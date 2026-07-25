@@ -62,6 +62,13 @@
       --accent-glow: rgba(108, 58, 237, 0.16);
       --accent-ink: #FFFFFF;
 
+      /* CTA drench: deliberately theme-independent deep violets so white text stays
+         >=4.5:1 in BOTH themes. NOT redefined in the dark block - the dark accents
+         (#a78bfa) are too light and dropped white text to 2.7:1. */
+      --cta-grad-1: #3d1f9e;
+      --cta-grad-2: #5b2fd4;
+      --cta-grad-3: #7c4de0;
+
       /* Module accent signature (from the app) */
       --m-tasks: #15803D;
       --m-calendar: #8250DF;
@@ -446,7 +453,7 @@
     /* ===== CTA ===== */
     .cta { padding: 110px 0; }
     .cta-box { position: relative; overflow: hidden; text-align: center; border-radius: var(--r-2xl); padding: 72px 40px;
-      background: linear-gradient(150deg, color-mix(in srgb, var(--accent) 92%, #000) 0%, var(--accent) 45%, var(--m-calendar) 110%);
+      background: linear-gradient(150deg, var(--cta-grad-1) 0%, var(--cta-grad-2) 46%, var(--cta-grad-3) 112%);
       box-shadow: var(--shadow-hero); }
     .cta-box::before { content: ''; position: absolute; inset: 0; opacity: 0.5;
       background: radial-gradient(60% 80% at 80% -10%, rgba(255,255,255,0.28), transparent 60%); }
@@ -455,14 +462,14 @@
     .cta-box > * { position: relative; z-index: 1; }
     .cta-box h2 { font-size: clamp(1.8rem, 4vw, 2.7rem); font-weight: 700; letter-spacing: -0.035em; color: #fff; margin-bottom: 14px; text-wrap: balance; }
     .cta-box h2 em { font-style: italic; font-weight: 600; }
-    .cta-box p { color: rgba(255,255,255,0.88); font-size: 1.08rem; max-width: 44ch; margin: 0 auto 32px; }
+    .cta-box p { color: rgba(255,255,255,0.95); font-size: 1.08rem; max-width: 44ch; margin: 0 auto 32px; }
     .cta-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
     .cta-actions .btn-primary { background: #fff; color: var(--accent-deep); box-shadow: 0 10px 30px rgba(0,0,0,0.22); }
     .cta-actions .btn-primary:hover { background: #fff; color: var(--accent-deep); opacity: 0.94; }
     .cta-actions .btn-secondary { background: rgba(255,255,255,0.12); color: #fff; border-color: rgba(255,255,255,0.30); box-shadow: none; }
     .cta-actions .btn-secondary:hover { background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.5); }
     /* Honest longevity line: MIT + self-host permanence, not a fabricated metric. */
-    .cta-note { color: rgba(255,255,255,0.82); font-size: 0.92rem; line-height: 1.55; max-width: 52ch; margin: 26px auto 0; }
+    .cta-note { color: rgba(255,255,255,0.92); font-size: 0.92rem; line-height: 1.55; max-width: 52ch; margin: 26px auto 0; }
 
     /* ===== Footer ===== */
     footer { border-top: 1px solid var(--border); padding: 56px 0 48px; }
@@ -471,7 +478,7 @@
     .foot-brand .nav-logo { margin-bottom: 14px; }
     .foot-brand p { font-size: 0.88rem; color: var(--text-2); line-height: 1.6; }
     .foot-cols { display: flex; gap: 56px; flex-wrap: wrap; }
-    .foot-col h4 { font-size: 0.74rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-3); margin-bottom: 14px; }
+    .foot-col h3 { font-size: 0.74rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-3); margin-bottom: 14px; }
     .foot-col a { display: block; font-size: 0.9rem; color: var(--text-2); padding: 6px 0; margin-bottom: 2px; transition: color .15s; }
     .foot-col a:hover { color: var(--accent); }
     .foot-bottom { margin-top: 44px; padding-top: 24px; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
@@ -979,27 +986,27 @@ cp .env.example .env  <span class="c"># set SESSION_SECRET and DB_ENCRYPTION_KEY
       </div>
       <div class="foot-cols">
         <div class="foot-col">
-          <h4 data-t="foot_product">Product</h4>
+          <h3 data-t="foot_product">Product</h3>
           <a href="#carousel" data-t="foot_screens">Screenshots</a>
           <a href="install.html" data-t="foot_install">Install</a>
           <a href="https://github.com/ulsklyc/yuvomi/blob/main/docs/SPEC.md" target="_blank" rel="noopener" data-t="foot_docs">Docs &amp; spec</a>
         </div>
         <div class="foot-col">
-          <h4 data-t="foot_project">Project</h4>
+          <h3 data-t="foot_project">Project</h3>
           <a href="https://github.com/ulsklyc/yuvomi" target="_blank" rel="noopener">GitHub</a>
           <a href="https://github.com/ulsklyc/yuvomi/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener" data-t="foot_contrib">Contributing</a>
           <a href="https://github.com/ulsklyc/yuvomi/blob/main/CHANGELOG.md" target="_blank" rel="noopener" data-t="foot_changelog">Changelog</a>
           <a href="https://github.com/ulsklyc/yuvomi/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a>
         </div>
         <div class="foot-col">
-          <h4 data-t="foot_legal">Legal</h4>
+          <h3 data-t="foot_legal">Legal</h3>
           <a href="impressum.html" data-t="foot_impressum">Impressum</a>
           <a href="datenschutz.html" data-t="foot_privacy">Datenschutz</a>
         </div>
       </div>
     </div>
     <div class="foot-bottom">
-      <span><span id="gh-stars-footer" data-gh-stars>★ 1k · </span><b>v1.45.9</b> · July 2026</span>
+      <span><span id="gh-stars-footer" data-gh-stars>★ 1k · </span><b>v1.45.9</b> · <span id="foot-released" data-released="2026-07-01">July 2026</span></span>
       <span data-t="foot_madewith">Self-hosted · Privacy-first · Open source</span>
     </div>
   </div>
@@ -1206,6 +1213,8 @@ cp .env.example .env  <span class="c"># set SESSION_SECRET and DB_ENCRYPTION_KEY
     lb.setAttribute('aria-label', lang === 'en' ? 'Auf Deutsch umschalten' : 'Switch to English');
     lb.setAttribute('title', lang === 'en' ? 'Auf Deutsch umschalten' : 'Switch to English');
     document.title = lang === 'en' ? 'Yuvomi - The Self-Hosted Family Planner' : 'Yuvomi - Der selbstgehostete Familienplaner';
+    var rel = document.getElementById('foot-released');
+    if (rel) { var rp = (rel.getAttribute('data-released') || '').split('-'); if (rp[0]) { rel.textContent = new Date(+rp[0], (+rp[1] || 1) - 1, 1).toLocaleDateString(lang === 'de' ? 'de-DE' : 'en-US', { year: 'numeric', month: 'long' }); } }
     applyShots();
   }
 
