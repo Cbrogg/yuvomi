@@ -258,7 +258,9 @@ router.get('/', (req, res) => {
         u.avatar_data AS assigned_avatar,
         ${ASSIGNED_USERS_SQL},
         (SELECT COUNT(*) FROM tasks s WHERE s.parent_task_id = t.id)                           AS subtask_total,
-        (SELECT COUNT(*) FROM tasks s WHERE s.parent_task_id = t.id AND s.status = 'done')     AS subtask_done
+        (SELECT COUNT(*) FROM tasks s WHERE s.parent_task_id = t.id AND s.status = 'done')     AS subtask_done,
+        (SELECT json_group_array(json_object('id', s.id, 'title', s.title, 'status', s.status))
+           FROM (SELECT id, title, status FROM tasks WHERE parent_task_id = t.id ORDER BY created_at ASC) s) AS subtasks
       FROM tasks t
       LEFT JOIN users u ON t.assigned_to = u.id
       WHERE t.parent_task_id IS NULL
@@ -291,7 +293,7 @@ router.get('/', (req, res) => {
         t.created_at DESC
     `;
 
-    const rows = db.get().prepare(sql).all(...params).map(addAssignedUsers);
+    const rows = db.get().prepare(sql).all(...params).map(task => ({ ...task, subtasks: JSON.parse(task.subtasks || '[]') })).map(addAssignedUsers);
     res.json({ data: attachDocumentCounts(rows, me) });
   } catch (err) {
     log.error('GET / error:', err);
