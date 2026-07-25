@@ -323,6 +323,38 @@ function parseExpenseBody(body, fallbackCurrency) {
   };
 }
 
+// Standard-Aufteilung einer Gruppe (#517): validiert Methode + optionale
+// pro-Mitglied-Werte, mit denen neue Ausgaben vorbelegt werden. Nur
+// percentage/shares tragen eine Config; Einträge für Nicht-Mitglieder oder mit
+// ungültigem Format werden verworfen. Bewusst KEINE 100%-Pflicht - das ist eine
+// Vorbelegung, die finale Validierung passiert pro Ausgabe in buildSplits, und so
+// bleibt die Config robust, wenn sich der Mitgliederkreis später ändert.
+function normalizeSplitDefaults(body, groupId, fallbackMethod = 'equal') {
+  const method = SPLIT_METHODS.includes(body.default_split_method) ? body.default_split_method : fallbackMethod;
+  if (method !== 'percentage' && method !== 'shares') return { method, config: null };
+  const members = new Set(
+    db.get().prepare('SELECT user_id FROM expense_group_members WHERE group_id = ?').all(groupId).map((r) => Number(r.user_id)),
+  );
+  const raw = Array.isArray(body.default_split_config) ? body.default_split_config : [];
+  const entries = [];
+  const seen = new Set();
+  for (const item of raw) {
+    const uid = Number(item?.user_id);
+    if (!members.has(uid) || seen.has(uid)) continue;
+    if (method === 'percentage') {
+      const pct = String(item?.percentage ?? '').trim();
+      if (!/^\d+(\.\d{1,2})?$/.test(pct) || Number(pct) < 0 || Number(pct) > 100) continue;
+      entries.push({ user_id: uid, percentage: pct });
+    } else {
+      const shares = Number(item?.shares);
+      if (!Number.isInteger(shares) || shares <= 0) continue;
+      entries.push({ user_id: uid, shares });
+    }
+    seen.add(uid);
+  }
+  return { method, config: entries.length ? JSON.stringify(entries) : null };
+}
+
 router.get('/meta', (_req, res) => {
   try {
     res.json({ data: { group_types: GROUP_TYPES, group_roles: GROUP_ROLES, split_methods: SPLIT_METHODS, categories: CATEGORIES, currencies: CURRENCIES, frequencies: FREQUENCIES, default_currency: defaultCurrency() } });
@@ -394,11 +426,15 @@ router.post('/groups', (req, res) => {
     if (errors.length) return res.status(400).json({ error: errors.join(' '), code: 400 });
     const type = GROUP_TYPES.includes(req.body.type) ? req.body.type : 'general';
     const currency = CURRENCIES.includes(req.body.default_currency) ? req.body.default_currency : defaultCurrency();
+    // Beim Anlegen existiert nur der Owner als Mitglied - eine pro-Mitglied-Config
+    // ist hier noch nicht sinnvoll (das Frontend bietet den Editor erst im
+    // Bearbeiten-Dialog). Nur die Methode wird direkt übernommen.
+    const defaultMethod = SPLIT_METHODS.includes(req.body.default_split_method) ? req.body.default_split_method : 'equal';
     const result = db.transaction(() => {
       const created = db.get().prepare(`
-        INSERT INTO expense_groups (name, description, type, default_currency, created_by)
-        VALUES (?, ?, ?, ?, ?)
-      `).run(vName.value, vDescription.value, type, currency, userId(req));
+        INSERT INTO expense_groups (name, description, type, default_currency, default_split_method, created_by)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run(vName.value, vDescription.value, type, currency, defaultMethod, userId(req));
       db.get().prepare('INSERT INTO expense_group_members (group_id, user_id, role, invited_by) VALUES (?, ?, ?, ?)')
         .run(created.lastInsertRowid, userId(req), 'owner', userId(req));
       activity(created.lastInsertRowid, userId(req), 'group_created', 'group', created.lastInsertRowid, { name: vName.value });
@@ -424,9 +460,17 @@ router.patch('/groups/:id', (req, res) => {
     const current = db.get().prepare('SELECT * FROM expense_groups WHERE id = ?').get(id);
     const type = GROUP_TYPES.includes(req.body.type) ? req.body.type : current.type;
     const currency = CURRENCIES.includes(req.body.default_currency) ? req.body.default_currency : current.default_currency;
+    // Standard-Aufteilung nur anfassen, wenn der Client sie mitschickt (#517).
+    let defaultMethod = current.default_split_method;
+    let defaultConfig = current.default_split_config;
+    if (req.body.default_split_method !== undefined || req.body.default_split_config !== undefined) {
+      const norm = normalizeSplitDefaults(req.body, id, current.default_split_method);
+      defaultMethod = norm.method;
+      defaultConfig = norm.config;
+    }
     db.get().prepare(`
-      UPDATE expense_groups SET name = ?, description = ?, type = ?, default_currency = ? WHERE id = ?
-    `).run(vName.value ?? current.name, vDescription.value !== undefined ? vDescription.value : current.description, type, currency, id);
+      UPDATE expense_groups SET name = ?, description = ?, type = ?, default_currency = ?, default_split_method = ?, default_split_config = ? WHERE id = ?
+    `).run(vName.value ?? current.name, vDescription.value !== undefined ? vDescription.value : current.description, type, currency, defaultMethod, defaultConfig, id);
     activity(id, userId(req), 'group_updated', 'group', id);
     const row = db.get().prepare(`${groupSelectWhere('g.id = @id AND visible.user_id = @userId')}`).get({ id, userId: userId(req) });
     res.json({ data: row });

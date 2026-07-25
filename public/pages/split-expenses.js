@@ -469,6 +469,37 @@ function splitGcd(a, b) {
   return b === 0 ? a : splitGcd(b, a % b);
 }
 
+/**
+ * Standard-Aufteilung einer Gruppe (#517). Die API liefert default_split_config
+ * als JSON-String ([{ user_id, percentage }] bzw. [{ user_id, shares }]); dieser
+ * Helfer parst tolerant in ein Array.
+ */
+function parseSplitConfig(raw) {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw;
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Übersetzt die gespeicherte Standard-Config einer Gruppe in die pro-Mitglied
+ * Split-Eingabewerte, mit denen eine neue Ausgabe vorbelegt wird. Nur für
+ * percentage/shares relevant; equal/exact brauchen keine Werte.
+ */
+function defaultSplitValues(group) {
+  const method = group?.default_split_method;
+  if (method !== 'percentage' && method !== 'shares') return {};
+  const values = {};
+  for (const entry of parseSplitConfig(group?.default_split_config)) {
+    values[entry.user_id] = method === 'shares' ? String(entry.shares) : String(entry.percentage);
+  }
+  return values;
+}
+
 function updateSplitInputs(panel) {
   const method = panel.querySelector('[name="split_method"]')?.value || 'equal';
   panel.querySelectorAll('.split-split-value').forEach((input) => {
@@ -514,6 +545,96 @@ function validateSplitForm(panel) {
   const save = panel.querySelector('#split-save-expense');
   if (save) save.disabled = !valid;
   return valid;
+}
+
+/**
+ * Standard-Aufteilungs-Editor im Gruppen-Modal (#517). Bietet Methode +
+ * pro-Mitglied-Werte (percentage/shares), mit denen neue Ausgaben starten.
+ * 'exact' ist bewusst nicht wählbar - exakte Beträge hängen vom Ausgabenbetrag
+ * ab, ein fixer Default ergibt keinen Sinn. Erst ab zwei Mitgliedern sichtbar.
+ */
+function renderGroupDefaults(group) {
+  const members = state.groupMembers.length ? state.groupMembers : state.members;
+  if (members.length < 2) return '';
+  const method = group?.default_split_method || 'equal';
+  const values = defaultSplitValues(group);
+  const opt = (value, label) => `<option value="${value}" ${value === method ? 'selected' : ''}>${label}</option>`;
+  return `
+    <fieldset class="split-defaults">
+      <legend>${t('splitExpenses.defaultSplit')}</legend>
+      <p class="form-hint">${t('splitExpenses.defaultSplitHint')}</p>
+      <label>${t('splitExpenses.splitMethod')}<select class="input" name="default_split_method">
+        ${opt('equal', t('splitExpenses.splitEqual'))}
+        ${opt('percentage', t('splitExpenses.splitPercentage'))}
+        ${opt('shares', t('splitExpenses.splitShares'))}
+      </select></label>
+      ${members.map((member) => {
+        const id = member.id ?? member.user_id;
+        return `
+        <div class="split-participant-row" data-default-row="${id}">
+          <span>${esc(member.display_name)}</span>
+          <input class="input split-default-value" name="default_value_${id}" inputmode="decimal" aria-label="${esc(member.display_name)} ${t('splitExpenses.splitValue')}" value="${esc(values[id] ?? '')}">
+        </div>`;
+      }).join('')}
+      <p class="form-hint" id="split-default-hint" role="status"></p>
+    </fieldset>
+  `;
+}
+
+/**
+ * Zeigt/versteckt die Default-Werte je Methode und blockiert das Speichern der
+ * Gruppe nur, wenn eine percentage-Config ausgefüllt ist, aber nicht 100 ergibt.
+ * Leere Werte = keine Vorbelegung (erlaubt).
+ */
+function updateGroupDefaults(panel) {
+  const select = panel.querySelector('[name="default_split_method"]');
+  if (!select) return;
+  const method = select.value;
+  const rows = [...panel.querySelectorAll('.split-default-value')];
+  rows.forEach((input) => {
+    input.hidden = method === 'equal';
+    if (method === 'percentage') input.placeholder = '50';
+    else if (method === 'shares') input.placeholder = '1';
+    else input.placeholder = '';
+  });
+  const filled = rows.filter((input) => String(input.value).trim() !== '');
+  let valid = true;
+  let message = '';
+  if (method === 'percentage' && filled.length) {
+    const total = rows.reduce((sum, input) => sum + (numberValue(input.value) || 0), 0);
+    valid = Math.abs(total - 100) < 0.01;
+    message = t('splitExpenses.splitCurrentTotal', { total: total.toFixed(2) });
+  } else if (method === 'shares' && filled.length) {
+    valid = filled.every((input) => {
+      const value = numberValue(input.value);
+      return Number.isInteger(value) && value > 0;
+    });
+  }
+  const hint = panel.querySelector('#split-default-hint');
+  if (hint) hint.textContent = valid ? message : `${t('splitExpenses.defaultSplitInvalid')} ${message}`.trim();
+  const save = panel.querySelector('#split-save-group');
+  if (save) save.disabled = !valid;
+}
+
+/**
+ * Baut aus den Default-Wert-Feldern die default_split_config für die API und
+ * entfernt die flachen default_value_*-Felder aus dem Payload.
+ */
+function collectGroupDefaults(form, data) {
+  const method = form.querySelector('[name="default_split_method"]')?.value;
+  Object.keys(data).forEach((key) => { if (key.startsWith('default_value_')) delete data[key]; });
+  if (!method) return;
+  data.default_split_method = method;
+  const config = [];
+  if (method === 'percentage' || method === 'shares') {
+    form.querySelectorAll('.split-default-value').forEach((input) => {
+      const raw = String(input.value).trim();
+      if (!raw) return;
+      const uid = Number(input.name.replace('default_value_', ''));
+      config.push(method === 'shares' ? { user_id: uid, shares: Number(raw) } : { user_id: uid, percentage: raw });
+    });
+  }
+  data.default_split_config = config;
 }
 
 function formatDateWhileTyping(value) {
@@ -599,6 +720,7 @@ async function openGroupModal(group = null) {
         <label>${t('splitExpenses.type')}<select class="input" name="type">${state.meta.group_types.map((type) => `<option value="${type}" ${type === group?.type ? 'selected' : ''}>${t(`splitExpenses.groupType.${type}`)}</option>`).join('')}</select></label>
         <label>${t('splitExpenses.currency')}<select class="input" name="default_currency">${state.meta.currencies.map((c) => `<option value="${c}" ${c === (group?.default_currency || currency) ? 'selected' : ''}>${c}</option>`).join('')}</select></label>
         ${isEdit ? renderGroupMemberEditor(candidates) : ''}
+        ${isEdit ? renderGroupDefaults(group) : ''}
         <div class="modal-actions">
           <button class="btn btn--secondary" type="button" id="split-cancel-group">${t('common.cancel')}</button>
           <button class="btn btn--primary" type="submit" id="split-save-group">${t('common.save')}</button>
@@ -607,10 +729,14 @@ async function openGroupModal(group = null) {
     `,
     onSave(panel) {
       panel.querySelector('#split-cancel-group')?.addEventListener('click', () => closeModal());
+      panel.querySelector('[name="default_split_method"]')?.addEventListener('change', () => updateGroupDefaults(panel));
+      panel.querySelectorAll('.split-default-value').forEach((input) => input.addEventListener('input', () => updateGroupDefaults(panel)));
+      updateGroupDefaults(panel);
       panel.querySelector('#split-group-form')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const form = panel.querySelector('#split-group-form');
         const data = Object.fromEntries(new FormData(form));
+        collectGroupDefaults(form, data);
         if (isEdit) await api.patch(`/split-expenses/groups/${group.id}`, data);
         else await api.post('/split-expenses/groups', data);
         if (isEdit) await syncEditedGroupMembers(group, form);
@@ -627,9 +753,11 @@ function openExpenseModal(expense = null) {
   if (!state.activeGroupId) return openGroupModal();
   const group = state.groups.find((g) => g.id === state.activeGroupId);
   const isEdit = Boolean(expense && expense.id);
-  const method = expense?.split_method || 'equal';
+  // Neue Ausgaben starten mit der Standard-Aufteilung der Gruppe (#517),
+  // bestehende mit ihrer eigenen gespeicherten Aufteilung.
+  const method = isEdit ? (expense.split_method || 'equal') : (group.default_split_method || 'equal');
   const selectedIds = isEdit ? (expense.splits || []).map((s) => s.user_id) : null;
-  const splitValues = isEdit ? deriveSplitValues(expense) : {};
+  const splitValues = isEdit ? deriveSplitValues(expense) : defaultSplitValues(group);
   const today = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
   const methodOption = (value, label) => `<option value="${value}" ${value === method ? 'selected' : ''}>${label}</option>`;
   openSharedModal({

@@ -540,6 +540,74 @@ test('DELETE /groups/:id: Gruppe ohne Finanzhistorie wird gelöscht', async () =
   assert.equal(db.prepare('SELECT 1 FROM expense_groups WHERE id = ?').get(eg), undefined);
 });
 
+// --------------------------------------------------------------------------
+// Standard-Aufteilung pro Gruppe (#517)
+// --------------------------------------------------------------------------
+let DGROUP;
+test('split-defaults setup: Gruppe mit percentage-Default anlegen, Mitglieder hinzufügen', async () => {
+  const g = await call('POST', '/groups', { actor: { id: OWNER, role: 'member' }, body: { name: 'Splitdefault', default_split_method: 'percentage' } });
+  assert.equal(g.status, 201);
+  assert.equal(g.body.data.default_split_method, 'percentage', 'Methode wird beim Anlegen übernommen');
+  assert.equal(g.body.data.default_split_config ?? null, null, 'ohne weitere Mitglieder noch keine Config');
+  DGROUP = g.body.data.id;
+  await call('POST', `/groups/${DGROUP}/members`, { actor: { id: OWNER, role: 'member' }, body: { user_id: MGR, role: 'admin' } });
+  await call('POST', `/groups/${DGROUP}/members`, { actor: { id: OWNER, role: 'member' }, body: { user_id: MEM, role: 'guest' } });
+});
+
+test('split-defaults: percentage-Werte pro Mitglied werden gespeichert und zurückgegeben', async () => {
+  const r = await call('PATCH', `/groups/${DGROUP}`, {
+    actor: { id: OWNER, role: 'member' },
+    body: { default_split_method: 'percentage', default_split_config: [{ user_id: OWNER, percentage: '60' }, { user_id: MGR, percentage: '40' }] },
+  });
+  assert.equal(r.status, 200);
+  assert.equal(r.body.data.default_split_method, 'percentage');
+  assert.deepEqual(JSON.parse(r.body.data.default_split_config), [{ user_id: OWNER, percentage: '60' }, { user_id: MGR, percentage: '40' }]);
+});
+
+test('split-defaults: Nicht-Mitglieder und ungültige Werte werden verworfen (keine 100%-Pflicht)', async () => {
+  const r = await call('PATCH', `/groups/${DGROUP}`, {
+    actor: { id: OWNER, role: 'member' },
+    body: { default_split_method: 'percentage', default_split_config: [
+      { user_id: OWNER, percentage: '70' },
+      { user_id: OUTSIDER, percentage: '30' }, // kein Mitglied -> raus
+      { user_id: MGR, percentage: 'abc' },     // ungültiges Format -> raus
+    ] },
+  });
+  assert.equal(r.status, 200);
+  assert.deepEqual(JSON.parse(r.body.data.default_split_config), [{ user_id: OWNER, percentage: '70' }]);
+});
+
+test('split-defaults: shares-Default nimmt nur positive Ganzzahlen', async () => {
+  const r = await call('PATCH', `/groups/${DGROUP}`, {
+    actor: { id: OWNER, role: 'member' },
+    body: { default_split_method: 'shares', default_split_config: [{ user_id: OWNER, shares: 2 }, { user_id: MGR, shares: 1 }, { user_id: MEM, shares: 0 }] },
+  });
+  assert.equal(r.status, 200);
+  assert.equal(r.body.data.default_split_method, 'shares');
+  assert.deepEqual(JSON.parse(r.body.data.default_split_config), [{ user_id: OWNER, shares: 2 }, { user_id: MGR, shares: 1 }]);
+});
+
+test('split-defaults: Wechsel auf equal löscht die Config', async () => {
+  const r = await call('PATCH', `/groups/${DGROUP}`, { actor: { id: OWNER, role: 'member' }, body: { default_split_method: 'equal' } });
+  assert.equal(r.status, 200);
+  assert.equal(r.body.data.default_split_method, 'equal');
+  assert.equal(r.body.data.default_split_config ?? null, null);
+});
+
+test('split-defaults: PATCH ohne Default-Felder lässt bestehende Aufteilung unangetastet', async () => {
+  await call('PATCH', `/groups/${DGROUP}`, { actor: { id: OWNER, role: 'member' }, body: { default_split_method: 'percentage', default_split_config: [{ user_id: OWNER, percentage: '50' }, { user_id: MGR, percentage: '50' }] } });
+  const r = await call('PATCH', `/groups/${DGROUP}`, { actor: { id: OWNER, role: 'member' }, body: { name: 'Splitdefault 2' } });
+  assert.equal(r.status, 200);
+  assert.equal(r.body.data.name, 'Splitdefault 2');
+  assert.equal(r.body.data.default_split_method, 'percentage');
+  assert.deepEqual(JSON.parse(r.body.data.default_split_config), [{ user_id: OWNER, percentage: '50' }, { user_id: MGR, percentage: '50' }]);
+});
+
+test('split-defaults: Guest darf Defaults nicht ändern -> 403', async () => {
+  const r = await call('PATCH', `/groups/${DGROUP}`, { actor: { id: MEM, role: 'member' }, body: { default_split_method: 'equal' } });
+  assert.equal(r.status, 403);
+});
+
 test('teardown: Server schließen', async () => {
   await new Promise((r) => server.close(r));
 });

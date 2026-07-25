@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.45.7] - 2026-07-25
+
+### Added
+- Split Expenses: each group can now store a default split method and, for percentage or shares splits, default per-member values. New shared expenses in the group open pre-filled with that split, so households and couples that always divide costs the same way no longer re-enter it each time (#517).
+
 ## [1.45.6] - 2026-07-25
 
 ### Added
