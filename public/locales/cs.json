@@ -825,6 +825,8 @@
         "income": "Příjmy",
         "expenses": "Výdaje",
         "balance": "Bilance",
+        "expensesOnly": "Pouze výdaje",
+        "expensesOnlyHint": "Zobrazit pouze výdaje, skrýt příjmy a zůstatek",
         "byCategory": "Podle kategorií",
         "chartSummary": "{{count}} kategorií · Největší: {{top}} ({{pct}}%)",
         "transactions": "Transakce",

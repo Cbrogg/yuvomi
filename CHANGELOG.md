@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.45.9] - 2026-07-25
+
+### Added
+- Budget: a dedicated "Expenses only" toggle on the month summary that hides the income and net-balance cards, so pure expense tracking no longer shows a red minus balance. The choice is remembered per device; the transaction list, category chart and CSV export are unaffected (#504).
+
+### Changed
+- Docker/Podman: renamed the compose service and container from `oikos` to `yuvomi`. Existing data is preserved - the database volume is unchanged and an existing `oikos.db` is migrated to `yuvomi.db` automatically on first start. When upgrading, run the update once with `docker compose up -d --remove-orphans` so the old `oikos` container releases port 3000. Named volumes and the TrueNAS/Unraid/Quadlet slugs keep the legacy `oikos` name so those installs upgrade in place.
+
 ## [1.45.8] - 2026-07-25
 
 ### Changed

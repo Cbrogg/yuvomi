@@ -825,6 +825,8 @@
         "income": "收入",
         "expenses": "支出",
         "balance": "余额",
+        "expensesOnly": "仅支出",
+        "expensesOnlyHint": "仅显示支出，隐藏收入和结余",
         "byCategory": "按分类",
         "chartSummary": "{{count}} 个类别 · 最大：{{top}}（{{pct}}%）",
         "transactions": "交易记录",

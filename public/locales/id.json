@@ -837,6 +837,8 @@
         "income": "Pemasukan",
         "expenses": "Pengeluaran",
         "balance": "Saldo",
+        "expensesOnly": "Hanya pengeluaran",
+        "expensesOnlyHint": "Tampilkan hanya pengeluaran, sembunyikan pemasukan dan saldo",
         "byCategory": "Menurut kategori",
         "chartSummary": "{{count}} kategori · Terbesar: {{top}} ({{pct}} %)",
         "transactions": "Transaksi",

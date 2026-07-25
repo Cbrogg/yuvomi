@@ -825,6 +825,8 @@
         "income": "الدخل",
         "expenses": "المصروفات",
         "balance": "الرصيد",
+        "expensesOnly": "المصروفات فقط",
+        "expensesOnlyHint": "عرض المصروفات فقط وإخفاء الدخل والرصيد",
         "byCategory": "حسب الفئة",
         "chartSummary": "{{count}} فئات · الأكبر: {{top}} ({{pct}}٪)",
         "transactions": "المعاملات",

@@ -837,6 +837,8 @@
         "income": "درآمد",
         "expenses": "هزینه‌ها",
         "balance": "مانده",
+        "expensesOnly": "فقط هزینه‌ها",
+        "expensesOnlyHint": "فقط هزینه‌ها نمایش داده شود، درآمد و مانده پنهان شود",
         "byCategory": "بر اساس دسته",
         "chartSummary": "{{count}} دسته · بزرگ‌ترین: {{top}} ({{pct}} %)",
         "transactions": "تراکنش‌ها",

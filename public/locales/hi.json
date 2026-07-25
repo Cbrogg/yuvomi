@@ -825,6 +825,8 @@
         "income": "आय",
         "expenses": "व्यय",
         "balance": "शेष",
+        "expensesOnly": "केवल व्यय",
+        "expensesOnlyHint": "केवल व्यय दिखाएँ, आय और शेष छिपाएँ",
         "byCategory": "श्रेणी द्वारा",
         "chartSummary": "{{count}} श्रेणियाँ · सबसे बड़ी: {{top}} ({{pct}}%)",
         "transactions": "लेनदेन",

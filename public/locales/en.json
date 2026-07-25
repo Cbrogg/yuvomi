@@ -825,6 +825,8 @@
         "income": "Income",
         "expenses": "Expenses",
         "balance": "Balance",
+        "expensesOnly": "Expenses only",
+        "expensesOnlyHint": "Show only expenses, hide income and balance",
         "byCategory": "By category",
         "chartSummary": "{{count}} categories · Largest: {{top}} ({{pct}}%)",
         "transactions": "Transactions",

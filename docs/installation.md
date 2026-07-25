@@ -54,7 +54,7 @@ podman compose -f podman-compose.yml up -d   # or: podman-compose -f podman-comp
 
 Then open the WebUI — the first visit guides you through creating your admin account in
 the browser. Headless deployments can instead create it from the container console with
-`docker compose exec oikos node setup.js` (or the matching `podman compose … exec`).
+`docker compose exec yuvomi node setup.js` (or the matching `podman compose … exec`).
 
 ---
 
@@ -267,9 +267,9 @@ docker compose logs -f
 You should see output like:
 
 ```
-oikos  | [Yuvomi] Server läuft auf Port 3000
-oikos  | [Yuvomi] Umgebung: production
-oikos  | [Sync] Auto-Sync alle 15 Minuten aktiv.
+yuvomi  | [Yuvomi] Server läuft auf Port 3000
+yuvomi  | [Yuvomi] Umgebung: production
+yuvomi  | [Sync] Auto-Sync alle 15 Minuten aktiv.
 ```
 
 Press `Ctrl+C` to stop following the logs (the container keeps running).
@@ -289,7 +289,7 @@ form is no longer reachable.
 a provisioning step — create the admin from the container console instead:
 
 ```bash
-docker compose exec oikos node setup.js
+docker compose exec yuvomi node setup.js
 ```
 
 ### 6. Open Yuvomi
@@ -783,6 +783,20 @@ in `/etc/containers/systemd/` and use `systemctl` without `--user`.
 
 ## Updates
 
+> **One-time step when upgrading past the container rename (Oikos → Yuvomi):** the Docker/Podman
+> service and container were renamed from `oikos` to `yuvomi`. Your data is safe - the database
+> volume is unchanged and the app migrates an existing `oikos.db` to `yuvomi.db` automatically on
+> first start. But the old `oikos` container lingers as an orphan and keeps holding host port 3000,
+> which prevents the new `yuvomi` container from starting. Run the update once with
+> `--remove-orphans`:
+>
+> ```bash
+> docker compose up -d --remove-orphans
+> # Podman: podman compose -f podman-compose.yml up -d --remove-orphans
+> ```
+>
+> TrueNAS, Unraid and Podman-Quadlet installs keep the legacy `oikos` slug and are unaffected.
+
 ### Option B — Pre-built Image
 
 Pull the latest published image and restart:
@@ -839,8 +853,8 @@ Scheduled backups are written to the host folder configured through `BACKUP_DIR`
 Use the built-in backup helper to create a consistent SQLite backup from the running container, then copy it to your host:
 
 ```bash
-docker compose exec oikos node -e "import('./server/db.js').then(async db => { await db.backupToFile('/data/yuvomi-backup.db'); process.exit(0); })"
-docker cp oikos:/data/yuvomi-backup.db ./yuvomi-backup-$(date +%Y%m%d).db
+docker compose exec yuvomi node -e "import('./server/db.js').then(async db => { await db.backupToFile('/data/yuvomi-backup.db'); process.exit(0); })"
+docker cp yuvomi:/data/yuvomi-backup.db ./yuvomi-backup-$(date +%Y%m%d).db
 ```
 
 Admins can also download a backup from **Settings → Administration → Backup and restore**.
@@ -857,7 +871,7 @@ BACKUP_DIR=./backups
 Admins can restore a backup from **Settings → Administration → Backup and restore**. For operational restores via Docker Compose, stop the running app, mount the backup into a temporary container that uses the same Docker volume, and replace the database file:
 
 ```bash
-SERVICE=oikos
+SERVICE=yuvomi
 BACKUP="$PWD/yuvomi-backup-20260401.db"
 docker compose stop "$SERVICE"
 docker compose run --rm -v "$BACKUP:/tmp/yuvomi-restore.db:ro" --entrypoint sh "$SERVICE" -c 'set -eu; target="${DB_PATH:-/data/yuvomi.db}"; case "$target" in */oikos.db) target="${target%/oikos.db}/yuvomi.db";; esac; stamp=$(date -u +%Y%m%dT%H%M%SZ); if [ -f "$target" ]; then cp "$target" "$target.pre-restore-$stamp"; fi; rm -f "$target-wal" "$target-shm"; cp /tmp/yuvomi-restore.db "$target"; chown node:node "$target" 2>/dev/null || true'
@@ -885,7 +899,7 @@ crontab -e
 Add this line:
 
 ```
-0 3 * * * docker compose exec -T oikos node -e "import('./server/db.js').then(async db => { await db.backupToFile('/data/yuvomi-cron-backup.db'); process.exit(0); })" && docker cp oikos:/data/yuvomi-cron-backup.db /path/to/backups/yuvomi-$(date +\%Y\%m\%d).db
+0 3 * * * docker compose exec -T yuvomi node -e "import('./server/db.js').then(async db => { await db.backupToFile('/data/yuvomi-cron-backup.db'); process.exit(0); })" && docker cp yuvomi:/data/yuvomi-cron-backup.db /path/to/backups/yuvomi-$(date +\%Y\%m\%d).db
 ```
 
 This creates a backup at 3:00 AM every day.
@@ -961,7 +975,7 @@ chcon -Rt container_file_t ./data ./backups ./modules
 
 3. Verify the port mapping:
    ```bash
-   docker port oikos
+   docker port yuvomi
    ```
 
 4. Check your firewall rules if accessing from another device.

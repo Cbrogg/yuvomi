@@ -825,6 +825,8 @@
         "income": "収入",
         "expenses": "支出",
         "balance": "残高",
+        "expensesOnly": "支出のみ",
+        "expensesOnlyHint": "支出のみを表示し、収入と残高を非表示にします",
         "byCategory": "カテゴリー別",
         "chartSummary": "{{count}} カテゴリ · 最大: {{top}}（{{pct}}%）",
         "transactions": "取引",

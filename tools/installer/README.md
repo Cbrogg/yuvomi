@@ -31,7 +31,7 @@ dedicated `podman-compose.yml` (SELinux `:Z` labels).
 ## What it does
 
 1. Detects the container engine (Docker or Podman), checks its prerequisites, and
-   reports any existing `.env` file or running `oikos` container before you start
+   reports any existing `.env` file or running `yuvomi` container before you start
 2. Lets you pick a setup path on the welcome screen:
    - **Simple setup** (recommended for non-technical users) — auto-generates the
      security keys, applies safe localhost/HTTP defaults, and goes straight to

@@ -330,7 +330,7 @@ async function route(req, res, server) {
     try {
       const envExists = existsSync(resolve(projectRoot(), '.env'));
       const engine = await getEngine();
-      const { cmd, args } = inspectCommand(engine, ['inspect', '--format', '{{.State.Status}}', 'oikos']);
+      const { cmd, args } = inspectCommand(engine, ['inspect', '--format', '{{.State.Status}}', 'yuvomi']);
       return await new Promise(resolvePromise => {
         const inspect = spawn(cmd, args, { stdio: 'pipe' });
         let out = '';
@@ -385,8 +385,8 @@ async function route(req, res, server) {
 
   if (req.method === 'GET' && url.pathname === '/api/status') {
     const engine = await getEngine();
-    const health = inspectCommand(engine, ['inspect', '--format', '{{.State.Health.Status}}', 'oikos']);
-    const stateCmd = inspectCommand(engine, ['inspect', '--format', '{{.State.Status}}', 'oikos']);
+    const health = inspectCommand(engine, ['inspect', '--format', '{{.State.Health.Status}}', 'yuvomi']);
+    const stateCmd = inspectCommand(engine, ['inspect', '--format', '{{.State.Status}}', 'yuvomi']);
     const logsCmd = composeCommand(engine, ['logs', '--tail', '30']);
     return new Promise(resolvePromise => {
       let settled = false;

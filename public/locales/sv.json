@@ -825,6 +825,8 @@
         "income": "Inkomst",
         "expenses": "Utgifter",
         "balance": "Balans",
+        "expensesOnly": "Endast utgifter",
+        "expensesOnlyHint": "Visa endast utgifter, dölj inkomster och saldo",
         "byCategory": "Efter kategori",
         "chartSummary": "{{count}} kategorier · Störst: {{top}} ({{pct}} %)",
         "transactions": "Transaktioner",

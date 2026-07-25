@@ -24,6 +24,11 @@ import '/components/category-manager.js';
 // Konstanten
 // --------------------------------------------------------
 
+// Anzeige-Präferenz „Nur Ausgaben" (#504): blendet die Einnahmen- und die Saldo-Karte
+// aus, damit reines Ausgaben-Tracking nicht als roter Minus-Saldo missverstanden wird.
+// Reine Client-Ansicht (kein Server-Pref), analog zu documents-view/Kalender-Layern.
+const EXPENSES_ONLY_KEY = 'yuvomi-budget-expenses-only';
+
 const SUBCATEGORY_I18N = () => ({
   rent_mortgage:            t('budget.subcatRentMortgage'),
   condominium:              t('budget.subcatCondominium'),
@@ -176,6 +181,7 @@ let state = {
   currency:    'EUR',
   budgetMode:  'shared',      // 'shared' (Altverhalten) | 'personal' (#476/#505)
   scope:       'mine',        // Ansichts-Filter im personal-Modus: 'mine' | 'household'
+  expensesOnly: false,        // Anzeige „Nur Ausgaben" (#504): Einnahmen+Saldo ausblenden
   meta:        { expenseCategories: [], incomeCategories: [], expenseSubcategories: {} },
 };
 let _container = null;
@@ -318,6 +324,7 @@ export async function render(container, { user }) {
       state.budgetMode = prefsRes.data?.budget_mode === 'personal' ? 'personal' : 'shared';
     } catch (_) { /* Fallback auf EUR */ }
   }
+  state.expensesOnly = localStorage.getItem(EXPENSES_ONLY_KEY) === '1';
 
   setHtml(container, `
     <div class="budget-page">
@@ -533,25 +540,45 @@ function renderBody() {
       : 'budget-summary-card--balance-negative';
   const prevLabel = p ? formatMonthLabel(p.month).split(' ')[0].slice(0, 3) : '';
 
-  setHtml(body, `
-    <div class="budget-tab-panel budget-tab-panel--budget">
-    <!-- Zusammenfassung -->
-    <div class="budget-summary">
+  // „Nur Ausgaben" (#504): Einnahmen- und Saldo-Karte entfallen ganz, die Ausgaben-
+  // Karte trägt die Zeile allein. Wer ausschließlich Ausgaben erfasst, sieht so keinen
+  // (neutralen) Saldo und keine Dauer-Null bei den Einnahmen. Liste, Diagramm und
+  // CSV-Export bleiben unberührt - der Umschalter fokussiert nur die Zusammenfassung.
+  const expensesOnly = state.expensesOnly;
+  const incomeCard = `
       <div class="budget-summary-card budget-summary-card--income">
         <div class="budget-summary-card__label">${t('budget.income')}</div>
         <div class="budget-summary-card__amount">${formatAmount(s.income)}</div>
         ${p ? renderTrend(s.income, p.income, prevLabel) : ''}
-      </div>
+      </div>`;
+  const expensesCard = `
       <div class="budget-summary-card budget-summary-card--expenses">
         <div class="budget-summary-card__label">${t('budget.expenses')}</div>
         <div class="budget-summary-card__amount">${formatAmount(Math.abs(s.expenses))}</div>
         ${p ? renderTrend(s.expenses, p.expenses, prevLabel) : ''}
-      </div>
+      </div>`;
+  const balanceCard = `
       <div class="budget-summary-card ${balanceClass}">
         <div class="budget-summary-card__label">${t('budget.balance')}</div>
         <div class="budget-summary-card__amount">${formatAmount(s.balance)}</div>
         ${p && !balanceNeutral ? renderTrend(s.balance, p.balance, prevLabel) : ''}
-      </div>
+      </div>`;
+
+  setHtml(body, `
+    <div class="budget-tab-panel budget-tab-panel--budget">
+    <!-- Anzeige-Umschalter: nur Ausgaben vs. volle Zusammenfassung -->
+    <div class="budget-summary-bar">
+      <button class="budget-expenses-toggle${expensesOnly ? ' budget-expenses-toggle--active' : ''}"
+              id="budget-expenses-only" type="button" role="switch"
+              aria-checked="${expensesOnly ? 'true' : 'false'}"
+              title="${t('budget.expensesOnlyHint')}">
+        <i data-lucide="receipt" class="icon-sm" aria-hidden="true"></i>
+        <span>${t('budget.expensesOnly')}</span>
+      </button>
+    </div>
+    <!-- Zusammenfassung -->
+    <div class="budget-summary${expensesOnly ? ' budget-summary--expenses-only' : ''}">
+      ${expensesOnly ? expensesCard : incomeCard + expensesCard + balanceCard}
     </div>
 
     <!-- Kategorie-Balken -->
@@ -598,6 +625,12 @@ function renderBody() {
   if (window.lucide) lucide.createIcons({ el: body });
   _container.querySelector('#empty-cta-budget')?.addEventListener('click', () => {
     document.querySelector('.page-fab')?.click();
+  });
+  _container.querySelector('#budget-expenses-only')?.addEventListener('click', () => {
+    state.expensesOnly = !state.expensesOnly;
+    try { localStorage.setItem(EXPENSES_ONLY_KEY, state.expensesOnly ? '1' : '0'); } catch (_) { /* Private-Mode: nur diese Sitzung */ }
+    vibrate(10);
+    renderBody();
   });
   _container.querySelector('#budget-manage-categories')?.addEventListener('click', openCategoryManager);
   _container.querySelector('#budget-clear-account-filter')?.addEventListener('click', async () => {

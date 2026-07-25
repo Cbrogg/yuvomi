@@ -825,6 +825,8 @@
         "income": "Revenus",
         "expenses": "Dépenses",
         "balance": "Solde",
+        "expensesOnly": "Dépenses uniquement",
+        "expensesOnlyHint": "Afficher uniquement les dépenses, masquer les revenus et le solde",
         "byCategory": "Par catégorie",
         "chartSummary": "{{count}} catégories · Plus grande : {{top}} ({{pct}} %)",
         "transactions": "Transactions",

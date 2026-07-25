@@ -825,6 +825,8 @@
         "income": "Gelir",
         "expenses": "Gider",
         "balance": "Bakiye",
+        "expensesOnly": "Yalnızca giderler",
+        "expensesOnlyHint": "Yalnızca giderleri göster, geliri ve bakiyeyi gizle",
         "byCategory": "Kategoriye göre",
         "chartSummary": "{{count}} kategori · En büyük: {{top}} (%{{pct}})",
         "transactions": "İşlemler",

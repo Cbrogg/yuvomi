@@ -825,6 +825,8 @@
         "income": "Доходи",
         "expenses": "Витрати",
         "balance": "Баланс",
+        "expensesOnly": "Лише витрати",
+        "expensesOnlyHint": "Показувати лише витрати, приховати доходи та баланс",
         "byCategory": "За категоріями",
         "chartSummary": "{{count}} категорій · Найбільша: {{top}} ({{pct}} %)",
         "transactions": "Транзакції",

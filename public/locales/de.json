@@ -837,6 +837,8 @@
         "income": "Einnahmen",
         "expenses": "Ausgaben",
         "balance": "Saldo",
+        "expensesOnly": "Nur Ausgaben",
+        "expensesOnlyHint": "Nur Ausgaben anzeigen, Einnahmen und Saldo ausblenden",
         "byCategory": "Nach Kategorie",
         "chartSummary": "{{count}} Kategorien · Größte: {{top}} ({{pct}} %)",
         "transactions": "Transaktionen",

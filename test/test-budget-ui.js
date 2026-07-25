@@ -269,6 +269,41 @@ test('die neutrale Saldo-Farbe kommt aus einem Token, nicht als Literal', () => 
 });
 
 // --------------------------------------------------------
+// „Nur Ausgaben"-Umschalter (#504)
+// --------------------------------------------------------
+
+test('„Nur Ausgaben" reduziert die Zusammenfassung auf die Ausgaben-Karte', () => {
+  // Reines Ausgaben-Tracking soll weder einen (neutralen) Saldo noch eine Dauer-Null
+  // bei den Einnahmen zeigen - der Umschalter blendet beide Karten aus.
+  assert.match(budget, /expensesOnly \? expensesCard : incomeCard \+ expensesCard \+ balanceCard/);
+});
+
+test('der „Nur Ausgaben"-Umschalter meldet seinen Zustand als echter Switch', () => {
+  assert.match(budget, /id="budget-expenses-only"[\s\S]{0,120}role="switch"/);
+  assert.match(budget, /aria-checked="\$\{expensesOnly \? 'true' : 'false'\}"/);
+});
+
+test('der „Nur Ausgaben"-Zustand ist client-persistent und geräte-lokal', () => {
+  // Reine Anzeige-Präferenz über localStorage (yuvomi-*), kein Server-Roundtrip -
+  // Liste, Diagramm und CSV-Export bleiben unberührt.
+  assert.match(budget, /const EXPENSES_ONLY_KEY = 'yuvomi-budget-expenses-only';/);
+  assert.match(budget, /state\.expensesOnly = localStorage\.getItem\(EXPENSES_ONLY_KEY\) === '1';/);
+  assert.match(budget, /localStorage\.setItem\(EXPENSES_ONLY_KEY, state\.expensesOnly \? '1' : '0'\)/);
+});
+
+test('die Ausgaben-Karte trägt im „Nur Ausgaben"-Modus die volle Breite', () => {
+  const rule = budgetCss.match(/\.budget-summary--expenses-only[^\n]*\{[^}]*\}/);
+  assert.ok(rule, '.budget-summary--expenses-only fehlt in budget.css');
+  assert.match(rule[0], /grid-template-columns:\s*1fr/);
+});
+
+test('der „Nur Ausgaben"-Umschalter nutzt Tokens, keine Farbliterale', () => {
+  const rule = budgetCss.match(/\.budget-expenses-toggle\s*\{[^}]*\}/);
+  assert.ok(rule, '.budget-expenses-toggle fehlt in budget.css');
+  assert.doesNotMatch(rule[0], /#[0-9a-fA-F]{3,8}\b/);
+});
+
+// --------------------------------------------------------
 // Zustand, Fokus, Ladewahrnehmung
 // --------------------------------------------------------
 
@@ -324,6 +359,7 @@ test('alle neuen Keys existieren in jeder Locale', () => {
     'budget.colorTeal', 'budget.colorBlue', 'budget.colorViolet', 'budget.colorMagenta',
     'budget.colorOrange', 'budget.colorGreen', 'budget.colorOcher',
     'budget.statsPointLabel', 'budget.statsPointsLabel',
+    'budget.expensesOnly', 'budget.expensesOnlyHint',
     'subscriptions.resetFilters', 'subscriptions.noMatchesTitle', 'subscriptions.noMatchesDescription',
     'subscriptions.filterLabelCategory', 'subscriptions.filterLabelMethod',
     'subscriptions.filterLabelStatus', 'subscriptions.filterLabelSort',
