@@ -20,6 +20,13 @@
 
 .cat-row {
   display: flex;
+  /* Umbruch erlauben: bei Gruppen mit Subkategorien (Budget-Ausgaben) hängt die
+     .cat-sublist als direktes Kind in dieser Flex-Zeile. Ohne wrap würde sie zum
+     Flex-Geschwister neben Name/Aktionen und den Namen auf 0px quetschen (der
+     ganze Zeileninhalt läuft dann horizontal aus dem Modal — #569). Mit wrap +
+     flex-basis:100% an der Sublist bricht diese sauber auf eine eigene, volle
+     Zeile unter den Zeileninhalt um (die beabsichtigte Einrückung). */
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-1);
@@ -109,6 +116,11 @@
   list-style: none;
   margin: var(--space-1) 0 0 var(--space-6);
   padding: 0;
+  /* Volle Zeilenbreite erzwingen, damit die Sublist im umbrechenden .cat-row
+     (flex-wrap:wrap) auf eine eigene Zeile unter Name/Aktionen fällt statt sie
+     seitlich zu verdrängen (#569). flex-shrink greift und passt sie inkl.
+     margin-left in die Modalbreite ein. */
+  flex-basis: 100%;
   display: flex;
   flex-direction: column;
   gap: var(--space-1);

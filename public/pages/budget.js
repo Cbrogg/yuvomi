@@ -1310,6 +1310,29 @@ function openLoanReport(loan) {
   });
 }
 
+// Rate in Landes-Locale mit Prozentzeichen (z. B. „2,5 %"). Nicht-brechendes
+// Leerzeichen, damit Wert und Zeichen nicht umbrechen.
+function formatRate(r) {
+  return `${getNumberFormat({ maximumFractionDigits: 2 }).format(Number(r))} %`;
+}
+
+// Zins-Infozeile der Loan-Card (#569): Monatsrate + Zinsphasen. '' bei zinsfreien
+// Darlehen, sodass die Karte unverändert bleibt.
+function loanInterestMeta(it) {
+  const monthly = t('budget.loanMonthlyRate', { amount: formatAmount(it.monthly_payment) });
+  // Variable Phase nur zeigen, wenn das Darlehen die Zinsbindung überhaupt erreicht;
+  // ist es vorher getilgt, verhält es sich wie ein Festzinsdarlehen (#569).
+  const hasVariablePhase = it.mode === 'fixed_then_variable' && it.remaining_after_binding > 0;
+  const phase = hasVariablePhase
+    ? t('budget.loanRateFixedThenVariable', {
+        fixed: formatRate(it.fixed_rate),
+        until: it.binding_end_month ? formatMonthLabel(it.binding_end_month) : '',
+        variable: formatRate(it.followup_rate),
+      })
+    : t('budget.loanRateFixed', { rate: formatRate(it.fixed_rate) });
+  return `${monthly} · ${phase}`;
+}
+
 function renderLoanCard(loan) {
   const paidPct = Math.min(100, Math.round((loan.paid_amount / loan.total_amount) * 100));
   const nextDue = loan.next_due_month ? formatMonthLabel(loan.next_due_month) : t('budget.loanPaidStatus');
@@ -1330,6 +1353,7 @@ function renderLoanCard(loan) {
           paid: loan.paid_installments,
           total: loan.installment_count,
         })}</div>
+        ${loan.interest ? `<div class="budget-loan-card__meta budget-loan-card__interest">${esc(loanInterestMeta(loan.interest))}</div>` : ''}
       </div>
       <div class="budget-loan-card__amounts">
         <strong>${formatAmount(loan.remaining_amount)}</strong>
@@ -1556,7 +1580,7 @@ function openBudgetModal({ mode, entry = null, initialType = '' }) {
         <input type="text" class="form-input" id="lm-title"
                placeholder="${t('budget.loanTitlePlaceholder')}">
       </div>
-      <div class="form-grid-2">
+      <div class="form-grid-2" id="lm-manual-fields">
         <div class="form-group">
           <label class="form-label" for="lm-amount">${t('budget.loanAmountLabel')}</label>
           <input type="number" class="form-input" id="lm-amount" step="0.01" min="0.01" inputmode="decimal">
@@ -1566,6 +1590,7 @@ function openBudgetModal({ mode, entry = null, initialType = '' }) {
           <input type="number" class="form-input" id="lm-installments" step="1" min="1" max="360" inputmode="numeric">
         </div>
       </div>
+      ${loanInterestFieldsHtml(null)}
       <div class="form-group">
         <label class="form-label" for="lm-start">${t('budget.loanStartMonthLabel')}</label>
         <input type="month" class="form-input" id="lm-start" value="${defaultDate.slice(0, 7)}">
@@ -1693,6 +1718,7 @@ function openBudgetModal({ mode, entry = null, initialType = '' }) {
       panel.querySelector('#type-loan')?.addEventListener('click', () => {
         setType('loan');
       });
+      wireLoanInterestFields(panel);
       panel.querySelector('#bm-category').addEventListener('change', () => updateSubcategoryOptions());
       panel.querySelector('#bm-recurring').addEventListener('change', (e) => {
         panel.querySelector('#bm-recurrence-options').hidden = !e.target.checked;
@@ -1860,25 +1886,124 @@ function requestNameInPanel(panel, { title, label, placeholder }) {
   });
 }
 
+// Zins-Darlehen (#569): Feldblock für den Darlehens-Dialog. Bei interest_mode
+// != 'none' werden Betrag/Ratenanzahl ausgeblendet (der Server leitet sie aus
+// Kreditsumme + Sollzins + Anfangstilgung ab) und stattdessen die Zinsfelder
+// gezeigt. Wird von beiden Dialogen (Neuanlage via + und Bearbeiten) genutzt.
+function loanInterestFieldsHtml(loan) {
+  const it = loan?.interest ?? null;
+  const mode = it?.mode ?? 'none';
+  const v = (x) => (x != null ? esc(String(x)) : '');
+  const opt = (val, key) => `<option value="${val}" ${mode === val ? 'selected' : ''}>${t(key)}</option>`;
+  return `
+    <div class="form-group">
+      <label class="form-label" for="lm-interest-mode">${t('budget.loanInterestModeLabel')}</label>
+      <select class="form-input" id="lm-interest-mode">
+        ${opt('none', 'budget.loanInterestNone')}
+        ${opt('fixed', 'budget.loanInterestFixed')}
+        ${opt('fixed_then_variable', 'budget.loanInterestFixedThenVariable')}
+      </select>
+    </div>
+    <div id="lm-interest-fields" ${mode === 'none' ? 'hidden' : ''}>
+      <div class="form-group">
+        <label class="form-label" for="lm-principal">${t('budget.loanPrincipalLabel')}</label>
+        <input type="number" class="form-input" id="lm-principal" step="0.01" min="0.01"
+               inputmode="decimal" value="${v(it?.principal)}">
+      </div>
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label" for="lm-fixed-rate">${t('budget.loanFixedRateLabel')}</label>
+          <input type="number" class="form-input" id="lm-fixed-rate" step="0.01" min="0" max="100"
+                 inputmode="decimal" value="${v(it?.fixed_rate)}">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="lm-initial-repayment">${t('budget.loanInitialRepaymentLabel')}</label>
+          <input type="number" class="form-input" id="lm-initial-repayment" step="0.01" min="0.01" max="100"
+                 inputmode="decimal" value="${v(it?.initial_repayment_rate)}">
+        </div>
+      </div>
+      <div id="lm-variable-fields" class="form-grid-2" ${mode === 'fixed_then_variable' ? '' : 'hidden'}>
+        <div class="form-group">
+          <label class="form-label" for="lm-fixed-period">${t('budget.loanFixedPeriodLabel')}</label>
+          <input type="number" class="form-input" id="lm-fixed-period" step="1" min="1" max="600"
+                 inputmode="numeric" value="${v(it?.fixed_period_months)}">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="lm-followup-rate">${t('budget.loanFollowupRateLabel')}</label>
+          <input type="number" class="form-input" id="lm-followup-rate" step="0.01" min="0" max="100"
+                 inputmode="decimal" value="${v(it?.followup_rate)}">
+        </div>
+      </div>
+      <p class="form-hint" id="lm-interest-preview" aria-live="polite"></p>
+    </div>`;
+}
+
+// Verdrahtet den Zinsmodus-Umschalter: blendet Betrag/Ratenanzahl vs. Zinsfelder
+// ein/aus und holt die Live-Vorschau (Monatsrate/Laufzeit/Gesamtzins) vom Server
+// (einzige Quelle der Zins-Mathematik). No-op, wenn der Block fehlt.
+function wireLoanInterestFields(panel) {
+  const modeSel = panel.querySelector('#lm-interest-mode');
+  if (!modeSel) return;
+  const interestFields = panel.querySelector('#lm-interest-fields');
+  const variableFields = panel.querySelector('#lm-variable-fields');
+  const manualFields = panel.querySelector('#lm-manual-fields');
+  const preview = panel.querySelector('#lm-interest-preview');
+  let timer = null;
+
+  const requestPreview = () => {
+    const mode = modeSel.value;
+    if (mode === 'none') { preview.textContent = ''; return; }
+    const body = {
+      interest_mode: mode,
+      principal: parseFloat(panel.querySelector('#lm-principal').value),
+      fixed_rate: parseFloat(panel.querySelector('#lm-fixed-rate').value),
+      initial_repayment_rate: parseFloat(panel.querySelector('#lm-initial-repayment').value),
+    };
+    if (mode === 'fixed_then_variable') {
+      body.fixed_period_months = parseInt(panel.querySelector('#lm-fixed-period').value, 10);
+      body.followup_rate = parseFloat(panel.querySelector('#lm-followup-rate').value);
+    }
+    const incomplete = !(body.principal > 0) || !(body.fixed_rate >= 0) || !(body.initial_repayment_rate > 0)
+      || (mode === 'fixed_then_variable' && !(body.fixed_period_months > 0 && body.followup_rate >= 0));
+    if (incomplete) { preview.textContent = ''; return; }
+    clearTimeout(timer);
+    timer = setTimeout(async () => {
+      try {
+        const { data } = await api.post('/budget/loans/preview', body);
+        if (!data?.ok) { preview.textContent = t('budget.loanPreviewInvalid'); return; }
+        preview.textContent = t('budget.loanPreviewSummary', {
+          rate: formatAmount(data.monthly_payment),
+          term: t('budget.loanTermYearsMonths', { years: Math.floor(data.total_months / 12), months: data.total_months % 12 }),
+          interest: formatAmount(data.total_interest),
+        });
+      } catch { preview.textContent = ''; }
+    }, 300);
+  };
+
+  const update = () => {
+    const interest = modeSel.value !== 'none';
+    interestFields.hidden = !interest;
+    variableFields.hidden = modeSel.value !== 'fixed_then_variable';
+    if (manualFields) manualFields.hidden = interest;
+    requestPreview();
+  };
+
+  modeSel.addEventListener('change', update);
+  ['lm-principal', 'lm-fixed-rate', 'lm-initial-repayment', 'lm-fixed-period', 'lm-followup-rate']
+    .forEach((id) => panel.querySelector('#' + id)?.addEventListener('input', requestPreview));
+  update();
+}
+
 async function saveLoanFromPanel(panel, saveBtn, { loan = null, closeAfterSave = false } = {}) {
   const isEdit = Boolean(loan);
   const borrower = panel.querySelector('#lm-borrower').value.trim();
   const title = panel.querySelector('#lm-title').value.trim() || borrower;
-  const total_amount = parseFloat(panel.querySelector('#lm-amount').value);
-  const installment_count = parseInt(panel.querySelector('#lm-installments').value, 10);
   const start_month = panel.querySelector('#lm-start').value;
   const notes = panel.querySelector('#lm-notes').value.trim();
+  const mode = panel.querySelector('#lm-interest-mode')?.value ?? 'none';
 
   if (!borrower) {
     reportFieldError(panel.querySelector('#lm-borrower'), t('budget.loanBorrowerRequired'));
-    return;
-  }
-  if (isNaN(total_amount) || total_amount <= 0) {
-    reportFieldError(panel.querySelector('#lm-amount'), t('budget.validAmountRequired'));
-    return;
-  }
-  if (!Number.isInteger(installment_count) || installment_count < 1) {
-    reportFieldError(panel.querySelector('#lm-installments'), t('budget.loanInstallmentsRequired'));
     return;
   }
   if (!/^\d{4}-\d{2}$/.test(start_month)) {
@@ -1886,10 +2011,55 @@ async function saveLoanFromPanel(panel, saveBtn, { loan = null, closeAfterSave =
     return;
   }
 
+  let body;
+  if (mode === 'none') {
+    const total_amount = parseFloat(panel.querySelector('#lm-amount').value);
+    const installment_count = parseInt(panel.querySelector('#lm-installments').value, 10);
+    if (isNaN(total_amount) || total_amount <= 0) {
+      reportFieldError(panel.querySelector('#lm-amount'), t('budget.validAmountRequired'));
+      return;
+    }
+    if (!Number.isInteger(installment_count) || installment_count < 1) {
+      reportFieldError(panel.querySelector('#lm-installments'), t('budget.loanInstallmentsRequired'));
+      return;
+    }
+    body = { borrower, title, start_month, notes, interest_mode: 'none', total_amount, installment_count };
+  } else {
+    const principal = parseFloat(panel.querySelector('#lm-principal').value);
+    const fixed_rate = parseFloat(panel.querySelector('#lm-fixed-rate').value);
+    const initial_repayment_rate = parseFloat(panel.querySelector('#lm-initial-repayment').value);
+    if (isNaN(principal) || principal <= 0) {
+      reportFieldError(panel.querySelector('#lm-principal'), t('budget.loanPrincipalRequired'));
+      return;
+    }
+    if (isNaN(fixed_rate) || fixed_rate < 0 || fixed_rate > 100) {
+      reportFieldError(panel.querySelector('#lm-fixed-rate'), t('budget.loanRateRequired'));
+      return;
+    }
+    if (isNaN(initial_repayment_rate) || initial_repayment_rate <= 0 || initial_repayment_rate > 100) {
+      reportFieldError(panel.querySelector('#lm-initial-repayment'), t('budget.loanRepaymentRequired'));
+      return;
+    }
+    body = { borrower, title, start_month, notes, interest_mode: mode, principal, fixed_rate, initial_repayment_rate };
+    if (mode === 'fixed_then_variable') {
+      const fixed_period_months = parseInt(panel.querySelector('#lm-fixed-period').value, 10);
+      const followup_rate = parseFloat(panel.querySelector('#lm-followup-rate').value);
+      if (!Number.isInteger(fixed_period_months) || fixed_period_months < 1 || fixed_period_months > 600) {
+        reportFieldError(panel.querySelector('#lm-fixed-period'), t('budget.loanFixedPeriodRequired'));
+        return;
+      }
+      if (isNaN(followup_rate) || followup_rate < 0 || followup_rate > 100) {
+        reportFieldError(panel.querySelector('#lm-followup-rate'), t('budget.loanRateRequired'));
+        return;
+      }
+      body.fixed_period_months = fixed_period_months;
+      body.followup_rate = followup_rate;
+    }
+  }
+
   saveBtn.disabled = true;
   saveBtn.textContent = '…';
   try {
-    const body = { borrower, title, total_amount, installment_count, start_month, notes };
     if (isEdit) {
       await api.put(`/budget/loans/${loan.id}`, body);
     } else {
@@ -1920,7 +2090,7 @@ function openLoanModal(loan = null) {
       <input type="text" class="form-input" id="lm-title"
              placeholder="${t('budget.loanTitlePlaceholder')}" value="${esc(loan?.title ?? '')}">
     </div>
-    <div class="form-grid-2">
+    <div class="form-grid-2" id="lm-manual-fields">
       <div class="form-group">
         <label class="form-label" for="lm-amount">${t('budget.loanAmountLabel')}</label>
         <input type="number" class="form-input" id="lm-amount" step="0.01" min="0.01"
@@ -1932,6 +2102,7 @@ function openLoanModal(loan = null) {
                inputmode="numeric" value="${loan?.installment_count ?? ''}">
       </div>
     </div>
+    ${loanInterestFieldsHtml(loan)}
     <div class="form-group">
       <label class="form-label" for="lm-start">${t('budget.loanStartMonthLabel')}</label>
       <input type="month" class="form-input" id="lm-start" value="${esc(loan?.start_month ?? todayMonth)}">
@@ -1953,6 +2124,7 @@ function openLoanModal(loan = null) {
     content,
     size: 'sm',
     onSave(panel) {
+      wireLoanInterestFields(panel);
       panel.querySelector('#lm-cancel').addEventListener('click', closeModal);
       panel.querySelector('#lm-save').addEventListener('click', async () => {
         const saveBtn = panel.querySelector('#lm-save');

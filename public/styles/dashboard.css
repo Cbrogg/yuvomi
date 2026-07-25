@@ -2059,7 +2059,12 @@ svg.weather-forecast__icon {
 }
 
 .widget-wrapper--editing {
-  padding-top: 42px;
+  /* Controls laufen im Fluss (nicht mehr absolut) oben in der Spalte; ein festes
+     padding-top reservierte genau 42px und wurde überlappt, sobald die Leiste auf
+     schmalen Kacheln in eine zweite Zeile umbrach (#569). Jetzt schiebt die Leiste
+     den Inhalt exakt um ihre echte Höhe nach unten. */
+  padding: 6px;
+  gap: var(--space-2);
   outline: 1px solid color-mix(in srgb, var(--module-accent) 36%, var(--color-border));
   outline-offset: -1px;
   border-radius: var(--radius-sm);
@@ -2074,11 +2079,10 @@ svg.weather-forecast__icon {
 }
 
 .widget-edit-controls {
-  position: absolute;
-  top: 6px;
-  left: 6px;
-  right: 6px;
-  z-index: 4;
+  /* Im Fluss (erstes Spalten-Kind des Wrappers) statt absolut überlagernd:
+     so kann die umbrechende Leiste den Widget-Inhalt nicht mehr verdecken (#569).
+     Der 6px-Einzug kommt jetzt aus dem padding des .widget-wrapper--editing. */
+  position: static;
   display: flex;
   align-items: center;
   /* Umbrechen statt Überlaufen: auf schmalen 1×1-Kacheln weichen die Segmente in

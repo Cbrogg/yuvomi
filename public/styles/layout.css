@@ -2078,11 +2078,16 @@ p.field-hint--warn[hidden] {
     width: 36px;
     height: 44px;
     background-color: transparent;
+    /* Nur die dünne Griff-Linie ist sichtbar; oben/unten transparent. Die
+       Linienfarbe läuft über --modal-handle-color, damit der Glass-Modus sie
+       (in glass.css) umfärben kann, OHNE das background-Shorthand zu benutzen —
+       das hatte das Gradient gelöscht und den Griff zum vollen 36×44-Block
+       gemacht (#569). */
     background-image: linear-gradient(
       to bottom,
       transparent calc(50% - 2px),
-      var(--color-border) calc(50% - 2px),
-      var(--color-border) calc(50% + 2px),
+      var(--modal-handle-color, var(--color-border)) calc(50% - 2px),
+      var(--modal-handle-color, var(--color-border)) calc(50% + 2px),
       transparent calc(50% + 2px)
     );
     border-radius: var(--radius-full);

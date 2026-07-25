@@ -60,7 +60,9 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  padding: var(--space-1) var(--space-3);
+  /* Mehr Seitenraum: der gefüllte Aktiv-Zustand (--c-accent) ließ kurze Labels
+     wie „Alle" bei space-3 fast kreisrund und randeng wirken (#569). */
+  padding: var(--space-1) var(--space-4);
   border-radius: var(--radius-full);
   font-size: var(--text-sm);
   font-weight: var(--font-weight-medium);

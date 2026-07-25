@@ -8,10 +8,90 @@ import { createLogger } from '../../logger.js';
 import * as db from '../../db.js';
 import { str, num, date as validateDate, month as validateMonth, collectErrors, MAX_TITLE, MAX_SHORT } from '../../middleware/validate.js';
 import { normalizeBudgetVisibility } from '../../services/budget-visibility.js';
+import { computeLoanSchedule, MAX_LOAN_MONTHS } from '../../services/loan-amortization.js';
 import { budgetFilter, mayEdit, getBudgetMode, loanSummaryRow, loadLoan, refreshLoanStatus, cents } from './helpers.js';
 
 const log = createLogger('Budget');
 const router = express.Router();
+
+const INTEREST_MODES = ['none', 'fixed', 'fixed_then_variable'];
+
+// Zins-Darlehen (#569): validiert die Zinseingaben und leitet daraus die vom
+// bestehenden Raten-/Status-System erwarteten Felder (total_amount = Gesamtaufwand,
+// installment_count = Laufzeit) ab. Gibt { fields } oder { error } zurück.
+function deriveInterestTerms(body, mode) {
+  const principal = Number(body.principal);
+  const fixedRate = Number(body.fixed_rate);
+  const initialRepaymentRate = Number(body.initial_repayment_rate);
+  const variable = mode === 'fixed_then_variable';
+  const fixedPeriodMonths = variable ? parseInt(body.fixed_period_months, 10) : null;
+  const followupRate = variable ? Number(body.followup_rate) : null;
+
+  if (!Number.isFinite(principal) || principal <= 0) return { error: 'Principal must be greater than zero.' };
+  if (!Number.isFinite(fixedRate) || fixedRate < 0 || fixedRate > 100) return { error: 'Fixed rate must be between 0 and 100.' };
+  if (!Number.isFinite(initialRepaymentRate) || initialRepaymentRate <= 0 || initialRepaymentRate > 100) {
+    return { error: 'Initial repayment rate must be greater than 0 and at most 100.' };
+  }
+  if (variable) {
+    if (!Number.isInteger(fixedPeriodMonths) || fixedPeriodMonths < 1 || fixedPeriodMonths > MAX_LOAN_MONTHS) {
+      return { error: 'Fixed-rate period is invalid.' };
+    }
+    if (!Number.isFinite(followupRate) || followupRate < 0 || followupRate > 100) {
+      return { error: 'Follow-up rate must be between 0 and 100.' };
+    }
+  }
+
+  const result = computeLoanSchedule({ principal, fixedRate, initialRepaymentRate, interestMode: mode, fixedPeriodMonths, followupRate });
+  if (!result.ok) {
+    return { error: result.reason === 'not_amortizing'
+      ? 'The monthly rate does not cover the interest; the loan never amortizes.'
+      : 'The resulting term exceeds the supported maximum.' };
+  }
+  return {
+    calc: result,
+    fields: {
+      interest_mode: mode,
+      principal: cents(principal),
+      fixed_rate: fixedRate,
+      initial_repayment_rate: initialRepaymentRate,
+      fixed_period_months: fixedPeriodMonths,
+      followup_rate: followupRate,
+      total_amount: result.totalRepayment,
+      installment_count: result.totalMonths,
+    },
+  };
+}
+
+// Live-Vorschau für den Darlehens-Dialog: berechnet Monatsrate, Laufzeit,
+// Gesamtzins und Restschuld ohne zu speichern. Server bleibt einzige Quelle der
+// Zins-Mathematik (keine Formel-Dopplung im Client).
+router.post('/loans/preview', (req, res) => {
+  try {
+    const mode = req.body.interest_mode;
+    if (mode !== 'fixed' && mode !== 'fixed_then_variable') {
+      return res.json({ data: { ok: false } });
+    }
+    const derived = deriveInterestTerms(req.body, mode);
+    if (derived.error) return res.json({ data: { ok: false } });
+    const c = derived.calc;
+    const bindingEnd = mode === 'fixed_then_variable' && req.body.fixed_period_months
+      ? c.remainingAfterBinding
+      : null;
+    res.json({
+      data: {
+        ok: true,
+        monthly_payment: c.monthlyPayment,
+        total_months: c.totalMonths,
+        total_interest: c.totalInterest,
+        total_repayment: c.totalRepayment,
+        remaining_after_binding: bindingEnd,
+      },
+    });
+  } catch (err) {
+    log.error('POST /loans/preview error:', err);
+    res.status(500).json({ error: 'Internal error', code: 500 });
+  }
+});
 
 router.get('/loans', (req, res) => {
   try {
@@ -58,16 +138,32 @@ router.post('/loans', (req, res) => {
   try {
     const vTitle = str(req.body.title || req.body.borrower, 'Title', { max: MAX_TITLE });
     const vBorrower = str(req.body.borrower, 'Borrower', { max: MAX_SHORT });
-    const vAmount = num(req.body.total_amount, 'Amount', { required: true });
     const vStartMonth = validateMonth(req.body.start_month, 'Start month');
     const vNotes = str(req.body.notes, 'Notes', { max: 1000, required: false });
-    const installmentCount = parseInt(req.body.installment_count, 10);
-    const errors = collectErrors([vTitle, vBorrower, vAmount, vStartMonth, vNotes]);
-    if (!Number.isInteger(installmentCount) || installmentCount < 1 || installmentCount > 360) {
-      errors.push('Installment count must be between 1 and 360.');
-    }
-    if (vAmount.value !== null && vAmount.value <= 0) errors.push('Amount must be greater than zero.');
+    const errors = collectErrors([vTitle, vBorrower, vStartMonth, vNotes]);
     if (!vStartMonth.value) errors.push('Start month is required.');
+
+    const mode = INTEREST_MODES.includes(req.body.interest_mode) ? req.body.interest_mode : 'none';
+    let terms = null;
+    if (mode === 'none') {
+      // Zinsfreier Pfad (unverändert): Gesamtbetrag + Ratenanzahl manuell.
+      const vAmount = num(req.body.total_amount, 'Amount', { required: true });
+      const installmentCount = parseInt(req.body.installment_count, 10);
+      errors.push(...collectErrors([vAmount]));
+      if (!Number.isInteger(installmentCount) || installmentCount < 1 || installmentCount > 360) {
+        errors.push('Installment count must be between 1 and 360.');
+      }
+      if (vAmount.value !== null && vAmount.value <= 0) errors.push('Amount must be greater than zero.');
+      terms = {
+        interest_mode: 'none', principal: null, fixed_rate: null, initial_repayment_rate: null,
+        fixed_period_months: null, followup_rate: null,
+        total_amount: vAmount.value !== null ? cents(vAmount.value) : null, installment_count: installmentCount,
+      };
+    } else {
+      const derived = deriveInterestTerms(req.body, mode);
+      if (derived.error) errors.push(derived.error);
+      else terms = derived.fields;
+    }
     if (errors.length) return res.status(400).json({ error: errors.join(' '), code: 400 });
 
     const me = req.authUserId || req.session.userId;
@@ -76,16 +172,20 @@ router.post('/loans', (req, res) => {
       getBudgetMode() === 'personal' ? 'private' : 'shared'
     );
     const result = db.get().prepare(`
-      INSERT INTO budget_loans (title, borrower, total_amount, installment_count, start_month, notes, created_by, owner_id, visibility)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO budget_loans
+        (title, borrower, total_amount, installment_count, start_month, notes, created_by, owner_id, visibility,
+         interest_mode, principal, fixed_rate, initial_repayment_rate, fixed_period_months, followup_rate)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       vTitle.value,
       vBorrower.value,
-      cents(vAmount.value),
-      installmentCount,
+      terms.total_amount,
+      terms.installment_count,
       vStartMonth.value,
       vNotes.value,
-      me, me, visibility
+      me, me, visibility,
+      terms.interest_mode, terms.principal, terms.fixed_rate, terms.initial_repayment_rate,
+      terms.fixed_period_months, terms.followup_rate
     );
 
     res.status(201).json({ data: loadLoan(result.lastInsertRowid) });
@@ -101,6 +201,75 @@ router.put('/loans/:id', (req, res) => {
     const loan = db.get().prepare('SELECT * FROM budget_loans WHERE id = ?').get(id);
     if (!loan) return res.status(404).json({ error: 'Loan not found.', code: 404 });
     if (!mayEdit(req, loan)) return res.status(403).json({ error: 'You cannot modify this loan.', code: 403 });
+
+    // Zins-Darlehen (#569): Wird interest_mode mitgeschickt, werden Terms komplett
+    // neu abgeleitet (der Edit-Dialog sendet dann den vollen Feldsatz). Der
+    // zinsfreie Legacy-Pfad darunter bleibt für Teil-Updates ohne interest_mode.
+    if (req.body.interest_mode !== undefined) {
+      const mode = INTEREST_MODES.includes(req.body.interest_mode) ? req.body.interest_mode : null;
+      const iChecks = [];
+      if (req.body.title !== undefined) iChecks.push(str(req.body.title, 'Title', { max: MAX_TITLE }));
+      if (req.body.borrower !== undefined) iChecks.push(str(req.body.borrower, 'Borrower', { max: MAX_SHORT }));
+      if (req.body.start_month !== undefined) iChecks.push(validateMonth(req.body.start_month, 'Start month'));
+      if (req.body.notes !== undefined) iChecks.push(str(req.body.notes, 'Notes', { max: 1000, required: false }));
+      const iErrors = collectErrors(iChecks);
+      const paidCount = db.get().prepare('SELECT COUNT(*) AS c FROM budget_loan_payments WHERE loan_id = ?').get(id).c;
+
+      let terms = null;
+      if (!mode) {
+        iErrors.push('Interest mode is invalid.');
+      } else if (mode === 'none') {
+        const vAmount = num(req.body.total_amount, 'Amount', { required: true });
+        const installmentCount = parseInt(req.body.installment_count, 10);
+        iErrors.push(...collectErrors([vAmount]));
+        if (!Number.isInteger(installmentCount) || installmentCount < 1 || installmentCount > 360) {
+          iErrors.push('Installment count must be between 1 and 360.');
+        }
+        if (vAmount.value !== null && vAmount.value <= 0) iErrors.push('Amount must be greater than zero.');
+        terms = {
+          interest_mode: 'none', principal: null, fixed_rate: null, initial_repayment_rate: null,
+          fixed_period_months: null, followup_rate: null,
+          total_amount: vAmount.value !== null ? cents(vAmount.value) : null, installment_count: installmentCount,
+        };
+      } else {
+        const derived = deriveInterestTerms(req.body, mode);
+        if (derived.error) iErrors.push(derived.error);
+        else terms = derived.fields;
+      }
+      if (terms && terms.installment_count !== null && terms.installment_count < paidCount) {
+        iErrors.push('The resulting term is shorter than the already paid installments.');
+      }
+      if (iErrors.length) return res.status(400).json({ error: iErrors.join(' '), code: 400 });
+
+      db.get().prepare(`
+        UPDATE budget_loans SET
+          title = COALESCE(?, title),
+          borrower = COALESCE(?, borrower),
+          start_month = COALESCE(?, start_month),
+          notes = ?,
+          total_amount = ?, installment_count = ?, interest_mode = ?, principal = ?,
+          fixed_rate = ?, initial_repayment_rate = ?, fixed_period_months = ?, followup_rate = ?
+        WHERE id = ?
+      `).run(
+        req.body.title?.trim() ?? null,
+        req.body.borrower?.trim() ?? null,
+        req.body.start_month ?? null,
+        req.body.notes !== undefined ? (req.body.notes?.trim() || null) : loan.notes,
+        terms.total_amount, terms.installment_count, terms.interest_mode, terms.principal,
+        terms.fixed_rate, terms.initial_repayment_rate, terms.fixed_period_months, terms.followup_rate,
+        id
+      );
+      return res.json({ data: refreshLoanStatus(id) });
+    }
+
+    // Zins-Darlehen (#569): Der zinsfreie Legacy-Pfad (kein interest_mode im Body)
+    // darf die aus principal/Zins abgeleiteten Felder nicht direkt verstellen,
+    // sonst desynchronisiert total_amount/installment_count von der Zins-Mathematik.
+    // Neutrale Partial-Updates (Titel, Notes, Startmonat) bleiben erlaubt.
+    if (loan.interest_mode && loan.interest_mode !== 'none'
+        && (req.body.total_amount !== undefined || req.body.installment_count !== undefined)) {
+      return res.status(400).json({ error: 'Interest loans must be edited via the interest fields.', code: 400 });
+    }
 
     const checks = [];
     if (req.body.title !== undefined) checks.push(str(req.body.title, 'Title', { max: MAX_TITLE }));

@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.45.10] - 2026-07-25
+
+### Added
+- Budget loans can optionally be modelled as a German-style annuity: enter the principal, nominal interest rate and initial repayment rate instead of a fixed total, and the constant monthly payment, term and total interest are derived and previewed live while typing. A "fixed then variable" mode continues after the fixed-interest period with a forecast follow-up rate, and the loan card shows the annuity rate and interest phase (#569).
+
+### Fixed
+- Calendar: the current-day badge number is now vertically centred instead of sitting too low (#569).
+- Contacts: filter chips have more horizontal padding so short active labels no longer look cramped (#569).
+- Category manager: nested sub-category lists (budget expenses) no longer squash the category name to zero width; they wrap onto their own indented line (#569).
+- Dashboard: widget edit controls no longer overlap the widget content when they wrap onto a second row on narrow tiles in edit mode (#569).
+- Mobile: the modal drag handle renders as a thin line again in glass mode instead of a full block (#569).
+
 ## [1.45.9] - 2026-07-25
 
 ### Added

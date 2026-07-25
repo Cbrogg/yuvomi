@@ -9,6 +9,7 @@ import { readFileSync } from 'node:fs';
 import path from 'path';
 import * as db from '../../db.js';
 import { budgetVisibilityWhere, budgetScopeWhere, canEditEntry, resolveBudgetMode } from '../../services/budget-visibility.js';
+import { computeLoanSchedule } from '../../services/loan-amortization.js';
 
 // --------------------------------------------------------
 // Persönlich/geteilt (#476/#505): Haushalts-Modus + Sichtbarkeits-Enforcement.
@@ -414,7 +415,12 @@ export function loanSummaryRow(loan) {
   const paidInstallments = payments.length;
   const remainingAmount = Math.max(0, cents(loan.total_amount - paidAmount));
   const remainingInstallments = Math.max(0, loan.installment_count - paidInstallments);
-  const installmentAmount = cents(loan.total_amount / loan.installment_count);
+  // Zins-Darlehen (#569): reale monatliche Belastung ist die konstante Annuität,
+  // nicht der Durchschnitt total_amount/installment_count (die letzte Rate ist
+  // kleiner). Sonst weicht der gebuchte Ratenbetrag von der angezeigten Monatsrate
+  // ab. Die letzte Rate wird im Zahlungs-Default ohnehin über remaining_amount getrued.
+  const interest = loanInterestSummary(loan);
+  const installmentAmount = interest ? interest.monthly_payment : cents(loan.total_amount / loan.installment_count);
 
   return {
     ...loan,
@@ -426,7 +432,36 @@ export function loanSummaryRow(loan) {
     remaining_installments: remainingInstallments,
     next_installment_number: remainingInstallments > 0 ? paidInstallments + 1 : null,
     next_due_month: remainingInstallments > 0 ? addMonths(loan.start_month, paidInstallments) : null,
+    interest,
     payments,
+  };
+}
+
+// Zins-Darlehen (#569): Kennzahlen für die Anzeige aus dem Amortisationsplan
+// (exakte Monatsrate, Gesamtzins, Restschuld nach Zinsbindung). Zinsfreie
+// Darlehen liefern null, sodass die Anzeige unverändert bleibt.
+export function loanInterestSummary(loan) {
+  if (!loan.interest_mode || loan.interest_mode === 'none' || loan.principal == null) return null;
+  const calc = computeLoanSchedule({
+    principal: loan.principal,
+    fixedRate: loan.fixed_rate,
+    initialRepaymentRate: loan.initial_repayment_rate,
+    interestMode: loan.interest_mode,
+    fixedPeriodMonths: loan.fixed_period_months,
+    followupRate: loan.followup_rate,
+  });
+  if (!calc.ok) return null;
+  return {
+    mode: loan.interest_mode,
+    principal: cents(loan.principal),
+    fixed_rate: loan.fixed_rate,
+    initial_repayment_rate: loan.initial_repayment_rate,
+    fixed_period_months: loan.fixed_period_months,
+    followup_rate: loan.followup_rate,
+    monthly_payment: calc.monthlyPayment,
+    total_interest: calc.totalInterest,
+    remaining_after_binding: calc.remainingAfterBinding,
+    binding_end_month: loan.fixed_period_months ? addMonths(loan.start_month, loan.fixed_period_months) : null,
   };
 }
 

@@ -166,6 +166,95 @@ test('nicht existierender Loan -> 404', async () => {
   assert.equal(r.status, 404);
 });
 
+// --------------------------------------------------------------------------
+// Zins-Darlehen (#569): Ableitung total_amount/installment_count + Prognose-Phase
+// --------------------------------------------------------------------------
+let INTEREST_LOAN;
+test('POST interest fixed_then_variable: leitet Laufzeit + Gesamtbetrag ab, liefert Zins-Summary', async () => {
+  setMode('shared');
+  const r = await call('POST', '/loans', {
+    as: AA,
+    body: {
+      borrower: 'Hyp', title: 'Hypothek', start_month: '2026-01',
+      interest_mode: 'fixed_then_variable', principal: 200000,
+      fixed_rate: 2.5, initial_repayment_rate: 2, fixed_period_months: 180, followup_rate: 4,
+    },
+  });
+  assert.equal(r.status, 201);
+  INTEREST_LOAN = r.body.data.id;
+  const row = db.prepare('SELECT interest_mode, principal, fixed_rate, initial_repayment_rate, fixed_period_months, followup_rate, total_amount, installment_count FROM budget_loans WHERE id = ?').get(INTEREST_LOAN);
+  assert.equal(row.interest_mode, 'fixed_then_variable');
+  assert.equal(row.principal, 200000);
+  assert.equal(row.fixed_period_months, 180);
+  assert.ok(row.installment_count > 180, 'Laufzeit über die Zinsbindung hinaus abgeleitet');
+  assert.ok(row.total_amount > 200000, 'Gesamtbetrag enthält Zinsen');
+
+  const s = r.body.data.interest;
+  assert.ok(s, 'interest-Summary vorhanden');
+  assert.ok(Math.abs(s.monthly_payment - 750) <= 0.02, `monthly_payment ${s.monthly_payment}`);
+  assert.equal(s.binding_end_month, '2041-01');
+  assert.ok(s.remaining_after_binding > 0);
+  assert.ok(s.total_interest > 0);
+});
+
+test('POST interest: Rate deckt Zins nicht -> 400', async () => {
+  const r = await call('POST', '/loans', {
+    as: AA,
+    body: {
+      borrower: 'Bad', start_month: '2026-01',
+      interest_mode: 'fixed_then_variable', principal: 100000,
+      fixed_rate: 1, initial_repayment_rate: 1, fixed_period_months: 12, followup_rate: 20,
+    },
+  });
+  assert.equal(r.status, 400);
+});
+
+test('POST interest: fehlende Kreditsumme -> 400', async () => {
+  const r = await call('POST', '/loans', {
+    as: AA,
+    body: { borrower: 'NoPrincipal', start_month: '2026-01', interest_mode: 'fixed', fixed_rate: 2.5, initial_repayment_rate: 2 },
+  });
+  assert.equal(r.status, 400);
+});
+
+test('PUT interest: geänderter Anschlusszins rechnet Laufzeit/Betrag neu', async () => {
+  const before = db.prepare('SELECT total_amount, installment_count FROM budget_loans WHERE id = ?').get(INTEREST_LOAN);
+  const r = await call('PUT', `/loans/${INTEREST_LOAN}`, {
+    as: AA,
+    body: {
+      interest_mode: 'fixed_then_variable', principal: 200000,
+      fixed_rate: 2.5, initial_repayment_rate: 2, fixed_period_months: 180, followup_rate: 6,
+    },
+  });
+  assert.equal(r.status, 200);
+  const after = db.prepare('SELECT total_amount, installment_count FROM budget_loans WHERE id = ?').get(INTEREST_LOAN);
+  assert.ok(after.installment_count > before.installment_count, 'höherer Anschlusszins -> längere Laufzeit');
+  assert.ok(after.total_amount > before.total_amount, 'höherer Anschlusszins -> mehr Gesamtzins');
+});
+
+test('GET interest-Loan: installment_amount = konstante Annuität, nicht total/count', async () => {
+  const r = await call('GET', '/loans', { as: AA });
+  const loan = r.body.data.loans.find((l) => l.id === INTEREST_LOAN);
+  assert.ok(loan.interest, 'interest-Summary vorhanden');
+  // Der gebuchte Ratenbetrag folgt der Annuität (monthly_payment), nicht dem
+  // Laufzeit-Durchschnitt total_amount/installment_count (letzte Rate kleiner).
+  assert.ok(Math.abs(loan.installment_amount - loan.interest.monthly_payment) <= 0.001,
+    `installment_amount ${loan.installment_amount} == monthly ${loan.interest.monthly_payment}`);
+  assert.ok(loan.installment_amount > loan.total_amount / loan.installment_count,
+    'Annuität liegt über dem Laufzeit-Durchschnitt');
+});
+
+test('PUT ohne interest_mode: direkter total_amount-Edit auf Zinsdarlehen -> 400', async () => {
+  const r = await call('PUT', `/loans/${INTEREST_LOAN}`, { as: AA, body: { total_amount: 123456 } });
+  assert.equal(r.status, 400);
+});
+
+test('PUT ohne interest_mode: neutrales Feld (notes) auf Zinsdarlehen bleibt erlaubt', async () => {
+  const r = await call('PUT', `/loans/${INTEREST_LOAN}`, { as: AA, body: { notes: 'Hinweis' } });
+  assert.equal(r.status, 200);
+  assert.equal(r.body.data.interest_mode, 'fixed_then_variable', 'Zins-Terms unangetastet');
+});
+
 test('teardown: Server schließen', async () => {
   await new Promise((r) => server.close(r));
 });

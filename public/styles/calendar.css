@@ -254,6 +254,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  /* line-height:1 kappt die Zeilenbox auf die Glyphenhöhe, sonst zentriert
+     align-items:center die größere Default-Zeilenbox und die Ziffer sitzt im
+     runden „heute"-Badge sichtbar zu tief (#569). */
+  line-height: 1;
   border-radius: var(--radius-full);
   margin-bottom: var(--space-1);
 }
