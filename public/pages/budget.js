@@ -1520,7 +1520,7 @@ function openBudgetModal({ mode, entry = null, initialType = '' }) {
         </div>
         <div class="form-group">
           <label class="form-label" for="lm-installments">${t('budget.loanInstallmentsLabel')}</label>
-          <input type="number" class="form-input" id="lm-installments" step="1" min="1" max="240" inputmode="numeric">
+          <input type="number" class="form-input" id="lm-installments" step="1" min="1" max="360" inputmode="numeric">
         </div>
       </div>
       <div class="form-group">
@@ -1885,7 +1885,7 @@ function openLoanModal(loan = null) {
       </div>
       <div class="form-group">
         <label class="form-label" for="lm-installments">${t('budget.loanInstallmentsLabel')}</label>
-        <input type="number" class="form-input" id="lm-installments" step="1" min="1" max="240"
+        <input type="number" class="form-input" id="lm-installments" step="1" min="1" max="360"
                inputmode="numeric" value="${loan?.installment_count ?? ''}">
       </div>
     </div>

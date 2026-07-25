@@ -7,8 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.45.6] - 2026-07-25
+
 ### Added
 - Subtask visualization on the tasks page: related subtasks are loaded with the task list and can be expanded directly inside the main task cards via the progress toggle, so task relationships are visible without opening the task detail.
+
+### Changed
+- Budget loans now accept a repayment term of up to 360 installments (30 years) instead of the previous limit of 240 (20 years), making it possible to track long-term home loans and mortgages (#545).
 
 ## [1.45.5] - 2026-07-24
 
