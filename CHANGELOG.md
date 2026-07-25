@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.45.8] - 2026-07-25
+
+### Changed
+- Budget: in a month with no income recorded, the monthly balance card is now shown in a neutral colour instead of red. Without income, the balance always equals the negated expense total, so tracking expenses only no longer looks like being in the red. The card returns to its green/red semantics as soon as any income exists (#504).
+
 ## [1.45.7] - 2026-07-25
 
 ### Added

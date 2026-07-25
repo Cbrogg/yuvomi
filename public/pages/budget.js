@@ -520,7 +520,17 @@ function renderBody() {
     return;
   }
 
-  const balanceClass = s.balance >= 0 ? 'budget-summary-card--balance-positive' : 'budget-summary-card--balance-negative';
+  // Reines Ausgaben-Tracking (keine Einnahmen im Monat): balance = -Ausgaben ist eine
+  // Tautologie, die prominente rote Zahl liest sich als „ich bin im Minus" (#504).
+  // Dann neutral färben; der Saldo-Trend ist ohne echten Saldo ebenfalls ohne Aussage
+  // und entfällt. Sobald Einnahmen existieren, bleibt alles beim Alten (rot = echte
+  // Mehrausgabe, grün = Überschuss).
+  const balanceNeutral = s.income === 0 && s.balance < 0;
+  const balanceClass = balanceNeutral
+    ? 'budget-summary-card--balance-neutral'
+    : s.balance >= 0
+      ? 'budget-summary-card--balance-positive'
+      : 'budget-summary-card--balance-negative';
   const prevLabel = p ? formatMonthLabel(p.month).split(' ')[0].slice(0, 3) : '';
 
   setHtml(body, `
@@ -540,7 +550,7 @@ function renderBody() {
       <div class="budget-summary-card ${balanceClass}">
         <div class="budget-summary-card__label">${t('budget.balance')}</div>
         <div class="budget-summary-card__amount">${formatAmount(s.balance)}</div>
-        ${p ? renderTrend(s.balance, p.balance, prevLabel) : ''}
+        ${p && !balanceNeutral ? renderTrend(s.balance, p.balance, prevLabel) : ''}
       </div>
     </div>
 

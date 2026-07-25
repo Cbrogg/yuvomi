@@ -518,6 +518,9 @@
 .budget-summary-card--balance  .budget-summary-card__amount { color: var(--color-text-primary); }
 .budget-summary-card--balance-positive .budget-summary-card__amount { color: var(--color-success); }
 .budget-summary-card--balance-negative .budget-summary-card__amount { color: var(--color-danger);  }
+/* Reines Ausgaben-Tracking (keine Einnahmen im Monat): Saldo = -Ausgaben ist eine
+   Tautologie, die rote Zahl wird als „im Minus" fehlgelesen (#504). Neutral statt rot. */
+.budget-summary-card--balance-neutral  .budget-summary-card__amount { color: var(--color-text-primary); }
 
 .budget-summary-card__trend {
   font-size: var(--text-xs);

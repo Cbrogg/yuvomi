@@ -18,6 +18,7 @@ const plans = read('../public/pages/budget-plans.js');
 const subscriptions = read('../public/pages/subscriptions.js');
 const layoutCss = read('../public/styles/layout.css');
 const tokensCss = read('../public/styles/tokens.css');
+const budgetCss = read('../public/styles/budget.css');
 
 // --------------------------------------------------------
 // Monatsnavigation und Neu-Aktion je Untertab
@@ -238,6 +239,33 @@ test('kein toter Toast-Typ: nur gestylte Varianten werden verwendet', () => {
       assert.ok(styled.has(match[1]), `${file}: showToast-Typ '${match[1]}' hat keine Styles`);
     }
   }
+});
+
+// --------------------------------------------------------
+// Saldo entdramatisieren bei reinem Ausgaben-Tracking (#504)
+// --------------------------------------------------------
+
+test('Saldo wird neutral, wenn keine Einnahmen erfasst sind', () => {
+  // Ohne Einnahmen ist balance = -Ausgaben eine Tautologie; die rote Zahl liest
+  // sich fälschlich als „im Minus". Bedingung: income === 0 && balance < 0.
+  assert.match(budget, /const balanceNeutral = s\.income === 0 && s\.balance < 0;/);
+  assert.match(budget, /balanceNeutral[\s\S]{0,80}budget-summary-card--balance-neutral/);
+  // Echte Einnahmen behalten die Farbsemantik (grün Überschuss / rot Mehrausgabe).
+  assert.match(budget, /budget-summary-card--balance-positive/);
+  assert.match(budget, /budget-summary-card--balance-negative/);
+});
+
+test('der Saldo-Trend entfällt im neutralen Ausgaben-Fall', () => {
+  // Ein farbiger Trendpfeil unter der bewusst neutralisierten Zahl wäre widersprüchlich
+  // und ohne echten Saldo ohne Aussage.
+  assert.match(budget, /p && !balanceNeutral \? renderTrend\(s\.balance/);
+});
+
+test('die neutrale Saldo-Farbe kommt aus einem Token, nicht als Literal', () => {
+  const rule = budgetCss.match(/\.budget-summary-card--balance-neutral[^\n]*\{[^}]*\}/);
+  assert.ok(rule, '.budget-summary-card--balance-neutral fehlt in budget.css');
+  assert.match(rule[0], /var\(--color-text-primary\)/);
+  assert.doesNotMatch(rule[0], /var\(--color-danger\)|var\(--color-success\)/);
 });
 
 // --------------------------------------------------------
