@@ -383,7 +383,7 @@ All configuration happens in the `.env` file. The container reads these values o
 | `PORT` | Port the Express server listens on **inside the container** (rarely changed) | `3000` | No |
 | `OIKOS_HTTP_PORT` | Host port that the compose file maps to the container's port 3000. Change this to expose Yuvomi on a different host port; the app inside the container always listens on 3000. | `3000` | No |
 | `OIKOS_HTTP_BIND` | Host bind address for the published port (`podman-compose.yml` only). Set to `127.0.0.1` for rootless Podman behind a reverse proxy on the same host. | `0.0.0.0` | No |
-| `TZ` | Container timezone (e.g. `Europe/Berlin`). Affects timestamps and the automated-backup schedule. | `UTC` | No |
+| `TZ` | Container timezone (e.g. `Europe/Berlin`). Affects timestamps, the automated-backup schedule, and serves as the fallback zone for events pushed to Google Calendar when the target calendar reports none. | `UTC` | No |
 | `NODE_ENV` | Runtime environment | `production` | No |
 | `TRUST_PROXY` | Number of reverse-proxy hops to trust, or a subnet string (e.g. `1`, `172.16.0.0/12`, `loopback`). Set to `1` when running behind a single Traefik/Nginx hop so `req.ip` returns the real client IP. Numeric values are treated as a hop count; subnet strings and named values (`loopback`, `linklocal`, `uniquelocal`) work as expected. | `false` | No |
 
