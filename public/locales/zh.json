@@ -2561,6 +2561,7 @@
             "group_updated": "群组已更新",
             "group_archived": "群组已归档",
             "member_added": "成员已添加",
+            "member_removed": "成员已移除",
             "guest_created": "访客已创建",
             "expense_created": "支出已创建",
             "expense_edited": "支出已编辑",

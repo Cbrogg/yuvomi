@@ -2561,6 +2561,7 @@
             "group_updated": "Grupa zaktualizowana",
             "group_archived": "Grupa zarchiwizowana",
             "member_added": "Członek dodany",
+            "member_removed": "Członek usunięty",
             "guest_created": "Gość utworzony",
             "expense_created": "Wydatek utworzony",
             "expense_edited": "Wydatek edytowany",

@@ -2561,6 +2561,7 @@
             "group_updated": "Group updated",
             "group_archived": "Group archived",
             "member_added": "Member added",
+            "member_removed": "Member removed",
             "guest_created": "Guest created",
             "expense_created": "Expense created",
             "expense_edited": "Expense edited",

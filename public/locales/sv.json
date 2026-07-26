@@ -2561,6 +2561,7 @@
             "group_updated": "Grupp uppdaterad",
             "group_archived": "Grupp arkiverad",
             "member_added": "Medlem tillagd",
+            "member_removed": "Medlem borttagen",
             "guest_created": "Gäst skapad",
             "expense_created": "Utgift skapad",
             "expense_edited": "Utgift ändrad",

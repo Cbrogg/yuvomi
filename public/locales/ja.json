@@ -2561,6 +2561,7 @@
             "group_updated": "グループを更新",
             "group_archived": "グループをアーカイブ",
             "member_added": "メンバーを追加",
+            "member_removed": "メンバーを削除",
             "guest_created": "ゲストを作成",
             "expense_created": "費用を作成",
             "expense_edited": "費用を編集",

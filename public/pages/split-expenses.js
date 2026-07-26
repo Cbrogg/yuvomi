@@ -339,7 +339,7 @@ function renderActivity() {
     <div class="split-activity-item">
       <span class="split-activity-dot"></span>
       <div>
-        <strong>${t(`splitExpenses.activityType.${item.type}`) || item.type}</strong>
+        <strong>${esc(t(`splitExpenses.activityType.${item.type}`))}</strong>
         <span>${esc(item.actor_name || t('splitExpenses.system'))} · ${formatDate(item.created_at.slice(0, 10))}</span>
       </div>
     </div>

@@ -2561,6 +2561,7 @@
             "group_updated": "Группа обновлена",
             "group_archived": "Группа архивирована",
             "member_added": "Участник добавлен",
+            "member_removed": "Участник удалён",
             "guest_created": "Гость создан",
             "expense_created": "Расход создан",
             "expense_edited": "Расход изменен",

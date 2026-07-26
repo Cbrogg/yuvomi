@@ -2283,6 +2283,7 @@
             "group_updated": "Skupina aktualizována",
             "group_archived": "Skupina archivována",
             "member_added": "Člen přidán",
+            "member_removed": "Člen odebrán",
             "guest_created": "Host vytvořen",
             "expense_created": "Výdaj vytvořen",
             "expense_edited": "Výdaj upraven",

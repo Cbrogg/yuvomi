@@ -7,6 +7,10 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+  /* Die Raster reflowen nach EIGENEM Platz, nicht nach Viewport-Breite: als
+   * Budget-Tab zieht die ausgeklappte Sidebar rund 345px ab, eine Query bei
+   * 1023px hielte .split-layout dort fälschlich zweispaltig. */
+  container: split-page / inline-size;
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--module-accent) 9%, transparent), transparent 280px),
     var(--color-bg);
@@ -116,6 +120,10 @@
 .split-groups-panel {
   padding: var(--space-3);
   min-height: 0;
+  /* Grid-Items haben min-width: auto: ohne diese Zeile setzt die 240px breite
+   * Gruppen-Kachel die Mindestbreite der Spalte und schiebt die Seite über
+   * ihren Rand, statt dass .split-groups horizontal scrollt. */
+  min-width: 0;
 }
 
 .split-panel-head {
@@ -219,6 +227,13 @@
   gap: var(--space-0h);
 }
 
+/* Aktivitätstexte kommen aus den Locales und werden nicht per Ellipsis gekürzt
+ * (anders als Gruppen- und Ausgabentitel). Ein einzelnes langes Wort - etwa ein
+ * roher Key, wenn eine Übersetzung fehlt - würde die Karte sonst aufspreizen. */
+.split-activity-item div {
+  overflow-wrap: anywhere;
+}
+
 .split-group__name,
 .split-expense__body strong {
   overflow: hidden;
@@ -240,6 +255,10 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+  /* Eigener Container: .split-content-grid steht hinter dem Gruppen-Panel und
+   * hat dadurch deutlich weniger Platz als .split-page. Ohne diese Ebene
+   * bliebe das Kartenraster zweispaltig, bis die ganze Seite schmal wird. */
+  container: split-main / inline-size;
 }
 
 .split-group-header {
@@ -281,6 +300,15 @@
 .split-card-head {
   justify-content: space-between;
   margin-bottom: var(--space-3);
+  /* Titel und Zusatz („vereinfachte Schulden") sind zwei eigenständige Zeilen,
+   * sobald sie nebeneinander nicht mehr passen - ohne Umbruch schiebt der
+   * Zusatz über den Kartenrand in die Nachbarkarte. */
+  flex-wrap: wrap;
+}
+
+.split-card-head > * {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .split-debt,
@@ -393,12 +421,25 @@ button.split-expense:hover {
   min-height: 360px;
 }
 
-@media (max-width: 1023px) {
-  .split-layout,
-  .split-content-grid {
-    grid-template-columns: 1fr;
+/* --------------------------------------------------------
+ * Reflow — Container-Queries statt Viewport-Breakpoints
+ *
+ * Container-Queries erhöhen die Spezifität nicht: diese Blöcke MÜSSEN nach
+ * den Basisregeln stehen, sonst gewinnt bei Gleichstand die spätere
+ * Basisdeklaration und die Kompaktstufe bleibt wirkungslos.
+ *
+ * Zwei Ebenen, weil die beiden Raster verschieden viel Platz haben:
+ *   split-page  → .split-layout (Gruppen-Panel neben dem Hauptbereich)
+ *   split-main  → .split-content-grid (Karten hinter dem Gruppen-Panel)
+ * -------------------------------------------------------- */
+
+/* Zweispaltig braucht das Panel (max. 320px) + Gap + rund 380px Rest. */
+@container split-page (max-width: 719px) {
+  .split-layout {
+    grid-template-columns: minmax(0, 1fr);
   }
 
+  /* Einspaltig wird aus der Panel-Spalte eine horizontale Gruppen-Leiste. */
   .split-groups {
     flex-direction: row;
     overflow-x: auto;
@@ -408,29 +449,15 @@ button.split-expense:hover {
   .split-group {
     min-width: 240px;
   }
-
-  .split-card:nth-child(2) {
-    grid-row: auto;
-  }
 }
 
-@media (max-width: 767px) {
-  .split-page {
-    padding: var(--space-3);
-    padding-bottom: calc(var(--space-8) + 72px);
-  }
-
-  .split-topbar > .btn {
-    display: none;
-  }
-
+@container split-page (max-width: 639px) {
   .split-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .split-group-header,
-  .split-topbar,
-  .split-form-row {
+  .split-topbar {
     align-items: stretch;
     flex-direction: column;
   }
@@ -442,8 +469,41 @@ button.split-expense:hover {
   .split-header-actions .btn {
     flex: 1;
   }
+}
+
+/* Die zweite Spalte hat min-width 300px; darunter plus Gap plus einer
+ * lesbaren ersten Spalte bleibt nur noch Stapeln. */
+@container split-main (max-width: 639px) {
+  .split-content-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .split-card:nth-child(2) {
+    grid-row: auto;
+  }
+}
+
+/* Formularzeilen leben im Modal und richten sich nach dessen Container. */
+@container modal-body (max-width: 480px) {
+  .split-form-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
 
   .split-participant-row {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Echte Geräte-Entscheidungen: Seitengutter und die Freihaltung für die
+ * Bottom-Nav samt FAB hängen am Viewport, nicht an der Spaltenbreite. */
+@media (max-width: 767px) {
+  .split-page {
+    padding: var(--space-3);
+    padding-bottom: calc(var(--space-8) + 72px);
+  }
+
+  .split-topbar > .btn {
+    display: none;
   }
 }

@@ -2561,6 +2561,7 @@
             "group_updated": "Csoport frissítve",
             "group_archived": "Csoport archiválva",
             "member_added": "Tag hozzáadva",
+            "member_removed": "Tag eltávolítva",
             "guest_created": "Vendég létrehozva",
             "expense_created": "Költség létrehozva",
             "expense_edited": "Költség szerkesztve",

@@ -2561,6 +2561,7 @@
             "group_updated": "Nhóm đã cập nhật",
             "group_archived": "Nhóm đã lưu trữ",
             "member_added": "Thành viên được thêm",
+            "member_removed": "Thành viên được xóa",
             "guest_created": "Khách được tạo",
             "expense_created": "Chi phí được tạo",
             "expense_edited": "Chi phí đã sửa",

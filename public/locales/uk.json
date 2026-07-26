@@ -2561,6 +2561,7 @@
             "group_updated": "Групу оновлено",
             "group_archived": "Групу архівовано",
             "member_added": "Учасника додано",
+            "member_removed": "Учасника видалено",
             "guest_created": "Гостя створено",
             "expense_created": "Витрату створено",
             "expense_edited": "Витрату змінено",

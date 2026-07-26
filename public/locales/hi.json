@@ -2561,6 +2561,7 @@
             "group_updated": "समूह अपडेट हुआ",
             "group_archived": "समूह संग्रहित हुआ",
             "member_added": "सदस्य जोड़ा गया",
+            "member_removed": "सदस्य हटाया गया",
             "guest_created": "अतिथि बनाया गया",
             "expense_created": "खर्च बनाया गया",
             "expense_edited": "खर्च बदला गया",

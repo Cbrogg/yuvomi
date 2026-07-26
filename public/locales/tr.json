@@ -2561,6 +2561,7 @@
             "group_updated": "Grup güncellendi",
             "group_archived": "Grup arşivlendi",
             "member_added": "Üye eklendi",
+            "member_removed": "Üye çıkarıldı",
             "guest_created": "Misafir oluşturuldu",
             "expense_created": "Gider oluşturuldu",
             "expense_edited": "Gider düzenlendi",

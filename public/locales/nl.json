@@ -2561,6 +2561,7 @@
             "group_updated": "Groep bijgewerkt",
             "group_archived": "Groep gearchiveerd",
             "member_added": "Lid toegevoegd",
+            "member_removed": "Lid verwijderd",
             "guest_created": "Gast aangemaakt",
             "expense_created": "Uitgave aangemaakt",
             "expense_edited": "Uitgave bewerkt",

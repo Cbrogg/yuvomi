@@ -131,7 +131,10 @@ test('dynamic frontend translation key domains exist in every locale', () => {
   const dashboardBudgetLabels = ['catHousing', 'catFood', 'catTransport', 'catPersonalHealth', 'catLeisure', 'catShoppingClothing', 'catEducation', 'catFinancialOther', 'catEarnedIncome', 'catInvestmentIncome', 'catTransferGiftIncome', 'catGovernmentBenefits', 'catOtherIncome'];
   const splitGroupTypes = ['household', 'couple', 'travel', 'event', 'shopping', 'general'];
   const splitMethods = ['equal', 'exact', 'percentage', 'shares'];
-  const splitActivityTypes = ['group_created', 'group_updated', 'group_archived', 'member_added', 'guest_created', 'expense_created', 'expense_edited', 'expense_deleted', 'comment_added', 'payment_registered', 'recurring_created', 'recurring_paused', 'recurring_resumed', 'recurring_generated'];
+  // Handpflege dieser Liste reicht nicht — sie hatte member_removed jahrelang
+  // nicht. Der Guard „split activity feed translates every type the backend
+  // writes" leitet die Typen direkt aus dem Server-Code ab.
+  const splitActivityTypes = ['group_created', 'group_updated', 'group_archived', 'member_added', 'member_removed', 'guest_created', 'expense_created', 'expense_edited', 'expense_deleted', 'comment_added', 'payment_registered', 'recurring_created', 'recurring_paused', 'recurring_resumed', 'recurring_generated'];
 
   const keys = [
     ...familyRoles.map((role) => `settings.familyRole${role.replace(/(^|_)([a-z])/g, (_, __, c) => c.toUpperCase())}`),
@@ -2899,4 +2902,112 @@ test('login keeps username-style input hints, not email (audit 1.6 — login is 
   assert.match(input[0], /autocapitalize="none"/);
   assert.match(input[0], /autocorrect="off"/);
   assert.doesNotMatch(input[0], /type="email"|inputmode="email"/, 'must not use email keyboard for username login');
+});
+
+// Der Split-Tab lebt eingebettet im Budget: die ausgeklappte Sidebar zieht rund
+// 345px ab, sodass bei 1024px Viewport nur ~680px übrig bleiben. Eine
+// Viewport-Query bei 1023px hielt das Kartenraster dort zweispaltig, die
+// Salden-Karte schrumpfte auf 120px und „vereinfachte Schulden" schob sich über
+// die Nachbarkarte. Der Guard pinnt beide Container-Ebenen (die Seite steuert
+// das Panel-Layout, der Hauptbereich das Kartenraster) und hält die verbleibenden
+// Viewport-Queries auf echte Geräte-Entscheidungen begrenzt.
+test('split expenses reflows from container width, not viewport width', () => {
+  const split = read('../public/styles/split-expenses.css');
+
+  assert.match(
+    cssRuleBody(split, '.split-page'),
+    /container:\s*split-page\s*\/\s*inline-size/,
+    '.split-page muss ein inline-size-Container sein (Gast-Route und Budget-Tab teilen die Regeln)',
+  );
+  assert.match(
+    cssRuleBody(split, '.split-main'),
+    /container:\s*split-main\s*\/\s*inline-size/,
+    '.split-main braucht eine eigene Ebene — es steht hinter dem Gruppen-Panel und hat weniger Platz als .split-page',
+  );
+
+  assert.match(
+    split,
+    /@container split-page \(max-width:\s*719px\)[\s\S]*\.split-layout\s*\{[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\)/,
+    '.split-layout stapelt nach eigener Breite; minmax(0, 1fr) verhindert, dass die 240px-Gruppenkachel die Spalte aufbläht',
+  );
+  assert.match(
+    split,
+    /@container split-main \(max-width:\s*639px\)[\s\S]*\.split-content-grid\s*\{[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\)/,
+    'das Kartenraster stapelt nach der Breite von .split-main, nicht nach dem Viewport',
+  );
+  // cssRuleBody träfe die geteilte Glass-Regel weiter oben; hier ist die
+  // eigenständige .split-groups-panel-Regel gemeint.
+  assert.match(
+    split,
+    /\n\.split-groups-panel\s*\{[^}]*min-width:\s*0/,
+    'Grid-Items haben min-width: auto — ohne 0 schiebt die Gruppen-Leiste die Seite über ihren Rand',
+  );
+  assert.match(
+    cssRuleBody(split, '.split-card-head'),
+    /flex-wrap:\s*wrap/,
+    'Titel und Zusatz der Kartenköpfe brechen um, statt in die Nachbarkarte zu laufen',
+  );
+
+  assert.doesNotMatch(
+    split,
+    /@media \(max-width:\s*1023px\)/,
+    'Spaltenumbrüche gehören in @container-Queries — der 1023px-Breakpoint misst den Viewport statt den verfügbaren Platz',
+  );
+  // Was an @media bleiben darf: Seitengutter und Bottom-Nav-Freiraum sind echte
+  // Geräte-Entscheidungen, keine Reflows nach verfügbarer Breite.
+  assert.doesNotMatch(
+    split,
+    /@media[^{]*\{[\s\S]*grid-template-columns/,
+    'kein Raster darf mehr an einer Viewport-Query hängen',
+  );
+});
+
+// Der Aktivitäts-Feed übersetzt über `splitExpenses.activityType.<type>`, wobei
+// <type> ungeprüft aus der DB-Spalte kommt. Fehlt der Key, rendert t() den Key
+// selbst (i18n.js: `?? key`) — im Feed stand so sichtbar
+// „splitExpenses.activityType.expense_added". Ursache waren zwei Typen, die nur
+// scripts/seed-demo.js erfand (expense_added, settlement_added), plus eine echte
+// Lücke: member_removed schreibt der Server seit jeher, übersetzt war es nie.
+// Handgepflegte Listen haben das nicht gefunden — dieser Guard leitet die Typen
+// aus dem Quellcode ab, damit jeder neue activity()-Aufruf seinen Key erzwingt.
+test('split activity feed translates every type the backend writes', () => {
+  const sources = {
+    'server/routes/split-expenses.js': read('../server/routes/split-expenses.js'),
+    'server/services/split-expenses-scheduler.js': read('../server/services/split-expenses-scheduler.js'),
+    'scripts/seed-demo.js': read('../scripts/seed-demo.js'),
+  };
+
+  // activity(groupId, actor, 'type', …) bzw. insertActivity(db, …, 'type', …).
+  // Der Typ ist das String-Literal vor dem entity_type-Argument; ein Aufruf
+  // wählt ihn per Ternary (recurring_resumed/recurring_paused), daher der
+  // optionale Vorlauf-Zweig.
+  const ENTITY_TYPES = String.raw`'(?:expense|group|member|settlement|recurring_expense)'`;
+  const found = new Map();
+  for (const [file, src] of Object.entries(sources)) {
+    const pattern = new RegExp(String.raw`(?:'([a-z_]+)'\s*:\s*)?'([a-z_]+)',\s*${ENTITY_TYPES}`, 'g');
+    for (const [, ternaryBranch, type] of src.matchAll(pattern)) {
+      for (const found_type of [ternaryBranch, type]) {
+        if (found_type && !found.has(found_type)) found.set(found_type, file);
+      }
+    }
+  }
+
+  // Ein zu kleiner Treffersatz hieße, das Regex passt nicht mehr auf den
+  // Quellcode — der Guard wäre dann still wirkungslos statt rot.
+  assert.ok(found.size >= 15, `erwartet mindestens 15 Aktivitätstypen, gefunden: ${[...found.keys()].join(', ')}`);
+
+  const de = JSON.parse(read('../public/locales/de.json'));
+  const translated = Object.keys(de.splitExpenses.activityType);
+
+  const untranslated = [...found].filter(([type]) => !translated.includes(type));
+  assert.deepEqual(
+    untranslated.map(([type, file]) => `${type} (${file})`),
+    [],
+    'jeder geschriebene Aktivitätstyp braucht splitExpenses.activityType.<type> — sonst rendert der Feed den rohen Key',
+  );
+
+  // Gegenrichtung: übersetzte Typen, die niemand schreibt, sind entweder tot
+  // oder ein Tippfehler gegenüber dem, was der Server tatsächlich einträgt.
+  const unwritten = translated.filter((type) => !found.has(type));
+  assert.deepEqual(unwritten, [], 'verwaiste activityType-Keys — kein Codepfad schreibt diesen Typ');
 });
