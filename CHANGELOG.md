@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.46.1] - 2026-07-26
+
+### Fixed
+- Backups no longer fail with `EACCES: permission denied, mkdir './backups'`. Container deployments that mounted a backup folder but did not also set `BACKUP_DIR` fell back to the app's bare-metal default `./backups`, which resolves to `/app/backups` inside the container. That path sits outside the mounted volume and the unprivileged user the app runs as cannot create it, so scheduled and manual backups both failed while the correctly mounted host folder stayed untouched. The image now defaults `BACKUP_DIR` to `/backups`, so every container writes to the mounted volume even when the deployment does not set the variable itself (#579).
+- Unraid installs write their backups to the folder configured in the template. The template mapped a host folder to `/backups` but never passed `BACKUP_DIR` along, so the app wrote somewhere else entirely. The variable is now part of the template (#579).
+- Portainer stacks keep their backups across updates. The standalone Portainer compose file carried no backup volume at all, so backup files only ever lived inside the container layer and were lost with the next image pull (#579).
+- A failing backup now names the directory it could not write to. The previous message only showed the relative path, which sent people looking at their host folder instead of at the setting; it now reports the resolved absolute path, the error code, and which variable to change (#579).
+
 ## [1.46.0] - 2026-07-26
 
 ### Added
