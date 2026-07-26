@@ -317,6 +317,8 @@ async function sync() {
   const calendarIds = enabledCalendarIds();
   // accessRole je Kalender, memoisiert über Inbound + Outbound hinweg.
   const roleCache = new Map();
+  // Anzeige-Zeitzone je Kalender (aus derselben Metadaten-Abfrage), für Outbound.
+  const tzCache = new Map();
 
   // --------------------------------------------------------
   // Inbound: jeder aktivierte Kalender mit eigenem syncToken
@@ -328,6 +330,7 @@ async function sync() {
       const meta = await calendar.calendarList.get({ calendarId });
       calColor   = meta.data.backgroundColor || GOOGLE_COLOR;
       roleCache.set(calendarId, meta.data.accessRole ?? null);
+      if (meta.data.timeZone) tzCache.set(calendarId, meta.data.timeZone);
       const calName = meta.data.summaryOverride || meta.data.summary || 'Google Calendar';
       calRefId   = upsertExternalCalendar('google', calendarId, calName, calColor);
     } catch (err) {
@@ -396,7 +399,7 @@ async function sync() {
         continue;
       }
       try {
-        const gEvent  = localEventToGoogle(event, eventColorMap);
+        const gEvent  = localEventToGoogle(event, eventColorMap, tzCache.get(targetId) || serverTimeZone());
         const created = await calendar.events.insert({ calendarId: targetId, requestBody: gEvent });
         const calRefId = upsertExternalCalendar('google', targetId, targetId, GOOGLE_COLOR);
         db.get().prepare(`
@@ -568,7 +571,24 @@ function normalizeRecurrenceUntil(rule, allDay) {
   }).join(';');
 }
 
-function localEventToGoogle(event, colorMap = {}) {
+// Fallback-Zeitzone für den Outbound-Sync, wenn Google für den Zielkalender
+// keine liefert: Container-TZ (TZ-Env, siehe .env.example) → System-Zone → UTC.
+function serverTimeZone() {
+  const envTz = (process.env.TZ || '').trim();
+  if (envTz) return envTz;
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  } catch { return 'UTC'; }
+}
+
+/**
+ * Lokales Event → Google-Event-Body.
+ * @param {object} event
+ * @param {Record<string,string>} colorMap
+ * @param {string} [timeZone]  IANA-Zone, in der Google die Wanduhrzeit interpretiert.
+ *                             Normalerweise die Zone des Zielkalenders (siehe sync()).
+ */
+function localEventToGoogle(event, colorMap = {}, timeZone = serverTimeZone()) {
   const allDay = !!event.all_day;
   const gEvent = {
     summary:     event.title,
@@ -590,10 +610,16 @@ function localEventToGoogle(event, colorMap = {}) {
     gEvent.start = { date: startDate };
     gEvent.end   = { date: localAllDayEndToExclusive(endDate) };
   } else {
+    // Yuvomi speichert getimte Events als naive Wanduhrzeit ohne Zone. Ohne
+    // timeZone lehnt Google Serien ab ("recurring events: field is required"),
+    // mit einer festen Zone landet das Event bei allen Nutzern außerhalb dieser
+    // Zone verschoben (Issue #572: Australien = +7,5 h gegenüber Europe/Berlin).
+    // Die Zone des Zielkalenders ist die, in der Google die Zeit anzeigt - damit
+    // steht in Google dieselbe Uhrzeit wie in Yuvomi.
     const startDt = toRfc3339(event.start_datetime);
     const endDt   = toRfc3339(event.end_datetime) || startDt;
-    gEvent.start = { dateTime: startDt, timeZone: 'Europe/Berlin' };
-    gEvent.end   = { dateTime: endDt,   timeZone: 'Europe/Berlin' };
+    gEvent.start = { dateTime: startDt, timeZone };
+    gEvent.end   = { dateTime: endDt,   timeZone };
   }
 
   if (event.recurrence_rule) {
@@ -612,5 +638,5 @@ export const __test = {
   localEventToGoogle, googleAllDayEndToInclusive, localAllDayEndToExclusive,
   upsertGoogleEvents, upsertExternalCalendar, setReadonly, isReadonly, isWritableRole,
   listSelection, setCalendarEnabled, recordSyncToken, getSyncToken, enabledCalendarIds,
-  fetchEventColorMap,
+  fetchEventColorMap, serverTimeZone,
 };

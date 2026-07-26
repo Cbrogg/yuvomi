@@ -14,7 +14,7 @@ const db = (await import('../server/db.js')).get();
 const { __test } = await import('../server/services/google-calendar.js');
 const { localEventToGoogle, googleAllDayEndToInclusive, localAllDayEndToExclusive,
         upsertGoogleEvents, upsertExternalCalendar,
-        setReadonly, isReadonly, fetchEventColorMap } = __test;
+        setReadonly, isReadonly, fetchEventColorMap, serverTimeZone } = __test;
 const { nearestColorId } = await import('../server/utils/ical-color.js');
 
 // Reale Google-Event-Palette (colors.get → event), Basis für Nearest-Match.
@@ -233,6 +233,76 @@ test('localEventToGoogle: getimtes UNTIL ohne Zeitteil wird zu UTC date-time', (
   };
   const g = localEventToGoogle(event);
   assertEqual(g.recurrence[0], 'RRULE:FREQ=WEEKLY;UNTIL=20260831T235959Z');
+});
+
+// --------------------------------------------------------
+// localEventToGoogle – Zeitzone (Issue #572)
+// Regression: die Zone war fest auf 'Europe/Berlin' verdrahtet, wodurch Events
+// bei Nutzern außerhalb dieser Zone verschoben in Google landeten (Australien:
+// +7,5 h). Die Zone kommt jetzt vom Zielkalender, Fallback ist die Server-Zone.
+// --------------------------------------------------------
+test('localEventToGoogle: Zielkalender-Zone wird übernommen, Wanduhrzeit bleibt', () => {
+  const event = {
+    title: 'Meeting',
+    all_day: 0,
+    start_datetime: '2026-06-03T14:00',
+    end_datetime:   '2026-06-03T15:00',
+    recurrence_rule: null,
+  };
+  const g = localEventToGoogle(event, {}, 'Australia/Adelaide');
+  assertEqual(g.start.timeZone, 'Australia/Adelaide');
+  assertEqual(g.end.timeZone,   'Australia/Adelaide');
+  assertEqual(g.start.dateTime, '2026-06-03T14:00:00', 'Uhrzeit wird nicht umgerechnet');
+});
+
+test('localEventToGoogle: keine feste Europe/Berlin-Zone mehr (Default = Server-Zone)', () => {
+  const prevTz = process.env.TZ;
+  process.env.TZ = 'Australia/Adelaide';
+  try {
+    const g = localEventToGoogle({
+      title: 'Ohne Zielzone', all_day: 0,
+      start_datetime: '2026-06-03T14:00', end_datetime: '2026-06-03T15:00',
+      recurrence_rule: null,
+    });
+    assertEqual(g.start.timeZone, 'Australia/Adelaide');
+  } finally {
+    if (prevTz === undefined) delete process.env.TZ; else process.env.TZ = prevTz;
+  }
+});
+
+test('localEventToGoogle: Serie bekommt eine timeZone (Google-Pflichtfeld)', () => {
+  const g = localEventToGoogle({
+    title: 'Yoga', all_day: 0,
+    start_datetime: '2026-06-05T19:00', end_datetime: '2026-06-05T20:00',
+    recurrence_rule: 'FREQ=WEEKLY;BYDAY=TU',
+  }, {}, 'Australia/Adelaide');
+  assert(!!g.start.timeZone, 'start.timeZone gesetzt');
+  assertEqual(g.recurrence[0], 'RRULE:FREQ=WEEKLY;BYDAY=TU');
+});
+
+test('localEventToGoogle: all-day-Event bleibt ohne timeZone (reines DATE)', () => {
+  const g = localEventToGoogle({
+    title: 'Urlaub', all_day: 1,
+    start_datetime: '2026-06-03', end_datetime: '2026-06-04',
+    recurrence_rule: null,
+  }, {}, 'Australia/Adelaide');
+  assertEqual(g.start.timeZone, undefined);
+  assertEqual(g.start.date, '2026-06-03');
+});
+
+test('serverTimeZone: TZ-Env hat Vorrang, sonst gültige IANA-Zone', () => {
+  const prevTz = process.env.TZ;
+  try {
+    process.env.TZ = 'Pacific/Auckland';
+    assertEqual(serverTimeZone(), 'Pacific/Auckland');
+    delete process.env.TZ;
+    const fallback = serverTimeZone();
+    assert(typeof fallback === 'string' && fallback.length > 0, 'Fallback liefert eine Zone');
+    // Muss von Intl akzeptiert werden, sonst weist Google das Event zurück.
+    new Intl.DateTimeFormat('en-US', { timeZone: fallback });
+  } finally {
+    if (prevTz === undefined) delete process.env.TZ; else process.env.TZ = prevTz;
+  }
 });
 
 // --------------------------------------------------------
