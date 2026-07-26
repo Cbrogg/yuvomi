@@ -2560,6 +2560,7 @@
             "group_created": "Grup oluşturuldu",
             "group_updated": "Grup güncellendi",
             "group_archived": "Grup arşivlendi",
+            "group_unarchived": "Grup geri yüklendi",
             "member_added": "Üye eklendi",
             "member_removed": "Üye çıkarıldı",
             "guest_created": "Misafir oluşturuldu",
@@ -2597,7 +2598,12 @@
         "deleteGroup": "Grubu sil",
         "archiveGroupConfirm": "Bu grup arşivlensin mi?",
         "deleteGroupConfirm": "Bu boş grup silinsin mi? Gideri olan gruplar arşivlenmelidir.",
-        "splitCurrentTotal": "Geçerli toplam: {{total}}"
+        "splitCurrentTotal": "Geçerli toplam: {{total}}",
+        "statusLabel": "Durum",
+        "statusActive": "Aktif",
+        "statusArchived": "Arşivlenmiş",
+        "restoreGroup": "Geri yükle",
+        "emptyArchivedTitle": "Arşivde bir şey yok"
     },
     "wmo": {
         "0": "Açık",

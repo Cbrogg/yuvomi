@@ -2560,6 +2560,7 @@
             "group_created": "Групу створено",
             "group_updated": "Групу оновлено",
             "group_archived": "Групу архівовано",
+            "group_unarchived": "Групу відновлено",
             "member_added": "Учасника додано",
             "member_removed": "Учасника видалено",
             "guest_created": "Гостя створено",
@@ -2597,7 +2598,12 @@
         "deleteGroup": "Видалити групу",
         "archiveGroupConfirm": "Архівувати цю групу?",
         "deleteGroupConfirm": "Видалити цю порожню групу? Групи з витратами треба архівувати.",
-        "splitCurrentTotal": "Поточна сума: {{total}}"
+        "splitCurrentTotal": "Поточна сума: {{total}}",
+        "statusLabel": "Статус",
+        "statusActive": "Активний",
+        "statusArchived": "Архівований",
+        "restoreGroup": "Відновити",
+        "emptyArchivedTitle": "Архів порожній"
     },
     "wmo": {
         "0": "Ясне небо",

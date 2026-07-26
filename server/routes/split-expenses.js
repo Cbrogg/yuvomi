@@ -494,6 +494,23 @@ router.post('/groups/:id/archive', (req, res) => {
   }
 });
 
+// Gegenstück zu /archive (#574): ohne diese Route wäre Archivieren eine
+// Einbahnstraße - archivierte Gruppen sind über ?status=archived sichtbar,
+// aber ohne Weg zurück in die aktive Liste.
+router.post('/groups/:id/unarchive', (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!requireGroupAccess(id, req)) return res.status(404).json({ error: 'Group not found.', code: 404 });
+    if (!canManageGroup(id, req)) return res.status(403).json({ error: 'Not authorized.', code: 403 });
+    db.get().prepare("UPDATE expense_groups SET status = 'active', archived_at = NULL WHERE id = ?").run(id);
+    activity(id, userId(req), 'group_unarchived', 'group', id);
+    res.json({ data: { ok: true } });
+  } catch (err) {
+    log.error('POST /groups/:id/unarchive error:', err);
+    res.status(500).json({ error: 'Internal server error.', code: 500 });
+  }
+});
+
 router.delete('/groups/:id', (req, res) => {
   try {
     const id = Number(req.params.id);

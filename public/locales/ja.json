@@ -2560,6 +2560,7 @@
             "group_created": "グループを作成",
             "group_updated": "グループを更新",
             "group_archived": "グループをアーカイブ",
+            "group_unarchived": "グループを復元",
             "member_added": "メンバーを追加",
             "member_removed": "メンバーを削除",
             "guest_created": "ゲストを作成",
@@ -2597,7 +2598,12 @@
         "deleteGroup": "グループを削除",
         "archiveGroupConfirm": "このグループをアーカイブしますか？",
         "deleteGroupConfirm": "この空のグループを削除しますか？費用があるグループはアーカイブしてください。",
-        "splitCurrentTotal": "現在の合計: {{total}}"
+        "splitCurrentTotal": "現在の合計: {{total}}",
+        "statusLabel": "ステータス",
+        "statusActive": "有効",
+        "statusArchived": "アーカイブ済み",
+        "restoreGroup": "復元",
+        "emptyArchivedTitle": "アーカイブは空です"
     },
     "wmo": {
         "0": "快晴",

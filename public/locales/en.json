@@ -2560,6 +2560,7 @@
             "group_created": "Group created",
             "group_updated": "Group updated",
             "group_archived": "Group archived",
+            "group_unarchived": "Group restored",
             "member_added": "Member added",
             "member_removed": "Member removed",
             "guest_created": "Guest created",
@@ -2597,7 +2598,12 @@
         "deleteGroup": "Delete group",
         "archiveGroupConfirm": "Archive this group?",
         "deleteGroupConfirm": "Delete this empty group? Groups with expenses must be archived.",
-        "splitCurrentTotal": "Current total: {{total}}"
+        "splitCurrentTotal": "Current total: {{total}}",
+        "statusLabel": "Status",
+        "statusActive": "Active",
+        "statusArchived": "Archived",
+        "restoreGroup": "Restore",
+        "emptyArchivedTitle": "Nothing archived"
     },
     "wmo": {
         "0": "Clear sky",

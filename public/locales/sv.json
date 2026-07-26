@@ -2560,6 +2560,7 @@
             "group_created": "Grupp skapad",
             "group_updated": "Grupp uppdaterad",
             "group_archived": "Grupp arkiverad",
+            "group_unarchived": "Grupp återställd",
             "member_added": "Medlem tillagd",
             "member_removed": "Medlem borttagen",
             "guest_created": "Gäst skapad",
@@ -2597,7 +2598,12 @@
         "deleteGroup": "Ta bort grupp",
         "archiveGroupConfirm": "Arkivera den här gruppen?",
         "deleteGroupConfirm": "Ta bort den här tomma gruppen? Grupper med utgifter måste arkiveras.",
-        "splitCurrentTotal": "Aktuell summa: {{total}}"
+        "splitCurrentTotal": "Aktuell summa: {{total}}",
+        "statusLabel": "Status",
+        "statusActive": "Aktiva",
+        "statusArchived": "Arkiverad",
+        "restoreGroup": "Återställ",
+        "emptyArchivedTitle": "Inget arkiverat"
     },
     "wmo": {
         "0": "Klart",

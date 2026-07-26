@@ -2560,6 +2560,7 @@
             "group_created": "Группа создана",
             "group_updated": "Группа обновлена",
             "group_archived": "Группа архивирована",
+            "group_unarchived": "Группа восстановлена",
             "member_added": "Участник добавлен",
             "member_removed": "Участник удалён",
             "guest_created": "Гость создан",
@@ -2597,7 +2598,12 @@
         "deleteGroup": "Удалить группу",
         "archiveGroupConfirm": "Архивировать эту группу?",
         "deleteGroupConfirm": "Удалить эту пустую группу? Группы с расходами нужно архивировать.",
-        "splitCurrentTotal": "Текущий итог: {{total}}"
+        "splitCurrentTotal": "Текущий итог: {{total}}",
+        "statusLabel": "Статус",
+        "statusActive": "Активный",
+        "statusArchived": "Архивированный",
+        "restoreGroup": "Восстановить",
+        "emptyArchivedTitle": "Архив пуст"
     },
     "wmo": {
         "0": "Ясное небо",

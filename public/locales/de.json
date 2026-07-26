@@ -2560,6 +2560,7 @@
             "group_created": "Gruppe erstellt",
             "group_updated": "Gruppe aktualisiert",
             "group_archived": "Gruppe archiviert",
+            "group_unarchived": "Gruppe wiederhergestellt",
             "member_added": "Mitglied hinzugefügt",
             "member_removed": "Mitglied entfernt",
             "guest_created": "Gast erstellt",
@@ -2597,7 +2598,12 @@
         "deleteGroup": "Gruppe löschen",
         "archiveGroupConfirm": "Diese Gruppe archivieren?",
         "deleteGroupConfirm": "Diese leere Gruppe löschen? Gruppen mit Ausgaben müssen archiviert werden.",
-        "splitCurrentTotal": "Aktuelle Summe: {{total}}"
+        "splitCurrentTotal": "Aktuelle Summe: {{total}}",
+        "statusLabel": "Status",
+        "statusActive": "Aktiv",
+        "statusArchived": "Archiviert",
+        "restoreGroup": "Wiederherstellen",
+        "emptyArchivedTitle": "Nichts archiviert"
     },
     "wmo": {
         "0": "Klarer Himmel",

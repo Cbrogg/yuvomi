@@ -2560,6 +2560,7 @@
             "group_created": "گروه ایجاد شد",
             "group_updated": "گروه به‌روزرسانی شد",
             "group_archived": "گروه بایگانی شد",
+            "group_unarchived": "گروه بازیابی شد",
             "member_added": "عضو افزوده شد",
             "member_removed": "عضو حذف شد",
             "guest_created": "مهمان ایجاد شد",
@@ -2597,7 +2598,12 @@
         "deleteGroup": "حذف گروه",
         "archiveGroupConfirm": "این گروه بایگانی شود؟",
         "deleteGroupConfirm": "این گروه خالی حذف شود؟ گروه‌های دارای هزینه باید بایگانی شوند.",
-        "splitCurrentTotal": "مجموع فعلی: {{total}}"
+        "splitCurrentTotal": "مجموع فعلی: {{total}}",
+        "statusLabel": "وضعیت",
+        "statusActive": "فعال",
+        "statusArchived": "بایگانی‌شده",
+        "restoreGroup": "بازیابی",
+        "emptyArchivedTitle": "چیزی بایگانی نشده"
     },
     "wmo": {
         "0": "آسمان صاف",

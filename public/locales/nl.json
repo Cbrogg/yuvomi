@@ -2560,6 +2560,7 @@
             "group_created": "Groep aangemaakt",
             "group_updated": "Groep bijgewerkt",
             "group_archived": "Groep gearchiveerd",
+            "group_unarchived": "Groep hersteld",
             "member_added": "Lid toegevoegd",
             "member_removed": "Lid verwijderd",
             "guest_created": "Gast aangemaakt",
@@ -2597,7 +2598,12 @@
         "deleteGroup": "Groep verwijderen",
         "archiveGroupConfirm": "Deze groep archiveren?",
         "deleteGroupConfirm": "Deze lege groep verwijderen? Groepen met uitgaven moeten worden gearchiveerd.",
-        "splitCurrentTotal": "Huidig totaal: {{total}}"
+        "splitCurrentTotal": "Huidig totaal: {{total}}",
+        "statusLabel": "Status",
+        "statusActive": "Actief",
+        "statusArchived": "Gearchiveerd",
+        "restoreGroup": "Herstellen",
+        "emptyArchivedTitle": "Niets gearchiveerd"
     },
     "wmo": {
         "0": "Heldere lucht",

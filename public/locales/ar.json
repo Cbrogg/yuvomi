@@ -2560,6 +2560,7 @@
             "group_created": "تم إنشاء المجموعة",
             "group_updated": "تم تحديث المجموعة",
             "group_archived": "تمت أرشفة المجموعة",
+            "group_unarchived": "تمت استعادة المجموعة",
             "member_added": "تمت إضافة عضو",
             "member_removed": "تمت إزالة عضو",
             "guest_created": "تم إنشاء ضيف",
@@ -2597,7 +2598,12 @@
         "deleteGroup": "حذف المجموعة",
         "archiveGroupConfirm": "هل تريد أرشفة هذه المجموعة؟",
         "deleteGroupConfirm": "هل تريد حذف هذه المجموعة الفارغة؟ يجب أرشفة المجموعات التي تحتوي على مصاريف.",
-        "splitCurrentTotal": "المجموع الحالي: {{total}}"
+        "splitCurrentTotal": "المجموع الحالي: {{total}}",
+        "statusLabel": "الحالة",
+        "statusActive": "نشط",
+        "statusArchived": "مؤرشف",
+        "restoreGroup": "استعادة",
+        "emptyArchivedTitle": "لا شيء مؤرشف"
     },
     "wmo": {
         "0": "سماء صافية",

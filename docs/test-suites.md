@@ -133,7 +133,7 @@ npm run test:backup-scheduler
 npm run test:backup-webdav
 npm run test:backup-routes  # Backup-/Restore-Routen: requireAdmin-Gate, /status, /trigger, /database, /restore (400/413/Roundtrip), WebDAV-Konfig + Loopback-Stub
 npm run test:split-expenses
-npm run test:split-expenses-routes   # Split-Expenses-Routen: Autorisierung (requireGroupAccess/canManageGroup, Gast-Confinement) + Geld/Ledger-Integrität (Salden, Settlement, Edit/Delete)
+npm run test:split-expenses-routes   # Split-Expenses-Routen: Autorisierung (requireGroupAccess/canManageGroup, Gast-Confinement) + Geld/Ledger-Integrität (Salden, Settlement, Edit/Delete) + Archivieren/Wiederherstellen (#574)
 npm run test:search
 npm run test:calendar-search   # calendar toolbar search (#471): FTS event search endpoint, location index, recurring next-instance, keyboard
 npm run test:search-diacritics # diacritic-insensitive FTS (unicode61 remove_diacritics 2) + ß↔ss query expansion

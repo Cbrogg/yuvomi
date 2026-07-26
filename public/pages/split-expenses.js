@@ -23,6 +23,9 @@ let state = {
   activity: [],
   query: '',
   category: '',
+  // Statusfilter der Gruppenliste (#574): 'archived' zeigt das Archiv
+  // schreibgeschützt, inklusive Weg zurück über restoreGroup().
+  groupStatus: 'active',
   user: null,
 };
 let _container = null;
@@ -80,6 +83,10 @@ export async function render(container, { user } = {}) {
               <input id="split-group-search" type="search" placeholder="${t('splitExpenses.searchGroups')}" autocomplete="off">
             </span>
           </label>
+          <div class="split-status-filter" id="split-status-filter" role="group" aria-label="${t('splitExpenses.statusLabel')}">
+            <button type="button" class="filter-chip filter-chip--sm" data-status="active">${t('splitExpenses.statusActive')}</button>
+            <button type="button" class="filter-chip filter-chip--sm" data-status="archived">${t('splitExpenses.statusArchived')}</button>
+          </div>
           <div class="split-groups" id="split-groups"></div>
         </aside>
         <main class="split-main" id="split-main" aria-busy="true">${renderSkeletonList({ rows: 5, lines: 2 })}</main>
@@ -116,7 +123,7 @@ function isSplitGuest() {
 }
 
 async function loadGroups() {
-  const res = await api.get(`/split-expenses/groups?q=${encodeURIComponent(state.query)}`);
+  const res = await api.get(`/split-expenses/groups?status=${state.groupStatus}&q=${encodeURIComponent(state.query)}`);
   state.groups = res.data || [];
   if (!state.activeGroupId || !state.groups.some((g) => g.id === state.activeGroupId)) {
     state.activeGroupId = state.groups[0]?.id || null;
@@ -169,6 +176,15 @@ function bindShell() {
       renderAll();
     }, 250);
   });
+  _container.querySelector('#split-status-filter')?.addEventListener('click', async (e) => {
+    const chip = e.target.closest('[data-status]');
+    if (!chip || chip.dataset.status === state.groupStatus) return;
+    state.groupStatus = chip.dataset.status;
+    state.activeGroupId = null;
+    await loadGroups();
+    await loadGroupData();
+    renderAll();
+  });
   _container.querySelector('#split-groups')?.addEventListener('click', async (e) => {
     const btn = e.target.closest('[data-group-id]');
     if (!btn) return;
@@ -178,11 +194,32 @@ function bindShell() {
   });
 }
 
+function isArchivedView() {
+  return state.groupStatus === 'archived';
+}
+
 function renderAll() {
+  renderStatusFilter();
   renderSummary();
   renderGroups();
   renderMain();
   if (window.lucide) lucide.createIcons({ el: _container });
+}
+
+/**
+ * Statusfilter spiegeln + Anlegen-Aktionen im Archiv stilllegen: eine neue
+ * Ausgabe würde dort in eine archivierte Gruppe laufen.
+ */
+function renderStatusFilter() {
+  _container.querySelectorAll('#split-status-filter [data-status]').forEach((chip) => {
+    const active = chip.dataset.status === state.groupStatus;
+    chip.classList.toggle('filter-chip--active', active);
+    chip.setAttribute('aria-pressed', String(active));
+  });
+  const addExpense = _container.querySelector('#split-add-expense');
+  if (addExpense) addExpense.hidden = isArchivedView();
+  const fab = _container.querySelector('#split-fab');
+  if (fab) fab.hidden = isArchivedView();
 }
 
 function renderSummary() {
@@ -199,7 +236,7 @@ function renderSummary() {
       <strong>${owing.length ? owing.map((r) => money(r.amount, r.currency)).join(' · ') : money(0, state.meta.default_currency)}</strong>
     </div>
     <div class="split-summary-card">
-      <span>${t('splitExpenses.activeGroups')}</span>
+      <span>${isArchivedView() ? t('splitExpenses.statusArchived') : t('splitExpenses.activeGroups')}</span>
       <strong>${state.groups.length}</strong>
     </div>
   `);
@@ -208,7 +245,12 @@ function renderSummary() {
 function renderGroups() {
   const el = _container.querySelector('#split-groups');
   if (!state.groups.length) {
-    setHtml(el, `
+    setHtml(el, isArchivedView() ? `
+      <div class="empty-state split-empty-inline">
+        <i data-lucide="archive" class="empty-state__icon" aria-hidden="true"></i>
+        <div class="empty-state__title">${t('splitExpenses.emptyArchivedTitle')}</div>
+      </div>
+    ` : `
       <div class="empty-state split-empty-inline">
         <i data-lucide="receipt-text" class="empty-state__icon" aria-hidden="true"></i>
         <div class="empty-state__title">${t('splitExpenses.emptyGroupsTitle')}</div>
@@ -233,7 +275,12 @@ function renderMain() {
   main.removeAttribute('aria-busy');
   const group = state.groups.find((g) => g.id === state.activeGroupId);
   if (!group) {
-    setHtml(main, `
+    setHtml(main, isArchivedView() ? `
+      <div class="empty-state split-main-empty">
+        <i data-lucide="archive" class="empty-state__icon" aria-hidden="true"></i>
+        <div class="empty-state__title">${t('splitExpenses.emptyArchivedTitle')}</div>
+      </div>
+    ` : `
       <div class="empty-state split-main-empty">
         <i data-lucide="users-round" class="empty-state__icon" aria-hidden="true"></i>
         <div class="empty-state__title">${t('splitExpenses.emptyGroupsTitle')}</div>
@@ -242,14 +289,23 @@ function renderMain() {
     `);
     return;
   }
+  // Archiv-Ansicht: Salden, Ausgaben und Verlauf bleiben lesbar, alle
+  // schreibenden Aktionen weichen dem Wiederherstellen (#574).
+  const archived = isArchivedView();
   setHtml(main, `
     <section class="split-group-header">
       <div>
         <div class="split-kicker">${t(`splitExpenses.groupType.${group.type}`)}</div>
         <h2>${esc(group.name)}</h2>
+        ${archived ? `<p class="split-archived-badge"><i data-lucide="archive" class="icon-md" aria-hidden="true"></i>${t('splitExpenses.statusArchived')}</p>` : ''}
         <p>${esc(group.description || t('splitExpenses.groupDefaultDescription'))}</p>
       </div>
       <div class="split-header-actions">
+        ${archived ? `
+        <button class="btn btn--secondary" id="split-restore-group" ${isSplitGuest() ? 'hidden' : ''}>
+          <i data-lucide="archive-restore" class="icon-md" aria-hidden="true"></i>
+          ${t('splitExpenses.restoreGroup')}
+        </button>` : `
         ${isSplitGuest() ? '' : `
         <button class="btn btn--secondary btn--icon" id="split-edit-group" aria-label="${t('splitExpenses.editGroup')}">
           <i data-lucide="pencil" aria-hidden="true"></i>
@@ -267,7 +323,7 @@ function renderMain() {
         <button class="btn btn--secondary" id="split-invite" ${isSplitGuest() ? 'hidden' : ''}>
           <i data-lucide="user-plus" class="icon-md" aria-hidden="true"></i>
           ${t('splitExpenses.addMember')}
-        </button>
+        </button>`}
       </div>
     </section>
     <div class="split-content-grid">
@@ -282,7 +338,7 @@ function renderMain() {
         <div class="split-card-head">
           <h3>${t('splitExpenses.recentExpenses')}</h3>
         </div>
-        <div id="split-expense-list">${renderExpenses()}</div>
+        <div id="split-expense-list">${renderExpenses(archived)}</div>
       </section>
       <section class="split-card">
         <div class="split-card-head">
@@ -292,6 +348,7 @@ function renderMain() {
       </section>
     </div>
   `);
+  main.querySelector('#split-restore-group')?.addEventListener('click', () => restoreGroup(group.id));
   main.querySelector('#split-edit-group')?.addEventListener('click', () => openGroupModal(group));
   main.querySelector('#split-archive-group')?.addEventListener('click', () => archiveGroup(group.id));
   main.querySelector('#split-delete-group')?.addEventListener('click', () => deleteGroup(group.id));
@@ -299,12 +356,14 @@ function renderMain() {
   const settleButton = main.querySelector('#split-settle');
   if (settleButton) settleButton.disabled = state.expenses.length === 0;
   main.querySelector('#split-invite')?.addEventListener('click', () => openMemberModal());
-  main.querySelector('#split-expense-list')?.addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-expense-id]');
-    if (!btn) return;
-    const expense = state.expenses.find((item) => item.id === Number(btn.dataset.expenseId));
-    if (expense) openExpenseModal(expense);
-  });
+  if (!archived) {
+    main.querySelector('#split-expense-list')?.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-expense-id]');
+      if (!btn) return;
+      const expense = state.expenses.find((item) => item.id === Number(btn.dataset.expenseId));
+      if (expense) openExpenseModal(expense);
+    });
+  }
   stagger(main.querySelectorAll('.split-expense, .split-debt, .split-activity-item'));
 }
 
@@ -319,18 +378,26 @@ function renderBalances() {
   `).join('');
 }
 
-function renderExpenses() {
+function renderExpenses(readOnly = false) {
   if (!state.expenses.length) return `<div class="split-muted">${t('splitExpenses.noExpenses')}</div>`;
-  return state.expenses.map((expense) => `
-    <button type="button" class="split-expense" data-expense-id="${expense.id}" aria-label="${esc(expense.title)} — ${t('splitExpenses.editExpense')}">
+  return state.expenses.map((expense) => {
+    const body = `
       <div class="split-expense__icon"><i data-lucide="${categoryIcon(expense.category)}" aria-hidden="true"></i></div>
       <div class="split-expense__body">
         <strong>${esc(expense.title)}</strong>
         <span>${t('splitExpenses.paidBy')}: ${esc(expense.payer_name || '')} · ${formatDate(expense.expense_date)}</span>
       </div>
       <div class="split-expense__amount">${money(expense.amount, expense.currency)}</div>
-    </button>
-  `).join('');
+    `;
+    // Im Archiv bleibt der Eintrag ein reiner Listeneintrag - ein Button würde
+    // eine Bearbeiten-Aktion versprechen, die es dort nicht gibt.
+    if (readOnly) return `<div class="split-expense">${body}</div>`;
+    return `
+      <button type="button" class="split-expense" data-expense-id="${expense.id}" aria-label="${esc(expense.title)} - ${t('splitExpenses.editExpense')}">
+        ${body}
+      </button>
+    `;
+  }).join('');
 }
 
 function renderActivity() {
@@ -369,6 +436,21 @@ async function archiveGroup(groupId) {
   });
   if (!confirmed) return;
   await api.post(`/split-expenses/groups/${groupId}/archive`, {});
+  await refreshDashboard();
+  await loadGroups();
+  await loadGroupData();
+  renderAll();
+}
+
+/**
+ * Holt eine archivierte Gruppe zurück in die aktive Liste und wechselt dorthin.
+ * Bewusst ohne Rückfrage: der Schritt ist verlustfrei und über Archivieren
+ * jederzeit umkehrbar.
+ */
+async function restoreGroup(groupId) {
+  await api.post(`/split-expenses/groups/${groupId}/unarchive`, {});
+  state.groupStatus = 'active';
+  state.activeGroupId = groupId;
   await refreshDashboard();
   await loadGroups();
   await loadGroupData();
@@ -740,6 +822,9 @@ async function openGroupModal(group = null) {
         if (isEdit) await api.patch(`/split-expenses/groups/${group.id}`, data);
         else await api.post('/split-expenses/groups', data);
         if (isEdit) await syncEditedGroupMembers(group, form);
+        // Neue Gruppen sind aktiv - aus dem Archiv heraus angelegt bliebe die
+        // Liste sonst leer, obwohl die Gruppe existiert.
+        if (!isEdit) state.groupStatus = 'active';
         closeModal({ force: true });
         await loadGroups();
         await loadGroupData();

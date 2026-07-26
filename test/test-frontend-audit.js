@@ -2509,6 +2509,40 @@ test('search fields keep visible labels after users enter a query', () => {
   }
 });
 
+test('split-expenses archive is reachable and offers a way back (#574)', () => {
+  // Archivieren war eine Einbahnstraße: die API kannte ?status=archived, die
+  // Oberfläche hatte weder Filter noch Wiederherstellen.
+  const page = read('../public/pages/split-expenses.js');
+  assert.match(page, /data-status="active"/, 'group list needs an active filter chip');
+  assert.match(page, /data-status="archived"/, 'group list needs an archived filter chip');
+  assert.match(
+    page,
+    /\/split-expenses\/groups\?status=\$\{state\.groupStatus\}/,
+    'group list must load the selected status, not only active groups',
+  );
+  assert.match(page, /groups\/\$\{groupId\}\/unarchive/, 'archived groups need a restore action');
+
+  // Das Gruppen-Panel ist ein Grid-Item: ohne min-width:0 wächst es auf die
+  // Breite der breitesten Gruppenkarte und schiebt Suche und Filter aus dem
+  // Viewport (auf 375px war das Suchfeld rechts abgeschnitten).
+  const css = read('../public/styles/split-expenses.css');
+  const panelRules = [...css.matchAll(/\.split-groups-panel\s*\{([^}]*)\}/g)].map((match) => match[1]);
+  assert.ok(
+    panelRules.some((body) => /min-width:\s*0/.test(body)),
+    '.split-groups-panel must not stretch past its grid track',
+  );
+
+  assertKeysExistInEveryLocale([
+    'splitExpenses.statusLabel',
+    'splitExpenses.statusActive',
+    'splitExpenses.statusArchived',
+    'splitExpenses.restoreGroup',
+    'splitExpenses.emptyArchivedTitle',
+    // Dynamisch gerendert (activityType.${item.type}), deshalb hier explizit.
+    'splitExpenses.activityType.group_unarchived',
+  ]);
+});
+
 test('German housekeeping visit copy contains no English fallback strings', () => {
   const locale = JSON.parse(read('../public/locales/de.json'));
   const expected = {

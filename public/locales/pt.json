@@ -2560,6 +2560,7 @@
             "group_created": "Grupo criado",
             "group_updated": "Grupo atualizado",
             "group_archived": "Grupo arquivado",
+            "group_unarchived": "Grupo restaurado",
             "member_added": "Membro adicionado",
             "member_removed": "Membro removido",
             "guest_created": "Convidado criado",
@@ -2597,7 +2598,12 @@
         "deleteGroup": "Excluir grupo",
         "archiveGroupConfirm": "Arquivar este grupo?",
         "deleteGroupConfirm": "Excluir este grupo vazio? Grupos com despesas devem ser arquivados.",
-        "splitCurrentTotal": "Total atual: {{total}}"
+        "splitCurrentTotal": "Total atual: {{total}}",
+        "statusLabel": "Estado",
+        "statusActive": "Ativo",
+        "statusArchived": "Arquivado",
+        "restoreGroup": "Restaurar",
+        "emptyArchivedTitle": "Nada arquivado"
     },
     "wmo": {
         "0": "Céu limpo",

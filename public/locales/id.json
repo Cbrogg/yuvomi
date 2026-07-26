@@ -2560,6 +2560,7 @@
             "group_created": "Grup dibuat",
             "group_updated": "Grup diperbarui",
             "group_archived": "Grup diarsipkan",
+            "group_unarchived": "Grup dipulihkan",
             "member_added": "Anggota ditambahkan",
             "member_removed": "Anggota dihapus",
             "guest_created": "Tamu dibuat",
@@ -2597,7 +2598,12 @@
         "deleteGroup": "Hapus grup",
         "archiveGroupConfirm": "Arsipkan grup ini?",
         "deleteGroupConfirm": "Hapus grup kosong ini? Grup dengan pengeluaran harus diarsipkan.",
-        "splitCurrentTotal": "Total saat ini: {{total}}"
+        "splitCurrentTotal": "Total saat ini: {{total}}",
+        "statusLabel": "Status",
+        "statusActive": "Aktif",
+        "statusArchived": "Diarsipkan",
+        "restoreGroup": "Pulihkan",
+        "emptyArchivedTitle": "Tidak ada arsip"
     },
     "wmo": {
         "0": "Langit cerah",

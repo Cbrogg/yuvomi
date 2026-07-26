@@ -2560,6 +2560,7 @@
             "group_created": "Nhóm đã tạo",
             "group_updated": "Nhóm đã cập nhật",
             "group_archived": "Nhóm đã lưu trữ",
+            "group_unarchived": "Nhóm đã khôi phục",
             "member_added": "Thành viên được thêm",
             "member_removed": "Thành viên được xóa",
             "guest_created": "Khách được tạo",
@@ -2597,7 +2598,12 @@
         "deleteGroup": "Xóa nhóm",
         "archiveGroupConfirm": "Lưu trữ nhóm này?",
         "deleteGroupConfirm": "Xóa nhóm trống này? Các nhóm có chi phí phải được lưu trữ.",
-        "splitCurrentTotal": "Tổng hiện tại: {{total}}"
+        "splitCurrentTotal": "Tổng hiện tại: {{total}}",
+        "statusLabel": "Trạng thái",
+        "statusActive": "Đang hoạt động",
+        "statusArchived": "Đã lưu trữ",
+        "restoreGroup": "Khôi phục",
+        "emptyArchivedTitle": "Chưa lưu trữ gì"
     },
     "wmo": {
         "0": "Trời quang",

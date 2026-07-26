@@ -2560,6 +2560,7 @@
             "group_created": "Η ομάδα δημιουργήθηκε",
             "group_updated": "Η ομάδα ενημερώθηκε",
             "group_archived": "Η ομάδα αρχειοθετήθηκε",
+            "group_unarchived": "Η ομάδα επαναφέρθηκε",
             "member_added": "Προστέθηκε μέλος",
             "member_removed": "Αφαιρέθηκε μέλος",
             "guest_created": "Δημιουργήθηκε επισκέπτης",
@@ -2597,7 +2598,12 @@
         "deleteGroup": "Διαγραφή ομάδας",
         "archiveGroupConfirm": "Να αρχειοθετηθεί αυτή η ομάδα;",
         "deleteGroupConfirm": "Να διαγραφεί αυτή η κενή ομάδα; Οι ομάδες με έξοδα πρέπει να αρχειοθετούνται.",
-        "splitCurrentTotal": "Τρέχον σύνολο: {{total}}"
+        "splitCurrentTotal": "Τρέχον σύνολο: {{total}}",
+        "statusLabel": "Κατάσταση",
+        "statusActive": "Ενεργό",
+        "statusArchived": "Αρχειοθετημένο",
+        "restoreGroup": "Επαναφορά",
+        "emptyArchivedTitle": "Τίποτα στο αρχείο"
     },
     "wmo": {
         "0": "Αίθριος καιρός",

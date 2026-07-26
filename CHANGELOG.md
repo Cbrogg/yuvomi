@@ -8,9 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
-- Split Expenses: the "Aufteilen" tab no longer overlaps its own cards on desktop. The layout used to switch to a single column at a fixed window width, which ignored the space the expanded sidebar takes up, so at a 1024px window the balances card was squeezed to a sliver and its "simplified debts" subtitle ran across the neighbouring card. Panel and card grid now each reflow from the width actually available to them, which also means collapsing the sidebar widens the content as expected (#575).
-- Split Expenses: the activity feed showed raw text such as `splitExpenses.activityType.expense_added` instead of a readable entry. Removing a member from a group had never been translated in any of the 23 languages, and the demo data recorded two activity types the app itself never writes (#575).
-- Split Expenses on narrow phones: the page no longer scrolls sideways. The tiles in the horizontal group bar widened the whole page instead of scrolling within their own row, and an untranslated entry in the activity feed could stretch the card past the screen edge (#575).
+- Shared expenses: the "Aufteilen" tab no longer overlaps its own cards on desktop. The layout used to switch to a single column at a fixed window width, which ignored the space the expanded sidebar takes up, so at a 1024px window the balances card was squeezed to a sliver and its "simplified debts" subtitle ran across the neighbouring card. Panel and card grid now each reflow from the width actually available to them, which also means collapsing the sidebar widens the content as expected (#575).
+- Shared expenses: the activity feed showed raw text such as `splitExpenses.activityType.expense_added` instead of a readable entry. Removing a member from a group had never been translated in any of the 23 languages, and the demo data recorded two activity types the app itself never writes (#575).
+- Shared expenses: a single long unbreakable word in the activity feed no longer stretches the card past the right edge of the screen on narrow phones (#575).
+
+## [1.45.13] - 2026-07-26
+
+### Fixed
+- Shared expenses: archived groups can be opened again. The group list has an Active/Archived filter, an archived group stays fully readable with its balances, expenses and activity feed, and a Restore action puts it back into the active list. Archiving used to be a one-way trip: the API already served archived groups, but no control in the interface led to them (#574).
+- Shared expenses: on narrow screens the group panel no longer reaches past the right edge of the screen. It grew to the width of the widest group card, which cut off the search field (#574).
 
 ## [1.45.12] - 2026-07-26
 
