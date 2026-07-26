@@ -72,9 +72,28 @@ test('mobile bottom navigation keeps five equal slots with inset indicator geome
   assert.match(baseItemRule, /flex:\s*1/);
   assert.match(itemRule, /min-width:\s*0/);
   assert.match(indicatorSurfaceRule, /inset-inline:\s*var\(--space-1\)/);
-  assert.match(indicatorRule, /top:\s*var\(--space-1\)/);
-  assert.match(indicatorRule, /bottom:\s*var\(--space-1\)/);
+  // Kapsel hinter dem Icon statt über die ganze Bar-Höhe: bar-hoch schnitt sie
+  // die Label-Grundlinie an und lief in die Safe-Area (#569-Nachtrag).
+  assert.match(indicatorRule, /top:\s*0/);
+  assert.match(indicatorRule, /bottom:\s*auto/);
+  assert.match(indicatorRule, /height:\s*var\(--target-md\)/);
   assert.doesNotMatch(indicatorRule, /transition:[^;]*\bwidth\b/);
+});
+
+test('mobile tab indicator stays a capsule behind the icon, clear of the bar edges', () => {
+  // Slot-breite Pille lief im ersten/letzten Tab bis an die Bar-Kante, wo die
+  // Rundung gekappt wurde (#569-Nachtrag). Die Geometrie kommt aus dem
+  // Icon-Well-Rect plus seitlichem Inset, nicht aus der reinen Slot-Breite.
+  const fn = routerJs.slice(routerJs.indexOf('function positionTabIndicator'));
+  const body = fn.slice(0, fn.indexOf('\n}\n') + 2);
+
+  assert.match(body, /querySelector\('\.nav-item__icon-well'\)/);
+  assert.match(body, /Math\.min\(ar\.width - TAB_INDICATOR_INSET \* 2, TAB_INDICATOR_MAX_WIDTH\)/);
+  assert.match(body, /indicator\.style\.height = `\$\{wr\.height\}px`/);
+  assert.match(body, /translate\(\$\{left\}px, \$\{top\}px\)/);
+  assert.doesNotMatch(body, /indicator\.style\.width = `\$\{ar\.width\}px`/);
+  assert.match(routerJs, /const TAB_INDICATOR_INSET = 4;/);
+  assert.match(routerJs, /const TAB_INDICATOR_MAX_WIDTH = 64;/);
 });
 
 test('cold dashboard load does not transform the scroll surface', () => {

@@ -2484,8 +2484,19 @@ function positionSidebarIndicator() {
   indicator.style.opacity = '';
 }
 
+// Seitliche Luft zur Slot-Kante und Maximalbreite der Aktiv-Kapsel. Eine
+// slot-breite Pille lief im ersten/letzten Tab bis an die Bar-Kante, wo ihre
+// Rundung gekappt wurde (#569-Nachtrag); begrenzt bleibt sie eine Kapsel hinter
+// dem Icon statt einer randlosen Kachel.
+const TAB_INDICATOR_INSET = 4;
+const TAB_INDICATOR_MAX_WIDTH = 64;
+
 /**
  * Positioniert den gleitenden Indikator in der mobilen Tab-Bar.
+ *
+ * Vertikal an der Icon-Well ausgerichtet (nicht über die ganze Bar-Höhe), damit
+ * die Label-Grundlinie frei bleibt und die Kapsel weder in die Safe-Area noch
+ * an die Bar-Kante läuft.
  */
 function positionTabIndicator() {
   const nav = document.querySelector('.nav-bottom');
@@ -2500,8 +2511,19 @@ function positionTabIndicator() {
   }
   const nr = nav.getBoundingClientRect();
   const ar = active.getBoundingClientRect();
-  indicator.style.width = `${ar.width}px`;
-  indicator.style.transform = `translateX(${ar.left - nr.left}px)`;
+  const well = active.querySelector('.nav-item__icon-well');
+  const wr = well ? well.getBoundingClientRect() : ar;
+  const width = Math.max(
+    wr.width,
+    Math.min(ar.width - TAB_INDICATOR_INSET * 2, TAB_INDICATOR_MAX_WIDTH),
+  );
+  // clientTop: der Indikator sitzt in der Padding-Box der Bar, das Rect an der
+  // Border-Kante - ohne den Abzug sitzt die Kapsel 1px zu tief.
+  const top = wr.top - nr.top - nav.clientTop;
+  const left = ar.left - nr.left + (ar.width - width) / 2;
+  indicator.style.width = `${width}px`;
+  indicator.style.height = `${wr.height}px`;
+  indicator.style.transform = `translate(${left}px, ${top}px)`;
   indicator.style.opacity = '';
 }
 

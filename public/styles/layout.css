@@ -3752,12 +3752,18 @@ textarea.input { resize: vertical; }
   z-index: 1;
 }
 
-/* ── Mobile: Tab-Indikator (Strukturell) ── */
+/* ── Mobile: Tab-Indikator (Strukturell) ──
+ * Kapsel hinter dem Icon, nicht hinter Icon+Label: die bar-hohe Variante
+ * schnitt die Label-Grundlinie an und stieß im ersten/letzten Slot an die
+ * Bar-Kante, wo ihre Rundung gekappt wurde (#569-Nachtrag). Die exakte
+ * Geometrie (Höhe/Breite/Versatz) setzt positionTabIndicator() aus dem
+ * Icon-Well-Rect; die Werte hier sind der Stand vor dem ersten Messen. */
 .nav-bottom__indicator {
   position: absolute;
-  top: var(--space-1);
-  bottom: var(--space-1);
+  top: 0;
+  bottom: auto;
   left: 0;
+  height: var(--target-md);
   border-radius: var(--radius-full);
   pointer-events: none;
   transition:
