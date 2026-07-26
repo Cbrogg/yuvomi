@@ -532,6 +532,40 @@ test('POST /groups/:id/archive: Mitglied 403, Owner 200 -> Gruppe archiviert', a
   assert.ok(archived.body.data.some((x) => x.id === ag));
 });
 
+test('POST /groups/:id/unarchive: Mitglied 403, Owner 200 -> Gruppe wieder aktiv (#574)', async () => {
+  const g = await call('POST', '/groups', { actor: { id: OWNER, role: 'member' }, body: { name: 'Unarchiv-Test' } });
+  const ug = g.body.data.id;
+  await call('POST', `/groups/${ug}/members`, { actor: { id: OWNER, role: 'member' }, body: { user_id: MEM, role: 'guest' } });
+  await call('POST', `/groups/${ug}/archive`, { actor: { id: OWNER, role: 'member' } });
+
+  const denied = await call('POST', `/groups/${ug}/unarchive`, { actor: { id: MEM, role: 'member' } });
+  assert.equal(denied.status, 403);
+  const stillArchived = db.prepare('SELECT status FROM expense_groups WHERE id = ?').get(ug);
+  assert.equal(stillArchived.status, 'archived');
+
+  const ok = await call('POST', `/groups/${ug}/unarchive`, { actor: { id: OWNER, role: 'member' } });
+  assert.equal(ok.status, 200);
+  const row = db.prepare('SELECT status, archived_at FROM expense_groups WHERE id = ?').get(ug);
+  assert.equal(row.status, 'active');
+  assert.equal(row.archived_at, null, 'archived_at wird beim Wiederherstellen geleert');
+
+  const active = await call('GET', '/groups', { actor: { id: OWNER, role: 'member' } });
+  assert.ok(active.body.data.some((x) => x.id === ug), 'Gruppe steht wieder in der aktiven Liste');
+  const archived = await call('GET', '/groups?status=archived', { actor: { id: OWNER, role: 'member' } });
+  assert.ok(!archived.body.data.some((x) => x.id === ug), 'und nicht mehr im Archiv');
+  const logged = db.prepare("SELECT 1 FROM expense_activity WHERE group_id = ? AND type = 'group_unarchived'").get(ug);
+  assert.ok(logged, 'Wiederherstellen landet im Aktivitätsverlauf');
+});
+
+test('POST /groups/:id/unarchive: Aussenstehender bekommt 404 (kein Gruppen-Leak)', async () => {
+  const g = await call('POST', '/groups', { actor: { id: OWNER, role: 'member' }, body: { name: 'Unarchiv-Fremd' } });
+  const fg = g.body.data.id;
+  await call('POST', `/groups/${fg}/archive`, { actor: { id: OWNER, role: 'member' } });
+  const r = await call('POST', `/groups/${fg}/unarchive`, { actor: { id: OUTSIDER, role: 'member' } });
+  assert.equal(r.status, 404);
+  assert.equal(db.prepare('SELECT status FROM expense_groups WHERE id = ?').get(fg).status, 'archived');
+});
+
 test('DELETE /groups/:id: Gruppe ohne Finanzhistorie wird gelöscht', async () => {
   const g = await call('POST', '/groups', { actor: { id: OWNER, role: 'member' }, body: { name: 'Leer-Test' } });
   const eg = g.body.data.id;

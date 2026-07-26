@@ -2282,6 +2282,7 @@
             "group_created": "Skupina vytvořena",
             "group_updated": "Skupina aktualizována",
             "group_archived": "Skupina archivována",
+            "group_unarchived": "Skupina obnovena",
             "member_added": "Člen přidán",
             "guest_created": "Host vytvořen",
             "expense_created": "Výdaj vytvořen",
@@ -2318,7 +2319,12 @@
         "deleteGroup": "Smazat skupinu",
         "archiveGroupConfirm": "Archivovat tuto skupinu?",
         "deleteGroupConfirm": "Smazat tuto prázdnou skupinu? Skupiny s výdaji musí být archivovány.",
-        "splitCurrentTotal": "Aktuální součet: {{total}}"
+        "splitCurrentTotal": "Aktuální součet: {{total}}",
+        "statusLabel": "Stav",
+        "statusActive": "Aktivní",
+        "statusArchived": "Archivováno",
+        "restoreGroup": "Obnovit",
+        "emptyArchivedTitle": "Nic archivováno"
     },
     "documents": {
         "title": "Dokumenty",

@@ -116,6 +116,10 @@
 .split-groups-panel {
   padding: var(--space-3);
   min-height: 0;
+  /* Grid-Item mit min-width:auto wächst sonst auf die Breite der breitesten
+   * Gruppenkarte (240px + Inhalt) und schiebt Suchfeld und Statusfilter im
+   * Einspalten-Layout aus dem Viewport. */
+  min-width: 0;
 }
 
 .split-panel-head {
@@ -168,6 +172,19 @@
   -webkit-appearance: none;
   appearance: none;
   display: none;
+}
+
+/* Statusfilter der Gruppenliste (Aktiv/Archiviert, #574). Teilt die
+ * .filter-chip-Vokabel mit Aufgaben/Dokumenten. */
+.split-status-filter {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.split-status-filter .filter-chip {
+  flex: 1;
+  justify-content: center;
 }
 
 .split-groups {
@@ -248,6 +265,21 @@
   background-color: var(--glass-bg-card);
   border: 1px solid var(--glass-border-subtle);
   border-radius: var(--radius-glass-card);
+}
+
+/* Archiv-Marker im Gruppenkopf: sagt beim Direkteinstieg (Deep-Link, Suche),
+ * warum alle schreibenden Aktionen fehlen. */
+.split-archived-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: var(--space-1) 0 0;
+  padding: var(--space-0h) var(--space-2);
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--module-accent) 12%, var(--color-surface-2));
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
 }
 
 .split-kicker {

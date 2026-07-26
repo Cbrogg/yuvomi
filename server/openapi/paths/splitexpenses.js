@@ -15,6 +15,9 @@ export function splitexpensesPaths() {
     '/api/v1/split-expenses/groups/{id}/archive': {
       post: op({ summary: 'Archive expense group', tag: 'SplitExpenses', params: [idParam()], stateChanging: true }),
     },
+    '/api/v1/split-expenses/groups/{id}/unarchive': {
+      post: op({ summary: 'Restore an archived expense group', tag: 'SplitExpenses', params: [idParam()], stateChanging: true }),
+    },
     '/api/v1/split-expenses/groups/{id}/members': {
       get: op({ summary: 'List group members', tag: 'SplitExpenses', params: [idParam()] }),
       post: op({ summary: 'Add member to group', tag: 'SplitExpenses', params: [idParam()], stateChanging: true, requestBody: jsonBody(null) }),

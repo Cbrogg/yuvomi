@@ -2560,6 +2560,7 @@
             "group_created": "Csoport létrehozva",
             "group_updated": "Csoport frissítve",
             "group_archived": "Csoport archiválva",
+            "group_unarchived": "Csoport visszaállítva",
             "member_added": "Tag hozzáadva",
             "guest_created": "Vendég létrehozva",
             "expense_created": "Költség létrehozva",
@@ -2596,7 +2597,12 @@
         "deleteGroup": "Csoport törlése",
         "archiveGroupConfirm": "Archiválja ezt a csoportot?",
         "deleteGroupConfirm": "Törli ezt az üres csoportot? A költségekkel rendelkező csoportokat archiválni kell.",
-        "splitCurrentTotal": "Jelenlegi összeg: {{total}}"
+        "splitCurrentTotal": "Jelenlegi összeg: {{total}}",
+        "statusLabel": "Állapot",
+        "statusActive": "Aktív",
+        "statusArchived": "Archivált",
+        "restoreGroup": "Visszaállítás",
+        "emptyArchivedTitle": "Nincs archiválva semmi"
     },
     "wmo": {
         "0": "Tiszta égbolt",

@@ -2560,6 +2560,7 @@
             "group_created": "群组已创建",
             "group_updated": "群组已更新",
             "group_archived": "群组已归档",
+            "group_unarchived": "群组已恢复",
             "member_added": "成员已添加",
             "guest_created": "访客已创建",
             "expense_created": "支出已创建",
@@ -2596,7 +2597,12 @@
         "deleteGroup": "删除群组",
         "archiveGroupConfirm": "归档此群组？",
         "deleteGroupConfirm": "删除这个空群组？有支出的群组必须归档。",
-        "splitCurrentTotal": "当前合计：{{total}}"
+        "splitCurrentTotal": "当前合计：{{total}}",
+        "statusLabel": "状态",
+        "statusActive": "活跃",
+        "statusArchived": "已归档",
+        "restoreGroup": "恢复",
+        "emptyArchivedTitle": "归档为空"
     },
     "wmo": {
         "0": "晴天",
