@@ -27,12 +27,16 @@ services:
       # Named volume keeps its legacy slug so existing Portainer stacks upgrade
       # in place instead of orphaning their data on rename.
       - oikos_data:/data
+      # Scheduled and manual backups. Without this volume the files would only
+      # live inside the container layer and vanish on the next image update.
+      - oikos_backups:/backups
       # Optional: mount a host folder for storing uploaded documents locally
       # - ./documents:/documents
     environment:
       - NODE_ENV=production
       - PORT=3000
       - DB_PATH=/data/yuvomi.db
+      - BACKUP_DIR=/backups
       - SESSION_SECRET=${SESSION_SECRET:?Set SESSION_SECRET in .env}
       - DB_ENCRYPTION_KEY=${DB_ENCRYPTION_KEY:?Set DB_ENCRYPTION_KEY in .env}
       # Set to true when behind a reverse proxy with HTTPS (Caddy, nginx, Traefik)
@@ -85,4 +89,6 @@ services:
 
 volumes:
   oikos_data:
+    driver: local
+  oikos_backups:
     driver: local

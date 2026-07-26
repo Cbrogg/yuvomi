@@ -83,6 +83,9 @@ After the container starts, open the WebUI — the first visit guides you throug
   <!-- Database path (advanced; matches the /data mount) -->
   <Config Name="DB_PATH" Target="DB_PATH" Default="/data/yuvomi.db" Mode="" Description="Path to the SQLite database inside the container. Keep default unless you know what you are doing. Legacy /data/oikos.db is auto-migrated on boot." Type="Variable" Display="advanced" Required="false" Mask="false">/data/yuvomi.db</Config>
 
+  <!-- Backup path (advanced; must match the /backups mount above) -->
+  <Config Name="BACKUP_DIR" Target="BACKUP_DIR" Default="/backups" Mode="" Description="Directory inside the container where backup files are written. Must match the Backups path mapping above, otherwise backups fail with a permission error." Type="Variable" Display="advanced" Required="false" Mask="false">/backups</Config>
+
   <!-- Weather (optional) — Open-Meteo (recommended, free, no API key) -->
   <Config Name="WEATHER_LAT" Target="WEATHER_LAT" Default="" Mode="" Description="Optional. Latitude for the Open-Meteo weather widget (no API key required). Find coordinates on openstreetmap.org or Google Maps, e.g. 52.52." Type="Variable" Display="advanced" Required="false" Mask="false"/>
   <Config Name="WEATHER_LON" Target="WEATHER_LON" Default="" Mode="" Description="Optional. Longitude for the Open-Meteo weather widget, e.g. 13.41." Type="Variable" Display="advanced" Required="false" Mask="false"/>

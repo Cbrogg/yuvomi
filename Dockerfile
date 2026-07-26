@@ -33,6 +33,13 @@ COPY . .
 # Daten-Volume-Verzeichnisse anlegen (Permissions werden zur Laufzeit gesetzt)
 RUN mkdir -p /data /backups /app/modules
 
+# Container-Default für das Backup-Ziel. Ohne diesen ENV fällt die App auf ihren
+# Bare-Metal-Default './backups' (= /app/backups) zurück - dort hat der node-User
+# keine Schreibrechte, und die Backups landeten nicht im gemounteten Volume.
+# Deployments, die BACKUP_DIR selbst setzen (Compose, TrueNAS, Umbrel, Quadlet),
+# überschreiben diesen Wert wie gehabt.
+ENV BACKUP_DIR=/backups
+
 # Entrypoint: korrigiert Volume-Permissions und startet als node-User
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

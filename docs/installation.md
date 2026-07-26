@@ -464,7 +464,7 @@ optional `DB_ENCRYPTION_KEY`.
 | `DB_PATH` | Path to the SQLite database file inside the container | `/data/yuvomi.db` | No |
 | `DB_ENCRYPTION_KEY` | Encryption key for SQLCipher AES-256. **Change this!** | - | **Yes** |
 | `DATA_DIR` | Host directory mounted at `/data` inside the container (set in `.env` or `docker-compose.yml`). | `./data` | No |
-| `BACKUP_DIR` | Host directory mounted at `/backups` for scheduled backup files. | `./backups` | No |
+| `BACKUP_DIR` | In `.env`/`docker-compose.yml`: the **host** directory mounted at `/backups`. Inside the container the app reads the same name as the **container** path it writes to — the compose files pin it to `/backups`, and the image defaults to `/backups` as well. Only override it inside the container if you mount your backup volume somewhere else. | `./backups` (host) / `/backups` (container) | No |
 
 Generate a secure `DB_ENCRYPTION_KEY`:
 
@@ -661,9 +661,9 @@ Built-in cron-based database backup (default: 2 AM daily, keep last 7 copies). S
 
 | Variable | Description | Default | Required |
 |----------|-------------|---------|----------|
-| `BACKUP_ENABLED` | Enable scheduled backups (`true`/`false`) | `false` | No |
+| `BACKUP_ENABLED` | Enable scheduled backups (`true`/`false`) | `true` | No |
 | `BACKUP_SCHEDULE` | Cron expression for backup schedule | `0 2 * * *` | No |
-| `BACKUP_DIR` | Directory (inside container) where backup files are written | `/backups` | No |
+| `BACKUP_DIR` | Directory (inside container) where backup files are written. Must be a writable, mounted path, otherwise backups fail with `EACCES`. | `/backups` (container), `./backups` (bare metal) | No |
 | `BACKUP_KEEP` | Number of most-recent backup files to retain | `7` | No |
 
 **WebDAV backup target (optional):** After each local backup, Yuvomi can automatically upload the file to any WebDAV-compatible server (Nextcloud, ownCloud, Hetzner Storage Box, Infomaniak kDrive, etc.). Configure in **Settings → Administration → Backup and restore → WebDAV Backup Target**, or via environment variables (env vars take precedence over the UI):
@@ -937,6 +937,28 @@ sudo usermod -aG docker $USER
 ```
 
 Log out and back in (or reboot) for the group change to take effect.
+
+</details>
+
+<details>
+<summary>Backup fails with <code>EACCES: permission denied, mkdir './backups'</code></summary>
+
+The relative path in the message is the giveaway: the app fell back to its bare-metal
+default (`./backups`, i.e. `/app/backups` in the container) instead of writing to the
+mounted `/backups` volume, and the unprivileged `node` user cannot create it there.
+Your host folder is fine — it just was never the target.
+
+This happened on deployments that mounted `/backups` without also setting `BACKUP_DIR`
+(Unraid before this fix, hand-rolled `docker run`). Update to the current image, which
+defaults `BACKUP_DIR` to `/backups`. If you build or run the container yourself, pass it
+explicitly:
+
+```bash
+docker run -e BACKUP_DIR=/backups -v /path/on/host/backups:/backups ...
+```
+
+Since this fix the error message names the resolved absolute path, so a genuinely
+unwritable mount is easy to tell apart from a misconfigured `BACKUP_DIR`.
 
 </details>
 

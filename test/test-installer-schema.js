@@ -194,6 +194,45 @@ test('Lokale Dokumentspeicher-Werte erzeugen keine TrueNAS- oder Umbrel-Fragen',
   }
 });
 
+test('Jedes Container-Deployment schreibt Backups nach /backups (issue #579)', () => {
+  // Ohne BACKUP_DIR fällt die App auf ihren Bare-Metal-Default './backups' zurück,
+  // also /app/backups im Container - ausserhalb des gemounteten Volumes und für den
+  // node-User nicht anlegbar. Das Image setzt den Default deshalb selbst, und jeder
+  // Descriptor mit einem /backups-Mount muss die Variable passend belegen.
+  const dockerfile = readFileSync(new URL('../Dockerfile', import.meta.url), 'utf8');
+  assert.match(
+    dockerfile,
+    /^ENV BACKUP_DIR=\/backups$/m,
+    'Dockerfile muss BACKUP_DIR=/backups als Image-Default setzen'
+  );
+
+  for (const path of [
+    '../docker-compose.yml',
+    '../podman-compose.yml',
+    '../docs/docker-compose.portainer.yml',
+    '../deploy/umbrel/docker-compose.yml',
+  ]) {
+    const src = readFileSync(new URL(path, import.meta.url), 'utf8');
+    assert.match(src, /:\/backups(:Z)?$/m, `${path} mountet kein /backups`);
+    assert.match(src, /- BACKUP_DIR=\/backups$/m, `${path} setzt BACKUP_DIR nicht auf /backups`);
+  }
+
+  const truenas = readFileSync(
+    new URL('../deploy/truenas/templates/docker-compose.yaml', import.meta.url),
+    'utf8'
+  );
+  assert.match(truenas, /add_env\("BACKUP_DIR", "\/backups"\)/, 'TrueNAS setzt BACKUP_DIR nicht');
+
+  const quadlet = readFileSync(new URL('../tools/quadlet/oikos.container', import.meta.url), 'utf8');
+  assert.match(quadlet, /^Environment=BACKUP_DIR=\/backups$/m, 'Quadlet setzt BACKUP_DIR nicht');
+
+  const unraid = readFileSync(new URL('../templates/yuvomi.xml', import.meta.url), 'utf8');
+  const backupVar = unraid.match(/<Config[^>]+Target="BACKUP_DIR"[^>]*>[^<]*/);
+  assert.ok(backupVar, 'Unraid deklariert BACKUP_DIR nicht');
+  assert.match(backupVar[0], /Default="\/backups"/, 'Unraid BACKUP_DIR muss /backups defaulten');
+  assert.match(unraid, /Target="\/backups"[^>]+Type="Path"/, 'Unraid mountet kein /backups');
+});
+
 test('TZ und OIKOS_HTTP_PORT haben writeToEnv: true', () => {
   for (const key of ['TZ', 'OIKOS_HTTP_PORT']) {
     const entry = ENV_SCHEMA.find(e => e.key === key);
