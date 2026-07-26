@@ -56,6 +56,12 @@ const MAX_CALENDAR_DURATION = 1440;
 const VALID_REMINDER_OFFSETS = [0, 15, 60, 1440, 2880, 10080, 20160];
 const MAX_DEFAULT_REMINDERS = 5;
 
+// Standard-Punktwert für neue Aufgaben (#578, haushaltweit). 0 = kein Standard,
+// das Punktefeld bleibt wie bisher leer. Obergrenze spiegelt MAX_POINTS in
+// server/routes/tasks.js.
+const DEFAULT_TASK_POINTS = 0;
+const MAX_TASK_POINTS = 10000;
+
 // Persistierte Default-Reminder als sortiertes Zahlen-Array lesen (leer = keine).
 function parseDefaultReminders(raw) {
   if (!raw) return [];
@@ -67,6 +73,13 @@ function parseDefaultReminders(raw) {
   } catch {
     return [];
   }
+}
+
+/** Persistierten Standard-Punktwert als ganze Zahl im gültigen Bereich lesen. */
+function parseTaskDefaultPoints(raw) {
+  const n = Math.trunc(Number(raw));
+  if (!Number.isFinite(n) || n <= 0) return DEFAULT_TASK_POINTS;
+  return Math.min(n, MAX_TASK_POINTS);
 }
 
 const VALID_WEATHER_PROVIDERS = ['open-meteo', 'openweathermap'];
@@ -268,6 +281,7 @@ router.get('/', (req, res) => {
         // Feature aktiv, damit Bestandshaushalte ihr Verhalten behalten.
         health_cycle_enabled: cfgGet('health_cycle_enabled') !== '0',
         rewards_require_approval: cfgGet('rewards_require_approval') !== '0',
+        tasks_default_points: parseTaskDefaultPoints(cfgGet('tasks_default_points')),
         weather_provider: cfgGet('weather_provider') ?? null,
         weather_lat:      cfgGet('weather_lat')      ?? null,
         weather_lon:      cfgGet('weather_lon')      ?? null,
@@ -300,7 +314,7 @@ router.get('/', (req, res) => {
 
 router.put('/', (req, res) => {
   try {
-    const { visible_meal_types, currency, date_format, time_format, week_start, region, app_name, dashboard_widgets, disabled_modules, module_order, mobile_nav_order, housekeeping_payment_tasks, budget_mode, calendar_default_duration, calendar_default_reminders, calendar_default_assign_me, health_cycle_enabled, rewards_require_approval, weather_provider, weather_lat, weather_lon, weather_city, weather_units, weather_auto_locate, weather_user, holiday_country, holiday_subdivision, holiday_group, holiday_show_public, holiday_show_school, holiday_public_color, holiday_school_color } = req.body;
+    const { visible_meal_types, currency, date_format, time_format, week_start, region, app_name, dashboard_widgets, disabled_modules, module_order, mobile_nav_order, housekeeping_payment_tasks, budget_mode, calendar_default_duration, calendar_default_reminders, calendar_default_assign_me, health_cycle_enabled, rewards_require_approval, tasks_default_points, weather_provider, weather_lat, weather_lon, weather_city, weather_units, weather_auto_locate, weather_user, holiday_country, holiday_subdivision, holiday_group, holiday_show_public, holiday_show_school, holiday_public_color, holiday_school_color } = req.body;
 
     if (visible_meal_types !== undefined) {
       if (!Array.isArray(visible_meal_types)) {
@@ -468,6 +482,18 @@ router.put('/', (req, res) => {
         return res.status(400).json({ error: 'rewards_require_approval must be a boolean', code: 400 });
       }
       cfgSet('rewards_require_approval', rewards_require_approval ? '1' : '0');
+    }
+
+    // Standard-Punktwert für neue Aufgaben (#578). 0 schaltet den Standard ab.
+    if (tasks_default_points !== undefined) {
+      if (req.authRole !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required.', code: 403 });
+      }
+      const points = Number(tasks_default_points);
+      if (!Number.isInteger(points) || points < 0 || points > MAX_TASK_POINTS) {
+        return res.status(400).json({ error: `tasks_default_points must be an integer between 0 and ${MAX_TASK_POINTS}`, code: 400 });
+      }
+      cfgSet('tasks_default_points', String(points));
     }
 
     // Weather configuration — admin only
@@ -683,6 +709,7 @@ router.put('/', (req, res) => {
         calendar_default_assign_me: cfgUserGet('calendar_default_assign_me', req.authUserId) === '1',
         health_cycle_enabled: cfgGet('health_cycle_enabled') !== '0',
         rewards_require_approval: cfgGet('rewards_require_approval') !== '0',
+        tasks_default_points: parseTaskDefaultPoints(cfgGet('tasks_default_points')),
         weather_provider: cfgGet('weather_provider') ?? null,
         weather_lat:      cfgGet('weather_lat')      ?? null,
         weather_lon:      cfgGet('weather_lon')      ?? null,

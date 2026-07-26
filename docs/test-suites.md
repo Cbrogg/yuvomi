@@ -13,6 +13,7 @@ npm run test:rename-migration   # Oikos→Yuvomi Identifier-Migration: seamless 
 npm run test:tasks
 npm run test:tasks-recurrence   # recurring task catch-up: nextOccurrenceAfter + PATCH status follow-up
 npm run test:tasks-routes       # Tasks-Routen-Schicht: PUT/:id, meta/options, Kategorie-CRUD (404/400/409), Filter, Verschachtelung, PATCH-Status, DELETE
+npm run test:task-default-points # Standard-Punkte (#578): Preference admin-only + Validierung, Prefill nur ohne expliziten Wert und nur für Hauptaufgaben, Rebase fasst nur offene Hauptaufgaben an (erledigte Punkte sind im Ledger gebucht)
 npm run test:task-categories    # Aufgaben-Kategorien (#494/#357): Migration (Seed, Sonstiges→misc, Orphan-Adoption) + CRUD-Guards
 npm run test:visibility         # Sichtbarkeit (#474): all|assignees|private Durchsetzung (Tasks+Termine), kein Admin-Bypass, normalizeVisibility
 npm run test:sync-default-assignee   # Standard-Zuweisung pro Sync-Ziel (#459): assignDefaultToEvent (neu-only, idempotent, No-op bei verwaister Person)

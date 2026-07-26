@@ -397,6 +397,17 @@ function renderModalContent({ task = null, users = [], reminder = null } = {}) {
     || (Number(task.points) > 0)
   );
 
+  // Punkte neuer Aufgaben mit dem Haushalt-Standard vorbelegen (#578). Der Wert
+  // ist per Definition KEIN Abweichler, der Aufklapper bleibt deshalb zu — damit
+  // er trotzdem auffindbar bleibt, nennt die Zusammenfassung den Punktwert.
+  const prefillPoints = !isEdit && state.defaultPoints > 0 ? state.defaultPoints : 0;
+  const pointsValue = isEdit
+    ? (Number(task?.points) > 0 ? Number(task.points) : '')
+    : (prefillPoints || '');
+  const advancedLabel = prefillPoints
+    ? `${t('modal.moreSettings')} · ${t('tasks.pointsSummary', { count: prefillPoints })}`
+    : undefined;
+
   const advancedFieldsHtml = `
       <div class="form-group">
         <label class="label" for="task-description">${t('tasks.descriptionLabel')}</label>
@@ -429,9 +440,11 @@ function renderModalContent({ task = null, users = [], reminder = null } = {}) {
         <div class="form-group">
           <label class="label" for="task-points">${t('tasks.pointsLabel')}</label>
           <input class="input" type="number" id="task-points" name="points" inputmode="numeric"
-                 min="0" step="1" value="${Number(task?.points) > 0 ? Number(task.points) : ''}"
+                 min="0" step="1" value="${pointsValue}"
                  placeholder="0">
-          <p class="task-field-hint">${t('tasks.pointsHint')}</p>
+          <p class="task-field-hint">${prefillPoints
+            ? t('tasks.pointsDefaultHint', { count: prefillPoints })
+            : t('tasks.pointsHint')}</p>
         </div>
       </div>`;
 
@@ -484,7 +497,7 @@ function renderModalContent({ task = null, users = [], reminder = null } = {}) {
         <p class="task-field-hint field-hint--warn" id="task-visibility-warning" role="status" hidden><i data-lucide="alert-triangle" aria-hidden="true"></i><span>${t('common.visibility.assigneesNobodyHint')}</span></p>
       </div>` : ''}
 
-      ${advancedSection(advancedFieldsHtml, { open: advancedFieldsOpen })}
+      ${advancedSection(advancedFieldsHtml, { open: advancedFieldsOpen, label: advancedLabel })}
 
       ${isEdit ? `
         <div class="form-group">
@@ -534,6 +547,7 @@ let state = {
   tasks:           [],
   users:           [],
   categories:      [],
+  defaultPoints:   0,        // Haushalt-Standard für neue Aufgaben (#578), 0 = aus
   currentUserId:   null,
   filters:         { status: 'open', priority: '', assigned_to: '' },
   groupMode:       'category',   // 'category' | 'due'
@@ -2274,12 +2288,14 @@ export async function render(container, { user }) {
     state.tasks = tasksData.data ?? [];
     state.users = metaData.users ?? [];
     state.categories = metaData.categories ?? [];
+    state.defaultPoints = Number(metaData.default_points) || 0;
   } catch (err) {
     console.error('[Tasks] Ladefehler:', err.message);
     window.yuvomi.showToast(t('tasks.loadError'), 'danger');
     state.tasks = [];
     state.users = [];
     state.categories = [];
+    state.defaultPoints = 0;
   }
 
   // UI verdrahten

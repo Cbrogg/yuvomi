@@ -50,6 +50,34 @@ function clampPoints(val) {
   return Math.min(n, MAX_POINTS);
 }
 
+/**
+ * Haushaltweiter Standard-Punktwert für neue Aufgaben (#578). 0 = kein Standard.
+ * Liegt in sync_config, damit die Einstellung im selben Speicher wie die
+ * übrigen Haushalt-Präferenzen liegt (siehe server/routes/preferences.js).
+ */
+function defaultTaskPoints() {
+  const row = db.get().prepare("SELECT value FROM sync_config WHERE key = 'tasks_default_points'").get();
+  return clampPoints(row?.value);
+}
+
+// Erledigte Aufgaben dürfen nicht umbepunktet werden: genau für 'done' hält der
+// reward_ledger eine earn-Buchung über den damaligen Punktwert
+// (awardForCompletion in server/services/rewards.js); ein nachträglicher Wechsel
+// ließe Aufgabenwert und Gutschrift auseinanderlaufen.
+// Alle übrigen Status sind buchungsfrei — auch 'archived': eine archivierte
+// Aufgabe war entweder nie 'done', oder der Übergang 'done' → 'archived' hat die
+// Buchung über reverseTaskEarnings wieder entfernt. Sie mitzuziehen verhindert,
+// dass eine später reaktivierte Aufgabe einen veralteten Wert auszahlt.
+const REBASE_EXCLUDED_STATUS = 'done';
+
+/** Nicht erledigte Hauptaufgaben, die exakt auf einem Punktwert stehen. */
+function countRebasableTasks(points) {
+  return db.get().prepare(`
+    SELECT COUNT(*) AS n FROM tasks
+    WHERE points = ? AND parent_task_id IS NULL AND status != ?
+  `).get(points, REBASE_EXCLUDED_STATUS).n;
+}
+
 // --------------------------------------------------------
 // Hilfsfunktionen
 // --------------------------------------------------------
@@ -354,7 +382,12 @@ router.post('/', (req, res) => {
       is_recurring    = 0,
       recurrence_rule = null,
     } = req.body;
-    const points = clampPoints(req.body.points);
+    // Ohne expliziten Wert greift der Haushalt-Standard (#578) — aber nur für
+    // Hauptaufgaben: Subtasks sind Checklisten-Punkte der Elternaufgabe und
+    // würden den Punktewert sonst vervielfachen. Eine ausdrückliche 0 bleibt 0.
+    const points = req.body.points === undefined && !parent_task_id
+      ? defaultTaskPoints()
+      : clampPoints(req.body.points);
     const visibility = normalizeVisibility(req.body.visibility);
 
     const userIds  = parseAssignedTo(req.body.assigned_to);
@@ -641,9 +674,76 @@ router.get('/meta/options', (req, res) => {
        WHERE NOT EXISTS (SELECT 1 FROM housekeeping_workers hw WHERE hw.user_id = u.id)
        ORDER BY display_name`
     ).all();
-    res.json({ users, priorities: VALID_PRIORITIES, statuses: VALID_STATUSES, categories: loadTaskCategories() });
+    res.json({
+      users,
+      priorities: VALID_PRIORITIES,
+      statuses: VALID_STATUSES,
+      categories: loadTaskCategories(),
+      default_points: defaultTaskPoints(),
+    });
   } catch (err) {
     log.error('GET /meta/options error:', err);
+    res.status(500).json({ error: 'Internal server error.', code: 500 });
+  }
+});
+
+// --------------------------------------------------------
+// Standard-Punkte nachziehen (#578)
+// Zweisegmentige Pfade — kollidieren nicht mit der /:id-Route.
+// --------------------------------------------------------
+
+// GET /api/v1/tasks/points/affected?points=N
+// Wie viele nicht erledigte Hauptaufgaben stehen exakt auf diesem Punktwert?
+// Vorschau für die Einstellungsseite, bevor sie den Wechsel anbietet — deshalb
+// dasselbe Admin-Gate wie beim Setzen des Standards und beim Nachziehen.
+router.get('/points/affected', (req, res) => {
+  try {
+    if (req.authRole !== 'admin') {
+      return res.status(403).json({ error: 'Admin access required.', code: 403 });
+    }
+    const points = Number(req.query.points);
+    if (!Number.isInteger(points) || points < 0 || points > MAX_POINTS) {
+      return res.status(400).json({ error: `points must be an integer between 0 and ${MAX_POINTS}`, code: 400 });
+    }
+    res.json({ data: { count: countRebasableTasks(points) } });
+  } catch (err) {
+    log.error('GET /points/affected error:', err);
+    res.status(500).json({ error: 'Internal server error.', code: 500 });
+  }
+});
+
+// POST /api/v1/tasks/points/rebase  Body: { from, to } → { data: { updated } }
+// Hebt alle nicht erledigten Hauptaufgaben, die auf dem alten Standard stehen,
+// auf den neuen. „Steht noch auf dem Standard" wird bewusst über den Zahlenwert
+// bestimmt statt über ein verstecktes Flag: eine Aufgabe, der jemand von Hand
+// exakt den alten Standardwert gegeben hat, wandert deshalb mit. Die Anzahl
+// steht vorab im Bestätigungsdialog, der Wechsel ist also nie verdeckt.
+router.post('/points/rebase', (req, res) => {
+  try {
+    if (req.authRole !== 'admin') {
+      return res.status(403).json({ error: 'Admin access required.', code: 403 });
+    }
+    const from = Number(req.body.from);
+    const to   = Number(req.body.to);
+    const inRange = (n) => Number.isInteger(n) && n >= 0 && n <= MAX_POINTS;
+    if (!inRange(from) || !inRange(to)) {
+      return res.status(400).json({ error: `from and to must be integers between 0 and ${MAX_POINTS}`, code: 400 });
+    }
+    // 0 als Quelle würde jede punktelose Aufgabe erfassen — das ist kein
+    // „nutzt noch den Standard", sondern schlicht „hat keine Punkte".
+    if (from === 0) {
+      return res.status(400).json({ error: 'from must be greater than 0.', code: 400 });
+    }
+    if (from === to) return res.json({ data: { updated: 0 } });
+
+    const result = db.get().prepare(`
+      UPDATE tasks SET points = ?
+      WHERE points = ? AND parent_task_id IS NULL AND status != ?
+    `).run(to, from, REBASE_EXCLUDED_STATUS);
+
+    res.json({ data: { updated: result.changes } });
+  } catch (err) {
+    log.error('POST /points/rebase error:', err);
     res.status(500).json({ error: 'Internal server error.', code: 500 });
   }
 });
