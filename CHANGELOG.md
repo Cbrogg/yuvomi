@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.46.0] - 2026-07-26
+
+### Added
+- Tasks can now start with a point value instead of it being typed in every time. Settings → Modules → Rewards has a "Standard-Punkte" field: set it once and every new task is prefilled with that value, still overridable per task, and a 0 entered by hand still means no points. Leaving it at 0 keeps the previous behaviour, where the points field starts empty (#578).
+- Changing the default offers to carry existing tasks over. After saving, the settings page reports how many tasks still sit on the old default and asks whether to move them to the new one. Tasks that were given their own point value keep it, and tasks already marked as done keep theirs too, because their points have already been credited to the ledger. Which tasks are affected is decided by their point value, and the count is shown before confirming, so nothing changes unseen (#578).
+- Subtasks stay at zero points. They are checklist items of their parent task, so applying the household default to each of them would multiply the parent's value (#578).
+
 ## [1.45.15] - 2026-07-26
 
 ### Fixed
