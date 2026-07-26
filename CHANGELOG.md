@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.45.13] - 2026-07-26
+
+### Fixed
+- Shared expenses: archived groups can be opened again. The group list has an Active/Archived filter, an archived group stays fully readable with its balances, expenses and activity feed, and a Restore action puts it back into the active list. Archiving used to be a one-way trip: the API already served archived groups, but no control in the interface led to them (#574).
+- Shared expenses: on narrow screens the group panel no longer reaches past the right edge of the screen. It grew to the width of the widest group card, which cut off the search field (#574).
+
 ## [1.45.12] - 2026-07-26
 
 ### Added
