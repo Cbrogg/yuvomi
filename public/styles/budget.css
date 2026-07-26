@@ -1253,6 +1253,15 @@
   display: none !important;
 }
 
+/* Zins-Darlehen (#569): Live-Vorschau + Variabel-Hinweis unter den Zinsfeldern.
+ * .form-hint lebt in settings.css, und der Router lädt nur ein Page-CSS pro
+ * Seite - im Budget-Modal blieben die Zeilen sonst auf Body-Größe und -Farbe. */
+.modal-panel .budget-loan-hint {
+  margin-top: var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
 .budget-field-header {
   display: flex;
   align-items: center;

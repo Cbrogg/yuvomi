@@ -12,6 +12,10 @@
  *     Prognose-Anschlusszins weiter (mehr Zins-, weniger Tilgungsanteil → längere
  *     Restlaufzeit). Reale variable Zinsen schwanken monatlich; hier ein
  *     angenommener Wert, daher „Prognose".
+ *   - interestMode 'variable' (Darlehen ganz ohne Zinsbindung) rechnet identisch
+ *     zu 'fixed': ein Zinssatz über die ganze Laufzeit, keine Phasen. Der
+ *     Unterschied ist die Zusage, nicht die Mathematik — der Satz ist der aktuelle
+ *     und kann sich jederzeit ändern, die Laufzeit ist also nur eine Momentaufnahme.
  *   - Die Laufzeit ergibt sich aus der Tilgung (kein manuelles Ratenlimit).
  *
  * Rein synchron, ohne Seiteneffekte/DB — netzfrei testbar (test:budget-loans-amortization).
@@ -27,8 +31,9 @@ const round2 = (v) => Math.round(v * 100) / 100;
  * @param {object} params
  * @param {number} params.principal            Kreditsumme in Euro (> 0)
  * @param {number} params.fixedRate            Sollzins p.a. in % (>= 0), Phase 1
+ *                                             (bei 'variable': aktueller variabler Zins)
  * @param {number} params.initialRepaymentRate Anfangstilgung p.a. in % (> 0)
- * @param {'fixed'|'fixed_then_variable'} params.interestMode
+ * @param {'fixed'|'variable'|'fixed_then_variable'} params.interestMode
  * @param {number|null} [params.fixedPeriodMonths] Zinsbindung in Monaten (nur fixed_then_variable)
  * @param {number|null} [params.followupRate]      Prognose-Anschlusszins p.a. in % (nur fixed_then_variable)
  * @returns {{ ok: true, monthlyPayment: number, totalMonths: number, totalInterest: number,
@@ -47,6 +52,8 @@ export function computeLoanSchedule({
   const P = Number(principal);
   const rf = Number(fixedRate);
   const rt = Number(initialRepaymentRate);
+  // Nur 'fixed_then_variable' hat zwei Phasen. 'variable' ist einphasig wie
+  // 'fixed' (ein Satz, keine Bindung) — daher hier bewusst kein Sonderfall.
   const variable = interestMode === 'fixed_then_variable';
   const rv = variable ? Number(followupRate) : rf;
   const bindingMonths = variable && Number.isFinite(Number(fixedPeriodMonths))

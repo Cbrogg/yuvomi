@@ -255,6 +255,80 @@ test('PUT ohne interest_mode: neutrales Feld (notes) auf Zinsdarlehen bleibt erl
   assert.equal(r.body.data.interest_mode, 'fixed_then_variable', 'Zins-Terms unangetastet');
 });
 
+// --------------------------------------------------------------------------
+// Rein variables Darlehen (#569-Nachtrag): ein Satz, keine Zinsbindung
+// --------------------------------------------------------------------------
+test('POST interest variable: speichert Modus ohne Bindungsfelder, rechnet wie fixed', async () => {
+  setMode('shared');
+  const variable = await call('POST', '/loans', {
+    as: AA,
+    body: {
+      borrower: 'Var', title: 'Variables Darlehen', start_month: '2026-01',
+      interest_mode: 'variable', principal: 150000, fixed_rate: 3.5, initial_repayment_rate: 2,
+      // Bindungsfelder mitgeschickt: dürfen im variablen Modus nicht landen.
+      fixed_period_months: 120, followup_rate: 9,
+    },
+  });
+  assert.equal(variable.status, 201);
+  const row = db.prepare('SELECT interest_mode, fixed_rate, fixed_period_months, followup_rate, total_amount, installment_count FROM budget_loans WHERE id = ?').get(variable.body.data.id);
+  assert.equal(row.interest_mode, 'variable');
+  assert.equal(row.fixed_period_months, null);
+  assert.equal(row.followup_rate, null);
+
+  const s = variable.body.data.interest;
+  assert.equal(s.mode, 'variable');
+  assert.equal(s.binding_end_month, null, 'ohne Bindung kein Bindungs-Endmonat');
+  assert.equal(s.remaining_after_binding, 0);
+
+  // Gleiche Mathematik wie der Festzins-Modus mit identischen Eingaben.
+  const fixed = await call('POST', '/loans', {
+    as: AA,
+    body: {
+      borrower: 'Fix', title: 'Vergleich fest', start_month: '2026-01',
+      interest_mode: 'fixed', principal: 150000, fixed_rate: 3.5, initial_repayment_rate: 2,
+    },
+  });
+  assert.equal(fixed.status, 201);
+  assert.equal(row.installment_count, fixed.body.data.installment_count);
+  assert.equal(s.monthly_payment, fixed.body.data.interest.monthly_payment);
+});
+
+test('PUT interest: Wechsel fixed_then_variable -> variable löscht die Bindungsfelder', async () => {
+  const r = await call('PUT', `/loans/${INTEREST_LOAN}`, {
+    as: AA,
+    body: {
+      interest_mode: 'variable', principal: 200000, fixed_rate: 2.5, initial_repayment_rate: 2,
+    },
+  });
+  assert.equal(r.status, 200);
+  const row = db.prepare('SELECT interest_mode, fixed_period_months, followup_rate FROM budget_loans WHERE id = ?').get(INTEREST_LOAN);
+  assert.equal(row.interest_mode, 'variable');
+  assert.equal(row.fixed_period_months, null);
+  assert.equal(row.followup_rate, null);
+  assert.equal(r.body.data.interest.mode, 'variable');
+});
+
+test('POST /loans/preview: variabler Modus liefert Rate + Laufzeit', async () => {
+  const r = await call('POST', '/loans/preview', {
+    as: AA,
+    body: { interest_mode: 'variable', principal: 150000, fixed_rate: 3.5, initial_repayment_rate: 2 },
+  });
+  assert.equal(r.status, 200);
+  assert.equal(r.body.data.ok, true);
+  assert.ok(Math.abs(r.body.data.monthly_payment - 687.5) <= 0.02, `monthly ${r.body.data.monthly_payment}`);
+  assert.ok(r.body.data.total_months > 0);
+  assert.equal(r.body.data.remaining_after_binding, null, 'ohne Bindung keine Restschuld-Marke');
+});
+
+test('POST /loans/preview: unbekannter Modus bleibt abgewiesen', async () => {
+  const r = await call('POST', '/loans/preview', {
+    as: AA,
+    body: { interest_mode: 'bogus', principal: 150000, fixed_rate: 3.5, initial_repayment_rate: 2 },
+  });
+  assert.equal(r.status, 200);
+  assert.equal(r.body.data.ok, false);
+});
+
 test('teardown: Server schließen', async () => {
   await new Promise((r) => server.close(r));
 });

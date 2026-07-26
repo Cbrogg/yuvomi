@@ -14,7 +14,9 @@ import { budgetFilter, mayEdit, getBudgetMode, loanSummaryRow, loadLoan, refresh
 const log = createLogger('Budget');
 const router = express.Router();
 
-const INTEREST_MODES = ['none', 'fixed', 'fixed_then_variable'];
+// 'variable' = Darlehen ganz ohne Zinsbindung (#569-Nachtrag): rechnet einphasig
+// wie 'fixed', der Satz gilt aber nur als aktueller Wert (Prognose).
+const INTEREST_MODES = ['none', 'fixed', 'variable', 'fixed_then_variable'];
 
 // Zins-Darlehen (#569): validiert die Zinseingaben und leitet daraus die vom
 // bestehenden Raten-/Status-System erwarteten Felder (total_amount = Gesamtaufwand,
@@ -23,6 +25,8 @@ function deriveInterestTerms(body, mode) {
   const principal = Number(body.principal);
   const fixedRate = Number(body.fixed_rate);
   const initialRepaymentRate = Number(body.initial_repayment_rate);
+  // Nur der Zwei-Phasen-Modus hat Zinsbindung + Anschlusszins; 'variable' und
+  // 'fixed' speichern beide Felder als NULL.
   const variable = mode === 'fixed_then_variable';
   const fixedPeriodMonths = variable ? parseInt(body.fixed_period_months, 10) : null;
   const followupRate = variable ? Number(body.followup_rate) : null;
@@ -68,7 +72,7 @@ function deriveInterestTerms(body, mode) {
 router.post('/loans/preview', (req, res) => {
   try {
     const mode = req.body.interest_mode;
-    if (mode !== 'fixed' && mode !== 'fixed_then_variable') {
+    if (!INTEREST_MODES.includes(mode) || mode === 'none') {
       return res.json({ data: { ok: false } });
     }
     const derived = deriveInterestTerms(req.body, mode);

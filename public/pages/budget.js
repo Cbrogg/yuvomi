@@ -1323,13 +1323,19 @@ function loanInterestMeta(it) {
   // Variable Phase nur zeigen, wenn das Darlehen die Zinsbindung überhaupt erreicht;
   // ist es vorher getilgt, verhält es sich wie ein Festzinsdarlehen (#569).
   const hasVariablePhase = it.mode === 'fixed_then_variable' && it.remaining_after_binding > 0;
-  const phase = hasVariablePhase
-    ? t('budget.loanRateFixedThenVariable', {
-        fixed: formatRate(it.fixed_rate),
-        until: it.binding_end_month ? formatMonthLabel(it.binding_end_month) : '',
-        variable: formatRate(it.followup_rate),
-      })
-    : t('budget.loanRateFixed', { rate: formatRate(it.fixed_rate) });
+  let phase;
+  if (hasVariablePhase) {
+    phase = t('budget.loanRateFixedThenVariable', {
+      fixed: formatRate(it.fixed_rate),
+      until: it.binding_end_month ? formatMonthLabel(it.binding_end_month) : '',
+      variable: formatRate(it.followup_rate),
+    });
+  } else if (it.mode === 'variable') {
+    // Ohne Zinsbindung darf die Karte keinen festen Zins behaupten (#569-Nachtrag).
+    phase = t('budget.loanRateVariable', { rate: formatRate(it.fixed_rate) });
+  } else {
+    phase = t('budget.loanRateFixed', { rate: formatRate(it.fixed_rate) });
+  }
   return `${monthly} · ${phase}`;
 }
 
@@ -1901,6 +1907,7 @@ function loanInterestFieldsHtml(loan) {
       <select class="form-input" id="lm-interest-mode">
         ${opt('none', 'budget.loanInterestNone')}
         ${opt('fixed', 'budget.loanInterestFixed')}
+        ${opt('variable', 'budget.loanInterestVariable')}
         ${opt('fixed_then_variable', 'budget.loanInterestFixedThenVariable')}
       </select>
     </div>
@@ -1912,7 +1919,9 @@ function loanInterestFieldsHtml(loan) {
       </div>
       <div class="form-grid-2">
         <div class="form-group">
-          <label class="form-label" for="lm-fixed-rate">${t('budget.loanFixedRateLabel')}</label>
+          <label class="form-label" for="lm-fixed-rate" id="lm-fixed-rate-label">${
+            t(mode === 'variable' ? 'budget.loanVariableRateLabel' : 'budget.loanFixedRateLabel')
+          }</label>
           <input type="number" class="form-input" id="lm-fixed-rate" step="0.01" min="0" max="100"
                  inputmode="decimal" value="${v(it?.fixed_rate)}">
         </div>
@@ -1934,7 +1943,10 @@ function loanInterestFieldsHtml(loan) {
                  inputmode="decimal" value="${v(it?.followup_rate)}">
         </div>
       </div>
-      <p class="form-hint" id="lm-interest-preview" aria-live="polite"></p>
+      <p class="form-hint budget-loan-hint" id="lm-variable-hint" ${mode === 'variable' ? '' : 'hidden'}>${
+        t('budget.loanVariableHint')
+      }</p>
+      <p class="form-hint budget-loan-hint" id="lm-interest-preview" aria-live="polite"></p>
     </div>`;
 }
 
@@ -1948,6 +1960,8 @@ function wireLoanInterestFields(panel) {
   const variableFields = panel.querySelector('#lm-variable-fields');
   const manualFields = panel.querySelector('#lm-manual-fields');
   const preview = panel.querySelector('#lm-interest-preview');
+  const rateLabel = panel.querySelector('#lm-fixed-rate-label');
+  const variableHint = panel.querySelector('#lm-variable-hint');
   let timer = null;
 
   const requestPreview = () => {
@@ -1982,8 +1996,15 @@ function wireLoanInterestFields(panel) {
 
   const update = () => {
     const interest = modeSel.value !== 'none';
+    // Rein variabler Zins (#569-Nachtrag): gleiche Felder wie beim festen Zins,
+    // aber ohne Zinsbindung - deshalb nur Beschriftung und Hinweis wechseln.
+    const isVariable = modeSel.value === 'variable';
     interestFields.hidden = !interest;
     variableFields.hidden = modeSel.value !== 'fixed_then_variable';
+    if (rateLabel) {
+      rateLabel.textContent = t(isVariable ? 'budget.loanVariableRateLabel' : 'budget.loanFixedRateLabel');
+    }
+    if (variableHint) variableHint.hidden = !isVariable;
     if (manualFields) manualFields.hidden = interest;
     requestPreview();
   };

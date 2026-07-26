@@ -72,6 +72,31 @@ test("Modus 'fixed' ignoriert Zinsbindung/Anschlusszins (durchgängig Sollzins)"
   assert.equal(r.remainingAfterBinding, 0);
 });
 
+test("Modus 'variable' rechnet einphasig wie 'fixed' (keine Zinsbindung)", () => {
+  const variable = computeLoanSchedule({
+    principal: 150000, fixedRate: 3.5, initialRepaymentRate: 2, interestMode: 'variable',
+  });
+  const fixed = computeLoanSchedule({
+    principal: 150000, fixedRate: 3.5, initialRepaymentRate: 2, interestMode: 'fixed',
+  });
+  assert.equal(variable.ok, true);
+  assert.equal(variable.monthlyPayment, fixed.monthlyPayment);
+  assert.equal(variable.totalMonths, fixed.totalMonths);
+  assert.equal(variable.totalInterest, fixed.totalInterest);
+  assert.ok(variable.schedule.every((x) => x.rate === 3.5 && x.phase === 1));
+  assert.equal(variable.remainingAfterBinding, 0, 'ohne Bindung gibt es keine Restschuld-Marke');
+});
+
+test("Modus 'variable' ignoriert mitgeschickte Bindungsfelder", () => {
+  const r = computeLoanSchedule({
+    principal: 150000, fixedRate: 3.5, initialRepaymentRate: 2,
+    interestMode: 'variable', fixedPeriodMonths: 120, followupRate: 9,
+  });
+  assert.equal(r.ok, true);
+  assert.ok(r.schedule.every((x) => x.rate === 3.5 && x.phase === 1));
+  assert.equal(r.remainingAfterBinding, 0);
+});
+
 test('Schutz: Anschlusszins zu hoch → tilgt nicht (not_amortizing)', () => {
   const r = computeLoanSchedule({
     principal: 100000, fixedRate: 1, initialRepaymentRate: 1,
