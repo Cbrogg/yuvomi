@@ -3,7 +3,11 @@
    * und tragen Teal - nicht das globale Violett (Akzentregel „Modul-Akzent führt"). */
   --module-accent: var(--module-budget);
   min-height: 100%;
-  padding: var(--page-gutter);
+  /* Achsen getrennt: --page-gutter steigt ab 1024px auf --space-8 (Issue #577).
+   * Als Shorthand hätte das auch den vertikalen Rand mit verdoppelt, was mit der
+   * Kopf-Fluchtlinie nichts zu tun hat. */
+  padding-block: var(--space-4);
+  padding-inline: var(--page-gutter);
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--module-accent) 9%, transparent), transparent 280px),
     var(--color-bg);

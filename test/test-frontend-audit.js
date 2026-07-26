@@ -2257,13 +2257,23 @@ test('phase 2 dashboard FAB uses tokenized position and reserved mobile scroll r
   );
 });
 
-test('calendar desktop layout matches the dashboard gutter and compacts weekday headers', () => {
+test('calendar draws its gutter from the shared page token and compacts weekday headers', () => {
   const calendar = read('../public/styles/calendar.css');
 
+  // Bis #577 holte der Kalender seinen Seitenrand aus einem modul-eigenen
+  // `padding: var(--space-6) var(--space-8)` plus `padding-inline: var(--space-10)`
+  // ab 1440px. Das machte ihn mit 1200px zum schmalsten Modul und setzte den
+  // sticky Kopf 24px vom oberen Rand ab, obwohl er top:0 klebt. Der Rand kommt
+  // jetzt aus derselben Quelle wie überall.
   assert.match(
     calendar,
-    /@media \(min-width:\s*1024px\)[\s\S]*?\.calendar-page\s*\{[\s\S]*?padding:\s*var\(--space-6\)\s+var\(--space-8\)/,
-    'desktop calendar should keep breathing room beside the sidebar',
+    /#cal-body\s*\{[^}]*padding-inline:\s*var\(--page-inline-pad\)/,
+    'calendar body should take its gutter from the shared --page-inline-pad',
+  );
+  assert.doesNotMatch(
+    calendar,
+    /\.calendar-page\s*\{[^}]*padding(-inline)?:\s*var\(--space-/,
+    'calendar must not reintroduce a module-specific page gutter (#577)',
   );
   assert.match(
     calendar,
@@ -2784,6 +2794,185 @@ test('housekeeping exposes its page title as the primary heading', () => {
 // vier Geschwister-Modulen wegbrechen. Dieser Guard pinnt die Grenze, damit ein
 // künftiges „Köpfe vereinheitlichen"-Refactor die Routen-Cluster-Familie nicht
 // still zerlegt.
+// Issue #577: Die Kopf-FAMILIEN (in-page tabs vs. route clusters, Test unten)
+// sind bewusst verschieden — die Kopf-BREITEN waren es nie. Bis v1.45.14 trug
+// jeder Modul-Root sein eigenes max-width, wodurch der Kopf mit im gedeckelten
+// Container saß: der 3px-Akzentstreifen endete 210px vor der Shell-Kante, und
+// die Module drifteten auf vier verschiedene Breiten (1700/1280/1200/720).
+// Dieser Guard hält die eine Regel fest, die damals nirgends aufgeschrieben war.
+// Kommentare VOR jeder Prüfung entfernen: ein Regex über rohen CSS-Text matcht
+// sonst auch in /* ... */ und die halbe Vertragsprüfung wäre durch eine
+// Erwähnung im Fließtext erfüllbar.
+const stripCssComments = (css) => css.replace(/\/\*[\s\S]*?\*\//g, '');
+
+// Flacher Regelblock-Scanner. At-Rule-Präludien (@media, @supports, @container)
+// fallen automatisch weg, weil [^{}]* kein '{' fressen kann und der Selektor
+// dann mit '@' beginnt.
+function cssRules(css) {
+  const rules = [];
+  for (const [, rawSelector, body] of stripCssComments(css).matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    const selector = rawSelector.replace(/\s+/g, ' ').trim();
+    if (!selector || selector.startsWith('@')) continue;
+    rules.push({ selectors: selector.split(',').map((s) => s.trim()), body });
+  }
+  return rules;
+}
+
+// Horizontale Padding-Werte einer Regel. padding-block/-top/-bottom sind bewusst
+// NICHT enthalten - die vertikale Achse darf jedes Modul frei setzen.
+function horizontalPaddings(body) {
+  const values = [];
+  for (const [, prop, raw] of body.matchAll(/(?:^|;)\s*(padding(?:-inline(?:-start|-end)?|-left|-right)?)\s*:\s*([^;]+)/g)) {
+    const value = raw.trim();
+    if (prop !== 'padding') { values.push(value); continue; }
+    // Shorthand: die horizontale Achse ist der zweite Wert (bzw. der erste,
+    // wenn nur einer angegeben ist). var(--x) und calc(...) zählen als ein Wert.
+    const parts = value.match(/(?:[a-z-]+\([^()]*(?:\([^()]*\)[^()]*)*\)|\S)+/gi) || [];
+    values.push(parts.length === 1 ? parts[0] : parts[1]);
+  }
+  return values.filter(Boolean);
+}
+
+const ALLOWED_INLINE = /^(0|0px|var\(--page-inline-pad\))$/;
+
+// Dokumentierte Ausnahmen. Bewusst als Liste MIT Begründung statt als stille
+// Lücke im Scan: wer hier etwas einträgt, muss den Grund hinschreiben.
+const RAIL_PAD_EXCEPTIONS = [
+  {
+    file: 'kitchen-tabs.css',
+    selector: '.kitchen-tabs-bar',
+    // Drei Tabs plus das Titel-Label „Küche" spannen auf 375px randvoll; mit
+    // --page-inline-pad (16px) blieben 343px für 359px Inhalt und die Leiste
+    // scrollte horizontal. Der Restversatz zum Body ist 8px und nur mobil.
+    reason: 'Tab-Dichte auf 375px, gemessen randvoll bei --space-2',
+  },
+];
+
+const isException = (file, selector) => RAIL_PAD_EXCEPTIONS.some(
+  (e) => file === e.file && selector.includes(e.selector),
+);
+
+// Issue #577: Die Kopf-FAMILIEN (in-page tabs vs. route clusters, Test unten)
+// sind bewusst verschieden - die Kopf-BREITEN waren es nie. Bis v1.45.14 trug
+// jeder Modul-Root sein eigenes max-width, wodurch der Kopf mit im gedeckelten
+// Container saß: der 3px-Akzentstreifen endete 210px vor der Shell-Kante, und
+// die Module drifteten auf vier verschiedene Breiten (1700/1280/1200/720).
+//
+// Der erste Anlauf dieses Guards prüfte nur, ob das Token je Datei VORKOMMT.
+// Das fing weder den glass.css-Override (andere Datei, Co-Klassen-Selektor)
+// noch den health.css-Mobil-Override (dieselbe Datei, zusätzliche Regel) -
+// also genau die beiden Fälle, deretwegen er geschrieben wurde. Jetzt wird
+// jeder Regelblock jedes Stylesheets geprüft.
+//
+// Gegenverifiziert: rot bei (1) Rail-Override in fremder Datei, (2) Mobil-
+// Override in derselben Datei, (3) max-width auf einem Modul-Root, (4) Token
+// nur noch im Kommentar.
+//
+// BEKANNTE GRENZE: Ein Textscan sieht keine Verschachtelung. Polstert ein
+// NACHFAHRE eines Spaltenträgers noch einmal horizontal (z. B. .budget-summary
+// unterhalb von #budget-body), addieren sich die Ränder, ohne dass hier etwas
+// anschlägt - der Selektor ist weder ein Rail noch selbst ein Träger. Genau so
+// entstand der 16px-Versatz im Budget-Modul nach dem ersten #577-Anlauf.
+// Dagegen hilft nur echte Geometrie: ein Playwright-Durchlauf über alle
+// Modulrouten, der die Kopf-Kante gegen die erste Inhaltskante vergleicht.
+// Der gehört nicht in npm test (braucht Server und DB), sondern in die
+// Screenshot-Pipeline.
+test('page-inline-pad contract holds across every stylesheet (#577)', () => {
+  // Dashboard und Settings sind dokumentierte Ausnahmen: beide haben keinen
+  // Canonical Page Head und behalten ihren zentrierten Block.
+  const bleedModules = [
+    'tasks', 'notes', 'contacts', 'documents', 'housekeeping', 'rewards',
+    'budget', 'calendar', 'birthdays', 'meals', 'shopping', 'recipes', 'health',
+  ];
+
+  // Rail-Aliasse aus dem Markup lesen. glass.css traf `.tasks-toolbar`, nicht
+  // `.page-toolbar` - ein Scan, der nur den Basisnamen kennt, ist dafür blind.
+  const rails = new Set(['.page-toolbar', '.sub-tabs-bar']);
+  for (const file of walkJsFiles('../public/pages/')) {
+    const src = stripCssComments(read(file));
+    for (const [, classList] of src.matchAll(/class="([^"]*\bpage-toolbar\b[^"]*)"/g)) {
+      classList.split(/\s+/).filter(Boolean).forEach((c) => rails.add(`.${c}`));
+    }
+    for (const [, classList] of src.matchAll(/className\s*=\s*'([^']*\bpage-toolbar\b[^']*)'/g)) {
+      classList.split(/\s+/).filter(Boolean).forEach((c) => rails.add(`.${c}`));
+    }
+  }
+  for (const util of ['kitchen-tabs', 'health-tabs']) {
+    for (const [, cls] of read(`../public/utils/${util}.js`).matchAll(/extraClass:\s*'([^']+)'/g)) {
+      cls.split(/\s+/).filter(Boolean).forEach((c) => rails.add(`.${c}`));
+    }
+  }
+  assert.ok(rails.size >= 4, 'Rail-Aliasse konnten nicht aus dem Markup gelesen werden');
+
+  const styleFiles = readdirSync(new URL('../public/styles/', import.meta.url))
+    .filter((f) => f.endsWith('.css'));
+
+  // (1) Kein Stylesheet darf ein Rail horizontal umpolstern - egal welche Datei,
+  //     welcher Breakpoint, welche Spezifität.
+  for (const file of styleFiles) {
+    for (const rule of cssRules(read(`../public/styles/${file}`))) {
+      const hitsRail = rule.selectors.some((sel) => [...rails].some(
+        (rail) => new RegExp(`${rail.replace('.', '\\.')}(?![\\w-])`).test(sel),
+      ));
+      if (!hitsRail) continue;
+      for (const value of horizontalPaddings(rule.body)) {
+        if (isException(file, rule.selectors.join(', '))) continue;
+        assert.ok(
+          ALLOWED_INLINE.test(value),
+          `${file}: "${rule.selectors.join(', ')}" setzt horizontales Padding "${value}" auf einem Full-bleed-Rail. `
+          + 'Erlaubt sind nur 0 und var(--page-inline-pad) (#577)',
+        );
+      }
+    }
+  }
+
+  // (2) Wer die Content-Spalte trägt, darf sie nirgends mit einem Festwert
+  //     überschreiben - auch nicht in einem späteren @media-Block derselben Datei.
+  for (const mod of bleedModules) {
+    const css = read(`../public/styles/${mod}.css`);
+    const rules = cssRules(css);
+    const carriers = new Set(
+      rules.filter((r) => /padding-inline:\s*var\(--page-inline-pad\)|margin-inline:\s*var\(--page-inline-pad\)/.test(r.body))
+        .flatMap((r) => r.selectors),
+    );
+    assert.ok(carriers.size > 0, `${mod}: kein Träger der Content-Spalte (--page-inline-pad) gefunden (#577)`);
+
+    for (const rule of rules) {
+      for (const sel of rule.selectors.filter((s) => carriers.has(s))) {
+        for (const value of horizontalPaddings(rule.body)) {
+          assert.ok(
+            ALLOWED_INLINE.test(value),
+            `${mod}.css: "${sel}" trägt die Content-Spalte, überschreibt sie aber mit "${value}" (#577)`,
+          );
+        }
+      }
+    }
+
+    // (3) Kein Modul-Root deckelt sich selbst - das war die Ursache von #577.
+    for (const rule of rules) {
+      if (!rule.selectors.some((s) => new RegExp(`\\.${mod === 'split-expenses' ? 'split' : '[a-z-]+'}-page$`).test(s))) continue;
+      assert.doesNotMatch(
+        rule.body,
+        /(?:^|;)\s*(?:max-)?(?:width|inline-size)\s*:/,
+        `${mod}: Modul-Root darf sich nicht selbst deckeln — die Content-Spalte kommt aus --page-inline-pad (#577)`,
+      );
+    }
+  }
+
+  // (4) Die Token-Definition selbst.
+  const tokens = stripCssComments(read('../public/styles/tokens.css'));
+  assert.match(
+    tokens,
+    /--page-inline-pad:\s*max\(\s*var\(--page-gutter\),\s*calc\(\(100% - var\(--content-max-width\)\) \/ 2\)\s*\)/,
+    'tokens.css muss --page-inline-pad aus --page-gutter und --content-max-width ableiten',
+  );
+  assert.match(
+    tokens,
+    /@media \(min-width:\s*1024px\)\s*\{\s*:root\s*\{\s*--page-gutter:\s*var\(--space-8\)/,
+    '--page-gutter muss ab 1024px auf --space-8 gehen (eine Quelle für Kopf und Body)',
+  );
+});
+
 test('module-head families stay split: in-page tabs vs route clusters', () => {
   // Familie 1: page-toolbar-Kopf + wireTablist, keine sub-tabs-bar.
   for (const mod of ['budget', 'housekeeping', 'rewards']) {

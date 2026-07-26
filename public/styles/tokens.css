@@ -470,8 +470,40 @@
   --content-max-width: 1280px;
   --content-max-width-narrow: 720px;
   /* Kanonisches horizontales Seiten-Padding. Ein Wert für den Gutter aller
-   * Modul-Roots, statt gestreuter --space-3/4/5/6 pro Modul. */
+   * Modul-Roots, statt gestreuter --space-3/4/5/6 pro Modul.
+   * Ab 1024px auf --space-8 angehoben (siehe Media-Query unter :root), damit
+   * Kopf und Inhalt dieselbe Fluchtlinie haben (Issue #577). */
   --page-gutter: var(--space-4);
+  /* Canonical Page Head — Bleed-Einrückung.
+   *
+   * Zieht den INHALT eines full-bleed Seiten-Kindes auf die zentrierte
+   * Content-Spalte (--content-max-width), während Hintergrund, Akzentstreifen
+   * und Trennlinien des Elements bis an die Shell-Kante laufen. Ersetzt das
+   * frühere `max-width` auf den Modul-Roots: dort saß das Chrome mit im
+   * gedeckelten Container und der 3px-Akzentstreifen endete mitten in der
+   * Fläche (Issue #577).
+   *
+   * ZWEI Bedingungen, beide zwingend:
+   *
+   * 1. BEZUG. Das `100%` löst gegen den Containing Block auf. Es muss also
+   *    exakt so breit sein wie die App-Shell — kein Vorfahre bis hinauf zu
+   *    `.page-transition` darf Inline-Padding, -Border, -Margin oder eine
+   *    Breitenbegrenzung beisteuern. Direkte Kinder eines Modul-Roots erfüllen
+   *    das; ein Enkel (`.rewards-content__inner`) auch, solange die Zwischen-
+   *    ebene selbst randlos bleibt. Der Modul-Root selbst (`.health-page`) und
+   *    die Geschwister-Rails (`.sub-tabs-bar` im Router-Wrapper) ebenso.
+   *
+   * 2. GENAU EINMAL PRO AHNENKETTE. Wer darunter noch einmal horizontal
+   *    polstert, addiert die Ränder. Genau so entstand der 16px-Versatz im
+   *    Budget-Modul, den #577 eigentlich beseitigen sollte (siehe den Reset
+   *    `#budget-body .split-page, #budget-body .subscriptions-page`).
+   *
+   * Beides ist per Guard `page-inline-pad contract` in
+   * test/test-frontend-audit.js abgesichert. */
+  --page-inline-pad: max(
+    var(--page-gutter),
+    calc((100% - var(--content-max-width)) / 2)
+  );
   --cal-hour-height: 56px;
   /* Breite der Zeitspalte in Wochen-/Tagesansicht. Muss 12-Stunden-Labels
    * („12:00 PM") aufnehmen, nicht nur 24h („08:00"), sonst wird das rechts-
@@ -642,6 +674,20 @@
   --lg-card-radius:    var(--radius-glass-card);
   --lg-density:        1;       /* multipliziert Schlüssel-Paddings (Reserve) */
   --lg-specular:       0.22;    /* Stärke des Inset-Top-Highlights */
+}
+
+/* ================================================================
+ * Desktop-Gutter
+ *
+ * Ab der App-Layout-Grenze (--bp-desktop) atmet der Seitenrand auf
+ * --space-8. Ein Wert für Kopf UND Inhalt: vorher hatte .page-toolbar
+ * --space-4 und die Body-Container --space-8, wodurch der sticky Titel
+ * dauerhaft 16px neben dem Inhalt darunter stand (Issue #577).
+ * ================================================================ */
+@media (min-width: 1024px) {
+  :root {
+    --page-gutter: var(--space-8);
+  }
 }
 
 /* ================================================================

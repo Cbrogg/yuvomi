@@ -76,7 +76,13 @@ export async function render(container) {
   // Suchfeld über der Liste: Rezepte waren als einziges Kitchen-Modul nicht
   // durchsuchbar (Audit A1-21).
   const toolbar = document.createElement('div');
-  toolbar.className = 'page-toolbar recipes-toolbar';
+  // Bewusst KEIN .page-toolbar: den Modul-Akzent der Küche trägt allein die
+  // .kitchen-tabs-bar darüber (siehe kitchen-tabs.css). Als .page-toolbar erbte
+  // diese Zeile einen zweiten 3px-Streifen in derselben Farbe, direkt unter dem
+  // ersten — Rezepte war damit das einzige Kitchen-Modul mit Doppelstreifen
+  // (Issue #577). Sie hat weder Titel noch Sticky-Rolle und ist eine reine
+  // Filterzeile wie .tasks-filters-row.
+  toolbar.className = 'recipes-toolbar';
   const searchWrap = document.createElement('div');
   searchWrap.className = 'recipes-search';
   const searchInput = document.createElement('input');

@@ -9,9 +9,12 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  max-width: var(--content-max-width);
-  margin: 0 auto;
-  padding: 0 var(--space-4) calc(var(--nav-bottom-height) + var(--space-6));
+  /* Full-bleed-Root (Issue #577): die Health-Tab-Leiste hängt außerhalb dieses
+   * Roots im Router-Wrapper und lief schon immer voll durch — der Inhalt
+   * darunter saß aber in einer 1280er-Insel. Beide teilen jetzt dieselbe
+   * Content-Spalte über --page-inline-pad. */
+  padding-inline: var(--page-inline-pad);
+  padding-bottom: calc(var(--nav-bottom-height) + var(--space-6));
 }
 
 /* Geteilte Tabs-Leiste trägt den Modul-Akzent-Streifen (wechselt je aktivem Tab
@@ -1265,9 +1268,10 @@ button.health-med-card:hover {
 }
 
 @media (max-width: 640px) {
-  .health-page {
-    padding-inline: var(--space-3);
-  }
+  /* .health-page bekommt hier BEWUSST keinen eigenen padding-inline mehr:
+   * --space-3 (12px) schlug --page-inline-pad (16px) und setzte den Inhalt
+   * mobil 4px neben die eigene Tab-Leiste — genau der Versatz, den #577
+   * beseitigt. Der Gutter kommt aus dem geteilten Token. */
 
   .health-empty {
     padding: var(--space-6) var(--space-3);

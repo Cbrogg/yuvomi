@@ -605,24 +605,23 @@ html.navigating .app-content *::after {
 }
 
 /* ================================================================
- * 28. Page-Toolbars — Glass Bar mit Tint
+ * 28. Page-Toolbars
  *
- * Modul-Header/Toolbars als Glass-Elemente mit
- * Modul-Akzentfarbe als dezenter Tint.
+ * Entfallen mit Issue #577. Hier stand ein Vier-Modul-Override
+ * (.tasks-page .tasks-toolbar, .notes-page .notes-toolbar,
+ * .contacts-page .contacts-toolbar, .calendar-page .cal-toolbar), das
+ * Hintergrund und 3px-Akzentstreifen exakt so wiederholte, wie
+ * .page-toolbar sie in layout.css ohnehin setzt — ein Relikt aus der
+ * Zeit vor der Vereinheitlichung des Canonical Page Head ("Eltern-
+ * Selektoren fuer Spezifitaet").
+ *
+ * Genau diese höhere Spezifität (0-2-0 gegen 0-1-0) hielt aber auch das
+ * alte `padding-left/right: var(--space-4)` fest und hebelte damit den
+ * Full-bleed-Rail in vier Modulen aus: Kopf-Inhalt saß 16px vom Rand,
+ * der Seiten-Body bei --page-inline-pad. Der Trennstrich kommt jetzt
+ * ebenfalls einheitlich aus .page-toolbar (--color-border statt
+ * --glass-border-subtle).
  * ================================================================ */
-/* Eltern-Selektoren fuer Spezifitaet
- * backdrop-filter deliberately omitted: position:sticky + backdrop-filter inside
- * overflow:auto blanks the entire scroll container on iOS/WebKit (iOS 26+). */
-.tasks-page .tasks-toolbar,
-.notes-page .notes-toolbar,
-.contacts-page .contacts-toolbar,
-.calendar-page .cal-toolbar {
-  background-color: var(--color-bg);
-  border-top: 3px solid var(--module-accent);
-  border-bottom: 1px solid var(--glass-border-subtle);
-  padding-left: var(--space-4);
-  padding-right: var(--space-4);
-}
 
 /* ================================================================
  * 29. Note-Items — Glass Cards
@@ -844,14 +843,12 @@ html.navigating .app-content *::after {
     -webkit-backdrop-filter: none;
   }
 
-  .tasks-page .tasks-toolbar,
-  .notes-page .notes-toolbar,
-  .contacts-page .contacts-toolbar,
-  .calendar-page .cal-toolbar {
-    background-color: var(--color-surface);
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-  }
+  /* Modul-Köpfe brauchen hier nichts mehr: .page-toolbar (layout.css) ist
+   * ohnehin opak (--color-bg) und trägt bewusst KEIN backdrop-filter. Hier
+   * stand bis #577 der Zwilling des gelöschten Section-28-Blocks — dieselbe
+   * Vier-Modul-Liste, die vier von dreizehn Köpfen unter dieser Präferenz auf
+   * --color-surface umfärbte, plus ein backdrop-filter:none, das nichts mehr
+   * abzuschalten hatte. */
 }
 
 /* ================================================================

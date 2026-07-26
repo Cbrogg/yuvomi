@@ -16,14 +16,17 @@
   display: flex;
   flex-direction: column;
   height: calc(100dvh - var(--safe-area-inset-top) - var(--nav-bottom-height) - var(--safe-area-inset-bottom));
-  max-width: var(--content-max-width);
-  margin: 0 auto;
+  /* Full-bleed-Root (Issue #577): die Küchen-Tab-Leiste hängt außerhalb dieses
+   * Roots im Router-Wrapper und lief schon immer voll durch — der Inhalt
+   * darunter saß aber in einer 1280er-Insel und fluchtete nicht mit ihr.
+   * Beide teilen jetzt --page-inline-pad. */
   overflow: hidden;
 }
 
 .meals-layout {
   flex: 1;
   min-height: 0;
+  padding-inline: var(--page-inline-pad);
   /* Flex-Container, damit .week-grid { flex:1; overflow-y:auto } eine begrenzte
    * Höhe bekommt und selbst scrollt. Ohne das läuft das Wochengitter auf volle
    * Inhaltshöhe auf, wird von .meals-page { overflow:hidden } abgeschnitten und
@@ -46,7 +49,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-3) var(--space-4);
+  padding-block: var(--space-3);
+  padding-inline: var(--page-inline-pad);
   border-bottom: 1px solid var(--color-border);
   background-color: var(--color-surface);
   flex-shrink: 0;
@@ -660,7 +664,10 @@
      * lesbare Breite behalten (Audit F-04); ab 1440px wieder volle 320px. */
     grid-template-columns: minmax(0, 1fr) 272px;
     gap: var(--space-4);
-    padding: 0 var(--space-4) var(--space-8);
+    /* Horizontal weiter über --page-inline-pad, sonst überschreibt dieser
+     * Breakpoint den Bleed-Gutter mit dem alten Festwert (Issue #577). */
+    padding-inline: var(--page-inline-pad);
+    padding-block: 0 var(--space-8);
   }
 
   /* Board als EIN Grid statt sieben unabhängiger Spalten-Stapel: Spalte 1 ist
@@ -672,8 +679,9 @@
    * Spaltenbreite erzwingt ein horizontales Scroll-Fenster mit Scroll-Snap
    * (≈5 Tage sichtbar) statt der 7-Spalten-Quetsche, die Labels und
    * Gerichtenamen silbenweise zerhackte (Critique P1). Kein Breakpoint-
-   * Sonderfall für „alle 7 Tage": die Seite ist auf --content-max-width
-   * (1280px) gedeckelt, lesbare 7 Spalten passen dort strukturell nie —
+   * Sonderfall für „alle 7 Tage": die Content-Spalte ist über
+   * --page-inline-pad auf --content-max-width (1280px) gedeckelt, lesbare
+   * 7 Spalten passen dort strukturell nie —
    * das Fenster löst sich von selbst auf, sobald der Platz reicht. */
   .week-grid {
     display: grid;

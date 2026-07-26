@@ -32,17 +32,31 @@
   display: flex;
   flex-direction: column;
   height: calc(100dvh - var(--safe-area-inset-top) - var(--nav-bottom-height) - var(--safe-area-inset-bottom));
-  max-width: var(--content-max-width);
-  margin: 0 auto;
-  /* overflow:clip inside overflow:auto (.app-content) triggers iOS WebKit blank-screen on scroll.
-   * overflow:hidden provides identical clipping without the compositor bug. */
+  /* Full-bleed-Root (Issue #577): Content-Spalte über --page-inline-pad auf den
+   * direkten Kindern. Das frühere Seiten-Padding (space-6/space-8 ab 1024px,
+   * space-10 ab 1440px) ist entfallen: es setzte den sticky Kopf 24px vom
+   * oberen Rand ab, obwohl er top:0 klebt, und machte den Kalender mit 1200px
+   * als einziges Modul schmaler als die kanonischen 1280px. */
   overflow: hidden;
 }
 
+/* Scroll-/Rasterfläche unter der Monats-Nav.
+ *
+ * Mobil bewusst randbündig: das Monatsraster ist ein Vollbreiten-Canvas mit
+ * sieben Spalten, kein Lesespalten-Inhalt. Ein Gutter kostete dort je Tageszelle
+ * spürbare Breite, während .calendar-page mobil noch nie einen hatte. Erst ab
+ * der Desktop-Grenze zieht die gemeinsame Content-Spalte. */
+#cal-body {
+  padding-bottom: var(--space-4);
+}
+
 @media (min-width: 1024px) {
+  #cal-body {
+    padding-inline: var(--page-inline-pad);
+  }
+
   .calendar-page {
     height: 100dvh;
-    padding: var(--space-6) var(--space-8);
   }
 
   .week-view__day-header {
@@ -56,12 +70,6 @@
     width: var(--target-sm);
     height: var(--target-sm);
     margin: 0;
-  }
-}
-
-@media (min-width: 1440px) {
-  .calendar-page {
-    padding-inline: var(--space-10);
   }
 }
 

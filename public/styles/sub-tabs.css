@@ -7,7 +7,15 @@
   display: flex;
   align-items: center;
   gap: var(--space-1);
-  padding: var(--space-2) var(--space-4);
+  padding-block: var(--space-2);
+  /* Full-bleed-Rail wie .page-toolbar (Issue #577): Hintergrund, Akzentstreifen
+   * und Trennlinie laufen bis zur Shell-Kante, der Tab-Inhalt sitzt in der
+   * zentrierten Content-Spalte und fluchtet mit dem Seiten-Body darunter.
+   * Konsumenten sind ausschließlich kitchen-tabs.js und health-tabs.js; beide
+   * hängen die Leiste als GESCHWISTER des Modul-Roots in den Router-Wrapper,
+   * womit das `100%` die volle Shell-Breite trifft. (Settings nutzt eine andere
+   * Tab-Mechanik, utils/tablist.js, und rendert keine .sub-tabs-bar.) */
+  padding-inline: var(--page-inline-pad);
   height: var(--sub-tabs-height);
   box-sizing: border-box;
   position: sticky;

@@ -66,7 +66,9 @@ export async function render(container, { user }) {
         </button>
       </div>
       <div class="notes-filters" id="notes-filters" role="group" aria-label="${t('notes.filterCreatorLabel')}" hidden></div>
-      <div id="notes-grid" class="notes-grid" aria-busy="true">${renderSkeletonList({ rows: 5, lines: 3 })}</div>
+      <div class="notes-scroll">
+        <div id="notes-grid" class="notes-grid" aria-busy="true">${renderSkeletonList({ rows: 5, lines: 3 })}</div>
+      </div>
       <button class="page-fab" id="fab-new-note" aria-label="${t('notes.addNoteLabel')}">
         <i data-lucide="plus" style="width:24px;height:24px" aria-hidden="true"></i>
       </button>

@@ -16,13 +16,14 @@
 /* --------------------------------------------------------
  * Seiten-Layout
  * -------------------------------------------------------- */
-.tasks-page {
-  max-width: var(--content-max-width);
-  margin: 0 auto;
-}
+/* Full-bleed-Root (Issue #577): das frühere max-width/margin:auto lag um den
+ * Kopf herum, wodurch dessen Akzentstreifen in der Fläche endete. Die
+ * Content-Spalte entsteht jetzt über --page-inline-pad auf den direkten
+ * Kindern; das Chrome der Toolbar läuft bis zur Shell-Kante. */
 
 .tasks-body {
-  padding: var(--space-4);
+  padding-inline: var(--page-inline-pad);
+  padding-top: var(--space-4);
   /* Freiraum für den schwebenden FAB (52px + Abstand), damit die letzte
    * Karte nicht darunter verschwindet. */
   padding-bottom: calc(var(--space-16) + var(--space-8));
@@ -30,7 +31,7 @@
 
 @media (min-width: 1024px) {
   .tasks-body {
-    padding: var(--space-8);
+    padding-top: var(--space-8);
     padding-bottom: calc(var(--space-16) + var(--space-6));
   }
 }

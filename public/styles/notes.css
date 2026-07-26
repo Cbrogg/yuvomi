@@ -16,13 +16,37 @@
   display: flex;
   flex-direction: column;
   height: calc(100dvh - var(--safe-area-inset-top) - var(--nav-bottom-height) - var(--safe-area-inset-bottom));
-  max-width: var(--content-max-width);
-  margin: 0 auto;
+  /* Full-bleed-Root (Issue #577): die Content-Spalte entsteht über
+   * --page-inline-pad auf den direkten Kindern, damit der Akzentstreifen des
+   * Kopfes bis zur Shell-Kante läuft statt in der Fläche zu enden. */
   /* overflow:clip inside overflow:auto (.app-content) triggers iOS WebKit blank-screen on scroll.
    * overflow:hidden provides identical clipping without the compositor bug. */
   overflow: hidden;
-  /* Container für das Masonry-Grid: Spaltenzahl reflowt nach EIGENEM Platz
-   * (Sidebar-bewusst), nicht nach Viewport. Siehe tokens.css §11c. */
+}
+
+/* Scroll-Fläche zwischen Kopf und Grid.
+ *
+ * Trägt die Content-Spalte (--page-inline-pad) UND den Query-Container.
+ * Läge der Container weiter auf dem full-bleed Root, würde er die volle
+ * Shell-Breite messen und viel zu früh auf mehr Spalten schalten (Issue #577).
+ *
+ * Der Container misst seit #577 die tatsächliche Rasterbreite: früher saß er
+ * auf .notes-page (ohne Padding), während das Grid darunter 16px je Seite
+ * abzog — die Breakpoints wurden also gegen einen um 32px zu großen Wert
+ * geprüft und schalteten eine Stufe zu früh. Jetzt ist Container-Content ==
+ * Grid-Breite. Folge: knapp oberhalb eines Breakpoints kippt die Spaltenzahl
+ * eine Stufe nach unten (bei 900px Viewport 3 statt 4). Das ist die Korrektur
+ * des alten Fehlers, keine Regression — die Werte 520/720/900/1200 bleiben
+ * bewusst stehen und meinen jetzt echte Rasterbreite.
+ *
+ * Container für das Masonry-Grid: Spaltenzahl reflowt nach EIGENEM Platz
+ * (Sidebar-bewusst), nicht nach Viewport. Siehe tokens.css §11c. */
+.notes-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-inline: var(--page-inline-pad);
   container: notes-page / inline-size;
 }
 
@@ -58,7 +82,8 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-4);
+  padding-block: var(--space-2);
+  padding-inline: var(--page-inline-pad);
   border-bottom: 1px solid var(--color-border-subtle);
   flex-shrink: 0;
 }
@@ -68,10 +93,9 @@
 }
 
 .notes-grid {
-  flex: 1;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  padding: var(--space-4);
+  /* Scroll + Einrückung liegen jetzt auf .notes-scroll; hier bleibt nur das
+   * Raster selbst (Guard: bewusst CSS-Grid, keine CSS-Columns). */
+  padding-top: var(--space-4);
   /* Der FAB schwebt über dieser scrollenden Fläche. Ohne eigene Reserve lag die
    * letzte Kartenreihe dauerhaft darunter — .tasks-body rechnet denselben
    * Freiraum bereits ein. */

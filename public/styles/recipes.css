@@ -8,8 +8,8 @@
   display: flex;
   flex-direction: column;
   height: calc(100dvh - var(--safe-area-inset-top) - var(--nav-bottom-height) - var(--safe-area-inset-bottom));
-  max-width: var(--content-max-width);
-  margin: 0 auto;
+  /* Full-bleed-Root (Issue #577): Content-Spalte über --page-inline-pad auf den
+   * direkten Kindern, fluchtend mit der Küchen-Tab-Leiste darüber. */
   overflow: hidden;
 }
 
@@ -22,7 +22,8 @@
 .recipes-list {
   flex: 1;
   overflow-y: auto;
-  padding: var(--space-4);
+  padding-inline: var(--page-inline-pad);
+  padding-block: var(--space-4);
   display: grid;
   /* Kachelt 2–3-spaltig auf Desktop, automatisch einspaltig auf Mobil
    * (Karten fassen ihre natürliche Höhe via align-items:start). */
@@ -61,8 +62,15 @@
 }
 
 /* Suchzeile über der Liste (Audit A1-21) */
+/* Reine Filterzeile (kein Canonical Page Head): kein Akzentstreifen, kein
+ * Sticky, kein Titel. Grammatik wie .tasks-filters-row. */
 .recipes-toolbar {
-  padding: var(--space-3) var(--space-4) 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  padding-inline: var(--page-inline-pad);
+  padding-top: var(--space-3);
 }
 
 .recipes-search {

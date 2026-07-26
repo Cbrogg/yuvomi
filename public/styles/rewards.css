@@ -9,9 +9,9 @@
   --module-accent: var(--module-rewards);
   /* FAB-Freiraum wie im Budget: Listenende bleibt über dem FAB lesbar. */
   --rw-fab-clearance: calc(var(--target-lg) + var(--space-6) + var(--space-4));
-  max-width: var(--content-max-width);
+  /* Full-bleed-Root (Issue #577): Content-Spalte über --page-inline-pad auf den
+   * direkten Kindern, damit das Chrome des Kopfes bis zur Shell-Kante läuft. */
   min-height: 100%;
-  margin: 0 auto;
   display: flex;
   flex-direction: column;
 }
@@ -29,8 +29,11 @@
   flex-direction: column;
   gap: var(--space-8);
   /* Horizontaler Innenabstand: Punktwerte klebten sonst an der
-   * Viewport-Kante; unten FAB-Freiraum statt fixem space-12 (Audit A2-15). */
-  padding: var(--space-6) var(--space-4) var(--rw-fab-clearance);
+   * Viewport-Kante; unten FAB-Freiraum statt fixem space-12 (Audit A2-15).
+   * --page-inline-pad hält ihn auf der gemeinsamen Fluchtlinie (Issue #577). */
+  padding-inline: var(--page-inline-pad);
+  padding-top: var(--space-6);
+  padding-bottom: var(--rw-fab-clearance);
 }
 
 /* --------------------------------------------------------

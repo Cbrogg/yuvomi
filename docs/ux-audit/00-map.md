@@ -102,6 +102,7 @@ Stand: 2026-07-19 · Version 1.38.0 · Branch `audit/ux-ui-full-2026-07`
 3. **Typo-Guard**: font-size/letter-spacing nur via Token (test:typography); Innen-HTML-Verbot (Hook); i18n-Platzhalter-Guard.
 4. **Undo-Toast statt Confirm** ist das kanonische Muster für Einzel-Löschungen (tasks/notes/contacts/calendar/recipes/shopping, je 5s-Fenster, z.B. `pages/notes.js:739-766`); `confirmModal` für schwere/mehrstufige Fälle.
 5. Notes-Grid bewusst CSS-Grid (kein Columns), zwei Toolbar-Familien-Grenze, `[hidden]`-Durchsetzung global (`layout.css:900-903`).
+6. **Canonical Page Head: Breite und Bleed (#577).** Das Chrome des Modul-Kopfes (3px-Akzentstreifen, Trennlinie, Hintergrund, Sticky-Fläche) läuft full-bleed bis zur Shell-Kante; der Kopf-INHALT sitzt in derselben zentrierten Content-Spalte wie der Seiten-Body. Umgesetzt über `--page-inline-pad: max(var(--page-gutter), calc((100% - var(--content-max-width)) / 2))` (tokens.css). Kein Modul-Root trägt `max-width` — Dashboard und Settings sind die dokumentierten Ausnahmen (kein Canonical Page Head). Zwei bindende Bedingungen: (a) der Containing Block des Verwenders muss shell-breit sein (kein Vorfahre bis `.page-transition` mit Inline-Inset oder Breitenkappe), (b) genau einmal pro Ahnenkette, sonst addieren sich die Ränder. Guard: `test-frontend-audit.js` → `page-inline-pad contract holds across every stylesheet (#577)`; dessen bekannte Grenze (Verschachtelung unterhalb eines Trägers) ist dort dokumentiert.
 
 ## 6. Methode & Grenzen der visuellen Erfassung
 

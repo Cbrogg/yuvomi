@@ -986,14 +986,30 @@ html.fab-anim-done .page-fab {
  * Kopf beim Modulwechsel nicht „springt". Modul-spezifischer Inhalt
  * (Suche, Filter-Chips, Views, Monats-Nav, Tabs) lebt weiter in den
  * Modul-CSS-Dateien als direkte Flex-Children dieser Shell.
+ *
+ * BREITE UND BLEED (Issue #577): Der Kopf ist ein Full-bleed-Rail. Das
+ * Chrome — Akzentstreifen, Trennlinie, Hintergrund, Sticky-Fläche —
+ * läuft bis an die Shell-Kante; der INHALT sitzt über
+ * --page-inline-pad in derselben zentrierten Content-Spalte wie der
+ * Seiten-Body. Vorher trug der Modul-Root das max-width, der Kopf lag
+ * mit drin, und der 3px-Streifen endete 210px vor der Kante.
+ * Bedingung: .page-toolbar muss DIREKTES Kind des Modul-Roots sein,
+ * sonst löst das `100%` in --page-inline-pad gegen einen anderen
+ * Containing Block auf und die Fluchtlinie bricht.
  * ================================================================ */
 .page-toolbar {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
+  padding-block: var(--space-3);
+  padding-inline: var(--page-inline-pad);
   border-top: 3px solid var(--module-accent);
   border-bottom: 1px solid var(--color-border);
+  /* Opaker Hintergrund, bewusst OHNE backdrop-filter: position:sticky plus
+   * backdrop-filter innerhalb eines overflow:auto-Containers leert auf
+   * iOS/WebKit (ab iOS 26) den gesamten Scroll-Container. Der Hinweis stand
+   * bis #577 an einem Vier-Modul-Override in glass.css, der mit dem Bleed-Fix
+   * entfallen ist — die Warnung gilt weiterhin für jeden Modul-Kopf. */
   background-color: var(--color-bg);
   position: sticky;
   top: 0;
@@ -1007,6 +1023,11 @@ html.fab-anim-done .page-fab {
   /* Größe/Weight kommen aus der Canonical-Page-Head-Rolle in typography.css
    * (.u-toolbar-title / .page-toolbar__title → --type-toolbar-title, 20px). */
   white-space: nowrap;
+  /* min-width:0 allein kürzt bei nowrap NICHT — ohne overflow/text-overflow
+   * läuft der Titel in langen Locales („Haushaltsbuch", „Paramètres") aus
+   * seiner Box statt sauber zu ellipsieren. */
+  overflow: hidden;
+  text-overflow: ellipsis;
   min-width: 0;
 }
 
@@ -1052,7 +1073,10 @@ html.fab-anim-done .page-fab {
 
 @media (max-width: 640px) {
   .page-toolbar {
-    padding: var(--space-2) var(--space-3);
+    /* Nur die Bauhöhe verdichten. Der horizontale Rand bleibt bewusst
+     * --page-inline-pad: er muss mit dem Seiten-Body fluchten, und ein
+     * eigener Wert hier war genau die Quelle des 16px-Versatzes. */
+    padding-block: var(--space-2);
   }
 
 }

@@ -7,7 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.45.14] - 2026-07-26
+## [1.45.15] - 2026-07-26
+
+### Fixed
+- Module headers now span the full width of the content area. The coloured 3px accent stripe that identifies each module used to stop about 200px short of the right edge on a wide screen, leaving the header floating in the middle of an otherwise empty band. Header background, divider and accent stripe now run to the edge, while the title and controls stay in the same centred column as the content below, so nothing gets harder to read on ultra-wide monitors (#577).
+- Module headers are the same width everywhere. Birthdays was half as wide as Contacts right next to it in the navigation, and Calendar was narrower than every other module, so the page visibly changed size when switching between them (#577).
+- The module title now lines up with the content beneath it. Title and content sat 16px apart, which stayed visible the whole time while scrolling because the header is sticky (#577).
+- Recipes no longer draws two accent stripes on top of each other. It was the only Kitchen tab that added a second stripe in the same colour directly below the shared one (#577).
+- The calendar header no longer sits detached from the top edge and jumps into place on the first scroll (#577).
+- Long module titles are now shortened with an ellipsis instead of running out of the header. This affected languages with longer words than German (#577).
 
 ### Fixed
 - Shared expenses: the "Aufteilen" tab no longer overlaps its own cards on desktop. The layout used to switch to a single column at a fixed window width, which ignored the space the expanded sidebar takes up, so at a 1024px window the balances card was squeezed to a sliver and its "simplified debts" subtitle ran across the neighbouring card. Panel and card grid now each reflow from the width actually available to them, which also means collapsing the sidebar widens the content as expected (#575).
