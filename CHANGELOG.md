@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.45.12] - 2026-07-26
+
+### Added
+- Budget loans can be entered with a purely variable interest rate, for loans that have no fixed-interest period at all. Payment, term and total interest are derived exactly as for a fixed rate, but the rate field is labelled as the current rate, a hint states that payment and term move with it, and the loan card reads "3.6 % variable" instead of claiming a fixed rate (#569).
+
+### Fixed
+- Mobile navigation: the active tab capsule now sits behind the icon only. It used to span the full bar height and the whole slot width, so its rounding was cropped against the bar edge on the first and last tab, its lower edge cut through the label, and on devices with a bottom safe area it reached into the home zone (#569).
+
 ## [1.45.11] - 2026-07-26
 
 ### Fixed
