@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Split Expenses: the "Aufteilen" tab no longer overlaps its own cards on desktop. The layout used to switch to a single column at a fixed window width, which ignored the space the expanded sidebar takes up, so at a 1024px window the balances card was squeezed to a sliver and its "simplified debts" subtitle ran across the neighbouring card. Panel and card grid now each reflow from the width actually available to them, which also means collapsing the sidebar widens the content as expected (#575).
+- Split Expenses: the activity feed showed raw text such as `splitExpenses.activityType.expense_added` instead of a readable entry. Removing a member from a group had never been translated in any of the 23 languages, and the demo data recorded two activity types the app itself never writes (#575).
+- Split Expenses on narrow phones: the page no longer scrolls sideways. The tiles in the horizontal group bar widened the whole page instead of scrolling within their own row, and an untranslated entry in the activity feed could stretch the card past the screen edge (#575).
+
 ## [1.45.12] - 2026-07-26
 
 ### Added
