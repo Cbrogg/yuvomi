@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.45.11] - 2026-07-26
+
+### Fixed
+- Google Calendar: timed events pushed from Yuvomi no longer arrive at the wrong time outside Central European Time. The outbound sync used to declare a fixed `Europe/Berlin` zone, which shifted every event for households in other regions (7.5 hours in Australia). Events now carry the target calendar's own time zone, so Google shows the same clock time as Yuvomi. If Google reports no zone for that calendar, the container's `TZ` is used, then the host zone, then UTC (#572).
+
 ## [1.45.10] - 2026-07-25
 
 ### Added
