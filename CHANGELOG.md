@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.46.2] - 2026-07-27
+
+### Fixed
+- The "Send test notification" button now reports whether anything was actually delivered. It previously said "sent" as soon as the server accepted the request, so a device that received nothing looked exactly like one that worked, and there was no way to tell a missing subscription from a rejected push without reading the server log. It now distinguishes between a delivered push, a registered device that could not be reached, and no registered device at all (#580).
+- A push subscription the server no longer knows about repairs itself instead of going silent forever. When a push service reports a subscription as gone, or a database restore loses it, the browser still considers push enabled while the server has no record of the device, so reminders stopped arriving with the toggle showing "active". The app now re-registers an existing subscription every time it starts, and the test button additionally detects a subscription bound to an outdated VAPID key, re-subscribes and retries once (#580).
+- Notification settings explain why push is unavailable on iPhone and iPad instead of claiming the browser does not support it. iOS only delivers Web Push to a web app installed on the Home Screen, so the previous message pointed at the wrong cause and left no path forward. Opened from Safari on iOS, the settings page now names the Home Screen requirement (#580).
+- Failed push deliveries are now diagnosable from the server log. The log recorded only the error message, which for a rejection from Apple or Google carries no usable detail. It now also records the push service host, the HTTP status and the response body, while still keeping the device token out of the log (#580).
+
+### Changed
+- The installation guide documents Apple's Web Push requirements: iOS/iPadOS 16.4 or newer, installation to the Home Screen, enabling the toggle from inside the installed app, a certificate iOS trusts, and outbound server access to Apple's push service (#580).
+
 ## [1.46.1] - 2026-07-26
 
 ### Fixed
