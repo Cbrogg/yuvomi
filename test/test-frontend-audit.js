@@ -2499,6 +2499,37 @@ test('text/surface token pairs meet WCAG AA 4.5:1 in both themes', () => {
   }
 });
 
+test('module accents stay readable as text on the page background in both themes', () => {
+  // `.btn--secondary` faerbt seine Beschriftung mit --active-module-accent
+  // (layout.css). Steht so ein Button auf dem Seitenhintergrund statt in einer
+  // Karte, entscheidet allein die Modulfarbe ueber die Lesbarkeit - im Light-
+  // Theme lagen sechs Farben darunter (Settings-Audit 2026-07-27: 4.13:1 bei
+  // "Kanal hinzufuegen", 4.20:1 bei "Aus Kontakten importieren").
+  const tokens = read('../public/styles/tokens.css');
+  const rootBlock = tokens.match(/:root\s*\{([\s\S]*?)\n\}/);
+  const darkBlock = tokens.match(/\n\[data-theme="dark"\]\s*\{([\s\S]*?)\n\}/);
+  assert.ok(rootBlock && darkBlock, 'expected :root and [data-theme="dark"] token blocks');
+
+  const light = parseTokenMap(rootBlock[1]);
+  const dark = new Map(light);
+  for (const [k, v] of parseTokenMap(darkBlock[1])) dark.set(k, v);
+
+  const moduleTokens = [...light.keys()].filter((name) => /^--module-[\w-]+$/.test(name));
+  assert.ok(moduleTokens.length >= 15, `expected the module palette, found ${moduleTokens.length}`);
+
+  for (const [theme, map] of [['light', light], ['dark', dark]]) {
+    const background = resolveColor('--color-bg', map);
+    for (const token of moduleTokens) {
+      const accent = resolveColor(token, map);
+      const ratio = contrastRatio(accent, background);
+      assert.ok(
+        ratio >= 4.5,
+        `${theme}: ${token} (${accent}) on --color-bg (${background}) is ${ratio.toFixed(2)}:1, below WCAG AA 4.5:1`,
+      );
+    }
+  }
+});
+
 test('modal Enter submits the form instead of advancing to the next field (audit 1.4)', () => {
   const src = read('../public/components/modal.js');
   const enterBlock = src.match(/if \(e\.key === 'Enter'\) \{[\s\S]*?\n {4}\}/);

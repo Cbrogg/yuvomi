@@ -229,18 +229,18 @@
   --module-meals:      var(--_module-meals);       /* Orange-700 - Essen, Wärme */
   --_module-recipes:   #0C7C5B;
   --module-recipes:    var(--_module-recipes);     /* Teal-Grün - Rezepte (166°, von --module-budget 186° und --module-tasks 150° getrennt); 5.19:1 auf weiß, 4.71:1 auf --color-bg — WCAG AA. Vorgänger #109C6B lag bei 3.51:1 auf weiß und verfehlte als Textfarbe AA. */
-  --_module-shopping:  #DB2777;
-  --module-shopping:   var(--_module-shopping);    /* Pink-600 - Einkaufen (trennt von Meals) */
-  --_module-notes:     #A16207;
-  --module-notes:      var(--_module-notes);       /* Amber-700 - Notizen (4.92:1 auf weiß — WCAG AA) */
+  --_module-shopping:  #D12370;
+  --module-shopping:   var(--_module-shopping);    /* Pink-600 - Einkaufen (trennt von Meals); 5.02:1 auf weiß, 4.57:1 auf --color-bg — WCAG AA */
+  --_module-notes:     #9F6107;
+  --module-notes:      var(--_module-notes);       /* Amber-700 - Notizen; 5.02:1 auf weiß, 4.57:1 auf --color-bg — WCAG AA */
   --_module-contacts:  #0969DA;
   --module-contacts:   var(--_module-contacts);    /* Kräftiges Blau - Kontakte */
-  --_module-birthdays: #D6336C;
-  --module-birthdays:  var(--_module-birthdays);   /* Rosé - Geburtstage (entkoppelt von --color-danger #B91C1C) */
+  --_module-birthdays: #D02A64;
+  --module-birthdays:  var(--_module-birthdays);   /* Rosé - Geburtstage (entkoppelt von --color-danger #B91C1C); 5.01:1 auf weiß, 4.56:1 auf --color-bg — WCAG AA */
   --_module-budget:    #0F766E;
   --module-budget:     var(--_module-budget);      /* Teal-700 - Finanzen, Stabilität */
-  --_module-split-expenses: #1A7BAE;
-  --module-split-expenses:  var(--_module-split-expenses); /* Azur-Cyan - geteilte Familienfinanzen (201°, von --module-reminders 193° getrennt) */
+  --_module-split-expenses: #1976A7;
+  --module-split-expenses:  var(--_module-split-expenses); /* Azur-Cyan - geteilte Familienfinanzen (201°, von --module-reminders 193° getrennt); 5.01:1 auf weiß, 4.56:1 auf --color-bg — WCAG AA */
   --_module-documents: #42587E;
   --module-documents:  var(--_module-documents);    /* Stahlblau - sichere Familiendokumente (aus dem Blau-Band gelöst) */
   --_module-housekeeping: #7C3AED;
@@ -253,12 +253,12 @@
   --cycle-period:    #C81E5A;   /* Menstruation/Blutung — Rosé-Rot (~5.0:1 auf weiß) */
   --cycle-fertile:   #0E8C74;   /* Fruchtbares Fenster — Teal-Grün (~4.5:1 auf weiß) */
   --cycle-ovulation: #0E7FB0;   /* Eisprung-Spitzentag — Cyan-Blau (~4.8:1 auf weiß) */
-  --_module-settings:   #6E7781;
-  --module-settings:    var(--_module-settings);   /* Grau - Konfiguration */
+  --_module-settings:   #677079;
+  --module-settings:    var(--_module-settings);   /* Grau - Konfiguration; 5.03:1 auf weiß, 4.58:1 auf --color-bg — WCAG AA */
   --_module-reminders:  #0E7490;
   --module-reminders:   var(--_module-reminders);  /* Cyan-700 - Erinnerungen, 5.36:1 auf weiß — WCAG AA */
-  --_module-rewards:    #BE4B6E;
-  --module-rewards:     var(--_module-rewards);     /* Rosé-Kupfer (342°) — Belohnungen. Warm-persönlich, klar von birthdays #E11D48 (350°) und shopping getrennt; 4.75:1 auf weiß — WCAG AA. */
+  --_module-rewards:    #BC4569;
+  --module-rewards:     var(--_module-rewards);     /* Rosé-Kupfer (342°) — Belohnungen. Warm-persönlich, klar von birthdays und shopping getrennt; 5.01:1 auf weiß, 4.56:1 auf --color-bg — WCAG AA. */
 
   /* KONVENTION "Akzent-Text auf akzent-getöntem Grund" (Chips, Badges,
    * Initialen-Avatare). Der rohe Akzent scheitert dort, weil der Grund eine
