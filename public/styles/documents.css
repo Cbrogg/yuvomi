@@ -1244,7 +1244,7 @@
   background: var(--color-surface-2);
 }
 
-@media (max-width: 480px) {
+@media (max-width: 640px) {
   .dms-result__media {
     width: 56px;
     height: 76px;

@@ -2104,7 +2104,6 @@
         "createdToast": "Birthday saved.",
         "updatedToast": "Birthday updated.",
         "deletedToast": "Birthday deleted.",
-        "deleteConfirm": "Delete birthday for \"{{name}}\"?",
         "ageNoteToday": "Turns {{age}} today.",
         "ageNoteTomorrow": "Turns {{age}} tomorrow.",
         "ageNoteDays": "Turns {{age}} in {{days}} days.",

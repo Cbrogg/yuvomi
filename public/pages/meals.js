@@ -659,7 +659,7 @@ function openRandomizeModal() {
           <span class="toggle__track"></span>
           <span>${t('meals.randomizeReplaceExisting')}</span>
         </label>
-        <div class="modal-panel__footer" style="border:none;padding:0;margin-top:var(--space-4)">
+        <div class="modal-panel__footer modal-panel__footer--plain">
           <button class="btn btn--secondary" id="meal-randomize-cancel">${t('common.cancel')}</button>
           <button class="btn btn--primary" id="meal-randomize-run">${t('meals.randomizePlan')}</button>
         </div>
@@ -1192,7 +1192,7 @@ function buildModalContent({ mode, date, mealType, meal, presetRecipeId = null }
       </button>
     </div>` : ''}
 
-    <div class="modal-panel__footer" style="border:none;padding:0;margin-top:var(--space-4)">
+    <div class="modal-panel__footer modal-panel__footer--plain">
       <button class="btn btn--secondary" id="modal-cancel">${t('common.cancel')}</button>
       <button class="btn btn--primary" id="modal-save">${isEdit ? t('common.save') : t('common.add')}</button>
     </div>`;

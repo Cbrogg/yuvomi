@@ -503,7 +503,10 @@ function renderTasks(content) {
     btn.addEventListener('click', async () => {
       const task = state.tasks.find((it) => String(it.id) === btn.dataset.deleteTask);
       if (!task) return;
-      if (!window.confirm(t('housekeeping.deleteTaskConfirm', { name: task.name }))) return;
+      if (!await confirmModal(
+        t('housekeeping.deleteTaskConfirm', { name: task.name }),
+        { danger: true, confirmLabel: t('common.delete') },
+      )) return;
       try {
         await api.delete(`/housekeeping/decay-tasks/${task.id}`);
         window.yuvomi?.showToast(t('housekeeping.taskDeletedToast'), 'success');
@@ -626,7 +629,7 @@ function openVisitReportModal(visit, content = null) {
           ${visit.calendar_event_id ? `<div><dt>${esc(t('housekeeping.calendarEvent'))}</dt><dd>#${esc(visit.calendar_event_id)}</dd></div>` : ''}
         </dl>
         ${paid ? '' : `
-        <div class="modal-panel__footer" style="border:none;padding:0;margin-top:var(--space-4)">
+        <div class="modal-panel__footer modal-panel__footer--plain">
           <button class="btn btn--ghost" type="button" data-action="close-modal">${esc(t('common.cancel'))}</button>
           <button class="btn btn--primary" type="button" id="visit-report-pay">
             <i data-lucide="check" class="icon-sm" aria-hidden="true"></i>${esc(t('housekeeping.markPaid'))}

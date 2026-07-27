@@ -7,7 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.47.0] - 2026-07-27
+## [1.47.1] - 2026-07-27
+
+### Fixed
+- Undoing the deletion of a birthday now actually keeps the entry. The delete was sent to the server immediately and "Undo" only restored the entry in the open view, so it reappeared in the list and was silently gone again after the next reload. Deletion now follows the same model as Notes, Contacts and Recipes: the server delete is held back until the undo window closes, so "Undo" prevents it instead of trying to recreate the record afterwards. The preceding confirmation dialog is gone, since a birthday cascades to nothing.
+- Deleting a housekeeping chore now asks through the app's own dialog instead of the browser's native confirmation box, which ignored the design, held no keyboard focus and gave the destructive action no danger colour.
+
+### Changed
+- Icon sizes come from one scale with a single name per step. Seven class names had been carrying the same four values, so `icon-sm` was not actually smaller than `icon-xs`, and 17 places set their size inline instead of using the scale at all. Icons in the Notes formatting toolbar are now 16px instead of 14px, and four buttons lost 4px of extra icon spacing that had been added on top of the standard gap.
+- Every stylesheet breakpoint follows the four canonical thresholds. The DMS preview tile, the CalDAV action row and the cycle hero switch to their narrow layout at 640px instead of 480px or 560px, and the cycle calendar's grid gap now shrinks fluidly rather than jumping at 380px.
+- Modal footers inside a scrolling dialog body use a shared class instead of 20 inline styles that reproduced the same rule with three different spacings; eight of them now sit at the common distance.
+- The specification documents the actual breakpoint contract (640/768/1024/1440), the icon scale, and the full set of 23 shipped languages. The breakpoint section still described a 768px mobile threshold that the stylesheets had not used for some time.
 
 ### Added
 - A loan can now run in its own currency instead of always following the household budget currency. The loan dialog offers a currency and, as soon as it differs from the budget currency, a fixed conversion rate; the hint spells out the direction (1 loan currency = x budget currency), and switching the currency clears the rate so the previous one is never carried over unnoticed. Loan cards, the loan report and the instalment transactions lead with the loan's own currency and show the budget equivalent quietly underneath (#582).

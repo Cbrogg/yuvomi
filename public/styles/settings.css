@@ -2120,7 +2120,7 @@
    „Trennen" nicht allein auf der letzten Zeile landet und dort zum optischen
    Anker der Kartenfuß wird - die destruktivste Aktion bekäme sonst die
    prominenteste Position. */
-@media (max-width: 480px) {
+@media (max-width: 640px) {
   .caldav-account-actions .btn--sm:first-child {
     flex: 1 0 100%;
   }
@@ -2500,7 +2500,7 @@
   height: 22px;
   border-radius: var(--radius-full);
   overflow: hidden;
-  color: #fff;
+  color: var(--color-text-on-accent);
   font-size: var(--text-xs);
   font-weight: var(--font-weight-semibold);
 }

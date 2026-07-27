@@ -2111,7 +2111,6 @@
         "createdToast": "Anniversaire enregistré.",
         "updatedToast": "Anniversaire mis à jour.",
         "deletedToast": "Anniversaire supprimé.",
-        "deleteConfirm": "Supprimer l'anniversaire de \"{{name}}\" ?",
         "ageNoteToday": "Fête ses {{age}} ans aujourd'hui.",
         "ageNoteTomorrow": "Fêtera ses {{age}} ans demain.",
         "ageNoteDays": "Fêtera ses {{age}} ans dans {{days}} jours.",

@@ -2555,7 +2555,6 @@
         "createdToast": "Narozeniny uloženy.",
         "updatedToast": "Narozeniny aktualizovány.",
         "deletedToast": "Narozeniny smazány.",
-        "deleteConfirm": "Smazat narozeniny „{{name}}“?",
         "ageNoteToday": "Dnes slaví {{age}} let.",
         "ageNoteTomorrow": "Zítra slaví {{age}} let.",
         "ageNoteDays": "Za {{days}} dní slaví {{age}} let.",

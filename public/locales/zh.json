@@ -2111,7 +2111,6 @@
         "createdToast": "生日已保存。",
         "updatedToast": "生日已更新。",
         "deletedToast": "生日已删除。",
-        "deleteConfirm": "删除“{{name}}”的生日？",
         "ageNoteToday": "今天满 {{age}} 岁。",
         "ageNoteTomorrow": "明天满 {{age}} 岁。",
         "ageNoteDays": "{{days}} 天后满 {{age}} 岁。",

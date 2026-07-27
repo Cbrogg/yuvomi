@@ -2111,7 +2111,6 @@
         "createdToast": "誕生日を保存しました。",
         "updatedToast": "誕生日を更新しました。",
         "deletedToast": "誕生日を削除しました。",
-        "deleteConfirm": "「{{name}}」の誕生日を削除しますか？",
         "ageNoteToday": "今日で{{age}}歳になります。",
         "ageNoteTomorrow": "明日で{{age}}歳になります。",
         "ageNoteDays": "{{days}}日後に{{age}}歳になります。",

@@ -426,7 +426,7 @@ function openRecipeModal(mode, recipe = null) {
           <input id="recipe-url" class="form-input" type="url" placeholder="${t('recipes.urlPlaceholder')}">
         </div>`,
         { open: isEdit && (!!recipe.notes || !!recipe.recipe_url) })}
-      <div class="modal-panel__footer" style="border:none;padding:0;margin-top:var(--space-4)">
+      <div class="modal-panel__footer modal-panel__footer--plain">
         <button class="btn btn--secondary" id="recipe-cancel">${t('common.cancel')}</button>
         <button class="btn btn--primary" id="recipe-save">${isEdit ? t('common.save') : t('common.add')}</button>
       </div>

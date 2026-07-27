@@ -2116,7 +2116,6 @@
         "createdToast": "Geburtstag gespeichert.",
         "updatedToast": "Geburtstag aktualisiert.",
         "deletedToast": "Geburtstag gelöscht.",
-        "deleteConfirm": "Geburtstag von \"{{name}}\" löschen?",
         "ageNoteToday": "Wird heute {{age}} Jahre alt.",
         "ageNoteTomorrow": "Wird morgen {{age}} Jahre alt.",
         "ageNoteDays": "Wird in {{days}} Tagen {{age}} Jahre alt.",

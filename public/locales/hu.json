@@ -2104,7 +2104,6 @@
         "createdToast": "Születésnap mentve.",
         "updatedToast": "Születésnap frissítve.",
         "deletedToast": "Születésnap törölve.",
-        "deleteConfirm": "Törli \"{{name}}\" születésnapját?",
         "ageNoteToday": "{{age}} éves lett ma.",
         "ageNoteTomorrow": "Holnap lesz {{age}} éves.",
         "ageNoteDays": "{{days}} nap múlva lesz {{age}} éves.",

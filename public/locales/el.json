@@ -2111,7 +2111,6 @@
         "createdToast": "Τα γενέθλια αποθηκεύτηκαν.",
         "updatedToast": "Τα γενέθλια ενημερώθηκαν.",
         "deletedToast": "Τα γενέθλια διαγράφηκαν.",
-        "deleteConfirm": "Διαγραφή γενεθλίων για τον/την \"{{name}}\";",
         "ageNoteToday": "Γίνεται {{age}} ετών σήμερα.",
         "ageNoteTomorrow": "Γίνεται {{age}} ετών αύριο.",
         "ageNoteDays": "Γίνεται {{age}} ετών σε {{days}} ημέρες.",

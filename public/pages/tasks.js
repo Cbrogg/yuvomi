@@ -527,7 +527,7 @@ function renderModalContent({ task = null, users = [], reminder = null } = {}) {
 
       <div id="task-form-error" class="login-error" hidden></div>
 
-      <div class="modal-panel__footer" style="padding:0;border:none;margin-top:var(--space-6)">
+      <div class="modal-panel__footer modal-panel__footer--plain">
         ${isEdit ? `
           <button type="button" class="btn btn--danger-outline" data-action="delete-task"
                   data-id="${task.id}" style="margin-right:auto">${t('common.delete')}</button>` : ''}

@@ -614,9 +614,9 @@ function renderBody() {
           ${state.accountFilterId ? `
           <button class="budget-account-chip" id="budget-clear-account-filter" type="button"
                   aria-label="${t('budget.clearAccountFilter')}">
-            <i data-lucide="wallet" class="icon-xs" aria-hidden="true"></i>
+            <i data-lucide="wallet" class="icon-sm" aria-hidden="true"></i>
             <span>${esc(accountName(state.accountFilterId))}</span>
-            <i data-lucide="x" class="icon-xs" aria-hidden="true"></i>
+            <i data-lucide="x" class="icon-sm" aria-hidden="true"></i>
           </button>` : ''}
         </div>
         <div class="budget-list-header__actions">
@@ -779,14 +779,14 @@ function renderEntries() {
     const sign      = isIncome ? '+' : '';
     const date      = formatEntryDate(e.date);
     const recurTag  = e.is_recurring
-      ? ` <span class="budget-recur-mark" role="img" aria-label="${t('budget.recurringLabel')}"><i data-lucide="repeat" class="icon-xs" aria-hidden="true"></i></span>${e.recurrence_virtual ? ' ' + t('budget.virtualBudgetBadge') : ''}`
-      : (e.recurrence_parent_id ? ` <span class="budget-recur-mark" role="img" aria-label="${t('budget.recurringInstanceLabel')}"><i data-lucide="corner-down-left" class="icon-xs" aria-hidden="true"></i></span>` : '');
+      ? ` <span class="budget-recur-mark" role="img" aria-label="${t('budget.recurringLabel')}"><i data-lucide="repeat" class="icon-sm" aria-hidden="true"></i></span>${e.recurrence_virtual ? ' ' + t('budget.virtualBudgetBadge') : ''}`
+      : (e.recurrence_parent_id ? ` <span class="budget-recur-mark" role="img" aria-label="${t('budget.recurringInstanceLabel')}"><i data-lucide="corner-down-left" class="icon-sm" aria-hidden="true"></i></span>` : '');
     const categoryMeta = isIncome || !e.subcategory
       ? categoryLabel(e.category)
       : `${categoryLabel(e.category)} · ${subcategoryLabel(e.subcategory)}`;
     const acctName = accountName(e.account_id);
     const acctMeta = acctName
-      ? ` · <span class="budget-entry__account"><i data-lucide="wallet" class="icon-xs" aria-hidden="true"></i>${esc(acctName)}</span>`
+      ? ` · <span class="budget-entry__account"><i data-lucide="wallet" class="icon-sm" aria-hidden="true"></i>${esc(acctName)}</span>`
       : '';
     // Im personal-Modus geteilte Einträge klar als Haushalts-Topf kennzeichnen (#476/#505).
     const sharedBadge = (state.budgetMode === 'personal' && e.visibility === 'shared')
@@ -822,7 +822,7 @@ function renderAccountsPage() {
 
   const archiveToggle = hasArchived ? `
       <button class="budget-accounts__toggle" id="budget-toggle-archived" type="button" aria-pressed="${state.accountsShowArchived}">
-        <i data-lucide="${state.accountsShowArchived ? 'eye-off' : 'archive'}" class="icon-xs" aria-hidden="true"></i>
+        <i data-lucide="${state.accountsShowArchived ? 'eye-off' : 'archive'}" class="icon-sm" aria-hidden="true"></i>
         ${state.accountsShowArchived ? t('budget.hideArchivedAccounts') : t('budget.showArchivedAccounts')}
       </button>` : '';
 
@@ -954,7 +954,7 @@ function openAccountModal(account = null) {
       <div class="budget-color-picker" id="am-color" role="group" aria-label="${t('budget.accountColorLabel')}">${colorSwatches}</div>
     </div>
 
-    <div class="modal-panel__footer" style="border:none;padding:0;margin-top:var(--space-4)">
+    <div class="modal-panel__footer modal-panel__footer--plain">
       <div style="display:flex;gap:var(--space-2)">
       ${isEdit ? `<button class="btn btn--danger btn--icon" id="am-delete" aria-label="${t('budget.deleteAccount')}">
         <i data-lucide="trash-2" class="icon-md" aria-hidden="true"></i>
@@ -1319,7 +1319,7 @@ function openLoanReport(loan) {
         </div>
       ` : `<div class="budget-loans__empty">${t('budget.loanNoTransactions')}</div>`}
     </div>
-    <div class="modal-panel__footer" style="border:none;padding:0;margin-top:var(--space-4)">
+    <div class="modal-panel__footer modal-panel__footer--plain">
       <div></div>
       <button class="btn btn--primary" id="loan-report-close">${t('common.close')}</button>
     </div>`;
@@ -1438,7 +1438,7 @@ function renderTrend(current, prev, prevLabel) {
   // bisher fest im Template — jetzt trägt der Key den ganzen Satz.
   const icon = positive ? 'trending-up' : 'trending-down';
   return `<div class="budget-summary-card__trend ${cls}">
-    <i data-lucide="${icon}" class="icon-xs" aria-hidden="true"></i>
+    <i data-lucide="${icon}" class="icon-sm" aria-hidden="true"></i>
     ${esc(t('budget.trendDelta', { amount: `${sign}${formatAmount(delta)}`, month: prevLabel }))}
   </div>`;
 }
@@ -1635,7 +1635,7 @@ function openBudgetModal({ mode, entry = null, initialType = '' }) {
       </div>
     </div>
 
-    <div class="modal-panel__footer" style="border:none;padding:0;margin-top:var(--space-4)">
+    <div class="modal-panel__footer modal-panel__footer--plain">
       ${isEdit ? `<button class="btn btn--danger btn--icon" id="bm-delete" aria-label="${t('budget.deleteLabel')}">
         <i data-lucide="trash-2" class="icon-md" aria-hidden="true"></i>
       </button>` : '<div></div>'}
@@ -2233,7 +2233,7 @@ function openLoanModal(loan = null) {
       <label class="form-label" for="lm-notes">${t('budget.loanNotesLabel')}</label>
       <textarea class="form-input" id="lm-notes" rows="3">${esc(loan?.notes ?? '')}</textarea>
     </div>
-    <div class="modal-panel__footer" style="border:none;padding:0;margin-top:var(--space-4)">
+    <div class="modal-panel__footer modal-panel__footer--plain">
       <div></div>
       <div style="display:flex;gap:var(--space-3)">
         <button class="btn btn--secondary" id="lm-cancel">${t('common.cancel')}</button>

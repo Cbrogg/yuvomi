@@ -85,7 +85,7 @@ npm run test:modal-utils
 npm run test:category-manager   # generic oikos-category-manager component + budget wiring
 npm run test:sortable-reorder   # SortableJS-Wrapper + Drag-and-Drop-Reorder im Category-Manager (Teil-Render, Fokus-Restore, aria-live, SW-Precache)
 npm run test:datepicker         # yuvomi-datepicker: ISO-Wertkontrakt, form-association, Popover/Touch, min/max, i18n-Vollständigkeit
-npm run test:ux-utils
+npm run test:ux-utils        # UX-Helfer: stagger/vibrate/withBusy, Datums-/Zeit-Parser, WCAG-Ink-Wahl; Undo-Löschen läuft ausschließlich über scheduleUndoableDelete (Undo verhindert den Server-Delete, ohne Undo commit nach Ablauf) - die alte deleteWithUndo-API löschte sofort und ist gesperrt
 npm run test:skeleton-utils
 npm run test:date-utils
 npm run test:time-input     # flexible Zeiteingabe: 0930/09.30/9h30 → HH:MM parsing (#442)
@@ -139,7 +139,7 @@ npm run test:search
 npm run test:calendar-search   # calendar toolbar search (#471): FTS event search endpoint, location index, recurring next-instance, keyboard
 npm run test:search-diacritics # diacritic-insensitive FTS (unicode61 remove_diacritics 2) + ß↔ss query expansion
 npm run test:mobile-scroll-layout
-npm run test:frontend-audit
+npm run test:frontend-audit  # A11y- und Hard-Constraint-Guards des UX-Audits (innerHTML, i18n-Key-Parität, Touch-Targets, Kontraste, page-inline-pad) + Konsistenz-Invarianten: kanonische Breakpoints (640/768/1024/1440), Icon-Skala kollisionsfrei und ohne Inline-Größen, keine nativen Browser-Dialoge, border-radius nur via Token, Modal-Footer als Klasse statt Inline-Style
 npm run test:layer-boundary  # Schicht-Guard: public/ importiert nie server/; server/ nur geteilte isomorphe Utils (Allowlist)
 npm run test:typography      # Typo-Guard: font-size/letter-spacing nur via Token, Breakpoint- & Rollen-Schicht
 npm run test:settings-navigation

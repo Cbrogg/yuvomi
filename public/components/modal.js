@@ -282,7 +282,7 @@ export function openModal({ title, content, onSave, onDelete, onClose, size = 'm
         <div class="modal-panel__header">
           <h2 class="modal-panel__title" id="shared-modal-title">${esc(title)}</h2>
           <button class="modal-panel__close" data-action="close-modal" aria-label="${t('modal.closeLabel')}">
-            <i data-lucide="x" style="width:16px;height:16px" aria-hidden="true"></i>
+            <i data-lucide="x" class="icon-md" aria-hidden="true"></i>
           </button>
         </div>
         <div class="modal-panel__body">

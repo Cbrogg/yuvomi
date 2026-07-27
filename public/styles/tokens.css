@@ -439,6 +439,21 @@
   --target-base: 44px;  /* iOS-Minimum Touch-Target (44pt) */
 
   /* --------------------------------------------------------
+   * 11b2. Icon-Größen
+   *
+   * VIER Stufen, lückenlos und kollisionsfrei — je Stufe genau ein Name.
+   * Vorher trugen sieben Klassennamen dieselben vier Werte
+   * (.icon-sm = .icon-xs = .icon-11 = 12px, .icon-md = .icon-base,
+   * .icon-xl = .icon-2xl), wodurch die Skala unter `md` keine echte
+   * Zwischenstufe hatte und `icon-sm` nicht das war, wonach es klingt.
+   * Die Utility-Klassen dazu stehen in layout.css.
+   * -------------------------------------------------------- */
+  --icon-sm: 12px;   /* Inline-Marker in Fließtext, Chips */
+  --icon-md: 16px;   /* Standard: Buttons, Listenzeilen */
+  --icon-lg: 20px;   /* Betonte Aktionen, Toolbar */
+  --icon-xl: 24px;   /* FAB, Empty-State, Dialog-Kopf */
+
+  /* --------------------------------------------------------
    * 11c. Breakpoints — verbindlicher Kontrakt
    *
    * VIER kanonische, strukturelle Grenzen. Media-Queries können keine

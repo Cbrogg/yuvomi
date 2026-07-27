@@ -4,12 +4,13 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, globSync, readFileSync } from 'node:fs';
 
 // Minimales Window/Navigator-Mock für Node
-const { stagger, vibrate, deleteWithUndo, withBusy } = await (async () => {
+const { stagger, vibrate, withBusy, scheduleUndoableDelete } = await (async () => {
   global.window = {
     matchMedia: () => ({ matches: false }),
+    addEventListener: () => {},
     yuvomi: { showToast: () => {} },
   };
   global.t = (k) => k;
@@ -182,30 +183,67 @@ test('readable text color selects a WCAG-safe ink for arbitrary card colors', as
   assert.equal(getReadableTextColor('#FFFFFF'), 'var(--color-ink-on-bright)');
 });
 
-test('deleteWithUndo: ruft onDelete auf', async () => {
-  let deleteCalled = false;
-  global.window.yuvomi = { showToast: () => {} };
-  await deleteWithUndo({
-    onDelete: async () => { deleteCalled = true; },
-    toastMessage: 'Gelöscht',
+// Löschen mit Undo läuft ausschließlich über scheduleUndoableDelete: der
+// Server-Delete wird bis zum Ablauf des Undo-Fensters zurückgehalten und bei
+// pagehide per keepalive nachgereicht. Die frühere deleteWithUndo-API löschte
+// sofort und überließ das Zurückholen dem Aufrufer — in Birthdays stellte das
+// Undo nur den lokalen State wieder her, der Eintrag war serverseitig weg.
+// Die Invariante, an der der alte Birthdays-Pfad scheiterte: dort lief der
+// Server-Delete sofort und „Rückgängig" stellte nur den lokalen State her —
+// der Eintrag kam sichtbar zurück und war beim nächsten Reload trotzdem weg.
+test('scheduleUndoableDelete: Undo verhindert den Server-Delete', async () => {
+  let committed = false;
+  let restored = false;
+  let capturedUndo = null;
+  global.window.yuvomi = { showToast: (_msg, _type, _duration, undoFn) => { capturedUndo = undoFn; } };
+
+  scheduleUndoableDelete({
+    message: 'Gelöscht',
+    duration: 40,
+    commit: async () => { committed = true; },
+    restore: () => { restored = true; },
   });
-  assert.equal(deleteCalled, true);
+
+  assert.ok(capturedUndo, 'der Undo-Toast muss eine Rückgängig-Aktion tragen');
+  capturedUndo();
+  await new Promise((resolve) => setTimeout(resolve, 90));
+
+  assert.equal(committed, false, 'nach Undo darf kein DELETE an den Server gehen');
+  assert.equal(restored, true, 'die UI muss zurückgesetzt werden');
 });
 
-test('deleteWithUndo: übergibt onUndo an showToast', async () => {
-  let undoCalled = false;
-  let capturedUndo = null;
-  global.window.yuvomi = {
-    showToast: (_msg, _type, _duration, undoFn) => { capturedUndo = undoFn; },
-  };
-  await deleteWithUndo({
-    onDelete: async () => {},
-    onUndo: async () => { undoCalled = true; },
-    toastMessage: 'Gelöscht',
+test('scheduleUndoableDelete: ohne Undo läuft der Delete nach dem Fenster', async () => {
+  let committed = false;
+  let keepaliveFlag = null;
+  global.window.yuvomi = { showToast: () => {} };
+
+  scheduleUndoableDelete({
+    message: 'Gelöscht',
+    duration: 20,
+    commit: async ({ keepalive }) => { committed = true; keepaliveFlag = keepalive; },
   });
-  assert.ok(capturedUndo, 'showToast muss eine Undo-Funktion erhalten haben');
-  await capturedUndo();
-  assert.equal(undoCalled, true);
+
+  await new Promise((resolve) => setTimeout(resolve, 90));
+  assert.equal(committed, true, 'ohne Undo muss der Delete nach Ablauf des Fensters laufen');
+  assert.equal(keepaliveFlag, false, 'der reguläre Commit läuft ohne keepalive');
+});
+
+test('scheduleUndoableDelete ist das einzige Undo-Löschmuster', () => {
+  const ux = readFileSync(new URL('../public/utils/ux.js', import.meta.url), 'utf8');
+  assert.ok(
+    ux.includes('export function scheduleUndoableDelete'),
+    'scheduleUndoableDelete muss die kanonische Undo-Lösch-API bleiben',
+  );
+  assert.ok(
+    !ux.includes('deleteWithUndo'),
+    'deleteWithUndo löscht sofort und ist ersatzlos entfernt — nicht wieder einführen',
+  );
+
+  // Aufruf oder Import — erklärende Kommentare dürfen den alten Namen nennen.
+  const usage = /deleteWithUndo\s*\(|import\s*\{[^}]*\bdeleteWithUndo\b/;
+  const pages = globSync('public/{pages,settings/pages,components,utils}/**/*.js');
+  const offenders = pages.filter((file) => usage.test(readFileSync(file, 'utf8')));
+  assert.deepEqual(offenders, [], 'deleteWithUndo darf nirgends mehr verwendet werden');
 });
 
 test('parseTimeInput: bare hour (24 h) expands to HH:00', () => {

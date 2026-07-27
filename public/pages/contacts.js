@@ -50,9 +50,9 @@ function byName(a, b) {
 
 // Liefert das Lucide-Placeholder-Markup für eine Kategorie; aria-hidden, da stets
 // von einem Text-Label begleitet. lucide.createIcons() ersetzt den Platzhalter.
-function categoryIcon(key, size = 16) {
+function categoryIcon(key, sizeClass = 'icon-md') {
   const name = catByKey(key)?.icon || 'tag';
-  return `<i data-lucide="${esc(name)}" class="contact-cat-icon" style="width:${size}px;height:${size}px;" aria-hidden="true"></i>`;
+  return `<i data-lucide="${esc(name)}" class="contact-cat-icon ${sizeClass}" aria-hidden="true"></i>`;
 }
 
 // CSS-Farbton-Klasse aus dem Key. Seed-Keys sind bereits Slugs und matchen
@@ -76,11 +76,11 @@ function initials(name) {
 
 // Avatar einer Zeile: Familien-/Personen-Kontakte zeigen Initialen im Modul-Ton,
 // alle anderen das Kategorie-Icon im Kategorie-Ton (--cat der Gruppe).
-function contactAvatar(c, size = 20) {
+function contactAvatar(c) {
   if (c.family_user_id) {
     return `<span class="contact-item__icon contact-item__icon--initials" aria-hidden="true">${esc(initials(c.name))}</span>`;
   }
-  return `<span class="contact-item__icon">${categoryIcon(c.category, size)}</span>`;
+  return `<span class="contact-item__icon">${categoryIcon(c.category, 'icon-lg')}</span>`;
 }
 
 // --------------------------------------------------------
@@ -116,19 +116,19 @@ export async function render(container, { user }) {
         ${renderPageSearch({ id: 'contacts-search', label: t('contacts.searchPlaceholder'), placeholder: t('contacts.searchPlaceholder'), value: state.searchQuery, clearLabel: t('common.searchClear'), className: 'contacts-toolbar__search page-toolbar__center' })}
         <div class="page-toolbar__actions">
           <button class="btn btn--icon btn--ghost" id="contacts-manage-cats" aria-label="${t('contacts.manageCategories')}" title="${t('contacts.manageCategories')}">
-            <i data-lucide="tags" style="width:16px;height:16px;" aria-hidden="true"></i>
+            <i data-lucide="tags" class="icon-md" aria-hidden="true"></i>
           </button>
           <button class="btn btn--secondary" id="contacts-select-btn" aria-pressed="false">
-            <i data-lucide="list-checks" style="width:16px;height:16px;margin-right:4px;" aria-hidden="true"></i>
+            <i data-lucide="list-checks" class="icon-md" aria-hidden="true"></i>
             ${t('contacts.selectButton')}
           </button>
           <label class="btn btn--secondary" title="${t('contacts.importTooltip')}" aria-label="${t('contacts.importLabel')}">
-            <i data-lucide="upload" style="width:16px;height:16px;margin-right:4px;" aria-hidden="true"></i>
+            <i data-lucide="upload" class="icon-md" aria-hidden="true"></i>
             ${t('contacts.importButton')}
             <input type="file" id="contacts-import-input" accept=".vcf,text/vcard" style="display:none">
           </label>
           <button class="btn btn--primary toolbar-new-btn" id="contacts-add-btn">
-            <i data-lucide="plus" style="width:16px;height:16px;margin-right:4px;" aria-hidden="true"></i>
+            <i data-lucide="plus" class="icon-md" aria-hidden="true"></i>
             ${t('contacts.addButton')}
           </button>
         </div>
@@ -145,7 +145,7 @@ export async function render(container, { user }) {
       <div id="contacts-status" class="sr-only" role="status" aria-live="polite"></div>
       <div id="contacts-list" class="contacts-list" aria-busy="true">${renderSkeletonList({ rows: 6, lines: 2 })}</div>
       <button class="page-fab" id="fab-new-contact" aria-label="${t('contacts.newContactLabel')}">
-        <i data-lucide="plus" style="width:24px;height:24px" aria-hidden="true"></i>
+        <i data-lucide="plus" class="icon-xl" aria-hidden="true"></i>
       </button>
     </div>
   `);
@@ -797,7 +797,7 @@ async function openContactModal({ mode, contact = null }) {
     <div class="form-group">
       <label class="form-label" for="cm-category">${t('contacts.categoryLabel')}</label>
       <div class="contacts-cat-select">
-        <span class="contacts-cat-select__icon" id="cm-cat-icon" aria-hidden="true">${categoryIcon(isEdit && contact.category ? contact.category : defaultCat, 18)}</span>
+        <span class="contacts-cat-select__icon" id="cm-cat-icon" aria-hidden="true">${categoryIcon(isEdit && contact.category ? contact.category : defaultCat, 'icon-lg')}</span>
         <select class="form-input" id="cm-category">${catOpts}</select>
       </div>
     </div>
@@ -808,7 +808,7 @@ async function openContactModal({ mode, contact = null }) {
 
     <div class="modal-panel__footer contact-modal__footer">
       ${isEdit && !contact.family_user_id ? `<button class="btn btn--danger btn--icon" id="cm-delete" aria-label="${t('contacts.deleteLabel')}">
-        <i data-lucide="trash-2" style="width:16px;height:16px;" aria-hidden="true"></i>
+        <i data-lucide="trash-2" class="icon-md" aria-hidden="true"></i>
       </button>` : '<div></div>'}
       <div class="contact-modal__footer-actions">
         <button class="btn btn--secondary" id="cm-cancel">${t('common.cancel')}</button>
@@ -848,7 +848,7 @@ async function openContactModal({ mode, contact = null }) {
       const catIcon = panel.querySelector('#cm-cat-icon');
       catSel?.addEventListener('change', () => {
         catIcon.replaceChildren();
-        catIcon.insertAdjacentHTML('beforeend', categoryIcon(catSel.value, 18));
+        catIcon.insertAdjacentHTML('beforeend', categoryIcon(catSel.value, 'icon-lg'));
         if (window.lucide) lucide.createIcons({ el: catIcon });
       });
 

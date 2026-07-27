@@ -2104,7 +2104,6 @@
         "createdToast": "Sinh nhật đã lưu.",
         "updatedToast": "Sinh nhật đã cập nhật.",
         "deletedToast": "Sinh nhật đã xóa.",
-        "deleteConfirm": "Xóa sinh nhật của \"{{name}}\"?",
         "ageNoteToday": "Tròn {{age}} tuổi hôm nay.",
         "ageNoteTomorrow": "Tròn {{age}} tuổi ngày mai.",
         "ageNoteDays": "Tròn {{age}} tuổi trong {{days}} ngày tới.",

@@ -1554,7 +1554,7 @@ button.health-med-card:hover {
   gap: var(--space-3);
 }
 
-@media (max-width: 560px) {
+@media (max-width: 640px) {
   .cycle-skeleton { flex-direction: column; }
   .cycle-skeleton__ring { width: 200px; height: 200px; }
 }
@@ -1807,11 +1807,16 @@ button.health-med-card:hover {
   text-transform: capitalize;
 }
 
+/* Sieben Spalten auf Phone-Breite: der Gap schrumpft stufenlos mit, damit die
+   Zellen auf schmalen Geräten so breit wie möglich bleiben und näher an ein
+   komfortables Daumen-Ziel kommen. Fluid statt eigener Viewport-Schwelle — ein
+   380px-Breakpoint hätte den Kontrakt aus tokens.css §11c gebrochen und
+   zwischen 380 und 640px hart gesprungen. */
 .cycle-cal__weekdays,
 .cycle-cal__grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: var(--space-1);
+  gap: clamp(var(--space-0h), 0.53vw, var(--space-1));
 }
 
 .cycle-cal__wd {
@@ -2045,16 +2050,9 @@ button.cycle-cal__day:not(:disabled):hover { background: var(--color-surface-2);
 .cycle-bulk__question { color: var(--color-text-primary); }
 .cycle-bulk__actions { display: flex; justify-content: flex-end; gap: var(--space-2); }
 
-@media (max-width: 560px) {
+@media (max-width: 640px) {
   .cycle-hero { flex-direction: column; }
   .cycle-ring { width: 200px; height: 200px; }
-}
-
-/* Schmale Phones: Grid-Gap verdichten, damit die Kalender-Zellen so breit wie
-   möglich werden und näher an ein komfortables Daumen-Ziel kommen. */
-@media (max-width: 380px) {
-  .cycle-cal__weekdays,
-  .cycle-cal__grid { gap: var(--space-0h); }
 }
 
 @media (prefers-reduced-motion: reduce) {

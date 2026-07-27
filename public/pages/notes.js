@@ -61,7 +61,7 @@ export async function render(container, { user }) {
         <h1 class="page-toolbar__title">${t('notes.title')}</h1>
         ${renderPageSearch({ id: 'notes-search', label: t('notes.searchPlaceholder'), placeholder: t('notes.searchPlaceholder'), value: state.filterQuery, clearLabel: t('common.searchClear'), className: 'notes-toolbar__search' })}
         <button class="btn btn--primary toolbar-new-btn" id="notes-add-btn">
-          <i data-lucide="plus" style="width:16px;height:16px;margin-right:4px;" aria-hidden="true"></i>
+          <i data-lucide="plus" class="icon-md" aria-hidden="true"></i>
           ${t('notes.addNoteLabel')}
         </button>
       </div>
@@ -70,7 +70,7 @@ export async function render(container, { user }) {
         <div id="notes-grid" class="notes-grid" aria-busy="true">${renderSkeletonList({ rows: 5, lines: 3 })}</div>
       </div>
       <button class="page-fab" id="fab-new-note" aria-label="${t('notes.addNoteLabel')}">
-        <i data-lucide="plus" style="width:24px;height:24px" aria-hidden="true"></i>
+        <i data-lucide="plus" class="icon-xl" aria-hidden="true"></i>
       </button>
     </div>
   `);
@@ -250,7 +250,7 @@ function renderNoteCard(note) {
          style="background-color:${esc(note.color)};color:${textColor};">
       <button class="note-card__pin" data-action="pin" data-id="${note.id}"
               aria-label="${note.pinned ? t('notes.unpinAction') : t('notes.pinAction')}">
-        <i data-lucide="${note.pinned ? 'pin-off' : 'pin'}" style="width:12px;height:12px;" aria-hidden="true"></i>
+        <i data-lucide="${note.pinned ? 'pin-off' : 'pin'}" class="icon-sm" aria-hidden="true"></i>
       </button>
       ${note.title ? `<div class="note-card__title">${esc(note.title)}</div>` : ''}
       <div class="note-card__content">${renderMarkdownLight(note.content)}</div>
@@ -271,10 +271,10 @@ function renderNoteCard(note) {
                Inline-Aktion auf der Aufgaben-Karte. -->
           <button class="note-card__open" data-action="open" data-id="${note.id}"
                   aria-label="${t('notes.openNote')}">
-            <i data-lucide="maximize-2" style="width:12px;height:12px;" aria-hidden="true"></i>
+            <i data-lucide="maximize-2" class="icon-sm" aria-hidden="true"></i>
           </button>
           <button class="note-card__delete" data-action="delete" data-id="${note.id}" aria-label="${t('notes.deleteLabel')}">
-            <i data-lucide="trash-2" style="width:12px;height:12px;" aria-hidden="true"></i>
+            <i data-lucide="trash-2" class="icon-sm" aria-hidden="true"></i>
           </button>
         </div>
       </div>
@@ -315,7 +315,7 @@ function renderFormatToolbar() {
     ? '<span class="note-format-btn--sep" role="separator" aria-orientation="vertical"></span>'
     : `<button type="button" class="note-format-btn" data-format="${a.format}"
                title="${esc(a.label)}" aria-label="${esc(a.label)}">
-         <i data-lucide="${a.icon}" style="width:14px;height:14px;" aria-hidden="true"></i>
+         <i data-lucide="${a.icon}" class="icon-md" aria-hidden="true"></i>
        </button>`
   ).join('');
 
@@ -534,7 +534,7 @@ function openNoteModal({ mode, note = null }) {
       { open: isEdit && (!!note.pinned || (!!note.color && note.color !== NOTE_COLORS[0])) })}
       </div>
 
-      <div class="modal-panel__footer note-modal__footer" style="border:none;padding:0;margin-top:var(--space-4)">
+      <div class="modal-panel__footer modal-panel__footer--plain note-modal__footer">
         ${isEdit ? `<button type="button" class="btn btn--danger-outline" id="note-modal-delete" style="margin-right:auto">${t('common.delete')}</button>` : ''}
         <button type="button" class="btn btn--secondary" id="note-modal-cancel" data-editor-only>${t('common.cancel')}</button>
         <button type="button" class="btn btn--primary" id="note-modal-save" data-editor-only>${isEdit ? t('common.save') : t('common.create')}</button>

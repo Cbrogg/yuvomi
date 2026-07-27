@@ -2116,7 +2116,6 @@
         "createdToast": "Urodziny zapisane.",
         "updatedToast": "Urodziny zaktualizowane.",
         "deletedToast": "Urodziny usunięte.",
-        "deleteConfirm": "Usunąć urodziny \"{{name}}\"?",
         "ageNoteToday": "Kończy dzisiaj {{age}} lat.",
         "ageNoteTomorrow": "Kończy jutro {{age}} lat.",
         "ageNoteDays": "Kończy {{age}} lat za {{days}} dni.",

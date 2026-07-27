@@ -1732,6 +1732,7 @@ Personal birthday tracker with automatic calendar integration.
 - **Configurable reminder:** customizable reminder offset per birthday with preset options (none, at time, 15 min, 1 h, 1 d, 2 d, 1 w, 2 w) and a fully custom interval (amount + unit). Reminder time calculated from offset; auto-dismissed when the birthday passes
 - **Import from contacts:** a toolbar action opens a selection dialog listing contacts (from CardDAV sync, vCard import, or local entry) that carry a `BDAY`/birthday. The user picks individual contacts via checkboxes; each import creates a birthday linked to its source contact (`contact_id`). Idempotent — already-imported contacts are shown with a check mark and "already added" badge and cannot be re-selected. Contacts without a stored birthday are listed separately for manual completion. Manual entry stays available for anyone not in an address book. Photos are not carried over (contact photos are raw vCard base64, not the data-URL format birthdays expect)
 - Search filter by name
+- **Deletion is undo-based** (5-second toast) rather than confirmation-gated, matching Notes, Contacts and Recipes: a birthday is a date with no history and nothing cascades from it. The server delete is held back until the undo window closes, so "Undo" prevents it instead of trying to recreate the record afterwards
 - API: `GET /api/v1/birthdays`, `GET /api/v1/birthdays/upcoming`, `GET /api/v1/birthdays/import/candidates`, `GET /api/v1/birthdays/:id`, `POST /api/v1/birthdays`, `POST /api/v1/birthdays/import`, `PUT /api/v1/birthdays/:id`, `DELETE /api/v1/birthdays/:id`
 
 ### Reminders (`/reminders`)
@@ -1943,6 +1944,11 @@ Source of truth: `public/styles/tokens.css`. Key values (as of v0.55.10):
 - Typography is assigned through semantic `--type-*` tokens. Hero and page-title roles switch at the 1024px breakpoint; app headings do not use fluid `clamp()` sizing.
 - Inputs and prose stay at 16px. Readable supporting text and interactive controls have a 14px minimum.
 
+### Icons
+- Lucide is the single icon family, self-hosted as `public/lucide.min.js`; placeholders are `<i data-lucide="…">` and are replaced by `lucide.createIcons({ el: container })` after insertion.
+- Four sizes, one name each, declared as `--icon-*` in `tokens.css` and applied through the utility classes in `layout.css`: `icon-sm` 12px (inline markers in running text, chips), `icon-md` 16px (default: buttons, list rows), `icon-lg` 20px (emphasised actions, toolbars), `icon-xl` 24px (FAB, empty state, dialog head).
+- Sizes are never set inline. A `style="width:…"` on an icon bypasses the scale and drifts; `test:frontend-audit` guards both the absence of inline sizing and that no two classes resolve to the same value.
+
 ### Responsive Composition
 - Phone layouts prioritize one readable content column, complete titles, and one clear primary creation action. Horizontal scrolling is reserved for deliberate tab or timeline patterns, never used to compensate for clipped cards or toolbars.
 - Tablet layouts (768–1023px) may wrap dense toolbars and use two-column overview grids while retaining the mobile navigation model.
@@ -2021,9 +2027,13 @@ Additive CSS file loaded globally after `layout.css`. Implements a Liquid Glass 
 - **User-selected note colors (v0.71.34):** note titles, content, creator metadata, and fallback avatars choose black or white ink from WCAG relative luminance instead of a brightness heuristic; supporting text remains fully opaque so every built-in note color meets AA contrast.
 
 ### Breakpoints
-- Mobile: < 768px (1 column, bottom nav)
-- Tablet: 768–1024px (2 columns, bottom nav)
-- Desktop: > 1024px (sidebar + content)
+Four canonical, structural thresholds, declared as `--bp-*` in `tokens.css` (§11c) and enforced by a guard in `test:frontend-audit` — every `@media` width in the stylesheets must be one of these or its complement:
+- Mobile: ≤ 640px (1 column, bottom nav)
+- Tablet: 641–767px (portrait tablet; the `min-width: 768px` complement)
+- Desktop: ≥ 1024px (sidebar + content, multi-column)
+- Wide: ≥ 1440px (optional wide-desktop tuning)
+
+Component-internal reflow — a card or form grid that changes its column count based on its *own* width — belongs in a `@container` query or a fluid `clamp()` value, not in a new viewport breakpoint. Otherwise a component reflows differently depending on which module hosts it.
 
 ---
 
@@ -2034,7 +2044,7 @@ All UI strings are managed via `public/i18n.js`. No hardcoded text in JS files o
 ### Architecture
 
 - **Module:** `public/i18n.js` - exports: `initI18n()`, `setLocale()`, `t(key, params?)`, `getLocale()`, `getSupportedLocales()`, `formatDate(date)`, `formatTime(date)`
-- **Locale files:** `public/locales/de.json` (reference), `public/locales/en.json`, `public/locales/es.json`, `public/locales/fr.json`, `public/locales/it.json`, `public/locales/sv.json`, `public/locales/el.json`, `public/locales/ru.json`, `public/locales/tr.json`, `public/locales/zh.json`, `public/locales/ja.json`, `public/locales/ar.json`, `public/locales/hi.json`, `public/locales/pt.json`, `public/locales/uk.json`, `public/locales/pl.json`, `public/locales/nl.json`, `public/locales/cs.json`, `public/locales/vi.json`, `public/locales/hu.json` - structure: `{ "module.camelCaseKey": "Value" }`
+- **Locale files:** `public/locales/de.json` (reference), `public/locales/en.json`, `public/locales/es.json`, `public/locales/fr.json`, `public/locales/it.json`, `public/locales/sv.json`, `public/locales/el.json`, `public/locales/ru.json`, `public/locales/tr.json`, `public/locales/zh.json`, `public/locales/ja.json`, `public/locales/ar.json`, `public/locales/hi.json`, `public/locales/pt.json`, `public/locales/uk.json`, `public/locales/pl.json`, `public/locales/nl.json`, `public/locales/cs.json`, `public/locales/vi.json`, `public/locales/hu.json`, `public/locales/fa.json`, `public/locales/id.json`, `public/locales/ko.json` - structure: `{ "module.camelCaseKey": "Value" }`
 - **Variables:** `{{variable}}` syntax in translation strings, e.g. `t('tasks.assignedTo', { name: 'Anna' })`
 - **Plurals (v1.34.0):** a numeric `count` parameter selects the matching CLDR category via `Intl.PluralRules` — `t('key', { count })` looks for `key_one`, `key_few`, … before falling back to `key_other` and then the bare key. Languages that need no distinction (Japanese, Korean, Chinese, Turkish …) or that use a count-agnostic phrasing simply carry no variant, so nothing regresses. Prevents strings like "1 address books enabled"
 - **Fallback chain:** active locale → German (`de`) → key itself

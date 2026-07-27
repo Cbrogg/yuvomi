@@ -2116,7 +2116,6 @@
         "createdToast": "Ulang tahun disimpan.",
         "updatedToast": "Ulang tahun diperbarui.",
         "deletedToast": "Ulang tahun dihapus.",
-        "deleteConfirm": "Hapus ulang tahun \"{{name}}\"?",
         "ageNoteToday": "Berusia {{age}} tahun hari ini.",
         "ageNoteTomorrow": "Berusia {{age}} tahun besok.",
         "ageNoteDays": "Berusia {{age}} tahun dalam {{days}} hari.",

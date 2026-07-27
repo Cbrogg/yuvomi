@@ -203,7 +203,7 @@ function openAddPlan() {
         <select class="form-input" id="plan-category">${optHtml}</select>
       </div>
       ${amountFieldHtml('')}
-      <div class="modal-panel__footer" style="border:none;padding:0;margin-top:var(--space-4)">
+      <div class="modal-panel__footer modal-panel__footer--plain">
         <div></div>
         <div style="display:flex;gap:var(--space-3)">
           <button class="btn btn--secondary" data-action="close-modal">${t('common.cancel')}</button>
@@ -231,7 +231,7 @@ function openPlanEditor({ category, savings = false }) {
     content: `
       ${savings ? `<p class="form-hint" style="margin-bottom:var(--space-3)">${t('budget.planSavingsHint')}</p>` : ''}
       ${amountFieldHtml(hasCurrent ? current : '')}
-      <div class="modal-panel__footer" style="border:none;padding:0;margin-top:var(--space-4)">
+      <div class="modal-panel__footer modal-panel__footer--plain">
         ${hasCurrent ? `<button class="btn btn--danger btn--icon" id="plan-delete" aria-label="${t('common.delete')}">
           <i data-lucide="trash-2" class="icon-md" aria-hidden="true"></i>
         </button>` : '<div></div>'}

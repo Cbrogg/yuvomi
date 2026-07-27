@@ -2116,7 +2116,6 @@
         "createdToast": "생일이 저장되었습니다.",
         "updatedToast": "생일이 업데이트되었습니다.",
         "deletedToast": "생일이 삭제되었습니다.",
-        "deleteConfirm": "\"{{name}}\"의 생일을 삭제할까요?",
         "ageNoteToday": "오늘 {{age}}세가 됩니다.",
         "ageNoteTomorrow": "내일 {{age}}세가 됩니다.",
         "ageNoteDays": "{{days}}일 후 {{age}}세가 됩니다.",

@@ -1640,11 +1640,11 @@ function openTaskQuickAction(taskId, taskTitle, rerender) {
     content: `
       <div class="modal-actions">
         <button type="button" class="btn btn--ghost" data-action="edit">
-          <i data-lucide="edit-2" style="width:16px;height:16px;" aria-hidden="true"></i>
+          <i data-lucide="edit-2" class="icon-md" aria-hidden="true"></i>
           ${t('common.edit')}
         </button>
         <button type="button" class="btn btn--primary" data-action="done">
-          <i data-lucide="check-circle" style="width:16px;height:16px;" aria-hidden="true"></i>
+          <i data-lucide="check-circle" class="icon-md" aria-hidden="true"></i>
           ${t('tasks.kanbanMoveToDone')}
         </button>
       </div>

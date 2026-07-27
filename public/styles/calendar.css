@@ -1366,12 +1366,6 @@
   outline-offset: 1px;
 }
 
-.cal-task-chip .icon-xs {
-  width: var(--space-3);
-  height: var(--space-3);
-  flex-shrink: 0;
-}
-
 .cal-task-chip span {
   overflow: hidden;
   text-overflow: ellipsis;

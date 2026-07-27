@@ -558,7 +558,7 @@ function calendarMetaIconHtml(icon) {
 }
 
 function calendarRepeatIconHtml() {
-  return '<i data-lucide="repeat" class="calendar-repeat-icon icon-xs" aria-hidden="true"></i>';
+  return '<i data-lucide="repeat" class="calendar-repeat-icon icon-sm" aria-hidden="true"></i>';
 }
 
 function eventIconElement(icon, className = 'event-icon') {
@@ -831,7 +831,7 @@ function renderTaskChip(task, { interactive = true } = {}) {
   return `<div class="cal-task-chip cal-task-chip--${priority}"
                data-task-id="${task.id}"${button}
                title="${label}${esc(timeStr)}">
-    <i data-lucide="check-square" class="icon-xs" aria-hidden="true"></i>
+    <i data-lucide="check-square" class="icon-sm" aria-hidden="true"></i>
     <span>${label}${esc(timeStr)}</span>
   </div>`;
 }
@@ -3080,7 +3080,7 @@ function buildEventModalContent({ mode, event, date, reminder = null, time = nul
 
     ${renderCalendarReminderSection(reminder, event, isEdit ? [] : state.defaultReminders)}
 
-    <div class="modal-panel__footer" style="border:none;padding:0;margin-top:var(--space-4)">
+    <div class="modal-panel__footer modal-panel__footer--plain">
       ${isEdit ? `<button class="btn btn--danger-outline" id="modal-delete">
         <i data-lucide="trash-2" class="icon-md" aria-hidden="true"></i>${t('common.delete')}
       </button>` : '<div></div>'}

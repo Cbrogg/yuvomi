@@ -2116,7 +2116,6 @@
         "createdToast": "تولد ذخیره شد.",
         "updatedToast": "تولد به‌روزرسانی شد.",
         "deletedToast": "تولد حذف شد.",
-        "deleteConfirm": "تولد «{{name}}» حذف شود؟",
         "ageNoteToday": "امروز {{age}} ساله می‌شود.",
         "ageNoteTomorrow": "فردا {{age}} ساله می‌شود.",
         "ageNoteDays": "در {{days}} روز {{age}} ساله می‌شود.",

@@ -103,27 +103,6 @@ export function scheduleUndoableDelete({ commit, restore, message, duration = 50
 }
 
 /**
- * Führt eine DELETE-Aktion aus und zeigt einen Undo-Toast.
- *
- * @param {Object} opts
- * @param {() => Promise<void>} opts.onDelete      - Async-Funktion die DELETE ausführt
- * @param {() => Promise<void>} [opts.onUndo]      - Async-Funktion die die Aktion rückgängig macht
- * @param {string} opts.toastMessage               - Text für den Toast
- * @param {'success'|'danger'} [opts.toastType]    - Toast-Typ, default 'success'
- */
-export async function deleteWithUndo({ onDelete, onUndo, toastMessage, toastType = 'success' }) {
-  await onDelete();
-  if (window.yuvomi?.showToast) {
-    window.yuvomi.showToast(
-      toastMessage,
-      toastType,
-      onUndo ? 4000 : 2000,
-      onUndo ?? null,
-    );
-  }
-}
-
-/**
  * Scroll-Affordanz für überlaufende Leisten und Listen (Audit F-01/F-06):
  * setzt `has-fade-start`/`has-fade-end` auf dem Element, solange in der
  * jeweiligen Richtung verborgener Inhalt liegt. Die zugehörigen Masken liegen

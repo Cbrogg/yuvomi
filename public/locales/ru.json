@@ -2111,7 +2111,6 @@
         "createdToast": "День рождения сохранён.",
         "updatedToast": "День рождения обновлён.",
         "deletedToast": "День рождения удалён.",
-        "deleteConfirm": "Удалить день рождения \"{{name}}\"?",
         "ageNoteToday": "Исполняется {{age}} сегодня.",
         "ageNoteTomorrow": "Исполнится {{age}} завтра.",
         "ageNoteDays": "Исполнится {{age}} через {{days}} дн.",

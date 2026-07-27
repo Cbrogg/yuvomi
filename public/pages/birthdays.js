@@ -1,6 +1,6 @@
 import { api } from '/api.js';
-import { openModal as openSharedModal, closeModal, confirmModal, advancedSection } from '/components/modal.js';
-import { stagger, deleteWithUndo } from '/utils/ux.js';
+import { openModal as openSharedModal, closeModal, advancedSection } from '/components/modal.js';
+import { stagger, scheduleUndoableDelete } from '/utils/ux.js';
 import { t, formatDate, parseDateInput, isDateInputValid } from '/i18n.js';
 import { esc } from '/utils/html.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
@@ -219,7 +219,7 @@ function renderPage() {
       <div class="birthdays-list" id="birthdays-list"></div>
 
       <button class="page-fab" id="fab-new-birthday" aria-label="${t('birthdays.addButton')}">
-        <i data-lucide="plus" style="width:24px;height:24px" aria-hidden="true"></i>
+        <i data-lucide="plus" class="icon-xl" aria-hidden="true"></i>
       </button>
     </div>
   `);
@@ -261,7 +261,7 @@ function bindEvents() {
       return;
     }
     if (action.dataset.action === 'delete') {
-      await deleteBirthday(id, birthday.name);
+      deleteBirthday(id);
     }
   });
 }
@@ -368,9 +368,9 @@ function openBirthdayModal({ mode, birthday = null }) {
       });
 
       panel.querySelector('#bd-cancel').addEventListener('click', closeModal);
-      panel.querySelector('#bd-delete')?.addEventListener('click', async () => {
+      panel.querySelector('#bd-delete')?.addEventListener('click', () => {
         closeModal();
-        await deleteBirthday(birthday.id, birthday.name);
+        deleteBirthday(birthday.id);
       });
       panel.querySelector('#bd-save').addEventListener('click', async () => {
         const saveBtn = panel.querySelector('#bd-save');
@@ -515,23 +515,37 @@ async function openImportModal() {
   });
 }
 
-async function deleteBirthday(id, name) {
-  if (!await confirmModal(t('birthdays.deleteConfirm', { name }), { danger: true, confirmLabel: t('common.delete') })) return;
-  const birthday = state.birthdays.find((b) => b.id === id);
+// Löschen mit Undo statt Bestätigungsdialog: ein Geburtstag ist ein Datum ohne
+// Verlauf und hängt an nichts, was mitgelöscht würde. Damit folgt das Modul
+// demselben Modell wie Notizen, Kontakte und Rezepte; die Vorab-Bestätigung
+// bleibt nur, wo Löschen kaskadiert.
+//
+// scheduleUndoableDelete hält den Server-Delete bis zum Ablauf des Undo-
+// Fensters zurück. Das frühere deleteWithUndo löschte sofort und stellte bei
+// Undo nur den lokalen State wieder her — der Eintrag war serverseitig weg und
+// verschwand beim nächsten Reload still.
+function deleteBirthday(id) {
+  const index = state.birthdays.findIndex((b) => b.id === id);
+  if (index === -1) return;
+  const birthday = state.birthdays[index];
+
   state.birthdays = state.birthdays.filter((b) => b.id !== id);
   updateBirthdayBadge();
   renderList();
-  await deleteWithUndo({
-    onDelete: async () => { await api.delete(`/birthdays/${id}`); },
-    onUndo: async () => {
-      if (birthday) {
-        state.birthdays = [...state.birthdays, birthday];
-        updateBirthdayBadge();
-        renderList();
-      }
+
+  scheduleUndoableDelete({
+    message: t('birthdays.deletedToast'),
+    commit: ({ keepalive }) => api.delete(`/birthdays/${id}`, { keepalive }),
+    restore: (err) => {
+      state.birthdays = [
+        ...state.birthdays.slice(0, index),
+        birthday,
+        ...state.birthdays.slice(index),
+      ];
+      updateBirthdayBadge();
+      renderList();
+      if (err) window.yuvomi?.showToast(err.data?.error ?? t('common.unknownError'), 'danger');
     },
-    toastMessage: t('birthdays.deletedToast'),
-    toastType: 'success',
   });
 }
 

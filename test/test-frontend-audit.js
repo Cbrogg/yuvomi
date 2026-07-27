@@ -3267,3 +3267,153 @@ test('split activity feed translates every type the backend writes', () => {
   const unwritten = translated.filter((type) => !found.has(type));
   assert.deepEqual(unwritten, [], 'verwaiste activityType-Keys — kein Codepfad schreibt diesen Typ');
 });
+
+// ============================================================
+// Konsistenz-Audit (UX/UI): Invarianten, die der Audit hergestellt hat.
+// Jeder Guard hier hält genau einen Befund geschlossen — die Befunde
+// entstanden alle in Bereichen, in denen vorher kein Test hinsah.
+// ============================================================
+
+function stylesheetFiles() {
+  return readdirSync(new URL('../public/styles/', import.meta.url))
+    .filter((file) => file.endsWith('.css'))
+    .map((file) => ({ file, css: read(`../public/styles/${file}`) }));
+}
+
+test('Viewport-Breakpoints halten den Kontrakt aus tokens.css §11c', () => {
+  // Vier strukturelle Grenzen plus ihre max-width-Komplemente. Alles andere
+  // ist eine private Schwelle, an der genau ein Modul anders umbricht als der
+  // Rest der App. Komponenten-interne Umbrüche gehören in @container-Queries
+  // (die dieser Guard bewusst nicht anfasst) oder in fluide clamp()-Werte.
+  const allowed = new Set([639, 640, 767, 768, 1023, 1024, 1439, 1440]);
+  const offenders = [];
+
+  for (const { file, css } of stylesheetFiles()) {
+    for (const match of css.matchAll(/@media[^{]*?\((?:min|max)-width:\s*(\d+)px\)/g)) {
+      const px = Number(match[1]);
+      if (!allowed.has(px)) {
+        const line = css.slice(0, match.index).split('\n').length;
+        offenders.push(`${file}:${line} → ${px}px`);
+      }
+    }
+  }
+
+  assert.deepEqual(
+    offenders,
+    [],
+    'nicht-kanonischer Viewport-Breakpoint — erlaubt sind nur 640/768/1024/1440 (+ Komplemente)',
+  );
+});
+
+test('Icon-Größen kommen aus der Utility-Skala, nie aus Inline-Styles', () => {
+  const offenders = [];
+  for (const path of walkFrontendFiles('../public/pages/')
+    .concat(walkFrontendFiles('../public/settings/'))
+    .concat(walkFrontendFiles('../public/components/'))
+    .concat(walkFrontendFiles('../public/utils/'))) {
+    const src = read(path);
+    // <i data-lucide="…"> mit inline gesetzter Breite/Höhe im selben Tag
+    for (const match of src.matchAll(/<i\b[^>]*data-lucide[^>]*>/g)) {
+      if (/(?:style="[^"]*(?:width|height)|(?:^|\s)(?:width|height)=)/.test(match[0])) {
+        const line = src.slice(0, match.index).split('\n').length;
+        offenders.push(`${path}:${line}`);
+      }
+    }
+  }
+  assert.deepEqual(
+    offenders,
+    [],
+    'Icon-Größe inline gesetzt — icon-sm/md/lg/xl verwenden (Werte: --icon-* in tokens.css)',
+  );
+});
+
+test('die Icon-Skala hat genau einen Namen pro Stufe', () => {
+  const layout = read('../public/styles/layout.css');
+  const tokens = read('../public/styles/tokens.css');
+
+  const sizes = new Map();
+  for (const match of layout.matchAll(/^\.(icon-[a-z0-9]+)\s*\{([^}]*)\}/gm)) {
+    const width = match[2].match(/width:\s*var\((--icon-[a-z]+)\)/);
+    assert.ok(width, `${match[1]} muss seine Breite aus einem --icon-*-Token ziehen`);
+    sizes.set(match[1], width[1]);
+  }
+
+  assert.deepEqual(
+    [...sizes.keys()].sort(),
+    ['icon-lg', 'icon-md', 'icon-sm', 'icon-xl'],
+    'genau vier Icon-Klassen — frühere Aliase (.icon-xs/.icon-11/.icon-base/.icon-2xl) trugen dieselben Werte',
+  );
+
+  // Kein Token doppelt belegt: sonst sind zwei Klassennamen wieder dieselbe Größe.
+  const used = [...sizes.values()];
+  assert.equal(new Set(used).size, used.length, 'zwei Icon-Klassen zeigen auf dasselbe --icon-*-Token');
+
+  const values = used.map((token) => {
+    const declared = tokens.match(new RegExp(`\\${token}:\\s*(\\d+)px`));
+    assert.ok(declared, `${token} fehlt in tokens.css`);
+    return Number(declared[1]);
+  });
+  assert.equal(new Set(values).size, values.length, 'zwei --icon-*-Tokens haben denselben px-Wert');
+});
+
+test('Dialoge laufen über die Modal-Komponente, nicht über native Browser-Dialoge', () => {
+  // window.confirm blockiert den Thread, ignoriert das Design-System, hat
+  // keinen Fokus-Trap und keine Danger-Farbe. confirmModal/promptModal/
+  // selectModal aus components/modal.js decken alle Fälle ab.
+  const native = /(?:\bwindow\.(?:confirm|alert|prompt)\s*\(|(?:^|[^.\w])(?:confirm|alert|prompt)\s*\()/;
+  const offenders = [];
+
+  for (const path of walkFrontendFiles('../public/pages/')
+    .concat(walkFrontendFiles('../public/settings/'))
+    .concat(walkFrontendFiles('../public/components/'))
+    .concat(walkFrontendFiles('../public/utils/'))) {
+    read(path).split('\n').forEach((line, index) => {
+      if (native.test(line)) offenders.push(`${path}:${index + 1}`);
+    });
+  }
+
+  assert.deepEqual(offenders, [], 'nativer Browser-Dialog — confirmModal/promptModal aus components/modal.js verwenden');
+});
+
+test('border-radius wird ausschließlich über Radius-Tokens gesetzt', () => {
+  const offenders = [];
+  for (const { file, css } of stylesheetFiles()) {
+    if (file === 'tokens.css') continue;
+    for (const match of css.matchAll(/border-radius(?:-[a-z-]+)?:\s*([^;}]+)/g)) {
+      const value = match[1].trim();
+      if (/^(0|none|inherit|initial|unset)$/.test(value)) continue;
+      if (/%|var\(--radius|var\(--lg-card-radius/.test(value)) continue;
+      const line = css.slice(0, match.index).split('\n').length;
+      offenders.push(`${file}:${line} → ${value}`);
+    }
+  }
+  assert.deepEqual(
+    offenders,
+    [],
+    'roher border-radius — --radius-* aus tokens.css verwenden (calc(var(--radius-x) ± Npx) ist erlaubt)',
+  );
+});
+
+test('der neutralisierte Modal-Footer ist eine Klasse, kein Inline-Style', () => {
+  // Zwanzig Stellen bauten border/padding/margin desselben Footers inline nach —
+  // mit drei verschiedenen Abständen (space-4/5/6) für dieselbe Rolle.
+  const offenders = [];
+  for (const path of walkFrontendFiles('../public/pages/')
+    .concat(walkFrontendFiles('../public/settings/'))
+    .concat(walkFrontendFiles('../public/components/'))) {
+    const src = read(path);
+    for (const match of src.matchAll(/<div[^>]*modal-panel__footer[^>]*>/g)) {
+      if (/style="/.test(match[0])) {
+        offenders.push(`${path}:${src.slice(0, match.index).split('\n').length}`);
+      }
+    }
+  }
+  assert.deepEqual(offenders, [], 'Modal-Footer inline neutralisiert — modal-panel__footer--plain verwenden');
+
+  const layout = read('../public/styles/layout.css');
+  assert.match(
+    layout,
+    /\.modal-panel__footer\.modal-panel__footer--plain\s*\{/,
+    'die --plain-Variante braucht Spezifität (0,2,0), sonst gewinnt die Basisregel',
+  );
+});

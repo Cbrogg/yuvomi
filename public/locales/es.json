@@ -2111,7 +2111,6 @@
         "createdToast": "Cumpleaños guardado.",
         "updatedToast": "Cumpleaños actualizado.",
         "deletedToast": "Cumpleaños eliminado.",
-        "deleteConfirm": "¿Eliminar el cumpleaños de \"{{name}}\"?",
         "ageNoteToday": "Cumple {{age}} años hoy.",
         "ageNoteTomorrow": "Cumple {{age}} años mañana.",
         "ageNoteDays": "Cumplirá {{age}} años en {{days}} días.",

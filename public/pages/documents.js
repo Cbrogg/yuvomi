@@ -1223,7 +1223,7 @@ function openDocumentModal(doc = null) {
         </div>
         ${advancedSection(advancedFieldsHtml, { open: advancedOpen })}
         <div id="document-error" class="login-error" hidden></div>
-        <div class="modal-panel__footer" style="padding:0;border:none;margin-top:var(--space-5)">
+        <div class="modal-panel__footer modal-panel__footer--plain">
           <button type="submit" class="btn btn--primary" id="document-submit">${isEdit ? t('common.save') : t('documents.uploadAction')}</button>
         </div>
       </form>
@@ -1371,7 +1371,7 @@ function openFolderModal() {
           <input class="input" id="document-folder-name" required maxlength="200" autocomplete="off">
         </div>
         <div id="document-folder-error" class="login-error" hidden></div>
-        <div class="modal-panel__footer" style="padding:0;border:none;margin-top:var(--space-5)">
+        <div class="modal-panel__footer modal-panel__footer--plain">
           <button type="submit" class="btn btn--primary">${t('documents.createFolderAction')}</button>
         </div>
       </form>
