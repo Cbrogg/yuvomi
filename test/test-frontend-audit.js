@@ -3589,8 +3589,13 @@ test('Rechtevergabe ist auf dem Telefon beschriftet und mit dem Finger bedienbar
   assert.match(source, /aria-label="\$\{esc\(label \|\| group\)\}: \$\{esc\(o\.label\)\}"/);
 
   const css = read('../public/styles/settings.css');
-  const mobile = css.slice(css.indexOf('@media (max-width: 767px)', css.indexOf('.perm-modeswitch {')));
-  assert.ok(mobile.includes('.perm-seg__label'), 'Der Mobile-Block muss das Label sichtbar schalten');
+  // Die Grenze ist NICHT der Mobile-Breakpoint: iPad Portrait ist 768px, dort
+  // galt die kompakte Icon-Variante wieder (gemessen bei 820px: 59 Segmente
+  // à 34x30px). `pointer: coarse` deckt das Tablet im Querformat.
+  const touchQuery = '@media (max-width: 1023px), (pointer: coarse)';
+  assert.ok(css.includes(touchQuery), 'Touch endet nicht bei 767px');
+  const mobile = css.slice(css.indexOf(touchQuery, css.indexOf('.perm-modeswitch {')));
+  assert.ok(mobile.includes('.perm-seg__label'), 'Der Touch-Block muss das Label sichtbar schalten');
   assert.match(mobile, /\.perm-modeswitch__btn,\s*\.perm-chip \{ min-height: var\(--target-base\); \}/);
   assert.match(mobile, /\.perm-seg__opt \{[^}]*min-height: var\(--target-base\);/s);
   // Gestapelt statt segmentiert: vier Stufen mit Wort passen bei 390px nicht
@@ -3739,3 +3744,4 @@ test('Avatar-Initialen waehlen die lesbare Textfarbe', async () => {
   }
   assert.match(read('../public/styles/settings.css'), /\.settings-avatar--ink,\s*\.perm-chip__avatar--ink \{\s*color: var\(--color-ink-on-bright\);/);
 });
+

@@ -2806,14 +2806,20 @@
 .perm-adminnote i { width: 22px; height: 22px; color: var(--color-accent); flex-shrink: 0; }
 .perm-adminnote p { margin: 0; font-size: var(--text-sm); }
 
-@media (max-width: 767px) {
+/* Rechtevergabe war die schlechteste Touch-Fläche in Settings - bei der Aufgabe
+   mit den größten sozialen Folgen (Critique 2026-07-27): 32px-Chips,
+   32px-Modusumschalter und 34x30px-Segmente, deren Klartext nur im `title`
+   stand. Gestapelt statt segmentiert: der Name bekommt seine eigene Zeile, die
+   Stufen darunter die volle Breite - mit Wort, nicht nur mit Symbol.
+
+   Die Grenze ist bewusst nicht der Mobile-Breakpoint: iPad Portrait ist
+   768px, dort galt die kompakte Icon-Variante wieder (gemessen bei 820px: 59
+   Segmente à 34x30px, Label `display: none`). Touch endet nicht bei 767px.
+   `pointer: coarse` deckt zusätzlich das Tablet im Querformat, wo der
+   Viewport breiter als Desktop ist, der Finger aber derselbe bleibt. */
+@media (max-width: 1023px), (pointer: coarse) {
   .perm-modgroup__widgets { padding-left: var(--space-4); }
 
-  /* Rechtevergabe war die schlechteste mobile Fläche in Settings - bei der
-     Aufgabe mit den größten sozialen Folgen (Critique 2026-07-27): 32px-Chips,
-     32px-Modusumschalter und 34x30px-Segmente, deren Klartext nur im `title`
-     stand. Gestapelt statt segmentiert: der Name bekommt seine eigene Zeile,
-     die Stufen darunter die volle Breite - mit Wort, nicht nur mit Symbol. */
   .perm-modeswitch__btn,
   .perm-chip { min-height: var(--target-base); }
 
