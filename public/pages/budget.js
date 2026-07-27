@@ -1074,7 +1074,7 @@ function renderLoansDashboard() {
           <div class="budget-loans__eyebrow">${t('budget.loansTitle')}</div>
           <div class="budget-loans__summary">${t('budget.loansSummary', {
             count: summary.active_count ?? 0,
-            amount: formatAmount(summary.remaining_amount ?? 0),
+            amount: formatAmount(summary.remaining_principal ?? summary.remaining_amount ?? 0),
           })}</div>
           ${state.loanFilterId ? `<div class="budget-list-header__filter">${esc(activeLoanLabel())}</div>` : ''}
         </div>
@@ -1095,8 +1095,8 @@ function renderLoansDashboard() {
       </div>
       <div class="budget-loans__stats">
         <div>
-          <span>${t('budget.loanRemainingAmount')}</span>
-          <strong>${formatAmount(summary.remaining_amount ?? 0)}</strong>
+          <span>${t(summary.has_interest ? 'budget.loanRemainingPrincipal' : 'budget.loanRemainingAmount')}</span>
+          <strong>${formatAmount(summary.remaining_principal ?? summary.remaining_amount ?? 0)}</strong>
         </div>
         <div>
           <span>${t('budget.loanRemainingInstallments')}</span>
@@ -1279,6 +1279,24 @@ function wireLoansPage() {
 function openLoanReport(loan) {
   const payments = (loan.payments ?? []).slice()
     .sort((a, b) => new Date(b.paid_date) - new Date(a.paid_date) || b.installment_number - a.installment_number);
+  // Verzinste Darlehen trennen Restschuld (offenes Kapital, die Zahl der Bank) und
+  // Restzahlungssumme (inklusive der Zinsen, die noch anfallen). Zinsfreie Darlehen
+  // kennen den Unterschied nicht und behalten die bisherigen vier Kennzahlen.
+  const interest = loan.interest;
+  const cells = interest
+    ? [
+      [t('budget.loanPrincipalAmount'), formatLoanAmount(interest.principal, loan)],
+      [t('budget.loanRemainingPrincipal'), formatLoanAmount(loan.remaining_principal, loan)],
+      [t('budget.loanStillToPay'), formatLoanAmount(loan.remaining_amount, loan)],
+      [t('budget.loanPaidAmount'), formatLoanAmount(loan.paid_amount, loan)],
+      [t('budget.loanRemainingInstallments'), String(loan.remaining_installments)],
+    ]
+    : [
+      [t('budget.loanAmountLabel'), formatLoanAmount(loan.total_amount, loan)],
+      [t('budget.loanRemainingAmount'), formatLoanAmount(loan.remaining_amount, loan)],
+      [t('budget.loanPaidAmount'), formatLoanAmount(loan.paid_amount, loan)],
+      [t('budget.loanRemainingInstallments'), String(loan.remaining_installments)],
+    ];
   const content = `
     <div class="loan-report">
       <div class="loan-report__hero">
@@ -1291,16 +1309,13 @@ function openLoanReport(loan) {
         </span>
       </div>
       <div class="loan-report__grid">
-        <div><span>${t('budget.loanAmountLabel')}</span><strong>${formatLoanAmount(loan.total_amount, loan)}</strong></div>
-        <div><span>${t('budget.loanRemainingAmount')}</span><strong>${formatLoanAmount(loan.remaining_amount, loan)}</strong></div>
-        <div><span>${t('budget.loanPaidAmount')}</span><strong>${formatLoanAmount(loan.paid_amount, loan)}</strong></div>
-        <div><span>${t('budget.loanRemainingInstallments')}</span><strong>${loan.remaining_installments}</strong></div>
+        ${cells.map(([label, value]) => `<div><span>${esc(label)}</span><strong>${value}</strong></div>`).join('')}
       </div>
       ${loan.is_foreign_currency ? `<p class="form-hint budget-loan-hint">${t('budget.loanRateInfo', {
         currency: esc(loan.currency),
         rate: getNumberFormat({ maximumFractionDigits: 6 }).format(Number(loan.exchange_rate || 1)),
         base: esc(state.currency),
-        amount: formatAmount(Number(loan.remaining_amount || 0) * Number(loan.exchange_rate || 1)),
+        amount: formatAmount(Number(interest ? loan.remaining_principal : loan.remaining_amount) * Number(loan.exchange_rate || 1)),
       })}</p>` : ''}
       <div class="loan-report__section-title">${t('budget.loanTransactions')}</div>
       ${payments.length ? `
@@ -1367,6 +1382,14 @@ function renderLoanCard(loan) {
   const paidPct = Math.min(100, Math.round((loan.paid_amount / loan.total_amount) * 100));
   const nextDue = loan.next_due_month ? formatMonthLabel(loan.next_due_month) : t('budget.loanPaidStatus');
   const payDisabled = loan.remaining_installments <= 0 ? 'disabled' : '';
+  // Führende Zahl ist bei verzinsten Darlehen die Restschuld, nicht die Summe der
+  // Restraten: Letztere enthält die Zinsen der Restlaufzeit und weicht deshalb von
+  // dem ab, was die Bank als offenen Betrag meldet. Bezugsgröße darunter ist dann
+  // die Kreditsumme statt der Gesamtrückzahlung, damit Zähler und Nenner
+  // zusammenpassen. Die Restzahlungssumme steht weiterhin im Report-Dialog.
+  const interest = loan.interest;
+  const leadAmount = interest ? loan.remaining_principal : loan.remaining_amount;
+  const leadTotal = interest ? interest.principal : loan.total_amount;
 
   return `
     <article class="budget-loan-card" data-loan-id="${loan.id}">
@@ -1386,10 +1409,11 @@ function renderLoanCard(loan) {
         ${loan.interest ? `<div class="budget-loan-card__meta budget-loan-card__interest">${esc(loanInterestMeta(loan.interest, loan))}</div>` : ''}
       </div>
       <div class="budget-loan-card__amounts">
-        <strong>${formatLoanAmount(loan.remaining_amount, loan)}</strong>
-        <span>${t('budget.loanRemainingOf', { total: formatLoanAmount(loan.total_amount, loan) })}</span>
+        ${interest ? `<span class="budget-loan-card__amount-label">${t('budget.loanRemainingPrincipal')}</span>` : ''}
+        <strong>${formatLoanAmount(leadAmount, loan)}</strong>
+        <span>${t('budget.loanRemainingOf', { total: formatLoanAmount(leadTotal, loan) })}</span>
         ${loan.is_foreign_currency
-          ? `<span class="budget-loan-card__converted">${loanBudgetEquivalent(loan.remaining_amount, loan)}</span>`
+          ? `<span class="budget-loan-card__converted">${loanBudgetEquivalent(leadAmount, loan)}</span>`
           : ''}
       </div>
       <div class="budget-loan-card__progress" role="progressbar"

@@ -163,9 +163,10 @@ router.get('/loans', (req, res) => {
       acc.total_amount += toBudgetAmount(loan.total_amount, loan);
       acc.paid_amount += toBudgetAmount(loan.paid_amount, loan);
       acc.remaining_amount += toBudgetAmount(loan.remaining_amount, loan);
+      acc.remaining_principal += toBudgetAmount(loan.remaining_principal, loan);
       acc.remaining_installments += loan.remaining_installments;
       return acc;
-    }, { total_amount: 0, paid_amount: 0, remaining_amount: 0, remaining_installments: 0 });
+    }, { total_amount: 0, paid_amount: 0, remaining_amount: 0, remaining_principal: 0, remaining_installments: 0 });
 
     res.json({
       data: {
@@ -175,9 +176,13 @@ router.get('/loans', (req, res) => {
           total_count: loans.length,
           currency: base,
           has_foreign_currency: loans.some((loan) => loan.is_foreign_currency),
+          // Steuert nur die Beschriftung: Sobald ein verzinstes Darlehen dabei ist,
+          // ist die Summe eine Restschuld und darf nicht mehr neutral "offen" heißen.
+          has_interest: loans.some((loan) => Boolean(loan.interest)),
           total_amount: cents(totals.total_amount),
           paid_amount: cents(totals.paid_amount),
           remaining_amount: cents(totals.remaining_amount),
+          remaining_principal: cents(totals.remaining_principal),
           remaining_installments: totals.remaining_installments,
         },
       },

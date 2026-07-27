@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.48.0] - 2026-07-27
+
+### Added
+- The loan report of an interest loan now lists the loan amount, the outstanding balance, what is still to pay, the amount paid and the instalments left, so both the open capital and the remaining payment total are visible in one place instead of only one of them.
+
+### Changed
+- An interest loan now leads with its outstanding balance instead of the sum of its outstanding instalments. The latter still contains the interest of the remaining term and was therefore several hundred euros above the open amount the bank reports, while carrying only the label "Outstanding". The card now shows the open capital from the amortisation schedule, labelled as such and set against the loan amount rather than the total repayment, and the summary card switches to the same figure as soon as one interest loan is present. Interest-free loans are unchanged, as both figures are identical there.
+
 ## [1.47.1] - 2026-07-27
 
 ### Fixed

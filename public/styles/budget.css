@@ -794,6 +794,16 @@
   white-space: nowrap;
 }
 
+/* Beschriftet den Hauptbetrag verzinster Darlehen als Restschuld. Ohne das Label
+   liest sich die Zahl wie die Summe der Restraten - genau die Verwechslung, die
+   der getrennte Ausweis von Restschuld und Restzahlungssumme auflöst. Als Eyebrow
+   gesetzt, damit es nicht mit der Bezugsgröße darunter verschwimmt. */
+.budget-loan-card__amount-label {
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  font-weight: var(--font-weight-semibold);
+}
+
 /* Budget-Gegenwert eines Fremdwährungs-Darlehens (#582): bewusst leiser als der
    Hauptbetrag, damit die Darlehenswährung die führende Zahl bleibt. */
 .budget-loan-card__converted {

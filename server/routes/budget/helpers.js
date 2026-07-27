@@ -9,7 +9,7 @@ import { readFileSync } from 'node:fs';
 import path from 'path';
 import * as db from '../../db.js';
 import { budgetVisibilityWhere, budgetScopeWhere, canEditEntry, resolveBudgetMode } from '../../services/budget-visibility.js';
-import { computeLoanSchedule } from '../../services/loan-amortization.js';
+import { computeLoanSchedule, remainingPrincipalAfter } from '../../services/loan-amortization.js';
 
 // --------------------------------------------------------
 // Persönlich/geteilt (#476/#505): Haushalts-Modus + Sichtbarkeits-Enforcement.
@@ -451,8 +451,14 @@ export function loanSummaryRow(loan, baseCurrency = budgetCurrency()) {
   // nicht der Durchschnitt total_amount/installment_count (die letzte Rate ist
   // kleiner). Sonst weicht der gebuchte Ratenbetrag von der angezeigten Monatsrate
   // ab. Die letzte Rate wird im Zahlungs-Default ohnehin über remaining_amount getrued.
-  const interest = loanInterestSummary(loan);
+  const interest = loanInterestSummary(loan, paidInstallments);
   const installmentAmount = interest ? interest.monthly_payment : cents(loan.total_amount / loan.installment_count);
+  // Restschuld: das noch offene Kapital laut Tilgungsplan. remainingAmount oben ist
+  // dagegen die Summe der Restraten und enthält die Zinsen der Restlaufzeit - bei
+  // verzinsten Darlehen liegen die beiden Werte deshalb auseinander, und die
+  // Restschuld ist die Zahl, die auch die Bank meldet. Zinsfreie Darlehen haben
+  // keinen Zinsanteil, dort sind beide identisch.
+  const remainingPrincipal = interest ? interest.remaining_principal : remainingAmount;
 
   // Währung je Darlehen (#582): Alle Beträge oben bleiben in der Darlehenswährung.
   // currency=NULL heißt "Budget-Währung" und wird erst hier aufgelöst, damit eine
@@ -470,6 +476,7 @@ export function loanSummaryRow(loan, baseCurrency = budgetCurrency()) {
     paid_amount: paidAmount,
     paid_installments: paidInstallments,
     remaining_amount: remainingAmount,
+    remaining_principal: remainingPrincipal,
     remaining_installments: remainingInstallments,
     next_installment_number: remainingInstallments > 0 ? paidInstallments + 1 : null,
     next_due_month: remainingInstallments > 0 ? addMonths(loan.start_month, paidInstallments) : null,
@@ -481,7 +488,9 @@ export function loanSummaryRow(loan, baseCurrency = budgetCurrency()) {
 // Zins-Darlehen (#569): Kennzahlen für die Anzeige aus dem Amortisationsplan
 // (exakte Monatsrate, Gesamtzins, Restschuld nach Zinsbindung). Zinsfreie
 // Darlehen liefern null, sodass die Anzeige unverändert bleibt.
-export function loanInterestSummary(loan) {
+// paidInstallments steuert nur remaining_principal (Restschuld zum aktuellen
+// Ratenstand); alle anderen Kennzahlen sind vom Zahlungsfortschritt unabhängig.
+export function loanInterestSummary(loan, paidInstallments = 0) {
   if (!loan.interest_mode || loan.interest_mode === 'none' || loan.principal == null) return null;
   const calc = computeLoanSchedule({
     principal: loan.principal,
@@ -501,6 +510,7 @@ export function loanInterestSummary(loan) {
     followup_rate: loan.followup_rate,
     monthly_payment: calc.monthlyPayment,
     total_interest: calc.totalInterest,
+    remaining_principal: remainingPrincipalAfter(calc.schedule, loan.principal, paidInstallments),
     remaining_after_binding: calc.remainingAfterBinding,
     binding_end_month: loan.fixed_period_months ? addMonths(loan.start_month, loan.fixed_period_months) : null,
   };

@@ -51,8 +51,8 @@ npm run test:budget-ui          # Budget-UI-Verträge: TAB_CAPS (Monatsnav/Neu-A
 npm run test:budget-plans       # Budgetplan (#468): computePlanProgress (Plan vs. Ist + Sparziel), GET/PUT/DELETE /budget/plans
 npm run test:budget-visibility  # Budget-Sichtbarkeit (#476/#505): owner-basiertes Modell (private/shared), Ansichts-Scope mine/household
 npm run test:budget-routes-scope   # Budget-Routen im Personal-Modus (#476/#505): End-to-End über den echten Router, Default-Sichtbarkeit, Lese-Scope
-npm run test:budget-loans-routes   # Loans-Routen: owner_id/visibility-Enforcement (#476/#505), mayEdit-Gates (kein Admin-Bypass), Repayment-Erbung, shared-Kontrast, Zins-Darlehen-Ableitung (#569)
-npm run test:budget-loans-amortization   # Zins-Darlehen-Mathematik (#569): konstante Annuität, Phasenwechsel nach Zinsbindung, Restschuld/Laufzeit-Ableitung, einphasiger variabler Modus, Schutzfälle (tilgt nicht / zu lang)
+npm run test:budget-loans-routes   # Loans-Routen: owner_id/visibility-Enforcement (#476/#505), mayEdit-Gates (kein Admin-Bypass), Repayment-Erbung, shared-Kontrast, Zins-Darlehen-Ableitung (#569), remaining_principal vs. remaining_amount in API + Summenkarte
+npm run test:budget-loans-amortization   # Zins-Darlehen-Mathematik (#569): konstante Annuität, Phasenwechsel nach Zinsbindung, Restschuld nach Zinsbindung/Laufzeit-Ableitung, einphasiger variabler Modus, Schutzfälle (tilgt nicht / zu lang); Restschuld zum Ratenstand liegt unter der Summe der Restraten (Differenz = Restzinsen)
 npm run test:budget-loans-migration   # Loans-Tabellen-Rebuild v101 (#569-Nachtrag, variabler Zins): Ratenzahlungen/Trigger/Indizes überleben den DROP, neuer Enum-Wert erlaubt, foreignKeysOff ist Pflicht
 npm run test:budget-entries-routes   # Eintrags-Routen: summary/export (CSV-Injektion), Filter, virtuelles Budget, Loan-Payment-Kopplung, Serien-Sichtbarkeitspropagation, Skip-Markierung
 npm run test:calendar-routes    # Kalender-Routen: GET//upcoming/search, Sichtbarkeit (kein Admin-Bypass), Serien-Expansion, requireAdmin-Sync-Gates, subscriptions/import/feed/holidays, CRUD, reset/exceptions (EXDATE)

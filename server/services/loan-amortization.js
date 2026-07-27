@@ -102,3 +102,30 @@ export function computeLoanSchedule({
     schedule,
   };
 }
+
+/**
+ * Planmäßige Restschuld (offenes Kapital) nach `paidInstallments` gezahlten Raten.
+ *
+ * Abgrenzung: Das ist NICHT die Summe der noch offenen Raten. Die enthält auch die
+ * Zinsen der Restlaufzeit und liegt deshalb immer höher. Banken melden die
+ * Restschuld, also den hier berechneten Wert - die Verwechslung war der Auslöser
+ * dieser Funktion.
+ *
+ * Der Wert kommt aus dem Tilgungsplan, ist also planmäßig: er unterstellt, dass
+ * jede Rate in Höhe der Annuität und zum Fälligkeitsmonat gezahlt wurde. Abweichend
+ * gebuchte Ratenbeträge verschieben die reale Tilgung und werden hier bewusst nicht
+ * nachgeführt, damit die Restschuld zur selben Prognose gehört wie Monatsrate,
+ * Gesamtzins und Laufzeit.
+ *
+ * @param {Array<{ balance: number }>} schedule Tilgungsplan aus computeLoanSchedule
+ * @param {number} principal        Kreditsumme (Restschuld vor der ersten Rate)
+ * @param {number} paidInstallments Anzahl bereits gezahlter Raten (>= 0)
+ * @returns {number} Restschuld in Euro, auf Cent gerundet
+ */
+export function remainingPrincipalAfter(schedule, principal, paidInstallments) {
+  const paid = Math.floor(Number(paidInstallments) || 0);
+  if (paid <= 0) return round2(Number(principal) || 0);
+  // Über den Plan hinaus gebuchte Raten können das Kapital nicht unter null drücken.
+  if (paid >= schedule.length) return 0;
+  return schedule[paid - 1].balance;
+}

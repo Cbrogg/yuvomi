@@ -9,7 +9,7 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { computeLoanSchedule, MAX_LOAN_MONTHS } from '../server/services/loan-amortization.js';
+import { computeLoanSchedule, remainingPrincipalAfter, MAX_LOAN_MONTHS } from '../server/services/loan-amortization.js';
 
 const near = (a, b, eps = 0.02) => Math.abs(a - b) <= eps;
 
@@ -117,4 +117,48 @@ test('niedrigere Anfangstilgung → längere Laufzeit', () => {
   assert.equal(low.ok, true);
   assert.equal(high.ok, true);
   assert.ok(low.totalMonths > high.totalMonths);
+});
+
+// --------------------------------------------------------------------------
+// Restschuld zum Ratenstand
+// --------------------------------------------------------------------------
+
+test('remainingPrincipalAfter: 0 Raten = Kreditsumme, n Raten = Plan-Restschuld', () => {
+  const r = computeLoanSchedule({ principal: 200000, fixedRate: 2.5, initialRepaymentRate: 2, interestMode: 'fixed' });
+  assert.equal(r.ok, true);
+  assert.equal(remainingPrincipalAfter(r.schedule, 200000, 0), 200000, 'vor der ersten Rate ist nichts getilgt');
+  assert.equal(remainingPrincipalAfter(r.schedule, 200000, 1), r.schedule[0].balance);
+  assert.equal(remainingPrincipalAfter(r.schedule, 200000, 60), r.schedule[59].balance);
+  assert.ok(remainingPrincipalAfter(r.schedule, 200000, 60) < 200000, 'die Restschuld sinkt');
+});
+
+test('remainingPrincipalAfter: getilgt bleibt 0, auch über den Plan hinaus', () => {
+  const r = computeLoanSchedule({ principal: 200000, fixedRate: 2.5, initialRepaymentRate: 2, interestMode: 'fixed' });
+  assert.equal(remainingPrincipalAfter(r.schedule, 200000, r.totalMonths), 0);
+  assert.equal(remainingPrincipalAfter(r.schedule, 200000, r.totalMonths + 50), 0, 'kein negatives Kapital');
+  assert.equal(remainingPrincipalAfter(r.schedule, 200000, -5), 200000, 'unsinnige Eingabe fällt auf die Kreditsumme zurück');
+});
+
+// Auslöser: Die Karte zeigte die Summe der Restraten und wurde als Restschuld
+// gelesen. Beide Größen dürfen bei verzinsten Darlehen nie gleichgesetzt werden -
+// die Differenz sind exakt die Zinsen, die in den Restraten noch stecken.
+test('Restschuld liegt unter der Summe der Restraten, Differenz = Restzinsen', () => {
+  // Nachgebauter Nutzerfall: 21.000 € zu 4,07 %, 72 Raten à 330,10 €, 44 gezahlt.
+  const r = computeLoanSchedule({
+    principal: 21000, fixedRate: 4.07, initialRepaymentRate: 14.792857, interestMode: 'fixed',
+  });
+  assert.equal(r.ok, true);
+  assert.ok(near(r.monthlyPayment, 330.10), `monthlyPayment ${r.monthlyPayment}`);
+  assert.equal(r.totalMonths, 72);
+
+  const paid = 44;
+  const principalLeft = remainingPrincipalAfter(r.schedule, 21000, paid);
+  const rest = r.schedule.slice(paid);
+  const paymentsLeft = rest.reduce((s, x) => s + x.interest + x.principal, 0);
+  const interestLeft = rest.reduce((s, x) => s + x.interest, 0);
+
+  assert.ok(principalLeft < paymentsLeft, `Restschuld ${principalLeft} muss unter ${paymentsLeft} liegen`);
+  assert.ok(near(paymentsLeft - principalLeft, interestLeft, 0.5), 'die Differenz sind die Restzinsen');
+  // Summe der planmäßigen Tilgungsanteile ab hier == Restschuld.
+  assert.ok(near(rest.reduce((s, x) => s + x.principal, 0), principalLeft, 0.5));
 });

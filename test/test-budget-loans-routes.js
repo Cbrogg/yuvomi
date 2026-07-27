@@ -460,6 +460,68 @@ test('PUT currency: Zins-Pfad (interest_mode im Body) behält die Fremdwährung'
   assert.equal(r.body.data.exchange_rate, 0.92);
 });
 
+// --------------------------------------------------------------------------
+// Restschuld vs. Restzahlungssumme
+// --------------------------------------------------------------------------
+
+test('GET interest-Loan: remaining_principal ist die Restschuld, nicht die Summe der Restraten', async () => {
+  setMode('shared');
+  setBudgetCurrency('EUR');
+  db.prepare('DELETE FROM budget_loans').run();
+
+  // Nachgebauter Nutzerfall: 21.000 € zu 4,07 %, Rate 330,10 €, 72 Monate.
+  const created = await call('POST', '/loans', {
+    as: AA,
+    body: {
+      borrower: 'Lukas', title: 'Auto', start_month: '2022-12',
+      interest_mode: 'fixed', principal: 21000,
+      fixed_rate: 4.07, initial_repayment_rate: 14.792857,
+    },
+  });
+  assert.equal(created.status, 201);
+  const id = created.body.data.id;
+  assert.equal(created.body.data.remaining_principal, 21000, 'ohne Zahlung ist die volle Kreditsumme offen');
+
+  for (let n = 0; n < 3; n++) {
+    const pay = await call('POST', `/loans/${id}/payments`, { as: AA, body: { paid_date: '2026-07-01' } });
+    assert.equal(pay.status, 201);
+  }
+
+  const r = await call('GET', '/loans', { as: AA });
+  const loan = r.body.data.loans.find((l) => l.id === id);
+  assert.equal(loan.paid_installments, 3);
+  // Kern der Abgrenzung: remaining_amount enthält die Zinsen der Restlaufzeit,
+  // remaining_principal nicht. Gleichsetzen wäre der Bug, der das ausgelöst hat.
+  assert.ok(loan.remaining_principal < loan.remaining_amount,
+    `Restschuld ${loan.remaining_principal} muss unter der Restzahlungssumme ${loan.remaining_amount} liegen`);
+  assert.ok(loan.remaining_principal < 21000, 'drei Raten haben getilgt');
+  assert.ok(loan.remaining_principal > 20000, 'aber nur einen kleinen Teil');
+  assert.equal(loan.remaining_principal, loan.interest.remaining_principal, 'ein Wert, zwei Zugriffswege');
+
+  assert.equal(r.body.data.summary.has_interest, true);
+  assert.ok(r.body.data.summary.remaining_principal < r.body.data.summary.remaining_amount,
+    'die Summenkarte trennt beide Größen ebenfalls');
+});
+
+test('GET zinsfreies Darlehen: remaining_principal == remaining_amount', async () => {
+  setMode('shared');
+  setBudgetCurrency('EUR');
+  db.prepare('DELETE FROM budget_loans').run();
+
+  const created = await call('POST', '/loans', {
+    as: AA,
+    body: { borrower: 'Ohne Zins', title: 'Privat', start_month: '2026-01', total_amount: 1200, installment_count: 12 },
+  });
+  assert.equal(created.status, 201);
+  assert.equal(created.body.data.interest, null, 'kein Zinsmodell');
+  assert.equal(created.body.data.remaining_principal, created.body.data.remaining_amount,
+    'ohne Zinsen gibt es keinen Unterschied zwischen den beiden Größen');
+
+  const r = await call('GET', '/loans', { as: AA });
+  assert.equal(r.body.data.summary.has_interest, false, 'ohne Zins bleibt die Summenkarte bei "Offen"');
+  assert.equal(r.body.data.summary.remaining_principal, r.body.data.summary.remaining_amount);
+});
+
 test('teardown: Server schließen', async () => {
   await new Promise((r) => server.close(r));
 });
