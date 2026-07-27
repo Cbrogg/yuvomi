@@ -177,7 +177,7 @@ function moduleRowHtml(mod) {
   return `
     <div class="perm-row perm-row--module" data-module="${esc(mod.key)}">
       <div class="perm-row__label">
-        <span class="perm-row__dot" style="background:${MODULE_ACCENT[mod.key] || 'var(--color-accent)'}"></span>
+        <span class="perm-row__dot" aria-hidden="true" style="background:${MODULE_ACCENT[mod.key] || 'var(--color-accent)'}"></span>
         <i data-lucide="${esc(mod.icon)}" aria-hidden="true"></i>
         <span class="perm-row__name">${esc(moduleLabel(mod.key))}</span>
         ${inheritedHint}
