@@ -735,6 +735,9 @@ Per-user reminders attached to tasks, calendar events, or subscriptions.
 
 Calendar events support **multiple reminders** (e.g. "15 minutes before" *and* "1 day before").
 Each reminder is an independent row and is delivered separately by the notification scheduler.
+Every delivery carries the linked entity's title as the notification body (task title, event title,
+or subscription name), so the reminder is identifiable without opening the app; the fallback text
+only applies once the linked entity has been deleted.
 The event dialog manages the set via `GET /api/v1/reminders/all?entity_type=event&entity_id=…`
 (returns the full list) and `PUT /api/v1/reminders?entity_type=event&entity_id=…` with
 `{ remind_ats: [...] }` (replace-set semantics: deduplicated, max 5). Tasks and subscriptions keep
