@@ -313,9 +313,13 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Strukturtrenner, kein deaktivierter Zustand: --color-text-disabled (#D1D0CB)
+ * lag bei 1.54:1 und ließ Telefon und E-Mail optisch ineinanderlaufen. Tertiary
+ * bleibt eine Stufe unter dem Meta-Text (secondary) und ist als schmales
+ * Glyph zurückhaltend genug. */
 .contact-item__meta-sep {
   flex-shrink: 0;
-  color: var(--color-text-disabled);
+  color: var(--color-text-tertiary);
 }
 
 .contact-item__meta-email {

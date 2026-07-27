@@ -34,10 +34,15 @@
   color: var(--color-text-primary);
 }
 
+/* Aktiv-Text nach der Konvention "Akzent-Text auf akzent-getöntem Grund"
+ * (dokumentiert in tokens.css, Abschnitt Modul-Akzente), nicht als roher
+ * Akzent: der Chip-Grund ist selbst eine Tönung derselben Farbe, dadurch hing
+ * der Kontrast allein an der Akzent-Helligkeit (tasks 3.60:1, notes 3.57:1).
+ * Füllung und Rahmen bleiben unberührt, der Chip behält seine Modulfarbe. */
 .filter-chip--active {
   background-color: color-mix(in srgb, var(--module-accent, var(--color-accent)) 14%, transparent);
   border-color: var(--module-accent, var(--color-accent));
-  color: var(--module-accent, var(--color-accent));
+  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) 70%, var(--color-text-primary));
 }
 
 @supports (backdrop-filter: blur(1px)) {

@@ -7,7 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.48.1] - 2026-07-27
+## [1.48.2] - 2026-07-27
+
+### Fixed
+- Text that sits on a tint of its own module colour now stays readable. Active filter chips, count badges, module badges and initials avatars used the raw module accent as their text colour on a tint of that same accent, so the contrast depended solely on how light that particular accent happened to be: measured across all 17 modules, 13 missed the WCAG AA threshold, with Recipes at 2.84:1 and Shopping at 3.21:1. The text now carries a 30% admixture of the primary ink colour, which shifts it away from the ground in a theme aware direction, darker in the light theme and lighter in the dark one. The hue is unchanged, so each module keeps its own colour. Icons are deliberately excluded because the 3:1 rule applies to them and the admixture would only mute the module colour.
+- The Recipes accent colour missed AA as text even on plain white (3.51:1), the only one of the 17 module accents to do so, and is now a darker teal green (5.19:1 on white, 4.71:1 on the page background). Its hue moved from 162 degrees to 166, which also widens the gap to the Tasks green from 12 to 16 degrees and keeps the two modules easier to tell apart.
+- Reward avatars picked white initials regardless of the member colour, which left them at 2.80:1 on a light orange. They now choose the stronger of light or dark ink from the colour's luminance, the same shared helper the dashboard, calendar, notes and member picker already used.
+- Budget category amounts no longer spill out of their column. The fixed 64px column was too narrow for every formatted amount in the demo data, which needed 75 to 91px; the column is now sized in character units so it scales with the font and stays identical across rows, which keeps the bars comparable.
+- Assignee initials and the "+N" counter in the calendar grid views were rendered at 6px. They now have a 9px floor.
+- The separator between phone number and email in a contact row used the disabled-text colour at 1.54:1, which let the two values run together visually. It now uses the tertiary text colour.
+- The install banner's install and dismiss buttons were 36px and 32px on touch devices, below the 44pt minimum the rest of the app follows. They now match on `(hover: none)`, unchanged for mouse pointers.
+
+### Changed
+- The Recipes module accent changed from `#109C6B` to `#0C7C5B`, which is visible wherever the Kitchen section carries its colour.
 
 ### Changed
 - A subscription reminder now states the amount and the renewal date, not just the subscription name. Knowing that something renews is of little use without knowing when and for how much, which is what decides whether it needs attention at all. The notification body reads `Netflix - 12.99 EUR - 2026-08-03` and drops the amount or the date individually when a subscription does not carry them. The line deliberately holds data only and no formulated sentence: notifications are assembled on the server, which cannot know the recipient's language because locale, date format and number format live in the browser, so any sentence would reach all 23 languages in only one of them (#581).

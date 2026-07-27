@@ -622,7 +622,7 @@ button.health-med-card:hover {
   border-radius: var(--radius-full);
   font-size: var(--text-2xs);
   background: color-mix(in srgb, var(--module-accent) 14%, transparent);
-  color: var(--module-accent);
+  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) 70%, var(--color-text-primary));
 }
 
 .health-med-badge--muted {
@@ -1678,7 +1678,7 @@ button.health-med-card:hover {
   font-weight: 600;
   padding: 2px var(--space-2);
   border-radius: var(--radius-full);
-  color: var(--module-accent);
+  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) 70%, var(--color-text-primary));
   background: color-mix(in srgb, var(--module-accent) 14%, transparent);
 }
 

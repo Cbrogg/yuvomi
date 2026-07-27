@@ -9,6 +9,7 @@
 import { api } from '/api.js';
 import { t, formatDate, getLocale, getNumberFormat } from '/i18n.js';
 import { esc } from '/utils/html.js';
+import { getReadableTextColor, AVATAR_FALLBACK_COLOR } from '/utils/color.js';
 import { openModal, closeModal, confirmModal } from '/components/modal.js';
 import { createPageFab, setPageFabAction } from '/utils/fab.js';
 import { wireTablist } from '/utils/tablist.js';
@@ -88,9 +89,13 @@ function avatar(member, size = 40) {
     const src = member.avatar_data || member.user_avatar;
     return `<span class="rw-avatar" style="${dim}"><img src="${esc(src)}" alt="" loading="lazy"></span>`;
   }
-  const color = member?.avatar_color || member?.user_color || 'var(--module-rewards)';
+  // Nutzerfarben kommen aus der DB und können beliebig hell sein: fest weißer
+  // Text erreichte auf hellen Tönen nur 2.8:1 (gemessen: Orange #F97316).
+  // getReadableTextColor wählt den kontraststärkeren Ton — dasselbe Muster wie
+  // in dashboard.js, calendar.js, notes.js und user-multi-select.js.
+  const color = member?.avatar_color || member?.user_color || AVATAR_FALLBACK_COLOR;
   const name = member?.display_name || member?.user_name || '';
-  return `<span class="rw-avatar rw-avatar--initials" style="${dim};--rw-avatar-bg:${esc(color)}">${esc(initials(name))}</span>`;
+  return `<span class="rw-avatar rw-avatar--initials" style="${dim};--rw-avatar-bg:${esc(color)};color:${getReadableTextColor(color)}">${esc(initials(name))}</span>`;
 }
 
 function emptyState(icon, title, body, action = '') {

@@ -610,7 +610,7 @@
 .subscriptions-combobox__options button[aria-selected="true"] {
   outline: none;
   background: color-mix(in srgb, var(--module-accent) 12%, transparent);
-  color: var(--module-accent);
+  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) 70%, var(--color-text-primary));
 }
 
 /* Tastatur-Fokus zusätzlich mit Inset-Ring markieren (Audit F-16): die reine

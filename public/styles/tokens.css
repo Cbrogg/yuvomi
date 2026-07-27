@@ -227,8 +227,8 @@
   --module-calendar:   var(--_module-calendar);    /* Violett - Termine, Zeit */
   --_module-meals:     #C2410C;
   --module-meals:      var(--_module-meals);       /* Orange-700 - Essen, Wärme */
-  --_module-recipes:   #109C6B;
-  --module-recipes:    var(--_module-recipes);     /* Teal-Grün - Rezepte (159°, von --module-budget 175° getrennt) */
+  --_module-recipes:   #0C7C5B;
+  --module-recipes:    var(--_module-recipes);     /* Teal-Grün - Rezepte (166°, von --module-budget 186° und --module-tasks 150° getrennt); 5.19:1 auf weiß, 4.71:1 auf --color-bg — WCAG AA. Vorgänger #109C6B lag bei 3.51:1 auf weiß und verfehlte als Textfarbe AA. */
   --_module-shopping:  #DB2777;
   --module-shopping:   var(--_module-shopping);    /* Pink-600 - Einkaufen (trennt von Meals) */
   --_module-notes:     #A16207;
@@ -259,6 +259,28 @@
   --module-reminders:   var(--_module-reminders);  /* Cyan-700 - Erinnerungen, 5.36:1 auf weiß — WCAG AA */
   --_module-rewards:    #BE4B6E;
   --module-rewards:     var(--_module-rewards);     /* Rosé-Kupfer (342°) — Belohnungen. Warm-persönlich, klar von birthdays #E11D48 (350°) und shopping getrennt; 4.75:1 auf weiß — WCAG AA. */
+
+  /* KONVENTION "Akzent-Text auf akzent-getöntem Grund" (Chips, Badges,
+   * Initialen-Avatare). Der rohe Akzent scheitert dort, weil der Grund eine
+   * Tönung derselben Farbe ist: der Kontrast hängt allein an der Akzent-
+   * Helligkeit, und gemessen verfehlten 13 von 17 Modulen AA (recipes 2.84:1,
+   * shopping 3.21:1). Stattdessen gilt:
+   *
+   *   color: color-mix(in srgb, var(--module-accent) 70%, var(--color-text-primary));
+   *
+   * Die 30%-Beimischung schiebt den Text themenrichtig vom Grund weg (Light
+   * dunkler, Dark heller), weil --color-text-primary mitschaltet: worst case
+   * 4.99:1 (Light, settings) und 5.32:1 (Dark, health).
+   *
+   * BEWUSST KEIN Token: ein hier definiertes --accent-on-tint würde bereits in
+   * :root ausgewertet, wo --module-accent noch nicht gesetzt ist (das setzen
+   * die Modul-Stylesheets auf ihrer Page-Root-Klasse). Der Fallback --color-
+   * accent würde eingefroren und als berechneter Wert vererbt — jeder Chip
+   * bekäme Dashboard-Violett statt seiner Modulfarbe. Die Formel muss dort
+   * stehen, wo --module-accent gilt. Fundstellen: `grep -rn "70%, var(--color-text-primary)" public/styles`.
+   *
+   * NUR für Text. Icons tragen weiter den vollen Akzent — dort gilt 3:1, und
+   * die Beimischung würde die Modulfarbe unnötig eintrüben. */
 
   /* --------------------------------------------------------
    * 5. Farben - Mahlzeit-Typen

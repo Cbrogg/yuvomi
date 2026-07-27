@@ -415,7 +415,7 @@
 
 .documents-folder-item--active .documents-folder-item__count {
   background: color-mix(in srgb, var(--module-accent) 16%, var(--color-surface));
-  color: var(--module-accent);
+  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) 70%, var(--color-text-primary));
 }
 
 .documents-list {
