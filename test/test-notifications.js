@@ -33,7 +33,10 @@ function makeDb({ withNotificationTables = true } = {}) {
     );
     CREATE TABLE budget_subscriptions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL
+      name TEXT NOT NULL,
+      amount REAL,
+      currency TEXT,
+      next_payment_date TEXT
     );
     CREATE TABLE reminders (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -245,7 +248,28 @@ test('notification processor fans out and deduplicates reminder deliveries', asy
   assert.deepEqual(calls, { webpush: 1, gotify: 1, ntfy: 1 });
 });
 
-test('subscription reminders carry the subscription name as body (#581)', async () => {
+test('subscription reminders carry name, amount and renewal date as body (#581)', async () => {
+  const { createNotificationChannelStore } = await import('../server/services/notification-channels.js');
+  const { processDueNotifications } = await import('../server/services/notifications.js');
+  const db = makeDb();
+  const store = createNotificationChannelStore({ db });
+  store.createChannel({ provider: 'ntfy', name: 'ntfy', enabled: true, config: { baseUrl: 'https://ntfy.test', topic: 'family' }, secrets: {} });
+  db.prepare("INSERT INTO budget_subscriptions (id, name, amount, currency, next_payment_date) VALUES (1, 'Netflix', 12.99, 'EUR', '2026-06-22')").run();
+  db.prepare("INSERT INTO reminders (id, entity_type, entity_id, remind_at, created_by) VALUES (1, 'subscription', 1, ?, 1)")
+    .run('2026-06-19T09:59:00.000Z');
+  const payloads = [];
+  const providers = {
+    ntfy: { id: 'ntfy', send: async ({ payload }) => { payloads.push(payload); return { ok: true, status: 200 }; } },
+  };
+  const pushService = { sendPushToUser: async () => 0 };
+
+  await processDueNotifications({ database: db, channelStore: store, pushService, providers, now: new Date() });
+  assert.equal(payloads.length, 1);
+  assert.equal(payloads[0].body, 'Netflix - 12.99 EUR - 2026-06-22');
+  assert.equal(payloads[0].title, 'Yuvomi');
+});
+
+test('subscription reminders degrade to the bare name when amount or date are missing (#581)', async () => {
   const { createNotificationChannelStore } = await import('../server/services/notification-channels.js');
   const { processDueNotifications } = await import('../server/services/notifications.js');
   const db = makeDb();
@@ -263,7 +287,26 @@ test('subscription reminders carry the subscription name as body (#581)', async 
   await processDueNotifications({ database: db, channelStore: store, pushService, providers, now: new Date() });
   assert.equal(payloads.length, 1);
   assert.equal(payloads[0].body, 'Netflix');
-  assert.equal(payloads[0].title, 'Yuvomi');
+});
+
+test('task reminders keep their bare title as body (#581)', async () => {
+  const { createNotificationChannelStore } = await import('../server/services/notification-channels.js');
+  const { processDueNotifications } = await import('../server/services/notifications.js');
+  const db = makeDb();
+  const store = createNotificationChannelStore({ db });
+  store.createChannel({ provider: 'ntfy', name: 'ntfy', enabled: true, config: { baseUrl: 'https://ntfy.test', topic: 'family' }, secrets: {} });
+  db.prepare("INSERT INTO tasks (id, title, created_by) VALUES (1, 'Müll rausbringen', 1)").run();
+  db.prepare("INSERT INTO reminders (id, entity_type, entity_id, remind_at, created_by) VALUES (1, 'task', 1, ?, 1)")
+    .run('2026-06-19T09:59:00.000Z');
+  const payloads = [];
+  const providers = {
+    ntfy: { id: 'ntfy', send: async ({ payload }) => { payloads.push(payload); return { ok: true, status: 200 }; } },
+  };
+  const pushService = { sendPushToUser: async () => 0 };
+
+  await processDueNotifications({ database: db, channelStore: store, pushService, providers, now: new Date() });
+  assert.equal(payloads.length, 1);
+  assert.equal(payloads[0].body, 'Müll rausbringen');
 });
 
 test('reminders for deleted entities never send the app name as body (#581)', async () => {
