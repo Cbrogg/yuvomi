@@ -96,6 +96,116 @@ function createDomainToggle(domain, panelId, expanded) {
   return toggle;
 }
 
+// Vergleichsform für die Blatt-Suche: Diakritika weg, damit "wetter" auch
+// "Wetter" findet und "prazdniny" auch "prázdniny".
+function searchNormalize(value) {
+  return String(value ?? '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '');
+}
+
+function createNavigationLink(entry, activeLeaf) {
+  const link = createLink(entry.path, 'settings-shell__navigation-link');
+  link.dataset.leafId = entry.id;
+  link.append(
+    createIcon(entry.icon, 'settings-shell__navigation-link-icon'),
+    document.createTextNode(t(entry.labelKey)),
+  );
+  if (entry.id === activeLeaf?.id) {
+    link.classList.add('settings-shell__navigation-link--active');
+    link.setAttribute('aria-current', 'page');
+  }
+  return link;
+}
+
+/**
+ * Suchfeld über alle sichtbaren Blätter. Bei 23 Blättern in vier Domänen ist
+ * die Taxonomie sonst der einzige Weg zu einer Einstellung, deren Domäne man
+ * nicht kennt (Critique 2026-07-27). Gefiltert wird über Label UND Beschreibung,
+ * damit "Zeitzone" auch ein Blatt findet, das anders heisst.
+ */
+function createNavigationSearch(navigation, domains, user, activeLeaf) {
+  const leaves = domains.flatMap((domain) => allowedLeavesForDomain(domain.id, user)
+    .map((entry) => ({
+      entry,
+      domainLabel: t(domain.labelKey),
+      haystack: searchNormalize(`${t(entry.labelKey)} ${t(entry.descriptionKey)} ${t(domain.labelKey)}`),
+    })));
+
+  const field = document.createElement('div');
+  field.className = 'settings-shell__navigation-search';
+  const input = document.createElement('input');
+  input.type = 'search';
+  input.className = 'form-input settings-shell__navigation-search-input';
+  input.placeholder = t('settings.searchLabel');
+  input.setAttribute('aria-label', t('settings.searchLabel'));
+  field.appendChild(input);
+
+  const results = document.createElement('ul');
+  results.className = 'settings-shell__navigation-list settings-shell__navigation-results';
+  results.hidden = true;
+
+  const status = document.createElement('p');
+  status.className = 'settings-shell__navigation-status';
+  status.setAttribute('role', 'status');
+  status.hidden = true;
+
+  const groups = () => navigation.querySelectorAll('.settings-shell__navigation-group');
+
+  const applyFilter = () => {
+    const query = searchNormalize(input.value.trim());
+    const searching = query.length > 0;
+
+    for (const group of groups()) group.hidden = searching;
+    results.hidden = !searching;
+    status.hidden = !searching;
+
+    if (!searching) {
+      results.replaceChildren();
+      status.textContent = '';
+      return;
+    }
+
+    const hits = leaves.filter((leaf) => leaf.haystack.includes(query));
+    results.replaceChildren(...hits.map(({ entry, domainLabel }) => {
+      const item = document.createElement('li');
+      const link = createLink(entry.path, 'settings-shell__navigation-link settings-shell__navigation-result');
+      link.dataset.leafId = entry.id;
+      if (entry.id === activeLeaf?.id) {
+        link.classList.add('settings-shell__navigation-link--active');
+        link.setAttribute('aria-current', 'page');
+      }
+
+      // Ohne die Gruppen fehlt der Ort: die Domäne wandert unter den Treffer.
+      // Label und Domäne stehen zusammen in einer Spalte neben dem Icon, damit
+      // ein langer Name nicht das Icon in eine eigene Zeile drängt.
+      const text = document.createElement('span');
+      text.className = 'settings-shell__navigation-result-text';
+      const label = document.createElement('span');
+      label.textContent = t(entry.labelKey);
+      const domainHint = document.createElement('span');
+      domainHint.className = 'settings-shell__navigation-result-domain';
+      domainHint.textContent = domainLabel;
+      text.append(label, domainHint);
+
+      link.append(createIcon(entry.icon, 'settings-shell__navigation-link-icon'), text);
+      item.appendChild(link);
+      return item;
+    }));
+    hydrateIcons(results);
+
+    status.textContent = hits.length
+      ? t('settings.searchResults', { count: hits.length })
+      : t('search.noResults');
+  };
+
+  input.addEventListener('input', applyFilter);
+  input.addEventListener('search', applyFilter);
+
+  navigation.prepend(field, status, results);
+}
+
 function createNavigation(domains, user, activeLeaf) {
   const navigation = document.createElement('nav');
   navigation.className = 'settings-shell__navigation';
@@ -122,17 +232,7 @@ function createNavigation(domains, user, activeLeaf) {
     list.className = 'settings-shell__navigation-list';
     for (const entry of allowedLeavesForDomain(domain.id, user)) {
       const item = document.createElement('li');
-      const link = createLink(entry.path, 'settings-shell__navigation-link');
-      link.dataset.leafId = entry.id;
-      link.append(
-        createIcon(entry.icon, 'settings-shell__navigation-link-icon'),
-        document.createTextNode(t(entry.labelKey)),
-      );
-      if (entry.id === activeLeaf?.id) {
-        link.classList.add('settings-shell__navigation-link--active');
-        link.setAttribute('aria-current', 'page');
-      }
-      item.appendChild(link);
+      item.appendChild(createNavigationLink(entry, activeLeaf));
       list.appendChild(item);
     }
 
@@ -172,6 +272,7 @@ function createNavigation(domains, user, activeLeaf) {
     navigation.appendChild(group);
   }
 
+  createNavigationSearch(navigation, domains, user, activeLeaf);
   return navigation;
 }
 

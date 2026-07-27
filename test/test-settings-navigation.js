@@ -495,6 +495,19 @@ test('the live Settings controller contains no page-specific endpoint strings', 
   }
 });
 
+test('die Navigation laesst sich ueber alle Blaetter durchsuchen', async () => {
+  const source = await readFile(new URL('../public/settings/shell.js', import.meta.url), 'utf8');
+  // Bei 23 Blaettern in vier Domaenen war die Taxonomie der einzige Weg zu
+  // einer Einstellung, deren Domaene man nicht kennt (Critique 2026-07-27).
+  assert.match(source, /type\s*=\s*'search'/, 'die Suche braucht ein echtes Suchfeld');
+  assert.match(source, /descriptionKey/, 'gefiltert wird ueber Label UND Beschreibung');
+  assert.match(source, /searchNormalize/, 'die Suche muss Gross-/Kleinschreibung und Diakritika ignorieren');
+  assert.match(source, /normalize\('NFD'\)/);
+  assert.match(source, /setAttribute\('role',\s*'status'\)/, 'die Trefferzahl gehoert in eine Live-Region');
+  // Ohne Treffer greift der bestehende Leerzustand, statt stumm zu bleiben.
+  assert.match(source, /t\('search\.noResults'\)/);
+});
+
 test('der Blattwechsel zeigt einen Ladezustand statt eines leeren Kastens', async () => {
   const source = await readFile(new URL('../public/settings/shell.js', import.meta.url), 'utf8');
   // Zwischen `leafContainer.replaceChildren()` und dem fertigen Blatt lagen der

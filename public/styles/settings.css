@@ -49,6 +49,41 @@
   margin-top: var(--space-5);
 }
 
+/* --------------------------------------------------------
+   Blatt-Suche in der Navigation
+   -------------------------------------------------------- */
+
+.settings-shell__navigation-search {
+  margin-bottom: var(--space-3);
+}
+
+.settings-shell__navigation-status {
+  margin: 0 var(--space-2) var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+/* Die Trefferliste ersetzt die Domaenengruppen: ohne sie fehlt der Ort, daher
+   traegt jeder Treffer seine Domaene als zweite Zeile - in derselben Spalte wie
+   das Label, damit ein langer Name das Icon nicht verdraengt. */
+/* Spezifischer als die Basisregel des Links weiter unten: das Icon gehoert auf
+   die Hoehe des Labels, nicht in die Mitte zwischen Label und Domaene. */
+.settings-shell__navigation-results .settings-shell__navigation-result {
+  align-items: flex-start;
+}
+
+.settings-shell__navigation-result-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.settings-shell__navigation-result-domain {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
 .settings-shell__navigation-heading {
   display: flex;
   align-items: center;
