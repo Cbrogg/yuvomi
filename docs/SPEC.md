@@ -737,7 +737,11 @@ Calendar events support **multiple reminders** (e.g. "15 minutes before" *and* "
 Each reminder is an independent row and is delivered separately by the notification scheduler.
 Every delivery carries the linked entity's title as the notification body (task title, event title,
 or subscription name), so the reminder is identifiable without opening the app; the fallback text
-only applies once the linked entity has been deleted.
+only applies once the linked entity has been deleted. Subscription reminders additionally carry the
+amount and the renewal date, as `Name - 12.99 EUR - 2026-08-03`. That line is deliberately data
+only, with no sentence around it: the notification is assembled on the server, which has no way to
+know the recipient's language, since locale, date and number formats live in the client's
+local storage. Amount and date are dropped individually when a subscription has neither.
 The event dialog manages the set via `GET /api/v1/reminders/all?entity_type=event&entity_id=…`
 (returns the full list) and `PUT /api/v1/reminders?entity_type=event&entity_id=…` with
 `{ remind_ats: [...] }` (replace-set semantics: deduplicated, max 5). Tasks and subscriptions keep
