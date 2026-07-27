@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.47.0] - 2026-07-27
+
+### Added
+- A loan can now run in its own currency instead of always following the household budget currency. The loan dialog offers a currency and, as soon as it differs from the budget currency, a fixed conversion rate; the hint spells out the direction (1 loan currency = x budget currency), and switching the currency clears the rate so the previous one is never carried over unnoticed. Loan cards, the loan report and the instalment transactions lead with the loan's own currency and show the budget equivalent quietly underneath (#582).
+- The loan summary card converts foreign-currency loans into the budget currency at their fixed rate and says so, because it is the one place that adds up across loans and would otherwise sum unrelated currencies (#582).
+- Recording an instalment on a foreign-currency loan books the converted amount into the budget while the instalment itself stays in the loan's currency, so the amortisation schedule and remaining balance stay exact. The rate is applied at booking time, so changing it later leaves already booked instalments untouched (#582).
+- The conversion rate is fixed and maintained by hand rather than fetched daily, so a schedule running for decades does not move its remaining balance every day and the feature works without an exchange-rate API key (#582).
+
+### Fixed
+- Editing the budget entry that belongs to a loan instalment no longer corrupts the remaining balance of a foreign-currency loan. The entry is kept in the budget currency while the instalment is kept in the loan's currency, and the amount was previously written back between the two without conversion; the remaining-balance check was comparing the two currencies against each other as well (#582).
+
 ## [1.46.3] - 2026-07-27
 
 ### Fixed
