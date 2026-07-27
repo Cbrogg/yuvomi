@@ -1178,7 +1178,7 @@ function openDocumentModal(doc = null) {
             <span>${t('documents.activeUploadTarget', {
               target: uploadBackendLabel(state.activeUploadBackend),
             })}</span>
-            ${state.isAdmin ? `<a class="document-storage-target__link" href="/settings/documents/storage" data-nav>${t('documents.storageSettingsLink')}</a>` : ''}
+            ${state.isAdmin ? `<a class="document-storage-target__link" href="/settings/sync/storage" data-nav>${t('documents.storageSettingsLink')}</a>` : ''}
           </p>
         </div>`;
 

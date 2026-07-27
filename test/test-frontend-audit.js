@@ -341,8 +341,12 @@ test('personal appearance leaf owns theme, locale, and regional preferences', ()
   assert.match(source, /id="date-format-error"[^>]*role="alert"/);
   assert.match(source, /id="time-format-error"[^>]*role="alert"/);
   assert.match(source, /id="locale-select"[^>]*aria-describedby="locale-error"/);
-  assert.match(source, /id="date-format-select"[^>]*aria-describedby="date-format-error"/);
-  assert.match(source, /id="time-format-select"[^>]*aria-describedby="time-format-error"/);
+  // Datums- und Zeitformat gelten haushaltweit und sind fuer jedes Mitglied
+  // aenderbar (server/routes/preferences.js). Der Hinweis muss an beiden
+  // Selects haengen, sonst behauptet das Blatt wieder das Gegenteil.
+  assert.match(source, /id="formats-household-hint"[^>]*>\$\{t\('settings\.formatsHouseholdHint'\)\}/);
+  assert.match(source, /id="date-format-select"[^>]*aria-describedby="formats-household-hint date-format-error"/);
+  assert.match(source, /id="time-format-select"[^>]*aria-describedby="formats-household-hint time-format-error"/);
   assert.match(source, /role="alert"[^>]*>\$\{t\('settings\.loadError'\)\}/);
 });
 
@@ -925,13 +929,18 @@ test('Shopping uses the shared category manager component (Audit F-15)', () => {
 test('Kitchen settings copy directs Recipes and Shopping content settings to their modules', () => {
   const english = JSON.parse(read('../public/locales/en.json'));
   const german = JSON.parse(read('../public/locales/de.json'));
+  const kitchenPage = read('../public/settings/pages/modules-kitchen.js');
 
-  assert.match(english.settings.pageKitchenDescription, /Recipes/);
-  assert.match(english.settings.pageKitchenDescription, /Shopping/);
-  assert.match(english.settings.pageKitchenDescription, /modules/);
-  assert.match(german.settings.pageKitchenDescription, /Rezepte/);
-  assert.match(german.settings.pageKitchenDescription, /Einkauf/);
-  assert.match(german.settings.pageKitchenDescription, /Modulen/);
+  // Der Zeiger stand in der Leaf-Description und machte sie zum einzigen
+  // Zweisatz unter 24 (Critique 2026-07-27). Er lebt jetzt als Hinweis auf dem
+  // Blatt selbst - dieselbe Information, an der Stelle, wo sie gebraucht wird.
+  assert.match(kitchenPage, /t\('settings\.kitchenExternalHint'\)/);
+  assert.match(english.settings.kitchenExternalHint, /Recipes/);
+  assert.match(english.settings.kitchenExternalHint, /Shopping/);
+  assert.match(english.settings.kitchenExternalHint, /modules/);
+  assert.match(german.settings.kitchenExternalHint, /Rezepte/);
+  assert.match(german.settings.kitchenExternalHint, /Einkauf/);
+  assert.match(german.settings.kitchenExternalHint, /Modulen/);
 });
 
 test('Recipes expose meal-type suitability controls for planner integrations', () => {

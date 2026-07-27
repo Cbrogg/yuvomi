@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Settings has one domain fewer. "Documents" held two admin-only pages that both do the same thing, connect an external service, while Calendar with its 729 lines of configuration had no domain of its own. Both pages now live under Synchronisation. Old bookmarks and the last visited page stored in the session are redirected to the new paths instead of quietly falling back to the account page.
+- Navigation settings moved from Modules to Personal and are open to every household member. The module order and the three mobile navigation slots are stored per user and the server never required admin rights for them, but the page sat behind the admin gate, so five of six family members could not reach their own settings. Which modules the household uses stays an admin decision: those switches are not rendered for members, and the server rejects them either way.
+
+### Fixed
+- Four settings pages promised things they do not contain. "Overview" said it configures widgets and layout but holds the household weather location and the app name; the widget configuration lives on the dashboard itself. Budget, Housekeeping and This device made similar promises. The descriptions now name what each page actually does, and a new test checks that every noun in a page description appears in the strings that page renders.
+- Appearance told members that only administrators can change region and format, while the date and time format selects right below it worked for everyone. Both formats apply to the whole household and every member may change them, which is deliberate; the text now says so instead of the opposite, and both selects reference the explanation.
+- The SMTP test error showed a literal `{error}` placeholder instead of the reason. The translation used single braces, which the interpolation never substitutes. Six languages also still carried the untranslated English string.
+- The backup retention count was untranslated in ten languages, and three counters said "1 kitchen modules active", "1 backups" and "1 permissions selected" because they had no singular form.
+- The mobile settings overview title read "Persönlich-Einstellungen" in German, a hyphen glued between an adjective and a noun. The document storage page also spelled its own name two different ways in the same view.
+
 ## [1.48.2] - 2026-07-27
 
 ### Fixed

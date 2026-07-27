@@ -49,6 +49,7 @@ function renderPage(container, preferences) {
             </label>
           `).join('')}
         </div>
+        <p class="form-hint">${t('settings.kitchenExternalHint')}</p>
       </div>
     </section>
   `);

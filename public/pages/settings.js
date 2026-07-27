@@ -103,6 +103,9 @@ export async function render(container, { user } = {}) {
       await redirectTo(ACCOUNT_LEAF);
       return;
     }
+    // Verschobenes Blatt: auf den kanonischen Pfad umleiten, sonst zeigte die
+    // Adresszeile die alte URL und der Breadcrumb die neue Domäne.
+    if (leaf.path !== path) { await redirectTo(leaf.path); return; }
 
     try {
       sessionStorage.setItem(SETTINGS_STORAGE_KEY, leaf.path);
@@ -152,7 +155,8 @@ export async function update({ user, path, query } = {}) {
   }
 
   const leaf = findSettingsLeaf(path, user);
-  if (!leaf) return false;
+  // Verschobenes Blatt nicht inkrementell rendern: der reguläre Pfad leitet um.
+  if (!leaf || leaf.path !== path) return false;
 
   try {
     sessionStorage.setItem(SETTINGS_STORAGE_KEY, leaf.path);

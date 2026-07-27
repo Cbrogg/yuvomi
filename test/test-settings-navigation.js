@@ -8,6 +8,8 @@ import {
   SETTINGS_LEAVES,
   SETTINGS_STORAGE_KEY,
   filterSettingsDomains,
+  currentSettingsPath,
+  RENAMED_SETTINGS_SOURCE_PATHS,
   findSettingsLeaf,
   migrateLegacySettingsTab,
   readStoredSettingsDestination,
@@ -139,6 +141,58 @@ test('navigation settings leaf imports without browser globals and exports rende
   assert.equal(typeof module.render, 'function');
 });
 
+test('Mitglieder können ihre eigene Navigation erreichen', () => {
+  // module_order und mobile_nav_order sind per-user (cfgUserSet, kein Admin-Check),
+  // das Blatt lag aber hinter adminOnly - 5 von 6 Mitgliedern kamen nie hin
+  // (Critique 2026-07-27).
+  assert.equal(findSettingsLeaf('/settings/personal/navigation', member)?.id, 'modules-navigation');
+  assert.equal(findSettingsLeaf('/settings/personal/navigation', admin)?.id, 'modules-navigation');
+  // Alter Pfad bleibt erreichbar und landet am neuen Ort.
+  assert.equal(findSettingsLeaf('/settings/modules/navigation', member)?.path, '/settings/personal/navigation');
+  // Und es liegt in der einzigen Domäne, die ein Mitglied sieht.
+  const leaf = SETTINGS_LEAVES.find((entry) => entry.id === 'modules-navigation');
+  assert.equal(leaf.domainId, 'personal');
+  assert.equal(leaf.adminOnly, false);
+});
+
+test('die Order eines Mitglieds reist ohne die haushaltweiten Schalter', async () => {
+  // `disabled_modules` ist serverseitig auf Admins beschränkt (403). Im
+  // gemeinsamen Payload wäre der GANZE Request eines Mitglieds gescheitert und
+  // seine Reihenfolge hätte nie gespeichert.
+  const { buildOrderPayload, buildNavigationPayload } = await import('/settings/pages/modules-navigation.js');
+
+  const memberPayload = buildOrderPayload(['calendar', 'tasks', 'kitchen']);
+  assert.deepEqual(Object.keys(memberPayload), ['module_order']);
+  assert.equal('disabled_modules' in memberPayload, false);
+
+  // Für Admins bleibt die gemeinsame Payload erhalten: Order und Aktivierung
+  // werden weiter zusammen geschrieben, also bleibt der Zustand konsistent.
+  const adminPayload = buildNavigationPayload(['notes'], new Set(['meals']), ['calendar', 'kitchen']);
+  assert.ok(Array.isArray(adminPayload.disabled_modules));
+  assert.ok(Array.isArray(adminPayload.module_order));
+
+  // Beide expandieren die Kitchen-Sammelzeile identisch zurück.
+  assert.deepEqual(
+    buildOrderPayload(['calendar', 'kitchen']).module_order,
+    adminPayload.module_order,
+  );
+});
+
+test('Aktivierungs-Schalter und Kitchen-Kinder sind für Mitglieder nicht gerendert', async () => {
+  const source = await readFile(
+    new URL('../public/settings/pages/modules-navigation.js', import.meta.url),
+    'utf8',
+  );
+  // Haushaltweite Schalter nur für Admins; Mitglieder bekommen stattdessen die
+  // Erklärung, wer darüber entscheidet.
+  assert.match(source, /\$\{isAdmin \? `\s*<label class="toggle-row settings-module-row__toggle">/);
+  assert.match(source, /data-kitchen-child-toggle[\s\S]{0,400}settings-module-kitchen__child--readonly/);
+  assert.match(source, /isAdmin \? '' : `<p class="form-hint">\$\{t\('settings\.modulesEnableAdminOnly'\)\}/);
+  // Der Save-Pfad muss die Rolle kennen, sonst sendet ein Mitglied disabled_modules.
+  assert.match(source, /async function saveNavigationState\(list, isAdmin\)/);
+  assert.match(source, /isAdmin\s*\?\s*buildNavigationPayload\(/);
+});
+
 test('navigation settings leaf reuses the canonical module-order helpers', async () => {
   const source = await readFile(
     new URL('../public/settings/pages/modules-navigation.js', import.meta.url),
@@ -169,8 +223,22 @@ test('members only see the personal settings domain', () => {
 test('admins see all settings domains', () => {
   assert.deepEqual(
     filterSettingsDomains(admin).map((domain) => domain.id),
-    ['personal', 'modules', 'sync', 'documents', 'admin'],
+    ['personal', 'modules', 'sync', 'admin'],
   );
+});
+
+test('verschobene Blatt-Pfade landen am neuen Ort statt beim Fallback', () => {
+  // Die Domäne `documents` trug zwei Admin-Blätter, während `calendar` mit 729
+  // Zeilen Konfiguration keine eigene hatte (Critique 2026-07-27). Beide binden
+  // externe Dienste an und liegen jetzt unter `sync`. Alte Bookmarks und
+  // gespeicherte Ziele dürfen dabei nicht stumm auf `personal/account` fallen.
+  assert.equal(findSettingsLeaf('/settings/documents/storage', admin)?.path, '/settings/sync/storage');
+  assert.equal(findSettingsLeaf('/settings/documents/dms', admin)?.path, '/settings/sync/dms');
+  assert.equal(currentSettingsPath('/settings/documents/storage'), '/settings/sync/storage');
+  assert.equal(currentSettingsPath('/settings/sync/storage'), '/settings/sync/storage');
+  assert.equal(currentSettingsPath('/settings/unbekannt'), '/settings/unbekannt');
+  // Rollen-Gate greift auch über den alten Pfad.
+  assert.equal(findSettingsLeaf('/settings/documents/storage', member), null);
 });
 
 test('legacy settings tabs migrate to their new destinations', () => {
@@ -219,8 +287,8 @@ test('settingsOverviewUrl builds an encoded domain overview URL', () => {
 
 test('resolveSettingsDestination restores an allowed stored leaf at the settings root', () => {
   assert.equal(
-    resolveSettingsDestination('/settings', admin, '/settings/documents/storage'),
-    '/settings/documents/storage',
+    resolveSettingsDestination('/settings', admin, '/settings/sync/storage'),
+    '/settings/sync/storage',
   );
 });
 
@@ -263,8 +331,13 @@ function createMemoryStorage(initial = {}) {
 }
 
 test('readStoredSettingsDestination restores a valid stored leaf', () => {
-  const storage = createMemoryStorage({ [SETTINGS_STORAGE_KEY]: '/settings/documents/storage' });
-  assert.equal(readStoredSettingsDestination(admin, storage), '/settings/documents/storage');
+  const storage = createMemoryStorage({ [SETTINGS_STORAGE_KEY]: '/settings/sync/storage' });
+  assert.equal(readStoredSettingsDestination(admin, storage), '/settings/sync/storage');
+});
+
+test('readStoredSettingsDestination hebt ein vor dem IA-Umbau gespeichertes Ziel an', () => {
+  const storage = createMemoryStorage({ [SETTINGS_STORAGE_KEY]: '/settings/documents/dms' });
+  assert.equal(readStoredSettingsDestination(admin, storage), '/settings/sync/dms');
 });
 
 test('readStoredSettingsDestination falls back to account for an invalid stored leaf', () => {
@@ -308,11 +381,21 @@ test('every approved settings leaf is registered as an exact SPA route', async (
     new URL('../public/router.js', import.meta.url),
     'utf8',
   );
-  assert.match(source, /import\s*\{\s*SETTINGS_LEAVES\s*\}\s*from\s*'\/settings\/registry\.js'/);
+  // Der Router muss seine Settings-Routen aus der Registry ableiten, nie aus
+  // einer Handliste - sonst driften Registry und Routentabelle auseinander.
+  assert.match(source, /import\s*\{[^}]*\bSETTINGS_LEAVES\b[^}]*\}\s*from\s*'\/settings\/registry\.js'/);
   assert.match(
     source,
     /SETTINGS_LEAVES\.map\(\(\{\s*path\s*\}\)\s*=>\s*\(\{\s*path,\s*page:\s*'\/pages\/settings\.js',\s*requiresAuth:\s*true,\s*module:\s*'settings'\s*\}\)\)/,
   );
+  // Und die vom IA-Umbau verschobenen Alt-Pfade ebenso: ohne eigene Route
+  // matcht ein alter Bookmark gar nichts und die Umleitung käme nie zum Zug.
+  assert.match(source, /import\s*\{[^}]*\bRENAMED_SETTINGS_SOURCE_PATHS\b[^}]*\}\s*from\s*'\/settings\/registry\.js'/);
+  assert.match(
+    source,
+    /RENAMED_SETTINGS_SOURCE_PATHS\.map\(\(path\)\s*=>\s*\(\{\s*path,\s*page:\s*'\/pages\/settings\.js',\s*requiresAuth:\s*true,\s*module:\s*'settings'\s*\}\)\)/,
+  );
+  assert.ok(RENAMED_SETTINGS_SOURCE_PATHS.length > 0);
 });
 
 test('the live Settings controller contains no page-specific endpoint strings', async () => {

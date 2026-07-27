@@ -175,16 +175,17 @@ function renderPage(container, preferences, isAdmin) {
           <select class="form-input" id="currency-select" aria-describedby="currency-error"></select>
         </div>
         <div id="currency-error" class="form-error" role="alert" hidden></div>` : ''}
+        <p class="form-hint" id="formats-household-hint">${t('settings.formatsHouseholdHint')}</p>
         <div class="form-group">
           <label class="form-label" for="date-format-select">${t('settings.dateFormatLabel')}</label>
-          <select class="form-input" id="date-format-select" aria-describedby="date-format-error">
+          <select class="form-input" id="date-format-select" aria-describedby="formats-household-hint date-format-error">
             ${formatOptions(preferences.date_format)}
           </select>
         </div>
         <div id="date-format-error" class="form-error" role="alert" hidden></div>
         <div class="form-group">
           <label class="form-label" for="time-format-select">${t('settings.timeFormatLabel')}</label>
-          <select class="form-input" id="time-format-select" aria-describedby="time-format-error">
+          <select class="form-input" id="time-format-select" aria-describedby="formats-household-hint time-format-error">
             <option value="24h"${preferences.time_format === '24h' ? ' selected' : ''}>24 ${t('settings.timeFormatHours')}</option>
             <option value="12h"${preferences.time_format === '12h' ? ' selected' : ''}>AM/PM</option>
           </select>

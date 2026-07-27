@@ -21,7 +21,7 @@ import { renderSkeletonList } from '/utils/skeleton.js';
 import { openModal, confirmModal } from '/components/modal.js';
 import '/components/datepicker.js';
 import { NAV_ICONS } from '/nav-icons.js';
-import { SETTINGS_LEAVES } from '/settings/registry.js';
+import { RENAMED_SETTINGS_SOURCE_PATHS, SETTINGS_LEAVES } from '/settings/registry.js';
 import {
   NAV_SECTION,
   resolveMobileNavOrder,
@@ -58,6 +58,9 @@ const ROUTES = [
 const SETTINGS_ROUTES = [
   { path: '/settings', page: '/pages/settings.js', requiresAuth: true, module: 'settings' },
   ...SETTINGS_LEAVES.map(({ path }) => ({ path, page: '/pages/settings.js', requiresAuth: true, module: 'settings' })),
+  // Vom IA-Umbau verschobene Blätter: als Route registriert, damit ein alter
+  // Bookmark überhaupt matcht. settings.js leitet dann auf den neuen Pfad um.
+  ...RENAMED_SETTINGS_SOURCE_PATHS.map((path) => ({ path, page: '/pages/settings.js', requiresAuth: true, module: 'settings' })),
 ];
 
 ROUTES.push(...SETTINGS_ROUTES);

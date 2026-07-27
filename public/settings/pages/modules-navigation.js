@@ -169,7 +169,7 @@ function rowControlsHtml(row) {
 // Toggle-Label ist sr-only: der sichtbare Status-Chip derselben Zeile sagt
 // bereits "Aktiviert"; ein zweites sichtbares "Aktiviert" am Toggle war
 // Doppel-Copy (Audit A2-25b). Gilt ebenso für die Kitchen-Zeile.
-function builtInRowHtml(row) {
+function builtInRowHtml(row, isAdmin) {
   const statusLabel = row.enabled ? t('settings.thirdPartyModulesStatusEnabled') : t('settings.thirdPartyModulesStatusDisabled');
   const statusClass = row.enabled ? 'settings-module-status--enabled' : 'settings-module-status--disabled';
   const stateClass = row.enabled ? 'settings-module-row--enabled' : 'settings-module-row--disabled';
@@ -187,15 +187,16 @@ function builtInRowHtml(row) {
           <span class="settings-module-status ${statusClass}">${esc(statusLabel)}</span>
         </div>
       </div>
+      ${isAdmin ? `
       <label class="toggle-row settings-module-row__toggle">
         <input type="checkbox" data-built-in-module-toggle="${esc(row.id)}"${row.enabled ? ' checked' : ''}${row.locked ? ' disabled' : ''}>
         <span class="settings-module-row__toggle-label sr-only">${t('settings.thirdPartyModulesEnableLabel')}</span>
-      </label>
+      </label>` : ''}
     </div>
   `;
 }
 
-function kitchenRowHtml(row) {
+function kitchenRowHtml(row, isAdmin) {
   const statusLabel = row.enabled ? t('settings.thirdPartyModulesStatusEnabled') : t('settings.thirdPartyModulesStatusDisabled');
   const stateClass = row.enabled ? 'settings-module-row--enabled' : 'settings-module-row--disabled';
   return `
@@ -214,13 +215,16 @@ function kitchenRowHtml(row) {
           <span>${t('settings.kitchenActiveCount', { count: row.enabledChildren })}</span>
         </button>
         <div class="settings-disclosure__panel settings-module-kitchen__children" data-kitchen-children hidden>
-          ${row.children.map((child) => `
+          ${row.children.map((child) => (isAdmin ? `
             <label class="toggle-row settings-module-kitchen__child">
               <input type="checkbox" data-kitchen-child-toggle="${esc(child.id)}"${child.enabled ? ' checked' : ''}>
               <i data-lucide="${esc(child.icon)}" aria-hidden="true"></i>
               <span>${esc(child.label)}</span>
-            </label>
-          `).join('')}
+            </label>` : `
+            <div class="settings-module-kitchen__child settings-module-kitchen__child--readonly">
+              <i data-lucide="${esc(child.icon)}" aria-hidden="true"></i>
+              <span>${esc(child.label)}</span>
+            </div>`)).join('')}
         </div>
       </div>
     </div>
@@ -255,10 +259,12 @@ function thirdPartyRowHtml(row) {
   `;
 }
 
-function rowHtml(row) {
-  if (row.type === 'kitchen') return kitchenRowHtml(row);
+function rowHtml(row, isAdmin) {
+  if (row.type === 'kitchen') return kitchenRowHtml(row, isAdmin);
+  // Drittanbieter-Zeilen erreichen Mitglieder nie: /modules?admin=1 wird für sie
+  // gar nicht abgefragt, thirdPartyModules bleibt leer.
   if (row.type === 'third-party') return thirdPartyRowHtml(row);
-  return builtInRowHtml(row);
+  return builtInRowHtml(row, isAdmin);
 }
 
 function mobileCandidateRows(rows) {
@@ -290,7 +296,7 @@ function mobileSlotHtml(rows, selectedIds, index) {
   `;
 }
 
-function desktopGroupHtml(section, rows) {
+function desktopGroupHtml(section, rows, isAdmin) {
   const sectionRows = rows.filter((row) => row.section === section);
   if (!sectionRows.length) return '';
 
@@ -298,16 +304,16 @@ function desktopGroupHtml(section, rows) {
     <section class="settings-navigation-group" data-module-section="${section}">
       <h3 class="settings-navigation-group__title">${esc(t(NAV_SECTION_LABEL_KEYS[section]))}</h3>
       <div class="settings-modules-list settings-modules-list--sortable" data-module-list>
-        ${sectionRows.map(rowHtml).join('')}
+        ${sectionRows.map((row) => rowHtml(row, isAdmin)).join('')}
       </div>
     </section>
   `;
 }
 
-function renderPage(container, rows, mobileOrder) {
+function renderPage(container, rows, mobileOrder, isAdmin) {
   container.replaceChildren();
   const desktopGroups = rows.length
-    ? `<div class="settings-navigation-groups" id="module-toggles">${NAV_SECTIONS.map((section) => desktopGroupHtml(section, rows)).join('')}</div>`
+    ? `<div class="settings-navigation-groups" id="module-toggles">${NAV_SECTIONS.map((section) => desktopGroupHtml(section, rows, isAdmin)).join('')}</div>`
     : `
       <div class="empty-state empty-state--compact">
         <div class="empty-state__title">${t('settings.thirdPartyModulesEmptyTitle')}</div>
@@ -329,6 +335,7 @@ function renderPage(container, rows, mobileOrder) {
         <h2 class="settings-navigation-panel__title">${t('settings.desktopNavigationTitle')}</h2>
         <p class="form-hint">${t('settings.desktopNavigationHint')}</p>
         <p class="form-hint">${t('settings.modulesDragHint')}</p>
+        ${isAdmin ? '' : `<p class="form-hint">${t('settings.modulesEnableAdminOnly')}</p>`}
         ${desktopGroups}
       </section>
     </section>
@@ -373,6 +380,25 @@ export function buildNavigationPayload(ordinaryDisabledIds, enabledKitchenChildr
   };
 }
 
+/**
+ * Save-Payload für Nicht-Admins: nur die persönliche Reihenfolge.
+ *
+ * `disabled_modules` ist haushaltweit und serverseitig auf Admins beschränkt
+ * (server/routes/preferences.js, 403). Würde ein Mitglied den gemeinsamen
+ * Payload senden, scheiterte der **ganze** Request und seine Reihenfolge
+ * speicherte nie. Für Admins bleibt buildNavigationPayload zuständig, damit
+ * Order und Aktivierung wie bisher gemeinsam und konsistent geschrieben werden.
+ *
+ * Verwaiste IDs sind unkritisch: normalizeModuleOrder filtert nicht gegen die
+ * aktivierten Module, aber buildRows sortiert nur - eine ID ohne passende Zeile
+ * bleibt wirkungslos.
+ */
+export function buildOrderPayload(visibleGlobalOrder) {
+  return {
+    module_order: expandModuleOrder(visibleGlobalOrder),
+  };
+}
+
 export function buildMobileNavigationPayload(order) {
   return {
     mobile_nav_order: normalizeMobileNavOrder(order),
@@ -395,16 +421,20 @@ export async function persistModuleToggle(input, enabled, save, rerender) {
   await rerender();
 }
 
-async function saveNavigationState(list) {
-  const payload = buildNavigationPayload(
-    collectOrdinaryDisabledIds(list),
-    collectEnabledKitchenChildren(list),
-    collectVisibleGlobalOrder(list),
-  );
+async function saveNavigationState(list, isAdmin) {
+  const payload = isAdmin
+    ? buildNavigationPayload(
+      collectOrdinaryDisabledIds(list),
+      collectEnabledKitchenChildren(list),
+      collectVisibleGlobalOrder(list),
+    )
+    : buildOrderPayload(collectVisibleGlobalOrder(list));
   const response = await api.put('/preferences', payload);
-  const savedDisabled = response?.data?.disabled_modules ?? payload.disabled_modules;
   const savedOrder = response?.data?.module_order ?? payload.module_order;
-  window.yuvomi?.setDisabledModules?.(savedDisabled);
+  if (isAdmin) {
+    const savedDisabled = response?.data?.disabled_modules ?? payload.disabled_modules;
+    window.yuvomi?.setDisabledModules?.(savedDisabled);
+  }
   window.yuvomi?.setModuleOrder?.(savedOrder);
 }
 
@@ -422,6 +452,7 @@ function bindKitchenDisclosure(container) {
 function bindModuleListEvents(container, user) {
   const list = container.querySelector('#module-toggles');
   if (!list) return;
+  const isAdmin = user?.role === 'admin';
   let dragged = null;
   let dragStartOrder = '';
   let savingOrder = false;
@@ -431,7 +462,7 @@ function bindModuleListEvents(container, user) {
     if (currentOrder === previousOrder || savingOrder) return;
     savingOrder = true;
     try {
-      await saveNavigationState(list);
+      await saveNavigationState(list, isAdmin);
       window.yuvomi?.showToast(t('settings.modulesSaved'), 'success');
     } catch (error) {
       window.yuvomi?.showToast(error.message ?? t('common.errorGeneric'), 'danger');
@@ -509,7 +540,7 @@ function bindModuleListEvents(container, user) {
             await api.patch(`/modules/${encodeURIComponent(input.dataset.thirdPartyModuleToggle)}`, { enabled });
             await window.yuvomi?.refreshThirdPartyModules?.();
           }
-          await saveNavigationState(list);
+          await saveNavigationState(list, isAdmin);
           window.yuvomi?.showToast(t('settings.thirdPartyModulesSaved'), 'success');
         },
         () => render(container, { user }),
@@ -556,7 +587,7 @@ export async function render(container, { user }) {
   const rows = buildRows(preferences, thirdPartyModules);
   const availableMobileIds = mobileCandidateRows(rows).map((row) => row.orderId);
   const mobileOrder = resolveMobileNavOrder(preferences.mobile_nav_order, availableMobileIds);
-  renderPage(container, rows, mobileOrder);
+  renderPage(container, rows, mobileOrder, isAdmin);
   bindKitchenDisclosure(container);
   bindModuleListEvents(container, user);
   bindMobileNavigationEvents(container, user);
