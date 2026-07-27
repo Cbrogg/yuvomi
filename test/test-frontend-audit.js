@@ -3575,3 +3575,29 @@ test('jedes Settings-Blatt importiert die geteilten Helfer, die es aufruft', () 
   }
   assert.deepEqual(missing, []);
 });
+
+// Rechtevergabe war bei 390px die schlechteste Flaeche in Settings, ausgerechnet
+// bei der Aufgabe mit den groessten sozialen Folgen: 32px-Chips, 32px-Modus-
+// umschalter und 34x30px-Zugriffsstufen, deren Klartext nur im `title` stand -
+// und `title` erscheint auf Touch nie (Critique 2026-07-27).
+test('Rechtevergabe ist auf dem Telefon beschriftet und mit dem Finger bedienbar', () => {
+  const source = read('../public/settings/pages/admin-permissions.js');
+  // Der Klartext muss im Markup stehen, nicht nur in title/aria-label.
+  assert.match(source, /<span class="perm-seg__label">\$\{esc\(o\.label\)\}<\/span>/);
+  // aria-label bleibt der spezifischere Name ("Kalender: Kein Zugriff") und
+  // enthaelt den sichtbaren Text - sonst bricht WCAG 2.5.3 (Label in Name).
+  assert.match(source, /aria-label="\$\{esc\(label \|\| group\)\}: \$\{esc\(o\.label\)\}"/);
+
+  const css = read('../public/styles/settings.css');
+  const mobile = css.slice(css.indexOf('@media (max-width: 767px)', css.indexOf('.perm-modeswitch {')));
+  assert.ok(mobile.includes('.perm-seg__label'), 'Der Mobile-Block muss das Label sichtbar schalten');
+  assert.match(mobile, /\.perm-modeswitch__btn,\s*\.perm-chip \{ min-height: var\(--target-base\); \}/);
+  assert.match(mobile, /\.perm-seg__opt \{[^}]*min-height: var\(--target-base\);/s);
+  // Gestapelt statt segmentiert: vier Stufen mit Wort passen bei 390px nicht
+  // neben den Modulnamen.
+  assert.match(mobile, /\.perm-row \{[^}]*flex-direction: column;/s);
+  assert.match(mobile, /\.perm-seg \{[^}]*grid-template-columns: repeat\(var\(--seg-count, 3\), 1fr\);/s);
+
+  // Am Zeiger bleibt es kompakt: das Label ist dort ausgeblendet.
+  assert.match(css, /\.perm-seg__label \{ display: none; \}/);
+});

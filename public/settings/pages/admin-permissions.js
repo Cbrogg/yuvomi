@@ -124,8 +124,13 @@ function accessShort(value) {
   }
 }
 
-// ── Segment-Control (Icon + Tooltip + gleitende Aktiv-Pille) ───────────────────
-
+// ── Segment-Control (Icon + Label + gleitende Aktiv-Pille) ────────────────────
+//
+// Die Zugriffsstufen waren reine Icon-Segmente; ihr Klartext stand nur in
+// `title`, und `title` erscheint auf Touch nie (Critique 2026-07-27). Genau
+// die Aufgabe mit den groessten sozialen Folgen war damit auf dem Telefon
+// unbeschriftet. Das Label steht jetzt im Markup und wird unter 768px
+// sichtbar; am Zeiger bleibt der Tooltip die kompaktere Antwort.
 function segControl({ group, label, current, options, disabled = false }) {
   const activeIdx = Math.max(0, options.findIndex((o) => o.value === current));
   const opts = options.map((o) => {
@@ -137,6 +142,7 @@ function segControl({ group, label, current, options, disabled = false }) {
         aria-label="${esc(label || group)}: ${esc(o.label)}"
         tabindex="${checked ? '0' : '-1'}"${disabled ? ' disabled' : ''}>
         <i data-lucide="${esc(o.icon)}" aria-hidden="true"></i>
+        <span class="perm-seg__label">${esc(o.label)}</span>
       </button>
     `;
   }).join('');
