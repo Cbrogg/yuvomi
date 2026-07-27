@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.50.0] - 2026-07-27
+
+### Added
+- Settings can be searched. With 23 pages across four domains, the taxonomy was the only way to reach a setting whose domain you did not know. The search field filters every page you may see by title, description and domain name, ignoring case and accents, and replaces the groups with a flat result list in which every hit names its own domain.
+- Half-filled settings forms are no longer discarded without a word. Until now only the permissions page warned before losing changes; the other 22 pages threw away what you had typed the moment you clicked another entry in the sidebar. Settings now asks first. Switches that save immediately are unaffected, because they never hold an unsaved state.
+- Switching between settings pages shows a loading state instead of an empty box while the page and its data arrive. Pages that load instantly do not flash a skeleton.
+
+### Changed
+- The backup schedule is written out. The administration page showed the raw cron line, "Schedule 0 2 * * *", which tells you nothing unless you read cron. It now says "Daily at 02:00" and keeps the expression alongside as evidence. Unusual schedules that cannot be summarised accurately keep their raw form.
+- The account page shows one profile picture instead of two. The same avatar appeared twice within the first mobile screen: once in a display card with your name, and directly below it in the editor with the same name as an input field. The display card is gone; the username, its only unique content, is now a read-only field in the form.
+- The account page names its own parts. The card was titled "Profile picture" but held display name, colour, phone, email and birthday. It is called "Profile" now, and the three contact fields are grouped under "Contact details".
+
+### Fixed
+- Importing a calendar file with a single event reported "1 events imported". German, English and the other 21 languages now have a singular form for both import messages.
+- Six module colours were too light to read as text on the page background: secondary buttons take their colour from the active module, so "Add channel" in the notification settings sat at 4.13:1 and "Import from contacts" in Birthdays at 4.20:1, both below the 4.5:1 the standard requires. All six are darkened slightly in the light theme, keeping their hue; the dark theme already passed.
+- The coloured dots in the permission matrix are no longer announced to screen readers. Eleven empty spans appeared as separate items, although their colour only repeats the module accent that the icon and name next to them already state.
+
 ## [1.49.0] - 2026-07-27
 
 ### Changed
