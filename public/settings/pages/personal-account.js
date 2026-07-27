@@ -73,16 +73,6 @@ function setAvatarPreview(container, user) {
   window.lucide?.createIcons({ el: preview });
 }
 
-function updateAccountSummary(container, user) {
-  const currentAvatar = container.querySelector('.settings-user-info > .settings-avatar');
-  if (currentAvatar) {
-    currentAvatar.insertAdjacentHTML('afterend', avatarHtml(user));
-    currentAvatar.remove();
-  }
-  const name = container.querySelector('#account-summary-name');
-  if (name) name.textContent = user?.display_name || '';
-}
-
 async function readImageAsDataUrl(file) {
   if (!file) return undefined;
   if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
@@ -144,17 +134,7 @@ function renderPage(container, user, refreshFailed, accessNotice) {
       <h2 class="settings-section__title">${t('settings.sectionAccount')}</h2>
 
       <div class="settings-card">
-        <div class="settings-user-info">
-          ${avatarHtml(user)}
-          <div>
-            <div class="settings-user-info__name" id="account-summary-name">${esc(user?.display_name || '')}</div>
-            <div class="settings-user-info__username">@${esc(user?.username || '')}</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="settings-card">
-        <h3 class="settings-card__title">${t('settings.profilePictureTitle')}</h3>
+        <h3 class="settings-card__title">${t('settings.profileCardTitle')}</h3>
         <form id="profile-form" class="settings-form">
           <div class="settings-profile-editor">
             ${avatarEditorHtml(user)}
@@ -169,23 +149,31 @@ function renderPage(container, user, refreshFailed, accessNotice) {
                   <input class="settings-color-button" type="color" id="profile-avatar-color" value="${esc(user?.avatar_color || '')}" aria-describedby="profile-error">
                 </div>
               </div>
+              <div class="form-group">
+                <label class="form-label" for="profile-username">${t('settings.usernameLabel')}</label>
+                <input class="form-input" type="text" id="profile-username" value="@${esc(user?.username || '')}" readonly>
+                <p class="form-hint">${t('settings.usernameFixedHint')}</p>
+              </div>
             </div>
           </div>
-          <div class="modal-grid modal-grid--2">
+          <fieldset class="settings-fieldset">
+            <legend class="settings-fieldset__legend">${t('settings.contactDetailsLegend')}</legend>
+            <div class="modal-grid modal-grid--2">
+              <div class="form-group">
+                <label class="form-label" for="profile-phone">${t('settings.memberPhoneLabel')}</label>
+                <input class="form-input" type="tel" id="profile-phone" value="${esc(user?.phone || '')}" autocomplete="tel" aria-describedby="profile-error">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="profile-email">${t('settings.memberEmailLabel')}</label>
+                <input class="form-input" type="email" id="profile-email" value="${esc(user?.email || '')}" autocomplete="email" aria-describedby="profile-error">
+              </div>
+            </div>
             <div class="form-group">
-              <label class="form-label" for="profile-phone">${t('settings.memberPhoneLabel')}</label>
-              <input class="form-input" type="tel" id="profile-phone" value="${esc(user?.phone || '')}" autocomplete="tel" aria-describedby="profile-error">
+              <label class="form-label" for="profile-birth-date">${t('settings.memberBirthDateLabel')}</label>
+              <yuvomi-datepicker type="date" id="profile-birth-date" value="${esc(user?.birth_date || '')}" aria-describedby="profile-error"></yuvomi-datepicker>
+              <p class="form-hint">${t('settings.memberContactBirthdayHint')}</p>
             </div>
-            <div class="form-group">
-              <label class="form-label" for="profile-email">${t('settings.memberEmailLabel')}</label>
-              <input class="form-input" type="email" id="profile-email" value="${esc(user?.email || '')}" autocomplete="email" aria-describedby="profile-error">
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="profile-birth-date">${t('settings.memberBirthDateLabel')}</label>
-            <yuvomi-datepicker type="date" id="profile-birth-date" value="${esc(user?.birth_date || '')}" aria-describedby="profile-error"></yuvomi-datepicker>
-            <p class="form-hint">${t('settings.memberContactBirthdayHint')}</p>
-          </div>
+          </fieldset>
           <div id="profile-error" class="form-error" role="alert" hidden></div>
           <div class="settings-form-actions">
             <button type="submit" class="btn btn--primary">${t('common.save')}</button>
@@ -288,7 +276,6 @@ function bindEvents(container, user, profileState) {
         profileState.avatarData = response.user.avatar_data ?? null;
         updatePreview();
       }
-      updateAccountSummary(container, user);
       window.yuvomi?.showToast(t('settings.profileSavedToast'), 'success');
     } catch (error) {
       showError(profileError, error.message);
