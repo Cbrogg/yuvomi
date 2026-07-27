@@ -7,16 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.49.0] - 2026-07-27
+
 ### Changed
 - Settings has one domain fewer. "Documents" held two admin-only pages that both do the same thing, connect an external service, while Calendar with its 729 lines of configuration had no domain of its own. Both pages now live under Synchronisation. Old bookmarks and the last visited page stored in the session are redirected to the new paths instead of quietly falling back to the account page.
 - Navigation settings moved from Modules to Personal and are open to every household member. The module order and the three mobile navigation slots are stored per user and the server never required admin rights for them, but the page sat behind the admin gate, so five of six family members could not reach their own settings. Which modules the household uses stays an admin decision: those switches are not rendered for members, and the server rejects them either way.
+- Budget, Health and Housekeeping each had their own settings page carrying a single checkbox, which cost three sidebar entries, three navigation steps and three requests. They share one "Module options" page now. Settings is down to 23 pages in four domains.
+- The settings root shows one navigation instead of three. On desktop the tile overview and the sidebar were rendered at the same time, both listing the same 23 destinations, next to the global app sidebar. The overview now belongs to the tiles, which carry each page's description, and the sidebar appears only inside a page. Opening Settings without a previously visited page lands on that overview rather than silently on the account form, and the collapsed sidebar no longer keeps a different domain open than the one being shown.
+- The back link inside a settings page names where it goes ("Back to Administration") instead of repeating "Back to Settings", which is what the link one level up says while leading somewhere else.
+- Every switch in Settings looks the same. Four different controls had grown for the same yes/no decision, so the WebDAV backup switch looked like iOS while its twin on the document storage page looked like a checkbox. They share one component now, which also lifts the backup switch from 26 to 48 pixels.
+- The two weather pages share one location form. Household and personal weather rendered the same five fields with the same translations, and the location lookup plus coordinate validation existed twice.
 
 ### Fixed
-- Four settings pages promised things they do not contain. "Overview" said it configures widgets and layout but holds the household weather location and the app name; the widget configuration lives on the dashboard itself. Budget, Housekeeping and This device made similar promises. The descriptions now name what each page actually does, and a new test checks that every noun in a page description appears in the strings that page renders.
-- Appearance told members that only administrators can change region and format, while the date and time format selects right below it worked for everyone. Both formats apply to the whole household and every member may change them, which is deliberate; the text now says so instead of the opposite, and both selects reference the explanation.
-- The SMTP test error showed a literal `{error}` placeholder instead of the reason. The translation used single braces, which the interpolation never substitutes. Six languages also still carried the untranslated English string.
-- The backup retention count was untranslated in ten languages, and three counters said "1 kitchen modules active", "1 backups" and "1 permissions selected" because they had no singular form.
-- The mobile settings overview title read "Persönlich-Einstellungen" in German, a hyphen glued between an adjective and a noun. The document storage page also spelled its own name two different ways in the same view.
+- Deleting a family member now says what that does. The dialog asked "Really delete X?" without naming that everything the person created goes with them (events, tasks, notes, transactions and lists) while items merely assigned to them stay and become unassigned. Revoking an API token now says that connected clients, including AI integrations, lose access immediately, and restoring a backup says that data created since that backup is lost and that files stored outside the database are not part of backups. Resetting a role's permissions was the only confirmation not marked as destructive.
+- Assigning permissions is usable on a phone. The three access levels were icon-only buttons of 34 by 30 pixels whose plain text lived in a tooltip, and tooltips never appear on touch. The levels now carry their words below 1024 pixels and on any touch device, the rows stack, and no control on that page is under 44 pixels any more. It stays compact for a mouse.
+- The module list shows its status colours again. A more specific rule further down the stylesheet overrode the badges, so "Enabled" and "Built-in" were grey instead of green and violet, at 4.41:1 contrast. They are now 5.90:1 and 5.05:1.
+- Backup pages no longer fail silently. Both the scheduler status and the WebDAV configuration wrote load errors to the console only, leaving "Automatic backups" with a heading and an empty body, which reads as "there are none". Both now say that the state is unknown and offer a retry. The WebDAV form disappears while unknown, because an empty form looks like "nothing configured" and its save button would have overwritten a connection nobody saw.
+- The API token can be copied. It is shown exactly once and sat in a read-only field that had to be selected by hand, while the WebDAV password reveal button next to it already existed.
+- Deleting a housekeeping task showed the literal text `Aufgabe "{name}" wirklich löschen?`. The translation used single braces, which the interpolation never substitutes, in all 23 languages. A test now checks every translated string for that mistake.
+- Initials on avatars pick a readable colour. They were always white regardless of the colour the member picked, which measured 3.5:1 and 2.8:1 on lighter ones. Dark ink is used where white misses the threshold; where white passes, it stays.
+- Body text in Settings no longer runs the full width of the content column. Lines reached about 125 characters at 1440 pixels; the limit is calibrated against actual German prose rather than the usual `ch` rule of thumb, which would have allowed 104.
+- The permission mode switch was labelled with the page title for screen readers, describing the page rather than the switch.
+
+### Removed
+- 174 lines of stylesheet for three systems that were never wired up: inline help tooltips, status badges and an empty state. None of their classes ever appeared in the markup.
+- Two translation keys with no remaining call site, and a stale breadcrumb rule that styled a class the shell never produces.
 
 ## [1.48.2] - 2026-07-27
 

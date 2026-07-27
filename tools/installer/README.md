@@ -80,7 +80,7 @@ The Google Drive Documents fields configure OAuth only. `GOOGLE_DRIVE_CLIENT_ID`
 `GOOGLE_DRIVE_CLIENT_SECRET` are optional paired overrides; when both are empty, the runtime reuses
 `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. `GOOGLE_DRIVE_REDIRECT_URI` is always Drive-specific
 and must exactly match `/api/v1/documents/storage/google-drive/callback`. After installation, connect
-and test Drive in **Settings → Documents → Document storage**, then explicitly select it. OAuth
+and test Drive in **Settings → Sync → Document storage**, then explicitly select it. OAuth
 success alone never changes the upload destination.
 
 > SQLite/database backups do not contain document binaries stored in a local folder, on WebDAV, or

@@ -533,7 +533,7 @@ environment:
 
 ### WebDAV Document Storage (Optional)
 
-Admins can configure **Settings → Documents → WebDAV Storage** as the global destination for all
+Admins can configure **Settings → Sync → Document storage** as the global destination for all
 new document files, including calendar attachments. Existing local documents are not migrated.
 Uploads fail closed: if WebDAV cannot accept the file, Yuvomi rejects the upload instead of silently
 storing it in SQLite. Disabling WebDAV changes only future uploads; existing WebDAV documents remain
@@ -582,7 +582,7 @@ Drive files and never creates public permissions.
 | `GOOGLE_DRIVE_CLIENT_SECRET` | Optional Drive-specific OAuth client secret | Reuses `GOOGLE_CLIENT_SECRET` | No |
 | `GOOGLE_DRIVE_REDIRECT_URI` | Exact Drive Documents callback URL | — | Yes when Drive is configured |
 
-After deployment, open **Settings → Documents → Document storage**, connect Google Drive, test the
+After deployment, open **Settings → Sync → Document storage**, connect Google Drive, test the
 connection, then explicitly select Google Drive as the upload destination. Connecting does not
 activate it. New files are placed in the visible private `Yuvomi/Documents` folder; the opaque Drive
 file ID is stored in SQLite. The environment-managed local-folder backend still takes precedence.
@@ -601,7 +601,7 @@ Drive token state without revoking shared Google credentials.
 
 ### Weather (Optional)
 
-The weather widget defaults to **Open-Meteo** — free, ECMWF-backed, and requiring **no API key**. Just set your coordinates (find them on [openstreetmap.org](https://www.openstreetmap.org) or Google Maps). You can also configure this in-app under **Settings → Modules → Overview** (admin only), which takes precedence over the environment variables and acts as the household default. Any user can additionally set their own personal location under **Settings → Personal → My Weather**, which overrides the household default just for their own dashboard widget.
+The weather widget defaults to **Open-Meteo** — free, ECMWF-backed, and requiring **no API key**. Just set your coordinates (find them on [openstreetmap.org](https://www.openstreetmap.org) or Google Maps). You can also configure this in-app under **Settings → Administration → Household weather** (admin only), which takes precedence over the environment variables and acts as the household default. Any user can additionally set their own personal location under **Settings → Personal → My Weather**, which overrides the household default just for their own dashboard widget.
 
 | Variable | Description | Default | Required |
 |----------|-------------|---------|----------|
