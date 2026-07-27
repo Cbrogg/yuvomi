@@ -1362,6 +1362,8 @@
         "apiTokenExpiresHint": "만료일 없는 토큰을 만들려면 비워 두세요.",
         "apiTokenCreatedLabel": "새 API 토큰",
         "apiTokenCreatedHint": "이 토큰을 안전하게 보관하세요. 다시 표시할 수 없습니다.",
+        "apiTokenCopy": "토큰 복사",
+        "apiTokenCopied": "토큰이 복사되었습니다",
         "apiTokenCreate": "토큰 만들기",
         "apiTokenInvalidExpiration": "유효한 만료일을 입력하세요.",
         "apiTokenCreatedToast": "API 토큰이 생성되었습니다.",

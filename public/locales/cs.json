@@ -1350,6 +1350,8 @@
         "apiTokenExpiresHint": "Nechte prázdné pro vytvoření tokenu bez data vypršení.",
         "apiTokenCreatedLabel": "Nový API token",
         "apiTokenCreatedHint": "Uložte tento token na bezpečném místě. Nelze ho znovu zobrazit.",
+        "apiTokenCopy": "Kopírovat token",
+        "apiTokenCopied": "Token zkopírován",
         "apiTokenCreate": "Vytvořit token",
         "apiTokenInvalidExpiration": "Zadejte prosím platné datum vypršení.",
         "apiTokenCreatedToast": "API token vytvořen.",

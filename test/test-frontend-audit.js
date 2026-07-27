@@ -3601,3 +3601,49 @@ test('Rechtevergabe ist auf dem Telefon beschriftet und mit dem Finger bedienbar
   // Am Zeiger bleibt es kompakt: das Label ist dort ausgeblendet.
   assert.match(css, /\.perm-seg__label \{ display: none; \}/);
 });
+
+// "Automatische Backups" mit Titel, Hinweis und leerem Inhalt liest sich als
+// "es gibt keine" - die gefaehrlichste Fehldeutung auf einer Backup-Seite.
+// Beide Ladepfade schrieben den Fehler nur in die Konsole (Critique
+// 2026-07-27), waehrend admin-system es nebenan richtig machte.
+test('admin-backup sagt bei Ladefehlern, dass der Stand unbekannt ist', () => {
+  const source = read('../public/settings/pages/admin-backup.js');
+  assert.match(source, /import \{[\s\S]*?createRetryState[\s\S]*?\} from '\/settings\/components\.js'/);
+
+  // Kein catch darf nur noch loggen.
+  const silentCatches = [...source.matchAll(/catch \((\w+)\) \{\s*console\.error\([^)]*\);?\s*\}/g)];
+  assert.deepEqual(
+    silentCatches.map((m) => m[0].slice(0, 60)),
+    [],
+    'Ladefehler brauchen einen sichtbaren Zustand, nicht nur console.error',
+  );
+  assert.equal([...source.matchAll(/createRetryState\(\{/g)].length, 2);
+
+  // Das WebDAV-Formular verschwindet im Fehlerfall: ein leeres Formular sieht
+  // aus wie "nichts konfiguriert" und wuerde beim Speichern eine bestehende
+  // Verbindung ueberschreiben.
+  assert.match(source, /form\.hidden = true;/);
+
+  // ... und `hidden` muss auf der Settings-Flaeche auch wirken: `.settings-form`
+  // setzt display:flex mit derselben Spezifitaet wie das UA-`[hidden]` und
+  // stand spaeter im Stylesheet, also blieb das Formular sichtbar.
+  assert.match(
+    read('../public/styles/settings.css'),
+    /\.settings-page \[hidden\] \{ display: none !important; \}/,
+  );
+});
+
+// Das API-Token ist genau einmal sichtbar und stand in einem readonly Input,
+// aus dem es von Hand markiert werden musste - der riskanteste Moment der
+// Oberflaeche hatte die schwaechste Behandlung (Critique 2026-07-27).
+test('das einmalig sichtbare API-Token laesst sich kopieren', () => {
+  const source = read('../public/settings/pages/admin-api.js');
+  assert.match(source, /id="api-token-copy"/);
+  assert.match(source, /settings\.apiTokenCopy/);
+  assert.match(source, /navigator\.clipboard\?\.writeText\(value\)/);
+  assert.match(source, /settings\.apiTokenCopied/);
+  // Der Lucide-Platzhalter im erst spaeter eingeblendeten Block braucht seinen
+  // eigenen createIcons-Aufruf.
+  assert.match(source, /window\.lucide\?\.createIcons\(\{ el: output \}\)/);
+  assertKeysExistInEveryLocale(['settings.apiTokenCopy', 'settings.apiTokenCopied', 'email.saveFailed']);
+});

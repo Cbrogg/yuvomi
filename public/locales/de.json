@@ -1362,6 +1362,8 @@
         "apiTokenExpiresHint": "Leer lassen, um einen Token ohne Ablaufdatum zu erstellen.",
         "apiTokenCreatedLabel": "Neuer API-Token",
         "apiTokenCreatedHint": "Speichere diesen Token sicher. Er kann nicht erneut angezeigt werden.",
+        "apiTokenCopy": "Token kopieren",
+        "apiTokenCopied": "Token kopiert",
         "apiTokenCreate": "Token erstellen",
         "apiTokenInvalidExpiration": "Bitte gib ein gültiges Ablaufdatum ein.",
         "apiTokenCreatedToast": "API-Token erstellt.",

@@ -1362,6 +1362,8 @@
         "apiTokenExpiresHint": "برای ساخت توکن بدون تاریخ انقضا خالی بگذارید.",
         "apiTokenCreatedLabel": "توکن API جدید",
         "apiTokenCreatedHint": "این توکن را ایمن نگه دارید. دوباره نمایش داده نخواهد شد.",
+        "apiTokenCopy": "کپی توکن",
+        "apiTokenCopied": "توکن کپی شد",
         "apiTokenCreate": "ایجاد توکن",
         "apiTokenInvalidExpiration": "لطفاً تاریخ انقضای معتبری وارد کنید.",
         "apiTokenCreatedToast": "توکن API ایجاد شد.",

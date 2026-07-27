@@ -1189,9 +1189,24 @@
 
 .settings-token-output {
   padding: var(--space-3);
-  border: 1px solid var(--color-border);
+  border: var(--space-px) solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-surface-2);
+}
+
+/* Eingabe und Kopieren nebeneinander (wie der WebDAV-Reveal-Button). */
+.settings-token-output__row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.settings-token-output__row .form-input { flex: 1; min-width: 0; }
+.settings-token-output__row .btn { flex-shrink: 0; }
+
+@media (max-width: 767px) {
+  .settings-token-output__row { flex-wrap: wrap; }
+  .settings-token-output__row .form-input { flex-basis: 100%; }
 }
 
 /* API-Token Scope-Auswahl */
@@ -2816,3 +2831,21 @@
   .perm-seg__opt,
   .perm-seg__thumb { transition: none; }
 }
+
+/* --------------------------------------------------------
+   [hidden] durchsetzen
+   -------------------------------------------------------- */
+
+/* Das UA-`[hidden] { display: none }` hat Spezifitaet (0,1,0) - genau so viel
+   wie jede Layoutklasse dieser Datei, die `display` setzt. Wer spaeter im
+   Stylesheet steht, gewinnt, und das ist hier fast immer die Klasse. Gefunden
+   an `.settings-form` (display:flex): das WebDAV-Formular blieb nach
+   `form.hidden = true` sichtbar, also stand ein leeres Formular unter einer
+   Fehlermeldung, dessen Speichern-Button eine bestehende Verbindung
+   ueberschrieben haette.
+
+   Die Regel gilt fuer die gesamte Settings-Flaeche statt fuer eine Liste
+   einzelner Klassen, damit das naechste `hidden` nicht dieselbe Falle stellt.
+   Dasselbe Muster steht in budget.css:86, calendar.css:596 und
+   documents.css:140 - dort jeweils punktuell. */
+.settings-page [hidden] { display: none !important; }

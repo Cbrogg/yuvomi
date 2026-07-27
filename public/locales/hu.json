@@ -1339,6 +1339,8 @@
         "apiTokenExpiresHint": "Hagyja üresen, ha lejárat nélküli tokent szeretne létrehozni.",
         "apiTokenCreatedLabel": "Új API token",
         "apiTokenCreatedHint": "Tárolja ezt a tokent biztonságosan. Többé nem jeleníthető meg.",
+        "apiTokenCopy": "Token másolása",
+        "apiTokenCopied": "Token másolva",
         "apiTokenCreate": "Token létrehozása",
         "apiTokenInvalidExpiration": "Kérjük, adjon meg egy érvényes lejárati dátumot.",
         "apiTokenCreatedToast": "API token létrehozva.",

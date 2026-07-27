@@ -133,7 +133,13 @@ function renderPage(container) {
           </div>
           <div id="api-token-created" class="settings-token-output" hidden>
             <label class="form-label" for="api-token-created-value">${t('settings.apiTokenCreatedLabel')}</label>
-            <input class="form-input" id="api-token-created-value" type="text" readonly />
+            <div class="settings-token-output__row">
+              <input class="form-input" id="api-token-created-value" type="text" readonly />
+              <button type="button" class="btn btn--secondary btn--sm" id="api-token-copy">
+                <i data-lucide="copy" class="icon-sm" aria-hidden="true"></i>
+                ${t('settings.apiTokenCopy')}
+              </button>
+            </div>
             <p class="form-hint">${t('settings.apiTokenCreatedHint')}</p>
           </div>
           <div id="api-token-error" class="form-error" role="alert" hidden></div>
@@ -209,6 +215,7 @@ function bindEvents(container, initialTokens) {
       // The raw token is shown exactly once, only from the creation response.
       outputValue.value = res.token;
       output.hidden = false;
+      window.lucide?.createIcons({ el: output });
       outputValue.focus();
       outputValue.select();
       window.yuvomi?.showToast(t('settings.apiTokenCreatedToast'), 'success');
@@ -216,6 +223,20 @@ function bindEvents(container, initialTokens) {
       showError(errorEl, err.message);
     } finally {
       btn.disabled = false;
+    }
+  });
+
+  // Der riskanteste Moment der Oberfläche hatte die schwächste Behandlung: das
+  // Token ist genau einmal sichtbar und stand in einem readonly Input, aus dem
+  // es von Hand markiert werden musste (Critique 2026-07-27).
+  container.querySelector('#api-token-copy')?.addEventListener('click', async () => {
+    const value = container.querySelector('#api-token-created-value')?.value;
+    if (!value) return;
+    try {
+      await navigator.clipboard?.writeText(value);
+      window.yuvomi?.showToast(t('settings.apiTokenCopied'), 'success');
+    } catch (err) {
+      window.yuvomi?.showToast(err.message || t('common.errorGeneric'), 'danger');
     }
   });
 

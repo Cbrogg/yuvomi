@@ -1333,6 +1333,8 @@
         "apiTokenExpiresHint": "Lämna tomt för att skapa en token utan utgång.",
         "apiTokenCreatedLabel": "Ny API-token",
         "apiTokenCreatedHint": "Förvara denna token säkert. Den kan inte visas igen.",
+        "apiTokenCopy": "Kopiera token",
+        "apiTokenCopied": "Token kopierad",
         "apiTokenCreate": "Skapa token",
         "apiTokenInvalidExpiration": "Ange ett giltigt utgångsdatum.",
         "apiTokenCreatedToast": "API-token skapad.",

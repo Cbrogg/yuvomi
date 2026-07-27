@@ -1339,6 +1339,8 @@
         "apiTokenExpiresHint": "Laat leeg om een token zonder vervaldatum aan te maken.",
         "apiTokenCreatedLabel": "Nieuw API-token",
         "apiTokenCreatedHint": "Sla dit token veilig op. Het kan niet opnieuw worden getoond.",
+        "apiTokenCopy": "Token kopiëren",
+        "apiTokenCopied": "Token gekopieerd",
         "apiTokenCreate": "Token aanmaken",
         "apiTokenInvalidExpiration": "Voer een geldige vervaldatum in.",
         "apiTokenCreatedToast": "API-token aangemaakt.",

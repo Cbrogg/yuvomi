@@ -1362,6 +1362,8 @@
         "apiTokenExpiresHint": "Biarkan kosong untuk membuat token tanpa tanggal kedaluwarsa.",
         "apiTokenCreatedLabel": "Token API baru",
         "apiTokenCreatedHint": "Simpan token ini dengan aman. Token tidak dapat ditampilkan lagi.",
+        "apiTokenCopy": "Salin token",
+        "apiTokenCopied": "Token disalin",
         "apiTokenCreate": "Buat token",
         "apiTokenInvalidExpiration": "Masukkan tanggal kedaluwarsa yang valid.",
         "apiTokenCreatedToast": "Token API dibuat.",

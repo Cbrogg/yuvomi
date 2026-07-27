@@ -1333,6 +1333,8 @@
         "apiTokenExpiresHint": "Залиште пустим, щоб створити токен без закінчення терміну дії.",
         "apiTokenCreatedLabel": "Новий токен API",
         "apiTokenCreatedHint": "Надійно зберігайте цей токен. Його не можна показати знову.",
+        "apiTokenCopy": "Скопіювати токен",
+        "apiTokenCopied": "Токен скопійовано",
         "apiTokenCreate": "Створити токен",
         "apiTokenInvalidExpiration": "Введіть дійсний термін дії.",
         "apiTokenCreatedToast": "Токен API створено.",

@@ -1333,6 +1333,8 @@
         "apiTokenExpiresHint": "Lascia vuoto per creare un token senza scadenza.",
         "apiTokenCreatedLabel": "Nuovo token API",
         "apiTokenCreatedHint": "Conserva questo token in modo sicuro. Non potrà essere mostrato di nuovo.",
+        "apiTokenCopy": "Copia token",
+        "apiTokenCopied": "Token copiato",
         "apiTokenCreate": "Crea token",
         "apiTokenInvalidExpiration": "Inserisci una data di scadenza valida.",
         "apiTokenCreatedToast": "Token API creato.",

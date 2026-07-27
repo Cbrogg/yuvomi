@@ -1,7 +1,12 @@
 import { api } from '/api.js';
 import { formatDate, formatTime, t } from '/i18n.js';
 import { confirmModal } from '/components/modal.js';
-import { createDisclosure, createInfoRow, toggleRowHtml } from '/settings/components.js';
+import {
+  createDisclosure,
+  createInfoRow,
+  createRetryState,
+  toggleRowHtml,
+} from '/settings/components.js';
 
 function showError(element, message) {
   if (!element) return;
@@ -149,14 +154,34 @@ function renderCliDisclosure(container) {
   host.replaceChildren(card);
 }
 
+/**
+ * "Automatische Backups" mit Titel, Hinweis und leerem Inhalt liest sich als
+ * "es gibt keine" - die gefaehrlichste moegliche Fehldeutung auf einer
+ * Backup-Seite. Beide Ladepfade schrieben den Fehler nur in die Konsole
+ * (Critique 2026-07-27); `createRetryState` sagt jetzt, dass der Stand
+ * unbekannt ist, und bietet den zweiten Versuch an.
+ */
 async function loadBackupSchedulerStatus(container) {
   const infoContainer = container.querySelector('#backup-scheduler-info');
   if (!infoContainer) return;
 
+  const failWithRetry = (error) => {
+    console.error('[Settings] Failed to load backup scheduler status:', error);
+    infoContainer.replaceChildren(createRetryState({
+      message: error?.message || t('settings.loadError'),
+      onRetry: () => loadBackupSchedulerStatus(container),
+    }));
+  };
+
   try {
     const res = await api.get('/backup/status');
     const scheduler = res.data?.scheduler;
-    if (!scheduler) return;
+    // Die Route liefert den Scheduler-Status immer mit; fehlt er, ist die
+    // Antwort kaputt und nicht etwa "kein Scheduler eingerichtet".
+    if (!scheduler) {
+      failWithRetry(new Error(t('settings.loadError')));
+      return;
+    }
 
     const { enabled, schedule, keepCount, lastBackup } = scheduler;
 
@@ -214,7 +239,7 @@ async function loadBackupSchedulerStatus(container) {
       });
     }
   } catch (err) {
-    console.error('[Settings] Failed to load backup scheduler status:', err);
+    failWithRetry(err);
   }
 }
 
@@ -285,6 +310,23 @@ async function loadWebdavConfig(container) {
   const statusGrid = container.querySelector('#backup-webdav-status');
   if (!form) return;
 
+  // Ein leeres Formular nach einem Ladefehler ist schlimmer als gar keins: es
+  // sieht aus wie "nichts konfiguriert" und wuerde beim Speichern eine
+  // bestehende Verbindung ueberschreiben, deren Werte niemand gesehen hat.
+  const failWithRetry = (error) => {
+    console.error('[Settings] Failed to load WebDAV config:', error);
+    form.hidden = true;
+    const state = createRetryState({
+      message: error?.message || t('settings.loadError'),
+      onRetry: async () => {
+        state.remove();
+        form.hidden = false;
+        await loadWebdavConfig(container);
+      },
+    });
+    form.after(state);
+  };
+
   try {
     const res = await api.get('/backup/webdav/config');
     const d = res.data ?? {};
@@ -323,7 +365,7 @@ async function loadWebdavConfig(container) {
     renderWebdavStatus(statusGrid, container, d);
     window.lucide?.createIcons({ el: form });
   } catch (err) {
-    console.error('[Settings] Failed to load WebDAV config:', err);
+    failWithRetry(err);
   }
 }
 

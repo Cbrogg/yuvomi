@@ -1333,6 +1333,8 @@
         "apiTokenExpiresHint": "Leave empty to create a token without expiration.",
         "apiTokenCreatedLabel": "New API token",
         "apiTokenCreatedHint": "Store this token securely. It cannot be shown again.",
+        "apiTokenCopy": "Copier le jeton",
+        "apiTokenCopied": "Jeton copié",
         "apiTokenCreate": "Create token",
         "apiTokenInvalidExpiration": "Please enter a valid expiration date.",
         "apiTokenCreatedToast": "API token created.",

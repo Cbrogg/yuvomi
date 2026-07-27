@@ -1339,6 +1339,8 @@
         "apiTokenExpiresHint": "Để trống để tạo mã không có ngày hết hạn.",
         "apiTokenCreatedLabel": "Mã API mới",
         "apiTokenCreatedHint": "Bảo quản mã này an toàn. Nó không thể hiển thị lại.",
+        "apiTokenCopy": "Sao chép token",
+        "apiTokenCopied": "Đã sao chép token",
         "apiTokenCreate": "Tạo mã",
         "apiTokenInvalidExpiration": "Vui lòng nhập ngày hết hạn hợp lệ.",
         "apiTokenCreatedToast": "Mã API đã được tạo.",
