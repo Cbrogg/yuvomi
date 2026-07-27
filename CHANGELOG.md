@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - The Recipes module accent changed from `#109C6B` to `#0C7C5B`, which is visible wherever the Kitchen section carries its colour.
 
+## [1.48.1] - 2026-07-27
+
 ### Changed
 - A subscription reminder now states the amount and the renewal date, not just the subscription name. Knowing that something renews is of little use without knowing when and for how much, which is what decides whether it needs attention at all. The notification body reads `Netflix - 12.99 EUR - 2026-08-03` and drops the amount or the date individually when a subscription does not carry them. The line deliberately holds data only and no formulated sentence: notifications are assembled on the server, which cannot know the recipient's language because locale, date format and number format live in the browser, so any sentence would reach all 23 languages in only one of them (#581).
 
