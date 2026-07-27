@@ -2378,7 +2378,7 @@
         "taskUpdatedToast": "Tarea actualizada",
         "taskDeletedToast": "Tarea eliminada",
         "taskUndoneToast": "Completado deshecho",
-        "deleteTaskConfirm": "¿Eliminar la tarea \"{name}\"?",
+        "deleteTaskConfirm": "¿Eliminar la tarea \"{{name}}\"?",
         "reportTitle": "Reportar problema",
         "problemDescription": "Descripción del problema",
         "problemPlaceholder": "Ejemplo: bombilla fundida",

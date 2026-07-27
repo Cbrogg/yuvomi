@@ -2378,7 +2378,7 @@
         "taskUpdatedToast": "タスクを更新しました",
         "taskDeletedToast": "タスクを削除しました",
         "taskUndoneToast": "完了をリセットしました",
-        "deleteTaskConfirm": "タスク「{name}」を削除しますか？",
+        "deleteTaskConfirm": "タスク「{{name}}」を削除しますか？",
         "reportTitle": "Report a problem",
         "problemDescription": "Problem description",
         "problemPlaceholder": "Example: burnt-out light bulb",

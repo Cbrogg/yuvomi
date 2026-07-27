@@ -2378,7 +2378,7 @@
         "taskUpdatedToast": "कार्य अपडेट किया गया",
         "taskDeletedToast": "कार्य हटाया गया",
         "taskUndoneToast": "पूर्णता रीसेट की गई",
-        "deleteTaskConfirm": "क्या आप वाकई कार्य \"{name}\" हटाना चाहते हैं?",
+        "deleteTaskConfirm": "क्या आप वाकई कार्य \"{{name}}\" हटाना चाहते हैं?",
         "reportTitle": "Report a problem",
         "problemDescription": "Problem description",
         "problemPlaceholder": "Example: burnt-out light bulb",

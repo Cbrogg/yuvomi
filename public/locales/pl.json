@@ -2382,7 +2382,7 @@
         "taskUpdatedToast": "Zadanie zaktualizowane",
         "taskDeletedToast": "Zadanie usunięte",
         "taskUndoneToast": "Ukończenie cofnięte",
-        "deleteTaskConfirm": "Usunąć zadanie \"{name}\"?",
+        "deleteTaskConfirm": "Usunąć zadanie \"{{name}}\"?",
         "reportTitle": "Zgłoś problem",
         "problemDescription": "Opis problemu",
         "problemPlaceholder": "Przykład: Przepalona żarówka",

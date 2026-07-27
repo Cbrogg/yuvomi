@@ -2378,7 +2378,7 @@
         "taskUpdatedToast": "Attività aggiornata",
         "taskDeletedToast": "Attività eliminata",
         "taskUndoneToast": "Completamento annullato",
-        "deleteTaskConfirm": "Eliminare l'attività \"{name}\"?",
+        "deleteTaskConfirm": "Eliminare l'attività \"{{name}}\"?",
         "reportTitle": "Segnala problema",
         "problemDescription": "Descrizione del problema",
         "problemPlaceholder": "Esempio: lampadina bruciata",

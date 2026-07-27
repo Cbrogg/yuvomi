@@ -2378,7 +2378,7 @@
         "taskUpdatedToast": "Taak bijgewerkt",
         "taskDeletedToast": "Taak verwijderd",
         "taskUndoneToast": "Voltooiing gereset",
-        "deleteTaskConfirm": "Taak \"{name}\" echt verwijderen?",
+        "deleteTaskConfirm": "Taak \"{{name}}\" echt verwijderen?",
         "reportTitle": "Probleem melden",
         "problemDescription": "Probleembeschrijving",
         "problemPlaceholder": "Voorbeeld: doorgebrande gloeilamp",

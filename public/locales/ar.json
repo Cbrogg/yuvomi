@@ -2378,7 +2378,7 @@
         "taskUpdatedToast": "تم تحديث المهمة",
         "taskDeletedToast": "تم حذف المهمة",
         "taskUndoneToast": "تمت إعادة تعيين الإنجاز",
-        "deleteTaskConfirm": "هل تريد حقاً حذف المهمة \"{name}\"؟",
+        "deleteTaskConfirm": "هل تريد حقاً حذف المهمة \"{{name}}\"؟",
         "reportTitle": "Report a problem",
         "problemDescription": "Problem description",
         "problemPlaceholder": "Example: burnt-out light bulb",

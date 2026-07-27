@@ -2378,7 +2378,7 @@
         "taskUpdatedToast": "Görev güncellendi",
         "taskDeletedToast": "Görev silindi",
         "taskUndoneToast": "Tamamlama sıfırlandı",
-        "deleteTaskConfirm": "\"{name}\" görevi silinsin mi?",
+        "deleteTaskConfirm": "\"{{name}}\" görevi silinsin mi?",
         "reportTitle": "Report a problem",
         "problemDescription": "Problem description",
         "problemPlaceholder": "Example: burnt-out light bulb",

@@ -308,6 +308,16 @@
   color: var(--color-accent);
 }
 
+/* Stand rund 1000 Zeilen weiter unten, getrennt von allem, was den Breadcrumb
+   sonst betrifft - inklusive des `display: none` direkt darüber. */
+.settings-breadcrumb {
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: var(--space-px) solid var(--color-border);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
 .settings-breadcrumb__link {
   display: inline-flex;
   align-items: center;
@@ -344,11 +354,9 @@
   font-weight: var(--font-weight-semibold);
 }
 
-@media (max-width: 767px) {
-  .settings-breadcrumb__link {
-    min-height: var(--target-lg);
-  }
-}
+/* Der frühere Mobile-Override auf `.settings-breadcrumb__link` ist ersatzlos
+   weg: unter 768px ist der ganze Breadcrumb `display: none` (siehe oben), das
+   Touch-Target existierte dort also nie. */
 
 .settings-leaf {
   min-width: 0;
@@ -804,6 +812,15 @@
   overflow: hidden;
 }
 
+/* Initialen auf einer frei gewählten Hintergrundfarbe: weiß war fix, und auf
+   hellen Tönen ergab das gemessene 3,5:1 und 2,8:1 (Critique 2026-07-27).
+   `prefersInkText()` in `/utils/contrast.js` entscheidet je Farbe; das Token
+   ist laut tokens.css:104 genau dafür da. */
+.settings-avatar--ink,
+.perm-chip__avatar--ink {
+  color: var(--color-ink-on-bright);
+}
+
 .settings-avatar--sm {
   width: 32px;
   height: 32px;
@@ -865,7 +882,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--color-border);
+  border: var(--space-px) solid var(--color-border);
   border-radius: var(--radius-full);
   background: var(--color-surface);
   color: var(--color-text-secondary);
@@ -923,7 +940,7 @@
   width: 44px;
   height: 44px;
   padding: var(--space-0h);
-  border: 1px solid var(--color-border);
+  border: var(--space-px) solid var(--color-border);
   border-radius: var(--radius-full);
   background: var(--color-surface);
   cursor: pointer;
@@ -971,7 +988,7 @@
 .settings-form--compact {
   margin-top: var(--space-3);
   padding-top: var(--space-3);
-  border-top: 1px solid var(--color-border);
+  border-top: var(--space-px) solid var(--color-border);
 }
 
 .settings-form-actions {
@@ -991,6 +1008,41 @@
 .form-hint {
   font-size: var(--text-sm);
   color: var(--color-text-secondary);
+}
+
+/* Tonlagen für Hinweistexte. Vorher setzte `admin-backup.js` die Farbe des
+   Verbindungstests inline (`style.color = 'var(--color-success)'`), was den
+   Wert am Token vorbei ins Markup schrieb. */
+.form-hint--success { color: var(--color-success); }
+.form-hint--danger { color: var(--color-danger); }
+
+/* Gesperrte Eingabefelder sahen aus wie bediente: es gab keine
+   :disabled-Regel, und `admin-backup.js` half sich mit einem hartkodierten
+   `style.opacity = '0.6'` für die env-gesteuerten Felder. Die Regel gilt jetzt
+   für jedes gesperrte Feld der Fläche - auch für die, die ein Blatt während
+   eines laufenden Requests sperrt. */
+.settings-page .form-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Fließtext lief in Settings über die volle Content-Spalte: bei 1440px
+   gemessene 794-896px (Critique 2026-07-27). Ziel sind 65-75 Zeichen, damit
+   das Auge den nächsten Zeilenanfang wiederfindet.
+
+   Der Wert ist gemessen, nicht geschätzt: `1ch` ist die Breite der Ziffer 0
+   und bei Plus Jakarta Sans mit 10,25px deutlich breiter als ein
+   Durchschnittszeichen deutschen Satztextes (6,7px bei 14px Schriftgrad). Die
+   verbreitete 65ch-Faustregel ergäbe hier 104 Zeichen; 50ch sind 512px und
+   damit rund 76.
+
+   Auf die Settings-Fläche begrenzt: `.form-hint` gehört zwar dieser Datei,
+   wird aber von acht weiteren Modulen benutzt, deren Spalten hier niemand
+   gemessen hat. */
+.settings-page .form-hint,
+.settings-page .settings-card-description,
+.settings-page .settings-leaf-header__description {
+  max-width: 50ch;
 }
 
 .form-input--color {
@@ -1022,7 +1074,7 @@
 
 .settings-sync-logo--google {
   background: var(--color-surface-2);
-  border: 1px solid var(--color-border);
+  border: var(--space-px) solid var(--color-border);
 }
 
 .settings-sync-logo--apple {
@@ -1220,7 +1272,7 @@
 
 .api-token-scopes {
   margin-top: var(--space-3);
-  border: 1px solid var(--color-border);
+  border: var(--space-px) solid var(--color-border);
   border-radius: var(--radius-sm);
   overflow: hidden;
 }
@@ -1247,7 +1299,7 @@
 }
 
 .api-token-scopes__row:not(:last-child) {
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-bottom: var(--space-px) solid var(--color-border-subtle);
 }
 
 .api-token-scopes__name {
@@ -1350,7 +1402,7 @@
   overflow-x: auto;
   border-radius: var(--radius-sm);
   background: var(--color-surface-2);
-  border: 1px solid var(--color-border);
+  border: var(--space-px) solid var(--color-border);
   color: var(--color-text-primary);
   font-size: var(--text-sm);
   line-height: 1.5;
@@ -1362,22 +1414,9 @@
   }
 }
 
-/* --------------------------------------------------------
-   Breadcrumb Navigation (UX-Verbesserung 1)
-   -------------------------------------------------------- */
-
-.settings-breadcrumb {
-  margin-bottom: var(--space-4);
-  padding-bottom: var(--space-3);
-  border-bottom: 1px solid var(--color-border);
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-}
-
-.settings-breadcrumb__current {
-  color: var(--color-text-primary);
-  font-weight: var(--font-weight-semibold);
-}
+/* Der Breadcrumb-Block ist zu den übrigen Breadcrumb-Regeln gewandert.
+   `.settings-breadcrumb__current` ist ersatzlos weg: `shell.js:375` erzeugt
+   `settings-breadcrumb__item--current`, die Klasse gab es nie im Markup. */
 
 /* --------------------------------------------------------
    Inline Help Icons mit Tooltips (UX-Verbesserung 2)
@@ -1588,7 +1627,7 @@
   justify-content: center;
   padding: var(--space-2) 0;
   border-radius: var(--radius-xs);
-  border: 1px solid var(--color-border);
+  border: var(--space-px) solid var(--color-border);
   font-size: var(--text-xs);
   font-weight: var(--font-weight-medium);
   color: var(--color-text-secondary);
@@ -1887,7 +1926,7 @@
      im Dark Mode ist --color-border dunkler als die Kartenfläche und damit
      praktisch unsichtbar (gemessen 1.06:1). Der Mix läuft in beiden Themes in
      die richtige Richtung. */
-  border: 1px solid color-mix(in srgb, var(--color-text-primary) 22%, var(--color-surface-raised));
+  border: var(--space-px) solid color-mix(in srgb, var(--color-text-primary) 22%, var(--color-surface-raised));
   border-radius: var(--radius-md);
   background-color: var(--color-surface-raised);
 }
@@ -1905,7 +1944,7 @@
   margin-top: var(--space-3);
   padding-top: var(--space-3);
   border: 0;
-  border-top: 1px solid var(--color-border);
+  border-top: var(--space-px) solid var(--color-border);
   border-radius: 0;
   background: none;
   overflow: visible;
@@ -1952,7 +1991,7 @@
 
 .caldav-calendars-details {
   margin: var(--space-3) 0;
-  border-top: 1px solid var(--color-border);
+  border-top: var(--space-px) solid var(--color-border);
   padding-top: var(--space-3);
 }
 
@@ -2109,7 +2148,7 @@
   flex-shrink: 0;
   max-width: 40%;
   padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--color-border);
+  border: var(--space-px) solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-surface-work);
   color: var(--color-text-primary);
@@ -2128,7 +2167,7 @@
   flex-wrap: wrap;
   margin-top: var(--space-3);
   padding-top: var(--space-3);
-  border-top: 1px solid var(--color-border);
+  border-top: var(--space-px) solid var(--color-border);
 }
 
 /* Schmale Viewports: die lange Wartungsaktion nimmt eine eigene Zeile, damit
@@ -2275,7 +2314,7 @@
   place-items: center;
   width: var(--target-base);
   height: var(--target-base);
-  border: 1px solid var(--color-border);
+  border: var(--space-px) solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-surface);
   color: var(--color-text-secondary);
@@ -2451,7 +2490,7 @@
   padding: var(--space-1);
   margin-bottom: var(--space-4);
   background: var(--color-surface-raised);
-  border: 1px solid var(--color-border-subtle);
+  border: var(--space-px) solid var(--color-border-subtle);
   border-radius: var(--radius-full);
 }
 
@@ -2589,7 +2628,7 @@
   align-items: center;
   gap: var(--space-1);
   padding: 2px var(--space-2);
-  border: 1px solid var(--color-border);
+  border: var(--space-px) solid var(--color-border);
   border-radius: var(--radius-full);
   background: var(--color-surface-work);
   color: var(--color-text-primary);
@@ -2602,20 +2641,20 @@
 
 /* Liste: Modul-Gruppen, jede mit eingerückten Widgets darunter. */
 .perm-list {
-  border: 1px solid var(--color-border);
+  border: var(--space-px) solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-surface-work);
   overflow: hidden;
 }
 
-.perm-modgroup + .perm-modgroup { border-top: 1px solid var(--color-border); }
+.perm-modgroup + .perm-modgroup { border-top: var(--space-px) solid var(--color-border); }
 
 .perm-modgroup__widgets {
   padding-left: var(--space-8);
   padding-bottom: var(--space-1);
 }
 
-.perm-modgroup__widgets .perm-row--widget { border-top: 1px solid var(--color-border-subtle); }
+.perm-modgroup__widgets .perm-row--widget { border-top: var(--space-px) solid var(--color-border-subtle); }
 
 .perm-modgroup--general .perm-modgroup__general-title {
   padding: var(--space-3) var(--space-4) 0;
@@ -2677,7 +2716,7 @@
   flex-shrink: 0;
   padding: var(--space-0h);
   background: var(--color-surface-raised);
-  border: 1px solid var(--color-border-subtle);
+  border: var(--space-px) solid var(--color-border-subtle);
   border-radius: var(--radius-full);
 }
 
@@ -2735,7 +2774,7 @@
   margin-top: var(--space-5);
   padding: var(--space-3) 0;
   background: var(--color-bg);
-  border-top: 1px solid var(--color-border-subtle);
+  border-top: var(--space-px) solid var(--color-border-subtle);
 }
 
 .perm-actions__status {
@@ -2758,7 +2797,7 @@
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-4);
-  border: 1px solid var(--color-border);
+  border: var(--space-px) solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-surface-raised);
   color: var(--color-text-secondary);

@@ -1238,7 +1238,7 @@ test('Sync-Kontolisten decken die Grid-Spalte, damit mobil nichts abgeschnitten 
   // Mode dunkler als die Kartenfläche und damit unsichtbar (gemessen 1.06:1).
   assert.match(
     settings,
-    /\.caldav-account-item\s*\{[\s\S]*?border:\s*1px solid color-mix\(in srgb, var\(--color-text-primary\)/,
+    /\.caldav-account-item\s*\{[\s\S]*?border:\s*var\(--space-px\) solid color-mix\(in srgb, var\(--color-text-primary\)/,
   );
   assert.match(
     settings,
@@ -1252,7 +1252,7 @@ test('Sync-Kontolisten decken die Grid-Spalte, damit mobil nichts abgeschnitten 
   // deshalb Flächen-Tokens, oben positiv gepinnt.
   assert.doesNotMatch(
     settings,
-    /\.caldav-account-item\s*\{[^}]*border:\s*1px solid var\(--glass-border-subtle\)/,
+    /\.caldav-account-item\s*\{[^}]*border:\s*var\(--space-px\) solid var\(--glass-border-subtle\)/,
   );
 });
 
@@ -3646,4 +3646,96 @@ test('das einmalig sichtbare API-Token laesst sich kopieren', () => {
   // eigenen createIcons-Aufruf.
   assert.match(source, /window\.lucide\?\.createIcons\(\{ el: output \}\)/);
   assertKeysExistInEveryLocale(['settings.apiTokenCopy', 'settings.apiTokenCopied', 'email.saveFailed']);
+});
+
+// `housekeeping.deleteTaskConfirm` schrieb `{name}` statt `{{name}}` - in allen
+// 23 Locales. Der Loesch-Dialog der Haushaltshilfe zeigte woertlich
+// `Aufgabe "{name}" wirklich loeschen?` (public/pages/housekeeping.js:507).
+// Der Guard prueft die ganze Klasse, nicht den einen Key.
+test('kein Locale-String traegt einen einfach geklammerten Platzhalter', () => {
+  const offenders = [];
+  for (const file of readdirSync(new URL('../public/locales/', import.meta.url)).filter((f) => f.endsWith('.json'))) {
+    const data = JSON.parse(read(`../public/locales/${file}`));
+    const walk = (node, path) => {
+      for (const [key, value] of Object.entries(node)) {
+        const at = path ? `${path}.${key}` : key;
+        if (typeof value === 'string') {
+          // `{x}` ohne doppelte Klammern - t() interpoliert nur `{{x}}`.
+          const single = value.match(/(?<!\{)\{[a-zA-Z_][a-zA-Z0-9_]*\}(?!\})/g);
+          if (single) offenders.push(`${file}: ${at} -> ${single.join(', ')}`);
+        } else if (value && typeof value === 'object') {
+          walk(value, at);
+        }
+      }
+    };
+    walk(data, '');
+  }
+  assert.deepEqual(offenders, []);
+});
+
+test('settings.css haelt Zeilenlaenge, Token-Disziplin und keine toten Regeln', () => {
+  const css = read('../public/styles/settings.css');
+
+  // Fließtext lief ueber die volle Content-Spalte (gemessene 794-896px bei
+  // 1440px). Der Wert ist an echtem Satztext kalibriert, siehe Kommentar dort.
+  assert.match(
+    css,
+    /\.settings-page \.form-hint,\s*\.settings-page \.settings-card-description,\s*\.settings-page \.settings-leaf-header__description \{\s*max-width: 50ch;/,
+  );
+
+  // 23x `1px solid` gegen 21x `var(--space-px) solid` in derselben Datei.
+  assert.equal([...css.matchAll(/\b1px solid\b/g)].length, 0, 'Rahmenbreite kommt aus --space-px');
+
+  // Tote Regeln: der Mobile-Override auf einen Breadcrumb, der unter 768px
+  // `display: none` ist, und eine Klasse, die shell.js nie erzeugt.
+  // Auf den Selektor prüfen, nicht auf das Wort: der Kommentar an der Fundstelle
+  // nennt die entfernte Klasse absichtlich.
+  assert.ok(
+    !/^\s*\.settings-breadcrumb__current\b/m.test(css),
+    'shell.js erzeugt settings-breadcrumb__item--current, nicht __current',
+  );
+  const shell = read('../public/settings/shell.js');
+  for (const cls of ['settings-breadcrumb__item--current', 'settings-breadcrumb__link']) {
+    assert.ok(shell.includes(cls), `${cls} muss im Markup vorkommen, sonst ist die CSS-Regel tot`);
+  }
+
+  // Design-Werte gehoeren nicht ins JS.
+  const backup = read('../public/settings/pages/admin-backup.js');
+  assert.ok(!/\.style\.(opacity|color)\s*=/.test(backup), 'Tone/Opazitaet ueber Klassen, nicht inline');
+  assert.match(css, /\.form-hint--success \{ color: var\(--color-success\); \}/);
+  assert.match(css, /\.settings-page \.form-input:disabled \{/);
+});
+
+// Avatare tragen die Farbe, die sich das Mitglied selbst aussucht; die
+// Initialen standen darauf immer in Weiss. Gemessen 3,5:1 auf #ec4899 und
+// 2,8:1 auf #f97316 - noetig sind 4,5:1 (Critique 2026-07-27).
+test('Avatar-Initialen waehlen die lesbare Textfarbe', async () => {
+  const { contrastRatio, prefersInkText } = await import('../public/utils/contrast.js');
+
+  // Die beiden Befund-Farben wechseln auf dunkle Tinte und halten die Schwelle.
+  for (const bg of ['#ec4899', '#f97316']) {
+    assert.equal(prefersInkText(bg), true, `${bg} traegt Weiss nicht`);
+    assert.ok(contrastRatio(bg, '#000000') >= 4.5);
+  }
+
+  // Wo Weiss reicht, bleibt es Weiss: kein flaechendeckendes Umfaerben.
+  for (const bg of ['#7c3aed', '#2563eb']) {
+    assert.equal(prefersInkText(bg), false, `${bg} haelt die Schwelle mit Weiss`);
+    assert.ok(contrastRatio(bg, '#ffffff') >= 4.5);
+  }
+
+  // Nicht auswertbare Werte fallen auf die Standardfarbe der Komponente zurueck.
+  assert.equal(prefersInkText('var(--color-accent)'), false);
+  assert.equal(prefersInkText(null), false);
+  assert.equal(contrastRatio('#000000', '#ffffff'), 21);
+  // Kurzform-Hex muss dasselbe ergeben wie die Langform.
+  assert.equal(contrastRatio('#fff', '#000000'), contrastRatio('#ffffff', '#000000'));
+
+  // Und die Blaetter muessen die Utility auch benutzen.
+  for (const leaf of ['admin-family', 'personal-account', 'admin-permissions']) {
+    const source = read(`../public/settings/pages/${leaf}.js`);
+    assert.match(source, /import \{ prefersInkText \} from '\/utils\/contrast\.js'/, `${leaf} importiert sie nicht`);
+    assert.match(source, /prefersInkText\(/, `${leaf} ruft sie nicht auf`);
+  }
+  assert.match(read('../public/styles/settings.css'), /\.settings-avatar--ink,\s*\.perm-chip__avatar--ink \{\s*color: var\(--color-ink-on-bright\);/);
 });

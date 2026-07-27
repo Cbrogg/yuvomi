@@ -13,6 +13,7 @@
 import { api } from '/api.js';
 import { t } from '/i18n.js';
 import { esc } from '/utils/html.js';
+import { prefersInkText } from '/utils/contrast.js';
 import { confirmModal } from '/components/modal.js';
 import { createRetryState } from '/settings/components.js';
 
@@ -370,7 +371,8 @@ function renderSubjectSelector(container) {
       return `
         <button type="button" class="perm-chip${String(m.id) === String(state.subjectId) ? ' is-active' : ''}"
           data-user="${esc(m.id)}">
-          <span class="perm-chip__avatar" style="background:${esc(m.avatar_color) || 'var(--color-accent)'}">${
+          <span class="perm-chip__avatar${prefersInkText(m.avatar_color) ? ' perm-chip__avatar--ink' : ''}"
+            style="background:${esc(m.avatar_color) || 'var(--color-accent)'}">${
             m.avatar_data ? `<img src="${esc(m.avatar_data)}" alt="">` : esc(initials(m.display_name))
           }</span>
           <span class="perm-chip__name">${esc(m.display_name)}</span>${badge}

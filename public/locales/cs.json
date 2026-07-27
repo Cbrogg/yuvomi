@@ -2105,7 +2105,7 @@
         "taskUpdatedToast": "Úkol aktualizován",
         "taskDeletedToast": "Úkol smazán",
         "taskUndoneToast": "Splnění zrušeno",
-        "deleteTaskConfirm": "Opravdu smazat úkol \"{name}\"?",
+        "deleteTaskConfirm": "Opravdu smazat úkol \"{{name}}\"?",
         "reportTitle": "Nahlásit problém",
         "problemDescription": "Popis problému",
         "problemPlaceholder": "Příklad: Vadná žárovka",

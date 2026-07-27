@@ -2382,7 +2382,7 @@
         "taskUpdatedToast": "کار به‌روزرسانی شد",
         "taskDeletedToast": "کار حذف شد",
         "taskUndoneToast": "انجام لغو شد",
-        "deleteTaskConfirm": "آیا واقعاً کار «{name}» حذف شود؟",
+        "deleteTaskConfirm": "آیا واقعاً کار «{{name}}» حذف شود؟",
         "reportTitle": "گزارش مشکل",
         "problemDescription": "شرح مشکل",
         "problemPlaceholder": "مثال: لامپ سوخته است",

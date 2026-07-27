@@ -2378,7 +2378,7 @@
         "taskUpdatedToast": "Nhiệm vụ đã cập nhật",
         "taskDeletedToast": "Nhiệm vụ đã bị xóa",
         "taskUndoneToast": "Đã đặt lại trạng thái hoàn thành",
-        "deleteTaskConfirm": "Thực sự xóa nhiệm vụ \"{name}\"?",
+        "deleteTaskConfirm": "Thực sự xóa nhiệm vụ \"{{name}}\"?",
         "reportTitle": "Báo cáo sự cố",
         "problemDescription": "Mô tả sự cố",
         "problemPlaceholder": "Ví dụ: bóng đèn bị cháy",

@@ -2378,7 +2378,7 @@
         "taskUpdatedToast": "Tarefa atualizada",
         "taskDeletedToast": "Tarefa excluída",
         "taskUndoneToast": "Conclusão desfeita",
-        "deleteTaskConfirm": "Excluir a tarefa \"{name}\"?",
+        "deleteTaskConfirm": "Excluir a tarefa \"{{name}}\"?",
         "reportTitle": "Reportar problema",
         "problemDescription": "Descrição do problema",
         "problemPlaceholder": "Ex: lâmpada queimada",

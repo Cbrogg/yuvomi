@@ -6,6 +6,7 @@ import {
   t,
 } from '/i18n.js';
 import { esc } from '/utils/html.js';
+import { prefersInkText } from '/utils/contrast.js';
 import { openModal, closeModal, confirmModal } from '/components/modal.js';
 import { createRetryState, toggleRowHtml } from '/settings/components.js';
 
@@ -39,8 +40,11 @@ function avatarHtml(user, className = 'settings-avatar') {
   const safeName = esc(user?.display_name || '');
   const fallback = esc(initials(user?.display_name || ''));
   const background = esc(user?.avatar_color) || 'var(--color-accent)';
+  // Die Farbe waehlt das Mitglied selbst; auf hellen Toenen lagen die weissen
+  // Initialen bei 3,5:1 und 2,8:1 (Critique 2026-07-27).
+  const inkClass = prefersInkText(user?.avatar_color) ? ' settings-avatar--ink' : '';
   return `
-    <div class="${className}" style="background:${background}" title="${safeName}">
+    <div class="${className}${inkClass}" style="background:${background}" title="${safeName}">
       ${user?.avatar_data ? `<img src="${esc(user.avatar_data)}" alt="${safeName}" loading="lazy">` : fallback}
     </div>
   `;

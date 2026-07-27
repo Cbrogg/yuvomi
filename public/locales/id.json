@@ -2382,7 +2382,7 @@
         "taskUpdatedToast": "Tugas diperbarui",
         "taskDeletedToast": "Tugas dihapus",
         "taskUndoneToast": "Penyelesaian dibatalkan",
-        "deleteTaskConfirm": "Benar-benar hapus tugas \"{name}\"?",
+        "deleteTaskConfirm": "Benar-benar hapus tugas \"{{name}}\"?",
         "reportTitle": "Laporkan masalah",
         "problemDescription": "Deskripsi masalah",
         "problemPlaceholder": "Contoh: Bola lampu rusak",

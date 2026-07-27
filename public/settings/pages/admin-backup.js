@@ -351,7 +351,6 @@ async function loadWebdavConfig(container) {
         if (el) {
           el.readOnly = true;
           el.disabled = true;
-          el.style.opacity = '0.6';
         }
       });
       const hint = form.querySelector('#webdav-test-result');
@@ -410,14 +409,12 @@ function bindWebdavBackupEvents(container) {
       const res = await api.post('/backup/webdav/test', overrides);
       if (resultEl) {
         resultEl.textContent = t('settings.backupWebdavTestSuccess', { files: res.data?.files ?? 0 });
-        resultEl.className = 'form-hint';
-        resultEl.style.color = 'var(--color-success)';
+        resultEl.className = 'form-hint form-hint--success';
       }
     } catch (err) {
       if (resultEl) {
         resultEl.textContent = t('settings.backupWebdavTestFailed', { error: err.message });
-        resultEl.className = 'form-hint';
-        resultEl.style.color = 'var(--color-danger)';
+        resultEl.className = 'form-hint form-hint--danger';
       }
     } finally {
       testBtn.disabled = false;

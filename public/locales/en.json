@@ -2378,7 +2378,7 @@
         "taskUpdatedToast": "Task updated",
         "taskDeletedToast": "Task deleted",
         "taskUndoneToast": "Completion reset",
-        "deleteTaskConfirm": "Really delete task \"{name}\"?",
+        "deleteTaskConfirm": "Really delete task \"{{name}}\"?",
         "reportTitle": "Report a problem",
         "problemDescription": "Problem description",
         "problemPlaceholder": "Example: burnt-out light bulb",

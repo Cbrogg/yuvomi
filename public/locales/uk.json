@@ -2378,7 +2378,7 @@
         "taskUpdatedToast": "Завдання оновлено",
         "taskDeletedToast": "Завдання видалено",
         "taskUndoneToast": "Виконання скасовано",
-        "deleteTaskConfirm": "Видалити завдання \"{name}\"?",
+        "deleteTaskConfirm": "Видалити завдання \"{{name}}\"?",
         "reportTitle": "Повідомте про проблему",
         "problemDescription": "Опис проблеми",
         "problemPlaceholder": "Приклад: перегоріла лампочка",

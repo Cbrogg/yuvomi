@@ -2382,7 +2382,7 @@
         "taskUpdatedToast": "Aufgabe aktualisiert",
         "taskDeletedToast": "Aufgabe gelöscht",
         "taskUndoneToast": "Erledigung zurückgesetzt",
-        "deleteTaskConfirm": "Aufgabe \"{name}\" wirklich löschen?",
+        "deleteTaskConfirm": "Aufgabe \"{{name}}\" wirklich löschen?",
         "reportTitle": "Problem melden",
         "problemDescription": "Problembeschreibung",
         "problemPlaceholder": "Beispiel: Glühbirne defekt",

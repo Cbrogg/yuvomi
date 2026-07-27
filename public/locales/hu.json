@@ -2378,7 +2378,7 @@
         "taskUpdatedToast": "Feladat frissítve",
         "taskDeletedToast": "Feladat törölve",
         "taskUndoneToast": "Feladat visszaállítva",
-        "deleteTaskConfirm": "Biztosan törölni szeretné a(z) \"{name}\" feladatot?",
+        "deleteTaskConfirm": "Biztosan törölni szeretné a(z) \"{{name}}\" feladatot?",
         "reportTitle": "Probléma jelentése",
         "problemDescription": "Probléma leírása",
         "problemPlaceholder": "Példa: kiégett villanykörte",

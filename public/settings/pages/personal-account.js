@@ -5,6 +5,7 @@ import {
   t,
 } from '/i18n.js';
 import { esc } from '/utils/html.js';
+import { prefersInkText } from '/utils/contrast.js';
 
 const MAX_AVATAR_DATA_LENGTH = 768 * 1024;
 
@@ -22,8 +23,9 @@ function avatarHtml(user, className = 'settings-avatar') {
   const safeName = esc(user?.display_name || '');
   const fallback = esc(initials(user?.display_name || ''));
   const background = esc(user?.avatar_color) || 'var(--color-accent)';
+  const inkClass = prefersInkText(user?.avatar_color) ? ' settings-avatar--ink' : '';
   return `
-    <div class="${className}" style="background:${background}" title="${safeName}">
+    <div class="${className}${inkClass}" style="background:${background}" title="${safeName}">
       ${user?.avatar_data ? `<img src="${esc(user.avatar_data)}" alt="${safeName}" loading="lazy">` : fallback}
     </div>
   `;
