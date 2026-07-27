@@ -535,7 +535,9 @@ function renderShell(container) {
     <section class="settings-section perm-page">
       <p class="settings-section__intro">${esc(t('settings.permIntro'))}</p>
 
-      <div class="perm-modeswitch" role="tablist" aria-label="${esc(t('settings.permTitle'))}">
+      <!-- Trug bis zum Copy-Durchgang den Seitentitel als Label: der beschreibt
+           die Seite, nicht die Umschaltung (Critique 2026-07-27). -->
+      <div class="perm-modeswitch" role="tablist" aria-label="${esc(t('settings.permModeLabel'))}">
         <button type="button" class="perm-modeswitch__btn is-active" role="tab" aria-selected="true" data-mode="role">
           <i data-lucide="users-round" aria-hidden="true"></i>${esc(t('settings.permByRole'))}
         </button>
