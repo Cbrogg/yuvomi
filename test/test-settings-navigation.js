@@ -42,7 +42,7 @@ import {
 } from '../public/settings/currency.js';
 import {
   isConnectedWeatherControl,
-} from '../public/settings/pages/modules-dashboard.js';
+} from '../public/settings/pages/admin-weather.js';
 import {
   persistMealTypeSelection,
 } from '../public/settings/pages/modules-kitchen.js';
@@ -98,9 +98,23 @@ function getTranslation(locale, key) {
 }
 
 test('settings leaves have unique IDs and paths', () => {
-  assert.equal(SETTINGS_LEAVES.length, 24);
   assert.equal(new Set(SETTINGS_LEAVES.map((leaf) => leaf.id)).size, SETTINGS_LEAVES.length);
   assert.equal(new Set(SETTINGS_LEAVES.map((leaf) => leaf.path)).size, SETTINGS_LEAVES.length);
+});
+
+test('die Blätter verteilen sich wie beschlossen auf die vier Domänen', () => {
+  // Statt einer nackten Gesamtzahl: die Verteilung ist die IA-Aussage. Der
+  // Critique 2026-07-27 fand sie unbalanciert (personal 5 / modules 8 / sync 3 /
+  // documents 2 / admin 6) - `documents` ist aufgelöst, `modules` von acht auf
+  // vier geschrumpft, und was per-user schreibt, liegt bei `personal`.
+  const perDomain = {};
+  for (const leaf of SETTINGS_LEAVES) perDomain[leaf.domainId] = (perDomain[leaf.domainId] ?? 0) + 1;
+  assert.deepEqual(perDomain, { personal: 7, modules: 4, sync: 5, admin: 7 });
+  // Jedes Blatt hängt an einer existierenden Domäne.
+  const domainIds = new Set(SETTINGS_DOMAINS.map((domain) => domain.id));
+  for (const leaf of SETTINGS_LEAVES) {
+    assert.ok(domainIds.has(leaf.domainId), `${leaf.id}: unbekannte Domäne "${leaf.domainId}"`);
+  }
 });
 
 test('settings registry is immutable', () => {
@@ -116,6 +130,7 @@ test('personal settings leaf modules import without browser globals', async () =
     import('/settings/pages/personal-appearance.js'),
     import('/settings/pages/personal-device.js'),
     import('/settings/pages/personal-weather.js'),
+    import('/settings/pages/personal-calendar.js'),
   ]);
 
   for (const module of modules) {
@@ -241,11 +256,50 @@ test('verschobene Blatt-Pfade landen am neuen Ort statt beim Fallback', () => {
   assert.equal(findSettingsLeaf('/settings/documents/storage', member), null);
 });
 
+test('das aufgelöste Übersicht-Blatt landet beim Haushalts-Wetter', () => {
+  // "Übersicht" trug Haushalts-Wetter und App-Name, aber keinen einzigen
+  // Widget-Schalter (Critique 2026-07-27). Der App-Name sitzt jetzt bei den
+  // Systemangaben, das Wetter in einem eigenen Blatt; der Alt-Pfad zeigt dorthin.
+  assert.equal(currentSettingsPath('/settings/modules/dashboard'), '/settings/admin/weather');
+  assert.equal(findSettingsLeaf('/settings/modules/dashboard', admin)?.id, 'admin-weather');
+  assert.equal(findSettingsLeaf('/settings/modules/dashboard', member), null);
+  assert.equal(SETTINGS_LEAVES.some((leaf) => leaf.id === 'modules-dashboard'), false);
+});
+
+test('Mitglieder erreichen ihre eigenen Termin-Vorgaben', () => {
+  // calendar_default_reminders und calendar_default_assign_me schreiben per
+  // cfgUserSet pro Nutzer, lagen aber hinter dem adminOnly-Kalenderblatt
+  // (Critique 2026-07-27).
+  const leaf = SETTINGS_LEAVES.find((entry) => entry.id === 'personal-calendar');
+  assert.equal(leaf.domainId, 'personal');
+  assert.equal(leaf.adminOnly, false);
+  assert.equal(findSettingsLeaf('/settings/personal/calendar', member)?.id, 'personal-calendar');
+  // Das haushaltweite Kalenderblatt bleibt adminOnly.
+  assert.equal(findSettingsLeaf('/settings/modules/calendar', member), null);
+});
+
+test('drei Ein-Schalter-Blätter teilen sich jetzt eines', () => {
+  // Budget, Gesundheit und Haushaltshilfe trugen zusammen drei Checkboxen und
+  // kosteten drei Sidebar-Einträge und drei Requests (Critique 2026-07-27).
+  for (const legacyPath of [
+    '/settings/modules/budget',
+    '/settings/modules/health',
+    '/settings/modules/housekeeping',
+  ]) {
+    assert.equal(currentSettingsPath(legacyPath), '/settings/modules/options');
+    assert.equal(findSettingsLeaf(legacyPath, admin)?.id, 'modules-options');
+    assert.equal(findSettingsLeaf(legacyPath, member), null);
+  }
+});
+
 test('legacy settings tabs migrate to their new destinations', () => {
   assert.equal(migrateLegacySettingsTab('general'), '/settings/personal/appearance');
   assert.equal(migrateLegacySettingsTab('shopping'), '/shopping?manage=categories');
   assert.equal(migrateLegacySettingsTab('sync'), '/settings/sync/calendar');
   assert.equal(migrateLegacySettingsTab('backup'), '/settings/admin/backup');
+  // Ein Alt-Tab muss am heutigen Blatt ankommen, nicht am Zwischenstand von
+  // 2026-06: der Budget-Tab zeigte auf ein Blatt, das seither aufgegangen ist.
+  assert.equal(migrateLegacySettingsTab('budget'), '/settings/modules/options');
 });
 
 test('legacy settings migration covers every previous tab', () => {
@@ -257,7 +311,7 @@ test('legacy settings migration covers every previous tab', () => {
     {
       general: '/settings/personal/appearance',
       meals: '/settings/modules/kitchen',
-      budget: '/settings/modules/budget',
+      budget: '/settings/modules/options',
       shopping: '/shopping?manage=categories',
       calendar: '/settings/modules/calendar',
       sync: '/settings/sync/calendar',

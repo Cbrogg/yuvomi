@@ -16,6 +16,9 @@
  * Begriff nur read-only anzeigt, besteht ihn. Er fängt die stärkere Klasse:
  * Begriffe, die auf dem Blatt überhaupt nicht auftauchen.
  *
+ * Seit dem IA-Umbau gilt er ohne Ausnahmeliste: die vier Blätter, die ihn beim
+ * Aufsetzen brachen, sind aufgelöst oder zusammengelegt.
+ *
  * Ausführen: node test/test-settings-copy.js
  */
 import assert from 'node:assert/strict';
@@ -26,18 +29,6 @@ import { SETTINGS_LEAVES } from '../public/settings/registry.js';
 
 const de = JSON.parse(readFileSync(new URL('../public/locales/de.json', import.meta.url), 'utf8'));
 const translate = (key) => key.split('.').reduce((value, segment) => value?.[segment], de);
-
-/**
- * Blätter, deren Identität der IA-Umbau auflöst oder zusammenlegt. Ihre
- * Descriptions werden dort neu geschrieben, nicht hier. Die Liste darf nur
- * schrumpfen - jeder Eintrag ist offene Schuld, kein Dauerzustand.
- */
-const PENDING_IA_REWRITE = new Set([
-  'modules-dashboard',   // "Übersicht: Widgets und Aufbau anpassen" -> hat keine Widget-Controls
-  'admin-system',        // Description verspricht "Admin-Optionen", Blatt ist read-only
-  'modules-budget',      // "wiederkehrende Buchungen und Zahlungen" -> ein Toggle
-  'modules-housekeeping', // "Personal und Vorräte" -> ein Toggle
-]);
 
 const SENTENCE_SPLIT = /[.!?]+\s+/;
 // Deutsche Substantive sind großgeschrieben. Das erste Wort eines Satzes ist
@@ -99,7 +90,6 @@ test('jede Leaf-Description endet mit einem Satzschlusszeichen', () => {
 test('jedes Substantiv einer Leaf-Description kommt im Blatt-Inhalt vor', () => {
   const failures = [];
   for (const leaf of SETTINGS_LEAVES) {
-    if (PENDING_IA_REWRITE.has(leaf.id)) continue;
     const description = translate(leaf.descriptionKey);
     const vocabulary = renderedVocabulary(leaf);
     for (const noun of descriptionNouns(description)) {
@@ -109,12 +99,4 @@ test('jedes Substantiv einer Leaf-Description kommt im Blatt-Inhalt vor', () => 
     }
   }
   assert.deepEqual(failures, []);
-});
-
-test('die IA-Ausnahmeliste enthält nur existierende Blätter', () => {
-  // Verhindert, dass die Liste nach dem Umbau als toter Ballast überlebt.
-  const ids = new Set(SETTINGS_LEAVES.map((leaf) => leaf.id));
-  for (const id of PENDING_IA_REWRITE) {
-    assert.ok(ids.has(id), `Ausnahmeliste nennt unbekanntes Blatt "${id}"`);
-  }
 });

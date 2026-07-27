@@ -378,9 +378,7 @@ test('module-specific settings leaves exist and export async render functions', 
   const files = [
     '../public/settings/pages/modules-kitchen.js',
     '../public/settings/pages/modules-calendar.js',
-    '../public/settings/pages/modules-budget.js',
-    '../public/settings/pages/modules-housekeeping.js',
-    '../public/settings/pages/modules-dashboard.js',
+    '../public/settings/pages/modules-options.js',
   ];
 
   for (const file of files) {
@@ -408,8 +406,6 @@ test('module-specific settings leaves only reference their owned preferences and
       ],
       preferences: [
         'calendar_default_duration',
-        'calendar_default_reminders',
-        'calendar_default_assign_me',
         'week_start',
         'holiday_country',
         'holiday_subdivision',
@@ -421,25 +417,9 @@ test('module-specific settings leaves only reference their owned preferences and
         'holiday_last_sync',
       ],
     },
-    '../public/settings/pages/modules-budget.js': {
+    '../public/settings/pages/modules-options.js': {
       endpoints: ['/preferences'],
-      preferences: ['budget_mode'],
-    },
-    '../public/settings/pages/modules-housekeeping.js': {
-      endpoints: ['/preferences'],
-      preferences: ['housekeeping_payment_tasks'],
-    },
-    '../public/settings/pages/modules-dashboard.js': {
-      endpoints: ['/preferences'],
-      preferences: [
-        'app_name',
-        'weather_provider',
-        'weather_lat',
-        'weather_lon',
-        'weather_city',
-        'weather_units',
-        'weather_auto_locate',
-      ],
+      preferences: ['budget_mode', 'health_cycle_enabled', 'housekeeping_payment_tasks'],
     },
   };
 
@@ -495,6 +475,10 @@ test('module-specific settings leaves preserve their required controls and behav
   assert.match(calendar, /api\.get\('\/preferences\/holidays\/countries'\)/);
   assert.match(calendar, /api\.get\(`\/preferences\/holidays\/subdivisions\/\$\{countryCode\}`\)/);
   assert.match(calendar, /api\.post\('\/preferences\/holidays\/sync', \{\}\)/);
+  // Die per-user-Vorgaben sind nach personal-calendar gezogen; hier bleibt nur
+  // Haushaltweites plus der Verweis dorthin (Critique 2026-07-27).
+  assert.doesNotMatch(calendar, /id="calendar-default-assign-me"|js-default-reminder/);
+  assert.match(calendar, /\/settings\/personal\/calendar/);
   assert.doesNotMatch(calendar, /caldav|carddav|google|apple|subscriptions|sync accounts/i);
   assert.doesNotMatch(calendar, /#[0-9a-f]{6}/i);
   assert.match(calendar, /id="holiday-country" disabled/);
@@ -504,46 +488,20 @@ test('module-specific settings leaves preserve their required controls and behav
     'Calendar must bind submit handling before loading holiday discovery data',
   );
 
-  const budget = read('../public/settings/pages/modules-budget.js');
-  // Currency moved to the unified Region/Format control in personal-appearance;
-  // the budget leaf keeps a pointer card to it. Since #476/#505 it also owns the
-  // admin-only household budget-mode toggle (personal vs. shared budgets).
-  assert.doesNotMatch(budget, /id="currency-select"/);
-  assert.match(budget, /\/settings\/personal\/appearance/);
-  assert.match(budget, /id="budget-mode-personal"/);
-  assert.match(budget, /budget_mode: modeToggle\.checked \? 'personal' : 'shared'/);
-  // Only the budget-mode toggle is a form control; it is admin-gated in markup.
-  assert.equal([...budget.matchAll(/<(?:input|select|textarea)\b/g)].length, 1);
-
-  const housekeeping = read('../public/settings/pages/modules-housekeeping.js');
-  assert.match(housekeeping, /id="housekeeping-payment-tasks"/);
-  assert.match(
-    housekeeping,
-    /api\.put\('\/preferences', \{ housekeeping_payment_tasks: toggle\.checked \}\)/,
-  );
-  assert.equal([...housekeeping.matchAll(/<(?:input|select|textarea)\b/g)].length, 1);
-
-  const dashboard = read('../public/settings/pages/modules-dashboard.js');
-  for (const id of [
-    'weather-lat',
-    'weather-lon',
-    'weather-city',
-    'weather-units',
-    'app-name-input',
-  ]) {
-    assert.match(dashboard, new RegExp(`id="${id}"`));
+  // Budget, Gesundheit und Haushaltshilfe hatten je ein Blatt für je eine
+  // Checkbox (Critique 2026-07-27). Sie teilen sich jetzt eines - mit genau
+  // diesen drei Schaltern und einem einzigen /preferences-Request statt dreien.
+  const options = read('../public/settings/pages/modules-options.js');
+  for (const id of ['budget-mode-personal', 'health-cycle-enabled', 'housekeeping-payment-tasks']) {
+    assert.match(options, new RegExp(`id="${id}"`));
   }
-  assert.match(dashboard, /weather_provider: 'open-meteo'/);
-  assert.match(dashboard, /weather_provider: null/);
-  assert.match(dashboard, /latitude >= -90/);
-  assert.match(dashboard, /latitude <= 90/);
-  assert.match(dashboard, /longitude >= -180/);
-  assert.match(dashboard, /longitude <= 180/);
-  assert.match(dashboard, /localStorage\.setItem\(key, value\)/);
-  assert.match(dashboard, /localStorage\.removeItem\(key\)/);
-  assert.match(dashboard, /new CustomEvent\('app-name-changed'/);
-  assert.match(dashboard, /window\.yuvomi\?\.showToast/);
-  assert.match(dashboard, /await render\(container, \{ user \}\)/);
+  assert.equal([...options.matchAll(/<(?:input|select|textarea)\b/g)].length, 3);
+  assert.equal([...options.matchAll(/api\.get\('\/preferences'\)/g)].length, 1);
+  assert.match(options, /budget_mode: checked \? 'personal' : 'shared'/);
+  // Die Währung sitzt in der vereinheitlichten Region/Format-Karte; das Blatt
+  // trägt nur noch den Verweis dorthin, keine eigene Auswahl.
+  assert.doesNotMatch(options, /id="currency-select"/);
+  assert.match(options, /\/settings\/personal\/appearance/);
 });
 
 test('synchronization-by-data-type leaves exist and export async render functions', () => {
@@ -812,6 +770,7 @@ test('administration-domain leaves exist and export async render functions', () 
     '../public/settings/pages/admin-family.js',
     '../public/settings/pages/admin-api.js',
     '../public/settings/pages/admin-backup.js',
+    '../public/settings/pages/admin-weather.js',
     '../public/settings/pages/admin-system.js',
   ];
 
@@ -886,7 +845,45 @@ test('admin-backup leaf owns database + WebDAV backup without document storage',
   assert.doesNotMatch(source, /\/version/);
 });
 
-test('admin-system leaf reads /version and renders safe translated rows only', () => {
+test('personal-calendar leaf owns only the per-user event defaults', () => {
+  const source = read('../public/settings/pages/personal-calendar.js');
+
+  assert.match(source, /id="calendar-default-assign-me"/);
+  assert.match(source, /id="calendar-default-reminders"/);
+  assert.match(source, /api\.put\('\/preferences', \{ calendar_default_assign_me: value \}\)/);
+  assert.match(source, /api\.put\('\/preferences', \{ calendar_default_reminders: selected \}\)/);
+  // Die Grenze muss auf dem Blatt stehen, sonst erklärt nichts, warum
+  // Standarddauer und Wochenstart hier fehlen.
+  assert.match(source, /settings\.calendarDefaultsScopeHint/);
+
+  // Haushaltweites bleibt im adminOnly-Kalenderblatt.
+  assert.doesNotMatch(source, /week_start|calendar_default_duration|holiday_/);
+});
+
+test('admin-weather leaf owns the household default location', () => {
+  const source = read('../public/settings/pages/admin-weather.js');
+
+  for (const id of ['weather-lat', 'weather-lon', 'weather-city', 'weather-units']) {
+    assert.match(source, new RegExp(`id="${id}"`));
+  }
+  assert.match(source, /weather_provider: 'open-meteo'/);
+  assert.match(source, /weather_provider: null/);
+  assert.match(source, /latitude >= -90/);
+  assert.match(source, /latitude <= 90/);
+  assert.match(source, /longitude >= -180/);
+  assert.match(source, /longitude <= 180/);
+  assert.match(source, /window\.yuvomi\?\.showToast/);
+  assert.match(source, /await render\(container, \{ user \}\)/);
+  // Die Vorrangregel muss auf dem Blatt stehen: personal-weather überschreibt
+  // diesen Standort, und ohne den Hinweis erklärt das nichts (Critique 2026-07-27).
+  assert.match(source, /settings\.householdWeatherOverrideHint/);
+
+  // Der Anwendungsname ist beim IA-Umbau zu admin-system gewandert.
+  assert.doesNotMatch(source, /app_name|app-name-input|APP_NAME_STORAGE_KEY/);
+  assert.doesNotMatch(source, /\/version/);
+});
+
+test('admin-system leaf owns the app name next to the read-only version rows', () => {
   const source = read('../public/settings/pages/admin-system.js');
 
   assert.match(source, /api\.get\('\/version'\)/);
@@ -894,10 +891,21 @@ test('admin-system leaf reads /version and renders safe translated rows only', (
   assert.match(source, /MIT/);
   assert.match(source, /setup_required/);
 
-  // System leaf is read-only: no other backend domains, no secrets.
+  // Der Anwendungsname lag in "Übersicht", während die Description dieses Blatts
+  // ihn versprach und nur read-only zeigte (Critique 2026-07-27).
+  assert.match(source, /id="app-name-input"/);
+  assert.match(source, /api\.put\('\/preferences', \{ app_name: value \}\)/);
+  assert.match(source, /new CustomEvent\('app-name-changed'/);
+  assert.match(source, /localStorage\.setItem\(key, value\)/);
+  assert.match(source, /localStorage\.removeItem\(key\)/);
+  // Die read-only Zeile daneben wäre der gleiche Wert zweimal auf einer Seite.
+  assert.doesNotMatch(source, /systemAppNameLabel/);
+
+  // System leaf owns no other backend domain and no secrets.
   assert.doesNotMatch(source, /\/documents\//);
   assert.doesNotMatch(source, /\/backup\//);
   assert.doesNotMatch(source, /\/auth\/api-tokens/);
+  assert.doesNotMatch(source, /weather_/);
 });
 
 test('Shopping uses the shared category manager component (Audit F-15)', () => {

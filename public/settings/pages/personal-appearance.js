@@ -112,6 +112,21 @@ function renderLoadError(container) {
   `);
 }
 
+/**
+ * Region, Währung, Datums- und Zeitformat bleiben eine Gruppe, obwohl sie sich
+ * in der Berechtigung teilen: Region und Währung schreiben nur Admins, die
+ * beiden Formate darf jedes Mitglied ändern (`server/routes/preferences.js:351`
+ * dokumentiert das ausdrücklich). Zwei Gründe gegen eine Trennung:
+ *
+ * 1. Der Region-Select setzt die anderen drei Werte mit (`syncRegionSelect` /
+ *    `detectRegion`) - auseinandergezogen reißt das #486 wieder auf.
+ * 2. Die ganze Gruppe nach `admin` zu schieben nähme Mitgliedern genau das
+ *    Formatändern, das die Route ihnen gewährt.
+ *
+ * Der Preis ist, dass ein "persönliches" Blatt vier haushaltweite Werte
+ * schreibt. Das trägt die Copy (`regionAdminOnly`, `formatsHouseholdHint`),
+ * nicht die Struktur (Critique 2026-07-27).
+ */
 function renderPage(container, preferences, isAdmin) {
   const theme = currentTheme();
   const activeRegion = resolveRegion(preferences);

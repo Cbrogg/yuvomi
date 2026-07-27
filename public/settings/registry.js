@@ -52,6 +52,20 @@ export const SETTINGS_LEAVES = freezeEntries([
     loader: () => import('/settings/pages/notifications.js'),
   },
   {
+    // `calendar_default_reminders` und `calendar_default_assign_me` schreiben
+    // per `cfgUserSet` pro Nutzer, lagen aber im adminOnly-`modules-calendar`
+    // (Critique 2026-07-27). Wochenstart, Standarddauer und Feiertage bleiben
+    // dort: die gelten haushaltweit.
+    id: 'personal-calendar',
+    domainId: 'personal',
+    path: '/settings/personal/calendar',
+    labelKey: 'settings.pageCalendarDefaults',
+    descriptionKey: 'settings.pageCalendarDefaultsDescription',
+    icon: 'calendar-clock',
+    adminOnly: false,
+    loader: () => import('/settings/pages/personal-calendar.js'),
+  },
+  {
     id: 'personal-weather',
     domainId: 'personal',
     path: '/settings/personal/weather',
@@ -96,24 +110,17 @@ export const SETTINGS_LEAVES = freezeEntries([
     loader: () => import('/settings/pages/modules-calendar.js'),
   },
   {
-    id: 'modules-budget',
+    // Budget, Gesundheit und Haushaltshilfe hatten je ein eigenes Blatt für je
+    // eine Checkbox - drei Sidebar-Einträge und drei Requests für drei Schalter
+    // (Critique 2026-07-27).
+    id: 'modules-options',
     domainId: 'modules',
-    path: '/settings/modules/budget',
-    labelKey: 'settings.pageBudgetModule',
-    descriptionKey: 'settings.pageBudgetModuleDescription',
-    icon: 'wallet',
+    path: '/settings/modules/options',
+    labelKey: 'settings.pageModuleOptions',
+    descriptionKey: 'settings.pageModuleOptionsDescription',
+    icon: 'sliders-horizontal',
     adminOnly: true,
-    loader: () => import('/settings/pages/modules-budget.js'),
-  },
-  {
-    id: 'modules-housekeeping',
-    domainId: 'modules',
-    path: '/settings/modules/housekeeping',
-    labelKey: 'settings.pageHousekeepingModule',
-    descriptionKey: 'settings.pageHousekeepingModuleDescription',
-    icon: 'sparkles',
-    adminOnly: true,
-    loader: () => import('/settings/pages/modules-housekeeping.js'),
+    loader: () => import('/settings/pages/modules-options.js'),
   },
   {
     id: 'modules-rewards',
@@ -124,26 +131,6 @@ export const SETTINGS_LEAVES = freezeEntries([
     icon: 'award',
     adminOnly: true,
     loader: () => import('/settings/pages/modules-rewards.js'),
-  },
-  {
-    id: 'modules-health',
-    domainId: 'modules',
-    path: '/settings/modules/health',
-    labelKey: 'settings.pageHealthModule',
-    descriptionKey: 'settings.pageHealthModuleDescription',
-    icon: 'heart-pulse',
-    adminOnly: true,
-    loader: () => import('/settings/pages/modules-health.js'),
-  },
-  {
-    id: 'modules-dashboard',
-    domainId: 'modules',
-    path: '/settings/modules/dashboard',
-    labelKey: 'settings.pageDashboardApp',
-    descriptionKey: 'settings.pageDashboardAppDescription',
-    icon: 'layout-dashboard',
-    adminOnly: true,
-    loader: () => import('/settings/pages/modules-dashboard.js'),
   },
   {
     id: 'sync-calendar',
@@ -219,6 +206,20 @@ export const SETTINGS_LEAVES = freezeEntries([
     loader: () => import('/settings/pages/admin-permissions.js'),
   },
   {
+    // Der Haushalts-Standardstandort lag als "Übersicht" in `modules` und trug
+    // dort keine einzige Widget-Einstellung (Critique 2026-07-27). Er ist eine
+    // haushaltweite Ressource, also Administration - das Gegenstück je Mitglied
+    // ist `personal-weather`.
+    id: 'admin-weather',
+    domainId: 'admin',
+    path: '/settings/admin/weather',
+    labelKey: 'settings.pageHouseholdWeather',
+    descriptionKey: 'settings.pageHouseholdWeatherDescription',
+    icon: 'cloud-sun',
+    adminOnly: true,
+    loader: () => import('/settings/pages/admin-weather.js'),
+  },
+  {
     id: 'admin-api',
     domainId: 'admin',
     path: '/settings/admin/api',
@@ -286,6 +287,13 @@ const RENAMED_SETTINGS_PATHS = Object.freeze({
   '/settings/documents/dms': '/settings/sync/dms',
   // Navigation ist überwiegend eine persönliche Einstellung, siehe Leaf-Kommentar.
   '/settings/modules/navigation': '/settings/personal/navigation',
+  // `modules-dashboard` aufgelöst: der Anwendungsname sitzt jetzt bei den
+  // Systemangaben, der Haushalts-Standardstandort in einem eigenen Blatt.
+  '/settings/modules/dashboard': '/settings/admin/weather',
+  // Drei Blätter für drei Checkboxen zu einem zusammengelegt.
+  '/settings/modules/budget': '/settings/modules/options',
+  '/settings/modules/health': '/settings/modules/options',
+  '/settings/modules/housekeeping': '/settings/modules/options',
 });
 
 export function filterSettingsDomains(user) {
@@ -324,7 +332,11 @@ export function resolveSettingsDestination(path, user, storedPath) {
 }
 
 export function migrateLegacySettingsTab(value) {
-  return LEGACY_SETTINGS_PATHS[value] ?? null;
+  const legacy = LEGACY_SETTINGS_PATHS[value];
+  // Die Tabelle bleibt historisch (Tab-Name -> Blatt von damals); dass ein Blatt
+  // seither weitergezogen ist, weiß nur `currentSettingsPath`. Ohne diesen
+  // Durchlauf käme ein Alt-Tab am Zwischenstand von 2026-06 an.
+  return legacy ? currentSettingsPath(legacy) : null;
 }
 
 export function readStoredSettingsDestination(user, storage = sessionStorage) {

@@ -41,60 +41,11 @@ function durationOptionLabel(minutes) {
   return t('settings.calendarDurationMinutes', { count: minutes });
 }
 
-// Standard-Erinnerungs-Offsets (Minuten) für neue Termine (#497). Labels aus dem
-// bestehenden reminders.offset*-Wortschatz (kein neuer Übersetzungsbedarf dafür).
-const DEFAULT_REMINDER_OPTIONS = [
-  { value: 0,     labelKey: 'reminders.offsetAtTime' },
-  { value: 15,    labelKey: 'reminders.offset15min' },
-  { value: 60,    labelKey: 'reminders.offset1hour' },
-  { value: 1440,  labelKey: 'reminders.offset1day' },
-  { value: 2880,  labelKey: 'reminders.offset2days' },
-  { value: 10080, labelKey: 'reminders.offset1week' },
-  { value: 20160, labelKey: 'reminders.offset2weeks' },
-];
-const MAX_DEFAULT_REMINDERS = 5;
-
-// Kleiner lokaler Debounce (kein geteilter Util im Projekt): koaleziert schnelle
-// Mehrfach-Auswahl zu einem einzigen Speichern + einem Toast.
-function debounce(fn, ms) {
-  let timer = null;
-  return (...args) => {
-    clearTimeout(timer);
-    timer = setTimeout(() => fn(...args), ms);
-  };
-}
-
-function defaultRemindersCardHtml(preferences) {
-  const selected = new Set(
-    Array.isArray(preferences.calendar_default_reminders) ? preferences.calendar_default_reminders.map(Number) : []
-  );
-  const assignMe = !!preferences.calendar_default_assign_me;
-  const checkboxes = DEFAULT_REMINDER_OPTIONS.map((o) => `
-    <label class="reminder-preset">
-      <input type="checkbox" class="js-default-reminder" value="${o.value}"${selected.has(o.value) ? ' checked' : ''}>
-      <span>${esc(t(o.labelKey))}</span>
-    </label>`).join('');
-  return `
-    <div class="settings-card">
-      <h3 class="settings-card__title">${t('settings.calendarDefaultsTitle')}</h3>
-      <p class="settings-card-description">${t('settings.calendarDefaultsDescription')}</p>
-
-      <div class="form-group">
-        <label class="toggle-row">
-          <input type="checkbox" id="calendar-default-assign-me"${assignMe ? ' checked' : ''}>
-          <span>${t('settings.calendarAssignMeLabel')}</span>
-        </label>
-      </div>
-
-      <div class="form-group">
-        <span class="form-label" id="calendar-default-reminders-label">${t('settings.calendarDefaultRemindersLabel')}</span>
-        <p class="settings-card-description">${t('settings.calendarDefaultRemindersHint')}</p>
-        <div id="calendar-default-reminders" class="reminder-preset-group" role="group" aria-labelledby="calendar-default-reminders-label">
-          ${checkboxes}
-        </div>
-      </div>
-    </div>`;
-}
+// Die per-user-Vorgaben für neue Termine (#497) sitzen in `personal-calendar`:
+// `calendar_default_reminders` und `calendar_default_assign_me` schreiben per
+// `cfgUserSet`, hinter diesem adminOnly-Blatt kam kein Mitglied an sie heran
+// (Critique 2026-07-27). Hier bleibt, was haushaltweit gilt.
+const PERSONAL_CALENDAR_PATH = '/settings/personal/calendar';
 
 function renderPage(container, preferences) {
   const currentDuration = Number(preferences.calendar_default_duration) || 60;
@@ -115,9 +66,12 @@ function renderPage(container, preferences) {
             ${DURATION_OPTIONS.map((m) => `<option value="${m}"${m === currentDuration ? ' selected' : ''}>${esc(durationOptionLabel(m))}</option>`).join('')}
           </select>
         </div>
-      </div>
 
-      ${defaultRemindersCardHtml(preferences)}
+        <p class="form-hint">
+          ${t('settings.calendarPersonalDefaultsHint')}
+          <a href="${PERSONAL_CALENDAR_PATH}" id="calendar-personal-link">${t('settings.pageCalendarDefaults')}</a>
+        </p>
+      </div>
     </section>
 
     <section class="settings-section">
@@ -436,65 +390,14 @@ function bindWeekStart(container, preferences) {
   });
 }
 
-// Standardwerte für neue Termine (#497/#498): Instant-Save wie beim Wochenstart.
-function bindCalendarDefaults(container) {
-  const assignMe = container.querySelector('#calendar-default-assign-me');
-  assignMe?.addEventListener('change', async () => {
-    const value = assignMe.checked;
-    assignMe.disabled = true;
-    try {
-      await api.put('/preferences', { calendar_default_assign_me: value });
-      window.yuvomi?.showToast(t('settings.calendarDefaultsSaved'), 'success');
-    } catch (error) {
-      assignMe.checked = !value; // Rollback
-      window.yuvomi?.showToast(error.message || t('common.errorGeneric'), 'danger');
-    } finally {
-      if (assignMe.isConnected) assignMe.disabled = false;
-    }
-  });
-
-  const remindersBox = container.querySelector('#calendar-default-reminders');
-  if (!remindersBox) return;
-  let persisted = collectDefaultReminders(remindersBox);
-
-  // Debounced: schnelle Mehrfach-Auswahl erzeugt EIN Speichern + EINEN Toast,
-  // statt einen pro Klick. Rollback auf den letzten persistierten Stand bei Fehler.
-  const persistReminders = debounce(async () => {
-    const selected = collectDefaultReminders(remindersBox);
-    try {
-      await api.put('/preferences', { calendar_default_reminders: selected });
-      persisted = selected;
-      if (remindersBox.isConnected) window.yuvomi?.showToast(t('settings.calendarDefaultsSaved'), 'success');
-    } catch (error) {
-      const keep = new Set(persisted);
-      remindersBox.querySelectorAll('.js-default-reminder').forEach((el) => {
-        el.checked = keep.has(Number(el.value));
-      });
-      window.yuvomi?.showToast(error.message || t('common.errorGeneric'), 'danger');
-    }
-  }, 500);
-
-  remindersBox.addEventListener('change', (event) => {
-    const box = event.target.closest('.js-default-reminder');
-    if (!box) return;
-    if (collectDefaultReminders(remindersBox).length > MAX_DEFAULT_REMINDERS) {
-      box.checked = false; // Cap: die gerade gesetzte Auswahl zurücknehmen
-      window.yuvomi?.showToast(t('settings.calendarDefaultRemindersMax', { count: MAX_DEFAULT_REMINDERS }), 'warning');
-      return;
-    }
-    persistReminders();
-  });
-}
-
-function collectDefaultReminders(box) {
-  return [...box.querySelectorAll('.js-default-reminder')]
-    .filter((el) => el.checked)
-    .map((el) => Number(el.value))
-    .sort((a, b) => a - b);
-}
-
 async function bindEvents(container, preferences) {
   bindWeekStart(container, preferences);
+
+  container.querySelector('#calendar-personal-link')?.addEventListener('click', (event) => {
+    if (!window.yuvomi?.navigate) return;
+    event.preventDefault();
+    window.yuvomi.navigate(PERSONAL_CALENDAR_PATH);
+  });
 
   // Instant-Save wie beim Wochenstart – ein einzelner Wert braucht keinen
   // separaten Speichern-Button (vereinheitlicht die beiden Ansicht-Controls).
@@ -516,8 +419,6 @@ async function bindEvents(container, preferences) {
       if (durationSelect.isConnected) durationSelect.disabled = false;
     }
   });
-
-  bindCalendarDefaults(container);
 
   const form = container.querySelector('#holidays-form');
   const countrySelect = container.querySelector('#holiday-country');
