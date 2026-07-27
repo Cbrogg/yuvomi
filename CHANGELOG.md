@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Modal footers inside a scrolling dialog body use a shared class instead of 20 inline styles that reproduced the same rule with three different spacings; eight of them now sit at the common distance.
 - The specification documents the actual breakpoint contract (640/768/1024/1440), the icon scale, and the full set of 23 shipped languages. The breakpoint section still described a 768px mobile threshold that the stylesheets had not used for some time.
 
+## [1.47.0] - 2026-07-27
+
 ### Added
 - A loan can now run in its own currency instead of always following the household budget currency. The loan dialog offers a currency and, as soon as it differs from the budget currency, a fixed conversion rate; the hint spells out the direction (1 loan currency = x budget currency), and switching the currency clears the rate so the previous one is never carried over unnoticed. Loan cards, the loan report and the instalment transactions lead with the loan's own currency and show the budget equivalent quietly underneath (#582).
 - The loan summary card converts foreign-currency loans into the budget currency at their fixed rate and says so, because it is the one place that adds up across loans and would otherwise sum unrelated currencies (#582).
