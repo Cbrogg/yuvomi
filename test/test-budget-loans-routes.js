@@ -329,6 +329,137 @@ test('POST /loans/preview: unbekannter Modus bleibt abgewiesen', async () => {
   assert.equal(r.body.data.ok, false);
 });
 
+// --------------------------------------------------------------------------
+// Währung je Darlehen (#582): eigene Währung + fester Kurs in die Budget-Währung
+// --------------------------------------------------------------------------
+
+function setBudgetCurrency(currency) {
+  db.prepare(`INSERT INTO sync_config (key, value) VALUES ('currency', ?)
+              ON CONFLICT(key) DO UPDATE SET value = excluded.value`).run(currency);
+}
+
+async function createForeignLoan(body = {}) {
+  return call('POST', '/loans', {
+    as: AA,
+    body: {
+      borrower: 'Fremdwährung', title: 'USD-Darlehen',
+      total_amount: 1200, installment_count: 12, start_month: '2026-05',
+      currency: 'USD', exchange_rate: 0.92,
+      ...body,
+    },
+  });
+}
+
+test('POST currency: Fremdwährung + Kurs werden gespeichert und ausgeliefert', async () => {
+  setMode('shared');
+  setBudgetCurrency('EUR');
+  const r = await createForeignLoan();
+  assert.equal(r.status, 201);
+  assert.equal(r.body.data.currency, 'USD');
+  assert.equal(r.body.data.exchange_rate, 0.92);
+  assert.equal(r.body.data.is_foreign_currency, true);
+  // Der Darlehensbetrag bleibt ungewandelt - nur so bleibt die Restschuld exakt.
+  assert.equal(r.body.data.total_amount, 1200);
+});
+
+test('POST currency: Budget-Währung wird als NULL gespeichert, Kurs auf 1 normalisiert', async () => {
+  setMode('shared');
+  setBudgetCurrency('EUR');
+  const r = await createForeignLoan({ currency: 'EUR', exchange_rate: 7 });
+  assert.equal(r.status, 201);
+  const row = db.prepare('SELECT currency, exchange_rate FROM budget_loans WHERE id = ?').get(r.body.data.id);
+  assert.equal(row.currency, null, 'ohne Fremdwährung folgt das Darlehen dem Budget');
+  assert.equal(row.exchange_rate, 1, 'ein Kurs ohne Fremdwährung darf nicht hängen bleiben');
+  assert.equal(r.body.data.currency, 'EUR');
+  assert.equal(r.body.data.is_foreign_currency, false);
+});
+
+test('POST currency: Kurs <= 0 und unsinniger Währungscode -> 400', async () => {
+  setMode('shared');
+  setBudgetCurrency('EUR');
+  assert.equal((await createForeignLoan({ exchange_rate: 0 })).status, 400);
+  assert.equal((await createForeignLoan({ exchange_rate: -3 })).status, 400);
+  assert.equal((await createForeignLoan({ currency: 'US' })).status, 400);
+});
+
+test('Ratenzahlung: Rate bleibt in Darlehenswährung, Budget-Eintrag wird umgerechnet', async () => {
+  setMode('shared');
+  setBudgetCurrency('EUR');
+  const loan = await createForeignLoan();
+  const id = loan.body.data.id;
+
+  const pay = await call('POST', `/loans/${id}/payments`, {
+    as: AA,
+    body: { amount: 100, paid_date: '2026-05-01' },
+  });
+  assert.equal(pay.status, 201);
+
+  const payment = db.prepare('SELECT amount, budget_entry_id FROM budget_loan_payments WHERE loan_id = ?').get(id);
+  assert.equal(payment.amount, 100, 'Rate wird in Darlehenswährung geführt');
+  const entry = db.prepare('SELECT amount, title FROM budget_entries WHERE id = ?').get(payment.budget_entry_id);
+  assert.equal(entry.amount, 92, '100 USD * 0.92 = 92 EUR im Budget');
+  assert.ok(entry.title.includes('(USD)'), 'Fremdwährung ist am Budget-Eintrag erkennbar');
+
+  // Restschuld rechnet weiter in Darlehenswährung.
+  assert.equal(pay.body.data.loan.remaining_amount, 1100);
+});
+
+test('GET /loans: Summenkarte rechnet Fremdwährung in die Budget-Währung um', async () => {
+  setMode('shared');
+  setBudgetCurrency('EUR');
+  db.prepare('DELETE FROM budget_loans').run();
+
+  await createForeignLoan();                                     // 1200 USD * 0.92 = 1104 EUR
+  await createForeignLoan({ currency: 'EUR', exchange_rate: 1 }); // 1200 EUR
+  const r = await call('GET', '/loans', { as: AA });
+  assert.equal(r.status, 200);
+  assert.equal(r.body.data.summary.currency, 'EUR');
+  assert.equal(r.body.data.summary.has_foreign_currency, true);
+  assert.equal(r.body.data.summary.total_amount, 2304);
+  assert.equal(r.body.data.summary.remaining_amount, 2304);
+});
+
+test('PUT currency: Zurückstellen auf die Budget-Währung löscht den Kurs', async () => {
+  setMode('shared');
+  setBudgetCurrency('EUR');
+  const loan = await createForeignLoan();
+  const id = loan.body.data.id;
+
+  const r = await call('PUT', `/loans/${id}`, { as: AA, body: { currency: 'EUR' } });
+  assert.equal(r.status, 200);
+  const row = db.prepare('SELECT currency, exchange_rate FROM budget_loans WHERE id = ?').get(id);
+  assert.equal(row.currency, null);
+  assert.equal(row.exchange_rate, 1);
+});
+
+test('PUT currency: Teil-Update ohne currency lässt Währung und Kurs unberührt', async () => {
+  setMode('shared');
+  setBudgetCurrency('EUR');
+  const loan = await createForeignLoan();
+  const id = loan.body.data.id;
+
+  const r = await call('PUT', `/loans/${id}`, { as: AA, body: { notes: 'nur eine Notiz' } });
+  assert.equal(r.status, 200);
+  const row = db.prepare('SELECT currency, exchange_rate FROM budget_loans WHERE id = ?').get(id);
+  assert.equal(row.currency, 'USD');
+  assert.equal(row.exchange_rate, 0.92);
+});
+
+test('PUT currency: Zins-Pfad (interest_mode im Body) behält die Fremdwährung', async () => {
+  setMode('shared');
+  setBudgetCurrency('EUR');
+  const loan = await createForeignLoan();
+  const id = loan.body.data.id;
+
+  const r = await call('PUT', `/loans/${id}`, {
+    as: AA,
+    body: { interest_mode: 'fixed', principal: 100000, fixed_rate: 3, initial_repayment_rate: 2 },
+  });
+  assert.equal(r.status, 200);
+  assert.equal(r.body.data.currency, 'USD');
+  assert.equal(r.body.data.exchange_rate, 0.92);
+});
+
 test('teardown: Server schließen', async () => {
   await new Promise((r) => server.close(r));
 });

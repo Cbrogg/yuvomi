@@ -24,6 +24,7 @@ process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'yuvomi-loanmig-')), 'unus
 const { MIGRATIONS } = await import('../server/db.js');
 
 const V101 = MIGRATIONS.find((m) => m.version === 101);
+const V102 = MIGRATIONS.find((m) => m.version === 102);
 
 // Stand von budget_loans direkt vor v101 (v28 + v88 + v100) mit einem Darlehen
 // und einer gekoppelten Ratenzahlung.
@@ -134,6 +135,25 @@ test("v101 erlaubt interest_mode 'variable' und weist Unbekanntes weiter ab", ()
   assert.equal(db.prepare('SELECT interest_mode FROM budget_loans WHERE id = 1').get().interest_mode, 'variable');
   assert.throws(() => db.prepare("UPDATE budget_loans SET interest_mode = 'bogus' WHERE id = 1").run(),
     /CHECK constraint failed/);
+  db.close();
+});
+
+test('v102 rüstet Währung + Kurs nach, ohne Altbestand umzuwerten (#582)', () => {
+  const db = seedPreV101();
+  db.pragma('foreign_keys = OFF');
+  db.exec(V101.up);
+  db.pragma('foreign_keys = ON');
+  db.exec(V102.up);
+
+  // Kritisch: bestehende Darlehen müssen currency=NULL (= Budget-Währung) und
+  // Kurs 1 behalten - ein anderer Default würde jeden Altbestand umrechnen.
+  assert.deepEqual(
+    db.prepare('SELECT id, currency, exchange_rate FROM budget_loans ORDER BY id').all(),
+    [
+      { id: 1, currency: null, exchange_rate: 1 },
+      { id: 2, currency: null, exchange_rate: 1 },
+    ],
+  );
   db.close();
 });
 

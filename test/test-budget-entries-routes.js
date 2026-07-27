@@ -289,6 +289,38 @@ test('PUT /:id: gültige Rückzahlung aktualisiert Eintrag + Payment synchron', 
   assert.equal(pay.amount, 500, 'Payment folgt dem Eintragsbetrag');
 });
 
+test('PUT /:id: Fremdwährungs-Darlehen (#582) rechnet den Eintragsbetrag zurück', async () => {
+  // Darlehen in USD, 1 USD = 0,50 EUR. Der Budget-Eintrag steht in EUR, die
+  // gekoppelte Rate in USD - ein Edit des Eintrags darf die Restschuld nicht
+  // verdoppeln, sondern muss über den Kurs zurückrechnen.
+  const loan = db.prepare(`INSERT INTO budget_loans (title, borrower, total_amount, installment_count, start_month, created_by, currency, exchange_rate)
+                           VALUES ('L-USD','Bo',1000,10,'2033-01',?,'USD',0.5)`).run(A).lastInsertRowid;
+  const eid = insertEntry({ title: 'pay-usd', amount: 50, category: 'Sonstiges Einkommen', date: '2033-09-01' });
+  const pid = db.prepare(`INSERT INTO budget_loan_payments (loan_id, installment_number, amount, paid_date, budget_entry_id, created_by)
+              VALUES (?,1,100,'2033-09-01',?,?)`).run(loan, eid, A).lastInsertRowid;
+
+  const r = await call('PUT', `/${eid}`, { body: { amount: 100 } });
+  assert.equal(r.status, 200);
+  assert.equal(r.body.data.amount, 100, 'Eintrag bleibt in Budget-Währung');
+  const pay = db.prepare('SELECT amount FROM budget_loan_payments WHERE id = ?').get(pid);
+  assert.equal(pay.amount, 200, '100 EUR / 0,50 = 200 USD Rate');
+});
+
+test('PUT /:id: Rest-Grenze eines Fremdwährungs-Darlehens gilt in Darlehenswährung', async () => {
+  // Restschuld 1000 USD. 400 EUR entsprechen bei 0,50 genau 800 USD (erlaubt),
+  // 600 EUR wären 1200 USD und müssen abgewiesen werden.
+  const loan = db.prepare(`INSERT INTO budget_loans (title, borrower, total_amount, installment_count, start_month, created_by, currency, exchange_rate)
+                           VALUES ('L-USD2','Bo',1000,10,'2033-01',?,'USD',0.5)`).run(A).lastInsertRowid;
+  const eid = insertEntry({ title: 'pay-usd2', amount: 50, category: 'Sonstiges Einkommen', date: '2033-10-01' });
+  db.prepare(`INSERT INTO budget_loan_payments (loan_id, installment_number, amount, paid_date, budget_entry_id, created_by)
+              VALUES (?,1,100,'2033-10-01',?,?)`).run(loan, eid, A);
+
+  assert.equal((await call('PUT', `/${eid}`, { body: { amount: 400 } })).status, 200);
+  const tooMuch = await call('PUT', `/${eid}`, { body: { amount: 600 } });
+  assert.equal(tooMuch.status, 400);
+  assert.match(tooMuch.body.error, /remaining loan/i);
+});
+
 // ── DELETE /:id ──────────────────────────────────────────────────────────────────
 test('DELETE /:id: unbekannte id → 404', async () => {
   const r = await call('DELETE', '/999999');

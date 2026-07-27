@@ -794,6 +794,13 @@
   white-space: nowrap;
 }
 
+/* Budget-Gegenwert eines Fremdwährungs-Darlehens (#582): bewusst leiser als der
+   Hauptbetrag, damit die Darlehenswährung die führende Zahl bleibt. */
+.budget-loan-card__converted {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.75;
+}
+
 .budget-loans__list {
   display: grid;
   grid-template-columns: 1fr;
@@ -1281,8 +1288,10 @@
 
 /* Zins-Darlehen (#569): Live-Vorschau + Variabel-Hinweis unter den Zinsfeldern.
  * .form-hint lebt in settings.css, und der Router lädt nur ein Page-CSS pro
- * Seite - im Budget-Modal blieben die Zeilen sonst auf Body-Größe und -Farbe. */
-.modal-panel .budget-loan-hint {
+ * Seite - im Budget-Modal blieben die Zeilen sonst auf Body-Größe und -Farbe.
+ * Nicht auf .modal-panel scopen: der Umrechnungshinweis der Summenkarte (#582)
+ * steht direkt auf der Seite und liefe sonst in dieselbe Falle. */
+.budget-loan-hint {
   margin-top: var(--space-1);
   font-size: var(--text-sm);
   color: var(--color-text-secondary);

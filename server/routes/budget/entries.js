@@ -13,7 +13,7 @@ import {
   DATE_RE, thisMonthLocalKey, cents,
   generateRecurringInstances, RECURRENCE_INTERVAL_KEYS, effectiveMonthly,
   validCategoryKeys, defaultCategory, validateSubcategory, validateAccountRef,
-  entryWithLoanMeta, refreshLoanStatus,
+  entryWithLoanMeta, refreshLoanStatus, fromBudgetAmount,
 } from './helpers.js';
 
 const log = createLogger('Budget');
@@ -423,14 +423,23 @@ router.put('/:id', (req, res) => {
     if (linkedPayment && amount !== undefined && Number(amount) <= 0) {
       return res.status(400).json({ error: 'Loan repayment entries must remain income.', code: 400 });
     }
+    // Währung je Darlehen (#582): Der Budget-Eintrag steht in Budget-Währung, die
+    // gekoppelte Rate dagegen in Darlehenswährung. Beide Richtungen unten rechnen
+    // deshalb über den festen Kurs des Darlehens um - sonst würde ein Edit des
+    // Eintrags die Restschuld eines Fremdwährungs-Darlehens verfälschen.
+    const linkedLoan = linkedPayment
+      ? db.get().prepare('SELECT total_amount, currency, exchange_rate FROM budget_loans WHERE id = ?').get(linkedPayment.loan_id)
+      : null;
+    const linkedPaymentAmount = linkedPayment && amount !== undefined
+      ? fromBudgetAmount(amount, linkedLoan)
+      : null;
     if (linkedPayment && amount !== undefined) {
-      const loan = db.get().prepare('SELECT total_amount FROM budget_loans WHERE id = ?').get(linkedPayment.loan_id);
       const otherPaid = db.get().prepare(`
         SELECT COALESCE(SUM(amount), 0) AS total
         FROM budget_loan_payments
         WHERE loan_id = ? AND id != ?
       `).get(linkedPayment.loan_id, linkedPayment.id).total;
-      if (Number(amount) - (Number(loan?.total_amount || 0) - Number(otherPaid || 0)) > 0.005) {
+      if (linkedPaymentAmount - (Number(linkedLoan?.total_amount || 0) - Number(otherPaid || 0)) > 0.005) {
         return res.status(400).json({ error: 'Amount cannot be greater than the remaining loan amount.', code: 400 });
       }
     }
@@ -512,7 +521,7 @@ router.put('/:id', (req, res) => {
               paid_date = COALESCE(?, paid_date)
           WHERE id = ?
         `).run(
-          amount !== undefined ? cents(amount) : null,
+          linkedPaymentAmount,
           date ?? null,
           linkedPayment.id
         );

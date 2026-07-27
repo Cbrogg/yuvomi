@@ -397,7 +397,39 @@ export function cents(value) {
   return Math.round(Number(value || 0) * 100) / 100;
 }
 
-export function loanSummaryRow(loan) {
+// --------------------------------------------------------
+// Währung je Darlehen (#582)
+// --------------------------------------------------------
+
+export const CURRENCY_RE = /^[A-Z]{3}$/;
+
+/** Haushaltweite Budget-Währung aus sync_config (Fallback wie in /preferences). */
+export function budgetCurrency() {
+  return db.get().prepare("SELECT value FROM sync_config WHERE key = 'currency'").get()?.value || 'EUR';
+}
+
+/**
+ * Fester Umrechnungskurs eines Darlehens in die Budget-Währung (#582).
+ * Semantik: 1 Einheit Darlehenswährung = rate Einheiten Budget-Währung.
+ * Unplausible oder fehlende Werte fallen auf 1 zurück, damit Altbestand und
+ * Darlehen in Budget-Währung nie durch einen Kurs verfälscht werden.
+ */
+export function loanRate(loan) {
+  const rate = Number(loan?.exchange_rate);
+  return Number.isFinite(rate) && rate > 0 ? rate : 1;
+}
+
+/** Rechnet einen Darlehensbetrag in die Budget-Währung um (#582). */
+export function toBudgetAmount(amount, loan) {
+  return cents(Number(amount || 0) * loanRate(loan));
+}
+
+/** Gegenrichtung zu toBudgetAmount: Budget-Betrag zurück in die Darlehenswährung (#582). */
+export function fromBudgetAmount(amount, loan) {
+  return cents(Number(amount || 0) / loanRate(loan));
+}
+
+export function loanSummaryRow(loan, baseCurrency = budgetCurrency()) {
   const payments = db.get().prepare(`
     SELECT p.*, u.display_name AS creator_name,
            b.title AS entry_title,
@@ -422,8 +454,17 @@ export function loanSummaryRow(loan) {
   const interest = loanInterestSummary(loan);
   const installmentAmount = interest ? interest.monthly_payment : cents(loan.total_amount / loan.installment_count);
 
+  // Währung je Darlehen (#582): Alle Beträge oben bleiben in der Darlehenswährung.
+  // currency=NULL heißt "Budget-Währung" und wird erst hier aufgelöst, damit eine
+  // spätere Umstellung der Haushaltswährung den Altbestand mitzieht.
+  const currency = loan.currency || baseCurrency;
+  const rate = currency === baseCurrency ? 1 : loanRate(loan);
+
   return {
     ...loan,
+    currency,
+    exchange_rate: rate,
+    is_foreign_currency: currency !== baseCurrency,
     total_amount: cents(loan.total_amount),
     installment_amount: installmentAmount,
     paid_amount: paidAmount,
@@ -465,14 +506,14 @@ export function loanInterestSummary(loan) {
   };
 }
 
-export function loadLoan(id) {
+export function loadLoan(id, baseCurrency = budgetCurrency()) {
   const loan = db.get().prepare(`
     SELECT l.*, u.display_name AS creator_name
     FROM budget_loans l
     LEFT JOIN users u ON u.id = l.created_by
     WHERE l.id = ?
   `).get(id);
-  return loan ? loanSummaryRow(loan) : null;
+  return loan ? loanSummaryRow(loan, baseCurrency) : null;
 }
 
 export function refreshLoanStatus(loanId) {

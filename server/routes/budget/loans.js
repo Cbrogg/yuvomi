@@ -9,7 +9,10 @@ import * as db from '../../db.js';
 import { str, num, date as validateDate, month as validateMonth, collectErrors, MAX_TITLE, MAX_SHORT } from '../../middleware/validate.js';
 import { normalizeBudgetVisibility } from '../../services/budget-visibility.js';
 import { computeLoanSchedule, MAX_LOAN_MONTHS } from '../../services/loan-amortization.js';
-import { budgetFilter, mayEdit, getBudgetMode, loanSummaryRow, loadLoan, refreshLoanStatus, cents } from './helpers.js';
+import {
+  budgetFilter, mayEdit, getBudgetMode, loanSummaryRow, loadLoan, refreshLoanStatus, cents,
+  budgetCurrency, toBudgetAmount, CURRENCY_RE,
+} from './helpers.js';
 
 const log = createLogger('Budget');
 const router = express.Router();
@@ -17,6 +20,45 @@ const router = express.Router();
 // 'variable' = Darlehen ganz ohne Zinsbindung (#569-Nachtrag): rechnet einphasig
 // wie 'fixed', der Satz gilt aber nur als aktueller Wert (Prognose).
 const INTEREST_MODES = ['none', 'fixed', 'variable', 'fixed_then_variable'];
+
+// Obergrenze für den festen Umrechnungskurs (#582). Großzügig genug für
+// Weichwährungen (1 EUR ≈ 10^5 IRR ⇒ Gegenrichtung ≈ 10^-5), aber eine Bremse
+// gegen Tippfehler, die die Budget-Summen unbrauchbar machen würden.
+const MAX_EXCHANGE_RATE = 1e6;
+
+/**
+ * Währung je Darlehen (#582): prüft Währungscode + festen Kurs.
+ *
+ * Die aktuelle Budget-Währung wird als NULL gespeichert (= "folgt dem Budget"),
+ * damit ein Darlehen ohne Fremdwährung nicht durch einen eingefrorenen Kurs 1
+ * verfälscht wird, falls der Haushalt später die Währung umstellt.
+ *
+ * @param {object} body      Request-Body
+ * @param {object|null} loan Bestehendes Darlehen (PUT) – liefert die Defaults
+ * @returns {{ currency: string|null, exchange_rate: number }|{ error: string }}
+ */
+function validateCurrencyFields(body, loan = null) {
+  const base = budgetCurrency();
+  const raw = body.currency === undefined
+    ? (loan ? loan.currency : null)
+    : String(body.currency || '').trim().toUpperCase();
+  const currency = !raw || raw === base ? null : raw;
+  if (currency !== null && !CURRENCY_RE.test(currency)) {
+    return { error: 'Currency must be a three-letter ISO code.' };
+  }
+  // Ohne Fremdwährung ist jeder Kurs bedeutungslos - hart auf 1, damit kein
+  // Restwert aus einem früheren Fremdwährungs-Zustand hängen bleibt.
+  if (currency === null) return { currency: null, exchange_rate: 1 };
+
+  const rawRate = body.exchange_rate === undefined
+    ? (loan ? loan.exchange_rate : 1)
+    : body.exchange_rate;
+  const rate = Number(rawRate);
+  if (!Number.isFinite(rate) || rate <= 0 || rate > MAX_EXCHANGE_RATE) {
+    return { error: 'Exchange rate must be greater than zero.' };
+  }
+  return { currency, exchange_rate: rate };
+}
 
 // Zins-Darlehen (#569): validiert die Zinseingaben und leitet daraus die vom
 // bestehenden Raten-/Status-System erwarteten Felder (total_amount = Gesamtaufwand,
@@ -101,6 +143,7 @@ router.get('/loans', (req, res) => {
   try {
     // Sichtbarkeit (#476/#505): Loans folgen dem Modus, ohne Mein/Haushalt-Scope.
     const filter = budgetFilter(req, 'l', { scoped: false });
+    const base = budgetCurrency();
     const loans = db.get().prepare(`
       SELECT l.*, u.display_name AS creator_name
       FROM budget_loans l
@@ -109,12 +152,17 @@ router.get('/loans', (req, res) => {
       ORDER BY CASE l.status WHEN 'active' THEN 0 ELSE 1 END,
                l.start_month ASC,
                l.created_at DESC
-    `).all(...filter.params).map(loanSummaryRow);
+    `).all(...filter.params).map((loan) => loanSummaryRow(loan, base));
     const active = loans.filter((loan) => loan.status === 'active');
+    // Währung je Darlehen (#582): Die Summenkarte ist die einzige Stelle, die über
+    // mehrere Darlehen hinweg addiert - sie muss deshalb in EINER Währung rechnen.
+    // Fremdwährungs-Darlehen gehen mit ihrem festen Kurs in die Budget-Währung ein
+    // (Bewertung zum hinterlegten Kurs; die bereits gebuchten Raten behalten
+    // dagegen den Kurs, der zum Buchungszeitpunkt galt).
     const totals = loans.reduce((acc, loan) => {
-      acc.total_amount += loan.total_amount;
-      acc.paid_amount += loan.paid_amount;
-      acc.remaining_amount += loan.remaining_amount;
+      acc.total_amount += toBudgetAmount(loan.total_amount, loan);
+      acc.paid_amount += toBudgetAmount(loan.paid_amount, loan);
+      acc.remaining_amount += toBudgetAmount(loan.remaining_amount, loan);
       acc.remaining_installments += loan.remaining_installments;
       return acc;
     }, { total_amount: 0, paid_amount: 0, remaining_amount: 0, remaining_installments: 0 });
@@ -125,6 +173,8 @@ router.get('/loans', (req, res) => {
         summary: {
           active_count: active.length,
           total_count: loans.length,
+          currency: base,
+          has_foreign_currency: loans.some((loan) => loan.is_foreign_currency),
           total_amount: cents(totals.total_amount),
           paid_amount: cents(totals.paid_amount),
           remaining_amount: cents(totals.remaining_amount),
@@ -168,6 +218,8 @@ router.post('/loans', (req, res) => {
       if (derived.error) errors.push(derived.error);
       else terms = derived.fields;
     }
+    const money = validateCurrencyFields(req.body);
+    if (money.error) errors.push(money.error);
     if (errors.length) return res.status(400).json({ error: errors.join(' '), code: 400 });
 
     const me = req.authUserId || req.session.userId;
@@ -178,8 +230,9 @@ router.post('/loans', (req, res) => {
     const result = db.get().prepare(`
       INSERT INTO budget_loans
         (title, borrower, total_amount, installment_count, start_month, notes, created_by, owner_id, visibility,
-         interest_mode, principal, fixed_rate, initial_repayment_rate, fixed_period_months, followup_rate)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         interest_mode, principal, fixed_rate, initial_repayment_rate, fixed_period_months, followup_rate,
+         currency, exchange_rate)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       vTitle.value,
       vBorrower.value,
@@ -189,7 +242,8 @@ router.post('/loans', (req, res) => {
       vNotes.value,
       me, me, visibility,
       terms.interest_mode, terms.principal, terms.fixed_rate, terms.initial_repayment_rate,
-      terms.fixed_period_months, terms.followup_rate
+      terms.fixed_period_months, terms.followup_rate,
+      money.currency, money.exchange_rate
     );
 
     res.status(201).json({ data: loadLoan(result.lastInsertRowid) });
@@ -243,6 +297,8 @@ router.put('/loans/:id', (req, res) => {
       if (terms && terms.installment_count !== null && terms.installment_count < paidCount) {
         iErrors.push('The resulting term is shorter than the already paid installments.');
       }
+      const iMoney = validateCurrencyFields(req.body, loan);
+      if (iMoney.error) iErrors.push(iMoney.error);
       if (iErrors.length) return res.status(400).json({ error: iErrors.join(' '), code: 400 });
 
       db.get().prepare(`
@@ -252,7 +308,8 @@ router.put('/loans/:id', (req, res) => {
           start_month = COALESCE(?, start_month),
           notes = ?,
           total_amount = ?, installment_count = ?, interest_mode = ?, principal = ?,
-          fixed_rate = ?, initial_repayment_rate = ?, fixed_period_months = ?, followup_rate = ?
+          fixed_rate = ?, initial_repayment_rate = ?, fixed_period_months = ?, followup_rate = ?,
+          currency = ?, exchange_rate = ?
         WHERE id = ?
       `).run(
         req.body.title?.trim() ?? null,
@@ -261,6 +318,7 @@ router.put('/loans/:id', (req, res) => {
         req.body.notes !== undefined ? (req.body.notes?.trim() || null) : loan.notes,
         terms.total_amount, terms.installment_count, terms.interest_mode, terms.principal,
         terms.fixed_rate, terms.initial_repayment_rate, terms.fixed_period_months, terms.followup_rate,
+        iMoney.currency, iMoney.exchange_rate,
         id
       );
       return res.json({ data: refreshLoanStatus(id) });
@@ -291,6 +349,8 @@ router.put('/loans/:id', (req, res) => {
       errors.push('Installment count cannot be lower than paid installments.');
     }
     if (req.body.total_amount !== undefined && Number(req.body.total_amount) <= 0) errors.push('Amount must be greater than zero.');
+    const money = validateCurrencyFields(req.body, loan);
+    if (money.error) errors.push(money.error);
     if (errors.length) return res.status(400).json({ error: errors.join(' '), code: 400 });
 
     db.get().prepare(`
@@ -300,7 +360,9 @@ router.put('/loans/:id', (req, res) => {
           total_amount = COALESCE(?, total_amount),
           installment_count = COALESCE(?, installment_count),
           start_month = COALESCE(?, start_month),
-          notes = ?
+          notes = ?,
+          currency = ?,
+          exchange_rate = ?
       WHERE id = ?
     `).run(
       req.body.title?.trim() ?? null,
@@ -309,6 +371,7 @@ router.put('/loans/:id', (req, res) => {
       installmentCount,
       req.body.start_month ?? null,
       req.body.notes !== undefined ? (req.body.notes?.trim() || null) : loan.notes,
+      money.currency, money.exchange_rate,
       id
     );
 
@@ -352,6 +415,13 @@ router.post('/loans/:id/payments', (req, res) => {
     if (existing) return res.status(409).json({ error: 'Installment already paid.', code: 409 });
 
     const paymentAmount = cents(vAmount.value);
+    // Währung je Darlehen (#582): Die Rate wird in Darlehenswährung geführt
+    // (budget_loan_payments.amount, gegen total_amount/Restschuld gerechnet), das
+    // Budget kennt aber nur eine Währung - der gekoppelte Eintrag wird deshalb mit
+    // dem festen Kurs umgerechnet. Der Kurs wird nur hier, zum Buchungszeitpunkt,
+    // angewandt: eine spätere Kursänderung lässt gebuchte Raten unberührt.
+    const budgetAmount = toBudgetAmount(paymentAmount, loan);
+    const foreign = loan.is_foreign_currency ? ` (${loan.currency})` : '';
     const tx = db.get().transaction(() => {
       // Repayment-Eintrag erbt Eigentümer + Sichtbarkeit des Loans (#476/#505),
       // damit er im Budget derselben Person/desselben Topfs erscheint.
@@ -359,8 +429,8 @@ router.post('/loans/:id/payments', (req, res) => {
         INSERT INTO budget_entries (title, amount, category, subcategory, date, is_recurring, created_by, owner_id, visibility)
         VALUES (?, ?, ?, '', ?, 0, ?, ?, ?)
       `).run(
-        `Loan repayment: ${loan.borrower}`,
-        paymentAmount,
+        `Loan repayment: ${loan.borrower}${foreign}`,
+        budgetAmount,
         'Geschenke & Transfers',
         vDate.value,
         req.authUserId || req.session.userId,

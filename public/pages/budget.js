@@ -18,6 +18,7 @@ import { renderStats } from '/pages/budget-stats.js';
 import { renderPlans } from '/pages/budget-plans.js';
 import { toLocalDateKey } from '/utils/date.js';
 import { budgetCategoryLabel } from '/utils/category-labels.js';
+import { appendCurrencyOptions } from '/settings/currency.js';
 import '/components/category-manager.js';
 
 // --------------------------------------------------------
@@ -213,8 +214,22 @@ function tabCaps() {
 // Formatierung
 // --------------------------------------------------------
 
-function formatAmount(n) {
-  return getNumberFormat({ style: 'currency', currency: state.currency }).format(n);
+// currency-Override für Darlehen in Fremdwährung (#582); ohne Argument gilt
+// unverändert die haushaltweite Budget-Währung.
+function formatAmount(n, currency = state.currency) {
+  return getNumberFormat({ style: 'currency', currency }).format(n);
+}
+
+// Beträge eines Darlehens stehen in dessen eigener Währung (#582).
+function formatLoanAmount(n, loan) {
+  return formatAmount(n, loan?.currency || state.currency);
+}
+
+// Gegenwert eines Darlehensbetrags in Budget-Währung, z. B. „≈ 4.600,00 €".
+// '' bei Darlehen ohne Fremdwährung, damit der Normalfall unverändert bleibt.
+function loanBudgetEquivalent(n, loan) {
+  if (!loan?.is_foreign_currency) return '';
+  return t('budget.loanConvertedAmount', { amount: formatAmount(Number(n || 0) * Number(loan.exchange_rate || 1)) });
 }
 
 function formatMonthLabel(ym) {
@@ -1092,6 +1107,9 @@ function renderLoansDashboard() {
           <strong>${formatAmount(summary.paid_amount ?? 0)}</strong>
         </div>
       </div>
+      ${summary.has_foreign_currency ? `<p class="form-hint budget-loan-hint">${t('budget.loanSummaryConverted', {
+        currency: esc(summary.currency || state.currency),
+      })}</p>` : ''}
       ${visibleLoans.length ? `
         <div class="budget-loans__list">
           ${visibleLoans.map(renderLoanCard).join('')}
@@ -1166,7 +1184,7 @@ function renderLoanPaymentEntry(loan, payment) {
         <div class="budget-entry__title">${esc(payment.entry_title || t('budget.loanPaymentTitle', { borrower: loan.borrower }))}</div>
         <div class="budget-entry__meta">${meta}</div>
       </div>
-      <div class="budget-entry__amount budget-entry__amount--income">+${formatAmount(payment.amount)}</div>
+      <div class="budget-entry__amount budget-entry__amount--income">+${formatLoanAmount(payment.amount, loan)}</div>
       <div class="row-actions">
         ${entry ? `
         <button class="row-action" data-action="loan-payment-edit" data-loan-id="${loan.id}" data-payment-id="${payment.id}" data-entry-id="${entry.id}" aria-label="${t('common.edit')}">
@@ -1273,11 +1291,17 @@ function openLoanReport(loan) {
         </span>
       </div>
       <div class="loan-report__grid">
-        <div><span>${t('budget.loanAmountLabel')}</span><strong>${formatAmount(loan.total_amount)}</strong></div>
-        <div><span>${t('budget.loanRemainingAmount')}</span><strong>${formatAmount(loan.remaining_amount)}</strong></div>
-        <div><span>${t('budget.loanPaidAmount')}</span><strong>${formatAmount(loan.paid_amount)}</strong></div>
+        <div><span>${t('budget.loanAmountLabel')}</span><strong>${formatLoanAmount(loan.total_amount, loan)}</strong></div>
+        <div><span>${t('budget.loanRemainingAmount')}</span><strong>${formatLoanAmount(loan.remaining_amount, loan)}</strong></div>
+        <div><span>${t('budget.loanPaidAmount')}</span><strong>${formatLoanAmount(loan.paid_amount, loan)}</strong></div>
         <div><span>${t('budget.loanRemainingInstallments')}</span><strong>${loan.remaining_installments}</strong></div>
       </div>
+      ${loan.is_foreign_currency ? `<p class="form-hint budget-loan-hint">${t('budget.loanRateInfo', {
+        currency: esc(loan.currency),
+        rate: getNumberFormat({ maximumFractionDigits: 6 }).format(Number(loan.exchange_rate || 1)),
+        base: esc(state.currency),
+        amount: formatAmount(Number(loan.remaining_amount || 0) * Number(loan.exchange_rate || 1)),
+      })}</p>` : ''}
       <div class="loan-report__section-title">${t('budget.loanTransactions')}</div>
       ${payments.length ? `
         <div class="loan-report__transactions">
@@ -1288,7 +1312,7 @@ function openLoanReport(loan) {
                 <span>${formatEntryDate(payment.paid_date)}</span>
               </div>
               <div>
-                <strong>${formatAmount(payment.amount)}</strong>
+                <strong>${formatLoanAmount(payment.amount, loan)}</strong>
               </div>
             </div>
           `).join('')}
@@ -1318,8 +1342,8 @@ function formatRate(r) {
 
 // Zins-Infozeile der Loan-Card (#569): Monatsrate + Zinsphasen. '' bei zinsfreien
 // Darlehen, sodass die Karte unverändert bleibt.
-function loanInterestMeta(it) {
-  const monthly = t('budget.loanMonthlyRate', { amount: formatAmount(it.monthly_payment) });
+function loanInterestMeta(it, loan) {
+  const monthly = t('budget.loanMonthlyRate', { amount: formatLoanAmount(it.monthly_payment, loan) });
   // Variable Phase nur zeigen, wenn das Darlehen die Zinsbindung überhaupt erreicht;
   // ist es vorher getilgt, verhält es sich wie ein Festzinsdarlehen (#569).
   const hasVariablePhase = it.mode === 'fixed_then_variable' && it.remaining_after_binding > 0;
@@ -1359,11 +1383,14 @@ function renderLoanCard(loan) {
           paid: loan.paid_installments,
           total: loan.installment_count,
         })}</div>
-        ${loan.interest ? `<div class="budget-loan-card__meta budget-loan-card__interest">${esc(loanInterestMeta(loan.interest))}</div>` : ''}
+        ${loan.interest ? `<div class="budget-loan-card__meta budget-loan-card__interest">${esc(loanInterestMeta(loan.interest, loan))}</div>` : ''}
       </div>
       <div class="budget-loan-card__amounts">
-        <strong>${formatAmount(loan.remaining_amount)}</strong>
-        <span>${t('budget.loanRemainingOf', { total: formatAmount(loan.total_amount) })}</span>
+        <strong>${formatLoanAmount(loan.remaining_amount, loan)}</strong>
+        <span>${t('budget.loanRemainingOf', { total: formatLoanAmount(loan.total_amount, loan) })}</span>
+        ${loan.is_foreign_currency
+          ? `<span class="budget-loan-card__converted">${loanBudgetEquivalent(loan.remaining_amount, loan)}</span>`
+          : ''}
       </div>
       <div class="budget-loan-card__progress" role="progressbar"
            aria-valuenow="${paidPct}" aria-valuemin="0" aria-valuemax="100"
@@ -1586,6 +1613,7 @@ function openBudgetModal({ mode, entry = null, initialType = '' }) {
         <input type="text" class="form-input" id="lm-title"
                placeholder="${t('budget.loanTitlePlaceholder')}">
       </div>
+      ${loanCurrencyFieldsHtml(null)}
       <div class="form-grid-2" id="lm-manual-fields">
         <div class="form-group">
           <label class="form-label" for="lm-amount">${t('budget.loanAmountLabel')}</label>
@@ -1724,6 +1752,7 @@ function openBudgetModal({ mode, entry = null, initialType = '' }) {
       panel.querySelector('#type-loan')?.addEventListener('click', () => {
         setType('loan');
       });
+      wireLoanCurrencyFields(panel);
       wireLoanInterestFields(panel);
       panel.querySelector('#bm-category').addEventListener('change', () => updateSubcategoryOptions());
       panel.querySelector('#bm-recurring').addEventListener('change', (e) => {
@@ -1892,6 +1921,60 @@ function requestNameInPanel(panel, { title, label, placeholder }) {
   });
 }
 
+// Währung je Darlehen (#582): Währungs-Select + fester Umrechnungskurs. Das
+// Kursfeld erscheint nur bei einer von der Budget-Währung abweichenden Wahl -
+// solange beide gleich sind, gibt es nichts umzurechnen. Die Option-Liste füllt
+// wireLoanCurrencyFields() nach dem Einfügen (geteilte SUPPORTED_CURRENCIES).
+function loanCurrencyFieldsHtml(loan) {
+  const currency = loan?.currency || state.currency;
+  const foreign = currency !== state.currency;
+  const rate = Number(loan?.exchange_rate ?? 1);
+  return `
+    <div class="form-grid-2">
+      <div class="form-group">
+        <label class="form-label" for="lm-currency">${t('budget.loanCurrencyLabel')}</label>
+        <select class="form-input" id="lm-currency" data-selected="${esc(currency)}"></select>
+      </div>
+      <div class="form-group" id="lm-rate-group" ${foreign ? '' : 'hidden'}>
+        <label class="form-label" for="lm-exchange-rate">${t('budget.loanExchangeRateLabel')}</label>
+        <input type="number" class="form-input" id="lm-exchange-rate" step="0.000001" min="0.000001"
+               inputmode="decimal" value="${foreign ? esc(String(rate)) : ''}">
+      </div>
+    </div>
+    <p class="form-hint budget-loan-hint" id="lm-rate-hint" ${foreign ? '' : 'hidden'}></p>`;
+}
+
+// Füllt die Währungsliste und hält den Kurs-Hinweis aktuell. Der Hinweis nennt
+// die Richtung ausdrücklich (1 Fremdwährung = x Budget-Währung), weil ein Kurs
+// ohne Richtung die häufigste Fehlerquelle bei der Eingabe ist.
+function wireLoanCurrencyFields(panel) {
+  const select = panel.querySelector('#lm-currency');
+  if (!select) return;
+  appendCurrencyOptions(select, select.dataset.selected || state.currency);
+
+  const rateGroup = panel.querySelector('#lm-rate-group');
+  const rateInput = panel.querySelector('#lm-exchange-rate');
+  const hint = panel.querySelector('#lm-rate-hint');
+
+  const update = ({ currencyChanged = false } = {}) => {
+    const foreign = select.value !== state.currency;
+    rateGroup.hidden = !foreign;
+    hint.hidden = !foreign;
+    if (!foreign) return;
+    // Nach einem Währungswechsel ist der bisherige Kurs garantiert falsch. Das
+    // Feld wird geleert, damit die Validierung eine bewusste Eingabe erzwingt,
+    // statt still den Kurs der vorherigen Währung zu übernehmen.
+    if (currencyChanged) rateInput.value = '';
+    hint.textContent = t('budget.loanExchangeRateHint', {
+      currency: select.value,
+      base: state.currency,
+    });
+  };
+
+  select.addEventListener('change', () => update({ currencyChanged: true }));
+  update();
+}
+
 // Zins-Darlehen (#569): Feldblock für den Darlehens-Dialog. Bei interest_mode
 // != 'none' werden Betrag/Ratenanzahl ausgeblendet (der Server leitet sie aus
 // Kreditsumme + Sollzins + Anfangstilgung ab) und stattdessen die Zinsfelder
@@ -1985,10 +2068,13 @@ function wireLoanInterestFields(panel) {
       try {
         const { data } = await api.post('/budget/loans/preview', body);
         if (!data?.ok) { preview.textContent = t('budget.loanPreviewInvalid'); return; }
+        // Die Vorschau rechnet in der im Dialog gewählten Darlehenswährung (#582) -
+        // die Kreditsumme darüber wird ja ebenfalls in dieser Währung eingegeben.
+        const currency = panel.querySelector('#lm-currency')?.value || state.currency;
         preview.textContent = t('budget.loanPreviewSummary', {
-          rate: formatAmount(data.monthly_payment),
+          rate: formatAmount(data.monthly_payment, currency),
           term: t('budget.loanTermYearsMonths', { years: Math.floor(data.total_months / 12), months: data.total_months % 12 }),
-          interest: formatAmount(data.total_interest),
+          interest: formatAmount(data.total_interest, currency),
         });
       } catch { preview.textContent = ''; }
     }, 300);
@@ -2030,6 +2116,18 @@ async function saveLoanFromPanel(panel, saveBtn, { loan = null, closeAfterSave =
   if (!/^\d{4}-\d{2}$/.test(start_month)) {
     reportFieldError(panel.querySelector('#lm-start'), t('budget.loanStartMonthRequired'));
     return;
+  }
+
+  // Währung je Darlehen (#582): Der Kurs zählt nur bei einer abweichenden Währung;
+  // sonst schickt der Client gar keinen, damit der Server ihn auf 1 normalisiert.
+  const currency = panel.querySelector('#lm-currency')?.value || state.currency;
+  let exchange_rate = 1;
+  if (currency !== state.currency) {
+    exchange_rate = parseFloat(panel.querySelector('#lm-exchange-rate').value);
+    if (!Number.isFinite(exchange_rate) || exchange_rate <= 0) {
+      reportFieldError(panel.querySelector('#lm-exchange-rate'), t('budget.loanExchangeRateRequired'));
+      return;
+    }
   }
 
   let body;
@@ -2077,6 +2175,8 @@ async function saveLoanFromPanel(panel, saveBtn, { loan = null, closeAfterSave =
       body.followup_rate = followup_rate;
     }
   }
+  body.currency = currency;
+  body.exchange_rate = exchange_rate;
 
   saveBtn.disabled = true;
   saveBtn.textContent = '…';
@@ -2111,6 +2211,7 @@ function openLoanModal(loan = null) {
       <input type="text" class="form-input" id="lm-title"
              placeholder="${t('budget.loanTitlePlaceholder')}" value="${esc(loan?.title ?? '')}">
     </div>
+    ${loanCurrencyFieldsHtml(loan)}
     <div class="form-grid-2" id="lm-manual-fields">
       <div class="form-group">
         <label class="form-label" for="lm-amount">${t('budget.loanAmountLabel')}</label>
@@ -2145,6 +2246,7 @@ function openLoanModal(loan = null) {
     content,
     size: 'sm',
     onSave(panel) {
+      wireLoanCurrencyFields(panel);
       wireLoanInterestFields(panel);
       panel.querySelector('#lm-cancel').addEventListener('click', closeModal);
       panel.querySelector('#lm-save').addEventListener('click', async () => {
