@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.46.3] - 2026-07-27
+
+### Fixed
+- Reminders for a subscription now name the subscription in the notification. Web Push, Gotify and ntfy received a notification whose title and body both read "Yuvomi", so a due renewal was indistinguishable from any other alert and gave no hint which subscription it was about. The reminder centre inside the app had shown the name correctly all along, and delivery itself always worked, which is why the server log reported sent notifications and the test button looked healthy (#581).
+- A reminder whose task, event or subscription has been deleted no longer arrives as a notification consisting only of the app name. It now carries a neutral fallback text, so the body never just repeats the title (#581).
+- Medication reminders use the same fallback, instead of repeating the app name when a medication has no name to show (#581).
+
 ## [1.46.2] - 2026-07-27
 
 ### Fixed
