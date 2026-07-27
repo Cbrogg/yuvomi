@@ -495,6 +495,29 @@ test('the live Settings controller contains no page-specific endpoint strings', 
   }
 });
 
+test('ungespeicherte Eingaben gehen beim Blattwechsel nicht still verloren', async () => {
+  const guard = await readFile(new URL('../public/settings/dirty-guard.js', import.meta.url), 'utf8');
+  const shell = await readFile(new URL('../public/settings/shell.js', import.meta.url), 'utf8');
+
+  // Nur echte Nutzereingaben zaehlen: Daten aus der API und Re-Renders eines
+  // Blatts setzen Werte programmatisch und duerfen nicht als Arbeit gelten.
+  assert.match(guard, /event\.isTrusted/, 'programmatische Wertaenderungen duerfen nicht dirty machen');
+  // Die vielen Sofort-Speicherer der Einstellungen haben nie einen offenen
+  // Stand - eine Rueckfrage waere dort falsch.
+  assert.match(guard, /button\[type="submit"\]/, 'nur Formulare mit eigenem Absenden koennen offen sein');
+  assert.match(guard, /'submit'/, 'ein abgeschicktes Formular ist wieder sauber');
+  // Verlaesst der Nutzer die Einstellungen, faellt die Shell aus dem Dokument:
+  // ohne diese Pruefung blockierte beforeunload danach weiter.
+  assert.match(guard, /isConnected/);
+  assert.match(guard, /beforeunload/);
+  // Wiederverwendete Texte statt eigener Keys - der Modal-Dirty-Schutz sagt dasselbe.
+  assert.match(guard, /modal\.unsavedChanges/);
+
+  assert.match(shell, /import\s*\{[^}]*confirmLeafExit[^}]*\}\s*from\s*'\.\/dirty-guard\.js'/);
+  assert.match(shell, /await confirmLeafExit\(\)/, 'jede Navigation aus einem Blatt muss durch den Guard');
+  assert.match(shell, /watchLeafForms\(leafContainer\)/, 'das Tracking haengt am fertig gerenderten Blatt');
+});
+
 test('die Navigation laesst sich ueber alle Blaetter durchsuchen', async () => {
   const source = await readFile(new URL('../public/settings/shell.js', import.meta.url), 'utf8');
   // Bei 23 Blaettern in vier Domaenen war die Taxonomie der einzige Weg zu

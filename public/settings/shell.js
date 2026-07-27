@@ -1,6 +1,7 @@
 import { t } from '/i18n.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
 import { createRetryState } from './components.js';
+import { clearLeafEdits, confirmLeafExit, watchLeafForms } from './dirty-guard.js';
 import { resetPreferencesCache } from './preferences-cache.js';
 import {
   SETTINGS_LEAVES,
@@ -26,7 +27,7 @@ function hydrateIcons(container) {
 }
 
 function bindSpaNavigation(link, href) {
-  link.addEventListener('click', (event) => {
+  link.addEventListener('click', async (event) => {
     if (
       event.defaultPrevented
       || event.button !== 0
@@ -39,6 +40,9 @@ function bindSpaNavigation(link, href) {
       return;
     }
     event.preventDefault();
+    // Alle Wege aus einem Blatt heraus laufen ueber diese Links: Seitenleiste,
+    // Suchtreffer, Breadcrumb und der Zurueck-Link.
+    if (!(await confirmLeafExit())) return;
     window.yuvomi.navigate(href);
   });
 }
@@ -562,6 +566,7 @@ async function renderLeafContent(content, leaf, domain, user, query) {
       leafContainer.replaceChildren();
       await module.render(leafContainer, { user, query });
       leafContainer.removeAttribute('aria-busy');
+      watchLeafForms(leafContainer);
 
       heading.tabIndex = -1;
       requestAnimationFrame(() => {
@@ -572,6 +577,7 @@ async function renderLeafContent(content, leaf, domain, user, query) {
       console.error(`[Settings] Failed to render ${leaf.id}:`, error);
       clearTimeout(skeletonTimer);
       leafContainer.removeAttribute('aria-busy');
+      clearLeafEdits();
       const retryState = createRetryState({
         message: t('settings.loadError'),
         onRetry: () => loadAndRender({ focusRetry: true }),
