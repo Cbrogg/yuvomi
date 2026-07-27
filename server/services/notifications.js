@@ -13,6 +13,9 @@ import { syncAllBirthdayReminders } from './birthdays.js';
 
 const log = createLogger('Notifications');
 const APP_NAME = 'Yuvomi';
+// Greift nur, wenn die verknuepfte Entitaet inzwischen geloescht wurde: nie den
+// App-Namen als Body wiederholen, sonst besteht die Notification nur aus "Yuvomi" (#581).
+const FALLBACK_BODY = 'Reminder';
 const RETRY_DELAY_MS = 5 * 60 * 1000;
 const MAX_ATTEMPTS = 3;
 const PROVIDER_TIMEOUT_MS = 8_000;
@@ -33,7 +36,7 @@ function safeError(error) {
 function reminderPayload(reminder) {
   return {
     title: APP_NAME,
-    body: reminder.entity_title || APP_NAME,
+    body: reminder.entity_title || FALLBACK_BODY,
     url: '/reminders',
     tag: `reminder-${reminder.id}`,
     priority: 'default',
@@ -172,6 +175,7 @@ export async function processDueNotifications({
       CASE r.entity_type
         WHEN 'task'  THEN (SELECT title FROM tasks           WHERE id = r.entity_id)
         WHEN 'event' THEN (SELECT title FROM calendar_events WHERE id = r.entity_id)
+        WHEN 'subscription' THEN (SELECT name FROM budget_subscriptions WHERE id = r.entity_id)
       END AS entity_title
     FROM reminders r
     WHERE r.dismissed = 0 AND r.pushed_at IS NULL AND r.remind_at <= ?

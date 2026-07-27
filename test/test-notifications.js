@@ -31,9 +31,13 @@ function makeDb({ withNotificationTables = true } = {}) {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       title TEXT NOT NULL
     );
+    CREATE TABLE budget_subscriptions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL
+    );
     CREATE TABLE reminders (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      entity_type TEXT NOT NULL CHECK(entity_type IN ('task','event')),
+      entity_type TEXT NOT NULL CHECK(entity_type IN ('task','event','subscription')),
       entity_id INTEGER NOT NULL,
       remind_at TEXT NOT NULL,
       dismissed INTEGER NOT NULL DEFAULT 0,
@@ -239,6 +243,47 @@ test('notification processor fans out and deduplicates reminder deliveries', asy
   const second = await processDueNotifications({ database: db, channelStore: store, pushService, providers, now: new Date() });
   assert.equal(second.due, 0);
   assert.deepEqual(calls, { webpush: 1, gotify: 1, ntfy: 1 });
+});
+
+test('subscription reminders carry the subscription name as body (#581)', async () => {
+  const { createNotificationChannelStore } = await import('../server/services/notification-channels.js');
+  const { processDueNotifications } = await import('../server/services/notifications.js');
+  const db = makeDb();
+  const store = createNotificationChannelStore({ db });
+  store.createChannel({ provider: 'ntfy', name: 'ntfy', enabled: true, config: { baseUrl: 'https://ntfy.test', topic: 'family' }, secrets: {} });
+  db.prepare("INSERT INTO budget_subscriptions (id, name) VALUES (1, 'Netflix')").run();
+  db.prepare("INSERT INTO reminders (id, entity_type, entity_id, remind_at, created_by) VALUES (1, 'subscription', 1, ?, 1)")
+    .run('2026-06-19T09:59:00.000Z');
+  const payloads = [];
+  const providers = {
+    ntfy: { id: 'ntfy', send: async ({ payload }) => { payloads.push(payload); return { ok: true, status: 200 }; } },
+  };
+  const pushService = { sendPushToUser: async () => 0 };
+
+  await processDueNotifications({ database: db, channelStore: store, pushService, providers, now: new Date() });
+  assert.equal(payloads.length, 1);
+  assert.equal(payloads[0].body, 'Netflix');
+  assert.equal(payloads[0].title, 'Yuvomi');
+});
+
+test('reminders for deleted entities never send the app name as body (#581)', async () => {
+  const { createNotificationChannelStore } = await import('../server/services/notification-channels.js');
+  const { processDueNotifications } = await import('../server/services/notifications.js');
+  const db = makeDb();
+  const store = createNotificationChannelStore({ db });
+  store.createChannel({ provider: 'ntfy', name: 'ntfy', enabled: true, config: { baseUrl: 'https://ntfy.test', topic: 'family' }, secrets: {} });
+  db.prepare("INSERT INTO reminders (id, entity_type, entity_id, remind_at, created_by) VALUES (1, 'task', 999, ?, 1)")
+    .run('2026-06-19T09:59:00.000Z');
+  const payloads = [];
+  const providers = {
+    ntfy: { id: 'ntfy', send: async ({ payload }) => { payloads.push(payload); return { ok: true, status: 200 }; } },
+  };
+  const pushService = { sendPushToUser: async () => 0 };
+
+  await processDueNotifications({ database: db, channelStore: store, pushService, providers, now: new Date() });
+  assert.equal(payloads.length, 1);
+  assert.notEqual(payloads[0].body, payloads[0].title);
+  assert.equal(payloads[0].body, 'Reminder');
 });
 
 test('notification processor retries failed external channels after backoff', async () => {

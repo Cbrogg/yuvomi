@@ -14,6 +14,8 @@ import { defaultProviders } from './notifications.js';
 
 const log = createLogger('MedicationScheduler');
 const APP_NAME = 'Yuvomi';
+// Fallback-Body, falls der Medikamentenname fehlt: nie den App-Namen wiederholen (#581).
+const FALLBACK_BODY = 'Medication reminder';
 const PROVIDER_TIMEOUT_MS = 8_000;
 
 /** Lokaler Datums-Key (YYYY-MM-DD) ohne UTC-Shift. */
@@ -112,7 +114,7 @@ export async function processDueMedications({
   for (const dose of newlyDue) {
     const payload = {
       title: APP_NAME,
-      body: dose.medName || APP_NAME,
+      body: dose.medName || FALLBACK_BODY,
       url: '/health/meds',
       tag: `medication-${dose.medicationId}-${dose.scheduledAt}`,
       priority: 'default',
