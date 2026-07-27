@@ -524,13 +524,28 @@
 }
 
 @media (min-width: 1024px) {
+  /* Eine Navigation je Modus, nicht zwei. Auf der Wurzel standen bisher
+     Sidebar (23 Blätter) und Kachelübersicht (dieselben 23 Blätter)
+     nebeneinander, dazu die globale App-Sidebar: drei parallele
+     Navigationsspalten plus Breadcrumb - genau die Enterprise-SaaS-Referenz,
+     die PRODUCT.md ausschliesst (Critique 2026-07-27).
+
+     Die Übersicht gehört den Kacheln: sie tragen die Beschreibungen und sind
+     der Einstieg. Die Sidebar gehört dem Blatt: sie ist zum Wechseln da. */
   .settings-shell {
-    grid-template-columns: var(--sidebar-width-expanded) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--space-6);
     align-items: start;
   }
 
-  .settings-shell__navigation {
+  .settings-page--leaf .settings-shell {
+    grid-template-columns: var(--sidebar-width-expanded) minmax(0, 1fr);
+  }
+
+  .settings-shell__navigation { display: none; }
+
+  .settings-page--leaf .settings-shell__navigation {
+    display: flex;
     position: sticky;
     top: calc(var(--space-4) + var(--safe-area-inset-top));
     align-self: start;

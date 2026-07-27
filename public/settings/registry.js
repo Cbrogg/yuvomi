@@ -354,5 +354,9 @@ export function readStoredSettingsDestination(user, storage = sessionStorage) {
     }
     return migrated;
   }
-  return '/settings/personal/account';
+  // `null` statt eines erfundenen Ziels: wer noch nie in den Einstellungen war,
+  // hat kein "zuletzt besuchtes Blatt". Vorher landete der erste Besuch
+  // wortlos im Konto-Formular, und die Übersicht war über die App-Navigation
+  // gar nicht erreichbar (Critique 2026-07-27). Der Aufrufer entscheidet.
+  return null;
 }

@@ -1827,6 +1827,7 @@
         "mobileOverviewDescription": "Wybierz obszar do konfiguracji.",
         "mobileDomainTitle": "Ustawienia: {{domain}}",
         "backToSettings": "Wróć do ustawień",
+        "backToDomain": "Powrót do: {{domain}}",
         "retry": "Spróbuj ponownie",
         "loadError": "Nie udało się wczytać ustawień.",
         "accessRedirected": "Przekierowano do dostępnego obszaru.",

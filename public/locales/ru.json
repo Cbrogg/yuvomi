@@ -1815,6 +1815,7 @@
         "mobileOverviewDescription": "Выберите раздел для настройки.",
         "mobileDomainTitle": "Настройки: {{domain}}",
         "backToSettings": "Назад к настройкам",
+        "backToDomain": "Назад к разделу «{{domain}}»",
         "retry": "Повторить",
         "loadError": "Не удалось загрузить настройки.",
         "accessRedirected": "Вы перенаправлены в доступный раздел.",

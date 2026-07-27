@@ -1827,6 +1827,7 @@
         "mobileOverviewDescription": "یک بخش انتخاب کنید.",
         "mobileDomainTitle": "تنظیمات {{domain}}",
         "backToSettings": "بازگشت به تنظیمات",
+        "backToDomain": "بازگشت به {{domain}}",
         "retry": "تلاش مجدد",
         "loadError": "تنظیمات بارگذاری نشد.",
         "accessRedirected": "شما به بخشی قابل‌دسترس هدایت شدید.",

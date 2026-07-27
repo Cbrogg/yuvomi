@@ -1815,6 +1815,7 @@
         "mobileOverviewDescription": "Choose an area to configure.",
         "mobileDomainTitle": "{{domain}} settings",
         "backToSettings": "Back to settings",
+        "backToDomain": "Back to {{domain}}",
         "retry": "Try again",
         "loadError": "Settings could not be loaded.",
         "accessRedirected": "You were redirected to an area you can access.",

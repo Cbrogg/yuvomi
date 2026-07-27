@@ -395,14 +395,19 @@ test('readStoredSettingsDestination hebt ein vor dem IA-Umbau gespeichertes Ziel
   assert.equal(readStoredSettingsDestination(admin, storage), '/settings/sync/dms');
 });
 
-test('readStoredSettingsDestination falls back to account for an invalid stored leaf', () => {
+// Ohne gueltiges gespeichertes Ziel gibt es kein "zuletzt besuchtes Blatt".
+// Frueher stand hier `/settings/personal/account`, und der erste Besuch der
+// Einstellungen landete wortlos in einem Formular; die Uebersicht war ueber die
+// App-Navigation gar nicht erreichbar (Critique 2026-07-27). `null` heisst
+// jetzt: der Aufrufer rendert die Uebersicht.
+test('readStoredSettingsDestination liefert null fuer ein ungueltiges gespeichertes Blatt', () => {
   const storage = createMemoryStorage({ [SETTINGS_STORAGE_KEY]: '/settings/not-a-page' });
-  assert.equal(readStoredSettingsDestination(admin, storage), '/settings/personal/account');
+  assert.equal(readStoredSettingsDestination(admin, storage), null);
 });
 
-test('readStoredSettingsDestination ignores a stored admin leaf for a member', () => {
+test('readStoredSettingsDestination ignoriert ein gespeichertes Admin-Blatt fuer ein Mitglied', () => {
   const storage = createMemoryStorage({ [SETTINGS_STORAGE_KEY]: '/settings/admin/system' });
-  assert.equal(readStoredSettingsDestination(member, storage), '/settings/personal/account');
+  assert.equal(readStoredSettingsDestination(member, storage), null);
 });
 
 test('readStoredSettingsDestination removes the legacy key only after a successful migration', () => {
@@ -414,7 +419,7 @@ test('readStoredSettingsDestination removes the legacy key only after a successf
 
 test('readStoredSettingsDestination keeps an unmigratable legacy key in place', () => {
   const storage = createMemoryStorage({ [LEGACY_SETTINGS_STORAGE_KEY]: 'totally-unknown' });
-  assert.equal(readStoredSettingsDestination(admin, storage), '/settings/personal/account');
+  assert.equal(readStoredSettingsDestination(admin, storage), null);
   assert.equal(storage.has(LEGACY_SETTINGS_STORAGE_KEY), true);
   assert.equal(storage.getItem(SETTINGS_STORAGE_KEY), null);
 });
@@ -426,9 +431,19 @@ test('readStoredSettingsDestination does not persist a migration that leaves Set
   assert.equal(storage.getItem(SETTINGS_STORAGE_KEY), null);
 });
 
-test('readStoredSettingsDestination defaults to account when storage is empty', () => {
+test('readStoredSettingsDestination liefert null bei leerem Speicher', () => {
   const storage = createMemoryStorage();
-  assert.equal(readStoredSettingsDestination(admin, storage), '/settings/personal/account');
+  assert.equal(readStoredSettingsDestination(admin, storage), null);
+});
+
+// Und der Controller muss daraus die Uebersicht machen, nicht einen Redirect:
+// nur ein vorhandenes Ziel loest eine Umleitung aus, alles andere faellt in den
+// Shell-Render mit 'domains'.
+test('der Settings-Controller rendert ohne gespeichertes Ziel die Uebersicht', async () => {
+  const source = await readFile(new URL('../public/pages/settings.js', import.meta.url), 'utf8');
+  assert.match(source, /if \(destination\) \{ await redirectTo\(destination\); return; \}/);
+  assert.match(source, /view: known \? 'domain' : 'domains'/);
+  assert.doesNotMatch(source, /await redirectTo\(readStoredSettingsDestination/);
 });
 
 test('every approved settings leaf is registered as an exact SPA route', async () => {

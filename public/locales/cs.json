@@ -1815,6 +1815,7 @@
         "mobileOverviewDescription": "Vyberte oblast k nastavení.",
         "mobileDomainTitle": "Nastavení: {{domain}}",
         "backToSettings": "Zpět do nastavení",
+        "backToDomain": "Zpět na {{domain}}",
         "retry": "Zkusit znovu",
         "loadError": "Nastavení se nepodařilo načíst.",
         "accessRedirected": "Byli jste přesměrováni do přístupné oblasti.",

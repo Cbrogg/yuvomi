@@ -1827,6 +1827,7 @@
         "mobileOverviewDescription": "Pilih sebuah area.",
         "mobileDomainTitle": "Pengaturan {{domain}}",
         "backToSettings": "Kembali ke Pengaturan",
+        "backToDomain": "Kembali ke {{domain}}",
         "retry": "Coba lagi",
         "loadError": "Pengaturan tidak dapat dimuat.",
         "accessRedirected": "Anda dialihkan ke area yang dapat diakses.",

@@ -1815,6 +1815,7 @@
         "mobileOverviewDescription": "कॉन्फ़िगर करने के लिए क्षेत्र चुनें।",
         "mobileDomainTitle": "{{domain}} सेटिंग",
         "backToSettings": "सेटिंग पर वापस जाएँ",
+        "backToDomain": "{{domain}} पर वापस जाएँ",
         "retry": "फिर प्रयास करें",
         "loadError": "सेटिंग लोड नहीं हो सकीं।",
         "accessRedirected": "आपको उपलब्ध क्षेत्र पर भेजा गया है।",

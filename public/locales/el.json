@@ -1815,6 +1815,7 @@
         "mobileOverviewDescription": "Επιλέξτε μια περιοχή για ρύθμιση.",
         "mobileDomainTitle": "Ρυθμίσεις {{domain}}",
         "backToSettings": "Πίσω στις ρυθμίσεις",
+        "backToDomain": "Επιστροφή σε {{domain}}",
         "retry": "Δοκιμή ξανά",
         "loadError": "Δεν ήταν δυνατή η φόρτωση των ρυθμίσεων.",
         "accessRedirected": "Μεταφερθήκατε σε περιοχή με πρόσβαση.",

@@ -1815,6 +1815,7 @@
         "mobileOverviewDescription": "选择要配置的区域。",
         "mobileDomainTitle": "{{domain}}设置",
         "backToSettings": "返回设置",
+        "backToDomain": "返回{{domain}}",
         "retry": "重试",
         "loadError": "无法加载设置。",
         "accessRedirected": "已将你重定向到可访问的区域。",

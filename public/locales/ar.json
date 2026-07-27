@@ -1815,6 +1815,7 @@
         "mobileOverviewDescription": "اختر قسمًا لإعداده.",
         "mobileDomainTitle": "إعدادات {{domain}}",
         "backToSettings": "العودة إلى الإعدادات",
+        "backToDomain": "العودة إلى {{domain}}",
         "retry": "إعادة المحاولة",
         "loadError": "تعذر تحميل الإعدادات.",
         "accessRedirected": "تم تحويلك إلى قسم يمكنك الوصول إليه.",

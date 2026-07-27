@@ -1815,6 +1815,7 @@
         "mobileOverviewDescription": "Välj ett område att ställa in.",
         "mobileDomainTitle": "Inställningar för {{domain}}",
         "backToSettings": "Tillbaka till inställningar",
+        "backToDomain": "Tillbaka till {{domain}}",
         "retry": "Försök igen",
         "loadError": "Inställningarna kunde inte läsas in.",
         "accessRedirected": "Du omdirigerades till ett tillgängligt område.",

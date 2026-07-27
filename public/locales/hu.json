@@ -1815,6 +1815,7 @@
         "mobileOverviewDescription": "Válasszon egy területet a konfiguráláshoz.",
         "mobileDomainTitle": "{{domain}} beállítások",
         "backToSettings": "Vissza a beállításokhoz",
+        "backToDomain": "Vissza ide: {{domain}}",
         "retry": "Próbálja újra",
         "loadError": "A beállítások betöltése sikertelen.",
         "accessRedirected": "Átirányították egy olyan területre, amelyhez hozzáférése van.",

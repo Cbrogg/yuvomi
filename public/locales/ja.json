@@ -1815,6 +1815,7 @@
         "mobileOverviewDescription": "設定する項目を選択してください。",
         "mobileDomainTitle": "{{domain}}の設定",
         "backToSettings": "設定に戻る",
+        "backToDomain": "{{domain}} に戻る",
         "retry": "再試行",
         "loadError": "設定を読み込めませんでした。",
         "accessRedirected": "アクセス可能な項目へ移動しました。",

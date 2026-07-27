@@ -1815,6 +1815,7 @@
         "mobileOverviewDescription": "Elige un área para configurarla.",
         "mobileDomainTitle": "Ajustes de {{domain}}",
         "backToSettings": "Volver a ajustes",
+        "backToDomain": "Volver a {{domain}}",
         "retry": "Reintentar",
         "loadError": "No se pudieron cargar los ajustes.",
         "accessRedirected": "Se te redirigió a un área accesible.",

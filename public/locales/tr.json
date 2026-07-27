@@ -1815,6 +1815,7 @@
         "mobileOverviewDescription": "Yapılandırılacak bir alan seçin.",
         "mobileDomainTitle": "{{domain}} ayarları",
         "backToSettings": "Ayarlara dön",
+        "backToDomain": "{{domain}} bölümüne dön",
         "retry": "Yeniden dene",
         "loadError": "Ayarlar yüklenemedi.",
         "accessRedirected": "Erişebileceğiniz bir alana yönlendirildiniz.",

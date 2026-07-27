@@ -1815,6 +1815,7 @@
         "mobileOverviewDescription": "Choisissez une rubrique à configurer.",
         "mobileDomainTitle": "Réglages de {{domain}}",
         "backToSettings": "Retour aux réglages",
+        "backToDomain": "Retour à {{domain}}",
         "retry": "Réessayer",
         "loadError": "Impossible de charger les réglages.",
         "accessRedirected": "Vous avez été redirigé vers une rubrique accessible.",

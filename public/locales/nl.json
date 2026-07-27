@@ -1815,6 +1815,7 @@
         "mobileOverviewDescription": "Kies een onderdeel om in te stellen.",
         "mobileDomainTitle": "Instellingen voor {{domain}}",
         "backToSettings": "Terug naar instellingen",
+        "backToDomain": "Terug naar {{domain}}",
         "retry": "Opnieuw proberen",
         "loadError": "Instellingen konden niet worden geladen.",
         "accessRedirected": "Je bent doorgestuurd naar een toegankelijk onderdeel.",

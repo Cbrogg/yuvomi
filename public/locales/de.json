@@ -1827,6 +1827,7 @@
         "mobileOverviewDescription": "Wähle einen Bereich aus.",
         "mobileDomainTitle": "Einstellungen: {{domain}}",
         "backToSettings": "Zurück zu Einstellungen",
+        "backToDomain": "Zurück zu {{domain}}",
         "retry": "Erneut versuchen",
         "loadError": "Einstellungen konnten nicht geladen werden.",
         "accessRedirected": "Du wurdest zu einem zugänglichen Bereich weitergeleitet.",

@@ -182,10 +182,13 @@ function updateNavigationActiveState(navigation, activeLeaf) {
   for (const group of navigation.querySelectorAll('.settings-shell__navigation-group')) {
     const isActiveDomain = group.dataset.domainId === activeDomainId;
     group.classList.toggle('settings-shell__navigation-group--active', isActiveDomain);
-    // Single-Open: die aktive Domäne wird aufgeklappt, alle anderen schließen mit.
-    // Ohne aktives Blatt (Übersicht) bleibt der manuelle Zustand unangetastet.
-    if (collapsible && activeDomainId) {
-      setGroupExpanded(group, isActiveDomain);
+    // Single-Open: die aktive Domäne wird aufgeklappt, alle anderen schließen
+    // mit. Ohne aktives Blatt schliessen alle - sonst stand links die Domäne
+    // des zuletzt besuchten Blatts offen, während rechts die Übersicht begann
+    // (Critique 2026-07-27). Ein Navigationszustand, der dem Inhalt
+    // widerspricht, kostet mehr Vertrauen als er Wege spart.
+    if (collapsible) {
+      setGroupExpanded(group, Boolean(activeDomainId) && isActiveDomain);
     }
   }
 
@@ -409,13 +412,17 @@ function createLeafHeader(leaf) {
 
 async function renderLeafContent(content, leaf, domain, user, query) {
   const breadcrumb = createBreadcrumb(domain, leaf);
+  // Nach dem Ziel benannt, nicht nach der Wurzel: der Link führt auf die
+  // Domänen-Übersicht, hiess aber "Zurück zu Einstellungen" - genau wie der
+  // Link eine Ebene höher, der woanders hinführt (Critique 2026-07-27).
+  // Mobil ist das die einzige Rückwärts-Affordance.
   const backLink = createLink(
     settingsOverviewUrl(domain.id),
     'settings-leaf-back-link',
   );
   backLink.append(
     createIcon('arrow-left', 'settings-leaf-back-link__icon'),
-    document.createTextNode(t('settings.backToSettings')),
+    document.createTextNode(t('settings.backToDomain', { domain: t(domain.labelKey) })),
   );
 
   // Der Leaf-Header wird zentral aus der Registry gerendert (Prio 5/B1): die
