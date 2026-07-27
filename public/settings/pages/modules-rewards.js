@@ -16,9 +16,8 @@ function renderPage(container, preferences) {
   container.replaceChildren();
   container.insertAdjacentHTML('beforeend', `
     <section class="settings-section">
-      <h2 class="settings-section__title">${t('nav.rewards')}</h2>
       <div class="settings-card">
-        <h3 class="settings-card__title">${t('settings.rewardsEnableTitle')}</h3>
+        <h2 class="settings-card__title">${t('settings.rewardsEnableTitle')}</h2>
         <p class="form-hint">${t('settings.rewardsEnableHint')}</p>
         <label class="toggle-row">
           <input type="checkbox" id="rewards-enabled"${isRewardsEnabled(preferences) ? ' checked' : ''}>
@@ -26,7 +25,7 @@ function renderPage(container, preferences) {
         </label>
       </div>
       <div class="settings-card">
-        <h3 class="settings-card__title">${t('settings.rewardsApprovalTitle')}</h3>
+        <h2 class="settings-card__title">${t('settings.rewardsApprovalTitle')}</h2>
         <p class="form-hint">${t('settings.rewardsApprovalHint')}</p>
         <label class="toggle-row">
           <input type="checkbox" id="rewards-require-approval"${preferences.rewards_require_approval !== false ? ' checked' : ''}>
@@ -34,7 +33,7 @@ function renderPage(container, preferences) {
         </label>
       </div>
       <div class="settings-card">
-        <h3 class="settings-card__title">${t('settings.rewardsDefaultPointsTitle')}</h3>
+        <h2 class="settings-card__title">${t('settings.rewardsDefaultPointsTitle')}</h2>
         <p class="form-hint">${t('settings.rewardsDefaultPointsHint')}</p>
         <form class="settings-form settings-form--compact" id="rewards-default-points-form" novalidate autocomplete="off">
           <div class="form-group">

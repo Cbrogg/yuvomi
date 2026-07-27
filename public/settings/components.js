@@ -103,13 +103,17 @@ export function createStatusSummary({
   details = [],
   action = null,
   tone = 'neutral',
+  // Überschriftenebene, nicht Größe: die trägt `settings-status-summary__title`.
+  // Blätter, in denen die Zusammenfassung direkt unter dem Leaf-Titel sitzt,
+  // brauchen 2, sonst springt das Outline von h1 auf h3.
+  level = 3,
 }) {
   const allowedTones = new Set(['neutral', 'success', 'warning', 'danger']);
   const resolvedTone = allowedTones.has(tone) ? tone : 'neutral';
   const summary = document.createElement('section');
   summary.className = `settings-status-summary settings-status-summary--${resolvedTone}`;
 
-  const heading = document.createElement('h3');
+  const heading = document.createElement(level === 2 ? 'h2' : 'h3');
   heading.className = 'settings-status-summary__title';
   heading.textContent = String(title ?? '');
 

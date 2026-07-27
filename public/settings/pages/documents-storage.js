@@ -75,7 +75,10 @@ function buildStatusSummary(data) {
     title: activeLabel,
     status: statusLine,
     details,
-    tone: lastError ? "warning" : "neutral"
+    tone: lastError ? "warning" : "neutral",
+    // Erster Heading nach dem Leaf-Titel: die Sektion trug ihn zuvor als h2 und
+    // wiederholte damit den Blatt-Titel wörtlich (Critique 2026-07-27).
+    level: 2
   });
 }
 
@@ -147,7 +150,6 @@ function renderPage(container) {
     "beforeend",
     `
     <section class="settings-section">
-      <h2 class="settings-section__title">${t("settings.documentStorageTitle")}</h2>
       <div class="settings-card" id="document-storage-card">
         <div id="document-storage-banner"></div>
         <p class="settings-card-description">${t("settings.documentStorageDescription")}</p>

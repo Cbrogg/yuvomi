@@ -24,7 +24,6 @@ export async function render(container, { user } = {}) {
   container.replaceChildren();
   container.insertAdjacentHTML('beforeend', `
     <section class="settings-section">
-      <h2 class="settings-section__title">${esc(t('settings.pageEmail'))}</h2>
       <div class="settings-card">
         <p class="form-hint">${esc(t('email.purposeHint'))}</p>
         <form class="settings-form" id="email-form" novalidate>

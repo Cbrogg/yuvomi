@@ -2170,11 +2170,16 @@
   background: var(--color-surface-raised);
 }
 
-.settings-mobile-nav-slot__label,
-.settings-navigation-group__title {
+.settings-mobile-nav-slot__label {
   color: var(--color-text-secondary);
   font-size: var(--text-sm);
   font-weight: var(--font-weight-semibold);
+}
+
+/* Größe und Weight kommen aus der kompakten Titelrolle in typography.css;
+ * hier nur noch die Farbe. */
+.settings-navigation-group__title {
+  color: var(--color-text-secondary);
 }
 
 .settings-navigation-groups {

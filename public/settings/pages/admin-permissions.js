@@ -525,7 +525,6 @@ function renderShell(container) {
   container.replaceChildren();
   container.insertAdjacentHTML('beforeend', `
     <section class="settings-section perm-page">
-      <h2 class="settings-section__title">${esc(t('settings.permTitle'))}</h2>
       <p class="settings-section__intro">${esc(t('settings.permIntro'))}</p>
 
       <div class="perm-modeswitch" role="tablist" aria-label="${esc(t('settings.permTitle'))}">

@@ -494,7 +494,10 @@ export async function renderSettingsShell(container, {
     const pageHeader = document.createElement('header');
     pageHeader.className = 'page__header settings-shell-header';
     const pageTitle = document.createElement('h1');
-    pageTitle.className = 'page__title';
+    // Nicht `page__title` (22/28px): jedes andere Modul rendert seinen
+    // Seitentitel mit 20px, und der Settings-Leaf-Titel tut es auch. Zwei
+    // h1-Größen für dieselbe Ebene (Critique 2026-07-27).
+    pageTitle.className = 'settings-shell-header__title';
     pageTitle.textContent = t('settings.title');
     pageHeader.appendChild(pageTitle);
 

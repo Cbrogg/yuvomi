@@ -136,7 +136,6 @@ function renderPage(container, preferences, isAdmin) {
     <section class="settings-section">
       <h2 class="settings-section__title">${t('settings.sectionDesign')}</h2>
       <div class="settings-card">
-        <h3 class="settings-card__title">${t('settings.cardAppearance')}</h3>
         <div class="theme-toggle" id="theme-toggle">
           <button class="theme-toggle__btn ${theme === 'system' ? 'theme-toggle__btn--active' : ''}" type="button" data-theme-value="system" aria-label="${t('settings.themeSysLabel')}" aria-pressed="${theme === 'system'}">
             <i data-lucide="monitor" class="icon-md" aria-hidden="true"></i>

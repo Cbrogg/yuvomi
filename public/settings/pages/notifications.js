@@ -43,10 +43,9 @@ function renderPage(container, user) {
   container.replaceChildren();
   container.insertAdjacentHTML('beforeend', `
     <section class="settings-section">
-      <h2 class="settings-section__title">${t('settings.notificationsTitle')}</h2>
+      <h2 class="settings-section__title">${t('settings.pushToggleTitle')}</h2>
       <div class="settings-card">
         <div class="settings-card__body">
-          <h3 class="settings-card__title">${t('settings.pushToggleTitle')}</h3>
           <p class="form-hint">${t('settings.pushDeviceDescription')}</p>
           <p class="form-hint" id="push-ios-hint" hidden>${t('settings.pushIosHomescreenHint')}</p>
           <p class="form-hint" id="push-status" aria-live="polite">${t('settings.pushChecking')}</p>
