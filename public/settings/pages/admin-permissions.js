@@ -518,8 +518,12 @@ function applySegment(container, opt) {
 }
 
 async function resetSubject(container) {
+  // War der einzige Confirm ohne `danger`, obwohl er Zugriffsbeschraenkungen
+  // aufhebt - und bei einer Rolle gleich fuer mehrere Personen.
   const ok = await confirmModal(t('settings.permResetConfirm', { name: subjectTitle() }), {
+    danger: true,
     confirmLabel: t('settings.permResetSubject'),
+    detail: t('settings.permResetConfirmDetail'),
   });
   if (!ok) return;
   state.draft = { modules: {}, widgets: {} };

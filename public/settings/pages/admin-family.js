@@ -235,9 +235,13 @@ function bindDeleteButtons(container) {
     btn.addEventListener('click', async () => {
       const id = parseInt(btn.dataset.deleteUser, 10);
       const name = btn.dataset.name;
+      // Die Folgen stehen im Dialog, nicht in der Dokumentation: `created_by`
+      // kaskadiert (server/db.js), `assigned_to` wird auf NULL gesetzt. In
+      // einer selbstgehosteten Instanz gibt es weder Support noch Undo.
       if (!await confirmModal(t('settings.deleteMemberConfirm', { name }), {
         danger: true,
         confirmLabel: t('common.delete'),
+        detail: t('settings.deleteMemberConfirmDetail', { name }),
       })) return;
       try {
         await auth.deleteUser(id);

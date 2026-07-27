@@ -248,6 +248,7 @@ function bindEvents(container, initialTokens) {
     if (!await confirmModal(t('settings.apiTokenRevokeConfirm', { name }), {
       danger: true,
       confirmLabel: t('settings.apiTokenRevoke'),
+      detail: t('settings.apiTokenRevokeDetail'),
     })) return;
     try {
       await api.delete(`/auth/api-tokens/${id}`);

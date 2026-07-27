@@ -3745,3 +3745,36 @@ test('Avatar-Initialen waehlen die lesbare Textfarbe', async () => {
   assert.match(read('../public/styles/settings.css'), /\.settings-avatar--ink,\s*\.perm-chip__avatar--ink \{\s*color: var\(--color-ink-on-bright\);/);
 });
 
+
+// In einer selbstgehosteten Familieninstanz gibt es weder Support noch Undo.
+// Wer die Folgen nicht im Dialog liest, liest sie nie - und "{{name}} wirklich
+// loeschen?" loeschte einen Menschen, ohne eine davon zu nennen, waehrend der
+// harmlosere Budget-Dialog "Zugeordnete Buchungen bleiben erhalten" sagt
+// (Critique 2026-07-27, zweiter Lauf).
+test('destruktive Settings-Dialoge nennen ihre Folgen und sind als gefaehrlich markiert', () => {
+  const dialoge = [
+    ['admin-family.js', 'settings.deleteMemberConfirm', 'settings.deleteMemberConfirmDetail'],
+    ['admin-api.js', 'settings.apiTokenRevokeConfirm', 'settings.apiTokenRevokeDetail'],
+    ['admin-permissions.js', 'settings.permResetConfirm', 'settings.permResetConfirmDetail'],
+    ['admin-backup.js', 'settings.backupRestoreConfirm', 'settings.backupRestoreDetail'],
+  ];
+
+  for (const [datei, confirmKey, detailKey] of dialoge) {
+    const source = read(`../public/settings/pages/${datei}`);
+    // Fenster fester Laenge statt bis `})`: der Confirm-Text interpoliert
+    // selbst (`{ name }`) und wuerde den Block zu frueh abschneiden.
+    const block = source.slice(source.indexOf(confirmKey), source.indexOf(confirmKey) + 320);
+    assert.ok(block.includes('danger: true'), `${datei}: ${confirmKey} braucht danger: true`);
+    assert.ok(block.includes(detailKey), `${datei}: ${confirmKey} braucht den Folgen-Text ${detailKey}`);
+  }
+
+  assertKeysExistInEveryLocale(dialoge.map(([, , detailKey]) => detailKey));
+
+  // Der Text muss die Folgen benennen, nicht nur warnen: Mindestlaenge als
+  // grober Schutz gegen ein spaeteres "Wirklich?" als Detail.
+  const de = JSON.parse(read('../public/locales/de.json'));
+  for (const [, , detailKey] of dialoge) {
+    const value = detailKey.split('.').reduce((o, k) => o?.[k], de);
+    assert.ok(value.length >= 80, `${detailKey} ist zu knapp fuer eine Folgenbeschreibung`);
+  }
+});

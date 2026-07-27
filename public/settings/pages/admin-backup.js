@@ -500,9 +500,12 @@ function bindRestoreEvents(container) {
     event.preventDefault();
     const file = fileInput.files?.[0];
     if (!file) return;
+    // Die Warnung zu Dateien ausserhalb der DB stand bisher nur auf dem
+    // Dokumentenspeicher-Blatt - also nicht dort, wo sie gebraucht wird.
     if (!await confirmModal(t('settings.backupRestoreConfirm'), {
       danger: true,
       confirmLabel: t('settings.backupRestoreButton'),
+      detail: t('settings.backupRestoreDetail'),
     })) return;
 
     errorEl.hidden = true;
