@@ -429,6 +429,33 @@ Generate a fixed key pair (optional):
 npx web-push generate-vapid-keys
 ```
 
+#### iOS and iPadOS
+
+Apple applies extra restrictions that do not exist on Android or desktop browsers:
+
+- **iOS/iPadOS 16.4 or newer** is required.
+- **The app must be installed to the Home Screen.** iOS delivers Web Push only to installed
+  home-screen web apps, never to a Safari tab. Open Yuvomi in Safari, then Share ->
+  "Add to Home Screen".
+- **Enable the toggle from inside the home-screen app.** The push subscription belongs to that
+  installation, so a toggle enabled in a Safari tab does not carry over.
+- **The certificate must be one iOS trusts.** A self-signed certificate or a private CA without an
+  installed profile stops the service worker from registering, which silently disables push. A
+  plain `http://` LAN address does not work either.
+- **Check iOS Settings -> Notifications -> Yuvomi**: "Allow Notifications" must be on, and a Focus
+  mode must not be filtering the app.
+- **The server needs outbound access to `web.push.apple.com`.** In LAN-only or egress-filtered
+  deployments the send fails server-side.
+
+If a test notification does not arrive, the server log is the authoritative source. Successful
+sends are silent; failures are logged as `[Push] Push send failed (host=... status=... body=...)`,
+where `host` identifies the push service (`web.push.apple.com` for iOS) and `status`/`body` carry
+that service's rejection reason.
+
+A subscription the server no longer knows about (removed after the push service reported it gone,
+or lost in a database restore) repairs itself: the app re-registers an existing subscription on
+every start, and the test button re-registers and retries once before reporting a failure.
+
 ### Email / SMTP (Optional)
 
 Configuring an outgoing SMTP server enables the self-service **"Forgot password"** flow on the

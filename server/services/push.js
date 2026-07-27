@@ -9,6 +9,15 @@ import { createLogger } from '../logger.js';
 
 const log = createLogger('Push');
 
+/** Nur der Host des Endpoints - der volle Endpoint enthält ein Geräte-Token. */
+function pushHost(endpoint) {
+  try {
+    return new URL(endpoint).host;
+  } catch {
+    return 'unknown';
+  }
+}
+
 export function createPushService({ db, webpush = webpushDefault } = {}) {
   const getDb = () => (db || dbModule.get());
 
@@ -58,9 +67,16 @@ export function createPushService({ db, webpush = webpushDefault } = {}) {
       } catch (err) {
         if (err && (err.statusCode === 404 || err.statusCode === 410)) {
           getDb().prepare('DELETE FROM push_subscriptions WHERE id = ?').run(sub.id);
-          log.info(`Removed gone push subscription ${sub.id}`);
+          log.info(`Removed gone push subscription ${sub.id} (${pushHost(sub.endpoint)})`);
         } else {
-          log.error('Push send failed:', err?.message || err);
+          // Statuscode und Body des Push-Dienstes mitloggen - ohne sie ist ein
+          // abgelehnter Push (z. B. Apple 403 BadJwtToken) nicht diagnostizierbar.
+          const parts = [
+            `host=${pushHost(sub.endpoint)}`,
+            err?.statusCode ? `status=${err.statusCode}` : null,
+            err?.body ? `body=${String(err.body).slice(0, 300)}` : null,
+          ].filter(Boolean);
+          log.error(`Push send failed (${parts.join(' ')}):`, err?.message || err);
         }
       }
     }

@@ -1044,6 +1044,39 @@ test('settings rows programmatically label form controls and preserve descriptio
   assert.match(source, /formControl\.setAttribute\('aria-describedby'/);
 });
 
+test('push client re-registers an orphaned subscription', () => {
+  const source = read('../public/push.js');
+
+  // App-Start: bestehendes Abo nachregistrieren, sonst bleibt ein serverseitig
+  // entferntes Abo (410, DB-Restore) dauerhaft stumm.
+  assert.match(source, /if \(st\.subscribed\) await resyncSubscription\(\)/);
+  assert.match(source, /async function resyncSubscription\(\)/);
+  assert.match(source, /api\.post\('\/push\/subscribe', sub\.toJSON\(\)\)/);
+  // Reparatur erkennt ein Abo auf einem veralteten VAPID-Key und legt es neu an.
+  assert.match(source, /async function repairPush\(\)/);
+  assert.match(source, /!matchesServerKey\(sub, serverKey\)/);
+  assert.match(source, /await sub\.unsubscribe\(\)/);
+  // Nie ungefragt nachfragen: Reparatur setzt eine erteilte Berechtigung voraus.
+  assert.match(source, /Notification\.permission !== 'granted'\) return false/);
+});
+
+test('notification settings report real delivery and self-heal once', () => {
+  const source = read('../public/settings/pages/notifications.js');
+
+  // Erfolgsmeldung nur bei tatsaechlich zugestelltem Push.
+  assert.match(source, /sent = Number\(res\?\.data\?\.sent\) \|\| 0/);
+  assert.match(source, /if \(sent > 0\) status\.textContent = t\('settings\.pushTestSent'\)/);
+  assert.match(source, /t\('settings\.pushTestFailed'\)/);
+  assert.match(source, /t\('settings\.pushTestNoDevice'\)/);
+  // Genau ein Reparaturversuch, kein Retry-Loop: ein regulaerer Versand plus
+  // hoechstens einer nach der Reparatur.
+  assert.match(source, /repaired = await repairPush\(\)/);
+  assert.equal(source.match(/await sendTest\(\)/g).length, 2);
+  // iOS ohne Home-Screen-Installation bekommt den Grund genannt, nicht "nicht unterstuetzt".
+  assert.match(source, /getPwaInstallState\(\)\.ios/);
+  assert.match(source, /t\('settings\.pushIosNotInstalled'\)/);
+});
+
 test('settings shell marks and focuses the active page', () => {
   const source = read('../public/settings/shell.js');
 

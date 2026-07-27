@@ -174,7 +174,43 @@ test('POST /test forwards client-provided localized text', async () => {
   const json = await res.json();
   assert.equal(res.status, 200);
   assert.equal(json.data.sent, 1);
+  assert.equal(json.data.devices, 1);
   assert.match(webpush.calls[0].payload, /Titel/);
+  await app.close();
+});
+
+test('POST /test reports sent 0 / devices 0 when nothing is registered', async () => {
+  const db = makeDb();
+  const app = await startApp(db, makeWebpushMock());
+  const res = await fetch(`${app.baseUrl}/test`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({}) });
+  const json = await res.json();
+  assert.equal(res.status, 200);
+  assert.equal(json.data.sent, 0);
+  assert.equal(json.data.devices, 0);
+  await app.close();
+});
+
+test('POST /test reports sent 0 but devices 1 when the subscription is gone', async () => {
+  const db = makeDb();
+  db.prepare("INSERT INTO push_subscriptions (user_id,endpoint,p256dh,auth) VALUES (1,'https://push/gone','p','a')").run();
+  const app = await startApp(db, makeWebpushMock());
+  const res = await fetch(`${app.baseUrl}/test`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({}) });
+  const json = await res.json();
+  assert.equal(res.status, 200);
+  assert.equal(json.data.sent, 0);
+  // Vor dem Senden gezaehlt: der Client kann "abgelaufen" von "nie registriert" trennen.
+  assert.equal(json.data.devices, 1);
+  assert.equal(db.prepare('SELECT COUNT(*) c FROM push_subscriptions').get().c, 0);
+  await app.close();
+});
+
+test('POST /test only counts the current user devices', async () => {
+  const db = makeDb();
+  db.prepare("INSERT INTO push_subscriptions (user_id,endpoint,p256dh,auth) VALUES (2,'https://push/bob','p','a')").run();
+  const app = await startApp(db, makeWebpushMock(), 1);
+  const res = await fetch(`${app.baseUrl}/test`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({}) });
+  const json = await res.json();
+  assert.equal(json.data.devices, 0);
   await app.close();
 });
 
