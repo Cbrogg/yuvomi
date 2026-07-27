@@ -1664,6 +1664,14 @@
   border-radius: var(--radius-sm);
 }
 
+/* Klartext zuerst, technischer Beleg darunter (Backup-Zeitplan). */
+.settings-info-value__stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-1);
+}
+
 .document-storage-status {
   margin-top: var(--space-4);
   padding-top: var(--space-4);

@@ -143,6 +143,7 @@ npm run test:frontend-audit  # A11y- und Hard-Constraint-Guards des UX-Audits (i
 npm run test:layer-boundary  # Schicht-Guard: public/ importiert nie server/; server/ nur geteilte isomorphe Utils (Allowlist)
 npm run test:typography      # Typo-Guard: font-size/letter-spacing nur via Token, Breakpoint- & Rollen-Schicht
 npm run test:settings-navigation
+npm run test:settings-cron-label  # Backup-Zeitplan als Klartext: Cron-Muster (täglich/wöchentlich/monatlich/Stundenintervall), null-Fallback für alles Übrige, Locale-Vollständigkeit
 npm run test:region-presets   # Region/Format-Presets: Mapping-Validierung + detectRegion-Reverse-Lookup
 npm run test:docker-publish   # Docker-Publish-Workflow: Tags, Plattformen, Trigger
 npm run test:auth-userid

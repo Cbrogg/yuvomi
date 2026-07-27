@@ -1,12 +1,29 @@
 import { api } from '/api.js';
 import { formatDate, formatTime, t } from '/i18n.js';
 import { confirmModal } from '/components/modal.js';
+import { formatCronSchedule } from '/settings/cron-label.js';
 import {
   createDisclosure,
   createInfoRow,
   createRetryState,
   toggleRowHtml,
 } from '/settings/components.js';
+
+// Zeitplan-Zelle: der Klartext trägt die Aussage, der Cron-Ausdruck bleibt als
+// Beleg daneben stehen. Ohne erkanntes Muster ist der Ausdruck die Aussage.
+function scheduleValue(schedule) {
+  const readable = formatCronSchedule(schedule);
+  if (!readable) return { value: schedule, code: true };
+
+  const wrapper = document.createElement('span');
+  wrapper.className = 'settings-info-value__stack';
+  const text = document.createElement('span');
+  text.textContent = readable;
+  const expression = document.createElement('code');
+  expression.textContent = schedule;
+  wrapper.append(text, expression);
+  return { value: wrapper, code: false };
+}
 
 function showError(element, message) {
   if (!element) return;
@@ -202,7 +219,7 @@ async function loadBackupSchedulerStatus(container) {
     ];
 
     if (enabled) {
-      rows.push(createInfoRow({ label: t('settings.backupSchedulerSchedule'), value: schedule, code: true }));
+      rows.push(createInfoRow({ label: t('settings.backupSchedulerSchedule'), ...scheduleValue(schedule) }));
       rows.push(createInfoRow({
         label: t('settings.backupSchedulerKeep'),
         value: t('settings.backupSchedulerKeepCount', { count: keepCount }),
