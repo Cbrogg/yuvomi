@@ -1,6 +1,7 @@
 import { api } from '/api.js';
 import { t } from '/i18n.js';
 import { esc } from '/utils/html.js';
+import { savePreferences } from '/settings/preferences-cache.js';
 import {
   createInfoList,
   createRetryState,
@@ -116,7 +117,7 @@ function bindAppNameEvents(container) {
   const persist = async (value) => {
     errorElement.hidden = true;
     try {
-      await api.put('/preferences', { app_name: value });
+      await savePreferences({ app_name: value });
       input.value = value || DEFAULT_APP_NAME;
       refreshBranding(value);
       window.yuvomi?.showToast(t('settings.appNameSavedToast'), 'success');

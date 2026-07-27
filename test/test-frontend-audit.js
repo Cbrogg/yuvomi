@@ -9,6 +9,11 @@ import { SETTINGS_DOMAINS, SETTINGS_LEAVES } from '../public/settings/registry.j
 
 const read = (path) => readFileSync(new URL(path, import.meta.url), 'utf8').replace(/\r/g, '');
 
+// Control-IDs stehen seit dem Toggle-Primitiv in zwei Formen im Quelltext:
+// literal im Markup (`id="foo"`) und als Option von toggleRowHtml
+// (`attrs: { id: 'foo' }`). Beide meinen dasselbe gerenderte Attribut.
+const controlIdPattern = (id) => new RegExp(`id="${id}"|id:\\s*['"]${id}['"]`);
+
 function walkJsFiles(dir) {
   const entries = readdirSync(new URL(dir, import.meta.url), { withFileTypes: true });
   return entries.flatMap((entry) => {
@@ -314,7 +319,7 @@ test('personal account leaf preserves self-profile, password, and logout contrac
 test('personal appearance leaf owns theme, locale, and regional preferences', () => {
   const source = read('../public/settings/pages/personal-appearance.js');
 
-  assert.match(source, /await api\.get\('\/preferences'\)/);
+  assert.match(source, /await getPreferences\(\)/);
   assert.match(source, /getSupportedLocales\(\)/);
   assert.match(source, /setLocale\(/);
   assert.match(source, /aria-pressed/);
@@ -324,7 +329,7 @@ test('personal appearance leaf owns theme, locale, and regional preferences', ()
   assert.match(source, /data-lucide="moon"/);
   assert.match(source, /date_format/);
   assert.match(source, /time_format/);
-  assert.match(source, /api\.put\('\/preferences'/);
+  assert.match(source, /savePreferences\(\{/);
   assert.match(source, /function safeStorageGet\(/);
   assert.match(source, /function safeStorageSet\(/);
   assert.match(source, /function safeStorageRemove\(/);
@@ -429,11 +434,14 @@ test('module-specific settings leaves only reference their owned preferences and
       ...source.matchAll(/\bapi\.(?:get|put|post|patch|delete)\(\s*`([^`$]*)/g),
       ...source.matchAll(/\bapi\.(?:get|put|post|patch|delete)\(\s*['"]([^'"]+)/g),
     ].map((match) => match[1]);
+    // getPreferences()/savePreferences() sind `/preferences` - der Cache steht
+    // dazwischen, der Endpunkt bleibt derselbe (Critique 2026-07-27).
+    if (/\b(?:get|save)Preferences\(/.test(source)) endpoints.push('/preferences');
     const preferenceKeys = new Set(
       [...source.matchAll(/\b(?:preferences|preferenceData)\.([a-z][a-z0-9_]*)/g)]
         .map((match) => match[1]),
     );
-    for (const match of source.matchAll(/api\.put\(\s*['"]\/preferences['"]\s*,\s*\{([\s\S]*?)\}\s*\)/g)) {
+    for (const match of source.matchAll(/savePreferences\(\s*\{([\s\S]*?)\}\s*\)/g)) {
       for (const keyMatch of match[1].matchAll(/\b([a-z][a-z0-9_]*)\s*:/g)) {
         preferenceKeys.add(keyMatch[1]);
       }
@@ -455,8 +463,8 @@ test('module-specific settings leaves only reference their owned preferences and
 test('module-specific settings leaves preserve their required controls and behaviors', () => {
   const kitchen = read('../public/settings/pages/modules-kitchen.js');
   assert.match(kitchen, /const MEAL_TYPES = \['breakfast', 'lunch', 'dinner', 'snack'\]/);
-  assert.match(kitchen, /await api\.get\('\/preferences'\)/);
-  assert.match(kitchen, /api\.put\('\/preferences', \{ visible_meal_types: checkedMealTypes \}\)/);
+  assert.match(kitchen, /await getPreferences\(\)/);
+  assert.match(kitchen, /savePreferences\(\{ visible_meal_types: checkedMealTypes \}\)/);
   assert.match(kitchen, /MEAL_TYPES\.map\(/);
   assert.doesNotMatch(kitchen, /\/(?:recipes|shopping)|shopping\/categories|recipe_settings|shopping_settings/);
 
@@ -470,7 +478,7 @@ test('module-specific settings leaves preserve their required controls and behav
     'holiday-school-color',
     'holiday-sync-btn',
   ]) {
-    assert.match(calendar, new RegExp(`id="${id}"`));
+    assert.match(calendar, controlIdPattern(id));
   }
   assert.match(calendar, /api\.get\('\/preferences\/holidays\/countries'\)/);
   assert.match(calendar, /api\.get\(`\/preferences\/holidays\/subdivisions\/\$\{countryCode\}`\)/);
@@ -493,10 +501,13 @@ test('module-specific settings leaves preserve their required controls and behav
   // diesen drei Schaltern und einem einzigen /preferences-Request statt dreien.
   const options = read('../public/settings/pages/modules-options.js');
   for (const id of ['budget-mode-personal', 'health-cycle-enabled', 'housekeeping-payment-tasks']) {
-    assert.match(options, new RegExp(`id="${id}"`));
+    assert.match(options, controlIdPattern(id));
   }
-  assert.equal([...options.matchAll(/<(?:input|select|textarea)\b/g)].length, 3);
-  assert.equal([...options.matchAll(/api\.get\('\/preferences'\)/g)].length, 1);
+  // Drei Schalter, sonst nichts: die Schalter selbst kommen aus dem geteilten
+  // Primitiv, deshalb zählt das Blatt keine `<input>`-Literale mehr.
+  assert.equal([...options.matchAll(/toggleRowHtml\(\{/g)].length, 3);
+  assert.equal([...options.matchAll(/<(?:input|select|textarea)\b/g)].length, 0);
+  assert.equal([...options.matchAll(/getPreferences\(\)/g)].length, 1);
   assert.match(options, /budget_mode: checked \? 'personal' : 'shared'/);
   // Die Währung sitzt in der vereinheitlichten Region/Format-Karte; das Blatt
   // trägt nur noch den Verweis dorthin, keine eigene Auswahl.
@@ -781,9 +792,11 @@ test('administration-domain leaves exist and export async render functions', () 
     assert.doesNotMatch(source, /\.innerHTML\s*=/, `${file} must not assign innerHTML`);
     assert.doesNotMatch(source, /\bfetch\(/, `${file} must use the shared API client`);
     assert.doesNotMatch(source, /\brequire\(/, `${file} must use import, not require`);
+    // Entweder direkt oder über einen geteilten Settings-Baustein
+    // (preferences-cache, weather-location) - nie über rohes fetch.
     assert.match(
       source,
-      /import \{ api(?:,\s*auth)? \} from '\/api\.js'/,
+      /import \{ api(?:,\s*auth)? \} from '\/api\.js'|from '\/settings\/(?:preferences-cache|weather-location)\.js'/,
       `${file} must import the shared API client`,
     );
   }
@@ -848,10 +861,10 @@ test('admin-backup leaf owns database + WebDAV backup without document storage',
 test('personal-calendar leaf owns only the per-user event defaults', () => {
   const source = read('../public/settings/pages/personal-calendar.js');
 
-  assert.match(source, /id="calendar-default-assign-me"/);
+  assert.match(source, controlIdPattern('calendar-default-assign-me'));
   assert.match(source, /id="calendar-default-reminders"/);
-  assert.match(source, /api\.put\('\/preferences', \{ calendar_default_assign_me: value \}\)/);
-  assert.match(source, /api\.put\('\/preferences', \{ calendar_default_reminders: selected \}\)/);
+  assert.match(source, /savePreferences\(\{ calendar_default_assign_me: value \}\)/);
+  assert.match(source, /savePreferences\(\{ calendar_default_reminders: selected \}\)/);
   // Die Grenze muss auf dem Blatt stehen, sonst erklärt nichts, warum
   // Standarddauer und Wochenstart hier fehlen.
   assert.match(source, /settings\.calendarDefaultsScopeHint/);
@@ -860,18 +873,39 @@ test('personal-calendar leaf owns only the per-user event defaults', () => {
   assert.doesNotMatch(source, /week_start|calendar_default_duration|holiday_/);
 });
 
+// Das Standortformular selbst liegt in weather-location.js: admin-weather und
+// personal-weather rendern dieselben fünf Felder mit denselben i18n-Keys, und
+// requestLocation samt Koordinatenvalidierung lag zweimal im Baum
+// (Critique 2026-07-27).
+test('beide Wetter-Blätter rendern dasselbe Standortformular', () => {
+  const shared = read('../public/settings/weather-location.js');
+  for (const field of ['lat', 'lon', 'city', 'units', 'auto-locate', 'locate-btn']) {
+    assert.match(shared, new RegExp(`id="\\$\\{scope\\}-${field}"|id: \`\\$\\{scope\\}-${field}\``));
+  }
+  assert.match(shared, /latitude >= -90/);
+  assert.match(shared, /latitude <= 90/);
+  assert.match(shared, /longitude >= -180/);
+  assert.match(shared, /longitude <= 180/);
+  // Genau ein requestLocation im ganzen Settings-Baum.
+  const owners = walkFrontendFiles('../public/settings/')
+    .filter((path) => /function requestLocation\(/.test(read(path)));
+  assert.deepEqual(owners, ['../public/settings/weather-location.js']);
+
+  for (const leaf of ['admin-weather', 'personal-weather']) {
+    const source = read(`../public/settings/pages/${leaf}.js`);
+    assert.match(source, /weatherLocationFieldsHtml\(\{/, `${leaf} muss das geteilte Formular rendern`);
+    assert.match(source, /bindWeatherLocationEvents\(container, SCOPE\)/);
+    assert.match(source, /hasValidWeatherCoords\(location\.lat, location\.lon\)/);
+    assert.doesNotMatch(source, /navigator\.geolocation/, `${leaf} darf Geolocation nicht selbst anfassen`);
+  }
+});
+
 test('admin-weather leaf owns the household default location', () => {
   const source = read('../public/settings/pages/admin-weather.js');
 
-  for (const id of ['weather-lat', 'weather-lon', 'weather-city', 'weather-units']) {
-    assert.match(source, new RegExp(`id="${id}"`));
-  }
+  assert.match(source, /HOUSEHOLD_WEATHER_SCOPE as SCOPE/);
   assert.match(source, /weather_provider: 'open-meteo'/);
   assert.match(source, /weather_provider: null/);
-  assert.match(source, /latitude >= -90/);
-  assert.match(source, /latitude <= 90/);
-  assert.match(source, /longitude >= -180/);
-  assert.match(source, /longitude <= 180/);
   assert.match(source, /window\.yuvomi\?\.showToast/);
   assert.match(source, /await render\(container, \{ user \}\)/);
   // Die Vorrangregel muss auf dem Blatt stehen: personal-weather überschreibt
@@ -894,7 +928,7 @@ test('admin-system leaf owns the app name next to the read-only version rows', (
   // Der Anwendungsname lag in "Übersicht", während die Description dieses Blatts
   // ihn versprach und nur read-only zeigte (Critique 2026-07-27).
   assert.match(source, /id="app-name-input"/);
-  assert.match(source, /api\.put\('\/preferences', \{ app_name: value \}\)/);
+  assert.match(source, /savePreferences\(\{ app_name: value \}\)/);
   assert.match(source, /new CustomEvent\('app-name-changed'/);
   assert.match(source, /localStorage\.setItem\(key, value\)/);
   assert.match(source, /localStorage\.removeItem\(key\)/);
@@ -3433,4 +3467,111 @@ test('der neutralisierte Modal-Footer ist eine Klasse, kein Inline-Style', () =>
     /\.modal-panel__footer\.modal-panel__footer--plain\s*\{/,
     'die --plain-Variante braucht Spezifität (0,2,0), sonst gewinnt die Basisregel',
   );
+});
+
+// Vier Primitives standen für dieselbe Boolean-Entscheidung nebeneinander:
+// `toggle-row`, `settings-toggle`, der iOS-Switch aus `toggle`/`toggle__track`
+// und nackte Checkboxen (Critique 2026-07-27). Ursache war die Lücke im
+// Komponenten-Set - solange `components.js` keinen Schalter anbot, erfand jedes
+// neue Blatt eine weitere Variante.
+test('Settings-Schalter kommen aus createToggleRow, nicht aus handgeschriebenem Markup', () => {
+  const components = read('../public/settings/components.js');
+  assert.match(components, /export function toggleRowHtml\(/);
+  assert.match(components, /export function createToggleRow\(/);
+
+  const offenders = [];
+  for (const path of walkFrontendFiles('../public/settings/')) {
+    if (path.endsWith('components.js')) continue;
+    const src = read(path);
+
+    // Handgeschriebenes `<label class="toggle-row">` und die drei Ausweich-
+    // Primitives sind ab hier Bugs.
+    for (const pattern of [
+      /<label[^>]*class="[^"]*\btoggle-row\b/g,
+      /class="[^"]*\bsettings-toggle\b/g,
+      /class="[^"]*\btoggle__track\b/g,
+    ]) {
+      for (const match of src.matchAll(pattern)) {
+        offenders.push(`${path}:${src.slice(0, match.index).split('\n').length}`);
+      }
+    }
+  }
+  assert.deepEqual(offenders, [], 'Schalter über toggleRowHtml()/createToggleRow() bauen');
+
+  // Und die tote Klasse darf nicht zurückkommen: `settings-notice` stand in
+  // admin-email im Markup, ohne je in public/styles/ definiert zu sein.
+  const styles = readdirSync(new URL('../public/styles/', import.meta.url))
+    .filter((file) => file.endsWith('.css'))
+    .map((file) => read(`../public/styles/${file}`))
+    .join('\n');
+  assert.ok(!styles.includes('.settings-notice'), 'settings-notice ist keine echte Klasse');
+  for (const path of walkFrontendFiles('../public/settings/')) {
+    assert.ok(
+      !/class(Name)?\s*=\s*["'][^"']*\bsettings-notice\b/.test(read(path)),
+      `${path} referenziert die klassenlose settings-notice`,
+    );
+  }
+});
+
+// Neun Blätter holten `GET /preferences` jeweils selbst; fünf Blattwechsel
+// kosteten fünf identische Requests (Critique 2026-07-27).
+test('Settings-Blätter lesen und schreiben Preferences über den geteilten Cache', () => {
+  const offenders = [];
+  for (const path of walkFrontendFiles('../public/settings/')) {
+    if (path.endsWith('preferences-cache.js')) continue;
+    const src = read(path);
+    for (const match of src.matchAll(/api\.(get|put)\(\s*['"]\/preferences['"]/g)) {
+      offenders.push(`${path}:${src.slice(0, match.index).split('\n').length}`);
+    }
+  }
+  assert.deepEqual(offenders, [], 'getPreferences()/savePreferences() aus preferences-cache.js verwenden');
+
+  const cache = read('../public/settings/preferences-cache.js');
+  assert.match(cache, /export function resetPreferencesCache\(/);
+  // Der Cache muss beim Schreiben fallen, sonst rendert das nächste Blatt einen
+  // Stand, den der Server nicht mehr hat.
+  assert.match(cache, /finally\s*\{\s*pending = null;/);
+
+  // Und die Shell muss ihn beim Mounten einer frischen Shell verwerfen.
+  assert.match(read('../public/settings/shell.js'), /resetPreferencesCache\(\)/);
+});
+
+// Ein fehlender Import ist im Blatt ein ReferenceError zur Render-Zeit, den
+// keine Quelltext-Assertion sieht: das Blatt landet im Retry-State, die Suite
+// bleibt grün. Genau so ist toggleRowHtml in modules-navigation durchgerutscht.
+test('jedes Settings-Blatt importiert die geteilten Helfer, die es aufruft', () => {
+  const sharedModules = [
+    'components.js',
+    'preferences-cache.js',
+    'weather-location.js',
+    'module-order.js',
+    'currency.js',
+    'region-presets.js',
+  ];
+  const owners = new Map();
+  for (const mod of sharedModules) {
+    const src = read(`../public/settings/${mod}`);
+    for (const match of src.matchAll(/export (?:async )?function (\w+)|export const (\w+)/g)) {
+      owners.set(match[1] ?? match[2], mod);
+    }
+  }
+  assert.ok(owners.has('toggleRowHtml'), 'Der Guard braucht die Export-Liste, sonst prüft er nichts');
+
+  const missing = [];
+  for (const path of walkFrontendFiles('../public/settings/')) {
+    if (sharedModules.some((mod) => path.endsWith(mod))) continue;
+    const src = read(path);
+    const imported = new Set(
+      [...src.matchAll(/import\s*\{([^}]*)\}\s*from/gs)]
+        .flatMap((match) => match[1].split(','))
+        .map((part) => part.trim().split(/\s+as\s+/).pop().trim())
+        .filter(Boolean),
+    );
+    for (const [name, mod] of owners) {
+      if (new RegExp(`\\b${name}\\s*\\(`).test(src) && !imported.has(name)) {
+        missing.push(`${path}: ruft ${name}() aus ${mod}, importiert es aber nicht`);
+      }
+    }
+  }
+  assert.deepEqual(missing, []);
 });

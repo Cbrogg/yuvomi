@@ -7,6 +7,7 @@ import { api, notifications } from '/api.js';
 import { confirmModal } from '/components/modal.js';
 import { esc } from '/utils/html.js';
 import { getPwaInstallState } from '/utils/pwa-install.js';
+import { toggleRowHtml } from '/settings/components.js';
 
 const DEFAULT_PROVIDERS = [
   { id: 'gotify', name: 'Gotify' },
@@ -15,10 +16,6 @@ const DEFAULT_PROVIDERS = [
 
 function selected(value, expected) {
   return value === expected ? ' selected' : '';
-}
-
-function checked(value) {
-  return value ? ' checked' : '';
 }
 
 function channelDefaults(provider = 'gotify') {
@@ -50,10 +47,11 @@ function renderPage(container, user) {
           <p class="form-hint" id="push-ios-hint" hidden>${t('settings.pushIosHomescreenHint')}</p>
           <p class="form-hint" id="push-status" aria-live="polite">${t('settings.pushChecking')}</p>
           <div class="settings-form-actions">
-            <label class="toggle-row">
-              <input type="checkbox" id="push-toggle" disabled>
-              <span>${t('settings.pushToggleLabel')}</span>
-            </label>
+            ${toggleRowHtml({
+              label: t('settings.pushToggleLabel'),
+              disabled: true,
+              attrs: { id: 'push-toggle' },
+            })}
           </div>
           <div class="settings-form-actions">
             <button type="button" class="btn btn--secondary" id="push-test-btn" disabled>
@@ -126,10 +124,11 @@ function renderChannelList(container, channels, providers = DEFAULT_PROVIDERS) {
           <label class="form-label" for="notification-name-${suffix}">${t('settings.notificationChannelName')}</label>
           <input class="form-input" id="notification-name-${suffix}" name="name" value="${esc(channel.name)}" required>
         </div>
-        <label class="toggle-row">
-          <input type="checkbox" name="enabled"${checked(channel.enabled)}>
-          <span>${t('settings.notificationChannelEnabled')}</span>
-        </label>
+        ${toggleRowHtml({
+          label: t('settings.notificationChannelEnabled'),
+          checked: !!channel.enabled,
+          attrs: { name: 'enabled' },
+        })}
         <div class="form-field">
           <label class="form-label" for="notification-base-url-${suffix}">${t('settings.notificationChannelBaseUrl')}</label>
           <input class="form-input" id="notification-base-url-${suffix}" name="baseUrl" value="${esc(channel.config.baseUrl)}" required>

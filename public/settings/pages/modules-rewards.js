@@ -1,6 +1,8 @@
 import { api } from '/api.js';
 import { t } from '/i18n.js';
 import { confirmModal } from '/components/modal.js';
+import { toggleRowHtml } from '/settings/components.js';
+import { getPreferences, savePreferences } from '/settings/preferences-cache.js';
 
 // Spiegelt MAX_POINTS in server/routes/tasks.js.
 const MAX_TASK_POINTS = 10000;
@@ -19,18 +21,20 @@ function renderPage(container, preferences) {
       <div class="settings-card">
         <h2 class="settings-card__title">${t('settings.rewardsEnableTitle')}</h2>
         <p class="form-hint">${t('settings.rewardsEnableHint')}</p>
-        <label class="toggle-row">
-          <input type="checkbox" id="rewards-enabled"${isRewardsEnabled(preferences) ? ' checked' : ''}>
-          <span>${t('settings.rewardsEnableLabel')}</span>
-        </label>
+        ${toggleRowHtml({
+          label: t('settings.rewardsEnableLabel'),
+          checked: isRewardsEnabled(preferences),
+          attrs: { id: 'rewards-enabled' },
+        })}
       </div>
       <div class="settings-card">
         <h2 class="settings-card__title">${t('settings.rewardsApprovalTitle')}</h2>
         <p class="form-hint">${t('settings.rewardsApprovalHint')}</p>
-        <label class="toggle-row">
-          <input type="checkbox" id="rewards-require-approval"${preferences.rewards_require_approval !== false ? ' checked' : ''}>
-          <span>${t('settings.rewardsApprovalLabel')}</span>
-        </label>
+        ${toggleRowHtml({
+          label: t('settings.rewardsApprovalLabel'),
+          checked: preferences.rewards_require_approval !== false,
+          attrs: { id: 'rewards-require-approval' },
+        })}
       </div>
       <div class="settings-card">
         <h2 class="settings-card__title">${t('settings.rewardsDefaultPointsTitle')}</h2>
@@ -63,7 +67,7 @@ function bindEvents(container, preferences) {
       ? current.filter((m) => m !== 'rewards')
       : [...new Set([...current, 'rewards'])];
     try {
-      const res = await api.put('/preferences', { disabled_modules: next });
+      const res = await savePreferences({ disabled_modules: next });
       const saved = res?.data?.disabled_modules ?? next;
       preferences.disabled_modules = saved;
       window.yuvomi?.setDisabledModules?.(saved);
@@ -80,7 +84,7 @@ function bindEvents(container, preferences) {
   approvalToggle?.addEventListener('change', async () => {
     approvalToggle.disabled = true;
     try {
-      await api.put('/preferences', { rewards_require_approval: approvalToggle.checked });
+      await savePreferences({ rewards_require_approval: approvalToggle.checked });
       window.yuvomi?.showToast(t('settings.rewardsSaved'), 'success');
     } catch (error) {
       approvalToggle.checked = !approvalToggle.checked;
@@ -125,7 +129,7 @@ function bindDefaultPoints(container, preferences) {
     input.disabled = true;
     const previous = persisted;
     try {
-      await api.put('/preferences', { tasks_default_points: next });
+      await savePreferences({ tasks_default_points: next });
       persisted = next;
       input.value = String(next);
       preferences.tasks_default_points = next;
@@ -182,8 +186,7 @@ async function offerRebase(from, to) {
 
 export async function render(container, { user }) {
   void user;
-  const response = await api.get('/preferences');
-  const preferences = response?.data ?? {};
+  const preferences = await getPreferences();
   renderPage(container, preferences);
   bindEvents(container, preferences);
 }

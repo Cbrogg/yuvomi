@@ -2721,6 +2721,7 @@
         "test": "Test connection",
         "testSuccess": "Test email sent successfully.",
         "testFailed": "Testet misslyckades: {{error}}",
+        "saveFailed": "Sparandet misslyckades: {{error}}",
         "saved": "Settings saved."
     },
     "category": {

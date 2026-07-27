@@ -1,5 +1,6 @@
 import { t } from '/i18n.js';
 import { createRetryState } from './components.js';
+import { resetPreferencesCache } from './preferences-cache.js';
 import {
   SETTINGS_LEAVES,
   filterSettingsDomains,
@@ -488,6 +489,11 @@ export async function renderSettingsShell(container, {
       activeLeaf,
     );
   } else {
+    // Frische Shell: der geteilte Preferences-Cache gilt genau für einen
+    // Settings-Besuch. Alles, was zwischenzeitlich ausserhalb geschrieben
+    // wurde (z. B. die Widget-Konfiguration im Dashboard), ist damit weg.
+    resetPreferencesCache();
+
     const page = document.createElement('div');
     page.className = 'page settings-page';
 

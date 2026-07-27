@@ -1,5 +1,6 @@
-import { api } from '/api.js';
 import { t } from '/i18n.js';
+import { toggleRowHtml } from '/settings/components.js';
+import { getPreferences, savePreferences } from '/settings/preferences-cache.js';
 
 /**
  * Drei Modul-Schalter, die vor dem IA-Umbau je ein eigenes Blatt hatten: Budget,
@@ -40,7 +41,6 @@ function checkedState(preferences) {
 
 function renderPage(container, preferences) {
   const checked = checkedState(preferences);
-  const attr = (id) => (checked.get(id) ? ' checked' : '');
   container.replaceChildren();
   container.insertAdjacentHTML('beforeend', `
     <section class="settings-section">
@@ -48,10 +48,11 @@ function renderPage(container, preferences) {
       <div class="settings-card">
         <h3 class="settings-card__title">${t('settings.budgetModeTitle')}</h3>
         <p class="form-hint">${t('settings.budgetModeHint')}</p>
-        <label class="toggle-row">
-          <input type="checkbox" id="budget-mode-personal"${attr('budget-mode-personal')}>
-          <span>${t('settings.budgetModePersonalLabel')}</span>
-        </label>
+        ${toggleRowHtml({
+          label: t('settings.budgetModePersonalLabel'),
+          checked: checked.get('budget-mode-personal'),
+          attrs: { id: 'budget-mode-personal' },
+        })}
         <p class="form-hint">
           ${t('settings.currencyMovedHint')}
           <a href="${APPEARANCE_PATH}" id="budget-region-link">${t('settings.regionTitle')}</a>
@@ -64,10 +65,11 @@ function renderPage(container, preferences) {
       <div class="settings-card">
         <h3 class="settings-card__title">${t('health.tabs.cycle')}</h3>
         <p class="form-hint">${t('settings.healthCycleHint')}</p>
-        <label class="toggle-row">
-          <input type="checkbox" id="health-cycle-enabled"${attr('health-cycle-enabled')}>
-          <span>${t('settings.healthCycleEnableLabel')}</span>
-        </label>
+        ${toggleRowHtml({
+          label: t('settings.healthCycleEnableLabel'),
+          checked: checked.get('health-cycle-enabled'),
+          attrs: { id: 'health-cycle-enabled' },
+        })}
       </div>
     </section>
 
@@ -76,10 +78,11 @@ function renderPage(container, preferences) {
       <div class="settings-card">
         <h3 class="settings-card__title">${t('settings.housekeepingPaymentsTitle')}</h3>
         <p class="form-hint">${t('settings.housekeepingPaymentTasksHint')}</p>
-        <label class="toggle-row">
-          <input type="checkbox" id="housekeeping-payment-tasks"${attr('housekeeping-payment-tasks')}>
-          <span>${t('settings.housekeepingPaymentTasksLabel')}</span>
-        </label>
+        ${toggleRowHtml({
+          label: t('settings.housekeepingPaymentTasksLabel'),
+          checked: checked.get('housekeeping-payment-tasks'),
+          attrs: { id: 'housekeeping-payment-tasks' },
+        })}
       </div>
     </section>
   `);
@@ -98,7 +101,7 @@ function bindEvents(container) {
     input?.addEventListener('change', async () => {
       input.disabled = true;
       try {
-        await api.put('/preferences', toggle.payload(input.checked));
+        await savePreferences(toggle.payload(input.checked));
         window.yuvomi?.showToast(t(toggle.savedKey), 'success');
       } catch (error) {
         input.checked = !input.checked; // Rollback nur bei Save-Fehler
@@ -112,8 +115,7 @@ function bindEvents(container) {
 
 export async function render(container, { user }) {
   void user;
-  const response = await api.get('/preferences');
-  const preferences = response?.data ?? {};
+  const preferences = await getPreferences();
   renderPage(container, preferences);
   bindEvents(container);
 }

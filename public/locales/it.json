@@ -2721,6 +2721,7 @@
         "test": "Testa connessione",
         "testSuccess": "Email di prova inviata con successo.",
         "testFailed": "Test fallito: {{error}}",
+        "saveFailed": "Salvataggio non riuscito: {{error}}",
         "saved": "Impostazioni salvate."
     },
     "category": {

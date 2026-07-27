@@ -2721,6 +2721,7 @@
         "test": "Test connection",
         "testSuccess": "Test email sent successfully.",
         "testFailed": "Test selhal: {{error}}",
+        "saveFailed": "Uložení se nezdařilo: {{error}}",
         "saved": "Settings saved."
     },
     "category": {

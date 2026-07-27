@@ -1,5 +1,6 @@
-import { api } from '/api.js';
 import { t } from '/i18n.js';
+import { toggleRowHtml } from '/settings/components.js';
+import { getPreferences, savePreferences } from '/settings/preferences-cache.js';
 
 const MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'];
 
@@ -42,12 +43,11 @@ function renderPage(container, preferences) {
         <h3 class="settings-card__title">${t('settings.mealTypesLabel')}</h3>
         <p class="form-hint">${t('settings.mealTypesHint')}</p>
         <div class="meal-type-toggles" id="meal-type-toggles">
-          ${MEAL_TYPES.map((mealType) => `
-            <label class="toggle-row">
-              <input type="checkbox" value="${mealType}"${visibleMealTypes.includes(mealType) ? ' checked' : ''}>
-              <span>${t(`meals.type${mealType[0].toUpperCase()}${mealType.slice(1)}`)}</span>
-            </label>
-          `).join('')}
+          ${MEAL_TYPES.map((mealType) => toggleRowHtml({
+            label: t(`meals.type${mealType[0].toUpperCase()}${mealType.slice(1)}`),
+            checked: visibleMealTypes.includes(mealType),
+            attrs: { value: mealType },
+          })).join('')}
         </div>
         <p class="form-hint">${t('settings.kitchenExternalHint')}</p>
       </div>
@@ -82,7 +82,7 @@ function bindEvents(container) {
         inputs,
         checkedMealTypes,
         persistedMealTypes,
-        () => api.put('/preferences', { visible_meal_types: checkedMealTypes }),
+        () => savePreferences({ visible_meal_types: checkedMealTypes }),
       );
       window.yuvomi?.showToast(t('settings.mealTypesSaved'), 'success');
     } catch (error) {
@@ -93,8 +93,7 @@ function bindEvents(container) {
 
 export async function render(container, { user }) {
   void user;
-  const response = await api.get('/preferences');
-  const preferences = response?.data ?? {};
+  const preferences = await getPreferences();
   renderPage(container, preferences);
   bindEvents(container);
 }

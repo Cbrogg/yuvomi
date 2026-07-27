@@ -2721,6 +2721,7 @@
         "test": "Uji koneksi",
         "testSuccess": "Email uji berhasil dikirim.",
         "testFailed": "Uji coba gagal: {{error}}",
+        "saveFailed": "Gagal menyimpan: {{error}}",
         "saved": "Pengaturan disimpan."
     },
     "category": {

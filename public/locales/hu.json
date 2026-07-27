@@ -2721,6 +2721,7 @@
         "test": "Kapcsolat tesztelése",
         "testSuccess": "Teszt email sikeresen elküldve.",
         "testFailed": "Teszt sikertelen: {{error}}",
+        "saveFailed": "A mentés sikertelen: {{error}}",
         "saved": "Beállítások mentve."
     },
     "category": {

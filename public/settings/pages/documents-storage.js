@@ -6,7 +6,8 @@ import {
   createInfoList,
   createRetryState,
   createSettingRow,
-  createStatusSummary
+  createStatusSummary,
+  toggleRowHtml
 } from "/settings/components.js";
 
 function formatSyncTime(value) {
@@ -92,10 +93,10 @@ function buildConnectionForm() {
     "beforeend",
     `
     <div class="settings-webdav-toggle-row">
-      <label class="toggle-row">
-        <input type="checkbox" id="document-storage-enabled" name="enabled" />
-        <span>${t("settings.documentStorageEnabled")}</span>
-      </label>
+      ${toggleRowHtml({
+        label: t("settings.documentStorageEnabled"),
+        attrs: { id: "document-storage-enabled", name: "enabled" },
+      })}
     </div>
     <div class="form-group">
       <label class="form-label" for="document-storage-url">${t("settings.documentStorageUrl")}</label>

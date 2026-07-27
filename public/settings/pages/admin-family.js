@@ -7,7 +7,7 @@ import {
 } from '/i18n.js';
 import { esc } from '/utils/html.js';
 import { openModal, closeModal, confirmModal } from '/components/modal.js';
-import { createRetryState } from '/settings/components.js';
+import { createRetryState, toggleRowHtml } from '/settings/components.js';
 
 const FAMILY_ROLES = ['dad', 'mom', 'parent', 'child', 'grandparent', 'relative', 'other'];
 const AVATAR_COLORS = ['#007AFF', '#34C759', '#FF9500', '#FF3B30', '#AF52DE', '#FF2D55'];
@@ -192,10 +192,10 @@ function renderPage(container) {
             <yuvomi-datepicker type="date" id="new-member-birth-date"></yuvomi-datepicker>
             <p class="form-hint">${t('settings.memberContactBirthdayHint')}</p>
           </div>
-          <label class="toggle-row">
-            <input type="checkbox" id="new-system-admin" />
-            <span>${t('settings.systemAdminLabel')}</span>
-          </label>
+          ${toggleRowHtml({
+            label: t('settings.systemAdminLabel'),
+            attrs: { id: 'new-system-admin' },
+          })}
           <p class="form-hint">${t('settings.systemAdminHint')}</p>
           <div id="member-error" class="form-error" role="alert" hidden></div>
           <div class="settings-form-actions">
@@ -311,10 +311,11 @@ function openEditMemberModal(member, currentUser, users, container) {
           <input class="form-input" type="password" id="edit-member-password" minlength="8" autocomplete="new-password" placeholder="${t('settings.resetPasswordPlaceholder')}" />
           <p class="form-hint">${t('settings.resetPasswordHint')}</p>
         </div>
-        <label class="toggle-row">
-          <input type="checkbox" id="edit-member-system-admin" ${member.role === 'admin' ? 'checked' : ''} />
-          <span>${t('settings.systemAdminLabel')}</span>
-        </label>
+        ${toggleRowHtml({
+          label: t('settings.systemAdminLabel'),
+          checked: member.role === 'admin',
+          attrs: { id: 'edit-member-system-admin' },
+        })}
         <p class="form-hint">${t('settings.systemAdminHint')}</p>
         <div id="edit-member-error" class="form-error" role="alert" hidden></div>
         <div class="settings-form-actions">

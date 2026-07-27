@@ -7,6 +7,8 @@ import {
   createInlineError,
   createRetryState,
   createStatusSummary,
+  createToggleRow,
+  toggleRowHtml,
 } from '/settings/components.js';
 import { withBusy } from '/utils/ux.js';
 
@@ -96,10 +98,10 @@ function renderPage(container, user) {
               <input class="form-input form-input--color" type="color" id="ics-color" value="#6366f1" />
             </div>
             <div class="form-group">
-              <label class="toggle-row">
-                <input type="checkbox" id="ics-shared" />
-                <span>${t('settings.ics.form.shared')}</span>
-              </label>
+              ${toggleRowHtml({
+                label: t('settings.ics.form.shared'),
+                attrs: { id: 'ics-shared' },
+              })}
             </div>
             <div id="ics-add-error" class="form-error" role="alert" hidden></div>
             <div class="settings-form-actions">
@@ -672,10 +674,11 @@ function openIcsEditModal(container, sub, subs, user) {
             <input class="settings-color-button" type="color" id="ics-edit-color" value="${esc(sub.color) || '#3b82f6'}" />
           </div>
           <div class="form-group settings-color-field">
-            <label class="toggle-row">
-              <input type="checkbox" id="ics-edit-shared" ${sub.shared ? 'checked' : ''} />
-              <span>${t('settings.ics.form.shared')}</span>
-            </label>
+            ${toggleRowHtml({
+              label: t('settings.ics.form.shared'),
+              checked: !!sub.shared,
+              attrs: { id: 'ics-edit-shared' },
+            })}
           </div>
         </div>
         <div class="form-group">
@@ -1021,17 +1024,11 @@ function buildGoogleReadonlyToggle(googleStatus) {
   const group = document.createElement('div');
   group.className = 'form-group';
 
-  const row = document.createElement('label');
-  row.className = 'toggle-row';
-
-  const checkbox = document.createElement('input');
-  checkbox.type = 'checkbox';
-  checkbox.checked = Boolean(googleStatus.readonly);
-
-  const text = document.createElement('span');
-  text.textContent = t('settings.googleReadonly');
-
-  row.append(checkbox, text);
+  const row = createToggleRow({
+    label: t('settings.googleReadonly'),
+    checked: Boolean(googleStatus.readonly),
+  });
+  const checkbox = row.querySelector('input');
   group.appendChild(row);
 
   const hint = document.createElement('p');
@@ -1230,10 +1227,11 @@ function renderFeedExportActive(body, data) {
       <p class="form-hint">${t('settings.feedExportHint')}</p>
     </div>
     <div class="form-group">
-      <label class="settings-toggle">
-        <input type="checkbox" id="feed-show-assignees" aria-describedby="feed-show-assignees-hint" ${data.showAssignees ? 'checked' : ''}>
-        <span>${t('settings.feedExportShowAssignees')}</span>
-      </label>
+      ${toggleRowHtml({
+        label: t('settings.feedExportShowAssignees'),
+        checked: !!data.showAssignees,
+        attrs: { id: 'feed-show-assignees', 'aria-describedby': 'feed-show-assignees-hint' },
+      })}
       <p class="form-hint" id="feed-show-assignees-hint">${t('settings.feedExportShowAssigneesHint')}</p>
     </div>
     <div class="settings-form-actions">

@@ -41,8 +41,9 @@ import {
   SUPPORTED_CURRENCIES,
 } from '../public/settings/currency.js';
 import {
+  hasValidWeatherCoords,
   isConnectedWeatherControl,
-} from '../public/settings/pages/admin-weather.js';
+} from '../public/settings/weather-location.js';
 import {
   persistMealTypeSelection,
 } from '../public/settings/pages/modules-kitchen.js';
@@ -200,7 +201,7 @@ test('Aktivierungs-Schalter und Kitchen-Kinder sind für Mitglieder nicht gerend
   );
   // Haushaltweite Schalter nur für Admins; Mitglieder bekommen stattdessen die
   // Erklärung, wer darüber entscheidet.
-  assert.match(source, /\$\{isAdmin \? `\s*<label class="toggle-row settings-module-row__toggle">/);
+  assert.match(source, /\$\{isAdmin \? toggleRowHtml\(\{[\s\S]{0,300}data-built-in-module-toggle/);
   assert.match(source, /data-kitchen-child-toggle[\s\S]{0,400}settings-module-kitchen__child--readonly/);
   assert.match(source, /isAdmin \? '' : `<p class="form-hint">\$\{t\('settings\.modulesEnableAdminOnly'\)\}/);
   // Der Save-Pfad muss die Rolle kennen, sonst sendet ein Mitglied disabled_modules.
@@ -874,6 +875,18 @@ test('weather geolocation callbacks only update the active leaf', () => {
     isConnectedWeatherControl({ isConnected: true }, { isConnected: false }),
     false,
   );
+});
+
+// Die Koordinatenvalidierung lag doppelt in admin-weather und personal-weather
+// (Critique 2026-07-27) und liegt jetzt einmal in weather-location.js.
+test('hasValidWeatherCoords rejects empty, non-numeric and out-of-range input', () => {
+  assert.equal(hasValidWeatherCoords('52.52', '13.405'), true);
+  assert.equal(hasValidWeatherCoords('-90', '180'), true);
+  assert.equal(hasValidWeatherCoords('', '13.405'), false);
+  assert.equal(hasValidWeatherCoords('52.52', ''), false);
+  assert.equal(hasValidWeatherCoords('abc', '13.405'), false);
+  assert.equal(hasValidWeatherCoords('90.1', '13.405'), false);
+  assert.equal(hasValidWeatherCoords('52.52', '180.1'), false);
 });
 
 test('buildNavigationPayload expands the visible order back to canonical Kitchen children', () => {

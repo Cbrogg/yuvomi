@@ -2721,6 +2721,7 @@
         "test": "연결 테스트",
         "testSuccess": "테스트 메일을 성공적으로 보냈습니다.",
         "testFailed": "테스트 실패: {{error}}",
+        "saveFailed": "저장하지 못했습니다: {{error}}",
         "saved": "설정이 저장되었습니다."
     },
     "category": {

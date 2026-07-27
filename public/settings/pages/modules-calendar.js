@@ -2,6 +2,8 @@ import { api } from '/api.js';
 import { formatDate, formatTime, t } from '/i18n.js';
 import { esc } from '/utils/html.js';
 import { weekStartIndex, weekdayOrder } from '/utils/date.js';
+import { toggleRowHtml } from '/settings/components.js';
+import { getPreferences, savePreferences } from '/settings/preferences-cache.js';
 
 // Wochenstart-Optionen; Labels aus dem bestehenden Kalender-i18n (kein neuer
 // Übersetzungsbedarf für die Wochentagsnamen).
@@ -121,10 +123,11 @@ function renderPage(container, preferences) {
             <p class="settings-card-description">${t('settings.holidayGroupHint')}</p>
           </div>
           <div class="form-group">
-            <label class="toggle-row">
-              <input type="checkbox" id="holiday-show-public"${preferences.holiday_show_public ? ' checked' : ''}>
-              <span>${t('settings.holidayPublicLabel')}</span>
-            </label>
+            ${toggleRowHtml({
+              label: t('settings.holidayPublicLabel'),
+              checked: !!preferences.holiday_show_public,
+              attrs: { id: 'holiday-show-public' },
+            })}
           </div>
           <div class="form-group" id="holiday-public-color-group"${preferences.holiday_show_public ? '' : ' hidden'}>
             <label class="form-label" for="holiday-public-color">${t('settings.holidayPublicColor')}</label>
@@ -132,10 +135,11 @@ function renderPage(container, preferences) {
               value="${esc(preferences.holiday_public_color)}">
           </div>
           <div class="form-group">
-            <label class="toggle-row">
-              <input type="checkbox" id="holiday-show-school"${preferences.holiday_show_school ? ' checked' : ''}>
-              <span>${t('settings.holidaySchoolLabel')}</span>
-            </label>
+            ${toggleRowHtml({
+              label: t('settings.holidaySchoolLabel'),
+              checked: !!preferences.holiday_show_school,
+              attrs: { id: 'holiday-show-school' },
+            })}
           </div>
           <div class="form-group" id="holiday-school-color-group"${preferences.holiday_show_school ? '' : ' hidden'}>
             <label class="form-label" for="holiday-school-color">${t('settings.holidaySchoolColor')}</label>
@@ -377,7 +381,7 @@ function bindWeekStart(container, preferences) {
     current = value;
     paint(value); // optimistisch – Klick fühlt sich sofort an
     try {
-      await api.put('/preferences', { week_start: value });
+      await savePreferences({ week_start: value });
       // Parität zu date-format-changed/time-format-changed: erlaubt offenen
       // Ansichten, den Wochenstart ohne Neuladen zu übernehmen.
       window.dispatchEvent(new CustomEvent('week-start-changed', { detail: { weekStart: value } }));
@@ -409,7 +413,7 @@ async function bindEvents(container, preferences) {
     persistedDuration = durationSelect.value;
     durationSelect.disabled = true;
     try {
-      await api.put('/preferences', { calendar_default_duration: minutes });
+      await savePreferences({ calendar_default_duration: minutes });
       window.yuvomi?.showToast(t('settings.calendarDurationSaved'), 'success');
     } catch (error) {
       persistedDuration = previous;
@@ -507,7 +511,7 @@ async function bindEvents(container, preferences) {
     errorElement.hidden = true;
     try {
       const preferenceData = holidayPreferenceData(container, discoveryState);
-      await api.put('/preferences', {
+      await savePreferences({
         holiday_country: preferenceData.holiday_country,
         holiday_subdivision: preferenceData.holiday_subdivision,
         holiday_group: preferenceData.holiday_group,
@@ -545,7 +549,7 @@ async function bindEvents(container, preferences) {
     const preferenceData = holidayPreferenceData(container, discoveryState);
     syncButton.disabled = true;
     try {
-      await api.put('/preferences', {
+      await savePreferences({
         holiday_country: preferenceData.holiday_country,
         holiday_subdivision: preferenceData.holiday_subdivision,
         holiday_group: preferenceData.holiday_group,
@@ -622,8 +626,7 @@ async function bindEvents(container, preferences) {
 
 export async function render(container, { user }) {
   void user;
-  const response = await api.get('/preferences');
-  const preferences = response?.data ?? {};
+  const preferences = await getPreferences();
   renderPage(container, preferences);
   await bindEvents(container, preferences);
   window.lucide?.createIcons({ el: container });

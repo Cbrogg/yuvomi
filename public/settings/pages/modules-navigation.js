@@ -1,6 +1,8 @@
 import { api } from '/api.js';
 import { t } from '/i18n.js';
 import { esc } from '/utils/html.js';
+import { getPreferences, savePreferences } from '/settings/preferences-cache.js';
+import { toggleRowHtml } from '/settings/components.js';
 import {
   KITCHEN_CHILD_IDS,
   NAV_SECTION,
@@ -187,11 +189,14 @@ function builtInRowHtml(row, isAdmin) {
           <span class="settings-module-status ${statusClass}">${esc(statusLabel)}</span>
         </div>
       </div>
-      ${isAdmin ? `
-      <label class="toggle-row settings-module-row__toggle">
-        <input type="checkbox" data-built-in-module-toggle="${esc(row.id)}"${row.enabled ? ' checked' : ''}${row.locked ? ' disabled' : ''}>
-        <span class="settings-module-row__toggle-label sr-only">${t('settings.thirdPartyModulesEnableLabel')}</span>
-      </label>` : ''}
+      ${isAdmin ? toggleRowHtml({
+        label: t('settings.thirdPartyModulesEnableLabel'),
+        checked: row.enabled,
+        disabled: row.locked,
+        className: 'settings-module-row__toggle',
+        labelVisible: false,
+        attrs: { 'data-built-in-module-toggle': row.id },
+      }) : ''}
     </div>
   `;
 }
@@ -215,12 +220,13 @@ function kitchenRowHtml(row, isAdmin) {
           <span>${t('settings.kitchenActiveCount', { count: row.enabledChildren })}</span>
         </button>
         <div class="settings-disclosure__panel settings-module-kitchen__children" data-kitchen-children hidden>
-          ${row.children.map((child) => (isAdmin ? `
-            <label class="toggle-row settings-module-kitchen__child">
-              <input type="checkbox" data-kitchen-child-toggle="${esc(child.id)}"${child.enabled ? ' checked' : ''}>
-              <i data-lucide="${esc(child.icon)}" aria-hidden="true"></i>
-              <span>${esc(child.label)}</span>
-            </label>` : `
+          ${row.children.map((child) => (isAdmin ? toggleRowHtml({
+            label: child.label,
+            checked: child.enabled,
+            className: 'settings-module-kitchen__child',
+            icon: child.icon,
+            attrs: { 'data-kitchen-child-toggle': child.id },
+          }) : `
             <div class="settings-module-kitchen__child settings-module-kitchen__child--readonly">
               <i data-lucide="${esc(child.icon)}" aria-hidden="true"></i>
               <span>${esc(child.label)}</span>
@@ -251,10 +257,14 @@ function thirdPartyRowHtml(row) {
         </div>
         ${row.error ? `<p class="form-error">${esc(row.error)}</p>` : ''}
       </div>
-      <label class="toggle-row settings-module-row__toggle">
-        <input type="checkbox" data-third-party-module-toggle="${esc(row.id)}"${row.enabled ? ' checked' : ''}${row.toggleDisabled ? ' disabled' : ''}>
-        <span class="settings-module-row__toggle-label sr-only">${t('settings.thirdPartyModulesEnableLabel')}</span>
-      </label>
+      ${toggleRowHtml({
+        label: t('settings.thirdPartyModulesEnableLabel'),
+        checked: row.enabled,
+        disabled: row.toggleDisabled,
+        className: 'settings-module-row__toggle',
+        labelVisible: false,
+        attrs: { 'data-third-party-module-toggle': row.id },
+      })}
     </div>
   `;
 }
@@ -429,7 +439,7 @@ async function saveNavigationState(list, isAdmin) {
       collectVisibleGlobalOrder(list),
     )
     : buildOrderPayload(collectVisibleGlobalOrder(list));
-  const response = await api.put('/preferences', payload);
+  const response = await savePreferences(payload);
   const savedOrder = response?.data?.module_order ?? payload.module_order;
   if (isAdmin) {
     const savedDisabled = response?.data?.disabled_modules ?? payload.disabled_modules;
@@ -561,7 +571,7 @@ function bindMobileNavigationEvents(container, user) {
       selects.forEach((select) => { select.disabled = true; });
 
       try {
-        const response = await api.put('/preferences', payload);
+        const response = await savePreferences(payload);
         const savedOrder = response?.data?.mobile_nav_order ?? payload.mobile_nav_order;
         window.yuvomi?.setMobileNavOrder?.(savedOrder);
         window.yuvomi?.showToast(t('settings.mobileNavigationSaved'), 'success');
@@ -577,7 +587,7 @@ function bindMobileNavigationEvents(container, user) {
 export async function render(container, { user }) {
   const isAdmin = user?.role === 'admin';
   const [preferencesResult, modulesResult] = await Promise.allSettled([
-    api.get('/preferences'),
+    getPreferences(),
     isAdmin ? api.get('/modules?admin=1') : Promise.resolve({ data: [] }),
   ]);
 

@@ -1,7 +1,7 @@
 import { api } from '/api.js';
 import { formatDate, formatTime, t } from '/i18n.js';
 import { confirmModal } from '/components/modal.js';
-import { createDisclosure, createInfoRow } from '/settings/components.js';
+import { createDisclosure, createInfoRow, toggleRowHtml } from '/settings/components.js';
 
 function showError(element, message) {
   if (!element) return;
@@ -65,11 +65,10 @@ function renderPage(container) {
         <p class="form-hint">${t('settings.backupWebdavHint')}</p>
         <form class="settings-form settings-webdav-form" id="backup-webdav-form" novalidate>
           <div class="settings-webdav-toggle-row">
-            <span class="form-label">${t('settings.backupWebdavEnabled')}</span>
-            <label class="toggle">
-              <input type="checkbox" id="webdav-enabled" name="enabled" />
-              <span class="toggle__track" aria-hidden="true"></span>
-            </label>
+            ${toggleRowHtml({
+              label: t('settings.backupWebdavEnabled'),
+              attrs: { id: 'webdav-enabled', name: 'enabled' },
+            })}
           </div>
           <div class="form-group">
             <label class="form-label" for="webdav-url">${t('settings.backupWebdavUrl')}</label>

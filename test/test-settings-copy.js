@@ -49,13 +49,26 @@ function leafSourcePath(leaf) {
   return new URL(`../public/settings/${match[1]}`, import.meta.url);
 }
 
+const translationKeysIn = (source) => [...source.matchAll(/\bt\(\s*['"]([\w.]+)['"]/g)].map((m) => m[1]);
+
 /**
  * Alle statischen t('...')-Werte, die das Blatt rendert, plus sein eigener
  * Titel (die Shell rendert ihn als h1, er gehört zu dem, was der Nutzer sieht).
+ *
+ * Geteilte Bausteine unter `/settings/` zählen mit: seit die beiden
+ * Wetter-Blätter sich `weather-location.js` teilen, steht ein Teil ihres
+ * sichtbaren Vokabulars nicht mehr in der Blattdatei. Eine Ebene tief, ohne
+ * Rekursion - der Guard soll das Blatt prüfen, nicht den halben Baum.
  */
 function renderedVocabulary(leaf) {
   const source = readFileSync(leafSourcePath(leaf), 'utf8');
-  const keys = [...source.matchAll(/\bt\(\s*['"]([\w.]+)['"]/g)].map((m) => m[1]);
+  const keys = translationKeysIn(source);
+
+  for (const match of source.matchAll(/from\s+'\/settings\/([\w/-]+\.js)'/g)) {
+    const shared = new URL(`../public/settings/${match[1]}`, import.meta.url);
+    keys.push(...translationKeysIn(readFileSync(shared, 'utf8')));
+  }
+
   const values = [leaf.labelKey, ...keys]
     .map(translate)
     .filter((value) => typeof value === 'string');

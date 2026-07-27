@@ -1,6 +1,7 @@
-import { api } from '/api.js';
 import { t } from '/i18n.js';
 import { esc } from '/utils/html.js';
+import { toggleRowHtml } from '/settings/components.js';
+import { getPreferences, savePreferences } from '/settings/preferences-cache.js';
 
 /**
  * Standardwerte, die nur für die eigenen neuen Termine gelten. `preferences.js`
@@ -61,10 +62,11 @@ function renderPage(container, preferences) {
         <p class="settings-card-description">${t('settings.calendarDefaultsDescription')}</p>
 
         <div class="form-group">
-          <label class="toggle-row">
-            <input type="checkbox" id="calendar-default-assign-me"${assignMe ? ' checked' : ''}>
-            <span>${t('settings.calendarAssignMeLabel')}</span>
-          </label>
+          ${toggleRowHtml({
+            label: t('settings.calendarAssignMeLabel'),
+            checked: assignMe,
+            attrs: { id: 'calendar-default-assign-me' },
+          })}
         </div>
 
         <div class="form-group">
@@ -88,7 +90,7 @@ function bindEvents(container) {
     const value = assignMe.checked;
     assignMe.disabled = true;
     try {
-      await api.put('/preferences', { calendar_default_assign_me: value });
+      await savePreferences({ calendar_default_assign_me: value });
       window.yuvomi?.showToast(t('settings.calendarDefaultsSaved'), 'success');
     } catch (error) {
       assignMe.checked = !value; // Rollback
@@ -107,7 +109,7 @@ function bindEvents(container) {
   const persistReminders = debounce(async () => {
     const selected = collectDefaultReminders(remindersBox);
     try {
-      await api.put('/preferences', { calendar_default_reminders: selected });
+      await savePreferences({ calendar_default_reminders: selected });
       persisted = selected;
       if (remindersBox.isConnected) window.yuvomi?.showToast(t('settings.calendarDefaultsSaved'), 'success');
     } catch (error) {
@@ -133,8 +135,7 @@ function bindEvents(container) {
 
 export async function render(container, { user }) {
   void user;
-  const response = await api.get('/preferences');
-  const preferences = response?.data ?? {};
+  const preferences = await getPreferences();
   renderPage(container, preferences);
   bindEvents(container);
 }

@@ -2,7 +2,7 @@ import { api } from '/api.js';
 import { formatDate, formatTime, t } from '/i18n.js';
 import { esc } from '/utils/html.js';
 import { confirmModal } from '/components/modal.js';
-import { createRetryState } from '/settings/components.js';
+import { createRetryState, toggleRowHtml } from '/settings/components.js';
 
 // Muss mit MODULE_KEYS in server/scopes.js übereinstimmen (gleiche Reihenfolge).
 const SCOPE_MODULE_KEYS = [
@@ -112,10 +112,10 @@ function renderPage(container) {
           <div class="form-group">
             <label class="form-label">${t('settings.apiTokenScopes')}</label>
             <p class="form-hint" style="margin-bottom:var(--space-2)">${t('settings.apiTokenScopeHint')}</p>
-            <label class="settings-toggle">
-              <input type="checkbox" id="api-token-scope-limit" />
-              <span>${t('settings.apiTokenScopeLimit')}</span>
-            </label>
+            ${toggleRowHtml({
+              label: t('settings.apiTokenScopeLimit'),
+              attrs: { id: 'api-token-scope-limit' },
+            })}
             <div id="api-token-scope-grid" class="api-token-scopes" hidden>
               <div class="api-token-scopes__head">
                 <span>${t('settings.apiTokenScopeModule')}</span>

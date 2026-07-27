@@ -2721,6 +2721,7 @@
         "test": "Test connection",
         "testSuccess": "Test email sent successfully.",
         "testFailed": "Kiểm tra thất bại: {{error}}",
+        "saveFailed": "Lưu thất bại: {{error}}",
         "saved": "Settings saved."
     },
     "category": {

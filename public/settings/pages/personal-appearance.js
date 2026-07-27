@@ -1,4 +1,3 @@
-import { api } from '/api.js';
 import {
   getLocale,
   getSupportedLocales,
@@ -7,6 +6,7 @@ import {
 } from '/i18n.js';
 import { esc } from '/utils/html.js';
 import { appendCurrencyOptions, persistCurrencySelection } from '/settings/currency.js';
+import { getPreferences, savePreferences } from '/settings/preferences-cache.js';
 import {
   CUSTOM_REGION,
   REGION_CODES,
@@ -309,7 +309,7 @@ function bindEvents(container, user) {
     clearError(errorElement);
     regionSelect.disabled = true;
     try {
-      await api.put('/preferences', {
+      await savePreferences({
         currency: preset.currency,
         date_format: preset.date_format,
         time_format: preset.time_format,
@@ -356,7 +356,7 @@ function bindEvents(container, user) {
       await persistCurrencySelection(
         currencySelect,
         persistedCurrency,
-        () => api.put('/preferences', { currency: currencySelect.value }),
+        () => savePreferences({ currency: currencySelect.value }),
       );
       persistedCurrency = currencySelect.value;
       syncRegionSelect(container);
@@ -373,7 +373,7 @@ function bindEvents(container, user) {
     clearError(errorElement);
     dateFormatSelect.disabled = true;
     try {
-      await api.put('/preferences', { date_format: dateFormatSelect.value });
+      await savePreferences({ date_format: dateFormatSelect.value });
       safeStorageSet('yuvomi-date-format', dateFormatSelect.value);
       window.dispatchEvent(new CustomEvent('date-format-changed', {
         detail: { dateFormat: dateFormatSelect.value },
@@ -394,7 +394,7 @@ function bindEvents(container, user) {
     clearError(errorElement);
     timeFormatSelect.disabled = true;
     try {
-      await api.put('/preferences', { time_format: timeFormatSelect.value });
+      await savePreferences({ time_format: timeFormatSelect.value });
       safeStorageSet('yuvomi-time-format', timeFormatSelect.value);
       window.dispatchEvent(new CustomEvent('time-format-changed', {
         detail: { timeFormat: timeFormatSelect.value },
@@ -412,12 +412,12 @@ function bindEvents(container, user) {
 
 export async function render(container, { user }) {
   try {
-    const response = await api.get('/preferences');
+    const loaded = await getPreferences();
     const preferences = {
-      currency: response?.data?.currency || 'EUR',
-      date_format: response?.data?.date_format || 'dmy',
-      time_format: response?.data?.time_format || '24h',
-      region: response?.data?.region || null,
+      currency: loaded.currency || 'EUR',
+      date_format: loaded.date_format || 'dmy',
+      time_format: loaded.time_format || '24h',
+      region: loaded.region || null,
     };
 
     safeStorageSet('yuvomi-date-format', preferences.date_format);
