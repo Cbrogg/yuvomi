@@ -38,23 +38,23 @@ await initI18n();
 
 test('Deutsch: Singular und Plural je nach count', async () => {
   await setLocale('de');
-  assert.equal(t('settings.enabledAddressbookCount', { count: 1 }), '1 Adressbuch aktiviert');
-  assert.equal(t('settings.enabledAddressbookCount', { count: 2 }), '2 Adressbücher aktiviert');
-  assert.equal(t('settings.enabledAddressbookCount', { count: 0 }), '0 Adressbücher aktiviert');
+  assert.equal(t('settings.enabledReminderListCount', { count: 1 }), '1 Erinnerungsliste aktiviert');
+  assert.equal(t('settings.enabledReminderListCount', { count: 2 }), '2 Erinnerungslisten aktiviert');
+  assert.equal(t('settings.enabledReminderListCount', { count: 0 }), '0 Erinnerungslisten aktiviert');
 });
 
 test('Englisch: Singular und Plural je nach count', async () => {
   await setLocale('en');
-  assert.equal(t('settings.enabledAddressbookCount', { count: 1 }), '1 address book enabled');
-  assert.equal(t('settings.enabledAddressbookCount', { count: 3 }), '3 address books enabled');
-  assert.equal(t('settings.enabledCalendarCount', { count: 1 }), '1 calendar enabled');
   assert.equal(t('settings.enabledReminderListCount', { count: 1 }), '1 reminder list enabled');
+  assert.equal(t('settings.enabledReminderListCount', { count: 3 }), '3 reminder lists enabled');
+  assert.equal(t('settings.calendarImport.success', { count: 1 }), '1 event imported.');
+  assert.equal(t('settings.calendarImport.success', { count: 4 }), '4 events imported.');
 });
 
 test('Sprachen ohne Zahlflexion liefern für jede Anzahl denselben Satz', async () => {
   await setLocale('ja');
-  const one = t('settings.enabledCalendarCount', { count: 1 });
-  const many = t('settings.enabledCalendarCount', { count: 5 });
+  const one = t('settings.enabledReminderListCount', { count: 1 });
+  const many = t('settings.enabledReminderListCount', { count: 5 });
   assert.equal(one.replace('1', 'N'), many.replace('5', 'N'));
 });
 
@@ -63,7 +63,7 @@ test('Polnisch: fehlende few/many-Variante fällt auf den Basisschlüssel zurüc
   // pl kennt one/few/many/other; hinterlegt sind Basis + _one. Kein Absturz,
   // und das zählunabhängige „Label: N"-Muster bleibt korrekt.
   for (const count of [1, 2, 5, 22]) {
-    assert.match(t('settings.enabledCalendarCount', { count }), /Włączone kalendarze: \d+/);
+    assert.match(t('settings.enabledReminderListCount', { count }), /Włączone listy przypomnień: \d+/);
   }
 });
 
@@ -110,10 +110,10 @@ test('Standard-Punkte (#578): zählende Strings nutzen die Singularform', async 
 test('Schlüssel ohne Pluralvarianten funktionieren unverändert', async () => {
   await setLocale('de');
   assert.equal(t('common.save'), localeFile('de').common.save);
-  // count-Parameter ohne _one-Variante: Basisschlüssel plus Interpolation.
+  // count-Parameter ohne passende Variante (7 → „other"): Basisschlüssel plus Interpolation.
   assert.equal(
-    t('settings.enabledCalendarCount', { count: 7 }),
-    '7 Kalender aktiviert',
+    t('settings.enabledReminderListCount', { count: 7 }),
+    '7 Erinnerungslisten aktiviert',
   );
 });
 

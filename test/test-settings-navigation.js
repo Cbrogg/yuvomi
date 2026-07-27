@@ -75,7 +75,7 @@ const sharedTranslationKeys = [
   'settings.appleLegacyHint',
   'settings.documentBackupWarning',
   'settings.kitchenActiveCount',
-  'settings.enabledCalendarCount',
+  'settings.enabledReminderListCount',
   'settings.lastSyncValue',
   'settings.neverSynced',
   'settings.mobileNavigationTitle',
