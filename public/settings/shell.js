@@ -1,4 +1,5 @@
 import { t } from '/i18n.js';
+import { renderSkeletonList } from '/utils/skeleton.js';
 import { createRetryState } from './components.js';
 import { resetPreferencesCache } from './preferences-cache.js';
 import {
@@ -7,6 +8,10 @@ import {
   findSettingsLeaf,
   settingsOverviewUrl,
 } from './registry.js';
+
+// Unter dieser Schwelle ist ein Blatt gefuehlt sofort da; ein Skelett waere
+// dort nur ein Aufblitzen.
+const SKELETON_DELAY_MS = 120;
 
 function createIcon(name, className) {
   const icon = document.createElement('i');
@@ -438,10 +443,24 @@ async function renderLeafContent(content, leaf, domain, user, query) {
 
   const loadAndRender = async ({ focusRetry = false } = {}) => {
     leafContainer.replaceChildren();
+    // Der Blattwechsel laedt ein Modul und danach dessen Daten. Bis dahin stand
+    // hier ein leerer Kasten (Critique 2026-07-27). aria-busy gilt sofort; das
+    // Skelett kommt erst nach einer kurzen Frist, damit ein Blatt aus dem
+    // Modul-Cache nicht kurz aufblitzt.
+    leafContainer.setAttribute('aria-busy', 'true');
+    const skeletonTimer = setTimeout(() => {
+      if (leafContainer.isConnected && !leafContainer.firstChild) {
+        leafContainer.insertAdjacentHTML('beforeend', renderSkeletonList({ rows: 3, lines: 3 }));
+      }
+    }, SKELETON_DELAY_MS);
+
     try {
       const module = await leaf.loader();
       if (typeof module.render !== 'function') throw new TypeError('Settings leaf must export render()');
+      clearTimeout(skeletonTimer);
+      leafContainer.replaceChildren();
       await module.render(leafContainer, { user, query });
+      leafContainer.removeAttribute('aria-busy');
 
       heading.tabIndex = -1;
       requestAnimationFrame(() => {
@@ -450,6 +469,8 @@ async function renderLeafContent(content, leaf, domain, user, query) {
       hydrateIcons(content);
     } catch (error) {
       console.error(`[Settings] Failed to render ${leaf.id}:`, error);
+      clearTimeout(skeletonTimer);
+      leafContainer.removeAttribute('aria-busy');
       const retryState = createRetryState({
         message: t('settings.loadError'),
         onRetry: () => loadAndRender({ focusRetry: true }),

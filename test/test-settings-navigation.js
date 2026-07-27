@@ -495,6 +495,23 @@ test('the live Settings controller contains no page-specific endpoint strings', 
   }
 });
 
+test('der Blattwechsel zeigt einen Ladezustand statt eines leeren Kastens', async () => {
+  const source = await readFile(new URL('../public/settings/shell.js', import.meta.url), 'utf8');
+  // Zwischen `leafContainer.replaceChildren()` und dem fertigen Blatt lagen der
+  // dynamische Import und der erste Datenabruf (Critique 2026-07-27).
+  assert.match(source, /import\s*\{\s*renderSkeletonList\s*\}\s*from\s*'\/utils\/skeleton\.js'/);
+  assert.match(source, /setAttribute\('aria-busy',\s*'true'\)/, 'aria-busy muss den Ladezustand ansagen');
+  assert.match(source, /renderSkeletonList\(/, 'das Skelett muss aus dem geteilten Helfer kommen');
+  // Erfolg und Fehlschlag muessen aria-busy wieder abraeumen, sonst bleibt das
+  // Blatt fuer Screenreader dauerhaft "beschaeftigt".
+  assert.equal(
+    source.match(/removeAttribute\('aria-busy'\)/g)?.length,
+    2,
+    'aria-busy muss im Erfolgs- UND im Fehlerpfad entfernt werden',
+  );
+  assert.match(source, /clearTimeout\(skeletonTimer\)/, 'der verzoegerte Einsatz muss abbrechbar sein');
+});
+
 test('the former Shopping category tab and handlers are absent from Settings', async () => {
   const source = await readFile(
     new URL('../public/pages/settings.js', import.meta.url),
