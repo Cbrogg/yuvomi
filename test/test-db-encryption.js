@@ -21,7 +21,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, existsSync, readFileSync, copyFileSync } from 'node:fs';
+import { mkdtempSync, existsSync, readFileSync, readdirSync, copyFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import Database from 'better-sqlite3-multiple-ciphers';
@@ -287,6 +287,45 @@ test('ein vor der Umstellung erzeugtes Klartext-Backup bleibt einspielbar', asyn
     'Daten aus dem alten Backup müssen ankommen'
   );
   assert.ok(!isPlaintext(dbPath), 'nach dem Restore muss wieder verschlüsselt sein');
+});
+
+test('ein Restore hinterlässt keine unverschlüsselte Kopie im Datenverzeichnis', async () => {
+  // Ein eingespieltes Alt-Backup wird beim Restore verschlüsselt. Die Sicherung
+  // dafür ist die Backup-Datei selbst plus `.pre-restore-*` — eine zusätzliche
+  // Klartext-Vollkopie bliebe dauerhaft liegen und käme bei jedem weiteren
+  // Restore erneut dazu, ohne dass die Backup-UI davon berichtet.
+  const legacyPath = join(tmpDir(), 'yuvomi.db');
+  const legacy = await bootDb(legacyPath, null);
+  legacy.get().exec('CREATE TABLE restore_marker (note TEXT)');
+  legacy.get().prepare('INSERT INTO restore_marker VALUES (?)').run('aus-dem-altbackup');
+  legacy.get().pragma('wal_checkpoint(TRUNCATE)');
+
+  const dir = tmpDir();
+  const oldBackup = join(dir, 'altbestand.db');
+  copyFileSync(legacyPath, oldBackup);
+  assert.ok(isPlaintext(oldBackup), 'Vorbedingung: das alte Backup ist unverschlüsselt');
+
+  const dbPath = join(dir, 'yuvomi.db');
+  const mod = await bootDb(dbPath, KEY);
+
+  await mod.restoreFromFile(oldBackup);
+  await mod.restoreFromFile(oldBackup); // zweiter Lauf: nichts darf sich anhäufen
+
+  const leftovers = readdirSync(dir).filter((name) => name.includes('plaintext-backup'));
+  assert.deepEqual(leftovers, [], `keine Klartext-Kopien erwartet, gefunden: ${leftovers.join(', ')}`);
+
+  assert.ok(!isPlaintext(dbPath), 'die wiederhergestellte Datenbank muss verschlüsselt sein');
+  assert.equal(
+    mod.get().prepare('SELECT note FROM restore_marker').get()?.note,
+    'aus-dem-altbackup',
+    'die Daten aus dem Backup müssen ankommen'
+  );
+
+  // Der Rollback-Anker bleibt: er ist verschlüsselt und deckt den Fehlerfall ab.
+  assert.ok(
+    readdirSync(dir).some((name) => name.includes('.pre-restore-')),
+    'die pre-restore-Sicherung muss weiterhin entstehen'
+  );
 });
 
 test('der SQLCipher-Cipher (AES-256) ist aktiv, nicht der Default ChaCha20', async () => {

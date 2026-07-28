@@ -154,9 +154,13 @@ let db;
 /**
  * Datenbankverbindung öffnen, SQLCipher-Key setzen, Migrations ausführen.
  * Einmalig beim Serverstart aufrufen.
+ * @param {{ plaintextBackup?: boolean }} [options] `plaintextBackup: false`
+ *   unterdrückt die Klartext-Sicherheitskopie der Verschlüsselungs-Migration.
+ *   Nur für Aufrufer, die die Quelldaten selbst schon gesichert halten — siehe
+ *   `restoreFromFile()`.
  * @returns {import('better-sqlite3-multiple-ciphers').Database}
  */
-function init() {
+function init({ plaintextBackup = true } = {}) {
   if (db) return db;
   if (!path.isAbsolute(DB_PATH)) {
     log.warn(
@@ -172,7 +176,7 @@ function init() {
   // nicht erst eine unverschlüsselte Datei entstehen.
   if (DB_KEY) {
     assertCipherSupport();
-    encryptPlaintextDatabase();
+    encryptPlaintextDatabase({ backup: plaintextBackup });
   }
 
   db = new Database(DB_PATH);
@@ -271,17 +275,26 @@ function isPlaintextDatabase(filePath) {
  *
  * Der Ablauf lässt das Original bis zum abschließenden, atomaren rename
  * unangetastet: bricht der Vorgang ab, ist die Datenbank unverändert.
+ *
+ * @param {{ backup?: boolean }} [options] `backup: false` überspringt die
+ *   Klartext-Sicherheitskopie. Gedacht für den Restore-Pfad: dort ist die
+ *   eingespielte Backup-Datei selbst die Sicherung, und `.pre-restore-*` deckt
+ *   den Rollback ab. Eine dritte, unverschlüsselte Vollkopie im Datenverzeichnis
+ *   wäre reine Duplikation — und würde sich bei jedem Restore erneut anhäufen.
  */
-function encryptPlaintextDatabase() {
+function encryptPlaintextDatabase({ backup = true } = {}) {
   if (!existsSync(DB_PATH)) return;           // Neuinstallation
   if (!isPlaintextDatabase(DB_PATH)) return;  // bereits verschlüsselt
 
   // Ein bereits vorhandenes Backup darf nicht überschrieben werden: nach dem
   // Einspielen eines alten Klartext-Backups liefe die Migration erneut und
   // würde sonst die Sicherheitskopie des ersten Durchlaufs vernichten.
-  let backupPath = `${DB_PATH}.plaintext-backup`;
-  if (existsSync(backupPath)) {
-    backupPath = `${DB_PATH}.plaintext-backup-${new Date().toISOString().replace(/[:.]/g, '-')}`;
+  let backupPath = null;
+  if (backup) {
+    backupPath = `${DB_PATH}.plaintext-backup`;
+    if (existsSync(backupPath)) {
+      backupPath = `${DB_PATH}.plaintext-backup-${new Date().toISOString().replace(/[:.]/g, '-')}`;
+    }
   }
   const workingPath = `${DB_PATH}.encrypting`;
 
@@ -316,7 +329,7 @@ function encryptPlaintextDatabase() {
     );
   }
 
-  copyFileSync(DB_PATH, backupPath);
+  if (backupPath) copyFileSync(DB_PATH, backupPath);
   copyFileSync(DB_PATH, workingPath);
 
   try {
@@ -347,6 +360,11 @@ function encryptPlaintextDatabase() {
   for (const suffix of ['-wal', '-shm']) {
     try { rmSync(`${DB_PATH}${suffix}`, { force: true }); } catch { /* SQLite legt sie neu an */ }
     try { rmSync(`${workingPath}${suffix}`, { force: true }); } catch { /* dito */ }
+  }
+
+  if (!backupPath) {
+    log.info('Database encrypted (AES-256).');
+    return;
   }
 
   log.info(`Database encrypted (AES-256). Plaintext backup: ${backupPath}`);
@@ -4157,7 +4175,13 @@ async function restoreFromFile(sourcePath) {
     await unlinkIfExists(`${DB_PATH}-shm`);
     await fs.copyFile(sourcePath, DB_PATH);
 
-    init();
+    // Ohne Klartext-Sicherheitskopie: stammt das Backup aus der Zeit vor der
+    // Verschlüsselung, verschlüsselt init() es jetzt — die Sicherung dafür ist
+    // die Quelldatei selbst, plus `.pre-restore-*` für den Rollback. Eine
+    // zusätzliche unverschlüsselte Vollkopie im Datenverzeichnis würde sich bei
+    // jedem Restore erneut anhäufen und die Zusage „verschlüsselt at rest"
+    // unterlaufen, ohne dass die Backup-UI davon berichtet.
+    init({ plaintextBackup: false });
     log.info(`Database restored from backup. Schema v${backupVersion}${rollbackCreated ? ` | rollback: ${rollbackPath}` : ''}`);
 
     return {
@@ -4174,12 +4198,12 @@ async function restoreFromFile(sourcePath) {
         await unlinkIfExists(`${DB_PATH}-wal`);
         await unlinkIfExists(`${DB_PATH}-shm`);
         await fs.copyFile(rollbackPath, DB_PATH);
-        init();
+        init({ plaintextBackup: false });
       } catch (rollbackErr) {
         log.error('Rollback after failed restore also failed:', rollbackErr);
       }
     } else if (!db) {
-      try { init(); } catch { /* preserve original restore error */ }
+      try { init({ plaintextBackup: false }); } catch { /* preserve original restore error */ }
     }
     throw err;
   }
