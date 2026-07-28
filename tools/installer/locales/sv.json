@@ -32,7 +32,9 @@
     "dbLabel": "Krypteringsnyckel för databasen",
     "dbHint": "Krypterar SQLite-databasen i vila.",
     "errBoth": "Båda nycklarna krävs.",
-    "dangerWarn": "Spara dessa nycklar nu. Om du förlorar dem går dina krypterade data inte att återställa — det finns ingen återställning."
+    "dangerWarn": "Spara dessa nycklar nu. Om du förlorar dem går dina krypterade data inte att återställa — det finns ingen återställning.",
+    "preserved": "Dina befintliga nycklar behålls, så den här installationen låser dig inte ute från den nuvarande databasen. Lämna ett fält tomt för att behålla dess nyckel; ett nytt värde ersätter den.",
+    "keepPlaceholder": "Befintlig nyckel behålls"
   },
   "weather": {
     "title": "Väder-widget",

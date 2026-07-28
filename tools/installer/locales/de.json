@@ -32,7 +32,9 @@
     "dbLabel": "Datenbank-Verschlüsselungsschlüssel",
     "dbHint": "Verschlüsselt die SQLite-Datenbank im Ruhezustand.",
     "errBoth": "Beide Schlüssel sind erforderlich.",
-    "dangerWarn": "Speichere diese Schlüssel jetzt. Gehen sie verloren, sind deine verschlüsselten Daten unwiederbringlich — es gibt kein Zurücksetzen."
+    "dangerWarn": "Speichere diese Schlüssel jetzt. Gehen sie verloren, sind deine verschlüsselten Daten unwiederbringlich — es gibt kein Zurücksetzen.",
+    "preserved": "Deine bestehenden Schlüssel bleiben erhalten - diese Einrichtung sperrt dich nicht aus der aktuellen Datenbank aus. Lass ein Feld leer, um seinen Schlüssel zu behalten; ein neuer Wert ersetzt ihn.",
+    "keepPlaceholder": "Bestehender Schlüssel bleibt erhalten"
   },
   "weather": {
     "title": "Wetter-Widget",

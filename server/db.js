@@ -1,18 +1,26 @@
 /**
  * Modul: Datenbank (Database)
  * Zweck: SQLite/SQLCipher Verbindung, Schema-Migration (versioniert) und Query-Helfer
- * Abhängigkeiten: better-sqlite3
+ * Abhängigkeiten: better-sqlite3-multiple-ciphers
  *
- * SQLCipher-Hinweis:
- *   Verschlüsselung funktioniert nur wenn better-sqlite3 gegen SQLCipher kompiliert wurde.
- *   Im Docker-Container (Dockerfile: libsqlcipher-dev + npm rebuild) ist das gewährleistet.
- *   Ohne DB_ENCRYPTION_KEY gesetzt läuft die App mit unverschlüsseltem SQLite (für Entwicklung).
+ * Verschlüsselung:
+ *   `better-sqlite3-multiple-ciphers` ist ein API-kompatibler Ersatz für
+ *   `better-sqlite3`, der die Cipher-Schicht bereits im vorkompilierten Binary
+ *   mitbringt. Es wird KEIN System-SQLCipher und kein Quell-Build benötigt -
+ *   das gilt für Docker und Bare-Metal gleichermaßen.
+ *
+ *   Ohne DB_ENCRYPTION_KEY läuft die App bewusst mit unverschlüsseltem SQLite
+ *   (Entwicklung). Ist der Key gesetzt, wird der Cipher auf `sqlcipher`
+ *   (AES-256) gestellt und beim Start hart verifiziert: fehlender
+ *   Cipher-Support oder eine trotz Key unverschlüsselte Datei sind ein
+ *   Startfehler, kein stilles Weiterlaufen. Eine bereits vorhandene
+ *   unverschlüsselte Datenbank wird dabei einmalig migriert.
  */
 
-import Database from 'better-sqlite3';
+import Database from 'better-sqlite3-multiple-ciphers';
 import path from 'path';
 import fs from 'node:fs/promises';
-import { mkdirSync, existsSync, renameSync, rmSync } from 'node:fs';
+import { mkdirSync, existsSync, renameSync, rmSync, copyFileSync, openSync, readSync, closeSync } from 'node:fs';
 import { createLogger } from './logger.js';
 import { decodeHtmlEntities } from './utils/html-entities.js';
 import { toE164, defaultCountryFromConfig } from './utils/phone.js';
@@ -79,9 +87,16 @@ function migrateLegacyDbFile() {
   //    WAL liegen; dann NICHT teil-migrieren.
   let checkpointed = false;
   try {
+    // Bestands-Installationen haben typischerweise einen gesetzten Key UND eine
+    // noch unverschlüsselte Datei (bis v1.52.x lief `PRAGMA key` ins Leere).
+    // Setzten wir ihr den Key auf, läse SQLite sie als verschlüsselt und schon
+    // der Checkpoint scheiterte mit „file is not a database" — über eine völlig
+    // intakte Datenbank. Verschlüsselt wird erst nach dem Rename, durch
+    // encryptPlaintextDatabase() auf dem dann gültigen DB_PATH.
+    const encrypted = !isPlaintextDatabase(LEGACY_DB_PATH);
     const legacy = new Database(LEGACY_DB_PATH);
     try {
-      applyEncryptionKey(legacy);
+      if (encrypted) applyEncryptionKey(legacy);
       // wal_checkpoint(TRUNCATE) WIRFT nicht, wenn eine andere Verbindung den
       // WAL-Lock hält — es liefert eine Zeile { busy, log, checkpointed }. Nur
       // busy === 0 bedeutet, dass der WAL vollständig gefaltet & getrunct wurde
@@ -139,9 +154,13 @@ let db;
 /**
  * Datenbankverbindung öffnen, SQLCipher-Key setzen, Migrations ausführen.
  * Einmalig beim Serverstart aufrufen.
- * @returns {import('better-sqlite3').Database}
+ * @param {{ plaintextBackup?: boolean }} [options] `plaintextBackup: false`
+ *   unterdrückt die Klartext-Sicherheitskopie der Verschlüsselungs-Migration.
+ *   Nur für Aufrufer, die die Quelldaten selbst schon gesichert halten — siehe
+ *   `restoreFromFile()`.
+ * @returns {import('better-sqlite3-multiple-ciphers').Database}
  */
-function init() {
+function init({ plaintextBackup = true } = {}) {
   if (db) return db;
   if (!path.isAbsolute(DB_PATH)) {
     log.warn(
@@ -152,6 +171,14 @@ function init() {
   }
   mkdirSync(path.dirname(DB_PATH), { recursive: true });
   migrateLegacyDbFile();
+
+  // Beide Prüfungen laufen VOR dem Öffnen: fehlt der Cipher-Support, darf gar
+  // nicht erst eine unverschlüsselte Datei entstehen.
+  if (DB_KEY) {
+    assertCipherSupport();
+    encryptPlaintextDatabase({ backup: plaintextBackup });
+  }
+
   db = new Database(DB_PATH);
 
   applyEncryptionKey(db);
@@ -161,7 +188,10 @@ function init() {
     try {
       assertReadable(db);
     } catch {
-      throw new Error('[DB] Wrong encryption key or SQLCipher support is unavailable.');
+      throw new Error(
+        `[DB] Wrong encryption key — ${DB_PATH} could not be decrypted. ` +
+        'Check DB_ENCRYPTION_KEY against the value used when the database was created.'
+      );
     }
   }
 
@@ -173,18 +203,187 @@ function init() {
   migrate();
   reconcileCriticalSchema();
 
+  // Erst hier steht garantiert eine beschriebene Datei auf der Platte. Der
+  // Header ist der einzige Beleg, der nicht auf einer API-Zusage beruht.
+  if (DB_KEY) assertStoredEncrypted();
+
   log.info(`Connected: ${DB_PATH} | Schema v${currentVersion()}`);
   return db;
 }
 
 function applyEncryptionKey(database) {
   if (!DB_KEY) return;
-  // Nur wirksam wenn Binary gegen SQLCipher kompiliert ist (Docker)
+  // `cipher` muss vor `key` gesetzt werden. `sqlcipher` = AES-256 im
+  // SQLCipher-Format (statt des Default-Ciphers ChaCha20).
+  database.pragma("cipher = 'sqlcipher'");
   database.pragma(`key="x'${Buffer.from(DB_KEY, 'utf8').toString('hex')}'"`);
 }
 
 function assertReadable(database) {
   database.prepare('SELECT count(*) FROM sqlite_master').get();
+}
+
+/**
+ * Belegt, dass das geladene Binary überhaupt verschlüsseln kann.
+ * `sqlite3mc_version()` existiert ausschließlich in
+ * better-sqlite3-multiple-ciphers. Ohne diese Prüfung schluckt reguläres
+ * SQLite das unbekannte `PRAGMA key` kommentarlos und die Daten lägen im
+ * Klartext, während die Konfiguration Verschlüsselung verspricht.
+ */
+function assertCipherSupport() {
+  const probe = new Database(':memory:');
+  try {
+    probe.prepare('SELECT sqlite3mc_version() AS version').get();
+  } catch {
+    throw new Error(
+      '[DB] DB_ENCRYPTION_KEY is set, but the installed SQLite binding has no ' +
+      'encryption support (expected better-sqlite3-multiple-ciphers). Refusing ' +
+      'to start rather than storing your data unencrypted.'
+    );
+  } finally {
+    probe.close();
+  }
+}
+
+/** Header jeder unverschlüsselten SQLite-Datei. Verschlüsselt ist er Zufallsrauschen. */
+const SQLITE_PLAINTEXT_HEADER = Buffer.from('SQLite format 3\0', 'binary');
+
+function isPlaintextDatabase(filePath) {
+  let fd;
+  try {
+    fd = openSync(filePath, 'r');
+    const head = Buffer.alloc(SQLITE_PLAINTEXT_HEADER.length);
+    const bytesRead = readSync(fd, head, 0, head.length, 0);
+    return bytesRead === head.length && head.equals(SQLITE_PLAINTEXT_HEADER);
+  } catch {
+    return false;
+  } finally {
+    if (fd !== undefined) {
+      try { closeSync(fd); } catch { /* Datei ist ohnehin gleich zu */ }
+    }
+  }
+}
+
+/**
+ * Einmalige Migration einer unverschlüsselten Bestands-Datenbank.
+ *
+ * Bis einschließlich v1.52.x war `DB_ENCRYPTION_KEY` faktisch wirkungslos:
+ * das ausgelieferte Binary hatte keine Cipher-Schicht, `PRAGMA key` lief ins
+ * Leere. Bestands-Installationen haben deshalb einen gesetzten Key UND eine
+ * unverschlüsselte Datei. Ohne diese Migration würde die App nach dem Update
+ * nicht mehr starten.
+ *
+ * Der Ablauf lässt das Original bis zum abschließenden, atomaren rename
+ * unangetastet: bricht der Vorgang ab, ist die Datenbank unverändert.
+ *
+ * @param {{ backup?: boolean }} [options] `backup: false` überspringt die
+ *   Klartext-Sicherheitskopie. Gedacht für den Restore-Pfad: dort ist die
+ *   eingespielte Backup-Datei selbst die Sicherung, und `.pre-restore-*` deckt
+ *   den Rollback ab. Eine dritte, unverschlüsselte Vollkopie im Datenverzeichnis
+ *   wäre reine Duplikation — und würde sich bei jedem Restore erneut anhäufen.
+ */
+function encryptPlaintextDatabase({ backup = true } = {}) {
+  if (!existsSync(DB_PATH)) return;           // Neuinstallation
+  if (!isPlaintextDatabase(DB_PATH)) return;  // bereits verschlüsselt
+
+  // Ein bereits vorhandenes Backup darf nicht überschrieben werden: nach dem
+  // Einspielen eines alten Klartext-Backups liefe die Migration erneut und
+  // würde sonst die Sicherheitskopie des ersten Durchlaufs vernichten.
+  let backupPath = null;
+  if (backup) {
+    backupPath = `${DB_PATH}.plaintext-backup`;
+    if (existsSync(backupPath)) {
+      backupPath = `${DB_PATH}.plaintext-backup-${new Date().toISOString().replace(/[:.]/g, '-')}`;
+    }
+  }
+  const workingPath = `${DB_PATH}.encrypting`;
+
+  log.warn(`${DB_PATH} is unencrypted but DB_ENCRYPTION_KEY is set — encrypting now.`);
+
+  // Offenes WAL einchecken, damit die .db-Datei für sich vollständig ist.
+  // wal_checkpoint(TRUNCATE) WIRFT NICHT, wenn eine andere Verbindung den
+  // WAL-Lock hält — es liefert { busy, log, checkpointed }. Nur busy === 0
+  // heißt, dass alle committeten Frames in der .db stehen. Würden wir bei
+  // busy != 0 weitermachen, verschlüsselten wir eine unvollständige Kopie und
+  // löschten anschließend die Sidecars: committete Daten wären verloren.
+  // Deshalb hier abbrechen statt teil-migrieren — unverschlüsselt weiterlaufen
+  // ist wegen der Sicherheitszusage ebenfalls keine Option.
+  let checkpointed = false;
+  const source = new Database(DB_PATH);
+  try {
+    const [row] = source.pragma('wal_checkpoint(TRUNCATE)');
+    checkpointed = row != null && row.busy === 0;
+    if (!checkpointed) {
+      log.warn(`WAL checkpoint incomplete (busy=${row?.busy}) — not encrypting a partial copy.`);
+    }
+  } finally {
+    source.close();
+  }
+
+  if (!checkpointed) {
+    throw new Error(
+      `[DB] Cannot encrypt ${DB_PATH}: its write-ahead log could not be checkpointed, ` +
+      'which means another connection is still using the database. Encrypting now ' +
+      'would risk losing committed data. Make sure no second instance is running ' +
+      'against this volume and start again.'
+    );
+  }
+
+  if (backupPath) copyFileSync(DB_PATH, backupPath);
+  copyFileSync(DB_PATH, workingPath);
+
+  try {
+    const working = new Database(workingPath);
+    try {
+      // rekey ist im WAL-Modus nicht erlaubt.
+      working.pragma('journal_mode = DELETE');
+      working.pragma("cipher = 'sqlcipher'");
+      working.pragma(`rekey="x'${Buffer.from(DB_KEY, 'utf8').toString('hex')}'"`);
+      working.pragma('journal_mode = WAL');
+    } finally {
+      working.close();
+    }
+  } catch (err) {
+    for (const suffix of ['', '-wal', '-shm']) {
+      try { rmSync(`${workingPath}${suffix}`, { force: true }); } catch { /* Aufräumen ist best-effort */ }
+    }
+    throw new Error(
+      `[DB] Encrypting the existing database failed (${err?.message}). ` +
+      `The original database is untouched at ${DB_PATH}.`
+    );
+  }
+
+  renameSync(workingPath, DB_PATH);
+
+  // Sidecars der unverschlüsselten Datei sind nach dem Checkpoint leer und
+  // passen nicht mehr zur neuen Datei.
+  for (const suffix of ['-wal', '-shm']) {
+    try { rmSync(`${DB_PATH}${suffix}`, { force: true }); } catch { /* SQLite legt sie neu an */ }
+    try { rmSync(`${workingPath}${suffix}`, { force: true }); } catch { /* dito */ }
+  }
+
+  if (!backupPath) {
+    log.info('Database encrypted (AES-256).');
+    return;
+  }
+
+  log.info(`Database encrypted (AES-256). Plaintext backup: ${backupPath}`);
+  log.warn(
+    `${backupPath} still contains UNENCRYPTED data — delete it once you have ` +
+    'verified that the app starts and your data is complete.'
+  );
+}
+
+/**
+ * Letzte Instanz gegen den stillen Fehlschlag: liegt trotz gesetztem Key eine
+ * unverschlüsselte Datei auf der Platte, ist der Start ein Fehler.
+ */
+function assertStoredEncrypted() {
+  if (!isPlaintextDatabase(DB_PATH)) return;
+  throw new Error(
+    `[DB] DB_ENCRYPTION_KEY is set, but ${DB_PATH} is stored unencrypted. ` +
+    'Refusing to continue — your data would not be protected.'
+  );
 }
 
 // --------------------------------------------------------
@@ -3901,7 +4100,16 @@ async function backupToFile(destinationPath) {
   const database = get();
   await fs.mkdir(path.dirname(destinationPath), { recursive: true });
 
-  if (typeof database.backup === 'function') {
+  if (DB_KEY) {
+    // Die SQLite-Backup-API kann nicht von einer verschlüsselten Quelle in ein
+    // frisch angelegtes Ziel schreiben ("backup is not supported with
+    // incompatible source and target databases") — ohne diesen Zweig wäre bei
+    // gesetztem Key JEDES Backup kaputt. VACUUM INTO übernimmt Cipher und Key
+    // der Quelle, das Backup ist also ebenfalls verschlüsselt. Es verlangt
+    // allerdings ein noch nicht existierendes Ziel.
+    await unlinkIfExists(destinationPath);
+    database.prepare('VACUUM INTO ?').run(destinationPath);
+  } else if (typeof database.backup === 'function') {
     await database.backup(destinationPath);
   } else {
     database.prepare('VACUUM INTO ?').run(destinationPath);
@@ -3911,9 +4119,14 @@ async function backupToFile(destinationPath) {
 }
 
 function validateBackupFile(sourcePath) {
+  // Backups, die vor der Verschlüsselungs-Umstellung entstanden sind, liegen im
+  // Klartext vor. Sie müssen einspielbar bleiben — würden wir ihnen den Key
+  // aufsetzen, läse SQLite sie als verschlüsselt und die Validierung schlüge
+  // fehl. Nach dem Restore verschlüsselt init() sie ohnehin.
+  const encrypted = !isPlaintextDatabase(sourcePath);
   const candidate = new Database(sourcePath, { readonly: true, fileMustExist: true });
   try {
-    applyEncryptionKey(candidate);
+    if (encrypted) applyEncryptionKey(candidate);
     assertReadable(candidate);
     const row = candidate.prepare(`
       SELECT name
@@ -3962,7 +4175,13 @@ async function restoreFromFile(sourcePath) {
     await unlinkIfExists(`${DB_PATH}-shm`);
     await fs.copyFile(sourcePath, DB_PATH);
 
-    init();
+    // Ohne Klartext-Sicherheitskopie: stammt das Backup aus der Zeit vor der
+    // Verschlüsselung, verschlüsselt init() es jetzt — die Sicherung dafür ist
+    // die Quelldatei selbst, plus `.pre-restore-*` für den Rollback. Eine
+    // zusätzliche unverschlüsselte Vollkopie im Datenverzeichnis würde sich bei
+    // jedem Restore erneut anhäufen und die Zusage „verschlüsselt at rest"
+    // unterlaufen, ohne dass die Backup-UI davon berichtet.
+    init({ plaintextBackup: false });
     log.info(`Database restored from backup. Schema v${backupVersion}${rollbackCreated ? ` | rollback: ${rollbackPath}` : ''}`);
 
     return {
@@ -3979,12 +4198,12 @@ async function restoreFromFile(sourcePath) {
         await unlinkIfExists(`${DB_PATH}-wal`);
         await unlinkIfExists(`${DB_PATH}-shm`);
         await fs.copyFile(rollbackPath, DB_PATH);
-        init();
+        init({ plaintextBackup: false });
       } catch (rollbackErr) {
         log.error('Rollback after failed restore also failed:', rollbackErr);
       }
     } else if (!db) {
-      try { init(); } catch { /* preserve original restore error */ }
+      try { init({ plaintextBackup: false }); } catch { /* preserve original restore error */ }
     }
     throw err;
   }
@@ -3996,7 +4215,7 @@ async function restoreFromFile(sourcePath) {
 
 /**
  * Datenbankinstanz zurückgeben.
- * @returns {import('better-sqlite3').Database}
+ * @returns {import('better-sqlite3-multiple-ciphers').Database}
  */
 function get() {
   if (!db) throw new Error('[DB] Not initialized - call init() first.');
@@ -4017,7 +4236,7 @@ let _originalDb = null;
 
 /**
  * ONLY FOR TESTING: Override the internal db instance
- * @param {import('better-sqlite3').Database} testDb
+ * @param {import('better-sqlite3-multiple-ciphers').Database} testDb
  */
 function _setTestDatabase(testDb) {
   if (!_originalDb) _originalDb = db;

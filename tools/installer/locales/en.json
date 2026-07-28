@@ -32,7 +32,9 @@
     "dbLabel": "Database Encryption Key",
     "dbHint": "Encrypts the SQLite database at rest.",
     "errBoth": "Both keys are required.",
-    "dangerWarn": "Save these keys now. If you lose them, your encrypted data is unrecoverable — there is no reset."
+    "dangerWarn": "Save these keys now. If you lose them, your encrypted data is unrecoverable — there is no reset.",
+    "preserved": "Your existing keys are kept, so this setup will not lock you out of the current database. Leave a field empty to keep its key; entering a new value replaces it.",
+    "keepPlaceholder": "Existing key kept"
   },
   "weather": {
     "title": "Weather Widget",

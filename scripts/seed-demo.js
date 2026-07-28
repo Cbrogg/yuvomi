@@ -26,7 +26,7 @@
  * Login for all demo users: <username> / demo1234
  */
 
-import Database from 'better-sqlite3';
+import Database from 'better-sqlite3-multiple-ciphers';
 import bcrypt from 'bcrypt';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';

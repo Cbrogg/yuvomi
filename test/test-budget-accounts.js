@@ -8,7 +8,7 @@
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import test from 'node:test';
-import Database from 'better-sqlite3';
+import Database from 'better-sqlite3-multiple-ciphers';
 import express from 'express';
 
 process.env.DB_PATH = ':memory:';

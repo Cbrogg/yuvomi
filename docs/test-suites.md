@@ -10,6 +10,7 @@ Neue Suite: `test/test-[module].js` anlegen + `test:[module]`-Skript in `package
 npm test             # Alle Suiten (Node >=22)
 npm run test:db
 npm run test:rename-migration   # Oikos→Yuvomi Identifier-Migration: seamless rename invariants
+npm run test:db-encryption      # DB_ENCRYPTION_KEY wirkt wirklich: Datei-Header verschlüsselt, Bestands-DB wird migriert, falscher Key bricht den Start ab
 npm run test:tasks
 npm run test:tasks-recurrence   # recurring task catch-up: nextOccurrenceAfter + PATCH status follow-up
 npm run test:tasks-routes       # Tasks-Routen-Schicht: PUT/:id, meta/options, Kategorie-CRUD (404/400/409), Filter, Verschachtelung, PATCH-Status, DELETE
