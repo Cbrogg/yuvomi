@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.53.0] - 2026-07-28
+
+### Security
+- `DB_ENCRYPTION_KEY` now actually encrypts the database. Both installers generate the key and the documentation promised AES-256 at rest, but the SQLite binding that shipped carried no cipher layer and silently ignored the key, so installations stored their data in plaintext while the configuration said otherwise. Saved CalDAV, CardDAV and WebDAV credentials were affected the same way. Setting the key now encrypts the file for real, and the app refuses to start rather than carry on unencrypted if the binding cannot encrypt or the file on disk is still plaintext.
+- An existing unencrypted database is encrypted once on the next start. The original is left untouched as `<DB_PATH>.plaintext-backup`; delete that copy once you have checked that the app starts and your data is complete. If another process still holds the database open, the migration stops rather than encrypt an incomplete copy, and your data is left exactly as it was.
+
+### Changed
+- Replaced `better-sqlite3` with the API-compatible `better-sqlite3-multiple-ciphers`, which carries the cipher inside its own binary. Docker and bare-metal installs are covered alike and no system SQLCipher is needed.
+- Re-running either installer now keeps a `SESSION_SECRET` or `DB_ENCRYPTION_KEY` that is already in your `.env` instead of generating a new one. A regenerated encryption key would leave the app unable to open its own database. Typing a value by hand still replaces it, which is the deliberate way to start over.
+- Updated the production dependencies and the development-only `puppeteer`, and realigned the `allowScripts` build-script pins to match. (#587, #588)
+
+### Fixed
+- Backups work again once encryption is enabled. The SQLite backup API refuses an encrypted source, so with a key set every backup failed, the scheduled ones and the WebDAV upload included.
+- Backups written before encryption took effect stay restorable. The restore check applied the key to every candidate file and therefore read those older plaintext backups as unreadable.
+- A restore no longer leaves an unencrypted copy of the database behind. Restoring a backup from before the switch encrypts it on the way in, and that step used to drop a full plaintext copy next to the database on every single restore.
+- Installations still on the legacy `oikos.db` filename that also have an encryption key set now start correctly. The rename to `yuvomi.db` was skipped on the first boot and reported "file is not a database" for a database that was perfectly intact.
+
 ## [1.52.1] - 2026-07-28
 
 ### Fixed
