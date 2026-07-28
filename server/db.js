@@ -87,9 +87,16 @@ function migrateLegacyDbFile() {
   //    WAL liegen; dann NICHT teil-migrieren.
   let checkpointed = false;
   try {
+    // Bestands-Installationen haben typischerweise einen gesetzten Key UND eine
+    // noch unverschlüsselte Datei (bis v1.52.x lief `PRAGMA key` ins Leere).
+    // Setzten wir ihr den Key auf, läse SQLite sie als verschlüsselt und schon
+    // der Checkpoint scheiterte mit „file is not a database" — über eine völlig
+    // intakte Datenbank. Verschlüsselt wird erst nach dem Rename, durch
+    // encryptPlaintextDatabase() auf dem dann gültigen DB_PATH.
+    const encrypted = !isPlaintextDatabase(LEGACY_DB_PATH);
     const legacy = new Database(LEGACY_DB_PATH);
     try {
-      applyEncryptionKey(legacy);
+      if (encrypted) applyEncryptionKey(legacy);
       // wal_checkpoint(TRUNCATE) WIRFT nicht, wenn eine andere Verbindung den
       // WAL-Lock hält — es liefert eine Zeile { busy, log, checkpointed }. Nur
       // busy === 0 bedeutet, dass der WAL vollständig gefaltet & getrunct wurde

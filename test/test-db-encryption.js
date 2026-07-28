@@ -133,6 +133,37 @@ test('die Migration hinterlässt ein unverschlüsseltes Backup der Originaldatei
   assert.equal(count, 10, 'das Backup muss den vollständigen Datenbestand enthalten');
 });
 
+test('eine unverschlüsselte Legacy-oikos.db wird im selben Start umbenannt und verschlüsselt', async () => {
+  // Der kritische Bestandsfall: Legacy-Dateiname UND gesetzter Key. Würde die
+  // Rename-Migration der noch unverschlüsselten oikos.db den Cipher-Key
+  // aufsetzen, scheiterte ihr Checkpoint mit „file is not a database", der
+  // Rename verschöbe sich auf den nächsten Boot und die Klartext-Sicherheits-
+  // kopie hieße oikos.db.plaintext-backup — nicht der Name, den .env.example,
+  // SECURITY.md und docs/installation.md zum Löschen nennen.
+  const dir = tmpDir();
+  const legacyPath = join(dir, 'oikos.db');
+  const dbPath = join(dir, 'yuvomi.db');
+  seedPlaintextDb(legacyPath, 20);
+
+  const mod = await bootDb(legacyPath, KEY);
+
+  assert.ok(existsSync(dbPath), 'die Datenbank muss im selben Start nach yuvomi.db umgezogen sein');
+  assert.ok(!existsSync(legacyPath), 'die Legacy-Datei darf nicht liegenbleiben');
+  assert.ok(!isPlaintext(dbPath), 'nach dem Umzug muss verschlüsselt sein');
+
+  assert.ok(
+    existsSync(`${dbPath}.plaintext-backup`),
+    'die Sicherheitskopie muss unter dem dokumentierten Namen <DB_PATH>.plaintext-backup liegen'
+  );
+  assert.ok(
+    !existsSync(`${legacyPath}.plaintext-backup`),
+    'keine unverschlüsselte Kopie unter einem Namen, den die Doku nicht nennt'
+  );
+
+  const { count } = mod.get().prepare('SELECT count(*) AS count FROM legacy_marker').get();
+  assert.equal(count, 20, 'alle Zeilen müssen den Umzug überstehen');
+});
+
 test('eine bereits verschlüsselte Datenbank wird beim nächsten Start nicht erneut migriert', async () => {
   const dbPath = join(tmpDir(), 'yuvomi.db');
   const backupPath = `${dbPath}.plaintext-backup`;
