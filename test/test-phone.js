@@ -9,7 +9,7 @@
 import { describe, it, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import Database from 'better-sqlite3';
+import Database from 'better-sqlite3-multiple-ciphers';
 
 import * as core from '../public/vendor/libphonenumber/core.min.mjs';
 import {

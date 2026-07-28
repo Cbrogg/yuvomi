@@ -21,6 +21,8 @@ bash install.sh
 
 The script checks prerequisites, generates security keys, configures optional integrations, starts the container (Docker or Podman — auto-detected), and creates your admin account. Like the web installer, it is fully localized in 23 languages and auto-detects yours from the shell environment (`LANG`/`LC_ALL`).
 
+Running it again on an existing installation is safe: keys already present in your `.env` are kept instead of regenerated, so the database stays readable. Remove a key from `.env` if you deliberately want a new one.
+
 Force a specific language with `--lang` (one of `de en es fr it sv el ru tr zh ja ar hi pt uk pl nl cs vi hu ko id fa`):
 
 ```bash
@@ -171,14 +173,14 @@ node tools/installer/install-server.js
 Open your browser and navigate to **http://localhost:8090**. The wizard detects your browser language (23 languages supported), verifies that a container engine is available (Docker with Compose v2, or Podman with `podman compose` / `podman-compose`), and reports any existing `.env` file or running container before you start. It then guides you through:
 
 - Basics — timezone (`TZ`) and HTTP host port (`OIKOS_HTTP_PORT`)
-- Security key generation (`SESSION_SECRET`, `DB_ENCRYPTION_KEY`)
+- Security key generation (`SESSION_SECRET`, `DB_ENCRYPTION_KEY`) — on a re-run, keys already present in your `.env` are kept rather than regenerated, so running the wizard again on a live installation cannot lock you out of your encrypted database
 - Optional integrations (weather, Google Calendar, Apple CalDAV, local folder, WebDAV, or Google Drive document storage)
 - Advanced settings — reverse-proxy/HTTPS (`SESSION_SECURE`, `TRUST_PROXY`), Single Sign-On (OIDC), and automatic backups
 - Writing your `.env` file (an existing `.env` is backed up to `.env.bak-<timestamp>` first)
 - Starting the container (via Docker or Podman, whichever was detected)
 - Creating your admin account
 
-The final screen lets you **download a copy of your `.env`** — keep it safe, as it holds the encryption keys that cannot be recovered if lost.
+The final screen lets you **download a copy of your `.env`** — keep it safe, as it holds the encryption keys that cannot be recovered if lost. Keys carried over from an earlier run appear there as a comment instead of a value, because the browser never receives them; those keys are still in the `.env` on disk and in its backup copy.
 
 The installer server shuts down automatically after setup completes (or after 30 minutes of inactivity).
 
@@ -251,7 +253,7 @@ Open `.env` and set the two required secrets (see above). Generate them with `op
 docker compose up -d --build
 ```
 
-- `--build` compiles the Docker image locally (SQLCipher dependencies, npm packages).
+- `--build` builds the Docker image locally (npm packages, including the native database module).
 - `-d` runs the container in the background.
 
 The first build takes a few minutes. Subsequent starts are much faster.
@@ -361,7 +363,7 @@ In Unraid, open the **Apps** tab (the Community Applications plugin) and search 
 Click **Install**. In the template, set:
 
 - **SESSION_SECRET** (required) — a long random string
-- **DB_ENCRYPTION_KEY** (recommended) — generate with `openssl rand -hex 32`; back it up, it cannot be recovered or changed on an existing database
+- **DB_ENCRYPTION_KEY** (recommended) — generate with `openssl rand -hex 32`; back it up, it cannot be recovered or changed on an existing database. If you are upgrading an installation whose database is still unencrypted, it is encrypted once on the next start and the untouched original is kept as `<DB_PATH>.plaintext-backup`; delete that copy once you have verified the app starts and your data is complete
 - Adjust the WebUI port and the appdata path if needed
 
 #### 3. Apply and Open
@@ -1062,13 +1064,15 @@ If you have existing data, you need the original encryption key. There is no way
 </details>
 
 <details>
-<summary>SQLCipher build fails during Docker build</summary>
+<summary>Native module build fails during Docker build</summary>
 
-> **Tip**: If you hit build issues, switch to the pre-built image (Option B above) — it ships with SQLCipher already compiled and requires no local build step.
+> **Tip**: If you hit build issues, switch to the pre-built image (Option B above) — it ships the database module ready to run and requires no local build step.
 
-The Dockerfile installs these build dependencies: `python3`, `make`, `g++`, `libsqlcipher-dev`. If the build fails, ensure your Docker installation is up to date and has internet access to pull packages.
+The database encryption is built into the `better-sqlite3-multiple-ciphers` module, so no system SQLCipher is needed. The build normally downloads a prebuilt binary for your architecture from GitHub; if that download fails, `node-gyp` compiles the module from source instead. The Dockerfile keeps `python3`, `make` and `g++` installed for exactly that fallback.
 
-On resource-constrained systems, the native compilation may run out of memory. Ensure at least 1 GB of RAM is available during the build.
+So if the build fails, check both: your Docker installation is up to date, and the build has internet access to reach both the Debian package mirrors and GitHub.
+
+On resource-constrained systems, the source fallback may run out of memory. Ensure at least 1 GB of RAM is available during the build.
 
 </details>
 

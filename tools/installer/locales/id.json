@@ -32,7 +32,9 @@
     "dbLabel": "Kunci enkripsi basis data",
     "dbHint": "Mengenkripsi basis data SQLite saat diam.",
     "errBoth": "Kedua kunci diperlukan.",
-    "dangerWarn": "Simpan kunci ini sekarang. Jika hilang, data terenkripsi Anda tidak dapat dipulihkan — tidak ada penyetelan ulang."
+    "dangerWarn": "Simpan kunci ini sekarang. Jika hilang, data terenkripsi Anda tidak dapat dipulihkan — tidak ada penyetelan ulang.",
+    "preserved": "Kunci yang sudah ada tetap dipertahankan, sehingga penyiapan ini tidak akan mengunci Anda dari basis data saat ini. Biarkan kolom kosong untuk mempertahankan kuncinya; memasukkan nilai baru akan menggantinya.",
+    "keepPlaceholder": "Kunci yang ada dipertahankan"
   },
   "weather": {
     "title": "Widget cuaca",

@@ -10,6 +10,7 @@ Neue Suite: `test/test-[module].js` anlegen + `test:[module]`-Skript in `package
 npm test             # Alle Suiten (Node >=22)
 npm run test:db
 npm run test:rename-migration   # Oikos→Yuvomi Identifier-Migration: seamless rename invariants
+npm run test:db-encryption      # DB_ENCRYPTION_KEY wirkt wirklich: Datei-Header verschlüsselt, Bestands-DB wird migriert, falscher Key bricht den Start ab
 npm run test:tasks
 npm run test:tasks-recurrence   # recurring task catch-up: nextOccurrenceAfter + PATCH status follow-up
 npm run test:tasks-routes       # Tasks-Routen-Schicht: PUT/:id, meta/options, Kategorie-CRUD (404/400/409), Filter, Verschachtelung, PATCH-Status, DELETE
@@ -104,7 +105,7 @@ npm run test:caldav-recurrence   # CalDAV/iOS-Serien mit Wochentags-Wiederholung
 npm run test:caldav-reminders
 npm run test:caldav-event-target
 npm run test:google-multi   # multiple Google calendars + per-event sync target
-npm run test:google-outbound   # Löschen + Ändern + Umziehen Yuvomi → Google (#593): Tombstones, Dirty-Marker, events.move, 404/410, Retry-Limit, Inbound-Konfliktschutz
+npm run test:google-outbound   # Löschen + Ändern + Umziehen Yuvomi → Google (#593): Tombstones, Dirty-Marker, events.move, 404/410, Retry-Limit, Inbound-Konfliktschutz, Serien-Dubletten (Master vs. Instanz-IDs)
 npm run test:calendar-outbound-migration   # Migrationen v103-v106 gegen befüllte Bestands-DB: additiv, kein Rebuild, Marker starten neutral
 npm run test:caldav-outbound   # Löschen + Ändern + Umziehen Yuvomi → CalDAV/Apple (#593): ICS-Patcher (Teilnehmer/Alarme/Overrides bleiben), Objekt-URL-Auflösung, Umzug = create+delete, Sofortversuch ohne Kalenderabruf
 npm run test:google-calendar

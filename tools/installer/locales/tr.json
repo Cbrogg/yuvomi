@@ -32,7 +32,9 @@
     "dbLabel": "Veritabanı Şifreleme Anahtarı",
     "dbHint": "SQLite veritabanını beklemede şifreler.",
     "errBoth": "Her iki anahtar da gereklidir.",
-    "dangerWarn": "Bu anahtarları şimdi kaydedin. Kaybederseniz şifrelenmiş verileriniz kurtarılamaz — sıfırlama yoktur."
+    "dangerWarn": "Bu anahtarları şimdi kaydedin. Kaybederseniz şifrelenmiş verileriniz kurtarılamaz — sıfırlama yoktur.",
+    "preserved": "Mevcut anahtarların korunur, bu nedenle bu kurulum seni geçerli veritabanının dışında bırakmaz. Anahtarını korumak için bir alanı boş bırak; yeni bir değer girmek onu değiştirir.",
+    "keepPlaceholder": "Mevcut anahtar korunuyor"
   },
   "weather": {
     "title": "Hava Durumu Widget",

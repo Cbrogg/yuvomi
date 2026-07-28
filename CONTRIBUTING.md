@@ -35,7 +35,7 @@ git clone https://github.com/ulsklyc/yuvomi.git
 cd yuvomi
 npm install
 cp .env.example .env
-# Set SESSION_SECRET - leave DB_ENCRYPTION_KEY empty (no SQLCipher needed locally)
+# Set SESSION_SECRET - leave DB_ENCRYPTION_KEY empty to work on an unencrypted DB locally
 npm run dev
 ```
 

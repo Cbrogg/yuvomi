@@ -9,7 +9,7 @@
 
 import assert from 'node:assert/strict';
 import test, { beforeEach } from 'node:test';
-import Database from 'better-sqlite3';
+import Database from 'better-sqlite3-multiple-ciphers';
 import { MIGRATIONS, _setTestDatabase, _resetTestDatabase } from '../server/db.js';
 import { sync, getForRange, getCountries, getSubdivisions, getGroups, __setFetchImpl } from '../server/services/holidays.js';
 

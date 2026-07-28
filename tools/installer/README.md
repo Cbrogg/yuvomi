@@ -39,7 +39,8 @@ dedicated `podman-compose.yml` (SELinux `:Z` labels).
    - **Advanced setup** — walks every option, step by step. Security keys are
      still pre-generated (regenerate any time), and each screen is optional:
      - **Basics** — domain/IP, timezone (`TZ`), HTTP host port (`OIKOS_HTTP_PORT`)
-     - **Security keys** — `SESSION_SECRET` and `DB_ENCRYPTION_KEY` (pre-filled)
+     - **Security keys** — `SESSION_SECRET` and `DB_ENCRYPTION_KEY` (pre-filled
+       on a fresh install; existing keys are kept, see below)
      - **Weather** — Open-Meteo coordinates (no API key)
      - **Calendar** — Google Calendar and Apple CalDAV
      - **Email** — SMTP for the "forgot password" flow (`EMAIL_SMTP_*`,
@@ -52,6 +53,14 @@ dedicated `podman-compose.yml` (SELinux `:Z` labels).
      password-reset links work out of the box.
    - A language switcher (top corner) overrides the auto-detected browser
      language and remembers your choice.
+   - **Existing keys survive a re-run.** If `SESSION_SECRET` or
+     `DB_ENCRYPTION_KEY` are already in your `.env`, no new value is generated
+     for them: the encryption key opens your current database, and a fresh one
+     would leave the app unable to start. Their fields stay empty on the
+     security-keys screen and the old values are written back unchanged. Typing
+     a value anyway overrides this, which is the deliberate way to start over.
+     The wizard never receives the existing values — the server reports only
+     which keys exist and restores them when it writes the file.
 3. Backs up any existing `.env` to `.env.bak-<ISO>` before writing
 4. Writes `.env` to the project root (keys are allowlisted against the shared
    env schema; values containing line breaks are rejected, and values with
@@ -62,7 +71,10 @@ dedicated `podman-compose.yml` (SELinux `:Z` labels).
 6. Polls the health endpoint until the container is ready
 7. Creates your first admin account via `POST /api/v1/auth/setup`
 8. Offers to download a copy of the written `.env` on the final screen — the
-   only backup of the encryption keys, which cannot be recovered if lost
+   only backup of newly generated encryption keys, which cannot be recovered if
+   lost. Keys carried over from a previous run appear as a comment rather than a
+   value, since the browser never sees them; those are still in the `.env` on
+   disk and in its `.env.bak-<ISO>` copy
 
 The local-folder document-storage fields are optional. Setting `DOCUMENT_STORAGE_LOCAL_ENABLED=true`
 writes new document files (including calendar attachments) to `DOCUMENT_STORAGE_LOCAL_PATH` (default

@@ -99,7 +99,7 @@ function loadSubjectRows(database, subjectType, subjectId) {
 
 /**
  * Löst die effektiven Rechte eines konkreten Nutzers auf.
- * @param {import('better-sqlite3').Database} database
+ * @param {import('better-sqlite3-multiple-ciphers').Database} database
  * @param {{ id: number, role: string, family_role?: string }} user
  * @returns {{ admin: boolean, modules: Record<string,'none'|'read'|'write'>, widgets: Record<string,'none'|'allow'> }}
  */
@@ -224,7 +224,7 @@ export function normalizePermissionInput({ modules = {}, widgets = {} } = {}) {
  * Ersetzt die komplette Rechte-Zeile eines Subjekts atomar (delete + insert der
  * abweichenden Einträge). Transaktion vom Aufrufer bereitgestellt oder hier
  * gekapselt.
- * @param {import('better-sqlite3').Database} database
+ * @param {import('better-sqlite3-multiple-ciphers').Database} database
  */
 export function replaceSubjectPermissions(database, subjectType, subjectId, input) {
   const rows = normalizePermissionInput(input);
