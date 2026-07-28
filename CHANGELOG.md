@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.52.1] - 2026-07-28
+
+### Fixed
+- A recurring event created in Yuvomi and synced to Google appeared twice in the calendar, once per occurrence. Yuvomi kept the series as a single entry with its repeat rule and worked out the occurrences itself, while Google returned the same series as separate events for every occurrence, and both were shown. Google's copies are now recognised as belonging to the series Yuvomi already has. Duplicates left behind by earlier syncs disappear on the next one, except where you had given a copy its own colour or assigned someone to it, since that would throw away your own edit. (#593)
+
 ## [1.52.0] - 2026-07-28
 
 ### Added

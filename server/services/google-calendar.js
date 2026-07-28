@@ -731,6 +731,26 @@ function upsertGoogleEvents(items, calRefId = null, calColor = GOOGLE_COLOR, col
     `SELECT 1 FROM calendar_pending_deletions WHERE source = 'google' AND event_external_id = ?`
   );
 
+  // Serie, die Yuvomi selbst hochgeladen hat: die Zeile trägt Googles Master-ID
+  // und ihre RRULE, und wird lokal expandiert. Der Abruf läuft mit
+  // singleEvents:true und liefert dieselbe Serie zusätzlich als Einzelinstanzen -
+  // ohne die folgende Prüfung stünde jeder Serientermin doppelt im Kalender.
+  const localMaster = db.get().prepare(`
+    SELECT 1 FROM calendar_events
+    WHERE external_calendar_id = ? AND external_source = 'google'
+      AND recurrence_rule IS NOT NULL
+  `);
+  // Aufräumen für Datenbanken aus der Zeit vor diesem Fix: die damals angelegten
+  // Instanz-Zeilen sind reine Dubletten des Masters. Nur unangetastete werden
+  // entfernt - was der Nutzer umgefärbt oder zugewiesen hat, bleibt stehen.
+  const untouchedInstance = db.get().prepare(`
+    SELECT e.id FROM calendar_events e
+    WHERE e.external_calendar_id = ? AND e.external_source = 'google'
+      AND e.user_modified = 0
+      AND NOT EXISTS (SELECT 1 FROM event_assignments ea WHERE ea.event_id = e.id)
+  `);
+  const dropRow = db.get().prepare('DELETE FROM calendar_events WHERE id = ?');
+
   const insertOrUpdate = db.get().transaction((item) => {
     // Löschung aus diesem Kalender - eine Zeile, die inzwischen zu einem anderen
     // Kalender gehört, ist davon nicht gemeint.
@@ -742,6 +762,13 @@ function upsertGoogleEvents(items, calRefId = null, calColor = GOOGLE_COLOR, col
     // Kalender - der Nutzer hat den Termin gelöscht.
     if (pendingDeletion.get(item.id)) {
       del.run(item.id, null, null);
+      return;
+    }
+    // Instanz einer Serie, deren Master hier bereits liegt: übergehen, sonst
+    // steht die Serie doppelt (lokal expandiert plus Googles Einzelinstanzen).
+    if (item.recurringEventId && localMaster.get(item.recurringEventId)) {
+      const stale = untouchedInstance.get(item.id);
+      if (stale) dropRow.run(stale.id);
       return;
     }
 

@@ -753,6 +753,107 @@ test('Altzeilen ohne calendar_ref_id werden von einem cancelled weiterhin gelös
   assert.equal(reload(event.id), undefined, 'sonst kämen echte Löschungen bei Altdaten nie an');
 });
 
+// ── Serien: Master lokal, Instanzen von Google ──────────────────────────────────
+
+function instanceItem(masterId, stamp, extra = {}) {
+  return {
+    id: `${masterId}_${stamp}`,
+    summary: 'Yoga',
+    status: 'confirmed',
+    recurringEventId: masterId,
+    start: { dateTime: `${stamp.slice(0, 4)}-${stamp.slice(4, 6)}-${stamp.slice(6, 8)}T18:00:00Z` },
+    end:   { dateTime: `${stamp.slice(0, 4)}-${stamp.slice(4, 6)}-${stamp.slice(6, 8)}T19:00:00Z` },
+    ...extra,
+  };
+}
+
+/** Zustand nach einem Outbound-Push: die Zeile trägt Googles Master-ID + RRULE. */
+function insertPushedSeries(masterId, calRefId) {
+  const r = db.prepare(`
+    INSERT INTO calendar_events
+      (title, start_datetime, end_datetime, recurrence_rule, external_calendar_id,
+       external_source, calendar_ref_id, created_by)
+    VALUES ('Yoga', '2035-03-03T18:00', '2035-03-03T19:00', 'FREQ=WEEKLY', ?, 'google', ?, 1)
+  `).run(masterId, calRefId);
+  return reload(r.lastInsertRowid);
+}
+
+test('eine selbst hochgeladene Serie wird nicht zusätzlich als Instanzen angelegt', () => {
+  reset();
+  const calRefId = __test.upsertExternalCalendar('google', 'primary', 'Primär', '#4285F4');
+  const master = insertPushedSeries('master-a', calRefId);
+
+  // singleEvents:true liefert dieselbe Serie als Einzelinstanzen.
+  __test.upsertGoogleEvents([
+    instanceItem('master-a', '20350303T180000Z'),
+    instanceItem('master-a', '20350310T180000Z'),
+  ], calRefId);
+
+  const rows = db.prepare("SELECT id FROM calendar_events WHERE external_source = 'google'").all();
+  assert.equal(rows.length, 1, 'sonst stünde jeder Serientermin doppelt im Kalender');
+  assert.equal(reload(master.id).recurrence_rule, 'FREQ=WEEKLY');
+});
+
+test('eine Serie aus Google ohne lokalen Master wird weiterhin als Instanzen importiert', () => {
+  reset();
+  const calRefId = __test.upsertExternalCalendar('google', 'primary', 'Primär', '#4285F4');
+
+  __test.upsertGoogleEvents([
+    instanceItem('fremd-b', '20350303T180000Z'),
+    instanceItem('fremd-b', '20350310T180000Z'),
+  ], calRefId);
+
+  const rows = db.prepare("SELECT id FROM calendar_events WHERE external_source = 'google'").all();
+  assert.equal(rows.length, 2, 'ohne eigenen Master ist die Instanz die einzige Quelle');
+});
+
+test('Altbestand: unangetastete Dubletten verschwinden beim nächsten Sync', () => {
+  reset();
+  const calRefId = __test.upsertExternalCalendar('google', 'primary', 'Primär', '#4285F4');
+  insertPushedSeries('master-c', calRefId);
+  // Vor dem Fix angelegte Instanz-Zeile.
+  const dupe = insertGoogleEvent({ calRefId, googleId: 'master-c_20350303T180000Z' });
+
+  __test.upsertGoogleEvents([instanceItem('master-c', '20350303T180000Z')], calRefId);
+
+  assert.equal(reload(dupe.id), undefined, 'die reine Dublette wird aufgeräumt');
+  assert.equal(db.prepare("SELECT COUNT(*) c FROM calendar_events WHERE external_source = 'google'").get().c, 1);
+});
+
+test('eine Dublette mit eigener Farbe bleibt stehen', () => {
+  reset();
+  const calRefId = __test.upsertExternalCalendar('google', 'primary', 'Primär', '#4285F4');
+  insertPushedSeries('master-d', calRefId);
+  const dupe = insertGoogleEvent({ calRefId, googleId: 'master-d_20350303T180000Z' });
+  db.prepare('UPDATE calendar_events SET user_modified = 1 WHERE id = ?').run(dupe.id);
+
+  __test.upsertGoogleEvents([instanceItem('master-d', '20350303T180000Z')], calRefId);
+
+  assert.ok(reload(dupe.id), 'was der Nutzer angefasst hat, wird nicht weggeräumt');
+});
+
+test('eine Dublette mit Zuweisung bleibt stehen', () => {
+  reset();
+  const calRefId = __test.upsertExternalCalendar('google', 'primary', 'Primär', '#4285F4');
+  insertPushedSeries('master-e', calRefId);
+  const dupe = insertGoogleEvent({ calRefId, googleId: 'master-e_20350303T180000Z' });
+  db.prepare('INSERT INTO event_assignments (event_id, user_id) VALUES (?, 1)').run(dupe.id);
+
+  __test.upsertGoogleEvents([instanceItem('master-e', '20350303T180000Z')], calRefId);
+
+  assert.ok(reload(dupe.id), 'eine Zuweisung ist Nutzerarbeit und darf nicht verschwinden');
+});
+
+test('ein Einzeltermin ohne recurringEventId ist von der Regel nicht betroffen', () => {
+  reset();
+  const calRefId = __test.upsertExternalCalendar('google', 'primary', 'Primär', '#4285F4');
+  insertPushedSeries('master-f', calRefId);
+
+  __test.upsertGoogleEvents([inboundItem('einzel-f', 'Einzeltermin')], calRefId);
+
+  assert.equal(db.prepare("SELECT COUNT(*) c FROM calendar_events WHERE external_calendar_id = 'einzel-f'").get().c, 1);
+});
+
 // ── disconnect ──────────────────────────────────────────────────────────────────
 
 test('disconnect() verwirft offene Tombstones', () => {
