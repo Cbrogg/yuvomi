@@ -32,7 +32,9 @@
     "dbLabel": "Databaseversleutelingssleutel",
     "dbHint": "Versleutelt de SQLite-database in rust.",
     "errBoth": "Beide sleutels zijn vereist.",
-    "dangerWarn": "Bewaar deze sleutels nu. Als je ze kwijtraakt, zijn je versleutelde gegevens onherstelbaar — er is geen herstel."
+    "dangerWarn": "Bewaar deze sleutels nu. Als je ze kwijtraakt, zijn je versleutelde gegevens onherstelbaar — er is geen herstel.",
+    "preserved": "Je bestaande sleutels blijven behouden, zodat deze installatie je niet buitensluit van de huidige database. Laat een veld leeg om de sleutel te behouden; een nieuwe waarde vervangt hem.",
+    "keepPlaceholder": "Bestaande sleutel behouden"
   },
   "weather": {
     "title": "Weer-widget",

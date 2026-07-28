@@ -32,7 +32,9 @@
     "dbLabel": "Chave de criptografia do banco de dados",
     "dbHint": "Criptografa o banco de dados SQLite em repouso.",
     "errBoth": "Ambas as chaves são obrigatórias.",
-    "dangerWarn": "Guarda estas chaves agora. Se as perderes, os teus dados cifrados serão irrecuperáveis — não há reposição."
+    "dangerWarn": "Guarda estas chaves agora. Se as perderes, os teus dados cifrados serão irrecuperáveis — não há reposição.",
+    "preserved": "As suas chaves existentes são mantidas, por isso esta instalação não o impedirá de aceder à base de dados atual. Deixe um campo vazio para manter a sua chave; introduzir um novo valor substitui-a.",
+    "keepPlaceholder": "Chave existente mantida"
   },
   "weather": {
     "title": "Widget de tempo",

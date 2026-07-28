@@ -32,7 +32,9 @@
     "dbLabel": "Šifrovací klíč databáze",
     "dbHint": "Šifruje databázi SQLite v klidovém stavu.",
     "errBoth": "Oba klíče jsou povinné.",
-    "dangerWarn": "Uložte tyto klíče hned. Pokud je ztratíte, vaše šifrovaná data budou nenávratně ztracena — neexistuje žádné obnovení."
+    "dangerWarn": "Uložte tyto klíče hned. Pokud je ztratíte, vaše šifrovaná data budou nenávratně ztracena — neexistuje žádné obnovení.",
+    "preserved": "Vaše stávající klíče zůstanou zachovány, takže vás tato instalace neodřízne od současné databáze. Nechte pole prázdné, aby se klíč zachoval; zadání nové hodnoty jej nahradí.",
+    "keepPlaceholder": "Stávající klíč zachován"
   },
   "weather": {
     "title": "Widget počasí",

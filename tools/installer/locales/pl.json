@@ -32,7 +32,9 @@
     "dbLabel": "Klucz szyfrowania bazy danych",
     "dbHint": "Szyfruje bazę danych SQLite w spoczynku.",
     "errBoth": "Oba klucze są wymagane.",
-    "dangerWarn": "Zapisz te klucze teraz. Jeśli je utracisz, Twoje zaszyfrowane dane będą nie do odzyskania — nie ma resetu."
+    "dangerWarn": "Zapisz te klucze teraz. Jeśli je utracisz, Twoje zaszyfrowane dane będą nie do odzyskania — nie ma resetu.",
+    "preserved": "Istniejące klucze zostają zachowane, więc ta instalacja nie odetnie Ci dostępu do bieżącej bazy danych. Zostaw pole puste, aby zachować jego klucz; wpisanie nowej wartości go zastąpi.",
+    "keepPlaceholder": "Zachowano istniejący klucz"
   },
   "weather": {
     "title": "Widget pogodowy",

@@ -71,6 +71,33 @@ generate_secret() {
   fi
 }
 
+# Einen bereits vergebenen Wert aus einer vorhandenen .env lesen.
+#
+# Ein einmal benutzter DB_ENCRYPTION_KEY MUSS erhalten bleiben: die Datenbank ist
+# damit verschlüsselt, und mit einem anderen Schlüssel bricht der Start ab. Ein
+# Installer-Rerun (Update, geänderter Port, nachgetragenes SMTP) würde die
+# Installation sonst unbrauchbar machen. Für SESSION_SECRET gilt dasselbe in
+# harmloser: ein neuer Wert wirft alle angemeldeten Nutzer aus der App.
+#
+# Der Web-Installer schreibt Werte compose-sicher (Quotes, `\` maskiert, `$` als
+# `$$`) — das wird hier zurückgedreht, damit ein CLI-Rerun nach einer
+# Web-Installation denselben Schlüssel liest.
+read_existing_env_value() {
+  [ -f .env ] || return 1
+  local line raw
+  line=$(grep -E "^$1=" .env 2>/dev/null | tail -n1)
+  [ -n "$line" ] || return 1
+  raw="${line#*=}"
+  if [ "${raw:0:1}" = '"' ] && [ "${raw: -1}" = '"' ] && [ ${#raw} -ge 2 ]; then
+    raw="${raw:1:${#raw}-2}"
+    raw="${raw//\\\"/\"}"
+    raw="${raw//\\\\/\\}"
+  fi
+  raw="${raw//\$\$/\$}"
+  [ -n "$raw" ] || return 1
+  printf '%s' "$raw"
+}
+
 on_interrupt() { printf "\n%s%s%s\n" "$YELLOW" "$(t common.interrupted)" "$RESET"; exit 1; }
 trap on_interrupt INT TERM
 
@@ -138,17 +165,30 @@ configure_secrets() {
   step "$(t secrets.step)"
   info "$(t secrets.intro)"; printf "\n"
 
+  SESSION_SECRET_REUSED=''; DB_ENCRYPTION_KEY_REUSED=''
+
   for varname in SESSION_SECRET DB_ENCRYPTION_KEY; do
     printf "\n  %s%s:%s\n" "$BOLD" "$varname" "$RESET"
+
+    # Bestehender Wert gewinnt ohne Rückfrage. Wer bewusst neu anfangen will,
+    # entfernt die Zeile aus der .env — das ist die explizite Geste dafür.
+    local existing
+    if existing=$(read_existing_env_value "$varname"); then
+      printf -v "$varname" '%s' "$existing"
+      printf -v "${varname}_REUSED" '%s' 'yes'
+      success "$(t secrets.reused)"
+      continue
+    fi
+
     ask "$(t secrets.choice)"
     read -r choice
     if [ "${choice,,}" = "m" ]; then
       ask "$(t secrets.enter)"
       local val; read -rs val; printf "\n"
-      eval "$varname='$val'"
+      printf -v "$varname" '%s' "$val"
     else
       local generated; generated=$(generate_secret)
-      eval "$varname='$generated'"
+      printf -v "$varname" '%s' "$generated"
       success "$(t secrets.generated)"
     fi
   done
@@ -256,8 +296,8 @@ review_and_confirm() {
   printf "  %-16s %s%s%s\n"  "$(t review.host)"     "$CYAN"   "$YUVOMI_HOST" "$RESET"
   printf "  %-16s %s%s%s\n"  "$(t review.port)"     "$CYAN"   "$YUVOMI_PORT" "$RESET"
   printf "  %-16s %s%s%s\n"  "$(t review.timezone)" "$CYAN"   "$YUVOMI_TZ"   "$RESET"
-  printf "  %-16s %s***%s\n" "SESSION_SECRET"       "$YELLOW" "$RESET"
-  printf "  %-16s %s***%s\n" "DB_ENCRYPT_KEY"       "$YELLOW" "$RESET"
+  printf "  %-16s %s***%s%s\n" "SESSION_SECRET" "$YELLOW" "$RESET" "${SESSION_SECRET_REUSED:+ $(t review.secret_reused)}"
+  printf "  %-16s %s***%s%s\n" "DB_ENCRYPT_KEY" "$YELLOW" "$RESET" "${DB_ENCRYPTION_KEY_REUSED:+ $(t review.secret_reused)}"
   [ -n "$OPENWEATHER_API_KEY" ] && printf "  %-16s %s%s%s\n" "$(t review.weather)" "$GREEN" "$(t review.weather_value "$OPENWEATHER_CITY")" "$RESET"
   [ -n "$GOOGLE_CLIENT_ID" ]    && printf "  %-16s %s%s%s\n" "$(t review.google)"  "$GREEN" "$(t review.google_value)" "$RESET"
   [ -n "$APPLE_USERNAME" ]      && printf "  %-16s %s%s%s\n" "$(t review.apple)"   "$GREEN" "$APPLE_USERNAME" "$RESET"
