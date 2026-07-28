@@ -251,7 +251,7 @@ Open `.env` and set the two required secrets (see above). Generate them with `op
 docker compose up -d --build
 ```
 
-- `--build` compiles the Docker image locally (SQLCipher dependencies, npm packages).
+- `--build` builds the Docker image locally (npm packages, including the native database module).
 - `-d` runs the container in the background.
 
 The first build takes a few minutes. Subsequent starts are much faster.
@@ -1062,13 +1062,15 @@ If you have existing data, you need the original encryption key. There is no way
 </details>
 
 <details>
-<summary>SQLCipher build fails during Docker build</summary>
+<summary>Native module build fails during Docker build</summary>
 
-> **Tip**: If you hit build issues, switch to the pre-built image (Option B above) — it ships with SQLCipher already compiled and requires no local build step.
+> **Tip**: If you hit build issues, switch to the pre-built image (Option B above) — it ships the database module ready to run and requires no local build step.
 
-The Dockerfile installs these build dependencies: `python3`, `make`, `g++`, `libsqlcipher-dev`. If the build fails, ensure your Docker installation is up to date and has internet access to pull packages.
+The database encryption is built into the `better-sqlite3-multiple-ciphers` module, so no system SQLCipher is needed. The build normally downloads a prebuilt binary for your architecture from GitHub; if that download fails, `node-gyp` compiles the module from source instead. The Dockerfile keeps `python3`, `make` and `g++` installed for exactly that fallback.
 
-On resource-constrained systems, the native compilation may run out of memory. Ensure at least 1 GB of RAM is available during the build.
+So if the build fails, check both: your Docker installation is up to date, and the build has internet access to reach both the Debian package mirrors and GitHub.
+
+On resource-constrained systems, the source fallback may run out of memory. Ensure at least 1 GB of RAM is available during the build.
 
 </details>
 
