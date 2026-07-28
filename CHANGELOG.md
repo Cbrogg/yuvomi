@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.52.0] - 2026-07-28
+
+### Added
+- Deleting or editing an event in Yuvomi now reaches CalDAV and iCloud servers too, the same way it already reached Google. Outbound sync could only ever create events there; once an event had been uploaded, nothing that happened to it in Yuvomi arrived on the server again. Editing a synced event preserves everything the server holds that Yuvomi does not: attendees, alarms, categories, and the exceptions of a recurring series stay exactly as they were, because only the fields Yuvomi manages are replaced. (#593)
+- A synced event can be moved to a different CalDAV calendar by picking another target. Since CalDAV cannot move an object between calendars, Yuvomi creates it in the destination first and removes it from the source afterwards, so a failure at the second step leaves the event twice rather than not at all.
+
+### Changed
+- Outbound changes are attempted the moment you save, for every provider. For CalDAV and iCloud this fetches only the affected calendar object instead of whole calendars, so a deletion is a single request. Anything that does not succeed right away is retried by the next sync run.
+- Events that were synced with a CalDAV or iCloud calendar before this release need one sync run before edits and deletions can reach them: the address of their calendar object was not stored until now. The next sync fills it in automatically, no action required.
+
 ## [1.51.0] - 2026-07-28
 
 ### Added

@@ -662,6 +662,13 @@ Yuvomi from changing anything in Google while still importing normally.
 |----------|-------------|---------|----------|
 | `SYNC_INTERVAL_MINUTES` | Sync interval in minutes for calendars and contacts | `15` | No |
 
+CalDAV and iCloud sync both ways: events created, edited, deleted, or moved to another calendar in
+Yuvomi are applied on the server as well, and changes made there flow back. An outbound change is
+attempted right when you save and retried by the next sync run if the server cannot be reached.
+Editing preserves everything the server holds that Yuvomi does not — attendees, alarms, categories
+and exceptions of a recurring series stay untouched. Events that were already synced before the
+upgrade to v1.52.0 need one sync run before edits and deletions can reach them.
+
 ### SSO / OpenID Connect (Optional)
 
 Enable single sign-on via any OpenID Connect provider (Authentik, Keycloak, Google, Microsoft Entra, etc.).

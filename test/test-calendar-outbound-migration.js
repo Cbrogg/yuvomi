@@ -1,13 +1,13 @@
 /**
- * Test: Migrationen v103-v105 gegen eine befüllte Bestands-DB (#593)
- * Zweck: Die drei Outbound-Migrationen fassen mit calendar_events eine Tabelle an,
+ * Test: Migrationen v103-v106 gegen eine befüllte Bestands-DB (#593)
+ * Zweck: Die vier Outbound-Migrationen fassen mit calendar_events eine Tabelle an,
  *        in der bei Bestandsnutzern alles steht - Termine, Anhänge, Zuweisungen,
  *        Sync-Zuordnungen. Diese Suite baut die echte Migrationskette bis v102 auf,
- *        befüllt sie und weist nach, dass v103-v105 rein additiv sind: kein
+ *        befüllt sie und weist nach, dass v103-v106 rein additiv sind: kein
  *        Tabellen-Rebuild, kein verlorener Wert, keine verletzte Fremdschlüssel-
  *        Beziehung, Trigger und Indizes unverändert. Prüft außerdem, dass die
  *        neuen Marker auf den neutralen Werten stehen, damit der erste Sync nach
- *        dem Update nichts in Google anfasst.
+ *        dem Update nichts beim Provider anfasst.
  * Ausführen: node --test test/test-calendar-outbound-migration.js
  */
 
@@ -25,7 +25,7 @@ process.env.SESSION_SECRET = process.env.SESSION_SECRET || 'test-secret';
 process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'yuvomi-calmig-')), 'unused.db');
 const { MIGRATIONS } = await import('../server/db.js');
 
-const OUTBOUND_VERSIONS = [103, 104, 105];
+const OUTBOUND_VERSIONS = [103, 104, 105, 106];
 
 function applyMigration(db, migration) {
   if (typeof migration.up === 'function') migration.up(db);
@@ -145,7 +145,7 @@ test('calendar_events wird nicht neu aufgebaut, nur erweitert', () => {
   }
 });
 
-test('die neuen Marker starten neutral - der erste Sync fasst nichts in Google an', () => {
+test('die neuen Marker starten neutral - der erste Sync fasst nichts beim Provider an', () => {
   const db = buildPreOutboundDatabase();
   seed(db);
   for (const version of OUTBOUND_VERSIONS) {
@@ -156,6 +156,7 @@ test('die neuen Marker starten neutral - der erste Sync fasst nichts in Google a
     assert.equal(row.outbound_dirty, 0, `Termin ${row.id} dürfte keinen Push auslösen`);
     assert.equal(row.outbound_attempts, 0);
     assert.equal(row.outbound_move_to, null, `Termin ${row.id} dürfte keinen Umzug auslösen`);
+    assert.equal(row.external_object_url, null, `Termin ${row.id} hat noch keine bekannte Objekt-URL`);
   }
   // Auch der Altbestand mit abweichendem Ziel (anderer@g vs. kein calendar_ref_id)
   // steht auf neutral - genau der Fall, der sonst still umziehen würde.

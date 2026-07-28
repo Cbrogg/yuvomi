@@ -11,6 +11,9 @@ import * as db from '../db.js';
 import { decodeHtmlEntities } from '../utils/html-entities.js';
 import { assignDefaultToEvent } from './sync-assignment.js';
 import { pruneDeletedEvents } from './calendar-prune.js';
+import * as outbound from './calendar-outbound.js';
+import { processPendingDeletions, processPendingUpdates, flushAccount } from './caldav-outbound.js';
+import { toICSDatetime, escapeICSText } from '../utils/ics-format.js';
 
 // Reused functions from apple-calendar.js
 import {
@@ -21,26 +24,9 @@ import {
   normalizeRecurrenceOverrides
 } from './ics-parser.js';
 
-function escapeICSText(str) {
-  if (!str) return '';
-  return str.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
-}
-
-// Convert a DB datetime string (YYYY-MM-DDThh:mm or ...hh:mm:ss[.ms][Z/±offset])
-// to RFC 5545 basic format (YYYYMMDDTHHmmss[Z/±hhmm]).
-// parseTimeInput returns HH:MM (no seconds) — without this, servers like mailbox.org
-// receive HHMM (4 digits) instead of HHMMSS (6), and default to 00:00 (#246).
-export function toICSDatetime(dt) {
-  if (!dt) return '';
-  if (!dt.includes('T')) return dt.replace(/-/g, '') + 'T000000';
-  const [datePart, rest] = dt.split('T');
-  const dateStr = datePart.replace(/-/g, '');
-  const m = rest.match(/^(\d{2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/);
-  if (!m) return `${dateStr}T000000`;
-  const ss = m[3] || '00';
-  const tz = (m[4] || '').replace(':', '');
-  return `${dateStr}T${m[1]}${m[2]}${ss}${tz}`;
-}
+// Historisch hier beheimatet, inzwischen in utils/ics-format.js - der Re-Export
+// hält die bestehenden Importpfade (Tests, ics-Export) gültig.
+export { toICSDatetime };
 
 function buildCalDAVICS(event) {
   const uid  = `oikos-${event.id}@oikos.local`;
@@ -390,6 +376,17 @@ function updateCalendarSelection(accountId, calendarUrl, enabled) {
 // YIELD_EVERY verarbeiteten Objekten kurz an den Event-Loop zurückgegeben.
 const YIELD_EVERY = 50;
 
+/** Echter tsdav-Client für einen Account; in Tests durch eine Factory ersetzbar. */
+async function defaultClientFactory(account) {
+  const { createDAVClient } = await import('tsdav');
+  return createDAVClient({
+    serverUrl:          account.caldav_url,
+    credentials:        { username: account.username, password: account.password },
+    authMethod:         'Basic',
+    defaultAccountType: 'caldav',
+  });
+}
+
 async function sync({ createClient } = {}) {
   const accounts = getAllAccounts();
 
@@ -399,15 +396,7 @@ async function sync({ createClient } = {}) {
   }
 
   // Client-Factory injizierbar (Tests), Default = echter tsdav-Client.
-  const makeClient = createClient || (async (account) => {
-    const { createDAVClient } = await import('tsdav');
-    return createDAVClient({
-      serverUrl:          account.caldav_url,
-      credentials:        { username: account.username, password: account.password },
-      authMethod:         'Basic',
-      defaultAccountType: 'caldav',
-    });
-  });
+  const makeClient = createClient || defaultClientFactory;
 
   let totalSyncedEvents = 0;
   let successfulAccounts = 0;
@@ -416,21 +405,25 @@ async function sync({ createClient } = {}) {
   // großen Kalendern spürbar Zeit und verkürzt damit das synchrone Verarbeitungsfenster.
   const conn = db.get();
   const selExistingEvent = conn.prepare(
-    `SELECT id FROM calendar_events WHERE external_calendar_id = ? AND external_source = 'caldav'`
+    `SELECT id, outbound_dirty FROM calendar_events WHERE external_calendar_id = ? AND external_source = 'caldav'`
   );
+  // Offene Löschungen einmal je Lauf, nicht je eingehendem Termin.
+  const pendingDeletionUids = outbound.pendingDeletionUids('caldav');
   const updEvent = conn.prepare(`
     UPDATE calendar_events
     SET title = ?, description = ?, start_datetime = ?, end_datetime = ?,
         all_day = ?, location = ?, recurrence_rule = ?, tzid = ?,
         color = CASE WHEN user_modified = 0 THEN ? ELSE color END,
-        calendar_ref_id = ?
+        calendar_ref_id = ?,
+        external_object_url = COALESCE(?, external_object_url)
     WHERE id = ?
   `);
   const insEvent = conn.prepare(`
     INSERT INTO calendar_events
       (title, description, start_datetime, end_datetime, all_day,
-       location, color, external_calendar_id, external_source, recurrence_rule, tzid, calendar_ref_id, created_by)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'caldav', ?, ?, ?, ?)
+       location, color, external_calendar_id, external_source, recurrence_rule, tzid, calendar_ref_id, created_by,
+       external_object_url)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'caldav', ?, ?, ?, ?, ?)
   `);
   // EXDATE-Ausnahmen der Serie (#489/#549). Additiv (INSERT OR IGNORE): entfernt
   // keine lokal vom Nutzer ausgenommenen Einzeltermine.
@@ -471,6 +464,11 @@ async function sync({ createClient } = {}) {
       // Kalender, deren Fetch fehlschlägt, landen hier nicht und werden nie geprunt.
       const fetchedCalendars = [];
       const accountUids = new Set();
+      // UID → das Kalenderobjekt, in dem sie steht (#593). Ausgehende Löschungen
+      // brauchen dessen URL, Änderungen zusätzlich seinen Originalinhalt.
+      const objectIndex   = new Map();
+      const calendarsByUrl = new Map();
+      const ownCalendarUrls = new Set();
 
       for (const selCal of enabledCalendars) {
         // Find matching calendar from server
@@ -493,6 +491,8 @@ async function sync({ createClient } = {}) {
           log.error(`Failed to fetch calendar objects from ${selCal.calendar_name}:`, err.message);
           continue;
         }
+        calendarsByUrl.set(selCal.calendar_url, serverCal);
+        ownCalendarUrls.add(selCal.calendar_url);
 
         // Upsert external calendar metadata
         const calRefId = upsertExternalCalendar('caldav', selCal.calendar_url, selCal.calendar_name, selCal.calendar_color);
@@ -514,10 +514,28 @@ async function sync({ createClient } = {}) {
             try {
               calendarUids.add(ev.uid);
               accountUids.add(ev.uid);
+              // Objekt merken: ausgehende Löschungen brauchen die URL, Änderungen
+              // zusätzlich den Originalinhalt zum Patchen (#593).
+              if (obj.url) {
+                objectIndex.set(ev.uid, {
+                  url: obj.url, etag: obj.etag, data: obj.data, calendarUrl: selCal.calendar_url,
+                });
+              }
               // Event-Eigenfarbe (RFC 7986) hat Vorrang, sonst Kalenderfarbe.
               const evColor = ev.color || selCal.calendar_color;
 
+              // Vom Nutzer gelöscht und noch nicht auf dem Server: nicht wieder
+              // anlegen, sonst kehrt der Termin bei jedem Sync zurück (#593).
+              if (pendingDeletionUids.has(ev.uid)) continue;
+
               const existing = selExistingEvent.get(ev.uid);
+
+              // Eine lokale Bearbeitung, die noch auf ihren Push wartet, darf der
+              // Inbound nicht mit dem alten Serverstand überschreiben (#593).
+              if (existing?.outbound_dirty) {
+                accountEventCount++;
+                continue;
+              }
 
               let eventId;
               if (existing) {
@@ -525,14 +543,16 @@ async function sync({ createClient } = {}) {
                 // umgefärbt hat (user_modified = 0); Titel/Zeit bleiben remote-geführt.
                 updEvent.run(
                   ev.summary, ev.description, ev.dtstart, ev.dtend,
-                  ev.allDay ? 1 : 0, ev.location, ev.rrule, ev.tzid ?? null, evColor, calRefId, existing.id
+                  ev.allDay ? 1 : 0, ev.location, ev.rrule, ev.tzid ?? null, evColor, calRefId,
+                  obj.url ?? null, existing.id
                 );
                 eventId = existing.id;
               } else {
                 // Insert
                 const inserted = insEvent.run(
                   ev.summary, ev.description, ev.dtstart, ev.dtend,
-                  ev.allDay ? 1 : 0, ev.location, evColor, ev.uid, ev.rrule, ev.tzid ?? null, calRefId, createdBy
+                  ev.allDay ? 1 : 0, ev.location, evColor, ev.uid, ev.rrule, ev.tzid ?? null, calRefId, createdBy,
+                  obj.url ?? null
                 );
                 eventId = Number(inserted.lastInsertRowid);
                 // Standard-Zuweisung dieses Kalenders (#459) auf den neuen Termin.
@@ -576,6 +596,18 @@ async function sync({ createClient } = {}) {
         }
       }
 
+      // Ausgehende Löschungen und Änderungen (#593). Nach dem Inbound, weil der
+      // Weg zum Objekt für Bestandstermine erst aus dessen Abruf bekannt wird;
+      // der Inbound überspringt dafür alles, was hier noch aussteht.
+      try {
+        const removed = await processPendingDeletions(client, 'caldav', objectIndex, ownCalendarUrls);
+        if (removed) log.info(`${removed} pending deletion(s) applied on the server.`);
+        const pushed = await processPendingUpdates(client, 'caldav', objectIndex, calendarsByUrl);
+        if (pushed) log.info(`${pushed} local change(s) pushed to the server.`);
+      } catch (err) {
+        log.error(`Outbound changes failed for account ${account.id}:`, err.message);
+      }
+
       // Outbound sync: Yuvomi → CalDAV (events with target_caldav_account_id)
       const localEvents = db.get().prepare(`
         SELECT * FROM calendar_events
@@ -602,12 +634,20 @@ async function sync({ createClient } = {}) {
             iCalString: icsData,
           });
 
-          // Update event to mark as synced
+          // Objekt-URL und Kalenderzuordnung festhalten: ohne sie wäre der frisch
+          // hochgeladene Termin für spätere Änderungen und Löschungen unerreichbar,
+          // bis ihn der nächste Inbound-Lauf wiederfindet (#593).
+          const objectUrl = `${String(targetCal.url).replace(/\/?$/, '/')}${uid}.ics`;
+          const calRefId  = upsertExternalCalendar(
+            'caldav', event.target_caldav_calendar_url,
+            targetCal.displayName || event.target_caldav_calendar_url, null
+          );
           db.get().prepare(`
             UPDATE calendar_events
-            SET external_source = 'caldav', external_calendar_id = ?
+            SET external_source = 'caldav', external_calendar_id = ?,
+                external_object_url = ?, calendar_ref_id = ?
             WHERE id = ?
-          `).run(uid, event.id);
+          `).run(uid, objectUrl, calRefId, event.id);
 
           accountEventCount++;
         } catch (err) {
@@ -637,6 +677,74 @@ async function sync({ createClient } = {}) {
   log.info(`CalDAV sync complete: ${successfulAccounts}/${accounts.length} accounts, ${totalSyncedEvents} events.`);
 
   return { success: true, syncedAccounts: successfulAccounts, syncedEvents: totalSyncedEvents };
+}
+
+/**
+ * Sofortversuch direkt nach einer lokalen Änderung oder Löschung (#593), damit ein
+ * Termin nicht erst beim nächsten Sync-Intervall auf dem Server nachzieht.
+ *
+ * Anders als der Sync-Lauf holt er keine Kalender ab, sondern nur die betroffenen
+ * Objekte: eine Löschung ist ein DELETE auf die gespeicherte URL, eine Änderung
+ * ein gezielter GET plus PUT. Termine ohne bekannte Objekt-URL (synchronisiert vor
+ * Migration v106) bleiben vorgemerkt und laufen im nächsten Sync mit.
+ * @returns {Promise<{deleted:number,updated:number}>}
+ */
+async function flushOutbound({ createClient } = {}) {
+  const idle = { deleted: 0, updated: 0 };
+  const deletions = outbound.pendingDeletions('caldav');
+  const updates   = outbound.pendingUpdates('caldav');
+  if (!deletions.length && !updates.length) return idle;
+
+  const conn = db.get();
+  const accountForCalendar = conn.prepare(
+    'SELECT account_id FROM caldav_calendar_selection WHERE calendar_url = ? LIMIT 1'
+  );
+  const calendarForRef = conn.prepare(
+    `SELECT external_id FROM external_calendars WHERE id = ? AND source = 'caldav'`
+  );
+
+  // Beides nach Account bündeln: ein Client je Konto, nicht je Termin.
+  const buckets = new Map();
+  const bucket = (accountId) => {
+    if (!buckets.has(accountId)) buckets.set(accountId, { deletions: [], updates: [], needsCalendars: false });
+    return buckets.get(accountId);
+  };
+
+  for (const row of deletions) {
+    if (!row.object_url) continue; // ohne URL hilft nur der volle Abruf des Syncs
+    const accountId = accountForCalendar.get(row.calendar_external_id)?.account_id;
+    if (accountId) bucket(accountId).deletions.push(row);
+  }
+
+  for (const event of updates) {
+    const calendarUrl = (event.calendar_ref_id ? calendarForRef.get(event.calendar_ref_id)?.external_id : null)
+      || event.target_caldav_calendar_url || null;
+    if (!calendarUrl || !event.external_object_url) continue;
+    const accountId = accountForCalendar.get(calendarUrl)?.account_id;
+    if (!accountId) continue;
+    const b = bucket(accountId);
+    b.updates.push({ ...event, __calendarUrl: calendarUrl });
+    if (event.outbound_move_to) b.needsCalendars = true;
+  }
+
+  if (buckets.size === 0) return idle;
+
+  const makeClient = createClient || defaultClientFactory;
+  const total = { deleted: 0, updated: 0 };
+  for (const [accountId, work] of buckets) {
+    const account = getAccountById(accountId);
+    if (!account) continue;
+    try {
+      const client = await makeClient(account);
+      const res = await flushAccount(client, 'caldav', work);
+      total.deleted += res.deleted;
+      total.updated += res.updated;
+    } catch (err) {
+      // Unkritisch: alles bleibt vorgemerkt, der nächste Sync-Lauf zieht nach.
+      log.warn(`Immediate outbound attempt failed for account ${accountId}: ${err.message}`);
+    }
+  }
+  return total;
 }
 
 function getStatus() {
@@ -680,5 +788,6 @@ export {
   getCalendars,
   updateCalendarSelection,
   sync,
+  flushOutbound,
   getStatus
 };

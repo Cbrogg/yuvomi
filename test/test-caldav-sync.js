@@ -422,7 +422,23 @@ describe('CalDAV sync yields to the event loop (#519)', () => {
         external_calendar_id TEXT, external_source TEXT,
         calendar_ref_id INTEGER, created_by INTEGER,
         user_modified INTEGER NOT NULL DEFAULT 0, assigned_to INTEGER,
-        target_caldav_account_id INTEGER, target_caldav_calendar_url TEXT
+        target_caldav_account_id INTEGER, target_caldav_calendar_url TEXT,
+        -- Ausgehende Vormerkungen (#593, Migrationen v104-v106)
+        outbound_dirty INTEGER NOT NULL DEFAULT 0,
+        outbound_attempts INTEGER NOT NULL DEFAULT 0,
+        outbound_move_to TEXT,
+        external_object_url TEXT
+      );
+      CREATE TABLE calendar_pending_deletions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        source TEXT NOT NULL,
+        calendar_external_id TEXT NOT NULL,
+        event_external_id TEXT NOT NULL,
+        attempts INTEGER NOT NULL DEFAULT 0,
+        last_error TEXT,
+        created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+        object_url TEXT,
+        UNIQUE(source, calendar_external_id, event_external_id)
       );
       CREATE TABLE event_assignments (
         event_id INTEGER, user_id INTEGER, UNIQUE(event_id, user_id)
@@ -544,7 +560,23 @@ describe('CalDAV: RECURRENCE-ID-Overrides killen die Serie nicht (#549)', () => 
         external_calendar_id TEXT, external_source TEXT,
         calendar_ref_id INTEGER, created_by INTEGER,
         user_modified INTEGER NOT NULL DEFAULT 0, assigned_to INTEGER,
-        target_caldav_account_id INTEGER, target_caldav_calendar_url TEXT
+        target_caldav_account_id INTEGER, target_caldav_calendar_url TEXT,
+        -- Ausgehende Vormerkungen (#593, Migrationen v104-v106)
+        outbound_dirty INTEGER NOT NULL DEFAULT 0,
+        outbound_attempts INTEGER NOT NULL DEFAULT 0,
+        outbound_move_to TEXT,
+        external_object_url TEXT
+      );
+      CREATE TABLE calendar_pending_deletions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        source TEXT NOT NULL,
+        calendar_external_id TEXT NOT NULL,
+        event_external_id TEXT NOT NULL,
+        attempts INTEGER NOT NULL DEFAULT 0,
+        last_error TEXT,
+        created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+        object_url TEXT,
+        UNIQUE(source, calendar_external_id, event_external_id)
       );
       CREATE TABLE event_assignments (event_id INTEGER, user_id INTEGER, UNIQUE(event_id, user_id));
       CREATE TABLE calendar_event_exceptions (

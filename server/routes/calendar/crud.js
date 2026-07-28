@@ -13,7 +13,7 @@ import {
   cleanupStagedUpload,
   stageDocumentUpload,
 } from '../../services/document-storage.js';
-import { queueEventDeletion, markEventOutbound, flushOutbound } from '../../services/google-calendar.js';
+import { queueEventDeletion, markEventOutbound, flushOutbound } from '../../services/calendar-outbound.js';
 import {
   ASSIGNED_USERS_SQL,
   getUserId,
@@ -363,7 +363,7 @@ router.put('/:id', async (req, res) => {
       WHERE e.id = ?
     `).get(id);
 
-    // Änderung an einem nach Google gespiegelten Termin dort nachziehen (#593):
+    // Änderung an einem synchronisierten Termin beim Provider nachziehen (#593):
     // geänderte Felder als Patch, ein gewechselter Zielkalender als Umzug.
     // Wie beim Löschen: vormerken, antworten, danach best effort ausführen.
     const pending = markEventOutbound(event, updated);
@@ -372,7 +372,7 @@ router.put('/:id', async (req, res) => {
 
     if (pending) {
       flushOutbound()
-        .catch((e) => log.warn('Google-Änderung vorgemerkt, Sofortversuch fehlgeschlagen:', e.message));
+        .catch((e) => log.warn('Änderung vorgemerkt, Sofortversuch fehlgeschlagen:', e.message));
     }
   } catch (err) {
     if (err instanceof StorageError && !stagedUpload) {
@@ -490,12 +490,12 @@ router.delete('/:id', (req, res) => {
 
     res.status(204).end();
 
-    // Bewusst nach der Antwort: der Google-Call darf das lokale Löschen weder
+    // Bewusst nach der Antwort: der Provider-Aufruf darf das lokale Löschen weder
     // verzögern noch scheitern lassen. Schlägt er fehl, bleibt der Tombstone
     // liegen und der nächste Sync-Lauf holt die Löschung nach.
     if (queued) {
       flushOutbound()
-        .catch((err) => log.warn('Google-Löschung vorgemerkt, Sofortversuch fehlgeschlagen:', err.message));
+        .catch((err) => log.warn('Löschung vorgemerkt, Sofortversuch fehlgeschlagen:', err.message));
     }
   } catch (err) {
     log.error('', err);

@@ -18,6 +18,7 @@ const log = createLogger('Google');
 import { google } from 'googleapis';
 import crypto from 'node:crypto';
 import * as db from '../db.js';
+import * as outbound from './calendar-outbound.js';
 import { decodeHtmlEntities } from '../utils/html-entities.js';
 import { nearestColorId } from '../utils/ical-color.js';
 import { assignDefaultToEvent } from './sync-assignment.js';
@@ -100,12 +101,9 @@ function isConnected() {
 
 // --------------------------------------------------------
 // Ausgehende Löschungen und Änderungen (Issue #593)
+// Vormerkung, Versuchslimit und Fehlereinordnung sind providerunabhängig und
+// liegen in calendar-outbound.js; hier steht nur die Google-Ausführung.
 // --------------------------------------------------------
-
-// Nach so vielen erfolglosen Versuchen wird eine ausgehende Operation verworfen.
-// Ohne Limit würde ein dauerhaft unschreibbares Event (Kalender entzogen, Konto
-// getauscht) jeden Sync-Lauf für immer mit einem Fehlversuch belasten.
-const MAX_OUTBOUND_ATTEMPTS = 5;
 
 /**
  * Kalender-Metadaten (Rolle, Zeitzone, Name, Farbe) einmal je Sync-Lauf holen.
@@ -155,35 +153,9 @@ function googleCalendarIdForEvent(event) {
   return currentGoogleCalendarId(event) || event.target_google_calendar_id || null;
 }
 
-/**
- * Merkt ein gerade lokal gelöschtes Event für die Löschung bei Google vor (#593).
- * Muss VOR dem lokalen DELETE mit der noch vorhandenen Zeile aufgerufen werden.
- * @param {object} event  Zeile aus calendar_events
- * @returns {boolean}     true, wenn ein Tombstone entstanden ist
- */
-function queueEventDeletion(event) {
-  if (!event || event.external_source !== 'google' || !event.external_calendar_id) return false;
-  if (!isConnected() || isReadonly()) return false;
-
-  const calendarId = googleCalendarIdForEvent(event);
-  if (!calendarId) {
-    log.warn(`No Google calendar known for event ${event.id}, remote deletion skipped.`);
-    return false;
-  }
-
-  db.get().prepare(`
-    INSERT INTO calendar_pending_deletions (source, calendar_external_id, event_external_id)
-    VALUES ('google', ?, ?)
-    ON CONFLICT(source, calendar_external_id, event_external_id) DO NOTHING
-  `).run(calendarId, event.external_calendar_id);
-  return true;
-}
-
 /** Anzahl offener Google-Tombstones. */
 function pendingDeletionCount() {
-  return db.get().prepare(
-    `SELECT COUNT(*) AS c FROM calendar_pending_deletions WHERE source = 'google'`
-  ).get().c;
+  return outbound.pendingDeletionCount('google');
 }
 
 /**
@@ -192,18 +164,8 @@ function pendingDeletionCount() {
  * @returns {Promise<number>} erledigte Tombstones
  */
 async function processPendingDeletions(calendar) {
-  const rows = db.get().prepare(`
-    SELECT id, calendar_external_id, event_external_id, attempts
-    FROM calendar_pending_deletions
-    WHERE source = 'google'
-    ORDER BY id
-  `).all();
+  const rows = outbound.pendingDeletions('google');
   if (rows.length === 0) return 0;
-
-  const drop = db.get().prepare('DELETE FROM calendar_pending_deletions WHERE id = ?');
-  const fail = db.get().prepare(
-    'UPDATE calendar_pending_deletions SET attempts = attempts + 1, last_error = ? WHERE id = ?'
-  );
 
   let done = 0;
   for (const row of rows) {
@@ -212,97 +174,23 @@ async function processPendingDeletions(calendar) {
         calendarId: row.calendar_external_id,
         eventId:    row.event_external_id,
       });
-      drop.run(row.id);
+      outbound.dropDeletion(row.id);
       done++;
     } catch (err) {
-      // 404/410 = bei Google bereits weg (z. B. dort parallel gelöscht). Das ist
-      // genau der gewünschte Endzustand, also kein Fehlversuch.
-      const status = err?.code ?? err?.response?.status;
-      if (status === 404 || status === 410) {
-        drop.run(row.id);
+      // 404/410 zählen als erledigt (bei Google bereits weg), alles andere
+      // wandert in den Retry bis zum gemeinsamen Versuchslimit.
+      if (outbound.handleDeletionError(err, row, 'Google')
+          && outbound.classifyOutboundError(err) === 'settled') {
         done++;
-        continue;
-      }
-      const attempts = row.attempts + 1;
-      fail.run(String(err?.message || err).slice(0, 500), row.id);
-      if (attempts >= MAX_OUTBOUND_ATTEMPTS) {
-        log.error(`Giving up on remote deletion of ${row.event_external_id} after ${attempts} attempts:`, err.message);
-        drop.run(row.id);
-      } else {
-        log.warn(`Remote deletion failed for ${row.event_external_id} (attempt ${attempts}):`, err.message);
       }
     }
   }
   return done;
 }
 
-/**
- * Einordnung eines Google-API-Fehlers für die ausgehenden Operationen.
- *   settled   - Ziel ist bereits erreicht bzw. gegenstandslos (Event weg)
- *   permanent - wiederholt sich garantiert (z. B. Serieninstanz verschieben)
- *   retry     - alles andere, inkl. 403 (kann rateLimitExceeded sein)
- */
-function classifyOutboundError(err) {
-  const status = err?.code ?? err?.response?.status;
-  if (status === 404 || status === 410) return 'settled';
-  if (status === 400) return 'permanent';
-  return 'retry';
-}
-
-// Felder, die localEventToGoogle nach Google spiegelt. Alles andere (Zuweisung,
-// Sichtbarkeit, Icon, Anhang) ist Yuvomi-intern und löst keinen Push aus.
-const MIRRORED_FIELDS = [
-  'title', 'description', 'location', 'color',
-  'all_day', 'start_datetime', 'end_datetime', 'recurrence_rule',
-];
-
-/**
- * Merkt die ausgehende Arbeit nach einer lokalen Bearbeitung vor (#593):
- * geänderte gespiegelte Felder → Push, geänderter Zielkalender → Umzug.
- * Nach dem UPDATE mit altem und neuem Stand aufzurufen.
- *
- * Der Umzug hängt bewusst an der *Änderung im Request*, nicht am Zustand:
- * Bestandsdaten können ein target_google_calendar_id tragen, das vom tatsächlichen
- * Kalender abweicht (das Feld war für gespiegelte Termine bisher folgenlos), und
- * das darf nicht nachträglich als Umzugswunsch gelesen werden.
- * @param {object} before  Zeile vor dem Update
- * @param {object} after   Zeile nach dem Update
- * @returns {boolean}      true, wenn etwas aussteht
- */
-function markEventOutbound(before, after) {
-  if (!after || after.external_source !== 'google' || !after.external_calendar_id) return false;
-  if (!isConnected() || isReadonly()) return false;
-
-  const fieldsChanged = MIRRORED_FIELDS.some((f) => before?.[f] !== after[f]);
-
-  const target  = after.target_google_calendar_id || null;
-  const current = currentGoogleCalendarId(after);
-  const moveTo  = (
-    target
-    && target !== before?.target_google_calendar_id
-    && current
-    && target !== current
-  ) ? target : null;
-
-  if (!fieldsChanged && !moveTo) return false;
-
-  db.get().prepare(`
-    UPDATE calendar_events
-    SET outbound_dirty     = CASE WHEN ? THEN 1 ELSE outbound_dirty END,
-        outbound_move_to   = COALESCE(?, outbound_move_to),
-        outbound_attempts  = 0
-    WHERE id = ?
-  `).run(fieldsChanged ? 1 : 0, moveTo, after.id);
-  return true;
-}
-
 /** Anzahl der Events, die auf einen Push oder Umzug zu Google warten. */
 function pendingUpdateCount() {
-  return db.get().prepare(
-    `SELECT COUNT(*) AS c FROM calendar_events
-     WHERE (outbound_dirty = 1 OR outbound_move_to IS NOT NULL)
-       AND external_source = 'google' AND external_calendar_id IS NOT NULL`
-  ).get().c;
+  return outbound.pendingUpdateCount('google');
 }
 
 /**
@@ -313,27 +201,11 @@ function pendingUpdateCount() {
  * @returns {Promise<number>} erfolgreich gepushte Events
  */
 async function processPendingUpdates(calendar, colorMap = {}, metaCache = new Map()) {
-  const events = db.get().prepare(`
-    SELECT * FROM calendar_events
-    WHERE (outbound_dirty = 1 OR outbound_move_to IS NOT NULL)
-      AND external_source = 'google' AND external_calendar_id IS NOT NULL
-    ORDER BY id
-  `).all();
+  const events = outbound.pendingUpdates('google');
   if (events.length === 0) return 0;
 
-  const clear = db.get().prepare(`
-    UPDATE calendar_events
-    SET outbound_dirty = 0, outbound_move_to = NULL, outbound_attempts = 0
-    WHERE id = ?
-  `);
-  // Nur der Umzug fällt weg - eine gleichzeitig vorgemerkte Feldänderung soll
-  // trotzdem noch rausgehen, dann eben im bisherigen Kalender.
-  const clearMove = db.get().prepare(
-    'UPDATE calendar_events SET outbound_move_to = NULL, outbound_attempts = 0 WHERE id = ?'
-  );
-  const fail = db.get().prepare(
-    'UPDATE calendar_events SET outbound_attempts = outbound_attempts + 1 WHERE id = ?'
-  );
+  const clear     = outbound.clearOutbound;
+  const clearMove = outbound.clearOutboundMove;
   // Nach dem Umzug zeigt die Zeile auf den Zielkalender. Ohne das ginge ein
   // späteres Löschen an den alten Kalender und liefe dort ins Leere, während der
   // Termin in Google stehen bliebe.
@@ -343,32 +215,8 @@ async function processPendingUpdates(calendar, colorMap = {}, metaCache = new Ma
     WHERE id = ?
   `);
 
-  /**
-   * Fehlerbehandlung, die sich Umzug und Push teilen. `giveUp` bestimmt, was beim
-   * Aufgeben fallen gelassen wird: beim Umzug nur die Umzugs-Vormerkung, beim
-   * Push (und bei einem bei Google verschwundenen Event) alles.
-   */
-  const handleError = (err, event, what, giveUp) => {
-    const kind = classifyOutboundError(err);
-    if (kind === 'settled') {
-      log.warn(`Event ${event.external_calendar_id} no longer exists at Google, dropping outbound ${what}.`);
-      clear.run(event.id);
-      return;
-    }
-    if (kind === 'permanent') {
-      log.error(`Outbound ${what} of event ${event.id} rejected by Google, giving up:`, err.message);
-      giveUp.run(event.id);
-      return;
-    }
-    const attempts = event.outbound_attempts + 1;
-    fail.run(event.id);
-    if (attempts >= MAX_OUTBOUND_ATTEMPTS) {
-      log.error(`Giving up on outbound ${what} of event ${event.id} after ${attempts} attempts:`, err.message);
-      giveUp.run(event.id);
-      return;
-    }
-    log.warn(`Outbound ${what} failed for event ${event.id} (attempt ${attempts}):`, err.message);
-  };
+  const handleError = (err, event, what, giveUp) =>
+    outbound.handleUpdateError(err, event, what, 'Google', giveUp);
 
   let done = 0;
   for (const event of events) {
@@ -376,14 +224,14 @@ async function processPendingUpdates(calendar, colorMap = {}, metaCache = new Ma
     let eventId    = event.external_calendar_id;
     if (!calendarId) {
       log.warn(`No Google calendar known for event ${event.id}, outbound work skipped.`);
-      clear.run(event.id);
+      clear(event.id);
       continue;
     }
 
     const meta = await loadCalendarMeta(calendar, calendarId, metaCache);
     if (!isWritableRole(meta?.role ?? null)) {
       log.warn(`Calendar ${calendarId} has no writable role (role=${meta?.role ?? null}), skipping outbound work for event ${event.id}.`);
-      clear.run(event.id);
+      clear(event.id);
       continue;
     }
     // Zeigt nach einem Umzug auf den Zielkalender - dessen Zone gilt für den Patch.
@@ -397,7 +245,7 @@ async function processPendingUpdates(calendar, colorMap = {}, metaCache = new Ma
         // Der Zielkalender bleibt unangetastet: nur die Vormerkung fällt weg,
         // der Termin bleibt in Google, wo er ist.
         log.warn(`Destination calendar ${moveTo} has no writable role (role=${destMeta?.role ?? null}), keeping event ${event.id} in ${calendarId}.`);
-        clearMove.run(event.id);
+        clearMove(event.id);
       } else {
         try {
           const moved = await calendar.events.move({
@@ -421,7 +269,7 @@ async function processPendingUpdates(calendar, colorMap = {}, metaCache = new Ma
       }
     } else if (moveTo) {
       // Ziel == aktueller Kalender: nichts zu tun (z. B. Umzug bereits erfolgt).
-      clearMove.run(event.id);
+      clearMove(event.id);
     }
 
     if (!event.outbound_dirty) continue;
@@ -431,13 +279,13 @@ async function processPendingUpdates(calendar, colorMap = {}, metaCache = new Ma
     // await, in dem eine weitere Bearbeitung eingetroffen sein kann. Sonst ginge
     // der ältere Stand raus und das anschließende clear würde die neue
     // Vormerkung mitlöschen - Google bliebe dauerhaft hinterher.
-    const fresh = db.get().prepare('SELECT * FROM calendar_events WHERE id = ?').get(event.id);
+    const fresh = outbound.reloadEvent(event.id);
     if (!fresh) continue; // parallel gelöscht - der Tombstone-Pfad übernimmt
 
     try {
       const gEvent = localEventToGoogle(fresh, colorMap, activeMeta?.timeZone || serverTimeZone());
       await calendar.events.patch({ calendarId, eventId, requestBody: gEvent });
-      clear.run(event.id);
+      clear(event.id);
       done++;
     } catch (err) {
       handleError(err, event, 'update', clear);
@@ -1044,15 +892,20 @@ function localEventToGoogle(event, colorMap = {}, timeZone = serverTimeZone()) {
 }
 
 export { getAuthUrl, handleCallback, getStatus, disconnect, sync, listCalendars,
-         listSelection, setCalendarEnabled, setReadonly,
-         queueEventDeletion, markEventOutbound, flushOutbound };
+         listSelection, setCalendarEnabled, setReadonly, flushOutbound };
 export const __test = {
   localEventToGoogle, googleAllDayEndToInclusive, localAllDayEndToExclusive,
   upsertGoogleEvents, upsertExternalCalendar, setReadonly, isReadonly, isWritableRole,
   listSelection, setCalendarEnabled, recordSyncToken, getSyncToken, enabledCalendarIds,
   fetchEventColorMap, serverTimeZone,
-  queueEventDeletion, processPendingDeletions, pendingDeletionCount,
-  markEventOutbound, processPendingUpdates, pendingUpdateCount, MIRRORED_FIELDS,
+  processPendingDeletions, pendingDeletionCount,
+  processPendingUpdates, pendingUpdateCount,
   googleCalendarIdForEvent, currentGoogleCalendarId, loadCalendarMeta,
-  classifyOutboundError, MAX_OUTBOUND_ATTEMPTS,
+  // Providerunabhängige Vormerkung: durchgereicht, damit die Google-Suite die
+  // Kette Vormerken → Ausführen weiterhin an einem Stück prüfen kann.
+  queueEventDeletion: outbound.queueEventDeletion,
+  markEventOutbound:  outbound.markEventOutbound,
+  MIRRORED_FIELDS:    outbound.MIRRORED_FIELDS,
+  classifyOutboundError: outbound.classifyOutboundError,
+  MAX_OUTBOUND_ATTEMPTS: outbound.MAX_OUTBOUND_ATTEMPTS,
 };
