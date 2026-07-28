@@ -281,11 +281,32 @@ function encryptPlaintextDatabase() {
   log.warn(`${DB_PATH} is unencrypted but DB_ENCRYPTION_KEY is set — encrypting now.`);
 
   // Offenes WAL einchecken, damit die .db-Datei für sich vollständig ist.
+  // wal_checkpoint(TRUNCATE) WIRFT NICHT, wenn eine andere Verbindung den
+  // WAL-Lock hält — es liefert { busy, log, checkpointed }. Nur busy === 0
+  // heißt, dass alle committeten Frames in der .db stehen. Würden wir bei
+  // busy != 0 weitermachen, verschlüsselten wir eine unvollständige Kopie und
+  // löschten anschließend die Sidecars: committete Daten wären verloren.
+  // Deshalb hier abbrechen statt teil-migrieren — unverschlüsselt weiterlaufen
+  // ist wegen der Sicherheitszusage ebenfalls keine Option.
+  let checkpointed = false;
   const source = new Database(DB_PATH);
   try {
-    source.pragma('wal_checkpoint(TRUNCATE)');
+    const [row] = source.pragma('wal_checkpoint(TRUNCATE)');
+    checkpointed = row != null && row.busy === 0;
+    if (!checkpointed) {
+      log.warn(`WAL checkpoint incomplete (busy=${row?.busy}) — not encrypting a partial copy.`);
+    }
   } finally {
     source.close();
+  }
+
+  if (!checkpointed) {
+    throw new Error(
+      `[DB] Cannot encrypt ${DB_PATH}: its write-ahead log could not be checkpointed, ` +
+      'which means another connection is still using the database. Encrypting now ' +
+      'would risk losing committed data. Make sure no second instance is running ' +
+      'against this volume and start again.'
+    );
   }
 
   copyFileSync(DB_PATH, backupPath);

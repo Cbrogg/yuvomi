@@ -164,6 +164,43 @@ test('ein falscher Key führt zu einem klaren Startfehler statt zu stillem Daten
   assert.ok(!isPlaintext(dbPath), 'die Datenbank bleibt verschlüsselt');
 });
 
+test('ein blockierter WAL-Checkpoint bricht die Migration ab, statt Teildaten zu verschlüsseln', async () => {
+  // wal_checkpoint(TRUNCATE) wirft nicht, wenn eine andere Verbindung liest —
+  // es meldet busy != 0. Würde die Migration das ignorieren, verschlüsselte sie
+  // eine unvollständige Kopie und löschte anschließend die WAL-Sidecars.
+  const dbPath = join(tmpDir(), 'yuvomi.db');
+  seedPlaintextDb(dbPath, 50);
+
+  // Zweite Instanz auf demselben Volume: ein offener Writer hält das WAL
+  // gefüllt, ein Reader mit laufender Transaktion blockiert den TRUNCATE.
+  const writer = new Database(dbPath);
+  writer.pragma('journal_mode = WAL');
+  writer.prepare('INSERT INTO legacy_marker (note) VALUES (?)').run('im-wal');
+  const reader = new Database(dbPath);
+  reader.exec('BEGIN');
+  reader.prepare('SELECT count(*) FROM legacy_marker').get();
+
+  try {
+    await assert.rejects(
+      () => bootDb(dbPath, KEY),
+      /write-ahead log could not be checkpointed/,
+      'die Migration muss bei blockiertem Checkpoint abbrechen'
+    );
+
+    // Entscheidend: die Datenbank muss unangetastet und vollständig bleiben.
+    assert.ok(isPlaintext(dbPath), 'die Originaldatei bleibt unverändert');
+  } finally {
+    reader.exec('COMMIT');
+    reader.close();
+    writer.close();
+  }
+
+  const survivor = new Database(dbPath);
+  const { count } = survivor.prepare('SELECT count(*) AS count FROM legacy_marker').get();
+  survivor.close();
+  assert.equal(count, 51, 'kein Datenverlust durch den abgebrochenen Versuch (50 + die WAL-Zeile)');
+});
+
 test('ein Backup der verschlüsselten Datenbank ist selbst verschlüsselt und wiederherstellbar', async () => {
   const dir = tmpDir();
   const dbPath = join(dir, 'yuvomi.db');
