@@ -119,7 +119,7 @@ export function calendarPaths() {
         tag: 'Calendar',
         params: [idParam()],
         stateChanging: true,
-        description: 'Supports document-storage attachments. Omit attachment fields to preserve the current attachment, send new `attachment_data` to create and link a document, or set `remove_attachment` to true to unlink it without deleting the library document. Legacy events may still return `attachment_data`.',
+        description: 'Supports document-storage attachments. Omit attachment fields to preserve the current attachment, send new `attachment_data` to create and link a document, or set `remove_attachment` to true to unlink it without deleting the library document. Legacy events may still return `attachment_data`. Changing a mirrored field (title, description, location, color, all-day, start/end, recurrence) of an event synced to Google pushes the change there, and switching `target_google_calendar_id` moves it to the other Google calendar. The remote call runs after the response and is retried by the next sync run if it fails.',
         requestBody: jsonBody(null),
         responses: {
           200: {
@@ -132,7 +132,13 @@ export function calendarPaths() {
           500: { $ref: '#/components/responses/InternalServerError' },
         },
       }),
-      delete: op({ summary: 'Delete calendar event', tag: 'Calendar', params: [idParam()], stateChanging: true }),
+      delete: op({
+        summary: 'Delete calendar event',
+        tag: 'Calendar',
+        params: [idParam()],
+        stateChanging: true,
+        description: 'An event mirrored to Google Calendar is deleted there as well. The remote call runs after the response; if it fails, the next sync run retries it.',
+      }),
     },
     '/api/v1/calendar/{id}/reset': {
       post: op({ summary: 'Reset external calendar event to source state', tag: 'Calendar', params: [idParam()], stateChanging: true }),

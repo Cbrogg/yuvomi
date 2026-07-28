@@ -404,6 +404,45 @@ Disabling a calendar removes its imported events and clears its `sync_token`, so
 performs a clean full resync. Migration v47 carries any previously single-selected
 `sync_config.google_calendar_id` (Issue #220) into one enabled row.
 
+### Calendar Pending Deletions
+Tombstones for events deleted in Yuvomi that still exist at the provider (migration v103, #593).
+Deleting a mirrored event locally must delete it remotely too, but the provider call is async and
+must neither delay the `204` nor let a network error abort the local delete — so the row outlives
+the deleted event and is worked off by the sync (at-least-once).
+
+| Column | Type | Constraint |
+|--------|------|-----------|
+| id | INTEGER | PRIMARY KEY AUTOINCREMENT |
+| source | TEXT | NOT NULL — currently only `google`; the column exists so CalDAV/Apple can reuse the table |
+| calendar_external_id | TEXT | NOT NULL — provider calendar the event lives in |
+| event_external_id | TEXT | NOT NULL — provider event ID |
+| attempts | INTEGER | NOT NULL, default 0 — failed remote deletions so far |
+| last_error | TEXT | nullable, truncated to 500 chars |
+| created_at | TEXT | ISO 8601, NOT NULL |
+
+Constraints: UNIQUE(source, calendar_external_id, event_external_id) ·
+Index: CREATE INDEX idx_cal_pending_del_event ON calendar_pending_deletions(source, event_external_id)
+
+Rows are created **only** by the explicit user delete (`DELETE /api/v1/calendar/:id`), never by a
+database trigger: the inbound sync deletes local rows as well (cancelled events, deselected
+calendars), and a trigger would turn those into delete calls against the provider.
+
+The counterpart for *edits* lives on the event row itself (migration v104): `outbound_dirty` (0/1)
+marks a mirrored event whose local change still has to reach the provider, and `outbound_attempts`
+counts failed pushes under the same five-attempt limit. Deliberately **not** `user_modified` — that
+flag means "touched locally, don't overwrite the color" permanently and would re-push the event on
+every sync run; `outbound_dirty` is a queue, set on edit and cleared after the push. Only changes to
+the mirrored fields (`title`, `description`, `location`, `color`, `all_day`, `start_datetime`,
+`end_datetime`, `recurrence_rule`) set it — assignment, visibility, icon and attachments are
+Yuvomi-internal.
+
+`outbound_move_to` (migration v105) holds the destination calendar of a pending move, `NULL` when
+none is queued. It is set from the *change in the request*, never derived by comparing
+`target_google_calendar_id` against the actual calendar: existing databases can carry a divergence
+there, because the field was always settable but had no effect on already-mirrored events, and a
+state comparison would turn that into a silent wave of moves across users' Google calendars on the
+first sync after the upgrade.
+
 ### CalDAV Reminder Selection
 Per-account reminder-list selection for CalDAV accounts. Apple Reminders lists are CalDAV
 collections whose supported components include `VTODO`. Reuses the same CalDAV Accounts; each
@@ -1532,7 +1571,11 @@ Reusable recipe cards linked to meal slots.
 - **"Assigned to me" quick filter:** a toggle in the calendar toolbar limits every view to events (and calendar-shown tasks) assigned to the current user; remembered per device, shown only in multi-member households
 - **Per-event visibility:** an "all / assignees only / private" selector in the event dialog controls who can see the event (server-enforced, no admin bypass — see [Calendar Events data model](#calendar-events)); it is an in-app control and does not filter the ICS export feed
 - Recurring via iCal RRULE (daily, weekly, monthly, yearly)
-- **Google Calendar:** OAuth 2.0, Calendar API v3, two-way sync of **multiple calendars** at once. After connecting, an admin enables/disables each available calendar via checkboxes in Settings (state in `google_calendar_selection`); enabled calendars are imported together, each in its own color, with its own incremental sync token. Disabling a calendar removes its imported events and clears its token (clean resync on re-enable). Outbound is **per-event**: a local event is only pushed to Google when it carries an explicit target calendar (`calendar_events.target_google_calendar_id`), chosen via the unified sync-target picker in the event dialog; events without a target stay local. The sync-target picker lists only **writable** Google calendars (accessRole `owner` or `writer`); read-only calendars (accessRole `reader` / `freeBusyReader`) are excluded from the picker. The server-side outbound sync additionally guards against writing to a calendar that has lost write permission after the event was created. A **read-only mode** checkbox prevents Yuvomi from pushing any local events back to Google while still reading incoming events normally; the flag is stored as `google_readonly` in `sync_config` and cleared on disconnect. Timed events are stored as local wall-clock time without a zone, so outbound pushes declare the **target calendar's own time zone** (read from the same `calendarList.get` metadata call as color and access role) — the event then shows the same clock time in Google as in Yuvomi, wherever the household lives. If Google reports no zone for that calendar, the server falls back to `TZ`, then the host zone, then UTC (v1.45.11).
+- **Google Calendar:** OAuth 2.0, Calendar API v3, two-way sync of **multiple calendars** at once. After connecting, an admin enables/disables each available calendar via checkboxes in Settings (state in `google_calendar_selection`); enabled calendars are imported together, each in its own color, with its own incremental sync token. Disabling a calendar removes its imported events and clears its token (clean resync on re-enable). Outbound is **per-event**: a local event is only pushed to Google when it carries an explicit target calendar (`calendar_events.target_google_calendar_id`), chosen via the unified sync-target picker in the event dialog; events without a target stay local. The sync-target picker lists only **writable** Google calendars (accessRole `owner` or `writer`); read-only calendars (accessRole `reader` / `freeBusyReader`) are excluded from the picker. The server-side outbound sync additionally guards against writing to a calendar that has lost write permission after the event was created. A **read-only mode** checkbox prevents Yuvomi from pushing any local events back to Google while still reading incoming events normally; the flag is stored as `google_readonly` in `sync_config` and cleared on disconnect. Timed events are stored as local wall-clock time without a zone, so outbound pushes declare the **target calendar's own time zone** (read from the same `calendarList.get` metadata call as color and access role) — the event then shows the same clock time in Google as in Yuvomi, wherever the household lives. If Google reports no zone for that calendar, the server falls back to `TZ`, then the host zone, then UTC (v1.45.11). **Deleting, editing or moving a mirrored event in Yuvomi reaches Google too (v1.51.0 · #593):** before this, outbound was `events.insert` only — an event that had already been pushed was never touched again, so local deletes and edits stayed local. Both now record their intent first (a tombstone in [Calendar Pending Deletions](#calendar-pending-deletions) for deletes, `calendar_events.outbound_dirty` for edits) and then try the `events.delete` / `events.patch` call immediately after answering the request; if that fails, the next sync run retries it. Both run **before** the inbound pass, so a full resync cannot resurrect a deleted event and a local edit reaches Google before the old remote state could be written over it; the inbound pass additionally skips events with an open tombstone or an unpushed edit, so a pending local change is never silently overwritten. A remote `404`/`410` counts as settled (the event is already gone in Google), and after five failed attempts the pending operation is dropped with an error log. An edit whose target calendar is no longer writable is dropped rather than retried forever. Nothing is recorded in read-only mode or without a connected account, and disconnecting discards open tombstones.
+
+**Switching an event's target calendar moves it in Google (`events.move`):** picking a different calendar for an already-mirrored event queues the move in `calendar_events.outbound_move_to`, and the move runs *before* the field patch so the edit lands in the destination, not the old calendar. It requires a writable role on **both** calendars — an unwritable destination drops the queued move and leaves the event where it is, rather than retrying forever. On success the local row follows: `calendar_ref_id` and `external_calendar_id` are updated from the API response, without which a later delete would target the old calendar and leave the event standing in Google. A `400` (Google rejecting the move outright, e.g. for a single instance of a recurring series) is given up on immediately instead of burning five attempts, since it cannot succeed on a retry.
+
+Related hardening: the inbound `cancelled` delete is scoped to the reporting calendar. Moving an event between two synced calendars *in Google* makes the source report it as cancelled while the destination still lists it — under the same event ID. An ID-only delete removed whichever row the destination had just written, so the event vanished locally although it existed in Google. Rows without a `calendar_ref_id` (pre-`external_calendars` data) and calendars whose metadata could not be read keep the ID-only behaviour, otherwise genuine deletions would stop arriving there.
 - **CalDAV Multi-Account:** Connect multiple CalDAV servers (iCloud, Nextcloud, Radicale, Baikal) with per-account calendar selection via checkboxes, two-way sync (tsdav), optional outbound target selection per event
 - **Default assignee per sync target (migration v79):** each synced calendar (Google/CalDAV) and each ICS subscription can be given an optional default assignee in Settings → Sync; newly imported events of that target are auto-assigned to that person (new events only — see [External Calendars](#external-calendars)). The per-calendar picker appears once the calendar has completed its first sync
 - **ICS Subscriptions:** Subscribe to any public ICS/webcal URL (e.g. public holidays, sports schedules). Per-subscription color, private/shared visibility, manual "Sync now" and automatic sync on the shared interval. Edit name, color, and visibility of any subscription inline. RRULE events expanded into a rolling ±6/+12 month window. SSRF-protected (DNS pre-resolution), ETag/Last-Modified conditional fetch, 10 MB limit, 15 s timeout. User-edited events are protected from being overwritten (`user_modified`); a "Reset to original" link restores them.

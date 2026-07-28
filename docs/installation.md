@@ -639,6 +639,13 @@ it in controlled environments.
 | `GOOGLE_CLIENT_SECRET` | OAuth 2.0 Client Secret | - | No |
 | `GOOGLE_REDIRECT_URI` | OAuth callback URL | `https://<YOUR-DOMAIN>/api/v1/calendar/google/callback` | No |
 
+After connecting, enable the calendars to sync under **Settings → Sync**. The sync runs both ways:
+events created, edited, deleted, or moved to another calendar in Yuvomi are applied in Google as
+well, and changes made in Google flow back. Outbound changes are attempted immediately and retried
+by the next sync run (`SYNC_INTERVAL_MINUTES`) if Google is unreachable. A calendar is only written
+to when the connected account has write access to it, and the **read-only mode** checkbox stops
+Yuvomi from changing anything in Google while still importing normally.
+
 ### Apple Calendar Sync — Legacy Single-Account (Optional)
 
 > **Note:** Since v0.44.0, multi-account CalDAV (iCloud, Nextcloud, Radicale, Baikal) is managed through **Settings → Synchronization** in the UI. These env vars configure a single Apple CalDAV account at startup and remain supported for backwards compatibility.

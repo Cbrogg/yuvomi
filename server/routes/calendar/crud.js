@@ -13,6 +13,7 @@ import {
   cleanupStagedUpload,
   stageDocumentUpload,
 } from '../../services/document-storage.js';
+import { queueEventDeletion, markEventOutbound, flushOutbound } from '../../services/google-calendar.js';
 import {
   ASSIGNED_USERS_SQL,
   getUserId,
@@ -362,7 +363,17 @@ router.put('/:id', async (req, res) => {
       WHERE e.id = ?
     `).get(id);
 
+    // Änderung an einem nach Google gespiegelten Termin dort nachziehen (#593):
+    // geänderte Felder als Patch, ein gewechselter Zielkalender als Umzug.
+    // Wie beim Löschen: vormerken, antworten, danach best effort ausführen.
+    const pending = markEventOutbound(event, updated);
+
     res.json({ data: serializeEvent(updated) });
+
+    if (pending) {
+      flushOutbound()
+        .catch((e) => log.warn('Google-Änderung vorgemerkt, Sofortversuch fehlgeschlagen:', e.message));
+    }
   } catch (err) {
     if (err instanceof StorageError && !stagedUpload) {
       log.error('PUT /:id storage error:', err);
@@ -462,16 +473,30 @@ router.post('/:id/exceptions', (req, res) => {
 
 // --------------------------------------------------------
 // DELETE /api/v1/calendar/:id
-// Termin löschen.
+// Termin löschen. Ein nach Google gespiegelter Termin wird dort ebenfalls
+// gelöscht (#593) - vorgemerkt vor dem lokalen DELETE (danach ist die Zeile
+// mitsamt der Google-Event-ID weg), ausgeführt asynchron nach der Antwort.
 // Response: 204 No Content
 // --------------------------------------------------------
 router.delete('/:id', (req, res) => {
   try {
-    const id     = parseInt(req.params.id, 10);
+    const id    = parseInt(req.params.id, 10);
+    const event = db.get().prepare('SELECT * FROM calendar_events WHERE id = ?').get(id);
+    const queued = event ? queueEventDeletion(event) : false;
+
     const result = db.get().prepare('DELETE FROM calendar_events WHERE id = ?').run(id);
     if (result.changes === 0)
       return res.status(404).json({ error: 'Termin nicht gefunden', code: 404 });
+
     res.status(204).end();
+
+    // Bewusst nach der Antwort: der Google-Call darf das lokale Löschen weder
+    // verzögern noch scheitern lassen. Schlägt er fehl, bleibt der Tombstone
+    // liegen und der nächste Sync-Lauf holt die Löschung nach.
+    if (queued) {
+      flushOutbound()
+        .catch((err) => log.warn('Google-Löschung vorgemerkt, Sofortversuch fehlgeschlagen:', err.message));
+    }
   } catch (err) {
     log.error('', err);
     res.status(500).json({ error: 'Interner Fehler', code: 500 });

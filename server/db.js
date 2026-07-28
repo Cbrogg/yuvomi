@@ -3670,6 +3670,79 @@ const MIGRATIONS = [
       ALTER TABLE budget_loans ADD COLUMN exchange_rate REAL NOT NULL DEFAULT 1;
     `,
   },
+  {
+    version: 103,
+    description: 'Calendar: tombstones for events deleted locally but still remote (#593)',
+    up: `
+      -- Lokales Löschen eines gespiegelten Termins muss auch beim Provider löschen
+      -- (#593). Die Route kann das nicht selbst tun: der Provider-Call ist async
+      -- und darf weder die 204-Antwort verzögern noch bei Netzfehlern den lokalen
+      -- Löschvorgang scheitern lassen. Deshalb ein Tombstone - die Zeile überlebt
+      -- das gelöschte Event und wird vom Sync abgearbeitet (at-least-once).
+      --
+      -- Bewusst NICHT als Trigger auf calendar_events: der Inbound-Sync löscht
+      -- lokale Zeilen ebenfalls (cancelled-Events, Kalender-Abwahl). Ein Trigger
+      -- würde daraus Löschbefehle an den Provider machen und fremde Termine
+      -- vernichten. Tombstones entstehen nur im expliziten User-Delete.
+      --
+      -- source ist von Anfang an vorhanden, damit CalDAV/Apple dieselbe Tabelle
+      -- nutzen können; aktuell schreibt nur 'google'.
+      CREATE TABLE IF NOT EXISTS calendar_pending_deletions (
+        id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+        source               TEXT NOT NULL,
+        calendar_external_id TEXT NOT NULL,
+        event_external_id    TEXT NOT NULL,
+        attempts             INTEGER NOT NULL DEFAULT 0,
+        last_error           TEXT,
+        created_at           TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+        UNIQUE(source, calendar_external_id, event_external_id)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_cal_pending_del_event
+        ON calendar_pending_deletions(source, event_external_id);
+    `,
+  },
+  {
+    version: 104,
+    description: 'Calendar: mark locally edited mirrored events for outbound push (#593)',
+    up: `
+      -- Gegenstück zu v103 für Änderungen: ein bereits nach Google gespiegelter
+      -- Termin wurde nach dem ersten Push nie wieder ausgehend angefasst, weil der
+      -- Outbound-Zweig nur external_source='local' selektiert. Titel-, Zeit- oder
+      -- Farbänderungen blieben damit in Yuvomi hängen.
+      --
+      -- outbound_dirty ist bewusst NICHT user_modified: das Flag bedeutet
+      -- dauerhaft "lokal angefasst, Farbe nicht überschreiben" und würde als
+      -- Push-Signal jeden Sync-Lauf ein Update an Google schicken. outbound_dirty
+      -- ist eine Warteschlange - gesetzt beim Bearbeiten, gelöscht nach dem Push.
+      --
+      -- outbound_attempts begrenzt Fehlversuche analog zu den Tombstones, damit
+      -- ein dauerhaft unschreibbares Event nicht jeden Lauf blockiert.
+      ALTER TABLE calendar_events ADD COLUMN outbound_dirty INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE calendar_events ADD COLUMN outbound_attempts INTEGER NOT NULL DEFAULT 0;
+
+      CREATE INDEX IF NOT EXISTS idx_calendar_outbound_dirty
+        ON calendar_events(outbound_dirty) WHERE outbound_dirty = 1;
+    `,
+  },
+  {
+    version: 105,
+    description: 'Calendar: queue a pending calendar move for mirrored Google events (#593)',
+    up: `
+      -- Wechselt der Zielkalender eines bereits gespiegelten Termins, muss er in
+      -- Google per events.move umziehen; ein Patch im alten Kalender würde ihn
+      -- dort belassen.
+      --
+      -- Der anstehende Umzug wird als eigener Wert vorgemerkt statt beim Sync aus
+      -- target_google_calendar_id != calendar_ref_id abgeleitet. Bestandsdaten
+      -- können diese Abweichung längst enthalten: target_google_calendar_id ließ
+      -- sich immer setzen, blieb für bereits gespiegelte Termine aber folgenlos.
+      -- Ein Zustandsvergleich würde daraus beim ersten Sync nach dem Update eine
+      -- stille Umzugswelle in fremden Google-Kalendern machen. So zieht nur um,
+      -- was ein Nutzer nach dem Update ausdrücklich umstellt.
+      ALTER TABLE calendar_events ADD COLUMN outbound_move_to TEXT;
+    `,
+  },
 ];
 
 /**

@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.51.0] - 2026-07-28
+
+### Added
+- An event that already lives in a Google calendar can be moved to a different one. Choosing another calendar in the event dialog moves it in Google as well, instead of leaving it where it was. Moving requires write access to both calendars; if the destination is read-only, the event simply stays where it is.
+
+### Changed
+- Changes headed for Google are attempted the moment you save and retried by the next sync run if Google cannot be reached, so a brief outage no longer means the change is lost. A change that is rejected five times in a row is given up on and written to the log.
+
+### Fixed
+- Deleting an event in Yuvomi left it standing in Google Calendar. Outbound sync only ever created events; once an event had been pushed to Google, nothing that happened to it in Yuvomi reached Google again. Deletions now follow. The other direction was never affected: events deleted or edited in Google kept arriving in Yuvomi. (#593)
+- Editing an event that is synced to Google changed nothing in Google, for the same reason. Title, notes, location, colour, all-day, start and end time and the repeat rule are now sent along. Assignment, visibility, icon and attachments stay in Yuvomi, as before. A local edit that has not reached Google yet is no longer overwritten by an incoming sync before it gets its chance. (#593)
+- An event moved between two synced calendars inside Google could vanish from Yuvomi. The source calendar reports it as cancelled while the destination still lists it under the same identifier, and the deletion was applied by identifier alone, so it could remove the entry the destination had just written. The event stays now. (#593)
+
 ## [1.50.1] - 2026-07-28
 
 ### Fixed
