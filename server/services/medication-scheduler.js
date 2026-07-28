@@ -62,7 +62,7 @@ async function withTimeout(fn, timeoutMs = PROVIDER_TIMEOUT_MS) {
  * Medikament-Eigentümers.
  *
  * @param {Object} [opts]
- * @param {import('better-sqlite3').Database} [opts.database]
+ * @param {import('better-sqlite3-multiple-ciphers').Database} [opts.database]
  * @param {Object} [opts.pushService]  - { sendPushToUser }
  * @param {Object} [opts.channelStore] - { listEnabledChannelsForUser }
  * @param {Object} [opts.providers]    - { [provider]: { send } }

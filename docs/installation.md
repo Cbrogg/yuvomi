@@ -361,7 +361,7 @@ In Unraid, open the **Apps** tab (the Community Applications plugin) and search 
 Click **Install**. In the template, set:
 
 - **SESSION_SECRET** (required) — a long random string
-- **DB_ENCRYPTION_KEY** (recommended) — generate with `openssl rand -hex 32`; back it up, it cannot be recovered or changed on an existing database
+- **DB_ENCRYPTION_KEY** (recommended) — generate with `openssl rand -hex 32`; back it up, it cannot be recovered or changed on an existing database. If you are upgrading an installation whose database is still unencrypted, it is encrypted once on the next start and the untouched original is kept as `<DB_PATH>.plaintext-backup`; delete that copy once you have verified the app starts and your data is complete
 - Adjust the WebUI port and the appdata path if needed
 
 #### 3. Apply and Open

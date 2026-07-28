@@ -1,11 +1,13 @@
 FROM node:22-slim AS build
 
-# SQLCipher-Abhängigkeiten
+# Toolchain als Fallback für native Module: better-sqlite3-multiple-ciphers zieht
+# normalerweise ein Prebuild (node-v127-linux-{x64,arm64}); schlägt der Download
+# fehl, kompiliert node-gyp aus dem Quellcode. Die Cipher-Schicht steckt im Modul
+# selbst - ein System-SQLCipher wird nicht mehr benötigt.
 RUN apt-get update && apt-get install -y \
     python3 \
     make \
     g++ \
-    libsqlcipher-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -18,7 +20,6 @@ RUN npm ci --omit=dev
 FROM node:22-slim
 
 RUN apt-get update && apt-get install -y \
-    libsqlcipher0 \
     gosu \
     && rm -rf /var/lib/apt/lists/*
 

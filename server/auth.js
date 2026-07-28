@@ -530,7 +530,7 @@ function setupAuthSession(req, res, user) {
  * Authentik-Deployments). Nur setzen, wenn der IdP vollständig unter eigener
  * Kontrolle steht und keine unverifizierten E-Mails zulässt.
  *
- * @param {import('better-sqlite3').Database} database
+ * @param {import('better-sqlite3-multiple-ciphers').Database} database
  * @param {{ sub: string, email?: string, email_verified?: boolean, name?: string, preferred_username?: string }} claims
  * @returns {{ id: number, role: string, [key: string]: any }}
  */

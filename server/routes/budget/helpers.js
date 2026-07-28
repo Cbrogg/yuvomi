@@ -177,7 +177,7 @@ export function effectiveMonthly(amount, interval) {
  * geglätteten Monatsanteil (amount); es wird in JEDEM Monat eine Instanz erzeugt.
  * Nicht-virtuelle Serien erzeugen den vollen Betrag nur in Fälligkeitsmonaten
  * (alle monthsPerInterval(interval) Monate ab dem Startmonat).
- * @param {import('better-sqlite3').Database} database
+ * @param {import('better-sqlite3-multiple-ciphers').Database} database
  * @param {string} month  YYYY-MM
  */
 export function generateRecurringInstances(database, month) {
