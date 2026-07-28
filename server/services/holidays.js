@@ -259,12 +259,12 @@ async function sync(force = false) {
   const showSchool  = db.get().prepare("SELECT value FROM sync_config WHERE key='holiday_show_school'").get()?.value === '1';
 
   if (!country) {
-    log.info('No holiday country configured – skipping sync.');
+    log.debug('No holiday country configured – skipping sync.');
     return { synced: 0 };
   }
 
   if (!showPublic && !showSchool) {
-    log.info('Both holiday layers disabled – skipping sync.');
+    log.debug('Both holiday layers disabled – skipping sync.');
     return { synced: 0 };
   }
 
@@ -274,7 +274,7 @@ async function sync(force = false) {
     if (!Number.isNaN(lastSyncDate.getTime())) {
       const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
       if (Date.now() - lastSyncDate.getTime() < thirtyDaysMs) {
-        log.info('Holidays synced recently – skipping automatic sync.');
+        log.debug('Holidays synced recently – skipping automatic sync.');
         return { synced: 0 };
       }
     }

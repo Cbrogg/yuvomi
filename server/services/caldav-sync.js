@@ -391,7 +391,7 @@ async function sync({ createClient } = {}) {
   const accounts = getAllAccounts();
 
   if (accounts.length === 0) {
-    log.info('No CalDAV accounts configured.');
+    log.debug('No CalDAV accounts configured.');
     return { success: true, syncedAccounts: 0, syncedEvents: 0 };
   }
 

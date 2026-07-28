@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
 import Database from 'better-sqlite3';
 import { MIGRATIONS } from '../server/db.js';
 import {
+  sync,
   pruneRemovedContacts,
   fetchVCardsResilient,
   unescapeVCardValue,
@@ -462,6 +463,14 @@ describe('CardDAV Contacts Schema (Migration 30)', () => {
 
     const differentAccount = db.prepare('SELECT * FROM contacts WHERE name = ?').get('Contact D');
     assert.ok(differentAccount, 'Same UID in different account should be allowed');
+  });
+});
+
+describe('CardDAV sync logging', () => {
+  it('logs the missing-account skip at debug level instead of info', () => {
+    const source = sync.toString();
+    assert.ok(source.includes("log.debug('No CardDAV accounts configured.')"));
+    assert.ok(!source.includes("log.info('No CardDAV accounts configured.')"));
   });
 });
 

@@ -193,6 +193,12 @@ describe('CalDAV Multi-Account Sync', () => {
     const migrated = db2.prepare(`SELECT external_source FROM calendar_events_new WHERE title = 'Migrated'`).get();
     assert.strictEqual(migrated.external_source, 'caldav');
   });
+
+  it('logs the missing-account skip at debug level instead of info', () => {
+    const source = sync.toString();
+    assert.ok(source.includes("log.debug('No CalDAV accounts configured.')"));
+    assert.ok(!source.includes("log.info('No CalDAV accounts configured.')"));
+  });
 });
 
 describe('Auto-Sync-Scheduler-Verdrahtung (#508)', () => {

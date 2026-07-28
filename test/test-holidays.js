@@ -101,6 +101,8 @@ function makeApiMock() {
 const SYNC_YEAR_SPAN = 4; // currentYear-1 .. currentYear+2
 const BRAZIL_PUBLIC_HOLIDAYS_PER_YEAR = 10;
 
+const HOLIDAY_SYNC_SOURCE = sync.toString();
+
 beforeEach(() => { resetState(); __setFetchImpl(null); });
 
 // ---- getForRange -------------------------------------------------------------
@@ -299,6 +301,15 @@ test('sync: both layers off → no fetch, synced 0', async () => {
   const res = await sync();
   assert.deepEqual(res, { synced: 0 });
   assert.equal(mock.calls.length, 0);
+});
+
+test('sync: skip paths use debug logging for disabled or throttled runs', () => {
+  assert.ok(HOLIDAY_SYNC_SOURCE.includes("log.debug('No holiday country configured – skipping sync.')"));
+  assert.ok(HOLIDAY_SYNC_SOURCE.includes("log.debug('Both holiday layers disabled – skipping sync.')"));
+  assert.ok(HOLIDAY_SYNC_SOURCE.includes("log.debug('Holidays synced recently – skipping automatic sync.')"));
+  assert.ok(!HOLIDAY_SYNC_SOURCE.includes("log.info('No holiday country configured – skipping sync.')"));
+  assert.ok(!HOLIDAY_SYNC_SOURCE.includes("log.info('Both holiday layers disabled – skipping sync.')"));
+  assert.ok(!HOLIDAY_SYNC_SOURCE.includes("log.info('Holidays synced recently – skipping automatic sync.')"));
 });
 
 test('sync: public-only fetches PublicHolidays per year, caches them, sets last_sync', async () => {

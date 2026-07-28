@@ -704,7 +704,7 @@ async function sync() {
   const accounts = getAllAccounts();
 
   if (accounts.length === 0) {
-    log.info('No CardDAV accounts configured.');
+    log.debug('No CardDAV accounts configured.');
     return { success: true, syncedAccounts: 0, syncedContacts: 0 };
   }
 
