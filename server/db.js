@@ -269,7 +269,13 @@ function encryptPlaintextDatabase() {
   if (!existsSync(DB_PATH)) return;           // Neuinstallation
   if (!isPlaintextDatabase(DB_PATH)) return;  // bereits verschlüsselt
 
-  const backupPath = `${DB_PATH}.plaintext-backup`;
+  // Ein bereits vorhandenes Backup darf nicht überschrieben werden: nach dem
+  // Einspielen eines alten Klartext-Backups liefe die Migration erneut und
+  // würde sonst die Sicherheitskopie des ersten Durchlaufs vernichten.
+  let backupPath = `${DB_PATH}.plaintext-backup`;
+  if (existsSync(backupPath)) {
+    backupPath = `${DB_PATH}.plaintext-backup-${new Date().toISOString().replace(/[:.]/g, '-')}`;
+  }
   const workingPath = `${DB_PATH}.encrypting`;
 
   log.warn(`${DB_PATH} is unencrypted but DB_ENCRYPTION_KEY is set — encrypting now.`);
@@ -4048,7 +4054,16 @@ async function backupToFile(destinationPath) {
   const database = get();
   await fs.mkdir(path.dirname(destinationPath), { recursive: true });
 
-  if (typeof database.backup === 'function') {
+  if (DB_KEY) {
+    // Die SQLite-Backup-API kann nicht von einer verschlüsselten Quelle in ein
+    // frisch angelegtes Ziel schreiben ("backup is not supported with
+    // incompatible source and target databases") — ohne diesen Zweig wäre bei
+    // gesetztem Key JEDES Backup kaputt. VACUUM INTO übernimmt Cipher und Key
+    // der Quelle, das Backup ist also ebenfalls verschlüsselt. Es verlangt
+    // allerdings ein noch nicht existierendes Ziel.
+    await unlinkIfExists(destinationPath);
+    database.prepare('VACUUM INTO ?').run(destinationPath);
+  } else if (typeof database.backup === 'function') {
     await database.backup(destinationPath);
   } else {
     database.prepare('VACUUM INTO ?').run(destinationPath);
@@ -4058,9 +4073,14 @@ async function backupToFile(destinationPath) {
 }
 
 function validateBackupFile(sourcePath) {
+  // Backups, die vor der Verschlüsselungs-Umstellung entstanden sind, liegen im
+  // Klartext vor. Sie müssen einspielbar bleiben — würden wir ihnen den Key
+  // aufsetzen, läse SQLite sie als verschlüsselt und die Validierung schlüge
+  // fehl. Nach dem Restore verschlüsselt init() sie ohnehin.
+  const encrypted = !isPlaintextDatabase(sourcePath);
   const candidate = new Database(sourcePath, { readonly: true, fileMustExist: true });
   try {
-    applyEncryptionKey(candidate);
+    if (encrypted) applyEncryptionKey(candidate);
     assertReadable(candidate);
     const row = candidate.prepare(`
       SELECT name

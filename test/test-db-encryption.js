@@ -21,7 +21,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, existsSync, readFileSync } from 'node:fs';
+import { mkdtempSync, existsSync, readFileSync, copyFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import Database from 'better-sqlite3-multiple-ciphers';
@@ -162,6 +162,63 @@ test('ein falscher Key führt zu einem klaren Startfehler statt zu stillem Daten
 
   // Die Datei darf dabei unangetastet bleiben.
   assert.ok(!isPlaintext(dbPath), 'die Datenbank bleibt verschlüsselt');
+});
+
+test('ein Backup der verschlüsselten Datenbank ist selbst verschlüsselt und wiederherstellbar', async () => {
+  const dir = tmpDir();
+  const dbPath = join(dir, 'yuvomi.db');
+  const backupPath = join(dir, 'backup.db');
+  const mod = await bootDb(dbPath, KEY);
+  mod.get().exec('CREATE TABLE backup_marker (note TEXT)');
+  mod.get().prepare('INSERT INTO backup_marker VALUES (?)').run('vor-backup');
+
+  // Die SQLite-Backup-API scheitert an verschlüsselten Quellen ("incompatible
+  // source and target databases"). Ohne den VACUUM-INTO-Zweig wäre bei gesetztem
+  // Key jedes Backup kaputt — inklusive Scheduler und WebDAV-Upload.
+  await mod.backupToFile(backupPath);
+
+  assert.ok(existsSync(backupPath), 'Backup muss angelegt werden');
+  assert.ok(!isPlaintext(backupPath), 'das Backup darf nicht im Klartext liegen');
+  assert.ok(
+    !readFileSync(backupPath).includes(Buffer.from('vor-backup')),
+    'Inhalte dürfen im Backup nicht im Klartext auffindbar sein'
+  );
+
+  const restored = await mod.restoreFromFile(backupPath);
+  assert.equal(restored.schemaVersion, mod.currentVersion(), 'Restore muss die Schema-Version melden');
+  assert.equal(
+    mod.get().prepare('SELECT note FROM backup_marker').get()?.note,
+    'vor-backup',
+    'Daten müssen den Restore überstehen'
+  );
+});
+
+test('ein vor der Umstellung erzeugtes Klartext-Backup bleibt einspielbar', async () => {
+  // Bestandsnutzer haben Backups aus der Zeit, in der DB_ENCRYPTION_KEY
+  // wirkungslos war. Würde die Validierung ihnen den Key aufsetzen, wären diese
+  // Backups nach dem Update wertlos.
+  const legacyPath = join(tmpDir(), 'yuvomi.db');
+  const legacy = await bootDb(legacyPath, null);
+  legacy.get().exec('CREATE TABLE backup_marker (note TEXT)');
+  legacy.get().prepare('INSERT INTO backup_marker VALUES (?)').run('altbestand');
+  legacy.get().pragma('wal_checkpoint(TRUNCATE)');
+
+  const dir = tmpDir();
+  const oldBackup = join(dir, 'old-plaintext-backup.db');
+  copyFileSync(legacyPath, oldBackup);
+  assert.ok(isPlaintext(oldBackup), 'Vorbedingung: das alte Backup ist unverschlüsselt');
+
+  const dbPath = join(dir, 'yuvomi.db');
+  const mod = await bootDb(dbPath, KEY);
+
+  const restored = await mod.restoreFromFile(oldBackup);
+  assert.ok(restored.schemaVersion > 0, 'das alte Backup muss einspielbar sein');
+  assert.equal(
+    mod.get().prepare('SELECT note FROM backup_marker').get()?.note,
+    'altbestand',
+    'Daten aus dem alten Backup müssen ankommen'
+  );
+  assert.ok(!isPlaintext(dbPath), 'nach dem Restore muss wieder verschlüsselt sein');
 });
 
 test('der SQLCipher-Cipher (AES-256) ist aktiv, nicht der Default ChaCha20', async () => {
