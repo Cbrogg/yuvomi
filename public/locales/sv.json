@@ -176,7 +176,7 @@
         "customizeReorderHandle": "Ordna om widget (dra eller piltangenter upp/ner)",
         "noRewards": "Inga belöningar konfigurerade",
         "rewardsPending": "{{count}} att godkänna",
-        "healthNoMeds": "Inga delade mediciner",
+        "healthNoMeds": "Inga mediciner ännu",
         "healthNoDosesToday": "Inga doser idag",
         "healthAllTaken": "Alla doser tagna",
         "healthDosesProgress": "{{taken}} av {{total}} doser tagna",

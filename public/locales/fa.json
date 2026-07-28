@@ -188,7 +188,7 @@
         "customizeReorderHandle": "مرتب‌سازی مجدد ابزارک (بکشید یا از کلیدهای بالا/پایین استفاده کنید)",
         "noRewards": "هنوز پاداشی تنظیم نشده",
         "rewardsPending": "{{count}} در انتظار تأیید",
-        "healthNoMeds": "داروی مشترکی نیست",
+        "healthNoMeds": "هنوز دارویی نیست",
         "healthNoDosesToday": "امروز دوزی نیست",
         "healthAllTaken": "همه دوزها مصرف شد",
         "healthDosesProgress": "{{taken}} از {{total}} دوز مصرف شد",

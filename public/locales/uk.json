@@ -176,7 +176,7 @@
         "customizeReorderHandle": "Перемістити віджет (перетягніть або стрілки вгору/вниз)",
         "noRewards": "Винагороди ще не налаштовані",
         "rewardsPending": "{{count}} на підтвердження",
-        "healthNoMeds": "Немає спільних ліків",
+        "healthNoMeds": "Ще немає ліків",
         "healthNoDosesToday": "На сьогодні прийомів немає",
         "healthAllTaken": "Усі дози прийнято",
         "healthDosesProgress": "Прийнято {{taken}} з {{total}} доз",

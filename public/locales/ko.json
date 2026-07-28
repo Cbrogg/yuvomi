@@ -188,7 +188,7 @@
         "customizeReorderHandle": "위젯 순서 변경 (끌거나 위/아래 화살표 사용)",
         "noRewards": "설정된 보상이 없습니다",
         "rewardsPending": "{{count}}건 승인 대기",
-        "healthNoMeds": "공유된 약이 없습니다",
+        "healthNoMeds": "아직 약 없음",
         "healthNoDosesToday": "오늘 복용 예정 없음",
         "healthAllTaken": "모든 복용 완료",
         "healthDosesProgress": "{{total}}회 중 {{taken}}회 복용",

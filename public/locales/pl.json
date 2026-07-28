@@ -188,7 +188,7 @@
         "customizeReorderHandle": "Zmień kolejność widżetu (przeciągnij lub strzałki góra/dół)",
         "noRewards": "Brak skonfigurowanych nagród",
         "rewardsPending": "{{count}} do zatwierdzenia",
-        "healthNoMeds": "Brak udostępnionych leków",
+        "healthNoMeds": "Brak leków",
         "healthNoDosesToday": "Brak dawek na dziś",
         "healthAllTaken": "Wszystkie dawki przyjęte",
         "healthDosesProgress": "Przyjęto {{taken}} z {{total}} dawek",

@@ -176,7 +176,7 @@
         "customizeReorderHandle": "Переместить виджет (перетащите или стрелки вверх/вниз)",
         "noRewards": "Награды ещё не настроены",
         "rewardsPending": "{{count}} на утверждение",
-        "healthNoMeds": "Нет общих лекарств",
+        "healthNoMeds": "Пока нет лекарств",
         "healthNoDosesToday": "На сегодня приёмов нет",
         "healthAllTaken": "Все дозы приняты",
         "healthDosesProgress": "Принято {{taken}} из {{total}} доз",

@@ -527,7 +527,7 @@ test('Dashboard-Endpoint: Belohnungen liefert Punktestand, Teilnehmerzahl und of
   }
 });
 
-test('Dashboard-Endpoint: Gesundheit zählt heute fällige familiensichtbare Dosen und Nachbestellungen', async () => {
+test('Dashboard-Endpoint: Gesundheit zählt heute fällige eigene Dosen und Nachbestellungen', async () => {
   const { get } = await import('../server/db.js');
   const { default: dashboardRouter } = await import('../server/routes/dashboard.js');
   const routeDb = get();
@@ -536,6 +536,10 @@ test('Dashboard-Endpoint: Gesundheit zählt heute fällige familiensichtbare Dos
   const owner = routeDb.prepare(`
     INSERT INTO users (username, display_name, password_hash, avatar_color, role)
     VALUES ('dashboard-health-owner', 'Health Owner', 'x', '#007AFF', 'admin')
+  `).run().lastInsertRowid;
+  const other = routeDb.prepare(`
+    INSERT INTO users (username, display_name, password_hash, avatar_color, role)
+    VALUES ('dashboard-health-other', 'Health Other', 'x', '#34C759', 'member')
   `).run().lastInsertRowid;
 
   // Familiensichtbares Medikament mit täglichem Plan (days_mask NULL) → heute fällig.
@@ -550,13 +554,22 @@ test('Dashboard-Endpoint: Gesundheit zählt heute fällige familiensichtbare Dos
     INSERT INTO medications (user_id, name, active, visibility, stock_qty, refill_threshold)
     VALUES (?, 'Ibuprofen', 1, 'family', 2, 5)
   `).run(owner);
-  // Privates Medikament mit Plan → darf NICHT auf dem geteilten Dashboard erscheinen.
+  // Eigenes privates Medikament mit Plan → zählt auf dem persönlichen Dashboard mit.
   const privMed = routeDb.prepare(`
     INSERT INTO medications (user_id, name, active, visibility) VALUES (?, 'Privat-Med', 1, 'private')
   `).run(owner).lastInsertRowid;
   routeDb.prepare(`
     INSERT INTO medication_schedules (medication_id, time_of_day, days_mask, active) VALUES (?, '09:00', NULL, 1)
   `).run(privMed);
+  // Fremdes Medikament, familiensichtbar, früheste Zeit + niedriger Bestand → darf weder
+  // als Dosis noch als nextDose noch als Nachbestellung erscheinen (Issue #592).
+  const foreignMed = routeDb.prepare(`
+    INSERT INTO medications (user_id, name, active, visibility, stock_qty, refill_threshold)
+    VALUES (?, 'Fremd-Med', 1, 'family', 0, 5)
+  `).run(other).lastInsertRowid;
+  routeDb.prepare(`
+    INSERT INTO medication_schedules (medication_id, time_of_day, days_mask, active) VALUES (?, '05:00', NULL, 1)
+  `).run(foreignMed);
 
   // Lokaler Tagesschlüssel wie im Handler (lokales Kalenderdatum), damit die
   // medication_logs-Zuordnung (substr(scheduled_at,1,10)) auch westlich von UTC greift.
@@ -613,13 +626,14 @@ test('Dashboard-Endpoint: Gesundheit zählt heute fällige familiensichtbare Dos
   try {
     const body = await (await fetch(`http://127.0.0.1:${server.address().port}/`)).json();
     nodeAssert.equal(body.health.hasMeds, true);
-    // Fällig heute: Vitamin D (08:00), Tagesmed (07:00), Genommenmed (10:00), Ausgelassenmed (11:00).
-    // Zukunfts-/Abgelaufen-Plan zählen nicht; privater Med ist ausgeschlossen.
-    nodeAssert.equal(body.health.dosesTotal, 4, 'vier familiensichtbare, heute fällige Dosen (privat/zukunft/abgelaufen ausgeschlossen)');
+    // Fällig heute: Tagesmed (07:00), Vitamin D (08:00), Privat-Med (09:00),
+    // Genommenmed (10:00), Ausgelassenmed (11:00). Zukunfts-/Abgelaufen-Plan zählen
+    // nicht; das fremde Med (05:00) ist trotz visibility='family' ausgeschlossen.
+    nodeAssert.equal(body.health.dosesTotal, 5, 'fünf eigene, heute fällige Dosen (zukunft/abgelaufen/fremd ausgeschlossen)');
     nodeAssert.equal(body.health.dosesTaken, 1, 'die geloggte Einnahme zählt als genommen');
     nodeAssert.equal(body.health.dosesSkipped, 1, 'die geloggte Auslassung zählt als ausgelassen');
-    nodeAssert.equal(body.health.nextDose.name, 'Tagesmed', 'früheste offene Dosis (07:00) ist die nächste');
-    nodeAssert.equal(body.health.lowStockCount, 1, 'niedriger Bestand wird gezählt');
+    nodeAssert.equal(body.health.nextDose.name, 'Tagesmed', 'früheste eigene offene Dosis (07:00) ist die nächste');
+    nodeAssert.equal(body.health.lowStockCount, 1, 'nur der eigene niedrige Bestand wird gezählt');
   } finally {
     await new Promise((resolve) => server.close(resolve));
     routeDb.prepare("DELETE FROM users WHERE username LIKE 'dashboard-health-%'").run();

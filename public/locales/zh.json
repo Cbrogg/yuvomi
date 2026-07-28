@@ -176,7 +176,7 @@
         "customizeReorderHandle": "重新排序小组件（拖动或使用上/下箭头键）",
         "noRewards": "尚未设置奖励",
         "rewardsPending": "{{count}} 项待批准",
-        "healthNoMeds": "没有共享的药物",
+        "healthNoMeds": "还没有药物",
         "healthNoDosesToday": "今天无需服药",
         "healthAllTaken": "已全部服用",
         "healthDosesProgress": "已服用 {{total}} 剂中的 {{taken}} 剂",

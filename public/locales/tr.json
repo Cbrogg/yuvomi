@@ -176,7 +176,7 @@
         "customizeReorderHandle": "Widget’ı yeniden sırala (sürükle veya yukarı/aşağı ok tuşları)",
         "noRewards": "Henüz ödül tanımlanmadı",
         "rewardsPending": "{{count}} onay bekliyor",
-        "healthNoMeds": "Paylaşılan ilaç yok",
+        "healthNoMeds": "Henüz ilaç yok",
         "healthNoDosesToday": "Bugün doz yok",
         "healthAllTaken": "Tüm dozlar alındı",
         "healthDosesProgress": "{{total}} dozdan {{taken}} alındı",

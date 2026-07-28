@@ -176,7 +176,7 @@
         "customizeReorderHandle": "Reorder widget (drag or arrow keys up/down)",
         "noRewards": "No rewards set up yet",
         "rewardsPending": "{{count}} to approve",
-        "healthNoMeds": "No shared medications",
+        "healthNoMeds": "No medications yet",
         "healthNoDosesToday": "No doses due today",
         "healthAllTaken": "All doses taken",
         "healthDosesProgress": "{{taken}} of {{total}} doses taken",

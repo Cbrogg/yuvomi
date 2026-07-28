@@ -176,7 +176,7 @@
         "customizeReorderHandle": "Riordina widget (trascina o frecce su/giù)",
         "noRewards": "Nessuna ricompensa configurata",
         "rewardsPending": "{{count}} da approvare",
-        "healthNoMeds": "Nessun farmaco condiviso",
+        "healthNoMeds": "Nessun farmaco",
         "healthNoDosesToday": "Nessuna dose prevista oggi",
         "healthAllTaken": "Tutte le dosi assunte",
         "healthDosesProgress": "{{taken}} di {{total}} dosi assunte",

@@ -176,7 +176,7 @@
         "customizeReorderHandle": "Widget herschikken (sleep of pijltoetsen omhoog/omlaag)",
         "noRewards": "Nog geen beloningen ingesteld",
         "rewardsPending": "{{count}} goed te keuren",
-        "healthNoMeds": "Geen gedeelde medicijnen",
+        "healthNoMeds": "Nog geen medicijnen",
         "healthNoDosesToday": "Vandaag geen doses gepland",
         "healthAllTaken": "Alle doses ingenomen",
         "healthDosesProgress": "{{taken}} van {{total}} doses ingenomen",

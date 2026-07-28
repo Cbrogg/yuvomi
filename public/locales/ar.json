@@ -176,7 +176,7 @@
         "customizeReorderHandle": "إعادة ترتيب العنصر (اسحب أو استخدم مفاتيح الأسهم لأعلى/لأسفل)",
         "noRewards": "لا توجد مكافآت مُعدّة بعد",
         "rewardsPending": "{{count}} بانتظار الموافقة",
-        "healthNoMeds": "لا أدوية مشتركة",
+        "healthNoMeds": "لا توجد أدوية بعد",
         "healthNoDosesToday": "لا جرعات اليوم",
         "healthAllTaken": "تم تناول جميع الجرعات",
         "healthDosesProgress": "تم تناول {{taken}} من {{total}} جرعة",

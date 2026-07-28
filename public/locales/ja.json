@@ -176,7 +176,7 @@
         "customizeReorderHandle": "ウィジェットの並べ替え（ドラッグまたは上下の矢印キー）",
         "noRewards": "ごほうびは未設定です",
         "rewardsPending": "{{count}} 件承認待ち",
-        "healthNoMeds": "共有中の薬はありません",
+        "healthNoMeds": "まだ薬がありません",
         "healthNoDosesToday": "今日の服用はありません",
         "healthAllTaken": "すべて服用済み",
         "healthDosesProgress": "{{total}} 回中 {{taken}} 回服用",

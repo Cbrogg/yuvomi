@@ -176,7 +176,7 @@
         "customizeReorderHandle": "Widget átrendezése (húzd vagy nyíl fel/le)",
         "noRewards": "Nincs jutalom beállítva",
         "rewardsPending": "{{count}} jóváhagyásra vár",
-        "healthNoMeds": "Nincs megosztott gyógyszer",
+        "healthNoMeds": "Még nincs gyógyszer",
         "healthNoDosesToday": "Mára nincs adag",
         "healthAllTaken": "Minden adag bevéve",
         "healthDosesProgress": "{{taken}} / {{total}} adag bevéve",

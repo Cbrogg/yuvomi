@@ -176,7 +176,7 @@
         "customizeReorderHandle": "विजेट पुनः क्रमित करें (खींचें या ऊपर/नीचे तीर कुंजियाँ)",
         "noRewards": "अभी कोई पुरस्कार सेट नहीं",
         "rewardsPending": "{{count}} स्वीकृति हेतु",
-        "healthNoMeds": "कोई साझा दवा नहीं",
+        "healthNoMeds": "अभी कोई दवा नहीं",
         "healthNoDosesToday": "आज कोई खुराक नहीं",
         "healthAllTaken": "सभी खुराक ले ली गईं",
         "healthDosesProgress": "{{total}} में से {{taken}} खुराक ली",

@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.50.1] - 2026-07-28
+
+### Fixed
+- The medication widget on the dashboard showed other people's medicines. It aggregated every medication marked family-visible across all members, so the "taken/total" bar, the next open dose and the refill chip mixed the whole household into what is meant to be a personal glance, while your own private medicines never appeared there at all. The widget now counts only your own medications, private and family-visible alike. Shared medicines stay on the Health page, whose visibility rules are unchanged.
+
 ## [1.50.0] - 2026-07-27
 
 ### Added
