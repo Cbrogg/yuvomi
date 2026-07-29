@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.54.0] - 2026-07-29
+
+### Added
+- Subscriptions can now define when they end: never, on a specific date, or after a set number of payments. Once the final payment passes, the subscription is automatically marked completed: it drops out of the monthly total and the renewal forecast, and its renewal reminder is removed, while it stays visible with a distinct completed state. Existing subscriptions keep running indefinitely as before. (#594)
+
 ## [1.53.2] - 2026-07-29
 
 ### Fixed
