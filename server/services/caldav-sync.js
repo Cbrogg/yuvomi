@@ -399,6 +399,10 @@ async function sync({ createClient } = {}) {
   const makeClient = createClient || defaultClientFactory;
 
   let totalSyncedEvents = 0;
+  // Getrennt von totalSyncedEvents: gesehen ist nicht geändert. Ein Kalender mit
+  // 47 Terminen liefert bei jedem Lauf 47 gesehene Events, aber im Regelfall
+  // null geänderte - und nur letzteres ist eine Meldung im Standard-Log wert.
+  let totalChangedEvents = 0;
   let successfulAccounts = 0;
 
   // Hot-Path-Statements einmal vorbereiten statt pro Event neu (#519): das spart bei
@@ -409,6 +413,15 @@ async function sync({ createClient } = {}) {
   );
   // Offene Löschungen einmal je Lauf, nicht je eingehendem Termin.
   const pendingDeletionUids = outbound.pendingDeletionUids('caldav');
+  // Der Vergleich in der WHERE-Klausel hält das Statement von Schreibvorgängen
+  // ab, die nichts ändern: ohne ihn meldet SQLite auch bei identischen Werten
+  // changes = 1, sodass sich ein Tick über einen unveränderten Kalender nicht
+  // von einem mit echten Änderungen unterscheiden lässt. Nebeneffekt: der
+  // Normalfall (nichts hat sich geändert) erzeugt keine WAL-Writes mehr.
+  // `IS NOT` statt `<>`, weil der Vergleich NULL-sicher sein muss, und die
+  // beiden abgeleiteten Spalten wiederholen ihren SET-Ausdruck, damit eine
+  // lokale Umfärbung (user_modified) bzw. ein fehlendes obj.url nicht als
+  // Unterschied zählt. Die Bindings der SET-Liste kommen dafür ein zweites Mal.
   const updEvent = conn.prepare(`
     UPDATE calendar_events
     SET title = ?, description = ?, start_datetime = ?, end_datetime = ?,
@@ -417,6 +430,18 @@ async function sync({ createClient } = {}) {
         calendar_ref_id = ?,
         external_object_url = COALESCE(?, external_object_url)
     WHERE id = ?
+      AND (   title               IS NOT ?
+           OR description         IS NOT ?
+           OR start_datetime      IS NOT ?
+           OR end_datetime        IS NOT ?
+           OR all_day             IS NOT ?
+           OR location            IS NOT ?
+           OR recurrence_rule     IS NOT ?
+           OR tzid                IS NOT ?
+           OR color               IS NOT CASE WHEN user_modified = 0 THEN ? ELSE color END
+           OR calendar_ref_id     IS NOT ?
+           OR external_object_url IS NOT COALESCE(?, external_object_url)
+          )
   `);
   const insEvent = conn.prepare(`
     INSERT INTO calendar_events
@@ -458,6 +483,7 @@ async function sync({ createClient } = {}) {
 
       // Inbound sync: CalDAV → Yuvomi
       let accountEventCount = 0;
+      let accountChangedCount = 0;
       let processedObjects = 0; // Zähler für den Event-Loop-Yield (#519)
 
       // Für die Löschphase: pro erfolgreich abgerufenem Kalender die gesehenen UIDs.
@@ -538,14 +564,20 @@ async function sync({ createClient } = {}) {
               }
 
               let eventId;
+              // Ob dieser Termin den lokalen Stand wirklich verändert hat. Nur
+              // das zählt als Änderung, nicht das bloße Wiedersehen.
+              let changed = false;
               if (existing) {
                 // Update: color nur überschreiben, solange der Nutzer nicht lokal
                 // umgefärbt hat (user_modified = 0); Titel/Zeit bleiben remote-geführt.
-                updEvent.run(
+                // Dieselben Werte binden die SET-Liste und den Vergleich in der
+                // WHERE-Klausel, weshalb sie zweimal übergeben werden.
+                const values = [
                   ev.summary, ev.description, ev.dtstart, ev.dtend,
                   ev.allDay ? 1 : 0, ev.location, ev.rrule, ev.tzid ?? null, evColor, calRefId,
-                  obj.url ?? null, existing.id
-                );
+                  obj.url ?? null,
+                ];
+                changed = updEvent.run(...values, existing.id, ...values).changes > 0;
                 eventId = existing.id;
               } else {
                 // Insert
@@ -555,17 +587,23 @@ async function sync({ createClient } = {}) {
                   obj.url ?? null
                 );
                 eventId = Number(inserted.lastInsertRowid);
+                changed = true;
                 // Standard-Zuweisung dieses Kalenders (#459) auf den neuen Termin.
                 assignDefaultToEvent(db.get(), eventId, calDefaultAssignee);
               }
 
               // EXDATE + ersetzte Override-Termine als Instanz-Ausnahmen ablegen,
               // damit die Expansion diese Vorkommen überspringt (#489/#549).
+              // INSERT OR IGNORE meldet changes = 0, wenn die Ausnahme schon
+              // steht, sodass auch hier nur echter Zuwachs als Änderung zählt.
               if (ev.rrule && Array.isArray(ev.exdates)) {
-                for (const exDate of ev.exdates) insException.run(eventId, exDate);
+                for (const exDate of ev.exdates) {
+                  if (insException.run(eventId, exDate).changes > 0) changed = true;
+                }
               }
 
               accountEventCount++;
+              if (changed) accountChangedCount++;
             } catch (err) {
               log.error(`Failed to upsert event UID ${ev.uid}:`, err.message);
             }
@@ -650,6 +688,7 @@ async function sync({ createClient } = {}) {
           `).run(uid, objectUrl, calRefId, event.id);
 
           accountEventCount++;
+          accountChangedCount++;
         } catch (err) {
           log.error(`Failed to upload event ${event.id} to CalDAV:`, err.message);
         }
@@ -660,12 +699,17 @@ async function sync({ createClient } = {}) {
         UPDATE caldav_accounts SET last_sync = ? WHERE id = ?
       `).run(new Date().toISOString(), account.id);
 
-      totalSyncedEvents += accountEventCount;
+      // Serverseitige Löschungen sind ebenfalls echte Änderungen am lokalen Stand.
+      accountChangedCount += deletedCount;
+
+      totalSyncedEvents  += accountEventCount;
+      totalChangedEvents += accountChangedCount;
       successfulAccounts++;
 
       log.debug(
-        `Account ${account.id} sync complete: ${accountEventCount} events` +
-        `${deletedCount > 0 ? `, ${deletedCount} deleted` : ''}.`
+        `Account ${account.id} sync complete: ${accountEventCount} events seen, ` +
+        `${accountChangedCount} changed` +
+        `${deletedCount > 0 ? ` (${deletedCount} deleted)` : ''}.`
       );
 
     } catch (err) {
@@ -674,12 +718,13 @@ async function sync({ createClient } = {}) {
     }
   }
 
-  // Die Zusammenfassung gehört nur ins Standard-Log, wenn der Lauf tatsächlich
-  // etwas verarbeitet hat. Ein Tick ohne Ergebnis (keine aktivierten Kalender,
-  // leere Kalender, fehlgeschlagene Accounts) bleibt still; Fehler melden sich
-  // ohnehin einzeln über log.error.
-  const summary = `CalDAV sync complete: ${successfulAccounts}/${accounts.length} accounts, ${totalSyncedEvents} events.`;
-  if (totalSyncedEvents > 0) log.info(summary);
+  // Die Zusammenfassung gehört nur ins Standard-Log, wenn der Lauf den lokalen
+  // Stand tatsächlich verändert hat. Ein Tick, der einen unveränderten Kalender
+  // bloß erneut abruft, bleibt damit ebenso still wie einer ohne aktivierte
+  // Kalender; Fehler melden sich ohnehin einzeln über log.error.
+  const summary = `CalDAV sync complete: ${successfulAccounts}/${accounts.length} accounts, `
+    + `${totalSyncedEvents} events seen, ${totalChangedEvents} changed.`;
+  if (totalChangedEvents > 0) log.info(summary);
   else log.debug(summary);
 
   return { success: true, syncedAccounts: successfulAccounts, syncedEvents: totalSyncedEvents };
