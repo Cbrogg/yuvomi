@@ -238,5 +238,115 @@ await (async () => {
   });
 })();
 
+// ---------------------------------------------------------------------------
+// Wiederholte Läufe über einen unveränderten Kalender.
+// Der ETag-Kurzschluss (notModified) greift nur, wenn der Server einen ETag
+// mitschickt. Ohne ihn kommt bei jedem Lauf der komplette Kalender erneut an
+// und lief bis dahin ungebremst in den Upsert.
+// ---------------------------------------------------------------------------
+
+console.log('\n[ICS-Subscription-Test] Unveränderte Läufe schreiben nicht\n');
+
+await (async () => {
+  const { MIGRATIONS } = await import('../server/db.js');
+  const dbModule = await import('../server/db.js');
+  const { sync } = await import('../server/services/ics-subscription.js');
+
+  // Eigene, voll migrierte DB: der Upsert braucht den UNIQUE-Index aus
+  // Migration 12, damit ON CONFLICT überhaupt greift. Hier better-sqlite3
+  // statt node:sqlite, weil syncOne() db.get().transaction() nutzt - die
+  // Methode gibt es nur im Produktionstreiber.
+  const { default: Database } = await import('better-sqlite3-multiple-ciphers');
+  const syncDb = new Database(':memory:');
+  syncDb.pragma('foreign_keys = ON');
+  syncDb.exec(`CREATE TABLE IF NOT EXISTS schema_migrations (
+    version INTEGER PRIMARY KEY, description TEXT NOT NULL,
+    applied_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')))`);
+  for (const m of MIGRATIONS) {
+    if (typeof m.up === 'function') m.up(syncDb); else syncDb.exec(m.up);
+    if (typeof m.afterUp === 'function') m.afterUp(syncDb);
+    syncDb.prepare('INSERT INTO schema_migrations (version, description) VALUES (?, ?)')
+      .run(m.version, m.description);
+  }
+  syncDb.prepare(`INSERT INTO users (username, display_name, password_hash, role)
+                  VALUES ('owner', 'Owner', 'x', 'admin')`).run();
+
+  const icsWith = (summary) => [
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Test//EN',
+    'BEGIN:VEVENT', 'UID:sync-1@test', 'DTSTART:20260714T090000Z',
+    'DTEND:20260714T100000Z', `SUMMARY:${summary}`, 'END:VEVENT',
+    'END:VCALENDAR', '',
+  ].join('\r\n');
+
+  // Server ohne ETag/Last-Modified: erzwingt den vollen Durchlauf pro Sync.
+  let body = icsWith('Zahnarzt');
+  const server = http.createServer((req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/calendar; charset=utf-8' });
+    res.end(Buffer.from(body, 'utf8'));
+  });
+  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  const { port } = server.address();
+
+  process.env[ENV_FLAG] = '1';
+  dbModule._setTestDatabase(syncDb);
+  try {
+    const subId = syncDb.prepare(`
+      INSERT INTO ics_subscriptions (name, url, color, created_by)
+      VALUES ('Testabo', ?, '#123456', 1)
+    `).run(`http://127.0.0.1:${port}/cal.ics`).lastInsertRowid;
+
+    await atest('Erster Sync legt den Termin an', async () => {
+      await sync(subId);
+      const n = syncDb.prepare(
+        'SELECT COUNT(*) AS n FROM calendar_events WHERE subscription_id = ?'
+      ).get(subId).n;
+      assert(n === 1, `erwartet 1 Termin, waren ${n}`);
+    });
+
+    await atest('Zweiter Sync über unveränderte Daten fasst keine Zeile an', async () => {
+      // last_sync/etag-Update der Subscription zählt mit, deshalb nur die
+      // Termin-Tabelle betrachten: ihre Zeilen dürfen unangetastet bleiben.
+      const before = syncDb.prepare(
+        'SELECT id, title, start_datetime, color FROM calendar_events WHERE subscription_id = ? ORDER BY id'
+      ).all(subId);
+      const changesBefore = syncDb.prepare('SELECT total_changes() AS n').get().n;
+
+      // Der Logger schreibt info über console.info (server/logger.js) - ein
+      // leerer Kanal beweist, dass die Zusammenfassung auf debug bleibt.
+      const realInfo = console.info;
+      const infoLines = [];
+      console.info = (...args) => infoLines.push(args.join(' '));
+      try { await sync(subId); } finally { console.info = realInfo; }
+      assert(infoLines.length === 0,
+        `unveränderter Sync meldete sich auf info: ${JSON.stringify(infoLines)}`);
+
+      const after = syncDb.prepare(
+        'SELECT id, title, start_datetime, color FROM calendar_events WHERE subscription_id = ? ORDER BY id'
+      ).all(subId);
+      const delta = syncDb.prepare('SELECT total_changes() AS n').get().n - changesBefore;
+
+      assert(before.length === 1, 'Vorbedingung: der Termin muss vorliegen');
+      assert(JSON.stringify(before) === JSON.stringify(after), 'Termin wurde verändert');
+      // Genau eine Änderung ist erlaubt: das last_sync/etag-UPDATE der Subscription.
+      assert(delta <= 1, `unveränderter Sync schrieb ${delta} Zeilen statt höchstens 1`);
+    });
+
+    // Gegenprobe: der Vergleich darf echte Änderungen nicht wegfiltern.
+    await atest('Geänderter Titel kommt weiterhin an', async () => {
+      body = icsWith('Zahnarzt (verschoben)');
+      await sync(subId);
+      const row = syncDb.prepare(
+        'SELECT title FROM calendar_events WHERE subscription_id = ?'
+      ).get(subId);
+      assert(row.title === 'Zahnarzt (verschoben)', `Titel blieb "${row.title}"`);
+    });
+  } finally {
+    dbModule._resetTestDatabase();
+    delete process.env[ENV_FLAG];
+    await new Promise((r) => server.close(r));
+    syncDb.close();
+  }
+})();
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

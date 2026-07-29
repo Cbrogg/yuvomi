@@ -179,7 +179,20 @@ async function syncOne(sub) {
         all_day        = excluded.all_day,
         location       = excluded.location,
         color          = excluded.color
+      -- Der Wertvergleich hält Schreibvorgänge ab, die nichts ändern. Liefert
+      -- ein Server kein ETag, kommt bei jedem Lauf der komplette Kalender neu
+      -- an, und ohne ihn würde davon jede Zeile neu geschrieben. IS NOT statt
+      -- Ungleich wegen der NULL-Sicherheit; die Gegenwerte stehen bereits als
+      -- excluded.* bereit, es braucht also keine zweiten Bindings.
       WHERE user_modified = 0
+        AND (   title          IS NOT excluded.title
+             OR description    IS NOT excluded.description
+             OR start_datetime IS NOT excluded.start_datetime
+             OR end_datetime   IS NOT excluded.end_datetime
+             OR all_day        IS NOT excluded.all_day
+             OR location       IS NOT excluded.location
+             OR color          IS NOT excluded.color
+            )
     `);
 
     const deleteStale = db.get().prepare(`
@@ -189,15 +202,20 @@ async function syncOne(sub) {
         AND user_modified = 0
     `);
 
+    // Zählt, was den lokalen Stand wirklich verändert hat. Gesehen ist nicht
+    // geändert: ein Abo mit 200 Terminen liefert bei jedem Lauf 200 Events,
+    // im Regelfall aber keine einzige Änderung.
+    let changedEvents = 0;
+
     db.get().transaction(() => {
       for (const ev of flatEvents) {
         try {
           // Event-Eigenfarbe (RFC 7986) hat Vorrang, sonst die Abo-Farbe.
-          upsert.run(ev.summary, ev.description, ev.dtstart, ev.dtend,
-            ev.allDay ? 1 : 0, ev.location, ev.color || sub.color, ev.uid, sub.id, ev.rrule, createdBy);
+          changedEvents += upsert.run(ev.summary, ev.description, ev.dtstart, ev.dtend,
+            ev.allDay ? 1 : 0, ev.location, ev.color || sub.color, ev.uid, sub.id, ev.rrule, createdBy).changes;
         } catch (err) { log.error(`Upsert UID ${ev.uid}: ${err.message}`); }
       }
-      deleteStale.run(sub.id, JSON.stringify([...seenUids]));
+      changedEvents += deleteStale.run(sub.id, JSON.stringify([...seenUids])).changes;
 
       // #459: neu importierte Termine der Standard-Person zuweisen.
       if (sub.default_assignee_user_id) {
@@ -214,7 +232,11 @@ async function syncOne(sub) {
         .run(new Date().toISOString(), newEtag, newLastModified, sub.id);
     })();
 
-    log.info(`Subscription ${sub.id} (${sub.name}): ${flatEvents.length} events synced.`);
+    // Ein Lauf, der nichts verändert hat, gehört nicht ins Standard-Log: er
+    // wiederholt sich bei jedem Scheduler-Tick.
+    const summary = `Subscription ${sub.id} (${sub.name}): ${flatEvents.length} events seen, ${changedEvents} changed.`;
+    if (changedEvents > 0) log.info(summary);
+    else log.debug(summary);
   } finally { syncingNow.delete(sub.id); }
 }
 
