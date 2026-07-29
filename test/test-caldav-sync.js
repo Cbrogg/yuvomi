@@ -856,4 +856,82 @@ describe('CalDAV: No-op-Syncs bleiben im Standard-Log-Level still', () => {
       d.close();
     }
   });
+
+  // --- Wiederholte Läufe über unveränderte Termine ---------------------------
+  // Der Regelfall im Betrieb: der Scheduler ruft denselben Kalender immer
+  // wieder ab, ohne dass sich etwas geändert hat.
+
+  const CALENDAR_URL = 'https://dav.example/cal-1/';
+
+  function seedAccountWithCalendar(d) {
+    d.exec(`
+      INSERT INTO caldav_accounts (name, caldav_url, username, password)
+        VALUES ('Radicale', 'https://dav.example/', 'u', 'p');
+      INSERT INTO caldav_calendar_selection
+        (account_id, calendar_url, calendar_name, calendar_color, enabled)
+        VALUES (1, '${CALENDAR_URL}', 'Cal 1', '#4A90E2', 1);
+    `);
+  }
+
+  // Client, der einen einzelnen Termin mit steuerbarem Titel liefert.
+  function clientWith(summary) {
+    return async () => ({
+      fetchCalendars:       async () => [{ url: CALENDAR_URL, displayName: 'Cal 1' }],
+      fetchCalendarObjects: async () => [{
+        data: [
+          'BEGIN:VCALENDAR', 'VERSION:2.0', 'BEGIN:VEVENT',
+          'UID:evt-1@test', `SUMMARY:${summary}`,
+          'DTSTART:20260101T100000Z', 'DTEND:20260101T110000Z',
+          'END:VEVENT', 'END:VCALENDAR',
+        ].join('\r\n'),
+      }],
+      createCalendarObject: async () => ({}),
+    });
+  }
+
+  it('bleibt still, wenn ein zweiter Lauf denselben Termin unverändert sieht', async () => {
+    const d = buildDb();
+    seedAccountWithCalendar(d);
+    _setTestDatabase(d);
+    try {
+      const createClient = clientWith('Event 1');
+      await captureConsole(() => sync({ createClient })); // erster Lauf legt an
+
+      const lines = await captureConsole(async () => {
+        const res = await sync({ createClient });
+        // Der Termin wird weiterhin gesehen, er ändert nur nichts mehr.
+        assert.strictEqual(res.syncedEvents, 1);
+      });
+      assert.deepStrictEqual(lines.info, [], 'unveränderter Lauf muss schweigen');
+      const row = d.prepare('SELECT COUNT(*) AS n FROM calendar_events').get();
+      assert.strictEqual(row.n, 1, 'kein Duplikat angelegt');
+    } finally {
+      _resetTestDatabase();
+      d.close();
+    }
+  });
+
+  // Gegenprobe zur WHERE-Klausel: sie darf echte Änderungen nicht wegfiltern.
+  // Ein falsches Negativ hier wäre Datenverlust, nicht bloß fehlendes Logging.
+  it('übernimmt und meldet einen Termin, dessen Titel sich geändert hat', async () => {
+    const d = buildDb();
+    seedAccountWithCalendar(d);
+    _setTestDatabase(d);
+    try {
+      await captureConsole(() => sync({ createClient: clientWith('Event 1') }));
+
+      const lines = await captureConsole(() =>
+        sync({ createClient: clientWith('Event 1 geändert') })
+      );
+      assert.ok(
+        lines.info.some((l) => l.includes('1 events seen, 1 changed')),
+        `Änderung nicht gemeldet: ${JSON.stringify(lines.info)}`
+      );
+      const row = d.prepare('SELECT title FROM calendar_events').get();
+      assert.strictEqual(row.title, 'Event 1 geändert', 'Änderung nicht übernommen');
+    } finally {
+      _resetTestDatabase();
+      d.close();
+    }
+  });
 });
