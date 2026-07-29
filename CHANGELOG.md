@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.53.1] - 2026-07-29
+
+### Changed
+- Sync runs no longer report an idle pass in the log. An account with no enabled calendar or address book, a holiday sync that finds nothing to import, and a Google account in read-only mode were each logged on every single run, which filled the container log with lines describing that nothing happened. The messages are still there under `LOG_LEVEL=debug`, which is now documented in the installation guide.
+
+### Fixed
+- The MCP endpoint can create and change data again through its OpenAPI bridge. Every write via `call_api_operation` failed with "Invalid JSON in request body" for AI clients that pass tool arguments as text, because the request body was encoded a second time on its way to the API. Reading was unaffected, and so were the built-in tools for tasks, shopping and calendar, which do not go through the bridge. (#599)
+
 ## [1.53.0] - 2026-07-28
 
 ### Security
