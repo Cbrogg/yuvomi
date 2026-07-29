@@ -436,7 +436,7 @@ async function sync({ createClient } = {}) {
 
   for (const account of accounts) {
     try {
-      log.info(`Syncing CalDAV account ${account.id} ("${account.name}")...`);
+      log.debug(`Syncing CalDAV account ${account.id} ("${account.name}")...`);
 
       // Create tsdav client (oder injizierte Test-Factory)
       const client = await makeClient(account);
@@ -663,7 +663,7 @@ async function sync({ createClient } = {}) {
       totalSyncedEvents += accountEventCount;
       successfulAccounts++;
 
-      log.info(
+      log.debug(
         `Account ${account.id} sync complete: ${accountEventCount} events` +
         `${deletedCount > 0 ? `, ${deletedCount} deleted` : ''}.`
       );
@@ -674,7 +674,13 @@ async function sync({ createClient } = {}) {
     }
   }
 
-  log.info(`CalDAV sync complete: ${successfulAccounts}/${accounts.length} accounts, ${totalSyncedEvents} events.`);
+  // Die Zusammenfassung gehört nur ins Standard-Log, wenn der Lauf tatsächlich
+  // etwas verarbeitet hat. Ein Tick ohne Ergebnis (keine aktivierten Kalender,
+  // leere Kalender, fehlgeschlagene Accounts) bleibt still; Fehler melden sich
+  // ohnehin einzeln über log.error.
+  const summary = `CalDAV sync complete: ${successfulAccounts}/${accounts.length} accounts, ${totalSyncedEvents} events.`;
+  if (totalSyncedEvents > 0) log.info(summary);
+  else log.debug(summary);
 
   return { success: true, syncedAccounts: successfulAccounts, syncedEvents: totalSyncedEvents };
 }
