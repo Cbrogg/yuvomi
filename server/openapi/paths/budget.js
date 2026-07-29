@@ -105,7 +105,7 @@ export function budgetPaths() {
       post: op({ summary: 'Find selectable logo options from a website URL or service name', tag: 'Budget', stateChanging: true, requestBody: jsonBody(null) }),
     },
     '/api/v1/budget/subscriptions/{id}/renew': {
-      post: op({ summary: 'Advance a subscription to its next renewal date', tag: 'Budget', params: [idParam()], stateChanging: true }),
+      post: op({ summary: 'Advance a subscription to its next renewal date, or complete it when its end condition is reached', tag: 'Budget', params: [idParam()], stateChanging: true }),
     },
     '/api/v1/budget/subscriptions/{id}': {
       put: op({ summary: 'Update subscription', tag: 'Budget', params: [idParam()], stateChanging: true, requestBody: jsonBody(null) }),

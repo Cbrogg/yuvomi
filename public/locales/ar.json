@@ -2906,7 +2906,20 @@
         "filterLabelCategory": "الفئة",
         "filterLabelMethod": "طريقة الدفع",
         "filterLabelStatus": "الحالة",
-        "filterLabelSort": "الترتيب"
+        "filterLabelSort": "الترتيب",
+        "endLabel": "الانتهاء",
+        "endNever": "بلا نهاية",
+        "endOnDate": "في تاريخ محدد",
+        "endAfterCount": "بعد عدد من الدفعات",
+        "endDateLabel": "تاريخ الانتهاء",
+        "endCountLabel": "عدد الدفعات",
+        "endCountInvalid": "أدخل عددًا لا يقل عن 1.",
+        "endsOn": "ينتهي في {{date}}",
+        "endsAfter_one": "المتبقّي: {{count}} دفعة",
+        "completed": "مكتمل",
+        "completedOn": "اكتمل في {{date}}",
+        "completedToast": "اكتمل الاشتراك.",
+        "endsAfter": "المتبقّي: {{count}} دفعة"
     },
     "health": {
         "tabs": {

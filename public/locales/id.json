@@ -2906,7 +2906,20 @@
         "filterLabelCategory": "Kategori",
         "filterLabelMethod": "Metode pembayaran",
         "filterLabelStatus": "Status",
-        "filterLabelSort": "Urutan"
+        "filterLabelSort": "Urutan",
+        "endLabel": "Berakhir",
+        "endNever": "Berjalan tanpa batas",
+        "endOnDate": "Pada tanggal",
+        "endAfterCount": "Setelah sejumlah pembayaran",
+        "endDateLabel": "Tanggal berakhir",
+        "endCountLabel": "Jumlah pembayaran",
+        "endCountInvalid": "Masukkan jumlah minimal 1.",
+        "endsOn": "Berakhir pada {{date}}",
+        "endsAfter_one": "Tersisa {{count}} pembayaran",
+        "completed": "Selesai",
+        "completedOn": "Selesai pada {{date}}",
+        "completedToast": "Langganan selesai.",
+        "endsAfter": "Tersisa {{count}} pembayaran"
     },
     "health": {
         "tabs": {

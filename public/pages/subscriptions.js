@@ -77,6 +77,24 @@ function addCycleDate(date, cycle, interval) {
   return next;
 }
 
+// Letztes einzuplanendes Fälligkeitsdatum bei begrenztem Abo (#594), sonst null.
+// Für 'after_count' wird das Startdatum um die verbleibenden Zyklen fortgeschrieben.
+function subscriptionEndBoundary(subscription) {
+  if (subscription.end_type === 'on_date' && subscription.end_date) {
+    return new Date(`${subscription.end_date}T00:00:00`);
+  }
+  if (subscription.end_type === 'after_count') {
+    const remaining = Number(subscription.occurrence_count) - Number(subscription.occurrences_done || 0);
+    if (remaining <= 0) return new Date(0);
+    let last = new Date(`${subscription.next_payment_date}T00:00:00`);
+    for (let index = 1; index < remaining; index += 1) {
+      last = addCycleDate(last, subscription.billing_cycle, subscription.cycle_interval || 1);
+    }
+    return last;
+  }
+  return null;
+}
+
 function monthKey(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 }
@@ -115,7 +133,7 @@ async function load({ refreshRates = false } = {}) {
   if (state.query) params.set('q', state.query);
   if (state.categoryId) params.set('category_id', state.categoryId);
   if (state.paymentMethodId) params.set('payment_method_id', state.paymentMethodId);
-  if (state.status !== 'all') params.set('enabled', state.status === 'active' ? 'true' : 'false');
+  if (state.status !== 'all') params.set('status', state.status);
   if (refreshRates) params.set('refresh_rates', 'true');
 
   const [list, meta, settings] = await Promise.all([
@@ -154,7 +172,8 @@ export async function render(target, { user } = {}) {
           <select class="form-input subscriptions-filter" id="subscriptions-status-filter">
             <option value="all">${t('subscriptions.statusAll')}</option>
             <option value="active">${t('subscriptions.statusActive')}</option>
-            <option value="disabled">${t('subscriptions.statusDisabled')}</option>
+            <option value="paused">${t('subscriptions.statusDisabled')}</option>
+            <option value="completed">${t('subscriptions.completed')}</option>
           </select>
         </label>
         <label class="subscriptions-filter-field">
@@ -406,9 +425,10 @@ function renewalForecast() {
   const monthMap = new Map(months.map((row) => [row.key, row]));
   const end = addMonths(start, months.length);
   for (const subscription of state.subscriptions.filter((row) => row.enabled)) {
+    const boundary = subscriptionEndBoundary(subscription);
     let due = new Date(`${subscription.next_payment_date}T00:00:00`);
     while (due < start) due = addCycleDate(due, subscription.billing_cycle, subscription.cycle_interval || 1);
-    while (due < end) {
+    while (due < end && (!boundary || due <= boundary)) {
       const row = monthMap.get(monthKey(due));
       if (row) row.amount += dueAmount(subscription);
       due = addCycleDate(due, subscription.billing_cycle, subscription.cycle_interval || 1);
@@ -491,13 +511,37 @@ function renderBreakdown(title, rows) {
   `;
 }
 
+function statusMeta(subscription) {
+  const status = subscription.status || (subscription.enabled ? 'active' : 'paused');
+  if (status === 'completed') return { cardClass: 'subscription-card--completed', badgeClass: 'subscription-status--completed', label: t('subscriptions.completed') };
+  if (status === 'active') return { cardClass: '', badgeClass: 'subscription-status--active', label: t('subscriptions.active') };
+  return { cardClass: 'subscription-card--disabled', badgeClass: '', label: t('subscriptions.disabled') };
+}
+
+// Ende-Zeile in der Card (#594): abgeschlossen, Enddatum oder Restzahlungen.
+function endInfoLabel(subscription) {
+  if (subscription.status === 'completed') {
+    const day = subscription.completed_at ? String(subscription.completed_at).slice(0, 10) : null;
+    return { icon: 'circle-check', text: day ? t('subscriptions.completedOn', { date: formatDate(day) }) : t('subscriptions.completed') };
+  }
+  if (subscription.end_type === 'on_date' && subscription.end_date) {
+    return { icon: 'calendar-x', text: t('subscriptions.endsOn', { date: formatDate(subscription.end_date) }) };
+  }
+  if (subscription.end_type === 'after_count') {
+    return { icon: 'list-ordered', text: t('subscriptions.endsAfter', { count: Number(subscription.occurrences_remaining ?? 0) }) };
+  }
+  return null;
+}
+
 function renderCard(subscription) {
   const brandColor = subscription.brand_color || subscription.category_color || '#0F766E';
   const converted = subscription.monthly_base === null
     ? t('subscriptions.conversionUnavailable')
     : t('subscriptions.monthlyEquivalent', { amount: money(subscription.monthly_base) });
+  const status = statusMeta(subscription);
+  const endInfo = endInfoLabel(subscription);
   return `
-    <article class="subscription-card ${subscription.enabled ? '' : 'subscription-card--disabled'}"
+    <article class="subscription-card ${status.cardClass}"
              data-id="${subscription.id}" style="--subscription-color:${esc(brandColor)}">
       <div class="subscription-card__brand">
         ${subscription.logo_data
@@ -510,8 +554,8 @@ function renderCard(subscription) {
             <h3>${esc(subscription.name)}</h3>
             <p>${esc(subscription.description || categoryLabel(subscription.category_name))}</p>
           </div>
-          <span class="subscription-status ${subscription.enabled ? 'subscription-status--active' : ''}">
-            ${subscription.enabled ? t('subscriptions.active') : t('subscriptions.disabled')}
+          <span class="subscription-status ${status.badgeClass}">
+            ${status.label}
           </span>
         </div>
         <div class="subscription-card__meta">
@@ -519,6 +563,7 @@ function renderCard(subscription) {
           <span><i data-lucide="repeat-2" aria-hidden="true"></i>${cycleLabel(subscription)}</span>
           <span><i data-lucide="wallet-cards" aria-hidden="true"></i>${esc(subscription.payment_method_name || t('subscriptions.unspecified'))}</span>
           <span><i data-lucide="bell" aria-hidden="true"></i>${t('subscriptions.reminderMeta', { count: subscription.reminder_days })}</span>
+          ${endInfo ? `<span><i data-lucide="${endInfo.icon}" aria-hidden="true"></i>${esc(endInfo.text)}</span>` : ''}
         </div>
       </div>
       <div class="subscription-card__cost">
@@ -842,6 +887,25 @@ export function openSubscriptionModal(subscription = null) {
             <input class="form-input" id="subscription-reminder" type="number" min="0" max="365" step="1" value="${subscription?.reminder_days ?? 3}">
           </div>
         </div>
+        <div class="form-group">
+          <label class="form-label" for="subscription-end-type">${t('subscriptions.endLabel')}</label>
+          <select class="form-input" id="subscription-end-type">
+            <option value="never">${t('subscriptions.endNever')}</option>
+            <option value="on_date">${t('subscriptions.endOnDate')}</option>
+            <option value="after_count">${t('subscriptions.endAfterCount')}</option>
+          </select>
+        </div>
+        <div class="form-grid-2">
+          <div class="form-group" id="subscription-end-date-field" ${(subscription?.end_type === 'on_date') ? '' : 'hidden'}>
+            <label class="form-label" for="subscription-end-date">${t('subscriptions.endDateLabel')}</label>
+            <yuvomi-datepicker id="subscription-end-date" type="date"
+                   value="${esc(subscription?.end_date || '')}"></yuvomi-datepicker>
+          </div>
+          <div class="form-group" id="subscription-end-count-field" ${(subscription?.end_type === 'after_count') ? '' : 'hidden'}>
+            <label class="form-label" for="subscription-end-count">${t('subscriptions.endCountLabel')}</label>
+            <input class="form-input" id="subscription-end-count" type="number" min="1" max="1200" step="1" value="${subscription?.occurrence_count ?? ''}">
+          </div>
+        </div>
       </section>
 
       ${advancedSection(advancedFieldsHtml, { open: advancedOpen })}
@@ -870,6 +934,15 @@ export function openSubscriptionModal(subscription = null) {
       wireCombobox(panel, 'subscription-cycle');
       wireCombobox(panel, 'subscription-category');
       wireCombobox(panel, 'subscription-method');
+      // Ende-Bedingung (#594): das passende Zusatzfeld ein-/ausblenden.
+      const endTypeSelect = panel.querySelector('#subscription-end-type');
+      endTypeSelect.value = subscription?.end_type || 'never';
+      const syncEndFields = () => {
+        panel.querySelector('#subscription-end-date-field').hidden = endTypeSelect.value !== 'on_date';
+        panel.querySelector('#subscription-end-count-field').hidden = endTypeSelect.value !== 'after_count';
+      };
+      endTypeSelect.addEventListener('change', syncEndFields);
+      syncEndFields();
       panel.querySelector('#subscription-cancel').addEventListener('click', closeModal);
       panel.querySelector('#subscription-logo').addEventListener('change', async (event) => {
         const file = event.target.files[0];
@@ -925,6 +998,26 @@ async function saveSubscription(panel, existing, searchedLogoData = null) {
     reportFieldError(panel.querySelector('#subscription-currency-search'), t('subscriptions.currencyRequired'));
     return;
   }
+  // Ende-Bedingung (#594): nur das aktive Zusatzfeld liefert einen Wert.
+  const endType = panel.querySelector('#subscription-end-type').value;
+  let endDate = null;
+  let occurrenceCount = null;
+  if (endType === 'on_date') {
+    const endDateInput = panel.querySelector('#subscription-end-date');
+    if (!isDateInputValid(endDateInput.value)) {
+      reportFieldError(endDateInput, t('subscriptions.invalidDate'));
+      return;
+    }
+    endDate = parseDateInput(endDateInput.value);
+  } else if (endType === 'after_count') {
+    const countInput = panel.querySelector('#subscription-end-count');
+    const count = Number(countInput.value);
+    if (!Number.isInteger(count) || count < 1) {
+      reportFieldError(countInput, t('subscriptions.endCountInvalid'));
+      return;
+    }
+    occurrenceCount = count;
+  }
   const submit = panel.querySelector('[type="submit"]');
   submit.disabled = true;
   try {
@@ -946,6 +1039,9 @@ async function saveSubscription(panel, existing, searchedLogoData = null) {
       logo_data: logoData,
       notes: panel.querySelector('#subscription-notes').value.trim() || null,
       enabled: panel.querySelector('#subscription-enabled').checked,
+      end_type: endType,
+      end_date: endDate,
+      occurrence_count: occurrenceCount,
     };
     if (existing) await api.put(`/budget/subscriptions/${existing.id}`, payload);
     else await api.post('/budget/subscriptions', payload);
@@ -1053,9 +1149,10 @@ async function toggleSubscription(subscription) {
 
 async function renewSubscription(subscription) {
   try {
-    await api.post(`/budget/subscriptions/${subscription.id}/renew`, {});
+    const response = await api.post(`/budget/subscriptions/${subscription.id}/renew`, {});
     await reload();
-    window.yuvomi?.showToast(t('subscriptions.renewedToast'), 'success');
+    const completed = response.data?.status === 'completed';
+    window.yuvomi?.showToast(t(completed ? 'subscriptions.completedToast' : 'subscriptions.renewedToast'), 'success');
   } catch (err) {
     window.yuvomi?.showToast(err.data?.error || t('common.unknownError'), 'danger');
   }

@@ -2906,7 +2906,20 @@
         "filterLabelCategory": "Kategorie",
         "filterLabelMethod": "Zahlungsart",
         "filterLabelStatus": "Status",
-        "filterLabelSort": "Sortierung"
+        "filterLabelSort": "Sortierung",
+        "endLabel": "Ende",
+        "endNever": "Läuft unbegrenzt",
+        "endOnDate": "An einem Datum",
+        "endAfterCount": "Nach Anzahl Zahlungen",
+        "endDateLabel": "Enddatum",
+        "endCountLabel": "Anzahl Zahlungen",
+        "endCountInvalid": "Gib eine Anzahl von mindestens 1 ein.",
+        "endsOn": "Endet am {{date}}",
+        "endsAfter_one": "Noch {{count}} Zahlung",
+        "completed": "Abgeschlossen",
+        "completedOn": "Abgeschlossen am {{date}}",
+        "completedToast": "Abo abgeschlossen.",
+        "endsAfter": "Noch {{count}} Zahlungen"
     },
     "health": {
         "tabs": {

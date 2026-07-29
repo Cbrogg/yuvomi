@@ -2906,7 +2906,20 @@
         "filterLabelCategory": "Категория",
         "filterLabelMethod": "Способ оплаты",
         "filterLabelStatus": "Статус",
-        "filterLabelSort": "Сортировка"
+        "filterLabelSort": "Сортировка",
+        "endLabel": "Окончание",
+        "endNever": "Бессрочно",
+        "endOnDate": "В определённую дату",
+        "endAfterCount": "После числа платежей",
+        "endDateLabel": "Дата окончания",
+        "endCountLabel": "Число платежей",
+        "endCountInvalid": "Укажите количество не меньше 1.",
+        "endsOn": "Заканчивается {{date}}",
+        "endsAfter_one": "Остался {{count}} платёж",
+        "completed": "Завершено",
+        "completedOn": "Завершено {{date}}",
+        "completedToast": "Подписка завершена.",
+        "endsAfter": "Осталось {{count}} платежей"
     },
     "health": {
         "tabs": {

@@ -2906,7 +2906,20 @@
         "filterLabelCategory": "Category",
         "filterLabelMethod": "Payment method",
         "filterLabelStatus": "Status",
-        "filterLabelSort": "Sort"
+        "filterLabelSort": "Sort",
+        "endLabel": "Ends",
+        "endNever": "Runs indefinitely",
+        "endOnDate": "On a date",
+        "endAfterCount": "After a number of payments",
+        "endDateLabel": "End date",
+        "endCountLabel": "Number of payments",
+        "endCountInvalid": "Enter a count of at least 1.",
+        "endsOn": "Ends on {{date}}",
+        "endsAfter_one": "{{count}} payment left",
+        "completed": "Completed",
+        "completedOn": "Completed on {{date}}",
+        "completedToast": "Subscription completed.",
+        "endsAfter": "{{count}} payments left"
     },
     "health": {
         "tabs": {

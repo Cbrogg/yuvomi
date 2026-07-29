@@ -2906,7 +2906,20 @@
         "filterLabelCategory": "دسته‌بندی",
         "filterLabelMethod": "روش پرداخت",
         "filterLabelStatus": "وضعیت",
-        "filterLabelSort": "مرتب‌سازی"
+        "filterLabelSort": "مرتب‌سازی",
+        "endLabel": "پایان",
+        "endNever": "بدون پایان",
+        "endOnDate": "در یک تاریخ",
+        "endAfterCount": "پس از تعداد پرداخت‌ها",
+        "endDateLabel": "تاریخ پایان",
+        "endCountLabel": "تعداد پرداخت‌ها",
+        "endCountInvalid": "عددی حداقل ۱ وارد کنید.",
+        "endsOn": "پایان در {{date}}",
+        "endsAfter_one": "{{count}} پرداخت باقی‌مانده",
+        "completed": "تکمیل‌شده",
+        "completedOn": "تکمیل در {{date}}",
+        "completedToast": "اشتراک تکمیل شد.",
+        "endsAfter": "{{count}} پرداخت باقی‌مانده"
     },
     "health": {
         "tabs": {

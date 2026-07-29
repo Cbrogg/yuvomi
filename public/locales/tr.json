@@ -2906,7 +2906,20 @@
         "filterLabelCategory": "Kategori",
         "filterLabelMethod": "Ödeme yöntemi",
         "filterLabelStatus": "Durum",
-        "filterLabelSort": "Sıralama"
+        "filterLabelSort": "Sıralama",
+        "endLabel": "Bitiş",
+        "endNever": "Süresiz",
+        "endOnDate": "Bir tarihte",
+        "endAfterCount": "Belirli ödeme sayısından sonra",
+        "endDateLabel": "Bitiş tarihi",
+        "endCountLabel": "Ödeme sayısı",
+        "endCountInvalid": "En az 1 olan bir sayı gir.",
+        "endsOn": "{{date}} tarihinde biter",
+        "endsAfter_one": "{{count}} ödeme kaldı",
+        "completed": "Tamamlandı",
+        "completedOn": "{{date}} tarihinde tamamlandı",
+        "completedToast": "Abonelik tamamlandı.",
+        "endsAfter": "{{count}} ödeme kaldı"
     },
     "health": {
         "tabs": {

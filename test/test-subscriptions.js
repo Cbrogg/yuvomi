@@ -25,6 +25,19 @@ try {
   assert.equal(service.convertAmount(10, 'USD', 'EUR', { USD: 0.9 }), 9);
   assert.equal(service.convertAmount(10, 'EUR', 'EUR', {}), 10);
   assert.equal(service.convertAmount(10, 'USD', 'EUR', {}), null);
+
+  // Ende-Bedingung (#594): resolveRenewal + occurrencesRemaining.
+  const renewNever = service.resolveRenewal({ next_payment_date: '2026-01-10', billing_cycle: 'monthly', cycle_interval: 1, end_type: 'never', occurrences_done: 3 });
+  assert.deepEqual(renewNever, { completed: false, nextDate: '2026-02-10', occurrencesDone: 4 });
+  // after_count: die letzte (occurrence_count-te) Zahlung schließt ab.
+  assert.equal(service.resolveRenewal({ next_payment_date: '2026-01-10', billing_cycle: 'monthly', cycle_interval: 1, end_type: 'after_count', occurrence_count: 4, occurrences_done: 3 }).completed, true);
+  assert.equal(service.resolveRenewal({ next_payment_date: '2026-01-10', billing_cycle: 'monthly', cycle_interval: 1, end_type: 'after_count', occurrence_count: 4, occurrences_done: 2 }).completed, false);
+  // on_date: liegt der nächste Termin hinter dem Ende, wird abgeschlossen.
+  assert.equal(service.resolveRenewal({ next_payment_date: '2026-01-10', billing_cycle: 'monthly', cycle_interval: 1, end_type: 'on_date', end_date: '2026-01-31', occurrences_done: 0 }).completed, true);
+  assert.equal(service.resolveRenewal({ next_payment_date: '2026-01-10', billing_cycle: 'monthly', cycle_interval: 1, end_type: 'on_date', end_date: '2026-06-30', occurrences_done: 0 }).completed, false);
+  assert.equal(service.occurrencesRemaining({ end_type: 'after_count', occurrence_count: 10, occurrences_done: 3 }), 7);
+  assert.equal(service.occurrencesRemaining({ end_type: 'never' }), null);
+
   assert.equal(logoService.privateAddress('127.0.0.1'), true);
   assert.equal(logoService.privateAddress('192.168.1.4'), true);
   assert.equal(logoService.privateAddress('8.8.8.8'), false);
@@ -385,6 +398,59 @@ try {
     assert.ok(!scoped.body.data.subscriptions.some((row) => row.id === foreignId), 'fremdes privates Abo nicht sichtbar');
     // Modus zurücksetzen, damit der Rest im shared-Standard läuft.
     database.prepare("UPDATE sync_config SET value = 'shared' WHERE key = 'budget_mode'").run();
+
+    // ------------------------------------------------------------------
+    // Ende-Bedingung (#594): Validierung, Abschluss beim Verlängern
+    // (after_count + on_date), Status-Filter, Reaktivierung.
+    // ------------------------------------------------------------------
+    const endBase = { name: 'Rate', amount: 100, currency: 'EUR', billing_cycle: 'monthly', reminder_days: 3 };
+    // Validierung der Ende-Felder.
+    assert.equal((await jsonReq('POST', '', { ...endBase, next_payment_date: '2027-01-10', end_type: 'on_date' })).status, 400, 'on_date ohne end_date');
+    assert.equal((await jsonReq('POST', '', { ...endBase, next_payment_date: '2027-01-10', end_type: 'on_date', end_date: '2026-12-01' })).status, 400, 'end_date vor next_payment');
+    assert.equal((await jsonReq('POST', '', { ...endBase, next_payment_date: '2027-01-10', end_type: 'after_count', occurrence_count: 0 })).status, 400, 'after_count 0');
+    assert.equal((await jsonReq('POST', '', { ...endBase, next_payment_date: '2027-01-10', end_type: 'bogus' })).status, 400, 'ungueltiger end_type');
+
+    // after_count = 2: erste Verlängerung läuft weiter, die zweite schließt ab.
+    const counted = await jsonReq('POST', '', { ...endBase, next_payment_date: '2027-01-15', end_type: 'after_count', occurrence_count: 2 });
+    assert.equal(counted.status, 201);
+    assert.equal(counted.body.data.status, 'active');
+    assert.equal(counted.body.data.occurrences_remaining, 2);
+    const countedId = counted.body.data.id;
+
+    const renew1 = await jsonReq('POST', `/${countedId}/renew`, {});
+    assert.equal(renew1.body.data.status, 'active');
+    assert.equal(renew1.body.data.next_payment_date, '2027-02-15');
+    assert.equal(renew1.body.data.occurrences_remaining, 1);
+    const countedEntryId = renew1.body.data.budget_entry_id;
+    assert.ok(countedEntryId, 'aktives Abo hält Budget-Eintrag');
+
+    const renew2 = await jsonReq('POST', `/${countedId}/renew`, {});
+    assert.equal(renew2.body.data.status, 'completed');
+    assert.equal(renew2.body.data.enabled, false);
+    assert.equal(renew2.body.data.occurrences_remaining, 0);
+    assert.ok(renew2.body.data.completed_at, 'completed_at gesetzt');
+    // Abschluss entfernt Budget-Eintrag und Erinnerung.
+    assert.equal(database.prepare('SELECT COUNT(*) AS n FROM budget_entries WHERE id = ?').get(countedEntryId).n, 0);
+    assert.equal(database.prepare("SELECT COUNT(*) AS n FROM reminders WHERE entity_type = 'subscription' AND entity_id = ?").get(countedId).n, 0);
+
+    // Status-Filter: completed sieht das Abo, active nicht.
+    assert.ok((await jsonReq('GET', '?status=completed')).body.data.subscriptions.some((row) => row.id === countedId));
+    assert.ok(!(await jsonReq('GET', '?status=active')).body.data.subscriptions.some((row) => row.id === countedId));
+
+    // Ein erschöpftes after_count-Abo kann nur mit höherem Zähler reaktiviert
+    // werden (sonst wäre es sofort wieder abgeschlossen).
+    assert.equal((await jsonReq('PUT', `/${countedId}`, { enabled: true })).status, 400, 'Reaktivieren ohne Zähler-Erhöhung');
+    const reactivated = await jsonReq('PUT', `/${countedId}`, { enabled: true, occurrence_count: 4 });
+    assert.equal(reactivated.body.data.status, 'active');
+    assert.equal(reactivated.body.data.completed_at, null);
+    assert.equal(reactivated.body.data.occurrences_remaining, 2);
+
+    // on_date: der nächste Termin liegt hinter dem Ende -> Abschluss.
+    const dated = await jsonReq('POST', '', { ...endBase, next_payment_date: '2027-01-10', end_type: 'on_date', end_date: '2027-02-01' });
+    assert.equal(dated.status, 201);
+    assert.equal(dated.body.data.end_type, 'on_date');
+    const datedRenew = await jsonReq('POST', `/${dated.body.data.id}/renew`, {});
+    assert.equal(datedRenew.body.data.status, 'completed');
 
     const removedNotificationsResponse = await fetch(`${baseUrl}/notification-agents`);
     assert.equal(removedNotificationsResponse.status, 404);

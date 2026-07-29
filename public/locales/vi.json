@@ -2906,7 +2906,20 @@
         "filterLabelCategory": "Danh mục",
         "filterLabelMethod": "Phương thức thanh toán",
         "filterLabelStatus": "Trạng thái",
-        "filterLabelSort": "Sắp xếp"
+        "filterLabelSort": "Sắp xếp",
+        "endLabel": "Kết thúc",
+        "endNever": "Chạy vô thời hạn",
+        "endOnDate": "Vào một ngày",
+        "endAfterCount": "Sau một số lần thanh toán",
+        "endDateLabel": "Ngày kết thúc",
+        "endCountLabel": "Số lần thanh toán",
+        "endCountInvalid": "Nhập số lượng ít nhất là 1.",
+        "endsOn": "Kết thúc vào {{date}}",
+        "endsAfter_one": "Còn {{count}} lần thanh toán",
+        "completed": "Đã hoàn tất",
+        "completedOn": "Hoàn tất vào {{date}}",
+        "completedToast": "Đã hoàn tất gói đăng ký.",
+        "endsAfter": "Còn {{count}} lần thanh toán"
     },
     "health": {
         "tabs": {

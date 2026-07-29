@@ -2906,7 +2906,20 @@
         "filterLabelCategory": "Categoria",
         "filterLabelMethod": "Forma de pagamento",
         "filterLabelStatus": "Estado",
-        "filterLabelSort": "Ordenação"
+        "filterLabelSort": "Ordenação",
+        "endLabel": "Fim",
+        "endNever": "Sem fim",
+        "endOnDate": "Em uma data",
+        "endAfterCount": "Após um número de pagamentos",
+        "endDateLabel": "Data de término",
+        "endCountLabel": "Número de pagamentos",
+        "endCountInvalid": "Insira um número de pelo menos 1.",
+        "endsOn": "Termina em {{date}}",
+        "endsAfter_one": "Falta {{count}} pagamento",
+        "completed": "Concluído",
+        "completedOn": "Concluído em {{date}}",
+        "completedToast": "Assinatura concluída.",
+        "endsAfter": "Faltam {{count}} pagamentos"
     },
     "health": {
         "tabs": {

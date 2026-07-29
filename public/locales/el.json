@@ -2906,7 +2906,20 @@
         "filterLabelCategory": "Κατηγορία",
         "filterLabelMethod": "Τρόπος πληρωμής",
         "filterLabelStatus": "Κατάσταση",
-        "filterLabelSort": "Ταξινόμηση"
+        "filterLabelSort": "Ταξινόμηση",
+        "endLabel": "Λήξη",
+        "endNever": "Χωρίς λήξη",
+        "endOnDate": "Σε ημερομηνία",
+        "endAfterCount": "Μετά από αριθμό πληρωμών",
+        "endDateLabel": "Ημερομηνία λήξης",
+        "endCountLabel": "Αριθμός πληρωμών",
+        "endCountInvalid": "Δώσε αριθμό τουλάχιστον 1.",
+        "endsOn": "Λήγει στις {{date}}",
+        "endsAfter_one": "Απομένει {{count}} πληρωμή",
+        "completed": "Ολοκληρώθηκε",
+        "completedOn": "Ολοκληρώθηκε στις {{date}}",
+        "completedToast": "Η συνδρομή ολοκληρώθηκε.",
+        "endsAfter": "Απομένουν {{count}} πληρωμές"
     },
     "health": {
         "tabs": {

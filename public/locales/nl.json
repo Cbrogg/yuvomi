@@ -2906,7 +2906,20 @@
         "filterLabelCategory": "Categorie",
         "filterLabelMethod": "Betaalwijze",
         "filterLabelStatus": "Status",
-        "filterLabelSort": "Sortering"
+        "filterLabelSort": "Sortering",
+        "endLabel": "Einde",
+        "endNever": "Loopt onbeperkt door",
+        "endOnDate": "Op een datum",
+        "endAfterCount": "Na een aantal betalingen",
+        "endDateLabel": "Einddatum",
+        "endCountLabel": "Aantal betalingen",
+        "endCountInvalid": "Voer een aantal van minstens 1 in.",
+        "endsOn": "Eindigt op {{date}}",
+        "endsAfter_one": "Nog {{count}} betaling",
+        "completed": "Voltooid",
+        "completedOn": "Voltooid op {{date}}",
+        "completedToast": "Abonnement voltooid.",
+        "endsAfter": "Nog {{count}} betalingen"
     },
     "health": {
         "tabs": {

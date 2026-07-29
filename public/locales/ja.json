@@ -2906,7 +2906,20 @@
         "filterLabelCategory": "カテゴリ",
         "filterLabelMethod": "支払い方法",
         "filterLabelStatus": "ステータス",
-        "filterLabelSort": "並び替え"
+        "filterLabelSort": "並び替え",
+        "endLabel": "終了",
+        "endNever": "無期限",
+        "endOnDate": "指定日",
+        "endAfterCount": "指定回数の支払い後",
+        "endDateLabel": "終了日",
+        "endCountLabel": "支払い回数",
+        "endCountInvalid": "1以上の回数を入力してください。",
+        "endsOn": "{{date}}に終了",
+        "endsAfter_one": "残り{{count}}回の支払い",
+        "completed": "完了",
+        "completedOn": "{{date}}に完了",
+        "completedToast": "サブスクリプションが完了しました。",
+        "endsAfter": "残り{{count}}回の支払い"
     },
     "health": {
         "tabs": {

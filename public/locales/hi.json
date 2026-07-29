@@ -2906,7 +2906,20 @@
         "filterLabelCategory": "श्रेणी",
         "filterLabelMethod": "भुगतान विधि",
         "filterLabelStatus": "स्थिति",
-        "filterLabelSort": "क्रम"
+        "filterLabelSort": "क्रम",
+        "endLabel": "समाप्ति",
+        "endNever": "अनिश्चितकालीन",
+        "endOnDate": "किसी तिथि पर",
+        "endAfterCount": "कुछ भुगतानों के बाद",
+        "endDateLabel": "समाप्ति तिथि",
+        "endCountLabel": "भुगतानों की संख्या",
+        "endCountInvalid": "कम से कम 1 संख्या दर्ज करें।",
+        "endsOn": "{{date}} को समाप्त",
+        "endsAfter_one": "{{count}} भुगतान शेष",
+        "completed": "पूर्ण",
+        "completedOn": "{{date}} को पूर्ण",
+        "completedToast": "सदस्यता पूर्ण हुई।",
+        "endsAfter": "{{count}} भुगतान शेष"
     },
     "health": {
         "tabs": {
