@@ -506,5 +506,40 @@ await testAsync('Zweiter Aufruf trifft den Cache (kein weiterer colors.get)', as
 });
 
 // --------------------------------------------------------
+// Wiederholte Läufe über unveränderte Events. Ein abgelaufener syncToken
+// zwingt zum Full-Resync, der den kompletten Kalender erneut liefert - ohne
+// Wertvergleich im UPDATE würde davon jede Zeile neu geschrieben.
+// --------------------------------------------------------
+
+// Zählt alle Zeilenänderungen seit dem Öffnen der Verbindung.
+const totalChanges = () => db.prepare('SELECT total_changes() AS n').get().n;
+
+test('Re-Sync unveränderter Events fasst keine Zeile an', () => {
+  const item     = { ...gEvent, id: 'evt-unchanged' };
+  const calRefId = upsertExternalCalendar('google', 'primary', 'Mein Kalender', '#FF0000');
+  upsertGoogleEvents([item], calRefId, '#FF0000', COLOR_MAP);
+
+  const before = totalChanges();
+  upsertGoogleEvents([item], calRefId, '#FF0000', COLOR_MAP);
+  assertEqual(totalChanges() - before, 0, 'unveränderter Re-Sync darf nichts schreiben');
+});
+
+// Gegenprobe: der Vergleich darf echte Änderungen nicht wegfiltern. Ein
+// falsches Negativ wäre hier Datenverlust, nicht bloß gesparte Schreiblast.
+test('Re-Sync mit geändertem Titel kommt weiterhin an', () => {
+  const item     = { ...gEvent, id: 'evt-changed' };
+  const calRefId = upsertExternalCalendar('google', 'primary', 'Mein Kalender', '#FF0000');
+  upsertGoogleEvents([item], calRefId, '#FF0000', COLOR_MAP);
+
+  upsertGoogleEvents(
+    [{ ...item, summary: 'Team-Meeting (verschoben)' }], calRefId, '#FF0000', COLOR_MAP
+  );
+  const row = db.prepare(
+    'SELECT title FROM calendar_events WHERE external_calendar_id = ?'
+  ).get('evt-changed');
+  assertEqual(row.title, 'Team-Meeting (verschoben)', 'Titeländerung muss ankommen');
+});
+
+// --------------------------------------------------------
 console.log(`\n  ${passed} passed, ${failed} failed\n`);
 if (failed > 0) process.exit(1);

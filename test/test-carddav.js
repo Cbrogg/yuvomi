@@ -3192,6 +3192,81 @@ describe('parseAndMergeContact scalar + category wiring (#531 DB integration)', 
     assert.strictEqual(c.name, 'Mein eigener Name', 'lokaler Name bleibt erhalten');
     assert.strictEqual(c.last_name, 'Schmidt', 'Struktur wird trotzdem nachgetragen');
   });
+
+  // --- Wiederholte Syncs derselben vCard ------------------------------------
+  // updateContactMultiValues nimmt den primären Eintrag von der Löschung aus,
+  // fügte aber die komplette vCard erneut ein. Der primäre Wert landete damit
+  // bei jedem Sync zusätzlich als nicht-primäre Kopie in der Tabelle.
+
+  const phonesOf = (id) => database.prepare(
+    'SELECT label, value, is_primary FROM contact_phones WHERE contact_id = ? ORDER BY id'
+  ).all(id);
+
+  it('legt bei wiederholtem Sync derselben vCard keine Dubletten an', async () => {
+    const card = vcf('dup-1', 'FN:Alex Beispiel',
+      'TEL;TYPE=CELL:+49 170 1234567', 'TEL;TYPE=WORK:+49 30 9876543',
+      'EMAIL;TYPE=HOME:alex@example.org');
+
+    const id = await parseAndMergeContact(card, accountId, abUrl);
+    await parseAndMergeContact(card, accountId, abUrl);
+    await parseAndMergeContact(card, accountId, abUrl);
+
+    assert.deepStrictEqual(phonesOf(id), [
+      { label: 'cell', value: '+49 170 1234567', is_primary: 1 },
+      { label: 'work', value: '+49 30 9876543',  is_primary: 0 },
+    ]);
+    const mails = database.prepare(
+      'SELECT COUNT(*) AS n FROM contact_emails WHERE contact_id = ?'
+    ).get(id).n;
+    assert.strictEqual(mails, 1, 'die Mailadresse darf sich nicht vervielfachen');
+  });
+
+  it('räumt eine bereits vorhandene Dublette beim nächsten Sync ab', async () => {
+    const card = vcf('dup-2', 'FN:Bea Beispiel', 'TEL;TYPE=CELL:+49 170 2222222');
+    const id = await parseAndMergeContact(card, accountId, abUrl);
+
+    // Zustand, den der alte Code hinterlassen hat: der primäre Wert steht ein
+    // zweites Mal als nicht-primäre Zeile daneben.
+    database.prepare(
+      'INSERT INTO contact_phones (contact_id, label, value, is_primary) VALUES (?, ?, ?, 0)'
+    ).run(id, 'cell', '+49 170 2222222');
+    assert.strictEqual(phonesOf(id).length, 2, 'Vorbedingung: Dublette liegt vor');
+
+    await parseAndMergeContact(card, accountId, abUrl);
+
+    assert.deepStrictEqual(phonesOf(id), [
+      { label: 'cell', value: '+49 170 2222222', is_primary: 1 },
+    ]);
+  });
+
+  it('schreibt beim Sync einer unveränderten vCard gar nicht mehr', async () => {
+    const card = vcf('dup-3', 'FN:Cem Beispiel',
+      'TEL;TYPE=CELL:+49 170 3333333', 'TEL;TYPE=WORK:+49 30 3333333');
+    await parseAndMergeContact(card, accountId, abUrl);
+    await parseAndMergeContact(card, accountId, abUrl); // Bestand einschwingen lassen
+
+    const changes = () => database.prepare('SELECT total_changes() AS n').get().n;
+    const before = changes();
+    await parseAndMergeContact(card, accountId, abUrl);
+    assert.strictEqual(changes() - before, 0, 'unveränderter Kontakt darf nichts schreiben');
+  });
+
+  // Gegenprobe: der Vergleich darf echte Änderungen nicht verschlucken.
+  it('übernimmt eine neu hinzugekommene Nummer', async () => {
+    const id = await parseAndMergeContact(
+      vcf('dup-4', 'FN:Dana Beispiel', 'TEL;TYPE=CELL:+49 170 4444444'), accountId, abUrl
+    );
+    await parseAndMergeContact(
+      vcf('dup-4', 'FN:Dana Beispiel', 'TEL;TYPE=CELL:+49 170 4444444',
+        'TEL;TYPE=WORK:+49 30 4444444'),
+      accountId, abUrl
+    );
+
+    assert.deepStrictEqual(phonesOf(id), [
+      { label: 'cell', value: '+49 170 4444444', is_primary: 1 },
+      { label: 'work', value: '+49 30 4444444',  is_primary: 0 },
+    ]);
+  });
 });
 
 // --------------------------------------------------------

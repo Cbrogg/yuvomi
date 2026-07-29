@@ -639,7 +639,11 @@ async function sync() {
         log.error(`Outbound error for event ${event.id}:`, err.message);
       }
     }
-    log.info(`Sync completed - ${localEvents.length} candidate local → Google.`);
+    // Ohne Kandidaten hat der Outbound nichts getan - das gehört nicht in jeden
+    // Scheduler-Tick des Standard-Logs.
+    const outboundSummary = `Sync completed - ${localEvents.length} candidate local → Google.`;
+    if (localEvents.length > 0) log.info(outboundSummary);
+    else log.debug(outboundSummary);
   }
 
   cfgSet('google_last_sync', new Date().toISOString());
@@ -801,6 +805,16 @@ function upsertGoogleEvents(items, calRefId = null, calColor = GOOGLE_COLOR, col
       // (user_modified = 0). Dadurch bleiben benutzerdefinierte Event-Farben über
       // Syncs hinweg erhalten (Issue #219), während echte Google-Farbänderungen
       // weiterhin durchkommen. Titel/Zeit bleiben unverändert remote-geführt.
+      // Der Vergleich in der WHERE-Klausel hält Schreibvorgänge ab, die nichts
+      // ändern: ein Full-Resync (abgelaufener syncToken) liefert den kompletten
+      // Kalender erneut, und ohne den Vergleich würde jede Zeile davon neu
+      // geschrieben. `IS NOT` statt `<>`, weil der Vergleich NULL-sicher sein
+      // muss; die Farbspalte wiederholt ihren SET-Ausdruck, damit eine lokale
+      // Umfärbung (user_modified) nicht als Unterschied zählt. Die Bindings der
+      // SET-Liste kommen dafür ein zweites Mal.
+      const values = [
+        title, description, startDt, endDt, allDay ? 1 : 0, location, rrule, evColor, calRefId,
+      ];
       db.get().prepare(`
         UPDATE calendar_events
         SET title = ?, description = ?, start_datetime = ?, end_datetime = ?,
@@ -808,7 +822,17 @@ function upsertGoogleEvents(items, calRefId = null, calColor = GOOGLE_COLOR, col
             color = CASE WHEN user_modified = 0 THEN ? ELSE color END,
             calendar_ref_id = ?
         WHERE id = ?
-      `).run(title, description, startDt, endDt, allDay ? 1 : 0, location, rrule, evColor, calRefId, existing.id);
+          AND (   title           IS NOT ?
+               OR description     IS NOT ?
+               OR start_datetime  IS NOT ?
+               OR end_datetime    IS NOT ?
+               OR all_day         IS NOT ?
+               OR location        IS NOT ?
+               OR recurrence_rule IS NOT ?
+               OR color           IS NOT CASE WHEN user_modified = 0 THEN ? ELSE color END
+               OR calendar_ref_id IS NOT ?
+              )
+      `).run(...values, existing.id, ...values);
     } else {
       const inserted = db.get().prepare(`
         INSERT INTO calendar_events
