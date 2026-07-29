@@ -271,10 +271,20 @@ await (async () => {
   syncDb.prepare(`INSERT INTO users (username, display_name, password_hash, role)
                   VALUES ('owner', 'Owner', 'x', 'admin')`).run();
 
+  // Datum relativ zum Testlauf: syncOne() importiert nur das Fenster von sechs
+  // Monaten zurück bis zwölf Monate voraus. Ein fest verdrahtetes Datum fiele
+  // irgendwann hinten heraus und ließe die Tests scheitern, ohne dass sich am
+  // Produktionscode etwas geändert hätte.
+  const inDays = (n) => {
+    const d = new Date(Date.now() + n * 24 * 60 * 60 * 1000);
+    return d.toISOString().slice(0, 10).replace(/-/g, '');
+  };
+  const DAY = inDays(30);
+
   const icsWith = (summary) => [
     'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Test//EN',
-    'BEGIN:VEVENT', 'UID:sync-1@test', 'DTSTART:20260714T090000Z',
-    'DTEND:20260714T100000Z', `SUMMARY:${summary}`, 'END:VEVENT',
+    'BEGIN:VEVENT', 'UID:sync-1@test', `DTSTART:${DAY}T090000Z`,
+    `DTEND:${DAY}T100000Z`, `SUMMARY:${summary}`, 'END:VEVENT',
     'END:VCALENDAR', '',
   ].join('\r\n');
 
@@ -310,6 +320,12 @@ await (async () => {
         'SELECT id, title, start_datetime, color FROM calendar_events WHERE subscription_id = ? ORDER BY id'
       ).all(subId);
       const changesBefore = syncDb.prepare('SELECT total_changes() AS n').get().n;
+      // total_changes() allein genügt nicht: ein INSERT mit ON CONFLICT, dessen
+      // DO UPDATE unterdrückt wird, meldet changes = 0, verbraucht aber trotzdem
+      // eine AUTOINCREMENT-Rowid und schreibt sqlite_sequence fort.
+      const seqBefore = syncDb.prepare(
+        "SELECT seq FROM sqlite_sequence WHERE name = 'calendar_events'"
+      ).get()?.seq ?? null;
 
       // Der Logger schreibt info über console.info (server/logger.js) - ein
       // leerer Kanal beweist, dass die Zusammenfassung auf debug bleibt.
@@ -325,10 +341,16 @@ await (async () => {
       ).all(subId);
       const delta = syncDb.prepare('SELECT total_changes() AS n').get().n - changesBefore;
 
+      const seqAfter = syncDb.prepare(
+        "SELECT seq FROM sqlite_sequence WHERE name = 'calendar_events'"
+      ).get()?.seq ?? null;
+
       assert(before.length === 1, 'Vorbedingung: der Termin muss vorliegen');
       assert(JSON.stringify(before) === JSON.stringify(after), 'Termin wurde verändert');
       // Genau eine Änderung ist erlaubt: das last_sync/etag-UPDATE der Subscription.
       assert(delta <= 1, `unveränderter Sync schrieb ${delta} Zeilen statt höchstens 1`);
+      assert(seqAfter === seqBefore,
+        `Rowid verbraucht, obwohl nichts zu tun war: ${seqBefore} -> ${seqAfter}`);
     });
 
     // Gegenprobe: der Vergleich darf echte Änderungen nicht wegfiltern.

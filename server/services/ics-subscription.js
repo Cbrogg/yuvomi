@@ -166,32 +166,41 @@ async function syncOne(sub) {
         .all(sub.id).map((r) => r.external_calendar_id)
     );
 
-    const upsert = db.get().prepare(`
+    // Bekannte UIDs werden nachgeschlagen statt blind eingefügt: ein INSERT mit
+    // ON CONFLICT reserviert bei AUTOINCREMENT auch dann eine neue Rowid und
+    // schreibt sqlite_sequence fort, wenn das DO UPDATE per WHERE unterdrückt
+    // wird. Ein unveränderter Lauf würde also weiterhin schreiben, nur für
+    // changes und total_changes() unsichtbar.
+    const findExisting = db.get().prepare(`
+      SELECT id FROM calendar_events
+      WHERE subscription_id = ? AND external_calendar_id = ?
+    `);
+
+    const insertEvent = db.get().prepare(`
       INSERT INTO calendar_events
         (title, description, start_datetime, end_datetime, all_day, location,
          color, external_calendar_id, external_source, subscription_id, recurrence_rule, user_modified, created_by)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ics', ?, ?, 0, ?)
-      ON CONFLICT(subscription_id, external_calendar_id) DO UPDATE SET
-        title          = excluded.title,
-        description    = excluded.description,
-        start_datetime = excluded.start_datetime,
-        end_datetime   = excluded.end_datetime,
-        all_day        = excluded.all_day,
-        location       = excluded.location,
-        color          = excluded.color
-      -- Der Wertvergleich hält Schreibvorgänge ab, die nichts ändern. Liefert
-      -- ein Server kein ETag, kommt bei jedem Lauf der komplette Kalender neu
-      -- an, und ohne ihn würde davon jede Zeile neu geschrieben. IS NOT statt
-      -- Ungleich wegen der NULL-Sicherheit; die Gegenwerte stehen bereits als
-      -- excluded.* bereit, es braucht also keine zweiten Bindings.
-      WHERE user_modified = 0
-        AND (   title          IS NOT excluded.title
-             OR description    IS NOT excluded.description
-             OR start_datetime IS NOT excluded.start_datetime
-             OR end_datetime   IS NOT excluded.end_datetime
-             OR all_day        IS NOT excluded.all_day
-             OR location       IS NOT excluded.location
-             OR color          IS NOT excluded.color
+    `);
+
+    // Der Wertvergleich hält Schreibvorgänge ab, die nichts ändern: liefert ein
+    // Server kein ETag, kommt bei jedem Lauf der komplette Kalender erneut an.
+    // IS NOT statt Ungleich wegen der NULL-Sicherheit. Verglichen wird genau
+    // über die Spalten, die auch gesetzt werden - recurrence_rule bleibt beim
+    // Update außen vor, wie zuvor beim ON CONFLICT, und darf deshalb auch den
+    // Vergleich nicht auslösen.
+    const updateEvent = db.get().prepare(`
+      UPDATE calendar_events
+      SET title = ?, description = ?, start_datetime = ?, end_datetime = ?,
+          all_day = ?, location = ?, color = ?
+      WHERE id = ? AND user_modified = 0
+        AND (   title          IS NOT ?
+             OR description    IS NOT ?
+             OR start_datetime IS NOT ?
+             OR end_datetime   IS NOT ?
+             OR all_day        IS NOT ?
+             OR location       IS NOT ?
+             OR color          IS NOT ?
             )
     `);
 
@@ -211,8 +220,20 @@ async function syncOne(sub) {
       for (const ev of flatEvents) {
         try {
           // Event-Eigenfarbe (RFC 7986) hat Vorrang, sonst die Abo-Farbe.
-          changedEvents += upsert.run(ev.summary, ev.description, ev.dtstart, ev.dtend,
-            ev.allDay ? 1 : 0, ev.location, ev.color || sub.color, ev.uid, sub.id, ev.rrule, createdBy).changes;
+          const color    = ev.color || sub.color;
+          const existing = findExisting.get(sub.id, ev.uid);
+          if (existing) {
+            // Dieselben Werte binden die SET-Liste und den Vergleich.
+            const values = [
+              ev.summary, ev.description, ev.dtstart, ev.dtend,
+              ev.allDay ? 1 : 0, ev.location, color,
+            ];
+            changedEvents += updateEvent.run(...values, existing.id, ...values).changes;
+          } else {
+            insertEvent.run(ev.summary, ev.description, ev.dtstart, ev.dtend,
+              ev.allDay ? 1 : 0, ev.location, color, ev.uid, sub.id, ev.rrule, createdBy);
+            changedEvents++;
+          }
         } catch (err) { log.error(`Upsert UID ${ev.uid}: ${err.message}`); }
       }
       changedEvents += deleteStale.run(sub.id, JSON.stringify([...seenUids])).changes;
