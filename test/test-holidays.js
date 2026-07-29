@@ -57,6 +57,24 @@ function seedHoliday({ type, country = 'DE', subdivision = null, group = null, s
 
 const okJson = (data) => ({ ok: true, json: async () => data });
 
+// Fängt alle console-Kanäle ab, damit ein Lauf beobachtbar wird, welche
+// Log-Level der Service tatsächlich benutzt. Der Logger schreibt debug über
+// console.log und info über console.info (server/logger.js), sodass eine
+// leere info-Liste beweist: nichts landet im Standard-Log-Level.
+async function captureConsole(fn) {
+  const original = { log: console.log, info: console.info, warn: console.warn, error: console.error };
+  const lines = { log: [], info: [], warn: [], error: [] };
+  for (const level of Object.keys(original)) {
+    console[level] = (...args) => lines[level].push(args.join(' '));
+  }
+  try {
+    await fn();
+  } finally {
+    Object.assign(console, original);
+  }
+  return lines;
+}
+
 // fetch-Mock, das je nach OpenHolidays-Endpoint deterministische Daten liefert.
 function makeApiMock() {
   const calls = [];
@@ -100,8 +118,6 @@ function makeApiMock() {
 
 const SYNC_YEAR_SPAN = 4; // currentYear-1 .. currentYear+2
 const BRAZIL_PUBLIC_HOLIDAYS_PER_YEAR = 10;
-
-const HOLIDAY_SYNC_SOURCE = sync.toString();
 
 beforeEach(() => { resetState(); __setFetchImpl(null); });
 
@@ -303,13 +319,31 @@ test('sync: both layers off → no fetch, synced 0', async () => {
   assert.equal(mock.calls.length, 0);
 });
 
-test('sync: skip paths use debug logging for disabled or throttled runs', () => {
-  assert.ok(HOLIDAY_SYNC_SOURCE.includes("log.debug('No holiday country configured – skipping sync.')"));
-  assert.ok(HOLIDAY_SYNC_SOURCE.includes("log.debug('Both holiday layers disabled – skipping sync.')"));
-  assert.ok(HOLIDAY_SYNC_SOURCE.includes("log.debug('Holidays synced recently – skipping automatic sync.')"));
-  assert.ok(!HOLIDAY_SYNC_SOURCE.includes("log.info('No holiday country configured – skipping sync.')"));
-  assert.ok(!HOLIDAY_SYNC_SOURCE.includes("log.info('Both holiday layers disabled – skipping sync.')"));
-  assert.ok(!HOLIDAY_SYNC_SOURCE.includes("log.info('Holidays synced recently – skipping automatic sync.')"));
+// Die drei Skip-Pfade laufen bei jedem Scheduler-Tick. Sie dürfen im
+// Standard-Log-Level (info) nichts ausgeben, sonst rauscht das Log zu.
+test('sync: no country → schweigt im Standard-Log-Level', async () => {
+  __setFetchImpl(makeApiMock());
+  const lines = await captureConsole(() => sync());
+  assert.deepEqual(lines.info, []);
+});
+
+test('sync: both layers off → schweigt im Standard-Log-Level', async () => {
+  __setFetchImpl(makeApiMock());
+  setConfig({ holiday_country: 'DE', holiday_show_public: '0', holiday_show_school: '0' });
+  const lines = await captureConsole(() => sync());
+  assert.deepEqual(lines.info, []);
+});
+
+test('sync: throttled run → schweigt im Standard-Log-Level', async () => {
+  const mock = makeApiMock();
+  __setFetchImpl(mock);
+  setConfig({
+    holiday_country: 'DE', holiday_show_public: '1', holiday_show_school: '0',
+    holiday_last_sync: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+  });
+  const lines = await captureConsole(() => sync());
+  assert.equal(mock.calls.length, 0, 'throttled run darf nicht fetchen');
+  assert.deepEqual(lines.info, []);
 });
 
 test('sync: public-only fetches PublicHolidays per year, caches them, sets last_sync', async () => {

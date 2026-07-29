@@ -193,12 +193,6 @@ describe('CalDAV Multi-Account Sync', () => {
     const migrated = db2.prepare(`SELECT external_source FROM calendar_events_new WHERE title = 'Migrated'`).get();
     assert.strictEqual(migrated.external_source, 'caldav');
   });
-
-  it('logs the missing-account skip at debug level instead of info', () => {
-    const source = sync.toString();
-    assert.ok(source.includes("log.debug('No CalDAV accounts configured.')"));
-    assert.ok(!source.includes("log.info('No CalDAV accounts configured.')"));
-  });
 });
 
 describe('Auto-Sync-Scheduler-Verdrahtung (#508)', () => {
@@ -686,6 +680,133 @@ describe('CalDAV: RECURRENCE-ID-Overrides killen die Serie nicht (#549)', () => 
       const ids = rows.map((r) => r.external_calendar_id).sort();
       assert.deepStrictEqual(ids, ['series@x', 'series@x::2026-07-21'],
         `Master + genau ein Override, keine Waisen: ${ids.join()}`);
+    } finally {
+      _resetTestDatabase();
+      d.close();
+    }
+  });
+});
+
+// --------------------------------------------------------
+// No-op-Sync-Pfade laufen bei jedem Scheduler-Tick durch. Sie dürfen im
+// Standard-Log-Level (info) nichts ausgeben, sonst füllt der Scheduler das
+// Log mit Meldungen über Zustände, die schlicht der Normalfall sind.
+// --------------------------------------------------------
+describe('CalDAV: No-op-Syncs bleiben im Standard-Log-Level still', () => {
+  // Fängt alle console-Kanäle ab. Der Logger schreibt debug über console.log
+  // und info über console.info (server/logger.js) - ein leerer info-Kanal
+  // beweist also, dass die Meldung unterhalb des Standard-Levels bleibt.
+  async function captureConsole(fn) {
+    const original = { log: console.log, info: console.info, warn: console.warn, error: console.error };
+    const lines = { log: [], info: [], warn: [], error: [] };
+    for (const level of Object.keys(original)) {
+      console[level] = (...args) => lines[level].push(args.join(' '));
+    }
+    try {
+      await fn();
+    } finally {
+      Object.assign(console, original);
+    }
+    return lines;
+  }
+
+  function buildDb() {
+    const d = new DatabaseSync(':memory:');
+    d.exec(`
+      CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, display_name TEXT);
+      INSERT INTO users (display_name) VALUES ('Owner');
+
+      CREATE TABLE caldav_accounts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT, caldav_url TEXT, username TEXT, password TEXT, last_sync TEXT
+      );
+      CREATE TABLE caldav_calendar_selection (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        account_id INTEGER, calendar_url TEXT, calendar_name TEXT,
+        calendar_color TEXT, enabled INTEGER NOT NULL DEFAULT 1
+      );
+      CREATE TABLE external_calendars (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        source TEXT NOT NULL, external_id TEXT NOT NULL, name TEXT, color TEXT,
+        default_assignee_user_id INTEGER,
+        UNIQUE(source, external_id)
+      );
+      CREATE TABLE calendar_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL, description TEXT,
+        start_datetime TEXT, end_datetime TEXT, all_day INTEGER NOT NULL DEFAULT 0,
+        location TEXT, color TEXT, recurrence_rule TEXT, tzid TEXT,
+        external_calendar_id TEXT, external_source TEXT,
+        calendar_ref_id INTEGER, created_by INTEGER,
+        user_modified INTEGER NOT NULL DEFAULT 0, assigned_to INTEGER,
+        target_caldav_account_id INTEGER, target_caldav_calendar_url TEXT,
+        outbound_dirty INTEGER NOT NULL DEFAULT 0,
+        outbound_attempts INTEGER NOT NULL DEFAULT 0,
+        outbound_move_to TEXT,
+        external_object_url TEXT
+      );
+      CREATE TABLE calendar_pending_deletions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        source TEXT NOT NULL,
+        calendar_external_id TEXT NOT NULL,
+        event_external_id TEXT NOT NULL,
+        attempts INTEGER NOT NULL DEFAULT 0,
+        last_error TEXT,
+        created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+        object_url TEXT,
+        UNIQUE(source, calendar_external_id, event_external_id)
+      );
+      CREATE TABLE event_assignments (
+        event_id INTEGER, user_id INTEGER, UNIQUE(event_id, user_id)
+      );
+      CREATE TABLE calendar_event_exceptions (
+        event_id INTEGER NOT NULL, exception_date TEXT NOT NULL,
+        PRIMARY KEY (event_id, exception_date)
+      );
+    `);
+    return d;
+  }
+
+  it('sagt nichts, wenn gar kein Account konfiguriert ist', async () => {
+    const d = buildDb();
+    _setTestDatabase(d);
+    try {
+      const lines = await captureConsole(async () => {
+        const res = await sync();
+        assert.deepStrictEqual(res, { success: true, syncedAccounts: 0, syncedEvents: 0 });
+      });
+      assert.deepStrictEqual(lines.info, []);
+    } finally {
+      _resetTestDatabase();
+      d.close();
+    }
+  });
+
+  it('sagt nichts, wenn ein Account keine aktivierten Kalender hat', async () => {
+    const d = buildDb();
+    d.exec(`INSERT INTO caldav_accounts (name, caldav_url, username, password)
+              VALUES ('Radicale', 'https://dav.example/', 'u', 'p');`);
+    _setTestDatabase(d);
+    try {
+      const createClient = async () => ({
+        fetchCalendars:       async () => [],
+        fetchCalendarObjects: async () => [],
+        createCalendarObject: async () => ({}),
+      });
+      const lines = await captureConsole(async () => {
+        const res = await sync({ createClient });
+        assert.strictEqual(res.syncedEvents, 0);
+      });
+      // Positivkontrolle: der Lauf hat den Account wirklich angefasst, der
+      // Skip-Pfad wurde also erreicht und nicht bloß übersprungen.
+      assert.ok(
+        lines.info.some((l) => l.includes('Syncing CalDAV account')),
+        `Sync-Pfad wurde nicht durchlaufen: ${JSON.stringify(lines.info)}`
+      );
+      assert.deepStrictEqual(
+        lines.info.filter((l) => l.includes('no enabled calendars')),
+        []
+      );
     } finally {
       _resetTestDatabase();
       d.close();

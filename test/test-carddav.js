@@ -6,7 +6,7 @@
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import Database from 'better-sqlite3-multiple-ciphers';
-import { MIGRATIONS } from '../server/db.js';
+import { MIGRATIONS, _setTestDatabase, _resetTestDatabase } from '../server/db.js';
 import {
   sync,
   pruneRemovedContacts,
@@ -463,14 +463,6 @@ describe('CardDAV Contacts Schema (Migration 30)', () => {
 
     const differentAccount = db.prepare('SELECT * FROM contacts WHERE name = ?').get('Contact D');
     assert.ok(differentAccount, 'Same UID in different account should be allowed');
-  });
-});
-
-describe('CardDAV sync logging', () => {
-  it('logs the missing-account skip at debug level instead of info', () => {
-    const source = sync.toString();
-    assert.ok(source.includes("log.debug('No CardDAV accounts configured.')"));
-    assert.ok(!source.includes("log.info('No CardDAV accounts configured.')"));
   });
 });
 
@@ -3199,5 +3191,51 @@ describe('parseAndMergeContact scalar + category wiring (#531 DB integration)', 
     const c = database.prepare('SELECT name, last_name FROM contacts WHERE id = ?').get(mergedId);
     assert.strictEqual(c.name, 'Mein eigener Name', 'lokaler Name bleibt erhalten');
     assert.strictEqual(c.last_name, 'Schmidt', 'Struktur wird trotzdem nachgetragen');
+  });
+});
+
+// --------------------------------------------------------
+// No-op-Syncs laufen bei jedem Scheduler-Tick durch und dürfen im
+// Standard-Log-Level (info) nichts ausgeben, sonst rauscht das Log zu.
+// --------------------------------------------------------
+describe('CardDAV: No-op-Sync bleibt im Standard-Log-Level still', () => {
+  // Der Logger schreibt debug über console.log und info über console.info
+  // (server/logger.js) - ein leerer info-Kanal beweist, dass die Meldung
+  // unterhalb des Standard-Levels bleibt.
+  async function captureConsole(fn) {
+    const original = { log: console.log, info: console.info, warn: console.warn, error: console.error };
+    const lines = { log: [], info: [], warn: [], error: [] };
+    for (const level of Object.keys(original)) {
+      console[level] = (...args) => lines[level].push(args.join(' '));
+    }
+    try {
+      await fn();
+    } finally {
+      Object.assign(console, original);
+    }
+    return lines;
+  }
+
+  it('sagt nichts, wenn gar kein Account konfiguriert ist', async () => {
+    const d = new Database(':memory:');
+    d.exec(`
+      CREATE TABLE carddav_accounts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT, carddav_url TEXT, username TEXT, password TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        last_sync TEXT, last_error TEXT, last_error_at TEXT
+      );
+    `);
+    _setTestDatabase(d);
+    try {
+      const lines = await captureConsole(async () => {
+        const res = await sync();
+        assert.deepStrictEqual(res, { success: true, syncedAccounts: 0, syncedContacts: 0 });
+      });
+      assert.deepStrictEqual(lines.info, []);
+    } finally {
+      _resetTestDatabase();
+      d.close();
+    }
   });
 });
