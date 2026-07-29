@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.56.1] - 2026-07-29
+
+### Fixed
+- Signing in with a password that contains umlauts or accented characters now works in every browser. Firefox on macOS hands such a password over in a different byte form than Safari and iOS do, and because the check compares those bytes, the same password was accepted in one browser and rejected in the other. Passwords are now brought into one common form before they are stored and before they are checked, so a password set in one browser opens the app in all of them. Existing passwords keep working and are quietly converted to the new form the next time you sign in, so no reset is needed. (#608)
+
+### Security
+- The eight character minimum for new passwords is now counted the same way in every browser. Depending on how the browser passed an umlaut along, a single character could count as two, which let a password through that was in fact shorter than the minimum.
+
 ## [1.56.0] - 2026-07-29
 
 ### Changed

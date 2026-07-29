@@ -78,6 +78,7 @@ npm run test:push           # Web Push: VAPID resolution, subscribe/unsubscribe 
 npm run test:email          # SMTP-Service: config/env resolution, masking, sendMail/sendTest, admin routes
 npm run test:password-reset # Reset tokens: create/verify/consume/cleanup + forgot/reset-password routes
 npm run test:admin-password-reset # PATCH /auth/users/:id password field: admin sets existing member's password (#372)
+npm run test:password-normalization # Passwort-Unicode: NFC-Hashing, Login mit NFD-Eingabe (Firefox/macOS), stille Migration alter NFD-Hashes, /me/password (#608)
 npm run test:notifications  # Notification-Kanäle (Gotify/ntfy): Provider-Mapping, Reminder-Fan-out, Admin-Routen, Payload-Body je entity_type (#581)
 npm run test:mcp            # MCP-Server: JSON-RPC-Dispatch (initialize/tools/list/tools/call) + Tool-Logik (Tasks, Shopping, Kalender)
 npm run test:token-scopes   # API-/MCP-Token-Scopes: scopes.js-Modell + Enforcement (tools/list-Filter, tools/call-Deny)

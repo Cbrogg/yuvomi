@@ -15,7 +15,7 @@ Every table: `id INTEGER PRIMARY KEY`, `created_at TEXT`, `updated_at TEXT` (ISO
 |--------|------|-----------|
 | username | TEXT | UNIQUE NOT NULL |
 | display_name | TEXT | |
-| password_hash | TEXT | bcrypt |
+| password_hash | TEXT | bcrypt (cost 12) of the NFC-normalized password (v1.56.1). Legacy hashes from non-normalized input are still verified and migrated to NFC on the next successful login |
 | avatar_color | TEXT | HEX color code |
 | avatar_data | TEXT | Base64 data URL of profile picture (nullable) |
 | role | TEXT | 'admin' or 'member' |

@@ -33,7 +33,7 @@ Vulnerabilities that require physical access to the host or root on the server a
   which would cause 401 errors on login. CSRF risk is mitigated by the
   Double Submit Cookie pattern listed below and the `Secure` flag.)
 - CSRF protection via Double Submit Cookie on all state-changing requests
-- Passwords hashed with bcrypt v6 (cost factor 12)
+- Passwords hashed with bcrypt v6 (cost factor 12). Passwords are Unicode-normalized to NFC before hashing and verification, so non-ASCII characters (umlauts, accents) authenticate identically regardless of how the browser normalizes the input. Hashes created before this normalization are still accepted and are silently re-hashed to NFC on the next successful login
 - Login rate limiting (5 attempts/min per IP)
 - API rate limiting (300 requests/min per IP)
 - Content Security Policy via Helmet (`self`-only)

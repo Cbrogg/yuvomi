@@ -4,9 +4,9 @@
  */
 
 import express from 'express';
-import bcrypt from 'bcrypt';
 import crypto from 'node:crypto';
 import * as db from '../db.js';
+import { hashPassword, normalizePassword } from '../utils/password.js';
 import { createLogger } from '../logger.js';
 import { collectErrors, date as validateDate, id as validateId, str, MAX_TEXT, MAX_TITLE } from '../middleware/validate.js';
 import { buildSplits, decorateMoney, minorToDecimal, parseMoneyToMinor, simplifyDebts } from '../services/split-expenses.js';
@@ -125,7 +125,7 @@ async function userFromContact(database, contactId, actorId) {
   if (!contact) throw new Error('Contact not found.');
   if (contact.family_user_id) return contact.family_user_id;
   const username = uniqueUsername(contact.name);
-  const passwordHash = await bcrypt.hash(crypto.randomBytes(24).toString('base64url'), 12);
+  const passwordHash = await hashPassword(crypto.randomBytes(24).toString('base64url'));
   const created = database.prepare(`
     INSERT INTO users (username, display_name, password_hash, avatar_color, role, family_role)
     VALUES (?, ?, ?, ?, 'member', 'other')
@@ -639,14 +639,14 @@ router.post('/groups/:id/guests', async (req, res) => {
     const errors = collectErrors([vDisplayName, vPhone, vEmail, vBirthDate]);
     if (errors.length) return res.status(400).json({ error: errors.join(' '), code: 400 });
     const password = String(req.body.password || '');
-    if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters long.', code: 400 });
+    if (normalizePassword(password).length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters long.', code: 400 });
     const familyRole = FAMILY_ROLES.includes(req.body.family_role) ? req.body.family_role : 'other';
     const username = req.body.username && /^[a-zA-Z0-9._-]{3,64}$/.test(req.body.username)
       ? String(req.body.username)
       : uniqueUsername(vDisplayName.value);
     const exists = db.get().prepare('SELECT 1 FROM users WHERE username = ?').get(username);
     if (exists) return res.status(409).json({ error: 'Username is already taken.', code: 409 });
-    const hash = await bcrypt.hash(password, 12);
+    const hash = await hashPassword(password);
 
     const createdUserId = db.transaction(() => {
       const created = db.get().prepare(`

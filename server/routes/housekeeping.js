@@ -5,9 +5,9 @@
  */
 
 import express from 'express';
-import bcrypt from 'bcrypt';
 import crypto from 'node:crypto';
 import { createLogger } from '../logger.js';
+import { hashPassword } from '../utils/password.js';
 import * as db from '../db.js';
 import { normalizeAvatarData, syncFamilyMemberArtifacts } from '../auth.js';
 import { collectErrors, color, date, datetime, month, num, oneOf, str, id as validateId, MAX_SHORT, MAX_TEXT, MAX_TITLE } from '../middleware/validate.js';
@@ -421,7 +421,7 @@ function assertAdmin(req, res) {
 async function createWorkerUser({ username, displayName, avatarColor, avatarData, actorUserId }) {
   const finalUsername = username || `housekeeper_${Date.now()}`;
   const password = crypto.randomBytes(24).toString('base64url');
-  const hash = await bcrypt.hash(password, 12);
+  const hash = await hashPassword(password);
   const result = db.get().prepare(`
     INSERT INTO users (username, display_name, password_hash, avatar_color, avatar_data, role, family_role)
     VALUES (?, ?, ?, ?, ?, 'member', 'other')
