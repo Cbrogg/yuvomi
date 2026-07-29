@@ -1311,14 +1311,53 @@ function updateContact(contactId, vcard, fillAll = false) {
  * @param {Object} vcard - Parsed vCard object
  */
 function updateContactMultiValues(contactId, vcard) {
-  const transaction = db.get().transaction(() => {
+  const conn = db.get();
+
+  const phones    = conn.prepare('SELECT label, value, is_primary FROM contact_phones WHERE contact_id = ? ORDER BY id').all(contactId);
+  const emails    = conn.prepare('SELECT label, value, is_primary FROM contact_emails WHERE contact_id = ? ORDER BY id').all(contactId);
+  const addresses = conn.prepare(`SELECT label, street, city, state, postal_code, country, is_primary
+                                  FROM contact_addresses WHERE contact_id = ? ORDER BY id`).all(contactId);
+
+  // Ein primärer Eintrag überlebt die Löschung unten. Steht sein Wert auch in
+  // der vCard, legte der anschließende Insert ihn ein zweites Mal als
+  // nicht-primäre Kopie an - bei jedem Sync aufs Neue. Deshalb fällt er hier
+  // aus der Einfügeliste heraus.
+  const keyOf        = (r) => `${r.label ?? ''} ${r.value ?? ''}`;
+  const addressKeyOf = (r) => [
+    r.label, r.street, r.city, r.state, r.postal_code ?? r.postalCode, r.country,
+  ].map((v) => v ?? '').join(' ');
+
+  const primaryKeys = (rows, key) => new Set(rows.filter((r) => r.is_primary).map(key));
+  const without     = (list, taken, key) => (list ?? []).filter((e) => !taken.has(key(e)));
+
+  const incoming = {
+    ...vcard,
+    phones:    without(vcard.phones,    primaryKeys(phones, keyOf),           keyOf),
+    emails:    without(vcard.emails,    primaryKeys(emails, keyOf),           keyOf),
+    addresses: without(vcard.addresses, primaryKeys(addresses, addressKeyOf), addressKeyOf),
+  };
+
+  // Steht der gewünschte Bestand schon so in der Datenbank, gar nicht erst
+  // schreiben: der Regelfall im Betrieb ist der unveränderte Kontakt.
+  const sameSet = (rows, list, key) => {
+    const a = rows.filter((r) => !r.is_primary).map(key).sort();
+    const b = (list ?? []).map(key).sort();
+    return a.length === b.length && a.every((v, i) => v === b[i]);
+  };
+  if (sameSet(phones,    incoming.phones,    keyOf) &&
+      sameSet(emails,    incoming.emails,    keyOf) &&
+      sameSet(addresses, incoming.addresses, addressKeyOf)) {
+    return;
+  }
+
+  const transaction = conn.transaction(() => {
     // Delete non-primary entries
-    db.get().prepare('DELETE FROM contact_phones WHERE contact_id = ? AND is_primary = 0').run(contactId);
-    db.get().prepare('DELETE FROM contact_emails WHERE contact_id = ? AND is_primary = 0').run(contactId);
-    db.get().prepare('DELETE FROM contact_addresses WHERE contact_id = ? AND is_primary = 0').run(contactId);
+    conn.prepare('DELETE FROM contact_phones WHERE contact_id = ? AND is_primary = 0').run(contactId);
+    conn.prepare('DELETE FROM contact_emails WHERE contact_id = ? AND is_primary = 0').run(contactId);
+    conn.prepare('DELETE FROM contact_addresses WHERE contact_id = ? AND is_primary = 0').run(contactId);
 
     // Insert new entries from vCard
-    insertContactMultiValues(contactId, vcard);
+    insertContactMultiValues(contactId, incoming);
   });
 
   transaction();
