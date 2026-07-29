@@ -788,24 +788,68 @@ describe('CalDAV: No-op-Syncs bleiben im Standard-Log-Level still', () => {
               VALUES ('Radicale', 'https://dav.example/', 'u', 'p');`);
     _setTestDatabase(d);
     try {
-      const createClient = async () => ({
-        fetchCalendars:       async () => [],
-        fetchCalendarObjects: async () => [],
-        createCalendarObject: async () => ({}),
-      });
+      let clientCalls = 0;
+      const createClient = async () => {
+        clientCalls++;
+        return {
+          fetchCalendars:       async () => [],
+          fetchCalendarObjects: async () => [],
+          createCalendarObject: async () => ({}),
+        };
+      };
       const lines = await captureConsole(async () => {
         const res = await sync({ createClient });
         assert.strictEqual(res.syncedEvents, 0);
       });
-      // Positivkontrolle: der Lauf hat den Account wirklich angefasst, der
-      // Skip-Pfad wurde also erreicht und nicht bloß übersprungen.
+      // Positivkontrolle ohne Umweg über das Log: die Account-Schleife lief
+      // wirklich, der Skip-Pfad wurde also erreicht statt übersprungen.
+      assert.strictEqual(clientCalls, 1, 'Account-Schleife wurde nicht durchlaufen');
+      assert.deepStrictEqual(lines.info, []);
+    } finally {
+      _resetTestDatabase();
+      d.close();
+    }
+  });
+
+  // Gegenprobe: der Sync darf nicht pauschal verstummen. Sobald er wirklich
+  // Events verarbeitet, gehört die Zusammenfassung ins Standard-Log.
+  it('meldet den Abschluss auf info, sobald Events verarbeitet wurden', async () => {
+    const CALENDAR_URL = 'https://dav.example/cal-1/';
+    const d = buildDb();
+    d.exec(`
+      INSERT INTO caldav_accounts (name, caldav_url, username, password)
+        VALUES ('Radicale', 'https://dav.example/', 'u', 'p');
+      INSERT INTO caldav_calendar_selection
+        (account_id, calendar_url, calendar_name, calendar_color, enabled)
+        VALUES (1, '${CALENDAR_URL}', 'Cal 1', '#4A90E2', 1);
+    `);
+    _setTestDatabase(d);
+    try {
+      const createClient = async () => ({
+        fetchCalendars:       async () => [{ url: CALENDAR_URL, displayName: 'Cal 1' }],
+        fetchCalendarObjects: async () => [{
+          data: [
+            'BEGIN:VCALENDAR', 'VERSION:2.0', 'BEGIN:VEVENT',
+            'UID:evt-1@test', 'SUMMARY:Event 1',
+            'DTSTART:20260101T100000Z', 'DTEND:20260101T110000Z',
+            'END:VEVENT', 'END:VCALENDAR',
+          ].join('\r\n'),
+        }],
+        createCalendarObject: async () => ({}),
+      });
+      const lines = await captureConsole(async () => {
+        const res = await sync({ createClient });
+        assert.strictEqual(res.syncedEvents, 1);
+      });
       assert.ok(
-        lines.info.some((l) => l.includes('Syncing CalDAV account')),
-        `Sync-Pfad wurde nicht durchlaufen: ${JSON.stringify(lines.info)}`
+        lines.info.some((l) => l.includes('CalDAV sync complete: 1/1 accounts, 1 events')),
+        `Zusammenfassung fehlt im Standard-Log: ${JSON.stringify(lines.info)}`
       );
-      assert.deepStrictEqual(
-        lines.info.filter((l) => l.includes('no enabled calendars')),
-        []
+      // Und zwar genau diese eine Zeile: der Fortschritt pro Account und die
+      // Detailbilanz gehören ins Debug-Log, nicht in jeden Scheduler-Tick.
+      assert.strictEqual(
+        lines.info.length, 1,
+        `nur die Zusammenfassung gehört auf info: ${JSON.stringify(lines.info)}`
       );
     } finally {
       _resetTestDatabase();
