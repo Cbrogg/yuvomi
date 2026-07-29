@@ -649,6 +649,13 @@ by the next sync run (`SYNC_INTERVAL_MINUTES`) if Google is unreachable. A calen
 to when the connected account has write access to it, and the **read-only mode** checkbox stops
 Yuvomi from changing anything in Google while still importing normally.
 
+Recurring appointments are imported as one series with its repeat rule, and cancelled or moved
+occurrences are carried over individually. Upgrading to v1.56.0 makes the first sync run read every
+enabled calendar in full once, which takes longer than usual and then returns to the normal
+incremental runs. That run also merges appointments that earlier versions had stored as separate
+occurrences back into their series; an occurrence you had assigned to someone or given its own
+colour is kept as a separate entry instead.
+
 ### Apple Calendar Sync — Legacy Single-Account (Optional)
 
 > **Note:** Since v0.44.0, multi-account CalDAV (iCloud, Nextcloud, Radicale, Baikal) is managed through **Settings → Synchronization** in the UI. These env vars configure a single Apple CalDAV account at startup and remain supported for backwards compatibility.

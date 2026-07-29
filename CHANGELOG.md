@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.56.0] - 2026-07-29
+
+### Changed
+- Recurring appointments from Google are now held as one series with its repeat rule, the way appointments from CalDAV and iCloud have always been held. Google used to hand each occurrence over separately, so a weekly appointment arrived as dozens of individual entries that only looked like a series. Editing the repeat rule of such an appointment or moving it to another calendar was rejected, and a series created in Yuvomi and synced to Google was the odd one out among its own occurrences. Cancelled occurrences are carried over as gaps in the series, and an occurrence moved to another time becomes an entry of its own on its new date. (#593)
+- The first sync after this update reads every enabled Google calendar in full once, which takes longer than a normal run before returning to the usual incremental ones. That run also merges appointments stored as separate occurrences by earlier versions back into their series. An occurrence you had assigned to someone or given its own colour is not merged away: it stays as a separate appointment on its date, and the series skips that date so nothing appears twice.
+
 ## [1.55.0] - 2026-07-29
 
 ### Added

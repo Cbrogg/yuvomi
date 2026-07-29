@@ -570,11 +570,19 @@ async function sync() {
     let newSyncToken = null;
 
     do {
-      const listParams = { calendarId, singleEvents: true, pageToken };
+      // singleEvents:false liefert eine Serie als EINEN Master mit ihrer RRULE
+      // statt als hunderte Einzelvorkommen - so, wie CalDAV und ICS sie schon
+      // immer liefern, und wie Yuvomi Serien lokal führt und expandiert (#593).
+      // showDeleted:true ist dabei Pflicht: ein einzeln abgesagtes Vorkommen ist
+      // nur als cancelled-Instanz erkennbar, aus der das EXDATE entsteht.
+      const listParams = { calendarId, singleEvents: false, showDeleted: true, pageToken };
       if (syncToken) {
         listParams.syncToken = syncToken;
       } else {
-        listParams.timeMin = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+        // Kein timeMin: ohne singleEvents wird der Zeitraum gegen den Serienstart
+        // geprüft, nicht gegen die Vorkommen. Eine 2019 begonnene, bis heute
+        // laufende Wochenserie fiele damit aus dem Abruf. Das kostet nichts an
+        // Volumen - ein Master ersetzt alle seine Instanzen.
         listParams.timeMax = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
       }
 
@@ -591,7 +599,7 @@ async function sync() {
         throw err;
       }
 
-      upsertGoogleEvents(response.data.items || [], calRefId, calColor, eventColorMap);
+      upsertGoogleEvents(response.data.items || [], calRefId, calColor, eventColorMap, { fullResync: !syncToken });
       pageToken    = response.data.nextPageToken;
       newSyncToken = response.data.nextSyncToken || newSyncToken;
     } while (pageToken);
@@ -707,7 +715,43 @@ async function fetchEventColorMap(calendar) {
 // Helfer: Google-Event in lokale DB upserten
 // --------------------------------------------------------
 
-function upsertGoogleEvents(items, calRefId = null, calColor = GOOGLE_COLOR, colorMap = {}) {
+/**
+ * Die RRULE-Zeile aus Googles `recurrence`-Liste. Die Liste führt neben der Regel
+ * auch EXDATE/RDATE, deren Reihenfolge nicht zugesichert ist.
+ */
+function recurrenceRuleOf(item) {
+  if (!Array.isArray(item.recurrence)) return null;
+  return item.recurrence.find((line) => /^RRULE[:;]/i.test(line)) || null;
+}
+
+/** Die EXDATE-Daten (YYYY-MM-DD) aus Googles `recurrence`-Liste. */
+function exdatesOf(item) {
+  if (!Array.isArray(item.recurrence)) return [];
+  const dates = [];
+  for (const line of item.recurrence) {
+    if (!/^EXDATE[:;]/i.test(line)) continue;
+    const values = line.slice(line.indexOf(':') + 1).split(',');
+    for (const value of values) {
+      const digits = value.trim().replace(/[^0-9]/g, '');
+      if (digits.length >= 8) {
+        dates.push(`${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}`);
+      }
+    }
+  }
+  return dates;
+}
+
+/**
+ * Datum, an dem ein Ausnahme-Vorkommen ursprünglich lag - das ist der Slot, den
+ * die Serienexpansion überspringen muss, nicht der (womöglich verschobene) neue
+ * Termin.
+ */
+function originalStartDate(item) {
+  const raw = item.originalStartTime?.dateTime || item.originalStartTime?.date || null;
+  return raw ? String(raw).slice(0, 10) : null;
+}
+
+function upsertGoogleEvents(items, calRefId = null, calColor = GOOGLE_COLOR, colorMap = {}, { fullResync = false } = {}) {
   // Auf den meldenden Kalender eingegrenzt: wird ein Event in Google von Kalender
   // A nach B verschoben, meldet A es als 'cancelled', während B es als aktiv
   // liefert - bei beiden dieselbe Event-ID. Ein ID-only-DELETE löscht dann je
@@ -735,30 +779,27 @@ function upsertGoogleEvents(items, calRefId = null, calColor = GOOGLE_COLOR, col
     `SELECT 1 FROM calendar_pending_deletions WHERE source = 'google' AND event_external_id = ?`
   );
 
-  // Serie, die Yuvomi selbst hochgeladen hat: die Zeile trägt Googles Master-ID
-  // und ihre RRULE, und wird lokal expandiert. Der Abruf läuft mit
-  // singleEvents:true und liefert dieselbe Serie zusätzlich als Einzelinstanzen -
-  // ohne die folgende Prüfung stünde jeder Serientermin doppelt im Kalender.
-  const localMaster = db.get().prepare(`
-    SELECT 1 FROM calendar_events
-    WHERE external_calendar_id = ? AND external_source = 'google'
-      AND recurrence_rule IS NOT NULL
-  `);
-  // Aufräumen für Datenbanken aus der Zeit vor diesem Fix: die damals angelegten
-  // Instanz-Zeilen sind reine Dubletten des Masters. Nur unangetastete werden
-  // entfernt - was der Nutzer umgefärbt oder zugewiesen hat, bleibt stehen.
-  const untouchedInstance = db.get().prepare(`
-    SELECT e.id FROM calendar_events e
-    WHERE e.external_calendar_id = ? AND e.external_source = 'google'
-      AND e.user_modified = 0
-      AND NOT EXISTS (SELECT 1 FROM event_assignments ea WHERE ea.event_id = e.id)
-  `);
   const dropRow = db.get().prepare('DELETE FROM calendar_events WHERE id = ?');
+  // Ausgenommene Vorkommen einer Serie (#489). Additiv: eine vom Nutzer lokal
+  // gesetzte Ausnahme wird dabei nicht entfernt.
+  const insException = db.get().prepare(
+    'INSERT OR IGNORE INTO calendar_event_exceptions (event_id, exception_date) VALUES (?, ?)'
+  );
+  const findLocal = db.get().prepare(
+    `SELECT id, start_datetime FROM calendar_events WHERE external_calendar_id = ? AND external_source = 'google'`
+  );
 
   const insertOrUpdate = db.get().transaction((item) => {
     // Löschung aus diesem Kalender - eine Zeile, die inzwischen zu einem anderen
     // Kalender gehört, ist davon nicht gemeint.
     if (item.status === 'cancelled') {
+      // Abgesagtes Einzelvorkommen einer Serie: nicht die Serie löschen, sondern
+      // genau dieses Datum aus ihr ausnehmen.
+      if (item.recurringEventId) {
+        const master = findLocal.get(item.recurringEventId);
+        const date   = originalStartDate(item);
+        if (master && date) insException.run(master.id, date);
+      }
       del.run(item.id, calRefId, calRefId);
       return;
     }
@@ -768,12 +809,14 @@ function upsertGoogleEvents(items, calRefId = null, calColor = GOOGLE_COLOR, col
       del.run(item.id, null, null);
       return;
     }
-    // Instanz einer Serie, deren Master hier bereits liegt: übergehen, sonst
-    // steht die Serie doppelt (lokal expandiert plus Googles Einzelinstanzen).
-    if (item.recurringEventId && localMaster.get(item.recurringEventId)) {
-      const stale = untouchedInstance.get(item.id);
-      if (stale) dropRow.run(stale.id);
-      return;
+    // Geändertes Einzelvorkommen: als eigenständiger Termin führen und sein
+    // ursprüngliches Datum aus der Serie ausnehmen, sonst stünde es doppelt -
+    // einmal aus der Expansion des Masters, einmal als Ausnahme. Dasselbe
+    // Verfahren wie bei CalDAV/ICS (normalizeRecurrenceOverrides).
+    if (item.recurringEventId) {
+      const master = findLocal.get(item.recurringEventId);
+      const date   = originalStartDate(item);
+      if (master && date) insException.run(master.id, date);
     }
 
     const allDay      = !!(item.start?.date && !item.start?.dateTime);
@@ -784,7 +827,10 @@ function upsertGoogleEvents(items, calRefId = null, calColor = GOOGLE_COLOR, col
     const title       = item.summary || '(kein Titel)';
     const description = item.description || null;
     const location    = item.location    || null;
-    const rrule       = item.recurrence  ? item.recurrence[0] : null;
+    // recurrence ist eine Liste von RFC-5545-Zeilen und enthält neben der RRULE
+    // auch EXDATE/RDATE. Gezielt die RRULE greifen statt blind die erste Zeile -
+    // steht ein EXDATE vorn, landete es sonst als Wiederholungsregel in der DB.
+    const rrule       = recurrenceRuleOf(item);
 
     // Event-Eigenfarbe aus colorId auflösen (Google liefert nur die Paletten-ID),
     // sonst Kalenderfarbe als Default.
@@ -842,15 +888,101 @@ function upsertGoogleEvents(items, calRefId = null, calColor = GOOGLE_COLOR, col
       `).run(title, description, startDt, endDt, allDay ? 1 : 0, location, evColor, item.id, rrule, calRefId);
       assignDefaultToEvent(db.get(), inserted.lastInsertRowid, defaultAssignee);
     }
+
+    // EXDATEs, die Google an der Serie selbst führt, als Ausnahmen ablegen.
+    if (rrule) {
+      const row = findLocal.get(item.id);
+      if (row) for (const date of exdatesOf(item)) insException.run(row.id, date);
+    }
   });
 
-  for (const item of items) {
-    if (!item) continue;
+  // Master vor ihren Ausnahmen: ein Ausnahme-Vorkommen braucht die Master-Zeile,
+  // um sein EXDATE daran zu hängen. Googles Reihenfolge ist nicht zugesichert.
+  const ordered = items.filter(Boolean)
+    .map((item, index) => ({ item, index }))
+    .sort((a, b) => (a.item.recurringEventId ? 1 : 0) - (b.item.recurringEventId ? 1 : 0) || a.index - b.index)
+    .map((entry) => entry.item);
+
+  for (const item of ordered) {
     try {
       insertOrUpdate(item);
     } catch (err) {
       log.error(`Upsert error for event ${item?.id}:`, err.message);
     }
+  }
+
+  // Beim Full-Resync: Zeilen aus der Zeit vor der Umstellung aufräumen. Damals
+  // wurde jede Serie als ihre Einzelvorkommen gespeichert (`<masterId>_<stamp>`);
+  // neben dem jetzt geführten Master wären das lauter Dubletten. Nur beim
+  // Full-Resync, weil nur dort alle echten Ausnahmen in derselben Antwort liegen
+  // und sich damit von Altlasten unterscheiden lassen.
+  if (fullResync) {
+    const seen = new Set(ordered.map((item) => item.id));
+    for (const item of ordered) {
+      if (item.recurringEventId || !recurrenceRuleOf(item)) continue;
+      try {
+        retireLegacyInstances(item.id, seen);
+      } catch (err) {
+        log.error(`Could not retire legacy instances of ${item.id}:`, err.message);
+      }
+    }
+  }
+}
+
+/**
+ * Wandelt die Einzelvorkommen um, die vor der Umstellung auf Serien-Master
+ * gespeichert wurden (#593).
+ *
+ * Unangetastete Zeilen verschwinden - der Master deckt sie ab. Zeilen mit
+ * eigener Farbe oder Zuweisung werden dagegen zu eigenständigen lokalen
+ * Terminen und ihr Datum aus der Serie ausgenommen: so bleibt die Arbeit des
+ * Nutzers erhalten, ohne dass der Termin doppelt erscheint.
+ */
+function retireLegacyInstances(masterExternalId, seen) {
+  const master = db.get().prepare(
+    `SELECT id FROM calendar_events WHERE external_calendar_id = ? AND external_source = 'google'`
+  ).get(masterExternalId);
+  if (!master) return;
+
+  const legacy = db.get().prepare(`
+    SELECT e.id, e.external_calendar_id, e.start_datetime, e.user_modified,
+           (SELECT COUNT(*) FROM event_assignments ea WHERE ea.event_id = e.id) AS assignments
+    FROM calendar_events e
+    WHERE e.external_source = 'google'
+      AND e.external_calendar_id LIKE ? ESCAPE '\\'
+      AND e.id <> ?
+  `).all(`${masterExternalId.replace(/([%_\\])/g, '\\$1')}\\_%`, master.id);
+
+  const drop     = db.get().prepare('DELETE FROM calendar_events WHERE id = ?');
+  const detach   = db.get().prepare(`
+    UPDATE calendar_events
+    SET external_source = 'local', external_calendar_id = NULL, recurrence_rule = NULL
+    WHERE id = ?
+  `);
+  const insException = db.get().prepare(
+    'INSERT OR IGNORE INTO calendar_event_exceptions (event_id, exception_date) VALUES (?, ?)'
+  );
+
+  let removed = 0;
+  let kept = 0;
+  for (const row of legacy) {
+    // In dieser Antwort enthalten heißt: echte Ausnahme, kein Altbestand.
+    if (seen.has(row.external_calendar_id)) continue;
+
+    if (row.user_modified === 0 && row.assignments === 0) {
+      drop.run(row.id);
+      removed++;
+    } else {
+      insException.run(master.id, String(row.start_datetime).slice(0, 10));
+      detach.run(row.id);
+      kept++;
+    }
+  }
+  if (removed || kept) {
+    log.info(
+      `Series ${masterExternalId}: ${removed} legacy occurrence(s) folded into the series` +
+      `${kept ? `, ${kept} kept as separate event(s) because they carry local edits` : ''}.`
+    );
   }
 }
 

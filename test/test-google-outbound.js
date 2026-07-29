@@ -16,6 +16,10 @@
  *          - Inbound darf weder einen gelöschten Termin wiederbeleben noch eine
  *            noch nicht gepushte lokale Änderung überschreiben, und ein cancelled
  *            aus Kalender A darf keine Zeile treffen, die inzwischen zu B gehört
+ *          - Serien: Google liefert seit der Umstellung auf singleEvents:false
+ *            einen Master mit Wiederholungsregel; Abweichungen werden zu eigenen
+ *            Terminen mit EXDATE, und der Altbestand aus der Zeit der
+ *            Einzelvorkommen geht beim ersten vollen Abgleich in seiner Serie auf
  *          - DELETE /:id und PUT /:id über den echten Router
  *
  *        Netz-frei: der Google-Client wird als Fake injiziert; GOOGLE_CLIENT_ID &
@@ -753,105 +757,225 @@ test('Altzeilen ohne calendar_ref_id werden von einem cancelled weiterhin gelös
   assert.equal(reload(event.id), undefined, 'sonst kämen echte Löschungen bei Altdaten nie an');
 });
 
-// ── Serien: Master lokal, Instanzen von Google ──────────────────────────────────
+// ── Serien: Google liefert Master statt Einzelvorkommen ─────────────────────────
+//
+// Der Abruf läuft mit singleEvents:false. Eine Serie kommt damit als EIN Master
+// mit ihrer Wiederholungsregel, ihre Abweichungen als eigene Items, die auf den
+// Master zeigen. Yuvomi expandiert die Serie lokal - so wie bei CalDAV und ICS.
 
-function instanceItem(masterId, stamp, extra = {}) {
+function seriesMaster(id, extra = {}) {
   return {
-    id: `${masterId}_${stamp}`,
-    summary: 'Yoga',
-    status: 'confirmed',
-    recurringEventId: masterId,
-    start: { dateTime: `${stamp.slice(0, 4)}-${stamp.slice(4, 6)}-${stamp.slice(6, 8)}T18:00:00Z` },
-    end:   { dateTime: `${stamp.slice(0, 4)}-${stamp.slice(4, 6)}-${stamp.slice(6, 8)}T19:00:00Z` },
+    id, summary: 'Yoga', status: 'confirmed',
+    recurrence: ['RRULE:FREQ=WEEKLY'],
+    start: { dateTime: '2035-03-03T18:00:00Z' },
+    end:   { dateTime: '2035-03-03T19:00:00Z' },
     ...extra,
   };
 }
 
-/** Zustand nach einem Outbound-Push: die Zeile trägt Googles Master-ID + RRULE. */
-function insertPushedSeries(masterId, calRefId) {
-  const r = db.prepare(`
-    INSERT INTO calendar_events
-      (title, start_datetime, end_datetime, recurrence_rule, external_calendar_id,
-       external_source, calendar_ref_id, created_by)
-    VALUES ('Yoga', '2035-03-03T18:00', '2035-03-03T19:00', 'FREQ=WEEKLY', ?, 'google', ?, 1)
-  `).run(masterId, calRefId);
-  return reload(r.lastInsertRowid);
+/** Ein von der Serie abweichendes Vorkommen (verschoben oder abgesagt). */
+function occurrence(masterId, originalStamp, extra = {}) {
+  const d = `${originalStamp.slice(0, 4)}-${originalStamp.slice(4, 6)}-${originalStamp.slice(6, 8)}`;
+  return {
+    id: `${masterId}_${originalStamp}`,
+    recurringEventId: masterId,
+    originalStartTime: { dateTime: `${d}T18:00:00Z` },
+    status: 'confirmed',
+    summary: 'Yoga',
+    start: { dateTime: `${d}T18:00:00Z` },
+    end:   { dateTime: `${d}T19:00:00Z` },
+    ...extra,
+  };
 }
 
-test('eine selbst hochgeladene Serie wird nicht zusätzlich als Instanzen angelegt', () => {
+function exceptionDates(eventId) {
+  return db.prepare('SELECT exception_date FROM calendar_event_exceptions WHERE event_id = ? ORDER BY exception_date')
+    .all(eventId).map((r) => r.exception_date);
+}
+
+function googleRows() {
+  return db.prepare("SELECT * FROM calendar_events WHERE external_source = 'google' ORDER BY id").all();
+}
+
+test('eine Serie kommt als ein Termin mit Wiederholungsregel an, nicht als viele', () => {
   reset();
   const calRefId = __test.upsertExternalCalendar('google', 'primary', 'Primär', '#4285F4');
-  const master = insertPushedSeries('master-a', calRefId);
 
-  // singleEvents:true liefert dieselbe Serie als Einzelinstanzen.
+  __test.upsertGoogleEvents([seriesMaster('yoga')], calRefId);
+
+  const rows = googleRows();
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].recurrence_rule, 'RRULE:FREQ=WEEKLY');
+});
+
+test('die Wiederholungsregel wird gezielt gegriffen, auch wenn ein EXDATE davor steht', () => {
+  reset();
+  const calRefId = __test.upsertExternalCalendar('google', 'primary', 'Primär', '#4285F4');
+
+  // Googles recurrence-Liste führt neben der Regel auch EXDATE/RDATE; ihre
+  // Reihenfolge ist nicht zugesichert.
+  __test.upsertGoogleEvents([seriesMaster('yoga', {
+    recurrence: ['EXDATE;TZID=Europe/Berlin:20350310T190000', 'RRULE:FREQ=WEEKLY'],
+  })], calRefId);
+
+  const [row] = googleRows();
+  assert.equal(row.recurrence_rule, 'RRULE:FREQ=WEEKLY', 'sonst stünde ein EXDATE als Regel in der DB');
+  assert.deepEqual(exceptionDates(row.id), ['2035-03-10'], 'das EXDATE wird zur Ausnahme');
+});
+
+test('ein verschobenes Vorkommen wird eigener Termin, sein alter Slot fällt weg', () => {
+  reset();
+  const calRefId = __test.upsertExternalCalendar('google', 'primary', 'Primär', '#4285F4');
+
   __test.upsertGoogleEvents([
-    instanceItem('master-a', '20350303T180000Z'),
-    instanceItem('master-a', '20350310T180000Z'),
+    seriesMaster('yoga'),
+    occurrence('yoga', '20350310T180000Z', {
+      summary: 'Yoga (später)',
+      start: { dateTime: '2035-03-10T20:00:00Z' },
+      end:   { dateTime: '2035-03-10T21:00:00Z' },
+    }),
   ], calRefId);
 
-  const rows = db.prepare("SELECT id FROM calendar_events WHERE external_source = 'google'").all();
-  assert.equal(rows.length, 1, 'sonst stünde jeder Serientermin doppelt im Kalender');
-  assert.equal(reload(master.id).recurrence_rule, 'FREQ=WEEKLY');
+  const rows = googleRows();
+  assert.equal(rows.length, 2);
+  const master = rows.find((r) => r.external_calendar_id === 'yoga');
+  const moved  = rows.find((r) => r.external_calendar_id === 'yoga_20350310T180000Z');
+  assert.equal(moved.title, 'Yoga (später)');
+  assert.equal(moved.recurrence_rule, null, 'ein Einzelvorkommen ist keine Serie');
+  assert.deepEqual(exceptionDates(master.id), ['2035-03-10'],
+    'ohne die Ausnahme stünde der 10.03. zweimal: aus der Serie und als verschobener Termin');
 });
 
-test('eine Serie aus Google ohne lokalen Master wird weiterhin als Instanzen importiert', () => {
+test('ein abgesagtes Vorkommen nimmt sein Datum aus der Serie, ohne sie zu löschen', () => {
   reset();
   const calRefId = __test.upsertExternalCalendar('google', 'primary', 'Primär', '#4285F4');
 
   __test.upsertGoogleEvents([
-    instanceItem('fremd-b', '20350303T180000Z'),
-    instanceItem('fremd-b', '20350310T180000Z'),
+    seriesMaster('yoga'),
+    occurrence('yoga', '20350317T180000Z', { status: 'cancelled' }),
   ], calRefId);
 
-  const rows = db.prepare("SELECT id FROM calendar_events WHERE external_source = 'google'").all();
-  assert.equal(rows.length, 2, 'ohne eigenen Master ist die Instanz die einzige Quelle');
+  const rows = googleRows();
+  assert.equal(rows.length, 1, 'die Serie selbst bleibt bestehen');
+  assert.deepEqual(exceptionDates(rows[0].id), ['2035-03-17']);
 });
 
-test('Altbestand: unangetastete Dubletten verschwinden beim nächsten Sync', () => {
+test('die Reihenfolge in Googles Antwort spielt keine Rolle', () => {
   reset();
   const calRefId = __test.upsertExternalCalendar('google', 'primary', 'Primär', '#4285F4');
-  insertPushedSeries('master-c', calRefId);
-  // Vor dem Fix angelegte Instanz-Zeile.
-  const dupe = insertGoogleEvent({ calRefId, googleId: 'master-c_20350303T180000Z' });
 
-  __test.upsertGoogleEvents([instanceItem('master-c', '20350303T180000Z')], calRefId);
+  // Abweichung VOR dem Master - ohne Sortierung fände sie ihren Master nicht.
+  __test.upsertGoogleEvents([
+    occurrence('yoga', '20350317T180000Z', { status: 'cancelled' }),
+    seriesMaster('yoga'),
+  ], calRefId);
 
-  assert.equal(reload(dupe.id), undefined, 'die reine Dublette wird aufgeräumt');
-  assert.equal(db.prepare("SELECT COUNT(*) c FROM calendar_events WHERE external_source = 'google'").get().c, 1);
+  const master = googleRows().find((r) => r.external_calendar_id === 'yoga');
+  assert.deepEqual(exceptionDates(master.id), ['2035-03-17']);
 });
 
-test('eine Dublette mit eigener Farbe bleibt stehen', () => {
+test('ein Einzeltermin bleibt ein Einzeltermin', () => {
   reset();
   const calRefId = __test.upsertExternalCalendar('google', 'primary', 'Primär', '#4285F4');
-  insertPushedSeries('master-d', calRefId);
-  const dupe = insertGoogleEvent({ calRefId, googleId: 'master-d_20350303T180000Z' });
-  db.prepare('UPDATE calendar_events SET user_modified = 1 WHERE id = ?').run(dupe.id);
 
-  __test.upsertGoogleEvents([instanceItem('master-d', '20350303T180000Z')], calRefId);
+  __test.upsertGoogleEvents([inboundItem('solo', 'Zahnarzt')], calRefId);
 
-  assert.ok(reload(dupe.id), 'was der Nutzer angefasst hat, wird nicht weggeräumt');
+  const [row] = googleRows();
+  assert.equal(row.recurrence_rule, null);
+  assert.equal(exceptionDates(row.id).length, 0);
 });
 
-test('eine Dublette mit Zuweisung bleibt stehen', () => {
+// ── Umstellung: Altbestand aus der Zeit der Einzelvorkommen ─────────────────────
+
+/** Wie eine Serie vor der Umstellung gespeichert war: als ihre Vorkommen. */
+function seedLegacyOccurrences(masterId, calRefId, stamps) {
+  const ins = db.prepare(`
+    INSERT INTO calendar_events
+      (title, start_datetime, end_datetime, external_calendar_id, external_source,
+       calendar_ref_id, created_by, user_modified)
+    VALUES ('Yoga', ?, ?, ?, 'google', ?, 1, ?) RETURNING id
+  `);
+  return stamps.map(({ stamp, userModified = 0 }) => {
+    const d = `${stamp.slice(0, 4)}-${stamp.slice(4, 6)}-${stamp.slice(6, 8)}`;
+    return ins.get(`${d}T18:00:00Z`, `${d}T19:00:00Z`, `${masterId}_${stamp}`, calRefId, userModified).id;
+  });
+}
+
+test('beim ersten vollen Abgleich gehen die alten Einzelvorkommen in ihrer Serie auf', () => {
   reset();
   const calRefId = __test.upsertExternalCalendar('google', 'primary', 'Primär', '#4285F4');
-  insertPushedSeries('master-e', calRefId);
-  const dupe = insertGoogleEvent({ calRefId, googleId: 'master-e_20350303T180000Z' });
-  db.prepare('INSERT INTO event_assignments (event_id, user_id) VALUES (?, 1)').run(dupe.id);
+  seedLegacyOccurrences('yoga', calRefId, [
+    { stamp: '20350303T180000Z' }, { stamp: '20350310T180000Z' }, { stamp: '20350317T180000Z' },
+  ]);
 
-  __test.upsertGoogleEvents([instanceItem('master-e', '20350303T180000Z')], calRefId);
+  __test.upsertGoogleEvents([seriesMaster('yoga')], calRefId, '#4285F4', {}, { fullResync: true });
 
-  assert.ok(reload(dupe.id), 'eine Zuweisung ist Nutzerarbeit und darf nicht verschwinden');
+  const rows = googleRows();
+  assert.equal(rows.length, 1, 'nur noch die Serie selbst');
+  assert.equal(rows[0].external_calendar_id, 'yoga');
 });
 
-test('ein Einzeltermin ohne recurringEventId ist von der Regel nicht betroffen', () => {
+test('ein angefasstes Vorkommen überlebt als eigener Termin statt gelöscht zu werden', () => {
   reset();
   const calRefId = __test.upsertExternalCalendar('google', 'primary', 'Primär', '#4285F4');
-  insertPushedSeries('master-f', calRefId);
+  const [, assignedId] = seedLegacyOccurrences('yoga', calRefId, [
+    { stamp: '20350303T180000Z' }, { stamp: '20350310T180000Z' },
+  ]);
+  db.prepare('INSERT INTO event_assignments (event_id, user_id) VALUES (?, 1)').run(assignedId);
 
-  __test.upsertGoogleEvents([inboundItem('einzel-f', 'Einzeltermin')], calRefId);
+  __test.upsertGoogleEvents([seriesMaster('yoga')], calRefId, '#4285F4', {}, { fullResync: true });
 
-  assert.equal(db.prepare("SELECT COUNT(*) c FROM calendar_events WHERE external_calendar_id = 'einzel-f'").get().c, 1);
+  const kept = reload(assignedId);
+  assert.ok(kept, 'eine Zuweisung ist Nutzerarbeit');
+  assert.equal(kept.external_source, 'local', 'losgelöst von Google, damit kein Sync sie wieder einsammelt');
+  assert.equal(kept.external_calendar_id, null);
+  assert.equal(db.prepare('SELECT COUNT(*) c FROM event_assignments WHERE event_id = ?').get(assignedId).c, 1);
+
+  const master = googleRows().find((r) => r.external_calendar_id === 'yoga');
+  assert.deepEqual(exceptionDates(master.id), ['2035-03-10'],
+    'sonst stünde der Termin doppelt: als eigener Eintrag und aus der Serie');
+});
+
+test('ein umgefärbtes Vorkommen überlebt genauso', () => {
+  reset();
+  const calRefId = __test.upsertExternalCalendar('google', 'primary', 'Primär', '#4285F4');
+  const [, recolouredId] = seedLegacyOccurrences('yoga', calRefId, [
+    { stamp: '20350303T180000Z' }, { stamp: '20350310T180000Z', userModified: 1 },
+  ]);
+
+  __test.upsertGoogleEvents([seriesMaster('yoga')], calRefId, '#4285F4', {}, { fullResync: true });
+
+  assert.equal(reload(recolouredId)?.external_source, 'local');
+});
+
+test('ohne vollen Abgleich wird kein Altbestand angefasst', () => {
+  reset();
+  const calRefId = __test.upsertExternalCalendar('google', 'primary', 'Primär', '#4285F4');
+  const ids = seedLegacyOccurrences('yoga', calRefId, [{ stamp: '20350303T180000Z' }]);
+
+  // Delta-Lauf: er enthält nur den geänderten Master, nicht die Abweichungen der
+  // Serie. Würde hier aufgeräumt, verschwänden echte Ausnahmen aus früheren Läufen.
+  __test.upsertGoogleEvents([seriesMaster('yoga')], calRefId);
+
+  assert.ok(reload(ids[0]), 'ein Delta erlaubt keine Unterscheidung von Altbestand und Ausnahme');
+});
+
+test('eine echte Ausnahme wird beim vollen Abgleich nicht für Altbestand gehalten', () => {
+  reset();
+  const calRefId = __test.upsertExternalCalendar('google', 'primary', 'Primär', '#4285F4');
+
+  __test.upsertGoogleEvents([
+    seriesMaster('yoga'),
+    occurrence('yoga', '20350310T180000Z', {
+      summary: 'Yoga (später)',
+      start: { dateTime: '2035-03-10T20:00:00Z' },
+      end:   { dateTime: '2035-03-10T21:00:00Z' },
+    }),
+  ], calRefId, '#4285F4', {}, { fullResync: true });
+
+  const moved = googleRows().find((r) => r.external_calendar_id === 'yoga_20350310T180000Z');
+  assert.ok(moved, 'sie steht in derselben Antwort und ist damit als echt erkennbar');
+  assert.equal(moved.external_source, 'google');
 });
 
 // ── disconnect ──────────────────────────────────────────────────────────────────
