@@ -766,6 +766,17 @@
     --_color-surface-raised:   #2E2E2B;
     --_color-surface-glass:    rgba(34, 34, 32, 0.78);
 
+    /* Kanten: im Dark eigenständig gesetzt statt aus der Neutral-Rampe
+     * abgeleitet. Die Rampe liegt hier so dicht an --color-surface (#222220),
+     * dass --color-border-subtle exakt DIE FLÄCHENFARBE traf - eine Kartenkante
+     * in der Farbe ihrer eigenen Fläche (1.00:1). Karten, Listenzeilen und
+     * Formfelder hatten damit im Dark faktisch keine Begrenzung; gemessen
+     * Critique 2026-07-29 an .recipe-card, .pantry-row und .quick-add__qty.
+     * Ratios gegen --color-surface; gegen --color-bg (#1A1A18) jeweils höher. */
+    --color-border-subtle: #3A3A37;  /* 1.40:1 - Trenner, ruhige Kartenkante */
+    --color-border:        #4A4A46;  /* 1.79:1 - Standardkante, Formfelder */
+    --color-border-strong: #6B6B68;  /* 2.98:1 - Hover, betonte Rahmen */
+
     --_sidebar-bg:           #141413;
     --_sidebar-shadow-light: rgba(255, 255, 255, 0.04);
     --_sidebar-shadow-dark:  rgba(0, 0, 0, 0.4);
@@ -869,7 +880,7 @@
     --_glass-bg-hover:         rgba(38, 38, 36, 0.82);
     --_glass-bg-elevated:      rgba(46, 46, 44, 0.90);
     --_glass-border:           rgba(255, 255, 255, 0.10);
-    --_glass-border-subtle:    rgba(255, 255, 255, 0.06);
+    --_glass-border-subtle:    rgba(255, 255, 255, 0.12);  /* 1.5:1 statt 1.18:1 - trägt Formfeld-Kanten (page-search, quick-add) */
     --_glass-highlight:        rgba(255, 255, 255, 0.09);
     --_glass-highlight-subtle: rgba(255, 255, 255, 0.05);
     --_glass-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.30), 0 0 0 1px rgba(255, 255, 255, 0.07);
@@ -910,6 +921,17 @@
     --_color-surface-work:     #242422;
     --_color-surface-raised:   #2E2E2B;
     --_color-surface-glass:    rgba(34, 34, 32, 0.78);
+
+    /* Kanten: im Dark eigenständig gesetzt statt aus der Neutral-Rampe
+     * abgeleitet. Die Rampe liegt hier so dicht an --color-surface (#222220),
+     * dass --color-border-subtle exakt DIE FLÄCHENFARBE traf - eine Kartenkante
+     * in der Farbe ihrer eigenen Fläche (1.00:1). Karten, Listenzeilen und
+     * Formfelder hatten damit im Dark faktisch keine Begrenzung; gemessen
+     * Critique 2026-07-29 an .recipe-card, .pantry-row und .quick-add__qty.
+     * Ratios gegen --color-surface; gegen --color-bg (#1A1A18) jeweils höher. */
+    --color-border-subtle: #3A3A37;  /* 1.40:1 - Trenner, ruhige Kartenkante */
+    --color-border:        #4A4A46;  /* 1.79:1 - Standardkante, Formfelder */
+    --color-border-strong: #6B6B68;  /* 2.98:1 - Hover, betonte Rahmen */
 
     /* Sidebar */
     --_sidebar-bg:           #141413;
@@ -1024,7 +1046,7 @@
     --_glass-bg-hover:        rgba(38, 38, 36, 0.82);
     --_glass-bg-elevated:     rgba(46, 46, 44, 0.90);
     --_glass-border:          rgba(255, 255, 255, 0.10);
-    --_glass-border-subtle:   rgba(255, 255, 255, 0.06);
+    --_glass-border-subtle:   rgba(255, 255, 255, 0.12);  /* 1.5:1 statt 1.18:1 - trägt Formfeld-Kanten (page-search, quick-add) */
     --_glass-highlight:       rgba(255, 255, 255, 0.09);
     --_glass-highlight-subtle: rgba(255, 255, 255, 0.05);
     --_glass-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.30), 0 0 0 1px rgba(255, 255, 255, 0.07);

@@ -224,7 +224,18 @@ export async function render(container, { user }) {
         <span class="week-nav__label" id="week-label"></span>
         <div class="week-nav__actions">
           <button class="week-nav__today" id="week-today">${t('meals.today')}</button>
-          <button class="btn btn--secondary week-nav__randomize" id="week-randomize">${t('meals.randomizePlan')}</button>
+          <!-- Ghost statt secondary: der Zufallsplan ist eine Beschleunigung,
+               nicht die Hauptsache der Seite. Als gerahmter Button war er das
+               lauteste Element im Kopf und stand damit vor Wochennavigation
+               und „Mahlzeit hinzufügen" (Critique 2026-07-29). -->
+          <button class="btn btn--ghost week-nav__randomize" id="week-randomize">${t('meals.randomizePlan')}</button>
+          <!-- Nur Desktop: klappt die Rezept-Spalte weg, damit alle sieben
+               Tagesspalten in voller Breite ins Board passen. -->
+          <button class="btn btn--icon week-nav__rail-toggle" id="rail-toggle"
+                  aria-expanded="true" aria-controls="recipe-sidebar"
+                  aria-label="${t('meals.hideRecipes')}" title="${t('meals.hideRecipes')}">
+            <i data-lucide="panel-right-close" class="icon-md" aria-hidden="true"></i>
+          </button>
         </div>
         <button class="btn btn--icon" id="week-next" aria-label="${t('meals.nextWeek')}">
           <i data-lucide="chevron-right" aria-hidden="true"></i>
@@ -253,6 +264,7 @@ export async function render(container, { user }) {
   renderRecipeSidebar();
   wireNav();
   wireRecipeSidebar();
+  wireRailToggle();
 
   const selectedRecipeId = Number(new URLSearchParams(window.location.search).get('recipe'));
   if (selectedRecipeId) {
@@ -266,6 +278,51 @@ export async function render(container, { user }) {
   container.querySelector('#fab-new-meal').addEventListener('click', () => {
     const firstType = state.visibleMealTypes[0] ?? 'lunch';
     openMealModal({ mode: 'create', date: today, mealType: firstType });
+  });
+}
+
+// --------------------------------------------------------
+// Rezept-Spalte ein-/ausklappen
+// --------------------------------------------------------
+
+const RAIL_STORAGE_KEY = 'yuvomi-meals-rail';
+
+/**
+ * Klappt die Rezept-Spalte weg. Sie belegt auf 1024-1439px 272px und ab 1440px
+ * 320px - genau die Breite, die dem Board für den siebten Tag fehlt: mit ihr
+ * sind Samstag und Sonntag nur über horizontales Scrollen erreichbar, ohne sie
+ * passen alle sieben Spalten in voller Breite (Critique 2026-07-29). Die
+ * Mindestbreite der Tagesspalten bleibt unangetastet, damit die Namen nicht
+ * wieder silbenweise brechen (siehe Kommentar an .week-grid in meals.css).
+ */
+function wireRailToggle() {
+  const btn = _container.querySelector('#rail-toggle');
+  const layout = _container.querySelector('.meals-layout');
+  if (!btn || !layout) return;
+
+  const apply = (hidden) => {
+    layout.classList.toggle('meals-layout--rail-hidden', hidden);
+    btn.setAttribute('aria-expanded', String(!hidden));
+    const label = hidden ? t('meals.showRecipes') : t('meals.hideRecipes');
+    btn.setAttribute('aria-label', label);
+    btn.title = label;
+    const icon = btn.querySelector('i, svg');
+    if (icon) {
+      icon.remove();
+      btn.insertAdjacentHTML('afterbegin',
+        `<i data-lucide="${hidden ? 'panel-right-open' : 'panel-right-close'}" class="icon-md" aria-hidden="true"></i>`);
+      if (window.lucide) lucide.createIcons({ el: btn });
+    }
+  };
+
+  let hidden = false;
+  try { hidden = localStorage.getItem(RAIL_STORAGE_KEY) === 'hidden'; } catch { /* ignore */ }
+  apply(hidden);
+
+  btn.addEventListener('click', () => {
+    hidden = !layout.classList.contains('meals-layout--rail-hidden');
+    apply(hidden);
+    try { localStorage.setItem(RAIL_STORAGE_KEY, hidden ? 'hidden' : 'shown'); } catch { /* ignore */ }
   });
 }
 
@@ -435,11 +492,18 @@ function renderSlot(date, type, mealsForDay, dayCol, typeRow) {
   }
 
   const cardsHTML = meals.map((meal) => {
-    const ingCount    = meal.ingredients?.length ?? 0;
+    const ownCount    = meal.ingredients?.length ?? 0;
     const ingDone     = meal.ingredients?.filter((i) => i.on_shopping_list).length ?? 0;
+    // Aus einem Rezept geplante Mahlzeiten haben noch keine eigenen Zutaten;
+    // der Server liefert dafür die Zahl aus dem Rezept mit. Sonst bliebe der
+    // Einkaufslisten-Button genau dort aus, wo die Zutaten längst bekannt sind
+    // (Critique 2026-07-29: sichtbar auf 1 von 22 Karten). Der erste Transfer
+    // materialisiert sie, danach zählt wieder ownCount.
+    const recipeCount = ownCount === 0 ? (meal.recipe_ingredient_count ?? 0) : 0;
+    const ingCount    = ownCount || recipeCount;
     const ingLabel    = ingCount > 0 ? (ingCount !== 1 ? t('meals.ingredientCountPlural', { count: ingCount }) : t('meals.ingredientCount', { count: ingCount })) : '';
-    const ingDoneLabel = ingCount > 0 && ingDone === ingCount ? ' ✓' : '';
-    const canTransfer  = ingCount > 0 && ingDone < ingCount;
+    const ingDoneLabel = ownCount > 0 && ingDone === ownCount ? ' ✓' : '';
+    const canTransfer  = recipeCount > 0 || (ownCount > 0 && ingDone < ownCount);
     const recurrenceBadge = meal.recurrence_template_id
       ? `<span class="meal-card__recurrence" aria-label="${t('meals.recurrenceBadge')}"><i data-lucide="repeat-2" class="icon-sm" aria-hidden="true"></i></span>`
       : '';
@@ -659,14 +723,51 @@ function openRandomizeModal() {
           <span class="toggle__track"></span>
           <span>${t('meals.randomizeReplaceExisting')}</span>
         </label>
+        <!-- Vorschau statt Blindflug: der Lauf füllt bis zu 28 Slots und kann
+             eine ganze geplante Woche überschreiben. Vorher nannte der Dialog
+             weder das eine noch das andere (Critique 2026-07-29). -->
+        <p class="meal-randomize-modal__preview" id="meal-randomize-preview" aria-live="polite"></p>
         <div class="modal-panel__footer modal-panel__footer--plain">
           <button class="btn btn--secondary" id="meal-randomize-cancel">${t('common.cancel')}</button>
           <button class="btn btn--primary" id="meal-randomize-run">${t('meals.randomizePlan')}</button>
         </div>
       </div>`,
     onSave(panel) {
+      const replaceBox = panel.querySelector('#meal-randomize-replace');
+      const preview = panel.querySelector('#meal-randomize-preview');
+      const runBtn = panel.querySelector('#meal-randomize-run');
+
+      // Rein clientseitig: buildRandomMealAssignments rechnet auf dem bereits
+      // geladenen Wochen- und Rezeptbestand, kostet also keinen Roundtrip.
+      const updatePreview = () => {
+        const plan = buildRandomMealAssignments({
+          weekStart: state.currentWeek,
+          visibleMealTypes: state.visibleMealTypes,
+          meals: state.meals,
+          recipes: state.recipes,
+          replaceExisting: Boolean(replaceBox?.checked),
+        });
+        const fill = plan.assignments.length;
+        const overwrite = plan.deleteMealIds?.length ?? 0;
+
+        if (!fill) {
+          preview.textContent = plan.reason === 'week_full'
+            ? t('meals.randomizeWeekFull')
+            : t('meals.randomizeNoRecipes');
+          runBtn.disabled = true;
+          return;
+        }
+        runBtn.disabled = false;
+        preview.textContent = overwrite > 0
+          ? `${t('meals.randomizePreview', { count: fill })} ${t('meals.randomizePreviewReplace', { count: overwrite })}`
+          : t('meals.randomizePreview', { count: fill });
+      };
+
+      replaceBox?.addEventListener('change', updatePreview);
+      updatePreview();
+
       panel.querySelector('#meal-randomize-cancel')?.addEventListener('click', closeModal);
-      panel.querySelector('#meal-randomize-run')?.addEventListener('click', () => runRandomize(panel));
+      runBtn?.addEventListener('click', () => runRandomize(panel));
     },
   });
 }

@@ -17,15 +17,31 @@
 @media (max-width: 640px) {
   .kitchen-tabs-bar {
     gap: var(--space-0h);
-    padding-inline: var(--space-2);
   }
 
+  /* Der Modultitel „Küche" entfällt mobil: die Bottom-Nav zeigt dasselbe Wort
+   * bereits als aktives Element, hier kostete er ~70px, die den Tab-Labels
+   * fehlten. Bei drei Tabs war die Leiste damit „randvoll" (so die frühere
+   * RAIL_PAD_EXCEPTIONS-Begründung); seit Vorrat als vierter Tab dazukam,
+   * ellipsierten bei 393px alle drei inaktiven Labels zu „Rez…" / „Eink…"
+   * (Critique 2026-07-29). Ohne den Titel reicht der Platz wieder, und die
+   * Leiste kann das reguläre --page-inline-pad tragen - womit auch der
+   * 8px-Versatz zum Body-Inhalt verschwindet. */
+  .kitchen-tabs-bar .sub-tabs-bar__title {
+    display: none;
+  }
+
+  /* padding-inline auf --space-0h: die letzten 2-10px, die dem längsten Label
+   * („Mahlzeiten", 72px) auf 393px noch fehlten, nachdem der Modultitel weg
+   * war. 4 Tabs × 2 × 2px = 16px - genug, dass auf jeder der vier Routen alle
+   * vier Labels ungekürzt stehen. Die Pill bleibt über --target-base hoch und
+   * über flex: 1 1 0 breit genug zum Treffen. */
   .kitchen-tabs-bar .sub-tab {
     flex: 1 1 0;
     min-width: 0;
     justify-content: center;
     gap: var(--space-0h);
-    padding-inline: var(--space-1);
+    padding-inline: var(--space-0h);
   }
 
   .kitchen-tabs-bar .sub-tab__label {
@@ -39,6 +55,21 @@
    * (Audit A1-09). */
   .kitchen-tabs-bar .sub-tab--active {
     flex: 0 0 auto;
+  }
+
+  /* Mobil weicht das Icon, nicht das Label. Vier Tabs teilen sich auf 393px
+   * ~90px pro Stück; „Mahlzeiten" allein braucht 73px Label + 16px Icon + die
+   * Abstände, also ~95px - beides passt nicht nebeneinander. Das Wort ist der
+   * bessere Anker: die Bottom-Nav trägt dieselben Icons bereits, und ein auf
+   * „Mahlz…" gekürztes Label kostet mehr Orientierung als ein fehlendes
+   * Piktogramm. Gilt im ganzen 640er-Breakpoint statt ab einer eigenen
+   * 480er-Schwelle - der Breakpoint-Kontrakt (tokens.css §11c) lässt nur
+   * 640/768/1024/1440 zu, und ein einheitlicher Mobilzustand ist ohnehin
+   * leichter zu lesen als drei Stufen. Das ellipsis oben bleibt als
+   * Sicherheitsnetz für noch schmalere Geräte und lange Übersetzungen. */
+  .kitchen-tabs-bar .sub-tab__icon,
+  .kitchen-tabs-bar .sub-tab > svg {
+    display: none;
   }
 }
 

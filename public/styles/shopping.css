@@ -7,7 +7,12 @@
 /* --------------------------------------------------------
  * Modul-Akzent
  * -------------------------------------------------------- */
-.shopping-page { --module-accent: var(--module-shopping); }
+.shopping-page {
+  --module-accent: var(--module-shopping);
+  /* Freiraum unter der Liste, damit der FAB die letzte Zeile nicht überdeckt.
+   * Gleiche Formel wie --budget-fab-clearance / --rw-fab-clearance. */
+  --shopping-fab-clearance: calc(var(--target-lg) + var(--space-6) + var(--space-4));
+}
 
 /* --------------------------------------------------------
  * Seiten-Layout
@@ -164,10 +169,13 @@
 }
 
 /* Abgehakt-löschen: Textbutton, dessen Label bei Platznot ellipsiert statt die
- * Zeile zu sprengen (Audit F-03). Ersetzt frühere Inline-Styles. */
+ * Zeile zu sprengen (Audit F-03). Ersetzt frühere Inline-Styles.
+ * Untergrenze statt min-width:0: das Label darf kürzen, der Button aber nie
+ * unter Icon + Padding fallen. Ohne sie schrumpfte er mobil auf 16px Breite
+ * mit 0px-Icon - Aktion faktisch unsichtbar (Critique 2026-07-29). */
 .list-header__clear-btn {
   font-size: var(--text-sm);
-  min-width: 0;
+  min-width: var(--target-lg);
 }
 
 .list-header__clear-label {
@@ -190,9 +198,10 @@
   min-width: 0;
 }
 
+/* Untergrenze wie bei .list-header__clear-btn - siehe dort. */
 .list-header__pantry-btn {
   font-size: var(--text-sm);
-  min-width: 0;
+  min-width: var(--target-lg);
 }
 
 /* --------------------------------------------------------
@@ -258,10 +267,20 @@
   gap: var(--space-3);
 }
 
-/* Mobile (Audit F-03): deterministische zwei Zeilen statt ausgefranstem Wrap.
- * Zeile 1: Listenname (volle Breite). Zeile 2: EINE nicht umbrechende
- * Aktionszeile — Abgehakt-löschen links (Label ellipsiert), Icon-Aktionen
- * rechts. Kein Waisen-Icon, kein Totraum mehr. */
+/* Mobile (Audit F-03): deterministische Zeilen statt ausgefranstem Wrap.
+ * Zeile 1: Listenname (volle Breite). Zeile 2: die dauerhaften Aktionen
+ * (Import + Icon-Buttons). Zeile 3, nur bei abgehakten Artikeln: „In den
+ * Vorrat" und „Abgehakt löschen".
+ *
+ * Warum drei Zeilen statt einer nowrap-Zeile (Critique 2026-07-29): fünf
+ * Buttons teilten sich 393px. Nach Import (158px) und zwei Icon-Buttons
+ * (je 48px) blieben ~110px für die beiden abgehakt-Aktionen - sie wurden auf
+ * reines Padding zusammengedrückt (32px und 16px), Icon und Label auf 0px.
+ * Genau die zwei Aktionen, die den Einkauf abschließen, waren damit auf dem
+ * Gerät unsichtbar, auf dem eingekauft wird.
+ *
+ * order:1 hält die dauerhaften Aktionen an ihrem Platz: die kontextuelle
+ * Zeile erscheint darunter, statt beim ersten Abhaken alles zu verschieben. */
 @media (max-width: 767px) {
   .list-header {
     flex-wrap: wrap;
@@ -274,15 +293,34 @@
 
   .list-header__actions {
     width: 100%;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     justify-content: flex-end;
+    row-gap: var(--space-2);
     min-width: 0;
   }
 
-  .list-header__clear-btn {
-    flex: 0 1 auto;
-    margin-right: auto;
-    padding-inline: var(--space-2);
+  .list-header__checked {
+    order: 1;
+    flex: 1 0 100%;
+    justify-content: flex-start;
+  }
+
+  /* In der eigenen Zeile ist Platz für beide vollen Labels (~316px von 361px);
+   * ohne flex-shrink: 0 kürzten sie trotzdem zu „In den Vor…" und warfen den
+   * Zähler aus „Abgehakt löschen (5)".
+   *
+   * flex-wrap dazu, weil die 316px erst ab ~360px Viewport hineinpassen: auf
+   * 320px ragte „Abgehakt löschen (3)" sonst 57px über die Kante und wurde vom
+   * Elterncontainer abgeschnitten. Umbruch in zwei Zeilen ist dort die einzige
+   * Variante, die beide Labels vollständig lässt. */
+  .list-header__checked {
+    flex-wrap: wrap;
+    row-gap: var(--space-2);
+  }
+
+  .list-header__checked .list-header__pantry-btn,
+  .list-header__checked .list-header__clear-btn {
+    flex-shrink: 0;
   }
 
   /* Label bleibt auch mobil sichtbar: das nackte Import-Icon war kryptisch
@@ -451,10 +489,13 @@
 /* --------------------------------------------------------
  * Artikel-Liste (scrollbar)
  * -------------------------------------------------------- */
+/* Bottom-Padding hält die letzte Zeile frei vom FAB, der sonst den untersten
+ * Artikel überdeckt. Gleiche Formel wie --budget-fab-clearance und
+ * --rw-fab-clearance, damit die Freiräume app-weit gleich groß sind. */
 .items-list {
   flex: 1;
   overflow-y: auto;
-  padding: 0 var(--space-4) var(--space-4);
+  padding: 0 var(--space-4) var(--shopping-fab-clearance);
   -webkit-overflow-scrolling: touch;
 }
 
@@ -465,22 +506,32 @@
   margin-bottom: var(--space-4);
 }
 
-/* Web: Einkauf-Content als zentrierte, breitenbegrenzte Spalte statt
- * links auslaufender Vollbreite (Liste liest sich auf ≥1024px ruhiger). */
+/* Web: Einkauf-Content als breitenbegrenzte Lesespalte statt links auslaufender
+ * Vollbreite (die Liste liest sich auf ≥1024px ruhiger).
+ *
+ * LINKSBÜNDIG, nicht zentriert (Critique 2026-07-29): die 720er-Spalte ist per
+ * DESIGN.md erlaubt, ihre Zentrierung war es nie. Zentriert begann der Body bei
+ * 1440px auf x=470, während Mahlzeiten, Rezepte und Vorrat bei x=252 beginnen
+ * und die geteilte Küchen-Tab-Leiste darüber bei x=323 - beim Durchklicken der
+ * vier Tabs sprang der Inhalt sichtbar um 218px. Der Canonical-Page-Head-
+ * Vertrag (#577) verlangt EINE Alignment-Linie; die Lesespalte darf schmaler
+ * sein als die Content-Spalte, muss aber an derselben Kante beginnen.
+ * Damit entfällt auch die Sonderrechnung für .list-tabs-bar: sie erbt jetzt
+ * dieselbe Kante wie alles andere, statt sich eine zweite auszurechnen (die
+ * 24px daneben lag). */
 @media (min-width: 1024px) {
   .shopping-page .list-header,
   .shopping-page .quick-add,
   .shopping-page .item-category {
     width: 100%;
     max-width: var(--content-max-width-narrow);
-    margin-inline: auto;
+    margin-inline: 0 auto;
   }
 
-  /* Listen-Auswahl-Leiste bleibt Vollbreite-Toolbar (durchgehender Trenner),
-   * aber ihre Pills rücken per Padding auf dieselbe zentrierte Spalte ein,
-   * damit „Weekly Shop" (Pill) mit dem Listen-Header darunter fluchtet. */
+  /* Vollbreite-Toolbar mit durchgehendem Trenner; der Inhalt sitzt auf der
+   * gemeinsamen Kante. */
   .shopping-page .list-tabs-bar {
-    padding-inline: max(var(--page-gutter), calc((100% - var(--content-max-width-narrow)) / 2));
+    padding-inline: var(--page-inline-pad);
   }
 }
 

@@ -67,8 +67,19 @@ function formatQuantity(value) {
   return new Intl.NumberFormat(getFormatLocale(), { maximumFractionDigits: 2 }).format(Number(value) || 0);
 }
 
+/**
+ * Einheit übersetzen, mit Rückfall auf den Rohwert. Alle Schreibpfade der App
+ * normalisieren über normalizePantryUnit() auf die zehn kanonischen Einheiten,
+ * ein unbekannter Wert ist also nicht über die Oberfläche erreichbar - wohl
+ * aber über einen direkten Datenbankzugriff, einen Fremdimport oder eine
+ * künftige Einheit, deren Locale-Key noch fehlt. Ohne diesen Rückfall stünde
+ * dann der nackte Schlüssel in der Zeile („1 pantry.units.Stk"), und zwar an
+ * der Stelle, an der die Menge steht. Der Rohwert ist immer noch lesbar.
+ */
 function unitLabel(unit) {
-  return t(`pantry.units.${unit}`);
+  const key = `pantry.units.${unit}`;
+  const label = t(key);
+  return label === key ? String(unit ?? '') : label;
 }
 
 function quantityText(item) {
@@ -616,7 +627,12 @@ function rowEl(item) {
   stepper.append(minus, value, plus);
   actions.appendChild(stepper);
 
-  li.append(actions, main);
+  // Name zuerst, Bedienung danach: eine Vorratsliste wird nach Namen gescannt,
+  // nicht nach Zahlen. Vorher las sich die Zeile „− 500 g + Naturjoghurt" und
+  // damit gegen die Leserichtung und gegen alle drei Geschwistermodule, die
+  // ausnahmslos mit dem Namen führen. Nebeneffekt: die Namenskante steht jetzt
+  // von selbst, statt mit der Stepper-Breite zu wandern (Critique 2026-07-29).
+  li.append(main, actions);
 
   // Kontextuelle Einkaufs-Aktion ans ZEILENENDE, nicht in die Aktionsgruppe:
   // dort verbreiterte sie die Gruppe um 52px, schob den Namen aus der Spalte

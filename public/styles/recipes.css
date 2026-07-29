@@ -23,7 +23,9 @@
   flex: 1;
   overflow-y: auto;
   padding-inline: var(--page-inline-pad);
-  padding-block: var(--space-4);
+  /* Auslauf unten wie in .pantry-list: ohne ihn deckt der FAB die
+   * „In Essensplan übernehmen"-Aktion der letzten Karte ab. */
+  padding-block: var(--space-4) calc(var(--space-4) + var(--target-lg) + var(--space-4));
   display: grid;
   /* Kachelt 2–3-spaltig auf Desktop, automatisch einspaltig auf Mobil
    * (Karten fassen ihre natürliche Höhe via align-items:start). */
@@ -160,6 +162,29 @@
   align-items: center;
   gap: var(--space-2);
   flex-wrap: wrap;
+}
+
+/* Zwei Zeilen, nicht drei: die Primäraktion nimmt Zeile 1 allein, der zweite
+ * Ausgang teilt sich Zeile 2 mit den Icon-Aktionen.
+ *
+ * Vorher trugen beide CTAs `flex: 1 1 auto` und damit je die volle Kartenbreite,
+ * wodurch `margin-right: auto` unten wirkungslos wurde und die Icon-Zeile
+ * zwangsläufig in eine dritte Zeile brach - auf Desktop mit `opacity: 0`, also
+ * als 48px hohes unsichtbares Band unter jeder Karte (gemessen: actions 144px,
+ * 3 Zeilen). Damit „Auf die Einkaufsliste" neben die drei Icon-Buttons passt
+ * (167px + 152px + gap ≤ 343px Kartenbreite), trägt der Button kein eigenes
+ * Icon mehr; direkt neben drei Icon-Buttons war ein viertes ohnehin Rauschen. */
+.recipe-card__primary {
+  flex: 1 1 100%;
+  justify-content: center;
+}
+
+.recipe-card__to-shopping {
+  flex: 0 1 auto;
+}
+
+.recipe-card__icon-actions {
+  margin-left: auto;
 }
 
 /* Primäraktion drängt die Icon-Aktionen an den rechten Rand.

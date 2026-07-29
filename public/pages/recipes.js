@@ -6,7 +6,7 @@
 import { api } from '/api.js';
 import { t } from '/i18n.js';
 import { esc } from '/utils/html.js';
-import { openModal as openSharedModal, closeModal as closeSharedModal, advancedSection, wireBlurValidation, reportFieldError } from '/components/modal.js';
+import { openModal as openSharedModal, closeModal as closeSharedModal, selectModal, advancedSection, wireBlurValidation, reportFieldError } from '/components/modal.js';
 import { DEFAULT_CATEGORY_NAME } from '/utils/shopping-categories.js';
 import { renderKitchenTabsBar } from '/utils/kitchen-tabs.js';
 import { ingredientRowHTML } from '/utils/ingredient-row.js';
@@ -19,6 +19,8 @@ let _container = null;
 const state = {
   recipes: [],
   categories: [],
+  // Einkaufslisten für „Auf die Einkaufsliste": nur die Auswahl, keine Artikel.
+  lists: [],
   query: '',
 };
 
@@ -57,6 +59,21 @@ async function loadCategories() {
     state.categories = res.data;
   } catch {
     state.categories = [];
+  }
+}
+
+// Ist das Einkaufsmodul deaktiviert oder gibt es keine Liste, bleibt state.lists
+// leer und die Karte zeigt die Übernahme-Aktion gar nicht erst an.
+async function loadShoppingLists() {
+  if (window.yuvomi?.isModuleDisabled?.('shopping')) {
+    state.lists = [];
+    return;
+  }
+  try {
+    const res = await api.get('/shopping');
+    state.lists = res.data ?? [];
+  } catch {
+    state.lists = [];
   }
 }
 
@@ -122,7 +139,7 @@ export async function render(container) {
 
   if (window.lucide) window.lucide.createIcons({ el: container });
 
-  await Promise.all([loadRecipes(), loadCategories()]);
+  await Promise.all([loadRecipes(), loadCategories(), loadShoppingLists()]);
   renderRecipeList();
 
   fab.addEventListener('click', () => openRecipeModal('create'));
@@ -156,6 +173,11 @@ export async function render(container) {
 
     if (actionBtn.dataset.action === 'duplicate') {
       await duplicateRecipe(recipe);
+      return;
+    }
+
+    if (actionBtn.dataset.action === 'to-shopping') {
+      await transferRecipe(recipe, actionBtn);
       return;
     }
 
@@ -313,6 +335,23 @@ function renderRecipeList() {
     addToMeals.dataset.id = String(recipe.id);
     addToMeals.textContent = t('recipes.addToMeals');
 
+    // Zweiter Ausgang aus dem Rezept: „was brauche ich dafür" war bisher nur
+    // über Einplanen → Tab wechseln → „Aus Essensplan" erreichbar, also vier
+    // Schritte über zwei Module. Sekundär gewichtet, weil Einplanen der
+    // häufigere Weg bleibt. Entfällt ohne Einkaufsliste.
+    let addToShopping = null;
+    if (state.lists.length && ingredients.length) {
+      addToShopping = document.createElement('button');
+      addToShopping.className = 'btn btn--secondary recipe-card__to-shopping';
+      addToShopping.type = 'button';
+      addToShopping.dataset.action = 'to-shopping';
+      addToShopping.dataset.id = String(recipe.id);
+      // Ohne eigenes Icon: der Button steht in derselben Zeile wie die drei
+      // Icon-Aktionen, und nur so passt die Zeile in die Kartenbreite (siehe
+      // Kommentar an .recipe-card__to-shopping in recipes.css).
+      addToShopping.textContent = t('recipes.toShoppingList');
+    }
+
     const iconActions = document.createElement('div');
     iconActions.className = 'row-actions recipe-card__icon-actions';
     const secondaryActions = [
@@ -336,7 +375,9 @@ function renderRecipeList() {
       iconActions.appendChild(btn);
     }
 
-    actions.append(addToMeals, iconActions);
+    actions.append(addToMeals);
+    if (addToShopping) actions.append(addToShopping);
+    actions.append(iconActions);
     card.appendChild(actions);
 
     list.appendChild(card);
@@ -514,6 +555,52 @@ async function saveRecipe(panel, mode, recipe) {
   } catch (err) {
     saveBtn.disabled = false;
     window.yuvomi?.showToast(err.data?.error ?? t('common.errorGeneric'), 'danger');
+  }
+}
+
+// --------------------------------------------------------
+// Zutaten → Einkaufsliste
+// --------------------------------------------------------
+
+/**
+ * Übernimmt die Zutaten eines Rezepts auf eine Einkaufsliste. Bei genau einer
+ * Liste ohne Rückfrage, sonst über die geteilte Auswahl - dasselbe Muster wie
+ * transferMeal() im Essensplan, damit sich der Weg in beiden Modulen gleich
+ * anfühlt. Der Server überspringt Zutaten, die schon unabgehakt auf der Liste
+ * liegen; die Rückmeldung nennt beide Zahlen.
+ */
+async function transferRecipe(recipe, btn) {
+  if (!state.lists.length) {
+    window.yuvomi?.showToast(t('meals.noShoppingLists'), 'danger');
+    return;
+  }
+
+  let listId = state.lists[0].id;
+  if (state.lists.length > 1) {
+    const options = state.lists.map((l) => ({ value: l.id, label: l.name }));
+    const choice = await selectModal(t('recipes.toShoppingListTitle'), options);
+    if (choice === null) return;
+    listId = Number(choice);
+  }
+
+  if (btn) btn.disabled = true;
+  try {
+    const res = await api.post(`/recipes/${recipe.id}/to-shopping-list`, { listId });
+    const added = res.data?.transferred ?? 0;
+    const skipped = res.data?.skipped ?? 0;
+
+    if (added > 0) {
+      // t() wählt die _one-Form selbst, sobald count numerisch ist (i18n.js).
+      window.yuvomi?.showToast(t('recipes.toShoppingSuccess', { count: added }), 'success');
+    } else if (skipped > 0) {
+      window.yuvomi?.showToast(t('recipes.toShoppingAllPresent'), 'info');
+    } else {
+      window.yuvomi?.showToast(t('recipes.toShoppingNoIngredients'), 'info');
+    }
+  } catch (err) {
+    window.yuvomi?.showToast(err.data?.error ?? t('common.errorGeneric'), 'danger');
+  } finally {
+    if (btn) btn.disabled = false;
   }
 }
 

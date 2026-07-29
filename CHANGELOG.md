@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.57.0] - 2026-07-29
+
+### Added
+- Recipes can now put their ingredients straight onto a shopping list. Every recipe card carries a second action next to "Add to meal plan"; with one list it transfers right away, with several it asks which one. Until now the only way there was to plan the recipe first, switch to the shopping tab and import the whole week from the meal plan. A recipe is a template you cook again and again, so nothing is marked as done on it: the transfer skips ingredients that are already on the list unticked and tells you how many it added and how many it left out. Things you ticked off during an earlier shop come along again.
+- The recipe column in the weekly planner can be folded away. It takes up the width the board needs for the last two days, so with it open Saturday and Sunday sat behind the scroll edge on most screens. The toggle sits in the week navigation and remembers your choice.
+
+### Fixed
+- After a shop, "Move to pantry" and "Delete ticked" were effectively invisible on a phone. Both buttons had been squeezed down to bare padding, so neither their label nor their icon was left, and they were far below a usable tap size. They now sit on a row of their own with their full labels, including the count.
+- Meals planned from a recipe could not send their ingredients to the shopping list. Such a meal only stored a reference to the recipe, so the transfer had nothing to hand over and its button never appeared. The ingredients are now taken from the recipe the first time you transfer them.
+- The Kitchen tab bar cut its labels mid-word on narrow phones, leaving "Reci…" and "Shopp…". All four labels are now readable, because the module title above them is dropped on mobile, where the bottom navigation already shows it.
+- Switching to Shopping made the whole page jump sideways. Its content sat 218 px further right than in Meals, Recipes and Pantry, even though the tab bar above it stayed put.
+- In the pantry, the quantity stepper stood in front of the item name, so a row read "minus 500 g plus Yoghurt" and the names started at a different spot on every row depending on how long the quantity was. The name now comes first and every row starts on the same edge. Best-before dates are no longer cut off when a row carries two status badges.
+- Cards, list rows and form fields had no visible edge in dark mode. The card outline resolved to exactly the colour of the surface behind it, which made an input field hard to make out as a field at all.
+- On a desktop screen the weekly planner hid Saturday and Sunday behind the scroll edge, the two days most likely to be planned.
+- The "Today" button in the meal planner did not meet the contrast minimum. It followed the module colour but kept the untinted text tone on top of it.
+- Recipe cards reserved an invisible 48 px strip below every card on desktop.
+- On the meal planner's action buttons the invisible tap areas overlapped, so aiming at the shopping-cart could land on the bin next to it.
+- The randomizer reported "1 meals planned" when it filled a single slot.
+
+### Changed
+- The meal planner now uses its own module colour throughout. Week navigation, the "Today" button and today's date marker were still drawn in the global violet, which put two different colour families side by side in one toolbar.
+- "Randomize plan" is no longer the loudest button in the meal planner. It keeps its place but steps back visually, and its dialog now says how many slots it will fill and how many existing meals it would overwrite before you confirm.
+
 ## [1.56.1] - 2026-07-29
 
 ### Fixed

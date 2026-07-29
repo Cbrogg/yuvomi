@@ -66,16 +66,21 @@
 }
 
 .week-nav .btn--icon {
-  color: var(--color-accent);
+  color: var(--module-accent);
 }
 
+/* Akzent-Text auf akzent-getöntem Grund folgt der Hauskonvention aus
+ * .pantry-badge--danger: der rohe Ton scheitert dort am Kontrast, weil der
+ * Grund eine Tönung derselben Farbe ist. Roh gemessen ergab #C2410C auf
+ * 12 % #C2410C nur 3.92:1 bei 14px/500 - unter den geforderten 4.5. Mit 30 %
+ * Ink beigemischt sind es 6.5:1, ohne dass die Modul-Identität verloren geht. */
 .week-nav__today {
   font-size: var(--text-sm);
-  color: var(--color-accent);
+  color: color-mix(in srgb, var(--module-accent) 70%, var(--color-text-primary));
   font-weight: var(--font-weight-medium);
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
-  background: var(--color-accent-light);
+  background: color-mix(in srgb, var(--module-accent) 12%, transparent);
   cursor: pointer;
   border: none;
   white-space: nowrap;
@@ -147,7 +152,7 @@
 
 .day-header--today .day-header__name,
 .day-header--today .day-header__date {
-  color: var(--color-accent);
+  color: var(--module-accent);
 }
 
 .day-slots {
@@ -215,8 +220,8 @@
   }
 
   .day-add:hover {
-    color: var(--color-accent);
-    border-color: var(--color-accent);
+    color: var(--module-accent);
+    border-color: var(--module-accent);
   }
 
   .meal-slot {
@@ -319,7 +324,7 @@
 }
 
 .meal-slot__add-btn:hover {
-  color: var(--color-accent);
+  color: var(--module-accent);
 }
 
 .meal-slot__add-more-btn {
@@ -344,8 +349,8 @@
 }
 
 .meal-slot__add-more-btn:hover {
-  color: var(--color-accent);
-  background-color: var(--color-accent-light);
+  color: var(--module-accent);
+  background-color: color-mix(in srgb, var(--module-accent) 12%, transparent);
 }
 
 /* Touch-Geräte kennen kein Hover: Button dauerhaft sichtbar und auf
@@ -419,9 +424,14 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* gap muss mindestens so groß sein wie der beidseitige Hitslop der Buttons
+ * (2 × 8px, siehe .meal-card__action-btn::before), sonst überlappen sich die
+ * unsichtbaren Trefferflächen. Bei --space-1 taten sie das um 20px: wer auf
+ * dem Desktop den Warenkorb anvisierte, landete im Papierkorb daneben
+ * (Critique 2026-07-29). */
 .meal-card__actions {
   display: flex;
-  gap: var(--space-1);
+  gap: var(--space-4);
   margin-top: var(--space-1);
   align-self: stretch;
   opacity: 0;
@@ -448,10 +458,14 @@
   transition: color var(--transition-fast), background-color var(--transition-fast);
 }
 
+/* -8px statt -12px: ergibt 40px Trefferfläche (= --target-md, die Desktop-
+ * Untergrenze) und passt exakt in den --space-4-gap darüber, ohne in den
+ * Nachbarbutton zu ragen. Auf Touch ist der Button ohnehin bereits
+ * --target-lg groß (siehe @media (hover: none) weiter unten). */
 .meal-card__action-btn::before {
   content: '';
   position: absolute;
-  inset: -12px;
+  inset: -8px;
 }
 
 .meal-card__action-btn:hover {
@@ -468,7 +482,7 @@
 }
 
 .meal-card__action-btn--recipe:hover {
-  color: var(--color-accent);
+  color: var(--module-accent);
 }
 
 /* --------------------------------------------------------
@@ -500,8 +514,8 @@
 
 .meal-modal__autocomplete-item:hover,
 .meal-modal__autocomplete-item--active {
-  background-color: var(--color-accent-light);
-  color: var(--color-accent);
+  background-color: color-mix(in srgb, var(--module-accent) 12%, transparent);
+  color: var(--module-accent);
 }
 
 /* Zutaten-Bereich */
@@ -520,7 +534,7 @@
   align-items: center;
   gap: var(--space-2);
   font-size: var(--text-sm);
-  color: var(--color-accent);
+  color: var(--module-accent);
   background: none;
   border: none;
   cursor: pointer;
@@ -534,15 +548,15 @@
   flex-direction: column;
   gap: var(--space-2);
   padding: var(--space-3);
-  background-color: var(--color-accent-light);
+  background-color: color-mix(in srgb, var(--module-accent) 12%, transparent);
   border-radius: var(--radius-sm);
-  border: 1px solid var(--color-accent);
+  border: 1px solid var(--module-accent);
 }
 
 .shopping-transfer__label {
   font-size: var(--text-sm);
   font-weight: var(--font-weight-medium);
-  color: var(--color-accent);
+  color: var(--module-accent);
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -552,7 +566,7 @@
   width: 100%;
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
-  border: 1px solid var(--color-accent);
+  border: 1px solid var(--module-accent);
   background-color: var(--color-surface);
   color: var(--color-text-primary);
   font-size: var(--type-body);
@@ -569,6 +583,15 @@
 
 .meal-randomize-modal__toggle {
   align-items: center;
+}
+
+/* Vorschauzeile: sagt vor dem Klick, wie viele Slots gefüllt und wie viele
+ * bestehende Mahlzeiten überschrieben werden. Sekundär gesetzt - sie informiert,
+ * sie warnt nicht; die Entscheidung trägt der Toggle darüber. */
+.meal-randomize-modal__preview {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
 }
 
 .meal-recurrence-option,
@@ -616,9 +639,9 @@
 }
 
 .meal-slot--drop-target {
-  outline: 2px dashed var(--color-accent);
+  outline: 2px dashed var(--module-accent);
   outline-offset: 2px;
-  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+  background: color-mix(in srgb, var(--module-accent) 8%, transparent);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -882,5 +905,31 @@
 @media (min-width: 1440px) {
   .meals-layout {
     grid-template-columns: minmax(0, 1fr) 320px;
+  }
+}
+
+/* --------------------------------------------------------
+ * Rezept-Spalte einklappen (Critique 2026-07-29)
+ * Die Spalte kostet 272-320px. Genau die fehlen dem Board für den sechsten und
+ * siebten Tag: mit ihr sind Samstag und Sonntag nur über horizontales Scrollen
+ * erreichbar - ausgerechnet die Tage, an denen am meisten gekocht wird. Ohne
+ * sie passen alle sieben Spalten in voller Breite, ohne dass die 148px-
+ * Mindestbreite angetastet werden muss.
+ * -------------------------------------------------------- */
+.week-nav__rail-toggle {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .week-nav__rail-toggle {
+    display: inline-flex;
+  }
+
+  .meals-layout--rail-hidden {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .meals-layout--rail-hidden .recipe-sidebar {
+    display: none;
   }
 }

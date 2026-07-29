@@ -1631,12 +1631,23 @@ test('dashboard weather widget adapts to selected widget size', () => {
   assert.doesNotMatch(dashboard, /\.weather-widget\s*\{[^}]*grid-column:\s*1\s*\/\s*-1/);
 });
 
-test('responsive adaptation keeps all three Kitchen tabs visible on narrow phones', () => {
+test('responsive adaptation keeps all four Kitchen tabs readable on narrow phones', () => {
   const kitchenTabs = read('../public/styles/kitchen-tabs.css');
 
+  // Platz für die Labels kommt seit dem vierten Tab (Vorrat) daher, dass der
+  // Modultitel mobil entfällt - die Bottom-Nav trägt dasselbe Wort bereits.
+  // Vorher fraß er ~70px, wodurch alle drei inaktiven Labels ellipsierten.
+  // Ersetzt das frühere padding-inline: var(--space-2), das den Platz nur
+  // umverteilt statt geschaffen hat; die Leiste erbt jetzt --page-inline-pad
+  // aus .sub-tabs-bar und fluchtet damit mit dem Body-Inhalt.
   assert.match(
     kitchenTabs,
-    /@media \(max-width:\s*640px\)[\s\S]*\.kitchen-tabs-bar\s*\{[\s\S]*padding-inline:\s*var\(--space-2\)/
+    /@media \(max-width:\s*640px\)[\s\S]*\.kitchen-tabs-bar \.sub-tabs-bar__title\s*\{[\s\S]*display:\s*none/
+  );
+  assert.doesNotMatch(
+    kitchenTabs,
+    /@media \(max-width:\s*640px\)[\s\S]*\.kitchen-tabs-bar\s*\{[^}]*padding-inline/,
+    'kitchen-tabs-bar darf --page-inline-pad aus .sub-tabs-bar nicht überschreiben',
   );
   assert.match(
     kitchenTabs,
@@ -2084,7 +2095,13 @@ test('desktop Meals and Calendar date-navigation icons use the accent color', ()
   const meals = read('../public/styles/meals.css');
   const calendar = read('../public/styles/calendar.css');
 
-  assert.match(cssRuleBody(meals, '.week-nav .btn--icon'), /color:\s*var\(--color-accent\)/);
+  // Meals folgt der Module-Accent-Leads-Rule (DESIGN.md §2, 2026-07): innerhalb
+  // eines Moduls führt der Modul-Akzent, globales Violett bleibt der Shell
+  // vorbehalten. Die Wochennavigation ist Modul-Bedienung, keine Shell-Chrome -
+  // vorher stand die violette „Heute"-Pille direkt neben dem orangen
+  // Zufallsplan-Button und beide lasen sich wie Controls aus zwei Apps.
+  // Calendar zieht bewusst noch nicht mit: eigenes Modul, eigener Durchgang.
+  assert.match(cssRuleBody(meals, '.week-nav .btn--icon'), /color:\s*var\(--module-accent\)/);
   assert.match(cssRuleBody(calendar, '.cal-toolbar__nav .btn--icon'), /color:\s*var\(--color-accent\)/);
 });
 
@@ -2955,11 +2972,15 @@ const ALLOWED_INLINE = /^(0|0px|var\(--page-inline-pad\))$/;
 const RAIL_PAD_EXCEPTIONS = [
   {
     file: 'kitchen-tabs.css',
-    selector: '.kitchen-tabs-bar',
-    // Drei Tabs plus das Titel-Label „Küche" spannen auf 375px randvoll; mit
-    // --page-inline-pad (16px) blieben 343px für 359px Inhalt und die Leiste
-    // scrollte horizontal. Der Restversatz zum Body ist 8px und nur mobil.
-    reason: 'Tab-Dichte auf 375px, gemessen randvoll bei --space-2',
+    selector: '.kitchen-tabs-bar .sub-tab',
+    // Der Tab-Button liegt IN der Rail, er ist nicht die Rail: sein
+    // padding-inline ist Innenabstand zwischen Icon und Pill-Rand, nicht die
+    // Einrückung der Content-Spalte. Vorher stand hier die Rail selbst
+    // (.kitchen-tabs-bar mit padding-inline: var(--space-2)) und deckte diesen
+    // Selektor per Substring-Match versehentlich mit ab. Seit der Modultitel
+    // mobil entfällt (Critique 2026-07-29), braucht die Rail keinen Override
+    // mehr und erbt --page-inline-pad - der 8px-Versatz zum Body ist damit weg.
+    reason: 'Button-Innenabstand des Tabs, keine Rail-Einrückung',
   },
 ];
 

@@ -198,9 +198,14 @@
 
 /* 6rem-Basis: auf einem 375px-Telefon bleibt neben Stepper (≈159px) und
  * Warenkorb (≈52px) genau so viel Platz. Der Name schrumpft dort und bricht
- * INNERHALB seiner Spalte um - das kostet dieselbe Höhe wie ein Zeilenumbruch,
- * lässt aber alle Namen an derselben Kante beginnen. Wächst die Zeile, wächst
- * der Name mit (flex-grow), auf dem Desktop steht ihm die volle Breite offen. */
+ * INNERHALB seiner Spalte um - das kostet dieselbe Höhe wie ein Zeilenumbruch.
+ * Wächst die Zeile, wächst der Name mit (flex-grow), auf dem Desktop steht ihm
+ * die volle Breite offen.
+ *
+ * Dass alle Namen an derselben Kante beginnen, leistet seit Critique
+ * 2026-07-29 die DOM-Reihenfolge (main vor actions, siehe pantry.js): vorher
+ * stand der Stepper davor und schob die Kante je nach Wertbreite um bis zu
+ * 95px hin und her - „Butter" begann bei x=485, „Naturjoghurt" bei x=390. */
 .pantry-row__main {
   flex: 1 1 5rem;
   min-width: 0;
@@ -236,12 +241,15 @@
   overflow-wrap: anywhere;
 }
 
+/* Umbrechen statt abschneiden: die Meta-Zeile trägt das MHD, und ein
+ * abgeschnittenes Mindesthaltbarkeitsdatum („MHD 01.08.2…") ist wertlos - es
+ * ist genau die Information, wegen der man eine Vorratsliste öffnet. Mit zwei
+ * Badges davor war die Spalte regelmäßig zu schmal (Critique 2026-07-29). Eine
+ * zweite Zeile kostet Höhe, aber keine Aussage. */
 .pantry-row__meta {
   font-size: var(--text-sm);
   color: var(--color-text-secondary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: break-word;
 }
 
 /* Badge nach der Hauskonvention "Akzent-Text auf akzent-getöntem Grund":
@@ -274,11 +282,31 @@
  * Steht am Zeilenanfang, weil der FAB die rechte untere Ecke besetzt (siehe
  * Kommentar in pantry.js). Nebeneffekt: die Mengen bilden jetzt eine linke
  * Spalte statt rechts auszufransen. */
+/* margin-inline-start: auto schiebt die Bedienung an die rechte Kante, statt
+ * sie der Namensbreite folgen zu lassen. Seit der Name vorne steht, wäre die
+ * Stepper-Position sonst von der Länge des Artikelnamens abhängig und die
+ * Minus-Buttons stünden in jeder Zeile woanders. */
 .pantry-row__actions {
   display: flex;
   align-items: center;
   gap: var(--space-1);
   flex-shrink: 0;
+  margin-inline-start: auto;
+}
+
+/* Der Warenkorb erscheint nur bei leeren/knappen Artikeln. Ohne reservierten
+ * Platz sprängen die Stepper der übrigen Zeilen um seine Breite nach rechts,
+ * also belegt er eine feste Endspalte, die immer da ist. */
+.pantry-row {
+  padding-inline-end: calc(var(--target-md) + var(--space-3));
+  position: relative;
+}
+
+.pantry-row__cart {
+  position: absolute;
+  inset-inline-end: var(--space-2);
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 /* Abschluss-Aktion der Zeile. BEWUSST ohne margin-inline-start:auto: die
