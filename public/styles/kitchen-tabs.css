@@ -48,7 +48,8 @@
  * die gesamte Seite (z.B. week-nav + Tages-Header) statt nur des inneren
  * Scrollbereichs. .meals-page und .recipes-page teilen dieselbe Basisformel. */
 .has-kitchen-tabs .meals-page,
-.has-kitchen-tabs .recipes-page {
+.has-kitchen-tabs .recipes-page,
+.has-kitchen-tabs .pantry-page {
   height: calc(
     100dvh
     - var(--safe-area-inset-top)
@@ -72,7 +73,8 @@
 @media (min-width: 1024px) {
   .has-kitchen-tabs .meals-page,
   .has-kitchen-tabs .recipes-page,
-  .has-kitchen-tabs .shopping-page {
+  .has-kitchen-tabs .shopping-page,
+  .has-kitchen-tabs .pantry-page {
     height: calc(100dvh - var(--kitchen-tabs-height));
   }
 }

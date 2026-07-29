@@ -25,6 +25,11 @@ class CategoryManagerElement extends HTMLElement {
     this._labelResolver = (item) => item.label ?? item.name; // Server liefert lokalisiertes `label`
     this._titleKey = 'category.manageTitle';
     this._hintKey = 'category.manageHint';
+    // Der Vorrat verwaltet mit derselben Komponente Lagerorte, keine
+    // Kategorien - dort las das Eingabefeld „Neue Kategorie" in einem Dialog
+    // mit dem Titel „Lagerorte verwalten" (Critique). titleKey/hintKey waren
+    // schon konfigurierbar, das Feld selbst nicht.
+    this._addPlaceholderKey = 'category.addPlaceholder';
     this._cats = [];
     this._sortables = [];
     this._onClick = this._onClick.bind(this);
@@ -38,6 +43,7 @@ class CategoryManagerElement extends HTMLElement {
     if (typeof opts.labelResolver === 'function') this._labelResolver = opts.labelResolver;
     if (opts.titleKey) this._titleKey = opts.titleKey;
     if (opts.hintKey) this._hintKey = opts.hintKey;
+    if (opts.addPlaceholderKey) this._addPlaceholderKey = opts.addPlaceholderKey;
     this._renderShell();
     this._load();
   }
@@ -109,8 +115,8 @@ class CategoryManagerElement extends HTMLElement {
         </ul>
         <form class="cat-add-form" data-group="${esc(g.key)}" novalidate autocomplete="off">
           <input class="form-input" type="text" maxlength="60"
-                 placeholder="${esc(t('category.addPlaceholder'))}"
-                 aria-label="${esc(t('category.addPlaceholder'))}" />
+                 placeholder="${esc(t(this._addPlaceholderKey))}"
+                 aria-label="${esc(t(this._addPlaceholderKey))}" />
           <button type="submit" class="btn btn--primary">${esc(t(g.addLabelKey || 'common.add'))}</button>
         </form>
       </section>`;

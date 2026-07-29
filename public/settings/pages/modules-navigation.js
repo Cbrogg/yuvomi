@@ -36,11 +36,13 @@ const KITCHEN_CHILD_LABEL_KEYS = Object.freeze({
   meals: 'nav.meals',
   recipes: 'nav.recipes',
   shopping: 'nav.shopping',
+  pantry: 'nav.pantry',
 });
 const KITCHEN_CHILD_ICONS = Object.freeze({
   meals: 'utensils',
   recipes: 'book-text',
   shopping: 'shopping-cart',
+  pantry: 'archive',
 });
 
 const DEFAULT_MODULE_ACCENT = 'var(--color-accent)';

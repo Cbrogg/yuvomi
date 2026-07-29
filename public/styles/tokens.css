@@ -231,6 +231,8 @@
   --module-recipes:    var(--_module-recipes);     /* Teal-Grün - Rezepte (166°, von --module-budget 186° und --module-tasks 150° getrennt); 5.19:1 auf weiß, 4.71:1 auf --color-bg — WCAG AA. Vorgänger #109C6B lag bei 3.51:1 auf weiß und verfehlte als Textfarbe AA. */
   --_module-shopping:  #D12370;
   --module-shopping:   var(--_module-shopping);    /* Pink-600 - Einkaufen (trennt von Meals); 5.02:1 auf weiß, 4.57:1 auf --color-bg — WCAG AA */
+  --_module-pantry:    #4D7C0F;
+  --module-pantry:     var(--_module-pantry);      /* Oliv-Grün (86°) - Vorrat. Besetzt die einzige freie Hue-Lücke zwischen notes (36°) und tasks (142°); 4.99:1 auf weiß, 4.54:1 auf --color-bg — WCAG AA. Erdig statt frisch: der Vorrat ist der Lagerort, nicht die Ernte. */
   --_module-notes:     #9F6107;
   --module-notes:      var(--_module-notes);       /* Amber-700 - Notizen; 5.02:1 auf weiß, 4.57:1 auf --color-bg — WCAG AA */
   --_module-contacts:  #0969DA;
@@ -815,6 +817,7 @@
     --_module-birthdays: #FB7185;
     --_module-budget:      #2DD4BF;
     --_module-recipes:     #2ECC99;
+    --_module-pantry:      #A3E635;   /* Lime-400 — Oliv im Dark; 11.3:1 auf #1C1C1A, Hue 83° (37° zu notes, 59° zu tasks) */
     --_module-split-expenses: #2FB6E8;
     --_module-documents:   #7E9BCC;
     --_module-housekeeping: #C4B5FD;
@@ -963,6 +966,7 @@
     --_module-birthdays: #FB7185;   /* Rosé-400 */
     --_module-budget:      #2DD4BF;   /* Teal-400 */
     --_module-recipes:     #2ECC99;   /* Teal-Grün — Dark-Override, von budget 172° entkoppelt (161°) */
+    --_module-pantry:      #A3E635;   /* Lime-400 — Oliv im Dark; 11.3:1 auf #1C1C1A, Hue 83° (37° zu notes, 59° zu tasks) */
     --_module-split-expenses: #2FB6E8;   /* Cyan — von reminders 188° getrennt (196°) */
     --_module-documents:   #7E9BCC;   /* Stahlblau — Dark-Override (vorher fehlend, erbte 2.38:1) */
     --_module-housekeeping: #C4B5FD;

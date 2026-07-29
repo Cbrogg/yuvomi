@@ -19,6 +19,7 @@ Independent modules — turn on what fits, ignore the rest:
 - Tasks — shared to-dos with priorities, due dates and assignees
 - Shopping — collaborative grocery lists, auto-sorted by category
 - Meals &amp; Recipes — weekly meal planner with a built-in recipe book
+- Pantry — what's actually in the house, with storage places and best-before alerts
 - Calendar — family calendar with recurring events and reminders
 - Budget — shared expenses, split costs and a spending overview
 - Housekeeping — chores, supplies and staff/session tracking
@@ -49,7 +50,7 @@ After the container starts, open the WebUI — the first visit guides you throug
 
   <Category>Productivity: HomeAutomation: Tools:</Category>
   <License>MIT</License>
-  <ExtraSearchTerms>family planner household organizer tasks groceries shopping meals recipes calendar budget chores notes contacts birthdays caldav carddav pwa selfhosted</ExtraSearchTerms>
+  <ExtraSearchTerms>family planner household organizer tasks groceries shopping meals recipes pantry inventory expiry calendar budget chores notes contacts birthdays caldav carddav pwa selfhosted</ExtraSearchTerms>
 
   <!-- Combined desktop + mobile dark-mode composites (see docs/screenshots/build-unraid-composites.mjs) -->
   <Screenshot>https://raw.githubusercontent.com/ulsklyc/yuvomi/main/docs/screenshots/unraid/dashboard-combined-dark.png</Screenshot>

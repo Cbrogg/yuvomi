@@ -30,6 +30,16 @@ export function shoppingPaths() {
       get: op({ summary: 'List items in shopping list', tag: 'Shopping', params: [idParam('listId', 'List ID')] }),
       post: op({ summary: 'Add item to shopping list', tag: 'Shopping', params: [idParam('listId', 'List ID')], stateChanging: true, requestBody: jsonBody(null) }),
     },
+    '/api/v1/shopping/{listId}/import-pantry': {
+      post: op({
+        summary: 'Add pantry items to a shopping list',
+        description: 'Adds low or empty pantry items to the list. Names already on the list unchecked are skipped instead of duplicated.',
+        tag: 'Shopping',
+        params: [idParam('listId', 'List ID')],
+        stateChanging: true,
+        requestBody: jsonBody(null),
+      }),
+    },
     '/api/v1/shopping/{listId}/items/checked': {
       delete: op({ summary: 'Delete checked shopping items', tag: 'Shopping', params: [idParam('listId', 'List ID')], stateChanging: true }),
     },

@@ -45,6 +45,7 @@ const ROUTES = [
   { path: '/birthdays', page: '/pages/birthdays.js', requiresAuth: true, module: 'birthdays' },
   { path: '/notes',    page: '/pages/notes.js',     requiresAuth: true, module: 'notes'     },
   { path: '/recipes',  page: '/pages/recipes.js',   requiresAuth: true, module: 'recipes'   },
+  { path: '/pantry',   page: '/pages/pantry.js',    requiresAuth: true, module: 'pantry'    },
   { path: '/contacts', page: '/pages/contacts.js',  requiresAuth: true, module: 'contacts'  },
   { path: '/budget',   page: '/pages/budget.js',    requiresAuth: true, module: 'budget'    },
   { path: '/documents', page: '/pages/documents.js', requiresAuth: true, module: 'documents' },
@@ -250,7 +251,7 @@ let _setupRequired = false;
 // Router
 // --------------------------------------------------------
 
-const ROUTE_ORDER = ['/', '/calendar', '/tasks', '/meals', '/recipes', '/shopping',
+const ROUTE_ORDER = ['/', '/calendar', '/tasks', '/meals', '/recipes', '/shopping', '/pantry',
                      '/birthdays', '/notes', '/contacts', '/budget', '/documents', '/housekeeping', '/health', '/settings'];
 
 const MOBILE_FAVORITE_COUNT = 3;
@@ -328,6 +329,7 @@ function routeTitle(path) {
     '/meals': t('nav.meals'),
     '/recipes': t('nav.recipes'),
     '/shopping': t('nav.shopping'),
+    '/pantry': t('nav.pantry'),
     '/notes': t('nav.notes'),
     '/contacts': t('nav.contacts'),
     '/budget': t('nav.budget'),
@@ -1457,6 +1459,7 @@ const SHORTCUTS = [
   { key: 'g k m', description: () => t('nav.meals'),           action: () => navigate('/meals')             },
   { key: 'g k r', description: () => t('nav.recipes'),         action: () => navigate('/recipes')           },
   { key: 'g k s', description: () => t('nav.shopping'),        action: () => navigate('/shopping')          },
+  { key: 'g k v', description: () => t('nav.pantry'),          action: () => navigate('/pantry')            },
 ];
 
 let _pendingKey = null;
@@ -2083,6 +2086,7 @@ function navItems() {
     { path: '/meals',     label: t('nav.meals'),     icon: 'utensils',      module: 'meals',    section: NAV_SECTION.household, kitchenGroup: true },
     { path: '/recipes',   label: t('nav.recipes'),   icon: 'book-text',     module: 'recipes',  section: NAV_SECTION.household, kitchenGroup: true },
     { path: '/shopping',  label: t('nav.shopping'),  icon: 'shopping-cart', module: 'shopping', section: NAV_SECTION.household, kitchenGroup: true },
+    { path: '/pantry',    label: t('nav.pantry'),    icon: 'archive',       module: 'pantry',   section: NAV_SECTION.household, kitchenGroup: true },
     { path: '/housekeeping', label: t('nav.housekeeping'), icon: 'paintbrush', module: 'housekeeping', section: NAV_SECTION.household },
     { path: '/documents', label: t('nav.documents'), icon: 'folder-lock',      module: 'documents',   section: NAV_SECTION.household },
     { path: '/rewards',   label: t('nav.rewards'),   icon: 'award',            module: 'rewards',     section: NAV_SECTION.household },

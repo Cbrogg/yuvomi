@@ -7,6 +7,7 @@ export const apiTags = [
       { name: 'Shopping' },
       { name: 'Meals' },
       { name: 'Recipes' },
+      { name: 'Pantry' },
       { name: 'Calendar' },
       { name: 'Notes' },
       { name: 'Contacts' },

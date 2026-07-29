@@ -75,7 +75,7 @@ async function toggleShoppingItem(id, checked, container) {
     // Nur die betroffene Zeile aktualisieren — kein Komplett-Re-Render,
     // damit die Scroll-Position der Liste erhalten bleibt (Issue #276).
     updateItemRow(container, item);
-    updateClearCheckedButton(container);
+    updateCheckedActions(container);
     updateListCounter(state.activeListId, 0, newVal ? 1 : -1);
     renderTabs(container);
   }
@@ -87,7 +87,7 @@ async function toggleShoppingItem(id, checked, container) {
     if (item) {
       item.is_checked = checked;
       updateItemRow(container, item);
-      updateClearCheckedButton(container);
+      updateCheckedActions(container);
       updateListCounter(state.activeListId, 0, newVal ? -1 : 1);
       renderTabs(container);
     }
@@ -152,8 +152,6 @@ function renderListContent(container) {
     return;
   }
 
-  const checkedCount = state.items.filter((i) => i.is_checked).length;
-
   content.replaceChildren();
   content.insertAdjacentHTML('beforeend', `
     <!-- Liste-Header -->
@@ -164,11 +162,8 @@ function renderListContent(container) {
         <i data-lucide="pencil" class="list-header__edit-icon" aria-hidden="true"></i>
       </span>
       <div class="list-header__actions">
-        ${checkedCount > 0 ? `
-          <button class="btn btn--ghost list-header__clear-btn" data-action="clear-checked">
-            <i data-lucide="trash-2" class="icon-md" aria-hidden="true"></i>
-            <span class="list-header__clear-label">${t('shopping.clearChecked', { count: checkedCount })}</span>
-          </button>` : ''}
+        <!-- Von abgehakten Artikeln abhängige Aktionen; gefüllt von updateCheckedActions(). -->
+        <div class="list-header__checked" id="list-header-checked"></div>
         <button class="btn btn--ghost list-header__import-btn" data-action="import-meals"
                 aria-label="${t('shopping.importMeals')}" title="${t('shopping.importMeals')}">
           <i data-lucide="utensils" class="icon-md" aria-hidden="true"></i>
@@ -216,6 +211,9 @@ function renderListContent(container) {
   wireAutocomplete(container);
   wireQuickAdd(container);
   maybeShowSwipeHint(container);
+  // Der Kopf rendert den Container leer; erst hier stehen die abgehakten
+  // Artikel fest, aus denen die Aktionen entstehen.
+  updateCheckedActions(container);
 }
 
 function renderItems() {
@@ -557,7 +555,7 @@ function wireSwipeGestures(container) {
             item.is_checked = newVal;
             // Nur die Zeile aktualisieren — Scroll-Position bewahren (Issue #276).
             updateItemRow(container, item);
-            updateClearCheckedButton(container);
+            updateCheckedActions(container);
             updateListCounter(state.activeListId, 0, newVal ? 1 : -1);
             renderTabs(container);
           }
@@ -568,7 +566,7 @@ function wireSwipeGestures(container) {
             if (item) {
               item.is_checked = checked;
               updateItemRow(container, item);
-              updateClearCheckedButton(container);
+              updateCheckedActions(container);
               updateListCounter(state.activeListId, 0, newVal ? -1 : 1);
               renderTabs(container);
             }
@@ -740,35 +738,170 @@ function updateItemsList(container) {
       document.querySelector('.page-fab')?.click();
     });
   }
-  updateClearCheckedButton(container);
+  updateCheckedActions(container);
 }
 
-/** Blendet den „Abgehakte löschen“-Button je nach Anzahl abgehakter Artikel ein/aus. */
-function updateClearCheckedButton(container) {
-  const checkedCount = state.items.filter((i) => i.is_checked).length;
-  const clearBtn     = container.querySelector('[data-action="clear-checked"]');
-  const header       = container.querySelector('.list-header__actions');
-  if (header) {
-    if (checkedCount > 0 && !clearBtn) {
-      header.insertAdjacentHTML('afterbegin', `
-        <button class="btn btn--ghost" data-action="clear-checked"
-                style="font-size:var(--text-sm);color:var(--color-text-secondary)">
-          <i data-lucide="trash-2" class="icon-md" aria-hidden="true"></i>
-          ${t('shopping.clearChecked', { count: checkedCount })}
-        </button>`);
-      if (window.lucide) window.lucide.createIcons({ el: header });
-    } else if (clearBtn) {
-      if (checkedCount === 0) {
-        clearBtn.remove();
-      } else {
-        clearBtn.replaceChildren();
-        clearBtn.insertAdjacentHTML('beforeend', `
-          <i data-lucide="trash-2" class="icon-md" aria-hidden="true"></i>
-          ${t('shopping.clearChecked', { count: checkedCount })}`);
-        if (window.lucide) window.lucide.createIcons({ el: clearBtn });
-      }
-    }
+/**
+ * Zerlegt den Freitext einer Einkaufsmenge in Zahl + Vorrats-Einheit.
+ *
+ * Bewusst nur die international geschriebenen metrischen Symbole: das Feld ist
+ * Freitext in der Sprache des Haushalts, und ein deutschsprachiger Wortschatz
+ * („Packung", „Dose") würde in 22 der 23 Sprachen ins Leere greifen. Zahl und
+ * g/kg/ml/l sind sprachunabhängig und tragen den Großteil des Nutzens; alles
+ * andere landet bei „Stück" und lässt sich im Dialog in einem Griff ändern.
+ */
+function parseShoppingQuantity(raw) {
+  const fallback = { quantity: 1, unit: 'pcs' };
+  const text = String(raw ?? '').trim();
+  if (!text) return fallback;
+
+  // Die Einheit braucht eine Wortgrenze davor, sonst schluckt `\b` sie bei
+  // Schreibweisen wie „3x" nicht und die Menge fiele auf 1 zurück.
+  const match = text.match(/^(\d+(?:[.,]\d+)?)\s*(?:(kg|g|ml|l)\b)?/i);
+  if (!match) return fallback;
+
+  const quantity = Number(match[1].replace(',', '.'));
+  if (!Number.isFinite(quantity) || quantity <= 0) return fallback;
+
+  return { quantity, unit: match[2] ? match[2].toLowerCase() : 'pcs' };
+}
+
+/**
+ * Übernahme-Dialog „Einkauf → Vorrat". Ein gemeinsamer Lagerort für alle
+ * Artikel plus Menge/Einheit je Zeile: nach dem Einkauf räumt man einen Beutel
+ * an einen Ort ein, nicht zwölf Artikel an zwölf Orte. Haltbarkeitsdaten bleiben
+ * hier bewusst außen vor - sie sind die Ausnahme, nicht die Regel, und im
+ * Vorrat einen Tap entfernt.
+ */
+async function openPantryTransfer(container) {
+  const checked = state.items.filter((i) => i.is_checked);
+  if (!checked.length) return;
+
+  let locations = [];
+  try {
+    const res = await api.get('/pantry/locations');
+    locations = res.data ?? [];
+  } catch (err) {
+    window.yuvomi.showToast(err.data?.error ?? t('common.errorGeneric'), 'danger');
+    return;
   }
+
+  const { PANTRY_UNITS } = await import('/utils/pantry-units.js');
+  const { locationLabel } = await import('/utils/pantry-locations.js');
+
+  const unitOptions = (selected) => PANTRY_UNITS
+    .map((u) => `<option value="${esc(u)}" ${u === selected ? 'selected' : ''}>${esc(t(`pantry.units.${u}`))}</option>`)
+    .join('');
+
+  const rows = checked.map((item) => {
+    const parsed = parseShoppingQuantity(item.quantity);
+    return `
+      <li class="pantry-transfer__row" data-id="${item.id}">
+        <span class="pantry-transfer__name">${esc(item.name)}</span>
+        <input class="form-input pantry-transfer__qty" type="number" min="0" step="any" inputmode="decimal"
+               value="${parsed.quantity}" aria-label="${esc(`${t('pantry.quantityLabel')}: ${item.name}`)}">
+        <select class="form-input pantry-transfer__unit" aria-label="${esc(`${t('pantry.unitLabel')}: ${item.name}`)}">
+          ${unitOptions(parsed.unit)}
+        </select>
+      </li>`;
+  }).join('');
+
+  openModal({
+    title: t('shopping.toPantryTitle'),
+    size: 'lg',
+    content: `
+      <p class="pantry-transfer__intro">${esc(t('shopping.toPantryDescription', { count: checked.length }))}</p>
+      <div class="form-group">
+        <label class="form-label" for="pantry-transfer-location">${esc(t('pantry.locationLabel'))}</label>
+        <select id="pantry-transfer-location" class="form-input">
+          <option value="">${esc(t('pantry.unlocated'))}</option>
+          ${locations.map((loc) => `<option value="${loc.id}">${esc(locationLabel(loc.name))}</option>`).join('')}
+        </select>
+      </div>
+      <ul class="pantry-transfer__list">${rows}</ul>
+      <label class="pantry-transfer__clear">
+        <input type="checkbox" id="pantry-transfer-clear" checked>
+        <span>${esc(t('shopping.toPantryClearList'))}</span>
+      </label>
+      <div class="modal-panel__footer modal-panel__footer--plain">
+        <button type="button" class="btn btn--secondary" data-action="close-modal">${esc(t('common.cancel'))}</button>
+        <button type="button" class="btn btn--primary" id="pantry-transfer-confirm">${esc(t('shopping.toPantryConfirm'))}</button>
+      </div>`,
+    onSave(panel) {
+      // Der erste Ort ist der wahrscheinlichste Standardwert; er ist zugleich
+      // der, den der Haushalt in der Lagerort-Verwaltung nach oben sortiert hat.
+      if (locations.length) panel.querySelector('#pantry-transfer-location').value = String(locations[0].id);
+
+      panel.querySelector('#pantry-transfer-confirm').addEventListener('click', async (e) => {
+        const btn = e.currentTarget;
+        const locationId = panel.querySelector('#pantry-transfer-location').value || null;
+        const clearList = panel.querySelector('#pantry-transfer-clear').checked;
+        const listId = state.activeListId;
+
+        const items = [...panel.querySelectorAll('.pantry-transfer__row')].map((row) => ({
+          shopping_item_id: Number(row.dataset.id),
+          quantity: Number(row.querySelector('.pantry-transfer__qty').value) || 1,
+          unit: row.querySelector('.pantry-transfer__unit').value,
+          location_id: locationId,
+        }));
+
+        btn.disabled = true;
+        try {
+          const res = await api.post('/pantry/import-shopping', { list_id: listId, items });
+          const stored = (res.data?.added ?? 0) + (res.data?.merged ?? 0);
+
+          if (clearList && stored) {
+            // Zweiter, getrennter Aufruf: der Vorrats-Router räumt bewusst
+            // nichts im Einkauf ab, damit ein `pantry:write`-Token dort keine
+            // Daten löschen kann (siehe routes/pantry.js).
+            await api.delete(`/shopping/${listId}/items/checked`);
+            const removed = checked.length;
+            state.items = state.items.filter((i) => !i.is_checked);
+            updateItemsList(container);
+            updateListCounter(listId, -removed, -removed);
+            renderTabs(container);
+          }
+
+          closeModal({ force: true });
+          window.yuvomi.showToast(
+            stored ? t('shopping.toPantryDone', { count: stored }) : t('shopping.toPantryNothing'),
+            stored ? 'success' : 'info'
+          );
+        } catch (err) {
+          btn.disabled = false;
+          window.yuvomi.showToast(err.data?.error ?? t('common.errorGeneric'), 'danger');
+        }
+      });
+    },
+  });
+}
+
+/**
+ * Baut die Aktionen neu auf, die an abgehakten Artikeln hängen. Reihenfolge:
+ * erst „In den Vorrat", dann „Erledigte löschen" — ein erledigter Einkauf endet
+ * im Regal, nicht im Papierkorb, und die Übernahme räumt die Liste auf Wunsch
+ * gleich mit ab. Bei null abgehakten Artikeln bleibt der Container leer.
+ */
+function updateCheckedActions(container) {
+  const wrap = container.querySelector('#list-header-checked');
+  if (!wrap) return;
+
+  const checkedCount = state.items.filter((i) => i.is_checked).length;
+  wrap.replaceChildren();
+  if (!checkedCount) return;
+
+  const pantryEnabled = !window.yuvomi?.isModuleDisabled?.('pantry');
+  wrap.insertAdjacentHTML('beforeend', `
+    ${pantryEnabled ? `
+      <button class="btn btn--ghost list-header__pantry-btn" data-action="to-pantry">
+        <i data-lucide="archive" class="icon-md" aria-hidden="true"></i>
+        <span class="list-header__clear-label">${esc(t('shopping.toPantry'))}</span>
+      </button>` : ''}
+    <button class="btn btn--ghost list-header__clear-btn" data-action="clear-checked">
+      <i data-lucide="trash-2" class="icon-md" aria-hidden="true"></i>
+      <span class="list-header__clear-label">${esc(t('shopping.clearChecked', { count: checkedCount }))}</span>
+    </button>`);
+  if (window.lucide) window.lucide.createIcons({ el: wrap });
 }
 
 function updateListCounter(listId, totalDelta, checkedDelta) {
@@ -1040,6 +1173,10 @@ function wireListContentEvents(container) {
 
     if (action === 'import-meals') {
       openMealPlanImport(container);
+    }
+
+    if (action === 'to-pantry') {
+      await openPantryTransfer(container);
     }
 
     // ---- Liste umbenennen ----

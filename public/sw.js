@@ -15,7 +15,7 @@
  *   → bypassCacheUntil (in-memory + Cache API für SW-Restart-Robustheit)
  */
 
-const APP_RELEASE   = '1.54.0';
+const APP_RELEASE   = '1.55.0';
 const SHELL_CACHE   = `yuvomi-shell-${APP_RELEASE}`;
 const PAGES_CACHE   = `yuvomi-pages-${APP_RELEASE}`;
 const LOCALES_CACHE = `yuvomi-locales-${APP_RELEASE}`;
@@ -62,6 +62,7 @@ const APP_SHELL = [
   '/styles/documents.css',
   '/styles/settings.css',
   '/styles/recipes.css',
+  '/styles/pantry.css',
   '/components/yuvomi-install-prompt.js',
   '/offline.html',
   '/manifest.json',
@@ -117,6 +118,7 @@ const PAGE_MODULES = [
   '/pages/settings.js',
   '/pages/login.js',
   '/pages/recipes.js',
+  '/pages/pantry.js',
   '/components/category-manager.js',
   '/utils/sortable.js',
   '/vendor/sortablejs/sortable.esm.min.js',

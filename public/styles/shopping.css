@@ -180,6 +180,79 @@
   gap: var(--space-2);
 }
 
+/* Von abgehakten Artikeln abhängige Aktionen (In den Vorrat / Erledigte löschen).
+ * Als eigener Flex-Container, damit die beiden zusammen wandern und mobil
+ * gemeinsam den linken Rand der Aktionszeile halten. */
+.list-header__checked {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.list-header__pantry-btn {
+  font-size: var(--text-sm);
+  min-width: 0;
+}
+
+/* --------------------------------------------------------
+ * Übernahme-Dialog „Einkauf → Vorrat"
+ * -------------------------------------------------------- */
+
+.pantry-transfer__intro {
+  margin: 0 0 var(--space-4);
+  color: var(--color-text-secondary);
+}
+
+.pantry-transfer__list {
+  margin: var(--space-2) 0 var(--space-4);
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--space-2);
+  /* Lange Einkäufe scrollen im Dialog statt ihn über den Bildschirm zu treiben;
+   * Kopf, Lagerort-Auswahl und Fußzeile bleiben dadurch immer erreichbar. */
+  max-height: min(46vh, 380px);
+  overflow-y: auto;
+}
+
+/* Name | Menge | Einheit auf einer Zeile, solange der Name seine 10rem hält.
+ * Darunter rutschen Menge und Einheit gemeinsam in die zweite Zeile und teilen
+ * sie sich - drei Spalten auf einem schmalen Telefon hätten den Namen auf
+ * wenige Zeichen zusammengedrückt. Intrinsisch statt per Breakpoint, weil die
+ * maßgebliche Breite die des Modals ist, nicht die des Viewports. */
+.pantry-transfer__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.pantry-transfer__name {
+  flex: 1 1 10rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pantry-transfer__qty {
+  flex: 1 1 6rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.pantry-transfer__unit {
+  flex: 1 1 8rem;
+}
+
+.pantry-transfer__clear {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+  color: var(--color-text-secondary);
+}
+
 .shopping-import-meals-form {
   display: grid;
   gap: var(--space-3);

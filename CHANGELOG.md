@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.55.0] - 2026-07-29
+
+### Added
+- A new **Pantry** module tracks what is actually in the house. It sits as the fourth tab of the Kitchen group and closes its cycle: plan a meal, cook it from a recipe, buy what is missing, and now record what came home. Each entry carries an amount and unit, a storage location, an optional best-before date, an optional minimum stock and a note. A stepper books items in and out in a single tap, sized to the unit so that "plus" on flour adds half a kilo rather than a whole one. Status badges appear only on the rows that have something to say, so expired, expiring-within-a-week, running-low and out-of-stock items stand out instead of every row wearing a label. Filters narrow the list to exactly those, and a filter that has no hits is never offered in the first place. Without a filter the list groups by storage location; with one it goes flat and sorts by urgency. Storage locations can be renamed, reordered and deleted, and deleting one keeps the stock it held. One entry is one batch, so two packs with different dates stay two lines. (#596)
+- The pantry works in both directions with the shopping list. Empty or nearly empty items go onto the list from the row or all at once, pre-filled with the amount missing from the minimum stock. After a shop, everything ticked off can be booked into the pantry in one dialog with a shared storage location and a per-item amount, read from what you typed into the shopping list for the metric units.
+
+### Changed
+- The shopping list header now offers "Into pantry" next to "Remove checked" whenever something is ticked off. A finished shop ends on the shelf rather than in the wastebasket, and the transfer clears the list for you if you want it to.
+
 ## [1.54.0] - 2026-07-29
 
 ### Added

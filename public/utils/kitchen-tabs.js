@@ -1,13 +1,15 @@
 import { t } from '/i18n.js';
 import { renderSubTabs } from '/utils/sub-tabs.js';
 
-export const KITCHEN_ROUTES = Object.freeze(['/meals', '/recipes', '/shopping']);
+// Reihenfolge = Küchen-Kreislauf: planen → kochen → einkaufen → lagern.
+export const KITCHEN_ROUTES = Object.freeze(['/meals', '/recipes', '/shopping', '/pantry']);
 export const KITCHEN_STORAGE_KEY = 'yuvomi-kitchen-tab';
 
 const TABS = () => [
   { route: '/meals',    labelKey: 'nav.meals',    icon: 'utensils'      },
   { route: '/recipes',  labelKey: 'nav.recipes',  icon: 'book-text'     },
   { route: '/shopping', labelKey: 'nav.shopping', icon: 'shopping-cart' },
+  { route: '/pantry',   labelKey: 'nav.pantry',   icon: 'archive'       },
 ].filter(({ route }) => !window.yuvomi?.isModuleDisabled(route.slice(1)));
 
 export function getLastKitchenRoute() {
@@ -17,7 +19,7 @@ export function getLastKitchenRoute() {
       return stored;
     }
   } catch { /* ignore */ }
-  const first = ['meals', 'recipes', 'shopping'].find((m) => !window.yuvomi?.isModuleDisabled(m));
+  const first = ['meals', 'recipes', 'shopping', 'pantry'].find((m) => !window.yuvomi?.isModuleDisabled(m));
   return first ? `/${first}` : '/meals';
 }
 

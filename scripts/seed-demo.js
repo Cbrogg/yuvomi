@@ -93,6 +93,11 @@ const WIPE = [
   'contact_phones', 'contact_emails', 'contact_addresses', 'contacts',
   'notes',
   'meal_ingredients', 'meals', 'recipe_ingredients', 'recipes',
+  // Nur der Bestand, NICHT pantry_locations: die Lagerorte sind Referenzdaten
+  // aus der Migration (wie shopping_categories, das hier ebenfalls fehlt).
+  // Sie zu leeren ließ den Haushalt ohne einen einzigen Lagerort zurück -
+  // niemand legt sie danach wieder an.
+  'pantry_items',
   'reminders',
   'event_assignments', 'task_assignments', 'calendar_events', 'tasks',
   'birthdays',

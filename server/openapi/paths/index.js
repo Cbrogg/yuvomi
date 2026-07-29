@@ -9,6 +9,7 @@ import { rewardsPaths } from './rewards.js';
 import { shoppingPaths } from './shopping.js';
 import { mealsPaths } from './meals.js';
 import { recipesPaths } from './recipes.js';
+import { pantryPaths } from './pantry.js';
 import { calendarPaths } from './calendar.js';
 import { notesPaths } from './notes.js';
 import { contactsPaths } from './contacts.js';
@@ -39,6 +40,7 @@ export function buildPaths() {
     ...shoppingPaths(),
     ...mealsPaths(),
     ...recipesPaths(),
+    ...pantryPaths(),
     ...calendarPaths(),
     ...notesPaths(),
     ...contactsPaths(),

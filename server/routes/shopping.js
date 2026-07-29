@@ -513,6 +513,66 @@ router.post('/:listId/import-meal-plan', (req, res) => {
 });
 
 // --------------------------------------------------------
+// POST /api/v1/shopping/:listId/import-pantry
+// Setzt Vorratsartikel auf die Einkaufsliste (leer oder unter Mindestbestand).
+// Body: { items: [{ pantry_item_id, quantity? }] }
+//
+// Die Mengen-Angabe kommt als fertiger Anzeigetext vom Client: shopping_items.quantity
+// ist Freitext, und die Einheiten des Vorrats ('pcs', 'can', …) sind erst über t()
+// lesbar. Die Übersetzung bleibt damit im Frontend, wo sie hingehört.
+//
+// Liegt derselbe Name bereits unabgehakt auf der Liste, wird übersprungen statt
+// dupliziert - zweimal "Milch" hilft im Supermarkt niemandem.
+// Response: { data: { added: number, skipped: number } }
+// --------------------------------------------------------
+router.post('/:listId/import-pantry', (req, res) => {
+  try {
+    const list = db.get()
+      .prepare('SELECT id FROM shopping_lists WHERE id = ?')
+      .get(req.params.listId);
+    if (!list) return res.status(404).json({ error: 'List not found.', code: 404 });
+
+    const entries = Array.isArray(req.body.items) ? req.body.items : [];
+    if (!entries.length) return res.json({ data: { added: 0, skipped: 0 } });
+
+    const validNames = validCategoryNames();
+    const defaultCat = validNames[validNames.length - 1] ?? 'Sonstiges';
+
+    const result = db.get().transaction(() => {
+      const findPantryItem = db.get().prepare('SELECT name, category FROM pantry_items WHERE id = ?');
+      const findDuplicate = db.get().prepare(`
+        SELECT id FROM shopping_items
+        WHERE list_id = ? AND is_checked = 0 AND name = ? COLLATE NOCASE
+        LIMIT 1
+      `);
+      const insertItem = db.get().prepare(`
+        INSERT INTO shopping_items (list_id, name, quantity, category) VALUES (?, ?, ?, ?)
+      `);
+
+      let added = 0, skipped = 0;
+
+      for (const entry of entries) {
+        const pantryItem = findPantryItem.get(Number(entry?.pantry_item_id));
+        if (!pantryItem) { skipped += 1; continue; }
+        if (findDuplicate.get(req.params.listId, pantryItem.name)) { skipped += 1; continue; }
+
+        const vQty = str(entry.quantity, 'Menge', { max: MAX_SHORT, required: false });
+        const category = validNames.includes(pantryItem.category) ? pantryItem.category : defaultCat;
+        insertItem.run(req.params.listId, pantryItem.name, vQty.value, category);
+        added += 1;
+      }
+
+      return { added, skipped };
+    })();
+
+    res.json({ data: result });
+  } catch (err) {
+    log.error('POST /:listId/import-pantry error:', err);
+    res.status(500).json({ error: 'Internal server error.', code: 500 });
+  }
+});
+
+// --------------------------------------------------------
 // DELETE /api/v1/shopping/:listId/items/checked
 // Alle abgehakten Artikel aus einer Liste löschen.
 // Response: { deleted: number }

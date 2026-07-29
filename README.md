@@ -59,7 +59,7 @@
 <div align="center">
   <table>
     <tr>
-      <td align="center"><b>16</b><br><sub>modules</sub></td>
+      <td align="center"><b>17</b><br><sub>modules</sub></td>
       <td align="center"><sub>·</sub></td>
       <td align="center"><b>23</b><br><sub>languages</sub></td>
       <td align="center"><sub>·</sub></td>
@@ -104,6 +104,7 @@ Most families glue their life together from a dozen paid apps, each with its own
 | a budgeting app | **Budget** - income, expenses, accounts, savings goals |
 | a meal planner &amp; recipe app | **Meals &amp; Recipes** - weekly planner with shopping export |
 | a grocery-list app | **Shopping** - shared, aisle-organized lists |
+| a pantry &amp; expiry tracker | **Pantry** - stock, storage location, best-before dates |
 | a document manager | **Documents** - tagged, searchable family files |
 | a notes app &amp; contacts sync | **Notes &amp; Contacts** - Markdown notes, CardDAV sync |
 
@@ -246,7 +247,7 @@ Most families glue their life together from a dozen paid apps, each with its own
 
 ## Modules
 
-Sixteen independent modules share one calm, consistent interface. Turn on what your household needs; the rest stays out of the way.
+Seventeen independent modules share one calm, consistent interface. Turn on what your household needs; the rest stays out of the way.
 
 | | Module | In one line |
 |:---:|---|---|
@@ -254,6 +255,7 @@ Sixteen independent modules share one calm, consistent interface. Turn on what y
 | ![shopping](https://raw.githubusercontent.com/ulsklyc/yuvomi/main/docs/icons/shopping.png) | **Shopping** | Collaborative lists grouped by aisle, with swipe gestures and one-tap import from the meal plan. |
 | ![meals](https://raw.githubusercontent.com/ulsklyc/yuvomi/main/docs/icons/meals.png) | **Meals** | Weekly drag-and-drop planner with a recipe sidebar and direct export to the shopping list. |
 | ![recipes](https://raw.githubusercontent.com/ulsklyc/yuvomi/main/docs/icons/recipes.png) | **Recipes** | Create, duplicate and scale recipes, then pre-fill meal slots or save any planned meal. |
+| ![pantry](https://raw.githubusercontent.com/ulsklyc/yuvomi/main/docs/icons/pantry.png) | **Pantry** | What is actually in the house: amount, storage location and best-before date, with expiry and low-stock filters and a two-way handover with the shopping list. |
 | ![calendar](https://raw.githubusercontent.com/ulsklyc/yuvomi/main/docs/icons/calendar.png) | **Calendar** | Two-way sync with Google and CalDAV, ICS subscriptions, recurring events, holiday overlays and shared visibility. |
 | ![documents](https://raw.githubusercontent.com/ulsklyc/yuvomi/main/docs/icons/documents.png) | **Documents** | Upload, tag, preview and organize family files, with optional WebDAV or Google Drive storage. |
 | ![budget](https://raw.githubusercontent.com/ulsklyc/yuvomi/main/docs/icons/budget.png) | **Budget** | Income, expenses, accounts, loans, subscriptions and per-category planning, with a personal mode. |
@@ -273,9 +275,10 @@ Sixteen independent modules share one calm, consistent interface. Turn on what y
 <br>
 
 - **Tasks** - Deadlines, priorities, subtasks, recurring schedules, multi-member assignment, per-task visibility (only me / assignees / everyone), customizable categories, linked documents from the Documents module, an "assigned to me" filter, keyword search across title and description, and a Kanban board. Optional CalDAV import of Apple Reminders.
-- **Shopping** - Collaborative lists grouped by aisle, with swipe gestures, per-item notes, and one-tap import from the meal plan.
+- **Shopping** - Collaborative lists grouped by aisle, with swipe gestures, per-item notes, one-tap import from the meal plan, and a handover of everything you ticked off straight into the Pantry.
 - **Meals** - Weekly planner with multiple items per slot, weekly repeats, a drag-and-drop recipe sidebar, a one-click week randomizer, and direct export to the shopping list.
 - **Recipes** - Create, duplicate, and scale recipes; pre-fill meal slots or save any planned meal as a recipe.
+- **Pantry** - What is actually in the house, as the fourth side of the kitchen: amount and unit, storage location, best-before date, an optional minimum stock, and a note. A quantity stepper books items in and out in one tap, status badges appear only where they matter (expired, expiring within a week, running low, out), and filters narrow the list to exactly those. Storage locations are renameable and sortable; deleting one keeps the stock. Runs in both directions with the shopping list: low or empty items go onto the list one at a time or all at once (topping up to the minimum stock), and everything ticked off after a shop can be booked into the pantry with its quantity and unit.
 - **Calendar** - two-way sync with Google (OAuth) and CalDAV (iCloud, Nextcloud, Radicale), where creating, editing, deleting and moving an event to another calendar all reach the server, ICS subscriptions, one-time import from an `.ics` file or shared feed into editable local events, recurring events with per-occurrence scope (edit or delete this event, this and following, or the whole series), attachments, holiday overlays, keyword search across title, location and notes (accent-insensitive), an "assigned to me" filter, per-event visibility, a default assignee per synced calendar, assigned members shown as avatars, a configurable week start (Monday, Sunday or Saturday), and a read-only `webcal://` export feed.
 - **Documents** - Upload, tag, preview, and organize family files with per-document visibility. Multi-file upload, folders, sorting, counted category facets, and bulk move/archive/delete. Optional local folder, WebDAV or Google Drive storage plus Paperless-ngx and Papra (DMS) linking.
 - **Budget** - Income, expenses, recurring entries, trend charts, a statistics tab, CSV export, accounts with starting balances and running totals plus net worth, loans (optionally as an annuity with a fixed, variable or fixed-then-variable interest rate, with the payment, term and total interest derived live; each loan can run in its own currency with a fixed conversion rate into the budget currency), split expenses, subscription tracking with renewals, currencies and an optional end date (on a date or after N payments, then auto-completed), a planning tab with per-category monthly budgets and a savings goal (planned vs. actual), and an optional personal budget mode where each entry can be private or shared with a My budget / Household view.

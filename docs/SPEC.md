@@ -233,6 +233,35 @@ Reusable recipe cards that can be pre-filled into meal slots.
 | quantity | TEXT | |
 | on_shopping_list | INTEGER | 0/1 |
 
+### Pantry Locations (migration v108)
+Storage places for the pantry. Renameable and sortable like Shopping Categories; seeded in German
+and translated for the seeded names only, so a household that renames one keeps its own wording.
+
+| Column | Type | Constraint |
+|--------|------|-----------|
+| name | TEXT | NOT NULL, UNIQUE |
+| icon | TEXT | NOT NULL (default 'package') |
+| sort_order | INTEGER | NOT NULL (default 0) |
+
+### Pantry Items (migration v108, v109)
+What is actually in the house. One row is one batch: two packs of milk with different best-before
+dates are two rows, which keeps the model flat instead of nesting batches under a product.
+
+| Column | Type | Constraint |
+|--------|------|-----------|
+| name | TEXT | NOT NULL |
+| quantity | REAL | NOT NULL (default 1) — numeric, unlike the free-text `quantity` of recipe/meal ingredients, so the stepper can decrement it and it can be compared against `min_quantity` |
+| unit | TEXT | NOT NULL (default 'pcs') — canonical key from `public/utils/pantry-units.js`; deliberately no CHECK constraint, because adding a unit would otherwise mean a SQLite table rebuild |
+| location_id | INTEGER | FK → Pantry Locations (SET NULL) — deleting a location never destroys stock |
+| category | TEXT | NOT NULL (default 'Sonstiges') — shares the Shopping Categories vocabulary |
+| expires_on | TEXT | nullable, `YYYY-MM-DD`; NULL means it does not expire |
+| min_quantity | REAL | nullable; at or below this amount the item counts as running low |
+| notes | TEXT | |
+| created_by | INTEGER | FK → Users (**SET NULL**, nullable since v109) — the pantry is household property, not private property, so removing a member must not delete the household's stock (v1.55.0) |
+
+Expiry and stock status are derived in the client, not stored: "expired" depends on the user's local
+calendar day, and the server reasons in UTC. The threshold for "expiring soon" is seven days.
+
 ### Calendar Events
 | Column | Type | Constraint |
 |--------|------|-----------|
@@ -884,7 +913,7 @@ Birthday records with optional profile photo and automatic calendar event + remi
 ### API Tokens
 Named Bearer / X-API-Key tokens for non-interactive external integrations. Admin-only creation and revocation. Token values are SHA-256-hashed at rest; the plaintext is shown only once after creation.
 
-Tokens can optionally be **scoped** to individual modules and access levels — a least-privilege allow-list that matters most for tokens handed to an off-device AI/MCP client. Each scope is `<module>:read` or `<module>:write` (write implies read); modules cover `tasks`, `shopping`, `meals`, `calendar`, `notes`, `contacts`, `budget`, `documents`, `health`, `rewards`, `housekeeping`, `weather`, `family`, `dashboard`, `search`. A `NULL` scopes value means no scoping — full role-based access (the default, and the state of every token created before this feature). A scoped token can only reach modules on its allow-list; every other `/api/v1` path is denied. Enforcement is shared across the REST API and MCP: the MCP core tools are checked in-process, `tools/list` hides tools the token cannot use, and the OpenAPI bridge inherits the same limits because it loops back through the REST layer with the same token.
+Tokens can optionally be **scoped** to individual modules and access levels — a least-privilege allow-list that matters most for tokens handed to an off-device AI/MCP client. Each scope is `<module>:read` or `<module>:write` (write implies read); modules cover `tasks`, `shopping`, `meals`, `pantry`, `calendar`, `notes`, `contacts`, `budget`, `documents`, `health`, `rewards`, `housekeeping`, `weather`, `family`, `dashboard`, `search`. A `NULL` scopes value means no scoping — full role-based access (the default, and the state of every token created before this feature). A scoped token can only reach modules on its allow-list; every other `/api/v1` path is denied. Enforcement is shared across the REST API and MCP: the MCP core tools are checked in-process, `tools/list` hides tools the token cannot use, and the OpenAPI bridge inherits the same limits because it loops back through the REST layer with the same token.
 
 | Column | Type | Constraint |
 |--------|------|-----------|
@@ -1570,6 +1599,21 @@ Reusable recipe cards linked to meal slots.
 - Duplicate existing recipes
 - "Add to meal plan" navigates to `/meals` with the selected recipe pre-filled in the modal
 - REST API: `GET/POST /api/v1/recipes`, `PUT/DELETE /api/v1/recipes/:id` with ingredient sync (`meal_types` included)
+
+### Pantry (`/pantry`) (v1.55.0)
+
+The fourth tab of the Kitchen group and the fourth side of its cycle: plan (Meals) → cook (Recipes)
+→ buy (Shopping) → **store**. Answers "how much do we still have", "where is it" and "what runs out
+soon" (#596).
+
+- CRUD: name, quantity + unit, storage location, category, best-before date, minimum stock, note. One row is one batch; a second pack with a different date is a second row.
+- **Numeric quantity with a per-unit step:** the ± stepper books stock in and out in one tap. Countable units step by 1, grams/millilitres by 100, kilograms/litres by 0.5, so "+" on flour is not a whole kilo. Updates are optimistic and the PATCH is debounced (450 ms); each request carries a sequence number so a slow response cannot overwrite a newer tap.
+- **Status is derived, never stored:** expired, expiring within seven days, running low (at or below `min_quantity`), and out of stock. Badges appear **only** on rows that carry one of these states, so the rows that need attention stand out instead of every row wearing a pill.
+- **Filter chips** for expired / expiring soon / running low, each with a count. A chip is only rendered when it has hits, and the active filter resets itself when it loses its last one — a chip can never lead to an empty list. Without a filter the list groups by storage location; with one it goes flat and sorts by urgency, and the location moves into the meta line.
+- **Storage locations** are their own table, renameable, sortable and deletable through the shared category-manager component. Deleting one keeps the stock and leaves those items location-less.
+- **Two-way handover with the shopping list.** Pantry → Shopping: a per-row action on low/empty items and a bulk action in the "running low" filter; the quantity is pre-filled with the shortfall to the minimum stock, or left open when none is set. Shopping → Pantry: everything ticked off after a shop is booked in through a dialog with one shared storage location and a per-item quantity/unit, parsed from the free-text shopping quantity for the language-independent metric units (g, kg, ml, l).
+- **Scope separation:** `POST /api/v1/pantry/import-shopping` deliberately does not clear the shopping list — the client calls the existing `DELETE /api/v1/shopping/:listId/items/checked` afterwards, so a `pantry:write` token can never delete shopping data.
+- REST API: `GET/POST /api/v1/pantry`, `PUT/PATCH/DELETE /api/v1/pantry/:itemId`, `GET/POST /api/v1/pantry/locations`, `PUT/DELETE /api/v1/pantry/locations/:locId`, `PATCH /api/v1/pantry/locations/reorder`, `POST /api/v1/pantry/import-shopping`, plus `POST /api/v1/shopping/:listId/import-pantry` on the shopping side.
 
 ### Calendar (`/calendar`)
 

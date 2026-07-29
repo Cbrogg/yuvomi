@@ -586,7 +586,8 @@ test('the Settings controller forces a full shell render when the locale changes
 });
 
 test('Kitchen child IDs use the canonical order', () => {
-  assert.deepEqual(KITCHEN_CHILD_IDS, ['meals', 'recipes', 'shopping']);
+  // Reihenfolge = Küchen-Kreislauf: planen → kochen → einkaufen → lagern (#596).
+  assert.deepEqual(KITCHEN_CHILD_IDS, ['meals', 'recipes', 'shopping', 'pantry']);
   assert.equal(Object.isFrozen(KITCHEN_CHILD_IDS), true);
 });
 
@@ -598,13 +599,14 @@ test('groupBuiltInModules enables Kitchen while any child is enabled', () => {
     { id: 'meals', enabled: true },
     { id: 'recipes', enabled: false },
     { id: 'shopping', enabled: true },
+    { id: 'pantry', enabled: true },
   ]);
-  assert.equal(kitchen.enabledChildren, 2);
+  assert.equal(kitchen.enabledChildren, 3);
   assert.equal(kitchen.enabled, true);
 });
 
 test('groupBuiltInModules disables Kitchen when every child is disabled', () => {
-  const [kitchen] = groupBuiltInModules(['meals', 'recipes', 'shopping']);
+  const [kitchen] = groupBuiltInModules(['meals', 'recipes', 'shopping', 'pantry']);
 
   assert.equal(kitchen.id, 'kitchen');
   assert.equal(kitchen.enabledChildren, 0);
@@ -648,7 +650,7 @@ test('normalizeModuleOrder replaces legacy Kitchen children with one Kitchen pos
 test('expandModuleOrder restores canonical Kitchen children', () => {
   assert.deepEqual(
     expandModuleOrder(['calendar', 'kitchen', 'tasks']),
-    ['calendar', 'meals', 'recipes', 'shopping', 'tasks'],
+    ['calendar', 'meals', 'recipes', 'shopping', 'pantry', 'tasks'],
   );
 });
 
@@ -661,7 +663,7 @@ test('module order helpers deduplicate repeated Kitchen children', () => {
   const order = ['meals', 'recipes', 'meals', 'shopping', 'recipes'];
 
   assert.deepEqual(normalizeModuleOrder(order), ['kitchen']);
-  assert.deepEqual(expandModuleOrder(order), ['meals', 'recipes', 'shopping']);
+  assert.deepEqual(expandModuleOrder(order), ['meals', 'recipes', 'shopping', 'pantry']);
 });
 
 test('explicit Kitchen and legacy children produce one Kitchen position', () => {
@@ -670,7 +672,7 @@ test('explicit Kitchen and legacy children produce one Kitchen position', () => 
   assert.deepEqual(normalizeModuleOrder(order), ['calendar', 'kitchen', 'tasks']);
   assert.deepEqual(
     expandModuleOrder(order),
-    ['calendar', 'meals', 'recipes', 'shopping', 'tasks'],
+    ['calendar', 'meals', 'recipes', 'shopping', 'pantry', 'tasks'],
   );
 });
 
@@ -680,7 +682,7 @@ test('module order helpers preserve stable unique non-Kitchen IDs', () => {
   assert.deepEqual(normalizeModuleOrder(order), ['tasks', 'calendar', 'kitchen', 'notes']);
   assert.deepEqual(
     expandModuleOrder(order),
-    ['tasks', 'calendar', 'meals', 'recipes', 'shopping', 'notes'],
+    ['tasks', 'calendar', 'meals', 'recipes', 'shopping', 'pantry', 'notes'],
   );
 });
 
@@ -958,20 +960,22 @@ test('hasValidWeatherCoords rejects empty, non-numeric and out-of-range input', 
 });
 
 test('buildNavigationPayload expands the visible order back to canonical Kitchen children', () => {
+  // Das kanonische Kinder-Set, nicht eine Teilmenge: dieser Test prüft die
+  // Reihenfolgen-Expansion, nicht welche Kinder aktiviert sind.
   const payload = buildNavigationPayload(
     ['notes'],
-    new Set(['meals', 'recipes', 'shopping']),
+    new Set(KITCHEN_CHILD_IDS),
     ['calendar', 'tasks', 'kitchen', 'notes'],
   );
 
   assert.deepEqual(payload, {
     disabled_modules: ['notes'],
-    module_order: ['calendar', 'tasks', 'meals', 'recipes', 'shopping', 'notes'],
+    module_order: ['calendar', 'tasks', 'meals', 'recipes', 'shopping', 'pantry', 'notes'],
   });
 });
 
 test('buildNavigationPayload yields an empty module order for an empty visible order', () => {
-  const payload = buildNavigationPayload([], new Set(['meals', 'recipes', 'shopping']), []);
+  const payload = buildNavigationPayload([], new Set(KITCHEN_CHILD_IDS), []);
 
   assert.deepEqual(payload, { disabled_modules: [], module_order: [] });
 });
@@ -979,7 +983,7 @@ test('buildNavigationPayload yields an empty module order for an empty visible o
 test('buildNavigationPayload keeps the single Kitchen position when expanding', () => {
   const payload = buildNavigationPayload([], new Set(KITCHEN_CHILD_IDS), ['kitchen']);
 
-  assert.deepEqual(payload.module_order, ['meals', 'recipes', 'shopping']);
+  assert.deepEqual(payload.module_order, ['meals', 'recipes', 'shopping', 'pantry']);
 });
 
 test('buildNavigationPayload disables Kitchen children that are not enabled', () => {
@@ -989,8 +993,8 @@ test('buildNavigationPayload disables Kitchen children that are not enabled', ()
     ['kitchen', 'budget'],
   );
 
-  assert.deepEqual(payload.disabled_modules, ['budget', 'recipes', 'shopping']);
-  assert.deepEqual(payload.module_order, ['meals', 'recipes', 'shopping', 'budget']);
+  assert.deepEqual(payload.disabled_modules, ['budget', 'recipes', 'shopping', 'pantry']);
+  assert.deepEqual(payload.module_order, ['meals', 'recipes', 'shopping', 'pantry', 'budget']);
 });
 
 test('buildMobileNavigationPayload normalizes aliases, duplicates, and slot count', () => {
