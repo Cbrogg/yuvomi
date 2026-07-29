@@ -10,7 +10,9 @@ Neue Suite: `test/test-[module].js` anlegen + `test:[module]`-Skript in `package
 npm test             # Alle Suiten (Node >=22)
 npm run test:db
 npm run test:rename-migration   # Oikos→Yuvomi Identifier-Migration: seamless rename invariants
+npm run test:schema-reconcile   # Schema-Selbstheilung gegen Migrations-Drift (#538): reconcileCriticalSchema ergänzt fehlende Spalten, obwohl die Migration als angewendet vermerkt ist
 npm run test:db-encryption      # DB_ENCRYPTION_KEY wirkt wirklich: Datei-Header verschlüsselt, Bestands-DB wird migriert, falscher Key bricht den Start ab
+npm run test:db-isolation       # Test-Isolation: keine Suite lädt server/db.js ohne wirksames DB_PATH (init() beim Import würde sonst eine echte yuvomi.db im Repo-Root anlegen); prüft auch die Reihenfolge, da eine Zuweisung nach einem statischen Import zu spät kommt
 npm run test:tasks
 npm run test:tasks-recurrence   # recurring task catch-up: nextOccurrenceAfter + PATCH status follow-up
 npm run test:tasks-routes       # Tasks-Routen-Schicht: PUT/:id, meta/options, Kategorie-CRUD (404/400/409), Filter, Verschachtelung, PATCH-Status, DELETE
@@ -79,7 +81,7 @@ npm run test:permissions    # Rollen & Rechte: Resolver (Admin-Bypass, Rolle/Mit
 npm run test:permissions-routes   # Rechte-Routen: requireAdmin-Gate (kein Privilege-Escalation), Payload-Validierung, sparse-Persistenz/Round-Trip, Admin-Ziel-Sonderregel
 npm run test:dashboard
 npm run test:ics-parser
-npm run test:ics-sub
+npm run test:ics-sub        # ICS-Abos: SSRF-Guards, ETag/304, und unveränderte Läufe schreiben nicht (kein Rowid-Verbrauch, kein info-Log)
 npm run test:ics-export     # ICS-Kalenderexport
 npm run test:ics-import     # einmaliger ICS-/Feed-Import als bearbeitbare lokale Termine (#437)
 npm run test:modal-utils
@@ -100,7 +102,7 @@ npm run test:api
 npm run test:openapi-structure   # OpenAPI-Modul-Split: jede paths/<modul>.js importiert+gespreadet, keine Pfad-Kollision
 npm run test:multi-assignment
 npm run test:kitchen-tabs
-npm run test:caldav
+npm run test:caldav         # CalDAV-Sync: Multi-Account, Event-Loop-Yield (#519), Serien-Overrides (#549), No-op-Läufe bleiben still und schreiben unveränderte Termine nicht neu
 npm run test:caldav-recurrence   # CalDAV/iOS-Serien mit Wochentags-Wiederholung (#549): FREQ=DAILY;BYDAY + DTSTART am Wochenende
 npm run test:caldav-reminders
 npm run test:caldav-event-target
@@ -108,12 +110,13 @@ npm run test:google-multi   # multiple Google calendars + per-event sync target
 npm run test:google-outbound   # Löschen + Ändern + Umziehen Yuvomi → Google (#593): Tombstones, Dirty-Marker, events.move, 404/410, Retry-Limit, Inbound-Konfliktschutz, Serien-Dubletten (Master vs. Instanz-IDs)
 npm run test:calendar-outbound-migration   # Migrationen v103-v106 gegen befüllte Bestands-DB: additiv, kein Rebuild, Marker starten neutral
 npm run test:caldav-outbound   # Löschen + Ändern + Umziehen Yuvomi → CalDAV/Apple (#593): ICS-Patcher (Teilnehmer/Alarme/Overrides bleiben), Objekt-URL-Auflösung, Umzug = create+delete, Sofortversuch ohne Kalenderabruf
-npm run test:google-calendar
+npm run test:google-calendar   # Google: Datumskonvertierung, Farbauflösung (#427/#219), unveränderte Events werden beim Full-Resync nicht neu geschrieben
 npm run test:housekeeping
 npm run test:housekeeping-routes   # Housekeeping-Routen: Worker-Anlage (Admin-Gate), Check-in/out-Lifecycle + Doppelbuchungs-Guard, Pay/Delete, Decay-CRUD, Supply-Requests, Maintenance-Log
 npm run test:documents          # Dokument-Preview: CSP-Header je MIME-Typ
 npm run test:documents-ux       # Dokumente-UX-Verträge: Leerzustände, Kategorie-Facetten, Upload-Modal, Auswahlmodus, Popover-Menü
 npm run test:document-storage   # Dokument-Storage-Migration und Invarianten
+npm run test:google-drive-storage   # Google Drive als Dokument-Ablage: eigenes Credential-Paar (fail-closed bei halber Konfiguration), OAuth-Callback legt Yuvomi/Documents an und wählt nie Drive als Kalender
 npm run test:document-folders   # Dokument-Ordner-Routen: umbenennen/löschen (PUT/DELETE) + ON DELETE SET NULL (#453)
 npm run test:task-documents     # Task↔Dokument-Verknüpfungen (#503): GET/PUT /tasks/:id/documents, Sichtbarkeit, Replace-Set, document_count, CASCADE
 npm run test:dms-adapter        # DMS-Adapter: Paperless-ngx
@@ -126,7 +129,7 @@ npm run test:preferences-weather   # weather config fields in preferences API
 npm run test:preferences-navigation   # preferences side-navigation language refresh
 npm run test:preferences-weekstart   # household week-start preference (#484/#465): GET default, PUT monday/sunday/saturday, invalid rejected
 npm run test:holidays           # holiday cache lookup, layer toggles, OpenHolidays sync (mocked)
-npm run test:carddav
+npm run test:carddav        # CardDAV: vCard-Parser, Merge/Adoption (#531/#535), Multi-Values ohne Dubletten des primären Eintrags bei wiederholtem Sync
 npm run test:carddav-addressbook-toggle   # Adressbuch-Umschaltung (#534): Frontend↔Router-Vertrag (PUT /addressbooks/:id), Feldnamen, 400/404
 npm run test:carddav-account-lifecycle    # CardDAV-Konto: Bearbeiten (PUT, Passwort-Beibehaltung, 409/404), Sammelschalter, sichtbare Sync-Fehler (Migration 92/93)
 npm run test:family-contacts
@@ -146,6 +149,7 @@ npm run test:mobile-scroll-layout
 npm run test:frontend-audit  # A11y- und Hard-Constraint-Guards des UX-Audits (innerHTML, i18n-Key-Parität, Touch-Targets, Kontraste, page-inline-pad) + Konsistenz-Invarianten: kanonische Breakpoints (640/768/1024/1440), Icon-Skala kollisionsfrei und ohne Inline-Größen, keine nativen Browser-Dialoge, border-radius nur via Token, Modal-Footer als Klasse statt Inline-Style
 npm run test:layer-boundary  # Schicht-Guard: public/ importiert nie server/; server/ nur geteilte isomorphe Utils (Allowlist)
 npm run test:typography      # Typo-Guard: font-size/letter-spacing nur via Token, Breakpoint- & Rollen-Schicht
+npm run test:settings-copy      # Beschriftungswahrheit der Settings-Blätter: Registry-Metadaten und Blatt-Inhalte dürfen nicht auseinanderlaufen
 npm run test:settings-navigation
 npm run test:settings-cron-label  # Backup-Zeitplan als Klartext: Cron-Muster (täglich/wöchentlich/monatlich/Stundenintervall), null-Fallback für alles Übrige, Locale-Vollständigkeit
 npm run test:region-presets   # Region/Format-Presets: Mapping-Validierung + detectRegion-Reverse-Lookup
