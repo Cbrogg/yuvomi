@@ -391,7 +391,7 @@ async function sync({ createClient } = {}) {
   const accounts = getAllAccounts();
 
   if (accounts.length === 0) {
-    log.info('No CalDAV accounts configured.');
+    log.debug('No CalDAV accounts configured.');
     return { success: true, syncedAccounts: 0, syncedEvents: 0 };
   }
 
@@ -449,7 +449,7 @@ async function sync({ createClient } = {}) {
       `).all(account.id);
 
       if (enabledCalendars.length === 0) {
-        log.info(`Account ${account.id}: no enabled calendars, skipping.`);
+        log.debug(`Account ${account.id}: no enabled calendars, skipping.`);
         continue;
       }
 

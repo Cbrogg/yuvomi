@@ -704,7 +704,7 @@ async function sync() {
   const accounts = getAllAccounts();
 
   if (accounts.length === 0) {
-    log.info('No CardDAV accounts configured.');
+    log.debug('No CardDAV accounts configured.');
     return { success: true, syncedAccounts: 0, syncedContacts: 0 };
   }
 
@@ -829,7 +829,7 @@ async function syncAccount(accountId) {
     `).all(accountId);
 
     if (enabledAddressbooks.length === 0) {
-      log.info(`Account ${accountId}: no enabled addressbooks, skipping.`);
+      log.debug(`Account ${accountId}: no enabled addressbooks, skipping.`);
       return { synced: 0, errors: 0 };
     }
 
