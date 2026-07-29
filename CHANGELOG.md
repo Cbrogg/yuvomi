@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.53.2] - 2026-07-29
+
+### Fixed
+- A contact synced over CardDAV no longer collects a second copy of its main phone number and email address. Every sync removed the non-primary entries and then inserted the whole vCard again, which put the value already held as the primary entry back a second time. From the second sync onwards the affected contacts showed their main number twice, and their main address as well. Duplicates left behind by earlier syncs disappear on the next one, no action required.
+
+### Changed
+- Calendar and contact syncs no longer rewrite entries that have not changed. A calendar with 47 appointments was written back in full on every scheduler run, even when nothing had changed on the server, and reported "47 events" each time as though it had done work. Runs now compare before they write, so a run without changes touches nothing and stays out of the log. The summary reads "N events seen, M changed" and only reaches the normal log level when something actually changed. This covers CalDAV, Google Calendar, ICS subscriptions and CardDAV alike, and for calendar subscriptions it also stops the run from consuming a database row id per appointment.
+
 ## [1.53.1] - 2026-07-29
 
 ### Changed
