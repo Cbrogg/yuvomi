@@ -368,6 +368,16 @@
   color: var(--color-success);
 }
 
+/* Abgeschlossen (#594): abgesetzt vom Pausiert-Grau über den Modul-Akzent. */
+.subscription-card--completed {
+  opacity: 0.78;
+}
+
+.subscription-status--completed {
+  background: color-mix(in srgb, var(--module-accent) 16%, var(--color-surface));
+  color: color-mix(in srgb, var(--module-accent) 72%, var(--color-text-primary));
+}
+
 .subscription-card__meta {
   display: flex;
   flex-wrap: wrap;

@@ -2906,7 +2906,20 @@
         "filterLabelCategory": "Kategorie",
         "filterLabelMethod": "Způsob platby",
         "filterLabelStatus": "Stav",
-        "filterLabelSort": "Řazení"
+        "filterLabelSort": "Řazení",
+        "endLabel": "Konec",
+        "endNever": "Bez konce",
+        "endOnDate": "K datu",
+        "endAfterCount": "Po počtu plateb",
+        "endDateLabel": "Datum konce",
+        "endCountLabel": "Počet plateb",
+        "endCountInvalid": "Zadej počet alespoň 1.",
+        "endsOn": "Končí {{date}}",
+        "endsAfter_one": "Zbývá {{count}} platba",
+        "completed": "Dokončeno",
+        "completedOn": "Dokončeno {{date}}",
+        "completedToast": "Předplatné dokončeno.",
+        "endsAfter": "Zbývá {{count}} plateb"
     },
     "health": {
         "tabs": {

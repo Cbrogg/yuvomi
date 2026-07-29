@@ -744,6 +744,11 @@ Recurring service and payment records shown in Budget → Subscriptions.
 | payment_method_id | INTEGER | FK → Subscription Payment Methods (SET NULL) |
 | reminder_days | INTEGER | Days before renewal, 0–365 |
 | enabled | INTEGER | 0/1; disabled records are retained but excluded from totals and reminders |
+| end_type | TEXT | NOT NULL DEFAULT `never` — `never` \| `on_date` \| `after_count` (migration v107) |
+| end_date | TEXT | DATE, required when `end_type = on_date`; must not precede `next_payment_date` |
+| occurrence_count | INTEGER | Target number of payments, required when `end_type = after_count` (1–1200) |
+| occurrences_done | INTEGER | NOT NULL DEFAULT 0 — payments already booked; the pending payment is number `occurrences_done + 1` |
+| completed_at | TEXT | Timestamp set when the end condition is reached; distinguishes an auto-completed subscription from a manually paused one |
 | website_url | TEXT | Optional public service URL |
 | logo_data | TEXT | Optional local image data URL, max 500 KB |
 | brand_color | TEXT | Optional HEX color |
@@ -751,6 +756,8 @@ Recurring service and payment records shown in Budget → Subscriptions.
 | created_by | INTEGER | FK → Users (CASCADE delete), NOT NULL |
 | owner_id | INTEGER | FK → Users, nullable (ON DELETE SET NULL) — owner, fixed to creator (migration v88) |
 | visibility | TEXT | NOT NULL DEFAULT `shared` — `private` \| `shared` (migration v88); the linked Budget expense inherits both |
+
+**Optional end condition (migration v107 · #594):** a subscription can define when it ends via an *Ends: Never / On a date / After N payments* selector (mirroring the calendar's finite-recurrence control). Renewing advances to the next cycle until the end is reached — the payment on the end date (or the `occurrence_count`-th payment) is the last — after which the subscription is **marked completed** (`completed_at` set, `enabled` cleared): it drops out of the monthly total, its linked Budget expense and renewal reminder are removed, and it stays visible with a distinct "Completed" state instead of looking manually paused. The 6-month renewal forecast only counts occurrences up to the end. Re-enabling a completed subscription clears the completion; an exhausted *after N payments* subscription can only be reactivated by raising `occurrence_count`. Existing subscriptions default to `never` and behave unchanged.
 
 Supporting tables store customizable/sortable categories and payment methods, the single household subscription budget/base-currency setting, and cached exchange rates. A "Manage categories and payment methods" dialog in the Subscriptions toolbar adds, renames, reorders, and removes both categories (name + color) and payment methods. Unlike the shared `oikos-category-manager` used elsewhere, removal is not blocked while in use: the FK `SET NULL` detaches referencing subscriptions (they fall back to uncategorized / unspecified) and the confirmation names how many subscriptions are affected. Subscription categories are mirrored under the Budget `Subscription` category, and active renewals use the matching Budget subcategory automatically; removing a category also removes its mirrored Budget subcategory and detaches any linked expense entries from it. Database backup and restore include all subscription data.
 

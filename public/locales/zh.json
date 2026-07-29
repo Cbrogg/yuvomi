@@ -2906,7 +2906,20 @@
         "filterLabelCategory": "分类",
         "filterLabelMethod": "支付方式",
         "filterLabelStatus": "状态",
-        "filterLabelSort": "排序"
+        "filterLabelSort": "排序",
+        "endLabel": "结束",
+        "endNever": "无限期",
+        "endOnDate": "在某个日期",
+        "endAfterCount": "在若干次付款后",
+        "endDateLabel": "结束日期",
+        "endCountLabel": "付款次数",
+        "endCountInvalid": "请输入至少为 1 的次数。",
+        "endsOn": "于 {{date}} 结束",
+        "endsAfter_one": "还剩 {{count}} 次付款",
+        "completed": "已完成",
+        "completedOn": "于 {{date}} 完成",
+        "completedToast": "订阅已完成。",
+        "endsAfter": "还剩 {{count}} 次付款"
     },
     "health": {
         "tabs": {

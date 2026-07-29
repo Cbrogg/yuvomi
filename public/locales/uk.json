@@ -2906,7 +2906,20 @@
         "filterLabelCategory": "Категорія",
         "filterLabelMethod": "Спосіб оплати",
         "filterLabelStatus": "Статус",
-        "filterLabelSort": "Сортування"
+        "filterLabelSort": "Сортування",
+        "endLabel": "Завершення",
+        "endNever": "Безстроково",
+        "endOnDate": "У певну дату",
+        "endAfterCount": "Після кількості платежів",
+        "endDateLabel": "Дата завершення",
+        "endCountLabel": "Кількість платежів",
+        "endCountInvalid": "Вкажіть кількість не менше 1.",
+        "endsOn": "Завершується {{date}}",
+        "endsAfter_one": "Залишився {{count}} платіж",
+        "completed": "Завершено",
+        "completedOn": "Завершено {{date}}",
+        "completedToast": "Підписку завершено.",
+        "endsAfter": "Залишилось {{count}} платежів"
     },
     "health": {
         "tabs": {

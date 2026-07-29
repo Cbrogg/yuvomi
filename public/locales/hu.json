@@ -2906,7 +2906,20 @@
         "filterLabelCategory": "Kategória",
         "filterLabelMethod": "Fizetési mód",
         "filterLabelStatus": "Állapot",
-        "filterLabelSort": "Rendezés"
+        "filterLabelSort": "Rendezés",
+        "endLabel": "Vége",
+        "endNever": "Határozatlan ideig fut",
+        "endOnDate": "Adott napon",
+        "endAfterCount": "Adott számú fizetés után",
+        "endDateLabel": "Befejezés dátuma",
+        "endCountLabel": "Fizetések száma",
+        "endCountInvalid": "Adj meg legalább 1-et.",
+        "endsOn": "Vége: {{date}}",
+        "endsAfter_one": "Még {{count}} fizetés",
+        "completed": "Befejezve",
+        "completedOn": "Befejezve: {{date}}",
+        "completedToast": "Előfizetés befejezve.",
+        "endsAfter": "Még {{count}} fizetés"
     },
     "health": {
         "tabs": {

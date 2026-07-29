@@ -2906,7 +2906,20 @@
         "filterLabelCategory": "Catégorie",
         "filterLabelMethod": "Moyen de paiement",
         "filterLabelStatus": "Statut",
-        "filterLabelSort": "Tri"
+        "filterLabelSort": "Tri",
+        "endLabel": "Fin",
+        "endNever": "Sans fin",
+        "endOnDate": "À une date",
+        "endAfterCount": "Après un nombre de paiements",
+        "endDateLabel": "Date de fin",
+        "endCountLabel": "Nombre de paiements",
+        "endCountInvalid": "Saisis un nombre d'au moins 1.",
+        "endsOn": "Se termine le {{date}}",
+        "endsAfter_one": "Encore {{count}} paiement",
+        "completed": "Terminé",
+        "completedOn": "Terminé le {{date}}",
+        "completedToast": "Abonnement terminé.",
+        "endsAfter": "Encore {{count}} paiements"
     },
     "health": {
         "tabs": {

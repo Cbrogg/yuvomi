@@ -2906,7 +2906,20 @@
         "filterLabelCategory": "Kategori",
         "filterLabelMethod": "Betalsätt",
         "filterLabelStatus": "Status",
-        "filterLabelSort": "Sortering"
+        "filterLabelSort": "Sortering",
+        "endLabel": "Slut",
+        "endNever": "Löper tills vidare",
+        "endOnDate": "På ett datum",
+        "endAfterCount": "Efter ett antal betalningar",
+        "endDateLabel": "Slutdatum",
+        "endCountLabel": "Antal betalningar",
+        "endCountInvalid": "Ange ett antal på minst 1.",
+        "endsOn": "Slutar {{date}}",
+        "endsAfter_one": "{{count}} betalning kvar",
+        "completed": "Avslutad",
+        "completedOn": "Avslutad {{date}}",
+        "completedToast": "Prenumeration avslutad.",
+        "endsAfter": "{{count}} betalningar kvar"
     },
     "health": {
         "tabs": {

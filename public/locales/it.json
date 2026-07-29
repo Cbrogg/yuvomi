@@ -2906,7 +2906,20 @@
         "filterLabelCategory": "Categoria",
         "filterLabelMethod": "Metodo di pagamento",
         "filterLabelStatus": "Stato",
-        "filterLabelSort": "Ordinamento"
+        "filterLabelSort": "Ordinamento",
+        "endLabel": "Fine",
+        "endNever": "Senza fine",
+        "endOnDate": "In una data",
+        "endAfterCount": "Dopo un numero di pagamenti",
+        "endDateLabel": "Data di fine",
+        "endCountLabel": "Numero di pagamenti",
+        "endCountInvalid": "Inserisci un numero di almeno 1.",
+        "endsOn": "Termina il {{date}}",
+        "endsAfter_one": "Ancora {{count}} pagamento",
+        "completed": "Completato",
+        "completedOn": "Completato il {{date}}",
+        "completedToast": "Abbonamento completato.",
+        "endsAfter": "Ancora {{count}} pagamenti"
     },
     "health": {
         "tabs": {
