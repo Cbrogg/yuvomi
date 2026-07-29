@@ -449,7 +449,7 @@ async function sync({ createClient } = {}) {
       `).all(account.id);
 
       if (enabledCalendars.length === 0) {
-        log.info(`Account ${account.id}: no enabled calendars, skipping.`);
+        log.debug(`Account ${account.id}: no enabled calendars, skipping.`);
         continue;
       }
 

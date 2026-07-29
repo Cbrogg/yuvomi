@@ -829,7 +829,7 @@ async function syncAccount(accountId) {
     `).all(accountId);
 
     if (enabledAddressbooks.length === 0) {
-      log.info(`Account ${accountId}: no enabled addressbooks, skipping.`);
+      log.debug(`Account ${accountId}: no enabled addressbooks, skipping.`);
       return { synced: 0, errors: 0 };
     }
 

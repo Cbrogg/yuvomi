@@ -603,7 +603,7 @@ async function sync() {
   // Outbound: nur lokale Events mit explizitem Google-Ziel
   // --------------------------------------------------------
   if (isReadonly()) {
-    log.info('Read-only mode – outbound sync skipped.');
+    log.debug('Read-only mode – outbound sync skipped.');
   } else {
     const localEvents = db.get().prepare(`
       SELECT * FROM calendar_events
