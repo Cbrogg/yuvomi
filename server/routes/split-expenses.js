@@ -22,7 +22,9 @@ const GROUP_TYPES = ['household', 'couple', 'travel', 'event', 'shopping', 'gene
 const GROUP_ROLES = ['owner', 'admin', 'guest'];
 const SPLIT_METHODS = ['equal', 'exact', 'percentage', 'shares'];
 const CATEGORIES = ['groceries', 'rent', 'utilities', 'baby', 'pets', 'school', 'travel', 'shopping', 'subscriptions', 'health', 'home', 'general'];
-const CURRENCIES = ['AED', 'AUD', 'BRL', 'CAD', 'CHF', 'CLP', 'CNY', 'CZK', 'DKK', 'EUR', 'GBP', 'HUF', 'INR', 'JPY', 'KZT', 'MYR', 'NOK', 'PLN', 'RUB', 'SAR', 'SEK', 'TRY', 'UAH', 'USD', 'ZAR'];
+// Muss mit VALID_CURRENCIES in server/routes/preferences.js übereinstimmen,
+// sonst lehnt diese Route die Haushaltswährung ab (per Test abgesichert).
+const CURRENCIES = ['AED', 'AUD', 'BRL', 'CAD', 'CHF', 'CLP', 'CNY', 'CZK', 'DKK', 'EUR', 'GBP', 'HUF', 'IDR', 'INR', 'IRR', 'JPY', 'KRW', 'KZT', 'MYR', 'NOK', 'PLN', 'RUB', 'SAR', 'SEK', 'TRY', 'UAH', 'USD', 'ZAR'];
 const FREQUENCIES = ['weekly', 'monthly', 'yearly'];
 const FAMILY_ROLES = ['dad', 'mom', 'parent', 'child', 'grandparent', 'relative', 'other'];
 

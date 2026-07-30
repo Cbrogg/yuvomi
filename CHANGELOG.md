@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - The Malaysian ringgit is now one of the currencies a household can pick, in the household settings as well as in subscriptions and in split expenses. Malaysian households had to record their money under a currency that was not theirs. Choosing Malaysia as the region sets the ringgit together with the local date and time format in one step, and amounts are then written the way they are written there: RM 1,234.56.
 
+### Fixed
+- The South Korean won, the Indonesian rupiah and the Iranian rial could be chosen as the household currency, but subscriptions did not offer them and split expenses refused them. A household on one of those three currencies could set it once in the settings and then had to leave it behind in two modules. All four places now work from the same list of currencies, and a test keeps them that way.
+
 ## [1.60.1] - 2026-07-30
 
 ### Fixed

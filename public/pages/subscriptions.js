@@ -31,9 +31,12 @@ let state = {
   user: null,
 };
 let container = null;
+// Muss mit VALID_CURRENCIES in server/routes/preferences.js übereinstimmen,
+// sonst ist die Haushaltswährung hier nicht wählbar (per Test abgesichert).
 const CURRENCIES = [
-  'AED', 'AUD', 'BRL', 'CAD', 'CHF', 'CLP', 'CNY', 'CZK', 'DKK', 'EUR', 'GBP', 'HUF',
-  'INR', 'JPY', 'KZT', 'MYR', 'NOK', 'PLN', 'RUB', 'SAR', 'SEK', 'TRY', 'UAH', 'USD', 'ZAR',
+  'AED', 'AUD', 'BRL', 'CAD', 'CHF', 'CLP', 'CNY', 'CZK', 'DKK', 'EUR', 'GBP',
+  'HUF', 'IDR', 'INR', 'IRR', 'JPY', 'KRW', 'KZT', 'MYR', 'NOK', 'PLN', 'RUB',
+  'SAR', 'SEK', 'TRY', 'UAH', 'USD', 'ZAR',
 ];
 const DEFAULT_CATEGORY_LABELS = {
   Entertainment: 'budget.subcatSubscriptionEntertainment',
