@@ -48,6 +48,7 @@
         "togglePasswordVisibility": "Toggle password visibility",
         "errorOfflineMutation": "Changes aren't possible while offline. Please reconnect.",
         "retry": "Try again",
+        "loadErrorDescription": "Please check your connection and try again.",
         "visibility": {
             "label": "Visibility",
             "all": "All family members",
@@ -2223,7 +2224,8 @@
         "noResultsTitle": "Nothing found",
         "searchNoResults": "No recipes found.",
         "dragToMealsHint": "Drag recipes onto meal slots to plan them quickly.",
-        "emptyAction": "Create recipe"
+        "emptyAction": "Create recipe",
+        "loadError": "Recipes could not be loaded."
     },
     "search": {
         "emptyHint": "Type at least 2 characters to search tasks, events, notes, contacts, shopping and health.",
@@ -3595,7 +3597,6 @@
         "emptyDescription": "Record what you have at home - with quantity, storage location and best-before date.",
         "emptyAction": "Add item",
         "loadErrorTitle": "Could not load the pantry",
-        "loadErrorDescription": "Please check your connection and try again.",
         "addItem": "Add item",
         "namePlaceholder": "e.g. plain flour",
         "quantityLabel": "Quantity",

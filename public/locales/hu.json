@@ -48,6 +48,7 @@
         "togglePasswordVisibility": "Jelszó láthatóságának váltása",
         "errorOfflineMutation": "Offline állapotban nem lehet módosítani. Csatlakozz újra.",
         "retry": "Újra",
+        "loadErrorDescription": "Ellenőrizd a kapcsolatot, és próbáld újra.",
         "visibility": {
             "label": "Láthatóság",
             "all": "Minden családtag",
@@ -2223,7 +2224,8 @@
         "noResultsTitle": "Nincs találat",
         "searchNoResults": "Nincs találat a receptek között.",
         "dragToMealsHint": "Húzza a recepteket az étkezési helyekre a gyors tervezéshez.",
-        "emptyAction": "Recept létrehozása"
+        "emptyAction": "Recept létrehozása",
+        "loadError": "A receptek betöltése sikertelen."
     },
     "search": {
         "emptyHint": "Írj be legalább 2 karaktert a feladatok, események, jegyzetek, névjegyek, bevásárlás és egészség kereséséhez.",
@@ -3595,7 +3597,6 @@
         "emptyDescription": "Rögzítsd, mi van otthon - mennyiséggel, tárolási hellyel és minőségmegőrzési dátummal.",
         "emptyAction": "Tétel hozzáadása",
         "loadErrorTitle": "A készletet nem sikerült betölteni",
-        "loadErrorDescription": "Ellenőrizd a kapcsolatot, és próbáld újra.",
         "addItem": "Tétel hozzáadása",
         "namePlaceholder": "pl. liszt",
         "quantityLabel": "Mennyiség",

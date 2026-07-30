@@ -48,6 +48,7 @@
         "togglePasswordVisibility": "Mostrar/ocultar contraseña",
         "errorOfflineMutation": "No se pueden hacer cambios sin conexión. Vuelve a conectarte.",
         "retry": "Reintentar",
+        "loadErrorDescription": "Comprueba tu conexión e inténtalo de nuevo.",
         "visibility": {
             "label": "Visibilidad",
             "all": "Todos los miembros de la familia",
@@ -2146,7 +2147,8 @@
         "noResultsTitle": "Sin resultados",
         "searchNoResults": "No se encontraron recetas.",
         "dragToMealsHint": "Arrastra recetas a las franjas de comida para planificarlas rápidamente.",
-        "emptyAction": "Crear receta"
+        "emptyAction": "Crear receta",
+        "loadError": "No se pudieron cargar las recetas."
     },
     "search": {
         "emptyHint": "Escribe al menos 2 caracteres para buscar en tareas, citas, notas, contactos, compras y salud.",
@@ -3595,7 +3597,6 @@
         "emptyDescription": "Anota lo que tienes en casa - con cantidad, lugar de almacenamiento y fecha de consumo preferente.",
         "emptyAction": "Añadir artículo",
         "loadErrorTitle": "No se pudo cargar la despensa",
-        "loadErrorDescription": "Comprueba tu conexión e inténtalo de nuevo.",
         "addItem": "Añadir artículo",
         "namePlaceholder": "p. ej. harina",
         "quantityLabel": "Cantidad",

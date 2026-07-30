@@ -48,6 +48,7 @@
         "togglePasswordVisibility": "Visa/dölj lösenord",
         "errorOfflineMutation": "Ändringar går inte att göra offline. Anslut igen.",
         "retry": "Försök igen",
+        "loadErrorDescription": "Kontrollera anslutningen och försök igen.",
         "visibility": {
             "label": "Synlighet",
             "all": "Alla familjemedlemmar",
@@ -2146,7 +2147,8 @@
         "noResultsTitle": "Inget hittades",
         "searchNoResults": "Inga recept hittades.",
         "dragToMealsHint": "Dra recept till måltidsfälten för att snabbt planera dem.",
-        "emptyAction": "Skapa recept"
+        "emptyAction": "Skapa recept",
+        "loadError": "Det gick inte att ladda recept."
     },
     "search": {
         "emptyHint": "Skriv minst 2 tecken för att söka bland uppgifter, händelser, anteckningar, kontakter, inköp och hälsa.",
@@ -3595,7 +3597,6 @@
         "emptyDescription": "Notera vad du har hemma - med mängd, förvaringsplats och bäst före-datum.",
         "emptyAction": "Lägg till vara",
         "loadErrorTitle": "Skafferiet kunde inte laddas",
-        "loadErrorDescription": "Kontrollera anslutningen och försök igen.",
         "addItem": "Lägg till vara",
         "namePlaceholder": "t.ex. vetemjöl",
         "quantityLabel": "Mängd",

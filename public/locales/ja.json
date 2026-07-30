@@ -48,6 +48,7 @@
         "togglePasswordVisibility": "パスワードを表示/非表示",
         "errorOfflineMutation": "オフラインでは変更できません。再接続してください。",
         "retry": "再試行",
+        "loadErrorDescription": "接続を確認してもう一度お試しください。",
         "visibility": {
             "label": "表示範囲",
             "all": "家族全員",
@@ -2146,7 +2147,8 @@
         "noResultsTitle": "見つかりません",
         "searchNoResults": "レシピが見つかりません。",
         "dragToMealsHint": "レシピを食事スロットにドラッグして、すばやく献立を組めます。",
-        "emptyAction": "レシピを作成"
+        "emptyAction": "レシピを作成",
+        "loadError": "レシピの読み込みに失敗しました。"
     },
     "search": {
         "emptyHint": "2文字以上入力すると、タスク・予定・メモ・連絡先・買い物・健康を検索できます。",
@@ -3595,7 +3597,6 @@
         "emptyDescription": "家にあるものを記録しましょう - 数量、保管場所、賞味期限とともに。",
         "emptyAction": "品目を追加",
         "loadErrorTitle": "在庫を読み込めませんでした",
-        "loadErrorDescription": "接続を確認してもう一度お試しください。",
         "addItem": "品目を追加",
         "namePlaceholder": "例: 小麦粉",
         "quantityLabel": "数量",

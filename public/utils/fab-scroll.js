@@ -33,29 +33,25 @@
  * unberührt.
  *
  * WIDERLEGT (Critique 2026-07-30): Hier stand als Begründung für den Listenanfang
- * „dort liegt keine Zeile unter ihm". Das ist falsch, und zwar messbar. Bei
- * `scrollTop = 0` liegen auf 5 von 6 geprüften Route/Viewport-Kombinationen
- * Zeilenaktionen unter dem FAB:
+ * „dort liegt keine Zeile unter ihm". Das war falsch, und zwar messbar - bei
+ * `scrollTop = 0` lagen auf 5 von 6 geprüften Route/Viewport-Kombinationen
+ * Zeilenaktionen unter dem FAB, bis 80,6% (phoneSm /pantry, „Menge erhöhen:
+ * Spaghetti"). 15 blockierende Überdeckungen über die geprüften Stände.
  *
- *   phoneSm /pantry    80.6%  („Menge erhöhen: Spaghetti")
- *   phone   /pantry    33.9%
- *   phoneSm /shopping  28.0%
- *   phone   /shopping  13% + 14%  (zwei „Details zu …")
- *   phone   /meals     10.1%
+ * SEITHER GELÖST, aber nicht hier: `--fab-safe-zone` verkürzt den Scrollport
+ * (Marge an .app-content, layout.css), sodass unter dem FAB bei JEDEM
+ * Scrollstand nichts Bedienbares mehr liegen kann. Nachgemessen über vier
+ * Routen × fünf Scrollstände im Ruhezustand des FAB: 0 Überdeckungen.
  *
- * Insgesamt 15 blockierende Überdeckungen über die geprüften Stände. Der
- * Retract-Mechanismus selbst greift zuverlässig (beim Abwärtsscrollen 0
- * Überdeckungen, Opazität 0), und am Listenende stimmt die Annahme - dort wirkt
- * --fab-clearance. Der ungelöste Fall ist der Ruhezustand VOR der ersten Geste.
- *
- * Warum hier trotzdem nichts geändert wurde: eine statische Geometrie löst es
- * nicht. Die Bedienzone sitzt an der rechten Zeilenkante, der FAB in der rechten
- * unteren Ecke; auf einem Telefon ist das dieselbe Spalte. Eine Gasse pro Zeile
- * kostete bei 320px 24% der Viewportbreite (deshalb wurde sie zurückgebaut), und
- * eine Gasse nur für die untersten Zeilen wäre bei scrollTop=0 wirkungslos, weil
- * die betroffenen Zeilen dort mitten in der Liste stehen. Was bleibt, ist eine
- * Struktur-Entscheidung: der FAB verlässt die Ecke (Leiste am Fuß), oder die
- * Zeilen tragen ihre Aktion nicht mehr rechts außen.
+ * WAS DAS FÜR DIESE DATEI HEISST: Der Retract ist kein Kollisionsschutz mehr -
+ * seine Begründung ist entfallen. Er bleibt vorerst als Sicht-Komfort beim
+ * Scrollen (mehr Liste im Blick), aber das ist eine schwächere Rechtfertigung
+ * als die ursprüngliche, und er kostet etwas: die Primäraktion verschwindet
+ * beim Abwärtsscrollen, ohne dass sie noch im Weg wäre. Das Modul hatte schon
+ * einmal zwei entgegengesetzte Antworten auf dasselbe Problem (Gasse und
+ * Freiraum-Padding); wer hier aufräumt, kann diese Mechanik ersatzlos
+ * entfernen - `.page-fab--retracted` in layout.css und den Aufruf in router.js
+ * gleich mit.
  */
 
 const RETRACTED = 'page-fab--retracted';

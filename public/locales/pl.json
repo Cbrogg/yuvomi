@@ -48,6 +48,7 @@
         "togglePasswordVisibility": "Pokaż/ukryj hasło",
         "errorOfflineMutation": "Zmiany nie są możliwe w trybie offline. Połącz się ponownie.",
         "retry": "Spróbuj ponownie",
+        "loadErrorDescription": "Sprawdź połączenie i spróbuj ponownie.",
         "visibility": {
             "label": "Widoczność",
             "all": "Wszyscy członkowie rodziny",
@@ -2235,7 +2236,8 @@
         "searchPlaceholder": "Szukaj przepisów…",
         "noResultsTitle": "Nic nie znaleziono",
         "searchNoResults": "Nie znaleziono przepisów.",
-        "dragToMealsHint": "Przeciągnij przepisy do pól posiłków, aby szybko je zaplanować."
+        "dragToMealsHint": "Przeciągnij przepisy do pól posiłków, aby szybko je zaplanować.",
+        "loadError": "Nie udało się załadować przepisów."
     },
     "onboarding": {
         "step1Title": "Witaj w {{name}}",
@@ -3595,7 +3597,6 @@
         "emptyDescription": "Zapisz, co masz w domu - z ilością, miejscem przechowywania i datą przydatności.",
         "emptyAction": "Dodaj produkt",
         "loadErrorTitle": "Nie udało się wczytać spiżarni",
-        "loadErrorDescription": "Sprawdź połączenie i spróbuj ponownie.",
         "addItem": "Dodaj produkt",
         "namePlaceholder": "np. mąka",
         "quantityLabel": "Ilość",

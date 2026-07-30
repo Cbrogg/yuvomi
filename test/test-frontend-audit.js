@@ -1294,8 +1294,12 @@ test('mobile navigation Quiet Precision keeps state feedback stable and accessib
   // verschwinden.
   assert.match(focusRule, /outline:\s*none/);
   const focusWellRule = cssRuleBody(layout, '.nav-bottom .nav-item:focus-visible .nav-item__icon-well');
-  assert.match(focusWellRule, /outline:\s*var\(--space-0h\)\s+solid/);
-  assert.match(focusWellRule, /outline-offset:\s*var\(--space-0h\)/);
+  // Breite und Offset kommen aus den geteilten Fokus-Tokens (tokens.css §7b),
+  // vorher aus --space-0h. Abweichen darf hier nur die FARBE: ein Nav-Item zeigt
+  // auf SEIN Modul, nicht auf das gerade offene.
+  assert.match(focusWellRule, /outline:\s*var\(--focus-ring-width\)\s+solid\s+var\(--focus-ring-color\)/);
+  assert.match(focusWellRule, /outline-offset:\s*var\(--focus-ring-offset\)/);
+  assert.match(focusWellRule, /--focus-ring-color:\s*var\(--item-module-accent,/);
   assert.match(pressedWellRule, /transform:\s*translateY\(var\(--space-px\)\) scale\(0\.96\)/);
   assert.doesNotMatch(layout, /(^|\n)\.nav-item:active\s*\{[\s\S]*?transform:/);
   assert.doesNotMatch(layout, /\.nav-bottom \.nav-item:active\s*\{[\s\S]*?transform:/);
@@ -1568,6 +1572,138 @@ test('die Küchen-Seiten bauen Leerzustände nur über den geteilten Renderer', 
 });
 
 /**
+ * Ein fehlgeschlagener Ladevorgang zeigt nie den Leerzustand.
+ *
+ * Ausgangsbefund (Critique P0, 2026-07-30): bei erzwungenem HTTP 500 sagte
+ * `/shopping` „Keine Listen · [Neue Liste erstellen]" bei 31 vorhandenen
+ * Artikeln, `/meals` dasselbe bei 28 geplanten Mahlzeiten. Beide Loader fingen
+ * den Fehler, leerten den State und legten die Meldung in einen Toast - von den
+ * zwei Aussagen überlebte damit die falsche, denn der Toast verging und der
+ * Leerzustand blieb. Ein Leerzustand ist die schädlichste Antwort auf einen
+ * Serverfehler: er behauptet Datenverlust und bietet als einzige Handlung eine
+ * schreibende an.
+ *
+ * Der Guard hält die drei Bedingungen fest, die den Defekt strukturell
+ * ausschließen. Die dritte ist die eigentliche: Reihenfolge im Rumpf. Ein
+ * Fehler-Feld, das erst NACH dem Leer-Zweig geprüft wird, ist wirkungslos -
+ * `state.items` ist nach einem Fehler ebenfalls leer, und nur die Reihenfolge
+ * trennt „nichts angelegt" von „nicht geladen".
+ */
+test('die Küchen-Seiten zeigen bei einem Ladefehler den Fehlerzustand, nicht den Leerzustand', () => {
+  for (const page of ['meals', 'recipes', 'shopping', 'pantry']) {
+    const src = read(`../public/pages/${page}.js`);
+
+    // 1. Es gibt überhaupt einen Fehlerzustand.
+    assert.match(src, /\bmountLoadError\s*\(/,
+      `${page}.js ruft den geteilten Fehler-Renderer mountLoadError() nicht auf`);
+
+    // 2. Jedes gesetzte Fehler-Feld wird auch gelesen. Ein Feld, das nur
+    //    geschrieben wird, ist genau der Zustand vor dem Fix: der Fehler ist
+    //    bekannt und wird trotzdem nicht gezeigt.
+    const assigned = new Set(
+      [...src.matchAll(/\bstate\.(\w*[eE]rror)\s*=/g)].map((m) => m[1]),
+    );
+    for (const field of assigned) {
+      const readPattern = new RegExp(`(if\\s*\\(|&&|\\|\\||!)\\s*!?state\\.${field}\\b`);
+      assert.match(src, readPattern,
+        `${page}.js setzt state.${field}, prüft es aber nirgends - der Fehler bleibt unsichtbar`);
+    }
+
+    // 3. Wo beide Zustände im selben Funktionsrumpf gerendert werden, kommt der
+    //    Fehlerzustand zuerst.
+    for (const [name, body] of topLevelFunctions(src)) {
+      const errorAt = body.search(/\bmountLoadError\s*\(/);
+      const emptyAt = body.search(/\bmountEmptyState\s*\(/);
+      if (errorAt === -1 || emptyAt === -1) continue;
+      assert.ok(errorAt < emptyAt,
+        `${page}.js: ${name}() rendert den Leerzustand vor dem Fehlerzustand - `
+        + 'nach einem Ladefehler ist die Sammlung ebenfalls leer, der Leer-Zweig greift also zuerst');
+    }
+
+    // 4. Kein Ladefehler wird nur noch in einen Toast gelegt.
+    for (const [name, body] of topLevelFunctions(src)) {
+      if (!/\bcatch\b/.test(body)) continue;
+      const toastOnly = /showToast\s*\(\s*t\(\s*['"][\w.]*[lL]oadError/.test(body);
+      assert.ok(!toastOnly,
+        `${page}.js: ${name}() meldet einen Ladefehler per Toast - der vergeht, `
+        + 'während der falsche Zustand darunter stehen bleibt');
+    }
+  }
+});
+
+/**
+ * Der Fokusring hat genau eine Spezifikation.
+ *
+ * Ausgangsbefund (Critique P1, 2026-07-30): sechs. Zwei konkurrierende
+ * Basisregeln - reset.css (2px, App-Akzent, offset 2px) und glass.css, das den
+ * Offset global auf 3px hob - plus rund 45 lokale Regeln darüber. Auf
+ * /shopping alternierte der Ring beim Durchtabben violett → orange → violett →
+ * orange, sechs Farbwechsel in 15 Tabstops, weil ein Teil der Komponenten
+ * `--active-module-accent` las und der andere `--color-accent` festverdrahtet
+ * hatte. Der Fokusring ist das einzige Bauteil, das ein Tastaturnutzer
+ * ununterbrochen sieht; ein Farbwechsel darin liest sich als Kontextwechsel.
+ *
+ * Der Guard erlaubt genau zwei Formen: die Tokens lesen, oder - für die
+ * begründeten Ausnahmen - `--focus-ring-color` lokal überschreiben. Eine eigene
+ * `outline`-Farbe in einer Fokusregel ist die siebte Spezifikation.
+ */
+test('Fokusringe lesen die Tokens aus tokens.css §7b', () => {
+  const tokens = read('../public/styles/tokens.css');
+  for (const token of ['--focus-ring-width', '--focus-ring-color', '--focus-ring-offset', '--focus-ring-offset-inset']) {
+    assert.ok(tokens.includes(`${token}:`), `tokens.css führt ${token} nicht`);
+  }
+
+  const findings = [];
+  for (const file of readdirSync(new URL('../public/styles/', import.meta.url))) {
+    if (!file.endsWith('.css')) continue;
+    const lines = read(`../public/styles/${file}`).split('\n');
+
+    lines.forEach((line, i) => {
+      const decl = line.split('/*')[0];
+      // `outline` muss eine Deklaration sein, kein Namensteil: `\b` matcht auch
+      // in `.btn--danger-outline:focus-visible`. Also nur nach Zeilenanfang,
+      // `{` oder `;`.
+      if (!/(^|[{;])\s*outline(-color|-offset|-width)?\s*:/.test(decl)) return;
+      if (/outline\s*:\s*(none|0)\s*[;}]/.test(decl)) return;
+      if (/var\(--focus-ring/.test(decl)) return;
+
+      // Nur Fokusregeln. Eine `outline` als Zustandsmarkierung (Drop-Target,
+      // „heute", aria-current) ist kein Fokusring und darf eigene Werte tragen.
+      let selector = null;
+      let depth = 0;
+      for (let j = i; j >= 0; j--) {
+        depth += (lines[j].match(/\}/g) || []).length - (lines[j].match(/\{/g) || []).length;
+        if (depth < 0) { selector = lines[j]; break; }
+      }
+      if (!selector || !/:focus-visible|:focus-within/.test(selector)) return;
+
+      findings.push(`${file}:${i + 1}  ${selector.split('{')[0].trim().slice(0, 50)} → ${decl.trim().slice(0, 50)}`);
+    });
+  }
+
+  assert.deepEqual(findings, [],
+    'Fokusregeln mit eigenen Werten statt der --focus-ring-*-Tokens. Begründete '
+    + 'Ausnahmen überschreiben --focus-ring-color lokal und lesen Breite/Offset '
+    + `weiter aus den Tokens:\n${findings.join('\n')}`);
+});
+
+/**
+ * Zerlegt eine Modulquelle in ihre Top-Level-Funktionen.
+ * Grob, aber ausreichend: die Küchen-Seiten deklarieren durchgängig mit
+ * `function name()` an der linken Spalte.
+ */
+function topLevelFunctions(src) {
+  const out = [];
+  const pattern = /^(?:export\s+)?(?:async\s+)?function\s+(\w+)/gm;
+  const starts = [...src.matchAll(pattern)];
+  starts.forEach((match, i) => {
+    const end = i + 1 < starts.length ? starts[i + 1].index : src.length;
+    out.push([match[1], src.slice(match.index, end)]);
+  });
+  return out;
+}
+
+/**
  * Die Küchen-Listen teilen EINE Zeilen-Grammatik.
  *
  * Ausgangsbefund (Critique 2026-07-30, gemessen bei 1440px): die vier Tabs
@@ -1710,10 +1846,25 @@ test('der FAB weicht der Zeile, statt eine Gasse zu reservieren', () => {
   assert.doesNotMatch(tokens.replace(/\/\*[\s\S]*?\*\//g, ''), /--fab-lane\s*:/,
     '--fab-lane ist stillgelegt und darf nicht wieder definiert werden');
 
-  // Das Listenende bleibt gepolstert: dort greift das Wegfahren nicht, weil der
-  // FAB am Ende bewusst zurückkommt.
-  assert.match(tokens, /--fab-clearance:\s*calc\([^;]*--fab-offset-bottom[^;]*--fab-size[^;]*;/,
-    '--fab-clearance muss weiter aus der FAB-Position abgeleitet werden');
+  // Die FAB-Zone ist eine Höhe, kein Padding. `padding-bottom` am scrollenden
+  // Element sitzt am Inhaltsende und wandert beim Scrollen mit - es wirkte
+  // deshalb nur, wenn der Nutzer schon unten war, und ließ bei scrollTop=0 bis
+  // 80,6% einer Zeilenaktion verdeckt (Critique P1, 2026-07-30).
+  assert.match(tokens, /--fab-safe-zone:\s*calc\([^;]*--fab-gap[^;]*--fab-size[^;]*;/,
+    '--fab-safe-zone muss aus --fab-gap und --fab-size abgeleitet werden');
+  assert.match(tokens, /--fab-offset-bottom:\s*calc\([^;]*--fab-gap[^;]*\)/,
+    '--fab-offset-bottom und --fab-safe-zone müssen dieselbe Quelle (--fab-gap) haben');
+  assert.match(layout, /\.app-content:has\(\.page-fab[\s\S]*?\{[^}]*margin-block-end:\s*var\(--fab-safe-zone\)/,
+    'der Scrollport muss über der FAB-Zone enden (Marge an .app-content)');
+
+  // Die drei auseinandergedrifteten Kopien bleiben abgeschafft. Sie rechneten
+  // `--target-lg + --space-6 + --space-4` = 88px und zählten --nav-bottom-height
+  // nicht mit - mobil also um mehr als 60px zu klein.
+  for (const file of readdirSync(styleDir).filter((f) => f.endsWith('.css'))) {
+    const live = read(`../public/styles/${file}`).replace(/\/\*[\s\S]*?\*\//g, '');
+    assert.doesNotMatch(live, /--[\w-]*fab-clearance/,
+      `${file} führt wieder ein eigenes FAB-Freiraum-Token statt --fab-safe-zone`);
+  }
 
   // Zurückgefahren heißt: unsichtbar UND nicht klickbar. Ein unsichtbarer, aber
   // klickbarer FAB wäre genau der Defekt, den er beheben soll - er würde den Tap
@@ -3472,6 +3623,9 @@ test('search fields keep visible labels after users enter a query', () => {
     ['../public/pages/contacts.js', 'contacts-search'],
     ['../public/pages/notes.js', 'notes-search'],
     ['../public/pages/documents.js', 'documents-search'],
+    ['../public/pages/tasks.js', 'tasks-search'],
+    ['../public/pages/pantry.js', 'pantry-search'],
+    ['../public/pages/recipes.js', 'recipes-search'],
   ];
   for (const [file, id] of viaComponent) {
     const source = read(file);
@@ -3479,6 +3633,45 @@ test('search fields keep visible labels after users enter a query', () => {
       source,
       new RegExp(`renderPageSearch\\(\\{[^}]*id:\\s*['"]${id}['"]`),
       `${file} must render #${id} via the shared page-search component`,
+    );
+  }
+
+  // Die Liste oben ist eine Allowlist und hat genau deshalb zwei Jahre lang
+  // nichts gemerkt: pantry.js und recipes.js bauten je ein eigenes
+  // `<input type="search">` nach - ohne Lupe, ohne Leeren-Knopf, ohne `<label>`,
+  // ohne Debounce und mit dem Placeholder als einziger Beschriftung. Sie standen
+  // nicht in der Liste, also gab es keinen Fehlschlag (Audit 2026-07-30).
+  //
+  // Ein Guard über eine Allowlist deckt keine Regel ab, sondern N Dateien. Diese
+  // Schleife dreht die Richtung um: sie findet JEDES Suchfeld im Seitenbestand
+  // und verlangt, dass es aus dem geteilten Baustein stammt oder als Ausnahme
+  // benannt ist. Ein neues Modul mit eigenem Nachbau fällt damit auf, ohne dass
+  // jemand daran denken muss, es hier einzutragen.
+  const documentedExceptions = new Set([
+    // Kalender: schwergewichtige Server-FTS-Ergebnisansicht mit eigener
+    // Icon-Reveal-Leiste, kein Client-Filter (siehe utils/page-search.js).
+    'calendar.js',
+    // Split-Expenses: sichtbares Label über dem Feld, Server-Reload. Der
+    // inlineLabel-Block unten prüft es separat.
+    'split-expenses.js',
+    // Abos: eigenes Markup, aber die Substanz stimmt - Lupe, `<label>` mit
+    // sr-only-Text, autocomplete="off" und eine 250ms-Debounce um einen
+    // SERVER-Filter (`?q=`), nicht um einen Client-Filter. Damit liegt es näher
+    // am Kalender als an der Küche und ist kein Fall der Defektklasse, die
+    // dieser Guard fängt. Offen bleibt allein der Leeren-Knopf; eine
+    // Konsolidierung wäre Aufräumen, keine Fehlerbehebung.
+    'subscriptions.js',
+  ]);
+  const pagesDir = new URL('../public/pages/', import.meta.url);
+  for (const entry of readdirSync(pagesDir)) {
+    if (!entry.endsWith('.js') || documentedExceptions.has(entry)) continue;
+    const source = read(`../public/pages/${entry}`);
+    if (!/type=['"]search['"]|\.type\s*=\s*['"]search['"]/.test(source)) continue;
+    assert.match(
+      source,
+      /renderPageSearch\(\{/,
+      `${entry} builds a search input by hand; use renderPageSearch() from `
+      + 'utils/page-search.js or add it to documentedExceptions with a reason',
     );
   }
 

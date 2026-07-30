@@ -48,6 +48,7 @@
         "togglePasswordVisibility": "Şifreyi göster/gizle",
         "errorOfflineMutation": "Çevrimdışıyken değişiklik yapılamaz. Lütfen yeniden bağlanın.",
         "retry": "Tekrar dene",
+        "loadErrorDescription": "Bağlantınızı kontrol edip tekrar deneyin.",
         "visibility": {
             "label": "Görünürlük",
             "all": "Tüm aile üyeleri",
@@ -2146,7 +2147,8 @@
         "noResultsTitle": "Sonuç yok",
         "searchNoResults": "Tarif bulunamadı.",
         "dragToMealsHint": "Tarifleri öğün alanlarına sürükleyerek hızlıca planlayın.",
-        "emptyAction": "Tarif oluştur"
+        "emptyAction": "Tarif oluştur",
+        "loadError": "Tarifler yüklenemedi."
     },
     "search": {
         "emptyHint": "Görevler, etkinlikler, notlar, kişiler, alışveriş ve sağlıkta aramak için en az 2 karakter yaz.",
@@ -3595,7 +3597,6 @@
         "emptyDescription": "Evde ne olduğunu kaydedin - miktar, saklama yeri ve son tüketim tarihiyle.",
         "emptyAction": "Ürün ekle",
         "loadErrorTitle": "Kiler yüklenemedi",
-        "loadErrorDescription": "Bağlantınızı kontrol edip tekrar deneyin.",
         "addItem": "Ürün ekle",
         "namePlaceholder": "ör. un",
         "quantityLabel": "Miktar",

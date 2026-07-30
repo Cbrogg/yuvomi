@@ -48,6 +48,7 @@
         "togglePasswordVisibility": "显示/隐藏密码",
         "errorOfflineMutation": "离线时无法进行更改。请重新连接。",
         "retry": "重试",
+        "loadErrorDescription": "请检查网络连接后重试。",
         "visibility": {
             "label": "可见性",
             "all": "所有家庭成员",
@@ -2146,7 +2147,8 @@
         "noResultsTitle": "未找到内容",
         "searchNoResults": "未找到食谱。",
         "dragToMealsHint": "将食谱拖到餐次格中即可快速安排。",
-        "emptyAction": "创建食谱"
+        "emptyAction": "创建食谱",
+        "loadError": "食谱加载失败。"
     },
     "search": {
         "emptyHint": "输入至少 2 个字符即可搜索任务、日程、便签、联系人、购物和健康。",
@@ -3595,7 +3597,6 @@
         "emptyDescription": "记录家里有什么 - 包含数量、存放位置和保质期。",
         "emptyAction": "添加商品",
         "loadErrorTitle": "无法加载库存",
-        "loadErrorDescription": "请检查网络连接后重试。",
         "addItem": "添加商品",
         "namePlaceholder": "例如：面粉",
         "quantityLabel": "数量",

@@ -17,9 +17,12 @@ import { mealPayloadFromRecipe } from '/utils/recipe-to-meal.js';
 import { toLocalDateKey } from '/utils/date.js';
 import '/components/datepicker.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
-import { mountEmptyState } from '/utils/empty-state.js';
+import { mountEmptyState, mountLoadError } from '/utils/empty-state.js';
+import { renderPageSearch, wirePageSearch } from '/utils/page-search.js';
 
 let _container = null;
+/** Handle des geteilten Suchfelds (setValue/clear), gesetzt in render(). */
+let _search = null;
 
 const state = {
   recipes: [],
@@ -27,6 +30,8 @@ const state = {
   // Einkaufslisten für „Auf die Einkaufsliste": nur die Auswahl, keine Artikel.
   lists: [],
   query: '',
+  /** Gefangener Fehler des letzten Rezept-Ladevorgangs, sonst null. */
+  loadError: null,
 };
 
 // Client-seitige Suche über Titel, Notizen und Zutaten (Audit A1-21):
@@ -53,9 +58,25 @@ function mealTypeOptions() {
   ];
 }
 
+/**
+ * Der Ladefehler bleibt im Modul, statt aus `render()` heraus zu propagieren.
+ *
+ * Vorher hatte diese Funktion als einzige der vier Küchen-Loader kein
+ * try/catch: ein HTTP 500 auf `/recipes` riss die gesamte App in den globalen
+ * Fehlerbildschirm - Navigation weg, die drei anderen Tabs unerreichbar, obwohl
+ * nur eine Liste fehlte (Critique P0, 2026-07-30). Ein Modul, das seine Daten
+ * nicht bekommt, darf höchstens sich selbst verlieren.
+ */
 async function loadRecipes() {
-  const res = await api.get('/recipes');
-  state.recipes = res.data;
+  try {
+    const res = await api.get('/recipes');
+    state.recipes = res.data ?? [];
+    state.loadError = null;
+  } catch (err) {
+    console.error('[Recipes] loadRecipes Fehler:', err);
+    state.recipes = [];
+    state.loadError = err;
+  }
 }
 
 async function loadCategories() {
@@ -107,20 +128,20 @@ export async function render(container) {
   toolbar.className = 'page-toolbar page-toolbar--in-group';
   const center = document.createElement('div');
   center.className = 'page-toolbar__center';
-  const searchWrap = document.createElement('div');
-  searchWrap.className = 'recipes-search';
-  const searchInput = document.createElement('input');
-  searchInput.type = 'search';
-  searchInput.className = 'form-input recipes-search__input';
-  searchInput.id = 'recipes-search';
-  searchInput.placeholder = t('recipes.searchPlaceholder');
-  searchInput.setAttribute('aria-label', t('recipes.searchPlaceholder'));
-  searchInput.addEventListener('input', () => {
-    state.query = searchInput.value.trim();
-    renderRecipeList();
-  });
-  searchWrap.appendChild(searchInput);
-  center.appendChild(searchWrap);
+  // Geteilter Baustein (utils/page-search.js) statt eines eigenen Inputs. Er
+  // bringt Lupe, Leeren-Knopf, `<label for>` und die mobilen Eingabe-Attribute
+  // mit; der Nachbau hatte keines davon und ließ den Placeholder die
+  // Beschriftung tragen, die beim ersten Zeichen verschwindet.
+  center.insertAdjacentHTML('beforeend', renderPageSearch({
+    id: 'recipes-search',
+    // Label und Placeholder aus demselben Key, wie im Vorrat und in den drei
+    // Referenzmodulen: „Rezepte durchsuchen" benennt das Feld vollständig.
+    label: t('recipes.searchPlaceholder'),
+    placeholder: t('recipes.searchPlaceholder'),
+    value: state.query,
+    clearLabel: t('common.searchClear'),
+    className: 'recipes-search',
+  }));
   toolbar.appendChild(center);
 
   const list = document.createElement('div');
@@ -157,6 +178,17 @@ export async function render(container) {
   renderRecipeList();
 
   fab.addEventListener('click', () => openRecipeModal('create'));
+
+  // Handle im Modul halten: der Zurücksetzen-Pfad des Suchtreffer-Leerzustands
+  // braucht `clear()`, nicht nur `input.value = ''` - sonst bliebe der
+  // Leeren-Knopf über einem leeren Feld stehen.
+  _search = wirePageSearch(toolbar, {
+    id: 'recipes-search',
+    onQuery: (value) => {
+      state.query = value.trim();
+      renderRecipeList();
+    },
+  });
 
   list.addEventListener('click', async (e) => {
     const actionBtn = e.target.closest('[data-action]');
@@ -218,6 +250,24 @@ function renderRecipeList() {
 
   list.replaceChildren();
 
+  // Fehlerzustand vor Leerzustand: nach einem Fehler ist `state.recipes`
+  // ebenfalls leer, und nur die Reihenfolge trennt „nichts angelegt" von
+  // „nicht geladen".
+  if (state.loadError) {
+    mountLoadError(list, {
+      title: t('recipes.loadError'),
+      description: t('common.loadErrorDescription'),
+      error: state.loadError,
+      retryLabel: t('common.retry'),
+      onRetry: async () => {
+        list.setAttribute('aria-busy', 'true');
+        await loadRecipes();
+        renderRecipeList();
+      },
+    });
+    return;
+  }
+
   if (!state.recipes.length) {
     // Geteilter Renderer (utils/empty-state.js): erzwingt Reihenfolge und
     // ARIA-Rolle. Vorher fehlte hier als einzigem Küchen-Leerzustand das Icon.
@@ -255,10 +305,11 @@ function renderRecipeList() {
         label: t('common.searchClear'),
         onClick: () => {
           state.query = '';
-          const search = _container?.querySelector('#recipes-search');
-          if (search) search.value = '';
+          // clear() versteckt zugleich den Leeren-Knopf; ein blankes
+          // `value = ''` ließe ihn über dem leeren Feld stehen.
+          _search?.clear();
           renderRecipeList();
-          search?.focus();
+          _search?.input.focus();
         },
       },
     });

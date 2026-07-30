@@ -48,6 +48,7 @@
         "togglePasswordVisibility": "إظهار/إخفاء كلمة المرور",
         "errorOfflineMutation": "لا يمكن إجراء تغييرات دون اتصال. يرجى إعادة الاتصال.",
         "retry": "أعد المحاولة",
+        "loadErrorDescription": "تحقق من الاتصال وحاول مرة أخرى.",
         "visibility": {
             "label": "الظهور",
             "all": "جميع أفراد العائلة",
@@ -2146,7 +2147,8 @@
         "noResultsTitle": "لم يتم العثور على شيء",
         "searchNoResults": "لم يتم العثور على وصفات.",
         "dragToMealsHint": "اسحب الوصفات إلى خانات الوجبات لتخطيطها بسرعة.",
-        "emptyAction": "إنشاء وصفة"
+        "emptyAction": "إنشاء وصفة",
+        "loadError": "فشل تحميل الوصفات."
     },
     "search": {
         "emptyHint": "اكتب حرفين على الأقل للبحث في المهام والمواعيد والملاحظات وجهات الاتصال والتسوق والصحة.",
@@ -3595,7 +3597,6 @@
         "emptyDescription": "سجّل ما لديك في المنزل - مع الكمية ومكان التخزين وتاريخ انتهاء الصلاحية.",
         "emptyAction": "إضافة عنصر",
         "loadErrorTitle": "تعذّر تحميل المؤن",
-        "loadErrorDescription": "تحقق من الاتصال وحاول مرة أخرى.",
         "addItem": "إضافة عنصر",
         "namePlaceholder": "مثال: دقيق",
         "quantityLabel": "الكمية",

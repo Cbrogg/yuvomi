@@ -607,9 +607,12 @@
   box-shadow: var(--shadow-xs);
 }
 
+/* AUSNAHME vom Fokusring-Token: der Slot trägt die Farbe seines Mahlzeit-Typs,
+ * die ihn auf der Übersicht überhaupt erst unterscheidbar macht. */
 .meal-slot:focus-visible {
-  outline: 2px solid var(--slot-color, var(--color-accent));
-  outline-offset: 2px;
+  --focus-ring-color: var(--slot-color, var(--color-accent));
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
 }
 
 /* Meal-Typ-Farben aus tokens.css */
@@ -1381,8 +1384,8 @@ svg.weather-forecast__icon {
 }
 
 .fab-action:focus-visible .fab-action__btn {
-  outline: 2px solid var(--active-module-accent, var(--color-accent));
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
 }
 
 /* --------------------------------------------------------
@@ -1432,8 +1435,8 @@ svg.weather-forecast__icon {
 }
 
 .widget-restore-chip:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .widget-restore-chip__icon {
@@ -2191,8 +2194,8 @@ svg.weather-forecast__icon {
 }
 
 .widget-size-btn:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
 }
 
 /* Edit-Mode-Controls sind auf dem Desktop bewusst kompakt (40px = --target-md,

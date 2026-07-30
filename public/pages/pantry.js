@@ -20,9 +20,10 @@ import {
 } from '/components/modal.js';
 import { renderKitchenTabsBar, refreshKitchenBadges } from '/utils/kitchen-tabs.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
+import { renderPageSearch, wirePageSearch } from '/utils/page-search.js';
 // Alias, weil dieses Modul selbst eine `emptyStateEl()`-Funktion hat, die den
 // Renderer mit den Vorrats-Texten füllt.
-import { emptyStateEl as emptyStateComponentEl, mountEmptyState } from '/utils/empty-state.js';
+import { emptyStateEl as emptyStateComponentEl, mountLoadError } from '/utils/empty-state.js';
 import { scheduleUndoableDelete, vibrate, wireScrollFade } from '/utils/ux.js';
 import { toLocalDateKey } from '/utils/date.js';
 import { DEFAULT_CATEGORY_NAME, categoryLabel } from '/utils/shopping-categories.js';
@@ -37,6 +38,8 @@ import {
 } from '/utils/pantry-status.js';
 
 let _container = null;
+/** Handle des geteilten Suchfelds (setValue/clear), gesetzt in render(). */
+let _search = null;
 
 const state = {
   items: [],
@@ -220,11 +223,17 @@ export async function render(container) {
   toolbar.className = 'page-toolbar page-toolbar--in-group';
   toolbar.insertAdjacentHTML('beforeend', `
     <div class="page-toolbar__center">
-      <div class="pantry-search">
-        <input type="search" class="form-input pantry-search__input" id="pantry-search"
-               placeholder="${esc(t('pantry.searchPlaceholder'))}"
-               aria-label="${esc(t('pantry.searchPlaceholder'))}">
-      </div>
+      ${renderPageSearch({
+        id: 'pantry-search',
+        // Label und Placeholder aus demselben Key: „Vorrat durchsuchen" benennt
+        // das Feld vollständig, wie in notes/contacts/documents. Ein eigener
+        // Label-Key wäre ein Schlüssel über 23 Locales ohne zusätzliche Aussage.
+        label: t('pantry.searchPlaceholder'),
+        placeholder: t('pantry.searchPlaceholder'),
+        value: state.query,
+        clearLabel: t('common.searchClear'),
+        className: 'pantry-search',
+      })}
     </div>
     <div class="page-toolbar__actions">
       <button class="btn btn--ghost btn--icon" data-action="manage-locations"
@@ -265,9 +274,20 @@ export async function render(container) {
 
   if (window.lucide) window.lucide.createIcons({ el: container });
 
-  toolbar.querySelector('#pantry-search').addEventListener('input', (e) => {
-    state.query = e.target.value.trim();
-    renderList();
+  // Geteilter Baustein statt eigenem Input (utils/page-search.js): Lupe,
+  // Leeren-Knopf, `<label for>` und die mobilen Eingabe-Attribute liegen dort
+  // einmal. Der Vorrat baute sie privat nach und hatte keines davon; die
+  // Beschriftung trug der Placeholder, der beim Tippen verschwindet.
+  // Die Debounce (Default 200ms) ist hier der eigentliche Gewinn: renderList()
+  // zeichnet die gesamte Liste neu, vorher bei jedem Tastendruck.
+  // Handle im Modul halten: der Zurücksetzen-Pfad des Treffer-Leerzustands
+  // braucht `clear()`, nicht nur `input.value = ''`.
+  _search = wirePageSearch(toolbar, {
+    id: 'pantry-search',
+    onQuery: (value) => {
+      state.query = value.trim();
+      renderList();
+    },
   });
 
   toolbar.querySelector('[data-action="manage-locations"]').addEventListener('click', openLocationManager);
@@ -294,13 +314,20 @@ export async function render(container) {
   renderList();
 }
 
+/**
+ * Der Vorrat war der einzige Tab mit einem echten Fehlerzustand - und zeigte
+ * als Erklärung `[object Object]`, weil die Beschreibung den rohen Servertext
+ * durchreichte (Critique P0, 2026-07-30). `mountLoadError()` nimmt jetzt das
+ * Fehlerobjekt selbst entgegen und liest daraus nur den Statuscode.
+ */
 function renderLoadError(list, err) {
   list.removeAttribute('aria-busy');
-  mountEmptyState(list, {
-    variant: 'error',
+  mountLoadError(list, {
     title: t('pantry.loadErrorTitle'),
-    description: err?.data?.error ?? t('pantry.loadErrorDescription'),
-    action: { label: t('common.retry'), onClick: () => render(_container) },
+    description: t('common.loadErrorDescription'),
+    error: err,
+    retryLabel: t('common.retry'),
+    onRetry: () => render(_container),
   });
 }
 
@@ -520,11 +547,12 @@ function noResultsEl() {
       onClick: () => {
         state.query = '';
         state.filter = 'all';
-        const search = _container?.querySelector('#pantry-search');
-        if (search) search.value = '';
+        // clear() versteckt zugleich den Leeren-Knopf des geteilten Suchfelds;
+        // ein blankes `value = ''` ließe ihn über dem leeren Feld stehen.
+        _search?.clear();
         renderFilters();
         renderList();
-        search?.focus();
+        _search?.input.focus();
       },
     },
   });

@@ -7,7 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.59.0] - 2026-07-30
+## [1.60.0] - 2026-07-30
+
+### Fixed
+- When the server could not be reached, the four kitchen tabs each did something different, and two of them lied. The shopping list and the meal plan showed their empty state, complete with the button that creates a first entry, while the items were still there on the server. The pantry showed a correct error whose explanation read "[object Object]". Recipes took the whole app down to the error screen because one list had failed. All four now show the same thing: what could not be loaded, and a button to try again.
+- The round button in the bottom corner covered part of a row's controls at every scroll position, up to four fifths of one on a small phone. The free space it needs was reserved at the end of the list, where it only helped once you had already scrolled to the bottom. The area below the button now belongs to it alone, wherever you are in the list.
+- Searching the pantry or the recipes had no way to clear the field again, no magnifier to mark it as a search, and the only label vanished as soon as you typed the first character. Both fields also re-filtered the entire list on every keystroke.
+
+### Changed
+- The focus outline that appears when moving through the app with the keyboard now has one colour: the one of the module you are in. There were six competing definitions, and tabbing through the shopping list alternated between purple and orange six times in fifteen stops. A change of colour reads as a change of context, and there was none.
+- Searching the pantry and the recipes now works like searching notes, contacts, documents or birthdays, because it is now the same component: a magnifier in front, a button to clear the field, a name that stays readable to a screen reader while you type, and a short pause before filtering so that typing stays smooth on a long list.
 
 ### Added
 - The kitchen tab bar now shows what is waiting in the other three tabs: free meal slots this week, items still to buy, and stores that have run out or are about to. Until now that connection was spelled out only while a tab was still empty, and it vanished with the first entry you made. The tab you are on stays without a number, because the page itself already shows it in more detail.

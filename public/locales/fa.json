@@ -48,6 +48,7 @@
         "togglePasswordVisibility": "نمایش/پنهان‌سازی رمز عبور",
         "errorOfflineMutation": "تغییرات در حالت آفلاین ممکن نیست. لطفاً دوباره متصل شوید.",
         "retry": "تلاش مجدد",
+        "loadErrorDescription": "اتصال خود را بررسی کنید و دوباره تلاش کنید.",
         "visibility": {
             "label": "نمایش",
             "all": "همه اعضای خانواده",
@@ -2235,7 +2236,8 @@
         "searchPlaceholder": "جستجوی دستورها…",
         "noResultsTitle": "چیزی یافت نشد",
         "searchNoResults": "دستوری یافت نشد.",
-        "dragToMealsHint": "برای برنامه‌ریزی سریع، دستورها را روی خانه‌های وعده بکشید."
+        "dragToMealsHint": "برای برنامه‌ریزی سریع، دستورها را روی خانه‌های وعده بکشید.",
+        "loadError": "دستورهای غذا بارگذاری نشدند."
     },
     "onboarding": {
         "step1Title": "به {{name}} خوش آمدید",
@@ -3595,7 +3597,6 @@
         "emptyDescription": "ثبت کنید چه چیزی در خانه دارید - همراه با مقدار، محل نگهداری و تاریخ انقضا.",
         "emptyAction": "افزودن کالا",
         "loadErrorTitle": "انبار بارگذاری نشد",
-        "loadErrorDescription": "اتصال خود را بررسی کنید و دوباره تلاش کنید.",
         "addItem": "افزودن کالا",
         "namePlaceholder": "مثلاً آرد",
         "quantityLabel": "مقدار",

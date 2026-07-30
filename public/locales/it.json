@@ -48,6 +48,7 @@
         "togglePasswordVisibility": "Mostra/nascondi password",
         "errorOfflineMutation": "Le modifiche non sono possibili offline. Riconnettiti.",
         "retry": "Riprova",
+        "loadErrorDescription": "Controlla la connessione e riprova.",
         "visibility": {
             "label": "Visibilità",
             "all": "Tutti i membri della famiglia",
@@ -2146,7 +2147,8 @@
         "noResultsTitle": "Nessun risultato",
         "searchNoResults": "Nessuna ricetta trovata.",
         "dragToMealsHint": "Trascina le ricette negli slot dei pasti per pianificarli rapidamente.",
-        "emptyAction": "Crea ricetta"
+        "emptyAction": "Crea ricetta",
+        "loadError": "Impossibile caricare le ricette."
     },
     "search": {
         "emptyHint": "Digita almeno 2 caratteri per cercare tra attività, appuntamenti, note, contatti, spesa e salute.",
@@ -3595,7 +3597,6 @@
         "emptyDescription": "Annota cosa hai in casa - con quantità, luogo di conservazione e data di scadenza.",
         "emptyAction": "Aggiungi articolo",
         "loadErrorTitle": "Impossibile caricare la dispensa",
-        "loadErrorDescription": "Controlla la connessione e riprova.",
         "addItem": "Aggiungi articolo",
         "namePlaceholder": "ad es. farina",
         "quantityLabel": "Quantità",

@@ -18,7 +18,7 @@
 .shopping-page {
   display: flex;
   flex-direction: column;
-  height: calc(100dvh - var(--safe-area-inset-top) - var(--nav-bottom-height) - var(--safe-area-inset-bottom));
+  height: 100%;
   /* Full-bleed-Root (Issue #577): Content-Spalte über --page-inline-pad auf den
    * direkten Kindern. Die 720er-Lesespalte der Liste (unten, ab 1024px) bleibt
    * davon unberührt und sitzt weiterhin an derselben Stelle. */
@@ -29,7 +29,7 @@
 
 @media (min-width: 1024px) {
   .shopping-page {
-    height: 100dvh;
+    height: 100%;
   }
 }
 

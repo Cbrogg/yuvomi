@@ -48,6 +48,7 @@
         "togglePasswordVisibility": "Afficher/masquer le mot de passe",
         "errorOfflineMutation": "Les modifications sont impossibles hors ligne. Veuillez vous reconnecter.",
         "retry": "Réessayer",
+        "loadErrorDescription": "Vérifiez votre connexion et réessayez.",
         "visibility": {
             "label": "Visibilité",
             "all": "Tous les membres de la famille",
@@ -2146,7 +2147,8 @@
         "noResultsTitle": "Aucun résultat",
         "searchNoResults": "Aucune recette trouvée.",
         "dragToMealsHint": "Glissez les recettes sur les créneaux de repas pour les planifier rapidement.",
-        "emptyAction": "Créer une recette"
+        "emptyAction": "Créer une recette",
+        "loadError": "Les recettes n'ont pas pu être chargées."
     },
     "search": {
         "emptyHint": "Saisis au moins 2 caractères pour chercher dans les tâches, rendez-vous, notes, contacts, courses et santé.",
@@ -3595,7 +3597,6 @@
         "emptyDescription": "Notez ce que vous avez à la maison - avec la quantité, le lieu de stockage et la date de péremption.",
         "emptyAction": "Ajouter un article",
         "loadErrorTitle": "Impossible de charger la réserve",
-        "loadErrorDescription": "Vérifiez votre connexion et réessayez.",
         "addItem": "Ajouter un article",
         "namePlaceholder": "p. ex. farine",
         "quantityLabel": "Quantité",

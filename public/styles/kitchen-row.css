@@ -54,6 +54,12 @@
  */
 .kitchen-list {
   flex: 1;
+  /* Ohne min-height: 0 schrumpft ein Flex-Item nicht unter seine Inhaltshöhe -
+   * die Liste blieb so hoch wie ihre Zeilen (1500px im Vorrat), statt auf den
+   * verfügbaren Platz zu fallen. Sichtbar war das nicht, weil .pantry-page
+   * `overflow: hidden` trägt; die Höhe propagierte aber nach oben und machte
+   * .app-content zu einem zweiten Scroller neben der Liste. */
+  min-height: 0;
   overflow-y: auto;
   /* Gruppen stapeln über gap, nicht über margin-bottom am Gruppen-Element: der
    * Einkauf trug die Marge an .item-category, der Vorrat das gap an der Liste -
@@ -74,9 +80,6 @@
    * linke Kante bei x=252, aber 64px Unterschied an der rechten. Mit content-box
    * ergeben beide Wege dieselbe Spalte 252..972. */
   box-sizing: content-box;
-  /* Auslauf unter der letzten Zeile: ohne ihn liegt die Bedienung des letzten
-   * Eintrags dauerhaft unter dem FAB. */
-  padding-block-end: var(--fab-clearance);
   -webkit-overflow-scrolling: touch;
 }
 
@@ -282,8 +285,8 @@
 }
 
 .kitchen-row__main--interactive:focus-visible {
-  outline: 2px solid var(--module-accent);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
   border-radius: var(--radius-xs);
 }
 

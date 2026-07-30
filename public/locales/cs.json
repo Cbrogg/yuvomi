@@ -48,6 +48,7 @@
         "togglePasswordVisibility": "Zobrazit/skrýt heslo",
         "errorOfflineMutation": "Změny nejsou offline možné. Připojte se prosím znovu.",
         "retry": "Zkusit znovu",
+        "loadErrorDescription": "Zkontrolujte připojení a zkuste to znovu.",
         "visibility": {
             "label": "Viditelnost",
             "all": "Všichni členové rodiny",
@@ -2707,7 +2708,8 @@
         "searchPlaceholder": "Hledat recepty…",
         "noResultsTitle": "Nic nenalezeno",
         "searchNoResults": "Žádné recepty nenalezeny.",
-        "dragToMealsHint": "Přetáhněte recepty do slotů jídel a rychle je naplánujte."
+        "dragToMealsHint": "Přetáhněte recepty do slotů jídel a rychle je naplánujte.",
+        "loadError": "Recepty se nepodařilo načíst."
     },
     "wmo": {
         "0": "Jasno",
@@ -3595,7 +3597,6 @@
         "emptyDescription": "Zapište, co máte doma - s množstvím, místem uložení a datem minimální trvanlivosti.",
         "emptyAction": "Přidat položku",
         "loadErrorTitle": "Spíž se nepodařilo načíst",
-        "loadErrorDescription": "Zkontrolujte připojení a zkuste to znovu.",
         "addItem": "Přidat položku",
         "namePlaceholder": "např. mouka",
         "quantityLabel": "Množství",

@@ -48,6 +48,7 @@
         "togglePasswordVisibility": "Tampilkan/sembunyikan kata sandi",
         "errorOfflineMutation": "Perubahan tidak dapat dilakukan saat offline. Harap sambungkan kembali.",
         "retry": "Coba lagi",
+        "loadErrorDescription": "Periksa koneksi Anda dan coba lagi.",
         "visibility": {
             "label": "Visibilitas",
             "all": "Semua anggota keluarga",
@@ -2235,7 +2236,8 @@
         "searchPlaceholder": "Cari resep…",
         "noResultsTitle": "Tidak ada hasil",
         "searchNoResults": "Resep tidak ditemukan.",
-        "dragToMealsHint": "Seret resep ke slot makan untuk merencanakannya dengan cepat."
+        "dragToMealsHint": "Seret resep ke slot makan untuk merencanakannya dengan cepat.",
+        "loadError": "Resep tidak dapat dimuat."
     },
     "onboarding": {
         "step1Title": "Selamat datang di {{name}}",
@@ -3595,7 +3597,6 @@
         "emptyDescription": "Catat apa yang ada di rumah - dengan jumlah, tempat penyimpanan, dan tanggal kedaluwarsa.",
         "emptyAction": "Tambah barang",
         "loadErrorTitle": "Persediaan tidak dapat dimuat",
-        "loadErrorDescription": "Periksa koneksi Anda dan coba lagi.",
         "addItem": "Tambah barang",
         "namePlaceholder": "mis. tepung",
         "quantityLabel": "Jumlah",

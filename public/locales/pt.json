@@ -48,6 +48,7 @@
         "togglePasswordVisibility": "Mostrar/ocultar senha",
         "errorOfflineMutation": "Não é possível fazer alterações offline. Reconecte-se.",
         "retry": "Tentar novamente",
+        "loadErrorDescription": "Verifique a ligação e tente novamente.",
         "visibility": {
             "label": "Visibilidade",
             "all": "Todos os membros da família",
@@ -2146,7 +2147,8 @@
         "noResultsTitle": "Nada encontrado",
         "searchNoResults": "Nenhuma receita encontrada.",
         "dragToMealsHint": "Arraste receitas para os espaços das refeições para planear rapidamente.",
-        "emptyAction": "Criar receita"
+        "emptyAction": "Criar receita",
+        "loadError": "Falha ao carregar receitas."
     },
     "search": {
         "emptyHint": "Digita pelo menos 2 caracteres para pesquisar tarefas, eventos, notas, contactos, compras e saúde.",
@@ -3595,7 +3597,6 @@
         "emptyDescription": "Registe o que tem em casa - com quantidade, local de armazenamento e data de validade.",
         "emptyAction": "Adicionar artigo",
         "loadErrorTitle": "Não foi possível carregar a despensa",
-        "loadErrorDescription": "Verifique a ligação e tente novamente.",
         "addItem": "Adicionar artigo",
         "namePlaceholder": "p. ex. farinha",
         "quantityLabel": "Quantidade",

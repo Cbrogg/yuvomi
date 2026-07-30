@@ -48,6 +48,7 @@
         "togglePasswordVisibility": "Passwort anzeigen/verbergen",
         "errorOfflineMutation": "Änderungen sind offline nicht möglich. Bitte erneut verbinden.",
         "retry": "Erneut versuchen",
+        "loadErrorDescription": "Bitte prüfe die Verbindung und versuche es erneut.",
         "visibility": {
             "label": "Sichtbarkeit",
             "all": "Alle Familienmitglieder",
@@ -2235,7 +2236,8 @@
         "searchPlaceholder": "Rezepte durchsuchen…",
         "noResultsTitle": "Nichts gefunden",
         "searchNoResults": "Keine Rezepte gefunden.",
-        "dragToMealsHint": "Ziehe Rezepte auf Essens-Slots, um sie schnell einzuplanen."
+        "dragToMealsHint": "Ziehe Rezepte auf Essens-Slots, um sie schnell einzuplanen.",
+        "loadError": "Rezepte konnten nicht geladen werden."
     },
     "onboarding": {
         "step1Title": "Willkommen bei {{name}}",
@@ -3595,7 +3597,6 @@
         "emptyDescription": "Trage ein, was im Haus ist - mit Menge, Lagerort und Mindesthaltbarkeit.",
         "emptyAction": "Artikel hinzufügen",
         "loadErrorTitle": "Vorrat konnte nicht geladen werden",
-        "loadErrorDescription": "Bitte prüfe die Verbindung und versuche es erneut.",
         "addItem": "Artikel hinzufügen",
         "namePlaceholder": "z. B. Mehl, Type 405",
         "quantityLabel": "Menge",

@@ -12,7 +12,7 @@ import { promptModal, openModal, closeModal, confirmModal, reportFieldError } fr
 import { DEFAULT_CATEGORY_NAME, categoryLabel } from '/utils/shopping-categories.js';
 import { addLocalDays, toLocalDateKey } from '/utils/date.js';
 import { renderKitchenTabsBar, refreshKitchenBadges } from '/utils/kitchen-tabs.js';
-import { mountEmptyState } from '/utils/empty-state.js';
+import { mountEmptyState, mountLoadError } from '/utils/empty-state.js';
 import { popoverMenuHtml, installPopoverMenus } from '/utils/popover-menu.js';
 import '/components/category-manager.js';
 
@@ -45,6 +45,12 @@ const state = {
   items:         [],
   activeList:    null,
   categories:    [],   // { id, name, icon, sort_order }[]
+  /** Zwei getrennte Ladewege, zwei getrennte Fehler - sie haben verschiedene
+   *  Wiederholungen: die Listen holt die ganze Seite neu, die Artikel nur die
+   *  aktive Liste. Ein gemeinsames Feld hätte den einen Fehler mit der
+   *  Wiederholung des anderen bedient. */
+  listsError:    null,
+  itemsError:    null,
 };
 
 // --------------------------------------------------------
@@ -133,6 +139,26 @@ function renderListContent(container) {
   const head = container.querySelector('#list-head');
   if (!content) return;
   content.removeAttribute('aria-busy');
+
+  // Listen nicht ladbar: Fehlerzustand statt Leerzustand. Muss VOR der
+  // `!state.activeList`-Prüfung stehen - ohne geladene Listen ist auch keine
+  // aktiv, und der Leerzustand darunter hätte „Keine Listen" behauptet und mit
+  // „Neue Liste erstellen" ausgerechnet eine schreibende Handlung als einzigen
+  // Ausweg angeboten (Critique P0, 2026-07-30).
+  if (state.listsError) {
+    if (head) {
+      head.replaceChildren();
+      head.hidden = true;
+    }
+    mountLoadError(content, {
+      title: t('shopping.listsLoadError'),
+      description: t('common.loadErrorDescription'),
+      error: state.listsError,
+      retryLabel: t('common.retry'),
+      onRetry: () => render(container, {}),
+    });
+    return;
+  }
 
   if (!state.activeList) {
     // Ohne aktive Liste gibt es nichts zu benennen: der Kopf entfällt ganz,
@@ -255,7 +281,7 @@ function renderListContent(container) {
     <div class="kitchen-list items-list" id="items-list"></div>
   `);
 
-  mountItems(content.querySelector('#items-list'));
+  mountItems(content.querySelector('#items-list'), container);
 
   if (window.lucide) window.lucide.createIcons({ el: content });
   stagger(content.querySelectorAll('.shopping-item'));
@@ -276,8 +302,24 @@ function renderListContent(container) {
  * einziger im Modul ein handgezeichnetes Inline-SVG statt eines Lucide-Icons -
  * dieselbe Warenkorb-Form, nur mit eigener Strichstärke (Critique 2026-07-29).
  */
-function mountItems(listEl) {
+function mountItems(listEl, container) {
   if (!listEl) return;
+
+  // Artikel nicht ladbar: eigener Fehler mit eigener Wiederholung. Die Liste
+  // existiert und ist im Kopf benannt - nur ihr Inhalt fehlt, also lädt der
+  // Retry auch nur diese eine Liste nach.
+  if (state.itemsError) {
+    mountLoadError(listEl, {
+      title: t('shopping.itemsLoadError'),
+      description: t('common.loadErrorDescription'),
+      error: state.itemsError,
+      retryLabel: t('common.retry'),
+      onRetry: container
+        ? () => switchList(state.activeListId, container)
+        : undefined,
+    });
+    return;
+  }
 
   if (!state.items.length) {
     mountEmptyState(listEl, {
@@ -946,7 +988,7 @@ function updateItemsList(container) {
   if (listEl) {
     // mountItems() verdrahtet den CTA des Leerzustands selbst; der frühere
     // nachgelagerte #empty-cta-shopping-Listener entfällt damit.
-    mountItems(listEl);
+    mountItems(listEl, container);
     if (window.lucide) window.lucide.createIcons({ el: listEl });
     stagger(listEl.querySelectorAll('.shopping-item'));
     wireSwipeGestures(container);
@@ -1265,10 +1307,14 @@ async function loadLists() {
   try {
     const data   = await api.get('/shopping');
     state.lists  = data.data ?? [];
+    state.listsError = null;
   } catch (err) {
     console.error('[Shopping] loadLists Fehler:', err);
     state.lists = [];
-    window.yuvomi?.showToast(t('shopping.listsLoadError'), 'danger');
+    // Fehler statt Toast: der Toast verging, während darunter „Keine Listen ·
+    // [Neue Liste erstellen]" stehen blieb - bei 31 vorhandenen Artikeln
+    // (Critique P0, 2026-07-30).
+    state.listsError = err;
   }
 }
 
@@ -1297,11 +1343,12 @@ async function switchList(listId, container) {
   container.querySelector('#list-content')?.setAttribute('aria-busy', 'true');
   try {
     await loadItems(listId);
+    state.itemsError = null;
   } catch (err) {
     console.error('[Shopping] loadItems Fehler:', err);
     state.items = [];
     state.activeList = state.lists.find((l) => l.id === listId) ?? null;
-    window.yuvomi?.showToast(t('shopping.itemsLoadError'), 'danger');
+    state.itemsError = err;
   }
   renderListContent(container);
   wireListContentEvents(container);
@@ -1624,17 +1671,28 @@ export async function render(container, { user }) {
       </div>
     </div>
   `);
+  state.itemsError = null;
   try {
+    // loadCategories() und loadLists() fangen selbst; der äußere catch ist das
+    // Netz für alles Unerwartete und bildet es auf denselben Fehlerzustand ab,
+    // statt die Ausnahme in den globalen Fehlerbildschirm laufen zu lassen.
     await Promise.all([loadCategories(), loadLists()]);
-    if (state.lists.length) {
+    if (!state.listsError && state.lists.length) {
       const listParam = parseInt(new URLSearchParams(window.location.search).get('list'), 10) || null;
       const target = listParam && state.lists.find((l) => l.id === listParam);
       state.activeListId = target ? target.id : state.lists[0].id;
-      await loadItems(state.activeListId);
+      try {
+        await loadItems(state.activeListId);
+      } catch (err) {
+        console.error('[Shopping] loadItems Fehler:', err);
+        state.items = [];
+        state.activeList = state.lists.find((l) => l.id === state.activeListId) ?? null;
+        state.itemsError = err;
+      }
     }
   } catch (err) {
-    console.error('[Shopping] Ladefehler:', err.message);
-    window.yuvomi.showToast(t('shopping.listsLoadError'), 'danger');
+    console.error('[Shopping] Ladefehler:', err);
+    state.listsError = err;
   }
 
   container.replaceChildren();

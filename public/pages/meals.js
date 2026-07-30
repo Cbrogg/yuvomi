@@ -15,7 +15,7 @@ import { renderKitchenTabsBar, refreshKitchenBadges } from '/utils/kitchen-tabs.
 import { ingredientRowHTML } from '/utils/ingredient-row.js';
 import { addLocalDays, startOfLocalWeekKey, toLocalDateKey } from '/utils/date.js';
 import { normalizeRecipeMealTypes, recipeSupportsMealType } from '/utils/recipe-meal-types.js';
-import { mountEmptyState, emptyStateEl } from '/utils/empty-state.js';
+import { mountEmptyState, mountLoadError, emptyStateEl } from '/utils/empty-state.js';
 import { mealPayloadFromRecipe } from '/utils/recipe-to-meal.js';
 
 // --------------------------------------------------------
@@ -48,6 +48,10 @@ let state = {
   categories:       [],     // Einkaufskategorien für Zutaten
   modal:            null,
   visibleMealTypes: ['breakfast', 'lunch', 'dinner', 'snack'],
+  /** Gefangener Fehler des letzten Wochen-Ladevorgangs, sonst null.
+   *  Ohne dieses Feld ist eine fehlgeschlagene Woche von einer leeren Woche
+   *  nicht zu unterscheiden - und der Renderer zeigte den Leerzustand. */
+  loadError:        null,
 };
 
 // Container-Referenz für Hilfsfunktionen (wird in render() gesetzt)
@@ -144,16 +148,20 @@ function buildRandomMealAssignments({ weekStart, visibleMealTypes, meals, recipe
 // --------------------------------------------------------
 
 async function loadWeek(week) {
+  const currentWeek = getMondayOf(week);
+  state.currentWeek = currentWeek;
   try {
-    const currentWeek = getMondayOf(week);
     const res = await api.get(`/meals?week=${currentWeek}`);
-    state.meals       = Array.isArray(res.data) ? res.data : [];
-    state.currentWeek = currentWeek;
+    state.meals     = Array.isArray(res.data) ? res.data : [];
+    state.loadError = null;
   } catch (err) {
     console.error('[Meals] loadWeek Fehler:', err);
-    state.meals       = [];
-    state.currentWeek = getMondayOf(week);
-    window.yuvomi?.showToast(t('meals.loadError'), 'danger');
+    state.meals     = [];
+    // Der Fehler wird bis zum Renderer getragen statt in einen Toast gelegt.
+    // Ein Toast verschwindet nach Sekunden, der falsche Leerzustand darunter
+    // blieb stehen - von den beiden Meldungen überlebte also genau die
+    // irreführende (Critique P0, 2026-07-30).
+    state.loadError = err;
   }
 }
 
@@ -342,6 +350,25 @@ function renderWeekGrid() {
 
   _container.querySelector('#week-label').textContent =
     formatWeekLabel(state.currentWeek);
+
+  // Fehlgeschlagene Woche: Fehlerzustand statt Leerzustand. Muss VOR der
+  // Leer-Prüfung stehen - `state.meals` ist nach einem Fehler ebenfalls leer,
+  // und die Reihenfolge ist das Einzige, was die beiden Fälle trennt.
+  if (state.loadError) {
+    grid.removeAttribute('aria-busy');
+    mountLoadError(grid, {
+      title: t('meals.loadError'),
+      description: t('common.loadErrorDescription'),
+      error: state.loadError,
+      retryLabel: t('common.retry'),
+      onRetry: async () => {
+        grid.setAttribute('aria-busy', 'true');
+        await loadWeek(state.currentWeek);
+        renderWeekGrid();
+      },
+    });
+    return;
+  }
 
   // Leere Woche: Leerzustand statt Slot-Raster.
   //

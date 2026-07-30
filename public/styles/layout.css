@@ -59,6 +59,22 @@
 /* Basis: unsichtbar vor Animation */
 .page-transition {
   opacity: 0;
+  /* Höhe durchreichen: dieser Wrapper steht zwischen .app-content und jedem
+   * Modul-Root. Ohne eigene Höhe ist er `auto`, und ein `height: 100%` am
+   * Modul-Root darunter hat keinen definiten Bezug - die Prozentangabe fällt
+   * dann still auf `auto` zurück und der Root wächst mit seinem Inhalt statt
+   * sich in den verfügbaren Platz zu fügen.
+   *
+   * Genau daran hingen die acht `height: calc(100dvh - ...)`-Formeln in den
+   * Modul-CSS: sie rechneten die Viewport-Höhe nach, weil die Kette sie nicht
+   * lieferte. Nachgerechnete Höhen kennen aber nur, was zum Zeitpunkt des
+   * Schreibens unter der Seite lag - die FAB-Zone (--fab-safe-zone) kam später
+   * dazu und fehlte in allen acht. Mit durchgereichter Höhe stimmt jede
+   * Änderung an .app-content automatisch überall.
+   *
+   * Seiten, die länger sind als der Platz (kein overflow am Root), laufen wie
+   * bisher heraus und werden von .app-content gescrollt. */
+  height: 100%;
 }
 
 /* Nach der In-Animation soll es sichtbar bleiben → direkt auf der Klasse */
@@ -148,6 +164,36 @@
    * animierbar. Selten (nur bei Offline-Wechsel); reduced-motion schaltet sie ab. */
   transition: padding-top var(--duration-md) ease;
   background-color: var(--color-bg);
+}
+
+/* Der Scrollport endet über dem FAB.
+ *
+ * Der FAB ist `position: fixed` über einem Scrollport und überdeckt damit
+ * zwangsläufig, was gerade unter ihm steht - bei `scrollTop = 0` gemessen bis
+ * 80,6% einer Zeilenaktion (phoneSm /pantry, Critique P1 2026-07-30). Die
+ * beiden bisherigen Antworten griffen beide zu kurz: eine reservierte Spur pro
+ * Zeile kostete bei 320px 24% der Viewportbreite (zurückgebaut), und
+ * `padding-bottom` am Listenende scrollt mit, wirkt also nur, wenn der Nutzer
+ * schon unten ist.
+ *
+ * MARGE, NICHT PADDING - darin liegt der ganze Unterschied. Padding sitzt am
+ * Ende des Inhalts und wandert beim Scrollen mit; eine Marge verkürzt den
+ * Container selbst. Der Streifen darunter gehört dem FAB bei jedem
+ * Scrollstand.
+ *
+ * AN .app-content, NICHT AN DEN LISTEN. Die App hat zwei Scrollport-
+ * Architekturen: in Küche und Budget ist der Modul-Root `overflow: hidden` und
+ * eine innere Liste scrollt, in Belohnungen und anderswo scrollt .app-content
+ * die ganze Seite. Eine Marge hier verkürzt in beiden Fällen das richtige
+ * Element - im ersten Fall über den kürzeren Modul-Root, im zweiten direkt.
+ * Sieben `padding-bottom: *-fab-clearance` in vier Dateien sind dadurch
+ * entfallen, samt der drei auseinandergedrifteten Kopien des Tokens.
+ *
+ * NUR MIT FAB: `:has()` fragt die Seite, statt eine Klasse zu verlangen, die
+ * beim nächsten neuen Modul vergessen wird. `:not([hidden])`, weil eine Seite
+ * ihren FAB zeitweise verbergen kann - dann gehört ihr der Platz. */
+.app-content:has(.page-fab:not([hidden])) {
+  margin-block-end: var(--fab-safe-zone);
 }
 
 /* #main-content wird nach jeder Navigation programmatisch fokussiert, damit
@@ -324,8 +370,8 @@ html:has(.search-overlay--visible) yuvomi-install-prompt {
 }
 
 .more-sheet__search:focus-visible {
-  outline: 2px solid var(--active-module-accent, var(--color-accent));
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
   border-color: var(--active-module-accent, var(--color-accent));
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--active-module-accent, var(--color-accent)) 18%, transparent);
 }
@@ -905,9 +951,13 @@ html:has(.search-overlay--visible) yuvomi-install-prompt {
   outline: none;
 }
 
+/* AUSNAHME vom Fokusring-Token: ein Nav-Item zeigt auf SEIN Modul, nicht auf
+ * das gerade offene. Der Ring trägt deshalb --item-module-accent und fällt erst
+ * dahinter auf den aktiven Akzent zurück. Nur die Farbe weicht ab. */
 .nav-bottom .nav-item:focus-visible .nav-item__icon-well {
-  outline: var(--space-0h) solid var(--item-module-accent, var(--active-module-accent, var(--color-accent)));
-  outline-offset: var(--space-0h);
+  --focus-ring-color: var(--item-module-accent, var(--active-module-accent, var(--color-accent)));
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .nav-bottom .nav-item:active .nav-item__icon-well {
@@ -962,9 +1012,16 @@ html:has(.search-overlay--visible) yuvomi-install-prompt {
   transform: scale(0.92);
 }
 
+/* AUSNAHME vom Fokusring-Token (tokens.css §7b), und die einzige mit einer
+ * optischen Begründung: der FAB ist selbst akzentfarben. Ein Ring im
+ * Modulakzent läge Farbe auf Farbe und wäre unsichtbar. Er wird deshalb
+ * invertiert - heller Ring direkt am Knopf, der Akzent als äußerer Halo per
+ * box-shadow. Überschrieben wird nur die FARBE, Breite und Offset kommen aus
+ * den Tokens: so wandert der FAB mit, wenn der Ring app-weit dicker wird. */
 .page-fab:focus-visible {
-  outline: 2px solid var(--color-bg);
-  outline-offset: 2px;
+  --focus-ring-color: var(--color-bg);
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
   box-shadow: 0 0 0 4px var(--module-accent, var(--color-accent));
 }
 
@@ -1755,11 +1812,12 @@ p.field-hint--warn[hidden] {
   /* ── Fokus-Ring der Nav-Items/Toggle nach innen versetzt ──
    * Die Items sitzen flush-links an der geclippten Sidebar-Kante
    * (.nav-sidebar overflow:hidden, .nav-sidebar__items overflow-y:auto → auch
-   * horizontal beschnitten). Der globale outline-offset:3px würde den Ring an
-   * der linken Kante abschneiden; ein Inset-Ring bleibt vollständig sichtbar. */
+   * horizontal beschnitten). Ein positiver --focus-ring-offset würde den Ring an
+   * der linken Kante abschneiden; der Inset-Wert bleibt vollständig sichtbar -
+   * genau der Fall, für den tokens.css §7b das zweite Offset-Token führt. */
   .nav-sidebar .nav-item:focus-visible,
   .nav-sidebar__toggle:focus-visible {
-    outline-offset: -2px;
+    outline-offset: var(--focus-ring-offset-inset);
   }
 }
 
@@ -1861,8 +1919,8 @@ p.field-hint--warn[hidden] {
 }
 
 .card--interactive:focus-visible {
-  outline: 2px solid var(--active-module-accent, var(--color-accent));
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
 }
 
 @media (min-width: 1024px) {
@@ -2225,8 +2283,8 @@ p.field-hint--warn[hidden] {
 }
 
 .form-advanced__summary:focus-visible {
-  outline: 2px solid var(--active-module-accent, var(--color-accent));
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
   border-radius: var(--radius-sm);
 }
 
@@ -2420,8 +2478,8 @@ p.field-hint--warn[hidden] {
 }
 
 .btn:focus-visible {
-  outline: 2px solid var(--active-module-accent, var(--color-accent));
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
 }
 
 /* Akzentregel „Modul-Akzent führt": Primäraktionen tragen den Akzent des aktiven
@@ -2474,8 +2532,12 @@ p.field-hint--warn[hidden] {
   border-color: var(--color-danger);
 }
 
+/* AUSNAHME vom Fokusring-Token: der Knopf verspricht eine destruktive Folge,
+ * und die Gefahrenfarbe trägt er schon in Rand und Text. Über
+ * `--focus-ring-color` statt `outline-color`, damit die Ausnahme dieselbe
+ * Stellschraube benutzt wie die übrigen fünf. */
 .btn--danger-outline:focus-visible {
-  outline-color: var(--color-danger);
+  --focus-ring-color: var(--color-danger);
 }
 
 .btn--ghost {
@@ -2501,8 +2563,9 @@ p.field-hint--warn[hidden] {
   color: var(--color-danger-hover);
 }
 
+/* AUSNAHME wie .btn--danger-outline: Gefahrenfarbe statt Modul-Akzent. */
 .btn--danger-ghost:focus-visible {
-  outline-color: var(--color-danger);
+  --focus-ring-color: var(--color-danger);
 }
 
 /* Eingerasteter Zustand eines Umschalt-Buttons (z. B. Mehrfachauswahl in
@@ -2582,8 +2645,8 @@ p.field-hint--warn[hidden] {
 }
 
 .row-action:focus-visible {
-  outline: 2px solid var(--active-module-accent, var(--color-accent));
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .row-action--danger:hover {
@@ -2876,8 +2939,8 @@ textarea::placeholder {
 }
 
 .toggle input:focus-visible + .toggle__track {
-  outline: 2px solid var(--active-module-accent, var(--color-accent));
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .toggle input:disabled + .toggle__track {
@@ -3057,8 +3120,8 @@ textarea::placeholder {
 }
 
 .empty-state__details > summary:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .empty-state__details > pre {
@@ -3876,10 +3939,18 @@ textarea.input { resize: vertical; }
  * Hier kommen komponentenspezifische Korrekturen hinzu.
  * -------------------------------------------------------- */
 @media (prefers-contrast: more) {
-  /* Fokus: dicker und weiter versetzt */
-  :focus-visible {
-    outline-width: 3px;
-    outline-offset: 4px;
+  /* Fokus: dicker und weiter versetzt.
+   *
+   * Über die Tokens, nicht über die Properties. `outline-width` auf
+   * `:focus-visible` (0,1,0) verliert gegen jede Komponentenregel wie
+   * `.page-fab:focus-visible` (0,2,0) - die Verstärkung griff deshalb nur beim
+   * Basisring und ausgerechnet nicht bei den rund 45 Komponenten, auf denen
+   * tatsächlich bedient wird. Als Token-Neudefinition ziehen alle mit, auch die
+   * begründeten Ausnahmen, die Breite und Offset ohnehin aus den Tokens lesen. */
+  :root {
+    --focus-ring-width: 3px;
+    --focus-ring-offset: 4px;
+    --focus-ring-offset-inset: -3px;
   }
 
   /* Ghost- und Secondary-Buttons: explizite Umrandung */

@@ -8,7 +8,7 @@
   --module-accent: var(--module-kitchen);
   display: flex;
   flex-direction: column;
-  height: calc(100dvh - var(--safe-area-inset-top) - var(--nav-bottom-height) - var(--safe-area-inset-bottom));
+  height: 100%;
   /* Full-bleed-Root (Issue #577): Content-Spalte über --page-inline-pad auf den
    * direkten Kindern, fluchtend mit der Küchen-Tab-Leiste darüber. */
   overflow: hidden;
@@ -16,7 +16,7 @@
 
 @media (min-width: 1024px) {
   .recipes-page {
-    height: 100dvh;
+    height: 100%;
   }
 }
 
@@ -189,6 +189,10 @@
  * .page-toolbar--in-group (layout.css); die frühere eigene .recipes-toolbar
  * entfällt samt Padding-Regeln, die der Kopf schon mitbringt. */
 
+/* Nur Positionierung, wie .pantry-search: das Bedienelement liegt in
+ * page-search.css. Der frühere Nachbau hier trug kein `min-width: 0` und konnte
+ * damit nicht unter die Mindestbreite des Inputs schrumpfen; der geteilte
+ * Baustein bringt es mit. */
 .recipes-search {
   flex: 1;
   max-width: 420px;

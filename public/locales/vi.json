@@ -48,6 +48,7 @@
         "togglePasswordVisibility": "Hiện/ẩn mật khẩu",
         "errorOfflineMutation": "Không thể thay đổi khi ngoại tuyến. Vui lòng kết nối lại.",
         "retry": "Thử lại",
+        "loadErrorDescription": "Hãy kiểm tra kết nối và thử lại.",
         "visibility": {
             "label": "Khả năng hiển thị",
             "all": "Tất cả thành viên gia đình",
@@ -2223,7 +2224,8 @@
         "noResultsTitle": "Không tìm thấy gì",
         "searchNoResults": "Không tìm thấy công thức.",
         "dragToMealsHint": "Kéo công thức vào ô bữa ăn để lên kế hoạch nhanh hơn.",
-        "emptyAction": "Tạo công thức"
+        "emptyAction": "Tạo công thức",
+        "loadError": "Không thể tải công thức nấu ăn."
     },
     "search": {
         "emptyHint": "Nhập ít nhất 2 ký tự để tìm trong công việc, sự kiện, ghi chú, danh bạ, mua sắm và sức khỏe.",
@@ -3595,7 +3597,6 @@
         "emptyDescription": "Ghi lại những gì có trong nhà - kèm số lượng, nơi cất giữ và hạn sử dụng.",
         "emptyAction": "Thêm món",
         "loadErrorTitle": "Không tải được kho dự trữ",
-        "loadErrorDescription": "Hãy kiểm tra kết nối và thử lại.",
         "addItem": "Thêm món",
         "namePlaceholder": "ví dụ: bột mì",
         "quantityLabel": "Số lượng",

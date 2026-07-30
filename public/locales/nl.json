@@ -48,6 +48,7 @@
         "togglePasswordVisibility": "Wachtwoord tonen/verbergen",
         "errorOfflineMutation": "Wijzigingen zijn offline niet mogelijk. Maak opnieuw verbinding.",
         "retry": "Opnieuw proberen",
+        "loadErrorDescription": "Controleer je verbinding en probeer het opnieuw.",
         "visibility": {
             "label": "Zichtbaarheid",
             "all": "Alle gezinsleden",
@@ -2223,7 +2224,8 @@
         "noResultsTitle": "Niets gevonden",
         "searchNoResults": "Geen recepten gevonden.",
         "dragToMealsHint": "Sleep recepten naar maaltijdvakken om ze snel in te plannen.",
-        "emptyAction": "Recept aanmaken"
+        "emptyAction": "Recept aanmaken",
+        "loadError": "Recepten konden niet worden geladen."
     },
     "search": {
         "emptyHint": "Typ minstens 2 tekens om te zoeken in taken, afspraken, notities, contacten, boodschappen en gezondheid.",
@@ -3595,7 +3597,6 @@
         "emptyDescription": "Noteer wat je in huis hebt - met hoeveelheid, bewaarplaats en houdbaarheidsdatum.",
         "emptyAction": "Artikel toevoegen",
         "loadErrorTitle": "Voorraad kon niet worden geladen",
-        "loadErrorDescription": "Controleer je verbinding en probeer het opnieuw.",
         "addItem": "Artikel toevoegen",
         "namePlaceholder": "bijv. bloem",
         "quantityLabel": "Hoeveelheid",
