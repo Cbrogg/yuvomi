@@ -15,6 +15,8 @@ import { renderKitchenTabsBar } from '/utils/kitchen-tabs.js';
 import { ingredientRowHTML } from '/utils/ingredient-row.js';
 import { addLocalDays, startOfLocalWeekKey, toLocalDateKey } from '/utils/date.js';
 import { normalizeRecipeMealTypes, recipeSupportsMealType } from '/utils/recipe-meal-types.js';
+import { mountEmptyState, emptyStateEl } from '/utils/empty-state.js';
+import { mealPayloadFromRecipe } from '/utils/recipe-to-meal.js';
 
 // --------------------------------------------------------
 // Konstanten
@@ -90,22 +92,6 @@ function recipeMealTypeOptions() {
     { key: 'dinner', label: t('meals.typeDinner') },
     { key: 'snack', label: t('meals.typeSnack') },
   ];
-}
-
-function mealPayloadFromRecipe(recipe, date, mealType) {
-  return {
-    date,
-    meal_type: mealType,
-    title: recipe.title,
-    notes: recipe.notes || null,
-    recipe_url: recipe.recipe_url || null,
-    recipe_id: recipe.id,
-    ingredients: (recipe.ingredients || []).map((ingredient) => ({
-      name: ingredient.name,
-      quantity: ingredient.quantity || null,
-      category: ingredient.category || DEFAULT_CATEGORY_NAME,
-    })),
-  };
 }
 
 function buildRandomMealAssignments({ weekStart, visibleMealTypes, meals, recipes, replaceExisting = false, pick = Math.random }) {
@@ -217,18 +203,27 @@ export async function render(container, { user }) {
   container.insertAdjacentHTML('beforeend', `
     <div class="meals-page">
       <h1 class="sr-only">${t('meals.title')}</h1>
-      <div class="week-nav">
-        <button class="btn btn--icon" id="week-prev" aria-label="${t('meals.prevWeek')}">
-          <i data-lucide="chevron-left" aria-hidden="true"></i>
-        </button>
-        <span class="week-nav__label" id="week-label"></span>
-        <div class="week-nav__actions">
+      <!-- Kanonischer Kopf, Gruppen-Variante (.page-toolbar--in-group in
+           layout.css): Akzentstreifen und oberste Sticky-Position bleiben bei
+           der .kitchen-tabs-bar darüber. Vorher war das hier eine eigene
+           .week-nav-Grammatik, eine von vier im Modul (Critique 2026-07-29).
+
+           Die Datums-Navigation liegt geschlossen im __center-Slot. Vorher
+           standen „<" und „>" an den beiden Enden der Zeile, mit dem gesamten
+           Aktionsblock dazwischen - mobil gemessen 80px und 705px, einhändig
+           also nie beide erreichbar. -->
+      <div class="page-toolbar page-toolbar--in-group page-toolbar--wrap">
+        <div class="page-toolbar__center week-nav">
+          <button class="btn btn--icon" id="week-prev" aria-label="${t('meals.prevWeek')}">
+            <i data-lucide="chevron-left" aria-hidden="true"></i>
+          </button>
+          <span class="week-nav__label" id="week-label"></span>
+          <button class="btn btn--icon" id="week-next" aria-label="${t('meals.nextWeek')}">
+            <i data-lucide="chevron-right" aria-hidden="true"></i>
+          </button>
+        </div>
+        <div class="page-toolbar__actions">
           <button class="week-nav__today" id="week-today">${t('meals.today')}</button>
-          <!-- Ghost statt secondary: der Zufallsplan ist eine Beschleunigung,
-               nicht die Hauptsache der Seite. Als gerahmter Button war er das
-               lauteste Element im Kopf und stand damit vor Wochennavigation
-               und „Mahlzeit hinzufügen" (Critique 2026-07-29). -->
-          <button class="btn btn--ghost week-nav__randomize" id="week-randomize">${t('meals.randomizePlan')}</button>
           <!-- Nur Desktop: klappt die Rezept-Spalte weg, damit alle sieben
                Tagesspalten in voller Breite ins Board passen. -->
           <button class="btn btn--icon week-nav__rail-toggle" id="rail-toggle"
@@ -236,10 +231,12 @@ export async function render(container, { user }) {
                   aria-label="${t('meals.hideRecipes')}" title="${t('meals.hideRecipes')}">
             <i data-lucide="panel-right-close" class="icon-md" aria-hidden="true"></i>
           </button>
+          <!-- Zuletzt und als Ghost: der Zufallsplan kann 28 Slots umschreiben,
+               stand aber im teuersten Pixel des Kopfes direkt neben „Heute" -
+               in der Gewichtung eines Datumssprungs (Critique 2026-07-29). Er
+               bleibt erreichbar, führt den Kopf aber nicht mehr an. -->
+          <button class="btn btn--ghost week-nav__randomize" id="week-randomize">${t('meals.randomizePlan')}</button>
         </div>
-        <button class="btn btn--icon" id="week-next" aria-label="${t('meals.nextWeek')}">
-          <i data-lucide="chevron-right" aria-hidden="true"></i>
-        </button>
       </div>
       <div class="meals-layout">
         <div class="week-grid" id="week-grid">
@@ -265,15 +262,6 @@ export async function render(container, { user }) {
   wireNav();
   wireRecipeSidebar();
   wireRailToggle();
-
-  const selectedRecipeId = Number(new URLSearchParams(window.location.search).get('recipe'));
-  if (selectedRecipeId) {
-    const selectedRecipe = state.recipes.find((r) => r.id === selectedRecipeId);
-    if (selectedRecipe) {
-      const firstType = state.visibleMealTypes[0] ?? 'lunch';
-      openMealModal({ mode: 'create', date: today, mealType: firstType, presetRecipeId: selectedRecipe.id });
-    }
-  }
 
   container.querySelector('#fab-new-meal').addEventListener('click', () => {
     const firstType = state.visibleMealTypes[0] ?? 'lunch';
@@ -315,8 +303,26 @@ function wireRailToggle() {
     }
   };
 
+  // Default: gemessen, nicht per Breakpoint.
+  //
+  // Die Rezept-Spalte kostet 272-320px - genau die Breite, die dem Board für
+  // die letzten Tage fehlt. Mit ihr zeigte das Board gemessen 4 von 7 Tagen
+  // (Critique 2026-07-30). Eine px-Schwelle wäre hier die falsche Antwort: die
+  // Zahl der Spalten hängt an den sichtbaren Mahlzeitstypen, und Zoom sowie
+  // Schriftgröße verschieben sie zusätzlich. Stattdessen die Frage stellen, um
+  // die es geht - passt die Woche mit offener Spalte? -, und nur dann
+  // einklappen. Eine bewusste Entscheidung des Nutzers überschreibt den
+  // Default dauerhaft (localStorage).
   let hidden = false;
-  try { hidden = localStorage.getItem(RAIL_STORAGE_KEY) === 'hidden'; } catch { /* ignore */ }
+  let gespeichert = null;
+  try { gespeichert = localStorage.getItem(RAIL_STORAGE_KEY); } catch { /* ignore */ }
+  if (gespeichert) {
+    hidden = gespeichert === 'hidden';
+  } else {
+    const grid = _container.querySelector('#week-grid');
+    const desktop = !window.matchMedia?.('(max-width: 640px)').matches;
+    hidden = Boolean(desktop && grid && grid.scrollWidth > grid.clientWidth + 1);
+  }
   apply(hidden);
 
   btn.addEventListener('click', () => {
@@ -336,6 +342,38 @@ function renderWeekGrid() {
 
   _container.querySelector('#week-label').textContent =
     formatWeekLabel(state.currentWeek);
+
+  // Leere Woche: Leerzustand statt Slot-Raster.
+  //
+  // Der Essensplan ist die Default-Landung des Küchen-Moduls und war bis hierher
+  // der einzige der vier Tabs ohne Leerzustand - ein neuer Haushalt sah bis zu
+  // 28 gestrichelte Kästen ohne ein Wort, während die drei Geschwister je einen
+  // vollständigen Leerzustand mit CTA hatten (Critique P0, 2026-07-29).
+  //
+  // Der Hinweis richtet sich danach, was der Haushalt schon hat: ohne Rezepte
+  // nennt er die nächste Station des Kreislaufs (der Plan füllt die
+  // Einkaufsliste), mit Rezepten den schnelleren Weg (Rezept direkt einplanen).
+  // Die Wochennavigation im Kopf bleibt erreichbar - der Leerzustand ersetzt nur
+  // das Raster, nicht die Seite.
+  if (!state.meals.length) {
+    grid.removeAttribute('aria-busy');
+    mountEmptyState(grid, {
+      icon: 'utensils',
+      title: t('meals.emptyTitle'),
+      description: t('meals.emptyDescription'),
+      hint: state.recipes.length ? t('meals.emptyHintRecipes') : t('emptyHint.meals'),
+      action: {
+        label: t('meals.emptyAction'),
+        icon: 'plus',
+        onClick: () => openMealModal({
+          mode: 'create',
+          date: state.currentWeek,
+          mealType: state.visibleMealTypes[0] ?? 'lunch',
+        }),
+      },
+    });
+    return;
+  }
 
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(state.currentWeek, i));
   const dayNames = DAY_NAMES();
@@ -399,10 +437,23 @@ function renderWeekGrid() {
     grid.querySelector('.day-header--today')?.closest('.day-column')
       ?.scrollIntoView({ block: 'start' });
   } else if (grid.scrollWidth > grid.clientWidth + 1) {
-    // Desktop-Board mit horizontalem Scroll-Fenster (1024–1439px): heutigen
-    // Tag zentrieren, damit die Woche nicht stumpf bei Montag startet.
-    grid.querySelector('.day-header--today')
-      ?.scrollIntoView({ inline: 'center', block: 'nearest' });
+    // Desktop-Board mit horizontalem Scroll-Fenster: heutigen Tag in den Blick
+    // holen - aber NUR, wenn er nicht ohnehin sichtbar ist.
+    //
+    // Vorher zentrierte diese Zeile unbedingt und erzeugte damit `scrollLeft`
+    // von 156px, obwohl heute (Mittwoch) längst im Fenster lag. Der erste
+    // Wochentag rutschte dadurch hinter die sticky Gutter-Spalte, deren
+    // opaker Hintergrund ihn vollständig verdeckte: Montag war bei jedem Laden
+    // reproduzierbar unsichtbar, ohne jeden Hinweis (Critique 2026-07-30).
+    // Die Woche beginnt jetzt bei Montag, solange heute im Blick ist.
+    const todayHeader = grid.querySelector('.day-header--today');
+    if (todayHeader) {
+      const gridBox = grid.getBoundingClientRect();
+      const todayBox = todayHeader.getBoundingClientRect();
+      const gutter = grid.querySelector('.week-gutter-label')?.getBoundingClientRect().width ?? 0;
+      const verdeckt = todayBox.left < gridBox.left + gutter || todayBox.right > gridBox.right;
+      if (verdeckt) todayHeader.scrollIntoView({ inline: 'center', block: 'nearest' });
+    }
   }
 }
 
@@ -416,18 +467,33 @@ function renderRecipeSidebar() {
   title.textContent = t('recipes.title');
   sidebar.appendChild(title);
 
+  // Der Drag-Hinweis erscheint nur, wenn es etwas zu ziehen gibt. Vorher stand
+  // „Ziehe Rezepte auf Essens-Slots" unbedingt da - bei leerem Haushalt direkt
+  // über „Noch keine Rezepte", also eine Anleitung für etwas, das es nicht gibt.
+  // Das war der einzige Text auf dem ersten Screen des Moduls und widersprach
+  // sich selbst (Critique P0, 2026-07-29).
+  if (!state.recipes.length) {
+    // Geteilter Renderer statt nacktem Satz: das Panel war die fünfte Leerfläche
+    // im Modul und die einzige, die den Renderer umging - ohne Icon, ohne CTA,
+    // direkt neben dem gestalteten Leerzustand des Boards (Critique 2026-07-30).
+    sidebar.appendChild(emptyStateEl({
+      icon: 'book-text',
+      title: t('recipes.emptyTitle'),
+      description: t('recipes.emptyDescription'),
+      action: {
+        label: t('recipes.emptyAction'),
+        icon: 'plus',
+        onClick: () => window.yuvomi?.navigate('/recipes'),
+      },
+    }));
+    if (window.lucide) window.lucide.createIcons({ el: sidebar });
+    return;
+  }
+
   const hint = document.createElement('p');
   hint.className = 'recipe-sidebar__hint';
   hint.textContent = t('recipes.dragToMealsHint');
   sidebar.appendChild(hint);
-
-  if (!state.recipes.length) {
-    const empty = document.createElement('div');
-    empty.className = 'recipe-sidebar__empty';
-    empty.textContent = t('recipes.emptyTitle');
-    sidebar.appendChild(empty);
-    return;
-  }
 
   const list = document.createElement('div');
   list.className = 'recipe-sidebar__list';
@@ -501,7 +567,7 @@ function renderSlot(date, type, mealsForDay, dayCol, typeRow) {
     // materialisiert sie, danach zählt wieder ownCount.
     const recipeCount = ownCount === 0 ? (meal.recipe_ingredient_count ?? 0) : 0;
     const ingCount    = ownCount || recipeCount;
-    const ingLabel    = ingCount > 0 ? (ingCount !== 1 ? t('meals.ingredientCountPlural', { count: ingCount }) : t('meals.ingredientCount', { count: ingCount })) : '';
+    const ingLabel    = ingCount > 0 ? t('meals.ingredientCount', { count: ingCount }) : '';
     const ingDoneLabel = ownCount > 0 && ingDone === ownCount ? ' ✓' : '';
     const canTransfer  = recipeCount > 0 || (ownCount > 0 && ingDone < ownCount);
     const recurrenceBadge = meal.recurrence_template_id
@@ -927,7 +993,7 @@ async function moveMeal(mealId, targetDate, targetType) {
 
 function openMealModal(opts) {
   state.modal = opts;
-  const { mode, date, mealType, meal, presetRecipeId = null } = opts;
+  const { mode, date, mealType, meal } = opts;
   const isEdit = mode === 'edit';
 
   const content = buildModalContent(opts);
@@ -1117,10 +1183,6 @@ function openMealModal(opts) {
         }
       });
 
-      if (presetRecipeId && recipeSelect) {
-        recipeSelect.value = String(presetRecipeId);
-        applyRecipe(presetRecipeId);
-      }
 
       addIngBtn.addEventListener('click', () => {
         const tmp  = document.createElement('div');
@@ -1146,7 +1208,7 @@ function openMealModal(opts) {
         try {
           const res = await api.post(`/meals/${state.modal.meal.id}/to-shopping-list`, { listId });
           if (res.data.transferred > 0) {
-            window.yuvomi?.showToast(res.data.transferred !== 1 ? t('meals.transferSuccessPlural', { count: res.data.transferred }) : t('meals.transferSuccess', { count: res.data.transferred }), 'success');
+            window.yuvomi?.showToast(t('meals.transferSuccess', { count: res.data.transferred }), 'success');
             await loadWeek(state.currentWeek);
             closeModal({ force: true });
             renderWeekGrid();
@@ -1168,7 +1230,7 @@ function openMealModal(opts) {
   });
 }
 
-function buildModalContent({ mode, date, mealType, meal, presetRecipeId = null }) {
+function buildModalContent({ mode, date, mealType, meal }) {
   const isEdit   = mode === 'edit';
   const isRecurring = isEdit && meal.recurrence_template_id;
   const typeOpts = MEAL_TYPES().map((mt) =>
@@ -1196,8 +1258,7 @@ function buildModalContent({ mode, date, mealType, meal, presetRecipeId = null }
     ...state.recipes.map((r) => `<option value="${r.id}" ${isEdit && meal.recipe_id === r.id ? 'selected' : ''}>${esc(r.title)}</option>`),
   ].join('');
 
-  const advancedOpen = (isEdit && (!!meal.recipe_id || !!meal.notes || !!meal.recipe_url || isRecurring))
-    || !!presetRecipeId;
+  const advancedOpen = isEdit && (!!meal.recipe_id || !!meal.notes || !!meal.recipe_url || isRecurring);
 
   const advancedFieldsHtml = `
     <div class="form-group">
@@ -1456,7 +1517,7 @@ async function transferMeal(mealId) {
   try {
     const res = await api.post(`/meals/${mealId}/to-shopping-list`, { listId });
     if (res.data.transferred > 0) {
-      window.yuvomi?.showToast(res.data.transferred !== 1 ? t('meals.transferSuccessPlural', { count: res.data.transferred }) : t('meals.transferSuccess', { count: res.data.transferred }), 'success');
+      window.yuvomi?.showToast(t('meals.transferSuccess', { count: res.data.transferred }), 'success');
       await loadWeek(state.currentWeek);
       renderWeekGrid();
     } else {

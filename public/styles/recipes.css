@@ -4,7 +4,8 @@
  */
 
 .recipes-page {
-  --module-accent: var(--module-recipes);
+  /* Geteilter Küchen-Akzent, siehe --module-kitchen in tokens.css. */
+  --module-accent: var(--module-kitchen);
   display: flex;
   flex-direction: column;
   height: calc(100dvh - var(--safe-area-inset-top) - var(--nav-bottom-height) - var(--safe-area-inset-bottom));
@@ -25,7 +26,7 @@
   padding-inline: var(--page-inline-pad);
   /* Auslauf unten wie in .pantry-list: ohne ihn deckt der FAB die
    * „In Essensplan übernehmen"-Aktion der letzten Karte ab. */
-  padding-block: var(--space-4) calc(var(--space-4) + var(--target-lg) + var(--space-4));
+  padding-block: var(--space-4) var(--fab-clearance);
   display: grid;
   /* Kachelt 2–3-spaltig auf Desktop, automatisch einspaltig auf Mobil
    * (Karten fassen ihre natürliche Höhe via align-items:start). */
@@ -63,17 +64,9 @@
   outline-offset: 2px;
 }
 
-/* Suchzeile über der Liste (Audit A1-21) */
-/* Reine Filterzeile (kein Canonical Page Head): kein Akzentstreifen, kein
- * Sticky, kein Titel. Grammatik wie .tasks-filters-row. */
-.recipes-toolbar {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex-shrink: 0;
-  padding-inline: var(--page-inline-pad);
-  padding-top: var(--space-3);
-}
+/* Die Suchzeile (Audit A1-21) ist jetzt der kanonische Kopf in der Variante
+ * .page-toolbar--in-group (layout.css); die frühere eigene .recipes-toolbar
+ * entfällt samt Padding-Regeln, die der Kopf schon mitbringt. */
 
 .recipes-search {
   flex: 1;
@@ -188,10 +181,14 @@
 }
 
 /* Primäraktion drängt die Icon-Aktionen an den rechten Rand.
- * Modul-Identität (Teal) via getönte Füllung + Border; das LABEL bleibt Ink
- * (--color-text-primary), weil Modul-Akzent-Text auf Hell nur ~3.5:1 erreicht
- * (unter AA 4.5). So flutet kein Karten-Raster mehr Violett UND das Label ist
- * in beiden Themes AA-sicher. Der Teal-Border ist als UI-Element bei 3:1 konform. */
+ * Modul-Identität via getönte Füllung + Border; das LABEL bleibt Ink
+ * (--color-text-primary), weil Modul-Akzent-Text auf Hell die AA-Schwelle 4.5
+ * nicht hält. So flutet kein Karten-Raster mit Akzentfarbe UND das Label ist in
+ * beiden Themes AA-sicher.
+ * Die früheren px-genauen Kontrastangaben standen hier für das alte Teal
+ * (--module-recipes) und gelten seit dem Wechsel auf --module-kitchen nicht
+ * mehr; der Border-Kontrast gegen die Karte wird in der Audit-Runde neu
+ * gemessen (WCAG 1.4.11 fordert 3:1). */
 .recipe-card__primary {
   margin-right: auto;
   background-color: color-mix(in srgb, var(--module-accent) 12%, transparent);
@@ -219,18 +216,24 @@
 .recipe-card__icon-actions {
   display: flex;
   gap: var(--space-1);
-  opacity: 0;
   transition: opacity var(--transition-fast);
 }
 
-.recipe-card:hover .recipe-card__icon-actions,
-.recipe-card:focus-within .recipe-card__icon-actions {
-  opacity: 1;
-}
-
-@media (max-width: 640px) {
+/* Wie .meal-card__actions: an die Geräte-Fähigkeit gebunden, nicht an die
+ * Viewport-Breite. Der frühere `@media (max-width: 640px)`-Rücknahme ließ ein
+ * Tablet ohne Hover über 640px ohne sichtbare Kartenaktionen zurück, und im
+ * ausgeblendeten Zustand blieb ein 152px breites unsichtbares Klickziel stehen
+ * (Critique 2026-07-29). */
+@media (hover: hover) {
   .recipe-card__icon-actions {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .recipe-card:hover .recipe-card__icon-actions,
+  .recipe-card:focus-within .recipe-card__icon-actions {
     opacity: 1;
+    pointer-events: auto;
   }
 }
 

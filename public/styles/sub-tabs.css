@@ -81,7 +81,14 @@
 }
 
 .sub-tab__label {
-  line-height: 1;
+  /* --line-height-tight statt 1: bei `font-size: 14px` ergab `line-height: 1`
+   * eine 14px hohe Zeilenbox für Glyphen, die 16px brauchen - gemessen
+   * `scrollHeight 16 > clientHeight 14` auf JEDEM Viewport. Mobil kommt in
+   * kitchen-tabs.css ein `overflow: hidden` dazu, das die 2px dann wirklich
+   * abschneidet: die Unterlänge im „p" von „Rezepte" verlor ihre Spitze
+   * (Critique 2026-07-30). Die Pillenhöhe steuert --target-base, nicht die
+   * Zeilenhöhe, der Kopf wächst dadurch nicht. */
+  line-height: var(--line-height-tight);
 }
 
 /* Vertical divider between tab groups */

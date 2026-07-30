@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.58.0] - 2026-07-30
+
+### Changed
+- Putting a recipe into the meal plan now asks where it should go, right on the recipe card: a small dialog with the date and the meal, and the meal is already picked from what the recipe says it suits. Until now the button switched you to the meal planner and opened the full meal form there, twenty-seven fields with an empty date and a heading that did not mention the recipe you had just clicked. Leaving that form also left a marker in the address bar, so reloading the page opened it again. All five ways of moving something through the kitchen now work the same: pick the target in a small dialog, then a message telling you what moved.
+- The four kitchen tabs share one colour. The "Kitchen" entry in the sidebar used to change colour on every tab switch, from orange to green to pink to olive, which is the same signal the app uses to say "you have left this module" while you were in fact still in it. The individual colours stay in use for the dashboard cards and the navigation icons.
+
+### Fixed
+- The weekly planner did not show the first day of the week. On opening, the board scrolled to centre today, which pushed Monday behind the column carrying the meal labels, whose opaque background hid it completely; four of seven days were visible and nothing indicated that anything was to the left. The board now only scrolls if today is genuinely out of view, the label column shows an edge once you scroll, and the recipe panel folds itself away when the week would not otherwise fit.
+- The meal planner showed a week without meals as up to twenty-eight empty boxes and not a single word. It now explains what belongs there and offers a way to start, like the other three kitchen tabs.
+- In the pantry every item name started at a different position, up to eighty-nine pixels apart, and the best-before line was pushed around with it. A list you scan by name could not be read at a glance.
+- Invisible but clickable areas sat over the meal cards in the weekly planner. The same fault existed in notes, where one of them covered the delete button, and in documents.
+- The filter row in the pantry and the recipe grid on narrow phones scrolled sideways without showing it. The fourth pantry filter began one pixel beyond the right edge of a 393-pixel screen and was unreachable.
+- Shopping items could not be deleted from their row in a narrow desktop window. The rule depended on the window width rather than on whether a swipe gesture exists at all, so in a window without touch the swipe replacement was missing too.
+- Quantities in Czech, Polish, Russian and Ukrainian were declined wrongly for two to four items.
+- The kitchen tab labels were cut off by two pixels; the descender of the "p" in the German "Rezepte" lost its tip.
+- In the shopping list and the pantry the header ran up to five hundred pixels further right than the list beneath it, leaving the delete button hovering over empty page.
+- Empty states now carry a heading rather than a plain paragraph, so a screen reader announces the first screen of an empty module with structure.
+
 ## [1.57.0] - 2026-07-29
 
 ### Added

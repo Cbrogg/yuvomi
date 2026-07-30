@@ -8,10 +8,8 @@
  * Modul-Akzent
  * -------------------------------------------------------- */
 .shopping-page {
-  --module-accent: var(--module-shopping);
-  /* Freiraum unter der Liste, damit der FAB die letzte Zeile nicht überdeckt.
-   * Gleiche Formel wie --budget-fab-clearance / --rw-fab-clearance. */
-  --shopping-fab-clearance: calc(var(--target-lg) + var(--space-6) + var(--space-4));
+  /* Geteilter Küchen-Akzent, siehe --module-kitchen in tokens.css. */
+  --module-accent: var(--module-kitchen);
 }
 
 /* --------------------------------------------------------
@@ -129,42 +127,39 @@
 /* --------------------------------------------------------
  * Liste-Header (Name + Aktionen)
  * -------------------------------------------------------- */
-.list-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-3) var(--space-4) var(--space-2);
-  flex-shrink: 0;
-  border-bottom: 1px solid var(--color-border-subtle);
-  /* Opaque background required: backdrop-filter on position:sticky inside overflow:auto
-   * triggers a WebKit compositor bug that blanks the entire scroll container (iOS 26+). */
-  background-color: var(--color-surface);
-  position: sticky;
-  top: 0;
-  z-index: var(--z-sticky);
-}
-
+/* Der Listen-Kopf ist der kanonische .page-toolbar in der Variante --in-group
+ * (#list-head in shopping.js). Padding, Trennlinie, opaker Hintergrund und
+ * Sticky-Rolle kommen von dort - inklusive der Warnung, dass hier kein
+ * backdrop-filter hin darf (WebKit leert sonst den Scroll-Container, iOS 26+).
+ * Die frühere .list-header-Regel entfällt damit vollständig. */
+/* Der Titel ist zugleich die Umbenennen-Affordanz: Flex nur, damit das
+ * Stift-Icon neben dem Namen sitzt. nowrap, overflow und Ellipse kommen aus
+ * .page-toolbar__title - vorher stand hier `overflow: hidden` OHNE
+ * `white-space`, was gar nicht kürzt: „Weekly Shop" brach schon bei 1440px in
+ * zwei Zeilen (Critique 2026-07-29). */
 .list-header__name {
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: var(--space-2);
   color: var(--color-text-primary);
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
+  /* Der Titel ist ein `role="button"` (Umbenennen) und war nur 25px hoch
+   * gemessen - unter --target-md, der Desktop-Untergrenze des Projekts. Als
+   * einziger Weg zum Umbenennen einer Liste braucht er die reguläre
+   * Zielgröße (Critique 2026-07-29). */
+  min-height: var(--target-md);
+}
+
+@media (hover: none) {
+  .list-header__name {
+    min-height: var(--target-lg);
+  }
 }
 
 .list-header__edit-icon {
   width: var(--space-4);
   height: var(--space-4);
   color: var(--color-text-disabled);
-}
-
-.list-header__actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
   flex-shrink: 0;
 }
 
@@ -202,6 +197,24 @@
 .list-header__pantry-btn {
   font-size: var(--text-sm);
   min-width: var(--target-lg);
+}
+
+/* Kopf-Inhalt auf dasselbe Lesemaß wie der Körper.
+ *
+ * Der Kopf bleibt full-bleed (Chrome läuft bis zur Shell-Kante, Issue #577),
+ * aber sein INHALT lief bis 1156px, während die Liste darunter bei 720px endet:
+ * gemessen 428px Versatz in Einkaufen, 500px im Vorrat - der Papierkorb hing
+ * weit rechts über leerer Seite (Critique 2026-07-30). DESIGN.md macht die
+ * gemeinsame Fluchtlinie zur Bedingung; sie gilt für beide Kanten, nicht nur
+ * für die linke. */
+@media (min-width: 1024px) {
+  .shopping-page .page-toolbar--in-group > * {
+    max-width: var(--content-max-width-narrow);
+  }
+
+  .shopping-page .page-toolbar--in-group {
+    flex-wrap: wrap;
+  }
 }
 
 /* --------------------------------------------------------
@@ -282,21 +295,50 @@
  * order:1 hält die dauerhaften Aktionen an ihrem Platz: die kontextuelle
  * Zeile erscheint darunter, statt beim ersten Abhaken alles zu verschieben. */
 @media (max-width: 767px) {
-  .list-header {
+  /* Der Kopf ist jetzt der geteilte .page-toolbar (#list-head); der Umbruch
+   * hängt an ihm statt an der entfallenen .list-header-Regel. */
+  #list-head {
     flex-wrap: wrap;
     row-gap: var(--space-1);
   }
 
-  .list-header__name {
-    flex: 1 1 100%;
+  /* Titel und Dauer-Aktionen teilen EINE Zeile.
+   *
+   * Vorher trug der Titel `flex: 1 1 100%` und schob die Aktionen auf eine
+   * zweite Zeile: der Kopf war 125px hoch (48 Titel + 56 Aktionen + Padding),
+   * und bis zum ersten Artikel lagen 396px von 852px. Beim Einkaufen ist die
+   * Liste das, was man liest - nicht der Kopf. Mit dem Label-losen
+   * Import-Button (unten) bleiben 217px für den Namen, genug für „Weekly Shop"
+   * samt Stift, und der Kopf halbiert sich (Critique 2026-07-29). */
+  /* Der Titel teilt sich die Zeile mit den Aktionen (siehe unten). Ihn mobil
+   * ganz auszublenden wäre naheliegend - der aktive Chip darüber zeigt den
+   * Namen bereits -, macht aber das UMBENENNEN unerreichbar: `rename-list`
+   * hängt ausschließlich an diesem Titel. Erst wenn die Aktion einen zweiten
+   * Weg hat, ist das eine Option. */
+  #list-head .page-toolbar__title {
+    flex: 1 1 auto;
+    min-width: 0;
   }
 
-  .list-header__actions {
-    width: 100%;
+  #list-head .page-toolbar__actions {
     flex-wrap: wrap;
     justify-content: flex-end;
     row-gap: var(--space-2);
     min-width: 0;
+  }
+
+  /* Ein leerer Container darf keine Zeile beanspruchen: ohne abgehakte Artikel
+   * stand hier ein 361px breites, 0px hohes Element und erzwang einen Umbruch. */
+  #list-head .list-header__checked:empty {
+    display: none;
+  }
+
+  /* „Aus dem Essensplan" nur als Icon: das Label kostete 136px der 361px
+   * Zeilenbreite. aria-label und title tragen den Namen weiter, und der Button
+   * sitzt zwischen zwei anderen Icon-Buttons - die Zeile liest sich dadurch
+   * ruhiger, nicht knapper. */
+  #list-head .list-header__import-btn span {
+    display: none;
   }
 
   .list-header__checked {
@@ -334,6 +376,9 @@
   padding: var(--space-2) var(--space-4) var(--space-3);
   flex-shrink: 0;
   position: relative;
+  /* Teilt das Lesemaß der Liste darunter (siehe .items-list), damit Eingabezeile
+   * und Artikel an derselben rechten Kante enden. */
+  max-width: var(--content-max-width-narrow);
 }
 
 .quick-add__form {
@@ -353,7 +398,12 @@
   width: 100%;
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-glass-button);
-  border: 1.5px solid var(--glass-border-subtle);
+  /* --color-border wie die beiden Nachbarfelder, nicht --glass-border-subtle.
+   * Das Glas-Token ist ein weißes Alpha (35 % hell / 12 % dunkel) und erreichte
+   * auf der opaken Arbeitsfläche 1.03:1 gegen den Grund - die schwächste
+   * Feldkante der ganzen App und als Glas auf einer Arbeitsfläche zusätzlich
+   * gegen die Hausregel „Glas bleibt der Shell" (Critique 2026-07-29). */
+  border: 1.5px solid var(--color-border);
   background-color: var(--color-surface);
   color: var(--color-text-primary);
   font-size: var(--text-base);
@@ -495,13 +545,31 @@
 .items-list {
   flex: 1;
   overflow-y: auto;
-  padding: 0 var(--space-4) var(--shopping-fab-clearance);
+  padding: 0 var(--space-4) var(--fab-clearance);
   -webkit-overflow-scrolling: touch;
+  /* Lesemaß der Küchen-Checklisten: dasselbe Token wie .pantry-list, damit die
+   * beiden Tabs, die eine Liste benannter Dinge mit einem Steuerelement am Ende
+   * zeigen, dieselbe Zeilenlänge haben. Vorher lief die Liste bis 1156px, im
+   * Vorrat bis 1220px - dort wurde die Klickfläche einer Zeile 923px breit, mit
+   * einer Leerstrecke zwischen Artikelname und Stepper (Critique 2026-07-29).
+   * Linksbündig, nicht zentriert: der Listentitel im Kopf darüber steht an
+   * derselben Kante, eine zentrierte Spalte würde darunter wegrutschen. */
+  max-width: var(--content-max-width-narrow);
 }
 
 /* --------------------------------------------------------
  * Kategorie-Gruppen
  * -------------------------------------------------------- */
+/* Rechte Gasse für den FAB freihalten (siehe --fab-lane in tokens.css): der
+ * FAB liegt sonst mitten in der Liste über der Zeilen-Bedienung, nicht nur am
+ * Listenende. Nur auf Touch: dort steht er in der unteren rechten Ecke über dem
+ * Inhalt. Auf Desktop sitzt er weiter aussen und die Listen sind gekappt. */
+@media (hover: none) {
+  .item-category {
+    padding-inline-end: var(--fab-lane);
+  }
+}
+
 .item-category {
   margin-bottom: var(--space-4);
 }
@@ -519,15 +587,14 @@
  * Damit entfällt auch die Sonderrechnung für .list-tabs-bar: sie erbt jetzt
  * dieselbe Kante wie alles andere, statt sich eine zweite auszurechnen (die
  * 24px daneben lag). */
+/* Die Kappung sitzt jetzt breakpointfrei an .items-list und .quick-add (oben).
+ * Unter 720px ist sie ein No-op, zwischen 720 und 1024px verhält sich der Tab
+ * damit genauso wie der Vorrat - vorher galt sie erst ab 1024px und die beiden
+ * Checklisten divergierten in genau diesem Bereich um bis zu 300px.
+ * .item-category braucht keine eigene Kappung mehr: es liegt in der gekappten
+ * .items-list. .list-header ist entfallen, der Kopf ist der full-bleed
+ * .page-toolbar--in-group (#list-head). */
 @media (min-width: 1024px) {
-  .shopping-page .list-header,
-  .shopping-page .quick-add,
-  .shopping-page .item-category {
-    width: 100%;
-    max-width: var(--content-max-width-narrow);
-    margin-inline: 0 auto;
-  }
-
   /* Vollbreite-Toolbar mit durchgehendem Trenner; der Inhalt sitzt auf der
    * gemeinsamen Kante. */
   .shopping-page .list-tabs-bar {
@@ -651,38 +718,12 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Löschen-Button — folgt der geteilten .row-action-Grammatik (Audit F-02):
- * ruhender Zustand dauerhaft sichtbar in Tertiär-Tinte (≥3:1, WCAG 1.4.11),
- * kein Opacity-Reveal als einzige Sichtbarkeit. Geometrie bleibt --target-base
- * (gepinnt in test-frontend-audit). Auf Mobile ersetzt Swipe den Button. */
-.item-delete {
-  width: var(--target-base);
-  height: var(--target-base);
-  min-width: var(--target-base);
-  min-height: var(--target-base);
-  border-radius: var(--radius-sm);
-  background: none;
-  color: var(--color-text-tertiary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: background-color var(--transition-fast), color var(--transition-fast);
-  position: relative;
-  border: none;
-  flex-shrink: 0;
-}
-
-.item-delete::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-}
-
-.item-delete:hover {
-  background: var(--color-danger-light);
-  color: var(--color-danger);
-}
+/* Die beiden Zeilenaktionen (Details, Löschen) nutzen seit dem Audit die
+ * geteilte .row-action-Grammatik aus layout.css: 48px über --target-lg,
+ * dauerhaft sichtbare Tertiär-Tinte, Danger-Hover über .row-action--danger.
+ * Die früheren .item-details/.item-delete-Regeln waren eine Kopie derselben
+ * Geometrie in eigener Größe - Einkaufen war der letzte der sieben Nutzer
+ * dieser Komponente, der sie nicht verwendete (Critique 2026-07-29). */
 
 /* Detail-Indikatoren (Link/Notiz) inline hinter dem Namen — dezent. */
 .item-meta {
@@ -701,31 +742,6 @@
 
 .shopping-item--checked .item-meta {
   color: var(--color-text-disabled);
-}
-
-/* Details-Button (URL/Notiz bearbeiten). Muss auf Touch ohne Hover erkennbar
- * sein (keine Swipe-Alternative) — daher wie .row-action dauerhaft sichtbar in
- * Tertiär-Tinte statt Disabled-Farbe + Opacity (Audit F-02, WCAG 1.4.11). */
-.item-details {
-  width: var(--target-base);
-  height: var(--target-base);
-  min-width: var(--target-base);
-  min-height: var(--target-base);
-  border-radius: var(--radius-sm);
-  background: none;
-  color: var(--color-text-tertiary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: background-color var(--transition-fast), color var(--transition-fast);
-  border: none;
-  flex-shrink: 0;
-}
-
-.item-details:hover {
-  background: var(--color-surface-hover);
-  color: var(--color-text-primary);
 }
 
 /* Klickbare Link-Vorschau im Detail-Drawer. */
@@ -771,22 +787,38 @@
   box-shadow: var(--shadow-lg);
 }
 
-/* × Löschen-Button auf Mobile ausblenden - Swipe übernimmt.
- * (Die frühere mobile Sichtbarkeits-Korrektur für .item-details ist seit der
- * Basis-Regel oben — dauerhaft tertiär, ohne Opacity — überflüssig.) */
-@media (max-width: 1023px) {
-  .item-delete {
+/* × Löschen-Button ausblenden, wo Swipe übernimmt. Greift über das
+ * data-Attribut, weil die Zeilenaktionen die geteilte .row-action-Klasse
+ * tragen und keine eigene mehr haben.
+ *
+ * Das Kriterium ist die ZEIGER-Fähigkeit, nicht die Viewport-Breite. Vorher
+ * stand hier `max-width: 1023px`: in einem 800px breiten Desktop-Fenster mit
+ * Maus verschwand das Löschen aus der Zeile, und Swipe - der einzige Ersatz -
+ * gibt es dort nicht (Critique 2026-07-30). Die drei Geschwister-Tabs sind im
+ * Umbau auf `hover` umgestellt worden, dieser Selektor blieb übrig. */
+@media (hover: none) {
+  .shopping-item .row-action[data-action="delete-item"] {
     display: none;
   }
 }
 
-/* --------------------------------------------------------
- * No-Lists-Zustand: geteilte .empty-state-Grammatik (layout.css).
- * Als direktes Kind von #list-content vertikal füllen/zentrieren.
- * -------------------------------------------------------- */
+/* Der Leerzustand ohne Liste hängt in #list-content, das selbst nicht gekappt
+ * ist - er zentrierte deshalb über die volle Content-Breite, während der
+ * Vorrats-Leerzustand in seiner 720er-Lesespalte sitzt: 250px Unterschied
+ * zwischen zwei Tabs desselben Objekttyps (Critique-Nachlauf 2026-07-30). Mit
+ * derselben Kappung folgt die Mitte dem Zwei-Maße-System: Checklisten schmal,
+ * Kartenraster und Wochenboard breit. */
 #list-content > .empty-state {
-  flex: 1;
+  max-width: var(--content-max-width-narrow);
 }
+
+/* Der No-Lists-Zustand nutzt die geteilte .empty-state-Grammatik (layout.css)
+ * und setzt wie die drei Geschwister-Tabs OBEN an. Hier stand ein `flex: 1`,
+ * das die Box über die volle Resthöhe streckte; zusammen mit dem
+ * `justify-content: center` der Grammatik landete der Titel bei y=495 statt
+ * y=255 - die dritte von drei vertikalen Achsen für denselben Zustand
+ * (Critique 2026-07-29). Das Ansetzen oben regelt jetzt `flex: 0 0 auto` in
+ * layout.css, für alle Konsumenten gleich. */
 
 /* Kategorie-Manager: seit Audit F-15 die geteilte Komponente
  * <yuvomi-category-manager> (Styles global in category-manager.css). */

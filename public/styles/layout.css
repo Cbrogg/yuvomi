@@ -930,10 +930,13 @@ html:has(.search-overlay--visible) yuvomi-install-prompt {
 
 .page-fab {
   position: fixed;
-  bottom: calc(var(--nav-bottom-height) + var(--space-6));
+  /* Geometrie aus tokens.css (--fab-size / --fab-offset-bottom): der Freiraum
+   * unter Listen (--fab-clearance) leitet sich daraus ab und kann so nicht
+   * mehr vom FAB wegdriften. */
+  bottom: var(--fab-offset-bottom);
   right: var(--space-4);
-  width: 52px;
-  height: 52px;
+  width: var(--fab-size);
+  height: var(--fab-size);
   border-radius: var(--radius-full);
   background-color: var(--module-accent, var(--color-accent));
   color: var(--color-ink-on-vivid);
@@ -1071,6 +1074,36 @@ html.fab-anim-done .page-fab {
   }
 }
 
+/* Opt-in: der Kopf sitzt UNTER einer Tab-Gruppenleiste (.sub-tabs-bar).
+ *
+ * Ohne diese Variante konnte die Küche den kanonischen Kopf nicht benutzen:
+ * `.kitchen-tabs-bar` trägt den 3px-Akzentstreifen der Gruppe
+ * (kitchen-tabs.css), ein `.page-toolbar` darunter hätte einen zweiten
+ * Streifen in derselben Farbe direkt darunter gesetzt - genau der
+ * Doppelstreifen aus Issue #577. Statt den Kopf zu meiden, haben sich alle
+ * vier Küchen-Tabs eigene Köpfe gebaut (week-nav / list-header / recipes-
+ * toolbar / pantry-toolbar), mit gemessenen Bauhöhen von 54 bis 188px und
+ * vier verschiedenen Slot-Ordnungen (Critique 2026-07-29).
+ *
+ * Die Variante gibt genau EINE Eigenschaft ab: den Akzentstreifen, den die
+ * Gruppenleiste schon trägt. Alles andere - Padding, Bleed, Hintergrund,
+ * Sticky-Rolle, Titel-Typografie, Slot-Grammatik - bleibt der kanonische Kopf.
+ *
+ * Das `top` NICHT verschieben. Naheliegend wäre, den Kopf um die Höhe der
+ * Gruppenleiste nach unten zu versetzen, damit er „darunter" klebt. Das
+ * unterstellt aber, der Scrollport sei das Viewport. In den Küchen-Tabs ist der
+ * Modul-Root eine Flex-Spalte mit `overflow: hidden` und damit SELBST der
+ * Scrollport; die Gruppenleiste liegt außerhalb davon. Ein `top: 56px` schob
+ * den Kopf dort 56px nach UNTEN über den folgenden Inhalt - im Vorrat lag er
+ * über der Filter-Chip-Leiste, im Essensplan über der ersten Slot-Reihe
+ * (gemessen 2026-07-29). Innerhalb eines nicht scrollenden Roots ist `top: 0`
+ * korrekt, und die Leiste darüber kann den Kopf ohnehin nicht überlaufen.
+ *
+ * Nutzer: die vier Küchen-Tabs. Für health-tabs.js ebenso verwendbar. */
+.page-toolbar--in-group {
+  border-top: none;
+}
+
 @media (max-width: 640px) {
   .page-toolbar {
     /* Nur die Bauhöhe verdichten. Der horizontale Rand bleibt bewusst
@@ -1094,9 +1127,15 @@ html.fab-anim-done .page-fab {
  * wurde. Bisher wurde dieselbe Falle punktuell in documents.css, contacts.css
  * und budget.css entschärft; hier steht sie einmal für alle geteilten
  * Bedienelemente. `hidden` heißt versteckt, ausnahmslos. */
+/* Seit 2026-07-30 auch `.page-toolbar`: ohne aktive Liste versteckt die
+ * Einkaufsliste ihren #list-head, und dessen `display: flex` schlug das
+ * UA-`[hidden]`. Übrig blieb ein 25px hoher leerer Streifen über dem
+ * Leerzustand. Die Selektorliste bleibt bewusst lückenlos - der Guard in
+ * test-budget-ui.js prüft die Nähe von Selektor und Deklaration. */
 .page-fab[hidden],
 .btn[hidden],
 .form-group[hidden],
+.page-toolbar[hidden],
 p.field-hint--warn[hidden] {
   display: none !important;
 }
@@ -2421,8 +2460,16 @@ p.field-hint--warn[hidden] {
   box-shadow: 0 0 0 3px var(--color-accent-light);
 }
 
-.input::placeholder,
-.form-input::placeholder {
+/* Auf ALLE Textfelder, nicht nur auf .input/.form-input.
+ *
+ * Vorher griff die Regel nur über die zwei Klassen. Jedes Feld ohne sie fiel auf
+ * Chromes UA-Default #757575 zurück, der im Dark Mode nicht mitkippt: gemessen
+ * 3.46:1 an den beiden Quick-Add-Feldern der Einkaufsliste und 3.12:1 am
+ * globalen Suchfeld - unter den 4.5:1, die WCAG 1.4.3 auch für Platzhaltertext
+ * fordert (Critique 2026-07-29). Der Elementselektor deckt jedes künftige Feld
+ * mit ab, statt auf die richtige Klasse zu hoffen. */
+input::placeholder,
+textarea::placeholder {
   color: var(--color-text-placeholder);
   opacity: 1; /* Firefox setzt ::placeholder sonst auf opacity < 1 und senkt den Kontrast erneut */
 }
@@ -2723,6 +2770,15 @@ p.field-hint--warn[hidden] {
   padding: var(--space-12) var(--space-6);
   text-align: center;
   animation: empty-state-in var(--duration-2xl) var(--ease-out) both;
+  /* Immer oben ansetzen, nie in der Restfläche zentriert.
+   *
+   * In einem Grid-Elternteil mit `align-content: start` (Rezepte, Vorrat) saß der
+   * Leerzustand oben, in einer gestreckten Flex-Spalte (Einkaufen) zentrierte
+   * ihn `justify-content: center` in der ganzen Resthöhe: gemessen lag der Titel
+   * bei y=174 / 242 / 482, also drei Achsen für denselben Zustand (Critique
+   * 2026-07-29). `flex: 0 0 auto` verhindert das Strecken; in Grid-Eltern ist es
+   * ein No-op. Die 48px Innenabstand oben geben den Abstand zum Kopf. */
+  flex: 0 0 auto;
 }
 
 @keyframes empty-state-in {
@@ -2745,6 +2801,10 @@ p.field-hint--warn[hidden] {
   font-size: var(--text-base);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
+  /* Der Titel ist seit dem Audit ein <h2> (Überschriften-Semantik für
+   * Screenreader). Der UA-Margin einer Überschrift würde die gap-basierte
+   * Abstandsfolge des Leerzustands verdoppeln. */
+  margin: 0;
 }
 
 .empty-state__description {

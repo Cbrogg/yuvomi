@@ -4,15 +4,19 @@
  */
 
 import { api } from '/api.js';
-import { t } from '/i18n.js';
+import { t, formatDate, formatDateInput, parseDateInput, isDateInputValid } from '/i18n.js';
 import { esc } from '/utils/html.js';
 import { openModal as openSharedModal, closeModal as closeSharedModal, selectModal, advancedSection, wireBlurValidation, reportFieldError } from '/components/modal.js';
 import { DEFAULT_CATEGORY_NAME } from '/utils/shopping-categories.js';
 import { renderKitchenTabsBar } from '/utils/kitchen-tabs.js';
 import { ingredientRowHTML } from '/utils/ingredient-row.js';
-import { scheduleUndoableDelete } from '/utils/ux.js';
+import { scheduleUndoableDelete, wireScrollFade } from '/utils/ux.js';
 import { normalizeRecipeMealTypes, RECIPE_MEAL_TYPE_KEYS } from '/utils/recipe-meal-types.js';
+import { mealPayloadFromRecipe } from '/utils/recipe-to-meal.js';
+import { toLocalDateKey } from '/utils/date.js';
+import '/components/datepicker.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
+import { mountEmptyState } from '/utils/empty-state.js';
 
 let _container = null;
 
@@ -92,14 +96,16 @@ export async function render(container) {
 
   // Suchfeld über der Liste: Rezepte waren als einziges Kitchen-Modul nicht
   // durchsuchbar (Audit A1-21).
+  // Kanonischer Kopf in der Gruppen-Variante: --in-group gibt Akzentstreifen und
+  // oberste Sticky-Position an die .kitchen-tabs-bar darüber ab, die beides schon
+  // trägt. Genau der Doppelstreifen aus Issue #577 war der Grund, warum diese
+  // Zeile vorher als eigene .recipes-toolbar gebaut war - mit dem Ergebnis, dass
+  // alle vier Küchen-Tabs eine andere Kopf-Grammatik hatten (Critique
+  // 2026-07-29). Die Variante löst den Konflikt, ohne den Kopf zu meiden.
   const toolbar = document.createElement('div');
-  // Bewusst KEIN .page-toolbar: den Modul-Akzent der Küche trägt allein die
-  // .kitchen-tabs-bar darüber (siehe kitchen-tabs.css). Als .page-toolbar erbte
-  // diese Zeile einen zweiten 3px-Streifen in derselben Farbe, direkt unter dem
-  // ersten — Rezepte war damit das einzige Kitchen-Modul mit Doppelstreifen
-  // (Issue #577). Sie hat weder Titel noch Sticky-Rolle und ist eine reine
-  // Filterzeile wie .tasks-filters-row.
-  toolbar.className = 'recipes-toolbar';
+  toolbar.className = 'page-toolbar page-toolbar--in-group';
+  const center = document.createElement('div');
+  center.className = 'page-toolbar__center';
   const searchWrap = document.createElement('div');
   searchWrap.className = 'recipes-search';
   const searchInput = document.createElement('input');
@@ -113,7 +119,8 @@ export async function render(container) {
     renderRecipeList();
   });
   searchWrap.appendChild(searchInput);
-  toolbar.appendChild(searchWrap);
+  center.appendChild(searchWrap);
+  toolbar.appendChild(center);
 
   const list = document.createElement('div');
   list.className = 'recipes-list';
@@ -122,6 +129,10 @@ export async function render(container) {
   // bereits vor dem Daten-await ein).
   list.setAttribute('aria-busy', 'true');
   list.insertAdjacentHTML('beforeend', renderSkeletonList({ rows: 5, lines: 2 }));
+  // Kanten-Anriss: bei 320px passt die 320px-Mindestbreite der Karten nicht
+  // mehr neben das Seitenpadding, das Raster ragt 32px über den Container und
+  // scrollt still (Critique 2026-07-30). Gleiches Werkzeug wie im Wochenboard.
+  wireScrollFade(list);
 
   const fab = document.createElement('button');
   fab.className = 'page-fab';
@@ -182,7 +193,7 @@ export async function render(container) {
     }
 
     if (actionBtn.dataset.action === 'add-to-meals') {
-      window.yuvomi?.navigate(`/meals?recipe=${recipe.id}`);
+      await planRecipe(recipe, actionBtn);
     }
   });
 
@@ -206,30 +217,19 @@ function renderRecipeList() {
   list.replaceChildren();
 
   if (!state.recipes.length) {
-    const empty = document.createElement('div');
-    empty.className = 'empty-state';
-
-    const emptyTitle = document.createElement('div');
-    emptyTitle.className = 'empty-state__title';
-    emptyTitle.textContent = t('recipes.emptyTitle');
-
-    const emptyDesc = document.createElement('div');
-    emptyDesc.className = 'empty-state__description';
-    emptyDesc.textContent = t('recipes.emptyDescription');
-
-    const emptyHint = document.createElement('p');
-    emptyHint.className = 'empty-state__hint';
-    emptyHint.textContent = t('emptyHint.recipes');
-    const emptyCta = document.createElement('button');
-    emptyCta.className = 'btn btn--primary empty-state__cta';
-    emptyCta.insertAdjacentHTML('afterbegin', '<i data-lucide="plus" aria-hidden="true" class="icon-md"></i>');
-    emptyCta.append(document.createTextNode(t('recipes.emptyAction')));
-    emptyCta.addEventListener('click', () => {
-      document.querySelector('.page-fab')?.click();
+    // Geteilter Renderer (utils/empty-state.js): erzwingt Reihenfolge und
+    // ARIA-Rolle. Vorher fehlte hier als einzigem Küchen-Leerzustand das Icon.
+    mountEmptyState(list, {
+      icon: 'book-text',
+      title: t('recipes.emptyTitle'),
+      description: t('recipes.emptyDescription'),
+      hint: t('emptyHint.recipes'),
+      action: {
+        label: t('recipes.emptyAction'),
+        icon: 'plus',
+        onClick: () => document.querySelector('.page-fab')?.click(),
+      },
     });
-    empty.append(emptyTitle, emptyDesc, emptyHint, emptyCta);
-    list.appendChild(empty);
-    if (window.lucide) window.lucide.createIcons({ el: empty });
     return;
   }
 
@@ -315,8 +315,13 @@ function renderRecipeList() {
       if (ingredients.length > MAX_INGREDIENTS) {
         const more = document.createElement('li');
         more.className = 'recipe-card__ingredient recipe-card__ingredient--more';
-        // Sprachneutraler Rest-Indikator (kein neuer Locale-Key nötig).
-        more.textContent = `+${ingredients.length - MAX_INGREDIENTS}`;
+        const rest = ingredients.length - MAX_INGREDIENTS;
+        // Sichtbar bleibt der sprachneutrale „+N"-Indikator. Für Hilfsmittel war
+        // er bedeutungslos - ein Screenreader las „plus zwei" ohne Bezugswort
+        // (Critique 2026-07-29). Das aria-label benennt, worum es sich handelt,
+        // und nutzt dafür den vorhandenen geteilten Zähl-Key.
+        more.textContent = `+${rest}`;
+        more.setAttribute('aria-label', `+${t('meals.ingredientCount', { count: rest })}`);
         ul.appendChild(more);
       }
       card.appendChild(ul);
@@ -569,6 +574,88 @@ async function saveRecipe(panel, mode, recipe) {
  * anfühlt. Der Server überspringt Zutaten, die schon unabgehakt auf der Liste
  * liegen; die Rückmeldung nennt beide Zahlen.
  */
+/**
+ * Rezept in den Essensplan übernehmen: fragt „Für wann?" hier und legt die
+ * Mahlzeit direkt an.
+ *
+ * Vorher navigierte dieser Weg auf `/meals?recipe=<id>`, wo ein Formular mit 27
+ * Feldern aufging - Titel „Mahlzeit hinzufügen" ohne das Rezept zu nennen, das
+ * Datumsfeld leer, 42 % des Dialogs unter der Sichtkante. Nach Escape blieb
+ * `?recipe=` in der URL und ein Reload öffnete das Formular erneut, beliebig oft
+ * (Critique 2026-07-29). Als einziger der fünf Transfers folgte er nicht dem
+ * Muster der anderen.
+ *
+ * Jetzt zwei Entscheidungen statt neun Feldern, kein Seitenwechsel, und der
+ * Query-Parameter existiert nicht mehr - der Zombie ist damit strukturell weg,
+ * nicht per `replaceState` kaschiert. Details lassen sich danach im Essensplan
+ * bearbeiten, wie bei jeder anderen Mahlzeit.
+ */
+async function planRecipe(recipe, btn) {
+  const types = normalizeRecipeMealTypes(recipe.meal_types);
+  // Vorauswahl: erklärt das Rezept genau einen Typ, ist die Sache klar. Erklärt
+  // es mehrere - was der Default ist, wenn niemand etwas gesetzt hat -, dann
+  // stand bisher „Frühstück" da, weil es in der Liste zuerst kommt: der Dialog
+  // schlug für ein Curry das Frühstück vor (Critique 2026-07-30). Ohne Signal
+  // vom Rezept ist das Abendessen die ehrlichere Annahme, es ist die Mahlzeit,
+  // die Haushalte am häufigsten planen.
+  const vorauswahl = types.length === 1 ? types[0] : (types.includes('dinner') ? 'dinner' : types[0]);
+  const typeOpts = mealTypeOptions()
+    .filter(({ key }) => types.includes(key))
+    .map(({ key, label }) =>
+      `<option value="${key}"${key === vorauswahl ? ' selected' : ''}>${esc(label)}</option>`)
+    .join('');
+
+  const today = toLocalDateKey(new Date());
+
+  openSharedModal({
+    title: t('recipes.planTitle', { name: recipe.title }),
+    size: 'sm',
+    content: `
+      <div class="form-group">
+        <label class="form-label" for="plan-date">${t('meals.dateLabel')}</label>
+        <yuvomi-datepicker type="date" id="plan-date" value="${esc(formatDateInput(today))}"></yuvomi-datepicker>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="plan-type">${t('meals.mealTypeLabel')}</label>
+        <select class="form-input" id="plan-type">${typeOpts}</select>
+      </div>
+      <div class="modal-panel__footer modal-panel__footer--plain">
+        <button type="button" class="btn btn--secondary" data-action="close-modal">${esc(t('common.cancel'))}</button>
+        <!-- „Übernehmen", nicht die Wiederholung des Auslöser-Labels: die drei
+             anderen Transfer-Dialoge bestätigen genauso, und der Dialogtitel
+             nennt Rezept und Ziel bereits (Critique 2026-07-30). -->
+        <button type="button" class="btn btn--primary" id="plan-confirm">${esc(t('common.apply'))}</button>
+      </div>`,
+    onSave(panel) {
+      panel.querySelector('#plan-confirm').addEventListener('click', async (e) => {
+        const confirmBtn = e.currentTarget;
+        const dateField = panel.querySelector('#plan-date');
+        if (!isDateInputValid(dateField.value)) {
+          reportFieldError(dateField, t('calendar.invalidDate'));
+          return;
+        }
+        const date = parseDateInput(dateField.value);
+        const mealType = panel.querySelector('#plan-type').value;
+
+        confirmBtn.disabled = true;
+        try {
+          await api.post('/meals', mealPayloadFromRecipe(recipe, date, mealType));
+          closeSharedModal({ force: true });
+          window.yuvomi?.showToast(
+            t('recipes.planSuccess', { name: recipe.title, date: formatDate(date) }),
+            'success',
+          );
+        } catch (err) {
+          window.yuvomi?.showToast(err.data?.error ?? t('common.errorGeneric'), 'danger');
+          confirmBtn.disabled = false;
+        }
+      });
+    },
+  });
+
+  if (btn) btn.blur();
+}
+
 async function transferRecipe(recipe, btn) {
   if (!state.lists.length) {
     window.yuvomi?.showToast(t('meals.noShoppingLists'), 'danger');

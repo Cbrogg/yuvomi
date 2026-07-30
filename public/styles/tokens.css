@@ -233,6 +233,20 @@
   --module-shopping:   var(--_module-shopping);    /* Pink-600 - Einkaufen (trennt von Meals); 5.02:1 auf weiß, 4.57:1 auf --color-bg — WCAG AA */
   --_module-pantry:    #4D7C0F;
   --module-pantry:     var(--_module-pantry);      /* Oliv-Grün (86°) - Vorrat. Besetzt die einzige freie Hue-Lücke zwischen notes (36°) und tasks (142°); 4.99:1 auf weiß, 4.54:1 auf --color-bg — WCAG AA. Erdig statt frisch: der Vorrat ist der Lagerort, nicht die Ernte. */
+  /* Akzent der KÜCHEN-GRUPPE. Mahlzeiten/Rezepte/Einkaufen/Vorrat sind EIN
+   * Modul mit vier Ansichten (router.js: `kitchenGroup: true`, ein einziger
+   * Sidebar-Eintrag) - also tragen sie einen Akzent, nicht vier. Vorher setzte
+   * jedes der vier Tab-CSS seinen eigenen `--module-accent`, wodurch derselbe
+   * Nav-Eintrag beim Tabwechsel die Farbe wechselte: orange → teal → pink →
+   * oliv. Ein Farbwechsel ist die stärkste „du hast den Kontext verlassen"-
+   * Botschaft, die die App hat; innerhalb einer Tab-Gruppe entwertet er den
+   * --module-*-Mechanismus für alle Module (Critique 2026-07-29).
+   * Orange, weil Mahlzeiten der Einstiegstab der Gruppe ist. Sub-Identität
+   * tragen die Tab-Icons, nicht der Hue. DESIGN.md-Prinzip 5 gilt weiter:
+   * ein Modul = eine Farbe - die Küche IST ein Modul.
+   * Die vier --module-{meals,recipes,shopping,pantry} bleiben bestehen: die
+   * Dashboard-Widgets und die Nav-Icons referenzieren sie einzeln. */
+  --module-kitchen:    var(--_module-meals);
   --_module-notes:     #9F6107;
   --module-notes:      var(--_module-notes);       /* Amber-700 - Notizen; 5.02:1 auf weiß, 4.57:1 auf --color-bg — WCAG AA */
   --_module-contacts:  #0969DA;
@@ -552,6 +566,36 @@
   --sub-tabs-height: 52px;
   --kitchen-tabs-height: 56px;
 
+  /* Floating Action Button - Geometrie und Freiraum.
+   *
+   * Größe und Offset lagen als Literale in `.page-toolbar`s Nachbarschaft
+   * (layout.css `.page-fab`), der Freiraum darunter als je eigene Formel in
+   * vier Modul-CSS. Die Formeln drifteten: meals/shopping rechneten
+   * `--target-lg + --space-6 + --space-4` = 88px, pantry/recipes
+   * `--space-4 + --target-lg + --space-4` = 80px. Beide waren mobil um mehr
+   * als 60px zu klein, weil sie --nav-bottom-height nicht mitzählten - der
+   * FAB steht dort ÜBER der Bottom-Nav. Ergebnis: die letzte Listenzeile
+   * ließ sich auf keiner der vier Routen unter dem FAB hervorscrollen
+   * (Critique 2026-07-29, gemessen bis 69% Verdeckung bei 320px).
+   *
+   * --fab-clearance leitet sich deshalb aus den beiden Werten ab, die die
+   * Position tatsächlich bestimmen. Wer den FAB verschiebt, verschiebt den
+   * Freiraum automatisch mit.
+   *
+   * Deckt NUR das Listenende ab. Ein fixierter FAB liegt naturgemäß auch
+   * mitten in der Liste über rechtsbündigen Zeilenaktionen; das ist eine
+   * Layout-Frage der Zeile, kein Freiraum-Problem. */
+  --fab-size: 52px;
+  --fab-offset-bottom: calc(var(--nav-bottom-height) + var(--space-6));
+  --fab-clearance: calc(var(--fab-offset-bottom) + var(--fab-size) + var(--space-4));
+  /* Rechte Gasse, die der FAB belegt: seine Breite plus sein Randabstand plus
+   * ein Atemzug. --fab-clearance polstert das Listen-ENDE und löst damit nur
+   * den Fall „letzte Zeile"; mitten in einer scrollenden Liste liegt der FAB
+   * über der Zeile, die zufällig unter ihm steht - gemessen 89.6% Verdeckung
+   * auf dem Vorrats-Warenkorb (Critique 2026-07-30). Listen, deren Zeilen
+   * rechts eine Bedienung tragen, halten diese Spur frei. */
+  --fab-lane: calc(var(--fab-size) + var(--space-4) + var(--space-2));
+
   /* --------------------------------------------------------
    * 13. Sidebar
    *     Reduzierter Neumorphismus - subtilere Schatten.
@@ -726,6 +770,11 @@
 @media (min-width: 1024px) {
   :root {
     --page-gutter: var(--space-8);
+    /* Desktop hat keine Bottom-Nav: der FAB rückt näher an die Ecke und wird
+     * kleiner. Spiegelt den Media-Query auf `.page-fab` in layout.css;
+     * --fab-clearance rechnet beides automatisch mit. */
+    --fab-size: var(--target-lg);
+    --fab-offset-bottom: var(--space-8);
   }
 }
 

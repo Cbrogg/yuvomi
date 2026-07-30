@@ -12,6 +12,7 @@ import { promptModal, openModal, closeModal, confirmModal } from '/components/mo
 import { DEFAULT_CATEGORY_NAME, categoryLabel } from '/utils/shopping-categories.js';
 import { addLocalDays, toLocalDateKey } from '/utils/date.js';
 import { renderKitchenTabsBar } from '/utils/kitchen-tabs.js';
+import { mountEmptyState } from '/utils/empty-state.js';
 import '/components/category-manager.js';
 
 // --------------------------------------------------------
@@ -128,41 +129,56 @@ function renderTabs(container) {
 
 function renderListContent(container) {
   const content = container.querySelector('#list-content');
+  const head = container.querySelector('#list-head');
   if (!content) return;
   content.removeAttribute('aria-busy');
 
   if (!state.activeList) {
-    content.replaceChildren();
-    // Geteilte .empty-state-Grammatik (wie Rezepte + leere Liste): Titel,
-    // Beschreibung und eine primäre CTA — nicht nur ein Textverweis auf das +.
-    content.insertAdjacentHTML('beforeend', `
-      <div class="empty-state">
-        <i data-lucide="shopping-cart" class="empty-state__icon" aria-hidden="true"></i>
-        <div class="empty-state__title">${t('shopping.noLists')}</div>
-        <div class="empty-state__description">${t('shopping.noListsDescription')}</div>
-        <button class="btn btn--primary empty-state__cta" id="empty-cta-newlist">
-          <i data-lucide="plus" aria-hidden="true" class="icon-md"></i>
-          ${t('shopping.newListButton')}
-        </button>
-      </div>`);
-    if (window.lucide) window.lucide.createIcons({ el: content });
-    content.querySelector('#empty-cta-newlist')?.addEventListener('click', () => {
-      container.querySelector('[data-action="new-list"]')?.click();
+    // Ohne aktive Liste gibt es nichts zu benennen: der Kopf entfällt ganz,
+    // statt einen leeren Titel-Slot und drei toten Aktionen zu zeigen.
+    if (head) {
+      head.replaceChildren();
+      head.hidden = true;
+    }
+    // Geteilter Renderer (utils/empty-state.js), damit dieser Zustand dieselbe
+    // Reihenfolge und Rolle trägt wie die drei Geschwister-Tabs.
+    mountEmptyState(content, {
+      icon: 'shopping-cart',
+      title: t('shopping.noLists'),
+      description: t('shopping.noListsDescription'),
+      // Nennt die EINGEHENDE Station des Kreislaufs (der Essensplan füllt die
+      // Liste) - wie der Vorrat, dessen Hinweis auf den Einkauf zeigt. Dieser
+      // Zustand war der einzige der vier ohne Hinweis (Critique 2026-07-29).
+      hint: t('shopping.noListsHint'),
+      action: {
+        label: t('shopping.newListButton'),
+        icon: 'plus',
+        onClick: () => container.querySelector('[data-action="new-list"]')?.click(),
+      },
     });
     return;
   }
 
-  content.replaceChildren();
-  content.insertAdjacentHTML('beforeend', `
-    <!-- Liste-Header -->
-    <div class="list-header">
-      <span class="list-header__name" data-action="rename-list" data-id="${state.activeList.id}"
+  if (head) {
+    head.hidden = false;
+    head.replaceChildren();
+    // Slot-Ordnung wie in den drei Geschwister-Tabs: Titel links, Aktionen
+    // rechts. Der Titel trägt .page-toolbar__title und damit dessen
+    // nowrap + ellipsis - vorher hatte .list-header__name `overflow: hidden`
+    // ohne `white-space`, wodurch „Weekly Shop" schon bei 1440px zweizeilig
+    // brach (Critique 2026-07-29).
+    head.insertAdjacentHTML('beforeend', `
+      <span class="page-toolbar__title list-header__name" data-action="rename-list"
+            data-id="${state.activeList.id}"
             role="button" tabindex="0" aria-label="${t('shopping.renameListLabel')}">
         ${esc(state.activeList.name)}
         <i data-lucide="pencil" class="list-header__edit-icon" aria-hidden="true"></i>
       </span>
-      <div class="list-header__actions">
-        <!-- Von abgehakten Artikeln abhängige Aktionen; gefüllt von updateCheckedActions(). -->
+      <div class="page-toolbar__actions">
+        <!-- Sammel-Transfer der Liste („In den Vorrat") plus „Abgehakt löschen";
+             von abgehakten Artikeln abhängig, gefüllt von updateCheckedActions().
+             Erster Aktions-Slot, damit der Weg zur nächsten Station des
+             Kreislaufs in jedem Tab an derselben Stelle sitzt. -->
         <div class="list-header__checked" id="list-header-checked"></div>
         <button class="btn btn--ghost list-header__import-btn" data-action="import-meals"
                 aria-label="${t('shopping.importMeals')}" title="${t('shopping.importMeals')}">
@@ -178,9 +194,12 @@ function renderListContent(container) {
                 title="${t('shopping.deleteListLabel')}">
           <i data-lucide="trash" class="icon-md" aria-hidden="true"></i>
         </button>
-      </div>
-    </div>
+      </div>`);
+    if (window.lucide) window.lucide.createIcons({ el: head });
+  }
 
+  content.replaceChildren();
+  content.insertAdjacentHTML('beforeend', `
     <!-- Quick-Add -->
     <div class="quick-add">
       <form class="quick-add__form" id="quick-add-form" novalidate autocomplete="off">
@@ -200,11 +219,12 @@ function renderListContent(container) {
       </form>
     </div>
 
-    <!-- Artikel-Liste -->
-    <div class="items-list" id="items-list">
-      ${renderItems()}
-    </div>
+    <!-- Artikel-Liste; Inhalt via mountItems(), damit der Leerzustand über den
+         geteilten Renderer läuft statt als HTML-String hier drin. -->
+    <div class="items-list" id="items-list"></div>
   `);
+
+  mountItems(content.querySelector('#items-list'));
 
   if (window.lucide) window.lucide.createIcons({ el: content });
   stagger(content.querySelectorAll('.shopping-item'));
@@ -216,24 +236,37 @@ function renderListContent(container) {
   updateCheckedActions(container);
 }
 
-function renderItems() {
+/**
+ * Füllt den Artikel-Container: entweder Kategorie-Gruppen oder den
+ * Leerzustand über den geteilten Renderer.
+ *
+ * Der Leerzustand lag vorher als HTML-String in `renderItems()` und trug als
+ * einziger im Modul ein handgezeichnetes Inline-SVG statt eines Lucide-Icons -
+ * dieselbe Warenkorb-Form, nur mit eigener Strichstärke (Critique 2026-07-29).
+ */
+function mountItems(listEl) {
+  if (!listEl) return;
+
   if (!state.items.length) {
-    return `
-      <div class="empty-state">
-        <svg class="empty-state__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-          <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
-          <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
-        </svg>
-        <div class="empty-state__title">${t('shopping.emptyList')}</div>
-        <div class="empty-state__description">${t('shopping.emptyListDescription')}</div>
-        <p class="empty-state__hint">${t('emptyHint.shopping')}</p>
-        <button class="btn btn--primary empty-state__cta" id="empty-cta-shopping">
-          <i data-lucide="plus" aria-hidden="true" class="icon-md"></i>
-          ${t('shopping.emptyAction')}
-        </button>
-      </div>`;
+    mountEmptyState(listEl, {
+      icon: 'shopping-cart',
+      title: t('shopping.emptyList'),
+      description: t('shopping.emptyListDescription'),
+      hint: t('emptyHint.shopping'),
+      action: {
+        label: t('shopping.emptyAction'),
+        icon: 'plus',
+        onClick: () => document.querySelector('.page-fab')?.click(),
+      },
+    });
+    return;
   }
 
+  listEl.replaceChildren();
+  listEl.insertAdjacentHTML('beforeend', renderItems());
+}
+
+function renderItems() {
   const groups = groupItemsByCategory(state.items);
   return groups.map(([cat, items]) => `
     <div class="item-category">
@@ -280,11 +313,16 @@ function renderItem(item) {
           <div class="item-name">${esc(item.name)}${renderItemMeta(item)}</div>
           ${item.quantity ? `<div class="item-quantity">${esc(item.quantity)}</div>` : ''}
         </div>
-        <button class="item-details" data-action="item-details" data-id="${item.id}"
+        <!-- Geteilte .row-action-Grammatik aus layout.css (app-weit von sieben
+             Modulen genutzt). Einkaufen war der letzte Tab mit eigenen
+             .item-details/.item-delete-Buttons - funktional derselbe Icon-Button
+             in eigener Größe, mit eigenem Danger-Hover und eigenem Hitslop
+             (Critique 2026-07-29). -->
+        <button class="row-action" data-action="item-details" data-id="${item.id}"
                 aria-label="${t('shopping.detailsLabel', { name: esc(item.name) })}">
           <i data-lucide="pencil" class="icon-md" aria-hidden="true"></i>
         </button>
-        <button class="item-delete" data-action="delete-item" data-id="${item.id}"
+        <button class="row-action row-action--danger" data-action="delete-item" data-id="${item.id}"
                 aria-label="${t('shopping.deleteItemLabel', { name: esc(item.name) })}">
           <i data-lucide="x" class="icon-md" aria-hidden="true"></i>
         </button>
@@ -728,15 +766,13 @@ function openItemDetails(itemId, container) {
 function updateItemsList(container) {
   const listEl = container.querySelector('#items-list');
   if (listEl) {
-    listEl.replaceChildren();
-    listEl.insertAdjacentHTML('beforeend', renderItems());
+    // mountItems() verdrahtet den CTA des Leerzustands selbst; der frühere
+    // nachgelagerte #empty-cta-shopping-Listener entfällt damit.
+    mountItems(listEl);
     if (window.lucide) window.lucide.createIcons({ el: listEl });
     stagger(listEl.querySelectorAll('.shopping-item'));
     wireSwipeGestures(container);
     maybeShowSwipeHint(container);
-    listEl.querySelector('#empty-cta-shopping')?.addEventListener('click', () => {
-      document.querySelector('.page-fab')?.click();
-    });
   }
   updateCheckedActions(container);
 }
@@ -825,7 +861,7 @@ async function openPantryTransfer(container) {
       </label>
       <div class="modal-panel__footer modal-panel__footer--plain">
         <button type="button" class="btn btn--secondary" data-action="close-modal">${esc(t('common.cancel'))}</button>
-        <button type="button" class="btn btn--primary" id="pantry-transfer-confirm">${esc(t('shopping.toPantryConfirm'))}</button>
+        <button type="button" class="btn btn--primary" id="pantry-transfer-confirm">${esc(t('common.apply'))}</button>
       </div>`,
     onSave(panel) {
       // Der erste Ort ist der wahrscheinlichste Standardwert; er ist zugleich
@@ -933,7 +969,7 @@ function openMealPlanImport(container) {
         <p class="form-hint" id="shopping-import-preview" role="status" aria-live="polite"></p>
         <div class="modal-actions">
           <button type="button" class="btn btn--secondary" id="shopping-import-cancel">${t('common.cancel')}</button>
-          <button type="submit" class="btn btn--primary">${t('shopping.importMealsAction')}</button>
+          <button type="submit" class="btn btn--primary">${t('common.apply')}</button>
         </div>
       </form>`,
     onSave: (panel) => {
@@ -985,7 +1021,7 @@ function openMealPlanImport(container) {
           wireListContentEvents(container);
           closeModal();
           const count = Number(data.data.transferred) || 0;
-          window.yuvomi.showToast(count === 1 ? t('meals.transferSuccess', { count }) : t('meals.transferSuccessPlural', { count }), 'success');
+          window.yuvomi.showToast(t('meals.transferSuccess', { count }), 'success');
         } catch (err) {
           window.yuvomi.showToast(err.data?.error ?? t('common.errorGeneric'), 'danger');
         }
@@ -1072,20 +1108,26 @@ function wireTabBar(container) {
 }
 
 function wireListContentEvents(container) {
-  const content = container.querySelector('#list-content');
-  if (!content) return;
+  // Delegations-Wurzel ist der Modul-Root, nicht mehr #list-content: der Kopf
+  // (#list-head) ist seit dem Umstieg auf .page-toolbar ein Geschwister von
+  // #list-content, seine Aktionen (rename-list, import-meals,
+  // manage-categories, delete-list) liegen also außerhalb. .shopping-page ist
+  // der nächste gemeinsame Vorfahre und wird - genau wie #list-content vorher -
+  // pro render() genau einmal erzeugt, womit die Einmal-Bindung unten weiter gilt.
+  const root = container.querySelector('.shopping-page');
+  if (!root) return;
 
-  // Die Klick-Delegation an das stabile #list-content-Element nur EINMAL anhängen.
-  // renderListContent ersetzt lediglich die Kinder (replaceChildren), nicht das
-  // Element selbst — würde der Listener bei jedem switchList/rename erneut gebunden,
-  // feuerte ein Toggle-Klick mehrfach und höbe sich auf (Issue #398).
-  if (content.dataset.eventsWired) {
-    wireRenameKeydown(content);
+  // Die Klick-Delegation nur EINMAL anhängen. renderListContent ersetzt lediglich
+  // die Kinder (replaceChildren), nicht das Element selbst - würde der Listener
+  // bei jedem switchList/rename erneut gebunden, feuerte ein Toggle-Klick
+  // mehrfach und höbe sich auf (Issue #398).
+  if (root.dataset.eventsWired) {
+    wireRenameKeydown(root);
     return;
   }
-  content.dataset.eventsWired = 'true';
+  root.dataset.eventsWired = 'true';
 
-  content.addEventListener('click', async (e) => {
+  root.addEventListener('click', async (e) => {
     const target = e.target.closest('[data-action]');
     if (!target) {
       if (shouldIgnoreShoppingRowToggle(e.target)) return;
@@ -1229,16 +1271,16 @@ function wireListContentEvents(container) {
     }
   });
 
-  wireRenameKeydown(content);
+  wireRenameKeydown(root);
 }
 
 /**
- * Verdrahtet „Rename per Enter" auf dem Listen-Header. Das Element wird bei jedem
+ * Verdrahtet „Rename per Enter" auf dem Listen-Titel. Das Element wird bei jedem
  * renderListContent neu erzeugt, daher muss diese Bindung pro Render erfolgen —
- * im Gegensatz zur delegierten Klick-Bindung am stabilen #list-content (Issue #398).
+ * im Gegensatz zur delegierten Klick-Bindung an der stabilen Wurzel (Issue #398).
  */
-function wireRenameKeydown(content) {
-  content.querySelector('[data-action="rename-list"]')?.addEventListener('keydown', (e) => {
+function wireRenameKeydown(root) {
+  root.querySelector('[data-action="rename-list"]')?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') e.currentTarget.click();
   });
 }
@@ -1337,6 +1379,13 @@ export async function render(container, { user }) {
     <div class="shopping-page">
       <h1 class="sr-only">${t('shopping.title')}</h1>
       <div class="list-tabs-bar" id="list-tabs-bar"></div>
+      <!-- Kanonischer Kopf als DIREKTES Kind des Modul-Roots. Er lag früher in
+           #list-content, das selbst --page-inline-pad trägt: als .page-toolbar
+           hätte er dessen Padding ein zweites Mal addiert - genau die
+           „genau einmal pro Ahnenkette"-Bedingung aus tokens.css, an der auch
+           der 16px-Versatz im Budget-Modul hing. Draußen fluchtet er mit der
+           Listen-Chip-Leiste darüber und trägt sein Chrome full-bleed. -->
+      <div class="page-toolbar page-toolbar--in-group" id="list-head" hidden></div>
       <div id="list-content" style="flex:1;display:flex;flex-direction:column;overflow:hidden"></div>
       <button class="page-fab" id="fab-new-item" aria-label="${t('shopping.addItemLabel')}">
         <i data-lucide="plus" class="icon-xl" aria-hidden="true"></i>

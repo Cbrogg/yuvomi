@@ -20,7 +20,10 @@ import {
 } from '/components/modal.js';
 import { renderKitchenTabsBar } from '/utils/kitchen-tabs.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
-import { scheduleUndoableDelete, vibrate } from '/utils/ux.js';
+// Alias, weil dieses Modul selbst eine `emptyStateEl()`-Funktion hat, die den
+// Renderer mit den Vorrats-Texten füllt.
+import { emptyStateEl as emptyStateComponentEl, mountEmptyState } from '/utils/empty-state.js';
+import { scheduleUndoableDelete, vibrate, wireScrollFade } from '/utils/ux.js';
 import { toLocalDateKey } from '/utils/date.js';
 import { DEFAULT_CATEGORY_NAME, categoryLabel } from '/utils/shopping-categories.js';
 import { locationLabel } from '/utils/pantry-locations.js';
@@ -210,18 +213,25 @@ export async function render(container) {
   live.setAttribute('role', 'status');
   live.setAttribute('aria-live', 'polite');
 
+  // Kanonischer Kopf, Gruppen-Variante (siehe .page-toolbar--in-group in
+  // layout.css): Suche im __center-Slot, Lagerort-Verwaltung im __actions-Slot -
+  // dieselbe Slot-Ordnung wie in den drei Geschwister-Tabs.
   const toolbar = document.createElement('div');
-  toolbar.className = 'pantry-toolbar';
+  toolbar.className = 'page-toolbar page-toolbar--in-group';
   toolbar.insertAdjacentHTML('beforeend', `
-    <div class="pantry-search">
-      <input type="search" class="form-input pantry-search__input" id="pantry-search"
-             placeholder="${esc(t('pantry.searchPlaceholder'))}"
-             aria-label="${esc(t('pantry.searchPlaceholder'))}">
+    <div class="page-toolbar__center">
+      <div class="pantry-search">
+        <input type="search" class="form-input pantry-search__input" id="pantry-search"
+               placeholder="${esc(t('pantry.searchPlaceholder'))}"
+               aria-label="${esc(t('pantry.searchPlaceholder'))}">
+      </div>
     </div>
-    <button class="btn btn--ghost btn--icon pantry-toolbar__locations" data-action="manage-locations"
-            aria-label="${esc(t('pantry.manageLocations'))}" title="${esc(t('pantry.manageLocations'))}">
-      <i data-lucide="archive" class="icon-md" aria-hidden="true"></i>
-    </button>`);
+    <div class="page-toolbar__actions">
+      <button class="btn btn--ghost btn--icon" data-action="manage-locations"
+              aria-label="${esc(t('pantry.manageLocations'))}" title="${esc(t('pantry.manageLocations'))}">
+        <i data-lucide="archive" class="icon-md" aria-hidden="true"></i>
+      </button>
+    </div>`);
 
   const filters = document.createElement('div');
   filters.className = 'pantry-filters';
@@ -277,22 +287,12 @@ export async function render(container) {
 
 function renderLoadError(list, err) {
   list.removeAttribute('aria-busy');
-  list.replaceChildren();
-  const box = document.createElement('div');
-  box.className = 'empty-state';
-  box.setAttribute('role', 'alert');
-  box.insertAdjacentHTML('beforeend', `
-    <i data-lucide="triangle-alert" class="empty-state__icon" aria-hidden="true"></i>
-    <div class="empty-state__title">${esc(t('pantry.loadErrorTitle'))}</div>
-    <div class="empty-state__description">${esc(err?.data?.error ?? t('pantry.loadErrorDescription'))}</div>`);
-  const retry = document.createElement('button');
-  retry.className = 'btn btn--primary empty-state__cta';
-  retry.type = 'button';
-  retry.textContent = t('common.retry');
-  retry.addEventListener('click', () => render(_container));
-  box.appendChild(retry);
-  list.appendChild(box);
-  if (window.lucide) window.lucide.createIcons({ el: box });
+  mountEmptyState(list, {
+    variant: 'error',
+    title: t('pantry.loadErrorTitle'),
+    description: err?.data?.error ?? t('pantry.loadErrorDescription'),
+    action: { label: t('common.retry'), onClick: () => render(_container) },
+  });
 }
 
 /**
@@ -317,6 +317,19 @@ let _scrolledFilter = null;
 function renderFilters() {
   const bar = _container?.querySelector('#pantry-filters');
   if (!bar) return { wasReset: false };
+
+  // Kanten-Anriss der Chip-Leiste. Sie scrollt horizontal (gemessen 135px
+  // Überhang bei 393px, 208px bei 320px), blendet ihre Scrollbar per CSS aus
+  // und hatte damit NULL Affordanz: der vierte Filter „Fast leer" begann bei
+  // x=394 in einem 393px-Viewport und existierte für Mobilnutzer nicht
+  // (Critique 2026-07-30). wireScrollFade setzt die geteilten has-fade-*-
+  // Klassen aus filter-chip.css - dasselbe Werkzeug, das das Wochenboard und
+  // die Kontakte-Filter schon nutzen. Einmal binden; der MutationObserver
+  // deckt die replaceChildren-Rerenders darunter ab.
+  if (!bar.dataset.fadeWired) {
+    bar.dataset.fadeWired = 'true';
+    wireScrollFade(bar);
+  }
 
   const counts = pantryFilterCounts(state.items, state.todayKey);
   const active = PANTRY_FILTERS.filter((key) => counts[key] > 0);
@@ -461,56 +474,44 @@ function renderList() {
  * und der Nutzer suchte den Fehler beim Suchbegriff.
  */
 function noResultsEl() {
-  const empty = document.createElement('div');
-  empty.className = 'empty-state';
-  empty.setAttribute('role', 'status');
-
   const active = [];
   if (state.query) active.push(`„${state.query}"`);
   if (state.filter !== 'all') {
     active.push(t({ expired: 'pantry.filterExpired', soon: 'pantry.filterSoon', low: 'pantry.filterLow' }[state.filter]));
   }
 
-  empty.insertAdjacentHTML('beforeend', `
-    <i data-lucide="search" class="empty-state__icon" aria-hidden="true"></i>
-    <div class="empty-state__title">${esc(t('pantry.noResultsTitle'))}</div>
-    <div class="empty-state__description">${esc(t('pantry.noResultsDescription'))}</div>
-    ${active.length ? `<p class="empty-state__hint">${esc(active.join(' · '))}</p>` : ''}`);
-
-  const reset = document.createElement('button');
-  reset.className = 'btn btn--secondary empty-state__cta';
-  reset.type = 'button';
-  reset.textContent = t('pantry.resetFilters');
-  reset.addEventListener('click', () => {
-    state.query = '';
-    state.filter = 'all';
-    const search = _container?.querySelector('#pantry-search');
-    if (search) search.value = '';
-    renderFilters();
-    renderList();
-    search?.focus();
+  return emptyStateComponentEl({
+    variant: 'no-results',
+    title: t('pantry.noResultsTitle'),
+    description: t('pantry.noResultsDescription'),
+    hint: active.length ? active.join(' · ') : undefined,
+    action: {
+      label: t('pantry.resetFilters'),
+      onClick: () => {
+        state.query = '';
+        state.filter = 'all';
+        const search = _container?.querySelector('#pantry-search');
+        if (search) search.value = '';
+        renderFilters();
+        renderList();
+        search?.focus();
+      },
+    },
   });
-  empty.appendChild(reset);
-  return empty;
 }
 
 function emptyStateEl() {
-  const empty = document.createElement('div');
-  empty.className = 'empty-state';
-  empty.insertAdjacentHTML('beforeend', `
-    <i data-lucide="archive" class="empty-state__icon" aria-hidden="true"></i>
-    <div class="empty-state__title">${esc(t('pantry.emptyTitle'))}</div>
-    <div class="empty-state__description">${esc(t('pantry.emptyDescription'))}</div>
-    <p class="empty-state__hint">${esc(t('emptyHint.pantry'))}</p>`);
-
-  const cta = document.createElement('button');
-  cta.className = 'btn btn--primary empty-state__cta';
-  cta.type = 'button';
-  cta.insertAdjacentHTML('afterbegin', '<i data-lucide="plus" aria-hidden="true" class="icon-md"></i>');
-  cta.append(document.createTextNode(t('pantry.emptyAction')));
-  cta.addEventListener('click', () => openItemModal('create'));
-  empty.appendChild(cta);
-  return empty;
+  return emptyStateComponentEl({
+    icon: 'archive',
+    title: t('pantry.emptyTitle'),
+    description: t('pantry.emptyDescription'),
+    hint: t('emptyHint.pantry'),
+    action: {
+      label: t('pantry.emptyAction'),
+      icon: 'plus',
+      onClick: () => openItemModal('create'),
+    },
+  });
 }
 
 /** Eine Vorratszeile. */
@@ -726,7 +727,43 @@ function adjustQuantity(item, direction, row) {
     }
   }, QUANTITY_DEBOUNCE_MS);
 
-  pendingQuantity.set(item.id, { timer, rollback, seq });
+  // `flush` schickt den gedebouncten Wert sofort ab, wenn die Seite verschwindet.
+  pendingQuantity.set(item.id, {
+    timer,
+    rollback,
+    seq,
+    flush: () => {
+      clearTimeout(timer);
+      pendingQuantity.delete(item.id);
+      // keepalive: der Request muss den Seitenwechsel überleben. Ohne ihn
+      // bricht der Browser ihn mit dem Dokument ab.
+      api.patch(`/pantry/${item.id}`, { quantity: item.quantity }, { keepalive: true })
+        .catch(() => { /* Die Seite ist weg; ein Toast hätte kein Ziel mehr. */ });
+    },
+  });
+  bindQuantityFlush();
+}
+
+let _quantityFlushBound = false;
+
+/**
+ * Offene Mengenänderungen beim Verschwinden der Seite noch abschicken.
+ *
+ * Der Stepper schreibt 450ms gedebounced. Genau in diesem Fenster ist der
+ * typische Ablauf: am Vorratsschrank stehen, „+" tippen, Telefon sperren. Der
+ * Timer feuerte dann nie, die UI hatte den neuen Wert aber schon optimistisch
+ * gezeigt - beim nächsten Öffnen stand der alte Bestand da, ohne jede Meldung.
+ *
+ * Dasselbe Muster wie `bindDeleteFlush` in utils/ux.js (Audit F-13): einmal
+ * global gebunden, `pagehide` deckt Tab-Schließen, Reload und den
+ * App-Wechsel auf iOS ab.
+ */
+function bindQuantityFlush() {
+  if (_quantityFlushBound) return;
+  _quantityFlushBound = true;
+  window.addEventListener('pagehide', () => {
+    for (const entry of [...pendingQuantity.values()]) entry.flush?.();
+  });
 }
 
 /** Sagt eine Bestandsänderung über die eine geteilte Live-Region der Seite an. */
@@ -818,8 +855,14 @@ async function sendToShopping(items) {
       window.yuvomi?.showToast(t('pantry.toShoppingNone'), 'info');
       return;
     }
+    // Zwei vollständige Sätze, mit Leerzeichen verbunden. Vorher stand ein
+    // Interpunkt dazwischen: das ergab einen zusammengesetzten Satz, der in
+    // Sprachen mit anderer Satzstellung bricht, und ein Screenreader liest das
+    // Zeichen mit (Critique 2026-07-29). Ein einziger Key mit beiden Zahlen
+    // wäre die Alternative - der müsste dann aber zwei Plurale in einem String
+    // beugen, was Intl.PluralRules nicht kann.
     const message = skipped
-      ? `${t('pantry.toShoppingDone', { count: added })} · ${t('pantry.toShoppingSkipped', { count: skipped })}`
+      ? `${t('pantry.toShoppingDone', { count: added })} ${t('pantry.toShoppingSkipped', { count: skipped })}`
       : t('pantry.toShoppingDone', { count: added });
     window.yuvomi?.showToast(message, 'success');
   } catch (err) {

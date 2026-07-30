@@ -1488,10 +1488,90 @@ test('mobile bottom navigation avoids clipped Android labels and sparse icon spa
   assert.match(labelRule, /line-height:\s*1\.2/);
 });
 
+/**
+ * Verborgene Reveal-Aktionen bleiben nicht klickbar.
+ *
+ * Ein Element, das im Ruhezustand `opacity: 0` trägt und per :hover/:focus-within
+ * eingeblendet wird, ist ohne `pointer-events: none` ein volles Trefferziel, das
+ * niemand sieht. Gefunden wurde das Muster in der Küchen-Critique vom
+ * 2026-07-30 (18 unsichtbare 146x40-Bänder im Wochenboard); der Guard zeigte,
+ * dass es repo-weit auftrat - unter anderem an einem unsichtbaren
+ * Löschen-Button in Notizen.
+ *
+ * Bewusste Ausnahmen: Textbeschriftungen, die INNERHALB eines sichtbaren,
+ * klickbaren Elternteils ausblenden. Sie erzeugen kein eigenes Trefferziel, der
+ * Elternteil bleibt das Ziel.
+ */
+test('verborgene Reveal-Aktionen bleiben nicht klickbar', () => {
+  const ALLOW = new Set(['nav-item__label', 'nav-section-label']);
+  const findings = [];
+
+  for (const file of readdirSync(new URL('../public/styles/', import.meta.url))) {
+    if (!file.endsWith('.css')) continue;
+    const rules = cssRules(read(`../public/styles/${file}`));
+
+    // Klassen, die im Ruhezustand unsichtbar sind (Keyframe-Schritte ausgenommen).
+    const hidden = new Map();
+    for (const { selectors, body } of rules) {
+      if (selectors.some((s) => /^(from|to|\d+%)$/.test(s))) continue;
+      if (!/(^|[\s;])opacity:\s*0\s*;/.test(body)) continue;
+      const guarded = /pointer-events/.test(body);
+      for (const selector of selectors) {
+        // Nur die RECHTESTE Klasse: sie benennt das Element, das versteckt wird.
+        // Vorfahren im Selektor (`html.sidebar-collapsed .nav-sidebar .x`) sind
+        // selbst nicht unsichtbar und dürfen nicht mitgezählt werden.
+        const classes = [...selector.matchAll(/\.([a-zA-Z0-9_-]+)/g)].map((m) => m[1]);
+        const subject = classes[classes.length - 1];
+        if (subject && !hidden.has(subject)) hidden.set(subject, guarded);
+      }
+    }
+
+    // Wer davon wird per Hover/Fokus eingeblendet?
+    for (const { selectors, body } of rules) {
+      if (!selectors.some((s) => /:hover|:focus-within/.test(s))) continue;
+      if (!/opacity:\s*1/.test(body)) continue;
+      for (const selector of selectors) {
+        const classes = [...selector.matchAll(/\.([a-zA-Z0-9_-]+)/g)].map((m) => m[1]);
+        const cls = classes[classes.length - 1];
+        if (!cls || !hidden.has(cls) || hidden.get(cls) || ALLOW.has(cls)) continue;
+        hidden.delete(cls);
+        findings.push(`${file} .${cls}`);
+      }
+    }
+  }
+
+  assert.deepEqual(findings, [], `opacity:0 ohne pointer-events:none in Reveal-Regeln:\n${findings.join('\n')}`);
+});
+
+/**
+ * Die Küche baut Leerzustände nur über den geteilten Renderer.
+ *
+ * `utils/empty-state.js` erzwingt Reihenfolge (Icon, Titel, Beschreibung,
+ * Hinweis, CTA) und die ARIA-Rolle je Variante. Solange Seiten das Markup
+ * daneben von Hand zusammensetzen, driften die Zustände wieder auseinander -
+ * genau das war der Ausgangsbefund (drei Grammatiken, drei vertikale Achsen).
+ *
+ * Absichtlich auf die Küche begrenzt: die übrigen 15 Seiten bauen ihre
+ * Leerzustände noch von Hand (152 Fundstellen, Stand 2026-07-30). Das ist ein
+ * bekannter Rückstand, kein Regressionsrisiko - dieser Guard hält fest, was
+ * bereits migriert ist.
+ */
+test('die Küchen-Seiten bauen Leerzustände nur über den geteilten Renderer', () => {
+  for (const page of ['meals', 'recipes', 'shopping', 'pantry']) {
+    const src = read(`../public/pages/${page}.js`);
+    const handRolled = [...src.matchAll(/class="empty-state|className\s*=\s*['"]empty-state/g)];
+    assert.equal(handRolled.length, 0,
+      `${page}.js baut .empty-state-Markup von Hand (${handRolled.length}x) statt emptyStateEl()/mountEmptyState() zu rufen`);
+    assert.match(src, /\b(mountEmptyState|emptyStateEl)\b/,
+      `${page}.js ruft den geteilten Leerzustands-Renderer nicht auf`);
+  }
+});
+
 test('phase 3 high-frequency controls use tokenized touch targets', () => {
   const tasks = read('../public/styles/tasks.css');
   const shopping = read('../public/styles/shopping.css');
   const notes = read('../public/styles/notes.css');
+  const layout = read('../public/styles/layout.css');
 
   assert.match(tasks, /\.task-status-btn::before[\s\S]*var\(--target-base\)/);
   assert.match(tasks, /\.task-bulk-checkbox[\s\S]*(?:min-width|width):\s*var\(--target-base\)/);
@@ -1499,9 +1579,19 @@ test('phase 3 high-frequency controls use tokenized touch targets', () => {
   assert.match(tasks, /\.task-card__inline-action[\s\S]*height:\s*var\(--target-base\)/);
   assert.match(tasks, /\.bulk-actions-bar__actions \.btn[\s\S]*min-height:\s*var\(--target-base\)/);
   assert.match(shopping, /\.item-check[\s\S]*(?:min-width|width):\s*var\(--target-base\)/);
-  assert.match(shopping, /\.item-delete[\s\S]*width:\s*var\(--target-base\)/);
-  assert.match(shopping, /\.item-delete[\s\S]*height:\s*var\(--target-base\)/);
   assert.match(shopping, /\.shopping-item[\s\S]*min-height:\s*var\(--target-base\)/);
+  // Die beiden Zeilenaktionen der Einkaufsliste trugen bis zum Audit
+  // 2026-07-29 eigene .item-details/.item-delete-Regeln mit --target-base.
+  // Sie nutzen jetzt die geteilte .row-action-Komponente aus layout.css, die
+  // mit --target-lg (48px) über der alten Größe liegt - die Invariante
+  // („tokenisierte Trefferfläche, nicht kleiner als --target-base") gilt
+  // dadurch strenger, aber an einer anderen Stelle. Deshalb hier auf die
+  // Komponente geprüft statt auf die entfallenen Modul-Klassen.
+  const shoppingPage = read('../public/pages/shopping.js');
+  assert.match(shoppingPage, /class="row-action"\s+data-action="item-details"/);
+  assert.match(shoppingPage, /class="row-action row-action--danger"\s+data-action="delete-item"/);
+  assert.match(layout, /\.row-action\s*\{[\s\S]*?width:\s*var\(--target-lg\)/);
+  assert.match(layout, /\.row-action\s*\{[\s\S]*?height:\s*var\(--target-lg\)/);
   assert.match(notes, /\.note-card__pin[\s\S]*width:\s*var\(--target-base\)/);
   assert.match(notes, /\.note-card__delete[\s\S]*width:\s*var\(--target-base\)/);
 });
