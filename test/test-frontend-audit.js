@@ -2161,10 +2161,15 @@ test('die beiden Küchen-Editoren sind derselbe Dialog', () => {
  */
 test('die Touch-Zielgröße folgt DESIGN.md statt einer dritten Zahl', () => {
   const tokens = read('../public/styles/tokens.css');
-  const design = read('../DESIGN.md');
 
-  assert.match(design, /48px \(mobile\) or 40px \(desktop\) minimum/,
-    'DESIGN.md ist die Quelle der Untergrenze - ändert sie sich, muss dieser Guard mitziehen');
+  // Die Quelle der Untergrenze ist DESIGN.md: „size touch targets at 48px (mobile)
+  // or 40px (desktop) minimum. The --target-lg and --target-md tokens encode this -
+  // never go below them on interactive elements."
+  //
+  // Der Satz wird hier ZITIERT und nicht gelesen: DESIGN.md steht in .gitignore
+  // (Zeile 44), liegt also nur lokal und fehlt in der CI. Ein Guard, der eine
+  // ignorierte Datei liest, ist lokal grün und im Build rot - genau so ist dieser
+  // Test beim Release v1.59.0 aufgefallen.
   assert.match(tokens, /--target-base:\s*44px/, 'auf Zeigergeräten bleibt es bei 44px (über der 40er-Grenze)');
   assert.match(tokens, /@media \(hover: none\)\s*\{\s*:root\s*\{\s*--target-base:\s*var\(--target-lg\)/,
     'auf Fingergeräten muss --target-base die 48px aus DESIGN.md erreichen');
