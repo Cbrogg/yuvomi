@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Add Malaysian Ringgit (MYR) throughout household preferences, subscriptions and split expenses, together with a Malaysia region preset.
+
 ## [1.57.0] - 2026-07-29
 
 ### Added

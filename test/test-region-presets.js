@@ -107,6 +107,16 @@ test('numberLocaleFor yields a region tag that drives Intl number grouping (#521
   );
 });
 
+test('Malaysia preset formats MYR amounts with the local currency symbol', () => {
+  const locale = numberLocaleFor({ region: 'ms-MY', ...REGION_PRESETS['ms-MY'] });
+  const formatted = new Intl.NumberFormat(locale, { style: 'currency', currency: 'MYR' })
+    .format(1234.56);
+
+  assert.equal(locale, 'ms-MY');
+  assert.ok(formatted.includes('RM'));
+  assert.ok(formatted.includes('1,234.56'));
+});
+
 test('numberLocaleFor derives the tag even without a stored region, and empties for custom', () => {
   // Region nicht gesetzt, aber Formate entsprechen einem Preset → abgeleiteter Tag.
   assert.equal(numberLocaleFor({ ...REGION_PRESETS['de-CH'] }), 'de-CH');

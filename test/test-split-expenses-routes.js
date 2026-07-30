@@ -271,6 +271,7 @@ test('GET /meta liefert Enum-Listen + Default-Währung', async () => {
   const r = await call('GET', '/meta', { actor: { id: OWNER, role: 'member' } });
   assert.equal(r.status, 200);
   assert.ok(Array.isArray(r.body.data.currencies) && r.body.data.currencies.includes('EUR'));
+  assert.ok(r.body.data.currencies.includes('MYR'));
   assert.ok(r.body.data.split_methods.includes('equal'));
   assert.ok(r.body.data.frequencies.includes('monthly'));
   assert.equal(typeof r.body.data.default_currency, 'string');

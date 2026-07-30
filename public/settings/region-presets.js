@@ -39,6 +39,7 @@ export const REGION_PRESETS = {
   'ar-SA': { currency: 'SAR', date_format: 'dmy_slash', time_format: '12h' },
   'ko-KR': { currency: 'KRW', date_format: 'ymd', time_format: '12h' },
   'id-ID': { currency: 'IDR', date_format: 'dmy', time_format: '24h' },
+  'ms-MY': { currency: 'MYR', date_format: 'dmy_slash', time_format: '12h' },
   'fa-IR': { currency: 'IRR', date_format: 'ymd', time_format: '24h' },
 };
 
