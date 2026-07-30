@@ -288,6 +288,10 @@
   border-radius: var(--radius-sm);
   color: var(--color-text-tertiary);
   opacity: 0;
+  /* Unsichtbar heisst auch unklickbar: ohne pointer-events bleibt hier ein
+   * volles Trefferziel stehen, das niemand sieht (Guard
+   * `verborgene Reveal-Aktionen bleiben nicht klickbar`, test-frontend-audit.js). */
+  pointer-events: none;
   transition: opacity var(--transition-fast), color var(--transition-fast), background-color var(--transition-fast);
 }
 
@@ -299,6 +303,7 @@
 .documents-folder-item:hover .documents-folder-item__menu,
 .documents-folder-item:focus-within .documents-folder-item__menu {
   opacity: 1;
+  pointer-events: auto;
 }
 
 .documents-folder-item__menu:hover {
@@ -311,6 +316,7 @@
 @media (hover: none) {
   .documents-folder-item__menu {
     opacity: 1;
+  pointer-events: auto;
   }
 
   .documents-folder-browser__add,
@@ -683,8 +689,8 @@
 .document-dropzone:focus-within {
   border-color: var(--module-accent);
   border-style: solid;
-  outline: 2px solid var(--module-accent);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .document-dropzone--active {
@@ -999,8 +1005,8 @@
 }
 
 .document-viewer__pdf-pages:focus-visible {
-  outline: 2px solid var(--module-accent);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
 }
 
 /* Sichtbarer Seitenindikator ("n von total"), klebt beim Scrollen oben am Modal-Body.
@@ -1270,6 +1276,10 @@
   display: grid;
   place-items: center;
   opacity: 0;
+  /* Unsichtbar heisst auch unklickbar: ohne pointer-events bleibt hier ein
+   * volles Trefferziel stehen, das niemand sieht (Guard
+   * `verborgene Reveal-Aktionen bleiben nicht klickbar`, test-frontend-audit.js). */
+  pointer-events: none;
   color: var(--color-surface);
   background: color-mix(in srgb, var(--color-text-primary) 52%, transparent);
   transition: opacity var(--transition-fast);
@@ -1285,12 +1295,13 @@
 .dms-result__media--action:not(:disabled):hover .dms-result__open,
 .dms-result__media--action:not(:disabled):focus-visible .dms-result__open {
   opacity: 1;
+  pointer-events: auto;
 }
 
 .dms-result__media--link:focus-visible,
 .dms-result__media--action:focus-visible {
-  outline: 2px solid var(--color-focus-ring, var(--module-accent));
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
 }
 
 @media (prefers-reduced-motion: reduce) {

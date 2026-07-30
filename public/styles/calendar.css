@@ -31,7 +31,7 @@
 .calendar-page {
   display: flex;
   flex-direction: column;
-  height: calc(100dvh - var(--safe-area-inset-top) - var(--nav-bottom-height) - var(--safe-area-inset-bottom));
+  height: 100%;
   /* Full-bleed-Root (Issue #577): Content-Spalte über --page-inline-pad auf den
    * direkten Kindern. Das frühere Seiten-Padding (space-6/space-8 ab 1024px,
    * space-10 ab 1440px) ist entfallen: es setzte den sticky Kopf 24px vom
@@ -56,7 +56,7 @@
   }
 
   .calendar-page {
-    height: 100dvh;
+    height: 100%;
   }
 
   .week-view__day-header {
@@ -232,8 +232,8 @@
  * Fokusring im Modul-Akzent. outline-offset negativ, weil overflow:hidden einen
  * außenliegenden Ring clippen würde; z-index hebt ihn über die Nachbar-Borders. */
 .month-day:focus-visible {
-  outline: 2px solid var(--module-accent, var(--color-accent));
-  outline-offset: -2px;
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset-inset);
   background-color: var(--glass-bg-card-hover);
   position: relative;
   z-index: 1;
@@ -880,8 +880,8 @@
 }
 
 .agenda-event:focus-visible {
-  outline: 2px solid var(--module-accent, var(--color-accent));
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
 }
 
 /* Kalenderfarbe als Dot statt vollhohem Seitenstreifen — konsistent mit den
@@ -1362,8 +1362,8 @@
 .cal-task-chip:hover,
 .cal-task-chip:focus-visible {
   filter: brightness(0.9);
-  outline: 2px solid var(--color-accent);
-  outline-offset: 1px;
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .cal-task-chip span {

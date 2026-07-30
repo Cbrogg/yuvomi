@@ -8,9 +8,12 @@
   --sub-tabs-height: var(--kitchen-tabs-height);
   /* Einziger Modul-Akzent-Träger der Küche: die geteilte Tabs-Leiste trägt den
    * 3px-Streifen (in --active-module-accent, wechselt je aktivem Tab). Die
-   * einzelnen Tab-Seiten (week-nav / list-tabs-bar / recipes) tragen ihn NICHT
-   * mehr — so haben alle drei Tabs exakt eine Kopf-Grammatik (box-sizing:
-   * border-box aus sub-tabs.css hält die 56px-Höhe stabil). */
+   * vier Tab-Seiten tragen ihn NICHT mehr: sie nutzen seit dem Umbau vom
+   * 2026-07-29 alle den kanonischen Kopf in der Variante
+   * `.page-toolbar--in-group` (layout.css), die genau deshalb existiert - ein
+   * regulärer .page-toolbar hätte hier einen zweiten Streifen in derselben
+   * Farbe gesetzt (Issue #577). box-sizing: border-box aus sub-tabs.css hält
+   * die 56px-Höhe stabil. */
   border-top: 3px solid var(--active-module-accent, var(--color-accent));
 }
 
@@ -31,30 +34,30 @@
     display: none;
   }
 
-  /* padding-inline auf --space-0h: die letzten 2-10px, die dem längsten Label
-   * („Mahlzeiten", 72px) auf 393px noch fehlten, nachdem der Modultitel weg
-   * war. 4 Tabs × 2 × 2px = 16px - genug, dass auf jeder der vier Routen alle
-   * vier Labels ungekürzt stehen. Die Pill bleibt über --target-base hoch und
-   * über flex: 1 1 0 breit genug zum Treffen. */
+  /* NATÜRLICHE BREITE, kein Gleichverteilen - die Leiste scrollt lieber, als ein
+   * Label zu kürzen.
+   *
+   * Hier stand `flex: 1 1 0` mit `min-width: 0` plus Ellipse am Label: alle vier
+   * Tabs gleich breit, und wer nicht passt, wird gekürzt. Das ging auf, solange die
+   * Tabs nur Labels trugen (gemessen: 4 × 89px bei 393px, „Mahlzeiten" brauchte
+   * 72px und bekam sie knapp). Mit den Zustandszahlen kostete jeder Badge 20-22px
+   * aus derselben Zelle - bei 393px war „Mahlzeiten" wieder gekürzt (61 von 72),
+   * bei 320px drei von vier Labels.
+   *
+   * Die Rechnung ohne Gleichverteilung: 72 + 55 + 66 + 41 Label + 42 Badge + 16
+   * Polster + 6 Gap = 298px. Das passt in 320px, und Deutsch ist die längste
+   * Locale. Wo es doch nicht passt (längere Übersetzung, größere Systemschrift),
+   * scrollt die Leiste - sie ist `overflow-x: auto`, trägt die geteilten
+   * has-fade-Masken und holt den aktiven Tab per scrollActiveIntoView() ins Bild.
+   *
+   * Das folgt derselben Regel, mit der eine Zeile weiter unten das ICON weicht und
+   * nicht das Wort: ein gekürztes „Mahlz…" kostet mehr Orientierung als ein Tab, für
+   * den man wischen muss. */
   .kitchen-tabs-bar .sub-tab {
-    flex: 1 1 0;
-    min-width: 0;
+    flex: 0 0 auto;
     justify-content: center;
     gap: var(--space-0h);
     padding-inline: var(--space-0h);
-  }
-
-  .kitchen-tabs-bar .sub-tab__label {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  /* Der aktive Tab trägt die Wo-bin-ich-Information und behält deshalb
-   * seine natürliche Breite; nur inaktive Nachbarn ellipsieren bei Platznot
-   * (Audit A1-09). */
-  .kitchen-tabs-bar .sub-tab--active {
-    flex: 0 0 auto;
   }
 
   /* Mobil weicht das Icon, nicht das Label. Vier Tabs teilen sich auf 393px
@@ -78,26 +81,24 @@
  * der äußere .app-content-Scrollcontainer läuft über → beim Scrollen wandert
  * die gesamte Seite (z.B. week-nav + Tages-Header) statt nur des inneren
  * Scrollbereichs. .meals-page und .recipes-page teilen dieselbe Basisformel. */
+/* Die vier Küchen-Seiten füllen den Platz UNTER der Tab-Leiste.
+ *
+ * Vorher rechneten diese beiden Blöcke die Viewport-Höhe nach
+ * (`100dvh - safe-top - nav - safe-bottom - tabs`), und zwar in zwei leicht
+ * verschiedenen Fassungen - der Einkauf ließ --safe-area-inset-top aus. Eine
+ * nachgerechnete Höhe kennt nur, was zum Zeitpunkt des Schreibens unter der
+ * Seite lag: die FAB-Zone (--fab-safe-zone) kam später dazu und fehlte in
+ * beiden, weshalb die Seiten aus der verkürzten .app-content herausliefen und
+ * sie selbst scrollbar machten.
+ *
+ * `100%` liest den Platz, statt ihn zu erraten - die Kette .app-content →
+ * .page-transition → Seite reicht ihn durch. Jede künftige Änderung an der
+ * Shell wirkt damit automatisch hier. */
 .has-kitchen-tabs .meals-page,
 .has-kitchen-tabs .recipes-page,
+.has-kitchen-tabs .shopping-page,
 .has-kitchen-tabs .pantry-page {
-  height: calc(
-    100dvh
-    - var(--safe-area-inset-top)
-    - var(--nav-bottom-height)
-    - var(--safe-area-inset-bottom)
-    - var(--kitchen-tabs-height)
-  );
-}
-
-/* Einkauf: Viewport-Höhe um Tab-Leiste reduzieren (Mobile) */
-.has-kitchen-tabs .shopping-page {
-  height: calc(
-    100dvh
-    - var(--nav-bottom-height)
-    - var(--safe-area-inset-bottom)
-    - var(--kitchen-tabs-height)
-  );
+  height: calc(100% - var(--kitchen-tabs-height));
 }
 
 /* Mahlzeiten + Rezepte + Einkauf: Viewport-Höhe (Desktop) */
@@ -106,6 +107,6 @@
   .has-kitchen-tabs .recipes-page,
   .has-kitchen-tabs .shopping-page,
   .has-kitchen-tabs .pantry-page {
-    height: calc(100dvh - var(--kitchen-tabs-height));
+    height: calc(100% - var(--kitchen-tabs-height));
   }
 }

@@ -626,8 +626,8 @@
 /* Tastatur-Fokus zusätzlich mit Inset-Ring markieren (Audit F-16): die reine
  * Flächenfarbe unterscheidet Fokus nicht von Hover/aria-selected. */
 .subscriptions-combobox__options button:focus-visible {
-  outline: 2px solid var(--module-accent);
-  outline-offset: -2px;
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset-inset);
 }
 
 .subscriptions-enabled-row > div {
