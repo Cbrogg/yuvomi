@@ -8,11 +8,12 @@ import { api } from '/api.js';
 import { stagger, vibrate, scheduleUndoableDelete } from '/utils/ux.js';
 import { t } from '/i18n.js';
 import { esc } from '/utils/html.js';
-import { promptModal, openModal, closeModal, confirmModal } from '/components/modal.js';
+import { promptModal, openModal, closeModal, confirmModal, reportFieldError } from '/components/modal.js';
 import { DEFAULT_CATEGORY_NAME, categoryLabel } from '/utils/shopping-categories.js';
 import { addLocalDays, toLocalDateKey } from '/utils/date.js';
-import { renderKitchenTabsBar } from '/utils/kitchen-tabs.js';
+import { renderKitchenTabsBar, refreshKitchenBadges } from '/utils/kitchen-tabs.js';
 import { mountEmptyState } from '/utils/empty-state.js';
+import { popoverMenuHtml, installPopoverMenus } from '/utils/popover-menu.js';
 import '/components/category-manager.js';
 
 // --------------------------------------------------------
@@ -175,25 +176,48 @@ function renderListContent(container) {
         <i data-lucide="pencil" class="list-header__edit-icon" aria-hidden="true"></i>
       </span>
       <div class="page-toolbar__actions">
-        <!-- Sammel-Transfer der Liste („In den Vorrat") plus „Abgehakt löschen";
-             von abgehakten Artikeln abhängig, gefüllt von updateCheckedActions().
-             Erster Aktions-Slot, damit der Weg zur nächsten Station des
-             Kreislaufs in jedem Tab an derselben Stelle sitzt. -->
-        <div class="list-header__checked" id="list-header-checked"></div>
-        <button class="btn btn--ghost list-header__import-btn" data-action="import-meals"
-                aria-label="${t('shopping.importMeals')}" title="${t('shopping.importMeals')}">
-          <i data-lucide="utensils" class="icon-md" aria-hidden="true"></i>
-          <span>${t('shopping.importMeals')}</span>
-        </button>
-        <button class="btn btn--ghost btn--icon" data-action="manage-categories"
-                aria-label="${t('shopping.manageCategories')}" title="${t('shopping.manageCategories')}">
-          <i data-lucide="tags" class="icon-md" aria-hidden="true"></i>
-        </button>
-        <button class="btn btn--ghost btn--icon" data-action="delete-list"
-                data-id="${state.activeList.id}" aria-label="${t('shopping.deleteListLabel')}"
-                title="${t('shopping.deleteListLabel')}">
-          <i data-lucide="trash" class="icon-md" aria-hidden="true"></i>
-        </button>
+        <!-- Der Kopf trägt NUR NOCH die drei dauerhaften Aktionen.
+             „In den Vorrat" und „Abgehakt löschen" standen hier und kosteten mobil
+             zwei zusätzliche Kopfzeilen: der Titel füllte die erste Zeile allein
+             (er wächst, und die Aktionsgruppe brach wegen ihrer
+             max-content-Breite um), darunter brachen die beiden Labels
+             (140px + 197px gegen 361px) noch einmal. Kopfhöhe 173px bei 393px,
+             229px bei 320px. Sie sitzen jetzt in der geteilten
+             .kitchen-bulkbar über der Liste - derselben Leiste, in der der Vorrat
+             seine Sammelaktion trägt (Critique 2026-07-30, P1). -->
+        <!-- Die drei dauerhaften Aktionen zweimal im DOM: einmal als Leiste (ab
+             768px), einmal als Menü-Einträge (darunter). CSS entscheidet, welche
+             Fassung Platz hat; display:none nimmt die andere auch aus der
+             Tabfolge. Das ist im Repo das etablierte Muster für responsives
+             Chrome, und beide Fassungen tragen dieselben data-action-Werte -
+             der delegierte Handler unterscheidet sie gar nicht. -->
+        <div class="list-header__inline-actions">
+          <button class="btn btn--ghost list-header__import-btn" data-action="import-meals"
+                  aria-label="${t('shopping.importMeals')}" title="${t('shopping.importMeals')}">
+            <i data-lucide="utensils" class="icon-md" aria-hidden="true"></i>
+            <span>${t('shopping.importMeals')}</span>
+          </button>
+          <button class="btn btn--ghost btn--icon" data-action="manage-categories"
+                  aria-label="${t('shopping.manageCategories')}" title="${t('shopping.manageCategories')}">
+            <i data-lucide="tags" class="icon-md" aria-hidden="true"></i>
+          </button>
+          <button class="btn btn--ghost btn--icon" data-action="delete-list"
+                  data-id="${state.activeList.id}" aria-label="${t('shopping.deleteListLabel')}"
+                  title="${t('shopping.deleteListLabel')}">
+            <i data-lucide="trash" class="icon-md" aria-hidden="true"></i>
+          </button>
+        </div>
+        <div class="list-header__more">
+          ${popoverMenuHtml({
+            id: 'list-head-menu',
+            label: t('common.moreActions'),
+            items: [
+              { action: 'import-meals', label: t('shopping.importMeals'), icon: 'utensils' },
+              { action: 'manage-categories', label: t('shopping.manageCategories'), icon: 'tags' },
+              { action: 'delete-list', label: t('shopping.deleteListLabel'), icon: 'trash', id: state.activeList.id, danger: true },
+            ],
+          })}
+        </div>
       </div>`);
     if (window.lucide) window.lucide.createIcons({ el: head });
   }
@@ -219,9 +243,16 @@ function renderListContent(container) {
       </form>
     </div>
 
+    <!-- Sammelaktions-Leiste, ÜBER dem Scroller und als GESCHWISTER der Liste.
+         Nicht darin: updateCheckedActions() läuft beim Abhaken einzelner Artikel,
+         ohne die Liste neu zu bauen (Issue #276, Scroll-Position), und mountItems()
+         leert #items-list komplett. Als Kind der Liste würde eines das andere
+         überschreiben. -->
+    <div class="kitchen-bulkbar" id="list-header-checked" hidden></div>
+
     <!-- Artikel-Liste; Inhalt via mountItems(), damit der Leerzustand über den
          geteilten Renderer läuft statt als HTML-String hier drin. -->
-    <div class="items-list" id="items-list"></div>
+    <div class="kitchen-list items-list" id="items-list"></div>
   `);
 
   mountItems(content.querySelector('#items-list'));
@@ -230,6 +261,7 @@ function renderListContent(container) {
   stagger(content.querySelectorAll('.shopping-item'));
   wireAutocomplete(container);
   wireQuickAdd(container);
+  syncQuickAddDisclosure(container, false);
   maybeShowSwipeHint(container);
   // Der Kopf rendert den Container leer; erst hier stehen die abgehakten
   // Artikel fest, aus denen die Aktionen entstehen.
@@ -268,13 +300,20 @@ function mountItems(listEl) {
 
 function renderItems() {
   const groups = groupItemsByCategory(state.items);
+  // Geteilte Gruppen-Grammatik (styles/kitchen-row.css): .kitchen-group ordnet,
+  // .kitchen-rows trägt die weiße Fläche und die Trennlinien. Die Zeilen selbst
+  // sind flächenlos - vorher war Einkaufen eine Trennlinien-Liste und der Vorrat
+  // eine Kartenliste, dieselbe Sache in zwei Paradigmen (Critique 2026-07-30).
   return groups.map(([cat, items]) => `
-    <div class="item-category">
-      <div class="item-category__header">
-        <i data-lucide="${catIcon(cat)}" class="item-category__icon" aria-hidden="true"></i>
+    <div class="kitchen-group item-category">
+      <div class="kitchen-group__title">
+        <i data-lucide="${catIcon(cat)}" class="icon-sm" aria-hidden="true"></i>
         ${esc(categoryLabel(cat))}
+        <span class="kitchen-group__count">${items.length}</span>
       </div>
-      ${items.map(renderItem).join('')}
+      <div class="kitchen-rows">
+        ${items.map(renderItem).join('')}
+      </div>
     </div>`).join('');
 }
 
@@ -302,30 +341,31 @@ function renderItem(item) {
         <i data-lucide="trash-2" class="icon-xl" aria-hidden="true"></i>
         <span>${t('shopping.swipeDelete')}</span>
       </div>
-      <div class="shopping-item ${isDone ? 'shopping-item--checked' : ''}"
+      <div class="kitchen-row shopping-item ${isDone ? 'shopping-item--checked' : ''}"
            data-item-id="${item.id}">
         <button class="item-check ${isDone ? 'item-check--checked' : ''}"
                 data-action="toggle-item" data-id="${item.id}" data-checked="${item.is_checked}"
                 aria-label="${isDone ? t('shopping.markUndoneLabel', { name: esc(item.name) }) : t('shopping.markDoneLabel', { name: esc(item.name) })}">
           <i data-lucide="check" class="item-check__icon" aria-hidden="true"></i>
         </button>
-        <div class="item-body">
-          <div class="item-name">${esc(item.name)}${renderItemMeta(item)}</div>
-          ${item.quantity ? `<div class="item-quantity">${esc(item.quantity)}</div>` : ''}
+        <div class="kitchen-row__main">
+          <div class="kitchen-row__name">${esc(item.name)}${renderItemMeta(item)}</div>
+          ${item.quantity ? `<div class="kitchen-row__meta">${esc(item.quantity)}</div>` : ''}
         </div>
         <!-- Geteilte .row-action-Grammatik aus layout.css (app-weit von sieben
-             Modulen genutzt). Einkaufen war der letzte Tab mit eigenen
-             .item-details/.item-delete-Buttons - funktional derselbe Icon-Button
-             in eigener Größe, mit eigenem Danger-Hover und eigenem Hitslop
-             (Critique 2026-07-29). -->
-        <button class="row-action" data-action="item-details" data-id="${item.id}"
-                aria-label="${t('shopping.detailsLabel', { name: esc(item.name) })}">
-          <i data-lucide="pencil" class="icon-md" aria-hidden="true"></i>
-        </button>
-        <button class="row-action row-action--danger" data-action="delete-item" data-id="${item.id}"
-                aria-label="${t('shopping.deleteItemLabel', { name: esc(item.name) })}">
-          <i data-lucide="x" class="icon-md" aria-hidden="true"></i>
-        </button>
+             Modulen genutzt), gruppiert in der geteilten .kitchen-row__actions -
+             vorher hingen die zwei Buttons als direkte Flex-Kinder in der Zeile,
+             wodurch die Bedienzone in jedem Tab anders zusammengesetzt war. -->
+        <div class="kitchen-row__actions">
+          <button class="row-action" data-action="item-details" data-id="${item.id}"
+                  aria-label="${t('shopping.detailsLabel', { name: esc(item.name) })}">
+            <i data-lucide="pencil" class="icon-md" aria-hidden="true"></i>
+          </button>
+          <button class="row-action row-action--danger" data-action="delete-item" data-id="${item.id}"
+                  aria-label="${t('shopping.deleteItemLabel', { name: esc(item.name) })}">
+            <i data-lucide="x" class="icon-md" aria-hidden="true"></i>
+          </button>
+        </div>
       </div>
     </div>`;
 }
@@ -434,9 +474,69 @@ function _flashAddBtn(btn) {
   }, 700);
 }
 
+// --------------------------------------------------------
+// Quick-Add als Disclosure (nur Touch)
+// --------------------------------------------------------
+
+/**
+ * Auf Touch ist das Quick-Add eingeklappt und der FAB öffnet es.
+ *
+ * WARUM: Der Einkauf trug mobil 439 von 852px Chrome, bevor ein Artikel sichtbar
+ * war (52%; bei 320px 495 von 720 = 69%). Das zweizeilige Quick-Add ist davon
+ * 126px - und es ist der einzige Tab, dessen FAB kein Formular öffnet, sondern
+ * nur ein bereits sichtbares Feld fokussiert. Ein Griff löst beides: der FAB tut
+ * dasselbe wie in Mahlzeiten, Rezepten und Vorrat, und die Liste beginnt weiter
+ * oben (Critique 2026-07-30, P1).
+ *
+ * KEIN BOTTOM-SHEET, obwohl der FAB unten sitzt und die Tastatur unten aufgeht:
+ * das Feld bleibt an seinem Platz über der Liste, wird nur enthüllt und
+ * eingescrollt. Ein Sheet wäre die schönere Geste und ein zweiter Overlay-Typ mit
+ * eigenem Focus-Trap - „Modal als erster Gedanke" ist in diesem Projekt ein
+ * ausdrücklich verbotenes Muster, und die Eingabe gehört sichtbar zur Liste, in
+ * die sie schreibt.
+ *
+ * Der Zustand hängt an `.shopping-page--adding` (siehe shopping.css) statt an
+ * einem `hidden` am Formular: das Kriterium ist die Zeigerfähigkeit, und die
+ * kennt nur CSS. JS setzt die Absicht, CSS entscheidet, ob sie überhaupt eine
+ * Wirkung hat - auf Desktop ist die Klasse ein No-op.
+ *
+ * @param {Element} container
+ * @param {boolean} open
+ */
+function syncQuickAddDisclosure(container, open) {
+  const page = container.querySelector('.shopping-page');
+  const fab = container.querySelector('#fab-new-item');
+  if (!page || !fab) return;
+
+  const collapsible = window.matchMedia('(hover: none)').matches && Boolean(state.activeList);
+  page.classList.toggle('shopping-page--adding', collapsible && open);
+
+  // `aria-expanded` NUR wo der Knopf tatsächlich etwas aufklappt. Auf Desktop
+  // fokussiert er ein sichtbares Feld; ein „eingeklappt" zu melden, was gar nicht
+  // eingeklappt ist, wäre eine Falschaussage an den Screenreader.
+  if (collapsible) {
+    fab.setAttribute('aria-expanded', String(open));
+    fab.setAttribute('aria-controls', 'quick-add-form');
+  } else {
+    fab.removeAttribute('aria-expanded');
+    fab.removeAttribute('aria-controls');
+  }
+}
+
 function wireQuickAdd(container) {
   const form = container.querySelector('#quick-add-form');
   if (!form) return;
+
+  // Esc klappt zu und gibt den Fokus an den FAB zurück - dieselbe Zusage wie im
+  // Modal, wo Esc schließt und den Auslöser wieder fokussiert.
+  form.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    const page = container.querySelector('.shopping-page');
+    if (!page?.classList.contains('shopping-page--adding')) return;
+    e.stopPropagation();
+    syncQuickAddDisclosure(container, false);
+    container.querySelector('#fab-new-item')?.focus();
+  });
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -677,26 +777,60 @@ function updateItemRow(container, item) {
 }
 
 /**
- * Aktualisiert nur die Detail-Indikatoren (Link/Notiz) einer Zeile, ohne das
- * .shopping-item-Element zu ersetzen — so bleiben die Swipe-Gesten-Closures
- * (die die Karte einmalig referenzieren) intakt.
+ * Aktualisiert Name, Menge und die Detail-Indikatoren (Link/Notiz) einer Zeile,
+ * ohne das .shopping-item-Element zu ersetzen — so bleiben die
+ * Swipe-Gesten-Closures (die die Karte einmalig referenzieren) intakt.
+ *
+ * Deckte vorher nur die Indikatoren ab: Name und Menge waren im Dialog gar nicht
+ * änderbar (Critique 2026-07-30, P2). Seit sie es sind, muss die Zeile beide
+ * mitziehen - und die Menge kann von „vorhanden" auf „leer" wechseln, also muss
+ * das Meta-Element auch verschwinden können.
  */
-function refreshItemMeta(container, item) {
+function refreshItemName(container, item) {
   const card = container.querySelector(`.shopping-item[data-item-id="${item.id}"]`);
-  const nameEl = card?.querySelector('.item-name');
+  const nameEl = card?.querySelector('.kitchen-row__name');
   if (!nameEl) return;
-  nameEl.querySelector('.item-meta')?.remove();
+
+  nameEl.replaceChildren(document.createTextNode(item.name));
   const metaHtml = renderItemMeta(item);
   if (metaHtml) {
     nameEl.insertAdjacentHTML('beforeend', metaHtml);
     if (window.lucide) window.lucide.createIcons({ el: nameEl });
   }
+
+  const main = card.querySelector('.kitchen-row__main');
+  const qtyEl = main?.querySelector('.kitchen-row__meta');
+  if (item.quantity) {
+    if (qtyEl) {
+      qtyEl.textContent = item.quantity;
+    } else {
+      main?.insertAdjacentHTML('beforeend', `<div class="kitchen-row__meta">${esc(item.quantity)}</div>`);
+    }
+  } else {
+    qtyEl?.remove();
+  }
 }
 
 /**
- * Detail-Drawer (Progressive Disclosure): bearbeitet die optionalen Rich-Felder
- * URL + Notiz eines Artikels. Der Quick-Add bleibt bewusst schlank; alles
- * Weiterführende lebt hier. Speichern per PATCH, danach nur die Zeile auffrischen.
+ * Artikel bearbeiten.
+ *
+ * WAS HIER FALSCH WAR (Critique 2026-07-30, P2): dieser Dialog und das
+ * strukturgleiche Vorrats-Modal sind dieselbe Handlung - „diesen Eintrag ändern" -
+ * und waren zwei verschiedene Dinge. Der Vorrat: Titel „Artikel bearbeiten", acht
+ * Felder, Löschen / Abbrechen / Speichern. Der Einkauf: der DATENWERT als Titel
+ * („Cherry tomatoes"), zwei Felder (Link, Notiz), Schließen und Speichern - KEIN
+ * Abbrechen, und Name und Menge waren gar nicht änderbar. Wer einen Tippfehler im
+ * Artikelnamen hatte, musste die Zeile löschen und neu anlegen.
+ *
+ * Jetzt: derselbe Titel aus demselben Key, Name / Menge / Kategorie editierbar,
+ * Abbrechen neben Speichern. Die Rich-Felder (Link, Notiz) bleiben, wo sie waren -
+ * sie sind der Grund, aus dem der Dialog existiert, und der Quick-Add bleibt
+ * bewusst schlank.
+ *
+ * KEIN LÖSCHEN im Dialog, anders als im Vorrat: die Einkaufszeile trägt es selbst
+ * (× auf Zeigergeräten, Wischen auf Touch), und beide Wege haben Undo. Ein dritter
+ * Weg an einer Stelle, an der man gerade einen Namen tippt, wäre eine
+ * Fehlerquelle, kein Gewinn.
  */
 function openItemDetails(itemId, container) {
   const item = state.items.find((i) => i.id === itemId);
@@ -712,10 +846,28 @@ function openItemDetails(itemId, container) {
   };
 
   openModal({
-    title: item.name,
+    title: t('common.editItem'),
     size: 'md',
     content: `
       <form id="item-details-form" class="item-details-form" novalidate autocomplete="off">
+        <div class="form-group">
+          <label class="form-label" for="item-details-name">${t('common.nameLabel')}</label>
+          <input class="form-input" type="text" id="item-details-name" required
+                 value="${esc(item.name)}">
+        </div>
+        <div class="pantry-form-row">
+          <div class="form-group">
+            <label class="form-label" for="item-details-qty">${t('shopping.itemQtyLabel')}</label>
+            <input class="form-input" type="text" id="item-details-qty"
+                   placeholder="${t('shopping.itemQtyPlaceholder')}" value="${esc(item.quantity || '')}">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="item-details-cat">${t('shopping.categoryLabel')}</label>
+            <select class="form-input" id="item-details-cat">
+              ${state.categories.map((c) => `<option value="${esc(c.name)}" ${c.name === item.category ? 'selected' : ''}>${esc(categoryLabel(c.name))}</option>`).join('')}
+            </select>
+          </div>
+        </div>
         <div class="form-group">
           <label class="form-label" for="item-details-url">${t('shopping.urlLabel')}</label>
           <input class="form-input" type="url" id="item-details-url" inputmode="url"
@@ -728,14 +880,20 @@ function openItemDetails(itemId, container) {
                     placeholder="${t('shopping.notesPlaceholder')}">${esc(item.notes || '')}</textarea>
         </div>
         <div class="modal-actions">
+          <button type="button" class="btn btn--secondary" id="item-details-cancel">${t('common.cancel')}</button>
           <button type="submit" class="btn btn--primary">${t('common.save')}</button>
         </div>
       </form>`,
     onSave: (panel) => {
       const form    = panel.querySelector('#item-details-form');
+      const nameEl  = panel.querySelector('#item-details-name');
+      const qtyEl   = panel.querySelector('#item-details-qty');
+      const catEl   = panel.querySelector('#item-details-cat');
       const urlEl   = panel.querySelector('#item-details-url');
       const notesEl = panel.querySelector('#item-details-notes');
       const preview = panel.querySelector('#item-details-link');
+
+      panel.querySelector('#item-details-cancel')?.addEventListener('click', () => closeModal());
 
       urlEl?.addEventListener('input', () => {
         preview.replaceChildren();
@@ -748,13 +906,33 @@ function openItemDetails(itemId, container) {
 
       form?.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const notes = notesEl.value.trim() || null;
-        const url   = urlEl.value.trim() || null;
+        const name = nameEl.value.trim();
+        if (!name) {
+          reportFieldError(nameEl, t('common.nameRequired'));
+          return;
+        }
+        const payload = {
+          name,
+          quantity: qtyEl.value.trim() || null,
+          category: catEl.value,
+          notes: notesEl.value.trim() || null,
+          url: urlEl.value.trim() || null,
+        };
         try {
-          const data = await api.patch(`/shopping/items/${item.id}`, { notes, url });
+          const data = await api.patch(`/shopping/items/${item.id}`, payload);
+          const categoryChanged = data.data.category !== item.category;
           Object.assign(item, data.data);
-          refreshItemMeta(container, item);
           closeModal();
+          // Ein Kategoriewechsel verschiebt die Zeile in eine andere Gruppe - das
+          // kann keine Zeilen-Auffrischung leisten, dafür muss die Liste neu
+          // gruppiert werden. Sonst genügt der schonende Weg, der die
+          // Swipe-Closures und die Scroll-Position erhält (Issue #276).
+          if (categoryChanged) {
+            updateItemsList(container);
+          } else {
+            updateItemRow(container, item);
+            refreshItemName(container, item);
+          }
         } catch (err) {
           window.yuvomi.showToast(err.data?.error ?? t('common.errorGeneric'), 'danger');
         }
@@ -855,7 +1033,13 @@ async function openPantryTransfer(container) {
         </select>
       </div>
       <ul class="pantry-transfer__list">${rows}</ul>
-      <label class="pantry-transfer__clear">
+      <!-- Geteiltes .form-check (layout.css): 20px-Box in Modul-Akzent, Label mit
+           eigener Trefferflaeche. Das war die folgenreichste Checkbox des Moduls -
+           sie loescht die eingekauften Artikel von der Liste, ist standardmaessig
+           aktiv, und war als nackte System-Checkbox in System-Groesse die
+           unauffaelligste (Critique 2026-07-30, P2). Der Default bleibt aktiv: wer
+           eingekauft und eingeraeumt hat, will nicht doppelt kaufen. -->
+      <label class="form-check pantry-transfer__clear">
         <input type="checkbox" id="pantry-transfer-clear" checked>
         <span>${esc(t('shopping.toPantryClearList'))}</span>
       </label>
@@ -899,10 +1083,22 @@ async function openPantryTransfer(container) {
           }
 
           closeModal({ force: true });
+          // Der Vorrat ist ein einziges Ziel, der Toast nennt ihn also schon. Was er
+          // NICHT nennt, ist der Lagerort - und der ist die Wahl, die der Nutzer im
+          // Dialog gerade getroffen hat.
+          const locationName = locationId
+            ? (locations.find((l) => String(l.id) === String(locationId))?.name ?? '')
+            : '';
           window.yuvomi.showToast(
-            stored ? t('shopping.toPantryDone', { count: stored }) : t('shopping.toPantryNothing'),
+            stored
+              ? (locationName
+                ? t('shopping.toPantryDoneAt', { count: stored, location: locationLabel(locationName) })
+                : t('shopping.toPantryDone', { count: stored }))
+              : t('shopping.toPantryNothing'),
             stored ? 'success' : 'info'
           );
+          // Der Vorrats-Tab zeigt jetzt eine andere Zahl.
+          refreshKitchenBadges();
         } catch (err) {
           btn.disabled = false;
           window.yuvomi.showToast(err.data?.error ?? t('common.errorGeneric'), 'danger');
@@ -913,10 +1109,20 @@ async function openPantryTransfer(container) {
 }
 
 /**
- * Baut die Aktionen neu auf, die an abgehakten Artikeln hängen. Reihenfolge:
- * erst „In den Vorrat", dann „Erledigte löschen" — ein erledigter Einkauf endet
- * im Regal, nicht im Papierkorb, und die Übernahme räumt die Liste auf Wunsch
- * gleich mit ab. Bei null abgehakten Artikeln bleibt der Container leer.
+ * Baut die Sammelaktions-Leiste neu auf, die an abgehakten Artikeln hängt.
+ * Reihenfolge: erst „In den Vorrat", dann „Erledigte löschen" — ein erledigter
+ * Einkauf endet im Regal, nicht im Papierkorb, und die Übernahme räumt die Liste
+ * auf Wunsch gleich mit ab.
+ *
+ * Die Leiste trägt eine erklärende Zeile („3 Artikel abgehakt.") - genau der Teil,
+ * der im Kopf fehlte: dort standen zwei Buttons, ohne dass irgendwo stand, auf
+ * welche Teilmenge sie wirken. Der Vorrat hatte diese Zeile schon, und der
+ * Critique nannte sie als das, was funktioniert.
+ *
+ * `hidden` statt eines leeren Containers: die Leiste hat eine Fläche, einen Rahmen
+ * und Polsterung - leer wäre sie ein sichtbarer 42px-Streifen über der Liste. Die
+ * [hidden]-Durchsetzung für `.kitchen-bulkbar` steht in layout.css, weil
+ * `display: flex` das UA-`[hidden]` sonst schlägt.
  */
 function updateCheckedActions(container) {
   const wrap = container.querySelector('#list-header-checked');
@@ -924,18 +1130,28 @@ function updateCheckedActions(container) {
 
   const checkedCount = state.items.filter((i) => i.is_checked).length;
   wrap.replaceChildren();
+  wrap.hidden = !checkedCount;
   if (!checkedCount) return;
 
   const pantryEnabled = !window.yuvomi?.isModuleDisabled?.('pantry');
   wrap.insertAdjacentHTML('beforeend', `
+    <span class="kitchen-bulkbar__label">${esc(t('shopping.checkedHint', { count: checkedCount }))}</span>
     ${pantryEnabled ? `
-      <button class="btn btn--ghost list-header__pantry-btn" data-action="to-pantry">
-        <i data-lucide="archive" class="icon-md" aria-hidden="true"></i>
-        <span class="list-header__clear-label">${esc(t('shopping.toPantry'))}</span>
+      <button class="btn btn--secondary kitchen-bulkbar__action" data-action="to-pantry">
+        <i data-lucide="archive" class="icon-sm" aria-hidden="true"></i>
+        <span>${esc(t('shopping.toPantry'))}</span>
       </button>` : ''}
-    <button class="btn btn--ghost list-header__clear-btn" data-action="clear-checked">
-      <i data-lucide="trash-2" class="icon-md" aria-hidden="true"></i>
-      <span class="list-header__clear-label">${esc(t('shopping.clearChecked', { count: checkedCount }))}</span>
+    <!-- Nur das Verb, nicht „Abgehakt löschen": die Zeile darüber nennt den Bezug
+         („3 Artikel abgehakt."), und bei 320px sind 262px Innenbreite gemessen -
+         mit 134px für „In den Vorrat" und 169px für das lange Label brach die
+         Leiste in eine dritte Zeile (159px hoch). Mit dem Verb allein sind es
+         253px und die Leiste bleibt auf allen Breiten zweizeilig. Die Aktion ist
+         zudem rückholbar (scheduleUndoableDelete), das Löschen der ganzen Liste
+         sitzt woanders (Überlaufmenü) und hat einen Bestätigungsdialog. -->
+    <button class="btn btn--ghost kitchen-bulkbar__action" data-action="clear-checked"
+            aria-label="${esc(t('shopping.clearChecked', { count: checkedCount }))}">
+      <i data-lucide="trash-2" class="icon-sm" aria-hidden="true"></i>
+      <span>${esc(t('common.delete'))}</span>
     </button>`);
   if (window.lucide) window.lucide.createIcons({ el: wrap });
 }
@@ -969,7 +1185,12 @@ function openMealPlanImport(container) {
         <p class="form-hint" id="shopping-import-preview" role="status" aria-live="polite"></p>
         <div class="modal-actions">
           <button type="button" class="btn btn--secondary" id="shopping-import-cancel">${t('common.cancel')}</button>
-          <button type="submit" class="btn btn--primary">${t('common.apply')}</button>
+          <!-- Startet deaktiviert und wird von updatePreview() freigeschaltet, sobald
+               der Zeitraum Zutaten enthaelt. Die Schwesteraktion „Plan zufaellig
+               fuellen" macht das seit dem Audit korrekt; hier blieb „Uebernehmen"
+               bei 0 Treffern klickbar und quittierte mit einem Info-Toast, dass
+               nichts passiert ist (Critique 2026-07-30, P2). -->
+          <button type="submit" class="btn btn--primary" id="shopping-import-submit" disabled>${t('common.apply')}</button>
         </div>
       </form>`,
     onSave: (panel) => {
@@ -980,6 +1201,7 @@ function openMealPlanImport(container) {
       // Vorschau vor dem Import (Audit A1-22): dieselbe Route rechnet mit
       // preview:true nur, statt zu schreiben - der Dialog sagt, was passiert.
       const previewEl = panel.querySelector('#shopping-import-preview');
+      const submitBtn = panel.querySelector('#shopping-import-submit');
       async function updatePreview() {
         const from = panel.querySelector('#shopping-import-from')?.value || '';
         const to = panel.querySelector('#shopping-import-to')?.value || '';
@@ -997,8 +1219,13 @@ function openMealPlanImport(container) {
               mealsText: t('shopping.importMealsPreviewMeals', { count: meals }),
             })
             : t('shopping.importMealsEmpty');
+          submitBtn.disabled = !transferred;
         } catch {
           previewEl.textContent = '';
+          // Vorschau fehlgeschlagen: nicht sperren. Der Nutzer soll es versuchen
+          // duerfen, statt an einem toten Knopf zu haengen, weil eine
+          // Nebenanfrage scheiterte.
+          submitBtn.disabled = false;
         }
       }
       updatePreview();
@@ -1121,6 +1348,10 @@ function wireListContentEvents(container) {
   // die Kinder (replaceChildren), nicht das Element selbst - würde der Listener
   // bei jedem switchList/rename erneut gebunden, feuerte ein Toggle-Klick
   // mehrfach und höbe sich auf (Issue #398).
+  // Positionierung und Schließen des Kopf-Überlaufmenüs. Idempotent, hängt an
+  // derselben stabilen Wurzel wie die Klick-Delegation.
+  installPopoverMenus(root);
+
   if (root.dataset.eventsWired) {
     wireRenameKeydown(root);
     return;
@@ -1239,35 +1470,67 @@ function wireListContentEvents(container) {
     }
 
     // ---- Liste löschen ----
-    // Container-Löschung (ganze Liste inkl. aller Artikel) bestätigt per Dialog
-    // statt nur Undo-Toast (Audit F-12): die Reibung folgt der Schwere — der
-    // 5s-Undo-Toast bleibt das Muster für Einzel-Artikel.
+    //
+    // Der Sicherheitsgradient war invertiert (Critique 2026-07-30, P2): ein
+    // einzelner Artikel hatte Undo und keine Rückfrage, die ganze Liste des
+    // Haushalts hatte eine Rückfrage und kein Undo - und die Rückfrage nannte nicht
+    // einmal, wie viel sie vernichtet („Liste \"Weekly Shop\" und alle Artikel
+    // löschen?" - wie viele?).
+    //
+    // Jetzt BEIDES, und in dieser Reihenfolge: die Rückfrage nennt die Artikelzahl,
+    // danach läuft der Commit über dieselbe 5s-Rücknahme wie jede andere Löschung im
+    // Modul. Redundant ist das nicht - eine Rückfrage schützt vor dem Fehlgriff, ein
+    // Undo vor dem falschen Entschluss, und hier hängen die Artikel eines ganzen
+    // Haushalts dran.
     if (action === 'delete-list') {
       const deletedListId = state.activeListId;
+      const snapshot = {
+        list: state.activeList ? { ...state.activeList } : null,
+        listEntry: state.lists.find((l) => l.id === deletedListId),
+        items: state.items.map((i) => ({ ...i })),
+        index: state.lists.findIndex((l) => l.id === deletedListId),
+      };
+      // Bei 0 Artikeln eine eigene Fassung: „und 0 Artikel löschen?" ist zwar
+      // richtig, liest sich aber wie ein Fehler.
       const confirmed = await confirmModal(
-        t('shopping.deleteListConfirm', { name: state.activeList?.name ?? '' }),
+        state.items.length
+          ? t('shopping.deleteListConfirm', { name: state.activeList?.name ?? '', count: state.items.length })
+          : t('shopping.deleteListConfirmEmpty', { name: state.activeList?.name ?? '' }),
         { danger: true, confirmLabel: t('common.delete') },
       );
       if (!confirmed) return;
 
-      try {
-        await api.delete(`/shopping/${deletedListId}`);
-        window.yuvomi.showToast(t('shopping.deletedListToast'), 'default');
-        await loadLists();
-        state.activeListId = state.lists[0]?.id ?? null;
-        if (state.activeListId) {
-          await switchList(state.activeListId, container);
-        } else {
-          state.items      = [];
-          state.activeList = null;
+      // Optimistisch aus der Leiste nehmen und auf die Nachbarliste wechseln.
+      state.lists = state.lists.filter((l) => l.id !== deletedListId);
+      state.activeListId = state.lists[0]?.id ?? null;
+      if (state.activeListId) {
+        await switchList(state.activeListId, container);
+      } else {
+        state.items = [];
+        state.activeList = null;
+        renderTabs(container);
+        renderListContent(container);
+        wireListContentEvents(container);
+      }
+
+      scheduleUndoableDelete({
+        message: t('shopping.deletedListToast'),
+        commit: ({ keepalive }) => api.delete(`/shopping/${deletedListId}`, { keepalive }),
+        restore: async (err) => {
+          // Der Server hat nichts gelöscht (der Commit war aufgeschoben) - die Liste
+          // muss also nur zurück in den State und an ihren alten Platz in der Leiste.
+          if (snapshot.listEntry) {
+            state.lists.splice(Math.max(0, snapshot.index), 0, snapshot.listEntry);
+          }
+          state.activeListId = deletedListId;
+          state.activeList = snapshot.list;
+          state.items = snapshot.items;
           renderTabs(container);
           renderListContent(container);
-        }
-      } catch (err) {
-        window.yuvomi.showToast(err.data?.error ?? t('common.unknownError'), 'danger');
-        await loadLists();
-        renderTabs(container);
-      }
+          wireListContentEvents(container);
+          if (err) window.yuvomi.showToast(err.data?.error ?? t('common.unknownError'), 'danger');
+        },
+      });
     }
   });
 
@@ -1377,7 +1640,7 @@ export async function render(container, { user }) {
   container.replaceChildren();
   container.insertAdjacentHTML('beforeend', `
     <div class="shopping-page">
-      <h1 class="sr-only">${t('shopping.title')}</h1>
+      <h1 class="sr-only">${t('nav.shopping')}</h1>
       <div class="list-tabs-bar" id="list-tabs-bar"></div>
       <!-- Kanonischer Kopf als DIREKTES Kind des Modul-Roots. Er lag früher in
            #list-content, das selbst --page-inline-pad trägt: als .page-toolbar
@@ -1399,19 +1662,28 @@ export async function render(container, { user }) {
   renderListContent(container);
   wireListContentEvents(container);
 
-  container.querySelector('#fab-new-item')?.addEventListener('click', () => {
+  container.querySelector('#fab-new-item')?.addEventListener('click', (e) => {
     const input = container.querySelector('#item-name-input');
-    if (input) {
-      // FAB = Erstell-Flow (wie Meals/Recipes): die Quick-Add-Fläche sichtbar
-      // aktivieren — Scroll + Fokus + kurzer Puls als „hier entsteht das Neue".
-      input.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      input.focus();
-      input.classList.add('quick-add__input--flash');
-      input.addEventListener('animationend', () => input.classList.remove('quick-add__input--flash'), { once: true });
-    } else {
+    if (!input) {
       // Keine Liste aktiv → neue Liste erstellen
       container.querySelector('[data-action="new-list"]')?.click();
+      return;
     }
+
+    // Auf Touch ist das Quick-Add eingeklappt: der FAB schaltet es um, statt nur
+    // ein sichtbares Feld zu fokussieren (siehe syncQuickAddDisclosure).
+    if (e.currentTarget.getAttribute('aria-expanded') === 'true') {
+      syncQuickAddDisclosure(container, false);
+      return;
+    }
+    syncQuickAddDisclosure(container, true);
+
+    // FAB = Erstell-Flow (wie Meals/Recipes): die Quick-Add-Fläche sichtbar
+    // aktivieren — Scroll + Fokus + kurzer Puls als „hier entsteht das Neue".
+    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    input.focus();
+    input.classList.add('quick-add__input--flash');
+    input.addEventListener('animationend', () => input.classList.remove('quick-add__input--flash'), { once: true });
   });
 
   // Deep-Link: ?highlight=<id> scrollt zum Artikel

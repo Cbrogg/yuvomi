@@ -34,30 +34,30 @@
     display: none;
   }
 
-  /* padding-inline auf --space-0h: die letzten 2-10px, die dem längsten Label
-   * („Mahlzeiten", 72px) auf 393px noch fehlten, nachdem der Modultitel weg
-   * war. 4 Tabs × 2 × 2px = 16px - genug, dass auf jeder der vier Routen alle
-   * vier Labels ungekürzt stehen. Die Pill bleibt über --target-base hoch und
-   * über flex: 1 1 0 breit genug zum Treffen. */
+  /* NATÜRLICHE BREITE, kein Gleichverteilen - die Leiste scrollt lieber, als ein
+   * Label zu kürzen.
+   *
+   * Hier stand `flex: 1 1 0` mit `min-width: 0` plus Ellipse am Label: alle vier
+   * Tabs gleich breit, und wer nicht passt, wird gekürzt. Das ging auf, solange die
+   * Tabs nur Labels trugen (gemessen: 4 × 89px bei 393px, „Mahlzeiten" brauchte
+   * 72px und bekam sie knapp). Mit den Zustandszahlen kostete jeder Badge 20-22px
+   * aus derselben Zelle - bei 393px war „Mahlzeiten" wieder gekürzt (61 von 72),
+   * bei 320px drei von vier Labels.
+   *
+   * Die Rechnung ohne Gleichverteilung: 72 + 55 + 66 + 41 Label + 42 Badge + 16
+   * Polster + 6 Gap = 298px. Das passt in 320px, und Deutsch ist die längste
+   * Locale. Wo es doch nicht passt (längere Übersetzung, größere Systemschrift),
+   * scrollt die Leiste - sie ist `overflow-x: auto`, trägt die geteilten
+   * has-fade-Masken und holt den aktiven Tab per scrollActiveIntoView() ins Bild.
+   *
+   * Das folgt derselben Regel, mit der eine Zeile weiter unten das ICON weicht und
+   * nicht das Wort: ein gekürztes „Mahlz…" kostet mehr Orientierung als ein Tab, für
+   * den man wischen muss. */
   .kitchen-tabs-bar .sub-tab {
-    flex: 1 1 0;
-    min-width: 0;
+    flex: 0 0 auto;
     justify-content: center;
     gap: var(--space-0h);
     padding-inline: var(--space-0h);
-  }
-
-  .kitchen-tabs-bar .sub-tab__label {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  /* Der aktive Tab trägt die Wo-bin-ich-Information und behält deshalb
-   * seine natürliche Breite; nur inaktive Nachbarn ellipsieren bei Platznot
-   * (Audit A1-09). */
-  .kitchen-tabs-bar .sub-tab--active {
-    flex: 0 0 auto;
   }
 
   /* Mobil weicht das Icon, nicht das Label. Vier Tabs teilen sich auf 393px

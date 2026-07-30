@@ -88,6 +88,29 @@
   --color-surface-2:      var(--neutral-50);
   --_color-surface-3:     var(--_neutral-150);
   --color-surface-3:      var(--_color-surface-3);
+  /* OFFEN, BEWUSST NICHT GEÄNDERT (Stand 2026-07-30, Entscheidung des Betreibers):
+   * die Kanten der BEDIENELEMENTE erreichen den von WCAG 1.4.11 geforderten
+   * 3:1-Kontrast nicht. Selbst gemessen auf /shopping und /pantry, beide Themes:
+   *
+   *   Eingabefelder (.form-input, .quick-add__*, .pantry-search__input)
+   *                        #E8E7E2 auf #F5F4F1 = 1.13:1   dark #4A4A46 auf #1A1A18 = 1.96:1
+   *   Checkbox (.item-check::before)  1.24:1                dark 1.75:1
+   *   Stepper (.pantry-stepper__btn)  1.24:1                dark 1.75:1
+   *   Filter-Chip                     3.89:1 (hell, OK)     dark 1.11:1
+   *   Listen-Chip (.list-tab)         2.84:1                dark 1.15:1
+   *
+   * Für 3:1 müsste --color-border auf etwa #8A8A86 (hell) bzw. #666660 (dunkel).
+   *
+   * NICHT betroffen sind die Karten- und Gruppenkanten (.kitchen-rows 1.06:1 hell /
+   * 1.53:1 dunkel): 1.4.11 verlangt 3:1 für „visuelle Information, die
+   * BEDIENELEMENTE identifiziert", nicht für dekorative Gruppierung. Der Critique
+   * zählte 28 Werte unter 3:1 und warf beides zusammen - die tatsächliche
+   * Verstoßmenge sind die fünf Zeilen oben.
+   *
+   * Der saubere Weg wäre ein eigenes --color-border-control mit 3:1, das NUR
+   * interaktive Kanten benutzen; --color-border global anzuheben würde jede
+   * Kartenkante und jede Trennlinie der App mithärten. Der TEXT-Kontrast ist
+   * übrigens ohne einen einzigen Verstoß (niedrigster Wert 4.57 hell). */
   --color-border:         var(--neutral-200);
   --color-border-subtle:  var(--neutral-150);
   --color-border-strong:  var(--neutral-300);  /* kräftigere Trennlinie (Hover, betonte Rahmen) */
@@ -319,6 +342,28 @@
   --_meal-snack-light:     #FFECE3;
   --meal-snack-light:      var(--_meal-snack-light);
 
+  /* GEPRÜFT UND BEWUSST SO GELASSEN (2026-07-30). Drei der vier Mahlzeit-Farben
+   * sind byte-gleich mit einem semantischen oder strukturellen Token:
+   *
+   *   --meal-breakfast  #A15C0A  ==  --color-warning   („läuft ab", „fast leer")
+   *   --meal-dinner     #6c3aed  ==  --color-accent    (App-Akzent)
+   *   --meal-snack      #C2410C  ==  --module-meals/--module-kitchen
+   *                                  (aktiver Tab, FAB, jeder Primär-CTA)
+   *
+   * Der Critique 2026-07-30 nennt das eine Semantik-Kollision: derselbe Amber heißt
+   * im Essensplan „Frühstück" und im Vorrat „läuft ab".
+   *
+   * Warum trotzdem nichts geändert wurde: die Farbe erscheint ausschließlich als
+   * 8px-Punkt in `.meal-slot__type-label` bzw. `.week-gutter-label`, und dort steht
+   * IMMER das ausgeschriebene Wort daneben (`.meal-slot__type-text`). Sie ist
+   * Scanhilfe, nie alleiniger Bedeutungsträger - anders als das Vorrats-Badge, wo
+   * derselbe Ton tatsächlich die Aussage trägt. Vier Markenfarben umzufärben ist
+   * eine Design-System-Entscheidung, kein Feinschliff, und die Zeitmetapher
+   * (Morgen-Amber, Mittag-Grün, Abend-Violett) ginge dabei verloren.
+   *
+   * Wer sie doch auflöst, braucht vier Töne, die untereinander UND gegen
+   * warning/danger/accent unterscheidbar sind - auch bei Rot-Grün-Schwäche. */
+
   /* --------------------------------------------------------
    * 6. Farben - Prioritäten
    * -------------------------------------------------------- */
@@ -474,7 +519,26 @@
   --target-sm: 32px;    /* Visuelle Größe (z.B. Logos) — kein Touch-Target */
   --target-md: 40px;    /* Desktop Touch-Target (Maus) */
   --target-lg: 48px;    /* Mobile Touch-Target (Finger) */
-  --target-base: 44px;  /* iOS-Minimum Touch-Target (44pt) */
+  /* Die Standardgröße für Bedienelemente, die nicht selbst zwischen md und lg
+   * unterscheiden. 111 Fundstellen in 18 Modulen.
+   *
+   * WARUM SIE AUF TOUCH AUF 48px WÄCHST: DESIGN.md §„Do" fordert „48px (mobile) oder
+   * 40px (desktop) minimum" und nennt dafür genau zwei Token, --target-lg und
+   * --target-md. Ein festes 44px stand damit auf Touch 4px UNTER dem eigenen
+   * dokumentierten Minimum - und zwar an sechs der meistbenutzten Bedienelemente der
+   * Küche (.sub-tab, .item-check, das Mengenfeld, der Quick-Add-Knopf, der
+   * Stepper-Knopf, „Woche zufällig füllen"). Der Critique vom 2026-07-30 nannte das
+   * so: „Eine der beiden Zahlen ist falsch."
+   *
+   * Falsch war die 44 - aber nur auf Touch. Auf Zeigergeräten liegt sie mit 44px
+   * ÜBER der 40px-Untergrenze und ist dort keine Verletzung; sie zurückzunehmen
+   * würde 111 Bedienelemente ohne Not verkleinern. Deshalb kein neuer Wert, sondern
+   * ein Wert, der die Zeigerfähigkeit kennt: Desktop bleibt exakt wie bisher,
+   * Touch erfüllt das Minimum. Blast-Radius auf Desktop: null.
+   *
+   * Die 44pt aus der iOS-HIG bleiben als Untergrenze richtig - sie sind ein
+   * Minimum, kein Ziel, und DESIGN.md setzt für Finger ein höheres. */
+  --target-base: 44px;
 
   /* --------------------------------------------------------
    * 11b2. Icon-Größen
@@ -582,19 +646,22 @@
    * Position tatsächlich bestimmen. Wer den FAB verschiebt, verschiebt den
    * Freiraum automatisch mit.
    *
-   * Deckt NUR das Listenende ab. Ein fixierter FAB liegt naturgemäß auch
-   * mitten in der Liste über rechtsbündigen Zeilenaktionen; das ist eine
-   * Layout-Frage der Zeile, kein Freiraum-Problem. */
+   * Deckt NUR das Listenende ab. Mitten in einer scrollenden Liste liegt ein
+   * fixierter FAB über der Zeile, die zufällig unter ihm steht - das löst kein
+   * Freiraum-Token, sondern utils/fab-scroll.js: der FAB fährt beim
+   * Abwärtsscrollen weg und kommt beim Hochscrollen, am Listenanfang und am
+   * Listenende zurück. Genau an diesen drei Stellen liegt keine Zeile unter ihm,
+   * am Ende dank dieses Tokens hier.
+   *
+   * ENTFALLEN: --fab-lane, eine reservierte rechte Spur von
+   * `--fab-size + --space-4 + --space-2` = 76px. Sie war die zweite, gegenteilige
+   * Antwort auf dasselbe Problem und wurde von Einkauf und Vorrat auf JEDE Zeile
+   * gelegt: kollisionsfrei, aber bei 320px 24% der Viewportbreite, und
+   * Artikelnamen fielen auf rund vier lesbare Zeichen (Critique 2026-07-30, P0).
+   * Ein Guard in test-frontend-audit.js verbietet ihre Rückkehr. */
   --fab-size: 52px;
   --fab-offset-bottom: calc(var(--nav-bottom-height) + var(--space-6));
   --fab-clearance: calc(var(--fab-offset-bottom) + var(--fab-size) + var(--space-4));
-  /* Rechte Gasse, die der FAB belegt: seine Breite plus sein Randabstand plus
-   * ein Atemzug. --fab-clearance polstert das Listen-ENDE und löst damit nur
-   * den Fall „letzte Zeile"; mitten in einer scrollenden Liste liegt der FAB
-   * über der Zeile, die zufällig unter ihm steht - gemessen 89.6% Verdeckung
-   * auf dem Vorrats-Warenkorb (Critique 2026-07-30). Listen, deren Zeilen
-   * rechts eine Bedienung tragen, halten diese Spur frei. */
-  --fab-lane: calc(var(--fab-size) + var(--space-4) + var(--space-2));
 
   /* --------------------------------------------------------
    * 13. Sidebar
@@ -775,6 +842,30 @@
      * --fab-clearance rechnet beides automatisch mit. */
     --fab-size: var(--target-lg);
     --fab-offset-bottom: var(--space-8);
+  }
+}
+
+/* ================================================================
+ * Touch-Ziele auf Fingergeräten
+ *
+ * DESIGN.md fordert „48px (mobile) oder 40px (desktop) minimum" und kodiert das in
+ * --target-lg und --target-md. --target-base stand mit festen 44px auf Touch
+ * darunter - an 111 Fundstellen in 18 Modulen, darunter sechs der
+ * meistbenutzten Bedienelemente der Küche (Critique 2026-07-30: „Eine der beiden
+ * Zahlen ist falsch.").
+ *
+ * DAS KRITERIUM IST DIE ZEIGERFÄHIGKEIT, NICHT DIE BREITE. Ein 800px schmales
+ * Desktop-Fenster wird mit der Maus bedient und braucht keine Fingergröße; ein
+ * Tablet mit 1180px braucht sie sehr wohl. Dieselbe Unterscheidung, die im Modul
+ * schon das Zeilen-Löschen und den Vorrats-Stepper steuert.
+ *
+ * Auf Zeigergeräten bleibt es bei 44px: das liegt ÜBER der 40px-Untergrenze, ist
+ * also keine Verletzung, und eine Rücknahme auf 40 würde 111 Bedienelemente ohne
+ * Not verkleinern.
+ * ================================================================ */
+@media (hover: none) {
+  :root {
+    --target-base: var(--target-lg);
   }
 }
 

@@ -568,8 +568,26 @@
   background-color: var(--color-surface-2);
 }
 
+/* Der Transfer trägt den MODUL-AKZENT, im Ruhezustand und auf Hover.
+ *
+ * Dieselbe Aktion („Auf die Einkaufsliste") hatte im Modul drei Erscheinungsformen:
+ * hier ein 24px-Glyph in --color-text-disabled mit GRÜNEM Hover, im Vorrat ein
+ * 48px-Glyph in --module-accent, in den Rezepten ein beschriftetes Pill (Critique
+ * 2026-07-30, P1). Drei Farben für einen Weg.
+ *
+ * Die GRÖSSE bleibt unterschiedlich, und das ist kein Versehen: dieser Knopf sitzt
+ * in einer 148px-Wochenspalte neben zwei Geschwistern, drei 48px-Ziele passen dort
+ * nicht (3 × 48 = 144 von 148px). Die Trefferfläche ist über das ::before ohnehin
+ * 40px bzw. auf Touch --target-lg. Was sich vereinheitlichen LÄSST, ist Ikone,
+ * Farbe und Name - und die sind es jetzt: shopping-cart, --module-accent,
+ * common.toShoppingList in allen vier Tabs. */
+.meal-card__action-btn--shopping {
+  color: var(--module-accent);
+}
+
 .meal-card__action-btn--shopping:hover {
-  color: var(--color-success);
+  color: var(--module-accent);
+  background-color: color-mix(in srgb, var(--module-accent) 12%, transparent);
 }
 
 .meal-card__action-btn--recipe {
@@ -801,7 +819,23 @@
    * Sonderfall für „alle 7 Tage": die Content-Spalte ist über
    * --page-inline-pad auf --content-max-width (1280px) gedeckelt, lesbare
    * 7 Spalten passen dort strukturell nie —
-   * das Fenster löst sich von selbst auf, sobald der Platz reicht. */
+   * das Fenster löst sich von selbst auf, sobald der Platz reicht.
+   *
+   * NACHGERECHNET 2026-07-30, weil der Critique behauptete, das Board zeige „auf
+   * keiner Desktop-Breite eine Woche". Das stimmt so nicht - es hängt an genau
+   * 52px:
+   *
+   *   Bedarf   116 Gutter + 7 × 148 Spalte + 8 × 8 Gap = 1208px
+   *   1920px   Content-Spalte gedeckelt auf 1280 → passt, 7/7 sichtbar, kein Fade
+   *   1440px   1156 verfügbar → 52px fehlen  (has-fade-end, Sonntag angeschnitten)
+   *   1280px    996 verfügbar → 212px fehlen (has-fade-start, Montag ausgescrollt)
+   *
+   * Bei 1440px wäre es mit 140px-Spalten erreichbar (116 + 980 + 56 = 1152 ≤ 1156).
+   * Bei 1280px bräuchte es 117px-Spalten - also 21% schmaler, und damit wieder die
+   * Silbentrennung in den Gerichtenamen, gegen die die Mindestbreite überhaupt
+   * eingeführt wurde. Die 8px bei 1440 gegen ein Regressionsrisiko bei 1280 zu
+   * tauschen, ist eine Struktur-, keine Feinschliff-Entscheidung: die eigentliche
+   * Frage ist, ob eine 7-Tage-Ansicht auf Laptop-Breite die richtige Ansicht ist. */
   .week-grid {
     display: grid;
     /* Breit genug für das längste deutsche Typ-Label („Mittagessen" ≈ 84px

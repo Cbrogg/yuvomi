@@ -11,7 +11,7 @@ import { t, formatDate, formatDayMonth, formatDateInput, parseDateInput, isDateI
 import { esc } from '/utils/html.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
 import { DEFAULT_CATEGORY_NAME } from '/utils/shopping-categories.js';
-import { renderKitchenTabsBar } from '/utils/kitchen-tabs.js';
+import { renderKitchenTabsBar, refreshKitchenBadges } from '/utils/kitchen-tabs.js';
 import { ingredientRowHTML } from '/utils/ingredient-row.js';
 import { addLocalDays, startOfLocalWeekKey, toLocalDateKey } from '/utils/date.js';
 import { normalizeRecipeMealTypes, recipeSupportsMealType } from '/utils/recipe-meal-types.js';
@@ -202,7 +202,7 @@ export async function render(container, { user }) {
   container.replaceChildren();
   container.insertAdjacentHTML('beforeend', `
     <div class="meals-page">
-      <h1 class="sr-only">${t('meals.title')}</h1>
+      <h1 class="sr-only">${t('nav.meals')}</h1>
       <!-- Kanonischer Kopf, Gruppen-Variante (.page-toolbar--in-group in
            layout.css): Akzentstreifen und oberste Sticky-Position bleiben bei
            der .kitchen-tabs-bar darüber. Vorher war das hier eine eigene
@@ -464,7 +464,7 @@ function renderRecipeSidebar() {
 
   const title = document.createElement('h2');
   title.className = 'recipe-sidebar__title';
-  title.textContent = t('recipes.title');
+  title.textContent = t('nav.recipes');
   sidebar.appendChild(title);
 
   // Der Drag-Hinweis erscheint nur, wenn es etwas zu ziehen gibt. Vorher stand
@@ -594,7 +594,7 @@ function renderSlot(date, type, mealsForDay, dayCol, typeRow) {
           ${canTransfer ? `<button class="meal-card__action-btn meal-card__action-btn--shopping"
             data-action="transfer-meal"
             data-meal-id="${meal.id}"
-            aria-label="${t('meals.transferToShoppingList')}"
+            aria-label="${t('common.toShoppingList')}"
           ><i data-lucide="shopping-cart" class="icon-sm" aria-hidden="true"></i></button>` : ''}
           <button class="meal-card__action-btn"
             data-action="delete-meal"
@@ -1149,7 +1149,7 @@ function openMealModal(opts) {
       saveAsRecipeBtn?.addEventListener('click', async () => {
         const title = panel.querySelector('#modal-title').value.trim();
         if (!title) {
-          reportFieldError(panel.querySelector('#modal-title'), t('meals.titleRequired'));
+          reportFieldError(panel.querySelector('#modal-title'), t('common.nameRequired'));
           return;
         }
 
@@ -1208,7 +1208,11 @@ function openMealModal(opts) {
         try {
           const res = await api.post(`/meals/${state.modal.meal.id}/to-shopping-list`, { listId });
           if (res.data.transferred > 0) {
-            window.yuvomi?.showToast(t('meals.transferSuccess', { count: res.data.transferred }), 'success');
+            window.yuvomi?.showToast(t('meals.transferSuccess', {
+              count: res.data.transferred,
+              list: state.lists.find((l) => l.id === listId)?.name ?? '',
+            }), 'success');
+            refreshKitchenBadges();
             await loadWeek(state.currentWeek);
             closeModal({ force: true });
             renderWeekGrid();
@@ -1323,7 +1327,7 @@ function buildModalContent({ mode, date, mealType, meal }) {
     </div>
 
     <div class="form-group" style="position:relative;">
-      <label class="form-label" for="modal-title">${t('meals.titleLabel')}</label>
+      <label class="form-label" for="modal-title">${t('common.nameLabel')}</label>
       <input type="text" class="form-input" id="modal-title" required
              placeholder="${t('meals.titlePlaceholder')}"
              value="${esc(isEdit ? meal.title : '')}"
@@ -1384,7 +1388,7 @@ async function saveModal(overlay) {
   }
 
   if (!title) {
-    reportFieldError(overlay.querySelector('#modal-title'), t('meals.titleRequired'));
+    reportFieldError(overlay.querySelector('#modal-title'), t('common.nameRequired'));
     return;
   }
 
@@ -1509,7 +1513,7 @@ async function transferMeal(mealId) {
 
   if (state.lists.length > 1) {
     const options = state.lists.map((l) => ({ value: l.id, label: l.name }));
-    const choice = await selectModal(t('meals.transferToShoppingList'), options);
+    const choice = await selectModal(t('common.toShoppingListWhich'), options);
     if (choice === null) return;
     listId = Number(choice);
   }
@@ -1517,7 +1521,16 @@ async function transferMeal(mealId) {
   try {
     const res = await api.post(`/meals/${mealId}/to-shopping-list`, { listId });
     if (res.data.transferred > 0) {
-      window.yuvomi?.showToast(t('meals.transferSuccess', { count: res.data.transferred }), 'success');
+      // Der Toast nennt die ZIEL-Liste. „5 Zutaten übernommen." sagte nicht, wohin -
+      // und bei mehreren Listen ist genau das die Frage, die offen bleibt (Critique
+      // 2026-07-30, P1). Der Kreislauf endet nicht mit „übernommen", sondern in
+      // einer bestimmten Liste.
+      window.yuvomi?.showToast(t('meals.transferSuccess', {
+        count: res.data.transferred,
+        list: state.lists.find((l) => l.id === listId)?.name ?? '',
+      }), 'success');
+      // Der Einkaufs-Tab zeigt jetzt eine andere Zahl.
+      refreshKitchenBadges();
       await loadWeek(state.currentWeek);
       renderWeekGrid();
     } else {

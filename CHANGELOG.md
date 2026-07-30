@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.59.0] - 2026-07-30
+
+### Added
+- The kitchen tab bar now shows what is waiting in the other three tabs: free meal slots this week, items still to buy, and stores that have run out or are about to. Until now that connection was spelled out only while a tab was still empty, and it vanished with the first entry you made. The tab you are on stays without a number, because the page itself already shows it in more detail.
+
+### Changed
+- The shopping list on a phone starts with the list, not with the controls above it. The three permanent actions moved into a menu and now carry their names, among them "Delete list", which had been an unlabelled icon between two other unlabelled icons. "Move to pantry" and "Delete ticked" moved out of the header into a bar above the list that says what they act on. The quick-add field folds away and opens with the round button in the corner, which now does the same thing there as in the other three tabs. Together that is a little over half the height above the first item, and six fewer stops when moving through the page with the keyboard.
+- Editing a shopping item is now the same dialog as in the pantry: it is called "Edit item" instead of showing the item name as its heading, it lets you change the name, the quantity and the category, and it has a Cancel button. Until now it offered only a link and a note, and correcting a mistyped name meant deleting the item and entering it again.
+- Deleting a shopping list now says how much it will delete and can be undone for five seconds afterwards. The safeguards used to be the wrong way round: a single item could be undone but was never queried, while the household's entire list was queried but could not be undone.
+- Buttons and fields are a little larger on touch devices, following the size the design guide asks for. Nothing changes with a mouse.
+- One word per thing across the kitchen. Moving something to the shopping list was called three different things internally, which had already drifted apart in English; a meal, a recipe and a stored item all call their name field the same now; and deleting something is called deleting everywhere, rather than removing in one tab and deleting in another. Messages after moving something now name where it went ("5 ingredients added to Weekly Shop") instead of only saying that it happened.
+
+### Fixed
+- On a 320 pixel screen a recipe name broke down to one letter per line, making a single row four hundred and fifty pixels tall and leaving room for one recipe on the screen. The three actions on the row take more than half its width there and now move into a menu, as they already do in the shopping list header.
+- In the pantry on narrow phones the quantity controls took two thirds of the row, leaving about thirty pixels for the name: "Olive oil extra virgin" ran over eight lines and rows grew to more than three hundred pixels. The quantity now sits above its buttons when the row is narrow, and stays next to the buttons that change it.
+- The numbers in the kitchen tab bar were too faint to meet the contrast minimum, and an empty one still took up space in its tab.
+- The checkbox that removes bought items from the shopping list, which is ticked by default, was a plain system checkbox in system size while the list next to it uses much larger controls of its own. The same applied to the meal types in the recipe form.
+- In the meal plan import, "Apply" stayed clickable when the chosen period held nothing to import, unlike its sibling action, which correctly greys itself out.
+- "Cancel" looked different in the delete confirmation than in every other dialog, which is where it matters most.
+
 ## [1.58.0] - 2026-07-30
 
 ### Changed
