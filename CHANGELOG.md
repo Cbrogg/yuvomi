@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The focus outline that appears when moving through the app with the keyboard now has one colour: the one of the module you are in. There were six competing definitions, and tabbing through the shopping list alternated between purple and orange six times in fifteen stops. A change of colour reads as a change of context, and there was none.
 - Searching the pantry and the recipes now works like searching notes, contacts, documents or birthdays, because it is now the same component: a magnifier in front, a button to clear the field, a name that stays readable to a screen reader while you type, and a short pause before filtering so that typing stays smooth on a long list.
 
+## [1.59.0] - 2026-07-30
+
 ### Added
 - The kitchen tab bar now shows what is waiting in the other three tabs: free meal slots this week, items still to buy, and stores that have run out or are about to. Until now that connection was spelled out only while a tab was still empty, and it vanished with the first entry you made. The tab you are on stays without a number, because the page itself already shows it in more detail.
 
