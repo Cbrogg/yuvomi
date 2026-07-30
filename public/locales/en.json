@@ -58,6 +58,11 @@
             "assigneesNobodyHint": "With no one assigned, only you can see this entry."
         }
     },
+    "kitchen": {
+        "noShoppingLists": "There is no shopping list yet.",
+        "createShoppingList": "Create new list",
+        "transferUndone": "Removed from the shopping list."
+    },
     "nav": {
         "dashboard": "Overview",
         "tasks": "Tasks",
@@ -456,7 +461,6 @@
         "removeIngredient": "Remove ingredient",
         "transferLabel": "Add ingredients to the shopping list",
         "transferNow": "Add",
-        "noShoppingLists": "No shopping lists available",
         "transferSuccess": "{{count}} ingredients added to {{list}}.",
         "transferAlreadyDone": "All ingredients are already on the list.",
         "randomizePlan": "Randomize plan",
@@ -3636,9 +3640,7 @@
         "toShoppingDone_one": "{{count}} item added to {{list}}.",
         "toShoppingSkipped": "{{count}} were already on it.",
         "toShoppingSkipped_one": "{{count}} was already on it.",
-        "toShoppingUndone": "Removed from the shopping list.",
         "toShoppingNone": "Everything is already on the shopping list.",
-        "noLists": "There is no shopping list yet. Create one in the Shopping tab.",
         "locPantry": "Pantry cupboard",
         "locFridge": "Fridge",
         "locFreezer": "Freezer",

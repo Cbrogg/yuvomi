@@ -653,7 +653,14 @@ router.delete('/ingredients/:ingId', (req, res) => {
  * POST /api/v1/meals/:id/to-shopping-list
  * Alle noch nicht übertragenen Zutaten einer Mahlzeit auf eine Einkaufsliste übernehmen.
  * Body: { listId: number, category?: string }
- * Response: { data: { transferred: number } }
+ * Response: { data: { transferred: number, added_ids: number[] } }
+ *
+ * `added_ids` trägt das Undo im Client (Audit 2026-07-30, P1-B). Zurückgenommen
+ * wird über `POST /shopping/items/undo-transfer` und nicht durch einfaches
+ * Löschen der Artikel: dieser Pfad setzt zusätzlich `on_shopping_list` auf den
+ * Zutaten. Wer nur die Einkaufsartikel entfernt, lässt die Mahlzeit für immer als
+ * „schon übertragen" zurück - die Zutaten wären dann weder auf der Liste noch
+ * erneut übertragbar.
  */
 router.post('/:id/to-shopping-list', (req, res) => {
   try {
@@ -699,9 +706,9 @@ router.post('/:id/to-shopping-list', (req, res) => {
     `).all(mealId);
 
     if (ingredients.length === 0)
-      return res.json({ data: { transferred: 0 } });
+      return res.json({ data: { transferred: 0, added_ids: [] } });
 
-    const transferred = db.transaction(() => {
+    const addedIds = db.transaction(() => {
       const insertItem = db.get().prepare(`
         INSERT INTO shopping_items (list_id, name, quantity, category, added_from_meal)
         VALUES (?, ?, ?, ?, ?)
@@ -710,16 +717,16 @@ router.post('/:id/to-shopping-list', (req, res) => {
         UPDATE meal_ingredients SET on_shopping_list = 1 WHERE id = ?
       `);
 
-      let count = 0;
+      const ids = [];
       for (const ing of ingredients) {
-        insertItem.run(listId, ing.name, ing.quantity, ing.category || 'Sonstiges', mealId);
+        const info = insertItem.run(listId, ing.name, ing.quantity, ing.category || 'Sonstiges', mealId);
         markDone.run(ing.id);
-        count++;
+        ids.push(Number(info.lastInsertRowid));
       }
-      return count;
+      return ids;
     });
 
-    res.json({ data: { transferred } });
+    res.json({ data: { transferred: addedIds.length, added_ids: addedIds } });
   } catch (err) {
     log.error('POST /:id/to-shopping-list', err);
     res.status(500).json({ error: 'Interner Fehler', code: 500 });
@@ -730,7 +737,11 @@ router.post('/:id/to-shopping-list', (req, res) => {
  * POST /api/v1/meals/week-to-shopping-list
  * Alle noch nicht übertragenen Zutaten einer ganzen Woche auf eine Einkaufsliste übernehmen.
  * Body: { listId, week: YYYY-MM-DD, category? }
- * Response: { data: { transferred: number } }
+ * Response: { data: { transferred: number, added_ids: number[] } }
+ *
+ * `added_ids` wie beim Einzel-Transfer. Diese Route hat derzeit keinen Aufrufer in
+ * der Oberfläche; die IDs stehen trotzdem in der Antwort, damit ein künftiger
+ * Aufrufer nicht als einziger Erzeuger-Pfad ohne Rücknahme dasteht.
  */
 router.post('/week-to-shopping-list', (req, res) => {
   try {
@@ -755,9 +766,9 @@ router.post('/week-to-shopping-list', (req, res) => {
     `).all(from, to);
 
     if (ingredients.length === 0)
-      return res.json({ data: { transferred: 0 } });
+      return res.json({ data: { transferred: 0, added_ids: [] } });
 
-    const transferred = db.transaction(() => {
+    const addedIds = db.transaction(() => {
       const insertItem = db.get().prepare(`
         INSERT INTO shopping_items (list_id, name, quantity, category, added_from_meal)
         VALUES (?, ?, ?, ?, ?)
@@ -766,16 +777,16 @@ router.post('/week-to-shopping-list', (req, res) => {
         UPDATE meal_ingredients SET on_shopping_list = 1 WHERE id = ?
       `);
 
-      let count = 0;
+      const ids = [];
       for (const ing of ingredients) {
-        insertItem.run(listId, ing.name, ing.quantity, ing.category || 'Sonstiges', ing.meal_id);
+        const info = insertItem.run(listId, ing.name, ing.quantity, ing.category || 'Sonstiges', ing.meal_id);
         markDone.run(ing.id);
-        count++;
+        ids.push(Number(info.lastInsertRowid));
       }
-      return count;
+      return ids;
     });
 
-    res.json({ data: { transferred } });
+    res.json({ data: { transferred: addedIds.length, added_ids: addedIds } });
   } catch (err) {
     log.error('POST /week-to-shopping-list', err);
     res.status(500).json({ error: 'Interner Fehler', code: 500 });

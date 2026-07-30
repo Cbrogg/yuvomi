@@ -58,6 +58,11 @@
             "assigneesNobodyHint": "Без назначения эту запись видите только вы."
         }
     },
+    "kitchen": {
+        "noShoppingLists": "Списка покупок ещё нет.",
+        "createShoppingList": "Создать новый список",
+        "transferUndone": "Удалено из списка покупок."
+    },
     "nav": {
         "dashboard": "Обзор",
         "tasks": "Задачи",
@@ -456,7 +461,6 @@
         "removeIngredient": "Удалить ингредиент",
         "transferLabel": "Добавить ингредиенты в список покупок",
         "transferNow": "Добавить",
-        "noShoppingLists": "Нет списков покупок",
         "transferSuccess": "В {{list}} добавлено: {{count}} ингредиентов.",
         "transferAlreadyDone": "Все ингредиенты уже в списке.",
         "randomizePlan": "Заполнить план случайно",
@@ -3636,9 +3640,7 @@
         "toShoppingDone_one": "В {{list}} добавлен {{count}} товар.",
         "toShoppingSkipped": "{{count}} уже были в нём.",
         "toShoppingSkipped_one": "{{count}} уже был в нём.",
-        "toShoppingUndone": "Удалено из списка покупок.",
         "toShoppingNone": "Всё уже есть в списке покупок.",
-        "noLists": "Списка покупок ещё нет. Создайте его на вкладке «Покупки».",
         "locPantry": "Кладовая",
         "locFridge": "Холодильник",
         "locFreezer": "Морозильник",

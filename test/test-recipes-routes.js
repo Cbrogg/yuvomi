@@ -19,6 +19,10 @@ import express from 'express';
 
 const dbmod = await import('../server/db.js');
 const { default: recipesRouter } = await import('../server/routes/recipes.js');
+// Der Einkaufs-Router hängt mit drin, weil die Rücknahme eines Transfers über
+// ihn läuft (POST /shopping/items/undo-transfer) - ohne ihn wäre nur die halbe
+// Handlung getestet.
+const { default: shoppingRouter } = await import('../server/routes/shopping.js');
 const db = dbmod.get();
 
 const OWNER = db.prepare(`INSERT INTO users (username, display_name, avatar_color, password_hash, role) VALUES ('owner','Owner','#112233','x','member')`).run().lastInsertRowid;
@@ -34,6 +38,7 @@ app.use((req, _res, next) => {
   req.session = { userId: actor.id, role: actor.role };
   next();
 });
+app.use('/shopping', shoppingRouter);
 app.use('/', recipesRouter);
 const server = app.listen(0);
 const baseUrl = await new Promise((r) => server.on('listening', () => r(`http://127.0.0.1:${server.address().port}`)));
@@ -253,7 +258,8 @@ test('POST /:id/to-shopping-list: überträgt Zutaten mit Menge und Kategorie', 
   const r = await call('POST', `/${created.body.data.id}/to-shopping-list`, { listId });
 
   assert.equal(r.status, 200);
-  assert.deepEqual(r.body.data, { transferred: 2, skipped: 0 });
+  assert.deepEqual({ transferred: r.body.data.transferred, skipped: r.body.data.skipped }, { transferred: 2, skipped: 0 });
+  assert.deepEqual(r.body.data.added_ids.length, 2);
   const items = shoppingItems(listId);
   assert.equal(items.length, 2);
   assert.equal(items[0].name, 'Mehl');
@@ -271,12 +277,12 @@ test('POST /:id/to-shopping-list: überspringt, was unabgehakt schon auf der Lis
   const id = created.body.data.id;
 
   const first = await call('POST', `/${id}/to-shopping-list`, { listId });
-  assert.deepEqual(first.body.data, { transferred: 2, skipped: 0 });
+  assert.equal(first.body.data.transferred, 2);
 
   // Zweiter Lauf darf die Liste nicht verdoppeln - ein Rezept ist eine Vorlage,
   // die mehrfach gekocht wird, und trägt kein „schon übertragen"-Flag.
   const second = await call('POST', `/${id}/to-shopping-list`, { listId });
-  assert.deepEqual(second.body.data, { transferred: 0, skipped: 2 });
+  assert.deepEqual(second.body.data, { transferred: 0, skipped: 2, added_ids: [] });
   assert.equal(shoppingItems(listId).length, 2);
 });
 
@@ -290,7 +296,7 @@ test('POST /:id/to-shopping-list: abgehakte Artikel blockieren die Übernahme ni
 
   // Bereits gekauft und abgehakt → beim nächsten Kochen wieder aufnehmen.
   const again = await call('POST', `/${id}/to-shopping-list`, { listId });
-  assert.deepEqual(again.body.data, { transferred: 1, skipped: 0 });
+  assert.equal(again.body.data.transferred, 1);
   assert.equal(shoppingItems(listId).length, 2);
 });
 
@@ -299,7 +305,7 @@ test('POST /:id/to-shopping-list: Rezept ohne Zutaten → 0/0 statt Fehler', asy
   const created = await call('POST', '/', { title: 'Leer', ingredients: [] });
   const r = await call('POST', `/${created.body.data.id}/to-shopping-list`, { listId });
   assert.equal(r.status, 200);
-  assert.deepEqual(r.body.data, { transferred: 0, skipped: 0 });
+  assert.deepEqual(r.body.data, { transferred: 0, skipped: 0, added_ids: [] });
 });
 
 test('POST /:id/to-shopping-list: fehlende oder unbekannte Liste → 400/404', async () => {
@@ -331,4 +337,29 @@ test('POST /:id/to-shopping-list: Nicht-Eigentümer darf übernehmen (kein owner
   actor = { id: OWNER, role: 'member' };
   assert.equal(r.status, 200);
   assert.equal(r.body.data.transferred, 1);
+});
+
+// Der Rezept-Transfer ist der Pfad, der am meisten auf einmal ueberträgt - eine
+// ganze Zutatenliste, in eine Liste, die der Nutzer gerade nicht ansieht. Ohne
+// added_ids gaebe es nichts zurueckzunehmen (Audit 2026-07-30, P1-B).
+test('POST /:id/to-shopping-list: added_ids erlauben ein exaktes Zuruecknehmen', async () => {
+  const listId = newList('Transfer Undo');
+  db.prepare('INSERT INTO shopping_items (list_id, name) VALUES (?, ?)').run(listId, 'Bleibt drin');
+
+  const created = await call('POST', '/', {
+    title: 'Ruecknahme',
+    ingredients: [{ name: 'Zwiebel' }, { name: 'Knoblauch' }],
+  });
+  const r = await call('POST', `/${created.body.data.id}/to-shopping-list`, { listId });
+  assert.equal(r.body.data.transferred, 2);
+  assert.equal(r.body.data.added_ids.length, 2);
+
+  const undo = await call('POST', '/shopping/items/undo-transfer', { ids: r.body.data.added_ids });
+  assert.equal(undo.body.data.removed, 2);
+  assert.deepEqual(shoppingItems(listId).map((i) => i.name), ['Bleibt drin']);
+
+  // Ein Rezept ist eine Vorlage: nach der Ruecknahme laesst es sich erneut
+  // uebertragen, weil am Rezept nichts markiert wird.
+  const again = await call('POST', `/${created.body.data.id}/to-shopping-list`, { listId });
+  assert.equal(again.body.data.transferred, 2);
 });

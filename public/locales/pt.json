@@ -58,6 +58,11 @@
             "assigneesNobodyHint": "Sem ninguém atribuído, só você vê esta entrada."
         }
     },
+    "kitchen": {
+        "noShoppingLists": "Ainda não existe lista de compras.",
+        "createShoppingList": "Criar nova lista",
+        "transferUndone": "Removido da lista de compras."
+    },
     "nav": {
         "dashboard": "Painel",
         "tasks": "Tarefas",
@@ -456,7 +461,6 @@
         "removeIngredient": "Remover ingrediente",
         "transferLabel": "Adicionar os ingredientes à lista de compras",
         "transferNow": "Adicionar",
-        "noShoppingLists": "Nenhuma lista de compras disponível",
         "transferSuccess": "{{count}} ingredientes adicionados a {{list}}.",
         "transferAlreadyDone": "Todos os ingredientes já estão na lista.",
         "randomizePlan": "Preencher plano aleatoriamente",
@@ -3636,9 +3640,7 @@
         "toShoppingDone_one": "{{count}} item adicionado a {{list}}.",
         "toShoppingSkipped": "{{count}} já lá estavam.",
         "toShoppingSkipped_one": "{{count}} já lá estava.",
-        "toShoppingUndone": "Removido da lista de compras.",
         "toShoppingNone": "Está tudo já na lista de compras.",
-        "noLists": "Ainda não existe lista de compras. Cria uma no separador Compras.",
         "locPantry": "Armário de mantimentos",
         "locFridge": "Frigorífico",
         "locFreezer": "Congelador",

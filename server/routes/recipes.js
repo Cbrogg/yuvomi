@@ -186,7 +186,7 @@ router.delete('/:id', (req, res) => {
  * POST /api/v1/recipes/:id/to-shopping-list
  * Zutaten eines Rezepts auf eine Einkaufsliste übernehmen.
  * Body: { listId: number }
- * Response: { data: { transferred: number, skipped: number } }
+ * Response: { data: { transferred: number, skipped: number, added_ids: number[] } }
  *
  * Anders als bei Mahlzeiten wird hier NICHTS am Rezept markiert: ein Rezept ist
  * eine Vorlage, die beliebig oft gekocht wird - ein „schon übertragen"-Flag wie
@@ -194,6 +194,12 @@ router.delete('/:id', (req, res) => {
  * gesetzt. Stattdessen überspringt der Import, was unter demselben Namen bereits
  * unabgehakt auf der Liste liegt; doppeltes Übernehmen fügt also nichts hinzu,
  * statt die Liste zu verdoppeln.
+ *
+ * `added_ids` trägt das Undo im Client, wie bei `/shopping/:listId/import-pantry`.
+ * Ohne die IDs gäbe es nichts zurückzunehmen: die Anzahl kennt erst der Server
+ * (er überspringt Duplikate), und dieser Pfad überträgt am meisten auf einmal -
+ * eine ganze Zutatenliste in eine Liste, die der Nutzer gerade nicht ansieht
+ * (Audit 2026-07-30, P1-B).
  */
 router.post('/:id/to-shopping-list', (req, res) => {
   try {
@@ -213,7 +219,7 @@ router.post('/:id/to-shopping-list', (req, res) => {
     const ingredients = db.get().prepare(
       'SELECT name, quantity, category FROM recipe_ingredients WHERE recipe_id = ? ORDER BY id ASC',
     ).all(id);
-    if (!ingredients.length) return res.json({ data: { transferred: 0, skipped: 0 } });
+    if (!ingredients.length) return res.json({ data: { transferred: 0, skipped: 0, added_ids: [] } });
 
     const result = db.transaction(() => {
       const existing = db.get().prepare(
@@ -226,16 +232,16 @@ router.post('/:id/to-shopping-list', (req, res) => {
         VALUES (?, ?, ?, ?)
       `);
 
-      let transferred = 0;
+      const addedIds = [];
       let skipped = 0;
       for (const ing of ingredients) {
         const key = ing.name.trim().toLowerCase();
         if (present.has(key)) { skipped += 1; continue; }
-        insertItem.run(vList.value, ing.name, ing.quantity, ing.category || 'Sonstiges');
+        const info = insertItem.run(vList.value, ing.name, ing.quantity, ing.category || 'Sonstiges');
         present.add(key);
-        transferred += 1;
+        addedIds.push(Number(info.lastInsertRowid));
       }
-      return { transferred, skipped };
+      return { transferred: addedIds.length, skipped, added_ids: addedIds };
     });
 
     res.json({ data: result });

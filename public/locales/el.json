@@ -58,6 +58,11 @@
             "assigneesNobodyHint": "Χωρίς ανάθεση, μόνο εσύ βλέπεις αυτήν την καταχώριση."
         }
     },
+    "kitchen": {
+        "noShoppingLists": "Δεν υπάρχει ακόμη λίστα αγορών.",
+        "createShoppingList": "Δημιουργία νέας λίστας",
+        "transferUndone": "Αφαιρέθηκε από τη λίστα αγορών."
+    },
     "nav": {
         "dashboard": "Επισκόπηση",
         "tasks": "Εργασίες",
@@ -456,7 +461,6 @@
         "removeIngredient": "Αφαίρεση υλικού",
         "transferLabel": "Προσθήκη υλικών στη λίστα αγορών",
         "transferNow": "Προσθήκη",
-        "noShoppingLists": "Δεν υπάρχουν λίστες αγορών",
         "transferSuccess": "{{count}} υλικά προστέθηκαν στη λίστα {{list}}.",
         "transferAlreadyDone": "Όλα τα υλικά είναι ήδη στη λίστα.",
         "randomizePlan": "Τυχαία συμπλήρωση πλάνου",
@@ -3636,9 +3640,7 @@
         "toShoppingDone_one": "{{count}} είδος προστέθηκε στη λίστα {{list}}.",
         "toShoppingSkipped": "{{count}} υπήρχαν ήδη.",
         "toShoppingSkipped_one": "{{count}} υπήρχε ήδη.",
-        "toShoppingUndone": "Αφαιρέθηκε από τη λίστα αγορών.",
         "toShoppingNone": "Όλα βρίσκονται ήδη στη λίστα αγορών.",
-        "noLists": "Δεν υπάρχει ακόμη λίστα αγορών. Δημιούργησε μία στην καρτέλα Αγορές.",
         "locPantry": "Ντουλάπι τροφίμων",
         "locFridge": "Ψυγείο",
         "locFreezer": "Καταψύκτης",

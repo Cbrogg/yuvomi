@@ -58,6 +58,11 @@
             "assigneesNobodyHint": "Utan tilldelning ser bara du den här posten."
         }
     },
+    "kitchen": {
+        "noShoppingLists": "Det finns ingen inköpslista än.",
+        "createShoppingList": "Skapa ny lista",
+        "transferUndone": "Borttagen från inköpslistan."
+    },
     "nav": {
         "dashboard": "Översikt",
         "tasks": "Uppgifter",
@@ -456,7 +461,6 @@
         "removeIngredient": "Ta bort ingrediensen",
         "transferLabel": "Lägg till ingredienserna i inköpslistan",
         "transferNow": "Lägg till",
-        "noShoppingLists": "Inga inköpslistor tillgängliga",
         "transferSuccess": "{{count}} ingredienser tillagda i {{list}}.",
         "transferAlreadyDone": "Alla ingredienser står redan på listan.",
         "randomizePlan": "Fyll planen slumpmässigt",
@@ -3636,9 +3640,7 @@
         "toShoppingDone_one": "{{count}} vara tillagd i {{list}}.",
         "toShoppingSkipped": "{{count}} fanns redan där.",
         "toShoppingSkipped_one": "{{count}} fanns redan där.",
-        "toShoppingUndone": "Borttagen från inköpslistan.",
         "toShoppingNone": "Allt finns redan på inköpslistan.",
-        "noLists": "Det finns ingen inköpslista än. Skapa en under fliken Inköp.",
         "locPantry": "Skafferi",
         "locFridge": "Kylskåp",
         "locFreezer": "Frys",

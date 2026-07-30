@@ -688,6 +688,22 @@
   align-self: flex-start;
 }
 
+/* Ohne Einkaufsliste: die geteilte Antwort statt eines toten Auswahlfelds
+   (utils/kitchen-transfer.js, mountMissingShoppingList). Erbt Ausrichtung und
+   Abstand vom Container, damit der Ausweg-Knopf genau dort sitzt, wo sonst
+   „Jetzt übernehmen" steht. */
+.shopping-transfer__missing {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.shopping-transfer__hint {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
 .meal-randomize-modal {
   display: grid;
   gap: var(--space-4);

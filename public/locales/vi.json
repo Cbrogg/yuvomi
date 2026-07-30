@@ -58,6 +58,11 @@
             "assigneesNobodyHint": "Nếu không giao cho ai, chỉ bạn thấy mục này."
         }
     },
+    "kitchen": {
+        "noShoppingLists": "Chưa có danh sách mua sắm.",
+        "createShoppingList": "Tạo danh sách mới",
+        "transferUndone": "Đã xóa khỏi danh sách mua sắm."
+    },
     "nav": {
         "dashboard": "Tổng quan",
         "tasks": "Nhiệm vụ",
@@ -456,7 +461,6 @@
         "removeIngredient": "Xóa nguyên liệu",
         "transferLabel": "Thêm nguyên liệu vào danh sách mua sắm",
         "transferNow": "Thêm",
-        "noShoppingLists": "Không có danh sách mua sắm nào",
         "transferSuccess": "Đã thêm {{count}} nguyên liệu vào {{list}}.",
         "transferAlreadyDone": "Tất cả nguyên liệu đã có trong danh sách.",
         "randomizePlan": "Điền kế hoạch ngẫu nhiên",
@@ -3636,9 +3640,7 @@
         "toShoppingDone_one": "Đã thêm {{count}} mục vào {{list}}.",
         "toShoppingSkipped": "{{count}} món đã có sẵn.",
         "toShoppingSkipped_one": "{{count}} món đã có sẵn.",
-        "toShoppingUndone": "Đã xóa khỏi danh sách mua sắm.",
         "toShoppingNone": "Mọi thứ đã có trong danh sách mua sắm.",
-        "noLists": "Chưa có danh sách mua sắm. Hãy tạo một danh sách ở tab Mua sắm.",
         "locPantry": "Tủ đựng thực phẩm",
         "locFridge": "Tủ lạnh",
         "locFreezer": "Tủ đông",

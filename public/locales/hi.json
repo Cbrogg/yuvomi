@@ -58,6 +58,11 @@
             "assigneesNobodyHint": "किसी को असाइन न करने पर यह प्रविष्टि केवल आप देख सकते हैं।"
         }
     },
+    "kitchen": {
+        "noShoppingLists": "अभी कोई खरीद सूची नहीं है.",
+        "createShoppingList": "नई सूची बनाएं",
+        "transferUndone": "खरीदारी सूची से हटा दिया गया।"
+    },
     "nav": {
         "dashboard": "डैशबोर्ड",
         "tasks": "कार्य",
@@ -456,7 +461,6 @@
         "removeIngredient": "सामग्री हटाएं",
         "transferLabel": "सामग्री को खरीद सूची में जोड़ें",
         "transferNow": "जोड़ें",
-        "noShoppingLists": "कोई खरीदारी सूची नहीं",
         "transferSuccess": "{{list}} में {{count}} सामग्री जोड़े गए।",
         "transferAlreadyDone": "सभी सामग्री पहले से सूची में हैं.",
         "randomizePlan": "योजना को यादृच्छिक रूप से भरें",
@@ -3636,9 +3640,7 @@
         "toShoppingDone_one": "{{list}} में {{count}} आइटम जोड़ा गया।",
         "toShoppingSkipped": "{{count}} पहले से मौजूद थीं।",
         "toShoppingSkipped_one": "{{count}} पहले से मौजूद थी।",
-        "toShoppingUndone": "खरीदारी सूची से हटा दिया गया।",
         "toShoppingNone": "सब कुछ पहले से खरीदारी सूची में है।",
-        "noLists": "अभी कोई खरीद सूची नहीं है. खरीदारी टैब में एक बनाएँ.",
         "locPantry": "भंडार अलमारी",
         "locFridge": "रेफ्रिजरेटर",
         "locFreezer": "फ्रीज़र",

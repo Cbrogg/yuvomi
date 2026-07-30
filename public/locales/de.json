@@ -58,6 +58,11 @@
             "assigneesNobodyHint": "Ohne Zuweisung sieht diesen Eintrag nur du."
         }
     },
+    "kitchen": {
+        "noShoppingLists": "Es gibt noch keine Einkaufsliste.",
+        "createShoppingList": "Neue Liste erstellen",
+        "transferUndone": "Von der Einkaufsliste entfernt."
+    },
     "nav": {
         "dashboard": "Übersicht",
         "tasks": "Aufgaben",
@@ -468,7 +473,6 @@
         "removeIngredient": "Zutat entfernen",
         "transferLabel": "Zutaten auf die Einkaufsliste übernehmen",
         "transferNow": "Übernehmen",
-        "noShoppingLists": "Keine Einkaufslisten vorhanden",
         "transferSuccess": "{{count}} Zutaten auf {{list}} übernommen.",
         "transferAlreadyDone": "Alle Zutaten stehen schon auf der Liste.",
         "randomizePlan": "Plan zufällig füllen",
@@ -3636,9 +3640,7 @@
         "toShoppingDone_one": "{{count}} Artikel auf {{list}} übernommen.",
         "toShoppingSkipped": "{{count}} standen schon darauf.",
         "toShoppingSkipped_one": "{{count}} stand schon darauf.",
-        "toShoppingUndone": "Von der Einkaufsliste entfernt.",
         "toShoppingNone": "Alles steht bereits auf der Einkaufsliste.",
-        "noLists": "Es gibt noch keine Einkaufsliste. Lege im Tab Einkaufen eine an.",
         "locPantry": "Vorratsschrank",
         "locFridge": "Kühlschrank",
         "locFreezer": "Gefrierschrank",

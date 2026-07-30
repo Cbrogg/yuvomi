@@ -258,6 +258,66 @@ router.patch('/items/:itemId', (req, res) => {
 });
 
 // --------------------------------------------------------
+// POST /api/v1/shopping/items/undo-transfer
+// Nimmt einen Übertrag aus einem Nachbar-Tab der Küche zurück.
+// Body: { ids: number[] } - die `added_ids` aus der Transfer-Antwort.
+// Response: { data: { removed: number } }
+//
+// Die drei erzeugenden Pfade der Küche (Vorrat, Rezept, Mahlzeit → Einkauf)
+// nehmen über DIESE Route zurück, nicht über N einzelne DELETEs. Zwei Gründe:
+//
+//   1. Ein Übertrag ist eine Handlung, also ist auch seine Rücknahme eine.
+//      Einzel-DELETEs können zur Hälfte scheitern und lassen dann einen Zustand
+//      zurück, den der Nutzer nie hergestellt hat. Hier ist es eine Transaktion.
+//   2. Der Mahlzeit-Pfad setzt beim Übertragen `meal_ingredients.on_shopping_list`.
+//      Wer nur die Einkaufsartikel löscht, lässt die Zutaten für immer als „schon
+//      übertragen" zurück - weder auf der Liste noch erneut übertragbar. Das Flag
+//      gehört zum Übertrag und muss mit ihm zurück (Audit 2026-07-30, P1-B).
+//
+// Zugeordnet wird über `added_from_meal` + Name: der Übertrag hat genau die
+// offenen Zutaten dieser Mahlzeit eingefügt, der Name ist innerhalb einer
+// Mahlzeit ihre Identität. Ein Doppelname wäre gemeinsam übertragen worden und
+// geht damit auch gemeinsam zurück.
+//
+// Fremde IDs werden still übergangen statt mit 404 quittiert: `removed` sagt,
+// was tatsächlich zurückging, und ein Undo, das mit einem Fehler endet, weil ein
+// Artikel inzwischen von Hand gelöscht wurde, wäre die schlechtere Antwort.
+// --------------------------------------------------------
+router.post('/items/undo-transfer', (req, res) => {
+  try {
+    const ids = Array.isArray(req.body?.ids)
+      ? req.body.ids.map(Number).filter(Number.isInteger)
+      : [];
+    if (!ids.length) return res.json({ data: { removed: 0 } });
+
+    const removed = db.get().transaction(() => {
+      const findItem = db.get()
+        .prepare('SELECT id, name, added_from_meal FROM shopping_items WHERE id = ?');
+      const deleteItem = db.get().prepare('DELETE FROM shopping_items WHERE id = ?');
+      const unmarkIngredient = db.get().prepare(`
+        UPDATE meal_ingredients SET on_shopping_list = 0
+        WHERE meal_id = ? AND name = ? AND on_shopping_list = 1
+      `);
+
+      let count = 0;
+      for (const id of ids) {
+        const item = findItem.get(id);
+        if (!item) continue;
+        deleteItem.run(id);
+        if (item.added_from_meal) unmarkIngredient.run(item.added_from_meal, item.name);
+        count += 1;
+      }
+      return count;
+    })();
+
+    res.json({ data: { removed } });
+  } catch (err) {
+    log.error('POST /items/undo-transfer error:', err);
+    res.status(500).json({ error: 'Internal server error.', code: 500 });
+  }
+});
+
+// --------------------------------------------------------
 // DELETE /api/v1/shopping/items/:itemId
 // Einzelnen Artikel löschen.
 // Response: { ok: true }

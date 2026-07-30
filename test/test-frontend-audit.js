@@ -1969,35 +1969,208 @@ test('der FAB weicht der Zeile, statt eine Gasse zu reservieren', () => {
   assert.match(router, /installFabRetract\(\)/, 'router.js muss ihn verdrahten');
 });
 
+// --------------------------------------------------------
+// Küche: der Weg in eine fremde Liste
+// --------------------------------------------------------
+
 /**
- * Der Warenkorb in der Vorratszeile ist zurücknehmbar.
+ * Alle Aufrufe, mit denen eine Seite Artikel in einen anderen Tab schiebt.
  *
- * Er sitzt in der Zeile neben „Menge erhöhen" und bedeutet das Gegenteil; bis
- * v1.58.0 war er die einzige erzeugende Aktion des Moduls ohne Undo
- * (Critique 2026-07-30). Echtes Rücknehmen statt verzögertem Commit, weil der
- * Server Duplikate überspringt und die Anzahl im Toast deshalb erst nach dem
- * Insert bekannt ist.
+ * Erkannt am Muster, nicht an einer Liste: letztes Segment `to-shopping-list`
+ * oder `import-<etwas>`. Ein künftiger Geschwister-Pfad fällt damit auf, ohne
+ * dass jemand daran denken muss, ihn hier einzutragen.
  */
-test('Vorrat auf die Einkaufsliste lässt sich zurücknehmen', () => {
-  const route = read('../server/routes/shopping.js');
-  const page = read('../public/pages/pantry.js');
+function transferCalls(source) {
+  return [...source.matchAll(/api\.post\(\s*[`'"]([^`'"]+)[`'"]/g)]
+    .map((match) => match[1])
+    .filter((url) => /\/to-shopping-list$|\/import-[a-z-]+$/.test(url));
+}
 
-  const block = route.slice(route.indexOf("router.post('/:listId/import-pantry'"));
-  assert.match(block, /lastInsertRowid/, 'die Route muss die erzeugten IDs sammeln');
-  assert.match(block, /added_ids:\s*addedIds/, 'die Route muss added_ids zurückgeben');
-  assert.match(block, /added:\s*addedIds\.length/,
-    'added muss aus derselben Quelle kommen wie added_ids, sonst können sie auseinanderlaufen');
-  assert.match(block, /res\.json\(\{ data: \{ added: 0, skipped: 0, added_ids: \[\] \} \}\)/,
-    'auch der Leerfall muss added_ids liefern, damit der Client nicht raten muss');
+/** Dieselben Pfade auf der Serverseite. */
+function transferRoutes(source) {
+  const heads = [...source.matchAll(/^router\.(get|post|put|patch|delete)\('([^']+)'/gm)];
+  return heads
+    .map((head, index) => ({
+      method: head[1],
+      path: head[2],
+      body: source.slice(head.index, heads[index + 1]?.index ?? source.length),
+    }))
+    .filter(({ method, path }) => method === 'post' && /\/to-shopping-list$|\/import-[a-z-]+$/.test(path));
+}
 
-  assert.match(page, /added_ids:\s*addedIds\s*=\s*\[\]/, 'pantry.js muss added_ids auslesen');
-  assert.match(page, /api\.delete\(`\/shopping\/items\/\$\{id\}`\)/,
-    'das Undo muss genau die erzeugten Artikel löschen');
-  assert.match(page, /showToast\(message, 'success', \d+, undo\)/,
-    'der Erfolgs-Toast muss die Undo-Aktion tragen');
-  assert.match(page, /addedIds\.length\s*\?/,
+/**
+ * Wege mit eigenem Bestätigungsdialog. Dort ist die Rückfrage der Schutz, und
+ * der Nutzer steht beim Auslösen auf dem ZIEL - beides fehlt den drei Ein-Tipp-
+ * Pfaden, um die es hier geht.
+ */
+const CONFIRMED_TRANSFERS = new Map([
+  ['import-meal-plan', 'Einkauf holt sich den Essensplan: eigener Dialog mit Zeitraum-Wahl und '
+    + 'Vorschau („X Zutaten aus Y Mahlzeiten"), bestätigt auf der Zielliste selbst.'],
+  ['import-shopping', 'Einkauf räumt in den Vorrat ein: eigener Dialog, in dem Menge, Einheit und '
+    + 'Lagerort pro Artikel gesetzt werden - kein versehentlich auslösbarer Knopf.'],
+]);
+
+const isConfirmedTransfer = (url) => [...CONFIRMED_TRANSFERS.keys()].some((name) => url.endsWith(name));
+
+/**
+ * Der Zustand „es gibt noch keine Einkaufsliste" hatte VIER Antworten.
+ *
+ * Gemessen (Audit 2026-07-30, P1-A): zwei Zeichenketten, zwei Töne und genau ein
+ * Ausweg. `pantry.js` sagte in `warning`, was zu tun ist; `recipes.js` und
+ * `meals.js` benannten in `danger` nur den Zustand - rot behauptet dabei, etwas
+ * sei kaputt, obwohl eine noch nicht angelegte Liste bloß eine fehlende
+ * Voraussetzung ist. Im Mahlzeiten-Modal stand derselbe Satz ein viertes Mal als
+ * deaktiviertes `<option>` neben einem Knopf, der nichts tat. Und `recipes.js`
+ * lieh sich dafür `meals.noShoppingLists`: ein Refactor im Essensplan hätte den
+ * Text der Rezepte stillschweigend mitgenommen.
+ *
+ * Der Guard hält die Regel, nicht die vier Dateien: er findet JEDEN Transfer im
+ * Seitenbestand und verlangt, dass dessen Vorprüfung aus dem geteilten Baustein
+ * kommt.
+ */
+test('der Zustand „keine Einkaufsliste" hat genau eine Antwort', () => {
+  const de = JSON.parse(read('../public/locales/de.json'));
+  const helper = read('../public/utils/kitchen-transfer.js');
+
+  // Der Helfer kapselt Prüfung UND Antwort. Ein geteilter Locale-Key allein
+  // hätte Ton, Ausweg und Vorprüfung unberührt gelassen - genau die Teile, die
+  // auseinandergelaufen waren.
+  assert.match(helper, /export async function resolveShoppingTarget/,
+    'die Vorprüfung gehört in den geteilten Baustein, nicht in die drei Aufrufer');
+  assert.match(helper, /showToast\(message, 'warning', TRANSFER_TOAST_MS, action\)/,
+    'Ton warning statt danger: eine fehlende Voraussetzung ist keine Störung');
+  assert.match(helper, /navigate\('\/shopping'\)/,
+    'die Antwort muss einen Ausweg tragen, nicht nur den Zustand benennen');
+  assert.match(helper, /isModuleDisabled\?\.\('shopping'\)/,
+    'ist der Einkauf abgeschaltet, wäre der Ausweg eine Sackgasse - dann entfällt er');
+
+  const pagesDir = new URL('../public/pages/', import.meta.url);
+  let checked = 0;
+  for (const entry of readdirSync(pagesDir)) {
+    if (!entry.endsWith('.js')) continue;
+    const source = read(`../public/pages/${entry}`);
+    for (const url of transferCalls(source)) {
+      if (isConfirmedTransfer(url)) continue;
+      checked += 1;
+      assert.match(source, /from '\/utils\/kitchen-transfer\.js'/,
+        `${entry} überträgt nach ${url} und muss dafür den geteilten Baustein importieren`);
+      assert.match(source, /resolveShoppingTarget\(/,
+        `${entry} muss sein Transfer-Ziel über resolveShoppingTarget() bestimmen, nicht selbst prüfen`);
+    }
+  }
+  assert.ok(checked >= 3, `mindestens die drei erzeugenden Pfade müssen erfasst sein, gefunden: ${checked}`);
+
+  // Keine Seite hält eine EIGENE Antwort auf diesen Zustand. Die beiden
+  // verbliebenen Vorkommen sind ein anderer Zustand: dort hat der Nutzer gar
+  // keine Liste UND steht auf der Fläche, auf der er eine anlegt - beide tragen
+  // ihren eigenen Anlege-CTA und sind keine Vorbedingung eines Transfers.
+  const ownEmptyStates = new Set(['shopping.noLists', 'dashboard.noShoppingLists']);
+  for (const entry of readdirSync(pagesDir)) {
+    if (!entry.endsWith('.js')) continue;
+    for (const [, key] of read(`../public/pages/${entry}`)
+      .matchAll(/t\('([a-zA-Z]+\.(?:noShoppingLists|noLists))'/g)) {
+      assert.ok(
+        key.startsWith('kitchen.') || ownEmptyStates.has(key),
+        `${entry} beantwortet „keine Einkaufsliste" mit ${key} statt über den geteilten Baustein`,
+      );
+    }
+  }
+
+  // Der Key gehört der Gruppe, nicht einem der drei Aufrufer.
+  assertKeysExistInEveryLocale(['kitchen.noShoppingLists', 'kitchen.createShoppingList']);
+  assert.equal(de.meals.noShoppingLists, undefined,
+    'der Text darf nicht in meals.* liegen - die Rezepte liehen ihn sich von dort');
+  assert.equal(de.pantry.noLists, undefined, 'auch der Vorrat besitzt den Zustand nicht mehr allein');
+  assert.doesNotMatch(de.kitchen.noShoppingLists, /Tab/,
+    'den Zielort nennt der Knopf; ein zweites Mal im Satz wäre der Tab-Name doppelt');
+});
+
+/**
+ * Zurücknehmen konnte man nur im Vorrat.
+ *
+ * Gemessen (Audit 2026-07-30, P1-B): drei Wege erzeugen mit EINEM Tippen Artikel
+ * in einer Liste, die der Nutzer gerade nicht ansieht - und nur `pantry.js` bot
+ * eine Rücknahme an. Das Rezept überträgt dabei am meisten auf einmal, eine
+ * ganze Zutatenliste. Dazu zwei Abweichungen auf demselben Pfad: die Standzeit
+ * des Toasts (Vorrat 5000, sonst Default) und das Sperren des Knopfes während
+ * des Transfers (Rezepte ja, Vorrat nein).
+ *
+ * Auch dieser Guard sucht den Bestand ab: jeder Transfer-Aufruf im Seitenbestand
+ * und jeder Transfer-Handler im Routenbestand muss die Regel erfüllen. Ausnahmen
+ * stehen mit Begründung in CONFIRMED_TRANSFERS.
+ */
+test('jeder Ein-Tipp-Transfer in eine fremde Liste ist rücknehmbar', () => {
+  const helper = read('../public/utils/kitchen-transfer.js');
+
+  // Eine Standzeit für alle, und sie ist länger als der Default: diese Toasts
+  // tragen eine Aktion, der Nutzer muss lesen UND entscheiden können.
+  assert.match(helper, /export const TRANSFER_TOAST_MS = 5000/);
+  assert.match(helper, /showToast\(message, 'success', TRANSFER_TOAST_MS, undo\)/,
+    'der Erfolgs-Toast muss die Rücknahme tragen');
+  assert.match(helper, /ids\.length\s*\?/,
     'ohne IDs darf kein Undo-Knopf erscheinen, der nichts zurücknehmen kann');
-  assertKeysExistInEveryLocale(['pantry.toShoppingUndone']);
+  assert.match(helper, /api\.post\('\/shopping\/items\/undo-transfer', \{ ids \}\)/,
+    'die Rücknahme läuft über EINEN Aufruf - N einzelne DELETEs können zur Hälfte scheitern');
+  assert.match(helper, /refreshKitchenBadges\(\)/,
+    'die Zahl des Einkaufs-Tabs ändert sich in beide Richtungen, beide Male hier');
+
+  // Serverbestand: was einen Transfer entgegennimmt, liefert die erzeugten IDs.
+  // Ohne sie gibt es nichts zurückzunehmen - die Anzahl kennt erst der Server,
+  // weil er Duplikate überspringt.
+  const routesDir = new URL('../server/routes/', import.meta.url);
+  let routesChecked = 0;
+  for (const entry of readdirSync(routesDir)) {
+    if (!entry.endsWith('.js')) continue;
+    for (const route of transferRoutes(read(`../server/routes/${entry}`))) {
+      if (isConfirmedTransfer(route.path)) continue;
+      routesChecked += 1;
+      assert.match(route.body, /added_ids/,
+        `POST ${route.path} (${entry}) muss die erzeugten IDs zurückgeben`);
+      assert.match(route.body, /lastInsertRowid/,
+        `POST ${route.path} (${entry}) muss die IDs beim Einfügen einsammeln`);
+      assert.match(route.body, /added_ids: \[\] \} \}\)/,
+        `POST ${route.path} (${entry}) muss auch im Leerfall added_ids liefern, damit der Client nicht raten muss`);
+    }
+  }
+  assert.ok(routesChecked >= 3, `mindestens drei Transfer-Routen erwartet, gefunden: ${routesChecked}`);
+
+  // Die Rücknahme nimmt den GANZEN Übertrag zurück, nicht nur seine Artikel: der
+  // Mahlzeit-Pfad setzt beim Übertragen `on_shopping_list`. Wer nur die
+  // Einkaufsartikel löscht, lässt die Zutaten für immer als „schon übertragen"
+  // zurück - weder auf der Liste noch erneut übertragbar.
+  const shoppingRoute = read('../server/routes/shopping.js');
+  const undoBlock = shoppingRoute.slice(shoppingRoute.indexOf("router.post('/items/undo-transfer'"));
+  assert.match(undoBlock, /UPDATE meal_ingredients SET on_shopping_list = 0/,
+    'das Undo muss das Zutaten-Flag mit zurücknehmen');
+  assert.match(undoBlock, /db\.get\(\)\.transaction\(/,
+    'die Rücknahme ist eine Handlung und gehört in eine Transaktion');
+
+  // Seitenbestand: jeder Transfer meldet über den geteilten Baustein - damit
+  // erbt er Standzeit, Tab-Zahl und Rücknahme, statt sie je Modul zu setzen.
+  const pagesDir = new URL('../public/pages/', import.meta.url);
+  for (const entry of readdirSync(pagesDir)) {
+    if (!entry.endsWith('.js')) continue;
+    const source = read(`../public/pages/${entry}`);
+    for (const url of transferCalls(source)) {
+      if (isConfirmedTransfer(url)) continue;
+      assert.match(source, /announceTransfer\(\{/,
+        `${entry} überträgt nach ${url} und muss den Erfolg über announceTransfer() melden`);
+      assert.match(source, /added_ids/,
+        `${entry} muss die added_ids der Antwort weiterreichen, sonst gibt es nichts zurückzunehmen`);
+      assert.doesNotMatch(source, /showToast\([^)]*'success',\s*\d+/,
+        `${entry} darf keine eigene Toast-Standzeit für einen Transfer setzen`);
+    }
+  }
+
+  // Knopf-Sperre während des Transfers in allen drei Aufrufern: ohne sie erzeugt
+  // jedes weitere Tippen einen eigenen Toast mit eigenem Undo, von denen nur der
+  // letzte etwas zurücknimmt.
+  for (const page of ['pantry.js', 'recipes.js', 'meals.js']) {
+    assert.match(read(`../public/pages/${page}`), /if \(btn\) btn\.disabled = true;/,
+      `${page} muss den auslösenden Knopf während des Transfers sperren`);
+  }
+
+  assertKeysExistInEveryLocale(['kitchen.transferUndone']);
 });
 
 /**
@@ -2262,8 +2435,13 @@ test('die Küche benutzt ein Vokabular für eine Sache', () => {
   }
   assert.match(de.shopping.toPantryDoneAt, /\{\{location\}\}/,
     'der Weg in den Vorrat muss den gewählten Lagerort nennen');
-  for (const [page, call] of [['meals', 'list: state.lists.find'], ['recipes', 'list: state.lists.find'], ['pantry', 'const listName = lists.find']]) {
-    assert.ok(pages[page].includes(call), `${page}.js muss den Listennamen an den Toast übergeben`);
+  // Geprüft wird der AUFRUF, nicht die Zeile, aus der der Name stammt: die drei
+  // holten ihn vorher je anders (`state.lists.find`, eine lokale `listName`), und
+  // ein Guard auf diese Schreibweisen scheiterte am nächsten Refactor, obwohl die
+  // Regel weiter galt.
+  for (const [page, key] of [['meals', 'meals.transferSuccess'], ['recipes', 'recipes.toShoppingSuccess'], ['pantry', 'pantry.toShoppingDone']]) {
+    assert.match(pages[page], new RegExp(`t\\('${key}',\\s*\\{[^}]*list:`),
+      `${page}.js muss den Listennamen an ${key} übergeben`);
   }
 
   // EIN Name pro Modul: der sichtbare Tab und die sr-only-Überschrift derselben
@@ -2294,7 +2472,7 @@ test('die Küche benutzt ein Vokabular für eine Sache', () => {
     // stand ohne, „Rezept gelöscht." mit (Critique 2026-07-30).
     assert.match(de[block][name], /\.$/, `${key} muss auf einen Punkt enden`);
   }
-  assert.match(de.pantry.toShoppingUndone, /entfernt/,
+  assert.match(de.kitchen.transferUndone, /entfernt/,
     'das Undo nimmt den Artikel von der Einkaufsliste, ohne ihn zu löschen - hier ist „entfernt" korrekt');
 });
 

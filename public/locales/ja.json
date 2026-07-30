@@ -58,6 +58,11 @@
             "assigneesNobodyHint": "誰も割り当てないと、この項目はあなたにしか表示されません。"
         }
     },
+    "kitchen": {
+        "noShoppingLists": "買い物リストがまだありません。",
+        "createShoppingList": "新しいリストを作成",
+        "transferUndone": "買い物リストから削除しました。"
+    },
     "nav": {
         "dashboard": "ダッシュボード",
         "tasks": "タスク",
@@ -456,7 +461,6 @@
         "removeIngredient": "材料を削除",
         "transferLabel": "材料を買い物リストに追加",
         "transferNow": "追加",
-        "noShoppingLists": "買い物リストがありません",
         "transferSuccess": "{{list}} に {{count}} 件の材料を追加しました。",
         "transferAlreadyDone": "すべての材料はすでにリストにあります。",
         "randomizePlan": "献立をランダムに埋める",
@@ -3636,9 +3640,7 @@
         "toShoppingDone_one": "{{list}} に {{count}} 件の商品を追加しました。",
         "toShoppingSkipped": "{{count}}件はすでに載っていました。",
         "toShoppingSkipped_one": "{{count}}件はすでに載っていました。",
-        "toShoppingUndone": "買い物リストから削除しました。",
         "toShoppingNone": "すべてすでに買い物リストにあります。",
-        "noLists": "買い物リストがまだありません。「買い物」タブで作成してください。",
         "locPantry": "食品棚",
         "locFridge": "冷蔵庫",
         "locFreezer": "冷凍庫",

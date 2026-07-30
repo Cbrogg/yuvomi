@@ -58,6 +58,11 @@
             "assigneesNobodyHint": "Kimse atanmazsa bu kaydı yalnızca sen görürsün."
         }
     },
+    "kitchen": {
+        "noShoppingLists": "Henüz alışveriş listesi yok.",
+        "createShoppingList": "Yeni liste oluştur",
+        "transferUndone": "Alışveriş listesinden kaldırıldı."
+    },
     "nav": {
         "dashboard": "Genel Bakış",
         "tasks": "Görevler",
@@ -456,7 +461,6 @@
         "removeIngredient": "Malzemeyi kaldır",
         "transferLabel": "Malzemeleri alışveriş listesine ekle",
         "transferNow": "Ekle",
-        "noShoppingLists": "Alışveriş listesi yok",
         "transferSuccess": "{{list}} listesine {{count}} malzeme eklendi.",
         "transferAlreadyDone": "Tüm malzemeler listede zaten var.",
         "randomizePlan": "Planı rastgele doldur",
@@ -3636,9 +3640,7 @@
         "toShoppingDone_one": "{{list}} listesine {{count}} ürün eklendi.",
         "toShoppingSkipped": "{{count}} zaten listedeydi.",
         "toShoppingSkipped_one": "{{count}} zaten listedeydi.",
-        "toShoppingUndone": "Alışveriş listesinden kaldırıldı.",
         "toShoppingNone": "Her şey zaten alışveriş listesinde.",
-        "noLists": "Henüz alışveriş listesi yok. Alışveriş sekmesinde bir tane oluştur.",
         "locPantry": "Kiler dolabı",
         "locFridge": "Buzdolabı",
         "locFreezer": "Derin dondurucu",

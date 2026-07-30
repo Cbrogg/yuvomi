@@ -11,7 +11,8 @@ import { t, formatDate, formatDayMonth, formatDateInput, parseDateInput, isDateI
 import { esc } from '/utils/html.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
 import { DEFAULT_CATEGORY_NAME } from '/utils/shopping-categories.js';
-import { renderKitchenTabsBar, refreshKitchenBadges } from '/utils/kitchen-tabs.js';
+import { renderKitchenTabsBar } from '/utils/kitchen-tabs.js';
+import { resolveShoppingTarget, announceTransfer, mountMissingShoppingList } from '/utils/kitchen-transfer.js';
 import { ingredientRowHTML } from '/utils/ingredient-row.js';
 import { addLocalDays, startOfLocalWeekKey, toLocalDateKey } from '/utils/date.js';
 import { normalizeRecipeMealTypes, recipeSupportsMealType } from '/utils/recipe-meal-types.js';
@@ -720,7 +721,7 @@ function wireGrid(grid) {
     }
 
     if (action === 'transfer-meal') {
-      await transferMeal(parseInt(btn.dataset.mealId, 10));
+      await transferMeal(parseInt(btn.dataset.mealId, 10), btn);
     }
   });
 
@@ -1225,7 +1226,14 @@ function openMealModal(opts) {
         if (btn) btn.closest('.ingredient-row').remove();
       });
 
-      // Einkaufslisten-Transfer
+      // Einkaufslisten-Transfer. Ohne Liste steht hier statt des toten
+      // Auswahlfelds die geteilte Antwort samt Ausweg - `beforeLeave` schließt
+      // das Modal, sonst bliebe es über dem Einkaufs-Tab stehen.
+      mountMissingShoppingList(
+        panel.querySelector('#transfer-missing'),
+        { beforeLeave: () => closeModal({ force: true }) },
+      );
+
       panel.querySelector('#transfer-btn')?.addEventListener('click', async () => {
         const selectEl = panel.querySelector('#transfer-list-select');
         const listId   = parseInt(selectEl?.value, 10);
@@ -1235,14 +1243,22 @@ function openMealModal(opts) {
         try {
           const res = await api.post(`/meals/${state.modal.meal.id}/to-shopping-list`, { listId });
           if (res.data.transferred > 0) {
-            window.yuvomi?.showToast(t('meals.transferSuccess', {
-              count: res.data.transferred,
-              list: state.lists.find((l) => l.id === listId)?.name ?? '',
-            }), 'success');
-            refreshKitchenBadges();
             await loadWeek(state.currentWeek);
             closeModal({ force: true });
             renderWeekGrid();
+            // Dieselbe Meldung, Standzeit und Rücknahme wie am Slot-Knopf: es ist
+            // derselbe Transfer, nur ein anderer Auslöser.
+            announceTransfer({
+              message: t('meals.transferSuccess', {
+                count: res.data.transferred,
+                list: state.lists.find((l) => l.id === listId)?.name ?? '',
+              }),
+              addedIds: res.data.added_ids ?? [],
+              onUndone: async () => {
+                await loadWeek(state.currentWeek);
+                renderWeekGrid();
+              },
+            });
           } else {
             window.yuvomi?.showToast(t('meals.transferAlreadyDone'), 'info');
             btn.disabled = false;
@@ -1268,9 +1284,7 @@ function buildModalContent({ mode, date, mealType, meal }) {
     `<option value="${mt.key}" ${mt.key === mealType ? 'selected' : ''}>${mt.label}</option>`
   ).join('');
 
-  const listOpts = state.lists.length
-    ? state.lists.map((l) => `<option value="${l.id}">${esc(l.name)}</option>`).join('')
-    : `<option value="" disabled>${t('meals.noShoppingLists')}</option>`;
+  const listOpts = state.lists.map((l) => `<option value="${l.id}">${esc(l.name)}</option>`).join('');
 
   const ingRows = isEdit && meal.ingredients?.length
     ? meal.ingredients.map((ing) => ingredientRowHTML({
@@ -1379,10 +1393,18 @@ function buildModalContent({ mode, date, mealType, meal }) {
         <i data-lucide="shopping-cart" class="icon-sm" aria-hidden="true"></i>
         ${t('meals.transferLabel')}
       </div>
+      ${state.lists.length ? `
       <select class="shopping-transfer__select" id="transfer-list-select">${listOpts}</select>
       <button class="btn btn--secondary shopping-transfer__btn" id="transfer-btn" type="button">
         ${t('meals.transferNow')}
-      </button>
+      </button>`
+      // Ohne Liste stand hier ein Auswahlfeld mit einem deaktivierten
+      // `<option>` als Begründung und daneben ein Knopf, der nichts tat - ein
+      // Bedienelement, das den Grund seiner Nutzlosigkeit in sich trägt, ist die
+      // schlechteste der vier Formen dieses Zustands, weil es bedienbar aussieht
+      // (Audit 2026-07-30, P1-A). Der Platzhalter wird beim Verdrahten aus dem
+      // geteilten Baustein gefüllt.
+      : '<div id="transfer-missing" class="shopping-transfer__missing"></div>'}
     </div>` : ''}
 
     <div class="modal-panel__footer modal-panel__footer--plain">
@@ -1530,41 +1552,43 @@ async function deleteMeal(mealId) {
 // Zutaten → Einkaufsliste (Quick-Transfer vom Slot aus)
 // --------------------------------------------------------
 
-async function transferMeal(mealId) {
-  if (!state.lists.length) {
-    window.yuvomi?.showToast(t('meals.noShoppingLists'), 'danger');
-    return;
-  }
+async function transferMeal(mealId, btn) {
+  // Vorprüfung, Listenwahl und die Antwort auf „es gibt keine Liste" liegen im
+  // geteilten Baustein (utils/kitchen-transfer.js).
+  const target = await resolveShoppingTarget(state.lists);
+  if (!target) return;
 
-  let listId = state.lists[0].id;
-
-  if (state.lists.length > 1) {
-    const options = state.lists.map((l) => ({ value: l.id, label: l.name }));
-    const choice = await selectModal(t('common.toShoppingListWhich'), options);
-    if (choice === null) return;
-    listId = Number(choice);
-  }
-
+  if (btn) btn.disabled = true;
   try {
-    const res = await api.post(`/meals/${mealId}/to-shopping-list`, { listId });
+    const res = await api.post(`/meals/${mealId}/to-shopping-list`, { listId: target.id });
     if (res.data.transferred > 0) {
+      await loadWeek(state.currentWeek);
+      renderWeekGrid();
       // Der Toast nennt die ZIEL-Liste. „5 Zutaten übernommen." sagte nicht, wohin -
       // und bei mehreren Listen ist genau das die Frage, die offen bleibt (Critique
       // 2026-07-30, P1). Der Kreislauf endet nicht mit „übernommen", sondern in
       // einer bestimmten Liste.
-      window.yuvomi?.showToast(t('meals.transferSuccess', {
-        count: res.data.transferred,
-        list: state.lists.find((l) => l.id === listId)?.name ?? '',
-      }), 'success');
-      // Der Einkaufs-Tab zeigt jetzt eine andere Zahl.
-      refreshKitchenBadges();
-      await loadWeek(state.currentWeek);
-      renderWeekGrid();
+      //
+      // `onUndone` zeichnet die Woche neu: die Rücknahme setzt serverseitig auch
+      // `on_shopping_list` zurück, die Zutaten sind danach wieder offen - und die
+      // Kachel zeigt den Übernahme-Knopf wieder an.
+      announceTransfer({
+        message: t('meals.transferSuccess', { count: res.data.transferred, list: target.name }),
+        addedIds: res.data.added_ids ?? [],
+        onUndone: async () => {
+          await loadWeek(state.currentWeek);
+          renderWeekGrid();
+        },
+      });
     } else {
       window.yuvomi?.showToast(t('meals.transferAlreadyDone'), 'info');
     }
   } catch (err) {
     window.yuvomi?.showToast(err.data?.error ?? t('common.errorGeneric'), 'danger');
+  } finally {
+    // Die Kachel wird nach einem Erfolg neu gezeichnet; der Knopf hier ist dann
+    // schon ersetzt. Das Zurücksetzen gilt dem Fehlerfall und dem Nichts-zu-tun-Fall.
+    if (btn?.isConnected) btn.disabled = false;
   }
 }
 

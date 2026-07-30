@@ -19,6 +19,11 @@ import express from 'express';
 
 const dbmod = await import('../server/db.js');
 const { default: mealsRouter } = await import('../server/routes/meals.js');
+// Der Einkaufs-Router hängt mit drin, weil die Rücknahme eines Transfers über
+// ihn läuft (POST /shopping/items/undo-transfer). Beim Mahlzeit-Pfad gehört das
+// `on_shopping_list`-Flag zum Übertrag und muss mit zurück - das ist ohne beide
+// Router nicht prüfbar.
+const { default: shoppingRouter } = await import('../server/routes/shopping.js');
 const { addDays, mealWeekday } = await import('../server/services/meal-recurrence.js');
 const db = dbmod.get();
 
@@ -35,6 +40,7 @@ app.use((req, _res, next) => {
   req.session = { userId: actor.id, role: actor.role };
   next();
 });
+app.use('/shopping', shoppingRouter);
 app.use('/', mealsRouter);
 const server = app.listen(0);
 const baseUrl = await new Promise((r) => server.on('listening', () => r(`http://127.0.0.1:${server.address().port}`)));
@@ -399,6 +405,46 @@ test('POST /:id/to-shopping-list: überträgt nur offene, markiert sie, idempote
   // zweiter Aufruf überträgt nichts
   const r2 = await call('POST', `/${m.id}/to-shopping-list`, { listId: LIST });
   assert.equal(r2.body.data.transferred, 0);
+  assert.deepEqual(r2.body.data.added_ids, []);
+});
+
+/**
+ * Beim Mahlzeit-Pfad gehört das `on_shopping_list`-Flag zum Übertrag.
+ *
+ * Wer nur die Einkaufsartikel löscht, lässt die Zutaten für immer als „schon
+ * übertragen" zurück - weder auf der Liste noch erneut übertragbar. Genau
+ * deshalb läuft die Rücknahme über einen eigenen Endpunkt und nicht über N
+ * DELETEs (Audit 2026-07-30, P1-B).
+ */
+test('POST /:id/to-shopping-list: das Undo nimmt Artikel UND Zutaten-Flag zurück', async () => {
+  const m = (await createMeal({
+    date: '2026-06-04', title: 'Undo', ingredients: [{ name: 'Hafer' }, { name: 'Zimt' }],
+  })).body.data;
+  db.prepare('INSERT INTO shopping_items (list_id, name) VALUES (?, ?)').run(LIST, 'Fremd');
+
+  const r = await call('POST', `/${m.id}/to-shopping-list`, { listId: LIST });
+  assert.equal(r.body.data.transferred, 2);
+  assert.equal(r.body.data.added_ids.length, 2);
+
+  const undo = await call('POST', '/shopping/items/undo-transfer', { ids: r.body.data.added_ids });
+  assert.equal(undo.body.data.removed, 2);
+
+  assert.equal(
+    db.prepare('SELECT COUNT(*) c FROM shopping_items WHERE added_from_meal = ?').get(m.id).c, 0,
+    'die erzeugten Artikel sind weg',
+  );
+  assert.equal(
+    db.prepare('SELECT COUNT(*) c FROM shopping_items WHERE list_id = ? AND name = ?').get(LIST, 'Fremd').c, 1,
+    'der Fremdartikel bleibt unberührt',
+  );
+  assert.equal(
+    db.prepare('SELECT COUNT(*) c FROM meal_ingredients WHERE meal_id = ? AND on_shopping_list = 0').get(m.id).c, 2,
+    'die Zutaten sind wieder offen',
+  );
+
+  // Der Beweis, dass die Rücknahme vollständig war: derselbe Transfer geht erneut.
+  const again = await call('POST', `/${m.id}/to-shopping-list`, { listId: LIST });
+  assert.equal(again.body.data.transferred, 2);
 });
 
 test('POST /week-to-shopping-list: fehlende listId → 400', async () => {

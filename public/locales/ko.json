@@ -58,6 +58,11 @@
             "assigneesNobodyHint": "아무도 지정하지 않으면 이 항목은 나만 볼 수 있습니다."
         }
     },
+    "kitchen": {
+        "noShoppingLists": "아직 장보기 목록이 없습니다.",
+        "createShoppingList": "새 목록 만들기",
+        "transferUndone": "쇼핑 목록에서 삭제했습니다."
+    },
     "nav": {
         "dashboard": "개요",
         "tasks": "할 일",
@@ -468,7 +473,6 @@
         "removeIngredient": "재료 제거",
         "transferLabel": "재료를 장보기 목록에 추가",
         "transferNow": "추가",
-        "noShoppingLists": "장보기 목록이 없습니다",
         "transferSuccess": "{{list}}에 재료 {{count}}개를 추가했습니다.",
         "transferAlreadyDone": "모든 재료가 이미 목록에 있습니다.",
         "randomizePlan": "식단 무작위 채우기",
@@ -3636,9 +3640,7 @@
         "toShoppingDone_one": "{{list}}에 항목 {{count}}개를 추가했습니다.",
         "toShoppingSkipped": "{{count}}개는 이미 있었습니다.",
         "toShoppingSkipped_one": "{{count}}개는 이미 있었습니다.",
-        "toShoppingUndone": "쇼핑 목록에서 삭제했습니다.",
         "toShoppingNone": "모두 이미 장보기 목록에 있습니다.",
-        "noLists": "아직 장보기 목록이 없습니다. 장보기 탭에서 하나 만드세요.",
         "locPantry": "식료품 수납장",
         "locFridge": "냉장고",
         "locFreezer": "냉동고",

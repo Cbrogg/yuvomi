@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.62.0] - 2026-07-30
+
+### Added
+- Sending things to a shopping list can now be taken back, from all three places that do it: the cart button on a pantry row, a recipe's ingredients, and a planned meal. Until now only the pantry offered it, although a recipe moves the most at once, a whole ingredient list, into a list you are not looking at. The confirmation stays on screen for five seconds everywhere, and taking it back removes exactly what was just added and nothing else. For a meal, the ingredients count as not yet transferred again afterwards, so the meal can be sent a second time.
+
+### Changed
+- "There is no shopping list yet" now says the same thing wherever you meet it, and it offers a way out. There were four different answers to the same situation: one in the pantry that told you where to go, two in red that only named the state and left you standing, and a fourth in the meal editor that was a greyed-out dropdown next to a button that did nothing. Red claims something is broken, while a list you have not created yet is simply a step you have not taken. All four are now one sentence in the same colour, with a button that takes you straight to the shopping list.
+
 ## [1.61.0] - 2026-07-30
 
 ### Added

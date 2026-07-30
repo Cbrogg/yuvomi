@@ -58,6 +58,11 @@
             "assigneesNobodyHint": "Sans personne assignée, vous seul voyez cette entrée."
         }
     },
+    "kitchen": {
+        "noShoppingLists": "Il n'y a encore aucune liste de courses.",
+        "createShoppingList": "Créer une nouvelle liste",
+        "transferUndone": "Retiré de la liste de courses."
+    },
     "nav": {
         "dashboard": "Accueil",
         "tasks": "Tâches",
@@ -456,7 +461,6 @@
         "removeIngredient": "Supprimer l'ingrédient",
         "transferLabel": "Ajouter les ingrédients à la liste de courses",
         "transferNow": "Ajouter",
-        "noShoppingLists": "Aucune liste de courses disponible",
         "transferSuccess": "{{count}} ingrédients ajoutés à {{list}}.",
         "transferAlreadyDone": "Tous les ingrédients sont déjà sur la liste.",
         "randomizePlan": "Remplir le planning au hasard",
@@ -3636,9 +3640,7 @@
         "toShoppingDone_one": "{{count}} article ajouté à {{list}}.",
         "toShoppingSkipped": "{{count}} y figuraient déjà.",
         "toShoppingSkipped_one": "{{count}} y figurait déjà.",
-        "toShoppingUndone": "Retiré de la liste de courses.",
         "toShoppingNone": "Tout figure déjà sur la liste de courses.",
-        "noLists": "Il n'y a encore aucune liste de courses. Créez-en une dans l'onglet Courses.",
         "locPantry": "Placard",
         "locFridge": "Réfrigérateur",
         "locFreezer": "Congélateur",

@@ -58,6 +58,11 @@
             "assigneesNobodyHint": "Bez przypisania widzisz ten wpis tylko ty."
         }
     },
+    "kitchen": {
+        "noShoppingLists": "Nie ma jeszcze listy zakupów.",
+        "createShoppingList": "Utwórz nową listę",
+        "transferUndone": "Usunięto z listy zakupów."
+    },
     "nav": {
         "dashboard": "Pulpit",
         "tasks": "Zadania",
@@ -468,7 +473,6 @@
         "removeIngredient": "Usuń składnik",
         "transferLabel": "Dodaj składniki do listy zakupów",
         "transferNow": "Dodaj",
-        "noShoppingLists": "Brak list zakupów",
         "transferSuccess": "Dodano {{count}} składników do {{list}}.",
         "transferAlreadyDone": "Wszystkie składniki są już na liście.",
         "randomizePlan": "Wypełnij plan losowo",
@@ -3636,9 +3640,7 @@
         "toShoppingDone_one": "Dodano {{count}} artykuł do {{list}}.",
         "toShoppingSkipped": "{{count}} już się na niej znajdowało.",
         "toShoppingSkipped_one": "{{count}} już się na niej znajdował.",
-        "toShoppingUndone": "Usunięto z listy zakupów.",
         "toShoppingNone": "Wszystko jest już na liście zakupów.",
-        "noLists": "Nie ma jeszcze listy zakupów. Utwórz ją w zakładce Zakupy.",
         "locPantry": "Szafka spiżarniana",
         "locFridge": "Lodówka",
         "locFreezer": "Zamrażarka",

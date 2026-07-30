@@ -58,6 +58,11 @@
             "assigneesNobodyHint": "Bez přiřazení vidíš tuto položku jen ty."
         }
     },
+    "kitchen": {
+        "noShoppingLists": "Nákupní seznam ještě neexistuje.",
+        "createShoppingList": "Vytvořit nový seznam",
+        "transferUndone": "Odebráno ze seznamu nákupů."
+    },
     "nav": {
         "dashboard": "Přehled",
         "tasks": "Úkoly",
@@ -456,7 +461,6 @@
         "removeIngredient": "Odebrat ingredienci",
         "transferLabel": "Přidat ingredience na nákupní seznam",
         "transferNow": "Přidat",
-        "noShoppingLists": "Žádné nákupní seznamy k dispozici",
         "transferSuccess": "{{count}} ingrediencí přidáno do {{list}}.",
         "transferAlreadyDone": "Všechny ingredience už na seznamu jsou.",
         "randomizePlan": "Vyplnit plán náhodně",
@@ -3636,9 +3640,7 @@
         "toShoppingDone_one": "{{count}} položka přidána do {{list}}.",
         "toShoppingSkipped": "{{count}} tam už bylo.",
         "toShoppingSkipped_one": "{{count}} tam už byla.",
-        "toShoppingUndone": "Odebráno ze seznamu nákupů.",
         "toShoppingNone": "Vše už je na nákupním seznamu.",
-        "noLists": "Nákupní seznam ještě neexistuje. Vytvoř ho v záložce Nákup.",
         "locPantry": "Spížní skříň",
         "locFridge": "Lednice",
         "locFreezer": "Mraznička",

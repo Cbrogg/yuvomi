@@ -58,6 +58,11 @@
             "assigneesNobodyHint": "Senza assegnatari, solo tu vedi questa voce."
         }
     },
+    "kitchen": {
+        "noShoppingLists": "Non c'è ancora una lista della spesa.",
+        "createShoppingList": "Crea nuova lista",
+        "transferUndone": "Rimosso dalla lista della spesa."
+    },
     "nav": {
         "dashboard": "Panoramica",
         "tasks": "Compiti",
@@ -456,7 +461,6 @@
         "removeIngredient": "Rimuovi ingrediente",
         "transferLabel": "Aggiungi gli ingredienti alla lista della spesa",
         "transferNow": "Aggiungi",
-        "noShoppingLists": "Nessuna lista della spesa disponibile",
         "transferSuccess": "{{count}} ingredienti aggiunti a {{list}}.",
         "transferAlreadyDone": "Tutti gli ingredienti sono già sulla lista.",
         "randomizePlan": "Compila il piano a caso",
@@ -3636,9 +3640,7 @@
         "toShoppingDone_one": "{{count}} articolo aggiunto a {{list}}.",
         "toShoppingSkipped": "{{count}} erano già presenti.",
         "toShoppingSkipped_one": "{{count}} era già presente.",
-        "toShoppingUndone": "Rimosso dalla lista della spesa.",
         "toShoppingNone": "Tutto è già nella lista della spesa.",
-        "noLists": "Non c'è ancora una lista della spesa. Creane una nella scheda Spesa.",
         "locPantry": "Dispensa",
         "locFridge": "Frigorifero",
         "locFreezer": "Congelatore",

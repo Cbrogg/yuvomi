@@ -58,6 +58,11 @@
             "assigneesNobodyHint": "Без призначення цей запис бачите лише ви."
         }
     },
+    "kitchen": {
+        "noShoppingLists": "Списку покупок ще немає.",
+        "createShoppingList": "Створити новий список",
+        "transferUndone": "Видалено зі списку покупок."
+    },
     "nav": {
         "dashboard": "Огляд",
         "tasks": "Завдання",
@@ -456,7 +461,6 @@
         "removeIngredient": "Видалити інгредієнт",
         "transferLabel": "Додати інгредієнти до списку покупок",
         "transferNow": "Додати",
-        "noShoppingLists": "Немає доступних списків покупок",
         "transferSuccess": "До {{list}} додано: {{count}} інгредієнтів.",
         "transferAlreadyDone": "Усі інгредієнти вже у списку.",
         "randomizePlan": "Заповнити план навмання",
@@ -3636,9 +3640,7 @@
         "toShoppingDone_one": "До {{list}} додано {{count}} товар.",
         "toShoppingSkipped": "{{count}} уже були в ньому.",
         "toShoppingSkipped_one": "{{count}} уже був у ньому.",
-        "toShoppingUndone": "Видалено зі списку покупок.",
         "toShoppingNone": "Усе вже є у списку покупок.",
-        "noLists": "Списку покупок ще немає. Створи його на вкладці «Покупки».",
         "locPantry": "Комора",
         "locFridge": "Холодильник",
         "locFreezer": "Морозильник",

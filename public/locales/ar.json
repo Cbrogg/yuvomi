@@ -58,6 +58,11 @@
             "assigneesNobodyHint": "بدون إسناد، لا يرى هذا العنصر سواك."
         }
     },
+    "kitchen": {
+        "noShoppingLists": "لا توجد قائمة مشتريات بعد.",
+        "createShoppingList": "إنشاء قائمة جديدة",
+        "transferUndone": "تمت الإزالة من قائمة التسوق."
+    },
     "nav": {
         "dashboard": "لوحة التحكم",
         "tasks": "المهام",
@@ -456,7 +461,6 @@
         "removeIngredient": "إزالة المكون",
         "transferLabel": "إضافة المكونات إلى قائمة المشتريات",
         "transferNow": "إضافة",
-        "noShoppingLists": "لا توجد قوائم تسوق",
         "transferSuccess": "تمت إضافة {{count}} مكونات إلى {{list}}.",
         "transferAlreadyDone": "جميع المكونات موجودة بالفعل في القائمة.",
         "randomizePlan": "تعبئة الخطة عشوائياً",
@@ -3636,9 +3640,7 @@
         "toShoppingDone_one": "تمت إضافة {{count}} عنصر إلى {{list}}.",
         "toShoppingSkipped": "{{count}} كانت موجودة بالفعل.",
         "toShoppingSkipped_one": "{{count}} كان موجودًا بالفعل.",
-        "toShoppingUndone": "تمت الإزالة من قائمة التسوق.",
         "toShoppingNone": "كل شيء موجود بالفعل في قائمة التسوق.",
-        "noLists": "لا توجد قائمة مشتريات بعد. أنشئ واحدة في تبويب المشتريات.",
         "locPantry": "خزانة المؤن",
         "locFridge": "الثلاجة",
         "locFreezer": "المجمّد",

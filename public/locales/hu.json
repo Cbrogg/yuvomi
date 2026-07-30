@@ -58,6 +58,11 @@
             "assigneesNobodyHint": "Hozzárendelés nélkül csak te látod ezt a bejegyzést."
         }
     },
+    "kitchen": {
+        "noShoppingLists": "Még nincs bevásárlólista.",
+        "createShoppingList": "Új lista létrehozása",
+        "transferUndone": "Eltávolítva a bevásárlólistáról."
+    },
     "nav": {
         "dashboard": "Áttekintés",
         "tasks": "Feladatok",
@@ -456,7 +461,6 @@
         "removeIngredient": "Hozzávaló eltávolítása",
         "transferLabel": "Hozzávalók hozzáadása a bevásárlólistához",
         "transferNow": "Hozzáadás",
-        "noShoppingLists": "Nincsenek elérhető bevásárlólisták",
         "transferSuccess": "{{count}} hozzávaló hozzáadva a következőhöz: {{list}}.",
         "transferAlreadyDone": "Minden hozzávaló szerepel már a listán.",
         "randomizePlan": "Terv véletlenszerű kitöltése",
@@ -3636,9 +3640,7 @@
         "toShoppingDone_one": "{{count}} elem hozzáadva a következőhöz: {{list}}.",
         "toShoppingSkipped": "{{count}} már rajta volt.",
         "toShoppingSkipped_one": "{{count}} már rajta volt.",
-        "toShoppingUndone": "Eltávolítva a bevásárlólistáról.",
         "toShoppingNone": "Minden rajta van már a bevásárlólistán.",
-        "noLists": "Még nincs bevásárlólista. Hozz létre egyet a Bevásárlás fülön.",
         "locPantry": "Kamraszekrény",
         "locFridge": "Hűtőszekrény",
         "locFreezer": "Fagyasztó",

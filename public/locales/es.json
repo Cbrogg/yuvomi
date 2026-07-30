@@ -58,6 +58,11 @@
             "assigneesNobodyHint": "Si no asignas a nadie, solo tú verás esta entrada."
         }
     },
+    "kitchen": {
+        "noShoppingLists": "Todavía no hay lista de la compra.",
+        "createShoppingList": "Crear nueva lista",
+        "transferUndone": "Eliminado de la lista de la compra."
+    },
     "nav": {
         "dashboard": "Inicio",
         "tasks": "Tareas",
@@ -456,7 +461,6 @@
         "removeIngredient": "Eliminar ingrediente",
         "transferLabel": "Añadir los ingredientes a la lista de la compra",
         "transferNow": "Añadir",
-        "noShoppingLists": "No hay listas de compras",
         "transferSuccess": "{{count}} ingredientes añadidos a {{list}}.",
         "transferAlreadyDone": "Todos los ingredientes ya están en la lista.",
         "randomizePlan": "Rellenar plan al azar",
@@ -3636,9 +3640,7 @@
         "toShoppingDone_one": "{{count}} artículo añadido a {{list}}.",
         "toShoppingSkipped": "{{count}} ya estaban en ella.",
         "toShoppingSkipped_one": "{{count}} ya estaba en ella.",
-        "toShoppingUndone": "Eliminado de la lista de la compra.",
         "toShoppingNone": "Todo está ya en la lista de la compra.",
-        "noLists": "Todavía no hay lista de la compra. Crea una en la pestaña Compra.",
         "locPantry": "Alacena",
         "locFridge": "Nevera",
         "locFreezer": "Congelador",

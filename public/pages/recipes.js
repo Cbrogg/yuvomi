@@ -6,9 +6,10 @@
 import { api } from '/api.js';
 import { t, formatDate, formatDateInput, parseDateInput, isDateInputValid } from '/i18n.js';
 import { esc } from '/utils/html.js';
-import { openModal as openSharedModal, closeModal as closeSharedModal, selectModal, advancedSection, wireBlurValidation, reportFieldError } from '/components/modal.js';
+import { openModal as openSharedModal, closeModal as closeSharedModal, advancedSection, wireBlurValidation, reportFieldError } from '/components/modal.js';
 import { DEFAULT_CATEGORY_NAME } from '/utils/shopping-categories.js';
-import { renderKitchenTabsBar, refreshKitchenBadges } from '/utils/kitchen-tabs.js';
+import { renderKitchenTabsBar } from '/utils/kitchen-tabs.js';
+import { resolveShoppingTarget, announceTransfer } from '/utils/kitchen-transfer.js';
 import { popoverMenuHtml, installPopoverMenus } from '/utils/popover-menu.js';
 import { ingredientRowHTML } from '/utils/ingredient-row.js';
 import { scheduleUndoableDelete } from '/utils/ux.js';
@@ -759,22 +760,16 @@ async function planRecipe(recipe, btn) {
 }
 
 async function transferRecipe(recipe, btn) {
-  if (!state.lists.length) {
-    window.yuvomi?.showToast(t('meals.noShoppingLists'), 'danger');
-    return;
-  }
-
-  let listId = state.lists[0].id;
-  if (state.lists.length > 1) {
-    const options = state.lists.map((l) => ({ value: l.id, label: l.name }));
-    const choice = await selectModal(t('common.toShoppingListWhich'), options);
-    if (choice === null) return;
-    listId = Number(choice);
-  }
+  // Vorprüfung, Listenwahl und die Antwort auf „es gibt keine Liste" liegen im
+  // geteilten Baustein. Vorher lieh sich diese Stelle `meals.noShoppingLists` -
+  // der Text der Rezepte hing damit an einem fremden Modul, und ein Refactor im
+  // Essensplan hätte ihn stillschweigend mitgenommen (Audit 2026-07-30, P1-A).
+  const target = await resolveShoppingTarget(state.lists);
+  if (!target) return;
 
   if (btn) btn.disabled = true;
   try {
-    const res = await api.post(`/recipes/${recipe.id}/to-shopping-list`, { listId });
+    const res = await api.post(`/recipes/${recipe.id}/to-shopping-list`, { listId: target.id });
     const added = res.data?.transferred ?? 0;
     const skipped = res.data?.skipped ?? 0;
 
@@ -782,11 +777,14 @@ async function transferRecipe(recipe, btn) {
       // t() wählt die _one-Form selbst, sobald count numerisch ist (i18n.js).
       // `list` nennt das Ziel: „5 Zutaten übernommen." sagte nicht, in welche der
       // Listen (Critique 2026-07-30, P1).
-      window.yuvomi?.showToast(t('recipes.toShoppingSuccess', {
-        count: added,
-        list: state.lists.find((l) => l.id === listId)?.name ?? '',
-      }), 'success');
-      refreshKitchenBadges();
+      //
+      // Rücknahme über den geteilten Baustein: dieser Pfad überträgt am meisten
+      // auf einmal - eine ganze Zutatenliste - in eine Liste, die der Nutzer
+      // gerade nicht ansieht (Audit 2026-07-30, P1-B).
+      announceTransfer({
+        message: t('recipes.toShoppingSuccess', { count: added, list: target.name }),
+        addedIds: res.data?.added_ids ?? [],
+      });
     } else if (skipped > 0) {
       window.yuvomi?.showToast(t('recipes.toShoppingAllPresent'), 'info');
     } else {

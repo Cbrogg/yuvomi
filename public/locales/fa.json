@@ -58,6 +58,11 @@
             "assigneesNobodyHint": "بدون واگذاری، فقط خودت این مورد را می‌بینی."
         }
     },
+    "kitchen": {
+        "noShoppingLists": "هنوز فهرست خریدی وجود ندارد.",
+        "createShoppingList": "ایجاد فهرست جدید",
+        "transferUndone": "از فهرست خرید حذف شد."
+    },
     "nav": {
         "dashboard": "نمای کلی",
         "tasks": "کارها",
@@ -468,7 +473,6 @@
         "removeIngredient": "حذف ماده",
         "transferLabel": "افزودن مواد لازم به فهرست خرید",
         "transferNow": "افزودن",
-        "noShoppingLists": "فهرست خریدی وجود ندارد",
         "transferSuccess": "{{count}} ماده به {{list}} اضافه شد.",
         "transferAlreadyDone": "همهٔ مواد لازم از قبل در فهرست هستند.",
         "randomizePlan": "پر کردن تصادفی برنامه",
@@ -3636,9 +3640,7 @@
         "toShoppingDone_one": "{{count}} مورد به {{list}} اضافه شد.",
         "toShoppingSkipped": "{{count}} از قبل در آن بود.",
         "toShoppingSkipped_one": "{{count}} از قبل در آن بود.",
-        "toShoppingUndone": "از فهرست خرید حذف شد.",
         "toShoppingNone": "همه چیز از قبل در فهرست خرید است.",
-        "noLists": "هنوز فهرست خریدی وجود ندارد. در زبانهٔ خرید یکی بسازید.",
         "locPantry": "کمد آذوقه",
         "locFridge": "یخچال",
         "locFreezer": "فریزر",

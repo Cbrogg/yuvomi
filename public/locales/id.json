@@ -58,6 +58,11 @@
             "assigneesNobodyHint": "Tanpa penerima tugas, hanya kamu yang melihat entri ini."
         }
     },
+    "kitchen": {
+        "noShoppingLists": "Belum ada daftar belanja.",
+        "createShoppingList": "Buat daftar baru",
+        "transferUndone": "Dihapus dari daftar belanja."
+    },
     "nav": {
         "dashboard": "Ringkasan",
         "tasks": "Tugas",
@@ -468,7 +473,6 @@
         "removeIngredient": "Hapus bahan",
         "transferLabel": "Tambahkan bahan ke daftar belanja",
         "transferNow": "Tambahkan",
-        "noShoppingLists": "Tidak ada daftar belanja",
         "transferSuccess": "{{count}} bahan ditambahkan ke {{list}}.",
         "transferAlreadyDone": "Semua bahan sudah ada di daftar.",
         "randomizePlan": "Isi rencana secara acak",
@@ -3636,9 +3640,7 @@
         "toShoppingDone_one": "{{count}} item ditambahkan ke {{list}}.",
         "toShoppingSkipped": "{{count}} sudah ada di sana.",
         "toShoppingSkipped_one": "{{count}} sudah ada di sana.",
-        "toShoppingUndone": "Dihapus dari daftar belanja.",
         "toShoppingNone": "Semuanya sudah ada di daftar belanja.",
-        "noLists": "Belum ada daftar belanja. Buat satu di tab Belanja.",
         "locPantry": "Lemari persediaan",
         "locFridge": "Kulkas",
         "locFreezer": "Freezer",
