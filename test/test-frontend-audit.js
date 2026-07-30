@@ -32,6 +32,38 @@ function walkFrontendFiles(dir) {
   });
 }
 
+// Zerlegt jedes `Promise.allSettled([...])` einer Datei in die Namen der
+// Destrukturierung und die Top-Level-Eintraege des Arrays, damit der Index eines
+// Aufrufs zu seinem Ergebnis-Bezeichner passt.
+function settledCalls(source) {
+  const marker = 'Promise.allSettled([';
+  const calls = [];
+  let from = 0;
+
+  for (;;) {
+    const start = source.indexOf(marker, from);
+    if (start === -1) return calls;
+
+    const names = source.slice(0, start).match(/const\s*\[([^\]]*)\]\s*=\s*await\s*$/);
+    const entries = [''];
+    let depth = 1;
+    let index = start + marker.length;
+
+    while (index < source.length && depth > 0) {
+      const char = source[index];
+      if ('([{'.includes(char)) depth += 1;
+      else if (')]}'.includes(char)) depth -= 1;
+      if (depth === 0) break;
+      if (char === ',' && depth === 1) entries.push('');
+      else entries[entries.length - 1] += char;
+      index += 1;
+    }
+
+    if (names) calls.push({ names: names[1].split(',').map((name) => name.trim()), entries });
+    from = index + 1;
+  }
+}
+
 function resolveLocaleKey(obj, key) {
   return key.split('.').reduce((value, part) => (value != null ? value[part] : undefined), obj);
 }
@@ -457,6 +489,43 @@ test('module-specific settings leaves only reference their owned preferences and
       [...approved.preferences].sort(),
       `${file} must only reference its owned preference keys`,
     );
+  }
+});
+
+// `api.get('/preferences')` liefert den `{ data }`-Envelope, `getPreferences()`
+// dagegen das bereits entpackte Objekt. Beim Umstellen der Blaetter auf den
+// Cache blieb in modules-navigation.js ein `?.data` stehen: `preferences` war ab
+// v1.49.0 dauerhaft leer, `disabled_modules` kam nie an, und jede abgehakte
+// Checkbox sprang beim Re-Render zurueck (#615). Der Guard laeuft ueber jede
+// Datei, die den Cache benutzt - eine Allowlist deckte nur diese eine Datei ab,
+// nicht die Regel.
+test('preferences cache consumers never unwrap a data envelope', () => {
+  const consumers = walkJsFiles('../public/').filter((file) => /\bgetPreferences\(/.test(read(file)));
+  assert.ok(consumers.length >= 8, 'expected the settings leaves to read preferences through the cache');
+
+  for (const file of consumers) {
+    const source = read(file);
+    assert.doesNotMatch(
+      source,
+      /getPreferences\(\)\s*\)*\s*\??\.data\b/,
+      `${file} must not read .data off getPreferences() - it already returns the preferences object`,
+    );
+
+    const bindings = [...source.matchAll(/(?:const|let)\s+([A-Za-z_$][\w$]*)\s*=\s*await\s+getPreferences\(\)/g)]
+      .map((match) => match[1]);
+    for (const call of settledCalls(source)) {
+      call.entries.forEach((entry, index) => {
+        if (/\bgetPreferences\(/.test(entry) && call.names[index]) bindings.push(`${call.names[index]}.value`);
+      });
+    }
+
+    for (const binding of bindings) {
+      assert.doesNotMatch(
+        source,
+        new RegExp(`${binding.replace(/\./g, '\\.')}\\s*\\??\\.data\\b`),
+        `${file} must not read .data off the cached preferences (${binding})`,
+      );
+    }
   }
 });
 
