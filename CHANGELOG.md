@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.61.0] - 2026-07-30
+
 ### Added
 - The Malaysian ringgit is now one of the currencies a household can pick, in the household settings as well as in subscriptions and in split expenses. Malaysian households had to record their money under a currency that was not theirs. Choosing Malaysia as the region sets the ringgit together with the local date and time format in one step, and amounts are then written the way they are written there: RM 1,234.56.
 
