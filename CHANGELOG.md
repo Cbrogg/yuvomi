@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.60.1] - 2026-07-30
+
+### Fixed
+- Turning a module off under Settings, Navigation did nothing: the checkbox switched itself back on a fraction of a second later, so there was no way to hide anything from the navigation. The setting was in fact saved every time, but the page redrew itself from an empty set of preferences right afterwards and therefore drew every box as switched on again. The same empty read also meant the module order and the three mobile navigation slots were never loaded, so the page opened on the default arrangement instead of yours.
+
 ## [1.60.0] - 2026-07-30
 
 ### Fixed
