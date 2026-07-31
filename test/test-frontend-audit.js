@@ -88,9 +88,14 @@ function assertKeysExistInEveryLocale(keys) {
   assert.deepEqual(missing, []);
 }
 
+// Jeder aus Quelltext gelesene Bezeichner, der in ein RegExp-Literal wandert,
+// muss vollstaendig escaped werden - ein Teil-Escape (nur `.`) laesst
+// Backslash und die uebrigen Metazeichen stehen und baut ein anderes Muster
+// als gemeint (CodeQL js/incomplete-sanitization).
+const escapeForRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 function cssRuleBody(css, selector) {
-  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const match = css.match(new RegExp(`${escaped}\\s*\\{([^}]*)\\}`, 'm'));
+  const match = css.match(new RegExp(`${escapeForRegExp(selector)}\\s*\\{([^}]*)\\}`, 'm'));
   return match?.[1] ?? '';
 }
 
@@ -539,7 +544,7 @@ test('preferences cache consumers never unwrap a data envelope', () => {
     for (const binding of bindings) {
       assert.doesNotMatch(
         source,
-        new RegExp(`${binding.replace(/\./g, '\\.')}\\s*\\??\\.data\\b`),
+        new RegExp(`${escapeForRegExp(binding)}\\s*\\??\\.data\\b`),
         `${file} must not read .data off the cached preferences (${binding})`,
       );
     }

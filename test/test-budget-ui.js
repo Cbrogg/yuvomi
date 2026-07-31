@@ -363,10 +363,21 @@ const BUDGET_STYLESHEETS = [
 // Guards, die auf Markup- oder Selektor-Muster prüfen, müssen an Kommentaren
 // vorbeisehen: sonst schlägt jede Erklärung an, die das verbotene Muster nennt -
 // und der Weg aus dem roten Test wäre, die Begründung zu löschen.
-const withoutComments = (src) => src
-  .replace(/\/\*[\s\S]*?\*\//g, '')
-  .replace(/<!--[\s\S]*?-->/g, '')
-  .replace(/^\s*\/\/.*$/gm, '');
+// Einmaliges Ersetzen genuegt nicht: ein Rest wie `<!<!-- x -->->` setzt sich
+// nach dem Schnitt zu einem neuen Kommentar-Delimiter zusammen. Darum bis zum
+// Fixpunkt laufen (CodeQL js/incomplete-multi-character-sanitization).
+const withoutComments = (src) => {
+  let out = src;
+  let previous;
+  do {
+    previous = out;
+    out = out
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/<!--[\s\S]*?-->/g, '')
+      .replace(/^\s*\/\/.*$/gm, '');
+  } while (out !== previous);
+  return out;
+};
 
 test('Geldbeträge laufen über den Modul-Formatierer, nicht über eigene', () => {
   // Drei eigene Formatierer bedeuteten vier Vorzeichenkonventionen: dieselbe
