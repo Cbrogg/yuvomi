@@ -360,21 +360,36 @@ const BUDGET_STYLESHEETS = [
   ['split-expenses.css', splitCss],
 ];
 
-// Guards, die auf Markup- oder Selektor-Muster prüfen, müssen an Kommentaren
-// vorbeisehen: sonst schlägt jede Erklärung an, die das verbotene Muster nennt -
-// und der Weg aus dem roten Test wäre, die Begründung zu löschen.
 // Einmaliges Ersetzen genuegt nicht: ein Rest wie `<!<!-- x -->->` setzt sich
 // nach dem Schnitt zu einem neuen Kommentar-Delimiter zusammen. Darum bis zum
 // Fixpunkt laufen (CodeQL js/incomplete-multi-character-sanitization).
+// Die Schleife muss den Aufruf direkt umschliessen: CodeQL erkennt den Fixpunkt
+// nur, wenn das Ergebnis des `replace` zu seinem eigenen Receiver zurueckfliesst.
+// In einer `.replace().replace()`-Kette gilt das nur fuer das letzte Glied - der
+// Schnitt gehoert deshalb hierher und nicht zurueck in die Kette unten.
+const withoutHtmlComments = (src) => {
+  let out = src;
+  let previous;
+  do {
+    previous = out;
+    out = out.replace(/<!--[\s\S]*?-->/g, '');
+  } while (out !== previous);
+  return out;
+};
+
+// Guards, die auf Markup- oder Selektor-Muster prüfen, müssen an Kommentaren
+// vorbeisehen: sonst schlägt jede Erklärung an, die das verbotene Muster nennt -
+// und der Weg aus dem roten Test wäre, die Begründung zu löschen.
+// Auch die Muster untereinander koennen sich gegenseitig freilegen (ein Blockkommentar
+// verdeckt einen HTML-Kommentar), darum laeuft auch die Kombination bis zum Fixpunkt.
 const withoutComments = (src) => {
   let out = src;
   let previous;
   do {
     previous = out;
-    out = out
-      .replace(/\/\*[\s\S]*?\*\//g, '')
-      .replace(/<!--[\s\S]*?-->/g, '')
-      .replace(/^\s*\/\/.*$/gm, '');
+    out = out.replace(/\/\*[\s\S]*?\*\//g, '');
+    out = withoutHtmlComments(out);
+    out = out.replace(/^\s*\/\/.*$/gm, '');
   } while (out !== previous);
   return out;
 };
