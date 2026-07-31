@@ -104,6 +104,7 @@ npm run test:i18n           # App-Locales: Dateiabdeckung, Schlüsselidentität 
 npm run test:i18n-plural    # Pluralformen in t(): Intl.PluralRules-Auswahl, Fallback auf Basisschlüssel, Varianten-Parität
 npm run test:lang-init
 npm run test:sw-api-cache   # Service Worker: Read-only-Offline-API-Cache (Whitelist, Fallback, CLEAR_API_CACHE, activate-Cleanup)
+npm run test:sw-precache    # Service Worker: Precache-Vollständigkeit (#616) - transitiver Modulgraph lückenlos gecacht, Bucket == fetch-Routing, jeder Pfad existiert (addAll ist All-or-Nothing)
 npm run test:api
 npm run test:openapi-structure   # OpenAPI-Modul-Split: jede paths/<modul>.js importiert+gespreadet, keine Pfad-Kollision
 npm run test:multi-assignment

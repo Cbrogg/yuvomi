@@ -258,6 +258,23 @@ test('service worker release caches track package version and include the early 
   assert.match(sw, /['"]\/lang-init\.js['"]/, 'early lang/dir bootstrap must be available offline');
 });
 
+test('an announced update stops the router from loading further page modules (#616)', () => {
+  const router = read('../public/router.js');
+
+  // Die Modul-Map eines Dokuments lässt sich nicht leeren. Wird nach einem
+  // SW-Update noch ein Seitenmodul nachgeladen, bindet der Browser es gegen die
+  // bereits geladenen, alten geteilten Module - ein neu hinzugekommener Export
+  // fliegt dann als SyntaxError auf. Erlaubt ist deshalb nur noch der Reload.
+  assert.match(router, /shellStale\s*=\s*true;/, 'SW_UPDATED must mark the running shell as stale');
+  assert.match(router, /if \(shellStale && reloadOnce\(\)\)/, 'importPage() must reload instead of importing a page module');
+  assert.match(router, /function prefetchRoute\(path\) \{[\s\S]*?if \(shellStale\) return;/, 'prefetchRoute() must stop warming modules after an update');
+  assert.doesNotMatch(
+    router,
+    /SW_UPDATED[\s\S]{0,400}moduleCache\.clear\(\)/,
+    'moduleCache.clear() on SW_UPDATED is ineffective - it empties only the router map, not the document module map',
+  );
+});
+
 test('runtime locale changes keep language and writing direction synchronized', () => {
   const i18n = read('../public/i18n.js');
   const router = read('../public/router.js');

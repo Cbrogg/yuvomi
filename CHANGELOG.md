@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.64.1] - 2026-07-31
+
+### Fixed
+
+- Updating the container while the app was open in a browser tab could leave that tab on an error screen naming a module, for example "The requested module '/utils/empty-state.js' does not provide an export named 'mountLoadError'". A browser keeps one set of loaded building blocks per open page and cannot exchange them, so a part of the app fetched after the update was assembled against parts of the previous version that were still in memory. Opening a section that had not been visited yet in that tab, most often Recipes, was enough. The app now stops loading further parts of a page as soon as it knows a new version is available and reloads instead, and it treats a failed load of this kind as a reason to reload once rather than to give up. Reloading the page had always cleared it; the point is that it no longer happens. Updating **to** this version can still show the error once in a tab that was open across the update, because the safeguard only arrives with the version it protects. It never indicated a damaged database, although the message in the container log at the time suggested one.
+- The offline cache stored the pages of the app without the shared building blocks they are made of: 52 of them, among those the module every page uses to insert text safely, were missing. After an update a page could therefore be present in its new form while its foundation was not, which is what made the error above possible in the first place, and offline a page could be complete but unusable. Pages and the modules they rely on are now cached together, and a test walks the whole dependency graph so the next added module cannot quietly reopen the gap.
+
 ## [1.64.0] - 2026-07-31
 
 ### Changed

@@ -157,9 +157,72 @@ function loadPageStyle(moduleName, routeStyle = null) {
 // --------------------------------------------------------
 const moduleCache = new Map();
 
+// --------------------------------------------------------
+// Veraltete Shell nach SW-Update (#616)
+//
+// Der Browser führt pro Dokument genau eine Modul-Map. Ist ein geteiltes Modul
+// (z. B. /utils/empty-state.js) einmal geladen, wird jeder spätere Import
+// dagegen gebunden - auch der eines Seitenmoduls, das der neue Service Worker
+// frisch vom Netz geholt hat. Nach einem Update im laufenden Tab trifft dann
+// neues Seitenmodul auf alte Abhängigkeit, und ein in der neuen Version
+// hinzugekommener Export fliegt als SyntaxError auf. Die Modul-Map lässt sich
+// nicht leeren; nur ein Reload des Dokuments verwirft sie.
+//
+// Sobald ein Update angekündigt ist, wird deshalb kein Seitenmodul mehr
+// nachgeladen: importPage() löst die Navigation stattdessen in einen Reload
+// auf. Das Promise bleibt bewusst offen, damit renderPage() nicht mit einem
+// Fehlerbildschirm weiterläuft, den der Reload eine Sekunde später wegwirft.
+// --------------------------------------------------------
+let shellStale = false;
+
+// Reload-Schleifen-Bremse: ein durch einen Modulfehler ausgelöster Reload darf
+// sich nicht wiederholen, wenn der Fehler nach dem Reload fortbesteht (echter
+// Bug statt Versions-Mischzustand). Zeitbasiert statt einmalig, damit ein
+// späteres, echtes Update wieder reloaden darf.
+const RELOAD_GUARD_KEY = 'yuvomi-stale-shell-reload';
+const RELOAD_GUARD_MS  = 30000;
+
+function reloadOnce() {
+  try {
+    const last = parseInt(sessionStorage.getItem(RELOAD_GUARD_KEY) || '0', 10);
+    if (Date.now() - last < RELOAD_GUARD_MS) return false;
+    sessionStorage.setItem(RELOAD_GUARD_KEY, String(Date.now()));
+  } catch { /* sessionStorage gesperrt (Private Mode) → Reload trotzdem wagen */ }
+  location.reload();
+  return true;
+}
+
+/**
+ * Erkennt Fehler, die ein Reload heilt: ein gegen eine alte Abhängigkeit
+ * gebundenes Modul (SyntaxError) oder ein Modul, das gar nicht erst geladen
+ * werden konnte (TypeError). Offline ist Letzteres normal und kein Grund für
+ * einen Reload - dann greift die reguläre Fehlerbehandlung.
+ */
+function isStaleModuleError(err) {
+  if (err instanceof SyntaxError) return true;
+  return err instanceof TypeError && navigator.onLine;
+}
+
 async function importPage(pagePath) {
+  // Nur wenn der Reload wirklich angestoßen wurde, bleibt das Promise offen.
+  // Greift die Schleifen-Bremse, wird regulär importiert: ein hängendes
+  // Promise ohne folgenden Reload ließe die Seite dauerhaft im Skelett stehen.
+  if (shellStale && reloadOnce()) {
+    return new Promise(() => {});
+  }
   if (!moduleCache.has(pagePath)) {
-    moduleCache.set(pagePath, await import(pagePath));
+    try {
+      moduleCache.set(pagePath, await import(pagePath));
+    } catch (err) {
+      moduleCache.delete(pagePath);
+      // Zweiter Rettungsanker: das Update kam ohne Vorankündigung durch (der
+      // Service Worker kann den Tab zwischen zwei Fetches übernehmen). Reload
+      // statt Fehlerbildschirm - beim zweiten Mal fällt der Fehler durch.
+      if (isStaleModuleError(err) && reloadOnce()) {
+        return new Promise(() => {});
+      }
+      throw err;
+    }
   }
   return moduleCache.get(pagePath);
 }
@@ -178,6 +241,10 @@ const _prefetchedStyles = new Set();
 
 function prefetchRoute(path) {
   if (!path) return;
+  // Nach angekündigtem Update nichts mehr vorwärmen: ein modulepreload zieht den
+  // kompletten Modulgraph in die Modul-Map und würde neue Seitenmodule gegen die
+  // alten geteilten Module binden, bevor der Reload greift (#616).
+  if (shellStale) return;
   const route = allRoutes().find((r) => r.path === path);
   if (!route) return;
 
@@ -2940,8 +3007,12 @@ window.addEventListener('unhandledrejection', (e) => {
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.addEventListener('message', (e) => {
     if (e.data?.type === 'SW_UPDATED') {
-      // Modul-Cache leeren damit nächste Navigation frische Module lädt
-      moduleCache.clear();
+      // Ab hier keine Seitenmodule mehr nachladen. Früher wurde an dieser Stelle
+      // der Modul-Cache dieses Routers geleert, damit die nächste Navigation
+      // frische Module lädt - wirkungslos: geleert wurde nur die eigene Map,
+      // während die Modul-Map des Dokuments die alten Abhängigkeiten weiter
+      // auflöst. Genau daraus entstand der Mischzustand aus #616.
+      shellStale = true;
       showToast(t('common.updateAvailable'), 'default', 8000);
       setTimeout(() => location.reload(), 8000);
     }

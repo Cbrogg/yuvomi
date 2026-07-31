@@ -1103,6 +1103,28 @@ This means Nginx cannot reach the Docker container. Check:
 
 </details>
 
+<details>
+<summary>"Something went wrong" right after updating, mentioning a module export</summary>
+
+A tab that was left open while the container was updated can end up mixing versions: the
+browser keeps one module map per page, so a freshly loaded part of the new version binds
+against parts of the old one that are still in memory. The error names the mismatch, for
+example `The requested module '/utils/empty-state.js' does not provide an export named
+'mountLoadError'`.
+
+Reloading the page clears it - the state cannot survive a reload:
+
+- Desktop: <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd> (<kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd> on macOS)
+- Installed PWA: close and reopen the app
+
+Since v1.64.1 the app prevents this by itself: once it learns that a new version is
+available, it stops loading further parts of the old page and reloads instead. Updating
+**to** that version can still show the error once, because the safeguard only ships with
+the version it protects. It does not indicate a damaged database - unrelated errors in
+the container log, such as SQLite messages, are worth checking separately.
+
+</details>
+
 ---
 
 ## Uninstall
