@@ -1194,6 +1194,36 @@ html.fab-anim-done .page-fab {
   border-top: none;
 }
 
+/* Opt-in: der Kopf-INHALT endet dort, wo der Körper endet - beim schmalen
+ * Lesemaß (--content-max-width-narrow) statt an der Content-Spalte.
+ *
+ * Nutzer: die drei Küchen-Listen (Rezepte, Einkaufen, Vorrat). Ihr Körper ist
+ * über .kitchen-list auf 720px gekappt, ihr Kopf lief bis an die Content-Spalte:
+ * gemessen bei 1280px Fensterbreite endete die Liste bei x=972, der
+ * Lagerort-Knopf im Vorrat und die drei Listen-Aktionen im Einkauf aber bei
+ * x=1248 - 276px über leerer Fläche. DESIGN.md macht die gemeinsame Fluchtlinie
+ * zur Bedingung, und zwar für BEIDE Kanten.
+ *
+ * WARUM NICHT `> * { max-width: ... }`: genau so stand die Regel bisher, je
+ * einmal in shopping.css und pantry.css. Sie griff nie. Gekappt wurde die
+ * Breite jedes Slots - die Slots sind aber schmaler als das Lesemaß (im Vorrat
+ * misst der Aktions-Slot 40px), und `.page-toolbar__actions { margin-left:
+ * auto }` schob sie danach unverändert an die äußere Kante. Das Maß ist nicht
+ * die Breite der Slots, sondern das ENDE der Zeile: eine Marge am letzten Slot,
+ * egal welcher das ist.
+ *
+ * Das Prozent löst gegen die Content-Box des Kopfes auf und wandert damit von
+ * selbst mit der Fensterbreite mit; `max()` nimmt die Marge zurück, sobald die
+ * Spalte schmaler als das Lesemaß ist. Deshalb ohne Breakpoint - die
+ * Vorgängerregeln standen in `@media (min-width: 1024px)` und ließen den
+ * Versatz zwischen 720px und 1024px stehen, wo der Körper längst gekappt ist.
+ *
+ * Der Rail bleibt full-bleed: Hintergrund, Trennlinie und Sticky-Fläche laufen
+ * weiter bis zur Shell-Kante, nur die Zeile darin wird kürzer. */
+.page-toolbar--narrow > :last-child {
+  margin-inline-end: max(0px, calc(100% - var(--content-max-width-narrow)));
+}
+
 @media (max-width: 640px) {
   .page-toolbar {
     /* Nur die Bauhöhe verdichten. Der horizontale Rand bleibt bewusst

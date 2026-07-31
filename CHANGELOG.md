@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.65.0] - 2026-07-31
+
+### Changed
+
+- The Meals tab in the Kitchen no longer carries a number. It counted free meal slots for the current week, that is the meal types you have switched on times seven days minus the slots you had filled, so an empty week showed 28: the loudest number in the whole tab bar, for the state "nothing planned yet". It also counted days that had already gone by and could no longer be planned, so on a Friday it still asked for Monday's breakfast. The two numbers that remain, open shopping items and pantry items that need attention, count things that are genuinely waiting for you. What is missing from the meal plan is better told by the empty slots on the planner itself, because those also say which day and which meal it is missing from. The shared kitchen request behind the tab bar no longer computes the figure either, which removes a query over the meal table from every kitchen page load.
+
+### Fixed
+
+- Controls in the header of Recipes, Shopping and Pantry no longer sit far to the right of the list they belong to. Those three pages hold their content in a reading column that ends well before the window edge, but their headers ran the full width: on a 1280 pixel window the storage-location button in Pantry sat 276 pixels past the right edge of the list underneath it, and the three header actions in Shopping did the same, hovering over empty space. Header and body now end on the same line at every window size. Recipes never had the rule at all, and the version Shopping and Pantry did have only applied above 1024 pixels, so the gap stayed on smaller laptops and tablets, where it measured 148 pixels at a window width of 900.
+
 ## [1.64.1] - 2026-07-31
 
 ### Fixed

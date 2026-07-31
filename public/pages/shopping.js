@@ -1706,7 +1706,9 @@ export async function render(container, { user }) {
            „genau einmal pro Ahnenkette"-Bedingung aus tokens.css, an der auch
            der 16px-Versatz im Budget-Modul hing. Draußen fluchtet er mit der
            Listen-Chip-Leiste darüber und trägt sein Chrome full-bleed. -->
-      <div class="page-toolbar page-toolbar--in-group" id="list-head" hidden></div>
+      <!-- --narrow: der Kopf endet beim Lesemaß des Körpers (.kitchen-list),
+           nicht an der Content-Spalte. Siehe layout.css. -->
+      <div class="page-toolbar page-toolbar--in-group page-toolbar--narrow" id="list-head" hidden></div>
       <div id="list-content" style="flex:1;display:flex;flex-direction:column;overflow:hidden"></div>
       <button class="page-fab" id="fab-new-item" aria-label="${t('shopping.addItemLabel')}">
         <i data-lucide="plus" class="icon-xl" aria-hidden="true"></i>

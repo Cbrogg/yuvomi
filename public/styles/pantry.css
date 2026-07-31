@@ -97,22 +97,13 @@
   color: var(--color-text-tertiary);
 }
 
-/* Kopf-Inhalt auf dasselbe Lesemaß wie der Körper.
- *
- * Der Kopf bleibt full-bleed (Chrome läuft bis zur Shell-Kante, Issue #577),
- * aber sein INHALT lief bis 1156px, während die Liste darunter bei 720px endet:
- * gemessen 428px Versatz in Einkaufen, 500px im Vorrat - der Papierkorb hing
- * weit rechts über leerer Seite (Critique 2026-07-30). DESIGN.md macht die
- * gemeinsame Fluchtlinie zur Bedingung; sie gilt für beide Kanten, nicht nur
- * für die linke. */
-@media (min-width: 1024px) {
-  .pantry-page .page-toolbar--in-group > * {
-    max-width: var(--content-max-width-narrow);
-  }
-
-  .pantry-page .page-toolbar--in-group {
-    flex-wrap: wrap;
-  }
+/* Kopf-Inhalt auf dasselbe Lesemaß wie der Körper: `.page-toolbar--narrow`
+ * (layout.css), gesetzt im Markup neben `--in-group`. Hier stand dieselbe
+ * Absicht als `> * { max-width: ... }` - sie kappte die Slot-Breiten und ließ
+ * den Lagerort-Knopf trotzdem an der äußeren Kante stehen; die Begründung steht
+ * am geteilten Selektor. */
+.pantry-page .page-toolbar--in-group {
+  flex-wrap: wrap;
 }
 
 /* --------------------------------------------------------

@@ -126,7 +126,9 @@ export async function render(container) {
   // alle vier Küchen-Tabs eine andere Kopf-Grammatik hatten (Critique
   // 2026-07-29). Die Variante löst den Konflikt, ohne den Kopf zu meiden.
   const toolbar = document.createElement('div');
-  toolbar.className = 'page-toolbar page-toolbar--in-group';
+  // --narrow: der Kopf endet beim Lesemaß der Liste darunter (.kitchen-list),
+  // nicht an der Content-Spalte. Siehe layout.css.
+  toolbar.className = 'page-toolbar page-toolbar--in-group page-toolbar--narrow';
   const center = document.createElement('div');
   center.className = 'page-toolbar__center';
   // Geteilter Baustein (utils/page-search.js) statt eines eigenen Inputs. Er

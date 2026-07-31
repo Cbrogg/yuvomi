@@ -220,7 +220,9 @@ export async function render(container) {
   // layout.css): Suche im __center-Slot, Lagerort-Verwaltung im __actions-Slot -
   // dieselbe Slot-Ordnung wie in den drei Geschwister-Tabs.
   const toolbar = document.createElement('div');
-  toolbar.className = 'page-toolbar page-toolbar--in-group';
+  // --narrow: der Kopf endet beim Lesemaß der Liste darunter (.kitchen-list),
+  // nicht an der Content-Spalte. Siehe layout.css.
+  toolbar.className = 'page-toolbar page-toolbar--in-group page-toolbar--narrow';
   toolbar.insertAdjacentHTML('beforeend', `
     <div class="page-toolbar__center">
       ${renderPageSearch({

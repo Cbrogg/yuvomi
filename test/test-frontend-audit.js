@@ -2392,7 +2392,7 @@ test('die Küchen-Tab-Leiste trägt den Zustand des Kreislaufs', () => {
     'der aktive Tab darf kein Badge tragen - sonst veraltet es bei jeder eigenen Mutation');
 
   // Das aria-label ERSETZT den Tab-Namen, es ergänzt ihn nicht.
-  for (const [tabKey, stateKey] of [['nav.meals', 'nav.mealsGaps'], ['nav.shopping', 'nav.shoppingOpen'], ['nav.pantry', 'nav.pantryAttention']]) {
+  for (const [tabKey, stateKey] of [['nav.shopping', 'nav.shoppingOpen'], ['nav.pantry', 'nav.pantryAttention']]) {
     assert.ok(tabs.includes(`\${t('${tabKey}')}: \${t('${stateKey}'`),
       `${stateKey} muss den Tabnamen voranstellen, sonst hört ein Screenreader nur die Zahl`);
   }
@@ -2408,17 +2408,36 @@ test('die Küchen-Tab-Leiste trägt den Zustand des Kreislaufs', () => {
   assert.match(subCss, /\.sub-tab__badge\s*\{[\s\S]*?color:\s*var\(--color-text-primary\)/,
     'die Zahl braucht Ink, nicht die zurückgenommene Tab-Tinte');
   assertKeysExistInEveryLocale([
-    'nav.mealsGaps', 'nav.mealsGaps_one', 'nav.shoppingOpen', 'nav.shoppingOpen_one',
+    'nav.shoppingOpen', 'nav.shoppingOpen_one',
     'nav.pantryAttention', 'nav.pantryAttention_one',
   ]);
 
-  // Rezepte bekommen keins: eine Sammlung hat keinen offenen Zustand.
-  // Nur die BADGES-Liste prüfen - `/recipes` steht selbstverständlich in TABS().
+  // Ein Badge zählt, was WARTET - nie, was fehlt.
+  //
+  // Rezepte bekamen nie eins („6 Rezepte" ist eine Bestandszahl), der Essensplan
+  // hatte eins und es zählte die Gegenrichtung: freie Slots der Woche, also
+  // Mahlzeitentypen × 7 minus die belegten. Bei leerer Woche stand dort 28 - das
+  // Maximum, die lauteste Zahl der Leiste, ausgerechnet für „nichts geplant" -
+  // und mitgezählt wurden Tage, die schon vorbei waren. Übrig bleiben die zwei
+  // Stationen mit echtem offenem Vorrat.
+  //
+  // Nur die BADGES-Liste prüfen - `/meals` und `/recipes` stehen
+  // selbstverständlich weiter in TABS().
   const badges = tabs.slice(tabs.indexOf('const BADGES = ['), tabs.indexOf('/** Aktuelle Leiste'));
-  assert.ok(badges.includes("route: '/meals'") && badges.includes("route: '/shopping'") && badges.includes("route: '/pantry'"),
-    'die drei Stationen mit offenem Zustand brauchen ein Badge');
-  assert.ok(!badges.includes("route: '/recipes'"),
-    'ein Badge, das nur zählt, entwertet die drei, die etwas verlangen');
+  assert.ok(badges.includes("route: '/shopping'") && badges.includes("route: '/pantry'"),
+    'die zwei Stationen mit offenem Zustand brauchen ein Badge');
+  for (const route of ['/recipes', '/meals']) {
+    assert.ok(!badges.includes(`route: '${route}'`),
+      `${route}: ein Badge, das Bestand oder Abwesenheit zählt, entwertet die zwei, die etwas verlangen`);
+  }
+  // Und die Rechnung dahinter ist mit weg: kein toter COUNT auf jedem
+  // Seitenaufruf. Ohne Kommentare geprüft - beide Dateien erklären in ihrem Kopf,
+  // was hier entfallen ist, und würden sich sonst selbst auslösen.
+  const code = (src) => src.replace(/\/\*[\s\S]*?\*\/|(^|[^:])\/\/.*$/gm, '$1');
+  assert.doesNotMatch(code(route), /\bgaps\b|FROM meals\b|visible_meal_types/,
+    'server/routes/kitchen.js: die Lücken-Rechnung ist ohne Badge tot - sie darf nicht stehenbleiben');
+  assert.doesNotMatch(code(tabs), /meals\?\.gaps|mealsGaps/,
+    'kitchen-tabs.js: kein Rest des entfallenen Mahlzeiten-Badges');
 });
 
 /**
@@ -4419,6 +4438,60 @@ test('page-inline-pad contract holds across every stylesheet (#577)', () => {
     /@media \(min-width:\s*1024px\)\s*\{\s*:root\s*\{\s*--page-gutter:\s*var\(--space-8\)/,
     '--page-gutter muss ab 1024px auf --space-8 gehen (eine Quelle für Kopf und Body)',
   );
+});
+
+test('wer seinen Körper aufs Lesemaß kappt, kappt auch seinen Kopf', () => {
+  // REGEL, KEINE LISTE: geprüft wird jede Seite, die .kitchen-list rendert -
+  // nicht eine Aufzählung der heute drei Küchen-Listen. Genau als Aufzählung
+  // stand die Vorgängerregel da (je ein `> * { max-width }`-Block in
+  // shopping.css und pantry.css), und die Rezepte fehlten darin schlicht.
+  //
+  // Was sie außerdem nicht leistete: `max-width` kappt die BREITE eines Slots,
+  // der Slot war aber ohnehin schmaler - `.page-toolbar__actions
+  // { margin-left: auto }` schob ihn danach unverändert an die äußere Kante.
+  // Gemessen bei 1280px: Liste bis x=972, Lagerort-Knopf bis x=1248.
+  // `.page-toolbar--narrow` (layout.css) setzt die Marge am LETZTEN Slot und
+  // trifft damit das Ende der Zeile statt der Slot-Breiten.
+  const narrowBody = /class(?:Name)?\s*=\s*['"`][^'"`]*\bkitchen-list\b/;
+  const pages = walkJsFiles('../public/pages/')
+    .filter((file) => narrowBody.test(read(file)));
+  assert.ok(pages.length >= 3, 'keine Seite mit .kitchen-list gefunden - Scan ist blind geworden');
+
+  for (const file of pages) {
+    const src = read(file);
+    // Jeder Kopf dieser Seite, egal ob als Template-Literal oder über className.
+    const heads = [
+      ...src.matchAll(/class="([^"]*\bpage-toolbar\b[^"]*)"/g),
+      ...src.matchAll(/className\s*=\s*'([^']*\bpage-toolbar\b[^']*)'/g),
+    ].map(([, classList]) => classList);
+    assert.ok(heads.length > 0, `${file}: kappt den Körper auf das Lesemaß, hat aber keinen kanonischen Kopf`);
+    for (const classList of heads) {
+      assert.ok(
+        /\bpage-toolbar--narrow\b/.test(classList),
+        `${file}: "${classList}" - der Körper endet bei --content-max-width-narrow, `
+        + 'der Kopf muss dieselbe Kante halten (page-toolbar--narrow)',
+      );
+    }
+  }
+
+  // Und die Variante muss das auch tun: Marge am letzten Slot, gegen dasselbe
+  // Token, das .kitchen-list kappt.
+  const layout = stripCssComments(read('../public/styles/layout.css'));
+  assert.match(
+    layout,
+    /\.page-toolbar--narrow\s*>\s*:last-child\s*\{[^}]*margin-inline-end:\s*max\(\s*0px,\s*calc\(100% - var\(--content-max-width-narrow\)\)\s*\)/,
+    'layout.css: .page-toolbar--narrow muss den letzten Slot auf --content-max-width-narrow zurückholen',
+  );
+  // Ohne Breakpoint: .kitchen-list kappt unbedingt, der Kopf muss das auch.
+  // Der Vorgänger stand in `@media (min-width: 1024px)` und ließ den Versatz
+  // zwischen 720px und 1024px stehen (gemessen 148px bei 900px Fensterbreite).
+  for (const file of ['shopping.css', 'pantry.css', 'recipes.css', 'kitchen-row.css']) {
+    assert.doesNotMatch(
+      stripCssComments(read(`../public/styles/${file}`)),
+      /page-toolbar[^{]*>\s*\*\s*\{[^}]*max-width/,
+      `${file}: Slot-Breiten kappen holt den Kopf nicht zurück - das macht .page-toolbar--narrow`,
+    );
+  }
 });
 
 test('module-head families stay split: in-page tabs vs route clusters', () => {
