@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.64.0] - 2026-07-31
+
+### Changed
+- The Budget header now keeps its place on every tab. The month stepper used to disappear without a word on five of the seven tabs, leaving a gap where the date had been, so it was never clear whether the month you had picked still applied. Tabs that have no time frame now say so quietly in the same spot: "Current balances", "All active subscriptions", "All loans", "All groups". "Current month" also moved behind the stepper instead of sitting between the back arrow and the date, where a reset button had no business being.
+- Statistics no longer keeps a second, separate period picker. It had its own stepper at a different position, in a different format (`01/07/2026 - 31/07/2026` instead of `July 2026`) and with its own anchor that was never in sync: picking March on the Budget tab and switching to Statistics showed July. Statistics now steps through the shared header, its Week/Month/Year switcher only picks how wide a step is, and both ends are reconciled when you switch tabs, in either direction. Week bounds still come from the server, so there is only one definition of a week.
+- Every switcher bar in the Budget module looks and behaves the same. There were four looks for the same question - a tinted capsule, a square accent-filled rectangle, a white tile and an outlined pill - and two of them offered no arrow-key navigation at all, so the keyboard handling you learned on Budget and Statistics was silently lost on Loans and Split Expenses. Loan status, group status and the account colour picker now share one appearance and one behaviour; the colour picker gained arrow keys in the process. Their touch targets grew from 40 and 28 pixels to the shared minimum of 44 (48 on touch devices).
+
+### Fixed
+- Subscription monograms were unreadable for many brands. The letters and the tile behind them were drawn from the same brand colour, so how legible a subscription was came down to which services a household happens to pay for: ten contrast failures across the seven demo brands, the worst at 1.83:1 where 4.5:1 is required, and nothing a user could do about it short of changing the brand colour. The brand now carries the tile and its border while the letters come from the regular text colour, which measures 12.9:1 in light mode and 10.7:1 in dark. The same flaw sat unnoticed in the account tiles on the Accounts tab and was fixed with it.
+
 ## [1.63.0] - 2026-07-31
 
 ### Changed
@@ -18,6 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The subscription category donut kept its light-mode colours in dark mode. It used fixed colour values instead of the theme's data-series tokens, so it stayed saturated while the identical donut on the Statistics tab next to it lightened correctly.
 - A net worth of exactly zero was shown in green, as if it were good news, and on an empty Accounts tab it was the only coloured thing on the screen. Zero is now neutral.
 - The subscription budget bar could not show that the budget was exceeded. It capped at full width and stayed in the accent colour while the figure beside it already read over budget; it now turns red past 100 percent.
+
+## [1.62.0] - 2026-07-30
 
 ### Added
 - Sending things to a shopping list can now be taken back, from all three places that do it: the cart button on a pantry row, a recipe's ingredients, and a planned meal. Until now only the pantry offered it, although a recipe moves the most at once, a whole ingredient list, into a list you are not looking at. The confirmation stays on screen for five seconds everywhere, and taking it back removes exactly what was just added and nothing else. For a meal, the ingredients count as not yet transferred again afterwards, so the meal can be sent a second time.

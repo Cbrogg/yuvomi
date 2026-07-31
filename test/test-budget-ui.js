@@ -38,15 +38,31 @@ test('TAB_CAPS ist die einzige Quelle für Monatsnavigation und Neu-Aktion', () 
     assert.match(table[0], new RegExp(`'${id}':`), `TAB_CAPS ohne Eintrag für '${id}'`);
   }
 
-  // Monatsnavigation nur dort, wo der Monat den Inhalt bestimmt.
-  assert.match(table[0], /'budget':\s*\{ month: true/);
-  assert.match(table[0], /'plan':\s*\{ month: true/);
-  for (const id of ['accounts', 'subscriptions', 'loans', 'reports', 'split-expenses']) {
+  // Zeitbezug nur dort, wo der Zeitraum den Inhalt bestimmt. Berichte tragen ihn
+  // seit der Zusammenführung mit — sie hatten vorher einen eigenen Stepper.
+  for (const id of ['budget', 'plan', 'reports']) {
+    assert.match(table[0], new RegExp(`'${id}':\\s*\\{ month: true`), `'${id}' braucht den Kopf-Stepper`);
+  }
+  for (const id of ['accounts', 'subscriptions', 'loans', 'split-expenses']) {
     assert.match(table[0], new RegExp(`'${id}':\\s*\\{ month: false`), `'${id}' darf keine Monatsnavigation zeigen`);
   }
 
   // Berichte kennt keine Neu-Aktion — dort bleiben Toolbar-Button und FAB weg.
-  assert.match(table[0], /'reports':\s*\{ month: false,\s*add: null/);
+  assert.match(table[0], /'reports':\s*\{ month: true,\s*range: true,\s*add: null/);
+});
+
+test('der Kopf-Slot bleibt auf jedem Tab besetzt', () => {
+  // Eine Lücke im Kopf las sich als „der zuletzt gewählte Monat gilt weiter".
+  // Regel statt Aufzählung: jeder Tab ohne Stepper braucht einen Kontexttext.
+  const table = budget.match(/const TAB_CAPS = \{[\s\S]*?\n\};/);
+  for (const entry of table[0].matchAll(/'([a-z-]+)':\s*\{([^}]*)\}/g)) {
+    const [, id, caps] = entry;
+    if (/month:\s*true/.test(caps)) continue;
+    assert.match(caps, /note:\s*'budget\.periodNote/, `'${id}' hat weder Stepper noch Kontexttext`);
+  }
+  // Und der Kontexttext wird auch wirklich geschaltet.
+  assert.match(budget, /note\.hidden = !caps\.note/);
+  assert.match(budget, /note\.textContent = t\(caps\.note\)/);
 });
 
 test('Monats-Bedienelemente werden als Block geschaltet, nicht einzeln', () => {
@@ -54,6 +70,21 @@ test('Monats-Bedienelemente werden als Block geschaltet, nicht einzeln', () => {
   const block = budget.match(/\['#budget-prev', '#budget-next', '#budget-today', '#budget-label'\][\s\S]{0,220}/);
   assert.ok(block, 'Monats-Bedienelemente werden nicht gemeinsam geschaltet');
   assert.match(block[0], /el\.hidden = !caps\.month/);
+});
+
+test('das Modul führt genau eine Zeitachse', () => {
+  // Vorher hielt budget-stats.js einen eigenen anchor: Budget auf März gestellt,
+  // Wechsel auf Berichte zeigte Juli. Der Anker lebt jetzt im Modul-State und
+  // wird beim Tabwechsel in beide Richtungen angeglichen.
+  assert.match(budget, /reportAnchor:\s*toLocalDateKey\(new Date\(\)\)/);
+  assert.match(budget, /state\.reportAnchor = anchorForMonth\(state\.month\)/, 'Hinweg Budget → Berichte fehlt');
+  assert.match(budget, /const ym = state\.reportAnchor\.slice\(0, 7\)/, 'Rückweg Berichte → Budget fehlt');
+
+  // Das Panel darf keinen eigenen Zeitraumwähler mehr aufbauen.
+  assert.doesNotMatch(stats, /data-step=/, 'budget-stats.js baut wieder einen zweiten Stepper');
+  assert.doesNotMatch(stats, /budget-stats__period/, 'der Zeitraum gehört in den geteilten Kopf');
+  assert.match(stats, /view\.anchor = ctx\.anchor/, 'der Anker muss vom Modul kommen');
+  assert.match(stats, /view\.ctx\.onRangeChange\(id\)/, 'die Auflösung muss ans Modul zurückgemeldet werden');
 });
 
 test('Toolbar-Aktion und FAB teilen sich Sichtbarkeit und Label', () => {
@@ -97,27 +128,104 @@ test('neue Einträge landen im angezeigten Monat, nicht im heutigen', () => {
 // Tab-Leisten und Filter-ARIA
 // --------------------------------------------------------
 
-test('alle Tab-Leisten des Moduls nutzen die geteilte Verhaltensschicht', () => {
+test('keine Umschalter-Leiste im Modul versteckt sich hinter role="group"', () => {
+  // REGEL statt Allowlist. Die Vorgängerfassung nannte drei Selektoren
+  // (.budget-tabs, .budget-scope, .budget-stats__ranges) und übersah damit genau
+  // die beiden Leisten, die role="group" trugen und ohne Pfeiltasten-Navigation
+  // dastanden - Darlehensstatus und Gruppenstatus. Eine Allowlist deckt N
+  // Dateien ab, nicht die Regel.
+  //
+  // Die Regel: wer eine Auswahl anbietet, benennt sie auch so. role="group" ist
+  // ein Sammelbehälter ohne Auswahlsemantik; Leisten gehören auf role="tablist"
+  // (Sichtwechsel) oder role="radiogroup" (Einfachauswahl) - und landen damit
+  // automatisch im Guard darunter.
+  for (const [file, src] of BUDGET_PAGES) {
+    for (const bar of withoutComments(src).matchAll(/role="group"[\s\S]{0,900}?<\/div>/g)) {
+      assert.doesNotMatch(
+        bar[0],
+        /aria-selected=|aria-pressed=|aria-checked=/,
+        `${file}: eine Leiste mit role="group" meldet einen Auswahlzustand - `
+        + 'role="tablist" (Sicht) oder role="radiogroup" (Wert) benennt das richtig',
+      );
+    }
+  }
+});
+
+test('jede Umschalter-Leiste des Moduls läuft durch die geteilte Verhaltensschicht', () => {
   // Ohne wireTablist gibt es Roving-Tabindex ohne Pfeiltasten — eine Falle, aus
-  // der Tastaturnutzer nicht mehr herauskommen.
-  assert.match(budget, /wireTablist\(_container\.querySelector\('\.budget-tabs'\)/);
-  assert.match(budget, /wireTablist\(_container\.querySelector\('\.budget-scope'\)/);
-  assert.match(stats, /wireTablist\(view\.root\.querySelector\('\.budget-stats__ranges'\)/);
+  // der Tastaturnutzer nicht mehr herauskommen. Der Guard leitet die Leisten aus
+  // dem Markup ab, statt sie aufzuzählen: eine neue Leiste ist automatisch erfasst.
+  const wired = BUDGET_PAGES.flatMap(([, src]) =>
+    [...src.matchAll(/wireTablist\(\s*[^)]*?querySelector\('([^']+)'\)/g)].map((m) => m[1]));
+
+  for (const [file, src] of BUDGET_PAGES) {
+    for (const bar of src.matchAll(/<div class="([^"]+)"([^>]*)role="(tablist|radiogroup)"/g)) {
+      const [, classes, attrs] = bar;
+      const id = attrs.match(/id="([^"]+)"/)?.[1];
+      const selectors = [...classes.trim().split(/\s+/).map((c) => `.${c}`), ...(id ? [`#${id}`] : [])];
+      assert.ok(
+        selectors.some((s) => wired.includes(s)),
+        `${file}: Leiste "${classes}" ist an keinem wireTablist verdrahtet (${selectors.join(' / ')})`,
+      );
+    }
+  }
   // Der Scope-Umschalter muss dafür data-tab-id tragen (nicht mehr data-scope).
   assert.doesNotMatch(budget, /data-scope=/);
 });
 
-test('Zeitraum-Umschalter der Berichte trägt echtes Tab-ARIA', () => {
-  const bar = stats.match(/class="budget-stats__ranges"[\s\S]*?<\/div>/);
-  assert.ok(bar, 'Zeitraum-Leiste nicht gefunden');
+test('es gibt genau eine Umschalter-Optik im Modul', () => {
+  // Vier Optiken für dieselbe Frage - getönte Kapsel, eckig gefülltes Rechteck,
+  // weiße Kachel, umrandete Pille - hießen, dass derselbe Zustand pro Tab anders
+  // aussah. .budget-segmented ist der Baustein; wer eine Leiste baut, greift ihn.
+  assert.ok(/\n\.budget-segmented\s*\{/.test(budgetCss), '.budget-segmented fehlt in budget.css');
+  assert.ok(/\n\.budget-segmented__item\s*\{/.test(budgetCss), '.budget-segmented__item fehlt');
+
+  for (const [file, src] of BUDGET_PAGES) {
+    for (const bar of src.matchAll(/<div class="([^"]+)"([^>]*)role="(tablist|radiogroup)"/g)) {
+      const [, classes] = bar;
+      // Die Haupt-Tabs und der Scope-Umschalter tragen die app-weite Pillen-
+      // Grammatik (sub-tabs.css) - sie sitzen in der Toolbar, nicht im Panel.
+      if (/budget-tabs|budget-scope|budget-color-picker/.test(classes)) continue;
+      assert.match(
+        classes,
+        /budget-segmented/,
+        `${file}: Leiste "${classes}" baut eine eigene Optik statt .budget-segmented`,
+      );
+    }
+  }
+
+  // Und die abgelösten Optiken kommen nicht zurück.
+  const liveCss = withoutComments(budgetCss);
+  for (const dead of ['budget-loans__filter\\b', 'budget-stats__range\\b']) {
+    assert.doesNotMatch(liveCss, new RegExp(`\\.${dead}`), `.${dead} ist durch .budget-segmented ersetzt`);
+  }
+});
+
+test('das Touch-Maß der Umschalter kommt aus dem Token, nicht aus der Leiste', () => {
+  // Die abgelösten Leisten lagen bei 40px (Zeitraum) und 28px (Nur-Ausgaben).
+  const item = budgetCss.match(/\n\.budget-segmented__item\s*\{([^}]*)\}/);
+  assert.ok(item, '.budget-segmented__item fehlt');
+  assert.match(item[1], /min-height:\s*var\(--target-base\)/);
+});
+
+test('Auflösungs-Umschalter der Berichte trägt echtes Tab-ARIA', () => {
+  const bar = stats.match(/class="[^"]*budget-stats__ranges"[\s\S]*?<\/div>/);
+  assert.ok(bar, 'Auflösungs-Leiste nicht gefunden');
   assert.match(bar[0], /role="tablist"/);
   assert.match(bar[0], /aria-label=/);
   assert.match(stats, /role="tab"[\s\S]{0,140}aria-selected="\$\{on\}"/);
   assert.match(stats, /tabindex="\$\{on \? '0' : '-1'\}"/);
 });
 
-test('Darlehens-Filter melden ihren Zustand über aria-pressed', () => {
-  assert.match(budget, /data-loan-status="\$\{id\}" aria-pressed="\$\{on\}"/);
+test('Einfachauswahl-Leisten melden ihren Zustand über aria-checked', () => {
+  // Darlehensstatus, Gruppenstatus und Kontofarbe wählen EINEN Wert, sie
+  // wechseln keine Sicht: aria-checked in einer radiogroup, nicht aria-pressed
+  // in einem role="group". Der Zustand muss angesagt werden - reine Einfärbung
+  // ist für Screenreader kein Kanal.
+  assert.match(budget, /role="radio" data-tab-id="\$\{id\}" aria-checked="\$\{on\}"/, 'Darlehensstatus');
+  assert.match(splitExpenses, /role="radio" data-tab-id="\$\{id\}" aria-checked="\$\{on\}"/, 'Gruppenstatus');
+  assert.match(budget, /role="radio"[\s\S]{0,200}aria-checked="\$\{on\}"/, 'Kontofarbe');
+  // Der Filter-Trichter je Darlehenszeile bleibt ein einzelner Toggle-Button.
   assert.match(budget, /data-action="loan-filter"[\s\S]{0,160}aria-pressed=/);
 });
 
@@ -252,6 +360,14 @@ const BUDGET_STYLESHEETS = [
   ['split-expenses.css', splitCss],
 ];
 
+// Guards, die auf Markup- oder Selektor-Muster prüfen, müssen an Kommentaren
+// vorbeisehen: sonst schlägt jede Erklärung an, die das verbotene Muster nennt -
+// und der Weg aus dem roten Test wäre, die Begründung zu löschen.
+const withoutComments = (src) => src
+  .replace(/\/\*[\s\S]*?\*\//g, '')
+  .replace(/<!--[\s\S]*?-->/g, '')
+  .replace(/^\s*\/\/.*$/gm, '');
+
 test('Geldbeträge laufen über den Modul-Formatierer, nicht über eigene', () => {
   // Drei eigene Formatierer bedeuteten vier Vorzeichenkonventionen: dieselbe
   // Zahl konnte in zwei Untertabs verschieden geschrieben sein. Bei Geld ist
@@ -327,6 +443,39 @@ test('Arbeitsflächen des Moduls sind opak, Glass bleibt den Overlays', () => {
         selector,
         OVERLAY_ROLES,
         `${file}: "${selector}" ist eine Arbeitsfläche und darf kein Glass tragen`,
+      );
+    }
+  }
+});
+
+test('kein Kontrast im Modul hängt an der Datenlage', () => {
+  // Das Abo-Monogramm zog Schrift UND Fläche aus derselben Markenfarbe. Damit
+  // war das Kontrastverhältnis reine Datenlage: gemessen 10 AA-Verstöße über 7
+  // Marken im Seed, bis hinunter auf 1.83:1, und kein Nutzer konnte das umgehen.
+  // Dieselbe Mechanik saß unbemerkt in der Konto-Kachel (--account-accent).
+  //
+  // REGEL: Datenfarben (die per style="--x:…" aus dem JS kommen, im Gegensatz zu
+  // den Tokens aus tokens.css) dürfen in einer Fläche nicht gleichzeitig
+  // Vordergrund und Hintergrund stellen. Eine von beiden Seiten muss aus einem
+  // Token kommen, sonst ist das Verhältnis nicht garantierbar.
+  const DATA_COLORS = new Set(
+    BUDGET_PAGES.flatMap(([, src]) =>
+      [...src.matchAll(/style="[^"]*?(--[a-z][a-z0-9-]*)\s*:/g)].map((m) => m[1])),
+  );
+  assert.ok(DATA_COLORS.size > 0, 'keine Datenfarben gefunden - der Guard misst nichts');
+
+  const varsIn = (decls) => [...decls.matchAll(/var\(\s*(--[a-z0-9-]+)/gi)].map((m) => m[1]);
+  for (const [file, css] of BUDGET_STYLESHEETS) {
+    for (const rule of css.matchAll(/([^{}]+)\{([^}]*)\}/g)) {
+      const body = rule[2];
+      const fg = [...body.matchAll(/(?:^|;)\s*color\s*:([^;]*)/g)].map((m) => m[1]).join(' ');
+      const bg = [...body.matchAll(/(?:^|;)\s*background(?:-color)?\s*:([^;]*)/g)].map((m) => m[1]).join(' ');
+      if (!fg.trim() || !bg.trim()) continue;
+      const shared = varsIn(fg).filter((v) => DATA_COLORS.has(v) && varsIn(bg).includes(v));
+      assert.equal(
+        shared.length, 0,
+        `${file}: "${rule[1].split('*/').pop().trim()}" zieht ${shared.join(', ')} `
+        + 'für Schrift UND Fläche - der Kontrast hängt damit an den Nutzerdaten',
       );
     }
   }

@@ -10,6 +10,7 @@ import { esc } from '/utils/html.js';
 import { stagger } from '/utils/ux.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
 import { formatMoney } from '/utils/money.js';
+import { wireTablist } from '/utils/tablist.js';
 
 let state = {
   meta: null,
@@ -30,6 +31,7 @@ let state = {
   user: null,
 };
 let _container = null;
+let _statusTablist = null;   // wireTablist-Handle des Statusfilters (sync ohne onChange)
 
 function setHtml(element, html) {
   element.replaceChildren();
@@ -88,9 +90,17 @@ export async function render(container, { user } = {}) {
               <input id="split-group-search" type="search" placeholder="${t('splitExpenses.searchGroups')}" autocomplete="off">
             </span>
           </label>
-          <div class="split-status-filter" id="split-status-filter" role="group" aria-label="${t('splitExpenses.statusLabel')}">
-            <button type="button" class="filter-chip filter-chip--sm" data-status="active">${t('splitExpenses.statusActive')}</button>
-            <button type="button" class="filter-chip filter-chip--sm" data-status="archived">${t('splitExpenses.statusArchived')}</button>
+          <!-- Geteilter Umschalter-Baustein des Budget-Moduls statt eigener
+               Pillen-Optik, und role="radiogroup" statt role="group": eine
+               Einfachauswahl, die ihren Zustand ansagt und über die geteilte
+               Verhaltensschicht Pfeiltasten mitbringt (Critique 2026-07-30, P1). -->
+          <div class="budget-segmented split-status-filter" id="split-status-filter" role="radiogroup" aria-label="${t('splitExpenses.statusLabel')}">
+            ${[['active', 'splitExpenses.statusActive'], ['archived', 'splitExpenses.statusArchived']].map(([id, key]) => {
+              const on = state.groupStatus === id;
+              return `<button type="button" class="budget-segmented__item${on ? ' is-active' : ''}"
+                  role="radio" data-tab-id="${id}" aria-checked="${on}"
+                  tabindex="${on ? '0' : '-1'}">${t(key)}</button>`;
+            }).join('')}
           </div>
           <div class="split-groups" id="split-groups"></div>
         </aside>
@@ -181,14 +191,17 @@ function bindShell() {
       renderAll();
     }, 250);
   });
-  _container.querySelector('#split-status-filter')?.addEventListener('click', async (e) => {
-    const chip = e.target.closest('[data-status]');
-    if (!chip || chip.dataset.status === state.groupStatus) return;
-    state.groupStatus = chip.dataset.status;
-    state.activeGroupId = null;
-    await loadGroups();
-    await loadGroupData();
-    renderAll();
+  _statusTablist = wireTablist(_container.querySelector('#split-status-filter'), {
+    activeId: state.groupStatus,
+    activeClass: 'is-active',
+    mode: 'select',
+    onChange: async (id) => {
+      state.groupStatus = id;
+      state.activeGroupId = null;
+      await loadGroups();
+      await loadGroupData();
+      renderAll();
+    },
   });
   _container.querySelector('#split-groups')?.addEventListener('click', async (e) => {
     const btn = e.target.closest('[data-group-id]');
@@ -216,11 +229,9 @@ function renderAll() {
  * Ausgabe würde dort in eine archivierte Gruppe laufen.
  */
 function renderStatusFilter() {
-  _container.querySelectorAll('#split-status-filter [data-status]').forEach((chip) => {
-    const active = chip.dataset.status === state.groupStatus;
-    chip.classList.toggle('filter-chip--active', active);
-    chip.setAttribute('aria-pressed', String(active));
-  });
+  // Zustand über die geteilte Verhaltensschicht spiegeln (sync löst kein
+  // onChange aus) statt Klassen und ARIA von Hand nachzuziehen.
+  _statusTablist?.sync(state.groupStatus);
   const addExpense = _container.querySelector('#split-add-expense');
   if (addExpense) addExpense.hidden = isArchivedView();
   const fab = _container.querySelector('#split-fab');

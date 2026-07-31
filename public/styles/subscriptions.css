@@ -302,15 +302,23 @@
   opacity: 0.62;
 }
 
+/* Monogramm: die Marke trägt Fläche und Rahmen, die Schrift kommt aus dem
+ * Text-Token. Vorher kamen Vorder- und Hintergrund aus DERSELBEN Markenfarbe
+ * (Vollton auf aufgehelltem Ton desselben Tons) — damit hing das Kontrast-
+ * verhältnis vollständig an der Datenlage: gemessen 10 AA-Verstöße über 7 Marken
+ * im Seed, bis hinunter auf 1.83:1 (Critique 2026-07-30, P1). Jede helle oder
+ * gesättigte Marke (Amazon-Orange, Spotify-Grün) fiel automatisch durch, und
+ * kein Nutzer konnte das umgehen, außer indem er die Markenfarbe änderte. */
 .subscription-card__brand {
   display: grid;
   width: 40px;
   height: 40px;
   place-items: center;
   overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--subscription-color) 45%, transparent);
   border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--subscription-color) 16%, var(--color-surface));
-  color: var(--subscription-color);
+  color: var(--color-text-primary);
   font-weight: var(--font-weight-bold);
 }
 

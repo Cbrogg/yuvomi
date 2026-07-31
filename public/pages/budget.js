@@ -16,7 +16,7 @@ import { render as renderSplitExpenses } from '/pages/split-expenses.js';
 import { openSubscriptionModal, render as renderSubscriptions } from '/pages/subscriptions.js';
 import { renderStats } from '/pages/budget-stats.js';
 import { renderPlans } from '/pages/budget-plans.js';
-import { toLocalDateKey } from '/utils/date.js';
+import { toLocalDateKey, parseLocalDateKey, addLocalDays } from '/utils/date.js';
 import { formatMoney, formatSignedAmount } from '/utils/money.js';
 import { budgetCategoryLabel } from '/utils/category-labels.js';
 import { appendCurrencyOptions } from '/settings/currency.js';
@@ -185,6 +185,12 @@ let state = {
   scope:       'mine',        // Ansichts-Filter im personal-Modus: 'mine' | 'household'
   expensesOnly: false,        // Anzeige „Nur Ausgaben" (#504): Einnahmen+Saldo ausblenden
   meta:        { expenseCategories: [], incomeCategories: [], expenseSubcategories: {} },
+  // Zeitachse der Berichte: dieselbe Kopfleiste wie der Monat, nur mit
+  // umschaltbarer Auflösung. Der Anker lebt hier statt in budget-stats.js, damit
+  // beide Enden beim Tabwechsel aneinander angeglichen werden können.
+  range:        'month',      // 'week' | 'month' | 'year'
+  reportAnchor: toLocalDateKey(new Date()),
+  reportPeriod: '',           // vom Server gemeldeter Zeitraum (nur für 'week' im Label)
 };
 let _container = null;
 let _user = null;
@@ -196,15 +202,29 @@ let _scopeTablist = null;
 // widersprochen hat (Monatslabel ohne Pfeile auf „Darlehen", FAB ohne Toolbar-„+"
 // auf „Berichte"). `month`: Monat ist der Bezugsrahmen des Tabs. `add`: es gibt
 // eine sinnvolle Neu-Aktion (labelKey benennt sie für FAB und Toolbar-Button).
+//
+// `note` schließt die Lücke, die `month: false` hinterließ: der Kopf-Slot wird
+// nie geleert, sondern umgeschrieben. Vorher verschwand der Zeitbezug auf fünf
+// von sieben Tabs wortlos, und der Nutzer musste raten, ob der zuletzt gewählte
+// Monat noch gilt (Critique 2026-07-30, P1).
+//
+// `range` erlaubt dem Tab, die Auflösung des Kopf-Steppers umzuschalten
+// (Woche|Monat|Jahr). Die Berichte hatten dafür einen ZWEITEN Zeitraumwähler an
+// anderer Position, in anderem Format und mit eigenem, nicht synchronisiertem
+// Anker: Budget auf März gestellt, Wechsel auf Berichte zeigte Juli.
 const TAB_CAPS = {
   'budget':         { month: true,  add: 'budget.newEntryFabLabel' },
   'plan':           { month: true,  add: 'budget.planAddBudget' },
-  'accounts':       { month: false, add: 'budget.addAccount' },
-  'subscriptions':  { month: false, add: 'subscriptions.add' },
-  'loans':          { month: false, add: 'budget.newLoan' },
-  'reports':        { month: false, add: null },
-  'split-expenses': { month: false, add: 'splitExpenses.addExpense' },
+  'accounts':       { month: false, note: 'budget.periodNoteAccounts',      add: 'budget.addAccount' },
+  'subscriptions':  { month: false, note: 'budget.periodNoteSubscriptions', add: 'subscriptions.add' },
+  'loans':          { month: false, note: 'budget.periodNoteLoans',         add: 'budget.newLoan' },
+  'reports':        { month: true,  range: true, add: null },
+  'split-expenses': { month: false, note: 'budget.periodNoteSplit',         add: 'splitExpenses.addExpense' },
 };
+
+// Sentinel für „keine eigene Farbe" im Kontofarb-Wähler: der echte Wert ist der
+// leere String, den eine Auswahl-Leiste nicht als Auswahl unterscheiden kann.
+const DEFAULT_COLOR_ID = 'default';
 
 function tabCaps() {
   if (_user?.access_scope === 'split_guest') return TAB_CAPS['split-expenses'];
@@ -250,6 +270,38 @@ function addMonths(ym, n) {
   const [y, m] = ym.split('-').map(Number);
   const d = new Date(y, m - 1 + n, 1);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function currentMonth() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
+// Tagesanker für einen Monat: im laufenden Monat der heutige Tag, sonst der
+// Monatserste. So landet ein Wechsel Budget → Berichte im gewählten Monat,
+// ohne bei „Woche" auf einen willkürlichen Tag zu springen.
+function anchorForMonth(ym) {
+  return ym === currentMonth() ? toLocalDateKey(new Date()) : `${ym}-01`;
+}
+
+// Ein Schritt in der Auflösung des jeweiligen Tabs.
+function stepAnchor(anchor, range, dir) {
+  if (range === 'week') return addLocalDays(anchor, 7 * dir);
+  const d = parseLocalDateKey(anchor);
+  if (range === 'month') d.setMonth(d.getMonth() + dir);
+  else d.setFullYear(d.getFullYear() + dir);
+  return toLocalDateKey(d);
+}
+
+// Kopf-Label der Berichte: dasselbe Format wie im Budget-Tab, nur in der
+// gewählten Auflösung. Monat und Jahr sind lokal ableitbar; die Wochengrenzen
+// legt der Server fest, deshalb steht dort sein gemeldeter Zeitraum. Der bleibt
+// über Tabwechsel hinweg stehen, statt zwischendurch auf das Ankerdatum
+// zurückzufallen - ein einzelner Tag im Kopf las sich wie eine Tagesansicht.
+function reportPeriodLabel() {
+  if (state.range === 'year') return String(parseLocalDateKey(state.reportAnchor).getFullYear());
+  if (state.range === 'month') return formatMonthLabel(state.reportAnchor.slice(0, 7));
+  return state.reportPeriod;
 }
 
 function setHtml(element, html) {
@@ -354,15 +406,21 @@ export async function render(container, { user }) {
     <div class="budget-page">
       <div class="page-toolbar page-toolbar--wrap budget-nav">
         <h1 class="page-toolbar__title">${t('budget.title')}</h1>
+        <!-- Der Kopf-Slot bleibt auf jedem Tab besetzt: entweder Stepper oder
+             ein ruhiger Kontexttext. Eine Lücke machte jeden Tabwechsel zur
+             Neuorientierung (Critique 2026-07-30, P1). -->
         <div class="page-toolbar__center budget-nav__month">
           <button class="btn btn--icon" id="budget-prev" aria-label="${t('budget.prevMonth')}">
             <i data-lucide="chevron-left" aria-hidden="true"></i>
           </button>
-          <button class="budget-nav__today" id="budget-today">${t('budget.currentMonth')}</button>
-          <span class="budget-nav__label" id="budget-label"></span>
+          <span class="budget-nav__label" id="budget-label" aria-live="polite"></span>
           <button class="btn btn--icon" id="budget-next" aria-label="${t('budget.nextMonth')}">
             <i data-lucide="chevron-right" aria-hidden="true"></i>
           </button>
+          <!-- „Aktuell" ist ein Reset, kein Navigationsschritt: hinter dem
+               Stepper statt zwischen Pfeil und Wert. -->
+          <button class="budget-nav__today" id="budget-today">${t('budget.currentMonth')}</button>
+          <span class="budget-nav__note" id="budget-period-note" hidden></span>
         </div>
         ${state.budgetMode === 'personal' ? `
         <div class="budget-scope" role="tablist" aria-label="${t('budget.scopeLabel')}">
@@ -422,19 +480,30 @@ export async function render(container, { user }) {
 // --------------------------------------------------------
 
 function wireNav() {
-  _container.querySelector('#budget-prev').addEventListener('click', async () => {
-    await loadMonth(addMonths(state.month, -1));
+  // EIN Stepper für alle Tabs mit Zeitbezug. Welche Achse er bewegt, sagt der
+  // Tab: Budget und Plan rechnen in Monaten, die Berichte in ihrer gewählten
+  // Auflösung. Vorher trugen die Berichte einen zweiten Stepper im Panel.
+  const stepPeriod = async (dir) => {
+    if (state.activeTab === 'reports') {
+      state.reportAnchor = stepAnchor(state.reportAnchor, state.range, dir);
+      renderBody();
+      return;
+    }
+    await loadMonth(addMonths(state.month, dir));
     renderBody();
     updateLabel();
-  });
-  _container.querySelector('#budget-next').addEventListener('click', async () => {
-    await loadMonth(addMonths(state.month, 1));
-    renderBody();
-    updateLabel();
-  });
+  };
+  _container.querySelector('#budget-prev').addEventListener('click', () => stepPeriod(-1));
+  _container.querySelector('#budget-next').addEventListener('click', () => stepPeriod(1));
   _container.querySelector('#budget-today').addEventListener('click', async () => {
-    const today = new Date();
-    const m = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+    if (state.activeTab === 'reports') {
+      const today = toLocalDateKey(new Date());
+      if (today === state.reportAnchor) return;
+      state.reportAnchor = today;
+      renderBody();
+      return;
+    }
+    const m = currentMonth();
     if (m === state.month) return;
     await loadMonth(m);
     renderBody();
@@ -472,9 +541,24 @@ function wireNav() {
   // Tab (sub-tab--active/aria/tabindex); renderBody übernimmt nur noch den Inhalt.
   _tablist = wireTablist(_container.querySelector('.budget-tabs'), {
     activeId: state.activeTab,
-    onChange: (id) => {
+    onChange: async (id) => {
+      const prev = state.activeTab;
       state.activeTab = id;
+      // Eine Zeitachse über den Tabwechsel hinweg: der Monat aus dem Budget-Tab
+      // wird zum Anker der Berichte und umgekehrt. Vorher hielt budget-stats.js
+      // einen eigenen Anker, sodass ein im Budget gewählter März in den Berichten
+      // weiter als Juli erschien (Critique 2026-07-30, P1).
+      if (id === 'reports' && prev !== 'reports') {
+        state.reportAnchor = anchorForMonth(state.month);
+      }
       renderBody();
+      if (prev === 'reports' && id !== 'reports') {
+        const ym = state.reportAnchor.slice(0, 7);
+        if (ym !== state.month) {
+          await loadMonth(ym);
+          if (state.activeTab === id) renderBody();
+        }
+      }
     },
   });
   // Edge-Fade + Aktiver-Tab-in-Sicht übernimmt jetzt wireTablist zentral
@@ -482,9 +566,16 @@ function wireNav() {
   updateLabel();
 }
 
+// Umschalter-Leisten, die im Panel sitzen, werden von renderBody() mit-neugebaut.
+// Ohne Rückgabe des Fokus endet die Tastaturnavigation nach dem ersten
+// Pfeildruck im Nichts - der Nutzer müsste sich von vorn durchtabben.
+function refocusSegmented(barSelector) {
+  _container.querySelector(`${barSelector} .budget-segmented__item.is-active`)?.focus();
+}
+
 function updateLabel() {
   const lbl = _container.querySelector('#budget-label');
-  if (lbl) lbl.textContent = formatMonthLabel(state.month);
+  if (lbl) lbl.textContent = state.activeTab === 'reports' ? reportPeriodLabel() : formatMonthLabel(state.month);
 }
 
 // --------------------------------------------------------
@@ -505,6 +596,21 @@ function renderBody() {
       user: _user, currency: state.currency,
       budgetMode: state.budgetMode, scope: state.scope,
       formatAmount, categoryLabel, esc,
+      // Zeitraum und Auflösung gehören dem Modul, nicht dem Panel: der Stepper
+      // sitzt im geteilten Kopf, das Panel wählt nur noch die Auflösung.
+      range: state.range,
+      anchor: state.reportAnchor,
+      onRangeChange: (r) => {
+        state.range = r;
+        renderBody();
+        refocusSegmented('.budget-stats__ranges');
+      },
+      // Die Wochengrenzen kennt der Server; das Kopf-Label holt sie sich von dort
+      // nach, statt die Wochenlogik ein zweites Mal im Client zu führen.
+      onPeriod: ({ from, to }) => {
+        state.reportPeriod = `${formatDate(from)} – ${formatDate(to)}`;
+        if (state.activeTab === 'reports' && state.range === 'week') updateLabel();
+      },
     }).catch((err) => console.error('[Budget] stats render error:', err));
     return;
   }
@@ -709,6 +815,13 @@ function updateTabs() {
     const el = _container.querySelector(selector);
     if (el) el.hidden = !caps.month;
   });
+  // Wo kein Stepper steht, steht der Grund: der Slot bleibt besetzt, statt eine
+  // Lücke zu hinterlassen, die der Nutzer als „Monat gilt noch" lesen könnte.
+  const note = _container.querySelector('#budget-period-note');
+  if (note) {
+    note.hidden = !caps.note;
+    if (caps.note) note.textContent = t(caps.note);
+  }
 
   // Toolbar-„+" und FAB zeigen dieselbe Aktion mit demselben Label — oder beide
   // gar nichts (Berichte hat keine Neu-Aktion).
@@ -952,9 +1065,16 @@ function openAccountModal(account = null) {
   ).join('');
 
   const currentColor = isEdit ? (account.color || '') : '';
-  const swatch = (value, styleColor, label) =>
-    `<button type="button" class="budget-color-swatch ${currentColor === value ? 'is-active' : ''}"
-             data-color="${esc(value)}" style="--swatch:${esc(styleColor)}" aria-label="${esc(label)}" aria-pressed="${currentColor === value}"></button>`;
+  // Einfachauswahl wie die Filterleisten des Moduls: role="radiogroup" und die
+  // geteilte Verhaltensschicht statt role="group" mit eigenem Klick-Handler.
+  // Die Standardfarbe hat den leeren Wert und trägt deshalb den Sentinel als
+  // data-tab-id - wireTablist erkennt einen leeren String nicht als Auswahl.
+  const swatch = (value, styleColor, label) => {
+    const on = currentColor === value;
+    return `<button type="button" role="radio" class="budget-color-swatch${on ? ' is-active' : ''}"
+             data-tab-id="${esc(value || DEFAULT_COLOR_ID)}" style="--swatch:${esc(styleColor)}"
+             aria-label="${esc(label)}" aria-checked="${on}" tabindex="${on ? '0' : '-1'}"></button>`;
+  };
   const colorSwatches = swatch('', 'var(--module-accent)', t('budget.accountColorDefault'))
     + ACCOUNT_COLORS.map((c) => swatch(c.value, c.value, t(c.nameKey))).join('');
 
@@ -976,7 +1096,7 @@ function openAccountModal(account = null) {
     </div>
     <div class="form-group">
       <label class="form-label">${t('budget.accountColorLabel')}</label>
-      <div class="budget-color-picker" id="am-color" role="group" aria-label="${t('budget.accountColorLabel')}">${colorSwatches}</div>
+      <div class="budget-color-picker" id="am-color" role="radiogroup" aria-label="${t('budget.accountColorLabel')}">${colorSwatches}</div>
     </div>
 
     <div class="modal-panel__footer modal-panel__footer--plain">
@@ -1002,16 +1122,11 @@ function openAccountModal(account = null) {
     size: 'sm',
     onSave(panel) {
       let selectedColor = currentColor;
-      const colorPicker = panel.querySelector('#am-color');
-      colorPicker?.querySelectorAll('.budget-color-swatch').forEach((sw) => {
-        sw.addEventListener('click', () => {
-          selectedColor = sw.dataset.color;
-          colorPicker.querySelectorAll('.budget-color-swatch').forEach((o) => {
-            const active = o === sw;
-            o.classList.toggle('is-active', active);
-            o.setAttribute('aria-pressed', String(active));
-          });
-        });
+      wireTablist(panel.querySelector('#am-color'), {
+        activeId: currentColor || DEFAULT_COLOR_ID,
+        activeClass: 'is-active',
+        mode: 'select',
+        onChange: (id) => { selectedColor = id === DEFAULT_COLOR_ID ? '' : id; },
       });
 
       panel.querySelector('#am-cancel').addEventListener('click', closeModal);
@@ -1103,19 +1218,23 @@ function renderLoansDashboard() {
           })}</div>
           ${state.loanFilterId ? `<div class="budget-list-header__filter">${esc(activeLoanLabel())}</div>` : ''}
         </div>
-        <div class="budget-loans__filters" role="group" aria-label="${t('budget.loanStatusFilterLabel')}">
+        <div class="budget-panel-head__actions">
           ${state.loanFilterId ? `
-          <button class="budget-loans__filter" type="button" id="budget-clear-loan-filter">
+          <button class="btn btn--secondary btn--sm" type="button" id="budget-clear-loan-filter">
             <i data-lucide="x" aria-hidden="true"></i>${t('budget.clearLoanFilter')}
           </button>` : ''}
-          ${[['active', 'budget.loanStatusActive'], ['paid', 'budget.loanStatusPaid'], ['all', 'budget.loanStatusAll']]
-            .map(([id, key]) => {
-              const on = state.loanStatusFilter === id;
-              // aria-pressed statt reiner Einfärbung: sonst ist der aktive Filter
-              // für Screenreader nicht von den inaktiven zu unterscheiden.
-              return `<button class="budget-loans__filter ${on ? 'budget-loans__filter--active' : ''}"
-                  type="button" data-loan-status="${id}" aria-pressed="${on}">${t(key)}</button>`;
-            }).join('')}
+          <!-- Einfachauswahl, keine Sicht: role="radiogroup" statt des früheren
+               role="group", damit der Zustand angesagt wird UND die geteilte
+               Verhaltensschicht Pfeiltasten liefert (Critique 2026-07-30, P1). -->
+          <div class="budget-segmented budget-loans__filters" role="radiogroup" aria-label="${t('budget.loanStatusFilterLabel')}">
+            ${[['active', 'budget.loanStatusActive'], ['paid', 'budget.loanStatusPaid'], ['all', 'budget.loanStatusAll']]
+              .map(([id, key]) => {
+                const on = state.loanStatusFilter === id;
+                return `<button class="budget-segmented__item${on ? ' is-active' : ''}"
+                    type="button" role="radio" data-tab-id="${id}" aria-checked="${on}"
+                    tabindex="${on ? '0' : '-1'}">${t(key)}</button>`;
+              }).join('')}
+          </div>
         </div>
       </div>
       <!-- Geteilte Kennzahl-Zeile statt der früheren eigenen budget-loans__stats
@@ -1253,11 +1372,17 @@ function wireLoansPage() {
     state.loanFilterId = null;
     renderBody();
   });
-  _container.querySelectorAll('[data-loan-status]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      state.loanStatusFilter = btn.dataset.loanStatus;
+  // Geteilte Verhaltensschicht statt eigener Klick-Handler: dieselbe Grammatik
+  // wie die Haupt-Tabs, im select-Modus (Einfachauswahl statt Sichtwechsel).
+  wireTablist(_container.querySelector('.budget-loans__filters'), {
+    activeId: state.loanStatusFilter,
+    activeClass: 'is-active',
+    mode: 'select',
+    onChange: (id) => {
+      state.loanStatusFilter = id;
       renderBody();
-    });
+      refocusSegmented('.budget-loans__filters');
+    },
   });
   _container.querySelectorAll('.budget-loan-card[data-loan-id]').forEach((card) => {
     card.addEventListener('click', (event) => {

@@ -3939,8 +3939,11 @@ test('split-expenses archive is reachable and offers a way back (#574)', () => {
   // Archivieren war eine Einbahnstraße: die API kannte ?status=archived, die
   // Oberfläche hatte weder Filter noch Wiederherstellen.
   const page = read('../public/pages/split-expenses.js');
-  assert.match(page, /data-status="active"/, 'group list needs an active filter chip');
-  assert.match(page, /data-status="archived"/, 'group list needs an archived filter chip');
+  // Die Statusleiste läuft seit der Budget-Zusammenführung über den geteilten
+  // Umschalter-Baustein (data-tab-id + wireTablist) statt über eigene Chips.
+  assert.match(page, /data-tab-id="\$\{id\}"/, 'group list needs a status switcher');
+  assert.match(page, /'active', 'splitExpenses\.statusActive'/, 'group list needs an active option');
+  assert.match(page, /'archived', 'splitExpenses\.statusArchived'/, 'group list needs an archived option');
   assert.match(
     page,
     /\/split-expenses\/groups\?status=\$\{state\.groupStatus\}/,
@@ -4089,7 +4092,10 @@ test('remaining audited mobile controls use 48px touch targets', () => {
 
   assertRuleUsesToken(tasks, '.filter-toggle-btn', 'min-height', '--target-lg', '../public/styles/tasks.css');
   assertRuleUsesToken(calendar, '.cal-toolbar__today', 'min-height', '--target-lg', '../public/styles/calendar.css');
-  assertRuleUsesToken(budget, '.budget-loans__filter', 'min-height', '--target-lg', '../public/styles/budget.css');
+  // Der Darlehens-Statusfilter ist in .budget-segmented aufgegangen. Der Baustein
+  // nimmt --target-base (44px Zeiger / 48px Finger) statt --target-lg fest: das
+  // Kriterium ist die Zeigerfähigkeit, nicht die Viewport-Breite (tokens.css).
+  assertRuleUsesToken(budget, '.budget-segmented__item', 'min-height', '--target-base', '../public/styles/budget.css');
   assertRuleUsesToken(budget, '.budget-loan-card__filter', 'width', '--target-lg', '../public/styles/budget.css');
   assertRuleUsesToken(budget, '.budget-loan-card__filter', 'height', '--target-lg', '../public/styles/budget.css');
   assert.match(
