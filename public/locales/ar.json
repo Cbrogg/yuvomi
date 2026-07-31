@@ -544,7 +544,7 @@
         "locationPlaceholder": "اختياري",
         "assignedLabel": "مسند إلى",
         "assignedNobody": "- لا أحد -",
-        "colorLabel": "اللون {{color}}",
+        "colorLabel": "اللون",
         "colorOverriddenByAssignee": "يتم تجاوز اللون بواسطة المستخدمين المعينين",
         "descriptionLabel": "الوصف",
         "descriptionPlaceholder": "اختياري…",

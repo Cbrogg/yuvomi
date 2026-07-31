@@ -544,7 +544,7 @@
         "locationPlaceholder": "Необязательно",
         "assignedLabel": "Назначено",
         "assignedNobody": "- Никому -",
-        "colorLabel": "Цвет {{color}}",
+        "colorLabel": "Цвет",
         "colorOverriddenByAssignee": "Цвет переопределяется назначенными пользователями",
         "descriptionLabel": "Описание",
         "descriptionPlaceholder": "Необязательно…",

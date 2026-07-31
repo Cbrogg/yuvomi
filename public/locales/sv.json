@@ -544,7 +544,7 @@
         "locationPlaceholder": "Frivillig",
         "assignedLabel": "Tilldelad till",
         "assignedNobody": "- Ingen -",
-        "colorLabel": "Färg {{color}}",
+        "colorLabel": "Färg",
         "colorOverriddenByAssignee": "Färgen åsidosätts av tilldelade användare",
         "descriptionLabel": "Beskrivning",
         "descriptionPlaceholder": "Frivillig…",

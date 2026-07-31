@@ -544,7 +544,7 @@
         "locationPlaceholder": "Необов'язково",
         "assignedLabel": "Призначено",
         "assignedNobody": "- Нікому -",
-        "colorLabel": "Колір {{color}}",
+        "colorLabel": "Колір",
         "colorOverriddenByAssignee": "Колір замінюється призначеними користувачами",
         "descriptionLabel": "Опис",
         "descriptionPlaceholder": "Необов'язково…",

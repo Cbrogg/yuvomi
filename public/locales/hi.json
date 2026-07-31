@@ -544,7 +544,7 @@
         "locationPlaceholder": "वैकल्पिक",
         "assignedLabel": "सौंपा गया",
         "assignedNobody": "- कोई नहीं -",
-        "colorLabel": "रंग {{color}}",
+        "colorLabel": "रंग",
         "colorOverriddenByAssignee": "रंग असाइन किए गए उपयोगकर्ताओं द्वारा ओवरराइड किया गया है",
         "descriptionLabel": "विवरण",
         "descriptionPlaceholder": "वैकल्पिक…",

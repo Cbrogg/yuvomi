@@ -544,7 +544,7 @@
         "locationPlaceholder": "Opcional",
         "assignedLabel": "Atribuído a",
         "assignedNobody": "- Ninguém -",
-        "colorLabel": "Cor {{color}}",
+        "colorLabel": "Cor",
         "colorOverriddenByAssignee": "A cor é substituída pelos utilizadores atribuídos",
         "descriptionLabel": "Descrição",
         "descriptionPlaceholder": "Opcional…",

@@ -544,7 +544,7 @@
         "locationPlaceholder": "Προαιρετικό",
         "assignedLabel": "Ανατεθειμένο σε",
         "assignedNobody": "- Κανέναν -",
-        "colorLabel": "Χρώμα {{color}}",
+        "colorLabel": "Χρώμα",
         "colorOverriddenByAssignee": "Το χρώμα παρακάμπτεται από τους ανατεθειμένους χρήστες",
         "descriptionLabel": "Περιγραφή",
         "descriptionPlaceholder": "Προαιρετικό…",

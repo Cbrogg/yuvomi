@@ -544,7 +544,7 @@
         "locationPlaceholder": "Opcionális",
         "assignedLabel": "Hozzárendelve",
         "assignedNobody": "- Senki -",
-        "colorLabel": "Szín {{color}}",
+        "colorLabel": "Szín",
         "colorOverriddenByAssignee": "A szín felülírva a hozzárendelt felhasználó(k) által",
         "descriptionLabel": "Leírás",
         "descriptionPlaceholder": "Opcionális…",

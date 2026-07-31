@@ -544,7 +544,7 @@
         "locationPlaceholder": "Tùy chọn",
         "assignedLabel": "Giao cho",
         "assignedNobody": "- Không ai -",
-        "colorLabel": "Màu {{color}}",
+        "colorLabel": "Màu",
         "descriptionLabel": "Mô tả",
         "descriptionPlaceholder": "Tùy chọn…",
         "popupEdit": "Sửa",
