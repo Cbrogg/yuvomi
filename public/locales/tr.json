@@ -1195,7 +1195,12 @@
         "statsTrendSummary": "{{periods}} dönemlik seyir · Gelir {{income}} · Gider {{expenses}} · Zirve {{peak}}",
         "statsDonutSummary": "{{count}} dilim · En büyüğü: {{top}} (%{{pct}}) · Toplam {{total}}",
         "statsPointsLabel": "Eğri değerleri",
-        "statsPointLabel": "{{period}}: gelir {{income}}, gider {{expenses}}"
+        "statsPointLabel": "{{period}}: gelir {{income}}, gider {{expenses}}",
+        "receiptsLabel": "Fişler",
+        "receiptsHint": "Bu işleme ait fiş veya fatura.",
+        "receiptDocumentName": "Fiş: {{title}} ({{date}})",
+        "receiptsAttachedLabel": "{{count}} fiş eklendi",
+        "receiptsAttachedLabel_one": "{{count}} fiş eklendi"
     },
     "settings": {
         "healthCycleEnableLabel": "Döngü sekmesini göster",
@@ -2411,7 +2416,9 @@
         "dmsSearchLabel": "Arama terimi",
         "dmsSearching": "Aranıyor…",
         "dmsSearchError": "DMS şu anda erişilebilir değil.",
-        "storageGoogleDrive": "Google Drive"
+        "storageGoogleDrive": "Google Drive",
+        "budgetFolder": "Fişler",
+        "splitExpensesFolder": "Paylaşılan harcamalar"
     },
     "shortcuts": {
         "goKitchen": "Mutfak",
@@ -2717,7 +2724,15 @@
         "statusActive": "Aktif",
         "statusArchived": "Arşivlenmiş",
         "restoreGroup": "Geri yükle",
-        "emptyArchivedTitle": "Arşivde bir şey yok"
+        "emptyArchivedTitle": "Arşivde bir şey yok",
+        "receiptsLabel": "Fişler",
+        "receiptsHint": "Bu harcamaya ait fiş veya fatura.",
+        "receiptDocumentName": "Fiş: {{title}} ({{group}})",
+        "receiptsAttachedLabel": "{{count}} fiş eklendi",
+        "receiptsAttachedLabel_one": "{{count}} fiş eklendi",
+        "proofLabel": "Ödeme belgesi",
+        "proofHint": "Tek bir belge, örneğin havalenin ekran görüntüsü.",
+        "proofDocumentName": "Ödeme belgesi {{group}}: {{name}}"
     },
     "wmo": {
         "0": "Açık",
@@ -3662,5 +3677,21 @@
             "jar": "kavanoz",
             "bag": "poşet"
         }
+    },
+    "documentAttach": {
+        "label": "Ekler",
+        "hint": "Mevcut belgeleri bağlayın veya yeni dosya yükleyin (en fazla 5 MB).",
+        "emptyState": "Henüz ek yok",
+        "uploadAction": "Dosya yükle",
+        "pickAction": "Mevcut belge",
+        "removeAction": "{{name}} ögesini kaldır",
+        "pickerTitle": "Belge seç",
+        "searchPlaceholder": "Belgelerde ara",
+        "noDocuments": "Eşleşen belge yok",
+        "loadFailed": "Belgeler yüklenemedi.",
+        "confirmSelection": "Seçilenleri ekle",
+        "openAction": "{{name}} ögesini aç",
+        "limitReached": "En fazla {{count}} belge.",
+        "limitReached_one": "En fazla {{count}} belge."
     }
 }

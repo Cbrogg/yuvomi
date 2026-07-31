@@ -1195,7 +1195,12 @@
         "statsTrendSummary": "Динамика за {{periods}} периодов · Доходы {{income}} · Расходы {{expenses}} · Максимум {{peak}}",
         "statsDonutSummary": "Сегментов: {{count}} · Наибольший: {{top}} ({{pct}} %) · Всего {{total}}",
         "statsPointsLabel": "Значения кривой",
-        "statsPointLabel": "{{period}}: доходы {{income}}, расходы {{expenses}}"
+        "statsPointLabel": "{{period}}: доходы {{income}}, расходы {{expenses}}",
+        "receiptsLabel": "Чеки",
+        "receiptsHint": "Чек или счёт по этой операции.",
+        "receiptDocumentName": "Чек: {{title}} ({{date}})",
+        "receiptsAttachedLabel": "Прикреплено чеков: {{count}}",
+        "receiptsAttachedLabel_one": "Прикреплён чек: {{count}}"
     },
     "settings": {
         "healthCycleEnableLabel": "Показать вкладку цикла",
@@ -2411,7 +2416,9 @@
         "dmsSearchLabel": "Поисковый запрос",
         "dmsSearching": "Поиск…",
         "dmsSearchError": "DMS сейчас недоступна.",
-        "storageGoogleDrive": "Google Drive"
+        "storageGoogleDrive": "Google Drive",
+        "budgetFolder": "Чеки",
+        "splitExpensesFolder": "Общие расходы"
     },
     "shortcuts": {
         "goKitchen": "Кухня",
@@ -2717,7 +2724,15 @@
         "statusActive": "Активный",
         "statusArchived": "Архивированный",
         "restoreGroup": "Восстановить",
-        "emptyArchivedTitle": "Архив пуст"
+        "emptyArchivedTitle": "Архив пуст",
+        "receiptsLabel": "Чеки",
+        "receiptsHint": "Чек или счёт по этому расходу.",
+        "receiptDocumentName": "Чек: {{title}} ({{group}})",
+        "receiptsAttachedLabel": "Прикреплено чеков: {{count}}",
+        "receiptsAttachedLabel_one": "Прикреплён чек: {{count}}",
+        "proofLabel": "Подтверждение оплаты",
+        "proofHint": "Одно подтверждение, например скриншот перевода.",
+        "proofDocumentName": "Подтверждение оплаты {{group}}: {{name}}"
     },
     "wmo": {
         "0": "Ясное небо",
@@ -3662,5 +3677,21 @@
             "jar": "стеклянная банка",
             "bag": "пакет"
         }
+    },
+    "documentAttach": {
+        "label": "Вложения",
+        "hint": "Свяжите существующие документы или загрузите новые файлы (до 5 МБ).",
+        "emptyState": "Вложений пока нет",
+        "uploadAction": "Загрузить файл",
+        "pickAction": "Существующий документ",
+        "removeAction": "Удалить {{name}}",
+        "pickerTitle": "Выбрать документ",
+        "searchPlaceholder": "Поиск документов",
+        "noDocuments": "Подходящих документов нет",
+        "loadFailed": "Не удалось загрузить документы.",
+        "confirmSelection": "Добавить выбранные",
+        "openAction": "Открыть {{name}}",
+        "limitReached": "Не более {{count}} документов.",
+        "limitReached_one": "Не более {{count}} документа."
     }
 }

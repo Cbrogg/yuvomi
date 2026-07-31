@@ -15,7 +15,7 @@
  *   → bypassCacheUntil (in-memory + Cache API für SW-Restart-Robustheit)
  */
 
-const APP_RELEASE   = '1.66.2';
+const APP_RELEASE   = '1.67.0';
 const SHELL_CACHE   = `yuvomi-shell-${APP_RELEASE}`;
 const PAGES_CACHE   = `yuvomi-pages-${APP_RELEASE}`;
 const LOCALES_CACHE = `yuvomi-locales-${APP_RELEASE}`;
@@ -71,6 +71,7 @@ const APP_SHELL = [
   // Dateisystem; Fetch-Routing für diese Pfade → SHELL_CACHE (isMutableAppResource).
   '/nav-icons.js',
   '/permissions.js',
+  '/components/document-attach.js',
   '/components/modal.js',
   '/components/user-multi-select.js',
   '/utils/birthday-event.js',

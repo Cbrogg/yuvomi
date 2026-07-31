@@ -1195,7 +1195,12 @@
         "statsTrendSummary": "التطور عبر {{periods}} فترات · الدخل {{income}} · المصروفات {{expenses}} · الذروة {{peak}}",
         "statsDonutSummary": "{{count}} أجزاء · الأكبر: {{top}} ({{pct}} %) · الإجمالي {{total}}",
         "statsPointsLabel": "قيم منحنى التطور",
-        "statsPointLabel": "{{period}}: الدخل {{income}}، المصروفات {{expenses}}"
+        "statsPointLabel": "{{period}}: الدخل {{income}}، المصروفات {{expenses}}",
+        "receiptsLabel": "الإيصالات",
+        "receiptsHint": "إيصال أو فاتورة لهذه الحركة.",
+        "receiptDocumentName": "إيصال: {{title}} ({{date}})",
+        "receiptsAttachedLabel": "الإيصالات المرفقة: {{count}}",
+        "receiptsAttachedLabel_one": "إيصال واحد مرفق"
     },
     "settings": {
         "healthCycleEnableLabel": "إظهار علامة تبويب الدورة",
@@ -2411,7 +2416,9 @@
         "dmsSearchLabel": "كلمة البحث",
         "dmsSearching": "جارٍ البحث…",
         "dmsSearchError": "نظام إدارة المستندات غير متاح حاليًا.",
-        "storageGoogleDrive": "Google Drive"
+        "storageGoogleDrive": "Google Drive",
+        "budgetFolder": "الإيصالات",
+        "splitExpensesFolder": "النفقات المشتركة"
     },
     "shortcuts": {
         "goKitchen": "المطبخ",
@@ -2717,7 +2724,15 @@
         "statusActive": "نشط",
         "statusArchived": "مؤرشف",
         "restoreGroup": "استعادة",
-        "emptyArchivedTitle": "لا شيء مؤرشف"
+        "emptyArchivedTitle": "لا شيء مؤرشف",
+        "receiptsLabel": "الإيصالات",
+        "receiptsHint": "إيصال أو فاتورة لهذه النفقة.",
+        "receiptDocumentName": "إيصال: {{title}} ({{group}})",
+        "receiptsAttachedLabel": "الإيصالات المرفقة: {{count}}",
+        "receiptsAttachedLabel_one": "إيصال واحد مرفق",
+        "proofLabel": "إثبات الدفع",
+        "proofHint": "إثبات واحد، مثل لقطة شاشة للتحويل.",
+        "proofDocumentName": "إثبات الدفع {{group}}: {{name}}"
     },
     "wmo": {
         "0": "سماء صافية",
@@ -3662,5 +3677,21 @@
             "jar": "برطمان",
             "bag": "كيس"
         }
+    },
+    "documentAttach": {
+        "label": "المرفقات",
+        "hint": "اربط مستندات موجودة أو ارفع ملفات جديدة (5 ميغابايت كحد أقصى).",
+        "emptyState": "لا توجد مرفقات بعد",
+        "uploadAction": "رفع ملف",
+        "pickAction": "مستند موجود",
+        "removeAction": "إزالة {{name}}",
+        "pickerTitle": "اختيار مستند",
+        "searchPlaceholder": "البحث في المستندات",
+        "noDocuments": "لا توجد مستندات مطابقة",
+        "loadFailed": "تعذر تحميل المستندات.",
+        "confirmSelection": "إضافة المحدد",
+        "openAction": "فتح {{name}}",
+        "limitReached": "بحد أقصى {{count}} مستندات.",
+        "limitReached_one": "مستند واحد بحد أقصى."
     }
 }

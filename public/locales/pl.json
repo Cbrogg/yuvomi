@@ -1207,7 +1207,12 @@
         "statsTrendSummary": "Przebieg w {{periods}} okresach · Przychody {{income}} · Wydatki {{expenses}} · Maksimum {{peak}}",
         "statsDonutSummary": "{{count}} segmentów · Największy: {{top}} ({{pct}} %) · Razem {{total}}",
         "statsPointsLabel": "Wartości krzywej trendu",
-        "statsPointLabel": "{{period}}: przychody {{income}}, wydatki {{expenses}}"
+        "statsPointLabel": "{{period}}: przychody {{income}}, wydatki {{expenses}}",
+        "receiptsLabel": "Dowody",
+        "receiptsHint": "Paragon lub faktura do tej transakcji.",
+        "receiptDocumentName": "Dowód: {{title}} ({{date}})",
+        "receiptsAttachedLabel": "Załączone dowody: {{count}}",
+        "receiptsAttachedLabel_one": "Załączone dowody: {{count}}"
     },
     "settings": {
         "healthCycleEnableLabel": "Pokaż kartę cyklu",
@@ -2424,7 +2429,9 @@
         "dmsSearchLabel": "Szukana fraza",
         "dmsSearching": "Wyszukiwanie…",
         "dmsSearchError": "System DMS jest obecnie nieosiągalny.",
-        "storageGoogleDrive": "Google Drive"
+        "storageGoogleDrive": "Google Drive",
+        "budgetFolder": "Dowody",
+        "splitExpensesFolder": "Wspólne wydatki"
     },
     "userMultiSelect": {
         "nobody": "– Nikt –",
@@ -2717,7 +2724,15 @@
         "statusActive": "Aktywny",
         "statusArchived": "Zarchiwizowany",
         "restoreGroup": "Przywróć",
-        "emptyArchivedTitle": "Nic nie zarchiwizowano"
+        "emptyArchivedTitle": "Nic nie zarchiwizowano",
+        "receiptsLabel": "Dowody",
+        "receiptsHint": "Paragon lub faktura do tego wydatku.",
+        "receiptDocumentName": "Dowód: {{title}} ({{group}})",
+        "receiptsAttachedLabel": "Załączone dowody: {{count}}",
+        "receiptsAttachedLabel_one": "Załączone dowody: {{count}}",
+        "proofLabel": "Potwierdzenie płatności",
+        "proofHint": "Jedno potwierdzenie, na przykład zrzut ekranu przelewu.",
+        "proofDocumentName": "Potwierdzenie płatności {{group}}: {{name}}"
     },
     "wmo": {
         "0": "Bezchmurnie",
@@ -3662,5 +3677,21 @@
             "jar": "słoik",
             "bag": "torebka"
         }
+    },
+    "documentAttach": {
+        "label": "Załączniki",
+        "hint": "Powiąż istniejące dokumenty lub prześlij nowe pliki (maks. 5 MB).",
+        "emptyState": "Brak załączników",
+        "uploadAction": "Prześlij plik",
+        "pickAction": "Istniejący dokument",
+        "removeAction": "Usuń {{name}}",
+        "pickerTitle": "Wybierz dokument",
+        "searchPlaceholder": "Szukaj dokumentów",
+        "noDocuments": "Brak pasujących dokumentów",
+        "loadFailed": "Nie udało się wczytać dokumentów.",
+        "confirmSelection": "Dodaj wybrane",
+        "openAction": "Otwórz {{name}}",
+        "limitReached": "Maksymalnie dokumentów: {{count}}.",
+        "limitReached_one": "Maksymalnie dokumentów: {{count}}."
     }
 }

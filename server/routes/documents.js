@@ -8,6 +8,7 @@ import express from 'express';
 import * as db from '../db.js';
 import { createLogger } from '../logger.js';
 import { str, collectErrors, id as validateId, MAX_TEXT, MAX_TITLE } from '../middleware/validate.js';
+import { documentVisibleSql } from '../services/document-access.js';
 import { getAdapter as defaultGetDmsAdapter } from '../services/dms/index.js';
 import { getStatus as getGoogleDriveStatus } from '../services/google-drive-storage.js';
 import {
@@ -110,14 +111,7 @@ function isAdmin(req) {
 }
 
 function canSeeSql(alias = 'd') {
-  return `(
-    ${alias}.created_by = @userId
-    OR ${alias}.visibility = 'family'
-    OR EXISTS (
-      SELECT 1 FROM family_document_access a
-      WHERE a.document_id = ${alias}.id AND a.user_id = @userId
-    )
-  )`;
+  return documentVisibleSql(alias);
 }
 
 function parseMemberIds(value) {

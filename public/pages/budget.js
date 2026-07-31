@@ -7,6 +7,7 @@
 
 import { api } from '/api.js';
 import { openModal as openSharedModal, closeModal, confirmModal, advancedSection, wireBlurValidation, reportFieldError } from '/components/modal.js';
+import { renderDocumentAttachField, bindDocumentAttachField } from '/components/document-attach.js';
 import { stagger, vibrate, scheduleUndoableDelete } from '/utils/ux.js';
 import { wireTablist } from '/utils/tablist.js';
 import { t, formatDate, getLocale, getNumberFormat } from '/i18n.js';
@@ -921,6 +922,13 @@ function renderEntries() {
     const sharedBadge = (state.budgetMode === 'personal' && e.visibility === 'shared')
       ? ` <span class="budget-badge budget-badge--shared">${esc(t('budget.householdBadge'))}</span>`
       : '';
+    // Beleg-Marke (#583): zeigt an, dass zu dieser Buchung ein Nachweis liegt.
+    // Zählt bewusst nicht mit - die Zahl beantwortet keine Frage, die man vor
+    // dem Öffnen der Buchung hat.
+    const receiptCount = e.attachments?.length ?? 0;
+    const receiptMark = receiptCount
+      ? ` <span class="budget-recur-mark" role="img" aria-label="${esc(t('budget.receiptsAttachedLabel', { count: receiptCount }))}"><i data-lucide="paperclip" class="icon-sm" aria-hidden="true"></i></span>`
+      : '';
 
     // Die Zeile ist die Edit-Fläche und braucht deshalb Tastaturzugang
     // (role=button + tabindex); ein echtes <button> geht nicht, weil der
@@ -932,7 +940,7 @@ function renderEntries() {
         <div class="budget-entry__indicator ${indClass}"></div>
         <div class="budget-entry__body">
           <div class="budget-entry__title">${esc(e.title)}${sharedBadge}</div>
-          <div class="budget-entry__meta">${date} · ${esc(categoryMeta)}${acctMeta}${recurTag}</div>
+          <div class="budget-entry__meta">${date} · ${esc(categoryMeta)}${acctMeta}${recurTag}${receiptMark}</div>
         </div>
         <div class="budget-entry__amount ${amtClass}">${amountText}</div>
         <button class="row-action row-action--danger" data-action="delete" data-id="${e.id}" aria-label="${t('budget.deleteLabel')}">
@@ -1777,8 +1785,16 @@ function openBudgetModal({ mode, entry = null, initialType = '' }) {
             <span>${t('budget.virtualBudgetLabel')}</span>
           </label>
           <p style="color:var(--color-text-secondary);font-size:var(--text-sm);margin-top:var(--space-1)">${t('budget.virtualBudgetHint')}</p>
-        </div>`,
-        { open: isEdit && (entry.is_recurring || !!entry.subcategory || entry.account_id != null) })}
+        </div>
+
+        ${renderDocumentAttachField({
+          attachments: isEdit ? (entry.attachments || []) : [],
+          label: t('budget.receiptsLabel'),
+          hint: t('budget.receiptsHint'),
+          icon: 'receipt',
+        })}`,
+        { open: isEdit && (entry.is_recurring || !!entry.subcategory || entry.account_id != null
+          || (entry.attachments?.length ?? 0) > 0) })}
     </div>
 
     <div id="bm-loan-fields" hidden>
@@ -1933,6 +1949,17 @@ function openBudgetModal({ mode, entry = null, initialType = '' }) {
       });
       wireLoanCurrencyFields(panel);
       wireLoanInterestFields(panel);
+      // Belege (#583): landen als Dokumente im Dokumente-Modul, deshalb die
+      // Finanz-Kategorie und ein eigener Ordner - ein Kassenbon soll dort
+      // auffindbar sein, nicht namenlos zwischen den Verträgen liegen.
+      const receipts = bindDocumentAttachField(panel, {
+        category: 'finance',
+        folderName: t('documents.budgetFolder'),
+        documentName: (file) => t('budget.receiptDocumentName', {
+          title: panel.querySelector('#bm-title').value.trim() || file.name,
+          date: formatDate(panel.querySelector('#bm-date').value),
+        }),
+      });
       panel.querySelector('#bm-category').addEventListener('change', () => updateSubcategoryOptions());
       panel.querySelector('#bm-recurring').addEventListener('change', (e) => {
         panel.querySelector('#bm-recurrence-options').hidden = !e.target.checked;
@@ -1990,8 +2017,15 @@ function openBudgetModal({ mode, entry = null, initialType = '' }) {
           // Sichtbarkeit nur im personal-Modus mitsenden (#476/#505).
           const sharedEl = panel.querySelector('#bm-shared');
           if (sharedEl) body.visibility = sharedEl.checked ? 'shared' : 'private';
+          // Belege erst hier hochladen, und nur für die Anfragen, die sie auch
+          // verarbeiten (#583). Bricht der Nutzer vorher ab, bleibt keine
+          // verwaiste Datei im Dokumente-Modul zurück.
+          const withReceipts = async () => {
+            if (receipts) body.attachment_document_ids = await receipts.commit();
+            return body;
+          };
           if (mode === 'create') {
-            const res = await api.post('/budget', body);
+            const res = await api.post('/budget', await withReceipts());
             state.entries.unshift(res.data);
             await loadMonth(state.month);
             closeModal({ force: true });
@@ -2009,10 +2043,12 @@ function openBudgetModal({ mode, entry = null, initialType = '' }) {
             });
             if (scope === null) { openBudgetModal({ mode: 'edit', entry }); return; }
             if (scope === 'series') {
+              // Ohne Belege: die hängen an der einzelnen Buchung, nicht an der
+              // Serie - eine Stromrechnung hat je Monat einen eigenen Beleg.
               await api.put(`/budget/${entry.id}/series`, body);
               window.yuvomi?.showToast(t('budget.recurringSeriesSaved'), 'success');
             } else {
-              const res = await api.put(`/budget/${entry.id}`, body);
+              const res = await api.put(`/budget/${entry.id}`, await withReceipts());
               const idx = state.entries.findIndex((e) => e.id === entry.id);
               if (idx !== -1) state.entries[idx] = res.data;
               window.yuvomi?.showToast(t('budget.savedToast'), 'success');
@@ -2020,7 +2056,7 @@ function openBudgetModal({ mode, entry = null, initialType = '' }) {
             await loadMonth(state.month);
             renderBody();
           } else {
-            const res = await api.put(`/budget/${entry.id}`, body);
+            const res = await api.put(`/budget/${entry.id}`, await withReceipts());
             const idx = state.entries.findIndex((e) => e.id === entry.id);
             if (idx !== -1) state.entries[idx] = res.data;
             await loadMonth(state.month);

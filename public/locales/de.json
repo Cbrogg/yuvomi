@@ -1207,7 +1207,12 @@
         "statsTrendSummary": "Verlauf über {{periods}} Zeitabschnitte · Einnahmen {{income}} · Ausgaben {{expenses}} · Höchstwert {{peak}}",
         "statsDonutSummary": "{{count}} Segmente · Größtes: {{top}} ({{pct}} %) · Gesamt {{total}}",
         "statsPointsLabel": "Werte der Trendkurve",
-        "statsPointLabel": "{{period}}: Einnahmen {{income}}, Ausgaben {{expenses}}"
+        "statsPointLabel": "{{period}}: Einnahmen {{income}}, Ausgaben {{expenses}}",
+        "receiptsLabel": "Belege",
+        "receiptsHint": "Kassenbon oder Rechnung zu dieser Buchung.",
+        "receiptDocumentName": "Beleg: {{title}} ({{date}})",
+        "receiptsAttachedLabel": "{{count}} Belege angehängt",
+        "receiptsAttachedLabel_one": "{{count}} Beleg angehängt"
     },
     "settings": {
         "healthCycleEnableLabel": "Zyklus-Tab anzeigen",
@@ -2424,7 +2429,9 @@
         "dmsSearchLabel": "Suchbegriff",
         "dmsSearching": "Suche läuft …",
         "dmsSearchError": "Das DMS ist gerade nicht erreichbar.",
-        "storageGoogleDrive": "Google Drive"
+        "storageGoogleDrive": "Google Drive",
+        "budgetFolder": "Belege",
+        "splitExpensesFolder": "Geteilte Ausgaben"
     },
     "userMultiSelect": {
         "nobody": "- Niemand -",
@@ -2717,7 +2724,15 @@
         "statusActive": "Aktiv",
         "statusArchived": "Archiviert",
         "restoreGroup": "Wiederherstellen",
-        "emptyArchivedTitle": "Nichts archiviert"
+        "emptyArchivedTitle": "Nichts archiviert",
+        "receiptsLabel": "Belege",
+        "receiptsHint": "Kassenbon oder Rechnung zu dieser Ausgabe.",
+        "receiptDocumentName": "Beleg: {{title}} ({{group}})",
+        "receiptsAttachedLabel": "{{count}} Belege angehängt",
+        "receiptsAttachedLabel_one": "{{count}} Beleg angehängt",
+        "proofLabel": "Zahlungsnachweis",
+        "proofHint": "Ein Nachweis, etwa der Screenshot der Überweisung.",
+        "proofDocumentName": "Zahlungsnachweis {{group}}: {{name}}"
     },
     "wmo": {
         "0": "Klarer Himmel",
@@ -3662,5 +3677,21 @@
             "jar": "Glas",
             "bag": "Beutel"
         }
+    },
+    "documentAttach": {
+        "label": "Anhänge",
+        "hint": "Vorhandene Dokumente verknüpfen oder neue Dateien hochladen (max. 5 MB).",
+        "emptyState": "Noch nichts angehängt",
+        "uploadAction": "Datei hochladen",
+        "pickAction": "Vorhandenes Dokument",
+        "removeAction": "{{name}} entfernen",
+        "pickerTitle": "Dokument auswählen",
+        "searchPlaceholder": "Dokumente durchsuchen",
+        "noDocuments": "Keine passenden Dokumente",
+        "loadFailed": "Dokumente konnten nicht geladen werden.",
+        "confirmSelection": "Übernehmen",
+        "openAction": "{{name}} öffnen",
+        "limitReached": "Höchstens {{count}} Dokumente möglich.",
+        "limitReached_one": "Höchstens {{count}} Dokument möglich."
     }
 }

@@ -1195,7 +1195,12 @@
         "statsTrendSummary": "Andamento su {{periods}} periodi · Entrate {{income}} · Uscite {{expenses}} · Massimo {{peak}}",
         "statsDonutSummary": "{{count}} segmenti · Maggiore: {{top}} ({{pct}} %) · Totale {{total}}",
         "statsPointsLabel": "Valori della curva",
-        "statsPointLabel": "{{period}}: entrate {{income}}, uscite {{expenses}}"
+        "statsPointLabel": "{{period}}: entrate {{income}}, uscite {{expenses}}",
+        "receiptsLabel": "Ricevute",
+        "receiptsHint": "Scontrino o fattura di questo movimento.",
+        "receiptDocumentName": "Ricevuta: {{title}} ({{date}})",
+        "receiptsAttachedLabel": "{{count}} ricevute allegate",
+        "receiptsAttachedLabel_one": "{{count}} ricevuta allegata"
     },
     "settings": {
         "healthCycleEnableLabel": "Mostra la scheda ciclo",
@@ -2411,7 +2416,9 @@
         "dmsSearchLabel": "Termine di ricerca",
         "dmsSearching": "Ricerca in corso…",
         "dmsSearchError": "Il DMS non è al momento raggiungibile.",
-        "storageGoogleDrive": "Google Drive"
+        "storageGoogleDrive": "Google Drive",
+        "budgetFolder": "Ricevute",
+        "splitExpensesFolder": "Spese condivise"
     },
     "shortcuts": {
         "goKitchen": "Cucina",
@@ -2717,7 +2724,15 @@
         "statusActive": "Attivo",
         "statusArchived": "Archiviato",
         "restoreGroup": "Ripristina",
-        "emptyArchivedTitle": "Niente in archivio"
+        "emptyArchivedTitle": "Niente in archivio",
+        "receiptsLabel": "Ricevute",
+        "receiptsHint": "Scontrino o fattura di questa spesa.",
+        "receiptDocumentName": "Ricevuta: {{title}} ({{group}})",
+        "receiptsAttachedLabel": "{{count}} ricevute allegate",
+        "receiptsAttachedLabel_one": "{{count}} ricevuta allegata",
+        "proofLabel": "Prova di pagamento",
+        "proofHint": "Una prova, ad esempio lo screenshot del bonifico.",
+        "proofDocumentName": "Prova di pagamento {{group}}: {{name}}"
     },
     "wmo": {
         "0": "Cielo sereno",
@@ -3662,5 +3677,21 @@
             "jar": "barattolo",
             "bag": "sacchetto"
         }
+    },
+    "documentAttach": {
+        "label": "Allegati",
+        "hint": "Collega documenti esistenti o carica nuovi file (max 5 MB).",
+        "emptyState": "Nessun allegato",
+        "uploadAction": "Carica file",
+        "pickAction": "Documento esistente",
+        "removeAction": "Rimuovi {{name}}",
+        "pickerTitle": "Seleziona documento",
+        "searchPlaceholder": "Cerca documenti",
+        "noDocuments": "Nessun documento corrispondente",
+        "loadFailed": "Impossibile caricare i documenti.",
+        "confirmSelection": "Aggiungi selezione",
+        "openAction": "Apri {{name}}",
+        "limitReached": "Al massimo {{count}} documenti.",
+        "limitReached_one": "Al massimo {{count}} documento."
     }
 }

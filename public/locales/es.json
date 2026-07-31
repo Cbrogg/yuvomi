@@ -1195,7 +1195,12 @@
         "statsTrendSummary": "Evolución en {{periods}} periodos · Ingresos {{income}} · Gastos {{expenses}} · Máximo {{peak}}",
         "statsDonutSummary": "{{count}} segmentos · Mayor: {{top}} ({{pct}} %) · Total {{total}}",
         "statsPointsLabel": "Valores de la curva",
-        "statsPointLabel": "{{period}}: ingresos {{income}}, gastos {{expenses}}"
+        "statsPointLabel": "{{period}}: ingresos {{income}}, gastos {{expenses}}",
+        "receiptsLabel": "Comprobantes",
+        "receiptsHint": "Ticket o factura de este movimiento.",
+        "receiptDocumentName": "Comprobante: {{title}} ({{date}})",
+        "receiptsAttachedLabel": "{{count}} comprobantes adjuntos",
+        "receiptsAttachedLabel_one": "{{count}} comprobante adjunto"
     },
     "settings": {
         "healthCycleEnableLabel": "Mostrar la pestaña de ciclo",
@@ -2411,7 +2416,9 @@
         "dmsSearchLabel": "Término de búsqueda",
         "dmsSearching": "Buscando…",
         "dmsSearchError": "El DMS no está disponible en este momento.",
-        "storageGoogleDrive": "Google Drive"
+        "storageGoogleDrive": "Google Drive",
+        "budgetFolder": "Comprobantes",
+        "splitExpensesFolder": "Gastos compartidos"
     },
     "shortcuts": {
         "goKitchen": "Cocina",
@@ -2717,7 +2724,15 @@
         "statusActive": "Activo",
         "statusArchived": "Archivado",
         "restoreGroup": "Restaurar",
-        "emptyArchivedTitle": "Nada archivado"
+        "emptyArchivedTitle": "Nada archivado",
+        "receiptsLabel": "Comprobantes",
+        "receiptsHint": "Ticket o factura de este gasto.",
+        "receiptDocumentName": "Comprobante: {{title}} ({{group}})",
+        "receiptsAttachedLabel": "{{count}} comprobantes adjuntos",
+        "receiptsAttachedLabel_one": "{{count}} comprobante adjunto",
+        "proofLabel": "Justificante de pago",
+        "proofHint": "Un justificante, por ejemplo la captura de la transferencia.",
+        "proofDocumentName": "Justificante de pago {{group}}: {{name}}"
     },
     "wmo": {
         "0": "Cielo despejado",
@@ -3662,5 +3677,21 @@
             "jar": "tarro",
             "bag": "bolsa"
         }
+    },
+    "documentAttach": {
+        "label": "Adjuntos",
+        "hint": "Vincula documentos existentes o sube archivos nuevos (máx. 5 MB).",
+        "emptyState": "Todavía no hay adjuntos",
+        "uploadAction": "Subir archivo",
+        "pickAction": "Documento existente",
+        "removeAction": "Quitar {{name}}",
+        "pickerTitle": "Seleccionar documento",
+        "searchPlaceholder": "Buscar documentos",
+        "noDocuments": "No hay documentos coincidentes",
+        "loadFailed": "No se pudieron cargar los documentos.",
+        "confirmSelection": "Añadir selección",
+        "openAction": "Abrir {{name}}",
+        "limitReached": "Como máximo {{count}} documentos.",
+        "limitReached_one": "Como máximo {{count}} documento."
     }
 }

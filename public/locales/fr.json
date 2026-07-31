@@ -1195,7 +1195,12 @@
         "statsTrendSummary": "Évolution sur {{periods}} périodes · Revenus {{income}} · Dépenses {{expenses}} · Maximum {{peak}}",
         "statsDonutSummary": "{{count}} segments · Le plus grand : {{top}} ({{pct}} %) · Total {{total}}",
         "statsPointsLabel": "Valeurs de la courbe",
-        "statsPointLabel": "{{period}} : revenus {{income}}, dépenses {{expenses}}"
+        "statsPointLabel": "{{period}} : revenus {{income}}, dépenses {{expenses}}",
+        "receiptsLabel": "Justificatifs",
+        "receiptsHint": "Ticket de caisse ou facture de cette opération.",
+        "receiptDocumentName": "Justificatif : {{title}} ({{date}})",
+        "receiptsAttachedLabel": "{{count}} justificatifs joints",
+        "receiptsAttachedLabel_one": "{{count}} justificatif joint"
     },
     "settings": {
         "healthCycleEnableLabel": "Afficher l’onglet cycle",
@@ -2411,7 +2416,9 @@
         "dmsSearchLabel": "Terme de recherche",
         "dmsSearching": "Recherche en cours…",
         "dmsSearchError": "La GED est actuellement injoignable.",
-        "storageGoogleDrive": "Google Drive"
+        "storageGoogleDrive": "Google Drive",
+        "budgetFolder": "Justificatifs",
+        "splitExpensesFolder": "Dépenses partagées"
     },
     "shortcuts": {
         "goKitchen": "Cuisine",
@@ -2717,7 +2724,15 @@
         "statusActive": "Actif",
         "statusArchived": "Archivé",
         "restoreGroup": "Restaurer",
-        "emptyArchivedTitle": "Rien d’archivé"
+        "emptyArchivedTitle": "Rien d’archivé",
+        "receiptsLabel": "Justificatifs",
+        "receiptsHint": "Ticket de caisse ou facture de cette dépense.",
+        "receiptDocumentName": "Justificatif : {{title}} ({{group}})",
+        "receiptsAttachedLabel": "{{count}} justificatifs joints",
+        "receiptsAttachedLabel_one": "{{count}} justificatif joint",
+        "proofLabel": "Preuve de paiement",
+        "proofHint": "Une preuve, par exemple la capture du virement.",
+        "proofDocumentName": "Preuve de paiement {{group}} : {{name}}"
     },
     "wmo": {
         "0": "Ciel dégagé",
@@ -3662,5 +3677,21 @@
             "jar": "bocal",
             "bag": "sachet"
         }
+    },
+    "documentAttach": {
+        "label": "Pièces jointes",
+        "hint": "Associez des documents existants ou importez de nouveaux fichiers (max. 5 Mo).",
+        "emptyState": "Aucune pièce jointe",
+        "uploadAction": "Importer un fichier",
+        "pickAction": "Document existant",
+        "removeAction": "Retirer {{name}}",
+        "pickerTitle": "Sélectionner un document",
+        "searchPlaceholder": "Rechercher des documents",
+        "noDocuments": "Aucun document correspondant",
+        "loadFailed": "Impossible de charger les documents.",
+        "confirmSelection": "Ajouter la sélection",
+        "openAction": "Ouvrir {{name}}",
+        "limitReached": "{{count}} documents au maximum.",
+        "limitReached_one": "{{count}} document au maximum."
     }
 }

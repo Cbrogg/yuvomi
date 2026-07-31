@@ -1195,7 +1195,12 @@
         "statsTrendSummary": "Динаміка за {{periods}} періодів · Доходи {{income}} · Витрати {{expenses}} · Максимум {{peak}}",
         "statsDonutSummary": "Сегментів: {{count}} · Найбільший: {{top}} ({{pct}} %) · Разом {{total}}",
         "statsPointsLabel": "Значення кривої",
-        "statsPointLabel": "{{period}}: доходи {{income}}, витрати {{expenses}}"
+        "statsPointLabel": "{{period}}: доходи {{income}}, витрати {{expenses}}",
+        "receiptsLabel": "Чеки",
+        "receiptsHint": "Чек або рахунок до цієї операції.",
+        "receiptDocumentName": "Чек: {{title}} ({{date}})",
+        "receiptsAttachedLabel": "Прикріплено чеків: {{count}}",
+        "receiptsAttachedLabel_one": "Прикріплено чек: {{count}}"
     },
     "settings": {
         "healthCycleEnableLabel": "Показати вкладку циклу",
@@ -2411,7 +2416,9 @@
         "dmsSearchLabel": "Пошуковий запит",
         "dmsSearching": "Пошук…",
         "dmsSearchError": "DMS зараз недоступна.",
-        "storageGoogleDrive": "Google Drive"
+        "storageGoogleDrive": "Google Drive",
+        "budgetFolder": "Чеки",
+        "splitExpensesFolder": "Спільні витрати"
     },
     "shortcuts": {
         "goKitchen": "Кухня",
@@ -2717,7 +2724,15 @@
         "statusActive": "Активний",
         "statusArchived": "Архівований",
         "restoreGroup": "Відновити",
-        "emptyArchivedTitle": "Архів порожній"
+        "emptyArchivedTitle": "Архів порожній",
+        "receiptsLabel": "Чеки",
+        "receiptsHint": "Чек або рахунок до цієї витрати.",
+        "receiptDocumentName": "Чек: {{title}} ({{group}})",
+        "receiptsAttachedLabel": "Прикріплено чеків: {{count}}",
+        "receiptsAttachedLabel_one": "Прикріплено чек: {{count}}",
+        "proofLabel": "Підтвердження оплати",
+        "proofHint": "Одне підтвердження, наприклад знімок переказу.",
+        "proofDocumentName": "Підтвердження оплати {{group}}: {{name}}"
     },
     "wmo": {
         "0": "Ясне небо",
@@ -3662,5 +3677,21 @@
             "jar": "скляна банка",
             "bag": "пакет"
         }
+    },
+    "documentAttach": {
+        "label": "Вкладення",
+        "hint": "Пов'яжіть наявні документи або завантажте нові файли (до 5 МБ).",
+        "emptyState": "Вкладень ще немає",
+        "uploadAction": "Завантажити файл",
+        "pickAction": "Наявний документ",
+        "removeAction": "Вилучити {{name}}",
+        "pickerTitle": "Вибрати документ",
+        "searchPlaceholder": "Пошук документів",
+        "noDocuments": "Відповідних документів немає",
+        "loadFailed": "Не вдалося завантажити документи.",
+        "confirmSelection": "Додати вибрані",
+        "openAction": "Відкрити {{name}}",
+        "limitReached": "Не більше ніж {{count}} документів.",
+        "limitReached_one": "Не більше ніж {{count}} документ."
     }
 }

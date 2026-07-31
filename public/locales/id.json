@@ -1207,7 +1207,12 @@
         "statsTrendSummary": "Tren selama {{periods}} periode · Pemasukan {{income}} · Pengeluaran {{expenses}} · Puncak {{peak}}",
         "statsDonutSummary": "{{count}} segmen · Terbesar: {{top}} ({{pct}} %) · Total {{total}}",
         "statsPointsLabel": "Nilai kurva tren",
-        "statsPointLabel": "{{period}}: pemasukan {{income}}, pengeluaran {{expenses}}"
+        "statsPointLabel": "{{period}}: pemasukan {{income}}, pengeluaran {{expenses}}",
+        "receiptsLabel": "Bukti",
+        "receiptsHint": "Struk atau faktur untuk transaksi ini.",
+        "receiptDocumentName": "Bukti: {{title}} ({{date}})",
+        "receiptsAttachedLabel": "{{count}} bukti terlampir",
+        "receiptsAttachedLabel_one": "{{count}} bukti terlampir"
     },
     "settings": {
         "healthCycleEnableLabel": "Tampilkan tab siklus",
@@ -2424,7 +2429,9 @@
         "dmsSearchLabel": "Kata kunci",
         "dmsSearching": "Mencari…",
         "dmsSearchError": "DMS sedang tidak dapat dijangkau.",
-        "storageGoogleDrive": "Google Drive"
+        "storageGoogleDrive": "Google Drive",
+        "budgetFolder": "Bukti",
+        "splitExpensesFolder": "Pengeluaran bersama"
     },
     "userMultiSelect": {
         "nobody": "- Tidak ada -",
@@ -2717,7 +2724,15 @@
         "statusActive": "Aktif",
         "statusArchived": "Diarsipkan",
         "restoreGroup": "Pulihkan",
-        "emptyArchivedTitle": "Tidak ada arsip"
+        "emptyArchivedTitle": "Tidak ada arsip",
+        "receiptsLabel": "Bukti",
+        "receiptsHint": "Struk atau faktur untuk pengeluaran ini.",
+        "receiptDocumentName": "Bukti: {{title}} ({{group}})",
+        "receiptsAttachedLabel": "{{count}} bukti terlampir",
+        "receiptsAttachedLabel_one": "{{count}} bukti terlampir",
+        "proofLabel": "Bukti pembayaran",
+        "proofHint": "Satu bukti, misalnya tangkapan layar transfer.",
+        "proofDocumentName": "Bukti pembayaran {{group}}: {{name}}"
     },
     "wmo": {
         "0": "Langit cerah",
@@ -3662,5 +3677,21 @@
             "jar": "toples",
             "bag": "kantong"
         }
+    },
+    "documentAttach": {
+        "label": "Lampiran",
+        "hint": "Tautkan dokumen yang ada atau unggah berkas baru (maks. 5 MB).",
+        "emptyState": "Belum ada lampiran",
+        "uploadAction": "Unggah berkas",
+        "pickAction": "Dokumen yang ada",
+        "removeAction": "Hapus {{name}}",
+        "pickerTitle": "Pilih dokumen",
+        "searchPlaceholder": "Cari dokumen",
+        "noDocuments": "Tidak ada dokumen yang cocok",
+        "loadFailed": "Dokumen tidak dapat dimuat.",
+        "confirmSelection": "Tambahkan pilihan",
+        "openAction": "Buka {{name}}",
+        "limitReached": "Maksimal {{count}} dokumen.",
+        "limitReached_one": "Maksimal {{count}} dokumen."
     }
 }

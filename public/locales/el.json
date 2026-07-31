@@ -1195,7 +1195,12 @@
         "statsTrendSummary": "Εξέλιξη σε {{periods}} περιόδους · Έσοδα {{income}} · Έξοδα {{expenses}} · Μέγιστο {{peak}}",
         "statsDonutSummary": "{{count}} τμήματα · Μεγαλύτερο: {{top}} ({{pct}} %) · Σύνολο {{total}}",
         "statsPointsLabel": "Τιμές της καμπύλης",
-        "statsPointLabel": "{{period}}: έσοδα {{income}}, έξοδα {{expenses}}"
+        "statsPointLabel": "{{period}}: έσοδα {{income}}, έξοδα {{expenses}}",
+        "receiptsLabel": "Αποδείξεις",
+        "receiptsHint": "Απόδειξη ή τιμολόγιο για αυτή την κίνηση.",
+        "receiptDocumentName": "Απόδειξη: {{title}} ({{date}})",
+        "receiptsAttachedLabel": "{{count}} συνημμένες αποδείξεις",
+        "receiptsAttachedLabel_one": "{{count}} συνημμένη απόδειξη"
     },
     "settings": {
         "healthCycleEnableLabel": "Εμφάνιση καρτέλας κύκλου",
@@ -2411,7 +2416,9 @@
         "dmsSearchLabel": "Όρος αναζήτησης",
         "dmsSearching": "Αναζήτηση…",
         "dmsSearchError": "Το DMS δεν είναι προσβάσιμο αυτήν τη στιγμή.",
-        "storageGoogleDrive": "Google Drive"
+        "storageGoogleDrive": "Google Drive",
+        "budgetFolder": "Αποδείξεις",
+        "splitExpensesFolder": "Κοινές δαπάνες"
     },
     "shortcuts": {
         "goKitchen": "Κουζίνα",
@@ -2717,7 +2724,15 @@
         "statusActive": "Ενεργό",
         "statusArchived": "Αρχειοθετημένο",
         "restoreGroup": "Επαναφορά",
-        "emptyArchivedTitle": "Τίποτα στο αρχείο"
+        "emptyArchivedTitle": "Τίποτα στο αρχείο",
+        "receiptsLabel": "Αποδείξεις",
+        "receiptsHint": "Απόδειξη ή τιμολόγιο για αυτή τη δαπάνη.",
+        "receiptDocumentName": "Απόδειξη: {{title}} ({{group}})",
+        "receiptsAttachedLabel": "{{count}} συνημμένες αποδείξεις",
+        "receiptsAttachedLabel_one": "{{count}} συνημμένη απόδειξη",
+        "proofLabel": "Αποδεικτικό πληρωμής",
+        "proofHint": "Ένα αποδεικτικό, π.χ. στιγμιότυπο του εμβάσματος.",
+        "proofDocumentName": "Αποδεικτικό πληρωμής {{group}}: {{name}}"
     },
     "wmo": {
         "0": "Αίθριος καιρός",
@@ -3662,5 +3677,21 @@
             "jar": "βάζο",
             "bag": "σακούλα"
         }
+    },
+    "documentAttach": {
+        "label": "Συνημμένα",
+        "hint": "Συνδέστε υπάρχοντα έγγραφα ή ανεβάστε νέα αρχεία (έως 5 MB).",
+        "emptyState": "Δεν υπάρχουν συνημμένα",
+        "uploadAction": "Μεταφόρτωση αρχείου",
+        "pickAction": "Υπάρχον έγγραφο",
+        "removeAction": "Αφαίρεση {{name}}",
+        "pickerTitle": "Επιλογή εγγράφου",
+        "searchPlaceholder": "Αναζήτηση εγγράφων",
+        "noDocuments": "Δεν βρέθηκαν έγγραφα",
+        "loadFailed": "Δεν ήταν δυνατή η φόρτωση των εγγράφων.",
+        "confirmSelection": "Προσθήκη επιλογής",
+        "openAction": "Άνοιγμα {{name}}",
+        "limitReached": "Το πολύ {{count}} έγγραφα.",
+        "limitReached_one": "Το πολύ {{count}} έγγραφο."
     }
 }

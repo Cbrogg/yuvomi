@@ -1207,7 +1207,12 @@
         "statsTrendSummary": "روند در {{periods}} بازه · درآمد {{income}} · هزینه {{expenses}} · بیشینه {{peak}}",
         "statsDonutSummary": "{{count}} بخش · بزرگ‌ترین: {{top}} ({{pct}} %) · مجموع {{total}}",
         "statsPointsLabel": "مقادیر نمودار روند",
-        "statsPointLabel": "{{period}}: درآمد {{income}}، هزینه {{expenses}}"
+        "statsPointLabel": "{{period}}: درآمد {{income}}، هزینه {{expenses}}",
+        "receiptsLabel": "رسیدها",
+        "receiptsHint": "رسید یا فاکتور این تراکنش.",
+        "receiptDocumentName": "رسید: {{title}} ({{date}})",
+        "receiptsAttachedLabel": "رسیدهای پیوست‌شده: {{count}}",
+        "receiptsAttachedLabel_one": "رسیدهای پیوست‌شده: {{count}}"
     },
     "settings": {
         "healthCycleEnableLabel": "نمایش برگهٔ چرخه",
@@ -2424,7 +2429,9 @@
         "dmsSearchLabel": "عبارت جست‌وجو",
         "dmsSearching": "در حال جست‌وجو…",
         "dmsSearchError": "در حال حاضر DMS در دسترس نیست.",
-        "storageGoogleDrive": "Google Drive"
+        "storageGoogleDrive": "Google Drive",
+        "budgetFolder": "رسیدها",
+        "splitExpensesFolder": "هزینه‌های مشترک"
     },
     "userMultiSelect": {
         "nobody": "- هیچ‌کس -",
@@ -2717,7 +2724,15 @@
         "statusActive": "فعال",
         "statusArchived": "بایگانی‌شده",
         "restoreGroup": "بازیابی",
-        "emptyArchivedTitle": "چیزی بایگانی نشده"
+        "emptyArchivedTitle": "چیزی بایگانی نشده",
+        "receiptsLabel": "رسیدها",
+        "receiptsHint": "رسید یا فاکتور این هزینه.",
+        "receiptDocumentName": "رسید: {{title}} ({{group}})",
+        "receiptsAttachedLabel": "رسیدهای پیوست‌شده: {{count}}",
+        "receiptsAttachedLabel_one": "رسیدهای پیوست‌شده: {{count}}",
+        "proofLabel": "سند پرداخت",
+        "proofHint": "یک سند، برای نمونه تصویر انتقال وجه.",
+        "proofDocumentName": "سند پرداخت {{group}}: {{name}}"
     },
     "wmo": {
         "0": "آسمان صاف",
@@ -3662,5 +3677,21 @@
             "jar": "شیشه",
             "bag": "کیسه"
         }
+    },
+    "documentAttach": {
+        "label": "پیوست‌ها",
+        "hint": "سندهای موجود را پیوند دهید یا فایل‌های جدید بارگذاری کنید (حداکثر ۵ مگابایت).",
+        "emptyState": "هنوز پیوستی نیست",
+        "uploadAction": "بارگذاری فایل",
+        "pickAction": "سند موجود",
+        "removeAction": "حذف {{name}}",
+        "pickerTitle": "انتخاب سند",
+        "searchPlaceholder": "جستجوی سندها",
+        "noDocuments": "سند مطابقی یافت نشد",
+        "loadFailed": "بارگیری سندها ممکن نشد.",
+        "confirmSelection": "افزودن انتخاب‌شده‌ها",
+        "openAction": "باز کردن {{name}}",
+        "limitReached": "حداکثر {{count}} سند.",
+        "limitReached_one": "حداکثر {{count}} سند."
     }
 }

@@ -1195,7 +1195,12 @@
         "statsTrendSummary": "{{periods}} अवधियों का रुझान · आय {{income}} · व्यय {{expenses}} · शिखर {{peak}}",
         "statsDonutSummary": "{{count}} खंड · सबसे बड़ा: {{top}} ({{pct}}%) · कुल {{total}}",
         "statsPointsLabel": "रुझान वक्र के मान",
-        "statsPointLabel": "{{period}}: आय {{income}}, व्यय {{expenses}}"
+        "statsPointLabel": "{{period}}: आय {{income}}, व्यय {{expenses}}",
+        "receiptsLabel": "रसीदें",
+        "receiptsHint": "इस लेनदेन की रसीद या बिल।",
+        "receiptDocumentName": "रसीद: {{title}} ({{date}})",
+        "receiptsAttachedLabel": "{{count}} रसीदें संलग्न",
+        "receiptsAttachedLabel_one": "{{count}} रसीद संलग्न"
     },
     "settings": {
         "healthCycleEnableLabel": "चक्र टैब दिखाएँ",
@@ -2411,7 +2416,9 @@
         "dmsSearchLabel": "खोज शब्द",
         "dmsSearching": "खोजा जा रहा है…",
         "dmsSearchError": "DMS इस समय उपलब्ध नहीं है।",
-        "storageGoogleDrive": "Google Drive"
+        "storageGoogleDrive": "Google Drive",
+        "budgetFolder": "रसीदें",
+        "splitExpensesFolder": "साझा खर्च"
     },
     "shortcuts": {
         "goKitchen": "रसोई",
@@ -2717,7 +2724,15 @@
         "statusActive": "सक्रिय",
         "statusArchived": "संग्रहित",
         "restoreGroup": "पुनर्स्थापित करें",
-        "emptyArchivedTitle": "कुछ भी संग्रहित नहीं"
+        "emptyArchivedTitle": "कुछ भी संग्रहित नहीं",
+        "receiptsLabel": "रसीदें",
+        "receiptsHint": "इस खर्च की रसीद या बिल।",
+        "receiptDocumentName": "रसीद: {{title}} ({{group}})",
+        "receiptsAttachedLabel": "{{count}} रसीदें संलग्न",
+        "receiptsAttachedLabel_one": "{{count}} रसीद संलग्न",
+        "proofLabel": "भुगतान प्रमाण",
+        "proofHint": "एक प्रमाण, जैसे ट्रांसफ़र का स्क्रीनशॉट।",
+        "proofDocumentName": "भुगतान प्रमाण {{group}}: {{name}}"
     },
     "wmo": {
         "0": "साफ आकाश",
@@ -3662,5 +3677,21 @@
             "jar": "जार",
             "bag": "थैली"
         }
+    },
+    "documentAttach": {
+        "label": "अनुलग्नक",
+        "hint": "मौजूदा दस्तावेज़ जोड़ें या नई फ़ाइलें अपलोड करें (अधिकतम 5 MB)।",
+        "emptyState": "अभी कुछ संलग्न नहीं",
+        "uploadAction": "फ़ाइल अपलोड करें",
+        "pickAction": "मौजूदा दस्तावेज़",
+        "removeAction": "{{name}} हटाएँ",
+        "pickerTitle": "दस्तावेज़ चुनें",
+        "searchPlaceholder": "दस्तावेज़ खोजें",
+        "noDocuments": "कोई मेल खाता दस्तावेज़ नहीं",
+        "loadFailed": "दस्तावेज़ लोड नहीं हो सके।",
+        "confirmSelection": "चयनित जोड़ें",
+        "openAction": "{{name}} खोलें",
+        "limitReached": "अधिकतम {{count}} दस्तावेज़।",
+        "limitReached_one": "अधिकतम {{count}} दस्तावेज़।"
     }
 }

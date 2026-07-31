@@ -1195,7 +1195,12 @@
         "statsTrendSummary": "Evolução em {{periods}} períodos · Receitas {{income}} · Despesas {{expenses}} · Máximo {{peak}}",
         "statsDonutSummary": "{{count}} segmentos · Maior: {{top}} ({{pct}} %) · Total {{total}}",
         "statsPointsLabel": "Valores da curva",
-        "statsPointLabel": "{{period}}: receitas {{income}}, despesas {{expenses}}"
+        "statsPointLabel": "{{period}}: receitas {{income}}, despesas {{expenses}}",
+        "receiptsLabel": "Comprovativos",
+        "receiptsHint": "Talão ou fatura deste movimento.",
+        "receiptDocumentName": "Comprovativo: {{title}} ({{date}})",
+        "receiptsAttachedLabel": "{{count}} comprovativos anexados",
+        "receiptsAttachedLabel_one": "{{count}} comprovativo anexado"
     },
     "settings": {
         "healthCycleEnableLabel": "Mostrar a aba de ciclo",
@@ -2411,7 +2416,9 @@
         "dmsSearchLabel": "Termo de pesquisa",
         "dmsSearching": "A pesquisar…",
         "dmsSearchError": "O DMS está indisponível de momento.",
-        "storageGoogleDrive": "Google Drive"
+        "storageGoogleDrive": "Google Drive",
+        "budgetFolder": "Comprovativos",
+        "splitExpensesFolder": "Despesas partilhadas"
     },
     "shortcuts": {
         "goKitchen": "Cozinha",
@@ -2717,7 +2724,15 @@
         "statusActive": "Ativo",
         "statusArchived": "Arquivado",
         "restoreGroup": "Restaurar",
-        "emptyArchivedTitle": "Nada arquivado"
+        "emptyArchivedTitle": "Nada arquivado",
+        "receiptsLabel": "Comprovativos",
+        "receiptsHint": "Talão ou fatura desta despesa.",
+        "receiptDocumentName": "Comprovativo: {{title}} ({{group}})",
+        "receiptsAttachedLabel": "{{count}} comprovativos anexados",
+        "receiptsAttachedLabel_one": "{{count}} comprovativo anexado",
+        "proofLabel": "Comprovativo de pagamento",
+        "proofHint": "Um comprovativo, por exemplo a captura da transferência.",
+        "proofDocumentName": "Comprovativo de pagamento {{group}}: {{name}}"
     },
     "wmo": {
         "0": "Céu limpo",
@@ -3662,5 +3677,21 @@
             "jar": "frasco",
             "bag": "saco"
         }
+    },
+    "documentAttach": {
+        "label": "Anexos",
+        "hint": "Vincule documentos existentes ou envie novos ficheiros (máx. 5 MB).",
+        "emptyState": "Ainda sem anexos",
+        "uploadAction": "Enviar ficheiro",
+        "pickAction": "Documento existente",
+        "removeAction": "Remover {{name}}",
+        "pickerTitle": "Selecionar documento",
+        "searchPlaceholder": "Pesquisar documentos",
+        "noDocuments": "Nenhum documento correspondente",
+        "loadFailed": "Não foi possível carregar os documentos.",
+        "confirmSelection": "Adicionar seleção",
+        "openAction": "Abrir {{name}}",
+        "limitReached": "No máximo {{count}} documentos.",
+        "limitReached_one": "No máximo {{count}} documento."
     }
 }

@@ -1195,7 +1195,12 @@
         "statsTrendSummary": "Trend across {{periods}} periods · Income {{income}} · Expenses {{expenses}} · Peak {{peak}}",
         "statsDonutSummary": "{{count}} segments · Largest: {{top}} ({{pct}}%) · Total {{total}}",
         "statsPointsLabel": "Trend line values",
-        "statsPointLabel": "{{period}}: income {{income}}, expenses {{expenses}}"
+        "statsPointLabel": "{{period}}: income {{income}}, expenses {{expenses}}",
+        "receiptsLabel": "Receipts",
+        "receiptsHint": "Receipt or invoice for this transaction.",
+        "receiptDocumentName": "Receipt: {{title}} ({{date}})",
+        "receiptsAttachedLabel": "{{count}} receipts attached",
+        "receiptsAttachedLabel_one": "{{count}} receipt attached"
     },
     "settings": {
         "healthCycleEnableLabel": "Show cycle tab",
@@ -2424,7 +2429,9 @@
         "dmsSearchLabel": "Search term",
         "dmsSearching": "Searching…",
         "dmsSearchError": "The DMS is currently unreachable.",
-        "storageGoogleDrive": "Google Drive"
+        "storageGoogleDrive": "Google Drive",
+        "budgetFolder": "Receipts",
+        "splitExpensesFolder": "Shared expenses"
     },
     "housekeeping": {
         "title": "Housekeeping",
@@ -2717,7 +2724,15 @@
         "statusActive": "Active",
         "statusArchived": "Archived",
         "restoreGroup": "Restore",
-        "emptyArchivedTitle": "Nothing archived"
+        "emptyArchivedTitle": "Nothing archived",
+        "receiptsLabel": "Receipts",
+        "receiptsHint": "Receipt or invoice for this expense.",
+        "receiptDocumentName": "Receipt: {{title}} ({{group}})",
+        "receiptsAttachedLabel": "{{count}} receipts attached",
+        "receiptsAttachedLabel_one": "{{count}} receipt attached",
+        "proofLabel": "Payment proof",
+        "proofHint": "One proof, for example a screenshot of the transfer.",
+        "proofDocumentName": "Payment proof {{group}}: {{name}}"
     },
     "wmo": {
         "0": "Clear sky",
@@ -3662,5 +3677,21 @@
             "jar": "jar",
             "bag": "bag"
         }
+    },
+    "documentAttach": {
+        "label": "Attachments",
+        "hint": "Link existing documents or upload new files (max. 5 MB).",
+        "emptyState": "Nothing attached yet",
+        "uploadAction": "Upload file",
+        "pickAction": "Existing document",
+        "removeAction": "Remove {{name}}",
+        "pickerTitle": "Select document",
+        "searchPlaceholder": "Search documents",
+        "noDocuments": "No matching documents",
+        "loadFailed": "Documents could not be loaded.",
+        "confirmSelection": "Add selected",
+        "openAction": "Open {{name}}",
+        "limitReached": "At most {{count}} documents.",
+        "limitReached_one": "At most {{count}} document."
     }
 }

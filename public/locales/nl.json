@@ -1195,7 +1195,12 @@
         "statsTrendSummary": "Verloop over {{periods}} perioden · Inkomsten {{income}} · Uitgaven {{expenses}} · Piek {{peak}}",
         "statsDonutSummary": "{{count}} segmenten · Grootste: {{top}} ({{pct}} %) · Totaal {{total}}",
         "statsPointsLabel": "Waarden van de trendlijn",
-        "statsPointLabel": "{{period}}: inkomsten {{income}}, uitgaven {{expenses}}"
+        "statsPointLabel": "{{period}}: inkomsten {{income}}, uitgaven {{expenses}}",
+        "receiptsLabel": "Bonnen",
+        "receiptsHint": "Kassabon of factuur bij deze boeking.",
+        "receiptDocumentName": "Bon: {{title}} ({{date}})",
+        "receiptsAttachedLabel": "{{count}} bonnen bijgevoegd",
+        "receiptsAttachedLabel_one": "{{count}} bon bijgevoegd"
     },
     "settings": {
         "healthCycleEnableLabel": "Cyclustabblad tonen",
@@ -2424,7 +2429,9 @@
         "dmsSearchLabel": "Zoekterm",
         "dmsSearching": "Bezig met zoeken…",
         "dmsSearchError": "Het DMS is momenteel niet bereikbaar.",
-        "storageGoogleDrive": "Google Drive"
+        "storageGoogleDrive": "Google Drive",
+        "budgetFolder": "Bonnen",
+        "splitExpensesFolder": "Gedeelde uitgaven"
     },
     "housekeeping": {
         "title": "Huishouden",
@@ -2717,7 +2724,15 @@
         "statusActive": "Actief",
         "statusArchived": "Gearchiveerd",
         "restoreGroup": "Herstellen",
-        "emptyArchivedTitle": "Niets gearchiveerd"
+        "emptyArchivedTitle": "Niets gearchiveerd",
+        "receiptsLabel": "Bonnen",
+        "receiptsHint": "Kassabon of factuur bij deze uitgave.",
+        "receiptDocumentName": "Bon: {{title}} ({{group}})",
+        "receiptsAttachedLabel": "{{count}} bonnen bijgevoegd",
+        "receiptsAttachedLabel_one": "{{count}} bon bijgevoegd",
+        "proofLabel": "Betaalbewijs",
+        "proofHint": "Eén bewijs, bijvoorbeeld een screenshot van de overboeking.",
+        "proofDocumentName": "Betaalbewijs {{group}}: {{name}}"
     },
     "wmo": {
         "0": "Heldere lucht",
@@ -3662,5 +3677,21 @@
             "jar": "pot",
             "bag": "zak"
         }
+    },
+    "documentAttach": {
+        "label": "Bijlagen",
+        "hint": "Koppel bestaande documenten of upload nieuwe bestanden (max. 5 MB).",
+        "emptyState": "Nog niets bijgevoegd",
+        "uploadAction": "Bestand uploaden",
+        "pickAction": "Bestaand document",
+        "removeAction": "{{name}} verwijderen",
+        "pickerTitle": "Document selecteren",
+        "searchPlaceholder": "Documenten zoeken",
+        "noDocuments": "Geen passende documenten",
+        "loadFailed": "Documenten konden niet worden geladen.",
+        "confirmSelection": "Selectie toevoegen",
+        "openAction": "{{name}} openen",
+        "limitReached": "Maximaal {{count}} documenten.",
+        "limitReached_one": "Maximaal {{count}} document."
     }
 }

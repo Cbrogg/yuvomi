@@ -244,6 +244,19 @@
   font-size: var(--text-sm);
 }
 
+/* Beleg-Marke in der Metazeile (#583): gleiche Größe wie der Text daneben,
+ * damit sie mitläuft statt die Zeilenhöhe aufzureißen. */
+.split-expense__receipt {
+  display: inline-flex;
+  vertical-align: text-bottom;
+  color: var(--module-accent);
+}
+
+.split-expense__receipt svg {
+  width: 14px;
+  height: 14px;
+}
+
 .split-main {
   min-width: 0;
   display: flex;

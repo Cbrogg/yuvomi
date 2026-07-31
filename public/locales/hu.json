@@ -1195,7 +1195,12 @@
         "statsTrendSummary": "Alakulás {{periods}} időszakon át · Bevétel {{income}} · Kiadás {{expenses}} · Csúcs {{peak}}",
         "statsDonutSummary": "{{count}} szelet · Legnagyobb: {{top}} ({{pct}} %) · Összesen {{total}}",
         "statsPointsLabel": "A trendgörbe értékei",
-        "statsPointLabel": "{{period}}: bevétel {{income}}, kiadás {{expenses}}"
+        "statsPointLabel": "{{period}}: bevétel {{income}}, kiadás {{expenses}}",
+        "receiptsLabel": "Bizonylatok",
+        "receiptsHint": "Nyugta vagy számla ehhez a tételhez.",
+        "receiptDocumentName": "Bizonylat: {{title}} ({{date}})",
+        "receiptsAttachedLabel": "{{count}} csatolt bizonylat",
+        "receiptsAttachedLabel_one": "{{count}} csatolt bizonylat"
     },
     "settings": {
         "healthCycleEnableLabel": "Ciklus fül megjelenítése",
@@ -2424,7 +2429,9 @@
         "dmsSearchLabel": "Keresőkifejezés",
         "dmsSearching": "Keresés…",
         "dmsSearchError": "A DMS jelenleg nem érhető el.",
-        "storageGoogleDrive": "Google Drive"
+        "storageGoogleDrive": "Google Drive",
+        "budgetFolder": "Bizonylatok",
+        "splitExpensesFolder": "Közös kiadások"
     },
     "housekeeping": {
         "title": "Háztartás",
@@ -2717,7 +2724,15 @@
         "statusActive": "Aktív",
         "statusArchived": "Archivált",
         "restoreGroup": "Visszaállítás",
-        "emptyArchivedTitle": "Nincs archiválva semmi"
+        "emptyArchivedTitle": "Nincs archiválva semmi",
+        "receiptsLabel": "Bizonylatok",
+        "receiptsHint": "Nyugta vagy számla ehhez a kiadáshoz.",
+        "receiptDocumentName": "Bizonylat: {{title}} ({{group}})",
+        "receiptsAttachedLabel": "{{count}} csatolt bizonylat",
+        "receiptsAttachedLabel_one": "{{count}} csatolt bizonylat",
+        "proofLabel": "Fizetési igazolás",
+        "proofHint": "Egy igazolás, például az utalás képernyőképe.",
+        "proofDocumentName": "Fizetési igazolás {{group}}: {{name}}"
     },
     "wmo": {
         "0": "Tiszta égbolt",
@@ -3662,5 +3677,21 @@
             "jar": "befőttesüveg",
             "bag": "tasak"
         }
+    },
+    "documentAttach": {
+        "label": "Mellékletek",
+        "hint": "Kapcsolj meglévő dokumentumokat, vagy tölts fel új fájlokat (max. 5 MB).",
+        "emptyState": "Még nincs melléklet",
+        "uploadAction": "Fájl feltöltése",
+        "pickAction": "Meglévő dokumentum",
+        "removeAction": "{{name}} eltávolítása",
+        "pickerTitle": "Dokumentum kiválasztása",
+        "searchPlaceholder": "Dokumentumok keresése",
+        "noDocuments": "Nincs találat",
+        "loadFailed": "A dokumentumokat nem sikerült betölteni.",
+        "confirmSelection": "Kiválasztottak hozzáadása",
+        "openAction": "{{name}} megnyitása",
+        "limitReached": "Legfeljebb {{count}} dokumentum.",
+        "limitReached_one": "Legfeljebb {{count}} dokumentum."
     }
 }

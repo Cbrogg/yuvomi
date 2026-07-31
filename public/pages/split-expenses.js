@@ -5,6 +5,7 @@
 
 import { api } from '/api.js';
 import { openModal as openSharedModal, closeModal, confirmModal } from '/components/modal.js';
+import { renderDocumentAttachField, bindDocumentAttachField } from '/components/document-attach.js';
 import { t, formatDate, getLocale, dateInputPlaceholder, parseDateInput, isDateInputValid } from '/i18n.js';
 import { esc } from '/utils/html.js';
 import { stagger } from '/utils/ux.js';
@@ -402,11 +403,17 @@ function renderBalances() {
 function renderExpenses(readOnly = false) {
   if (!state.expenses.length) return `<div class="split-muted">${t('splitExpenses.noExpenses')}</div>`;
   return state.expenses.map((expense) => {
+    // Beleg-Marke (#583): dass ein Nachweis vorliegt, ist die Information -
+    // wie viele es sind, beantwortet keine Frage vor dem Öffnen.
+    const receiptCount = expense.attachments?.length ?? 0;
+    const receiptMark = receiptCount
+      ? ` <span class="split-expense__receipt" role="img" aria-label="${esc(t('splitExpenses.receiptsAttachedLabel', { count: receiptCount }))}"><i data-lucide="paperclip" aria-hidden="true"></i></span>`
+      : '';
     const body = `
       <div class="split-expense__icon"><i data-lucide="${categoryIcon(expense.category)}" aria-hidden="true"></i></div>
       <div class="split-expense__body">
         <strong>${esc(expense.title)}</strong>
-        <span>${t('splitExpenses.paidBy')}: ${esc(expense.payer_name || '')} · ${formatDate(expense.expense_date)}</span>
+        <span>${t('splitExpenses.paidBy')}: ${esc(expense.payer_name || '')} · ${formatDate(expense.expense_date)}${receiptMark}</span>
       </div>
       <div class="split-expense__amount">${money(expense.amount, expense.currency)}</div>
     `;
@@ -888,6 +895,12 @@ function openExpenseModal(expense = null) {
         <p class="form-hint" id="split-method-hint">${t(`splitExpenses.splitHint.${method}`)}</p>
         <fieldset class="split-participants"><legend>${t('splitExpenses.participants')}</legend>${groupMemberCheckboxes(selectedIds, splitValues)}</fieldset>
         <label>${t('splitExpenses.notes')}<textarea class="input" name="description" rows="3" maxlength="5000">${esc(expense?.description || '')}</textarea></label>
+        ${renderDocumentAttachField({
+          attachments: isEdit ? (expense.attachments || []) : [],
+          label: t('splitExpenses.receiptsLabel'),
+          hint: t('splitExpenses.receiptsHint'),
+          icon: 'receipt',
+        })}
         <div class="modal-actions">
           ${isEdit ? `<button class="btn btn--danger" type="button" id="split-delete-expense">${t('common.delete')}</button>` : ''}
           <button class="btn btn--secondary" type="button" id="split-cancel-expense">${t('common.cancel')}</button>
@@ -896,6 +909,16 @@ function openExpenseModal(expense = null) {
       </form>
     `,
     onSave(panel) {
+      // Belege (#583): landen als Dokumente im Dokumente-Modul, benannt nach der
+      // Ausgabe - ein Kassenbon soll dort auffindbar bleiben.
+      const receipts = bindDocumentAttachField(panel, {
+        category: 'finance',
+        folderName: t('documents.splitExpensesFolder'),
+        documentName: (file) => t('splitExpenses.receiptDocumentName', {
+          title: panel.querySelector('[name="title"]').value.trim() || file.name,
+          group: group?.name || '',
+        }),
+      });
       panel.querySelector('#split-cancel-expense')?.addEventListener('click', () => closeModal());
       panel.querySelector('[name="split_method"]')?.addEventListener('change', () => updateSplitInputs(panel));
       panel.querySelector('#split-expense-form')?.addEventListener('input', () => validateSplitForm(panel));
@@ -927,6 +950,9 @@ function openExpenseModal(expense = null) {
         const data = Object.fromEntries(new FormData(form));
         const { participants, splits } = collectSplitPayload(form);
         const payload = { ...data, participants, splits };
+        // commit() lädt wartende Dateien erst jetzt hoch: ein abgebrochenes
+        // Formular hinterlässt keine verwaiste Datei im Dokumente-Modul.
+        if (receipts) payload.attachment_document_ids = await receipts.commit();
         if (isEdit) await api.put(`/split-expenses/expenses/${expense.id}`, payload);
         else await api.post(`/split-expenses/groups/${state.activeGroupId}/expenses`, payload);
         closeModal({ force: true });
@@ -958,6 +984,12 @@ function openSettlementModal() {
           <label>${t('splitExpenses.currency')}<select class="input" name="currency">${state.meta.currencies.map((c) => `<option value="${c}" ${c === (debt?.currency || group.default_currency) ? 'selected' : ''}>${c}</option>`).join('')}</select></label>
         </div>
         <label>${t('splitExpenses.notes')}<textarea class="input" name="notes" rows="3" maxlength="5000"></textarea></label>
+        ${renderDocumentAttachField({
+          label: t('splitExpenses.proofLabel'),
+          hint: t('splitExpenses.proofHint'),
+          icon: 'receipt',
+          maxItems: 1,
+        })}
         <div class="modal-actions">
           <button class="btn btn--secondary" type="button" id="split-cancel-settlement">${t('common.cancel')}</button>
           <button class="btn btn--primary" type="submit" id="split-save-settlement">${t('splitExpenses.registerPayment')}</button>
@@ -965,6 +997,17 @@ function openSettlementModal() {
       </form>
     `,
     onSave(panel) {
+      // Zahlungsnachweis: das Modell kennt genau ein Dokument je Zahlung
+      // (settlements.proof_document_id), deshalb wird unten nur das erste
+      // übernommen - mehrere Nachweise für eine Überweisung gibt es nicht.
+      const proof = bindDocumentAttachField(panel, {
+        category: 'finance',
+        folderName: t('documents.splitExpensesFolder'),
+        documentName: (file) => t('splitExpenses.proofDocumentName', {
+          group: group?.name || '',
+          name: file.name,
+        }),
+      });
       const form = panel.querySelector('#split-settlement-form');
       const payerSel = form.querySelector('[name="payer_id"]');
       const payeeSel = form.querySelector('[name="payee_id"]');
@@ -991,6 +1034,8 @@ function openSettlementModal() {
         e.preventDefault();
         if (samePerson()) { syncSameHint(); payeeSel.focus(); return; }
         const data = Object.fromEntries(new FormData(form));
+        const proofIds = proof ? await proof.commit() : [];
+        if (proofIds.length) data.proof_document_id = proofIds[0];
         await api.post(`/split-expenses/groups/${state.activeGroupId}/settlements`, data);
         closeModal({ force: true });
         await refreshDashboard();

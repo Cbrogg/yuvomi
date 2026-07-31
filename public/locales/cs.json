@@ -1195,7 +1195,12 @@
         "statsTrendSummary": "Vývoj za {{periods}} období · Příjmy {{income}} · Výdaje {{expenses}} · Maximum {{peak}}",
         "statsDonutSummary": "{{count}} segmentů · Největší: {{top}} ({{pct}} %) · Celkem {{total}}",
         "statsPointsLabel": "Hodnoty křivky vývoje",
-        "statsPointLabel": "{{period}}: příjmy {{income}}, výdaje {{expenses}}"
+        "statsPointLabel": "{{period}}: příjmy {{income}}, výdaje {{expenses}}",
+        "receiptsLabel": "Doklady",
+        "receiptsHint": "Účtenka nebo faktura k této transakci.",
+        "receiptDocumentName": "Doklad: {{title}} ({{date}})",
+        "receiptsAttachedLabel": "Připojené doklady: {{count}}",
+        "receiptsAttachedLabel_one": "Připojený doklad: {{count}}"
     },
     "settings": {
         "healthCycleEnableLabel": "Zobrazit kartu cyklu",
@@ -2434,7 +2439,15 @@
         "statusActive": "Aktivní",
         "statusArchived": "Archivováno",
         "restoreGroup": "Obnovit",
-        "emptyArchivedTitle": "Nic archivováno"
+        "emptyArchivedTitle": "Nic archivováno",
+        "receiptsLabel": "Doklady",
+        "receiptsHint": "Účtenka nebo faktura k tomuto výdaji.",
+        "receiptDocumentName": "Doklad: {{title}} ({{group}})",
+        "receiptsAttachedLabel": "Připojené doklady: {{count}}",
+        "receiptsAttachedLabel_one": "Připojený doklad: {{count}}",
+        "proofLabel": "Doklad o platbě",
+        "proofHint": "Jeden doklad, například snímek převodu.",
+        "proofDocumentName": "Doklad o platbě {{group}}: {{name}}"
     },
     "documents": {
         "title": "Dokumenty",
@@ -2573,7 +2586,9 @@
         "dmsSearchLabel": "Hledaný výraz",
         "dmsSearching": "Hledání…",
         "dmsSearchError": "DMS je momentálně nedostupný.",
-        "storageGoogleDrive": "Google Drive"
+        "storageGoogleDrive": "Google Drive",
+        "budgetFolder": "Doklady",
+        "splitExpensesFolder": "Sdílené výdaje"
     },
     "reminders": {
         "sectionTitle": "Připomínka",
@@ -3662,5 +3677,21 @@
             "jar": "sklenice",
             "bag": "sáček"
         }
+    },
+    "documentAttach": {
+        "label": "Přílohy",
+        "hint": "Propojte existující dokumenty nebo nahrajte nové soubory (max. 5 MB).",
+        "emptyState": "Zatím žádné přílohy",
+        "uploadAction": "Nahrát soubor",
+        "pickAction": "Existující dokument",
+        "removeAction": "Odebrat {{name}}",
+        "pickerTitle": "Vybrat dokument",
+        "searchPlaceholder": "Hledat dokumenty",
+        "noDocuments": "Žádné odpovídající dokumenty",
+        "loadFailed": "Dokumenty se nepodařilo načíst.",
+        "confirmSelection": "Přidat vybrané",
+        "openAction": "Otevřít {{name}}",
+        "limitReached": "Nejvýše dokumentů: {{count}}.",
+        "limitReached_one": "Nejvýše dokumentů: {{count}}."
     }
 }

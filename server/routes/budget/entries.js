@@ -8,6 +8,7 @@ import { createLogger } from '../../logger.js';
 import * as db from '../../db.js';
 import { str, oneOf, date as validateDate, num, rrule, collectErrors, MAX_TITLE, MONTH_RE } from '../../middleware/validate.js';
 import { normalizeBudgetVisibility } from '../../services/budget-visibility.js';
+import { attachmentsFor, replaceAttachments, withAttachments } from './attachments.js';
 import {
   budgetFilter, getBudgetMode, mayEdit,
   DATE_RE, thisMonthLocalKey, cents,
@@ -201,7 +202,7 @@ router.get('/', (req, res) => {
     sql += ' ORDER BY b.date DESC, b.created_at DESC';
 
     const entries = db.get().prepare(sql).all(...params);
-    res.json({ data: entries });
+    res.json({ data: withAttachments(entries, req.authUserId || req.session.userId) });
   } catch (err) {
     log.error('', err);
     res.status(500).json({ error: 'Internal error', code: 500 });
@@ -262,9 +263,13 @@ router.post('/', (req, res) => {
       me, me, visibility
     );
 
+    // Belege (#583): optional, deshalb erst nach dem Insert - der Eintrag steht
+    // auch ohne sie, ein unbekanntes Dokument darf ihn nicht scheitern lassen.
+    replaceAttachments(result.lastInsertRowid, req.body.attachment_document_ids, me);
+
     const entry = entryWithLoanMeta(result.lastInsertRowid);
 
-    res.status(201).json({ data: entry });
+    res.status(201).json({ data: { ...entry, attachments: attachmentsFor(entry.id, me) } });
   } catch (err) {
     log.error('', err);
     res.status(500).json({ error: 'Internal error', code: 500 });
@@ -359,8 +364,13 @@ router.put('/:id/series', (req, res) => {
       }
     })();
 
+    // Belege bleiben hier bewusst unberuehrt (#583): sie gehoeren zur einzelnen
+    // Buchung, nicht zur Serie - eine Stromrechnung hat je Monat einen eigenen
+    // Beleg. Der Preis dafuer: die oben geloeschten kuenftigen Instanzen nehmen
+    // ihre Verknuepfungen mit. Die Dokumente selbst bleiben im Dokumente-Modul.
+    const me = req.authUserId || req.session.userId;
     const updated = entryWithLoanMeta(parentId);
-    res.json({ data: updated });
+    res.json({ data: { ...updated, attachments: attachmentsFor(parentId, me) } });
   } catch (err) {
     log.error('PUT /budget/:id/series error:', err);
     res.status(500).json({ error: 'Internal error', code: 500 });
@@ -530,9 +540,17 @@ router.put('/:id', (req, res) => {
     });
     tx();
 
+    // Belege (#583): nur anfassen, wenn das Feld mitkommt. Ein PUT, das nur den
+    // Betrag korrigiert, darf die angehaengten Belege nicht stillschweigend
+    // abraeumen.
+    const me = req.authUserId || req.session.userId;
+    if (req.body.attachment_document_ids !== undefined) {
+      replaceAttachments(id, req.body.attachment_document_ids, me);
+    }
+
     const updated = entryWithLoanMeta(id);
 
-    res.json({ data: updated });
+    res.json({ data: { ...updated, attachments: attachmentsFor(id, me) } });
   } catch (err) {
     log.error('', err);
     res.status(500).json({ error: 'Internal error', code: 500 });

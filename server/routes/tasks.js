@@ -7,6 +7,7 @@
 import { createLogger } from '../logger.js';
 import express from 'express';
 import * as db from '../db.js';
+import { documentVisibleSql } from '../services/document-access.js';
 import { nextOccurrenceAfter } from '../services/recurrence.js';
 import { syncTaskRewards } from '../services/rewards.js';
 import { normalizeVisibility, visibilityWhere } from '../services/visibility.js';
@@ -585,11 +586,7 @@ router.delete('/:id', (req, res) => {
 // --------------------------------------------------------
 
 // Sichtbarkeits-Fragment für ein Dokument (Alias `d`, benannter Bind @me).
-const DOC_VISIBLE_SQL = `(
-  d.created_by = @me
-  OR d.visibility = 'family'
-  OR EXISTS (SELECT 1 FROM family_document_access a WHERE a.document_id = d.id AND a.user_id = @me)
-)`;
+const DOC_VISIBLE_SQL = documentVisibleSql('d', 'me');
 
 /** Aufgabe nur zurückgeben, wenn sie für die betrachtende Person sichtbar ist. */
 function findVisibleTask(id, me) {

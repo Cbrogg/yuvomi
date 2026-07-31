@@ -1195,7 +1195,12 @@
         "statsTrendSummary": "Utveckling över {{periods}} perioder · Inkomster {{income}} · Utgifter {{expenses}} · Toppvärde {{peak}}",
         "statsDonutSummary": "{{count}} segment · Störst: {{top}} ({{pct}} %) · Totalt {{total}}",
         "statsPointsLabel": "Värden i trendkurvan",
-        "statsPointLabel": "{{period}}: inkomster {{income}}, utgifter {{expenses}}"
+        "statsPointLabel": "{{period}}: inkomster {{income}}, utgifter {{expenses}}",
+        "receiptsLabel": "Kvitton",
+        "receiptsHint": "Kvitto eller faktura för den här posten.",
+        "receiptDocumentName": "Kvitto: {{title}} ({{date}})",
+        "receiptsAttachedLabel": "{{count}} kvitton bifogade",
+        "receiptsAttachedLabel_one": "{{count}} kvitto bifogat"
     },
     "settings": {
         "healthCycleEnableLabel": "Visa cykelfliken",
@@ -2411,7 +2416,9 @@
         "dmsSearchLabel": "Sökord",
         "dmsSearching": "Söker…",
         "dmsSearchError": "DMS:et går inte att nå just nu.",
-        "storageGoogleDrive": "Google Drive"
+        "storageGoogleDrive": "Google Drive",
+        "budgetFolder": "Kvitton",
+        "splitExpensesFolder": "Delade utgifter"
     },
     "shortcuts": {
         "goKitchen": "Kök",
@@ -2717,7 +2724,15 @@
         "statusActive": "Aktiva",
         "statusArchived": "Arkiverad",
         "restoreGroup": "Återställ",
-        "emptyArchivedTitle": "Inget arkiverat"
+        "emptyArchivedTitle": "Inget arkiverat",
+        "receiptsLabel": "Kvitton",
+        "receiptsHint": "Kvitto eller faktura för den här utgiften.",
+        "receiptDocumentName": "Kvitto: {{title}} ({{group}})",
+        "receiptsAttachedLabel": "{{count}} kvitton bifogade",
+        "receiptsAttachedLabel_one": "{{count}} kvitto bifogat",
+        "proofLabel": "Betalningsbevis",
+        "proofHint": "Ett bevis, till exempel en skärmbild av överföringen.",
+        "proofDocumentName": "Betalningsbevis {{group}}: {{name}}"
     },
     "wmo": {
         "0": "Klart",
@@ -3662,5 +3677,21 @@
             "jar": "glasburk",
             "bag": "påse"
         }
+    },
+    "documentAttach": {
+        "label": "Bilagor",
+        "hint": "Länka befintliga dokument eller ladda upp nya filer (max 5 MB).",
+        "emptyState": "Inget bifogat ännu",
+        "uploadAction": "Ladda upp fil",
+        "pickAction": "Befintligt dokument",
+        "removeAction": "Ta bort {{name}}",
+        "pickerTitle": "Välj dokument",
+        "searchPlaceholder": "Sök dokument",
+        "noDocuments": "Inga matchande dokument",
+        "loadFailed": "Dokumenten kunde inte läsas in.",
+        "confirmSelection": "Lägg till valda",
+        "openAction": "Öppna {{name}}",
+        "limitReached": "Högst {{count}} dokument.",
+        "limitReached_one": "Högst {{count}} dokument."
     }
 }

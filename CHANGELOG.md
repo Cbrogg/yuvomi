@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.67.0] - 2026-07-31
+
+### Added
+
+- Transactions in Budget can carry receipts. The entry dialog, under "More options", lets you either upload a new file or pick a document you already filed under Documents - several per transaction, since one purchase can produce a till receipt, an invoice and a warranty. A transaction with a receipt shows a paperclip in the list, and a receipt's name opens its preview. Until now the only way to keep a receipt near a transaction was to file it under Documents and remember the connection yourself.
+- Picking an existing document is new everywhere. The three places that could attach a file - Documents, Calendar, Housekeeping - could only ever upload a new one, so filing the same receipt twice was the only way to reuse it. The new receipt field does both and is shared, rather than being built a fourth time.
+- Shared expenses take receipts the same way, and a settle-up can record one payment proof. The database columns for this had existed since the module was written, but nothing in the interface ever filled them.
+- Uploads only leave the browser when you save the transaction, so an abandoned dialog leaves no stray file behind. New receipts are filed under Documents in a "Receipts" folder.
+
+### Security
+
+- A receipt keeps the visibility it has in Documents. A document filed as private stays invisible to everyone else even when it hangs on a shared transaction or a group expense, and administrators are no exception - the Documents module has never had an override, and attaching a document does not create one. You can only attach what you are allowed to see, so a guessed document ID cannot be used to read back a stranger's file name.
+- Saving a shared transaction or expense no longer removes attachments you cannot see. Only the links visible to you are replaced, so another member's private receipt survives your edit instead of being silently dropped.
+- Shared expenses previously handed out the names of attached documents to every group member without checking that document's visibility, and a payment proof was accepted by ID without any check at all. Both now run through the same rule as everything else. No installation was exposed by this, because nothing in the interface could attach a document until now.
+
+### Changed
+
+- The rule for who may see a document lived in three modules as three copies. It now lives in one place, which Budget, shared expenses, Documents, Tasks and the DMS integration all read from.
+
 ## [1.66.2] - 2026-07-31
 
 ### Fixed

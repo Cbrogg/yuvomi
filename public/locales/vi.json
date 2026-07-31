@@ -1195,7 +1195,12 @@
         "statsTrendSummary": "Diễn biến qua {{periods}} kỳ · Thu nhập {{income}} · Chi tiêu {{expenses}} · Cao nhất {{peak}}",
         "statsDonutSummary": "{{count}} phần · Lớn nhất: {{top}} ({{pct}} %) · Tổng {{total}}",
         "statsPointsLabel": "Giá trị đường xu hướng",
-        "statsPointLabel": "{{period}}: thu nhập {{income}}, chi tiêu {{expenses}}"
+        "statsPointLabel": "{{period}}: thu nhập {{income}}, chi tiêu {{expenses}}",
+        "receiptsLabel": "Chứng từ",
+        "receiptsHint": "Hóa đơn hoặc biên lai của giao dịch này.",
+        "receiptDocumentName": "Chứng từ: {{title}} ({{date}})",
+        "receiptsAttachedLabel": "Đã đính kèm {{count}} chứng từ",
+        "receiptsAttachedLabel_one": "Đã đính kèm {{count}} chứng từ"
     },
     "settings": {
         "healthCycleEnableLabel": "Hiện tab chu kỳ",
@@ -2424,7 +2429,9 @@
         "dmsSearchLabel": "Từ khóa tìm kiếm",
         "dmsSearching": "Đang tìm…",
         "dmsSearchError": "Hiện không kết nối được tới DMS.",
-        "storageGoogleDrive": "Google Drive"
+        "storageGoogleDrive": "Google Drive",
+        "budgetFolder": "Chứng từ",
+        "splitExpensesFolder": "Chi tiêu chung"
     },
     "housekeeping": {
         "title": "Dọn dẹp",
@@ -2717,7 +2724,15 @@
         "statusActive": "Đang hoạt động",
         "statusArchived": "Đã lưu trữ",
         "restoreGroup": "Khôi phục",
-        "emptyArchivedTitle": "Chưa lưu trữ gì"
+        "emptyArchivedTitle": "Chưa lưu trữ gì",
+        "receiptsLabel": "Chứng từ",
+        "receiptsHint": "Hóa đơn hoặc biên lai của khoản chi này.",
+        "receiptDocumentName": "Chứng từ: {{title}} ({{group}})",
+        "receiptsAttachedLabel": "Đã đính kèm {{count}} chứng từ",
+        "receiptsAttachedLabel_one": "Đã đính kèm {{count}} chứng từ",
+        "proofLabel": "Bằng chứng thanh toán",
+        "proofHint": "Một bằng chứng, ví dụ ảnh chụp màn hình chuyển khoản.",
+        "proofDocumentName": "Bằng chứng thanh toán {{group}}: {{name}}"
     },
     "wmo": {
         "0": "Trời quang",
@@ -3662,5 +3677,21 @@
             "jar": "lọ",
             "bag": "túi"
         }
+    },
+    "documentAttach": {
+        "label": "Tệp đính kèm",
+        "hint": "Liên kết tài liệu có sẵn hoặc tải lên tệp mới (tối đa 5 MB).",
+        "emptyState": "Chưa có tệp đính kèm",
+        "uploadAction": "Tải tệp lên",
+        "pickAction": "Tài liệu có sẵn",
+        "removeAction": "Gỡ {{name}}",
+        "pickerTitle": "Chọn tài liệu",
+        "searchPlaceholder": "Tìm tài liệu",
+        "noDocuments": "Không có tài liệu phù hợp",
+        "loadFailed": "Không tải được tài liệu.",
+        "confirmSelection": "Thêm mục đã chọn",
+        "openAction": "Mở {{name}}",
+        "limitReached": "Tối đa {{count}} tài liệu.",
+        "limitReached_one": "Tối đa {{count}} tài liệu."
     }
 }

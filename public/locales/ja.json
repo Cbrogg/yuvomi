@@ -1195,7 +1195,12 @@
         "statsTrendSummary": "{{periods}} 期間の推移 · 収入 {{income}} · 支出 {{expenses}} · 最大 {{peak}}",
         "statsDonutSummary": "{{count}} セグメント · 最大: {{top}}（{{pct}}%）· 合計 {{total}}",
         "statsPointsLabel": "推移グラフの値",
-        "statsPointLabel": "{{period}}: 収入 {{income}}、支出 {{expenses}}"
+        "statsPointLabel": "{{period}}: 収入 {{income}}、支出 {{expenses}}",
+        "receiptsLabel": "領収書",
+        "receiptsHint": "この取引のレシートまたは請求書。",
+        "receiptDocumentName": "領収書: {{title}}（{{date}}）",
+        "receiptsAttachedLabel": "領収書 {{count}} 件を添付",
+        "receiptsAttachedLabel_one": "領収書 {{count}} 件を添付"
     },
     "settings": {
         "healthCycleEnableLabel": "周期タブを表示",
@@ -2411,7 +2416,9 @@
         "dmsSearchLabel": "検索語",
         "dmsSearching": "検索中…",
         "dmsSearchError": "現在 DMS に接続できません。",
-        "storageGoogleDrive": "Google Drive"
+        "storageGoogleDrive": "Google Drive",
+        "budgetFolder": "領収書",
+        "splitExpensesFolder": "共同の支出"
     },
     "shortcuts": {
         "goKitchen": "キッチン",
@@ -2717,7 +2724,15 @@
         "statusActive": "有効",
         "statusArchived": "アーカイブ済み",
         "restoreGroup": "復元",
-        "emptyArchivedTitle": "アーカイブは空です"
+        "emptyArchivedTitle": "アーカイブは空です",
+        "receiptsLabel": "領収書",
+        "receiptsHint": "この支出のレシートまたは請求書。",
+        "receiptDocumentName": "領収書: {{title}}（{{group}}）",
+        "receiptsAttachedLabel": "領収書 {{count}} 件を添付",
+        "receiptsAttachedLabel_one": "領収書 {{count}} 件を添付",
+        "proofLabel": "支払いの証明",
+        "proofHint": "証明を1件、たとえば振込のスクリーンショット。",
+        "proofDocumentName": "支払いの証明 {{group}}: {{name}}"
     },
     "wmo": {
         "0": "快晴",
@@ -3662,5 +3677,21 @@
             "jar": "瓶",
             "bag": "袋"
         }
+    },
+    "documentAttach": {
+        "label": "添付",
+        "hint": "既存の書類をリンクするか、新しいファイルをアップロードします（最大5MB）。",
+        "emptyState": "添付はまだありません",
+        "uploadAction": "ファイルをアップロード",
+        "pickAction": "既存の書類",
+        "removeAction": "{{name}} を削除",
+        "pickerTitle": "書類を選択",
+        "searchPlaceholder": "書類を検索",
+        "noDocuments": "該当する書類がありません",
+        "loadFailed": "書類を読み込めませんでした。",
+        "confirmSelection": "選択を追加",
+        "openAction": "{{name}} を開く",
+        "limitReached": "書類は最大 {{count}} 件までです。",
+        "limitReached_one": "書類は最大 {{count}} 件までです。"
     }
 }
