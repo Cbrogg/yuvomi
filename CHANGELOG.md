@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.66.1] - 2026-07-31
+
+### Fixed
+
+- Family members can pick a sync target for a calendar event again. Anyone who was not an administrator only ever saw "Store locally" in the dropdown, even with a CalDAV server or Google account connected and its calendars switched on. The list of calendars was read through the account settings, which only administrators may open, so everyone else got nothing back. Saving a target was never restricted, only the list you pick it from.
+- A Google account whose access has expired no longer empties the CalDAV calendars in that same dropdown. Both lists now arrive together and each one falls back to empty on its own.
+
 ## [1.66.0] - 2026-07-31
 
 ### Added
