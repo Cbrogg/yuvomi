@@ -314,6 +314,33 @@ test('Google Drive OAuth installer wiring is optional, masked, validated and dep
   }
 });
 
+test('Unraid deklariert alle Web-Push-Variablen advanced und maskiert den privaten Schluessel', () => {
+  // Unraid zaehlt jede Variable von Hand auf und hat keinen Fallback: fehlt ein
+  // Eintrag, koennen Unraid-Nutzer die Variable ueberhaupt nicht setzen. Genau
+  // daran scheiterte Push auf iOS - das Subject war nirgends erreichbar (#580).
+  const unraid = readFileSync(new URL('../templates/yuvomi.xml', import.meta.url), 'utf8');
+  const envExample = readFileSync(new URL('../.env.example', import.meta.url), 'utf8');
+
+  for (const key of ['VAPID_SUBJECT', 'VAPID_PUBLIC_KEY', 'VAPID_PRIVATE_KEY']) {
+    const entry = unraid.match(new RegExp(`<Config[^>]+Target="${key}"[^>]*>`));
+    assert.ok(entry, `${key} fehlt in templates/yuvomi.xml`);
+    assert.match(entry[0], /Display="advanced"/, `${key} sollte advanced sein`);
+    assert.match(entry[0], /Required="false"/, `${key} ist optional`);
+    assert.match(envExample, new RegExp(`^# ?${key}=`, 'm'), `${key} fehlt in .env.example`);
+  }
+
+  assert.match(
+    unraid.match(/<Config[^>]+Target="VAPID_PRIVATE_KEY"[^>]*>/)[0],
+    /Mask="true"/,
+    'der private VAPID-Schluessel muss maskiert sein'
+  );
+  assert.match(
+    unraid.match(/<Config[^>]+Target="VAPID_SUBJECT"[^>]*>/)[0],
+    /BadJwtToken/,
+    'die Apple-Falle gehoert in die Beschreibung, sonst setzt sie niemand'
+  );
+});
+
 test('FIXER_API_KEY ist optional und als Secret markiert', () => {
   const fixer = ENV_SCHEMA.find(e => e.key === 'FIXER_API_KEY');
   assert.ok(fixer, 'FIXER_API_KEY nicht in ENV_SCHEMA');

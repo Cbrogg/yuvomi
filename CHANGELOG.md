@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.66.2] - 2026-07-31
+
+### Fixed
+
+- Web Push reaches iPhone and iPad again. Every push is signed with a contact address, and without a configured email sender or `VAPID_SUBJECT` that address defaulted to `admin@localhost`. Apple checks it and refuses a token it cannot reach, answering `403 BadJwtToken`, so pushes to Apple devices failed while the very same installation kept delivering to Android. The address is now taken from the first reachable source, in order: `VAPID_SUBJECT`, the sender address from the email settings, then `BASE_URL`. A value that cannot work, such as a `localhost` or `.local` address or one without a domain ending, is discarded instead of being sent. Nothing has to be configured for this to take effect.
+- A rejected push now names the contact address it was signed with in the log, alongside the push service and status code it already carried, plus a line pointing at the address as the likely cause. A `403` was previously indistinguishable from any other server-side failure, which is what made the cause above so hard to find.
+- Unraid users can set the Web Push variables at all. `VAPID_SUBJECT`, `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` were missing from the template, and since Unraid lists every variable by hand and has no fallback, there was simply no field to enter them in.
+- The installation guide's iOS and iPadOS section now covers the contact address as well, next to the home-screen and certificate requirements already listed there.
+
 ## [1.66.1] - 2026-07-31
 
 ### Fixed

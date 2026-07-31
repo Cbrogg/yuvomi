@@ -850,6 +850,12 @@ scheduler to deliver due reminders as system notifications even when the PWA is 
 VAPID keys are generated on first use and stored in **Sync Config** (`push_vapid_public`,
 `push_vapid_private`); they can be overridden via `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` env vars.
 
+The signed token's contact subject resolves to the first **routable** candidate: `VAPID_SUBJECT`,
+then the SMTP sender address (`email_from_address`), then `BASE_URL`, then a placeholder. Loopback,
+`.local`/`.lan`-style and TLD-less values are discarded rather than passed on, because Apple answers
+`403 BadJwtToken` for an unreachable subject — which disabled push on iOS/iPadOS only, while FCM
+accepted the same value (v1.66.2).
+
 ### Notification Channels
 
 Admin-configured outbound channels for household reminder delivery. Web Push subscriptions stay

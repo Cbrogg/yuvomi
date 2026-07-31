@@ -424,7 +424,7 @@ accepted for trusted internal networks such as a private LAN or container networ
 |----------|-------------|---------|----------|
 | `VAPID_PUBLIC_KEY` | VAPID public key. Auto-generated on first use and stored in the database if unset. | auto | No |
 | `VAPID_PRIVATE_KEY` | VAPID private key. Set together with the public key to pin a fixed pair across redeployments. | auto | No |
-| `VAPID_SUBJECT` | Contact URI (`mailto:` or `https:`) sent to push services. | `mailto:admin@localhost` | No |
+| `VAPID_SUBJECT` | Contact URI (`mailto:` address or `https:` origin) sent to push services. Must be routable — Apple rejects a `localhost`, `.local` or otherwise unreachable subject with `403 BadJwtToken`, which disables push on iOS while Android keeps working. Falls back to the sender address from Settings → Administration → Email, then to `BASE_URL`, then to a placeholder. | derived, see description | No |
 
 Generate a fixed key pair (optional):
 
@@ -449,11 +449,16 @@ Apple applies extra restrictions that do not exist on Android or desktop browser
   mode must not be filtering the app.
 - **The server needs outbound access to `web.push.apple.com`.** In LAN-only or egress-filtered
   deployments the send fails server-side.
+- **The VAPID subject must be routable.** Apple validates the contact URI in the signed token and
+  answers `403 BadJwtToken` when it cannot be reached, so push fails on iOS while Android continues
+  to work. Yuvomi derives a usable value from the SMTP sender address or `BASE_URL`; set
+  [`VAPID_SUBJECT`](#web-push-optional) explicitly if neither is configured.
 
 If a test notification does not arrive, the server log is the authoritative source. Successful
 sends are silent; failures are logged as `[Push] Push send failed (host=... status=... body=...)`,
 where `host` identifies the push service (`web.push.apple.com` for iOS) and `status`/`body` carry
-that service's rejection reason.
+that service's rejection reason. A rejected token additionally logs `sub=...` plus a line naming
+the subject as the likely cause.
 
 A subscription the server no longer knows about (removed after the push service reported it gone,
 or lost in a database restore) repairs itself: the app re-registers an existing subscription on
