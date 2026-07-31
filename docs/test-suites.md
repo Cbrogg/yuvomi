@@ -54,7 +54,7 @@ npm run test:budget-stats   # statistics tab: computeStatsRange, computeStats, G
 npm run test:subscriptions  # Budget subscription tracker: CRUD, renewals, currencies, SSRF-protected logo lookup
 npm run test:budget-structure   # Budget-Routen-Split: 33-Routen-Tabelle + Re-Export-Fläche gepinnt
 npm run test:budget-accounts    # Budget-Konten (#495): CRUD, laufender Saldo (Startsaldo + zugeordnete Einträge), Nettovermögen
-npm run test:budget-ui          # Budget-UI-Verträge: TAB_CAPS (Monatsnav/Neu-Aktion je Tab), Eintragsdatum folgt Monat, Tablist-/Filter-ARIA, Chart-Textalternativen + Datenreihen-Tokens, keine Text-/Farbliterale
+npm run test:budget-ui          # Budget-UI-Verträge: TAB_CAPS (Monatsnav/Neu-Aktion je Tab), Eintragsdatum folgt Monat, Tablist-/Filter-ARIA, Chart-Textalternativen + Datenreihen-Tokens, keine Text-/Farbliterale; geteilte Bausteine (v1.63.0, als Regel über alle Modul-Dateien statt als Allowlist): ein Geld-Formatierer mit vier Rollen, eine Kennzahlkarte, Panel-Fläche + Kopfleiste geteilt, Arbeitsflächen opak (Glass nur mit Overlay-Rolle im Selektor), eingebettete Untertabs ohne eigenes Seiten-Chrome
 npm run test:budget-plans       # Budgetplan (#468): computePlanProgress (Plan vs. Ist + Sparziel), GET/PUT/DELETE /budget/plans
 npm run test:budget-visibility  # Budget-Sichtbarkeit (#476/#505): owner-basiertes Modell (private/shared), Ansichts-Scope mine/household
 npm run test:budget-routes-scope   # Budget-Routen im Personal-Modus (#476/#505): End-to-End über den echten Router, Default-Sichtbarkeit, Lese-Scope

@@ -5,10 +5,11 @@
 
 import { api } from '/api.js';
 import { openModal as openSharedModal, closeModal, confirmModal } from '/components/modal.js';
-import { t, formatDate, getLocale, getNumberFormat, dateInputPlaceholder, parseDateInput, isDateInputValid } from '/i18n.js';
+import { t, formatDate, getLocale, dateInputPlaceholder, parseDateInput, isDateInputValid } from '/i18n.js';
 import { esc } from '/utils/html.js';
 import { stagger } from '/utils/ux.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
+import { formatMoney } from '/utils/money.js';
 
 let state = {
   meta: null,
@@ -35,10 +36,14 @@ function setHtml(element, html) {
   element.insertAdjacentHTML('beforeend', html);
 }
 
+// Format aus utils/money.js - EINE Quelle für das ganze Budget-Modul (Critique
+// P0). Geteilte Ausgaben tragen die Rolle `plain`: ein Rechnungsposten der
+// Gruppe ist keine Bewegung auf dem Konto des Betrachters, wer ihn ausgelegt
+// hat, hat eine Forderung und kein Minus. Die Rollentabelle steht in money.js.
 function money(amount, currency) {
   const n = Number(amount || 0);
   if (!Number.isFinite(n)) return `${amount} ${currency}`;
-  return getNumberFormat({ style: 'currency', currency }).format(n);
+  return formatMoney(n, currency);
 }
 
 function groupIcon(type) {
@@ -57,7 +62,7 @@ export async function render(container, { user } = {}) {
   state.user = user || null;
   setHtml(container, `
     <div class="split-page">
-      <header class="split-topbar">
+      <header class="budget-panel-head split-topbar">
         <div>
           <h1 class="split-title">${t('splitExpenses.title')}</h1>
           <p class="split-subtitle">${t('splitExpenses.subtitle')}</p>
@@ -67,7 +72,7 @@ export async function render(container, { user } = {}) {
           ${t('splitExpenses.addExpense')}
         </button>
       </header>
-      <section class="split-summary" id="split-summary"></section>
+      <section class="budget-summary" id="split-summary"></section>
       <div class="split-layout">
         <aside class="split-groups-panel">
           <div class="split-panel-head">
@@ -226,18 +231,23 @@ function renderSummary() {
   const summary = _container.querySelector('#split-summary');
   const owed = state.dashboard?.total_owed || [];
   const owing = state.dashboard?.total_owing || [];
+  // Geteilte Kennzahlkarte des Budget-Moduls (budget.css). Die frühere eigene
+  // .split-summary-card war die dritte von fünf Bauarten im selben Modul
+  // (Critique 2026-07-30, P0).
+  // Rolle `total`: die Richtung steht im Label („Du bekommst" / „Du schuldest"),
+  // nicht im Vorzeichen - deshalb der Ton explizit statt aus der Zahl.
   setHtml(summary, `
-    <div class="split-summary-card split-summary-card--positive">
-      <span>${t('splitExpenses.youAreOwed')}</span>
-      <strong>${owed.length ? owed.map((r) => money(r.amount, r.currency)).join(' · ') : money(0, state.meta.default_currency)}</strong>
+    <div class="budget-summary-card budget-summary-card--positive">
+      <div class="budget-summary-card__label">${t('splitExpenses.youAreOwed')}</div>
+      <div class="budget-summary-card__amount">${owed.length ? owed.map((r) => money(r.amount, r.currency)).join(' · ') : money(0, state.meta.default_currency)}</div>
     </div>
-    <div class="split-summary-card split-summary-card--negative">
-      <span>${t('splitExpenses.youOwe')}</span>
-      <strong>${owing.length ? owing.map((r) => money(r.amount, r.currency)).join(' · ') : money(0, state.meta.default_currency)}</strong>
+    <div class="budget-summary-card budget-summary-card--negative">
+      <div class="budget-summary-card__label">${t('splitExpenses.youOwe')}</div>
+      <div class="budget-summary-card__amount">${owing.length ? owing.map((r) => money(r.amount, r.currency)).join(' · ') : money(0, state.meta.default_currency)}</div>
     </div>
-    <div class="split-summary-card">
-      <span>${isArchivedView() ? t('splitExpenses.statusArchived') : t('splitExpenses.activeGroups')}</span>
-      <strong>${state.groups.length}</strong>
+    <div class="budget-summary-card">
+      <div class="budget-summary-card__label">${isArchivedView() ? t('splitExpenses.statusArchived') : t('splitExpenses.activeGroups')}</div>
+      <div class="budget-summary-card__amount">${state.groups.length}</div>
     </div>
   `);
 }

@@ -8,7 +8,6 @@ import { closeModal, confirmModal, openModal, advancedSection, reportFieldError 
 import {
   formatDate,
   getLocale,
-  getNumberFormat,
   isDateInputValid,
   parseDateInput,
   t,
@@ -16,6 +15,7 @@ import {
 import { esc } from '/utils/html.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
 import { toLocalDateKey } from '/utils/date.js';
+import { formatMoney } from '/utils/money.js';
 
 let state = {
   subscriptions: [],
@@ -52,9 +52,13 @@ function setHtml(element, html) {
   element.insertAdjacentHTML('afterbegin', html);
 }
 
+// Format aus utils/money.js - EINE Quelle für das ganze Budget-Modul. Vorher
+// hatte jede der drei Page-Dateien einen eigenen Formatierer, sodass dieselbe
+// Zahl in zwei Untertabs verschieden geschrieben sein konnte (Critique P0).
+// Abo-Beträge tragen die Rolle `plain`: Rechnungsbeträge ohne Kontorichtung,
+// also kein Vorzeichen und keine Ampelfarbe.
 function money(amount, currency = state.summary?.base_currency || state.settings.base_currency) {
-  const value = Number(amount || 0);
-  return getNumberFormat({ style: 'currency', currency }).format(value);
+  return formatMoney(amount, currency);
 }
 
 function categoryLabel(category) {
@@ -362,29 +366,34 @@ function renderSummary() {
   const realPercentage = hasBudget ? Math.round((used / budget) * 100) : 0;
   const percentage = Math.min(100, realPercentage);
   const isOverBudget = hasBudget && summary.remaining_budget < 0;
+  // Geteilte Kennzahl-Zeile und -Karte des Budget-Moduls (budget.css). Die
+  // frühere eigene .subscriptions-summary-card war die zweite von fünf
+  // Bauarten im selben Modul (Critique 2026-07-30, P0).
+  // Rolle `plain`: Abo-Kosten sind Rechnungsbeträge ohne Kontorichtung.
   return `
-    <section class="subscriptions-summary">
-      <article class="subscriptions-summary-card">
-        <span>${t('subscriptions.monthlyCost')}</span>
-        <strong>${money(used)}</strong>
-        <small>${t('subscriptions.activeCount', { count: summary.active_count })}</small>
+    <section class="budget-summary budget-summary--quad">
+      <article class="budget-summary-card">
+        <div class="budget-summary-card__label">${t('subscriptions.monthlyCost')}</div>
+        <div class="budget-summary-card__amount">${money(used)}</div>
+        <div class="budget-summary-card__note">${t('subscriptions.activeCount', { count: summary.active_count })}</div>
       </article>
-      <article class="subscriptions-summary-card">
-        <span>${t('subscriptions.monthlyBudget')}</span>
-        <strong>${money(budget)}</strong>
-        <div class="subscriptions-budget-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${percentage}" aria-valuetext="${realPercentage}%">
-          <span style="width:${percentage}%"></span>
+      <article class="budget-summary-card">
+        <div class="budget-summary-card__label">${t('subscriptions.monthlyBudget')}</div>
+        <div class="budget-summary-card__amount">${money(budget)}</div>
+        <div class="budget-summary-card__progress${isOverBudget ? ' budget-summary-card__progress--over' : ''}"
+             role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${percentage}" aria-valuetext="${realPercentage}%">
+          <span style="--fill:${percentage / 100}"></span>
         </div>
       </article>
-      <article class="subscriptions-summary-card ${isOverBudget ? 'subscriptions-summary-card--danger' : ''}">
-        <span>${hasBudget ? (isOverBudget ? t('subscriptions.overBudget') : t('subscriptions.remainingBudget')) : t('subscriptions.noBudgetLimit')}</span>
-        <strong>${hasBudget ? money(Math.abs(summary.remaining_budget)) : t('subscriptions.unlimited')}</strong>
-        <small>${hasBudget ? `${realPercentage}% ${t('subscriptions.budgetUsed')}` : t('subscriptions.setBudgetHint')}</small>
+      <article class="budget-summary-card${isOverBudget ? ' budget-summary-card--negative' : ''}">
+        <div class="budget-summary-card__label">${hasBudget ? (isOverBudget ? t('subscriptions.overBudget') : t('subscriptions.remainingBudget')) : t('subscriptions.noBudgetLimit')}</div>
+        <div class="budget-summary-card__amount">${hasBudget ? money(Math.abs(summary.remaining_budget)) : t('subscriptions.unlimited')}</div>
+        <div class="budget-summary-card__note${isOverBudget ? ' budget-summary-card__note--danger' : ''}">${hasBudget ? `${realPercentage}% ${t('subscriptions.budgetUsed')}` : t('subscriptions.setBudgetHint')}</div>
       </article>
-      <article class="subscriptions-summary-card">
-        <span>${t('subscriptions.yearlyProjection')}</span>
-        <strong>${money(used * 12)}</strong>
-        <small>${summary.base_currency}</small>
+      <article class="budget-summary-card">
+        <div class="budget-summary-card__label">${t('subscriptions.yearlyProjection')}</div>
+        <div class="budget-summary-card__amount">${money(used * 12)}</div>
+        <div class="budget-summary-card__note">${esc(summary.base_currency)}</div>
       </article>
     </section>
   `;
@@ -466,7 +475,12 @@ function renderAreaChart(title, rows) {
 }
 
 function renderPieChart(title, rows) {
-  const colors = ['#6c3aed', '#0f766e', '#0969da', '#d97706', '#b91c1c', '#64748b'];
+  // Datenreihen-Tokens statt Hex-Literalen: tokens.css definiert die Serie im
+  // Dark Mode auf hellere Werte um, Literale machten das nicht mit - der Donut
+  // behielt dort seine Light-Mode-Sättigung, während der Statistik-Donut nebenan
+  // korrekt aufhellte (Critique 2026-07-30). conic-gradient und der Legenden-
+  // Hintergrund verarbeiten var() unverändert.
+  const colors = Array.from({ length: 6 }, (_, i) => `var(--chart-series-${i + 1})`);
   const total = rows.reduce((sum, row) => sum + row.amount, 0);
   let offset = 0;
   const gradient = total > 0

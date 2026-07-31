@@ -17,6 +17,7 @@ import { openSubscriptionModal, render as renderSubscriptions } from '/pages/sub
 import { renderStats } from '/pages/budget-stats.js';
 import { renderPlans } from '/pages/budget-plans.js';
 import { toLocalDateKey } from '/utils/date.js';
+import { formatMoney, formatSignedAmount } from '/utils/money.js';
 import { budgetCategoryLabel } from '/utils/category-labels.js';
 import { appendCurrencyOptions } from '/settings/currency.js';
 import '/components/category-manager.js';
@@ -216,8 +217,16 @@ function tabCaps() {
 
 // currency-Override für Darlehen in Fremdwährung (#582); ohne Argument gilt
 // unverändert die haushaltweite Budget-Währung.
+// Format und Vorzeichen kommen aus utils/money.js - EINE Quelle für das ganze
+// Modul, damit dieselbe Zahl nicht in zwei Untertabs verschieden geschrieben ist.
 function formatAmount(n, currency = state.currency) {
-  return getNumberFormat({ style: 'currency', currency }).format(n);
+  return formatMoney(n, currency);
+}
+
+// Betrag mit Rolle: die Rolle entscheidet Vorzeichen und Farbe gemeinsam.
+// Siehe die Rollentabelle in utils/money.js.
+function amountByRole(n, role, { currency = state.currency, tone, block } = {}) {
+  return formatSignedAmount(n, { currency, role, tone, block });
 }
 
 // Beträge eines Darlehens stehen in dessen eigener Währung (#582).
@@ -500,7 +509,7 @@ function renderBody() {
     return;
   }
   if (state.activeTab === 'plan') {
-    setHtml(body, '<div class="budget-tab-panel budget-tab-panel--plan" id="budget-plan-panel"></div>');
+    setHtml(body, '<div class="budget-tab-panel budget-panel--reading budget-tab-panel--plan" id="budget-plan-panel"></div>');
     renderPlans(body.querySelector('#budget-plan-panel'), {
       user: _user, currency: state.currency, month: state.month,
       formatAmount, categoryLabel, esc,
@@ -560,22 +569,26 @@ function renderBody() {
   // (neutralen) Saldo und keine Dauer-Null bei den Einnahmen. Liste, Diagramm und
   // CSV-Export bleiben unberührt - der Umschalter fokussiert nur die Zusammenfassung.
   const expensesOnly = state.expensesOnly;
+  // Rolle `total`: die Richtung steht im Label („Einnahmen", „Ausgaben"), nicht
+  // im Vorzeichen. Das frühere Math.abs stand nur bei den Ausgaben und war damit
+  // eine stille Ausnahme - jetzt ist es die Rolle, die für beide Karten gilt.
   const incomeCard = `
       <div class="budget-summary-card budget-summary-card--income">
         <div class="budget-summary-card__label">${t('budget.income')}</div>
-        <div class="budget-summary-card__amount">${formatAmount(s.income)}</div>
+        <div class="budget-summary-card__amount">${amountByRole(s.income, 'total').text}</div>
         ${p ? renderTrend(s.income, p.income, prevLabel) : ''}
       </div>`;
   const expensesCard = `
       <div class="budget-summary-card budget-summary-card--expenses">
         <div class="budget-summary-card__label">${t('budget.expenses')}</div>
-        <div class="budget-summary-card__amount">${formatAmount(Math.abs(s.expenses))}</div>
+        <div class="budget-summary-card__amount">${amountByRole(s.expenses, 'total').text}</div>
         ${p ? renderTrend(s.expenses, p.expenses, prevLabel) : ''}
       </div>`;
+  // Rolle `balance`: hier trägt die Zahl selbst die Richtung.
   const balanceCard = `
       <div class="budget-summary-card ${balanceClass}">
         <div class="budget-summary-card__label">${t('budget.balance')}</div>
-        <div class="budget-summary-card__amount">${formatAmount(s.balance)}</div>
+        <div class="budget-summary-card__amount">${amountByRole(s.balance, 'balance').text}</div>
         ${p && !balanceNeutral ? renderTrend(s.balance, p.balance, prevLabel) : ''}
       </div>`;
 
@@ -776,7 +789,10 @@ function renderEntries() {
     const isIncome  = e.amount > 0;
     const amtClass  = isIncome ? 'budget-entry__amount--income' : 'budget-entry__amount--expenses';
     const indClass  = isIncome ? 'budget-entry__indicator--income' : 'budget-entry__indicator--expenses';
-    const sign      = isIncome ? '+' : '';
+    // Rolle `flow`: eine einzelne Kontobewegung trägt immer ein Vorzeichen, und
+    // das Vorzeichen kommt aus dem Zahlformat (signDisplay), nicht aus einem
+    // vorangestellten '+' - sonst steht es in RTL-Locales auf der falschen Seite.
+    const amountText = amountByRole(e.amount, 'flow').text;
     const date      = formatEntryDate(e.date);
     const recurTag  = e.is_recurring
       ? ` <span class="budget-recur-mark" role="img" aria-label="${t('budget.recurringLabel')}"><i data-lucide="repeat" class="icon-sm" aria-hidden="true"></i></span>${e.recurrence_virtual ? ' ' + t('budget.virtualBudgetBadge') : ''}`
@@ -799,13 +815,13 @@ function renderEntries() {
     // Lösch-Button-Namen aus dem Zeilen-Namen heraus.
     return `
       <div class="budget-entry" data-id="${e.id}" role="button" tabindex="0"
-           aria-label="${esc(t('budget.editEntry'))}: ${esc(e.title)}, ${sign}${formatAmount(e.amount)}">
+           aria-label="${esc(t('budget.editEntry'))}: ${esc(e.title)}, ${amountText}">
         <div class="budget-entry__indicator ${indClass}"></div>
         <div class="budget-entry__body">
           <div class="budget-entry__title">${esc(e.title)}${sharedBadge}</div>
           <div class="budget-entry__meta">${date} · ${esc(categoryMeta)}${acctMeta}${recurTag}</div>
         </div>
-        <div class="budget-entry__amount ${amtClass}">${sign}${formatAmount(e.amount)}</div>
+        <div class="budget-entry__amount ${amtClass}">${amountText}</div>
         <button class="row-action row-action--danger" data-action="delete" data-id="${e.id}" aria-label="${t('budget.deleteLabel')}">
           <i data-lucide="trash-2" class="icon-md" aria-hidden="true"></i>
         </button>
@@ -818,7 +834,10 @@ function renderAccountsPage() {
   const all = state.accounts ?? [];
   const hasArchived = all.some((a) => a.archived);
   const visible = all.filter((a) => state.accountsShowArchived || !a.archived);
-  const netClass = state.netWorth >= 0 ? 'budget-networth--positive' : 'budget-networth--negative';
+  // Rolle `balance`: das Vorzeichen steckt in der Zahl. Nebenbei behebt die
+  // Rollenlogik, dass ein Nettovermögen von exakt 0 vorher als Erfolg grün
+  // erschien - null Vermögen ist keine gute Nachricht, sondern gar keine.
+  const netWorth = amountByRole(state.netWorth, 'balance', { block: 'budget-summary-card' });
 
   const archiveToggle = hasArchived ? `
       <button class="budget-accounts__toggle" id="budget-toggle-archived" type="button" aria-pressed="${state.accountsShowArchived}">
@@ -826,17 +845,23 @@ function renderAccountsPage() {
         ${state.accountsShowArchived ? t('budget.hideArchivedAccounts') : t('budget.showArchivedAccounts')}
       </button>` : '';
 
+  // Kopfleiste = Aktionen, Kennzahl = Karte in der geteilten Kennzahl-Zeile.
+  // Vorher stand das Nettovermögen als Label-plus-Wert direkt im Kopf und war
+  // damit die vierte Kartenbauart des Moduls (Critique 2026-07-30, P0).
   const header = `
-    <div class="budget-accounts__header">
-      <div class="budget-networth ${netClass}">
-        <span class="budget-networth__label">${t('budget.netWorth')}</span>
-        <span class="budget-networth__amount">${formatAmount(state.netWorth)}</span>
-      </div>
-      <div class="budget-accounts__header-actions">
+    <div class="budget-panel-head">
+      <span class="budget-panel-head__title">${t('budget.accountsTab')}</span>
+      <div class="budget-panel-head__actions">
         ${archiveToggle}
         <button class="btn btn--secondary" id="budget-add-account" type="button">
           <i data-lucide="plus" class="icon-sm" aria-hidden="true"></i>${t('budget.addAccount')}
         </button>
+      </div>
+    </div>
+    <div class="budget-summary">
+      <div class="budget-summary-card ${netWorth.className}">
+        <div class="budget-summary-card__label">${t('budget.netWorth')}</div>
+        <div class="budget-summary-card__amount">${netWorth.text}</div>
       </div>
     </div>`;
 
@@ -1069,9 +1094,9 @@ function renderLoansDashboard() {
 
   return `
     <section class="budget-loans">
-      <div class="budget-loans__header">
+      <div class="budget-panel-head budget-loans__header">
         <div>
-          <div class="budget-loans__eyebrow">${t('budget.loansTitle')}</div>
+          <div class="budget-panel-head__title">${t('budget.loansTitle')}</div>
           <div class="budget-loans__summary">${t('budget.loansSummary', {
             count: summary.active_count ?? 0,
             amount: formatAmount(summary.remaining_principal ?? summary.remaining_amount ?? 0),
@@ -1093,18 +1118,21 @@ function renderLoansDashboard() {
             }).join('')}
         </div>
       </div>
-      <div class="budget-loans__stats">
-        <div>
-          <span>${t(summary.has_interest ? 'budget.loanRemainingPrincipal' : 'budget.loanRemainingAmount')}</span>
-          <strong>${formatAmount(summary.remaining_principal ?? summary.remaining_amount ?? 0)}</strong>
+      <!-- Geteilte Kennzahl-Zeile statt der früheren eigenen budget-loans__stats
+           (fünfte Kartenbauart des Moduls, Critique 2026-07-30, P0). Rolle
+           total: die Richtung steht im Label, nicht im Vorzeichen. -->
+      <div class="budget-summary">
+        <div class="budget-summary-card">
+          <div class="budget-summary-card__label">${t(summary.has_interest ? 'budget.loanRemainingPrincipal' : 'budget.loanRemainingAmount')}</div>
+          <div class="budget-summary-card__amount">${amountByRole(summary.remaining_principal ?? summary.remaining_amount ?? 0, 'total').text}</div>
         </div>
-        <div>
-          <span>${t('budget.loanRemainingInstallments')}</span>
-          <strong>${summary.remaining_installments ?? 0}</strong>
+        <div class="budget-summary-card">
+          <div class="budget-summary-card__label">${t('budget.loanRemainingInstallments')}</div>
+          <div class="budget-summary-card__amount">${summary.remaining_installments ?? 0}</div>
         </div>
-        <div>
-          <span>${t('budget.loanPaidAmount')}</span>
-          <strong>${formatAmount(summary.paid_amount ?? 0)}</strong>
+        <div class="budget-summary-card">
+          <div class="budget-summary-card__label">${t('budget.loanPaidAmount')}</div>
+          <div class="budget-summary-card__amount">${amountByRole(summary.paid_amount ?? 0, 'total').text}</div>
         </div>
       </div>
       ${summary.has_foreign_currency ? `<p class="form-hint budget-loan-hint">${t('budget.loanSummaryConverted', {
@@ -1455,7 +1483,9 @@ function renderTrend(current, prev, prevLabel) {
     return `<div class="budget-summary-card__trend budget-summary-card__trend--neutral">${t('budget.trendNeutral', { month: prevLabel })}</div>`;
   }
   const positive = delta > 0;
-  const sign     = positive ? '+' : '';
+  // Rolle `flow`: eine Veränderung gegenüber dem Vormonat trägt immer ein
+  // Vorzeichen, aus demselben Zahlformat wie die Buchungen selbst.
+  const deltaText = amountByRole(delta, 'flow').text;
   const cls      = positive ? 'budget-summary-card__trend--positive' : 'budget-summary-card__trend--negative';
   // Pfeil als Lucide-Icon statt ▲/▼: die Textglyphen fallen aus der Icon-Familie
   // und sind je nach Font unterschiedlich breit (Zeilenzittern). Das „vs." stand
@@ -1463,7 +1493,7 @@ function renderTrend(current, prev, prevLabel) {
   const icon = positive ? 'trending-up' : 'trending-down';
   return `<div class="budget-summary-card__trend ${cls}">
     <i data-lucide="${icon}" class="icon-sm" aria-hidden="true"></i>
-    ${esc(t('budget.trendDelta', { amount: `${sign}${formatAmount(delta)}`, month: prevLabel }))}
+    ${esc(t('budget.trendDelta', { amount: deltaText, month: prevLabel }))}
   </div>`;
 }
 

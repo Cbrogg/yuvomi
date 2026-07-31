@@ -7,7 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.62.0] - 2026-07-30
+## [1.63.0] - 2026-07-31
+
+### Changed
+- The seven Budget tabs now look like one module instead of three. They already shared the toolbar, the tab bar and the accent colour, but from the panel edge inward they had drifted into five different metric-card designs, four names for the same panel header, three container patterns and three different paddings, so every tab switch meant relearning where the number sits. There is now one metric card for the whole module, left aligned so each amount starts at the same position in a row, with room for a footnote below the figure. Accounts, Loans, Subscriptions and Split Expenses use it too: net worth and the loan figures are ordinary cards, the Loans tab no longer frames itself as a card full of cards, and Subscriptions and Split Expenses stop painting their own page background inside the Budget page, which used to appear as a tinted band that broke off at the container edge.
+- Money is written the same way everywhere in the Budget module. Each amount now carries one of four roles, and the role decides sign and colour together: a single account movement is always signed and coloured, a sum whose direction is already in its label is unsigned, a balance is signed only when negative, and an invoice amount such as a subscription price or a shared expense carries no sign at all. Before this, the same tab could show a signed amount on a transaction row and an unsigned one on the summary card directly above it. Signs come from the locale's own number format, so they stay on the correct side in right-to-left languages.
+- Work surfaces in the Budget module are opaque. The module had documented that rule for itself, that translucent glass belongs to overlays and modals so content stays readable, and then broke it on its own subscription cards, charts, list sections, group header, one search field and two row hover states.
+
+### Fixed
+- The subscription category donut kept its light-mode colours in dark mode. It used fixed colour values instead of the theme's data-series tokens, so it stayed saturated while the identical donut on the Statistics tab next to it lightened correctly.
+- A net worth of exactly zero was shown in green, as if it were good news, and on an empty Accounts tab it was the only coloured thing on the screen. Zero is now neutral.
+- The subscription budget bar could not show that the budget was exceeded. It capped at full width and stayed in the accent colour while the figure beside it already read over budget; it now turns red past 100 percent.
 
 ### Added
 - Sending things to a shopping list can now be taken back, from all three places that do it: the cart button on a pantry row, a recipe's ingredients, and a planned meal. Until now only the pantry offered it, although a recipe moves the most at once, a whole ingredient list, into a list you are not looking at. The confirmation stays on screen for five seconds everywhere, and taking it back removes exactly what was just added and nothing else. For a meal, the ingredients count as not yet transferred again afterwards, so the meal can be sent a second time.

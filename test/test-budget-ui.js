@@ -16,9 +16,13 @@ const budget = read('../public/pages/budget.js');
 const stats = read('../public/pages/budget-stats.js');
 const plans = read('../public/pages/budget-plans.js');
 const subscriptions = read('../public/pages/subscriptions.js');
+const splitExpenses = read('../public/pages/split-expenses.js');
+const money = read('../public/utils/money.js');
 const layoutCss = read('../public/styles/layout.css');
 const tokensCss = read('../public/styles/tokens.css');
 const budgetCss = read('../public/styles/budget.css');
+const subscriptionsCss = read('../public/styles/subscriptions.css');
+const splitCss = read('../public/styles/split-expenses.css');
 
 // --------------------------------------------------------
 // Monatsnavigation und Neu-Aktion je Untertab
@@ -224,6 +228,150 @@ test('keine hartkodierten Anzeigetexte in den Budget-Views', () => {
   assert.match(budget, /t\('budget\.trendDelta'/);
 });
 
+// --------------------------------------------------------
+// Geteilte Bausteine des Moduls (Critique 2026-07-30, P0)
+//
+// Diese Guards sind bewusst als REGEL über alle Dateien des Moduls formuliert,
+// nicht als Allowlist einzelner Selektoren: eine Allowlist deckt N Dateien ab,
+// aber nicht die Regel - genau daran sind hier fünf Kartenbauarten und drei
+// Währungsformatierer vorbeigewachsen.
+// --------------------------------------------------------
+
+// Jede Page-Datei, die unter /budget rendert. Neue Untertabs kommen hierher.
+const BUDGET_PAGES = [
+  ['budget.js', budget],
+  ['budget-stats.js', stats],
+  ['budget-plans.js', plans],
+  ['subscriptions.js', subscriptions],
+  ['split-expenses.js', splitExpenses],
+];
+
+const BUDGET_STYLESHEETS = [
+  ['budget.css', budgetCss],
+  ['subscriptions.css', subscriptionsCss],
+  ['split-expenses.css', splitCss],
+];
+
+test('Geldbeträge laufen über den Modul-Formatierer, nicht über eigene', () => {
+  // Drei eigene Formatierer bedeuteten vier Vorzeichenkonventionen: dieselbe
+  // Zahl konnte in zwei Untertabs verschieden geschrieben sein. Bei Geld ist
+  // das kein Stilproblem, sondern ein Vertrauensproblem.
+  for (const [file, src] of BUDGET_PAGES) {
+    assert.doesNotMatch(
+      src,
+      /getNumberFormat\(\{[^}]*style:\s*'currency'/,
+      `${file}: Währungsformat gehört in utils/money.js, nicht in die Page`,
+    );
+  }
+  assert.match(money, /export function formatSignedAmount/);
+  assert.match(money, /export function formatMoney/);
+});
+
+test('jede Rolle des Geld-Vokabulars ist in money.js dokumentiert und behandelt', () => {
+  // Das Vokabular ist der eigentliche Baustein: wer einen neuen Betrag rendert,
+  // wählt eine Rolle statt eine fünfte Schreibweise zu erfinden.
+  const roles = money.match(/export const MONEY_ROLES = \[([^\]]*)\]/);
+  assert.ok(roles, 'MONEY_ROLES fehlt in utils/money.js');
+  for (const role of ['flow', 'total', 'balance', 'plain']) {
+    assert.ok(roles[1].includes(`'${role}'`), `Rolle '${role}' fehlt in MONEY_ROLES`);
+    assert.ok(
+      new RegExp(`\\|\\s*\`${role}\``).test(money),
+      `Rolle '${role}' ist in der Rollentabelle von money.js nicht dokumentiert`,
+    );
+  }
+  // Nur diese vier Rollen dürfen aufgerufen werden.
+  for (const [file, src] of BUDGET_PAGES) {
+    for (const call of src.matchAll(/formatSignedAmount\([^)]*role:\s*'([a-z]+)'/g)) {
+      assert.ok(roles[1].includes(`'${call[1]}'`), `${file}: unbekannte Geld-Rolle '${call[1]}'`);
+    }
+    for (const call of src.matchAll(/amountByRole\([^,]+,\s*'([a-z]+)'/g)) {
+      assert.ok(roles[1].includes(`'${call[1]}'`), `${file}: unbekannte Geld-Rolle '${call[1]}'`);
+    }
+  }
+});
+
+test('es gibt genau eine Kennzahlkarte im Modul', () => {
+  // Fünf Bauarten hießen fünfmal neu lernen, wo die Zahl steht. Wer eine neue
+  // Kennzahl zeigt, nimmt .budget-summary-card - oder dieser Guard schlägt an.
+  for (const [file, css] of BUDGET_STYLESHEETS) {
+    for (const match of css.matchAll(/^\.([a-z-]*summary-card[a-z_-]*)/gm)) {
+      assert.ok(
+        match[1].startsWith('budget-summary-card'),
+        `${file}: .${match[1]} ist eine zweite Kennzahlkarte - .budget-summary-card ist der Baustein`,
+      );
+    }
+  }
+  for (const [file, src] of BUDGET_PAGES) {
+    for (const match of src.matchAll(/class="([^"]*summary-card[^"]*)"/g)) {
+      assert.ok(
+        /budget-summary-card/.test(match[1]),
+        `${file}: Kennzahlkarte "${match[1]}" nutzt nicht .budget-summary-card`,
+      );
+    }
+  }
+});
+
+test('Arbeitsflächen des Moduls sind opak, Glass bleibt den Overlays', () => {
+  // budget.css begründet die Regel an .budget-summary-card. Sie galt nur dort,
+  // während subscriptions.css und split-expenses.css im selben Modul Glass auf
+  // Karten, Panels und sogar auf einem Eingabefeld setzten.
+  // Overlay-Rollen tragen ihr Rollenwort im Selektor; alles andere ist
+  // Arbeitsfläche. Neue Arbeitsflächen fallen damit automatisch durch.
+  const OVERLAY_ROLES = /modal|dialog|popover|overlay|picker-panel|form__section|tooltip|menu/;
+  for (const [file, css] of BUDGET_STYLESHEETS) {
+    // Regelblöcke grob zerlegen: Selektorliste bis '{', Body bis '}'.
+    for (const rule of css.matchAll(/([^{}]+)\{([^}]*)\}/g)) {
+      const selector = rule[1].split('*/').pop().trim();
+      if (!/--glass-bg-card|--glass-shadow/.test(rule[2])) continue;
+      assert.match(
+        selector,
+        OVERLAY_ROLES,
+        `${file}: "${selector}" ist eine Arbeitsfläche und darf kein Glass tragen`,
+      );
+    }
+  }
+});
+
+test('eingebettete Untertabs bringen kein eigenes Seiten-Chrome mit', () => {
+  // Ein eigener Seiten-Gradient im Sub-Page-Wrapper lief als getönte
+  // Vollbreiten-Bahn innerhalb der Budget-Seite und brach an deren Container-
+  // Kante ab. Fläche und Rand gehören dem Panel.
+  for (const [file, css, selector] of [
+    ['subscriptions.css', subscriptionsCss, '.budget-page .subscriptions-page'],
+    ['split-expenses.css', splitCss, '.budget-page .split-page'],
+  ]) {
+    const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const rule = css.match(new RegExp(`${escaped}\\s*\\{([^}]*)\\}`));
+    assert.ok(rule, `${file}: ${selector}-Override fehlt`);
+    assert.match(rule[1], /background:\s*none/, `${file}: ${selector} muss den eigenen Gradient ablegen`);
+    assert.match(rule[1], /padding-block:\s*0/, `${file}: ${selector} muss den eigenen Rand ablegen`);
+  }
+});
+
+test('Panel-Fläche und Kopfleiste sind geteilt, nicht pro Tab gebaut', () => {
+  // Drei Padding-Werte und drei Scroll-Achsen über sieben Tabs waren drei
+  // Gelegenheiten, die Fläche unterschiedlich zu bauen.
+  const panel = budgetCss.match(/\n\.budget-tab-panel\s*\{([^}]*)\}/);
+  assert.ok(panel, '.budget-tab-panel fehlt in budget.css');
+  assert.match(panel[1], /overflow-y:\s*auto/);
+  assert.match(panel[1], /padding-block-start:\s*var\(--space/);
+
+  assert.ok(/\n\.budget-panel-head\s*\{/.test(budgetCss), '.budget-panel-head fehlt in budget.css');
+  assert.ok(/\n\.budget-panel-head__title\s*\{/.test(budgetCss), '.budget-panel-head__title fehlt');
+
+  // Kein Tab setzt Scroll-Achse oder Panel-Padding noch selbst. Ausnahmen sind
+  // benannte Modifier (--budget hält seine eigene innere Scroll-Region).
+  const ALLOWED_PANEL_OVERRIDES = /budget-tab-panel--budget/;
+  for (const rule of budgetCss.matchAll(/(\.budget-tab-panel--[a-z-]+)(?:[^{}]*)\{([^}]*)\}/g)) {
+    if (!/overflow-y|padding-block-start|padding-top/.test(rule[2])) continue;
+    assert.match(
+      rule[1],
+      ALLOWED_PANEL_OVERRIDES,
+      `${rule[1]} setzt Scroll-Achse oder Padding selbst - beides gehört .budget-tab-panel`,
+    );
+  }
+});
+
 test('Trendpfeile sind Icons, keine Textglyphen', () => {
   assert.doesNotMatch(budget, /'▲'/);
   assert.doesNotMatch(budget, /'▼'/);
@@ -300,9 +448,16 @@ test('der „Nur Ausgaben"-Zustand ist client-persistent und geräte-lokal', () 
 });
 
 test('die Ausgaben-Karte trägt im „Nur Ausgaben"-Modus die volle Breite', () => {
+  // Die Spaltenzahl der geteilten Kennzahl-Zeile kommt seit der Baustein-
+  // Extraktion aus --summary-cards; geprüft wird die Invariante (eine Spalte),
+  // nicht mehr die grid-template-columns-Schreibweise.
   const rule = budgetCss.match(/\.budget-summary--expenses-only[^\n]*\{[^}]*\}/);
   assert.ok(rule, '.budget-summary--expenses-only fehlt in budget.css');
-  assert.match(rule[0], /grid-template-columns:\s*1fr/);
+  assert.match(rule[0], /--summary-cards:\s*1/);
+
+  const base = budgetCss.match(/\n\.budget-summary\s*\{[^}]*\}/);
+  assert.ok(base, '.budget-summary fehlt in budget.css');
+  assert.match(base[0], /grid-template-columns:\s*repeat\(var\(--summary-cards[^)]*\)/);
 });
 
 test('der „Nur Ausgaben"-Umschalter nutzt Tokens, keine Farbliterale', () => {
