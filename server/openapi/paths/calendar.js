@@ -71,6 +71,13 @@ export function calendarPaths() {
     '/api/v1/calendar/feed/regenerate': {
       post: op({ summary: 'Regenerate personal ICS export feed token', tag: 'Calendar', stateChanging: true }),
     },
+    '/api/v1/calendar/sync-targets': {
+      get: op({
+        summary: 'List selectable sync targets for the event editor',
+        tag: 'Calendar',
+        description: 'Available to every authenticated user (#618). Returns `{ data: { google: [{ id, summary }], caldav: [{ accountId, accountName, calendarUrl, calendarName }] } }`, pre-filtered to enabled (and, for Google, writable) calendars. Carries no credentials, server URLs, or usernames - account management stays admin-only. A provider that cannot be reached yields an empty list instead of failing the request.',
+      }),
+    },
     '/api/v1/calendar/caldav/accounts': {
       get: op({ summary: 'List CalDAV accounts', tag: 'Calendar', admin: true }),
       post: op({ summary: 'Create CalDAV account', tag: 'Calendar', admin: true, stateChanging: true, requestBody: jsonBody(null) }),

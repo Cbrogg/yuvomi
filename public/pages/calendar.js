@@ -2505,49 +2505,46 @@ async function loadSyncTargets(selectElement, currentEvent = null) {
   localOption.textContent = t('calendar.syncTargetLocal');
   selectElement.appendChild(localOption);
 
-  // Google calendars (enabled only)
+  // Ziele über die gemeinsame Lese-Route holen (#618): die Verwaltungsrouten
+  // sind admin-only und lieferten Familienmitgliedern nur 403 - übrig blieb
+  // "Lokal speichern". /sync-targets liefert bereits gefiltert (aktiviert +
+  // beschreibbar) und ohne Zugangsdaten.
+  let targets = { google: [], caldav: [] };
   try {
-    const res = await api.get('/calendar/google/calendars');
-    const enabled = (res.data || []).filter((c) => c.enabled && c.writable);
-    if (enabled.length) {
-      const group = document.createElement('optgroup');
-      group.className = 'js-google-targets';
-      group.label = t('calendar.syncTargetGoogleGroup');
-      for (const cal of enabled) {
-        const option = document.createElement('option');
-        option.value = `google:${cal.id}`;
-        option.textContent = cal.summary || cal.id;
-        group.appendChild(option);
-      }
-      selectElement.appendChild(group);
-    }
+    const res = await api.get('/calendar/sync-targets');
+    targets = { google: res.data?.google || [], caldav: res.data?.caldav || [] };
   } catch (err) {
-    console.warn('Failed to load Google targets:', err);
+    console.warn('Failed to load sync targets:', err);
   }
 
-  // CalDAV calendars (enabled only), grouped per account
-  try {
-    const accountsRes = await api.get('/calendar/caldav/accounts');
-    for (const account of accountsRes.data || []) {
-      try {
-        const calRes = await api.get(`/calendar/caldav/accounts/${account.id}/calendars`);
-        const enabled = (calRes.data || []).filter((cal) => cal.enabled);
-        if (!enabled.length) continue;
-        const group = document.createElement('optgroup');
-        group.label = `${t('calendar.syncTargetCaldavGroup')} · ${account.name}`;
-        for (const cal of enabled) {
-          const option = document.createElement('option');
-          option.value = `caldav:${account.id}|${cal.calendarUrl}`;
-          option.textContent = cal.calendarName || cal.calendarUrl;
-          group.appendChild(option);
-        }
-        selectElement.appendChild(group);
-      } catch (err) {
-        console.warn(`Failed to load calendars for account ${account.id}:`, err);
-      }
+  if (targets.google.length) {
+    const group = document.createElement('optgroup');
+    group.className = 'js-google-targets';
+    group.label = t('calendar.syncTargetGoogleGroup');
+    for (const cal of targets.google) {
+      const option = document.createElement('option');
+      option.value = `google:${cal.id}`;
+      option.textContent = cal.summary || cal.id;
+      group.appendChild(option);
     }
-  } catch (err) {
-    console.warn('Failed to load CalDAV targets:', err);
+    selectElement.appendChild(group);
+  }
+
+  // CalDAV-Kalender nach Konto gruppieren - die Route liefert sie kontoweise
+  // sortiert, ein Wechsel der accountId beginnt die nächste optgroup.
+  let caldavGroup = null;
+  let caldavGroupAccountId = null;
+  for (const cal of targets.caldav) {
+    if (caldavGroupAccountId !== cal.accountId) {
+      caldavGroup = document.createElement('optgroup');
+      caldavGroup.label = `${t('calendar.syncTargetCaldavGroup')} · ${cal.accountName}`;
+      caldavGroupAccountId = cal.accountId;
+      selectElement.appendChild(caldavGroup);
+    }
+    const option = document.createElement('option');
+    option.value = `caldav:${cal.accountId}|${cal.calendarUrl}`;
+    option.textContent = cal.calendarName || cal.calendarUrl;
+    caldavGroup.appendChild(option);
   }
 
   // Pre-select the editing event's existing target
