@@ -49,7 +49,7 @@ Every table: `id INTEGER PRIMARY KEY`, `created_at TEXT`, `updated_at TEXT` (ISO
 Recurring tasks keep only one open instance: the next instance is created on completion, not on a schedule. When an overdue recurring task is marked done, its next due date catches up to the next occurrence at or after today (skipping missed periods) instead of advancing a single interval from the old — possibly still overdue — due date.
 
 ### Task Categories (migration v83)
-DB-backed, customizable category list for tasks. Replaces the old hardcoded set. The eight predefined keys (`household`, `school`, `shopping`, `repair`, `health`, `finance`, `leisure`, `misc`) keep a stable slug key and are localized via `label_key`; user-added categories store their display `name`. A "Manage categories" action in the tasks toolbar opens a modal (the reusable `oikos-category-manager` component) to add, rename, reorder, and delete categories. Renaming leaves the key stable (so existing tasks are unaffected) and clears `label_key`. Deletion is blocked while a category is still referenced by tasks (`409`) or when it is the last remaining category.
+DB-backed, customizable category list for tasks. Replaces the old hardcoded set. The eight predefined keys (`household`, `school`, `shopping`, `repair`, `health`, `finance`, `leisure`, `misc`) keep a stable slug key and are localized via `label_key`; user-added categories store their display `name`. A "Manage categories" action in the tasks toolbar opens a modal (the reusable `yuvomi-category-manager` component) to add, rename, reorder, and delete categories. Renaming leaves the key stable (so existing tasks are unaffected) and clears `label_key`. Deletion is blocked while a category is still referenced by tasks (`409`) or when it is the last remaining category.
 
 | Column | Type | Constraint |
 |--------|------|-----------|
@@ -155,10 +155,10 @@ Custom, household-wide category list for shopping items. Replaces the old hardco
 | Column | Type | Constraint |
 |--------|------|-----------|
 | id | INTEGER | PRIMARY KEY |
-| name | TEXT | NOT NULL |
-| sort_order | INTEGER | NOT NULL |
+| name | TEXT | NOT NULL UNIQUE |
+| icon | TEXT | NOT NULL DEFAULT `tag` — Lucide icon name, shown on the aisle group heading |
+| sort_order | INTEGER | NOT NULL DEFAULT 0 |
 | created_at | TEXT | |
-| updated_at | TEXT | |
 
 ### Meals
 | Column | Type | Constraint |
@@ -590,7 +590,7 @@ single unparsable vCard, suspends deletion entirely and logs a warning — an in
 must never be read as "everything else was deleted".
 
 ### Contact Categories (migration v84)
-DB-backed, customizable category list for contacts. Replaces the old hardcoded German-named set. The seven predefined keys (`doctor`, `school`, `authority`, `insurance`, `craftsman`, `emergency`, `misc`) carry a stable slug key (which also drives the per-category color tint and, together with `icon`, the list grouping), a localizing `label_key`, and a Lucide `icon`; the pre-existing German category values (`Arzt`, `Behörde`, …) are migrated to these keys. User-added categories store their `name` and default to the `tag` icon. A "Manage categories" button in the contacts toolbar opens the shared `oikos-category-manager` modal to add, rename, reorder, and delete categories, with the same in-use / last-category deletion guards as Tasks and Budget.
+DB-backed, customizable category list for contacts. Replaces the old hardcoded German-named set. The seven predefined keys (`doctor`, `school`, `authority`, `insurance`, `craftsman`, `emergency`, `misc`) carry a stable slug key (which also drives the per-category color tint and, together with `icon`, the list grouping), a localizing `label_key`, and a Lucide `icon`; the pre-existing German category values (`Arzt`, `Behörde`, …) are migrated to these keys. User-added categories store their `name` and default to the `tag` icon. A "Manage categories" button in the contacts toolbar opens the shared `yuvomi-category-manager` modal to add, rename, reorder, and delete categories, with the same in-use / last-category deletion guards as Tasks and Budget.
 
 | Column | Type | Constraint |
 |--------|------|-----------|
@@ -727,7 +727,7 @@ Separate accounts (checking, savings, cash, credit card, investment, other) show
 | created_at / updated_at | TEXT | ISO 8601 |
 
 ### Budget Categories
-Expense and income category list, DB-backed with stable English slug keys. Predefined set (8 expense, 5 income); users can add custom categories inline from the entry modal. A "Manage categories" button in the Budget tab header opens a modal (the reusable `oikos-category-manager` component) to rename, reorder, and delete categories. Deletion is blocked while a category is still referenced by entries (`409`) or when it is the last category of its type.
+Expense and income category list, DB-backed. Predefined set: **9 expense** and **5 income**. The expense keys are stable English slugs (`housing`, `food`, `transport`, `personal_health`, `leisure`, `shopping_clothing`, `education`, `financial_other`, `subscriptions`); the ninth, `subscriptions`, is the category the Subscriptions tab mirrors its own categories into as subcategories (migration v59). The five income keys are historically the German display names, not slugs — they predate the slug convention and are left alone because they are the FK value of every existing income entry. Users can add custom categories inline from the entry modal. A "Manage categories" button in the Budget tab header opens a modal (the reusable `yuvomi-category-manager` component) to rename, reorder, and delete categories. Deletion is blocked while a category is still referenced by entries (`409`) or when it is the last category of its type.
 
 | Column | Type | Constraint |
 |--------|------|-----------|
@@ -738,7 +738,7 @@ Expense and income category list, DB-backed with stable English slug keys. Prede
 | created_at | TEXT | ISO 8601 |
 
 ### Budget Subcategories
-Optional subcategories scoped to an expense category. Predefined set (35 entries); users can add custom subcategories inline. Income categories have no subcategories. The "Manage categories" modal also renames, reorders, and deletes subcategories per expense category (with the same in-use and last-subcategory deletion guards).
+Optional subcategories scoped to an expense category. Predefined set (40 entries); users can add custom subcategories inline. Income categories have no subcategories. The "Manage categories" modal also renames, reorders, and deletes subcategories per expense category (with the same in-use and last-subcategory deletion guards).
 
 | Column | Type | Constraint |
 |--------|------|-----------|
@@ -764,6 +764,8 @@ Recurring service and payment records shown in Budget → Subscriptions.
 | Column | Type | Constraint |
 |--------|------|-----------|
 | name | TEXT | NOT NULL |
+| description | TEXT | nullable — short service description shown on the card |
+| notes | TEXT | nullable — free-text note |
 | amount | REAL | Native billing amount, CHECK(>= 0) |
 | currency | TEXT | ISO 4217 code, NOT NULL |
 | billing_cycle | TEXT | `daily` \| `weekly` \| `monthly` \| `yearly` |
@@ -788,7 +790,7 @@ Recurring service and payment records shown in Budget → Subscriptions.
 
 **Optional end condition (migration v107 · #594):** a subscription can define when it ends via an *Ends: Never / On a date / After N payments* selector (mirroring the calendar's finite-recurrence control). Renewing advances to the next cycle until the end is reached — the payment on the end date (or the `occurrence_count`-th payment) is the last — after which the subscription is **marked completed** (`completed_at` set, `enabled` cleared): it drops out of the monthly total, its linked Budget expense and renewal reminder are removed, and it stays visible with a distinct "Completed" state instead of looking manually paused. The 6-month renewal forecast only counts occurrences up to the end. Re-enabling a completed subscription clears the completion; an exhausted *after N payments* subscription can only be reactivated by raising `occurrence_count`. Existing subscriptions default to `never` and behave unchanged.
 
-Supporting tables store customizable/sortable categories and payment methods, the single household subscription budget/base-currency setting, and cached exchange rates. A "Manage categories and payment methods" dialog in the Subscriptions toolbar adds, renames, reorders, and removes both categories (name + color) and payment methods. Unlike the shared `oikos-category-manager` used elsewhere, removal is not blocked while in use: the FK `SET NULL` detaches referencing subscriptions (they fall back to uncategorized / unspecified) and the confirmation names how many subscriptions are affected. Subscription categories are mirrored under the Budget `Subscription` category, and active renewals use the matching Budget subcategory automatically; removing a category also removes its mirrored Budget subcategory and detaches any linked expense entries from it. Database backup and restore include all subscription data.
+Supporting tables store customizable/sortable categories and payment methods, the single household subscription budget/base-currency setting, and cached exchange rates. A "Manage categories and payment methods" dialog in the Subscriptions toolbar adds, renames, reorders, and removes both categories (name + color) and payment methods. Unlike the shared `yuvomi-category-manager` used elsewhere, removal is not blocked while in use: the FK `SET NULL` detaches referencing subscriptions (they fall back to uncategorized / unspecified) and the confirmation names how many subscriptions are affected. Subscription categories are mirrored under the Budget `Subscription` category, and active renewals use the matching Budget subcategory automatically; removing a category also removes its mirrored Budget subcategory and detaches any linked expense entries from it. Database backup and restore include all subscription data.
 
 ### Budget Plans
 Planned/estimated budget (Budget → Plan). A **steady monthly plan**: one amount per expense category that applies to every month, compared against the month's actual spending. The reserved key `__savings__` holds the household's monthly savings goal, compared against the month's net balance (income − expenses).
@@ -967,7 +969,7 @@ Upload and manage family files with per-document access control.
 | file_size | INTEGER | NOT NULL (bytes) |
 | content_data | TEXT | NOT NULL — raw binary file payload stored as a BLOB for in-database `local`; empty string for folder-backed `local`, `webdav`, `google_drive`, and `dms`. Binary BLOB since migration v67 (previously Base64 text, ~33 % larger); the column keeps TEXT affinity, and legacy Base64 rows remain readable |
 | storage_provider | TEXT | Compatibility field: local (default), external |
-| storage_backend | TEXT | Authoritative backend: local (default), webdav, google_drive, dms (Google Drive added by migration v96) |
+| storage_backend | TEXT | Authoritative backend: local (default), webdav, google_drive, dms (discriminator added by migration v51, Google Drive by v98) |
 | storage_key | TEXT | nullable (local/WebDAV relative key, opaque Google Drive file ID, or DMS document ID) |
 | dms_account_id | INTEGER | FK → DMS Accounts (ON DELETE SET NULL), nullable (migration v50) |
 | external_url | TEXT | nullable (deep link to the document in the DMS) |
@@ -1195,12 +1197,14 @@ Immutable expense records — amounts stored in integer minor currency units (e.
 |--------|------|-----------|
 | group_id | INTEGER | FK → Expense Groups (CASCADE delete), NOT NULL |
 | title | TEXT | NOT NULL |
+| description | TEXT | nullable |
 | amount_minor | INTEGER | NOT NULL CHECK(> 0) |
 | currency | TEXT | NOT NULL |
 | converted_amount_minor | INTEGER | NOT NULL CHECK(> 0) |
 | converted_currency | TEXT | NOT NULL |
 | exchange_rate_num | INTEGER | NOT NULL DEFAULT 1 |
 | exchange_rate_den | INTEGER | NOT NULL DEFAULT 1 |
+| exchange_snapshot | TEXT | JSON, nullable — the rate source as it stood at booking time, so a later rate change never rewrites a recorded expense |
 | payer_id | INTEGER | FK → Users (RESTRICT on delete), NOT NULL |
 | category | TEXT | NOT NULL DEFAULT 'general' |
 | split_method | TEXT | 'equal', 'exact', 'percentage', 'shares' (default 'equal') |
@@ -1219,6 +1223,35 @@ Immutable expense records — amounts stored in integer minor currency units (e.
 | amount_minor | INTEGER | NOT NULL CHECK(>= 0) |
 | currency | TEXT | NOT NULL |
 | UNIQUE | | (expense_id, user_id) |
+
+### Expense Attachments
+Receipts and proofs linked to an expense. The binary itself always stays in the Documents module — this
+is a link table, so a receipt is not stored twice and the document's own visibility keeps applying.
+
+| Column | Type | Constraint |
+|--------|------|-----------|
+| expense_id | INTEGER | FK → Expenses (CASCADE delete), NOT NULL |
+| document_id | INTEGER | FK → Family Documents (CASCADE delete), NOT NULL |
+| kind | TEXT | NOT NULL DEFAULT `receipt` — CHECK `receipt` \| `proof` \| `other` |
+| created_by | INTEGER | FK → Users (CASCADE delete), NOT NULL |
+| UNIQUE | | (expense_id, document_id) |
+
+Set on create/update via `attachment_document_ids` on the expense payload (`INSERT OR IGNORE`, so
+re-sending an existing link is a no-op).
+
+### Expense Comments
+Free-text comments on a single expense ("this also covered the taxi"). Each comment additionally
+writes a `comment_added` row into [Expense Activity](#expense-activity), so the group feed stays the
+one chronological view.
+
+| Column | Type | Constraint |
+|--------|------|-----------|
+| expense_id | INTEGER | FK → Expenses (CASCADE delete), NOT NULL |
+| user_id | INTEGER | FK → Users (CASCADE delete), NOT NULL |
+| comment | TEXT | NOT NULL |
+| created_at | TEXT | ISO 8601 |
+
+API: `POST /api/v1/split/expenses/:id/comments`.
 
 ### Expense Ledger Entries
 Immutable double-entry ledger derived from expense splits and settlements.
@@ -1269,6 +1302,7 @@ Template for automatically generated expenses on a fixed schedule.
 |--------|------|-----------|
 | group_id | INTEGER | FK → Expense Groups (CASCADE delete), NOT NULL |
 | title | TEXT | NOT NULL |
+| description | TEXT | nullable |
 | amount_minor | INTEGER | NOT NULL CHECK(> 0) |
 | currency | TEXT | NOT NULL |
 | payer_id | INTEGER | FK → Users (RESTRICT on delete), NOT NULL |
@@ -1551,7 +1585,7 @@ Skeleton loading instead of spinners (the skeleton mirrors the default-visible w
 - **Start date:** tasks can have an optional start date; tasks with a future start date are hidden from the default list view to reduce cognitive load. A "Show scheduled" toggle chip in the filter bar reveals all upcoming planned tasks. Task cards display a "Starts on …" badge when a start date is set.
 - **"Assigned to me" quick filter:** a toggle chip in the filter bar limits the list to tasks assigned to the current user (a shortcut for the person filter); the choice is remembered per device. Shown only in multi-member households.
 - **Per-task visibility:** an "all / assignees only / private" selector in the task dialog controls who can see the task (server-enforced, no admin bypass — see [Tasks data model](#tasks)); restricted tasks carry a lock/people icon in the list.
-- **Customizable categories:** a "Manage categories" action in the toolbar opens the shared `oikos-category-manager` modal to add, rename, reorder, and delete task categories (predefined set localized, custom categories added inline). Deletion is blocked while a category is in use or when it is the last one — see [Task Categories data model](#task-categories-migration-v83).
+- **Customizable categories:** a "Manage categories" action in the toolbar opens the shared `yuvomi-category-manager` modal to add, rename, reorder, and delete task categories (predefined set localized, custom categories added inline). Deletion is blocked while a category is in use or when it is the last one — see [Task Categories data model](#task-categories-migration-v83).
 - **Linked documents:** documents from the Documents module can be optionally linked to a task from the task dialog, so supporting information (manuals, policies, service instructions) is reachable directly from the task. Linked documents appear as chips that open the document preview/download; a paperclip badge with the count shows on the task card. Only documents the user may see are listed or linkable (document visibility enforced, no admin bypass) — see [Task Documents data model](#task-documents-migration-v86).
 - **Full-text search (v1.36.0):** a search field in the module head filters the list and the Kanban board instantly by title and description (client-side, on top of the server-side status/priority/person filters). A search without hits names the query instead of claiming the module is empty.
 - **Responsive toolbar (v1.36.0):** the toolbar follows the shared Documents/Contacts grammar — a wrapping module head (search, view switch, bulk select, categories) above a permanently visible filter row that carries the filter chips and the grouping choice. The earlier `<details>` overflow panel was removed: it hid the view and grouping controls behind a click without showing their state. Bulk actions remain hidden until at least one task is selected. Checkbox and row actions use the shared touch-target tokens.
@@ -1569,7 +1603,7 @@ Skeleton loading instead of spinners (the skeleton mirrors the default-visible w
 - Checked items shown with strikethrough + moved to bottom
 - "Clear list" = remove checked items only
 - Autocomplete from previous entries (local)
-- **Category management lives in Shopping** (no longer in Settings): a "Manage categories" action opens the shared `oikos-category-manager` modal (also reachable directly via `/shopping?manage=categories`) for add, rename, reorder, and delete - the same component as Tasks, Contacts and Budget, resolving default category names through their localization and preserving the API's last-category-deletion guard. The legacy Settings → Shopping tab redirects here.
+- **Category management lives in Shopping** (no longer in Settings): a "Manage categories" action opens the shared `yuvomi-category-manager` modal (also reachable directly via `/shopping?manage=categories`) for add, rename, reorder, and delete - the same component as Tasks, Contacts and Budget, resolving default category names through their localization and preserving the API's last-category-deletion guard. The legacy Settings → Shopping tab redirects here.
 - Mobile quick-add form uses a resilient grid: item name spans the row, quantity/category/add controls remain touch-safe at 390px width, and autocomplete stays anchored to the input.
 - Mobile swipe: left = check/uncheck, right = delete; × delete button hidden on mobile (swipe takes over)
 - **Deletion friction follows severity:** removing single items (or the checked ones) is undo-based (5-second toast), while deleting a whole list - which cascades to all its items - asks for confirmation first, mirroring the Budget convention for cascading deletions. **Both, for the list (v1.59.0):** the confirmation now names how much it destroys ("Delete list 'Weekly Shop' and 31 items?", with a separate wording for an empty list) and the deletion afterwards runs through the same 5-second undo as every other deletion in the module. The gradient used to be inverted — a single item had undo and no confirmation, the household's whole list had a confirmation and no undo.
@@ -1661,7 +1695,7 @@ Related hardening: the inbound `cancelled` delete is scoped to the reporting cal
 - **External calendar names & colors:** Google and Apple sync stores each calendar's display name and background color in the `external_calendars` table (migration v14). A colored `event-cal-label` badge appears in event popups, agenda, month, week, and day views when `cal_name` is present.
 - **Event color sync (Discussion #427):** Each provider preserves per-event colors, not just the calendar color. Inbound, Google's `colorId` is resolved to a hex value via the event color palette (`colors.get`, cached 24 h), and the iCalendar `COLOR` property (RFC 7986 — CSS3 name or hex) is read for CalDAV, Apple, and ICS subscriptions; an event without its own color inherits its calendar's color. Outbound to Google, a local event's hex color is mapped to the nearest of Google's 11 event `colorId`s (perceptual redmean distance). Locally recolored events are protected across syncs by the unified `user_modified` flag: a resync overwrites an event's color only while `user_modified = 0`, so remote color changes still flow in until the user picks their own color, after which it stays fixed. The `COLOR`↔hex mapping lives in `server/utils/ical-color.js`.
 - **Event location:** Event popup and dashboard display the location field with RFC 5545 backslash-escape normalization (`\n`, `\,`, `\;`, `\\`) via `fmtLocation()` in `public/utils/html.js`.
-- **Custom event icons:** Each event can have an icon chosen from 102 validated Lucide icons via a visual picker. Birthday events are automatically assigned the `cake` icon. Icon stored in `calendar_events.icon`.
+- **Custom event icons:** Each event can have an icon chosen from a visual picker; the server validates against a fixed allow-list (`VALID_EVENT_ICONS` in `server/routes/calendar/helpers.js`, currently 104 entries — Lucide names plus the custom `tooth` glyph). Birthday events are automatically assigned the `cake` icon. Icon stored in `calendar_events.icon`.
 - **File attachments:** Events support a single file attachment (images, PDFs, Office documents, ≤ 5 MB). Images are displayed inline in the event popup; other files show a download link. Drag-and-drop upload is supported in the event modal. New attachments create one `family_documents` object through the active document-storage backend and link it via `attachment_document_id`; no second binary copy is written to `attachment_data`. Existing legacy Base64 attachments remain readable. Unchanged attachments are not re-uploaded, and removing an attachment only unlinks it from the event.
 - **Overlapping events:** In week and day views, timed events that overlap in time are rendered side-by-side using a column-layout algorithm instead of stacking.
 - **Task chips:** Open and in-progress tasks with a `due_date` appear as read-only priority-coloured chips in all four calendar views (month, week/day all-day row, agenda). Clicking a chip navigates to `/tasks?open=<id>` and opens the task edit modal. Tasks with `due_time` show the time in the chip label. Done/archived tasks are not shown. No server changes required — tasks are fetched in parallel with events on each range load (`GET /api/v1/tasks?include_future=1`), filtered client-side, and rendered via `renderTaskChip()`.
@@ -1689,7 +1723,7 @@ Responsive grid with colored sticky notes. Phones use one readable column; wider
 
 - CRUD with category filter
 - **Separate first/last name (v1.38.0):** the contact dialog has two name fields grouped under one required marker ("Name \*") — at least one of them must be filled. The display name is composed as `First [Middle] Last`, and the list sorts by last name, so contacts read the same no matter which CardDAV server they came from. A contact that has no stored components yet is pre-filled by splitting its display name at the last word; that guess is only saved when a name field is actually edited. A category the household does not (or no longer) manages is offered as its own option instead of silently falling back to the first entry — see [structured name components](#contacts)
-- **Customizable categories:** a "Manage categories" button in the toolbar opens the shared `oikos-category-manager` modal to add, rename, reorder, and delete contact categories (predefined set localized with per-category icons and color tints, custom categories added inline). Deletion is blocked while a category is in use or when it is the last one — see [Contact Categories data model](#contact-categories-migration-v84)
+- **Customizable categories:** a "Manage categories" button in the toolbar opens the shared `yuvomi-category-manager` modal to add, rename, reorder, and delete contact categories (predefined set localized with per-category icons and color tints, custom categories added inline). Deletion is blocked while a category is in use or when it is the last one — see [Contact Categories data model](#contact-categories-migration-v84)
 - **Multi-value fields:** multiple phones, emails, and addresses per contact, each with a label (mobile, work, home, etc.) and optional `isPrimary` flag
 - **Additional fields:** organization, job_title, birthday, website, photo, nickname
 - Phone: `tel:` link, email: `mailto:` link
@@ -1755,6 +1789,41 @@ One page module with six deep-link routes (pattern like Settings, not like the K
 - **Accessibility:** sub-tab bar and person/range chip rows expose `role="tablist"`/`tab` with arrow-key navigation and roving tabindex; SVG charts carry `role="img"` + `aria-label`; take/skip/save actions announce via the polite/assertive live regions; modals trap focus and restore it on close.
 - **API:** `GET/POST/PATCH/DELETE /api/v1/health/{vitals,medications,labs,activities}` (+ nested `…/medications/:id/schedules|logs`, `…/logs/:id/take|skip`, lab results), cycle endpoints `…/cycle/periods`, `…/cycle/logs` (upsert per day), `GET/PUT …/cycle/settings`, and `GET /api/v1/health/export/{vitals,activities,labs,meds-logs,cycle}` (text/csv). All handlers apply `user_id` scoping and `visibility` filtering.
 
+### Rewards (`/rewards`)
+
+Points-and-rewards module for households that want task completion to pay into something. Toggleable
+like any module (Settings → Modules → Rewards); disabled → the route and the navigation entry are
+gone. The data model, including why the balance is always derived from the ledger, is under
+[Rewards data model](#rewards-migration-v70).
+
+- **Three tabs** in the module head (`wireTablist`, arrow keys, roving tabindex): **Overview**
+  (balances and pending redemptions), **Catalog** (the rewards on offer), **Ledger** (every booking).
+- **Overview:** one flat row per participating member — avatar, name, balance, and a progress bar
+  toward the cheapest reward they cannot yet afford ("still 40 points to Cinema evening"), or
+  "redeemable now" once anything in the catalog is within reach. Deliberately a **flat list, not a
+  ranking**: the dashboard widget carries the leaderboard reading, the module itself is per-member.
+  Balances count up on load (suppressed under `prefers-reduced-motion`).
+- **First-run guidance:** while the module has no participants, no priced tasks or an empty catalog,
+  the overview shows the three open setup steps with a jump into the page that resolves each one.
+  It disappears once all three are done — the module is useless in three separate places at once, and
+  an empty balance list would not say which one is missing.
+- **Redeeming:** members **request** a reward and a parent/admin approves it; an admin redeems
+  directly. The verb in the UI follows that (`request` vs. `redeem`). Requesting reserves the points
+  immediately as a `redeem` ledger row, so a second request cannot spend the same balance; rejecting
+  or cancelling books them back as a `reversal`. `rewards_require_approval = false` (Settings →
+  Modules → Rewards) drops the approval step household-wide.
+- **Context FAB:** creates a reward on the Catalog tab and grants a bonus on the Ledger tab, both
+  admin-only; on the Overview tab, and for members, it is hidden — the module's create actions are
+  parent actions.
+- **Settings → Modules → Rewards** holds the three household switches: module on/off, approval
+  required, and the default point value for new tasks (with the roll-over of existing tasks
+  described under [Rewards data model](#rewards-migration-v70)).
+- **API:** `GET /api/v1/rewards/overview` (balances, catalog, pending count, setup counters),
+  `GET/PUT /api/v1/rewards/participants[/:userId]` (admin), `GET/POST /api/v1/rewards/catalog`,
+  `PATCH`/`DELETE /api/v1/rewards/catalog/:id` (admin), `GET /api/v1/rewards/ledger`,
+  `GET/POST /api/v1/rewards/redemptions`, `PATCH /api/v1/rewards/redemptions/:id` (approve / reject /
+  cancel), `POST /api/v1/rewards/bonus` (admin).
+
 ### First-run setup (`/setup`) (v0.58.0)
 
 On a fresh install with no users, the first admin can be created directly in the web UI.
@@ -1793,7 +1862,7 @@ User management and app configuration. Logged-in users only.
 
   - **Reminder sync (`/settings/sync/reminders`):** reuses the CalDAV accounts but exposes only reminder/task collections — per-list enablement, refresh, target mapping to Tasks or Shopping, and a read-only explanation; calendar collections do not appear here
 - **Weather:** Settings → Administration → Household weather configures the household default Open-Meteo location (latitude/longitude, optional city label, units; no API key) — admin only; saving activates Open-Meteo and supersedes any OpenWeatherMap `.env` configuration. A **"Detect location"** button uses the browser's Geolocation API to auto-fill latitude and longitude (no reverse-geocoding — the optional city field stays whatever was last typed, or the widget falls back to showing raw coordinates). **Automatic location updates:** an opt-in checkbox re-requests the browser's location every 30 minutes while the dashboard is open, silently updating the saved coordinates (and clearing any stale city label) so a moved device's weather stays current without a manual re-detect; skipped silently on permission denial or once the dashboard is closed. **Per-user override (Settings → Personal → My Weather, all users):** any user — not just admins — can set their own latitude/longitude/city/units and their own automatic-location-updates toggle; this personal location is stored separately from the household default and only affects that user's own dashboard widget. A status indicator shows whether a personal location or the household default is currently active, and a **"Use household default"** action clears the override. When a user has no personal override, the household admin's location is used as before.
-- **Language:** System (follows `navigator.language`), German, English, Spanish, French, Italian, Swedish, Greek, Russian, Turkish, Chinese, Japanese, Arabic, Hindi, Portuguese, Ukrainian, Polish, Dutch, Czech, Vietnamese, Hungarian - via `oikos-locale-picker` web component; switch without page reload
+- **Language:** System (follows `navigator.language`) plus the 23 locales listed under [Supported Languages](#supported-languages) - via the `yuvomi-locale-picker` web component; switch without page reload
 - **API Tokens (admin):** create named Bearer / X-API-Key tokens for external integrations; the full token value is shown only once immediately after creation; tokens can be revoked at any time; support optional expiry and track last-used timestamp; **optional per-module scopes** (`<module>:read`/`<module>:write`, write implies read) restrict a token — e.g. an MCP token that may write the calendar but never read health data — while an unscoped token keeps full role-based access
 - **Documents (admin):** one Document storage page shows the selected and effective upload destinations before provider details. A local-folder environment override can therefore be distinguished from the saved selector. The unchanged WebDAV form retains per-field environment overrides, SSRF controls, protected connection changes and PUT/GET/DELETE testing. A sibling Google Drive disclosure shows configured/connected state, account, `Yuvomi/Documents` folder, Drive document count, last test/error, Connect/Reconnect/Test/Disconnect controls, callback banners and the Drive-owner/shared-folder privacy boundary. OAuth success never changes the selector.
 - **Backup Management (admin):** download the current database as a file (`GET /api/v1/backup/database`) or restore from a backup file (`POST /api/v1/backup/restore`, drag-and-drop supported). Validates that the uploaded file is a valid Yuvomi database. A rollback copy is created automatically before restore. **Automatic scheduled backups:** configurable via `.env` (`BACKUP_ENABLED`, `BACKUP_SCHEDULE`, `BACKUP_DIR`, `BACKUP_KEEP`); default 2 AM daily, keeps last 7 copies; Settings → Administration → Backup and restore shows scheduler status, schedule, retention policy, last backup timestamp, and a manual trigger button. The schedule is shown **in plain language** ("Daily at 02:00", "Every Monday at 03:30") with the raw cron expression kept alongside as evidence; expressions outside the common daily/weekly/monthly/every-N-hours patterns (lists, ranges, month fields) stay in their raw form rather than being summarised inaccurately (`public/settings/cron-label.js`). **WebDAV backup target:** optional upload of each backup to a WebDAV server (Nextcloud, ownCloud, Hetzner Storage Box, etc.) after each local backup; configurable via Settings → Administration → Backup and restore or env vars (`WEBDAV_BACKUP_ENABLED`, `WEBDAV_BACKUP_URL`, `WEBDAV_BACKUP_USERNAME`, `WEBDAV_BACKUP_PASSWORD`, `WEBDAV_BACKUP_PATH`, `WEBDAV_BACKUP_KEEP`); uses Node 22 native fetch, no extra dependencies; password is masked in the UI and API; upload failures are non-fatal (local backup is always retained).
@@ -1807,7 +1876,7 @@ User management and app configuration. Logged-in users only.
 
   A central registry (`public/settings/registry.js`) is the single source of truth for domains, routes, roles, labels, icons, and legacy-tab mappings; each leaf is **lazy-loaded** and owns only its own API domain. Members see only Personal; deep links to admin pages redirect to Personal → Account with a localized notice. Preferences are read once per settings visit through a shared cache (`public/settings/preferences-cache.js`) rather than by each leaf separately.
 
-  **One navigation per mode:** the shared shell (`public/settings/shell.js`) renders the **tile overview** on the settings root (each tile carrying its page description) and the **sticky local navigation column** only inside a leaf (≥ 1024px, with `aria-current="page"` and a focus-managed page heading). Below 1024px it is a **history-aware drill-down** (settings overview → domain overview → leaf, with breadcrumbs and Back traversal); tablet overview pages use two columns from 768–1023px. `/settings` without a stored destination renders the overview instead of redirecting to a page, and the in-leaf Back link names its target ("Back to Administration") rather than the root. Each leaf catches its own load/save errors with inline retry without dropping sibling sections. Legacy `oikos:settings:tab` values migrate once to the new paths; the former flat tab bar and `settings-nav.js`/`settings-nav.css` are removed.
+  **One navigation per mode:** the shared shell (`public/settings/shell.js`) renders the **tile overview** on the settings root (each tile carrying its page description) and the **sticky local navigation column** only inside a leaf (≥ 1024px, with `aria-current="page"` and a focus-managed page heading). Below 1024px it is a **history-aware drill-down** (settings overview → domain overview → leaf, with breadcrumbs and Back traversal); tablet overview pages use two columns from 768–1023px. `/settings` without a stored destination renders the overview instead of redirecting to a page, and the in-leaf Back link names its target ("Back to Administration") rather than the root. Each leaf catches its own load/save errors with inline retry without dropping sibling sections. Legacy `yuvomi:settings:tab` values migrate once to the new paths; the former flat tab bar and `settings-nav.js`/`settings-nav.css` are removed.
 
   **Finding a page without knowing its domain:** the navigation carries a search field that filters all leaves the current user may see by label, description and domain name, ignoring case and diacritics. While searching, the domain groups give way to a flat result list in which every hit names its own domain; the hit count is announced in a live region and an empty search falls back to the shared "no results" state.
 
@@ -1815,6 +1884,8 @@ User management and app configuration. Logged-in users only.
 
   Two earlier domains are gone: **Documents** held two admin pages that both connect an external service and now live under Sync, and the former **Modules → Navigation** page moved to Personal because module order and the three mobile slots are stored per user (which modules the household uses stays an admin decision, gated inside the page). Budget, Health and Housekeeping carried one checkbox each and were merged into **Module options**.
 - **Region / Format presets (Settings → Personal → Appearance):** a household-wide **Region** selector (admin-only) sets currency, **number**, date and time format together from one BCP-47 region (e.g. Switzerland → `1'234.50`). Number and currency grouping follow the selected region independently of the UI language (v1.29.0) — a German-language household can still display Swiss-formatted amounts — resolved via a `getFormatLocale()` that reads the stored region and falls back to the UI language; choosing **Custom** configures each format individually. Non-admin members see a read-only notice. Budget CSV export uses a dot decimal without grouping so a comma-decimal locale never collides with the comma field delimiter.
+
+  **One currency list, four places (v1.61.0).** The set of selectable ISO 4217 codes is declared in `public/settings/currency.js` and has to hold identically in the household preference (`server/routes/preferences.js`), the Subscriptions tab (`public/pages/subscriptions.js`) and Split Expenses (`server/routes/split-expenses.js`) — the two module lists are validated server-side, so a code missing there is not a cosmetic gap but a rejected write. They had silently drifted apart: KRW, IDR and IRR were selectable as the household currency while Subscriptions did not offer them and Split Expenses refused them, stranding those households in two modules. A guard in `test:settings-navigation` now compares all four against the same source.
 - **Family management (admin):** assign a `family_role` (Dad, Mom, Parent, Child, Grandparent, Relative, Other) to each user, and set per-member phone, email, and birthday — automatically synced to Contacts and Birthdays. Displayed in the family member list and profile views. The Edit member dialog has an optional "Reset password" field (min. 8 characters, left blank keeps the current password) so an admin can set a new password for a family member who forgot theirs or never got it working — no SMTP/`BASE_URL` setup required, unlike the self-service "Forgot password" flow. On change, all of that member's other sessions are invalidated. `PATCH /api/v1/auth/users/:id` (admin-only) accepts an optional `password` field.
 - **Profile picture:** users can upload a personal avatar (PNG/JPEG/WebP, ≤ 5 MB), stored as a Base64 JPEG data URL in `avatar_data` at 256 × 256 px. After selecting a file a **canvas crop dialog** opens: the user can drag the image and zoom (slider or mouse wheel) to choose the square crop region before confirming. Shown in all avatar circles throughout the app — task cards, calendar agenda, user assignment picker, dashboard task widget, dashboard calendar widget, and notes creator badge — with coloured initials as fallback when no photo is set. Housekeeping staff avatars use the same crop dialog.
 - **App info:** version, license
@@ -1836,8 +1907,8 @@ User management and app configuration. Logged-in users only.
 - **One money vocabulary (v1.63.0):** `public/utils/money.js` replaces the three separate currency formatters in `budget.js`, `subscriptions.js` and `split-expenses.js`. Every amount carries one of four roles, and the role decides sign and colour together: `flow` (a single account movement — always signed, coloured by sign), `total` (a sum whose direction is already in its label — unsigned), `balance` (signed only when negative) and `plain` (an invoice amount with no account direction: subscription price, shared expense). The sign comes from `Intl`'s `signDisplay`, not a prepended `+`, so it stays on the correct side in RTL locales. Previously the same tab could show `−134.20 €` on a row and `3,046.11 €` unsigned on the summary card above it; that `Math.abs` was a silent exception and is now the `total` role applying to both cards. A net worth of exactly 0 is no longer green, because `balance` resolves zero as neutral. A shared expense deliberately stays unsigned — it is a group invoice line, not a movement on the viewer's account — but that is now a named role rather than an accident.
 
 - CRUD: title, amount, category, subcategory, date
-- Categories: DB-backed with stable English slug keys; 8 predefined expense categories, 5 income categories; users can add custom categories inline from the entry modal
-- Subcategories: 35 predefined subcategories across expense categories; users can add custom subcategories inline; displayed alongside category in each entry's metadata line
+- Categories: DB-backed; 9 predefined expense categories (English slug keys, including the `subscriptions` category the Subscriptions tab mirrors into), 5 income categories; users can add custom categories inline from the entry modal
+- Subcategories: 40 predefined subcategories across expense categories; users can add custom subcategories inline; displayed alongside category in each entry's metadata line
 - Recurring entries
 - **Personal vs. shared budgets (#476/#505):** an admin can switch the household into *personal budget mode* (Settings → Modules → Module options). Each entry, loan and subscription then carries an owner (the creator) and a visibility (`private`/`shared`); the entry modal gains a "Share with the household" toggle (default private), shared rows show a "Household" badge, and a **My budget / Household** view switcher appears in the toolbar. Enforcement is server-side on every read path with no admin bypass; see the [Budget Entries](#budget-entries) data model for the full rule. In the default shared mode nothing changes.
 - Monthly comparison (current vs. previous month)
@@ -1851,7 +1922,7 @@ User management and app configuration. Logged-in users only.
 - **Subscriptions tab:** recurring service CRUD with daily/weekly/monthly/yearly cycles and exact next-renewal calculation. Every active subscription creates a linked expense on the Budget tab for its next payment; edits synchronize it, disabling removes it from calculations, and renewal preserves the paid expense while creating the next one. Includes custom sortable categories and payment methods, searchable in-modal currency/category/payment controls, uploaded logos plus redirect-aware SSRF-protected public HTTPS logo discovery from site icons and public metadata, configurable reminder timing, filtering, sorting, and responsive analytics. Each filter control carries a visible label; a "Reset filters" button appears only while a filter or search is active, and a filtered-to-empty list shows a distinct "No matches" state with a reset action instead of the "no subscriptions yet" empty state (v1.37.0).
 - **Subscription finances:** native billing currencies, configurable base currency and monthly budget, 12-hour exchange-rate cache with optional Fixer refresh, monthly normalization and yearly projection, remaining/over-budget status, and category/payment-method charts.
 - **Subscription reminders:** upcoming payments appear in the existing in-app reminder center according to each subscription's reminder timing.
-- **Platform inheritance:** Subscriptions uses the application's existing household multi-user authorization, OIDC/OAuth login, SQLCipher option, backup/restore, responsive PWA shell, offline shell caching, themes, and 20-locale i18n system rather than duplicating those controls inside the tab.
+- **Platform inheritance:** Subscriptions uses the application's existing household multi-user authorization, OIDC/OAuth login, SQLCipher option, backup/restore, responsive PWA shell, offline shell caching, themes, and 23-locale i18n system rather than duplicating those controls inside the tab.
 - **Split Expenses tab:** shared expense tracking within named groups (household, couple, travel, event, shopping, general). Split methods: equal, exact amounts, percentage, shares. **Split defaults (#517):** each group stores a default split method and, for percentage/shares, per-member default values; new expenses in the group open pre-filled with them (editable in the group dialog once it has at least two members) so recurring same-split expenses need no re-entry. Balances derived from an immutable double-entry ledger — amounts stored as integer minor currency units (cents) to avoid floating-point errors. **Settlements:** record payments between members; a debt-simplification algorithm produces the minimal transfer set. **Recurring expenses:** daily, weekly, monthly, yearly schedule with automatic generation via hourly scheduler. **Guest accounts:** invite people outside the family as restricted users who can only access the Split module and see their invited groups. **Multi-currency:** each group has a default currency; individual expenses can use any currency with historical exchange rate snapshots. **Activity feed:** per-group log of all expense, member, and settlement events. **Archive (#574):** the group list has an Active/Archived filter. An archived group stays fully readable — balances, expenses and activity feed — but every writing action is replaced by **Restore**, which returns it to the active list without a confirmation prompt (the step is lossless and reversible by archiving again). Restoring is limited to group owners/admins, like archiving.
 - API: `GET /api/v1/budget/categories`, `GET /api/v1/budget/categories/:key/subcategories` (optional `?lang=` localisation), `POST /api/v1/budget/categories`, `POST /api/v1/budget/categories/:key/subcategories`, `GET /api/v1/budget/stats?range=week|month|year&anchor=YYYY-MM-DD` (totals, comparison vs. previous period, per-period series, per-category breakdown), `GET /api/v1/budget/export?from=YYYY-MM-DD&to=YYYY-MM-DD` (range CSV; legacy `?month=YYYY-MM` still supported), `GET /api/v1/budget/plans?month=YYYY-MM` (planned vs. actual per category + savings goal), `PUT`/`DELETE /api/v1/budget/plans/:category`
 - Loans API: `GET /api/v1/budget/loans`, `POST /api/v1/budget/loans`, `POST /api/v1/budget/loans/preview` (live interest calculation — monthly payment, term, total interest, remaining balance after the fixed period; no persistence), `GET /api/v1/budget/loans/:id`, `PUT /api/v1/budget/loans/:id`, `DELETE /api/v1/budget/loans/:id`, `GET /api/v1/budget/loans/:id/payments`, `POST /api/v1/budget/loans/:id/payments`, `DELETE /api/v1/budget/loans/:id/payments/:paymentId`
@@ -1875,14 +1946,14 @@ Personal birthday tracker with automatic calendar integration.
 
 ### Reminders (`/reminders`)
 
-Time-based reminders attached to tasks or calendar events.
+Time-based reminders attached to tasks, calendar events, or subscriptions.
 
-- One reminder per entity (upsert — creating a new reminder replaces the previous one)
-- Reminder time set via datetime picker in the task or event modal
+- **Tasks and subscriptions keep one reminder per entity** (upsert — creating a new one replaces the previous). **Calendar events carry up to five**, each an independent row delivered separately; the event dialog manages them as a row list (see [Reminders data model](#reminders))
+- Reminder time set via the shared `yuvomi-datepicker` in the task or event modal, usually as an offset from the due date/start
 - **Pending reminders:** polled on page load and at a fixed interval; displayed as an in-app notification badge/toast
-- **Birthday reminders** auto-synced from the Birthdays module (1 day before each occurrence)
+- **Birthday reminders** auto-synced from the Birthdays module (configurable offset per birthday, default 1 day before each occurrence)
 - Dismissing a reminder marks it `dismissed = 1`; dismissed reminders are not shown again
-- API: `GET /api/v1/reminders/pending`, `GET /api/v1/reminders?entity_type=&entity_id=`, `POST /api/v1/reminders`, `DELETE /api/v1/reminders/:id`, `POST /api/v1/reminders/:id/dismiss`
+- API: `GET /api/v1/reminders/pending`, `GET /api/v1/reminders?entity_type=&entity_id=` (single), `GET /api/v1/reminders/all?entity_type=&entity_id=` (full list for multi-reminder entities), `POST /api/v1/reminders` (upsert one), `PUT /api/v1/reminders?entity_type=&entity_id=` with `{ remind_ats: [...] }` (replace-set, deduplicated, max 5), `PATCH /api/v1/reminders/:id/dismiss`, `DELETE /api/v1/reminders/:id`, `DELETE /api/v1/reminders?entity_type=&entity_id=` (all of one entity)
 - **Web Push (PWA):** when a device opts in via Settings → Personal → Notifications, a service-worker push handler shows due reminders as system notifications even while the app is closed. The foreground in-app toast still runs; only the in-page `Notification(...)` is suppressed on devices with an active push subscription (push takes over). **Requires HTTPS** (service workers + Push API). API: `GET /api/v1/push/vapid-public-key`, `POST /api/v1/push/subscribe`, `POST /api/v1/push/unsubscribe`, `POST /api/v1/push/test`
 - **Household notification channels:** admins can add Gotify and ntfy channels under Settings → Personal → Notifications. A 60-second server-side scheduler (`server/services/push-scheduler.js`, backed by `server/services/notifications.js`) fans out due, undismissed reminders to Web Push plus every enabled household channel. Delivery state is tracked in `notification_deliveries` for duplicate protection and bounded retries; `reminders.pushed_at` is still set once the active targets are complete or exhausted. API: `GET /api/v1/notifications/providers`, `GET/POST /api/v1/notifications/channels`, `PUT/DELETE /api/v1/notifications/channels/:id`, `POST /api/v1/notifications/channels/:id/test`
 
@@ -1959,7 +2030,11 @@ A stateless [Model Context Protocol](https://modelcontextprotocol.io) endpoint i
 
 ### Colors (CSS Custom Properties)
 
-Source of truth: `public/styles/tokens.css`. Key values (as of v0.55.10):
+Source of truth: `public/styles/tokens.css`. The excerpt below carries the values that encode a
+decision (palette anchors, severity, module identity) — the glass, chart-series, and neutral-ramp
+tokens live only in `tokens.css`, where every value has its measured contrast ratio next to it.
+Each public token is a `var(--_private)` indirection there, so light and dark are declared once
+instead of being repeated across `@media` and `[data-theme]`. Values as of v1.64.0.
 
 **Palette rationale:** Warm-tinted neutral scale (`#F5F4F1 → #1C1C1A`) anchored by a **Violet primary** (`#6c3aed`) that unifies the brand identity and the Calendar module color. Module colors are semantically separated from severity colors — no hue is shared without explicit documentation in `tokens.css`.
 
@@ -1973,11 +2048,11 @@ Source of truth: `public/styles/tokens.css`. Key values (as of v0.55.10):
   --color-surface-glass:   rgba(255,255,255,0.70); /* decorative/light glass */
   --color-border:          #E8E7E2;   /* neutral-200 */
   --color-text-primary:    #1C1C1A;   /* neutral-900, 14.7:1 on bg */
-  --color-text-secondary:  #6C6B67;   /* neutral-600, 5.0:1 on white */
-  --color-text-tertiary:   #6A6964;   /* 4.61:1 on bg */
+  --color-text-secondary:  #6C6B67;   /* neutral-600, 5.33:1 on white */
+  --color-text-tertiary:   #6A6964;   /* 5.00:1 on bg, 5.50:1 on white */
 
   /* Primary accent — Violet */
-  --color-accent:           #6c3aed;  /* Violet-600, 5.63:1 on white (AA) */
+  --color-accent:           #6c3aed;  /* Violet-600, 6.06:1 on white (AA) */
   --color-accent-hover:     #5b2fd4;  /* Violet-700 */
   --color-accent-active:    #4a26bb;  /* Violet-800 */
   --color-accent-deep:      #3d1f9e;  /* deep Violet for gradients/weather */
@@ -1989,9 +2064,9 @@ Source of truth: `public/styles/tokens.css`. Key values (as of v0.55.10):
 
   /* Severity — hue-separated from module colors */
   --color-success:       #15803D;     /* 4.54:1 */
-  --color-warning:       #A15C0A;     /* 5.23:1 — Amber, distinct from --module-meals */
-  --color-danger:        #B91C1C;     /* Red-700, 6.90:1 (AAA) */
-  --color-info:          #0969DA;     /* 4.64:1 */
+  --color-warning:       #A15C0A;     /* 5.18:1 — Amber, distinct from --module-meals */
+  --color-danger:        #B91C1C;     /* Red-700, 6.47:1 */
+  --color-info:          #0B66C3;     /* 5.67:1 — own value, split from --module-contacts */
 
   /* Module accents — domain-specific, not interchangeable with severity.
      One accent per top-level module, not per tab inside one: the Kitchen group
@@ -2005,83 +2080,49 @@ Source of truth: `public/styles/tokens.css`. Key values (as of v0.55.10):
                                          Meals is the group's entry tab */
   --module-dashboard:       #6c3aed;  /* Violet — follows primary accent */
   --module-tasks:           #15803D;  /* Green — intentional share with --color-success */
-  --module-calendar:        #4F46E5;  /* Indigo-600 — Appointments, time (6.29:1) */
+  --module-calendar:        #4F46E5;  /* Violet-indigo — Appointments, time */
   --module-meals:           #C2410C;  /* Orange-700 — Food, warmth */
-  --module-shopping:        #DB2777;  /* Pink-600 — distinct from Meals/Warning */
+  --module-shopping:        #D12370;  /* Pink-600 — distinct from Meals (5.02:1, WCAG AA) */
   --module-recipes:         #0C7C5B;  /* Teal-green (166°) — Recipes, hue-separated from
                                          Budget 186° and Tasks 150° (5.19:1, WCAG AA) */
-  --module-notes:           #A16207;  /* Amber-700 — Notes (6.3:1, WCAG AA) */
+  --module-pantry:          #4D7C0F;  /* Olive green (86°) — Pantry; fills the only free hue gap
+                                         between Notes 36° and Tasks 142° (4.99:1, WCAG AA).
+                                         Earthy, not fresh: the pantry is the store, not the harvest */
+  --module-notes:           #9F6107;  /* Amber-700 — Notes (5.02:1, WCAG AA) */
   --module-contacts:        #0969DA;  /* Blue — distinct from Violet primary */
-  --module-birthdays:       #D6336C;  /* Rose — Birthdays, decoupled from --color-danger */
+  --module-birthdays:       #D02A64;  /* Rose — Birthdays, decoupled from --color-danger (5.01:1) */
   --module-budget:          #0F766E;  /* Teal-700 — Finance, stability */
-  --module-split-expenses:  #1A7BAE;  /* Azure-cyan (201°) — Shared family finance */
+  --module-split-expenses:  #1976A7;  /* Azure-cyan (201°) — Shared family finance (5.01:1) */
   --module-documents:       #42587E;  /* Steel blue — Secure family documents (7.17:1) */
   --module-housekeeping:    #7C3AED;  /* Violet — Focused service workflow */
   --module-health:          #9E1E88;  /* Berry fuchsia (310°) — Health (7.01:1, WCAG AAA) */
-  --module-reminders:       #0E7490;  /* Cyan-700 — Reminders (WCAG AA) */
-  --module-rewards:         #BE4B6E;  /* Rose-copper (342°) — Rewards (4.75:1, WCAG AA) */
-  --module-settings:        #6E7781;  /* Neutral grey */
+  --module-reminders:       #0E7490;  /* Cyan-700 — Reminders (5.36:1, WCAG AA) */
+  --module-rewards:         #BC4569;  /* Rose-copper (342°) — Rewards (5.01:1, WCAG AA) */
+  --module-settings:        #677079;  /* Neutral grey (5.03:1, WCAG AA) */
 
-  /* Priority */
-  --color-priority-medium: #A16207;  /* Amber-700, 6.3:1 — distinct from Warning+Meals */
-  --color-priority-high:   #C2410C;  /* = --module-meals (documented share: "hot") */
-  --color-priority-urgent: #B91C1C;  /* = --color-danger (documented share: "destructive") */
-
-  /* Glass layer tokens */
-  --glass-bg: rgba(255,255,255,0.72);
-  --glass-border: rgba(255,255,255,0.55);
-  --glass-bg-card: var(--color-surface-glass);
-  --blur-2xs: blur(2px);
-  --blur-md: 16px;
-  --radius-glass-button: 9999px;       /* capsule */
-  --ease-glass: cubic-bezier(0.34, 1.56, 0.64, 1); /* spring */
-
-  /* Glass Vibrancy tokens (Phase 4) */
-  --glass-bg-card: rgba(255,255,255,0.52);
-  --glass-bg-card-hover: rgba(255,255,255,0.65);
-  --glass-bg-input: rgba(255,255,255,0.48);
-  --glass-bg-toolbar: rgba(255,255,255,0.58);
-  --glass-tint-strength: 6%;
-
-  /* Glass inset specular highlights */
-  --glass-inset-soft:     inset 0 1px 0 rgba(255,255,255,0.18);
-  --glass-inset-base:     inset 0 1px 0 rgba(255,255,255,0.20);
-  --glass-inset-medium:   inset 0 1px 0 rgba(255,255,255,0.22);
-  --glass-inset-elevated: inset 0 1px 0 rgba(255,255,255,0.28);
-  --glass-inset-strong:   inset 0 1px 0 rgba(255,255,255,0.32);
-}
-
-/* Dark mode — Hue preserved (Violet-400), only Lightness/Saturation adjusted.
-   Private --_name tokens prevent duplication between @media and [data-theme]. */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-bg: #1A1A18;       /* deep warm */
-    --color-surface: #222220;
-    --color-border: #2C2C2A;
-    --color-text-primary: #F5F4F1;
-    --color-text-secondary: #AEADB0;
-    --color-accent:            #a78bfa;  /* Violet-400, 6.05:1 on dark surface */
-    --color-accent-hover:      #9066f5;  /* Violet-500 */
-    --color-accent-active:     #7c3aed;  /* Violet-600 — mirrors light primary */
-    --color-accent-light:      #2e1065;
-    --color-accent-subtle:     #1e1040;
-    --color-btn-primary:       #9066f5;  /* Violet-500, good contrast on dark */
-    --color-btn-primary-hover: #7c3aed;
-    --module-dashboard: #a78bfa;  /* Violet-400 */
-    --module-meals:     #FB923C;  /* Orange-400 */
-    --module-shopping:  #F472B6;  /* Pink-400 */
-    --module-budget:    #2DD4BF;  /* Teal-400 */
-    --module-reminders: #22D3EE;  /* Cyan-400 */
-    --glass-bg: rgba(28,28,26,0.75);
-    --glass-border: rgba(255,255,255,0.12);
-    --color-surface-work: #242422;
-    --color-surface-raised: #2E2E2B;
-    --color-surface-glass: rgba(34,34,32,0.78);
-    --glass-bg-card: var(--color-surface-glass);
-    --glass-tint-strength: 8%;
-  }
+  /* Priority — own values, no longer aliases of --module-meals / --color-danger.
+     The priority dot on the dashboard and the mobile calendar encodes rank by
+     colour alone, so "high" has to stay separable from "urgent": #B4400E sits
+     at ~1.8× the lightness of #991B1B (still perceivable with red-green
+     deficiency) and holds 4.79:1 for the badge label on its own tinted badge
+     ground — the composed surface the old alias had never been measured against
+     (v1.40.4). */
+  --color-priority-none:   var(--neutral-400);
+  --color-priority-low:    #5F5E5A;
+  --color-priority-medium: #854D0E;
+  --color-priority-high:   #B4400E;
+  --color-priority-urgent: #991B1B;
 }
 ```
+
+**Dark mode** keeps the hue and adjusts lightness/saturation only. Two things are not simply
+lightened counterparts and are therefore worth naming here:
+
+- **Edges are set independently, not derived from the neutral ramp** (v1.57.0): `--color-border-subtle: #3A3A37`, `--color-border: #4A4A46`, `--color-border-strong: #6B6B68`. The ramp sits so close to `--color-surface` (`#222220`) that the subtle step resolved to *exactly* the surface colour — see [Components → Edge tokens in dark mode](#components).
+- **Accent tints go darker, not lighter**: `--color-accent-light: #1e1040`, `--color-accent-subtle: #160b30`, and `--color-btn-primary: #7c3aed` (hover `#6d28d9`), because a "light" accent surface on a dark canvas has to sit *below* the text, not above it.
+
+The full dark set — including every module accent, the chart-series palette, and the vivid-fill ink
+token — lives in `tokens.css`; the glass tokens are described under [Glass Layer](#glass-layer-publicstylesglasscss).
 
 ### Typography
 - Plus Jakarta Sans is the single self-hosted UI family; headings use weight 600–700.
@@ -2179,7 +2220,7 @@ Additive CSS file loaded globally after `layout.css`. Implements a Liquid Glass 
 - **Calendar search (#471):** An in-context search bar in the calendar toolbar (magnifier button, or the `f` shortcut) finds appointments across the whole timeline — past and future — even when the date is unknown. Matches title, location, and notes/description via `GET /api/v1/calendar/search?q=` (same FTS5 index; event body indexes `location` since migration 76). Results render as a chronological, date-grouped list anchored on the next upcoming hit; recurring events resolve to their next occurrence within a two-year window rather than the series start. Selecting a result jumps to that day and opens the event. Result rows are keyboard-operable (`role="button"`, Enter/Space); the count line reports "N of M" when capped at 100.
 - **PWA install prompt:** Appears only after 2 user interactions. Dismiss window 7 days; interaction counter resets after dismiss.
 - **PWA offline and update contract (v0.71.34):** Service-worker shell, page, locale, and asset caches are keyed to the package release so every published UI revision installs fresh cache namespaces. The early `/lang-init.js` locale/direction bootstrap is part of the offline shell. When the network is unreachable and `index.html` is not cached, the worker serves `/offline.html` with a reload button.
-- **Read-only offline data (v0.78.8):** The service worker network-first-caches a whitelist of read-only `GET /api/v1/*` data paths (calendar, tasks, shopping, contacts, dashboard) in a release-keyed `oikos-api-<version>` cache, so the last-seen data stays viewable offline. Mutations, `/auth/*`, and non-whitelisted GETs are never cached; state-changing requests that fail offline surface a clear "changes aren't possible while offline" message instead of a raw network error. The calendar shows a subtle "Offline – as of: {time}" banner (from the cached `x-cached-at` timestamp) when served from cache. The API cache is wiped on logout and session expiry (`CLEAR_API_CACHE` message) so a second user on the same device cannot see the previous user's cached data, and old `oikos-api-*` caches are purged on every SW update.
+- **Read-only offline data (v0.78.8):** The service worker network-first-caches a whitelist of read-only `GET /api/v1/*` data paths (calendar, tasks, shopping, contacts, dashboard) in a release-keyed `yuvomi-api-<version>` cache, so the last-seen data stays viewable offline. Mutations, `/auth/*`, and non-whitelisted GETs are never cached; state-changing requests that fail offline surface a clear "changes aren't possible while offline" message instead of a raw network error. The calendar shows a subtle "Offline – as of: {time}" banner (from the cached `x-cached-at` timestamp) when served from cache. The API cache is wiped on logout and session expiry (`CLEAR_API_CACHE` message) so a second user on the same device cannot see the previous user's cached data, and every cache that does not belong to the running release is purged on SW activation — previous `yuvomi-*` versions as well as the legacy `oikos-*` caches from before the rename.
 - **User-selected note colors (v0.71.34):** note titles, content, creator metadata, and fallback avatars choose black or white ink from WCAG relative luminance instead of a brightness heuristic; supporting text remains fully opaque so every built-in note color meets AA contrast.
 
 ### Breakpoints
@@ -2216,7 +2257,7 @@ All UI strings are managed via `public/i18n.js`. No hardcoded text in JS files o
 
 ### Language Detection
 
-1. `localStorage` entry `oikos-locale` (manual selection)
+1. `localStorage` entry `yuvomi-locale` (manual selection)
 2. `navigator.languages[0]` (browser language)
 3. Fallback: `en`
 
@@ -2240,16 +2281,21 @@ All UI strings are managed via `public/i18n.js`. No hardcoded text in JS files o
 | `pt` | Portuguese | Full translation (added v0.19.0) |
 | `uk` | Ukrainian | Full translation (added v0.19.0, completed v0.52.3 by @baragoon) |
 | `pl` | Polish | Full translation (added v0.50.0) |
+| `nl` | Dutch | Full translation |
+| `cs` | Czech | Full translation |
+| `vi` | Vietnamese | Full translation |
 | `hu` | Hungarian | Full translation |
 | `ko` | Korean | Full translation (added v0.88.0) |
 | `id` | Indonesian | Full translation (added v0.88.0) |
 | `fa` | Persian (Farsi) | Full translation, RTL (added v0.88.0) |
 
+The table documents `SUPPORTED_LOCALES` in `public/i18n.js` — 23 locales. `de` is the reference: every key exists there first, and the other files are diffed against it (the `i18n-auditor` agent covers app and installer locales in one pass).
+
 ### Adding a New Language
 
 1. Create `public/locales/xx.json` (copy of `de.json`, translate)
 2. Add `'xx'` to `SUPPORTED_LOCALES` in `public/i18n.js`
-3. Add label in `oikos-locale-picker` (`LOCALE_LABELS['xx'] = 'Name'`)
+3. Add label in `yuvomi-locale-picker` (`LOCALE_LABELS['xx'] = 'Name'`)
 
 ### Locale Switching
 
