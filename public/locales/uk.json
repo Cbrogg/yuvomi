@@ -485,6 +485,9 @@
         "deletedToast": "Прийом їжі видалено.",
         "recurrenceLabel": "Повторювати щотижня",
         "recurrenceHint": "Yuvomi автоматично додає цю страву в той самий день тижня в наступних тижнях.",
+        "recurrenceUntilLabel": "Повторювати до",
+        "recurrenceUntilHint": "Залиште порожнім для безстрокового повторення.",
+        "recurrenceUntilBeforeStart": "Кінець повторення не може бути раніше дати.",
         "recurrenceBadge": "Повторювана страва",
         "recurrenceEditHint": "Ця страва повторюється щотижня. Видалення пропускає лише цю дату.",
         "editScopeLabel": "Застосувати зміну до",
@@ -492,7 +495,9 @@
         "editScopeSeries": "Уся серія",
         "deleteRecurringTitle": "Видалити повторюваний прийом їжі",
         "deleteScopeSingle": "Лише ця дата",
+        "deleteScopeFuture": "Це та всі наступні",
         "deleteScopeSeries": "Уся серія (усі тижні)",
+        "seriesEndedToast": "Серію завершено з цієї дати.",
         "seriesDeletedToast": "Серію видалено."
     },
     "calendar": {

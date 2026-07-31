@@ -485,6 +485,9 @@
         "deletedToast": "भोजन हटाया गया।",
         "recurrenceLabel": "हर सप्ताह दोहराएं",
         "recurrenceHint": "Yuvomi आने वाले सप्ताहों में इसी सप्ताह-दिन पर यह भोजन अपने आप जोड़ता है।",
+        "recurrenceUntilLabel": "इस तारीख तक दोहराएँ",
+        "recurrenceUntilHint": "असीमित दोहराव के लिए खाली छोड़ें।",
+        "recurrenceUntilBeforeStart": "दोहराव का अंत तारीख से पहले नहीं हो सकता।",
         "recurrenceBadge": "दोहराया जाने वाला भोजन",
         "recurrenceEditHint": "यह भोजन हर सप्ताह दोहरता है। इसे हटाने से केवल यह तारीख छोड़ी जाएगी।",
         "editScopeLabel": "परिवर्तन लागू करें",
@@ -492,7 +495,9 @@
         "editScopeSeries": "पूरी शृंखला",
         "deleteRecurringTitle": "आवर्ती भोजन हटाएं",
         "deleteScopeSingle": "केवल यह तारीख",
+        "deleteScopeFuture": "यह और आगे के सभी",
         "deleteScopeSeries": "पूरी शृंखला (सभी सप्ताह)",
+        "seriesEndedToast": "श्रृंखला इस तारीख से समाप्त कर दी गई।",
         "seriesDeletedToast": "श्रृंखला हटाई गई।"
     },
     "calendar": {

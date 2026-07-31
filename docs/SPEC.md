@@ -178,6 +178,7 @@ Weekly meal templates created from the meal modal's advanced repeat option (v0.7
 | Column | Type | Constraint |
 |--------|------|-----------|
 | start_date | TEXT | DATE, NOT NULL — first date eligible for materialization |
+| end_date | TEXT | DATE, nullable — last date eligible for materialization; NULL means the series never ends (v1.66.0) |
 | weekday | INTEGER | 0–6, Monday-based |
 | meal_type | TEXT | breakfast, lunch, dinner, snack |
 | title | TEXT | NOT NULL |
@@ -197,7 +198,7 @@ Ingredient snapshot copied to each generated weekly meal occurrence.
 | category | TEXT | NOT NULL (default 'Sonstiges') |
 
 ### Meal Recurrence Exceptions
-Stores individual skipped recurring meal dates so deleting a single occurrence (scope: this date only) does not regenerate it. Deleting the whole series drops the template and cascades these exceptions away.
+Stores individual skipped recurring meal dates so deleting a single occurrence (scope: this date only) does not regenerate it. Deleting the whole series drops the template and cascades these exceptions away; ending a series from a given date (scope: this and all following) clears the exceptions behind the new end, since there is nothing left to skip.
 
 | Column | Type | Constraint |
 |--------|------|-----------|
@@ -1627,6 +1628,7 @@ Skeleton loading instead of spinners (the skeleton mirrors the default-visible w
 - **Multiple items per slot:** each day/meal-type cell can hold any number of meals, displayed as stacked cards with a separator. A hover-visible `+` button lets you add another item to an already-filled slot without clearing the existing entry. (v0.63.3)
 - **Recipe integration:** Select a saved recipe from the meal modal to auto-fill title, notes, URL, and ingredients. Scale ingredient quantities by a numeric factor. Save the current meal as a new recipe with one click.
 - **Weekly meal repeats:** New meals can be marked as weekly repeats from the advanced meal dialog. Yuvomi stores a recurrence template, materializes future occurrences for each loaded week, shows a repeat badge on generated meals, and records per-date skip exceptions when a single occurrence is deleted. Editing or deleting a recurring meal offers a scope choice — **this date only** or the **whole series**: series edits propagate the content fields and ingredients to the template and every materialized occurrence, while series deletion removes the template together with all of its occurrences. (v0.78.1, series scope v1.1.0)
+- **Bounded repeats (v1.66.0):** a weekly repeat can carry a **repeat-until** date, set next to the repeat toggle when the meal is created and editable later under the series scope; leaving it empty keeps the series open-ended, as before. Materialization stops at that date, and shortening a running series removes the occurrences already generated behind the new end. Deleting a recurring meal gained a third scope — **this and all following** — which ends the series the day before that occurrence, keeps everything earlier, and stops the regeneration that previously refilled every week the moment it was opened. Ending a series on its very first occurrence drops the template outright. Without a boundary, an open series planted one row per meal into every week a user ever paged through, and the only way back was deleting each occurrence individually while the next week already produced a new one (#619).
 - **Customizable meal visibility:** In Settings, users can toggle which meal types (breakfast, lunch, dinner, snack) are shown in the planner and the dashboard's Today Meals widget. Stored as household-wide preference in `sync_config` (key: `visible_meal_types`). At least one type must remain active.
 
 ### Recipes (`/recipes`)

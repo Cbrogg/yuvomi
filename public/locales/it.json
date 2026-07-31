@@ -485,6 +485,9 @@
         "deletedToast": "Pasto eliminato.",
         "recurrenceLabel": "Ripeti ogni settimana",
         "recurrenceHint": "Yuvomi aggiunge automaticamente questo pasto nello stesso giorno della settimana nelle settimane future.",
+        "recurrenceUntilLabel": "Ripeti fino al",
+        "recurrenceUntilHint": "Lascia vuoto per ripetere all'infinito.",
+        "recurrenceUntilBeforeStart": "La fine della ripetizione non può precedere la data.",
         "recurrenceBadge": "Pasto ricorrente",
         "recurrenceEditHint": "Questo pasto si ripete ogni settimana. Eliminandolo salti solo questa data.",
         "editScopeLabel": "Applica modifica a",
@@ -492,7 +495,9 @@
         "editScopeSeries": "Tutta la serie",
         "deleteRecurringTitle": "Elimina pasto ricorrente",
         "deleteScopeSingle": "Solo questa data",
+        "deleteScopeFuture": "Questa e tutte le successive",
         "deleteScopeSeries": "Tutta la serie (tutte le settimane)",
+        "seriesEndedToast": "Serie terminata a partire da questa data.",
         "seriesDeletedToast": "Serie eliminata."
     },
     "calendar": {

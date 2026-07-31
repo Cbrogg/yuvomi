@@ -313,6 +313,128 @@ test('DELETE /:id einer Serien-Instanz erzeugt Ausnahme statt Neu-Materialisieru
   assert.equal(cnt, 0, 'keine Neu-Materialisierung nach Ausnahme');
 });
 
+// --------------------------------------------------------------------------
+// Wiederholungs-Grenze (#619)
+// --------------------------------------------------------------------------
+test('POST / mit repeat_until: Template trägt end_date, Materialisierung hört dort auf', async () => {
+  const start = '2041-03-04';
+  const until = addDays(start, 7); // genau eine weitere Wiederholung
+  const created = (await createMeal({ date: start, title: 'Begrenzt', repeat_weekly: true, repeat_until: until })).body.data;
+  const tplId = created.recurrence_template_id;
+  assert.equal(
+    db.prepare('SELECT end_date FROM meal_recurrence_templates WHERE id = ?').get(tplId).end_date,
+    until,
+  );
+  assert.equal(created.recurrence_end_date, until, 'Antwort nennt das Serien-Ende');
+
+  await call('GET', `/?week=${until}`);
+  assert.equal(db.prepare('SELECT COUNT(*) c FROM meals WHERE recurrence_template_id = ? AND date = ?').get(tplId, until).c, 1);
+
+  // Die Woche NACH dem Ende bleibt leer - genau das fehlte in #619
+  const beyond = addDays(start, 14);
+  await call('GET', `/?week=${beyond}`);
+  assert.equal(db.prepare('SELECT COUNT(*) c FROM meals WHERE recurrence_template_id = ? AND date = ?').get(tplId, beyond).c, 0);
+});
+
+test('POST /: repeat_until vor dem Datum → 400', async () => {
+  const r = await createMeal({ date: '2041-04-01', repeat_weekly: true, repeat_until: '2041-03-01' });
+  assert.equal(r.status, 400);
+  assert.match(r.body.error, /Wiederholungs-Ende/);
+});
+
+test('POST /: repeat_until ohne repeat_weekly bleibt folgenlos', async () => {
+  const r = await createMeal({ date: '2041-04-08', title: 'Einmalig', repeat_until: '2041-04-01' });
+  assert.equal(r.status, 201, 'kein Fehler, weil ohne Serie kein Ende existiert');
+  assert.equal(r.body.data.recurrence_template_id, null);
+});
+
+test('PUT /:id?scope=series mit repeat_until: kürzt die Serie und räumt spätere Instanzen ab', async () => {
+  const start = '2041-05-06';
+  const created = (await createMeal({ date: start, title: 'Kürzen', repeat_weekly: true })).body.data;
+  const tplId = created.recurrence_template_id;
+  const week2 = addDays(start, 7);
+  const week3 = addDays(start, 14);
+  await call('GET', `/?week=${week2}`);
+  await call('GET', `/?week=${week3}`);
+  assert.equal(db.prepare('SELECT COUNT(*) c FROM meals WHERE recurrence_template_id = ?').get(tplId).c, 3);
+
+  const r = await call('PUT', `/${created.id}?scope=series`, { repeat_until: week2 });
+  assert.equal(r.status, 200);
+  assert.equal(db.prepare('SELECT end_date FROM meal_recurrence_templates WHERE id = ?').get(tplId).end_date, week2);
+  const dates = db.prepare('SELECT date FROM meals WHERE recurrence_template_id = ? ORDER BY date').all(tplId).map((m) => m.date);
+  assert.deepEqual(dates, [start, week2], 'Instanz hinter dem Ende entfernt');
+
+  // Und sie kommt nicht zurück
+  await call('GET', `/?week=${week3}`);
+  assert.equal(db.prepare('SELECT COUNT(*) c FROM meals WHERE recurrence_template_id = ? AND date = ?').get(tplId, week3).c, 0);
+});
+
+test('PUT /:id?scope=series mit leerem repeat_until: Serie läuft wieder unbegrenzt', async () => {
+  const start = '2041-06-03';
+  const until = addDays(start, 7);
+  const created = (await createMeal({ date: start, title: 'Entgrenzen', repeat_weekly: true, repeat_until: until })).body.data;
+  const tplId = created.recurrence_template_id;
+
+  const r = await call('PUT', `/${created.id}?scope=series`, { repeat_until: '' });
+  assert.equal(r.status, 200);
+  assert.equal(db.prepare('SELECT end_date FROM meal_recurrence_templates WHERE id = ?').get(tplId).end_date, null);
+
+  const beyond = addDays(start, 14);
+  await call('GET', `/?week=${beyond}`);
+  assert.equal(db.prepare('SELECT COUNT(*) c FROM meals WHERE recurrence_template_id = ? AND date = ?').get(tplId, beyond).c, 1);
+});
+
+test('PUT /:id?scope=series: repeat_until vor Serienbeginn → 400', async () => {
+  const created = (await createMeal({ date: '2041-07-01', title: 'Zu früh', repeat_weekly: true })).body.data;
+  const r = await call('PUT', `/${created.id}?scope=series`, { repeat_until: '2041-06-01' });
+  assert.equal(r.status, 400);
+});
+
+test('DELETE /:id?scope=future: beendet die Serie ab diesem Termin, Vergangenes bleibt', async () => {
+  const start = '2041-08-05';
+  const created = (await createMeal({ date: start, title: 'AbHier', repeat_weekly: true })).body.data;
+  const tplId = created.recurrence_template_id;
+  const week2 = addDays(start, 7);
+  const week3 = addDays(start, 14);
+  await call('GET', `/?week=${week2}`);
+  await call('GET', `/?week=${week3}`);
+
+  const second = db.prepare('SELECT id FROM meals WHERE recurrence_template_id = ? AND date = ?').get(tplId, week2);
+  const r = await call('DELETE', `/${second.id}?scope=future`);
+  assert.equal(r.status, 204);
+
+  const dates = db.prepare('SELECT date FROM meals WHERE recurrence_template_id = ? ORDER BY date').all(tplId).map((m) => m.date);
+  assert.deepEqual(dates, [start], 'nur der Termin vor dem Schnitt bleibt');
+  assert.equal(
+    db.prepare('SELECT end_date FROM meal_recurrence_templates WHERE id = ?').get(tplId).end_date,
+    addDays(week2, -1),
+  );
+
+  // Kein Nachwachsen mehr - der Kern von #619
+  await call('GET', `/?week=${week2}`);
+  await call('GET', `/?week=${week3}`);
+  assert.equal(db.prepare('SELECT COUNT(*) c FROM meals WHERE recurrence_template_id = ?').get(tplId).c, 1);
+});
+
+test('DELETE /:id?scope=future auf dem ersten Termin entfernt die Vorlage ganz', async () => {
+  const start = '2041-09-02';
+  const created = (await createMeal({ date: start, title: 'AbStart', repeat_weekly: true })).body.data;
+  const tplId = created.recurrence_template_id;
+  await call('GET', `/?week=${addDays(start, 7)}`);
+
+  const r = await call('DELETE', `/${created.id}?scope=future`);
+  assert.equal(r.status, 204);
+  assert.equal(db.prepare('SELECT COUNT(*) c FROM meal_recurrence_templates WHERE id = ?').get(tplId).c, 0);
+  assert.equal(db.prepare('SELECT COUNT(*) c FROM meals WHERE recurrence_template_id = ?').get(tplId).c, 0);
+});
+
+test('DELETE /:id?scope=future ohne Serie löscht nur die Mahlzeit', async () => {
+  const m = (await createMeal({ date: '2041-10-07', title: 'Solo' })).body.data;
+  const r = await call('DELETE', `/${m.id}?scope=future`);
+  assert.equal(r.status, 204);
+  assert.equal(db.prepare('SELECT COUNT(*) c FROM meals WHERE id = ?').get(m.id).c, 0);
+});
+
 test('DELETE /:id?scope=series: entfernt alle Instanzen + Template', async () => {
   const created = (await createMeal({ date: '2026-10-05', title: 'GanzeSerie', repeat_weekly: true })).body.data;
   const tplId = created.recurrence_template_id;

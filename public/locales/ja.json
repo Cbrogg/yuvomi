@@ -485,6 +485,9 @@
         "deletedToast": "食事を削除しました。",
         "recurrenceLabel": "毎週繰り返す",
         "recurrenceHint": "Yuvomi は今後の週でも同じ曜日にこの食事を自動で追加します。",
+        "recurrenceUntilLabel": "繰り返しの終了日",
+        "recurrenceUntilHint": "無期限に繰り返す場合は空のままにします。",
+        "recurrenceUntilBeforeStart": "繰り返しの終了日は開始日より前にはできません。",
         "recurrenceBadge": "繰り返しの食事",
         "recurrenceEditHint": "この食事は毎週繰り返されます。削除するとこの日付だけをスキップします。",
         "editScopeLabel": "変更の適用範囲",
@@ -492,7 +495,9 @@
         "editScopeSeries": "シリーズ全体",
         "deleteRecurringTitle": "繰り返しの食事を削除",
         "deleteScopeSingle": "この日付のみ",
+        "deleteScopeFuture": "この日以降のすべて",
         "deleteScopeSeries": "シリーズ全体（毎週）",
+        "seriesEndedToast": "この日でシリーズを終了しました。",
         "seriesDeletedToast": "シリーズを削除しました。"
     },
     "calendar": {

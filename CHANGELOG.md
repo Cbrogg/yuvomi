@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.66.0] - 2026-07-31
+
+### Added
+
+- A weekly repeating meal can now be given an end date. The field sits next to the repeat switch when you create the meal and can be changed later by editing the series; leaving it empty keeps the series running without an end, the way it behaved before. Until now every repeat ran forever, and since the planner writes a real meal into the week the moment you open it, paging a year ahead planted 52 copies that then stayed there.
+- Deleting a repeating meal offers a third choice: this and all following. It ends the series the day before the meal you are looking at, keeps every earlier occurrence, and stops new ones from appearing. Deleting the very first occurrence this way removes the series outright. Before this, the only ways out were deleting a single date, which the next week undid by generating a fresh copy, or deleting the whole series including its history.
+
 ## [1.65.0] - 2026-07-31
 
 ### Changed

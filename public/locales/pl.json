@@ -497,6 +497,9 @@
         "deletedToast": "Posiłek usunięty.",
         "recurrenceLabel": "Powtarzaj co tydzień",
         "recurrenceHint": "Yuvomi automatycznie dodaje ten posiłek w ten sam dzień tygodnia w kolejnych tygodniach.",
+        "recurrenceUntilLabel": "Powtarzaj do",
+        "recurrenceUntilHint": "Pozostaw puste, aby powtarzać bez końca.",
+        "recurrenceUntilBeforeStart": "Koniec powtarzania nie może być wcześniejszy niż data.",
         "recurrenceBadge": "Posiłek cykliczny",
         "recurrenceEditHint": "Ten posiłek powtarza się co tydzień. Usunięcie pomija tylko tę datę.",
         "editScopeLabel": "Zastosuj zmianę do",
@@ -504,7 +507,9 @@
         "editScopeSeries": "Cała seria",
         "deleteRecurringTitle": "Usuń powtarzający się posiłek",
         "deleteScopeSingle": "Tylko ta data",
+        "deleteScopeFuture": "Ten i wszystkie następne",
         "deleteScopeSeries": "Cała seria (wszystkie tygodnie)",
+        "seriesEndedToast": "Seria zakończona od tej daty.",
         "seriesDeletedToast": "Seria usunięta."
     },
     "calendar": {

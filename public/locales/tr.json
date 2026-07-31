@@ -485,6 +485,9 @@
         "deletedToast": "Öğün silindi.",
         "recurrenceLabel": "Haftalık tekrarla",
         "recurrenceHint": "Yuvomi bu öğünü gelecek haftalarda aynı hafta gününde otomatik olarak ekler.",
+        "recurrenceUntilLabel": "Şu tarihe kadar tekrarla",
+        "recurrenceUntilHint": "Sınırsız tekrar için boş bırakın.",
+        "recurrenceUntilBeforeStart": "Tekrarın bitişi tarihten önce olamaz.",
         "recurrenceBadge": "Tekrarlanan öğün",
         "recurrenceEditHint": "Bu öğün haftalık tekrarlanır. Silmek yalnızca bu tarihi atlar.",
         "editScopeLabel": "Değişikliği uygula",
@@ -492,7 +495,9 @@
         "editScopeSeries": "Tüm seri",
         "deleteRecurringTitle": "Yinelenen öğünü sil",
         "deleteScopeSingle": "Yalnızca bu tarih",
+        "deleteScopeFuture": "Bu ve sonraki tüm tarihler",
         "deleteScopeSeries": "Tüm seri (tüm haftalar)",
+        "seriesEndedToast": "Seri bu tarihten itibaren sonlandırıldı.",
         "seriesDeletedToast": "Seri silindi."
     },
     "calendar": {

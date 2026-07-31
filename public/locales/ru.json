@@ -485,6 +485,9 @@
         "deletedToast": "Приём пищи удалён.",
         "recurrenceLabel": "Повторять каждую неделю",
         "recurrenceHint": "Yuvomi автоматически добавляет это блюдо в тот же день недели в следующих неделях.",
+        "recurrenceUntilLabel": "Повторять до",
+        "recurrenceUntilHint": "Оставьте пустым для бессрочного повтора.",
+        "recurrenceUntilBeforeStart": "Окончание повтора не может быть раньше даты.",
         "recurrenceBadge": "Повторяющееся блюдо",
         "recurrenceEditHint": "Это блюдо повторяется каждую неделю. Удаление пропускает только эту дату.",
         "editScopeLabel": "Применить изменение к",
@@ -492,7 +495,9 @@
         "editScopeSeries": "Вся серия",
         "deleteRecurringTitle": "Удалить повторяющийся приём пищи",
         "deleteScopeSingle": "Только эта дата",
+        "deleteScopeFuture": "Это и все последующие",
         "deleteScopeSeries": "Вся серия (все недели)",
+        "seriesEndedToast": "Серия завершена с этой даты.",
         "seriesDeletedToast": "Серия удалена."
     },
     "calendar": {

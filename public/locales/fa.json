@@ -497,6 +497,9 @@
         "deletedToast": "وعده حذف شد.",
         "recurrenceLabel": "تکرار هفتگی",
         "recurrenceHint": "Yuvomi این وعده را در هفته‌های آینده به‌طور خودکار در همان روز هفته اضافه می‌کند.",
+        "recurrenceUntilLabel": "تکرار تا",
+        "recurrenceUntilHint": "برای تکرار نامحدود خالی بگذارید.",
+        "recurrenceUntilBeforeStart": "پایان تکرار نمی‌تواند پیش از تاریخ باشد.",
         "recurrenceBadge": "وعده تکرارشونده",
         "recurrenceEditHint": "این وعده هر هفته تکرار می‌شود. حذف فقط این تاریخ را نادیده می‌گیرد.",
         "editScopeLabel": "اعمال تغییر بر",
@@ -504,7 +507,9 @@
         "editScopeSeries": "کل مجموعه",
         "deleteRecurringTitle": "حذف وعده تکرارشونده",
         "deleteScopeSingle": "فقط این تاریخ",
+        "deleteScopeFuture": "این و همه موارد بعدی",
         "deleteScopeSeries": "کل مجموعه (همه هفته‌ها)",
+        "seriesEndedToast": "سری از این تاریخ پایان یافت.",
         "seriesDeletedToast": "سری حذف شد."
     },
     "calendar": {

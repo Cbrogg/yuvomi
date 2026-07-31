@@ -485,6 +485,9 @@
         "deletedToast": "Maaltijd verwijderd.",
         "recurrenceLabel": "Wekelijks herhalen",
         "recurrenceHint": "Yuvomi voegt deze maaltijd in toekomstige weken automatisch op dezelfde weekdag toe.",
+        "recurrenceUntilLabel": "Herhalen tot",
+        "recurrenceUntilHint": "Laat leeg om onbeperkt te herhalen.",
+        "recurrenceUntilBeforeStart": "Het einde van de herhaling mag niet voor de datum liggen.",
         "recurrenceBadge": "Terugkerende maaltijd",
         "recurrenceEditHint": "Deze maaltijd wordt wekelijks herhaald. Verwijderen slaat alleen deze datum over.",
         "editScopeLabel": "Wijziging toepassen op",
@@ -492,7 +495,9 @@
         "editScopeSeries": "Hele reeks",
         "deleteRecurringTitle": "Terugkerende maaltijd verwijderen",
         "deleteScopeSingle": "Alleen deze datum",
+        "deleteScopeFuture": "Deze en alle volgende",
         "deleteScopeSeries": "Hele reeks (alle weken)",
+        "seriesEndedToast": "Reeks vanaf deze datum beëindigd.",
         "seriesDeletedToast": "Reeks verwijderd."
     },
     "calendar": {

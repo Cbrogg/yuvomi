@@ -485,6 +485,9 @@
         "deletedToast": "Το γεύμα διαγράφηκε.",
         "recurrenceLabel": "Επανάληψη κάθε εβδομάδα",
         "recurrenceHint": "Το Yuvomi δημιουργεί αυτό το γεύμα αυτόματα την ίδια ημέρα της εβδομάδας στις επόμενες εβδομάδες.",
+        "recurrenceUntilLabel": "Επανάληψη έως",
+        "recurrenceUntilHint": "Αφήστε το κενό για επ' αόριστον επανάληψη.",
+        "recurrenceUntilBeforeStart": "Το τέλος της επανάληψης δεν μπορεί να προηγείται της ημερομηνίας.",
         "recurrenceBadge": "Επαναλαμβανόμενο γεύμα",
         "recurrenceEditHint": "Αυτό το γεύμα επαναλαμβάνεται κάθε εβδομάδα. Η διαγραφή παραλείπει μόνο αυτή την ημερομηνία.",
         "editScopeLabel": "Εφαρμογή αλλαγής σε",
@@ -492,7 +495,9 @@
         "editScopeSeries": "Ολόκληρη η σειρά",
         "deleteRecurringTitle": "Διαγραφή επαναλαμβανόμενου γεύματος",
         "deleteScopeSingle": "Μόνο αυτή η ημερομηνία",
+        "deleteScopeFuture": "Αυτή και όλες τις επόμενες",
         "deleteScopeSeries": "Ολόκληρη η σειρά (όλες οι εβδομάδες)",
+        "seriesEndedToast": "Η σειρά τερματίστηκε από αυτή την ημερομηνία.",
         "seriesDeletedToast": "Η σειρά διαγράφηκε."
     },
     "calendar": {

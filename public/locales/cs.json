@@ -485,6 +485,9 @@
         "deletedToast": "Jídlo odstraněno.",
         "recurrenceLabel": "Opakovat každý týden",
         "recurrenceHint": "Yuvomi tuto večeři nebo jídlo automaticky vytvoří ve stejný den v dalších týdnech.",
+        "recurrenceUntilLabel": "Opakovat do",
+        "recurrenceUntilHint": "Nechte prázdné pro opakování bez konce.",
+        "recurrenceUntilBeforeStart": "Konec opakování nesmí být před datem.",
         "recurrenceBadge": "Opakované jídlo",
         "recurrenceEditHint": "Toto jídlo se opakuje každý týden. Smazání tohoto záznamu přeskočí jen toto datum.",
         "editScopeLabel": "Použít změnu na",
@@ -492,7 +495,9 @@
         "editScopeSeries": "Celá série",
         "deleteRecurringTitle": "Smazat opakující se jídlo",
         "deleteScopeSingle": "Pouze toto datum",
+        "deleteScopeFuture": "Toto a všechna následující",
         "deleteScopeSeries": "Celá série (všechny týdny)",
+        "seriesEndedToast": "Série ukončena od tohoto data.",
         "seriesDeletedToast": "Série odstraněna."
     },
     "calendar": {

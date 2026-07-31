@@ -485,6 +485,9 @@
         "deletedToast": "Đã xóa bữa ăn.",
         "recurrenceLabel": "Lặp lại hằng tuần",
         "recurrenceHint": "Yuvomi tự động thêm bữa ăn này vào cùng thứ trong các tuần sau.",
+        "recurrenceUntilLabel": "Lặp lại đến",
+        "recurrenceUntilHint": "Để trống để lặp lại vô thời hạn.",
+        "recurrenceUntilBeforeStart": "Ngày kết thúc lặp lại không được trước ngày này.",
         "recurrenceBadge": "Bữa ăn lặp lại",
         "recurrenceEditHint": "Bữa ăn này lặp lại hằng tuần. Xóa sẽ chỉ bỏ qua ngày này.",
         "editScopeLabel": "Áp dụng thay đổi cho",
@@ -492,7 +495,9 @@
         "editScopeSeries": "Toàn bộ chuỗi",
         "deleteRecurringTitle": "Xóa bữa ăn lặp lại",
         "deleteScopeSingle": "Chỉ ngày này",
+        "deleteScopeFuture": "Mục này và tất cả các mục sau",
         "deleteScopeSeries": "Toàn bộ chuỗi (tất cả các tuần)",
+        "seriesEndedToast": "Đã kết thúc chuỗi từ ngày này.",
         "seriesDeletedToast": "Đã xóa chuỗi."
     },
     "calendar": {

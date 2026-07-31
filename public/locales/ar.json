@@ -485,6 +485,9 @@
         "deletedToast": "تم حذف الوجبة.",
         "recurrenceLabel": "كرر أسبوعياً",
         "recurrenceHint": "ينشئ Yuvomi هذه الوجبة تلقائياً في نفس يوم الأسبوع في الأسابيع القادمة.",
+        "recurrenceUntilLabel": "التكرار حتى",
+        "recurrenceUntilHint": "اتركه فارغًا للتكرار بلا نهاية.",
+        "recurrenceUntilBeforeStart": "لا يمكن أن تكون نهاية التكرار قبل التاريخ.",
         "recurrenceBadge": "وجبة متكررة",
         "recurrenceEditHint": "تتكرر هذه الوجبة أسبوعياً. حذف هذا الإدخال يتخطى هذا التاريخ فقط.",
         "editScopeLabel": "تطبيق التغيير على",
@@ -492,7 +495,9 @@
         "editScopeSeries": "السلسلة كاملة",
         "deleteRecurringTitle": "حذف الوجبة المتكررة",
         "deleteScopeSingle": "هذا التاريخ فقط",
+        "deleteScopeFuture": "هذا وكل ما يليه",
         "deleteScopeSeries": "السلسلة كاملة (كل الأسابيع)",
+        "seriesEndedToast": "تم إنهاء السلسلة من هذا التاريخ.",
         "seriesDeletedToast": "تم حذف السلسلة."
     },
     "calendar": {

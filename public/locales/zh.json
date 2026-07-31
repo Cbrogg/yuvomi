@@ -485,6 +485,9 @@
         "deletedToast": "已删除该餐。",
         "recurrenceLabel": "每周重复",
         "recurrenceHint": "Yuvomi 会在未来每周的同一天自动添加这顿餐食。",
+        "recurrenceUntilLabel": "重复至",
+        "recurrenceUntilHint": "留空表示无限重复。",
+        "recurrenceUntilBeforeStart": "重复结束日期不能早于该日期。",
         "recurrenceBadge": "重复餐食",
         "recurrenceEditHint": "这顿餐食每周重复。删除只会跳过这个日期。",
         "editScopeLabel": "应用更改到",
@@ -492,7 +495,9 @@
         "editScopeSeries": "整个系列",
         "deleteRecurringTitle": "删除重复餐食",
         "deleteScopeSingle": "仅此日期",
+        "deleteScopeFuture": "此项及之后全部",
         "deleteScopeSeries": "整个系列（所有周）",
+        "seriesEndedToast": "已从该日期结束该系列。",
         "seriesDeletedToast": "已删除该系列。"
     },
     "calendar": {

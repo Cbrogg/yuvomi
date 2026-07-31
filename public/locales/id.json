@@ -497,6 +497,9 @@
         "deletedToast": "Makanan dihapus.",
         "recurrenceLabel": "Ulangi mingguan",
         "recurrenceHint": "Yuvomi secara otomatis menambahkan makanan ini pada hari yang sama di minggu-minggu mendatang.",
+        "recurrenceUntilLabel": "Ulangi sampai",
+        "recurrenceUntilHint": "Kosongkan untuk mengulang tanpa batas.",
+        "recurrenceUntilBeforeStart": "Akhir pengulangan tidak boleh sebelum tanggalnya.",
         "recurrenceBadge": "Makanan berulang",
         "recurrenceEditHint": "Makanan ini berulang setiap minggu. Menghapus hanya melewati tanggal ini.",
         "editScopeLabel": "Terapkan perubahan ke",
@@ -504,7 +507,9 @@
         "editScopeSeries": "Seluruh rangkaian",
         "deleteRecurringTitle": "Hapus makanan berulang",
         "deleteScopeSingle": "Hanya tanggal ini",
+        "deleteScopeFuture": "Ini dan semua berikutnya",
         "deleteScopeSeries": "Seluruh rangkaian (semua minggu)",
+        "seriesEndedToast": "Seri diakhiri mulai tanggal ini.",
         "seriesDeletedToast": "Seri dihapus."
     },
     "calendar": {

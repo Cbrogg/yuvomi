@@ -485,6 +485,9 @@
         "deletedToast": "Meal deleted.",
         "recurrenceLabel": "Repeat weekly",
         "recurrenceHint": "Yuvomi automatically adds this meal on the same weekday in future weeks.",
+        "recurrenceUntilLabel": "Repeat until",
+        "recurrenceUntilHint": "Leave empty to repeat indefinitely.",
+        "recurrenceUntilBeforeStart": "The repeat end cannot be before the date.",
         "recurrenceBadge": "Recurring meal",
         "recurrenceEditHint": "This meal repeats weekly. When editing or deleting you can choose between this date and the whole series.",
         "editScopeLabel": "Apply change to",
@@ -492,7 +495,9 @@
         "editScopeSeries": "Whole series",
         "deleteRecurringTitle": "Delete recurring meal",
         "deleteScopeSingle": "Only this date",
+        "deleteScopeFuture": "This and all following",
         "deleteScopeSeries": "Whole series (all weeks)",
+        "seriesEndedToast": "Series ended from this date.",
         "seriesDeletedToast": "Series deleted."
     },
     "calendar": {

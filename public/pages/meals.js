@@ -1269,6 +1269,20 @@ function openMealModal(opts) {
         }
       });
 
+      // Das Wiederholungs-Ende gehört zur Wiederholung, nicht zur Mahlzeit: es
+      // zeigt sich nur, wenn die Serie überhaupt im Spiel ist - beim Anlegen mit
+      // gesetztem Schalter, beim Bearbeiten im Serien-Umfang.
+      const repeatUntilGroup = panel.querySelector('#modal-repeat-until-group');
+      const repeatToggle     = panel.querySelector('#modal-repeat-weekly');
+      const editScopeSelect  = panel.querySelector('#modal-edit-scope');
+
+      repeatToggle?.addEventListener('change', () => {
+        repeatUntilGroup.hidden = !repeatToggle.checked;
+      });
+      editScopeSelect?.addEventListener('change', () => {
+        repeatUntilGroup.hidden = editScopeSelect.value !== 'series';
+      });
+
       panel.querySelector('#modal-cancel').addEventListener('click', closeModal);
       panel.querySelector('#modal-save').addEventListener('click', () => saveModal(panel));
       // Pflichtfelder melden sich beim Verlassen inline (geteiltes Muster).
@@ -1345,6 +1359,12 @@ function buildModalContent({ mode, date, mealType, meal }) {
         <option value="single">${t('meals.editScopeSingle')}</option>
         <option value="series">${t('meals.editScopeSeries')}</option>
       </select>
+    </div>
+    <div class="form-group" id="modal-repeat-until-group" hidden>
+      <label class="form-label" for="modal-repeat-until">${t('meals.recurrenceUntilLabel')}</label>
+      <yuvomi-datepicker type="date" id="modal-repeat-until"
+                         value="${meal.recurrence_end_date ? formatDateInput(meal.recurrence_end_date) : ''}"></yuvomi-datepicker>
+      <p class="form-hint">${t('meals.recurrenceUntilHint')}</p>
     </div>` : '') : `
     <div class="meal-recurrence-option">
       <label class="toggle">
@@ -1353,6 +1373,11 @@ function buildModalContent({ mode, date, mealType, meal }) {
         <span>${t('meals.recurrenceLabel')}</span>
       </label>
       <p class="form-hint">${t('meals.recurrenceHint')}</p>
+      <div class="form-group" id="modal-repeat-until-group" hidden>
+        <label class="form-label" for="modal-repeat-until">${t('meals.recurrenceUntilLabel')}</label>
+        <yuvomi-datepicker type="date" id="modal-repeat-until" value=""></yuvomi-datepicker>
+        <p class="form-hint">${t('meals.recurrenceUntilHint')}</p>
+      </div>
     </div>`}`;
 
   return `
@@ -1430,9 +1455,29 @@ async function saveModal(overlay) {
   const repeat_weekly = state.modal?.mode === 'create'
     ? Boolean(overlay.querySelector('#modal-repeat-weekly')?.checked)
     : false;
+  const scope = overlay.querySelector('#modal-edit-scope')?.value || 'single';
+  // Das Wiederholungs-Ende zählt nur, solange die Serie im Spiel ist: beim
+  // Anlegen mit gesetztem Schalter, beim Bearbeiten im Serien-Umfang. Sonst
+  // steht im Feld zwar ein Wert, er gehört aber zu keiner der beiden Absichten.
+  const seriesScoped   = state.modal?.mode === 'create' ? repeat_weekly : scope === 'series';
+  const repeatUntilEl  = overlay.querySelector('#modal-repeat-until');
+  const repeatUntilRaw = seriesScoped ? (repeatUntilEl?.value ?? '') : '';
+  // Leeres Feld heißt „ohne Ende" und geht als leerer String raus: der Server
+  // unterscheidet das ausdrücklich vom fehlenden Feld (Ende bleibt unverändert).
+  const repeat_until = repeatUntilRaw ? parseDateInput(repeatUntilRaw) : '';
 
   if (!date || !isDateInputValid(dateRaw)) {
     reportFieldError(overlay.querySelector('#modal-date'), t('calendar.invalidDate'));
+    return;
+  }
+
+  if (repeatUntilRaw && (!repeat_until || !isDateInputValid(repeatUntilRaw))) {
+    reportFieldError(repeatUntilEl, t('calendar.invalidDate'));
+    return;
+  }
+
+  if (repeat_until && repeat_until < date) {
+    reportFieldError(repeatUntilEl, t('meals.recurrenceUntilBeforeStart'));
     return;
   }
 
@@ -1450,14 +1495,12 @@ async function saveModal(overlay) {
     const { mode, meal } = state.modal;
 
     if (mode === 'create') {
-      const res     = await api.post('/meals', { date, meal_type, title, notes, recipe_url, recipe_id, ingredients, repeat_weekly });
+      const res     = await api.post('/meals', { date, meal_type, title, notes, recipe_url, recipe_id, ingredients, repeat_weekly, repeat_until });
       state.meals.push(res.data);
     } else {
-      const scope = overlay.querySelector('#modal-edit-scope')?.value || 'single';
-
       if (scope === 'series') {
         // Ganze Serie: Template + alle Instanzen inkl. Zutaten serverseitig aktualisieren.
-        await api.put(`/meals/${meal.id}?scope=series`, { meal_type, title, notes, recipe_url, recipe_id, ingredients });
+        await api.put(`/meals/${meal.id}?scope=series`, { meal_type, title, notes, recipe_url, recipe_id, ingredients, repeat_until });
       } else {
         // Nur diese Instanz
         await api.put(`/meals/${meal.id}`, { date, meal_type, title, notes, recipe_url, recipe_id });
@@ -1508,20 +1551,27 @@ function collectModalIngredients(overlay) {
 async function deleteMeal(mealId) {
   const meal = state.meals.find((m) => m.id === mealId);
 
-  // Wiederkehrende Mahlzeit: Einzeltermin oder ganze Serie löschen.
+  // Wiederkehrende Mahlzeit: Einzeltermin, alles ab hier oder ganze Serie löschen.
+  // „Ab hier" ist der Ausweg, wenn die Serie in der Vergangenheit sinnvoll war und
+  // nur nach vorn enden soll - ohne ihn blieb nur, jedes künftige Vorkommen
+  // einzeln zu löschen, während die nächste Woche schon wieder eines erzeugte (#619).
   if (meal?.recurrence_template_id) {
     const choice = await selectModal(t('meals.deleteRecurringTitle'), [
       { value: 'single', label: t('meals.deleteScopeSingle') },
+      { value: 'future', label: t('meals.deleteScopeFuture') },
       { value: 'series', label: t('meals.deleteScopeSeries') },
     ]);
     if (choice === null) return;
 
-    if (choice === 'series') {
+    if (choice === 'series' || choice === 'future') {
       try {
-        await api.delete(`/meals/${mealId}?scope=series`);
+        await api.delete(`/meals/${mealId}?scope=${choice}`);
         await loadWeek(state.currentWeek);
         renderWeekGrid();
-        window.yuvomi?.showToast(t('meals.seriesDeletedToast'), 'success');
+        window.yuvomi?.showToast(
+          choice === 'future' ? t('meals.seriesEndedToast') : t('meals.seriesDeletedToast'),
+          'success',
+        );
       } catch (err) {
         window.yuvomi?.showToast(err.data?.error ?? t('common.unknownError'), 'danger');
       }

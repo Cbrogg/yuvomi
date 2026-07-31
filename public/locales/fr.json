@@ -485,6 +485,9 @@
         "deletedToast": "Repas supprimé.",
         "recurrenceLabel": "Répéter chaque semaine",
         "recurrenceHint": "Yuvomi ajoute automatiquement ce repas le même jour de la semaine dans les semaines à venir.",
+        "recurrenceUntilLabel": "Répéter jusqu'au",
+        "recurrenceUntilHint": "Laisser vide pour répéter indéfiniment.",
+        "recurrenceUntilBeforeStart": "La fin de la répétition ne peut pas précéder la date.",
         "recurrenceBadge": "Repas récurrent",
         "recurrenceEditHint": "Ce repas se répète chaque semaine. Le supprimer ignore uniquement cette date.",
         "editScopeLabel": "Appliquer la modification à",
@@ -492,7 +495,9 @@
         "editScopeSeries": "Toute la série",
         "deleteRecurringTitle": "Supprimer le repas récurrent",
         "deleteScopeSingle": "Seulement cette date",
+        "deleteScopeFuture": "Celle-ci et toutes les suivantes",
         "deleteScopeSeries": "Toute la série (toutes les semaines)",
+        "seriesEndedToast": "Série terminée à partir de cette date.",
         "seriesDeletedToast": "Série supprimée."
     },
     "calendar": {
