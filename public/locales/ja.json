@@ -1647,7 +1647,7 @@
         "calendarEnabled": "Calendar enabled",
         "calendarsRefreshed": "Calendars refreshed",
         "caldavRemindersToggle": "リマインダーリストの表示/非表示",
-        "caldavRemindersHint": "リマインダーリスト（Appleのリマインダー）は読み取り専用でタスクまたは買い物に同期されます。",
+        "caldavRemindersHint": "リマインダーリスト（Appleのリマインダー）はタスクまたは買い物と双方向で同期されます。",
         "caldavRemindersEmpty": "リマインダーリストが見つかりません。「リマインダーリストを更新」をクリックして検出してください。",
         "caldavReminderMapTasks": "タスク",
         "caldavReminderMapShopping": "買い物",

@@ -1632,7 +1632,7 @@
         "calendarDisabled": "Kalendarz wyłączony",
         "calendarsRefreshed": "Kalendarze odświeżone",
         "caldavRemindersToggle": "Pokaż/ukryj listy przypomnień",
-        "caldavRemindersHint": "Listy przypomnień (Przypomnienia Apple) są synchronizowane tylko do odczytu do Zadań lub Zakupów.",
+        "caldavRemindersHint": "Listy przypomnień (Przypomnienia Apple) są synchronizowane dwukierunkowo z Zadaniami lub Zakupami.",
         "caldavRemindersEmpty": "Nie znaleziono list przypomnień. Kliknij „Odśwież listy przypomnień\", aby je wykryć.",
         "caldavReminderMapTasks": "Zadania",
         "caldavReminderMapShopping": "Zakupy",

@@ -1647,7 +1647,7 @@
         "calendarEnabled": "Calendar enabled",
         "calendarsRefreshed": "Calendars refreshed",
         "caldavRemindersToggle": "显示/隐藏提醒列表",
-        "caldavRemindersHint": "提醒列表（Apple 提醒事项）以只读方式同步到任务或购物。",
+        "caldavRemindersHint": "提醒列表（Apple 提醒事项）与任务或购物双向同步。",
         "caldavRemindersEmpty": "未找到提醒列表。点击“刷新提醒列表”以检测它们。",
         "caldavReminderMapTasks": "任务",
         "caldavReminderMapShopping": "购物",

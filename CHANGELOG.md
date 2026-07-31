@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.68.0] - 2026-07-31
+
+### Added
+
+- Reminder lists sync both ways now. A task or shopping item that came from a CalDAV list follows you back to the server when you tick it off, rename it, change its due date or priority, or delete it. Until now the mirror was one-way: the change stayed local and the next sync run quietly undid it. This works with any CalDAV server that serves reminder collections - iCloud, Radicale, Nextcloud - not only Apple Reminders.
+- A change is written into the existing item on the server instead of replacing it, so alarms, categories and whatever else your other apps put there survive the round trip. Tasks created in Yuvomi stay local: unlike an event, a task has no target list it could be created in.
+
+### Fixed
+
+- Reminders with a due time arrived shifted by the time-zone offset - a task due at 16:30 showed up as 14:30. Due times are now read into, and written back out of, the household time zone (`TZ`).
+- A task set to "in progress" or archived fell back to "open" on every sync run, and an "urgent" priority dropped to "high", because neither has an exact counterpart in the reminder format. Both now survive unless the server genuinely moves the item to another level.
+
 ## [1.67.0] - 2026-07-31
 
 ### Added

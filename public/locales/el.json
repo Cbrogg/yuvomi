@@ -1647,7 +1647,7 @@
         "calendarEnabled": "Calendar enabled",
         "calendarsRefreshed": "Calendars refreshed",
         "caldavRemindersToggle": "Εμφάνιση/απόκρυψη λιστών υπενθυμίσεων",
-        "caldavRemindersHint": "Οι λίστες υπενθυμίσεων (Υπενθυμίσεις Apple) συγχρονίζονται μόνο για ανάγνωση στις Εργασίες ή στα Ψώνια.",
+        "caldavRemindersHint": "Οι λίστες υπενθυμίσεων (Υπενθυμίσεις Apple) συγχρονίζονται με τις Εργασίες ή τα Ψώνια και προς τις δύο κατευθύνσεις.",
         "caldavRemindersEmpty": "Δεν βρέθηκαν λίστες υπενθυμίσεων. Κάντε κλικ στο «Ανανέωση λιστών υπενθυμίσεων» για να τις εντοπίσετε.",
         "caldavReminderMapTasks": "Εργασίες",
         "caldavReminderMapShopping": "Ψώνια",

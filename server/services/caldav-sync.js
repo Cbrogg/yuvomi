@@ -14,6 +14,7 @@ import { pruneDeletedEvents } from './calendar-prune.js';
 import * as outbound from './calendar-outbound.js';
 import { processPendingDeletions, processPendingUpdates, flushAccount } from './caldav-outbound.js';
 import { toICSDatetime, escapeICSText } from '../utils/ics-format.js';
+import { createCalDAVClient } from '../utils/caldav-client.js';
 
 // Reused functions from apple-calendar.js
 import {
@@ -377,15 +378,7 @@ function updateCalendarSelection(accountId, calendarUrl, enabled) {
 const YIELD_EVERY = 50;
 
 /** Echter tsdav-Client für einen Account; in Tests durch eine Factory ersetzbar. */
-async function defaultClientFactory(account) {
-  const { createDAVClient } = await import('tsdav');
-  return createDAVClient({
-    serverUrl:          account.caldav_url,
-    credentials:        { username: account.username, password: account.password },
-    authMethod:         'Basic',
-    defaultAccountType: 'caldav',
-  });
-}
+const defaultClientFactory = createCalDAVClient;
 
 async function sync({ createClient } = {}) {
   const accounts = getAllAccounts();

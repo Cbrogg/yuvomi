@@ -1647,7 +1647,7 @@
         "calendarEnabled": "Calendar enabled",
         "calendarsRefreshed": "Calendars refreshed",
         "caldavRemindersToggle": "Hatırlatıcı listelerini göster/gizle",
-        "caldavRemindersHint": "Hatırlatıcı listeleri (Apple Anımsatıcılar) salt okunur olarak Görevler veya Alışveriş'e eşitlenir.",
+        "caldavRemindersHint": "Hatırlatıcı listeleri (Apple Anımsatıcılar) Görevler veya Alışveriş ile çift yönlü eşitlenir.",
         "caldavRemindersEmpty": "Hatırlatıcı listesi bulunamadı. Bunları bulmak için «Hatırlatıcı listelerini yenile» düğmesine tıklayın.",
         "caldavReminderMapTasks": "Görevler",
         "caldavReminderMapShopping": "Alışveriş",

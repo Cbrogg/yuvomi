@@ -1647,7 +1647,7 @@
         "calendarEnabled": "Calendar enabled",
         "calendarsRefreshed": "Calendars refreshed",
         "caldavRemindersToggle": "إظهار/إخفاء قوائم التذكيرات",
-        "caldavRemindersHint": "تتم مزامنة قوائم التذكيرات (تذكيرات Apple) للقراءة فقط إلى المهام أو التسوق.",
+        "caldavRemindersHint": "تتم مزامنة قوائم التذكيرات (تذكيرات Apple) مع المهام أو التسوق في كلا الاتجاهين.",
         "caldavRemindersEmpty": "لم يتم العثور على قوائم تذكيرات. انقر على «تحديث قوائم التذكيرات» لاكتشافها.",
         "caldavReminderMapTasks": "المهام",
         "caldavReminderMapShopping": "التسوق",

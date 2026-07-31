@@ -1647,7 +1647,7 @@
         "calendarEnabled": "Calendar enabled",
         "calendarsRefreshed": "Calendars refreshed",
         "caldavRemindersToggle": "Показать/скрыть списки напоминаний",
-        "caldavRemindersHint": "Списки напоминаний (Напоминания Apple) синхронизируются только для чтения в Задачи или Покупки.",
+        "caldavRemindersHint": "Списки напоминаний (Напоминания Apple) синхронизируются с Задачами или Покупками в обе стороны.",
         "caldavRemindersEmpty": "Списки напоминаний не найдены. Нажмите «Обновить списки напоминаний», чтобы их обнаружить.",
         "caldavReminderMapTasks": "Задачи",
         "caldavReminderMapShopping": "Покупки",

@@ -12,6 +12,9 @@ import express from 'express';
 import * as db from '../db.js';
 import { str, oneOf, url, date, collectErrors, MAX_TITLE, MAX_SHORT, MAX_TEXT } from '../middleware/validate.js';
 import { aggregateMealIngredients } from '../services/shopping-import.js';
+import {
+  flushOutbound, markTodoOutbound, queueTodoDeletions,
+} from '../services/caldav-todo-outbound.js';
 
 const log = createLogger('Shopping');
 
@@ -20,6 +23,26 @@ const router  = express.Router();
 // --------------------------------------------------------
 // Hilfsfunktionen
 // --------------------------------------------------------
+
+/**
+ * Aus einer CalDAV-Liste gespiegelte Artikel einer Auswahl - vor dem Löschen zu
+ * ermitteln, danach sind UID und Objekt-URL weg (#617).
+ */
+function mirroredItems(where, ...params) {
+  return db.get().prepare(
+    `SELECT * FROM shopping_items WHERE ${where} AND external_source = 'caldav'`
+  ).all(...params);
+}
+
+/**
+ * Ausgehende Arbeit an einem CalDAV-Spiegel anstoßen (#617). Bewusst nach der
+ * Antwort und ohne await: der Server-Aufruf darf die Antwort weder verzögern
+ * noch scheitern lassen. Schlägt er fehl, bleibt die Vormerkung liegen und der
+ * nächste Sync-Lauf holt sie nach.
+ */
+function pushToCalDAV(what) {
+  flushOutbound().catch((err) => log.warn(`${what} vorgemerkt, Sofortversuch fehlgeschlagen:`, err.message));
+}
 
 /** Alle Kategorien aus DB laden (nach sort_order sortiert). */
 function loadCategories() {
@@ -250,7 +273,14 @@ router.patch('/items/:itemId', (req, res) => {
     const updated = db.get()
       .prepare('SELECT * FROM shopping_items WHERE id = ?')
       .get(req.params.itemId);
+
+    // Abhaken oder Umbenennen eines gespiegelten Artikels zieht auf dem
+    // CalDAV-Server nach (#617).
+    const pending = markTodoOutbound('shopping', item, updated);
+
     res.json({ data: updated });
+
+    if (pending) pushToCalDAV('Änderung');
   } catch (err) {
     log.error('PATCH items/:id error:', err);
     res.status(500).json({ error: 'Internal server error.', code: 500 });
@@ -324,12 +354,16 @@ router.post('/items/undo-transfer', (req, res) => {
 // --------------------------------------------------------
 router.delete('/items/:itemId', (req, res) => {
   try {
+    const queued = queueTodoDeletions('shopping', mirroredItems('id = ?', req.params.itemId));
+
     const result = db.get()
       .prepare('DELETE FROM shopping_items WHERE id = ?')
       .run(req.params.itemId);
     if (result.changes === 0)
       return res.status(404).json({ error: 'Item not found.', code: 404 });
     res.json({ ok: true });
+
+    if (queued) pushToCalDAV('Löschung');
   } catch (err) {
     log.error('DELETE items/:id error:', err);
     res.status(500).json({ error: 'Internal server error.', code: 500 });
@@ -419,12 +453,18 @@ router.put('/:listId', (req, res) => {
 // --------------------------------------------------------
 router.delete('/:listId', (req, res) => {
   try {
+    // Die Artikel gehen per CASCADE mit, also müssen ihre Löschungen vorher
+    // vorgemerkt sein (#617).
+    const queued = queueTodoDeletions('shopping', mirroredItems('list_id = ?', req.params.listId));
+
     const result = db.get()
       .prepare('DELETE FROM shopping_lists WHERE id = ?')
       .run(req.params.listId);
     if (result.changes === 0)
       return res.status(404).json({ error: 'List not found.', code: 404 });
     res.json({ ok: true });
+
+    if (queued) pushToCalDAV('Löschung');
   } catch (err) {
     log.error('DELETE /:listId error:', err);
     res.status(500).json({ error: 'Internal server error.', code: 500 });
@@ -648,10 +688,16 @@ router.post('/:listId/import-pantry', (req, res) => {
 // --------------------------------------------------------
 router.delete('/:listId/items/checked', (req, res) => {
   try {
+    const queued = queueTodoDeletions(
+      'shopping', mirroredItems('list_id = ? AND is_checked = 1', req.params.listId)
+    );
+
     const result = db.get().prepare(`
       DELETE FROM shopping_items WHERE list_id = ? AND is_checked = 1
     `).run(req.params.listId);
     res.json({ deleted: result.changes });
+
+    if (queued) pushToCalDAV('Löschung');
   } catch (err) {
     log.error('DELETE /:listId/items/checked error:', err);
     res.status(500).json({ error: 'Internal server error.', code: 500 });

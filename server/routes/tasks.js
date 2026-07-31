@@ -11,10 +11,23 @@ import { documentVisibleSql } from '../services/document-access.js';
 import { nextOccurrenceAfter } from '../services/recurrence.js';
 import { syncTaskRewards } from '../services/rewards.js';
 import { normalizeVisibility, visibilityWhere } from '../services/visibility.js';
+import {
+  flushOutbound, markTodoOutbound, queueTodoDeletion,
+} from '../services/caldav-todo-outbound.js';
 import { uniqueKey } from '../utils/category-slug.js';
 import * as v from '../middleware/validate.js';
 
 const log = createLogger('Tasks');
+
+/**
+ * Ausgehende Arbeit an einem CalDAV-Spiegel anstoßen (#617). Bewusst nach der
+ * Antwort und ohne await: der Server-Aufruf darf die Antwort weder verzögern
+ * noch scheitern lassen. Schlägt er fehl, bleibt die Vormerkung liegen und der
+ * nächste Sync-Lauf holt sie nach.
+ */
+function pushToCalDAV(what) {
+  flushOutbound().catch((err) => log.warn(`${what} vorgemerkt, Sofortversuch fehlgeschlagen:`, err.message));
+}
 
 const router = express.Router();
 
@@ -495,7 +508,12 @@ router.put('/:id', (req, res) => {
     addAssignedUsers(updated);
     updated.subtasks = loadSubtasks(updated.id);
 
+    // Änderung an einer gespiegelten Aufgabe auf dem CalDAV-Server nachziehen (#617).
+    const pending = markTodoOutbound('tasks', task, updated);
+
     res.json({ data: updated });
+
+    if (pending) pushToCalDAV('Änderung');
   } catch (err) {
     log.error('PUT /:id error:', err);
     res.status(500).json({ error: 'Internal server error.', code: 500 });
@@ -514,11 +532,14 @@ router.patch('/:id/status', (req, res) => {
     if (!VALID_STATUSES.includes(status))
       return res.status(400).json({ error: `Invalid status. Allowed: ${VALID_STATUSES.join(', ')}`, code: 400 });
 
-    const prev = db.get().prepare('SELECT status FROM tasks WHERE id = ?').get(req.params.id);
+    // Ganze Zeile, nicht nur der Status: die Rückrichtung (#617) braucht die
+    // externen Kennungen, um den Statuswechsel dem CalDAV-Objekt zuzuordnen.
+    const prev = db.get().prepare('SELECT * FROM tasks WHERE id = ?').get(req.params.id);
     if (!prev)
       return res.status(404).json({ error: 'Task not found.', code: 404 });
 
     db.get().prepare('UPDATE tasks SET status = ? WHERE id = ?').run(status, req.params.id);
+    const pending = markTodoOutbound('tasks', prev, { ...prev, status });
 
     syncHousekeepingPaymentStatus(db.get(), req.params.id, status);
     // Punkte-Gutschrift/Storno an den Aufgaben-Statuswechsel koppeln.
@@ -554,6 +575,8 @@ router.patch('/:id/status', (req, res) => {
     }
 
     res.json({ data: { id: Number(req.params.id), status } });
+
+    if (pending) pushToCalDAV('Statuswechsel');
   } catch (err) {
     log.error('PATCH /:id/status error:', err);
     res.status(500).json({ error: 'Internal server error.', code: 500 });
@@ -567,10 +590,21 @@ router.patch('/:id/status', (req, res) => {
 // --------------------------------------------------------
 router.delete('/:id', (req, res) => {
   try {
+    // Vor dem DELETE vormerken (#617): danach sind UID und Objekt-URL weg. Die
+    // per CASCADE mitgelöschten Unteraufgaben gehören dazu - eine gespiegelte
+    // Aufgabe kann lokal welche bekommen haben, und die stammen dann selbst aus
+    // keiner Liste, aber der Fall kostet nichts.
+    const doomed = db.get().prepare(
+      `SELECT * FROM tasks WHERE (id = ? OR parent_task_id = ?) AND external_source = 'caldav'`
+    ).all(req.params.id, req.params.id);
+    const queued = doomed.reduce((n, row) => n + (queueTodoDeletion('tasks', row) ? 1 : 0), 0);
+
     const result = db.get().prepare('DELETE FROM tasks WHERE id = ?').run(req.params.id);
     if (result.changes === 0)
       return res.status(404).json({ error: 'Task not found.', code: 404 });
     res.json({ ok: true });
+
+    if (queued) pushToCalDAV('Löschung');
   } catch (err) {
     log.error('DELETE /:id error:', err);
     res.status(500).json({ error: 'Internal server error.', code: 500 });

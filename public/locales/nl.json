@@ -1607,7 +1607,7 @@
         "calendarDisabled": "Kalender uitgeschakeld",
         "calendarsRefreshed": "Kalenders vernieuwd",
         "caldavRemindersToggle": "Herinneringslijsten tonen/verbergen",
-        "caldavRemindersHint": "Herinneringslijsten (Apple Reminders) worden alleen-lezen gesynchroniseerd naar Taken of Boodschappen.",
+        "caldavRemindersHint": "Herinneringslijsten (Apple Reminders) worden in beide richtingen gesynchroniseerd met Taken of Boodschappen.",
         "caldavRemindersEmpty": "Geen herinneringslijsten gevonden. Klik op \"Herinneringslijsten vernieuwen\" om ze te ontdekken.",
         "caldavReminderMapTasks": "Taken",
         "caldavReminderMapShopping": "Boodschappen",

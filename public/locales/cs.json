@@ -1620,7 +1620,7 @@
         "calendarDisabled": "Kalendář deaktivován",
         "calendarsRefreshed": "Kalendáře aktualizovány",
         "caldavRemindersToggle": "Zobrazit/skrýt seznamy připomínek",
-        "caldavRemindersHint": "Seznamy připomínek (Apple Připomínky) se přebírají pouze pro čtení jako úkoly nebo nákup.",
+        "caldavRemindersHint": "Seznamy připomínek (Apple Připomínky) se synchronizují s Úkoly nebo Nákupem v obou směrech.",
         "caldavRemindersEmpty": "Nenalezeny žádné seznamy připomínek. Klikněte na „Aktualizovat seznamy připomínek“ pro jejich vyhledání.",
         "caldavReminderMapTasks": "Úkoly",
         "caldavReminderMapShopping": "Nákup",

@@ -274,7 +274,7 @@ Seventeen independent modules share one calm, consistent interface. Turn on what
 
 <br>
 
-- **Tasks** - Deadlines, priorities, subtasks, recurring schedules, multi-member assignment, per-task visibility (only me / assignees / everyone), customizable categories, linked documents from the Documents module, an "assigned to me" filter, keyword search across title and description, and a Kanban board. Optional CalDAV import of Apple Reminders.
+- **Tasks** - Deadlines, priorities, subtasks, recurring schedules, multi-member assignment, per-task visibility (only me / assignees / everyone), customizable categories, linked documents from the Documents module, an "assigned to me" filter, keyword search across title and description, and a Kanban board. Optional two-way CalDAV sync with reminder lists (Apple Reminders, Radicale, Nextcloud): completing, editing or deleting a mirrored task reaches the server too.
 - **Shopping** - Collaborative lists grouped by aisle, with swipe gestures, per-item notes, one-tap import from the meal plan, and a handover of everything you ticked off straight into the Pantry.
 - **Meals** - Weekly planner with multiple items per slot, weekly repeats, a drag-and-drop recipe sidebar, a one-click week randomizer, and direct export to the shopping list.
 - **Recipes** - Create, duplicate, and scale recipes; pre-fill meal slots, send the ingredients straight to a shopping list, or save any planned meal as a recipe.

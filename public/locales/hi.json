@@ -1647,7 +1647,7 @@
         "calendarEnabled": "Calendar enabled",
         "calendarsRefreshed": "Calendars refreshed",
         "caldavRemindersToggle": "रिमाइंडर सूचियाँ दिखाएँ/छिपाएँ",
-        "caldavRemindersHint": "रिमाइंडर सूचियाँ (Apple रिमाइंडर) केवल-पढ़ने के रूप में कार्य या खरीदारी में सिंक की जाती हैं।",
+        "caldavRemindersHint": "रिमाइंडर सूचियाँ (Apple रिमाइंडर) कार्य या खरीदारी के साथ दोनों दिशाओं में सिंक होती हैं।",
         "caldavRemindersEmpty": "कोई रिमाइंडर सूची नहीं मिली। उन्हें खोजने के लिए «रिमाइंडर सूचियाँ ताज़ा करें» पर क्लिक करें।",
         "caldavReminderMapTasks": "कार्य",
         "caldavReminderMapShopping": "खरीदारी",

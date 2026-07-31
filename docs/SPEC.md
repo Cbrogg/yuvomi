@@ -482,8 +482,10 @@ first sync after the upgrade.
 
 ### CalDAV Reminder Selection
 Per-account reminder-list selection for CalDAV accounts. Apple Reminders lists are CalDAV
-collections whose supported components include `VTODO`. Reuses the same CalDAV Accounts; each
-enabled list is mirrored **read-only** (iCloud → Yuvomi) into the Tasks or Shopping module.
+collections whose supported components include `VTODO` — the discovery filters on that component,
+so any CalDAV server that serves `VTODO` collections works (iCloud, Radicale, Nextcloud), not just
+Apple. Reuses the same CalDAV Accounts; each enabled list is mirrored **in both directions**
+(v1.68.0 · #617) into the Tasks or Shopping module.
 
 | Column | Type | Constraint |
 |--------|------|-----------|
@@ -503,6 +505,37 @@ The `tasks` and `shopping_items` tables carry `external_uid`, `external_source` 
 set to `'caldav'` for imported reminders), and `external_account_id` columns for this linkage.
 Imported rows are keyed on `(external_source, external_account_id, external_uid)`; items that
 disappear from the remote list are pruned on the next sync.
+
+**Outbound: local change → server (migration v113 · #617).** Editing, completing or deleting a
+mirrored task or shopping item is pushed back to the CalDAV server. Same shape as the calendar
+outbound path (#593): the intent is recorded synchronously in the route handler, executed after the
+response, and retried by the next sync run (at-least-once, given up after 5 attempts).
+
+- `tasks` and `shopping_items` gain `external_object_url` (CalDAV addresses an object by *its own*
+  URL — there is no "change item X in list Y"), `outbound_dirty` and `outbound_attempts`.
+- `caldav_todo_pending_deletions` (`account_id`, `module`, `uid`, `object_url`, `attempts`,
+  `last_error`, UNIQUE `(account_id, module, uid)`) outlives the deleted row, which is where the UID
+  and object URL would otherwise be read from. Separate from `calendar_pending_deletions`, whose key
+  is cut for calendars and events; the failure and give-up rules stay shared
+  (`calendar-outbound.js: outboundFailureAction`).
+- A change is a **patch of the original object**, never a rebuild: only the mirrored properties
+  (`SUMMARY`, `DESCRIPTION`, `DUE`, `PRIORITY`, `STATUS`, `COMPLETED`, `PERCENT-COMPLETE`) are
+  replaced, so alarms, categories and client-specific properties survive. Mirrored fields are
+  title/name, description, priority, status/checked and due date — category, assignment, points,
+  visibility and subtasks are Yuvomi-internal and never trigger a push.
+- The inbound pass skips rows with a pending push (the stale server state must not overwrite them)
+  and does not re-create a locally deleted row while its tombstone is open.
+- **Creating** is deliberately out of scope: unlike an event, a task carries no selectable target —
+  it belongs to the list it came from. Locally created tasks stay local.
+- **Lossy mappings are held from both ends.** Yuvomi has four priority levels and four statuses,
+  RFC 5545 three priority bands and no "in progress". `urgent`/`high` share the top band and
+  `in_progress`/`archived` both map out as "not completed", so the inbound keeps the finer local
+  value whenever the server reports the same band — otherwise every pushed *urgent* task would come
+  back as *high* on the next run.
+- **`DUE` is an instant, `due_date`/`due_time` are wall-clock (#617).** A task carries no TZID, so a
+  due time with a zone is converted into the household zone (`TZ` env → system zone → UTC) on the
+  way in and back on the way out. Before the fix a task due at 16:30 showed up as 14:30, shifted by
+  exactly the zone offset. A floating `DUE` (no zone at all) is already wall-clock and is left alone.
 
 **Pruning guards (#508):** a reminder list that cannot be fetched suspends the deletion pass for its
 whole target module. `tasks` and `shopping_items` only carry the account ID, not the list URL, so a
@@ -1878,7 +1911,7 @@ User management and app configuration. Logged-in users only.
   - **Calendar sync (`/settings/sync/calendar`):** CalDAV accounts and Webcal/ICS subscriptions are primary. Manage multiple CalDAV accounts (iCloud, Nextcloud, Radicale, Baikal) with per-account calendar selection via checkboxes, two-way sync, and a unified per-event sync-target picker; manage ICS URL subscriptions (add, delete, sync now, set color and visibility); configure sync interval. Google Calendar (OAuth 2.0, multi-calendar selection, read-only mode) and Apple/iCloud CalDAV live inside an accessible **"More providers"** disclosure that always shows current connection state; Apple carries a **legacy** badge directing new iCloud users to the generic CalDAV setup. OAuth callbacks (`sync_ok` / `sync_error`) render a localized banner, expand the matching provider disclosure, and are then stripped from the URL.
   - **Contact sync (`/settings/sync/contacts`):** manage multiple CardDAV accounts (iCloud, Nextcloud, Radicale, Baikal) — add, **edit** (credentials, URL, name; empty password keeps the stored one) and disconnect; per-addressbook enable/disable plus "enable all / disable all"; automatic sync on the `SYNC_INTERVAL_MINUTES` schedule plus a manual trigger. Each account card is one bordered object carrying its own actions, so "Disconnect" is unambiguously attributable. **Sync failures are visible in the app, not only in the server log** (v1.34.0): a partial failure outranks success in the status line, and the message sits on the address-book row that caused it, with the list auto-expanded. A configuration gap ("no address book enabled") stays neutral and disables the sync action instead of reporting success for a non-event; a real server error is shown in the danger tone. The disconnect confirmation names the account
 
-  - **Reminder sync (`/settings/sync/reminders`):** reuses the CalDAV accounts but exposes only reminder/task collections — per-list enablement, refresh, target mapping to Tasks or Shopping, and a read-only explanation; calendar collections do not appear here
+  - **Reminder sync (`/settings/sync/reminders`):** reuses the CalDAV accounts but exposes only reminder/task collections — per-list enablement, refresh and target mapping to Tasks or Shopping; calendar collections do not appear here. Enabled lists sync in **both directions** (v1.68.0 · #617): completing, editing or deleting a mirrored task or shopping item reaches the server too
 - **Weather:** Settings → Administration → Household weather configures the household default Open-Meteo location (latitude/longitude, optional city label, units; no API key) — admin only; saving activates Open-Meteo and supersedes any OpenWeatherMap `.env` configuration. A **"Detect location"** button uses the browser's Geolocation API to auto-fill latitude and longitude (no reverse-geocoding — the optional city field stays whatever was last typed, or the widget falls back to showing raw coordinates). **Automatic location updates:** an opt-in checkbox re-requests the browser's location every 30 minutes while the dashboard is open, silently updating the saved coordinates (and clearing any stale city label) so a moved device's weather stays current without a manual re-detect; skipped silently on permission denial or once the dashboard is closed. **Per-user override (Settings → Personal → My Weather, all users):** any user — not just admins — can set their own latitude/longitude/city/units and their own automatic-location-updates toggle; this personal location is stored separately from the household default and only affects that user's own dashboard widget. A status indicator shows whether a personal location or the household default is currently active, and a **"Use household default"** action clears the override. When a user has no personal override, the household admin's location is used as before.
 - **Language:** System (follows `navigator.language`) plus the 23 locales listed under [Supported Languages](#supported-languages) - via the `yuvomi-locale-picker` web component; switch without page reload
 - **API Tokens (admin):** create named Bearer / X-API-Key tokens for external integrations; the full token value is shown only once immediately after creation; tokens can be revoked at any time; support optional expiry and track last-used timestamp; **optional per-module scopes** (`<module>:read`/`<module>:write`, write implies read) restrict a token — e.g. an MCP token that may write the calendar but never read health data — while an unscoped token keeps full role-based access

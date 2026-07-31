@@ -113,7 +113,8 @@ npm run test:multi-assignment
 npm run test:kitchen-tabs
 npm run test:caldav         # CalDAV-Sync: Multi-Account, Event-Loop-Yield (#519), Serien-Overrides (#549), No-op-Läufe bleiben still und schreiben unveränderte Termine nicht neu
 npm run test:caldav-recurrence   # CalDAV/iOS-Serien mit Wochentags-Wiederholung (#549): FREQ=DAILY;BYDAY + DTSTART am Wochenende
-npm run test:caldav-reminders
+npm run test:caldav-reminders   # VTODO-Inbound: Feld-Abbildung, Prune-Leerguard (#508), DUE als Wanduhrzeit statt UTC (#617; TZ=Europe/Berlin fixiert)
+npm run test:caldav-todo-outbound   # Rückrichtung VTODO (#617): Patcher lässt Alarme/Kategorien stehen, Erledigt = STATUS+COMPLETED+PERCENT-COMPLETE (und weg beim Wiederöffnen), bandtreue Priorität/Status halten urgent und in_progress, DUE-Roundtrip zonenrichtig, Inbound überschreibt keine wartende Bearbeitung und legt Gelöschtes nicht neu an
 npm run test:caldav-event-target
 npm run test:google-multi   # multiple Google calendars + per-event sync target
 npm run test:google-outbound   # Löschen + Ändern + Umziehen Yuvomi → Google (#593): Tombstones, Dirty-Marker, events.move, 404/410, Retry-Limit, Inbound-Konfliktschutz; dazu Serien als Master (EXDATE aus Absagen/Verschiebungen, Altbestand-Zusammenführung nur beim Full-Resync)

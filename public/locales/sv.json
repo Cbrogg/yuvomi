@@ -1647,7 +1647,7 @@
         "calendarEnabled": "Kalender aktiverad",
         "calendarsRefreshed": "Kalendrar uppdaterade",
         "caldavRemindersToggle": "Visa/dölj påminnelselistor",
-        "caldavRemindersHint": "Påminnelselistor (Apple Påminnelser) synkroniseras skrivskyddat till Uppgifter eller Inköp.",
+        "caldavRemindersHint": "Påminnelselistor (Apple Påminnelser) synkroniseras i båda riktningarna med Uppgifter eller Inköp.",
         "caldavRemindersEmpty": "Inga påminnelselistor hittades. Klicka på ”Uppdatera påminnelselistor” för att hitta dem.",
         "caldavReminderMapTasks": "Uppgifter",
         "caldavReminderMapShopping": "Inköp",
