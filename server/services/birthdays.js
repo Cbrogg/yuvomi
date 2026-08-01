@@ -1,3 +1,6 @@
+import { formatDateKey, resolveHouseholdFormats, translate } from '../utils/i18n.js';
+import { OUTBOUND_SOURCES } from './calendar-outbound.js';
+
 const BIRTHDAY_COLOR = '#E11D48';
 const BIRTHDAY_RRULE = 'FREQ=YEARLY;INTERVAL=1';
 
@@ -61,16 +64,27 @@ function birthdayReminderAt(birthDate, offsetMin = 0, from = new Date()) {
   return new Date(baseTime - (offsetMin || 0) * 60000).toISOString();
 }
 
-// Titel/Beschreibung werden bewusst sprachneutral (englisch) in der DB abgelegt:
-// die Anzeigesprache ist nur clientseitig bekannt. Der Kalender-Read liefert bei
-// Geburtstags-Terminen birthday_name/birthday_date mit; das Frontend lokalisiert
-// Titel und Beschreibung über birthdays.calendarEventTitle/-Description (Issue #524).
-function eventTitle(name) {
-  return `Birthday: ${name}`;
+// Titel/Beschreibung werden in der Datensprache des Haushalts gespeichert
+// (resolveHouseholdLocale, siehe server/utils/i18n.js). Grund: die Zeile in
+// calendar_events ist das, was REST-API, ICS-Feed, CalDAV-/Google-Outbound und
+// der FTS-Suchindex zu sehen bekommen - keiner dieser Kanäle durchläuft die
+// clientseitige Übersetzung (#631, #632). Vorher stand hier ein fest englischer
+// Titel, den nur die Web-UI über birthday_name übersetzt hat (#524).
+//
+// Die clientseitige Übersetzung in public/utils/birthday-event.js bleibt: sie ist
+// jetzt der Override für Nutzer, deren Anzeigesprache von der Datensprache des
+// Haushalts abweicht.
+function eventTitle(name, locale) {
+  return translate(locale, 'birthdays.calendarEventTitle', { name });
 }
 
-function eventDescription(name, birthDate) {
-  return `Birthday reminder for ${name} (${birthDate}).`;
+function eventDescription(name, birthDate, locale, dateFormat) {
+  return birthDate
+    ? translate(locale, 'birthdays.calendarEventDescription', {
+        name,
+        date: formatDateKey(birthDate, dateFormat),
+      })
+    : translate(locale, 'birthdays.calendarEventDescriptionNoDate', { name });
 }
 
 function syncBirthdayCalendarEvent(database, birthday) {
@@ -84,9 +98,10 @@ function syncBirthdayCalendarEvent(database, birthday) {
     return null;
   }
 
+  const { locale, dateFormat } = resolveHouseholdFormats(database);
   const payload = {
-    title: eventTitle(birthday.name),
-    description: eventDescription(birthday.name, birthday.birth_date),
+    title: eventTitle(birthday.name, locale),
+    description: eventDescription(birthday.name, birthday.birth_date, locale, dateFormat),
     start_datetime: birthday.birth_date,
     end_datetime: null,
     all_day: 1,
@@ -199,6 +214,63 @@ function deleteBirthdayArtifacts(database, birthday) {
     `).run(birthday.calendar_event_id, birthday.created_by);
     database.prepare('DELETE FROM calendar_events WHERE id = ?').run(birthday.calendar_event_id);
   }
+}
+
+/**
+ * Betitelt alle vorhandenen Geburtstags-Termine in der aktuellen Datensprache des
+ * Haushalts neu.
+ *
+ * Nötig beim Wechsel der Sprache: die Titel stehen als Text in calendar_events,
+ * ein Umschalten allein ändert die Bestandszeilen nicht. Ohne diesen Lauf würde
+ * der Haushalt bis zum nächsten Geburtstags-Sync eine Mischung aus alter und
+ * neuer Sprache sehen - und in externen Kalendern noch länger.
+ *
+ * Ein umbenannter Termin, der bereits beim Provider liegt, wird für den Push
+ * vorgemerkt. Ohne das bliebe genau der Kanal englisch, um den es hier geht:
+ * `title` und `description` stehen in MIRRORED_FIELDS, aber der Sync holt sich
+ * seine Arbeit ausschließlich über `outbound_dirty` (pendingUpdates in
+ * server/services/calendar-outbound.js). Geburtstags-Termine landen dort, weil
+ * der Apple-Sync jedes lokale Event ohne Kalenderzuordnung hochlädt und die
+ * Zeile danach auf `external_source = 'apple'` stellt.
+ *
+ * Der Marker wird bewusst inline gesetzt statt über markOutbound(): das schreibt
+ * über db.get() und würde die übergebene Connection umgehen.
+ *
+ * @param {object} database
+ * @returns {number} Zahl der tatsächlich geänderten Termine
+ */
+function retitleBirthdayEvents(database) {
+  const { locale, dateFormat } = resolveHouseholdFormats(database);
+  const rows = database.prepare(`
+    SELECT b.name, b.birth_date,
+           e.id, e.title, e.description, e.external_source, e.external_calendar_id
+    FROM birthdays b
+    JOIN calendar_events e ON e.id = b.calendar_event_id
+  `).all();
+
+  const update = database.prepare(
+    'UPDATE calendar_events SET title = ?, description = ? WHERE id = ?'
+  );
+  // Kein Reset von outbound_dirty auf 0: ein anderer Grund für einen
+  // ausstehenden Push darf durch diesen Lauf nicht verlorengehen.
+  const markDirty = database.prepare(
+    'UPDATE calendar_events SET outbound_dirty = 1, outbound_attempts = 0 WHERE id = ?'
+  );
+
+  let changed = 0;
+  for (const row of rows) {
+    const title = eventTitle(row.name, locale);
+    const description = eventDescription(row.name, row.birth_date, locale, dateFormat);
+    if (title === row.title && description === (row.description ?? null)) continue;
+
+    update.run(title, description, row.id);
+    changed++;
+
+    if (OUTBOUND_SOURCES.includes(row.external_source) && row.external_calendar_id) {
+      markDirty.run(row.id);
+    }
+  }
+  return changed;
 }
 
 function hydrateBirthday(row, from = new Date()) {
@@ -316,6 +388,7 @@ export {
   listBirthdayImportCandidates,
   nextBirthdayAge,
   nextBirthdayDate,
+  retitleBirthdayEvents,
   syncAllBirthdayReminders,
   syncBirthdayArtifacts,
 };

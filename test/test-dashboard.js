@@ -12,9 +12,14 @@ import { register } from 'node:module';
 import * as nodeAssert from 'node:assert/strict';
 import express from 'express';
 import { MIGRATIONS_SQL } from '../server/db-schema-test.js';
-import { hydrateBirthday, syncBirthdayArtifacts } from '../server/services/birthdays.js';
-import { getUpcomingEvents } from '../server/services/calendar-events.js';
 import { addLocalDays, toLocalDateKey } from '../public/utils/date.js';
+
+// Dynamisch geladen, weil beide Module inzwischen server/db.js in ihren
+// Import-Graphen ziehen: statische Imports laufen vor der DB_PATH-Zuweisung
+// oben, sodass db.js eine echte yuvomi.db im Repo anlegen würde
+// (`test:db-isolation` wacht darüber).
+const { hydrateBirthday, syncBirthdayArtifacts } = await import('../server/services/birthdays.js');
+const { getUpcomingEvents } = await import('../server/services/calendar-events.js');
 
 register('./test-browser-loader.mjs', import.meta.url);
 
