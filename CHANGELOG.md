@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.69.1] - 2026-08-01
+
+### Fixed
+
+- Saving an edited shopping item no longer asks whether to discard the changes. The item was already stored at that point, so the question described the opposite of what had happened - and pressing "Discard" kept the save. The same dialog appeared after importing ingredients from the meal plan.
+
 ## [1.69.0] - 2026-08-01
 
 ### Added
