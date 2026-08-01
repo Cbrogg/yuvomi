@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.69.2] - 2026-08-01
+
 ### Fixed
 
 - Switching between light and dark mode now recolours the whole app right away. The colour a module lends to its buttons, focus rings and the active navigation pill kept the shade of the theme that was active when the page was opened, so after switching to dark mode that text sat at 2.7:1 against the background - below the readable minimum. Reloading fixed it, which is why it was easy to miss. The same went for "Automatic": when the system moved to dark mode on its own, the accent stayed behind.
