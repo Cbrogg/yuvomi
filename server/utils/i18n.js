@@ -1,0 +1,195 @@
+/**
+ * Server-i18n - Übersetzungen für serverseitig erzeugte Inhalte (#631, #632)
+ *
+ * Die Anzeigesprache eines Nutzers lebt im localStorage und ist dem Server nicht
+ * bekannt. Für Inhalte, die der Server *speichert* statt nur ausliefert, reicht
+ * das nicht: Geburtstags-Termine landen als Zeile in `calendar_events` und gehen
+ * von dort in die REST-API, den ICS-Feed, den CalDAV-/Google-Outbound und den
+ * FTS-Suchindex. Jeder dieser Kanäle sieht den gespeicherten Titel, keiner
+ * durchläuft die clientseitige Übersetzung in `public/utils/birthday-event.js`.
+ *
+ * Deshalb hat der Haushalt eine eigene Datensprache (`language` in sync_config,
+ * siehe resolveHouseholdLocale) - analog zu `currency`, `date_format` und
+ * `week_start`, die ebenfalls haushaltweit sind. Sie bestimmt, in welcher Sprache
+ * serverseitig erzeugte Titel und Beschreibungen abgelegt werden.
+ *
+ * Die Übersetzungen kommen aus denselben `public/locales/*.json`, die auch der
+ * Client lädt - sie werden als Daten gelesen (readFileSync), nicht importiert.
+ * Die Schichtgrenze aus `test/test-layer-boundary.js` bleibt damit gewahrt: es
+ * gibt keinen Modul-Import über `public/` hinweg, und die Übersetzungen können
+ * nicht auseinanderlaufen.
+ */
+
+import { readdirSync, readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const LOCALES_DIR = fileURLToPath(new URL('../../public/locales/', import.meta.url));
+
+// Referenz-Locale für fehlende Keys - dieselbe Rolle wie fallbackTranslations in
+// public/i18n.js: `de` ist vollständig, jede andere Datei darf Lücken haben.
+const REFERENCE_LOCALE = 'de';
+
+// Default-Datensprache, wenn der Haushalt keine gesetzt und keine Region gewählt
+// hat. Englisch, weil das exakt dem Verhalten vor der Preference entspricht
+// ("Birthday: <Name>") - ein Bestandshaushalt erlebt so keinen stillen Wechsel.
+const DEFAULT_LOCALE = 'en';
+
+const LOCALE_FILE_RE = /^([a-z]{2})\.json$/;
+
+let supportedLocales = null;
+const localeCache = new Map();
+
+/**
+ * Alle Sprachen, für die eine Locale-Datei existiert. Die Dateien sind die
+ * Wahrheit - so kann die Server-Liste nicht von SUPPORTED_LOCALES in
+ * public/i18n.js abweichen, wenn dort eine Sprache dazukommt.
+ * @returns {string[]} sortierte ISO-639-1-Codes
+ */
+export function getSupportedLocales() {
+  if (supportedLocales) return supportedLocales;
+  try {
+    supportedLocales = readdirSync(LOCALES_DIR)
+      .map((file) => file.match(LOCALE_FILE_RE)?.[1])
+      .filter(Boolean)
+      .sort();
+  } catch {
+    supportedLocales = [DEFAULT_LOCALE];
+  }
+  if (!supportedLocales.length) supportedLocales = [DEFAULT_LOCALE];
+  return supportedLocales;
+}
+
+/** Ist `locale` eine Sprache mit vorhandener Locale-Datei? */
+export function isSupportedLocale(locale) {
+  return typeof locale === 'string' && getSupportedLocales().includes(locale);
+}
+
+/**
+ * Übersetzungsobjekt einer Sprache, gecacht. Liefert bei fehlender oder
+ * kaputter Datei `null` statt zu werfen - eine Übersetzung darf nie der Grund
+ * sein, warum ein Route-Handler 500 wirft.
+ */
+function loadLocale(locale) {
+  if (localeCache.has(locale)) return localeCache.get(locale);
+  let data = null;
+  if (isSupportedLocale(locale)) {
+    try {
+      data = JSON.parse(readFileSync(path.join(LOCALES_DIR, `${locale}.json`), 'utf8'));
+    } catch {
+      data = null;
+    }
+  }
+  localeCache.set(locale, data);
+  return data;
+}
+
+/** Dot-Notation in verschachteltem Objekt auflösen (wie public/i18n.js). */
+function resolveKey(obj, key) {
+  return key.split('.').reduce((o, k) => (o != null ? o[k] : undefined), obj);
+}
+
+/**
+ * Übersetzt einen Key in die angegebene Sprache. Platzhalter-Syntax `{{name}}`,
+ * identisch zu t() im Frontend. Fehlt der Key in der Zielsprache, greift die
+ * Referenz-Locale; fehlt er auch dort, kommt der Key selbst zurück.
+ *
+ * Ohne `count`-Pluralisierung: serverseitig erzeugte Texte sind Titel und
+ * Beschreibungen einzelner Datensätze, keine Mengenangaben.
+ *
+ * @param {string} locale  ISO-639-1-Code
+ * @param {string} key     Dot-Notation, z. B. 'birthdays.calendarEventTitle'
+ * @param {object} params  Platzhalter-Werte
+ * @returns {string}
+ */
+export function translate(locale, key, params = {}) {
+  const primary = loadLocale(isSupportedLocale(locale) ? locale : DEFAULT_LOCALE);
+  let str = resolveKey(primary, key) ?? resolveKey(loadLocale(REFERENCE_LOCALE), key) ?? key;
+  for (const [name, value] of Object.entries(params)) {
+    str = str.replaceAll(`{{${name}}}`, String(value));
+  }
+  return str;
+}
+
+const VALID_DATE_FORMATS = ['mdy', 'dmy', 'ymd', 'mdy_dot', 'dmy_dot', 'dmy_slash', 'ymd_dot', 'ymd_slash'];
+
+/**
+ * Formatiert einen lokalen Datums-Key (YYYY-MM-DD) nach der Haushalts-Einstellung
+ * `date_format`. Portiert formatDateParts() aus public/i18n.js, damit ein Datum
+ * in einer gespeicherten Beschreibung genauso aussieht wie in der Oberfläche.
+ *
+ * Arbeitet bewusst auf dem String statt auf einem Date: `new Date('2026-03-01')`
+ * ist UTC-Mitternacht und kippt westlich von UTC auf den Vortag.
+ *
+ * @param {string} dateKey     'YYYY-MM-DD'
+ * @param {string} dateFormat  einer aus VALID_DATE_FORMATS
+ * @returns {string}           formatiertes Datum, '' bei ungültiger Eingabe
+ */
+export function formatDateKey(dateKey, dateFormat = 'dmy') {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateKey ?? ''));
+  if (!match) return '';
+  const [, year, month, day] = match;
+  switch (VALID_DATE_FORMATS.includes(dateFormat) ? dateFormat : 'dmy') {
+    case 'mdy':       return `${month}/${day}/${year}`;
+    case 'mdy_dot':   return `${month}.${day}.${year}`;
+    case 'dmy_dot':   return `${day}.${month}.${year}`;
+    case 'dmy_slash': return `${day}/${month}/${year}`;
+    case 'ymd':       return `${year}-${month}-${day}`;
+    case 'ymd_dot':   return `${year}.${month}.${day}`;
+    case 'ymd_slash': return `${year}/${month}/${day}`;
+    default:          return `${day}.${month}.${year}`;
+  }
+}
+
+function cfgValue(database, key) {
+  try {
+    return database.prepare('SELECT value FROM sync_config WHERE key = ?').get(key)?.value ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Datensprache des Haushalts.
+ *
+ * Reihenfolge: explizit gesetzte `language` → Sprachteil der `region`
+ * (`de-DE` → `de`) → Englisch. Die Ableitung aus der Region ist der Grund,
+ * warum die meisten Haushalte nichts einstellen müssen: wer seine Region auf
+ * "Deutschland" gesetzt hat, bekommt deutsche Titel, ohne davon zu wissen.
+ *
+ * `ignoreExplicit` überspringt die erste Stufe und liefert, was die Automatik
+ * ergäbe. Das braucht die Einstellungsseite für ihr "Automatisch (…)"-Label:
+ * sonst nennt es bei explizit gewählter Sprache genau diese und verspricht dem
+ * Nutzer eine Automatik, die er so nicht bekäme.
+ *
+ * @param {object} database  better-sqlite3-Connection
+ * @param {{ ignoreExplicit?: boolean }} options
+ * @returns {string}
+ */
+export function resolveHouseholdLocale(database, { ignoreExplicit = false } = {}) {
+  if (!ignoreExplicit) {
+    const explicit = cfgValue(database, 'language');
+    if (isSupportedLocale(explicit)) return explicit;
+  }
+
+  const regionLanguage = /^([a-z]{2})-[A-Z]{2}$/.exec(cfgValue(database, 'region') ?? '')?.[1];
+  if (isSupportedLocale(regionLanguage)) return regionLanguage;
+
+  return DEFAULT_LOCALE;
+}
+
+/**
+ * Sprache + Datumsformat des Haushalts in einem Zug - beides steckt in
+ * sync_config und wird von Aufrufern fast immer zusammen gebraucht.
+ * @param {object} database
+ * @returns {{ locale: string, dateFormat: string }}
+ */
+export function resolveHouseholdFormats(database) {
+  const dateFormat = cfgValue(database, 'date_format');
+  return {
+    locale: resolveHouseholdLocale(database),
+    dateFormat: VALID_DATE_FORMATS.includes(dateFormat) ? dateFormat : 'dmy',
+  };
+}
+
+export { DEFAULT_LOCALE, REFERENCE_LOCALE };

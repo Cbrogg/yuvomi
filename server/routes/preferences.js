@@ -9,6 +9,13 @@ import express from 'express';
 import * as db from '../db.js';
 import * as holidays from '../services/holidays.js';
 import { str, MAX_SHORT } from '../middleware/validate.js';
+import {
+  getSupportedLocales,
+  isSupportedLocale,
+  resolveHouseholdFormats,
+  resolveHouseholdLocale,
+} from '../utils/i18n.js';
+import { retitleBirthdayEvents } from '../services/birthdays.js';
 
 const log = createLogger('Preferences');
 
@@ -37,6 +44,14 @@ const DEFAULT_WEEK_START = 'monday';
 // 'personal' = persönliche/geteilte Einträge mit Mein/Haushalt-Ansicht.
 const VALID_BUDGET_MODES = ['shared', 'personal'];
 const DEFAULT_BUDGET_MODE = 'shared';
+
+// Datensprache des Haushalts (#631, #632): in welcher Sprache der Server Inhalte
+// *speichert*, die er selbst erzeugt - heute die Titel und Beschreibungen der
+// Geburtstags-Termine. Anders als die UI-Sprache (per-user im localStorage) muss
+// das haushaltweit sein: eine calendar_events-Zeile hat genau einen Titel, und
+// den lesen REST-API, ICS-Feed, CalDAV-/Google-Outbound und die Suche.
+// Nicht gesetzt = aus der Region abgeleitet, sonst Englisch (resolveHouseholdLocale).
+const VALID_LANGUAGES = getSupportedLocales();
 
 // Region ist nur ein Anzeige-Hinweis (Locale-Code wie "fr-FR" oder "custom").
 // Der Client fällt bei unbekanntem Wert ohnehin auf detectRegion() zurück, daher
@@ -266,6 +281,12 @@ router.get('/', (req, res) => {
         time_format: timeFormat,
         week_start: weekStart,
         region: cfgGet('region') || null,
+        // Drei Sichten auf dieselbe Einstellung, weil drei verschiedene Fragen
+        // dahinterstecken: was ist gewählt (Select-Zustand), was gilt gerade
+        // (API-Konsument), und was ergäbe die Automatik (Label der ersten Option).
+        language: isSupportedLocale(cfgGet('language')) ? cfgGet('language') : null,
+        language_effective: resolveHouseholdLocale(db.get()),
+        language_auto: resolveHouseholdLocale(db.get(), { ignoreExplicit: true }),
         app_name: appName,
         dashboard_widgets: dashboardWidgets,
         disabled_modules: disabledModules,
@@ -314,7 +335,14 @@ router.get('/', (req, res) => {
 
 router.put('/', (req, res) => {
   try {
-    const { visible_meal_types, currency, date_format, time_format, week_start, region, app_name, dashboard_widgets, disabled_modules, module_order, mobile_nav_order, housekeeping_payment_tasks, budget_mode, calendar_default_duration, calendar_default_reminders, calendar_default_assign_me, health_cycle_enabled, rewards_require_approval, tasks_default_points, weather_provider, weather_lat, weather_lon, weather_city, weather_units, weather_auto_locate, weather_user, holiday_country, holiday_subdivision, holiday_group, holiday_show_public, holiday_show_school, holiday_public_color, holiday_school_color } = req.body;
+    const { visible_meal_types, currency, date_format, time_format, week_start, region, language, app_name, dashboard_widgets, disabled_modules, module_order, mobile_nav_order, housekeeping_payment_tasks, budget_mode, calendar_default_duration, calendar_default_reminders, calendar_default_assign_me, health_cycle_enabled, rewards_require_approval, tasks_default_points, weather_provider, weather_lat, weather_lon, weather_city, weather_units, weather_auto_locate, weather_user, holiday_country, holiday_subdivision, holiday_group, holiday_show_public, holiday_show_school, holiday_public_color, holiday_school_color } = req.body;
+
+    // Ausgangszustand der Datensprache/-formatierung merken. Die gespeicherten
+    // Geburtstags-Titel hängen an beidem, und beide lassen sich über drei
+    // verschiedene Felder verschieben (language direkt, region indirekt,
+    // date_format über die Beschreibung). Ein Vergleich am Ende trifft alle drei
+    // Wege, ohne den Backfill an drei Stellen zu wiederholen.
+    const formatsBefore = resolveHouseholdFormats(db.get());
 
     if (visible_meal_types !== undefined) {
       if (!Array.isArray(visible_meal_types)) {
@@ -375,6 +403,19 @@ router.put('/', (req, res) => {
         return res.status(400).json({ error: 'Ungültige Region.', code: 400 });
       }
       cfgSet('region', region ?? '');
+    }
+
+    // Datensprache — haushaltweite Grundsatzentscheidung wie Region und Währung,
+    // deshalb nur Admin. null/'' stellt auf "automatisch" zurück (aus der Region).
+    if (language !== undefined) {
+      if (req.authRole !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required.', code: 403 });
+      }
+      if (language !== null && language !== '' && !isSupportedLocale(language)) {
+        return res.status(400).json({ error: `Ungültige Sprache. Erlaubt: ${VALID_LANGUAGES.join(', ')}`, code: 400 });
+      }
+      if (language === null || language === '') cfgDelete('language');
+      else cfgSet('language', language);
     }
 
     if (app_name !== undefined) {
@@ -676,6 +717,14 @@ router.put('/', (req, res) => {
       }
     }
 
+    // Hat sich Sprache oder Datumsformat verschoben, tragen die gespeicherten
+    // Geburtstags-Termine noch die alte Fassung — einmal nachziehen.
+    const formatsAfter = resolveHouseholdFormats(db.get());
+    if (formatsAfter.locale !== formatsBefore.locale
+        || formatsAfter.dateFormat !== formatsBefore.dateFormat) {
+      db.transaction(() => retitleBirthdayEvents(db.get()));
+    }
+
     const rawMealTypes = cfgGet('visible_meal_types') ?? DEFAULT_MEAL_TYPES;
     const savedMealTypes = rawMealTypes.split(',').filter((t) => VALID_MEAL_TYPES.includes(t));
     const savedCurrency = cfgGet('currency') ?? DEFAULT_CURRENCY;
@@ -697,6 +746,9 @@ router.put('/', (req, res) => {
         time_format: savedTimeFormat,
         week_start: savedWeekStart,
         region: cfgGet('region') || null,
+        language: isSupportedLocale(cfgGet('language')) ? cfgGet('language') : null,
+        language_effective: formatsAfter.locale,
+        language_auto: resolveHouseholdLocale(db.get(), { ignoreExplicit: true }),
         app_name: savedAppName,
         dashboard_widgets: savedWidgets,
         disabled_modules: savedDisabledModules,

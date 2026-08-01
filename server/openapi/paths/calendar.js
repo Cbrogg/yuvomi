@@ -6,6 +6,7 @@ export function calendarPaths() {
       get: op({
         summary: 'List calendar events',
         tag: 'Calendar',
+        description: 'Events generated from the birthdays module carry `birthday_name` and `birthday_date`. Their `title` is stored in the household data language (see `language` in `/preferences`), so API consumers, the ICS feed and calendar sync all read the same wording; clients that display in a different language can re-render the title from `birthday_name`.',
         responses: {
           200: {
             description: 'Calendar events',
