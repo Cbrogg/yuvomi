@@ -2665,14 +2665,7 @@ function positionSidebarIndicator() {
   // Liste lagen Item UND Pille sonst unsichtbar unterhalb der Falte — die
   // Navigation verlor ihren „Du bist hier"-Anker. Manuelles Scrollen statt
   // scrollIntoView, damit garantiert nur dieser Container scrollt.
-  const margin = 8;
   const top = active.offsetTop;
-  const bottom = top + active.offsetHeight;
-  if (top < container.scrollTop + margin) {
-    container.scrollTop = Math.max(0, top - margin);
-  } else if (bottom > container.scrollTop + container.clientHeight - margin) {
-    container.scrollTop = bottom - container.clientHeight + margin;
-  }
   // Pille vertikal im Item zentrieren — aus realen Höhen, token-unabhängig.
   // offsetTop ist scroll-unabhängig relativ zum (position:relative) Container.
   const centerOffset = (active.offsetHeight - indicator.getBoundingClientRect().height) / 2;
