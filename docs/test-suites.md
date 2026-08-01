@@ -44,7 +44,7 @@ npm run test:module-registry-parity       # Client-/Server-Modulregister-Paritä
 npm run test:pantry-status    # Vorrats-Ableitungen (#596): Ablauf-Schwelle EXPIRY_SOON_DAYS (inklusiv, exakte Grenze), daysUntil über Monatswechsel, "fast leer" vs. "leer" (disjunkt), Filter-Zählung mit Mehrfachtreffern, Einheiten-/Mengen-Normalisierung und Stepper-Schrittweiten
 npm run test:birthdays-routes   # Birthdays-Routen: Validierung/404 (Foto-Data-URL + Größenlimit), partielle COALESCE-Updates, limit-Clamp, GET-Sync-Seiteneffekt (calendar_events), Löschung inkl. Artefakt-Aufräumen
 npm run test:birthday-import    # Geburtstags-Import aus Kontakten (#518): Migration v90 (contact_id + Unique-Index), Kandidaten/Import-Service (idempotent), Routen GET /import/candidates + POST /import
-npm run test:birthday-localization   # Geburtstags-Lokalisierung im Kalender (#524): Kalender-Read liefert birthday_name/birthday_date, Client übersetzt Titel/Beschreibung; Locale-Key-Parität
+npm run test:birthday-localization   # Geburtstags-Lokalisierung (#524, #631, #632): Kalender-Read liefert birthday_name/birthday_date für die Client-Übersetzung; der gespeicherte Titel folgt der Datensprache des Haushalts (language → region → en), ein Sprachwechsel betitelt Bestandstermine um, der ICS-Feed exportiert die lokalisierte Fassung; Locale-Key-Parität
 npm run test:calendar
 npm run test:ncb            # notes, contacts, budget
 npm run test:notes-routes   # Notes-Routen: Validierung (Inhalt-Pflicht, HEX-Farbe)/404, CRUD, Pin-Toggle, Pinned-zuerst-Sortierung
