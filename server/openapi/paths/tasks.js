@@ -25,7 +25,14 @@ export function tasksPaths() {
       delete: op({ summary: 'Delete task category', tag: 'Tasks', params: [idParam('key', 'Category key')], stateChanging: true }),
     },
     '/api/v1/tasks/tags': {
-      get: op({ summary: 'List task tags', tag: 'Tasks', description: 'Every tag in use with its task count. Tags are free-form and have no registry: the list follows from the tasks themselves. Mirrored from VTODO CATEGORIES on CalDAV task lists, and distinct from the single category a task carries.' }),
+      get: op({ summary: 'List task tags', tag: 'Tasks', description: 'Every visible tag in use with its task count. Tags are free-form and have no registry: the list follows from the tasks themselves. Mirrored from VTODO CATEGORIES on CalDAV task lists, and distinct from the single category a task carries. Tags on tasks the caller cannot see are omitted, counts included.' }),
+    },
+    '/api/v1/tasks/tags/apply': {
+      post: op({ summary: 'Add or remove tags on several tasks', tag: 'Tasks', stateChanging: true, requestBody: jsonBody(null), description: 'Body: { ids, add?, remove? }. Applies to the tasks in `ids` the caller can see; the others are skipped silently. Returns the number of tasks actually changed and the refreshed tag list.' }),
+    },
+    '/api/v1/tasks/tags/{tag}': {
+      put: op({ summary: 'Rename a task tag', tag: 'Tasks', params: [idParam('tag', 'Tag name')], stateChanging: true, requestBody: jsonBody(null), description: 'Body: { name }. Renames the tag on every task the caller can see. Renaming onto an existing tag merges the two. Tasks the caller cannot see keep the old tag.' }),
+      delete: op({ summary: 'Remove a task tag everywhere', tag: 'Tasks', params: [idParam('tag', 'Tag name')], stateChanging: true, description: 'Detaches the tag from every task the caller can see. The tasks themselves stay. Unlike categories there is no in-use guard: a tag is nothing but its uses.' }),
     },
     '/api/v1/tasks/{id}': {
       get: op({ summary: 'Get task', tag: 'Tasks', params: [idParam()] }),

@@ -15,7 +15,7 @@ import * as db from '../db.js';
 import { parseVTODO } from './ics-parser.js';
 import { createCalDAVClient } from '../utils/caldav-client.js';
 import { serverTimeZone, utcToWall } from '../utils/timezone.js';
-import { setTags } from '../utils/task-tags.js';
+import { setItemTags, setTags } from '../utils/task-tags.js';
 import * as todoOutbound from './caldav-todo-outbound.js';
 
 // --------------------------------------------------------
@@ -271,19 +271,30 @@ function upsertShoppingItem(sel, todo, accountId, objectUrl = null) {
     `SELECT id FROM shopping_items WHERE external_uid = ? AND external_source = 'caldav' AND external_account_id = ?`
   ).get(todo.uid, accountId);
 
+  let itemId;
   if (existing) {
     db.get().prepare(`
       UPDATE shopping_items
       SET name = ?, is_checked = ?, list_id = ?, external_object_url = COALESCE(?, external_object_url)
       WHERE id = ?
     `).run(todo.summary, isChecked, listId, objectUrl, existing.id);
+    itemId = existing.id;
   } else {
-    db.get().prepare(`
+    // category bleibt beim Spalten-Default - die Kategorie ist hier der Gang im
+    // Laden, eine verwaltete Liste. CATEGORIES landet in den Tags.
+    const row = db.get().prepare(`
       INSERT INTO shopping_items
         (list_id, name, is_checked, external_uid, external_source, external_account_id, external_object_url)
       VALUES (?, ?, ?, ?, 'caldav', ?, ?)
     `).run(listId, todo.summary, isChecked, todo.uid, accountId, objectUrl);
+    itemId = row.lastInsertRowid;
   }
+
+  // CATEGORIES → Tags (#586). Anders als bei Aufgaben ist das eine Einbahn-
+  // straße: der Einkauf zeigt die Etiketten der Quellliste, verwaltet sie aber
+  // nicht. Entsprechend nimmt icsFieldsForShoppingItem CATEGORIES nicht auf -
+  // ein Push darf die Werte des Servers nicht anfassen.
+  setItemTags(db.get(), itemId, todo.tags);
 }
 
 // Nur diese Tabellen dürfen geprunt werden. `table` wird interpoliert (SQLite

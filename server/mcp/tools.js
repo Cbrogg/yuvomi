@@ -25,6 +25,7 @@ import { readFileSync } from 'node:fs';
 import { buildOpenApiSpec } from '../openapi.js';
 import { tokenAllows } from '../scopes.js';
 import { visibilityWhere } from '../services/visibility.js';
+import { loadTagsFor, normalizeTags, setTags } from '../utils/task-tags.js';
 
 const pkg = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'));
 
@@ -41,26 +42,44 @@ class ToolError extends Error {}
 // Kern-Tools: reine Funktionen (db, actorId, args)
 // --------------------------------------------------------
 
-function listTasks(db, args) {
+function listTasks(db, actorId, args) {
   let sql = `
-    SELECT id, title, status, priority, category, due_date, due_time
-    FROM tasks
-    WHERE parent_task_id IS NULL
+    SELECT t.id, t.title, t.status, t.priority, t.category, t.due_date, t.due_time
+    FROM tasks t
+    WHERE t.parent_task_id IS NULL
+      -- Sichtbarkeit (#474): kein Zugriff auf private/eingeschränkte Aufgaben
+      -- anderer. Stand hier bisher nicht, obwohl die Termin-Abfrage sie führt -
+      -- ein MCP-Token sah damit jede private Aufgabe des Haushalts, und mit den
+      -- Tags (#586) käme deren Freitext gleich mit.
+      AND ${visibilityWhere('t', 'task_assignments', 'task_id', '@me')}
   `;
-  const params = [];
+  const params = { me: actorId };
   if (args.status) {
     const s = v.oneOf(args.status, ['open', 'in_progress', 'done', 'archived'], 'status');
     if (s.error) throw new ToolError(s.error);
-    sql += ' AND status = ?';
-    params.push(args.status);
+    sql += ' AND t.status = @status';
+    params.status = args.status;
   } else {
-    sql += " AND status != 'archived'";
+    sql += " AND t.status != 'archived'";
   }
+  // Tag-Filter, gleiche Semantik wie GET /api/v1/tasks: mehrere Tags engen
+  // UND-verknüpft ein, die Schreibweise zählt nicht.
+  const tags = normalizeTags(args.tag);
+  tags.forEach((tag, i) => {
+    sql += ` AND EXISTS (SELECT 1 FROM task_tags tt WHERE tt.task_id = t.id AND tt.tag = @tag${i} COLLATE NOCASE)`;
+    params[`tag${i}`] = tag;
+  });
   sql += `
-    ORDER BY CASE WHEN due_date IS NULL THEN 1 ELSE 0 END, due_date ASC, created_at DESC
+    ORDER BY CASE WHEN t.due_date IS NULL THEN 1 ELSE 0 END, t.due_date ASC, t.created_at DESC
     LIMIT 100
   `;
-  return db.prepare(sql).all(...params);
+  const rows = db.prepare(sql).all(params);
+  // Tags als Liste, nicht als group_concat-String: ein Tag darf selbst ein Komma
+  // enthalten ("Haus, Hof"), eine verbundene Zeichenkette wäre nicht mehr
+  // eindeutig trennbar.
+  const tagMap = loadTagsFor(db, rows.map((r) => r.id));
+  for (const row of rows) row.tags = tagMap.get(row.id) ?? [];
+  return rows;
 }
 
 function createTask(db, actorId, args) {
@@ -80,16 +99,26 @@ function createTask(db, actorId, args) {
   `).run(
     title.value,
     description.value,
-    category.value || 'Sonstiges',
+    // 'misc' ist der Key der Auffangkategorie, 'Sonstiges' war ihr Anzeigename
+    // vor v83. Der alte Fallback schrieb einen Key, den task_categories nie
+    // hatte: die Aufgabe fiel damit aus Dropdown und Filter und sprang beim
+    // ersten Speichern still auf die erste echte Kategorie. Migration v114
+    // hat den Bestand geputzt - diese Zeile hat ihn weiter nachgeliefert.
+    category.value || 'misc',
     priority.value || 'none',
     dueDate.value,
     dueTime.value,
     actorId,
   );
 
-  return db.prepare(
+  // Tags mitschreiben (#586). normalizeTags nimmt Array wie kommaseparierten
+  // String - ein LLM-Client schickt mal das eine, mal das andere.
+  const tags = setTags(db, result.lastInsertRowid, args.tags ?? []);
+
+  const task = db.prepare(
     'SELECT id, title, status, priority, category, due_date, due_time FROM tasks WHERE id = ?'
   ).get(result.lastInsertRowid);
+  return { ...task, tags };
 }
 
 function listShoppingItems(db, args) {
@@ -453,15 +482,20 @@ async function internalApiRequest(ctx, method, path, { query, payload, contentDa
 const CORE_TOOLS = [
   {
     name: 'list_tasks',
-    description: 'List the family\'s current top-level tasks (open by default). Optionally filter by status.',
+    description: 'List the family\'s current top-level tasks (open by default). Optionally filter by status and tags. Each task carries its tags; tags are free-form labels mirrored from CalDAV task lists and are distinct from the single category a task has.',
     scope: { module: 'tasks', access: 'read' },
     inputSchema: {
       type: 'object',
       properties: {
         status: { type: 'string', enum: ['open', 'in_progress', 'done', 'archived'], description: 'Filter by task status.' },
+        tag: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Filter by tags. Several tags narrow the list (a task must carry all of them). Case-insensitive.',
+        },
       },
     },
-    handler: (ctx, args) => listTasks(ctx.db, args),
+    handler: (ctx, args) => listTasks(ctx.db, ctx.actor.id, args),
   },
   {
     name: 'create_task',
@@ -476,6 +510,11 @@ const CORE_TOOLS = [
         priority:    { type: 'string', enum: VALID_PRIORITIES, description: 'Optional priority (default none).' },
         due_date:    { type: 'string', description: 'Optional due date, format YYYY-MM-DD.' },
         due_time:    { type: 'string', description: 'Optional due time, format HH:MM.' },
+        tags: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Optional free-form tags. Unlike the single category, a task can carry many. Mirrored to CATEGORIES on CalDAV task lists.',
+        },
       },
       required: ['title'],
     },

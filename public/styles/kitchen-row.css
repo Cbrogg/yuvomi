@@ -324,6 +324,41 @@
 }
 
 /* --------------------------------------------------------
+   Gespiegelte VTODO-CATEGORIES einer Zeile (#586)
+   Anzeige, keine Bedienung: die Etiketten gehören der CalDAV-Quellliste.
+   Optisch leiser als der Name, damit sie die Zeile ordnen und nicht führen.
+   -------------------------------------------------------- */
+
+.kitchen-row__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+}
+
+.item-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-0h) var(--space-2);
+  border: var(--space-px) solid var(--color-border-subtle);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-2);
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+  line-height: 1.4;
+  /* Ein sehr langer Fremd-Tag darf die Zeile nicht sprengen. */
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Abgehakte Posten treten insgesamt zurück - die Etiketten mit. */
+.shopping-item--checked .item-tag {
+  opacity: 0.6;
+}
+
+/* --------------------------------------------------------
  * Bedienzone
  * -------------------------------------------------------- */
 

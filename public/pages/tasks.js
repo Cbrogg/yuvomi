@@ -8,13 +8,14 @@ import { api } from '/api.js';
 import { renderRRuleFields, bindRRuleEvents, getRRuleValues } from '/rrule-ui.js';
 import { openModal as openSharedModal, closeModal, wireBlurValidation, validateAll, btnSuccess, btnError, promptModal, advancedSection } from '/components/modal.js';
 import { stagger, vibrate, scheduleUndoableDelete } from '/utils/ux.js';
-import { t, formatDate, formatTime, formatDateInput, parseDateInput, isDateInputValid, formatTimeInput, parseTimeInput } from '/i18n.js';
+import { t, getLocale, formatDate, formatTime, formatDateInput, parseDateInput, isDateInputValid, formatTimeInput, parseTimeInput } from '/i18n.js';
 import { esc } from '/utils/html.js';
 import { refresh as refreshReminders } from '/reminders.js';
 import { renderUserMultiSelect, getSelectedUserIds, bindUserMultiSelect, renderAvatarStack } from '/components/user-multi-select.js';
 import { resolveReminderPreset } from '/utils/reminder-offset.js';
 import { renderPageSearch, wirePageSearch } from '/utils/page-search.js';
 import '/components/category-manager.js';
+import '/components/tag-manager.js';
 
 // --------------------------------------------------------
 // Konstanten
@@ -476,10 +477,51 @@ function wireTagEditor(panel) {
   });
 }
 
-/** Tag-Chips einer Aufgabe für Karten und Kanban. */
+// Wie viele Tags eine Karte zeigt, bevor sie zusammenfasst. Analog zum
+// Avatar-Stack: eine Karte, die 32 Etiketten ausrollt, ist keine Karte mehr.
+const TAG_BADGES_VISIBLE = 3;
+
+/**
+ * Tag-Chips einer Aufgabe für Karten und Kanban.
+ *
+ * Die Chips sind Buttons, keine Beschriftungen: ein Tag anzuklicken und die
+ * Liste darauf zu filtern ist die Geste, die man von einem Etikett erwartet.
+ * Den Klick fängt die Delegation in wireTagBadgeFilter ab, die ihn auch vom
+ * Karten-Klick (Aufgabe öffnen) trennt.
+ */
 function renderTagBadges(tags) {
   if (!tags?.length) return '';
-  return tags.map((tag) => `<span class="task-tag">${esc(tag)}</span>`).join('');
+  const shown = tags.slice(0, TAG_BADGES_VISIBLE);
+  const rest  = tags.length - shown.length;
+  const chips = shown.map((tag) => `
+    <button type="button" class="task-tag task-tag--filter" data-tag-filter="${esc(tag)}"
+            aria-label="${esc(t('tasks.tagFilterBy', { tag }))}">${esc(tag)}</button>`);
+  // Der Rest bleibt lesbar statt anklickbar: er benennt keinen einzelnen Tag,
+  // also gäbe es auch nichts, worauf ein Klick filtern könnte.
+  if (rest > 0) {
+    chips.push(`<span class="task-tag task-tag--more"
+                      title="${esc(tags.slice(TAG_BADGES_VISIBLE).join(', '))}">+${rest}</span>`);
+  }
+  return chips.join('');
+}
+
+/**
+ * Klick auf ein Tag-Chip filtert die Liste danach (#586).
+ *
+ * Delegiert, weil Karten laufend neu gezeichnet werden - und in der
+ * Capture-Phase, nicht beim Bubbling. Im Kanban öffnet ein Klick irgendwo auf
+ * der Karte den Bearbeiten-Dialog, und dieser Handler sitzt am Board, also
+ * unterhalb des Containers: beim Bubbling käme er zuerst dran und hätte den
+ * Dialog längst geöffnet, bevor ein stopPropagation hier noch etwas ausrichtet.
+ */
+function wireTagBadgeFilter(container) {
+  container.addEventListener('click', async (e) => {
+    const chip = e.target.closest('[data-tag-filter]');
+    if (!chip || !container.contains(chip)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    await toggleTagFilter(chip.dataset.tagFilter, container);
+  }, true);
 }
 
 function renderModalContent({ task = null, users = [], reminder = null } = {}) {
@@ -675,7 +717,9 @@ let state = {
   allTags:         [],       // [{ tag, count }] für Filterleiste und Vorschläge (#586)
   defaultPoints:   0,        // Haushalt-Standard für neue Aufgaben (#578), 0 = aus
   currentUserId:   null,
-  filters:         { status: 'open', priority: '', assigned_to: '', tag: '' },
+  // `tags` ist eine Liste, keine Auswahl: mehrere Tags engen UND-verknüpft ein,
+  // wie jeder andere Filter in dieser Leiste auch (#586).
+  filters:         { status: 'open', priority: '', assigned_to: '', tags: [] },
   groupMode:       'category',   // 'category' | 'due'
   viewMode:        'list',       // 'list' | 'kanban' (resolved at render time)
   showFuture:      false,
@@ -707,8 +751,14 @@ function filteredTasks() {
 // API-Aktionen
 // --------------------------------------------------------
 
-async function loadTasks(container) {
-  persistAssignedToMe();
+/**
+ * Query-String für /tasks aus dem aktuellen Filterzustand.
+ *
+ * Geteilt zwischen dem ersten Aufbau der Seite und jedem Nachladen: die Liste
+ * stand zweimal da und ist beim Hinzukommen des Tag-Filters prompt
+ * auseinandergelaufen.
+ */
+function taskQuery() {
   const params = new URLSearchParams();
   // Kanban-Spalten SIND der Status: den Statusfilter dort nicht an den Server
   // senden, sonst blieben "In Bearbeitung"/"Erledigt" trotz vorhandener Aufgaben
@@ -717,11 +767,16 @@ async function loadTasks(container) {
   if (state.filters.status && state.viewMode !== 'kanban') params.set('status', state.filters.status);
   if (state.filters.priority)    params.set('priority',    state.filters.priority);
   if (state.filters.assigned_to) params.set('assigned_to', state.filters.assigned_to);
-  if (state.filters.tag)         params.set('tag',         state.filters.tag);
+  // append statt set: jeder Tag ist ein eigener Parameter, damit ein Tag mit
+  // Komma im Namen nicht am Server in zwei zerfällt.
+  state.filters.tags.forEach((tag) => params.append('tag', tag));
   if (state.showFuture)          params.set('include_future', '1');
+  return params.toString() ? `?${params}` : '';
+}
 
-  const query = params.toString() ? `?${params}` : '';
-  const data  = await api.get(`/tasks${query}`);
+async function loadTasks(container) {
+  persistAssignedToMe();
+  const data  = await api.get(`/tasks${taskQuery()}`);
   state.tasks = data.data ?? [];
   renderTaskList(container);
 }
@@ -958,6 +1013,98 @@ function openTaskModal({ task = null, users = [], reminder = null } = {}, contai
 
       panel.querySelector('[data-action="delete-task"]')
         ?.addEventListener('click', (e) => handleDeleteTask(e.currentTarget.dataset.id, container));
+    },
+  });
+}
+
+// --------------------------------------------------------
+// Tag-Verwaltung und Bulk-Vergabe (#586)
+// --------------------------------------------------------
+
+/**
+ * Tags haushaltsweit umbenennen, zusammenführen und entfernen.
+ * Nach jeder Änderung wandert die frische Liste direkt in den State - der
+ * Server liefert sie in derselben Antwort mit, ein Nachladen entfällt.
+ */
+function openTagManager(container) {
+  let manager = null;
+  const onChanged = async (e) => {
+    state.allTags = e.detail?.tags ?? state.allTags;
+    // Ein Tag, der gerade umbenannt oder gelöscht wurde, kann noch im Filter
+    // stehen. Bliebe er dort, filterte die Liste auf einen Namen, den es nicht
+    // mehr gibt, und zeigte dauerhaft nichts an.
+    const known = new Set(state.allTags.map((entry) => entry.tag.toLowerCase()));
+    state.filters.tags = state.filters.tags.filter((tag) => known.has(tag.toLowerCase()));
+    renderFilters(container);
+    await loadTasks(container);
+  };
+  openSharedModal({
+    title: t('tasks.manageTags'),
+    content: '<yuvomi-tag-manager></yuvomi-tag-manager>',
+    size: 'lg',
+    onSave: (panel) => {
+      manager = panel.querySelector('yuvomi-tag-manager');
+      manager.addEventListener('tag-manager-changed', onChanged);
+    },
+    onClose: () => manager?.removeEventListener('tag-manager-changed', onChanged),
+  });
+}
+
+/**
+ * Tag an die ausgewählten Aufgaben hängen oder von ihnen nehmen.
+ *
+ * Beim Entfernen kommen die Vorschläge aus den ausgewählten Aufgaben selbst,
+ * nicht aus dem Gesamtbestand: einen Tag anzubieten, den keine der markierten
+ * Aufgaben trägt, wäre eine Aktion, die garantiert nichts tut.
+ */
+function openBulkTagDialog(taskIds, mode, container) {
+  const selected = state.tasks.filter((task) => taskIds.includes(task.id));
+  const pool = mode === 'remove'
+    ? [...new Map(selected.flatMap((task) => task.tags ?? [])
+        .map((tag) => [tag.toLowerCase(), tag])).values()].sort((a, b) =>
+          a.localeCompare(b, getLocale(), { sensitivity: 'base' }))
+    : state.allTags.map((entry) => entry.tag);
+
+  openSharedModal({
+    title: mode === 'add' ? t('tasks.bulkTagAdd') : t('tasks.bulkTagRemove'),
+    size: 'sm',
+    content: `
+      <form id="bulk-tag-form">
+        <div class="form-group">
+          <label class="label" for="bulk-tag-input">${t('tasks.tagsLabel')}</label>
+          <input class="input" type="text" id="bulk-tag-input" name="tag" autocomplete="off"
+                 list="bulk-tag-suggestions" maxlength="64"
+                 placeholder="${t('tasks.tagsPlaceholder')}">
+          <datalist id="bulk-tag-suggestions">
+            ${pool.map((tag) => `<option value="${esc(tag)}"></option>`).join('')}
+          </datalist>
+          <p class="task-field-hint">${t('tasks.bulkTagHint', { count: taskIds.length })}</p>
+        </div>
+        <div class="modal-actions">
+          <button type="submit" class="btn btn--primary">${t('common.apply')}</button>
+        </div>
+      </form>`,
+    onSave: (panel) => {
+      const form = panel.querySelector('#bulk-tag-form');
+      panel.querySelector('#bulk-tag-input')?.focus();
+      form?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const tag = form.elements.tag.value.trim();
+        if (!tag) return;
+        try {
+          const body = mode === 'add' ? { ids: taskIds, add: [tag] } : { ids: taskIds, remove: [tag] };
+          const res = await api.post('/tasks/tags/apply', body);
+          state.allTags = res.data?.tags ?? state.allTags;
+          window.yuvomi.showToast(t('tasks.tagsUpdated', { count: res.data?.updated ?? 0 }), 'success');
+          closeModal({ force: true });
+          state.selectedTaskIds.clear();
+          updateBulkActionsBar(container);
+          renderFilters(container);
+          await loadTasks(container);
+        } catch (err) {
+          window.yuvomi.showToast(err.message ?? t('common.errorGeneric'), 'danger');
+        }
+      });
     },
   });
 }
@@ -1577,8 +1724,7 @@ function renderFilters(container) {
     state.viewMode === 'kanban' ? '' : state.filters.status,
     state.filters.priority,
     state.filters.assigned_to,
-    state.filters.tag,
-  ].filter(Boolean).length;
+  ].filter(Boolean).length + state.filters.tags.length;
 
   // ---- Chip-Leiste: nur aktive Filter + Toggle-Button ----
   bar.replaceChildren();
@@ -1605,11 +1751,14 @@ function renderFilters(container) {
     chip.dataset.filter = 'assigned_to';
     bar.appendChild(chip);
   }
-  if (state.filters.tag) {
-    const chip = makeChip({ label: state.filters.tag, active: true, withRemove: true });
+  // Ein Chip je gewähltem Tag. Jeder trägt seinen eigenen Wert, damit das
+  // Entfernen genau diesen einen löst und nicht die ganze Auswahl.
+  state.filters.tags.forEach((tag) => {
+    const chip = makeChip({ label: tag, active: true, withRemove: true });
     chip.dataset.filter = 'tag';
+    chip.dataset.value = tag;
     bar.appendChild(chip);
-  }
+  });
 
   // "Mir zugewiesen" Schnellzugriff — nur sinnvoll bei mehreren Familienmitgliedern.
   // Icon+Label bewusst identisch zum Kalender-Toggle (gleiche Fähigkeit, eine Gestalt).
@@ -1680,10 +1829,10 @@ function renderFilters(container) {
       const u = state.users.find((u) => u.id === Number(f.assigned_to));
       if (u) parts.push(u.display_name);
     }
-    // Der Tag gehört in die Beschriftung, weil der Chip ihn beim Klick mitsetzt:
-    // ohne ihn hieße ein Chip „Offen" und schaltete zusätzlich einen Tag-Filter,
-    // den niemand am Chip ablesen kann (#586).
-    if (f.tag) parts.push(f.tag);
+    // Die Tags gehören in die Beschriftung, weil der Chip sie beim Klick
+    // mitsetzt: ohne sie hieße ein Chip „Offen" und schaltete zusätzlich
+    // Tag-Filter, die niemand am Chip ablesen kann (#586).
+    parts.push(...f.tags);
     if (!parts.length) return;
     // Aktions-Chip (wendet ein Filter-Set an), kein Ein/Aus-Zustand → pressed:null.
     const chip = makeChip({ label: parts.join(' · '), extraClass: 'filter-chip--recent', pressed: null });
@@ -1744,7 +1893,11 @@ function renderFilters(container) {
       row.className = 'filter-panel__chips';
 
       group.items.forEach((item) => {
-        const isActive = state.filters[group.key] === item.value;
+        // Tags sind die einzige Gruppe mit Mehrfachauswahl - dort entscheidet
+        // die Zugehörigkeit zur Liste, sonst die Gleichheit mit dem einen Wert.
+        const isActive = group.key === 'tag'
+          ? hasTagFilter(item.value)
+          : state.filters[group.key] === item.value;
         const chip = makeChip({ label: item.label, active: isActive, withRemove: isActive });
         chip.dataset.filter = group.key;
         chip.dataset.value = item.value;
@@ -1832,17 +1985,60 @@ function persistAssignedToMe() {
   try { localStorage.setItem(ASSIGNED_TO_ME_KEY, isAssignedToMe() ? '1' : '0'); } catch {}
 }
 
+/** Ist dieser Tag gerade gefiltert? Schreibweise zählt dabei nicht. */
+function hasTagFilter(tag) {
+  const key = String(tag).toLowerCase();
+  return state.filters.tags.some((active) => active.toLowerCase() === key);
+}
+
+/**
+ * Tag im Filter an- oder abwählen. Mehrere Tags engen UND-verknüpft ein, also
+ * fügt ein Klick hinzu statt zu ersetzen.
+ */
+async function toggleTagFilter(tag, container) {
+  const key = String(tag).toLowerCase();
+  state.filters.tags = hasTagFilter(tag)
+    ? state.filters.tags.filter((active) => active.toLowerCase() !== key)
+    : [...state.filters.tags, tag];
+  if (state.filters.tags.length) saveRecentFilter(state.filters);
+  renderFilters(container);
+  await loadTasks(container);
+}
+
+/**
+ * Ein gespeichertes Filter-Set auf die aktuelle Form bringen.
+ *
+ * `tag` als einzelner String stammt aus den Einträgen, die vor der
+ * Mehrfachauswahl im localStorage gelandet sind. Ohne die Umschreibung wäre
+ * `state.filters.tags` dort kein Array, und der erste `.forEach` darauf risse
+ * die Seite auf - für einen Wert, den niemand mehr absichtlich gesetzt hat.
+ */
+function normalizeFilterSet(f = {}) {
+  const tags = Array.isArray(f.tags) ? f.tags : (f.tag ? [f.tag] : []);
+  return {
+    status:      f.status || '',
+    priority:    f.priority || '',
+    assigned_to: f.assigned_to || '',
+    tags:        tags.filter(Boolean),
+  };
+}
+
 function getRecentFilters() {
-  try { return JSON.parse(localStorage.getItem(RECENT_FILTERS_KEY) ?? '[]'); } catch { return []; }
+  try {
+    return JSON.parse(localStorage.getItem(RECENT_FILTERS_KEY) ?? '[]').map(normalizeFilterSet);
+  } catch { return []; }
 }
 
 function saveRecentFilter(filters) {
-  if (!filters.status && !filters.priority && !filters.assigned_to) return;
-  const key = [filters.status, filters.priority, filters.assigned_to].join('|');
-  const recent = getRecentFilters().filter((f) =>
-    [f.status, f.priority, f.assigned_to].join('|') !== key
-  );
-  recent.unshift({ ...filters });
+  const set = normalizeFilterSet(filters);
+  if (!set.status && !set.priority && !set.assigned_to && !set.tags.length) return;
+  // Der Tag-Teil gehört in den Schlüssel: sonst verdrängte „Offen + Garten"
+  // den Eintrag „Offen + Haus", weil beide auf dieselbe Kennung fielen.
+  const keyOf = (f) => [f.status, f.priority, f.assigned_to,
+    f.tags.map((t) => t.toLowerCase()).sort().join(',')].join('|');
+  const key = keyOf(set);
+  const recent = getRecentFilters().filter((f) => keyOf(f) !== key);
+  recent.unshift(set);
   try { localStorage.setItem(RECENT_FILTERS_KEY, JSON.stringify(recent.slice(0, RECENT_FILTERS_MAX))); } catch {}
 }
 
@@ -2020,7 +2216,7 @@ function wireFilterChips(container) {
 
   // Alle Filter zurücksetzen
   container.querySelector('#filter-clear-all')?.addEventListener('click', async () => {
-    state.filters = { status: '', priority: '', assigned_to: '', tag: '' };
+    state.filters = { status: '', priority: '', assigned_to: '', tags: [] };
     renderFilters(container);
     await loadTasks(container);
   });
@@ -2044,6 +2240,10 @@ function wireFilterChips(container) {
   container.querySelectorAll('[data-filter]').forEach((chip) => {
     chip.addEventListener('click', async () => {
       const filter = chip.dataset.filter;
+      if (filter === 'tag') {
+        await toggleTagFilter(chip.dataset.value, container);
+        return;
+      }
       if (chip.classList.contains('filter-chip--active')) {
         state.filters[filter] = '';
       } else {
@@ -2059,11 +2259,7 @@ function wireFilterChips(container) {
   container.querySelectorAll('[data-recent-filter]').forEach((chip) => {
     chip.addEventListener('click', async () => {
       try {
-        const f = JSON.parse(chip.dataset.recentFilter);
-        state.filters = {
-          status: f.status || '', priority: f.priority || '',
-          assigned_to: f.assigned_to || '', tag: f.tag || '',
-        };
+        state.filters = normalizeFilterSet(JSON.parse(chip.dataset.recentFilter));
       } catch { return; }
       renderFilters(container);
       await loadTasks(container);
@@ -2208,6 +2404,11 @@ function wireBulkActions(container) {
     // (kein ungestylter window.confirm, immer rückgängig machbar — Critique P1).
     if (action === 'bulk-delete') {
       handleBulkDelete(taskIds, container);
+      return;
+    }
+
+    if (action === 'bulk-tag-add' || action === 'bulk-tag-remove') {
+      openBulkTagDialog(taskIds, action === 'bulk-tag-add' ? 'add' : 'remove', container);
       return;
     }
 
@@ -2387,6 +2588,13 @@ export async function render(container, { user }) {
           </button>
           <button class="btn btn--icon btn--ghost" id="btn-manage-categories"
                   aria-label="${t('tasks.manageCategories')}" title="${t('tasks.manageCategories')}">
+            <i data-lucide="folder-tree" class="icon-lg" aria-hidden="true"></i>
+          </button>
+          <!-- Der Tag-Verwalter bekommt das Etiketten-Icon, die Kategorien den
+               Ordnerbaum: die beiden Achsen sind bewusst getrennt, und dieselbe
+               Bildsprache für beide hätte genau das wieder eingeebnet. -->
+          <button class="btn btn--icon btn--ghost" id="btn-manage-tags"
+                  aria-label="${t('tasks.manageTags')}" title="${t('tasks.manageTags')}">
             <i data-lucide="tags" class="icon-lg" aria-hidden="true"></i>
           </button>
           <button class="btn btn--primary toolbar-new-btn" id="btn-new-task" style="gap:var(--space-1)">
@@ -2424,6 +2632,14 @@ export async function render(container, { user }) {
               <i data-lucide="archive" class="icon-md" aria-hidden="true"></i>
               ${t('tasks.bulkArchive')}
             </button>
+            <button class="btn btn--secondary btn--sm" id="bulk-tag-add">
+              <i data-lucide="tag" class="icon-md" aria-hidden="true"></i>
+              ${t('tasks.bulkTagAdd')}
+            </button>
+            <button class="btn btn--secondary btn--sm" id="bulk-tag-remove">
+              <i data-lucide="tag-off" class="icon-md" aria-hidden="true"></i>
+              ${t('tasks.bulkTagRemove')}
+            </button>
             <button class="btn btn--danger btn--sm" id="bulk-delete">
               <i data-lucide="trash-2" class="icon-md" aria-hidden="true"></i>
               ${t('tasks.bulkDelete')}
@@ -2450,19 +2666,8 @@ export async function render(container, { user }) {
 
   // Daten laden (Filter-State aus vorheriger Session berücksichtigen)
   try {
-    const params = new URLSearchParams();
-    // Statusfilter im Kanban weglassen (Spalten SIND der Status), sonst startet die
-    // Ansicht mit leeren "In Bearbeitung"/"Erledigt"-Spalten (Audit A1-07/P3) -
-    // gleiche Regel wie loadTasks().
-    if (state.filters.status && state.viewMode !== 'kanban') params.set('status', state.filters.status);
-    if (state.filters.priority)    params.set('priority',    state.filters.priority);
-    if (state.filters.assigned_to) params.set('assigned_to', state.filters.assigned_to);
-    if (state.filters.tag)         params.set('tag',         state.filters.tag);
-    if (state.showFuture)          params.set('include_future', '1');
-    const query = params.toString() ? `?${params}` : '';
-
     const [tasksData, metaData] = await Promise.all([
-      api.get(`/tasks${query}`),
+      api.get(`/tasks${taskQuery()}`),
       api.get('/tasks/meta/options'),
     ]);
     state.tasks = tasksData.data ?? [];
@@ -2488,8 +2693,11 @@ export async function render(container, { user }) {
   wireBulkSelect(container);
   wireBulkCheckboxes(container);
   wireBulkActions(container);
+  wireTagBadgeFilter(container);
   container.querySelector('#btn-manage-categories')
     ?.addEventListener('click', () => openTaskCategoryManager(container));
+  container.querySelector('#btn-manage-tags')
+    ?.addEventListener('click', () => openTagManager(container));
   renderFilters(container);
   renderTaskList(container);
 

@@ -39,7 +39,7 @@ const { patchICSTodo } = await import('../server/utils/ics-patch.js');
 const { mapVtodoPriority, mapVtodoStatus, splitDue, sync } =
   await import('../server/services/caldav-reminders-sync.js');
 const { parseVTODO } = await import('../server/services/ics-parser.js');
-const { loadTags, setTags, tagsKey } = await import('../server/utils/task-tags.js');
+const { loadTags, loadItemTags, setTags, tagsKey } = await import('../server/utils/task-tags.js');
 const { MAX_OUTBOUND_ATTEMPTS } = await import('../server/services/calendar-outbound.js');
 
 db.prepare("INSERT INTO users (username, display_name, password_hash, role) VALUES ('admin','Admin','x','admin')").run();
@@ -334,9 +334,24 @@ test('Bloßes Umsortieren derselben Tags ist keine Änderung', () => {
   const pending = markTodoOutbound(
     'tasks',
     { ...task, tags_key: tagsKey(['Garten', 'Haus']) },
-    { ...task, tags_key: tagsKey(['haus', 'GARTEN']) },
+    { ...task, tags_key: tagsKey(['Haus', 'Garten']) },
   );
   assert.strictEqual(pending, false, 'sonst pushte jeder Speichervorgang erneut');
+});
+
+test('Eine andere Schreibweise ist sehr wohl eine Änderung', () => {
+  // Die Gegenprobe. Würde tagsKey die Schreibweise einebnen, käme ein
+  // Umbenennen von "garten" auf "Garten" nie beim Server an: lokal stünde die
+  // neue Schreibweise, hier fiele die Entscheidung "nichts zu tun", und der
+  // nächste Sync-Lauf holte die alte zurück.
+  const accountId = reset();
+  const task = insertTask({ accountId });
+  const pending = markTodoOutbound(
+    'tasks',
+    { ...task, tags_key: tagsKey(['garten']) },
+    { ...task, tags_key: tagsKey(['Garten']) },
+  );
+  assert.strictEqual(pending, true);
 });
 
 test('Der Push schreibt die vollständige Tag-Liste nach CATEGORIES', async () => {
@@ -719,4 +734,33 @@ test('v113 ist additiv und startet mit neutralen Markern', async () => {
   assert.strictEqual(old.prepare('SELECT COUNT(*) AS n FROM caldav_todo_pending_deletions').get().n, 0);
 
   old.close();
+});
+
+test('Der Inbound spiegelt CATEGORIES auch in die Tags eines Einkaufspostens', async () => {
+  // Eine Erinnerungsliste kann auf Aufgaben ODER auf den Einkauf zeigen (#617).
+  // Bis hierher fielen die CATEGORIES eines Einkaufspostens stillschweigend weg.
+  const accountId = reset();
+  enableList(accountId, 'shopping');
+  const client = fakeClient({
+    objects: [{ url: OBJ_URL, etag: 'e1', data: serverTodo({ extra: ['CATEGORIES:Bio'] }) }],
+  });
+
+  await sync({ createClient: async () => client });
+
+  const item = db.prepare("SELECT id, category FROM shopping_items WHERE external_uid = 'todo-1@test'").get();
+  assert.deepStrictEqual(loadItemTags(db, item.id), ['Bio', 'Haushalt']);
+  // Die Kategorie ist hier der Gang im Laden, eine verwaltete Liste: sie darf
+  // sich von fremden CATEGORIES nicht befuellen lassen.
+  assert.strictEqual(item.category, 'Sonstiges');
+});
+
+test('Der Push eines Einkaufspostens fasst CATEGORIES nicht an', () => {
+  // Der Einkauf spiegelt CATEGORIES nur herein (#586): er zeigt die Etiketten
+  // der Quellliste, verwaltet sie aber nicht. Nähme icsFieldsForShoppingItem
+  // CATEGORIES auf, löschte jeder Haken auf einem Posten die Tags, die der
+  // Server kennt und Yuvomi nie gesehen hat - genau der Fehler, den die
+  // Aufgaben-Seite nur vermeiden darf, weil sie die Liste vollständig führt.
+  const fields = icsFieldsForShoppingItem({ id: 1, name: 'Milch', is_checked: 0 });
+  assert.ok(!('CATEGORIES' in fields),
+    'Ein Feld, das nicht im Patch steht, lässt die Property auf dem Server unberührt');
 });

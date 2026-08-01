@@ -28,8 +28,9 @@ process.env.SESSION_SECRET = 'task-tags-test-secret';
 
 const { MIGRATIONS, get, _setTestDatabase } = await import('../server/db.js');
 const { default: tasksRouter } = await import('../server/routes/tasks.js');
-const { normalizeTags, tagsKey, setTags, loadTags, allTags, MAX_TAGS, MAX_TAG_LEN } =
-  await import('../server/utils/task-tags.js');
+const { normalizeTags, tagsKey, setTags, loadTags, allTags, setItemTags, loadItemTags,
+  MAX_TAGS, MAX_TAG_LEN } = await import('../server/utils/task-tags.js');
+const { runSearch } = await import('../server/services/search.js');
 
 const moduleDatabase = get();
 const suiteDatabase = buildMigratedDatabase(MIGRATIONS);
@@ -173,10 +174,19 @@ test('normalizeTags deckelt Anzahl und Länge, statt abzulehnen', () => {
   assert.equal(long[0].length, MAX_TAG_LEN);
 });
 
-test('tagsKey ignoriert Reihenfolge und Schreibweise', () => {
+test('tagsKey ignoriert die Reihenfolge', () => {
   // Sonst löste eine bloße Umsortierung einen Push zum CalDAV-Server aus.
-  assert.equal(tagsKey(['Garten', 'Haus']), tagsKey(['haus', 'GARTEN']));
+  assert.equal(tagsKey(['Garten', 'Haus']), tagsKey(['Haus', 'Garten']));
   assert.notEqual(tagsKey(['Garten']), tagsKey(['Garten', 'Haus']));
+});
+
+test('tagsKey achtet auf die Schreibweise', () => {
+  // Die Gegenprobe zur Reihenfolge, und der Grund steht am Umbenennen: würde
+  // tagsKey die Schreibweise einebnen, erreichte ein Umbenennen von "garten" auf
+  // "Garten" den CalDAV-Server nie. Lokal stünde die neue Schreibweise, der
+  // Feldvergleich sähe keine Änderung, und der nächste Sync-Lauf holte die alte
+  // zurück - eine Umbenennung, die sich von selbst rückgängig macht.
+  assert.notEqual(tagsKey(['garten']), tagsKey(['Garten']));
 });
 
 // ── Speicherschicht ────────────────────────────────────────────────────────────
@@ -205,7 +215,7 @@ test('allTags zählt über Aufgaben hinweg', () => {
   const b = seedTask();
   setTags(get(), a, ['Zähltest']);
   setTags(get(), b, ['Zähltest']);
-  const entry = allTags(get()).find((e) => e.tag === 'Zähltest');
+  const entry = allTags(get(), ALICE).find((e) => e.tag === 'Zähltest');
   assert.equal(entry.count, 2);
   get().prepare('DELETE FROM tasks WHERE id IN (?, ?)').run(a, b);
 });
@@ -315,6 +325,447 @@ test('meta/options liefert die Tags für die Filterleiste mit', async () => {
     await h.call('POST', '/', { title: 'Meta', tags: [marker] });
     const res = await h.call('GET', '/meta/options');
     assert.ok(res.body.tags.some((e) => e.tag === marker));
+  } finally {
+    await h.close();
+  }
+});
+
+// ── Sichtbarkeit (#474 auf dem Tag-Lesepfad) ───────────────────────────────────
+//
+// Ein Tag ist Freitext und trägt damit selbst Inhalt. Eine Tag-Liste ohne
+// Sichtbarkeitsprüfung verrät den Inhalt einer privaten Aufgabe, obwohl die
+// Aufgabe selbst nirgends auftaucht - der dokumentierte Anwendungsfall
+// ("Überraschung vorbereiten") wäre damit hinfällig. Die folgenden drei Tests
+// halten fest, dass die Regel auf beiden Tag-Routen greift und dass sie nicht
+// über das Ziel hinausschießt.
+
+test('GET /tags verschweigt die Tags einer privaten Aufgabe', async () => {
+  const bob = seedUser('bob', 'member');
+  const owner = createHarness();
+  const other = createHarness({ userId: bob, role: 'member' });
+  try {
+    const marker = `Geheim-${randomUUID().slice(0, 8)}`;
+    await owner.call('POST', '/', { title: 'Geschenk kaufen', visibility: 'private', tags: [marker] });
+
+    const mine = await owner.call('GET', '/tags');
+    assert.ok(mine.body.data.some((e) => e.tag === marker),
+      'Der eigenen Ersteller:in bleibt der Tag erhalten');
+
+    const theirs = await other.call('GET', '/tags');
+    assert.equal(theirs.body.data.some((e) => e.tag === marker), false,
+      'Der Tag einer privaten Aufgabe darf in keiner fremden Filterleiste stehen');
+  } finally {
+    await owner.close();
+    await other.close();
+  }
+});
+
+test('meta/options verschweigt sie ebenso', async () => {
+  // Zweiter Lesepfad, dieselbe Quelle: die Filterleiste wird beim Seitenaufbau
+  // aus meta/options gefüllt und erst danach aus /tags nachgeladen. Ein Leck an
+  // nur einer der beiden Stellen fiele beim Testen der anderen nicht auf.
+  const bob = seedUser('bob', 'member');
+  const owner = createHarness();
+  const other = createHarness({ userId: bob, role: 'member' });
+  try {
+    const marker = `Geheim-${randomUUID().slice(0, 8)}`;
+    await owner.call('POST', '/', { title: 'Zweiter Pfad', visibility: 'private', tags: [marker] });
+
+    const theirs = await other.call('GET', '/meta/options');
+    assert.equal(theirs.body.tags.some((e) => e.tag === marker), false);
+  } finally {
+    await owner.close();
+    await other.close();
+  }
+});
+
+test('der Zähler in /tags überspringt die unsichtbaren Aufgaben', async () => {
+  // Nicht nur der Tag-Name verrät etwas, auch seine Häufigkeit: stünde eine
+  // private Aufgabe im Zähler eines sonst öffentlichen Tags, wäre ihre Existenz
+  // ablesbar, ohne dass sie in irgendeiner Liste auftaucht.
+  const bob = seedUser('bob', 'member');
+  const owner = createHarness();
+  const other = createHarness({ userId: bob, role: 'member' });
+  try {
+    const marker = `Zähler-${randomUUID().slice(0, 8)}`;
+    await owner.call('POST', '/', { title: 'Für alle', tags: [marker] });
+    await owner.call('POST', '/', { title: 'Nur für mich', visibility: 'private', tags: [marker] });
+
+    assert.equal(
+      (await owner.call('GET', '/tags')).body.data.find((e) => e.tag === marker)?.count, 2);
+    assert.equal(
+      (await other.call('GET', '/tags')).body.data.find((e) => e.tag === marker)?.count, 1,
+      'Fremde dürfen nur die sichtbare Aufgabe mitgezählt bekommen');
+  } finally {
+    await owner.close();
+    await other.close();
+  }
+});
+
+// ── Mehrfach-Filter ────────────────────────────────────────────────────────────
+
+test('mehrere Tags verbinden sich mit UND, nicht mit ODER', async () => {
+  // Jeder weitere Filter in derselben Leiste engt ein (Status UND Priorität UND
+  // Person). Ein Tag, der die Liste plötzlich wachsen ließe, wäre dort ein Bruch.
+  const h = createHarness();
+  try {
+    const m = randomUUID().slice(0, 6);
+    const beide  = await h.call('POST', '/', { title: 'A', tags: [`x${m}`, `y${m}`] });
+    await h.call('POST', '/', { title: 'B', tags: [`x${m}`] });
+
+    const res = await h.call('GET', `/?tag=x${m}&tag=y${m}`);
+    assert.deepEqual(res.body.data.map((t) => t.id), [beide.body.data.id]);
+  } finally {
+    await h.close();
+  }
+});
+
+test('?tag=a,b meint dasselbe wie ?tag=a&tag=b', async () => {
+  const h = createHarness();
+  try {
+    const m = randomUUID().slice(0, 6);
+    const beide = await h.call('POST', '/', { title: 'A', tags: [`x${m}`, `y${m}`] });
+    await h.call('POST', '/', { title: 'B', tags: [`y${m}`] });
+
+    const res = await h.call('GET', `/?tag=x${m},y${m}`);
+    assert.deepEqual(res.body.data.map((t) => t.id), [beide.body.data.id]);
+  } finally {
+    await h.close();
+  }
+});
+
+// ── Verwaltung: umbenennen, entfernen, bulk ────────────────────────────────────
+
+test('PUT /tags/:tag benennt auf allen sichtbaren Aufgaben um', async () => {
+  const h = createHarness();
+  try {
+    const m = randomUUID().slice(0, 6);
+    const a = await h.call('POST', '/', { title: 'A', tags: [`alt${m}`, 'Haus'] });
+    const b = await h.call('POST', '/', { title: 'B', tags: [`alt${m}`] });
+
+    const res = await h.call('PUT', `/tags/${encodeURIComponent(`alt${m}`)}`, { name: `neu${m}` });
+    assert.equal(res.status, 200);
+    assert.equal(res.body.data.updated, 2);
+
+    assert.deepEqual(loadTags(get(), a.body.data.id), ['Haus', `neu${m}`]);
+    assert.deepEqual(loadTags(get(), b.body.data.id), [`neu${m}`]);
+  } finally {
+    await h.close();
+  }
+});
+
+test('Umbenennen auf einen vorhandenen Tag führt beide zusammen, ohne Dublette', async () => {
+  // Der Fall, an dem ein naives UPDATE task_tags SET tag=? scheitert: der
+  // Primärschlüssel vergleicht Bytes, "Haus" und "haus" wären zwei Zeilen, und
+  // die Aufgabe trüge hinterher beide Schreibweisen desselben Etiketts.
+  const h = createHarness();
+  try {
+    const m = randomUUID().slice(0, 6);
+    const a = await h.call('POST', '/', { title: 'A', tags: [`alt${m}`, `ziel${m}`] });
+
+    await h.call('PUT', `/tags/${encodeURIComponent(`alt${m}`)}`, { name: `ZIEL${m}` });
+    assert.deepEqual(loadTags(get(), a.body.data.id), [`ZIEL${m}`],
+      'Zusammengeführt auf die getippte Schreibweise, genau einmal');
+  } finally {
+    await h.close();
+  }
+});
+
+test('die Zusammenführung eint auch die Aufgaben, die nur den Zieltag tragen', async () => {
+  // Sonst stünde dasselbe Etikett hinterher in zwei Schreibweisen im Bestand.
+  // allTags gruppiert NOCASE und zeigt davon genau eine - welche, entscheidet
+  // dann die Zeile, die SQLite zuerst greift.
+  const h = createHarness();
+  try {
+    const m = randomUUID().slice(0, 6);
+    const mitAlt  = await h.call('POST', '/', { title: 'A', tags: [`alt${m}`] });
+    const nurZiel = await h.call('POST', '/', { title: 'B', tags: [`ziel${m}`] });
+
+    const res = await h.call('PUT', `/tags/${encodeURIComponent(`alt${m}`)}`, { name: `ZIEL${m}` });
+    assert.equal(res.body.data.updated, 2);
+    assert.deepEqual(loadTags(get(), mitAlt.body.data.id),  [`ZIEL${m}`]);
+    assert.deepEqual(loadTags(get(), nurZiel.body.data.id), [`ZIEL${m}`]);
+
+    const entries = res.body.data.tags.filter((e) => e.tag.toLowerCase() === `ziel${m}`);
+    assert.equal(entries.length, 1);
+    assert.equal(entries[0].tag, `ZIEL${m}`, 'Die Filterleiste zeigt eine eindeutige Schreibweise');
+  } finally {
+    await h.close();
+  }
+});
+
+test('Umbenennen kann allein die Schreibweise ändern', async () => {
+  const h = createHarness();
+  try {
+    const m = randomUUID().slice(0, 6);
+    const a = await h.call('POST', '/', { title: 'A', tags: [`klein${m}`] });
+
+    const res = await h.call('PUT', `/tags/${encodeURIComponent(`klein${m}`)}`, { name: `KLEIN${m}` });
+    assert.equal(res.body.data.updated, 1, 'Eine reine Umschreibung ist eine Änderung');
+    assert.deepEqual(loadTags(get(), a.body.data.id), [`KLEIN${m}`]);
+  } finally {
+    await h.close();
+  }
+});
+
+test('DELETE /tags/:tag löst den Tag, lässt die Aufgaben stehen', async () => {
+  const h = createHarness();
+  try {
+    const m = randomUUID().slice(0, 6);
+    const a = await h.call('POST', '/', { title: 'Bleibt', tags: [`weg${m}`, 'Haus'] });
+
+    const res = await h.call('DELETE', `/tags/${encodeURIComponent(`weg${m}`)}`);
+    assert.equal(res.status, 200);
+    assert.deepEqual(loadTags(get(), a.body.data.id), ['Haus']);
+    assert.equal((await h.call('GET', `/${a.body.data.id}`)).status, 200, 'Die Aufgabe lebt');
+  } finally {
+    await h.close();
+  }
+});
+
+test('Umbenennen und Löschen fassen fremde private Aufgaben nicht an', async () => {
+  // Die Kehrseite der Sichtbarkeitsregel: wer eine Zeile nicht sehen darf, darf
+  // sie auch nicht ändern. Sonst verriete allein die gemeldete Trefferzahl, dass
+  // es sie gibt.
+  const bob = seedUser('bob', 'member');
+  const owner = createHarness();
+  const other = createHarness({ userId: bob, role: 'member' });
+  try {
+    const m = randomUUID().slice(0, 6);
+    const geheim = await owner.call('POST', '/', {
+      title: 'Geheim', visibility: 'private', tags: [`geteilt${m}`],
+    });
+    const offen = await other.call('POST', '/', { title: 'Offen', tags: [`geteilt${m}`] });
+
+    const res = await other.call('PUT', `/tags/${encodeURIComponent(`geteilt${m}`)}`, { name: `neu${m}` });
+    assert.equal(res.body.data.updated, 1, 'Nur die sichtbare Aufgabe zählt mit');
+    assert.deepEqual(loadTags(get(), offen.body.data.id), [`neu${m}`]);
+    assert.deepEqual(loadTags(get(), geheim.body.data.id), [`geteilt${m}`],
+      'Die private Aufgabe behält ihren Tag');
+  } finally {
+    await owner.close();
+    await other.close();
+  }
+});
+
+test('PUT /tags/:tag auf einen unbekannten Tag → 404', async () => {
+  const h = createHarness();
+  try {
+    const res = await h.call('PUT', `/tags/gibtesnicht-${randomUUID().slice(0, 8)}`, { name: 'X' });
+    assert.equal(res.status, 404);
+  } finally {
+    await h.close();
+  }
+});
+
+test('POST /tags/apply hängt an und nimmt weg, in einem Aufruf', async () => {
+  const h = createHarness();
+  try {
+    const m = randomUUID().slice(0, 6);
+    const a = await h.call('POST', '/', { title: 'A', tags: [`weg${m}`] });
+    const b = await h.call('POST', '/', { title: 'B', tags: [`weg${m}`, 'Haus'] });
+
+    const res = await h.call('POST', '/tags/apply', {
+      ids: [a.body.data.id, b.body.data.id], add: [`neu${m}`], remove: [`weg${m}`],
+    });
+    assert.equal(res.status, 200);
+    assert.equal(res.body.data.updated, 2);
+    assert.deepEqual(loadTags(get(), a.body.data.id), [`neu${m}`]);
+    assert.deepEqual(loadTags(get(), b.body.data.id), ['Haus', `neu${m}`]);
+  } finally {
+    await h.close();
+  }
+});
+
+test('POST /tags/apply zählt nur, was sich wirklich geändert hat', async () => {
+  // Sonst meldete "3 Aufgaben aktualisiert", wo zwei den Tag schon trugen - und
+  // jede unveränderte Aufgabe liefe zusätzlich als Push zum CalDAV-Server.
+  const h = createHarness();
+  try {
+    const m = randomUUID().slice(0, 6);
+    const a = await h.call('POST', '/', { title: 'A', tags: [`da${m}`] });
+    const b = await h.call('POST', '/', { title: 'B' });
+
+    const res = await h.call('POST', '/tags/apply', {
+      ids: [a.body.data.id, b.body.data.id], add: [`da${m}`],
+    });
+    assert.equal(res.body.data.updated, 1);
+  } finally {
+    await h.close();
+  }
+});
+
+test('POST /tags/apply überspringt Aufgaben, die die Person nicht sehen darf', async () => {
+  const bob = seedUser('bob', 'member');
+  const owner = createHarness();
+  const other = createHarness({ userId: bob, role: 'member' });
+  try {
+    const m = randomUUID().slice(0, 6);
+    const geheim = await owner.call('POST', '/', { title: 'Geheim', visibility: 'private' });
+    const offen  = await other.call('POST', '/', { title: 'Offen' });
+
+    const res = await other.call('POST', '/tags/apply', {
+      ids: [geheim.body.data.id, offen.body.data.id], add: [`x${m}`],
+    });
+    assert.equal(res.body.data.updated, 1);
+    assert.deepEqual(loadTags(get(), geheim.body.data.id), []);
+  } finally {
+    await owner.close();
+    await other.close();
+  }
+});
+
+test('POST /tags/apply ohne ids oder ohne Änderung → 400', async () => {
+  const h = createHarness();
+  try {
+    assert.equal((await h.call('POST', '/tags/apply', { add: ['X'] })).status, 400);
+    const task = await h.call('POST', '/', { title: 'Leer' });
+    assert.equal((await h.call('POST', '/tags/apply', { ids: [task.body.data.id] })).status, 400);
+  } finally {
+    await h.close();
+  }
+});
+
+// ── Wiederkehrende Aufgaben ────────────────────────────────────────────────────
+
+test('die Folgeinstanz einer Serie erbt die Tags', async () => {
+  // Tags gehören zur Aufgabe, nicht zum einzelnen Durchlauf. Ohne das Erben
+  // verlöre eine wöchentliche Aufgabe ihre Etiketten beim ersten Abhaken, und
+  // zwar lautlos: die Folgeinstanz sieht ansonsten vollständig aus.
+  const h = createHarness();
+  try {
+    const marker = `Serie-${randomUUID().slice(0, 8)}`;
+    const past = new Date(Date.now() - 21 * 86400_000).toISOString().slice(0, 10);
+    const post = await h.call('POST', '/', {
+      title: `Bad putzen ${marker}`, due_date: past,
+      is_recurring: true, recurrence_rule: 'FREQ=WEEKLY', tags: [marker, 'Haushalt'],
+    });
+    assert.equal(post.status, 201);
+
+    const done = await h.call('PATCH', `/${post.body.data.id}/status`, { status: 'done' });
+    assert.equal(done.status, 200);
+
+    const followups = get().prepare(
+      `SELECT id FROM tasks WHERE title = ? AND status = 'open' AND parent_task_id IS NULL`,
+    ).all(`Bad putzen ${marker}`);
+    assert.equal(followups.length, 1, 'Vorbedingung: genau eine Folgeinstanz');
+    assert.deepEqual(loadTags(get(), followups[0].id), ['Haushalt', marker].sort((a, b) =>
+      a.localeCompare(b, 'de', { sensitivity: 'base' })));
+  } finally {
+    await h.close();
+  }
+});
+
+// ── Globale Suche ──────────────────────────────────────────────────────────────
+//
+// Ein Tag ist Freitext und damit Inhalt. Die Aufgabenliste filtert danach; fände
+// die globale Suche ihn nicht, führte dasselbe Wort je nach Eingabefeld zu einem
+// Treffer oder zu keinem.
+
+test('die Suche findet eine Aufgabe über ihren Tag', async () => {
+  const h = createHarness();
+  try {
+    const marker = `suchtag${randomUUID().slice(0, 6)}`;
+    const post = await h.call('POST', '/', { title: 'Nichts Passendes im Titel', tags: [marker] });
+
+    const hits = runSearch(get(), marker, ALICE).tasks;
+    assert.deepEqual(hits.map((t) => t.id), [post.body.data.id]);
+  } finally {
+    await h.close();
+  }
+});
+
+test('ein nachträglich vergebener Tag landet ohne Zutun im Index', () => {
+  // Der Trigger auf `tasks` sieht nur die Zeile. Ohne die eigenen Trigger auf
+  // task_tags bliebe eine reine Tag-Änderung unindiziert - die Aufgabe selbst
+  // wird dabei nicht angefasst.
+  const marker = `nachtrag${randomUUID().slice(0, 6)}`;
+  const id = seedTask();
+  assert.equal(runSearch(get(), marker, ALICE).tasks.length, 0, 'Vorbedingung');
+
+  setTags(get(), id, [marker]);
+  assert.deepEqual(runSearch(get(), marker, ALICE).tasks.map((t) => t.id), [id]);
+});
+
+test('ein entfernter Tag verschwindet aus dem Index', () => {
+  const marker = `entfernt${randomUUID().slice(0, 6)}`;
+  const id = seedTask();
+  setTags(get(), id, [marker]);
+  assert.equal(runSearch(get(), marker, ALICE).tasks.length, 1, 'Vorbedingung');
+
+  setTags(get(), id, []);
+  assert.equal(runSearch(get(), marker, ALICE).tasks.length, 0);
+});
+
+test('eine gelöschte Aufgabe hinterlässt keine Karteileiche im Index', () => {
+  // Der Fall, an dem ein VALUES-INSERT im Tag-Trigger scheitert: beim Löschen
+  // räumt CASCADE die Tag-Zeilen ab und feuert den Trigger, obwohl es die
+  // Aufgabe nicht mehr gibt. Das INSERT ... SELECT findet dann nichts.
+  const marker = `leiche${randomUUID().slice(0, 6)}`;
+  const id = seedTask();
+  setTags(get(), id, [marker]);
+
+  get().prepare('DELETE FROM tasks WHERE id = ?').run(id);
+
+  assert.equal(runSearch(get(), marker, ALICE).tasks.length, 0);
+  assert.equal(
+    get().prepare(`SELECT COUNT(*) AS n FROM search_index WHERE entity = 'task' AND entity_id = ?`).get(id).n,
+    0, 'Auch die Indexzeile selbst muss weg sein');
+});
+
+// ── Einkaufsposten ─────────────────────────────────────────────────────────────
+
+test('Einkaufsposten tragen dieselbe Tag-Achse und sind darüber auffindbar', () => {
+  // Eine CalDAV-Erinnerungsliste kann auf Aufgaben ODER auf den Einkauf zeigen
+  // (#617). Bis hierher fielen die CATEGORIES eines Einkaufspostens weg.
+  const marker = `einkauf${randomUUID().slice(0, 6)}`;
+  const listId = get().prepare(
+    'INSERT INTO shopping_lists (name, created_by) VALUES (?, ?)'
+  ).run(`Liste-${randomUUID()}`, ALICE).lastInsertRowid;
+  const itemId = get().prepare(
+    'INSERT INTO shopping_items (list_id, name) VALUES (?, ?)'
+  ).run(listId, 'Milch').lastInsertRowid;
+
+  setItemTags(get(), itemId, ['Bio', marker]);
+  assert.deepEqual(loadItemTags(get(), itemId), ['Bio', marker]);
+  assert.deepEqual(runSearch(get(), marker, ALICE).items.map((i) => i.id), [itemId]);
+
+  get().prepare('DELETE FROM shopping_items WHERE id = ?').run(itemId);
+  assert.equal(runSearch(get(), marker, ALICE).items.length, 0, 'CASCADE räumt auch den Index');
+});
+
+test('die Kategorie eines Einkaufspostens bleibt von den Tags unberührt', () => {
+  // Die Kategorie ist hier der Gang im Laden - eine verwaltete Liste. Fremde
+  // CATEGORIES hineinzuspülen liesse sie bei jedem Sync wachsen.
+  const listId = get().prepare(
+    'INSERT INTO shopping_lists (name, created_by) VALUES (?, ?)'
+  ).run(`Liste-${randomUUID()}`, ALICE).lastInsertRowid;
+  const itemId = get().prepare(
+    'INSERT INTO shopping_items (list_id, name) VALUES (?, ?)'
+  ).run(listId, 'Äpfel').lastInsertRowid;
+  const before = get().prepare('SELECT category FROM shopping_items WHERE id = ?').get(itemId).category;
+
+  setItemTags(get(), itemId, ['Obst & Gemüse', 'Bio']);
+
+  assert.equal(get().prepare('SELECT category FROM shopping_items WHERE id = ?').get(itemId).category, before);
+});
+
+// ── Unteraufgaben ──────────────────────────────────────────────────────────────
+
+test('eine Unteraufgabe liefert ihre Tags mit', async () => {
+  // Sonst fehlten sie in der Antwort, und ein PUT auf Basis dieser Zeile
+  // schriebe sie still weg.
+  const h = createHarness();
+  try {
+    const parent = await h.call('POST', '/', { title: 'Eltern' });
+    const marker = `unter${randomUUID().slice(0, 6)}`;
+    await h.call('POST', '/', {
+      title: 'Kind', parent_task_id: parent.body.data.id, tags: [marker],
+    });
+
+    const detail = await h.call('GET', `/${parent.body.data.id}`);
+    assert.equal(detail.body.data.subtasks.length, 1);
+    assert.deepEqual(detail.body.data.subtasks[0].tags, [marker]);
   } finally {
     await h.close();
   }
