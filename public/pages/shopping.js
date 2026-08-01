@@ -988,7 +988,10 @@ function openItemDetails(itemId, container) {
           const data = await api.patch(`/shopping/items/${item.id}`, payload);
           const categoryChanged = data.data.category !== item.category;
           Object.assign(item, data.data);
-          closeModal();
+          // force: der Dirty-Guard vergleicht gegen den Snapshot vom Öffnen und
+          // sähe die gerade gespeicherten Felder als ungespeicherte Änderungen.
+          // Ohne das fragte Speichern „Änderungen verwerfen?" (Issue #625).
+          closeModal({ force: true });
           // Ein Kategoriewechsel verschiebt die Zeile in eine andere Gruppe - das
           // kann keine Zeilen-Auffrischung leisten, dafür muss die Liste neu
           // gruppiert werden. Sonst genügt der schonende Weg, der die
@@ -1312,7 +1315,9 @@ function openMealPlanImport(container) {
           renderTabs(container);
           renderListContent(container);
           wireListContentEvents(container);
-          closeModal();
+          // force: siehe openItemDetails - ein geänderter Zeitraum ist nach dem
+          // Import nichts, was noch zu verwerfen wäre.
+          closeModal({ force: true });
           const count = Number(data.data.transferred) || 0;
           window.yuvomi.showToast(t('meals.transferSuccess', { count }), 'success');
         } catch (err) {

@@ -5267,3 +5267,39 @@ test('der Tag-Filter ist ueberall eine Liste, nirgends mehr ein einzelner Wert',
   assert.match(source, /params\.append\('tag', tag\)/,
     'Jeder Tag gehoert als eigener Query-Parameter in die Anfrage');
 });
+
+/**
+ * Speichern darf nicht nach dem Verwerfen fragen.
+ *
+ * Gemessen (Issue #625): der Einkaufs-Artikel-Dialog schloss nach dem PATCH mit
+ * `closeModal()`. Der Dirty-Guard vergleicht die Felder gegen den Snapshot vom
+ * Oeffnen, sah die soeben gespeicherten Werte als ungespeicherte Aenderungen und
+ * legte „Aenderungen verwerfen?" ueber den fertigen Vorgang - der Klick auf
+ * „Verwerfen" schloss dann den Dialog, waehrend die Daten laengst geschrieben
+ * waren. Die Frage war also nicht nur ueberfluessig, sie log ueber den Ausgang.
+ *
+ * Die Regel gilt fuer jeden Schreibvorgang, nicht fuer eine Allowlist von
+ * Dateien: ist eine Aenderung erst einmal beim Server, gibt es nichts mehr zu
+ * verwerfen, und das Modal gehoert mit `force: true` zu.
+ */
+test('nach einem Schreibvorgang schliesst das Modal ohne Verwerfen-Frage', () => {
+  const WINDOW = 20; // Zeilen zwischen Request und Schliessen, grosszuegig gefasst
+  const violations = [];
+
+  for (const file of walkJsFiles('../public/')) {
+    const lines = read(file).split('\n');
+    lines.forEach((line, index) => {
+      if (!/await\s+api\.(post|patch|put|delete)\s*\(/.test(line)) return;
+      lines.slice(index, index + WINDOW).forEach((candidate, offset) => {
+        if (!/closeModal\s*\(/.test(candidate)) return;
+        // Definition und Import tragen denselben Namen, sind aber kein Aufruf.
+        if (/function closeModal|^\s*import|\bfrom\s+'/.test(candidate)) return;
+        if (/force/.test(candidate)) return;
+        violations.push(`${file}:${index + offset + 1}: ${candidate.trim()}`);
+      });
+    });
+  }
+
+  assert.deepEqual(violations, [],
+    'closeModal() im Erfolgspfad eines Schreibvorgangs braucht { force: true }');
+});
