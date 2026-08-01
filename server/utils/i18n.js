@@ -91,8 +91,14 @@ function resolveKey(obj, key) {
 
 /**
  * Übersetzt einen Key in die angegebene Sprache. Platzhalter-Syntax `{{name}}`,
- * identisch zu t() im Frontend. Fehlt der Key in der Zielsprache, greift die
- * Referenz-Locale; fehlt er auch dort, kommt der Key selbst zurück.
+ * identisch zu t() im Frontend.
+ *
+ * Fallback-Kette: Zielsprache → Englisch → Referenz-Locale → der Key selbst.
+ * Englisch steht vor `de`, weil es die Default-Datensprache ist: fehlt ein Key
+ * einmal in der schwedischen Datei, ist ein englischer Titel die kleinere
+ * Überraschung als ein deutscher. Heute greift die Kette nicht, weil `test:i18n`
+ * Schlüsselgleichheit über alle Locales erzwingt - sie ist die Absicherung für
+ * den Fall, dass diese Zusage einmal gelockert wird.
  *
  * Ohne `count`-Pluralisierung: serverseitig erzeugte Texte sind Titel und
  * Beschreibungen einzelner Datensätze, keine Mengenangaben.
@@ -103,8 +109,18 @@ function resolveKey(obj, key) {
  * @returns {string}
  */
 export function translate(locale, key, params = {}) {
-  const primary = loadLocale(isSupportedLocale(locale) ? locale : DEFAULT_LOCALE);
-  let str = resolveKey(primary, key) ?? resolveKey(loadLocale(REFERENCE_LOCALE), key) ?? key;
+  const chain = [isSupportedLocale(locale) ? locale : DEFAULT_LOCALE, DEFAULT_LOCALE, REFERENCE_LOCALE];
+
+  let str;
+  for (const candidate of chain) {
+    const hit = resolveKey(loadLocale(candidate), key);
+    // Ein Key, der auf einen Teilbaum zeigt, ist ein Aufruffehler und kein Text.
+    // Ohne diese Prüfung würde das replaceAll unten mit einem TypeError brechen -
+    // ausgerechnet in einer Funktion, die nie werfen soll.
+    if (typeof hit === 'string') { str = hit; break; }
+  }
+  if (str === undefined) return key;
+
   for (const [name, value] of Object.entries(params)) {
     str = str.replaceAll(`{{${name}}}`, String(value));
   }

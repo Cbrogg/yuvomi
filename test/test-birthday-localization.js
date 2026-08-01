@@ -128,6 +128,16 @@ function setConfig(key, value) {
   `).run(key, value);
 }
 
+/** Führt einen Aufruf als Admin aus und stellt die Mitglieds-Rolle danach wieder her. */
+async function asAdmin(fn) {
+  actor.role = 'admin';
+  try {
+    return await fn();
+  } finally {
+    actor.role = 'member';
+  }
+}
+
 test('gesetzte Datensprache bestimmt Titel und Beschreibung des Termins', async () => {
   setConfig('language', 'de');
   setConfig('date_format', 'dmy');
@@ -164,18 +174,13 @@ test('PUT /preferences betitelt bestehende Geburtstags-Termine um', async () => 
   const created = await call('POST', '/birthdays', { name: 'Nora', birth_date: '1992-06-30' });
   assert.equal(storedEvent(created.body.data.id).title, 'Birthday: Nora');
 
-  actor.role = 'admin';
-  try {
-    const saved = await call('PUT', '/preferences', { language: 'de' });
-    assert.equal(saved.status, 200);
-    assert.equal(saved.body.data.language, 'de');
-    assert.equal(saved.body.data.language_effective, 'de');
-    // Ohne Region fiele die Automatik auf Englisch - das Label der
-    // Automatik-Option darf nicht die gerade gewählte Sprache versprechen.
-    assert.equal(saved.body.data.language_auto, 'en');
-  } finally {
-    actor.role = 'member';
-  }
+  const saved = await asAdmin(() => call('PUT', '/preferences', { language: 'de' }));
+  assert.equal(saved.status, 200);
+  assert.equal(saved.body.data.language, 'de');
+  assert.equal(saved.body.data.language_effective, 'de');
+  // Ohne Region fiele die Automatik auf Englisch - das Label der
+  // Automatik-Option darf nicht die gerade gewählte Sprache versprechen.
+  assert.equal(saved.body.data.language_auto, 'en');
 
   // Der Kern von #632: der Wechsel muss die bereits gespeicherten Zeilen
   // erreichen, nicht nur künftige Termine.
@@ -184,8 +189,11 @@ test('PUT /preferences betitelt bestehende Geburtstags-Termine um', async () => 
   assert.equal(storedEvent(first).title, 'Geburtstag: Lina Müller');
 });
 
-test('ICS-Feed exportiert den lokalisierten Titel', () => {
-  // Haushalt steht aus dem vorigen Test auf Deutsch.
+test('ICS-Feed exportiert den lokalisierten Titel', async () => {
+  // Vorbedingung selbst setzen statt sie vom vorigen Test zu erben: ein
+  // eingeschobener Test würde sonst diese Zusicherung still verschieben.
+  await asAdmin(() => call('PUT', '/preferences', { language: 'de' }));
+
   const feed = buildFeed(db, USER);
   assert.match(feed, /SUMMARY:Geburtstag: Nora/);
   assert.doesNotMatch(feed, /SUMMARY:Birthday: /);
@@ -193,28 +201,112 @@ test('ICS-Feed exportiert den lokalisierten Titel', () => {
 
 test('Zurück auf automatisch stellt die abgeleitete Sprache wieder her', async () => {
   setConfig('region', 'en-GB');
-  actor.role = 'admin';
-  try {
-    const saved = await call('PUT', '/preferences', { language: null });
-    assert.equal(saved.status, 200);
-    assert.equal(saved.body.data.language, null);
-    assert.equal(saved.body.data.language_effective, 'en');
-  } finally {
-    actor.role = 'member';
-  }
+  const saved = await asAdmin(() => call('PUT', '/preferences', { language: null }));
+  assert.equal(saved.status, 200);
+  assert.equal(saved.body.data.language, null);
+  assert.equal(saved.body.data.language_effective, 'en');
+
   const first = db.prepare(`SELECT id FROM birthdays ORDER BY id ASC`).get().id;
   assert.equal(storedEvent(first).title, 'Birthday: Lina Müller');
 });
 
 test('PUT /preferences weist ungültige Sprachen ab und verlangt Admin', async () => {
-  actor.role = 'admin';
-  try {
-    const invalid = await call('PUT', '/preferences', { language: 'klingon' });
-    assert.equal(invalid.status, 400);
-  } finally {
-    actor.role = 'member';
-  }
+  const invalid = await asAdmin(() => call('PUT', '/preferences', { language: 'klingon' }));
+  assert.equal(invalid.status, 400);
 
   const forbidden = await call('PUT', '/preferences', { language: 'de' });
   assert.equal(forbidden.status, 403, 'Mitglieder ändern keine haushaltweite Datensprache');
+});
+
+// Die Datensprache lässt sich über drei Felder verschieben. Ein Guard nur auf
+// `language` deckt die Beispiele ab, nicht die Regel: `region` und `date_format`
+// führen genauso in den Backfill, und `region` ist der Weg, über den ein
+// Mitglied das Admin-Gate sonst umginge.
+
+test('region allein verschiebt die Sprache bestehender Termine', async () => {
+  db.prepare(`DELETE FROM sync_config WHERE key = 'language'`).run();
+  setConfig('region', 'en-GB');
+  await asAdmin(() => call('PUT', '/preferences', { region: 'en-GB' }));
+
+  const first = db.prepare(`SELECT id FROM birthdays ORDER BY id ASC`).get().id;
+  assert.equal(storedEvent(first).title, 'Birthday: Lina Müller');
+
+  const saved = await asAdmin(() => call('PUT', '/preferences', { region: 'it-IT' }));
+  assert.equal(saved.status, 200);
+  assert.equal(saved.body.data.language_effective, 'it');
+  assert.equal(storedEvent(first).title, 'Compleanno: Lina Müller');
+});
+
+test('region ist Mitgliedern verwehrt, sonst wäre das Sprach-Gate umgehbar', async () => {
+  const forbidden = await call('PUT', '/preferences', { region: 'de-DE' });
+  assert.equal(forbidden.status, 403);
+  assert.equal(
+    db.prepare(`SELECT value FROM sync_config WHERE key = 'region'`).get()?.value,
+    'it-IT',
+    'die abgewiesene Anfrage darf die Region nicht verändert haben',
+  );
+});
+
+test('date_format allein zieht die Beschreibung nach', async () => {
+  const first = db.prepare(`SELECT id FROM birthdays ORDER BY id ASC`).get().id;
+
+  await asAdmin(() => call('PUT', '/preferences', { date_format: 'ymd' }));
+  assert.match(storedEvent(first).description, /1990-05-12/);
+
+  await asAdmin(() => call('PUT', '/preferences', { date_format: 'dmy' }));
+  assert.match(storedEvent(first).description, /12\.05\.1990/);
+});
+
+test('gespiegelte Termine werden für den Push vorgemerkt', async () => {
+  // Ein Geburtstags-Termin, den der Apple-Sync bereits hochgeladen hat: er trägt
+  // danach external_source='apple' und eine Kalender-Zuordnung. Ohne den Marker
+  // holt pendingUpdates() ihn nie ab und iCloud behielte den alten Titel (#632).
+  const first = db.prepare(`SELECT id, calendar_event_id FROM birthdays ORDER BY id ASC`).get();
+  db.prepare(`
+    UPDATE calendar_events
+    SET external_source = 'apple', external_calendar_id = 'oikos-test@oikos.local',
+        outbound_dirty = 0
+    WHERE id = ?
+  `).run(first.calendar_event_id);
+
+  await asAdmin(() => call('PUT', '/preferences', { language: 'de' }));
+
+  const row = db.prepare('SELECT title, outbound_dirty FROM calendar_events WHERE id = ?')
+    .get(first.calendar_event_id);
+  assert.equal(row.title, 'Geburtstag: Lina Müller');
+  assert.equal(row.outbound_dirty, 1, 'der umbenannte Termin muss zum Provider nachgezogen werden');
+});
+
+test('ein rein lokaler Termin wird nicht für den Push vorgemerkt', async () => {
+  const created = await call('POST', '/birthdays', { name: 'Timo', birth_date: '1999-02-02' });
+  const eventId = db.prepare('SELECT calendar_event_id AS id FROM birthdays WHERE id = ?')
+    .get(created.body.data.id).id;
+
+  await asAdmin(() => call('PUT', '/preferences', { language: 'fr' }));
+
+  const row = db.prepare('SELECT title, outbound_dirty FROM calendar_events WHERE id = ?').get(eventId);
+  assert.equal(row.title, 'Anniversaire : Timo');
+  assert.equal(row.outbound_dirty, 0, 'ohne Provider-Zuordnung gibt es nichts zu pushen');
+});
+
+test('ein unveränderter Termin wird nicht erneut geschrieben', async () => {
+  const first = db.prepare(`SELECT calendar_event_id AS id FROM birthdays ORDER BY id ASC`).get();
+  db.prepare('UPDATE calendar_events SET outbound_dirty = 0 WHERE id = ?').run(first.id);
+
+  // Sprache bleibt fr: derselbe Titel, also kein Schreibvorgang und kein Marker.
+  await asAdmin(() => call('PUT', '/preferences', { language: 'fr' }));
+
+  assert.equal(
+    db.prepare('SELECT outbound_dirty FROM calendar_events WHERE id = ?').get(first.id).outbound_dirty,
+    0,
+    'ein Lauf ohne Textänderung darf keinen Push auslösen',
+  );
+});
+
+test('GET /preferences liefert die drei Sprachfelder', async () => {
+  const res = await call('GET', '/preferences');
+  assert.equal(res.status, 200);
+  assert.equal(res.body.data.language, 'fr', 'explizit gesetzt');
+  assert.equal(res.body.data.language_effective, 'fr', 'was gilt');
+  assert.equal(res.body.data.language_auto, 'it', 'was die Automatik aus der Region ergäbe');
 });

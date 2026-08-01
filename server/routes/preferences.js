@@ -9,12 +9,7 @@ import express from 'express';
 import * as db from '../db.js';
 import * as holidays from '../services/holidays.js';
 import { str, MAX_SHORT } from '../middleware/validate.js';
-import {
-  getSupportedLocales,
-  isSupportedLocale,
-  resolveHouseholdFormats,
-  resolveHouseholdLocale,
-} from '../utils/i18n.js';
+import { getSupportedLocales, isSupportedLocale, resolveHouseholdLocale } from '../utils/i18n.js';
 import { retitleBirthdayEvents } from '../services/birthdays.js';
 
 const log = createLogger('Preferences');
@@ -337,13 +332,6 @@ router.put('/', (req, res) => {
   try {
     const { visible_meal_types, currency, date_format, time_format, week_start, region, language, app_name, dashboard_widgets, disabled_modules, module_order, mobile_nav_order, housekeeping_payment_tasks, budget_mode, calendar_default_duration, calendar_default_reminders, calendar_default_assign_me, health_cycle_enabled, rewards_require_approval, tasks_default_points, weather_provider, weather_lat, weather_lon, weather_city, weather_units, weather_auto_locate, weather_user, holiday_country, holiday_subdivision, holiday_group, holiday_show_public, holiday_show_school, holiday_public_color, holiday_school_color } = req.body;
 
-    // Ausgangszustand der Datensprache/-formatierung merken. Die gespeicherten
-    // Geburtstags-Titel hängen an beidem, und beide lassen sich über drei
-    // verschiedene Felder verschieben (language direkt, region indirekt,
-    // date_format über die Beschreibung). Ein Vergleich am Ende trifft alle drei
-    // Wege, ohne den Backfill an drei Stellen zu wiederholen.
-    const formatsBefore = resolveHouseholdFormats(db.get());
-
     if (visible_meal_types !== undefined) {
       if (!Array.isArray(visible_meal_types)) {
         return res.status(400).json({ error: 'visible_meal_types muss ein Array sein', code: 400 });
@@ -395,10 +383,19 @@ router.put('/', (req, res) => {
       cfgSet('budget_mode', budget_mode);
     }
 
-    // Reine Anzeige-Hilfe: welche Region-Vorlage der Nutzer gewählt hat. Nötig,
-    // weil sich mehrere Regionen dasselbe currency/date/time-Triple teilen und
-    // der Dropdown sonst nach dem Speichern auf die falsche Region springt (#486).
+    // Welche Region-Vorlage der Nutzer gewählt hat. Nötig, weil sich mehrere
+    // Regionen dasselbe currency/date/time-Triple teilen und der Dropdown sonst
+    // nach dem Speichern auf die falsche Region springt (#486).
+    //
+    // Seit die Datensprache aus der Region abgeleitet wird, ist das keine reine
+    // Anzeige-Hilfe mehr: eine Region schiebt die Sprache, in der Geburtstags-
+    // Termine gespeichert werden. Deshalb dasselbe Admin-Gate wie bei `language`
+    // - sonst wäre der dortige Schutz über diesen Umweg zu umgehen. Die Oberfläche
+    // behandelte die Region ohnehin immer als Admin-Feld, nur die Route nicht.
     if (region !== undefined) {
+      if (req.authRole !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required.', code: 403 });
+      }
       if (region !== null && (typeof region !== 'string' || !VALID_REGION.test(region))) {
         return res.status(400).json({ error: 'Ungültige Region.', code: 400 });
       }
@@ -717,12 +714,21 @@ router.put('/', (req, res) => {
       }
     }
 
-    // Hat sich Sprache oder Datumsformat verschoben, tragen die gespeicherten
-    // Geburtstags-Termine noch die alte Fassung — einmal nachziehen.
-    const formatsAfter = resolveHouseholdFormats(db.get());
-    if (formatsAfter.locale !== formatsBefore.locale
-        || formatsAfter.dateFormat !== formatsBefore.dateFormat) {
+    // Gespeicherte Geburtstags-Termine an die geltende Datensprache angleichen.
+    //
+    // Unbedingt statt nur bei erkannter Verschiebung: retitleBirthdayEvents
+    // vergleicht ohnehin pro Zeile und schreibt nur, was abweicht. Ein Vergleich
+    // vorher/nachher hier oben wäre ein zweiter Ort, an dem alle Wege zur
+    // Datensprache (language, region, date_format) vollständig aufgezählt sein
+    // müssten - und der Lauf heilt so auch einen früheren Fehlschlag mit.
+    //
+    // Fehler beenden die Anfrage nicht: die Präferenzen sind zu diesem Zeitpunkt
+    // geschrieben, und eine 500-Antwort würde einen Zustand melden, den der
+    // Aufrufer nicht mehr zurücknehmen kann. Der nächste PUT versucht es erneut.
+    try {
       db.transaction(() => retitleBirthdayEvents(db.get()));
+    } catch (err) {
+      log.error('PUT / - Geburtstags-Termine konnten nicht umbenannt werden', err);
     }
 
     const rawMealTypes = cfgGet('visible_meal_types') ?? DEFAULT_MEAL_TYPES;
@@ -747,7 +753,7 @@ router.put('/', (req, res) => {
         week_start: savedWeekStart,
         region: cfgGet('region') || null,
         language: isSupportedLocale(cfgGet('language')) ? cfgGet('language') : null,
-        language_effective: formatsAfter.locale,
+        language_effective: resolveHouseholdLocale(db.get()),
         language_auto: resolveHouseholdLocale(db.get(), { ignoreExplicit: true }),
         app_name: savedAppName,
         dashboard_widgets: savedWidgets,

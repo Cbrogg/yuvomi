@@ -351,16 +351,23 @@ function bindEvents(container, user) {
   // Geburtstags-Termine um. Danach neu rendern, damit das Automatik-Label die
   // eventuell veränderte Ableitung zeigt.
   const dataLanguageSelect = container.querySelector('#data-language-select');
+  let persistedDataLanguage = dataLanguageSelect?.value ?? '';
   dataLanguageSelect?.addEventListener('change', async () => {
     const errorElement = container.querySelector('#data-language-error');
     clearError(errorElement);
     dataLanguageSelect.disabled = true;
     try {
       await savePreferences({ language: dataLanguageSelect.value || null });
+      persistedDataLanguage = dataLanguageSelect.value;
+      // Nur die Optionen neu aufbauen statt die Seite: ein voller Re-Render nähme
+      // dem gerade bedienten Select den Fokus und würde eine noch nicht
+      // gespeicherte "Benutzerdefiniert"-Wahl im Region-Block wieder zuklappen.
+      await refreshDataLanguageOptions(container);
       window.yuvomi?.showToast(t('settings.dataLanguageSaved'), 'success');
-      await render(container, { user });
-      return;
     } catch (error) {
+      // Zurück auf den gespeicherten Wert: sonst zeigt die Seite eine
+      // Datensprache an, die nie geschrieben wurde.
+      dataLanguageSelect.value = persistedDataLanguage;
       showError(errorElement, error.message);
     } finally {
       if (dataLanguageSelect.isConnected) dataLanguageSelect.disabled = false;
