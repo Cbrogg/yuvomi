@@ -840,6 +840,29 @@ function currentRoute() {
   return allRoutes().find((r) => r.path === currentPath);
 }
 
+/**
+ * Zieht die Statusbar-Farbe auf das jetzt gültige Theme nach.
+ *
+ * Der Modul-Akzent ist nicht die einzige eingefrorene Momentaufnahme:
+ * `updateThemeColorForRoute` löst `--module-<name>` über denselben `getCSSToken`
+ * auf und schreibt das Ergebnis in beide `<meta name="theme-color">`. Ein
+ * Attribut nimmt an keiner Kaskade teil, also behielt die Statusbar nach
+ * hell↔dunkel die Modulfarbe des alten Themes, während die Shell darunter längst
+ * umgeschaltet hatte - dieselbe Regel wie bei applyModuleAccentForRoute, nur für
+ * die zweite Momentaufnahme.
+ *
+ * Sichtbar nur in der installierten PWA: `setThemeColor` steigt außerhalb des
+ * Standalone-Modus früh aus. Deshalb fiel es neben dem Akzent-Befund nicht auf.
+ */
+function refreshThemeColorForTheme() {
+  // Liegt ein Modal über der Seite, gehört die Statusbar ihm: modal.js dunkelt
+  // sie beim Öffnen ab und stellt sie über restoreThemeColor selbst wieder her.
+  // Ein Nachziehen der Routenfarbe höbe die Abdunklung mitten im offenen Modal
+  // auf - der Fall tritt im Auto-Modus ein, wenn das System selbst umschaltet.
+  if (document.getElementById('shared-modal-overlay')) return;
+  updateThemeColorForRoute(currentRoute());
+}
+
 // Bestätigter Logout, überall aus der Navigation erreichbar (Sidebar-Footer +
 // Mehr-Sheet). Teilt den Server-Logout mit den Einstellungen; das finally räumt
 // die lokale Session auch bei Netzfehler, damit man nie „eingeloggt festhängt"
@@ -3222,8 +3245,12 @@ if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
     // bliebe also beim Sonnenuntergang des Systems auf dem Hellmodus-Wert
     // stehen: derselbe Kontrast-Bruch wie beim manuellen Umschalten, nur ohne
     // Nutzeraktion. Der Listener zieht ihn nach; bei explizitem Theme ist der
-    // Aufruf idempotent (dieselbe Farbe wird erneut aufgelöst).
-    darkSchemeQuery?.addEventListener?.('change', () => applyModuleAccentForRoute(currentRoute()));
+    // Aufruf idempotent (dieselbe Farbe wird erneut aufgelöst). Die Statusbar
+    // hängt an derselben Momentaufnahme, siehe refreshThemeColorForTheme.
+    darkSchemeQuery?.addEventListener?.('change', () => {
+      applyModuleAccentForRoute(currentRoute());
+      refreshThemeColorForTheme();
+    });
 
     await initI18n();
     try {
@@ -3267,6 +3294,9 @@ window.yuvomi = {
     // ganze Shell (Buttons, Fokusringe, FAB, aktive Nav-Pille) den Akzent des
     // vorherigen Themes. Begründung an applyModuleAccentForRoute.
     applyModuleAccentForRoute(currentRoute());
+    // Die Statusbar im Standalone-Modus trägt dieselbe eingefrorene
+    // Momentaufnahme, siehe refreshThemeColorForTheme.
+    refreshThemeColorForTheme();
     // Persistenz zuletzt und fehlertolerant: ein werfendes localStorage (Safari
     // Privatmodus, Quota) darf das sichtbare Anwenden nicht abbrechen. Vorher
     // stand diese Zeile zuerst - warf sie, fiel der Aufrufer in den

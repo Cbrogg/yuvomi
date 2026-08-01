@@ -3927,6 +3927,57 @@ test('module accent is recomputed on every runtime theme switch', () => {
   );
 });
 
+/**
+ * Der Akzent ist nicht die einzige eingefrorene Momentaufnahme.
+ *
+ * `updateThemeColorForRoute` loest `--module-<name>` ueber denselben
+ * `getCSSToken` auf und schreibt das Ergebnis in beide
+ * `<meta name="theme-color">`. Ein Attribut nimmt an keiner Kaskade teil, also
+ * behielt die Statusbar nach hell/dunkel die Modulfarbe des alten Themes,
+ * waehrend die Shell darunter laengst umgeschaltet hatte. Sichtbar nur in der
+ * installierten PWA (`setThemeColor` steigt sonst frueh aus), weshalb es neben
+ * dem Akzent-Befund durchrutschte - die Regel ist aber dieselbe: Jeder Weg, der
+ * das Theme zur Laufzeit umschaltet, muss BEIDE neu berechnen.
+ */
+test('the standalone status bar colour is recomputed on a runtime theme switch too', () => {
+  const router = read('../public/router.js');
+
+  const helper = router.match(/function refreshThemeColorForTheme\(\)[\s\S]*?\n\}/);
+  assert.ok(helper, 'expected refreshThemeColorForTheme to own the status bar refresh');
+  assert.match(
+    helper[0],
+    /updateThemeColorForRoute\(currentRoute\(\)\)/,
+    'the helper must recompute the status bar colour for the current route',
+  );
+  // Ein offenes Modal haelt die Statusbar abgedunkelt und stellt sie beim
+  // Schliessen ueber restoreThemeColor selbst wieder her. Zoege der Auto-Modus
+  // die Routenfarbe nach, waere die Abdunklung mitten im Modal weg.
+  assert.match(
+    helper[0],
+    /shared-modal-overlay/,
+    'the helper must leave the status bar alone while a modal dims it',
+  );
+
+  // Beide Umschaltwege ziehen nach - derselbe Anspruch wie beim Modul-Akzent.
+  const applyTheme = router.match(/applyTheme:\s*\(value\) => \{[\s\S]*?\n {2}\},/);
+  assert.ok(applyTheme, 'expected the applyTheme export');
+  assert.match(
+    applyTheme[0],
+    /refreshThemeColorForTheme\(\)/,
+    'applyTheme must refresh the status bar colour',
+  );
+
+  const listener = router.match(
+    /darkSchemeQuery\s*\??\.?\s*addEventListener[\s\S]{0,120}?'change'[\s\S]{0,300}?\n {4}\}\);/,
+  );
+  assert.ok(listener, 'expected a prefers-color-scheme change listener for auto mode');
+  assert.match(
+    listener[0],
+    /refreshThemeColorForTheme\(\)/,
+    'the auto-mode listener must refresh the status bar colour too',
+  );
+});
+
 test('modal Enter submits the form instead of advancing to the next field (audit 1.4)', () => {
   const src = read('../public/components/modal.js');
   const enterBlock = src.match(/if \(e\.key === 'Enter'\) \{[\s\S]*?\n {4}\}/);
