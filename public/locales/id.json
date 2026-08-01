@@ -273,7 +273,6 @@
         "editButton": "Ubah tugas",
         "swipeOpen": "Buka",
         "swipeDone": "Selesai",
-        "swipeEdit": "Ubah",
         "subtaskAdd": "+ Tambah subtugas",
         "subtaskToggle": "Tampilkan subtugas",
         "subtaskMarkDone": "Tandai {{title}} selesai",
@@ -363,7 +362,12 @@
         "searchPlaceholder": "Cari tugas…",
         "viewToggleLabel": "Tampilan",
         "groupToggleLabel": "Kelompokkan menurut",
-        "noResultsDescription": "Tidak ada tugas yang berisi \"{{query}}\"."
+        "noResultsDescription": "Tidak ada tugas yang berisi \"{{query}}\".",
+        "detailStart": "Mulai",
+        "detailFinish": "Selesaikan",
+        "detailReopen": "Buka kembali",
+        "subtasksLabel": "Subtugas",
+        "swipeView": "Lihat"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} hidangan",
@@ -595,7 +599,6 @@
         "colorCyan": "Sian",
         "descriptionLabel": "Deskripsi",
         "descriptionPlaceholder": "Opsional…",
-        "popupEdit": "Ubah",
         "deleteConfirm": "Benar-benar hapus \"{{title}}\"?",
         "createdToast": "Acara dibuat",
         "savedToast": "Acara disimpan",
@@ -754,7 +757,9 @@
         "recurringScopeSeries": "Seluruh rangkaian",
         "recurringScopeHintThis": "Hanya memengaruhi acara pada {{date}}.",
         "recurringScopeHintFollowing": "Memengaruhi acara pada {{date}} dan semua berikutnya.",
-        "recurringScopeHintSeries": "Memengaruhi seluruh seri."
+        "recurringScopeHintSeries": "Memengaruhi seluruh seri.",
+        "detailWhen": "Waktu",
+        "detailCalendar": "Kalender"
     },
     "notes": {
         "title": "Catatan",
@@ -2161,7 +2166,10 @@
         "unitMonths": "Bulan",
         "freqYearly": "Tahunan",
         "unitYear": "Tahun",
-        "unitYears": "Tahun"
+        "unitYears": "Tahun",
+        "summaryUntil": "hingga {{date}}",
+        "summaryCount": "{{count}} kejadian",
+        "summaryCount_one": "{{count}} kejadian"
     },
     "reminders": {
         "sectionTitle": "Pengingat",
@@ -2194,7 +2202,8 @@
         "customMinutes": "Menit",
         "customHours": "Jam",
         "customDays": "Hari",
-        "customWeeks": "Minggu"
+        "customWeeks": "Minggu",
+        "sectionTitlePlural": "Pengingat"
     },
     "birthdays": {
         "inDays": "dalam {{days}} hari",
@@ -2291,7 +2300,7 @@
         "staleData": "Offline – per: {{time}}"
     },
     "emptyHint": {
-        "tasks": "Ketuk + untuk membuat tugas pertama Anda. Geser kartu ke kiri untuk menyelesaikan, ke kanan untuk mengedit.",
+        "tasks": "Ketuk + untuk membuat tugas pertama Anda. Geser kartu ke kiri untuk menyelesaikan, ke kanan untuk melihat.",
         "calendar": "Sambungkan Google Calendar di Pengaturan → Integrasi untuk sinkronisasi otomatis.",
         "shopping": "Setelah berbelanja, item yang dicentang pindah ke penyimpanan.",
         "notes": "Ketuk + untuk catatan baru. Catatan dicari secara teks lengkap.",

@@ -260,7 +260,6 @@
         "editButton": "Редагувати завдання",
         "swipeOpen": "Відкрити знову",
         "swipeDone": "Виконано",
-        "swipeEdit": "Редагувати",
         "subtaskAdd": "+ Додати підзавдання",
         "subtaskToggle": "Показати підзавдання",
         "subtaskMarkDone": "Позначити {{title}} як виконане",
@@ -351,7 +350,12 @@
         "searchPlaceholder": "Пошук завдань…",
         "viewToggleLabel": "Вигляд",
         "groupToggleLabel": "Групувати за",
-        "noResultsDescription": "Жодне завдання не містить \"{{query}}\"."
+        "noResultsDescription": "Жодне завдання не містить \"{{query}}\".",
+        "detailStart": "Почати",
+        "detailFinish": "Завершити",
+        "detailReopen": "Відкрити знову",
+        "subtasksLabel": "Підзавдання",
+        "swipeView": "Перегляд"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} прийоми їжі",
@@ -573,7 +577,6 @@
         "colorOverriddenByAssignee": "Колір замінюється призначеними користувачами",
         "descriptionLabel": "Опис",
         "descriptionPlaceholder": "Необов'язково…",
-        "popupEdit": "Редагувати",
         "deleteConfirm": "Справді видалити «{{title}}»?",
         "createdToast": "Подію створено",
         "savedToast": "Подію збережено",
@@ -742,7 +745,9 @@
         "recurringScopeSeries": "Усю серію",
         "recurringScopeHintThis": "Стосується лише події {{date}}.",
         "recurringScopeHintFollowing": "Стосується події {{date}} та всіх наступних.",
-        "recurringScopeHintSeries": "Стосується всієї серії."
+        "recurringScopeHintSeries": "Стосується всієї серії.",
+        "detailWhen": "Час",
+        "detailCalendar": "Календар"
     },
     "notes": {
         "title": "Нотатки",
@@ -2149,7 +2154,10 @@
         "unitMonths": "місяців",
         "freqYearly": "Щороку",
         "unitYear": "рік",
-        "unitYears": "років"
+        "unitYears": "років",
+        "summaryUntil": "до {{date}}",
+        "summaryCount": "{{count}} повторень",
+        "summaryCount_one": "{{count}} повторення"
     },
     "reminders": {
         "sectionTitle": "Нагадування",
@@ -2182,7 +2190,8 @@
         "customMinutes": "Хвилин",
         "customHours": "Години",
         "customDays": "Днів",
-        "customWeeks": "Тижнів"
+        "customWeeks": "Тижнів",
+        "sectionTitlePlural": "Нагадування"
     },
     "recipes": {
         "toShoppingSuccess_few": "До {{list}} додано {{count}} інгредієнти.",
@@ -2291,7 +2300,7 @@
         "staleData": "Офлайн — станом на: {{time}}"
     },
     "emptyHint": {
-        "tasks": "Натисніть +, щоб створити перше завдання. Проведіть картку вліво, щоб позначити виконаною, вправо — щоб редагувати.",
+        "tasks": "Натисніть +, щоб створити перше завдання. Проведіть картку вліво, щоб позначити виконаною, вправо — щоб переглянути.",
         "calendar": "Підключіть Google Календар у Налаштування → Інтеграції для автоматичної синхронізації.",
         "shopping": "Після покупок позначені товари переходять до запасів.",
         "notes": "Натисніть +, щоб створити нову нотатку. Нотатки шукаються за повним текстом.",

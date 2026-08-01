@@ -5430,7 +5430,15 @@ test('der Tag-Filter ist ueberall eine Liste, nirgends mehr ein einzelner Wert',
  * Dateien: ist eine Aenderung erst einmal beim Server, gibt es nichts mehr zu
  * verwerfen, und das Modal gehoert mit `force: true` zu.
  */
-const CLOSE_MODAL_CALL = /\bclose(Shared)?Modal\s*\(/;
+// Dieselbe Handlung traegt drei Namen: `closeModal`, den Import-Alias
+// `closeSharedModal` (Kueche, Vorrat, Rezepte) und `closeDetailView`, das die
+// Detailansicht ueber closeModal legt. Faehrt die Regel nur auf dem ersten,
+// laeuft sie an zwei Dritteln der Aufrufer vorbei - und zwar still.
+// Die Detailansicht reicht ihren Fusszeilen-Aktionen zusaetzlich ein blankes
+// `close` herein; dafuer greift der Guard in test-detail-view.js, weil ein
+// ungebundenes `close(` hier auf jeden Popover- und Stream-Aufruf ansprechen
+// wuerde.
+const CLOSE_MODAL_CALL = /\b(close(Shared)?Modal|closeDetailView)\s*\(/;
 
 test('nach einem Schreibvorgang schliesst das Modal ohne Verwerfen-Frage', () => {
   const WINDOW = 20; // Zeilen zwischen Request und Schliessen, grosszuegig gefasst

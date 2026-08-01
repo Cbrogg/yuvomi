@@ -273,7 +273,6 @@
         "editButton": "Edytuj zadanie",
         "swipeOpen": "Otwórz",
         "swipeDone": "Zrobione",
-        "swipeEdit": "Edytuj",
         "subtaskAdd": "+ Dodaj podzadanie",
         "subtaskToggle": "Pokaż podzadania",
         "subtaskMarkDone": "Oznacz {{title}} jako zrobione",
@@ -363,7 +362,12 @@
         "searchPlaceholder": "Szukaj zadań…",
         "viewToggleLabel": "Widok",
         "groupToggleLabel": "Grupuj według",
-        "noResultsDescription": "Żadne zadanie nie zawiera „{{query}}”."
+        "noResultsDescription": "Żadne zadanie nie zawiera „{{query}}”.",
+        "detailStart": "Rozpocznij",
+        "detailFinish": "Zakończ",
+        "detailReopen": "Otwórz ponownie",
+        "subtasksLabel": "Podzadania",
+        "swipeView": "Podgląd"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} posiłki",
@@ -595,7 +599,6 @@
         "colorCyan": "Cyjan",
         "descriptionLabel": "Opis",
         "descriptionPlaceholder": "Opcjonalnie…",
-        "popupEdit": "Edytuj",
         "deleteConfirm": "Naprawdę usunąć \"{{title}}\"?",
         "createdToast": "Wydarzenie utworzone",
         "savedToast": "Wydarzenie zapisane",
@@ -754,7 +757,9 @@
         "recurringScopeSeries": "Cała seria",
         "recurringScopeHintThis": "Dotyczy tylko wydarzenia w dniu {{date}}.",
         "recurringScopeHintFollowing": "Dotyczy wydarzenia w dniu {{date}} i wszystkich następnych.",
-        "recurringScopeHintSeries": "Dotyczy całej serii."
+        "recurringScopeHintSeries": "Dotyczy całej serii.",
+        "detailWhen": "Godzina",
+        "detailCalendar": "Kalendarz"
     },
     "notes": {
         "title": "Notatki",
@@ -2161,7 +2166,10 @@
         "unitMonths": "miesiące",
         "freqYearly": "Co rok",
         "unitYear": "rok",
-        "unitYears": "lata"
+        "unitYears": "lata",
+        "summaryUntil": "do {{date}}",
+        "summaryCount": "{{count}} terminów",
+        "summaryCount_one": "{{count}} termin"
     },
     "reminders": {
         "sectionTitle": "Przypomnienie",
@@ -2194,7 +2202,8 @@
         "customMinutes": "Minuty",
         "customHours": "Godziny",
         "customDays": "Dni",
-        "customWeeks": "Tygodnie"
+        "customWeeks": "Tygodnie",
+        "sectionTitlePlural": "Przypomnienia"
     },
     "birthdays": {
         "inDays": "za {{days}} dni",
@@ -2291,7 +2300,7 @@
         "staleData": "Offline – stan z: {{time}}"
     },
     "emptyHint": {
-        "tasks": "Stuknij +, aby utworzyć pierwsze zadanie. Przesuń kartę w lewo, aby oznaczyć jako ukończone, w prawo, aby edytować.",
+        "tasks": "Stuknij +, aby utworzyć pierwsze zadanie. Przesuń kartę w lewo, aby oznaczyć jako ukończone, w prawo, aby wyświetlić.",
         "calendar": "Połącz Google Kalendarz w Ustawienia → Integracje, aby automatycznie synchronizować.",
         "shopping": "Po zakupach odhaczone produkty trafiają do spiżarni.",
         "notes": "Stuknij + dla nowej notatki. Notatki są przeszukiwane pełnotekstowo.",

@@ -323,8 +323,7 @@
 .month-day__event span,
 .allday-event span,
 .week-event__title span,
-.agenda-event__title span,
-.event-popup__title span {
+.agenda-event__title span {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1157,74 +1156,6 @@
   margin-top: var(--space-2);
   font-size: var(--text-sm);
   color: var(--color-text-secondary);
-}
-
-/* --------------------------------------------------------
- * Termin-Detailansicht (Popup beim Klick)
- * -------------------------------------------------------- */
-.event-popup {
-  position: fixed;
-  z-index: calc(var(--z-modal) - 1);
-  background-color: var(--color-surface);
-  border-radius: var(--radius-glass-card);
-  box-shadow: var(--glass-shadow-lg);
-  border: 1px solid var(--glass-border-subtle);
-  padding: var(--space-4);
-  min-width: 240px;
-  max-width: 320px;
-  animation: fadeIn var(--transition-fast) var(--ease-glass);
-}
-
-.event-popup__color-bar {
-  height: 3px;
-  border-radius: var(--radius-full);
-  margin-bottom: var(--space-3);
-}
-
-.event-popup__title {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-bottom: var(--space-2);
-}
-
-.event-popup__meta {
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.event-popup__actions {
-  display: flex;
-  gap: var(--space-2);
-  margin-top: var(--space-3);
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--glass-border-subtle);
-}
-
-.event-popup__edit {
-  flex: 1;
-}
-
-.event-popup__attachment {
-  margin-top: var(--space-2);
-}
-
-.event-popup__attachment--image img {
-  width: 100%;
-  max-height: 220px;
-  object-fit: cover;
-  border-radius: var(--radius-glass-inner);
-  border: 1px solid var(--color-border-subtle);
-}
-
-.event-popup__attachment--file {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  color: var(--color-accent);
 }
 
 .reminder-section__group {

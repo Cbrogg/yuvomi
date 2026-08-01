@@ -273,7 +273,6 @@
         "editButton": "ویرایش کار",
         "swipeOpen": "باز کردن",
         "swipeDone": "انجام‌شده",
-        "swipeEdit": "ویرایش",
         "subtaskAdd": "+ افزودن زیرکار",
         "subtaskToggle": "نمایش زیرکارها",
         "subtaskMarkDone": "علامت‌گذاری {{title}} به عنوان انجام‌شده",
@@ -363,7 +362,12 @@
         "searchPlaceholder": "جستجوی وظایف…",
         "viewToggleLabel": "نما",
         "groupToggleLabel": "گروه‌بندی بر اساس",
-        "noResultsDescription": "هیچ وظیفه‌ای شامل «{{query}}» نیست."
+        "noResultsDescription": "هیچ وظیفه‌ای شامل «{{query}}» نیست.",
+        "detailStart": "شروع",
+        "detailFinish": "تکمیل",
+        "detailReopen": "بازگشایی",
+        "subtasksLabel": "زیروظیفه‌ها",
+        "swipeView": "مشاهده"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} وعده",
@@ -595,7 +599,6 @@
         "colorCyan": "فیروزه‌ای",
         "descriptionLabel": "توضیحات",
         "descriptionPlaceholder": "اختیاری…",
-        "popupEdit": "ویرایش",
         "deleteConfirm": "آیا واقعاً «{{title}}» حذف شود؟",
         "createdToast": "رویداد ایجاد شد",
         "savedToast": "رویداد ذخیره شد",
@@ -754,7 +757,9 @@
         "recurringScopeSeries": "کل مجموعه",
         "recurringScopeHintThis": "فقط رویداد {{date}} را تحت تأثیر قرار می‌دهد.",
         "recurringScopeHintFollowing": "رویداد {{date}} و همه‌ی بعدی‌ها را تحت تأثیر قرار می‌دهد.",
-        "recurringScopeHintSeries": "کل مجموعه را تحت تأثیر قرار می‌دهد."
+        "recurringScopeHintSeries": "کل مجموعه را تحت تأثیر قرار می‌دهد.",
+        "detailWhen": "زمان",
+        "detailCalendar": "تقویم"
     },
     "notes": {
         "title": "یادداشت‌ها",
@@ -2161,7 +2166,10 @@
         "unitMonths": "ماه",
         "freqYearly": "سالانه",
         "unitYear": "سال",
-        "unitYears": "سال"
+        "unitYears": "سال",
+        "summaryUntil": "تا {{date}}",
+        "summaryCount": "{{count}} رویداد",
+        "summaryCount_one": "{{count}} رویداد"
     },
     "reminders": {
         "sectionTitle": "یادآور",
@@ -2194,7 +2202,8 @@
         "customMinutes": "دقیقه",
         "customHours": "ساعت",
         "customDays": "روز",
-        "customWeeks": "هفته"
+        "customWeeks": "هفته",
+        "sectionTitlePlural": "یادآورها"
     },
     "birthdays": {
         "inDays": "{{days}} روز دیگر",
@@ -2291,7 +2300,7 @@
         "staleData": "آفلاین – وضعیت: {{time}}"
     },
     "emptyHint": {
-        "tasks": "برای ساخت اولین کار خود روی + بزنید. یک کارت را برای انجام‌شدن به چپ و برای ویرایش به راست بکشید.",
+        "tasks": "برای ساخت اولین کار خود روی + بزنید. یک کارت را برای انجام‌شدن به چپ و برای مشاهده به راست بکشید.",
         "calendar": "برای همگام‌سازی خودکار، Google Calendar را در تنظیمات ← یکپارچه‌سازی‌ها متصل کنید.",
         "shopping": "پس از خرید، موارد علامت‌خورده به انبار منتقل می‌شوند.",
         "notes": "برای یادداشت جدید روی + بزنید. یادداشت‌ها به‌صورت تمام‌متن جستجو می‌شوند.",

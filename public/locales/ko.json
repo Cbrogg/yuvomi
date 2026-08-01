@@ -273,7 +273,6 @@
         "editButton": "할 일 편집",
         "swipeOpen": "열기",
         "swipeDone": "완료",
-        "swipeEdit": "편집",
         "subtaskAdd": "+ 하위 작업 추가",
         "subtaskToggle": "하위 작업 표시",
         "subtaskMarkDone": "{{title}} 완료로 표시",
@@ -363,7 +362,12 @@
         "searchPlaceholder": "할 일 검색…",
         "viewToggleLabel": "보기",
         "groupToggleLabel": "그룹화 기준",
-        "noResultsDescription": "\"{{query}}\"을(를) 포함하는 할 일이 없습니다."
+        "noResultsDescription": "\"{{query}}\"을(를) 포함하는 할 일이 없습니다.",
+        "detailStart": "시작",
+        "detailFinish": "완료 처리",
+        "detailReopen": "다시 열기",
+        "subtasksLabel": "하위 작업",
+        "swipeView": "보기"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}}개 식사",
@@ -595,7 +599,6 @@
         "colorCyan": "청록",
         "descriptionLabel": "설명",
         "descriptionPlaceholder": "선택 사항…",
-        "popupEdit": "편집",
         "deleteConfirm": "\"{{title}}\"을(를) 정말 삭제할까요?",
         "createdToast": "일정이 생성되었습니다",
         "savedToast": "일정이 저장되었습니다",
@@ -754,7 +757,9 @@
         "recurringScopeSeries": "전체 시리즈",
         "recurringScopeHintThis": "{{date}} 일정에만 적용됩니다.",
         "recurringScopeHintFollowing": "{{date}} 일정과 이후 전체에 적용됩니다.",
-        "recurringScopeHintSeries": "시리즈 전체에 적용됩니다."
+        "recurringScopeHintSeries": "시리즈 전체에 적용됩니다.",
+        "detailWhen": "시간",
+        "detailCalendar": "캘린더"
     },
     "notes": {
         "title": "메모",
@@ -2161,7 +2166,10 @@
         "unitMonths": "개월",
         "freqYearly": "매년",
         "unitYear": "년",
-        "unitYears": "년"
+        "unitYears": "년",
+        "summaryUntil": "{{date}}까지",
+        "summaryCount": "{{count}}회",
+        "summaryCount_one": "{{count}}회"
     },
     "reminders": {
         "sectionTitle": "알림",
@@ -2194,7 +2202,8 @@
         "customMinutes": "분",
         "customHours": "시간",
         "customDays": "일",
-        "customWeeks": "주"
+        "customWeeks": "주",
+        "sectionTitlePlural": "알림"
     },
     "birthdays": {
         "inDays": "{{days}}일 후",
@@ -2291,7 +2300,7 @@
         "staleData": "오프라인 – 기준: {{time}}"
     },
     "emptyHint": {
-        "tasks": "+ 를 탭하여 첫 할 일을 만드세요. 카드를 왼쪽으로 밀면 완료, 오른쪽으로 밀면 편집됩니다.",
+        "tasks": "+ 를 탭하여 첫 할 일을 만드세요. 카드를 왼쪽으로 밀면 완료, 오른쪽으로 밀면 보기가 열립니다.",
         "calendar": "자동 동기화를 위해 설정 → 통합에서 Google 캘린더를 연결하세요.",
         "shopping": "장을 본 뒤 체크한 항목은 식료품 저장고로 옮겨집니다.",
         "notes": "+ 를 탭하여 새 메모를 만드세요. 메모는 전문 검색됩니다.",

@@ -63,6 +63,7 @@ const APP_SHELL = [
   '/styles/settings.css',
   '/styles/recipes.css',
   '/styles/pantry.css',
+  '/styles/detail-view.css',
   '/components/yuvomi-install-prompt.js',
   // Geteilte Module. Sie werden von Shell UND Seitenmodulen importiert und
   // müssen deshalb zusammen mit der Shell erneuert werden: der Browser bindet
@@ -71,6 +72,7 @@ const APP_SHELL = [
   // Dateisystem; Fetch-Routing für diese Pfade → SHELL_CACHE (isMutableAppResource).
   '/nav-icons.js',
   '/permissions.js',
+  '/components/detail-view.js',
   '/components/document-attach.js',
   '/components/modal.js',
   '/components/user-multi-select.js',

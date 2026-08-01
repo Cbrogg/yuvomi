@@ -262,7 +262,6 @@
         "archiveButton": "Taak archiveren",
         "swipeOpen": "Heropenen",
         "swipeDone": "Klaar",
-        "swipeEdit": "Bewerken",
         "subtaskAdd": "+ Subtaak toevoegen",
         "subtaskToggle": "Subtaken tonen",
         "subtaskMarkDone": "{{title}} als klaar markeren",
@@ -351,7 +350,12 @@
         "searchPlaceholder": "Taken zoeken…",
         "viewToggleLabel": "Weergave",
         "groupToggleLabel": "Groeperen op",
-        "noResultsDescription": "Geen taak bevat \"{{query}}\"."
+        "noResultsDescription": "Geen taak bevat \"{{query}}\".",
+        "detailStart": "Starten",
+        "detailFinish": "Voltooien",
+        "detailReopen": "Heropenen",
+        "subtasksLabel": "Subtaken",
+        "swipeView": "Bekijken"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} maaltijden",
@@ -573,7 +577,6 @@
         "colorOverriddenByAssignee": "Kleur wordt overschreven door toegewezen gebruikers",
         "descriptionLabel": "Beschrijving",
         "descriptionPlaceholder": "Optioneel…",
-        "popupEdit": "Bewerken",
         "deleteConfirm": "\"{{title}}\" echt verwijderen?",
         "createdToast": "Evenement aangemaakt",
         "savedToast": "Evenement opgeslagen",
@@ -742,7 +745,9 @@
         "recurringScopeSeries": "Hele reeks",
         "recurringScopeHintThis": "Heeft alleen invloed op de afspraak op {{date}}.",
         "recurringScopeHintFollowing": "Heeft invloed op de afspraak op {{date}} en alle volgende.",
-        "recurringScopeHintSeries": "Heeft invloed op de hele reeks."
+        "recurringScopeHintSeries": "Heeft invloed op de hele reeks.",
+        "detailWhen": "Tijd",
+        "detailCalendar": "Agenda"
     },
     "notes": {
         "title": "Bord",
@@ -2149,7 +2154,10 @@
         "unitMonths": "maanden",
         "freqYearly": "Jaarlijks",
         "unitYear": "jaar",
-        "unitYears": "jaar"
+        "unitYears": "jaar",
+        "summaryUntil": "tot {{date}}",
+        "summaryCount": "{{count}} herhalingen",
+        "summaryCount_one": "{{count}} herhaling"
     },
     "reminders": {
         "sectionTitle": "Herinnering",
@@ -2182,7 +2190,8 @@
         "customMinutes": "Minuten",
         "customHours": "Uren",
         "customDays": "Dagen",
-        "customWeeks": "Weken"
+        "customWeeks": "Weken",
+        "sectionTitlePlural": "Herinneringen"
     },
     "birthdays": {
         "inDays": "over {{days}} dagen",
@@ -2304,7 +2313,7 @@
         "goHealth": "Gezondheid"
     },
     "emptyHint": {
-        "tasks": "Tik op + om je eerste taak aan te maken. Veeg een kaart naar links om af te vinken, naar rechts om te bewerken.",
+        "tasks": "Tik op + om je eerste taak aan te maken. Veeg een kaart naar links om af te vinken, naar rechts om te bekijken.",
         "calendar": "Verbind Google Agenda via Instellingen → Integraties voor automatische synchronisatie.",
         "shopping": "Na het boodschappen doen gaan afgevinkte artikelen naar de voorraad.",
         "notes": "Tik op + voor een nieuwe notitie. Notities zijn doorzoekbaar op volledige tekst.",

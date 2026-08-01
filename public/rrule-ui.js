@@ -4,7 +4,7 @@
  * Abhängigkeiten: /i18n.js
  */
 
-import { t, formatDateInput, parseDateInput, isDateInputValid } from '/i18n.js';
+import { t, formatDate, formatDateInput, parseDateInput, isDateInputValid } from '/i18n.js';
 
 const FREQ_OPTIONS = () => [
   { value: '',        label: t('rrule.freqNone') },
@@ -171,6 +171,59 @@ function unitLabel(freq, interval) {
   if (freq === 'MONTHLY') return n ? t('rrule.unitMonths') : t('rrule.unitMonth');
   if (freq === 'YEARLY')  return n ? t('rrule.unitYears')  : t('rrule.unitYear');
   return '';
+}
+
+/**
+ * Beschreibt eine RRULE in einem Satz: „Alle 2 Wochen (Mo, Do) bis 31.12.2026".
+ *
+ * Für die Detailansicht: Ob ein Termin wöchentlich wiederkehrt, war bisher nur
+ * im Bearbeitungsformular zu sehen - man musste den Termin öffnen, um eine
+ * Leseinformation zu bekommen.
+ *
+ * @param {string|null} rule
+ * @returns {string} leerer String, wenn keine Wiederholung
+ */
+export function describeRRule(rule) {
+  const p = parseRRule(rule);
+  if (!p.freq) return '';
+
+  // Die Beschriftungen kommen aus denselben Listen, die auch das Formular füllt.
+  // Eine zweite Wert-zu-Label-Zuordnung daneben hiesse, jede künftige Frequenz
+  // an zwei Stellen zu pflegen.
+  const parts = [
+    p.interval > 1
+      ? `${t('rrule.labelEvery')} ${p.interval} ${unitLabel(p.freq, p.interval)}`
+      : (FREQ_OPTIONS().find((o) => o.value === p.freq)?.label ?? t('rrule.freqDaily')),
+  ];
+
+  // Wochentage nur bei WEEKLY: bei jeder anderen Frequenz trägt BYDAY in dieser
+  // Oberfläche keine Bedeutung (buildRRule schreibt es dort auch nicht).
+  if (p.freq === 'WEEKLY' && p.byday.length) {
+    const weekdays = WEEKDAYS();
+    const days = p.byday.map((d) => weekdays.find((w) => w.value === d)?.label).filter(Boolean);
+    if (days.length) parts.push(`(${days.join(', ')})`);
+  }
+
+  // Die Endebedingung ist eine eigene Aussage und bekommt einen Trenner:
+  // „Alle 2 Monate 5 Termine" las sich wie ein verunglückter Satz.
+  const rhythm = parts.join(' ');
+  if (p.count) return `${rhythm} · ${t('rrule.summaryCount', { count: p.count })}`;
+  if (p.until) return `${rhythm} · ${t('rrule.summaryUntil', { date: formatDate(p.until) })}`;
+  return rhythm;
+}
+
+/**
+ * Die Wiederholung als fertige Zeile für die Detailansicht.
+ *
+ * Wohnt hier statt in detail-view.js, weil dieses Modul das Konzept
+ * „Wiederholungsregel" besitzt - Kalender und Aufgaben bauten die Zeile sonst
+ * beide selbst, wortgleich bis auf die Entität.
+ *
+ * @param {string|null} rule
+ * @returns {{icon: string, label: string, value: string}}
+ */
+export function recurrenceRow(rule) {
+  return { icon: 'repeat', label: t('rrule.labelRepeat'), value: describeRRule(rule) };
 }
 
 /**

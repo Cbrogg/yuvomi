@@ -260,7 +260,6 @@
         "editButton": "Редактировать задачу",
         "swipeOpen": "Открыть снова",
         "swipeDone": "Выполнено",
-        "swipeEdit": "Редактировать",
         "subtaskAdd": "+ Добавить подзадачу",
         "subtaskToggle": "Показать подзадачи",
         "subtaskMarkDone": "Отметить {{title}} как выполненное",
@@ -351,7 +350,12 @@
         "searchPlaceholder": "Поиск задач…",
         "viewToggleLabel": "Вид",
         "groupToggleLabel": "Группировать по",
-        "noResultsDescription": "Ни одна задача не содержит \"{{query}}\"."
+        "noResultsDescription": "Ни одна задача не содержит \"{{query}}\".",
+        "detailStart": "Начать",
+        "detailFinish": "Завершить",
+        "detailReopen": "Открыть снова",
+        "subtasksLabel": "Подзадачи",
+        "swipeView": "Просмотр"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} приёма пищи",
@@ -573,7 +577,6 @@
         "colorOverriddenByAssignee": "Цвет переопределяется назначенными пользователями",
         "descriptionLabel": "Описание",
         "descriptionPlaceholder": "Необязательно…",
-        "popupEdit": "Редактировать",
         "deleteConfirm": "Удалить «{{title}}»?",
         "createdToast": "Событие создано",
         "savedToast": "Событие сохранено",
@@ -742,7 +745,9 @@
         "recurringScopeSeries": "Всю серию",
         "recurringScopeHintThis": "Затрагивает только событие {{date}}.",
         "recurringScopeHintFollowing": "Затрагивает событие {{date}} и все последующие.",
-        "recurringScopeHintSeries": "Затрагивает всю серию."
+        "recurringScopeHintSeries": "Затрагивает всю серию.",
+        "detailWhen": "Время",
+        "detailCalendar": "Календарь"
     },
     "notes": {
         "title": "Заметки",
@@ -2149,7 +2154,10 @@
         "unitMonths": "месяцев",
         "freqYearly": "Ежегодно",
         "unitYear": "год",
-        "unitYears": "лет"
+        "unitYears": "лет",
+        "summaryUntil": "до {{date}}",
+        "summaryCount": "{{count}} повторений",
+        "summaryCount_one": "{{count}} повторение"
     },
     "recipes": {
         "toShoppingSuccess_few": "В {{list}} добавлено {{count}} ингредиента.",
@@ -2273,7 +2281,8 @@
         "customMinutes": "Minutes",
         "customHours": "Hours",
         "customDays": "Days",
-        "customWeeks": "Weeks"
+        "customWeeks": "Weeks",
+        "sectionTitlePlural": "Напоминания"
     },
     "onboarding": {
         "step1Title": "Добро пожаловать в {{name}}",
@@ -2299,7 +2308,7 @@
         "meals": "Готовый план заполняет список покупок в один шаг.",
         "notes": "Нажмите + для новой заметки. Заметки ищутся по полному тексту.",
         "shopping": "После покупок отмеченные товары переходят в запасы.",
-        "tasks": "Нажмите + для создания первой задачи. Смахните карточку влево, чтобы отметить выполненной, вправо — для редактирования.",
+        "tasks": "Нажмите + для создания первой задачи. Смахните карточку влево, чтобы отметить выполненной, вправо — для просмотра.",
         "pantry": "Совет: отмеченные при покупке товары можно сразу перенести в запасы."
     },
     "documents": {

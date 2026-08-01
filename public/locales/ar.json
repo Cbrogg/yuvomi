@@ -260,7 +260,6 @@
         "editButton": "تعديل المهمة",
         "swipeOpen": "فتح",
         "swipeDone": "منجز",
-        "swipeEdit": "تعديل",
         "subtaskAdd": "+ إضافة مهمة فرعية",
         "subtaskToggle": "عرض المهام الفرعية",
         "subtaskMarkDone": "وضع علامة منجز على {{title}}",
@@ -351,7 +350,12 @@
         "searchPlaceholder": "البحث في المهام…",
         "viewToggleLabel": "العرض",
         "groupToggleLabel": "التجميع حسب",
-        "noResultsDescription": "لا توجد مهمة تحتوي على \"{{query}}\"."
+        "noResultsDescription": "لا توجد مهمة تحتوي على \"{{query}}\".",
+        "detailStart": "ابدأ",
+        "detailFinish": "إكمال",
+        "detailReopen": "إعادة الفتح",
+        "subtasksLabel": "المهام الفرعية",
+        "swipeView": "عرض"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} وجبات",
@@ -573,7 +577,6 @@
         "colorOverriddenByAssignee": "يتم تجاوز اللون بواسطة المستخدمين المعينين",
         "descriptionLabel": "الوصف",
         "descriptionPlaceholder": "اختياري…",
-        "popupEdit": "تعديل",
         "deleteConfirm": "هل تريد حذف \"{{title}}\"؟",
         "createdToast": "تم إنشاء الحدث",
         "savedToast": "تم حفظ الحدث",
@@ -742,7 +745,9 @@
         "recurringScopeSeries": "السلسلة بأكملها",
         "recurringScopeHintThis": "يؤثر فقط على الموعد في {{date}}.",
         "recurringScopeHintFollowing": "يؤثر على الموعد في {{date}} وكل ما يليه.",
-        "recurringScopeHintSeries": "يؤثر على السلسلة بأكملها."
+        "recurringScopeHintSeries": "يؤثر على السلسلة بأكملها.",
+        "detailWhen": "الوقت",
+        "detailCalendar": "التقويم"
     },
     "notes": {
         "title": "لوحة الملاحظات",
@@ -2149,7 +2154,10 @@
         "unitMonths": "أشهر",
         "freqYearly": "سنوياً",
         "unitYear": "سنة",
-        "unitYears": "سنوات"
+        "unitYears": "سنوات",
+        "summaryUntil": "حتى {{date}}",
+        "summaryCount": "{{count}} مواعيد",
+        "summaryCount_one": "{{count}} موعد"
     },
     "recipes": {
         "toShoppingSuccess_few": "تمت إضافة {{count}} مكونات إلى {{list}}.",
@@ -2273,7 +2281,8 @@
         "customMinutes": "Minutes",
         "customHours": "Hours",
         "customDays": "Days",
-        "customWeeks": "Weeks"
+        "customWeeks": "Weeks",
+        "sectionTitlePlural": "التذكيرات"
     },
     "onboarding": {
         "step1Title": "مرحبًا بك في {{name}}",
@@ -2299,7 +2308,7 @@
         "meals": "عند اكتمال الخطة تُملأ قائمة المشتريات في خطوة واحدة.",
         "notes": "اضغط + لملاحظة جديدة. يتم البحث في الملاحظات بالنص الكامل.",
         "shopping": "بعد الشراء تنتقل العناصر المحددة إلى المخزن.",
-        "tasks": "اضغط + لإنشاء أول مهمة. اسحب البطاقة يساراً للإنجاز، ويميناً للتعديل.",
+        "tasks": "اضغط + لإنشاء أول مهمة. اسحب البطاقة يساراً للإنجاز، ويميناً للعرض.",
         "pantry": "نصيحة: يمكن نقل العناصر المحددة أثناء التسوق مباشرة إلى المؤن."
     },
     "documents": {

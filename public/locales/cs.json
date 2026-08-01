@@ -262,7 +262,6 @@
         "archiveButton": "Archivovat úkol",
         "swipeOpen": "Znovu otevřít",
         "swipeDone": "Hotovo",
-        "swipeEdit": "Upravit",
         "subtaskAdd": "+ Přidat podúkol",
         "subtaskToggle": "Zobrazit podúkoly",
         "subtaskMarkDone": "Označit {{title}} jako hotové",
@@ -351,7 +350,12 @@
         "searchPlaceholder": "Hledat úkoly…",
         "viewToggleLabel": "Zobrazení",
         "groupToggleLabel": "Seskupit podle",
-        "noResultsDescription": "Žádný úkol neobsahuje „{{query}}“."
+        "noResultsDescription": "Žádný úkol neobsahuje „{{query}}“.",
+        "detailStart": "Začít",
+        "detailFinish": "Dokončit",
+        "detailReopen": "Znovu otevřít",
+        "subtasksLabel": "Dílčí úkoly",
+        "swipeView": "Zobrazit"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} jídla",
@@ -573,7 +577,6 @@
         "colorOverriddenByAssignee": "Barva je přepsána přiřazenými uživateli",
         "descriptionLabel": "Popis",
         "descriptionPlaceholder": "Volitelné…",
-        "popupEdit": "Upravit",
         "deleteConfirm": "Opravdu smazat \"{{title}}\"?",
         "createdToast": "Událost vytvořena",
         "savedToast": "Událost uložena",
@@ -742,7 +745,9 @@
         "recurringScopeSeries": "Celou sérii",
         "recurringScopeHintThis": "Ovlivní jen událost dne {{date}}.",
         "recurringScopeHintFollowing": "Ovlivní událost dne {{date}} a všechny následující.",
-        "recurringScopeHintSeries": "Ovlivní celou sérii."
+        "recurringScopeHintSeries": "Ovlivní celou sérii.",
+        "detailWhen": "Čas",
+        "detailCalendar": "Kalendář"
     },
     "notes": {
         "title": "Nástěnka",
@@ -2145,7 +2150,7 @@
         "goHealth": "Zdraví"
     },
     "emptyHint": {
-        "tasks": "Klepněte na + a vytvořte svůj první úkol. Přejetím karty doleva ji označíte za hotovou, doprava upravíte.",
+        "tasks": "Klepněte na + a vytvořte svůj první úkol. Přejetím karty doleva ji označíte za hotovou, doprava zobrazíte.",
         "calendar": "Propojte Kalendář Google v Nastavení → Integrace pro automatickou synchronizaci.",
         "shopping": "Po nákupu se odškrtnuté položky přesunou do zásob.",
         "notes": "Klepněte na + pro novou poznámku. Poznámky jsou prohledávány v plném textu.",
@@ -2644,7 +2649,8 @@
         "customMinutes": "Minuty",
         "customHours": "Hodiny",
         "customDays": "Dny",
-        "customWeeks": "Týdny"
+        "customWeeks": "Týdny",
+        "sectionTitlePlural": "Připomínky"
     },
     "birthdays": {
         "inDays": "za {{days}} dní",
@@ -2720,7 +2726,10 @@
         "unitMonths": "měsíce",
         "freqYearly": "Ročně",
         "unitYear": "rok",
-        "unitYears": "roky"
+        "unitYears": "roky",
+        "summaryUntil": "do {{date}}",
+        "summaryCount": "{{count}} termínů",
+        "summaryCount_one": "{{count}} termín"
     },
     "recipes": {
         "toShoppingSuccess_few": "{{count}} ingredience přidány do {{list}}.",

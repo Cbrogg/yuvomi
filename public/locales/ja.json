@@ -260,7 +260,6 @@
         "editButton": "タスクを編集",
         "swipeOpen": "開く",
         "swipeDone": "完了",
-        "swipeEdit": "編集",
         "subtaskAdd": "+ サブタスクを追加",
         "subtaskToggle": "サブタスクを表示",
         "subtaskMarkDone": "{{title}} を完了としてマーク",
@@ -351,7 +350,12 @@
         "searchPlaceholder": "タスクを検索…",
         "viewToggleLabel": "表示",
         "groupToggleLabel": "グループ化",
-        "noResultsDescription": "「{{query}}」を含むタスクはありません。"
+        "noResultsDescription": "「{{query}}」を含むタスクはありません。",
+        "detailStart": "開始",
+        "detailFinish": "完了にする",
+        "detailReopen": "再開",
+        "subtasksLabel": "サブタスク",
+        "swipeView": "表示"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}}件の食事",
@@ -573,7 +577,6 @@
         "colorOverriddenByAssignee": "色は割り当てられたユーザーによって上書きされます",
         "descriptionLabel": "説明",
         "descriptionPlaceholder": "任意…",
-        "popupEdit": "編集",
         "deleteConfirm": "「{{title}}」を削除しますか？",
         "createdToast": "予定を作成しました",
         "savedToast": "予定を保存しました",
@@ -742,7 +745,9 @@
         "recurringScopeSeries": "シリーズ全体",
         "recurringScopeHintThis": "{{date}} の予定のみに影響します。",
         "recurringScopeHintFollowing": "{{date}} 以降のすべての予定に影響します。",
-        "recurringScopeHintSeries": "シリーズ全体に影響します。"
+        "recurringScopeHintSeries": "シリーズ全体に影響します。",
+        "detailWhen": "時間",
+        "detailCalendar": "カレンダー"
     },
     "notes": {
         "title": "メモボード",
@@ -2149,7 +2154,10 @@
         "unitMonths": "ヶ月",
         "freqYearly": "毎年",
         "unitYear": "年",
-        "unitYears": "年"
+        "unitYears": "年",
+        "summaryUntil": "{{date}}まで",
+        "summaryCount": "{{count}}回",
+        "summaryCount_one": "{{count}}回"
     },
     "recipes": {
         "toShoppingSuccess_few": "{{list}} に {{count}} 件の材料を追加しました。",
@@ -2273,7 +2281,8 @@
         "customMinutes": "Minutes",
         "customHours": "Hours",
         "customDays": "Days",
-        "customWeeks": "Weeks"
+        "customWeeks": "Weeks",
+        "sectionTitlePlural": "リマインダー"
     },
     "onboarding": {
         "step1Title": "{{name}}へようこそ",
@@ -2299,7 +2308,7 @@
         "meals": "計画ができると、買い物リストが一度に埋まります。",
         "notes": "+ をタップして新しいメモを作成。メモは全文検索されます。",
         "shopping": "買い物のあと、チェックした品はパントリーに移ります。",
-        "tasks": "+ をタップして最初のタスクを作成。カードを左にスワイプで完了、右で編集。",
+        "tasks": "+ をタップして最初のタスクを作成。カードを左にスワイプで完了、右で表示。",
         "pantry": "ヒント: 買い物でチェックした品目は、そのまま在庫に取り込めます。"
     },
     "documents": {

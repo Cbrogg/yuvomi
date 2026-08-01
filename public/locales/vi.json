@@ -262,7 +262,6 @@
         "archiveButton": "Lưu trữ nhiệm vụ",
         "swipeOpen": "Mở lại",
         "swipeDone": "Hoàn thành",
-        "swipeEdit": "Sửa",
         "subtaskAdd": "+ Thêm nhiệm vụ phụ",
         "subtaskToggle": "Hiển thị nhiệm vụ phụ",
         "subtaskMarkDone": "Đánh dấu {{title}} là hoàn thành",
@@ -351,7 +350,12 @@
         "searchPlaceholder": "Tìm kiếm công việc…",
         "viewToggleLabel": "Chế độ xem",
         "groupToggleLabel": "Nhóm theo",
-        "noResultsDescription": "Không có công việc nào chứa \"{{query}}\"."
+        "noResultsDescription": "Không có công việc nào chứa \"{{query}}\".",
+        "detailStart": "Bắt đầu",
+        "detailFinish": "Hoàn thành",
+        "detailReopen": "Mở lại",
+        "subtasksLabel": "Nhiệm vụ con",
+        "swipeView": "Xem"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} bữa ăn",
@@ -572,7 +576,6 @@
         "colorLabel": "Màu",
         "descriptionLabel": "Mô tả",
         "descriptionPlaceholder": "Tùy chọn…",
-        "popupEdit": "Sửa",
         "deleteConfirm": "Thực sự xóa \"{{title}}\"?",
         "createdToast": "Sự kiện đã tạo",
         "savedToast": "Sự kiện đã lưu",
@@ -742,7 +745,9 @@
         "recurringScopeSeries": "Toàn bộ chuỗi",
         "recurringScopeHintThis": "Chỉ ảnh hưởng đến sự kiện vào {{date}}.",
         "recurringScopeHintFollowing": "Ảnh hưởng đến sự kiện vào {{date}} và tất cả sau đó.",
-        "recurringScopeHintSeries": "Ảnh hưởng đến toàn bộ chuỗi."
+        "recurringScopeHintSeries": "Ảnh hưởng đến toàn bộ chuỗi.",
+        "detailWhen": "Thời gian",
+        "detailCalendar": "Lịch"
     },
     "notes": {
         "title": "Bảng ghi chú",
@@ -2149,7 +2154,10 @@
         "unitMonths": "tháng",
         "freqYearly": "Hàng năm",
         "unitYear": "năm",
-        "unitYears": "năm"
+        "unitYears": "năm",
+        "summaryUntil": "đến {{date}}",
+        "summaryCount": "{{count}} lần",
+        "summaryCount_one": "{{count}} lần"
     },
     "reminders": {
         "sectionTitle": "Nhắc nhở",
@@ -2182,7 +2190,8 @@
         "customMinutes": "Phút",
         "customHours": "Giờ",
         "customDays": "Ngày",
-        "customWeeks": "Tuần"
+        "customWeeks": "Tuần",
+        "sectionTitlePlural": "Lời nhắc"
     },
     "birthdays": {
         "inDays": "trong {{days}} ngày",
@@ -2304,7 +2313,7 @@
         "goHealth": "Sức khỏe"
     },
     "emptyHint": {
-        "tasks": "Chạm vào + để tạo nhiệm vụ đầu tiên của bạn. Vuốt thẻ sang trái để hoàn thành, sang phải để chỉnh sửa.",
+        "tasks": "Chạm vào + để tạo nhiệm vụ đầu tiên của bạn. Vuốt thẻ sang trái để hoàn thành, sang phải để xem.",
         "calendar": "Kết nối Google Calendar trong Cài đặt → Tích hợp để đồng bộ tự động.",
         "shopping": "Sau khi mua sắm, các món đã đánh dấu chuyển vào kho.",
         "notes": "Chạm vào + cho ghi chú mới. Ghi chú có thể tìm kiếm toàn văn.",

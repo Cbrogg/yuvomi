@@ -260,7 +260,6 @@
         "editButton": "Modifica compito",
         "swipeOpen": "Riapri",
         "swipeDone": "Completato",
-        "swipeEdit": "Modifica",
         "subtaskAdd": "+ Aggiungi sotto-compito",
         "subtaskToggle": "Mostra sotto-compiti",
         "subtaskMarkDone": "Segna {{title}} come completato",
@@ -351,7 +350,12 @@
         "searchPlaceholder": "Cerca attività…",
         "viewToggleLabel": "Vista",
         "groupToggleLabel": "Raggruppa per",
-        "noResultsDescription": "Nessuna attività contiene \"{{query}}\"."
+        "noResultsDescription": "Nessuna attività contiene \"{{query}}\".",
+        "detailStart": "Inizia",
+        "detailFinish": "Completa",
+        "detailReopen": "Riapri",
+        "subtasksLabel": "Attività secondarie",
+        "swipeView": "Visualizza"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} pasti",
@@ -573,7 +577,6 @@
         "colorOverriddenByAssignee": "Il colore viene sostituito dagli utenti assegnati",
         "descriptionLabel": "Descrizione",
         "descriptionPlaceholder": "Opzionale…",
-        "popupEdit": "Modifica",
         "deleteConfirm": "Eliminare davvero \"{{title}}\"?",
         "createdToast": "Evento creato",
         "savedToast": "Evento salvato",
@@ -742,7 +745,9 @@
         "recurringScopeSeries": "Intera serie",
         "recurringScopeHintThis": "Riguarda solo l'evento del {{date}}.",
         "recurringScopeHintFollowing": "Riguarda l'evento del {{date}} e tutti i successivi.",
-        "recurringScopeHintSeries": "Riguarda l'intera serie."
+        "recurringScopeHintSeries": "Riguarda l'intera serie.",
+        "detailWhen": "Ora",
+        "detailCalendar": "Calendario"
     },
     "notes": {
         "title": "Bacheca",
@@ -2149,7 +2154,10 @@
         "unitMonths": "mesi",
         "freqYearly": "Ogni anno",
         "unitYear": "anno",
-        "unitYears": "anni"
+        "unitYears": "anni",
+        "summaryUntil": "fino al {{date}}",
+        "summaryCount": "{{count}} ricorrenze",
+        "summaryCount_one": "{{count}} ricorrenza"
     },
     "recipes": {
         "toShoppingSuccess_few": "{{count}} ingredienti aggiunti a {{list}}.",
@@ -2273,7 +2281,8 @@
         "customMinutes": "Minuti",
         "customHours": "Ore",
         "customDays": "Giorni",
-        "customWeeks": "Settimane"
+        "customWeeks": "Settimane",
+        "sectionTitlePlural": "Promemoria"
     },
     "onboarding": {
         "step1Title": "Benvenuto in {{name}}",
@@ -2299,7 +2308,7 @@
         "meals": "A piano pronto, la lista della spesa si riempie in un passaggio.",
         "notes": "Tocca + per una nuova nota. Le note vengono cercate nel testo completo.",
         "shopping": "Dopo la spesa, gli articoli spuntati passano in dispensa.",
-        "tasks": "Tocca + per creare il tuo primo compito. Scorri una scheda a sinistra per completare, a destra per modificare.",
+        "tasks": "Tocca + per creare il tuo primo compito. Scorri una scheda a sinistra per completare, a destra per visualizzare.",
         "pantry": "Suggerimento: gli articoli spuntati durante la spesa possono passare direttamente in dispensa."
     },
     "documents": {

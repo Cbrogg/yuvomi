@@ -260,7 +260,6 @@
         "editButton": "编辑任务",
         "swipeOpen": "打开",
         "swipeDone": "完成",
-        "swipeEdit": "编辑",
         "subtaskAdd": "+ 添加子任务",
         "subtaskToggle": "显示子任务",
         "subtaskMarkDone": "将 {{title}} 标记为完成",
@@ -351,7 +350,12 @@
         "searchPlaceholder": "搜索任务…",
         "viewToggleLabel": "视图",
         "groupToggleLabel": "分组方式",
-        "noResultsDescription": "没有任务包含\"{{query}}\"。"
+        "noResultsDescription": "没有任务包含\"{{query}}\"。",
+        "detailStart": "开始",
+        "detailFinish": "标记完成",
+        "detailReopen": "重新打开",
+        "subtasksLabel": "子任务",
+        "swipeView": "查看"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} 餐",
@@ -573,7 +577,6 @@
         "colorOverriddenByAssignee": "颜色被指定用户覆盖",
         "descriptionLabel": "描述",
         "descriptionPlaceholder": "可选…",
-        "popupEdit": "编辑",
         "deleteConfirm": "确定删除 \"{{title}}\"？",
         "createdToast": "日程已创建",
         "savedToast": "日程已保存",
@@ -742,7 +745,9 @@
         "recurringScopeSeries": "整个系列",
         "recurringScopeHintThis": "仅影响 {{date}} 的事件。",
         "recurringScopeHintFollowing": "影响 {{date}} 及后续的所有事件。",
-        "recurringScopeHintSeries": "影响整个系列。"
+        "recurringScopeHintSeries": "影响整个系列。",
+        "detailWhen": "时间",
+        "detailCalendar": "日历"
     },
     "notes": {
         "title": "便签板",
@@ -2149,7 +2154,10 @@
         "unitMonths": "个月",
         "freqYearly": "每年",
         "unitYear": "年",
-        "unitYears": "年"
+        "unitYears": "年",
+        "summaryUntil": "至 {{date}}",
+        "summaryCount": "{{count}} 次",
+        "summaryCount_one": "{{count}} 次"
     },
     "recipes": {
         "toShoppingSuccess_few": "已向 {{list}} 添加 {{count}} 个食材。",
@@ -2273,7 +2281,8 @@
         "customMinutes": "Minutes",
         "customHours": "Hours",
         "customDays": "Days",
-        "customWeeks": "Weeks"
+        "customWeeks": "Weeks",
+        "sectionTitlePlural": "提醒"
     },
     "onboarding": {
         "step1Title": "欢迎使用{{name}}",
@@ -2299,7 +2308,7 @@
         "meals": "计划排好后，购物清单一步就能填好。",
         "notes": "点击 + 创建新笔记。笔记支持全文搜索。",
         "shopping": "采购后，勾选的物品会移入储藏。",
-        "tasks": "点击 + 创建您的第一个任务。向左滑动卡片可完成，向右可编辑。",
+        "tasks": "点击 + 创建您的第一个任务。向左滑动卡片可完成，向右可查看。",
         "pantry": "提示：采购时勾选的商品可以直接转入库存。"
     },
     "documents": {

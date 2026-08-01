@@ -260,7 +260,6 @@
         "editButton": "Görevi düzenle",
         "swipeOpen": "Yeniden aç",
         "swipeDone": "Tamamlandı",
-        "swipeEdit": "Düzenle",
         "subtaskAdd": "+ Alt görev ekle",
         "subtaskToggle": "Alt görevleri göster",
         "subtaskMarkDone": "{{title}} tamamlandı olarak işaretle",
@@ -351,7 +350,12 @@
         "searchPlaceholder": "Görevlerde ara…",
         "viewToggleLabel": "Görünüm",
         "groupToggleLabel": "Gruplama ölçütü",
-        "noResultsDescription": "\"{{query}}\" içeren görev yok."
+        "noResultsDescription": "\"{{query}}\" içeren görev yok.",
+        "detailStart": "Başlat",
+        "detailFinish": "Tamamla",
+        "detailReopen": "Yeniden aç",
+        "subtasksLabel": "Alt görevler",
+        "swipeView": "Görüntüle"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} öğünden",
@@ -573,7 +577,6 @@
         "colorOverriddenByAssignee": "Renk, atanan kullanıcılar tarafından geçersiz kılınır",
         "descriptionLabel": "Açıklama",
         "descriptionPlaceholder": "İsteğe bağlı…",
-        "popupEdit": "Düzenle",
         "deleteConfirm": "\"{{title}}\" silinsin mi?",
         "createdToast": "Etkinlik oluşturuldu",
         "savedToast": "Etkinlik kaydedildi",
@@ -742,7 +745,9 @@
         "recurringScopeSeries": "Tüm seri",
         "recurringScopeHintThis": "Yalnızca {{date}} tarihindeki etkinliği etkiler.",
         "recurringScopeHintFollowing": "{{date}} tarihindeki etkinliği ve sonraki tümünü etkiler.",
-        "recurringScopeHintSeries": "Tüm seriyi etkiler."
+        "recurringScopeHintSeries": "Tüm seriyi etkiler.",
+        "detailWhen": "Saat",
+        "detailCalendar": "Takvim"
     },
     "notes": {
         "title": "Notlar",
@@ -2149,7 +2154,10 @@
         "unitMonths": "ay",
         "freqYearly": "Yıllık",
         "unitYear": "yıl",
-        "unitYears": "yıl"
+        "unitYears": "yıl",
+        "summaryUntil": "{{date}} tarihine kadar",
+        "summaryCount": "{{count}} tekrar",
+        "summaryCount_one": "{{count}} tekrar"
     },
     "recipes": {
         "toShoppingSuccess_few": "{{list}} listesine {{count}} malzeme eklendi.",
@@ -2273,7 +2281,8 @@
         "customMinutes": "Minutes",
         "customHours": "Hours",
         "customDays": "Days",
-        "customWeeks": "Weeks"
+        "customWeeks": "Weeks",
+        "sectionTitlePlural": "Hatırlatıcılar"
     },
     "onboarding": {
         "step1Title": "{{name}} uygulamasına hoş geldiniz",
@@ -2299,7 +2308,7 @@
         "meals": "Plan hazır olduğunda alışveriş listesini tek adımda doldurur.",
         "notes": "Yeni not için + tuşuna dokunun. Notlar tam metin olarak aranır.",
         "shopping": "Alışverişten sonra işaretlenen ürünler kilere geçer.",
-        "tasks": "İlk görevinizi oluşturmak için + tuşuna dokunun. Tamamlamak için kartı sola, düzenlemek için sağa kaydırın.",
+        "tasks": "İlk görevinizi oluşturmak için + tuşuna dokunun. Tamamlamak için kartı sola, görüntülemek için sağa kaydırın.",
         "pantry": "İpucu: alışverişte işaretlediğiniz ürünler doğrudan kilere aktarılabilir."
     },
     "documents": {

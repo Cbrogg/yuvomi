@@ -262,7 +262,6 @@
         "archiveButton": "Archive task",
         "swipeOpen": "Reopen",
         "swipeDone": "Done",
-        "swipeEdit": "Edit",
         "subtaskAdd": "+ Add subtask",
         "subtaskToggle": "Show subtasks",
         "subtaskMarkDone": "Mark {{title}} as done",
@@ -351,7 +350,12 @@
         "searchPlaceholder": "Search tasks…",
         "viewToggleLabel": "View",
         "groupToggleLabel": "Group by",
-        "noResultsDescription": "No task contains \"{{query}}\"."
+        "noResultsDescription": "No task contains \"{{query}}\".",
+        "detailStart": "Start",
+        "detailFinish": "Complete",
+        "detailReopen": "Reopen",
+        "subtasksLabel": "Subtasks",
+        "swipeView": "View"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} meals",
@@ -573,7 +577,6 @@
         "colorOverriddenByAssignee": "Color is overridden by assigned user(s)",
         "descriptionLabel": "Description",
         "descriptionPlaceholder": "Optional…",
-        "popupEdit": "Edit",
         "deleteConfirm": "Really delete \"{{title}}\"?",
         "createdToast": "Event created",
         "savedToast": "Event saved",
@@ -742,7 +745,9 @@
         "recurringScopeSeries": "Whole series",
         "recurringScopeHintThis": "Affects only the event on {{date}}.",
         "recurringScopeHintFollowing": "Affects the event on {{date}} and all following.",
-        "recurringScopeHintSeries": "Affects the entire series."
+        "recurringScopeHintSeries": "Affects the entire series.",
+        "detailWhen": "Time",
+        "detailCalendar": "Calendar"
     },
     "notes": {
         "title": "Board",
@@ -2149,7 +2154,10 @@
         "unitMonths": "months",
         "freqYearly": "Yearly",
         "unitYear": "year",
-        "unitYears": "years"
+        "unitYears": "years",
+        "summaryUntil": "until {{date}}",
+        "summaryCount": "{{count}} occurrences",
+        "summaryCount_one": "{{count}} occurrence"
     },
     "reminders": {
         "sectionTitle": "Reminder",
@@ -2182,7 +2190,8 @@
         "customMinutes": "Minutes",
         "customHours": "Hours",
         "customDays": "Days",
-        "customWeeks": "Weeks"
+        "customWeeks": "Weeks",
+        "sectionTitlePlural": "Reminders"
     },
     "birthdays": {
         "inDays": "in {{days}} days",
@@ -2304,7 +2313,7 @@
         "goHealth": "Health"
     },
     "emptyHint": {
-        "tasks": "Tap + to create your first task. Swipe a card left to check off, right to edit.",
+        "tasks": "Tap + to create your first task. Swipe a card left to check off, right to view.",
         "calendar": "Connect Google Calendar under Settings → Integrations for automatic sync.",
         "shopping": "After the shop, ticked items move into the pantry.",
         "notes": "Tap + for a new note. Notes are full-text searchable.",

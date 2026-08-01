@@ -7,10 +7,17 @@
  *                 i18n.js (t)
  *
  * API:
- *   openModal({ title, content, onSave, onDelete, onClose, size }) → void
+ *   openModal({ title, content, onSave, onDelete, onClose, size,
+ *               initialFocus, headerAction }) → void
  *   closeModal({ force }) → Promise<void>
  *   confirmModal(message, opts) → Promise<boolean>       (ersetzt ein offenes Modal)
  *   confirmOverModal(message, opts) → Promise<boolean>   (parkt es und gibt es zurück)
+ *
+ * Nachträglich gemountete Panes (Detailansicht → Formular, detail-view.js)
+ *   mountFooter(panel)             → hebt eine neu gerenderte Fußzeile ans Panel
+ *   refreshDirtySnapshot()         → Dirty-Basis auf den jetzigen Stand setzen
+ *   focusFirstField(panel)         → Fokus nach dem Pane-Wechsel, touch-bewusst
+ *   updateHeaderAction(panel, …)   → Beschriftung/Handler des Kopf-Buttons tauschen
  */
 
 import { t } from '/i18n.js';
@@ -26,10 +33,10 @@ let _modalFormSeq = 0;
 // Modal-Lebenszyklus als explizite Zustandsmaschine (Audit 1.5). Ersetzt die
 // frühere ad-hoc-Jonglage aus einem Boolean-Schließ-Flag plus temporär
 // genullten Globals. Gültige Zustände:
-//   idle       – kein Modal offen
-//   open       – Modal sichtbar und interaktiv
-//   confirming – „Änderungen verwerfen?"-Dialog liegt über einem dirty Modal
-//   closing    – Schließ-Animation/Cleanup läuft (blockt erneutes Schließen)
+//   idle       - kein Modal offen
+//   open       - Modal sichtbar und interaktiv
+//   confirming - „Änderungen verwerfen?"-Dialog liegt über einem dirty Modal
+//   closing    - Schließ-Animation/Cleanup läuft (blockt erneutes Schließen)
 let modalState = 'idle';
 
 // Overlay-Dimming: theme-color abdunkeln im Standalone-Modus
@@ -44,11 +51,15 @@ const FOCUSABLE = [
   '[tabindex]:not([tabindex="-1"])',
 ].join(', ');
 
+// Erstes echtes Eingabefeld eines Formulars - der Ort, an den der Fokus bei
+// Dateneingabe gehört.
+const FIRST_FIELD = 'input:not([type="hidden"]):not([disabled]), textarea:not([disabled]), select:not([disabled])';
+
 // --------------------------------------------------------
 // Focus-Trap (Spec §5.2)
 // --------------------------------------------------------
 
-function trapFocus(container) {
+function trapFocus(container, initialFocus = 'first-field') {
   focusTrapHandler = (e) => {
     // Tab-Trap: Fokus innerhalb des Modals halten
     if (e.key === 'Tab') {
@@ -97,16 +108,65 @@ function trapFocus(container) {
   container.addEventListener('focusin', onInputFocus);
   container._onInputFocus = onInputFocus;
 
-  // Enthält das Modal ein Formular, gehört der Fokus in das erste Eingabefeld -
-  // nicht auf das Schließen-X. Sonst beginnt jede Dateneingabe mit einem Tab
-  // an der Aktion vorbei, die man gerade nicht will.
-  const firstField = container.querySelector(
-    'input:not([type="hidden"]):not([disabled]), textarea:not([disabled]), select:not([disabled])',
-  );
-  const first = firstField ?? container.querySelector(FOCUSABLE);
+  applyInitialFocus(container, initialFocus);
+}
+
+/**
+ * Setzt den Fokus beim Öffnen.
+ *
+ *   'first-field' (Default) - Enthält das Modal ein Formular, gehört der Fokus in
+ *                             das erste Eingabefeld, nicht auf das Schließen-X.
+ *                             Sonst beginnt jede Dateneingabe mit einem Tab an
+ *                             der Aktion vorbei, die man gerade nicht will.
+ *   'none'                  - Der Aufrufer setzt den Fokus selbst. Für Ansichten
+ *                             ohne Eingabeabsicht (Detailansicht): dort gibt es
+ *                             nichts zu tippen, und ein Feldfokus fährt auf dem
+ *                             Smartphone grundlos die Tastatur hoch.
+ *   HTMLElement             - genau dieses Element.
+ */
+function applyInitialFocus(container, initialFocus) {
+  if (initialFocus === 'none') return;
+
+  if (initialFocus && typeof initialFocus.focus === 'function') {
+    setTimeout(() => initialFocus.focus(), 50);
+    return;
+  }
+
+  const first = container.querySelector(FIRST_FIELD) ?? container.querySelector(FOCUSABLE);
   if (first) {
     setTimeout(() => first.focus(), 50);
   }
+}
+
+/**
+ * Fokus nach einem Pane-Wechsel innerhalb eines offenen Modals (Detailansicht →
+ * Formular). `trapFocus` läuft nur beim Öffnen; ohne diesen Aufruf bliebe der
+ * Fokus auf dem verschwundenen „Bearbeiten"-Button und Screenreader verlören
+ * den Faden.
+ *
+ * Auf Fingergeräten landet er bewusst NICHT im ersten Feld: Man hat „Bearbeiten"
+ * gedrückt, nicht „Tippen". Ein Feldfokus würde die Tastatur hochfahren, die
+ * rund 40 % des Sheets verdeckt. Der Panel-Kopf ist der ruhige Einstieg - er
+ * nennt die Ansicht und liegt vor allen Feldern in der Tab-Reihenfolge.
+ */
+export function focusFirstField(panel) {
+  if (!panel) return null;
+
+  const coarse = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+  if (coarse) {
+    const heading = panel.querySelector('.modal-panel__title');
+    if (heading) {
+      // Überschriften sind nicht von Haus aus fokussierbar; tabindex="-1" macht
+      // sie programmatisch erreichbar, ohne sie in die Tab-Kette zu hängen.
+      if (!heading.hasAttribute('tabindex')) heading.setAttribute('tabindex', '-1');
+      heading.focus();
+      return heading;
+    }
+  }
+
+  const target = panel.querySelector(FIRST_FIELD) ?? panel.querySelector(FOCUSABLE);
+  target?.focus();
+  return target ?? null;
 }
 
 // --------------------------------------------------------
@@ -121,6 +181,29 @@ function serializeForm(container) {
 function isFormDirty(container) {
   if (_initialFormSnapshot === null) return false;
   return serializeForm(container) !== _initialFormSnapshot;
+}
+
+function _snapshotNow() {
+  if (!activeOverlay) return;
+  _initialFormSnapshot = serializeForm(activeOverlay.querySelector('.modal-panel') ?? activeOverlay);
+}
+
+/**
+ * Setzt die Dirty-Basis auf den aktuellen Feldstand.
+ *
+ * Nötig, wenn ein Formular erst NACH dem Öffnen entsteht: Der Snapshot beim
+ * Öffnen erfasst dann eine Detailansicht ohne Felder, also den leeren String.
+ * Sobald das Formular gemountet ist, liefert `serializeForm` plötzlich
+ * `title=Zahnarzt&…`, und das Schließen fragt „Änderungen verwerfen?", obwohl
+ * niemand etwas geändert hat.
+ *
+ * Der zweite, verzögerte Snapshot spiegelt `openModal`: Felder, die per API
+ * nachgeladen werden (Selects, Datepicker), sind erst danach befüllt.
+ */
+export function refreshDirtySnapshot() {
+  _snapshotNow();
+  if (_initialFormTimeout) clearTimeout(_initialFormTimeout);
+  _initialFormTimeout = setTimeout(_snapshotNow, 150);
 }
 
 // --------------------------------------------------------
@@ -171,7 +254,7 @@ function _wireSheetSwipe(panel) {
       closeModal();
     } else {
       // Transform-Reset per rAF verzögern: DOM-Mutationen direkt in touchend
-      // unterbrechen auf iOS WebKit die Touch→Click-Konvertierung – der click-Event
+      // unterbrechen auf iOS WebKit die Touch→Click-Konvertierung - der click-Event
       // auf Child-Elementen (Buttons) wird gecancelt → Buttons reagieren nicht.
       requestAnimationFrame(() => { panel.style.transform = ''; });
     }
@@ -349,6 +432,75 @@ function _doClose(overlayEl) {
 }
 
 // --------------------------------------------------------
+// Fußzeilen-Umzug
+// --------------------------------------------------------
+
+/**
+ * Hebt eine im Body gerenderte `.modal-panel__footer` ans Panel.
+ *
+ * Aufrufer rendern ihre Fußzeile historisch im content, also im scrollenden
+ * Body. Strukturell gehört sie ans Panel: sonst liegt die Primäraktion bei
+ * langen Formularen unter der Falz und ist mobil mit offener Tastatur
+ * unerreichbar (Audit A2-20). Die Inline-Styles des alten In-Body-Layouts
+ * (border:none, padding:0, margin-top) fallen mit dem Move weg, damit das
+ * kanonische Footer-CSS (.modal-panel > .modal-panel__footer) greift.
+ *
+ * Eigene Funktion, weil der Umzug nicht nur beim Öffnen gebraucht wird: Ein
+ * später gemountetes Formular (Detailansicht → Bearbeiten) bringt seine eigene
+ * Fußzeile mit, die sonst im scrollenden Body liegen bliebe - und ein
+ * „Speichern" mit type="submit" löste dort kein submit aus (#543).
+ *
+ * @param {HTMLElement} panel
+ * @returns {HTMLElement|null} die umgezogene Fußzeile, oder null
+ */
+export function mountFooter(panel) {
+  const bodyFooter = [...panel.querySelectorAll('.modal-panel__body .modal-panel__footer')].pop();
+  if (!bodyFooter) return null;
+
+  bodyFooter.removeAttribute('style');
+  // Liegt die Fußzeile in einem <form>, löst das Anheben ans Panel ihre
+  // Bedienelemente aus dem Formular - ein „Speichern"/„Übernehmen"-Button mit
+  // type="submit" löst dann kein submit-Event mehr aus, und der Klick tut
+  // scheinbar nichts (#543). Vor dem Verschieben die Formular-Zugehörigkeit
+  // per form-Attribut festzurren; so submittet der Button das Formular auch
+  // außerhalb des Formular-DOM (Standard-HTML-Assoziation).
+  const ownerForm = bodyFooter.closest('form');
+  if (ownerForm) {
+    if (!ownerForm.id) ownerForm.id = `modal-form-${++_modalFormSeq}`;
+    bodyFooter.querySelectorAll('button, input, select, textarea').forEach((el) => {
+      if (!el.hasAttribute('form')) el.setAttribute('form', ownerForm.id);
+    });
+  }
+
+  // Beim Pane-Wechsel hängt bereits die Fußzeile der vorigen Ansicht am Panel.
+  // Sie muss weichen, sonst stehen zwei Fußzeilen übereinander.
+  [...panel.children]
+    .filter((el) => el !== bodyFooter && el.classList?.contains('modal-panel__footer'))
+    .forEach((el) => el.remove());
+
+  panel.appendChild(bodyFooter);
+  return bodyFooter;
+}
+
+// --------------------------------------------------------
+// Kopf-Aktion
+// --------------------------------------------------------
+
+/**
+ * Tauscht Beschriftung und Handler des Kopf-Buttons zur Laufzeit - „Bearbeiten"
+ * wird nach dem Wechsel ins Formular zu „Fertig". Der Klick-Listener bleibt
+ * dabei derselbe; er ruft immer den aktuell hinterlegten Callback auf.
+ */
+export function updateHeaderAction(panel, { label, onClick, hidden = false } = {}) {
+  const btn = panel?.querySelector('.modal-panel__action');
+  if (!btn) return null;
+  if (typeof label === 'string') btn.textContent = label;
+  if (onClick !== undefined) btn._onAction = onClick;
+  btn.hidden = hidden;
+  return btn;
+}
+
+// --------------------------------------------------------
 // openModal
 // --------------------------------------------------------
 
@@ -362,8 +514,13 @@ function _doClose(overlayEl) {
  * @param {Function} [opts.onClose]  - Callback, wird aufgerufen wenn das Modal geschlossen wird
  * @param {Function} [opts.onDelete] - Falls vorhanden, wird ein Löschen-Button eingebaut
  * @param {string}   [opts.size='md'] - 'sm' (400px) | 'md' (520px) | 'lg' (680px) | 'xl' (min(960px, 95vw)); Breiten siehe layout.css .modal-panel--*
+ * @param {'first-field'|'none'|HTMLElement} [opts.initialFocus='first-field'] - siehe applyInitialFocus
+ * @param {{label: string, id?: string, onClick?: Function}} [opts.headerAction] - Textbutton rechts im Kopf, links vom Schließen-X
  */
-export function openModal({ title, content, onSave, onDelete, onClose, size = 'md' } = {}) {
+export function openModal({
+  title, content, onSave, onDelete, onClose, size = 'md',
+  initialFocus = 'first-field', headerAction = null,
+} = {}) {
   // Vorheriges Modal schließen (kein Stacking).
   if (activeOverlay) {
     activeOverlay.removeAttribute('id');
@@ -379,15 +536,25 @@ export function openModal({ title, content, onSave, onDelete, onClose, size = 'm
 
   const sizeClass = size !== 'md' ? ` modal-panel--${size}` : '';
 
+  // Kopf-Aktion („Bearbeiten"): Textbutton, kein Icon-Rätsel. Er steht links vom
+  // Schließen-X, weil er die häufigere Absicht trägt und das X seinen gewohnten
+  // Platz in der Ecke behält.
+  const headerActionHtml = headerAction
+    ? `<button type="button" class="modal-panel__action" id="${esc(headerAction.id ?? 'modal-header-action')}">${esc(headerAction.label)}</button>`
+    : '';
+
   const html = `
     <div class="modal-overlay" id="shared-modal-overlay" aria-label="${t('modal.overlayLabel')}">
       <div class="modal-panel${sizeClass}" role="dialog" aria-modal="true"
            aria-labelledby="shared-modal-title">
         <div class="modal-panel__header">
           <h2 class="modal-panel__title" id="shared-modal-title">${esc(title)}</h2>
-          <button class="modal-panel__close" data-action="close-modal" aria-label="${t('modal.closeLabel')}">
-            <i data-lucide="x" class="icon-md" aria-hidden="true"></i>
-          </button>
+          <div class="modal-panel__header-actions">
+            ${headerActionHtml}
+            <button class="modal-panel__close" data-action="close-modal" aria-label="${t('modal.closeLabel')}">
+              <i data-lucide="x" class="icon-md" aria-hidden="true"></i>
+            </button>
+          </div>
         </div>
         <div class="modal-panel__body">
           ${content}
@@ -405,41 +572,23 @@ export function openModal({ title, content, onSave, onDelete, onClose, size = 'm
   // Focus-Trap
   const panel = activeOverlay.querySelector('.modal-panel');
 
-  // Aufrufer rendern ihre Fußzeile historisch im content, also im scrollenden
-  // Body. Strukturell gehört sie ans Panel: sonst liegt die Primäraktion bei
-  // langen Formularen unter der Falz und ist mobil mit offener Tastatur
-  // unerreichbar (Audit A2-20). Die Inline-Styles des alten In-Body-Layouts
-  // (border:none, padding:0, margin-top) fallen mit dem Move weg, damit das
-  // kanonische Footer-CSS (.modal-panel > .modal-panel__footer) greift.
-  const bodyFooter = [...panel.querySelectorAll('.modal-panel__body .modal-panel__footer')].pop();
-  if (bodyFooter) {
-    bodyFooter.removeAttribute('style');
-    // Liegt die Fußzeile in einem <form>, löst das Anheben ans Panel ihre
-    // Bedienelemente aus dem Formular - ein „Speichern"/„Übernehmen"-Button mit
-    // type="submit" löst dann kein submit-Event mehr aus, und der Klick tut
-    // scheinbar nichts (#543). Vor dem Verschieben die Formular-Zugehörigkeit
-    // per form-Attribut festzurren; so submittet der Button das Formular auch
-    // außerhalb des Formular-DOM (Standard-HTML-Assoziation).
-    const ownerForm = bodyFooter.closest('form');
-    if (ownerForm) {
-      if (!ownerForm.id) ownerForm.id = `modal-form-${++_modalFormSeq}`;
-      bodyFooter.querySelectorAll('button, input, select, textarea').forEach((el) => {
-        if (!el.hasAttribute('form')) el.setAttribute('form', ownerForm.id);
-      });
-    }
-    panel.appendChild(bodyFooter);
+  mountFooter(panel);
+
+  // Kopf-Aktion verdrahten: der Listener ruft immer den aktuell hinterlegten
+  // Callback, damit updateHeaderAction() ihn später tauschen kann, ohne den
+  // Listener neu zu binden.
+  const actionBtn = panel.querySelector('.modal-panel__action');
+  if (actionBtn) {
+    actionBtn._onAction = headerAction?.onClick;
+    actionBtn.addEventListener('click', () => actionBtn._onAction?.());
   }
 
-  trapFocus(panel);
+  trapFocus(panel, initialFocus);
 
   // Snapshot für Dirty-Check (kurzer Delay: Felder könnten noch per JS befüllt werden)
   if (_initialFormTimeout) clearTimeout(_initialFormTimeout);
   _initialFormSnapshot = null;
-  _initialFormTimeout = setTimeout(() => {
-    if (activeOverlay) {
-      _initialFormSnapshot = serializeForm(activeOverlay.querySelector('.modal-panel') ?? activeOverlay);
-    }
-  }, 150);
+  _initialFormTimeout = setTimeout(_snapshotNow, 150);
 
   // Swipe-to-Close auf Mobile
   if (window.innerWidth < 768) {
@@ -962,7 +1111,7 @@ export function btnError(btn) {
  * Häufigste Felder bleiben oben sichtbar, seltene wandern hinter einen
  * „Weitere Einstellungen"-Aufklapper. Gibt einen HTML-String zurück, der in
  * den `content` von openModal() eingesetzt wird (Injektion via
- * insertAdjacentHTML in openModal — kein innerHTML).
+ * insertAdjacentHTML in openModal - kein innerHTML).
  *
  * Die enthaltenen Felder bleiben unabhängig vom Auf-/Zuklappen im DOM, sodass
  * bestehende querySelector-Verdrahtung, Dirty-Check und Validierung

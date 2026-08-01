@@ -5,14 +5,15 @@
  */
 
 import { api } from '/api.js';
-import { renderRRuleFields, bindRRuleEvents, getRRuleValues } from '/rrule-ui.js';
-import { openModal as openSharedModal, closeModal, wireBlurValidation, validateAll, btnSuccess, btnError, promptModal, advancedSection } from '/components/modal.js';
+import { renderRRuleFields, bindRRuleEvents, getRRuleValues, recurrenceRow } from '/rrule-ui.js';
+import { openModal as openSharedModal, closeModal, wireBlurValidation, validateAll, btnSuccess, btnError, btnLoading, promptModal, advancedSection } from '/components/modal.js';
+import { openDetailView, closeDetailView, visibilityRow, assignedRow } from '/components/detail-view.js';
 import { stagger, vibrate, scheduleUndoableDelete } from '/utils/ux.js';
 import { t, getLocale, formatDate, formatTime, formatDateInput, parseDateInput, isDateInputValid, formatTimeInput, parseTimeInput } from '/i18n.js';
 import { esc } from '/utils/html.js';
 import { refresh as refreshReminders } from '/reminders.js';
 import { renderUserMultiSelect, getSelectedUserIds, bindUserMultiSelect, renderAvatarStack } from '/components/user-multi-select.js';
-import { resolveReminderPreset } from '/utils/reminder-offset.js';
+import { resolveReminderPreset, parseRemindAtAsUtc } from '/utils/reminder-offset.js';
 import { renderPageSearch, wirePageSearch } from '/utils/page-search.js';
 import { isPreviewable } from '/utils/document-preview.js';
 import '/components/category-manager.js';
@@ -210,8 +211,8 @@ function renderSwipeRow(task, innerHtml) {
         <span>${isDone ? t('tasks.swipeOpen') : t('tasks.swipeDone')}</span>
       </div>
       <div class="swipe-reveal swipe-reveal--edit" aria-hidden="true">
-        <i data-lucide="pencil" class="icon-xl" aria-hidden="true"></i>
-        <span>${t('tasks.swipeEdit')}</span>
+        <i data-lucide="eye" class="icon-xl" aria-hidden="true"></i>
+        <span>${t('tasks.swipeView')}</span>
       </div>
       ${innerHtml}
     </div>`;
@@ -975,43 +976,236 @@ function openTaskModal({ task = null, users = [], reminder = null } = {}, contai
     title: isEdit ? t('tasks.editTask') : t('tasks.newTask'),
     content: renderModalContent({ task, users, reminder }),
     size: 'lg',
-    onSave(panel) {
-      panel.querySelector('.modal-panel__body')?.classList.add('modal-panel__body--tasks-fit');
-      // RRULE-Events binden
-      bindRRuleEvents(document, 'task');
-      bindUserMultiSelect(panel, 'task_assigned');
-      wireVisibilityWarning(panel, '#task-visibility', 'task_assigned', '#task-visibility-warning');
+    // Eine neue Aufgabe startet weiterhin mit dem Fokus im Titelfeld - hier ist
+    // Tippen die Absicht.
+    onSave(panel) { wireTaskForm(panel, { task, container }); },
+  });
+}
 
-      // Tag-Editor (#586)
-      renderTagChips(panel);
-      wireTagEditor(panel);
+/**
+ * Verdrahtet das Aufgaben-Formular. Eigene Funktion, weil das Formular an zwei
+ * Orten entsteht: als eigenes Modal (neue Aufgabe) und als zweites Pane der
+ * Detailansicht, das erst beim Wechsel gemountet wird.
+ */
+function wireTaskForm(panel, { task = null, container }) {
+  panel.querySelector('.modal-panel__body')?.classList.add('modal-panel__body--tasks-fit');
+  // RRULE-Events binden
+  bindRRuleEvents(document, 'task');
+  bindUserMultiSelect(panel, 'task_assigned');
+  wireVisibilityWarning(panel, '#task-visibility', 'task_assigned', '#task-visibility-warning');
 
-      // Verknüpfte Dokumente laden + Add/Remove binden (#503)
-      wireDocumentSection(panel, task);
+  // Tag-Editor (#586)
+  renderTagChips(panel);
+  wireTagEditor(panel);
 
-      // Blur-Validierung für required-Felder aktivieren
-      wireBlurValidation(panel);
+  // Verknüpfte Dokumente laden + Add/Remove binden (#503)
+  wireDocumentSection(panel, task);
 
-      // Reminder-Toggle: Felder ein-/ausblenden
-      const toggle = panel.querySelector('#reminder-toggle');
-      const fields = panel.querySelector('#reminder-fields');
-      const offset = panel.querySelector('#reminder-offset');
-      const customFields = panel.querySelector('#reminder-custom-fields');
-      toggle?.addEventListener('change', () => {
-        fields.style.display = toggle.checked ? '' : 'none';
-      });
-      offset?.addEventListener('change', () => {
-        if (!customFields) return;
-        customFields.style.display = offset.value === 'offset_custom' ? '' : 'none';
-      });
-      // Form-Events
-      panel.querySelector('#task-form')
-        ?.addEventListener('submit', (e) => handleFormSubmit(e, container));
+  // Blur-Validierung für required-Felder aktivieren
+  wireBlurValidation(panel);
 
-      panel.querySelector('[data-action="delete-task"]')
-        ?.addEventListener('click', (e) => handleDeleteTask(e.currentTarget.dataset.id, container));
+  // Reminder-Toggle: Felder ein-/ausblenden
+  const toggle = panel.querySelector('#reminder-toggle');
+  const fields = panel.querySelector('#reminder-fields');
+  const offset = panel.querySelector('#reminder-offset');
+  const customFields = panel.querySelector('#reminder-custom-fields');
+  toggle?.addEventListener('change', () => {
+    fields.style.display = toggle.checked ? '' : 'none';
+  });
+  offset?.addEventListener('change', () => {
+    if (!customFields) return;
+    customFields.style.display = offset.value === 'offset_custom' ? '' : 'none';
+  });
+  // Form-Events
+  panel.querySelector('#task-form')
+    ?.addEventListener('submit', (e) => handleFormSubmit(e, container));
+
+  panel.querySelector('[data-action="delete-task"]')
+    ?.addEventListener('click', (e) => handleDeleteTask(e.currentTarget.dataset.id, container));
+}
+
+// --------------------------------------------------------
+// Aufgaben-Detailansicht
+// --------------------------------------------------------
+
+// Was aus dem aktuellen Status als Nächstes kommt. Archivierte Aufgaben führen
+// keine Weiterschaltung: sie sind aus dem Lauf genommen, nicht angehalten.
+const NEXT_STATUS = {
+  open:        { status: 'in_progress', labelKey: 'tasks.detailStart',  icon: 'circle-dot' },
+  in_progress: { status: 'done',        labelKey: 'tasks.detailFinish', icon: 'check' },
+  done:        { status: 'open',        labelKey: 'tasks.detailReopen', icon: 'rotate-ccw' },
+};
+
+/** Prioritätsbadge als DOM - dieselbe Optik wie auf der Karte. */
+function priorityNode(priority) {
+  if (!priority || priority === 'none') return null;
+  const badge = document.createElement('span');
+  badge.className = `priority-badge priority-badge--${priority}`;
+  const dot = document.createElement('span');
+  dot.className = `priority-dot priority-dot--${priority}`;
+  badge.append(dot, document.createTextNode(PRIORITY_LABELS()[priority] ?? priority));
+  return badge;
+}
+
+/** Eine Chip-Reihe aus einer Liste. Beschriftung liefert der Aufrufer. */
+function chipListNode(items, toLabel) {
+  if (!items.length) return null;
+  const wrap = document.createElement('div');
+  wrap.className = 'detail-chips';
+  items.forEach((item) => {
+    const chip = document.createElement('span');
+    chip.className = 'task-tag';
+    chip.textContent = toLabel(item);
+    wrap.appendChild(chip);
+  });
+  return wrap;
+}
+
+/** Tags als Chips. In der Leseansicht benennen sie, sie filtern nicht. */
+function tagChipsNode(tags) {
+  return chipListNode(normalizeTagList(tags), (tag) => tag);
+}
+
+/** Teilaufgaben mit ihrem Stand - die Liste führt sie, also führt die Ansicht sie auch. */
+function subtaskListNode(task) {
+  if (!task.subtasks?.length) return null;
+  const wrap = document.createElement('div');
+  wrap.className = 'detail-subtasks';
+  task.subtasks.forEach((s) => {
+    const row = document.createElement('div');
+    row.className = s.status === 'done' ? 'detail-subtask detail-subtask--done' : 'detail-subtask';
+    const icon = document.createElement('i');
+    icon.dataset.lucide = s.status === 'done' ? 'check-circle-2' : 'circle';
+    icon.className = 'icon-sm';
+    icon.setAttribute('aria-hidden', 'true');
+    const label = document.createElement('span');
+    label.textContent = s.title;
+    row.append(icon, label);
+    wrap.appendChild(row);
+  });
+  return wrap;
+}
+
+/** Verknüpfte Dokumente beim Namen nennen, nicht nur zählen. */
+function documentListNode(docs) {
+  return chipListNode(
+    Array.isArray(docs) ? docs : [],
+    (doc) => doc.title || doc.filename || String(doc.id),
+  );
+}
+
+/** Erinnerung im Klartext, aus dem gespeicherten Zeitpunkt. */
+function taskReminderSummary(reminders) {
+  const list = Array.isArray(reminders) ? reminders : (reminders ? [reminders] : []);
+  return list
+    .map((r) => {
+      if (!r?.remind_at) return '';
+      const at = parseRemindAtAsUtc(r.remind_at);
+      return `${formatDate(at)} ${formatTime(at)}`.trim();
+    })
+    .filter(Boolean)
+    .join(', ');
+}
+
+function renderTaskDetail(task, reminders = []) {
+  const due = formatDueDate(task.due_date, task.due_time, task.status === 'done' || task.status === 'archived');
+
+  return [
+    { icon: 'circle-dot', label: t('tasks.statusLabel'), value: STATUS_LABELS()[task.status] ?? task.status },
+    { icon: 'flag', label: t('tasks.priorityLabel'), node: priorityNode(task.priority) },
+    { icon: 'clock', label: t('tasks.dueDateLabel'), value: due?.label ?? '' },
+    { icon: 'calendar-clock', label: t('tasks.startDateLabel'), value: task.start_date ? formatDate(task.start_date) : '' },
+    recurrenceRow(task.recurrence_rule),
+    { icon: 'folder', label: t('tasks.categoryLabel'), value: task.category && task.category !== FALLBACK_CATEGORY ? catLabel(task.category) : '' },
+    assignedRow(task.assigned_users, t('tasks.assignedLabel')),
+    { icon: 'award', label: t('tasks.pointsLabel'), value: task.points ? String(task.points) : '' },
+    { icon: 'tag', label: t('tasks.tagsLabel'), node: tagChipsNode(task.tags) },
+    { icon: 'list-checks', label: t('tasks.subtasksLabel'), node: subtaskListNode(task) },
+    { icon: 'paperclip', label: t('tasks.documentsLabel'), node: documentListNode(task.documents) },
+    { icon: 'bell', label: t('reminders.sectionTitle'), value: taskReminderSummary(reminders) },
+    visibilityRow(task.visibility),
+    { icon: 'align-left', label: t('tasks.descriptionLabel'), value: task.description ?? '', multiline: true },
+  ];
+}
+
+/**
+ * Der einzige Einstieg in eine bestehende Aufgabe.
+ *
+ * Anders als beim Kalender wird hier bewusst kein Anker übergeben: Eine Aufgabe
+ * trägt deutlich mehr Inhalt als ein Termin, und ein 320px-Popover neben der
+ * Zeile wäre für Teilaufgaben, Tags und Dokumente zu eng.
+ */
+function openTaskDetail({ task, users = [], reminder = null }, container) {
+  const next = NEXT_STATUS[task.status];
+
+  const actions = [{
+    id: 'task-detail-delete',
+    label: t('common.delete'),
+    variant: 'danger-ghost',
+    icon: 'trash-2',
+    align: 'start',
+    // Siehe closeDetailView: nach dem Löschen gibt es nichts mehr zu verwerfen,
+    // und der await hält die optimistische Löschung zurück, bis der
+    // Overlay-Slot frei ist.
+    onClick: async ({ close }) => {
+      await close({ force: true });
+      handleDeleteTask(String(task.id), container);
+    },
+  }];
+
+  // Der häufigste Grund, eine Aufgabe zu öffnen, ist sie abzuhaken. Bisher
+  // führte dieser Weg durch ein Formular mit sieben Auswahlfeldern.
+  if (next) {
+    actions.push({
+      id: 'task-detail-advance',
+      label: t(next.labelKey),
+      variant: 'secondary',
+      icon: next.icon,
+      onClick: ({ button }) => advanceTaskStatus(task, next.status, button, container),
+    });
+  }
+
+  openDetailView({
+    title: task.title,
+    size: 'lg',
+    sections: renderTaskDetail(task, reminder),
+    actions,
+    edit: {
+      label: t('common.edit'),
+      title: t('tasks.editTask'),
+      mount: (panel, pane) => {
+        // Working-Set VOR dem Rendern setzen: renderTagChips in wireTaskForm
+        // liest ihn direkt danach.
+        modalTags = normalizeTagList(task.tags);
+        pane.insertAdjacentHTML('beforeend', renderModalContent({ task, users, reminder }));
+        wireTaskForm(panel, { task, container });
+      },
     },
   });
+}
+
+/**
+ * Status aus der Detailansicht weiterschalten. Optimistisch: Der Knopf zeigt
+ * den neuen Stand sofort, weil das Abhaken sonst wie ein verschluckter Klick
+ * wirkt. Scheitert der Aufruf, kommt die alte Beschriftung zurück.
+ */
+async function advanceTaskStatus(task, status, button, container) {
+  const previous = task.status;
+  const stop = btnLoading(button);
+  try {
+    await api.patch(`/tasks/${task.id}/status`, { status });
+    task.status = status;
+    // Der Status steht bereits beim Server - eine Verwerfen-Frage danach böte
+    // an, etwas rückgängig zu machen, was gar nicht mehr aussteht (#625).
+    await closeDetailView({ force: true });
+    await loadTasks(container);
+  } catch (err) {
+    task.status = previous;
+    stop();
+    // Gescheitert ist ein Schreibvorgang, kein Laden - tasks.loadError („Aufgabe
+    // konnte nicht geladen werden") beschriebe den falschen Vorgang.
+    window.yuvomi.showToast(err.message ?? t('common.errorGeneric'), 'danger');
+  }
 }
 
 // --------------------------------------------------------
@@ -1529,7 +1723,7 @@ function wireKanbanDrag(container) {
           loadTaskForEdit(card.dataset.taskId),
           loadReminderForTask(card.dataset.taskId),
         ]);
-        openTaskModal({ task, users: state.users, reminder }, container);
+        openTaskDetail({ task, users: state.users, reminder }, container);
       } catch (err) {
         window.yuvomi.showToast(t('tasks.loadError'), 'danger');
       }
@@ -2159,7 +2353,7 @@ function wireSwipeGestures(container) {
         }, 200);
 
       } else if (dx > SWIPE_THRESHOLD) {
-        // Swipe rechts → Bearbeiten-Modal
+        // Swipe rechts → Detailansicht
         resetCard(true);
         vibrate(20);
         try {
@@ -2167,7 +2361,7 @@ function wireSwipeGestures(container) {
             loadTaskForEdit(taskId),
             loadReminderForTask(taskId),
           ]);
-          openTaskModal({ task, users: state.users, reminder }, container);
+          openTaskDetail({ task, users: state.users, reminder }, container);
         } catch (err) {
           window.yuvomi.showToast(t('tasks.loadError'), 'danger');
         }
@@ -2506,7 +2700,7 @@ function wireTaskList(container) {
           loadTaskForEdit(id),
           loadReminderForTask(id),
         ]);
-        openTaskModal({ task, users: state.users, reminder }, container);
+        openTaskDetail({ task, users: state.users, reminder }, container);
       } catch (err) {
         window.yuvomi.showToast(t('tasks.loadError'), 'danger');
       }
@@ -2706,7 +2900,7 @@ export async function render(container, { user }) {
     },
   });
 
-  // Deep-Link: ?open=<id> öffnet direkt das Edit-Modal
+  // Deep-Link: ?open=<id> öffnet die Detailansicht
   const openId = new URLSearchParams(window.location.search).get('open');
   if (openId) {
     try {
@@ -2714,7 +2908,7 @@ export async function render(container, { user }) {
         loadTaskForEdit(openId),
         loadReminderForTask(openId),
       ]);
-      openTaskModal({ task, users: state.users, reminder }, container);
+      openTaskDetail({ task, users: state.users, reminder }, container);
     } catch { /* Task existiert nicht oder kein Zugriff */ }
   }
 }

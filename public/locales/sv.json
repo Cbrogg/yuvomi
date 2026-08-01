@@ -260,7 +260,6 @@
         "editButton": "Redigera uppgift",
         "swipeOpen": "Öppna igen",
         "swipeDone": "Klart",
-        "swipeEdit": "Redigera",
         "subtaskAdd": "+ Lägg till deluppgift",
         "subtaskToggle": "Visa deluppgifter",
         "subtaskMarkDone": "Markera {{title}} som klar",
@@ -351,7 +350,12 @@
         "searchPlaceholder": "Sök uppgifter…",
         "viewToggleLabel": "Vy",
         "groupToggleLabel": "Gruppera efter",
-        "noResultsDescription": "Ingen uppgift innehåller \"{{query}}\"."
+        "noResultsDescription": "Ingen uppgift innehåller \"{{query}}\".",
+        "detailStart": "Starta",
+        "detailFinish": "Slutför",
+        "detailReopen": "Öppna igen",
+        "subtasksLabel": "Deluppgifter",
+        "swipeView": "Visa"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} måltider",
@@ -573,7 +577,6 @@
         "colorOverriddenByAssignee": "Färgen åsidosätts av tilldelade användare",
         "descriptionLabel": "Beskrivning",
         "descriptionPlaceholder": "Frivillig…",
-        "popupEdit": "Redigera",
         "deleteConfirm": "Vill du verkligen ta bort \"{{title}}\"?",
         "createdToast": "Händelse skapad",
         "savedToast": "Händelsen har sparats",
@@ -742,7 +745,9 @@
         "recurringScopeSeries": "Hela serien",
         "recurringScopeHintThis": "Påverkar bara händelsen den {{date}}.",
         "recurringScopeHintFollowing": "Påverkar händelsen den {{date}} och alla följande.",
-        "recurringScopeHintSeries": "Påverkar hela serien."
+        "recurringScopeHintSeries": "Påverkar hela serien.",
+        "detailWhen": "Tid",
+        "detailCalendar": "Kalender"
     },
     "notes": {
         "title": "Anteckningar",
@@ -2149,7 +2154,10 @@
         "unitMonths": "månader",
         "freqYearly": "Årligen",
         "unitYear": "år",
-        "unitYears": "år"
+        "unitYears": "år",
+        "summaryUntil": "till {{date}}",
+        "summaryCount": "{{count}} tillfällen",
+        "summaryCount_one": "{{count}} tillfälle"
     },
     "recipes": {
         "toShoppingSuccess_few": "{{count}} ingredienser tillagda i {{list}}.",
@@ -2273,7 +2281,8 @@
         "customMinutes": "Minuter",
         "customHours": "Timmar",
         "customDays": "dagar",
-        "customWeeks": "Veckor"
+        "customWeeks": "Veckor",
+        "sectionTitlePlural": "Påminnelser"
     },
     "onboarding": {
         "step1Title": "Välkommen till {{name}}",
@@ -2292,7 +2301,7 @@
     },
     "emptyHint": {
         "recipes": "Ett recept går direkt till måltidsplanen eller till inköpslistan.",
-        "tasks": "Tryck på + för att skapa din första uppgift. Svep ett kort åt vänster för att bocka av, åt höger för att redigera.",
+        "tasks": "Tryck på + för att skapa din första uppgift. Svep ett kort åt vänster för att bocka av, åt höger för att visa.",
         "calendar": "Koppla Google Kalender under Inställningar → Integrationer för automatisk synkronisering.",
         "shopping": "Efter handlingen flyttas markerade varor till skafferiet.",
         "notes": "Tryck på + för en ny anteckning. Anteckningar söks i fulltext.",

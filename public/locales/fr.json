@@ -260,7 +260,6 @@
         "editButton": "Modifier la tâche",
         "swipeOpen": "Rouvrir",
         "swipeDone": "Terminé",
-        "swipeEdit": "Modifier",
         "subtaskAdd": "+ Ajouter une sous-tâche",
         "subtaskToggle": "Afficher les sous-tâches",
         "subtaskMarkDone": "Marquer {{title}} comme terminé",
@@ -351,7 +350,12 @@
         "searchPlaceholder": "Rechercher des tâches…",
         "viewToggleLabel": "Affichage",
         "groupToggleLabel": "Grouper par",
-        "noResultsDescription": "Aucune tâche ne contient \"{{query}}\"."
+        "noResultsDescription": "Aucune tâche ne contient \"{{query}}\".",
+        "detailStart": "Démarrer",
+        "detailFinish": "Terminer",
+        "detailReopen": "Rouvrir",
+        "subtasksLabel": "Sous-tâches",
+        "swipeView": "Afficher"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} repas",
@@ -573,7 +577,6 @@
         "colorOverriddenByAssignee": "La couleur est remplacée par les utilisateurs assignés",
         "descriptionLabel": "Description",
         "descriptionPlaceholder": "Optionnel…",
-        "popupEdit": "Modifier",
         "deleteConfirm": "Supprimer « {{title}} » ?",
         "createdToast": "Événement créé",
         "savedToast": "Événement enregistré",
@@ -742,7 +745,9 @@
         "recurringScopeSeries": "Toute la série",
         "recurringScopeHintThis": "Affecte uniquement l'événement du {{date}}.",
         "recurringScopeHintFollowing": "Affecte l'événement du {{date}} et tous les suivants.",
-        "recurringScopeHintSeries": "Affecte toute la série."
+        "recurringScopeHintSeries": "Affecte toute la série.",
+        "detailWhen": "Heure",
+        "detailCalendar": "Calendrier"
     },
     "notes": {
         "title": "Notes",
@@ -2149,7 +2154,10 @@
         "unitMonths": "mois",
         "freqYearly": "Annuel",
         "unitYear": "an",
-        "unitYears": "ans"
+        "unitYears": "ans",
+        "summaryUntil": "jusqu'au {{date}}",
+        "summaryCount": "{{count}} occurrences",
+        "summaryCount_one": "{{count}} occurrence"
     },
     "recipes": {
         "toShoppingSuccess_few": "{{count}} ingrédients ajoutés à {{list}}.",
@@ -2273,7 +2281,8 @@
         "customMinutes": "Minutes",
         "customHours": "Hours",
         "customDays": "Days",
-        "customWeeks": "Weeks"
+        "customWeeks": "Weeks",
+        "sectionTitlePlural": "Rappels"
     },
     "onboarding": {
         "step1Title": "Bienvenue dans {{name}}",
@@ -2299,7 +2308,7 @@
         "meals": "Une fois le plan établi, il remplit la liste de courses en une étape.",
         "notes": "Appuyez sur + pour une nouvelle note. Les notes sont indexées en texte intégral.",
         "shopping": "Après les courses, les articles cochés passent au garde-manger.",
-        "tasks": "Appuyez sur + pour créer votre première tâche. Glissez une carte à gauche pour cocher, à droite pour modifier.",
+        "tasks": "Appuyez sur + pour créer votre première tâche. Glissez une carte à gauche pour cocher, à droite pour afficher.",
         "pantry": "Astuce : les articles cochés pendant les courses peuvent passer directement dans la réserve."
     },
     "documents": {

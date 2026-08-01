@@ -273,7 +273,6 @@
         "editButton": "Aufgabe bearbeiten",
         "swipeOpen": "Öffnen",
         "swipeDone": "Erledigt",
-        "swipeEdit": "Bearbeiten",
         "subtaskAdd": "+ Teilaufgabe hinzufügen",
         "subtaskToggle": "Teilaufgaben anzeigen",
         "subtaskMarkDone": "{{title}} als erledigt markieren",
@@ -363,7 +362,12 @@
         "searchPlaceholder": "Aufgaben durchsuchen…",
         "viewToggleLabel": "Ansicht",
         "groupToggleLabel": "Gruppieren nach",
-        "noResultsDescription": "Keine Aufgabe enthält \"{{query}}\"."
+        "noResultsDescription": "Keine Aufgabe enthält \"{{query}}\".",
+        "detailStart": "Starten",
+        "detailFinish": "Erledigen",
+        "detailReopen": "Wieder öffnen",
+        "subtasksLabel": "Teilaufgaben",
+        "swipeView": "Ansehen"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} Mahlzeiten",
@@ -595,7 +599,6 @@
         "colorCyan": "Cyan",
         "descriptionLabel": "Beschreibung",
         "descriptionPlaceholder": "Optional…",
-        "popupEdit": "Bearbeiten",
         "deleteConfirm": "\"{{title}}\" wirklich löschen?",
         "createdToast": "Termin erstellt",
         "savedToast": "Termin gespeichert",
@@ -754,7 +757,9 @@
         "recurringScopeSeries": "Ganze Serie",
         "recurringScopeHintThis": "Betrifft nur den Termin am {{date}}.",
         "recurringScopeHintFollowing": "Betrifft den Termin am {{date}} und alle folgenden.",
-        "recurringScopeHintSeries": "Betrifft die gesamte Serie."
+        "recurringScopeHintSeries": "Betrifft die gesamte Serie.",
+        "detailWhen": "Zeit",
+        "detailCalendar": "Kalender"
     },
     "notes": {
         "title": "Notizen",
@@ -2161,7 +2166,10 @@
         "unitMonths": "Monate",
         "freqYearly": "Jährlich",
         "unitYear": "Jahr",
-        "unitYears": "Jahre"
+        "unitYears": "Jahre",
+        "summaryUntil": "bis {{date}}",
+        "summaryCount": "{{count}} Termine",
+        "summaryCount_one": "{{count}} Termin"
     },
     "reminders": {
         "sectionTitle": "Erinnerung",
@@ -2194,7 +2202,8 @@
         "customMinutes": "Minuten",
         "customHours": "Stunden",
         "customDays": "Tage",
-        "customWeeks": "Wochen"
+        "customWeeks": "Wochen",
+        "sectionTitlePlural": "Erinnerungen"
     },
     "birthdays": {
         "inDays": "in {{days}} Tagen",
@@ -2291,7 +2300,7 @@
         "staleData": "Offline – Stand: {{time}}"
     },
     "emptyHint": {
-        "tasks": "Tippe auf + um deine erste Aufgabe zu erstellen. Wische eine Karte nach links zum Abhaken, nach rechts zum Bearbeiten.",
+        "tasks": "Tippe auf + um deine erste Aufgabe zu erstellen. Wische eine Karte nach links zum Abhaken, nach rechts zum Ansehen.",
         "calendar": "Verbinde Google Kalender unter Einstellungen → Integrationen für automatische Synchronisation.",
         "shopping": "Nach dem Einkauf wandern abgehakte Artikel in den Vorrat.",
         "notes": "Tippe auf + für eine neue Notiz. Notizen werden im Volltext durchsucht.",

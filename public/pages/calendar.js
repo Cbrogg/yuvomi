@@ -5,8 +5,9 @@
  */
 
 import { api } from '/api.js';
-import { renderRRuleFields, bindRRuleEvents, getRRuleValues } from '/rrule-ui.js';
+import { renderRRuleFields, bindRRuleEvents, getRRuleValues, recurrenceRow } from '/rrule-ui.js';
 import { openModal as openSharedModal, closeModal, advancedSection, wireBlurValidation, reportFieldError } from '/components/modal.js';
+import { openDetailView, visibilityRow, assignedRow } from '/components/detail-view.js';
 import { stagger, wireScrollFade, scheduleUndoableDelete } from '/utils/ux.js';
 import { t, formatDate as formatPreferredDate, formatDayMonth, formatTime, timeSuffix, formatDateInput, parseDateInput, isDateInputValid, formatTimeInput, parseTimeInput } from '/i18n.js';
 import { esc, fmtLocation } from '/utils/html.js';
@@ -623,23 +624,6 @@ function attachmentUrls(event) {
   };
 }
 
-function attachmentHtml(event) {
-  if (!hasAttachment(event)) return '';
-  const name = esc(event.attachment_name || t('calendar.attachmentFallback'));
-  const urls = attachmentUrls(event);
-  if (isImageAttachment(event.attachment_mime)) {
-    return `
-      <div class="event-popup__attachment event-popup__attachment--image">
-        <img src="${esc(urls.preview)}" alt="${name}">
-      </div>`;
-  }
-  return `
-    <a class="event-popup__attachment event-popup__attachment--file" href="${esc(urls.download)}" download="${name}">
-      <i data-lucide="paperclip" aria-hidden="true"></i>
-      <span>${name}</span>
-    </a>`;
-}
-
 function truncateDescription(description, maxLength = 500) {
   const text = String(description || '').trim();
   if (!text) return '';
@@ -997,14 +981,11 @@ export async function render(container, { user }) {
 
     if (chip) {
       chip.scrollIntoView({ block: 'center', behavior: 'instant' });
-      showEventPopup(occurrence, chip);
+      openEventDetail(occurrence, chip);
     } else {
-      try {
-        const reminder = await loadReminderForEvent(openId);
-        openEventModal({ mode: 'edit', event: occurrence, reminder });
-      } catch {
-        openEventModal({ mode: 'edit', event: occurrence });
-      }
+      // Kein sichtbarer Chip (Termin außerhalb der aktuellen Ansicht): Der
+      // Deep-Link landet trotzdem in der Leseansicht, nur ohne Verankerung.
+      openEventDetail(occurrence);
     }
   }
 }
@@ -1403,7 +1384,7 @@ function renderMonthView(container) {
       if (evEl) {
         e.stopPropagation();
         const ev = state.events.find((ev) => ev.id === parseInt(evEl.dataset.id, 10));
-        if (ev) showEventPopup(ev, evEl);
+        if (ev) openEventDetail(ev, evEl);
         return;
       }
     }
@@ -1581,7 +1562,7 @@ function renderWeekView(container) {
     const evEl = e.target.closest('.week-event');
     if (evEl) {
       const ev = state.events.find((ev) => ev.id === parseInt(evEl.dataset.id, 10));
-      if (ev) showEventPopup(ev, evEl);
+      if (ev) openEventDetail(ev, evEl);
       return;
     }
     const col = e.target.closest('[data-date]');
@@ -1600,7 +1581,7 @@ function renderWeekView(container) {
     const evEl = e.target.closest('.allday-event');
     if (evEl) {
       const ev = state.events.find((ev) => ev.id === parseInt(evEl.dataset.id, 10));
-      if (ev) showEventPopup(ev, evEl);
+      if (ev) openEventDetail(ev, evEl);
     }
   });
 
@@ -1791,7 +1772,7 @@ function renderDayView(container) {
     const evEl = e.target.closest('.allday-event');
     if (evEl) {
       const ev = state.events.find((ev) => ev.id === parseInt(evEl.dataset.id, 10));
-      if (ev) showEventPopup(ev, evEl);
+      if (ev) openEventDetail(ev, evEl);
     }
   });
 
@@ -1799,7 +1780,7 @@ function renderDayView(container) {
     const evEl = e.target.closest('.week-event');
     if (evEl) {
       const ev = state.events.find((ev) => ev.id === parseInt(evEl.dataset.id, 10));
-      if (ev) showEventPopup(ev, evEl);
+      if (ev) openEventDetail(ev, evEl);
       return;
     }
     const time = clickedTime(e, e.currentTarget);
@@ -1868,7 +1849,7 @@ function renderAgendaView(container) {
     const evEl = e.target.closest('.agenda-event');
     if (evEl) {
       const ev = state.events.find((ev) => ev.id === parseInt(evEl.dataset.id, 10));
-      if (ev) showEventPopup(ev, evEl);
+      if (ev) openEventDetail(ev, evEl);
     }
   });
 
@@ -1879,7 +1860,7 @@ function renderAgendaView(container) {
     if (!evEl) return;
     e.preventDefault();
     const ev = state.events.find((x) => x.id === parseInt(evEl.dataset.id, 10));
-    if (ev) showEventPopup(ev, evEl);
+    if (ev) openEventDetail(ev, evEl);
   });
 }
 
@@ -2106,9 +2087,9 @@ async function openFoundEvent(ev) {
   const chip = _container.querySelector(`[data-id="${CSS.escape(String(ev.id))}"]`);
   if (chip) {
     chip.scrollIntoView({ block: 'center', behavior: 'instant' });
-    showEventPopup(full, chip);
+    openEventDetail(full, chip);
   } else {
-    openEventModal({ mode: 'edit', event: full });
+    openEventDetail(full);
   }
 }
 
@@ -2182,127 +2163,192 @@ function eventVisibilityMeta(visibility) {
 }
 
 // --------------------------------------------------------
-// Event-Popup (Detail-Ansicht bei Klick auf Termin)
+// Termin-Detailansicht (beim Antippen eines Termins)
 // --------------------------------------------------------
 
-function showEventPopup(ev, anchor) {
-  document.querySelector('#event-popup')?.remove();
+/** Anhang als Bildvorschau oder Download-Link - beides als DOM, nie als Markup. */
+function attachmentNode(ev) {
+  if (!hasAttachment(ev)) return null;
+  const name = ev.attachment_name || t('calendar.attachmentFallback');
+  const urls = attachmentUrls(ev);
 
-  const popup = document.createElement('div');
-  popup.id        = 'event-popup';
-  popup.className = 'event-popup';
-  popup.setAttribute('role', 'dialog');
-  popup.setAttribute('aria-label', ev.title || t('calendar.title'));
-  popup.tabIndex  = -1;
+  if (isImageAttachment(ev.attachment_mime)) {
+    const wrap = document.createElement('div');
+    wrap.className = 'detail-attachment detail-attachment--image';
+    const img = document.createElement('img');
+    img.src = urls.preview;
+    img.alt = name;
+    wrap.appendChild(img);
+    return wrap;
+  }
 
+  const link = document.createElement('a');
+  link.className = 'detail-attachment detail-attachment--file';
+  link.href = urls.download;
+  link.download = name;
+  const icon = document.createElement('i');
+  icon.dataset.lucide = 'paperclip';
+  icon.className = 'icon-md';
+  icon.setAttribute('aria-hidden', 'true');
+  link.append(icon, document.createTextNode(name));
+  return link;
+}
+
+/** Kalendername als farbiger Chip, wie in der Agenda-Ansicht. */
+function calendarChipNode(ev) {
+  if (!ev.cal_name) return null;
+  const chip = document.createElement('span');
+  chip.className = 'event-cal-label';
+  chip.style.setProperty('--cal-color', ev.cal_color || ev.color || resolveEventColor(ev));
+  chip.textContent = ev.cal_name;
+  return chip;
+}
+
+/** Erinnerungen im Klartext („1 Tag vorher"), statt sie ganz zu verschweigen. */
+function reminderSummary(ev, reminders) {
+  const list = Array.isArray(reminders) ? reminders : [];
+  if (!list.length) return '';
+  const labels = REMINDER_OFFSETS();
+  return list
+    .map((r) => {
+      const value = reminderOffsetFromEvent(ev, r);
+      const match = labels.find((o) => o.value === value && o.value !== '');
+      // „Benutzerdefiniert…" ist als Auswahl-Label gedacht, nicht als Aussage -
+      // in der Leseansicht steht stattdessen der tatsächliche Zeitpunkt.
+      return value === 'custom' || !match
+        ? formatDateTime(parseRemindAtAsUtc(r.remind_at))
+        : match.label;
+    })
+    .filter(Boolean)
+    .join(', ');
+}
+
+/**
+ * Die Leseinformationen eines Termins.
+ *
+ * Wiederholung, Erinnerungen und Sichtbarkeit standen bisher nur im
+ * Bearbeitungsformular - wer wissen wollte, ob ein Termin wöchentlich
+ * wiederkehrt, musste ihn zum Bearbeiten öffnen.
+ */
+function renderEventDetail(ev, reminders = []) {
   const timeStr = ev.all_day
-    ? t('calendar.allDay')
+    ? `${formatPreferredDate(localDate(ev.start_datetime))} · ${t('calendar.allDay')}`
     : formatDateTime(ev.start_datetime)
       + (ev.end_datetime ? ` – ${formatTime(ev.end_datetime)} ${timeSuffix()}`.trimEnd() : '');
 
-  const displayBg     = resolveEventBackground(ev);
-  const displayColor  = resolveEventColor(ev);
-  const calLabelColor = ev.cal_color || ev.color || displayColor;
+  return [
+    { icon: 'calendar', label: t('calendar.detailCalendar'), node: calendarChipNode(ev) },
+    { icon: 'clock', label: t('calendar.detailWhen'), value: timeStr },
+    recurrenceRow(ev.recurrence_rule),
+    { icon: 'map-pin', label: t('calendar.locationLabel'), value: ev.location ? fmtLocation(ev.location) : '' },
+    assignedRow(ev.assigned_users, t('calendar.assignedLabel'), ev.assigned_name || ''),
+    {
+      icon: 'bell',
+      label: reminders.length > 1 ? t('reminders.sectionTitlePlural') : t('reminders.sectionTitle'),
+      value: reminderSummary(ev, reminders),
+    },
+    visibilityRow(ev.visibility),
+    {
+      icon: 'align-left',
+      label: t('calendar.descriptionLabel'),
+      value: ev.description ? truncateDescription(ev.description, 500) : '',
+      multiline: true,
+    },
+    { icon: 'paperclip', label: t('calendar.attachmentLabel'), node: attachmentNode(ev) },
+  ];
+}
 
-  // Alle zugewiesenen Mitglieder anzeigen, nicht nur das erste (#492).
-  const assignedNames = (ev.assigned_users ?? [])
-    .map((u) => u.display_name)
-    .filter(Boolean);
-  const assignedLabel = assignedNames.length
-    ? assignedNames.join(', ')
-    : (ev.assigned_name || '');
-  popup.insertAdjacentHTML('beforeend', `
-    <div class="event-popup__color-bar" style="background:${esc(displayBg)};"></div>
-    <div class="event-popup__title">${eventIconHtml(ev.icon)}<span>${esc(ev.title)}</span></div>
-    <div class="event-popup__meta">
-      ${ev.cal_name ? `<div><span class="event-cal-label" style="--cal-color:${esc(calLabelColor)}">${esc(ev.cal_name)}</span></div>` : ''}
-      <div class="calendar-meta-item">${calendarMetaIconHtml('clock')}<span>${esc(timeStr)}</span></div>
-      ${ev.location ? `<div class="calendar-meta-item">${calendarMetaIconHtml('map-pin')}<span>${esc(fmtLocation(ev.location))}</span></div>` : ''}
-      ${ev.description ? `<div>${esc(truncateDescription(ev.description, 500))}</div>` : ''}
-      ${hasAttachment(ev) ? attachmentHtml(ev) : ''}
-      ${assignedLabel ? `<div class="calendar-meta-item">${calendarMetaIconHtml(assignedNames.length > 1 ? 'users' : 'user')}<span>${esc(assignedLabel)}</span></div>` : ''}
-    </div>
-    <div class="event-popup__actions">
-      <button class="btn btn--secondary event-popup__edit" id="popup-edit">${t('calendar.popupEdit')}</button>
-      <button class="btn btn--danger-ghost" id="popup-delete">
-        <i data-lucide="trash-2" class="icon-md" aria-hidden="true"></i>${t('common.delete')}
-      </button>
-    </div>
-  `);
+/**
+ * Der einzige Einstieg in einen bestehenden Termin. Ohne Anker (Deep-Link,
+ * Suchtreffer) wird daraus ein Sheet, mit Anker am Desktop ein Popover.
+ */
+async function openEventDetail(ev, anchor = null) {
+  // Haushaltshilfe-Besuche werden in ihrem eigenen Modul bearbeitet; der Umweg
+  // über eine Detailansicht führte sonst ins Leere.
+  if (ev?.housekeeping_visit_id) {
+    window.yuvomi.navigate(`/housekeeping?editVisit=${ev.housekeeping_visit_id}`);
+    return;
+  }
 
-  document.body.appendChild(popup);
-  if (window.lucide) lucide.createIcons({ el: popup });
+  // Die Erinnerungen kosten einen eigenen Serveraufruf; alles andere steckt
+  // schon im Termin. Früher wurde davor gewartet, und der Antipp-Moment - der
+  // einzige, dessen ganzer Zweck Leichtigkeit ist - blieb einen Roundtrip lang
+  // stumm. Jetzt läuft der Aufruf neben dem Öffnen her und die Zeile kommt
+  // nach. Die Sync-Ziele braucht nur das Formular, die lädt erst dessen mount().
+  let reminders = [];
+  const remindersReady = loadReminderForEvent(ev.id).then((r) => { reminders = r; });
 
+  const actions = [{
+    id: 'detail-delete',
+    label: t('common.delete'),
+    variant: 'danger-ghost',
+    icon: 'trash-2',
+    align: 'start',
+    // force + await: Löschen entscheidet über die Eingaben mit, eine
+    // Verwerfen-Frage davor wäre die zweite Rückfrage für dieselbe
+    // Entscheidung. Der await hält das Löschen zurück, bis der Overlay-Slot
+    // wirklich frei ist - requestDeleteEvent öffnet bei Serien selbst einen
+    // Dialog, und das Shared-Modal kennt kein Stacking.
+    onClick: async ({ close }) => { await close({ force: true }); await requestDeleteEvent(ev); },
+  }];
+
+  // ICS-Abos: Ein lokal geänderter Termin lässt sich auf das Original
+  // zurücksetzen. Die Aktion gehört zum Objekt, also in die Fußzeile.
   if (ev.external_source === 'ics' && ev.user_modified === 1) {
-    const resetLink = document.createElement('a');
-    resetLink.href = '#';
-    resetLink.className = 'event-popup__reset-link';
-    resetLink.textContent = t('calendar.ics.reset');
-    resetLink.style.cssText = 'display:block;text-align:center;font-size:var(--text-xs);color:var(--color-text-secondary);margin-top:var(--space-2);cursor:pointer;text-decoration:underline;';
-    resetLink.addEventListener('click', async (e) => {
-      e.preventDefault();
-      try {
-        await api.post(`/calendar/${ev.id}/reset`, {});
-        dismiss();
-        await reloadForView();
-        window.yuvomi?.showToast(t('calendar.ics.resetToast'), 'success');
-      } catch (err) {
-        // Server-Meldung bevorzugen (nutzerorientiert), sonst lokalisierter
-        // Fallback — nie den rohen JS-/Netzwerk-Fehlertext zeigen.
-        window.yuvomi?.showToast(err.data?.error ?? t('calendar.saveError'), 'danger');
-      }
+    actions.push({
+      id: 'detail-ics-reset',
+      label: t('calendar.ics.reset'),
+      variant: 'ghost',
+      icon: 'rotate-ccw',
+      onClick: async ({ close }) => {
+        try {
+          await api.post(`/calendar/${ev.id}/reset`, {});
+          // Der Schreibvorgang ist durch - ohne force fragte der Dirty-Guard
+          // nach dem Verwerfen von Änderungen, die der Reset ohnehin
+          // zurückgenommen hat (#625).
+          await close({ force: true });
+          await reloadForView();
+          window.yuvomi?.showToast(t('calendar.ics.resetToast'), 'success');
+        } catch (err) {
+          // Server-Meldung bevorzugen (nutzerorientiert), sonst lokalisierter
+          // Fallback — nie den rohen JS-/Netzwerk-Fehlertext zeigen.
+          window.yuvomi?.showToast(err.data?.error ?? t('calendar.saveError'), 'danger');
+        }
+      },
     });
-    popup.querySelector('.event-popup__actions').before(resetLink);
   }
 
-  // Positionierung: erst messen, dann im Viewport halten.
-  const rect = anchor.getBoundingClientRect();
-  const gap = 8;
-  const margin = 8;
-  const popupRect = popup.getBoundingClientRect();
-  const viewportWidth = document.documentElement.clientWidth;
-  const viewportHeight = document.documentElement.clientHeight;
-  const fitsBelow = rect.bottom + gap + popupRect.height <= viewportHeight - margin;
-  const top = fitsBelow
-    ? rect.bottom + gap
-    : Math.max(margin, rect.top - gap - popupRect.height);
-  const left = Math.min(
-    Math.max(margin, rect.left),
-    Math.max(margin, viewportWidth - popupRect.width - margin)
-  );
-  const maxTop = Math.max(margin, viewportHeight - popupRect.height - margin);
-  popup.style.top = `${Math.min(Math.max(margin, top), maxTop)}px`;
-  popup.style.left = `${left}px`;
-
-  // Gemeinsames Schließen: entfernt Popup und beide globalen Listener, damit
-  // kein keydown-/click-Handler verwaist zurückbleibt.
-  const onKeydown = (e) => {
-    if (e.key === 'Escape') { e.stopPropagation(); dismiss(); anchor?.focus?.(); }
-  };
-  function dismiss() {
-    popup.remove();
-    document.removeEventListener('keydown', onKeydown);
-    document.removeEventListener('click', onOutsideClick);
-  }
-  function onOutsideClick(e) {
-    if (!popup.isConnected || !popup.contains(e.target)) dismiss();
-  }
-
-  popup.querySelector('#popup-edit').addEventListener('click', async () => {
-    dismiss();
-    const reminder = await loadReminderForEvent(ev.id);
-    openEventModal({ mode: 'edit', event: ev, reminder });
+  const view = openDetailView({
+    title: ev.title,
+    accentColor: resolveEventBackground(ev),
+    anchor,
+    sections: renderEventDetail(ev, reminders),
+    actions,
+    edit: {
+      label: t('common.edit'),
+      title: t('calendar.editEvent'),
+      // Das Formular wartet auf die Erinnerungen, die Leseansicht nicht. Ohne
+      // diese Sperre baute ein sofortiger Klick auf „Bearbeiten" das Formular
+      // ohne Erinnerungszeilen auf - und saveEvent löscht die Erinnerungen des
+      // Termins, wenn es keine Zeile findet.
+      ready: remindersReady,
+      mount: (panel, pane) => {
+        pane.insertAdjacentHTML('beforeend', buildEventModalContent({ mode: 'edit', event: ev, reminder: reminders }));
+        wireEventForm(panel, { mode: 'edit', event: ev, reminder: reminders });
+      },
+      // Am Desktop bleibt der gewohnte Weg: Popover zu, Formular auf.
+      standalone: async () => {
+        await remindersReady;
+        openEventModal({ mode: 'edit', event: ev, reminder: reminders });
+      },
+    },
   });
 
-  popup.querySelector('#popup-delete').addEventListener('click', async () => {
-    dismiss();
-    await requestDeleteEvent(ev);
-  });
-
-  // Escape schließt und gibt den Fokus an den Auslöser zurück; Außenklick schließt.
-  document.addEventListener('keydown', onKeydown);
-  setTimeout(() => document.addEventListener('click', onOutsideClick), 0);
-  popup.focus();
+  // Die Erinnerungszeile nachtragen. Zeilen ohne Inhalt fallen ohnehin weg, ein
+  // Termin ohne Erinnerung bewegt sich also gar nicht. `update` verwirft sich
+  // selbst, wenn der Nutzer inzwischen etwas anderes geöffnet hat.
+  await remindersReady;
+  if (reminders.length) view.update(renderEventDetail(ev, reminders));
 }
 
 // --------------------------------------------------------
@@ -2604,236 +2650,246 @@ function openEventModal({ mode, event = null, date = null, reminder = null, time
     title: isEdit ? t('calendar.editEvent') : t('calendar.newEvent'),
     content,
     size: 'md',
-    onSave(panel) {
-      // RRULE-Events binden
-      bindRRuleEvents(panel, 'event');
-      bindRecurringScopeChooser(panel, 'modal-edit');
-      bindUserMultiSelect(panel, 'cal_assigned');
-      wireVisibilityWarning(panel, '#modal-visibility', 'cal_assigned', '#modal-visibility-warning');
-
-      // Color-Picker ausgrauen wenn Assignees gesetzt sind (Avatar-Farbe hat Vorrang)
-      function syncColorPickerState() {
-        const hasAssignees = getSelectedUserIds(panel, 'cal_assigned').length > 0;
-        const group  = panel.querySelector('.js-color-picker-group');
-        const hint   = panel.querySelector('#color-picker-assignee-hint');
-        const picker = panel.querySelector('#event-color-picker');
-        if (group)  group.classList.toggle('color-picker--disabled', hasAssignees);
-        if (hint)   hint.hidden = !hasAssignees;
-        if (picker) {
-          picker.setAttribute('aria-disabled', hasAssignees ? 'true' : 'false');
-          picker.querySelectorAll('.color-swatch').forEach((s) => {
-            if (hasAssignees) {
-              s.setAttribute('tabindex', '-1');
-            } else {
-              s.setAttribute('tabindex', s.classList.contains('color-swatch--active') ? '0' : '-1');
-            }
-          });
-        }
-      }
-      const msWidget = panel.querySelector('.user-ms[data-ms-name="cal_assigned"]');
-      msWidget?.addEventListener('change', syncColorPickerState);
-      syncColorPickerState();
-
-      const selectedColor = isEdit ? (event?.color || EVENT_COLORS[0]) : EVENT_COLORS[0];
-
-      // Farb-Auswahl: Auswahl + ARIA + Keyboard (Roving Tabindex)
-      function selectSwatch(target) {
-        panel.querySelectorAll('.color-swatch').forEach((s) => {
-          s.classList.remove('color-swatch--active');
-          s.setAttribute('aria-checked', 'false');
-          s.setAttribute('tabindex', '-1');
-        });
-        target.classList.add('color-swatch--active');
-        target.setAttribute('aria-checked', 'true');
-        target.setAttribute('tabindex', '0');
-      }
-      panel.querySelectorAll('.color-swatch').forEach((sw) => {
-        if (sw.dataset.color === selectedColor) selectSwatch(sw);
-        sw.addEventListener('click', () => { selectSwatch(sw); sw.focus(); });
-        sw.addEventListener('keydown', (e) => {
-          const swatches = [...panel.querySelectorAll('.color-swatch')];
-          const idx = swatches.indexOf(sw);
-          if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-            e.preventDefault();
-            const next = swatches[(idx + 1) % swatches.length];
-            selectSwatch(next); next.focus();
-          } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-            e.preventDefault();
-            const prev = swatches[(idx - 1 + swatches.length) % swatches.length];
-            selectSwatch(prev); prev.focus();
-          } else if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            selectSwatch(sw);
-          }
-        });
-      });
-
-      // Ganztägig-Toggle
-      const alldayCheck = panel.querySelector('#modal-allday');
-      const timeFields  = panel.querySelector('#time-fields');
-      const alldayFields = panel.querySelector('#allday-fields');
-      alldayCheck.addEventListener('change', () => {
-        if (alldayCheck.checked) { timeFields.style.display = 'none'; alldayFields.style.display = ''; }
-        else                      { timeFields.style.display = '';     alldayFields.style.display = 'none'; }
-      });
-      if (isEdit && event?.all_day) { timeFields.style.display = 'none'; alldayFields.style.display = ''; }
-
-      const iconInput = panel.querySelector('#modal-icon');
-      const iconTrigger = panel.querySelector('#modal-icon-trigger');
-      const selectIcon = (icon) => {
-        const nextIcon = eventIconName(icon);
-        if (iconInput) iconInput.value = nextIcon;
-        if (iconTrigger) {
-          iconTrigger.dataset.icon = nextIcon;
-          iconTrigger.replaceChildren(eventIconElement(nextIcon, 'event-icon-picker__trigger-icon'));
-        }
-        if (window.lucide) lucide.createIcons({ el: iconTrigger });
-      };
-
-      iconTrigger?.addEventListener('click', () => {
-        iconTrigger.setAttribute('aria-expanded', 'true');
-        openIconPickerDialog(iconInput?.value || 'calendar', (icon) => {
-          selectIcon(icon);
-          iconTrigger?.setAttribute('aria-expanded', 'false');
-          iconTrigger?.focus();
-        }, () => {
-          iconTrigger?.setAttribute('aria-expanded', 'false');
-          iconTrigger?.focus();
-        });
-      });
-
-      const attachmentInput = panel.querySelector('#modal-attachment');
-      const selectedAttachment = panel.querySelector('#modal-selected-attachment');
-      const attachmentPreview = panel.querySelector('#modal-attachment-preview');
-      const removeAttachment = panel.querySelector('#modal-remove-attachment');
-      const attachmentState = {
-        name: event?.attachment_name || null,
-        mime: event?.attachment_mime || null,
-        size: event?.attachment_size || null,
-        changed: false,
-        removed: false,
-      };
-
-      const syncSelectedAttachment = () => {
-        if (!selectedAttachment) return;
-        selectedAttachment.hidden = !attachmentState.name;
-        selectedAttachment.textContent = attachmentState.name ? selectedAttachmentLabel(attachmentState.name) : '';
-        if (removeAttachment) removeAttachment.hidden = !attachmentState.name;
-      };
-
-      const syncAttachmentSelection = () => {
-        if (!selectedAttachment) return;
-        const file = attachmentInput.files?.[0];
-        if (file) {
-          attachmentState.name = file.name;
-          attachmentState.mime = file.type || 'application/octet-stream';
-          attachmentState.size = file.size;
-          attachmentState.changed = true;
-          attachmentState.removed = false;
-          selectedAttachment.hidden = false;
-          selectedAttachment.textContent = selectedAttachmentLabel(file.name);
-          if (removeAttachment) removeAttachment.hidden = false;
-          if (attachmentPreview) {
-            attachmentPreview.replaceChildren();
-            attachmentPreview.hidden = true;
-          }
-          return;
-        }
-        syncSelectedAttachment();
-      };
-
-      attachmentInput?.addEventListener('change', syncAttachmentSelection);
-      removeAttachment?.addEventListener('click', () => {
-        if (attachmentInput) attachmentInput.value = '';
-        attachmentState.name = null;
-        attachmentState.mime = null;
-        attachmentState.size = null;
-        attachmentState.changed = true;
-        attachmentState.removed = true;
-        if (attachmentPreview) {
-          attachmentPreview.replaceChildren();
-          attachmentPreview.hidden = true;
-        }
-        syncSelectedAttachment();
-      });
-
-      const attachmentDropzone = panel.querySelector('#modal-attachment-dropzone');
-      if (attachmentDropzone && attachmentInput) {
-        ['dragenter', 'dragover'].forEach((eventName) => {
-          attachmentDropzone.addEventListener(eventName, (dropEvent) => {
-            dropEvent.preventDefault();
-            attachmentDropzone.classList.add('document-dropzone--active');
-          });
-        });
-        ['dragleave', 'drop'].forEach((eventName) => {
-          attachmentDropzone.addEventListener(eventName, (dropEvent) => {
-            dropEvent.preventDefault();
-            attachmentDropzone.classList.remove('document-dropzone--active');
-          });
-        });
-        attachmentDropzone.addEventListener('drop', (dropEvent) => {
-          const file = dropEvent.dataTransfer?.files?.[0];
-          if (!file) return;
-          const transfer = new DataTransfer();
-          transfer.items.add(file);
-          attachmentInput.files = transfer.files;
-          syncAttachmentSelection();
-        });
-      }
-
-      syncSelectedAttachment();
-
-      // Erinnerungen: Toggle blendet die Zeilenliste ein/aus; „Hinzufügen" und
-      // „Entfernen" verwalten mehrere Erinnerungen je Termin (#436).
-      wireReminderRows(panel);
-
-      // Load unified sync targets (Google + CalDAV)
-      const syncTargetSelect = panel.querySelector('#event-sync-target');
-      if (syncTargetSelect) {
-        loadSyncTargets(syncTargetSelect, event);
-      }
-
-      // Enddatum dem Startdatum nachführen, damit das Verschieben des Starts
-      // das Ende nicht davor zurücklässt (Dauer bleibt erhalten).
-      const wireDateFollow = (startSel, endSel) => {
-        const startEl = panel.querySelector(startSel);
-        const endEl   = panel.querySelector(endSel);
-        if (!startEl || !endEl) return;
-        let prevStart = startEl.value;
-        startEl.addEventListener('change', () => {
-          if (isDateInputValid(startEl.value) && isDateInputValid(endEl.value)) {
-            const oldKey = parseDateInput(prevStart);
-            const newKey = parseDateInput(startEl.value);
-            const endKey = parseDateInput(endEl.value);
-            if (oldKey && newKey && endKey) {
-              endEl.value = formatDateInput(shiftEndDateKey(oldKey, newKey, endKey));
-            }
-          }
-          prevStart = startEl.value;
-        });
-      };
-      wireDateFollow('#modal-start-date', '#modal-end-date');
-      wireDateFollow('#modal-allday-start', '#modal-allday-end');
-
-      // Dynamische Termindauer (#441): das Ende folgt dem Start um die gemerkte
-      // Dauer. Ändert der Nutzer das Ende, wird die neue Dauer übernommen und bei
-      // der nächsten Start-Änderung angewendet. Nur für Zeit-Termine.
-      wireDurationMemory(panel);
-
-      panel.querySelector('#modal-cancel').addEventListener('click', closeModal);
-
-      panel.querySelector('#modal-delete')?.addEventListener('click', async () => {
-        closeModal({ force: true });
-        await requestDeleteEvent(event);
-      });
-
-      panel.querySelector('#modal-save').addEventListener('click', () => saveEvent(panel, mode, event, reminder, attachmentState));
-      // Pflichtfelder melden sich beim Verlassen inline statt erst beim
-      // Speichern als ortloser Toast (Critique P1).
-      wireBlurValidation(panel);
-      if (window.lucide) lucide.createIcons({ el: panel });
-    },
+    // Ein neuer Termin startet weiterhin mit dem Fokus im Titelfeld: Hier ist
+    // Tippen die Absicht, hier ist der Autofokus richtig.
+    onSave(panel) { wireEventForm(panel, { mode, event, reminder }); },
   });
+}
+
+/**
+ * Verdrahtet das Termin-Formular. Eigene Funktion, weil das Formular an zwei
+ * Orten entsteht: als eigenes Modal (neuer Termin, Desktop-Bearbeiten) und als
+ * zweites Pane der Detailansicht, das erst beim Wechsel gemountet wird.
+ */
+function wireEventForm(panel, { mode, event = null, reminder = null }) {
+  const isEdit = mode === 'edit';
+  // RRULE-Events binden
+  bindRRuleEvents(panel, 'event');
+  bindRecurringScopeChooser(panel, 'modal-edit');
+  bindUserMultiSelect(panel, 'cal_assigned');
+  wireVisibilityWarning(panel, '#modal-visibility', 'cal_assigned', '#modal-visibility-warning');
+
+  // Color-Picker ausgrauen wenn Assignees gesetzt sind (Avatar-Farbe hat Vorrang)
+  function syncColorPickerState() {
+    const hasAssignees = getSelectedUserIds(panel, 'cal_assigned').length > 0;
+    const group  = panel.querySelector('.js-color-picker-group');
+    const hint   = panel.querySelector('#color-picker-assignee-hint');
+    const picker = panel.querySelector('#event-color-picker');
+    if (group)  group.classList.toggle('color-picker--disabled', hasAssignees);
+    if (hint)   hint.hidden = !hasAssignees;
+    if (picker) {
+      picker.setAttribute('aria-disabled', hasAssignees ? 'true' : 'false');
+      picker.querySelectorAll('.color-swatch').forEach((s) => {
+        if (hasAssignees) {
+          s.setAttribute('tabindex', '-1');
+        } else {
+          s.setAttribute('tabindex', s.classList.contains('color-swatch--active') ? '0' : '-1');
+        }
+      });
+    }
+  }
+  const msWidget = panel.querySelector('.user-ms[data-ms-name="cal_assigned"]');
+  msWidget?.addEventListener('change', syncColorPickerState);
+  syncColorPickerState();
+
+  const selectedColor = isEdit ? (event?.color || EVENT_COLORS[0]) : EVENT_COLORS[0];
+
+  // Farb-Auswahl: Auswahl + ARIA + Keyboard (Roving Tabindex)
+  function selectSwatch(target) {
+    panel.querySelectorAll('.color-swatch').forEach((s) => {
+      s.classList.remove('color-swatch--active');
+      s.setAttribute('aria-checked', 'false');
+      s.setAttribute('tabindex', '-1');
+    });
+    target.classList.add('color-swatch--active');
+    target.setAttribute('aria-checked', 'true');
+    target.setAttribute('tabindex', '0');
+  }
+  panel.querySelectorAll('.color-swatch').forEach((sw) => {
+    if (sw.dataset.color === selectedColor) selectSwatch(sw);
+    sw.addEventListener('click', () => { selectSwatch(sw); sw.focus(); });
+    sw.addEventListener('keydown', (e) => {
+      const swatches = [...panel.querySelectorAll('.color-swatch')];
+      const idx = swatches.indexOf(sw);
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        const next = swatches[(idx + 1) % swatches.length];
+        selectSwatch(next); next.focus();
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        const prev = swatches[(idx - 1 + swatches.length) % swatches.length];
+        selectSwatch(prev); prev.focus();
+      } else if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        selectSwatch(sw);
+      }
+    });
+  });
+
+  // Ganztägig-Toggle
+  const alldayCheck = panel.querySelector('#modal-allday');
+  const timeFields  = panel.querySelector('#time-fields');
+  const alldayFields = panel.querySelector('#allday-fields');
+  alldayCheck.addEventListener('change', () => {
+    if (alldayCheck.checked) { timeFields.style.display = 'none'; alldayFields.style.display = ''; }
+    else                      { timeFields.style.display = '';     alldayFields.style.display = 'none'; }
+  });
+  if (isEdit && event?.all_day) { timeFields.style.display = 'none'; alldayFields.style.display = ''; }
+
+  const iconInput = panel.querySelector('#modal-icon');
+  const iconTrigger = panel.querySelector('#modal-icon-trigger');
+  const selectIcon = (icon) => {
+    const nextIcon = eventIconName(icon);
+    if (iconInput) iconInput.value = nextIcon;
+    if (iconTrigger) {
+      iconTrigger.dataset.icon = nextIcon;
+      iconTrigger.replaceChildren(eventIconElement(nextIcon, 'event-icon-picker__trigger-icon'));
+    }
+    if (window.lucide) lucide.createIcons({ el: iconTrigger });
+  };
+
+  iconTrigger?.addEventListener('click', () => {
+    iconTrigger.setAttribute('aria-expanded', 'true');
+    openIconPickerDialog(iconInput?.value || 'calendar', (icon) => {
+      selectIcon(icon);
+      iconTrigger?.setAttribute('aria-expanded', 'false');
+      iconTrigger?.focus();
+    }, () => {
+      iconTrigger?.setAttribute('aria-expanded', 'false');
+      iconTrigger?.focus();
+    });
+  });
+
+  const attachmentInput = panel.querySelector('#modal-attachment');
+  const selectedAttachment = panel.querySelector('#modal-selected-attachment');
+  const attachmentPreview = panel.querySelector('#modal-attachment-preview');
+  const removeAttachment = panel.querySelector('#modal-remove-attachment');
+  const attachmentState = {
+    name: event?.attachment_name || null,
+    mime: event?.attachment_mime || null,
+    size: event?.attachment_size || null,
+    changed: false,
+    removed: false,
+  };
+
+  const syncSelectedAttachment = () => {
+    if (!selectedAttachment) return;
+    selectedAttachment.hidden = !attachmentState.name;
+    selectedAttachment.textContent = attachmentState.name ? selectedAttachmentLabel(attachmentState.name) : '';
+    if (removeAttachment) removeAttachment.hidden = !attachmentState.name;
+  };
+
+  const syncAttachmentSelection = () => {
+    if (!selectedAttachment) return;
+    const file = attachmentInput.files?.[0];
+    if (file) {
+      attachmentState.name = file.name;
+      attachmentState.mime = file.type || 'application/octet-stream';
+      attachmentState.size = file.size;
+      attachmentState.changed = true;
+      attachmentState.removed = false;
+      selectedAttachment.hidden = false;
+      selectedAttachment.textContent = selectedAttachmentLabel(file.name);
+      if (removeAttachment) removeAttachment.hidden = false;
+      if (attachmentPreview) {
+        attachmentPreview.replaceChildren();
+        attachmentPreview.hidden = true;
+      }
+      return;
+    }
+    syncSelectedAttachment();
+  };
+
+  attachmentInput?.addEventListener('change', syncAttachmentSelection);
+  removeAttachment?.addEventListener('click', () => {
+    if (attachmentInput) attachmentInput.value = '';
+    attachmentState.name = null;
+    attachmentState.mime = null;
+    attachmentState.size = null;
+    attachmentState.changed = true;
+    attachmentState.removed = true;
+    if (attachmentPreview) {
+      attachmentPreview.replaceChildren();
+      attachmentPreview.hidden = true;
+    }
+    syncSelectedAttachment();
+  });
+
+  const attachmentDropzone = panel.querySelector('#modal-attachment-dropzone');
+  if (attachmentDropzone && attachmentInput) {
+    ['dragenter', 'dragover'].forEach((eventName) => {
+      attachmentDropzone.addEventListener(eventName, (dropEvent) => {
+        dropEvent.preventDefault();
+        attachmentDropzone.classList.add('document-dropzone--active');
+      });
+    });
+    ['dragleave', 'drop'].forEach((eventName) => {
+      attachmentDropzone.addEventListener(eventName, (dropEvent) => {
+        dropEvent.preventDefault();
+        attachmentDropzone.classList.remove('document-dropzone--active');
+      });
+    });
+    attachmentDropzone.addEventListener('drop', (dropEvent) => {
+      const file = dropEvent.dataTransfer?.files?.[0];
+      if (!file) return;
+      const transfer = new DataTransfer();
+      transfer.items.add(file);
+      attachmentInput.files = transfer.files;
+      syncAttachmentSelection();
+    });
+  }
+
+  syncSelectedAttachment();
+
+  // Erinnerungen: Toggle blendet die Zeilenliste ein/aus; „Hinzufügen" und
+  // „Entfernen" verwalten mehrere Erinnerungen je Termin (#436).
+  wireReminderRows(panel);
+
+  // Load unified sync targets (Google + CalDAV)
+  const syncTargetSelect = panel.querySelector('#event-sync-target');
+  if (syncTargetSelect) {
+    loadSyncTargets(syncTargetSelect, event);
+  }
+
+  // Enddatum dem Startdatum nachführen, damit das Verschieben des Starts
+  // das Ende nicht davor zurücklässt (Dauer bleibt erhalten).
+  const wireDateFollow = (startSel, endSel) => {
+    const startEl = panel.querySelector(startSel);
+    const endEl   = panel.querySelector(endSel);
+    if (!startEl || !endEl) return;
+    let prevStart = startEl.value;
+    startEl.addEventListener('change', () => {
+      if (isDateInputValid(startEl.value) && isDateInputValid(endEl.value)) {
+        const oldKey = parseDateInput(prevStart);
+        const newKey = parseDateInput(startEl.value);
+        const endKey = parseDateInput(endEl.value);
+        if (oldKey && newKey && endKey) {
+          endEl.value = formatDateInput(shiftEndDateKey(oldKey, newKey, endKey));
+        }
+      }
+      prevStart = startEl.value;
+    });
+  };
+  wireDateFollow('#modal-start-date', '#modal-end-date');
+  wireDateFollow('#modal-allday-start', '#modal-allday-end');
+
+  // Dynamische Termindauer (#441): das Ende folgt dem Start um die gemerkte
+  // Dauer. Ändert der Nutzer das Ende, wird die neue Dauer übernommen und bei
+  // der nächsten Start-Änderung angewendet. Nur für Zeit-Termine.
+  wireDurationMemory(panel);
+
+  panel.querySelector('#modal-cancel').addEventListener('click', closeModal);
+
+  panel.querySelector('#modal-delete')?.addEventListener('click', async () => {
+    closeModal({ force: true });
+    await requestDeleteEvent(event);
+  });
+
+  panel.querySelector('#modal-save').addEventListener('click', () => saveEvent(panel, mode, event, reminder, attachmentState));
+  // Pflichtfelder melden sich beim Verlassen inline statt erst beim
+  // Speichern als ortloser Toast (Critique P1).
+  wireBlurValidation(panel);
+  if (window.lucide) lucide.createIcons({ el: panel });
 }
 
 /**

@@ -260,7 +260,6 @@
         "editButton": "Επεξεργασία εργασίας",
         "swipeOpen": "Επαναφορά",
         "swipeDone": "Ολοκληρώθηκε",
-        "swipeEdit": "Επεξεργασία",
         "subtaskAdd": "+ Προσθήκη υποεργασίας",
         "subtaskToggle": "Εμφάνιση υποεργασιών",
         "subtaskMarkDone": "Επισήμανση {{title}} ως ολοκληρωμένο",
@@ -351,7 +350,12 @@
         "searchPlaceholder": "Αναζήτηση εργασιών…",
         "viewToggleLabel": "Προβολή",
         "groupToggleLabel": "Ομαδοποίηση κατά",
-        "noResultsDescription": "Καμία εργασία δεν περιέχει \"{{query}}\"."
+        "noResultsDescription": "Καμία εργασία δεν περιέχει \"{{query}}\".",
+        "detailStart": "Έναρξη",
+        "detailFinish": "Ολοκλήρωση",
+        "detailReopen": "Άνοιγμα ξανά",
+        "subtasksLabel": "Υποεργασίες",
+        "swipeView": "Προβολή"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} γεύματα",
@@ -573,7 +577,6 @@
         "colorOverriddenByAssignee": "Το χρώμα παρακάμπτεται από τους ανατεθειμένους χρήστες",
         "descriptionLabel": "Περιγραφή",
         "descriptionPlaceholder": "Προαιρετικό…",
-        "popupEdit": "Επεξεργασία",
         "deleteConfirm": "Διαγραφή «{{title}}»;",
         "createdToast": "Η εκδήλωση δημιουργήθηκε",
         "savedToast": "Η εκδήλωση αποθηκεύτηκε",
@@ -742,7 +745,9 @@
         "recurringScopeSeries": "Ολόκληρη τη σειρά",
         "recurringScopeHintThis": "Επηρεάζει μόνο το συμβάν στις {{date}}.",
         "recurringScopeHintFollowing": "Επηρεάζει το συμβάν στις {{date}} και όλα τα επόμενα.",
-        "recurringScopeHintSeries": "Επηρεάζει ολόκληρη τη σειρά."
+        "recurringScopeHintSeries": "Επηρεάζει ολόκληρη τη σειρά.",
+        "detailWhen": "Ώρα",
+        "detailCalendar": "Ημερολόγιο"
     },
     "notes": {
         "title": "Σημειώσεις",
@@ -2149,7 +2154,10 @@
         "unitMonths": "μήνες",
         "freqYearly": "Ετησίως",
         "unitYear": "χρόνο",
-        "unitYears": "χρόνια"
+        "unitYears": "χρόνια",
+        "summaryUntil": "έως {{date}}",
+        "summaryCount": "{{count}} επαναλήψεις",
+        "summaryCount_one": "{{count}} επανάληψη"
     },
     "recipes": {
         "toShoppingSuccess_few": "{{count}} υλικά προστέθηκαν στη λίστα {{list}}.",
@@ -2273,7 +2281,8 @@
         "customMinutes": "Minutes",
         "customHours": "Hours",
         "customDays": "Days",
-        "customWeeks": "Weeks"
+        "customWeeks": "Weeks",
+        "sectionTitlePlural": "Υπενθυμίσεις"
     },
     "onboarding": {
         "step1Title": "Καλώς ήρθατε στο {{name}}",
@@ -2299,7 +2308,7 @@
         "meals": "Με το πρόγραμμα έτοιμο, η λίστα αγορών συμπληρώνεται σε ένα βήμα.",
         "notes": "Πατήστε + για νέα σημείωση. Οι σημειώσεις αναζητούνται σε πλήρες κείμενο.",
         "shopping": "Μετά τα ψώνια, τα τσεκαρισμένα προϊόντα πάνε στο κελάρι.",
-        "tasks": "Πατήστε + για να δημιουργήσετε την πρώτη σας εργασία. Σύρετε αριστερά για ολοκλήρωση, δεξιά για επεξεργασία.",
+        "tasks": "Πατήστε + για να δημιουργήσετε την πρώτη σας εργασία. Σύρετε αριστερά για ολοκλήρωση, δεξιά για προβολή.",
         "pantry": "Συμβουλή: τα προϊόντα που τσεκάρετε στα ψώνια μπορούν να περάσουν κατευθείαν στο απόθεμα."
     },
     "documents": {

@@ -262,7 +262,6 @@
         "archiveButton": "Feladat archiválása",
         "swipeOpen": "Újranyitás",
         "swipeDone": "Kész",
-        "swipeEdit": "Szerkesztés",
         "subtaskAdd": "+ Alfeladat hozzáadása",
         "subtaskToggle": "Alfeladatok megjelenítése",
         "subtaskMarkDone": "Jelölés késznek: {{title}}",
@@ -351,7 +350,12 @@
         "searchPlaceholder": "Feladatok keresése…",
         "viewToggleLabel": "Nézet",
         "groupToggleLabel": "Csoportosítás",
-        "noResultsDescription": "Egyetlen feladat sem tartalmazza: \"{{query}}\"."
+        "noResultsDescription": "Egyetlen feladat sem tartalmazza: \"{{query}}\".",
+        "detailStart": "Indítás",
+        "detailFinish": "Befejezés",
+        "detailReopen": "Újranyitás",
+        "subtasksLabel": "Részfeladatok",
+        "swipeView": "Megtekintés"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} étkezésből",
@@ -573,7 +577,6 @@
         "colorOverriddenByAssignee": "A szín felülírva a hozzárendelt felhasználó(k) által",
         "descriptionLabel": "Leírás",
         "descriptionPlaceholder": "Opcionális…",
-        "popupEdit": "Szerkesztés",
         "deleteConfirm": "Valóban törölni szeretné a(z) \"{{title}}\" eseményt?",
         "createdToast": "Esemény létrehozva",
         "savedToast": "Esemény mentve",
@@ -742,7 +745,9 @@
         "recurringScopeSeries": "Az egész sorozatot",
         "recurringScopeHintThis": "Csak a(z) {{date}} eseményt érinti.",
         "recurringScopeHintFollowing": "A(z) {{date}} eseményt és az összes következőt érinti.",
-        "recurringScopeHintSeries": "A teljes sorozatot érinti."
+        "recurringScopeHintSeries": "A teljes sorozatot érinti.",
+        "detailWhen": "Időpont",
+        "detailCalendar": "Naptár"
     },
     "notes": {
         "title": "Tábla",
@@ -2149,7 +2154,10 @@
         "unitMonths": "hónap",
         "freqYearly": "Évente",
         "unitYear": "év",
-        "unitYears": "év"
+        "unitYears": "év",
+        "summaryUntil": "{{date}}-ig",
+        "summaryCount": "{{count}} alkalom",
+        "summaryCount_one": "{{count}} alkalom"
     },
     "reminders": {
         "sectionTitle": "Emlékeztetők",
@@ -2182,7 +2190,8 @@
         "customMinutes": "Perc",
         "customHours": "Óra",
         "customDays": "Nap",
-        "customWeeks": "Hét"
+        "customWeeks": "Hét",
+        "sectionTitlePlural": "Emlékeztetők"
     },
     "birthdays": {
         "inDays": "{{days}} nap múlva",
@@ -2304,7 +2313,7 @@
         "goHealth": "Egészség"
     },
     "emptyHint": {
-        "tasks": "Érintse meg a + gombot az első feladat létrehozásához. Húzza a kártyát balra a kész állapothoz, jobbra a szerkesztéshez.",
+        "tasks": "Érintse meg a + gombot az első feladat létrehozásához. Húzza a kártyát balra a kész állapothoz, jobbra a megtekintéshez.",
         "calendar": "Csatlakoztassa a Google Naptárt a Beállítások → Integrációk alatt az automatikus szinkronizáláshoz.",
         "shopping": "Vásárlás után a kipipált tételek a kamrába kerülnek.",
         "notes": "Érintse meg a + gombot egy új jegyzethez. A jegyzetek teljes szövege kereshető.",

@@ -2089,6 +2089,35 @@ p.field-hint--warn[hidden] {
   background-color: var(--color-surface-3);
 }
 
+/* Kopf-Bedienelemente als Gruppe: das Schließen-X behält seinen Platz in der
+ * Ecke, eine optionale Kopf-Aktion („Bearbeiten") setzt sich links daneben. */
+.modal-panel__header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}
+
+/* Textbutton im Kopf. Bewusst Text statt Icon: „Bearbeiten" ist eine benannte
+ * Absicht, in die man nicht hineinstolpern soll - ein Stiftsymbol wäre ein
+ * Rätsel an der Stelle, an der die Ansicht ihren Modus wechselt. */
+.modal-panel__action {
+  min-height: var(--target-base);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-sm);
+  /* Modul-Akzent führt (DESIGN.md §2): Die Kopf-Aktion gehört zum Modul, in dem
+   * das Modal steht, nicht zur Shell. */
+  color: var(--active-module-accent, var(--color-accent));
+  font-size: var(--type-body);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+  transition: background-color var(--transition-fast);
+}
+
+.modal-panel__action:hover {
+  background-color: var(--color-surface-3);
+}
+
 .modal-panel__body {
   padding: var(--space-4);
   display: flex;
@@ -2098,6 +2127,11 @@ p.field-hint--warn[hidden] {
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+  /* Kein Scroll-Chaining: Am Ende des Modal-Inhalts weiterzuwischen darf nicht
+   * die Seite dahinter bewegen. Fällt beim Sheet am stärksten auf, weil dort
+   * gewischt statt gescrollt wird und die Detailansicht kurz genug ist, um
+   * schnell am Ende anzukommen. */
+  overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
   /* Container für Formular-Raster: 2-Spalten-Felder collabieren nach
    * MODALBREITE (sm 400 / md 520 / lg 680), nicht Viewport. Ein sm-Modal

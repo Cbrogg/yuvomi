@@ -53,6 +53,8 @@ const STUBS = {
     export const renderRRuleFields = () => '';
     export const bindRRuleEvents = () => {};
     export const getRRuleValues = () => ({});
+    export const describeRRule = () => '';
+    export const recurrenceRow = () => ({ icon: 'repeat', label: '', value: '' });
   `,
   '/components/modal.js': `
     export const openModal = () => {};
@@ -62,6 +64,17 @@ const STUBS = {
     export const advancedSection = (inner = '') => String(inner);
     export const wireBlurValidation = () => {};
     export const reportFieldError = () => false;
+    export const mountFooter = () => null;
+    export const refreshDirtySnapshot = () => {};
+    export const focusFirstField = () => null;
+    export const updateHeaderAction = () => null;
+  `,
+  '/components/detail-view.js': `
+    export const openDetailView = () => ({ update: () => true, isOpen: () => true });
+    export const closeDetailView = () => {};
+    export const detailRowEl = () => null;
+    export const visibilityRow = () => ({ icon: 'users', label: '', value: '' });
+    export const assignedRow = () => ({ icon: 'user', label: '', value: '' });
   `,
   '/utils/ux.js': `
     export const stagger = () => {};
