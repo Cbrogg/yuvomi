@@ -10,7 +10,7 @@ import { api } from '/api.js';
 import { t, formatDate, getLocale, getNumberFormat } from '/i18n.js';
 import { esc } from '/utils/html.js';
 import { getReadableTextColor, AVATAR_FALLBACK_COLOR } from '/utils/color.js';
-import { openModal, closeModal, confirmModal } from '/components/modal.js';
+import { openModal, closeModal, confirmModal, confirmOverModal } from '/components/modal.js';
 import { createPageFab, setPageFabAction } from '/utils/fab.js';
 import { wireTablist } from '/utils/tablist.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
@@ -729,10 +729,11 @@ function openRewardModal(item) {
       </form>`,
     onSave: (panel) => {
       panel.querySelector('#rw-reward-delete')?.addEventListener('click', async () => {
-        const ok = await confirmModal(t('rewards.confirmDeleteReward', { reward: item.name }), { confirmLabel: t('common.delete'), danger: true });
+        // confirmOverModal statt confirmModal: „Abbrechen" gibt das Belohnungs-
+        // Formular unverändert zurück; bestätigt schliesst es die Frage selbst.
+        const ok = await confirmOverModal(t('rewards.confirmDeleteReward', { reward: item.name }), { confirmLabel: t('common.delete'), danger: true });
         if (!ok) return;
         await api.delete(`/rewards/catalog/${item.id}`);
-        await closeModal({ force: true });
         toast(t('rewards.toastRewardDeleted'), 'default');
         await refreshActiveTab();
       });

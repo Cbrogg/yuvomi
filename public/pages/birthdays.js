@@ -368,8 +368,13 @@ function openBirthdayModal({ mode, birthday = null }) {
       });
 
       panel.querySelector('#bd-cancel').addEventListener('click', closeModal);
-      panel.querySelector('#bd-delete')?.addEventListener('click', () => {
-        closeModal();
+      // Löschen verwirft die Eingaben ohnehin mit dem Datensatz: der Dirty-Guard
+      // hätte hier erst nach dem Verwerfen von Feldern gefragt, die gleich mit
+      // weggehen - zwei Rückfragen für eine Entscheidung (#625-Muster). Der
+      // await hält das Löschen zurück, bis der Overlay-Slot wirklich frei ist;
+      // das Shared-Modal kennt kein Stacking (siehe _suspendActiveModal).
+      panel.querySelector('#bd-delete')?.addEventListener('click', async () => {
+        await closeModal({ force: true });
         deleteBirthday(birthday.id);
       });
       panel.querySelector('#bd-save').addEventListener('click', async () => {

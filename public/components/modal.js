@@ -8,7 +8,9 @@
  *
  * API:
  *   openModal({ title, content, onSave, onDelete, onClose, size }) → void
- *   closeModal() → void
+ *   closeModal({ force }) → Promise<void>
+ *   confirmModal(message, opts) → Promise<boolean>       (ersetzt ein offenes Modal)
+ *   confirmOverModal(message, opts) → Promise<boolean>   (parkt es und gibt es zurück)
  */
 
 import { t } from '/i18n.js';
@@ -177,40 +179,142 @@ function _wireSheetSwipe(panel) {
 }
 
 // --------------------------------------------------------
-// Suspend/Restore für den Dirty-Confirm-Dialog (Audit 1.5)
+// Suspend/Restore für Dialoge über einem offenen Modal (Audit 1.5)
 //
-// Das Shared-Modal kennt bewusst kein Stacking: ein „Verwerfen?"-Dialog nutzt
-// denselben Overlay-Slot wie das dirty Formular darunter. Damit der nachfolgende
-// openModal()-Aufruf (in confirmModal) das dirty Modal nicht wegräumt, wird es
+// Das Shared-Modal kennt bewusst kein Stacking: ein Dialog nutzt denselben
+// Overlay-Slot wie das Formular darunter. Damit der nachfolgende
+// openModal()-Aufruf (in confirmModal) das Formular nicht wegräumt, wird es
 // kurzzeitig aus dem aktiven Slot gelöst und in einem Token geparkt. Diese drei
 // Helfer kapseln die Übergänge, statt die Globals frei „auszuleihen".
+//
+// Genutzt vom Dirty-Guard („Änderungen verwerfen?") und von confirmOverModal.
 // --------------------------------------------------------
+
+/**
+ * Wartet, bis ein Overlay wirklich aus dem DOM ist. `closeModal` kehrt auf
+ * Mobile schon zurück, wenn die 200-ms-Exit-Animation *startet* - der Dialog
+ * hängt dann noch bis zu 400 ms im Baum. Wer in diesem Fenster das Modal
+ * darunter zurückholt, hat kurzzeitig zwei Dialoge mit derselben Titel-id und
+ * einen Escape-Handler, der bereits gegen das wiederhergestellte Formular läuft.
+ */
+function _awaitOverlayRemoval(node, timeout = 600) {
+  if (!node?.isConnected) return Promise.resolve();
+  return new Promise((resolve) => {
+    let fallback;
+    const done = () => {
+      clearTimeout(fallback);
+      observer.disconnect();
+      resolve();
+    };
+    const observer = new MutationObserver(() => { if (!node.isConnected) done(); });
+    observer.observe(document.body, { childList: true });
+    // Reißleine: ohne sie hinge das Modal darunter für immer im Suspend, falls
+    // das Entfernen ausbleibt (abgebrochene Animation, entkoppelter Knoten).
+    fallback = setTimeout(done, timeout);
+  });
+}
 
 function _suspendActiveModal() {
   const overlay = activeOverlay;
-  const token = { overlay, id: overlay.id, snapshot: _initialFormSnapshot };
+  // previouslyFocused wandert mit: der Dialog darüber setzt es auf sein eigenes
+  // Auslöser-Element und nullt es beim Schließen. Ohne das Parken verlöre ein
+  // fortlebendes Modal seinen Focus-Restore auf die Zeile, aus der es kam.
+  // Die Titel-id muss mit: beide Panels tragen `aria-labelledby="shared-modal-
+  // title"`, und der Browser löst eine doppelt vergebene id auf das ERSTE
+  // Element im DOM auf - das geparkte Formular. Ohne das Ablegen sagen
+  // Screenreader den Dialog mit dem Titel des Formulars darunter an (gemessen:
+  // „Wirklich löschen?" wurde als „Test-Formular" vorgelesen).
+  const title = overlay.querySelector('#shared-modal-title');
+  const panel = overlay.querySelector('.modal-panel');
+  const token = {
+    overlay,
+    id: overlay.id,
+    title,
+    titleId: title?.id ?? null,
+    // Fällt der Dialog in die 150-ms-Lücke vor dem ersten Snapshot, entsteht er
+    // hier: das gleich folgende openModal löscht den ausstehenden Timer, und ein
+    // null-Snapshot schaltet isFormDirty() für die restliche Lebensdauer des
+    // Formulars ab - der Dirty-Guard wäre danach still tot.
+    snapshot: _initialFormSnapshot ?? (panel ? serializeForm(panel) : null),
+    restoreFocus: previouslyFocused,
+    // Zwei verschiedene Fokusziele: `restoreFocus` zeigt nach draußen (die Zeile,
+    // aus der das Modal kam) und gilt für dessen späteres Schließen; `trigger`
+    // ist der Knopf IM Modal, der den Dialog auslöste. inert entzieht ihm sofort
+    // den Fokus, also muss er beim Zurückholen wieder gesetzt werden.
+    trigger: document.activeElement,
+  };
+  if (title) title.removeAttribute('id');
   overlay.removeAttribute('id');
+  // Das geparkte Modal bleibt sichtbar unter dem Dialog liegen. `inert` nimmt
+  // es aus dem Accessibility-Baum und der Tab-Reihenfolge: Screenreader lesen
+  // sonst durch den Dialog hindurch das Formular darunter vor, als wäre es
+  // bedienbar. Der Focus-Trap des Dialogs allein deckt das nicht ab - er hält
+  // den Tab-Fokus, aber nicht den Lesecursor.
+  overlay.inert = true;
   activeOverlay = null;
   modalState = 'confirming';
   return token;
 }
 
-// Nutzer bricht das Verwerfen ab → dirty Modal exakt wiederherstellen.
-function _resumeSuspendedModal({ overlay, id, snapshot }) {
+// Dialog beendet, Modal darunter lebt weiter → exakt wiederherstellen.
+function _resumeSuspendedModal({ overlay, id, title, titleId, snapshot, restoreFocus, trigger }) {
   if (id) overlay.id = id;
+  if (title && titleId) title.id = titleId;
+  // Vor dem Setzen des Fokus: ein inertes Element nimmt keinen an.
+  overlay.inert = false;
   activeOverlay = overlay;
   _initialFormSnapshot = snapshot;
+  previouslyFocused = restoreFocus;
   document.body.style.overflow = 'hidden';
   modalState = 'open';
+  // Der Dialog hat den Escape-Handler beim Schließen abgemeldet; ohne das
+  // erneute Anmelden reagiert das wiederhergestellte Modal nicht mehr auf Esc.
+  document.removeEventListener('keydown', onEscape);
+  document.addEventListener('keydown', onEscape);
   if (window.yuvomi?.setThemeColor) {
     window.yuvomi.setThemeColor(OVERLAY_THEME_COLOR, OVERLAY_THEME_COLOR);
+  }
+  // Fokus zurück auf den auslösenden Knopf - nur wenn er noch zu diesem Modal
+  // gehört, sonst zöge ein Element von außerhalb den Fokus aus dem Dialog heraus.
+  if (trigger?.isConnected && overlay.contains(trigger) && typeof trigger.focus === 'function') {
+    trigger.focus();
+  }
+}
+
+/**
+ * Stellt die Frage über einem bereits geparkten Modal und kehrt erst zurück,
+ * wenn der Dialog aus dem DOM verschwunden ist. Beide Aufrufer (Dirty-Guard und
+ * confirmOverModal) brauchen genau das: solange der Dialog noch hängt, wäre das
+ * Zurückholen ein Zustand mit zwei Dialogen, doppelter Titel-id und einem
+ * Escape-Handler, der schon auf das Formular zeigt.
+ *
+ * Der Dialog entsteht synchron im Promise-Executor von confirmModal, deshalb
+ * lässt sich sein Overlay direkt nach dem Aufruf greifen.
+ */
+async function _confirmOverSuspended(message, opts, suspended) {
+  const pending = confirmModal(message, opts);
+  const dialogOverlay = document.getElementById('shared-modal-overlay');
+  try {
+    const confirmed = await pending;
+    await _awaitOverlayRemoval(dialogOverlay);
+    return confirmed;
+  } catch (err) {
+    // Ein geparktes Modal ist inert und damit unbedienbar. Scheitert der Dialog,
+    // muss es zurückkommen - sonst steht die App bis zum Reload.
+    _resumeSuspendedModal(suspended);
+    throw err;
   }
 }
 
 // Nutzer bestätigt das Verwerfen → dirty Modal wieder zum aktiven Overlay
-// machen, damit die nachfolgende Schließ-Logik es regulär abräumt.
-function _discardSuspendedModal({ overlay }) {
+// machen, damit die nachfolgende Schließ-Logik es regulär abräumt. Der geparkte
+// Fokus kommt mit, sonst läuft der Focus-Restore in _doClose ins Leere.
+function _discardSuspendedModal({ overlay, restoreFocus }) {
+  // Auch der Weg nach draußen hebt inert auf: das Overlay durchläuft noch die
+  // reguläre Schließ-Logik samt Animation und soll dabei kein Sonderzustand sein.
+  overlay.inert = false;
   activeOverlay = overlay;
+  previouslyFocused = restoreFocus;
 }
 
 // --------------------------------------------------------
@@ -401,14 +505,15 @@ export async function closeModal({ force = false } = {}) {
       // Dirty Modal in den Confirm-Slot parken (modalState → 'confirming').
       const suspended = _suspendActiveModal();
 
-      const confirmed = await confirmModal(t('modal.unsavedChanges'), {
+      const confirmed = await _confirmOverSuspended(t('modal.unsavedChanges'), {
         danger: false,
         confirmLabel: t('modal.discardChanges'),
         detail: t('modal.unsavedChangesDetail'),
-      });
+      }, suspended);
 
       if (!confirmed) {
-        // Verwerfen abgebrochen → dirty Modal exakt wiederherstellen.
+        // Verwerfen abgebrochen → dirty Modal exakt wiederherstellen, samt
+        // Fokus auf dem Element, das den Dialog ausgelöst hat.
         _resumeSuspendedModal(suspended);
         return;
       }
@@ -604,6 +709,44 @@ export function confirmModal(message, { confirmLabel, danger = false, detail = n
       },
     });
   });
+}
+
+/**
+ * Bestätigung ÜBER einem offenen Modal, ohne es zu verdrängen.
+ *
+ * `confirmModal` läuft durch `openModal`, und das räumt ein offenes Modal mit
+ * `force: true` weg (kein Stacking, siehe _suspendActiveModal). Aus einem
+ * Formular-Modal heraus gefragt heißt das: ausgerechnet der Abbrechen-Pfad -
+ * der einzige Grund, aus dem man überhaupt fragt - vernichtet die Eingaben,
+ * ohne den Dirty-Guard auch nur zu streifen. Diese Variante parkt das Formular
+ * stattdessen im Suspend-Token und gibt es bei „Abbrechen" unverändert zurück,
+ * inklusive Dirty-Snapshot, Escape-Handler und Focus-Restore.
+ *
+ * Bestätigt der Nutzer, schließt das geparkte Modal mit `force: true`: die
+ * Entscheidung nimmt die Eingaben ohnehin mit, eine zweite Rückfrage wäre
+ * falsch (#625).
+ *
+ * Ohne offenes Modal identisch mit `confirmModal` - eine Löschfunktion, die aus
+ * Liste und Modal gleichermaßen aufgerufen wird, braucht keine Fallunterscheidung.
+ *
+ * @param {string} message - die Frage (wird zum Titel), wie bei confirmModal
+ * @param {Object} [opts]  - identisch zu confirmModal ({ confirmLabel, danger, detail })
+ * @returns {Promise<boolean>}
+ */
+export async function confirmOverModal(message, opts = {}) {
+  // Nur ein regulär offenes Modal lässt sich parken: läuft gerade eine
+  // Schließ-Animation oder liegt schon ein Dialog im Slot, gibt es nichts zu
+  // schützen, und ein Suspend würde den laufenden Übergang zerlegen.
+  if (!activeOverlay || modalState !== 'open') return confirmModal(message, opts);
+
+  const suspended = _suspendActiveModal();
+  const confirmed = await _confirmOverSuspended(message, opts, suspended);
+  // Erst zurückholen, dann ggf. schließen: das Abräumen soll durch die reguläre
+  // Schließ-Logik laufen, nicht an ihrem 'closing'-Wächter vorbei. Der Fokus
+  // kehrt dabei auf den auslösenden Knopf zurück (siehe _resumeSuspendedModal).
+  _resumeSuspendedModal(suspended);
+  if (confirmed) await closeModal({ force: true });
+  return confirmed;
 }
 
 // --------------------------------------------------------

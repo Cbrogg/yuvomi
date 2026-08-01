@@ -4,7 +4,7 @@
  */
 
 import { api } from '/api.js';
-import { closeModal, confirmModal, openModal, advancedSection, reportFieldError } from '/components/modal.js';
+import { closeModal, confirmModal, confirmOverModal, openModal, advancedSection, reportFieldError } from '/components/modal.js';
 import {
   formatDate,
   getLocale,
@@ -1423,19 +1423,21 @@ function openMetadataModal() {
           const item = state.meta[isCat ? 'categories' : 'payment_methods'].find((row) => row.id === id);
           const inUse = item?.usage_count || 0;
           const name = item ? (isCat ? categoryLabel(item) : item.name) : '';
-          // confirmModal ersetzt (kein Stacking) das Verwalten-Modal; danach neu öffnen.
-          const confirmed = await confirmModal(
+          // confirmOverModal parkt das Verwalten-Modal, statt es zu ersetzen:
+          // „Abbrechen" gibt es mitsamt Scrollposition und Fokus zurück. Nur
+          // nach echtem Löschen wird es neu aufgebaut - die Liste hat sich
+          // geändert.
+          const confirmed = await confirmOverModal(
             t(isCat ? 'subscriptions.deleteCategoryConfirm' : 'subscriptions.deletePaymentMethodConfirm', { name }),
             { danger: true, detail: inUse ? t('subscriptions.metaInUseWarning', { count: inUse }) : null },
           );
-          if (confirmed) {
-            try {
-              await api.delete(`/budget/subscriptions/${isCat ? 'categories' : 'payment-methods'}/${id}`);
-              await reload();
-              window.yuvomi?.showToast(t('subscriptions.metaDeletedToast'), 'success');
-            } catch (err) {
-              window.yuvomi?.showToast(err.data?.error || err.message || t('common.unknownError'), 'danger');
-            }
+          if (!confirmed) return;
+          try {
+            await api.delete(`/budget/subscriptions/${isCat ? 'categories' : 'payment-methods'}/${id}`);
+            await reload();
+            window.yuvomi?.showToast(t('subscriptions.metaDeletedToast'), 'success');
+          } catch (err) {
+            window.yuvomi?.showToast(err.data?.error || err.message || t('common.unknownError'), 'danger');
           }
           openMetadataModal();
         });

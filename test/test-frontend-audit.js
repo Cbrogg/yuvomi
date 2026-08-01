@@ -5379,6 +5379,8 @@ test('der Tag-Filter ist ueberall eine Liste, nirgends mehr ein einzelner Wert',
  * Dateien: ist eine Aenderung erst einmal beim Server, gibt es nichts mehr zu
  * verwerfen, und das Modal gehoert mit `force: true` zu.
  */
+const CLOSE_MODAL_CALL = /\bclose(Shared)?Modal\s*\(/;
+
 test('nach einem Schreibvorgang schliesst das Modal ohne Verwerfen-Frage', () => {
   const WINDOW = 20; // Zeilen zwischen Request und Schliessen, grosszuegig gefasst
   const violations = [];
@@ -5388,7 +5390,9 @@ test('nach einem Schreibvorgang schliesst das Modal ohne Verwerfen-Frage', () =>
     lines.forEach((line, index) => {
       if (!/await\s+api\.(post|patch|put|delete)\s*\(/.test(line)) return;
       lines.slice(index, index + WINDOW).forEach((candidate, offset) => {
-        if (!/closeModal\s*\(/.test(candidate)) return;
+        // Kueche/Vorrat importieren dieselbe Funktion unter `closeSharedModal`;
+        // ohne den Alias liefe die Regel an diesen Modulen vorbei.
+        if (!CLOSE_MODAL_CALL.test(candidate)) return;
         // Definition und Import tragen denselben Namen, sind aber kein Aufruf.
         if (/function closeModal|^\s*import|\bfrom\s+'/.test(candidate)) return;
         if (/force/.test(candidate)) return;
@@ -5399,4 +5403,104 @@ test('nach einem Schreibvorgang schliesst das Modal ohne Verwerfen-Frage', () =>
 
   assert.deepEqual(violations, [],
     'closeModal() im Erfolgspfad eines Schreibvorgangs braucht { force: true }');
+});
+
+/**
+ * Loeschen fragt nicht nach dem Verwerfen.
+ *
+ * Dieselbe Regel von der anderen Seite: nicht nur ein erledigter Schreibvorgang
+ * macht die Verwerfen-Frage sinnlos, sondern auch eine Entscheidung, die die
+ * Eingaben ohnehin mitnimmt.
+ *
+ * Gemessen (Geburtstage, Schwester von #625): der Loeschen-Knopf im
+ * Bearbeiten-Dialog rief `closeModal()` ohne `force`. Hatte der Nutzer vorher
+ * ein Feld angefasst, kam erst „Aenderungen verwerfen?" und danach der
+ * Loeschvorgang - zwei Rueckfragen fuer eine Entscheidung, und die erste fragte
+ * nach Feldern, die der geloeschte Datensatz mitnimmt. Weil der Aufruf zudem
+ * nicht awaited war, lief das Loeschen bereits los, waehrend der Verwerfen-
+ * Dialog noch im selben Overlay-Slot hing (das Shared-Modal kennt kein
+ * Stacking): ein Klick auf „Abbrechen" stellte danach ein Bearbeiten-Modal zu
+ * einem bereits entfernten Eintrag wieder her.
+ *
+ * Die Regel gilt fuer jeden Loeschen-Knopf, nicht fuer eine Allowlist von
+ * Dateien: wer loescht, hat ueber die Eingaben schon entschieden.
+ */
+test('der Loeschen-Knopf im Modal schliesst ohne Verwerfen-Frage', () => {
+  // Verdrahtung eines Loeschen-Knopfes: Selektor mit „delete" plus click-Handler.
+  const DELETE_BUTTON = /querySelector(All)?\([^)]*delete[^)]*\)[^;]*addEventListener\(\s*'click'/i;
+  const WINDOW = 16; // Handler sind kurz; die Grenze faengt unerkannte Enden ab
+  const violations = [];
+
+  for (const file of walkJsFiles('../public/')) {
+    const lines = read(file).split('\n');
+    lines.forEach((line, index) => {
+      if (!DELETE_BUTTON.test(line)) return;
+      // Nur mehrzeilige Handler haben einen Rumpf zum Pruefen; einzeilige
+      // (`=> deleteMed(med));`) delegieren und schliessen selbst nichts.
+      if (!/\{\s*$/.test(line)) return;
+      const indent = line.search(/\S/);
+
+      for (let offset = 1; offset <= WINDOW; offset += 1) {
+        const candidate = lines[index + offset];
+        if (candidate === undefined) break;
+        // Handler-Ende: schliessende Klammer auf Hoehe der Verdrahtung.
+        if (/^\s*\}\)/.test(candidate) && candidate.search(/\S/) <= indent) break;
+        if (!CLOSE_MODAL_CALL.test(candidate) || /force/.test(candidate)) continue;
+        violations.push(`${file}:${index + offset + 1}: ${candidate.trim()}`);
+      }
+    });
+  }
+
+  assert.deepEqual(violations, [],
+    'closeModal() im Loeschen-Pfad braucht { force: true }');
+});
+
+/**
+ * Ein Dialog aus einem offenen Modal heraus verdraengt es nicht.
+ *
+ * `confirmModal` laeuft durch `openModal`, und das raeumt ein offenes Modal mit
+ * `force: true` weg - das Shared-Modal stapelt bewusst nicht. Aus einem
+ * Formular-Modal heraus gefragt heisst das: ausgerechnet der Abbrechen-Pfad -
+ * der einzige Grund, aus dem man ueberhaupt fragt - vernichtet die Eingaben,
+ * ohne den Dirty-Guard auch nur zu streifen.
+ *
+ * Gemessen an acht Stellen (Ausgaben-, Konto-, Belohnungs- und fuenf
+ * Gesundheits-Formulare); zwei weitere Module hatten sich den Verlust mit
+ * Behelfen erkauft (Modal danach neu oeffnen, Inline-Bestaetigung von Hand).
+ * `confirmOverModal` parkt das Formular stattdessen und gibt es unveraendert
+ * zurueck.
+ *
+ * Grenze der Regel: sie sieht nur den direkten Aufruf im Handler. Ruft der
+ * Handler eine Funktion, die ihrerseits fragt (health.js: deleteMed), faellt
+ * das hier nicht auf - eine transitive Aufloesung ueber Modulgrenzen waere
+ * raterei und wuerde bei jeder Umbenennung falsch anschlagen.
+ */
+test('ein Dialog ueber einem offenen Modal nutzt confirmOverModal', () => {
+  const violations = [];
+
+  for (const file of walkJsFiles('../public/')) {
+    if (file.endsWith('components/modal.js')) continue; // definiert beide
+    const lines = read(file).split('\n');
+
+    lines.forEach((line, index) => {
+      if (!/\bconfirmModal\s*\(/.test(line)) return;
+      if (/^\s*(import|\/\/|\*)/.test(line)) return;
+
+      // Vorfahren-Kette rein ueber Einrueckung: die jeweils naechste Zeile
+      // oberhalb mit kleinerer Einrueckung. Steht ein `onSave` darin, laeuft der
+      // Aufruf im Rumpf eines offenen Modals.
+      let level = lines[index].search(/\S/);
+      for (let i = index - 1; i >= 0 && level > 0; i -= 1) {
+        const indent = lines[i].search(/\S/);
+        if (indent === -1 || indent >= level) continue;
+        level = indent;
+        if (!/\bonSave\s*[:({]/.test(lines[i])) continue;
+        violations.push(`${file}:${index + 1}: ${line.trim().slice(0, 80)}`);
+        break;
+      }
+    });
+  }
+
+  assert.deepEqual(violations, [],
+    'confirmModal() aus einem offenen Modal heraus gehoert auf confirmOverModal() umgestellt');
 });
