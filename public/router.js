@@ -84,6 +84,14 @@ const isStandalone = window.matchMedia('(display-mode: standalone)').matches
   || navigator.standalone === true;
 
 /**
+ * System-Farbschema als langlebige MediaQueryList. Bewusst ein Modul-Binding
+ * und kein `window.matchMedia(...).addEventListener(...)` in einem Rutsch: ohne
+ * gehaltene Referenz darf die Engine die Liste einsammeln, und der Listener
+ * verstummt irgendwann still. Genutzt vom Auto-Modus-Nachzug des Modul-Akzents.
+ */
+const darkSchemeQuery = window.matchMedia?.('(prefers-color-scheme: dark)') ?? null;
+
+/**
  * Setzt die theme-color Meta-Tags (Light + Dark Variante).
  * @param {string} lightColor
  * @param {string} [darkColor] - Falls nicht angegeben, wird lightColor für beide gesetzt
@@ -102,6 +110,27 @@ function setThemeColor(lightColor, darkColor) {
 /** Liest eine CSS Custom Property vom :root */
 function getCSSToken(name) {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+/**
+ * Setzt den Modul-Akzent der Route als Inline-Custom-Property auf <html>.
+ *
+ * Der Wert ist die AUFGELÖSTE Farbe, keine `var(--module-*)`-Kette: Dritt-
+ * anbieter-Module liefern einen literalen Hex-Wert, und ein nicht existierendes
+ * `--module-<name>` würde als var()-Kette „invalid at computed-value time"
+ * enden statt in den CSS-Fallback `var(--color-accent)` zu laufen.
+ *
+ * Preis dieser Auflösung: der Inline-Wert ist eine Momentaufnahme des aktuellen
+ * Themes. `--module-tasks` wechselt im Dark-Theme von #15803D auf #4ADE80 - die
+ * Momentaufnahme tut das nicht. Deshalb MUSS jeder Theme-Wechsel diese Funktion
+ * erneut aufrufen (applyTheme + der prefers-color-scheme-Listener für den
+ * Auto-Modus), sonst behält die ganze Shell den Akzent des alten Themes und
+ * Text darauf fiel im Dunkelmodus auf 2.71:1 statt 7.81:1 - unter WCAG AA.
+ */
+function applyModuleAccentForRoute(route) {
+  const accentToken = moduleAccentToken(route?.module);
+  const accent = route?.thirdPartyModule?.accent || (accentToken ? getCSSToken(accentToken) : '');
+  document.documentElement.style.setProperty('--active-module-accent', accent);
 }
 
 /** Setzt theme-color passend zum aktuellen Modul */
@@ -668,9 +697,7 @@ async function navigate(path, userOrPushState = true, pushState = true) {
     // Akzent. Sonst wechselte der 3px-Streifen der Tab-Leiste und der FAB beim
     // Tabwechsel die Farbe - dieselbe Botschaft wie ein echter Modulwechsel
     // (Critique 2026-07-29). Begründung am Token in tokens.css.
-    const accentToken = moduleAccentToken(route?.module);
-    const accent = route?.thirdPartyModule?.accent || (accentToken ? getCSSToken(accentToken) : '');
-    document.documentElement.style.setProperty('--active-module-accent', accent);
+    applyModuleAccentForRoute(route);
 
     // Optimistisches Chrome-Feedback: aktive Nav-Markierung + Indikator-Pille und
     // Statusbar-Farbe schon VOR dem Modul-Render setzen, sobald die Shell existiert.
@@ -802,6 +829,15 @@ function allRoutes() {
       thirdPartyModule: module,
     }));
   return [...ROUTES, ...moduleRoutes];
+}
+
+/**
+ * Die Route der gerade dargestellten Seite. Nötig für alles, was Chrome-Farben
+ * ausserhalb einer Navigation nachzieht (Theme-Wechsel, Rückkehr aus einem
+ * Overlay) - dort gibt es kein `route`-Objekt aus navigate() mehr.
+ */
+function currentRoute() {
+  return allRoutes().find((r) => r.path === currentPath);
 }
 
 // Bestätigter Logout, überall aus der Navigation erreichbar (Sidebar-Footer +
@@ -3180,7 +3216,15 @@ if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
     } else {
       document.documentElement.removeAttribute('data-theme');
     }
-    
+
+    // Theme „Automatisch" (kein data-theme) folgt prefers-color-scheme rein per
+    // CSS - applyTheme() feuert dabei nie. Der Modul-Akzent im Inline-Style
+    // bliebe also beim Sonnenuntergang des Systems auf dem Hellmodus-Wert
+    // stehen: derselbe Kontrast-Bruch wie beim manuellen Umschalten, nur ohne
+    // Nutzeraktion. Der Listener zieht ihn nach; bei explizitem Theme ist der
+    // Aufruf idempotent (dieselbe Farbe wird erneut aufgelöst).
+    darkSchemeQuery?.addEventListener?.('change', () => applyModuleAccentForRoute(currentRoute()));
+
     await initI18n();
     try {
       const v = await api.get('/version');
@@ -3211,7 +3255,6 @@ window.yuvomi = {
   refreshThirdPartyModules,
   isModuleDisabled,
   applyTheme: (value) => {
-    localStorage.setItem('yuvomi-theme', value);
     if (value === 'dark') {
       document.documentElement.setAttribute('data-theme', 'dark');
     } else if (value === 'light') {
@@ -3219,10 +3262,25 @@ window.yuvomi = {
     } else {
       document.documentElement.removeAttribute('data-theme');
     }
+    // Der Modul-Akzent liegt als aufgelöste Farbe im Inline-Style von <html> und
+    // folgt der CSS-Kaskade daher NICHT. Ohne dieses Nachziehen behielte die
+    // ganze Shell (Buttons, Fokusringe, FAB, aktive Nav-Pille) den Akzent des
+    // vorherigen Themes. Begründung an applyModuleAccentForRoute.
+    applyModuleAccentForRoute(currentRoute());
+    // Persistenz zuletzt und fehlertolerant: ein werfendes localStorage (Safari
+    // Privatmodus, Quota) darf das sichtbare Anwenden nicht abbrechen. Vorher
+    // stand diese Zeile zuerst - warf sie, fiel der Aufrufer in den
+    // Einstellungen auf ein direktes data-theme zurück und liess den Akzent
+    // stehen. Derselbe Schlüssel wird dort ohnehin über safeStorageSet
+    // geschrieben, hier geht also nichts verloren.
+    try {
+      localStorage.setItem('yuvomi-theme', value);
+    } catch {
+      // Theme gilt für diese Sitzung, überlebt den Reload aber nicht.
+    }
   },
   restoreThemeColor: () => {
-    const route = allRoutes().find((r) => r.path === currentPath);
-    updateThemeColorForRoute(route);
+    updateThemeColorForRoute(currentRoute());
   },
   // Client-seitigen Sitzungszustand nach einem bewussten Logout zurücksetzen,
   // damit die anschließende navigate('/login') nicht am currentUser-Guard
