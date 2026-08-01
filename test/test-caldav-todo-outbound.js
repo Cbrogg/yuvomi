@@ -479,6 +479,30 @@ test('Ohne offene Arbeit baut flushOutbound keinen Client auf', async () => {
   assert.strictEqual(built, 0);
 });
 
+// ── Abruf der Aufgabenliste ─────────────────────────────────────────────────────
+
+test('Der Inbound fragt die Liste nach VTODO ab, nicht nach Terminen (#586)', async () => {
+  const accountId = reset();
+  enableList(accountId, 'tasks');
+
+  // Attrappe eines regelkonformen Servers: der REPORT liefert nur, wonach der
+  // comp-filter fragt. Ohne eigene Angabe filtert tsdav auf VEVENT - auf einer
+  // Aufgabenliste blieb die Antwort damit leer, die Liste tauchte in den
+  // Einstellungen auf und das Modul blieb trotzdem leer.
+  const strict = fakeClient({ objects: [{ url: OBJ_URL, etag: 'e1', data: serverTodo() }] });
+  const answer = strict.fetchCalendarObjects;
+  strict.fetchCalendarObjects = async (args) => {
+    const objects = await answer(args);
+    return JSON.stringify(args.filters ?? []).includes('VTODO') ? objects : [];
+  };
+
+  await sync({ createClient: async () => strict });
+
+  const task = db.prepare("SELECT * FROM tasks WHERE external_uid = 'todo-1@test'").get();
+  assert.ok(task, 'die Aufgabe der Liste muss ankommen');
+  assert.strictEqual(task.title, 'Milch kaufen');
+});
+
 // ── Zusammenspiel mit dem Inbound ───────────────────────────────────────────────
 
 test('Der Inbound überschreibt keine Bearbeitung, die noch auf ihren Push wartet', async () => {

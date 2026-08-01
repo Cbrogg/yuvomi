@@ -99,6 +99,21 @@ function isReminderCollection(cal) {
   return Array.isArray(comps) && comps.map(c => String(c).toUpperCase()).includes('VTODO');
 }
 
+/**
+ * Ohne eigene Angabe filtert `fetchCalendarObjects` auf VEVENT (tsdav-Default).
+ * Auf eine Aufgabenliste angewandt fragt der REPORT damit nach Terminen, die es
+ * dort nicht gibt - ein regelkonformer Server (Nextcloud/SabreDAV, Radicale)
+ * antwortet mit einer leeren Sammlung, der Inbound spiegelt nichts und das Modul
+ * bleibt leer, obwohl die Liste in den Einstellungen auftaucht (#586). Der Abruf
+ * muss also ausdrücklich nach VTODO fragen.
+ */
+const VTODO_FILTERS = [{
+  'comp-filter': {
+    _attributes: { name: 'VCALENDAR' },
+    'comp-filter': { _attributes: { name: 'VTODO' } },
+  },
+}];
+
 const createClient = createCalDAVClient;
 
 // --------------------------------------------------------
@@ -380,7 +395,7 @@ async function sync({ createClient: makeClient } = {}) {
 
         let objects;
         try {
-          objects = await client.fetchCalendarObjects({ calendar: serverCal });
+          objects = await client.fetchCalendarObjects({ calendar: serverCal, filters: VTODO_FILTERS });
         } catch (err) {
           log.error(`Failed to fetch VTODOs from "${sel.list_name}":`, err.message);
           incompleteModules.add(module);

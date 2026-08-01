@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.68.1] - 2026-08-01
+
+### Fixed
+
+- Reminder lists stayed empty. A list you picked in the settings appeared there, but no task or shopping item ever arrived from it: the request asked the server for calendar events rather than reminders, and a standards-compliant server (Nextcloud, Radicale) correctly answered with nothing. Reminders now arrive from any such list. Nothing was lost while this was broken - the safeguard against deleting on an empty answer kept existing items untouched.
+
 ## [1.68.0] - 2026-07-31
 
 ### Added
