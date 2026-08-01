@@ -4296,6 +4296,9 @@ const MIGRATIONS = [
       DROP TABLE tasks;
       ALTER TABLE tasks_new RENAME TO tasks;
 
+      -- Auch wenn keine einzige Aufgabe überlebt, greift das: eine Kopie mit
+      -- null Zeilen legt für tasks_new trotzdem einen sqlite_sequence-Eintrag
+      -- an (seq = 0), den das RENAME mitnimmt. Das UPDATE hebt ihn dann an.
       UPDATE sqlite_sequence
          SET seq = (SELECT seq FROM _tasks_seq)
        WHERE name = 'tasks' AND seq < (SELECT seq FROM _tasks_seq);

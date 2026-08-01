@@ -66,6 +66,13 @@ export function normalizeTags(input) {
     if (item === null || item === undefined) continue;
     const tag = String(item).trim().slice(0, MAX_TAG_LEN).trim();
     if (!tag) continue;
+    // "." und ".." fallen raus. Sie tragen als Etikett nichts, und die
+    // Verwaltungsrouten adressieren einen Tag über ein Pfadsegment: der
+    // URL-Parser löst genau diese beiden vorher auf, sodass
+    // `/tasks/tags/..` zu `/tasks/` wird und ein Umbenennen still auf einer
+    // fremden Route landet. Prozentkodieren hilft nicht, %2E wird ebenso
+    // aufgelöst. Jeder andere Wert übersteht das Segment unbeschadet.
+    if (tag === '.' || tag === '..') continue;
     const key = tagKey(tag);
     if (seen.has(key)) continue;
     seen.add(key);

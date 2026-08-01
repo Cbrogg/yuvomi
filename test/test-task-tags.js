@@ -875,3 +875,54 @@ test('v114 nimmt den AUTOINCREMENT-Hochstand über den Rebuild mit', () => {
     `Die neue Aufgabe erbt eine schon vergebene ID (${naechste}, zuvor vergeben: ${hoechste})`);
   db.close();
 });
+
+test('Punkt-Tags entstehen gar nicht erst', () => {
+  // "." und ".." lösen sich im Pfadsegment der Verwaltungsrouten auf:
+  // /tasks/tags/.. wird zu /tasks/, das Umbenennen landete still auf einer
+  // fremden Route. Prozentkodieren hilft nicht, %2E wird ebenso aufgelöst.
+  assert.deepEqual(normalizeTags(['.', '..', 'Garten']), ['Garten']);
+  // Die Gegenprobe: alles andere übersteht das Segment und bleibt erlaubt.
+  assert.deepEqual(normalizeTags(['a/b', 'a\\b', 'Haus, Hof', '...']),
+    ['a/b', 'a\\b', 'Haus, Hof', '...']);
+});
+
+test('Umbenennen nimmt einen Namen mit Komma als EINEN Tag', async () => {
+  // Derselbe Fehler wie beim Filter, eine Funktion weiter: die String-Form von
+  // normalizeTags trennt am Komma, "Haus, Hof" wäre zu "Haus" geworden - bei
+  // gemeldetem Erfolg.
+  const h = createHarness();
+  try {
+    const m = randomUUID().slice(0, 6);
+    const a = await h.call('POST', '/', { title: 'A', tags: [`alt${m}`] });
+    const res = await h.call('PUT', `/tags/${encodeURIComponent(`alt${m}`)}`, { name: `Haus, Hof ${m}` });
+    assert.equal(res.status, 200);
+    assert.deepEqual(loadTags(get(), a.body.data.id), [`Haus, Hof ${m}`]);
+  } finally {
+    await h.close();
+  }
+});
+
+test('v114 rettet den Hochstand auch, wenn keine Aufgabe überlebt', () => {
+  // Die Gegenprobe zum Fall darüber. Sie hält fest, dass auch der Extremfall
+  // trägt: eine Kopie mit null Zeilen legt für die neue Tabelle trotzdem einen
+  // sqlite_sequence-Eintrag an (seq = 0), den das RENAME mitnimmt - erst
+  // dadurch findet das UPDATE etwas vor, das es anheben kann.
+  const db = buildMigratedDatabase(MIGRATIONS.filter((m) => m.version <= 113));
+  db.prepare(`INSERT INTO users (username, display_name, password_hash, role)
+              VALUES ('leer', 'Leer', 'h', 'admin')`).run();
+  const insert = db.prepare('INSERT INTO tasks (title, created_by) VALUES (?, 1)');
+  insert.run('eins');
+  const hoechste = Number(insert.run('zwei').lastInsertRowid);
+  db.prepare('DELETE FROM tasks').run();          // ALLE, nicht nur die höchste
+
+  for (const migration of MIGRATIONS.filter((m) => m.version > 113)) {
+    if (!migration.foreignKeysOff) { applyMigration(db, migration); continue; }
+    db.pragma('foreign_keys = OFF');
+    try { applyMigration(db, migration); } finally { db.pragma('foreign_keys = ON'); }
+  }
+
+  const naechste = Number(insert.run('drei').lastInsertRowid);
+  assert.ok(naechste > hoechste,
+    `Auch bei leerer Tabelle darf keine ID erneut vergeben werden (${naechste}, zuvor: ${hoechste})`);
+  db.close();
+});

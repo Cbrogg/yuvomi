@@ -330,7 +330,11 @@ router.post('/tags/apply', (req, res) => {
 // übliche Weg, ein versehentliches Duplikat einzusammeln.
 router.put('/tags/:tag', (req, res) => {
   try {
-    const [to] = normalizeTags(req.body.name ?? '');
+    // Als Array-Element, nicht als String: die String-Form von normalizeTags
+    // trennt am Komma, und ein Umbenennen auf "Haus, Hof" behielte nur "Haus" -
+    // bei gemeldetem Erfolg. Denselben Fehler hatte der Filter eine Funktion
+    // weiter oben.
+    const [to] = normalizeTags([req.body.name ?? '']);
     if (!to) return res.status(400).json({ error: 'name must be a non-empty tag.', code: 400 });
 
     const me = req.authUserId || req.session.userId;

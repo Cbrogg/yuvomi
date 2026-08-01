@@ -25,6 +25,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The tags of a private task no longer show up for anyone else. Tag names are free text and can give away what a task is about, so the filter bar and the suggestion list now only offer tags from tasks you are allowed to see - counts included. A task hidden while you prepare a surprise no longer announces itself through its label.
 - An AI or automation client connected over MCP could list every private task in the household. The task list it receives now follows the same visibility rules as the app, matching the calendar list, which always did.
 - A recurring task no longer loses its tags. The follow-up instance created when you tick one off kept the title, category and assignees but silently dropped the labels; tags belong to the task, not to a single run.
+- Renaming a tag to a name containing a comma kept only the part before it, and reported success anyway.
+- A tag consisting only of dots could not be renamed or removed: the address for it dissolved before the request was sent. Such tags are no longer created.
+- A tag ending in a backslash arrived from a reminder list glued to the tag after it.
 - Filtering by a tag that contains a comma, such as `Haus, Hof` from a reminder list, found nothing. A single tag in the address was read as a comma-separated list and split into two, so the search asked for two tags at once.
 - Tags with umlauts ignored capitalization only by half: a task tagged `Äpfel` was not found by `äpfel`, although `ÄPFEL` worked. The database's built-in comparison folds only the English alphabet; tags are now compared through a key that understands the whole alphabet.
 - A private subtask under a shared task was handed out to everyone, title and all. Subtasks never followed the visibility rule of their own; now they do, and their tags with them.

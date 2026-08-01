@@ -41,14 +41,39 @@ const MAX_CATEGORY_LEN = 64;
  *    Komma splitten, dann jedes Element einzeln unescapen - andersherum zerfiele
  *    ein Tag wie „Haus\, Garten" in zwei.
  */
+/**
+ * Eine CATEGORIES-Zeile am Trenner-Komma zerlegen.
+ *
+ * Ein Lookbehind auf ein einzelnes Zeichen reicht dafür nicht: `\\` ist ein
+ * escapter Backslash **im Wert**, und `foo\\,bar` meint die Tags `foo\` und
+ * `bar`. Der Blick auf nur ein vorangehendes Zeichen sähe dort einen Escape und
+ * verweigerte die Trennung. Also Zeichen für Zeichen: eine Escape-Sequenz wird
+ * am Stück übernommen, danach ist das nächste Komma wieder ein Trenner.
+ */
+function splitCategoryList(value) {
+  const out = [];
+  let current = '';
+  for (let i = 0; i < value.length; i++) {
+    const ch = value[i];
+    if (ch === '\\' && i + 1 < value.length) {
+      current += ch + value[i + 1];
+      i++;
+      continue;
+    }
+    if (ch === ',') { out.push(current); current = ''; continue; }
+    current += ch;
+  }
+  out.push(current);
+  return out;
+}
+
 function parseCategories(block) {
   const re  = /^CATEGORIES(?:;[^:\n]*)?:(.*)$/gim;
   const out = [];
   const seen = new Set();
   let m;
   while ((m = re.exec(block)) !== null) {
-    // (?<!\\) trennt nur an einem Komma, dem kein Backslash vorausgeht.
-    for (const raw of m[1].split(/(?<!\\),/)) {
+    for (const raw of splitCategoryList(m[1])) {
       const tag = unescapeICSText(raw.trim())?.trim().slice(0, MAX_CATEGORY_LEN);
       if (!tag) continue;
       const key = tag.toLowerCase();

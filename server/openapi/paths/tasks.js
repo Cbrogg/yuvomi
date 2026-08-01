@@ -3,7 +3,31 @@ import { op, jsonBody, idParam, stringPathParam } from '../helpers.js';
 export function tasksPaths() {
   return {
     '/api/v1/tasks': {
-      get: op({ summary: 'List tasks', tag: 'Tasks', description: 'Filterable by status, priority, assigned_to, category and tag. Repeat `tag` once per tag; each occurrence is one literal tag, and several of them narrow the result (a task must carry all). Case-insensitive, including non-ASCII letters.' }),
+      // Die Filter stehen als echte Parameter da, nicht nur im Fließtext: ein
+      // generierter Client und die MCP-Brücke (get_api_operation) lesen die
+      // Liste, nicht die Beschreibung. `tag` braucht dabei explizit die
+      // Wiederhol-Form, weil sich daraus die Serialisierung ergibt.
+      get: op({
+        summary: 'List tasks',
+        tag: 'Tasks',
+        description: 'Several tags narrow the result: a task must carry all of them. Tag matching ignores case, including non-ASCII letters.',
+        params: [
+          { name: 'status',      in: 'query', required: false, schema: { type: 'string', enum: ['open', 'in_progress', 'done', 'archived'] } },
+          { name: 'priority',    in: 'query', required: false, schema: { type: 'string', enum: ['none', 'low', 'medium', 'high', 'urgent'] } },
+          { name: 'assigned_to', in: 'query', required: false, schema: { type: 'integer' }, description: 'Family member ID.' },
+          { name: 'category',    in: 'query', required: false, schema: { type: 'string' }, description: 'Task category key.' },
+          {
+            name: 'tag',
+            in: 'query',
+            required: false,
+            explode: true,
+            style: 'form',
+            schema: { type: 'array', items: { type: 'string' } },
+            description: 'Repeat once per tag (?tag=a&tag=b). Each occurrence is one literal tag, never a comma-separated list, so a tag containing a comma survives.',
+          },
+          { name: 'include_future', in: 'query', required: false, schema: { type: 'string' }, description: 'Any non-empty value also returns tasks whose start date lies in the future.' },
+        ],
+      }),
       post: op({ summary: 'Create task', tag: 'Tasks', stateChanging: true, requestBody: jsonBody(null) }),
     },
     '/api/v1/tasks/meta/options': { get: op({ summary: 'Get task metadata', tag: 'Tasks' }) },
