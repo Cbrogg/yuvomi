@@ -3144,10 +3144,20 @@ function rebuildNavigation({ updateLabels = true } = {}) {
   }
 
   if (navSidebarItems) {
+    // replaceChildren recria toda a árvore da navegação (por exemplo, após
+    // mudança de rota, idioma ou módulos) e o browser zera a rolagem do
+    // container. Preservamos a posição manual antes e depois do re-render.
+    const previousScrollTop = navSidebarItems.scrollTop;
     const sidebarEls = sidebarNavItems();
     navSidebarItems.replaceChildren(...sidebarEls);
     if (window.lucide) window.lucide.createIcons({ el: navSidebarItems });
-    requestAnimationFrame(() => positionSidebarIndicator());
+    requestAnimationFrame(() => {
+      navSidebarItems.scrollTop = Math.min(
+        previousScrollTop,
+        Math.max(0, navSidebarItems.scrollHeight - navSidebarItems.clientHeight),
+      );
+      positionSidebarIndicator();
+    });
   }
   if (bottomItems) {
     const moreBtn = bottomItems.querySelector('#more-btn') ?? moreNavButtonEl();
