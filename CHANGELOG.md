@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.69.0] - 2026-08-01
+
+### Added
+
+- Tasks can carry tags. A task still sits in exactly one category, but it can wear any number of labels on top - "garden", "before the holidays", "for grandma". Tags are free text with no list to maintain: one exists because a task carries it, and it disappears with the last one. The dialog has a tag field with suggestions, and tags show as chips on the task card and on the Kanban board.
+- Clicking a tag on a card filters the list by it, and picking several narrows it further, the same way the status and person filters already do. The filter bar offers every tag in use.
+- Tags can be managed for the whole household. "Manage tags" in the tasks toolbar renames a tag everywhere at once, merges it into another by renaming it onto an existing name, or detaches it from every task. Fixing a typo no longer means opening every task that carries it.
+- Several tasks can be tagged at once. With multiple tasks selected, the bulk bar adds or removes a tag on all of them in one step.
+- Tags travel both ways with CalDAV reminder lists, as that list's categories. A label you set in Nextcloud Tasks, Radicale or another reminder app shows up here, and one you set here reaches the server. Until now those categories were read past and lost.
+- Shopping items show the categories of the reminder list they came from as tags. A reminder list can feed either the task list or the shopping list, and on the shopping side those labels used to be dropped without a trace. They are shown, not managed here: they belong to the source list, so nothing Yuvomi does overwrites them on the server.
+- The global search finds tasks and shopping items by their tags, so the same word leads to a hit whether you type it into the search or the filter bar.
+- An AI or automation client connected over MCP sees a task's tags, can filter by them, and can set them when creating a task.
+
+### Fixed
+
+- The tags of a private task no longer show up for anyone else. Tag names are free text and can give away what a task is about, so the filter bar and the suggestion list now only offer tags from tasks you are allowed to see - counts included. A task hidden while you prepare a surprise no longer announces itself through its label.
+- An AI or automation client connected over MCP could list every private task in the household. The task list it receives now follows the same visibility rules as the app, matching the calendar list, which always did.
+- A recurring task no longer loses its tags. The follow-up instance created when you tick one off kept the title, category and assignees but silently dropped the labels; tags belong to the task, not to a single run.
+- Tasks created over MCP landed in a category that appeared in no dropdown and no filter, and jumped to some other category the first time they were saved. This was a leftover from the category rework: the fallback still wrote the old display name instead of the key. Existing tasks affected by it, including every task that arrived through a reminder list, are repaired on upgrade.
+
 ## [1.68.2] - 2026-08-01
 
 ### Changed

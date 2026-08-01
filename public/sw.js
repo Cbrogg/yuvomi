@@ -15,7 +15,7 @@
  *   → bypassCacheUntil (in-memory + Cache API für SW-Restart-Robustheit)
  */
 
-const APP_RELEASE   = '1.68.2';
+const APP_RELEASE   = '1.69.0';
 const SHELL_CACHE   = `yuvomi-shell-${APP_RELEASE}`;
 const PAGES_CACHE   = `yuvomi-pages-${APP_RELEASE}`;
 const LOCALES_CACHE = `yuvomi-locales-${APP_RELEASE}`;
@@ -173,6 +173,7 @@ const PAGE_MODULES = [
   '/pages/split-expenses.js',
   '/pages/subscriptions.js',
   '/components/category-manager.js',
+  '/components/tag-manager.js',
   '/utils/sortable.js',
   '/vendor/sortablejs/sortable.esm.min.js',
   // libphonenumber-js: lazy im Kontaktmodul, aber vorab gecacht → Telefon-
