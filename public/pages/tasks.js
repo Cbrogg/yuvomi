@@ -363,6 +363,7 @@ function renderTaskGroups(tasks, groupMode) {
       ${sorted.map((t) => renderSwipeRow(t, renderTaskCard(t, {
         showCheckbox: state.bulkSelectMode,
         isChecked: state.selectedTaskIds.has(t.id),
+        expandedSubtasks: state.subtasksExpandedByDefault,
       }))).join('')}
     </div>`;
   }).join('');
@@ -721,6 +722,7 @@ let state = {
   groupMode:       'category',   // 'category' | 'due'
   viewMode:        'list',       // 'list' | 'kanban' (resolved at render time)
   showFuture:      false,
+  subtasksExpandedByDefault: false,
   expandedTasks:   new Set(),
   dragTaskId:      null,
   filterPanelOpen: false,
@@ -2857,15 +2859,19 @@ export async function render(container, { user }) {
 
   // Daten laden (Filter-State aus vorheriger Session berücksichtigen)
   try {
-    const [tasksData, metaData] = await Promise.all([
+    const [tasksData, metaData, preferencesData] = await Promise.all([
       api.get(`/tasks${taskQuery()}`),
       api.get('/tasks/meta/options'),
+      // Reine Anzeigepräferenz: ein Fehler hier darf die Aufgabenliste nicht
+      // mit in den Ladefehler ziehen, deshalb eigener Fallback.
+      api.get('/preferences').catch(() => ({ data: {} })),
     ]);
     state.tasks = tasksData.data ?? [];
     state.users = metaData.users ?? [];
     state.categories = metaData.categories ?? [];
     state.allTags = metaData.tags ?? [];
     state.defaultPoints = Number(metaData.default_points) || 0;
+    state.subtasksExpandedByDefault = preferencesData.data?.tasks_subtasks_expanded === true;
   } catch (err) {
     console.error('[Tasks] Ladefehler:', err.message);
     window.yuvomi.showToast(t('tasks.loadError'), 'danger');
@@ -2874,6 +2880,7 @@ export async function render(container, { user }) {
     state.categories = [];
     state.allTags = [];
     state.defaultPoints = 0;
+    state.subtasksExpandedByDefault = false;
   }
 
   // UI verdrahten

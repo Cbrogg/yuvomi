@@ -33,6 +33,13 @@ const TOGGLES = [
     payload: (checked) => ({ housekeeping_payment_tasks: checked }),
     savedKey: 'settings.housekeepingPaymentTasksSaved',
   },
+  {
+    id: 'tasks-subtasks-expanded',
+    key: 'tasks_subtasks_expanded',
+    read: (preferences) => Boolean(preferences.tasks_subtasks_expanded),
+    payload: (checked) => ({ tasks_subtasks_expanded: checked }),
+    savedKey: 'settings.tasksSubtasksExpandedSaved',
+  },
 ];
 
 function checkedState(preferences) {
@@ -82,6 +89,19 @@ function renderPage(container, preferences) {
           label: t('settings.housekeepingPaymentTasksLabel'),
           checked: checked.get('housekeeping-payment-tasks'),
           attrs: { id: 'housekeeping-payment-tasks' },
+        })}
+      </div>
+    </section>
+
+    <section class="settings-section">
+      <h2 class="settings-section__title">${t('nav.tasks')}</h2>
+      <div class="settings-card">
+        <h3 class="settings-card__title">${t('settings.tasksSubtasksExpandedTitle')}</h3>
+        <p class="form-hint">${t('settings.tasksSubtasksExpandedHint')}</p>
+        ${toggleRowHtml({
+          label: t('settings.tasksSubtasksExpandedLabel'),
+          checked: checked.get('tasks-subtasks-expanded'),
+          attrs: { id: 'tasks-subtasks-expanded' },
         })}
       </div>
     </section>
