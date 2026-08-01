@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Tapping an appointment or a task now shows it to you before it lets you change it. Until now the edit form opened straight away, so the on-screen keyboard rose over roughly 40 % of the display for someone who only wanted to know when the dentist appointment is - and tasks had no reading path at all, every one of the five ways in ended in the form. The new view contains no input field whatsoever, so the keyboard cannot come up, and "Edit" in the header is a separate, deliberate step. Creating something new still starts in the form, because there typing is the point. On a wide screen an appointment opens as a small card anchored to the entry you tapped, so the short path stays short.
+- The appointment view states three things the old popup kept to itself: how the appointment repeats, written out ("Every 2 weeks (Mon, Thu), until 31.12.2026"), which reminders are set, and who can see it.
+- A task's status can be moved on straight from its detail view, instead of going through a form with seven select fields just to tick something off.
+
+### Fixed
+
+- Switching between light and dark mode now also recolours the status bar of the installed app. It kept the module colour of the theme that had been active when the page was opened, so after a switch it sat there in the old shade until the next navigation.
+
 ## [1.69.3] - 2026-08-01
 
 ### Fixed
