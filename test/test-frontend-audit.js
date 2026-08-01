@@ -3830,6 +3830,103 @@ test('module accents stay readable as text on the page background in both themes
   }
 });
 
+/**
+ * Der Test darueber prueft die Token-WERTE pro Theme. Er sagt nichts darueber,
+ * ob die App zur Laufzeit auch den Wert des aktiven Themes benutzt - und genau
+ * da lag die Luecke: `--active-module-accent` steht als AUFGELOESTE Farbe im
+ * Inline-Style von <html> (der Router liest --module-<name> beim Seitenwechsel
+ * aus). Ein Inline-Style folgt keiner Kaskade. Wer im Hellmodus /tasks oeffnete
+ * und dann auf Dunkel schaltete, behielt #15803D statt #4ADE80: Text in
+ * Modul-Akzentfarbe kam auf 2.71:1 statt 7.81:1 - unter WCAG AA. Betroffen war
+ * die ganze Shell (.btn--primary, .btn--secondary, --focus-ring-color, FAB,
+ * aktive Nav-Pille). Nach einem Reload im Zielmodus stimmte alles wieder,
+ * deshalb faellt es beim Testen im Zielmodus nicht auf.
+ *
+ * Der Guard formuliert die Regel, nicht die Fundstelle: die Momentaufnahme darf
+ * nur an EINER Stelle entstehen, und jeder Weg, der das Theme zur Laufzeit
+ * umschaltet, muss sie neu berechnen.
+ */
+test('module accent is recomputed on every runtime theme switch', () => {
+  const router = read('../public/router.js');
+
+  // 1. Genau ein Schreiber im ganzen Frontend. Ein zweiter waere eine zweite
+  //    Momentaufnahme, die dieser Guard nicht mitzoege.
+  const writers = walkJsFiles('../public/')
+    .filter((path) => !path.includes('/vendor/'))
+    .flatMap((path) => {
+      const hits = read(path).match(/setProperty\(\s*'--active-module-accent'/g) ?? [];
+      return hits.map(() => path);
+    });
+  assert.deepEqual(
+    writers,
+    ['../public/router.js'],
+    `--active-module-accent must be written in exactly one place, found: ${writers.join(', ')}`,
+  );
+
+  const helper = router.match(/function applyModuleAccentForRoute\([\s\S]*?\n\}/);
+  assert.ok(helper, 'expected applyModuleAccentForRoute to own the write');
+  assert.match(
+    helper[0],
+    /setProperty\(\s*'--active-module-accent'/,
+    'the single write must live inside applyModuleAccentForRoute',
+  );
+
+  // 2. Der Seitenwechsel geht durch denselben Helfer (keine Inline-Kopie).
+  assert.match(router, /applyModuleAccentForRoute\(route\)/, 'navigate() must use the helper');
+
+  // 3. Expliziter Theme-Wechsel (window.yuvomi.applyTheme) berechnet neu.
+  const applyTheme = router.match(/applyTheme:\s*\(value\) => \{[\s\S]*?\n {2}\},/);
+  assert.ok(applyTheme, 'expected the applyTheme export');
+  assert.match(
+    applyTheme[0],
+    /data-theme/,
+    'sanity: applyTheme is the function that flips the theme',
+  );
+  assert.match(
+    applyTheme[0],
+    /applyModuleAccentForRoute\(currentRoute\(\)\)/,
+    'applyTheme must recompute the module accent for the current route',
+  );
+
+  // 4. Theme "Automatisch" schaltet ohne applyTheme um - rein per CSS-Media-
+  //    Query. Ohne Listener liefe derselbe Kontrast-Bruch beim Sonnenuntergang
+  //    des Systems, nur ohne Nutzeraktion.
+  //
+  //    Die MediaQueryList muss dabei in einem Modul-Binding leben. Als
+  //    Wegwerf-Ausdruck (`matchMedia(...).addEventListener(...)`) darf die
+  //    Engine sie einsammeln - der Listener verstummt dann still, und der
+  //    Fehler kaeme genau in der Sitzung zurueck, die lange genug offen war.
+  assert.match(
+    router,
+    /const darkSchemeQuery = window\.matchMedia\??\.?\(\s*'\(prefers-color-scheme: dark\)'\s*\)/,
+    'the prefers-color-scheme query must be held in a module binding, not a throwaway expression',
+  );
+  assert.doesNotMatch(
+    router,
+    /matchMedia\??\.?\(\s*'\(prefers-color-scheme: dark\)'\s*\)\s*\??\.?\s*addEventListener/,
+    'do not attach the listener to an unreferenced MediaQueryList',
+  );
+
+  const listener = router.match(
+    /darkSchemeQuery\s*\??\.?\s*addEventListener[\s\S]{0,120}?'change'[\s\S]{0,200}?;/,
+  );
+  assert.ok(listener, 'expected a prefers-color-scheme change listener for auto mode');
+  assert.match(
+    listener[0],
+    /applyModuleAccentForRoute\(currentRoute\(\)\)/,
+    'the auto-mode listener must recompute the module accent too',
+  );
+
+  // 5. Das Anwenden darf nicht hinter einem werfenden localStorage haengen:
+  //    stand die Persistenz zuerst, brach ein Quota-Fehler ab, bevor der Akzent
+  //    neu berechnet war.
+  assert.ok(
+    applyTheme[0].indexOf('applyModuleAccentForRoute')
+      < applyTheme[0].indexOf("localStorage.setItem('yuvomi-theme'"),
+    'applyTheme must apply theme and accent before persisting the choice',
+  );
+});
+
 test('modal Enter submits the form instead of advancing to the next field (audit 1.4)', () => {
   const src = read('../public/components/modal.js');
   const enterBlock = src.match(/if \(e\.key === 'Enter'\) \{[\s\S]*?\n {4}\}/);
