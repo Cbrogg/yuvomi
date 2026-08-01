@@ -276,7 +276,8 @@ const MIGRATIONS_SQL = {
     CREATE TABLE IF NOT EXISTS task_tags (
       task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
       tag     TEXT    NOT NULL,
-      PRIMARY KEY (task_id, tag)
+      tag_key TEXT    NOT NULL,
+      PRIMARY KEY (task_id, tag_key)
     );
     CREATE TABLE IF NOT EXISTS event_assignments (
       event_id INTEGER NOT NULL REFERENCES calendar_events(id) ON DELETE CASCADE,

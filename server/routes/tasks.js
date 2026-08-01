@@ -17,7 +17,7 @@ import {
 import { uniqueKey } from '../utils/category-slug.js';
 import {
   allTags, applyTagChanges, loadTags, loadTagsFor, normalizeTags,
-  removeTagEverywhere, renameTag, setTags, tagsKey, taskIdsWithTag,
+  removeTagEverywhere, renameTag, setTags, tagKey, tagsKey, taskIdsWithTag,
 } from '../utils/task-tags.js';
 import * as v from '../middleware/validate.js';
 
@@ -171,15 +171,20 @@ function syncHousekeepingPaymentStatus(d, taskId, status) {
 }
 
 /** Alle Subtasks einer Aufgabe laden (eine Ebene tief). */
-function loadSubtasks(taskId) {
+function loadSubtasks(taskId, me) {
+  // Eine Unteraufgabe trägt eine eigene Sichtbarkeit (POST nimmt das Feld
+  // entgegen). Sie hing hier noch nie an der Regel: unter einer geteilten
+  // Elternaufgabe wurde eine private Unteraufgabe samt Titel ausgeliefert.
+  // Mit den Tags käme deren Freitext dazu.
   const rows = db.get().prepare(`
     SELECT t.*, u.display_name AS assigned_name, u.avatar_color AS assigned_color,
       u.avatar_data AS assigned_avatar, ${ASSIGNED_USERS_SQL}
     FROM tasks t
     LEFT JOIN users u ON t.assigned_to = u.id
     WHERE t.parent_task_id = ?
+      AND ${visibilityWhere('t', 'task_assignments', 'task_id', '@me')}
     ORDER BY t.created_at ASC
-  `).all(taskId).map(addAssignedUsers);
+  `).all(taskId, { me }).map(addAssignedUsers);
   // Unteraufgaben sind Aufgaben und können Tags tragen - über den CalDAV-Spiegel
   // bekommen sie welche, ohne dass jemand sie hier vergibt. Ohne das Anhängen
   // wären sie in der Antwort einfach nicht da, und ein PUT auf Basis dieser
@@ -491,13 +496,15 @@ router.get('/', (req, res) => {
     // Mehrere Tags verbinden sich mit UND, nicht mit ODER: jeder weitere Filter
     // in dieser Leiste engt ein (Status UND Priorität UND Person), und ein Tag,
     // der die Liste plötzlich wachsen ließe, wäre in derselben Reihe ein Bruch.
-    // `?tag=a&tag=b` (Express liefert ein Array) und `?tag=a,b` meinen dasselbe.
-    // normalizeTags unterscheidet beides von selbst und trennt nur die
-    // String-Form am Komma - so überlebt ein Tag, der selbst ein Komma enthält,
-    // wenigstens die Array-Form. Genau die schickt die Oberfläche.
-    for (const value of normalizeTags(tag)) {
-      sql += ' AND EXISTS (SELECT 1 FROM task_tags tt WHERE tt.task_id = t.id AND tt.tag = ? COLLATE NOCASE)';
-      params.push(value);
+    // Jedes `tag`-Vorkommen ist genau EIN Tag, nie eine kommaseparierte Liste.
+    // Der frühere CSV-Komfort war ein Fehler: Express liefert bei einem einzigen
+    // `?tag=` einen String statt eines Arrays, und "Haus, Hof" - ein Tag, den
+    // CATEGORIES ausdrücklich erlaubt - zerfiel dabei in zwei, sodass die Suche
+    // nach ihm garantiert leer ausging.
+    const tagFilters = normalizeTags(tag === undefined ? [] : [tag].flat());
+    for (const value of tagFilters) {
+      sql += ' AND EXISTS (SELECT 1 FROM task_tags tt WHERE tt.task_id = t.id AND tt.tag_key = ?)';
+      params.push(tagKey(value));
     }
 
     // Sichtbarkeit (#474): eigene + für alle sichtbare + zugewiesene-sichtbare.
@@ -542,7 +549,7 @@ router.get('/:id', (req, res) => {
     if (!task) return res.status(404).json({ error: 'Task not found.', code: 404 });
 
     addAssignedUsers(task);
-    task.subtasks = loadSubtasks(task.id);
+    task.subtasks = loadSubtasks(task.id, me);
     attachDocumentCounts([task], me);
     attachTags([task]);
     res.json({ data: task });
@@ -695,7 +702,7 @@ router.put('/:id', (req, res) => {
       WHERE t.id = ?
     `).get(req.params.id);
     addAssignedUsers(updated);
-    updated.subtasks = loadSubtasks(updated.id);
+    updated.subtasks = loadSubtasks(updated.id, req.authUserId || req.session.userId);
     attachTags([updated]);
 
     // Änderung an einer gespiegelten Aufgabe auf dem CalDAV-Server nachziehen (#617).

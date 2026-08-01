@@ -25,7 +25,7 @@ import { readFileSync } from 'node:fs';
 import { buildOpenApiSpec } from '../openapi.js';
 import { tokenAllows } from '../scopes.js';
 import { visibilityWhere } from '../services/visibility.js';
-import { loadTagsFor, normalizeTags, setTags } from '../utils/task-tags.js';
+import { loadTagsFor, normalizeTags, setTags, tagKey } from '../utils/task-tags.js';
 
 const pkg = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'));
 
@@ -64,10 +64,20 @@ function listTasks(db, actorId, args) {
   }
   // Tag-Filter, gleiche Semantik wie GET /api/v1/tasks: mehrere Tags engen
   // UND-verknüpft ein, die Schreibweise zählt nicht.
-  const tags = normalizeTags(args.tag);
+  //
+  // Die Form wird ausdrücklich geprüft, statt sich auf das Schema zu verlassen:
+  // callTool erzwingt es zur Laufzeit nicht, und normalizeTags macht aus einem
+  // Unsinnswert stillschweigend eine leere Liste. Ein einschränkender Filter,
+  // der bei Unsinn die VOLLE Liste liefert, ist die gefährliche Richtung - eine
+  // Automatisierung handelte dann an fremden Aufgaben.
+  if (args.tag !== undefined && args.tag !== null
+      && !Array.isArray(args.tag) && typeof args.tag !== 'string') {
+    throw new ToolError('tag must be an array of strings or a single string.');
+  }
+  const tags = normalizeTags(args.tag === undefined ? [] : [args.tag].flat());
   tags.forEach((tag, i) => {
-    sql += ` AND EXISTS (SELECT 1 FROM task_tags tt WHERE tt.task_id = t.id AND tt.tag = @tag${i} COLLATE NOCASE)`;
-    params[`tag${i}`] = tag;
+    sql += ` AND EXISTS (SELECT 1 FROM task_tags tt WHERE tt.task_id = t.id AND tt.tag_key = @tag${i})`;
+    params[`tag${i}`] = tagKey(tag);
   });
   sql += `
     ORDER BY CASE WHEN t.due_date IS NULL THEN 1 ELSE 0 END, t.due_date ASC, t.created_at DESC

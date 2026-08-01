@@ -228,6 +228,16 @@ test('tools/call list_tasks: private Aufgaben anderer bleiben verborgen (#474)',
   assert.equal(seenByBob.some((t) => t.title === 'Geschenk für Anna'), true);
 });
 
+test('tools/call list_tasks: ein unsinniger tag-Filter wird abgewiesen', async () => {
+  // Die gefährliche Richtung: callTool erzwingt das JSON-Schema zur Laufzeit
+  // nicht, und normalizeTags macht aus einem Objekt stillschweigend eine leere
+  // Liste. Ein einschränkender Filter lieferte damit die VOLLE Liste statt
+  // eines Fehlers, und eine Automatisierung handelte an fremden Aufgaben.
+  const res = await toolCall('list_tasks', { tag: { nope: 1 } });
+  assert.equal(res.result.isError, true);
+  assert.match(res.result.content[0].text, /tag/i);
+});
+
 // ── Shopping ─────────────────────────────────────────────────────────────────
 
 test('tools/call add_shopping_item: fügt Artikel zur Standardliste hinzu', async () => {

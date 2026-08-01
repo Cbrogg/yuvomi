@@ -29,6 +29,25 @@ export const MAX_TAGS = 32;
 export const MAX_TAG_LEN = 64;
 
 /**
+ * Vergleichsschlüssel eines Tags: NFC-normalisiert und kleingeschrieben.
+ *
+ * Der Grund, warum es diese Spalte in der Datenbank überhaupt gibt: SQLites
+ * eingebautes `COLLATE NOCASE` faltet ausschließlich ASCII. „Äpfel" wird damit
+ * über „äpfel" **nicht** gefunden, über „ÄPFEL" schon - in einer deutschen App
+ * mit Tags aus fremden Kalendern ist das keine Randnotiz. `lower()` in SQLite
+ * hat dieselbe Grenze, und eine eigene Collation zu registrieren ginge nur in
+ * einem der beiden verwendeten Treiber.
+ *
+ * Also fällt die Entscheidung dort, wo Unicode wirklich verstanden wird: in JS.
+ * Geschrieben wird beides, die Schreibweise für die Anzeige und dieser Schlüssel
+ * für jeden Vergleich. NFC zuerst, damit ein vorkomponiertes „Ä" und ein „A" mit
+ * kombinierendem Trema denselben Schlüssel ergeben.
+ */
+export function tagKey(tag) {
+  return String(tag).normalize('NFC').toLowerCase();
+}
+
+/**
  * Beliebige Eingabe auf eine saubere Tag-Liste bringen: trimmen, leere weg,
  * kürzen, deckeln, und Groß-/Kleinschreibung eint (erste Schreibweise gewinnt,
  * damit „Garten" und „garten" nicht zweimal in der Filterleiste stehen).
@@ -47,7 +66,7 @@ export function normalizeTags(input) {
     if (item === null || item === undefined) continue;
     const tag = String(item).trim().slice(0, MAX_TAG_LEN).trim();
     if (!tag) continue;
-    const key = tag.toLowerCase();
+    const key = tagKey(tag);
     if (seen.has(key)) continue;
     seen.add(key);
     out.push(tag);
@@ -131,8 +150,9 @@ function loadFor(database, { table, fk }, ids) {
 function set(database, { table, fk }, id, tags) {
   const normalized = normalizeTags(tags);
   database.prepare(`DELETE FROM ${table} WHERE ${fk} = ?`).run(id);
-  const ins = database.prepare(`INSERT OR IGNORE INTO ${table} (${fk}, tag) VALUES (?, ?)`);
-  for (const tag of normalized) ins.run(id, tag);
+  const ins = database.prepare(
+    `INSERT OR IGNORE INTO ${table} (${fk}, tag, tag_key) VALUES (?, ?, ?)`);
+  for (const tag of normalized) ins.run(id, tag, tagKey(tag));
   return normalized;
 }
 
@@ -183,11 +203,11 @@ export function setItemTags(database, itemId, tags) {
  */
 export function allTags(database, me = null) {
   return database.prepare(`
-    SELECT tt.tag AS tag, COUNT(*) AS count
+    SELECT MIN(tt.tag) AS tag, COUNT(*) AS count
     FROM task_tags tt
     JOIN tasks t ON t.id = tt.task_id
     WHERE ${visibilityWhere('t', 'task_assignments', 'task_id', '@me')}
-    GROUP BY tt.tag COLLATE NOCASE
+    GROUP BY tt.tag_key
     ORDER BY count DESC, tag COLLATE NOCASE ASC
   `).all({ me });
 }
@@ -213,10 +233,10 @@ export function taskIdsWithTag(database, tag, me = null) {
     SELECT DISTINCT t.id AS id
     FROM task_tags tt
     JOIN tasks t ON t.id = tt.task_id
-    WHERE tt.tag = ? COLLATE NOCASE
+    WHERE tt.tag_key = ?
       AND ${visibilityWhere('t', 'task_assignments', 'task_id', '@me')}
     ORDER BY t.id
-  `).all(tag, { me }).map((r) => r.id);
+  `).all(tagKey(tag), { me }).map((r) => r.id);
 }
 
 /**
@@ -256,24 +276,24 @@ export function mutateTags(database, taskIds, mutate) {
  * greift.
  */
 export function renameTag(database, { from, to, me = null }) {
-  const fromKey = String(from).toLowerCase();
-  const toKey   = to.toLowerCase();
+  const fromKey = tagKey(from);
+  const toKey   = tagKey(to);
   const ids = [...new Set([
     ...taskIdsWithTag(database, from, me),
     ...taskIdsWithTag(database, to, me),
   ])];
   return mutateTags(database, ids, (tags) =>
     tags.map((tag) => {
-      const key = tag.toLowerCase();
+      const key = tagKey(tag);
       return key === fromKey || key === toKey ? to : tag;
     }));
 }
 
 /** Entfernt einen Tag von allen sichtbaren Aufgaben. */
 export function removeTagEverywhere(database, { tag, me = null }) {
-  const key = String(tag).toLowerCase();
+  const key = tagKey(tag);
   return mutateTags(database, taskIdsWithTag(database, tag, me), (tags) =>
-    tags.filter((existing) => existing.toLowerCase() !== key));
+    tags.filter((existing) => tagKey(existing) !== key));
 }
 
 /**
@@ -282,8 +302,8 @@ export function removeTagEverywhere(database, { tag, me = null }) {
  * neuen Tag verwirft und nicht einen bestehenden.
  */
 export function applyTagChanges(database, { taskIds, add = [], remove = [] }) {
-  const removeKeys = new Set(normalizeTags(remove).map((tag) => tag.toLowerCase()));
+  const removeKeys = new Set(normalizeTags(remove).map(tagKey));
   const addList    = normalizeTags(add);
   return mutateTags(database, taskIds, (tags) =>
-    [...tags.filter((tag) => !removeKeys.has(tag.toLowerCase())), ...addList]);
+    [...tags.filter((tag) => !removeKeys.has(tagKey(tag))), ...addList]);
 }

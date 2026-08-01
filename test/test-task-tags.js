@@ -420,15 +420,58 @@ test('mehrere Tags verbinden sich mit UND, nicht mit ODER', async () => {
   }
 });
 
-test('?tag=a,b meint dasselbe wie ?tag=a&tag=b', async () => {
+test('ein einzelnes ?tag= ist genau EIN Tag, auch mit Komma darin', async () => {
+  // Der Fall, der die CSV-Bequemlichkeit gekostet hat: bei genau einem
+  // Vorkommen liefert Express einen String, nicht ein Array. Wurde der am Komma
+  // getrennt, suchte "Haus, Hof" nach zwei Tags und fand garantiert nichts -
+  // dabei ist genau das ein Tag, den CATEGORIES ausdrücklich zulässt.
   const h = createHarness();
   try {
     const m = randomUUID().slice(0, 6);
-    const beide = await h.call('POST', '/', { title: 'A', tags: [`x${m}`, `y${m}`] });
-    await h.call('POST', '/', { title: 'B', tags: [`y${m}`] });
+    const tag = `Haus, Hof ${m}`;
+    const treffer = await h.call('POST', '/', { title: 'Mit Komma', tags: [tag] });
+    await h.call('POST', '/', { title: 'Nur Haus', tags: [`Haus ${m}`] });
 
-    const res = await h.call('GET', `/?tag=x${m},y${m}`);
-    assert.deepEqual(res.body.data.map((t) => t.id), [beide.body.data.id]);
+    const res = await h.call('GET', `/?tag=${encodeURIComponent(tag)}`);
+    assert.deepEqual(res.body.data.map((t) => t.id), [treffer.body.data.id]);
+  } finally {
+    await h.close();
+  }
+});
+
+test('der Tag-Filter faltet auch Umlaute', async () => {
+  // SQLites COLLATE NOCASE faltet nur ASCII: "Äpfel" wäre über "äpfel" nicht
+  // auffindbar, über "ÄPFEL" schon. Deshalb liegt der Vergleich auf einer
+  // eigenen, in JS normalisierten Spalte.
+  const h = createHarness();
+  try {
+    const m = randomUUID().slice(0, 6);
+    const post = await h.call('POST', '/', { title: 'Obst', tags: [`Äpfel${m}`] });
+
+    for (const schreibweise of [`äpfel${m}`, `ÄPFEL${m}`, `Äpfel${m}`]) {
+      const res = await h.call('GET', `/?tag=${encodeURIComponent(schreibweise)}`);
+      assert.deepEqual(res.body.data.map((t) => t.id), [post.body.data.id],
+        `"${schreibweise}" muss dieselbe Aufgabe finden`);
+    }
+  } finally {
+    await h.close();
+  }
+});
+
+test('Umlaut-Schreibweisen gelten auch beim Zählen und Umbenennen als ein Tag', async () => {
+  const h = createHarness();
+  try {
+    const m = randomUUID().slice(0, 6);
+    await h.call('POST', '/', { title: 'A', tags: [`Öl${m}`] });
+    await h.call('POST', '/', { title: 'B', tags: [`öl${m}`] });
+
+    const eintraege = (await h.call('GET', '/tags')).body.data
+      .filter((e) => e.tag.toLowerCase().includes(`öl${m}`.toLowerCase()));
+    assert.equal(eintraege.length, 1, 'Die Filterleiste zeigt ein Etikett, nicht zwei');
+    assert.equal(eintraege[0].count, 2);
+
+    const um = await h.call('PUT', `/tags/${encodeURIComponent(`ÖL${m}`)}`, { name: `Speiseöl${m}` });
+    assert.equal(um.body.data.updated, 2, 'Umbenennen erwischt beide Schreibweisen');
   } finally {
     await h.close();
   }
@@ -769,4 +812,66 @@ test('eine Unteraufgabe liefert ihre Tags mit', async () => {
   } finally {
     await h.close();
   }
+});
+
+test('eine private Unteraufgabe bleibt Fremden verborgen, samt ihrer Tags', async () => {
+  // loadSubtasks hing noch nie an der Sichtbarkeitsregel: unter einer geteilten
+  // Elternaufgabe wurde eine private Unteraufgabe samt Titel ausgeliefert. Mit
+  // den Tags käme deren Freitext dazu.
+  const bob = seedUser('bob', 'member');
+  const owner = createHarness();
+  const other = createHarness({ userId: bob, role: 'member' });
+  try {
+    const m = randomUUID().slice(0, 6);
+    const parent = await owner.call('POST', '/', { title: 'Geteilte Eltern' });
+    await owner.call('POST', '/', {
+      title: 'Geheimes Kind', parent_task_id: parent.body.data.id,
+      visibility: 'private', tags: [`geheim${m}`],
+    });
+    await owner.call('POST', '/', {
+      title: 'Offenes Kind', parent_task_id: parent.body.data.id, tags: [`offen${m}`],
+    });
+
+    const mine = await owner.call('GET', `/${parent.body.data.id}`);
+    assert.equal(mine.body.data.subtasks.length, 2, 'Der Ersteller sieht beide');
+
+    const theirs = await other.call('GET', `/${parent.body.data.id}`);
+    assert.deepEqual(theirs.body.data.subtasks.map((s) => s.title), ['Offenes Kind']);
+    assert.equal(
+      JSON.stringify(theirs.body.data.subtasks).includes(`geheim${m}`), false,
+      'Auch der Tag der privaten Unteraufgabe darf nicht durchscheinen');
+  } finally {
+    await owner.close();
+    await other.close();
+  }
+});
+
+test('v114 nimmt den AUTOINCREMENT-Hochstand über den Rebuild mit', () => {
+  // Der Fall spielt sich über die Migration hinweg ab, nicht innerhalb einer
+  // Sitzung: wer vor dem Upgrade die höchste Aufgabe gelöscht hat, dessen
+  // Rebuild kopiert nur die überlebenden Zeilen und liesse sqlite_sequence auf
+  // deren Maximum zurückfallen. Die nächste Aufgabe bekäme eine schon vergebene
+  // ID - und reminders zeigt ohne Fremdschlüssel darauf, eine verwaiste
+  // Erinnerung fiele der neuen Aufgabe zu.
+  //
+  // Deshalb eine eigene Datenbank, die bei v113 anhält, Aufgaben anlegt, die
+  // höchste löscht und erst dann weitermigriert.
+  const db = buildMigratedDatabase(MIGRATIONS.filter((m) => m.version <= 113));
+  db.prepare(`INSERT INTO users (username, display_name, password_hash, role)
+              VALUES ('seq', 'Seq', 'h', 'admin')`).run();
+  const insert = db.prepare('INSERT INTO tasks (title, created_by) VALUES (?, 1)');
+  insert.run('eins');
+  const hoechste = Number(insert.run('zwei').lastInsertRowid);
+  db.prepare('DELETE FROM tasks WHERE id = ?').run(hoechste);
+
+  for (const migration of MIGRATIONS.filter((m) => m.version > 113)) {
+    if (!migration.foreignKeysOff) { applyMigration(db, migration); continue; }
+    db.pragma('foreign_keys = OFF');
+    try { applyMigration(db, migration); } finally { db.pragma('foreign_keys = ON'); }
+  }
+
+  const naechste = Number(insert.run('drei').lastInsertRowid);
+  assert.ok(naechste > hoechste,
+    `Die neue Aufgabe erbt eine schon vergebene ID (${naechste}, zuvor vergeben: ${hoechste})`);
+  db.close();
 });

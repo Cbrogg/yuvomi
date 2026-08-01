@@ -4283,8 +4283,24 @@ const MIGRATIONS = [
         outbound_dirty, outbound_attempts
       FROM tasks;
 
+      -- Den AUTOINCREMENT-Hochstand mitnehmen. Ein Rebuild kopiert nur die
+      -- überlebenden Zeilen, also fällt sqlite_sequence auf deren höchste ID
+      -- zurück. Wurde vor dem Upgrade die höchste Aufgabe gelöscht, vergäbe die
+      -- nächste Aufgabe eine schon einmal benutzte ID. Die Tabelle reminders zeigt
+      -- entity_type/entity_id auf Aufgaben, ohne Fremdschlüssel und ohne
+      -- Aufräumen beim Löschen - eine verwaiste Erinnerung fiele damit einer
+      -- fremden neuen Aufgabe zu.
+      CREATE TEMP TABLE _tasks_seq AS
+        SELECT COALESCE((SELECT seq FROM sqlite_sequence WHERE name = 'tasks'), 0) AS seq;
+
       DROP TABLE tasks;
       ALTER TABLE tasks_new RENAME TO tasks;
+
+      UPDATE sqlite_sequence
+         SET seq = (SELECT seq FROM _tasks_seq)
+       WHERE name = 'tasks' AND seq < (SELECT seq FROM _tasks_seq);
+
+      DROP TABLE _tasks_seq;
 
       -- Bestand einsammeln: nicht nur 'Sonstiges', sondern jeden Key, für den es
       -- keine Kategorie (mehr) gibt. Nach v83 konnten weitere entstehen.
@@ -4333,14 +4349,21 @@ const MIGRATIONS = [
       -- Freitext statt verwalteter Liste: die Werte kommen von fremden Servern,
       -- eine Registry würde sich bei jedem Sync mit Fremdwerten füllen und in
       -- jedem Kategorie-Dropdown auftauchen.
+      -- Die Spalte tag ist die Schreibweise für die Anzeige, tag_key der
+      -- Vergleichsschlüssel (NFC + kleingeschrieben, gebildet in JS). Der
+      -- Schlüssel ist keine Bequemlichkeit: SQLites COLLATE NOCASE faltet nur
+      -- ASCII, "Äpfel" wäre über "äpfel" nicht auffindbar. Der Primärschlüssel
+      -- hängt am Schlüssel, damit dieselbe Aufgabe ein Etikett nicht in zwei
+      -- Schreibweisen tragen kann.
       CREATE TABLE IF NOT EXISTS task_tags (
         task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
         tag     TEXT    NOT NULL,
-        PRIMARY KEY (task_id, tag)
+        tag_key TEXT    NOT NULL,
+        PRIMARY KEY (task_id, tag_key)
       );
 
       -- Für den ?tag=-Filter und die Vorschlagsliste.
-      CREATE INDEX IF NOT EXISTS idx_task_tags_tag ON task_tags(tag);
+      CREATE INDEX IF NOT EXISTS idx_task_tags_key ON task_tags(tag_key);
     `,
   },
   {
@@ -4358,10 +4381,11 @@ const MIGRATIONS = [
       CREATE TABLE IF NOT EXISTS shopping_item_tags (
         item_id INTEGER NOT NULL REFERENCES shopping_items(id) ON DELETE CASCADE,
         tag     TEXT    NOT NULL,
-        PRIMARY KEY (item_id, tag)
+        tag_key TEXT    NOT NULL,
+        PRIMARY KEY (item_id, tag_key)
       );
 
-      CREATE INDEX IF NOT EXISTS idx_shopping_item_tags_tag ON shopping_item_tags(tag);
+      CREATE INDEX IF NOT EXISTS idx_shopping_item_tags_key ON shopping_item_tags(tag_key);
     `,
   },
   {

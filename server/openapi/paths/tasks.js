@@ -3,7 +3,7 @@ import { op, jsonBody, idParam, stringPathParam } from '../helpers.js';
 export function tasksPaths() {
   return {
     '/api/v1/tasks': {
-      get: op({ summary: 'List tasks', tag: 'Tasks', description: 'Filterable by status, priority, assigned_to, category and tag. The tag filter ignores case.' }),
+      get: op({ summary: 'List tasks', tag: 'Tasks', description: 'Filterable by status, priority, assigned_to, category and tag. Repeat `tag` once per tag; each occurrence is one literal tag, and several of them narrow the result (a task must carry all). Case-insensitive, including non-ASCII letters.' }),
       post: op({ summary: 'Create task', tag: 'Tasks', stateChanging: true, requestBody: jsonBody(null) }),
     },
     '/api/v1/tasks/meta/options': { get: op({ summary: 'Get task metadata', tag: 'Tasks' }) },
