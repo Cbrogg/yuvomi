@@ -264,6 +264,7 @@ function renderTaskCard(task, opts = {}) {
             ${task.document_count > 0 ? `<span class="due-date task-card__docs" aria-label="${t('tasks.documentsCount', { count: task.document_count })}"><i data-lucide="paperclip" class="icon-sm" aria-hidden="true"></i>${task.document_count}</span>` : ''}
             ${renderVisibilityBadge(task.visibility)}
             ${task.category !== FALLBACK_CATEGORY ? `<span class="due-date task-card__category">${esc(catLabel(task.category))}</span>` : ''}
+            ${renderTagBadges(task.tags)}
           </div>
         </div>
 
@@ -372,6 +373,115 @@ function renderTaskGroups(tasks, groupMode) {
 // Task-Modal (Erstellen / Bearbeiten)
 // --------------------------------------------------------
 
+// --------------------------------------------------------
+// Tags (#586)
+// Freie Etiketten, gespiegelt aus VTODO CATEGORIES. Bewusst getrennt von der
+// Kategorie: eine Aufgabe liegt in einer Schublade, trägt aber beliebig viele
+// Etiketten.
+// --------------------------------------------------------
+
+// Grenzen identisch zu server/utils/task-tags.js — die Oberfläche soll gar nicht
+// erst anbieten, was der Server anschließend kürzt.
+const MAX_TAGS = 32;
+const MAX_TAG_LEN = 64;
+
+// Working-Set des offenen Bearbeiten-Dialogs, analog zu den verknüpften
+// Dokumenten. Wird beim Öffnen aus der Aufgabe gefüllt und beim Speichern gelesen.
+let modalTags = [];
+
+/** Tag-Liste säubern; Groß-/Kleinschreibung eint (erste Schreibweise gewinnt). */
+function normalizeTagList(list) {
+  const out = [];
+  const seen = new Set();
+  for (const item of list ?? []) {
+    const tag = String(item ?? '').trim().slice(0, MAX_TAG_LEN).trim();
+    if (!tag) continue;
+    const key = tag.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(tag);
+    if (out.length >= MAX_TAGS) break;
+  }
+  return out;
+}
+
+/** Zeichnet die Chips des Tag-Editors neu. */
+function renderTagChips(container) {
+  const wrap = container.querySelector('#task-tags-chips');
+  if (!wrap) return;
+  wrap.replaceChildren();
+
+  modalTags.forEach((tag, index) => {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'task-tag task-tag--editable';
+    chip.dataset.tagIndex = String(index);
+    chip.setAttribute('aria-label', t('tasks.tagRemove', { tag }));
+    chip.appendChild(document.createTextNode(tag));
+
+    const icon = document.createElement('i');
+    icon.setAttribute('data-lucide', 'x');
+    icon.className = 'icon-sm';
+    icon.setAttribute('aria-hidden', 'true');
+    chip.appendChild(icon);
+
+    wrap.appendChild(chip);
+  });
+
+  if (window.lucide) window.lucide.createIcons({ el: wrap });
+}
+
+/**
+ * Verdrahtet den Tag-Editor: Enter oder Komma übernimmt, Klick auf ein Chip
+ * entfernt, Backspace im leeren Feld nimmt das letzte zurück.
+ */
+function wireTagEditor(panel) {
+  const input = panel.querySelector('#task-tag-input');
+  const chips = panel.querySelector('#task-tags-chips');
+  if (!input || !chips) return;
+
+  const commit = () => {
+    // Eine eingefügte Liste („Garten, Haus") in einem Rutsch übernehmen.
+    const added = input.value.split(',');
+    if (!added.some((v) => v.trim())) return;
+    modalTags = normalizeTagList([...modalTags, ...added]);
+    input.value = '';
+    renderTagChips(panel);
+  };
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      // Enter darf im Tag-Feld nicht das Formular abschicken.
+      e.preventDefault();
+      commit();
+      return;
+    }
+    if (e.key === 'Backspace' && !input.value && modalTags.length) {
+      modalTags = modalTags.slice(0, -1);
+      renderTagChips(panel);
+    }
+  });
+
+  // Verlassen des Feldes übernimmt ebenfalls: sonst geht ein getippter Tag beim
+  // Speichern still verloren.
+  input.addEventListener('blur', commit);
+  // Auswahl aus der Vorschlagsliste löst kein keydown aus.
+  input.addEventListener('change', commit);
+
+  chips.addEventListener('click', (e) => {
+    const chip = e.target.closest('[data-tag-index]');
+    if (!chip) return;
+    modalTags.splice(Number(chip.dataset.tagIndex), 1);
+    renderTagChips(panel);
+  });
+}
+
+/** Tag-Chips einer Aufgabe für Karten und Kanban. */
+function renderTagBadges(tags) {
+  if (!tags?.length) return '';
+  return tags.map((tag) => `<span class="task-tag">${esc(tag)}</span>`).join('');
+}
+
 function renderModalContent({ task = null, users = [], reminder = null } = {}) {
   const isEdit = !!task;
 
@@ -395,6 +505,7 @@ function renderModalContent({ task = null, users = [], reminder = null } = {}) {
     || (!!task.category && task.category !== FALLBACK_CATEGORY)
     || !!task.start_date
     || (Number(task.points) > 0)
+    || !!task.tags?.length
   );
 
   // Punkte neuer Aufgaben mit dem Haushalt-Standard vorbelegen (#578). Der Wert
@@ -446,6 +557,20 @@ function renderModalContent({ task = null, users = [], reminder = null } = {}) {
             ? t('tasks.pointsDefaultHint', { count: prefillPoints })
             : t('tasks.pointsHint')}</p>
         </div>
+      </div>
+
+      <div class="form-group task-tags-field" style="margin-top:var(--space-4)">
+        <label class="label" for="task-tag-input">${t('tasks.tagsLabel')}</label>
+        <div class="task-tags-editor" id="task-tags-editor">
+          <div class="task-tags-editor__chips" id="task-tags-chips"></div>
+          <input class="input task-tags-editor__input" type="text" id="task-tag-input"
+                 list="task-tag-suggestions" autocomplete="off"
+                 placeholder="${t('tasks.tagsPlaceholder')}">
+          <datalist id="task-tag-suggestions">
+            ${state.allTags.map((entry) => `<option value="${esc(entry.tag)}"></option>`).join('')}
+          </datalist>
+        </div>
+        <p class="task-field-hint">${t('tasks.tagsHint')}</p>
       </div>`;
 
   return `
@@ -547,9 +672,10 @@ let state = {
   tasks:           [],
   users:           [],
   categories:      [],
+  allTags:         [],       // [{ tag, count }] für Filterleiste und Vorschläge (#586)
   defaultPoints:   0,        // Haushalt-Standard für neue Aufgaben (#578), 0 = aus
   currentUserId:   null,
-  filters:         { status: 'open', priority: '', assigned_to: '' },
+  filters:         { status: 'open', priority: '', assigned_to: '', tag: '' },
   groupMode:       'category',   // 'category' | 'due'
   viewMode:        'list',       // 'list' | 'kanban' (resolved at render time)
   showFuture:      false,
@@ -572,7 +698,8 @@ function filteredTasks() {
   if (!q) return state.tasks;
   return state.tasks.filter((task) =>
     (task.title       || '').toLowerCase().includes(q) ||
-    (task.description || '').toLowerCase().includes(q)
+    (task.description || '').toLowerCase().includes(q) ||
+    (task.tags ?? []).some((tag) => tag.toLowerCase().includes(q))
   );
 }
 
@@ -590,12 +717,26 @@ async function loadTasks(container) {
   if (state.filters.status && state.viewMode !== 'kanban') params.set('status', state.filters.status);
   if (state.filters.priority)    params.set('priority',    state.filters.priority);
   if (state.filters.assigned_to) params.set('assigned_to', state.filters.assigned_to);
+  if (state.filters.tag)         params.set('tag',         state.filters.tag);
   if (state.showFuture)          params.set('include_future', '1');
 
   const query = params.toString() ? `?${params}` : '';
   const data  = await api.get(`/tasks${query}`);
   state.tasks = data.data ?? [];
   renderTaskList(container);
+}
+
+/**
+ * Vergebene Tags nachladen (#586). Nur nach dem Speichern nötig, nicht bei jedem
+ * Filterwechsel - die Liste ändert sich ausschließlich durch Bearbeiten.
+ * Scheitert der Aufruf, bleibt die alte Liste stehen: veraltete Vorschläge sind
+ * harmloser als eine plötzlich verschwundene Filtergruppe.
+ */
+async function refreshTags() {
+  try {
+    const res = await api.get('/tasks/tags');
+    state.allTags = res.data ?? [];
+  } catch { /* alte Liste behalten */ }
 }
 
 async function toggleTaskStatus(id, currentStatus) {
@@ -776,6 +917,8 @@ async function wireDocumentSection(panel, task) {
 
 function openTaskModal({ task = null, users = [], reminder = null } = {}, container) {
   const isEdit = !!task;
+  // Working-Set VOR dem Rendern setzen: renderTagChips liest ihn direkt danach.
+  modalTags = normalizeTagList(task?.tags);
   openSharedModal({
     title: isEdit ? t('tasks.editTask') : t('tasks.newTask'),
     content: renderModalContent({ task, users, reminder }),
@@ -786,6 +929,10 @@ function openTaskModal({ task = null, users = [], reminder = null } = {}, contai
       bindRRuleEvents(document, 'task');
       bindUserMultiSelect(panel, 'task_assigned');
       wireVisibilityWarning(panel, '#task-visibility', 'task_assigned', '#task-visibility-warning');
+
+      // Tag-Editor (#586)
+      renderTagChips(panel);
+      wireTagEditor(panel);
 
       // Verknüpfte Dokumente laden + Add/Remove binden (#503)
       wireDocumentSection(panel, task);
@@ -880,11 +1027,17 @@ async function handleFormSubmit(e, container) {
     submitBtn.textContent = originalLabel;
     return;
   }
+  // Ein noch nicht übernommener Tag im Eingabefeld zählt mit — wer tippt und
+  // direkt speichert, hat ihn gemeint.
+  const pendingTag = form.querySelector('#task-tag-input')?.value ?? '';
+  const tags = normalizeTagList([...modalTags, ...pendingTag.split(',')]);
+
   const body = {
     title:           form.title.value.trim(),
     description:     form.description.value.trim() || null,
     priority:        form.priority.value,
     category:        form.category.value,
+    tags,
     start_date:      startDate || null,
     due_date:        dueDate || null,
     assigned_to:     getSelectedUserIds(form, 'task_assigned'),
@@ -963,6 +1116,9 @@ async function handleFormSubmit(e, container) {
 
     btnSuccess(submitBtn, originalLabel);
     setTimeout(() => closeModal({ force: true }), 700);
+    // Erst die Tag-Liste, dann neu zeichnen: ein gerade vergebener Tag soll
+    // sofort in Filterleiste und Vorschlägen stehen (#586).
+    await refreshTags();
     await loadTasks(container);
   } catch (err) {
     resetSubmit(err.message);
@@ -1038,6 +1194,7 @@ function renderKanbanCard(task) {
       <div class="kanban-card__meta">
         ${renderPriorityBadge(task.priority)}
         ${due ? `<span class="due-date ${due.cls}"><i data-lucide="clock" class="icon-sm" aria-hidden="true"></i> ${due.label}</span>` : ''}
+        ${renderTagBadges(task.tags)}
       </div>
       <div class="kanban-card__footer">
         ${renderAvatarStack(task.assigned_users ?? [], { size: 22 }) || '<span></span>'}
@@ -1420,6 +1577,7 @@ function renderFilters(container) {
     state.viewMode === 'kanban' ? '' : state.filters.status,
     state.filters.priority,
     state.filters.assigned_to,
+    state.filters.tag,
   ].filter(Boolean).length;
 
   // ---- Chip-Leiste: nur aktive Filter + Toggle-Button ----
@@ -1445,6 +1603,11 @@ function renderFilters(container) {
       withRemove: true,
     });
     chip.dataset.filter = 'assigned_to';
+    bar.appendChild(chip);
+  }
+  if (state.filters.tag) {
+    const chip = makeChip({ label: state.filters.tag, active: true, withRemove: true });
+    chip.dataset.filter = 'tag';
     bar.appendChild(chip);
   }
 
@@ -1517,6 +1680,10 @@ function renderFilters(container) {
       const u = state.users.find((u) => u.id === Number(f.assigned_to));
       if (u) parts.push(u.display_name);
     }
+    // Der Tag gehört in die Beschriftung, weil der Chip ihn beim Klick mitsetzt:
+    // ohne ihn hieße ein Chip „Offen" und schaltete zusätzlich einen Tag-Filter,
+    // den niemand am Chip ablesen kann (#586).
+    if (f.tag) parts.push(f.tag);
     if (!parts.length) return;
     // Aktions-Chip (wendet ein Filter-Set an), kein Ein/Aus-Zustand → pressed:null.
     const chip = makeChip({ label: parts.join(' · '), extraClass: 'filter-chip--recent', pressed: null });
@@ -1550,6 +1717,15 @@ function renderFilters(container) {
         key: 'assigned_to',
         label: t('tasks.filterGroupPerson'),
         items: state.users.map((u) => ({ value: String(u.id), label: u.display_name })),
+      });
+    }
+    // Tags nur anbieten, wenn welche vergeben sind — ohne CalDAV-Spiegel und ohne
+    // eigene Vergabe bleibt die Gruppe sonst als leere Zeile stehen (#586).
+    if (state.allTags.length) {
+      groups.push({
+        key: 'tag',
+        label: t('tasks.filterGroupTag'),
+        items: state.allTags.map((entry) => ({ value: entry.tag, label: entry.tag })),
       });
     }
 
@@ -1844,7 +2020,7 @@ function wireFilterChips(container) {
 
   // Alle Filter zurücksetzen
   container.querySelector('#filter-clear-all')?.addEventListener('click', async () => {
-    state.filters = { status: '', priority: '', assigned_to: '' };
+    state.filters = { status: '', priority: '', assigned_to: '', tag: '' };
     renderFilters(container);
     await loadTasks(container);
   });
@@ -1884,7 +2060,10 @@ function wireFilterChips(container) {
     chip.addEventListener('click', async () => {
       try {
         const f = JSON.parse(chip.dataset.recentFilter);
-        state.filters = { status: f.status || '', priority: f.priority || '', assigned_to: f.assigned_to || '' };
+        state.filters = {
+          status: f.status || '', priority: f.priority || '',
+          assigned_to: f.assigned_to || '', tag: f.tag || '',
+        };
       } catch { return; }
       renderFilters(container);
       await loadTasks(container);
@@ -2278,6 +2457,7 @@ export async function render(container, { user }) {
     if (state.filters.status && state.viewMode !== 'kanban') params.set('status', state.filters.status);
     if (state.filters.priority)    params.set('priority',    state.filters.priority);
     if (state.filters.assigned_to) params.set('assigned_to', state.filters.assigned_to);
+    if (state.filters.tag)         params.set('tag',         state.filters.tag);
     if (state.showFuture)          params.set('include_future', '1');
     const query = params.toString() ? `?${params}` : '';
 
@@ -2288,6 +2468,7 @@ export async function render(container, { user }) {
     state.tasks = tasksData.data ?? [];
     state.users = metaData.users ?? [];
     state.categories = metaData.categories ?? [];
+    state.allTags = metaData.tags ?? [];
     state.defaultPoints = Number(metaData.default_points) || 0;
   } catch (err) {
     console.error('[Tasks] Ladefehler:', err.message);
@@ -2295,6 +2476,7 @@ export async function render(container, { user }) {
     state.tasks = [];
     state.users = [];
     state.categories = [];
+    state.allTags = [];
     state.defaultPoints = 0;
   }
 

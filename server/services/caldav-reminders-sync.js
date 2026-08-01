@@ -15,6 +15,7 @@ import * as db from '../db.js';
 import { parseVTODO } from './ics-parser.js';
 import { createCalDAVClient } from '../utils/caldav-client.js';
 import { serverTimeZone, utcToWall } from '../utils/timezone.js';
+import { setTags } from '../utils/task-tags.js';
 import * as todoOutbound from './caldav-todo-outbound.js';
 
 // --------------------------------------------------------
@@ -236,6 +237,7 @@ function upsertTask(todo, accountId, createdBy, objectUrl = null) {
   const priority = mapVtodoPriority(todo.priority, existing?.priority);
   const status   = mapVtodoStatus(todo, existing?.status);
 
+  let taskId;
   if (existing) {
     db.get().prepare(`
       UPDATE tasks
@@ -243,13 +245,22 @@ function upsertTask(todo, accountId, createdBy, objectUrl = null) {
           external_object_url = COALESCE(?, external_object_url)
       WHERE id = ?
     `).run(todo.summary, todo.description, priority, status, date, time, objectUrl, existing.id);
+    taskId = existing.id;
   } else {
-    db.get().prepare(`
+    // category bleibt beim Spalten-Default 'misc' (v114) - VTODO kennt keine
+    // Entsprechung, und CATEGORIES ist die Tag-Liste, nicht die Schublade.
+    const row = db.get().prepare(`
       INSERT INTO tasks
         (title, description, priority, status, due_date, due_time, created_by, external_uid, external_source, external_account_id, external_object_url)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'caldav', ?, ?)
     `).run(todo.summary, todo.description, priority, status, date, time, createdBy, todo.uid, accountId, objectUrl);
+    taskId = row.lastInsertRowid;
   }
+
+  // CATEGORIES → Tags (#586). Der Server führt sie, also gewinnt er auch: eine
+  // lokale Bearbeitung, die noch aussteht, kommt hier gar nicht an - der
+  // Aufrufer überspringt dirty markierte Einträge (#617).
+  setTags(db.get(), taskId, todo.tags);
 }
 
 function upsertShoppingItem(sel, todo, accountId, objectUrl = null) {

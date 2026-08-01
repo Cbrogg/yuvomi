@@ -3,7 +3,7 @@ import { op, jsonBody, idParam } from '../helpers.js';
 export function tasksPaths() {
   return {
     '/api/v1/tasks': {
-      get: op({ summary: 'List tasks', tag: 'Tasks' }),
+      get: op({ summary: 'List tasks', tag: 'Tasks', description: 'Filterable by status, priority, assigned_to, category and tag. The tag filter ignores case.' }),
       post: op({ summary: 'Create task', tag: 'Tasks', stateChanging: true, requestBody: jsonBody(null) }),
     },
     '/api/v1/tasks/meta/options': { get: op({ summary: 'Get task metadata', tag: 'Tasks' }) },
@@ -23,6 +23,9 @@ export function tasksPaths() {
     '/api/v1/tasks/categories/{key}': {
       put: op({ summary: 'Rename task category', tag: 'Tasks', params: [idParam('key', 'Category key')], stateChanging: true, requestBody: jsonBody(null) }),
       delete: op({ summary: 'Delete task category', tag: 'Tasks', params: [idParam('key', 'Category key')], stateChanging: true }),
+    },
+    '/api/v1/tasks/tags': {
+      get: op({ summary: 'List task tags', tag: 'Tasks', description: 'Every tag in use with its task count. Tags are free-form and have no registry: the list follows from the tasks themselves. Mirrored from VTODO CATEGORIES on CalDAV task lists, and distinct from the single category a task carries.' }),
     },
     '/api/v1/tasks/{id}': {
       get: op({ summary: 'Get task', tag: 'Tasks', params: [idParam()] }),

@@ -409,6 +409,55 @@
   }
 }
 
+/* --------------------------------------------------------
+   Tags (#586)
+   Gespiegelte VTODO-CATEGORIES und lokal vergebene Etiketten. Bewusst leiser
+   als die Prioritäts-Badges: Tags ordnen, sie warnen nicht.
+   -------------------------------------------------------- */
+
+.task-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-0h) var(--space-2);
+  border: var(--space-px) solid var(--color-border-subtle);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-2);
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+  line-height: 1.4;
+  /* Ein sehr langer Fremd-Tag darf die Zeile nicht sprengen. */
+  max-width: 14rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Im Editor ist das Chip ein Button (Klick entfernt) — die Button-Herkunft
+ * abräumen, damit es wie die Anzeige-Variante aussieht. */
+.task-tag--editable {
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.task-tag--editable:hover {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+
+.task-tags-editor__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+/* Nur wenn Chips da sind Abstand halten — sonst klafft über dem leeren Feld
+ * eine Lücke. */
+.task-tags-editor__chips:not(:empty) {
+  margin-bottom: var(--space-2);
+}
+
 .task-status-btn--done {
   animation: check-pop var(--duration-md) var(--ease-out);
 }

@@ -22,6 +22,45 @@ function unescapeICSText(str) {
     .replace(/\\\\/g, '\\');
 }
 
+// Maximal übernommene Tags je Aufgabe und Zeichen je Tag. Die Werte kommen von
+// fremden Servern; ohne Deckel wandert ein absurd getaggtes VTODO ungebremst in
+// die Datenbank und in jede Filterleiste. Beide Grenzen gelten identisch in der
+// Route (server/routes/tasks.js).
+const MAX_CATEGORIES = 32;
+const MAX_CATEGORY_LEN = 64;
+
+/**
+ * CATEGORIES eines Komponenten-Blocks als Liste (#586).
+ *
+ * Zwei Eigenheiten, die ein naives `get('CATEGORIES')` verfehlt:
+ *
+ * 1. Die Property darf mehrfach vorkommen. RFC 5545 erlaubt sowohl
+ *    `CATEGORIES:a,b` als auch zwei getrennte CATEGORIES-Zeilen, und Clients
+ *    nutzen beides. Deshalb alle Vorkommen einsammeln statt nur des ersten.
+ * 2. `\,` ist ein escaptes Komma **im Wert**, kein Trenner. Erst am unescapten
+ *    Komma splitten, dann jedes Element einzeln unescapen - andersherum zerfiele
+ *    ein Tag wie „Haus\, Garten" in zwei.
+ */
+function parseCategories(block) {
+  const re  = /^CATEGORIES(?:;[^:\n]*)?:(.*)$/gim;
+  const out = [];
+  const seen = new Set();
+  let m;
+  while ((m = re.exec(block)) !== null) {
+    // (?<!\\) trennt nur an einem Komma, dem kein Backslash vorausgeht.
+    for (const raw of m[1].split(/(?<!\\),/)) {
+      const tag = unescapeICSText(raw.trim())?.trim().slice(0, MAX_CATEGORY_LEN);
+      if (!tag) continue;
+      const key = tag.toLowerCase();
+      if (seen.has(key)) continue;   // Groß-/Kleinschreibung eint, erste Schreibweise gewinnt
+      seen.add(key);
+      out.push(tag);
+      if (out.length >= MAX_CATEGORIES) return out;
+    }
+  }
+  return out;
+}
+
 function parseICS(ics) {
   const unfolded = unfoldLines(ics);
   const events   = [];
@@ -189,7 +228,8 @@ function parseVTODO(ics) {
     const prioRaw = get('PRIORITY');
     let priority  = prioRaw !== null ? parseInt(prioRaw, 10) : null;
     if (priority === 0 || Number.isNaN(priority)) priority = null;
-    todos.push({ uid, summary, description, completed, status, due, priority });
+    const tags = parseCategories(block);
+    todos.push({ uid, summary, description, completed, status, due, priority, tags });
   }
   return todos;
 }
@@ -282,4 +322,4 @@ function expandRRULE(vevent, windowStart, windowEnd) {
   return results;
 }
 
-export { unfoldLines, unescapeICSText, parseICS, parseVTODO, formatICSDate, tzLocalToUTC, applyDuration, expandRRULE, normalizeRecurrenceOverrides };
+export { unfoldLines, unescapeICSText, parseICS, parseVTODO, parseCategories, MAX_CATEGORIES, MAX_CATEGORY_LEN, formatICSDate, tzLocalToUTC, applyDuration, expandRRULE, normalizeRecurrenceOverrides };
