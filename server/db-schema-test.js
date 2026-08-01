@@ -269,6 +269,16 @@ const MIGRATIONS_SQL = {
       user_id  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       PRIMARY KEY (task_id, user_id)
     );
+    -- Aufgaben-Tags (Migration v115, #586). Steht hier wie task_assignments im
+    -- Basis-Schnappschuss und nicht als eigener Versions-Eintrag: die Suiten,
+    -- die die Aufgaben-Routen oder die MCP-Tools anfassen, brauchen die Tabelle
+    -- unabhängig davon, welche Versionen sie sonst anlegen.
+    CREATE TABLE IF NOT EXISTS task_tags (
+      task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+      tag     TEXT    NOT NULL,
+      tag_key TEXT    NOT NULL,
+      PRIMARY KEY (task_id, tag_key)
+    );
     CREATE TABLE IF NOT EXISTS event_assignments (
       event_id INTEGER NOT NULL REFERENCES calendar_events(id) ON DELETE CASCADE,
       user_id  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,

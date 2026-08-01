@@ -39,6 +39,7 @@ const { patchICSTodo } = await import('../server/utils/ics-patch.js');
 const { mapVtodoPriority, mapVtodoStatus, splitDue, sync } =
   await import('../server/services/caldav-reminders-sync.js');
 const { parseVTODO } = await import('../server/services/ics-parser.js');
+const { loadTags, loadItemTags, setTags, tagsKey } = await import('../server/utils/task-tags.js');
 const { MAX_OUTBOUND_ATTEMPTS } = await import('../server/services/calendar-outbound.js');
 
 db.prepare("INSERT INTO users (username, display_name, password_hash, role) VALUES ('admin','Admin','x','admin')").run();
@@ -259,10 +260,129 @@ test('patchICSTodo tauscht nur die verwalteten Properties', () => {
 
   // Alles, was Yuvomi nicht kennt, bleibt Zeichen für Zeichen stehen.
   assert.ok(out.includes('X-APPLE-SORT-ORDER:12'), 'fremde Property bleibt');
-  assert.ok(out.includes('CATEGORIES:Haushalt'), 'Kategorien bleiben');
+  // Ohne geladene Tags gilt CATEGORIES als unbekannt, nicht als leer (#586) -
+  // sonst löschte jeder Aufrufer mit einer rohen Zeile die Tags des Servers.
+  assert.ok(out.includes('CATEGORIES:Haushalt'), 'Tags ohne Kenntnisstand bleiben');
   assert.ok(out.includes('BEGIN:VALARM') && out.includes('TRIGGER:-PT15M'), 'Alarm bleibt');
   assert.ok(out.includes('SEQUENCE:1'), 'SEQUENCE wird gesetzt, damit Clients die Kopie erneuern');
   assert.strictEqual(out.match(/BEGIN:VTODO/g).length, 1);
+});
+
+// ── Tags ⇄ CATEGORIES (#586) ────────────────────────────────────────────────────
+
+test('CATEGORIES kommt als Tag-Liste an: mehrfach, kommasepariert, escapt', () => {
+  // Drei Eigenheiten auf einmal, weil jede für sich einen naiven Parser bricht:
+  // die Property darf mehrfach vorkommen, das Komma trennt, und `\,` ist ein
+  // Komma IM Wert. Der Dedup eint zusätzlich die Schreibweise.
+  const todo = parseVTODO(serverTodo({
+    extra: ['CATEGORIES:Garten,Haus\\, Hof', 'CATEGORIES:garten'],
+  }))[0];
+  assert.deepStrictEqual(todo.tags, ['Haushalt', 'Garten', 'Haus, Hof']);
+});
+
+test('Ein VTODO ohne CATEGORIES liefert eine leere Liste, nicht undefined', () => {
+  const bare = ['BEGIN:VTODO', 'UID:x@test', 'SUMMARY:Ohne', 'END:VTODO'].join('\r\n');
+  assert.deepStrictEqual(parseVTODO(bare)[0].tags, []);
+});
+
+test('Der Inbound spiegelt CATEGORIES in die Tags der Aufgabe', async () => {
+  const accountId = reset();
+  enableList(accountId, 'tasks');
+  const client = fakeClient({
+    objects: [{ url: OBJ_URL, etag: 'e1', data: serverTodo({ extra: ['CATEGORIES:Garten'] }) }],
+  });
+
+  await sync({ createClient: async () => client });
+
+  const task = db.prepare("SELECT id FROM tasks WHERE external_uid = 'todo-1@test'").get();
+  assert.deepStrictEqual(loadTags(db, task.id), ['Garten', 'Haushalt']);
+});
+
+test('Der Server führt die Tags: entfernte CATEGORIES verschwinden auch lokal', async () => {
+  const accountId = reset();
+  enableList(accountId, 'tasks');
+
+  const withTags = fakeClient({ objects: [{ url: OBJ_URL, etag: 'e1', data: serverTodo() }] });
+  await sync({ createClient: async () => withTags });
+  const task = db.prepare("SELECT id FROM tasks WHERE external_uid = 'todo-1@test'").get();
+  assert.deepStrictEqual(loadTags(db, task.id), ['Haushalt']);
+
+  // Dieselbe Aufgabe, auf dem Server entkategorisiert.
+  const stripped = serverTodo().replace('CATEGORIES:Haushalt\r\n', '');
+  const without = fakeClient({ objects: [{ url: OBJ_URL, etag: 'e2', data: stripped }] });
+  await sync({ createClient: async () => without });
+  assert.deepStrictEqual(loadTags(db, task.id), []);
+});
+
+test('Eine reine Tag-Änderung löst einen Push aus', () => {
+  const accountId = reset();
+  const task = insertTask({ accountId });
+  // Ohne den mitgereichten Schlüssel bliebe die Änderung unbemerkt: Tags liegen
+  // in task_tags, der Feldvergleich sieht nur die Zeile selbst.
+  const pending = markTodoOutbound(
+    'tasks',
+    { ...task, tags_key: tagsKey([]) },
+    { ...task, tags_key: tagsKey(['Garten']) },
+  );
+  assert.strictEqual(pending, true);
+  assert.strictEqual(db.prepare('SELECT outbound_dirty FROM tasks WHERE id = ?').get(task.id).outbound_dirty, 1);
+});
+
+test('Bloßes Umsortieren derselben Tags ist keine Änderung', () => {
+  const accountId = reset();
+  const task = insertTask({ accountId });
+  const pending = markTodoOutbound(
+    'tasks',
+    { ...task, tags_key: tagsKey(['Garten', 'Haus']) },
+    { ...task, tags_key: tagsKey(['Haus', 'Garten']) },
+  );
+  assert.strictEqual(pending, false, 'sonst pushte jeder Speichervorgang erneut');
+});
+
+test('Eine andere Schreibweise ist sehr wohl eine Änderung', () => {
+  // Die Gegenprobe. Würde tagsKey die Schreibweise einebnen, käme ein
+  // Umbenennen von "garten" auf "Garten" nie beim Server an: lokal stünde die
+  // neue Schreibweise, hier fiele die Entscheidung "nichts zu tun", und der
+  // nächste Sync-Lauf holte die alte zurück.
+  const accountId = reset();
+  const task = insertTask({ accountId });
+  const pending = markTodoOutbound(
+    'tasks',
+    { ...task, tags_key: tagsKey(['garten']) },
+    { ...task, tags_key: tagsKey(['Garten']) },
+  );
+  assert.strictEqual(pending, true);
+});
+
+test('Der Push schreibt die vollständige Tag-Liste nach CATEGORIES', async () => {
+  const accountId = reset();
+  const task = insertTask({ accountId });
+  setTags(db, task.id, ['Garten', 'Haus, Hof']);
+  db.prepare('UPDATE tasks SET outbound_dirty = 1 WHERE id = ?').run(task.id);
+
+  const client = fakeClient();
+  await processPendingUpdates(client, accountId, 'tasks', indexOf('todo-1@test'));
+
+  const sent = client.calls.updated[0].data;
+  // Das trennende Komma bleibt roh, das Komma im Wert bleibt escapt - genau
+  // andersherum wäre aus einem Tag zwei geworden.
+  assert.ok(sent.includes('CATEGORIES:Garten,Haus\\, Hof'), `CATEGORIES fehlt oder ist falsch escapt:\n${sent}`);
+  assert.deepStrictEqual(parseVTODO(sent)[0].tags, ['Garten', 'Haus, Hof'], 'Roundtrip muss verlustfrei sein');
+});
+
+test('Sind lokal alle Tags weg, verschwindet CATEGORIES auf dem Server', async () => {
+  const accountId = reset();
+  const task = insertTask({ accountId });
+  setTags(db, task.id, []);
+  db.prepare('UPDATE tasks SET outbound_dirty = 1 WHERE id = ?').run(task.id);
+
+  const client = fakeClient();
+  await processPendingUpdates(client, accountId, 'tasks', indexOf('todo-1@test'));
+
+  const sent = client.calls.updated[0].data;
+  assert.ok(!/^CATEGORIES:/m.test(sent), `CATEGORIES hätte entfernt werden müssen:\n${sent}`);
+  // Der Rest des fremden Objekts bleibt trotzdem unangetastet.
+  assert.ok(sent.includes('X-APPLE-SORT-ORDER:12') && sent.includes('BEGIN:VALARM'));
 });
 
 test('Wiederöffnen entfernt COMPLETED, sonst bliebe die Aufgabe erledigt', () => {
@@ -614,4 +734,33 @@ test('v113 ist additiv und startet mit neutralen Markern', async () => {
   assert.strictEqual(old.prepare('SELECT COUNT(*) AS n FROM caldav_todo_pending_deletions').get().n, 0);
 
   old.close();
+});
+
+test('Der Inbound spiegelt CATEGORIES auch in die Tags eines Einkaufspostens', async () => {
+  // Eine Erinnerungsliste kann auf Aufgaben ODER auf den Einkauf zeigen (#617).
+  // Bis hierher fielen die CATEGORIES eines Einkaufspostens stillschweigend weg.
+  const accountId = reset();
+  enableList(accountId, 'shopping');
+  const client = fakeClient({
+    objects: [{ url: OBJ_URL, etag: 'e1', data: serverTodo({ extra: ['CATEGORIES:Bio'] }) }],
+  });
+
+  await sync({ createClient: async () => client });
+
+  const item = db.prepare("SELECT id, category FROM shopping_items WHERE external_uid = 'todo-1@test'").get();
+  assert.deepStrictEqual(loadItemTags(db, item.id), ['Bio', 'Haushalt']);
+  // Die Kategorie ist hier der Gang im Laden, eine verwaltete Liste: sie darf
+  // sich von fremden CATEGORIES nicht befuellen lassen.
+  assert.strictEqual(item.category, 'Sonstiges');
+});
+
+test('Der Push eines Einkaufspostens fasst CATEGORIES nicht an', () => {
+  // Der Einkauf spiegelt CATEGORIES nur herein (#586): er zeigt die Etiketten
+  // der Quellliste, verwaltet sie aber nicht. Nähme icsFieldsForShoppingItem
+  // CATEGORIES auf, löschte jeder Haken auf einem Posten die Tags, die der
+  // Server kennt und Yuvomi nie gesehen hat - genau der Fehler, den die
+  // Aufgaben-Seite nur vermeiden darf, weil sie die Liste vollständig führt.
+  const fields = icsFieldsForShoppingItem({ id: 1, name: 'Milch', is_checked: 0 });
+  assert.ok(!('CATEGORIES' in fields),
+    'Ein Feld, das nicht im Patch steht, lässt die Property auf dem Server unberührt');
 });

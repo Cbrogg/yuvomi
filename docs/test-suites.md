@@ -129,6 +129,7 @@ npm run test:document-storage   # Dokument-Storage-Migration und Invarianten
 npm run test:google-drive-storage   # Google Drive als Dokument-Ablage: eigenes Credential-Paar (fail-closed bei halber Konfiguration), OAuth-Callback legt Yuvomi/Documents an und wählt nie Drive als Kalender
 npm run test:document-folders   # Dokument-Ordner-Routen: umbenennen/löschen (PUT/DELETE) + ON DELETE SET NULL (#453)
 npm run test:task-documents     # Task↔Dokument-Verknüpfungen (#503): GET/PUT /tasks/:id/documents, Sichtbarkeit, Replace-Set, document_count, CASCADE
+npm run test:task-tags          # Aufgaben-Tags (#586): v114-Rebuild lässt Indizes/Suchtrigger intakt, Tags bleiben von der Kategorie getrennt, /tags und meta/options zeigen nur Sichtbares (#474), Serien erben ihre Tags, Umbenennen/Zusammenführen/Löschen und Bulk-Vergabe fassen nur Sichtbares an, die globale Suche findet Tags und gibt sie beim Entfernen wieder her (v117-Trigger auf den Tag-Tabellen), Einkaufsposten teilen die Achse ohne ihre Kategorie zu berühren, Unteraufgaben liefern ihre Tags mit
 npm run test:dms-adapter        # DMS-Adapter: Paperless-ngx
 npm run test:dms-routes         # DMS-Routen: account management, search, link, push
 npm run test:dms-papra-adapter  # DMS-Adapter: Papra

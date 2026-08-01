@@ -371,6 +371,29 @@ function renderItemMeta(item) {
   return bits.length ? `<span class="item-meta">${bits.join('')}</span>` : '';
 }
 
+// Wie viele Tags eine Zeile zeigt, bevor sie zusammenfasst - wie auf den
+// Aufgabenkarten.
+const ITEM_TAGS_VISIBLE = 3;
+
+/**
+ * Gespiegelte VTODO-CATEGORIES eines Einkaufspostens (#586).
+ *
+ * Anzeige, keine Bedienung: die Etiketten gehören der CalDAV-Quellliste, Yuvomi
+ * verwaltet sie hier nicht und schreibt sie auch nicht zurück. Deshalb <span>
+ * statt Button - anders als in den Aufgaben, wo ein Klick danach filtert.
+ */
+function renderItemTags(tags) {
+  if (!tags?.length) return '';
+  const shown = tags.slice(0, ITEM_TAGS_VISIBLE);
+  const rest  = tags.length - shown.length;
+  const chips = shown.map((tag) => `<span class="item-tag">${esc(tag)}</span>`);
+  if (rest > 0) {
+    chips.push(`<span class="item-tag item-tag--more"
+                      title="${esc(tags.slice(ITEM_TAGS_VISIBLE).join(', '))}">+${rest}</span>`);
+  }
+  return `<div class="kitchen-row__tags">${chips.join('')}</div>`;
+}
+
 function renderItem(item) {
   const isDone = Boolean(item.is_checked);
   return `
@@ -393,6 +416,7 @@ function renderItem(item) {
         <div class="kitchen-row__main">
           <div class="kitchen-row__name">${esc(item.name)}${renderItemMeta(item)}</div>
           ${item.quantity ? `<div class="kitchen-row__meta">${esc(item.quantity)}</div>` : ''}
+          ${renderItemTags(item.tags)}
         </div>
         <!-- Geteilte .row-action-Grammatik aus layout.css (app-weit von sieben
              Modulen genutzt), gruppiert in der geteilten .kitchen-row__actions -

@@ -4221,6 +4221,296 @@ const MIGRATIONS = [
         ON caldav_todo_pending_deletions(account_id);
     `,
   },
+  {
+    version: 114,
+    description: 'Tasks: repair the category default left behind by v83 (#586)',
+    // Der Rebuild droppt `tasks` und nimmt dabei alle Indizes und die drei
+    // Suchindex-Trigger mit - beide werden unten vollständig neu angelegt. Ohne
+    // Fremdschlüssel-Pause würde das DROP die referenzierenden Zeilen
+    // (task_assignments, task_documents, reward_ledger, Unteraufgaben) per
+    // CASCADE mitreißen.
+    foreignKeysOff: true,
+    up: `
+      -- v83 hat die Kategorien in eine eigene Tabelle überführt und den Bestand
+      -- von 'Sonstiges' auf den Key 'misc' gezogen, den Spalten-Default der
+      -- Tabelle aber stehen lassen. Seitdem trägt jede Zeile, die ohne
+      -- ausdrückliche Kategorie entsteht, einen Key, den es in task_categories
+      -- nicht gibt. Über den CalDAV-Spiegel passiert genau das bei jeder
+      -- eingespielten Aufgabe (#586): sie landet in einer Kategorie, die in
+      -- keinem Dropdown und keinem Filter auftaucht, und springt beim ersten
+      -- Speichern im Modal still auf die erste echte Kategorie.
+      CREATE TABLE tasks_new (
+        id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+        title               TEXT    NOT NULL,
+        description         TEXT,
+        category            TEXT    NOT NULL DEFAULT 'misc',
+        priority            TEXT    NOT NULL DEFAULT 'none'
+                                    CHECK(priority IN ('none', 'low', 'medium', 'high', 'urgent')),
+        status              TEXT    NOT NULL DEFAULT 'open'
+                                    CHECK(status IN ('open', 'in_progress', 'done', 'archived')),
+        due_date            TEXT,
+        due_time            TEXT,
+        assigned_to         INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        created_by          INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        is_recurring        INTEGER NOT NULL DEFAULT 0,
+        recurrence_rule     TEXT,
+        parent_task_id      INTEGER REFERENCES tasks(id) ON DELETE CASCADE,
+        created_at          TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+        updated_at          TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+        start_date          TEXT,
+        external_uid        TEXT,
+        external_source     TEXT    NOT NULL DEFAULT 'local',
+        external_account_id INTEGER,
+        points              INTEGER NOT NULL DEFAULT 0,
+        visibility          TEXT    NOT NULL DEFAULT 'all',
+        external_object_url TEXT,
+        outbound_dirty      INTEGER NOT NULL DEFAULT 0,
+        outbound_attempts   INTEGER NOT NULL DEFAULT 0
+      );
+
+      INSERT INTO tasks_new (
+        id, title, description, category, priority, status, due_date, due_time,
+        assigned_to, created_by, is_recurring, recurrence_rule, parent_task_id,
+        created_at, updated_at, start_date, external_uid, external_source,
+        external_account_id, points, visibility, external_object_url,
+        outbound_dirty, outbound_attempts
+      )
+      SELECT
+        id, title, description, category, priority, status, due_date, due_time,
+        assigned_to, created_by, is_recurring, recurrence_rule, parent_task_id,
+        created_at, updated_at, start_date, external_uid, external_source,
+        external_account_id, points, visibility, external_object_url,
+        outbound_dirty, outbound_attempts
+      FROM tasks;
+
+      -- Den AUTOINCREMENT-Hochstand mitnehmen. Ein Rebuild kopiert nur die
+      -- überlebenden Zeilen, also fällt sqlite_sequence auf deren höchste ID
+      -- zurück. Wurde vor dem Upgrade die höchste Aufgabe gelöscht, vergäbe die
+      -- nächste Aufgabe eine schon einmal benutzte ID. Die Tabelle reminders zeigt
+      -- entity_type/entity_id auf Aufgaben, ohne Fremdschlüssel und ohne
+      -- Aufräumen beim Löschen - eine verwaiste Erinnerung fiele damit einer
+      -- fremden neuen Aufgabe zu.
+      CREATE TEMP TABLE _tasks_seq AS
+        SELECT COALESCE((SELECT seq FROM sqlite_sequence WHERE name = 'tasks'), 0) AS seq;
+
+      DROP TABLE tasks;
+      ALTER TABLE tasks_new RENAME TO tasks;
+
+      -- Auch wenn keine einzige Aufgabe überlebt, greift das: eine Kopie mit
+      -- null Zeilen legt für tasks_new trotzdem einen sqlite_sequence-Eintrag
+      -- an (seq = 0), den das RENAME mitnimmt. Das UPDATE hebt ihn dann an.
+      UPDATE sqlite_sequence
+         SET seq = (SELECT seq FROM _tasks_seq)
+       WHERE name = 'tasks' AND seq < (SELECT seq FROM _tasks_seq);
+
+      DROP TABLE _tasks_seq;
+
+      -- Bestand einsammeln: nicht nur 'Sonstiges', sondern jeden Key, für den es
+      -- keine Kategorie (mehr) gibt. Nach v83 konnten weitere entstehen.
+      UPDATE tasks SET category = 'misc'
+      WHERE category NOT IN (SELECT key FROM task_categories);
+
+      CREATE INDEX IF NOT EXISTS idx_tasks_status     ON tasks(status);
+      CREATE INDEX IF NOT EXISTS idx_tasks_assigned   ON tasks(assigned_to);
+      CREATE INDEX IF NOT EXISTS idx_tasks_parent     ON tasks(parent_task_id);
+      CREATE INDEX IF NOT EXISTS idx_tasks_start_date ON tasks(start_date);
+      CREATE INDEX IF NOT EXISTS idx_tasks_external
+        ON tasks(external_source, external_account_id, external_uid);
+
+      -- Die Suchindex-Trigger hingen an der gedroppten Tabelle. Fehlen sie, läuft
+      -- die Suche still auf einem einfrierenden Index weiter.
+      DROP TRIGGER IF EXISTS trg_search_tasks_ai;
+      DROP TRIGGER IF EXISTS trg_search_tasks_au;
+      DROP TRIGGER IF EXISTS trg_search_tasks_ad;
+
+      CREATE TRIGGER trg_search_tasks_ai AFTER INSERT ON tasks BEGIN
+        INSERT INTO search_index (entity, entity_id, title, body)
+        VALUES ('task', NEW.id, COALESCE(NEW.title, ''), COALESCE(NEW.description, ''));
+      END;
+
+      CREATE TRIGGER trg_search_tasks_au AFTER UPDATE ON tasks BEGIN
+        DELETE FROM search_index WHERE entity = 'task' AND entity_id = OLD.id;
+        INSERT INTO search_index (entity, entity_id, title, body)
+        VALUES ('task', NEW.id, COALESCE(NEW.title, ''), COALESCE(NEW.description, ''));
+      END;
+
+      CREATE TRIGGER trg_search_tasks_ad AFTER DELETE ON tasks BEGIN
+        DELETE FROM search_index WHERE entity = 'task' AND entity_id = OLD.id;
+      END;
+    `,
+  },
+  {
+    version: 115,
+    description: 'Tasks: free-form tags, mirrored from VTODO CATEGORIES (#586)',
+    up: `
+      -- Tags sind das Gegenstück zu VTODO CATEGORIES und bewusst NICHT die
+      -- Kategorie: eine Aufgabe liegt in genau einer Kategorie (einer Schublade),
+      -- trägt aber beliebig viele Tags (Etiketten). CATEGORIES auf category
+      -- abzubilden hieße, alle Werte ab dem zweiten zu verlieren und beim Push
+      -- die Tags zu löschen, die der Server kennt und Yuvomi nie gesehen hat.
+      --
+      -- Freitext statt verwalteter Liste: die Werte kommen von fremden Servern,
+      -- eine Registry würde sich bei jedem Sync mit Fremdwerten füllen und in
+      -- jedem Kategorie-Dropdown auftauchen.
+      -- Die Spalte tag ist die Schreibweise für die Anzeige, tag_key der
+      -- Vergleichsschlüssel (NFC + kleingeschrieben, gebildet in JS). Der
+      -- Schlüssel ist keine Bequemlichkeit: SQLites COLLATE NOCASE faltet nur
+      -- ASCII, "Äpfel" wäre über "äpfel" nicht auffindbar. Der Primärschlüssel
+      -- hängt am Schlüssel, damit dieselbe Aufgabe ein Etikett nicht in zwei
+      -- Schreibweisen tragen kann.
+      CREATE TABLE IF NOT EXISTS task_tags (
+        task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+        tag     TEXT    NOT NULL,
+        tag_key TEXT    NOT NULL,
+        PRIMARY KEY (task_id, tag_key)
+      );
+
+      -- Für den ?tag=-Filter und die Vorschlagsliste.
+      CREATE INDEX IF NOT EXISTS idx_task_tags_key ON task_tags(tag_key);
+    `,
+  },
+  {
+    version: 116,
+    description: 'Shopping items: tags mirrored from VTODO CATEGORIES (#586)',
+    up: `
+      -- Einkaufsposten spiegeln dieselbe VTODO-Eigenschaft wie Aufgaben: eine
+      -- CalDAV-Erinnerungsliste kann auf beide Module zeigen (#617), und bis
+      -- hierher fielen die CATEGORIES eines Einkaufspostens stillschweigend weg.
+      --
+      -- Bewusst NICHT auf shopping_items.category abgebildet: die Kategorie ist
+      -- hier der Gang im Laden, eine verwaltete Liste mit Icon und Sortierung.
+      -- Fremdwerte hineinzuspülen hieße, diese Liste bei jedem Sync wachsen zu
+      -- lassen - derselbe Fehler, den v115 für Aufgaben vermeidet.
+      CREATE TABLE IF NOT EXISTS shopping_item_tags (
+        item_id INTEGER NOT NULL REFERENCES shopping_items(id) ON DELETE CASCADE,
+        tag     TEXT    NOT NULL,
+        tag_key TEXT    NOT NULL,
+        PRIMARY KEY (item_id, tag_key)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_shopping_item_tags_key ON shopping_item_tags(tag_key);
+    `,
+  },
+  {
+    version: 117,
+    description: 'Search index: tags belong to the searchable text (#586)',
+    up: `
+      -- Ein Tag ist Freitext und damit Inhalt. Die Aufgabenliste filtert danach,
+      -- die globale Suche fand ihn bisher nicht - dasselbe Wort führte je nach
+      -- Eingabefeld zu einem Treffer oder zu keinem.
+      --
+      -- Die Tags liegen in eigenen Tabellen, die bestehenden Trigger hängen aber
+      -- an tasks bzw. shopping_items und sehen nur die Zeile. Es braucht deshalb
+      -- beides: erweiterte Trigger auf der Hauptzeile UND eigene Trigger auf den
+      -- Tag-Tabellen, sonst bliebe eine reine Tag-Änderung unindiziert.
+      --
+      -- Alle Neuaufnahmen laufen als INSERT ... SELECT über die Haupttabelle.
+      -- Das ist kein Stil, sondern der Schutz gegen das Löschen: beim Entfernen
+      -- einer Aufgabe räumt CASCADE die Tag-Zeilen ab und feuert den
+      -- Tag-Trigger. Ein VALUES-INSERT legte dann eine Karteileiche für eine
+      -- Aufgabe an, die es nicht mehr gibt; das SELECT findet nichts und fügt
+      -- folgerichtig nichts ein.
+
+      DROP TRIGGER IF EXISTS trg_search_tasks_ai;
+      DROP TRIGGER IF EXISTS trg_search_tasks_au;
+      DROP TRIGGER IF EXISTS trg_search_tasks_ad;
+      DROP TRIGGER IF EXISTS trg_search_items_ai;
+      DROP TRIGGER IF EXISTS trg_search_items_au;
+      DROP TRIGGER IF EXISTS trg_search_items_ad;
+
+      CREATE TRIGGER trg_search_tasks_ai AFTER INSERT ON tasks BEGIN
+        INSERT INTO search_index (entity, entity_id, title, body)
+        SELECT 'task', t.id, COALESCE(t.title, ''),
+               TRIM(COALESCE(t.description, '') || ' ' ||
+                    COALESCE((SELECT group_concat(tag, ' ') FROM task_tags WHERE task_id = t.id), ''))
+        FROM tasks t WHERE t.id = NEW.id;
+      END;
+
+      CREATE TRIGGER trg_search_tasks_au AFTER UPDATE ON tasks BEGIN
+        DELETE FROM search_index WHERE entity = 'task' AND entity_id = OLD.id;
+        INSERT INTO search_index (entity, entity_id, title, body)
+        SELECT 'task', t.id, COALESCE(t.title, ''),
+               TRIM(COALESCE(t.description, '') || ' ' ||
+                    COALESCE((SELECT group_concat(tag, ' ') FROM task_tags WHERE task_id = t.id), ''))
+        FROM tasks t WHERE t.id = NEW.id;
+      END;
+
+      CREATE TRIGGER trg_search_tasks_ad AFTER DELETE ON tasks BEGIN
+        DELETE FROM search_index WHERE entity = 'task' AND entity_id = OLD.id;
+      END;
+
+      CREATE TRIGGER trg_search_task_tags_ai AFTER INSERT ON task_tags BEGIN
+        DELETE FROM search_index WHERE entity = 'task' AND entity_id = NEW.task_id;
+        INSERT INTO search_index (entity, entity_id, title, body)
+        SELECT 'task', t.id, COALESCE(t.title, ''),
+               TRIM(COALESCE(t.description, '') || ' ' ||
+                    COALESCE((SELECT group_concat(tag, ' ') FROM task_tags WHERE task_id = t.id), ''))
+        FROM tasks t WHERE t.id = NEW.task_id;
+      END;
+
+      CREATE TRIGGER trg_search_task_tags_ad AFTER DELETE ON task_tags BEGIN
+        DELETE FROM search_index WHERE entity = 'task' AND entity_id = OLD.task_id;
+        INSERT INTO search_index (entity, entity_id, title, body)
+        SELECT 'task', t.id, COALESCE(t.title, ''),
+               TRIM(COALESCE(t.description, '') || ' ' ||
+                    COALESCE((SELECT group_concat(tag, ' ') FROM task_tags WHERE task_id = t.id), ''))
+        FROM tasks t WHERE t.id = OLD.task_id;
+      END;
+
+      CREATE TRIGGER trg_search_items_ai AFTER INSERT ON shopping_items BEGIN
+        INSERT INTO search_index (entity, entity_id, title, body)
+        SELECT 'item', i.id, COALESCE(i.name, ''),
+               TRIM(COALESCE(i.notes, '') || ' ' ||
+                    COALESCE((SELECT group_concat(tag, ' ') FROM shopping_item_tags WHERE item_id = i.id), ''))
+        FROM shopping_items i WHERE i.id = NEW.id;
+      END;
+
+      CREATE TRIGGER trg_search_items_au AFTER UPDATE ON shopping_items BEGIN
+        DELETE FROM search_index WHERE entity = 'item' AND entity_id = OLD.id;
+        INSERT INTO search_index (entity, entity_id, title, body)
+        SELECT 'item', i.id, COALESCE(i.name, ''),
+               TRIM(COALESCE(i.notes, '') || ' ' ||
+                    COALESCE((SELECT group_concat(tag, ' ') FROM shopping_item_tags WHERE item_id = i.id), ''))
+        FROM shopping_items i WHERE i.id = NEW.id;
+      END;
+
+      CREATE TRIGGER trg_search_items_ad AFTER DELETE ON shopping_items BEGIN
+        DELETE FROM search_index WHERE entity = 'item' AND entity_id = OLD.id;
+      END;
+
+      CREATE TRIGGER trg_search_item_tags_ai AFTER INSERT ON shopping_item_tags BEGIN
+        DELETE FROM search_index WHERE entity = 'item' AND entity_id = NEW.item_id;
+        INSERT INTO search_index (entity, entity_id, title, body)
+        SELECT 'item', i.id, COALESCE(i.name, ''),
+               TRIM(COALESCE(i.notes, '') || ' ' ||
+                    COALESCE((SELECT group_concat(tag, ' ') FROM shopping_item_tags WHERE item_id = i.id), ''))
+        FROM shopping_items i WHERE i.id = NEW.item_id;
+      END;
+
+      CREATE TRIGGER trg_search_item_tags_ad AFTER DELETE ON shopping_item_tags BEGIN
+        DELETE FROM search_index WHERE entity = 'item' AND entity_id = OLD.item_id;
+        INSERT INTO search_index (entity, entity_id, title, body)
+        SELECT 'item', i.id, COALESCE(i.name, ''),
+               TRIM(COALESCE(i.notes, '') || ' ' ||
+                    COALESCE((SELECT group_concat(tag, ' ') FROM shopping_item_tags WHERE item_id = i.id), ''))
+        FROM shopping_items i WHERE i.id = OLD.item_id;
+      END;
+
+      -- Bestand neu einlesen: die Tags der bereits gespiegelten Zeilen stehen
+      -- sonst erst nach der nächsten Bearbeitung im Index.
+      DELETE FROM search_index WHERE entity IN ('task', 'item');
+      INSERT INTO search_index (entity, entity_id, title, body)
+        SELECT 'task', id, COALESCE(title, ''),
+               TRIM(COALESCE(description, '') || ' ' ||
+                    COALESCE((SELECT group_concat(tag, ' ') FROM task_tags WHERE task_id = tasks.id), ''))
+        FROM tasks;
+      INSERT INTO search_index (entity, entity_id, title, body)
+        SELECT 'item', id, COALESCE(name, ''),
+               TRIM(COALESCE(notes, '') || ' ' ||
+                    COALESCE((SELECT group_concat(tag, ' ') FROM shopping_item_tags WHERE item_id = shopping_items.id), ''))
+        FROM shopping_items;
+    `,
+  },
 ];
 
 /**

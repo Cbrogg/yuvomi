@@ -5215,3 +5215,55 @@ test('destruktive Settings-Dialoge nennen ihre Folgen und sind als gefaehrlich m
     assert.ok(value.length >= 80, `${detailKey} ist zu knapp fuer eine Folgenbeschreibung`);
   }
 });
+
+// --------------------------------------------------------
+// Aufgaben-Tags (#586)
+// Drei Entscheidungen, die im Quelltext unscheinbar aussehen und deren Verlust
+// sich in der Oberflaeche erst spaet zeigt.
+// --------------------------------------------------------
+
+test('Tag-Chips auf Karten sind Filter-Buttons, keine Beschriftungen', () => {
+  const source = read('../public/pages/tasks.js');
+  const fn = source.slice(source.indexOf('function renderTagBadges'),
+                          source.indexOf('function wireTagBadgeFilter'));
+
+  assert.match(fn, /<button type="button" class="task-tag task-tag--filter"/,
+    'Ein Tag anzuklicken und danach zu filtern ist die erwartete Geste - als <span> gibt es sie nicht');
+  assert.match(fn, /data-tag-filter="\$\{esc\(tag\)\}"/, 'Der Wert muss escaped am Chip haengen');
+  assert.match(fn, /aria-label="\$\{esc\(t\('tasks\.tagFilterBy'/,
+    'Der Button braucht eine Beschriftung, die seine Wirkung nennt');
+
+  // Die Zusammenfassung ab dem vierten Tag darf kein Button sein: sie benennt
+  // keinen einzelnen Tag, auf den ein Klick filtern koennte.
+  const more = fn.slice(fn.indexOf('task-tag--more') - 120, fn.indexOf('task-tag--more') + 200);
+  assert.match(more, /<span/, '+N ist eine Anzeige, kein Ziel');
+});
+
+test('der Tag-Klick wird in der Capture-Phase abgefangen', () => {
+  const source = read('../public/pages/tasks.js');
+  const fn = source.slice(source.indexOf('function wireTagBadgeFilter'),
+                          source.indexOf('function wireTagBadgeFilter') + 600);
+
+  assert.match(fn, /e\.stopPropagation\(\)/,
+    'Ohne stopPropagation oeffnet derselbe Klick zusaetzlich den Bearbeiten-Dialog');
+  // Das `true` am Ende ist der ganze Punkt: der Kanban-Board-Handler sitzt
+  // unterhalb des Containers und kaeme beim Bubbling zuerst dran.
+  assert.match(fn, /\}, true\);/,
+    'Der Listener muss in der Capture-Phase haengen, sonst hat das Board den Dialog schon geoeffnet');
+});
+
+test('der Tag-Filter ist ueberall eine Liste, nirgends mehr ein einzelner Wert', () => {
+  const source = read('../public/pages/tasks.js');
+
+  // `filters.tag` (Singular) war die Fassung vor der Mehrfachauswahl. Bleibt
+  // irgendwo ein Zugriff darauf stehen, ist er still wirkungslos: er liest
+  // undefined und filtert nie.
+  const singular = [...source.matchAll(/filters\.tag\b(?!s)/g)];
+  assert.equal(singular.length, 0,
+    `filters.tag (Singular) darf nicht mehr vorkommen, gefunden: ${singular.length}`);
+
+  // Mehrere Tags muessen als eigene Parameter reisen, sonst zerfaellt ein Tag
+  // mit Komma im Namen (aus CATEGORIES) am Server in zwei.
+  assert.match(source, /params\.append\('tag', tag\)/,
+    'Jeder Tag gehoert als eigener Query-Parameter in die Anfrage');
+});

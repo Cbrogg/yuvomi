@@ -13,9 +13,18 @@
 const MANAGED_VEVENT = new Set(['SUMMARY', 'DESCRIPTION', 'LOCATION', 'DTSTART', 'DTEND', 'RRULE']);
 // VTODO (#617): STATUS, COMPLETED und PERCENT-COMPLETE gehören zusammen - Clients
 // lesen den Erledigt-Zustand mal am einen, mal am anderen ab.
+//
+// CATEGORIES kam mit den Tags dazu (#586). Verwaltet werden darf es erst,
+// seit Yuvomi die vollständige Liste hält: solange nur ein einzelner Wert
+// gespiegelt worden wäre, hätte jeder Push die übrigen Tags des Servers
+// gelöscht.
 const MANAGED_VTODO = new Set([
   'SUMMARY', 'DESCRIPTION', 'DUE', 'PRIORITY', 'STATUS', 'COMPLETED', 'PERCENT-COMPLETE',
+  'CATEGORIES',
 ]);
+
+// Properties, deren Wert eine kommaseparierte Liste ist.
+const LIST_VALUED = new Set(['CATEGORIES']);
 
 // Properties, deren Parameter sich mit dem Wert ändern (VALUE=DATE, TZID) und die
 // ihre Parameter deshalb selbst mitbringen: { value, params }.
@@ -68,6 +77,16 @@ function buildLines(name, value) {
     const { value: v, params = '' } = value;
     if (!v) return [];
     return [`${name}${params}:${v}`];
+  }
+  // Listen-Properties: das Komma trennt hier die Werte, escapeText würde es zum
+  // Bestandteil eines einzigen Wertes machen. Also jedes Element für sich
+  // escapen (ein Komma **im** Wert bleibt dabei escaped) und dann verbinden.
+  if (LIST_VALUED.has(name)) {
+    const items = (Array.isArray(value) ? value : [value])
+      .map((item) => String(item ?? '').trim())
+      .filter(Boolean);
+    if (!items.length) return [];   // leere Liste = Property entfernen
+    return [`${name}:${items.map(escapeText).join(',')}`];
   }
   if (name === 'RRULE') {
     const rule = String(value).replace(/^RRULE:/i, '');

@@ -26,6 +26,7 @@ import { outboundFailureAction } from './calendar-outbound.js';
 import { patchICSTodo } from '../utils/ics-patch.js';
 import { createCalDAVClient, collectionUrlOf } from '../utils/caldav-client.js';
 import { localToUTC, serverTimeZone } from '../utils/timezone.js';
+import { loadTags } from '../utils/task-tags.js';
 
 const log = createLogger('CalDAV-Todo-Outbound');
 
@@ -44,7 +45,12 @@ export const MODULES = {
     // Felder, die zum Server gespiegelt werden. Alles andere (Kategorie,
     // Zuweisung, Punkte, Sichtbarkeit, Unteraufgaben) ist Yuvomi-intern und
     // kennt in VTODO keine Entsprechung, löst also keinen Push aus.
-    mirrored: ['title', 'description', 'priority', 'status', 'due_date', 'due_time'],
+    //
+    // `tags_key` ist kein Spaltenname: Tags liegen in task_tags, der
+    // Feldvergleich sieht aber nur die Zeile. Der Aufrufer hängt den
+    // kanonischen Schlüssel (utils/task-tags.js: tagsKey) an beide Seiten,
+    // sonst bliebe eine reine Tag-Änderung unbemerkt (#586).
+    mirrored: ['title', 'description', 'priority', 'status', 'due_date', 'due_time', 'tags_key'],
     icsFields: icsFieldsForTask,
     labelOf: (row) => row.title,
   },
@@ -125,15 +131,26 @@ function completionFields(done, inProgress, hadCompleted) {
   return fields;
 }
 
-/** VTODO-Properties einer lokalen Aufgabe. */
+/**
+ * VTODO-Properties einer lokalen Aufgabe.
+ *
+ * CATEGORIES wird nur aufgenommen, wenn die Tags wirklich geladen sind (#586).
+ * Der Unterschied ist folgenreich: ein leeres Array heißt „keine Tags mehr" und
+ * entfernt die Property auf dem Server, ein fehlendes Feld heißt „unbekannt"
+ * und muss sie unberührt lassen. Wäre beides dasselbe, würde jeder Aufrufer,
+ * der eine rohe Zeile aus `SELECT *` durchreicht, die Tags des Servers
+ * stillschweigend löschen - `reloadRow` hängt sie deshalb an.
+ */
 export function icsFieldsForTask(task, hadCompleted = false) {
-  return {
+  const fields = {
     SUMMARY:     task.title,
     DESCRIPTION: task.description || null,
     DUE:         dueField(task.due_date, task.due_time),
     PRIORITY:    priorityToVtodo(task.priority),
     ...completionFields(task.status === 'done', task.status === 'in_progress', hadCompleted),
   };
+  if (Array.isArray(task.tags)) fields.CATEGORIES = task.tags;
+  return fields;
 }
 
 /** VTODO-Properties eines lokalen Einkaufspostens. */
@@ -293,10 +310,16 @@ function failOutbound(module, id) {
   ).run(id);
 }
 
-/** Der Stand unmittelbar vor dem Server-Aufruf; null, wenn parallel gelöscht. */
+/**
+ * Der Stand unmittelbar vor dem Server-Aufruf; null, wenn parallel gelöscht.
+ * Aufgaben bekommen ihre Tags angehängt - sie liegen in task_tags, `SELECT *`
+ * allein liefert sie also nicht, und icsFieldsForTask baut CATEGORIES daraus (#586).
+ */
 function reloadRow(module, id) {
   const def = moduleDef(module);
-  return db.get().prepare(`SELECT * FROM ${def.table} WHERE id = ?`).get(id) ?? null;
+  const row = db.get().prepare(`SELECT * FROM ${def.table} WHERE id = ?`).get(id) ?? null;
+  if (row && module === 'tasks') row.tags = loadTags(db.get(), row.id);
+  return row;
 }
 
 // --------------------------------------------------------
@@ -362,7 +385,9 @@ export async function processPendingDeletions(client, accountId, module, objectI
 /**
  * Schiebt lokal bearbeitete Spiegel-Einträge zum Server. Geändert wird das
  * Originalobjekt, nicht ein neu gebautes: sonst verlöre die Aufgabe auf dem
- * Server alles, was Yuvomi nicht kennt (Alarme, Unterlisten, Kategorien).
+ * Server alles, was Yuvomi nicht kennt (Alarme, Unterlisten, Beziehungen).
+ * CATEGORIES gehört seit #586 nicht mehr dazu - die Tag-Liste ist vollständig
+ * gespiegelt und wird deshalb bewusst verwaltet.
  *
  * @returns {Promise<number>} erfolgreich verarbeitete Einträge
  */

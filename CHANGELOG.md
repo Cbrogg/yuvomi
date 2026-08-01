@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.69.0] - 2026-08-01
+
+### Added
+
+- Tasks can carry tags. A task still sits in exactly one category, but it can wear any number of labels on top - "garden", "before the holidays", "for grandma". Tags are free text with no list to maintain: one exists because a task carries it, and it disappears with the last one. The dialog has a tag field with suggestions, and tags show as chips on the task card and on the Kanban board.
+- Clicking a tag on a card filters the list by it, and picking several narrows it further, the same way the status and person filters already do. The filter bar offers every tag in use.
+- Tags can be managed for the whole household. "Manage tags" in the tasks toolbar renames a tag everywhere at once, merges it into another by renaming it onto an existing name, or detaches it from every task. Fixing a typo no longer means opening every task that carries it.
+- Several tasks can be tagged at once. With multiple tasks selected, the bulk bar adds or removes a tag on all of them in one step.
+- Tags travel both ways with CalDAV reminder lists, as that list's categories. A label you set in Nextcloud Tasks, Radicale or another reminder app shows up here, and one you set here reaches the server. Until now those categories were read past and lost.
+- Shopping items show the categories of the reminder list they came from as tags. A reminder list can feed either the task list or the shopping list, and on the shopping side those labels used to be dropped without a trace. They are shown, not managed here: they belong to the source list, so nothing Yuvomi does overwrites them on the server.
+- The global search finds tasks and shopping items by their tags, so the same word leads to a hit whether you type it into the search or the filter bar.
+- An AI or automation client connected over MCP sees a task's tags, can filter by them, and can set them when creating a task.
+
+### Fixed
+
+- The tags of a private task no longer show up for anyone else. Tag names are free text and can give away what a task is about, so the filter bar and the suggestion list now only offer tags from tasks you are allowed to see - counts included. A task hidden while you prepare a surprise no longer announces itself through its label.
+- An AI or automation client connected over MCP could list every private task in the household. The task list it receives now follows the same visibility rules as the app, matching the calendar list, which always did.
+- A recurring task no longer loses its tags. The follow-up instance created when you tick one off kept the title, category and assignees but silently dropped the labels; tags belong to the task, not to a single run.
+- Renaming a tag to a name containing a comma kept only the part before it, and reported success anyway.
+- A tag consisting only of dots could not be renamed or removed: the address for it dissolved before the request was sent. Such tags are no longer created.
+- A tag ending in a backslash arrived from a reminder list glued to the tag after it.
+- Filtering by a tag that contains a comma, such as `Haus, Hof` from a reminder list, found nothing. A single tag in the address was read as a comma-separated list and split into two, so the search asked for two tags at once.
+- Tags with umlauts ignored capitalization only by half: a task tagged `Äpfel` was not found by `äpfel`, although `ÄPFEL` worked. The database's built-in comparison folds only the English alphabet; tags are now compared through a key that understands the whole alphabet.
+- A private subtask under a shared task was handed out to everyone, title and all. Subtasks never followed the visibility rule of their own; now they do, and their tags with them.
+- On upgrade, a household that had deleted its most recent task could see that task's ID handed out again, which could attach an old reminder to an unrelated new task.
+- An AI or automation client that sent a malformed tag filter received the full task list instead of an error, so an automation could act on tasks it never asked for.
+- The API description declared the category and tag path parameters as numbers, although both are names. A client generated from it refused an address like `/tasks/tags/garden` or sent a number instead. Only generated clients were affected; the API itself always accepted the name.
+- Tasks created over MCP landed in a category that appeared in no dropdown and no filter, and jumped to some other category the first time they were saved. This was a leftover from the category rework: the fallback still wrote the old display name instead of the key. Existing tasks affected by it, including every task that arrived through a reminder list, are repaired on upgrade.
+
 ## [1.68.2] - 2026-08-01
 
 ### Changed

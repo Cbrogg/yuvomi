@@ -12,6 +12,7 @@ import express from 'express';
 import * as db from '../db.js';
 import { str, oneOf, url, date, collectErrors, MAX_TITLE, MAX_SHORT, MAX_TEXT } from '../middleware/validate.js';
 import { aggregateMealIngredients } from '../services/shopping-import.js';
+import { loadItemTagsFor } from '../utils/task-tags.js';
 import {
   flushOutbound, markTodoOutbound, queueTodoDeletions,
 } from '../services/caldav-todo-outbound.js';
@@ -495,6 +496,11 @@ router.get('/:listId/items', (req, res) => {
         is_checked ASC,
         created_at ASC
     `).all(req.params.listId);
+
+    // Gespiegelte CATEGORIES der Quellliste (#586). Eine Abfrage für die ganze
+    // Liste, nicht eine pro Zeile.
+    const tagMap = loadItemTagsFor(db.get(), items.map((i) => i.id));
+    for (const item of items) item.tags = tagMap.get(item.id) ?? [];
 
     res.json({ data: items, list, categories });
   } catch (err) {
