@@ -714,23 +714,6 @@ router.put('/', (req, res) => {
       }
     }
 
-    // Gespeicherte Geburtstags-Termine an die geltende Datensprache angleichen.
-    //
-    // Unbedingt statt nur bei erkannter Verschiebung: retitleBirthdayEvents
-    // vergleicht ohnehin pro Zeile und schreibt nur, was abweicht. Ein Vergleich
-    // vorher/nachher hier oben wäre ein zweiter Ort, an dem alle Wege zur
-    // Datensprache (language, region, date_format) vollständig aufgezählt sein
-    // müssten - und der Lauf heilt so auch einen früheren Fehlschlag mit.
-    //
-    // Fehler beenden die Anfrage nicht: die Präferenzen sind zu diesem Zeitpunkt
-    // geschrieben, und eine 500-Antwort würde einen Zustand melden, den der
-    // Aufrufer nicht mehr zurücknehmen kann. Der nächste PUT versucht es erneut.
-    try {
-      db.transaction(() => retitleBirthdayEvents(db.get()));
-    } catch (err) {
-      log.error('PUT / - Geburtstags-Termine konnten nicht umbenannt werden', err);
-    }
-
     const rawMealTypes = cfgGet('visible_meal_types') ?? DEFAULT_MEAL_TYPES;
     const savedMealTypes = rawMealTypes.split(',').filter((t) => VALID_MEAL_TYPES.includes(t));
     const savedCurrency = cfgGet('currency') ?? DEFAULT_CURRENCY;
@@ -788,6 +771,28 @@ router.put('/', (req, res) => {
   } catch (err) {
     log.error('PUT /', err);
     res.status(500).json({ error: 'Interner Fehler', code: 500 });
+  } finally {
+    // Gespeicherte Geburtstags-Termine an die geltende Datensprache angleichen.
+    //
+    // Unbedingt statt nur bei erkannter Verschiebung: retitleBirthdayEvents
+    // vergleicht ohnehin pro Zeile und schreibt nur, was abweicht. Ein Vergleich
+    // vorher/nachher wäre ein zweiter Ort, an dem alle Wege zur Datensprache
+    // (language, region, date_format) vollständig aufgezählt sein müssten.
+    //
+    // Im finally, weil der Handler schreibt und validiert, während er durch die
+    // Felder läuft: ein Batch aus gültiger `language` und einem später
+    // abgelehnten Feld verlässt ihn über ein `return res.status(400)`, hat die
+    // Sprache aber schon geschrieben. Am Ende des try-Blocks bliebe der Haushalt
+    // dann auf einer neuen Sprache mit alten Titeln sitzen.
+    //
+    // Fehler beenden die Anfrage nicht: die Antwort ist zu diesem Zeitpunkt
+    // längst gesendet, und die Präferenzen sind geschrieben. Der nächste PUT
+    // versucht es erneut - der Lauf ist idempotent.
+    try {
+      db.transaction(() => retitleBirthdayEvents(db.get()));
+    } catch (err) {
+      log.error('PUT / - Geburtstags-Termine konnten nicht umbenannt werden', err);
+    }
   }
 });
 

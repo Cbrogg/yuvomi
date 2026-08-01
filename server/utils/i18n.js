@@ -121,10 +121,19 @@ export function translate(locale, key, params = {}) {
   }
   if (str === undefined) return key;
 
-  for (const [name, value] of Object.entries(params)) {
-    str = str.replaceAll(`{{${name}}}`, String(value));
-  }
-  return str;
+  // Ein Durchgang mit Callback statt einer Schleife aus replaceAll(string, string).
+  // Zwei Gründe, beide an echten Namen nachvollziehbar:
+  //   - Ein String-Ersatz interpretiert `$&`, `` $` `` und `$$`. Ein Kind namens
+  //     "A $& B" wurde zu "A {{name}} B", und `` $` `` zog sogar den Text vor dem
+  //     Treffer in den Namen ("X $` Y" → "X Geburtstag:  Y").
+  //   - Nacheinander ersetzt, wird ein bereits eingesetzter Wert vom nächsten
+  //     Platzhalter erneut durchsucht: ein Name "{{date}}" verwandelte sich beim
+  //     date-Durchgang in das Datum.
+  // Unbekannte Platzhalter bleiben stehen, statt zu verschwinden - so ist ein
+  // fehlender Parameter im Ergebnis sichtbar und nicht still weggekürzt.
+  return str.replace(/\{\{(\w+)\}\}/g, (placeholder, name) => (
+    Object.prototype.hasOwnProperty.call(params, name) ? String(params[name]) : placeholder
+  ));
 }
 
 const VALID_DATE_FORMATS = ['mdy', 'dmy', 'ymd', 'mdy_dot', 'dmy_dot', 'dmy_slash', 'ymd_dot', 'ymd_slash'];
@@ -177,6 +186,17 @@ function cfgValue(database, key) {
  * ergäbe. Das braucht die Einstellungsseite für ihr "Automatisch (…)"-Label:
  * sonst nennt es bei explizit gewählter Sprache genau diese und verspricht dem
  * Nutzer eine Automatik, die er so nicht bekäme.
+ *
+ * Bewusst die *gespeicherte* Region, nicht die aus den Formaten abgeleitete:
+ * ändert jemand nach der Regionswahl ein Format von Hand, springt der
+ * Region-Dropdown auf "Benutzerdefiniert", während `sync_config.region` auf der
+ * zuletzt gewählten Region stehen bleibt (#486 - genau dafür wurde sie
+ * eingeführt). Die Datensprache folgt dann weiter dieser Wahl. Das ist die
+ * bessere Antwort als der Gegenvorschlag, die Region bei jeder Formatänderung
+ * zu verwerfen: ein anderes Datumsformat ist keine Aussage über die Sprache, und
+ * ein deutscher Haushalt fiele dadurch auf englische Titel zurück. Der Preis ist
+ * ein Dropdown, das "Benutzerdefiniert" zeigt, während das Sprach-Label eine
+ * Region nennt - eine Erklärungslücke, kein falscher Wert.
  *
  * @param {object} database  better-sqlite3-Connection
  * @param {{ ignoreExplicit?: boolean }} options

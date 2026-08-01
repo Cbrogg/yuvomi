@@ -303,7 +303,56 @@ test('ein unveränderter Termin wird nicht erneut geschrieben', async () => {
   );
 });
 
+test('Namen mit Ersetzungssyntax landen wörtlich im Titel', async () => {
+  await asAdmin(() => call('PUT', '/preferences', { language: 'de' }));
+
+  // `$&` und `` $` `` sind in einem String-Ersatz Rückverweise auf den Treffer
+  // bzw. auf den Text davor. Vor dem Fix wurde aus "A $& B" ein "A {{name}} B",
+  // und `` $` `` zog den halben Titel in den Namen.
+  const created = await call('POST', '/birthdays', { name: 'A $& B $` C', birth_date: '1980-07-07' });
+  assert.equal(created.status, 201);
+  assert.equal(storedEvent(created.body.data.id).title, 'Geburtstag: A $& B $` C');
+});
+
+test('ein Name, der wie ein Platzhalter aussieht, wird nicht erneut ersetzt', async () => {
+  const created = await call('POST', '/birthdays', { name: '{{date}}', birth_date: '1975-01-02' });
+  assert.equal(created.status, 201);
+  // Der Name bleibt stehen; nur der echte {{date}}-Platzhalter der Vorlage wird
+  // gefüllt. Nacheinander ersetzt, wäre hier zweimal das Datum gelandet.
+  assert.equal(
+    storedEvent(created.body.data.id).description,
+    'Geburtstagserinnerung für {{date}} (02.01.1975).',
+  );
+});
+
+test('ein abgelehntes Feld hinterlässt keine Sprache ohne passende Titel', async () => {
+  await asAdmin(() => call('PUT', '/preferences', { language: 'en' }));
+  const first = db.prepare(`SELECT id FROM birthdays ORDER BY id ASC`).get().id;
+  assert.equal(storedEvent(first).title, 'Birthday: Lina Müller');
+
+  // Gültige Sprache zusammen mit einem Feld, das später scheitert: der Handler
+  // schreibt im Durchlauf und verlässt sich über ein early return.
+  const rejected = await asAdmin(() => call('PUT', '/preferences', {
+    language: 'de',
+    app_name: 'x'.repeat(5000),
+  }));
+  assert.equal(rejected.status, 400);
+
+  const after = await call('GET', '/preferences');
+  assert.equal(after.body.data.language, 'de', 'die Sprache ist geschrieben');
+  assert.equal(
+    storedEvent(first).title,
+    'Geburtstag: Lina Müller',
+    'dann müssen die Titel ihr auch folgen, sonst meldet GET einen Zustand, den die Daten nicht haben',
+  );
+});
+
 test('GET /preferences liefert die drei Sprachfelder', async () => {
+  // Eigene Vorbedingung: die drei Felder sind nur dann unterscheidbar, wenn
+  // gewählte Sprache und Region auseinanderfallen.
+  setConfig('region', 'it-IT');
+  await asAdmin(() => call('PUT', '/preferences', { language: 'fr' }));
+
   const res = await call('GET', '/preferences');
   assert.equal(res.status, 200);
   assert.equal(res.body.data.language, 'fr', 'explizit gesetzt');
