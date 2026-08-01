@@ -1632,7 +1632,7 @@
         "calendarDisabled": "Kalender dinonaktifkan",
         "calendarsRefreshed": "Kalender diperbarui",
         "caldavRemindersToggle": "Tampilkan/sembunyikan daftar pengingat",
-        "caldavRemindersHint": "Daftar pengingat (Apple Reminders) disinkronkan dua arah dengan Tugas atau Belanja.",
+        "caldavRemindersHint": "Daftar pengingat dari server CalDAV mana pun (iCloud, Nextcloud, Radicale) disinkronkan dua arah dengan Tugas atau Belanja.",
         "caldavRemindersEmpty": "Tidak ada daftar pengingat ditemukan. Klik „Perbarui daftar pengingat\" untuk menemukannya.",
         "caldavReminderMapTasks": "Tugas",
         "caldavReminderMapShopping": "Belanja",

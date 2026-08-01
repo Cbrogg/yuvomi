@@ -1647,7 +1647,7 @@
         "calendarEnabled": "Calendar enabled",
         "calendarsRefreshed": "Calendars refreshed",
         "caldavRemindersToggle": "Afficher/masquer les listes de rappels",
-        "caldavRemindersHint": "Les listes de rappels (Rappels Apple) sont synchronisées avec Tâches ou Courses dans les deux sens.",
+        "caldavRemindersHint": "Les listes de rappels de n'importe quel serveur CalDAV (iCloud, Nextcloud, Radicale) sont synchronisées avec Tâches ou Courses dans les deux sens.",
         "caldavRemindersEmpty": "Aucune liste de rappels trouvée. Cliquez sur « Actualiser les listes de rappels » pour les détecter.",
         "caldavReminderMapTasks": "Tâches",
         "caldavReminderMapShopping": "Courses",

@@ -1647,7 +1647,7 @@
         "calendarEnabled": "Календар увімкнено",
         "calendarsRefreshed": "Календарі оновлено",
         "caldavRemindersToggle": "Показати/сховати списки нагадувань",
-        "caldavRemindersHint": "Списки нагадувань (Нагадування Apple) синхронізуються із Завданнями або Покупками в обидві сторони.",
+        "caldavRemindersHint": "Списки нагадувань з будь-якого сервера CalDAV (iCloud, Nextcloud, Radicale) синхронізуються із Завданнями або Покупками в обидві сторони.",
         "caldavRemindersEmpty": "Списки нагадувань не знайдено. Натисніть «Оновити списки нагадувань», щоб виявити їх.",
         "caldavReminderMapTasks": "Завдання",
         "caldavReminderMapShopping": "Покупки",

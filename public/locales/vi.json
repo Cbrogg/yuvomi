@@ -1584,7 +1584,7 @@
         "calendarDisabled": "Đã tắt lịch",
         "calendarsRefreshed": "Đã làm mới lịch",
         "caldavRemindersToggle": "Hiển thị/ẩn danh sách nhắc nhở",
-        "caldavRemindersHint": "Danh sách nhắc nhở (Apple Reminders) được đồng bộ hai chiều với Nhiệm vụ hoặc Mua sắm.",
+        "caldavRemindersHint": "Danh sách nhắc nhở từ bất kỳ máy chủ CalDAV nào (iCloud, Nextcloud, Radicale) được đồng bộ hai chiều với Nhiệm vụ hoặc Mua sắm.",
         "caldavRemindersEmpty": "Không tìm thấy danh sách nhắc nhở. Nhấp vào \"Làm mới danh sách nhắc nhở\" để khám phá chúng.",
         "caldavReminderMapTasks": "Nhiệm vụ",
         "caldavReminderMapShopping": "Mua sắm",

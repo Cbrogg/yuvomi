@@ -1607,7 +1607,7 @@
         "calendarDisabled": "Calendar disabled",
         "calendarsRefreshed": "Calendars refreshed",
         "caldavRemindersToggle": "Show/hide reminder lists",
-        "caldavRemindersHint": "Reminder lists (Apple Reminders) sync with Tasks or Shopping in both directions.",
+        "caldavRemindersHint": "Reminder lists from any CalDAV server (iCloud, Nextcloud, Radicale) sync with Tasks or Shopping in both directions.",
         "caldavRemindersEmpty": "No reminder lists found. Click “Refresh reminder lists” to discover them.",
         "caldavReminderMapTasks": "Tasks",
         "caldavReminderMapShopping": "Shopping",

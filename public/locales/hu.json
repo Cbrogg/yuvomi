@@ -1607,7 +1607,7 @@
         "calendarDisabled": "Naptár letiltva",
         "calendarsRefreshed": "Naptárak frissítve",
         "caldavRemindersToggle": "Emlékeztető listák mutatása/elrejtése",
-        "caldavRemindersHint": "Az emlékeztető listák (Apple Emlékeztetők) mindkét irányban szinkronizálódnak a Feladatok vagy Bevásárló listákkal.",
+        "caldavRemindersHint": "Bármely CalDAV-kiszolgáló emlékeztető listái (iCloud, Nextcloud, Radicale) mindkét irányban szinkronizálódnak a Feladatok vagy Bevásárló listákkal.",
         "caldavRemindersEmpty": "Nincs található emlékeztető lista. Kattintson a „Emlékeztető listák frissítése” gombra a felfedezéshez.",
         "caldavReminderMapTasks": "Feladatok",
         "caldavReminderMapShopping": "Bevásárlás",

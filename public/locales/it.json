@@ -1647,7 +1647,7 @@
         "calendarEnabled": "Calendario abilitato",
         "calendarsRefreshed": "Calendari aggiornati",
         "caldavRemindersToggle": "Mostra/nascondi elenchi promemoria",
-        "caldavRemindersHint": "Gli elenchi promemoria (Promemoria di Apple) si sincronizzano con Attività o Spesa in entrambe le direzioni.",
+        "caldavRemindersHint": "Gli elenchi promemoria di qualsiasi server CalDAV (iCloud, Nextcloud, Radicale) si sincronizzano con Attività o Spesa in entrambe le direzioni.",
         "caldavRemindersEmpty": "Nessun elenco promemoria trovato. Fai clic su «Aggiorna elenchi promemoria» per rilevarli.",
         "caldavReminderMapTasks": "Attività",
         "caldavReminderMapShopping": "Spesa",

@@ -1632,7 +1632,7 @@
         "calendarDisabled": "تقویم غیرفعال شد",
         "calendarsRefreshed": "تقویم‌ها به‌روزرسانی شدند",
         "caldavRemindersToggle": "نمایش/پنهان‌سازی فهرست‌های یادآور",
-        "caldavRemindersHint": "فهرست‌های یادآور (یادآورهای Apple) در هر دو جهت با کارها یا خرید همگام‌سازی می‌شوند.",
+        "caldavRemindersHint": "فهرست‌های یادآور از هر سرور CalDAV (iCloud، Nextcloud، Radicale) در هر دو جهت با کارها یا خرید همگام‌سازی می‌شوند.",
         "caldavRemindersEmpty": "فهرست یادآوری یافت نشد. برای یافتن آن‌ها روی «به‌روزرسانی فهرست‌های یادآور» کلیک کنید.",
         "caldavReminderMapTasks": "کارها",
         "caldavReminderMapShopping": "خرید",

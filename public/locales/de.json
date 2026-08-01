@@ -1632,7 +1632,7 @@
         "calendarDisabled": "Kalender deaktiviert",
         "calendarsRefreshed": "Kalender aktualisiert",
         "caldavRemindersToggle": "Erinnerungslisten anzeigen/ausblenden",
-        "caldavRemindersHint": "Erinnerungslisten (Apple Erinnerungen) werden mit Aufgaben oder Einkauf abgeglichen - Änderungen gehen in beide Richtungen.",
+        "caldavRemindersHint": "Erinnerungslisten jedes CalDAV-Servers (iCloud, Nextcloud, Radicale) werden mit Aufgaben oder Einkauf abgeglichen - Änderungen gehen in beide Richtungen.",
         "caldavRemindersEmpty": "Keine Erinnerungslisten gefunden. Klicke auf „Erinnerungslisten aktualisieren\", um sie zu finden.",
         "caldavReminderMapTasks": "Aufgaben",
         "caldavReminderMapShopping": "Einkauf",

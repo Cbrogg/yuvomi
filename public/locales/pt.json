@@ -1647,7 +1647,7 @@
         "calendarEnabled": "Calendar enabled",
         "calendarsRefreshed": "Calendars refreshed",
         "caldavRemindersToggle": "Mostrar/ocultar listas de lembretes",
-        "caldavRemindersHint": "As listas de lembretes (Lembretes da Apple) são sincronizadas com Tarefas ou Compras nos dois sentidos.",
+        "caldavRemindersHint": "As listas de lembretes de qualquer servidor CalDAV (iCloud, Nextcloud, Radicale) são sincronizadas com Tarefas ou Compras nos dois sentidos.",
         "caldavRemindersEmpty": "Nenhuma lista de lembretes encontrada. Clique em «Atualizar listas de lembretes» para detectá-las.",
         "caldavReminderMapTasks": "Tarefas",
         "caldavReminderMapShopping": "Compras",

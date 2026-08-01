@@ -1647,7 +1647,7 @@
         "calendarEnabled": "Calendar enabled",
         "calendarsRefreshed": "Calendars refreshed",
         "caldavRemindersToggle": "Mostrar/ocultar listas de recordatorios",
-        "caldavRemindersHint": "Las listas de recordatorios (Recordatorios de Apple) se sincronizan con Tareas o Compras en ambas direcciones.",
+        "caldavRemindersHint": "Las listas de recordatorios de cualquier servidor CalDAV (iCloud, Nextcloud, Radicale) se sincronizan con Tareas o Compras en ambas direcciones.",
         "caldavRemindersEmpty": "No se encontraron listas de recordatorios. Haz clic en «Actualizar listas de recordatorios» para detectarlas.",
         "caldavReminderMapTasks": "Tareas",
         "caldavReminderMapShopping": "Compras",
