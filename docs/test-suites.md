@@ -105,7 +105,7 @@ npm run test:html-entities
 npm run test:help
 npm run test:changelog      # Changelog: GitHub-Releases-Proxy (normalizeVersion/cleanMarkdownText/parseReleaseBody/buildChangelogPayload)
 npm run test:i18n           # App-Locales: Dateiabdeckung, Schlüsselidentität zu de.json, Platzhalter-Parität ({{name}}), 4-Space-Format
-npm run test:i18n-plural    # Pluralformen in t(): Intl.PluralRules-Auswahl, Fallback auf Basisschlüssel, Varianten-Parität
+npm run test:i18n-plural    # Pluralformen in t(): Intl.PluralRules-Auswahl, Fallback auf Basisschlüssel, Varianten-Parität; dazu die Platzhalter-Ersetzung: Nutzerwerte werden eingesetzt statt interpretiert (kein `$&`/`` $` ``-Rückverweis, kein zweiter Durchgang über bereits Eingesetztes), unbekannte Platzhalter bleiben sichtbar
 npm run test:lang-init
 npm run test:sw-api-cache   # Service Worker: Read-only-Offline-API-Cache (Whitelist, Fallback, CLEAR_API_CACHE, activate-Cleanup)
 npm run test:sw-precache    # Service Worker: Precache-Vollständigkeit (#616) - transitiver Modulgraph lückenlos gecacht, Bucket == fetch-Routing, jeder Pfad existiert (addAll ist All-or-Nothing)

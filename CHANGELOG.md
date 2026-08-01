@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Birthday appointments no longer read "Birthday: Grandma" outside the app. The title was stored in English and only translated while the page was drawn, so everything that reads the stored appointment showed English: the API, the calendar feed you subscribe to elsewhere, the sync to iCloud, Google and Nextcloud, and the search index.
+- Names containing a dollar sign are no longer mangled where the app writes them into a sentence. A contact called "A $& B" showed up as "A {{name}} B", and some combinations pulled a piece of the surrounding sentence into the name. Affected every screen that puts a name, title or note into a phrase - birthday appointments, assignment labels, confirmation prompts.
 
 ### Added
 
