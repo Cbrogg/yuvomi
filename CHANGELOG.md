@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.71.0] - 2026-08-01
+
 ### Fixed
 
 - Birthday appointments no longer read "Birthday: Grandma" outside the app. The title was stored in English and only translated while the page was drawn, so everything that reads the stored appointment showed English: the API, the calendar feed you subscribe to elsewhere, the sync to iCloud, Google and Nextcloud, and the search index.
