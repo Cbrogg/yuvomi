@@ -16,7 +16,7 @@ import { t, formatDate, formatTime, getLocale, getNumberFormat } from '/i18n.js'
 import { esc } from '/utils/html.js';
 import { wireScrollFade, scheduleUndoableDelete } from '/utils/ux.js';
 import { toLocalDateKey, parseLocalDateKey, addLocalDays } from '/utils/date.js';
-import { openModal, closeModal, confirmModal, reportFieldError } from '/components/modal.js';
+import { openModal, closeModal, confirmOverModal, reportFieldError } from '/components/modal.js';
 import { createPageFab, setPageFabAction } from '/utils/fab.js';
 import { computeVitalSeries, VITAL_METRICS, vitalMetric } from '/utils/health-vitals.js';
 import {
@@ -1519,10 +1519,9 @@ function collectMedBody(panel) {
 
 async function deleteMed(med) {
   if (!med?.id) return;
-  if (!(await confirmModal(t('health.meds.deleteConfirm'), { danger: true, confirmLabel: t('common.delete') }))) return;
+  if (!(await confirmOverModal(t('health.meds.deleteConfirm'), { danger: true, confirmLabel: t('common.delete') }))) return;
   try {
     await api.delete(`/health/medications/${med.id}`);
-    closeModal({ force: true });
     window.yuvomi?.showToast(t('health.meds.deleted'), 'success');
     await reloadMeds();
   } catch (err) {
@@ -2166,10 +2165,9 @@ function collectLabHead(panel) {
 
 async function deleteLabReport(report) {
   if (!report?.id) return;
-  if (!(await confirmModal(t('health.labs.deleteConfirm'), { danger: true, confirmLabel: t('common.delete') }))) return;
+  if (!(await confirmOverModal(t('health.labs.deleteConfirm'), { danger: true, confirmLabel: t('common.delete') }))) return;
   try {
     await api.delete(`/health/labs/${report.id}`);
-    closeModal({ force: true });
     window.yuvomi?.showToast(t('health.labs.deleted'), 'success');
     if (labs.selectedReportId === report.id) labs.selectedReportId = null;
     await reloadLabs();
@@ -2783,10 +2781,9 @@ function collectActivityBody(panel) {
 
 async function deleteActivity(row) {
   if (!row?.id) return;
-  if (!(await confirmModal(t('health.activity.deleteConfirm'), { danger: true, confirmLabel: t('common.delete') }))) return;
+  if (!(await confirmOverModal(t('health.activity.deleteConfirm'), { danger: true, confirmLabel: t('common.delete') }))) return;
   try {
     await api.delete(`/health/activities/${row.id}`);
-    closeModal({ force: true });
     window.yuvomi?.showToast(t('health.activity.deleted'), 'success');
     await reloadActivity();
   } catch (err) {
@@ -3924,10 +3921,9 @@ function openPeriodModal(period) {
 
 async function deletePeriod(period) {
   if (!period?.id) return;
-  if (!(await confirmModal(t('health.cycle.deleteConfirm'), { danger: true, confirmLabel: t('common.delete') }))) return;
+  if (!(await confirmOverModal(t('health.cycle.deleteConfirm'), { danger: true, confirmLabel: t('common.delete') }))) return;
   try {
     await api.delete(`/health/cycle/periods/${period.id}`);
-    closeModal({ force: true });
     window.yuvomi?.showToast(t('health.cycle.deleted'), 'success');
     await reloadCycle();
   } catch (err) {
@@ -4038,10 +4034,9 @@ function openDayLogModal(dateKey) {
 
 async function deleteDayLog(log) {
   if (!log?.id) return;
-  if (!(await confirmModal(t('health.cycle.deleteConfirm'), { danger: true, confirmLabel: t('common.delete') }))) return;
+  if (!(await confirmOverModal(t('health.cycle.deleteConfirm'), { danger: true, confirmLabel: t('common.delete') }))) return;
   try {
     await api.delete(`/health/cycle/logs/${log.id}`);
-    closeModal({ force: true });
     window.yuvomi?.showToast(t('health.cycle.deleted'), 'success');
     await reloadCycle();
   } catch (err) {

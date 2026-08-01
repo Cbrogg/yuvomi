@@ -6,7 +6,7 @@
  */
 
 import { api } from '/api.js';
-import { openModal as openSharedModal, closeModal, confirmModal, advancedSection, wireBlurValidation, reportFieldError } from '/components/modal.js';
+import { openModal as openSharedModal, closeModal, confirmOverModal, advancedSection, wireBlurValidation, reportFieldError } from '/components/modal.js';
 import { renderDocumentAttachField, bindDocumentAttachField } from '/components/document-attach.js';
 import { stagger, vibrate, scheduleUndoableDelete } from '/utils/ux.js';
 import { wireTablist } from '/utils/tablist.js';
@@ -1153,14 +1153,16 @@ function openAccountModal(account = null) {
       });
 
       panel.querySelector('#am-delete')?.addEventListener('click', async () => {
-        const ok = await confirmModal(
+        // confirmOverModal statt confirmModal: „Abbrechen" gibt das Konto-Modal
+        // unverändert zurück, statt es samt Eingaben zu verdrängen. Bestätigt
+        // der Nutzer, ist es beim Weiterlaufen hier bereits geschlossen.
+        const ok = await confirmOverModal(
           t('budget.deleteAccountConfirm', { name: account.name }),
           { confirmLabel: t('common.delete'), danger: true },
         );
         if (!ok) return;
         try {
           await api.delete(`/budget/accounts/${account.id}`);
-          closeModal({ force: true });
           await loadMonth(state.month);
           renderBody();
           window.yuvomi?.showToast(t('budget.accountDeletedToast'), 'success');

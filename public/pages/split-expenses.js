@@ -4,7 +4,7 @@
  */
 
 import { api } from '/api.js';
-import { openModal as openSharedModal, closeModal, confirmModal } from '/components/modal.js';
+import { openModal as openSharedModal, closeModal, confirmModal, confirmOverModal } from '/components/modal.js';
 import { renderDocumentAttachField, bindDocumentAttachField } from '/components/document-attach.js';
 import { t, formatDate, getLocale, dateInputPlaceholder, parseDateInput, isDateInputValid } from '/i18n.js';
 import { esc } from '/utils/html.js';
@@ -933,7 +933,10 @@ function openExpenseModal(expense = null) {
       });
       updateSplitInputs(panel);
       panel.querySelector('#split-delete-expense')?.addEventListener('click', async () => {
-        const confirmed = await confirmModal(t('splitExpenses.deleteExpenseConfirm'), {
+        // confirmOverModal statt confirmModal: das Ausgaben-Formular trägt
+        // Betrag, Teilnehmer, Aufteilung und wartende Belege - „Abbrechen" gibt
+        // es unverändert zurück, statt alles davon zu verdrängen.
+        const confirmed = await confirmOverModal(t('splitExpenses.deleteExpenseConfirm'), {
           danger: true,
           confirmLabel: t('common.delete'),
         });

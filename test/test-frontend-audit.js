@@ -5357,3 +5357,53 @@ test('der Loeschen-Knopf im Modal schliesst ohne Verwerfen-Frage', () => {
   assert.deepEqual(violations, [],
     'closeModal() im Loeschen-Pfad braucht { force: true }');
 });
+
+/**
+ * Ein Dialog aus einem offenen Modal heraus verdraengt es nicht.
+ *
+ * `confirmModal` laeuft durch `openModal`, und das raeumt ein offenes Modal mit
+ * `force: true` weg - das Shared-Modal stapelt bewusst nicht. Aus einem
+ * Formular-Modal heraus gefragt heisst das: ausgerechnet der Abbrechen-Pfad -
+ * der einzige Grund, aus dem man ueberhaupt fragt - vernichtet die Eingaben,
+ * ohne den Dirty-Guard auch nur zu streifen.
+ *
+ * Gemessen an acht Stellen (Ausgaben-, Konto-, Belohnungs- und fuenf
+ * Gesundheits-Formulare); zwei weitere Module hatten sich den Verlust mit
+ * Behelfen erkauft (Modal danach neu oeffnen, Inline-Bestaetigung von Hand).
+ * `confirmOverModal` parkt das Formular stattdessen und gibt es unveraendert
+ * zurueck.
+ *
+ * Grenze der Regel: sie sieht nur den direkten Aufruf im Handler. Ruft der
+ * Handler eine Funktion, die ihrerseits fragt (health.js: deleteMed), faellt
+ * das hier nicht auf - eine transitive Aufloesung ueber Modulgrenzen waere
+ * raterei und wuerde bei jeder Umbenennung falsch anschlagen.
+ */
+test('ein Dialog ueber einem offenen Modal nutzt confirmOverModal', () => {
+  const violations = [];
+
+  for (const file of walkJsFiles('../public/')) {
+    if (file.endsWith('components/modal.js')) continue; // definiert beide
+    const lines = read(file).split('\n');
+
+    lines.forEach((line, index) => {
+      if (!/\bconfirmModal\s*\(/.test(line)) return;
+      if (/^\s*(import|\/\/|\*)/.test(line)) return;
+
+      // Vorfahren-Kette rein ueber Einrueckung: die jeweils naechste Zeile
+      // oberhalb mit kleinerer Einrueckung. Steht ein `onSave` darin, laeuft der
+      // Aufruf im Rumpf eines offenen Modals.
+      let level = lines[index].search(/\S/);
+      for (let i = index - 1; i >= 0 && level > 0; i -= 1) {
+        const indent = lines[i].search(/\S/);
+        if (indent === -1 || indent >= level) continue;
+        level = indent;
+        if (!/\bonSave\s*[:({]/.test(lines[i])) continue;
+        violations.push(`${file}:${index + 1}: ${line.trim().slice(0, 80)}`);
+        break;
+      }
+    });
+  }
+
+  assert.deepEqual(violations, [],
+    'confirmModal() aus einem offenen Modal heraus gehoert auf confirmOverModal() umgestellt');
+});
