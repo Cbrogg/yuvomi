@@ -204,7 +204,7 @@ Neues Zuhause: **https://yuvomi.cloud/** · Fragen? Eröffne eine [Diskussion](h
 - **SSO / OpenID Connect** — optionales Single Sign-on über jeden OIDC-Provider (Authentik, Keycloak, Google, Microsoft Entra), konfiguriert mit vier Umgebungsvariablen; Authorization-Code- + PKCE-Flow
 - **Self-Service-Passwort-Reset** — optionales SMTP lässt Nutzer ein vergessenes Passwort selbst per zeitlich begrenztem E-Mail-Link zurücksetzen; enumerationssicher by design
 - **Kein Build-Schritt** — reine ES-Module, kein Bundler, kein Transpiler, kein Framework
-- **Mehrsprachig** — 23 Sprachen mit automatischer Locale-Erkennung (de, en, es, fr, it, sv, el, ru, tr, zh, ja, ar, hi, pt, uk, pl, nl, cs, vi, hu, ko, id, fa)
+- **Mehrsprachig** — 23 Sprachen mit automatischer Locale-Erkennung (de, en, es, fr, it, sv, el, ru, tr, zh, ja, ar, hi, pt, uk, pl, nl, cs, vi, hu, ko, id, fa). Eine eigene Haushalts-Einstellung bestimmt die Sprache selbst erzeugter Einträge, damit ein exportierter Kalender und die API die Sprache des Haushalts sprechen statt Englisch
 
 ---
 

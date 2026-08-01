@@ -420,7 +420,7 @@ Nothing. Yuvomi is free and MIT-licensed. You provide the server; there is no su
 - **Privacy first** - fully self-hosted, optional SQLCipher AES-256 database encryption, zero telemetry.
 - **SSO / OpenID Connect** - optional single sign-on via any OIDC provider (Authentik, Keycloak, Google, Microsoft Entra), configured with four env vars using the Authorization Code + PKCE flow.
 - **Self-service password reset** - optional SMTP email lets users reset a forgotten password themselves via a time-limited link, with anti-enumeration by design.
-- **Multilingual** - 23 languages with automatic locale detection (de, en, es, fr, it, sv, el, ru, tr, zh, ja, ar, hi, pt, uk, pl, nl, cs, vi, hu, ko, id, fa).
+- **Multilingual** - 23 languages with automatic locale detection (de, en, es, fr, it, sv, el, ru, tr, zh, ja, ar, hi, pt, uk, pl, nl, cs, vi, hu, ko, id, fa). A separate household setting decides the language of entries Yuvomi creates itself, so an exported calendar and the API speak your household's language instead of English.
 
 <p>
   <img src="https://img.shields.io/badge/Express-000000?style=flat-square&logo=express&logoColor=white" alt="Express">
