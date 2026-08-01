@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.70.0] - 2026-08-01
+
 ### Added
 
 - Tapping an appointment or a task now shows it to you before it lets you change it. Until now the edit form opened straight away, so the on-screen keyboard rose over roughly 40 % of the display for someone who only wanted to know when the dentist appointment is - and tasks had no reading path at all, every one of the five ways in ended in the form. The new view contains no input field whatsoever, so the keyboard cannot come up, and "Edit" in the header is a separate, deliberate step. Creating something new still starts in the form, because there typing is the point. On a wide screen an appointment opens as a small card anchored to the entry you tapped, so the short path stays short.
