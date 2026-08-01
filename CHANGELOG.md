@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.69.3] - 2026-08-01
+
+### Fixed
+
+- A confirmation asked from inside a form no longer throws the form away. Deleting a shared expense, an account, a reward, a medication, a lab report, an activity, a cycle entry or a subscription category opened its confirmation *in place of* the form, so pressing "Cancel" - the only reason the question exists - was the one path that destroyed everything typed in. Cancelling now hands the form back exactly as it was.
+- Deleting a birthday from the edit dialog no longer asks whether to discard the changes first. Those fields go with the entry anyway, so the question stood between the user and a single decision. Cancelling it could even bring the edit dialog back for an entry that had already been removed from the list.
+- Confirmation dialogs are announced with their own question again. When one opened over a form, screen readers read the heading of the form underneath instead, because both carried the same title id. While the dialog is up, the form beneath is now also out of the reading order rather than only out of the tab order.
+- Keyboard focus returns to the button that opened a confirmation once it is closed, instead of falling back to the top of the page.
+
 ## [1.69.2] - 2026-08-01
 
 ### Fixed
