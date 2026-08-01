@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.68.2] - 2026-08-01
+
+### Changed
+
+- The reminder sync settings no longer present reminder lists as an Apple feature. List discovery has always worked with any CalDAV server that serves reminder collections, and the wording now says so instead of naming Apple Reminders.
+
 ## [1.68.1] - 2026-08-01
 
 ### Fixed
