@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The tags of a private task no longer show up for anyone else. Tag names are free text and can give away what a task is about, so the filter bar and the suggestion list now only offer tags from tasks you are allowed to see - counts included. A task hidden while you prepare a surprise no longer announces itself through its label.
 - An AI or automation client connected over MCP could list every private task in the household. The task list it receives now follows the same visibility rules as the app, matching the calendar list, which always did.
 - A recurring task no longer loses its tags. The follow-up instance created when you tick one off kept the title, category and assignees but silently dropped the labels; tags belong to the task, not to a single run.
+- The API description declared the category and tag path parameters as numbers, although both are names. A client generated from it refused an address like `/tasks/tags/garden` or sent a number instead. Only generated clients were affected; the API itself always accepted the name.
 - Tasks created over MCP landed in a category that appeared in no dropdown and no filter, and jumped to some other category the first time they were saved. This was a leftover from the category rework: the fallback still wrote the old display name instead of the key. Existing tasks affected by it, including every task that arrived through a reminder list, are repaired on upgrade.
 
 ## [1.68.2] - 2026-08-01
