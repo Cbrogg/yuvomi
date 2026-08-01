@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Names containing a dollar sign are no longer mangled where the app writes them into a sentence. A contact called "A $& B" showed up as "A {{name}} B", and some combinations pulled a piece of the surrounding sentence into the name. Affected every screen that puts a name, title or note into a phrase - birthday appointments, assignment labels, confirmation prompts.
+
 ## [1.70.0] - 2026-08-01
 
 ### Added

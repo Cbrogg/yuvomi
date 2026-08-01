@@ -130,15 +130,29 @@ function resolvePluralKey(key, count) {
  * Übersetzungsfunktion mit Platzhalter-Unterstützung {{variable}}.
  * Ein numerischer `count`-Parameter wählt zusätzlich die passende Pluralform
  * (`key_one`, `key_few`, … ), sofern die Locale sie definiert.
+ *
+ * Die Ersetzung läuft in einem Durchgang über ein Regex mit Callback, nicht in
+ * einer Schleife aus replaceAll(string, string). Zwei Gründe, beide an echten
+ * Nutzereingaben nachvollziehbar:
+ *
+ *   - Ein String als Ersatz interpretiert `$&`, `` $` ``, `$'` und `$$` als
+ *     Rückverweise. Ein Kontakt namens "A $& B" wurde als "A {{name}} B"
+ *     angezeigt, und `` $` `` zog den Text vor dem Treffer in den Namen hinein
+ *     ("X $` Y" → "X Geburtstag:  Y").
+ *   - Nacheinander ersetzt, durchsucht jeder weitere Platzhalter den bereits
+ *     eingesetzten Wert erneut: ein Name "{{date}}" verwandelte sich beim
+ *     date-Durchgang in das Datum.
+ *
+ * Unbekannte Platzhalter bleiben stehen, statt zu verschwinden - ein fehlender
+ * Parameter soll im Ergebnis sichtbar sein und nicht still weggekürzt werden.
  */
 export function t(key, params = {}) {
-  let str = typeof params.count === 'number'
+  const str = typeof params.count === 'number'
     ? resolvePluralKey(key, params.count)
     : resolve(translations, key) ?? resolve(fallbackTranslations, key) ?? key;
-  for (const [k, v] of Object.entries(params)) {
-    str = str.replaceAll(`{{${k}}}`, String(v));
-  }
-  return str;
+  return str.replace(/\{\{(\w+)\}\}/g, (placeholder, name) => (
+    Object.prototype.hasOwnProperty.call(params, name) ? String(params[name]) : placeholder
+  ));
 }
 
 function isDateOnlyString(value) {
