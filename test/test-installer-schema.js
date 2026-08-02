@@ -697,21 +697,26 @@ function uiLockingEnvKeys() {
 }
 
 test('kein Deploy-Descriptor gibt einem UI-sperrenden Schlüssel einen nicht-leeren Default', () => {
+  // Repo-relativ gehalten, damit derselbe String die Datei findet UND in der
+  // Fehlermeldung stehen kann. Ein nachträgliches Abschneiden von '../' wäre
+  // eine Textersetzung, die nur das erste Vorkommen trifft (CodeQL-Regel
+  // "Incomplete string escaping or encoding") - hier unnötig, weil der Präfix
+  // ohnehin nur beim Lesen gebraucht wird.
   const descriptors = [
-    '../docs/docker-compose.portainer.yml',
-    '../docker-compose.yml',
-    '../podman-compose.yml',
-    '../deploy/umbrel/docker-compose.yml',
+    'docs/docker-compose.portainer.yml',
+    'docker-compose.yml',
+    'podman-compose.yml',
+    'deploy/umbrel/docker-compose.yml',
   ];
   const offenders = [];
 
   for (const key of uiLockingEnvKeys()) {
     for (const path of descriptors) {
-      const src = readFileSync(new URL(path, import.meta.url), 'utf8');
+      const src = readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
       // ${KEY:-<default>} - alles ausser sofort schliessender Klammer ist ein Wert.
       for (const m of src.matchAll(new RegExp(`\\$\\{${key}:-([^}]*)\\}`, 'g'))) {
         if (m[1].trim() === '') continue;
-        offenders.push(`${path.replace('../', '')}: ${key} defaultet auf "${m[1]}"`);
+        offenders.push(`${path}: ${key} defaultet auf "${m[1]}"`);
       }
     }
   }
