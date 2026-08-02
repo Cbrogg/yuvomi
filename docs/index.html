@@ -612,7 +612,7 @@
     <span class="sep dt">·</span>
     <span data-t="proof_mit">MIT licensed</span>
     <span class="sep">·</span>
-    <span><b>v1.72.0</b></span>
+    <span><b>v1.73.0</b></span>
   </div>
 </div>
 
@@ -848,7 +848,7 @@
       </div>
       <div class="mod-card reveal d2" style="--m: var(--m-recipes)">
         <div class="mod-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 0-7 7c0 2.4 1.2 4.5 3 5.7V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.3c1.8-1.2 3-3.3 3-5.7a7 7 0 0 0-7-7z"/><line x1="9" y1="22" x2="15" y2="22"/></svg></div>
-        <h3 data-t="m_recipes_t">Recipes</h3><p data-t="m_recipes_d">Create, duplicate and scale reusable recipes. Pre-fill meal slots, send the ingredients to a shopping list, or save any meal as a recipe.</p>
+        <h3 data-t="m_recipes_t">Recipes</h3><p data-t="m_recipes_d">Create, duplicate and scale reusable recipes. Pre-fill meal slots, send the ingredients to a shopping list, or save any meal as a recipe. A self-hosted Mealie instance can be mirrored in read-only alongside your own.</p>
       </div>
       <div class="mod-card reveal" style="--m: var(--m-calendar)">
         <div class="mod-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
@@ -1007,7 +1007,7 @@ cp .env.example .env  <span class="c"># set SESSION_SECRET and DB_ENCRYPTION_KEY
       </div>
     </div>
     <div class="foot-bottom">
-      <span><span id="gh-stars-footer" data-gh-stars>★ 1.1k · </span><b>v1.72.0</b> · <span id="foot-released" data-released="2026-08-02">August 2026</span></span>
+      <span><span id="gh-stars-footer" data-gh-stars>★ 1.1k · </span><b>v1.73.0</b> · <span id="foot-released" data-released="2026-08-02">August 2026</span></span>
       <span data-t="foot_madewith">Self-hosted · Privacy-first · Open source</span>
     </div>
   </div>
@@ -1030,8 +1030,8 @@ cp .env.example .env  <span class="c"># set SESSION_SECRET and DB_ENCRYPTION_KEY
       prob_1_t:'Ten different apps', prob_1_d:'Tasks here, shopping there, calendar somewhere else. Nothing talks to anything.',
       prob_2_t:'Subscriptions, forever', prob_2_d:'Notion, Google One, iCloud. Another invoice every year, no way out.',
       prob_3_t:'Your data, everywhere', prob_3_d:"Your calendar on Google's servers, your notes on Dropbox. Who actually owns your family's data?",
-      prob_cta:"There's a calmer way.",
-      why_label:'Why Yuvomi', why_title:'Built for families, not for profit.',
+      prob_cta:"There's a calmer way. <span>Self-hosted, and yours.</span>",
+      why_label:'Why Yuvomi', why_title:'Built for families, <em>not for profit.</em>',
       why_desc:'It all runs on hardware you own, keeps working without any subscription, and never sends your data off your home network.',
       p_priv_t:'Privacy first', p_priv_d:'Optional AES-256 database encryption via SQLCipher (enabled in the recommended Docker setup). Zero telemetry. Your data never leaves your server.',
       p_self_t:'Fully self-hosted', p_self_d:'Runs on a Raspberry Pi, a NAS, or any server. Docker or Podman makes setup a one-liner.',
@@ -1064,30 +1064,30 @@ cp .env.example .env  <span class="c"># set SESSION_SECRET and DB_ENCRYPTION_KEY
       m_house_t:'Housekeeping', m_house_d:'Manage household staff: schedules, check-in/out, daily or hourly billing, chores and supplies.',
       m_health_t:'Health', m_health_d:'Track vitals, medications with reminders, lab results, activity and menstrual cycles per family member, private or shared. Not a medical device.',
       m_rewards_t:'Rewards', m_rewards_d:'Give tasks point values; finishing them credits the assigned members. Set a household default that prefills new tasks and can be rolled out to existing ones. A reward catalog with parent-approved redemptions, opt-in per member, bonus points and a full point ledger.',
-      m_recipes_t:'Recipes', m_recipes_d:'Create, duplicate and scale reusable recipes. Pre-fill meal slots, send the ingredients to a shopping list, or save any meal as a recipe.',
+      m_recipes_t:'Recipes', m_recipes_d:'Create, duplicate and scale reusable recipes. Pre-fill meal slots, send the ingredients to a shopping list, or save any meal as a recipe. A self-hosted Mealie instance can be mirrored in read-only alongside your own.',
       m_rem_t:'Reminders', m_rem_d:'Time-based notifications on tasks and calendar events, with an in-app badge so nothing slips, plus opt-in push notifications that reach you even when the app is closed.',
       m_backup_t:'Backup & SSO', m_backup_d:'Scheduled backups with pre-restore rollback, optional WebDAV cloud upload (Nextcloud, ownCloud, Hetzner, etc.), plus single sign-on via any OIDC provider.',
-      screens_label:'Preview', screens_title:'Every screen, carefully crafted',
+      screens_label:'Preview', screens_title:'Every screen, <em>carefully crafted</em>',
       screens_desc:'A clean, intuitive interface with tuned touch targets and layouts that adapt to your device and theme.',
       screens_hint:'Drag, swipe or scroll to explore →',
       cap_tasks:'Tasks', cap_cal:'Calendar', cap_shop:'Shopping', cap_meals:'Meals', cap_recipes:'Recipes',
       cap_budget:'Budget', cap_notes:'Notes', cap_contacts:'Contacts', cap_bday:'Birthdays', cap_house:'Housekeeping', cap_documents:'Documents',
       cap_health:'Health', cap_rewards:'Rewards', cap_split:'Split expenses', cap_subs:'Subscriptions',
-      plat_label:'Install anywhere', plat_title:'Runs on your hardware',
+      plat_label:'Install anywhere', plat_title:'Runs on <em>your</em> hardware',
       plat_desc:"A Docker or Podman container that drops onto any home server or NAS. Or install it in a couple of clicks from your platform's app store.",
-      plat_docker:'Pre-built image, up and running with a single compose command.',
+      plat_docker:'Pre-built image, up and running with a single <code>compose</code> command.',
       plat_podman:'Rootless and SELinux-ready for RHEL, Fedora and CentOS Stream.',
       plat_truenas:'In the SCALE Community Apps catalog: install from the web UI, no terminal.',
       plat_umbrel:'Available in the Umbrel App Store; everything stays on your Umbrel.',
       plat_unraid:'A Community Apps template: add it straight from the Unraid Apps tab.',
       plat_oneclick:'1-click', plat_guide:'Guide',
-      quick_note:'Then open http://localhost:3000. The first visit walks you through creating your admin account. Prefer a guided setup? The step-by-step installer handles HTTPS, SSO and backups for you.',
+      quick_note:'Then open <code>http://localhost:3000</code>. The first visit walks you through creating your admin account. Prefer a guided setup? The <a href="install.html">step-by-step installer</a> handles HTTPS, SSO and backups for you.',
       setup_label:'Setup', setup_title:'Up and running in minutes',
       setup_1_t:'Start the installer', setup_1_d:'One command launches a setup wizard in your browser. No editing config files by hand.',
       setup_2_t:'Set up your account', setup_2_d:'Create an admin account and choose your preferences. Takes about two minutes.',
       setup_3_t:'Invite your family', setup_3_d:'Add family members, set roles, and start using Yuvomi together.',
       setup_link:'Step-by-step installation guide',
-      cta_title:"Take back control of your family's data.", cta_desc:'Free. Open source. Runs on your server. No subscriptions, ever.', cta_longevity:'MIT-licensed and self-hosted: even if the project stops, nothing phones home and your instance keeps running. The data lives on your server - yours to keep, back up, and move.',
+      cta_title:"Take back control of your <em>family's data.</em>", cta_desc:'Free. Open source. Runs on your server. No subscriptions, ever.', cta_longevity:'MIT-licensed and self-hosted: even if the project stops, nothing phones home and your instance keeps running. The data lives on your server - yours to keep, back up, and move.',
       cta_install:'Get started', cta_gh:'View on GitHub',
       footer_heart:'Built with care for families who value privacy and simplicity.',
       foot_product:'Product', foot_screens:'Screenshots', foot_install:'Install', foot_docs:'Docs & spec',
@@ -1141,7 +1141,7 @@ cp .env.example .env  <span class="c"># set SESSION_SECRET and DB_ENCRYPTION_KEY
       m_house_t:'Haushaltshilfe', m_house_d:'Haushaltspersonal verwalten: Pläne, Ein-/Ausstempeln, Tages- oder Stundenabrechnung, Chores und Bedarf.',
       m_health_t:'Gesundheit', m_health_d:'Vitalwerte, Medikamente mit Erinnerungen, Laborwerte, Aktivität und Menstruationszyklus je Familienmitglied, privat oder geteilt. Kein Medizinprodukt.',
       m_rewards_t:'Belohnungen', m_rewards_d:'Aufgaben können Punkte tragen; beim Erledigen werden sie den zuständigen Mitgliedern gutgeschrieben. Ein Haushalts-Standard belegt neue Aufgaben vor und lässt sich auf bestehende übertragen. Prämien-Katalog mit Eltern-Freigabe, opt-in je Mitglied, Bonuspunkte und ein vollständiges Punkte-Ledger.',
-      m_recipes_t:'Rezepte', m_recipes_d:'Wiederverwendbare Rezepte erstellen, duplizieren und skalieren. Mahlzeiten vorausfüllen, die Zutaten auf eine Einkaufsliste schicken oder als Rezept speichern.',
+      m_recipes_t:'Rezepte', m_recipes_d:'Wiederverwendbare Rezepte erstellen, duplizieren und skalieren. Mahlzeiten vorausfüllen, die Zutaten auf eine Einkaufsliste schicken oder als Rezept speichern. Eine selbst gehostete Mealie-Instanz lässt sich nur lesend daneben spiegeln.',
       m_rem_t:'Erinnerungen', m_rem_d:'Zeitbasierte Benachrichtigungen für Aufgaben und Termine, mit In-App-Badge, damit nichts durchrutscht, plus optionale Push-Benachrichtigungen, die dich auch bei geschlossener App erreichen.',
       m_backup_t:'Backup & SSO', m_backup_d:'Geplante Backups mit Vor-Wiederherstellungs-Rollback, optionalem WebDAV-Cloud-Upload (Nextcloud, ownCloud, Hetzner\xa0usw.) und Single Sign-On \xfcber jeden OIDC-Provider.',
       screens_label:'Vorschau', screens_title:'Jeder Screen, sorgfältig gestaltet',
@@ -1207,10 +1207,46 @@ cp .env.example .env  <span class="c"># set SESSION_SECRET and DB_ENCRYPTION_KEY
     document.getElementById('moonIco').style.display = d ? 'block' : 'none';
     applyShots();
   }
+  /* Some translated strings carry inline markup: the <em> accent that gives each
+     section headline its voice, <code> around commands, and the inline link to
+     the guided installer. Assigning textContent would strip all of it, so those
+     strings are built as real nodes through a strict tag/attribute whitelist.
+     No innerHTML, and the input is always a static literal from the table
+     above - never user data. Markup position differs per language, which is why
+     it lives in the strings rather than being split across sibling elements. */
+  var RICH_TAGS = ['em', 'code', 'strong', 'b', 'span', 'a'];
+  var RICH_ATTRS = ['href', 'target', 'rel', 'class'];
+  function setRich(el, str){
+    if (str.indexOf('<') === -1) { el.textContent = str; return; }
+    var frag = document.createDocumentFragment();
+    var stack = [frag];
+    var re = /<(\/?)([a-zA-Z]+)((?:\s+[a-zA-Z-]+="[^"]*")*)\s*>/g;
+    var last = 0, m;
+    function text(chunk){ if (chunk) stack[stack.length - 1].appendChild(document.createTextNode(chunk)); }
+    while ((m = re.exec(str)) !== null) {
+      var name = m[2].toLowerCase();
+      if (RICH_TAGS.indexOf(name) === -1) continue; // unknown tag stays literal text
+      text(str.slice(last, m.index));
+      last = re.lastIndex;
+      if (m[1]) { if (stack.length > 1) stack.pop(); continue; }
+      var node = document.createElement(name);
+      (m[3] || '').replace(/([a-zA-Z-]+)="([^"]*)"/g, function(_, attr, val){
+        attr = attr.toLowerCase();
+        if (RICH_ATTRS.indexOf(attr) === -1) return '';
+        if (attr === 'href' && /^\s*javascript:/i.test(val)) return '';
+        node.setAttribute(attr, val);
+        return '';
+      });
+      stack[stack.length - 1].appendChild(node);
+      stack.push(node);
+    }
+    text(str.slice(last));
+    el.replaceChildren(frag);
+  }
   function applyLang(){
     document.documentElement.lang = lang;
     var s = T[lang];
-    document.querySelectorAll('[data-t]').forEach(function(el){ var k = el.getAttribute('data-t'); if (s[k] !== undefined) el.textContent = s[k]; });
+    document.querySelectorAll('[data-t]').forEach(function(el){ var k = el.getAttribute('data-t'); if (s[k] !== undefined) setRich(el, s[k]); });
     document.getElementById('langLbl').textContent = lang === 'en' ? 'DE' : 'EN';
     var lb = document.getElementById('langBtn');
     lb.setAttribute('aria-label', lang === 'en' ? 'Auf Deutsch umschalten' : 'Switch to English');

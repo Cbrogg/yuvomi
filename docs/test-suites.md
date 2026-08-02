@@ -37,7 +37,7 @@ npm run test:shopping
 npm run test:shopping-routes   # Shopping-Routen: Listen/Artikel-CRUD, Kategorie-Rename-Kaskade + Delete-Fallback + Letzte-Sperre, Essensplan-Import-Aggregation
 npm run test:meals
 npm run test:meals-routes   # Meals-Routen: Validierung/404, Wiederholungs-Serien (Template/Exceptions/Instanzen, scope=series), Zutaten-CRUD, Zutaten→Einkaufsliste-Transfer inkl. Rücknahme (added_ids; das Undo setzt auch on_shopping_list zurück, sonst bliebe die Mahlzeit für immer „schon übertragen")
-npm run test:recipes-routes   # Recipes-Routen: owner-403-Gate (kein Admin-Bypass), Validierung/404, Zutaten-Regeln (leerer Name, category-Default, Slicing), meal_types-Normalisierung, Replace-Set + CASCADE, Zutaten→Einkaufsliste-Transfer inkl. exakter Rücknahme über added_ids
+npm run test:recipes-routes   # Recipes-Routen: owner-403-Gate (kein Admin-Bypass), Validierung/404, Zutaten-Regeln (leerer Name, category-Default, Slicing), meal_types-Normalisierung, Replace-Set + CASCADE, Zutaten→Einkaufsliste-Transfer inkl. exakter Rücknahme über added_ids, gespiegelte Mealie-Rezepte sind serverseitig schreibgeschützt (403 auf PUT/DELETE, nicht nur in der UI ausgeblendet), Thumbnail-Proxy mit MIME-Allowlist
 npm run test:pantry-routes    # Vorrats-Routen (#596): Validierung/404, Mengen-Normalisierung (Rundung/Klemmung/Default 1 statt 0), Einheit wird normalisiert statt abgelehnt, Lagerort-Guards (letzter Ort, NOCASE-Konflikt, ON DELETE SET NULL erhält Bestand), PATCH als Teil-Update, beide Import-Richtungen inkl. Chargen-Regel (gleiches MHD addiert, abweichendes MHD = eigene Zeile) Scope-Trennung (import-shopping räumt die Einkaufsliste nicht ab) und die geteilte Rücknahme (POST /shopping/items/undo-transfer: unbekannte IDs werden übergangen, removed sagt was zurückging)
 npm run test:pantry-ownership-migration   # Migration v109 (#596 Follow-up): created_by nullable + ON DELETE SET NULL statt CASCADE - der Tabellen-Rebuild erhält Bestand, Lagerort, Indizes und updated_at-Trigger; das Löschen eines Mitglieds entkoppelt nur die Herkunft und vernichtet nicht den Haushaltsvorrat
 npm run test:module-registry-parity       # Client-/Server-Modulregister-Parität: SCOPE_MODULE_KEYS gegen MODULE_KEYS, NAV_TO_MODULE gegen PERMISSION_MODULES.navIds, MODULE_ACCENT-Abdeckung, die drei Kitchen-Child-Listen, KITCHEN_NAV_IDS, TOGGLEABLE_MODULES und die sw.js-Caches. Fängt die Drift, die beim Vorrat alle sechs Client-Zwillinge übersprang, während der Server lückenlos verdrahtet war
@@ -135,6 +135,9 @@ npm run test:task-tags          # Aufgaben-Tags (#586): v114-Rebuild lässt Indi
 npm run test:dms-adapter        # DMS-Adapter: Paperless-ngx
 npm run test:dms-routes         # DMS-Routen: account management, search, link, push
 npm run test:dms-papra-adapter  # DMS-Adapter: Papra
+npm run test:mealie-client      # Mealie-Adapter (#530): Bearer-Auth, Paginierung, Zutaten-Flattening (quantity 0 = Mealies "keine Menge"), Deep-Link aus external_url, Thumbnail-Abruf
+npm run test:mealie-sync        # Mealie-Sync (#530): Upsert statt Neuanlage (Mahlzeitenplan-Verknüpfungen überleben ein Rename), unveränderte Rezepte werden übersprungen, ein fehlgeschlagener/leerer Abruf löscht NIE bestehende Spiegel, recipe_url wird aus dem Slug neu gebaut
+npm run test:mealie-routes      # Mealie-Routen (#530): Konto-CRUD admin-only, Token nie in der Antwort, /status für alle Angemeldeten, manueller Sync, Verbindungstest
 npm run test:weather            # Open-Meteo + OWM-Legacy provider resolution
 npm run test:preferences-routes    # Preferences-Routen: HTTP-Schicht von server/routes/preferences.js gegen den echten Router
 npm run test:preferences-budget-mode   # Budget-Modus in der Preferences-API (#476/#505): GET-Default 'shared', PUT shared/personal

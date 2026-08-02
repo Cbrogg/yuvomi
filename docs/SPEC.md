@@ -235,6 +235,13 @@ Reusable recipe cards that can be pre-filled into meal slots.
 | recipe_url | TEXT | nullable |
 | meal_types | TEXT | NOT NULL, default `breakfast,lunch,dinner,snack` — comma-separated suitability list; drives which planner slots a recipe fits and the week randomizer's candidate pool (v1.3.0) |
 | created_by | INTEGER | FK → Users (CASCADE delete) |
+| mealie_account_id | INTEGER | nullable, FK → Mealie Accounts (CASCADE delete); NULL = native recipe, set = mirrored (migration v118) |
+| mealie_recipe_id | TEXT | nullable (Mealie's own recipe ID; upsert key on repeated syncs, migration v118) |
+| mealie_updated_at | TEXT | nullable (Mealie's `updatedAt`; unchanged recipes are skipped, migration v118) |
+| mealie_slug | TEXT | nullable (rebuilds `recipe_url` on every sync without a re-fetch, migration v120) |
+| mealie_has_image | INTEGER | 0/1, NOT NULL default 0 (migration v120) |
+
+UNIQUE partial index on `(mealie_account_id, mealie_recipe_id)` where `mealie_account_id IS NOT NULL`.
 
 ### Recipe Ingredients
 | Column | Type | Constraint |
@@ -243,6 +250,37 @@ Reusable recipe cards that can be pre-filled into meal slots.
 | name | TEXT | NOT NULL |
 | quantity | TEXT | |
 | category | TEXT | NOT NULL (default 'Sonstiges') |
+
+### Mealie Accounts (migration v118, v119)
+Connections to a self-hosted [Mealie](https://mealie.io) instance for the Recipes module. Admin-managed
+in Settings → Kitchen. The mirror is **read-only**: Mealie stays the source of truth for recipe content,
+so editing or deleting a mirrored recipe returns 403 server-side (not merely hidden in the UI) —
+"Duplicate" forks one into an editable native recipe instead.
+
+| Column | Type | Constraint |
+|--------|------|-----------|
+| name | TEXT | NOT NULL (display name) |
+| base_url | TEXT | NOT NULL, UNIQUE — must be reachable **from the server** (often a Docker-internal Compose hostname) |
+| external_url | TEXT | nullable (migration v119) — public address used only to build "Open in Mealie" deep links; falls back to `base_url` when blank |
+| api_token | TEXT | NOT NULL (write-only; never returned by the API, protected by optional SQLCipher) |
+| enabled | INTEGER | 0/1, NOT NULL default 1 |
+| created_by | INTEGER | FK → Users (CASCADE delete), NOT NULL |
+| created_at / updated_at | TEXT | ISO 8601 (`updated_at` via trigger) |
+| last_sync | TEXT | nullable |
+| last_error | TEXT | nullable |
+
+`base_url` is UNIQUE so the same Mealie server cannot be added twice and mirror every recipe in duplicate.
+Deleting an account cascades to its mirrored recipes.
+
+**Sync:** hourly scheduler plus a manual trigger, `server/services/mealie-sync.js`. A failed or empty
+fetch never prunes existing mirrored recipes — an unreachable Mealie leaves the local copies alone
+rather than emptying the module. Ingredients are matched best-effort to shopping categories on import,
+so a mirrored recipe transfers to the shopping list like any other. Routes live under `/mealie`,
+registered against the existing `meals` scope module, so per-member restricted access still applies;
+account CRUD, manual sync and connection test are admin-only, `GET /mealie/status` is open to any
+authenticated user. `GET /recipes/:id/mealie-thumbnail` proxies Mealie's image server-side (same MIME
+allowlist and security headers as the DMS thumbnail proxy) because Mealie's media endpoint requires the
+same Bearer token as every other endpoint, and that token must never reach the browser.
 
 ### Meal Ingredients
 | Column | Type | Constraint |
@@ -1647,6 +1685,7 @@ Skeleton loading instead of spinners (the skeleton mirrors the default-visible w
 
 **Features:**
 - CRUD + subtasks (max 2 levels, checkbox list, progress bar)
+- **Subtasks expanded by default (#623):** a household-wide preference (`tasks_subtasks_expanded` in `sync_config`, admin-gated, default off) decides whether the subtask list of a task starts open instead of collapsed behind its progress bar. Manual expand and collapse still work per task; the preference only sets the starting state. Settings → Modules → Module options.
 - **Multi-person assignment:** tasks can be assigned to multiple family members simultaneously via `UserMultiSelect` checkbox dropdown; stacked avatar circles (up to 3 visible + `+N` overflow badge) shown on task cards and Kanban — each circle shows the member's profile photo if set, otherwise coloured initials
 - Priorities shown visually via color/icon
 - Recurring: automatically create next instance on completion
@@ -1712,7 +1751,8 @@ Reusable recipe cards linked to meal slots.
 - **"Add to meal plan" (v1.58.0):** asks for the date and the meal type in a small dialog on the recipe card and creates the meal right there — no navigation, and the meal type is pre-selected from the recipe's own `meal_types` (dinner when the recipe declares several). Before this it navigated to `/meals?recipe=<id>`, where the full 27-field meal form opened with an empty date field and a title that did not name the recipe; escaping left the query parameter behind, so a reload re-opened the form. The parameter no longer exists. This makes all five kitchen transfers one pattern: pick the target in a small dialog, then a toast naming what moved.
 - **"Add to shopping list" (v1.57.0):** a second action on every recipe card that carries ingredients puts them straight onto a shopping list — one list transfers without asking, several open the shared selection dialog, the same pattern the meal planner and the pantry already use. Unlike meals, a recipe is **not** marked as transferred: it is a template that gets cooked repeatedly, so a `on_shopping_list` flag would be set forever after the first shop. Instead the server skips ingredients already sitting **unchecked** on the target list and reports `transferred` and `skipped` separately; items ticked off from an earlier shop come along again. Before this, the only route from a recipe to the list was plan → switch tab → "From meal plan" → pick week, four steps across two modules.
 - **Row actions collapse on narrow rows (v1.59.0):** edit, duplicate and delete take 152 px of a 262 px row at 320 px width; below 30 rem **row** width (a container query, not a viewport breakpoint) they move into the shared overflow menu with labels, and the ingredient count drops below the title. Without this the recipe name fell to `min-content` — with `overflow-wrap: anywhere` that is the width of the widest single character: 8 px, one character per line, a 448 px tall row, one recipe per screen. Measured after: 182 px name, 69 px row height.
-- REST API: `GET/POST /api/v1/recipes`, `PUT/DELETE /api/v1/recipes/:id` with ingredient sync (`meal_types` included), `POST /api/v1/recipes/:id/to-shopping-list`
+- **Mealie mirror (#530):** with a Mealie account connected (Settings → Kitchen), its recipes appear in the same list as native ones, carrying a source badge in the collapsed row and a thumbnail, so a mixed list is readable without opening each entry. A source filter (all / native / Mealie) sits in the header as a menu button — the same popover component the row overflow actions use — and only appears once a mirrored recipe exists. Mirrored recipes are read-only: the UI drops the edit affordance and the server returns 403, so the two cannot drift. "Duplicate" forks one into an editable native recipe. They behave like any other recipe everywhere else: meal-plan picker (grouped by source when a mirror exists), shopping-list transfer, scaling. A rename in Mealie updates the mirrored copy in place instead of replacing it, so its meal-plan links survive.
+- REST API: `GET/POST /api/v1/recipes`, `PUT/DELETE /api/v1/recipes/:id` with ingredient sync (`meal_types` included), `POST /api/v1/recipes/:id/to-shopping-list`, `GET /api/v1/recipes/:id/mealie-thumbnail` (proxy). Recipes report `source: native | mealie`.
 
 ### Pantry (`/pantry`) (v1.55.0)
 

@@ -7,8 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.73.0] - 2026-08-02
+
 ### Added
-- Recipes can now mirror from a self-hosted Mealie instance. Add a Mealie account under Settings → Kitchen and its recipes appear alongside your own, with a "Mealie" badge and a link back to view them there. Mealie stays the source of truth for their content, so mirrored recipes are read-only here — editing and deleting are blocked, though you can still duplicate one into an editable native copy. They slot straight into the meal planner and shopping list like any other recipe, sync automatically, and a rename in Mealie updates the mirrored copy in place instead of losing its meal-plan links. A broken connection to Mealie never wipes the local copies. A Mealie account also accepts an optional public link URL, separate from the (possibly Docker-internal or LAN-only) address used for syncing, so the "Open in Mealie" links actually work from your browser.
+
+- Recipes can now mirror from a self-hosted Mealie instance. Add a Mealie account under Settings → Kitchen and its recipes appear alongside your own, with a "Mealie" badge and a link back to view them there. Mealie stays the source of truth for their content, so mirrored recipes are read-only here - editing and deleting are blocked, though you can still duplicate one into an editable native copy. They slot straight into the meal planner and shopping list like any other recipe, sync automatically, and a rename in Mealie updates the mirrored copy in place instead of losing its meal-plan links. A broken connection to Mealie never wipes the local copies. A Mealie account also accepts an optional public link URL, separate from the (possibly Docker-internal or LAN-only) address used for syncing, so the "Open in Mealie" links actually work from your browser.
+- Subtasks can start expanded. A task's checklist was always folded away behind its progress bar, so a household that plans in subtasks reopened the same lists on every visit. A new switch under Settings → Modules → Module options makes them open by default; folding one shut by hand still works, the setting only decides where a task starts.
+
+### Fixed
+
+- The module list in the sidebar no longer jumps while you use it. Rebuilding the navigation - which happens on every route change, and when the language or the module list changes - reset its scroll position to the top, and the mechanism that keeps the current module in view immediately pulled it somewhere else, so a long list appeared to jump between its first and last entry. The position now survives the rebuild, and the current module is only scrolled into view when it genuinely sits outside it.
 
 ## [1.72.0] - 2026-08-02
 
