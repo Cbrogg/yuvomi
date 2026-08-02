@@ -92,6 +92,18 @@ writeFileSync(GRAPH, JSON.stringify(graph), 'utf8');
 const labelsCache = path.join(OUT, '.graphify_labels.json');
 if (existsSync(labelsCache)) {
   const cache = JSON.parse(readFileSync(labelsCache, 'utf8'));
+  // ERST DIE EIGENEN ALT-EINTRÄGE RÄUMEN, dann schreiben. Ein reines Merge ließ
+  // die Community-ID eines früheren Laufs samt Namen stehen; da die IDs beim
+  // Re-Clustering neu vergeben werden, hängt der Name beim nächsten
+  // `graphify update` an irgendeiner fremden Community, die dieselbe ID
+  // wiederbekommt - genau die ID-Instabilität, gegen die die Anker antreten.
+  //
+  // Erkannt am NAMEN, nicht an der ID: nur so bleibt unberührt, was graphify
+  // selbst in den Cache geschrieben hat.
+  const ownLabels = new Set([...Object.values(anchors), ...Object.values(fileAnchors)]);
+  for (const [c, label] of Object.entries(cache)) {
+    if (ownLabels.has(label)) delete cache[c];
+  }
   for (const [c, label] of newName) cache[String(c)] = label;
   writeFileSync(labelsCache, JSON.stringify(cache), 'utf8');
 }

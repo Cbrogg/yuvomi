@@ -5,7 +5,7 @@
  */
 
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import test from 'node:test';
 
 import {
@@ -163,9 +163,17 @@ test('the router resets the surviving scrollport on every navigation', () => {
     'Scrollport und getauschter Container müssen dasselbe Element bleiben',
   );
 
+  // Kommentare vorab entfernen, statt sie im Muster mitzudenken. Hier stand eine
+  // Alternation aus Zeilen- und Blockkommentar unter einem `*` - die backtrackt
+  // exponentiell, sobald ein `/*` ohne Abschluss folgt (CodeQL js/redos). Beide
+  // Ersetzungen sind ungierig und ohne äußere Wiederholung, also linear.
+  const routerCode = routerJs
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/^[ \t]*\/\/[^\n]*$/gm, '');
+
   assert.match(
-    routerJs,
-    /content\.replaceChildren\(pageWrapper\);\s*(?:\/\/[^\n]*\n\s*|\/\*[\s\S]*?\*\/\s*)*content\.scrollTop = 0;/,
+    routerCode,
+    /content\.replaceChildren\(pageWrapper\);\s*content\.scrollTop = 0;/,
     'der Reset muss direkt am Inhaltstausch hängen - VOR dem Render, sonst kassiert '
     + 'er die modul-eigenen Scrolls (Kalender-Tagesansicht, Essensplan) wieder ein',
   );
@@ -179,6 +187,45 @@ test('the router resets the surviving scrollport on every navigation', () => {
     /scrollPositionFor\(basePath, \{ restore: !pushState \}\)/,
     'die Richtung kommt aus pushState, nicht aus getDirection() - das ist die '
     + 'Slide-Richtung nach ROUTE_ORDER und auch bei Vorwärts-Taps oft "left"',
+  );
+});
+
+/**
+ * Die Wiederherstellung bei Browser-Zurück hängt am Scrollstand von
+ * `#main-content`. Module, deren Root `overflow: hidden` auf voller Höhe ist und
+ * die einen INNEREN Container scrollen, halten `#main-content` dauerhaft auf 0 -
+ * dort gibt es nichts zu merken, und Zurück landet oben. Das ist eine bewusste
+ * Grenze (siehe utils/scroll-restore.js und SPEC, Responsive Composition), keine
+ * versehentliche.
+ *
+ * Dieser Guard hält die Liste ehrlich: kommt ein neuntes Modul dazu oder
+ * verliert eines seinen inneren Scroller, verschiebt sich die Reichweite der
+ * Zusage - und Kommentar wie Spezifikation müssen mitziehen, statt still falsch
+ * zu werden. Geprüft wird die REGEL über alle Modul-Stylesheets, nicht eine
+ * Handvoll bekannter Dateien.
+ */
+test('the modules with an inner scroll container are the documented eight', () => {
+  const styleDir = new URL('../public/styles/', import.meta.url);
+  const found = [];
+
+  for (const file of readdirSync(styleDir).filter((f) => f.endsWith('.css'))) {
+    const css = readFileSync(new URL(file, styleDir), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    for (const [, selector, body] of css.matchAll(/([^{}]+)\{([^}]*)\}/g)) {
+      const sel = selector.split('\n').pop().trim();
+      if (!/^\.[a-z-]+-page$/.test(sel)) continue;
+      if (/height:\s*100%/.test(body) && /overflow:\s*hidden/.test(body)) found.push(sel);
+    }
+  }
+
+  assert.deepEqual(
+    [...new Set(found)].sort(),
+    [
+      '.budget-page', '.calendar-page', '.contacts-page', '.meals-page',
+      '.notes-page', '.pantry-page', '.recipes-page', '.shopping-page',
+    ],
+    'Die Module mit innerem Scroller haben sich geändert. Sie sind genau die, in '
+    + 'denen Browser-Zurück NICHT an die alte Position zurückkehrt - die Liste in '
+    + 'utils/scroll-restore.js und in docs/SPEC.md (Responsive Composition) muss mit.',
   );
 });
 

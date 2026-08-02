@@ -25,6 +25,26 @@
 // MERKEN STATT NUR NICHT-ZURÜCKSETZEN. Ein „bei popstate einfach nichts tun"
 // bewahrt nicht die Position der Zielseite, sondern die der Seite, von der man
 // gerade kommt - dass das gelegentlich gleich aussieht, ist Zufall.
+//
+// REICHWEITE: Das Merken hängt am Scrollstand von `#main-content`. Acht
+// Modul-Roots (.budget-page, .calendar-page, .contacts-page, .meals-page,
+// .notes-page, .pantry-page, .recipes-page, .shopping-page) sind `overflow:
+// hidden` auf voller Höhe und scrollen einen inneren Container; dort steht
+// `#main-content` immer auf 0, es gibt also nichts zu merken und ein Zurück
+// landet oben. Das OBEN-ANFANGEN stimmt trotzdem überall - jene inneren
+// Container entstehen bei jeder Navigation neu und starten zwangsläufig bei 0.
+//
+// Warum nicht einfach der erste scrollbare Nachfahre: den müsste man nach dem
+// Render wiederfinden, und ein aus Klassen abgeleiteter Selektor bricht beim
+// nächsten Umbau still. Der Weg dahin führt über ein Modul, das seinen
+// Scrollbereich benennt (Attribut), nicht über einen ratenden Router.
+//
+// Schlüssel ist der Pfad, nicht der History-Eintrag. Wer eine Route zweimal in
+// derselben Historie besucht, teilt sich damit einen Eintrag: nach zweimal
+// Zurück trägt der erste Besuch die Position des zweiten. Das kostet einen
+// Sprung an eine falsche Stelle derselben Seite, wo es vorher gar keine
+// Wiederherstellung gab - ein Schlüssel in `history.state` wäre die Antwort,
+// wenn das jemandem auffällt.
 const positions = new Map();
 
 /**
