@@ -93,7 +93,7 @@ npm run test:ics-sub        # ICS-Abos: SSRF-Guards, ETag/304, und unveränderte
 npm run test:ics-export     # ICS-Kalenderexport
 npm run test:ics-import     # einmaliger ICS-/Feed-Import als bearbeitbare lokale Termine (#437)
 npm run test:modal-utils
-npm run test:detail-view    # Leseansicht vor dem Formular: Präsentationsweiche (Popover nur ab 768px UND mit Anker), die drei Fallen des Pane-Wechsels in fester Reihenfolge, Fußzeilen-Aktionen schließen mit force (versteckte Formulare zählen in den Dirty-Check), showEventPopup rückstandslos weg, neue i18n-Keys in allen Locales
+npm run test:detail-view    # Leseansicht vor dem Formular (Kalender, Aufgaben, Kontakte): Präsentationsweiche (Popover nur ab 768px UND mit Anker), die drei Fallen des Pane-Wechsels in fester Reihenfolge, Fußzeilen-Aktionen schließen mit force (versteckte Formulare zählen in den Dirty-Check), showEventPopup rückstandslos weg, neue i18n-Keys in allen Locales. Für Kontakte zusätzlich: beide Einstiege (Liste + Deep-Link) führen in die Leseansicht, edit.ready sperrt den Wechsel bis die Mehrfachwerte da sind (sonst löscht das Speichern die Zweitnummern), alle Nummern/Mails/Adressen statt der Legacy-Einzelwerte, Kontaktdaten nur über textContent, und die neuen Keys liegen unter contacts statt shopping
 npm run test:category-manager   # generic oikos-category-manager component + budget wiring
 npm run test:sortable-reorder   # SortableJS-Wrapper + Drag-and-Drop-Reorder im Category-Manager (Teil-Render, Fokus-Restore, aria-live, SW-Precache)
 npm run test:datepicker         # yuvomi-datepicker: ISO-Wertkontrakt, form-association, Popover/Touch, min/max, i18n-Vollständigkeit
