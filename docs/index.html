@@ -1036,11 +1036,11 @@
       </div>
       <div class="mod-card reveal d1" style="--m: var(--m-birthdays)">
         <div class="mod-ico"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-        <h3 data-t="m_family_t">Family</h3><p data-t="m_family_d">Member profiles with roles, photos and contact details, kept in sync with Contacts and Birthdays. One place to decide who sees what.</p>
+        <h3 data-t="m_family_t">Family</h3><p data-t="m_family_d">Member profiles with roles, photos and contact details, kept in sync with Contacts and Birthdays.</p>
       </div>
       <div class="mod-card reveal d2" style="--m: var(--m-split)">
         <div class="mod-ico"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></div>
-        <h3 data-t="m_api_t">API tokens</h3><p data-t="m_api_d">Bearer and X-API-Key tokens against a documented OpenAPI 3.0 spec, plus a built-in MCP endpoint. Wire Yuvomi into Home Assistant, a script, or an AI agent, on your own network.</p>
+        <h3 data-t="m_api_t">API tokens</h3><p data-t="m_api_d">Bearer and X-API-Key tokens against a documented OpenAPI 3.0 spec, plus a built-in MCP endpoint at <code>/mcp</code> that lets an AI client like Claude Desktop drive the whole API in plain language. Optional per-module read/write scopes keep a token off the areas it has no business in.</p>
       </div>
     </div>
     <!-- Anyone already running a home server asks the same two questions before
@@ -1218,8 +1218,8 @@ openssl rand -hex 32
       skip_link:'Skip to content',
       more_scope:'Not a photo library, a password manager or a media server: Yuvomi replaces the apps a household runs on, not your whole server. What you already run can stay. Calendars and contacts sync both ways over CalDAV and CardDAV, documents can live on WebDAV or Google Drive, and API tokens plus the MCP endpoint let the rest of your setup talk to it.',
       m_pantry_t:'Pantry', m_pantry_d:'What is actually in the house: amount, storage location and best-before date, with expiry and low-stock filters. Ticked-off shopping items hand straight over, and anything running low goes back onto the list.',
-      m_family_t:'Family', m_family_d:'Member profiles with roles, photos and contact details, kept in sync with Contacts and Birthdays. One place to decide who sees what.',
-      m_api_t:'API tokens', m_api_d:'Bearer and X-API-Key tokens against a documented OpenAPI 3.0 spec, plus a built-in MCP endpoint. Wire Yuvomi into Home Assistant, a script, or an AI agent, on your own network.',
+      m_family_t:'Family', m_family_d:'Member profiles with roles, photos and contact details, kept in sync with Contacts and Birthdays.',
+      m_api_t:'API tokens', m_api_d:'Bearer and X-API-Key tokens against a documented OpenAPI 3.0 spec, plus a built-in MCP endpoint at <code>/mcp</code> that lets an AI client like Claude Desktop drive the whole API in plain language. Optional per-module read/write scopes keep a token off the areas it has no business in.',
       ho_title:'The modules <em>talk to each other</em>',
       ho_desc:'This is the part ten separate apps cannot do. What happens in one module shows up where you need it, without anyone re-typing it.',
       ho_1_a:'Meal plan for the week', ho_1_b:'Ingredients on the shopping list',
@@ -1333,9 +1333,9 @@ openssl rand -hex 32
     de: {
       skip_link:'Zum Inhalt springen',
       more_scope:'Keine Fotobibliothek, kein Passwort-Manager, kein Media-Server: Yuvomi ersetzt die Apps, mit denen ein Haushalt läuft, nicht euren ganzen Server. Was ihr schon betreibt, darf bleiben. Kalender und Kontakte synchronisieren in beide Richtungen über CalDAV und CardDAV, Dokumente können auf WebDAV oder Google Drive liegen, und über API-Tokens samt MCP-Endpunkt spricht der Rest eurer Einrichtung mit Yuvomi.',
-      m_pantry_t:'Vorratskammer', m_pantry_d:'Was tatsächlich im Haus ist: Menge, Lagerort und Mindesthaltbarkeit, mit Filtern für Ablauf und knappe Bestände. Abgehakte Einkäufe wandern direkt hinüber, und was zur Neige geht, landet wieder auf der Liste.',
-      m_family_t:'Familie', m_family_d:'Mitgliederprofile mit Rollen, Fotos und Kontaktdaten, synchron mit Kontakten und Geburtstagen. Ein Ort, an dem ihr festlegt, wer was sieht.',
-      m_api_t:'API-Tokens', m_api_d:'Bearer- und X-API-Key-Tokens gegen eine dokumentierte OpenAPI-3.0-Spezifikation, dazu ein eingebauter MCP-Endpunkt. Bindet Yuvomi an Home Assistant, ein Skript oder einen KI-Agenten an, in eurem eigenen Netz.',
+      m_pantry_t:'Vorrat', m_pantry_d:'Was tatsächlich im Haus ist: Menge, Lagerort und Mindesthaltbarkeit, mit Filtern für Ablauf und knappe Bestände. Abgehakte Einkäufe wandern direkt hinüber, und was zur Neige geht, landet wieder auf der Liste.',
+      m_family_t:'Familie', m_family_d:'Mitgliederprofile mit Rollen, Fotos und Kontaktdaten, synchron mit Kontakten und Geburtstagen.',
+      m_api_t:'API-Tokens', m_api_d:'Bearer- und X-API-Key-Tokens gegen eine dokumentierte OpenAPI-3.0-Spezifikation, dazu ein eingebauter MCP-Endpunkt unter <code>/mcp</code>, über den ein KI-Client wie Claude Desktop die gesamte API in natürlicher Sprache bedient. Optionale Lese-/Schreibrechte pro Modul halten ein Token aus Bereichen heraus, in denen es nichts zu suchen hat.',
       ho_title:'Die Module <em>reden miteinander</em>',
       ho_desc:'Genau das können zehn einzelne Apps nicht. Was in einem Modul passiert, taucht dort auf, wo ihr es braucht, ohne dass es jemand abtippt.',
       ho_1_a:'Mahlzeitenplan für die Woche', ho_1_b:'Zutaten auf der Einkaufsliste',
