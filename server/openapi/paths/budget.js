@@ -35,11 +35,11 @@ export function budgetPaths() {
       delete: op({ summary: 'Delete budget subcategory', tag: 'Budget', params: [stringPathParam('key', 'Category key'), stringPathParam('subKey', 'Subcategory key')], stateChanging: true }),
     },
     '/api/v1/budget/accounts': {
-      get: op({ summary: 'List accounts with starting and running balance plus net worth', tag: 'Budget' }),
-      post: op({ summary: 'Create account (name, type, starting balance)', tag: 'Budget', stateChanging: true, requestBody: jsonBody(null) }),
+      get: op({ summary: 'List accounts with starting and running balance, net worth, and available limit on credit cards', tag: 'Budget' }),
+      post: op({ summary: 'Create account (name, type, starting balance; credit cards also take credit_bank and credit_limit)', tag: 'Budget', stateChanging: true, requestBody: jsonBody(null) }),
     },
     '/api/v1/budget/accounts/{id}': {
-      put: op({ summary: 'Update account', tag: 'Budget', params: [idParam()], stateChanging: true, requestBody: jsonBody(null) }),
+      put: op({ summary: 'Update account (credit cards also take credit_bank and credit_limit)', tag: 'Budget', params: [idParam()], stateChanging: true, requestBody: jsonBody(null) }),
       delete: op({ summary: 'Delete account (linked entries are kept, account_id cleared)', tag: 'Budget', params: [idParam()], stateChanging: true }),
     },
     '/api/v1/budget/loans': {
