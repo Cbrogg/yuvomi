@@ -2664,7 +2664,9 @@ function positionSidebarIndicator() {
   // Aktives Item in den Sichtbereich holen (Audit F-01): bei überlaufender
   // Liste lagen Item UND Pille sonst unsichtbar unterhalb der Falte — die
   // Navigation verlor ihren „Du bist hier"-Anker. Manuelles Scrollen statt
-  // scrollIntoView, damit garantiert nur dieser Container scrollt.
+  // scrollIntoView, damit garantiert nur dieser Container scrollt. Nur wenn das
+  // Item wirklich außerhalb liegt: rebuildNavigation() stellt die Scroll-Position
+  // vorher wieder her, ein sichtbares Item wird also nie mehr verschoben.
   const margin = 8;
   const top = active.offsetTop;
   const bottom = top + active.offsetHeight;
@@ -3151,10 +3153,23 @@ function rebuildNavigation({ updateLabels = true } = {}) {
   }
 
   if (navSidebarItems) {
+    // replaceChildren recria toda a árvore da navegação (por exemplo, após
+    // replaceChildren baut die Navigation komplett neu (Routenwechsel, Sprache,
+    // Modulliste) und der Browser setzt die Scroll-Position dabei auf 0 zurück.
+    // Ohne Sicherung sprang die Liste bei jedem Rebuild an den Anfang und das
+    // Auto-Scroll unten riss sie sofort wieder zum aktiven Item — sichtbar als
+    // Springen zwischen erstem und letztem Eintrag.
+    const previousScrollTop = navSidebarItems.scrollTop;
     const sidebarEls = sidebarNavItems();
     navSidebarItems.replaceChildren(...sidebarEls);
     if (window.lucide) window.lucide.createIcons({ el: navSidebarItems });
-    requestAnimationFrame(() => positionSidebarIndicator());
+    requestAnimationFrame(() => {
+      navSidebarItems.scrollTop = Math.min(
+        previousScrollTop,
+        Math.max(0, navSidebarItems.scrollHeight - navSidebarItems.clientHeight),
+      );
+      positionSidebarIndicator();
+    });
   }
   if (bottomItems) {
     const moreBtn = bottomItems.querySelector('#more-btn') ?? moreNavButtonEl();

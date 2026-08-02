@@ -1535,7 +1535,11 @@ p.field-hint--warn[hidden] {
      * die Footer-Haarlinie stößt. */
     padding: 0 0 var(--space-2);
     flex: 1;
+    /* Ohne min-height:0 schrumpft ein Flex-Item nicht unter seine Inhaltshöhe -
+     * overflow-y:auto bliebe wirkungslos und die Liste liefe über den Footer. */
+    min-height: 0;
     overflow-y: auto;
+    overscroll-behavior-y: contain;
     scrollbar-width: none;
   }
   .nav-sidebar__items::-webkit-scrollbar { display: none; }
