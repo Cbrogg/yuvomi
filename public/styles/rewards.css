@@ -318,7 +318,7 @@
 .rw-chip--active {
   background: var(--module-accent);
   border-color: var(--module-accent);
-  color: var(--color-text-on-accent);
+  color: var(--color-ink-on-vivid);
 }
 
 .rw-ledger { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }

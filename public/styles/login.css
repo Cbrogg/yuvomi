@@ -50,10 +50,17 @@
   margin-bottom: var(--space-4);
   border-radius: var(--radius-lg);
   background-color: var(--color-accent);
-  color: var(--color-text-on-accent);
+  /* Nicht --color-text-on-accent: das ist statisches Weiss und wird im Dark-Block
+   * nirgends redefiniert, während --color-accent dort aufhellt - gemessene
+   * 2,72:1 auf dem Zeichen. --color-ink-on-vivid kippt mit dem Modus und liegt
+   * so in beiden Themes bei 6,06:1 bzw. 6,40:1. */
+  color: var(--color-ink-on-vivid);
   box-shadow:
     var(--shadow-md),
-    inset 0 1px 0 color-mix(in srgb, var(--color-text-on-accent) 22%, transparent);
+    /* Lichtkante, kein Text: bleibt weiss und nimmt im Dark-Modus zurück, weil
+     * die Fläche dort selbst hell ist. Eigenes Token, damit die Zeile nicht
+     * versehentlich der Textfarbe oben folgt. */
+    inset 0 1px 0 var(--glass-highlight-subtle);
 }
 
 .login-hero__mark svg {
