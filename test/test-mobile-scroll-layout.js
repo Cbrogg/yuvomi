@@ -8,6 +8,12 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
+import {
+  rememberScrollPosition,
+  scrollPositionFor,
+  forgetScrollPositions,
+} from '../public/utils/scroll-restore.js';
+
 const routerJs = readFileSync(new URL('../public/router.js', import.meta.url), 'utf8');
 const layoutCss = readFileSync(new URL('../public/styles/layout.css', import.meta.url), 'utf8');
 const glassCss = readFileSync(new URL('../public/styles/glass.css', import.meta.url), 'utf8');
@@ -106,6 +112,73 @@ test('cold dashboard load does not transform the scroll surface', () => {
     routerJs,
     /if \(shouldAnimate\) \{\s*pageWrapper\.classList\.add\(inClass\);/,
     'the slide class must only be applied after an existing route',
+  );
+});
+
+test('a forward navigation opens the target page at the top, a back navigation where it was', () => {
+  forgetScrollPositions();
+
+  // Übersicht weit unten verlassen (gemessener Fall: scrollTop 1267 → /tasks).
+  rememberScrollPosition('/', 1267);
+
+  assert.equal(
+    scrollPositionFor('/tasks', { restore: false }),
+    0,
+    'ein eigener Aufruf (pushState) muss oben beginnen',
+  );
+  assert.equal(
+    scrollPositionFor('/', { restore: true }),
+    1267,
+    'Browser-Zurück muss den gemerkten Stand der ZIELseite liefern',
+  );
+  assert.equal(
+    scrollPositionFor('/tasks', { restore: true }),
+    0,
+    'ohne gemerkten Stand bleibt auch popstate bei 0',
+  );
+
+  // Oben stehende Seiten werden nicht eingetragen - der Default liefert dieselbe 0.
+  rememberScrollPosition('/', 0);
+  assert.equal(scrollPositionFor('/', { restore: true }), 0);
+
+  forgetScrollPositions();
+  rememberScrollPosition('/', 1267);
+  forgetScrollPositions();
+  assert.equal(
+    scrollPositionFor('/', { restore: true }),
+    0,
+    'nach Sitzungsende darf kein Stand überleben',
+  );
+});
+
+test('the router resets the surviving scrollport on every navigation', () => {
+  // #main-content IST .app-content (renderAppShell) und überlebt jede Navigation:
+  // renderPage() tauscht per replaceChildren nur seinen Inhalt. Ohne expliziten
+  // Reset öffnet die Zielseite auf dem Scrollstand der Vorseite.
+  const mainRule = cssRuleBody(layoutCss, '.app-content');
+  assert.match(mainRule, /overflow-y:\s*auto/, '.app-content ist der Scrollport');
+  assert.match(
+    routerJs,
+    /main\.className = 'app-content';\s*main\.id = 'main-content';/,
+    'Scrollport und getauschter Container müssen dasselbe Element bleiben',
+  );
+
+  assert.match(
+    routerJs,
+    /content\.replaceChildren\(pageWrapper\);\s*(?:\/\/[^\n]*\n\s*|\/\*[\s\S]*?\*\/\s*)*content\.scrollTop = 0;/,
+    'der Reset muss direkt am Inhaltstausch hängen - VOR dem Render, sonst kassiert '
+    + 'er die modul-eigenen Scrolls (Kalender-Tagesansicht, Essensplan) wieder ein',
+  );
+  assert.match(
+    routerJs,
+    /if \(scrollTarget > 0\) content\.scrollTop = scrollTarget;/,
+    'die Wiederherstellung bei popstate gehört hinter das await auf den Render',
+  );
+  assert.match(
+    routerJs,
+    /scrollPositionFor\(basePath, \{ restore: !pushState \}\)/,
+    'die Richtung kommt aus pushState, nicht aus getDirection() - das ist die '
+    + 'Slide-Richtung nach ROUTE_ORDER und auch bei Vorwärts-Taps oft "left"',
   );
 });
 

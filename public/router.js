@@ -18,6 +18,11 @@ import { getLastHealthRoute, HEALTH_ROUTES } from '/utils/health-tabs.js';
 import { activityType } from '/utils/health-activity.js';
 import { buildHelpRows } from '/utils/help.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
+import {
+  rememberScrollPosition,
+  scrollPositionFor,
+  forgetScrollPositions,
+} from '/utils/scroll-restore.js';
 import { openModal, confirmModal } from '/components/modal.js';
 import '/components/datepicker.js';
 import { NAV_ICONS } from '/nav-icons.js';
@@ -554,6 +559,17 @@ async function navigate(path, userOrPushState = true, pushState = true) {
     const basePath = path.split('?')[0];
     currentPath = basePath;
 
+    // Scrollstand der Seite festhalten, die gerade verlassen wird - er ist die
+    // Antwort auf ein späteres Browser-Zurück. Bewusst vor den Guards: was hier
+    // sichtbar ist, gilt unabhängig davon, ob die Navigation gleich umgeleitet
+    // wird. Der Scrollport ist #main-content selbst (== .app-content).
+    if (previousPath) {
+      rememberScrollPosition(previousPath, document.getElementById('main-content')?.scrollTop ?? 0);
+    }
+    // Vorwärts heißt oben anfangen, Zurück/Vor heißt weitermachen. Details und
+    // die Begründung gegen getDirection() in utils/scroll-restore.js.
+    const scrollTarget = scrollPositionFor(basePath, { restore: !pushState });
+
     // First-Run-Weiche: Solange kein Account existiert und niemand eingeloggt ist,
     // alle Routen außer /setup auf /setup umleiten.
     if (_setupRequired && !currentUser && basePath !== '/setup') {
@@ -686,6 +702,11 @@ async function navigate(path, userOrPushState = true, pushState = true) {
         handled = false;
       }
       if (handled) {
+        // Auch die Soft-Navigation wechselt den Inhalt (Settings-Blatt, Health-Tab)
+        // und muss den Scrollport nachziehen - hier zwangsläufig NACH dem Render,
+        // weil kein Teardown existiert, an den man sich hängen könnte.
+        const main = document.getElementById('main-content');
+        if (main) main.scrollTop = scrollTarget;
         updateNav(topLevelSection(basePath));
         return;
       }
@@ -709,7 +730,7 @@ async function navigate(path, userOrPushState = true, pushState = true) {
       updateThemeColorForRoute(route);
     }
 
-    await renderPage(route, previousPath);
+    await renderPage(route, previousPath, scrollTarget);
     // Autoritative Aktualisierung nach dem Render: deckt den Erstlade-Fall ab und
     // markiert ggf. seiten-interne [data-route]-Links (idempotent).
     // Settings-Blätter teilen sich den /settings Nav-Eintrag (aria-current).
@@ -1025,8 +1046,9 @@ function buildMoreSheetBody() {
  * Lädt und rendert eine Seite dynamisch.
  * @param {{ path: string, page: string }} route
  * @param {string|null} previousPath - Pfad vor der Navigation (für Richtungsberechnung)
+ * @param {number} scrollTarget - Scrollstand der Zielseite (0 vorwärts, gemerkt bei popstate)
  */
-async function renderPage(route, previousPath = null) {
+async function renderPage(route, previousPath = null, scrollTarget = 0) {
   const app = document.getElementById('app');
   const loading = document.getElementById('app-loading');
 
@@ -1083,6 +1105,16 @@ async function renderPage(route, previousPath = null) {
     pageWrapper.className = 'page-transition';
     pageWrapper.style.opacity = '0';
     content.replaceChildren(pageWrapper);
+    // Scrollport auf Anfang, solange er leer ist. `content` IST der Scrollport
+    // (#main-content == .app-content) und überlebt die Navigation; ohne diese
+    // Zeile öffnet die Zielseite auf dem Scrollstand der Vorseite.
+    //
+    // HIER, NICHT NACH DEM RENDER: Module scrollen beim Aufbau selbst - die
+    // Tagesansicht des Kalenders zur aktuellen Stunde, der Essensplan zum
+    // heutigen Tag. Ein Reset danach würde genau das wieder einkassieren. Die
+    // Wiederherstellung bei popstate darf und soll das dagegen überschreiben,
+    // sie steht deshalb unten hinter dem await.
+    content.scrollTop = 0;
     style.cleanup();
 
     // Teardown abgeschlossen: ein evtl. gemerktes Soft-Update-Ziel ist jetzt
@@ -1117,6 +1149,11 @@ async function renderPage(route, previousPath = null) {
     }
 
     await renderPromise;
+
+    // Browser-Zurück/-Vor: gemerkten Stand wiederherstellen, jetzt wo der Inhalt
+    // seine volle Höhe hat. Best effort - ist die Seite kürzer als beim Verlassen
+    // (gefilterte Liste, gelöschter Eintrag), klemmt der Browser auf sein Maximum.
+    if (scrollTarget > 0) content.scrollTop = scrollTarget;
 
     // Ab hier kann das Modul Soft-Navigationen bedienen (sofern es update() bietet).
     _renderedModule = module;
@@ -3080,6 +3117,9 @@ window.addEventListener('auth:expired', () => {
   // Offline-API-Cache leeren: Session-Ende → keine gecachten Daten zurücklassen,
   // die der nächste Nutzer am selben Gerät offline sehen könnte.
   clearApiCache();
+  // Gemerkte Scrollstände gehören zur Sitzung: der nächste Nutzer am selben
+  // Gerät soll nicht auf den Positionen des vorigen landen.
+  forgetScrollPositions();
   stopThirdPartyModulePolling();
   stopReminders();
   stopPush();
@@ -3310,6 +3350,7 @@ window.yuvomi = {
   clearSession: () => {
     currentUser = null;
     _navBuiltForUserId = null;
+    forgetScrollPositions();
     stopThirdPartyModulePolling();
     stopReminders();
     stopPush();

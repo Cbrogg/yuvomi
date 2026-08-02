@@ -109,6 +109,7 @@ const APP_SHELL = [
   '/utils/recipe-to-meal.js',
   '/utils/recurrence-scope.js',
   '/utils/reminder-offset.js',
+  '/utils/scroll-restore.js',
   '/utils/shopping-categories.js',
   '/utils/skeleton.js',
   '/utils/sub-tabs.js',
