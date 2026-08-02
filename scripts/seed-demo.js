@@ -103,6 +103,20 @@ function isoFromNow(days, hour = 9, min = 0) {
   return d.toISOString().slice(0, 19) + 'Z';
 }
 
+// Tage bis zum Montag DIESER Woche (0 = heute ist Montag, -6 = heute ist Sonntag).
+// Der Essensplan zeigt immer Mo-So; ein Plan, der wie alles andere relativ zu
+// „heute" liegt, ist an jedem Tag außer Montag angeschnitten - an einem Sonntag
+// standen fünf von sieben Spalten leer.
+function mondayOffset() {
+  const day = new Date().getDay(); // 0 = Sonntag
+  return day === 0 ? -6 : 1 - day;
+}
+
+/** Datum des i-ten Wochentags dieser Woche. i: 0 = Montag … 6 = Sonntag. */
+function weekDayKey(i) {
+  return daysFromNow(mondayOffset() + i);
+}
+
 // ── Wipe existing data (keep category/migration tables) ──────────────────────
 
 console.log('Clearing existing data…');
@@ -167,6 +181,33 @@ cfgSet.run('weather_lat', '51.5136');
 cfgSet.run('weather_lon', '7.4653');
 cfgSet.run('weather_city', 'Dortmund');
 cfgSet.run('weather_units', 'metric');
+
+// Dashboard-Kacheln: kuratiert statt Vorgabe. Die Standardaufteilung ließ das
+// Budget-Widget als 1x2 stehen, obwohl sein Inhalt nur die halbe Höhe füllt
+// (209 px Loch), schob das Wetter als letztes Widget in eine eigene Zeile und
+// ließ links daneben eine leere Fläche. Gemessen, nicht geraten: die Web-Ansicht
+// hat vier Spalten, die beiden Zeilen unten gehen exakt auf (2+1+1 / 1+1+2).
+// Auf schmalen Geräten fällt das Raster einspaltig - dort zählt allein die
+// Reihenfolge, und das Wetter steht als erstes oben.
+const dashboardWidgets = [
+  { id: 'weather',   visible: true,  size: '2x1' },
+  { id: 'family',    visible: true,  size: '1x1' },
+  { id: 'budget',    visible: true,  size: '1x1' },
+  { id: 'birthdays', visible: true,  size: '1x1' },
+  { id: 'rewards',   visible: true,  size: '1x1' },
+  { id: 'notes',     visible: true,  size: '2x1' },
+  // Ausgeblendet, aber in der Liste: die Reihenfolge bleibt stabil, wenn ein
+  // Haushalt sie im Anpassen-Modus wieder einblendet. tasks/calendar/shopping/
+  // meals deckt das „Heute"-Cockpit oben bereits ab - doppelt gezeigt wäre Echo.
+  { id: 'tasks',        visible: false, size: '1x2' },
+  { id: 'calendar',     visible: false, size: '1x2' },
+  { id: 'shopping',     visible: false, size: '2x1' },
+  { id: 'meals',        visible: false, size: '2x1' },
+  { id: 'housekeeping', visible: false, size: '1x1' },
+  { id: 'health',       visible: false, size: '2x1' },
+  { id: 'cycle',        visible: false, size: '2x1' },
+].map((w, order) => ({ ...w, order }));
+cfgSet.run('dashboard_widgets', JSON.stringify(dashboardWidgets));
 
 // Einkaufskategorien sind freie Namen (kein label_key) - im Deutschen stehen die
 // Migrationsvorgaben schon richtig, für Englisch werden sie an Ort und Stelle
@@ -377,50 +418,42 @@ const insertMeal = db.prepare(`
 `);
 const insertMealIng = db.prepare('INSERT INTO meal_ingredients (meal_id, name, quantity, category, on_shopping_list) VALUES (?, ?, ?, ?, ?)');
 
+// Erstes Feld = Wochentag dieser Woche (0 = Montag … 6 = Sonntag), NICHT Tage ab
+// heute: die Ansicht zeigt immer Mo-So, ein relativ geplanter Satz wäre an sechs
+// von sieben Wochentagen angeschnitten. Der Freitagabend (Index 4) fehlt hier
+// bewusst - den bespielt die Serie weiter unten.
 const STIR_FRY = L('Beef stir-fry', 'Rindfleisch-Pfanne');
 const mealPlan = [
-  [-1, 'breakfast', L('Scrambled eggs & toast',      'Rührei mit Toast'),            L('With smoked salmon',        'Mit Räucherlachs')],
-  [-1, 'lunch',     L('Tomato soup',                 'Tomatensuppe'),                L('Served with sourdough bread','Dazu Sauerteigbrot')],
-  [-1, 'dinner',    L('Spaghetti Bolognese',         'Spaghetti Bolognese'),         L('Kids loved it',             'Kam bei den Kindern super an')],
-  [-1, 'snack',     L('Apple slices & peanut butter','Apfelspalten mit Erdnussmus'), ''],
-  [ 0, 'breakfast', L('Overnight oats',              'Overnight Oats'),              L('Blueberries & honey',       'Blaubeeren und Honig')],
-  [ 0, 'lunch',     L('Caesar salad with chicken',   'Caesar Salat mit Hähnchen'),   L('Homemade dressing',         'Dressing selbst gemacht')],
-  [ 0, 'dinner',    L('Grilled Salmon & Roasted Veg','Lachs mit Ofengemüse'),        L('Lemon butter sauce',        'Mit Zitronenbutter')],
-  [ 0, 'snack',     L('Hummus with carrot sticks',   'Hummus mit Möhrensticks'),     ''],
-  [ 1, 'breakfast', L('Avocado toast',               'Avocadobrot'),                 L('Poached eggs on top',       'Mit pochiertem Ei')],
-  [ 1, 'lunch',     L('Lentil soup',                 'Linsensuppe'),                 L('With crusty bread',         'Mit knusprigem Brot')],
-  [ 1, 'dinner',    L('Chicken Tikka Masala',        'Chicken Tikka Masala'),        L('Basmati rice & naan',       'Basmatireis und Naan')],
-  [ 2, 'breakfast', L('Fluffy Pancakes',             'Fluffige Pancakes'),           L('Blueberry compote',         'Blaubeerkompott')],
-  [ 2, 'lunch',     L('Greek salad & pita',          'Griechischer Salat mit Pita'), L('Extra feta',                'Extra Feta')],
-  [ 2, 'dinner',    STIR_FRY,                                                        L('Jasmine rice, pak choi',    'Jasminreis, Pak Choi')],
+  [ 0, 'breakfast', L('Scrambled eggs & toast',      'Rührei mit Toast'),            L('With smoked salmon',        'Mit Räucherlachs')],
+  [ 0, 'lunch',     L('Tomato soup',                 'Tomatensuppe'),                L('Served with sourdough bread','Dazu Sauerteigbrot')],
+  [ 0, 'dinner',    L('Spaghetti Bolognese',         'Spaghetti Bolognese'),         L('Kids loved it',             'Kam bei den Kindern super an')],
+  [ 0, 'snack',     L('Apple slices & peanut butter','Apfelspalten mit Erdnussmus'), ''],
+  [ 1, 'breakfast', L('Overnight oats',              'Overnight Oats'),              L('Blueberries & honey',       'Blaubeeren und Honig')],
+  [ 1, 'lunch',     L('Caesar salad with chicken',   'Caesar Salat mit Hähnchen'),   L('Homemade dressing',         'Dressing selbst gemacht')],
+  [ 1, 'dinner',    L('Grilled Salmon & Roasted Veg','Lachs mit Ofengemüse'),        L('Lemon butter sauce',        'Mit Zitronenbutter')],
+  [ 1, 'snack',     L('Hummus with carrot sticks',   'Hummus mit Möhrensticks'),     ''],
+  [ 2, 'breakfast', L('Avocado toast',               'Avocadobrot'),                 L('Poached eggs on top',       'Mit pochiertem Ei')],
+  [ 2, 'lunch',     L('Lentil soup',                 'Linsensuppe'),                 L('With crusty bread',         'Mit knusprigem Brot')],
+  [ 2, 'dinner',    L('Chicken Tikka Masala',        'Chicken Tikka Masala'),        L('Basmati rice & naan',       'Basmatireis und Naan')],
   [ 2, 'snack',     L('Yoghurt & granola',           'Joghurt mit Granola'),         ''],
-  [ 3, 'breakfast', L('Porridge with banana',        'Porridge mit Banane'),         L('Cinnamon & honey',          'Zimt und Honig')],
-  [ 3, 'lunch',     L('Tuna melt sandwich',          'Überbackenes Thunfischbrot'),  L('Toasted ciabatta',          'Getoastetes Ciabatta')],
-  [ 3, 'dinner',    L('Veggie curry',                'Gemüsecurry'),                 L('Chickpeas & spinach',       'Kichererbsen und Spinat')],
-  [ 4, 'breakfast', L('Granola & mixed berries',     'Granola mit Beeren'),          L('Greek yoghurt',             'Griechischer Joghurt')],
-  [ 4, 'lunch',     L('Minestrone soup',             'Minestrone'),                  L('Topped with Parmesan',      'Mit Parmesan bestreut')],
-  [ 4, 'dinner',    L('Sunday Roast Chicken',        'Hähnchen aus dem Ofen'),       L('Sunday roast vibes',        'Sonntagsbraten-Stimmung')],
+  [ 3, 'breakfast', L('Fluffy Pancakes',             'Fluffige Pancakes'),           L('Blueberry compote',         'Blaubeerkompott')],
+  [ 3, 'lunch',     L('Greek salad & pita',          'Griechischer Salat mit Pita'), L('Extra feta',                'Extra Feta')],
+  [ 3, 'dinner',    STIR_FRY,                                                        L('Jasmine rice, pak choi',    'Jasminreis, Pak Choi')],
+  [ 4, 'breakfast', L('Porridge with banana',        'Porridge mit Banane'),         L('Cinnamon & honey',          'Zimt und Honig')],
+  [ 4, 'lunch',     L('Tuna melt sandwich',          'Überbackenes Thunfischbrot'),  L('Toasted ciabatta',          'Getoastetes Ciabatta')],
   [ 4, 'snack',     L('Fruit salad',                 'Obstsalat'),                   ''],
   [ 5, 'breakfast', L('French toast',                'Arme Ritter'),                 L('Powdered sugar & berries',  'Puderzucker und Beeren')],
   [ 5, 'lunch',     L('BLT sandwich',                'BLT-Sandwich'),                L('Wholemeal bread',           'Vollkornbrot')],
-  [ 5, 'dinner',    L('Fish & chips',                'Fish and Chips'),              L('Mushy peas, tartare sauce', 'Erbsenpüree, Remoulade')],
+  [ 5, 'dinner',    L('Sunday Roast Chicken',        'Hähnchen aus dem Ofen'),       L('For the whole family',      'Für die ganze Familie')],
+  [ 5, 'snack',     L('Yoghurt & granola',           'Joghurt mit Granola'),         ''],
   [ 6, 'breakfast', L('Smoothie bowl',               'Smoothie Bowl'),               L('Banana, chia seeds',        'Banane, Chiasamen')],
   [ 6, 'lunch',     L('Caprese salad & focaccia',    'Caprese mit Focaccia'),        L('Fresh basil',               'Frisches Basilikum')],
   [ 6, 'dinner',    L('Lamb chops & couscous',       'Lammkoteletts mit Couscous'),  L('Mint yoghurt dressing',     'Minzjoghurt-Dressing')],
+  [ 6, 'snack',     L('Fruit salad',                 'Obstsalat'),                   ''],
 ];
-// Freitagabend gehört der Serie unten. Ein fester statischer Eintrag an einem
-// Freitag stünde daneben und der Slot wäre doppelt belegt - der Plan zeigte
-// zwei Abendessen am selben Tag.
-function isFriday(days) {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() + days);
-  return d.getDay() === 5;
-}
-for (const [days, type, title, notes] of mealPlan) {
-  if (type === 'dinner' && isFriday(days)) continue;
+for (const [weekday, type, title, notes] of mealPlan) {
   const recipeId = recipeIdByTitle[title] ?? null;
-  const mid = insertMeal.run(daysFromNow(days), type, title, notes, recipeId, alexId).lastInsertRowid;
+  const mid = insertMeal.run(weekDayKey(weekday), type, title, notes, recipeId, alexId).lastInsertRowid;
   // A couple of upcoming dinners get a few ingredients to populate the kitchen view
   if (title === STIR_FRY) {
     [
