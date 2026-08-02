@@ -84,7 +84,6 @@ const APP_SHELL = [
   '/utils/date.js',
   '/utils/document-preview.js',
   '/utils/empty-state.js',
-  '/utils/fab-scroll.js',
   '/utils/fab.js',
   '/utils/health-activity.js',
   '/utils/health-cycle.js',
