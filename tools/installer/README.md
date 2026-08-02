@@ -111,7 +111,22 @@ The **CLI installer** (`install.sh` at the repo root) is localized into the same
 `--lang <code>` override. Its strings live in `tools/installer/locales/cli/<lang>.sh`
 — one sourced shell file per language that sets `MSG_*` variables; `en.sh` is the
 fallback base, the active language overlays it. Key parity across all 23 files is
-enforced by `test-installer-cli-i18n.js`.
+enforced by `test-installer-cli-i18n.js`, which also checks that every value is a
+`printf` format matching its call site (each value is passed to `printf` as the
+format string, so a stray `%` or a wrong `%s` count is a runtime bug).
+
+Unlike the wizard, the CLI installer writes `.env` from a fixed template. Every
+key it does **not** ask about is carried over from the previous file rather than
+dropped, so an installation configured by hand or through the wizard survives a
+re-run; the set of keys the dialog owns is the `MANAGED_KEYS` array in
+`install.sh`, and `test-installer-env-write.js` enforces that it matches the
+template in both directions. It asks for `BASE_URL` instead of deriving it,
+because behind a reverse proxy the public origin differs from the host and port
+the container listens on — and it reads `SESSION_SECURE` and `TRUST_PROXY` back
+out of that answer, since both server defaults are wrong for the other mode
+(no HSTS behind HTTPS; `X-Forwarded-For` trusted without a proxy in front,
+which is what the per-IP login rate limit counts). An existing value in `.env`
+wins over the derivation.
 
 ## Design
 
