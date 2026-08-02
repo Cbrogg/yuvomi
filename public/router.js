@@ -3228,16 +3228,71 @@ window.addEventListener('resize', () => {
 }, { passive: true });
 
 // --------------------------------------------------------
-// Virtuelle Tastatur: FAB ausblenden wenn Keyboard offen
-// Erkennung via visualViewport - Höhe < 75% des Fensters = Keyboard aktiv.
-// Nur auf Mobilgeräten relevant (< 1024px), Desktop hat keine virtuelle Tastatur.
+// Virtuelle Tastatur: FAB ausblenden, solange sie offen ist.
+// Nur auf Mobilgeräten relevant (< 1024px, siehe layout.css) - Desktop hat
+// keine virtuelle Tastatur.
+//
+// ZWEI BEDINGUNGEN, NICHT EINE (#634): Ein geschrumpfter Viewport allein ist
+// kein Beweis für eine Tastatur. Auf iOS schrumpft er auch, wenn die
+// Adressleiste ausfährt, und die frühere Fassung schloss allein daraus auf
+// „Tastatur offen". Schwerer als der Fehlschluss wog sein Rückweg: der Zustand
+// hing an einem einzelnen `resize`, und blieb ein zweites aus, war die
+// Primäraktion des Moduls dauerhaft weg - dieselbe Falle wie beim
+// Scroll-Retract, den #634 entfernt hat. Der FAB ist der einzige Weg zum
+// Anlegen (`.toolbar-new-btn` ist überall ausgeblendet), also kostet ein
+// Falsch-Positiv hier das ganze Modul.
+//
+// Eine Tastatur ist offen, wenn ein Texteingabefeld den Fokus hat. Das ist
+// direkt beobachtbar statt geschätzt, und es hat einen Rückweg, der nicht
+// ausbleiben kann: `focusout` feuert immer, und jede Navigation fokussiert
+// #main-content, was die Bedingung ebenfalls auflöst. Die Viewport-Messung
+// bleibt als zweite Bedingung - sie kann jetzt nur noch dazu führen, dass der
+// FAB stehen bleibt, nie mehr dazu, dass er ohne Tastatur verschwindet.
 // --------------------------------------------------------
-if (window.visualViewport) {
-  window.visualViewport.addEventListener('resize', () => {
-    const keyboardVisible = window.visualViewport.height < window.innerHeight * 0.75;
-    document.body.classList.toggle('keyboard-visible', keyboardVisible);
-  });
+
+/** Eingabetypen, die keine Tastatur öffnen: eigene Picker oder Knöpfe. */
+const NON_TEXT_INPUT_TYPES = new Set([
+  'button', 'checkbox', 'color', 'date', 'datetime-local', 'file', 'hidden',
+  'image', 'month', 'radio', 'range', 'reset', 'submit', 'time', 'week',
+]);
+
+function isTextEntry(el) {
+  if (!el) return false;
+  if (el.isContentEditable) return true;
+  if (el.tagName === 'TEXTAREA') return true;
+  if (el.tagName !== 'INPUT') return false;
+  return !NON_TEXT_INPUT_TYPES.has(el.type);
 }
+
+function syncKeyboardVisible() {
+  const focused = isTextEntry(document.activeElement);
+  const vv = window.visualViewport;
+  // Ohne visualViewport trägt der Fokus die Entscheidung allein.
+  const shrunk = !vv || vv.height < window.innerHeight * 0.75;
+  document.body.classList.toggle('keyboard-visible', focused && shrunk);
+}
+
+// `focusout` feuert, bevor der neue Fokus steht - erst danach messen, sonst
+// blitzt der FAB beim Sprung von einem Feld zum nächsten kurz auf.
+//
+// `setTimeout` und nicht `requestAnimationFrame`: rAF ruht in verborgenen Tabs.
+// Der Zustand verbirgt die Primäraktion, also darf sein Rückweg nicht an einem
+// Ereignis hängen, das ausbleiben kann - dieselbe Regel, an der der
+// Scroll-Retract gescheitert ist. Timer werden gedrosselt, aber sie laufen.
+let keyboardSyncTimer = 0;
+function scheduleKeyboardSync() {
+  if (keyboardSyncTimer) return;
+  keyboardSyncTimer = setTimeout(() => {
+    keyboardSyncTimer = 0;
+    syncKeyboardVisible();
+  }, 0);
+}
+
+document.addEventListener('focusin', scheduleKeyboardSync);
+document.addEventListener('focusout', scheduleKeyboardSync);
+// Die Messung kommt auf iOS erst einige hundert Millisekunden nach dem Fokus -
+// ohne diesen Listener bliebe die zweite Bedingung beim Öffnen ungeprüft.
+window.visualViewport?.addEventListener('resize', syncKeyboardVisible);
 
 // --------------------------------------------------------
 // iOS PWA: Viewport-Zoom bei Tastatur-Erscheinen verhindern.

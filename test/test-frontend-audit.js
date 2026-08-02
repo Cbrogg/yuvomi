@@ -1984,9 +1984,12 @@ test('der FAB weicht der Zeile, statt eine Gasse zu reservieren', () => {
   // selbst wieder auflöst.
   //
   // AUSGENOMMEN ist `.keyboard-visible` - der einzige Zustand, der den FAB
-  // legitim verbirgt. Er hat genau die Eigenschaft, die dem Retract fehlte: er
-  // endet, wenn der Nutzer die Tastatur schließt, und zwar immer. Der Retract
-  // endete nur durch ein weiteres Scroll-Ereignis, das ausbleiben konnte.
+  // legitim verbirgt. Hier stand, er ende „immer, wenn der Nutzer die Tastatur
+  // schließt". Das war die unbelegte Annahme, die den Melder ein zweites Mal
+  // traf: die Erkennung las nur den Viewport, und den schrumpft die
+  // iOS-Adressleiste ohne jede Tastatur. Was die Ausnahme trägt, ist nicht der
+  // Klassenname, sondern die Bedingung dahinter - und die prüft der Test
+  // „die Tastatur-Erkennung hängt am Fokus, nicht nur am Viewport".
   for (const file of readdirSync(styleDir).filter((f) => f.endsWith('.css'))) {
     const live = read(`../public/styles/${file}`).replace(/\/\*[\s\S]*?\*\//g, '');
     const fabRules = (live.match(/[^{}]*\.page-fab[^{]*\{[^}]*\}/g) ?? [])
@@ -1997,6 +2000,68 @@ test('der FAB weicht der Zeile, statt eine Gasse zu reservieren', () => {
       assert.doesNotMatch(rule, /pointer-events:\s*none/,
         `${file} nimmt dem FAB die Bedienbarkeit - genau der Zustand aus #634`);
     }
+  }
+});
+
+/**
+ * #634, zweite Runde: auch eine falsch erkannte Tastatur darf den FAB nicht
+ * nehmen.
+ *
+ * Nach dem Entfernen des Scroll-Retracts meldete derselbe Nutzer denselben
+ * Defekt weiter, jetzt in /tasks UND /pantry. Übrig war der zweite Zustand, der
+ * den FAB verbirgt: `.keyboard-visible`. Er wurde allein aus einem geschrumpften
+ * visualViewport geschlossen - eine Messung, die auf iOS auch die ausfahrende
+ * Adressleiste auslöst, ganz ohne Tastatur. Und er hing an genau einem
+ * `resize`: blieb ein zweites aus, blieb der FAB weg.
+ *
+ * Damit hatte der Retract-Fix die Mechanik entfernt, aber nicht ihre Form. Die
+ * Form ist: ein Zustand, der die Primäraktion verbirgt, aus einem Signal
+ * geschlossen wird, das nicht bedeutet was es soll, und keinen Rückweg hat, der
+ * garantiert kommt. Dieser Test hält die Gegenform fest - nicht den Namen der
+ * Funktion, sondern die drei Eigenschaften.
+ */
+test('die Tastatur-Erkennung hängt am Fokus, nicht nur am Viewport', () => {
+  const router = read('../public/router.js');
+
+  const sync = router.match(/function syncKeyboardVisible\(\)\s*\{([\s\S]*?)\n\}/)?.[1] ?? '';
+  assert.ok(sync, 'syncKeyboardVisible() muss es geben - sie hält die Bedingung an einer Stelle');
+
+  // 1. Das Signal muss bedeuten, was es behauptet: eine Tastatur ist offen,
+  //    wenn ein Texteingabefeld den Fokus hat. Der Viewport bestätigt nur.
+  assert.match(sync, /isTextEntry\(document\.activeElement\)/,
+    'die Tastatur gilt nur als offen, wenn ein Texteingabefeld den Fokus hat (#634)');
+  assert.match(sync, /focused && shrunk|shrunk && focused/,
+    'Fokus UND Viewport - eine der beiden Bedingungen allein reicht nicht (#634)');
+
+  // 2. Der Rückweg, der dem Retract fehlte: focusout kommt immer, und jede
+  //    Navigation fokussiert #main-content, was die Bedingung ebenfalls löst.
+  assert.match(router, /addEventListener\('focusout', scheduleKeyboardSync\)/,
+    'focusout muss den Zustand auflösen - der Rückweg, der nicht ausbleiben kann (#634)');
+  assert.match(router, /addEventListener\('focusin', scheduleKeyboardSync\)/,
+    'focusin muss den Zustand nachziehen');
+
+  // 3. Eine Stelle, nicht zwei: ein zweiter Setzer hätte einen eigenen Rückweg,
+  //    und genau daran ist die erste Fassung gestorben.
+  assert.equal((router.match(/keyboard-visible/g) ?? []).length, 1,
+    'keyboard-visible darf nur in syncKeyboardVisible() gesetzt werden (#634)');
+
+  // 4. Und der Rückweg selbst darf nicht wieder an einem Ereignis hängen, das
+  //    ausbleiben kann: `requestAnimationFrame` ruht in verborgenen Tabs. Beim
+  //    Nachmessen im Browser blieb der Zustand damit stehen - dieselbe Form wie
+  //    der Defekt, nur eine Ebene tiefer. Timer werden gedrosselt, aber laufen.
+  const scheduler = router.match(/function scheduleKeyboardSync\(\)\s*\{([\s\S]*?)\n\}/)?.[1] ?? '';
+  assert.ok(scheduler, 'scheduleKeyboardSync() muss es geben');
+  assert.doesNotMatch(scheduler, /requestAnimationFrame/,
+    'der Rückweg darf nicht an rAF hängen - das ruht in verborgenen Tabs (#634)');
+  assert.match(scheduler, /setTimeout/,
+    'der aufgeschobene Abgleich läuft über einen Timer, der auch verborgen feuert (#634)');
+
+  // Picker öffnen keine Tastatur. Ohne diese Trennung verschwände der FAB,
+  // sobald jemand ein Datums- oder Farbfeld antippt.
+  const nonText = router.match(/NON_TEXT_INPUT_TYPES = new Set\(\[([\s\S]*?)\]\)/)?.[1] ?? '';
+  for (const type of ['date', 'checkbox', 'radio', 'color', 'file', 'range']) {
+    assert.match(nonText, new RegExp(`'${type}'`),
+      `input[type=${type}] öffnet keine Tastatur und darf den FAB nicht verbergen`);
   }
 });
 
