@@ -583,12 +583,16 @@ const insertAccount = db.prepare(`
   INSERT INTO budget_accounts (name, type, starting_balance, color, sort_order, created_by)
   VALUES (?, ?, ?, ?, ?, ?)
 `);
+// Sechs Konten decken vier der sechs Kontoarten ab. Vier waren zu wenig: die
+// Liste endete auf halber Höhe, und `investment` kam in keinem Datensatz vor.
 const accountId = {};
 [
   ['current',  L('Joint Current Account', 'Gemeinsames Girokonto'), 'checking',   2480.00, '#2563EB', 0, alexId],
   ['savings',  L('Savings — Holiday',     'Sparkonto — Urlaub'),    'savings',    5200.00, '#10B981', 1, lindaId],
-  ['cash',     L('Housekeeping cash',     'Haushaltskasse'),        'cash',        180.00, '#F59E0B', 2, lindaId],
-  ['credit',   L('Visa Credit Card',      'Visa Kreditkarte'),      'credit',     -340.00, '#8B5CF6', 3, alexId],
+  ['kids',     L('Savings — Emma & Leo',  'Sparen für Emma & Leo'), 'savings',    1850.00, '#EC4899', 2, lindaId],
+  ['cash',     L('Housekeeping cash',     'Haushaltskasse'),        'cash',        180.00, '#F59E0B', 3, lindaId],
+  ['credit',   L('Visa Credit Card',      'Visa Kreditkarte'),      'credit',     -340.00, '#8B5CF6', 4, alexId],
+  ['depot',    L('Investment Account',    'Wertpapierdepot'),       'investment', 9420.00, '#0EA5E9', 5, alexId],
 ].forEach(([slug, name, type, balance, color, sort, by]) => {
   accountId[slug] = insertAccount.run(name, type, balance, color, sort, by).lastInsertRowid;
 });

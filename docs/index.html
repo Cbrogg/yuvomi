@@ -1061,7 +1061,10 @@
   <div class="carousel-track" id="track" tabindex="0" aria-label="App screenshots">
     <div class="carousel-item"><img class="sc" data-light="screenshots/dashboard-light-mobile.png" data-dark="screenshots/dashboard-dark-mobile.png" src="screenshots/dashboard-light-mobile.png" alt="Dashboard" data-alt-t="alt_c_dash" loading="lazy" width="440" height="956"><span>Dashboard</span></div>
     <div class="carousel-item"><img class="sc" data-light="screenshots/budget-subscriptions-light-mobile.png" data-dark="screenshots/budget-subscriptions-dark-mobile.png" src="screenshots/budget-subscriptions-light-mobile.png" alt="Subscription tracker" data-alt-t="alt_c_subs" loading="lazy" width="440" height="956"><span data-t="cap_subs">Subscriptions</span></div>
+    <div class="carousel-item"><img class="sc" data-light="screenshots/budget-plan-light-mobile.png" data-dark="screenshots/budget-plan-dark-mobile.png" src="screenshots/budget-plan-light-mobile.png" alt="Per-category budgets with spending progress" data-alt-t="alt_c_plan" loading="lazy" width="440" height="956"><span data-t="cap_plan">Budget plan</span></div>
+    <div class="carousel-item"><img class="sc" data-light="screenshots/budget-accounts-light-mobile.png" data-dark="screenshots/budget-accounts-dark-mobile.png" src="screenshots/budget-accounts-light-mobile.png" alt="Accounts with balances and net worth" data-alt-t="alt_c_accounts" loading="lazy" width="440" height="956"><span data-t="cap_accounts">Accounts</span></div>
     <div class="carousel-item"><img class="sc" data-light="screenshots/recipes-light-mobile.png" data-dark="screenshots/recipes-dark-mobile.png" src="screenshots/recipes-light-mobile.png" alt="Recipes" data-alt-t="alt_c_recipes" loading="lazy" width="440" height="956"><span data-t="cap_recipes">Recipes</span></div>
+    <div class="carousel-item"><img class="sc" data-light="screenshots/pantry-light-mobile.png" data-dark="screenshots/pantry-dark-mobile.png" src="screenshots/pantry-light-mobile.png" alt="Pantry stock with best-before dates and low-stock hints" data-alt-t="alt_c_pantry" loading="lazy" width="440" height="956"><span data-t="cap_pantry">Pantry</span></div>
     <div class="carousel-item"><img class="sc" data-light="screenshots/documents-light-mobile.png" data-dark="screenshots/documents-dark-mobile.png" src="screenshots/documents-light-mobile.png" alt="Documents" data-alt-t="alt_c_docs" loading="lazy" width="440" height="956"><span data-t="cap_documents">Documents</span></div>
     <div class="carousel-item"><img class="sc" data-light="screenshots/housekeeping-light-mobile.png" data-dark="screenshots/housekeeping-dark-mobile.png" src="screenshots/housekeeping-light-mobile.png" alt="Housekeeping" data-alt-t="alt_c_house" loading="lazy" width="440" height="956"><span data-t="cap_house">Housekeeping</span></div>
     <div class="carousel-item"><img class="sc" data-light="screenshots/notes-light-mobile.png" data-dark="screenshots/notes-dark-mobile.png" src="screenshots/notes-light-mobile.png" alt="Notes" data-alt-t="alt_c_notes" loading="lazy" width="440" height="956"><span data-t="cap_notes">Notes</span></div>
@@ -1254,6 +1257,9 @@ openssl rand -hex 32
       alt_c_contacts:"Contacts",
       alt_c_rewards:"Rewards",
       alt_c_recipes:"Recipes",
+      alt_c_pantry:"Pantry stock with best-before dates and low-stock hints",
+      alt_c_accounts:"Accounts with balances and net worth",
+      alt_c_plan:"Per-category budgets with spending progress",
       alt_c_shop:"Shopping",
       alt_c_cal:"Calendar",
       alt_c_budget:"Budget",
@@ -1307,9 +1313,10 @@ openssl rand -hex 32
       m_backup_t:'Backup & SSO', m_backup_d:'Scheduled backups with pre-restore rollback, optional WebDAV cloud upload (Nextcloud, ownCloud, Hetzner, etc.), plus single sign-on via any OIDC provider.', screens_title:'Every screen, <em>carefully crafted</em>',
       screens_desc:'A clean, intuitive interface with tuned touch targets and layouts that adapt to your device and theme.',
       screens_hint:'Drag, swipe or scroll to explore →',
-      cap_tasks:'Tasks', cap_cal:'Calendar', cap_shop:'Shopping', cap_meals:'Meals', cap_recipes:'Recipes',
+      cap_tasks:'Tasks', cap_cal:'Calendar', cap_shop:'Shopping', cap_meals:'Meals', cap_recipes:'Recipes', cap_pantry:'Pantry',
       cap_budget:'Budget', cap_notes:'Notes', cap_contacts:'Contacts', cap_bday:'Birthdays', cap_house:'Housekeeping', cap_documents:'Documents',
-      cap_health:'Health', cap_rewards:'Rewards', cap_split:'Split expenses', cap_subs:'Subscriptions', plat_title:'Runs on <em>your</em> hardware',
+      cap_health:'Health', cap_rewards:'Rewards', cap_split:'Split expenses', cap_subs:'Subscriptions',
+      cap_accounts:'Accounts', cap_plan:'Budget plan', plat_title:'Runs on <em>your</em> hardware',
       plat_desc:"A Docker or Podman container that drops onto any home server or NAS. Or install it in a couple of clicks from your platform's app store.",
       plat_docker:'Pre-built image, up and running with a single <code>compose</code> command.',
       plat_podman:'Rootless and SELinux-ready for RHEL, Fedora and CentOS Stream.',
@@ -1370,6 +1377,9 @@ openssl rand -hex 32
       alt_c_contacts:"Kontakte",
       alt_c_rewards:"Belohnungen",
       alt_c_recipes:"Rezepte",
+      alt_c_pantry:"Vorratsbestand mit Mindesthaltbarkeit und Hinweis auf knappe Bestände",
+      alt_c_accounts:"Konten mit Salden und Nettovermögen",
+      alt_c_plan:"Kategorie-Budgets mit Ausgabenfortschritt",
       alt_c_shop:"Einkauf",
       alt_c_cal:"Kalender",
       alt_c_budget:"Budget",
@@ -1423,9 +1433,10 @@ openssl rand -hex 32
       m_backup_t:'Backup & SSO', m_backup_d:'Geplante Backups mit Vor-Wiederherstellungs-Rollback, optionalem WebDAV-Cloud-Upload (Nextcloud, ownCloud, Hetzner\xa0usw.) und Single Sign-On \xfcber jeden OIDC-Provider.', screens_title:'Jeder Screen, <em>sorgfältig gestaltet</em>',
       screens_desc:'Eine klare, intuitive Oberfläche mit optimierten Touch-Zielen und Layouts, die sich an Gerät und Theme anpassen.',
       screens_hint:'Ziehen, wischen oder scrollen zum Erkunden →',
-      cap_tasks:'Aufgaben', cap_cal:'Kalender', cap_shop:'Einkauf', cap_meals:'Mahlzeiten', cap_recipes:'Rezepte',
+      cap_tasks:'Aufgaben', cap_cal:'Kalender', cap_shop:'Einkauf', cap_meals:'Mahlzeiten', cap_recipes:'Rezepte', cap_pantry:'Vorrat',
       cap_budget:'Budget', cap_notes:'Notizen', cap_contacts:'Kontakte', cap_bday:'Geburtstage', cap_house:'Haushaltshilfe', cap_documents:'Dokumente',
-      cap_health:'Gesundheit', cap_rewards:'Belohnungen', cap_split:'Geteilte Kosten', cap_subs:'Abonnements', plat_title:'Läuft auf <em>eurer</em> Hardware',
+      cap_health:'Gesundheit', cap_rewards:'Belohnungen', cap_split:'Geteilte Kosten', cap_subs:'Abonnements',
+      cap_accounts:'Konten', cap_plan:'Budgetplan', plat_title:'Läuft auf <em>eurer</em> Hardware',
       plat_desc:'Ein Docker- oder Podman-Container, der auf jeden Heimserver oder jedes NAS passt. Oder in wenigen Klicks aus dem App-Store eurer Plattform.',
       plat_docker:'Fertiges Image, mit einem einzigen <code>compose</code>-Befehl einsatzbereit.',
       plat_podman:'Rootless und SELinux-fähig für RHEL, Fedora und CentOS Stream.',
