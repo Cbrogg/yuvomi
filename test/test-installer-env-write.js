@@ -448,10 +448,143 @@ test('PRESERVED_KEYS deckt beide Startschlüssel ab', () => {
 });
 
 test('install.sh sichert bestehende .env vor cat > .env', () => {
-  const src = readFileSync(new URL('../install.sh', import.meta.url), 'utf8');
+  // Die Reihenfolge gilt für den CODE, nicht für den Dateitext: ein Kommentar,
+  // der `cat > .env` bloss erwähnt, hat diesen Test schon einmal rot gefärbt,
+  // während der Ablauf völlig korrekt war. Kommentare fliegen deshalb raus,
+  // bevor gemessen wird.
+  const src = readFileSync(new URL('../install.sh', import.meta.url), 'utf8')
+    .split('\n')
+    .map(line => (/^\s*#/.test(line) ? '' : line))
+    .join('\n');
   const backupIdx = src.indexOf('.env.bak-');
   const catIdx = src.indexOf('cat > .env');
   assert.ok(backupIdx !== -1, 'install.sh legt kein .env.bak-* an');
   assert.ok(catIdx !== -1, 'install.sh hat keinen cat > .env Block');
   assert.ok(backupIdx < catIdx, 'Backup muss vor dem Überschreiben (cat > .env) stehen');
+});
+
+// ── Regel-Guard: MANAGED_KEYS ⇄ der ENVEOF-Block ─────────────────────────────
+//
+// install.sh schrieb die .env mit `cat >` neu und warf dabei alles weg, was der
+// Dialog nicht selbst kennt: SMTP, OIDC, WebDAV-Backups, VAPID - 31 der 55
+// Schema-Schlüssel. Wer sie von Hand ergänzt oder den Web-Installer benutzt
+// hatte, verlor sie beim nächsten Lauf lautlos, und ein Rerun ist der Normalfall
+// (Update, geänderter Port, nachgetragenes SMTP), nicht die Ausnahme.
+//
+// preserve_unmanaged() übernimmt jetzt alles, was NICHT in MANAGED_KEYS steht.
+// Damit hängt die Korrektheit an genau einer Invariante, und sie geht in beide
+// Richtungen schief:
+//
+//   Schlüssel geschrieben, aber nicht in MANAGED_KEYS  → steht danach doppelt
+//   Schlüssel in MANAGED_KEYS, aber nicht geschrieben  → wird beim Rerun gelöscht
+//
+// Der zweite Fall ist der gefährliche: er sieht aus wie Aufräumen und ist
+// Datenverlust. Beide Richtungen werden hier geprüft.
+
+function installShSource() {
+  return readFileSync(new URL('../install.sh', import.meta.url), 'utf8');
+}
+
+function managedKeys() {
+  const block = installShSource().match(/^MANAGED_KEYS=\(([\s\S]*?)^\)$/m);
+  assert.ok(block, 'MANAGED_KEYS-Array in install.sh nicht gefunden');
+  return new Set(
+    block[1]
+      .split('\n')
+      .map(line => line.replace(/#.*$/, ''))
+      .join(' ')
+      .split(/\s+/)
+      .filter(Boolean),
+  );
+}
+
+function envHeredocKeys() {
+  const block = installShSource().match(/cat > \.env << ENVEOF\n([\s\S]*?)\nENVEOF/);
+  assert.ok(block, 'ENVEOF-Block in install.sh nicht gefunden');
+  return new Set([...block[1].matchAll(/^([A-Z][A-Z0-9_]*)=/gm)].map(m => m[1]));
+}
+
+test('jeder von install.sh geschriebene Schlüssel steht in MANAGED_KEYS', () => {
+  const managed = managedKeys();
+  const written = [...envHeredocKeys()].filter(key => !managed.has(key));
+  assert.deepEqual(written, [],
+    `install.sh schreibt diese Schlüssel und übernimmt sie zusätzlich aus der alten .env `
+    + `(doppelte Zeilen): ${written.join(', ')}`);
+});
+
+test('jeder MANAGED_KEY wird von install.sh auch wirklich geschrieben', () => {
+  const written = envHeredocKeys();
+  const dropped = [...managedKeys()].filter(key => !written.has(key));
+  assert.deepEqual(dropped, [],
+    `Diese Schlüssel stehen in MANAGED_KEYS, werden aber nicht geschrieben - `
+    + `preserve_unmanaged() unterdrückt sie und der Rerun LÖSCHT sie: ${dropped.join(', ')}`);
+});
+
+test('preserve_unmanaged rettet fremde Schlüssel und lässt eigene in Ruhe', () => {
+  const src = installShSource();
+  assert.match(src, /preserve_unmanaged\(\)/, 'preserve_unmanaged() fehlt');
+  // Aus dem Backup lesen, nicht aus .env: die ist zu diesem Zeitpunkt schon neu
+  // geschrieben, und die Funktion würde ihre eigene Ausgabe wiederkäuen.
+  assert.match(src, /preserved=\$\(preserve_unmanaged "\$backup"\)/,
+    'preserve_unmanaged muss aus dem Backup lesen, nicht aus der frischen .env');
+  assert.match(src, /printf '%s\\n' "\$preserved" \| grep -c \./,
+    'die Anzahl übernommener Zeilen wird gemeldet');
+});
+
+test('install.sh schreibt BASE_URL und fragt die Origin ab', () => {
+  // Ohne BASE_URL versendet der Server keine Passwort-Reset-Links (der
+  // Request-Host-Header wird bewusst nicht vertraut). Zusammensetzen aus Host
+  // und Port reicht nicht: hinter einem Reverse-Proxy ist die Origin eine
+  // andere als die, auf die der Container hört.
+  const src = installShSource();
+  assert.match(src, /^BASE_URL=\$\{YUVOMI_BASE_URL\}$/m, 'install.sh schreibt BASE_URL nicht');
+  assert.match(src, /t basic\.base_url/, 'install.sh fragt die Basis-URL nicht ab');
+  assert.match(src, /YUVOMI_BASE_URL="\$\{YUVOMI_BASE_URL:-\$default_base\}"/,
+    'die Basis-URL braucht einen abgeleiteten Default');
+});
+
+test('der Wetter-Dialog nutzt Open-Meteo und fragt keinen API-Schlüssel mehr ab', () => {
+  // Open-Meteo ist seit 2026-06-07 der Default: kostenlos, ohne Konto, ohne
+  // Schlüssel. Der CLI-Dialog schickte trotzdem jeden zu einer Registrierung
+  // bei OpenWeatherMap, die er nicht braucht.
+  const src = installShSource();
+  for (const key of ['WEATHER_LAT', 'WEATHER_LON', 'WEATHER_CITY', 'WEATHER_UNITS']) {
+    assert.match(src, new RegExp(`^${key}=`, 'm'), `install.sh schreibt ${key} nicht`);
+  }
+  assert.doesNotMatch(src, /t weather\.apikey/,
+    'der Wetter-Dialog fragt weiterhin nach einem OpenWeather-API-Schlüssel');
+  assert.doesNotMatch(src, /^OPENWEATHER_/m,
+    'OPENWEATHER_* gehört nicht mehr in den geschriebenen Block (Legacy läuft über preserve_unmanaged)');
+  // Die Bereichsprüfung ist der Grund, warum der Dialog überhaupt Koordinaten
+  // annehmen darf: bash kann kein Fliesskomma, also muss awk ran.
+  assert.match(src, /valid_number "\$WEATHER_LAT" -90 90/, 'Breitengrad wird nicht validiert');
+  assert.match(src, /valid_number "\$WEATHER_LON" -180 180/, 'Längengrad wird nicht validiert');
+});
+
+test('install.sh leitet Reverse-Proxy-Betrieb aus dem Schema der Basis-URL ab', () => {
+  // Beide Server-Defaults sind für die jeweils andere Betriebsart falsch:
+  // SESSION_SECURE ist aus (kein HSTS, kein Secure-Cookie hinter HTTPS), und
+  // TRUST_PROXY steht auf 1, vertraut also X-Forwarded-For auch dann, wenn gar
+  // kein Proxy davor sitzt - dann kann sich jeder Client eine beliebige IP
+  // geben und das Anmelde-Rate-Limit umgehen, weil es pro IP zählt.
+  const src = installShSource();
+
+  assert.match(src, /^SESSION_SECURE=\$\{YUVOMI_SESSION_SECURE\}$/m, 'SESSION_SECURE wird nicht geschrieben');
+  assert.match(src, /^TRUST_PROXY=\$\{YUVOMI_TRUST_PROXY\}$/m, 'TRUST_PROXY wird nicht geschrieben');
+
+  const fn = src.match(/configure_proxy\(\) \{([\s\S]*?)\n\}/);
+  assert.ok(fn, 'configure_proxy() fehlt');
+
+  // Ein bestehender Wert gewinnt, sonst wäre ein von Hand gesetztes
+  // TRUST_PROXY=2 (zwei Hops) beim nächsten Lauf auf 1 zurückgesetzt.
+  assert.match(fn[1], /read_existing_env_value SESSION_SECURE/, 'bestehendes SESSION_SECURE wird ignoriert');
+  assert.match(fn[1], /read_existing_env_value TRUST_PROXY/, 'bestehendes TRUST_PROXY wird ignoriert');
+
+  // https → Proxy-Betrieb, alles andere → Direktzugriff.
+  const secure = fn[1].match(/YUVOMI_SESSION_SECURE[\s\S]*?esac/);
+  assert.ok(secure && /https:\/\/\*\)\s*YUVOMI_SESSION_SECURE='true'/.test(secure[0]),
+    'https muss SESSION_SECURE=true ergeben');
+  assert.match(fn[1], /https:\/\/\*\)\s*YUVOMI_TRUST_PROXY='1'/, 'https muss TRUST_PROXY=1 ergeben');
+  assert.match(fn[1], /\*\)\s*YUVOMI_TRUST_PROXY='loopback'/,
+    'ohne https muss TRUST_PROXY=loopback sein, sonst ist X-Forwarded-For fälschbar');
 });
