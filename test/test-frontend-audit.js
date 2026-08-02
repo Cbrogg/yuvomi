@@ -1904,6 +1904,261 @@ test('die Küchen-Listen teilen eine Zeilen-Grammatik', () => {
     '.items-list darf kein horizontales Polster setzen: #list-content trägt schon --page-inline-pad');
   assert.doesNotMatch(shared.match(/\.kitchen-list\s*\{([^}]*)\}/)?.[1] ?? '', /padding-inline:/,
     '.kitchen-list darf kein padding-inline setzen: wo der Spalten-Träger sitzt, ist pro Tab verschieden');
+
+  // Die Kappung aufs Lesemaß sitzt an den KINDERN des Scrollers, nicht am
+  // Scroller selbst (PR #614). Die Begründung dafür stand bisher nur als
+  // Kommentar im CSS.
+  //
+  // Gescannt wird JEDE Regel JEDER Stylesheet-Datei, nicht der erste Textblock
+  // je Selektor. Zwei Wege führen sonst am Guard vorbei: ein zweiter Block
+  // hinter einem Breakpoint, und das Modul-CSS, das später lädt und auf
+  // demselben Element sitzt (`class="kitchen-list items-list"`).
+  //
+  // Und jede Regel weiß, OB sie bedingt gilt. cssRules() wirft das At-Rule-
+  // Präludium weg; eine geforderte Kappung, die nur unter `@media (max-width:
+  // 640px)` steht, ist auf jedem breiteren Fenster keine.
+  const styleDir = new URL('../public/styles/', import.meta.url);
+  const allRules = readdirSync(styleDir).filter((f) => f.endsWith('.css'))
+    .flatMap((file) => scopedRules(read(`../public/styles/${file}`)).map((rule) => ({ file, ...rule })));
+
+  // Der WIRKSAME Wert einer Eigenschaft, oder null. Drei Fallen stecken darin:
+  //
+  //   - Eine Deklaration ist kein Textvorkommen: `--eigene-max-width: 40rem`
+  //     setzt keine Breite, und `--x: var(--content-max-width-narrow)` erfüllt
+  //     keine Zusage.
+  //   - Die LETZTE Deklaration gewinnt, wie im Browser. Sonst gilt
+  //     `max-width: var(--content-max-width-narrow); max-width: none` als
+  //     erfüllt, obwohl das Element bildschirmbreit läuft.
+  //   - Kurzschreibweisen setzen dieselbe Eigenschaft mit: `place-self:
+  //     stretch` setzt `align-self` zurück. Deshalb nimmt die Funktion eine
+  //     Liste und gibt bei `place-*` den ersten Teilwert (die Block-Achse).
+  //   - `!important` schlägt die Quellreihenfolge. `max-width: none !important;
+  //     max-width: var(…)` sieht sonst erfüllt aus, obwohl das `none` gewinnt.
+  const declaredValue = (body, props, axis = 'block') => {
+    const list = [].concat(props);
+    const alternatives = list.map((p) => escapeForRegExp(p)).join('|');
+    // Standard-Eigenschaften sind ASCII-case-insensitiv (`MAX-WIDTH` wirkt),
+    // Custom Properties dagegen nicht: `--Foo` und `--foo` sind zwei Namen.
+    const flags = list.some((p) => p.startsWith('--')) ? 'gm' : 'gmi';
+    const hits = [...body.matchAll(new RegExp(`(?:^|;)\\s*(${alternatives})\\s*:\\s*([^;]+)`, flags))]
+      .map(([, prop, raw]) => ({ prop, raw: raw.trim() }));
+    if (!hits.length) return null;
+    const important = hits.filter(({ raw }) => /!\s*important$/i.test(raw));
+    const { prop, raw } = (important.length ? important : hits).at(-1);
+    const value = raw.replace(/!\s*important$/i, '').trim();
+    if (!prop.toLowerCase().startsWith('place-')) return value;
+    // `place-self: <align> <justify>` - fehlt der zweite Wert, gilt der erste
+    // fuer beide Achsen.
+    const parts = value.split(/\s+/);
+    return axis === 'inline' ? (parts[1] ?? parts[0]) : parts[0];
+  };
+  const NARROW = 'var(--content-max-width-narrow)';
+  const ALIGN_SELF = ['align-self', 'place-self'];
+  // Eine Kappung ist eine Kappung, egal wie buchstabiert: die logischen Formen
+  // wirken im Schreibmodus dieser App auf dieselbe Achse. Dasselbe Paar prüft
+  // der Modul-Root-Breiten-Guard weiter unten schon.
+  const WIDTH_CAP = ['width', 'max-width', 'inline-size', 'max-inline-size'];
+  const MAX_WIDTH = ['max-width', 'max-inline-size'];
+
+  // Zielt der Selektor auf das Element selbst, nicht auf einen Nachfahren?
+  // Geprüft wird der LETZTE Compound, damit auch `.kitchen-list#items-list`,
+  // `.kitchen-list:hover` und `:is(.kitchen-list)` als Treffer gelten -
+  // `.kitchen-list .row` dagegen nicht.
+  //
+  // `:not(…)` und `:has(…)` fallen vorher weg, und zwar VOR dem Zerlegen:
+  // beide nennen die Klasse, ohne dass die Regel sie stylt. `.page:has(
+  // .kitchen-list)` gestaltet den Vorfahren, nicht den Scroller - dort rot zu
+  // werden hieße, eine korrekte Layoutregel zu blockieren.
+  // Das Token ist `.klasse` oder `#id`: dasselbe Element lässt sich über beide
+  // ansprechen, und eine Regel auf der ID nennt keine seiner Klassen.
+  const targets = (selector, token) => {
+    const subject = selector.replace(/:(?:not|has)\([^)]*\)/g, '');
+    const compound = subject.trim().split(/[\s>+~]+/).pop() ?? '';
+    // Ein Pseudo-Element ist ein eigener Kasten, nicht das Element selbst:
+    // `.recipes-list::before { width: 1rem }` kappt den Scroller nicht, und
+    // dort rot zu werden hieße, eine harmlose Dekoration zu verbieten.
+    if (/::|:(?:before|after|first-line|first-letter|marker|backdrop|selection|placeholder)\b/.test(compound)) return false;
+    return new RegExp(`${escapeForRegExp(token)}(?![\\w-])`).test(compound);
+  };
+  const rulesFor = (token) => allRules.filter(({ selectors }) => selectors.some((s) => targets(s, token)));
+
+  // 1. Der Scroller selbst darf nicht gekappt werden. Er ist das Element mit
+  //    `overflow-y: auto`; kappt man es aufs Lesemaß, endet damit auch sein
+  //    eigener Trefferbereich fürs Mausrad an der Lesespalten-Kante, und auf
+  //    einem breiten Fenster greift das Rad rechts davon ins Leere.
+  //
+  //    Welche Klassen den Scroller mitbenennen, sagt das Markup, nicht diese
+  //    Liste: wer auf demselben Element sitzt, kann seine Breite kappen.
+  //    JEDE geprüfte Seite muss ihre eigene Kombination liefern. Eine globale
+  //    Mindestzahl genügt nicht: fiele nur eine Seite aus der Erkennung, würden
+  //    die beiden anderen sie weiter erfüllen, und deren Modul-Klasse wäre
+  //    ungeprüft.
+  const scrollerTokens = new Set(['.kitchen-list']);
+  for (const page of ['shopping', 'pantry', 'recipes']) {
+    const src = read(`../public/pages/${page}.js`);
+    const combos = [...src.matchAll(/class(?:Name)?\s*=\s*(['"`])([^'"`]*\bkitchen-list\b[^'"`]*)\1/g)];
+    assert.ok(combos.length > 0,
+      `${page}.js hängt seine Klasse nicht mehr literal an .kitchen-list - dieser Scan findet sie dann nicht und prüft den Scroller des Tabs ungewollt gar nicht`);
+    combos.forEach(([, , combo]) => combo.trim().split(/\s+/).forEach((cls) => scrollerTokens.add(`.${cls}`)));
+
+    // Und über die ID, die alle drei Scroller tragen: `#recipes-list` trifft
+    // dasselbe Element, ohne eine seiner Klassen zu nennen. Keine ID im
+    // Markup heißt umgekehrt, dass kein ID-Selektor es treffen kann - deshalb
+    // ist hier nichts zu fordern, nur einzusammeln.
+    const inTag = (src.match(/<[^>]*\bkitchen-list\b[^>]*>/g) ?? [])
+      .map((tag) => tag.match(/\bid="([^"]+)"/)?.[1]);
+    const nextToClassName = [...src.matchAll(
+      /(\w+)\.className\s*=\s*['"`][^'"`]*\bkitchen-list\b[^'"`]*['"`];\s*\1\.id\s*=\s*['"`]([^'"`]+)/g)]
+      .map(([, , id]) => id);
+    [...inTag, ...nextToClassName].filter(Boolean).forEach((id) => scrollerTokens.add(`#${id}`));
+
+    // Inline-Styles stehen in keiner der gescannten Dateien und schlagen
+    // trotzdem jede Regel darin. Der Scroller wird im JS gebaut, also muss
+    // der Scan dort nachsehen - an derselben Variablen, die die Klasse bekommt,
+    // und im Tag, das sie im Markup trägt.
+    for (const [, variable] of src.matchAll(/(\w+)\.className\s*=\s*['"`][^'"`]*\bkitchen-list\b/g)) {
+      const name = escapeForRegExp(variable);
+      assert.doesNotMatch(src, new RegExp(`\\b${name}\\.style\\.(?:max)?(?:Width|InlineSize)\\s*=`, 'i'),
+        `${page}.js setzt eine Inline-Breite am Scroller - die schlägt jede Regel im Stylesheet und damit auch diesen Guard`);
+      assert.doesNotMatch(src, new RegExp(`\\b${name}\\.style\\.(?:alignSelf|placeSelf)\\s*=`),
+        `${page}.js setzt align-self inline am Scroller - das nimmt ihm die volle Breite`);
+      assert.doesNotMatch(src, new RegExp(`\\b${name}\\.style\\.setProperty\\(\\s*['"\`](?:max-)?(?:width|inline-size|align-self|place-self)`, 'i'),
+        `${page}.js setzt eine Breite oder Ausrichtung inline am Scroller (setProperty)`);
+      assert.doesNotMatch(src, new RegExp(`\\b${name}\\.style\\.cssText\\s*=`),
+        `${page}.js überschreibt den Stil des Scrollers per cssText - was darin steht, sieht dieser Guard nicht`);
+      assert.doesNotMatch(src, new RegExp(`\\b${name}\\.setAttribute\\(\\s*['"\`]style`, 'i'),
+        `${page}.js setzt den Stil des Scrollers per setAttribute - derselbe Inline-Stil über einen anderen Weg`);
+    }
+    (src.match(/<[^>]*\bkitchen-list\b[^>]*>/g) ?? []).forEach((tag) => {
+      assert.doesNotMatch(tag, /\sstyle\s*=/,
+        `${page}.js gibt dem Scroller ein style-Attribut - Inline-Stile schlagen jede Regel im Stylesheet`);
+    });
+  }
+  assert.ok(rulesFor('.kitchen-list').length > 0,
+    '.kitchen-list ist nirgends definiert: ein leerer Treffer darf hier nicht still grün bleiben');
+  for (const cls of scrollerTokens) {
+    for (const { file, selectors, body } of rulesFor(cls)) {
+      assert.equal(declaredValue(body, WIDTH_CAP), null,
+        `${file} ${selectors.join(', ')}: der Scroller darf nicht gekappt werden, sonst endet sein Mausrad-Trefferbereich an der Lesespalten-Kante`);
+
+      // Dieselbe Kante ohne jede Breitenangabe: der Scroller ist Flex-Item
+      // seines Modul-Roots (.recipes-page & Co. sind flex column). Ein
+      // `align-self: start` nimmt ihm das voreingestellte Strecken und lässt
+      // ihn auf Inhaltsbreite schrumpfen - der Trefferbereich fürs Mausrad
+      // endet dann genau dort. Erlaubt bleibt nur, was ihn füllen lässt.
+      const spread = declaredValue(body, ALIGN_SELF);
+      assert.ok(spread === null || ['stretch', 'normal', 'auto', 'initial', 'unset'].includes(spread),
+        `${file} ${selectors.join(', ')}: align-self: ${spread} nimmt dem Scroller die volle Breite - dann greift das Mausrad rechts daneben ins Leere`);
+
+      // `all` setzt jede der oben geprüften Eigenschaften mit zurück, ohne
+      // eine davon zu nennen.
+      assert.equal(declaredValue(body, 'all'), null,
+        `${file} ${selectors.join(', ')}: die all-Kurzschreibweise setzt Breite und Ausrichtung des Scrollers zurück`);
+    }
+  }
+
+  //    Und das Lesemaß behält EINE Quelle. Definierte ein Modul
+  //    --content-max-width-narrow lokal um, trüge das Kind zwar weiter die
+  //    geforderte Deklaration, löste sie aber auf ein anderes Maß auf - der
+  //    Guard unten vergliche dann zwei Texte, die dasselbe sagen und
+  //    Verschiedenes bedeuten.
+  for (const { file, selectors, body } of allRules) {
+    // Ausgenommen ist die KANONISCHE Deklaration, nicht die Datei: eine auf
+    // einen Selektor gescopte Neudefinition in tokens.css selbst umginge
+    // dieselbe Invariante, die dieser Block schützt.
+    if (file === 'tokens.css' && selectors.every((s) => /^:root\b/.test(s.trim()))) continue;
+    assert.equal(declaredValue(body, '--content-max-width-narrow'), null,
+      `${file} ${selectors.join(', ')}: --content-max-width-narrow wird hier lokal umdefiniert - das Lesemaß kommt aus tokens.css und nirgendwo sonst`);
+  }
+
+  //    Und es muss sie geben: fehlt die :root-Deklaration, wird jedes
+  //    `var(--content-max-width-narrow)` ungültig und das max-width fällt auf
+  //    `none` zurück - die Listen liefen bildschirmbreit, während dieser Test
+  //    weiter zwei Texte vergleicht, die zueinander passen.
+  assert.ok(allRules.some(({ file, selectors, body, conditional }) =>
+    file === 'tokens.css' && !conditional && selectors.some((sel) => /^:root\b/.test(sel))
+    && declaredValue(body, '--content-max-width-narrow') !== null),
+  'tokens.css muss --content-max-width-narrow unbedingt in :root definieren - ohne die Deklaration löst var(…) auf nichts auf und die Kappung entfällt');
+
+  // 2. Tragen muss die Kappung stattdessen jedes Kind, das ALLEIN Kind des
+  //    Scrollers sein kann: .kitchen-group bei gruppierten Tabs (Einkauf,
+  //    Vorrat), .kitchen-rows ungruppiert (Rezepte). Fehlt sie an einem der
+  //    beiden, läuft der betroffene Tab bildschirmbreit - und ein zweiter
+  //    Block darf sie auch nicht auf einen abweichenden Wert ziehen.
+  for (const cls of ['.kitchen-group', '.kitchen-rows']) {
+    const rules = rulesFor(cls);
+    // Unbedingt heißt zweierlei: nicht hinter einem Breakpoint UND nicht an
+    // einen Zustand gebunden. `.kitchen-rows:hover` kappt nur unter dem
+    // Mauszeiger; auf Touch und per Tastatur liefe die Liste voll breit.
+    const unstated = (sel) => !/:(?!(?:is|where)\()/.test(sel);
+    assert.ok(rules.some(({ body, conditional, selectors }) =>
+      !conditional && selectors.some(unstated) && declaredValue(body, MAX_WIDTH) === NARROW),
+    `${cls} muss das Lesemaß UNBEDINGT tragen: eine Kappung hinter einem Breakpoint oder an einem Zustand (:hover) fehlt im Normalfall`);
+    for (const { file, body } of rules) {
+      // Eine feste Breite schlägt die Kappung, ohne sie anzufassen: mit
+      // `width: 20rem` bleibt das max-width korrekt stehen und die Liste steht
+      // trotzdem schmal. Prozentwerte und `auto` sind unschädlich - sie messen
+      // den (ungekappten) Scroller, und das max-width begrenzt weiter.
+      const definite = declaredValue(body, ['width', 'inline-size']);
+      assert.ok(definite === null || definite === 'auto' || definite === '100%',
+        `${file}: ${cls} bekommt hier eine feste Breite (${definite}) - gekappt wird über max-width, sonst steht die Liste unabhängig vom Lesemaß schmal`);
+
+      // Dasselbe ohne Breitenangabe: als Grid-Item von .kitchen-list füllt das
+      // Kind seine Spur per Voreinstellung. `justify-self: start` nimmt ihm
+      // das, und die auto-Breite fällt auf den Inhalt zusammen - das Lesemaß
+      // bleibt dabei unangetastet und unwirksam.
+      const inline = declaredValue(body, ['justify-self', 'place-self'], 'inline');
+      assert.ok(inline === null || ['stretch', 'normal', 'auto', 'initial', 'unset'].includes(inline),
+        `${file}: ${cls} bekommt justify-self: ${inline} - dann schrumpft die Gruppe auf ihren Inhalt, statt das Lesemaß auszufüllen`);
+      assert.equal(declaredValue(body, 'all'), null,
+        `${file}: ${cls} wird per all-Kurzschreibweise zurückgesetzt - das nimmt Kappung und Ausrichtung mit`);
+
+      const width = declaredValue(body, MAX_WIDTH);
+      if (width === null) continue;
+      assert.equal(width, NARROW,
+        `${file}: ${cls} bekommt hier eine zweite, abweichende Breite - das Lesemaß ist EIN Wert`);
+    }
+  }
+
+  // 3. Und wer aufs Lesemaß kappt UND clippt, muss auf seine Inhaltshöhe
+  //    wachsen dürfen.
+  //
+  //    Absichtlich eine Regel und keine Allowlist: `overflow: hidden` (hier für
+  //    die Eckenradien) macht aus dem gekappten Kind einen Clipper. Ohne
+  //    `align-self: start` streckt das voreingestellte `align-items: stretch`
+  //    es auf die volle Spurhöhe, und es schneidet alles darüber still ab,
+  //    bevor .kitchen-list den Überlauf je sieht. Gemessen an einer Rezeptliste
+  //    mit 50 gespiegelten Einträgen: scrollHeight 3249px gegen clientHeight
+  //    657px, kein Scrollbalken, kein Weg an die übrigen Zeilen. Harmlos ist
+  //    das nur, solange mehrere kurze Gruppen dieselbe Spur teilen.
+  //
+  //    Der Scan bleibt auf kitchen-row.css, wo die geteilten Bausteine
+  //    definiert werden. Andere Module kappen mit demselben Token Elemente, die
+  //    nie Grid-Item dieses Scrollers werden (shopping.css die Eingabezeile,
+  //    layout.css den Leerzustand) - für die wäre `align-self: start` falsch.
+  //    Innerhalb dieser Datei gilt dieselbe Einschränkung für .kitchen-bulkbar:
+  //    sie steht ÜBER dem Scroller (siehe dort) und trägt das Lesemaß, clippt
+  //    aber nicht. Käme dort ein `overflow: hidden` dazu, meldet dieser Guard
+  //    einen Fall, den ein Mensch entscheiden muss.
+  for (const { selectors, body } of cssRules(shared)) {
+    if (declaredValue(body, MAX_WIDTH) !== NARROW) continue;
+    // `clip` kappt wie `hidden`, nur ohne Scrollport - und die Block-Achse
+    // lässt sich auch als Langform setzen. Der Grund für die Zusicherung ist
+    // das Abschneiden, nicht die eine Schreibweise dafür.
+    const overflow = declaredValue(body, ['overflow', 'overflow-y', 'overflow-block']);
+    if (overflow === null || !/\b(?:hidden|clip)\b/.test(overflow)) continue;
+    assert.equal(declaredValue(body, ALIGN_SELF), 'start',
+      `${selectors.join(', ')} kappt aufs Lesemaß und clippt zugleich, ist also ein gekapptes Kind des Scroller-Grids: ohne align-self: start schneidet es den Überlauf ab, bevor .kitchen-list ihn sieht`);
+  }
+
+  // Und kein später geladenes Modul-Stylesheet biegt den Wert wieder um -
+  // auch nicht über die Kurzschreibweise place-self.
+  for (const { file, body } of rulesFor('.kitchen-rows')) {
+    const align = declaredValue(body, ALIGN_SELF);
+    if (align === null) continue;
+    assert.equal(align, 'start',
+      `${file}: .kitchen-rows bekommt hier ein anderes align-self - genau der Rückfall, den die Regel darüber verhindert`);
+  }
 });
 
 /**
@@ -4489,6 +4744,48 @@ test('housekeeping exposes its page title as the primary heading', () => {
 // sonst auch in /* ... */ und die halbe Vertragsprüfung wäre durch eine
 // Erwähnung im Fließtext erfüllbar.
 const stripCssComments = (css) => css.replace(/\/\*[\s\S]*?\*\//g, '');
+
+// Wie cssRules(), aber jede Regel weiß zusätzlich, ob sie in einer At-Rule
+// steht (`conditional`). Für eine GEFORDERTE Deklaration ist das der
+// Unterschied zwischen „gilt immer" und „gilt unterhalb von 640px": cssRules()
+// wirft das Präludium weg und kann beides nicht auseinanderhalten.
+function scopedRules(css) {
+  const live = stripCssComments(css);
+  const rules = [];
+  let depth = 0;   // Tiefe der offenen At-Rule-Blöcke
+  let from = 0;    // Beginn des laufenden Präludiums
+  for (let i = 0; i < live.length; i += 1) {
+    const char = live[i];
+    if (char === '{') {
+      const prelude = live.slice(from, i).trim();
+      if (prelude.startsWith('@')) {
+        depth += 1;
+        from = i + 1;
+        continue;
+      }
+      const end = live.indexOf('}', i);
+      if (end === -1) break;
+      rules.push({
+        selectors: prelude.replace(/\s+/g, ' ').split(',').map((s) => s.trim()).filter(Boolean),
+        body: live.slice(i + 1, end),
+        conditional: depth > 0,
+      });
+      i = end;
+      from = i + 1;
+    } else if (char === '}') {
+      depth = Math.max(0, depth - 1);
+      from = i + 1;
+    } else if (char === ';') {
+      // Statement-At-Rules (@import, @charset, @layer x;) enden mit Semikolon
+      // und oeffnen keinen Block. Ohne diesen Zweig waechst das Praeludium
+      // ueber sie hinaus, beginnt mit '@' - und die erste echte Regel der
+      // Datei wird still als At-Rule-Rumpf verschluckt. Deklarations-Semikola
+      // landen hier nie: ueber Regelbloecke springt die Schleife hinweg.
+      from = i + 1;
+    }
+  }
+  return rules;
+}
 
 // Flacher Regelblock-Scanner. At-Rule-Präludien (@media, @supports, @container)
 // fallen automatisch weg, weil [^{}]* kein '{' fressen kann und der Selektor
