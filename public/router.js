@@ -2664,8 +2664,17 @@ function positionSidebarIndicator() {
   // Aktives Item in den Sichtbereich holen (Audit F-01): bei überlaufender
   // Liste lagen Item UND Pille sonst unsichtbar unterhalb der Falte — die
   // Navigation verlor ihren „Du bist hier"-Anker. Manuelles Scrollen statt
-  // scrollIntoView, damit garantiert nur dieser Container scrollt.
+  // scrollIntoView, damit garantiert nur dieser Container scrollt. Nur wenn das
+  // Item wirklich außerhalb liegt: rebuildNavigation() stellt die Scroll-Position
+  // vorher wieder her, ein sichtbares Item wird also nie mehr verschoben.
+  const margin = 8;
   const top = active.offsetTop;
+  const bottom = top + active.offsetHeight;
+  if (top < container.scrollTop + margin) {
+    container.scrollTop = Math.max(0, top - margin);
+  } else if (bottom > container.scrollTop + container.clientHeight - margin) {
+    container.scrollTop = bottom - container.clientHeight + margin;
+  }
   // Pille vertikal im Item zentrieren — aus realen Höhen, token-unabhängig.
   // offsetTop ist scroll-unabhängig relativ zum (position:relative) Container.
   const centerOffset = (active.offsetHeight - indicator.getBoundingClientRect().height) / 2;
@@ -3145,8 +3154,11 @@ function rebuildNavigation({ updateLabels = true } = {}) {
 
   if (navSidebarItems) {
     // replaceChildren recria toda a árvore da navegação (por exemplo, após
-    // mudança de rota, idioma ou módulos) e o browser zera a rolagem do
-    // container. Preservamos a posição manual antes e depois do re-render.
+    // replaceChildren baut die Navigation komplett neu (Routenwechsel, Sprache,
+    // Modulliste) und der Browser setzt die Scroll-Position dabei auf 0 zurück.
+    // Ohne Sicherung sprang die Liste bei jedem Rebuild an den Anfang und das
+    // Auto-Scroll unten riss sie sofort wieder zum aktiven Item — sichtbar als
+    // Springen zwischen erstem und letztem Eintrag.
     const previousScrollTop = navSidebarItems.scrollTop;
     const sidebarEls = sidebarNavItems();
     navSidebarItems.replaceChildren(...sidebarEls);
