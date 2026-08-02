@@ -39,6 +39,23 @@ export function createEmailService({ db, nodemailer = nodemailerDefault, env = p
     return cfgGet(key);
   }
 
+  /**
+   * Steht dieses Feld unter env-Kontrolle? Der Vorrang oben galt schon immer,
+   * aber die Settings-Seite wusste nichts davon: sie zeigte Eingabefelder,
+   * speicherte brav in die Datenbank, und der Wert wirkte nie. Ohne Hinweis.
+   * Bei WEBDAV_BACKUP_* und DOCUMENT_STORAGE_WEBDAV_* war dasselbe
+   * Vorrangverhalten längst sichtbar gelöst, bei SMTP nicht.
+   */
+  function isEnvControlled(field) {
+    const fromEnv = env[CONFIG_KEYS[field].env];
+    return fromEnv !== undefined && String(fromEnv).trim() !== '';
+  }
+
+  /** Pro Feld, nicht pro Gruppe: wer nur EMAIL_SMTP_HOST setzt, darf den Rest weiter in der UI pflegen. */
+  function envControlledFields() {
+    return Object.fromEntries(Object.keys(CONFIG_KEYS).map(f => [f, isEnvControlled(f)]));
+  }
+
   function getRawConfig() {
     const secure = (resolve('secure') || 'starttls').toLowerCase();
     return {
@@ -69,6 +86,7 @@ export function createEmailService({ db, nodemailer = nodemailerDefault, env = p
       fromName: c.fromName,
       passwordSet: Boolean(c.pass),
       configured: isConfigured(),
+      envControlled: envControlledFields(),
     };
   }
 
@@ -117,7 +135,7 @@ export function createEmailService({ db, nodemailer = nodemailerDefault, env = p
     }
   }
 
-  return { isConfigured, getPublicConfig, getRawConfig, sendMail, sendTest };
+  return { isConfigured, getPublicConfig, getRawConfig, isEnvControlled, sendMail, sendTest };
 }
 
 export const emailService = createEmailService();
