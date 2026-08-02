@@ -347,6 +347,167 @@ test('ein abgelehntes Feld hinterlässt keine Sprache ohne passende Titel', asyn
   );
 });
 
+// ---------------------------------------------------------------------------
+// Bearbeiten und Löschen eines bereits gespiegelten Geburtstags
+//
+// Das Umbenennen läuft über syncBirthdayCalendarEvent, nicht über den Backfill.
+// Diese Anweisung setzte `external_source` auf 'local' zurück - seit dem ersten
+// Geburtstags-Commit, lange vor dem Outbound-Sync. Mit 'local' UND gesetzter
+// Kalender-ID fiel der Termin aus beiden Pfaden: pendingUpdates sucht nach
+// 'apple', der Neu-Upload nach external_calendar_id IS NULL. Er fror beim
+// Provider ein, ohne dass irgendetwas ihn je wieder abgeholt hätte.
+// ---------------------------------------------------------------------------
+
+// Die Warteschlange ist auf (source, calendar_external_id, event_external_id)
+// eindeutig - zwei Termine mit derselben UID ergaeben nur eine Vormerkung, und
+// der zweite Test haette gegen den Eintrag des ersten geprueft.
+// Provider-Konfiguration einmal fuer alle Tests dieses Blocks: acceptsOutbound()
+// prueft sie, und in einem Peer-Test gesetzt haetten die Folgetests von dessen
+// Ausfuehrung abgehangen (ein einzeln laufender Test waere rot gewesen).
+setConfig('apple_caldav_url', 'https://caldav.example/');
+
+function mirrorEvent(eventId) {
+  db.prepare(`
+    UPDATE calendar_events
+    SET external_source = 'apple', external_calendar_id = ?,
+        external_object_url = ?, outbound_dirty = 0
+    WHERE id = ?
+  `).run(`bd-mirror-${eventId}@oikos.local`, `https://caldav.example/bd-${eventId}.ics`, eventId);
+}
+
+test('ein umbenannter Geburtstag bleibt mit seiner Kopie beim Provider verbunden', async () => {
+  const created = await call('POST', '/birthdays', { name: 'Oma', birth_date: '1950-04-01' });
+  const eventId = db.prepare('SELECT calendar_event_id AS id FROM birthdays WHERE id = ?')
+    .get(created.body.data.id).id;
+  mirrorEvent(eventId);
+
+  const renamed = await call('PUT', `/birthdays/${created.body.data.id}`, {
+    name: 'Großmutter',
+    birth_date: '1950-04-01',
+  });
+  assert.equal(renamed.status, 200);
+
+  const row = db.prepare('SELECT title, external_source, outbound_dirty FROM calendar_events WHERE id = ?')
+    .get(eventId);
+  assert.match(row.title, /Großmutter/);
+  assert.equal(row.external_source, 'apple', 'die Zuordnung zum Provider darf nicht verlorengehen');
+  assert.equal(row.outbound_dirty, 1, 'sonst erreicht der neue Name den Provider nie');
+});
+
+test('ein Sync ohne echte Änderung löst keinen Push aus', async () => {
+  const created = await call('POST', '/birthdays', { name: 'Onkel', birth_date: '1960-03-03' });
+  const eventId = db.prepare('SELECT calendar_event_id AS id FROM birthdays WHERE id = ?')
+    .get(created.body.data.id).id;
+  mirrorEvent(eventId);
+
+  // Der Weg über den Provider ist nicht wertneutral: der ICS-Export schreibt für
+  // einen ganztägigen Termin immer ein DTEND, und die Farbe überträgt er nicht -
+  // der Inbound schreibt also ein end_datetime, wo NULL stand, und die Farbe des
+  // Kalenders. Genau diesen Rückweg stellen die beiden Zeilen nach.
+  db.prepare(`
+    UPDATE calendar_events SET end_datetime = start_datetime, color = '#FC3C44' WHERE id = ?
+  `).run(eventId);
+
+  // syncAllBirthdayReminders hängt an GET /birthdays, GET /reminders und am
+  // Benachrichtigungs-Scheduler. Zählte der Vergleich die normalisierten Felder
+  // mit, wäre das ein Push pro Geburtstag pro Abruf - endlos.
+  for (let i = 0; i < 3; i++) await call('GET', '/birthdays');
+
+  assert.equal(
+    db.prepare('SELECT outbound_dirty FROM calendar_events WHERE id = ?').get(eventId).outbound_dirty,
+    0,
+    'Provider-Normalisierung darf keinen Push auslösen',
+  );
+});
+
+test('ein verschobenes Geburtsdatum nimmt das Ende des Termins mit', async () => {
+  const created = await call('POST', '/birthdays', { name: 'Papa', birth_date: '1955-04-01' });
+  const eventId = db.prepare('SELECT calendar_event_id AS id FROM birthdays WHERE id = ?')
+    .get(created.body.data.id).id;
+  mirrorEvent(eventId);
+  // Der Inbound legt bei einem ganztägigen Termin ein Ende gleich dem Start ab.
+  db.prepare('UPDATE calendar_events SET end_datetime = start_datetime WHERE id = ?').run(eventId);
+
+  await call('PUT', `/birthdays/${created.body.data.id}`, { name: 'Papa', birth_date: '1955-09-15' });
+
+  const row = db.prepare('SELECT start_datetime, end_datetime FROM calendar_events WHERE id = ?').get(eventId);
+  assert.equal(row.start_datetime, '1955-09-15');
+  assert.equal(
+    row.end_datetime, '1955-09-15',
+    'ein stehengebliebenes Ende läge vor dem Beginn - die Serializer machten daraus ein DTEND vor DTSTART',
+  );
+});
+
+test('im Nur-Lesen-Modus bleibt die lokale Änderung gegen den Inbound geschützt', async () => {
+  // Ein schreibgeschützter Provider nimmt den Push nicht an. Der Marker ist aber
+  // auch der Schutz davor, dass der Inbound die lokale Fassung überschreibt
+  // (`if (existing?.outbound_dirty) continue`) - er muss deshalb trotzdem stehen.
+  setConfig('google_refresh_token', 'token');
+  setConfig('google_readonly', '1');
+
+  const created = await call('POST', '/birthdays', { name: 'Cousine', birth_date: '1985-02-02' });
+  const eventId = db.prepare('SELECT calendar_event_id AS id FROM birthdays WHERE id = ?')
+    .get(created.body.data.id).id;
+  db.prepare(`
+    UPDATE calendar_events
+    SET external_source = 'google', external_calendar_id = ?, outbound_dirty = 0 WHERE id = ?
+  `).run(`bd-ro-${eventId}@google`, eventId);
+
+  await call('PUT', `/birthdays/${created.body.data.id}`, { name: 'Cousine Mia', birth_date: '1985-02-02' });
+
+  const row = db.prepare('SELECT title, outbound_dirty FROM calendar_events WHERE id = ?').get(eventId);
+  assert.match(row.title, /Mia/);
+  assert.equal(row.outbound_dirty, 1, 'ohne Marker überschriebe der nächste Inbound den neuen Namen');
+
+  db.prepare(`DELETE FROM sync_config WHERE key IN ('google_refresh_token', 'google_readonly')`).run();
+});
+
+test('ein gelöschter Geburtstag räumt die Kopie beim Provider mit ab', async () => {
+  const created = await call('POST', '/birthdays', { name: 'Opa', birth_date: '1948-09-09' });
+  const eventId = db.prepare('SELECT calendar_event_id AS id FROM birthdays WHERE id = ?')
+    .get(created.body.data.id).id;
+  mirrorEvent(eventId);
+  const before = db.prepare('SELECT COUNT(*) AS c FROM calendar_pending_deletions').get().c;
+
+  const deleted = await call('DELETE', `/birthdays/${created.body.data.id}`);
+  assert.ok([200, 204].includes(deleted.status), `unerwarteter Status ${deleted.status}`);
+
+  assert.equal(
+    db.prepare('SELECT COUNT(*) AS c FROM calendar_events WHERE id = ?').get(eventId).c,
+    0,
+    'lokal gelöscht',
+  );
+  assert.ok(
+    db.prepare('SELECT COUNT(*) AS c FROM calendar_pending_deletions').get().c > before,
+    'ohne Vormerkung bliebe der Termin beim Provider stehen und käme beim nächsten Inbound zurück',
+  );
+});
+
+test('"keine Benachrichtigung" räumt die Kopie beim Provider ebenfalls ab', async () => {
+  const created = await call('POST', '/birthdays', { name: 'Tante', birth_date: '1970-01-15' });
+  const eventId = db.prepare('SELECT calendar_event_id AS id FROM birthdays WHERE id = ?')
+    .get(created.body.data.id).id;
+  mirrorEvent(eventId);
+  const before = db.prepare('SELECT COUNT(*) AS c FROM calendar_pending_deletions').get().c;
+
+  // reminder_offset = '' entfernt den Termin, ohne den Geburtstag zu löschen.
+  const muted = await call('PUT', `/birthdays/${created.body.data.id}`, {
+    name: 'Tante',
+    birth_date: '1970-01-15',
+    reminder_offset: '',
+  });
+  assert.equal(muted.status, 200);
+
+  assert.equal(
+    db.prepare('SELECT calendar_event_id FROM birthdays WHERE id = ?').get(created.body.data.id).calendar_event_id,
+    null,
+  );
+  assert.ok(
+    db.prepare('SELECT COUNT(*) AS c FROM calendar_pending_deletions').get().c > before,
+    'auch dieser Pfad löscht einen gespiegelten Termin',
+  );
+});
+
 test('GET /preferences liefert die drei Sprachfelder', async () => {
   // Eigene Vorbedingung: die drei Felder sind nur dann unterscheidbar, wenn
   // gewählte Sprache und Region auseinanderfallen.

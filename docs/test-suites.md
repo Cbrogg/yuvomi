@@ -124,7 +124,7 @@ npm run test:calendar-outbound-migration   # Migrationen v103-v106 gegen befüll
 npm run test:caldav-outbound   # Löschen + Ändern + Umziehen Yuvomi → CalDAV/Apple (#593): ICS-Patcher (Teilnehmer/Alarme/Overrides bleiben), Objekt-URL-Auflösung, Umzug = create+delete, Sofortversuch ohne Kalenderabruf
 npm run test:google-calendar   # Google: Datumskonvertierung, Farbauflösung (#427/#219), unveränderte Events werden beim Full-Resync nicht neu geschrieben
 npm run test:housekeeping
-npm run test:housekeeping-routes   # Housekeeping-Routen: Worker-Anlage (Admin-Gate), Check-in/out-Lifecycle + Doppelbuchungs-Guard, Pay/Delete, Decay-CRUD, Supply-Requests, Maintenance-Log
+npm run test:housekeeping-routes   # Housekeeping-Routen: Worker-Anlage (Admin-Gate), Check-in/out-Lifecycle + Doppelbuchungs-Guard, Pay/Delete, Decay-CRUD, Supply-Requests, Maintenance-Log; dazu die Besuchs-Artefakte: Fallback-Titel folgen der Datensprache (ohne gesetzte Sprache bleibt Englisch), ein verschobener Besuch wird für den Provider-Push vorgemerkt und ein gelöschter räumt die Kopie beim Provider mit ab - beides nur bei gespiegelten Terminen
 npm run test:documents          # Dokument-Preview: CSP-Header je MIME-Typ
 npm run test:documents-ux       # Dokumente-UX-Verträge: Leerzustände, Kategorie-Facetten, Upload-Modal, Auswahlmodus, Popover-Menü
 npm run test:document-storage   # Dokument-Storage-Migration und Invarianten

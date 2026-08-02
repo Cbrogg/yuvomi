@@ -215,17 +215,48 @@ export function resolveHouseholdLocale(database, { ignoreExplicit = false } = {}
 }
 
 /**
- * Sprache + Datumsformat des Haushalts in einem Zug - beides steckt in
- * sync_config und wird von Aufrufern fast immer zusammen gebraucht.
+ * Sprache, Datumsformat und Währung des Haushalts in einem Zug - alles drei
+ * steckt in sync_config und wird von Aufrufern fast immer zusammen gebraucht.
  * @param {object} database
- * @returns {{ locale: string, dateFormat: string }}
+ * @returns {{ locale: string, dateFormat: string, currency: string }}
  */
 export function resolveHouseholdFormats(database) {
   const dateFormat = cfgValue(database, 'date_format');
   return {
     locale: resolveHouseholdLocale(database),
     dateFormat: VALID_DATE_FORMATS.includes(dateFormat) ? dateFormat : 'dmy',
+    currency: cfgValue(database, 'currency') || 'EUR',
   };
+}
+
+/**
+ * Formatiert einen Betrag als Währung, wie es der Client mit `money()` tut.
+ *
+ * Die Zahlformatierung folgt der **Region**, nicht der Sprache - ein
+ * deutschsprachiger Haushalt in der Schweiz schreibt `1'234.50`. Der Client
+ * macht dasselbe über `getFormatLocale()`; hier ist die Region der volle
+ * BCP-47-Tag aus sync_config, mit der Datensprache als Rückfall.
+ *
+ * Fehlerhafte Währungscodes lassen `Intl` werfen - dann bleibt die nackte Zahl
+ * übrig, was besser ist als ein 500 aus einer Beschriftung.
+ *
+ * @param {number} amount
+ * @param {{ locale: string, currency: string, region?: string|null }} opts
+ * @returns {string}
+ */
+export function formatMoney(amount, { locale, currency, region = null }) {
+  const numberLocale = /^[a-z]{2}-[A-Z]{2}$/.test(region ?? '') ? region : locale;
+  try {
+    return new Intl.NumberFormat(numberLocale, { style: 'currency', currency }).format(amount);
+  } catch {
+    return String(amount);
+  }
+}
+
+/** Gespeicherte Region des Haushalts (voller BCP-47-Tag) oder null. */
+export function householdRegion(database) {
+  const region = cfgValue(database, 'region');
+  return /^[a-z]{2}-[A-Z]{2}$/.test(region ?? '') ? region : null;
 }
 
 export { DEFAULT_LOCALE, REFERENCE_LOCALE };

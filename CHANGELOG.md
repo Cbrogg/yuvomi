@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Changes to a birthday now reach the calendar you sync it to. Editing one detached its appointment from the copy in iCloud, Google or Nextcloud: the new name showed up in Yuvomi while the external calendar kept the old one forever. Deleting a birthday, or setting its reminder to "none", now removes the appointment there too instead of leaving it behind for the next sync to bring back.
+- Moving or deleting a housekeeping visit reaches the external calendar as well. A visit shifted to another day showed the new date in Yuvomi and the old one everywhere else.
+- Visit and payment entries that Yuvomi writes for you now follow the household data language, with the amount formatted as currency and the date in your chosen format. Only the app sent translated text before; anything else - the API, scripts, integrations - got English and a raw date.
+
 ## [1.71.0] - 2026-08-01
 
 ### Fixed
