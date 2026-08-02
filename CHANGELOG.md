@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.73.2] - 2026-08-02
+
+This release changes nothing in the application itself. Apart from the service worker's release marker, which every release bumps so that browsers drop their caches, no file under `public/` or `server/` differs from v1.73.1. What it carries is the reworked project website and documentation, and it keeps the published version in step with them. If you self-host, a running instance will behave exactly as before.
+
+### Changed
+
+- The project website has been rebuilt around the design critique. The landing page and the installation page were reworked, the imprint and privacy pages follow the same layout, and 21 unused translation keys were dropped along the way.
+- The screenshot gallery now also shows Pantry, Accounts and the Budget plan. The shots were retaken with the version number hidden, the dashboard laid out denser, and the meal plan set on the calendar week.
+- The installation guide now describes the state of the database key the same way on every install path, instead of differing between them.
+
 ## [1.73.1] - 2026-08-02
 
 ### Fixed
