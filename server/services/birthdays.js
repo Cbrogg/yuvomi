@@ -1,5 +1,5 @@
 import { formatDateKey, resolveHouseholdFormats, translate } from '../utils/i18n.js';
-import { OUTBOUND_SOURCES } from './calendar-outbound.js';
+import { OUTBOUND_SOURCES, markEventOutbound, queueEventDeletion } from './calendar-outbound.js';
 
 const BIRTHDAY_COLOR = '#E11D48';
 const BIRTHDAY_RRULE = 'FREQ=YEARLY;INTERVAL=1';
@@ -87,12 +87,24 @@ function eventDescription(name, birthDate, locale, dateFormat) {
     : translate(locale, 'birthdays.calendarEventDescriptionNoDate', { name });
 }
 
+/**
+ * Löscht einen Geburtstags-Termin und merkt die beim Provider liegende Kopie zur
+ * Löschung vor. Die Vormerkung muss davor passieren: danach fehlt der Weg zum
+ * entfernten Objekt (Kalender-ID und Objekt-URL stehen in der Zeile), und der
+ * nächste Inbound-Lauf spielte den Termin sonst wieder ein.
+ */
+function deleteCalendarEvent(database, eventId) {
+  const event = database.prepare('SELECT * FROM calendar_events WHERE id = ?').get(eventId);
+  if (event) queueEventDeletion(event);
+  database.prepare('DELETE FROM calendar_events WHERE id = ?').run(eventId);
+}
+
 function syncBirthdayCalendarEvent(database, birthday) {
   // "Keine Benachrichtigung" → Geburtstag soll weder im Dashboard noch im
   // Kalender als Termin erscheinen. Vorhandenes Event löschen und null zurückgeben.
   if (birthday.reminder_offset === '') {
     if (birthday.calendar_event_id) {
-      database.prepare('DELETE FROM calendar_events WHERE id = ?').run(birthday.calendar_event_id);
+      deleteCalendarEvent(database, birthday.calendar_event_id);
       database.prepare('UPDATE birthdays SET calendar_event_id = NULL WHERE id = ?').run(birthday.id);
     }
     return null;
@@ -114,13 +126,19 @@ function syncBirthdayCalendarEvent(database, birthday) {
   };
 
   if (birthday.calendar_event_id) {
-    const existing = database.prepare('SELECT id FROM calendar_events WHERE id = ?').get(birthday.calendar_event_id);
+    const existing = database.prepare('SELECT * FROM calendar_events WHERE id = ?').get(birthday.calendar_event_id);
     if (existing) {
+      // `external_source` wird bewusst NICHT auf 'local' zurückgesetzt. Das tat
+      // diese Anweisung seit dem ersten Geburtstags-Commit, lange bevor es einen
+      // Outbound-Sync gab - und seither entkoppelte jede Bearbeitung den Termin
+      // von seiner Kopie beim Provider: `pendingUpdates` sucht nach
+      // external_source='apple', der Neu-Upload nach external_calendar_id IS NULL,
+      // und mit 'local' + gesetzter Kalender-ID traf keiner von beiden zu. Ein
+      // einmal gespiegelter Geburtstag fror dort für immer ein.
       database.prepare(`
         UPDATE calendar_events
         SET title = ?, description = ?, start_datetime = ?, end_datetime = ?, all_day = ?,
-            location = ?, color = ?, icon = ?, assigned_to = ?, recurrence_rule = ?, created_by = ?,
-            external_source = 'local'
+            location = ?, color = ?, icon = ?, assigned_to = ?, recurrence_rule = ?, created_by = ?
         WHERE id = ?
       `).run(
         payload.title,
@@ -136,6 +154,10 @@ function syncBirthdayCalendarEvent(database, birthday) {
         payload.created_by,
         birthday.calendar_event_id,
       );
+      const after = database.prepare('SELECT * FROM calendar_events WHERE id = ?').get(birthday.calendar_event_id);
+      // Vergleicht die gespiegelten Felder selbst und prüft Quelle,
+      // Kalenderzuordnung und Schreibbarkeit des Providers.
+      if (after) markEventOutbound(existing, after);
       return birthday.calendar_event_id;
     }
   }
@@ -212,7 +234,7 @@ function deleteBirthdayArtifacts(database, birthday) {
       DELETE FROM reminders
       WHERE entity_type = 'event' AND entity_id = ? AND created_by = ?
     `).run(birthday.calendar_event_id, birthday.created_by);
-    database.prepare('DELETE FROM calendar_events WHERE id = ?').run(birthday.calendar_event_id);
+    deleteCalendarEvent(database, birthday.calendar_event_id);
   }
 }
 

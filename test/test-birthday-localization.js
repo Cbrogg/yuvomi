@@ -347,6 +347,95 @@ test('ein abgelehntes Feld hinterlässt keine Sprache ohne passende Titel', asyn
   );
 });
 
+// ---------------------------------------------------------------------------
+// Bearbeiten und Löschen eines bereits gespiegelten Geburtstags
+//
+// Das Umbenennen läuft über syncBirthdayCalendarEvent, nicht über den Backfill.
+// Diese Anweisung setzte `external_source` auf 'local' zurück - seit dem ersten
+// Geburtstags-Commit, lange vor dem Outbound-Sync. Mit 'local' UND gesetzter
+// Kalender-ID fiel der Termin aus beiden Pfaden: pendingUpdates sucht nach
+// 'apple', der Neu-Upload nach external_calendar_id IS NULL. Er fror beim
+// Provider ein, ohne dass irgendetwas ihn je wieder abgeholt hätte.
+// ---------------------------------------------------------------------------
+
+// Die Warteschlange ist auf (source, calendar_external_id, event_external_id)
+// eindeutig - zwei Termine mit derselben UID ergaeben nur eine Vormerkung, und
+// der zweite Test haette gegen den Eintrag des ersten geprueft.
+function mirrorEvent(eventId) {
+  db.prepare(`
+    UPDATE calendar_events
+    SET external_source = 'apple', external_calendar_id = ?,
+        external_object_url = ?, outbound_dirty = 0
+    WHERE id = ?
+  `).run(`bd-mirror-${eventId}@oikos.local`, `https://caldav.example/bd-${eventId}.ics`, eventId);
+}
+
+test('ein umbenannter Geburtstag bleibt mit seiner Kopie beim Provider verbunden', async () => {
+  setConfig('apple_caldav_url', 'https://caldav.example/');
+  const created = await call('POST', '/birthdays', { name: 'Oma', birth_date: '1950-04-01' });
+  const eventId = db.prepare('SELECT calendar_event_id AS id FROM birthdays WHERE id = ?')
+    .get(created.body.data.id).id;
+  mirrorEvent(eventId);
+
+  const renamed = await call('PUT', `/birthdays/${created.body.data.id}`, {
+    name: 'Großmutter',
+    birth_date: '1950-04-01',
+  });
+  assert.equal(renamed.status, 200);
+
+  const row = db.prepare('SELECT title, external_source, outbound_dirty FROM calendar_events WHERE id = ?')
+    .get(eventId);
+  assert.match(row.title, /Großmutter/);
+  assert.equal(row.external_source, 'apple', 'die Zuordnung zum Provider darf nicht verlorengehen');
+  assert.equal(row.outbound_dirty, 1, 'sonst erreicht der neue Name den Provider nie');
+});
+
+test('ein gelöschter Geburtstag räumt die Kopie beim Provider mit ab', async () => {
+  const created = await call('POST', '/birthdays', { name: 'Opa', birth_date: '1948-09-09' });
+  const eventId = db.prepare('SELECT calendar_event_id AS id FROM birthdays WHERE id = ?')
+    .get(created.body.data.id).id;
+  mirrorEvent(eventId);
+  const before = db.prepare('SELECT COUNT(*) AS c FROM calendar_pending_deletions').get().c;
+
+  const deleted = await call('DELETE', `/birthdays/${created.body.data.id}`);
+  assert.ok([200, 204].includes(deleted.status), `unerwarteter Status ${deleted.status}`);
+
+  assert.equal(
+    db.prepare('SELECT COUNT(*) AS c FROM calendar_events WHERE id = ?').get(eventId).c,
+    0,
+    'lokal gelöscht',
+  );
+  assert.ok(
+    db.prepare('SELECT COUNT(*) AS c FROM calendar_pending_deletions').get().c > before,
+    'ohne Vormerkung bliebe der Termin beim Provider stehen und käme beim nächsten Inbound zurück',
+  );
+});
+
+test('"keine Benachrichtigung" räumt die Kopie beim Provider ebenfalls ab', async () => {
+  const created = await call('POST', '/birthdays', { name: 'Tante', birth_date: '1970-01-15' });
+  const eventId = db.prepare('SELECT calendar_event_id AS id FROM birthdays WHERE id = ?')
+    .get(created.body.data.id).id;
+  mirrorEvent(eventId);
+  const before = db.prepare('SELECT COUNT(*) AS c FROM calendar_pending_deletions').get().c;
+
+  // reminder_offset = '' entfernt den Termin, ohne den Geburtstag zu löschen.
+  const muted = await call('PUT', `/birthdays/${created.body.data.id}`, {
+    name: 'Tante',
+    birth_date: '1970-01-15',
+    reminder_offset: '',
+  });
+  assert.equal(muted.status, 200);
+
+  assert.equal(
+    db.prepare('SELECT calendar_event_id FROM birthdays WHERE id = ?').get(created.body.data.id).calendar_event_id,
+    null,
+  );
+  assert.ok(
+    db.prepare('SELECT COUNT(*) AS c FROM calendar_pending_deletions').get().c > before,
+    'auch dieser Pfad löscht einen gespiegelten Termin',
+  );
+});
+
 test('GET /preferences liefert die drei Sprachfelder', async () => {
   // Eigene Vorbedingung: die drei Felder sind nur dann unterscheidbar, wenn
   // gewählte Sprache und Region auseinanderfallen.
