@@ -2078,7 +2078,28 @@
         "documentStorageGoogleDriveDisconnectBlocked": "Bağlantıyı kesmeden önce başka bir hedef seçin ve Drive'da saklanan belgeleri kaldırın.",
         "documentStorageGoogleDriveOAuthSuccess": "Google Drive bağlantısı kuruldu. Hazır olduğunuzda yükleme hedefi olarak seçin.",
         "documentStorageGoogleDriveOAuthError": "Google Drive bağlantısı kurulamadı. Varsa önceki bağlantı korundu.",
-        "documentStorageGoogleDrivePrivacy": "Yuvomi görünürlük ayarları yalnızca Yuvomi üzerinden erişimi kontrol eder. Bağlı Google Drive klasörüne erişimi olan herkes, burada depolanan tüm dosyaları görüntüleyebilir."
+        "documentStorageGoogleDrivePrivacy": "Yuvomi görünürlük ayarları yalnızca Yuvomi üzerinden erişimi kontrol eder. Bağlı Google Drive klasörüne erişimi olan herkes, burada depolanan tüm dosyaları görüntüleyebilir.",
+        "mealieTitle": "Mealie",
+        "mealieDescription": "Kendi barındırdığınız bir Mealie örneğinden tarifleri yansıtır. Mealie doğruluğun kaynağı olmaya devam eder — buradaki tarifler salt okunurdur ve otomatik olarak güncellenir.",
+        "mealieAddAccount": "Mealie Hesabı Ekle",
+        "mealieNameLabel": "Ad",
+        "mealieUrlLabel": "Mealie URL'si",
+        "mealieUrlHint": "Sunucunun senkronizasyon için kullandığı adres — Docker'a özel veya yalnızca LAN'da erişilebilen bir URL olabilir.",
+        "mealieExternalUrlLabel": "Herkese açık bağlantı URL'si (isteğe bağlı)",
+        "mealieExternalUrlHint": "Size gösterilen \"Mealie'de aç\" bağlantıları için kullanılır. Yukarıdaki Mealie URL'sini kullanmak için boş bırakın — ancak bu adres Docker'a özelse veya başka şekilde herkese açık erişilemiyorsa bağlantılar açılmaz, bu yüzden burada erişilebilir bir adres belirleyin.",
+        "mealieEditLink": "Bağlantı URL'sini düzenle",
+        "mealieTokenLabel": "API belirteci",
+        "mealieTokenHint": "Mealie'de Ayarlar → API Belirteçleri altında uzun ömürlü bir API belirteci oluşturun.",
+        "mealieEmptyState": "Henüz bağlı bir Mealie hesabı yok.",
+        "mealieSyncSuccess": "Mealie tarifleri senkronize edildi.",
+        "mealieSyncFailed": "Mealie senkronizasyonu başarısız oldu.",
+        "mealieEnable": "Etkinleştir",
+        "mealieDisable": "Devre dışı bırak",
+        "mealieAccountAdded": "Mealie hesabı eklendi.",
+        "mealieAccountUpdated": "Mealie hesabı güncellendi.",
+        "mealieAccountDeleted": "Mealie hesabı silindi.",
+        "mealieDeleteAccountConfirm": "Bu işlem ayrıca {{count}} yansıtılmış tarifi kaldırır ve bunları tüm yemek planı girişlerinden ayırır.",
+        "mealieLastError": "Son senkronizasyon hatası: {{message}}"
     },
     "login": {
         "tagline": "Aile planlayıcına tekrar hoş geldin.",
@@ -2204,7 +2225,11 @@
         "searchNoResults": "Tarif bulunamadı.",
         "dragToMealsHint": "Tarifleri öğün alanlarına sürükleyerek hızlıca planlayın.",
         "emptyAction": "Tarif oluştur",
-        "loadError": "Tarifler yüklenemedi."
+        "loadError": "Tarifler yüklenemedi.",
+        "sourceMealie": "Mealie",
+        "sourceNative": "Yerel",
+        "sourceAll": "Tümü",
+        "sourceFilterLabel": "Kaynağa göre filtrele"
     },
     "search": {
         "emptyHint": "Görevler, etkinlikler, notlar, kişiler, alışveriş ve sağlıkta aramak için en az 2 karakter yaz.",

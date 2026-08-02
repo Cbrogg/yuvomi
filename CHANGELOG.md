@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Recipes can now mirror from a self-hosted Mealie instance. Add a Mealie account under Settings → Kitchen and its recipes appear alongside your own, with a "Mealie" badge and a link back to view them there. Mealie stays the source of truth for their content, so mirrored recipes are read-only here — editing and deleting are blocked, though you can still duplicate one into an editable native copy. They slot straight into the meal planner and shopping list like any other recipe, sync automatically, and a rename in Mealie updates the mirrored copy in place instead of losing its meal-plan links. A broken connection to Mealie never wipes the local copies. A Mealie account also accepts an optional public link URL, separate from the (possibly Docker-internal or LAN-only) address used for syncing, so the "Open in Mealie" links actually work from your browser.
+
 ## [1.72.0] - 2026-08-02
 
 ### Added

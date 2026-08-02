@@ -2078,7 +2078,28 @@
         "documentStorageGoogleDriveDisconnectBlocked": "Selecciona otro destino y elimina los documentos almacenados en Drive antes de desconectarlo.",
         "documentStorageGoogleDriveOAuthSuccess": "Google Drive se ha conectado. Selecciónalo como destino de carga cuando quieras.",
         "documentStorageGoogleDriveOAuthError": "No se ha podido conectar con Google Drive. Se ha conservado la conexión anterior, si la había.",
-        "documentStorageGoogleDrivePrivacy": "La configuración de visibilidad de Yuvomi solo controla el acceso a través de Yuvomi. Cualquier persona con acceso a la carpeta de Google Drive conectada puede ver todos los archivos almacenados allí."
+        "documentStorageGoogleDrivePrivacy": "La configuración de visibilidad de Yuvomi solo controla el acceso a través de Yuvomi. Cualquier persona con acceso a la carpeta de Google Drive conectada puede ver todos los archivos almacenados allí.",
+        "mealieTitle": "Mealie",
+        "mealieDescription": "Refleja recetas de una instancia de Mealie autoalojada. Mealie sigue siendo la fuente de la verdad: las recetas aquí son de solo lectura y se actualizan automáticamente.",
+        "mealieAddAccount": "Añadir cuenta de Mealie",
+        "mealieNameLabel": "Nombre",
+        "mealieUrlLabel": "URL de Mealie",
+        "mealieUrlHint": "La dirección que usa el servidor para sincronizar — puede ser una URL interna de Docker o solo accesible en la LAN.",
+        "mealieExternalUrlLabel": "URL pública para enlaces (opcional)",
+        "mealieExternalUrlHint": "Se usa para los enlaces «Abrir en Mealie» que se te muestran. Déjalo en blanco para usar la URL de Mealie de arriba — pero si esa es una dirección interna de Docker o no accesible públicamente, los enlaces no se podrán abrir, así que indica aquí una dirección accesible.",
+        "mealieEditLink": "Editar URL del enlace",
+        "mealieTokenLabel": "Token de API",
+        "mealieTokenHint": "Crea un token de API de larga duración en Mealie en Ajustes → Tokens de API.",
+        "mealieEmptyState": "Aún no hay ninguna cuenta de Mealie conectada.",
+        "mealieSyncSuccess": "Recetas de Mealie sincronizadas.",
+        "mealieSyncFailed": "Error al sincronizar con Mealie.",
+        "mealieEnable": "Activar",
+        "mealieDisable": "Desactivar",
+        "mealieAccountAdded": "Cuenta de Mealie añadida.",
+        "mealieAccountUpdated": "Cuenta de Mealie actualizada.",
+        "mealieAccountDeleted": "Cuenta de Mealie eliminada.",
+        "mealieDeleteAccountConfirm": "Esto también elimina {{count}} recetas reflejadas y las desvincula de cualquier entrada del plan de comidas.",
+        "mealieLastError": "Último error de sincronización: {{message}}"
     },
     "login": {
         "tagline": "Bienvenido de nuevo a tu planificador familiar.",
@@ -2204,7 +2225,11 @@
         "searchNoResults": "No se encontraron recetas.",
         "dragToMealsHint": "Arrastra recetas a las franjas de comida para planificarlas rápidamente.",
         "emptyAction": "Crear receta",
-        "loadError": "No se pudieron cargar las recetas."
+        "loadError": "No se pudieron cargar las recetas.",
+        "sourceMealie": "Mealie",
+        "sourceNative": "Nativo",
+        "sourceAll": "Todas",
+        "sourceFilterLabel": "Filtrar por origen"
     },
     "search": {
         "emptyHint": "Escribe al menos 2 caracteres para buscar en tareas, citas, notas, contactos, compras y salud.",

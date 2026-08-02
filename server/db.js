@@ -4511,6 +4511,64 @@ const MIGRATIONS = [
         FROM shopping_items;
     `,
   },
+  {
+    version: 118,
+    description: 'Mealie integration: mealie_accounts table + recipe mirror columns',
+    up: `
+      CREATE TABLE IF NOT EXISTS mealie_accounts (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        name        TEXT    NOT NULL,
+        base_url    TEXT    NOT NULL,
+        api_token   TEXT    NOT NULL,
+        enabled     INTEGER NOT NULL DEFAULT 1,
+        created_by  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at  TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+        updated_at  TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+        last_sync   TEXT,
+        last_error  TEXT,
+        -- Eine Rezepttabelle je Mealie-Server: die UNIQUE-Bedingung verhindert,
+        -- dass derselbe Server zweimal angelegt wird und alle Rezepte doppelt
+        -- gespiegelt ankommen.
+        UNIQUE(base_url)
+      );
+
+      CREATE TRIGGER IF NOT EXISTS trg_mealie_accounts_updated_at
+        AFTER UPDATE ON mealie_accounts FOR EACH ROW
+        BEGIN UPDATE mealie_accounts SET updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id = OLD.id; END;
+
+      -- mealie_account_id NULL = eigenes Rezept; gesetzt = Spiegel dieses Kontos.
+      ALTER TABLE recipes ADD COLUMN mealie_account_id INTEGER
+        REFERENCES mealie_accounts(id) ON DELETE CASCADE;
+      -- Mealies eigener Slug/Id, Schlüssel für den Upsert bei jedem Sync-Lauf.
+      ALTER TABLE recipes ADD COLUMN mealie_recipe_id TEXT;
+      -- Mealies updatedAt: unveränderte Rezepte überspringt der Sync damit.
+      ALTER TABLE recipes ADD COLUMN mealie_updated_at TEXT;
+
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_recipes_mealie_unique
+        ON recipes(mealie_account_id, mealie_recipe_id) WHERE mealie_account_id IS NOT NULL;
+    `,
+  },
+  {
+    version: 119,
+    description: 'Mealie integration: separate public link URL from the server-reachable sync URL',
+    up: `
+      -- base_url muss vom Server aus erreichbar sein (oft ein Docker-internes
+      -- Compose-Hostname) und ist damit für den Browser des Nutzers meist tot.
+      -- external_url trägt die von außen erreichbare Adresse für die Deep-Links.
+      ALTER TABLE mealie_accounts ADD COLUMN external_url TEXT;
+    `,
+  },
+  {
+    version: 120,
+    description: 'Mealie integration: store recipe slug and image flag for link rebuild and thumbnails',
+    up: `
+      -- Slug persistieren: recipe_url wird bei jedem Sync neu daraus gebaut, ohne
+      -- erneuten Abruf. Sonst erreichte eine geänderte external_url nur Rezepte,
+      -- die sich in Mealie selbst wieder ändern.
+      ALTER TABLE recipes ADD COLUMN mealie_slug TEXT;
+      ALTER TABLE recipes ADD COLUMN mealie_has_image INTEGER NOT NULL DEFAULT 0;
+    `,
+  },
 ];
 
 /**
