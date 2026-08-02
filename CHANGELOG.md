@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.73.1] - 2026-08-02
+
+### Fixed
+
+- The button for adding an entry no longer disappears while you are not typing. Yuvomi hides it whenever the on-screen keyboard is open, so that it does not cover the field you are filling in, but it inferred the keyboard from the size of the visible page alone - and on an iPhone the address bar shrinks that page just as a keyboard would. A single such change could therefore take the button away in any module that has one, with nothing to bring it back, which is what remained of the report in #634 after the previous fix: the same button, gone for the same reason, this time in Tasks and Pantry alike. The keyboard now counts as open only while a text field actually has the focus. Leaving that field brings the button straight back, and so does moving to another module. Date and colour fields no longer count, since they open a picker rather than a keyboard.
+
 ## [1.73.0] - 2026-08-02
 
 ### Added
