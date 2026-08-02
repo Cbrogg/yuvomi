@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.71.2] - 2026-08-02
+
+### Fixed
+
+- The button for adding a task no longer disappears the moment you enter the module. It slid away whenever you scrolled down, to clear the row sitting underneath it, and it came back only once you scrolled again - so a single downward nudge could leave the module without its one way to add anything. On an iPhone the address bar produces such a nudge on its own, and so does a list still growing as it loads, which is why it looked like the button vanished on its own. The free space below the button is held open at every scroll position anyway since v1.60.0, so the sliding had nothing left to do.
+- Opening a module now starts at the top of the page, instead of wherever you left the previous one. The scrolling area belongs to the whole app rather than to a page, and nothing reset it, so stepping from a long dashboard into the task list dropped you into the middle of the list. Browser back and forward still take you to where you were. That part covers the pages that scroll as a whole; the eight modules with a list of their own (Budget, Calendar, Contacts, Meals, Notes, Pantry, Recipes, Shopping) come back to the top for now.
+
 ## [1.71.1] - 2026-08-02
 
 ### Fixed
