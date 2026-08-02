@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Yuvomi Web Installer — temporary setup server.
+ * Yuvomi Web Installer - temporary setup server.
  * Zero npm dependencies. Node.js built-ins only.
  * Run: node tools/installer/install-server.js
  */
@@ -8,6 +8,7 @@
 import http from 'node:http';
 import { readFileSync, writeFileSync, existsSync, copyFileSync } from 'node:fs';
 import { spawn } from 'node:child_process';
+import { EventEmitter } from 'node:events';
 import { randomBytes } from 'node:crypto';
 import { resolve, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -32,7 +33,7 @@ let idleTimer = null;
 function resetIdle(server) {
   clearTimeout(idleTimer);
   idleTimer = setTimeout(() => {
-    console.log('\nIdle timeout — shutting down installer server.');
+    console.log('\nIdle timeout - shutting down installer server.');
     server.close(() => process.exit(0));
   }, IDLE_TIMEOUT_MS);
   // Don't let the idle timer keep the process (or a test runner) alive.
@@ -95,7 +96,7 @@ export function decodeEnvValue(raw) {
 
 /**
  * Eine vorhandene .env einlesen. Nur für Werte gedacht, die erhalten bleiben
- * müssen — der Rest der Datei wird beim Speichern ohnehin neu geschrieben.
+ * müssen - der Rest der Datei wird beim Speichern ohnehin neu geschrieben.
  * Fehlt oder bricht die Datei, ist das Ergebnis ein leeres Objekt.
  */
 export function readEnvFile(envPath) {
@@ -126,7 +127,7 @@ export function readEnvFile(envPath) {
  * darf eine laufende Installation nicht so zerlegen. SESSION_SECRET ist der
  * harmlosere Fall: ein neuer Wert wirft nur alle Angemeldeten aus der App.
  *
- * Sendet der Client für einen dieser Schlüssel einen Wert, gewinnt der — dann
+ * Sendet der Client für einen dieser Schlüssel einen Wert, gewinnt der - dann
  * hat der Nutzer ihn im Experten-Modus bewusst eingetragen.
  */
 export const PRESERVED_KEYS = ['SESSION_SECRET', 'DB_ENCRYPTION_KEY'];
@@ -221,19 +222,103 @@ function getEngine() {
  * launch without waiting for compose to finish; 'error' (e.g. ENOENT when
  * docker is missing) surfaces the failure to the caller instead of swallowing it.
  */
-export function spawnStart(cmd, args, opts = {}) {
+export function spawnStart(cmd, args, opts = {}, onOutput = null) {
   return new Promise(resolvePromise => {
     let settled = false;
     const done = v => { if (!settled) { settled = true; resolvePromise(v); } };
     let child;
     try {
-      child = spawn(cmd, args, { stdio: 'ignore', ...opts });
+      // Ohne onOutput bleibt es bei 'ignore' wie bisher. Mit Callback werden
+      // stdout/stderr mitgelesen: das ist die einzige Stelle, an der der
+      // Fortschritt des Image-Pulls überhaupt entsteht - `up -d` läuft
+      // detached weiter, während der Wizard pollt.
+      const stdio = onOutput ? ['ignore', 'pipe', 'pipe'] : 'ignore';
+      child = spawn(cmd, args, { stdio, ...opts });
     } catch (err) {
       return done({ ok: false, error: err.message });
+    }
+    if (onOutput) {
+      child.stdout?.on('data', d => onOutput(d.toString()));
+      child.stderr?.on('data', d => onOutput(d.toString()));
     }
     child.on('error', err => done({ ok: false, error: err.message }));
     child.on('spawn', () => done({ ok: true }));
   });
+}
+
+/**
+ * Ringpuffer für die Ausgabe des laufenden `compose up -d`. Der Prozess ist
+ * detached und lebt länger als der Request, der ihn gestartet hat; ohne diesen
+ * Puffer bliebe der längste Moment der Installation (Image laden) ohne jede
+ * Rückmeldung. Begrenzt, damit ein hängender Pull den Speicher nicht füllt.
+ */
+const START_LOG_LIMIT = 8000;
+let startLog = '';
+export function resetStartLog() { startLog = ''; }
+export function getStartLog() { return startLog; }
+function appendStartLog(chunk) {
+  startLog = (startLog + chunk).slice(-START_LOG_LIMIT);
+}
+
+// Nur diese beiden Zustände sind endgültig. `created` und `restarting` sind
+// Durchgangsstationen, und eine leere Ausgabe heisst „den Container gibt es noch
+// gar nicht" - der Normalfall, solange `up -d` das Image lädt.
+const DEAD_STATES = new Set(['exited', 'dead']);
+
+/**
+ * Verdikt aus dem Health-Check, oder null, wenn er keine Aussage trifft (kein
+ * Healthcheck definiert, Container nicht vorhanden). Dann entscheidet der
+ * Container-Zustand.
+ * @returns {{ status: string, phase: string }|null}
+ */
+export function classifyHealth(healthCode, health) {
+  if (healthCode !== 0) return null;
+  if (health === 'healthy') return { status: 'running', phase: 'running' };
+  if (health === 'starting' || health === 'unhealthy') return { status: 'starting', phase: 'health' };
+  return null;
+}
+
+/**
+ * Verdikt aus `{{.State.Status}}`.
+ *
+ * Eigene, reine Funktion, weil genau hier der teuerste Fehler des
+ * Wartebildschirms sass: ein noch nicht existierender Container (leere Ausgabe)
+ * galt als Fehlschlag. Bei jeder Erstinstallation über einer langsamen Leitung
+ * sah der Nutzer „Container konnte nicht gestartet werden", während der Pull
+ * ganz normal lief. Ohne Prozesse, damit dieser Fall auch auf einer Maschine
+ * ohne Container-Engine prüfbar bleibt.
+ * @returns {{ status: 'running'|'starting'|'error', phase: 'pull'|'boot' }}
+ */
+export function classifyContainerState(state) {
+  if (!state) return { status: 'starting', phase: 'pull' };
+  if (DEAD_STATES.has(state)) return { status: 'error', phase: 'boot' };
+  return { status: 'starting', phase: 'boot' };
+}
+
+/**
+ * spawn() that never throws synchronously.
+ *
+ * Without a container engine, detectEngine() reports `composeBin: null`, so
+ * composeCommand() hands us `cmd: null` and node's normalizeSpawnArguments
+ * throws a TypeError *synchronously*. An `.on('error')` handler cannot catch
+ * that, and inside a child-process callback there is no try/catch above us
+ * either - the throw escapes route() and kills the whole installer process.
+ * That is worst for the users who have no engine, i.e. exactly the ones the
+ * UI tells to "install it and reload the page".
+ *
+ * Returns a stand-in that emits 'error' asynchronously instead, so every call
+ * site keeps its existing error path.
+ */
+export function safeSpawn(cmd, args, opts = {}) {
+  try {
+    return spawn(cmd, args, opts);
+  } catch (err) {
+    const stub = new EventEmitter();
+    stub.stdout = new EventEmitter();
+    stub.stderr = new EventEmitter();
+    queueMicrotask(() => { stub.emit('error', err); stub.emit('close', null); });
+    return stub;
+  }
 }
 
 /**
@@ -270,7 +355,7 @@ function isTrustedRequest(req) {
     try {
       if (!LOOPBACK_HOSTS.has(new URL(source).hostname)) return false;
     } catch {
-      return false; // unparseable Origin/Referer — reject
+      return false; // unparseable Origin/Referer - reject
     }
   }
   return true;
@@ -321,8 +406,12 @@ async function route(req, res, server) {
   resetIdle(server);
   const url = new URL(req.url, `http://localhost:${PORT}`);
 
-  // State-changing requests must originate from the loopback installer page.
-  if (req.method === 'POST' && !isTrustedRequest(req)) {
+  // Jeder API-Zugriff muss von der Loopback-Installerseite kommen, nicht nur der
+  // schreibende: /api/status hat den Prozess beendet, und ein GET darauf kann
+  // jede beliebige Seite absetzen, die der Nutzer während der Installation
+  // offen hat. Die statische Auslieferung (/, tokens.css, Fonts) bleibt frei,
+  // sonst scheiterte schon der erste Seitenaufruf.
+  if ((req.method === 'POST' || url.pathname.startsWith('/api/')) && !isTrustedRequest(req)) {
     return json(res, 403, { error: 'Cross-origin request rejected' });
   }
 
@@ -377,7 +466,7 @@ async function route(req, res, server) {
     try {
       const existingEnv = readEnvFile(resolve(projectRoot(), '.env'));
       const envExists = existsSync(resolve(projectRoot(), '.env'));
-      // Nur die NAMEN der vorhandenen Schlüssel — die Werte bleiben auf dem
+      // Nur die NAMEN der vorhandenen Schlüssel - die Werte bleiben auf dem
       // Server. Das Frontend erzeugt für diese keinen neuen Wert mehr.
       const preservedKeys = PRESERVED_KEYS.filter(key => Boolean(existingEnv[key]));
       const engine = await getEngine();
@@ -436,7 +525,8 @@ async function route(req, res, server) {
     try {
       const engine = await getEngine();
       const { cmd, args } = composeCommand(engine, ['up', '-d']);
-      const result = await spawnStart(cmd, args, { cwd: projectRoot() });
+      resetStartLog();
+      const result = await spawnStart(cmd, args, { cwd: projectRoot() }, appendStartLog);
       if (!result.ok) console.error(`${cmd} compose error:`, result.error);
       return json(res, result.ok ? 200 : 500, result);
     } catch (err) {
@@ -446,6 +536,12 @@ async function route(req, res, server) {
 
   if (req.method === 'GET' && url.pathname === '/api/status') {
     const engine = await getEngine();
+    // Ohne Engine gibt es keinen Container, dessen Status man abfragen könnte,
+    // und composeCommand() lieferte hier `cmd: null`. Früh und ehrlich
+    // antworten, statt einen Spawn zu versuchen, den es nicht geben kann.
+    if (!engine.engine) {
+      return json(res, 200, { status: 'error', phase: 'engine', logs: `Missing: ${engine.missing.join(', ')}` });
+    }
     const health = inspectCommand(engine, ['inspect', '--format', '{{.State.Health.Status}}', 'yuvomi']);
     const stateCmd = inspectCommand(engine, ['inspect', '--format', '{{.State.Status}}', 'yuvomi']);
     const logsCmd = composeCommand(engine, ['logs', '--tail', '30']);
@@ -455,26 +551,28 @@ async function route(req, res, server) {
       // A spawn 'error' (engine binary vanished mid-poll) fires on an
       // EventEmitter that would otherwise throw and crash the process outside
       // route()'s catch. Treat any spawn failure here as a transient "starting".
-      const onSpawnError = () => reply({ status: 'starting' });
-      const inspect = spawn(health.cmd, health.args, { stdio: 'pipe' });
+      const onSpawnError = () => reply({ status: 'starting', phase: 'pull', logs: getStartLog() });
+      const inspect = safeSpawn(health.cmd, health.args, { stdio: 'pipe' });
       let out = '';
       inspect.on('error', onSpawnError);
       inspect.stdout.on('data', d => { out += d.toString().trim(); });
       inspect.on('close', code => {
-        if (code === 0 && out === 'healthy') return reply({ status: 'running' });
-        if (code === 0 && (out === 'starting' || out === 'unhealthy')) return reply({ status: 'starting' });
-        const state = spawn(stateCmd.cmd, stateCmd.args, { stdio: 'pipe' });
+        const byHealth = classifyHealth(code, out);
+        if (byHealth?.status === 'running') return reply(byHealth);
+        if (byHealth) return reply({ ...byHealth, logs: getStartLog() });
+        const state = safeSpawn(stateCmd.cmd, stateCmd.args, { stdio: 'pipe' });
         let stateOut = '';
         state.on('error', onSpawnError);
         state.stdout.on('data', d => { stateOut += d.toString().trim(); });
         state.on('close', () => {
-          if (stateOut === 'running') return reply({ status: 'starting' });
-          const logs = spawn(logsCmd.cmd, logsCmd.args, { cwd: projectRoot(), stdio: 'pipe' });
+          const verdict = classifyContainerState(stateOut);
+          if (verdict.status !== 'error') return reply({ ...verdict, logs: getStartLog() });
+          const logs = safeSpawn(logsCmd.cmd, logsCmd.args, { cwd: projectRoot(), stdio: 'pipe' });
           let logsOut = '';
-          logs.on('error', () => reply({ status: 'error', logs: 'Container engine unavailable.' }));
+          logs.on('error', () => reply({ ...verdict, logs: 'Container engine unavailable.' }));
           logs.stdout.on('data', d => { logsOut += d.toString(); });
           logs.stderr.on('data', d => { logsOut += d.toString(); });
-          logs.on('close', () => reply({ status: 'error', logs: logsOut }));
+          logs.on('close', () => reply({ ...verdict, logs: logsOut || getStartLog() }));
         });
       });
     });
@@ -515,7 +613,7 @@ async function route(req, res, server) {
 
       if (result.status === 201 || result.status === 403) {
         setTimeout(() => {
-          console.log('\nSetup complete — shutting down installer server.');
+          console.log('\nSetup complete - shutting down installer server.');
           server.close(() => process.exit(0));
         }, 2000);
       }
@@ -537,6 +635,13 @@ export function createInstallerServer() {
 
 // Only start listening when run directly (not when imported by tests).
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  // Letztes Netz: ein Wurf aus einem Kind-Prozess-Callback liegt ausserhalb
+  // jedes try/catch und beendete den Installer mitten in der Einrichtung. Der
+  // Nutzer verlöre damit den Wizard und sähe nur noch eine tote Seite.
+  // Lieber weiterlaufen und den Fehler sichtbar machen.
+  process.on('uncaughtException', err => {
+    console.error('Installer server error (kept running):', err);
+  });
   const server = createInstallerServer();
   server.listen(PORT, '127.0.0.1', () => {
     console.log(`\n  Yuvomi Web Installer`);

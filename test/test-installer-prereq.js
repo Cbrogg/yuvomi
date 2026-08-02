@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 import {
   commandAvailable, checkPrereqs, spawnStart, createInstallerServer,
-  detectEngine, composeCommand, inspectCommand,
+  detectEngine, composeCommand, inspectCommand, safeSpawn,
 } from '../tools/installer/install-server.js';
 
 const REPO_ROOT = fileURLToPath(new URL('../', import.meta.url));
@@ -222,4 +222,212 @@ test('env-schema enthält die neuen P5-Settings als writeToEnv', async () => {
   ]) {
     assert.ok(writable.has(key), `env-schema fehlt writeToEnv-Key ${key}`);
   }
+});
+
+// ── Ohne Container-Engine darf der Installer nicht sterben ────────────────────
+//
+// Ein GET auf /api/status beendete den Serverprozess, wenn weder Docker noch
+// Podman vorhanden waren: composeCommand() liefert dann `cmd: null`, und
+// spawn(null) wirft SYNCHRON. Der Wurf lag in einem Kind-Prozess-Callback,
+// also ausserhalb jedes try/catch. Betroffen war genau die Gruppe, der die UI
+// sagt "installiere sie und lade die Seite neu" - das Neuladen schlug dann fehl.
+
+test('composeCommand liefert ohne Engine cmd: null (die Vorbedingung des Absturzes)', () => {
+  const keine = { engine: null, composeBin: null, compose: null, missing: ['docker', 'podman'] };
+  assert.equal(composeCommand(keine, ['logs']).cmd, null,
+    'Vorbedingung geändert: dann gehört dieser Guard nachgezogen');
+});
+
+test('safeSpawn wirft nicht bei cmd null, sondern meldet den Fehler asynchron', async () => {
+  const kind = safeSpawn(null, ['logs'], { stdio: 'pipe' });   // würde als spawn() werfen
+  const fehler = await new Promise((resolve, reject) => {
+    kind.on('error', resolve);
+    setTimeout(() => reject(new Error('kein error-Event binnen 500ms')), 500);
+  });
+  assert.ok(fehler instanceof Error, 'error-Event trägt kein Error-Objekt');
+});
+
+test('GET /api/status beendet den Server nicht und antwortet danach weiter', async () => {
+  await withServer(async base => {
+    const r = await fetch(`${base}/api/status`);
+    assert.equal(r.status, 200);
+    const d = await r.json();
+    assert.ok(['running', 'starting', 'error'].includes(d.status), `unerwarteter Status ${d.status}`);
+
+    // Der eigentliche Befund: der Prozess muss den Aufruf überleben. Deshalb
+    // ein zweiter Request - er erreichte den toten Server vorher nicht mehr.
+    const danach = await fetch(`${base}/api/prereqs`);
+    assert.equal(danach.status, 200, 'Server hat den Statusaufruf nicht überlebt');
+  });
+});
+
+test('GET /api/status weist einen fremden Origin ab (nicht nur POSTs)', async () => {
+  await withServer(async base => {
+    const r = await fetch(`${base}/api/status`, { headers: { Origin: 'https://evil.example' } });
+    assert.equal(r.status, 403, 'lesende API-Routen brauchen denselben Loopback-Guard wie POSTs');
+  });
+});
+
+test('die statische Auslieferung bleibt ohne Origin erreichbar', async () => {
+  await withServer(async base => {
+    assert.equal((await fetch(`${base}/`)).status, 200, 'der Guard darf die Seite selbst nicht sperren');
+  });
+});
+
+// ── Das Überschreiben der .env ist auf JEDEM Pfad bestätigungspflichtig ───────
+//
+// Der Erweitert-Pfad verlangte zwei Klicks, der Einfach-Pfad einen - und der
+// Einfach-Pfad rendert step-config nie, sah die Warnung über eine bestehende
+// .env also überhaupt nicht. Damit hatte ausgerechnet der Laien-Pfad weniger
+// Netz bei der einzigen irreversiblen Aktion des Wizards.
+//
+// Als Regel formuliert, nicht als Liste der beiden heutigen Buttons: ein
+// dritter Schreibpfad fällt damit beim Hinzufügen auf, nicht erst im Critique.
+
+test('jeder Pfad, der die .env schreibt, verlangt vorher eine Bestätigung', () => {
+  const src = readFileSync(new URL('../tools/installer/install.html', import.meta.url), 'utf8');
+  const schreibstellen = [...src.matchAll(/fetch\('\/api\/save-env'/g)].map(m => m.index);
+  assert.ok(schreibstellen.length >= 2,
+    `erwartet mindestens zwei Schreibpfade (einfach + erweitert), gefunden ${schreibstellen.length}`);
+
+  for (const idx of schreibstellen) {
+    const handler = src.slice(Math.max(0, idx - 1500), idx);
+    assert.match(handler, /if \(!\w*[Cc]onfirmed\)/,
+      'ein Pfad schreibt die .env ohne vorherige Zwei-Klick-Bestätigung');
+  }
+});
+
+test('beide Einrichtungspfade zeigen die Warnung über eine bestehende .env', () => {
+  const src = readFileSync(new URL('../tools/installer/install.html', import.meta.url), 'utf8');
+  for (const id of ['cfg-existing', 'simple-existing']) {
+    assert.match(src, new RegExp(`id="${id}"[^>]*data-i18n="config.existing"`),
+      `${id} fehlt im Markup oder trägt den falschen i18n-Schlüssel`);
+  }
+  // Ein Banner, das der Preflight nie einblendet, ist so gut wie keins.
+  const preflight = src.slice(src.indexOf('d.envExists'), src.indexOf('d.envExists') + 300);
+  for (const id of ['cfg-existing', 'simple-existing']) {
+    assert.ok(preflight.includes(id), `${id} wird bei envExists nicht eingeblendet`);
+  }
+});
+
+// ── Der Wartebildschirm: eine Phase ist kein Fehlschlag ───────────────────────
+//
+// `spawnStart` löst beim 'spawn'-Event auf, nicht am Ende von `compose up -d`.
+// Der Wizard pollt also, während das Image noch geladen wird - und in dieser
+// Zeit gibt es den Container noch gar nicht. Eine leere Inspect-Ausgabe wurde
+// als Fehlschlag gemeldet: bei jeder Erstinstallation über einer langsamen
+// Leitung stand „Container konnte nicht gestartet werden" auf dem Schirm,
+// während alles normal lief.
+
+import {
+  classifyContainerState, classifyHealth, getStartLog, resetStartLog,
+} from '../tools/installer/install-server.js';
+
+test('ein noch nicht existierender Container ist die Pull-Phase, kein Fehler', () => {
+  const v = classifyContainerState('');
+  assert.equal(v.status, 'starting', 'leere Inspect-Ausgabe heisst „gibt es noch nicht", nicht „kaputt"');
+  assert.equal(v.phase, 'pull');
+});
+
+test('Durchgangszustände sind kein Fehler, nur exited und dead sind endgültig', () => {
+  for (const state of ['created', 'restarting', 'paused', 'running']) {
+    assert.equal(classifyContainerState(state).status, 'starting',
+      `${state} ist eine Durchgangsstation und darf die Installation nicht abbrechen`);
+  }
+  for (const state of ['exited', 'dead']) {
+    assert.equal(classifyContainerState(state).status, 'error', `${state} muss als Fehler gelten`);
+  }
+});
+
+test('der Health-Check entscheidet nur, wenn er eine Aussage trifft', () => {
+  assert.deepEqual(classifyHealth(0, 'healthy'), { status: 'running', phase: 'running' });
+  assert.equal(classifyHealth(0, 'starting').phase, 'health');
+  assert.equal(classifyHealth(0, 'unhealthy').phase, 'health');
+  // Container ohne Healthcheck: docker druckt `<no value>` mit Exit 0.
+  assert.equal(classifyHealth(0, '<no value>'), null, 'ohne Healthcheck entscheidet der Container-Zustand');
+  assert.equal(classifyHealth(1, ''), null, 'fehlgeschlagenes Inspect trifft keine Aussage');
+});
+
+test('spawnStart reicht die Ausgabe durch, wenn ein Callback übergeben wird', async () => {
+  // Das ist die einzige Stelle, an der der Fortschritt des Image-Pulls entsteht:
+  // `up -d` läuft detached weiter, während der Wizard pollt.
+  let gesammelt = '';
+  const r = await spawnStart(
+    process.execPath,
+    ['-e', 'process.stdout.write("pulling layer 1\\n"); process.stderr.write("warn\\n")'],
+    {},
+    chunk => { gesammelt += chunk; }
+  );
+  assert.equal(r.ok, true);
+  await new Promise(resolve => setTimeout(resolve, 300));
+  assert.match(gesammelt, /pulling layer 1/, 'stdout muss ankommen');
+  assert.match(gesammelt, /warn/, 'stderr muss ebenfalls ankommen');
+});
+
+test('ohne Callback bleibt spawnStart bei stdio ignore (unverändertes Verhalten)', async () => {
+  const r = await spawnStart(process.execPath, ['-e', 'process.stdout.write("x")']);
+  assert.equal(r.ok, true);
+});
+
+test('das Startprotokoll ist begrenzt und zurücksetzbar', async () => {
+  resetStartLog();
+  assert.equal(getStartLog(), '', 'reset muss leeren');
+  await spawnStart(
+    process.execPath,
+    ['-e', 'process.stdout.write("a".repeat(20000))'],
+    {},
+    () => {}
+  );
+  // Der Puffer im Server ist auf 8000 Zeichen gedeckelt; ein hängender Pull
+  // darf den Speicher nicht füllen.
+  const quelle = readFileSync(new URL('../tools/installer/install-server.js', import.meta.url), 'utf8');
+  const limit = quelle.match(/START_LOG_LIMIT = (\d+)/);
+  assert.ok(limit && Number(limit[1]) > 0 && Number(limit[1]) <= 100_000,
+    'das Startprotokoll braucht eine Obergrenze');
+  assert.match(quelle, /startLog = \(startLog \+ chunk\)\.slice\(-START_LOG_LIMIT\)/,
+    'der Puffer muss hinten abschneiden, nicht unbegrenzt wachsen');
+});
+
+// ── Der Client hängt nicht mehr ewig am Spinner ───────────────────────────────
+
+test('pollDocker verschluckt Fehler nicht mehr dauerhaft', () => {
+  // Vorher: `catch { /* keep polling during startup */ }`. Ein toter Server
+  // bedeutete einen Spinner, der sich für immer dreht.
+  const html = readFileSync(new URL('../tools/installer/install.html', import.meta.url), 'utf8');
+  assert.match(html, /MAX_POLL_FAILURES/, 'wiederholte Fehlschläge brauchen eine Obergrenze');
+  assert.match(html, /\+\+pollFailures >= MAX_POLL_FAILURES/, 'die Serie muss gezählt und beendet werden');
+  assert.match(html, /TIMEOUT_MS/, 'der Wartebildschirm braucht ein Gesamt-Timeout');
+  assert.match(html, /elapsed >= TIMEOUT_MS/, 'das Timeout muss auch ausgewertet werden');
+});
+
+test('der Wartebildschirm benennt jede Phase, die der Server melden kann', () => {
+  // Regel statt Allowlist: meldet der Server eine neue Phase, muss der Client
+  // ein Wort dafür haben - sonst bleibt die Statuszeile stumm stehen.
+  const server = readFileSync(new URL('../tools/installer/install-server.js', import.meta.url), 'utf8');
+  const html = readFileSync(new URL('../tools/installer/install.html', import.meta.url), 'utf8');
+  const de = JSON.parse(readFileSync(new URL('../tools/installer/locales/de.json', import.meta.url), 'utf8'));
+
+  const phases = new Set(
+    [...server.matchAll(/phase: '(\w+)'/g)].map(m => m[1]).filter(p => p !== 'running' && p !== 'engine')
+  );
+  assert.ok(phases.size >= 3, `erwartet mindestens drei benennbare Phasen, gefunden: ${[...phases]}`);
+
+  const mapped = html.match(/const PHASE_KEYS = \{([\s\S]*?)\};/);
+  assert.ok(mapped, 'PHASE_KEYS in install.html nicht gefunden');
+  for (const phase of phases) {
+    const entry = mapped[1].match(new RegExp(`${phase}:\\s*'docker\\.(\\w+)'`));
+    assert.ok(entry, `der Client kennt kein Wort für die Server-Phase "${phase}"`);
+    assert.ok(de.docker[entry[1]], `de.json fehlt docker.${entry[1]} für die Phase "${phase}"`);
+  }
+});
+
+test('die Dauererwartung und der Ausweg stehen im Markup', () => {
+  const html = readFileSync(new URL('../tools/installer/install.html', import.meta.url), 'utf8');
+  // Ab Sekunde 0 sichtbar, nicht erst wenn es zu lange dauert.
+  assert.match(html, /id="dkr-expect"[^>]*data-i18n="docker\.firstRunHint"/,
+    'die Dauererwartung gehört von Anfang an auf den Schirm');
+  assert.match(html, /id="dkr-logs-toggle"/, 'nach der Schwelle braucht es „Protokoll anzeigen"');
+  assert.match(html, /STALL_AFTER_MS/, 'die Schwelle für den Ausweg fehlt');
+  assert.match(html, /elapsed >= STALL_AFTER_MS\) revealDockerEscape\(\)/,
+    'die Schwelle muss den Ausweg tatsächlich einblenden');
 });
