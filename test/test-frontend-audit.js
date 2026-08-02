@@ -589,13 +589,14 @@ test('module-specific settings leaves preserve their required controls and behav
 
   // Budget, Gesundheit und Haushaltshilfe hatten je ein Blatt für je eine
   // Checkbox (Critique 2026-07-27). Sie teilen sich jetzt eines - mit genau
-  // diesen drei Schaltern und einem einzigen /preferences-Request statt dreien.
+  // diesen Schaltern (Aufgaben kam später dazu) und einem einzigen
+  // /preferences-Request statt einem pro Schalter.
   const options = read('../public/settings/pages/modules-options.js');
   for (const id of ['budget-mode-personal', 'health-cycle-enabled', 'housekeeping-payment-tasks', 'tasks-subtasks-expanded']) {
     assert.match(options, controlIdPattern(id));
   }
-  // Drei Schalter, sonst nichts: die Schalter selbst kommen aus dem geteilten
-  // Primitiv, deshalb zählt das Blatt keine `<input>`-Literale mehr.
+  // Genau diese Schalter, sonst nichts: sie kommen aus dem geteilten Primitiv,
+  // deshalb zählt das Blatt keine `<input>`-Literale mehr.
   assert.equal([...options.matchAll(/toggleRowHtml\(\{/g)].length, 4);
   assert.equal([...options.matchAll(/<(?:input|select|textarea)\b/g)].length, 0);
   assert.equal([...options.matchAll(/getPreferences\(\)/g)].length, 1);

@@ -3,10 +3,11 @@ import { toggleRowHtml } from '/settings/components.js';
 import { getPreferences, savePreferences } from '/settings/preferences-cache.js';
 
 /**
- * Drei Modul-Schalter, die vor dem IA-Umbau je ein eigenes Blatt hatten: Budget,
+ * Modul-Schalter, die vor dem IA-Umbau je ein eigenes Blatt hatten: Budget,
  * Gesundheit und Haushaltshilfe trugen zusammen drei Checkboxen, kosteten aber
  * drei Sidebar-Einträge, drei Navigationsschritte und drei Requests
- * (Critique 2026-07-27). Ein Schalter je Karte, ein Blatt.
+ * (Critique 2026-07-27). Ein Schalter je Karte, ein Blatt. Aufgaben kam später
+ * nach demselben Muster dazu.
  */
 const APPEARANCE_PATH = '/settings/personal/appearance';
 
