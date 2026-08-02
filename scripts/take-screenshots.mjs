@@ -1,11 +1,12 @@
 /**
  * Screenshot Script - Yuvomi
- * Fully automated: seeds demo data, creates Linda user, starts server,
- * captures all modules in light + dark mode for two device profiles:
+ * Fully automated: seeds demo data (in the target locale), starts a server and
+ * captures every module and sub-tab in light + dark mode for two device profiles:
  *   - web:    iPad Pro 13"         → 2752 × 2064 px  (viewport 1376×1032, DSF 2.0)
  *   - mobile: iPhone 17 Pro Max    → 1320 × 2868 px  (portrait, DSF ≈ 2.70)
  *
- * Usage:  node scripts/take-screenshots.mjs
+ * Usage:  node scripts/take-screenshots.mjs              (English → docs/screenshots/)
+ *         SHOT_LOCALE=de node scripts/take-screenshots.mjs  (German → docs/screenshots/de/)
  *
  * Side effects: writes a temporary database to /tmp/yuvomi-screenshot.db
  *               and starts a server on port 3099. Both are cleaned up on exit.
@@ -80,13 +81,17 @@ const MODULES = [
   { path: '/',             name: 'dashboard'      },
   { path: '/tasks',        name: 'tasks'          },
   { path: '/calendar',     name: 'calendar'       },
+  // Küchen-Kreislauf in seiner eigenen Reihenfolge: planen → kochen → einkaufen → lagern
   { path: '/meals',        name: 'meals'          },
   { path: '/recipes',      name: 'recipes'        },
   { path: '/shopping',     name: 'shopping'       },
+  { path: '/pantry',       name: 'pantry'         },
   { path: '/birthdays',    name: 'birthdays'      },
   { path: '/notes',        name: 'notes'          },
   { path: '/contacts',     name: 'contacts'       },
   { path: '/budget',       name: 'budget'              },
+  { path: '/budget',       name: 'budget-plan',          tab: '#budget-tab-plan' },
+  { path: '/budget',       name: 'budget-accounts',      tab: '#budget-tab-accounts' },
   { path: '/budget',       name: 'budget-subscriptions', tab: '#budget-tab-subscriptions' },
   { path: '/budget',       name: 'budget-reports',       tab: '#budget-tab-reports' },
   { path: '/budget',       name: 'budget-loans',         tab: '#budget-tab-loans' },
@@ -287,10 +292,12 @@ async function setupDemoDb() {
   // 3. Seed demo data. seed-demo.js creates every user (incl. Linda, the admin/mom
   //    screenshot persona with her own health & cycle data) and sets the weather
   //    preference (Dortmund) directly in sync_config — no post-seed API calls needed.
+  //    The locale reaches the seed too: an English UI showing German content (or
+  //    the other way round) is the one thing these screenshots must not show.
   console.log('  Running seed-demo.js…');
   const seed = spawnSync(
     'node',
-    [resolve(ROOT, 'scripts/seed-demo.js'), '--db', DEMO_DB],
+    [resolve(ROOT, 'scripts/seed-demo.js'), '--db', DEMO_DB, '--locale', LOCALE],
     { cwd: ROOT, stdio: 'inherit' }
   );
   if (seed.status !== 0) throw new Error('seed-demo.js failed');
