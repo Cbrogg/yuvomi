@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.71.1] - 2026-08-02
+
 ### Fixed
 
 - Changes to a birthday now reach the calendar you sync it to. Editing one detached its appointment from the copy in iCloud, Google or Nextcloud: the new name showed up in Yuvomi while the external calendar kept the old one forever. Deleting a birthday, or setting its reminder to "none", now removes the appointment there too instead of leaving it behind for the next sync to bring back.
