@@ -420,6 +420,48 @@ test('ein Sync ohne echte Änderung löst keinen Push aus', async () => {
   );
 });
 
+test('ein verschobenes Geburtsdatum nimmt das Ende des Termins mit', async () => {
+  const created = await call('POST', '/birthdays', { name: 'Papa', birth_date: '1955-04-01' });
+  const eventId = db.prepare('SELECT calendar_event_id AS id FROM birthdays WHERE id = ?')
+    .get(created.body.data.id).id;
+  mirrorEvent(eventId);
+  // Der Inbound legt bei einem ganztägigen Termin ein Ende gleich dem Start ab.
+  db.prepare('UPDATE calendar_events SET end_datetime = start_datetime WHERE id = ?').run(eventId);
+
+  await call('PUT', `/birthdays/${created.body.data.id}`, { name: 'Papa', birth_date: '1955-09-15' });
+
+  const row = db.prepare('SELECT start_datetime, end_datetime FROM calendar_events WHERE id = ?').get(eventId);
+  assert.equal(row.start_datetime, '1955-09-15');
+  assert.equal(
+    row.end_datetime, '1955-09-15',
+    'ein stehengebliebenes Ende läge vor dem Beginn - die Serializer machten daraus ein DTEND vor DTSTART',
+  );
+});
+
+test('im Nur-Lesen-Modus bleibt die lokale Änderung gegen den Inbound geschützt', async () => {
+  // Ein schreibgeschützter Provider nimmt den Push nicht an. Der Marker ist aber
+  // auch der Schutz davor, dass der Inbound die lokale Fassung überschreibt
+  // (`if (existing?.outbound_dirty) continue`) - er muss deshalb trotzdem stehen.
+  setConfig('google_refresh_token', 'token');
+  setConfig('google_readonly', '1');
+
+  const created = await call('POST', '/birthdays', { name: 'Cousine', birth_date: '1985-02-02' });
+  const eventId = db.prepare('SELECT calendar_event_id AS id FROM birthdays WHERE id = ?')
+    .get(created.body.data.id).id;
+  db.prepare(`
+    UPDATE calendar_events
+    SET external_source = 'google', external_calendar_id = ?, outbound_dirty = 0 WHERE id = ?
+  `).run(`bd-ro-${eventId}@google`, eventId);
+
+  await call('PUT', `/birthdays/${created.body.data.id}`, { name: 'Cousine Mia', birth_date: '1985-02-02' });
+
+  const row = db.prepare('SELECT title, outbound_dirty FROM calendar_events WHERE id = ?').get(eventId);
+  assert.match(row.title, /Mia/);
+  assert.equal(row.outbound_dirty, 1, 'ohne Marker überschriebe der nächste Inbound den neuen Namen');
+
+  db.prepare(`DELETE FROM sync_config WHERE key IN ('google_refresh_token', 'google_readonly')`).run();
+});
+
 test('ein gelöschter Geburtstag räumt die Kopie beim Provider mit ab', async () => {
   const created = await call('POST', '/birthdays', { name: 'Opa', birth_date: '1948-09-09' });
   const eventId = db.prepare('SELECT calendar_event_id AS id FROM birthdays WHERE id = ?')

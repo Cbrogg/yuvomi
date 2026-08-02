@@ -500,6 +500,33 @@ test('ein verschobener Besuch wird zum Provider nachgezogen', async () => {
   assert.equal(event.outbound_dirty, 1, 'die Verschiebung muss den Provider erreichen');
 });
 
+test('im Nur-Lesen-Modus bleibt der verschobene Besuch gegen den Inbound geschützt', async () => {
+  // Ein schreibgeschützter Provider nimmt den Push nicht an - der Marker ist aber
+  // auch der Schutz davor, dass der Inbound das neue Datum überschreibt.
+  setConfig('google_refresh_token', 'token');
+  setConfig('google_readonly', '1');
+
+  const workerId = await freshWorker('Rita');
+  const created = await call('POST', '/work-sessions/check-in', {
+    as: ADM,
+    body: { worker_id: workerId, daily_rate: 40, local_date: '2025-07-01' },
+  });
+  const row = db.prepare('SELECT calendar_event_id AS id FROM housekeeping_work_sessions WHERE id = ?')
+    .get(created.body.data.id);
+  db.prepare(`
+    UPDATE calendar_events
+    SET external_source = 'google', external_calendar_id = ?, outbound_dirty = 0 WHERE id = ?
+  `).run(`hk-ro-${row.id}@google`, row.id);
+
+  await call('PUT', `/visits/${created.body.data.id}`, { as: ADM, body: { date: '2025-07-08', daily_rate: 40 } });
+
+  const event = db.prepare('SELECT start_datetime, outbound_dirty FROM calendar_events WHERE id = ?').get(row.id);
+  assert.equal(event.start_datetime, '2025-07-08');
+  assert.equal(event.outbound_dirty, 1, 'ohne Marker überschriebe der nächste Inbound das alte Datum zurück');
+
+  db.prepare(`DELETE FROM sync_config WHERE key IN ('google_refresh_token', 'google_readonly')`).run();
+});
+
 test('ein gelöschter Besuch räumt die Kopie beim Provider mit ab', async () => {
   const row = db.prepare('SELECT calendar_event_id FROM housekeeping_work_sessions WHERE id = ?').get(LOCALIZED_SESSION);
   const before = db.prepare('SELECT COUNT(*) AS c FROM calendar_pending_deletions').get().c;

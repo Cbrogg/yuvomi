@@ -108,17 +108,14 @@ function eventDescription(name, birthDate, locale, dateFormat) {
  * entfernten Objekt (Kalender-ID und Objekt-URL stehen in der Zeile), und der
  * nächste Inbound-Lauf spielte den Termin sonst wieder ein.
  *
- * Grenze: `queueEventDeletion` schreibt über `db.get()`, nicht über die hier
- * übergebene Connection - dasselbe gilt für seine Guards. In der Anwendung ist
- * das dieselbe Verbindung; auseinander fallen sie nur, wenn ein Aufrufer eine
- * eigene injiziert (processDueNotifications nimmt eine entgegen, nutzt sie aber
- * nur in Tests). Das sauber durchzureichen hieße, vier Funktionen in
- * calendar-outbound.js umzubauen; das gehört in einen eigenen Vorgang, nicht in
- * diesen. retitleBirthdayEvents setzt seinen Marker aus demselben Grund inline.
+ * Die Connection wird durchgereicht: `syncBirthdayArtifacts` läuft auch mit einer
+ * eigenen (processDueNotifications gibt seine weiter, test-dashboard.js nutzt
+ * das). Über `db.get()` geschrieben landete die Vormerkung sonst in einer anderen
+ * Datenbank als der Termin, auf den sie sich bezieht.
  */
 function deleteCalendarEvent(database, eventId) {
   const event = database.prepare('SELECT * FROM calendar_events WHERE id = ?').get(eventId);
-  if (event) queueEventDeletion(event);
+  if (event) queueEventDeletion(event, database);
   database.prepare('DELETE FROM calendar_events WHERE id = ?').run(eventId);
 }
 
@@ -179,13 +176,21 @@ function syncBirthdayCalendarEvent(database, birthday) {
         // syncAllBirthdayReminders schon an einem GET /birthdays hängt, wäre das
         // ein Push pro Geburtstag pro Abruf, endlos. Diese Felder gehören
         // deshalb dem Provider, sobald er die Zeile einmal angefasst hat.
+        // `end_datetime` folgt dem Start, statt zu bleiben: der Inbound legt bei
+        // einem ganztägigen Termin ein Ende gleich dem Startdatum ab. Bliebe es
+        // beim Verschieben des Geburtsdatums stehen, läge das Ende vor dem
+        // Beginn - die Outbound-Serializer machen daraus ein DTEND vor DTSTART
+        // bzw. einen mehrtägigen Geburtstag. NULL bleibt NULL, damit ein noch
+        // nicht normalisierter Termin keine Scheinänderung bekommt.
         database.prepare(`
           UPDATE calendar_events
-          SET title = ?, description = ?, start_datetime = ?
+          SET title = ?, description = ?, start_datetime = ?,
+              end_datetime = CASE WHEN end_datetime IS NULL THEN NULL ELSE ? END
           WHERE id = ?
         `).run(
           payload.title,
           payload.description,
+          payload.start_datetime,
           payload.start_datetime,
           birthday.calendar_event_id,
         );

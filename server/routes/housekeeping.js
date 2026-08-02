@@ -19,7 +19,11 @@ import {
   resolveHouseholdFormats,
   translate,
 } from '../utils/i18n.js';
-import { markEventOutbound, queueEventDeletion } from '../services/calendar-outbound.js';
+import {
+  OUTBOUND_SOURCES,
+  mirroredFieldsChanged,
+  queueEventDeletion,
+} from '../services/calendar-outbound.js';
 
 const log = createLogger('Housekeeping');
 const router = express.Router();
@@ -328,9 +332,24 @@ function updateVisitLinks(database, session, worker, checkIn, dailyRate, extras,
       session.calendar_event_id,
     );
     const after = database.prepare('SELECT * FROM calendar_events WHERE id = ?').get(session.calendar_event_id);
-    // markEventOutbound vergleicht die gespiegelten Felder selbst und prüft
-    // Quelle, Kalenderzuordnung und ob der Provider überhaupt schreibbar ist.
-    if (before && after) markEventOutbound(before, after);
+    // Marker inline statt über markEventOutbound, aus zwei Gründen:
+    //
+    //   - markEventOutbound lehnt einen schreibgeschützten Provider ab
+    //     (`google_readonly`). Der Marker ist aber nicht nur ein Push-Auftrag,
+    //     sondern auch der Schutz davor, dass der Inbound die lokale Änderung
+    //     überschreibt - `if (existing?.outbound_dirty) continue`. Ohne ihn
+    //     verlöre ein verschobener Besuch sein Datum an den alten Serverstand,
+    //     sobald jemand den Nur-Lesen-Modus einschaltet.
+    //   - Es schreibt über db.get() und umginge die hier übergebene Connection.
+    //
+    // Der Feldvergleich bleibt derselbe: mirroredFieldsChanged prüft genau die
+    // Felder, die zum Provider gespiegelt werden.
+    const mirrored = after && OUTBOUND_SOURCES.includes(after.external_source) && !!after.external_calendar_id;
+    if (before && mirrored && mirroredFieldsChanged(before, after)) {
+      database.prepare(
+        'UPDATE calendar_events SET outbound_dirty = 1, outbound_attempts = 0 WHERE id = ?'
+      ).run(session.calendar_event_id);
+    }
   }
   if (session.payment_task_id) {
     const totalAmount = Number(dailyRate || 0) + Number(extras || 0);
@@ -355,7 +374,7 @@ function deleteVisitLinks(database, session) {
     // den Termin in iCloud/Google/Nextcloud stehen, und der nächste Inbound-Lauf
     // spielte ihn womöglich wieder ein.
     const event = database.prepare('SELECT * FROM calendar_events WHERE id = ?').get(session.calendar_event_id);
-    if (event) queueEventDeletion(event);
+    if (event) queueEventDeletion(event, database);
     database.prepare('DELETE FROM calendar_events WHERE id = ?').run(session.calendar_event_id);
   }
   if (session.payment_task_id) database.prepare('DELETE FROM tasks WHERE id = ?').run(session.payment_task_id);

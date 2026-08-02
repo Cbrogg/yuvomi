@@ -87,11 +87,11 @@ export function outboundFailureAction(err, attempts) {
  * Legt einen Tombstone an. Idempotent über den UNIQUE-Index.
  * @returns {boolean} true, wenn eine Löschung vorgemerkt ist
  */
-export function queueDeletion({ source, calendarExternalId, eventExternalId, objectUrl = null }) {
+export function queueDeletion({ source, calendarExternalId, eventExternalId, objectUrl = null }, database = null) {
   if (!source || !eventExternalId) return false;
   if (!calendarExternalId && !objectUrl) return false;
 
-  db.get().prepare(`
+  (database || db.get()).prepare(`
     INSERT INTO calendar_pending_deletions (source, calendar_external_id, event_external_id, object_url)
     VALUES (?, ?, ?, ?)
     ON CONFLICT(source, calendar_external_id, event_external_id)
@@ -283,9 +283,9 @@ function cfg(key) {
 }
 
 /** Externe Kalender-Kennung, in der das Event beim Provider liegt. */
-function calendarExternalId(event) {
+function calendarExternalId(event, database = null) {
   if (event.calendar_ref_id) {
-    const row = db.get().prepare(
+    const row = (database || db.get()).prepare(
       'SELECT external_id FROM external_calendars WHERE id = ? AND source = ?'
     ).get(event.calendar_ref_id, event.external_source);
     if (row?.external_id) return row.external_id;
@@ -314,12 +314,12 @@ function acceptsOutbound(source) {
  * Muss VOR dem lokalen DELETE mit der noch vorhandenen Zeile aufgerufen werden.
  * @returns {boolean} true, wenn ein Tombstone entstanden ist
  */
-export function queueEventDeletion(event) {
+export function queueEventDeletion(event, database = null) {
   if (!event || !OUTBOUND_SOURCES.includes(event.external_source)) return false;
   if (!event.external_calendar_id) return false;
   if (!acceptsOutbound(event.external_source)) return false;
 
-  const calId = calendarExternalId(event);
+  const calId = calendarExternalId(event, database);
   // Ohne Kalender und ohne Objekt-URL gibt es keinen Weg zum entfernten Objekt.
   if (!calId && !event.external_object_url) {
     log.warn(`No remote calendar known for event ${event.id}, deletion at the provider skipped.`);
@@ -331,7 +331,7 @@ export function queueEventDeletion(event) {
     calendarExternalId: calId,
     eventExternalId:    event.external_calendar_id,
     objectUrl:          event.external_object_url || null,
-  });
+  }, database);
 }
 
 /**
