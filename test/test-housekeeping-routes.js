@@ -461,6 +461,10 @@ test('Fallback-Titel folgen der Datensprache des Haushalts', async () => {
 
 test('ohne gesetzte Sprache bleibt es beim englischen Bestandsverhalten', async () => {
   db.prepare(`DELETE FROM sync_config WHERE key IN ('language', 'region')`).run();
+  // Sprache am Ende wiederherstellen: die Folgetests pruefen deutsche Texte, und
+  // ohne das schriebe updateVisitLinks die Beschreibung stillschweigend auf
+  // Englisch zurueck - der Test davor haette dann eine Zusicherung gemacht, die
+  // der naechste Aufruf widerlegt.
 
   const workerId = await freshWorker('Nina');
   const r = await call('POST', '/work-sessions/check-in', {
@@ -470,6 +474,8 @@ test('ohne gesetzte Sprache bleibt es beim englischen Bestandsverhalten', async 
   const row = db.prepare('SELECT calendar_event_id FROM housekeeping_work_sessions WHERE id = ?').get(r.body.data.id);
   const event = db.prepare('SELECT title FROM calendar_events WHERE id = ?').get(row.calendar_event_id);
   assert.equal(event.title, 'Housekeeping: Nina');
+
+  setConfig('language', 'de');
 });
 
 test('ein verschobener Besuch wird zum Provider nachgezogen', async () => {

@@ -4,6 +4,21 @@ import { OUTBOUND_SOURCES, markEventOutbound, queueEventDeletion } from './calen
 const BIRTHDAY_COLOR = '#E11D48';
 const BIRTHDAY_RRULE = 'FREQ=YEARLY;INTERVAL=1';
 
+// Felder, die der Geburtstag selbst hervorbringt: Titel und Beschreibung aus dem
+// Namen, Startdatum aus dem Geburtsdatum. Nur ihre Änderung darf einen Push zum
+// Provider auslösen.
+//
+// Bewusst NICHT dabei: Farbe, Ende, Ganztags-Flag und Ort sind Beiwerk, das der
+// Provider auf dem Rückweg normalisiert (der ICS-Export schreibt für ganztägige
+// Termine immer ein DTEND, eine Farbe überträgt er gar nicht) - sie mitzuzählen
+// erzeugte eine Endlosschleife aus Rückschreiben und Pushen, ausgelöst schon von
+// einem GET /birthdays. Die Serienregel fehlt aus einem anderen Grund: sie ist
+// bei einem Geburtstag konstant jährlich, und dasselbe Ergebnis existiert in
+// zwei Schreibweisen - lokal ohne, aus ICS mit `RRULE:`-Präfix (beide gültig,
+// server/services/recurrence.js:18 nimmt sie entgegen). Als Vergleichswert wäre
+// sie also nur eine weitere Quelle für Scheinänderungen.
+const AUTHORED_FIELDS = ['title', 'description', 'start_datetime'];
+
 function pad2(n) {
   return String(n).padStart(2, '0');
 }
@@ -92,6 +107,14 @@ function eventDescription(name, birthDate, locale, dateFormat) {
  * Löschung vor. Die Vormerkung muss davor passieren: danach fehlt der Weg zum
  * entfernten Objekt (Kalender-ID und Objekt-URL stehen in der Zeile), und der
  * nächste Inbound-Lauf spielte den Termin sonst wieder ein.
+ *
+ * Grenze: `queueEventDeletion` schreibt über `db.get()`, nicht über die hier
+ * übergebene Connection - dasselbe gilt für seine Guards. In der Anwendung ist
+ * das dieselbe Verbindung; auseinander fallen sie nur, wenn ein Aufrufer eine
+ * eigene injiziert (processDueNotifications nimmt eine entgegen, nutzt sie aber
+ * nur in Tests). Das sauber durchzureichen hieße, vier Funktionen in
+ * calendar-outbound.js umzubauen; das gehört in einen eigenen Vorgang, nicht in
+ * diesen. retitleBirthdayEvents setzt seinen Marker aus demselben Grund inline.
  */
 function deleteCalendarEvent(database, eventId) {
   const event = database.prepare('SELECT * FROM calendar_events WHERE id = ?').get(eventId);
@@ -135,29 +158,70 @@ function syncBirthdayCalendarEvent(database, birthday) {
       // external_source='apple', der Neu-Upload nach external_calendar_id IS NULL,
       // und mit 'local' + gesetzter Kalender-ID traf keiner von beiden zu. Ein
       // einmal gespiegelter Geburtstag fror dort für immer ein.
-      database.prepare(`
-        UPDATE calendar_events
-        SET title = ?, description = ?, start_datetime = ?, end_datetime = ?, all_day = ?,
-            location = ?, color = ?, icon = ?, assigned_to = ?, recurrence_rule = ?, created_by = ?
-        WHERE id = ?
-      `).run(
-        payload.title,
-        payload.description,
-        payload.start_datetime,
-        payload.end_datetime,
-        payload.all_day,
-        payload.location,
-        payload.color,
-        payload.icon,
-        payload.assigned_to,
-        payload.recurrence_rule,
-        payload.created_by,
-        birthday.calendar_event_id,
-      );
-      const after = database.prepare('SELECT * FROM calendar_events WHERE id = ?').get(birthday.calendar_event_id);
-      // Vergleicht die gespiegelten Felder selbst und prüft Quelle,
-      // Kalenderzuordnung und Schreibbarkeit des Providers.
-      if (after) markEventOutbound(existing, after);
+      //
+      // Folge, die dazugehört: die Zeile bleibt damit auch im Blick von
+      // pruneDeletedEvents (calendar-prune.js). Wer den Termin beim Provider
+      // löscht, den Geburtstag in Yuvomi aber behält, bekommt ihn beim nächsten
+      // Sync neu angelegt und hochgeladen. Das ist die konsequente Fortsetzung
+      // davon, dass der Geburtstag die Quelle ist und der Kalendereintrag sein
+      // Abbild - wer ihn loswerden will, stellt die Erinnerung auf "keine" oder
+      // löscht den Geburtstag.
+      const mirrored = OUTBOUND_SOURCES.includes(existing.external_source) && !!existing.external_calendar_id;
+
+      if (mirrored) {
+        // Bei einer gespiegelten Zeile nur schreiben, was der Geburtstag selbst
+        // hervorbringt. Der Weg über den Provider ist nicht wertneutral: der
+        // ICS-Export schreibt für einen ganztägigen Termin immer ein DTEND, und
+        // der Inbound macht daraus ein `end_datetime`, wo vorher NULL stand;
+        // eine Farbe überträgt er gar nicht, also kommt die des Kalenders
+        // zurück. Würde dieser Sync das stumpf zurückschreiben, sähe der
+        // Feldvergleich bei JEDEM Lauf eine Änderung - und weil
+        // syncAllBirthdayReminders schon an einem GET /birthdays hängt, wäre das
+        // ein Push pro Geburtstag pro Abruf, endlos. Diese Felder gehören
+        // deshalb dem Provider, sobald er die Zeile einmal angefasst hat.
+        database.prepare(`
+          UPDATE calendar_events
+          SET title = ?, description = ?, start_datetime = ?
+          WHERE id = ?
+        `).run(
+          payload.title,
+          payload.description,
+          payload.start_datetime,
+          birthday.calendar_event_id,
+        );
+
+        // Marker inline statt über markEventOutbound: das schreibt über db.get()
+        // und würde die übergebene Connection umgehen (dieselbe Überlegung wie
+        // in retitleBirthdayEvents). Verglichen wird genau das, was oben
+        // geschrieben wurde - alles andere ist Provider-Normalisierung und darf
+        // keinen Push auslösen.
+        const authoredChanged = AUTHORED_FIELDS.some((f) => existing[f] !== payload[f]);
+        if (authoredChanged) {
+          database.prepare(
+            'UPDATE calendar_events SET outbound_dirty = 1, outbound_attempts = 0 WHERE id = ?'
+          ).run(birthday.calendar_event_id);
+        }
+      } else {
+        database.prepare(`
+          UPDATE calendar_events
+          SET title = ?, description = ?, start_datetime = ?, end_datetime = ?, all_day = ?,
+              location = ?, color = ?, icon = ?, assigned_to = ?, recurrence_rule = ?, created_by = ?
+          WHERE id = ?
+        `).run(
+          payload.title,
+          payload.description,
+          payload.start_datetime,
+          payload.end_datetime,
+          payload.all_day,
+          payload.location,
+          payload.color,
+          payload.icon,
+          payload.assigned_to,
+          payload.recurrence_rule,
+          payload.created_by,
+          birthday.calendar_event_id,
+        );
+      }
       return birthday.calendar_event_id;
     }
   }

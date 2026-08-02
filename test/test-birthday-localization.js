@@ -361,6 +361,11 @@ test('ein abgelehntes Feld hinterlässt keine Sprache ohne passende Titel', asyn
 // Die Warteschlange ist auf (source, calendar_external_id, event_external_id)
 // eindeutig - zwei Termine mit derselben UID ergaeben nur eine Vormerkung, und
 // der zweite Test haette gegen den Eintrag des ersten geprueft.
+// Provider-Konfiguration einmal fuer alle Tests dieses Blocks: acceptsOutbound()
+// prueft sie, und in einem Peer-Test gesetzt haetten die Folgetests von dessen
+// Ausfuehrung abgehangen (ein einzeln laufender Test waere rot gewesen).
+setConfig('apple_caldav_url', 'https://caldav.example/');
+
 function mirrorEvent(eventId) {
   db.prepare(`
     UPDATE calendar_events
@@ -371,7 +376,6 @@ function mirrorEvent(eventId) {
 }
 
 test('ein umbenannter Geburtstag bleibt mit seiner Kopie beim Provider verbunden', async () => {
-  setConfig('apple_caldav_url', 'https://caldav.example/');
   const created = await call('POST', '/birthdays', { name: 'Oma', birth_date: '1950-04-01' });
   const eventId = db.prepare('SELECT calendar_event_id AS id FROM birthdays WHERE id = ?')
     .get(created.body.data.id).id;
@@ -388,6 +392,32 @@ test('ein umbenannter Geburtstag bleibt mit seiner Kopie beim Provider verbunden
   assert.match(row.title, /Großmutter/);
   assert.equal(row.external_source, 'apple', 'die Zuordnung zum Provider darf nicht verlorengehen');
   assert.equal(row.outbound_dirty, 1, 'sonst erreicht der neue Name den Provider nie');
+});
+
+test('ein Sync ohne echte Änderung löst keinen Push aus', async () => {
+  const created = await call('POST', '/birthdays', { name: 'Onkel', birth_date: '1960-03-03' });
+  const eventId = db.prepare('SELECT calendar_event_id AS id FROM birthdays WHERE id = ?')
+    .get(created.body.data.id).id;
+  mirrorEvent(eventId);
+
+  // Der Weg über den Provider ist nicht wertneutral: der ICS-Export schreibt für
+  // einen ganztägigen Termin immer ein DTEND, und die Farbe überträgt er nicht -
+  // der Inbound schreibt also ein end_datetime, wo NULL stand, und die Farbe des
+  // Kalenders. Genau diesen Rückweg stellen die beiden Zeilen nach.
+  db.prepare(`
+    UPDATE calendar_events SET end_datetime = start_datetime, color = '#FC3C44' WHERE id = ?
+  `).run(eventId);
+
+  // syncAllBirthdayReminders hängt an GET /birthdays, GET /reminders und am
+  // Benachrichtigungs-Scheduler. Zählte der Vergleich die normalisierten Felder
+  // mit, wäre das ein Push pro Geburtstag pro Abruf - endlos.
+  for (let i = 0; i < 3; i++) await call('GET', '/birthdays');
+
+  assert.equal(
+    db.prepare('SELECT outbound_dirty FROM calendar_events WHERE id = ?').get(eventId).outbound_dirty,
+    0,
+    'Provider-Normalisierung darf keinen Push auslösen',
+  );
 });
 
 test('ein gelöschter Geburtstag räumt die Kopie beim Provider mit ab', async () => {
