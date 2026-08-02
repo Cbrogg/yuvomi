@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.72.0] - 2026-08-02
+
+### Added
+
+- Tapping a contact now shows it to you before it lets you change it. Until now it opened the edit form straight away, while the chevron at the end of the row promised a detail view that did not exist - so looking up the paediatrician's number put you in a form with the keyboard in the way. The new view holds no input field at all, and "Edit" in the header is a separate step. Creating a contact still starts in the form. The same applies when you arrive from search: a hit is something you want to see first.
+- Every number, mail and address a contact has is now reachable. The list only ever showed and offered the first of each, so a contact with a work and a mobile number gave you exactly one to tap although the second had long been stored - it was only ever visible inside the edit form. Each value now sits in the detail view with its label, ready to call, mail or open on a map.
+- Contacts show their organisation and job title. Both arrive over CardDAV and had no display anywhere in the app, because the contact form does not manage them.
+
 ## [1.71.2] - 2026-08-02
 
 ### Fixed
