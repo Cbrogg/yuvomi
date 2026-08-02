@@ -174,6 +174,12 @@
       color: var(--text-1);
     }
     h2:first-of-type { margin-top: 0; }
+    /* Every section carries an id, so "Haftung für Links" can be linked to
+       directly - datenschutz.html has had that since it grew a table of
+       contents, and this page had neither. No table of contents here on
+       purpose: nine short sections fit in about two screens, where a 9-entry
+       index is a second thing to read rather than a way past the first. */
+    main h2 { scroll-margin-top: 24px; }
 
     p { margin-bottom: 12px; color: var(--text-1); overflow-wrap: anywhere; }
 
@@ -268,6 +274,19 @@
       }
       .to-top { transition: none; }
     }
+
+    /* Print. An Impressum is routinely printed or archived as a PDF, and it
+       printed with the floating "Nach oben" pill over the text and every
+       external reference as a bare underlined word. */
+    @media print {
+      html { scroll-behavior: auto; }
+      body { background: #fff; color: #000; }
+      .skip-link, .to-top, .back-link { display: none !important; }
+      header.top, .info-block { background: transparent; }
+      .info-block { break-inside: avoid; }
+      h2 { break-after: avoid; }
+      a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 0.85em; word-break: break-all; }
+    }
   </style>
   <script>
     /* Honor the theme the visitor picked on the main pages (no toggle here). */
@@ -322,7 +341,7 @@
       <a href="datenschutz.html">Privacy Policy</a>.
     </p>
 
-    <h2>Anbieter / Diensteanbieter</h2>
+    <h2 id="im-anbieter">Anbieter / Diensteanbieter</h2>
     <div class="info-block">
       <dl>
         <dt>Name</dt>
@@ -338,7 +357,7 @@
       </dl>
     </div>
 
-    <h2>Kontakt</h2>
+    <h2 id="im-kontakt">Kontakt</h2>
     <div class="info-block">
       <dl>
         <dt>E-Mail</dt>
@@ -352,7 +371,7 @@
       </dl>
     </div>
 
-    <h2>Umsatzsteuer</h2>
+    <h2 id="im-umsatzsteuer">Umsatzsteuer</h2>
     <div class="info-block">
       <p>
         Aufgrund der Kleinunternehmerregelung gemäß § 19 Umsatzsteuergesetz (UStG) wird keine
@@ -360,7 +379,7 @@
       </p>
     </div>
 
-    <h2>Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV</h2>
+    <h2 id="im-verantwortlich">Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV</h2>
     <div class="info-block">
       <dl>
         <dt>Name</dt>
@@ -370,7 +389,7 @@
       </dl>
     </div>
 
-    <h2>EU-Streitschlichtung</h2>
+    <h2 id="im-eu-streitschlichtung">EU-Streitschlichtung</h2>
     <div class="info-block">
       <p>
         Die Europäische Kommission stellt eine Plattform zur Online-Streitbeilegung (OS) bereit:
@@ -382,7 +401,7 @@
       </p>
     </div>
 
-    <h2>Verbraucherstreitbeilegung / Universalschlichtungsstelle</h2>
+    <h2 id="im-verbraucherstreitbeilegung">Verbraucherstreitbeilegung / Universalschlichtungsstelle</h2>
     <div class="info-block">
       <p>
         Der Anbieter ist nicht bereit und nicht verpflichtet, an Streitbeilegungsverfahren vor einer
@@ -390,7 +409,7 @@
       </p>
     </div>
 
-    <h2>Haftung für Inhalte</h2>
+    <h2 id="im-haftung-inhalte">Haftung für Inhalte</h2>
     <p>
       Als Diensteanbieter ist der Betreiber gemäß § 7 Abs. 1 DDG für eigene Inhalte auf diesen Seiten
       nach den allgemeinen Gesetzen verantwortlich. Nach §§ 8 bis 10 DDG ist der Betreiber als
@@ -402,7 +421,7 @@
       Rechtsverletzungen werden diese Inhalte umgehend entfernt.
     </p>
 
-    <h2>Haftung für Links</h2>
+    <h2 id="im-haftung-links">Haftung für Links</h2>
     <p>
       Dieses Angebot enthält Links zu externen Websites Dritter (z. B. github.com), auf deren Inhalte
       der Betreiber keinen Einfluss hat. Deshalb kann für diese fremden Inhalte auch keine Gewähr
@@ -414,7 +433,7 @@
       Rechtsverletzungen werden derartige Links umgehend entfernt.
     </p>
 
-    <h2>Urheberrecht</h2>
+    <h2 id="im-urheberrecht">Urheberrecht</h2>
     <p>
       Die durch den Betreiber erstellten Inhalte und Werke auf diesen Seiten unterliegen dem deutschen
       Urheberrecht. Der Quellcode des Yuvomi-Projekts steht unter der
@@ -435,7 +454,7 @@
 <footer class="bot">
   <div class="wrap">
     <span>&copy; <span id="year">2026</span> Ulas Kalayci · Yuvomi</span>
-    <nav>
+    <nav aria-label="Fußzeile">
       <a href="index.html">Startseite</a>
       <a href="impressum.html">Impressum</a>
       <a href="datenschutz.html">Datenschutz</a>
