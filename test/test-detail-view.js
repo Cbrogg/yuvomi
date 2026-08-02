@@ -26,6 +26,7 @@ const detailCss  = () => read('public/styles/detail-view.css');
 const modalJs    = () => read('public/components/modal.js');
 const calendarJs = () => read('public/pages/calendar.js');
 const tasksJs    = () => read('public/pages/tasks.js');
+const contactsJs = () => read('public/pages/contacts.js');
 const rruleJs    = () => read('public/rrule-ui.js');
 
 // Die neuen Keys, gruppiert nach ihrem Namensraum in den Locale-Dateien.
@@ -386,7 +387,14 @@ test('Fußzeilen-Aktionen schließen die Detailansicht mit force', async () => {
   const WINDOW = 16;
   const violations = [];
 
-  for (const [name, src] of [['calendar.js', await calendarJs()], ['tasks.js', await tasksJs()]]) {
+  // Jede Seite, die die Komponente nutzt, gehört hierher - die Regel gilt für
+  // den Alias, nicht für eine Auswahl von Dateien.
+  const pages = [
+    ['calendar.js', await calendarJs()],
+    ['tasks.js',    await tasksJs()],
+    ['contacts.js', await contactsJs()],
+  ];
+  for (const [name, src] of pages) {
     const lines = src.split('\n');
     lines.forEach((line, index) => {
       if (!HANDLER.test(line)) return;
@@ -406,6 +414,86 @@ test('Fußzeilen-Aktionen schließen die Detailansicht mit force', async () => {
 
   assert.deepEqual(violations, [],
     'close() einer Fußzeilen-Aktion braucht { force: true } - siehe closeDetailView');
+});
+
+// --------------------------------------------------------
+// Kontakte
+// --------------------------------------------------------
+
+test('beide Kontakt-Einstiege führen in die Leseansicht', async () => {
+  const src = await contactsJs();
+
+  // Listenzeile und Deep-Link (?open=<id> aus der globalen Suche) landeten
+  // beide direkt im Formular - genau der Fall, den die Komponente ablöst.
+  assert.match(src, /if \(c\) openContactDetail\(c\)/, 'Antippen in der Liste');
+  assert.match(src, /if \(contact\) openContactDetail\(contact\)/, 'Deep-Link ?open=<id>');
+
+  // Die Neuanlage bleibt im Formular: dort ist Tippen die Absicht.
+  assert.match(src, /openContactModal\(\{ mode: 'create'/, 'Neuanlage weiterhin direkt ins Formular');
+});
+
+test('der Wechsel ins Formular wartet auf die nachgeladenen Mehrfachwerte', async () => {
+  const src = await contactsJs();
+
+  // Die Listen-API führt weder Zweitnummern noch Adressen. buildContactForm
+  // liest sie aus contact.phones/emails und fällt ohne sie auf den
+  // Legacy-Einzelwert zurück - ein Formular, das vor der Antwort entsteht,
+  // schriebe beim Speichern genau eine Nummer und verlöre alle weiteren.
+  const fn = src.slice(src.indexOf('function openContactDetail'));
+  const body = fn.slice(0, fn.indexOf('\n}\n'));
+  assert.match(body, /const ready = fetchFullContact\(/, 'Einzelabruf als ready-Promise');
+  assert.match(body, /\bready,/, 'ready wird an edit übergeben');
+  assert.match(body, /mount: \(panel, pane\)/, 'Formular entsteht erst beim Wechsel');
+  assert.match(body, /buildContactForm\(\{ mode: 'edit', contact: full \}\)/,
+    'das Formular bekommt den nachgeladenen Kontakt, nicht den Listeneintrag');
+});
+
+test('die Leseansicht führt alle Nummern, Mails und Adressen', async () => {
+  const src = await contactsJs();
+  const fn = src.slice(src.indexOf('function renderContactDetail'));
+  const body = fn.slice(0, fn.indexOf('\n}\n'));
+
+  // Der Kern des Gewinns: die Liste zeigt je einen Legacy-Einzelwert, ein
+  // Kontakt mit Dienst- und Mobilnummer bot bisher nur eine zum Antippen an.
+  for (const [group, legacy] of [['phones', 'phone'], ['emails', 'email'], ['addresses', 'address']]) {
+    assert.ok(body.includes(`contact.${group}?.length`),
+      `${group} muss als Mehrfachwert gelesen werden`);
+    assert.ok(body.includes(`contact.${legacy}`),
+      `${legacy} bleibt der Rückfall, solange der Einzelabruf noch läuft`);
+  }
+
+  // CardDAV-Felder, die das Formular nicht führt und die App bisher nirgends zeigte.
+  for (const field of ['organization', 'job_title', 'website', 'nickname']) {
+    assert.ok(body.includes(`contact.${field}`), `${field} gehört in die Leseansicht`);
+  }
+});
+
+test('Kontaktdaten kommen als Text ins DOM, nie als Markup', async () => {
+  const src = await contactsJs();
+  const fn = src.slice(src.indexOf('function contactLinksNode'));
+  const body = fn.slice(0, fn.indexOf('\n}\n'));
+
+  // Namen und Notizen kommen ungeprüft aus CardDAV. textContent kann sie nicht
+  // als HTML interpretieren; ein insertAdjacentHTML an dieser Stelle könnte es.
+  assert.match(body, /\.textContent = /, 'Werte über textContent setzen');
+  assert.doesNotMatch(body, /insertAdjacentHTML|innerHTML/, 'kein Markup-Pfad für Kontaktdaten');
+});
+
+test('alle Locales tragen die neuen Kontakt-Schlüssel', async () => {
+  const dir = new URL('../public/locales/', import.meta.url);
+  const files = (await readdir(dir)).filter((f) => f.endsWith('.json'));
+  assert.ok(files.length >= 23, `erwartet mindestens 23 Locales, gefunden ${files.length}`);
+
+  for (const file of files) {
+    const json = JSON.parse(await readFile(new URL(file, dir), 'utf8'));
+    for (const key of ['organizationLabel', 'websiteLabel', 'nicknameLabel']) {
+      assert.ok(json.contacts?.[key], `${file}: contacts.${key} fehlt oder ist leer`);
+      // Der erste Versuch setzte sie versehentlich in den shopping-Block: der
+      // Anker `notesLabel` steht in beiden Namensräumen, und die Schlüssel-
+      // parität blieb dabei grün, weil alle 23 Dateien denselben Fehler trugen.
+      assert.ok(!json.shopping?.[key], `${file}: contacts.${key} liegt im falschen Block (shopping)`);
+    }
+  }
 });
 
 // --------------------------------------------------------

@@ -703,3 +703,49 @@
 .contact-phone-hint__warn {
   color: var(--color-warning);
 }
+
+/* --------------------------------------------------------
+   Detailansicht: antippbare Werte
+
+   Eine Zeile je Gruppe (Telefon, Mail, Adresse), darin je ein Wert pro Zeile.
+   Der Wert IST die Aktion - anrufen, mailen, Karte öffnen -, deshalb liegt die
+   Trefferfläche auf dem Link und nicht auf einem zusätzlichen Icon daneben.
+   -------------------------------------------------------- */
+.contact-detail__values {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.contact-detail__value {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* Volle Zeilenhöhe als Trefferfläche: Auf dem Smartphone steht hier die
+   häufigste Handlung der ganzen Seite, und Telefonnummern liegen dicht
+   untereinander. --target-base ist dasselbe Maß, das die Detailansicht für
+   Kopf- und Fußzeilen-Aktionen nutzt. */
+.contact-detail__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--target-base);
+  color: var(--module-contacts, var(--color-accent));
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.contact-detail__link:hover,
+.contact-detail__link:focus-visible {
+  text-decoration: underline;
+}
+
+/* Das Label der Nummer ("mobil", "Arbeit") ordnet ein, ohne mit dem Wert zu
+   konkurrieren - es steht daneben, nicht darüber, weil die Zeile sonst bei drei
+   Nummern zu einem Block aus sechs Zeilen wird. */
+.contact-detail__sub {
+  font-size: var(--type-caption);
+  color: var(--color-text-tertiary);
+}
