@@ -83,7 +83,11 @@ create-screenshots*.js
 custom-screenshots.js
 seed-demo-simple.js
 seed-english-demo*.js
-screenshots/
+# Leading slash: this is meant for a generator output folder at the repo root.
+# Without it the pattern also matched docs/screenshots/, which IS the website -
+# its PNGs only stayed versioned because they predate this rule, while anything
+# added later (the WebP variants, new locale folders) was silently dropped.
+/screenshots/
 
 # Database backup files
 *.db.backup-*

@@ -13,6 +13,19 @@
   <meta name="theme-color" content="#fafaf8" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#1a1a18" media="(prefers-color-scheme: dark)">
   <link rel="canonical" href="https://yuvomi.cloud/impressum.html">
+  <meta name="color-scheme" content="light dark">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Yuvomi">
+  <meta property="og:locale" content="de_DE">
+  <meta property="og:title" content="Impressum - Yuvomi">
+  <meta property="og:description" content="Impressum und Anbieterkennzeichnung für yuvomi.cloud.">
+  <meta property="og:url" content="https://yuvomi.cloud/impressum.html">
+  <meta property="og:image" content="https://yuvomi.cloud/og-image.png">
+  <meta property="og:image:alt" content="Yuvomi - der selbstgehostete Familienplaner">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Impressum - Yuvomi">
+  <meta name="twitter:description" content="Impressum und Anbieterkennzeichnung für yuvomi.cloud.">
+  <meta name="twitter:image" content="https://yuvomi.cloud/twitter-image.png">
   <link rel="icon" type="image/svg+xml" href="logo.svg">
 
   <style>
@@ -110,6 +123,7 @@
     .nav-logo {
       display: inline-flex;
       align-items: center;
+      min-height: 44px;
       gap: 10px;
       font-weight: 700;
       font-size: 18px;
@@ -222,6 +236,38 @@
     footer.bot a:hover { color: var(--accent); }
     footer.bot nav { display: flex; gap: 14px; flex-wrap: wrap; }
     footer.bot nav a { padding: 6px 2px; min-height: 44px; display: inline-flex; align-items: center; }
+  
+    /* These two pages relied on the UA default focus ring; match the other pages. */
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+
+    /* Skip link: index and install put 26 focusable nodes between the top of the
+       page and the content, so keyboard users need a way past the nav. */
+    .skip-link { position: absolute; left: -9999px; top: 0; z-index: 200; }
+    .skip-link:focus { left: 8px; top: 8px; padding: 12px 18px; display: inline-flex; align-items: center; min-height: 44px;
+      background: var(--surface); color: var(--text-1);
+      border: 1px solid var(--border); border-radius: var(--r-md); box-shadow: var(--shadow-md); font-weight: 600; }
+  
+    /* 14 dense legal sections with a table of contents at the very top and no way
+       back to it on a phone. Appears only once you are past the first screen. */
+    .to-top { position: fixed; right: 16px; bottom: 16px; z-index: 90;
+      display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px;
+      background: var(--surface); color: var(--text-1); border: 1px solid var(--border);
+      border-radius: var(--r-full); box-shadow: var(--shadow-md); font-size: 0.85rem; font-weight: 600;
+      opacity: 0; visibility: hidden; transform: translateY(8px); transition: opacity .2s, transform .2s, visibility .2s; }
+    .to-top.show { opacity: 1; visibility: visible; transform: none; }
+    .to-top:hover { text-decoration: none; border-color: var(--border-strong); }
+    .to-top svg { width: 15px; height: 15px; }
+  
+    /* These two pages had no reduced-motion guard at all. */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+      .to-top { transition: none; }
+    }
   </style>
   <script>
     /* Honor the theme the visitor picked on the main pages (no toggle here). */
@@ -234,6 +280,7 @@
   </script>
 </head>
 <body>
+<a class="skip-link" href="#main-content">Zum Inhalt springen</a>
 
 <header class="top">
   <div class="wrap">
@@ -255,7 +302,7 @@
   </div>
 </header>
 
-<main>
+<main id="main-content" tabindex="-1">
   <div class="wrap">
 
     <h1>Impressum</h1>
@@ -401,5 +448,13 @@
   document.getElementById('year').textContent = new Date().getFullYear();
 </script>
 
+<a class="to-top" href="#main-content" id="toTop"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>Nach oben</a>
+<script>
+(function(){
+  var b = document.getElementById('toTop'); if (!b) return;
+  function sync(){ b.classList.toggle('show', scrollY > 600); }
+  addEventListener('scroll', sync, { passive: true }); sync();
+})();
+</script>
 </body>
 </html>
