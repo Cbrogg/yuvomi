@@ -125,6 +125,26 @@ function initFlags(arg) {
     localStorage.setItem('yuvomi-theme', arg.theme);
   } catch {}
   window.addEventListener('beforeinstallprompt', (e) => e.preventDefault());
+
+  // Die Versionsnummer in der Seitenleiste ist das einzige im Bild, das jedes
+  // Patch-Release veraltet - der Screenshot müsste dann neu, obwohl sich sonst
+  // nichts geändert hat. Sie gehört hier ausgeblendet und nicht in der App
+  // abschaltbar gemacht: der Screenshot-Modus ist eine Eigenschaft dieses
+  // Scripts, kein Schalter, den ein Haushalt je sehen soll.
+  //
+  // Als CSS und nicht über das `hidden`-Attribut des Elements: updateBranding()
+  // setzt dieses Attribut bei jeder Navigation neu aus der geladenen Version
+  // (router.js:452), ein einmaliges Verstecken hielte also nur bis zum nächsten
+  // Modul. Der Style wird ins Dokument gehängt, sobald es einen head gibt.
+  const hideVersion = () => {
+    if (document.getElementById('shot-hide-version')) return;
+    const style = document.createElement('style');
+    style.id = 'shot-hide-version';
+    style.textContent = '.nav-sidebar__version { display: none !important; }';
+    document.head.appendChild(style);
+  };
+  if (document.head) hideVersion();
+  else document.addEventListener('DOMContentLoaded', hideVersion, { once: true });
 }
 
 async function dismissOverlays(page) {
