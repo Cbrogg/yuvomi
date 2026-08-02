@@ -1957,8 +1957,64 @@ test('die Küchen-Listen teilen eine Zeilen-Grammatik', () => {
   // Eine Kappung ist eine Kappung, egal wie buchstabiert: die logischen Formen
   // wirken im Schreibmodus dieser App auf dieselbe Achse. Dasselbe Paar prüft
   // der Modul-Root-Breiten-Guard weiter unten schon.
-  const WIDTH_CAP = ['width', 'max-width', 'inline-size', 'max-inline-size'];
+  // ZWEI Gruppen, nicht eine Liste: `width` und `max-width` konkurrieren nicht,
+  // sie beschränken die Box gemeinsam. Als eine Liste gelesen gewönne bei
+  // `max-width: 20rem; width: 100%` das erlaubte `100%` - und die Kappung auf
+  // 20rem stünde ungeprüft daneben. Innerhalb einer Gruppe konkurrieren die
+  // Schreibweisen sehr wohl (logisch gegen physisch, gleiche Achse).
+  const WIDTH_AXES = [['width', 'inline-size'], ['max-width', 'max-inline-size']];
   const MAX_WIDTH = ['max-width', 'max-inline-size'];
+  // Werte, die dem Scroller NICHTS wegnehmen. Ein Modul darf `max-width: none`
+  // ausdrücklich hinschreiben - verboten ist die Kappung, nicht die Erwähnung.
+  const FREE_WIDTH = ['none', 'auto', 'initial', 'unset', 'revert', '100%'];
+  // Ausrichtungen, die das Element seine Spur füllen lassen.
+  const FILLS = ['stretch', 'normal', 'auto', 'initial', 'unset', 'revert'];
+
+  // Die WIRKSAMEN Inline-Margen einer Regel. In Deklarationsreihenfolge
+  // aufgelöst, weil der Shorthand die Langformen zurücksetzt: nach
+  // `margin-inline-end: 20rem; margin: 0` ist die Marge null, und wer nur
+  // sammelt statt zu kaskadieren, meldet dort einen Verstoß, den es
+  // nicht gibt.
+  const inlineMargins = (body) => {
+    let start = null;
+    let end = null;
+    let startFixed = false;   // von einer !important-Deklaration gesetzt
+    let endFixed = false;
+    const setStart = (value, important) => {
+      if (startFixed && !important) return;
+      start = value;
+      startFixed = startFixed || important;
+    };
+    const setEnd = (value, important) => {
+      if (endFixed && !important) return;
+      end = value;
+      endFixed = endFixed || important;
+    };
+    const pattern = /(?:^|;)\s*(margin|margin-inline|margin-inline-start|margin-inline-end|margin-left|margin-right)\s*:\s*([^;]+)/gim;
+    for (const [, rawProp, rawValue] of body.matchAll(pattern)) {
+      const prop = rawProp.toLowerCase();
+      // Eine wichtige Langform überlebt einen späteren gewöhnlichen
+      // Shorthand - sonst meldete `margin-inline-end: 20rem !important;
+      // margin: 0` eine Marge von null, die der Browser nie sieht.
+      const important = /!\s*important$/i.test(rawValue.trim());
+      const value = rawValue.replace(/!\s*important$/i, '').trim();
+      const parts = value.split(/\s+/);
+      if (prop === 'margin') {
+        const [top, right = top, , left = right] = parts;
+        setStart(left, important);
+        setEnd(right, important);
+      } else if (prop === 'margin-inline') {
+        const [first, second = first] = parts;
+        setStart(first, important);
+        setEnd(second, important);
+      } else if (prop === 'margin-inline-start' || prop === 'margin-left') {
+        setStart(value, important);
+      } else {
+        setEnd(value, important);
+      }
+    }
+    return [['margin-inline-start', start], ['margin-inline-end', end]].filter(([, value]) => value !== null);
+  };
 
   // Zielt der Selektor auf das Element selbst, nicht auf einen Nachfahren?
   // Geprüft wird der LETZTE Compound, damit auch `.kitchen-list#items-list`,
@@ -2022,12 +2078,14 @@ test('die Küchen-Listen teilen eine Zeilen-Grammatik', () => {
         `${page}.js setzt eine Inline-Breite am Scroller - die schlägt jede Regel im Stylesheet und damit auch diesen Guard`);
       assert.doesNotMatch(src, new RegExp(`\\b${name}\\.style\\.(?:alignSelf|placeSelf)\\s*=`),
         `${page}.js setzt align-self inline am Scroller - das nimmt ihm die volle Breite`);
-      assert.doesNotMatch(src, new RegExp(`\\b${name}\\.style\\.setProperty\\(\\s*['"\`](?:max-)?(?:width|inline-size|align-self|place-self)`, 'i'),
-        `${page}.js setzt eine Breite oder Ausrichtung inline am Scroller (setProperty)`);
+      assert.doesNotMatch(src, new RegExp(`\\b${name}\\.style\\.setProperty\\(\\s*['"\`](?:(?:max-)?(?:width|inline-size)|align-self|place-self|margin(?:-inline)?(?:-start|-end)?|margin-left|margin-right)`, 'i'),
+        `${page}.js setzt eine Breite, Ausrichtung oder Marge inline am Scroller (setProperty)`);
       assert.doesNotMatch(src, new RegExp(`\\b${name}\\.style\\.cssText\\s*=`),
         `${page}.js überschreibt den Stil des Scrollers per cssText - was darin steht, sieht dieser Guard nicht`);
       assert.doesNotMatch(src, new RegExp(`\\b${name}\\.setAttribute\\(\\s*['"\`]style`, 'i'),
         `${page}.js setzt den Stil des Scrollers per setAttribute - derselbe Inline-Stil über einen anderen Weg`);
+      assert.doesNotMatch(src, new RegExp(`\\b${name}\\.style\\.margin(?:Inline|Left|Right)?[A-Za-z]*\\s*=`),
+        `${page}.js setzt eine Inline-Marge am Scroller - die zieht als gestrecktes Flex-Item direkt von seiner Breite ab`);
     }
     (src.match(/<[^>]*\bkitchen-list\b[^>]*>/g) ?? []).forEach((tag) => {
       assert.doesNotMatch(tag, /\sstyle\s*=/,
@@ -2038,8 +2096,19 @@ test('die Küchen-Listen teilen eine Zeilen-Grammatik', () => {
     '.kitchen-list ist nirgends definiert: ein leerer Treffer darf hier nicht still grün bleiben');
   for (const cls of scrollerTokens) {
     for (const { file, selectors, body } of rulesFor(cls)) {
-      assert.equal(declaredValue(body, WIDTH_CAP), null,
-        `${file} ${selectors.join(', ')}: der Scroller darf nicht gekappt werden, sonst endet sein Mausrad-Trefferbereich an der Lesespalten-Kante`);
+      for (const axis of WIDTH_AXES) {
+        const cap = declaredValue(body, axis);
+        assert.ok(cap === null || FREE_WIDTH.includes(cap),
+          `${file} ${selectors.join(', ')}: ${axis[0]}: ${cap} kappt den Scroller - dann endet sein Mausrad-Trefferbereich an der Lesespalten-Kante`);
+      }
+
+      // Dieselbe Verengung ohne Breitenangabe: als gestrecktes Flex-Item zieht
+      // eine Inline-Marge direkt von der Randbox ab. `margin-inline-end: 20rem`
+      // beendet den Trefferbereich 20rem vor der Seitenkante.
+      for (const [prop, value] of inlineMargins(body)) {
+        assert.ok(/^0[a-z%]*$/.test(value),
+          `${file} ${selectors.join(', ')}: ${prop}: ${value} nimmt dem Scroller Breite - der Trefferbereich endet dann davor`);
+      }
 
       // Dieselbe Kante ohne jede Breitenangabe: der Scroller ist Flex-Item
       // seines Modul-Roots (.recipes-page & Co. sind flex column). Ein
@@ -2047,7 +2116,7 @@ test('die Küchen-Listen teilen eine Zeilen-Grammatik', () => {
       // ihn auf Inhaltsbreite schrumpfen - der Trefferbereich fürs Mausrad
       // endet dann genau dort. Erlaubt bleibt nur, was ihn füllen lässt.
       const spread = declaredValue(body, ALIGN_SELF);
-      assert.ok(spread === null || ['stretch', 'normal', 'auto', 'initial', 'unset'].includes(spread),
+      assert.ok(spread === null || FILLS.includes(spread),
         `${file} ${selectors.join(', ')}: align-self: ${spread} nimmt dem Scroller die volle Breite - dann greift das Mausrad rechts daneben ins Leere`);
 
       // `all` setzt jede der oben geprüften Eigenschaften mit zurück, ohne
@@ -2075,10 +2144,20 @@ test('die Küchen-Listen teilen eine Zeilen-Grammatik', () => {
   //    `var(--content-max-width-narrow)` ungültig und das max-width fällt auf
   //    `none` zurück - die Listen liefen bildschirmbreit, während dieser Test
   //    weiter zwei Texte vergleicht, die zueinander passen.
-  assert.ok(allRules.some(({ file, selectors, body, conditional }) =>
-    file === 'tokens.css' && !conditional && selectors.some((sel) => /^:root\b/.test(sel))
-    && declaredValue(body, '--content-max-width-narrow') !== null),
-  'tokens.css muss --content-max-width-narrow unbedingt in :root definieren - ohne die Deklaration löst var(…) auf nichts auf und die Kappung entfällt');
+  // Die GEWINNENDE Deklaration über alle kanonischen Regeln. Weder „die
+  // letzte" noch „die erste" genügt: `!important` schlägt die
+  // Quellreihenfolge auch zwischen zwei :root-Blöcken. Deshalb werden die
+  // Rümpfe in Quellreihenfolge aneinandergehängt und einmal ausgewertet -
+  // declaredValue() kennt die Vorrangregel bereits.
+  const canonicalBodies = allRules
+    .filter(({ file, selectors, conditional }) => file === 'tokens.css' && !conditional
+      && selectors.some((sel) => /^:root\b/.test(sel)))
+    .map(({ body }) => body).join(';');
+  const tokenValue = declaredValue(canonicalBodies, '--content-max-width-narrow');
+  assert.ok(tokenValue !== null,
+    'tokens.css muss --content-max-width-narrow unbedingt in :root definieren - ohne die Deklaration löst var(…) auf nichts auf und die Kappung entfällt');
+  assert.match(tokenValue, /^(?:\d+(?:\.\d+)?(?:px|rem|em|ch|ex|vw|vmin|vmax|%)|(?:min|max|clamp|calc)\(.*\))$/,
+    `--content-max-width-narrow ist auf "${tokenValue}" gesetzt - das ist keine Breite, und die Kappung der Kinder läuft ins Leere`);
 
   // 2. Tragen muss die Kappung stattdessen jedes Kind, das ALLEIN Kind des
   //    Scrollers sein kann: .kitchen-group bei gruppierten Tabs (Einkauf,
@@ -2087,13 +2166,23 @@ test('die Küchen-Listen teilen eine Zeilen-Grammatik', () => {
   //    Block darf sie auch nicht auf einen abweichenden Wert ziehen.
   for (const cls of ['.kitchen-group', '.kitchen-rows']) {
     const rules = rulesFor(cls);
-    // Unbedingt heißt zweierlei: nicht hinter einem Breakpoint UND nicht an
-    // einen Zustand gebunden. `.kitchen-rows:hover` kappt nur unter dem
-    // Mauszeiger; auf Touch und per Tastatur liefe die Liste voll breit.
-    const unstated = (sel) => !/:(?!(?:is|where)\()/.test(sel);
+    // Unbedingt heißt dreierlei: nicht hinter einem Breakpoint, nicht an einen
+    // Zustand gebunden, und nicht an einen Vorfahren geknüpft.
+    // `.kitchen-rows:hover` kappt nur unter dem Mauszeiger;
+    // `.shopping-page .kitchen-rows` kappt die Rezeptliste gar nicht, obwohl
+    // der Selektor die Klasse nennt und dieser Scan ihn findet.
+    // Anders als in targets() bleiben :not() und :has() hier STEHEN. Dort
+    // sagen sie nur, dass die genannte Klasse nicht das Subjekt ist; hier
+    // sagen sie, dass die Kappung an eine Bedingung geknüpft ist -
+    // `.kitchen-rows:not(.uncapped)` lässt jede Zeile mit dieser Klasse
+    // ungekappt. `:is()`/`:where()` gehören zum Subjekt: Inhalt behalten.
+    const plain = (sel) => {
+      const bare = sel.replace(/:(?:is|where)\(([^)]*)\)/g, '$1');
+      return !/:/.test(bare) && !/[\s>+~,]/.test(bare);
+    };
     assert.ok(rules.some(({ body, conditional, selectors }) =>
-      !conditional && selectors.some(unstated) && declaredValue(body, MAX_WIDTH) === NARROW),
-    `${cls} muss das Lesemaß UNBEDINGT tragen: eine Kappung hinter einem Breakpoint oder an einem Zustand (:hover) fehlt im Normalfall`);
+      !conditional && selectors.some(plain) && declaredValue(body, MAX_WIDTH) === NARROW),
+    `${cls} muss das Lesemaß UNBEDINGT tragen: eine Kappung hinter einem Breakpoint, an einem Zustand (:hover) oder unter einem Vorfahren (.foo ${cls}) greift nicht in jedem Kontext, in dem das Element gerendert wird`);
     for (const { file, body } of rules) {
       // Eine feste Breite schlägt die Kappung, ohne sie anzufassen: mit
       // `width: 20rem` bleibt das max-width korrekt stehen und die Liste steht
@@ -2108,7 +2197,7 @@ test('die Küchen-Listen teilen eine Zeilen-Grammatik', () => {
       // das, und die auto-Breite fällt auf den Inhalt zusammen - das Lesemaß
       // bleibt dabei unangetastet und unwirksam.
       const inline = declaredValue(body, ['justify-self', 'place-self'], 'inline');
-      assert.ok(inline === null || ['stretch', 'normal', 'auto', 'initial', 'unset'].includes(inline),
+      assert.ok(inline === null || FILLS.includes(inline),
         `${file}: ${cls} bekommt justify-self: ${inline} - dann schrumpft die Gruppe auf ihren Inhalt, statt das Lesemaß auszufüllen`);
       assert.equal(declaredValue(body, 'all'), null,
         `${file}: ${cls} wird per all-Kurzschreibweise zurückgesetzt - das nimmt Kappung und Ausrichtung mit`);
@@ -2140,7 +2229,60 @@ test('die Küchen-Listen teilen eine Zeilen-Grammatik', () => {
   //    sie steht ÜBER dem Scroller (siehe dort) und trägt das Lesemaß, clippt
   //    aber nicht. Käme dort ein `overflow: hidden` dazu, meldet dieser Guard
   //    einen Fall, den ein Mensch entscheiden muss.
-  for (const { selectors, body } of cssRules(shared)) {
+  //    Kombiniert wird über REGELGRENZEN hinweg: der Browser sammelt die
+  //    Deklarationen aller passenden Regeln, bevor er den Wert bestimmt.
+  //    Stünden Kappung und `overflow` in zwei getrennten Blöcken, sähe eine
+  //    Prüfung pro Block in keinem von beiden ein gekapptes, clippendes
+  //    Element - und genau das ist es.
+  //    Gruppiert wird nach dem ELEMENT, nicht nach dem Selektortext: `.kitchen-rows`
+  //    und `ul.kitchen-rows` treffen dasselbe `ul`, stünden als zwei Einträge
+  //    aber je unvollständig da. Maßgeblich sind die Klassen und IDs im
+  //    Subjekt; eine Regel zählt zu jedem Element, dessen Merkmale sie
+  //    vollständig enthält.
+  const subjectKeys = (selector) => {
+    const subject = selector
+      .replace(/:(?:not|has)\([^)]*\)/g, '')
+      .replace(/:(?:is|where)\(([^)]*)\)/g, '$1')
+      .trim().split(/[\s>+~]+/).pop() ?? '';
+    return new Set(subject.match(/[.#][\w-]+/g) ?? []);
+  };
+  //    Der Vorfahren-Kontext bleibt dabei erhalten. Ohne ihn landeten
+  //    `.context-a .kitchen-rows { overflow: hidden }` und
+  //    `.context-b .kitchen-rows { align-self: start }` im selben Topf,
+  //    obwohl kein Element je beide Regeln sieht - der Guard hielte das
+  //    Clipping für ausgeglichen, das es in Kontext A nicht ist.
+  const contextOf = (selector) => {
+    const parts = selector.replace(/:(?:is|where)\(([^)]*)\)/g, '$1').trim().split(/[\s>+~]+/);
+    return parts.slice(0, -1).join(' ');
+  };
+  // Der Zustand des Subjekts gehört ebenfalls zum Schlüssel: sonst gliche
+  // `.kitchen-rows:hover { align-self: start }` eine Lücke aus, die im
+  // Ruhezustand - also fast immer - besteht.
+  const stateOf = (selector) => {
+    const subject = selector.replace(/:(?:is|where)\(([^)]*)\)/g, '$1')
+      .trim().split(/[\s>+~]+/).pop() ?? '';
+    return (subject.match(/:(?!:)[\w-]+(?:\([^)]*\))?/g) ?? []).sort().join('');
+  };
+  const sharedRules = scopedRules(shared)
+    .flatMap(({ selectors, body }) => selectors.map((sel) => ({
+      keys: subjectKeys(sel), context: contextOf(sel), state: stateOf(sel), sel, body,
+    })))
+    .filter(({ keys }) => keys.size > 0);
+  const elements = new Map();
+  for (const { keys, context, state, sel } of sharedRules) {
+    const id = `${context}|${state}|${[...keys].sort().join('')}`;
+    if (!elements.has(id)) elements.set(id, { keys, context, state, label: sel });
+  }
+  for (const [, { keys, context, state, label }] of elements) {
+    const body = sharedRules
+      // Eine kontext- und zustandsfreie Regel trifft das Element immer; eine
+      // gebundene nur in ihrem eigenen Kontext beziehungsweise Zustand.
+      .filter(({ keys: own, context: ownContext, state: ownState }) =>
+        [...own].every((key) => keys.has(key))
+        && (ownContext === '' || ownContext === context)
+        && (ownState === '' || ownState === state))
+      .map(({ body: part }) => part).join(';');
+    const selectors = [label];
     if (declaredValue(body, MAX_WIDTH) !== NARROW) continue;
     // `clip` kappt wie `hidden`, nur ohne Scrollport - und die Block-Achse
     // lässt sich auch als Langform setzen. Der Grund für die Zusicherung ist
@@ -4745,45 +4887,100 @@ test('housekeeping exposes its page title as the primary heading', () => {
 // Erwähnung im Fließtext erfüllbar.
 const stripCssComments = (css) => css.replace(/\/\*[\s\S]*?\*\//g, '');
 
-// Wie cssRules(), aber jede Regel weiß zusätzlich, ob sie in einer At-Rule
-// steht (`conditional`). Für eine GEFORDERTE Deklaration ist das der
-// Unterschied zwischen „gilt immer" und „gilt unterhalb von 640px": cssRules()
-// wirft das Präludium weg und kann beides nicht auseinanderhalten.
+// Wie cssRules(), aber jede Regel kennt zusaetzlich ihren Kontext:
+//
+//   - `conditional` sagt, ob sie nur unter einer Bedingung gilt. Fuer eine
+//     GEFORDERTE Deklaration ist das der Unterschied zwischen „gilt immer" und
+//     „gilt unterhalb von 640px". Entscheidend ist die SEMANTIK der At-Rule,
+//     nicht ihr '@': `@media`/`@supports`/`@container`/`@scope` schraenken ein,
+//     `@layer` ordnet nur die Kaskade und gilt ueberall.
+//   - Verschachtelte Regeln werden mitgelesen, mit aufgeloestem Selektor.
+//     Ein flacher Scanner nimmt die erste schliessende Klammer als Rumpfende
+//     und uebersieht `.foo { & { max-width: 20rem } }` vollstaendig - er
+//     prueft dann still weniger, als er behauptet.
+const CONDITIONAL_AT_RULE = /^@(?:media|supports|container|scope|document|starting-style)\b/i;
+
+// Deklarationen dieser Ebene, ohne die Rumpfe verschachtelter Regeln (die
+// kommen als eigene Eintraege) und ohne deren Praeludien.
+function ownDeclarations(body) {
+  let out = '';
+  let depth = 0;
+  for (let i = 0; i < body.length; i += 1) {
+    const char = body[i];
+    if (char === '{') {
+      if (depth === 0) {
+        const cut = Math.max(out.lastIndexOf(';'), out.lastIndexOf('}'));
+        out = out.slice(0, cut + 1);
+      }
+      depth += 1;
+    } else if (char === '}') {
+      depth = Math.max(0, depth - 1);
+    } else if (depth === 0) {
+      out += char;
+    }
+  }
+  return out;
+}
+
 function scopedRules(css) {
   const live = stripCssComments(css);
   const rules = [];
-  let depth = 0;   // Tiefe der offenen At-Rule-Blöcke
-  let from = 0;    // Beginn des laufenden Präludiums
-  for (let i = 0; i < live.length; i += 1) {
-    const char = live[i];
-    if (char === '{') {
-      const prelude = live.slice(from, i).trim();
-      if (prelude.startsWith('@')) {
-        depth += 1;
-        from = i + 1;
+
+  const parse = (from, to, conditional, parents) => {
+    let i = from;
+    let start = from;
+    while (i < to) {
+      const char = live[i];
+      // Statement-At-Rules (@import, @charset, @layer x;) oeffnen keinen Block;
+      // ohne diesen Zweig waechst das Praeludium ueber sie hinaus und die
+      // naechste echte Regel wird als At-Rule-Rumpf verschluckt.
+      if (char === ';' || char === '}') {
+        i += 1;
+        start = i;
         continue;
       }
-      const end = live.indexOf('}', i);
-      if (end === -1) break;
-      rules.push({
-        selectors: prelude.replace(/\s+/g, ' ').split(',').map((s) => s.trim()).filter(Boolean),
-        body: live.slice(i + 1, end),
-        conditional: depth > 0,
-      });
-      i = end;
-      from = i + 1;
-    } else if (char === '}') {
-      depth = Math.max(0, depth - 1);
-      from = i + 1;
-    } else if (char === ';') {
-      // Statement-At-Rules (@import, @charset, @layer x;) enden mit Semikolon
-      // und oeffnen keinen Block. Ohne diesen Zweig waechst das Praeludium
-      // ueber sie hinaus, beginnt mit '@' - und die erste echte Regel der
-      // Datei wird still als At-Rule-Rumpf verschluckt. Deklarations-Semikola
-      // landen hier nie: ueber Regelbloecke springt die Schleife hinweg.
-      from = i + 1;
+      if (char !== '{') {
+        i += 1;
+        continue;
+      }
+
+      const prelude = live.slice(start, i).replace(/\s+/g, ' ').trim();
+      let depth = 1;
+      let j = i + 1;
+      while (j < to && depth > 0) {
+        if (live[j] === '{') depth += 1;
+        else if (live[j] === '}') depth -= 1;
+        j += 1;
+      }
+      const close = j - 1;
+
+      if (prelude.startsWith('@')) {
+        const inner = conditional || CONDITIONAL_AT_RULE.test(prelude);
+        // Steht die Gruppe IN einer Style-Regel, gelten ihre eigenen
+        // Deklarationen dem Elternselektor: `.kitchen-list { @media … {
+        // max-width: 20rem } }`. Ohne diesen Zweig verschwindet die Kappung.
+        if (parents.length) {
+          const own = ownDeclarations(live.slice(i + 1, close));
+          if (own.trim()) rules.push({ selectors: parents, body: own, conditional: inner });
+        }
+        parse(i + 1, close, inner, parents);
+      } else {
+        const own = prelude.split(',').map((sel) => sel.trim()).filter(Boolean);
+        const selectors = parents.length
+          ? own.flatMap((sel) => parents.map((parent) => (sel.includes('&')
+            ? sel.replace(/&/g, parent)
+            : `${parent} ${sel}`)))
+          : own;
+        rules.push({ selectors, body: ownDeclarations(live.slice(i + 1, close)), conditional });
+        parse(i + 1, close, conditional, selectors);
+      }
+
+      i = close + 1;
+      start = i;
     }
-  }
+  };
+
+  parse(0, live.length, false, []);
   return rules;
 }
 
