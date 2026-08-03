@@ -33,12 +33,25 @@ function userId(req) {
   return req.authUserId || req.session.userId;
 }
 
-function isSplitGuest(req) {
-  return Boolean(db.get().prepare('SELECT 1 FROM split_expense_guest_users WHERE user_id = ?').get(userId(req)));
+/**
+ * Gast-Confinement in einer Abfrage. Ergebnis:
+ *   null                 - unbeschränktes Konto
+ *   { groupId: 7 }       - Gast, sieht ausschließlich Gruppe 7
+ *   { groupId: null }    - Gast, dessen Gruppe gelöscht wurde: sieht nichts
+ *
+ * Die beiden Aussagen "ist beschränkt" (Existenz der Zeile) und "worauf"
+ * (group_id) müssen getrennt bleiben. Wer nur die group_id abfragt und ihr
+ * Fehlen als "unbeschränkt" liest, hebt das Confinement auf, sobald eine
+ * Gruppe gelöscht wird - das war die Rechteausweitung, die Migration 124
+ * schließt.
+ */
+function splitGuestScope(req) {
+  const row = db.get().prepare('SELECT group_id FROM split_expense_guest_users WHERE user_id = ?').get(userId(req));
+  return row ? { groupId: row.group_id ?? null } : null;
 }
 
-function splitGuestGroupId(req) {
-  return db.get().prepare('SELECT group_id FROM split_expense_guest_users WHERE user_id = ?').get(userId(req))?.group_id || null;
+function isSplitGuest(req) {
+  return Boolean(splitGuestScope(req));
 }
 
 function isSystemAdmin(req) {
@@ -60,8 +73,9 @@ function canManageGroup(groupId, req) {
 }
 
 function requireGroupAccess(groupId, req) {
-  const restrictedGroupId = splitGuestGroupId(req);
-  if (restrictedGroupId && Number(restrictedGroupId) !== Number(groupId)) return null;
+  const guest = splitGuestScope(req);
+  // Gast ohne Gruppe (gelöschte Gruppe) erreicht keine Gruppe mehr - nicht jede.
+  if (guest && (guest.groupId == null || Number(guest.groupId) !== Number(groupId))) return null;
   const group = db.get().prepare(`
     SELECT g.*, m.role AS member_role
     FROM expense_groups g
@@ -370,11 +384,13 @@ router.get('/dashboard', (req, res) => {
     const mine = balances.filter((row) => row.user_id === uid);
     const totalOwed = mine.filter((row) => row.net_minor > 0).map((row) => normalizeLedgerRow({ ...row, amount_minor: row.net_minor }));
     const totalOwing = mine.filter((row) => row.net_minor < 0).map((row) => normalizeLedgerRow({ ...row, amount_minor: -row.net_minor }));
-    const groupWhere = isSplitGuest(req)
+    const guest = splitGuestScope(req);
+    const groupWhere = guest
       ? "visible.user_id = @userId AND g.status = 'active' AND g.id = @restrictedGroupId"
       : "visible.user_id = @userId AND g.status = 'active'";
+    // groupId === null (gelöschte Gruppe) trifft über `g.id = NULL` keine Zeile.
     const groups = db.get().prepare(`${groupSelectWhere(groupWhere)} ORDER BY g.updated_at DESC LIMIT 6`)
-      .all({ userId: uid, restrictedGroupId: splitGuestGroupId(req) });
+      .all({ userId: uid, restrictedGroupId: guest?.groupId ?? null });
     const recent = db.get().prepare(`
       SELECT e.*, g.name AS group_name, u.display_name AS payer_name
       FROM expenses e
@@ -397,11 +413,11 @@ router.get('/groups', (req, res) => {
   try {
     const status = req.query.status === 'archived' ? 'archived' : 'active';
     const query = String(req.query.q || '').trim();
-    const guest = isSplitGuest(req);
+    const guest = splitGuestScope(req);
     const rows = db.get().prepare(`
       ${groupSelectWhere(`visible.user_id = @userId AND g.status = @status AND (@query = '' OR g.name LIKE '%' || @query || '%')${guest ? ' AND g.id = @restrictedGroupId' : ''}`)}
       ORDER BY g.updated_at DESC
-    `).all({ userId: userId(req), status, query, restrictedGroupId: splitGuestGroupId(req) });
+    `).all({ userId: userId(req), status, query, restrictedGroupId: guest?.groupId ?? null });
     res.json({ data: rows });
   } catch (err) {
     log.error('GET /groups error:', err);
@@ -964,9 +980,13 @@ router.get('/search', (req, res) => {
   try {
     const q = String(req.query.q || '').trim();
     const uid = userId(req);
-    const restrictedGroupId = splitGuestGroupId(req);
+    const guest = splitGuestScope(req);
+    const restrictedGroupId = guest?.groupId ?? null;
+    // Der Filter hängt am Gast-Status, nicht an der group_id: ein Gast ohne
+    // Gruppe darf keine Treffer bekommen, nicht alle.
+    const isGuest = guest ? 1 : 0;
     const groups = db.get().prepare(`
-      ${groupSelectWhere(`visible.user_id = @userId AND g.status = 'active' AND (@q = '' OR g.name LIKE '%' || @q || '%')${restrictedGroupId ? ' AND g.id = @restrictedGroupId' : ''}`)}
+      ${groupSelectWhere(`visible.user_id = @userId AND g.status = 'active' AND (@q = '' OR g.name LIKE '%' || @q || '%')${guest ? ' AND g.id = @restrictedGroupId' : ''}`)}
       ORDER BY g.updated_at DESC LIMIT 10
     `).all({ userId: uid, q, restrictedGroupId });
     const expenses = db.get().prepare(`
@@ -976,9 +996,9 @@ router.get('/search', (req, res) => {
       JOIN expense_group_members gm ON gm.group_id = g.id AND gm.user_id = @uid
       LEFT JOIN users u ON u.id = e.payer_id
       WHERE e.status = 'active' AND (@q = '' OR e.title LIKE '%' || @q || '%' OR e.description LIKE '%' || @q || '%')
-        AND (@restrictedGroupId IS NULL OR g.id = @restrictedGroupId)
+        AND (@isGuest = 0 OR g.id = @restrictedGroupId)
       ORDER BY e.expense_date DESC LIMIT 10
-    `).all({ uid, q, restrictedGroupId });
+    `).all({ uid, q, restrictedGroupId, isGuest });
     const expensesSerialized = serializeExpenseList(expenses, userId(req));
     const people = db.get().prepare(`
       SELECT DISTINCT u.id, u.display_name, u.username, u.avatar_color
@@ -986,9 +1006,9 @@ router.get('/search', (req, res) => {
       JOIN expense_group_members gm ON gm.user_id = u.id
       JOIN expense_group_members mine ON mine.group_id = gm.group_id AND mine.user_id = @uid
       WHERE (@q = '' OR u.display_name LIKE '%' || @q || '%' OR u.username LIKE '%' || @q || '%')
-        AND (@restrictedGroupId IS NULL OR gm.group_id = @restrictedGroupId)
+        AND (@isGuest = 0 OR gm.group_id = @restrictedGroupId)
       ORDER BY u.display_name COLLATE NOCASE ASC LIMIT 10
-    `).all({ uid, q, restrictedGroupId });
+    `).all({ uid, q, restrictedGroupId, isGuest });
     res.json({ data: { groups, expenses: expensesSerialized, people } });
   } catch (err) {
     log.error('GET /search error:', err);
