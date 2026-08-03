@@ -931,7 +931,6 @@
         "titleLabel": "Título",
         "titlePlaceholder": "Ej. Supermercado",
         "amountLabel": "Importe",
-        "amountPlaceholder": "0,00",
         "categoryLabel": "Categoría",
         "dateLabel": "Fecha *",
         "recurringLabel": "Recurrente",

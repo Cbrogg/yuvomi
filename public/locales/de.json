@@ -944,7 +944,6 @@
         "titleLabel": "Titel",
         "titlePlaceholder": "z.B. REWE Einkauf",
         "amountLabel": "Betrag",
-        "amountPlaceholder": "0,00",
         "categoryLabel": "Kategorie",
         "dateLabel": "Datum *",
         "recurringLabel": "Wiederkehrend",

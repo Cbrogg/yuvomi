@@ -931,7 +931,6 @@
         "titleLabel": "Titel",
         "titlePlaceholder": "till exempel Stormarknad",
         "amountLabel": "Belopp",
-        "amountPlaceholder": "0,00",
         "categoryLabel": "Kategori",
         "dateLabel": "Datum *",
         "recurringLabel": "Återkommande",

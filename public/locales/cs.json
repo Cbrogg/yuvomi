@@ -931,7 +931,6 @@
         "titleLabel": "Název",
         "titlePlaceholder": "např. Supermarket",
         "amountLabel": "Částka",
-        "amountPlaceholder": "0.00",
         "categoryLabel": "Kategorie",
         "dateLabel": "Datum *",
         "recurringLabel": "Opakující se",

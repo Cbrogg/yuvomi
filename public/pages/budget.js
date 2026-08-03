@@ -18,7 +18,7 @@ import { openSubscriptionModal, render as renderSubscriptions } from '/pages/sub
 import { renderStats } from '/pages/budget-stats.js';
 import { renderPlans } from '/pages/budget-plans.js';
 import { toLocalDateKey, parseLocalDateKey, addLocalDays } from '/utils/date.js';
-import { formatMoney, formatSignedAmount } from '/utils/money.js';
+import { formatMoney, formatSignedAmount, amountPlaceholder } from '/utils/money.js';
 import { budgetCategoryLabel } from '/utils/category-labels.js';
 import { appendCurrencyOptions } from '/settings/currency.js';
 import '/components/category-manager.js';
@@ -1727,7 +1727,7 @@ function openBudgetModal({ mode, entry = null, initialType = '' }) {
     <div class="form-group js-entry-field">
       <label class="form-label" for="bm-amount">${t('budget.amountLabel')}<span class="required-marker" aria-hidden="true"> *</span></label>
       <input type="number" class="form-input" id="bm-amount"
-             placeholder="${t('budget.amountPlaceholder')}" step="0.01" min="0.01"
+             placeholder="${amountPlaceholder(state.currency)}" step="0.01" min="0.01"
              inputmode="decimal" value="${absAmount}">
     </div>
 

@@ -931,7 +931,6 @@
         "titleLabel": "标题",
         "titlePlaceholder": "例如：超市购物",
         "amountLabel": "金额",
-        "amountPlaceholder": "0.00",
         "categoryLabel": "分类",
         "dateLabel": "日期 *",
         "recurringLabel": "重复",

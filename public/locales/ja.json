@@ -931,7 +931,6 @@
         "titleLabel": "タイトル",
         "titlePlaceholder": "例：スーパーでの買い物",
         "amountLabel": "金額",
-        "amountPlaceholder": "0",
         "categoryLabel": "カテゴリー",
         "dateLabel": "日付 *",
         "recurringLabel": "繰り返し",

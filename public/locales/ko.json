@@ -944,7 +944,6 @@
         "titleLabel": "제목",
         "titlePlaceholder": "예: 마트 장보기",
         "amountLabel": "금액",
-        "amountPlaceholder": "0.00",
         "categoryLabel": "카테고리",
         "dateLabel": "날짜 *",
         "recurringLabel": "반복",

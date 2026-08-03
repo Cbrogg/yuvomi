@@ -931,7 +931,6 @@
         "titleLabel": "Заголовок",
         "titlePlaceholder": "напр. Продукты",
         "amountLabel": "Сумма",
-        "amountPlaceholder": "0,00",
         "categoryLabel": "Категория",
         "dateLabel": "Дата *",
         "recurringLabel": "Повторяющееся",

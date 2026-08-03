@@ -931,7 +931,6 @@
         "titleLabel": "Title",
         "titlePlaceholder": "e.g. Supermarket",
         "amountLabel": "Amount",
-        "amountPlaceholder": "0.00",
         "categoryLabel": "Category",
         "dateLabel": "Date *",
         "recurringLabel": "Recurring",

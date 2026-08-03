@@ -931,7 +931,6 @@
         "titleLabel": "Título",
         "titlePlaceholder": "Ex.: Supermercado",
         "amountLabel": "Valor",
-        "amountPlaceholder": "0,00",
         "categoryLabel": "Categoria",
         "dateLabel": "Data *",
         "recurringLabel": "Recorrente",

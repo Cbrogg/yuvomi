@@ -944,7 +944,6 @@
         "titleLabel": "Tytuł",
         "titlePlaceholder": "np. Zakupy spożywcze",
         "amountLabel": "Kwota",
-        "amountPlaceholder": "0,00",
         "categoryLabel": "Kategoria",
         "dateLabel": "Data *",
         "recurringLabel": "Cykliczne",

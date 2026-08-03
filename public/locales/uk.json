@@ -931,7 +931,6 @@
         "titleLabel": "Заголовок",
         "titlePlaceholder": "напр. Супермаркет",
         "amountLabel": "Сума",
-        "amountPlaceholder": "0,00",
         "categoryLabel": "Категорія",
         "dateLabel": "Дата *",
         "recurringLabel": "Повторюване",

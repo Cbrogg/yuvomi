@@ -931,7 +931,6 @@
         "titleLabel": "Titel",
         "titlePlaceholder": "bijv. Supermarkt",
         "amountLabel": "Bedrag",
-        "amountPlaceholder": "0,00",
         "categoryLabel": "Categorie",
         "dateLabel": "Datum *",
         "recurringLabel": "Terugkerend",

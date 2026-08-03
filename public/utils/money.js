@@ -38,6 +38,28 @@ export function formatMoney(amount, currency) {
 }
 
 /**
+ * Eingabe-Platzhalter für ein Betragsfeld: die Null im Zahlformat der
+ * Format-Locale, mit den Nachkommastellen der Währung.
+ * EUR/de -> "0,00", EUR/de-CH -> "0.00", JPY -> "0".
+ *
+ * Stand vorher als Locale-Key `budget.amountPlaceholder` in 23 JSON-Dateien und
+ * war dort in cs, hu und vi schlicht falsch (Punkt statt Komma). Ein Locale-Key
+ * kann das auch gar nicht leisten: das Dezimaltrennzeichen hängt an der Region
+ * (getFormatLocale), nicht an der UI-Sprache, und die Nachkommastellen hängen an
+ * der Währung - beides weiß eine Übersetzungsdatei nicht.
+ */
+export function amountPlaceholder(currency) {
+  let digits = 2;
+  try {
+    // Wirft bei fehlendem oder ungültigem ISO-Code; dann bleibt es bei zwei.
+    digits = getNumberFormat({ style: 'currency', currency }).resolvedOptions().minimumFractionDigits;
+  } catch {
+    digits = 2;
+  }
+  return getNumberFormat({ minimumFractionDigits: digits, maximumFractionDigits: digits }).format(0);
+}
+
+/**
  * Betrag nach Rolle. Liefert Text, Ton und die passende Modifier-Klasse
  * gemeinsam, damit Vorzeichen und Farbe nie auseinanderlaufen können.
  *
