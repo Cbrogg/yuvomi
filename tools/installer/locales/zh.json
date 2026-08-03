@@ -164,7 +164,7 @@
     "documentWebdav": "WebDAV 文档存储",
     "documentWebdavHint": "非空环境变量会覆盖数据库中对应的设置。",
     "documentWebdavEnable": "将新文档存储到 WebDAV",
-    "documentWebdavUrlLabel": "WebDAV URL",
+    "documentWebdavUrlLabel": "WebDAV 网址",
     "documentWebdavUsernameLabel": "用户名",
     "documentWebdavPasswordLabel": "密码",
     "documentWebdavPathLabel": "基础路径",

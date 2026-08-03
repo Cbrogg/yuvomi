@@ -151,7 +151,7 @@
     "proxyHint": "直接アクセスでは secure 限定の Cookie を無効にし、HTTPS なしでもログインできるようにします。",
     "oidc": "シングルサインオン (OIDC)",
     "oidcHint": "SSO を有効にするには 4 つすべての項目を入力するか、すべて空のままにしてください。",
-    "oidcIssuerLabel": "Issuer URL",
+    "oidcIssuerLabel": "発行者 URL",
     "oidcClientIdLabel": "クライアント ID",
     "oidcClientSecretLabel": "クライアントシークレット",
     "oidcRedirectLabel": "リダイレクト URI",

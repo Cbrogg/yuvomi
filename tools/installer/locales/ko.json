@@ -79,7 +79,7 @@
     "proxyHint": "직접 접속은 순수 Secure 쿠키를 비활성화하여 HTTPS 없이도 로그인이 작동하게 합니다.",
     "oidc": "싱글 사인온 (OIDC)",
     "oidcHint": "SSO를 활성화하려면 네 필드를 모두 채우거나 비워 두세요.",
-    "oidcIssuerLabel": "Issuer URL",
+    "oidcIssuerLabel": "발급자 URL",
     "oidcClientIdLabel": "클라이언트 ID",
     "oidcClientSecretLabel": "클라이언트 시크릿",
     "oidcRedirectLabel": "리디렉션 URI",
