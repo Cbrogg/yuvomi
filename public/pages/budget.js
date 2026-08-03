@@ -18,7 +18,7 @@ import { openSubscriptionModal, render as renderSubscriptions } from '/pages/sub
 import { renderStats } from '/pages/budget-stats.js';
 import { renderPlans } from '/pages/budget-plans.js';
 import { toLocalDateKey, parseLocalDateKey, addLocalDays } from '/utils/date.js';
-import { formatMoney, formatSignedAmount, amountPlaceholder, amountStep, amountMin, currencyFractionDigits } from '/utils/money.js';
+import { formatMoney, formatSignedAmount, amountPlaceholder, amountStep, amountMin, currencyFractionDigits, applyAmountFormat } from '/utils/money.js';
 import { budgetCategoryLabel } from '/utils/category-labels.js';
 import { appendCurrencyOptions } from '/settings/currency.js';
 import '/components/category-manager.js';
@@ -1098,8 +1098,9 @@ function openAccountModal(account = null) {
     </div>
     <div class="form-group">
       <label class="form-label" for="am-balance">${t('budget.startingBalanceLabel')}</label>
-      <input type="number" class="form-input" id="am-balance" step="0.01" inputmode="decimal"
-             placeholder="0.00" value="${isEdit ? account.starting_balance : ''}">
+      <input type="number" class="form-input" id="am-balance"
+             step="${amountStep(state.currency, isEdit ? account.starting_balance : '')}" inputmode="decimal"
+             placeholder="${amountPlaceholder(state.currency)}" value="${isEdit ? account.starting_balance : ''}">
       <p class="form-hint">${t('budget.startingBalanceHint')}</p>
     </div>
     <div class="form-group">
@@ -1817,7 +1818,9 @@ function openBudgetModal({ mode, entry = null, initialType = '' }) {
       <div class="form-grid-2" id="lm-manual-fields">
         <div class="form-group">
           <label class="form-label" for="lm-amount">${t('budget.loanAmountLabel')}</label>
-          <input type="number" class="form-input" id="lm-amount" step="0.01" min="0.01" inputmode="decimal">
+          <input type="number" class="form-input" id="lm-amount"
+                 step="${amountStep(state.currency, '')}" min="${amountMin(state.currency, '')}"
+                 placeholder="${amountPlaceholder(state.currency)}" inputmode="decimal">
         </div>
         <div class="form-group">
           <label class="form-label" for="lm-installments">${t('budget.loanInstallmentsLabel')}</label>
@@ -2177,6 +2180,12 @@ function wireLoanCurrencyFields(panel) {
   const hint = panel.querySelector('#lm-rate-hint');
 
   const update = ({ currencyChanged = false } = {}) => {
+    // Kreditsumme und Darlehensbetrag stehen in der gewählten Währung, nicht in
+    // der Budget-Währung: ohne das Nachziehen zeigte ein auf JPY gestelltes
+    // Darlehen weiter "0,00" und liesse Hundertstel Yen zu.
+    applyAmountFormat(panel.querySelector('#lm-amount'), select.value, { required: true });
+    applyAmountFormat(panel.querySelector('#lm-principal'), select.value, { required: true });
+
     const foreign = select.value !== state.currency;
     rateGroup.hidden = !foreign;
     hint.hidden = !foreign;
@@ -2202,6 +2211,9 @@ function wireLoanCurrencyFields(panel) {
 function loanInterestFieldsHtml(loan) {
   const it = loan?.interest ?? null;
   const mode = it?.mode ?? 'none';
+  // Die Kreditsumme ist ein Geldbetrag in der Darlehenswährung, nicht in der
+  // Budget-Währung; wireLoanCurrencyFields zieht sie bei einem Wechsel nach.
+  const currency = loan?.currency || state.currency;
   const v = (x) => (x != null ? esc(String(x)) : '');
   const opt = (val, key) => `<option value="${val}" ${mode === val ? 'selected' : ''}>${t(key)}</option>`;
   return `
@@ -2217,8 +2229,9 @@ function loanInterestFieldsHtml(loan) {
     <div id="lm-interest-fields" ${mode === 'none' ? 'hidden' : ''}>
       <div class="form-group">
         <label class="form-label" for="lm-principal">${t('budget.loanPrincipalLabel')}</label>
-        <input type="number" class="form-input" id="lm-principal" step="0.01" min="0.01"
-               inputmode="decimal" value="${v(it?.principal)}">
+        <input type="number" class="form-input" id="lm-principal"
+               step="${amountStep(currency, it?.principal ?? '')}" min="${amountMin(currency, it?.principal ?? '')}"
+               placeholder="${amountPlaceholder(currency)}" inputmode="decimal" value="${v(it?.principal)}">
       </div>
       <div class="form-grid-2">
         <div class="form-group">
@@ -2420,6 +2433,7 @@ async function saveLoanFromPanel(panel, saveBtn, { loan = null, closeAfterSave =
 function openLoanModal(loan = null) {
   const isEdit = Boolean(loan);
   const todayMonth = toLocalDateKey(new Date()).slice(0, 7);
+  const loanCurrency = loan?.currency || state.currency;
   const content = `
     <div class="form-group">
       <label class="form-label" for="lm-borrower">${t('budget.loanBorrowerLabel')}</label>
@@ -2435,8 +2449,11 @@ function openLoanModal(loan = null) {
     <div class="form-grid-2" id="lm-manual-fields">
       <div class="form-group">
         <label class="form-label" for="lm-amount">${t('budget.loanAmountLabel')}</label>
-        <input type="number" class="form-input" id="lm-amount" step="0.01" min="0.01"
-               inputmode="decimal" value="${loan ? loan.total_amount.toFixed(2) : ''}">
+        <input type="number" class="form-input" id="lm-amount"
+               step="${amountStep(loanCurrency, loan ? loan.total_amount : '')}"
+               min="${amountMin(loanCurrency, loan ? loan.total_amount : '')}"
+               placeholder="${amountPlaceholder(loanCurrency)}" inputmode="decimal"
+               value="${loan ? loan.total_amount.toFixed(currencyFractionDigits(loanCurrency)) : ''}">
       </div>
       <div class="form-group">
         <label class="form-label" for="lm-installments">${t('budget.loanInstallmentsLabel')}</label>

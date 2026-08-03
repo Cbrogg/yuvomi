@@ -11,6 +11,7 @@ import { renderSkeletonList } from '/utils/skeleton.js';
 import { openModal, closeModal, confirmModal } from '/components/modal.js';
 import { createPageFab, setPageFabAction } from '/utils/fab.js';
 import { wireTablist } from '/utils/tablist.js';
+import { amountPlaceholder, amountStep } from '/utils/money.js';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
@@ -878,12 +879,14 @@ function openVisitEditModal(visit, content, { onDone } = {}) {
           ` : `
             <label class="housekeeping-field">
               <span>${esc(t('housekeeping.dailyRate'))}</span>
-              <input name="daily_rate" type="number" min="0" step="0.01" inputmode="decimal" value="${esc(visit.daily_rate ?? 0)}">
+              <input name="daily_rate" type="number" min="0" step="${amountStep(state.currency, visit.daily_rate ?? 0)}"
+                     placeholder="${amountPlaceholder(state.currency)}" inputmode="decimal" value="${esc(visit.daily_rate ?? 0)}">
             </label>
           `}
           <label class="housekeeping-field">
             <span>${esc(t('housekeeping.extras'))}</span>
-            <input name="extras" type="number" min="0" step="0.01" inputmode="decimal" value="${esc(visit.extras ?? 0)}">
+            <input name="extras" type="number" min="0" step="${amountStep(state.currency, visit.extras ?? 0)}"
+                   placeholder="${amountPlaceholder(state.currency)}" inputmode="decimal" value="${esc(visit.extras ?? 0)}">
           </label>
         </div>
         <label class="document-dropzone" id="housekeeping-receipt-dropzone" for="housekeeping-receipt-file">
@@ -1037,11 +1040,13 @@ function openStaffModal(worker, content, options = {}) {
           </label>
           <label class="housekeeping-field" id="housekeeping-field-daily-rate">
             <span>${esc(t('housekeeping.dailyRate'))}</span>
-            <input name="daily_rate" type="number" min="0" step="0.01" inputmode="decimal" value="${esc(item.daily_rate ?? 0)}">
+            <input name="daily_rate" type="number" min="0" step="${amountStep(state.currency, item.daily_rate ?? 0)}"
+                   placeholder="${amountPlaceholder(state.currency)}" inputmode="decimal" value="${esc(item.daily_rate ?? 0)}">
           </label>
           <label class="housekeeping-field" id="housekeeping-field-hourly-rate"${(!item.rate_type || item.rate_type === 'daily') ? ' hidden' : ''}>
             <span>${esc(t('housekeeping.hourlyRate'))}</span>
-            <input name="hourly_rate" type="number" min="0" step="0.01" inputmode="decimal" value="${esc(item.hourly_rate ?? 0)}">
+            <input name="hourly_rate" type="number" min="0" step="${amountStep(state.currency, item.hourly_rate ?? 0)}"
+                   placeholder="${amountPlaceholder(state.currency)}" inputmode="decimal" value="${esc(item.hourly_rate ?? 0)}">
           </label>
           <label class="housekeeping-field housekeeping-field--color">
             <span>${esc(t('housekeeping.calendarColor'))}</span>

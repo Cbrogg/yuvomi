@@ -10,7 +10,7 @@ import { t, formatDate, getLocale, dateInputPlaceholder, parseDateInput, isDateI
 import { esc } from '/utils/html.js';
 import { stagger } from '/utils/ux.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
-import { formatMoney } from '/utils/money.js';
+import { formatMoney, amountPlaceholder } from '/utils/money.js';
 import { wireTablist } from '/utils/tablist.js';
 
 let state = {
@@ -612,11 +612,17 @@ function defaultSplitValues(group) {
 
 function updateSplitInputs(panel) {
   const method = panel.querySelector('[name="split_method"]')?.value || 'equal';
+  // Der Betrag und die Teilbeträge stehen in der gewählten Währung; Prozente
+  // und Anteile sind reine Zahlen und behalten ihren festen Platzhalter.
+  const currency = panel.querySelector('[name="currency"]')?.value || state.meta?.default_currency || 'EUR';
+  const zero = amountPlaceholder(currency);
+  const amountInput = panel.querySelector('[name="amount"]');
+  if (amountInput) amountInput.placeholder = zero;
   panel.querySelectorAll('.split-split-value').forEach((input) => {
     input.hidden = method === 'equal';
     input.required = method !== 'equal';
     if (method === 'percentage') input.placeholder = '30';
-    else if (method === 'exact') input.placeholder = '70.00';
+    else if (method === 'exact') input.placeholder = zero;
     else if (method === 'shares') input.placeholder = '1';
     else input.placeholder = '';
   });
@@ -879,7 +885,7 @@ function openExpenseModal(expense = null) {
       <form id="split-expense-form" class="split-form">
         <label>${t('splitExpenses.titleLabel')}<input class="input" name="title" required maxlength="200" value="${esc(expense?.title || '')}"></label>
         <div class="split-form-row">
-          <label>${t('splitExpenses.amount')}<input class="input" name="amount" inputmode="decimal" placeholder="42.50" required value="${esc(expense?.amount || '')}"></label>
+          <label>${t('splitExpenses.amount')}<input class="input" name="amount" inputmode="decimal" placeholder="${amountPlaceholder(isEdit ? expense.currency : group.default_currency)}" required value="${esc(expense?.amount || '')}"></label>
           <label>${t('splitExpenses.paidBy')}<select class="input" name="payer_id">${memberOptions(isEdit ? expense.payer_id : state.user?.id)}</select></label>
         </div>
         <div class="split-form-row">
@@ -921,6 +927,7 @@ function openExpenseModal(expense = null) {
       });
       panel.querySelector('#split-cancel-expense')?.addEventListener('click', () => closeModal());
       panel.querySelector('[name="split_method"]')?.addEventListener('change', () => updateSplitInputs(panel));
+      panel.querySelector('[name="currency"]')?.addEventListener('change', () => updateSplitInputs(panel));
       panel.querySelector('#split-expense-form')?.addEventListener('input', () => validateSplitForm(panel));
       panel.querySelectorAll('input[name="participants"]').forEach((input) => {
         const row = input.closest('.split-participant-row');
@@ -983,7 +990,7 @@ function openSettlementModal() {
         </div>
         <p class="form-hint field-hint--warn" id="split-settlement-same" role="status" hidden><i data-lucide="alert-triangle" aria-hidden="true"></i><span>${t('splitExpenses.settlementSamePerson')}</span></p>
         <div class="split-form-row">
-          <label>${t('splitExpenses.amount')}<input class="input" name="amount" inputmode="decimal" required value="${debt ? esc(String(debt.amount)) : ''}"></label>
+          <label>${t('splitExpenses.amount')}<input class="input" name="amount" inputmode="decimal" placeholder="${amountPlaceholder(debt?.currency || group.default_currency)}" required value="${debt ? esc(String(debt.amount)) : ''}"></label>
           <label>${t('splitExpenses.currency')}<select class="input" name="currency">${state.meta.currencies.map((c) => `<option value="${c}" ${c === (debt?.currency || group.default_currency) ? 'selected' : ''}>${c}</option>`).join('')}</select></label>
         </div>
         <label>${t('splitExpenses.notes')}<textarea class="input" name="notes" rows="3" maxlength="5000"></textarea></label>
@@ -1032,6 +1039,12 @@ function openSettlementModal() {
       });
       payeeSel.addEventListener('change', syncSameHint);
       syncSameHint();
+      // Der Platzhalter zeigt die Null im Format der gewählten Währung und muss
+      // beim Wechsel mitgehen - JPY schreibt "0", EUR "0,00".
+      const currencySel = form.querySelector('[name="currency"]');
+      currencySel?.addEventListener('change', () => {
+        form.querySelector('[name="amount"]').placeholder = amountPlaceholder(currencySel.value);
+      });
       panel.querySelector('#split-cancel-settlement')?.addEventListener('click', () => closeModal());
       form?.addEventListener('submit', async (e) => {
         e.preventDefault();

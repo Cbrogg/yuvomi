@@ -106,6 +106,26 @@ export function amountMin(currency, currentValue) {
 }
 
 /**
+ * Ein bestehendes Betragsfeld auf eine Währung nachziehen: Platzhalter,
+ * Schrittweite und - bei Pflichtfeldern - Untergrenze in einem Zug.
+ *
+ * Nötig überall dort, wo die Währung im selben Formular wählbar ist (Abo,
+ * geteilte Ausgabe, Darlehen). Ohne das Nachziehen zeigt das Feld nach einem
+ * Wechsel von EUR auf JPY weiter "0,00" und liesse Hundertstel Yen zu.
+ *
+ * @param {HTMLInputElement|null} input
+ * @param {string} currency  ISO-Code
+ * @param {{ required?: boolean }} [options]  required: das Feld verlangt einen
+ *        Betrag > 0, bekommt also zusätzlich eine Untergrenze.
+ */
+export function applyAmountFormat(input, currency, { required = false } = {}) {
+  if (!input) return;
+  input.placeholder = amountPlaceholder(currency);
+  input.step = amountStep(currency, input.value);
+  if (required) input.min = amountMin(currency, input.value);
+}
+
+/**
  * Betrag nach Rolle. Liefert Text, Ton und die passende Modifier-Klasse
  * gemeinsam, damit Vorzeichen und Farbe nie auseinanderlaufen können.
  *

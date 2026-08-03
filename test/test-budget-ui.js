@@ -17,6 +17,7 @@ const stats = read('../public/pages/budget-stats.js');
 const plans = read('../public/pages/budget-plans.js');
 const subscriptions = read('../public/pages/subscriptions.js');
 const splitExpenses = read('../public/pages/split-expenses.js');
+const housekeeping = read('../public/pages/housekeeping.js');
 const money = read('../public/utils/money.js');
 const layoutCss = read('../public/styles/layout.css');
 const tokensCss = read('../public/styles/tokens.css');
@@ -393,6 +394,47 @@ const withoutComments = (src) => {
   } while (out !== previous);
   return out;
 };
+
+// Jede Seite, die ein Betragsfeld rendert - nicht nur das Budget-Modul. Die
+// Schrittweite hängt an der Währung, und eine Währung gibt es auch ausserhalb
+// von Budget (Hauspflege rechnet Tages- und Stundensätze ab).
+const MONEY_INPUT_PAGES = [...BUDGET_PAGES, ['housekeeping.js', housekeeping]];
+
+test('Betragsfelder holen ihre Schrittweite aus der Währung, nicht aus 0.01', () => {
+  // Die Regel, nicht die Liste: ein Feld mit inputmode="decimal" ist entweder
+  // ein Anteil in Prozent (dann trägt es max="100") oder ein Geldbetrag - und
+  // dann ist eine feste Schrittweite falsch, sobald die Währung keine zwei
+  // Nachkommastellen hat. Bei JPY liess step="0.01" Hundertstel Yen zu,
+  // während Platzhalter und Untergrenze schon ganze Yen zeigten.
+  // Eine Allowlist einzelner Feld-IDs würde nur die heute bekannten Felder
+  // decken; der nächste neue Dialog fiele wieder durch.
+  for (const [file, src] of MONEY_INPUT_PAGES) {
+    const inputs = withoutComments(src).match(/<input(?:[^>]|\n)*?>/g) || [];
+    for (const input of inputs) {
+      if (!/inputmode="decimal"/.test(input)) continue;
+      if (!/step="0\.01"/.test(input)) continue;
+      assert.match(
+        input,
+        /max="100"/,
+        `${file}: Betragsfeld mit fester Schrittweite 0.01 - amountStep(currency, wert) aus utils/money.js nutzen:\n${input.replace(/\s+/g, ' ')}`,
+      );
+    }
+  }
+});
+
+test('wählbare Währungen ziehen das Betragsfeld nach', () => {
+  // Ein Formular, in dem die Währung gewählt werden kann, muss das Betragsfeld
+  // beim Wechsel nachziehen - sonst behält es das Format der vorherigen Währung
+  // und der Platzhalter widerspricht der Auswahl direkt daneben.
+  assert.match(money, /export function applyAmountFormat/);
+  for (const [file, src] of [['budget.js', budget], ['subscriptions.js', subscriptions], ['split-expenses.js', splitExpenses]]) {
+    assert.match(
+      withoutComments(src),
+      /applyAmountFormat\(|amountPlaceholder\(/,
+      `${file}: Währungswechsel im Formular ohne Nachziehen des Betragsfeldes`,
+    );
+  }
+});
 
 test('Geldbeträge laufen über den Modul-Formatierer, nicht über eigene', () => {
   // Drei eigene Formatierer bedeuteten vier Vorzeichenkonventionen: dieselbe

@@ -15,7 +15,7 @@ import {
 import { esc } from '/utils/html.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
 import { toLocalDateKey } from '/utils/date.js';
-import { formatMoney } from '/utils/money.js';
+import { formatMoney, amountPlaceholder, amountStep, amountMin, applyAmountFormat } from '/utils/money.js';
 
 let state = {
   subscriptions: [],
@@ -700,6 +700,10 @@ function wireCombobox(panel, id) {
     search.value = option.textContent.trim();
     options.forEach((item) => item.setAttribute('aria-selected', String(item === option)));
     close();
+    // Das Wertfeld ist ein verstecktes Input, das nur programmatisch gesetzt
+    // wird - ohne dieses Event erfährt niemand von der Auswahl. Die Betragsfelder
+    // hängen an der Währungs-Combobox und müssen dabei nachziehen.
+    value.dispatchEvent(new Event('change', { bubbles: true }));
   };
   const selectFromKeyboard = (option) => {
     select(option);
@@ -766,6 +770,9 @@ function wireCombobox(panel, id) {
 
 export function openSubscriptionModal(subscription = null) {
   const edit = Boolean(subscription);
+  // Jedes Abo trägt seine eigene Währung; das Betragsfeld richtet sich danach
+  // und wird beim Wechsel der Währungs-Combobox nachgezogen.
+  const formCurrency = subscription?.currency || state.settings.base_currency;
   const cycleItems = state.meta.billing_cycles.map((cycle) => ({
     value: cycle,
     label: t(`subscriptions.cycle.${cycle}`),
@@ -868,7 +875,11 @@ export function openSubscriptionModal(subscription = null) {
         <div class="subscription-form__billing-grid">
           <div class="form-group">
             <label class="form-label" for="subscription-amount">${t('subscriptions.amountLabel')}</label>
-            <input class="form-input" id="subscription-amount" type="number" min="0" step="0.01" inputmode="decimal" required value="${subscription?.amount ?? ''}">
+            <input class="form-input" id="subscription-amount" type="number"
+                   min="${amountMin(formCurrency, subscription?.amount ?? '')}"
+                   step="${amountStep(formCurrency, subscription?.amount ?? '')}"
+                   placeholder="${amountPlaceholder(formCurrency)}"
+                   inputmode="decimal" required value="${subscription?.amount ?? ''}">
           </div>
           ${comboboxMarkup({
             id: 'subscription-currency',
@@ -948,6 +959,9 @@ export function openSubscriptionModal(subscription = null) {
         }
       };
       wireCombobox(panel, 'subscription-currency');
+      panel.querySelector('#subscription-currency').addEventListener('change', (event) => {
+        applyAmountFormat(panel.querySelector('#subscription-amount'), event.target.value, { required: true });
+      });
       wireCombobox(panel, 'subscription-cycle');
       wireCombobox(panel, 'subscription-category');
       wireCombobox(panel, 'subscription-method');
@@ -1192,7 +1206,10 @@ async function openSettingsModal() {
     <form id="subscriptions-settings-form">
       <div class="form-group">
         <label class="form-label" for="subscriptions-budget">${t('subscriptions.monthlyBudgetLabel')}</label>
-        <input class="form-input" id="subscriptions-budget" type="number" min="0" step="0.01" value="${state.settings.monthly_budget}">
+        <input class="form-input" id="subscriptions-budget" type="number" min="0"
+               step="${amountStep(state.settings.base_currency, state.settings.monthly_budget)}"
+               placeholder="${amountPlaceholder(state.settings.base_currency)}"
+               value="${state.settings.monthly_budget}">
       </div>
       ${comboboxMarkup({
         id: 'subscriptions-base-currency',
@@ -1216,6 +1233,9 @@ async function openSettingsModal() {
     size: 'sm',
     onSave(panel) {
       wireCombobox(panel, 'subscriptions-base-currency');
+      panel.querySelector('#subscriptions-base-currency').addEventListener('change', (event) => {
+        applyAmountFormat(panel.querySelector('#subscriptions-budget'), event.target.value);
+      });
       panel.querySelector('#subscriptions-settings-cancel').addEventListener('click', closeModal);
       panel.querySelector('#subscriptions-settings-form').addEventListener('submit', async (event) => {
         event.preventDefault();
