@@ -4,13 +4,13 @@
  */
 
 import { api } from '/api.js';
-import { openModal as openSharedModal, closeModal, confirmModal, confirmOverModal } from '/components/modal.js';
+import { openModal as openSharedModal, closeModal, confirmModal, confirmOverModal, reportFieldError } from '/components/modal.js';
 import { renderDocumentAttachField, bindDocumentAttachField } from '/components/document-attach.js';
 import { t, formatDate, getLocale, dateInputPlaceholder, parseDateInput, isDateInputValid } from '/i18n.js';
 import { esc } from '/utils/html.js';
 import { stagger } from '/utils/ux.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
-import { formatMoney, amountPlaceholder, toDecimalString } from '/utils/money.js';
+import { formatMoney, amountPlaceholder, toDecimalString, amountIsSavable, smallestUnitLabel } from '/utils/money.js';
 import { wireTablist } from '/utils/tablist.js';
 
 let state = {
@@ -642,6 +642,28 @@ function updateSplitInputs(panel) {
  */
 const decimalString = toDecimalString;
 
+/**
+ * Weist einen Betrag zurück, der mehr Nachkommastellen hat als die Währung
+ * kennt. Die Felder hier sind Textfelder, es gibt also kein `step`, das der
+ * Browser prüfen könnte - und der Platzhalter zeigt bei HUF, IDR oder IRR
+ * bereits ganze Einheiten an.
+ *
+ * Ohne diese Prüfung landet die Ablehnung beim Server (parseMoneyToMinor wirft
+ * bei zu vielen Stellen), und die Meldung erscheint als ortloser Fehler statt
+ * am Feld, das sie meint.
+ *
+ * @returns {boolean} true, wenn abgewiesen wurde (der Aufrufer bricht dann ab)
+ */
+function rejectOffGridSplitAmount(input, value, currency, original = null) {
+  if (input == null || value === '' || value == null) return false;
+  if (amountIsSavable(value, currency, { original })) return false;
+  reportFieldError(input, t('common.amountPrecisionRequired', {
+    currency,
+    step: smallestUnitLabel(currency),
+  }));
+  return true;
+}
+
 function numberValue(value) {
   const normalized = decimalString(value);
   if (!normalized) return NaN;
@@ -971,6 +993,16 @@ function openExpenseModal(expense = null) {
         const form = panel.querySelector('#split-expense-form');
         const data = Object.fromEntries(new FormData(form));
         data.amount = decimalString(data.amount);
+        const expenseCurrency = form.querySelector('[name="currency"]')?.value || group.default_currency;
+        if (rejectOffGridSplitAmount(form.querySelector('[name="amount"]'), numberValue(data.amount),
+          expenseCurrency, isEdit ? expense.amount : null)) return;
+        // Auch die Genau-Beträge: sie sind Geld in derselben Währung.
+        if (form.querySelector('[name="split_method"]')?.value === 'exact') {
+          for (const field of form.querySelectorAll('.split-split-value')) {
+            if (field.hidden || !field.value) continue;
+            if (rejectOffGridSplitAmount(field, numberValue(field.value), expenseCurrency)) return;
+          }
+        }
         const { participants, splits } = collectSplitPayload(form);
         const payload = { ...data, participants, splits };
         // commit() lädt wartende Dateien erst jetzt hoch: ein abgebrochenes
@@ -1064,6 +1096,9 @@ function openSettlementModal() {
         if (samePerson()) { syncSameHint(); payeeSel.focus(); return; }
         const data = Object.fromEntries(new FormData(form));
         data.amount = decimalString(data.amount);
+        if (rejectOffGridSplitAmount(form.querySelector('[name="amount"]'), numberValue(data.amount),
+          form.querySelector('[name="currency"]')?.value || group.default_currency,
+          debt?.amount ?? null)) return;
         const proofIds = proof ? await proof.commit() : [];
         if (proofIds.length) data.proof_document_id = proofIds[0];
         await api.post(`/split-expenses/groups/${state.activeGroupId}/settlements`, data);
