@@ -447,9 +447,11 @@ test('Geldbeträge gehen als Punkt-Dezimalstring an den Server', () => {
   const impl = withoutComments(money).match(/export function toDecimalString[\s\S]*?\n\}/);
   assert.ok(impl, 'toDecimalString fehlt in utils/money.js');
   assert.match(impl[0], /getNumberFormat\(/, 'die Ziffern müssen aus Intl kommen, nicht aus einer Tabelle');
-  // Gruppierung bleibt bewusst ungelöst: in de trennt der Punkt Tausender, aber
-  // "12.50" meint dort zwölf-fünfzig. Wer ihn entfernte, machte daraus 1250.
-  assert.doesNotMatch(impl[0], /type === 'group'/, 'Gruppierung darf nicht still entfernt werden');
+  // Gruppierung wird abgewiesen, nicht aufgelöst: in de-DE heisst "1.000"
+  // tausend, als Dezimalzahl aber eins. Wer das still deutet, liegt bei Geld im
+  // Zweifel um den Faktor tausend daneben.
+  assert.doesNotMatch(impl[0], /replace\([^)]*groupSep/, 'Gruppierung darf nicht still entfernt werden');
+  assert.match(impl[0], /return ''/, 'ein gruppierter Betrag muss abgewiesen werden');
 });
 
 test('jeder Speicherpfad prüft die Schrittweite selbst', () => {
@@ -458,16 +460,22 @@ test('jeder Speicherpfad prüft die Schrittweite selbst', () => {
   // angezeigtes step="1" ist damit reine Behauptung - ohne eigene Prüfung nimmt
   // das Feld trotzdem 12,5 JPY entgegen und schreibt den Wert weg, während die
   // Anzeige ihn gerundet darstellt.
-  for (const [file, src] of [['budget.js', budget], ['budget-plans.js', plans]]) {
+  // Über alle Seiten mit Betragsfeldern, nicht nur die formularlosen: ein
+  // <form> hilft hier nichts, weil amountStep bei Bestandswerten neben dem
+  // Raster "any" liefert und die Browser-Prüfung damit aussetzt.
+  //
+  // Bewusst qualitativ und nicht als Zählung Felder-gegen-Aufrufe: eine Prüfung
+  // kann mehrere Felder gemeinsam abdecken, und eine Zahlengleichheit zu
+  // verlangen hiesse, den Code auf den Guard hin zu verbiegen. Er fängt damit
+  // das vollständige Vergessen einer Seite, nicht das einzelne Feld - dafür
+  // sind die Fall-Guards unten da.
+  for (const [file, src] of MONEY_INPUT_PAGES) {
     const clean = withoutComments(src);
-    assert.doesNotMatch(clean, /<form\b/, `${file}: Dialoge sind bewusst keine Formulare - der Guard hier setzt das voraus`);
-    const checks = (clean.match(/amountIsSavable\(|rejectOffGridAmount\(/g) || []).length;
-    // Jedes Feld, dessen Schrittweite aus der Währung kommt, braucht seine
-    // eigene Prüfung im Speicherpfad.
-    const fields = (clean.match(/step="\$\{amountStep\(/g) || []).length;
-    assert.ok(
-      checks >= fields,
-      `${file}: ${fields} währungsgerasterte Felder, aber nur ${checks} Prüfungen im Speicherpfad`,
+    if (!/step="\$\{amountStep\(/.test(clean)) continue;
+    assert.match(
+      clean,
+      /amountIsSavable\(|rejectOffGridAmount\(/,
+      `${file}: währungsgerasterte Felder, aber keine Prüfung im Speicherpfad`,
     );
   }
   assert.match(money, /export function fitsCurrencyGrid/);
@@ -534,6 +542,11 @@ test('nur der Trenner der Region wird zum Dezimalpunkt', () => {
   const impl = withoutComments(money).match(/export function toDecimalString[\s\S]*?\n\}/)[0];
   assert.doesNotMatch(impl, /char === ','/, "das ASCII-Komma darf nicht pauschal als Dezimaltrenner gelten");
   assert.match(impl, /char === decimalSep/, 'der Trenner der Region fehlt');
+  // Gruppierung wird abgewiesen, nicht gedeutet: "1.000" heisst in de-DE
+  // tausend, als Dezimalzahl aber eins. Beide Lesarten sind vertretbar, und die
+  // falsche liegt bei Geld um den Faktor tausend daneben.
+  assert.match(impl, /groupSep/, 'die Gruppierung muss erkannt werden');
+  assert.match(impl, /\\\\d\{3\}/, 'erkannt wird das Muster (drei Ziffern), nicht das blosse Zeichen');
 });
 
 test('ein Abo darf null kosten', () => {

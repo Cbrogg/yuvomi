@@ -164,11 +164,16 @@ export function amountMin(currency, currentValue) {
  *
  * Unbekannte Zeichen bleiben absichtlich stehen, statt still zu verschwinden -
  * ein Tippfehler soll als Tippfehler auffallen und nicht zu einer plausiblen
- * anderen Zahl werden. Aus demselben Grund wird Tausendergruppierung NICHT
- * aufgelöst: in de trennt der Punkt Tausender, aber "12.50" meint dort fast
- * immer zwölf-fünfzig. Wer den Punkt still entfernte, machte daraus 1250 - ein
- * um zwei Zehnerpotenzen falscher Betrag, den niemand mehr sieht. Ein
- * gruppierter Betrag wird stattdessen abgelehnt, und zwar schon im Formular.
+ * anderen Zahl werden.
+ *
+ * Tausendergruppierung wird nicht aufgelöst, sondern abgelehnt: der Rückgabewert
+ * ist dann leer, und die Formularprüfung verlangt eine neue Eingabe. Auflösen
+ * wäre in beide Richtungen gefährlich - in de-DE gruppiert der Punkt, "1.000"
+ * hiesse also tausend, während dieselbe Schreibweise als Dezimalzahl eins
+ * bedeutet. Beide Deutungen sind vertretbar, und bei Geld ist die falsche um
+ * den Faktor tausend daneben. Erkannt wird die Gruppierung am Muster, nicht am
+ * blossen Zeichen: drei Ziffern hinter dem Trenner sind mehrdeutig, zwei
+ * ("12.50") sind es nicht und gelten weiter als Dezimalangabe.
  */
 export function toDecimalString(value) {
   const raw = String(value ?? '').trim();
@@ -183,6 +188,15 @@ export function toDecimalString(value) {
 
   const parts = getNumberFormat({ useGrouping: false, minimumFractionDigits: 1 }).formatToParts(1.5);
   const decimalSep = parts.find((part) => part.type === 'decimal')?.value ?? '.';
+  const groupSep = getNumberFormat({ useGrouping: true, maximumFractionDigits: 0 })
+    .formatToParts(1234).find((part) => part.type === 'group')?.value;
+
+  // Gruppierungsmuster: der Trenner, gefolgt von genau drei Ziffern, auf die
+  // keine weitere folgt. "1.000" in de-DE trifft zu, "12.50" nicht.
+  if (groupSep && groupSep !== decimalSep) {
+    const escaped = groupSep.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (new RegExp(`${escaped}\\d{3}(?!\\d)`).test(raw)) return '';
+  }
 
   let out = '';
   for (const char of raw) {

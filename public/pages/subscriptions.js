@@ -1265,6 +1265,19 @@ async function openSettingsModal() {
           reportFieldError(panel.querySelector('#subscriptions-base-currency-search'), t('subscriptions.currencyRequired'));
           return;
         }
+        // Auch hier gilt: bei einem Bestandsbudget neben dem Raster steht das
+        // Feld auf step="any", die Prüfung muss also hier stattfinden.
+        const budgetInput = panel.querySelector('#subscriptions-budget');
+        if (!amountIsSavable(Number(budgetInput.value), baseCurrency, {
+          original: state.settings.monthly_budget ?? null,
+          originalCurrency: state.settings.base_currency ?? null,
+        })) {
+          reportFieldError(budgetInput, t('common.amountPrecisionRequired', {
+            currency: baseCurrency,
+            step: smallestUnitLabel(baseCurrency),
+          }));
+          return;
+        }
         try {
           await api.put('/budget/subscriptions/settings', {
             monthly_budget: Number(panel.querySelector('#subscriptions-budget').value),

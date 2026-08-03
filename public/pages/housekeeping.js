@@ -919,6 +919,22 @@ function openVisitEditModal(visit, content, { onDone } = {}) {
           ? null
           : Number(fields.daily_rate.value || 0);
         const extras = Number(fields.extras.value || 0);
+        // Wie beim Mitarbeitersatz: liegt der Bestandswert neben dem Raster,
+        // gibt amountStep "any" zurück, und ohne diese Prüfung wäre aus 12,5 JPY
+        // anschliessend auch 12,555 JPY speicherbar.
+        const offGrid = [
+          [fields.daily_rate, dailyRate, visit.daily_rate],
+          [fields.extras, extras, visit.extras],
+        ].find(([field, value, original]) => field && value != null
+          && !amountIsSavable(value, state.currency, { original: original ?? null }));
+        if (offGrid) {
+          window.yuvomi?.showToast(t('common.amountPrecisionRequired', {
+            currency: state.currency,
+            step: smallestUnitLabel(state.currency),
+          }), 'danger');
+          offGrid[0].focus();
+          return;
+        }
         let receiptDocumentId = visit.receipt_document_id || null;
         try {
           const file = panel.querySelector('#housekeeping-receipt-file')?.files?.[0];
@@ -1089,6 +1105,13 @@ function openStaffModal(worker, content, options = {}) {
         const rateField = isHourly ? fields.hourly_rate : fields.daily_rate;
         const rateValue = Number(rateField?.value || 0);
         const rateOriginal = isHourly ? item.hourly_rate : item.daily_rate;
+        // Nur der Satz zum gewählten Tarif-Typ zählt. Der andere wird unten
+        // trotzdem mitgesendet - dort geht der gespeicherte Wert raus, nicht
+        // eine liegengebliebene Eingabe: wer 12,5 als Tagessatz tippt und dann
+        // auf Stundensatz umstellt, schriebe sonst den ungeprüften Rest weg.
+        const inactiveField = isHourly ? fields.daily_rate : fields.hourly_rate;
+        const inactiveOriginal = isHourly ? item.daily_rate : item.hourly_rate;
+        if (inactiveField) inactiveField.value = String(inactiveOriginal ?? 0);
         if (!amountIsSavable(rateValue, state.currency, { original: rateOriginal ?? null })) {
           window.yuvomi?.showToast(t('common.amountPrecisionRequired', {
             currency: state.currency,
