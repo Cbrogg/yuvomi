@@ -179,8 +179,8 @@
         "customizeSize": "Tamanho",
         "customizeSizeFor": "Tamanho de {{widget}}",
         "customizeHide": "Ocultar {{widget}}",
-        "customizeHiddenTitle": "Ausgeblendete Widgets",
-        "customizeShow": "{{widget}} einblenden",
+        "customizeHiddenTitle": "Widgets ocultos",
+        "customizeShow": "Mostrar {{widget}}",
         "widgetSizeTiny": "Pequeno (1×1)",
         "widgetSizeNarrow": "Estreito (2×1)",
         "widgetSizeTall": "Alto (1×2)",
@@ -505,10 +505,10 @@
         "recipeUrlLabel": "Link da receita (opcional)",
         "recipeUrlPlaceholder": "https://…",
         "openRecipe": "Abrir receita",
-        "savedRecipeLabel": "Saved recipe",
-        "savedRecipePlaceholder": "Select recipe",
-        "saveAsRecipe": "Save as recipe",
-        "recipeScaleLabel": "Scale ingredients",
+        "savedRecipeLabel": "Receita salva",
+        "savedRecipePlaceholder": "Selecionar receita",
+        "saveAsRecipe": "Salvar como receita",
+        "recipeScaleLabel": "Ajustar ingredientes",
         "deletedToast": "Refeição excluída.",
         "recurrenceLabel": "Repetir semanalmente",
         "recurrenceHint": "O Yuvomi adiciona automaticamente esta refeição no mesmo dia da semana nas semanas futuras.",
@@ -2345,17 +2345,17 @@
     },
     "onboarding": {
         "step1Title": "Bem-vindo ao {{name}}",
-        "step1Body": "Your personal family planner. Tasks, calendar, shopping and more – all in one place.",
+        "step1Body": "Seu planejador familiar pessoal. Tarefas, calendário, compras e mais - tudo em um só lugar.",
         "step2Title": "Navegação e módulos",
         "step2Body": "Na parte inferior acessa diretamente o Painel e o Calendário. Com o botão ··· abre módulos adicionais como Cozinha, Notas e Contactos.",
         "step3Title": "Comece rapidamente",
         "step3Body": "Com o botão + cria novas entradas em qualquer lugar. Deslize itens da lista para a esquerda ou direita para ações rápidas.",
-        "next": "Next",
-        "done": "Get started",
-        "skip": "Skip"
+        "next": "Próximo",
+        "done": "Começar",
+        "skip": "Pular"
     },
     "offline": {
-        "banner": "Offline – reconnecting…",
+        "banner": "Offline - reconectando…",
         "staleData": "Offline – dados de: {{time}}"
     },
     "emptyHint": {
