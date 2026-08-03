@@ -1148,7 +1148,7 @@
 
 .loan-report__status--active {
   background: var(--color-info);
-  color: var(--color-text-on-accent);
+  color: var(--color-ink-on-vivid);
 }
 
 .loan-report__status--paid {

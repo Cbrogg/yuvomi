@@ -166,7 +166,7 @@
 
 .health-vitals__range.is-active {
   background: var(--module-accent);
-  color: var(--color-text-on-accent);
+  color: var(--color-ink-on-vivid);
 }
 
 .health-vitals__add {

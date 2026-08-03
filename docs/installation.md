@@ -19,9 +19,14 @@ git clone https://github.com/ulsklyc/yuvomi.git && cd yuvomi
 bash install.sh
 ```
 
-The script checks prerequisites, generates security keys, configures optional integrations, starts the container (Docker or Podman — auto-detected), and creates your admin account. Like the web installer, it is fully localized in 23 languages and auto-detects yours from the shell environment (`LANG`/`LC_ALL`).
+The script checks prerequisites, generates security keys, asks for the base URL your household will use, configures optional integrations (weather via Open-Meteo coordinates, calendars, document storage), starts the container (Docker or Podman — auto-detected), and creates your admin account. Like the web installer, it is fully localized in 23 languages and auto-detects yours from the shell environment (`LANG`/`LC_ALL`).
 
-Running it again on an existing installation is safe: keys already present in your `.env` are kept instead of regenerated, so the database stays readable. Remove a key from `.env` if you deliberately want a new one.
+Running it again on an existing installation is safe, in two ways:
+
+- **Security keys are never regenerated.** `SESSION_SECRET` and `DB_ENCRYPTION_KEY` already present in your `.env` are kept, so the database stays readable. Remove a key from `.env` if you deliberately want a new one.
+- **Settings the script does not ask about are carried over.** Anything you added by hand or through the web installer — `EMAIL_SMTP_*`, `OIDC_*`, `WEBDAV_BACKUP_*`, `VAPID_SUBJECT`, `LOG_LEVEL` and the rest — is copied from the previous `.env` into the new one, and the script reports how many entries it kept. Only the values the dialog itself asks about are replaced by your answers. The previous file is still backed up to `.env.bak-<timestamp>` first.
+
+> **Base URL.** The script asks for the absolute origin your household will open (default `http://<host>:<port>`) and writes it as `BASE_URL`. Behind a reverse proxy, enter the public address there — for example `https://yuvomi.example.com`. Without it the server sends no password-reset emails at all, because it deliberately does not trust the request's `Host` header.
 
 Force a specific language with `--lang` (one of `de en es fr it sv el ru tr zh ja ar hi pt uk pl nl cs vi hu ko id fa`):
 
@@ -523,7 +528,8 @@ Mount a host directory to the container path and enable the backend:
 ```yaml
 # docker-compose.yml
 volumes:
-  - ${DOCUMENT_STORAGE_LOCAL_DIR:-./documents}:/documents
+  # Both ends come from the .env, so changing the container path moves the mount with it
+  - ${DOCUMENT_STORAGE_LOCAL_DIR:-./documents}:${DOCUMENT_STORAGE_LOCAL_PATH:-/documents}
 environment:
   - DOCUMENT_STORAGE_LOCAL_ENABLED=true
   - DOCUMENT_STORAGE_LOCAL_PATH=/documents
@@ -533,7 +539,7 @@ environment:
 |----------|-------------|---------|----------|
 | `DOCUMENT_STORAGE_LOCAL_ENABLED` | Write new document files to the mounted folder (`true`/`false`) | `false` | No |
 | `DOCUMENT_STORAGE_LOCAL_PATH` | Container path for document files | `/documents` | No |
-| `DOCUMENT_STORAGE_LOCAL_DIR` | Compose-only: host folder mounted to `/documents` | `./documents` | No |
+| `DOCUMENT_STORAGE_LOCAL_DIR` | Compose-only: host folder mounted to `DOCUMENT_STORAGE_LOCAL_PATH` | `./documents` | No |
 
 > Ensure the mounted folder is writable by the container (adjust ownership/permissions as needed).
 > Files live on the host volume, so include that folder in your host-level backups — database
@@ -797,7 +803,7 @@ SESSION_SECURE=true
 TRUST_PROXY=1
 ```
 
-> The web installer's **Advanced** step and `install.sh` set both values for you when you choose a reverse-proxy deployment.
+> Both installers set these for you. The web installer's **Advanced** step asks for your deployment type; the CLI installer derives them from the scheme of the base URL you enter — `https://` means proxy (`SESSION_SECURE=true`, `TRUST_PROXY=1`), anything else means direct access (`SESSION_SECURE=false`, `TRUST_PROXY=loopback`). A value already present in your `.env` always wins, so a hand-tuned `TRUST_PROXY=2` survives a re-run.
 
 Then restart the container so the new values take effect:
 

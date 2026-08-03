@@ -4301,6 +4301,164 @@ test('module accents stay readable as text on the page background in both themes
   }
 });
 
+// Fuellflaechen, die zur Laufzeit entstehen und daher in tokens.css GAR NICHT
+// stehen. Sie einfach nachzuschlagen liefert undefined - und ein Guard, der
+// undefined still ueberspringt, bewacht genau die Stellen nicht, um die es
+// geht (drei von acht Mutationen blieben so gruen):
+//
+//   --active-module-accent  setzt der Router auf <html>, je nach offener Seite.
+//   --module-accent         setzt jedes Modul-CSS scoped auf seiner Page-Root
+//                           (`--module-accent: var(--module-birthdays)`).
+//
+// Die zweite laesst sich pro Datei exakt aufloesen, die erste nicht - dort ist
+// jede Modulfarbe moeglich, also zaehlt der schlechteste Fall.
+const RUNTIME_FILL_TOKENS = new Set(['--active-module-accent', '--module-accent']);
+
+// Das lokale `--module-accent: var(--module-x)` einer Modul-CSS-Datei.
+function localModuleAccent(src) {
+  const m = src.match(/--module-accent\s*:\s*var\(\s*(--module-[\w-]+)\s*\)/);
+  return m ? m[1] : null;
+}
+
+function themeTokenMaps() {
+  const tokens = read('../public/styles/tokens.css');
+  const rootBlock = tokens.match(/:root\s*\{([\s\S]*?)\n\}/);
+  const darkBlock = tokens.match(/\n\[data-theme="dark"\]\s*\{([\s\S]*?)\n\}/);
+  assert.ok(rootBlock && darkBlock, 'expected :root and [data-theme="dark"] token blocks');
+  const light = parseTokenMap(rootBlock[1]);
+  const dark = new Map(light);
+  for (const [k, v] of parseTokenMap(darkBlock[1])) dark.set(k, v);
+  return { light, dark };
+}
+
+// Die Flaechen, die ein Fuell-Token in einem Theme annehmen kann. Fuer
+// --active-module-accent sind das alle Modulfarben, sonst genau eine.
+function fillColors(token, map, scopedAccent) {
+  if (RUNTIME_FILL_TOKENS.has(token)) {
+    const names = token === '--module-accent' && scopedAccent
+      ? [scopedAccent]
+      : [...map.keys()].filter((name) => /^--module-[\w-]+$/.test(name));
+    return names.map((name) => ({ label: name, hex: resolveColor(name, map) }));
+  }
+  const hex = resolveColor(token, map);
+  return hex && /^#[0-9a-f]{6}$/i.test(hex) ? [{ label: token, hex }] : [];
+}
+
+/**
+ * Genau die Flaechen, um die es geht: die, die zwischen den Themes die
+ * TEXTPOLARITAET wechseln - im Light gesaettigt-dunkel (weiss traegt), im Dark
+ * pastellig-hell (weiss traegt nicht). Das ist das Muster der gesamten
+ * Yuvomi-Akzentpalette und der Grund, warum eine statische Textfarbe dort
+ * zwangslaeufig in einem der beiden Themes falsch liegt.
+ *
+ * Ruhige Flaechen (Surfaces, Rahmen) kippen nicht: sie sind in beiden Themes
+ * auf derselben Seite. Sie gehoeren nicht unter diese Regel, sonst zieht der
+ * Guard jeden gewoehnlichen Text-auf-Karte-Fall herein und misst etwas, das er
+ * gar nicht meint.
+ */
+function flipsTextPolarity(lightHex, darkHex) {
+  if (!lightHex || !darkHex) return false;
+  return contrastRatio('#ffffff', lightHex) >= 4.5 && contrastRatio('#ffffff', darkHex) < 4.5;
+}
+
+/**
+ * Die Regel, nicht die Fundstellen.
+ *
+ * `--color-text-on-accent` ist statisches Weiss und wird in KEINEM Dark-Block
+ * redefiniert. Die vividen Fuellfarben kippen dagegen alle: im Light sind sie
+ * gesaettigt-dunkel (weiss traegt), im Dark pastellig-hell (weiss traegt nicht).
+ * Gemessen lagen alle 18 Modulakzente im Dark zwischen 1,44:1 (Notizen #FCD34D)
+ * und 3,21:1 - der Datepicker faerbte den gewaehlten Tag so unlesbar ein.
+ *
+ * Der Guard listet keine Dateien auf, sondern RECHNET: jede Deklaration, die
+ * eine Textfarbe auf eine Fuellflaeche setzt, muss in beiden Themes 4,5:1
+ * halten. Damit faellt auch ein kuenftiges Token durch, das heute noch nicht
+ * existiert. Eine Allowlist haette genau das nicht geleistet - sie deckt N
+ * Dateien ab, nicht die Regel.
+ */
+test('Textfarbe auf vividen Fuellflaechen haelt WCAG AA in beiden Themes', () => {
+  const { light, dark } = themeTokenMaps();
+  const dir = new URL('../public/styles/', import.meta.url);
+  const violations = [];
+
+  for (const file of readdirSync(dir).filter((n) => n.endsWith('.css') && n !== 'tokens.css')) {
+    const src = read(`../public/styles/${file}`);
+    const scopedAccent = localModuleAccent(src);
+    // Flache Deklarationsbloecke; @media-Verschachtelung faellt in den aeusseren
+    // Selektor-Teil, der Block selbst bleibt korrekt.
+    for (const [, selector, body] of src.matchAll(/([^{}]*)\{([^{}]*)\}/g)) {
+      // Nur eine PURE Token-Fuellung (ggf. mit var()-Fallback). color-mix und
+      // Gradienten sind bewusst ausgenommen: dort entscheidet die Mischung,
+      // nicht das Token (`.birthday-chip--today` mischt 72% mit Schwarz und
+      // traegt weiss mit gemessenen 4,87:1).
+      const fill = body.match(
+        /(?:^|[\s;])background(?:-color)?\s*:\s*var\(\s*(--[\w-]+)\s*(?:,\s*var\(\s*(--[\w-]+)\s*\)\s*)?\)\s*(?:;|$)/,
+      );
+      const textColor = body.match(/(?:^|[\s;])color\s*:\s*var\(\s*(--[\w-]+)\s*\)\s*(?:;|$)/);
+      if (!fill || !textColor) continue;
+
+      const fillToken = fill[1];
+      const lightFills = fillColors(fillToken, light, scopedAccent);
+      const darkFills = new Map(
+        fillColors(fillToken, dark, scopedAccent).map((f) => [f.label, f.hex]),
+      );
+
+      for (const surface of lightFills) {
+        const darkHex = darkFills.get(surface.label);
+        if (!flipsTextPolarity(surface.hex, darkHex)) continue;
+
+        for (const [theme, map, surfaceHex] of [
+          ['light', light, surface.hex],
+          ['dark', dark, darkHex],
+        ]) {
+          const ink = resolveColor(textColor[1], map);
+          if (!ink || !/^#[0-9a-f]{6}$/i.test(ink)) continue;
+          const ratio = contrastRatio(ink, surfaceHex);
+          if (ratio >= 4.5) continue;
+          violations.push(
+            `${file} {${selector.trim().split('\n').pop().trim()}}: ${theme} ` +
+            `${textColor[1]} (${ink}) auf ${surface.label} (${surfaceHex}) = ${ratio.toFixed(2)}:1`,
+          );
+        }
+      }
+    }
+  }
+
+  assert.deepEqual(violations, [],
+    'Textfarbe auf vivider Fuellflaeche unter 4,5:1 - --color-ink-on-vivid kippt mit dem Theme, --color-text-on-accent nicht');
+});
+
+test('--color-ink-on-vivid traegt auf jedem Modulakzent, --color-text-on-accent nicht', () => {
+  // Die Gegenprobe zum Guard darueber: sie belegt, dass der vorgeschriebene
+  // Token die Schwelle ueberhaupt halten KANN, und dass der alte es nicht tut.
+  // Ohne diese Haelfte koennte jemand die Regel erfuellen, indem er auf ein
+  // drittes, ebenso untaugliches Token ausweicht.
+  const { light, dark } = themeTokenMaps();
+
+  for (const [theme, map] of [['light', light], ['dark', dark]]) {
+    const ink = resolveColor('--color-ink-on-vivid', map);
+    const modules = [...map.keys()].filter((name) => /^--module-[\w-]+$/.test(name));
+    assert.ok(modules.length >= 15, `expected the module palette, found ${modules.length}`);
+
+    for (const token of modules) {
+      const surface = resolveColor(token, map);
+      const ratio = contrastRatio(ink, surface);
+      assert.ok(ratio >= 4.5,
+        `${theme}: --color-ink-on-vivid (${ink}) auf ${token} (${surface}) ist ${ratio.toFixed(2)}:1`);
+    }
+  }
+
+  // Im Dark-Theme muss das statische Weiss messbar durchfallen - sonst waere
+  // der ganze Umbau unnoetig und dieser Guard wuerde eine tote Regel bewachen.
+  const staticWhite = resolveColor('--color-text-on-accent', dark);
+  assert.equal(staticWhite.toLowerCase(), '#ffffff', '--color-text-on-accent ist statisches Weiss');
+  const worst = [...dark.keys()]
+    .filter((name) => /^--module-[\w-]+$/.test(name))
+    .map((name) => contrastRatio(staticWhite, resolveColor(name, dark)));
+  assert.ok(Math.min(...worst) < 3,
+    'Dark-Modulakzente muessen weissen Text unterschreiten, sonst ist die Regel gegenstandslos');
+});
+
 /**
  * Der Test darueber prueft die Token-WERTE pro Theme. Er sagt nichts darueber,
  * ob die App zur Laufzeit auch den Wert des aktiven Themes benutzt - und genau

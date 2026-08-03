@@ -4,7 +4,7 @@
     "continue": "ادامه",
     "back": "بازگشت",
     "generate": "تولید",
-    "generating": "…",
+    "generating": "در حال تولید…",
     "optional": "اختیاری",
     "stepCounter": "گام {{n}} از {{total}}",
     "toggleVisibility": "نمایش یا پنهان‌سازی مقدار",
@@ -125,7 +125,17 @@
     "documentGoogleDriveReuseHint": "برای استفادهٔ مجدد از اعتبارنامه‌های OAuth تقویم Google، هر دو فیلد را خالی بگذارید. برای اعتبارنامه‌های اختصاصی، آن‌ها را در Google Cloud Console بسازید (مانند مرحلهٔ تقویم).",
     "documentGoogleDriveRedirectLabel": "URI تغییر مسیر",
     "errDocumentGoogleDrivePair": "شناسه و رمز سرویس‌گیرندهٔ Google Drive باید هر دو تنظیم شوند یا هر دو خالی باشند.",
-    "errDocumentGoogleDriveCredentials": "Google Drive به شناسه و رمز سرویس‌گیرندهٔ اختصاصی خود یا اعتبارنامه‌های پیکربندی‌شدهٔ تقویم Google نیاز دارد."
+    "errDocumentGoogleDriveCredentials": "Google Drive به شناسه و رمز سرویس‌گیرندهٔ اختصاصی خود یا اعتبارنامه‌های پیکربندی‌شدهٔ تقویم Google نیاز دارد.",
+    "dataDirLabel": "پوشه داده روی میزبان",
+    "dataDirHint": "محل پایگاه داده و داده‌های برنامه روی سرور. برای استفاده از ‎./data کنار فایل compose خالی بگذارید.",
+    "documentLocalDirLabel": "پوشه روی میزبان",
+    "documentLocalDirHint": "پوشه‌ای روی سرور که در کانتینر سوار می‌شود. برای استفاده از ‎./documents خالی بگذارید.",
+    "documentWebdavPrivateNetwork": "اجازه مقصد WebDAV در شبکه خانگی",
+    "documentWebdavPrivateNetworkHint": "برای Nextcloud در شبکه خودتان لازم است. حفاظت SSRF را برای این مقصد برمی‌دارد.",
+    "icsPrivateNetwork": "اجازه اشتراک تقویم از شبکه خانگی",
+    "icsPrivateNetworkHint": "برای فیدهای ICS از دستگاه‌های شبکه خودتان لازم است. حفاظت SSRF را برای اشتراک‌های تقویم برمی‌دارد.",
+    "oidcTrustEmail": "اعتماد به ایمیل بدون ادعای verified",
+    "oidcTrustEmailHint": "فقط زمانی فعال کنید که ارائه‌دهنده شما email_verified نمی‌فرستد و به آن اعتماد دارید."
   },
   "review": {
     "title": "بازبینی",
@@ -159,13 +169,20 @@
   "docker": {
     "title": "Yuvomi در حال راه‌اندازی است",
     "subtitle": "ایمیج بارگذاری و کانتینر Docker راه‌اندازی می‌شود.",
-    "starting": "کانتینر در حال راه‌اندازی …",
     "elapsed": "{{n}} ثانیه گذشت",
     "running": "کانتینر سالم است و در حال اجراست",
     "failed": "کانتینر راه‌اندازی نشد",
     "unknownError": "خطای ناشناخته",
     "toAdmin": "ادامه به راه‌اندازی مدیر",
-    "retry": "تلاش مجدد"
+    "retry": "تلاش مجدد",
+    "phasePull": "در حال دانلود ایمیج",
+    "phaseBoot": "کانتینر در حال راه‌اندازی است",
+    "phaseHealth": "بررسی سلامت در حال اجراست",
+    "firstRunHint": "بار اول ممکن است چند دقیقه طول بکشد.",
+    "stalled": "این کار بیش از حد معمول طول کشیده است. گزارش زیر دلیل آن را نشان می‌دهد.",
+    "showLogs": "نمایش گزارش",
+    "hideLogs": "پنهان کردن گزارش",
+    "timedOut": "پس از ۱۵ دقیقه پاسخی دریافت نشد. گزارش را بررسی کنید و دوباره تلاش کنید."
   },
   "admin": {
     "title": "ایجاد حساب مدیر",
