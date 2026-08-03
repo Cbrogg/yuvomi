@@ -158,7 +158,8 @@ npm run test:backup-scheduler
 npm run test:backup-webdav
 npm run test:backup-routes  # Backup-/Restore-Routen: requireAdmin-Gate, /status, /trigger, /database, /restore (400/413/Roundtrip), WebDAV-Konfig + Loopback-Stub
 npm run test:split-expenses
-npm run test:split-expenses-routes   # Split-Expenses-Routen: Autorisierung (requireGroupAccess/canManageGroup, Gast-Confinement) + Geld/Ledger-Integrität (Salden, Settlement, Edit/Delete) + Archivieren/Wiederherstellen (#574)
+npm run test:split-expenses-routes   # Split-Expenses-Routen: Autorisierung (requireGroupAccess/canManageGroup, Gast-Confinement) + Geld/Ledger-Integrität (Salden, Settlement, Edit/Delete) + Archivieren/Wiederherstellen (#574). Das Gast-Confinement deckt auch den verwaisten Gast ab (Gruppe gelöscht) und den Gast, der zusätzlich in einer fremden Gruppe steht: Gruppenliste, Dashboard-Salden, jüngste Ausgaben, Suche und /expenses/:id bleiben ihm verschlossen
+npm run test:split-guest-migration   # Rebuild von split_expense_guest_users (v124): die Zeile trägt "ist beschränkt" (Existenz) und "worauf" (group_id) - das CASCADE aus v40 löschte beim Gruppen-Löschen beide und wertete den Gast zum Vollkonto auf. Prüft Bestandsübernahme (auf frischer DB ist die Tabelle bei v124 leer, der INSERT..SELECT liefe sonst ungetestet), Index, SET-NULL-Verhalten + Gegenbeweis auf dem Vor-v124-Stand
 npm run test:search
 npm run test:calendar-search   # calendar toolbar search (#471): FTS event search endpoint, location index, recurring next-instance, keyboard
 npm run test:search-diacritics # diacritic-insensitive FTS (unicode61 remove_diacritics 2) + ß↔ss query expansion

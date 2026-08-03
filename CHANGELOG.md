@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.75.6] - 2026-08-04
+
+### Security
+
+- Deleting a split expense group turned the guest accounts belonging to it into full household members. A guest is held to the Split module by a single record that carries two things at once: that the account is restricted at all, and which group it may see. Deleting the group took that whole record with it, while the login itself stayed untouched, so the account went on to reach the rest of the API, from the calendar to the documents. Any group owner could bring this about, because a group without expenses or settlements can be deleted outright. Deleting a group now clears only the group assignment: the account stays a guest and sees nothing. Accounts that an earlier deletion already promoted cannot be recognised after the fact, because the record that marked them is gone, so it is worth looking through Settings, Administration, Family for accounts that should not have household access.
+- A guest who also belonged to a second group could see that group's figures and expenses. On the Split dashboard the group list was restricted but the balances and recent expenses shown next to it were not, and a single expense could be opened, commented on, edited or deleted through its id, because those routes went by group membership alone. All of them now apply the same restriction as the group list.
+
 ## [1.75.5] - 2026-08-03
 
 ### Fixed
