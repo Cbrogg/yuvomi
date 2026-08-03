@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add New Zealand Dollar (NZD) as a selectable currency across household settings, subscriptions and split expenses, with an English (New Zealand) region preset.
+
 ## [1.75.3] - 2026-08-03
 
 ### Fixed

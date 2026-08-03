@@ -111,8 +111,8 @@ test('PUT visible_meal_types: gültige Teilmenge persistiert + filtert Unbekannt
 // --------------------------------------------------------
 test('PUT currency: ungültig -> 400, gültig -> persist', async () => {
   assert.equal((await put({ currency: 'XXX' })).status, 400);
-  assert.equal((await put({ currency: 'USD' })).body.data.currency, 'USD');
-  assert.equal((await get()).body.data.currency, 'USD');
+  assert.equal((await put({ currency: 'NZD' })).body.data.currency, 'NZD');
+  assert.equal((await get()).body.data.currency, 'NZD');
 });
 test('PUT date_format: ungültig -> 400, gültig -> persist', async () => {
   assert.equal((await put({ date_format: 'zzz' })).status, 400);

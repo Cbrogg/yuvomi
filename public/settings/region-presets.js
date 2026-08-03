@@ -19,6 +19,7 @@ export const REGION_PRESETS = {
   'en-GB': { currency: 'GBP', date_format: 'dmy_slash', time_format: '24h' },
   'en-CA': { currency: 'CAD', date_format: 'ymd', time_format: '12h' },
   'en-AU': { currency: 'AUD', date_format: 'dmy_slash', time_format: '12h' },
+  'en-NZ': { currency: 'NZD', date_format: 'dmy_slash', time_format: '12h' },
   'es-ES': { currency: 'EUR', date_format: 'dmy_slash', time_format: '24h' },
   'es-CL': { currency: 'CLP', date_format: 'dmy_slash', time_format: '24h' },
   'fr-FR': { currency: 'EUR', date_format: 'dmy_slash', time_format: '24h' },

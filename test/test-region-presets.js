@@ -117,6 +117,16 @@ test('Malaysia preset formats MYR amounts with the local currency symbol', () =>
   assert.ok(formatted.includes('1,234.56'));
 });
 
+test('New Zealand preset uses NZD and local number formatting', () => {
+  const locale = numberLocaleFor({ region: 'en-NZ', ...REGION_PRESETS['en-NZ'] });
+  const formatted = new Intl.NumberFormat(locale, { style: 'currency', currency: 'NZD' })
+    .format(1234.56);
+
+  assert.equal(locale, 'en-NZ');
+  assert.ok(formatted.includes('$'));
+  assert.ok(formatted.includes('1,234.56'));
+});
+
 test('numberLocaleFor derives the tag even without a stored region, and empties for custom', () => {
   // Region nicht gesetzt, aber Formate entsprechen einem Preset → abgeleiteter Tag.
   assert.equal(numberLocaleFor({ ...REGION_PRESETS['de-CH'] }), 'de-CH');

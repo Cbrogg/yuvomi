@@ -35,7 +35,7 @@ let container = null;
 // sonst ist die Haushaltswährung hier nicht wählbar (per Test abgesichert).
 const CURRENCIES = [
   'AED', 'AUD', 'BRL', 'CAD', 'CHF', 'CLP', 'CNY', 'CZK', 'DKK', 'EUR', 'GBP',
-  'HUF', 'IDR', 'INR', 'IRR', 'JPY', 'KRW', 'KZT', 'MYR', 'NOK', 'PLN', 'RUB',
+  'HUF', 'IDR', 'INR', 'IRR', 'JPY', 'KRW', 'KZT', 'MYR', 'NOK', 'NZD', 'PLN', 'RUB',
   'SAR', 'SEK', 'TRY', 'UAH', 'USD', 'ZAR',
 ];
 const DEFAULT_CATEGORY_LABELS = {
