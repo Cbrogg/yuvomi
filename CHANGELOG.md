@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.75.5] - 2026-08-03
+
+### Fixed
+
+- Deleting a CalDAV account left the tasks and shopping items it had mirrored pointing at an account that no longer existed, and those entries could then not be deleted at all. Deleting a mirrored entry first records the deletion for the server, and that record requires a live account: the record failed, and because it is written before the entry itself is removed, the removal never happened. The entry stayed put in Yuvomi while its copy on the server was already out of reach, with nothing to explain why it kept coming back. Deleting an account now detaches everything it had mirrored — those tasks and shopping items remain as ordinary local ones — and entries left behind by an earlier account deletion are repaired during the update.
+
 ## [1.75.4] - 2026-08-03
 
 ### Changed
