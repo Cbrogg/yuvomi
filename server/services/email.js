@@ -35,7 +35,15 @@ export function createEmailService({ db, nodemailer = nodemailerDefault, env = p
   function resolve(field) {
     const { key, env: envName } = CONFIG_KEYS[field];
     const fromEnv = env[envName];
-    if (fromEnv !== undefined && String(fromEnv).trim() !== '') return String(fromEnv).trim();
+    if (fromEnv !== undefined && String(fromEnv).trim() !== '') {
+      // Getrimmt wird geprüft, zurückgegeben aber nur, wo Trimmen unschädlich
+      // ist. Ein Passwort darf mit einem Leerzeichen anfangen oder enden; wer
+      // es abschneidet, macht aus einer gültigen Zugangsdatei eine ungültige,
+      // und das fällt erst beim ersten Versandversuch auf. Bei Host, Port und
+      // den Adressfeldern ist ein versehentliches Leerzeichen dagegen der
+      // wahrscheinlichere Fall, dort hilft das Trimmen.
+      return field === 'pass' ? String(fromEnv) : String(fromEnv).trim();
+    }
     return cfgGet(key);
   }
 

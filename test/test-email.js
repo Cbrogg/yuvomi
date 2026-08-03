@@ -321,3 +321,27 @@ test('die Settings-Seite sperrt jedes env-gestützte Feld sichtbar', () => {
   assert.match(page, /input\.disabled = controlled/,
     'admin-email.js muss die gesteuerten Felder tatsächlich sperren');
 });
+
+test('ein SMTP-Passwort behaelt Leerzeichen am Rand, Host und Co. werden getrimmt', () => {
+  // Dieselbe Falle wie bei den WebDAV-Zugangsdaten: getrimmt wird geprueft,
+  // zurueckgegeben aber nur dort, wo Trimmen unschaedlich ist. Bei Host und
+  // Adressen ist ein versehentliches Leerzeichen der wahrscheinlichere Fall,
+  // beim Passwort ist es Teil des Werts.
+  const db = { prepare: () => ({ get: () => undefined, run: () => {}, all: () => [] }) };
+  const svc = createEmailService({
+    db,
+    env: {
+      EMAIL_SMTP_HOST: ' smtp.example.test ',
+      EMAIL_SMTP_PASS: ' geheim ',
+      EMAIL_FROM_ADDRESS: ' family@example.test ',
+    },
+  });
+  const cfg = svc.getPublicConfig();
+  assert.equal(cfg.host, 'smtp.example.test', 'der Host wird getrimmt');
+  assert.equal(cfg.fromAddress, 'family@example.test', 'die Absenderadresse wird getrimmt');
+  // getPublicConfig gibt das Passwort nie heraus; getRawConfig ist die Stelle,
+  // die der Versand tatsaechlich benutzt. Kein optionaler Aufruf: ein Guard,
+  // der still ueberspringt, wenn die Methode fehlt, bewacht nichts.
+  assert.equal(typeof svc.getRawConfig, 'function', 'getRawConfig muss existieren');
+  assert.equal(svc.getRawConfig().pass, ' geheim ', 'das Passwort muss unveraendert bleiben');
+});

@@ -340,3 +340,22 @@ describe('env-Vorrang', () => {
     }
   });
 });
+
+describe('Zugangsdaten aus der Umgebung', () => {
+  it('erhaelt Leerzeichen am Rand eines Passworts', async () => {
+    // Getrimmt werden darf nur zur Erkennung "ist die Variable leer?". Wer den
+    // Wert selbst trimmt, macht aus einem gueltigen Passwort mit Rand-
+    // Leerzeichen ein ungueltiges - und das faellt erst beim naechsten Backup
+    // auf, nicht beim Speichern.
+    const saved = process.env.WEBDAV_BACKUP_PASSWORD;
+    process.env.WEBDAV_BACKUP_PASSWORD = ' pass mit rand ';
+    try {
+      const mod = await import(`../server/services/backup-webdav.js?pw=${process.pid}`);
+      assert.equal(mod.getConfig().password, ' pass mit rand ',
+        'das Passwort muss unveraendert durchgereicht werden');
+    } finally {
+      if (saved === undefined) delete process.env.WEBDAV_BACKUP_PASSWORD;
+      else process.env.WEBDAV_BACKUP_PASSWORD = saved;
+    }
+  });
+});

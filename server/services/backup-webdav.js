@@ -77,7 +77,11 @@ function cfgDelete(key) {
  * isEnvControlled() in services/email.js.
  */
 function envValue(raw) {
-  return raw !== undefined && String(raw).trim() !== '' ? String(raw).trim() : undefined;
+  // Getrimmt wird nur GEPRUEFT, zurueck kommt der Originalwert. Ein Passwort
+  // darf mit einem Leerzeichen anfangen oder enden - wer es trimmt, macht aus
+  // einer gueltigen Zugangsdatei eine ungueltige, und das faellt erst beim
+  // naechsten Backup auf.
+  return raw !== undefined && String(raw).trim() !== '' ? String(raw) : undefined;
 }
 
 export function getConfig() {
