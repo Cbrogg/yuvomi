@@ -409,7 +409,10 @@ test('Betragsfelder holen ihre Schrittweite aus der Währung, nicht aus 0.01', (
   // Eine Allowlist einzelner Feld-IDs würde nur die heute bekannten Felder
   // decken; der nächste neue Dialog fiele wieder durch.
   for (const [file, src] of MONEY_INPUT_PAGES) {
-    const inputs = withoutComments(src).match(/<input(?:[^>]|\n)*?>/g) || [];
+    // `[^>]` schliesst Zeilenumbrueche bereits ein (anders als `.`), eine
+    // Alternative `(?:[^>]|\n)` waere also mehrdeutig - und genau das ergibt
+    // exponentielles Backtracking (CodeQL js/redos).
+    const inputs = withoutComments(src).match(/<input[^>]*>/g) || [];
     for (const input of inputs) {
       if (!/inputmode="decimal"/.test(input)) continue;
       if (!/step="0\.01"/.test(input)) continue;
