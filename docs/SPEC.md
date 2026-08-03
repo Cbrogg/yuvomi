@@ -618,15 +618,15 @@ response, and retried by the next sync run (at-least-once, given up after 5 atte
 
 **Deleting the account detaches its mirrored rows (migration v123 · #617).**
 `external_account_id` carries no foreign key, so `CASCADE` reaches only what belongs to the account
-itself — calendar and list selection and the open VTODO deletions. The mirrored tasks and shopping
+itself - calendar and list selection and the open VTODO deletions. The mirrored tasks and shopping
 items are user data and stay, but a dangling account ID made them **undeletable**:
 `queueTodoDeletion()` records the deletion in `caldav_todo_pending_deletions`, which *does* carry
-the foreign key, and that insert runs before the local `DELETE` — so the row could not be removed at
+the foreign key, and that insert runs before the local `DELETE` - so the row could not be removed at
 all, while its remote copy was already out of reach. `deleteAccount` now detaches the rows in the
 same transaction that removes the account: back to `external_source = 'local'`, with UID, account
 ID, object URL and outbound markers cleared, so what remains is an ordinary task or shopping item.
 Migration v123 cleans up rows left behind by earlier deletions, and the outbound path additionally
-skips any row whose account is gone — the same precondition `acceptsOutbound()` applies to events.
+skips any row whose account is gone - the same precondition `acceptsOutbound()` applies to events.
 The foreign key is deliberately not retrofitted: SQLite cannot add one to an existing column without
 rebuilding `tasks` and `shopping_items` along with their indexes, FTS triggers and referencing
 tables.
