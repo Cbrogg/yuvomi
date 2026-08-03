@@ -196,6 +196,13 @@ const auth = {
   deleteUser: (id) => api.delete(`/auth/users/${id}`),
   forgotPassword: (identifier) => api.post('/auth/forgot-password', { identifier }),
   resetPassword: (token, password) => api.post('/auth/reset-password', { token, password }),
+  // Einladungen: die ersten drei sind Admin-Routen, die letzten beiden öffentlich
+  // (die /join-Seite ruft sie ohne Session auf).
+  createInvite: (data) => api.post('/auth/invites', data),
+  getInvites: () => api.get('/auth/invites'),
+  revokeInvite: (id) => api.delete(`/auth/invites/${id}`),
+  previewInvite: (token) => api.get(`/auth/invites/preview?token=${encodeURIComponent(token)}`),
+  acceptInvite: (data) => api.post('/auth/invites/accept', data),
 };
 
 // --------------------------------------------------------

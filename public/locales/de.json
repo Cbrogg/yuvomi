@@ -2111,7 +2111,29 @@
         "documentStorageGoogleDriveDisconnectBlocked": "Wähle ein anderes Ziel und entferne Drive-Dokumente vor dem Trennen.",
         "documentStorageGoogleDriveOAuthSuccess": "Google Drive ist verbunden. Wähle es als Upload-Ziel aus, wenn du bereit bist.",
         "documentStorageGoogleDriveOAuthError": "Die Google-Drive-Verbindung ist fehlgeschlagen. Eine bestehende Verbindung wurde beibehalten.",
-        "documentStorageGoogleDrivePrivacy": "Die Sichtbarkeitseinstellungen von Yuvomi steuern nur den Zugriff über Yuvomi. Jeder, der Zugriff auf den verbundenen Google-Drive-Ordner hat, kann alle dort gespeicherten Dateien sehen."
+        "documentStorageGoogleDrivePrivacy": "Die Sichtbarkeitseinstellungen von Yuvomi steuern nur den Zugriff über Yuvomi. Jeder, der Zugriff auf den verbundenen Google-Drive-Ordner hat, kann alle dort gespeicherten Dateien sehen.",
+        "invites": {
+            "title": "Einladungen",
+            "intro": "Lade neue Mitglieder per Link ein. Ihr Passwort legen sie selbst fest.",
+            "add": "+ Einladung erstellen",
+            "submit": "Einladung erstellen",
+            "usernameHint": "Optional. Bleibt das Feld leer, wählt die eingeladene Person den Namen selbst.",
+            "sendEmail": "Einladung per E-Mail senden",
+            "linkTitle": "Einladungslink",
+            "linkOnce": "Dieser Link wird nur jetzt angezeigt. Gib ihn weiter, bevor du die Seite verlässt.",
+            "copy": "Link kopieren",
+            "copied": "Link kopiert.",
+            "copyFailed": "Kopieren war nicht möglich. Markiere den Link und kopiere ihn von Hand.",
+            "emailSent": "Die Einladung wurde per E-Mail verschickt.",
+            "emailNotSent": "Es ist kein E-Mail-Versand eingerichtet. Gib den Link selbst weiter.",
+            "empty": "Es ist keine Einladung offen.",
+            "expires": "Gültig bis {{date}}",
+            "revoke": "Widerrufen",
+            "revokeConfirm": "Diese Einladung widerrufen? Der Link wird damit ungültig.",
+            "revoked": "Die Einladung wurde widerrufen.",
+            "created": "Die Einladung wurde erstellt.",
+            "revokeConfirmDetail": "Ein bereits verschickter oder kopierter Link hört sofort auf zu funktionieren. Die eingeladene Person kann damit kein Konto mehr anlegen; dafür musst du sie erneut einladen."
+        }
     },
     "login": {
         "tagline": "Willkommen zurück bei eurem Familienplaner.",
@@ -3762,5 +3784,25 @@
         "openAction": "{{name}} öffnen",
         "limitReached": "Höchstens {{count}} Dokumente möglich.",
         "limitReached_one": "Höchstens {{count}} Dokument möglich."
+    },
+    "join": {
+        "title": "Konto einrichten",
+        "intro": "Du wurdest zu Yuvomi eingeladen. Lege hier deine Zugangsdaten fest.",
+        "usernameLabel": "Benutzername",
+        "fieldFixed": "Von der Einladung vorgegeben.",
+        "displayNameLabel": "Anzeigename",
+        "passwordLabel": "Passwort",
+        "confirmLabel": "Passwort bestätigen",
+        "submit": "Konto erstellen",
+        "success": "Dein Konto wurde erstellt. Du kannst dich jetzt anmelden.",
+        "mismatch": "Die Passwörter stimmen nicht überein.",
+        "tooShort": "Das Passwort muss mindestens 8 Zeichen lang sein.",
+        "invalidToken": "Diese Einladung ist ungültig, abgelaufen oder wurde bereits eingelöst.",
+        "missingToken": "Es wurde kein gültiger Token gefunden.",
+        "usernameRequired": "Bitte wähle einen Benutzernamen.",
+        "usernameInvalid": "Der Benutzername muss 3 bis 64 Zeichen lang sein und darf nur Buchstaben, Zahlen, Punkt, Bindestrich und Unterstrich enthalten.",
+        "usernameTaken": "Dieser Benutzername ist bereits vergeben.",
+        "error": "Das Konto konnte nicht erstellt werden. Bitte versuche es noch einmal.",
+        "displayNameTooLong": "Der Anzeigename darf höchstens 128 Zeichen lang sein."
     }
 }

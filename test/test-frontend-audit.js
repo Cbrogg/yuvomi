@@ -6065,6 +6065,7 @@ test('Avatar-Initialen waehlen die lesbare Textfarbe', async () => {
 test('destruktive Settings-Dialoge nennen ihre Folgen und sind als gefaehrlich markiert', () => {
   const dialoge = [
     ['admin-family.js', 'settings.deleteMemberConfirm', 'settings.deleteMemberConfirmDetail'],
+    ['admin-family.js', 'settings.invites.revokeConfirm', 'settings.invites.revokeConfirmDetail'],
     ['admin-api.js', 'settings.apiTokenRevokeConfirm', 'settings.apiTokenRevokeDetail'],
     ['admin-permissions.js', 'settings.permResetConfirm', 'settings.permResetConfirmDetail'],
     ['admin-backup.js', 'settings.backupRestoreConfirm', 'settings.backupRestoreDetail'],

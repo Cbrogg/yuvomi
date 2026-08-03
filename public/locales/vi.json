@@ -2099,7 +2099,29 @@
         "mealieAccountUpdated": "Đã cập nhật tài khoản Mealie.",
         "mealieAccountDeleted": "Đã xóa tài khoản Mealie.",
         "mealieDeleteAccountConfirm": "Thao tác này cũng sẽ xóa {{count}} công thức được phản chiếu và hủy liên kết chúng khỏi mọi mục trong kế hoạch bữa ăn.",
-        "mealieLastError": "Lỗi đồng bộ gần nhất: {{message}}"
+        "mealieLastError": "Lỗi đồng bộ gần nhất: {{message}}",
+        "invites": {
+            "title": "Lời mời",
+            "intro": "Mời thành viên mới bằng liên kết. Họ tự đặt mật khẩu.",
+            "add": "+ Tạo lời mời",
+            "submit": "Tạo lời mời",
+            "usernameHint": "Không bắt buộc. Để trống thì người được mời tự chọn tên.",
+            "sendEmail": "Gửi lời mời qua e-mail",
+            "linkTitle": "Liên kết lời mời",
+            "linkOnce": "Liên kết này chỉ hiện lúc này. Hãy chuyển đi trước khi rời trang.",
+            "copy": "Sao chép liên kết",
+            "copied": "Đã sao chép liên kết.",
+            "copyFailed": "Sao chép không thành công. Hãy chọn liên kết và sao chép thủ công.",
+            "emailSent": "Lời mời đã được gửi qua e-mail.",
+            "emailNotSent": "Chưa cấu hình gửi e-mail. Hãy tự chuyển liên kết.",
+            "empty": "Không có lời mời nào đang mở.",
+            "expires": "Có hiệu lực đến {{date}}",
+            "revoke": "Thu hồi",
+            "revokeConfirm": "Thu hồi lời mời này? Liên kết sẽ ngừng hoạt động.",
+            "revoked": "Lời mời đã được thu hồi.",
+            "created": "Lời mời đã được tạo.",
+            "revokeConfirmDetail": "Liên kết bạn đã gửi hoặc sao chép sẽ ngừng hoạt động ngay. Người được mời không thể tạo tài khoản bằng liên kết đó nữa; bạn sẽ phải mời lại."
+        }
     },
     "login": {
         "tagline": "Chào mừng bạn trở lại trình lập kế hoạch gia đình.",
@@ -2115,7 +2137,7 @@
         "loginWithSso": "Đăng nhập với SSO",
         "orDivider": "hoặc",
         "ssoError": "Đăng nhập SSO thất bại. Vui lòng thử lại.",
-        "forgotPassword": "Forgot password?",
+        "forgotPassword": "Quên mật khẩu?",
         "networkError": "Kết nối thất bại. Kiểm tra xem máy chủ có đang chạy không rồi thử lại.",
         "capsLockWarning": "Caps Lock đang bật.",
         "fillAllFields": "Vui lòng nhập tên người dùng và mật khẩu."
@@ -2852,23 +2874,23 @@
         "noReleaseNotes": "Không có ghi chú phát hành cho phiên bản này."
     },
     "forgotPassword": {
-        "title": "Reset password",
-        "intro": "Enter your username or email address. We'll send you a reset link.",
-        "identifierLabel": "Username or email",
-        "submit": "Send link",
-        "sent": "If a matching account exists, a reset link has been sent.",
-        "backToLogin": "Back to login"
+        "title": "Đặt lại mật khẩu",
+        "intro": "Nhập tên đăng nhập hoặc e-mail của bạn. Chúng tôi sẽ gửi liên kết đặt lại.",
+        "identifierLabel": "Tên đăng nhập hoặc e-mail",
+        "submit": "Gửi liên kết",
+        "sent": "Nếu có tài khoản phù hợp, liên kết đặt lại đã được gửi.",
+        "backToLogin": "Quay lại đăng nhập"
     },
     "resetPassword": {
-        "title": "Set a new password",
-        "passwordLabel": "New password",
-        "confirmLabel": "Confirm password",
-        "submit": "Save password",
-        "success": "Your password has been changed. You can now sign in.",
-        "mismatch": "The passwords do not match.",
-        "tooShort": "The password must be at least 8 characters long.",
-        "invalidToken": "This link is invalid or has expired.",
-        "missingToken": "No valid token was found."
+        "title": "Đặt mật khẩu mới",
+        "passwordLabel": "Mật khẩu mới",
+        "confirmLabel": "Xác nhận mật khẩu",
+        "submit": "Lưu mật khẩu",
+        "success": "Mật khẩu của bạn đã được thay đổi. Bây giờ bạn có thể đăng nhập.",
+        "mismatch": "Mật khẩu không khớp.",
+        "tooShort": "Mật khẩu phải dài ít nhất 8 ký tự.",
+        "invalidToken": "Liên kết này không hợp lệ hoặc đã hết hạn.",
+        "missingToken": "Không tìm thấy mã hợp lệ."
     },
     "email": {
         "host": "SMTP host",
@@ -3762,5 +3784,25 @@
         "openAction": "Mở {{name}}",
         "limitReached": "Tối đa {{count}} tài liệu.",
         "limitReached_one": "Tối đa {{count}} tài liệu."
+    },
+    "join": {
+        "title": "Thiết lập tài khoản",
+        "intro": "Bạn được mời vào Yuvomi. Hãy đặt thông tin đăng nhập tại đây.",
+        "usernameLabel": "Tên đăng nhập",
+        "fieldFixed": "Do lời mời ấn định.",
+        "displayNameLabel": "Tên hiển thị",
+        "passwordLabel": "Mật khẩu",
+        "confirmLabel": "Xác nhận mật khẩu",
+        "submit": "Tạo tài khoản",
+        "success": "Tài khoản của bạn đã được tạo. Bây giờ bạn có thể đăng nhập.",
+        "mismatch": "Mật khẩu không khớp.",
+        "tooShort": "Mật khẩu phải dài ít nhất 8 ký tự.",
+        "invalidToken": "Lời mời này không hợp lệ, đã hết hạn hoặc đã được dùng.",
+        "missingToken": "Không tìm thấy mã hợp lệ.",
+        "usernameRequired": "Hãy chọn một tên đăng nhập.",
+        "usernameInvalid": "Tên đăng nhập phải dài từ 3 đến 64 ký tự và chỉ gồm chữ cái, chữ số, dấu chấm, dấu gạch ngang và gạch dưới.",
+        "usernameTaken": "Tên đăng nhập này đã được dùng.",
+        "error": "Không tạo được tài khoản. Vui lòng thử lại.",
+        "displayNameTooLong": "Tên hiển thị dài tối đa 128 ký tự."
     }
 }

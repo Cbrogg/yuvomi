@@ -2099,7 +2099,29 @@
         "mealieAccountUpdated": "Ο λογαριασμός Mealie ενημερώθηκε.",
         "mealieAccountDeleted": "Ο λογαριασμός Mealie διαγράφηκε.",
         "mealieDeleteAccountConfirm": "Αυτό θα αφαιρέσει επίσης {{count}} αντικατοπτρισμένες συνταγές και θα τις αποσυνδέσει από τυχόν καταχωρίσεις προγράμματος γευμάτων.",
-        "mealieLastError": "Τελευταίο σφάλμα συγχρονισμού: {{message}}"
+        "mealieLastError": "Τελευταίο σφάλμα συγχρονισμού: {{message}}",
+        "invites": {
+            "title": "Προσκλήσεις",
+            "intro": "Πρόσκαλεσε νέα μέλη με σύνδεσμο. Τον κωδικό τους τον ορίζουν μόνα τους.",
+            "add": "+ Δημιουργία πρόσκλησης",
+            "submit": "Δημιουργία πρόσκλησης",
+            "usernameHint": "Προαιρετικό. Αν το αφήσεις κενό, το όνομα το διαλέγει το προσκεκλημένο άτομο.",
+            "sendEmail": "Αποστολή πρόσκλησης με e-mail",
+            "linkTitle": "Σύνδεσμος πρόσκλησης",
+            "linkOnce": "Ο σύνδεσμος εμφανίζεται μόνο τώρα. Δώσ’ τον πριν φύγεις από τη σελίδα.",
+            "copy": "Αντιγραφή συνδέσμου",
+            "copied": "Ο σύνδεσμος αντιγράφηκε.",
+            "copyFailed": "Η αντιγραφή απέτυχε. Επίλεξε τον σύνδεσμο και αντίγραψέ τον με το χέρι.",
+            "emailSent": "Η πρόσκληση στάλθηκε με e-mail.",
+            "emailNotSent": "Δεν έχει ρυθμιστεί αποστολή e-mail. Δώσε τον σύνδεσμο μόνος σου.",
+            "empty": "Δεν υπάρχει εκκρεμής πρόσκληση.",
+            "expires": "Ισχύει έως {{date}}",
+            "revoke": "Ανάκληση",
+            "revokeConfirm": "Ανάκληση αυτής της πρόσκλησης; Ο σύνδεσμος θα πάψει να ισχύει.",
+            "revoked": "Η πρόσκληση ανακλήθηκε.",
+            "created": "Η πρόσκληση δημιουργήθηκε.",
+            "revokeConfirmDetail": "Ένας σύνδεσμος που έχεις ήδη στείλει ή αντιγράψει παύει αμέσως να ισχύει. Το προσκεκλημένο άτομο δεν μπορεί πλέον να δημιουργήσει λογαριασμό με αυτόν, θα χρειαστεί νέα πρόσκληση."
+        }
     },
     "login": {
         "tagline": "Καλώς ήρθατε ξανά στον οικογενειακό σας οργανωτή.",
@@ -2115,7 +2137,7 @@
         "loginWithSso": "Σύνδεση με SSO",
         "orDivider": "ή",
         "ssoError": "Η σύνδεση SSO απέτυχε. Παρακαλώ δοκιμάστε ξανά.",
-        "forgotPassword": "Forgot password?",
+        "forgotPassword": "Ξέχασες τον κωδικό;",
         "networkError": "Η σύνδεση απέτυχε. Ελέγξτε αν ο διακομιστής λειτουργεί και δοκιμάστε ξανά.",
         "capsLockWarning": "Το Caps Lock είναι ενεργό.",
         "fillAllFields": "Εισαγάγετε το όνομα χρήστη και τον κωδικό πρόσβασης."
@@ -2852,23 +2874,23 @@
         "noReleaseNotes": "Δεν υπάρχουν σημειώσεις έκδοσης για αυτήν την έκδοση."
     },
     "forgotPassword": {
-        "title": "Reset password",
-        "intro": "Enter your username or email address. We'll send you a reset link.",
-        "identifierLabel": "Username or email",
-        "submit": "Send link",
-        "sent": "If a matching account exists, a reset link has been sent.",
-        "backToLogin": "Back to login"
+        "title": "Επαναφορά κωδικού",
+        "intro": "Δώσε το όνομα χρήστη ή το e-mail σου. Θα σου στείλουμε σύνδεσμο επαναφοράς.",
+        "identifierLabel": "Όνομα χρήστη ή e-mail",
+        "submit": "Αποστολή συνδέσμου",
+        "sent": "Αν υπάρχει αντίστοιχος λογαριασμός, στάλθηκε σύνδεσμος επαναφοράς.",
+        "backToLogin": "Πίσω στη σύνδεση"
     },
     "resetPassword": {
-        "title": "Set a new password",
-        "passwordLabel": "New password",
-        "confirmLabel": "Confirm password",
-        "submit": "Save password",
-        "success": "Your password has been changed. You can now sign in.",
-        "mismatch": "The passwords do not match.",
-        "tooShort": "The password must be at least 8 characters long.",
-        "invalidToken": "This link is invalid or has expired.",
-        "missingToken": "No valid token was found."
+        "title": "Ορισμός νέου κωδικού",
+        "passwordLabel": "Νέος κωδικός πρόσβασης",
+        "confirmLabel": "Επιβεβαίωση κωδικού",
+        "submit": "Αποθήκευση κωδικού",
+        "success": "Ο κωδικός σου άλλαξε. Μπορείς να συνδεθείς τώρα.",
+        "mismatch": "Οι κωδικοί δεν ταιριάζουν.",
+        "tooShort": "Ο κωδικός πρέπει να έχει τουλάχιστον 8 χαρακτήρες.",
+        "invalidToken": "Αυτός ο σύνδεσμος δεν είναι έγκυρος ή έχει λήξει.",
+        "missingToken": "Δεν βρέθηκε έγκυρο διακριτικό."
     },
     "email": {
         "host": "SMTP host",
@@ -3762,5 +3784,25 @@
         "openAction": "Άνοιγμα {{name}}",
         "limitReached": "Το πολύ {{count}} έγγραφα.",
         "limitReached_one": "Το πολύ {{count}} έγγραφο."
+    },
+    "join": {
+        "title": "Ρύθμιση λογαριασμού",
+        "intro": "Έχεις προσκληθεί στο Yuvomi. Όρισε εδώ τα στοιχεία σύνδεσής σου.",
+        "usernameLabel": "Όνομα χρήστη",
+        "fieldFixed": "Καθορίζεται από την πρόσκληση.",
+        "displayNameLabel": "Εμφανιζόμενο όνομα",
+        "passwordLabel": "Κωδικός πρόσβασης",
+        "confirmLabel": "Επιβεβαίωση κωδικού",
+        "submit": "Δημιουργία λογαριασμού",
+        "success": "Ο λογαριασμός σου δημιουργήθηκε. Μπορείς να συνδεθείς τώρα.",
+        "mismatch": "Οι κωδικοί δεν ταιριάζουν.",
+        "tooShort": "Ο κωδικός πρέπει να έχει τουλάχιστον 8 χαρακτήρες.",
+        "invalidToken": "Αυτή η πρόσκληση δεν είναι έγκυρη, έχει λήξει ή έχει ήδη χρησιμοποιηθεί.",
+        "missingToken": "Δεν βρέθηκε έγκυρο διακριτικό.",
+        "usernameRequired": "Διάλεξε ένα όνομα χρήστη.",
+        "usernameInvalid": "Το όνομα χρήστη πρέπει να έχει 3 έως 64 χαρακτήρες και να περιέχει μόνο γράμματα, αριθμούς, τελείες, παύλες και κάτω παύλες.",
+        "usernameTaken": "Αυτό το όνομα χρήστη χρησιμοποιείται ήδη.",
+        "error": "Ο λογαριασμός δεν μπόρεσε να δημιουργηθεί. Δοκίμασε ξανά.",
+        "displayNameTooLong": "Το εμφανιζόμενο όνομα μπορεί να έχει έως 128 χαρακτήρες."
     }
 }

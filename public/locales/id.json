@@ -2111,7 +2111,29 @@
         "mealieAccountUpdated": "Akun Mealie diperbarui.",
         "mealieAccountDeleted": "Akun Mealie dihapus.",
         "mealieDeleteAccountConfirm": "Ini juga akan menghapus {{count}} resep cerminan dan memutuskan tautannya dari entri rencana makan mana pun.",
-        "mealieLastError": "Kesalahan sinkronisasi terakhir: {{message}}"
+        "mealieLastError": "Kesalahan sinkronisasi terakhir: {{message}}",
+        "invites": {
+            "title": "Undangan",
+            "intro": "Undang anggota baru lewat tautan. Kata sandi mereka tentukan sendiri.",
+            "add": "+ Buat undangan",
+            "submit": "Buat undangan",
+            "usernameHint": "Opsional. Jika dikosongkan, orang yang diundang memilih namanya sendiri.",
+            "sendEmail": "Kirim undangan lewat email",
+            "linkTitle": "Tautan undangan",
+            "linkOnce": "Tautan ini hanya ditampilkan sekarang. Teruskan sebelum Anda meninggalkan halaman.",
+            "copy": "Salin tautan",
+            "copied": "Tautan disalin.",
+            "copyFailed": "Penyalinan gagal. Pilih tautannya dan salin secara manual.",
+            "emailSent": "Undangan telah dikirim lewat email.",
+            "emailNotSent": "Pengiriman email belum dikonfigurasi. Teruskan tautannya sendiri.",
+            "empty": "Tidak ada undangan yang terbuka.",
+            "expires": "Berlaku sampai {{date}}",
+            "revoke": "Cabut",
+            "revokeConfirm": "Cabut undangan ini? Tautannya akan berhenti berfungsi.",
+            "revoked": "Undangan telah dicabut.",
+            "created": "Undangan telah dibuat.",
+            "revokeConfirmDetail": "Tautan yang sudah Anda kirim atau salin langsung berhenti berfungsi. Orang yang diundang tidak dapat lagi membuat akun dengannya; Anda harus mengundangnya lagi."
+        }
     },
     "login": {
         "tagline": "Selamat datang kembali di perencana keluarga Anda.",
@@ -3762,5 +3784,25 @@
         "openAction": "Buka {{name}}",
         "limitReached": "Maksimal {{count}} dokumen.",
         "limitReached_one": "Maksimal {{count}} dokumen."
+    },
+    "join": {
+        "title": "Siapkan akun Anda",
+        "intro": "Anda diundang ke Yuvomi. Tentukan data masuk Anda di sini.",
+        "usernameLabel": "Nama pengguna",
+        "fieldFixed": "Ditetapkan oleh undangan.",
+        "displayNameLabel": "Nama tampilan",
+        "passwordLabel": "Kata sandi",
+        "confirmLabel": "Konfirmasi kata sandi",
+        "submit": "Buat akun",
+        "success": "Akun Anda telah dibuat. Sekarang Anda dapat masuk.",
+        "mismatch": "Kata sandi tidak cocok.",
+        "tooShort": "Kata sandi harus minimal 8 karakter.",
+        "invalidToken": "Undangan ini tidak valid, kedaluwarsa, atau sudah dipakai.",
+        "missingToken": "Token yang valid tidak ditemukan.",
+        "usernameRequired": "Pilih nama pengguna.",
+        "usernameInvalid": "Nama pengguna harus 3 sampai 64 karakter dan hanya boleh berisi huruf, angka, titik, tanda hubung, dan garis bawah.",
+        "usernameTaken": "Nama pengguna ini sudah dipakai.",
+        "error": "Akun tidak dapat dibuat. Silakan coba lagi.",
+        "displayNameTooLong": "Nama tampilan paling banyak 128 karakter."
     }
 }

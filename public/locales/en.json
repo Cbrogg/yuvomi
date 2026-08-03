@@ -2099,7 +2099,29 @@
         "documentStorageGoogleDriveDisconnectBlocked": "Select another destination and remove Drive-backed documents before disconnecting.",
         "documentStorageGoogleDriveOAuthSuccess": "Google Drive connected. Select it as the upload destination when you are ready.",
         "documentStorageGoogleDriveOAuthError": "Google Drive connection failed. The previous connection, if any, was kept.",
-        "documentStorageGoogleDrivePrivacy": "Yuvomi visibility settings only control access through Yuvomi. Anyone with access to the connected Google Drive folder can view all files stored there."
+        "documentStorageGoogleDrivePrivacy": "Yuvomi visibility settings only control access through Yuvomi. Anyone with access to the connected Google Drive folder can view all files stored there.",
+        "invites": {
+            "title": "Invitations",
+            "intro": "Invite new members by link. They choose their own password.",
+            "add": "+ Create invitation",
+            "submit": "Create invitation",
+            "usernameHint": "Optional. Leave empty and the invited person picks their own name.",
+            "sendEmail": "Send the invitation by email",
+            "linkTitle": "Invitation link",
+            "linkOnce": "This link is shown only now. Pass it on before you leave the page.",
+            "copy": "Copy link",
+            "copied": "Link copied.",
+            "copyFailed": "Copying failed. Select the link and copy it by hand.",
+            "emailSent": "The invitation was sent by email.",
+            "emailNotSent": "No email delivery is configured. Pass the link on yourself.",
+            "empty": "No invitation is open.",
+            "expires": "Valid until {{date}}",
+            "revoke": "Revoke",
+            "revokeConfirm": "Revoke this invitation? The link stops working.",
+            "revoked": "The invitation was revoked.",
+            "created": "The invitation was created.",
+            "revokeConfirmDetail": "A link you already sent or copied stops working immediately. The invited person can no longer create an account with it; you would have to invite them again."
+        }
     },
     "login": {
         "tagline": "Welcome back to your family planner.",
@@ -3762,5 +3784,25 @@
         "openAction": "Open {{name}}",
         "limitReached": "At most {{count}} documents.",
         "limitReached_one": "At most {{count}} document."
+    },
+    "join": {
+        "title": "Set up your account",
+        "intro": "You have been invited to Yuvomi. Choose your sign-in details here.",
+        "usernameLabel": "Username",
+        "fieldFixed": "Set by the invitation.",
+        "displayNameLabel": "Display name",
+        "passwordLabel": "Password",
+        "confirmLabel": "Confirm password",
+        "submit": "Create account",
+        "success": "Your account has been created. You can sign in now.",
+        "mismatch": "The passwords do not match.",
+        "tooShort": "The password must be at least 8 characters long.",
+        "invalidToken": "This invitation is invalid, expired, or has already been used.",
+        "missingToken": "No valid token was found.",
+        "usernameRequired": "Please choose a username.",
+        "usernameInvalid": "The username must be 3 to 64 characters long and may only contain letters, numbers, dots, hyphens, and underscores.",
+        "usernameTaken": "This username is already taken.",
+        "error": "The account could not be created. Please try again.",
+        "displayNameTooLong": "The display name may be at most 128 characters long."
     }
 }

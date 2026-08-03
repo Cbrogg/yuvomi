@@ -107,6 +107,43 @@
   margin-bottom: var(--space-4);
 }
 
+/* Gegenstück zur Fehlerbox: die Erfolgsmeldung nach dem Einlösen einer
+ * Einladung oder eines Reset-Links stand bisher unausgezeichnet im Fließtext. */
+.login-success {
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--color-success-light);
+  color: var(--color-success);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  margin-bottom: var(--space-4);
+}
+
+/* Einleitungstext unter dem Kartentitel (/join). */
+.login-card__intro {
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  margin-bottom: var(--space-4);
+}
+
+/* Hinweis unter einem Feld, das die Einladung vorgibt. Bewusst ohne
+ * display-Angabe: eine solche überschriebe das UA-display:none des
+ * hidden-Attributs, und der Hinweis stünde auch ohne Vorgabe da. */
+.login-form__hint {
+  margin-top: var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+/* Das vorgegebene Feld selbst: eigene Klasse statt eines .input[readonly]-
+ * Selektors. readonly wird auch dort gesetzt, wo ein Feld nur seine Tastatur-
+ * eingabe sperrt und trotzdem normal aussehen soll; die Dämpfung gilt hier
+ * ausdrücklich nur für "die Einladung gibt diesen Wert vor". */
+.input--fixed {
+  background-color: var(--color-surface-2);
+  color: var(--color-text-secondary);
+  cursor: default;
+}
+
 /* Die Fehlerregion wird nach einem Fehlschlag programmatisch fokussiert
  * (tabindex="-1"), damit sehende Tastaturnutzer sie bemerken. Die rote Box
  * kommuniziert den Zustand bereits – kein zusätzlicher Fokusring nötig. */

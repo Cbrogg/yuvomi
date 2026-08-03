@@ -2099,7 +2099,29 @@
         "mealieAccountUpdated": "Mealie-fiók frissítve.",
         "mealieAccountDeleted": "Mealie-fiók törölve.",
         "mealieDeleteAccountConfirm": "Ez törli a(z) {{count}} tükrözött receptet is, és leválasztja őket minden étrendbejegyzésről.",
-        "mealieLastError": "Legutóbbi szinkronizálási hiba: {{message}}"
+        "mealieLastError": "Legutóbbi szinkronizálási hiba: {{message}}",
+        "invites": {
+            "title": "Meghívók",
+            "intro": "Hívj meg új tagokat linkkel. A jelszavukat maguk választják.",
+            "add": "+ Meghívó létrehozása",
+            "submit": "Meghívó létrehozása",
+            "usernameHint": "Nem kötelező. Ha üresen hagyod, a meghívott maga választ nevet.",
+            "sendEmail": "Meghívó küldése e-mailben",
+            "linkTitle": "Meghívó link",
+            "linkOnce": "Ez a link csak most látszik. Add tovább, mielőtt elhagyod az oldalt.",
+            "copy": "Link másolása",
+            "copied": "Link másolva.",
+            "copyFailed": "A másolás nem sikerült. Jelöld ki a linket, és másold ki kézzel.",
+            "emailSent": "A meghívót elküldtük e-mailben.",
+            "emailNotSent": "Nincs beállítva e-mail-küldés. Add tovább te a linket.",
+            "empty": "Nincs függőben lévő meghívó.",
+            "expires": "Érvényes eddig: {{date}}",
+            "revoke": "Visszavonás",
+            "revokeConfirm": "Visszavonod ezt a meghívót? A link ezzel érvénytelenné válik.",
+            "revoked": "A meghívót visszavontuk.",
+            "created": "A meghívó elkészült.",
+            "revokeConfirmDetail": "A már elküldött vagy kimásolt link azonnal működésképtelen lesz. A meghívott ezzel nem tud fiókot létrehozni; újra meg kellene hívnod."
+        }
     },
     "login": {
         "tagline": "Üdv újra a családi tervezőben.",
@@ -3762,5 +3784,25 @@
         "openAction": "{{name}} megnyitása",
         "limitReached": "Legfeljebb {{count}} dokumentum.",
         "limitReached_one": "Legfeljebb {{count}} dokumentum."
+    },
+    "join": {
+        "title": "Fiók beállítása",
+        "intro": "Meghívtak a Yuvomibe. Itt add meg a belépési adataidat.",
+        "usernameLabel": "Felhasználónév",
+        "fieldFixed": "A meghívó határozza meg.",
+        "displayNameLabel": "Megjelenő név",
+        "passwordLabel": "Jelszó",
+        "confirmLabel": "Jelszó megerősítése",
+        "submit": "Fiók létrehozása",
+        "success": "A fiókod elkészült. Most már bejelentkezhetsz.",
+        "mismatch": "A jelszavak nem egyeznek.",
+        "tooShort": "A jelszónak legalább 8 karakter hosszúnak kell lennie.",
+        "invalidToken": "Ez a meghívó érvénytelen, lejárt vagy már felhasználták.",
+        "missingToken": "Nem található érvényes token.",
+        "usernameRequired": "Válassz felhasználónevet.",
+        "usernameInvalid": "A felhasználónév 3 és 64 karakter közötti lehet, és csak betűket, számokat, pontot, kötőjelet és aláhúzást tartalmazhat.",
+        "usernameTaken": "Ez a felhasználónév már foglalt.",
+        "error": "A fiókot nem sikerült létrehozni. Próbáld újra.",
+        "displayNameTooLong": "A megjelenő név legfeljebb 128 karakter lehet."
     }
 }

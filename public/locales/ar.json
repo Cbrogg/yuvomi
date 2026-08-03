@@ -2099,7 +2099,29 @@
         "mealieAccountUpdated": "تم تحديث حساب Mealie.",
         "mealieAccountDeleted": "تم حذف حساب Mealie.",
         "mealieDeleteAccountConfirm": "سيؤدي هذا أيضًا إلى إزالة {{count}} وصفة معكوسة وفصلها عن أي إدخالات في خطة الوجبات.",
-        "mealieLastError": "آخر خطأ في المزامنة: {{message}}"
+        "mealieLastError": "آخر خطأ في المزامنة: {{message}}",
+        "invites": {
+            "title": "الدعوات",
+            "intro": "ادعُ أعضاء جددًا برابط. يختارون كلمة المرور بأنفسهم.",
+            "add": "+ إنشاء دعوة",
+            "submit": "إنشاء دعوة",
+            "usernameHint": "اختياري. إذا تركته فارغًا يختار المدعو الاسم بنفسه.",
+            "sendEmail": "إرسال الدعوة بالبريد الإلكتروني",
+            "linkTitle": "رابط الدعوة",
+            "linkOnce": "يظهر هذا الرابط الآن فقط. مرّره قبل مغادرة الصفحة.",
+            "copy": "نسخ الرابط",
+            "copied": "تم نسخ الرابط.",
+            "copyFailed": "تعذر النسخ. حدّد الرابط وانسخه يدويًا.",
+            "emailSent": "تم إرسال الدعوة بالبريد الإلكتروني.",
+            "emailNotSent": "إرسال البريد غير مهيأ. مرّر الرابط بنفسك.",
+            "empty": "لا توجد دعوات معلقة.",
+            "expires": "صالح حتى {{date}}",
+            "revoke": "إلغاء",
+            "revokeConfirm": "إلغاء هذه الدعوة؟ سيتوقف الرابط عن العمل.",
+            "revoked": "تم إلغاء الدعوة.",
+            "created": "تم إنشاء الدعوة.",
+            "revokeConfirmDetail": "الرابط الذي أرسلته أو نسخته يتوقف عن العمل فورًا. لن يتمكن الشخص المدعو من إنشاء حساب به بعد الآن، وسيلزم دعوته من جديد."
+        }
     },
     "login": {
         "tagline": "مرحبًا بعودتك إلى منظّم عائلتك.",
@@ -2115,7 +2137,7 @@
         "loginWithSso": "تسجيل الدخول بـ SSO",
         "orDivider": "أو",
         "ssoError": "فشل تسجيل الدخول بـ SSO. يرجى المحاولة مرة أخرى.",
-        "forgotPassword": "Forgot password?",
+        "forgotPassword": "نسيت كلمة المرور؟",
         "networkError": "فشل الاتصال. تحقّق من أن الخادم يعمل ثم حاول مرة أخرى.",
         "capsLockWarning": "مفتاح Caps Lock مُفعَّل.",
         "fillAllFields": "يُرجى إدخال اسم المستخدم وكلمة المرور."
@@ -2852,23 +2874,23 @@
         "noReleaseNotes": "لا توجد ملاحظات إصدار لهذه النسخة."
     },
     "forgotPassword": {
-        "title": "Reset password",
-        "intro": "Enter your username or email address. We'll send you a reset link.",
-        "identifierLabel": "Username or email",
-        "submit": "Send link",
-        "sent": "If a matching account exists, a reset link has been sent.",
-        "backToLogin": "Back to login"
+        "title": "إعادة تعيين كلمة المرور",
+        "intro": "أدخل اسم المستخدم أو البريد الإلكتروني. سنرسل لك رابط إعادة التعيين.",
+        "identifierLabel": "اسم المستخدم أو البريد الإلكتروني",
+        "submit": "إرسال الرابط",
+        "sent": "إذا كان هناك حساب مطابق، فقد أُرسل رابط لإعادة التعيين.",
+        "backToLogin": "العودة إلى تسجيل الدخول"
     },
     "resetPassword": {
-        "title": "Set a new password",
-        "passwordLabel": "New password",
-        "confirmLabel": "Confirm password",
-        "submit": "Save password",
-        "success": "Your password has been changed. You can now sign in.",
-        "mismatch": "The passwords do not match.",
-        "tooShort": "The password must be at least 8 characters long.",
-        "invalidToken": "This link is invalid or has expired.",
-        "missingToken": "No valid token was found."
+        "title": "تعيين كلمة مرور جديدة",
+        "passwordLabel": "كلمة المرور الجديدة",
+        "confirmLabel": "تأكيد كلمة المرور",
+        "submit": "حفظ كلمة المرور",
+        "success": "تم تغيير كلمة المرور. يمكنك تسجيل الدخول الآن.",
+        "mismatch": "كلمتا المرور غير متطابقتين.",
+        "tooShort": "يجب ألا تقل كلمة المرور عن 8 أحرف.",
+        "invalidToken": "هذا الرابط غير صالح أو منتهي الصلاحية.",
+        "missingToken": "لم يتم العثور على رمز صالح."
     },
     "email": {
         "host": "SMTP host",
@@ -3762,5 +3784,25 @@
         "openAction": "فتح {{name}}",
         "limitReached": "بحد أقصى {{count}} مستندات.",
         "limitReached_one": "مستند واحد بحد أقصى."
+    },
+    "join": {
+        "title": "إعداد حسابك",
+        "intro": "تمت دعوتك إلى Yuvomi. حدّد هنا بيانات الدخول الخاصة بك.",
+        "usernameLabel": "اسم المستخدم",
+        "fieldFixed": "محدد في الدعوة.",
+        "displayNameLabel": "الاسم المعروض",
+        "passwordLabel": "كلمة المرور",
+        "confirmLabel": "تأكيد كلمة المرور",
+        "submit": "إنشاء الحساب",
+        "success": "تم إنشاء حسابك. يمكنك تسجيل الدخول الآن.",
+        "mismatch": "كلمتا المرور غير متطابقتين.",
+        "tooShort": "يجب ألا تقل كلمة المرور عن 8 أحرف.",
+        "invalidToken": "هذه الدعوة غير صالحة أو منتهية أو تم استخدامها بالفعل.",
+        "missingToken": "لم يتم العثور على رمز صالح.",
+        "usernameRequired": "اختر اسم مستخدم.",
+        "usernameInvalid": "يجب أن يتكون اسم المستخدم من 3 إلى 64 حرفًا وألا يحتوي إلا على حروف وأرقام ونقاط وشرطات وشرطات سفلية.",
+        "usernameTaken": "اسم المستخدم هذا مستخدم بالفعل.",
+        "error": "تعذر إنشاء الحساب. حاول مرة أخرى.",
+        "displayNameTooLong": "يجب ألا يزيد الاسم المعروض عن 128 حرفًا."
     }
 }

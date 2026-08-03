@@ -2099,7 +2099,29 @@
         "mealieAccountUpdated": "Обліковий запис Mealie оновлено.",
         "mealieAccountDeleted": "Обліковий запис Mealie видалено.",
         "mealieDeleteAccountConfirm": "Це також видалить {{count}} віддзеркалених рецептів і від'єднає їх від будь-яких записів плану харчування.",
-        "mealieLastError": "Остання помилка синхронізації: {{message}}"
+        "mealieLastError": "Остання помилка синхронізації: {{message}}",
+        "invites": {
+            "title": "Запрошення",
+            "intro": "Запрошуйте нових учасників за посиланням. Пароль вони задають самі.",
+            "add": "+ Створити запрошення",
+            "submit": "Створити запрошення",
+            "usernameHint": "Необов’язково. Якщо залишити порожнім, запрошена особа обере ім’я сама.",
+            "sendEmail": "Надіслати запрошення електронною поштою",
+            "linkTitle": "Посилання-запрошення",
+            "linkOnce": "Це посилання показується лише зараз. Передайте його, перш ніж покинути сторінку.",
+            "copy": "Скопіювати посилання",
+            "copied": "Посилання скопійовано.",
+            "copyFailed": "Скопіювати не вдалося. Виділіть посилання та скопіюйте вручну.",
+            "emailSent": "Запрошення надіслано електронною поштою.",
+            "emailNotSent": "Надсилання пошти не налаштоване. Передайте посилання самі.",
+            "empty": "Відкритих запрошень немає.",
+            "expires": "Дійсне до {{date}}",
+            "revoke": "Відкликати",
+            "revokeConfirm": "Відкликати це запрошення? Посилання перестане працювати.",
+            "revoked": "Запрошення відкликано.",
+            "created": "Запрошення створено.",
+            "revokeConfirmDetail": "Уже надіслане або скопійоване посилання одразу перестає працювати. Запрошена особа більше не створить за ним обліковий запис, доведеться запросити ще раз."
+        }
     },
     "login": {
         "tagline": "З поверненням до вашого сімейного планувальника.",
@@ -2115,7 +2137,7 @@
         "loginWithSso": "Увійти через SSO",
         "orDivider": "або",
         "ssoError": "Вхід через SSO не вдався. Спробуйте ще раз.",
-        "forgotPassword": "Forgot password?",
+        "forgotPassword": "Забули пароль?",
         "networkError": "Не вдалося підключитися. Перевірте, чи запущено сервер, і повторіть спробу.",
         "capsLockWarning": "Увімкнено Caps Lock.",
         "fillAllFields": "Введіть ім’я користувача та пароль."
@@ -2852,23 +2874,23 @@
         "noReleaseNotes": "Для цієї версії немає приміток до випуску."
     },
     "forgotPassword": {
-        "title": "Reset password",
-        "intro": "Enter your username or email address. We'll send you a reset link.",
-        "identifierLabel": "Username or email",
-        "submit": "Send link",
-        "sent": "If a matching account exists, a reset link has been sent.",
-        "backToLogin": "Back to login"
+        "title": "Скидання пароля",
+        "intro": "Введіть ім’я користувача або адресу електронної пошти. Ми надішлемо посилання для скидання.",
+        "identifierLabel": "Ім’я користувача або е-пошта",
+        "submit": "Надіслати посилання",
+        "sent": "Якщо відповідний обліковий запис існує, посилання для скидання надіслано.",
+        "backToLogin": "Повернутися до входу"
     },
     "resetPassword": {
-        "title": "Set a new password",
-        "passwordLabel": "New password",
-        "confirmLabel": "Confirm password",
-        "submit": "Save password",
-        "success": "Your password has been changed. You can now sign in.",
-        "mismatch": "The passwords do not match.",
-        "tooShort": "The password must be at least 8 characters long.",
-        "invalidToken": "This link is invalid or has expired.",
-        "missingToken": "No valid token was found."
+        "title": "Задати новий пароль",
+        "passwordLabel": "Новий пароль",
+        "confirmLabel": "Підтвердіть пароль",
+        "submit": "Зберегти пароль",
+        "success": "Пароль змінено. Тепер можна увійти.",
+        "mismatch": "Паролі не збігаються.",
+        "tooShort": "Пароль має містити щонайменше 8 символів.",
+        "invalidToken": "Це посилання недійсне або прострочене.",
+        "missingToken": "Дійсний токен не знайдено."
     },
     "email": {
         "host": "SMTP host",
@@ -3762,5 +3784,25 @@
         "openAction": "Відкрити {{name}}",
         "limitReached": "Не більше ніж {{count}} документів.",
         "limitReached_one": "Не більше ніж {{count}} документ."
+    },
+    "join": {
+        "title": "Налаштування облікового запису",
+        "intro": "Вас запросили до Yuvomi. Задайте тут дані для входу.",
+        "usernameLabel": "Ім’я користувача",
+        "fieldFixed": "Задано запрошенням.",
+        "displayNameLabel": "Відображуване ім’я",
+        "passwordLabel": "Пароль",
+        "confirmLabel": "Підтвердіть пароль",
+        "submit": "Створити обліковий запис",
+        "success": "Обліковий запис створено. Тепер можна увійти.",
+        "mismatch": "Паролі не збігаються.",
+        "tooShort": "Пароль має містити щонайменше 8 символів.",
+        "invalidToken": "Це запрошення недійсне, прострочене або вже використане.",
+        "missingToken": "Дійсний токен не знайдено.",
+        "usernameRequired": "Оберіть ім’я користувача.",
+        "usernameInvalid": "Ім’я користувача має містити від 3 до 64 символів і лише літери, цифри, крапки, дефіси та підкреслення.",
+        "usernameTaken": "Це ім’я користувача вже зайняте.",
+        "error": "Не вдалося створити обліковий запис. Спробуйте ще раз.",
+        "displayNameTooLong": "Відображуване ім’я може містити щонайбільше 128 символів."
     }
 }

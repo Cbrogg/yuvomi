@@ -2099,7 +2099,29 @@
         "mealieAccountUpdated": "Účet Mealie aktualizován.",
         "mealieAccountDeleted": "Účet Mealie smazán.",
         "mealieDeleteAccountConfirm": "Tím se také odstraní {{count}} zrcadlených receptů a zruší se jejich propojení se všemi položkami jídelníčku.",
-        "mealieLastError": "Poslední chyba synchronizace: {{message}}"
+        "mealieLastError": "Poslední chyba synchronizace: {{message}}",
+        "invites": {
+            "title": "Pozvánky",
+            "intro": "Pozvi nové členy odkazem. Heslo si zvolí sami.",
+            "add": "+ Vytvořit pozvánku",
+            "submit": "Vytvořit pozvánku",
+            "usernameHint": "Nepovinné. Když pole necháš prázdné, jméno si zvolí pozvaná osoba sama.",
+            "sendEmail": "Odeslat pozvánku e-mailem",
+            "linkTitle": "Odkaz pozvánky",
+            "linkOnce": "Tento odkaz se zobrazí jen teď. Předej ho, než stránku opustíš.",
+            "copy": "Kopírovat odkaz",
+            "copied": "Odkaz zkopírován.",
+            "copyFailed": "Kopírování se nezdařilo. Označ odkaz a zkopíruj ho ručně.",
+            "emailSent": "Pozvánka byla odeslána e-mailem.",
+            "emailNotSent": "Odesílání e-mailů není nastavené. Předej odkaz sám.",
+            "empty": "Žádná pozvánka není otevřená.",
+            "expires": "Platí do {{date}}",
+            "revoke": "Zrušit",
+            "revokeConfirm": "Zrušit tuto pozvánku? Odkaz přestane fungovat.",
+            "revoked": "Pozvánka byla zrušena.",
+            "created": "Pozvánka byla vytvořena.",
+            "revokeConfirmDetail": "Už odeslaný nebo zkopírovaný odkaz okamžitě přestane fungovat. Pozvaná osoba si přes něj nevytvoří účet; musel bys ji pozvat znovu."
+        }
     },
     "login": {
         "tagline": "Vítejte zpět ve svém rodinném plánovači.",
@@ -2115,7 +2137,7 @@
         "loginWithSso": "Přihlásit se přes SSO",
         "orDivider": "nebo",
         "ssoError": "Přihlášení přes SSO selhalo. Zkuste to prosím znovu.",
-        "forgotPassword": "Forgot password?",
+        "forgotPassword": "Zapomenuté heslo?",
         "networkError": "Připojení selhalo. Zkontrolujte, zda server běží, a zkuste to znovu.",
         "capsLockWarning": "Caps Lock je zapnutý.",
         "fillAllFields": "Zadejte prosím uživatelské jméno a heslo."
@@ -2852,23 +2874,23 @@
         "noReleaseNotes": "Pro tuto verzi nejsou žádné poznámky k vydání."
     },
     "forgotPassword": {
-        "title": "Reset password",
-        "intro": "Enter your username or email address. We'll send you a reset link.",
-        "identifierLabel": "Username or email",
-        "submit": "Send link",
-        "sent": "If a matching account exists, a reset link has been sent.",
-        "backToLogin": "Back to login"
+        "title": "Obnovit heslo",
+        "intro": "Zadej uživatelské jméno nebo e-mail. Pošleme ti odkaz pro obnovení.",
+        "identifierLabel": "Uživatelské jméno nebo e-mail",
+        "submit": "Odeslat odkaz",
+        "sent": "Pokud odpovídající účet existuje, byl odeslán odkaz pro obnovení.",
+        "backToLogin": "Zpět na přihlášení"
     },
     "resetPassword": {
-        "title": "Set a new password",
-        "passwordLabel": "New password",
-        "confirmLabel": "Confirm password",
-        "submit": "Save password",
-        "success": "Your password has been changed. You can now sign in.",
-        "mismatch": "The passwords do not match.",
-        "tooShort": "The password must be at least 8 characters long.",
-        "invalidToken": "This link is invalid or has expired.",
-        "missingToken": "No valid token was found."
+        "title": "Nastavit nové heslo",
+        "passwordLabel": "Nové heslo",
+        "confirmLabel": "Potvrdit heslo",
+        "submit": "Uložit heslo",
+        "success": "Heslo bylo změněno. Nyní se můžeš přihlásit.",
+        "mismatch": "Hesla se neshodují.",
+        "tooShort": "Heslo musí mít alespoň 8 znaků.",
+        "invalidToken": "Tento odkaz je neplatný nebo vypršel.",
+        "missingToken": "Nebyl nalezen platný token."
     },
     "email": {
         "host": "SMTP host",
@@ -3762,5 +3784,25 @@
         "openAction": "Otevřít {{name}}",
         "limitReached": "Nejvýše dokumentů: {{count}}.",
         "limitReached_one": "Nejvýše dokumentů: {{count}}."
+    },
+    "join": {
+        "title": "Nastavení účtu",
+        "intro": "Byl jsi pozván do Yuvomi. Nastav si zde přihlašovací údaje.",
+        "usernameLabel": "Uživatelské jméno",
+        "fieldFixed": "Určeno pozvánkou.",
+        "displayNameLabel": "Zobrazované jméno",
+        "passwordLabel": "Heslo",
+        "confirmLabel": "Potvrdit heslo",
+        "submit": "Vytvořit účet",
+        "success": "Účet byl vytvořen. Nyní se můžeš přihlásit.",
+        "mismatch": "Hesla se neshodují.",
+        "tooShort": "Heslo musí mít alespoň 8 znaků.",
+        "invalidToken": "Tato pozvánka je neplatná, vypršela nebo už byla použita.",
+        "missingToken": "Nebyl nalezen platný token.",
+        "usernameRequired": "Zvol si uživatelské jméno.",
+        "usernameInvalid": "Uživatelské jméno musí mít 3 až 64 znaků a smí obsahovat pouze písmena, číslice, tečky, pomlčky a podtržítka.",
+        "usernameTaken": "Toto uživatelské jméno je již obsazené.",
+        "error": "Účet se nepodařilo vytvořit. Zkus to prosím znovu.",
+        "displayNameTooLong": "Zobrazované jméno může mít nejvýše 128 znaků."
     }
 }

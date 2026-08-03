@@ -2099,7 +2099,29 @@
         "mealieAccountUpdated": "Mealie 账户已更新。",
         "mealieAccountDeleted": "已删除 Mealie 账户。",
         "mealieDeleteAccountConfirm": "这也会移除 {{count}} 个镜像食谱，并解除它们与所有膳食计划条目的关联。",
-        "mealieLastError": "上次同步错误：{{message}}"
+        "mealieLastError": "上次同步错误：{{message}}",
+        "invites": {
+            "title": "邀请",
+            "intro": "用链接邀请新成员，密码由他们自己设置。",
+            "add": "+ 创建邀请",
+            "submit": "创建邀请",
+            "usernameHint": "可选。留空时由受邀者自行选择名称。",
+            "sendEmail": "通过电子邮件发送邀请",
+            "linkTitle": "邀请链接",
+            "linkOnce": "此链接仅现在显示一次，请在离开页面前转交。",
+            "copy": "复制链接",
+            "copied": "链接已复制。",
+            "copyFailed": "复制失败。请选中链接并手动复制。",
+            "emailSent": "邀请已通过电子邮件发送。",
+            "emailNotSent": "尚未配置邮件发送，请自行转交链接。",
+            "empty": "没有待处理的邀请。",
+            "expires": "有效期至 {{date}}",
+            "revoke": "撤销",
+            "revokeConfirm": "撤销此邀请？链接将失效。",
+            "revoked": "邀请已撤销。",
+            "created": "邀请已创建。",
+            "revokeConfirmDetail": "已经发送或复制的链接会立即失效。受邀者无法再用它创建账户，你需要重新邀请一次。"
+        }
     },
     "login": {
         "tagline": "欢迎回到您的家庭计划工具。",
@@ -2115,7 +2137,7 @@
         "loginWithSso": "通过SSO登录",
         "orDivider": "或",
         "ssoError": "SSO登录失败，请重试。",
-        "forgotPassword": "Forgot password?",
+        "forgotPassword": "忘记密码？",
         "networkError": "连接失败。请检查服务器是否正在运行，然后重试。",
         "capsLockWarning": "大写锁定已开启。",
         "fillAllFields": "请输入用户名和密码。"
@@ -2852,23 +2874,23 @@
         "noReleaseNotes": "此版本没有发布说明。"
     },
     "forgotPassword": {
-        "title": "Reset password",
-        "intro": "Enter your username or email address. We'll send you a reset link.",
-        "identifierLabel": "Username or email",
-        "submit": "Send link",
-        "sent": "If a matching account exists, a reset link has been sent.",
-        "backToLogin": "Back to login"
+        "title": "重置密码",
+        "intro": "请输入你的用户名或电子邮箱，我们会发送重置链接。",
+        "identifierLabel": "用户名或电子邮箱",
+        "submit": "发送链接",
+        "sent": "如果存在匹配的账户，重置链接已发送。",
+        "backToLogin": "返回登录"
     },
     "resetPassword": {
-        "title": "Set a new password",
-        "passwordLabel": "New password",
-        "confirmLabel": "Confirm password",
-        "submit": "Save password",
-        "success": "Your password has been changed. You can now sign in.",
-        "mismatch": "The passwords do not match.",
-        "tooShort": "The password must be at least 8 characters long.",
-        "invalidToken": "This link is invalid or has expired.",
-        "missingToken": "No valid token was found."
+        "title": "设置新密码",
+        "passwordLabel": "新密码",
+        "confirmLabel": "确认密码",
+        "submit": "保存密码",
+        "success": "你的密码已更改，现在可以登录了。",
+        "mismatch": "两次输入的密码不一致。",
+        "tooShort": "密码至少需要 8 个字符。",
+        "invalidToken": "此链接无效或已过期。",
+        "missingToken": "未找到有效的令牌。"
     },
     "email": {
         "host": "SMTP host",
@@ -3762,5 +3784,25 @@
         "openAction": "打开 {{name}}",
         "limitReached": "最多 {{count}} 份文档。",
         "limitReached_one": "最多 {{count}} 份文档。"
+    },
+    "join": {
+        "title": "设置你的账户",
+        "intro": "你已被邀请加入 Yuvomi。请在此设置登录信息。",
+        "usernameLabel": "用户名",
+        "fieldFixed": "由邀请指定。",
+        "displayNameLabel": "显示名称",
+        "passwordLabel": "密码",
+        "confirmLabel": "确认密码",
+        "submit": "创建账户",
+        "success": "账户已创建，现在可以登录了。",
+        "mismatch": "两次输入的密码不一致。",
+        "tooShort": "密码至少需要 8 个字符。",
+        "invalidToken": "此邀请无效、已过期或已被使用。",
+        "missingToken": "未找到有效的令牌。",
+        "usernameRequired": "请选择一个用户名。",
+        "usernameInvalid": "用户名需为 3 到 64 个字符，且只能包含字母、数字、点、连字符和下划线。",
+        "usernameTaken": "该用户名已被占用。",
+        "error": "无法创建账户，请重试。",
+        "displayNameTooLong": "显示名称最多 128 个字符。"
     }
 }
