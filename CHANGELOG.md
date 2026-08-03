@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Large parts of the app were still English in up to 21 languages. The locale files carried every key, so nothing looked broken and every test passed, but in many languages the value was simply the untranslated English text. Those screens read as English to everyone outside the German and English households. Just over 4,000 strings are now actually translated, across subscriptions, the budget categories and the loan screens, the shared category manager, calendar attachments and sync targets, the SMTP form, bulk actions on tasks, document folders, dashboard widgets, meals, onboarding, reminder lead times, the offline banner, the whole Housekeeping module, and the installer.
+- Greek, Arabic, Hindi, Japanese, Korean, Russian, Ukrainian, Persian and Chinese showed German text in places, not English. Anyone reading those languages got a string they had no way to parse. These are gone.
+- Six settings strings were German in the English locale file too, among them the CalDAV and CardDAV help tooltips and the sync status. Because other languages fall back to English, they had inherited the German text as well. The English wording is now actually English.
+- The Swedish word for a file attachment was wrong: calendar attachments were labelled "Fastsättning", which means fastening something in place, not a file attached to an entry. It now reads "Bilaga", the word the rest of the Swedish translation already used.
+- Amount fields showed the wrong number format. The placeholder was a fixed string per language, so Czech, Hungarian and Vietnamese got a decimal point where those languages use a comma, and Swiss German got a comma where it uses a point. The placeholder, the step size and the lower bound now follow the currency and the configured region: euro amounts step in cents, yen, forint and dong in whole units, and dinar in thousandths.
+- The translations follow the vocabulary each language already used for the module itself rather than introducing a second term for the same thing, so Housekeeping stays Limpieza, Ménage, Уборка or 家事 throughout, including in the calendar entries, payment tasks and receipts it generates.
+
 ## [1.75.0] - 2026-08-03
 
 Adding someone to the household no longer means inventing a password for them and passing it on. You send them a link, they choose their own, and nobody else ever knows it.
