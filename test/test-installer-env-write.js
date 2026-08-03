@@ -713,3 +713,51 @@ test('die Abschlussseite baut die .env nicht mehr im Browser nach', () => {
   assert.doesNotMatch(html, /function renderEnvClient/,
     'renderEnvClient ist ersatzlos entfallen - der Browser kennt die bewahrten Werte nicht');
 });
+
+test('ein Rerun schreibt gueltige Compose-Syntax unveraendert zurueck', async () => {
+  // readEnvFile/decodeEnvValue kennen nur doppelte Anfuehrungszeichen. Werden
+  // ALLE Zeilen darueber geparst und neu gerendert, wird aus `PASS='a b'` der
+  // Wert mit Quotes und aus `DIR=./data # x` der Wert mit Kommentar - der Rerun
+  // aendert still das Passwort oder mountet ein anderes Verzeichnis. Zeilen,
+  // die niemand anfasst, gehoeren deshalb Zeichen fuer Zeichen zurueck.
+  const dir = mkdtempSync(join(tmpdir(), 'oikos-verbatim-'));
+  try {
+    const tricky = [
+      'SESSION_SECRET=alt-session',
+      "EMAIL_SMTP_PASS='a b'",
+      'DATA_DIR=./data # storage',
+      'OIDC_ISSUER=https://auth.example.test',
+    ];
+    writeFileSync(join(dir, '.env'), `${tricky.join('\n')}\n`);
+    await withServer(dir, async base => {
+      const r = await fetch(`${base}/api/save-env`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ env: { TZ: 'Europe/Berlin' } }),
+      });
+      assert.equal(r.status, 200);
+    });
+    const after = readFileSync(join(dir, '.env'), 'utf8');
+    for (const line of tricky.slice(1)) {
+      assert.ok(after.includes(line), `Zeile wurde neu interpretiert statt uebernommen: ${line}`);
+    }
+    assert.match(after, /^TZ=Europe\/Berlin$/m, 'ein gesendeter Wert muss weiterhin geschrieben werden');
+    assert.ok(after.includes('SESSION_SECRET=alt-session'), 'das bestehende Secret muss bleiben');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('der Installer bleibt nach dem Setup erreichbar, solange der Download aussteht', () => {
+  // Vorher: harte zwei Sekunden nach /api/create-admin. Solange der Download
+  // eine Blob-Kopie im Browser war, ging das - er brauchte den Server nicht.
+  // Seit er die echte Datei holt, war der Knopf fuer jeden tot, der laenger
+  // brauchte, und die Seite meldete trotzdem "gesichert".
+  const src = readFileSync(new URL('../tools/installer/install-server.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(src, /server\.close\(\(\) => process\.exit\(0\)\);\s*\}, 2000\)/,
+    'der harte Zwei-Sekunden-Shutdown darf nicht zurueckkehren');
+  assert.match(src, /beginPostSetupShutdown\(\);\s*\n\s*resetIdle\(server\);/,
+    'nach dem Setup muss der verlaengerbare Nachlauf greifen');
+  // Jeder Request setzt ihn zurueck - sonst waere die Frist wieder starr.
+  assert.match(src, /idleTimer = setTimeout\([\s\S]*?\}, idleMs\);/,
+    'der Idle-Timer muss die veraenderliche Frist benutzen');
+});

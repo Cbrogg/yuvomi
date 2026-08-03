@@ -30,12 +30,30 @@ const WRITABLE_KEYS = new Set(ENV_SCHEMA.filter(e => e.writeToEnv).map(e => e.ke
 
 let idleTimer = null;
 
+/**
+ * Nachlauf nach dem Anlegen des Admin-Kontos.
+ *
+ * Vorher waren das harte zwei Sekunden. Solange der Download eine Blob-Kopie im
+ * Browser war, ging das: er brauchte den Server nicht. Seit er die echte Datei
+ * von /api/env-file holt, war der Knopf fuer jeden tot, der laenger als zwei
+ * Sekunden auf dem Abschlussbildschirm brauchte - und die Seite meldete
+ * trotzdem "gesichert" und gab den Link zur App frei. Ausgerechnet die
+ * Sicherung der einzigen Verschluesselungsschluessel.
+ *
+ * Fuenf Minuten, und jeder weitere Request setzt sie zurueck: genug fuer den
+ * Download, aber der Installer bleibt nicht die vollen 30 Minuten offen,
+ * nachdem seine Arbeit getan ist.
+ */
+const POST_SETUP_IDLE_MS = 5 * 60 * 1000;
+let idleMs = IDLE_TIMEOUT_MS;
+export function beginPostSetupShutdown() { idleMs = POST_SETUP_IDLE_MS; }
+
 function resetIdle(server) {
   clearTimeout(idleTimer);
   idleTimer = setTimeout(() => {
     console.log('\nIdle timeout - shutting down installer server.');
     server.close(() => process.exit(0));
-  }, IDLE_TIMEOUT_MS);
+  }, idleMs);
   // Don't let the idle timer keep the process (or a test runner) alive.
   idleTimer.unref?.();
 }
@@ -116,6 +134,42 @@ export function readEnvFile(envPath) {
     env[trimmed.slice(0, separator).trim()] = decodeEnvValue(trimmed.slice(separator + 1));
   }
   return env;
+}
+
+/**
+ * Die Zuweisungen einer bestehenden .env, die der Client nicht selbst schickt -
+ * als ROHE Zeilen, Zeichen für Zeichen.
+ *
+ * Das ist der Unterschied zu readEnvFile(): dort wird dekodiert, hier nicht.
+ * Eine Zeile, die niemand ändern will, soll die Datei genauso wieder verlassen,
+ * wie sie hineingekommen ist. Parsen und neu rendern hiesse, Compose-Syntax zu
+ * interpretieren, die decodeEnvValue gar nicht kennt (einfache
+ * Anführungszeichen, angehängte Kommentare) - der Rerun änderte damit still
+ * Passwörter und Pfade.
+ *
+ * Kommentare und Leerzeilen fallen weg: sie beziehen sich auf den alten Aufbau
+ * der Datei und stünden im neuen an der falschen Stelle.
+ */
+export function preserveUnmanagedLines(envPath, written) {
+  if (!existsSync(envPath)) return [];
+  let content;
+  try {
+    content = readFileSync(envPath, 'utf8');
+  } catch {
+    return [];
+  }
+  const lines = [];
+  for (const line of content.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const separator = trimmed.indexOf('=');
+    if (separator < 1) continue;
+    const key = trimmed.slice(0, separator).trim();
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) continue;
+    if (written[key]) continue;
+    lines.push(trimmed);
+  }
+  return lines;
 }
 
 /**
@@ -574,10 +628,15 @@ async function route(req, res, server) {
       // überschreiben. Das ist der richtige Tausch, solange die Felder leer
       // starten - dann hat niemand einen Wert bewusst entfernt, er hat ihn nie
       // gesehen. Zum Löschen dient die .env selbst.
-      const existingEnv = readEnvFile(envPath);
-      for (const [key, value] of Object.entries(existingEnv)) {
-        if (!result.env[key] && value) result.env[key] = value;
-      }
+      // ... und zwar VERBATIM, nicht ueber readEnvFile geparst und neu
+      // gerendert. decodeEnvValue kennt nur doppelte Anfuehrungszeichen: ein
+      // `EMAIL_SMTP_PASS='a b'` oder ein `DATA_DIR=./data # storage` sind
+      // gueltige Compose-Syntax, kaemen aber als Wert MIT Quotes bzw. MIT
+      // Kommentar zurueck und wuerden beim Rendern erneut maskiert. Der Rerun
+      // haette so still das Passwort geaendert oder ein anderes Verzeichnis
+      // gemountet. Der Parser war nie fuer diesen Zweck gedacht - sein eigener
+      // Kommentar sagt "nur fuer Werte, die erhalten bleiben muessen".
+      const preserved = preserveUnmanagedLines(envPath, result.env);
 
       let backup = null;
       try {
@@ -587,7 +646,14 @@ async function route(req, res, server) {
         return json(res, 500, { error: `Could not back up existing .env: ${err.message}` });
       }
 
-      writeFileSync(envPath, renderEnvFile(result.env), 'utf8');
+      const rendered = renderEnvFile(result.env);
+      writeFileSync(
+        envPath,
+        preserved.length
+          ? `${rendered}\n# Carried over from the previous .env\n${preserved.join('\n')}\n`
+          : rendered,
+        'utf8',
+      );
       return json(res, 200, { ok: true, backup, path: envPath });
     } catch (err) {
       return json(res, 500, { error: err.message });
@@ -685,10 +751,12 @@ async function route(req, res, server) {
       json(res, result.status, result.body);
 
       if (result.status === 201 || result.status === 403) {
-        setTimeout(() => {
-          console.log('\nSetup complete - shutting down installer server.');
-          server.close(() => process.exit(0));
-        }, 2000);
+        // Nicht sofort schliessen: die Abschlussseite bietet den Download der
+        // .env an, und der holt die Datei von hier. Ab jetzt gilt der kurze
+        // Nachlauf, den jeder weitere Request verlaengert.
+        console.log('\nSetup complete - installer will shut down once idle.');
+        beginPostSetupShutdown();
+        resetIdle(server);
       }
     } catch (err) {
       json(res, 500, { error: err.message });

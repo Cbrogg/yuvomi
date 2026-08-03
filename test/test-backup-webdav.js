@@ -310,3 +310,33 @@ describe('WebDAV Backup — service module', async () => {
     process.env.WEBDAV_BACKUP_ENABLED = 'true';
   });
 });
+
+
+describe('env-Vorrang', () => {
+  it('behandelt leere env-Variablen als nicht gesetzt', async () => {
+    // Deploy-Descriptoren, die jede Variable von Hand aufzaehlen (Portainer,
+    // Unraid), reichen optionale Felder als LEEREN STRING durch. Der ist
+    // definiert und nicht nullish, gewann also gegen alles in der Datenbank:
+    // ein Haushalt konnte WebDAV-Backups in den Einstellungen einrichten, die
+    // UI nahm es an, und wirksam wurde nichts davon. Dasselbe Kriterium nutzt
+    // isEnvControlled() in services/email.js.
+    const keys = ['WEBDAV_BACKUP_ENABLED', 'WEBDAV_BACKUP_URL', 'WEBDAV_BACKUP_USERNAME',
+      'WEBDAV_BACKUP_PASSWORD', 'WEBDAV_BACKUP_PATH', 'WEBDAV_BACKUP_KEEP'];
+    const saved = Object.fromEntries(keys.map(k => [k, process.env[k]]));
+    for (const k of keys) process.env[k] = '';
+    try {
+      // Frischer Import: die env-Konstanten werden beim Modul-Load gelesen.
+      const mod = await import(`../server/services/backup-webdav.js?empty=${process.pid}`);
+      const cfg = mod.getConfig();
+      assert.equal(cfg.url, null, 'eine leere URL darf nicht als gesetzt gelten');
+      assert.equal(cfg.username, null);
+      assert.equal(cfg.password, null);
+      assert.equal(cfg.remotePath, '/yuvomi/backups/', 'der Default-Pfad muss greifen');
+      assert.equal(cfg.keep, 7, 'ein leeres KEEP darf nicht auf 0 fallen');
+    } finally {
+      for (const [k, v] of Object.entries(saved)) {
+        if (v === undefined) delete process.env[k]; else process.env[k] = v;
+      }
+    }
+  });
+});
