@@ -89,7 +89,11 @@ export async function render(container) {
   try {
     preview = (await auth.previewInvite(token))?.data;
   } catch {
-    dead(t('join.invalidToken'));
+    // Nur `valid: false` heißt "Token unbrauchbar". Ein Rate-Limit (429), ein
+    // Serverfehler oder eine abgerissene Verbindung sind vorübergehend, und wer
+    // dann "Einladung ungültig" liest, wirft einen intakten Link weg. Das
+    // Formular bleibt trotzdem zu: ohne Vorschau sind die Vorgaben unbekannt.
+    dead(t('join.previewFailed'));
     return;
   }
   if (!preview?.valid) { dead(t('join.invalidToken')); return; }
@@ -140,8 +144,10 @@ export async function render(container) {
       // Ein 400 kann die Einladung meinen oder die Eingabe. Die Vorschau sagt,
       // welches von beidem: nur bei totem Token das Formular ausblenden, sonst
       // sperrte eine abgelehnte Eingabe den Eingeladenen dauerhaft aus.
+      // Scheitert die Rückfrage selbst, gilt der Token als intakt: ein 429 darf
+      // nicht dieselbe Wirkung haben wie ein abgelaufener Link.
       if (err?.status === 400) {
-        const stillValid = await auth.previewInvite(token).then((r) => r?.data?.valid).catch(() => false);
+        const stillValid = await auth.previewInvite(token).then((r) => r?.data?.valid).catch(() => true);
         if (!stillValid) { dead(t('join.invalidToken')); return; }
       }
       fail(t('join.error'));

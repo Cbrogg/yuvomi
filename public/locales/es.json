@@ -3803,6 +3803,7 @@
         "usernameInvalid": "El nombre de usuario debe tener entre 3 y 64 caracteres y solo puede contener letras, números, puntos, guiones y guiones bajos.",
         "usernameTaken": "Ese nombre de usuario ya está en uso.",
         "error": "No se ha podido crear la cuenta. Inténtalo de nuevo.",
-        "displayNameTooLong": "El nombre visible puede tener como máximo 128 caracteres."
+        "displayNameTooLong": "El nombre visible puede tener como máximo 128 caracteres.",
+        "previewFailed": "No se ha podido comprobar la invitación en este momento. Vuelve a cargar la página en unos instantes."
     }
 }

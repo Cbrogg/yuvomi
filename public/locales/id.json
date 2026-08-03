@@ -3803,6 +3803,7 @@
         "usernameInvalid": "Nama pengguna harus 3 sampai 64 karakter dan hanya boleh berisi huruf, angka, titik, tanda hubung, dan garis bawah.",
         "usernameTaken": "Nama pengguna ini sudah dipakai.",
         "error": "Akun tidak dapat dibuat. Silakan coba lagi.",
-        "displayNameTooLong": "Nama tampilan paling banyak 128 karakter."
+        "displayNameTooLong": "Nama tampilan paling banyak 128 karakter.",
+        "previewFailed": "Undangan tidak dapat diperiksa saat ini. Silakan muat ulang halaman sebentar lagi."
     }
 }

@@ -3803,6 +3803,7 @@
         "usernameInvalid": "The username must be 3 to 64 characters long and may only contain letters, numbers, dots, hyphens, and underscores.",
         "usernameTaken": "This username is already taken.",
         "error": "The account could not be created. Please try again.",
-        "displayNameTooLong": "The display name may be at most 128 characters long."
+        "displayNameTooLong": "The display name may be at most 128 characters long.",
+        "previewFailed": "The invitation could not be checked right now. Please reload the page in a moment."
     }
 }

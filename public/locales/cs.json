@@ -3803,6 +3803,7 @@
         "usernameInvalid": "Uživatelské jméno musí mít 3 až 64 znaků a smí obsahovat pouze písmena, číslice, tečky, pomlčky a podtržítka.",
         "usernameTaken": "Toto uživatelské jméno je již obsazené.",
         "error": "Účet se nepodařilo vytvořit. Zkus to prosím znovu.",
-        "displayNameTooLong": "Zobrazované jméno může mít nejvýše 128 znaků."
+        "displayNameTooLong": "Zobrazované jméno může mít nejvýše 128 znaků.",
+        "previewFailed": "Pozvánku se teď nepodařilo ověřit. Za chvíli stránku načti znovu."
     }
 }

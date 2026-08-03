@@ -108,6 +108,16 @@ test('eine eingelöste Einladung ist kein zweites Mal einlösbar', () => {
   assert.equal(svc.markAccepted(token, 2), 0);
 });
 
+test('markAccepted greift nach Ablauf nicht mehr, auch mit gültig geprüftem Token', () => {
+  const db = makeDb();
+  const { token } = svcAt(db, T0).createInvite({ createdBy: 1 });
+  // Der Ablauf faellt zwischen verifyToken und markAccepted: beim Einloesen liegt
+  // dazwischen ein bcrypt-Hash von rund 300 ms.
+  assert.notEqual(svcAt(db, T0).verifyToken(token), null);
+  assert.equal(svcAt(db, AFTER_TTL).markAccepted(token, 2), 0);
+  assert.equal(db.prepare('SELECT accepted_at FROM invites').get().accepted_at, null);
+});
+
 test('markAccepted löscht nicht, sondern hält die Spur wer wen eingeladen hat', () => {
   const db = makeDb();
   const svc = svcAt(db, T0);
@@ -166,17 +176,22 @@ test('listOpen zeigt weder eingelöste noch widerrufene noch abgelaufene Einladu
   assert.deepEqual(svcAt(db, AFTER_TTL).listOpen(), []);
 });
 
-test('cleanupExpired räumt abgelaufene ab, eingelöste bleiben als Spur bestehen', () => {
+test('cleanupExpired räumt abgelaufene ab, eingelöste und widerrufene bleiben', () => {
   const db = makeDb();
   const svc = svcAt(db, T0);
   const accepted = svc.createInvite({ username: 'accepted', createdBy: 1 });
+  const revoked = svc.createInvite({ username: 'revoked', createdBy: 1 });
   svc.createInvite({ username: 'stale', createdBy: 1 });
   svc.markAccepted(accepted.token, 2);
+  svc.revoke(revoked.id);
 
+  // Nur die Einladung, die nie zu etwas geführt hat, verschwindet. Ein Widerruf
+  // ist eine Entscheidung: revoke() löscht deshalb nicht, und der Aufräumjob
+  // darf sie nicht nachträglich aufheben.
   assert.equal(svcAt(db, AFTER_TTL).cleanupExpired(), 1);
   assert.deepEqual(
-    db.prepare('SELECT username FROM invites').all().map((r) => r.username),
-    ['accepted']
+    db.prepare('SELECT username FROM invites ORDER BY id').all().map((r) => r.username),
+    ['accepted', 'revoked']
   );
 });
 

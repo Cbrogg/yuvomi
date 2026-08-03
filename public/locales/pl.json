@@ -3803,6 +3803,7 @@
         "usernameInvalid": "Nazwa użytkownika musi mieć od 3 do 64 znaków i może zawierać wyłącznie litery, cyfry, kropki, myślniki i podkreślenia.",
         "usernameTaken": "Ta nazwa użytkownika jest już zajęta.",
         "error": "Nie udało się utworzyć konta. Spróbuj ponownie.",
-        "displayNameTooLong": "Nazwa wyświetlana może mieć najwyżej 128 znaków."
+        "displayNameTooLong": "Nazwa wyświetlana może mieć najwyżej 128 znaków.",
+        "previewFailed": "Nie udało się teraz sprawdzić zaproszenia. Odśwież stronę za chwilę."
     }
 }

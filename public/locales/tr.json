@@ -3803,6 +3803,7 @@
         "usernameInvalid": "Kullanıcı adı 3 ile 64 karakter arasında olmalı ve yalnızca harf, rakam, nokta, tire ve alt çizgi içerebilir.",
         "usernameTaken": "Bu kullanıcı adı zaten alınmış.",
         "error": "Hesap oluşturulamadı. Lütfen tekrar dene.",
-        "displayNameTooLong": "Görünen ad en fazla 128 karakter olabilir."
+        "displayNameTooLong": "Görünen ad en fazla 128 karakter olabilir.",
+        "previewFailed": "Davet şu anda denetlenemedi. Lütfen birazdan sayfayı yeniden yükle."
     }
 }

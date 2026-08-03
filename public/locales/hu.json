@@ -3803,6 +3803,7 @@
         "usernameInvalid": "A felhasználónév 3 és 64 karakter közötti lehet, és csak betűket, számokat, pontot, kötőjelet és aláhúzást tartalmazhat.",
         "usernameTaken": "Ez a felhasználónév már foglalt.",
         "error": "A fiókot nem sikerült létrehozni. Próbáld újra.",
-        "displayNameTooLong": "A megjelenő név legfeljebb 128 karakter lehet."
+        "displayNameTooLong": "A megjelenő név legfeljebb 128 karakter lehet.",
+        "previewFailed": "A meghívót most nem sikerült ellenőrizni. Töltsd újra az oldalt egy pillanat múlva."
     }
 }

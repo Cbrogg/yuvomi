@@ -3803,6 +3803,7 @@
         "usernameInvalid": "用户名需为 3 到 64 个字符，且只能包含字母、数字、点、连字符和下划线。",
         "usernameTaken": "该用户名已被占用。",
         "error": "无法创建账户，请重试。",
-        "displayNameTooLong": "显示名称最多 128 个字符。"
+        "displayNameTooLong": "显示名称最多 128 个字符。",
+        "previewFailed": "目前无法检查该邀请，请稍后重新加载页面。"
     }
 }

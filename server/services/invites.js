@@ -61,12 +61,17 @@ export function createInviteService({ db, now = () => Date.now() } = {}) {
    * Markiert die Einladung als eingelöst. Die Bedingungen stehen im WHERE, damit
    * der Aufrufer den Ausgang an `changes` erkennt: zwei parallele Einlösungen
    * desselben Tokens sehen so nur einmal changes === 1.
+   *
+   * Der Ablauf gehört mit ins WHERE, obwohl verifyToken ihn schon geprüft hat:
+   * dazwischen liegt beim Einlösen ein bcrypt-Hash von rund 300 ms, und in dem
+   * Fenster darf die Frist nicht stillschweigend überschritten werden.
    */
   function markAccepted(token, userId) {
     const info = getDb().prepare(`
       UPDATE invites SET accepted_at = ?, accepted_user_id = ?
       WHERE token_hash = ? AND accepted_at IS NULL AND revoked_at IS NULL
-    `).run(stamp(), userId, hash(token));
+        AND expires_at > ?
+    `).run(stamp(), userId, hash(token), now());
     return info.changes;
   }
 
@@ -88,10 +93,16 @@ export function createInviteService({ db, now = () => Date.now() } = {}) {
     `).all(now());
   }
 
-  /** Räumt abgelaufene Einladungen ab. Eingelöste bleiben als Spur bestehen. */
+  /**
+   * Räumt abgelaufene Einladungen ab, die nie zu etwas geführt haben.
+   * Eingelöste und widerrufene bleiben: beide sind eine Entscheidung, die jemand
+   * getroffen hat ("wer hat wen eingeladen", "wer hat das zurückgenommen"), und
+   * revoke() löscht aus genau diesem Grund nicht. Ein Aufräumjob, der sie später
+   * doch entfernt, hebt die Entscheidung nachträglich auf.
+   */
   function cleanupExpired() {
     const info = getDb().prepare(
-      'DELETE FROM invites WHERE expires_at <= ? AND accepted_at IS NULL'
+      'DELETE FROM invites WHERE expires_at <= ? AND accepted_at IS NULL AND revoked_at IS NULL'
     ).run(now());
     if (info.changes) log.info(`Cleaned up ${info.changes} expired invite(s)`);
     return info.changes;

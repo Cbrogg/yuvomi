@@ -3803,6 +3803,7 @@
         "usernameInvalid": "Användarnamnet måste vara 3 till 64 tecken långt och får bara innehålla bokstäver, siffror, punkter, bindestreck och understreck.",
         "usernameTaken": "Användarnamnet är redan taget.",
         "error": "Kontot kunde inte skapas. Försök igen.",
-        "displayNameTooLong": "Visningsnamnet får vara högst 128 tecken långt."
+        "displayNameTooLong": "Visningsnamnet får vara högst 128 tecken långt.",
+        "previewFailed": "Inbjudan kunde inte kontrolleras just nu. Ladda om sidan om en stund."
     }
 }

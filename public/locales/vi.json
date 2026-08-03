@@ -3803,6 +3803,7 @@
         "usernameInvalid": "Tên đăng nhập phải dài từ 3 đến 64 ký tự và chỉ gồm chữ cái, chữ số, dấu chấm, dấu gạch ngang và gạch dưới.",
         "usernameTaken": "Tên đăng nhập này đã được dùng.",
         "error": "Không tạo được tài khoản. Vui lòng thử lại.",
-        "displayNameTooLong": "Tên hiển thị dài tối đa 128 ký tự."
+        "displayNameTooLong": "Tên hiển thị dài tối đa 128 ký tự.",
+        "previewFailed": "Hiện chưa kiểm tra được lời mời. Vui lòng tải lại trang sau giây lát."
     }
 }

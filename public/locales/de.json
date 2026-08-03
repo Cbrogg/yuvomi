@@ -3803,6 +3803,7 @@
         "usernameInvalid": "Der Benutzername muss 3 bis 64 Zeichen lang sein und darf nur Buchstaben, Zahlen, Punkt, Bindestrich und Unterstrich enthalten.",
         "usernameTaken": "Dieser Benutzername ist bereits vergeben.",
         "error": "Das Konto konnte nicht erstellt werden. Bitte versuche es noch einmal.",
-        "displayNameTooLong": "Der Anzeigename darf höchstens 128 Zeichen lang sein."
+        "displayNameTooLong": "Der Anzeigename darf höchstens 128 Zeichen lang sein.",
+        "previewFailed": "Die Einladung konnte gerade nicht geprüft werden. Bitte lade die Seite in einem Moment neu."
     }
 }

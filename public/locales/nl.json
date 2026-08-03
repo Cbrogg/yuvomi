@@ -3803,6 +3803,7 @@
         "usernameInvalid": "De gebruikersnaam moet 3 tot 64 tekens lang zijn en mag alleen letters, cijfers, punten, streepjes en underscores bevatten.",
         "usernameTaken": "Deze gebruikersnaam is al in gebruik.",
         "error": "Het account kon niet worden aangemaakt. Probeer het opnieuw.",
-        "displayNameTooLong": "De weergavenaam mag maximaal 128 tekens lang zijn."
+        "displayNameTooLong": "De weergavenaam mag maximaal 128 tekens lang zijn.",
+        "previewFailed": "De uitnodiging kon nu niet worden gecontroleerd. Laad de pagina zo meteen opnieuw."
     }
 }
