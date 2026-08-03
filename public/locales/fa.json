@@ -862,7 +862,7 @@
         "notesLabel": "یادداشت‌ها",
         "organizationLabel": "Organisation",
         "websiteLabel": "Website",
-        "nicknameLabel": "Spitzname",
+        "nicknameLabel": "نام مستعار",
         "notesPlaceholder": "اختیاری…",
         "callLabel": "تماس",
         "emailActionLabel": "ایمیل",
@@ -3501,13 +3501,13 @@
                 "nextMonth": "ماه بعد"
             },
             "weekday": {
-                "mon": "Mo",
-                "tue": "Di",
-                "wed": "Mi",
-                "thu": "Do",
-                "fri": "Fr",
-                "sat": "Sa",
-                "sun": "So"
+                "mon": "دوش",
+                "tue": "سه‌ش",
+                "wed": "چها",
+                "thu": "پنج",
+                "fri": "جمعه",
+                "sat": "شنبه",
+                "sun": "یک‌ش"
             },
             "legend": {
                 "period": "قاعدگی",

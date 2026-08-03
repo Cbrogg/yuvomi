@@ -849,7 +849,7 @@
         "notesLabel": "नोट्स",
         "organizationLabel": "Organisation",
         "websiteLabel": "Website",
-        "nicknameLabel": "Spitzname",
+        "nicknameLabel": "उपनाम",
         "notesPlaceholder": "वैकल्पिक…",
         "callLabel": "कॉल करें",
         "emailActionLabel": "ईमेल करें",
@@ -3501,13 +3501,13 @@
                 "nextMonth": "अगला माह"
             },
             "weekday": {
-                "mon": "Mo",
-                "tue": "Di",
-                "wed": "Mi",
-                "thu": "Do",
-                "fri": "Fr",
-                "sat": "Sa",
-                "sun": "So"
+                "mon": "सोम",
+                "tue": "मंगल",
+                "wed": "बुध",
+                "thu": "गुरु",
+                "fri": "शुक्र",
+                "sat": "शनि",
+                "sun": "रवि"
             },
             "legend": {
                 "period": "माहवारी",

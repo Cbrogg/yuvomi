@@ -849,7 +849,7 @@
         "notesLabel": "Notes",
         "organizationLabel": "Organisation",
         "websiteLabel": "Website",
-        "nicknameLabel": "Spitzname",
+        "nicknameLabel": "Surnom",
         "notesPlaceholder": "Optionnel…",
         "callLabel": "Appeler",
         "emailActionLabel": "E-mail",
@@ -3501,13 +3501,13 @@
                 "nextMonth": "Mois suivant"
             },
             "weekday": {
-                "mon": "Mo",
-                "tue": "Di",
-                "wed": "Mi",
-                "thu": "Do",
-                "fri": "Fr",
+                "mon": "Lu",
+                "tue": "Ma",
+                "wed": "Me",
+                "thu": "Je",
+                "fri": "Ve",
                 "sat": "Sa",
-                "sun": "So"
+                "sun": "Di"
             },
             "legend": {
                 "period": "Règles",
