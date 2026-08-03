@@ -699,6 +699,13 @@ router.put('/:id', (req, res) => {
       syncTaskRewards(db.get(), task.id, task.status, status, req.authUserId || req.session.userId);
     })();
 
+    // Auch über das Bearbeiten-Formular lässt sich ein Abhaken zurücknehmen -
+    // die Folgeinstanz muss dann genauso verschwinden wie beim Klick auf die
+    // Checkbox (#650).
+    const undone = task.status === 'done' && status !== 'done'
+      ? discardRecurrenceFollowup(task.id)
+      : 0;
+
     const updated = db.get().prepare(`
       SELECT t.*, u.display_name AS assigned_name, u.avatar_color AS assigned_color,
         u.avatar_data AS assigned_avatar, ${ASSIGNED_USERS_SQL}
@@ -720,12 +727,46 @@ router.put('/:id', (req, res) => {
 
     res.json({ data: updated });
 
-    if (pending) pushToCalDAV('Änderung');
+    if (pending || undone) pushToCalDAV('Änderung');
   } catch (err) {
     log.error('PUT /:id error:', err);
     res.status(500).json({ error: 'Internal server error.', code: 500 });
   }
 });
+
+/**
+ * Die Folgeinstanz, die beim Erledigen dieser Aufgabe entstanden ist (#650) -
+ * oder null. Es gibt höchstens eine: der Spawn legt nur an, wenn hier nichts
+ * steht.
+ */
+function recurrenceFollowupOf(taskId) {
+  return db.get().prepare(
+    'SELECT * FROM tasks WHERE recurrence_origin_id = ? ORDER BY id LIMIT 1'
+  ).get(taskId) ?? null;
+}
+
+/**
+ * Nimmt die Folgeinstanz zurück, wenn ein Abhaken rückgängig gemacht wird (#650).
+ * Nur unangetastete Instanzen verschwinden: hat jemand sie selbst erledigt (und
+ * damit die Serie weitergeschrieben) oder ihr Unteraufgaben gegeben, steckt dort
+ * Arbeit, die ein Klick auf die Vorgängerin nicht wegwerfen darf.
+ * Rückgabe: Anzahl vorgemerkter CalDAV-Löschungen.
+ */
+function discardRecurrenceFollowup(taskId) {
+  const followup = recurrenceFollowupOf(taskId);
+  if (!followup || followup.status !== 'open') return 0;
+
+  const touched = db.get().prepare(
+    'SELECT 1 FROM tasks WHERE parent_task_id = ? LIMIT 1'
+  ).get(followup.id);
+  if (touched || recurrenceFollowupOf(followup.id)) return 0;
+
+  // Vor dem DELETE vormerken, wie in DELETE /:id: danach sind UID und Objekt-URL
+  // weg. Lokal erzeugte Folgeinstanzen sind nicht gespiegelt, dann ist das ein No-op.
+  const queued = queueTodoDeletion('tasks', followup) ? 1 : 0;
+  db.get().prepare('DELETE FROM tasks WHERE id = ?').run(followup.id);
+  return queued;
+}
 
 // --------------------------------------------------------
 // PATCH /api/v1/tasks/:id/status
@@ -752,10 +793,19 @@ router.patch('/:id/status', (req, res) => {
     // Punkte-Gutschrift/Storno an den Aufgaben-Statuswechsel koppeln.
     syncTaskRewards(db.get(), Number(req.params.id), prev.status, status, req.authUserId || req.session.userId);
 
+    // Zurückgenommenes Abhaken macht auch die Folgeinstanz rückgängig (#650).
+    // Sonst stünde die beim Erledigen erzeugte nächste Instanz neben der wieder
+    // geöffneten Aufgabe - die Serie sähe doppelt aus.
+    let undone = 0;
+    if (prev.status === 'done' && status !== 'done') {
+      undone = discardRecurrenceFollowup(Number(req.params.id));
+    }
+
     // Wiederkehrende Aufgabe: nächste Instanz erstellen wenn erledigt
-    if (status === 'done') {
+    if (status === 'done' && prev.status !== 'done') {
       const task = db.get().prepare('SELECT * FROM tasks WHERE id = ?').get(req.params.id);
-      if (task?.is_recurring && task.recurrence_rule && !task.parent_task_id) {
+      if (task?.is_recurring && task.recurrence_rule && !task.parent_task_id
+          && !recurrenceFollowupOf(task.id)) {
         // Überfällige Serien aufholen: nächste Instanz liegt immer in der Zukunft,
         // statt blind altes Fälligkeitsdatum + Intervall (das selbst überfällig sein kann).
         // Schwelle "heute" in UTC, konsistent zur Listen-Filterung mit SQL date('now').
@@ -773,12 +823,14 @@ router.patch('/:id/status', (req, res) => {
           db.get().transaction(() => {
             const newTask = db.get().prepare(`
               INSERT INTO tasks (title, description, category, priority, status,
-                due_date, due_time, assigned_to, created_by, is_recurring, recurrence_rule, points, visibility)
-              VALUES (?, ?, ?, ?, 'open', ?, ?, ?, ?, 1, ?, ?, ?)
+                due_date, due_time, assigned_to, created_by, is_recurring, recurrence_rule, points, visibility,
+                recurrence_origin_id)
+              VALUES (?, ?, ?, ?, 'open', ?, ?, ?, ?, 1, ?, ?, ?, ?)
             `).run(
               task.title, task.description, task.category, task.priority,
               nextDate, task.due_time, task.assigned_to, task.created_by,
-              task.recurrence_rule, task.points, task.visibility
+              task.recurrence_rule, task.points, task.visibility,
+              task.id
             );
             setAssignments(db.get(), newTask.lastInsertRowid, existingAssignments);
             setTags(db.get(), newTask.lastInsertRowid, existingTags);
@@ -789,7 +841,7 @@ router.patch('/:id/status', (req, res) => {
 
     res.json({ data: { id: Number(req.params.id), status } });
 
-    if (pending) pushToCalDAV('Statuswechsel');
+    if (pending || undone) pushToCalDAV('Statuswechsel');
   } catch (err) {
     log.error('PATCH /:id/status error:', err);
     res.status(500).json({ error: 'Internal server error.', code: 500 });

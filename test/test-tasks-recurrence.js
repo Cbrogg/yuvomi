@@ -149,6 +149,86 @@ test('PATCH done: nicht-wiederkehrende Aufgabe erzeugt keine Folgeinstanz', asyn
   assert.equal(rows.n, 1);
 });
 
+// --------------------------------------------------------
+// Zurückgenommenes Abhaken (#650)
+// --------------------------------------------------------
+function openInstances(title) {
+  return db.prepare(
+    `SELECT * FROM tasks WHERE title = ? AND status = 'open' AND parent_task_id IS NULL
+     ORDER BY due_date`,
+  ).all(title);
+}
+
+async function completeRecurring(title, rule = 'FREQ=DAILY') {
+  const id = insertTask({
+    title, category: 'Haushalt', priority: 'medium', status: 'open',
+    due_date: dayKey(0), created_by: uid, is_recurring: 1, recurrence_rule: rule,
+  });
+  await call('PATCH', `/${id}/status`, { status: 'done' });
+  return id;
+}
+
+test('PATCH open: zurückgenommenes Abhaken entfernt die erzeugte Folgeinstanz', async () => {
+  const first = await completeRecurring('Müll rausbringen');
+  const second = openInstances('Müll rausbringen')[0];
+  assert.ok(second, 'Abhaken muss eine Folgeinstanz erzeugt haben');
+
+  // Versehentlich auch die Folgeinstanz abgehakt → dritte Instanz entsteht
+  await call('PATCH', `/${second.id}/status`, { status: 'done' });
+  assert.equal(openInstances('Müll rausbringen').length, 1);
+
+  // Zurücknehmen: die aus DIESEM Abhaken entstandene Instanz verschwindet wieder
+  const res = await call('PATCH', `/${second.id}/status`, { status: 'open' });
+  assert.equal(res.status, 200);
+
+  const open = openInstances('Müll rausbringen');
+  assert.equal(open.length, 1, 'Nach dem Zurücknehmen darf genau eine offene Instanz existieren');
+  assert.equal(open[0].id, second.id, 'Und zwar die wieder geöffnete, nicht die Folgeinstanz');
+  assert.equal(db.prepare('SELECT status FROM tasks WHERE id = ?').get(first).status, 'done');
+});
+
+test('PATCH done: erneutes Abhaken nach dem Zurücknehmen erzeugt wieder genau eine Folgeinstanz', async () => {
+  await completeRecurring('Pflanzen gießen');
+  const second = openInstances('Pflanzen gießen')[0];
+
+  await call('PATCH', `/${second.id}/status`, { status: 'done' });
+  await call('PATCH', `/${second.id}/status`, { status: 'open' });
+  await call('PATCH', `/${second.id}/status`, { status: 'done' });
+
+  assert.equal(openInstances('Pflanzen gießen').length, 1);
+});
+
+test('PATCH done: doppeltes done ohne Statuswechsel erzeugt keine zweite Folgeinstanz', async () => {
+  const id = await completeRecurring('Katzenklo');
+  await call('PATCH', `/${id}/status`, { status: 'done' });
+  assert.equal(openInstances('Katzenklo').length, 1);
+});
+
+test('PATCH open: bearbeitete Folgeinstanz bleibt stehen', async () => {
+  await completeRecurring('Wäsche waschen');
+  const second = openInstances('Wäsche waschen')[0];
+  await call('PATCH', `/${second.id}/status`, { status: 'done' });
+  const third = openInstances('Wäsche waschen')[0];
+  // Jemand hat der Folgeinstanz Arbeit hinzugefügt - die darf nicht wegfallen
+  insertTask({ title: 'Buntwäsche', status: 'open', created_by: uid, parent_task_id: third.id });
+
+  await call('PATCH', `/${second.id}/status`, { status: 'open' });
+  const survivor = db.prepare('SELECT * FROM tasks WHERE id = ?').get(third.id);
+  assert.ok(survivor, 'Folgeinstanz mit Unteraufgaben bleibt erhalten');
+  assert.equal(openInstances('Wäsche waschen').length, 2);
+});
+
+test('PUT: Statuswechsel weg von done entfernt die Folgeinstanz ebenfalls', async () => {
+  const id = await completeRecurring('Staubsaugen');
+  const second = openInstances('Staubsaugen')[0];
+  await call('PATCH', `/${second.id}/status`, { status: 'done' });
+
+  const res = await call('PUT', `/${second.id}`, { title: 'Staubsaugen', status: 'open' });
+  assert.equal(res.status, 200);
+  assert.equal(openInstances('Staubsaugen').length, 1);
+  assert.equal(db.prepare('SELECT status FROM tasks WHERE id = ?').get(id).status, 'done');
+});
+
 test('PATCH done: Subtask einer Serie erzeugt keine Folgeinstanz', async () => {
   const parent = insertTask({
     title: 'Eltern-Serie', status: 'open', due_date: dayKey(-7), created_by: uid,
