@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.74.0] - 2026-08-03
+
+The installer got a thorough pass, and most of what came out of it are fixes for ways an installation could quietly lose data or configuration. If you installed once and never ran the installer again, little changes for you. If you ever re-ran it, or deploy through Portainer, several things that silently did not work now do.
+
+### Added
+
+- Installer: `DATA_DIR` and `DOCUMENT_STORAGE_LOCAL_DIR` (host folders for the database and for locally stored documents), `DOCUMENT_STORAGE_WEBDAV_ALLOW_PRIVATE_NETWORK` and `ICS_SUBSCRIPTION_ALLOW_PRIVATE_NETWORK` (for targets on your own LAN, which the SSRF guard blocked before), and `OIDC_TRUST_EMAIL_WITHOUT_VERIFIED_CLAIM` for identity providers that send no `email_verified` claim.
+- Installer: `WEBDAV_BACKUP_KEEP` finally has a field. It had been in the schema for months without ever being written.
+- CLI installer: asks for the base URL your household will open. Behind a reverse proxy this differs from the host and port the container listens on, and password-reset mails need it.
+- Portainer: 23 previously missing variables, among them all of `OIDC_*`, all of `WEBDAV_BACKUP_*`, the `EMAIL_*` fields and `BASE_URL`. Portainer lists every variable by hand, so anything absent could not be set at all.
+- Web installer: a wait screen that names what is happening (pulling the image, starting the container, health check), shows the pull log after 90 seconds and offers a retry.
+
+### Changed
+
+- CLI installer: configures weather through Open-Meteo coordinates. It still asked for an OpenWeatherMap API key, although the default has been Open-Meteo without a key since 2026-06-07.
+- CLI installer: derives `SESSION_SECURE` and `TRUST_PROXY` from the scheme of the base URL, and writes both. An existing value in your `.env` always wins.
+- Settings: SMTP fields that come from an environment variable are now shown as locked and labelled as such. The value always won; the page just did not say so, accepted your input and discarded it.
+- Web installer: matches the app visually, and its touch targets and input sizes now follow the mobile guidelines.
+
+### Fixed
+
+- Text on coloured fills follows the theme. In dark mode white text sat on every lightened module accent at between 1.44:1 and 3.21:1 — among others the selected day in the date picker and the count in the reminder badge.
+- Re-running either installer no longer discards configuration. Both rewrote the `.env` from scratch and kept only the two security keys, so SMTP, OIDC, WebDAV backups and the data directory were lost — visible only at the next login attempt.
+- The web installer no longer terminates when no container engine is present.
+- A slow first installation is no longer reported as a failure while the image is still downloading, and a start that fails after launching is now recognised instead of waiting for the 15-minute timeout.
+- Google Calendar and Drive callbacks are built from the base URL, so OAuth completes behind a reverse proxy.
+- Local document storage: the Compose files mount the host folder at `DOCUMENT_STORAGE_LOCAL_PATH` instead of a fixed `/documents`. Changing that path sent uploads into the container layer, where the next image update removed them.
+- WebDAV backups configured in the settings are no longer overridden by empty environment variables that deployment descriptors pass through.
+- Passwords supplied through environment variables keep leading and trailing whitespace.
+- The `.env` download on the final screen is the file that was written, and the installer stays reachable long enough to serve it.
+- The "generate" button keeps its accessible name while working, and no longer stays disabled after a failure.
+- Installer translations: error messages state coordinate ranges with a plain hyphen, so the value can be typed into the field it refers to.
+
 ## [1.73.2] - 2026-08-02
 
 This release changes nothing in the application itself. Apart from the service worker's release marker, which every release bumps so that browsers drop their caches, no file under `public/` or `server/` differs from v1.73.1. What it carries is the reworked project website and documentation, and it keeps the published version in step with them. If you self-host, a running instance will behave exactly as before.
