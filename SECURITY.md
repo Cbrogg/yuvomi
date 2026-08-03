@@ -45,7 +45,7 @@ Vulnerabilities that require physical access to the host or root on the server a
 - Drive OAuth tokens, codes, folder IDs and raw Google responses are never returned by the API or intentionally logged. Disconnect deletes local Drive state without calling Google's revocation endpoint, so shared Calendar credentials are not revoked
 - Reconnection validates the candidate account and access to an existing Drive-backed file before atomically replacing working tokens. Disconnect is blocked while Drive is selected or referenced by documents; connecting Drive never activates it for uploads
 - Subscription logo discovery is SSRF-protected: only public HTTPS targets are fetched, every redirect is re-validated, and remote image responses are size/type constrained
-- No API endpoint accessible without session auth (except login)
+- No API endpoint is accessible without session auth, apart from the entry points that are unauthenticated by design: login and first-run setup, the OIDC handshake (`/oidc/config`, `/oidc/start`, `/oidc/callback`), self-service password reset (`/forgot-password`, `/reset-password`), invitation preview and acceptance, and the per-user ICS export feed, which authenticates with its own secret token instead of a session. Every one of them except the feed carries a dedicated rate limiter on top of the global API limit; the feed is polled by calendar clients on a schedule and is covered by the global limit alone
 - `SESSION_SECRET` is mandatory - server refuses to start if unset
 
 ## Authorization Model
