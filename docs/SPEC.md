@@ -59,12 +59,15 @@ One pending invitation per row. The `users` row is only created when the invitat
 | is_recurring | INTEGER | 0/1 |
 | recurrence_rule | TEXT | iCal RRULE |
 | parent_task_id | INTEGER | FK → Tasks (max 2 levels) |
+| recurrence_origin_id | INTEGER | FK → Tasks, ON DELETE SET NULL (migration v122) — the completed instance whose completion created this one. Deliberately not `parent_task_id`, which means "subtask" |
 | points | INTEGER | NOT NULL DEFAULT 0 — reward points credited to assigned members on completion (Rewards module, migration v69) |
 | visibility | TEXT | NOT NULL DEFAULT `all` — `all` \| `assignees` \| `private`; who may see the task (migration v78) |
 
 **Visibility (migration v78):** every task carries a `visibility` of `all` (all family members, the default and prior behaviour), `assignees` (creator + assigned members only), or `private` (creator only). Enforcement is **server-side on every read path** (list, detail, dashboard widgets, search, MCP) — there is **no admin bypass**, so a "private" task stays hidden even from a parent/admin (the intended use is preparing a surprise). Set via the visibility selector in the task modal; restricted tasks carry a lock/people icon in the list. The same field and rule apply to calendar events.
 
 Recurring tasks keep only one open instance: the next instance is created on completion, not on a schedule. When an overdue recurring task is marked done, its next due date catches up to the next occurrence at or after today (skipping missed periods) instead of advancing a single interval from the old — possibly still overdue — due date. The follow-up instance inherits the tags along with the assignees: tags belong to the task, not to a single run.
+
+**Undoing a completion (migration v122, #650):** ticking a series off is reversible. The follow-up instance records which completion created it (`recurrence_origin_id`), so moving a task back out of `done` — via the checkbox or the edit dialog — removes that follow-up again instead of leaving it standing next to the reopened task. Only an untouched follow-up is withdrawn: one that is still `open`, has no subtasks and has not itself been completed. Once work has accumulated on it, a click on its predecessor must not throw that away. The same link makes the creation idempotent: a completion never adds a second follow-up.
 
 **Category default repaired (migration v114, #586):** v83 moved the categories into their own table and migrated existing rows from `Sonstiges` to the key `misc`, but left the column default at `Sonstiges` — a key that never existed in `task_categories`. Every row created without an explicit category (notably every task arriving through the CalDAV mirror) therefore carried a key that appeared in no dropdown and no filter, and jumped silently to the first real category on the first save. v114 rebuilds the table with the correct default and re-homes every orphaned key.
 

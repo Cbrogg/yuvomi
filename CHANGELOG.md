@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.75.2] - 2026-08-03
+
+### Fixed
+
+- Unticking a recurring task left the series looking doubled. Marking one off creates the next instance, but that instance carried no trace of where it came from, so taking the completion back - the natural fix for an accidental tap - reopened the task next to the instance that same tap had created. Two entries for one series, and the only way out was deleting one by hand. Moving a task back out of "done", by checkbox or in the edit dialog, now withdraws the follow-up it created. Only an untouched one: a follow-up you have since completed yourself, or given subtasks to, stays put, because a click on its predecessor must not throw that work away. Ticking the same task off twice no longer adds a second follow-up either.
+
 ## [1.75.1] - 2026-08-03
 
 Most of this release is translation. The locale files were complete in the sense that every key existed, which is why nothing looked broken and every test passed - but in many languages the value behind the key was still the English original. The second half is about money: an amount field now knows what currency it holds, and says so before you save rather than after.
