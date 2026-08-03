@@ -956,6 +956,7 @@
         "loadError": "Le budget n'a pas pu être chargé.",
         "trendNeutral": "- identique à {{month}}",
         "validAmountRequired": "Veuillez saisir un montant valide",
+        "amountPrecisionRequired": "En {{currency}}, les montants ne sont possibles que par paliers de {{step}}",
         "dateRequired": "La date est obligatoire",
         "catFood": "Alimentation",
         "catRent": "Loyer",

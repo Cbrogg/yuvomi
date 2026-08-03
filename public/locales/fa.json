@@ -969,6 +969,7 @@
         "loadError": "بودجه بارگذاری نشد.",
         "trendNeutral": "- مانند {{month}}",
         "validAmountRequired": "مبلغ معتبری وارد کنید",
+        "amountPrecisionRequired": "در {{currency}} فقط مبالغ با گام {{step}} ممکن است",
         "dateRequired": "تاریخ الزامی است",
         "catFood": "خوراک",
         "catRent": "اجاره",

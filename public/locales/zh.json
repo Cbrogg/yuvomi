@@ -956,6 +956,7 @@
         "loadError": "预算加载失败。",
         "trendNeutral": "- 与 {{month}} 相同",
         "validAmountRequired": "请输入有效金额",
+        "amountPrecisionRequired": "使用 {{currency}} 时，金额只能以 {{step}} 为单位",
         "dateRequired": "日期为必填项",
         "catFood": "食品",
         "catRent": "租金",

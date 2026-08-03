@@ -956,6 +956,7 @@
         "loadError": "A költségvetés betöltése sikertelen.",
         "trendNeutral": "- ugyanaz, mint {{month}}",
         "validAmountRequired": "Kérjük, adjon meg egy érvényes összeget",
+        "amountPrecisionRequired": "{{currency}} esetén csak {{step}} lépésközű összegek adhatók meg",
         "dateRequired": "A dátum megadása kötelező",
         "catFood": "Élelmiszer",
         "catRent": "Bérleti díj",

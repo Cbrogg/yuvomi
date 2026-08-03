@@ -956,6 +956,7 @@
         "loadError": "Rozpočet se nepodařilo načíst.",
         "trendNeutral": "- stejné jako {{month}}",
         "validAmountRequired": "Zadejte prosím platnou částku",
+        "amountPrecisionRequired": "V měně {{currency}} jsou možné jen částky po {{step}}",
         "dateRequired": "Datum je povinné",
         "catFood": "Jídlo",
         "catRent": "Nájem",

@@ -956,6 +956,7 @@
         "loadError": "No se pudo cargar el presupuesto.",
         "trendNeutral": "- como {{month}}",
         "validAmountRequired": "Introduce un importe válido",
+        "amountPrecisionRequired": "En {{currency}} solo se admiten importes en pasos de {{step}}",
         "dateRequired": "La fecha es obligatoria",
         "catFood": "Alimentación",
         "catRent": "Alquiler",

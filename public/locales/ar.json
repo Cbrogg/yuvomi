@@ -956,6 +956,7 @@
         "loadError": "فشل تحميل الميزانية.",
         "trendNeutral": "- مثل {{month}}",
         "validAmountRequired": "أدخل مبلغاً صحيحاً",
+        "amountPrecisionRequired": "بعملة {{currency}} يُسمح فقط بمبالغ بمقدار {{step}}",
         "dateRequired": "التاريخ مطلوب",
         "catFood": "الطعام",
         "catRent": "الإيجار",

@@ -956,6 +956,7 @@
         "loadError": "Не вдалося завантажити бюджет.",
         "trendNeutral": "— так само, як у {{month}}",
         "validAmountRequired": "Будь ласка, введіть коректну суму",
+        "amountPrecisionRequired": "У валюті {{currency}} суми можливі лише з кроком {{step}}",
         "dateRequired": "Дата є обов'язковою",
         "catFood": "Продукти",
         "catRent": "Оренда",

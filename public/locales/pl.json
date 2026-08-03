@@ -969,6 +969,7 @@
         "loadError": "Nie udało się załadować budżetu.",
         "trendNeutral": "– jak {{month}}",
         "validAmountRequired": "Podaj prawidłową kwotę",
+        "amountPrecisionRequired": "W walucie {{currency}} możliwe są tylko kwoty co {{step}}",
         "dateRequired": "Data jest wymagana",
         "catFood": "Żywność",
         "catRent": "Czynsz",

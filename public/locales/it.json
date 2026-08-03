@@ -956,6 +956,7 @@
         "loadError": "Impossibile caricare il bilancio.",
         "trendNeutral": "- come {{month}}",
         "validAmountRequired": "Inserisci un importo valido",
+        "amountPrecisionRequired": "In {{currency}} sono possibili solo importi a passi di {{step}}",
         "dateRequired": "La data è obbligatoria",
         "catFood": "Alimentazione",
         "catRent": "Affitto",

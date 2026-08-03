@@ -956,6 +956,7 @@
         "loadError": "Falha ao carregar orçamento.",
         "trendNeutral": "- igual a {{month}}",
         "validAmountRequired": "Insira um valor válido",
+        "amountPrecisionRequired": "Em {{currency}}, os valores só são possíveis em incrementos de {{step}}",
         "dateRequired": "Data é obrigatória",
         "catFood": "Alimentação",
         "catRent": "Aluguel",

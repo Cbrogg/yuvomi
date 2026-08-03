@@ -956,6 +956,7 @@
         "loadError": "Budget kon niet worden geladen.",
         "trendNeutral": "- gelijk aan {{month}}",
         "validAmountRequired": "Voer een geldig bedrag in",
+        "amountPrecisionRequired": "In {{currency}} zijn alleen bedragen in stappen van {{step}} mogelijk",
         "dateRequired": "Datum is verplicht",
         "catFood": "Voeding",
         "catRent": "Huur",

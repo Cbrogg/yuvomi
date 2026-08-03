@@ -956,6 +956,7 @@
         "loadError": "Bütçe yüklenemedi.",
         "trendNeutral": "- {{month}} ile aynı",
         "validAmountRequired": "Lütfen geçerli bir tutar girin",
+        "amountPrecisionRequired": "{{currency}} para biriminde tutarlar yalnızca {{step}} adımlarıyla girilebilir",
         "dateRequired": "Tarih zorunludur",
         "catFood": "Market",
         "catRent": "Kira",

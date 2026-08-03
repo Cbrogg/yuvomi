@@ -956,6 +956,7 @@
         "loadError": "Budget kunde inte laddas.",
         "trendNeutral": "- samma som {{month}}",
         "validAmountRequired": "Ange ett giltigt belopp",
+        "amountPrecisionRequired": "I {{currency}} är belopp bara möjliga i steg om {{step}}",
         "dateRequired": "Datum krävs",
         "catFood": "Specerier",
         "catRent": "Hyra",

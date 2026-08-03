@@ -956,6 +956,7 @@
         "loadError": "家計の読み込みに失敗しました。",
         "trendNeutral": "- {{month}} と同じ",
         "validAmountRequired": "有効な金額を入力してください",
+        "amountPrecisionRequired": "{{currency}} では {{step}} 単位の金額のみ指定できます",
         "dateRequired": "日付は必須です",
         "catFood": "食費",
         "catRent": "家賃",

@@ -72,6 +72,27 @@ function smallestUnit(digits) {
 }
 
 /**
+ * Passt ein Betrag ins Raster der Währung? 1300 JPY ja, 12,5 JPY nein.
+ *
+ * Das `step`-Attribut allein reicht dafür nicht: die Budget-Dialoge sind keine
+ * `<form>`-Elemente, sie speichern über einen Button-Handler. Die native
+ * Prüfung läuft also nie, und ein Feld mit step="1" nähme trotzdem 12,5
+ * entgegen. Wer eine Schrittweite anzeigt, muss sie auch selbst durchsetzen.
+ */
+export function fitsCurrencyGrid(amount, currency) {
+  const digits = currencyFractionDigits(currency);
+  const scaled = Number(amount) * 10 ** digits;
+  if (!Number.isFinite(scaled)) return false;
+  return Math.abs(scaled - Math.round(scaled)) < 1e-9;
+}
+
+/** Die kleinste erfassbare Einheit als Text fürs Feld: JPY "1", EUR "0.01". */
+export function smallestUnitLabel(currency) {
+  const digits = currencyFractionDigits(currency);
+  return smallestUnit(digits).toFixed(digits);
+}
+
+/**
  * Schrittweite für ein Betragsfeld, passend zur Währung: "1" bei JPY, "0.01"
  * bei EUR, "0.001" bei KWD. Immer mit Punkt - `step` und `min` sind HTML-Syntax,
  * kein Anzeigeformat.

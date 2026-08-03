@@ -969,6 +969,7 @@
         "loadError": "Anggaran tidak dapat dimuat.",
         "trendNeutral": "- sama seperti {{month}}",
         "validAmountRequired": "Masukkan jumlah yang valid",
+        "amountPrecisionRequired": "Dalam {{currency}}, jumlah hanya dimungkinkan dalam kelipatan {{step}}",
         "dateRequired": "Tanggal wajib diisi",
         "catFood": "Makanan",
         "catRent": "Sewa",

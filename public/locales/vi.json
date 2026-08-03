@@ -956,6 +956,7 @@
         "loadError": "Không thể tải ngân sách.",
         "trendNeutral": "- giống như {{month}}",
         "validAmountRequired": "Vui lòng nhập số tiền hợp lệ",
+        "amountPrecisionRequired": "Với {{currency}}, số tiền chỉ có thể theo bước {{step}}",
         "dateRequired": "Ngày là bắt buộc",
         "catFood": "Thực phẩm",
         "catRent": "Thuê nhà",

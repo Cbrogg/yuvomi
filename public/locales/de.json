@@ -969,6 +969,7 @@
         "loadError": "Budget konnte nicht geladen werden.",
         "trendNeutral": "- wie {{month}}",
         "validAmountRequired": "Gültigen Betrag eingeben",
+        "amountPrecisionRequired": "Bei {{currency}} sind nur Beträge in Schritten von {{step}} möglich",
         "dateRequired": "Datum ist erforderlich",
         "catFood": "Ernährung",
         "catRent": "Miete",

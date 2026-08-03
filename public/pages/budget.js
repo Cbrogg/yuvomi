@@ -18,7 +18,7 @@ import { openSubscriptionModal, render as renderSubscriptions } from '/pages/sub
 import { renderStats } from '/pages/budget-stats.js';
 import { renderPlans } from '/pages/budget-plans.js';
 import { toLocalDateKey, parseLocalDateKey, addLocalDays } from '/utils/date.js';
-import { formatMoney, formatSignedAmount, amountPlaceholder, amountStep, amountMin, applyAmountFormat } from '/utils/money.js';
+import { formatMoney, formatSignedAmount, amountPlaceholder, amountStep, amountMin, applyAmountFormat, fitsCurrencyGrid, smallestUnitLabel } from '/utils/money.js';
 import { budgetCategoryLabel } from '/utils/category-labels.js';
 import { appendCurrencyOptions } from '/settings/currency.js';
 import '/components/category-manager.js';
@@ -1187,6 +1187,7 @@ function openAccountModal(account = null) {
           reportFieldError(panel.querySelector('#am-balance'), t('budget.validAmountRequired'));
           return;
         }
+        if (rejectOffGridAmount(panel.querySelector('#am-balance'), startingBalance, state.currency)) return;
 
         saveBtn.disabled = true;
         saveBtn.textContent = '…';
@@ -2012,6 +2013,7 @@ function openBudgetModal({ mode, entry = null, initialType = '' }) {
           reportFieldError(panel.querySelector('#bm-amount'), t('budget.validAmountRequired'));
           return;
         }
+        if (rejectOffGridAmount(panel.querySelector('#bm-amount'), absVal, state.currency)) return;
         if (!date) {
           reportFieldError(panel.querySelector('#bm-date'), t('calendar.invalidDate'));
           return;
@@ -2151,6 +2153,26 @@ function requestNameInPanel(panel, { title, label, placeholder }) {
 // Kursfeld erscheint nur bei einer von der Budget-Währung abweichenden Wahl -
 // solange beide gleich sind, gibt es nichts umzurechnen. Die Option-Liste füllt
 // wireLoanCurrencyFields() nach dem Einfügen (geteilte SUPPORTED_CURRENCIES).
+/**
+ * Weist einen Betrag zurück, der nicht ins Raster seiner Währung passt.
+ *
+ * Die Dialoge des Moduls sind keine `<form>`-Elemente - sie speichern über
+ * einen Button-Handler, die native `step`-Prüfung des Browsers läuft also nie.
+ * Ein Feld mit step="1" nähme sonst trotzdem 12,5 JPY entgegen und schriebe
+ * den Wert weg, während die Anzeige ihn gerundet darstellt. Wer eine
+ * Schrittweite zeigt, muss sie auch selbst durchsetzen.
+ *
+ * @returns {boolean} true, wenn abgewiesen wurde (der Aufrufer bricht dann ab)
+ */
+function rejectOffGridAmount(input, value, currency) {
+  if (fitsCurrencyGrid(value, currency)) return false;
+  reportFieldError(input, t('budget.amountPrecisionRequired', {
+    currency,
+    step: smallestUnitLabel(currency),
+  }));
+  return true;
+}
+
 function loanCurrencyFieldsHtml(loan) {
   const currency = loan?.currency || state.currency;
   const foreign = currency !== state.currency;
@@ -2374,6 +2396,9 @@ async function saveLoanFromPanel(panel, saveBtn, { loan = null, closeAfterSave =
       reportFieldError(panel.querySelector('#lm-amount'), t('budget.validAmountRequired'));
       return;
     }
+    // Gegen die Darlehenswährung, nicht gegen die des Budgets: ein Darlehen in
+    // JPY rastert in ganzen Yen, auch wenn der Haushalt in EUR rechnet.
+    if (rejectOffGridAmount(panel.querySelector('#lm-amount'), total_amount, currency)) return;
     if (!Number.isInteger(installment_count) || installment_count < 1) {
       reportFieldError(panel.querySelector('#lm-installments'), t('budget.loanInstallmentsRequired'));
       return;
@@ -2387,6 +2412,7 @@ async function saveLoanFromPanel(panel, saveBtn, { loan = null, closeAfterSave =
       reportFieldError(panel.querySelector('#lm-principal'), t('budget.loanPrincipalRequired'));
       return;
     }
+    if (rejectOffGridAmount(panel.querySelector('#lm-principal'), principal, currency)) return;
     if (isNaN(fixed_rate) || fixed_rate < 0 || fixed_rate > 100) {
       reportFieldError(panel.querySelector('#lm-fixed-rate'), t('budget.loanRateRequired'));
       return;

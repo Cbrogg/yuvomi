@@ -956,6 +956,7 @@
         "loadError": "Δεν ήταν δυνατή η φόρτωση του προϋπολογισμού.",
         "trendNeutral": "- ίδιο με {{month}}",
         "validAmountRequired": "Παρακαλώ εισαγάγετε έγκυρο ποσό",
+        "amountPrecisionRequired": "Σε {{currency}} επιτρέπονται μόνο ποσά σε βήματα των {{step}}",
         "dateRequired": "Η ημερομηνία είναι υποχρεωτική",
         "catFood": "Τρόφιμα",
         "catRent": "Ενοίκιο",

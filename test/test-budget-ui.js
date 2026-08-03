@@ -452,6 +452,27 @@ test('Geldbeträge gehen als Punkt-Dezimalstring an den Server', () => {
   assert.doesNotMatch(impl[0], /type === 'group'/, 'Gruppierung darf nicht still entfernt werden');
 });
 
+test('jeder Speicherpfad prüft die Schrittweite selbst', () => {
+  // Die Dialoge des Moduls sind keine <form>-Elemente: sie speichern über einen
+  // Button-Handler, die native step-Prüfung des Browsers läuft also nie. Ein
+  // angezeigtes step="1" ist damit reine Behauptung - ohne eigene Prüfung nimmt
+  // das Feld trotzdem 12,5 JPY entgegen und schreibt den Wert weg, während die
+  // Anzeige ihn gerundet darstellt.
+  for (const [file, src] of [['budget.js', budget], ['budget-plans.js', plans]]) {
+    const clean = withoutComments(src);
+    assert.doesNotMatch(clean, /<form\b/, `${file}: Dialoge sind bewusst keine Formulare - der Guard hier setzt das voraus`);
+    const checks = (clean.match(/fitsCurrencyGrid\(|rejectOffGridAmount\(/g) || []).length;
+    // Jedes Feld, dessen Schrittweite aus der Währung kommt, braucht seine
+    // eigene Prüfung im Speicherpfad.
+    const fields = (clean.match(/step="\$\{amountStep\(/g) || []).length;
+    assert.ok(
+      checks >= fields,
+      `${file}: ${fields} währungsgerasterte Felder, aber nur ${checks} Prüfungen im Speicherpfad`,
+    );
+  }
+  assert.match(money, /export function fitsCurrencyGrid/);
+});
+
 test('ein Abo darf null kosten', () => {
   // Gratis-Tarife sind ein gültiger Bestand: validatePayload weist erst
   // amount < 0 ab, das Schema prüft CHECK(amount >= 0). Eine Untergrenze aus
