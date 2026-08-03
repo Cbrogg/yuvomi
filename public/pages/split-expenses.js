@@ -10,7 +10,7 @@ import { t, formatDate, getLocale, dateInputPlaceholder, parseDateInput, isDateI
 import { esc } from '/utils/html.js';
 import { stagger } from '/utils/ux.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
-import { formatMoney, amountPlaceholder } from '/utils/money.js';
+import { formatMoney, amountPlaceholder, toDecimalString } from '/utils/money.js';
 import { wireTablist } from '/utils/tablist.js';
 
 let state = {
@@ -634,15 +634,13 @@ function updateSplitInputs(panel) {
  * Ein Geldbetrag aus dem Formular in der Schreibweise, die der Server erwartet.
  *
  * parseMoneyToMinor() in server/services/split-expenses.js nimmt ausschliesslich
- * /^-?\d+(\.\d+)?$/ entgegen, die Eingabe folgt dagegen der Region: in de, cs
- * oder pl trennt ein Komma, und der Platzhalter zeigt es auch so an. Ohne diese
- * Umschrift kommt "12,50" unverändert am Server an - die Client-Prüfung stimmt
- * zu (numberValue kennt das Komma), und das Anlegen scheitert erst danach mit
- * einem Fehler, der auf kein Feld zeigt.
+ * /^-?\d+(\.\d+)?$/ entgegen, die Eingabe folgt dagegen der Region - bis in die
+ * Ziffern hinein. Ohne diese Umschrift kommt "12,50" oder "۱۲٫۵۰" unverändert
+ * am Server an, und das Anlegen scheitert dort mit einem Fehler, der auf kein
+ * Feld zeigt. Die Umschrift selbst steht in utils/money.js, der einen Quelle
+ * für Geldformate.
  */
-function decimalString(value) {
-  return String(value ?? '').trim().replace(',', '.');
-}
+const decimalString = toDecimalString;
 
 function numberValue(value) {
   const normalized = decimalString(value);

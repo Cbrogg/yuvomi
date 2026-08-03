@@ -106,6 +106,49 @@ export function amountMin(currency, currentValue) {
 }
 
 /**
+ * Ein eingetippter Betrag in der Schreibweise, die der Server erwartet:
+ * ASCII-Ziffern, Punkt als Dezimaltrenner, ohne Gruppierung.
+ *
+ * Die Eingabefelder folgen der Region, und zwar bis in die Ziffern: unter fa
+ * oder ar-EG zeigt der Platzhalter `۰٫۰۰` beziehungsweise `٠٫٠٠`, und wer das
+ * abtippt, schickt Zeichen, die weder `Number()` noch die ASCII-Regex des
+ * Servers kennt. Das Anlegen scheiterte dann an einer Eingabe, die genau so
+ * aussah wie das, was die Oberfläche vorgeschlagen hatte.
+ *
+ * Unbekannte Zeichen bleiben absichtlich stehen, statt still zu verschwinden -
+ * ein Tippfehler soll als Tippfehler auffallen und nicht zu einer plausiblen
+ * anderen Zahl werden. Aus demselben Grund wird Tausendergruppierung NICHT
+ * aufgelöst: in de trennt der Punkt Tausender, aber "12.50" meint dort fast
+ * immer zwölf-fünfzig. Wer den Punkt still entfernte, machte daraus 1250 - ein
+ * um zwei Zehnerpotenzen falscher Betrag, den niemand mehr sieht. Ein
+ * gruppierter Betrag wird stattdessen abgelehnt, und zwar schon im Formular.
+ */
+export function toDecimalString(value) {
+  const raw = String(value ?? '').trim();
+  if (!raw) return '';
+
+  // Die Ziffern des aktuell eingestellten Zahlensystems - genau die, die der
+  // Platzhalter zeigt. Aus Intl abgeleitet statt aus einer Tabelle, damit ein
+  // Regionswechsel nichts nachzupflegen lässt.
+  const plain = getNumberFormat({ useGrouping: false, maximumFractionDigits: 0 });
+  const digits = new Map();
+  for (let i = 0; i < 10; i += 1) digits.set(plain.format(i), String(i));
+
+  const parts = getNumberFormat({ useGrouping: false, minimumFractionDigits: 1 }).formatToParts(1.5);
+  const decimalSep = parts.find((part) => part.type === 'decimal')?.value ?? '.';
+
+  let out = '';
+  for (const char of raw) {
+    if (digits.has(char)) { out += digits.get(char); continue; }
+    // Auch das ASCII-Komma: auf einer fremden Tastatur getippt meint es
+    // dasselbe wie der Trenner der eingestellten Region.
+    if (char === decimalSep || char === ',') { out += '.'; continue; }
+    out += char;
+  }
+  return out;
+}
+
+/**
  * Ein bestehendes Betragsfeld auf eine Währung nachziehen: Platzhalter,
  * Schrittweite und - bei Pflichtfeldern - Untergrenze in einem Zug.
  *

@@ -8,7 +8,7 @@
  */
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 
 const {
   FLOW_LEVELS, FLOW_VALUES, flowLevel,
@@ -357,4 +357,38 @@ test('buildCycleCalendar: keine Projektion im Schwangerschafts-Modus', () => {
 test('cycleRing: null im Schwangerschafts-Modus', () => {
   const p = predictCycle(periods(['2026-05-01'], 5), { pregnancy_mode: 1, pregnancy_due_date: '2027-01-01' }, '2026-06-01');
   assert.equal(cycleRing(p), null);
+});
+
+// Der Kalenderkopf steht in `grid-template-columns: repeat(7, 1fr)`
+// (.cycle-cal__weekdays in styles/health.css): sieben feste Spalten, die nicht
+// mitwachsen. Ein langer Tagesname laeuft dort in die Nachbarspalte, statt den
+// Kopf breiter zu machen - auf schmalen Telefonen wird die Zeile unlesbar.
+//
+// Deshalb hier eine Obergrenze statt einer Sichtpruefung: Arabisch stand nach
+// der Uebersetzungsrunde auf den vollen Namen (الثلاثاء, acht Zeichen), weil
+// die Werte aus health.meds.weekday uebernommen wurden. Deren Schalter ist ein
+// flex-wrap-Element mit Innenabstand und darf lang sein - derselbe Text an zwei
+// Orten heisst eben nicht, dass beide Orte gleich viel Platz haben.
+test('die Wochentage im Zyklus-Kalender passen in sieben feste Spalten', () => {
+  const segmenter = new Intl.Segmenter('en', { granularity: 'grapheme' });
+  const graphemes = (value) => [...segmenter.segment(value)].length;
+  const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+  const LIMIT = 4;
+
+  const dir = new URL('../public/locales/', import.meta.url);
+  const files = readdirSync(dir).filter((name) => name.endsWith('.json'));
+  assert.ok(files.length >= 20, 'Locale-Dateien nicht gefunden');
+
+  for (const file of files) {
+    const locale = JSON.parse(readFileSync(new URL(file, dir), 'utf8'));
+    const weekday = locale.health?.cycle?.weekday;
+    assert.ok(weekday, `${file}: health.cycle.weekday fehlt`);
+    for (const day of DAYS) {
+      const label = weekday[day];
+      assert.ok(
+        graphemes(label) <= LIMIT,
+        `${file}: "${label}" (${day}) ist ${graphemes(label)} Zeichen lang, erlaubt sind ${LIMIT} - der Kalenderkopf hat feste Spalten`,
+      );
+    }
+  }
 });

@@ -431,7 +431,8 @@ test('Geldbeträge gehen als Punkt-Dezimalstring an den Server', () => {
   // pl trennt ein Komma. Ohne Umschrift stimmt die Client-Prüfung zu und der
   // Server lehnt danach ab, mit einem Fehler, der auf kein Feld zeigt.
   const src = withoutComments(splitExpenses);
-  assert.match(src, /function decimalString\(/, 'die Umschrift fehlt');
+  assert.match(src, /toDecimalString[^\n]*from '\/utils\/money\.js'/, 'die Umschrift kommt aus utils/money.js');
+  assert.match(src, /decimalString\s*=\s*toDecimalString/, 'die Umschrift fehlt');
   // Jeder Payload-Betrag läuft durch die Umschrift: FormData liefert den
   // Rohwert des Textfeldes, nicht den normalisierten.
   const posted = src.match(/data\.amount\s*=\s*[^\n;]+/g) || [];
@@ -439,6 +440,16 @@ test('Geldbeträge gehen als Punkt-Dezimalstring an den Server', () => {
   for (const line of posted) {
     assert.match(line, /decimalString\(/, `Betrag ohne Umschrift an den Server: ${line}`);
   }
+
+  // Die Umschrift muss die Ziffern des eingestellten Zahlensystems kennen, nicht
+  // nur das ASCII-Komma: unter fa oder ar-EG zeigt der Platzhalter "۰٫۰۰" bzw.
+  // "٠٫٠٠", und wer das abtippt, schickt Zeichen, die Number() nicht kennt.
+  const impl = withoutComments(money).match(/export function toDecimalString[\s\S]*?\n\}/);
+  assert.ok(impl, 'toDecimalString fehlt in utils/money.js');
+  assert.match(impl[0], /getNumberFormat\(/, 'die Ziffern müssen aus Intl kommen, nicht aus einer Tabelle');
+  // Gruppierung bleibt bewusst ungelöst: in de trennt der Punkt Tausender, aber
+  // "12.50" meint dort zwölf-fünfzig. Wer ihn entfernte, machte daraus 1250.
+  assert.doesNotMatch(impl[0], /type === 'group'/, 'Gruppierung darf nicht still entfernt werden');
 });
 
 test('ein Abo darf null kosten', () => {
