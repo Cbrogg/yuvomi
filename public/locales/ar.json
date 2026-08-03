@@ -35,6 +35,7 @@
         "contentRequired": "المحتوى مطلوب",
         "all": "الكل",
         "unknownError": "خطأ غير معروف",
+        "amountPrecisionRequired": "بعملة {{currency}} يُسمح فقط بمبالغ بمقدار {{step}}",
         "confirm": "تأكيد",
         "undo": "تراجع",
         "reset": "إعادة التعيين للأصل",
@@ -849,7 +850,7 @@
         "notesLabel": "ملاحظات",
         "organizationLabel": "Organisation",
         "websiteLabel": "Website",
-        "nicknameLabel": "Spitzname",
+        "nicknameLabel": "الاسم المستعار",
         "notesPlaceholder": "اختياري…",
         "callLabel": "اتصال",
         "emailActionLabel": "بريد إلكتروني",
@@ -3501,13 +3502,13 @@
                 "nextMonth": "الشهر التالي"
             },
             "weekday": {
-                "mon": "Mo",
-                "tue": "Di",
-                "wed": "Mi",
-                "thu": "Do",
-                "fri": "Fr",
-                "sat": "Sa",
-                "sun": "So"
+                "mon": "إث",
+                "tue": "ثل",
+                "wed": "أر",
+                "thu": "خم",
+                "fri": "جم",
+                "sat": "سب",
+                "sun": "أح"
             },
             "legend": {
                 "period": "الدورة",

@@ -35,6 +35,7 @@
         "contentRequired": "Obsah je povinný",
         "all": "Vše",
         "unknownError": "Neznámá chyba",
+        "amountPrecisionRequired": "V měně {{currency}} jsou možné jen částky po {{step}}",
         "confirm": "Potvrdit",
         "undo": "Zpět",
         "reset": "Obnovit původní",
@@ -849,7 +850,7 @@
         "notesLabel": "Poznámky",
         "organizationLabel": "Organisation",
         "websiteLabel": "Website",
-        "nicknameLabel": "Spitzname",
+        "nicknameLabel": "Přezdívka",
         "notesPlaceholder": "Volitelné…",
         "callLabel": "Volat",
         "emailActionLabel": "E-mail",
@@ -3501,13 +3502,13 @@
                 "nextMonth": "Příští měsíc"
             },
             "weekday": {
-                "mon": "Mo",
-                "tue": "Di",
-                "wed": "Mi",
-                "thu": "Do",
-                "fri": "Fr",
-                "sat": "Sa",
-                "sun": "So"
+                "mon": "Po",
+                "tue": "Út",
+                "wed": "St",
+                "thu": "Čt",
+                "fri": "Pá",
+                "sat": "So",
+                "sun": "Ne"
             },
             "legend": {
                 "period": "Menstruace",

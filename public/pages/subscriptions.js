@@ -15,7 +15,7 @@ import {
 import { esc } from '/utils/html.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
 import { toLocalDateKey } from '/utils/date.js';
-import { formatMoney } from '/utils/money.js';
+import { formatMoney, amountPlaceholder, amountStep, applyAmountFormat, amountIsSavable, smallestUnitLabel } from '/utils/money.js';
 
 let state = {
   subscriptions: [],
@@ -700,6 +700,10 @@ function wireCombobox(panel, id) {
     search.value = option.textContent.trim();
     options.forEach((item) => item.setAttribute('aria-selected', String(item === option)));
     close();
+    // Das Wertfeld ist ein verstecktes Input, das nur programmatisch gesetzt
+    // wird - ohne dieses Event erfährt niemand von der Auswahl. Die Betragsfelder
+    // hängen an der Währungs-Combobox und müssen dabei nachziehen.
+    value.dispatchEvent(new Event('change', { bubbles: true }));
   };
   const selectFromKeyboard = (option) => {
     select(option);
@@ -766,6 +770,9 @@ function wireCombobox(panel, id) {
 
 export function openSubscriptionModal(subscription = null) {
   const edit = Boolean(subscription);
+  // Jedes Abo trägt seine eigene Währung; das Betragsfeld richtet sich danach
+  // und wird beim Wechsel der Währungs-Combobox nachgezogen.
+  const formCurrency = subscription?.currency || state.settings.base_currency;
   const cycleItems = state.meta.billing_cycles.map((cycle) => ({
     value: cycle,
     label: t(`subscriptions.cycle.${cycle}`),
@@ -868,7 +875,11 @@ export function openSubscriptionModal(subscription = null) {
         <div class="subscription-form__billing-grid">
           <div class="form-group">
             <label class="form-label" for="subscription-amount">${t('subscriptions.amountLabel')}</label>
-            <input class="form-input" id="subscription-amount" type="number" min="0" step="0.01" inputmode="decimal" required value="${subscription?.amount ?? ''}">
+            <input class="form-input" id="subscription-amount" type="number"
+                   min="0"
+                   step="${amountStep(formCurrency, subscription?.amount ?? '')}"
+                   placeholder="${amountPlaceholder(formCurrency)}"
+                   inputmode="decimal" required value="${subscription?.amount ?? ''}">
           </div>
           ${comboboxMarkup({
             id: 'subscription-currency',
@@ -948,6 +959,12 @@ export function openSubscriptionModal(subscription = null) {
         }
       };
       wireCombobox(panel, 'subscription-currency');
+      // Ohne `required`: ein Abo darf 0 kosten (Gratis-Tarif, Server prüft
+      // amount >= 0), die Untergrenze bleibt also bei null statt bei einer
+      // kleinsten Einheit.
+      panel.querySelector('#subscription-currency').addEventListener('change', (event) => {
+        applyAmountFormat(panel.querySelector('#subscription-amount'), event.target.value);
+      });
       wireCombobox(panel, 'subscription-cycle');
       wireCombobox(panel, 'subscription-category');
       wireCombobox(panel, 'subscription-method');
@@ -1035,6 +1052,24 @@ async function saveSubscription(panel, existing, searchedLogoData = null) {
     }
     occurrenceCount = count;
   }
+  // Bei einem Bestandsbetrag neben dem Raster liefert amountStep "any", damit
+  // sich das vorhandene Abo überhaupt noch speichern lässt. Das gilt aber fürs
+  // ganze Feld: ohne diese Prüfung wäre aus 12,5 JPY anschliessend auch
+  // 12,555 JPY speicherbar, also mehr Bruch als die feste Schrittweite zuliess.
+  const amountInput = panel.querySelector('#subscription-amount');
+  const amountValue = Number(amountInput.value);
+  const targetCurrency = currencyInput.value.trim().toUpperCase();
+  if (!amountIsSavable(amountValue, targetCurrency, {
+    original: existing?.amount ?? null,
+    originalCurrency: existing?.currency ?? null,
+  })) {
+    reportFieldError(amountInput, t('common.amountPrecisionRequired', {
+      currency: targetCurrency,
+      step: smallestUnitLabel(targetCurrency),
+    }));
+    return;
+  }
+
   const submit = panel.querySelector('[type="submit"]');
   submit.disabled = true;
   try {
@@ -1192,7 +1227,10 @@ async function openSettingsModal() {
     <form id="subscriptions-settings-form">
       <div class="form-group">
         <label class="form-label" for="subscriptions-budget">${t('subscriptions.monthlyBudgetLabel')}</label>
-        <input class="form-input" id="subscriptions-budget" type="number" min="0" step="0.01" value="${state.settings.monthly_budget}">
+        <input class="form-input" id="subscriptions-budget" type="number" min="0"
+               step="${amountStep(state.settings.base_currency, state.settings.monthly_budget)}"
+               placeholder="${amountPlaceholder(state.settings.base_currency)}"
+               value="${state.settings.monthly_budget}">
       </div>
       ${comboboxMarkup({
         id: 'subscriptions-base-currency',
@@ -1216,12 +1254,28 @@ async function openSettingsModal() {
     size: 'sm',
     onSave(panel) {
       wireCombobox(panel, 'subscriptions-base-currency');
+      panel.querySelector('#subscriptions-base-currency').addEventListener('change', (event) => {
+        applyAmountFormat(panel.querySelector('#subscriptions-budget'), event.target.value);
+      });
       panel.querySelector('#subscriptions-settings-cancel').addEventListener('click', closeModal);
       panel.querySelector('#subscriptions-settings-form').addEventListener('submit', async (event) => {
         event.preventDefault();
         const baseCurrency = panel.querySelector('#subscriptions-base-currency').value;
         if (!baseCurrency) {
           reportFieldError(panel.querySelector('#subscriptions-base-currency-search'), t('subscriptions.currencyRequired'));
+          return;
+        }
+        // Auch hier gilt: bei einem Bestandsbudget neben dem Raster steht das
+        // Feld auf step="any", die Prüfung muss also hier stattfinden.
+        const budgetInput = panel.querySelector('#subscriptions-budget');
+        if (!amountIsSavable(Number(budgetInput.value), baseCurrency, {
+          original: state.settings.monthly_budget ?? null,
+          originalCurrency: state.settings.base_currency ?? null,
+        })) {
+          reportFieldError(budgetInput, t('common.amountPrecisionRequired', {
+            currency: baseCurrency,
+            step: smallestUnitLabel(baseCurrency),
+          }));
           return;
         }
         try {

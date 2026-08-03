@@ -35,6 +35,7 @@
         "contentRequired": "Content is required",
         "all": "All",
         "unknownError": "Unknown error",
+        "amountPrecisionRequired": "In {{currency}}, amounts are only possible in steps of {{step}}",
         "confirm": "Confirm",
         "undo": "Undo",
         "reset": "Reset to original",

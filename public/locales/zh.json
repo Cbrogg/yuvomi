@@ -35,6 +35,7 @@
         "contentRequired": "内容为必填项",
         "all": "全部",
         "unknownError": "未知错误",
+        "amountPrecisionRequired": "使用 {{currency}} 时，金额只能以 {{step}} 为单位",
         "confirm": "确认",
         "undo": "撤销",
         "reset": "重置为原始",
@@ -849,7 +850,7 @@
         "notesLabel": "备注",
         "organizationLabel": "Organisation",
         "websiteLabel": "Website",
-        "nicknameLabel": "Spitzname",
+        "nicknameLabel": "昵称",
         "notesPlaceholder": "可选…",
         "callLabel": "拨打电话",
         "emailActionLabel": "发送邮件",
@@ -3501,13 +3502,13 @@
                 "nextMonth": "下个月"
             },
             "weekday": {
-                "mon": "Mo",
-                "tue": "Di",
-                "wed": "Mi",
-                "thu": "Do",
-                "fri": "Fr",
-                "sat": "Sa",
-                "sun": "So"
+                "mon": "一",
+                "tue": "二",
+                "wed": "三",
+                "thu": "四",
+                "fri": "五",
+                "sat": "六",
+                "sun": "日"
             },
             "legend": {
                 "period": "月经",

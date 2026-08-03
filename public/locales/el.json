@@ -35,6 +35,7 @@
         "contentRequired": "Το περιεχόμενο είναι υποχρεωτικό",
         "all": "Όλα",
         "unknownError": "Άγνωστο σφάλμα",
+        "amountPrecisionRequired": "Σε {{currency}} επιτρέπονται μόνο ποσά σε βήματα των {{step}}",
         "confirm": "Επιβεβαίωση",
         "undo": "Αναίρεση",
         "reset": "Επαναφορά στο αρχικό",
@@ -849,7 +850,7 @@
         "notesLabel": "Σημειώσεις",
         "organizationLabel": "Organisation",
         "websiteLabel": "Website",
-        "nicknameLabel": "Spitzname",
+        "nicknameLabel": "Ψευδώνυμο",
         "notesPlaceholder": "Προαιρετικό…",
         "callLabel": "Κλήση",
         "emailActionLabel": "Email",
@@ -3501,13 +3502,13 @@
                 "nextMonth": "Επόμενος μήνας"
             },
             "weekday": {
-                "mon": "Mo",
-                "tue": "Di",
-                "wed": "Mi",
-                "thu": "Do",
-                "fri": "Fr",
-                "sat": "Sa",
-                "sun": "So"
+                "mon": "Δε",
+                "tue": "Τρ",
+                "wed": "Τε",
+                "thu": "Πε",
+                "fri": "Πα",
+                "sat": "Σα",
+                "sun": "Κυ"
             },
             "legend": {
                 "period": "Περίοδος",

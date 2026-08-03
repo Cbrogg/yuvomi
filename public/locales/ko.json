@@ -35,6 +35,7 @@
         "contentRequired": "내용은 필수입니다",
         "all": "전체",
         "unknownError": "알 수 없는 오류",
+        "amountPrecisionRequired": "{{currency}}에서는 {{step}} 단위의 금액만 입력할 수 있습니다",
         "confirm": "확인",
         "undo": "실행 취소",
         "reset": "원본으로 되돌리기",
@@ -862,7 +863,7 @@
         "notesLabel": "메모",
         "organizationLabel": "Organisation",
         "websiteLabel": "Website",
-        "nicknameLabel": "Spitzname",
+        "nicknameLabel": "별명",
         "notesPlaceholder": "선택 사항…",
         "callLabel": "전화 걸기",
         "emailActionLabel": "이메일",
@@ -3501,13 +3502,13 @@
                 "nextMonth": "다음 달"
             },
             "weekday": {
-                "mon": "Mo",
-                "tue": "Di",
-                "wed": "Mi",
-                "thu": "Do",
-                "fri": "Fr",
-                "sat": "Sa",
-                "sun": "So"
+                "mon": "월",
+                "tue": "화",
+                "wed": "수",
+                "thu": "목",
+                "fri": "금",
+                "sat": "토",
+                "sun": "일"
             },
             "legend": {
                 "period": "생리",

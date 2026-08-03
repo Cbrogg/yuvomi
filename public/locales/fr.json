@@ -35,6 +35,7 @@
         "contentRequired": "Le contenu est obligatoire",
         "all": "Tout",
         "unknownError": "Erreur inconnue",
+        "amountPrecisionRequired": "En {{currency}}, les montants ne sont possibles que par paliers de {{step}}",
         "confirm": "Confirmer",
         "undo": "Annuler",
         "reset": "Réinitialiser",
@@ -849,7 +850,7 @@
         "notesLabel": "Notes",
         "organizationLabel": "Organisation",
         "websiteLabel": "Website",
-        "nicknameLabel": "Spitzname",
+        "nicknameLabel": "Surnom",
         "notesPlaceholder": "Optionnel…",
         "callLabel": "Appeler",
         "emailActionLabel": "E-mail",
@@ -3501,13 +3502,13 @@
                 "nextMonth": "Mois suivant"
             },
             "weekday": {
-                "mon": "Mo",
-                "tue": "Di",
-                "wed": "Mi",
-                "thu": "Do",
-                "fri": "Fr",
+                "mon": "Lu",
+                "tue": "Ma",
+                "wed": "Me",
+                "thu": "Je",
+                "fri": "Ve",
                 "sat": "Sa",
-                "sun": "So"
+                "sun": "Di"
             },
             "legend": {
                 "period": "Règles",

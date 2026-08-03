@@ -72,6 +72,55 @@ function smallestUnit(digits) {
 }
 
 /**
+ * Passt ein Betrag ins Raster der Währung? 1300 JPY ja, 12,5 JPY nein.
+ *
+ * Das `step`-Attribut allein reicht dafür nicht: die Budget-Dialoge sind keine
+ * `<form>`-Elemente, sie speichern über einen Button-Handler. Die native
+ * Prüfung läuft also nie, und ein Feld mit step="1" nähme trotzdem 12,5
+ * entgegen. Wer eine Schrittweite anzeigt, muss sie auch selbst durchsetzen.
+ *
+ * Über `toFixed` und nicht über `wert * 10**stellen` mit einer festen Toleranz:
+ * `131072.02 * 100` ergibt `13107201.999999998`, liegt also knapp zwei
+ * Milliardstel daneben. Jede feste Schranke ist damit entweder zu eng (dieser
+ * gültige Betrag flöge raus) oder zu weit (bei kleinen Beträgen ginge echter
+ * Bruch durch). Der Vergleich mit der gerundeten Dezimaldarstellung braucht
+ * gar keine Schranke und stimmt über jede Größenordnung.
+ */
+export function fitsCurrencyGrid(amount, currency) {
+  const value = Number(amount);
+  if (!Number.isFinite(value)) return false;
+  return Number(value.toFixed(currencyFractionDigits(currency))) === value;
+}
+
+/** Die kleinste erfassbare Einheit als Text fürs Feld: JPY "1", EUR "0.01". */
+export function smallestUnitLabel(currency) {
+  const digits = currencyFractionDigits(currency);
+  return smallestUnit(digits).toFixed(digits);
+}
+
+/**
+ * Darf dieser Betrag gespeichert werden? Wie `fitsCurrencyGrid`, lässt aber
+ * einen unangetasteten Bestandswert durch.
+ *
+ * Nötig, weil `amountStep` bei einem Bestandswert neben dem Raster `"any"`
+ * liefert - sonst markierte der Browser einen bereits gespeicherten Eintrag als
+ * ungültig, und selbst eine Änderung am Titel liesse sich nicht mehr sichern.
+ * Dieses `"any"` gilt aber fürs ganze Feld: ohne die Prüfung hier wäre aus
+ * einem Alt-Betrag von 12,5 JPY anschliessend auch 12,555 JPY speicherbar,
+ * also mehr Bruch als vorher. Der Bestandsschutz endet deshalb genau dort, wo
+ * der Wert angefasst wird.
+ *
+ * Ein Währungswechsel hebt ihn ebenfalls auf: wer auf JPY umstellt, hat das
+ * Raster bewusst gewechselt.
+ */
+export function amountIsSavable(value, currency, { original = null, originalCurrency = null } = {}) {
+  if (fitsCurrencyGrid(value, currency)) return true;
+  if (original == null) return false;
+  if (originalCurrency != null && originalCurrency !== currency) return false;
+  return Number(original) === Number(value);
+}
+
+/**
  * Schrittweite für ein Betragsfeld, passend zur Währung: "1" bei JPY, "0.01"
  * bei EUR, "0.001" bei KWD. Immer mit Punkt - `step` und `min` sind HTML-Syntax,
  * kein Anzeigeformat.
@@ -83,10 +132,8 @@ function smallestUnit(digits) {
  */
 export function amountStep(currency, currentValue) {
   const digits = currencyFractionDigits(currency);
-  const value = Number(currentValue);
-  if (currentValue !== '' && currentValue != null && Number.isFinite(value)) {
-    const scaled = value * 10 ** digits;
-    if (Math.abs(scaled - Math.round(scaled)) > 1e-9) return 'any';
+  if (currentValue !== '' && currentValue != null && Number.isFinite(Number(currentValue))) {
+    if (!fitsCurrencyGrid(currentValue, currency)) return 'any';
   }
   return smallestUnit(digits).toFixed(digits);
 }
@@ -103,6 +150,91 @@ export function amountMin(currency, currentValue) {
   const value = Math.abs(Number(currentValue));
   if (Number.isFinite(value) && value > 0 && value < smallest) return String(value);
   return smallest.toFixed(digits);
+}
+
+/**
+ * Ein eingetippter Betrag in der Schreibweise, die der Server erwartet:
+ * ASCII-Ziffern, Punkt als Dezimaltrenner, ohne Gruppierung.
+ *
+ * Die Eingabefelder folgen der Region, und zwar bis in die Ziffern: unter fa
+ * oder ar-EG zeigt der Platzhalter `۰٫۰۰` beziehungsweise `٠٫٠٠`, und wer das
+ * abtippt, schickt Zeichen, die weder `Number()` noch die ASCII-Regex des
+ * Servers kennt. Das Anlegen scheiterte dann an einer Eingabe, die genau so
+ * aussah wie das, was die Oberfläche vorgeschlagen hatte.
+ *
+ * Unbekannte Zeichen bleiben absichtlich stehen, statt still zu verschwinden -
+ * ein Tippfehler soll als Tippfehler auffallen und nicht zu einer plausiblen
+ * anderen Zahl werden.
+ *
+ * Tausendergruppierung wird nicht aufgelöst, sondern abgelehnt: der Rückgabewert
+ * ist dann leer, und die Formularprüfung verlangt eine neue Eingabe. Auflösen
+ * wäre in beide Richtungen gefährlich - in de-DE gruppiert der Punkt, "1.000"
+ * hiesse also tausend, während dieselbe Schreibweise als Dezimalzahl eins
+ * bedeutet. Beide Deutungen sind vertretbar, und bei Geld ist die falsche um
+ * den Faktor tausend daneben. Erkannt wird die Gruppierung am Muster, nicht am
+ * blossen Zeichen: drei Ziffern hinter dem Trenner sind mehrdeutig, zwei
+ * ("12.50") sind es nicht und gelten weiter als Dezimalangabe.
+ */
+export function toDecimalString(value) {
+  const raw = String(value ?? '').trim();
+  if (!raw) return '';
+
+  // Die Ziffern des aktuell eingestellten Zahlensystems - genau die, die der
+  // Platzhalter zeigt. Aus Intl abgeleitet statt aus einer Tabelle, damit ein
+  // Regionswechsel nichts nachzupflegen lässt.
+  const plain = getNumberFormat({ useGrouping: false, maximumFractionDigits: 0 });
+  const digits = new Map();
+  for (let i = 0; i < 10; i += 1) digits.set(plain.format(i), String(i));
+
+  const parts = getNumberFormat({ useGrouping: false, minimumFractionDigits: 1 }).formatToParts(1.5);
+  const decimalSep = parts.find((part) => part.type === 'decimal')?.value ?? '.';
+  const groupSep = getNumberFormat({ useGrouping: true, maximumFractionDigits: 0 })
+    .formatToParts(1234).find((part) => part.type === 'group')?.value;
+
+  // Gruppierungsmuster: der Trenner, gefolgt von genau drei Ziffern, auf die
+  // keine weitere folgt. "1.000" in de-DE trifft zu, "12.50" nicht.
+  if (groupSep && groupSep !== decimalSep) {
+    const escaped = groupSep.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (new RegExp(`${escaped}\\d{3}(?!\\d)`).test(raw)) return '';
+  }
+
+  let out = '';
+  for (const char of raw) {
+    if (digits.has(char)) { out += digits.get(char); continue; }
+    // Nur der Trenner der eingestellten Region wird zum Punkt. Das ASCII-Komma
+    // pauschal mitzunehmen wäre gefährlich: unter en-US gruppiert es Tausender,
+    // aus "1,000" würde dann "1.000" und daraus die Zahl 1 - ein Anteil, der um
+    // den Faktor tausend danebenliegt, ohne dass irgendwo ein Fehler erscheint.
+    if (char === decimalSep) { out += '.'; continue; }
+    out += char;
+  }
+  return out;
+}
+
+/**
+ * Ein bestehendes Betragsfeld auf eine Währung nachziehen: Platzhalter,
+ * Schrittweite und - bei Pflichtfeldern - Untergrenze in einem Zug.
+ *
+ * Nötig überall dort, wo die Währung im selben Formular wählbar ist (Abo,
+ * geteilte Ausgabe, Darlehen). Ohne das Nachziehen zeigt das Feld nach einem
+ * Wechsel von EUR auf JPY weiter "0,00" und liesse Hundertstel Yen zu.
+ *
+ * Der Bestandswert-Schutz von amountStep/amountMin gilt hier bewusst NICHT: er
+ * existiert, damit ein in EUR erfasster Betrag beim Öffnen des Dialogs nicht
+ * als ungültig gilt. Wer die Währung gerade selbst auf JPY stellt, hat den
+ * Wechsel dagegen bewusst ausgelöst - liesse man das Raster hier offen, wären
+ * Hundertstel Yen weiter eingebbar und würden auch so gespeichert.
+ *
+ * @param {HTMLInputElement|null} input
+ * @param {string} currency  ISO-Code
+ * @param {{ required?: boolean }} [options]  required: das Feld verlangt einen
+ *        Betrag > 0, bekommt also zusätzlich eine Untergrenze.
+ */
+export function applyAmountFormat(input, currency, { required = false } = {}) {
+  if (!input) return;
+  input.placeholder = amountPlaceholder(currency);
+  input.step = amountStep(currency);
+  if (required) input.min = amountMin(currency);
 }
 
 /**

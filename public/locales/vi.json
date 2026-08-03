@@ -35,6 +35,7 @@
         "contentRequired": "Nội dung là bắt buộc",
         "all": "Tất cả",
         "unknownError": "Lỗi không xác định",
+        "amountPrecisionRequired": "Với {{currency}}, số tiền chỉ có thể theo bước {{step}}",
         "confirm": "Xác nhận",
         "undo": "Hoàn tác",
         "reset": "Đặt lại về ban đầu",
@@ -849,7 +850,7 @@
         "notesLabel": "Ghi chú",
         "organizationLabel": "Organisation",
         "websiteLabel": "Website",
-        "nicknameLabel": "Spitzname",
+        "nicknameLabel": "Biệt danh",
         "notesPlaceholder": "Tùy chọn…",
         "callLabel": "Gọi",
         "emailActionLabel": "Gửi Email",
@@ -3501,13 +3502,13 @@
                 "nextMonth": "Tháng sau"
             },
             "weekday": {
-                "mon": "Mo",
-                "tue": "Di",
-                "wed": "Mi",
-                "thu": "Do",
-                "fri": "Fr",
-                "sat": "Sa",
-                "sun": "So"
+                "mon": "T2",
+                "tue": "T3",
+                "wed": "T4",
+                "thu": "T5",
+                "fri": "T6",
+                "sat": "T7",
+                "sun": "CN"
             },
             "legend": {
                 "period": "Kỳ kinh",

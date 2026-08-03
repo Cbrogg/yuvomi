@@ -35,6 +35,7 @@
         "contentRequired": "Inhoud is verplicht",
         "all": "Alles",
         "unknownError": "Onbekende fout",
+        "amountPrecisionRequired": "In {{currency}} zijn alleen bedragen in stappen van {{step}} mogelijk",
         "confirm": "Bevestigen",
         "undo": "Ongedaan maken",
         "reset": "Terugzetten naar origineel",
@@ -849,7 +850,7 @@
         "notesLabel": "Notities",
         "organizationLabel": "Organisation",
         "websiteLabel": "Website",
-        "nicknameLabel": "Spitzname",
+        "nicknameLabel": "Bijnaam",
         "notesPlaceholder": "Optioneel…",
         "callLabel": "Bellen",
         "emailActionLabel": "E-mailen",
@@ -3501,13 +3502,13 @@
                 "nextMonth": "Volgende maand"
             },
             "weekday": {
-                "mon": "Mo",
-                "tue": "Di",
-                "wed": "Mi",
-                "thu": "Do",
-                "fri": "Fr",
-                "sat": "Sa",
-                "sun": "So"
+                "mon": "ma",
+                "tue": "di",
+                "wed": "wo",
+                "thu": "do",
+                "fri": "vr",
+                "sat": "za",
+                "sun": "zo"
             },
             "legend": {
                 "period": "Menstruatie",

@@ -17,6 +17,7 @@ const stats = read('../public/pages/budget-stats.js');
 const plans = read('../public/pages/budget-plans.js');
 const subscriptions = read('../public/pages/subscriptions.js');
 const splitExpenses = read('../public/pages/split-expenses.js');
+const housekeeping = read('../public/pages/housekeeping.js');
 const money = read('../public/utils/money.js');
 const layoutCss = read('../public/styles/layout.css');
 const tokensCss = read('../public/styles/tokens.css');
@@ -393,6 +394,201 @@ const withoutComments = (src) => {
   } while (out !== previous);
   return out;
 };
+
+// Jede Seite, die ein Betragsfeld rendert - nicht nur das Budget-Modul. Die
+// Schrittweite hängt an der Währung, und eine Währung gibt es auch ausserhalb
+// von Budget (Hauspflege rechnet Tages- und Stundensätze ab).
+const MONEY_INPUT_PAGES = [...BUDGET_PAGES, ['housekeeping.js', housekeeping]];
+
+test('Betragsfelder holen ihre Schrittweite aus der Währung, nicht aus 0.01', () => {
+  // Die Regel, nicht die Liste: ein Feld mit inputmode="decimal" ist entweder
+  // ein Anteil in Prozent (dann trägt es max="100") oder ein Geldbetrag - und
+  // dann ist eine feste Schrittweite falsch, sobald die Währung keine zwei
+  // Nachkommastellen hat. Bei JPY liess step="0.01" Hundertstel Yen zu,
+  // während Platzhalter und Untergrenze schon ganze Yen zeigten.
+  // Eine Allowlist einzelner Feld-IDs würde nur die heute bekannten Felder
+  // decken; der nächste neue Dialog fiele wieder durch.
+  for (const [file, src] of MONEY_INPUT_PAGES) {
+    // `[^>]` schliesst Zeilenumbrueche bereits ein (anders als `.`), eine
+    // Alternative `(?:[^>]|\n)` waere also mehrdeutig - und genau das ergibt
+    // exponentielles Backtracking (CodeQL js/redos).
+    const inputs = withoutComments(src).match(/<input[^>]*>/g) || [];
+    for (const input of inputs) {
+      if (!/inputmode="decimal"/.test(input)) continue;
+      if (!/step="0\.01"/.test(input)) continue;
+      assert.match(
+        input,
+        /max="100"/,
+        `${file}: Betragsfeld mit fester Schrittweite 0.01 - amountStep(currency, wert) aus utils/money.js nutzen:\n${input.replace(/\s+/g, ' ')}`,
+      );
+    }
+  }
+});
+
+test('Geldbeträge gehen als Punkt-Dezimalstring an den Server', () => {
+  // Der Server nimmt nur /^-?\d+(\.\d+)?$/ entgegen, die Eingabefelder der
+  // geteilten Ausgaben sind Textfelder und folgen der Region - in de, cs oder
+  // pl trennt ein Komma. Ohne Umschrift stimmt die Client-Prüfung zu und der
+  // Server lehnt danach ab, mit einem Fehler, der auf kein Feld zeigt.
+  const src = withoutComments(splitExpenses);
+  assert.match(src, /toDecimalString[^\n]*from '\/utils\/money\.js'/, 'die Umschrift kommt aus utils/money.js');
+  assert.match(src, /decimalString\s*=\s*toDecimalString/, 'die Umschrift fehlt');
+  // Jeder Payload-Betrag läuft durch die Umschrift: FormData liefert den
+  // Rohwert des Textfeldes, nicht den normalisierten.
+  const posted = src.match(/data\.amount\s*=\s*[^\n;]+/g) || [];
+  assert.ok(posted.length >= 2, 'Ausgabe und Zahlung müssen den Betrag umschreiben');
+  for (const line of posted) {
+    assert.match(line, /decimalString\(/, `Betrag ohne Umschrift an den Server: ${line}`);
+  }
+
+  // Die Umschrift muss die Ziffern des eingestellten Zahlensystems kennen, nicht
+  // nur das ASCII-Komma: unter fa oder ar-EG zeigt der Platzhalter "۰٫۰۰" bzw.
+  // "٠٫٠٠", und wer das abtippt, schickt Zeichen, die Number() nicht kennt.
+  const impl = withoutComments(money).match(/export function toDecimalString[\s\S]*?\n\}/);
+  assert.ok(impl, 'toDecimalString fehlt in utils/money.js');
+  assert.match(impl[0], /getNumberFormat\(/, 'die Ziffern müssen aus Intl kommen, nicht aus einer Tabelle');
+  // Gruppierung wird abgewiesen, nicht aufgelöst: in de-DE heisst "1.000"
+  // tausend, als Dezimalzahl aber eins. Wer das still deutet, liegt bei Geld im
+  // Zweifel um den Faktor tausend daneben.
+  assert.doesNotMatch(impl[0], /replace\([^)]*groupSep/, 'Gruppierung darf nicht still entfernt werden');
+  assert.match(impl[0], /return ''/, 'ein gruppierter Betrag muss abgewiesen werden');
+});
+
+test('jeder Speicherpfad prüft die Schrittweite selbst', () => {
+  // Die Dialoge des Moduls sind keine <form>-Elemente: sie speichern über einen
+  // Button-Handler, die native step-Prüfung des Browsers läuft also nie. Ein
+  // angezeigtes step="1" ist damit reine Behauptung - ohne eigene Prüfung nimmt
+  // das Feld trotzdem 12,5 JPY entgegen und schreibt den Wert weg, während die
+  // Anzeige ihn gerundet darstellt.
+  // Über alle Seiten mit Betragsfeldern, nicht nur die formularlosen: ein
+  // <form> hilft hier nichts, weil amountStep bei Bestandswerten neben dem
+  // Raster "any" liefert und die Browser-Prüfung damit aussetzt.
+  //
+  // Bewusst qualitativ und nicht als Zählung Felder-gegen-Aufrufe: eine Prüfung
+  // kann mehrere Felder gemeinsam abdecken, und eine Zahlengleichheit zu
+  // verlangen hiesse, den Code auf den Guard hin zu verbiegen. Er fängt damit
+  // das vollständige Vergessen einer Seite, nicht das einzelne Feld - dafür
+  // sind die Fall-Guards unten da.
+  for (const [file, src] of MONEY_INPUT_PAGES) {
+    const clean = withoutComments(src);
+    if (!/step="\$\{amountStep\(/.test(clean)) continue;
+    assert.match(
+      clean,
+      /amountIsSavable\(|rejectOffGridAmount\(/,
+      `${file}: währungsgerasterte Felder, aber keine Prüfung im Speicherpfad`,
+    );
+  }
+  assert.match(money, /export function fitsCurrencyGrid/);
+
+  // Keine feste Toleranz gegen Float-Ungenauigkeit: 131072.02 * 100 ergibt
+  // 13107201.999999998, liegt also knapp zwei Milliardstel daneben. Mit einer
+  // Schranke von 1e-9 hätte jeder Speicherpfad diesen gültigen Euro-Betrag
+  // abgewiesen. Der Vergleich mit der gerundeten Dezimaldarstellung braucht
+  // gar keine Schranke und stimmt über jede Größenordnung.
+  const clean = withoutComments(money);
+  assert.doesNotMatch(clean, /1e-9/, 'Rasterprüfung darf nicht an einer festen Toleranz hängen');
+  assert.doesNotMatch(clean, /Math\.round\([^)]*10 \*\* /, 'Rasterprüfung über die Dezimaldarstellung, nicht über skalierte Floats');
+});
+
+test('ein unangetasteter Bestandsbetrag bleibt speicherbar', () => {
+  // Unter der alten Oberfläche mit fester Schrittweite 0,01 konnten Beträge
+  // entstehen, die nicht ins Raster ihrer Währung passen. Eine unbedingte
+  // Prüfung sperrte an solchen Einträgen auch das Ändern von Titel oder Notiz -
+  // der Bestandswert-Schutz in amountStep wäre damit wirkungslos.
+  const clean = withoutComments(budget);
+  assert.match(clean, /original(?:Currency)?\s*[=:]/, 'rejectOffGridAmount kennt den Bestandswert nicht');
+  // Jeder Aufruf an einem bearbeitbaren Eintrag reicht den gespeicherten Wert durch.
+  const calls = clean.match(/rejectOffGridAmount\([\s\S]*?\)\) return;/g) || [];
+  assert.ok(calls.length >= 4, `erwartet 4 Prüfungen, gefunden ${calls.length}`);
+  for (const call of calls) {
+    assert.match(call, /original:/, `Prüfung ohne Bestandsschutz: ${call.replace(/\s+/g, ' ').slice(0, 90)}`);
+  }
+});
+
+test('jedes Formular prüft den Betrag auch selbst, nicht nur über step', () => {
+  // amountStep gibt bei einem Bestandswert neben dem Raster "any" zurück, damit
+  // sich der vorhandene Eintrag noch speichern lässt. Das gilt aber fürs ganze
+  // Feld: wer sich allein auf die Browser-Prüfung verlässt, macht aus 12,5 JPY
+  // anschliessend auch 12,555 JPY speicherbar - mehr Bruch als die feste
+  // Schrittweite je zuliess. Jede Seite mit einem Betragsfeld braucht deshalb
+  // eine eigene Prüfung, unabhängig davon, ob sie ein <form> ist.
+  assert.match(money, /export function amountIsSavable/);
+  for (const [file, src] of MONEY_INPUT_PAGES) {
+    const clean = withoutComments(src);
+    if (!/step="\$\{amountStep\(/.test(clean)) continue;
+    assert.match(
+      clean,
+      /amountIsSavable\(|rejectOffGridAmount\(/,
+      `${file}: währungsgerasterte Felder ohne eigene Prüfung im Speicherpfad`,
+    );
+  }
+});
+
+test('das inaktive Tarif-Feld ist von der Formularprüfung ausgenommen', () => {
+  // Ein per `hidden` verstecktes Feld nimmt weiter an der Browser-Prüfung teil.
+  // Ein liegengebliebener Tagessatz von 12,5 blockierte unter JPY damit das
+  // Speichern, ohne dass etwas zu sehen war - der Knopf tat schlicht nichts.
+  const clean = withoutComments(housekeeping);
+  const fn = clean.match(/function updateRateFields\(\)[\s\S]*?\n  \}/);
+  assert.ok(fn, 'updateRateFields nicht gefunden');
+  assert.match(fn[0], /\.disabled = /, 'das inaktive Feld muss disabled werden, nicht nur versteckt');
+  assert.match(clean, /\n  updateRateFields\(\);/, 'updateRateFields muss beim Öffnen einmal laufen');
+});
+
+test('nur der Trenner der Region wird zum Dezimalpunkt', () => {
+  // Unter en-US gruppiert das Komma Tausender. Würde es pauschal zum Punkt,
+  // machte "1,000" die Zahl 1 - ein Anteil, der um den Faktor tausend
+  // danebenliegt, ohne dass irgendwo ein Fehler erscheint.
+  const impl = withoutComments(money).match(/export function toDecimalString[\s\S]*?\n\}/)[0];
+  assert.doesNotMatch(impl, /char === ','/, "das ASCII-Komma darf nicht pauschal als Dezimaltrenner gelten");
+  assert.match(impl, /char === decimalSep/, 'der Trenner der Region fehlt');
+  // Gruppierung wird abgewiesen, nicht gedeutet: "1.000" heisst in de-DE
+  // tausend, als Dezimalzahl aber eins. Beide Lesarten sind vertretbar, und die
+  // falsche liegt bei Geld um den Faktor tausend daneben.
+  assert.match(impl, /groupSep/, 'die Gruppierung muss erkannt werden');
+  assert.match(impl, /\\\\d\{3\}/, 'erkannt wird das Muster (drei Ziffern), nicht das blosse Zeichen');
+});
+
+test('ein Abo darf null kosten', () => {
+  // Gratis-Tarife sind ein gültiger Bestand: validatePayload weist erst
+  // amount < 0 ab, das Schema prüft CHECK(amount >= 0). Eine Untergrenze aus
+  // der kleinsten Währungseinheit sperrte das Speichern eines 0-Abos.
+  const field = withoutComments(subscriptions).match(/<input[^>]*id="subscription-amount"[^>]*>/);
+  assert.ok(field, 'Abo-Betragsfeld nicht gefunden');
+  assert.match(field[0], /min="0"/, 'Abo-Preis braucht die Untergrenze null, nicht amountMin()');
+});
+
+test('gespeicherte Beträge werden beim Öffnen nicht gerundet', () => {
+  // toFixed() auf die Nachkommastellen der Währung schrieb einen Finanzwert
+  // still um: 12,50 in einem JPY-Darlehen wurde zu "13", und das nächste
+  // Speichern hätte den Betrag dauerhaft auf den gerundeten Wert gesetzt.
+  assert.doesNotMatch(
+    withoutComments(budget),
+    /\.toFixed\(currencyFractionDigits\(/,
+    'budget.js: Bestandsbetrag wird beim Rendern gerundet - amountStep fängt off-grid-Werte ab',
+  );
+});
+
+test('wählbare Währungen ziehen das Betragsfeld nach', () => {
+  // Ein Formular, in dem die Währung gewählt werden kann, muss das Betragsfeld
+  // beim Wechsel nachziehen - sonst behält es das Format der vorherigen Währung
+  // und der Platzhalter widerspricht der Auswahl direkt daneben.
+  assert.match(money, /export function applyAmountFormat/);
+  for (const [file, src] of [['budget.js', budget], ['subscriptions.js', subscriptions], ['split-expenses.js', splitExpenses]]) {
+    assert.match(
+      withoutComments(src),
+      /applyAmountFormat\(|amountPlaceholder\(/,
+      `${file}: Währungswechsel im Formular ohne Nachziehen des Betragsfeldes`,
+    );
+  }
+  // Beim Wechsel gilt das strikte Raster der neuen Währung. Der
+  // Bestandswert-Schutz von amountStep/amountMin existiert nur fürs Öffnen des
+  // Dialogs: gäbe man den aktuellen Wert auch hier weiter, liefe ein von EUR
+  // auf JPY gestelltes Feld mit step="any" weiter und speicherte Hundertstel Yen.
+  const body = withoutComments(money).match(/export function applyAmountFormat[\s\S]*?\n\}/)[0];
+  assert.doesNotMatch(body, /amountStep\([^)]*input\.value/, 'applyAmountFormat darf den Bestandswert nicht weiterreichen');
+  assert.doesNotMatch(body, /amountMin\([^)]*input\.value/, 'applyAmountFormat darf den Bestandswert nicht weiterreichen');
+});
 
 test('Geldbeträge laufen über den Modul-Formatierer, nicht über eigene', () => {
   // Drei eigene Formatierer bedeuteten vier Vorzeichenkonventionen: dieselbe

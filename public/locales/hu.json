@@ -35,6 +35,7 @@
         "contentRequired": "A tartalom megadása kötelező",
         "all": "Összes",
         "unknownError": "Ismeretlen hiba",
+        "amountPrecisionRequired": "{{currency}} esetén csak {{step}} lépésközű összegek adhatók meg",
         "confirm": "Megerősítés",
         "undo": "Visszavonás",
         "reset": "Visszaállítás az eredetire",
@@ -849,7 +850,7 @@
         "notesLabel": "Jegyzetek",
         "organizationLabel": "Organisation",
         "websiteLabel": "Website",
-        "nicknameLabel": "Spitzname",
+        "nicknameLabel": "Becenév",
         "notesPlaceholder": "Opcionális…",
         "callLabel": "Hívás",
         "emailActionLabel": "Email",
@@ -3501,13 +3502,13 @@
                 "nextMonth": "Következő hónap"
             },
             "weekday": {
-                "mon": "Mo",
-                "tue": "Di",
-                "wed": "Mi",
-                "thu": "Do",
-                "fri": "Fr",
-                "sat": "Sa",
-                "sun": "So"
+                "mon": "H",
+                "tue": "K",
+                "wed": "Sze",
+                "thu": "Cs",
+                "fri": "P",
+                "sat": "Szo",
+                "sun": "V"
             },
             "legend": {
                 "period": "Menstruáció",

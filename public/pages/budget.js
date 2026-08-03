@@ -18,7 +18,7 @@ import { openSubscriptionModal, render as renderSubscriptions } from '/pages/sub
 import { renderStats } from '/pages/budget-stats.js';
 import { renderPlans } from '/pages/budget-plans.js';
 import { toLocalDateKey, parseLocalDateKey, addLocalDays } from '/utils/date.js';
-import { formatMoney, formatSignedAmount, amountPlaceholder, amountStep, amountMin, currencyFractionDigits } from '/utils/money.js';
+import { formatMoney, formatSignedAmount, amountPlaceholder, amountStep, amountMin, applyAmountFormat, amountIsSavable, smallestUnitLabel } from '/utils/money.js';
 import { budgetCategoryLabel } from '/utils/category-labels.js';
 import { appendCurrencyOptions } from '/settings/currency.js';
 import '/components/category-manager.js';
@@ -1068,6 +1068,11 @@ function wireAccountsPage() {
 
 function openAccountModal(account = null) {
   const isEdit = !!account;
+  // Ein Konto kann eine eigene Währung tragen (budget_accounts.currency). Der
+  // Saldo rastert dann nach dieser, nicht nach der des Haushalts: sonst wies ein
+  // EUR-Konto im JPY-Haushalt einen gültigen Saldo von 12,75 zurück, und ein
+  // JPY-Konto im EUR-Haushalt liesse Bruchteile von Yen zu.
+  const accountCurrency = account?.currency || state.currency;
   const typeOpts = ACCOUNT_TYPES.map((key) =>
     `<option value="${key}" ${isEdit && account.type === key ? 'selected' : ''}>${esc(accountTypeLabel(key))}</option>`
   ).join('');
@@ -1098,8 +1103,9 @@ function openAccountModal(account = null) {
     </div>
     <div class="form-group">
       <label class="form-label" for="am-balance">${t('budget.startingBalanceLabel')}</label>
-      <input type="number" class="form-input" id="am-balance" step="0.01" inputmode="decimal"
-             placeholder="0.00" value="${isEdit ? account.starting_balance : ''}">
+      <input type="number" class="form-input" id="am-balance"
+             step="${amountStep(accountCurrency, isEdit ? account.starting_balance : '')}" inputmode="decimal"
+             placeholder="${amountPlaceholder(accountCurrency)}" value="${isEdit ? account.starting_balance : ''}">
       <p class="form-hint">${t('budget.startingBalanceHint')}</p>
     </div>
     <div class="form-group">
@@ -1186,6 +1192,9 @@ function openAccountModal(account = null) {
           reportFieldError(panel.querySelector('#am-balance'), t('budget.validAmountRequired'));
           return;
         }
+        if (rejectOffGridAmount(panel.querySelector('#am-balance'), startingBalance, accountCurrency, {
+          original: isEdit ? account.starting_balance : null,
+        })) return;
 
         saveBtn.disabled = true;
         saveBtn.textContent = '…';
@@ -1683,9 +1692,12 @@ function openBudgetModal({ mode, entry = null, initialType = '' }) {
   const editAmount = isEdit && entry.recurrence_virtual && entry.recurrence_full_amount != null
     ? entry.recurrence_full_amount
     : (isEdit ? entry.amount : 0);
-  // Nachkommastellen der Währung, nicht fest zwei: bei JPY stand hier sonst
-  // "1300.00" im Feld, während Platzhalter und Schrittweite ganze Yen zeigen.
-  const absAmount  = isEdit ? Math.abs(editAmount).toFixed(currencyFractionDigits(state.currency)) : '';
+  // Den gespeicherten Betrag unverändert zeigen. Ein toFixed() auf die
+  // Nachkommastellen der Währung schrieb hier einen Finanzwert still um: ein
+  // in EUR erfasstes 12,50 wurde unter JPY zu "13", und das nächste Speichern
+  // hätte den Betrag dauerhaft auf den gerundeten Wert gesetzt. Dass ein
+  // solcher Bestandswert nicht ins Raster passt, fängt amountStep ab.
+  const absAmount  = isEdit ? String(Math.abs(editAmount)) : '';
   const curInterval = isEdit && entry.recurrence_interval ? entry.recurrence_interval : 'monthly';
   const intervalOption = (val, key) =>
     `<option value="${val}" ${curInterval === val ? 'selected' : ''}>${t(key)}</option>`;
@@ -1817,7 +1829,9 @@ function openBudgetModal({ mode, entry = null, initialType = '' }) {
       <div class="form-grid-2" id="lm-manual-fields">
         <div class="form-group">
           <label class="form-label" for="lm-amount">${t('budget.loanAmountLabel')}</label>
-          <input type="number" class="form-input" id="lm-amount" step="0.01" min="0.01" inputmode="decimal">
+          <input type="number" class="form-input" id="lm-amount"
+                 step="${amountStep(state.currency, '')}" min="${amountMin(state.currency, '')}"
+                 placeholder="${amountPlaceholder(state.currency)}" inputmode="decimal">
         </div>
         <div class="form-group">
           <label class="form-label" for="lm-installments">${t('budget.loanInstallmentsLabel')}</label>
@@ -2006,6 +2020,9 @@ function openBudgetModal({ mode, entry = null, initialType = '' }) {
           reportFieldError(panel.querySelector('#bm-amount'), t('budget.validAmountRequired'));
           return;
         }
+        if (rejectOffGridAmount(panel.querySelector('#bm-amount'), absVal, state.currency, {
+          original: isEdit ? Math.abs(editAmount) : null,
+        })) return;
         if (!date) {
           reportFieldError(panel.querySelector('#bm-date'), t('calendar.invalidDate'));
           return;
@@ -2145,6 +2162,33 @@ function requestNameInPanel(panel, { title, label, placeholder }) {
 // Kursfeld erscheint nur bei einer von der Budget-Währung abweichenden Wahl -
 // solange beide gleich sind, gibt es nichts umzurechnen. Die Option-Liste füllt
 // wireLoanCurrencyFields() nach dem Einfügen (geteilte SUPPORTED_CURRENCIES).
+/**
+ * Weist einen Betrag zurück, der nicht ins Raster seiner Währung passt.
+ *
+ * Die Dialoge des Moduls sind keine `<form>`-Elemente - sie speichern über
+ * einen Button-Handler, die native `step`-Prüfung des Browsers läuft also nie.
+ * Ein Feld mit step="1" nähme sonst trotzdem 12,5 JPY entgegen und schriebe
+ * den Wert weg, während die Anzeige ihn gerundet darstellt. Wer eine
+ * Schrittweite zeigt, muss sie auch selbst durchsetzen.
+ *
+ * `original` ist der gespeicherte Betrag eines bestehenden Eintrags. Liegt er
+ * selbst schon neben dem Raster - unter der alten Oberfläche mit fester
+ * Schrittweite 0,01 war das möglich - und wurde er nicht angefasst, bleibt er
+ * erlaubt. Sonst liesse sich an einem solchen Eintrag nicht einmal mehr der
+ * Titel ändern, ohne vorher den Betrag anzufassen. Neu eingegebene Werte und
+ * ein Währungswechsel laufen weiter in die Prüfung.
+ *
+ * @returns {boolean} true, wenn abgewiesen wurde (der Aufrufer bricht dann ab)
+ */
+function rejectOffGridAmount(input, value, currency, { original = null, originalCurrency = null } = {}) {
+  if (amountIsSavable(value, currency, { original, originalCurrency })) return false;
+  reportFieldError(input, t('common.amountPrecisionRequired', {
+    currency,
+    step: smallestUnitLabel(currency),
+  }));
+  return true;
+}
+
 function loanCurrencyFieldsHtml(loan) {
   const currency = loan?.currency || state.currency;
   const foreign = currency !== state.currency;
@@ -2177,6 +2221,12 @@ function wireLoanCurrencyFields(panel) {
   const hint = panel.querySelector('#lm-rate-hint');
 
   const update = ({ currencyChanged = false } = {}) => {
+    // Kreditsumme und Darlehensbetrag stehen in der gewählten Währung, nicht in
+    // der Budget-Währung: ohne das Nachziehen zeigte ein auf JPY gestelltes
+    // Darlehen weiter "0,00" und liesse Hundertstel Yen zu.
+    applyAmountFormat(panel.querySelector('#lm-amount'), select.value, { required: true });
+    applyAmountFormat(panel.querySelector('#lm-principal'), select.value, { required: true });
+
     const foreign = select.value !== state.currency;
     rateGroup.hidden = !foreign;
     hint.hidden = !foreign;
@@ -2202,6 +2252,9 @@ function wireLoanCurrencyFields(panel) {
 function loanInterestFieldsHtml(loan) {
   const it = loan?.interest ?? null;
   const mode = it?.mode ?? 'none';
+  // Die Kreditsumme ist ein Geldbetrag in der Darlehenswährung, nicht in der
+  // Budget-Währung; wireLoanCurrencyFields zieht sie bei einem Wechsel nach.
+  const currency = loan?.currency || state.currency;
   const v = (x) => (x != null ? esc(String(x)) : '');
   const opt = (val, key) => `<option value="${val}" ${mode === val ? 'selected' : ''}>${t(key)}</option>`;
   return `
@@ -2217,8 +2270,9 @@ function loanInterestFieldsHtml(loan) {
     <div id="lm-interest-fields" ${mode === 'none' ? 'hidden' : ''}>
       <div class="form-group">
         <label class="form-label" for="lm-principal">${t('budget.loanPrincipalLabel')}</label>
-        <input type="number" class="form-input" id="lm-principal" step="0.01" min="0.01"
-               inputmode="decimal" value="${v(it?.principal)}">
+        <input type="number" class="form-input" id="lm-principal"
+               step="${amountStep(currency, it?.principal ?? '')}" min="${amountMin(currency, it?.principal ?? '')}"
+               placeholder="${amountPlaceholder(currency)}" inputmode="decimal" value="${v(it?.principal)}">
       </div>
       <div class="form-grid-2">
         <div class="form-group">
@@ -2358,6 +2412,12 @@ async function saveLoanFromPanel(panel, saveBtn, { loan = null, closeAfterSave =
       reportFieldError(panel.querySelector('#lm-amount'), t('budget.validAmountRequired'));
       return;
     }
+    // Gegen die Darlehenswährung, nicht gegen die des Budgets: ein Darlehen in
+    // JPY rastert in ganzen Yen, auch wenn der Haushalt in EUR rechnet.
+    if (rejectOffGridAmount(panel.querySelector('#lm-amount'), total_amount, currency, {
+      original: loan?.total_amount ?? null,
+      originalCurrency: loan?.currency || (loan ? state.currency : null),
+    })) return;
     if (!Number.isInteger(installment_count) || installment_count < 1) {
       reportFieldError(panel.querySelector('#lm-installments'), t('budget.loanInstallmentsRequired'));
       return;
@@ -2371,6 +2431,10 @@ async function saveLoanFromPanel(panel, saveBtn, { loan = null, closeAfterSave =
       reportFieldError(panel.querySelector('#lm-principal'), t('budget.loanPrincipalRequired'));
       return;
     }
+    if (rejectOffGridAmount(panel.querySelector('#lm-principal'), principal, currency, {
+      original: loan?.interest?.principal ?? null,
+      originalCurrency: loan?.currency || (loan ? state.currency : null),
+    })) return;
     if (isNaN(fixed_rate) || fixed_rate < 0 || fixed_rate > 100) {
       reportFieldError(panel.querySelector('#lm-fixed-rate'), t('budget.loanRateRequired'));
       return;
@@ -2420,6 +2484,7 @@ async function saveLoanFromPanel(panel, saveBtn, { loan = null, closeAfterSave =
 function openLoanModal(loan = null) {
   const isEdit = Boolean(loan);
   const todayMonth = toLocalDateKey(new Date()).slice(0, 7);
+  const loanCurrency = loan?.currency || state.currency;
   const content = `
     <div class="form-group">
       <label class="form-label" for="lm-borrower">${t('budget.loanBorrowerLabel')}</label>
@@ -2435,8 +2500,11 @@ function openLoanModal(loan = null) {
     <div class="form-grid-2" id="lm-manual-fields">
       <div class="form-group">
         <label class="form-label" for="lm-amount">${t('budget.loanAmountLabel')}</label>
-        <input type="number" class="form-input" id="lm-amount" step="0.01" min="0.01"
-               inputmode="decimal" value="${loan ? loan.total_amount.toFixed(2) : ''}">
+        <input type="number" class="form-input" id="lm-amount"
+               step="${amountStep(loanCurrency, loan ? loan.total_amount : '')}"
+               min="${amountMin(loanCurrency, loan ? loan.total_amount : '')}"
+               placeholder="${amountPlaceholder(loanCurrency)}" inputmode="decimal"
+               value="${loan ? String(loan.total_amount) : ''}">
       </div>
       <div class="form-group">
         <label class="form-label" for="lm-installments">${t('budget.loanInstallmentsLabel')}</label>

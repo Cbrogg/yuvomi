@@ -35,6 +35,7 @@
         "contentRequired": "Konten wajib diisi",
         "all": "Semua",
         "unknownError": "Kesalahan tidak diketahui",
+        "amountPrecisionRequired": "Dalam {{currency}}, jumlah hanya dimungkinkan dalam kelipatan {{step}}",
         "confirm": "Konfirmasi",
         "undo": "Urungkan",
         "reset": "Kembalikan ke asli",
@@ -862,7 +863,7 @@
         "notesLabel": "Catatan",
         "organizationLabel": "Organisation",
         "websiteLabel": "Website",
-        "nicknameLabel": "Spitzname",
+        "nicknameLabel": "Nama panggilan",
         "notesPlaceholder": "Opsional…",
         "callLabel": "Telepon",
         "emailActionLabel": "Email",
@@ -3501,13 +3502,13 @@
                 "nextMonth": "Bulan berikutnya"
             },
             "weekday": {
-                "mon": "Mo",
-                "tue": "Di",
-                "wed": "Mi",
-                "thu": "Do",
-                "fri": "Fr",
-                "sat": "Sa",
-                "sun": "So"
+                "mon": "Sen",
+                "tue": "Sel",
+                "wed": "Rab",
+                "thu": "Kam",
+                "fri": "Jum",
+                "sat": "Sab",
+                "sun": "Min"
             },
             "legend": {
                 "period": "Menstruasi",

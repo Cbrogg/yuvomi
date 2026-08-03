@@ -4,13 +4,13 @@
  */
 
 import { api } from '/api.js';
-import { openModal as openSharedModal, closeModal, confirmModal, confirmOverModal } from '/components/modal.js';
+import { openModal as openSharedModal, closeModal, confirmModal, confirmOverModal, reportFieldError } from '/components/modal.js';
 import { renderDocumentAttachField, bindDocumentAttachField } from '/components/document-attach.js';
 import { t, formatDate, getLocale, dateInputPlaceholder, parseDateInput, isDateInputValid } from '/i18n.js';
 import { esc } from '/utils/html.js';
 import { stagger } from '/utils/ux.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
-import { formatMoney } from '/utils/money.js';
+import { formatMoney, amountPlaceholder, toDecimalString, amountIsSavable, smallestUnitLabel } from '/utils/money.js';
 import { wireTablist } from '/utils/tablist.js';
 
 let state = {
@@ -612,11 +612,17 @@ function defaultSplitValues(group) {
 
 function updateSplitInputs(panel) {
   const method = panel.querySelector('[name="split_method"]')?.value || 'equal';
+  // Der Betrag und die Teilbeträge stehen in der gewählten Währung; Prozente
+  // und Anteile sind reine Zahlen und behalten ihren festen Platzhalter.
+  const currency = panel.querySelector('[name="currency"]')?.value || state.meta?.default_currency || 'EUR';
+  const zero = amountPlaceholder(currency);
+  const amountInput = panel.querySelector('[name="amount"]');
+  if (amountInput) amountInput.placeholder = zero;
   panel.querySelectorAll('.split-split-value').forEach((input) => {
     input.hidden = method === 'equal';
     input.required = method !== 'equal';
     if (method === 'percentage') input.placeholder = '30';
-    else if (method === 'exact') input.placeholder = '70.00';
+    else if (method === 'exact') input.placeholder = zero;
     else if (method === 'shares') input.placeholder = '1';
     else input.placeholder = '';
   });
@@ -624,8 +630,42 @@ function updateSplitInputs(panel) {
   validateSplitForm(panel);
 }
 
+/**
+ * Ein Geldbetrag aus dem Formular in der Schreibweise, die der Server erwartet.
+ *
+ * parseMoneyToMinor() in server/services/split-expenses.js nimmt ausschliesslich
+ * /^-?\d+(\.\d+)?$/ entgegen, die Eingabe folgt dagegen der Region - bis in die
+ * Ziffern hinein. Ohne diese Umschrift kommt "12,50" oder "۱۲٫۵۰" unverändert
+ * am Server an, und das Anlegen scheitert dort mit einem Fehler, der auf kein
+ * Feld zeigt. Die Umschrift selbst steht in utils/money.js, der einen Quelle
+ * für Geldformate.
+ */
+const decimalString = toDecimalString;
+
+/**
+ * Weist einen Betrag zurück, der mehr Nachkommastellen hat als die Währung
+ * kennt. Die Felder hier sind Textfelder, es gibt also kein `step`, das der
+ * Browser prüfen könnte - und der Platzhalter zeigt bei HUF, IDR oder IRR
+ * bereits ganze Einheiten an.
+ *
+ * Ohne diese Prüfung landet die Ablehnung beim Server (parseMoneyToMinor wirft
+ * bei zu vielen Stellen), und die Meldung erscheint als ortloser Fehler statt
+ * am Feld, das sie meint.
+ *
+ * @returns {boolean} true, wenn abgewiesen wurde (der Aufrufer bricht dann ab)
+ */
+function rejectOffGridSplitAmount(input, value, currency, original = null) {
+  if (input == null || value === '' || value == null) return false;
+  if (amountIsSavable(value, currency, { original })) return false;
+  reportFieldError(input, t('common.amountPrecisionRequired', {
+    currency,
+    step: smallestUnitLabel(currency),
+  }));
+  return true;
+}
+
 function numberValue(value) {
-  const normalized = String(value || '').trim().replace(',', '.');
+  const normalized = decimalString(value);
   if (!normalized) return NaN;
   return Number(normalized);
 }
@@ -738,7 +778,7 @@ function collectGroupDefaults(form, data) {
   const config = [];
   if (method === 'percentage' || method === 'shares') {
     form.querySelectorAll('.split-default-value').forEach((input) => {
-      const raw = String(input.value).trim();
+      const raw = decimalString(input.value);
       if (!raw) return;
       const uid = Number(input.name.replace('default_value_', ''));
       config.push(method === 'shares' ? { user_id: uid, shares: Number(raw) } : { user_id: uid, percentage: raw });
@@ -766,7 +806,7 @@ function collectSplitPayload(form) {
   const participants = [...form.querySelectorAll('input[name="participants"]:checked')].map((input) => Number(input.value));
   if (method === 'equal') return { participants, splits: [] };
   const splits = participants.map((userId) => {
-    const value = form.querySelector(`[name="split_value_${userId}"]`)?.value.trim() || '';
+    const value = decimalString(form.querySelector(`[name="split_value_${userId}"]`)?.value);
     if (method === 'percentage') return { user_id: userId, percentage: value };
     if (method === 'exact') return { user_id: userId, amount: value };
     return { user_id: userId, shares: Number(value) };
@@ -879,7 +919,7 @@ function openExpenseModal(expense = null) {
       <form id="split-expense-form" class="split-form">
         <label>${t('splitExpenses.titleLabel')}<input class="input" name="title" required maxlength="200" value="${esc(expense?.title || '')}"></label>
         <div class="split-form-row">
-          <label>${t('splitExpenses.amount')}<input class="input" name="amount" inputmode="decimal" placeholder="42.50" required value="${esc(expense?.amount || '')}"></label>
+          <label>${t('splitExpenses.amount')}<input class="input" name="amount" inputmode="decimal" placeholder="${amountPlaceholder(isEdit ? expense.currency : group.default_currency)}" required value="${esc(expense?.amount || '')}"></label>
           <label>${t('splitExpenses.paidBy')}<select class="input" name="payer_id">${memberOptions(isEdit ? expense.payer_id : state.user?.id)}</select></label>
         </div>
         <div class="split-form-row">
@@ -921,6 +961,7 @@ function openExpenseModal(expense = null) {
       });
       panel.querySelector('#split-cancel-expense')?.addEventListener('click', () => closeModal());
       panel.querySelector('[name="split_method"]')?.addEventListener('change', () => updateSplitInputs(panel));
+      panel.querySelector('[name="currency"]')?.addEventListener('change', () => updateSplitInputs(panel));
       panel.querySelector('#split-expense-form')?.addEventListener('input', () => validateSplitForm(panel));
       panel.querySelectorAll('input[name="participants"]').forEach((input) => {
         const row = input.closest('.split-participant-row');
@@ -951,6 +992,17 @@ function openExpenseModal(expense = null) {
         if (!validateSplitForm(panel)) return;
         const form = panel.querySelector('#split-expense-form');
         const data = Object.fromEntries(new FormData(form));
+        data.amount = decimalString(data.amount);
+        const expenseCurrency = form.querySelector('[name="currency"]')?.value || group.default_currency;
+        if (rejectOffGridSplitAmount(form.querySelector('[name="amount"]'), numberValue(data.amount),
+          expenseCurrency, isEdit ? expense.amount : null)) return;
+        // Auch die Genau-Beträge: sie sind Geld in derselben Währung.
+        if (form.querySelector('[name="split_method"]')?.value === 'exact') {
+          for (const field of form.querySelectorAll('.split-split-value')) {
+            if (field.hidden || !field.value) continue;
+            if (rejectOffGridSplitAmount(field, numberValue(field.value), expenseCurrency)) return;
+          }
+        }
         const { participants, splits } = collectSplitPayload(form);
         const payload = { ...data, participants, splits };
         // commit() lädt wartende Dateien erst jetzt hoch: ein abgebrochenes
@@ -983,7 +1035,7 @@ function openSettlementModal() {
         </div>
         <p class="form-hint field-hint--warn" id="split-settlement-same" role="status" hidden><i data-lucide="alert-triangle" aria-hidden="true"></i><span>${t('splitExpenses.settlementSamePerson')}</span></p>
         <div class="split-form-row">
-          <label>${t('splitExpenses.amount')}<input class="input" name="amount" inputmode="decimal" required value="${debt ? esc(String(debt.amount)) : ''}"></label>
+          <label>${t('splitExpenses.amount')}<input class="input" name="amount" inputmode="decimal" placeholder="${amountPlaceholder(debt?.currency || group.default_currency)}" required value="${debt ? esc(String(debt.amount)) : ''}"></label>
           <label>${t('splitExpenses.currency')}<select class="input" name="currency">${state.meta.currencies.map((c) => `<option value="${c}" ${c === (debt?.currency || group.default_currency) ? 'selected' : ''}>${c}</option>`).join('')}</select></label>
         </div>
         <label>${t('splitExpenses.notes')}<textarea class="input" name="notes" rows="3" maxlength="5000"></textarea></label>
@@ -1032,11 +1084,21 @@ function openSettlementModal() {
       });
       payeeSel.addEventListener('change', syncSameHint);
       syncSameHint();
+      // Der Platzhalter zeigt die Null im Format der gewählten Währung und muss
+      // beim Wechsel mitgehen - JPY schreibt "0", EUR "0,00".
+      const currencySel = form.querySelector('[name="currency"]');
+      currencySel?.addEventListener('change', () => {
+        form.querySelector('[name="amount"]').placeholder = amountPlaceholder(currencySel.value);
+      });
       panel.querySelector('#split-cancel-settlement')?.addEventListener('click', () => closeModal());
       form?.addEventListener('submit', async (e) => {
         e.preventDefault();
         if (samePerson()) { syncSameHint(); payeeSel.focus(); return; }
         const data = Object.fromEntries(new FormData(form));
+        data.amount = decimalString(data.amount);
+        if (rejectOffGridSplitAmount(form.querySelector('[name="amount"]'), numberValue(data.amount),
+          form.querySelector('[name="currency"]')?.value || group.default_currency,
+          debt?.amount ?? null)) return;
         const proofIds = proof ? await proof.commit() : [];
         if (proofIds.length) data.proof_document_id = proofIds[0];
         await api.post(`/split-expenses/groups/${state.activeGroupId}/settlements`, data);
