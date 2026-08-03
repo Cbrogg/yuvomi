@@ -38,6 +38,19 @@ export function formatMoney(amount, currency) {
 }
 
 /**
+ * Nachkommastellen einer Währung: EUR 2, JPY/HUF/VND 0, KWD/BHD 3.
+ * Fällt bei fehlendem oder ungültigem ISO-Code auf zwei zurück.
+ */
+export function currencyFractionDigits(currency) {
+  try {
+    // Wirft bei fehlendem oder ungültigem ISO-Code; dann bleibt es bei zwei.
+    return getNumberFormat({ style: 'currency', currency }).resolvedOptions().minimumFractionDigits;
+  } catch {
+    return 2;
+  }
+}
+
+/**
  * Eingabe-Platzhalter für ein Betragsfeld: die Null im Zahlformat der
  * Format-Locale, mit den Nachkommastellen der Währung.
  * EUR/de -> "0,00", EUR/de-CH -> "0.00", JPY -> "0".
@@ -49,14 +62,47 @@ export function formatMoney(amount, currency) {
  * der Währung - beides weiß eine Übersetzungsdatei nicht.
  */
 export function amountPlaceholder(currency) {
-  let digits = 2;
-  try {
-    // Wirft bei fehlendem oder ungültigem ISO-Code; dann bleibt es bei zwei.
-    digits = getNumberFormat({ style: 'currency', currency }).resolvedOptions().minimumFractionDigits;
-  } catch {
-    digits = 2;
-  }
+  const digits = currencyFractionDigits(currency);
   return getNumberFormat({ minimumFractionDigits: digits, maximumFractionDigits: digits }).format(0);
+}
+
+/** Kleinster erfassbarer Betrag der Währung als Zahl: JPY 1, EUR 0.01, KWD 0.001. */
+function smallestUnit(digits) {
+  return digits === 0 ? 1 : 10 ** -digits;
+}
+
+/**
+ * Schrittweite für ein Betragsfeld, passend zur Währung: "1" bei JPY, "0.01"
+ * bei EUR, "0.001" bei KWD. Immer mit Punkt - `step` und `min` sind HTML-Syntax,
+ * kein Anzeigeformat.
+ *
+ * `currentValue` ist der Bestandswert des Feldes. Passt er nicht ins Raster,
+ * entfällt die Schrittprüfung ("any"): ein in EUR erfasster Betrag von 12,50
+ * oder eine Split-Teilung (10/3) würde sonst vom Browser als ungültig markiert
+ * und das Speichern stillschweigend blockieren.
+ */
+export function amountStep(currency, currentValue) {
+  const digits = currencyFractionDigits(currency);
+  const value = Number(currentValue);
+  if (currentValue !== '' && currentValue != null && Number.isFinite(value)) {
+    const scaled = value * 10 ** digits;
+    if (Math.abs(scaled - Math.round(scaled)) > 1e-9) return 'any';
+  }
+  return smallestUnit(digits).toFixed(digits);
+}
+
+/**
+ * Untergrenze für ein Pflicht-Betragsfeld: eine Einheit, also der kleinste
+ * erfassbare positive Betrag. Liegt der Bestandswert darunter (0,50 erfasst in
+ * EUR, jetzt JPY mit Untergrenze 1), gilt er selbst - sonst liesse sich ein
+ * vorhandener Eintrag nicht mehr speichern.
+ */
+export function amountMin(currency, currentValue) {
+  const digits = currencyFractionDigits(currency);
+  const smallest = smallestUnit(digits);
+  const value = Math.abs(Number(currentValue));
+  if (Number.isFinite(value) && value > 0 && value < smallest) return String(value);
+  return smallest.toFixed(digits);
 }
 
 /**

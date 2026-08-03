@@ -18,7 +18,7 @@ import { openSubscriptionModal, render as renderSubscriptions } from '/pages/sub
 import { renderStats } from '/pages/budget-stats.js';
 import { renderPlans } from '/pages/budget-plans.js';
 import { toLocalDateKey, parseLocalDateKey, addLocalDays } from '/utils/date.js';
-import { formatMoney, formatSignedAmount, amountPlaceholder } from '/utils/money.js';
+import { formatMoney, formatSignedAmount, amountPlaceholder, amountStep, amountMin, currencyFractionDigits } from '/utils/money.js';
 import { budgetCategoryLabel } from '/utils/category-labels.js';
 import { appendCurrencyOptions } from '/settings/currency.js';
 import '/components/category-manager.js';
@@ -1683,7 +1683,9 @@ function openBudgetModal({ mode, entry = null, initialType = '' }) {
   const editAmount = isEdit && entry.recurrence_virtual && entry.recurrence_full_amount != null
     ? entry.recurrence_full_amount
     : (isEdit ? entry.amount : 0);
-  const absAmount  = isEdit ? Math.abs(editAmount).toFixed(2) : '';
+  // Nachkommastellen der Währung, nicht fest zwei: bei JPY stand hier sonst
+  // "1300.00" im Feld, während Platzhalter und Schrittweite ganze Yen zeigen.
+  const absAmount  = isEdit ? Math.abs(editAmount).toFixed(currencyFractionDigits(state.currency)) : '';
   const curInterval = isEdit && entry.recurrence_interval ? entry.recurrence_interval : 'monthly';
   const intervalOption = (val, key) =>
     `<option value="${val}" ${curInterval === val ? 'selected' : ''}>${t(key)}</option>`;
@@ -1727,7 +1729,8 @@ function openBudgetModal({ mode, entry = null, initialType = '' }) {
     <div class="form-group js-entry-field">
       <label class="form-label" for="bm-amount">${t('budget.amountLabel')}<span class="required-marker" aria-hidden="true"> *</span></label>
       <input type="number" class="form-input" id="bm-amount"
-             placeholder="${amountPlaceholder(state.currency)}" step="0.01" min="0.01"
+             placeholder="${amountPlaceholder(state.currency)}"
+             step="${amountStep(state.currency, absAmount)}" min="${amountMin(state.currency, absAmount)}"
              inputmode="decimal" value="${absAmount}">
     </div>
 

@@ -9,7 +9,7 @@ import { t } from '/i18n.js';
 import { openModal, closeModal, reportFieldError } from '/components/modal.js';
 import { vibrate } from '/utils/ux.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
-import { amountPlaceholder } from '/utils/money.js';
+import { amountPlaceholder, amountStep } from '/utils/money.js';
 
 const view = { month: '', data: null, error: false, ctx: null, root: null };
 
@@ -261,7 +261,8 @@ function amountFieldHtml(value) {
   return `
     <div class="form-group">
       <label class="form-label" for="plan-amount">${t('budget.planMonthlyAmount')}</label>
-      <input id="plan-amount" class="form-input" type="number" inputmode="decimal" min="0" step="0.01"
+      <input id="plan-amount" class="form-input" type="number" inputmode="decimal" min="0"
+             step="${amountStep(view.ctx.currency, value)}"
              value="${value === '' ? '' : String(value)}" placeholder="${amountPlaceholder(view.ctx.currency)}" />
     </div>`;
 }
