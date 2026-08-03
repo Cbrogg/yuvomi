@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.75.3] - 2026-08-03
+
+### Fixed
+
+- Signing in through an identity provider that sends no `preferred_username` claim named the new account after its email address. That claim is optional in the OIDC spec, and Synology DSM SSO is one of the providers that leaves it out. An email makes a poor account name: a household commonly shares one address across several members, so it identifies nobody in particular, and the domain part only makes it unwieldy. The name is now taken from `preferred_username`, then from the non-standard `username` claim that Synology and others do send, then from `sub`, and never from the email. Accounts that already exist keep the name they have, because sign-in matches on `sub`, not on the name.
+- An account created through SSO could end up carrying a username that no other part of Yuvomi accepts. Everywhere else a user is named, the name must be letters, digits, dots, hyphens or underscores, but the SSO path wrote through whatever the provider sent, and both an email address and a Synology `sub` carry an `@`. Such an account could then not be saved under Settings → Administration → Family at all, not even to change something unrelated to the name, because saving revalidates the name the account already had. Names derived from SSO now pass through the same format, with accented letters transliterated instead of mangled.
+- Yuvomi recorded which provider an SSO account came from by copying the configured `OIDC_ISSUER`. It now reads the issuer out of the validated ID token instead. That is the name the provider gives itself, and it can differ from the URL you configured, for instance when yours is a CNAME pointing at it.
+
 ## [1.75.2] - 2026-08-03
 
 ### Fixed
