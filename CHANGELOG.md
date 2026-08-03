@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.75.1] - 2026-08-03
+
+Most of this release is translation. The locale files were complete in the sense that every key existed, which is why nothing looked broken and every test passed - but in many languages the value behind the key was still the English original. The second half is about money: an amount field now knows what currency it holds, and says so before you save rather than after.
+
 ### Fixed
 
 - Large parts of the app were still English in up to 21 languages. The locale files carried every key, so nothing looked broken and every test passed, but in many languages the value was simply the untranslated English text. Those screens read as English to everyone outside the German and English households. Just over 4,000 strings are now actually translated, across subscriptions, the budget categories and the loan screens, the shared category manager, calendar attachments and sync targets, the SMTP form, bulk actions on tasks, document folders, dashboard widgets, meals, onboarding, reminder lead times, the offline banner, the whole Housekeeping module, and the installer.
