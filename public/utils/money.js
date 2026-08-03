@@ -99,6 +99,28 @@ export function smallestUnitLabel(currency) {
 }
 
 /**
+ * Darf dieser Betrag gespeichert werden? Wie `fitsCurrencyGrid`, lässt aber
+ * einen unangetasteten Bestandswert durch.
+ *
+ * Nötig, weil `amountStep` bei einem Bestandswert neben dem Raster `"any"`
+ * liefert - sonst markierte der Browser einen bereits gespeicherten Eintrag als
+ * ungültig, und selbst eine Änderung am Titel liesse sich nicht mehr sichern.
+ * Dieses `"any"` gilt aber fürs ganze Feld: ohne die Prüfung hier wäre aus
+ * einem Alt-Betrag von 12,5 JPY anschliessend auch 12,555 JPY speicherbar,
+ * also mehr Bruch als vorher. Der Bestandsschutz endet deshalb genau dort, wo
+ * der Wert angefasst wird.
+ *
+ * Ein Währungswechsel hebt ihn ebenfalls auf: wer auf JPY umstellt, hat das
+ * Raster bewusst gewechselt.
+ */
+export function amountIsSavable(value, currency, { original = null, originalCurrency = null } = {}) {
+  if (fitsCurrencyGrid(value, currency)) return true;
+  if (original == null) return false;
+  if (originalCurrency != null && originalCurrency !== currency) return false;
+  return Number(original) === Number(value);
+}
+
+/**
  * Schrittweite für ein Betragsfeld, passend zur Währung: "1" bei JPY, "0.01"
  * bei EUR, "0.001" bei KWD. Immer mit Punkt - `step` und `min` sind HTML-Syntax,
  * kein Anzeigeformat.

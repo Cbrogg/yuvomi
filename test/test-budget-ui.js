@@ -461,7 +461,7 @@ test('jeder Speicherpfad prüft die Schrittweite selbst', () => {
   for (const [file, src] of [['budget.js', budget], ['budget-plans.js', plans]]) {
     const clean = withoutComments(src);
     assert.doesNotMatch(clean, /<form\b/, `${file}: Dialoge sind bewusst keine Formulare - der Guard hier setzt das voraus`);
-    const checks = (clean.match(/fitsCurrencyGrid\(|rejectOffGridAmount\(/g) || []).length;
+    const checks = (clean.match(/amountIsSavable\(|rejectOffGridAmount\(/g) || []).length;
     // Jedes Feld, dessen Schrittweite aus der Währung kommt, braucht seine
     // eigene Prüfung im Speicherpfad.
     const fields = (clean.match(/step="\$\{amountStep\(/g) || []).length;
@@ -495,6 +495,36 @@ test('ein unangetasteter Bestandsbetrag bleibt speicherbar', () => {
   for (const call of calls) {
     assert.match(call, /original:/, `Prüfung ohne Bestandsschutz: ${call.replace(/\s+/g, ' ').slice(0, 90)}`);
   }
+});
+
+test('jedes Formular prüft den Betrag auch selbst, nicht nur über step', () => {
+  // amountStep gibt bei einem Bestandswert neben dem Raster "any" zurück, damit
+  // sich der vorhandene Eintrag noch speichern lässt. Das gilt aber fürs ganze
+  // Feld: wer sich allein auf die Browser-Prüfung verlässt, macht aus 12,5 JPY
+  // anschliessend auch 12,555 JPY speicherbar - mehr Bruch als die feste
+  // Schrittweite je zuliess. Jede Seite mit einem Betragsfeld braucht deshalb
+  // eine eigene Prüfung, unabhängig davon, ob sie ein <form> ist.
+  assert.match(money, /export function amountIsSavable/);
+  for (const [file, src] of MONEY_INPUT_PAGES) {
+    const clean = withoutComments(src);
+    if (!/step="\$\{amountStep\(/.test(clean)) continue;
+    assert.match(
+      clean,
+      /amountIsSavable\(|rejectOffGridAmount\(/,
+      `${file}: währungsgerasterte Felder ohne eigene Prüfung im Speicherpfad`,
+    );
+  }
+});
+
+test('das inaktive Tarif-Feld ist von der Formularprüfung ausgenommen', () => {
+  // Ein per `hidden` verstecktes Feld nimmt weiter an der Browser-Prüfung teil.
+  // Ein liegengebliebener Tagessatz von 12,5 blockierte unter JPY damit das
+  // Speichern, ohne dass etwas zu sehen war - der Knopf tat schlicht nichts.
+  const clean = withoutComments(housekeeping);
+  const fn = clean.match(/function updateRateFields\(\)[\s\S]*?\n  \}/);
+  assert.ok(fn, 'updateRateFields nicht gefunden');
+  assert.match(fn[0], /\.disabled = /, 'das inaktive Feld muss disabled werden, nicht nur versteckt');
+  assert.match(clean, /\n  updateRateFields\(\);/, 'updateRateFields muss beim Öffnen einmal laufen');
 });
 
 test('nur der Trenner der Region wird zum Dezimalpunkt', () => {

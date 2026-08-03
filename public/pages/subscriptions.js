@@ -15,7 +15,7 @@ import {
 import { esc } from '/utils/html.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
 import { toLocalDateKey } from '/utils/date.js';
-import { formatMoney, amountPlaceholder, amountStep, applyAmountFormat } from '/utils/money.js';
+import { formatMoney, amountPlaceholder, amountStep, applyAmountFormat, amountIsSavable, smallestUnitLabel } from '/utils/money.js';
 
 let state = {
   subscriptions: [],
@@ -1052,6 +1052,24 @@ async function saveSubscription(panel, existing, searchedLogoData = null) {
     }
     occurrenceCount = count;
   }
+  // Bei einem Bestandsbetrag neben dem Raster liefert amountStep "any", damit
+  // sich das vorhandene Abo überhaupt noch speichern lässt. Das gilt aber fürs
+  // ganze Feld: ohne diese Prüfung wäre aus 12,5 JPY anschliessend auch
+  // 12,555 JPY speicherbar, also mehr Bruch als die feste Schrittweite zuliess.
+  const amountInput = panel.querySelector('#subscription-amount');
+  const amountValue = Number(amountInput.value);
+  const targetCurrency = currencyInput.value.trim().toUpperCase();
+  if (!amountIsSavable(amountValue, targetCurrency, {
+    original: existing?.amount ?? null,
+    originalCurrency: existing?.currency ?? null,
+  })) {
+    reportFieldError(amountInput, t('common.amountPrecisionRequired', {
+      currency: targetCurrency,
+      step: smallestUnitLabel(targetCurrency),
+    }));
+    return;
+  }
+
   const submit = panel.querySelector('[type="submit"]');
   submit.disabled = true;
   try {

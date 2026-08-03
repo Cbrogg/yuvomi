@@ -9,7 +9,7 @@ import { t } from '/i18n.js';
 import { openModal, closeModal, reportFieldError } from '/components/modal.js';
 import { vibrate } from '/utils/ux.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
-import { amountPlaceholder, amountStep, fitsCurrencyGrid, smallestUnitLabel } from '/utils/money.js';
+import { amountPlaceholder, amountStep, amountIsSavable, smallestUnitLabel } from '/utils/money.js';
 
 const view = { month: '', data: null, error: false, ctx: null, root: null };
 
@@ -285,9 +285,8 @@ async function savePlan(panel, category, original = null) {
   // native step-Prüfung läuft also nie. Ohne diese Zeile nähme ein Feld mit
   // step="1" trotzdem 12,5 JPY entgegen. Ein unangetasteter Bestandswert, der
   // schon vorher neben dem Raster lag, bleibt speicherbar.
-  const untouched = original != null && Number(original) === amount;
-  if (!untouched && !fitsCurrencyGrid(amount, view.ctx.currency)) {
-    reportFieldError(panel.querySelector('#plan-amount'), t('budget.amountPrecisionRequired', {
+  if (!amountIsSavable(amount, view.ctx.currency, { original })) {
+    reportFieldError(panel.querySelector('#plan-amount'), t('common.amountPrecisionRequired', {
       currency: view.ctx.currency,
       step: smallestUnitLabel(view.ctx.currency),
     }));

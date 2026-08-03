@@ -11,7 +11,7 @@ import { renderSkeletonList } from '/utils/skeleton.js';
 import { openModal, closeModal, confirmModal } from '/components/modal.js';
 import { createPageFab, setPageFabAction } from '/utils/fab.js';
 import { wireTablist } from '/utils/tablist.js';
-import { amountPlaceholder, amountStep } from '/utils/money.js';
+import { amountPlaceholder, amountStep, amountIsSavable, smallestUnitLabel } from '/utils/money.js';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
@@ -1080,6 +1080,23 @@ function openStaffModal(worker, content, options = {}) {
         event.preventDefault();
         const form = event.currentTarget;
         const fields = form.elements;
+        // Bei einem Bestandssatz neben dem Raster liefert amountStep "any" -
+        // sonst liesse sich der vorhandene Eintrag gar nicht mehr speichern.
+        // Dieses "any" gilt aber fürs ganze Feld, also muss der neu eingegebene
+        // Wert hier geprüft werden: sonst wäre aus 12,5 JPY auch 12,555 JPY
+        // speicherbar, mehr Bruch als die feste Schrittweite je zuliess.
+        const isHourly = fields.rate_type.value === 'hourly';
+        const rateField = isHourly ? fields.hourly_rate : fields.daily_rate;
+        const rateValue = Number(rateField?.value || 0);
+        const rateOriginal = isHourly ? item.hourly_rate : item.daily_rate;
+        if (!amountIsSavable(rateValue, state.currency, { original: rateOriginal ?? null })) {
+          window.yuvomi?.showToast(t('common.amountPrecisionRequired', {
+            currency: state.currency,
+            step: smallestUnitLabel(state.currency),
+          }), 'danger');
+          rateField?.focus();
+          return;
+        }
         try {
           await api.post('/housekeeping/worker', {
             id: fields.id.value || null,
@@ -1119,8 +1136,21 @@ function openStaffModal(worker, content, options = {}) {
     const isHourly = rateTypeSelect?.value === 'hourly';
     if (dailyRateField) dailyRateField.hidden = isHourly;
     if (hourlyRateField) hourlyRateField.hidden = !isHourly;
+    // Das Label zu verstecken genügt nicht: ein verstecktes Feld nimmt weiter an
+    // der Formularprüfung des Browsers teil. Ein liegengebliebener Tagessatz von
+    // 12,5 blockierte damit unter JPY (Schrittweite 1) das Speichern, ohne dass
+    // irgendwo etwas zu sehen war - der Absenden-Knopf tat schlicht nichts.
+    // `disabled` nimmt das Feld aus der Prüfung; sein Wert bleibt lesbar, und
+    // der Speicherpfad liest ihn direkt über form.elements, nicht über FormData.
+    const dailyInput = dailyRateField?.querySelector('input');
+    const hourlyInput = hourlyRateField?.querySelector('input');
+    if (dailyInput) dailyInput.disabled = isHourly;
+    if (hourlyInput) hourlyInput.disabled = !isHourly;
   }
   rateTypeSelect?.addEventListener('change', updateRateFields);
+  // Einmal beim Öffnen: das Markup setzt zwar `hidden`, aber nicht `disabled` -
+  // ohne diesen Aufruf bliebe das inaktive Feld von Anfang an in der Prüfung.
+  updateRateFields();
 
   const avatarFile = panel?.querySelector('#housekeeping-avatar-file');
   const avatarButton = panel?.querySelector('#housekeeping-avatar-btn');

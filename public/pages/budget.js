@@ -18,7 +18,7 @@ import { openSubscriptionModal, render as renderSubscriptions } from '/pages/sub
 import { renderStats } from '/pages/budget-stats.js';
 import { renderPlans } from '/pages/budget-plans.js';
 import { toLocalDateKey, parseLocalDateKey, addLocalDays } from '/utils/date.js';
-import { formatMoney, formatSignedAmount, amountPlaceholder, amountStep, amountMin, applyAmountFormat, fitsCurrencyGrid, smallestUnitLabel } from '/utils/money.js';
+import { formatMoney, formatSignedAmount, amountPlaceholder, amountStep, amountMin, applyAmountFormat, amountIsSavable, smallestUnitLabel } from '/utils/money.js';
 import { budgetCategoryLabel } from '/utils/category-labels.js';
 import { appendCurrencyOptions } from '/settings/currency.js';
 import '/components/category-manager.js';
@@ -1068,6 +1068,11 @@ function wireAccountsPage() {
 
 function openAccountModal(account = null) {
   const isEdit = !!account;
+  // Ein Konto kann eine eigene Währung tragen (budget_accounts.currency). Der
+  // Saldo rastert dann nach dieser, nicht nach der des Haushalts: sonst wies ein
+  // EUR-Konto im JPY-Haushalt einen gültigen Saldo von 12,75 zurück, und ein
+  // JPY-Konto im EUR-Haushalt liesse Bruchteile von Yen zu.
+  const accountCurrency = account?.currency || state.currency;
   const typeOpts = ACCOUNT_TYPES.map((key) =>
     `<option value="${key}" ${isEdit && account.type === key ? 'selected' : ''}>${esc(accountTypeLabel(key))}</option>`
   ).join('');
@@ -1099,8 +1104,8 @@ function openAccountModal(account = null) {
     <div class="form-group">
       <label class="form-label" for="am-balance">${t('budget.startingBalanceLabel')}</label>
       <input type="number" class="form-input" id="am-balance"
-             step="${amountStep(state.currency, isEdit ? account.starting_balance : '')}" inputmode="decimal"
-             placeholder="${amountPlaceholder(state.currency)}" value="${isEdit ? account.starting_balance : ''}">
+             step="${amountStep(accountCurrency, isEdit ? account.starting_balance : '')}" inputmode="decimal"
+             placeholder="${amountPlaceholder(accountCurrency)}" value="${isEdit ? account.starting_balance : ''}">
       <p class="form-hint">${t('budget.startingBalanceHint')}</p>
     </div>
     <div class="form-group">
@@ -1187,7 +1192,7 @@ function openAccountModal(account = null) {
           reportFieldError(panel.querySelector('#am-balance'), t('budget.validAmountRequired'));
           return;
         }
-        if (rejectOffGridAmount(panel.querySelector('#am-balance'), startingBalance, state.currency, {
+        if (rejectOffGridAmount(panel.querySelector('#am-balance'), startingBalance, accountCurrency, {
           original: isEdit ? account.starting_balance : null,
         })) return;
 
@@ -2176,13 +2181,8 @@ function requestNameInPanel(panel, { title, label, placeholder }) {
  * @returns {boolean} true, wenn abgewiesen wurde (der Aufrufer bricht dann ab)
  */
 function rejectOffGridAmount(input, value, currency, { original = null, originalCurrency = null } = {}) {
-  if (fitsCurrencyGrid(value, currency)) return false;
-  // Der Bestandsschutz gilt nur, solange auch die Währung dieselbe ist: wer auf
-  // JPY umstellt, hat das Raster bewusst gewechselt und muss den Betrag anfassen.
-  const untouched = original != null && Number(original) === Number(value)
-    && (originalCurrency == null || originalCurrency === currency);
-  if (untouched) return false;
-  reportFieldError(input, t('budget.amountPrecisionRequired', {
+  if (amountIsSavable(value, currency, { original, originalCurrency })) return false;
+  reportFieldError(input, t('common.amountPrecisionRequired', {
     currency,
     step: smallestUnitLabel(currency),
   }));
