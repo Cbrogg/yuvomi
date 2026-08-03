@@ -630,8 +630,22 @@ function updateSplitInputs(panel) {
   validateSplitForm(panel);
 }
 
+/**
+ * Ein Geldbetrag aus dem Formular in der Schreibweise, die der Server erwartet.
+ *
+ * parseMoneyToMinor() in server/services/split-expenses.js nimmt ausschliesslich
+ * /^-?\d+(\.\d+)?$/ entgegen, die Eingabe folgt dagegen der Region: in de, cs
+ * oder pl trennt ein Komma, und der Platzhalter zeigt es auch so an. Ohne diese
+ * Umschrift kommt "12,50" unverändert am Server an - die Client-Prüfung stimmt
+ * zu (numberValue kennt das Komma), und das Anlegen scheitert erst danach mit
+ * einem Fehler, der auf kein Feld zeigt.
+ */
+function decimalString(value) {
+  return String(value ?? '').trim().replace(',', '.');
+}
+
 function numberValue(value) {
-  const normalized = String(value || '').trim().replace(',', '.');
+  const normalized = decimalString(value);
   if (!normalized) return NaN;
   return Number(normalized);
 }
@@ -744,7 +758,7 @@ function collectGroupDefaults(form, data) {
   const config = [];
   if (method === 'percentage' || method === 'shares') {
     form.querySelectorAll('.split-default-value').forEach((input) => {
-      const raw = String(input.value).trim();
+      const raw = decimalString(input.value);
       if (!raw) return;
       const uid = Number(input.name.replace('default_value_', ''));
       config.push(method === 'shares' ? { user_id: uid, shares: Number(raw) } : { user_id: uid, percentage: raw });
@@ -772,7 +786,7 @@ function collectSplitPayload(form) {
   const participants = [...form.querySelectorAll('input[name="participants"]:checked')].map((input) => Number(input.value));
   if (method === 'equal') return { participants, splits: [] };
   const splits = participants.map((userId) => {
-    const value = form.querySelector(`[name="split_value_${userId}"]`)?.value.trim() || '';
+    const value = decimalString(form.querySelector(`[name="split_value_${userId}"]`)?.value);
     if (method === 'percentage') return { user_id: userId, percentage: value };
     if (method === 'exact') return { user_id: userId, amount: value };
     return { user_id: userId, shares: Number(value) };
@@ -958,6 +972,7 @@ function openExpenseModal(expense = null) {
         if (!validateSplitForm(panel)) return;
         const form = panel.querySelector('#split-expense-form');
         const data = Object.fromEntries(new FormData(form));
+        data.amount = decimalString(data.amount);
         const { participants, splits } = collectSplitPayload(form);
         const payload = { ...data, participants, splits };
         // commit() lädt wartende Dateien erst jetzt hoch: ein abgebrochenes
@@ -1050,6 +1065,7 @@ function openSettlementModal() {
         e.preventDefault();
         if (samePerson()) { syncSameHint(); payeeSel.focus(); return; }
         const data = Object.fromEntries(new FormData(form));
+        data.amount = decimalString(data.amount);
         const proofIds = proof ? await proof.commit() : [];
         if (proofIds.length) data.proof_document_id = proofIds[0];
         await api.post(`/split-expenses/groups/${state.activeGroupId}/settlements`, data);

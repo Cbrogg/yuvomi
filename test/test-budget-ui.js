@@ -425,6 +425,42 @@ test('Betragsfelder holen ihre Schrittweite aus der Währung, nicht aus 0.01', (
   }
 });
 
+test('Geldbeträge gehen als Punkt-Dezimalstring an den Server', () => {
+  // Der Server nimmt nur /^-?\d+(\.\d+)?$/ entgegen, die Eingabefelder der
+  // geteilten Ausgaben sind Textfelder und folgen der Region - in de, cs oder
+  // pl trennt ein Komma. Ohne Umschrift stimmt die Client-Prüfung zu und der
+  // Server lehnt danach ab, mit einem Fehler, der auf kein Feld zeigt.
+  const src = withoutComments(splitExpenses);
+  assert.match(src, /function decimalString\(/, 'die Umschrift fehlt');
+  // Jeder Payload-Betrag läuft durch die Umschrift: FormData liefert den
+  // Rohwert des Textfeldes, nicht den normalisierten.
+  const posted = src.match(/data\.amount\s*=\s*[^\n;]+/g) || [];
+  assert.ok(posted.length >= 2, 'Ausgabe und Zahlung müssen den Betrag umschreiben');
+  for (const line of posted) {
+    assert.match(line, /decimalString\(/, `Betrag ohne Umschrift an den Server: ${line}`);
+  }
+});
+
+test('ein Abo darf null kosten', () => {
+  // Gratis-Tarife sind ein gültiger Bestand: validatePayload weist erst
+  // amount < 0 ab, das Schema prüft CHECK(amount >= 0). Eine Untergrenze aus
+  // der kleinsten Währungseinheit sperrte das Speichern eines 0-Abos.
+  const field = withoutComments(subscriptions).match(/<input[^>]*id="subscription-amount"[^>]*>/);
+  assert.ok(field, 'Abo-Betragsfeld nicht gefunden');
+  assert.match(field[0], /min="0"/, 'Abo-Preis braucht die Untergrenze null, nicht amountMin()');
+});
+
+test('gespeicherte Beträge werden beim Öffnen nicht gerundet', () => {
+  // toFixed() auf die Nachkommastellen der Währung schrieb einen Finanzwert
+  // still um: 12,50 in einem JPY-Darlehen wurde zu "13", und das nächste
+  // Speichern hätte den Betrag dauerhaft auf den gerundeten Wert gesetzt.
+  assert.doesNotMatch(
+    withoutComments(budget),
+    /\.toFixed\(currencyFractionDigits\(/,
+    'budget.js: Bestandsbetrag wird beim Rendern gerundet - amountStep fängt off-grid-Werte ab',
+  );
+});
+
 test('wählbare Währungen ziehen das Betragsfeld nach', () => {
   // Ein Formular, in dem die Währung gewählt werden kann, muss das Betragsfeld
   // beim Wechsel nachziehen - sonst behält es das Format der vorherigen Währung
@@ -437,6 +473,13 @@ test('wählbare Währungen ziehen das Betragsfeld nach', () => {
       `${file}: Währungswechsel im Formular ohne Nachziehen des Betragsfeldes`,
     );
   }
+  // Beim Wechsel gilt das strikte Raster der neuen Währung. Der
+  // Bestandswert-Schutz von amountStep/amountMin existiert nur fürs Öffnen des
+  // Dialogs: gäbe man den aktuellen Wert auch hier weiter, liefe ein von EUR
+  // auf JPY gestelltes Feld mit step="any" weiter und speicherte Hundertstel Yen.
+  const body = withoutComments(money).match(/export function applyAmountFormat[\s\S]*?\n\}/)[0];
+  assert.doesNotMatch(body, /amountStep\([^)]*input\.value/, 'applyAmountFormat darf den Bestandswert nicht weiterreichen');
+  assert.doesNotMatch(body, /amountMin\([^)]*input\.value/, 'applyAmountFormat darf den Bestandswert nicht weiterreichen');
 });
 
 test('Geldbeträge laufen über den Modul-Formatierer, nicht über eigene', () => {

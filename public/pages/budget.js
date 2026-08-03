@@ -18,7 +18,7 @@ import { openSubscriptionModal, render as renderSubscriptions } from '/pages/sub
 import { renderStats } from '/pages/budget-stats.js';
 import { renderPlans } from '/pages/budget-plans.js';
 import { toLocalDateKey, parseLocalDateKey, addLocalDays } from '/utils/date.js';
-import { formatMoney, formatSignedAmount, amountPlaceholder, amountStep, amountMin, currencyFractionDigits, applyAmountFormat } from '/utils/money.js';
+import { formatMoney, formatSignedAmount, amountPlaceholder, amountStep, amountMin, applyAmountFormat } from '/utils/money.js';
 import { budgetCategoryLabel } from '/utils/category-labels.js';
 import { appendCurrencyOptions } from '/settings/currency.js';
 import '/components/category-manager.js';
@@ -1684,9 +1684,12 @@ function openBudgetModal({ mode, entry = null, initialType = '' }) {
   const editAmount = isEdit && entry.recurrence_virtual && entry.recurrence_full_amount != null
     ? entry.recurrence_full_amount
     : (isEdit ? entry.amount : 0);
-  // Nachkommastellen der Währung, nicht fest zwei: bei JPY stand hier sonst
-  // "1300.00" im Feld, während Platzhalter und Schrittweite ganze Yen zeigen.
-  const absAmount  = isEdit ? Math.abs(editAmount).toFixed(currencyFractionDigits(state.currency)) : '';
+  // Den gespeicherten Betrag unverändert zeigen. Ein toFixed() auf die
+  // Nachkommastellen der Währung schrieb hier einen Finanzwert still um: ein
+  // in EUR erfasstes 12,50 wurde unter JPY zu "13", und das nächste Speichern
+  // hätte den Betrag dauerhaft auf den gerundeten Wert gesetzt. Dass ein
+  // solcher Bestandswert nicht ins Raster passt, fängt amountStep ab.
+  const absAmount  = isEdit ? String(Math.abs(editAmount)) : '';
   const curInterval = isEdit && entry.recurrence_interval ? entry.recurrence_interval : 'monthly';
   const intervalOption = (val, key) =>
     `<option value="${val}" ${curInterval === val ? 'selected' : ''}>${t(key)}</option>`;
@@ -2453,7 +2456,7 @@ function openLoanModal(loan = null) {
                step="${amountStep(loanCurrency, loan ? loan.total_amount : '')}"
                min="${amountMin(loanCurrency, loan ? loan.total_amount : '')}"
                placeholder="${amountPlaceholder(loanCurrency)}" inputmode="decimal"
-               value="${loan ? loan.total_amount.toFixed(currencyFractionDigits(loanCurrency)) : ''}">
+               value="${loan ? String(loan.total_amount) : ''}">
       </div>
       <div class="form-group">
         <label class="form-label" for="lm-installments">${t('budget.loanInstallmentsLabel')}</label>

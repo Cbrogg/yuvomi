@@ -15,7 +15,7 @@ import {
 import { esc } from '/utils/html.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
 import { toLocalDateKey } from '/utils/date.js';
-import { formatMoney, amountPlaceholder, amountStep, amountMin, applyAmountFormat } from '/utils/money.js';
+import { formatMoney, amountPlaceholder, amountStep, applyAmountFormat } from '/utils/money.js';
 
 let state = {
   subscriptions: [],
@@ -876,7 +876,7 @@ export function openSubscriptionModal(subscription = null) {
           <div class="form-group">
             <label class="form-label" for="subscription-amount">${t('subscriptions.amountLabel')}</label>
             <input class="form-input" id="subscription-amount" type="number"
-                   min="${amountMin(formCurrency, subscription?.amount ?? '')}"
+                   min="0"
                    step="${amountStep(formCurrency, subscription?.amount ?? '')}"
                    placeholder="${amountPlaceholder(formCurrency)}"
                    inputmode="decimal" required value="${subscription?.amount ?? ''}">
@@ -959,8 +959,11 @@ export function openSubscriptionModal(subscription = null) {
         }
       };
       wireCombobox(panel, 'subscription-currency');
+      // Ohne `required`: ein Abo darf 0 kosten (Gratis-Tarif, Server prüft
+      // amount >= 0), die Untergrenze bleibt also bei null statt bei einer
+      // kleinsten Einheit.
       panel.querySelector('#subscription-currency').addEventListener('change', (event) => {
-        applyAmountFormat(panel.querySelector('#subscription-amount'), event.target.value, { required: true });
+        applyAmountFormat(panel.querySelector('#subscription-amount'), event.target.value);
       });
       wireCombobox(panel, 'subscription-cycle');
       wireCombobox(panel, 'subscription-category');

@@ -113,6 +113,12 @@ export function amountMin(currency, currentValue) {
  * geteilte Ausgabe, Darlehen). Ohne das Nachziehen zeigt das Feld nach einem
  * Wechsel von EUR auf JPY weiter "0,00" und liesse Hundertstel Yen zu.
  *
+ * Der Bestandswert-Schutz von amountStep/amountMin gilt hier bewusst NICHT: er
+ * existiert, damit ein in EUR erfasster Betrag beim Öffnen des Dialogs nicht
+ * als ungültig gilt. Wer die Währung gerade selbst auf JPY stellt, hat den
+ * Wechsel dagegen bewusst ausgelöst - liesse man das Raster hier offen, wären
+ * Hundertstel Yen weiter eingebbar und würden auch so gespeichert.
+ *
  * @param {HTMLInputElement|null} input
  * @param {string} currency  ISO-Code
  * @param {{ required?: boolean }} [options]  required: das Feld verlangt einen
@@ -121,8 +127,8 @@ export function amountMin(currency, currentValue) {
 export function applyAmountFormat(input, currency, { required = false } = {}) {
   if (!input) return;
   input.placeholder = amountPlaceholder(currency);
-  input.step = amountStep(currency, input.value);
-  if (required) input.min = amountMin(currency, input.value);
+  input.step = amountStep(currency);
+  if (required) input.min = amountMin(currency);
 }
 
 /**
