@@ -675,3 +675,41 @@ test('install.sh baut OAuth-Callbacks und die Schluss-Adresse aus der Basis-URL'
   assert.match(src, /-X POST "http:\/\/localhost:\$\{YUVOMI_PORT\}\/api\/v1\/auth\/setup"/,
     'der Setup-Aufruf muss lokal bleiben');
 });
+
+test('der Download liefert die geschriebene .env, nicht eine Nachbildung im Browser', async () => {
+  // Die Abschlussseite baute ihre Kopie aus dem Browser-Zustand. Seit der Server
+  // beim Rerun bewahrt, was der Client nicht schickt, ist das die falsche
+  // Quelle: der Download enthielt weder die übernommenen Schlüssel noch die
+  // beiden Secrets, die der Wizard bewusst nie zu sehen bekommt. Wer die Datei
+  // als Sicherung beiseitelegte und später zurückspielte, warf genau das weg,
+  // was der Rerun gerettet hatte - und die Sicherung der einzigen
+  // Verschlüsselungsschlüssel war gar keine.
+  const dir = mkdtempSync(join(tmpdir(), 'oikos-dl-'));
+  try {
+    const contents = 'SESSION_SECRET=geheim-x\nDB_ENCRYPTION_KEY=geheim-y\nDATA_DIR=/mnt/tank\n';
+    writeFileSync(join(dir, '.env'), contents);
+    await withServer(dir, async base => {
+      const r = await fetch(`${base}/api/env-file`);
+      assert.equal(r.status, 200);
+      assert.match(r.headers.get('content-disposition'), /attachment; filename="\.env"/);
+      assert.equal(await r.text(), contents, 'der Download muss die Datei sein, Byte für Byte');
+
+      // Dieselbe Loopback-Schranke wie jede andere API-Route: die Datei enthält
+      // die Verschlüsselungsschlüssel.
+      const cross = await fetch(`${base}/api/env-file`, { headers: { Origin: 'https://evil.test' } });
+      assert.equal(cross.status, 403, 'Cross-Origin muss abgelehnt werden');
+    });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('die Abschlussseite baut die .env nicht mehr im Browser nach', () => {
+  const html = readFileSync(new URL('../tools/installer/install.html', import.meta.url), 'utf8');
+  assert.match(html, /a\.href = '\/api\/env-file';/,
+    'der Download muss die Datei vom Server holen');
+  // Die Nachbildung konnte prinzipiell nicht stimmen und ist entfallen; kehrt
+  // sie zurück, kehrt der Bug mit ihr zurück.
+  assert.doesNotMatch(html, /function renderEnvClient/,
+    'renderEnvClient ist ersatzlos entfallen - der Browser kennt die bewahrten Werte nicht');
+});

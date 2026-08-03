@@ -725,3 +725,25 @@ test('kein Deploy-Descriptor gibt einem UI-sperrenden Schlüssel einen nicht-lee
     'Diese Defaults setzen eine env-Variable, die ein UI-Feld sperrt - der Nutzer kann das '
     + `Feld danach in den Einstellungen nicht mehr ändern:\n${offenders.join('\n')}`);
 });
+
+test('der Dokument-Mount zielt auf DOCUMENT_STORAGE_LOCAL_PATH, nie auf einen festen Pfad', () => {
+  // DOCUMENT_STORAGE_LOCAL_DIR wurde eingeführt, damit Host-Ordner und
+  // Container-Pfad nicht auseinanderlaufen. Die Compose-Dateien mounteten aber
+  // weiter auf das LITERALE /documents, während die App nach
+  // DOCUMENT_STORAGE_LOCAL_PATH schreibt. Wer diesen Pfad ändert, schreibt
+  // seine Uploads damit ins Container-Overlay - beim nächsten
+  // `pull && up -d` weg, die Verweise in der Datenbank bleiben. Also genau der
+  // Schaden, den die Variable laut ihrem eigenen Kommentar verhindert.
+  const offenders = [];
+  for (const path of ['docker-compose.yml', 'podman-compose.yml', 'docs/docker-compose.portainer.yml']) {
+    const src = readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
+    for (const [line] of src.matchAll(/^.*\$\{DOCUMENT_STORAGE_LOCAL_DIR[^\n]*$/gm)) {
+      if (!/:\$\{DOCUMENT_STORAGE_LOCAL_PATH:-\/documents\}/.test(line)) {
+        offenders.push(`${path}: ${line.trim()}`);
+      }
+    }
+  }
+  assert.deepEqual(offenders, [],
+    'Der Host-Ordner wird auf ein festes Ziel gemountet, während die App den konfigurierten '
+    + `Pfad benutzt:\n${offenders.join('\n')}`);
+});

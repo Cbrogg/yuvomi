@@ -515,6 +515,37 @@ async function route(req, res, server) {
     }
   }
 
+  /**
+   * Die tatsächlich geschriebene .env zum Herunterladen.
+   *
+   * Die Abschlussseite baute ihre Kopie aus dem Browser-Zustand
+   * (`renderEnvClient(buildEnv())`). Seit der Server beim Rerun bewahrt, was der
+   * Client nicht schickt, ist dieser Zustand die falsche Quelle: der Download
+   * enthielt weder die übernommenen Schlüssel noch die beiden bewahrten Secrets,
+   * die der Wizard bewusst nie zu sehen bekommt. Wer die Datei als Sicherung
+   * beiseitelegte und später zurückspielte, warf damit genau das weg, was der
+   * Rerun gerettet hatte - und die Sicherung der einzigen
+   * Verschlüsselungsschlüssel war gar keine.
+   *
+   * Die Secrets verlassen den Server damit nur auf ausdrückliche Anforderung
+   * und über dieselbe Loopback-Schranke wie jede andere API-Route; in den
+   * JS-Zustand der Seite gelangen sie weiterhin nicht.
+   */
+  if (req.method === 'GET' && url.pathname === '/api/env-file') {
+    try {
+      const envPath = resolve(projectRoot(), '.env');
+      if (!existsSync(envPath)) return json(res, 404, { error: '.env not found' });
+      res.writeHead(200, {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Content-Disposition': 'attachment; filename=".env"',
+        'Cache-Control': 'no-store',
+      });
+      return res.end(readFileSync(envPath, 'utf8'));
+    } catch (err) {
+      return json(res, 500, { error: err.message });
+    }
+  }
+
   if (req.method === 'POST' && url.pathname === '/api/save-env') {
     try {
       const body = await readBody(req);
