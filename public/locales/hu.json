@@ -2893,7 +2893,7 @@
         "missingToken": "Nem található érvényes token."
     },
     "email": {
-        "host": "SMTP host",
+        "host": "SMTP-kiszolgáló",
         "purposeHint": "SMTP-kiszolgáló nélkül a Yuvomi nem küld jelszó-visszaállító hivatkozásokat és értesítéseket.",
         "port": "Port",
         "security": "Titkosítás",
