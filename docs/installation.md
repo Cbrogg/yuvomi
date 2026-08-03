@@ -528,7 +528,8 @@ Mount a host directory to the container path and enable the backend:
 ```yaml
 # docker-compose.yml
 volumes:
-  - ${DOCUMENT_STORAGE_LOCAL_DIR:-./documents}:/documents
+  # Both ends come from the .env, so changing the container path moves the mount with it
+  - ${DOCUMENT_STORAGE_LOCAL_DIR:-./documents}:${DOCUMENT_STORAGE_LOCAL_PATH:-/documents}
 environment:
   - DOCUMENT_STORAGE_LOCAL_ENABLED=true
   - DOCUMENT_STORAGE_LOCAL_PATH=/documents
@@ -538,7 +539,7 @@ environment:
 |----------|-------------|---------|----------|
 | `DOCUMENT_STORAGE_LOCAL_ENABLED` | Write new document files to the mounted folder (`true`/`false`) | `false` | No |
 | `DOCUMENT_STORAGE_LOCAL_PATH` | Container path for document files | `/documents` | No |
-| `DOCUMENT_STORAGE_LOCAL_DIR` | Compose-only: host folder mounted to `/documents` | `./documents` | No |
+| `DOCUMENT_STORAGE_LOCAL_DIR` | Compose-only: host folder mounted to `DOCUMENT_STORAGE_LOCAL_PATH` | `./documents` | No |
 
 > Ensure the mounted folder is writable by the container (adjust ownership/permissions as needed).
 > Files live on the host volume, so include that folder in your host-level backups — database

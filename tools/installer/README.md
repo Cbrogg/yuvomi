@@ -70,16 +70,23 @@ dedicated `podman-compose.yml` (SELinux `:Z` labels).
    podman-compose.yml up -d` / `podman-compose -f podman-compose.yml up -d`)
 6. Polls the health endpoint until the container is ready
 7. Creates your first admin account via `POST /api/v1/auth/setup`
-8. Offers to download a copy of the written `.env` on the final screen — the
-   only backup of newly generated encryption keys, which cannot be recovered if
-   lost. Keys carried over from a previous run appear as a comment rather than a
-   value, since the browser never sees them; those are still in the `.env` on
-   disk and in its `.env.bak-<ISO>` copy
+8. Offers to download the written `.env` on the final screen — the only backup
+   of newly generated encryption keys, which cannot be recovered if lost. The
+   download is served from disk (`GET /api/env-file`), so it is the file itself,
+   including values carried over from a previous run and the two secrets the
+   wizard itself never sees. Same loopback guard as every other API route
 
 The local-folder document-storage fields are optional. Setting `DOCUMENT_STORAGE_LOCAL_ENABLED=true`
 writes new document files (including calendar attachments) to `DOCUMENT_STORAGE_LOCAL_PATH` (default
-`/documents`, a mounted host folder) instead of the database, and takes precedence over every selected
-backend. Mount that folder into the container (see `docker-compose.yml`); existing files are not migrated.
+`/documents`) instead of the database, and takes precedence over every selected backend. Existing
+files are not migrated.
+
+The two local-storage paths are the two ends of one mount and must not drift apart:
+`DOCUMENT_STORAGE_LOCAL_DIR` is the **host** folder, `DOCUMENT_STORAGE_LOCAL_PATH` the **container**
+path the app writes to. The Compose files derive both ends from the `.env`
+(`${DOCUMENT_STORAGE_LOCAL_DIR}:${DOCUMENT_STORAGE_LOCAL_PATH}`), because a mount fixed at
+`/documents` would send uploads into the container layer as soon as anyone changes the path — gone on
+the next image update, while the database keeps referencing them.
 
 The WebDAV document-storage fields are optional. Non-empty
 `DOCUMENT_STORAGE_WEBDAV_ENABLED`, `_URL`, `_USERNAME`, `_PASSWORD`, and `_PATH` values override
