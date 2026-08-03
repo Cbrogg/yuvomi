@@ -1992,7 +1992,7 @@
         "pushIosNotInstalled": "Push доступний в iOS лише після встановлення застосунку на початковий екран і запуску звідти.",
         "pushTestFailed": "Не вдалося доставити. Перевірте журнали сервера (Push send failed).",
         "pushTestNoDevice": "На сервері не зареєстровано жодного пристрою. Вимкніть перемикач і ввімкніть його знову.",
-        "pageEmail": "Email (SMTP)",
+        "pageEmail": "Ел. пошта (SMTP)",
         "pageEmailDescription": "Налаштуйте доступ SMTP для скидання паролів і сповіщень.",
         "resetPasswordLabel": "Новий пароль",
         "resetPasswordPlaceholder": "Залиште порожнім, щоб зберегти пароль",

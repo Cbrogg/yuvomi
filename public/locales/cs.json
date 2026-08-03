@@ -1992,7 +1992,7 @@
         "pushIosNotInstalled": "Push je na iOS dostupný až po instalaci aplikace na plochu a jejím otevření odtud.",
         "pushTestFailed": "Doručení selhalo. Zkontrolujte prosím protokoly serveru (Push send failed).",
         "pushTestNoDevice": "Na serveru není registrováno žádné zařízení. Vypněte přepínač a znovu jej zapněte.",
-        "pageEmail": "Email (SMTP)",
+        "pageEmail": "E-mail (SMTP)",
         "pageEmailDescription": "Nastavte SMTP přístup pro obnovu hesel a oznámení.",
         "resetPasswordLabel": "Nové heslo",
         "resetPasswordPlaceholder": "Ponechte prázdné pro zachování hesla",

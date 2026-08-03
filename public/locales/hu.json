@@ -1766,7 +1766,7 @@
         "weatherRemoved": "Open-Meteo letiltva.",
         "weatherActiveProvider": "Aktív szolgáltató",
         "weatherProviderOpenMeteo": "Open-Meteo",
-        "weatherProviderOwm": "OpenWeatherMap (legacy, via .env)",
+        "weatherProviderOwm": "OpenWeatherMap (örökölt, .env-en keresztül)",
         "weatherProviderNone": "Nincs konfigurálva",
         "weatherSwitchHint": "Open-Meteo a mentéskor aktiválódik, és az OWM figyelmen kívül lesz hagyva.",
         "householdWeatherOverrideHint": "A tagok az „Időjárás“ oldalon saját helyet adhatnak meg, amely ezt felülírja.",

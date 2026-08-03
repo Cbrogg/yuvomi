@@ -1766,7 +1766,7 @@
         "weatherRemoved": "Open-Meteo disattivato.",
         "weatherActiveProvider": "Provider attivo",
         "weatherProviderOpenMeteo": "Open-Meteo",
-        "weatherProviderOwm": "OpenWeatherMap (legacy, via .env)",
+        "weatherProviderOwm": "OpenWeatherMap (legacy, tramite .env)",
         "weatherProviderNone": "Non configurato",
         "weatherSwitchHint": "Open-Meteo sarà attivato al salvataggio e OWM ignorato.",
         "householdWeatherOverrideHint": "Ogni membro può impostare la propria posizione in «Il mio meteo», che sostituisce questa.",
