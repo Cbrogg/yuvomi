@@ -677,6 +677,19 @@ test('setup verwaister Gast: Gast in leerer Gruppe, zusätzlich Mitglied einer z
   assert.equal(e.status, 201);
 });
 
+test('Gast mit Gruppe sieht die fremde Gruppe auch im Dashboard nicht', async () => {
+  // Noch vor dem Löschen: Die Mitgliedschaft allein öffnet Salden und Ausgaben
+  // der Nebenkasse, das Confinement muss auch hier greifen.
+  const r = await call('GET', '/dashboard', { actor: { id: ORPHAN_ID, role: 'member' } });
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.body.data.groups.map((g) => g.id), [ORPHAN_GROUP], 'nur die eigene Gruppe');
+  // Die einzige Ausgabe und der einzige Ledger-Eintrag des Gasts liegen in der
+  // Nebenkasse - beides darf über die Mitgliedschaft nicht durchschlagen.
+  assert.deepEqual(r.body.data.recent_expenses, [], 'keine fremden Ausgaben');
+  assert.deepEqual(r.body.data.total_owing, [], 'kein Saldo aus der Nebenkasse');
+  assert.deepEqual(r.body.data.total_owed, []);
+});
+
 test('leere Gast-Gruppe wird gelöscht -> 200', async () => {
   const r = await call('DELETE', `/groups/${ORPHAN_GROUP}`, { actor: { id: OWNER, role: 'member' } });
   assert.equal(r.status, 200);
@@ -714,6 +727,11 @@ test('verwaister Gast sieht keine Gruppen und kein Dashboard', async () => {
   const dash = await call('GET', '/dashboard', { actor: { id: ORPHAN_ID, role: 'member' } });
   assert.equal(dash.status, 200);
   assert.deepEqual(dash.body.data.groups, []);
+  // Salden und jüngste Ausgaben hängen an der Mitgliedschaft, nicht an der
+  // Gruppenliste - ohne eigenen Filter blieben sie sichtbar.
+  assert.deepEqual(dash.body.data.recent_expenses, [], 'keine Ausgaben');
+  assert.deepEqual(dash.body.data.total_owing, [], 'keine offenen Schulden');
+  assert.deepEqual(dash.body.data.total_owed, [], 'keine offenen Forderungen');
 });
 
 test('verwaister Gast: Suche liefert nichts (kein Fallback auf "unbeschränkt")', async () => {

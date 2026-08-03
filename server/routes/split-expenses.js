@@ -373,24 +373,31 @@ router.get('/meta', (_req, res) => {
 router.get('/dashboard', (req, res) => {
   try {
     const uid = userId(req);
+    // Alle drei Abfragen tragen dasselbe Confinement: die Mitgliedschaft allein
+    // reicht nicht, ein Gast kann zusätzlich in fremden Gruppen stehen. Der
+    // Filter hängt am Gast-Status, nicht an der group_id - ein Gast ohne Gruppe
+    // sieht nichts, nicht alles.
+    const guest = splitGuestScope(req);
+    const restrictedGroupId = guest?.groupId ?? null;
+    const isGuest = guest ? 1 : 0;
     const balances = db.get().prepare(`
       SELECT l.currency, l.user_id, u.display_name, SUM(l.amount_minor) AS net_minor
       FROM expense_ledger_entries l
       JOIN expense_group_members gm ON gm.group_id = l.group_id AND gm.user_id = @uid
       JOIN expense_groups g ON g.id = l.group_id AND g.status = 'active'
       LEFT JOIN users u ON u.id = l.user_id
+      WHERE (@isGuest = 0 OR l.group_id = @restrictedGroupId)
       GROUP BY l.currency, l.user_id
-    `).all({ uid });
+    `).all({ uid, restrictedGroupId, isGuest });
     const mine = balances.filter((row) => row.user_id === uid);
     const totalOwed = mine.filter((row) => row.net_minor > 0).map((row) => normalizeLedgerRow({ ...row, amount_minor: row.net_minor }));
     const totalOwing = mine.filter((row) => row.net_minor < 0).map((row) => normalizeLedgerRow({ ...row, amount_minor: -row.net_minor }));
-    const guest = splitGuestScope(req);
     const groupWhere = guest
       ? "visible.user_id = @userId AND g.status = 'active' AND g.id = @restrictedGroupId"
       : "visible.user_id = @userId AND g.status = 'active'";
     // groupId === null (gelöschte Gruppe) trifft über `g.id = NULL` keine Zeile.
     const groups = db.get().prepare(`${groupSelectWhere(groupWhere)} ORDER BY g.updated_at DESC LIMIT 6`)
-      .all({ userId: uid, restrictedGroupId: guest?.groupId ?? null });
+      .all({ userId: uid, restrictedGroupId });
     const recent = db.get().prepare(`
       SELECT e.*, g.name AS group_name, u.display_name AS payer_name
       FROM expenses e
@@ -398,9 +405,10 @@ router.get('/dashboard', (req, res) => {
       JOIN expense_group_members gm ON gm.group_id = g.id AND gm.user_id = @uid
       LEFT JOIN users u ON u.id = e.payer_id
       WHERE e.status = 'active'
+        AND (@isGuest = 0 OR e.group_id = @restrictedGroupId)
       ORDER BY e.expense_date DESC, e.created_at DESC
       LIMIT 8
-    `).all({ uid });
+    `).all({ uid, restrictedGroupId, isGuest });
     const recentSerialized = serializeExpenseList(recent, userId(req));
     res.json({ data: { total_owed: totalOwed, total_owing: totalOwing, groups, recent_expenses: recentSerialized } });
   } catch (err) {
