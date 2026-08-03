@@ -519,6 +519,29 @@ function setupAuthSession(req, res, user) {
 
 // --------------------------------------------------------
 /**
+ * Bringt einen Claim-Wert auf das app-weite Username-Format
+ * `[a-zA-Z0-9._-]{3,64}` (siehe die Prüfungen in /setup, /invites und den
+ * User-Routen). Fremde Zeichen (`@` aus Synology-`sub`s, Leerzeichen, Umlaute)
+ * werden zu Bindestrichen, Diakritika vorher transliteriert. Ergibt der Wert
+ * weniger als drei verwertbare Zeichen, liefert die Funktion `null`, damit der
+ * nächste Kandidat greift.
+ *
+ * @param {unknown} raw
+ * @returns {string|null}
+ */
+function sanitizeOidcUsername(raw) {
+  if (typeof raw !== 'string') return null;
+  const cleaned = raw
+    .normalize('NFKD')
+    .replace(/\p{Diacritic}/gu, '')
+    .replace(/[^a-zA-Z0-9._-]+/g, '-')
+    .replace(/-{2,}/g, '-')
+    .slice(0, 64)
+    .replace(/^[.-]+|[.-]+$/g, '');
+  return cleaned.length >= 3 ? cleaned : null;
+}
+
+/**
  * Findet oder erstellt einen User anhand der (validierten) OIDC-Claims.
  *
  * Identität primär über den (kryptografisch validierten) `sub`. Existiert kein
@@ -534,11 +557,15 @@ function setupAuthSession(req, res, user) {
  * Kontrolle steht und keine unverifizierten E-Mails zulässt.
  *
  * @param {import('better-sqlite3-multiple-ciphers').Database} database
- * @param {{ sub: string, email?: string, email_verified?: boolean, name?: string, preferred_username?: string }} claims
+ * @param {{ sub: string, iss?: string, email?: string, email_verified?: boolean, name?: string, preferred_username?: string, username?: string }} claims
  * @returns {{ id: number, role: string, [key: string]: any }}
  */
 export function findOrCreateOidcUser(database, claims) {
-  const { sub, email, email_verified, name, preferred_username } = claims;
+  const { sub, iss, email, email_verified, name, preferred_username, username: usernameClaim } = claims;
+
+  // Der Issuer aus dem validierten ID-Token kennt sich selbst am besten; OIDC_ISSUER
+  // ist nur der konfigurierte Einstiegspunkt und kann davon abweichen (CNAME o. Ä.).
+  const provider = iss || process.env.OIDC_ISSUER || null;
 
   // 1. Bestehenden OIDC-Nutzer über den eindeutigen sub finden
   const existing = database.prepare('SELECT * FROM users WHERE oidc_sub = ?').get(sub);
@@ -564,27 +591,34 @@ export function findOrCreateOidcUser(database, claims) {
     if (matches.length === 1) {
       database.prepare(
         'UPDATE users SET oidc_sub = ?, oidc_provider = ? WHERE id = ?',
-      ).run(sub, process.env.OIDC_ISSUER ?? null, matches[0].id);
+      ).run(sub, provider, matches[0].id);
       return database.prepare('SELECT * FROM users WHERE id = ?').get(matches[0].id);
     }
   }
 
-  // 3. Eindeutigen username ableiten (Kollision mit bestehenden Usernamen vermeiden)
-  const base = (preferred_username || email || `oidc-${sub}`).slice(0, 64);
+  // 3. Eindeutigen username ableiten (Kollision mit bestehenden Usernamen vermeiden).
+  //    Reihenfolge: preferred_username (Standard-Claim) → username (non-standard,
+  //    u. a. Synology DSM SSO) → sub. Die E-Mail ist bewusst KEIN Kandidat (#653):
+  //    sie ist bei geteilten Familien-Adressen nicht eindeutig, vermischt Kontaktdaten
+  //    mit dem Identifikator und trägt den Domain-Teil unnötig in den Namen.
+  const base = sanitizeOidcUsername(preferred_username)
+    ?? sanitizeOidcUsername(usernameClaim)
+    ?? sanitizeOidcUsername(sub)
+    ?? 'oidc-user';
   let username = base;
   for (let n = 1; database.prepare('SELECT 1 FROM users WHERE username = ?').get(username); n++) {
     const suffix = `-${n}`;
     username = base.slice(0, 64 - suffix.length) + suffix;
   }
 
-  const display_name = (name || preferred_username || email || username).slice(0, 128);
+  const display_name = (name || preferred_username || usernameClaim || email || username).slice(0, 128);
   const avatar_color = avatarColors[Math.floor(Math.random() * avatarColors.length)];
 
   // oidc_provider = Issuer-URL (zukunftssicher für mehrere Provider)
   const result = database.prepare(`
     INSERT INTO users (username, display_name, password_hash, avatar_color, role, oidc_sub, oidc_provider)
     VALUES (?, ?, '$oidc$', ?, 'member', ?, ?)
-  `).run(username, display_name, avatar_color, sub, process.env.OIDC_ISSUER ?? null);
+  `).run(username, display_name, avatar_color, sub, provider);
 
   return database.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
 }
@@ -1089,11 +1123,16 @@ router.get('/oidc/callback', async (req, res) => {
 
     const user = findOrCreateOidcUser(db.get(), {
       sub:                claims.sub,
+      // iss stammt aus dem validierten ID-Token und ist gegen die Discovery-Metadaten
+      // geprüft, also verlässlicher als die konfigurierte OIDC_ISSUER-URL
+      iss:                claims.iss,
       email:              userinfo.email,
       // email_verified kann je nach Provider im UserInfo oder im ID-Token stehen
       email_verified:     userinfo.email_verified ?? claims.email_verified,
       name:               userinfo.name,
       preferred_username: userinfo.preferred_username,
+      // non-standard, u. a. Synology DSM SSO: der reine Kontoname ohne Directory-Teil
+      username:           userinfo.username ?? claims.username,
     });
     await setupAuthSession(req, res, user);
 
