@@ -431,3 +431,58 @@ test('die Dauererwartung und der Ausweg stehen im Markup', () => {
   assert.match(html, /elapsed >= STALL_AFTER_MS\) revealDockerEscape\(\)/,
     'die Schwelle muss den Ausweg tatsächlich einblenden');
 });
+
+test('ein fehlgeschlagener Start bleibt nicht ewig in der Pull-Phase', async () => {
+  // spawnStart loest beim spawn-Event auf, damit der Request nicht auf den
+  // Image-Pull wartet. Der Exit-Code war damit niemandes Zustaendigkeit:
+  // beendete sich `up -d` danach mit einem Fehler (belegter Port, Image nicht
+  // gefunden, fehlende Rechte), sah /api/status nur einen fehlenden Container -
+  // und der galt als laufender Pull. Der Wizard drehte bis zum
+  // 15-Minuten-Timeout, statt sofort "Erneut versuchen" anzubieten.
+  const { classifyContainerState, spawnStart } = await import('../tools/installer/install-server.js');
+
+  // Solange der Start laeuft, bleibt ein fehlender Container der Normalfall.
+  assert.deepEqual(classifyContainerState('', null), { status: 'starting', phase: 'pull' });
+  assert.deepEqual(classifyContainerState('', 0), { status: 'starting', phase: 'pull' });
+  // Ist er mit Fehler beendet, entsteht hier nie mehr ein Container.
+  assert.deepEqual(classifyContainerState('', 1), { status: 'error', phase: 'boot' });
+  assert.deepEqual(classifyContainerState('', 125), { status: 'error', phase: 'boot' });
+  // Ein vorhandener Container gewinnt weiterhin ueber den Exit-Code: `up -d`
+  // kann nonzero enden, obwohl der Container laeuft (etwa beim zweiten Aufruf).
+  assert.equal(classifyContainerState('running', 1).status, 'starting');
+  assert.equal(classifyContainerState('exited', null).status, 'error');
+
+  // Und spawnStart meldet den Exit ueberhaupt weiter.
+  const seen = [];
+  const r = await spawnStart('sh', ['-c', 'exit 3'], {}, null, code => seen.push(code));
+  assert.equal(r.ok, true, 'der Spawn selbst gelingt');
+  await new Promise(resolve => setTimeout(resolve, 200));
+  assert.deepEqual(seen, [3], 'der Exit-Code muss den onExit-Callback erreichen');
+});
+
+test('ein Retry raeumt das laufende Polling ab, statt ein zweites zu starten', () => {
+  // "Erneut versuchen" erscheint schon nach 90 Sekunden Stillstand, also
+  // waehrend gepollt wird - nicht erst im Fehlerfall, wo clearInterval laeuft.
+  // startDocker() ueberschrieb pollInterval, die alte Timer-ID war verloren,
+  // und zwei Timer pollten weiter. Beim Erfolg liess sich nur der neuere
+  // stoppen; der verwaiste triggerte den Erfolgsuebergang wieder und wieder.
+  const html = readFileSync(new URL('../tools/installer/install.html', import.meta.url), 'utf8');
+
+  const startDocker = html.match(/async function startDocker\(\) \{([\s\S]*?)\n\}/);
+  assert.ok(startDocker, 'startDocker() nicht gefunden');
+  const body = startDocker[1];
+  const clearIdx = body.indexOf('clearInterval(pollInterval)');
+  const setIdx = body.indexOf('setInterval(pollDocker');
+  assert.ok(clearIdx !== -1, 'startDocker() raeumt kein laufendes Intervall ab');
+  assert.ok(setIdx !== -1, 'startDocker() setzt kein Polling-Intervall');
+  assert.ok(clearIdx < setIdx, 'das Abraeumen muss VOR dem neuen setInterval stehen');
+
+  // Zweiter Riegel: pollDocker ist async, also kann ein Tick seine Antwort noch
+  // auswerten, nachdem ein anderer den Endzustand gemeldet hat.
+  for (const fn of ['dockerSucceeded', 'dockerFailed']) {
+    const m = html.match(new RegExp(`function ${fn}\\([^)]*\\) \\{([\\s\\S]*?)\\n\\}`));
+    assert.ok(m, `${fn}() nicht gefunden`);
+    assert.match(m[1], /if \(dockerDone\) return;/,
+      `${fn}() muss den Endzustand gegen einen zweiten Aufruf schuetzen`);
+  }
+});

@@ -588,3 +588,90 @@ test('install.sh leitet Reverse-Proxy-Betrieb aus dem Schema der Basis-URL ab', 
   assert.match(fn[1], /\*\)\s*YUVOMI_TRUST_PROXY='loopback'/,
     'ohne https muss TRUST_PROXY=loopback sein, sonst ist X-Forwarded-For fälschbar');
 });
+
+test('POST /api/save-env verliert bei einem Rerun keinen bestehenden Wert', async () => {
+  // PRESERVED_KEYS war eine Allowlist aus zwei Schlüsseln und deckte damit zwei
+  // Schlüssel ab statt der Regel. Die Datei wird komplett neu geschrieben,
+  // sanitizeEnv verwirft leere Werte, und der Wizard startet jedes Feld leer -
+  // er lädt bestehende Werte nie nach. Ein Rerun löschte deshalb alles ausser
+  // den beiden Secrets: gemessen 7 von 10 Schlüsseln, darunter DATA_DIR mit dem
+  // Datenbankpfad. Die Installation lief danach auf dem Standardpfad weiter und
+  // sah aus, als wären die Daten weg.
+  const dir = mkdtempSync(join(tmpdir(), 'oikos-rerun-'));
+  try {
+    const before = {
+      SESSION_SECRET: 'alt-session',
+      DB_ENCRYPTION_KEY: 'alt-db',
+      DATA_DIR: '/mnt/tank/yuvomi',
+      EMAIL_SMTP_HOST: 'smtp.example.test',
+      EMAIL_SMTP_PASS: 'geheim',
+      OIDC_ISSUER: 'https://auth.example.test',
+      WEBDAV_BACKUP_URL: 'https://cloud.example.test/dav',
+      VAPID_SUBJECT: 'mailto:admin@example.test',
+      BASE_URL: 'https://planer.example.test',
+      // Ausserhalb des ENV_SCHEMA: der Installer darf auch die Zeilen nicht
+      // verlieren, die er gar nicht kennt.
+      LOG_LEVEL: 'debug',
+    };
+    writeFileSync(
+      join(dir, '.env'),
+      Object.entries(before).map(([k, v]) => `${k}=${v}`).join('\n') + '\n',
+    );
+
+    await withServer(dir, async base => {
+      // Der Rerun, wie der Wizard ihn schickt: ein bewusst geänderter Wert,
+      // alle übrigen Felder leer, weil sie leer starten.
+      const r = await fetch(`${base}/api/save-env`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          env: {
+            TZ: 'Europe/Vienna',
+            DATA_DIR: '', EMAIL_SMTP_HOST: '', EMAIL_SMTP_PASS: '',
+            OIDC_ISSUER: '', WEBDAV_BACKUP_URL: '', VAPID_SUBJECT: '', BASE_URL: '',
+          },
+        }),
+      });
+      assert.equal(r.status, 200);
+    });
+
+    const after = readEnvFile(join(dir, '.env'));
+    for (const [key, value] of Object.entries(before)) {
+      assert.equal(after[key], value, `${key} hat den Rerun nicht überlebt`);
+    }
+    // Ein tatsächlich gesendeter Wert muss weiterhin gewinnen, sonst wäre der
+    // Installer wirkungslos geworden.
+    assert.equal(after.TZ, 'Europe/Vienna', 'ein gesendeter Wert muss den alten überschreiben');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('install.sh baut OAuth-Callbacks und die Schluss-Adresse aus der Basis-URL', () => {
+  // Der Dialog fragt seit dem BASE_URL-Schritt die oeffentliche Origin ab, die
+  // Callbacks wurden aber weiter aus Host und Port zusammengesetzt. Hinter
+  // einem Proxy bekam Google damit eine Redirect-URI mit falschem Schema und
+  // dem internen Port - der OAuth-Flow konnte gar nicht abschliessen, und
+  // genau fuer diesen Fall ist die Frage da. Dasselbe galt fuer die
+  // "Oeffnen"-Adresse am Ende: sie zeigte auf einen Host, den der Nutzer von
+  // aussen nicht erreicht.
+  const src = installShSource();
+
+  for (const path of [
+    '/api/v1/calendar/google/callback',
+    '/api/v1/documents/storage/google-drive/callback',
+  ]) {
+    const uses = [...src.matchAll(new RegExp(`([^"\\s]*)${path.replaceAll('/', '\\/')}`, 'g'))];
+    assert.ok(uses.length > 0, `keine Verwendung von ${path} gefunden`);
+    for (const [, prefix] of uses) {
+      assert.match(prefix, /\$\{YUVOMI_BASE_URL\}$/,
+        `${path} wird aus "${prefix}" gebaut statt aus YUVOMI_BASE_URL`);
+    }
+  }
+
+  assert.match(src, /local url="\$\{YUVOMI_BASE_URL:-/,
+    'die Schluss-Adresse muss die Basis-URL nutzen');
+  // Der Setup-Aufruf selbst geht weiterhin an den lokalen Port: der Installer
+  // spricht den Container direkt an, nicht ueber den Proxy.
+  assert.match(src, /-X POST "http:\/\/localhost:\$\{YUVOMI_PORT\}\/api\/v1\/auth\/setup"/,
+    'der Setup-Aufruf muss lokal bleiben');
+});

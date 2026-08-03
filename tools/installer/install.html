@@ -1973,6 +1973,13 @@ const PHASE_KEYS = {
 };
 
 async function startDocker() {
+  // Ein noch laufendes Intervall zuerst abraeumen. Der Retry-Knopf erscheint
+  // schon nach 90 Sekunden Stillstand, also waehrend gepollt wird - ohne das
+  // hier ueberschreibt die Zeile unten pollInterval, die alte ID ist verloren,
+  // und zwei Timer pollen weiter. Beim Erfolg laesst sich nur der neuere
+  // stoppen, der verwaiste triggert den Erfolgsuebergang wieder und wieder.
+  clearInterval(pollInterval);
+  pollInterval = null;
   dockerStart = Date.now();
   pollFailures = 0;
   dockerDone = false;
@@ -2074,6 +2081,9 @@ async function pollDocker() {
 }
 
 function dockerSucceeded() {
+  // Endzustand nur einmal betreten: ein spaeter Tick aus einem Timer, der die
+  // Antwort schon unterwegs hatte, darf den Schritt nicht erneut umschalten.
+  if (dockerDone) return;
   clearInterval(pollInterval);
   dockerDone = true;
   $('dkr-icon').className = 'ok-icon';
@@ -2101,6 +2111,11 @@ function restartDocker() {
 }
 
 function dockerFailed(logs) {
+  // Symmetrisch zu dockerSucceeded: pollDocker ist async, also kann ein Tick
+  // seine Antwort noch auswerten, nachdem ein anderer den Erfolg gemeldet hat.
+  // Ohne diesen Riegel ueberschriebe ein solcher Nachzuegler den fertigen
+  // Bildschirm mit einer Fehlermeldung.
+  if (dockerDone) return;
   clearInterval(pollInterval);
   dockerDone = true;
   $('dkr-icon').className = 'err-icon';

@@ -222,7 +222,7 @@ function getEngine() {
  * launch without waiting for compose to finish; 'error' (e.g. ENOENT when
  * docker is missing) surfaces the failure to the caller instead of swallowing it.
  */
-export function spawnStart(cmd, args, opts = {}, onOutput = null) {
+export function spawnStart(cmd, args, opts = {}, onOutput = null, onExit = null) {
   return new Promise(resolvePromise => {
     let settled = false;
     const done = v => { if (!settled) { settled = true; resolvePromise(v); } };
@@ -242,6 +242,11 @@ export function spawnStart(cmd, args, opts = {}, onOutput = null) {
       child.stderr?.on('data', d => onOutput(d.toString()));
     }
     child.on('error', err => done({ ok: false, error: err.message }));
+    // Bewusst beim spawn-Event aufloesen, nicht beim Exit: `up -d` laeuft
+    // detached weiter, waehrend das Image geladen wird, und der Request darf
+    // darauf nicht warten. Der Exit-Code interessiert trotzdem - er ist das
+    // einzige Signal dafuer, dass aus diesem Start kein Container mehr wird.
+    child.on('exit', code => onExit?.(code));
     child.on('spawn', () => done({ ok: true }));
   });
 }
@@ -254,11 +259,25 @@ export function spawnStart(cmd, args, opts = {}, onOutput = null) {
  */
 const START_LOG_LIMIT = 8000;
 let startLog = '';
-export function resetStartLog() { startLog = ''; }
+export function resetStartLog() { startLog = ''; startExit = null; }
 export function getStartLog() { return startLog; }
 function appendStartLog(chunk) {
   startLog = (startLog + chunk).slice(-START_LOG_LIMIT);
 }
+
+/**
+ * Exit-Code des letzten `compose up -d`, oder null solange er laeuft.
+ *
+ * spawnStart loest beim spawn-Event auf, damit der Request nicht auf den
+ * Image-Pull wartet. Damit war der Exit-Code aber niemandes Zustaendigkeit:
+ * beendete sich der Befehl danach mit einem Fehler (belegter Port, Image nicht
+ * gefunden, fehlende Rechte), sah /api/status weiterhin nur einen fehlenden
+ * Container - und der galt als laufender Pull. Der Wizard drehte dann bis zum
+ * 15-Minuten-Timeout, statt sofort „Erneut versuchen" anzubieten.
+ */
+let startExit = null;
+export function getStartExit() { return startExit; }
+function recordStartExit(code) { startExit = code; }
 
 // Nur diese beiden Zustände sind endgültig. `created` und `restarting` sind
 // Durchgangsstationen, und eine leere Ausgabe heisst „den Container gibt es noch
@@ -289,8 +308,15 @@ export function classifyHealth(healthCode, health) {
  * ohne Container-Engine prüfbar bleibt.
  * @returns {{ status: 'running'|'starting'|'error', phase: 'pull'|'boot' }}
  */
-export function classifyContainerState(state) {
-  if (!state) return { status: 'starting', phase: 'pull' };
+export function classifyContainerState(state, startExitCode = null) {
+  if (!state) {
+    // Kein Container. Solange `up -d` laeuft (startExitCode === null), ist das
+    // der Normalfall waehrend des Pulls. Hat sich der Befehl dagegen schon mit
+    // einem Fehler beendet, entsteht hier nie mehr ein Container - dann ist
+    // Warten sinnlos und der Nutzer soll es sofort erfahren.
+    if (startExitCode !== null && startExitCode !== 0) return { status: 'error', phase: 'boot' };
+    return { status: 'starting', phase: 'pull' };
+  }
   if (DEAD_STATES.has(state)) return { status: 'error', phase: 'boot' };
   return { status: 'starting', phase: 'boot' };
 }
@@ -497,13 +523,29 @@ async function route(req, res, server) {
 
       const envPath = resolve(projectRoot(), '.env');
 
-      // Letzte Instanz gegen den zerstörerischen Rerun: schickt der Client für
-      // einen der bewahrten Schlüssel nichts, wird der bestehende Wert
-      // übernommen statt ein neuer erzeugt. Greift auch, wenn ein älteres
-      // Frontend aus dem Browser-Cache noch nichts von preservedKeys weiß.
+      // Letzte Instanz gegen den zerstörerischen Rerun. Das war eine Allowlist
+      // aus zwei Schlüsseln, und damit deckte sie zwei Schlüssel ab statt der
+      // Regel: die Datei wird komplett neu geschrieben, sanitizeEnv verwirft
+      // leere Werte, und der Wizard startet JEDES Feld leer (er lädt bestehende
+      // Werte nie nach). Ein Rerun löschte deshalb alles ausser den beiden
+      // Secrets - gemessen 7 von 10 Schlüsseln, darunter DATA_DIR mit dem
+      // Datenbankpfad, EMAIL_SMTP_PASS, OIDC_ISSUER und BASE_URL. Die
+      // Installation lief danach mit Standardpfad weiter und sah aus, als wären
+      // die Daten weg.
+      //
+      // Die Regel: was der Client nicht mit einem nicht-leeren Wert schickt,
+      // bleibt stehen. Auch Schlüssel ausserhalb des Schemas (LOG_LEVEL,
+      // OPENWEATHER_*, von Hand ergänzte) - der Installer ist ein
+      // Einrichtungswerkzeug und darf keine Zeile verlieren, die er nicht
+      // versteht. Dasselbe leistet preserve_unmanaged() in install.sh.
+      //
+      // Preis: über den Wizard lässt sich ein Wert nicht mehr LEEREN, nur
+      // überschreiben. Das ist der richtige Tausch, solange die Felder leer
+      // starten - dann hat niemand einen Wert bewusst entfernt, er hat ihn nie
+      // gesehen. Zum Löschen dient die .env selbst.
       const existingEnv = readEnvFile(envPath);
-      for (const key of PRESERVED_KEYS) {
-        if (!result.env[key] && existingEnv[key]) result.env[key] = existingEnv[key];
+      for (const [key, value] of Object.entries(existingEnv)) {
+        if (!result.env[key] && value) result.env[key] = value;
       }
 
       let backup = null;
@@ -526,7 +568,7 @@ async function route(req, res, server) {
       const engine = await getEngine();
       const { cmd, args } = composeCommand(engine, ['up', '-d']);
       resetStartLog();
-      const result = await spawnStart(cmd, args, { cwd: projectRoot() }, appendStartLog);
+      const result = await spawnStart(cmd, args, { cwd: projectRoot() }, appendStartLog, recordStartExit);
       if (!result.ok) console.error(`${cmd} compose error:`, result.error);
       return json(res, result.ok ? 200 : 500, result);
     } catch (err) {
@@ -565,7 +607,7 @@ async function route(req, res, server) {
         state.on('error', onSpawnError);
         state.stdout.on('data', d => { stateOut += d.toString().trim(); });
         state.on('close', () => {
-          const verdict = classifyContainerState(stateOut);
+          const verdict = classifyContainerState(stateOut, getStartExit());
           if (verdict.status !== 'error') return reply({ ...verdict, logs: getStartLog() });
           const logs = safeSpawn(logsCmd.cmd, logsCmd.args, { cwd: projectRoot(), stdio: 'pipe' });
           let logsOut = '';

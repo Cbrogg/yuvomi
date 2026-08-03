@@ -313,10 +313,10 @@ configure_calendar() {
   read -r want_google
   if [ "${want_google,,}" = "y" ]; then
     info "$(t calendar.google_hint)"
-    info "$(t calendar.redirect_hint "http://${YUVOMI_HOST}:${YUVOMI_PORT}/api/v1/calendar/google/callback")"
+    info "$(t calendar.redirect_hint "${YUVOMI_BASE_URL}/api/v1/calendar/google/callback")"
     ask "$(t calendar.client_id)"; read -r GOOGLE_CLIENT_ID
     ask "$(t calendar.client_secret)"; read -rs GOOGLE_CLIENT_SECRET; printf "\n"
-    GOOGLE_REDIRECT_URI="http://${YUVOMI_HOST}:${YUVOMI_PORT}/api/v1/calendar/google/callback"
+    GOOGLE_REDIRECT_URI="${YUVOMI_BASE_URL}/api/v1/calendar/google/callback"
   fi
 
   ask "$(t calendar.apple_enable)"
@@ -369,7 +369,7 @@ configure_document_storage() {
   ask "$(t document_google_drive.enable)"
   read -r want_document_google_drive
   if [ "${want_document_google_drive,,}" = "y" ]; then
-    info "$(t document_google_drive.redirect_hint "http://${YUVOMI_HOST}:${YUVOMI_PORT}/api/v1/documents/storage/google-drive/callback")"
+    info "$(t document_google_drive.redirect_hint "${YUVOMI_BASE_URL}/api/v1/documents/storage/google-drive/callback")"
     ask "$(t document_google_drive.client_id)"; read -r GOOGLE_DRIVE_CLIENT_ID
     ask "$(t document_google_drive.client_secret)"; read -rs GOOGLE_DRIVE_CLIENT_SECRET; printf "\n"
     if { [ -n "$GOOGLE_DRIVE_CLIENT_ID" ] && [ -z "$GOOGLE_DRIVE_CLIENT_SECRET" ]; } || { [ -z "$GOOGLE_DRIVE_CLIENT_ID" ] && [ -n "$GOOGLE_DRIVE_CLIENT_SECRET" ]; }; then
@@ -378,7 +378,7 @@ configure_document_storage() {
     if [ -z "$GOOGLE_DRIVE_CLIENT_ID" ] && { [ -z "$GOOGLE_CLIENT_ID" ] || [ -z "$GOOGLE_CLIENT_SECRET" ]; }; then
       err "$(t document_google_drive.err_credentials)"
     fi
-    GOOGLE_DRIVE_REDIRECT_URI="http://${YUVOMI_HOST}:${YUVOMI_PORT}/api/v1/documents/storage/google-drive/callback"
+    GOOGLE_DRIVE_REDIRECT_URI="${YUVOMI_BASE_URL}/api/v1/documents/storage/google-drive/callback"
   fi
 }
 
@@ -568,7 +568,10 @@ create_admin() {
   http_code=$(printf '%s' "$response" | tail -n1)
   body=$(printf '%s' "$response" | head -n-1)
 
-  local url="http://${YUVOMI_HOST}:${YUVOMI_PORT}"
+  # Die Adresse, unter der der Haushalt die App tatsächlich öffnet, nicht die,
+  # auf die der Container hört. Hinter einem Proxy sind das zwei verschiedene,
+  # und ein Link auf http://host:port führt dort ins Leere.
+  local url="${YUVOMI_BASE_URL:-http://${YUVOMI_HOST}:${YUVOMI_PORT}}"
   if [ "$http_code" = "201" ]; then
     success "$(t admin.created)"
     printf "\n%s%s━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━%s\n"   "$BOLD" "$GREEN" "$RESET"
