@@ -7,7 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.75.3] - 2026-08-03
+## [1.75.4] - 2026-08-03
+
+### Changed
+
+- Confirmation dialogs for destructive actions now say what they actually destroy. Twenty-five of them asked "Delete X?" and left it there, which in a self-hosted household is the only chance anyone gets to learn the consequence: there is no support desk and no undo. Each one now names the concrete outcome instead of repeating the warning. Deleting a budget account keeps its entries but strips their account link. Deleting a folder keeps the documents and moves them out of it. Deleting a medication takes its schedule and the whole intake history along. Deleting a subscribed calendar removes the events it imported. Disconnecting Google drops deletions that had not been pushed yet, so those events stay behind in Google, and it clears the calendar selection, so reconnecting alone does not resume the sync.
+- Where one component serves several modules, each module now supplies its own consequence rather than sharing a single sentence. The category manager is used by Budget, Tasks, Contacts, Shopping and Pantry, and those servers disagree: the first three refuse to delete a category that is still in use, Shopping moves the items to the first remaining category, and Pantry leaves the supplies without a storage location. One shared text was wrong for two of the five.
+- Rejecting or withdrawing a reward request is no longer marked as dangerous. The reserved points are booked back and the request can be made again while the reward is still in the catalogue, so a red button claimed a finality the action does not have.
+
+### Fixed
+
+- Deleting a subscription category or payment method explained nothing at all when no subscription used it yet. The linked budget subcategory is removed in either case, so the dialog was silent exactly where the effect was least expected.
+- The dialog for removing a CalDAV account read as though the appointments were going away with it. They stay; what ends is the sync.
 
 ### Fixed
 
