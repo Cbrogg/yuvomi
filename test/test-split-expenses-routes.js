@@ -653,7 +653,7 @@ test('split-defaults: Guest darf Defaults nicht ändern -> 403', async () => {
 // haushaltsweit berechtigtes Konto. Migration 124 stellt das auf SET NULL um,
 // die Routen lesen group_id IS NULL als "keine Gruppe", nicht als "frei".
 // --------------------------------------------------------------------------
-let ORPHAN_GROUP, ORPHAN_ID, SIDE_GROUP;
+let ORPHAN_GROUP, ORPHAN_ID, SIDE_GROUP, SIDE_EXPENSE;
 test('setup verwaister Gast: Gast in leerer Gruppe, zusätzlich Mitglied einer zweiten Gruppe', async () => {
   const g = await call('POST', '/groups', { actor: { id: OWNER, role: 'member' }, body: { name: 'Wochenendtrip', type: 'travel' } });
   ORPHAN_GROUP = g.body.data.id;
@@ -675,6 +675,22 @@ test('setup verwaister Gast: Gast in leerer Gruppe, zusätzlich Mitglied einer z
     body: { title: 'Nebenkassen-Beleg', amount: '20.00', currency: 'EUR', split_method: 'equal', category: 'general', payer_id: OWNER, participants: [OWNER, ORPHAN_ID], expense_date: '2026-05-20' },
   });
   assert.equal(e.status, 201);
+  SIDE_EXPENSE = e.body.data.id;
+});
+
+test('Gast mit Gruppe erreicht die fremde Ausgabe nicht per ID', async () => {
+  // /expenses/:id hängt nicht an requireGroupAccess, sondern an der
+  // Mitgliedschaft - lesend, kommentierend und schreibend.
+  const guest = { id: ORPHAN_ID, role: 'member' };
+  const comment = await call('POST', `/expenses/${SIDE_EXPENSE}/comments`, { actor: guest, body: { comment: 'mitgelesen' } });
+  assert.equal(comment.status, 404);
+  const put = await call('PUT', `/expenses/${SIDE_EXPENSE}`, { actor: guest, body: { title: 'umbenannt', amount: '1.00', currency: 'EUR' } });
+  assert.equal(put.status, 404);
+  const del = await call('DELETE', `/expenses/${SIDE_EXPENSE}`, { actor: guest });
+  assert.equal(del.status, 404);
+  // Gegenprobe: Der Owner kommt weiterhin heran.
+  const owner = await call('POST', `/expenses/${SIDE_EXPENSE}/comments`, { actor: { id: OWNER, role: 'member' }, body: { comment: 'ok' } });
+  assert.equal(owner.status, 201);
 });
 
 test('Gast mit Gruppe sieht die fremde Gruppe auch im Dashboard nicht', async () => {

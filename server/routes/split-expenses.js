@@ -206,6 +206,10 @@ function syncGuestArtifacts(database, userId, { displayName, phone, email, birth
 }
 
 function loadExpense(expenseId, req) {
+  // Die Mitgliedschaft allein reicht als Zugang nicht: ein Gast kann zusätzlich
+  // in fremden Gruppen stehen. Ohne diesen Filter erreicht er deren Ausgaben
+  // per ID - lesend, kommentierend und als deren Ersteller auch schreibend.
+  const guest = splitGuestScope(req);
   const expense = db.get().prepare(`
     SELECT e.*, u.display_name AS payer_name, g.name AS group_name
     FROM expenses e
@@ -213,9 +217,17 @@ function loadExpense(expenseId, req) {
     JOIN expense_group_members gm ON gm.group_id = e.group_id AND gm.user_id = @userId
     LEFT JOIN users u ON u.id = e.payer_id
     WHERE e.id = @expenseId AND e.status = 'active'
-  `).get({ expenseId, userId: userId(req) });
-  if (!expense && !isSystemAdmin(req)) return null;
-  if (!expense && isSystemAdmin(req)) {
+      AND (@isGuest = 0 OR e.group_id = @restrictedGroupId)
+  `).get({
+    expenseId,
+    userId: userId(req),
+    restrictedGroupId: guest?.groupId ?? null,
+    isGuest: guest ? 1 : 0,
+  });
+  // Der Admin-Bypass gilt nicht für Gastkonten - sonst hinge das Confinement an
+  // der Annahme, dass ein Gast nie die Admin-Rolle trägt.
+  if (!expense && (!isSystemAdmin(req) || guest)) return null;
+  if (!expense) {
     return db.get().prepare(`
       SELECT e.*, u.display_name AS payer_name, g.name AS group_name
       FROM expenses e
