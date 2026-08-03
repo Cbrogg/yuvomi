@@ -264,7 +264,7 @@ Seventeen independent modules share one calm, consistent interface. Turn on what
 | ![health](https://raw.githubusercontent.com/ulsklyc/yuvomi/main/docs/icons/health.png) | **Health** | Per-member vitals, medications, labs, activity and menstrual cycle tracking, with trend charts. |
 | ![notes](https://raw.githubusercontent.com/ulsklyc/yuvomi/main/docs/icons/notes.png) | **Notes &amp; Contacts** | Colored Markdown sticky notes plus a contact directory with CardDAV sync and vCard import/export. |
 | ![birthdays](https://raw.githubusercontent.com/ulsklyc/yuvomi/main/docs/icons/birthdays.png) | **Birthdays** | Birthday tracker with automatic calendar events, age display and reminders. |
-| ![family](https://raw.githubusercontent.com/ulsklyc/yuvomi/main/docs/icons/family.png) | **Family** | Member profiles with roles, photos and contact details, synced to Contacts and Birthdays. |
+| ![family](https://raw.githubusercontent.com/ulsklyc/yuvomi/main/docs/icons/family.png) | **Family** | Member profiles with roles, photos and contact details, synced to Contacts and Birthdays. New members join through an invite link and pick their own password. |
 | ![reminders](https://raw.githubusercontent.com/ulsklyc/yuvomi/main/docs/icons/reminders.png) | **Reminders** | Task and calendar reminders via in-app badges, opt-in Web Push and household Gotify/ntfy channels. |
 | ![api-tokens](https://raw.githubusercontent.com/ulsklyc/yuvomi/main/docs/icons/api-tokens.png) | **API Tokens** | Bearer / X-API-Key tokens with an OpenAPI 3.0 spec and a built-in MCP endpoint for AI agents. |
 | ![backup](https://raw.githubusercontent.com/ulsklyc/yuvomi/main/docs/icons/backup.png) | **Backup** | Manual and scheduled database backup/restore with pre-restore rollback and optional WebDAV upload. |
@@ -402,7 +402,7 @@ Update by pulling the new image (`docker compose pull && docker compose up -d`);
 <details>
 <summary><b>Can the whole family use it, not just me?</b></summary>
 <br>
-Yes. Every household member is a full user with their own profile, role and avatar. Optional SSO (any OIDC provider) and self-service password reset via email keep sign-in painless for everyone.
+Yes. Every household member is a full user with their own profile, role and avatar. You invite them with a link and they choose their own password, so no admin ever has to hand one over. Optional SSO (any OIDC provider) and self-service password reset via email keep sign-in painless for everyone.
 </details>
 
 <details>
@@ -419,6 +419,7 @@ Nothing. Yuvomi is free and MIT-licensed. You provide the server; there is no su
 - **Zero build step** - pure ES modules, no bundler, no transpiler, no framework.
 - **Privacy first** - fully self-hosted, optional SQLCipher AES-256 database encryption, zero telemetry.
 - **SSO / OpenID Connect** - optional single sign-on via any OIDC provider (Authentik, Keycloak, Google, Microsoft Entra), configured with four env vars using the Authorization Code + PKCE flow.
+- **Invite links** - admins invite new members with a link instead of setting a password for them; the invited person chooses their own, and the link expires after 7 days. Mail delivery is optional, the link works without SMTP.
 - **Self-service password reset** - optional SMTP email lets users reset a forgotten password themselves via a time-limited link, with anti-enumeration by design.
 - **Multilingual** - 23 languages with automatic locale detection (de, en, es, fr, it, sv, el, ru, tr, zh, ja, ar, hi, pt, uk, pl, nl, cs, vi, hu, ko, id, fa). A separate household setting decides the language of entries Yuvomi creates itself, so an exported calendar and the API speak your household's language instead of English.
 

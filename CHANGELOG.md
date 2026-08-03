@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.75.0] - 2026-08-03
+
+Adding someone to the household no longer means inventing a password for them and passing it on. You send them a link, they choose their own, and nobody else ever knows it.
+
+### Added
+
+- Invitations: admins invite new members with a link instead of setting their password. The panel sits under Settings, Administration, Family and roles, next to the member list. Username and display name are optional, so the invited person can pick their own; family role and admin rights are decided by whoever invites.
+- The link is shown exactly once, with a copy button. Only a hash of it is stored, so a lost link cannot be recovered, only revoked and reissued. Invitations expire after seven days and can be revoked at any time, which kills the link immediately.
+- Sending the invitation by email is optional and needs SMTP plus `BASE_URL`. Without either, the panel says so instead of claiming a mail it never sent, and you pass the link on yourself.
+- Creating an account directly is unchanged and stays the right way for a child with no mail address and no device of their own.
+
+### Fixed
+
+- Password reset: the confirmation after setting a new password was never visible. It sat inside the form that gets hidden on success, so the page went blank for a moment and then jumped to the login screen.
+- The password reset and forgot-password pages were still English in 16 of the 23 languages.
+
+### Security
+
+- Role and family role are taken from the invitation and ignored in the request that redeems it, so an invited member cannot make themselves an admin. Redeeming happens inside the transaction that creates the account, so one link can never produce two accounts, and an expired link cannot slip through while the password is being hashed.
+
 ## [1.74.0] - 2026-08-03
 
 The installer got a thorough pass, and most of what came out of it are fixes for ways an installation could quietly lose data or configuration. If you installed once and never ran the installer again, little changes for you. If you ever re-ran it, or deploy through Portainer, several things that silently did not work now do.

@@ -34,6 +34,7 @@ Vulnerabilities that require physical access to the host or root on the server a
   Double Submit Cookie pattern listed below and the `Secure` flag.)
 - CSRF protection via Double Submit Cookie on all state-changing requests
 - Passwords hashed with bcrypt v6 (cost factor 12). Passwords are Unicode-normalized to NFC before hashing and verification, so non-ASCII characters (umlauts, accents) authenticate identically regardless of how the browser normalizes the input. Hashes created before this normalization are still accepted and are silently re-hashed to NFC on the next successful login
+- Invite links store only a SHA-256 hash of the token, never the token itself, so a leaked database cannot be turned into working invitations. They expire after 7 days, are single-use, and can be revoked at any time. Redemption happens in the same transaction that creates the user, so one token can never produce two accounts. Role and family role are taken from the invitation the admin created and are ignored in the redeeming request, so an invited member cannot make themselves an admin. The two public invite routes are rate-limited
 - Login rate limiting (5 attempts/min per IP)
 - API rate limiting (300 requests/min per IP)
 - Content Security Policy via Helmet (`self`-only)

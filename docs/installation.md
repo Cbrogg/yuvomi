@@ -307,7 +307,7 @@ Open your browser and navigate to:
 http://localhost:3000
 ```
 
-Log in with the admin credentials you just created. You can add family members from the **Settings** page.
+Log in with the admin credentials you just created. You can add family members from the **Settings** page: either invite them with a link so they choose their own password, or create the account directly and hand over the credentials yourself.
 
 ---
 
