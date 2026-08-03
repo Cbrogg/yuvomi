@@ -2111,7 +2111,29 @@
         "mealieAccountUpdated": "Konto Mealie zaktualizowane.",
         "mealieAccountDeleted": "Usunięto konto Mealie.",
         "mealieDeleteAccountConfirm": "To usunie również {{count}} odzwierciedlonych przepisów i odłączy je od wszystkich wpisów planu posiłków.",
-        "mealieLastError": "Ostatni błąd synchronizacji: {{message}}"
+        "mealieLastError": "Ostatni błąd synchronizacji: {{message}}",
+        "invites": {
+            "title": "Zaproszenia",
+            "intro": "Zapraszaj nowych członków linkiem. Hasło ustalają sami.",
+            "add": "+ Utwórz zaproszenie",
+            "submit": "Utwórz zaproszenie",
+            "usernameHint": "Opcjonalne. Jeśli zostawisz puste, zaproszona osoba sama wybierze nazwę.",
+            "sendEmail": "Wyślij zaproszenie e-mailem",
+            "linkTitle": "Link zaproszenia",
+            "linkOnce": "Ten link jest pokazywany tylko teraz. Przekaż go, zanim opuścisz stronę.",
+            "copy": "Kopiuj link",
+            "copied": "Link skopiowany.",
+            "copyFailed": "Kopiowanie się nie powiodło. Zaznacz link i skopiuj go ręcznie.",
+            "emailSent": "Zaproszenie zostało wysłane e-mailem.",
+            "emailNotSent": "Wysyłka e-maili nie jest skonfigurowana. Przekaż link samodzielnie.",
+            "empty": "Brak oczekujących zaproszeń.",
+            "expires": "Ważne do {{date}}",
+            "revoke": "Unieważnij",
+            "revokeConfirm": "Unieważnić to zaproszenie? Link przestanie działać.",
+            "revoked": "Zaproszenie zostało unieważnione.",
+            "created": "Zaproszenie zostało utworzone.",
+            "revokeConfirmDetail": "Wysłany lub skopiowany link natychmiast przestaje działać. Zaproszona osoba nie założy już z nim konta; trzeba by zaprosić ją ponownie."
+        }
     },
     "login": {
         "tagline": "Witaj ponownie w swoim planerze rodzinnym.",
@@ -2127,7 +2149,7 @@
         "loginWithSso": "Zaloguj się przez SSO",
         "orDivider": "lub",
         "ssoError": "Logowanie SSO nie powiodło się. Spróbuj ponownie.",
-        "forgotPassword": "Forgot password?",
+        "forgotPassword": "Nie pamiętasz hasła?",
         "networkError": "Połączenie nie powiodło się. Sprawdź, czy serwer działa, i spróbuj ponownie.",
         "capsLockWarning": "Caps Lock jest włączony.",
         "fillAllFields": "Wprowadź nazwę użytkownika i hasło."
@@ -2852,23 +2874,23 @@
         "noReleaseNotes": "Brak informacji o wydaniu dla tej wersji."
     },
     "forgotPassword": {
-        "title": "Reset password",
-        "intro": "Enter your username or email address. We'll send you a reset link.",
-        "identifierLabel": "Username or email",
-        "submit": "Send link",
-        "sent": "If a matching account exists, a reset link has been sent.",
-        "backToLogin": "Back to login"
+        "title": "Zresetuj hasło",
+        "intro": "Podaj nazwę użytkownika lub e-mail. Wyślemy Ci link do zresetowania hasła.",
+        "identifierLabel": "Nazwa użytkownika lub e-mail",
+        "submit": "Wyślij link",
+        "sent": "Jeśli pasujące konto istnieje, link do zresetowania hasła został wysłany.",
+        "backToLogin": "Powrót do logowania"
     },
     "resetPassword": {
-        "title": "Set a new password",
-        "passwordLabel": "New password",
-        "confirmLabel": "Confirm password",
-        "submit": "Save password",
-        "success": "Your password has been changed. You can now sign in.",
-        "mismatch": "The passwords do not match.",
-        "tooShort": "The password must be at least 8 characters long.",
-        "invalidToken": "This link is invalid or has expired.",
-        "missingToken": "No valid token was found."
+        "title": "Ustaw nowe hasło",
+        "passwordLabel": "Nowe hasło",
+        "confirmLabel": "Potwierdź hasło",
+        "submit": "Zapisz hasło",
+        "success": "Hasło zostało zmienione. Możesz się teraz zalogować.",
+        "mismatch": "Hasła nie są zgodne.",
+        "tooShort": "Hasło musi mieć co najmniej 8 znaków.",
+        "invalidToken": "Ten link jest nieprawidłowy lub wygasł.",
+        "missingToken": "Nie znaleziono prawidłowego tokenu."
     },
     "email": {
         "host": "SMTP host",
@@ -3762,5 +3784,26 @@
         "openAction": "Otwórz {{name}}",
         "limitReached": "Maksymalnie dokumentów: {{count}}.",
         "limitReached_one": "Maksymalnie dokumentów: {{count}}."
+    },
+    "join": {
+        "title": "Skonfiguruj konto",
+        "intro": "Otrzymałeś zaproszenie do Yuvomi. Ustaw tutaj swoje dane logowania.",
+        "usernameLabel": "Nazwa użytkownika",
+        "fieldFixed": "Ustalone w zaproszeniu.",
+        "displayNameLabel": "Nazwa wyświetlana",
+        "passwordLabel": "Hasło",
+        "confirmLabel": "Potwierdź hasło",
+        "submit": "Utwórz konto",
+        "success": "Konto zostało utworzone. Możesz się teraz zalogować.",
+        "mismatch": "Hasła nie są zgodne.",
+        "tooShort": "Hasło musi mieć co najmniej 8 znaków.",
+        "invalidToken": "To zaproszenie jest nieprawidłowe, wygasło lub zostało już wykorzystane.",
+        "missingToken": "Nie znaleziono prawidłowego tokenu.",
+        "usernameRequired": "Wybierz nazwę użytkownika.",
+        "usernameInvalid": "Nazwa użytkownika musi mieć od 3 do 64 znaków i może zawierać wyłącznie litery, cyfry, kropki, myślniki i podkreślenia.",
+        "usernameTaken": "Ta nazwa użytkownika jest już zajęta.",
+        "error": "Nie udało się utworzyć konta. Spróbuj ponownie.",
+        "displayNameTooLong": "Nazwa wyświetlana może mieć najwyżej 128 znaków.",
+        "previewFailed": "Nie udało się teraz sprawdzić zaproszenia. Odśwież stronę za chwilę."
     }
 }

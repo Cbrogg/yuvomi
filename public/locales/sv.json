@@ -2099,7 +2099,29 @@
         "mealieAccountUpdated": "Mealie-konto uppdaterat.",
         "mealieAccountDeleted": "Mealie-konto borttaget.",
         "mealieDeleteAccountConfirm": "Detta tar även bort {{count}} speglade recept och kopplar bort dem från alla måltidsplaneringsposter.",
-        "mealieLastError": "Senaste synkroniseringsfel: {{message}}"
+        "mealieLastError": "Senaste synkroniseringsfel: {{message}}",
+        "invites": {
+            "title": "Inbjudningar",
+            "intro": "Bjud in nya medlemmar med en länk. Lösenordet väljer de själva.",
+            "add": "+ Skapa inbjudan",
+            "submit": "Skapa inbjudan",
+            "usernameHint": "Valfritt. Lämnar du fältet tomt väljer den inbjudna sitt eget namn.",
+            "sendEmail": "Skicka inbjudan via e-post",
+            "linkTitle": "Inbjudningslänk",
+            "linkOnce": "Länken visas bara nu. Skicka vidare den innan du lämnar sidan.",
+            "copy": "Kopiera länk",
+            "copied": "Länken kopierades.",
+            "copyFailed": "Kopieringen misslyckades. Markera länken och kopiera den för hand.",
+            "emailSent": "Inbjudan skickades via e-post.",
+            "emailNotSent": "Ingen e-postutskick är konfigurerad. Skicka länken själv.",
+            "empty": "Det finns ingen öppen inbjudan.",
+            "expires": "Giltig till {{date}}",
+            "revoke": "Återkalla",
+            "revokeConfirm": "Återkalla inbjudan? Länken slutar då fungera.",
+            "revoked": "Inbjudan återkallades.",
+            "created": "Inbjudan skapades.",
+            "revokeConfirmDetail": "En länk du redan skickat eller kopierat slutar fungera direkt. Den inbjudna personen kan inte längre skapa ett konto med den; du måste bjuda in på nytt."
+        }
     },
     "login": {
         "tagline": "Välkommen tillbaka till din familjeplanerare.",
@@ -2115,7 +2137,7 @@
         "loginWithSso": "Logga in med SSO",
         "orDivider": "eller",
         "ssoError": "SSO-inloggning misslyckades. Försök igen.",
-        "forgotPassword": "Forgot password?",
+        "forgotPassword": "Glömt lösenordet?",
         "networkError": "Anslutningen misslyckades. Kontrollera att servern körs och försök igen.",
         "capsLockWarning": "Caps Lock är på.",
         "fillAllFields": "Ange ditt användarnamn och lösenord."
@@ -2852,23 +2874,23 @@
         "noReleaseNotes": "Inga versionsnoteringar för den här versionen."
     },
     "forgotPassword": {
-        "title": "Reset password",
-        "intro": "Enter your username or email address. We'll send you a reset link.",
-        "identifierLabel": "Username or email",
-        "submit": "Send link",
-        "sent": "If a matching account exists, a reset link has been sent.",
-        "backToLogin": "Back to login"
+        "title": "Återställ lösenord",
+        "intro": "Ange ditt användarnamn eller din e-postadress. Vi skickar en återställningslänk.",
+        "identifierLabel": "Användarnamn eller e-post",
+        "submit": "Skicka länk",
+        "sent": "Om ett matchande konto finns har en återställningslänk skickats.",
+        "backToLogin": "Tillbaka till inloggningen"
     },
     "resetPassword": {
-        "title": "Set a new password",
-        "passwordLabel": "New password",
-        "confirmLabel": "Confirm password",
-        "submit": "Save password",
-        "success": "Your password has been changed. You can now sign in.",
-        "mismatch": "The passwords do not match.",
-        "tooShort": "The password must be at least 8 characters long.",
-        "invalidToken": "This link is invalid or has expired.",
-        "missingToken": "No valid token was found."
+        "title": "Ange ett nytt lösenord",
+        "passwordLabel": "Nytt lösenord",
+        "confirmLabel": "Bekräfta lösenord",
+        "submit": "Spara lösenord",
+        "success": "Ditt lösenord har ändrats. Du kan logga in nu.",
+        "mismatch": "Lösenorden stämmer inte överens.",
+        "tooShort": "Lösenordet måste vara minst 8 tecken långt.",
+        "invalidToken": "Länken är ogiltig eller har gått ut.",
+        "missingToken": "Ingen giltig token hittades."
     },
     "email": {
         "host": "SMTP host",
@@ -3762,5 +3784,26 @@
         "openAction": "Öppna {{name}}",
         "limitReached": "Högst {{count}} dokument.",
         "limitReached_one": "Högst {{count}} dokument."
+    },
+    "join": {
+        "title": "Skapa ditt konto",
+        "intro": "Du har blivit inbjuden till Yuvomi. Ange dina inloggningsuppgifter här.",
+        "usernameLabel": "Användarnamn",
+        "fieldFixed": "Bestämt av inbjudan.",
+        "displayNameLabel": "Visningsnamn",
+        "passwordLabel": "Lösenord",
+        "confirmLabel": "Bekräfta lösenord",
+        "submit": "Skapa konto",
+        "success": "Ditt konto har skapats. Du kan logga in nu.",
+        "mismatch": "Lösenorden stämmer inte överens.",
+        "tooShort": "Lösenordet måste vara minst 8 tecken långt.",
+        "invalidToken": "Inbjudan är ogiltig, har gått ut eller har redan använts.",
+        "missingToken": "Ingen giltig token hittades.",
+        "usernameRequired": "Välj ett användarnamn.",
+        "usernameInvalid": "Användarnamnet måste vara 3 till 64 tecken långt och får bara innehålla bokstäver, siffror, punkter, bindestreck och understreck.",
+        "usernameTaken": "Användarnamnet är redan taget.",
+        "error": "Kontot kunde inte skapas. Försök igen.",
+        "displayNameTooLong": "Visningsnamnet får vara högst 128 tecken långt.",
+        "previewFailed": "Inbjudan kunde inte kontrolleras just nu. Ladda om sidan om en stund."
     }
 }

@@ -2099,7 +2099,29 @@
         "mealieAccountUpdated": "Mealie hesabı güncellendi.",
         "mealieAccountDeleted": "Mealie hesabı silindi.",
         "mealieDeleteAccountConfirm": "Bu işlem ayrıca {{count}} yansıtılmış tarifi kaldırır ve bunları tüm yemek planı girişlerinden ayırır.",
-        "mealieLastError": "Son senkronizasyon hatası: {{message}}"
+        "mealieLastError": "Son senkronizasyon hatası: {{message}}",
+        "invites": {
+            "title": "Davetler",
+            "intro": "Yeni üyeleri bağlantıyla davet et. Parolalarını kendileri belirler.",
+            "add": "+ Davet oluştur",
+            "submit": "Davet oluştur",
+            "usernameHint": "İsteğe bağlı. Boş bırakırsan davet edilen kişi adını kendi seçer.",
+            "sendEmail": "Daveti e-posta ile gönder",
+            "linkTitle": "Davet bağlantısı",
+            "linkOnce": "Bu bağlantı yalnızca şimdi görünür. Sayfadan ayrılmadan ilet.",
+            "copy": "Bağlantıyı kopyala",
+            "copied": "Bağlantı kopyalandı.",
+            "copyFailed": "Kopyalanamadı. Bağlantıyı seçip elle kopyala.",
+            "emailSent": "Davet e-posta ile gönderildi.",
+            "emailNotSent": "E-posta gönderimi yapılandırılmamış. Bağlantıyı kendin ilet.",
+            "empty": "Bekleyen davet yok.",
+            "expires": "{{date}} tarihine kadar geçerli",
+            "revoke": "Geri al",
+            "revokeConfirm": "Bu davet geri alınsın mı? Bağlantı geçersiz olur.",
+            "revoked": "Davet geri alındı.",
+            "created": "Davet oluşturuldu.",
+            "revokeConfirmDetail": "Daha önce gönderdiğin ya da kopyaladığın bağlantı hemen çalışmaz olur. Davet edilen kişi onunla artık hesap oluşturamaz; yeniden davet etmen gerekir."
+        }
     },
     "login": {
         "tagline": "Aile planlayıcına tekrar hoş geldin.",
@@ -2115,7 +2137,7 @@
         "loginWithSso": "SSO ile giriş yap",
         "orDivider": "veya",
         "ssoError": "SSO girişi başarısız oldu. Lütfen tekrar deneyin.",
-        "forgotPassword": "Forgot password?",
+        "forgotPassword": "Parolanı mı unuttun?",
         "networkError": "Bağlantı başarısız oldu. Sunucunun çalıştığını kontrol edip tekrar deneyin.",
         "capsLockWarning": "Caps Lock açık.",
         "fillAllFields": "Lütfen kullanıcı adını ve şifreni gir."
@@ -2852,23 +2874,23 @@
         "noReleaseNotes": "Bu sürüm için sürüm notu yok."
     },
     "forgotPassword": {
-        "title": "Reset password",
-        "intro": "Enter your username or email address. We'll send you a reset link.",
-        "identifierLabel": "Username or email",
-        "submit": "Send link",
-        "sent": "If a matching account exists, a reset link has been sent.",
-        "backToLogin": "Back to login"
+        "title": "Parolayı sıfırla",
+        "intro": "Kullanıcı adını ya da e-posta adresini gir. Sana bir sıfırlama bağlantısı göndeririz.",
+        "identifierLabel": "Kullanıcı adı veya e-posta",
+        "submit": "Bağlantıyı gönder",
+        "sent": "Eşleşen bir hesap varsa, sıfırlama bağlantısı gönderildi.",
+        "backToLogin": "Girişe dön"
     },
     "resetPassword": {
-        "title": "Set a new password",
-        "passwordLabel": "New password",
-        "confirmLabel": "Confirm password",
-        "submit": "Save password",
-        "success": "Your password has been changed. You can now sign in.",
-        "mismatch": "The passwords do not match.",
-        "tooShort": "The password must be at least 8 characters long.",
-        "invalidToken": "This link is invalid or has expired.",
-        "missingToken": "No valid token was found."
+        "title": "Yeni parola belirle",
+        "passwordLabel": "Yeni parola",
+        "confirmLabel": "Parolayı doğrula",
+        "submit": "Parolayı kaydet",
+        "success": "Parolan değiştirildi. Artık giriş yapabilirsin.",
+        "mismatch": "Parolalar eşleşmiyor.",
+        "tooShort": "Parola en az 8 karakter olmalı.",
+        "invalidToken": "Bu bağlantı geçersiz ya da süresi dolmuş.",
+        "missingToken": "Geçerli bir belirteç bulunamadı."
     },
     "email": {
         "host": "SMTP host",
@@ -3762,5 +3784,26 @@
         "openAction": "{{name}} ögesini aç",
         "limitReached": "En fazla {{count}} belge.",
         "limitReached_one": "En fazla {{count}} belge."
+    },
+    "join": {
+        "title": "Hesabını oluştur",
+        "intro": "Yuvomi’ye davet edildin. Giriş bilgilerini burada belirle.",
+        "usernameLabel": "Kullanıcı adı",
+        "fieldFixed": "Davet tarafından belirlendi.",
+        "displayNameLabel": "Görünen ad",
+        "passwordLabel": "Parola",
+        "confirmLabel": "Parolayı doğrula",
+        "submit": "Hesap oluştur",
+        "success": "Hesabın oluşturuldu. Artık giriş yapabilirsin.",
+        "mismatch": "Parolalar eşleşmiyor.",
+        "tooShort": "Parola en az 8 karakter olmalı.",
+        "invalidToken": "Bu davet geçersiz, süresi dolmuş ya da zaten kullanılmış.",
+        "missingToken": "Geçerli bir belirteç bulunamadı.",
+        "usernameRequired": "Bir kullanıcı adı seç.",
+        "usernameInvalid": "Kullanıcı adı 3 ile 64 karakter arasında olmalı ve yalnızca harf, rakam, nokta, tire ve alt çizgi içerebilir.",
+        "usernameTaken": "Bu kullanıcı adı zaten alınmış.",
+        "error": "Hesap oluşturulamadı. Lütfen tekrar dene.",
+        "displayNameTooLong": "Görünen ad en fazla 128 karakter olabilir.",
+        "previewFailed": "Davet şu anda denetlenemedi. Lütfen birazdan sayfayı yeniden yükle."
     }
 }

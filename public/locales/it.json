@@ -2099,7 +2099,29 @@
         "mealieAccountUpdated": "Account Mealie aggiornato.",
         "mealieAccountDeleted": "Account Mealie eliminato.",
         "mealieDeleteAccountConfirm": "Questo rimuove anche {{count}} ricette rispecchiate e le scollega da eventuali voci del piano pasti.",
-        "mealieLastError": "Ultimo errore di sincronizzazione: {{message}}"
+        "mealieLastError": "Ultimo errore di sincronizzazione: {{message}}",
+        "invites": {
+            "title": "Inviti",
+            "intro": "Invita nuovi membri con un link. La password la scelgono loro.",
+            "add": "+ Crea invito",
+            "submit": "Crea invito",
+            "usernameHint": "Facoltativo. Se lo lasci vuoto, la persona invitata sceglie il proprio nome.",
+            "sendEmail": "Invia l'invito via e-mail",
+            "linkTitle": "Link di invito",
+            "linkOnce": "Questo link viene mostrato solo ora. Passalo prima di lasciare la pagina.",
+            "copy": "Copia link",
+            "copied": "Link copiato.",
+            "copyFailed": "Copia non riuscita. Seleziona il link e copialo a mano.",
+            "emailSent": "L'invito è stato inviato via e-mail.",
+            "emailNotSent": "Nessun invio e-mail configurato. Passa tu stesso il link.",
+            "empty": "Nessun invito in sospeso.",
+            "expires": "Valido fino al {{date}}",
+            "revoke": "Revoca",
+            "revokeConfirm": "Revocare questo invito? Il link smetterà di funzionare.",
+            "revoked": "L'invito è stato revocato.",
+            "created": "L'invito è stato creato.",
+            "revokeConfirmDetail": "Un link già inviato o copiato smette subito di funzionare. La persona invitata non potrà più creare un account; dovresti invitarla di nuovo."
+        }
     },
     "login": {
         "tagline": "Bentornato nel tuo pianificatore familiare.",
@@ -3762,5 +3784,26 @@
         "openAction": "Apri {{name}}",
         "limitReached": "Al massimo {{count}} documenti.",
         "limitReached_one": "Al massimo {{count}} documento."
+    },
+    "join": {
+        "title": "Configura il tuo account",
+        "intro": "Sei stato invitato a Yuvomi. Imposta qui le tue credenziali.",
+        "usernameLabel": "Nome utente",
+        "fieldFixed": "Impostato dall'invito.",
+        "displayNameLabel": "Nome visualizzato",
+        "passwordLabel": "Password",
+        "confirmLabel": "Conferma password",
+        "submit": "Crea account",
+        "success": "Il tuo account è stato creato. Ora puoi accedere.",
+        "mismatch": "Le password non coincidono.",
+        "tooShort": "La password deve contenere almeno 8 caratteri.",
+        "invalidToken": "Questo invito non è valido, è scaduto o è già stato usato.",
+        "missingToken": "Nessun token valido trovato.",
+        "usernameRequired": "Scegli un nome utente.",
+        "usernameInvalid": "Il nome utente deve avere da 3 a 64 caratteri e può contenere solo lettere, numeri, punti, trattini e trattini bassi.",
+        "usernameTaken": "Questo nome utente è già in uso.",
+        "error": "Non è stato possibile creare l'account. Riprova.",
+        "displayNameTooLong": "Il nome visualizzato può contenere al massimo 128 caratteri.",
+        "previewFailed": "Non è stato possibile verificare l'invito in questo momento. Ricarica la pagina tra un istante."
     }
 }

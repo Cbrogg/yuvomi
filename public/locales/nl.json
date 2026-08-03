@@ -2099,7 +2099,29 @@
         "mealieAccountUpdated": "Mealie-account bijgewerkt.",
         "mealieAccountDeleted": "Mealie-account verwijderd.",
         "mealieDeleteAccountConfirm": "Dit verwijdert ook {{count}} gespiegelde recepten en ontkoppelt ze van eventuele maaltijdplan-items.",
-        "mealieLastError": "Laatste synchronisatiefout: {{message}}"
+        "mealieLastError": "Laatste synchronisatiefout: {{message}}",
+        "invites": {
+            "title": "Uitnodigingen",
+            "intro": "Nodig nieuwe leden uit via een link. Hun wachtwoord kiezen ze zelf.",
+            "add": "+ Uitnodiging maken",
+            "submit": "Uitnodiging maken",
+            "usernameHint": "Optioneel. Laat je het leeg, dan kiest de uitgenodigde persoon zelf een naam.",
+            "sendEmail": "Uitnodiging per e-mail versturen",
+            "linkTitle": "Uitnodigingslink",
+            "linkOnce": "Deze link zie je alleen nu. Geef hem door voordat je de pagina verlaat.",
+            "copy": "Link kopiëren",
+            "copied": "Link gekopieerd.",
+            "copyFailed": "Kopiëren lukte niet. Selecteer de link en kopieer hem handmatig.",
+            "emailSent": "De uitnodiging is per e-mail verstuurd.",
+            "emailNotSent": "Er is geen e-mailverzending ingesteld. Geef de link zelf door.",
+            "empty": "Er staat geen uitnodiging open.",
+            "expires": "Geldig tot {{date}}",
+            "revoke": "Intrekken",
+            "revokeConfirm": "Deze uitnodiging intrekken? De link werkt daarna niet meer.",
+            "revoked": "De uitnodiging is ingetrokken.",
+            "created": "De uitnodiging is aangemaakt.",
+            "revokeConfirmDetail": "Een link die je al hebt verstuurd of gekopieerd werkt meteen niet meer. De uitgenodigde persoon kan er geen account meer mee aanmaken; je zou opnieuw moeten uitnodigen."
+        }
     },
     "login": {
         "tagline": "Welkom terug bij je gezinsplanner.",
@@ -2115,7 +2137,7 @@
         "loginWithSso": "Aanmelden met SSO",
         "orDivider": "of",
         "ssoError": "SSO-aanmelding mislukt. Probeer het opnieuw.",
-        "forgotPassword": "Forgot password?",
+        "forgotPassword": "Wachtwoord vergeten?",
         "networkError": "Verbinding mislukt. Controleer of de server draait en probeer het opnieuw.",
         "capsLockWarning": "Caps Lock staat aan.",
         "fillAllFields": "Voer je gebruikersnaam en wachtwoord in."
@@ -2852,23 +2874,23 @@
         "noReleaseNotes": "Geen release-opmerkingen voor deze versie."
     },
     "forgotPassword": {
-        "title": "Reset password",
-        "intro": "Enter your username or email address. We'll send you a reset link.",
-        "identifierLabel": "Username or email",
-        "submit": "Send link",
-        "sent": "If a matching account exists, a reset link has been sent.",
-        "backToLogin": "Back to login"
+        "title": "Wachtwoord opnieuw instellen",
+        "intro": "Voer je gebruikersnaam of e-mailadres in. We sturen je een herstellink.",
+        "identifierLabel": "Gebruikersnaam of e-mail",
+        "submit": "Link versturen",
+        "sent": "Als er een bijbehorend account bestaat, is er een herstellink verstuurd.",
+        "backToLogin": "Terug naar inloggen"
     },
     "resetPassword": {
-        "title": "Set a new password",
-        "passwordLabel": "New password",
-        "confirmLabel": "Confirm password",
-        "submit": "Save password",
-        "success": "Your password has been changed. You can now sign in.",
-        "mismatch": "The passwords do not match.",
-        "tooShort": "The password must be at least 8 characters long.",
-        "invalidToken": "This link is invalid or has expired.",
-        "missingToken": "No valid token was found."
+        "title": "Nieuw wachtwoord instellen",
+        "passwordLabel": "Nieuw wachtwoord",
+        "confirmLabel": "Wachtwoord bevestigen",
+        "submit": "Wachtwoord opslaan",
+        "success": "Je wachtwoord is gewijzigd. Je kunt nu inloggen.",
+        "mismatch": "De wachtwoorden komen niet overeen.",
+        "tooShort": "Het wachtwoord moet minstens 8 tekens lang zijn.",
+        "invalidToken": "Deze link is ongeldig of verlopen.",
+        "missingToken": "Er is geen geldig token gevonden."
     },
     "email": {
         "host": "SMTP host",
@@ -3762,5 +3784,26 @@
         "openAction": "{{name}} openen",
         "limitReached": "Maximaal {{count}} documenten.",
         "limitReached_one": "Maximaal {{count}} document."
+    },
+    "join": {
+        "title": "Account instellen",
+        "intro": "Je bent uitgenodigd voor Yuvomi. Stel hier je inloggegevens in.",
+        "usernameLabel": "Gebruikersnaam",
+        "fieldFixed": "Vastgelegd in de uitnodiging.",
+        "displayNameLabel": "Weergavenaam",
+        "passwordLabel": "Wachtwoord",
+        "confirmLabel": "Wachtwoord bevestigen",
+        "submit": "Account aanmaken",
+        "success": "Je account is aangemaakt. Je kunt nu inloggen.",
+        "mismatch": "De wachtwoorden komen niet overeen.",
+        "tooShort": "Het wachtwoord moet minstens 8 tekens lang zijn.",
+        "invalidToken": "Deze uitnodiging is ongeldig, verlopen of al gebruikt.",
+        "missingToken": "Er is geen geldig token gevonden.",
+        "usernameRequired": "Kies een gebruikersnaam.",
+        "usernameInvalid": "De gebruikersnaam moet 3 tot 64 tekens lang zijn en mag alleen letters, cijfers, punten, streepjes en underscores bevatten.",
+        "usernameTaken": "Deze gebruikersnaam is al in gebruik.",
+        "error": "Het account kon niet worden aangemaakt. Probeer het opnieuw.",
+        "displayNameTooLong": "De weergavenaam mag maximaal 128 tekens lang zijn.",
+        "previewFailed": "De uitnodiging kon nu niet worden gecontroleerd. Laad de pagina zo meteen opnieuw."
     }
 }

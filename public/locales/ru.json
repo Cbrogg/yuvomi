@@ -2099,7 +2099,29 @@
         "mealieAccountUpdated": "Аккаунт Mealie обновлён.",
         "mealieAccountDeleted": "Аккаунт Mealie удалён.",
         "mealieDeleteAccountConfirm": "Это также удалит {{count}} зеркальных рецептов и отвяжет их от всех записей плана питания.",
-        "mealieLastError": "Последняя ошибка синхронизации: {{message}}"
+        "mealieLastError": "Последняя ошибка синхронизации: {{message}}",
+        "invites": {
+            "title": "Приглашения",
+            "intro": "Приглашайте новых участников по ссылке. Пароль они задают сами.",
+            "add": "+ Создать приглашение",
+            "submit": "Создать приглашение",
+            "usernameHint": "Необязательно. Если оставить пустым, приглашённый выберет имя сам.",
+            "sendEmail": "Отправить приглашение по электронной почте",
+            "linkTitle": "Ссылка-приглашение",
+            "linkOnce": "Эта ссылка показывается только сейчас. Передайте её, прежде чем уйти со страницы.",
+            "copy": "Скопировать ссылку",
+            "copied": "Ссылка скопирована.",
+            "copyFailed": "Скопировать не удалось. Выделите ссылку и скопируйте вручную.",
+            "emailSent": "Приглашение отправлено по электронной почте.",
+            "emailNotSent": "Отправка почты не настроена. Передайте ссылку сами.",
+            "empty": "Открытых приглашений нет.",
+            "expires": "Действительно до {{date}}",
+            "revoke": "Отозвать",
+            "revokeConfirm": "Отозвать это приглашение? Ссылка перестанет работать.",
+            "revoked": "Приглашение отозвано.",
+            "created": "Приглашение создано.",
+            "revokeConfirmDetail": "Уже отправленная или скопированная ссылка сразу перестаёт работать. Приглашённый больше не сможет создать по ней учётную запись, придётся пригласить заново."
+        }
     },
     "login": {
         "tagline": "С возвращением в ваш семейный планировщик.",
@@ -2115,7 +2137,7 @@
         "loginWithSso": "Войти через SSO",
         "orDivider": "или",
         "ssoError": "Вход через SSO не удался. Повторите попытку.",
-        "forgotPassword": "Forgot password?",
+        "forgotPassword": "Забыли пароль?",
         "networkError": "Не удалось подключиться. Проверьте, запущен ли сервер, и повторите попытку.",
         "capsLockWarning": "Включён Caps Lock.",
         "fillAllFields": "Введите имя пользователя и пароль."
@@ -2852,23 +2874,23 @@
         "noReleaseNotes": "Для этой версии нет примечаний к выпуску."
     },
     "forgotPassword": {
-        "title": "Reset password",
-        "intro": "Enter your username or email address. We'll send you a reset link.",
-        "identifierLabel": "Username or email",
-        "submit": "Send link",
-        "sent": "If a matching account exists, a reset link has been sent.",
-        "backToLogin": "Back to login"
+        "title": "Сброс пароля",
+        "intro": "Введите имя пользователя или адрес электронной почты. Мы отправим ссылку для сброса.",
+        "identifierLabel": "Имя пользователя или эл. почта",
+        "submit": "Отправить ссылку",
+        "sent": "Если подходящая учётная запись существует, ссылка для сброса отправлена.",
+        "backToLogin": "Вернуться ко входу"
     },
     "resetPassword": {
-        "title": "Set a new password",
-        "passwordLabel": "New password",
-        "confirmLabel": "Confirm password",
-        "submit": "Save password",
-        "success": "Your password has been changed. You can now sign in.",
-        "mismatch": "The passwords do not match.",
-        "tooShort": "The password must be at least 8 characters long.",
-        "invalidToken": "This link is invalid or has expired.",
-        "missingToken": "No valid token was found."
+        "title": "Задать новый пароль",
+        "passwordLabel": "Новый пароль",
+        "confirmLabel": "Подтвердите пароль",
+        "submit": "Сохранить пароль",
+        "success": "Пароль изменён. Теперь можно войти.",
+        "mismatch": "Пароли не совпадают.",
+        "tooShort": "Пароль должен содержать не менее 8 символов.",
+        "invalidToken": "Эта ссылка недействительна или истекла.",
+        "missingToken": "Действительный токен не найден."
     },
     "email": {
         "host": "SMTP host",
@@ -3762,5 +3784,26 @@
         "openAction": "Открыть {{name}}",
         "limitReached": "Не более {{count}} документов.",
         "limitReached_one": "Не более {{count}} документа."
+    },
+    "join": {
+        "title": "Настройка учётной записи",
+        "intro": "Вас пригласили в Yuvomi. Задайте здесь данные для входа.",
+        "usernameLabel": "Имя пользователя",
+        "fieldFixed": "Задано приглашением.",
+        "displayNameLabel": "Отображаемое имя",
+        "passwordLabel": "Пароль",
+        "confirmLabel": "Подтвердите пароль",
+        "submit": "Создать учётную запись",
+        "success": "Учётная запись создана. Теперь можно войти.",
+        "mismatch": "Пароли не совпадают.",
+        "tooShort": "Пароль должен содержать не менее 8 символов.",
+        "invalidToken": "Это приглашение недействительно, истекло или уже использовано.",
+        "missingToken": "Действительный токен не найден.",
+        "usernameRequired": "Выберите имя пользователя.",
+        "usernameInvalid": "Имя пользователя должно содержать от 3 до 64 символов и может состоять только из букв, цифр, точек, дефисов и подчёркиваний.",
+        "usernameTaken": "Это имя пользователя уже занято.",
+        "error": "Не удалось создать учётную запись. Попробуйте ещё раз.",
+        "displayNameTooLong": "Отображаемое имя может содержать не более 128 символов.",
+        "previewFailed": "Сейчас не удалось проверить приглашение. Обновите страницу через мгновение."
     }
 }

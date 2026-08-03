@@ -42,6 +42,7 @@ const ROUTES = [
   { path: '/setup',    page: '/pages/setup.js',    requiresAuth: false, module: null        },
   { path: '/forgot-password', page: '/pages/forgot-password.js', requiresAuth: false, module: null },
   { path: '/reset-password',  page: '/pages/reset-password.js',  requiresAuth: false, module: null },
+  { path: '/join',     page: '/pages/join.js',     requiresAuth: false, module: null        },
   { path: '/',         page: '/pages/dashboard.js', requiresAuth: true, module: 'dashboard' },
   { path: '/tasks',    page: '/pages/tasks.js',     requiresAuth: true, module: 'tasks'     },
   { path: '/shopping', page: '/pages/shopping.js',  requiresAuth: true, module: 'shopping'  },

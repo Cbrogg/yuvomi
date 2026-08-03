@@ -2099,7 +2099,29 @@
         "mealieAccountUpdated": "Compte Mealie mis à jour.",
         "mealieAccountDeleted": "Compte Mealie supprimé.",
         "mealieDeleteAccountConfirm": "Cela supprime également {{count}} recettes reflétées et les dissocie de toute entrée du plan de repas.",
-        "mealieLastError": "Dernière erreur de synchronisation : {{message}}"
+        "mealieLastError": "Dernière erreur de synchronisation : {{message}}",
+        "invites": {
+            "title": "Invitations",
+            "intro": "Invitez de nouveaux membres par lien. Ils choisissent eux-mêmes leur mot de passe.",
+            "add": "+ Créer une invitation",
+            "submit": "Créer l'invitation",
+            "usernameHint": "Facultatif. Laissez vide et la personne invitée choisira son nom.",
+            "sendEmail": "Envoyer l'invitation par e-mail",
+            "linkTitle": "Lien d'invitation",
+            "linkOnce": "Ce lien n'est affiché que maintenant. Transmettez-le avant de quitter la page.",
+            "copy": "Copier le lien",
+            "copied": "Lien copié.",
+            "copyFailed": "La copie a échoué. Sélectionnez le lien et copiez-le à la main.",
+            "emailSent": "L'invitation a été envoyée par e-mail.",
+            "emailNotSent": "Aucun envoi d'e-mail n'est configuré. Transmettez le lien vous-même.",
+            "empty": "Aucune invitation en attente.",
+            "expires": "Valable jusqu'au {{date}}",
+            "revoke": "Révoquer",
+            "revokeConfirm": "Révoquer cette invitation ? Le lien cessera de fonctionner.",
+            "revoked": "L'invitation a été révoquée.",
+            "created": "L'invitation a été créée.",
+            "revokeConfirmDetail": "Un lien déjà envoyé ou copié cesse aussitôt de fonctionner. La personne invitée ne peut plus créer de compte avec ce lien ; il faudrait l'inviter à nouveau."
+        }
     },
     "login": {
         "tagline": "Bon retour sur votre planificateur familial.",
@@ -2115,7 +2137,7 @@
         "loginWithSso": "Se connecter avec SSO",
         "orDivider": "ou",
         "ssoError": "La connexion SSO a échoué. Veuillez réessayer.",
-        "forgotPassword": "Forgot password?",
+        "forgotPassword": "Mot de passe oublié ?",
         "networkError": "Échec de la connexion. Vérifiez que le serveur fonctionne, puis réessayez.",
         "capsLockWarning": "La touche Verr. Maj est activée.",
         "fillAllFields": "Veuillez saisir votre nom d’utilisateur et votre mot de passe."
@@ -2852,23 +2874,23 @@
         "noReleaseNotes": "Aucune note de version pour cette version."
     },
     "forgotPassword": {
-        "title": "Reset password",
-        "intro": "Enter your username or email address. We'll send you a reset link.",
-        "identifierLabel": "Username or email",
-        "submit": "Send link",
-        "sent": "If a matching account exists, a reset link has been sent.",
-        "backToLogin": "Back to login"
+        "title": "Réinitialiser le mot de passe",
+        "intro": "Saisissez votre nom d'utilisateur ou votre e-mail. Nous vous enverrons un lien de réinitialisation.",
+        "identifierLabel": "Nom d'utilisateur ou e-mail",
+        "submit": "Envoyer le lien",
+        "sent": "Si un compte correspondant existe, un lien de réinitialisation a été envoyé.",
+        "backToLogin": "Retour à la connexion"
     },
     "resetPassword": {
-        "title": "Set a new password",
-        "passwordLabel": "New password",
-        "confirmLabel": "Confirm password",
-        "submit": "Save password",
-        "success": "Your password has been changed. You can now sign in.",
-        "mismatch": "The passwords do not match.",
-        "tooShort": "The password must be at least 8 characters long.",
-        "invalidToken": "This link is invalid or has expired.",
-        "missingToken": "No valid token was found."
+        "title": "Définir un nouveau mot de passe",
+        "passwordLabel": "Nouveau mot de passe",
+        "confirmLabel": "Confirmer le mot de passe",
+        "submit": "Enregistrer le mot de passe",
+        "success": "Votre mot de passe a été modifié. Vous pouvez vous connecter.",
+        "mismatch": "Les mots de passe ne correspondent pas.",
+        "tooShort": "Le mot de passe doit comporter au moins 8 caractères.",
+        "invalidToken": "Ce lien est invalide ou expiré.",
+        "missingToken": "Aucun jeton valide n'a été trouvé."
     },
     "email": {
         "host": "SMTP host",
@@ -3762,5 +3784,26 @@
         "openAction": "Ouvrir {{name}}",
         "limitReached": "{{count}} documents au maximum.",
         "limitReached_one": "{{count}} document au maximum."
+    },
+    "join": {
+        "title": "Configurer votre compte",
+        "intro": "Vous avez été invité à Yuvomi. Choisissez ici vos identifiants.",
+        "usernameLabel": "Nom d'utilisateur",
+        "fieldFixed": "Défini par l'invitation.",
+        "displayNameLabel": "Nom affiché",
+        "passwordLabel": "Mot de passe",
+        "confirmLabel": "Confirmer le mot de passe",
+        "submit": "Créer le compte",
+        "success": "Votre compte a été créé. Vous pouvez vous connecter.",
+        "mismatch": "Les mots de passe ne correspondent pas.",
+        "tooShort": "Le mot de passe doit comporter au moins 8 caractères.",
+        "invalidToken": "Cette invitation est invalide, expirée ou déjà utilisée.",
+        "missingToken": "Aucun jeton valide n'a été trouvé.",
+        "usernameRequired": "Veuillez choisir un nom d'utilisateur.",
+        "usernameInvalid": "Le nom d'utilisateur doit comporter de 3 à 64 caractères et ne peut contenir que des lettres, des chiffres, des points, des tirets et des tirets bas.",
+        "usernameTaken": "Ce nom d'utilisateur est déjà pris.",
+        "error": "Le compte n'a pas pu être créé. Veuillez réessayer.",
+        "displayNameTooLong": "Le nom affiché ne peut pas dépasser 128 caractères.",
+        "previewFailed": "L'invitation n'a pas pu être vérifiée pour le moment. Rechargez la page dans un instant."
     }
 }

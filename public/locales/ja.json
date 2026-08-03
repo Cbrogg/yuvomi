@@ -2099,7 +2099,29 @@
         "mealieAccountUpdated": "Mealieアカウントを更新しました。",
         "mealieAccountDeleted": "Mealieアカウントを削除しました。",
         "mealieDeleteAccountConfirm": "これにより、ミラーリングされた{{count}}件のレシピも削除され、献立の項目との関連付けが解除されます。",
-        "mealieLastError": "直近の同期エラー: {{message}}"
+        "mealieLastError": "直近の同期エラー: {{message}}",
+        "invites": {
+            "title": "招待",
+            "intro": "リンクで新しいメンバーを招待します。パスワードは本人が設定します。",
+            "add": "+ 招待を作成",
+            "submit": "招待を作成",
+            "usernameHint": "任意。空欄にすると、招待された人が自分で名前を選びます。",
+            "sendEmail": "招待をメールで送る",
+            "linkTitle": "招待リンク",
+            "linkOnce": "このリンクが表示されるのは今だけです。ページを離れる前に渡してください。",
+            "copy": "リンクをコピー",
+            "copied": "リンクをコピーしました。",
+            "copyFailed": "コピーできませんでした。リンクを選択して手動でコピーしてください。",
+            "emailSent": "招待をメールで送信しました。",
+            "emailNotSent": "メール送信が設定されていません。リンクは自分で渡してください。",
+            "empty": "保留中の招待はありません。",
+            "expires": "{{date}} まで有効",
+            "revoke": "取り消す",
+            "revokeConfirm": "この招待を取り消しますか？リンクは使えなくなります。",
+            "revoked": "招待を取り消しました。",
+            "created": "招待を作成しました。",
+            "revokeConfirmDetail": "すでに送った、またはコピーしたリンクはただちに使えなくなります。招待した相手はそのリンクでアカウントを作成できなくなるため、あらためて招待する必要があります。"
+        }
     },
     "login": {
         "tagline": "家族のプランナーへおかえりなさい。",
@@ -2115,7 +2137,7 @@
         "loginWithSso": "SSOでサインイン",
         "orDivider": "または",
         "ssoError": "SSOサインインに失敗しました。もう一度お試しください。",
-        "forgotPassword": "Forgot password?",
+        "forgotPassword": "パスワードをお忘れですか？",
         "networkError": "接続に失敗しました。サーバーが起動しているか確認して、もう一度お試しください。",
         "capsLockWarning": "Caps Lock がオンになっています。",
         "fillAllFields": "ユーザー名とパスワードを入力してください。"
@@ -2852,23 +2874,23 @@
         "noReleaseNotes": "このバージョンのリリースノートはありません。"
     },
     "forgotPassword": {
-        "title": "Reset password",
-        "intro": "Enter your username or email address. We'll send you a reset link.",
-        "identifierLabel": "Username or email",
-        "submit": "Send link",
-        "sent": "If a matching account exists, a reset link has been sent.",
-        "backToLogin": "Back to login"
+        "title": "パスワードの再設定",
+        "intro": "ユーザー名またはメールアドレスを入力してください。再設定用のリンクをお送りします。",
+        "identifierLabel": "ユーザー名またはメールアドレス",
+        "submit": "リンクを送信",
+        "sent": "該当するアカウントがあれば、再設定用のリンクを送信しました。",
+        "backToLogin": "ログインに戻る"
     },
     "resetPassword": {
-        "title": "Set a new password",
-        "passwordLabel": "New password",
-        "confirmLabel": "Confirm password",
-        "submit": "Save password",
-        "success": "Your password has been changed. You can now sign in.",
-        "mismatch": "The passwords do not match.",
-        "tooShort": "The password must be at least 8 characters long.",
-        "invalidToken": "This link is invalid or has expired.",
-        "missingToken": "No valid token was found."
+        "title": "新しいパスワードを設定",
+        "passwordLabel": "新しいパスワード",
+        "confirmLabel": "パスワードの確認",
+        "submit": "パスワードを保存",
+        "success": "パスワードを変更しました。ログインできます。",
+        "mismatch": "パスワードが一致しません。",
+        "tooShort": "パスワードは8文字以上にしてください。",
+        "invalidToken": "このリンクは無効か、期限切れです。",
+        "missingToken": "有効なトークンが見つかりませんでした。"
     },
     "email": {
         "host": "SMTP host",
@@ -3762,5 +3784,26 @@
         "openAction": "{{name}} を開く",
         "limitReached": "書類は最大 {{count}} 件までです。",
         "limitReached_one": "書類は最大 {{count}} 件までです。"
+    },
+    "join": {
+        "title": "アカウントの設定",
+        "intro": "Yuvomi に招待されました。ここでログイン情報を設定してください。",
+        "usernameLabel": "ユーザー名",
+        "fieldFixed": "招待で指定されています。",
+        "displayNameLabel": "表示名",
+        "passwordLabel": "パスワード",
+        "confirmLabel": "パスワードの確認",
+        "submit": "アカウントを作成",
+        "success": "アカウントを作成しました。ログインできます。",
+        "mismatch": "パスワードが一致しません。",
+        "tooShort": "パスワードは8文字以上にしてください。",
+        "invalidToken": "この招待は無効か、期限切れか、すでに使用されています。",
+        "missingToken": "有効なトークンが見つかりませんでした。",
+        "usernameRequired": "ユーザー名を選んでください。",
+        "usernameInvalid": "ユーザー名は3〜64文字で、英数字、ドット、ハイフン、アンダースコアのみ使用できます。",
+        "usernameTaken": "このユーザー名はすでに使われています。",
+        "error": "アカウントを作成できませんでした。もう一度お試しください。",
+        "displayNameTooLong": "表示名は128文字までです。",
+        "previewFailed": "招待をいま確認できませんでした。しばらくしてからページを再読み込みしてください。"
     }
 }
