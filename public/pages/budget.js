@@ -1187,7 +1187,9 @@ function openAccountModal(account = null) {
           reportFieldError(panel.querySelector('#am-balance'), t('budget.validAmountRequired'));
           return;
         }
-        if (rejectOffGridAmount(panel.querySelector('#am-balance'), startingBalance, state.currency)) return;
+        if (rejectOffGridAmount(panel.querySelector('#am-balance'), startingBalance, state.currency, {
+          original: isEdit ? account.starting_balance : null,
+        })) return;
 
         saveBtn.disabled = true;
         saveBtn.textContent = '…';
@@ -2013,7 +2015,9 @@ function openBudgetModal({ mode, entry = null, initialType = '' }) {
           reportFieldError(panel.querySelector('#bm-amount'), t('budget.validAmountRequired'));
           return;
         }
-        if (rejectOffGridAmount(panel.querySelector('#bm-amount'), absVal, state.currency)) return;
+        if (rejectOffGridAmount(panel.querySelector('#bm-amount'), absVal, state.currency, {
+          original: isEdit ? Math.abs(editAmount) : null,
+        })) return;
         if (!date) {
           reportFieldError(panel.querySelector('#bm-date'), t('calendar.invalidDate'));
           return;
@@ -2162,10 +2166,22 @@ function requestNameInPanel(panel, { title, label, placeholder }) {
  * den Wert weg, während die Anzeige ihn gerundet darstellt. Wer eine
  * Schrittweite zeigt, muss sie auch selbst durchsetzen.
  *
+ * `original` ist der gespeicherte Betrag eines bestehenden Eintrags. Liegt er
+ * selbst schon neben dem Raster - unter der alten Oberfläche mit fester
+ * Schrittweite 0,01 war das möglich - und wurde er nicht angefasst, bleibt er
+ * erlaubt. Sonst liesse sich an einem solchen Eintrag nicht einmal mehr der
+ * Titel ändern, ohne vorher den Betrag anzufassen. Neu eingegebene Werte und
+ * ein Währungswechsel laufen weiter in die Prüfung.
+ *
  * @returns {boolean} true, wenn abgewiesen wurde (der Aufrufer bricht dann ab)
  */
-function rejectOffGridAmount(input, value, currency) {
+function rejectOffGridAmount(input, value, currency, { original = null, originalCurrency = null } = {}) {
   if (fitsCurrencyGrid(value, currency)) return false;
+  // Der Bestandsschutz gilt nur, solange auch die Währung dieselbe ist: wer auf
+  // JPY umstellt, hat das Raster bewusst gewechselt und muss den Betrag anfassen.
+  const untouched = original != null && Number(original) === Number(value)
+    && (originalCurrency == null || originalCurrency === currency);
+  if (untouched) return false;
   reportFieldError(input, t('budget.amountPrecisionRequired', {
     currency,
     step: smallestUnitLabel(currency),
@@ -2398,7 +2414,10 @@ async function saveLoanFromPanel(panel, saveBtn, { loan = null, closeAfterSave =
     }
     // Gegen die Darlehenswährung, nicht gegen die des Budgets: ein Darlehen in
     // JPY rastert in ganzen Yen, auch wenn der Haushalt in EUR rechnet.
-    if (rejectOffGridAmount(panel.querySelector('#lm-amount'), total_amount, currency)) return;
+    if (rejectOffGridAmount(panel.querySelector('#lm-amount'), total_amount, currency, {
+      original: loan?.total_amount ?? null,
+      originalCurrency: loan?.currency || (loan ? state.currency : null),
+    })) return;
     if (!Number.isInteger(installment_count) || installment_count < 1) {
       reportFieldError(panel.querySelector('#lm-installments'), t('budget.loanInstallmentsRequired'));
       return;
@@ -2412,7 +2431,10 @@ async function saveLoanFromPanel(panel, saveBtn, { loan = null, closeAfterSave =
       reportFieldError(panel.querySelector('#lm-principal'), t('budget.loanPrincipalRequired'));
       return;
     }
-    if (rejectOffGridAmount(panel.querySelector('#lm-principal'), principal, currency)) return;
+    if (rejectOffGridAmount(panel.querySelector('#lm-principal'), principal, currency, {
+      original: loan?.interest?.principal ?? null,
+      originalCurrency: loan?.currency || (loan ? state.currency : null),
+    })) return;
     if (isNaN(fixed_rate) || fixed_rate < 0 || fixed_rate > 100) {
       reportFieldError(panel.querySelector('#lm-fixed-rate'), t('budget.loanRateRequired'));
       return;

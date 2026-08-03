@@ -78,12 +78,18 @@ function smallestUnit(digits) {
  * `<form>`-Elemente, sie speichern über einen Button-Handler. Die native
  * Prüfung läuft also nie, und ein Feld mit step="1" nähme trotzdem 12,5
  * entgegen. Wer eine Schrittweite anzeigt, muss sie auch selbst durchsetzen.
+ *
+ * Über `toFixed` und nicht über `wert * 10**stellen` mit einer festen Toleranz:
+ * `131072.02 * 100` ergibt `13107201.999999998`, liegt also knapp zwei
+ * Milliardstel daneben. Jede feste Schranke ist damit entweder zu eng (dieser
+ * gültige Betrag flöge raus) oder zu weit (bei kleinen Beträgen ginge echter
+ * Bruch durch). Der Vergleich mit der gerundeten Dezimaldarstellung braucht
+ * gar keine Schranke und stimmt über jede Größenordnung.
  */
 export function fitsCurrencyGrid(amount, currency) {
-  const digits = currencyFractionDigits(currency);
-  const scaled = Number(amount) * 10 ** digits;
-  if (!Number.isFinite(scaled)) return false;
-  return Math.abs(scaled - Math.round(scaled)) < 1e-9;
+  const value = Number(amount);
+  if (!Number.isFinite(value)) return false;
+  return Number(value.toFixed(currencyFractionDigits(currency))) === value;
 }
 
 /** Die kleinste erfassbare Einheit als Text fürs Feld: JPY "1", EUR "0.01". */
@@ -104,10 +110,8 @@ export function smallestUnitLabel(currency) {
  */
 export function amountStep(currency, currentValue) {
   const digits = currencyFractionDigits(currency);
-  const value = Number(currentValue);
-  if (currentValue !== '' && currentValue != null && Number.isFinite(value)) {
-    const scaled = value * 10 ** digits;
-    if (Math.abs(scaled - Math.round(scaled)) > 1e-9) return 'any';
+  if (currentValue !== '' && currentValue != null && Number.isFinite(Number(currentValue))) {
+    if (!fitsCurrencyGrid(currentValue, currency)) return 'any';
   }
   return smallestUnit(digits).toFixed(digits);
 }
@@ -161,9 +165,11 @@ export function toDecimalString(value) {
   let out = '';
   for (const char of raw) {
     if (digits.has(char)) { out += digits.get(char); continue; }
-    // Auch das ASCII-Komma: auf einer fremden Tastatur getippt meint es
-    // dasselbe wie der Trenner der eingestellten Region.
-    if (char === decimalSep || char === ',') { out += '.'; continue; }
+    // Nur der Trenner der eingestellten Region wird zum Punkt. Das ASCII-Komma
+    // pauschal mitzunehmen wäre gefährlich: unter en-US gruppiert es Tausender,
+    // aus "1,000" würde dann "1.000" und daraus die Zahl 1 - ein Anteil, der um
+    // den Faktor tausend danebenliegt, ohne dass irgendwo ein Fehler erscheint.
+    if (char === decimalSep) { out += '.'; continue; }
     out += char;
   }
   return out;

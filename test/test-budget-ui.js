@@ -471,6 +471,39 @@ test('jeder Speicherpfad prüft die Schrittweite selbst', () => {
     );
   }
   assert.match(money, /export function fitsCurrencyGrid/);
+
+  // Keine feste Toleranz gegen Float-Ungenauigkeit: 131072.02 * 100 ergibt
+  // 13107201.999999998, liegt also knapp zwei Milliardstel daneben. Mit einer
+  // Schranke von 1e-9 hätte jeder Speicherpfad diesen gültigen Euro-Betrag
+  // abgewiesen. Der Vergleich mit der gerundeten Dezimaldarstellung braucht
+  // gar keine Schranke und stimmt über jede Größenordnung.
+  const clean = withoutComments(money);
+  assert.doesNotMatch(clean, /1e-9/, 'Rasterprüfung darf nicht an einer festen Toleranz hängen');
+  assert.doesNotMatch(clean, /Math\.round\([^)]*10 \*\* /, 'Rasterprüfung über die Dezimaldarstellung, nicht über skalierte Floats');
+});
+
+test('ein unangetasteter Bestandsbetrag bleibt speicherbar', () => {
+  // Unter der alten Oberfläche mit fester Schrittweite 0,01 konnten Beträge
+  // entstehen, die nicht ins Raster ihrer Währung passen. Eine unbedingte
+  // Prüfung sperrte an solchen Einträgen auch das Ändern von Titel oder Notiz -
+  // der Bestandswert-Schutz in amountStep wäre damit wirkungslos.
+  const clean = withoutComments(budget);
+  assert.match(clean, /original(?:Currency)?\s*[=:]/, 'rejectOffGridAmount kennt den Bestandswert nicht');
+  // Jeder Aufruf an einem bearbeitbaren Eintrag reicht den gespeicherten Wert durch.
+  const calls = clean.match(/rejectOffGridAmount\([\s\S]*?\)\) return;/g) || [];
+  assert.ok(calls.length >= 4, `erwartet 4 Prüfungen, gefunden ${calls.length}`);
+  for (const call of calls) {
+    assert.match(call, /original:/, `Prüfung ohne Bestandsschutz: ${call.replace(/\s+/g, ' ').slice(0, 90)}`);
+  }
+});
+
+test('nur der Trenner der Region wird zum Dezimalpunkt', () => {
+  // Unter en-US gruppiert das Komma Tausender. Würde es pauschal zum Punkt,
+  // machte "1,000" die Zahl 1 - ein Anteil, der um den Faktor tausend
+  // danebenliegt, ohne dass irgendwo ein Fehler erscheint.
+  const impl = withoutComments(money).match(/export function toDecimalString[\s\S]*?\n\}/)[0];
+  assert.doesNotMatch(impl, /char === ','/, "das ASCII-Komma darf nicht pauschal als Dezimaltrenner gelten");
+  assert.match(impl, /char === decimalSep/, 'der Trenner der Region fehlt');
 });
 
 test('ein Abo darf null kosten', () => {

@@ -245,14 +245,14 @@ function openPlanEditor({ category, savings = false }) {
       const input = panel.querySelector('#plan-amount');
       input?.focus();
       input?.select();
-      panel.querySelector('#plan-save').addEventListener('click', () => savePlan(panel, category));
+      panel.querySelector('#plan-save').addEventListener('click', () => savePlan(panel, category, hasCurrent ? current : null));
       panel.querySelector('#plan-delete')?.addEventListener('click', (e) => {
         const btn = e.currentTarget;
         if (btn.disabled) return;        // Doppel-Klick-Schutz gegen doppeltes DELETE
         btn.disabled = true;
         deletePlan(category).finally(() => { btn.disabled = false; });
       });
-      bindEnter(panel, () => savePlan(panel, category));
+      bindEnter(panel, () => savePlan(panel, category, hasCurrent ? current : null));
     },
   });
 }
@@ -273,7 +273,7 @@ function bindEnter(panel, fn) {
   });
 }
 
-async function savePlan(panel, category) {
+async function savePlan(panel, category, original = null) {
   const raw = panel.querySelector('#plan-amount').value;
   const amount = parseFloat(raw);
   if (isNaN(amount) || amount <= 0) {
@@ -283,8 +283,10 @@ async function savePlan(panel, category) {
   }
   // Der Dialog ist kein <form>: gespeichert wird über einen Button-Handler, die
   // native step-Prüfung läuft also nie. Ohne diese Zeile nähme ein Feld mit
-  // step="1" trotzdem 12,5 JPY entgegen.
-  if (!fitsCurrencyGrid(amount, view.ctx.currency)) {
+  // step="1" trotzdem 12,5 JPY entgegen. Ein unangetasteter Bestandswert, der
+  // schon vorher neben dem Raster lag, bleibt speicherbar.
+  const untouched = original != null && Number(original) === amount;
+  if (!untouched && !fitsCurrencyGrid(amount, view.ctx.currency)) {
     reportFieldError(panel.querySelector('#plan-amount'), t('budget.amountPrecisionRequired', {
       currency: view.ctx.currency,
       step: smallestUnitLabel(view.ctx.currency),
