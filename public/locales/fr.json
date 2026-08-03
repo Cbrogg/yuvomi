@@ -2435,14 +2435,14 @@
         "dropzoneTitle": "Déposez le fichier ici ou cliquez pour choisir",
         "dropzoneHint": "Glissez un fichier dans cette zone ou utilisez le sélecteur.",
         "selectedFileLabel": "Sélectionné : {{name}}",
-        "addFolderButton": "Add folder",
-        "allFolders": "All folders",
-        "folderLabel": "Folder",
-        "noFolder": "No folder",
-        "newFolderTitle": "New folder",
-        "folderNameLabel": "Folder name",
-        "createFolderAction": "Create folder",
-        "folderCreatedToast": "Folder created.",
+        "addFolderButton": "Ajouter un dossier",
+        "allFolders": "Tous les dossiers",
+        "folderLabel": "Dossier",
+        "noFolder": "Aucun dossier",
+        "newFolderTitle": "Nouveau dossier",
+        "folderNameLabel": "Nom du dossier",
+        "createFolderAction": "Créer un dossier",
+        "folderCreatedToast": "Dossier créé.",
         "folderActions": "Actions du dossier",
         "renameFolder": "Renommer le dossier",
         "deleteFolder": "Supprimer le dossier",
@@ -3595,7 +3595,7 @@
                 "pregnancyMode": "Mode grossesse",
                 "dueDate": "Date prévue d'accouchement",
                 "pregnancyHint": "En mode grossesse, les prévisions de règles et d'ovulation sont en pause. Le suivi quotidien reste disponible.",
-                "saved": "Settings saved."
+                "saved": "Paramètres enregistrés."
             }
         }
     },

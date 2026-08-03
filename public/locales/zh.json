@@ -2435,14 +2435,14 @@
         "dropzoneTitle": "将文件拖到此处或点击选择",
         "dropzoneHint": "将文件拖入此区域，或使用文件选择器。",
         "selectedFileLabel": "已选择：{{name}}",
-        "addFolderButton": "Add folder",
-        "allFolders": "All folders",
-        "folderLabel": "Folder",
-        "noFolder": "No folder",
-        "newFolderTitle": "New folder",
-        "folderNameLabel": "Folder name",
-        "createFolderAction": "Create folder",
-        "folderCreatedToast": "Folder created.",
+        "addFolderButton": "添加文件夹",
+        "allFolders": "所有文件夹",
+        "folderLabel": "文件夹",
+        "noFolder": "无文件夹",
+        "newFolderTitle": "新建文件夹",
+        "folderNameLabel": "文件夹名称",
+        "createFolderAction": "创建文件夹",
+        "folderCreatedToast": "已创建文件夹。",
         "folderActions": "文件夹操作",
         "renameFolder": "重命名文件夹",
         "deleteFolder": "删除文件夹",
@@ -3595,7 +3595,7 @@
                 "pregnancyMode": "怀孕模式",
                 "dueDate": "预产期",
                 "pregnancyHint": "在怀孕模式下，月经和排卵预测将暂停。每日记录仍可使用。",
-                "saved": "Settings saved."
+                "saved": "设置已保存。"
             }
         }
     },

@@ -2435,14 +2435,14 @@
         "dropzoneTitle": "Dosyayı buraya bırakın veya seçmek için tıklayın",
         "dropzoneHint": "Bir dosyayı bu alana sürükleyin veya dosya seçiciyi kullanın.",
         "selectedFileLabel": "Seçildi: {{name}}",
-        "addFolderButton": "Add folder",
-        "allFolders": "All folders",
-        "folderLabel": "Folder",
-        "noFolder": "No folder",
-        "newFolderTitle": "New folder",
-        "folderNameLabel": "Folder name",
-        "createFolderAction": "Create folder",
-        "folderCreatedToast": "Folder created.",
+        "addFolderButton": "Klasör ekle",
+        "allFolders": "Tüm klasörler",
+        "folderLabel": "Klasör",
+        "noFolder": "Klasör yok",
+        "newFolderTitle": "Yeni klasör",
+        "folderNameLabel": "Klasör adı",
+        "createFolderAction": "Klasör oluştur",
+        "folderCreatedToast": "Klasör oluşturuldu.",
         "folderActions": "Klasör işlemleri",
         "renameFolder": "Klasörü yeniden adlandır",
         "deleteFolder": "Klasörü sil",
@@ -3595,7 +3595,7 @@
                 "pregnancyMode": "Gebelik modu",
                 "dueDate": "Tahmini doğum tarihi",
                 "pregnancyHint": "Gebelik modunda regl ve yumurtlama tahminleri duraklatılır. Günlük kayıt kullanılmaya devam eder.",
-                "saved": "Settings saved."
+                "saved": "Ayarlar kaydedildi."
             }
         }
     },

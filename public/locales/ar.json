@@ -2435,14 +2435,14 @@
         "dropzoneTitle": "أفلت الملف هنا أو انقر للاختيار",
         "dropzoneHint": "اسحب ملفًا إلى هذه المنطقة أو استخدم محدد الملفات.",
         "selectedFileLabel": "المحدد: {{name}}",
-        "addFolderButton": "Add folder",
-        "allFolders": "All folders",
-        "folderLabel": "Folder",
-        "noFolder": "No folder",
-        "newFolderTitle": "New folder",
-        "folderNameLabel": "Folder name",
-        "createFolderAction": "Create folder",
-        "folderCreatedToast": "Folder created.",
+        "addFolderButton": "إضافة مجلد",
+        "allFolders": "كل المجلدات",
+        "folderLabel": "المجلد",
+        "noFolder": "بلا مجلد",
+        "newFolderTitle": "مجلد جديد",
+        "folderNameLabel": "اسم المجلد",
+        "createFolderAction": "إنشاء مجلد",
+        "folderCreatedToast": "تم إنشاء المجلد.",
         "folderActions": "إجراءات المجلد",
         "renameFolder": "إعادة تسمية المجلد",
         "deleteFolder": "حذف المجلد",
@@ -3595,7 +3595,7 @@
                 "pregnancyMode": "وضع الحمل",
                 "dueDate": "تاريخ الولادة المتوقع",
                 "pregnancyHint": "في وضع الحمل، تتوقف تنبؤات الدورة والإباضة مؤقتًا. يبقى التسجيل اليومي متاحًا.",
-                "saved": "Settings saved."
+                "saved": "تم حفظ الإعدادات."
             }
         }
     },

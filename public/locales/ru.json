@@ -2435,14 +2435,14 @@
         "dropzoneTitle": "Перетащите файл сюда или нажмите для выбора",
         "dropzoneHint": "Перетащите файл в эту область или используйте выбор файла.",
         "selectedFileLabel": "Выбрано: {{name}}",
-        "addFolderButton": "Add folder",
-        "allFolders": "All folders",
-        "folderLabel": "Folder",
-        "noFolder": "No folder",
-        "newFolderTitle": "New folder",
-        "folderNameLabel": "Folder name",
-        "createFolderAction": "Create folder",
-        "folderCreatedToast": "Folder created.",
+        "addFolderButton": "Добавить папку",
+        "allFolders": "Все папки",
+        "folderLabel": "Папка",
+        "noFolder": "Без папки",
+        "newFolderTitle": "Новая папка",
+        "folderNameLabel": "Название папки",
+        "createFolderAction": "Создать папку",
+        "folderCreatedToast": "Папка создана.",
         "folderActions": "Действия с папкой",
         "renameFolder": "Переименовать папку",
         "deleteFolder": "Удалить папку",
@@ -3595,7 +3595,7 @@
                 "pregnancyMode": "Режим беременности",
                 "dueDate": "Предполагаемая дата родов",
                 "pregnancyHint": "В режиме беременности прогнозы менструации и овуляции приостановлены. Ежедневные записи остаются доступны.",
-                "saved": "Settings saved."
+                "saved": "Настройки сохранены."
             }
         }
     },

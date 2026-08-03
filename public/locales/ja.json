@@ -2435,14 +2435,14 @@
         "dropzoneTitle": "ここにファイルをドロップ、またはクリックして選択",
         "dropzoneHint": "この領域にファイルをドラッグするか、ファイル選択を使用します。",
         "selectedFileLabel": "選択済み: {{name}}",
-        "addFolderButton": "Add folder",
-        "allFolders": "All folders",
-        "folderLabel": "Folder",
-        "noFolder": "No folder",
-        "newFolderTitle": "New folder",
-        "folderNameLabel": "Folder name",
-        "createFolderAction": "Create folder",
-        "folderCreatedToast": "Folder created.",
+        "addFolderButton": "フォルダーを追加",
+        "allFolders": "すべてのフォルダー",
+        "folderLabel": "フォルダー",
+        "noFolder": "フォルダーなし",
+        "newFolderTitle": "新しいフォルダー",
+        "folderNameLabel": "フォルダー名",
+        "createFolderAction": "フォルダーを作成",
+        "folderCreatedToast": "フォルダーを作成しました。",
         "folderActions": "フォルダー操作",
         "renameFolder": "フォルダー名を変更",
         "deleteFolder": "フォルダーを削除",
@@ -3595,7 +3595,7 @@
                 "pregnancyMode": "妊娠モード",
                 "dueDate": "出産予定日",
                 "pregnancyHint": "妊娠モードでは生理と排卵の予測が一時停止します。毎日の記録は引き続き利用できます。",
-                "saved": "Settings saved."
+                "saved": "設定を保存しました。"
             }
         }
     },

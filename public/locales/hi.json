@@ -2435,14 +2435,14 @@
         "dropzoneTitle": "फ़ाइल यहाँ छोड़ें या चुनने के लिए क्लिक करें",
         "dropzoneHint": "फ़ाइल को इस क्षेत्र में खींचें या फ़ाइल पिकर का उपयोग करें।",
         "selectedFileLabel": "चयनित: {{name}}",
-        "addFolderButton": "Add folder",
-        "allFolders": "All folders",
-        "folderLabel": "Folder",
-        "noFolder": "No folder",
-        "newFolderTitle": "New folder",
-        "folderNameLabel": "Folder name",
-        "createFolderAction": "Create folder",
-        "folderCreatedToast": "Folder created.",
+        "addFolderButton": "फ़ोल्डर जोड़ें",
+        "allFolders": "सभी फ़ोल्डर",
+        "folderLabel": "फ़ोल्डर",
+        "noFolder": "कोई फ़ोल्डर नहीं",
+        "newFolderTitle": "नया फ़ोल्डर",
+        "folderNameLabel": "फ़ोल्डर नाम",
+        "createFolderAction": "फ़ोल्डर बनाएँ",
+        "folderCreatedToast": "फ़ोल्डर बनाया गया।",
         "folderActions": "फ़ोल्डर क्रियाएँ",
         "renameFolder": "फ़ोल्डर का नाम बदलें",
         "deleteFolder": "फ़ोल्डर हटाएँ",
@@ -3595,7 +3595,7 @@
                 "pregnancyMode": "गर्भावस्था मोड",
                 "dueDate": "संभावित प्रसव तिथि",
                 "pregnancyHint": "गर्भावस्था मोड में मासिक धर्म और ओव्यूलेशन के पूर्वानुमान रुक जाते हैं। दैनिक लॉगिंग उपलब्ध रहती है।",
-                "saved": "Settings saved."
+                "saved": "सेटिंग्स सहेजी गईं।"
             }
         }
     },

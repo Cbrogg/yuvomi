@@ -2435,14 +2435,14 @@
         "dropzoneTitle": "Suelta el archivo aquí o haz clic para elegir",
         "dropzoneHint": "Arrastra un archivo a esta área o usa el selector de archivos.",
         "selectedFileLabel": "Seleccionado: {{name}}",
-        "addFolderButton": "Add folder",
-        "allFolders": "All folders",
-        "folderLabel": "Folder",
-        "noFolder": "No folder",
-        "newFolderTitle": "New folder",
-        "folderNameLabel": "Folder name",
-        "createFolderAction": "Create folder",
-        "folderCreatedToast": "Folder created.",
+        "addFolderButton": "Añadir carpeta",
+        "allFolders": "Todas las carpetas",
+        "folderLabel": "Carpeta",
+        "noFolder": "Sin carpeta",
+        "newFolderTitle": "Nueva carpeta",
+        "folderNameLabel": "Nombre de la carpeta",
+        "createFolderAction": "Crear carpeta",
+        "folderCreatedToast": "Carpeta creada.",
         "folderActions": "Acciones de carpeta",
         "renameFolder": "Renombrar carpeta",
         "deleteFolder": "Eliminar carpeta",
@@ -3595,7 +3595,7 @@
                 "pregnancyMode": "Modo embarazo",
                 "dueDate": "Fecha probable de parto",
                 "pregnancyHint": "En el modo embarazo se pausan las predicciones de periodo y ovulación. El registro diario sigue disponible.",
-                "saved": "Settings saved."
+                "saved": "Ajustes guardados."
             }
         }
     },

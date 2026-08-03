@@ -2435,14 +2435,14 @@
         "dropzoneTitle": "Αφήστε το αρχείο εδώ ή κάντε κλικ για επιλογή",
         "dropzoneHint": "Σύρετε ένα αρχείο σε αυτήν την περιοχή ή χρησιμοποιήστε τον επιλογέα αρχείων.",
         "selectedFileLabel": "Επιλέχθηκε: {{name}}",
-        "addFolderButton": "Add folder",
-        "allFolders": "All folders",
-        "folderLabel": "Folder",
-        "noFolder": "No folder",
-        "newFolderTitle": "New folder",
-        "folderNameLabel": "Folder name",
-        "createFolderAction": "Create folder",
-        "folderCreatedToast": "Folder created.",
+        "addFolderButton": "Προσθήκη φακέλου",
+        "allFolders": "Όλοι οι φάκελοι",
+        "folderLabel": "Φάκελος",
+        "noFolder": "Χωρίς φάκελο",
+        "newFolderTitle": "Νέος φάκελος",
+        "folderNameLabel": "Όνομα φακέλου",
+        "createFolderAction": "Δημιουργία φακέλου",
+        "folderCreatedToast": "Ο φάκελος δημιουργήθηκε.",
         "folderActions": "Ενέργειες φακέλου",
         "renameFolder": "Μετονομασία φακέλου",
         "deleteFolder": "Διαγραφή φακέλου",
@@ -3595,7 +3595,7 @@
                 "pregnancyMode": "Λειτουργία εγκυμοσύνης",
                 "dueDate": "Πιθανή ημερομηνία τοκετού",
                 "pregnancyHint": "Στη λειτουργία εγκυμοσύνης, οι προβλέψεις περιόδου και ωορρηξίας τίθενται σε παύση. Η καθημερινή καταγραφή παραμένει διαθέσιμη.",
-                "saved": "Settings saved."
+                "saved": "Οι ρυθμίσεις αποθηκεύτηκαν."
             }
         }
     },
