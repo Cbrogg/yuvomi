@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Deleting a subscription category or payment method explained nothing at all when no subscription used it yet. The linked budget subcategory is removed in either case, so the dialog was silent exactly where the effect was least expected.
 - The dialog for removing a CalDAV account read as though the appointments were going away with it. They stay; what ends is the sync.
 
+## [1.75.3] - 2026-08-03
+
 ### Fixed
 
 - Signing in through an identity provider that sends no `preferred_username` claim named the new account after its email address. That claim is optional in the OIDC spec, and Synology DSM SSO is one of the providers that leaves it out. An email makes a poor account name: a household commonly shares one address across several members, so it identifies nobody in particular, and the domain part only makes it unwieldy. The name is now taken from `preferred_username`, then from the non-standard `username` claim that Synology and others do send, then from `sub`, and never from the email. Accounts that already exist keep the name they have, because sign-in matches on `sub`, not on the name.
