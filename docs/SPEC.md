@@ -457,10 +457,19 @@ Multi-account CalDAV integration. Stores credentials for CalDAV servers (iCloud,
 | password | TEXT | CalDAV password (encrypted if DB_ENCRYPTION_KEY set), NOT NULL |
 | created_at | TEXT | ISO 8601 |
 | last_sync | TEXT | ISO 8601, nullable |
+| reminders_discovered_at | TEXT | ISO 8601, nullable (migration v125) - `NULL` means no reminder-list discovery has run for this account yet |
 | UNIQUE | | (caldav_url, username) |
 
+`reminders_discovered_at` exists because an empty selection is ambiguous on its own: a server with no
+`VTODO` collections leaves the table empty forever, so "no rows" cannot distinguish "never looked"
+from "looked, found nothing" and every settings-page load would query the server again.
+
 ### CalDAV Calendar Selection
-Per-account calendar enable/disable state for CalDAV accounts.
+Per-account calendar enable/disable state for CalDAV accounts. A collection that does not accept
+`VEVENT` is dropped from the selection on the next sync run (v1.75.7 · #617), which is how accounts
+created before the component filter shed the task lists they had adopted as calendars. Disabling
+happens before the run records the calendar as fetched, so the prune leaves events already mirrored
+from it untouched.
 
 | Column | Type | Constraint |
 |--------|------|-----------|
