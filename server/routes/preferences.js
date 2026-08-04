@@ -11,6 +11,9 @@ import * as holidays from '../services/holidays.js';
 import { str, MAX_SHORT } from '../middleware/validate.js';
 import { getSupportedLocales, isSupportedLocale, resolveHouseholdLocale } from '../utils/i18n.js';
 import { retitleBirthdayEvents } from '../services/birthdays.js';
+// Geteilte isomorphe Util (#620, Allowlist in test/test-layer-boundary.js):
+// dasselbe Kennungsformat, das Event-Modal und Einstellungen verwenden.
+import { parseSyncTargetValue } from '../../public/utils/sync-target.js';
 
 const log = createLogger('Preferences');
 
@@ -69,6 +72,25 @@ const MAX_CALENDAR_DURATION = 1440;
 // analog MAX_REMINDERS_PER_ENTITY in server/routes/reminders.js.
 const VALID_REMINDER_OFFSETS = [0, 15, 60, 1440, 2880, 10080, 20160];
 const MAX_DEFAULT_REMINDERS = 5;
+
+// Standard-Sync-Ziel für eigene neue Termine (#620, per-user). Gespeichert wird
+// exakt die Kennung, die das Event-Modal ohnehin führt: '' (lokal speichern),
+// 'google:<calendarId>' oder 'caldav:<accountId>|<calendarUrl>'. Geprüft wird mit
+// parseSyncTargetValue aus dem geteilten Util - dieselbe Funktion, mit der das
+// Frontend die Kennung baut und liest, damit Server und Client nicht getrennte
+// Vorstellungen vom Format entwickeln.
+//
+// Geprüft wird nur die FORM, nicht die Existenz. Ein Kalender kann deaktiviert,
+// gelöscht oder auf nur-lesend gestellt werden, lange nachdem jemand ihn hier
+// gewählt hat; eine Existenzprüfung beim Speichern würde das nicht verhindern,
+// aber einen Google-API-Aufruf in jeden Einstellungs-Save ziehen. Stattdessen
+// entscheidet das Modal beim Öffnen: steht das Ziel nicht mehr in der Liste,
+// bleibt die Vorauswahl auf "Lokal" (siehe applyDefaultSyncTarget).
+//
+// Per-user, kein Admin-Gate: die Nachbarschlüssel calendar_default_reminders und
+// calendar_default_assign_me liegen aus demselben Grund pro Nutzer (#497/#498) -
+// wer welchen Kalender bespielt, ist eine persönliche Entscheidung.
+const MAX_CALENDAR_TARGET_LENGTH = 500;
 
 // Standard-Punktwert für neue Aufgaben (#578, haushaltweit). 0 = kein Standard,
 // das Punktefeld bleibt wie bisher leer. Obergrenze spiegelt MAX_POINTS in
@@ -297,6 +319,7 @@ router.get('/', (req, res) => {
         // Standardwerte für neue Termine (per-user, #497/#498).
         calendar_default_reminders: parseDefaultReminders(cfgUserGet('calendar_default_reminders', req.authUserId)),
         calendar_default_assign_me: cfgUserGet('calendar_default_assign_me', req.authUserId) === '1',
+        calendar_default_target: cfgUserGet('calendar_default_target', req.authUserId) || '',
         // Modul-Feature-Schalter (haushaltweit). Default an: fehlender Wert =>
         // Feature aktiv, damit Bestandshaushalte ihr Verhalten behalten.
         health_cycle_enabled: cfgGet('health_cycle_enabled') !== '0',
@@ -335,7 +358,7 @@ router.get('/', (req, res) => {
 
 router.put('/', (req, res) => {
   try {
-    const { visible_meal_types, currency, date_format, time_format, week_start, region, language, app_name, dashboard_widgets, disabled_modules, module_order, mobile_nav_order, housekeeping_payment_tasks, budget_mode, calendar_default_duration, calendar_default_reminders, calendar_default_assign_me, health_cycle_enabled, rewards_require_approval, tasks_subtasks_expanded, tasks_default_points, weather_provider, weather_lat, weather_lon, weather_city, weather_units, weather_auto_locate, weather_user, holiday_country, holiday_subdivision, holiday_group, holiday_show_public, holiday_show_school, holiday_public_color, holiday_school_color } = req.body;
+    const { visible_meal_types, currency, date_format, time_format, week_start, region, language, app_name, dashboard_widgets, disabled_modules, module_order, mobile_nav_order, housekeeping_payment_tasks, budget_mode, calendar_default_duration, calendar_default_reminders, calendar_default_assign_me, calendar_default_target, health_cycle_enabled, rewards_require_approval, tasks_subtasks_expanded, tasks_default_points, weather_provider, weather_lat, weather_lon, weather_city, weather_units, weather_auto_locate, weather_user, holiday_country, holiday_subdivision, holiday_group, holiday_show_public, holiday_show_school, holiday_public_color, holiday_school_color } = req.body;
 
     if (visible_meal_types !== undefined) {
       if (!Array.isArray(visible_meal_types)) {
@@ -504,6 +527,24 @@ router.put('/', (req, res) => {
     // Neue Termine standardmäßig mir zuweisen (#498, per-user).
     if (calendar_default_assign_me !== undefined) {
       cfgUserSet('calendar_default_assign_me', req.authUserId, calendar_default_assign_me ? '1' : '0');
+    }
+
+    // Standard-Sync-Ziel für eigene neue Termine (#620, per-user).
+    if (calendar_default_target !== undefined) {
+      if (calendar_default_target !== null && typeof calendar_default_target !== 'string') {
+        return res.status(400).json({ error: 'calendar_default_target muss ein String sein', code: 400 });
+      }
+      const target = (calendar_default_target ?? '').trim();
+      if (target.length > MAX_CALENDAR_TARGET_LENGTH) {
+        return res.status(400).json({ error: `calendar_default_target: maximal ${MAX_CALENDAR_TARGET_LENGTH} Zeichen`, code: 400 });
+      }
+      // Leer = "Lokal speichern" und damit das ausdrückliche Abwählen eines
+      // zuvor gesetzten Ziels. parseSyncTargetValue liefert dafür {kind:'local'},
+      // also einen gültigen Wert, und null nur bei echtem Formfehler.
+      if (parseSyncTargetValue(target) === null) {
+        return res.status(400).json({ error: 'calendar_default_target: erwartet "google:<id>" oder "caldav:<kontoId>|<url>"', code: 400 });
+      }
+      cfgUserSet('calendar_default_target', req.authUserId, target);
     }
 
     // Haushaltweite Modul-Feature-Schalter — nur Admins.
@@ -763,6 +804,7 @@ router.put('/', (req, res) => {
         calendar_default_duration: Number(cfgGet('calendar_default_duration')) || DEFAULT_CALENDAR_DURATION,
         calendar_default_reminders: parseDefaultReminders(cfgUserGet('calendar_default_reminders', req.authUserId)),
         calendar_default_assign_me: cfgUserGet('calendar_default_assign_me', req.authUserId) === '1',
+        calendar_default_target: cfgUserGet('calendar_default_target', req.authUserId) || '',
         health_cycle_enabled: cfgGet('health_cycle_enabled') !== '0',
         rewards_require_approval: cfgGet('rewards_require_approval') !== '0',
         tasks_subtasks_expanded: cfgGet('tasks_subtasks_expanded') === '1',

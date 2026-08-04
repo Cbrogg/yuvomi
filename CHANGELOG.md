@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- A default calendar for your own new events, under Settings → Personal → Calendar. Pick any of the Google or CalDAV calendars already connected and new events start out pointing at it, instead of at "Store locally only" every time. The setting belongs to each household member separately, like the default reminders and the assign-to-me switch next to it: in a family where one person keeps a work calendar and another does not, a single shared default would be wrong for somebody by definition. The target picker in the event dialog still has the last word, so a single event can go anywhere. Editing an existing event never changes its target, and a default whose calendar has since been removed, disabled or turned read-only quietly falls back to storing locally rather than pointing a new event at a calendar that cannot accept it (#620)
+
 ## [1.78.1] - 2026-08-04
 
 ### Fixed

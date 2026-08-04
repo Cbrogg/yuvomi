@@ -19,6 +19,7 @@ import { parseRemindAtAsUtc } from '/utils/reminder-offset.js';
 import { renderUserMultiSelect, getSelectedUserIds, bindUserMultiSelect, renderAvatarStack } from '/components/user-multi-select.js';
 import { wireTablist } from '/utils/tablist.js';
 import { localizeBirthdayEvent } from '/utils/birthday-event.js';
+import { googleTargetValue, caldavTargetValue } from '/utils/sync-target.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
 
 // --------------------------------------------------------
@@ -959,6 +960,8 @@ export async function render(container, { user }) {
     ? prefsRes.data.calendar_default_reminders.map(Number)
     : [];
   state.defaultAssignMe  = !!prefsRes.data?.calendar_default_assign_me;
+  // Standard-Sync-Ziel für eigene neue Termine (#620).
+  state.defaultSyncTarget = prefsRes.data?.calendar_default_target || '';
   state.documentUploadBackend = documentOptionsRes.data?.active_upload_backend ?? 'local';
   state.layerHolidays = localStorage.getItem(LAYER_HOLIDAYS_KEY) !== 'false';
   state.layerSchool   = localStorage.getItem(LAYER_SCHOOL_KEY)   !== 'false';
@@ -2569,7 +2572,7 @@ async function loadSyncTargets(selectElement, currentEvent = null) {
     group.label = t('calendar.syncTargetGoogleGroup');
     for (const cal of targets.google) {
       const option = document.createElement('option');
-      option.value = `google:${cal.id}`;
+      option.value = googleTargetValue(cal.id);
       option.textContent = cal.summary || cal.id;
       group.appendChild(option);
     }
@@ -2588,14 +2591,14 @@ async function loadSyncTargets(selectElement, currentEvent = null) {
       selectElement.appendChild(caldavGroup);
     }
     const option = document.createElement('option');
-    option.value = `caldav:${cal.accountId}|${cal.calendarUrl}`;
+    option.value = caldavTargetValue(cal.accountId, cal.calendarUrl);
     option.textContent = cal.calendarName || cal.calendarUrl;
     caldavGroup.appendChild(option);
   }
 
   // Pre-select the editing event's existing target
   if (currentEvent?.target_google_calendar_id) {
-    const value = `google:${currentEvent.target_google_calendar_id}`;
+    const value = googleTargetValue(currentEvent.target_google_calendar_id);
     // Zeigt das Event auf ein (jetzt) nur-lesbares Ziel, das nicht mehr in der
     // gefilterten Liste steht: Option nachtragen, damit Speichern das Ziel nicht
     // still auf "Lokal" zurücksetzt. Der Server-Guard fängt den Outbound-Fall ab.
@@ -2614,8 +2617,30 @@ async function loadSyncTargets(selectElement, currentEvent = null) {
     }
     selectElement.value = value;
   } else if (currentEvent?.target_caldav_account_id && currentEvent?.target_caldav_calendar_url) {
-    selectElement.value = `caldav:${currentEvent.target_caldav_account_id}|${currentEvent.target_caldav_calendar_url}`;
+    selectElement.value = caldavTargetValue(currentEvent.target_caldav_account_id, currentEvent.target_caldav_calendar_url);
+  } else if (!currentEvent) {
+    // Nur für NEUE Termine (#620). Ein bestehender Termin behält sein Ziel, auch
+    // wenn es "Lokal" ist - sonst würde das Öffnen und Speichern eines lokalen
+    // Termins ihn stillschweigend in einen Kalender schieben.
+    applyDefaultSyncTarget(selectElement);
   }
+}
+
+/**
+ * Setzt das persönliche Standard-Sync-Ziel (#620) als Vorauswahl.
+ *
+ * Steht das gespeicherte Ziel nicht (mehr) in der Liste - Kalender deaktiviert,
+ * gelöscht, auf nur-lesend gestellt oder Konto entfernt - bleibt es bei "Lokal
+ * speichern". Die Alternative, die Option nachzutragen wie beim Bearbeiten eines
+ * Termins, wäre hier falsch: dort rettet sie ein bereits gesetztes Ziel, hier
+ * würde sie einen neuen Termin auf einen Kalender richten, der ihn nicht
+ * annehmen kann.
+ */
+function applyDefaultSyncTarget(selectElement) {
+  const target = state.defaultSyncTarget;
+  if (!target) return;
+  const available = Array.from(selectElement.options).some((o) => o.value === target);
+  if (available) selectElement.value = target;
 }
 
 // --------------------------------------------------------
