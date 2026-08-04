@@ -126,7 +126,13 @@ async function getReminderLists(accountId, { refresh = false, createClient: make
     throw new Error(`Account ${accountId} not found.`);
   }
 
-  if (!refresh) {
+  // Ohne gelaufene Suche entdeckt ein frisch angelegtes Konto nur Kalender: die
+  // Seite zeigte einen leeren Zustand, bis jemand "Aktualisieren" drückte, und wer
+  // den Knopf nicht fand, hielt den Aufgaben-Abgleich für kaputt (#617). Deshalb
+  // sucht der erste Aufruf selbst. Der Zeitstempel (v125) merkt sich, dass die
+  // Suche lief, auch wenn sie nichts fand - sonst befragte ein Server ohne
+  // VTODO-Sammlungen bei jedem Seitenaufruf erneut das Netz.
+  if (!refresh && account.reminders_discovered_at) {
     const rows = db.get().prepare(`
       SELECT list_url, list_name, target_module, enabled
       FROM caldav_reminder_selection
@@ -134,19 +140,12 @@ async function getReminderLists(accountId, { refresh = false, createClient: make
       ORDER BY list_name
     `).all(accountId);
 
-    // Kein Eintrag heißt: für dieses Konto lief noch nie eine Suche. Das Anlegen
-    // eines Kontos entdeckt nur Kalender, nie Aufgabenlisten - die Seite zeigte
-    // deshalb einen leeren Zustand, bis jemand "Aktualisieren" drückte, und wer
-    // den Knopf nicht fand, hielt den Aufgaben-Abgleich für kaputt (#617). Ein
-    // einmaliger Griff zum Server ist billiger als diese Sackgasse.
-    if (rows.length > 0) {
-      return rows.map(r => ({
-        listUrl:      r.list_url,
-        listName:     r.list_name,
-        targetModule: r.target_module,
-        enabled:      r.enabled === 1,
-      }));
-    }
+    return rows.map(r => ({
+      listUrl:      r.list_url,
+      listName:     r.list_name,
+      targetModule: r.target_module,
+      enabled:      r.enabled === 1,
+    }));
   }
 
   // Refresh from server, preserving existing enabled/target_module settings
@@ -172,6 +171,12 @@ async function getReminderLists(accountId, { refresh = false, createClient: make
 
     result.push({ listUrl: cal.url, listName: name, targetModule, enabled: enabled === 1 });
   }
+
+  db.get().prepare(`
+    UPDATE caldav_accounts
+       SET reminders_discovered_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+     WHERE id = ?
+  `).run(accountId);
 
   log.info(`Discovered ${result.length} reminder list(s) for account ${accountId}.`);
   return result;

@@ -373,7 +373,8 @@ describe('Aufgabenlisten erscheinen ohne Knopfdruck (#617)', () => {
       CREATE TABLE caldav_accounts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL, caldav_url TEXT NOT NULL,
-        username TEXT NOT NULL, password TEXT NOT NULL
+        username TEXT NOT NULL, password TEXT NOT NULL,
+        reminders_discovered_at TEXT
       );
       CREATE TABLE caldav_reminder_selection (
         id            INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -428,6 +429,26 @@ describe('Aufgabenlisten erscheinen ohne Knopfdruck (#617)', () => {
     db.prepare('DELETE FROM caldav_reminder_selection').run();
     const lists = await getReminderLists(1, { refresh: true, createClient: silentServer });
     assert.deepStrictEqual(lists.map(l => l.listName), ['Eins', 'Zwei']);
+  });
+
+  it('fragt einen Server ohne Aufgabenlisten nur einmal', async () => {
+    // Ein leeres Ergebnis ist auch ein Ergebnis. Solange nur die leere
+    // Auswahltabelle als "noch nie gesucht" galt, hätte jeder Aufruf der
+    // Einstellungsseite erneut den Server befragt.
+    db.prepare('DELETE FROM caldav_reminder_selection').run();
+    db.prepare('UPDATE caldav_accounts SET reminders_discovered_at = NULL').run();
+
+    let calls = 0;
+    const emptyServer = async () => { calls++; return { fetchCalendars: async () => [] }; };
+
+    assert.deepStrictEqual(await getReminderLists(1, { createClient: emptyServer }), []);
+    assert.deepStrictEqual(await getReminderLists(1, { createClient: emptyServer }), []);
+    assert.deepStrictEqual(await getReminderLists(1, { createClient: emptyServer }), []);
+    assert.strictEqual(calls, 1, 'ein leeres Ergebnis muss gemerkt werden');
+
+    // Der Knopf sucht weiterhin auf Zuruf.
+    await getReminderLists(1, { refresh: true, createClient: emptyServer });
+    assert.strictEqual(calls, 2);
   });
 
   it('gibt die Test-Datenbank wieder frei', () => {

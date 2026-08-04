@@ -528,6 +528,22 @@ async function sync({ createClient } = {}) {
           continue;
         }
 
+        // Konten, die vor dem Komponentenfilter angelegt wurden, tragen die
+        // Aufgabenlisten weiter als aktivierte Kalender: das Filtern beim Anlegen
+        // erreicht sie nicht mehr, und bis jemand von Hand aktualisiert bleibt eine
+        // Aufgabenliste ein Ziel für Termine (#617). Der Lauf hat die Komponenten
+        // ohnehin schon geladen, also wird die Auswahl hier nachgezogen. Vor dem
+        // Vermerken in `fetchedCalendars`, damit der Prune die bereits gespiegelten
+        // Termine dieses Kalenders in Ruhe lässt.
+        if (!supportsComponent(serverCal, 'VEVENT')) {
+          log.warn(`Calendar ${selCal.calendar_name} does not accept events, disabling.`);
+          db.get().prepare(`
+            UPDATE caldav_calendar_selection SET enabled = 0
+            WHERE account_id = ? AND calendar_url = ?
+          `).run(account.id, selCal.calendar_url);
+          continue;
+        }
+
         // Fetch calendar objects
         let calObjects;
         try {
