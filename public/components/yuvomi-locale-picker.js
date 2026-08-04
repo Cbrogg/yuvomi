@@ -31,6 +31,7 @@ const LOCALE_LABELS = {
   ko: '한국어',
   id: 'Bahasa Indonesia',
   fa: 'فارسی',
+  fil: 'Filipino',
 };
 
 class YuvomiLocalePicker extends HTMLElement {

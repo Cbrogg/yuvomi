@@ -5,7 +5,7 @@
  * Dependencies: none (vanilla JS, Fetch API, Intl API)
  */
 
-const SUPPORTED_LOCALES = ['de', 'en', 'es', 'fr', 'it', 'sv', 'el', 'ru', 'tr', 'zh', 'ja', 'ar', 'hi', 'pt', 'uk', 'pl', 'nl', 'cs', 'vi', 'hu', 'ko', 'id', 'fa'];
+const SUPPORTED_LOCALES = ['de', 'en', 'es', 'fr', 'it', 'sv', 'el', 'ru', 'tr', 'zh', 'ja', 'ar', 'hi', 'pt', 'uk', 'pl', 'nl', 'cs', 'vi', 'hu', 'ko', 'id', 'fa', 'fil'];
 const RTL_LOCALES = new Set(['ar', 'fa']);
 const DEFAULT_LOCALE = 'de';
 const STORAGE_KEY = 'yuvomi-locale';
@@ -226,7 +226,7 @@ export function getFormatLocale() {
   } catch {
     stored = null;
   }
-  return stored && /^[a-z]{2}-[A-Z]{2}$/.test(stored) ? stored : currentLocale;
+  return stored && /^[a-z]{2,3}-[A-Z]{2}$/.test(stored) ? stored : currentLocale;
 }
 
 // Gecachte Intl.NumberFormat-Instanzen je (Format-Locale × Options). Die

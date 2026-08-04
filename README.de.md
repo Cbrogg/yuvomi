@@ -29,7 +29,7 @@
     <tr>
       <td align="center"><b>17</b><br><sub>Module</sub></td>
       <td align="center"><sub>·</sub></td>
-      <td align="center"><b>23</b><br><sub>Sprachen</sub></td>
+      <td align="center"><b>24</b><br><sub>Sprachen</sub></td>
       <td align="center"><sub>·</sub></td>
       <td align="center"><b>0</b><br><sub>Tracker</sub></td>
       <td align="center"><sub>·</sub></td>
@@ -205,7 +205,7 @@ Neues Zuhause: **https://yuvomi.cloud/** · Fragen? Eröffne eine [Diskussion](h
 - **Einladungslinks** — Admins laden neue Mitglieder per Link ein, statt ihnen ein Passwort zu setzen; die eingeladene Person legt es selbst fest, der Link läuft nach 7 Tagen ab. Der Mailversand ist optional, der Link funktioniert auch ohne SMTP
 - **Self-Service-Passwort-Reset** — optionales SMTP lässt Nutzer ein vergessenes Passwort selbst per zeitlich begrenztem E-Mail-Link zurücksetzen; enumerationssicher by design
 - **Kein Build-Schritt** — reine ES-Module, kein Bundler, kein Transpiler, kein Framework
-- **Mehrsprachig** — 23 Sprachen mit automatischer Locale-Erkennung (de, en, es, fr, it, sv, el, ru, tr, zh, ja, ar, hi, pt, uk, pl, nl, cs, vi, hu, ko, id, fa). Eine eigene Haushalts-Einstellung bestimmt die Sprache selbst erzeugter Einträge, damit ein exportierter Kalender und die API die Sprache des Haushalts sprechen statt Englisch
+- **Mehrsprachig** — 24 Sprachen mit automatischer Locale-Erkennung (de, en, es, fr, it, sv, el, ru, tr, zh, ja, ar, hi, pt, uk, pl, nl, cs, vi, hu, ko, id, fa, fil). Eine eigene Haushalts-Einstellung bestimmt die Sprache selbst erzeugter Einträge, damit ein exportierter Kalender und die API die Sprache des Haushalts sprechen statt Englisch
 
 ---
 
@@ -213,7 +213,7 @@ Neues Zuhause: **https://yuvomi.cloud/** · Fragen? Eröffne eine [Diskussion](h
 
 ### Web-Installer (empfohlen)
 
-Ein lokalisierter Setup-Assistent — 23 Sprachen — der im Browser läuft. Erkennt Docker oder Podman automatisch, konfiguriert HTTPS, SSO und geplante Backups, startet dann den Container und legt dein Admin-Konto an.
+Ein lokalisierter Setup-Assistent — 24 Sprachen — der im Browser läuft. Erkennt Docker oder Podman automatisch, konfiguriert HTTPS, SSO und geplante Backups, startet dann den Container und legt dein Admin-Konto an.
 
 ```bash
 git clone https://github.com/ulsklyc/yuvomi.git && cd yuvomi

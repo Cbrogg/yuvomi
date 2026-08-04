@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.78.0] - 2026-08-04
+
+### Added
+
+- 25 more currencies, covering every currency in use across the Americas plus the Philippine peso: ARS, BBD, BOB, BSD, BZD, COP, CRC, CUP, DOP, GTQ, GYD, HNL, HTG, JMD, MXN, NIO, PAB, PEN, PHP, PYG, SRD, TTD, UYU, VES and XCD. They are selectable as the household currency and in Subscriptions and Split Expenses alike (54 in total)
+- 34 more regions under Settings → Appearance → Region: every sovereign state of North, Central and South America including the Caribbean, plus English (Philippines) and Filipino (Philippines). Each preset takes its date and time format from the region's own convention, so Panama defaults to MM/DD/YYYY and Argentina to a 12-hour clock (64 in total)
+- Filipino as the 24th interface language, fully translated in the app, the web installer and the command-line installer (#669)
+
+### Changed
+
+- The region selector now sorts by the name it displays instead of by an internal grouping, which matters now that it lists 64 regions
+
+### Fixed
+
+- Regions whose language code is three letters long, such as Filipino (`fil-PH`), were rejected by the server as invalid and never reached the number and currency formatting. The shape check for language tags accepted two-letter codes only, in all five places it is made
+
 ## [1.77.0] - 2026-08-04
 
 ### Added

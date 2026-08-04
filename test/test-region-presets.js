@@ -11,6 +11,10 @@ import {
   numberLocaleFor,
 } from '../public/settings/region-presets.js';
 
+// Spiegelt die Formprüfung aus getFormatLocale() in public/i18n.js. Zwei- oder
+// dreibuchstabiger Sprachcode, damit fil-PH (Filipino) durchkommt.
+const BCP47_TAG = /^[a-z]{2,3}-[A-Z]{2}$/;
+
 async function backendList(name) {
   const src = await readFile(
     new URL('../server/routes/preferences.js', import.meta.url),
@@ -137,7 +141,28 @@ test('numberLocaleFor derives the tag even without a stored region, and empties 
   // Jeder gelieferte Tag muss ein gültiger BCP-47-Regionscode sein (getFormatLocale-Regex).
   for (const code of REGION_CODES) {
     const tag = numberLocaleFor({ region: code, ...REGION_PRESETS[code] });
-    assert.match(tag, /^[a-z]{2}-[A-Z]{2}$/, `${code}: numberLocaleFor tag not BCP-47`);
+    assert.match(tag, BCP47_TAG, `${code}: numberLocaleFor tag not BCP-47`);
+  }
+});
+
+// Die Tag-Form wird an fünf Stellen geprüft (getFormatLocale, VALID_REGION,
+// resolveHouseholdLocale, formatMoney, householdRegion). Eine Region mit
+// dreibuchstabigem Sprachcode wie fil-PH fiel durch jede Stelle, die noch auf
+// {2} stand - deshalb liest der Guard die Regexe aus dem Code, statt sie zu
+// doppeln, und schlägt an, sobald eine davon zurückfällt.
+test('jede Tag-Formprüfung akzeptiert zwei- UND dreibuchstabige Sprachcodes', async () => {
+  const sources = [
+    ['public/i18n.js', 'getFormatLocale'],
+    ['server/routes/preferences.js', 'VALID_REGION'],
+    ['server/utils/i18n.js', 'resolveHouseholdLocale/formatMoney/householdRegion'],
+  ];
+  for (const [file, label] of sources) {
+    const src = await readFile(new URL(`../${file}`, import.meta.url), 'utf8');
+    const tagChecks = [...src.matchAll(/\[a-z\]\{([^}]+)\}-\[A-Z\]\{2\}/g)].map((m) => m[1]);
+    assert.ok(tagChecks.length > 0, `${file}: keine BCP-47-Formprüfung gefunden (${label})`);
+    for (const quantifier of tagChecks) {
+      assert.equal(quantifier, '2,3', `${file}: Formprüfung auf {${quantifier}} weist fil-PH ab (${label})`);
+    }
   }
 });
 

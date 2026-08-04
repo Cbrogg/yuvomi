@@ -170,7 +170,7 @@ npm run test:typography      # Typo-Guard: font-size/letter-spacing nur via Toke
 npm run test:settings-copy      # Beschriftungswahrheit der Settings-Blätter: Registry-Metadaten und Blatt-Inhalte dürfen nicht auseinanderlaufen
 npm run test:settings-navigation
 npm run test:settings-cron-label  # Backup-Zeitplan als Klartext: Cron-Muster (täglich/wöchentlich/monatlich/Stundenintervall), null-Fallback für alles Übrige, Locale-Vollständigkeit
-npm run test:region-presets   # Region/Format-Presets: Mapping-Validierung + detectRegion-Reverse-Lookup
+npm run test:region-presets   # Region/Format-Presets: Mapping-Validierung + detectRegion-Reverse-Lookup + BCP-47-Formprüfungen ({2,3}, damit fil-PH durchkommt)
 npm run test:docker-publish   # Docker-Publish-Workflow: Tags, Plattformen, Trigger
 npm run test:auth-userid
 npm run test:setup

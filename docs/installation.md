@@ -10,7 +10,7 @@ node tools/installer/install-server.js
 # Open http://localhost:8090
 ```
 
-Requires Node.js 18+ on the host. The browser-based wizard is fully localized (23 languages, auto-detected from your browser), detects your container engine (Docker or Podman) first, then configures your `.env` — including optional reverse-proxy/HTTPS, Single Sign-On (OIDC), and automatic backups — starts the container, and creates your admin account. The engine still runs the app itself.
+Requires Node.js 18+ on the host. The browser-based wizard is fully localized (24 languages, auto-detected from your browser), detects your container engine (Docker or Podman) first, then configures your `.env` — including optional reverse-proxy/HTTPS, Single Sign-On (OIDC), and automatic backups — starts the container, and creates your admin account. The engine still runs the app itself.
 
 ### Option B — CLI Installer (Linux / macOS)
 
@@ -19,7 +19,7 @@ git clone https://github.com/ulsklyc/yuvomi.git && cd yuvomi
 bash install.sh
 ```
 
-The script checks prerequisites, generates security keys, asks for the base URL your household will use, configures optional integrations (weather via Open-Meteo coordinates, calendars, document storage), starts the container (Docker or Podman — auto-detected), and creates your admin account. Like the web installer, it is fully localized in 23 languages and auto-detects yours from the shell environment (`LANG`/`LC_ALL`).
+The script checks prerequisites, generates security keys, asks for the base URL your household will use, configures optional integrations (weather via Open-Meteo coordinates, calendars, document storage), starts the container (Docker or Podman — auto-detected), and creates your admin account. Like the web installer, it is fully localized in 24 languages and auto-detects yours from the shell environment (`LANG`/`LC_ALL`).
 
 Running it again on an existing installation is safe, in two ways:
 
@@ -28,7 +28,7 @@ Running it again on an existing installation is safe, in two ways:
 
 > **Base URL.** The script asks for the absolute origin your household will open (default `http://<host>:<port>`) and writes it as `BASE_URL`. Behind a reverse proxy, enter the public address there — for example `https://yuvomi.example.com`. Without it the server sends no password-reset emails at all, because it deliberately does not trust the request's `Host` header.
 
-Force a specific language with `--lang` (one of `de en es fr it sv el ru tr zh ja ar hi pt uk pl nl cs vi hu ko id fa`):
+Force a specific language with `--lang` (one of `de en es fr it sv el ru tr zh ja ar hi pt uk pl nl cs vi hu ko id fa fil`):
 
 ```bash
 bash install.sh --lang de
@@ -175,7 +175,7 @@ node tools/installer/install-server.js
 
 #### 3. Open the Wizard
 
-Open your browser and navigate to **http://localhost:8090**. The wizard detects your browser language (23 languages supported), verifies that a container engine is available (Docker with Compose v2, or Podman with `podman compose` / `podman-compose`), and reports any existing `.env` file or running container before you start. It then guides you through:
+Open your browser and navigate to **http://localhost:8090**. The wizard detects your browser language (24 languages supported), verifies that a container engine is available (Docker with Compose v2, or Podman with `podman compose` / `podman-compose`), and reports any existing `.env` file or running container before you start. It then guides you through:
 
 - Basics — timezone (`TZ`) and HTTP host port (`OIKOS_HTTP_PORT`)
 - Security key generation (`SESSION_SECRET`, `DB_ENCRYPTION_KEY`) — on a re-run, keys already present in your `.env` are kept rather than regenerated, so running the wizard again on a live installation cannot lock you out of your encrypted database

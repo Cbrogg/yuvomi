@@ -61,7 +61,7 @@
     <tr>
       <td align="center"><b>17</b><br><sub>modules</sub></td>
       <td align="center"><sub>·</sub></td>
-      <td align="center"><b>23</b><br><sub>languages</sub></td>
+      <td align="center"><b>24</b><br><sub>languages</sub></td>
       <td align="center"><sub>·</sub></td>
       <td align="center"><b>0</b><br><sub>trackers</sub></td>
       <td align="center"><sub>·</sub></td>
@@ -315,7 +315,7 @@ Seventeen independent modules share one calm, consistent interface. Turn on what
 
 ### Web installer (recommended)
 
-A localized setup wizard, in 23 languages, that runs in your browser. It auto-detects Docker or Podman, configures HTTPS, SSO and scheduled backups, then starts the container and creates your admin account.
+A localized setup wizard, in 24 languages, that runs in your browser. It auto-detects Docker or Podman, configures HTTPS, SSO and scheduled backups, then starts the container and creates your admin account.
 
 ```bash
 git clone https://github.com/ulsklyc/yuvomi.git && cd yuvomi
@@ -378,7 +378,7 @@ Open `http://localhost:3000`. The first visit walks you through creating your ad
 <details>
 <summary><b>Do I need to be technical to run this?</b></summary>
 <br>
-If you can install an app on a NAS or run one command, yes. The web installer speaks 23 languages, auto-detects Docker or Podman, and sets up HTTPS, SSO and backups for you. TrueNAS, Umbrel and Unraid users install from the app store with no terminal at all.
+If you can install an app on a NAS or run one command, yes. The web installer speaks 24 languages, auto-detects Docker or Podman, and sets up HTTPS, SSO and backups for you. TrueNAS, Umbrel and Unraid users install from the app store with no terminal at all.
 </details>
 
 <details>
@@ -421,7 +421,7 @@ Nothing. Yuvomi is free and MIT-licensed. You provide the server; there is no su
 - **SSO / OpenID Connect** - optional single sign-on via any OIDC provider (Authentik, Keycloak, Google, Microsoft Entra), configured with four env vars using the Authorization Code + PKCE flow.
 - **Invite links** - admins invite new members with a link instead of setting a password for them; the invited person chooses their own, and the link expires after 7 days. Mail delivery is optional, the link works without SMTP.
 - **Self-service password reset** - optional SMTP email lets users reset a forgotten password themselves via a time-limited link, with anti-enumeration by design.
-- **Multilingual** - 23 languages with automatic locale detection (de, en, es, fr, it, sv, el, ru, tr, zh, ja, ar, hi, pt, uk, pl, nl, cs, vi, hu, ko, id, fa). A separate household setting decides the language of entries Yuvomi creates itself, so an exported calendar and the API speak your household's language instead of English.
+- **Multilingual** - 24 languages with automatic locale detection (de, en, es, fr, it, sv, el, ru, tr, zh, ja, ar, hi, pt, uk, pl, nl, cs, vi, hu, ko, id, fa, fil). A separate household setting decides the language of entries Yuvomi creates itself, so an exported calendar and the API speak your household's language instead of English.
 
 <p>
   <img src="https://img.shields.io/badge/Express-000000?style=flat-square&logo=express&logoColor=white" alt="Express">

@@ -19,7 +19,7 @@ const router = express.Router();
 const VALID_MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'];
 const DEFAULT_MEAL_TYPES = VALID_MEAL_TYPES.join(',');
 
-const VALID_CURRENCIES = ['AED', 'AUD', 'BRL', 'CAD', 'CHF', 'CLP', 'CNY', 'CZK', 'DKK', 'EUR', 'GBP', 'HUF', 'IDR', 'INR', 'IRR', 'JPY', 'KRW', 'KZT', 'MYR', 'NOK', 'NZD', 'PLN', 'RUB', 'SAR', 'SEK', 'TRY', 'UAH', 'USD', 'ZAR'];
+const VALID_CURRENCIES = ['AED', 'ARS', 'AUD', 'BBD', 'BOB', 'BRL', 'BSD', 'BZD', 'CAD', 'CHF', 'CLP', 'CNY', 'COP', 'CRC', 'CUP', 'CZK', 'DKK', 'DOP', 'EUR', 'GBP', 'GTQ', 'GYD', 'HNL', 'HTG', 'HUF', 'IDR', 'INR', 'IRR', 'JMD', 'JPY', 'KRW', 'KZT', 'MXN', 'MYR', 'NIO', 'NOK', 'NZD', 'PAB', 'PEN', 'PHP', 'PLN', 'PYG', 'RUB', 'SAR', 'SEK', 'SRD', 'TRY', 'TTD', 'UAH', 'USD', 'UYU', 'VES', 'XCD', 'ZAR'];
 const DEFAULT_CURRENCY = 'EUR';
 const DEFAULT_APP_NAME = 'Yuvomi';
 
@@ -51,7 +51,11 @@ const VALID_LANGUAGES = getSupportedLocales();
 // Region ist nur ein Anzeige-Hinweis (Locale-Code wie "fr-FR" oder "custom").
 // Der Client fällt bei unbekanntem Wert ohnehin auf detectRegion() zurück, daher
 // genügt eine Formprüfung statt einer festen Liste.
-const VALID_REGION = /^(custom|[a-z]{2}-[A-Z]{2})$/;
+//
+// Der Sprachteil darf zwei oder drei Buchstaben haben: BCP-47 kennt beides und
+// "fil-PH" (Filipino) wäre mit der alten {2}-Prüfung als ungültige Region
+// abgewiesen worden, obwohl der Client sie anbietet.
+const VALID_REGION = /^(custom|[a-z]{2,3}-[A-Z]{2})$/;
 const DEFAULT_TIME_FORMAT = '24h';
 
 // Standard-Termindauer (Minuten): setzt das Ende neuer Kalender-Termine relativ

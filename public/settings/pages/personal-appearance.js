@@ -63,9 +63,17 @@ function formatOptions(selected) {
 
 function regionOptions(selectedRegion) {
   const locale = getLocale();
-  const presets = REGION_CODES.map((code) => (
-    `<option value="${esc(code)}"${selectedRegion === code ? ' selected' : ''}>${esc(regionLabel(code, locale))}</option>`
-  )).join('');
+  // Nach dem angezeigten Namen sortieren, nicht nach der Reihenfolge in
+  // REGION_PRESETS: die ist nach Sprachfamilie gruppiert und war bei einem
+  // Dutzend Einträgen noch überschaubar. Mit der Amerika-Abdeckung sind es
+  // über 60 - da findet man "Spanisch (Peru)" nur alphabetisch wieder.
+  // detectRegion() bleibt von der Sortierung unberührt, es liest das Objekt.
+  const presets = [...REGION_CODES]
+    .map((code) => ({ code, label: regionLabel(code, locale) }))
+    .sort((a, b) => a.label.localeCompare(b.label, locale))
+    .map(({ code, label }) => (
+      `<option value="${esc(code)}"${selectedRegion === code ? ' selected' : ''}>${esc(label)}</option>`
+    )).join('');
   const custom = `<option value="${CUSTOM_REGION}"${selectedRegion === CUSTOM_REGION ? ' selected' : ''}>${t('settings.regionCustom')}</option>`;
   return presets + custom;
 }
