@@ -1698,7 +1698,7 @@
         "calendarsRefreshed": "Takvimler güncellendi",
         "caldavRemindersToggle": "Hatırlatıcı listelerini göster/gizle",
         "caldavRemindersHint": "Herhangi bir CalDAV sunucusundaki hatırlatıcı listeleri (iCloud, Nextcloud, Radicale) Görevler veya Alışveriş ile çift yönlü eşitlenir.",
-        "caldavRemindersEmpty": "Hatırlatıcı listesi bulunamadı. Bunları bulmak için «Hatırlatıcı listelerini yenile» düğmesine tıklayın.",
+        "caldavRemindersEmpty": "Bu sunucu hatırlatıcı listesi sunmuyor. Sunucuda bir tane oluşturun, ardından aramayı yenileyin.",
         "caldavReminderMapTasks": "Görevler",
         "caldavReminderMapShopping": "Alışveriş",
         "caldavRefreshReminders": "Hatırlatıcı listelerini yenile",

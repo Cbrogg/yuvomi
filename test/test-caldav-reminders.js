@@ -6,8 +6,13 @@
 import { describe, it, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
+import { readFileSync } from 'node:fs';
 
-import { mapVtodoPriority, splitDue, pruneRemoved } from '../server/services/caldav-reminders-sync.js';
+import {
+  mapVtodoPriority, splitDue, pruneRemoved, getReminderLists,
+} from '../server/services/caldav-reminders-sync.js';
+import { supportsComponent } from '../server/utils/caldav-client.js';
+import { _setTestDatabase, _resetTestDatabase } from '../server/db.js';
 
 describe('VTODO field mapping', () => {
   it('maps RFC-5545 PRIORITY to task priority', () => {
@@ -284,5 +289,148 @@ describe('caldav_reminder_selection schema & upsert logic', () => {
         AND external_uid NOT IN (${placeholders})`).run(accId, ...seenUids);
     const stale = db.prepare(`SELECT * FROM tasks WHERE external_uid = 'stale@x'`).get();
     assert.strictEqual(stale, undefined, 'stale caldav task should be removed');
+  });
+});
+
+// --------------------------------------------------------
+// Komponentenzuordnung (#617)
+// --------------------------------------------------------
+
+describe('supportsComponent: Termine und Aufgaben teilen eine Regel (#617)', () => {
+  it('hält Aufgabenlisten aus der Kalenderauswahl und Kalender aus der Aufgabenauswahl', () => {
+    const todoList = { components: ['VTODO'] };
+    const calendar = { components: ['VEVENT'] };
+
+    assert.strictEqual(supportsComponent(todoList, 'VTODO'), true);
+    assert.strictEqual(supportsComponent(todoList, 'VEVENT'), false,
+      'eine reine Aufgabenliste darf nicht als Kalender angeboten werden');
+    assert.strictEqual(supportsComponent(calendar, 'VEVENT'), true);
+    assert.strictEqual(supportsComponent(calendar, 'VTODO'), false);
+  });
+
+  it('lässt eine gemischte Collection auf beiden Seiten zu', () => {
+    const mixed = { components: ['VTODO', 'VEVENT', 'VJOURNAL'] };
+    assert.strictEqual(supportsComponent(mixed, 'VEVENT'), true);
+    assert.strictEqual(supportsComponent(mixed, 'VTODO'), true);
+  });
+
+  it('nimmt ohne Angabe des Servers alle Komponenten an (RFC 4791 §5.2.3)', () => {
+    // Die Property ist optional. Wer strikt filtert, blendet auf solchen Servern
+    // jede Collection aus - vorher galt das für die Aufgabenseite.
+    for (const cal of [{}, { components: [] }, { components: null }]) {
+      assert.strictEqual(supportsComponent(cal, 'VTODO'), true, JSON.stringify(cal));
+      assert.strictEqual(supportsComponent(cal, 'VEVENT'), true, JSON.stringify(cal));
+    }
+  });
+
+  it('vergleicht Komponentennamen unabhängig von der Schreibweise', () => {
+    assert.strictEqual(supportsComponent({ components: ['vtodo'] }, 'VTODO'), true);
+  });
+});
+
+describe('Kalenderauswahl übernimmt nur VEVENT-Collections (#617)', () => {
+  // Regel statt Allowlist: jede Schleife, die in caldav_calendar_selection
+  // schreibt, muss über eventCalendars() laufen. Es sind drei (Konto anlegen,
+  // Zugangsdaten ändern, Kalender aktualisieren) - eine übersehene Stelle bietet
+  // Aufgabenlisten wieder als Terminziel an.
+  const source = readFileSync(new URL('../server/services/caldav-sync.js', import.meta.url), 'utf8');
+
+  it('führt jeden INSERT über eventCalendars()', () => {
+    const lines = source.split('\n');
+    const inserts = lines
+      .map((line, i) => ({ line, i }))
+      .filter(({ line }) => /INSERT INTO caldav_calendar_selection/.test(line));
+
+    assert.ok(inserts.length >= 3, `erwartet mindestens 3 Schreibstellen, gefunden ${inserts.length}`);
+
+    for (const { i } of inserts) {
+      // Die umschließende for-Schleife steht oberhalb des INSERT.
+      const preceding = lines.slice(Math.max(0, i - 12), i).reverse();
+      const loop = preceding.find(l => /for \(const \w+ of /.test(l));
+      assert.ok(loop, `keine Schleife über dem INSERT in Zeile ${i + 1}`);
+      assert.match(loop, /eventCalendars\(/,
+        `Zeile ${i + 1}: Kalenderauswahl wird ungefiltert befüllt - `
+        + 'eine reine Aufgabenliste landet damit als Speicherziel für Termine');
+    }
+  });
+});
+
+describe('Aufgabenlisten erscheinen ohne Knopfdruck (#617)', () => {
+  let db;
+
+  function stubClient(components) {
+    return async () => ({
+      fetchCalendars: async () => [
+        { url: 'https://dav.example/termine/',  displayName: 'Termine',  components: ['VEVENT'] },
+        { url: 'https://dav.example/aufgaben/', displayName: 'Aufgaben', components },
+      ],
+    });
+  }
+
+  before(() => {
+    db = new DatabaseSync(':memory:');
+    db.exec(`
+      CREATE TABLE caldav_accounts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL, caldav_url TEXT NOT NULL,
+        username TEXT NOT NULL, password TEXT NOT NULL
+      );
+      CREATE TABLE caldav_reminder_selection (
+        id            INTEGER PRIMARY KEY AUTOINCREMENT,
+        account_id    INTEGER NOT NULL,
+        list_url      TEXT NOT NULL,
+        list_name     TEXT NOT NULL,
+        target_module TEXT NOT NULL DEFAULT 'tasks',
+        target_list_id INTEGER,
+        enabled       INTEGER NOT NULL DEFAULT 0,
+        UNIQUE(account_id, list_url)
+      );
+      INSERT INTO caldav_accounts (name, caldav_url, username, password)
+      VALUES ('Radicale', 'https://dav.example/', 'demo', 'pw');
+    `);
+    _setTestDatabase(db);
+  });
+
+  it('sucht beim ersten Aufruf selbst, statt einen leeren Zustand zu zeigen', async () => {
+    // Das Anlegen eines Kontos entdeckt nur Kalender. Ohne diesen Griff zum
+    // Server blieb die Seite leer, bis jemand "Aktualisieren" fand - und der
+    // Abgleich sah kaputt aus, obwohl er nur nichts zu tun hatte.
+    const lists = await getReminderLists(1, { createClient: stubClient(['VTODO']) });
+
+    assert.strictEqual(lists.length, 1);
+    assert.strictEqual(lists[0].listName, 'Aufgaben');
+    assert.strictEqual(lists[0].enabled, false, 'gefunden heißt nicht eingeschaltet');
+  });
+
+  it('liest danach aus der Datenbank, ohne den Server erneut zu fragen', async () => {
+    const explode = async () => { throw new Error('darf den Server nicht erneut fragen'); };
+    const lists = await getReminderLists(1, { createClient: explode });
+    assert.strictEqual(lists.length, 1);
+  });
+
+  it('behält eine eingeschaltete Liste über eine erneute Suche hinweg', async () => {
+    db.prepare('UPDATE caldav_reminder_selection SET enabled = 1').run();
+    const lists = await getReminderLists(1, { refresh: true, createClient: stubClient(['VTODO']) });
+    assert.strictEqual(lists[0].enabled, true, 'die Auswahl des Nutzers darf eine Suche nicht zurücksetzen');
+  });
+
+  it('nimmt jede Liste mit, wenn der Server keine Komponenten meldet', async () => {
+    // Server ohne `supported-calendar-component-set`: RFC 4791 §5.2.3 verlangt,
+    // dass dann alle Komponenten gelten. Vorher fiel dort jede Liste durch das
+    // Raster und die Seite blieb leer, obwohl Aufgaben da waren.
+    const silentServer = async () => ({
+      fetchCalendars: async () => [
+        { url: 'https://dav.example/eins/', displayName: 'Eins' },
+        { url: 'https://dav.example/zwei/', displayName: 'Zwei', components: [] },
+      ],
+    });
+
+    db.prepare('DELETE FROM caldav_reminder_selection').run();
+    const lists = await getReminderLists(1, { refresh: true, createClient: silentServer });
+    assert.deepStrictEqual(lists.map(l => l.listName), ['Eins', 'Zwei']);
+  });
+
+  it('gibt die Test-Datenbank wieder frei', () => {
+    _resetTestDatabase();
   });
 });

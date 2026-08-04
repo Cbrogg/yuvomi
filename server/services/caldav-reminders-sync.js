@@ -13,7 +13,7 @@ const log = createLogger('CalDAV-Reminders');
 
 import * as db from '../db.js';
 import { parseVTODO } from './ics-parser.js';
-import { createCalDAVClient } from '../utils/caldav-client.js';
+import { createCalDAVClient, supportsComponent } from '../utils/caldav-client.js';
 import { serverTimeZone, utcToWall } from '../utils/timezone.js';
 import { setItemTags, setTags } from '../utils/task-tags.js';
 import * as todoOutbound from './caldav-todo-outbound.js';
@@ -96,8 +96,7 @@ function getAllAccounts() {
 }
 
 function isReminderCollection(cal) {
-  const comps = cal.components || [];
-  return Array.isArray(comps) && comps.map(c => String(c).toUpperCase()).includes('VTODO');
+  return supportsComponent(cal, 'VTODO');
 }
 
 /**
@@ -121,7 +120,7 @@ const createClient = createCalDAVClient;
 // Reminder-List Discovery & Selection
 // --------------------------------------------------------
 
-async function getReminderLists(accountId, { refresh = false } = {}) {
+async function getReminderLists(accountId, { refresh = false, createClient: makeClient } = {}) {
   const account = getAccountById(accountId);
   if (!account) {
     throw new Error(`Account ${accountId} not found.`);
@@ -135,16 +134,23 @@ async function getReminderLists(accountId, { refresh = false } = {}) {
       ORDER BY list_name
     `).all(accountId);
 
-    return rows.map(r => ({
-      listUrl:      r.list_url,
-      listName:     r.list_name,
-      targetModule: r.target_module,
-      enabled:      r.enabled === 1,
-    }));
+    // Kein Eintrag heißt: für dieses Konto lief noch nie eine Suche. Das Anlegen
+    // eines Kontos entdeckt nur Kalender, nie Aufgabenlisten - die Seite zeigte
+    // deshalb einen leeren Zustand, bis jemand "Aktualisieren" drückte, und wer
+    // den Knopf nicht fand, hielt den Aufgaben-Abgleich für kaputt (#617). Ein
+    // einmaliger Griff zum Server ist billiger als diese Sackgasse.
+    if (rows.length > 0) {
+      return rows.map(r => ({
+        listUrl:      r.list_url,
+        listName:     r.list_name,
+        targetModule: r.target_module,
+        enabled:      r.enabled === 1,
+      }));
+    }
   }
 
   // Refresh from server, preserving existing enabled/target_module settings
-  const client    = await createClient(account);
+  const client    = await (makeClient || createClient)(account);
   const calendars = await client.fetchCalendars();
   const lists     = calendars.filter(isReminderCollection);
 

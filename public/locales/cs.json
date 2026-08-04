@@ -1671,7 +1671,7 @@
         "calendarsRefreshed": "Kalendáře aktualizovány",
         "caldavRemindersToggle": "Zobrazit/skrýt seznamy připomínek",
         "caldavRemindersHint": "Seznamy připomínek z libovolného serveru CalDAV (iCloud, Nextcloud, Radicale) se synchronizují s Úkoly nebo Nákupem v obou směrech.",
-        "caldavRemindersEmpty": "Nenalezeny žádné seznamy připomínek. Klikněte na „Aktualizovat seznamy připomínek“ pro jejich vyhledání.",
+        "caldavRemindersEmpty": "Tento server nenabízí žádné seznamy připomínek. Vytvořte jeden na serveru a poté vyhledávání aktualizujte.",
         "caldavReminderMapTasks": "Úkoly",
         "caldavReminderMapShopping": "Nákup",
         "caldavRefreshReminders": "Aktualizovat seznamy připomínek",

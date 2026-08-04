@@ -1683,7 +1683,7 @@
         "calendarsRefreshed": "تقویم‌ها به‌روزرسانی شدند",
         "caldavRemindersToggle": "نمایش/پنهان‌سازی فهرست‌های یادآور",
         "caldavRemindersHint": "فهرست‌های یادآور از هر سرور CalDAV (iCloud، Nextcloud، Radicale) در هر دو جهت با کارها یا خرید همگام‌سازی می‌شوند.",
-        "caldavRemindersEmpty": "فهرست یادآوری یافت نشد. برای یافتن آن‌ها روی «به‌روزرسانی فهرست‌های یادآور» کلیک کنید.",
+        "caldavRemindersEmpty": "این سرور هیچ فهرست یادآوری ارائه نمی‌دهد. یکی روی سرور بسازید و سپس جست‌وجو را به‌روز کنید.",
         "caldavReminderMapTasks": "کارها",
         "caldavReminderMapShopping": "خرید",
         "caldavRefreshReminders": "به‌روزرسانی فهرست‌های یادآور",

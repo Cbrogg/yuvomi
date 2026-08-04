@@ -1698,7 +1698,7 @@
         "calendarsRefreshed": "Calendarios actualizados",
         "caldavRemindersToggle": "Mostrar/ocultar listas de recordatorios",
         "caldavRemindersHint": "Las listas de recordatorios de cualquier servidor CalDAV (iCloud, Nextcloud, Radicale) se sincronizan con Tareas o Compras en ambas direcciones.",
-        "caldavRemindersEmpty": "No se encontraron listas de recordatorios. Haz clic en «Actualizar listas de recordatorios» para detectarlas.",
+        "caldavRemindersEmpty": "Este servidor no ofrece listas de recordatorios. Crea una en el servidor y actualiza la búsqueda.",
         "caldavReminderMapTasks": "Tareas",
         "caldavReminderMapShopping": "Compras",
         "caldavRefreshReminders": "Actualizar listas de recordatorios",
