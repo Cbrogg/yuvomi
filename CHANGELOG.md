@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.76.0] - 2026-08-04
+
 ### Added
 
 - The New Zealand dollar is now one of the currencies a household can pick, in the household settings as well as in subscriptions and in split expenses. New Zealand households had to record their money under a currency that was not theirs. Choosing New Zealand as the region sets the dollar together with the local date and time format in one step, and amounts are then written the way they are written there: $1,234.56.
