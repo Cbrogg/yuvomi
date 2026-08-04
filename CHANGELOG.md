@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.75.8] - 2026-08-04
+
+### Fixed
+
+- The edit and delete buttons of a housekeeping task now carry their icons the moment the task is added from a suggestion. The list was redrawn without turning the icon placeholders into icons, which happened only on a tab switch, so the buttons stayed blank until the page was reloaded. Checking a task off, restoring it, deleting one and saving the edit dialog were affected the same way, as was marking a visit as paid on the reports tab (#668)
+
 ## [1.75.7] - 2026-08-04
 
 ### Fixed
