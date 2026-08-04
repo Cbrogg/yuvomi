@@ -1698,7 +1698,7 @@
         "calendarsRefreshed": "Календари обновлены",
         "caldavRemindersToggle": "Показать/скрыть списки напоминаний",
         "caldavRemindersHint": "Списки напоминаний с любого сервера CalDAV (iCloud, Nextcloud, Radicale) синхронизируются с Задачами или Покупками в обе стороны.",
-        "caldavRemindersEmpty": "Списки напоминаний не найдены. Нажмите «Обновить списки напоминаний», чтобы их обнаружить.",
+        "caldavRemindersEmpty": "Этот сервер не предоставляет списков напоминаний. Создайте список на сервере, затем обновите поиск.",
         "caldavReminderMapTasks": "Задачи",
         "caldavReminderMapShopping": "Покупки",
         "caldavRefreshReminders": "Обновить списки напоминаний",

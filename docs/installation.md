@@ -1138,6 +1138,28 @@ the container log, such as SQLite messages, are worth checking separately.
 
 </details>
 
+<details>
+<summary>CalDAV tasks are not syncing</summary>
+
+Adding a CalDAV account only sets up **calendars**. Task lists live on their own page under
+**Settings → Synchronization → Reminder sync**, and each list has to be switched on there and
+mapped to Tasks or Shopping before anything is mirrored. That step is deliberate: enabling every
+list by default would pull a server's existing reminders into your task board unannounced.
+
+After switching a list on, either press "Sync reminders" or wait for the next scheduled run
+(`SYNC_INTERVAL_MINUTES`).
+
+If the page shows no lists at all, the server is not advertising any collection that accepts
+`VTODO`. Create a task list in your CalDAV server (in Radicale, Nextcloud or your client of
+choice), then press "Refresh reminder lists".
+
+Before v1.75.7 the page only looked for lists when that refresh button was pressed, so a freshly
+added account showed an empty state even when the server was serving task lists. Upgrading fixes
+this without any action on your part. A second bug, fixed in v1.68.1, made the fetch ask for
+appointments on task lists, which left the mirror empty against Radicale and Nextcloud.
+
+</details>
+
 ---
 
 ## Uninstall

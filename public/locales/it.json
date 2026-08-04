@@ -1698,7 +1698,7 @@
         "calendarsRefreshed": "Calendari aggiornati",
         "caldavRemindersToggle": "Mostra/nascondi elenchi promemoria",
         "caldavRemindersHint": "Gli elenchi promemoria di qualsiasi server CalDAV (iCloud, Nextcloud, Radicale) si sincronizzano con Attività o Spesa in entrambe le direzioni.",
-        "caldavRemindersEmpty": "Nessun elenco promemoria trovato. Fai clic su «Aggiorna elenchi promemoria» per rilevarli.",
+        "caldavRemindersEmpty": "Questo server non offre elenchi promemoria. Creane uno sul server, poi aggiorna la ricerca.",
         "caldavReminderMapTasks": "Attività",
         "caldavReminderMapShopping": "Spesa",
         "caldavRefreshReminders": "Aggiorna elenchi promemoria",

@@ -1675,7 +1675,7 @@
         "calendarsRefreshed": "Calendars refreshed",
         "caldavRemindersToggle": "Show/hide reminder lists",
         "caldavRemindersHint": "Reminder lists from any CalDAV server (iCloud, Nextcloud, Radicale) sync with Tasks or Shopping in both directions.",
-        "caldavRemindersEmpty": "No reminder lists found. Click “Refresh reminder lists” to discover them.",
+        "caldavRemindersEmpty": "This server offers no reminder lists. Create one on the server, then refresh the search.",
         "caldavReminderMapTasks": "Tasks",
         "caldavReminderMapShopping": "Shopping",
         "caldavRefreshReminders": "Refresh reminder lists",

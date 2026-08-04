@@ -15,7 +15,7 @@ import * as outbound from './calendar-outbound.js';
 import { processPendingDeletions, processPendingUpdates, flushAccount } from './caldav-outbound.js';
 import { detachAccountRows } from './caldav-todo-outbound.js';
 import { toICSDatetime, escapeICSText } from '../utils/ics-format.js';
-import { createCalDAVClient } from '../utils/caldav-client.js';
+import { createCalDAVClient, supportsComponent } from '../utils/caldav-client.js';
 
 // Reused functions from apple-calendar.js
 import {
@@ -110,6 +110,17 @@ function getAllAccounts() {
 // Connection Testing
 // --------------------------------------------------------
 
+/**
+ * Nur Collections, die Termine aufnehmen. `fetchCalendars()` liefert jede
+ * Kalender-Collection des Kontos, also auch reine Aufgabenlisten - die landeten
+ * ungefiltert in der Kalenderauswahl und wurden als Speicherziel für Termine
+ * angeboten. Sabre/Nextcloud weist ein VEVENT darin mit 403 ab, Radicale nimmt es
+ * an und verschmutzt damit die Aufgabenliste anderer Clients (#617).
+ */
+function eventCalendars(calendars) {
+  return (calendars || []).filter(cal => supportsComponent(cal, 'VEVENT'));
+}
+
 async function testConnection(caldavUrl, username, password) {
   try {
     const { createDAVClient } = await import('tsdav');
@@ -169,7 +180,7 @@ async function addAccount(name, caldavUrl, username, password) {
 
   // Insert calendar selections (all enabled by default)
   const calendarData = [];
-  for (const cal of calendars) {
+  for (const cal of eventCalendars(calendars)) {
     const calColor = normalizeCalColor(cal.calendarColor) || '#4A90E2';
     const calName = cal.displayName || 'Unnamed Calendar';
 
@@ -181,7 +192,7 @@ async function addAccount(name, caldavUrl, username, password) {
     calendarData.push({ url: cal.url, name: calName, color: calColor, enabled: true });
   }
 
-  log.info(`Added CalDAV account "${name}" with ${calendars.length} calendars.`);
+  log.info(`Added CalDAV account "${name}" with ${calendarData.length} calendars.`);
 
   return { accountId, calendars: calendarData };
 }
@@ -229,7 +240,7 @@ async function updateAccount(accountId, { name, caldavUrl, username, password })
       db.get().prepare('DELETE FROM caldav_calendar_selection WHERE account_id = ?').run(accountId);
 
       // Insert new selections
-      for (const cal of calendars) {
+      for (const cal of eventCalendars(calendars)) {
         const calColor = normalizeCalColor(cal.calendarColor) || '#4A90E2';
         const calName = cal.displayName || 'Unnamed Calendar';
 
@@ -337,7 +348,7 @@ async function getCalendars(accountId, { refresh = false } = {}) {
   db.get().prepare('DELETE FROM caldav_calendar_selection WHERE account_id = ?').run(accountId);
 
   const result = [];
-  for (const cal of calendars) {
+  for (const cal of eventCalendars(calendars)) {
     const calColor = normalizeCalColor(cal.calendarColor) || '#4A90E2';
     const calName = cal.displayName || 'Unnamed Calendar';
 
@@ -510,6 +521,22 @@ async function sync({ createClient } = {}) {
 
         if (!serverCal) {
           log.warn(`Calendar ${selCal.calendar_url} not found on server, disabling.`);
+          db.get().prepare(`
+            UPDATE caldav_calendar_selection SET enabled = 0
+            WHERE account_id = ? AND calendar_url = ?
+          `).run(account.id, selCal.calendar_url);
+          continue;
+        }
+
+        // Konten, die vor dem Komponentenfilter angelegt wurden, tragen die
+        // Aufgabenlisten weiter als aktivierte Kalender: das Filtern beim Anlegen
+        // erreicht sie nicht mehr, und bis jemand von Hand aktualisiert bleibt eine
+        // Aufgabenliste ein Ziel für Termine (#617). Der Lauf hat die Komponenten
+        // ohnehin schon geladen, also wird die Auswahl hier nachgezogen. Vor dem
+        // Vermerken in `fetchedCalendars`, damit der Prune die bereits gespiegelten
+        // Termine dieses Kalenders in Ruhe lässt.
+        if (!supportsComponent(serverCal, 'VEVENT')) {
+          log.warn(`Calendar ${selCal.calendar_name} does not accept events, disabling.`);
           db.get().prepare(`
             UPDATE caldav_calendar_selection SET enabled = 0
             WHERE account_id = ? AND calendar_url = ?

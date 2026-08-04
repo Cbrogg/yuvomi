@@ -1683,7 +1683,7 @@
         "calendarsRefreshed": "Kalendarze odświeżone",
         "caldavRemindersToggle": "Pokaż/ukryj listy przypomnień",
         "caldavRemindersHint": "Listy przypomnień z dowolnego serwera CalDAV (iCloud, Nextcloud, Radicale) są synchronizowane dwukierunkowo z Zadaniami lub Zakupami.",
-        "caldavRemindersEmpty": "Nie znaleziono list przypomnień. Kliknij „Odśwież listy przypomnień\", aby je wykryć.",
+        "caldavRemindersEmpty": "Ten serwer nie udostępnia list przypomnień. Utwórz jedną na serwerze, a następnie odśwież wyszukiwanie.",
         "caldavReminderMapTasks": "Zadania",
         "caldavReminderMapShopping": "Zakupy",
         "caldavRefreshReminders": "Odśwież listy przypomnień",

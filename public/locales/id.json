@@ -1683,7 +1683,7 @@
         "calendarsRefreshed": "Kalender diperbarui",
         "caldavRemindersToggle": "Tampilkan/sembunyikan daftar pengingat",
         "caldavRemindersHint": "Daftar pengingat dari server CalDAV mana pun (iCloud, Nextcloud, Radicale) disinkronkan dua arah dengan Tugas atau Belanja.",
-        "caldavRemindersEmpty": "Tidak ada daftar pengingat ditemukan. Klik „Perbarui daftar pengingat\" untuk menemukannya.",
+        "caldavRemindersEmpty": "Server ini tidak menyediakan daftar pengingat. Buat satu di server, lalu perbarui pencarian.",
         "caldavReminderMapTasks": "Tugas",
         "caldavReminderMapShopping": "Belanja",
         "caldavRefreshReminders": "Perbarui daftar pengingat",

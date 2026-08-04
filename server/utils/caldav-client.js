@@ -23,6 +23,26 @@ export async function createCalDAVClient(account) {
 }
 
 /**
+ * Trägt eine Collection die gesuchte iCalendar-Komponente?
+ *
+ * `supported-calendar-component-set` ist laut RFC 4791 §5.2.3 optional: fehlt die
+ * Property, muss der Client alle Komponenten annehmen. tsdav liefert dann ein
+ * leeres `components`-Array - wer darauf strikt filtert, blendet auf solchen
+ * Servern jede Collection aus. Die Regel steht hier einmal, weil Termine und
+ * Aufgaben sie spiegelbildlich brauchen und sie vorher auf der einen Seite fehlte
+ * (Aufgabenlisten landeten in der Kalenderauswahl) und auf der anderen zu streng
+ * war (#617).
+ *
+ * @param {{components?: string[]}} cal  Collection aus `fetchCalendars()`
+ * @param {string} component            'VEVENT' | 'VTODO'
+ */
+export function supportsComponent(cal, component) {
+  const comps = Array.isArray(cal?.components) ? cal.components : [];
+  if (comps.length === 0) return true;
+  return comps.map(c => String(c).toUpperCase()).includes(String(component).toUpperCase());
+}
+
+/**
  * Collection-URL eines Kalenderobjekts: alles bis zum letzten Segment.
  * CalDAV-Objekte liegen unmittelbar in ihrer Collection, deshalb ist der Pfad
  * ohne Dateinamen die Liste, zu der das Objekt gehört. Nötig, weil tsdav ein

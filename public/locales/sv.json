@@ -1698,7 +1698,7 @@
         "calendarsRefreshed": "Kalendrar uppdaterade",
         "caldavRemindersToggle": "Visa/dölj påminnelselistor",
         "caldavRemindersHint": "Påminnelselistor från valfri CalDAV-server (iCloud, Nextcloud, Radicale) synkroniseras i båda riktningarna med Uppgifter eller Inköp.",
-        "caldavRemindersEmpty": "Inga påminnelselistor hittades. Klicka på ”Uppdatera påminnelselistor” för att hitta dem.",
+        "caldavRemindersEmpty": "Den här servern erbjuder inga påminnelselistor. Skapa en på servern och uppdatera sedan sökningen.",
         "caldavReminderMapTasks": "Uppgifter",
         "caldavReminderMapShopping": "Inköp",
         "caldavRefreshReminders": "Uppdatera påminnelselistor",

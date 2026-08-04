@@ -1698,7 +1698,7 @@
         "calendarsRefreshed": "Calendriers actualisés",
         "caldavRemindersToggle": "Afficher/masquer les listes de rappels",
         "caldavRemindersHint": "Les listes de rappels de n'importe quel serveur CalDAV (iCloud, Nextcloud, Radicale) sont synchronisées avec Tâches ou Courses dans les deux sens.",
-        "caldavRemindersEmpty": "Aucune liste de rappels trouvée. Cliquez sur « Actualiser les listes de rappels » pour les détecter.",
+        "caldavRemindersEmpty": "Ce serveur ne propose aucune liste de rappels. Créez-en une sur le serveur, puis actualisez la recherche.",
         "caldavReminderMapTasks": "Tâches",
         "caldavReminderMapShopping": "Courses",
         "caldavRefreshReminders": "Actualiser les listes de rappels",

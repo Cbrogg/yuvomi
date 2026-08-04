@@ -1654,7 +1654,7 @@
         "calendarsRefreshed": "Kalenders vernieuwd",
         "caldavRemindersToggle": "Herinneringslijsten tonen/verbergen",
         "caldavRemindersHint": "Herinneringslijsten van elke CalDAV-server (iCloud, Nextcloud, Radicale) worden in beide richtingen gesynchroniseerd met Taken of Boodschappen.",
-        "caldavRemindersEmpty": "Geen herinneringslijsten gevonden. Klik op \"Herinneringslijsten vernieuwen\" om ze te ontdekken.",
+        "caldavRemindersEmpty": "Deze server biedt geen herinneringslijsten. Maak er een aan op de server en vernieuw daarna de zoekopdracht.",
         "caldavReminderMapTasks": "Taken",
         "caldavReminderMapShopping": "Boodschappen",
         "caldavRefreshReminders": "Herinneringslijsten vernieuwen",
