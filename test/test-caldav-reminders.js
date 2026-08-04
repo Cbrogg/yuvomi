@@ -9,8 +9,9 @@ import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
 
 import {
-  mapVtodoPriority, splitDue, pruneRemoved, getReminderLists,
+  mapVtodoPriority, splitDue, pruneRemoved, getReminderLists, applyTaskRelations,
 } from '../server/services/caldav-reminders-sync.js';
+import { parseVTODO } from '../server/services/ics-parser.js';
 import { supportsComponent } from '../server/utils/caldav-client.js';
 import { _setTestDatabase, _resetTestDatabase } from '../server/db.js';
 
@@ -452,6 +453,158 @@ describe('Aufgabenlisten erscheinen ohne Knopfdruck (#617)', () => {
   });
 
   it('gibt die Test-Datenbank wieder frei', () => {
+    _resetTestDatabase();
+  });
+});
+
+// #671: Unteraufgaben aus Apple Reminders/Nextcloud landeten in Yuvomi als
+// eigenständige Aufgaben nebeneinander, weil der Parser RELATED-TO gar nicht
+// las. Der Melder sah zehn flache Einträge statt zweier Listen mit Kindern.
+describe('VTODO-Hierarchie über RELATED-TO (#671)', () => {
+  const vtodo = (uid, summary, extra = '') =>
+    `BEGIN:VTODO\r\nUID:${uid}\r\nSUMMARY:${summary}\r\n${extra}END:VTODO\r\n`;
+  const wrap = (body) => `BEGIN:VCALENDAR\r\nVERSION:2.0\r\n${body}END:VCALENDAR\r\n`;
+
+  it('liest RELATED-TO ohne RELTYPE als Elternangabe (RFC-5545-Default)', () => {
+    const [todo] = parseVTODO(wrap(vtodo('kind-1', 'AOS4 Nether', 'RELATED-TO:aos-4\r\n')));
+    assert.strictEqual(todo.parentUid, 'aos-4');
+    assert.deepStrictEqual(todo.childUids, []);
+  });
+
+  it('liest RELTYPE=PARENT und ignoriert SIBLING', () => {
+    const [todo] = parseVTODO(wrap(vtodo('kind-2', 'AOS4 End',
+      'RELATED-TO;RELTYPE=SIBLING:egal\r\nRELATED-TO;RELTYPE=PARENT:aos-4\r\n')));
+    assert.strictEqual(todo.parentUid, 'aos-4');
+  });
+
+  it('liest die Gegenrichtung RELTYPE=CHILD am Elternteil', () => {
+    const [todo] = parseVTODO(wrap(vtodo('aos-4', 'AOS 4',
+      'RELATED-TO;RELTYPE=CHILD:kind-1\r\nRELATED-TO;RELTYPE=CHILD:kind-2\r\n')));
+    assert.strictEqual(todo.parentUid, null);
+    assert.deepStrictEqual(todo.childUids, ['kind-1', 'kind-2']);
+  });
+
+  it('kommt ohne RELATED-TO auf null statt undefined', () => {
+    const [todo] = parseVTODO(wrap(vtodo('allein', 'Add OAuth')));
+    assert.strictEqual(todo.parentUid, null);
+    assert.deepStrictEqual(todo.childUids, []);
+  });
+});
+
+describe('applyTaskRelations (#671)', () => {
+  let db;
+
+  const seed = (rows) => {
+    db = new DatabaseSync(':memory:');
+    db.exec(`CREATE TABLE tasks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      parent_task_id INTEGER REFERENCES tasks(id) ON DELETE CASCADE
+    );`);
+    _setTestDatabase(db);
+    const insert = db.prepare('INSERT INTO tasks (title, parent_task_id) VALUES (?, ?)');
+    const map = new Map();
+    for (const [uid, title, parentUid, childUids, existingParentUid] of rows) {
+      const id = insert.run(title, null).lastInsertRowid;
+      map.set(uid, { taskId: id, parentUid: parentUid || null, childUids: childUids || [], existingParentUid });
+    }
+    // Bestehende Zuordnung nachtragen, sobald alle IDs bekannt sind.
+    for (const [, entry] of map) {
+      if (entry.existingParentUid) {
+        db.prepare('UPDATE tasks SET parent_task_id = ? WHERE id = ?')
+          .run(map.get(entry.existingParentUid).taskId, entry.taskId);
+      }
+    }
+    return map;
+  };
+  const parentOf = (map, uid) =>
+    db.prepare('SELECT parent_task_id FROM tasks WHERE id = ?').get(map.get(uid).taskId).parent_task_id;
+
+  it('hängt die Kinder unter ihren Elternteil', () => {
+    const map = seed([
+      ['aos-4', 'AOS 4', null, []],
+      ['nether', 'AOS4 Nether', 'aos-4', []],
+      ['end', 'AOS4 End', 'aos-4', []],
+    ]);
+    applyTaskRelations(map);
+    assert.strictEqual(parentOf(map, 'aos-4'), null);
+    assert.strictEqual(parentOf(map, 'nether'), map.get('aos-4').taskId);
+    assert.strictEqual(parentOf(map, 'end'), map.get('aos-4').taskId);
+    _resetTestDatabase();
+  });
+
+  it('verdrahtet auch, wenn das Kind vor dem Elternteil kommt', () => {
+    // Der Objektstrom des Servers hat keine garantierte Reihenfolge, und über
+    // zwei Listen hinweg schon gar nicht - deshalb läuft die Auflösung als
+    // eigene Phase nach dem Upsert.
+    const map = seed([
+      ['nether', 'AOS4 Nether', 'aos-4', []],
+      ['aos-4', 'AOS 4', null, []],
+    ]);
+    applyTaskRelations(map);
+    assert.strictEqual(parentOf(map, 'nether'), map.get('aos-4').taskId);
+    _resetTestDatabase();
+  });
+
+  it('akzeptiert die Gegenrichtung über childUids', () => {
+    const map = seed([
+      ['aos-4', 'AOS 4', null, ['nether']],
+      ['nether', 'AOS4 Nether', null, []],
+    ]);
+    applyTaskRelations(map);
+    assert.strictEqual(parentOf(map, 'nether'), map.get('aos-4').taskId);
+    _resetTestDatabase();
+  });
+
+  it('hebt ein Enkelkind auf den obersten Vorfahren, statt es fallen zu lassen', () => {
+    // Yuvomi kennt eine Ebene, CalDAV beliebig viele. Flach unter dem Kopf ist
+    // immer noch eine Hierarchie; gar keine wäre der gemeldete Zustand.
+    const map = seed([
+      ['a', 'Oben', null, []],
+      ['b', 'Mitte', 'a', []],
+      ['c', 'Unten', 'b', []],
+    ]);
+    applyTaskRelations(map);
+    assert.strictEqual(parentOf(map, 'b'), map.get('a').taskId);
+    assert.strictEqual(parentOf(map, 'c'), map.get('a').taskId);
+    _resetTestDatabase();
+  });
+
+  it('lässt einen unbekannten Elternteil flach, statt zu raten', () => {
+    const map = seed([['waise', 'Kind ohne Eltern', 'nicht-abgerufen', []]]);
+    applyTaskRelations(map);
+    assert.strictEqual(parentOf(map, 'waise'), null);
+    _resetTestDatabase();
+  });
+
+  it('bricht bei einem Zyklus ab, statt sich aufzuhängen', () => {
+    const map = seed([
+      ['a', 'A', 'b', []],
+      ['b', 'B', 'a', []],
+    ]);
+    applyTaskRelations(map);
+    assert.strictEqual(parentOf(map, 'a'), null);
+    assert.strictEqual(parentOf(map, 'b'), null);
+    _resetTestDatabase();
+  });
+
+  it('löst eine entfernte Beziehung wieder auf', () => {
+    // Wer auf dem Server aus der Unterliste gezogen wird, muss auch in Yuvomi
+    // wieder oben stehen - sonst bleibt er für immer ein Kind.
+    const map = seed([
+      ['aos-4', 'AOS 4', null, []],
+      ['nether', 'AOS4 Nether', null, [], 'aos-4'],
+    ]);
+    assert.strictEqual(parentOf(map, 'nether'), map.get('aos-4').taskId, 'Vorbedingung');
+    applyTaskRelations(map);
+    assert.strictEqual(parentOf(map, 'nether'), null);
+    _resetTestDatabase();
+  });
+
+  it('ignoriert den Selbstbezug', () => {
+    const map = seed([['a', 'A', 'a', []]]);
+    applyTaskRelations(map);
+    assert.strictEqual(parentOf(map, 'a'), null);
     _resetTestDatabase();
   });
 });

@@ -102,8 +102,12 @@
 /* --------------------------------------------------------
  * Teilaufgaben
  *
- * Nur Stand und Titel: In der Leseansicht zählt, was noch offen ist, nicht ob
- * man es hier abhaken kann - das tut die Liste, die sie ohnehin führt.
+ * Abhakbar, nicht nur lesbar (#671). Hier stand bis v1.78.0 die Annahme, die
+ * Leseansicht brauche keinen Schalter, weil "das die Liste tut, die sie ohnehin
+ * führt". Die Liste tut es - aber hinter einem eingeklappten Fortschrittsbalken,
+ * den ein Melder nicht als Zugang erkannt hat: er legte eine Teilaufgabe an, sah
+ * sie in der Detailansicht und kam nirgends mehr an sie heran. Ein Stand, der
+ * sichtbar ist, muss dort auch änderbar sein.
  * -------------------------------------------------------- */
 
 .detail-subtasks {
@@ -117,6 +121,31 @@
   align-items: center;
   gap: var(--space-2);
   color: var(--color-text-primary);
+  /* Button-Reset: die Zeile ist ein <button>, damit Tastatur und Screenreader
+     denselben Weg haben wie der Zeigefinger. */
+  width: 100%;
+  min-height: var(--target-base);
+  padding: var(--space-1) var(--space-2);
+  margin-inline: calc(var(--space-2) * -1);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.detail-subtask:hover {
+  background: var(--color-surface-2);
+}
+
+.detail-subtask:focus-visible {
+  outline: var(--focus-ring-width) solid var(--active-module-accent, var(--color-accent));
+  outline-offset: var(--focus-ring-offset);
+}
+
+.detail-subtask:disabled {
+  cursor: progress;
 }
 
 .detail-subtask i {

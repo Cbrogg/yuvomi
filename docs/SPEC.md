@@ -585,6 +585,8 @@ by default would pull a server's existing VTODOs into the Tasks module unannounc
 
 A VTODO's `CATEGORIES` arrive as tags (#586): two-way for tasks (see [Task Tags](#task-tags-migration-v115-586)), inbound only for shopping items (see [Shopping Item Tags](#shopping-item-tags-migration-v116-586)). They are never mapped onto the module's own category — a task or item sits in exactly one category, but a VTODO may carry any number of categories, and folding them together would drop every value after the first and pull foreign values into a managed list.
 
+**Subtask hierarchy via `RELATED-TO` (v1.78.1, #671).** Apple Reminders, Nextcloud Tasks and Tasks.org express a subtask by putting `RELATED-TO` on the **child**, carrying the parent's UID. Until v1.78.1 the parser never read the property, so every subtask arrived as a top-level task standing next to its parent — a reporter's five-item checklist showed up as five separate entries. `RELTYPE` is optional and defaults to `PARENT` (RFC 5545 §3.2.15), so a bare `RELATED-TO` is already the parent link; the rarer opposite direction (`RELTYPE=CHILD` on the parent) is read too, `SIBLING` is discarded. Resolution runs as a second pass once every list of the account has been read, because a child may appear before its parent in the object stream and across list boundaries at that. Three deliberate edges: CalDAV allows arbitrarily deep chains while Yuvomi allows one level, so a grandchild is attached to its topmost ancestor rather than dropped; a relation that disappears server-side is written back as `NULL`, otherwise an item pulled out of a sublist would stay a child forever; and a cycle or self-reference leaves the rows flat instead of looping. The outbound direction needs no counterpart — it patches the original calendar object and therefore preserves relations Yuvomi does not manage.
+
 | Column | Type | Constraint |
 |--------|------|-----------|
 | id | INTEGER | PRIMARY KEY AUTOINCREMENT |
@@ -1742,12 +1744,12 @@ Skeleton loading instead of spinners (the skeleton mirrors the default-visible w
 ### Tasks (`/tasks`)
 
 **Views:**
-- List view (default): grouped by category or due date (toggleable), filter: person, priority, status
+- List view (default): grouped by category or due date (toggleable), filter: person, priority, status. **Each of those three axes takes several values at once (v1.78.1, #671)** and combines them with OR — "high or medium" is a question worth asking, while AND across two priorities would always be empty, since a task carries exactly one. The axes still combine with AND among themselves, so every row narrows the list. Tags stay AND-combined (see [Task Tags](#task-tags-migration-v115-586)); there a task really can carry both. `GET /api/v1/tasks` takes each value as its own parameter (`?priority=high&priority=medium`) and keeps accepting a single one
 - Kanban: columns Open → In Progress → Done, drag & drop
 - View mode persisted in localStorage; URL parameter `?view=kanban` overrides (useful for tablet kiosk setups)
 
 **Features:**
-- CRUD + subtasks (max 2 levels, checkbox list, progress bar)
+- CRUD + subtasks (max 2 levels, checkbox list, progress bar). Subtasks are tickable **wherever they are visible** — on the task card and, since v1.78.1 (#671), in the detail view too. Read-only rows there had assumed the list next door would carry the interaction, but that list keeps them behind a collapsed progress bar, so a freshly created subtask could end up visible and unreachable at the same time
 - **Subtasks expanded by default (#623):** a household-wide preference (`tasks_subtasks_expanded` in `sync_config`, admin-gated, default off) decides whether the subtask list of a task starts open instead of collapsed behind its progress bar. Manual expand and collapse still work per task; the preference only sets the starting state. Settings → Modules → Module options.
 - **Multi-person assignment:** tasks can be assigned to multiple family members simultaneously via `UserMultiSelect` checkbox dropdown; stacked avatar circles (up to 3 visible + `+N` overflow badge) shown on task cards and Kanban — each circle shows the member's profile photo if set, otherwise coloured initials
 - Priorities shown visually via color/icon

@@ -272,6 +272,59 @@ function upsertTask(todo, accountId, createdBy, objectUrl = null) {
   // lokale Bearbeitung, die noch aussteht, kommt hier gar nicht an - der
   // Aufrufer überspringt dirty markierte Einträge (#617).
   setTags(db.get(), taskId, todo.tags);
+  return taskId;
+}
+
+/**
+ * Löst RELATED-TO in `tasks.parent_task_id` auf (#671).
+ *
+ * Läuft als zweite Phase, nachdem alle Listen eines Kontos verarbeitet sind:
+ * ein VTODO kann seinen Elternteil vor sich selbst im Objektstrom haben oder
+ * danach, und über Listengrenzen hinweg ohnehin. Erst wenn alle UIDs eine
+ * lokale ID haben, ist die Zuordnung entscheidbar.
+ *
+ * Yuvomi kennt genau eine Ebene (die POST-Route weist ein Enkelkind ab), CalDAV
+ * kennt beliebig tiefe Ketten. Ein Enkel wird deshalb an den obersten Vorfahren
+ * gehängt statt fallen gelassen - flach unter dem falschen Kopf ist immer noch
+ * eine Hierarchie, gar keine wäre der gemeldete Zustand.
+ *
+ * @param {Map<string, {taskId: number, parentUid: string|null, childUids: string[]}>} seen
+ */
+function applyTaskRelations(seen) {
+  const idByUid = new Map([...seen].map(([uid, entry]) => [uid, entry.taskId]));
+
+  // Beide Richtungen auf dieselbe Aussage bringen: Kind -> Elternteil.
+  const parentUidOf = new Map();
+  for (const [uid, entry] of seen) {
+    if (entry.parentUid && idByUid.has(entry.parentUid)) parentUidOf.set(uid, entry.parentUid);
+  }
+  for (const [uid, entry] of seen) {
+    for (const childUid of entry.childUids || []) {
+      // Ein am Kind gesetztes PARENT ist die genauere Angabe und bleibt stehen.
+      if (idByUid.has(childUid) && !parentUidOf.has(childUid)) parentUidOf.set(childUid, uid);
+    }
+  }
+
+  /** Oberster Vorfahre, oder null bei Zyklus/Selbstbezug. */
+  const rootOf = (uid) => {
+    const path = new Set([uid]);
+    let current = parentUidOf.get(uid);
+    while (current && parentUidOf.has(current)) {
+      if (path.has(current)) return null;      // Zyklus: lieber flach als falsch
+      path.add(current);
+      current = parentUidOf.get(current);
+    }
+    return current && current !== uid ? current : null;
+  };
+
+  const update = db.get().prepare('UPDATE tasks SET parent_task_id = ? WHERE id = ? AND parent_task_id IS NOT ?');
+  for (const [uid, entry] of seen) {
+    const rootUid = parentUidOf.has(uid) ? rootOf(uid) : null;
+    const parentId = rootUid ? idByUid.get(rootUid) ?? null : null;
+    // Auch der NULL-Fall muss geschrieben werden: wer auf dem Server aus der
+    // Unterliste gezogen wurde, ist sonst in Yuvomi für immer ein Kind.
+    update.run(parentId, entry.taskId, parentId);
+  }
 }
 
 function upsertShoppingItem(sel, todo, accountId, objectUrl = null) {
@@ -415,6 +468,9 @@ async function sync({ createClient: makeClient } = {}) {
       // UID → Kalenderobjekt dieses Laufs. Ausgehende Löschungen brauchen dessen
       // URL, Änderungen zusätzlich seinen Originalinhalt zum Patchen.
       const objectsByModule = { tasks: new Map(), shopping: new Map() };
+      // UID → lokale Aufgabe dieses Laufs, für die Hierarchie-Auflösung nach
+      // allen Listen (#671). Nur Aufgaben: der Einkauf kennt keine Unterposten.
+      const taskRelations = new Map();
 
       for (const sel of enabledLists) {
         const module = sel.target_module === 'shopping' ? 'shopping' : 'tasks';
@@ -458,13 +514,28 @@ async function sync({ createClient: makeClient } = {}) {
               if (module === 'shopping') {
                 upsertShoppingItem(sel, todo, account.id, obj.url || null);
               } else {
-                upsertTask(todo, account.id, createdBy, obj.url || null);
+                const taskId = upsertTask(todo, account.id, createdBy, obj.url || null);
+                taskRelations.set(todo.uid, {
+                  taskId,
+                  parentUid: todo.parentUid || null,
+                  childUids: todo.childUids || [],
+                });
               }
               totalItems++;
             } catch (err) {
               log.error(`Failed to upsert VTODO ${todo.uid}:`, err.message);
             }
           }
+        }
+      }
+
+      // Unteraufgaben verdrahten, sobald alle Listen des Kontos gelesen sind
+      // (#671) - vorher ist die UID des Elternteils womöglich noch keine ID.
+      if (taskRelations.size > 0) {
+        try {
+          applyTaskRelations(taskRelations);
+        } catch (err) {
+          log.error(`Failed to apply VTODO relations for account ${account.id}:`, err.message);
         }
       }
 
@@ -564,6 +635,7 @@ export {
   mapVtodoPriority,
   mapVtodoStatus,
   splitDue,
+  applyTaskRelations,
   getReminderLists,
   updateReminderSelection,
   sync,

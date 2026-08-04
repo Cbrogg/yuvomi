@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.78.1] - 2026-08-04
+
+### Fixed
+
+- Subtasks from a CalDAV reminder list (Apple Reminders, Nextcloud Tasks, Tasks.org) arrived as separate top-level tasks standing next to their parent, so a checklist of five items showed up as five unrelated entries. The property carrying that relationship, `RELATED-TO`, was never read. Existing mirrored tasks sort themselves out on the next sync, no re-import needed (#671)
+- Subtasks could be seen but not ticked off in a task's detail view, while the same subtask had a checkbox on the task card. Anyone who added a subtask and then opened the task found it visible and out of reach, because the card keeps its subtasks behind a collapsed progress bar (#671)
+- The task filter accepted only one value per row, so "high or medium priority" was impossible to ask for. Priority, status and person now take several values at once and combine them with OR, while the rows still narrow each other. Tags keep narrowing as before, since a task can genuinely carry several (#671)
+
 ## [1.78.0] - 2026-08-04
 
 ### Added

@@ -487,11 +487,32 @@ router.get('/', (req, res) => {
       sql += ` AND (t.start_date IS NULL OR t.start_date <= date('now'))`;
     }
 
-    if (status)      { sql += ' AND t.status = ?';      params.push(status); }
-    if (priority)    { sql += ' AND t.priority = ?';    params.push(priority); }
-    if (assigned_to) {
-      sql += ' AND EXISTS (SELECT 1 FROM task_assignments ta WHERE ta.task_id = t.id AND ta.user_id = ?)';
-      params.push(Number(assigned_to));
+    // Status, Priorität und Person nehmen mehrere Werte entgegen und verknüpfen
+    // sie ODER (#671). Anders als bei den Tags unten ist das keine Geschmacks-
+    // frage: eine Aufgabe trägt genau EINE Priorität, ein UND über zwei Werte
+    // wäre also garantiert leer. Gemeldet wurde genau das - "medium und high
+    // zugleich" ging nicht, weil jede Reihe nur einen Wert zuließ.
+    // Zwischen den Gruppen bleibt es UND: jede Reihe engt weiter ein.
+    // Ein einzelner Wert kommt weiterhin als String an (API-Token, Bookmarks).
+    const asList = (v) => (v === undefined ? [] : [v].flat().filter((x) => x !== ''));
+
+    const statuses = asList(status);
+    if (statuses.length) {
+      sql += ` AND t.status IN (${statuses.map(() => '?').join(', ')})`;
+      params.push(...statuses);
+    }
+
+    const priorities = asList(priority);
+    if (priorities.length) {
+      sql += ` AND t.priority IN (${priorities.map(() => '?').join(', ')})`;
+      params.push(...priorities);
+    }
+
+    const assignees = asList(assigned_to).map(Number).filter(Number.isInteger);
+    if (assignees.length) {
+      sql += ` AND EXISTS (SELECT 1 FROM task_assignments ta WHERE ta.task_id = t.id
+                             AND ta.user_id IN (${assignees.map(() => '?').join(', ')}))`;
+      params.push(...assignees);
     }
     if (category)    { sql += ' AND t.category = ?';    params.push(category); }
     // Tag-Filter ohne Rücksicht auf Groß-/Kleinschreibung: die Werte kommen von

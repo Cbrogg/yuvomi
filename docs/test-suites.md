@@ -15,7 +15,7 @@ npm run test:db-encryption      # DB_ENCRYPTION_KEY wirkt wirklich: Datei-Header
 npm run test:db-isolation       # Test-Isolation: keine Suite lädt server/db.js ohne wirksames DB_PATH (init() beim Import würde sonst eine echte yuvomi.db im Repo-Root anlegen); prüft auch die Reihenfolge, da eine Zuweisung nach einem statischen Import zu spät kommt
 npm run test:tasks
 npm run test:tasks-recurrence   # recurring task catch-up: nextOccurrenceAfter + PATCH status follow-up
-npm run test:tasks-routes       # Tasks-Routen-Schicht: PUT/:id, meta/options, Kategorie-CRUD (404/400/409), Filter, Verschachtelung, PATCH-Status, DELETE
+npm run test:tasks-routes       # Tasks-Routen-Schicht: PUT/:id, meta/options, Kategorie-CRUD (404/400/409), Filter (Mehrfachwerte je Achse ODER-verknüpft, #671), Verschachtelung, PATCH-Status, DELETE
 npm run test:task-default-points # Standard-Punkte (#578): Preference admin-only + Validierung, Prefill nur ohne expliziten Wert und nur für Hauptaufgaben, Rebase fasst nur offene Hauptaufgaben an (erledigte Punkte sind im Ledger gebucht)
 npm run test:task-categories    # Aufgaben-Kategorien (#494/#357): Migration (Seed, Sonstiges→misc, Orphan-Adoption) + CRUD-Guards
 npm run test:visibility         # Sichtbarkeit (#474): all|assignees|private Durchsetzung (Tasks+Termine), kein Admin-Bypass, normalizeVisibility
@@ -116,7 +116,7 @@ npm run test:multi-assignment
 npm run test:kitchen-tabs
 npm run test:caldav         # CalDAV-Sync: Multi-Account, Event-Loop-Yield (#519), Serien-Overrides (#549), No-op-Läufe bleiben still und schreiben unveränderte Termine nicht neu
 npm run test:caldav-recurrence   # CalDAV/iOS-Serien mit Wochentags-Wiederholung (#549): FREQ=DAILY;BYDAY + DTSTART am Wochenende
-npm run test:caldav-reminders   # VTODO-Inbound: Feld-Abbildung, Prune-Leerguard (#508), DUE als Wanduhrzeit statt UTC (#617; TZ=Europe/Berlin fixiert)
+npm run test:caldav-reminders   # VTODO-Inbound: Feld-Abbildung, Prune-Leerguard (#508), DUE als Wanduhrzeit statt UTC (#617; TZ=Europe/Berlin fixiert), RELATED-TO-Hierarchie inkl. Reihenfolge/Enkel/Zyklus (#671)
 npm run test:caldav-todo-outbound   # Rückrichtung VTODO (#617): Patcher lässt Alarme/Kategorien stehen, Erledigt = STATUS+COMPLETED+PERCENT-COMPLETE (und weg beim Wiederöffnen), bandtreue Priorität/Status halten urgent und in_progress, DUE-Roundtrip zonenrichtig, Inbound überschreibt keine wartende Bearbeitung und legt Gelöschtes nicht neu an, ein gelöschtes Konto entkoppelt seine Spiegelzeilen statt sie unlöschbar zu machen (v123)
 npm run test:caldav-event-target
 npm run test:google-multi   # multiple Google calendars + per-event sync target

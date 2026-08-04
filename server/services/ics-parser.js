@@ -86,6 +86,30 @@ function parseCategories(block) {
   return out;
 }
 
+// RELATED-TO (RFC 5545 §3.8.4.5) trägt die Unteraufgaben-Beziehung: Apple
+// Reminders, Nextcloud Tasks und Tasks.org hängen sie ans KIND und schreiben
+// die UID des Elternteils hinein. Der Parameter RELTYPE ist optional und hat
+// laut §3.2.15 den Default PARENT - ein RELATED-TO ohne RELTYPE ist also
+// bereits die Elternangabe und darf nicht übersehen werden.
+//
+// Die Gegenrichtung (RELTYPE=CHILD am Elternteil) kommt seltener vor, kostet
+// hier aber nur eine Zeile; wer sie schreibt, verlöre seine Hierarchie sonst
+// genauso still. SIBLING ist keine Hierarchie und wird verworfen.
+function parseRelations(block) {
+  const re = /^RELATED-TO((?:;[^:;\n]*)*):(.*)$/gim;
+  const childUids = [];
+  let parentUid = null;
+  let m;
+  while ((m = re.exec(block)) !== null) {
+    const relType = (/;RELTYPE=([^;:]+)/i.exec(m[1])?.[1] || 'PARENT').trim().toUpperCase();
+    const value = unescapeICSText(m[2].trim())?.trim();
+    if (!value) continue;
+    if (relType === 'PARENT') { if (!parentUid) parentUid = value; }
+    else if (relType === 'CHILD' && !childUids.includes(value)) childUids.push(value);
+  }
+  return { parentUid, childUids };
+}
+
 function parseICS(ics) {
   const unfolded = unfoldLines(ics);
   const events   = [];
@@ -254,7 +278,8 @@ function parseVTODO(ics) {
     let priority  = prioRaw !== null ? parseInt(prioRaw, 10) : null;
     if (priority === 0 || Number.isNaN(priority)) priority = null;
     const tags = parseCategories(block);
-    todos.push({ uid, summary, description, completed, status, due, priority, tags });
+    const { parentUid, childUids } = parseRelations(block);
+    todos.push({ uid, summary, description, completed, status, due, priority, tags, parentUid, childUids });
   }
   return todos;
 }

@@ -718,7 +718,9 @@ let state = {
   currentUserId:   null,
   // `tags` ist eine Liste, keine Auswahl: mehrere Tags engen UND-verknüpft ein,
   // wie jeder andere Filter in dieser Leiste auch (#586).
-  filters:         { status: 'open', priority: '', assigned_to: '', tags: [] },
+  // Status, Priorität und Person halten mehrere Werte (#671); innerhalb einer
+  // Achse wirken sie ODER, zwischen den Achsen UND. Tags bleiben UND-verknüpft.
+  filters:         { status: ['open'], priority: [], assigned_to: [], tags: [] },
   groupMode:       'category',   // 'category' | 'due'
   viewMode:        'list',       // 'list' | 'kanban' (resolved at render time)
   showFuture:      false,
@@ -764,11 +766,12 @@ function taskQuery() {
   // senden, sonst blieben "In Bearbeitung"/"Erledigt" trotz vorhandener Aufgaben
   // leer (Audit A1-07/P3). In der Liste wirkt er normal; state bleibt erhalten,
   // sodass der Filter beim Zurückwechseln wieder greift.
-  if (state.filters.status && state.viewMode !== 'kanban') params.set('status', state.filters.status);
-  if (state.filters.priority)    params.set('priority',    state.filters.priority);
-  if (state.filters.assigned_to) params.set('assigned_to', state.filters.assigned_to);
-  // append statt set: jeder Tag ist ein eigener Parameter, damit ein Tag mit
-  // Komma im Namen nicht am Server in zwei zerfällt.
+  // append statt set: jeder Wert ist ein eigener Parameter. Bei den Tags, damit
+  // ein Tag mit Komma im Namen am Server nicht in zwei zerfällt; bei den übrigen
+  // Achsen, weil sie seit #671 mehrere Werte tragen (ODER-verknüpft).
+  if (state.viewMode !== 'kanban') state.filters.status.forEach((v) => params.append('status', v));
+  state.filters.priority.forEach((v) => params.append('priority', v));
+  state.filters.assigned_to.forEach((v) => params.append('assigned_to', v));
   state.filters.tags.forEach((tag) => params.append('tag', tag));
   if (state.showFuture)          params.set('include_future', '1');
   return params.toString() ? `?${params}` : '';
@@ -1069,20 +1072,62 @@ function tagChipsNode(tags) {
 }
 
 /** Teilaufgaben mit ihrem Stand - die Liste führt sie, also führt die Ansicht sie auch. */
-function subtaskListNode(task) {
+/**
+ * Teilaufgaben in der Detailansicht - abhakbar, nicht nur lesbar (#671).
+ *
+ * Bis v1.78.0 waren die Zeilen hier reine Anzeige, während dieselbe Teilaufgabe
+ * in der Listenkarte einen Schalter hatte. Wer eine Teilaufgabe anlegte und
+ * danach die Aufgabe öffnete, sah sie also, kam aber nicht mehr an sie heran -
+ * genau die Beobachtung aus der Meldung.
+ *
+ * Der Klick-Handler des Seiten-Containers greift hier nicht: Die Detailansicht
+ * rendert in den Top-Layer, außerhalb von `container`. Deshalb hängt die
+ * Delegation am Wrapper selbst.
+ */
+function subtaskListNode(task, container) {
   if (!task.subtasks?.length) return null;
   const wrap = document.createElement('div');
   wrap.className = 'detail-subtasks';
-  task.subtasks.forEach((s) => {
-    const row = document.createElement('div');
-    row.className = s.status === 'done' ? 'detail-subtask detail-subtask--done' : 'detail-subtask';
+
+  const paint = (row, status, title) => {
+    row.className = status === 'done' ? 'detail-subtask detail-subtask--done' : 'detail-subtask';
+    row.dataset.status = status;
+    row.setAttribute('aria-pressed', String(status === 'done'));
+    row.setAttribute('aria-label', t('tasks.subtaskMarkDone', { title }));
     const icon = document.createElement('i');
-    icon.dataset.lucide = s.status === 'done' ? 'check-circle-2' : 'circle';
+    icon.dataset.lucide = status === 'done' ? 'check-circle-2' : 'circle';
     icon.className = 'icon-sm';
     icon.setAttribute('aria-hidden', 'true');
     const label = document.createElement('span');
-    label.textContent = s.title;
-    row.append(icon, label);
+    label.textContent = title;
+    row.replaceChildren(icon, label);
+    if (window.lucide) window.lucide.createIcons({ el: row });
+  };
+
+  task.subtasks.forEach((s) => {
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.dataset.subtaskId = String(s.id);
+    paint(row, s.status, s.title);
+
+    row.addEventListener('click', async () => {
+      const previous = row.dataset.status;
+      row.disabled = true;
+      // Optimistisch umschalten: ein Abhaken, das erst nach der Antwort
+      // reagiert, fühlt sich wie ein verschluckter Klick an.
+      paint(row, previous === 'done' ? 'open' : 'done', s.title);
+      try {
+        await toggleSubtaskStatus(s.id, previous);
+        // Die Liste im Hintergrund trägt den Fortschrittsbalken der Elternkarte.
+        if (container) await loadTasks(container);
+      } catch (err) {
+        paint(row, previous, s.title);
+        window.yuvomi.showToast(err.message, 'danger');
+      } finally {
+        row.disabled = false;
+      }
+    });
+
     wrap.appendChild(row);
   });
   return wrap;
@@ -1109,7 +1154,7 @@ function taskReminderSummary(reminders) {
     .join(', ');
 }
 
-function renderTaskDetail(task, reminders = []) {
+function renderTaskDetail(task, reminders = [], container = null) {
   const due = formatDueDate(task.due_date, task.due_time, task.status === 'done' || task.status === 'archived');
 
   return [
@@ -1122,7 +1167,7 @@ function renderTaskDetail(task, reminders = []) {
     assignedRow(task.assigned_users, t('tasks.assignedLabel')),
     { icon: 'award', label: t('tasks.pointsLabel'), value: task.points ? String(task.points) : '' },
     { icon: 'tag', label: t('tasks.tagsLabel'), node: tagChipsNode(task.tags) },
-    { icon: 'list-checks', label: t('tasks.subtasksLabel'), node: subtaskListNode(task) },
+    { icon: 'list-checks', label: t('tasks.subtasksLabel'), node: subtaskListNode(task, container) },
     { icon: 'paperclip', label: t('tasks.documentsLabel'), node: documentListNode(task.documents) },
     { icon: 'bell', label: t('reminders.sectionTitle'), value: taskReminderSummary(reminders) },
     visibilityRow(task.visibility),
@@ -1170,7 +1215,7 @@ function openTaskDetail({ task, users = [], reminder = null }, container) {
   openDetailView({
     title: task.title,
     size: 'lg',
-    sections: renderTaskDetail(task, reminder),
+    sections: renderTaskDetail(task, reminder, container),
     actions,
     edit: {
       label: t('common.edit'),
@@ -1914,37 +1959,45 @@ function renderFilters(container) {
   // Im Kanban ist der Statusfilter unwirksam (die Spalten SIND der Status) und
   // wird nicht als Chip gezeigt - daher auch nicht mitzählen, sonst behauptet
   // "Filter N" einen unsichtbaren Filter (Audit P3).
-  const activeCount    = [
-    state.viewMode === 'kanban' ? '' : state.filters.status,
-    state.filters.priority,
-    state.filters.assigned_to,
-  ].filter(Boolean).length + state.filters.tags.length;
+  const activeCount    = (state.viewMode === 'kanban' ? 0 : state.filters.status.length)
+    + state.filters.priority.length
+    + state.filters.assigned_to.length
+    + state.filters.tags.length;
 
   // ---- Chip-Leiste: nur aktive Filter + Toggle-Button ----
   bar.replaceChildren();
 
-  if (state.filters.status && state.viewMode !== 'kanban') {
-    const chip = makeChip({ label: statusLabels[state.filters.status], active: true, withRemove: true });
-    chip.dataset.filter = 'status';
-    bar.appendChild(chip);
+  // Ein Chip je gewähltem Wert, in jeder Achse. Jeder trägt seinen eigenen
+  // Wert, damit das Entfernen genau diesen einen löst und nicht die ganze
+  // Auswahl (#671) - vorher gab es je Achse nur einen Wert und damit einen Chip.
+  if (state.viewMode !== 'kanban') {
+    state.filters.status.forEach((value) => {
+      const chip = makeChip({ label: statusLabels[value] ?? value, active: true, withRemove: true });
+      chip.dataset.filter = 'status';
+      chip.dataset.value = value;
+      bar.appendChild(chip);
+    });
   }
-  if (state.filters.priority) {
-    const chip = makeChip({ label: priorityLabels[state.filters.priority], active: true, withRemove: true });
+  state.filters.priority.forEach((value) => {
+    const chip = makeChip({ label: priorityLabels[value] ?? value, active: true, withRemove: true });
     chip.dataset.filter = 'priority';
+    chip.dataset.value = value;
     bar.appendChild(chip);
-  }
-  // Aktiver Personen-Filter — außer es ist die eigene ID, die deckt der
-  // dedizierte „Mir zugewiesen"-Chip ab (keine Doppel-Anzeige).
-  if (state.filters.assigned_to && !isAssignedToMe()) {
-    const u = state.users.find((u) => u.id === Number(state.filters.assigned_to));
+  });
+  // Aktive Personen-Filter — außer der eigenen ID, die deckt der dedizierte
+  // „Mir zugewiesen"-Chip ab (keine Doppel-Anzeige).
+  state.filters.assigned_to.forEach((value) => {
+    if (state.currentUserId != null && Number(value) === Number(state.currentUserId)) return;
+    const u = state.users.find((user) => user.id === Number(value));
     const chip = makeChip({
       label: u?.display_name ?? t('tasks.filterGroupPerson'),
       active: true,
       withRemove: true,
     });
     chip.dataset.filter = 'assigned_to';
+    chip.dataset.value = value;
     bar.appendChild(chip);
-  }
+  });
   // Ein Chip je gewähltem Tag. Jeder trägt seinen eigenen Wert, damit das
   // Entfernen genau diesen einen löst und nicht die ganze Auswahl.
   state.filters.tags.forEach((tag) => {
@@ -2017,12 +2070,15 @@ function renderFilters(container) {
   const recent = getRecentFilters();
   recent.forEach((f) => {
     const parts = [];
-    if (f.status)      parts.push(statusLabelsMap[f.status]   ?? f.status);
-    if (f.priority)    parts.push(priorityLabelsMap[f.priority] ?? f.priority);
-    if (f.assigned_to) {
-      const u = state.users.find((u) => u.id === Number(f.assigned_to));
+    // Jeder Wert jeder Achse wird benannt: seit #671 kann ein gemerktes Set
+    // "Hoch" UND "Mittel" enthalten, und ein Chip, der nur den ersten nennt,
+    // schaltete beim Klick mehr, als er behauptet.
+    f.status.forEach((v) => parts.push(statusLabelsMap[v] ?? v));
+    f.priority.forEach((v) => parts.push(priorityLabelsMap[v] ?? v));
+    f.assigned_to.forEach((v) => {
+      const u = state.users.find((user) => user.id === Number(v));
       if (u) parts.push(u.display_name);
-    }
+    });
     // Die Tags gehören in die Beschriftung, weil der Chip sie beim Klick
     // mitsetzt: ohne sie hieße ein Chip „Offen" und schaltete zusätzlich
     // Tag-Filter, die niemand am Chip ablesen kann (#586).
@@ -2087,11 +2143,11 @@ function renderFilters(container) {
       row.className = 'filter-panel__chips';
 
       group.items.forEach((item) => {
-        // Tags sind die einzige Gruppe mit Mehrfachauswahl - dort entscheidet
-        // die Zugehörigkeit zur Liste, sonst die Gleichheit mit dem einen Wert.
+        // Jede Gruppe erlaubt Mehrfachauswahl (#671); die Tags unterscheiden
+        // sich nur darin, dass ihre Zugehörigkeit die Schreibweise ignoriert.
         const isActive = group.key === 'tag'
           ? hasTagFilter(item.value)
-          : state.filters[group.key] === item.value;
+          : hasFilter(group.key, item.value);
         const chip = makeChip({ label: item.label, active: isActive, withRemove: isActive });
         chip.dataset.filter = group.key;
         chip.dataset.value = item.value;
@@ -2171,8 +2227,7 @@ const ASSIGNED_TO_ME_KEY = 'yuvomi:taskAssignedToMe';
 // eigenen User-ID. Wird pro Gerät gemerkt und beim Laden aus dem gespeicherten
 // assigned_to-Wert (== eigene ID) abgeleitet, damit Panel-Auswahl und Chip synchron bleiben.
 function isAssignedToMe() {
-  return state.currentUserId != null
-    && String(state.filters.assigned_to) === String(state.currentUserId);
+  return state.currentUserId != null && hasFilter('assigned_to', state.currentUserId);
 }
 
 function persistAssignedToMe() {
@@ -2202,19 +2257,40 @@ async function toggleTagFilter(tag, container) {
 /**
  * Ein gespeichertes Filter-Set auf die aktuelle Form bringen.
  *
- * `tag` als einzelner String stammt aus den Einträgen, die vor der
- * Mehrfachauswahl im localStorage gelandet sind. Ohne die Umschreibung wäre
- * `state.filters.tags` dort kein Array, und der erste `.forEach` darauf risse
- * die Seite auf - für einen Wert, den niemand mehr absichtlich gesetzt hat.
+ * Einzelne Strings stammen aus Einträgen, die vor der jeweiligen Mehrfachauswahl
+ * im localStorage gelandet sind - `tag` vor der Tag-Auswahl, `status`,
+ * `priority` und `assigned_to` vor #671. Ohne die Umschreibung wären das dort
+ * keine Arrays, und der erste `.includes` darauf risse die Seite auf, für Werte,
+ * die niemand mehr absichtlich gesetzt hat.
  */
 function normalizeFilterSet(f = {}) {
-  const tags = Array.isArray(f.tags) ? f.tags : (f.tag ? [f.tag] : []);
+  const asList = (value) => (Array.isArray(value) ? value : (value ? [value] : [])).filter(Boolean).map(String);
   return {
-    status:      f.status || '',
-    priority:    f.priority || '',
-    assigned_to: f.assigned_to || '',
-    tags:        tags.filter(Boolean),
+    status:      asList(f.status),
+    priority:    asList(f.priority),
+    assigned_to: asList(f.assigned_to),
+    tags:        asList(Array.isArray(f.tags) ? f.tags : (f.tag ? [f.tag] : [])),
   };
+}
+
+/** Ist dieser Wert in der Achse gerade gewählt? */
+function hasFilter(key, value) {
+  return (state.filters[key] || []).includes(String(value));
+}
+
+/**
+ * Wert einer ODER-Achse an- oder abwählen. Ein Klick ergänzt, statt zu
+ * ersetzen - sonst bliebe es bei einem Wert pro Reihe (#671).
+ */
+async function toggleValueFilter(key, value, container) {
+  const current = state.filters[key] || [];
+  const next = String(value);
+  state.filters[key] = current.includes(next)
+    ? current.filter((v) => v !== next)
+    : [...current, next];
+  if (state.filters[key].length) saveRecentFilter(state.filters);
+  renderFilters(container);
+  await loadTasks(container);
 }
 
 function getRecentFilters() {
@@ -2225,11 +2301,12 @@ function getRecentFilters() {
 
 function saveRecentFilter(filters) {
   const set = normalizeFilterSet(filters);
-  if (!set.status && !set.priority && !set.assigned_to && !set.tags.length) return;
-  // Der Tag-Teil gehört in den Schlüssel: sonst verdrängte „Offen + Garten"
-  // den Eintrag „Offen + Haus", weil beide auf dieselbe Kennung fielen.
-  const keyOf = (f) => [f.status, f.priority, f.assigned_to,
-    f.tags.map((t) => t.toLowerCase()).sort().join(',')].join('|');
+  if (!set.status.length && !set.priority.length && !set.assigned_to.length && !set.tags.length) return;
+  // Jede Achse gehört mit allen ihren Werten in den Schlüssel: sonst verdrängte
+  // „Offen + Garten" den Eintrag „Offen + Haus", weil beide auf dieselbe Kennung
+  // fielen - seit #671 gilt dasselbe für zwei Prioritäten statt einer.
+  const axis = (values) => [...values].map((v) => String(v).toLowerCase()).sort().join(',');
+  const keyOf = (f) => [f.status, f.priority, f.assigned_to, f.tags].map(axis).join('|');
   const key = keyOf(set);
   const recent = getRecentFilters().filter((f) => keyOf(f) !== key);
   recent.unshift(set);
@@ -2410,7 +2487,7 @@ function wireFilterChips(container) {
 
   // Alle Filter zurücksetzen
   container.querySelector('#filter-clear-all')?.addEventListener('click', async () => {
-    state.filters = { status: '', priority: '', assigned_to: '', tags: [] };
+    state.filters = { status: [], priority: [], assigned_to: [], tags: [] };
     renderFilters(container);
     await loadTasks(container);
   });
@@ -2423,11 +2500,11 @@ function wireFilterChips(container) {
     await loadTasks(container);
   });
 
-  // "Mir zugewiesen" Toggle — schaltet assigned_to auf die eigene ID
+  // "Mir zugewiesen" Toggle — nimmt die eigene ID in den Personen-Filter auf
+  // bzw. wieder heraus. Seit #671 eine Achse mit mehreren Werten: eine bereits
+  // gewählte zweite Person bleibt dabei stehen, statt still zu verschwinden.
   container.querySelector('#filter-assigned-me')?.addEventListener('click', async () => {
-    state.filters.assigned_to = isAssignedToMe() ? '' : String(state.currentUserId);
-    renderFilters(container);
-    await loadTasks(container);
+    await toggleValueFilter('assigned_to', state.currentUserId, container);
   });
 
   // Chip-Klicks (in Bar + Panel)
@@ -2438,14 +2515,7 @@ function wireFilterChips(container) {
         await toggleTagFilter(chip.dataset.value, container);
         return;
       }
-      if (chip.classList.contains('filter-chip--active')) {
-        state.filters[filter] = '';
-      } else {
-        state.filters[filter] = chip.dataset.value;
-        saveRecentFilter(state.filters);
-      }
-      renderFilters(container);
-      await loadTasks(container);
+      await toggleValueFilter(filter, chip.dataset.value, container);
     });
   });
 
@@ -2735,7 +2805,9 @@ export async function render(container, { user }) {
   // „Mir zugewiesen" pro Gerät wiederherstellen (setzt assigned_to auf die eigene ID)
   try {
     if (state.currentUserId != null && localStorage.getItem(ASSIGNED_TO_ME_KEY) === '1') {
-      state.filters.assigned_to = String(state.currentUserId);
+      if (!hasFilter('assigned_to', state.currentUserId)) {
+        state.filters.assigned_to = [...state.filters.assigned_to, String(state.currentUserId)];
+      }
     }
   } catch {}
 
