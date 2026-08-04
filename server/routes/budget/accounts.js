@@ -132,6 +132,9 @@ router.delete('/accounts/:id', (req, res) => {
     const tx = db.get().transaction(() => {
       // Zuordnung explizit leeren (unabhängig vom FK-Pragma), Einträge bleiben bestehen.
       db.get().prepare('UPDATE budget_entries SET account_id = NULL WHERE account_id = ?').run(id);
+      // Dasselbe für das Standardkonto eines Darlehens (#638) - künftige Raten
+      // landen dann wieder ohne Kontobezug statt auf einer toten ID.
+      db.get().prepare('UPDATE budget_loans SET account_id = NULL WHERE account_id = ?').run(id);
       db.get().prepare('DELETE FROM budget_accounts WHERE id = ?').run(id);
     });
     tx();

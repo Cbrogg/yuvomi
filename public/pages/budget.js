@@ -1319,6 +1319,12 @@ function renderLoanTransactions(loans) {
   </div>`;
 }
 
+// Richtung (#638): Bei einem aufgenommenen Kredit geht die Rate raus. Vorzeichen,
+// Farbe und Kategorie hängen deshalb an loan.direction, nicht mehr fest an „Einnahme".
+function isBorrowedLoan(loan) {
+  return loan?.direction === 'borrowed';
+}
+
 function loanPaymentToEntry(loan, payment) {
   if (!payment.budget_entry_id) return null;
   return {
@@ -1327,7 +1333,10 @@ function loanPaymentToEntry(loan, payment) {
     // die deutsche Kategorie „Geschenke & Transfers" waren in 22 von 23 Sprachen
     // falsch — und die Kategorie ist längst ein Key, kein Anzeigename.
     title: payment.entry_title || t('budget.loanPaymentTitle', { borrower: loan.borrower }),
-    amount: Number(payment.amount || 0),
+    // budget_loan_payments.amount ist per CHECK immer positiv (Betrag der Rate);
+    // das Vorzeichen trägt der gekoppelte Budget-Eintrag, und genau den bearbeitet
+    // das Edit-Modal - ohne die Spiegelung stünde dort eine Ausgabe als Einnahme.
+    amount: (isBorrowedLoan(loan) ? -1 : 1) * Number(payment.amount || 0),
     category: payment.entry_category || '',
     subcategory: payment.entry_subcategory || '',
     date: payment.paid_date,
@@ -1342,15 +1351,24 @@ function renderLoanPaymentEntry(loan, payment) {
     number: payment.installment_number,
     total: loan.installment_count,
   })}`;
+  const borrowed = isBorrowedLoan(loan);
+  const flow = borrowed ? 'expenses' : 'income';
+  // Rolle `flow` wie in der Einträge-Liste: das Vorzeichen kommt aus dem Zahlformat,
+  // nicht aus einem vorangestellten '+' - sonst steht es in RTL-Locales falsch.
+  const amountText = amountByRole(
+    (borrowed ? -1 : 1) * Number(payment.amount || 0),
+    'flow',
+    { currency: loan?.currency || state.currency }
+  ).text;
 
   return `
     <div class="budget-entry budget-entry--loan" data-loan-payment-id="${payment.id}" data-loan-id="${loan.id}" ${entry ? `data-entry-id="${entry.id}"` : ''}>
-      <div class="budget-entry__indicator budget-entry__indicator--income"></div>
+      <div class="budget-entry__indicator budget-entry__indicator--${flow}"></div>
       <div class="budget-entry__body">
         <div class="budget-entry__title">${esc(payment.entry_title || t('budget.loanPaymentTitle', { borrower: loan.borrower }))}</div>
         <div class="budget-entry__meta">${meta}</div>
       </div>
-      <div class="budget-entry__amount budget-entry__amount--income">+${formatLoanAmount(payment.amount, loan)}</div>
+      <div class="budget-entry__amount budget-entry__amount--${flow}">${amountText}</div>
       <div class="row-actions">
         ${entry ? `
         <button class="row-action" data-action="loan-payment-edit" data-loan-id="${loan.id}" data-payment-id="${payment.id}" data-entry-id="${entry.id}" aria-label="${t('common.edit')}">
@@ -1574,7 +1592,9 @@ function renderLoanCard(loan) {
             <i data-lucide="filter" aria-hidden="true"></i>
           </button>
         </div>
-        <div class="budget-loan-card__meta">${esc(loan.borrower)} · ${t('budget.loanInstallmentMeta', {
+        <div class="budget-loan-card__meta">${t(isBorrowedLoan(loan)
+          ? 'budget.loanDirectionBorrowedBadge'
+          : 'budget.loanDirectionLentBadge')} · ${esc(loan.borrower)} · ${t('budget.loanInstallmentMeta', {
           paid: loan.paid_installments,
           total: loan.installment_count,
         })}</div>
@@ -1819,16 +1839,7 @@ function openBudgetModal({ mode, entry = null, initialType = '' }) {
     </div>
 
     <div id="bm-loan-fields" hidden>
-      <div class="form-group">
-        <label class="form-label" for="lm-borrower">${t('budget.loanBorrowerLabel')}</label>
-        <input type="text" class="form-input" id="lm-borrower"
-               placeholder="${t('budget.loanBorrowerPlaceholder')}">
-      </div>
-      <div class="form-group">
-        <label class="form-label" for="lm-title">${t('budget.loanTitleLabel')}</label>
-        <input type="text" class="form-input" id="lm-title"
-               placeholder="${t('budget.loanTitlePlaceholder')}">
-      </div>
+      ${loanIdentityFieldsHtml(null)}
       ${loanCurrencyFieldsHtml(null)}
       <div class="form-grid-2" id="lm-manual-fields">
         <div class="form-group">
@@ -1970,6 +1981,7 @@ function openBudgetModal({ mode, entry = null, initialType = '' }) {
       panel.querySelector('#type-loan')?.addEventListener('click', () => {
         setType('loan');
       });
+      wireLoanDirectionField(panel);
       wireLoanCurrencyFields(panel);
       wireLoanInterestFields(panel);
       // Belege (#583): landen als Dokumente im Dokumente-Modul, deshalb die
@@ -2249,6 +2261,66 @@ function wireLoanCurrencyFields(panel) {
   update();
 }
 
+// Kopffelder des Darlehens (Richtung, Gegenüber, Titel, Konto). Beide Dialoge -
+// der Loan-Tab im Eintrags-Dialog und der eigene Darlehens-Dialog - teilen sich
+// diesen Baustein: die Richtung (#638) doppelt zu pflegen hieße, dass ein über
+// den einen Weg angelegter Kredit stumm wieder als Einnahme gebucht wird.
+function loanIdentityFieldsHtml(loan) {
+  const borrowed = isBorrowedLoan(loan);
+  return `
+    <div class="form-group">
+      <label class="form-label" for="lm-direction">${t('budget.loanDirectionLabel')}</label>
+      <select class="form-input" id="lm-direction">
+        <option value="lent" ${borrowed ? '' : 'selected'}>${t('budget.loanDirectionLent')}</option>
+        <option value="borrowed" ${borrowed ? 'selected' : ''}>${t('budget.loanDirectionBorrowed')}</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="lm-borrower" id="lm-borrower-label">${
+        t(borrowed ? 'budget.loanLenderLabel' : 'budget.loanBorrowerLabel')
+      }</label>
+      <input type="text" class="form-input" id="lm-borrower"
+             placeholder="${t(borrowed ? 'budget.loanLenderPlaceholder' : 'budget.loanBorrowerPlaceholder')}"
+             value="${esc(loan?.borrower ?? '')}">
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="lm-title">${t('budget.loanTitleLabel')}</label>
+      <input type="text" class="form-input" id="lm-title"
+             placeholder="${t('budget.loanTitlePlaceholder')}" value="${esc(loan?.title ?? '')}">
+    </div>
+    ${loanAccountFieldHtml(loan)}`;
+}
+
+// Konto für die Raten (#638): Bis dahin hatte der Raten-Eintrag nie eine
+// Kontozuordnung. Der Block entfällt komplett, solange kein Konto angelegt ist -
+// genau wie im Eintrags-Dialog.
+function loanAccountFieldHtml(loan) {
+  if (!(state.accounts?.length)) return '';
+  const opts = `<option value="">${t('budget.noAccount')}</option>` + state.accounts.map((a) =>
+    `<option value="${a.id}" ${loan?.account_id === a.id ? 'selected' : ''}>${esc(a.name)}</option>`
+  ).join('');
+  return `
+    <div class="form-group">
+      <label class="form-label" for="lm-account">${t('budget.loanAccountLabel')}</label>
+      <select class="form-input" id="lm-account">${opts}</select>
+    </div>`;
+}
+
+// Richtung (#638): benennt das Personenfeld live um. Bei einem aufgenommenen
+// Kredit ist das Gegenüber der Kreditgeber, nicht der Kreditnehmer - stünde dort
+// weiter „Person", wäre nicht erkennbar, wessen Name gemeint ist.
+function wireLoanDirectionField(panel) {
+  const dirSel = panel.querySelector('#lm-direction');
+  if (!dirSel) return;
+  const label = panel.querySelector('#lm-borrower-label');
+  const input = panel.querySelector('#lm-borrower');
+  dirSel.addEventListener('change', () => {
+    const borrowed = dirSel.value === 'borrowed';
+    if (label) label.textContent = t(borrowed ? 'budget.loanLenderLabel' : 'budget.loanBorrowerLabel');
+    if (input) input.placeholder = t(borrowed ? 'budget.loanLenderPlaceholder' : 'budget.loanBorrowerPlaceholder');
+  });
+}
+
 // Zins-Darlehen (#569): Feldblock für den Darlehens-Dialog. Bei interest_mode
 // != 'none' werden Betrag/Ratenanzahl ausgeblendet (der Server leitet sie aus
 // Kreditsumme + Sollzins + Anfangstilgung ab) und stattdessen die Zinsfelder
@@ -2465,6 +2537,12 @@ async function saveLoanFromPanel(panel, saveBtn, { loan = null, closeAfterSave =
   }
   body.currency = currency;
   body.exchange_rate = exchange_rate;
+  // Richtung (#638) und Konto: der Server leitet daraus Vorzeichen, Kategorie und
+  // Kontobelastung der Raten ab. Fehlt der Konto-Block (kein Konto angelegt), wird
+  // account_id gar nicht mitgeschickt, damit ein PUT die Zuordnung nicht löscht.
+  body.direction = panel.querySelector('#lm-direction')?.value === 'borrowed' ? 'borrowed' : 'lent';
+  const accountSel = panel.querySelector('#lm-account');
+  if (accountSel) body.account_id = accountSel.value === '' ? null : parseInt(accountSel.value, 10);
 
   saveBtn.disabled = true;
   saveBtn.textContent = '…';
@@ -2489,17 +2567,10 @@ function openLoanModal(loan = null) {
   const isEdit = Boolean(loan);
   const todayMonth = toLocalDateKey(new Date()).slice(0, 7);
   const loanCurrency = loan?.currency || state.currency;
+  // Richtung (#638) steht ganz oben: sie entscheidet, ob die Rate als Einnahme oder
+  // als Ausgabe gebucht wird, und benennt das Feld darunter um (Person vs. Kreditgeber).
   const content = `
-    <div class="form-group">
-      <label class="form-label" for="lm-borrower">${t('budget.loanBorrowerLabel')}</label>
-      <input type="text" class="form-input" id="lm-borrower"
-             placeholder="${t('budget.loanBorrowerPlaceholder')}" value="${esc(loan?.borrower ?? '')}">
-    </div>
-    <div class="form-group">
-      <label class="form-label" for="lm-title">${t('budget.loanTitleLabel')}</label>
-      <input type="text" class="form-input" id="lm-title"
-             placeholder="${t('budget.loanTitlePlaceholder')}" value="${esc(loan?.title ?? '')}">
-    </div>
+    ${loanIdentityFieldsHtml(loan)}
     ${loanCurrencyFieldsHtml(loan)}
     <div class="form-grid-2" id="lm-manual-fields">
       <div class="form-group">
@@ -2538,6 +2609,7 @@ function openLoanModal(loan = null) {
     content,
     size: 'sm',
     onSave(panel) {
+      wireLoanDirectionField(panel);
       wireLoanCurrencyFields(panel);
       wireLoanInterestFields(panel);
       panel.querySelector('#lm-cancel').addEventListener('click', closeModal);

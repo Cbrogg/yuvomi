@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.77.0] - 2026-08-04
+
+### Added
+
+- A loan now records its direction: whether the household lent the money out or took it on. Instalments on a loan you took on are booked as an expense under Financial Services and Other / Loans / Interest, while instalments on money you lent out stay income as before. The dialog asks for the direction first and renames the field below it accordingly, so it is clear whose name belongs there: the borrower when you lend, the lender when you borrow. Existing loans keep counting as lent out, and switching one to borrowed re-books the instalments already recorded, so a mortgage entered before this release does not have to be deleted and entered again (#638)
+- A loan can be assigned an account. Every instalment booked from then on charges that account, so its balance follows the payment. Until now the budget entry written for an instalment carried no account at all (#638)
+
+### Fixed
+
+- Paying an instalment on a loan the household had taken on counted as income in the monthly balance, so a mortgage payment raised the balance instead of lowering it. The loan module was originally built for money lent out, where a repayment coming back really is income; the interest fields released in v1.45.10 made a mortgage expressible without the booking logic following (#638)
+- The installer reported the exit code of the start command before its last output had arrived, so the setup wizard could offer "Try again" while the line explaining the failure was still missing from the start log
+
 ## [1.76.0] - 2026-08-04
 
 ### Added

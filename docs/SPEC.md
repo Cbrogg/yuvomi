@@ -1213,10 +1213,12 @@ Instalment-based loans with per-payment tracking. Active loans show remaining ba
 
 **Own currency per loan (migration v102, #582):** a loan can run in a currency other than the household budget currency. Every monetary field of the loan (`total_amount`, `principal`, and `budget_loan_payments.amount`) stays stored **in that currency**, so the amortisation schedule and the remaining balance stay exact. `currency = NULL` means "follows the budget currency" and is both the legacy state and the normal case; selecting the current budget currency in the UI is stored as NULL rather than the code, so a later household currency change cannot turn the loan into a foreign-currency one at rate 1. `exchange_rate` is a **fixed, manually maintained** rate (1 unit of loan currency = `exchange_rate` units of budget currency), not a daily quote: a 30-year schedule must not move its remaining balance every day, and the live-rate path of the Subscriptions module needs a `FIXER_API_KEY` most installations do not set. Only two places convert: the cross-loan summary card (valued at the stored rate) and the budget entry written for an instalment, which is converted **at booking time** so a later rate change leaves booked instalments untouched. Editing that coupled budget entry converts back into the loan currency, including the remaining-balance check.
 
+**Lending direction (migration v126, #638):** the module was originally built for money the household *lends out*, so an instalment was always booked as income — a positive amount under an income category. The interest fields of #569 made a mortgage expressible, but the booking logic never followed, and a mortgage payment showed up as income in the monthly balance. `direction` now decides sign and category together: `lent` (the default, unchanged for existing rows) writes the instalment as a positive amount under `Geschenke & Transfers`, `borrowed` writes it as a negative amount under `financial_other` / `loans_interest`. Both have to switch together, because the statistics read the type off the sign (`amount > 0` = income) while `budget_categories` carries its own `type` — turning only one of them would file an expense under an income category. Switching an existing loan's direction **re-books the instalments already recorded** (sign and category): a wrong sign is never legitimate history, and this is the repair path for rows the migration defaulted to `lent`. `account_id` gives the loan a default account which every new instalment inherits, so a payment can charge an account at all — the coupled budget entry carried none before. A later account change applies to new instalments only, since re-booking the old ones would falsify historical account balances.
+
 | Column | Type | Constraint |
 |--------|------|-----------|
 | title | TEXT | NOT NULL |
-| borrower | TEXT | NOT NULL |
+| borrower | TEXT | NOT NULL — the counterparty: the borrower with `direction = 'lent'`, the lender with `borrowed` (#638) |
 | total_amount | REAL | NOT NULL CHECK(> 0) — for interest loans: derived total repayment (principal + interest) |
 | installment_count | INTEGER | NOT NULL CHECK(> 0) — for interest loans: derived term in months |
 | start_month | TEXT | YYYY-MM, NOT NULL |
@@ -1233,6 +1235,8 @@ Instalment-based loans with per-payment tracking. Active loans show remaining ba
 | followup_rate | REAL | nullable — forecast annual interest rate % after the fixed period (migration v100) |
 | currency | TEXT | nullable — ISO 4217 code the loan runs in; NULL = budget currency (migration v102, #582) |
 | exchange_rate | REAL | NOT NULL DEFAULT 1 — fixed rate, 1 loan currency = `exchange_rate` budget currency; forced to 1 whenever `currency` is NULL (migration v102, #582) |
+| direction | TEXT | NOT NULL DEFAULT `lent` — `lent` \| `borrowed`; decides sign and category of the coupled budget entry (migration v126, #638) |
+| account_id | INTEGER | FK → Budget Accounts, nullable (ON DELETE SET NULL) — default account the instalments charge (migration v126, #638) |
 
 ### Budget Loan Payments
 Individual payment records for a budget loan. Each installment number is unique per loan.
@@ -1241,7 +1245,7 @@ Individual payment records for a budget loan. Each installment number is unique 
 |--------|------|-----------|
 | loan_id | INTEGER | FK → Budget Loans (CASCADE delete), NOT NULL |
 | installment_number | INTEGER | NOT NULL CHECK(> 0), UNIQUE per loan |
-| amount | REAL | NOT NULL CHECK(> 0) — in the loan's currency, not the budget currency (#582) |
+| amount | REAL | NOT NULL CHECK(> 0) — in the loan's currency, not the budget currency (#582); always positive, the sign lives on the coupled budget entry and follows `direction` (#638) |
 | paid_date | TEXT | DATE, NOT NULL |
 | budget_entry_id | INTEGER | FK → Budget Entries (SET NULL on delete), nullable |
 | created_by | INTEGER | FK → Users (CASCADE delete), NOT NULL |

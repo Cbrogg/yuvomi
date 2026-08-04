@@ -348,18 +348,37 @@ test('der Health-Check entscheidet nur, wenn er eine Aussage trifft', () => {
   assert.equal(classifyHealth(1, ''), null, 'fehlgeschlagenes Inspect trifft keine Aussage');
 });
 
+/**
+ * Startet einen Prozess und wartet, bis er wirklich fertig ist - inklusive der
+ * letzten Ausgabe.
+ *
+ * Vorher warteten diese Tests eine feste Zeitspanne (300 bzw. 200 ms) und hofften,
+ * dass der Prozess bis dahin gestartet, geschrieben und beendet war. Unter Last -
+ * etwa wenn `npm test` alle Suiten hintereinander fährt - reicht das nicht, und die
+ * Suite wurde sporadisch rot. spawnStart meldet das Ende über onExit (am
+ * 'close'-Event, also nach dem letzten Chunk); darauf lässt sich exakt warten,
+ * statt eine Dauer zu raten.
+ *
+ * Bleibt der Spawn selbst erfolglos, feuert 'close' nie - dann würde das Warten
+ * hängen, deshalb der frühe Ausstieg.
+ */
+async function spawnUndWarten(cmd, args, onOutput = null) {
+  const beendet = Promise.withResolvers();
+  const r = await spawnStart(cmd, args, {}, onOutput, code => beendet.resolve(code));
+  if (!r.ok) return { ...r, code: null };
+  return { ...r, code: await beendet.promise };
+}
+
 test('spawnStart reicht die Ausgabe durch, wenn ein Callback übergeben wird', async () => {
   // Das ist die einzige Stelle, an der der Fortschritt des Image-Pulls entsteht:
   // `up -d` läuft detached weiter, während der Wizard pollt.
   let gesammelt = '';
-  const r = await spawnStart(
+  const r = await spawnUndWarten(
     process.execPath,
     ['-e', 'process.stdout.write("pulling layer 1\\n"); process.stderr.write("warn\\n")'],
-    {},
     chunk => { gesammelt += chunk; }
   );
   assert.equal(r.ok, true);
-  await new Promise(resolve => setTimeout(resolve, 300));
   assert.match(gesammelt, /pulling layer 1/, 'stdout muss ankommen');
   assert.match(gesammelt, /warn/, 'stderr muss ebenfalls ankommen');
 });
@@ -372,12 +391,9 @@ test('ohne Callback bleibt spawnStart bei stdio ignore (unverändertes Verhalten
 test('das Startprotokoll ist begrenzt und zurücksetzbar', async () => {
   resetStartLog();
   assert.equal(getStartLog(), '', 'reset muss leeren');
-  await spawnStart(
-    process.execPath,
-    ['-e', 'process.stdout.write("a".repeat(20000))'],
-    {},
-    () => {}
-  );
+  // Mitwarten statt den Prozess unbeaufsichtigt weiterlaufen zu lassen: sonst
+  // schreibt er noch 20000 Zeichen, waehrend die naechsten Tests schon laufen.
+  await spawnUndWarten(process.execPath, ['-e', 'process.stdout.write("a".repeat(20000))'], () => {});
   // Der Puffer im Server ist auf 8000 Zeichen gedeckelt; ein hängender Pull
   // darf den Speicher nicht füllen.
   const quelle = readFileSync(new URL('../tools/installer/install-server.js', import.meta.url), 'utf8');
@@ -452,12 +468,11 @@ test('ein fehlgeschlagener Start bleibt nicht ewig in der Pull-Phase', async () 
   assert.equal(classifyContainerState('running', 1).status, 'starting');
   assert.equal(classifyContainerState('exited', null).status, 'error');
 
-  // Und spawnStart meldet den Exit ueberhaupt weiter.
-  const seen = [];
-  const r = await spawnStart('sh', ['-c', 'exit 3'], {}, null, code => seen.push(code));
+  // Und spawnStart meldet den Exit ueberhaupt weiter. r.code stammt
+  // ausschliesslich aus dem onExit-Callback - kommt er nicht an, bleibt er null.
+  const r = await spawnUndWarten('sh', ['-c', 'exit 3']);
   assert.equal(r.ok, true, 'der Spawn selbst gelingt');
-  await new Promise(resolve => setTimeout(resolve, 200));
-  assert.deepEqual(seen, [3], 'der Exit-Code muss den onExit-Callback erreichen');
+  assert.equal(r.code, 3, 'der Exit-Code muss den onExit-Callback erreichen');
 });
 
 test('ein Retry raeumt das laufende Polling ab, statt ein zweites zu starten', () => {

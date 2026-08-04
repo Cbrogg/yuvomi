@@ -300,7 +300,13 @@ export function spawnStart(cmd, args, opts = {}, onOutput = null, onExit = null)
     // detached weiter, waehrend das Image geladen wird, und der Request darf
     // darauf nicht warten. Der Exit-Code interessiert trotzdem - er ist das
     // einzige Signal dafuer, dass aus diesem Start kein Container mehr wird.
-    child.on('exit', code => onExit?.(code));
+    //
+    // 'close' statt 'exit': 'exit' feuert, sobald der Prozess endet, waehrend die
+    // letzten stdout/stderr-Chunks noch unterwegs sein koennen. Der Wizard haette
+    // dann einen Fehler-Exit-Code, aber die erklaerende Zeile stuende noch nicht im
+    // Startprotokoll - "Erneut versuchen" ohne die Begruendung daneben. 'close'
+    // feuert erst, wenn alle stdio-Streams zu sind, also nach dem letzten Chunk.
+    child.on('close', code => onExit?.(code));
     child.on('spawn', () => done({ ok: true }));
   });
 }
