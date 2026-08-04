@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.75.7] - 2026-08-04
+
+### Fixed
+
+- CalDAV reminder lists now appear on the reminder sync page by themselves. Adding an account only ever discovered calendars, so the page showed an empty state and the task mirror looked broken while the server was serving lists all along (#617)
+- Collections that only hold tasks are no longer offered as calendars. They were adopted as event destinations when an account was added, where Nextcloud rejects a saved appointment outright and Radicale files it into the task list other clients read (#617)
+- Accounts created before this release shed those task lists on their next sync run instead of requiring a manual calendar refresh. Events already mirrored from such a collection are kept (#617)
+- A server that does not advertise `supported-calendar-component-set` no longer loses every reminder list. RFC 4791 leaves the property optional and requires clients to assume all components are supported (#617)
+- The reminder page no longer queries the server on every visit when an account has no task lists. It now records that a discovery ran, which also removes the duplicate request behind the refresh button that could show a connected account as disconnected (#617)
+
 ## [1.75.6] - 2026-08-04
 
 ### Security
