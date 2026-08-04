@@ -13,7 +13,7 @@ const log = createLogger('CalDAV-Reminders');
 
 import * as db from '../db.js';
 import { parseVTODO } from './ics-parser.js';
-import { createCalDAVClient } from '../utils/caldav-client.js';
+import { createCalDAVClient, supportsComponent } from '../utils/caldav-client.js';
 import { serverTimeZone, utcToWall } from '../utils/timezone.js';
 import { setItemTags, setTags } from '../utils/task-tags.js';
 import * as todoOutbound from './caldav-todo-outbound.js';
@@ -96,8 +96,7 @@ function getAllAccounts() {
 }
 
 function isReminderCollection(cal) {
-  const comps = cal.components || [];
-  return Array.isArray(comps) && comps.map(c => String(c).toUpperCase()).includes('VTODO');
+  return supportsComponent(cal, 'VTODO');
 }
 
 /**
@@ -121,13 +120,19 @@ const createClient = createCalDAVClient;
 // Reminder-List Discovery & Selection
 // --------------------------------------------------------
 
-async function getReminderLists(accountId, { refresh = false } = {}) {
+async function getReminderLists(accountId, { refresh = false, createClient: makeClient } = {}) {
   const account = getAccountById(accountId);
   if (!account) {
     throw new Error(`Account ${accountId} not found.`);
   }
 
-  if (!refresh) {
+  // Ohne gelaufene Suche entdeckt ein frisch angelegtes Konto nur Kalender: die
+  // Seite zeigte einen leeren Zustand, bis jemand "Aktualisieren" drückte, und wer
+  // den Knopf nicht fand, hielt den Aufgaben-Abgleich für kaputt (#617). Deshalb
+  // sucht der erste Aufruf selbst. Der Zeitstempel (v125) merkt sich, dass die
+  // Suche lief, auch wenn sie nichts fand - sonst befragte ein Server ohne
+  // VTODO-Sammlungen bei jedem Seitenaufruf erneut das Netz.
+  if (!refresh && account.reminders_discovered_at) {
     const rows = db.get().prepare(`
       SELECT list_url, list_name, target_module, enabled
       FROM caldav_reminder_selection
@@ -144,7 +149,7 @@ async function getReminderLists(accountId, { refresh = false } = {}) {
   }
 
   // Refresh from server, preserving existing enabled/target_module settings
-  const client    = await createClient(account);
+  const client    = await (makeClient || createClient)(account);
   const calendars = await client.fetchCalendars();
   const lists     = calendars.filter(isReminderCollection);
 
@@ -166,6 +171,12 @@ async function getReminderLists(accountId, { refresh = false } = {}) {
 
     result.push({ listUrl: cal.url, listName: name, targetModule, enabled: enabled === 1 });
   }
+
+  db.get().prepare(`
+    UPDATE caldav_accounts
+       SET reminders_discovered_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+     WHERE id = ?
+  `).run(accountId);
 
   log.info(`Discovered ${result.length} reminder list(s) for account ${accountId}.`);
   return result;

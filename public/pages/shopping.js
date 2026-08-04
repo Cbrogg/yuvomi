@@ -1572,7 +1572,7 @@ function wireListContentEvents(container) {
         state.items.length
           ? t('shopping.deleteListConfirm', { name: state.activeList?.name ?? '', count: state.items.length })
           : t('shopping.deleteListConfirmEmpty', { name: state.activeList?.name ?? '' }),
-        { danger: true, confirmLabel: t('common.delete') },
+        { danger: true, confirmLabel: t('common.delete'), detail: t('shopping.deleteListConfirmDetail') },
       );
       if (!confirmed) return;
 
@@ -1660,6 +1660,9 @@ async function openCategoryManager(container, { fromDeepLink = false } = {}) {
         labelResolver: (item) => categoryLabel(item.name),
         titleKey: 'shopping.manageCategories',
         hintKey: 'settings.shoppingCategoriesHint',
+        // Anders als Budget/Tasks/Kontakte loescht der Einkauf auch belegte
+        // Kategorien und schiebt die Artikel auf die naechste Kategorie.
+        deleteDetailKey: 'shopping.categoryDeleteConfirmDetail',
       });
     },
     onClose: () => {

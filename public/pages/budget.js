@@ -1164,7 +1164,7 @@ function openAccountModal(account = null) {
         // der Nutzer, ist es beim Weiterlaufen hier bereits geschlossen.
         const ok = await confirmOverModal(
           t('budget.deleteAccountConfirm', { name: account.name }),
-          { confirmLabel: t('common.delete'), danger: true },
+          { confirmLabel: t('common.delete'), danger: true, detail: t('budget.deleteAccountConfirmDetail') },
         );
         if (!ok) return;
         try {
@@ -1672,6 +1672,10 @@ function openCategoryManager() {
         labelResolver: (item) => item.label ?? budgetCategoryLabel(item.key, item.name, t),
         titleKey: 'budget.manageCategories',
         hintKey: 'category.manageHint',
+        // Einziger Aufrufer mit Unterkategorien, und der Server weist benutzte
+        // Kategorien mit 409 ab.
+        deleteDetailKey: 'budget.categoryDeleteConfirmDetail',
+        subDeleteDetailKey: 'budget.subcategoryDeleteConfirmDetail',
       });
     },
     onClose: () => manager?.removeEventListener('category-manager-changed', onChanged),

@@ -4616,6 +4616,109 @@ const MIGRATIONS = [
         ON tasks(recurrence_origin_id) WHERE recurrence_origin_id IS NOT NULL;
     `,
   },
+  {
+    version: 123,
+    description: 'CalDAV: detach mirrored tasks and shopping items from deleted accounts (#617)',
+    up: `
+      -- tasks.external_account_id und shopping_items.external_account_id sind
+      -- bloße INTEGER-Spalten (v45): löscht jemand ein CalDAV-Konto, nimmt
+      -- CASCADE nur mit, was dem Konto selbst gehört - Kalender- und
+      -- Listenauswahl und die offenen VTODO-Löschungen. Die gespiegelten
+      -- Zeilen bleiben stehen, mit einer Kennung, die auf nichts mehr zeigt.
+      --
+      -- Das war nicht nur unsauber, sondern eine Sackgasse: beim Löschen so
+      -- einer Zeile merkt queueTodoDeletion() sie in
+      -- caldav_todo_pending_deletions vor - und DIE Tabelle hat den
+      -- Fremdschlüssel sehr wohl. Der INSERT scheiterte, der Eintrag ließ sich
+      -- lokal gar nicht mehr löschen, während die entfernte Kopie ohne Konto
+      -- ohnehin unerreichbar ist.
+      --
+      -- Der Fremdschlüssel lässt sich in SQLite nicht nachträglich an eine
+      -- bestehende Spalte hängen; das hieße beide Tabellen samt Indizes,
+      -- Suchtriggern und den auf sie zeigenden Tabellen neu bauen. Diese
+      -- Migration räumt darum den Bestand, und caldavSync.deleteAccount
+      -- entkoppelt künftig selbst, bevor das Konto verschwindet.
+      --
+      -- Entkoppelt heißt lokal, nicht halb-extern: ohne Konto gibt es keine
+      -- Liste, in die etwas zurückginge, keinen Inbound, der die Zeile noch
+      -- anfasst, und keine UID, die noch etwas bedeutet. Was bleibt, ist eine
+      -- gewöhnliche Aufgabe bzw. ein gewöhnlicher Einkaufsposten.
+      UPDATE tasks
+         SET external_source     = 'local',
+             external_uid        = NULL,
+             external_account_id = NULL,
+             external_object_url = NULL,
+             outbound_dirty      = 0,
+             outbound_attempts   = 0
+       WHERE external_account_id IS NOT NULL
+         AND external_account_id NOT IN (SELECT id FROM caldav_accounts);
+
+      UPDATE shopping_items
+         SET external_source     = 'local',
+             external_uid        = NULL,
+             external_account_id = NULL,
+             external_object_url = NULL,
+             outbound_dirty      = 0,
+             outbound_attempts   = 0
+       WHERE external_account_id IS NOT NULL
+         AND external_account_id NOT IN (SELECT id FROM caldav_accounts);
+    `,
+  },
+  {
+    version: 124,
+    description: 'Split guests stay confined when their group is deleted (group_id ON DELETE SET NULL)',
+    up: `
+      -- Rechteausweitung: split_expense_guest_users traegt zwei Aussagen in
+      -- einer Zeile - DASS ein Konto beschraenkt ist (die Existenz der Zeile,
+      -- die server/index.js abfragt) und WORAUF (group_id). Das CASCADE aus
+      -- v40 hat beim Loeschen der Gruppe die ganze Zeile mitgenommen und damit
+      -- auch die erste Aussage geloescht. Der zugehoerige users-Eintrag blieb
+      -- unveraendert bestehen: aus einem Gast wurde ein haushaltsweit
+      -- berechtigtes Konto, das die uebrige API erreicht. Eine Gruppe ohne
+      -- Ausgaben und Ausgleiche laesst sich loeschen (409-Guard in
+      -- routes/split-expenses.js), der Weg dorthin stand also jedem
+      -- Gruppen-Owner offen.
+      --
+      -- SET NULL loescht nur noch die Zuordnung. Der Gast bleibt ein Gast und
+      -- sieht nichts mehr - die Routen behandeln group_id IS NULL als "keine
+      -- Gruppe", nicht als "keine Beschraenkung".
+      --
+      -- SQLite kann eine FK-Aktion nicht per ALTER aendern, daher der Rebuild.
+      -- Keine Tabelle referenziert split_expense_guest_users, das DROP zieht
+      -- also nichts mit sich; foreignKeysOff ist dafuer nicht noetig.
+      CREATE TABLE split_expense_guest_users_new (
+        user_id    INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        group_id   INTEGER REFERENCES expense_groups(id) ON DELETE SET NULL,
+        created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+      );
+
+      INSERT INTO split_expense_guest_users_new (user_id, group_id, created_by, created_at)
+        SELECT user_id, group_id, created_by, created_at FROM split_expense_guest_users;
+
+      DROP TABLE split_expense_guest_users;
+      ALTER TABLE split_expense_guest_users_new RENAME TO split_expense_guest_users;
+
+      -- Der Index hing an der gedroppten Tabelle und muss neu angelegt werden.
+      CREATE INDEX IF NOT EXISTS idx_split_guest_group ON split_expense_guest_users(group_id);
+    `,
+  },
+  {
+    version: 125,
+    description: 'CalDAV: remember that a reminder-list discovery ran, even when it found nothing (#617)',
+    up: `
+      -- Die Aufgabenseite sucht beim ersten Oeffnen selbst nach Listen, statt
+      -- einen leeren Zustand zu zeigen. "Zum ersten Mal" liess sich bisher nur
+      -- daran ablesen, dass caldav_reminder_selection fuer das Konto leer ist -
+      -- fuer einen Server ohne VTODO-Sammlungen bleibt sie das aber fuer immer,
+      -- und jeder Aufruf der Seite haette erneut den Server befragt.
+      --
+      -- Der Zeitstempel trennt die beiden Faelle: NULL heisst "nie gesucht",
+      -- gesetzt heisst "gesucht, Ergebnis gilt". Bestandskonten starten auf NULL
+      -- und suchen damit genau einmal.
+      ALTER TABLE caldav_accounts ADD COLUMN reminders_discovered_at TEXT;
+    `,
+  },
 ];
 
 /**

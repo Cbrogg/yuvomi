@@ -9,7 +9,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Add New Zealand Dollar (NZD) as a selectable currency across household settings, subscriptions and split expenses, with an English (New Zealand) region preset.
+- The New Zealand dollar is now one of the currencies a household can pick, in the household settings as well as in subscriptions and in split expenses. New Zealand households had to record their money under a currency that was not theirs. Choosing New Zealand as the region sets the dollar together with the local date and time format in one step, and amounts are then written the way they are written there: $1,234.56.
+
+## [1.75.8] - 2026-08-04
+
+### Fixed
+
+- The edit and delete buttons of a housekeeping task now carry their icons the moment the task is added from a suggestion. The list was redrawn without turning the icon placeholders into icons, which happened only on a tab switch, so the buttons stayed blank until the page was reloaded. Checking a task off, restoring it, deleting one and saving the edit dialog were affected the same way, as was marking a visit as paid on the reports tab (#668)
+
+## [1.75.7] - 2026-08-04
+
+### Fixed
+
+- CalDAV reminder lists now appear on the reminder sync page by themselves. Adding an account only ever discovered calendars, so the page showed an empty state and the task mirror looked broken while the server was serving lists all along (#617)
+- Collections that only hold tasks are no longer offered as calendars. They were adopted as event destinations when an account was added, where Nextcloud rejects a saved appointment outright and Radicale files it into the task list other clients read (#617)
+- Accounts created before this release shed those task lists on their next sync run instead of requiring a manual calendar refresh. Events already mirrored from such a collection are kept (#617)
+- A server that does not advertise `supported-calendar-component-set` no longer loses every reminder list. RFC 4791 leaves the property optional and requires clients to assume all components are supported (#617)
+- The reminder page no longer queries the server on every visit when an account has no task lists. It now records that a discovery ran, which also removes the duplicate request behind the refresh button that could show a connected account as disconnected (#617)
+
+## [1.75.6] - 2026-08-04
+
+### Security
+
+- Deleting a split expense group turned the guest accounts belonging to it into full household members. A guest is held to the Split module by a single record that carries two things at once: that the account is restricted at all, and which group it may see. Deleting the group took that whole record with it, while the login itself stayed untouched, so the account went on to reach the rest of the API, from the calendar to the documents. Any group owner could bring this about, because a group without expenses or settlements can be deleted outright. Deleting a group now clears only the group assignment: the account stays a guest and sees nothing. Accounts that an earlier deletion already promoted cannot be recognised after the fact, because the record that marked them is gone, so it is worth looking through Settings, Administration, Family for accounts that should not have household access.
+- A guest who also belonged to a second group could see that group's figures and expenses. On the Split dashboard the group list was restricted but the balances and recent expenses shown next to it were not, and a single expense could be opened, commented on, edited or deleted through its id, because those routes went by group membership alone. All of them now apply the same restriction as the group list.
+
+## [1.75.5] - 2026-08-03
+
+### Fixed
+
+- Deleting a CalDAV account left the tasks and shopping items it had mirrored pointing at an account that no longer existed, and those entries could then not be deleted at all. Deleting a mirrored entry first records the deletion for the server, and that record requires a live account: the record failed, and because it is written before the entry itself is removed, the removal never happened. The entry stayed put in Yuvomi while its copy on the server was already out of reach, with nothing to explain why it kept coming back. Deleting an account now detaches everything it had mirrored, so those tasks and shopping items remain as ordinary local ones, and entries left behind by an earlier account deletion are repaired during the update.
+
+## [1.75.4] - 2026-08-03
+
+### Changed
+
+- Confirmation dialogs for destructive actions now say what they actually destroy. Twenty-five of them asked "Delete X?" and left it there, which in a self-hosted household is the only chance anyone gets to learn the consequence: there is no support desk and no undo. Each one now names the concrete outcome instead of repeating the warning. Deleting a budget account keeps its entries but strips their account link. Deleting a folder keeps the documents and moves them out of it. Deleting a medication takes its schedule and the whole intake history along. Deleting a subscribed calendar removes the events it imported. Disconnecting Google drops deletions that had not been pushed yet, so those events stay behind in Google, and it clears the calendar selection, so reconnecting alone does not resume the sync.
+- Where one component serves several modules, each module now supplies its own consequence rather than sharing a single sentence. The category manager is used by Budget, Tasks, Contacts, Shopping and Pantry, and those servers disagree: the first three refuse to delete a category that is still in use, Shopping moves the items to the first remaining category, and Pantry leaves the supplies without a storage location. One shared text was wrong for two of the five.
+- Rejecting or withdrawing a reward request is no longer marked as dangerous. The reserved points are booked back and the request can be made again while the reward is still in the catalogue, so a red button claimed a finality the action does not have.
+
+### Fixed
+
+- Deleting a subscription category or payment method explained nothing at all when no subscription used it yet. The linked budget subcategory is removed in either case, so the dialog was silent exactly where the effect was least expected.
+- The dialog for removing a CalDAV account read as though the appointments were going away with it. They stay; what ends is the sync.
 
 ## [1.75.3] - 2026-08-03
 
