@@ -449,6 +449,7 @@ function renderTasks(content) {
       `}
     </section>
   `);
+  if (window.lucide) window.lucide.createIcons({ el: content });
 
   content.querySelectorAll('[data-template-index]').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -578,6 +579,7 @@ function renderReports(content) {
       ${rows || `<p class="housekeeping-muted">${esc(t('housekeeping.noVisitReports'))}</p>`}
     </section>
   `);
+  if (window.lucide) window.lucide.createIcons({ el: content });
 
   content.querySelectorAll('[data-visit-report]').forEach((btn) => {
     btn.addEventListener('click', () => {

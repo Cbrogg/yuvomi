@@ -6586,3 +6586,68 @@ test('ein Dialog ueber einem offenen Modal nutzt confirmOverModal', () => {
   assert.deepEqual(violations, [],
     'confirmModal() aus einem offenen Modal heraus gehoert auf confirmOverModal() umgestellt');
 });
+
+/**
+ * Wer Lucide-Platzhalter einfuegt, materialisiert sie selbst.
+ *
+ * Ausgangsbefund (#668): in der Hauswirtschaft blieben die Bearbeiten- und
+ * Loeschen-Knoepfe einer Aufgabe leer, sobald sie ueber einen Vorschlag angelegt
+ * wurde - erst ein Reload brachte die Icons. `renderTasks()` fuegte
+ * `<i data-lucide>` ein, ohne `createIcons` zu rufen; das tat nur
+ * `renderCurrentTab()`. Beim Tabwechsel ging das gut, bei den fuenf anderen
+ * Aufrufern (Anlegen, Abhaken, Zurueckholen, Loeschen, Bearbeiten-Modal) nicht.
+ * `renderReports()` hatte dieselbe Luecke.
+ *
+ * Die Regel ist deshalb nicht "jede Render-Funktion ruft createIcons", sondern:
+ * hat eine Funktion mehr als einen Aufrufer, darf sie das Materialisieren nicht
+ * an ihn delegieren - der naechste Aufrufer erbt die Annahme nicht.
+ *
+ * Zwei Formen zaehlen als erfuellt: der direkte `createIcons`-Aufruf und ein
+ * datei-lokaler Helfer, der ihn kapselt (rewards.js: `icons(el)`).
+ *
+ * Grenzen der Regel: Element-Fabriken sind ausgenommen - sie befuellen ein
+ * losgeloestes Element und geben es zurueck, materialisieren laesst sich das
+ * erst am eingehaengten Baum (pantry.js: `rowEl`, `cartEl`, `bulkBarEl`).
+ * Funktionen mit genau einem Aufrufer ebenso: dort ist die Zustaendigkeit
+ * eindeutig und nachlesbar (calendar.js: `renderAgendaView`). Beides faellt auf,
+ * sobald ein zweiter Aufrufer dazukommt.
+ *
+ * Aufrufer werden am Namen erkannt, Kommentarzeilen zaehlen deshalb nicht mit -
+ * sonst haette der Satz "pro render() genau einmal erzeugt" (shopping.js) einen
+ * zweiten Aufrufer vorgetaeuscht.
+ */
+test('Render-Funktionen mit mehreren Aufrufern materialisieren ihre Icons selbst', () => {
+  const violations = [];
+  const withoutComments = (body) => body
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .split('\n').filter((line) => !/^\s*(\/\/|\*)/.test(line)).join('\n');
+
+  for (const file of [...walkJsFiles('../public/pages/'), ...walkJsFiles('../public/components/')]) {
+    const fns = topLevelFunctions(read(file)).map(([name, body]) => [name, withoutComments(body)]);
+
+    // Helfer, die nur `createIcons` kapseln, ohne selbst Markup einzufuegen.
+    const helpers = fns
+      .filter(([, body]) => /createIcons/.test(body) && !/data-lucide=/.test(body))
+      .map(([name]) => name);
+    const materialises = (body) => /createIcons/.test(body)
+      || helpers.some((name) => new RegExp(`\\b${name}\\s*\\(`).test(body));
+
+    for (const [name, body] of fns) {
+      if (!/\.(insertAdjacentHTML|replaceChildren)\s*\(/.test(body)) continue;
+      if (!/data-lucide=/.test(body)) continue;
+      if (materialises(body)) continue;
+      if (/document\.createElement\(/.test(body) && /\breturn\b/.test(body)) continue; // Element-Fabrik
+
+      const callers = fns.filter(([other, otherBody]) =>
+        other !== name && new RegExp(`\\b${name}\\s*\\(`).test(otherBody));
+      if (callers.length <= 1) continue;
+
+      violations.push(`${file}: ${name}() - ${callers.length} Aufrufer `
+        + `(${callers.map(([caller]) => caller).join(', ')})`);
+    }
+  }
+
+  assert.deepEqual(violations, [],
+    'Diese Funktionen fügen <i data-lucide> ein, überlassen das Materialisieren aber '
+    + `ihren Aufrufern. Ein lucide.createIcons({ el: ... }) gehört ans Ende:\n${violations.join('\n')}`);
+});
