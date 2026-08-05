@@ -49,6 +49,7 @@ export function collectDefaultReminders(box) {
  */
 function syncTargetOptions(targets, current = '') {
   return buildSyncTargetOptions(targets, {
+    outlook: t('calendar.syncTargetOutlookGroup'),
     local: t('calendar.syncTargetLocal'),
     google: t('calendar.syncTargetGoogleGroup'),
     caldav: t('calendar.syncTargetCaldavGroup'),
