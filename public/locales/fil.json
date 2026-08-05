@@ -2165,7 +2165,9 @@
             "revoked": "Nabawi ang imbitasyon.",
             "created": "Nagawa ang imbitasyon.",
             "revokeConfirmDetail": "Agad na hihinto sa paggana ang link na naipadala o nakopya mo na. Hindi na makakagawa ng account ang inimbitahan gamit ito; kakailanganin mo siyang imbitahang muli."
-        }
+        },
+        "healthCaregiversLabel": "Puwedeng magtala ng datos ng kalusugan",
+        "healthCaregiversHint": "Puwedeng magtala ang mga taong ito ng vitals, gamot, resulta ng lab at aktibidad para sa miyembrong ito, at makikita rin nila ang mga pribadong tala nito. Hindi kasama ang talaarawan ng siklo."
     },
     "login": {
         "tagline": "Maligayang pagbabalik sa iyong family planner.",
@@ -3665,7 +3667,8 @@
             "hm": "{{hours}} oras {{minutes}} min",
             "h": "{{hours}} oras",
             "m": "{{minutes}} min"
-        }
+        },
+        "careBanner": "Nagtatala ka para kay {{name}}."
     },
     "rewards": {
         "title": "Mga Gantimpala",

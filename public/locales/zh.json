@@ -2153,7 +2153,9 @@
             "revoked": "邀请已撤销。",
             "created": "邀请已创建。",
             "revokeConfirmDetail": "已经发送或复制的链接会立即失效。受邀者无法再用它创建账户，你需要重新邀请一次。"
-        }
+        },
+        "healthCaregiversLabel": "可以记录健康数据",
+        "healthCaregiversHint": "这些人可以为该成员记录体征、用药、化验结果和活动，并在此过程中看到其私密记录。经期日记不在此列。"
     },
     "login": {
         "tagline": "欢迎回到您的家庭计划工具。",
@@ -3665,7 +3667,8 @@
             "hm": "{{hours}} 小时 {{minutes}} 分钟",
             "h": "{{hours}} 小时",
             "m": "{{minutes}} 分钟"
-        }
+        },
+        "careBanner": "你正在为 {{name}} 记录。"
     },
     "rewards": {
         "title": "奖励",

@@ -2153,7 +2153,9 @@
             "revoked": "Lời mời đã được thu hồi.",
             "created": "Lời mời đã được tạo.",
             "revokeConfirmDetail": "Liên kết bạn đã gửi hoặc sao chép sẽ ngừng hoạt động ngay. Người được mời không thể tạo tài khoản bằng liên kết đó nữa; bạn sẽ phải mời lại."
-        }
+        },
+        "healthCaregiversLabel": "Có thể ghi dữ liệu sức khỏe",
+        "healthCaregiversHint": "Những người này có thể ghi chỉ số sinh tồn, thuốc, kết quả xét nghiệm và hoạt động cho thành viên này, đồng thời thấy các mục riêng tư của họ. Nhật ký chu kỳ vẫn được loại trừ."
     },
     "login": {
         "tagline": "Chào mừng bạn trở lại trình lập kế hoạch gia đình.",
@@ -3665,7 +3667,8 @@
             "hm": "{{hours}} giờ {{minutes}} phút",
             "h": "{{hours}} giờ",
             "m": "{{minutes}} phút"
-        }
+        },
+        "careBanner": "Bạn đang ghi cho {{name}}."
     },
     "rewards": {
         "title": "Phần thưởng",

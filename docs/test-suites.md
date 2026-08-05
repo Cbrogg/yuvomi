@@ -29,9 +29,9 @@ npm run test:health-labs        # Gesundheit: Laborwerte-Tab
 npm run test:health-activity    # Gesundheit: Aktivitäts-Tab
 npm run test:health-cycle       # Gesundheit: Zyklus-Tab (#450)
 npm run test:health-export      # Gesundheit: CSV-Export - Formel-Injection-Schutz, Header/Spaltenbreiten-Kopplung über HEALTH_EXPORT_HEADERS, Labor-Fan-out und Zyklus-Längenberechnung
-npm run test:health-api         # Gesundheit: Route-Handler
+npm run test:health-api         # Gesundheit: Route-Handler + Betreuung (#584): Betreuer schreibt und liest fuer die betreute Person, Fremde erhalten 403, der Zyklus-Tab bleibt ausgenommen
 npm run test:health-nav         # Gesundheit: Tab-Navigation
-npm run test:health-structure   # Gesundheit: Routen-Split-Guard (41-Routen-Tabelle + Cluster-Disjunktheit)
+npm run test:health-structure   # Gesundheit: Routen-Split-Guard (45-Routen-Tabelle + Cluster-Disjunktheit)
 npm run test:medication-scheduler   # Medikations-Erinnerungs-Scheduler
 npm run test:shopping
 npm run test:shopping-routes   # Shopping-Routen: Listen/Artikel-CRUD, Kategorie-Rename-Kaskade + Delete-Fallback + Letzte-Sperre, Essensplan-Import-Aggregation

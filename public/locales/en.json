@@ -2153,7 +2153,9 @@
             "revoked": "The invitation was revoked.",
             "created": "The invitation was created.",
             "revokeConfirmDetail": "A link you already sent or copied stops working immediately. The invited person can no longer create an account with it; you would have to invite them again."
-        }
+        },
+        "healthCaregiversLabel": "May record health data",
+        "healthCaregiversHint": "These people may record vitals, medications, lab results and activities for this member, and see their private entries while doing so. The cycle diary stays excluded."
     },
     "login": {
         "tagline": "Welcome back to your family planner.",
@@ -3665,7 +3667,8 @@
             "hm": "{{hours}} h {{minutes}} min",
             "h": "{{hours}} h",
             "m": "{{minutes}} min"
-        }
+        },
+        "careBanner": "You are recording for {{name}}."
     },
     "rewards": {
         "title": "Rewards",

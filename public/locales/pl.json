@@ -2165,7 +2165,9 @@
             "revoked": "Zaproszenie zostało unieważnione.",
             "created": "Zaproszenie zostało utworzone.",
             "revokeConfirmDetail": "Wysłany lub skopiowany link natychmiast przestaje działać. Zaproszona osoba nie założy już z nim konta; trzeba by zaprosić ją ponownie."
-        }
+        },
+        "healthCaregiversLabel": "Może wprowadzać dane zdrowotne",
+        "healthCaregiversHint": "Te osoby mogą wprowadzać parametry życiowe, leki, wyniki badań i aktywności dla tego członka rodziny oraz widzieć przy tym jego prywatne wpisy. Dziennik cyklu pozostaje wyłączony."
     },
     "login": {
         "tagline": "Witaj ponownie w swoim planerze rodzinnym.",
@@ -3665,7 +3667,8 @@
             "hm": "{{hours}} godz. {{minutes}} min",
             "h": "{{hours}} godz.",
             "m": "{{minutes}} min"
-        }
+        },
+        "careBanner": "Wpisujesz dane dla {{name}}."
     },
     "rewards": {
         "title": "Nagrody",

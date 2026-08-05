@@ -22,7 +22,8 @@
  *   - Housekeeping (worker, work sessions, recurring chores, supplies, log)
  *   - Split expenses (household + trip groups, expenses, receipts, comments,
  *     a recurring expense, ledger, settlement)
- *   - Health (vitals, activities, medications + schedules/logs, lab reports, cycle)
+ *   - Health (vitals, activities, medications + schedules/logs, lab reports, cycle,
+ *     plus caregiver grants: both parents may record for the two children)
  *   - Rewards (participants, catalog, points ledger, fulfilled + pending redemptions)
  *   - Budget subscriptions (streaming, storage, gym — mixed billing cycles, one ending)
  *   - Household preferences (EUR, dd.mm.yyyy, 24h, weather = Dortmund)
@@ -145,6 +146,7 @@ const WIPE = [
   'housekeeping_work_sessions', 'housekeeping_decay_tasks', 'housekeeping_supply_requests',
   'housekeeping_maintenance_log', 'housekeeping_workers',
   'family_document_access', 'family_documents', 'family_document_folders',
+  'health_care_grants',
   'health_vitals', 'health_activities', 'health_lab_results', 'health_lab_reports',
   'medication_logs', 'medication_schedules', 'medications',
   'cycle_day_logs', 'cycle_periods', 'cycle_settings',
@@ -1065,6 +1067,18 @@ insertVital.run(lindaId, 'temp', 36.7, null, null, '°C', dateTimeFromNow(-5, 20
 // Mood on the 1-5 scale — no unit, the number is a step
 [[-13, 4], [-11, 3], [-9, 2], [-7, 4], [-5, 3], [-3, 5], [-1, 4]]
   .forEach(([d, step]) => insertVital.run(lindaId, 'mood', step, null, null, null, dateTimeFromNow(d, 20, 30), null));
+
+// ── Health: Caregiver grants (#584) ──────────────────────────────────────────
+// Both parents may record for both children. Without a grant the feature is
+// invisible, and a demo that never shows it is a demo of the old behaviour.
+
+console.log('Granting health caregiver rights…');
+const insertCareGrant = db.prepare(`
+  INSERT INTO health_care_grants (subject_id, caregiver_id) VALUES (?, ?)
+`);
+for (const childId of [emmaId, leoId]) {
+  for (const parentId of [alexId, lindaId]) insertCareGrant.run(childId, parentId);
+}
 
 // ── Health: Activities ───────────────────────────────────────────────────────
 

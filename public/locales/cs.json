@@ -2153,7 +2153,9 @@
             "revoked": "Pozvánka byla zrušena.",
             "created": "Pozvánka byla vytvořena.",
             "revokeConfirmDetail": "Už odeslaný nebo zkopírovaný odkaz okamžitě přestane fungovat. Pozvaná osoba si přes něj nevytvoří účet; musel bys ji pozvat znovu."
-        }
+        },
+        "healthCaregiversLabel": "Může zadávat zdravotní údaje",
+        "healthCaregiversHint": "Tyto osoby mohou za tohoto člena zadávat vitální hodnoty, léky, laboratorní výsledky a aktivity a přitom vidí i jeho soukromé záznamy. Deník cyklu zůstává vyňat."
     },
     "login": {
         "tagline": "Vítejte zpět ve svém rodinném plánovači.",
@@ -3665,7 +3667,8 @@
             "hm": "{{hours}} h {{minutes}} min",
             "h": "{{hours}} h",
             "m": "{{minutes}} min"
-        }
+        },
+        "careBanner": "Zapisuješ za {{name}}."
     },
     "rewards": {
         "title": "Odměny",

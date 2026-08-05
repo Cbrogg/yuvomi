@@ -2153,7 +2153,9 @@
             "revoked": "L'invito è stato revocato.",
             "created": "L'invito è stato creato.",
             "revokeConfirmDetail": "Un link già inviato o copiato smette subito di funzionare. La persona invitata non potrà più creare un account; dovresti invitarla di nuovo."
-        }
+        },
+        "healthCaregiversLabel": "Può registrare dati sanitari",
+        "healthCaregiversHint": "Queste persone possono registrare parametri vitali, farmaci, esami di laboratorio e attività per questo membro, vedendone anche le voci private. Il diario del ciclo resta escluso."
     },
     "login": {
         "tagline": "Bentornato nel tuo pianificatore familiare.",
@@ -3665,7 +3667,8 @@
             "hm": "{{hours}} h {{minutes}} min",
             "h": "{{hours}} h",
             "m": "{{minutes}} min"
-        }
+        },
+        "careBanner": "Stai registrando per {{name}}."
     },
     "rewards": {
         "title": "Ricompense",

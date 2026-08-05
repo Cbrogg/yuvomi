@@ -9,6 +9,9 @@ import { esc } from '/utils/html.js';
 import { prefersInkText } from '/utils/contrast.js';
 import { openModal, closeModal, confirmModal } from '/components/modal.js';
 import { createRetryState, toggleRowHtml } from '/settings/components.js';
+import {
+  renderUserMultiSelect, getSelectedUserIds, bindUserMultiSelect,
+} from '/components/user-multi-select.js';
 
 const FAMILY_ROLES = ['dad', 'mom', 'parent', 'child', 'grandparent', 'relative', 'other'];
 const AVATAR_COLORS = ['#007AFF', '#34C759', '#FF9500', '#FF3B30', '#AF52DE', '#FF2D55'];
@@ -509,8 +512,24 @@ function bindEditButtons(container, currentUser, users) {
   });
 }
 
-function openEditMemberModal(member, currentUser, users, container) {
+/**
+ * Betreuende einer Person laden (#584). `null` heißt "nicht ermittelbar" und ist
+ * absichtlich von "niemand" unterschieden: bei einem Ladefehler blendet das
+ * Modal das Feld aus und rührt die gespeicherte Betreuung beim Speichern nicht
+ * an - ein leer gerendertes Feld würde sie sonst kommentarlos entziehen.
+ */
+async function loadCaregiverIds(memberId) {
+  try {
+    const res = await api.get('/health/caregivers');
+    return res?.data?.[memberId] ?? [];
+  } catch {
+    return null;
+  }
+}
+
+async function openEditMemberModal(member, currentUser, users, container) {
   const state = { avatarData: member.avatar_data ?? null };
+  const caregiverIds = await loadCaregiverIds(member.id);
   openModal({
     title: t('settings.editMemberTitle'),
     size: 'md',
@@ -541,6 +560,16 @@ function openEditMemberModal(member, currentUser, users, container) {
             ${buildFamilyRoleOptions(member.family_role)}
           </select>
         </div>
+        ${caregiverIds === null ? '' : `
+        <div class="form-group">
+          ${renderUserMultiSelect(
+            users.filter((u) => u.id !== member.id),
+            caregiverIds,
+            'member_caregivers',
+            'settings.healthCaregiversLabel',
+          )}
+          <p class="form-hint">${t('settings.healthCaregiversHint')}</p>
+        </div>`}
         <div class="modal-grid modal-grid--2">
           <div class="form-group">
             <label class="form-label" for="edit-member-phone">${t('settings.memberPhoneLabel')}</label>
@@ -608,6 +637,8 @@ function openEditMemberModal(member, currentUser, users, container) {
         });
       });
 
+      if (caregiverIds !== null) bindUserMultiSelect(panel, 'member_caregivers');
+
       panel.querySelector('#edit-member-cancel')?.addEventListener('click', closeModal);
       panel.querySelector('#edit-member-form')?.addEventListener('submit', async (event) => {
         event.preventDefault();
@@ -634,6 +665,13 @@ function openEditMemberModal(member, currentUser, users, container) {
             birth_date: parseDateInput(birthDateRaw) || null,
             ...(newPassword ? { password: newPassword } : {}),
           });
+          // Betreuung getrennt speichern: sie lebt im Gesundheitsmodul, nicht am
+          // Nutzerdatensatz (#584).
+          if (caregiverIds !== null) {
+            await api.put(`/health/caregivers/${member.id}`, {
+              caregiver_ids: getSelectedUserIds(panel, 'member_caregivers'),
+            });
+          }
           const idx = users.findIndex((u) => u.id === member.id);
           if (idx !== -1) users[idx] = res.user;
           if (currentUser?.id === member.id) Object.assign(currentUser, res.user);

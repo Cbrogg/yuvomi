@@ -2153,7 +2153,9 @@
             "revoked": "Davet geri alındı.",
             "created": "Davet oluşturuldu.",
             "revokeConfirmDetail": "Daha önce gönderdiğin ya da kopyaladığın bağlantı hemen çalışmaz olur. Davet edilen kişi onunla artık hesap oluşturamaz; yeniden davet etmen gerekir."
-        }
+        },
+        "healthCaregiversLabel": "Sağlık verisi girebilir",
+        "healthCaregiversHint": "Bu kişiler bu üye için yaşamsal değerler, ilaçlar, laboratuvar sonuçları ve aktiviteler girebilir ve bunu yaparken özel kayıtlarını da görür. Döngü günlüğü hariç kalır."
     },
     "login": {
         "tagline": "Aile planlayıcına tekrar hoş geldin.",
@@ -3665,7 +3667,8 @@
             "hm": "{{hours}} sa {{minutes}} dk",
             "h": "{{hours}} sa",
             "m": "{{minutes}} dk"
-        }
+        },
+        "careBanner": "{{name}} için kayıt giriyorsun."
     },
     "rewards": {
         "title": "Ödüller",

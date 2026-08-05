@@ -2153,7 +2153,9 @@
             "revoked": "De uitnodiging is ingetrokken.",
             "created": "De uitnodiging is aangemaakt.",
             "revokeConfirmDetail": "Een link die je al hebt verstuurd of gekopieerd werkt meteen niet meer. De uitgenodigde persoon kan er geen account meer mee aanmaken; je zou opnieuw moeten uitnodigen."
-        }
+        },
+        "healthCaregiversLabel": "Mag gezondheidsgegevens invoeren",
+        "healthCaregiversHint": "Deze personen mogen vitale waarden, medicijnen, labuitslagen en activiteiten voor dit lid invoeren en zien daarbij ook diens privé-invoer. Het cyclusdagboek blijft uitgesloten."
     },
     "login": {
         "tagline": "Welkom terug bij je gezinsplanner.",
@@ -3665,7 +3667,8 @@
             "hm": "{{hours}} u {{minutes}} min",
             "h": "{{hours}} u",
             "m": "{{minutes}} min"
-        }
+        },
+        "careBanner": "Je noteert voor {{name}}."
     },
     "rewards": {
         "title": "Beloningen",

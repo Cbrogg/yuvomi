@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- A parent can now record health data for a child. Fever and medication are handled by whoever is looking after the child, but every entry in the health module was hard-wired to the person logged in, so the one case that matters most at home was the one case the module could not do. An admin decides per person who may record for them, under Settings → Family; nothing changes for anyone until they do. The person switcher then says "You are recording for X" in place of the read-only banner, and the capture button is there. A grant covers vitals, medications, lab results and activities, and it includes seeing that person's private entries, since a caregiver who could write but not read would lose sight of the reading they just took. The cycle diary stays excluded: fever and medication are care, reading someone's cycle diary is not (#584)
+
+### Changed
+
+- Whether the health module lets you write is now one question asked in one place, instead of five tabs each carrying their own copy of "is this me?"
+
 ### Fixed
 
 - The Portainer stack now keeps third-party modules. The image creates `/data`, `/backups` and `/app/modules`, but the Portainer compose mounted only the first two, so anything dropped into the modules folder lived in the container layer and was gone with the next image pull. It has its own named volume now, like the other two.

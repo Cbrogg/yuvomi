@@ -2153,7 +2153,9 @@
             "revoked": "O convite foi revogado.",
             "created": "O convite foi criado.",
             "revokeConfirmDetail": "Uma ligação já enviada ou copiada deixa de funcionar de imediato. A pessoa convidada já não consegue criar uma conta com ela; terias de a convidar novamente."
-        }
+        },
+        "healthCaregiversLabel": "Pode registar dados de saúde",
+        "healthCaregiversHint": "Estas pessoas podem registar sinais vitais, medicamentos, análises e atividades para este membro e ver as suas entradas privadas ao fazê-lo. O diário do ciclo permanece excluído."
     },
     "login": {
         "tagline": "Bem-vindo de volta ao teu planeador familiar.",
@@ -3665,7 +3667,8 @@
             "hm": "{{hours}} h {{minutes}} min",
             "h": "{{hours}} h",
             "m": "{{minutes}} min"
-        }
+        },
+        "careBanner": "Está a registar para {{name}}."
     },
     "rewards": {
         "title": "Recompensas",

@@ -2165,7 +2165,9 @@
             "revoked": "Undangan telah dicabut.",
             "created": "Undangan telah dibuat.",
             "revokeConfirmDetail": "Tautan yang sudah Anda kirim atau salin langsung berhenti berfungsi. Orang yang diundang tidak dapat lagi membuat akun dengannya; Anda harus mengundangnya lagi."
-        }
+        },
+        "healthCaregiversLabel": "Boleh mencatat data kesehatan",
+        "healthCaregiversHint": "Orang-orang ini boleh mencatat tanda vital, obat, hasil lab, dan aktivitas untuk anggota ini, dan sekaligus melihat catatan pribadinya. Buku harian siklus tetap dikecualikan."
     },
     "login": {
         "tagline": "Selamat datang kembali di perencana keluarga Anda.",
@@ -3665,7 +3667,8 @@
             "hm": "{{hours}} j {{minutes}} mnt",
             "h": "{{hours}} j",
             "m": "{{minutes}} mnt"
-        }
+        },
+        "careBanner": "Kamu mencatat untuk {{name}}."
     },
     "rewards": {
         "title": "Hadiah",

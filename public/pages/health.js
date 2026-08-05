@@ -55,6 +55,41 @@ async function loadHealthPrefs() {
   }
 }
 
+// Personen, für die diese Person eintragen darf (#584). Einmal je Seitenaufruf
+// geladen und für alle Tabs geteilt - die Betreuung hängt am Nutzer, nicht am Tab.
+let careFor = [];
+
+async function loadCareGrants() {
+  try {
+    const res = await api.get('/health/caregivers/me');
+    careFor = Array.isArray(res?.data) ? res.data : [];
+  } catch {
+    // Keine Auskunft heißt keine Betreuung: im Zweifel weniger Rechte anzeigen,
+    // nicht mehr. Ein Schreibversuch scheiterte ohnehin serverseitig.
+    careFor = [];
+  }
+}
+
+/**
+ * Darf in der Ansicht dieser Person geschrieben werden - eigene Daten oder die
+ * einer betreuten Person? Ersetzt die fünf gleichlautenden `isOwn*View()`, die
+ * jeder Tab für sich trug; geblieben ist `isOwnCycleView()`, denn dort stellt
+ * sich weiterhin die andere Frage ("bin ich das selbst?") - der Zyklus-Tab ist
+ * von der Betreuung bewusst ausgenommen.
+ */
+function canEditFor(personId, meId) {
+  if (personId == null) return false;
+  return personId === meId || careFor.includes(personId);
+}
+
+/**
+ * Eigentümer-Feld für einen POST: nur gesetzt, wenn für eine andere Person
+ * eingetragen wird. Ohne das Feld verhält sich die API wie bisher.
+ */
+function ownerField(personId, meId) {
+  return personId != null && personId !== meId ? { user_id: personId } : {};
+}
+
 // Vitalwerte-View-Zustand. Eine einzige Messungs-Liste (alle Typen) je Person;
 // Karten und Chart werden clientseitig daraus abgeleitet.
 const vitals = {
@@ -245,19 +280,21 @@ let _fab = null;
 
 function updateHealthFab(activeRoute) {
   if (!_fab) return;
-  // Gating spiegelt die früheren Inline-„Hinzufügen"-Buttons: Erstellen nur in
-  // der eigenen Ansicht (isOwn*View), in fremden (read-only) Ansichten kein FAB.
+  // Gating spiegelt die früheren Inline-„Hinzufügen"-Buttons: Erstellen in der
+  // eigenen Ansicht und in der einer betreuten Person (#584), in allen übrigen
+  // (read-only) Ansichten kein FAB. Der Zyklus-Tab bleibt bei isOwnCycleView() -
+  // er ist von der Betreuung ausgenommen.
   switch (activeRoute) {
     case '/health/vitals':
-      setPageFabAction(_fab, { hidden: !isOwnView(), label: t('health.vitals.add'), onClick: () => openVitalModal() }); break;
+      setPageFabAction(_fab, { hidden: !canEditFor(vitals.personId, vitals.meId), label: t('health.vitals.add'), onClick: () => openVitalModal() }); break;
     case '/health/cycle':
       setPageFabAction(_fab, { hidden: !isOwnCycleView(), label: t('health.cycle.add'), onClick: () => openPeriodModal(null) }); break;
     case '/health/meds':
-      setPageFabAction(_fab, { hidden: !isOwnMedsView(), label: t('health.meds.add'), onClick: () => openMedModal(null) }); break;
+      setPageFabAction(_fab, { hidden: !canEditFor(meds.personId, meds.meId), label: t('health.meds.add'), onClick: () => openMedModal(null) }); break;
     case '/health/labs':
-      setPageFabAction(_fab, { hidden: !isOwnLabsView(), label: t('health.labs.add'), onClick: () => openLabModal(null) }); break;
+      setPageFabAction(_fab, { hidden: !canEditFor(labs.personId, labs.meId), label: t('health.labs.add'), onClick: () => openLabModal(null) }); break;
     case '/health/activity':
-      setPageFabAction(_fab, { hidden: !isOwnActivityView(), label: t('health.activity.add'), onClick: () => openActivityModal(null) }); break;
+      setPageFabAction(_fab, { hidden: !canEditFor(activity.personId, activity.meId), label: t('health.activity.add'), onClick: () => openActivityModal(null) }); break;
     default:
       setPageFabAction(_fab, { hidden: true });
   }
@@ -288,7 +325,7 @@ export async function render(container, ctx = {}) {
   overview.meId = ctx.user?.id ?? overview.meId;
   overview.root = null;
   overview.loaded = false;
-  await loadHealthPrefs();
+  await Promise.all([loadHealthPrefs(), loadCareGrants()]);
   const activeRoute = normalizeHealthPath(window.location.pathname);
   const panels = PANELS().filter((panel) => cycleEnabled || panel.route !== '/health/cycle');
 
@@ -377,10 +414,6 @@ async function loadVitals() {
   vitals.rows = res.data || [];
 }
 
-function isOwnView() {
-  return vitals.personId != null && vitals.personId === vitals.meId;
-}
-
 function renderVitalsShell() {
   if (!vitals.root?.isConnected) return;
   vitals.root.replaceChildren();
@@ -406,7 +439,7 @@ function renderVitalsShell() {
     <div class="health-persons" role="tablist" aria-label="${esc(t('health.vitals.personsLabel'))}">
       ${personChipsMarkup(vitals.members, vitals.personId, vitals.meId)}
     </div>
-    ${readOnlyBannerMarkup(vitals.members, vitals.personId, isOwnView())}
+    ${readOnlyBannerMarkup(vitals.members, vitals.personId, canEditFor(vitals.personId, vitals.meId), vitals.meId)}
     <div class="health-vitals__toolbar">
       <div class="health-vitals__ranges" role="tablist" aria-label="${esc(t('health.vitals.chartTitle'))}">
         ${['week', 'month', 'year'].map((r) => `
@@ -442,13 +475,23 @@ function personChipsMarkup(members, activeId, meId) {
   }).join('');
 }
 
-// Nur-Lesen-Hinweis beim Betrachten der Daten einer anderen Person. Das bloße
-// Fehlen der Bearbeiten-Buttons ist leicht zu übersehen — der Banner macht den
-// View-Only-Zustand explizit. Gibt '' für die eigene Ansicht zurück.
-function readOnlyBannerMarkup(members, personId, own) {
-  if (own) return '';
+// Hinweis auf den Zustand einer fremden Ansicht. Zwei Fälle, ein Baustein:
+// ohne Schreibrecht der bisherige Nur-Lesen-Hinweis (das bloße Fehlen der
+// Bearbeiten-Buttons ist leicht zu übersehen), mit Betreuung (#584) stattdessen
+// die Ansage, für wen gerade eingetragen wird. Letzteres ist kein Schmuck: die
+// Ansicht sieht sonst aus wie die eigene, und ein Fieberwert landet lautlos beim
+// falschen Kind. Gibt '' für die eigene Ansicht zurück.
+function readOnlyBannerMarkup(members, personId, canEdit, meId) {
+  if (personId == null || personId === meId) return '';
   const m = (members || []).find((x) => x.id === personId);
   const name = m ? m.display_name : '';
+  if (canEdit) {
+    return `
+      <div class="health-readonly-banner health-readonly-banner--care" role="status">
+        <i data-lucide="pencil-line" aria-hidden="true"></i>
+        <span>${esc(t('health.careBanner', { name }))}</span>
+      </div>`;
+  }
   return `
     <div class="health-readonly-banner" role="status">
       <i data-lucide="eye" aria-hidden="true"></i>
@@ -737,7 +780,7 @@ function recentMeasurementsMarkup(metric) {
     .sort((a, b) => String(b.measured_at).localeCompare(String(a.measured_at)))
     .slice(0, 8);
   if (!rows.length) return '';
-  const own = isOwnView();
+  const own = canEditFor(vitals.personId, vitals.meId);
   const valueText = (r) => vitalValueText(metric, r);
   return `
     <div class="health-recent">
@@ -1040,7 +1083,7 @@ function openVitalModal(opts = {}) {
         }
         submitBtn.disabled = true;
         try {
-          await api.post('/health/vitals', body);
+          await api.post('/health/vitals', { ...body, ...ownerField(vitals.personId, vitals.meId) });
           closeModal({ force: true });
           window.yuvomi?.showToast(t('health.vitals.saved'), 'success');
           await reloadAfterSave(body.type);
@@ -1265,10 +1308,6 @@ async function loadMeds() {
   }));
 }
 
-function isOwnMedsView() {
-  return meds.personId != null && meds.personId === meds.meId;
-}
-
 function allSchedules() {
   return meds.list.flatMap((m) => meds.schedulesByMed[m.id] || []);
 }
@@ -1314,7 +1353,7 @@ function renderMedsShell() {
     <div class="health-persons" role="tablist" aria-label="${esc(t('health.meds.personsLabel'))}">
       ${personChipsMarkup(meds.members, meds.personId, meds.meId)}
     </div>
-    ${readOnlyBannerMarkup(meds.members, meds.personId, isOwnMedsView())}
+    ${readOnlyBannerMarkup(meds.members, meds.personId, canEditFor(meds.personId, meds.meId), meds.meId)}
     <div class="health-meds__toolbar">
       <h3 class="health-meds__section-title u-toolbar-title">${esc(t('health.meds.dueToday.title'))}</h3>
     </div>
@@ -1344,7 +1383,7 @@ function dueTodayMarkup() {
 function dueRowMarkup(dose, med, log) {
   const name = med ? med.name : '';
   const status = log?.status;
-  const own = isOwnMedsView();
+  const own = canEditFor(meds.personId, meds.meId);
   const doseText = dose.dose_qty != null ? ` · ${t('health.meds.doseQty', { count: fmtNum(dose.dose_qty) })}` : '';
 
   let actions;
@@ -1445,7 +1484,7 @@ function medListMarkup() {
 function medCardMarkup(med) {
   const rf = refillState(med);
   const subtitle = [med.dosage_text, med.form].filter(Boolean).join(' · ');
-  const own = isOwnMedsView();
+  const own = canEditFor(meds.personId, meds.meId);
 
   const badges = [];
   if (!med.active) badges.push(`<span class="health-med-badge health-med-badge--muted">${esc(t('health.meds.badge.inactive'))}</span>`);
@@ -1653,7 +1692,7 @@ function openMedModal(med) {
         submitBtn.disabled = true;
         try {
           if (isEdit) await api.patch(`/health/medications/${med.id}`, body);
-          else await api.post('/health/medications', body);
+          else await api.post('/health/medications', { ...body, ...ownerField(meds.personId, meds.meId) });
           closeModal({ force: true });
           window.yuvomi?.showToast(t('health.meds.saved'), 'success');
           await reloadMeds();
@@ -1886,10 +1925,6 @@ async function loadLabs() {
   if (!names.includes(labs.trendAnalyte)) labs.trendAnalyte = names[0] ?? null;
 }
 
-function isOwnLabsView() {
-  return labs.personId != null && labs.personId === labs.meId;
-}
-
 function selectedReport() {
   return labs.reports.find((r) => r.id === labs.selectedReportId) || null;
 }
@@ -1942,7 +1977,7 @@ function renderLabsShell() {
     <div class="health-persons" role="tablist" aria-label="${esc(t('health.labs.personsLabel'))}">
       ${personChipsMarkup(labs.members, labs.personId, labs.meId)}
     </div>
-    ${readOnlyBannerMarkup(labs.members, labs.personId, isOwnLabsView())}
+    ${readOnlyBannerMarkup(labs.members, labs.personId, canEditFor(labs.personId, labs.meId), labs.meId)}
     <div class="health-labs__toolbar">
       <h3 class="health-labs__section-title u-toolbar-title">${esc(t('health.labs.reportsTitle'))}</h3>
     </div>
@@ -1990,7 +2025,7 @@ function labDetailMarkup() {
     return `<div class="health-labs__detail-empty">${esc(t('health.labs.selectHint'))}</div>`;
   }
 
-  const own = isOwnLabsView();
+  const own = canEditFor(labs.personId, labs.meId);
   const results = Array.isArray(report.results) ? report.results : [];
   const dateLabel = formatDate(String(report.report_date).slice(0, 10));
 
@@ -2308,7 +2343,7 @@ function openLabModal(report) {
           if (isEdit) {
             await api.patch(`/health/labs/${report.id}`, body);
           } else {
-            const created = await api.post('/health/labs', body);
+            const created = await api.post('/health/labs', { ...body, ...ownerField(labs.personId, labs.meId) });
             // Neu angelegten Befund direkt selektieren, damit das Detail nicht
             // beim zuvor gewählten Befund stehen bleibt.
             if (created?.data?.id != null) labs.selectedReportId = created.data.id;
@@ -2559,10 +2594,6 @@ async function loadActivity() {
   activity.rows = res.data || [];
 }
 
-function isOwnActivityView() {
-  return activity.personId != null && activity.personId === activity.meId;
-}
-
 async function switchActivityPerson() {
   activity.anchor = toLocalDateKey(new Date());
   try {
@@ -2636,7 +2667,7 @@ function renderActivityShell() {
     <div class="health-persons" role="tablist" aria-label="${esc(t('health.activity.personsLabel'))}">
       ${personChipsMarkup(activity.members, activity.personId, activity.meId)}
     </div>
-    ${readOnlyBannerMarkup(activity.members, activity.personId, isOwnActivityView())}
+    ${readOnlyBannerMarkup(activity.members, activity.personId, canEditFor(activity.personId, activity.meId), activity.meId)}
     <div class="health-activity__toolbar">
       <div class="health-activity__stepper">
         <button class="btn btn--icon" data-step="-1" aria-label="${esc(t('health.activity.prevWeek'))}"><i data-lucide="chevron-left" aria-hidden="true"></i></button>
@@ -2720,7 +2751,7 @@ function activityLogMarkup(rows) {
   if (!rows.length) {
     return `<div class="health-activity__empty">${esc(t('health.activity.noEntries'))}</div>`;
   }
-  const own = isOwnActivityView();
+  const own = canEditFor(activity.personId, activity.meId);
   return `
     <h3 class="health-activity__log-title u-toolbar-title">${esc(t('health.activity.logTitle'))}</h3>
     <ul class="health-activity-list">${rows.map((r) => activityRowMarkup(r, own)).join('')}</ul>`;
@@ -2900,7 +2931,7 @@ function openActivityModal(row, opts = {}) {
           if (isEdit) {
             await api.patch(`/health/activities/${row.id}`, body);
           } else {
-            await api.post('/health/activities', body);
+            await api.post('/health/activities', { ...body, ...ownerField(activity.personId, activity.meId) });
             activity.anchor = toLocalDateKey(new Date(body.performed_at));
           }
           closeModal({ force: true });
@@ -3058,10 +3089,6 @@ async function loadOverview() {
   }));
 }
 
-function isOwnOverviewView() {
-  return overview.personId != null && overview.personId === overview.meId;
-}
-
 function overviewAllSchedules() {
   return overview.meds.flatMap((m) => overview.schedulesByMed[m.id] || []);
 }
@@ -3122,12 +3149,12 @@ function renderOverviewShell() {
     <div class="health-persons" role="tablist" aria-label="${esc(t('health.overview.personsLabel'))}">
       ${personChipsMarkup(overview.members, overview.personId, overview.meId)}
     </div>
-    ${readOnlyBannerMarkup(overview.members, overview.personId, isOwnOverviewView())}
+    ${readOnlyBannerMarkup(overview.members, overview.personId, canEditFor(overview.personId, overview.meId), overview.meId)}
     <div class="health-overview__grid">
       ${overviewCard('calendar-check', 'health.overview.dueToday.title', overviewDueMarkup())}
       ${overviewCard('trending-up', 'health.overview.adherence.title', overviewAdherenceMarkup())}
       ${overviewCard('activity', 'health.overview.vitals.title', overviewVitalsMarkup())}
-      ${isOwnOverviewView() ? overviewCard('plus-circle', 'health.overview.quick.title', quickCaptureMarkup()) : ''}
+      ${canEditFor(overview.personId, overview.meId) ? overviewCard('plus-circle', 'health.overview.quick.title', quickCaptureMarkup()) : ''}
       ${overviewCard('bell', 'health.overview.reminders.title', overviewUpcomingMarkup())}
       ${overviewCard('download', 'health.export.title', overviewExportMarkup())}
     </div>
@@ -3156,7 +3183,7 @@ function overviewDueMarkup() {
   if (!due.length) {
     return `<div class="health-meds__due-empty">${esc(t('health.meds.dueToday.empty'))}</div>`;
   }
-  const own = isOwnOverviewView();
+  const own = canEditFor(overview.personId, overview.meId);
   const rows = due.map((dose) => {
     const med = overview.meds.find((m) => m.id === dose.medicationId);
     return overviewDueRowMarkup(dose, med, overviewFindLog(dose), own);
@@ -3339,7 +3366,7 @@ function overviewUpcomingMarkup() {
 // --- Schnell-Erfassung (nur eigene Person) ---
 
 function quickCaptureMarkup() {
-  if (!isOwnOverviewView()) return '';
+  if (!canEditFor(overview.personId, overview.meId)) return '';
   return `
     <div class="health-overview__quick">
       <button type="button" class="btn btn--secondary" data-action="ov-add-vital">
@@ -3594,7 +3621,7 @@ function renderCycleShell() {
     <div class="health-persons" role="tablist" aria-label="${esc(t('health.cycle.personsLabel'))}">
       ${personChipsMarkup(cycle.members, cycle.personId, cycle.meId)}
     </div>
-    ${readOnlyBannerMarkup(cycle.members, cycle.personId, own)}`;
+    ${readOnlyBannerMarkup(cycle.members, cycle.personId, own, cycle.meId)}`;
 
   // Schwangerschafts-Modus: Vorhersagen sind pausiert — statt Ring/Prognose wird
   // der Schwangerschafts-Status gezeigt. Logging, Kalender (ohne Projektion) und

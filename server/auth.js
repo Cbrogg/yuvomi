@@ -21,6 +21,7 @@ import { inviteService as defaultInviteService } from './services/invites.js';
 import { parseScopes, serializeScopes, normalizeScopes } from './scopes.js';
 import { hashPassword, normalizePassword, verifyPassword } from './utils/password.js';
 import { resolvePermissions, buildSessionModuleAccess, clientPermissions } from './permissions.js';
+import { requireAdmin } from './middleware/require-admin.js';
 
 const log = createLogger('Auth');
 const router = express.Router();
@@ -484,12 +485,6 @@ function requireAuth(req, res, next) {
 /**
  * Prüft ob der authentifizierte User Admin-Rolle hat.
  */
-function requireAdmin(req, res, next) {
-  if (req.authRole === 'admin') {
-    return next();
-  }
-  res.status(403).json({ error: 'Permission denied.', code: 403 });
-}
 
 /**
  * Richtet eine neue Session nach erfolgter Authentifizierung ein.

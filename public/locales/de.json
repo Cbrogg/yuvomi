@@ -2165,7 +2165,9 @@
             "revoked": "Die Einladung wurde widerrufen.",
             "created": "Die Einladung wurde erstellt.",
             "revokeConfirmDetail": "Ein bereits verschickter oder kopierter Link hört sofort auf zu funktionieren. Die eingeladene Person kann damit kein Konto mehr anlegen; dafür musst du sie erneut einladen."
-        }
+        },
+        "healthCaregiversLabel": "Darf Gesundheitsdaten eintragen",
+        "healthCaregiversHint": "Diese Personen dürfen für dieses Mitglied Vitalwerte, Medikamente, Laborwerte und Aktivitäten eintragen und dabei auch dessen private Einträge sehen. Das Zyklus-Tagebuch bleibt ausgenommen."
     },
     "login": {
         "tagline": "Willkommen zurück bei eurem Familienplaner.",
@@ -3665,7 +3667,8 @@
             "hm": "{{hours}} Std. {{minutes}} Min.",
             "h": "{{hours}} Std.",
             "m": "{{minutes}} Min."
-        }
+        },
+        "careBanner": "Du trägst für {{name}} ein."
     },
     "rewards": {
         "title": "Belohnungen",

@@ -2153,7 +2153,9 @@
             "revoked": "Inbjudan återkallades.",
             "created": "Inbjudan skapades.",
             "revokeConfirmDetail": "En länk du redan skickat eller kopierat slutar fungera direkt. Den inbjudna personen kan inte längre skapa ett konto med den; du måste bjuda in på nytt."
-        }
+        },
+        "healthCaregiversLabel": "Får registrera hälsodata",
+        "healthCaregiversHint": "Dessa personer får registrera vitalvärden, mediciner, provsvar och aktiviteter åt den här medlemmen och ser då även dennes privata poster. Cykeldagboken förblir undantagen."
     },
     "login": {
         "tagline": "Välkommen tillbaka till din familjeplanerare.",
@@ -3665,7 +3667,8 @@
             "hm": "{{hours}} tim {{minutes}} min",
             "h": "{{hours}} tim",
             "m": "{{minutes}} min"
-        }
+        },
+        "careBanner": "Du registrerar åt {{name}}."
     },
     "rewards": {
         "title": "Belöningar",

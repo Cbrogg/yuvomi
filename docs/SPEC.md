@@ -1575,6 +1575,21 @@ makes **no diagnostic claims**; reference ranges and flags are neutral, user-sup
 | visibility | TEXT | `private` \| `family`, default `private` |
 | created_at / updated_at | TEXT | ISO 8601, default now (updated_at via trigger) |
 
+**`health_care_grants`** — who may record for whom (#584). Directed and explicit; never derived from
+`family_role`, so an upgrade grants nobody anything until an admin says so.
+
+| Column | Type | Constraint |
+|--------|------|-----------|
+| subject_id | INTEGER | FK → Users (CASCADE delete), NOT NULL — the person being cared for |
+| caregiver_id | INTEGER | FK → Users (CASCADE delete), NOT NULL — the person allowed to record |
+| created_at | TEXT | ISO 8601, default now |
+| | | PRIMARY KEY (subject_id, caregiver_id); CHECK (subject_id <> caregiver_id) |
+
+A grant covers reading **and** writing the subject's vitals, medications, lab reports and activities,
+including their `private` rows: a caregiver who could write but not read would lose sight of the
+reading they just entered. The cycle tab is deliberately excluded from grants. Admins manage grants
+under Settings → Family; every member can ask `GET /health/caregivers/me` who they may record for.
+
 **`medications`** — medication master data.
 
 | Column | Type | Constraint |
@@ -1976,6 +1991,10 @@ Module for managing household staff workflows. Navigation uses violet accent the
 One page module with six deep-link routes (pattern like Settings, not like the Kitchen cluster), sharing a sub-tab bar: Overview (`/health`), Vitals (`/health/vitals`), Cycle (`/health/cycle`), Medications (`/health/meds`), Labs (`/health/labs`), Activity (`/health/activity`). Toggleable like any module; disabled → router redirects to the dashboard. Health data is sensitive — enable `DB_ENCRYPTION_KEY` (SQLCipher). **Not a medical device; no diagnostic claims.**
 
 - **Per-member scoping:** a person switcher (chip row) filters to one family member; each row is `private` (owner only) or `family` (all members). Editing is limited to the owner's own view; foreign members show family-visible rows read-only.
+- **Recording for someone else:** a parent can record for a child (fever, medication) once an admin
+  grants it per person under Settings → Family. The person switcher then shows "You are recording for
+  X" instead of the read-only banner, and the capture button appears. Grants cover vitals,
+  medications, labs and activities, never the cycle diary.
 - **Vitals:** capture blood pressure (sys/dia/pulse), glucose, weight, pulse, optional SpO₂/temperature, sleep duration and mood; per-metric cards with last value + delta; native SVG trend charts with selectable range. A metric declares how its numbers read (`format`: pair, duration, scale) — sleep is entered as hours + minutes and stored as decimal hours, mood as one of five steps on a scale whose chart axis stays clamped to the full 1-5 range.
 - **Medications:** medication list (name, dose, form, active/PRN), schedule editor (time slots + weekday mask + dose), "due today" view with take/skip, 7-day adherence bar, and stock/refill warnings. Reminders are delivered through the existing push/notification-channel layer (`server/services/medication-scheduler.js`) — no separate reminder table.
 - **Labs:** reports with multiple analytes (value, unit, reference low/high); `low`/`normal`/`high` flag derived from value + range and colour-coded via tokens; per-analyte trend chart with a reference band; neutral medical disclaimer.

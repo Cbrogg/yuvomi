@@ -2153,7 +2153,9 @@
             "revoked": "A meghívót visszavontuk.",
             "created": "A meghívó elkészült.",
             "revokeConfirmDetail": "A már elküldött vagy kimásolt link azonnal működésképtelen lesz. A meghívott ezzel nem tud fiókot létrehozni; újra meg kellene hívnod."
-        }
+        },
+        "healthCaregiversLabel": "Rögzíthet egészségügyi adatokat",
+        "healthCaregiversHint": "Ezek a személyek rögzíthetnek életjeleket, gyógyszereket, laboreredményeket és tevékenységeket ehhez a taghoz, és eközben a privát bejegyzéseit is látják. A ciklusnapló kivétel marad."
     },
     "login": {
         "tagline": "Üdv újra a családi tervezőben.",
@@ -3665,7 +3667,8 @@
             "hm": "{{hours}} ó {{minutes}} p",
             "h": "{{hours}} ó",
             "m": "{{minutes}} p"
-        }
+        },
+        "careBanner": "{{name}} nevében rögzítesz."
     },
     "rewards": {
         "title": "Jutalmak",

@@ -2153,7 +2153,9 @@
             "revoked": "L'invitation a été révoquée.",
             "created": "L'invitation a été créée.",
             "revokeConfirmDetail": "Un lien déjà envoyé ou copié cesse aussitôt de fonctionner. La personne invitée ne peut plus créer de compte avec ce lien ; il faudrait l'inviter à nouveau."
-        }
+        },
+        "healthCaregiversLabel": "Peut saisir des données de santé",
+        "healthCaregiversHint": "Ces personnes peuvent saisir les constantes, médicaments, résultats de laboratoire et activités de ce membre, et voir ses entrées privées à cette occasion. Le journal du cycle reste exclu."
     },
     "login": {
         "tagline": "Bon retour sur votre planificateur familial.",
@@ -3665,7 +3667,8 @@
             "hm": "{{hours}} h {{minutes}} min",
             "h": "{{hours}} h",
             "m": "{{minutes}} min"
-        }
+        },
+        "careBanner": "Vous saisissez pour {{name}}."
     },
     "rewards": {
         "title": "Récompenses",
