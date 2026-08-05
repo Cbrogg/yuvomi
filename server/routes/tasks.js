@@ -737,6 +737,11 @@ router.put('/:id', (req, res) => {
     updated.subtasks = loadSubtasks(updated.id, req.authUserId || req.session.userId);
     attachTags([updated]);
 
+    // Das Status-Dropdown im Bearbeiten-Formular hakt genauso ab wie die Checkbox -
+    // also muss es die Serie genauso weiterschreiben. Grundlage ist die frisch
+    // gelesene Zeile, damit im selben Zug geänderte Regel/Fälligkeit schon zählen.
+    if (status === 'done' && task.status !== 'done') spawnRecurrenceFollowup(updated);
+
     // Änderung an einer gespiegelten Aufgabe auf dem CalDAV-Server nachziehen (#617).
     // Die Tags reisen als kanonischer Schlüssel mit, weil sie in einer eigenen
     // Tabelle liegen und der Feldvergleich nur die Zeile selbst sieht (#586).
@@ -789,6 +794,51 @@ function discardRecurrenceFollowup(taskId) {
   return queued;
 }
 
+/**
+ * Schreibt die Serie weiter: nächste Instanz anlegen, wenn eine wiederkehrende
+ * Aufgabe erledigt wurde. Erwartet die bereits auf 'done' gesetzte Zeile.
+ *
+ * Beide Wege zum Haken müssen hier durch - die Checkbox (PATCH /:id/status) und
+ * das Status-Dropdown im Bearbeiten-Dialog (PUT /:id). Lag der Spawn nur im
+ * einen, beendete der andere die Serie lautlos.
+ */
+function spawnRecurrenceFollowup(task) {
+  if (!task?.is_recurring || !task.recurrence_rule || task.parent_task_id) return;
+  // Höchstens eine Folgeinstanz je Erledigung - sonst legt doppeltes Abhaken nach.
+  if (recurrenceFollowupOf(task.id)) return;
+
+  // Überfällige Serien aufholen: nächste Instanz liegt immer in der Zukunft,
+  // statt blind altes Fälligkeitsdatum + Intervall (das selbst überfällig sein kann).
+  // Schwelle "heute" in UTC, konsistent zur Listen-Filterung mit SQL date('now').
+  const today = new Date().toISOString().slice(0, 10);
+  const nextDate = nextOccurrenceAfter(task.due_date, task.recurrence_rule, today);
+  if (!nextDate) return;
+
+  const existingAssignments = db.get()
+    .prepare('SELECT user_id FROM task_assignments WHERE task_id = ?')
+    .all(task.id).map((r) => r.user_id);
+  // Die Tags gehören zur Aufgabe, nicht zum einzelnen Durchlauf (#586).
+  // Ohne das Mitnehmen verlöre eine wöchentliche Aufgabe ihre Etiketten
+  // beim ersten Abhaken - und zwar lautlos, weil die Folgeinstanz sonst
+  // vollständig aussieht.
+  const existingTags = loadTags(db.get(), task.id);
+  db.get().transaction(() => {
+    const newTask = db.get().prepare(`
+      INSERT INTO tasks (title, description, category, priority, status,
+        due_date, due_time, assigned_to, created_by, is_recurring, recurrence_rule, points, visibility,
+        recurrence_origin_id)
+      VALUES (?, ?, ?, ?, 'open', ?, ?, ?, ?, 1, ?, ?, ?, ?)
+    `).run(
+      task.title, task.description, task.category, task.priority,
+      nextDate, task.due_time, task.assigned_to, task.created_by,
+      task.recurrence_rule, task.points, task.visibility,
+      task.id
+    );
+    setAssignments(db.get(), newTask.lastInsertRowid, existingAssignments);
+    setTags(db.get(), newTask.lastInsertRowid, existingTags);
+  })();
+}
+
 // --------------------------------------------------------
 // PATCH /api/v1/tasks/:id/status
 // Status einer Aufgabe schnell wechseln (z.B. Swipe-Geste / Checkbox).
@@ -824,40 +874,7 @@ router.patch('/:id/status', (req, res) => {
 
     // Wiederkehrende Aufgabe: nächste Instanz erstellen wenn erledigt
     if (status === 'done' && prev.status !== 'done') {
-      const task = db.get().prepare('SELECT * FROM tasks WHERE id = ?').get(req.params.id);
-      if (task?.is_recurring && task.recurrence_rule && !task.parent_task_id
-          && !recurrenceFollowupOf(task.id)) {
-        // Überfällige Serien aufholen: nächste Instanz liegt immer in der Zukunft,
-        // statt blind altes Fälligkeitsdatum + Intervall (das selbst überfällig sein kann).
-        // Schwelle "heute" in UTC, konsistent zur Listen-Filterung mit SQL date('now').
-        const today = new Date().toISOString().slice(0, 10);
-        const nextDate = nextOccurrenceAfter(task.due_date, task.recurrence_rule, today);
-        if (nextDate) {
-          const existingAssignments = db.get()
-            .prepare('SELECT user_id FROM task_assignments WHERE task_id = ?')
-            .all(task.id).map((r) => r.user_id);
-          // Die Tags gehören zur Aufgabe, nicht zum einzelnen Durchlauf (#586).
-          // Ohne das Mitnehmen verlöre eine wöchentliche Aufgabe ihre Etiketten
-          // beim ersten Abhaken - und zwar lautlos, weil die Folgeinstanz sonst
-          // vollständig aussieht.
-          const existingTags = loadTags(db.get(), task.id);
-          db.get().transaction(() => {
-            const newTask = db.get().prepare(`
-              INSERT INTO tasks (title, description, category, priority, status,
-                due_date, due_time, assigned_to, created_by, is_recurring, recurrence_rule, points, visibility,
-                recurrence_origin_id)
-              VALUES (?, ?, ?, ?, 'open', ?, ?, ?, ?, 1, ?, ?, ?, ?)
-            `).run(
-              task.title, task.description, task.category, task.priority,
-              nextDate, task.due_time, task.assigned_to, task.created_by,
-              task.recurrence_rule, task.points, task.visibility,
-              task.id
-            );
-            setAssignments(db.get(), newTask.lastInsertRowid, existingAssignments);
-            setTags(db.get(), newTask.lastInsertRowid, existingTags);
-          })();
-        }
-      }
+      spawnRecurrenceFollowup(db.get().prepare('SELECT * FROM tasks WHERE id = ?').get(req.params.id));
     }
 
     res.json({ data: { id: Number(req.params.id), status } });

@@ -1,8 +1,9 @@
 /**
  * Modul: Tasks-Recurrence-Test
  * Zweck: Aufholen übersprungener wiederkehrender Aufgaben (Discussion #405).
- *        Unit: nextOccurrenceAfter. Integration: PATCH /:id/status erzeugt genau eine
- *        Folgeinstanz mit Fälligkeitsdatum in der Zukunft.
+ *        Unit: nextOccurrenceAfter. Integration: PATCH /:id/status und PUT /:id
+ *        erzeugen beim Erledigen genau eine Folgeinstanz mit Fälligkeitsdatum in
+ *        der Zukunft - und nehmen sie beim Zurücknehmen wieder weg.
  * Ausführen: node --test test/test-tasks-recurrence.js
  */
 import assert from 'node:assert/strict';
@@ -227,6 +228,63 @@ test('PUT: Statuswechsel weg von done entfernt die Folgeinstanz ebenfalls', asyn
   assert.equal(res.status, 200);
   assert.equal(openInstances('Staubsaugen').length, 1);
   assert.equal(db.prepare('SELECT status FROM tasks WHERE id = ?').get(id).status, 'done');
+});
+
+test('PUT done: Abhaken im Bearbeiten-Dialog erzeugt die Folgeinstanz genauso', async () => {
+  const id = insertTask({
+    title: 'Fenster putzen', category: 'Haushalt', priority: 'medium', status: 'open',
+    due_date: dayKey(-21), created_by: uid, is_recurring: 1, recurrence_rule: 'FREQ=WEEKLY',
+  });
+  db.prepare('INSERT INTO task_assignments (task_id, user_id) VALUES (?, ?)').run(id, uid);
+
+  const res = await call('PUT', `/${id}`, { title: 'Fenster putzen', status: 'done' });
+  assert.equal(res.status, 200);
+
+  const open = openInstances('Fenster putzen');
+  assert.equal(open.length, 1, 'Das Status-Dropdown muss die Serie weiterschreiben');
+  assert.ok(open[0].due_date >= todayKey(), 'Folgeinstanz muss in der Zukunft fällig sein');
+  assert.equal(open[0].is_recurring, 1);
+  assert.equal(open[0].recurrence_origin_id, id);
+  const assignees = db.prepare('SELECT user_id FROM task_assignments WHERE task_id = ?').all(open[0].id);
+  assert.deepEqual(assignees.map((a) => a.user_id), [uid]);
+});
+
+test('PUT done: erneutes Speichern ohne Statuswechsel erzeugt keine zweite Folgeinstanz', async () => {
+  const id = insertTask({
+    title: 'Handtücher wechseln', status: 'open', due_date: dayKey(0), created_by: uid,
+    is_recurring: 1, recurrence_rule: 'FREQ=DAILY',
+  });
+  await call('PUT', `/${id}`, { title: 'Handtücher wechseln', status: 'done' });
+  await call('PUT', `/${id}`, { title: 'Handtücher wechseln', status: 'done' });
+  assert.equal(openInstances('Handtücher wechseln').length, 1);
+});
+
+test('PUT: Zurücknehmen entfernt die per PUT erzeugte Folgeinstanz wieder', async () => {
+  const id = insertTask({
+    title: 'Bettwäsche', status: 'open', due_date: dayKey(0), created_by: uid,
+    is_recurring: 1, recurrence_rule: 'FREQ=DAILY',
+  });
+  await call('PUT', `/${id}`, { title: 'Bettwäsche', status: 'done' });
+  assert.equal(openInstances('Bettwäsche').length, 1);
+
+  await call('PUT', `/${id}`, { title: 'Bettwäsche', status: 'open' });
+  const open = openInstances('Bettwäsche');
+  assert.equal(open.length, 1, 'Nach dem Zurücknehmen bleibt nur die wieder geöffnete Aufgabe');
+  assert.equal(open[0].id, id);
+});
+
+test('PUT done: Subtask einer Serie erzeugt keine Folgeinstanz', async () => {
+  const parent = insertTask({
+    title: 'Eltern-Serie PUT', status: 'open', due_date: dayKey(-7), created_by: uid,
+    is_recurring: 1, recurrence_rule: 'FREQ=WEEKLY',
+  });
+  const sub = insertTask({
+    title: 'Sub PUT', status: 'open', due_date: dayKey(-7), created_by: uid,
+    parent_task_id: parent, is_recurring: 1, recurrence_rule: 'FREQ=WEEKLY',
+  });
+  await call('PUT', `/${sub}`, { title: 'Sub PUT', status: 'done' });
+  const rows = db.prepare(`SELECT COUNT(*) AS n FROM tasks WHERE title = 'Sub PUT'`).get();
+  assert.equal(rows.n, 1, 'Subtasks dürfen keine Folgeinstanz auslösen');
 });
 
 test('PATCH done: Subtask einer Serie erzeugt keine Folgeinstanz', async () => {
