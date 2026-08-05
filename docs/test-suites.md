@@ -69,6 +69,8 @@ npm run test:calendar-routes    # Kalender-Routen: GET//upcoming/search, Sichtba
 npm run test:calendar-structure  # Kalender-Routen-Split: 45-Routen-Tabelle + Cluster-Disjunktheit + /:id-Reihenfolge-Vertrag + Re-Export-Fläche gepinnt
 npm run test:calendar-exceptions  # Einzeltermin-Ausnahmen für Serien (EXDATE, #489): Migration v85 + POST /calendar/:id/exceptions
 npm run test:calendar-defaults    # Standardwerte für neue Termine (#497/#498): per-User calendar_default_reminders (Offset-Liste, Cap, Validierung)
+npm run test:preferences-calendar-target  # Standard-Sync-Ziel (#620): GET-Default '', PUT google:/caldav:-Kennungen, Formfehler -> 400, Per-User-Isolation, Wert auch in der PUT-Antwort
+npm run test:sync-target        # Kennungsformat der Sync-Ziele (#620): bauen/zerlegen invers, Pipe in der CalDAV-URL überlebt, entfallenes Ziel bleibt sichtbar statt still zu verschwinden
 npm run test:recurring-scope    # Serientermin-Scope (#532): truncateRuleBefore (RRULE-UNTIL-Kürzung) + shiftSeriesStart/shiftEndForStart + End-to-End-Expansion
 npm run test:family-routes      # Family-Route GET /members: Worker-Ausschluss, NOCASE-Sortierung, LEFT JOIN contacts/birthdays
 npm run test:modules        # Third-Party-Modul-Registry: Manifest-Validierung, Path-Traversal-Schutz, error-Fallback, admin-Filter, enable-Toggle, Asset-MIME
