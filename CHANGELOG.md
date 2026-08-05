@@ -7,10 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.82.0] - 2026-08-05
+
 ### Added
 
-- Sleep and mood join the vitals you already track. Sleep is entered as hours and minutes, not as a decimal ("7.5" is a sum you should not have to do in your head), and carries the date the night ended, so a night belongs to the morning it finished rather than landing on either side of midnight depending on when you went to bed. Mood is a scale of five faces, from very bad to very good. Both get the same card, trend chart, history and CSV export as every other metric. The mood chart keeps its axis on the full 1 to 5 range: a week between "good" and "very good" should look like a good week, not like a collapse (#609)
-- The mood in the cycle diary stays where it is and means something else: it names a kind of mood (irritable, sensitive, anxious) on a cycle day, while the new scale measures how well you are and is open to everyone, with or without the cycle tab
+- Sleep and mood join the vitals you already track. Sleep is entered as hours and minutes, not as a decimal ("7.5" is a sum you should not have to do in your head), and carries the date the night ended, so a night belongs to the morning it finished rather than landing on either side of midnight depending on when you went to bed. Mood is a scale of five faces, from very bad to very good. Both get the same card, trend chart, history and CSV export as every other metric. The mood chart keeps its axis on the full 1 to 5 range: a week between "good" and "very good" should look like a good week, not like a collapse. The mood in the cycle diary stays where it is and means something else: it names a kind of mood (irritable, sensitive, anxious) on a cycle day, while the new scale measures how well you are and is open to everyone, with or without the cycle tab (#609)
 
 ### Changed
 

@@ -23,7 +23,7 @@ npm run test:sync-default-assignee   # Standard-Zuweisung pro Sync-Ziel (#459): 
 npm run test:rewards            # Belohnungen: Punkte-Vergabe/Storno/Idempotenz, Katalog, Einlösen mit Freigabe, Bonus, Ledger
 npm run test:rewards-routes     # Belohnungs-Routen: requireAdmin-Gates, Redemption-Autorisierung (Nicht-Admin nur für sich/Admin stellvertretend), Eltern-Freigabe pending vs. autoFulfill, 409-Idempotenz, Punkte-Reservierung/Rückbuchung
 npm run test:health-overview    # Gesundheit: Übersichts-Tab
-npm run test:health-vitals      # Gesundheit: Vitalwerte-Tab
+npm run test:health-vitals      # Gesundheit: Vitalwerte-Tab - Zeitraum-Bucketing/Aggregation plus das Anzeigeformat je Metrik (Paar/Dauer/Skala), Schlaf-Umrechnung Stunden↔Dezimalstunden und die Stufen-Klemmung der Stimmungsskala
 npm run test:health-meds        # Gesundheit: Medikamente-Tab
 npm run test:health-labs        # Gesundheit: Laborwerte-Tab
 npm run test:health-activity    # Gesundheit: Aktivitäts-Tab
