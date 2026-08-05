@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.85.0] - 2026-08-05
+
+### Added
+
+- Bug reports now use a GitHub issue form that asks for the app version and the deployment type before it lets you submit. The old Markdown template could not require anything, and GitHub did not even count it as an issue template. Half of one earlier report turned out to have been fixed long before it was written, which nobody could tell because the version was missing. The log instructions name the current service and work for container installs as well.
+
+### Changed
+
+- The Umbrel store gallery images are rebuilt from current screenshots. The previous ones showed the interface as it looked fourteen months ago, under the old branding. A generator now composes them in the published store style, so the next refresh is a command rather than an afternoon.
+
+### Fixed
+
+- Three ways the CLI installer could get a rerun wrong. It polled the container's internal port instead of the host port, so with a non-default mapping the health check spent two minutes waiting for nothing. `SYNC_INTERVAL_MINUTES` was silently reset to 15 on every rerun although the dialog never asks about it. And values were read with one escaping rule and written back with another, which quietly damaged quoted secrets; both sides now use the same encoder as the web installer.
+- Link previews for the site. The Twitter image still came from a retired generator and rendered missing-glyph boxes on an app state from v0.65.34; all three social images are now produced from one layout and regenerated.
+- Five test suites had npm scripts but hung in no chain, so they never ran in CI. One of them had quietly rotted: its fixture predated the pending-confirmation column, which the suite would otherwise have caught.
+
 ## [1.84.0] - 2026-08-05
 
 ### Added
