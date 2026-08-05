@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.81.0] - 2026-08-05
+
 ### Added
 
 - Recurring budget entries take any rhythm now: pick weekly, monthly or yearly and say how many of them lie between two bookings. Every two weeks, every three months, every second year - none of that was expressible before, when the only choices were monthly, half-yearly and yearly. A weekly series books several times in the same month; the day of the month, or the weekday, is the one the entry itself carries. Existing entries keep their rhythm exactly: half-yearly ones now read as "every 6 months" (#636)
