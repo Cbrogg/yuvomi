@@ -273,6 +273,41 @@ test('PUT: Zurücknehmen entfernt die per PUT erzeugte Folgeinstanz wieder', asy
   assert.equal(open[0].id, id);
 });
 
+test('PUT done: im selben Speichern geänderte Regel gilt schon für die Folgeinstanz', async () => {
+  // Der Aufruf übergibt bewusst die frisch gelesene Zeile, nicht den Stand von
+  // vorher. Wer im Bearbeiten-Dialog die Wiederholung umstellt und gleich abhakt,
+  // bekommt sonst die nächste Instanz nach der alten Regel.
+  const id = insertTask({
+    title: 'Filter wechseln', status: 'open', due_date: dayKey(-1), created_by: uid,
+    is_recurring: 1, recurrence_rule: 'FREQ=WEEKLY',
+  });
+  const newDue = dayKey(-1);
+  await call('PUT', `/${id}`, {
+    title: 'Filter wechseln', status: 'done',
+    recurrence_rule: 'FREQ=MONTHLY', due_date: newDue,
+  });
+
+  const open = openInstances('Filter wechseln');
+  assert.equal(open.length, 1);
+  assert.equal(open[0].recurrence_rule, 'FREQ=MONTHLY', 'Die neue Regel reist mit');
+  assert.equal(
+    open[0].due_date,
+    nextOccurrenceAfter(newDue, 'FREQ=MONTHLY', todayKey()),
+    'Fälligkeit liegt auf dem Monats-, nicht auf dem Wochenraster',
+  );
+});
+
+test('PUT done: im selben Speichern abgeschaltete Wiederholung erzeugt keine Folgeinstanz', async () => {
+  const id = insertTask({
+    title: 'Filter entkalken', status: 'open', due_date: dayKey(-1), created_by: uid,
+    is_recurring: 1, recurrence_rule: 'FREQ=WEEKLY',
+  });
+  await call('PUT', `/${id}`, { title: 'Filter entkalken', status: 'done', is_recurring: 0 });
+
+  const rows = db.prepare(`SELECT COUNT(*) AS n FROM tasks WHERE title = 'Filter entkalken'`).get();
+  assert.equal(rows.n, 1, 'Wer die Wiederholung abschaltet, beendet die Serie bewusst');
+});
+
 test('PUT done: Subtask einer Serie erzeugt keine Folgeinstanz', async () => {
   const parent = insertTask({
     title: 'Eltern-Serie PUT', status: 'open', due_date: dayKey(-7), created_by: uid,

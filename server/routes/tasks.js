@@ -737,11 +737,6 @@ router.put('/:id', (req, res) => {
     updated.subtasks = loadSubtasks(updated.id, req.authUserId || req.session.userId);
     attachTags([updated]);
 
-    // Das Status-Dropdown im Bearbeiten-Formular hakt genauso ab wie die Checkbox -
-    // also muss es die Serie genauso weiterschreiben. Grundlage ist die frisch
-    // gelesene Zeile, damit im selben Zug geänderte Regel/Fälligkeit schon zählen.
-    if (status === 'done' && task.status !== 'done') spawnRecurrenceFollowup(updated);
-
     // Änderung an einer gespiegelten Aufgabe auf dem CalDAV-Server nachziehen (#617).
     // Die Tags reisen als kanonischer Schlüssel mit, weil sie in einer eigenen
     // Tabelle liegen und der Feldvergleich nur die Zeile selbst sieht (#586).
@@ -750,6 +745,13 @@ router.put('/:id', (req, res) => {
       { ...task,    tags_key: tagsKey(tagsBefore) },
       { ...updated, tags_key: tagsKey(updated.tags) },
     );
+
+    // Das Status-Dropdown im Bearbeiten-Formular hakt genauso ab wie die Checkbox -
+    // also muss es die Serie genauso weiterschreiben. Grundlage ist die frisch
+    // gelesene Zeile, damit im selben Zug geänderte Regel/Fälligkeit schon zählen.
+    // Wie in PATCH steht der Spawn hinter dem Vormerken: die Aufgabe selbst ist
+    // schon geschrieben, ein Fehler beim Nachlegen darf ihren Push nicht fressen.
+    if (status === 'done' && task.status !== 'done') spawnRecurrenceFollowup(updated);
 
     res.json({ data: updated });
 
@@ -801,6 +803,10 @@ function discardRecurrenceFollowup(taskId) {
  * Beide Wege zum Haken müssen hier durch - die Checkbox (PATCH /:id/status) und
  * das Status-Dropdown im Bearbeiten-Dialog (PUT /:id). Lag der Spawn nur im
  * einen, beendete der andere die Serie lautlos.
+ *
+ * Ohne Rückgabewert, anders als discardRecurrenceFollowup: die Folgeinstanz
+ * entsteht ohne external_uid/external_source, markTodoOutbound lässt sie
+ * deshalb liegen. Es gibt nichts zu pushen.
  */
 function spawnRecurrenceFollowup(task) {
   if (!task?.is_recurring || !task.recurrence_rule || task.parent_task_id) return;
