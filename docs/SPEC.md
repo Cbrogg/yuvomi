@@ -2227,7 +2227,7 @@ modules/
 - Disabled modules are not served to the browser and do not appear in navigation.
 - Enabled module pages are registered automatically in the SPA router at startup.
 
-**Docker / Podman:** The default `docker-compose.yml` mounts `${MODULES_DIR:-./modules}` to `/app/modules`. To keep modules outside the Yuvomi checkout set `MODULES_DIR=/absolute/path` in `.env` and restart. No image rebuild is required. On Podman use `podman-compose.yml`, which adds the SELinux `:Z` relabel to the same mount.
+**Docker / Podman:** The default `docker-compose.yml` mounts `${MODULES_DIR:-./modules}` to `/app/modules`. To keep modules outside the Yuvomi checkout set `MODULES_DIR=/absolute/path` in `.env` and restart. No image rebuild is required. On Podman use `podman-compose.yml`, which adds the SELinux `:Z` relabel to the same mount. On Portainer the stack mounts the named volume `oikos_modules` there instead, as that deployment has no checkout to bind-mount from.
 
 **Security rules for module authors:**
 - Use `replaceChildren()` and `insertAdjacentHTML()`. Never use `innerHTML`.

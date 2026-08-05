@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.83.0] - 2026-08-05
+
 ### Added
 
 - A parent can now record health data for a child. Fever and medication are handled by whoever is looking after the child, but every entry in the health module was hard-wired to the person logged in, so the one case that matters most at home was the one case the module could not do. An admin decides per person who may record for them, under Settings → Family; nothing changes for anyone until they do. The person switcher then says "You are recording for X" in place of the read-only banner, and the capture button is there. A grant covers vitals, medications, lab results and activities, and it includes seeing that person's private entries, since a caregiver who could write but not read would lose sight of the reading they just took. The cycle diary stays excluded: fever and medication are care, reading someone's cycle diary is not (#584)
