@@ -1160,8 +1160,12 @@ function openAccountModal(account = null) {
       </div>
       <div class="form-group">
         <label class="form-label" for="am-credit-limit">${t('budget.creditLimitLabel')}</label>
-        <input type="number" class="form-input" id="am-credit-limit" step="0.01" min="0" inputmode="decimal"
-               placeholder="0.00" value="${isEdit ? (account.credit_limit ?? '') : ''}">
+        <!-- Schrittweite und Platzhalter aus der Kontowährung: bei JPY ist ein
+             Hundertstel keine Einheit, die es gibt. min bleibt 0 - ein Rahmen
+             ist nie negativ, und leer heisst "kein Rahmen gepflegt". -->
+        <input type="number" class="form-input" id="am-credit-limit" min="0" inputmode="decimal"
+               step="${amountStep(accountCurrency, isEdit ? (account.credit_limit ?? '') : '')}"
+               placeholder="${amountPlaceholder(accountCurrency)}" value="${isEdit ? (account.credit_limit ?? '') : ''}">
         <p class="form-hint">${t('budget.creditLimitHint')}</p>
       </div>
     </div>
