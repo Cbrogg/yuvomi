@@ -76,6 +76,7 @@ Complete setup instructions for Yuvomi - from Docker installation to your first 
 - [Step-by-Step Installation](#step-by-step-installation)
 - [Environment Variables](#environment-variables)
 - [HTTPS / Reverse Proxy (Nginx)](#https--reverse-proxy-nginx)
+- [Podman & systemd Autostart (rootless)](#podman--systemd-autostart-rootless)
 - [Updates](#updates)
 - [Backup & Restore](#backup--restore)
 - [Troubleshooting](#troubleshooting)
@@ -147,6 +148,7 @@ git --version              # git version 2.x.x
 
 - **RAM**: 256 MB minimum (the container is lightweight)
 - **Disk**: ~500 MB for the Docker image, plus space for your database
+- **CPU**: `amd64` and `arm64` images are published (x86 servers, Raspberry Pi 4/5, Apple Silicon, most NAS devices)
 
 ---
 
@@ -230,6 +232,12 @@ docker compose up -d
 ```
 
 Docker pulls `ghcr.io/ulsklyc/yuvomi:latest` automatically. No build step, no Node.js installation needed.
+
+> **Pinning a version.** Every release is also published under immutable tags:
+> `1.84.0` (exact version), `1.84` (latest patch of that minor), plus a moving `main`
+> tag for the current development state. To pin production to a known-good release,
+> set `image: ghcr.io/ulsklyc/yuvomi:1.84.0` in your compose file and bump it
+> deliberately; `latest` always points at the newest release.
 
 Continue with [Step 4 — Verify](#4-verify-the-container-is-running).
 
@@ -505,6 +513,7 @@ optional `DB_ENCRYPTION_KEY`.
 | `DB_PATH` | Path to the SQLite database file inside the container | `/data/yuvomi.db` | No |
 | `DB_ENCRYPTION_KEY` | SQLCipher AES-256 key for encryption at rest. Leave it empty and the database stays unencrypted. Once set there is no way back: it cannot be recovered and cannot be changed on an existing database. | - | No, but strongly recommended |
 | `DATA_DIR` | Host directory mounted at `/data` inside the container (set in `.env` or `docker-compose.yml`). | `./data` | No |
+| `MODULES_DIR` | Host directory mounted at `/app/modules` inside the container - the drop-in folder for [third-party modules](../MODULES.md). Compose-only, like `DATA_DIR`. | `./modules` | No |
 | `BACKUP_DIR` | In `.env`/`docker-compose.yml`: the **host** directory mounted at `/backups`. Inside the container the app reads the same name as the **container** path it writes to — the compose files pin it to `/backups`, and the image defaults to `/backups` as well. Only override it inside the container if you mount your backup volume somewhere else. | `./backups` (host) / `/backups` (container) | No |
 
 Generate a secure `DB_ENCRYPTION_KEY`:
@@ -730,6 +739,7 @@ Built-in cron-based database backup (default: 2 AM daily, keep last 7 copies). S
 | `BACKUP_SCHEDULE` | Cron expression for backup schedule | `0 2 * * *` | No |
 | `BACKUP_DIR` | Directory (inside container) where backup files are written. Must be a writable, mounted path, otherwise backups fail with `EACCES`. | `/backups` (container), `./backups` (bare metal) | No |
 | `BACKUP_KEEP` | Number of most-recent backup files to retain | `7` | No |
+| `BACKUP_UPLOAD_LIMIT` | Maximum size of a backup file uploaded for restore through the admin UI (Express body-limit syntax). Raise it when restoring a database larger than the default. | `100mb` | No |
 
 **WebDAV backup target (optional):** After each local backup, Yuvomi can automatically upload the file to any WebDAV-compatible server (Nextcloud, ownCloud, Hetzner Storage Box, Infomaniak kDrive, etc.). Configure in **Settings → Administration → Backup and restore → WebDAV Backup Target**, or via environment variables (env vars take precedence over the UI):
 

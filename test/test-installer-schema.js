@@ -88,6 +88,7 @@ const INTENTIONALLY_NOT_IN_INSTALLER = {
   PORT: 'Container-interner Port, überall fest 3000. Der Host-Port ist OIKOS_HTTP_PORT.',
   DB_PATH: 'Vom Descriptor auf /data/yuvomi.db gesetzt.',
   BACKUP_DIR: 'Vom Image auf /backups gesetzt; hat wegen der Doppelrolle Host-Pfad gegen Container-Env einen eigenen Guard (#579).',
+  MODULES_DIR: 'Compose-Host-Pfad für Dritt-Modul-Drop-ins (MODULES.md). Der Default ./modules ist für jede vom Wizard erzeugte Installation richtig; wer Module nutzt, ändert bewusst die Compose-Ebene.',
   OIKOS_HTTP_BIND: 'Bindungsadresse für rootless Podman hinter Proxy. Ein falscher Wert macht die App unerreichbar, und der Default ist für jede vom Wizard erzeugte Installation richtig.',
 
   // Werden zur Laufzeit erzeugt und in der Datenbank abgelegt.
