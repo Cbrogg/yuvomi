@@ -1029,7 +1029,7 @@
            whether anyone is minding it. -->
       <div class="phil-card reveal d3" style="--m: var(--accent)">
         <div class="phil-ico"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg></div>
-        <div><h3 data-t="p_foot_t">Small, and looked after</h3><p data-t="p_foot_d">256 MB RAM and a ~500 MB image, on a single SQLite file you can copy. 175 test suites run against every change.</p></div>
+        <div><h3 data-t="p_foot_t">Small, and looked after</h3><p data-t="p_foot_d">256 MB RAM and a ~500 MB image, on a single SQLite file you can copy. 180 test suites run against every change.</p></div>
       </div>
     </div>
   </div>
@@ -1236,7 +1236,7 @@
       </div>
       <div class="mod-card reveal d2" style="--m: var(--m-tasks)">
         <div class="mod-ico"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg></div>
-        <h3 data-t="m_backup_t">Backup</h3><p data-t="m_backup_d">Scheduled backups with pre-restore rollback, optional WebDAV cloud upload (Nextcloud, ownCloud, Hetzner, etc.), plus single sign-on via any OIDC provider.</p>
+        <h3 data-t="m_backup_t">Backup</h3><p data-t="m_backup_d">Scheduled backups with pre-restore rollback, optional WebDAV cloud upload (Nextcloud, ownCloud, Hetzner, etc.).</p>
       </div>
       <div class="mod-card reveal" style="--m: var(--m-housekeeping)">
         <div class="mod-ico"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m19 11-8-8-8.6 8.6a2 2 0 0 0 0 2.8l5.2 5.2a2 2 0 0 0 2.8 0z"/><path d="m5 2 5 5"/><path d="M2 13h15"/><path d="M22 20a2 2 0 1 1-4 0c0-1.6 1.7-2.4 2-4 .3 1.6 2 2.4 2 4z"/></svg></div>
@@ -1519,7 +1519,7 @@ openssl rand -hex 32
       p_priv_t:'Privacy first', p_priv_d:'Optional AES-256 database encryption via SQLCipher (enabled in the recommended Docker setup). Zero telemetry. Your data never leaves your server.',
       p_self_t:'Fully self-hosted', p_self_d:'Runs on a Raspberry Pi, a NAS, or any server. Docker or Podman makes setup a one-liner.',
       p_open_t:'Open source', p_open_d:'MIT licensed. Inspect, modify, extend, contribute. Built in the open for families who value transparency.',
-      p_foot_t:'Small, and looked after', p_foot_d:'256 MB RAM and a ~500 MB image, on a single SQLite file you can copy. 175 test suites run against every change.', feat_title:'Everything your household needs',
+      p_foot_t:'Small, and looked after', p_foot_d:'256 MB RAM and a ~500 MB image, on a single SQLite file you can copy. 180 test suites run against every change.', feat_title:'Everything your household needs',
       feat_desc:'A complete set of tools for families, designed to work together, not scattered across seventeen separate tabs.',
       f_tasks_k:'Tasks', f_tasks_t:'Everyone knows what needs doing.', f_tasks_d:'Shared tasks with deadlines, priorities, subtasks, tags and recurring schedules, assignable to several family members at once.',
       f_tasks_l1:'Kanban board with one-tap status changes', f_tasks_l2:'Multi-member assignment with stacked avatars', f_tasks_l3:'Optional two-way sync with CalDAV reminder lists',
@@ -1539,7 +1539,7 @@ openssl rand -hex 32
       m_rewards_t:'Rewards', m_rewards_d:'Points on tasks credit the assigned member, with a configurable default for new tasks, a parent-approved catalog and an auditable ledger.',
       m_recipes_t:'Recipes', m_recipes_d:'Create, duplicate and scale reusable recipes, then pre-fill meal slots or send the ingredients to a shopping list. A self-hosted Mealie instance can be mirrored read-only.',
       m_rem_t:'Reminders', m_rem_d:'Reminders on tasks and calendar events with an in-app badge, plus opt-in push notifications that reach you even when the app is closed.',
-      m_backup_t:'Backup', m_backup_d:'Scheduled backups with pre-restore rollback, optional WebDAV cloud upload (Nextcloud, ownCloud, Hetzner, etc.), plus single sign-on via any OIDC provider.', screens_title:'And the <em>other ten screens</em>',
+      m_backup_t:'Backup', m_backup_d:'Scheduled backups with pre-restore rollback, optional WebDAV cloud upload (Nextcloud, ownCloud, Hetzner, etc.).', screens_title:'And the <em>other ten screens</em>',
       screens_desc:'The modules you have not seen yet, on the phone in your pocket. Same tuned touch targets, same layouts adapting to your device and theme.',
       screens_hint:'Drag, swipe or scroll to explore →',
       cap_recipes:'Recipes', cap_pantry:'Pantry', cap_notes:'Notes', cap_contacts:'Contacts',
@@ -1633,7 +1633,7 @@ openssl rand -hex 32
       p_priv_t:'Datenschutz zuerst', p_priv_d:'Optionale AES-256-Datenbankverschlüsselung via SQLCipher (im empfohlenen Docker-Setup aktiviert). Keine Telemetrie. Eure Daten verlassen nie euren Server.',
       p_self_t:'Vollständig selbstgehostet', p_self_d:'Läuft auf einem Raspberry Pi, NAS oder jedem Server. Docker oder Podman macht das Setup zum Einzeiler.',
       p_open_t:'Open Source', p_open_d:'MIT-lizenziert. Einsehen, anpassen, erweitern, beitragen. Offen gebaut für Familien, die Transparenz schätzen.',
-      p_foot_t:'Klein, und gepflegt', p_foot_d:'256 MB RAM und ein rund 500 MB großes Image, auf einer einzigen SQLite-Datei, die ihr kopieren könnt. 175 Testsuiten laufen gegen jede Änderung.', feat_title:'Alles, was euer Haushalt braucht',
+      p_foot_t:'Klein, und gepflegt', p_foot_d:'256 MB RAM und ein rund 500 MB großes Image, auf einer einzigen SQLite-Datei, die ihr kopieren könnt. 180 Testsuiten laufen gegen jede Änderung.', feat_title:'Alles, was euer Haushalt braucht',
       feat_desc:'Ein vollständiges Werkzeugset für Familien, aufeinander abgestimmt statt verstreut auf siebzehn getrennte Tabs.',
       f_tasks_k:'Aufgaben', f_tasks_t:'Alle wissen, was zu tun ist.', f_tasks_d:'Gemeinsame Aufgaben mit Fristen, Prioritäten, Unteraufgaben, Tags und Wiederholungen, mehreren Mitgliedern gleichzeitig zuweisbar.',
       f_tasks_l1:'Kanban-Board mit Ein-Tipp-Status', f_tasks_l2:'Mehrfachzuweisung mit gestapelten Avataren', f_tasks_l3:'Optionaler Zwei-Wege-Sync mit CalDAV-Erinnerungslisten',
@@ -1653,7 +1653,7 @@ openssl rand -hex 32
       m_rewards_t:'Belohnungen', m_rewards_d:'Punkte auf Aufgaben werden dem zuständigen Mitglied gutgeschrieben, mit einstellbarem Standardwert für neue Aufgaben, Prämien-Katalog mit Eltern-Freigabe und vollständigem Punkte-Ledger.',
       m_recipes_t:'Rezepte', m_recipes_d:'Wiederverwendbare Rezepte erstellen, duplizieren und skalieren, dann Mahlzeiten vorausfüllen oder die Zutaten auf die Einkaufsliste schicken. Eine selbst gehostete Mealie-Instanz lässt sich nur lesend daneben spiegeln.',
       m_rem_t:'Erinnerungen', m_rem_d:'Erinnerungen für Aufgaben und Termine mit In-App-Badge, dazu optionale Push-Benachrichtigungen, die dich auch bei geschlossener App erreichen.',
-      m_backup_t:'Backup', m_backup_d:'Geplante Backups mit Vor-Wiederherstellungs-Rollback, optionalem WebDAV-Cloud-Upload (Nextcloud, ownCloud, Hetzner\xa0usw.) und Single Sign-On \xfcber jeden OIDC-Provider.', screens_title:'Und die <em>zehn übrigen Ansichten</em>',
+      m_backup_t:'Backup', m_backup_d:'Geplante Backups mit Vor-Wiederherstellungs-Rollback, optionalem WebDAV-Cloud-Upload (Nextcloud, ownCloud, Hetzner\xa0usw.).', screens_title:'Und die <em>zehn übrigen Ansichten</em>',
       screens_desc:'Die Module, die ihr noch nicht gesehen habt, auf dem Handy in eurer Tasche. Dieselben optimierten Touch-Ziele, dieselben Layouts, die sich an Gerät und Theme anpassen.',
       screens_hint:'Ziehen, wischen oder scrollen zum Erkunden →',
       cap_recipes:'Rezepte', cap_pantry:'Vorrat', cap_notes:'Notizen', cap_contacts:'Kontakte',
