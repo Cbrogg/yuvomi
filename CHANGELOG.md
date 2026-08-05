@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - A dot on the "Changelog" entry now says when a newer release is out. Self-hosted installs have nobody to tell them; the version was already there in the changelog modal, next to the latest one, but only for whoever thought to look. The dot marks the sidebar entry and, on mobile, the "More" button that hides it in its sheet, and it names the version for screen readers. Opening the modal clears it until something newer appears, and the modal then leads with "Version X is available". The comparison is numeric per segment, because a string compare ranks 1.9.0 above 1.10.0; anything unparseable counts as unknown and stays quiet, as does a failed check (#490)
+- A clock widget for the dashboard. The case it is built for is a wall tablet in the living room, which has no system bar to read the time off, so the digits scale with the tile size instead of sitting at one fixed size, and they follow the 12h/24h and date-format preferences already set. It ticks on the minute, not the second: the display has no seconds, and a tab that was in the background catches up as soon as it is looked at again. Hidden by default, since a second clock on a phone is duplication - switch it on under Customize (#651)
 
 ## [1.83.0] - 2026-08-05
 

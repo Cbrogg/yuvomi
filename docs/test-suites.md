@@ -89,7 +89,7 @@ npm run test:invites        # Einladungslinks: Token-Lebenszyklus (nur der Hash 
 npm run test:notifications  # Notification-Kanäle (Gotify/ntfy): Provider-Mapping, Reminder-Fan-out, Admin-Routen, Payload-Body je entity_type (#581)
 npm run test:mcp            # MCP-Server: JSON-RPC-Dispatch (initialize/tools/list/tools/call) + Tool-Logik (Tasks, Shopping, Kalender)
 npm run test:token-scopes   # API-/MCP-Token-Scopes: scopes.js-Modell + Enforcement (tools/list-Filter, tools/call-Deny)
-npm run test:permissions    # Rollen & Rechte: Resolver (Admin-Bypass, Rolle/Mitglied-Override, Widget-Kaskade), Session-Enforcement-Map, Sparse-Speicherung (#467)
+npm run test:permissions    # Rollen & Rechte: Resolver (Admin-Bypass, Rolle/Mitglied-Override, Widget-Kaskade), Session-Enforcement-Map, Sparse-Speicherung (#467); dazu der Abgleich der drei Widget-Listen (WIDGET_IDS in dashboard.js, PERMISSION_WIDGETS serverseitig, WIDGET_LABEL_KEYS in der Rechte-UI) - ein neues Widget fehlt sonst still in den Rechten oder trägt dort seinen rohen Slug
 npm run test:permissions-routes   # Rechte-Routen: requireAdmin-Gate (kein Privilege-Escalation), Payload-Validierung, sparse-Persistenz/Round-Trip, Admin-Ziel-Sonderregel
 npm run test:dashboard
 npm run test:ics-parser

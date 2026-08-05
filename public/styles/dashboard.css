@@ -1048,6 +1048,50 @@ svg.weather-forecast__icon {
   opacity: 0.85;
 }
 
+/* ── Uhr (#651) ──────────────────────────────────────────────────────────
+ * Gebaut für den Fall, der sie erst nötig macht: ein Wandtablet ohne
+ * Systemleiste, aus mehreren Metern Abstand gelesen. Die Zeit skaliert
+ * deshalb mit der Kachelbreite (cqw im bestehenden `dashboard-widget`-
+ * Container) statt auf einer festen Größe zu stehen - „variabel in der Größe"
+ * ist der Kern des Wunsches. Die Obergrenze hängt an der Zeilenzahl, nicht an
+ * der Breite: eine einzeilige Kachel ist mindestens 132px hoch, eine Ziffer
+ * von 6.5rem risse Zeit und Datum darin auseinander. */
+.clock-widget {
+  --clock-time-max: var(--text-5xl);
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  padding: var(--space-4);
+  text-align: center;
+}
+
+.widget-size--1x2 > .clock-widget,
+.widget-size--2x2 > .clock-widget,
+.widget-size--1x3 > .clock-widget,
+.widget-size--2x3 > .clock-widget,
+.widget-size--1x4 > .clock-widget,
+.widget-size--2x4 > .clock-widget {
+  --clock-time-max: var(--text-6xl);
+}
+
+.clock-widget__time {
+  /* tabular-nums: sonst wandert die Uhr bei jedem Minutenwechsel seitlich,
+     weil proportionale Ziffern unterschiedlich breit sind. */
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(var(--text-3xl), 18cqw, var(--clock-time-max));
+  font-weight: var(--font-weight-semibold);
+  line-height: 1;
+  letter-spacing: var(--tracking-tight);
+  color: var(--color-text-primary);
+}
+
+.clock-widget__date {
+  margin: 0;
+  font-size: clamp(var(--text-xs), 4cqw, var(--text-lg));
+  color: var(--color-text-secondary);
+  text-wrap: balance;
+}
+
 /* Tiny weather keeps the current conditions readable instead of forcing
  * forecast rows into a 1x1 tile. */
 .widget-size--1x1 > .weather-widget .weather-widget__meta,

@@ -505,6 +505,12 @@
   --text-2xl:  1.5rem;     /* 24px - Page-Title (Mobile) */
   --text-3xl:  1.875rem;   /* 30px - Page-Title (Desktop) */
   --text-4xl:  2.25rem;    /* 36px - Hero/Greeting */
+  /* Display-Stufen. Kein Fließtext mehr, sondern Anzeigewerte, die aus mehreren
+     Metern Abstand lesbar sein müssen - eingeführt für die Uhr auf dem
+     Wandtablet (#651). Nicht für Überschriften verwenden: dort endet die Skala
+     bewusst bei --text-4xl. */
+  --text-5xl:  3rem;       /* 48px - Display auf einzeiliger Kachel */
+  --text-6xl:  4.5rem;     /* 72px - Display auf hoher Kachel */
 
   /* Semantische Rollen. Produktoberflächen nutzen feste rem-Werte; responsive
      Unterschiede werden ausschließlich an den kanonischen Breakpoints gesetzt. */
