@@ -732,14 +732,16 @@ router.put('/:id', (req, res) => {
         undone = discardRecurrenceFollowup(task.id);
       }
 
+      // Nur was die Schreibarbeit unten braucht, liegt in der Transaktion: die
+      // frische Zeile und ihre Tags (der Feldvergleich kennt tags_key). Das
+      // Ausschmücken für die Antwort wartet draußen, damit die Schreibsperre
+      // nicht über Lesearbeit gehalten wird.
       updated = db.get().prepare(`
         SELECT t.*, u.display_name AS assigned_name, u.avatar_color AS assigned_color,
           u.avatar_data AS assigned_avatar, ${ASSIGNED_USERS_SQL}
         FROM tasks t LEFT JOIN users u ON t.assigned_to = u.id
         WHERE t.id = ?
       `).get(req.params.id);
-      addAssignedUsers(updated);
-      updated.subtasks = loadSubtasks(updated.id, req.authUserId || req.session.userId);
       attachTags([updated]);
 
       // Änderung an einer gespiegelten Aufgabe auf dem CalDAV-Server nachziehen (#617).
@@ -756,6 +758,9 @@ router.put('/:id', (req, res) => {
       // gelesene Zeile, damit im selben Zug geänderte Regel/Fälligkeit schon zählen.
       if (status === 'done' && task.status !== 'done') spawnRecurrenceFollowup(updated);
     })();
+
+    addAssignedUsers(updated);
+    updated.subtasks = loadSubtasks(updated.id, req.authUserId || req.session.userId);
 
     res.json({ data: updated });
 
@@ -801,6 +806,18 @@ function discardRecurrenceFollowup(taskId) {
 }
 
 /**
+ * Der Vorlauf gehört zum Durchlauf, nicht zum Kalender: beginnt eine Aufgabe
+ * drei Tage vor ihrer Fälligkeit, tut sie das auch beim nächsten Mal. Ohne
+ * Start- oder Fälligkeitsdatum gibt es nichts zu verschieben (NULL).
+ */
+function shiftedStartDate(startDate, dueDate, nextDue) {
+  if (!startDate || !dueDate) return null;
+  const lead = Date.parse(`${dueDate}T00:00:00Z`) - Date.parse(`${startDate}T00:00:00Z`);
+  if (!Number.isFinite(lead)) return null;
+  return new Date(Date.parse(`${nextDue}T00:00:00Z`) - lead).toISOString().slice(0, 10);
+}
+
+/**
  * Schreibt die Serie weiter: nächste Instanz anlegen, wenn eine wiederkehrende
  * Aufgabe erledigt wurde. Erwartet die bereits auf 'done' gesetzte Zeile.
  *
@@ -811,6 +828,10 @@ function discardRecurrenceFollowup(taskId) {
  * Ohne Rückgabewert, anders als discardRecurrenceFollowup: die Folgeinstanz
  * entsteht ohne external_uid/external_source, markTodoOutbound lässt sie
  * deshalb liegen. Es gibt nichts zu pushen.
+ *
+ * Beide Aufrufer halten bereits eine Transaktion, die eigene läuft darin als
+ * Savepoint. Sie bleibt trotzdem stehen: sie hält Aufgabe, Zuweisungen und Tags
+ * auch dann zusammen, wenn später jemand von außerhalb einer Transaktion ruft.
  */
 function spawnRecurrenceFollowup(task) {
   if (!task?.is_recurring || !task.recurrence_rule || task.parent_task_id) return;
@@ -835,11 +856,12 @@ function spawnRecurrenceFollowup(task) {
   db.get().transaction(() => {
     const newTask = db.get().prepare(`
       INSERT INTO tasks (title, description, category, priority, status,
-        due_date, due_time, assigned_to, created_by, is_recurring, recurrence_rule, points, visibility,
-        recurrence_origin_id)
-      VALUES (?, ?, ?, ?, 'open', ?, ?, ?, ?, 1, ?, ?, ?, ?)
+        start_date, due_date, due_time, assigned_to, created_by, is_recurring, recurrence_rule,
+        points, visibility, recurrence_origin_id)
+      VALUES (?, ?, ?, ?, 'open', ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)
     `).run(
       task.title, task.description, task.category, task.priority,
+      shiftedStartDate(task.start_date, task.due_date, nextDate),
       nextDate, task.due_time, task.assigned_to, task.created_by,
       task.recurrence_rule, task.points, task.visibility,
       task.id

@@ -325,37 +325,78 @@ test('PUT done: Subtask einer Serie erzeugt keine Folgeinstanz', async () => {
 // --------------------------------------------------------
 // Erledigen und Folgeinstanz sind eine Einheit
 // --------------------------------------------------------
-test('Scheitert der Spawn, bleibt die Aufgabe offen - in beiden Pfaden', async () => {
-  // Der Trigger lässt genau den Spawn-INSERT scheitern (nur er setzt
-  // recurrence_origin_id) und lässt alles andere in Ruhe.
+
+/**
+ * Lässt genau den Spawn-INSERT scheitern (nur er setzt recurrence_origin_id)
+ * und lässt alles andere in Ruhe.
+ */
+async function withFailingSpawn(fn) {
   db.exec(`CREATE TRIGGER spawn_boom BEFORE INSERT ON tasks
     WHEN NEW.recurrence_origin_id IS NOT NULL
     BEGIN SELECT RAISE(ABORT, 'spawn failed'); END`);
   try {
-    const viaPatch = insertTask({
-      title: 'Rauchmelder prüfen', status: 'open', due_date: dayKey(0), created_by: uid,
-      is_recurring: 1, recurrence_rule: 'FREQ=MONTHLY',
-    });
-    const patched = await call('PATCH', `/${viaPatch}/status`, { status: 'done' });
-    assert.equal(patched.status, 500);
-    assert.equal(
-      db.prepare('SELECT status FROM tasks WHERE id = ?').get(viaPatch).status, 'open',
-      'Ohne Folgeinstanz darf die Aufgabe nicht erledigt zurückbleiben - die Serie endete sonst still',
-    );
-
-    const viaPut = insertTask({
-      title: 'Sieb reinigen', status: 'open', due_date: dayKey(0), created_by: uid,
-      is_recurring: 1, recurrence_rule: 'FREQ=MONTHLY',
-    });
-    const put = await call('PUT', `/${viaPut}`, { title: 'Sieb reinigen', status: 'done' });
-    assert.equal(put.status, 500);
-    assert.equal(
-      db.prepare('SELECT status FROM tasks WHERE id = ?').get(viaPut).status, 'open',
-      'Auch das Bearbeiten-Formular rollt den Statuswechsel mit zurück',
-    );
+    await fn();
   } finally {
     db.exec('DROP TRIGGER spawn_boom');
   }
+}
+
+test('PATCH: scheitert der Spawn, bleibt die Aufgabe offen', async () => {
+  await withFailingSpawn(async () => {
+    const id = insertTask({
+      title: 'Rauchmelder prüfen', status: 'open', due_date: dayKey(0), created_by: uid,
+      is_recurring: 1, recurrence_rule: 'FREQ=MONTHLY',
+    });
+    const res = await call('PATCH', `/${id}/status`, { status: 'done' });
+    assert.equal(res.status, 500);
+    assert.equal(
+      db.prepare('SELECT status FROM tasks WHERE id = ?').get(id).status, 'open',
+      'Ohne Folgeinstanz darf die Aufgabe nicht erledigt zurückbleiben - die Serie endete sonst still',
+    );
+  });
+});
+
+test('PUT: scheitert der Spawn, rollt das ganze Speichern zurück', async () => {
+  await withFailingSpawn(async () => {
+    const id = insertTask({
+      title: 'Sieb reinigen', status: 'open', due_date: dayKey(0), created_by: uid,
+      priority: 'low', is_recurring: 1, recurrence_rule: 'FREQ=MONTHLY',
+    });
+    // Titel und Priorität ändern sich mit: die Transaktion deckt das ganze
+    // UPDATE ab, nicht nur die Status-Spalte.
+    const res = await call('PUT', `/${id}`, {
+      title: 'Sieb reinigen NEU', status: 'done', priority: 'high',
+    });
+    assert.equal(res.status, 500);
+
+    const row = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id);
+    assert.equal(row.status, 'open', 'Auch das Bearbeiten-Formular rollt den Statuswechsel mit zurück');
+    assert.equal(row.title, 'Sieb reinigen', 'Und den Rest des Speicherns gleich mit');
+    assert.equal(row.priority, 'low');
+  });
+});
+
+test('Folgeinstanz behält den Vorlauf zwischen Start- und Fälligkeitsdatum', async () => {
+  const id = insertTask({
+    title: 'Steuer vorbereiten', status: 'open',
+    start_date: dayKey(-24), due_date: dayKey(-21), created_by: uid,
+    is_recurring: 1, recurrence_rule: 'FREQ=WEEKLY',
+  });
+  await call('PATCH', `/${id}/status`, { status: 'done' });
+
+  const next = openInstances('Steuer vorbereiten')[0];
+  assert.ok(next.start_date, 'Das Startdatum darf nicht verlorengehen');
+  const lead = (Date.parse(`${next.due_date}T00:00:00Z`) - Date.parse(`${next.start_date}T00:00:00Z`)) / DAY;
+  assert.equal(lead, 3, 'Drei Tage Vorlauf wie beim Durchlauf davor');
+});
+
+test('Folgeinstanz ohne Startdatum bekommt auch keines', async () => {
+  const id = insertTask({
+    title: 'Backup prüfen', status: 'open', due_date: dayKey(-2), created_by: uid,
+    is_recurring: 1, recurrence_rule: 'FREQ=WEEKLY',
+  });
+  await call('PATCH', `/${id}/status`, { status: 'done' });
+  assert.equal(openInstances('Backup prüfen')[0].start_date, null);
 });
 
 test('PATCH done: Subtask einer Serie erzeugt keine Folgeinstanz', async () => {
