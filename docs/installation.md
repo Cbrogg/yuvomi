@@ -760,17 +760,14 @@ sudo apt install nginx
 
 ### Configure Nginx
 
-Yuvomi ships with an example configuration. Copy it to Nginx:
+Yuvomi ships with an example configuration. Copy it and replace `deine-domain.de` with
+your actual domain — but do **not** enable the site yet: its HTTPS block references a
+certificate that does not exist until the next step, and Nginx refuses to load an
+`ssl` listener without one.
 
 ```bash
 sudo cp nginx.conf.example /etc/nginx/sites-available/yuvomi
-sudo ln -s /etc/nginx/sites-available/yuvomi /etc/nginx/sites-enabled/
-```
-
-Edit the file and replace `deine-domain.de` with your actual domain:
-
-```bash
-sudo nano /etc/nginx/sites-available/yuvomi
+sudo nano /etc/nginx/sites-available/yuvomi   # replace deine-domain.de
 ```
 
 The configuration includes:
@@ -780,16 +777,30 @@ The configuration includes:
 - Security headers (HSTS, X-Frame-Options, etc.)
 - Static asset caching
 
+> **Using Nginx Proxy Manager instead?** Paste the file's contents into the proxy host's
+> **Advanced** tab and you are done — NPM obtains and manages the certificate itself, and
+> the commented `ssl_certificate` lines stay commented.
+
 ### Enable HTTPS with Let's Encrypt
 
-Install Certbot and obtain a free SSL certificate:
+Obtain the certificate **first**, then activate the site. The standalone method answers
+the challenge on port 80 itself, so it works before any site is configured (the hooks
+stop and restart Nginx around it, and are remembered for automatic renewals):
 
 ```bash
 sudo apt install certbot python3-certbot-nginx
-sudo certbot --nginx -d <YOUR-DOMAIN>
+sudo certbot certonly --standalone -d <YOUR-DOMAIN> \
+  --pre-hook "systemctl stop nginx" --post-hook "systemctl start nginx"
 ```
 
-Certbot automatically modifies the Nginx configuration to include your certificates.
+Now point the site at the new certificate and enable it: uncomment the two
+`ssl_certificate` lines in `/etc/nginx/sites-available/yuvomi`, then link and reload:
+
+```bash
+sudo nano /etc/nginx/sites-available/yuvomi   # uncomment ssl_certificate + ssl_certificate_key
+sudo ln -s /etc/nginx/sites-available/yuvomi /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+```
 
 Verify auto-renewal is active:
 
