@@ -2235,7 +2235,10 @@
         "unitYears": "лет",
         "summaryUntil": "до {{date}}",
         "summaryCount": "{{count}} повторений",
-        "summaryCount_one": "{{count}} повторение"
+        "summaryCount_one": "{{count}} повторение",
+        "fromCompletionLabel": "Повторять от даты выполнения",
+        "fromCompletionHint": "Интервал отсчитывается со дня, когда вы отметили задачу выполненной, а не от срока.",
+        "summaryFromCompletion": "от выполнения"
     },
     "recipes": {
         "toShoppingSuccess_few": "В {{list}} добавлено {{count}} ингредиента.",

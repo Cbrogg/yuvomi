@@ -2235,7 +2235,10 @@
         "unitYears": "yıl",
         "summaryUntil": "{{date}} tarihine kadar",
         "summaryCount": "{{count}} tekrar",
-        "summaryCount_one": "{{count}} tekrar"
+        "summaryCount_one": "{{count}} tekrar",
+        "fromCompletionLabel": "Tamamlandığı günden itibaren tekrarla",
+        "fromCompletionHint": "Aralık, görevi tamamladığınız gün başlar; son tarihte değil.",
+        "summaryFromCompletion": "tamamlanmadan itibaren"
     },
     "recipes": {
         "toShoppingSuccess_few": "{{list}} listesine {{count}} malzeme eklendi.",

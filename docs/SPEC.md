@@ -58,6 +58,7 @@ One pending invitation per row. The `users` row is only created when the invitat
 | created_by | INTEGER | FK → Users, NOT NULL |
 | is_recurring | INTEGER | 0/1 |
 | recurrence_rule | TEXT | iCal RRULE |
+| recurrence_from_completion | INTEGER | NOT NULL DEFAULT 0 (migration v127, #658) — 1 anchors the next due date to the day the task was ticked off instead of to its due date |
 | parent_task_id | INTEGER | FK → Tasks (max 2 levels) |
 | recurrence_origin_id | INTEGER | FK → Tasks, ON DELETE SET NULL (migration v122) — the completed instance whose completion created this one. Deliberately not `parent_task_id`, which means "subtask" |
 | points | INTEGER | NOT NULL DEFAULT 0 — reward points credited to assigned members on completion (Rewards module, migration v69) |
@@ -66,6 +67,13 @@ One pending invitation per row. The `users` row is only created when the invitat
 **Visibility (migration v78):** every task carries a `visibility` of `all` (all family members, the default and prior behaviour), `assignees` (creator + assigned members only), or `private` (creator only). Enforcement is **server-side on every read path** (list, detail, dashboard widgets, search, MCP) — there is **no admin bypass**, so a "private" task stays hidden even from a parent/admin (the intended use is preparing a surprise). Set via the visibility selector in the task modal; restricted tasks carry a lock/people icon in the list. The same field and rule apply to calendar events.
 
 Recurring tasks keep only one open instance: the next instance is created on completion, not on a schedule. When an overdue recurring task is marked done, its next due date catches up to the next occurrence at or after today (skipping missed periods) instead of advancing a single interval from the old — possibly still overdue — due date. The follow-up instance inherits the tags along with the assignees: tags belong to the task, not to a single run.
+
+**Which day the interval counts from (migration v127, #658).** Two anchors, chosen per task by the "repeat from completion" switch inside the recurrence fields:
+
+- **From the due date** (default, unchanged behaviour): the grid stays put no matter when the task is ticked off. Right for anything tied to an outside rhythm (bin day, rent, the club evening), and the only mode that needs the catch-up described above.
+- **From the completion day**: the interval starts on the day the task was actually ticked off. Right for anything whose interval only begins with the action, such as cleaning the filter or feeding the plants. A weekly task due Saturday and completed on Monday becomes due the Monday after, not five days later. No catch-up is involved: with any positive interval the result already lies in the future. This mode also carries a series that has no due date at all, since the completion day is a usable anchor on its own.
+
+The flag is copied onto the follow-up instance; without that the series would fall back to the due-date grid from its second run on, and it would do so silently, because the follow-up looks complete either way. The completion day is read in the household's own zone (`TZ`, see `server/utils/timezone.js`): ticking a task off at 00:30 must count as the new day, or a weekly task would come back six days later. The anchor is local to Yuvomi and does not travel over CalDAV, because RFC 5545 has no way to express it and a mirrored VTODO carries the rule alone. The shared calculation lives in `nextDueAfterCompletion()` in `server/services/recurrence.js`, deliberately separate from the route because resettable countdowns want the same "counts from the moment you touched it" arithmetic (#647).
 
 **Undoing a completion (migration v122, #650):** ticking a series off is reversible. The follow-up instance records which completion created it (`recurrence_origin_id`), so moving a task back out of `done` — via the checkbox or the edit dialog — removes that follow-up again instead of leaving it standing next to the reopened task. Only an untouched follow-up is withdrawn: one that is still `open`, has no subtasks and has not itself been completed. Once work has accumulated on it, a click on its predecessor must not throw that away. The same link makes the creation idempotent: a completion never adds a second follow-up.
 

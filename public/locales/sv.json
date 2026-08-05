@@ -2235,7 +2235,10 @@
         "unitYears": "år",
         "summaryUntil": "till {{date}}",
         "summaryCount": "{{count}} tillfällen",
-        "summaryCount_one": "{{count}} tillfälle"
+        "summaryCount_one": "{{count}} tillfälle",
+        "fromCompletionLabel": "Upprepa från slutförandet",
+        "fromCompletionHint": "Intervallet börjar den dag du bockar av uppgiften, inte på förfallodatumet.",
+        "summaryFromCompletion": "från slutförandet"
     },
     "recipes": {
         "toShoppingSuccess_few": "{{count}} ingredienser tillagda i {{list}}.",

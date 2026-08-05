@@ -3533,6 +3533,19 @@ textarea::placeholder {
   margin-top: var(--space-1);
 }
 
+/* Ankerschalter „ab Erledigung" (#658). Sitzt unter dem Takt, weil er ihn
+ * verankert und nicht selbst einer ist: erst „jede Woche", dann „ab wann". */
+.rrule-anchor {
+  border-top: 1px solid var(--color-border-subtle);
+  padding-top: var(--space-3);
+}
+
+.rrule-anchor__hint {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
 .rrule-day {
   width: var(--target-md);
   height: var(--target-md);

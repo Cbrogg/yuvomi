@@ -675,7 +675,10 @@ function renderModalContent({ task = null, users = [], reminder = null } = {}) {
           </select>
         </div>` : ''}
 
-      ${renderRRuleFields('task', task?.recurrence_rule)}
+      ${renderRRuleFields('task', task?.recurrence_rule, {
+        allowFromCompletion: true,
+        fromCompletion: !!task?.recurrence_from_completion,
+      })}
 
       ${renderReminderSection(task, reminder)}
 
@@ -1162,7 +1165,7 @@ function renderTaskDetail(task, reminders = [], container = null) {
     { icon: 'flag', label: t('tasks.priorityLabel'), node: priorityNode(task.priority) },
     { icon: 'clock', label: t('tasks.dueDateLabel'), value: due?.label ?? '' },
     { icon: 'calendar-clock', label: t('tasks.startDateLabel'), value: task.start_date ? formatDate(task.start_date) : '' },
-    recurrenceRow(task.recurrence_rule),
+    recurrenceRow(task.recurrence_rule, { fromCompletion: !!task.recurrence_from_completion }),
     { icon: 'folder', label: t('tasks.categoryLabel'), value: task.category && task.category !== FALLBACK_CATEGORY ? catLabel(task.category) : '' },
     assignedRow(task.assigned_users, t('tasks.assignedLabel')),
     { icon: 'award', label: t('tasks.pointsLabel'), value: task.points ? String(task.points) : '' },
@@ -1430,6 +1433,7 @@ async function handleFormSubmit(e, container) {
     visibility:      form.querySelector('#task-visibility')?.value || 'all',
     is_recurring:    rrule.is_recurring ? 1 : 0,
     recurrence_rule: rrule.recurrence_rule,
+    recurrence_from_completion: rrule.recurrence_from_completion ? 1 : 0,
     points:          Math.max(0, Math.trunc(Number(form.points?.value)) || 0),
   };
   const dueTimeRaw = form.due_time?.value || '';

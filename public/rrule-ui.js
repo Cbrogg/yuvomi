@@ -81,14 +81,19 @@ export function buildRRule({ freq, interval, byday, until, count = null }) {
  * Rendert das HTML für die Wiederholungs-Felder.
  * @param {string} prefix - ID-Prefix (z.B. "task" oder "event")
  * @param {string|null} existingRule - bestehende RRULE oder null
- * @param {{ allowCount?: boolean }} [opts] - allowCount aktiviert die
- *        "Nach N Terminen"-Endebedingung (COUNT). Nur für Kontexte mit
- *        startverankerter Expansion (Kalender). Aufgaben sind
+ * @param {{ allowCount?: boolean, allowFromCompletion?: boolean, fromCompletion?: boolean }} [opts]
+ *        allowCount aktiviert die "Nach N Terminen"-Endebedingung (COUNT). Nur
+ *        für Kontexte mit startverankerter Expansion (Kalender). Aufgaben sind
  *        abschluss-getrieben und kennen keine COUNT-Semantik (#513).
+ *        allowFromCompletion aktiviert den Ankerschalter "ab Erledigung" (#658) -
+ *        umgekehrt nur dort, wo es ein Erledigen gibt: ein Termin wird nicht
+ *        abgehakt, für ihn gäbe es keinen zweiten Anker.
  * @returns {string} HTML-String
  */
 export function renderRRuleFields(prefix, existingRule, opts = {}) {
   const allowCount = !!opts.allowCount;
+  const allowFromCompletion = !!opts.allowFromCompletion;
+  const fromCompletion = !!opts.fromCompletion;
   const parsed = parseRRule(existingRule);
 
   const freqOpts = FREQ_OPTIONS().map(o =>
@@ -159,6 +164,16 @@ export function renderRRuleFields(prefix, existingRule, opts = {}) {
           <div class="rrule-day-grid">${dayBtns}</div>
         </div>
 
+        ${allowFromCompletion ? `
+        <div class="rrule-anchor">
+          <label class="toggle" style="margin:0">
+            <input type="checkbox" id="${prefix}-rrule-from-completion" ${fromCompletion ? 'checked' : ''}>
+            <span class="toggle__track"></span>
+            <span>${t('rrule.fromCompletionLabel')}</span>
+          </label>
+          <p class="rrule-anchor__hint">${t('rrule.fromCompletionHint')}</p>
+        </div>` : ''}
+
       </div>
     </div>
   `;
@@ -181,9 +196,13 @@ function unitLabel(freq, interval) {
  * Leseinformation zu bekommen.
  *
  * @param {string|null} rule
+ * @param {{ fromCompletion?: boolean }} [opts] Der Anker steht nicht in der
+ *        RRULE (RFC 5545 kennt ihn nicht) und muss deshalb hier hereingereicht
+ *        werden. Ohne ihn läse sich „Jede Woche" für zwei verschiedene Serien
+ *        gleich, obwohl sie an verschiedenen Tagen wiederkommen (#658).
  * @returns {string} leerer String, wenn keine Wiederholung
  */
-export function describeRRule(rule) {
+export function describeRRule(rule, opts = {}) {
   const p = parseRRule(rule);
   if (!p.freq) return '';
 
@@ -206,7 +225,8 @@ export function describeRRule(rule) {
 
   // Die Endebedingung ist eine eigene Aussage und bekommt einen Trenner:
   // „Alle 2 Monate 5 Termine" las sich wie ein verunglückter Satz.
-  const rhythm = parts.join(' ');
+  let rhythm = parts.join(' ');
+  if (opts.fromCompletion) rhythm += ` · ${t('rrule.summaryFromCompletion')}`;
   if (p.count) return `${rhythm} · ${t('rrule.summaryCount', { count: p.count })}`;
   if (p.until) return `${rhythm} · ${t('rrule.summaryUntil', { date: formatDate(p.until) })}`;
   return rhythm;
@@ -220,10 +240,11 @@ export function describeRRule(rule) {
  * beide selbst, wortgleich bis auf die Entität.
  *
  * @param {string|null} rule
+ * @param {{ fromCompletion?: boolean }} [opts] siehe describeRRule
  * @returns {{icon: string, label: string, value: string}}
  */
-export function recurrenceRow(rule) {
-  return { icon: 'repeat', label: t('rrule.labelRepeat'), value: describeRRule(rule) };
+export function recurrenceRow(rule, opts = {}) {
+  return { icon: 'repeat', label: t('rrule.labelRepeat'), value: describeRRule(rule, opts) };
 }
 
 /**
@@ -277,7 +298,8 @@ export function bindRRuleEvents(root, prefix) {
  * Liest die aktuellen RRULE-Werte aus dem Formular.
  * @param {HTMLElement} root - Container-Element
  * @param {string} prefix - ID-Prefix
- * @returns {{ is_recurring: boolean, recurrence_rule: string|null }}
+ * @returns {{ is_recurring: boolean, recurrence_rule: string|null,
+ *            recurrence_from_completion: boolean, valid_until: boolean }}
  */
 export function getRRuleValues(root, prefix) {
   const freq     = root.querySelector(`#${prefix}-rrule-freq`)?.value || '';
@@ -296,9 +318,15 @@ export function getRRuleValues(root, prefix) {
   });
 
   const rule = buildRRule({ freq, interval, byday, until, count });
+  // Ohne Regel ist der Anker bedeutungslos: sonst bliebe der Schalter an einer
+  // Aufgabe hängen, die gar nicht mehr wiederkehrt, und käme beim nächsten
+  // Einschalten der Wiederholung ungefragt zurück.
+  const fromCompletion = !!rule
+    && !!root.querySelector(`#${prefix}-rrule-from-completion`)?.checked;
   return {
     is_recurring:    !!rule,
     recurrence_rule: rule,
+    recurrence_from_completion: fromCompletion,
     // UNTIL nur validieren, wenn "Am Datum" gewählt ist (sonst irrelevant).
     valid_until:     endMode !== 'until' || isDateInputValid(untilRaw),
   };

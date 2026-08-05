@@ -2235,7 +2235,10 @@
         "unitYears": "anni",
         "summaryUntil": "fino al {{date}}",
         "summaryCount": "{{count}} ricorrenze",
-        "summaryCount_one": "{{count}} ricorrenza"
+        "summaryCount_one": "{{count}} ricorrenza",
+        "fromCompletionLabel": "Ripeti dal completamento",
+        "fromCompletionHint": "L'intervallo parte dal giorno in cui completi l'attività, non dalla data di scadenza.",
+        "summaryFromCompletion": "dal completamento"
     },
     "recipes": {
         "toShoppingSuccess_few": "{{count}} ingredienti aggiunti a {{list}}.",

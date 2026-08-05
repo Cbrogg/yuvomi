@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- A recurring task can now count its interval from the day you tick it off instead of from its due date. The switch sits with the other repetition settings in the task dialog. A weekly task due Saturday and completed on Monday becomes due the Monday after, rather than five days later. The old behaviour stays the default and stays right for anything tied to an outside rhythm, such as bin day or rent: the grid must not move just because you were late. Existing recurring tasks keep counting from the due date until you flip the switch (#658)
+
+### Fixed
+
+- The day a recurring task was completed was read in UTC rather than in the household's own time zone, so ticking one off shortly after midnight could make the next instance land a day early. It now uses the zone the container runs in, the same one that already governs task due times
+
 ## [1.79.0] - 2026-08-05
 
 ### Added

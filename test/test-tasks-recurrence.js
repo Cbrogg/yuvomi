@@ -1,8 +1,10 @@
 /**
  * Modul: Tasks-Recurrence-Test
- * Zweck: Aufholen übersprungener wiederkehrender Aufgaben (Discussion #405).
- *        Unit: nextOccurrenceAfter. Integration: PATCH /:id/status erzeugt genau eine
- *        Folgeinstanz mit Fälligkeitsdatum in der Zukunft.
+ * Zweck: Aufholen übersprungener wiederkehrender Aufgaben (Discussion #405) und
+ *        die Wahl des Ankers: ab Fälligkeit oder ab Erledigungstag (#658).
+ *        Unit: nextOccurrenceAfter, nextDueAfterCompletion. Integration:
+ *        PATCH /:id/status erzeugt genau eine Folgeinstanz, deren Fälligkeit am
+ *        gewählten Anker hängt.
  * Ausführen: node --test test/test-tasks-recurrence.js
  */
 import assert from 'node:assert/strict';
@@ -12,8 +14,15 @@ import express from 'express';
 import Database from 'better-sqlite3-multiple-ciphers';
 
 process.env.DB_PATH = ':memory:';
+// Der Erledigungstag kommt aus der Haushaltszone (serverTimeZone lesend über
+// process.env.TZ). Auf UTC festgenagelt, damit `todayKey()` hier und die
+// Route dieselbe Vorstellung von "heute" haben - sonst hinge das Ergebnis an
+// der Zone der ausführenden Maschine und wackelte über Mitternacht.
+process.env.TZ = 'UTC';
 
-const { nextOccurrence, nextOccurrenceAfter } = await import('../server/services/recurrence.js');
+const {
+  nextOccurrence, nextOccurrenceAfter, nextDueAfterCompletion,
+} = await import('../server/services/recurrence.js');
 const { MIGRATIONS, _setTestDatabase } = await import('../server/db.js');
 const { default: tasksRouter } = await import('../server/routes/tasks.js');
 
@@ -63,6 +72,80 @@ test('nextOccurrenceAfter: UNTIL endet vor heute → null', () => {
 
 test('nextOccurrenceAfter: ohne Basisdatum → null', () => {
   assert.equal(nextOccurrenceAfter(null, 'FREQ=WEEKLY', todayKey()), null);
+});
+
+// --------------------------------------------------------
+// Unit: nextDueAfterCompletion - Anker ab Erledigungstag (#658)
+// --------------------------------------------------------
+test('nextDueAfterCompletion: der Fall aus #658 - Samstag fällig, Montag erledigt, Montag+7', () => {
+  // Fester Kalender statt "heute": die Aussage ist ein Datumsverhältnis, kein
+  // Verhältnis zur Laufzeit des Tests.
+  const next = nextDueAfterCompletion({
+    anchorDate: '2026-08-01',   // Samstag
+    rule: 'FREQ=WEEKLY',
+    completedOn: '2026-08-03',  // Montag
+    fromCompletion: true,
+  });
+  assert.equal(next, '2026-08-10', 'eine Woche ab dem Tag des Abhakens');
+});
+
+test('nextDueAfterCompletion: derselbe Fall fälligkeitsverankert bleibt auf dem Samstag', () => {
+  const next = nextDueAfterCompletion({
+    anchorDate: '2026-08-01',
+    rule: 'FREQ=WEEKLY',
+    completedOn: '2026-08-03',
+    fromCompletion: false,
+  });
+  assert.equal(next, '2026-08-08', 'Vorgabe: das Raster der Serie verschiebt sich nicht');
+});
+
+test('nextDueAfterCompletion: frühes Abhaken zählt ebenfalls ab dem Erledigungstag', () => {
+  // Nicht nur überfälliges Abhaken verschiebt: wer zwei Tage früher fertig ist,
+  // beginnt das Intervall auch zwei Tage früher.
+  const next = nextDueAfterCompletion({
+    anchorDate: '2026-08-10',
+    rule: 'FREQ=DAILY;INTERVAL=3',
+    completedOn: '2026-08-08',
+    fromCompletion: true,
+  });
+  assert.equal(next, '2026-08-11');
+});
+
+test('nextDueAfterCompletion: MONTHLY rechnet vom Erledigungstag, nicht vom Fälligkeitstag', () => {
+  const next = nextDueAfterCompletion({
+    anchorDate: '2026-01-31',
+    rule: 'FREQ=MONTHLY',
+    completedOn: '2026-02-05',
+    fromCompletion: true,
+  });
+  assert.equal(next, '2026-03-05');
+});
+
+test('nextDueAfterCompletion: UNTIL beendet auch die erledigungsverankerte Serie', () => {
+  const next = nextDueAfterCompletion({
+    anchorDate: '2026-08-01',
+    rule: 'FREQ=WEEKLY;UNTIL=20260805',
+    completedOn: '2026-08-03',
+    fromCompletion: true,
+  });
+  assert.equal(next, null);
+});
+
+test('nextDueAfterCompletion: ohne Erledigungstag → null', () => {
+  assert.equal(nextDueAfterCompletion({
+    anchorDate: '2026-08-01', rule: 'FREQ=WEEKLY', completedOn: null, fromCompletion: true,
+  }), null);
+});
+
+test('nextDueAfterCompletion: ohne Fälligkeitsdatum trägt der Erledigungstag die Serie', () => {
+  // Fälligkeitsverankert gäbe es hier nichts zu rechnen (und es entsteht keine
+  // Folgeinstanz); mit dem Erledigungstag als Anker schon.
+  assert.equal(nextDueAfterCompletion({
+    anchorDate: null, rule: 'FREQ=WEEKLY', completedOn: '2026-08-03', fromCompletion: false,
+  }), null);
+  assert.equal(nextDueAfterCompletion({
+    anchorDate: null, rule: 'FREQ=WEEKLY', completedOn: '2026-08-03', fromCompletion: true,
+  }), '2026-08-10');
 });
 
 // --------------------------------------------------------
@@ -227,6 +310,66 @@ test('PUT: Statuswechsel weg von done entfernt die Folgeinstanz ebenfalls', asyn
   assert.equal(res.status, 200);
   assert.equal(openInstances('Staubsaugen').length, 1);
   assert.equal(db.prepare('SELECT status FROM tasks WHERE id = ?').get(id).status, 'done');
+});
+
+// --------------------------------------------------------
+// Anker ab Erledigungstag gegen den Router (#658)
+// --------------------------------------------------------
+test('PATCH done: erledigungsverankerte Serie wird ab heute fällig, nicht ab dem alten Raster', async () => {
+  const id = insertTask({
+    title: 'Luftfilter reinigen', status: 'open', due_date: dayKey(-3), created_by: uid,
+    is_recurring: 1, recurrence_rule: 'FREQ=WEEKLY', recurrence_from_completion: 1,
+  });
+  await call('PATCH', `/${id}/status`, { status: 'done' });
+
+  const followup = openInstances('Luftfilter reinigen')[0];
+  assert.ok(followup, 'Abhaken muss eine Folgeinstanz erzeugt haben');
+  assert.equal(followup.due_date, dayKey(7), 'genau eine Woche ab heute');
+  // Das fälligkeitsverankerte Ergebnis wäre der 4. Tag ab heute (due-3 + 7).
+  assert.notEqual(followup.due_date, dayKey(4));
+});
+
+test('PATCH done: die Folgeinstanz erbt den Anker, sonst kippt die Serie ab dem zweiten Lauf', async () => {
+  const id = insertTask({
+    title: 'Pflanzen düngen', status: 'open', due_date: dayKey(-5), created_by: uid,
+    is_recurring: 1, recurrence_rule: 'FREQ=WEEKLY', recurrence_from_completion: 1,
+  });
+  await call('PATCH', `/${id}/status`, { status: 'done' });
+  const second = openInstances('Pflanzen düngen')[0];
+  assert.equal(second.recurrence_from_completion, 1);
+
+  // Zweiter Durchlauf: heute abgehakt, obwohl erst in einer Woche fällig →
+  // wieder heute + 7 statt fällig + 7.
+  await call('PATCH', `/${second.id}/status`, { status: 'done' });
+  const third = openInstances('Pflanzen düngen')[0];
+  assert.equal(third.due_date, dayKey(7));
+});
+
+test('POST/PUT: der Anker reist über die Route und lässt sich wieder abschalten', async () => {
+  const created = await call('POST', '/', {
+    title: 'Zahnbürstenkopf wechseln', is_recurring: 1,
+    recurrence_rule: 'FREQ=MONTHLY', recurrence_from_completion: 1,
+  });
+  assert.equal(created.status, 201);
+  assert.equal(created.body.data.recurrence_from_completion, 1);
+
+  const updated = await call('PUT', `/${created.body.data.id}`, {
+    title: 'Zahnbürstenkopf wechseln', recurrence_from_completion: 0,
+  });
+  assert.equal(updated.status, 200);
+  assert.equal(updated.body.data.recurrence_from_completion, 0);
+  // Und ohne das Feld im Body bleibt der gespeicherte Wert stehen.
+  const untouched = await call('PUT', `/${created.body.data.id}`, { title: 'Zahnbürstenkopf wechseln' });
+  assert.equal(untouched.body.data.recurrence_from_completion, 0);
+});
+
+test('PATCH done: ohne Anker bleibt es beim bisherigen Verhalten', async () => {
+  const id = insertTask({
+    title: 'Müllabfuhr', status: 'open', due_date: dayKey(-3), created_by: uid,
+    is_recurring: 1, recurrence_rule: 'FREQ=WEEKLY',
+  });
+  await call('PATCH', `/${id}/status`, { status: 'done' });
+  assert.equal(openInstances('Müllabfuhr')[0].due_date, dayKey(4));
 });
 
 test('PATCH done: Subtask einer Serie erzeugt keine Folgeinstanz', async () => {
