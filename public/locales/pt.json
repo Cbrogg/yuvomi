@@ -2235,7 +2235,10 @@
         "unitYears": "anos",
         "summaryUntil": "até {{date}}",
         "summaryCount": "{{count}} ocorrências",
-        "summaryCount_one": "{{count}} ocorrência"
+        "summaryCount_one": "{{count}} ocorrência",
+        "fromCompletionLabel": "Repetir a partir da conclusão",
+        "fromCompletionHint": "O intervalo começa no dia em que você marca a tarefa como concluída, não na data de vencimento.",
+        "summaryFromCompletion": "a partir da conclusão"
     },
     "recipes": {
         "toShoppingSuccess_few": "{{count}} ingredientes adicionados a {{list}}.",

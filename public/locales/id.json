@@ -2247,7 +2247,10 @@
         "unitYears": "Tahun",
         "summaryUntil": "hingga {{date}}",
         "summaryCount": "{{count}} kejadian",
-        "summaryCount_one": "{{count}} kejadian"
+        "summaryCount_one": "{{count}} kejadian",
+        "fromCompletionLabel": "Ulangi dari tanggal penyelesaian",
+        "fromCompletionHint": "Interval dimulai pada hari Anda menandai tugas selesai, bukan pada tanggal jatuh temponya.",
+        "summaryFromCompletion": "dari penyelesaian"
     },
     "reminders": {
         "sectionTitle": "Pengingat",

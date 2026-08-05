@@ -9,8 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Ticking a recurring task off through the edit dialog ended the series. Only the checkbox on the task card created the next instance; saving the form with the status set to "Done" completed the task and left nothing behind, so a weekly task finished that way simply stopped coming back, with nothing to show that it had. Both ways of ticking off now write the series forward, and if the rule or due date is changed in the same save, the next instance already follows the new one. Taking the tick back has removed the follow-up on either path since v1.75.2; this is the other half of it (#650)
-- The next instance of a recurring task lost its start date. A task set to begin three days before it is due came back with the start date empty, so the head start it was given had to be entered again every time. The follow-up now keeps the same distance between its start and its due date as the run before it
+- Ticking a recurring task off through the edit dialog ended the series. Only the checkbox on the task card created the next instance; saving the form with the status set to "Done" completed the task and left nothing behind, so a weekly task finished that way simply stopped coming back, with nothing to show that it had. Both ways of ticking off now write the series forward, including the repeat anchor released in v1.80.0, and if the rule or due date is changed in the same save, the next instance already follows the new one. Taking the tick back has removed the follow-up on either path since v1.75.2; this is the other half of it (#650)
+- The next instance of a recurring task lost its start date. A task set to begin three days before it is due came back with the start date empty, so the head start it was given had to be entered again every time. The follow-up now keeps the same distance between its start and its due date as the run before it. Note that a task is hidden from the list until its start date arrives, unless "Show future tasks" is on
+
+## [1.80.0] - 2026-08-05
+
+### Added
+
+- A recurring task can now count its interval from the day you tick it off instead of from its due date. The switch sits with the other repetition settings in the task dialog. A weekly task due Saturday and completed on Monday becomes due the Monday after, rather than five days later. The old behaviour stays the default and stays right for anything tied to an outside rhythm, such as bin day or rent: the grid must not move just because you were late. Existing recurring tasks keep counting from the due date until you flip the switch (#658)
+
+### Fixed
+
+- The day a recurring task was completed was read in UTC rather than in the household's own time zone, so ticking one off shortly after midnight could make the next instance land a day early. It now uses the zone the container runs in, the same one that already governs task due times
 
 ## [1.79.0] - 2026-08-05
 

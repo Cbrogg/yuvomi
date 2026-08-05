@@ -2247,7 +2247,10 @@
         "unitYears": "سال",
         "summaryUntil": "تا {{date}}",
         "summaryCount": "{{count}} رویداد",
-        "summaryCount_one": "{{count}} رویداد"
+        "summaryCount_one": "{{count}} رویداد",
+        "fromCompletionLabel": "تکرار از روز انجام",
+        "fromCompletionHint": "بازه از روزی آغاز می‌شود که کار را انجام‌شده علامت می‌زنید، نه از تاریخ سررسید.",
+        "summaryFromCompletion": "از روز انجام"
     },
     "reminders": {
         "sectionTitle": "یادآور",

@@ -2235,7 +2235,10 @@
         "unitYears": "χρόνια",
         "summaryUntil": "έως {{date}}",
         "summaryCount": "{{count}} επαναλήψεις",
-        "summaryCount_one": "{{count}} επανάληψη"
+        "summaryCount_one": "{{count}} επανάληψη",
+        "fromCompletionLabel": "Επανάληψη από την ολοκλήρωση",
+        "fromCompletionHint": "Το διάστημα ξεκινά την ημέρα που ολοκληρώνετε την εργασία, όχι από την ημερομηνία λήξης.",
+        "summaryFromCompletion": "από την ολοκλήρωση"
     },
     "recipes": {
         "toShoppingSuccess_few": "{{count}} υλικά προστέθηκαν στη λίστα {{list}}.",

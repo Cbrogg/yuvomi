@@ -2247,7 +2247,10 @@
         "unitYears": "taon",
         "summaryUntil": "hanggang {{date}}",
         "summaryCount": "{{count}} pagkakataon",
-        "summaryCount_one": "{{count}} pagkakataon"
+        "summaryCount_one": "{{count}} pagkakataon",
+        "fromCompletionLabel": "Ulitin mula sa araw ng pagkumpleto",
+        "fromCompletionHint": "Magsisimula ang agwat sa araw na markahan mong tapos ang gawain, hindi sa takdang petsa nito.",
+        "summaryFromCompletion": "mula sa pagkumpleto"
     },
     "reminders": {
         "sectionTitle": "Paalala",

@@ -2235,7 +2235,10 @@
         "unitYears": "years",
         "summaryUntil": "until {{date}}",
         "summaryCount": "{{count}} occurrences",
-        "summaryCount_one": "{{count}} occurrence"
+        "summaryCount_one": "{{count}} occurrence",
+        "fromCompletionLabel": "Repeat from completion",
+        "fromCompletionHint": "The interval starts on the day you tick the task off, not on its due date.",
+        "summaryFromCompletion": "from completion"
     },
     "reminders": {
         "sectionTitle": "Reminder",

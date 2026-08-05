@@ -2235,7 +2235,10 @@
         "unitYears": "év",
         "summaryUntil": "{{date}}-ig",
         "summaryCount": "{{count}} alkalom",
-        "summaryCount_one": "{{count}} alkalom"
+        "summaryCount_one": "{{count}} alkalom",
+        "fromCompletionLabel": "Ismétlés a teljesítéstől",
+        "fromCompletionHint": "Az időköz azon a napon indul, amikor kipipálod a feladatot, nem a határidőtől.",
+        "summaryFromCompletion": "a teljesítéstől"
     },
     "reminders": {
         "sectionTitle": "Emlékeztetők",

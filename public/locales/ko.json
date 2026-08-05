@@ -2247,7 +2247,10 @@
         "unitYears": "년",
         "summaryUntil": "{{date}}까지",
         "summaryCount": "{{count}}회",
-        "summaryCount_one": "{{count}}회"
+        "summaryCount_one": "{{count}}회",
+        "fromCompletionLabel": "완료일부터 반복",
+        "fromCompletionHint": "마감일이 아니라 작업을 완료한 날부터 간격이 시작됩니다.",
+        "summaryFromCompletion": "완료일부터"
     },
     "reminders": {
         "sectionTitle": "알림",

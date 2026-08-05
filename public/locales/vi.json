@@ -2235,7 +2235,10 @@
         "unitYears": "năm",
         "summaryUntil": "đến {{date}}",
         "summaryCount": "{{count}} lần",
-        "summaryCount_one": "{{count}} lần"
+        "summaryCount_one": "{{count}} lần",
+        "fromCompletionLabel": "Lặp lại từ ngày hoàn thành",
+        "fromCompletionHint": "Khoảng thời gian bắt đầu từ ngày bạn đánh dấu hoàn thành, không phải từ ngày đến hạn.",
+        "summaryFromCompletion": "từ ngày hoàn thành"
     },
     "reminders": {
         "sectionTitle": "Nhắc nhở",

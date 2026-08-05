@@ -340,7 +340,9 @@ test('die Aufgaben-Detailansicht führt die Leseinformationen der Karte', async 
     'tasks.subtasksLabel', 'tasks.documentsLabel', 'tasks.descriptionLabel']) {
     assert.match(fn, new RegExp(key.replace('.', '\\.')), `${key} fehlt in der Detailansicht`);
   }
-  assert.match(fn, /recurrenceRow\(task\.recurrence_rule\)/, 'Wiederholung über die geteilte Zeile');
+  // Der Anker ab Erledigung reist als zweites Argument mit (#658), die Zeile
+  // bleibt aber die geteilte - deshalb offen bis zur Klammer statt exakt.
+  assert.match(fn, /recurrenceRow\(task\.recurrence_rule[),]/, 'Wiederholung über die geteilte Zeile');
   assert.match(fn, /visibilityRow\(task\.visibility\)/, 'Sichtbarkeit über die geteilte Zeile');
   assert.match(fn, /assignedRow\(task\.assigned_users/, 'Zugewiesene über die geteilte Zeile');
 });
@@ -353,7 +355,7 @@ test('die geteilten Zeilen tragen Icon und Beschriftung', async () => {
   const repeat = rrule.slice(rrule.indexOf('export function recurrenceRow'));
   assert.match(repeat, /icon: 'repeat'/, 'Wiederholungs-Icon');
   assert.match(repeat, /rrule\.labelRepeat/, 'Beschriftung der Wiederholungszeile');
-  assert.match(repeat, /describeRRule\(rule\)/, 'Klartext aus describeRRule');
+  assert.match(repeat, /describeRRule\(rule[),]/, 'Klartext aus describeRRule');
 
   const detail = await detailJs();
   const assigned = detail.slice(detail.indexOf('export function assignedRow'));

@@ -8,13 +8,14 @@ import { createLogger } from '../logger.js';
 import express from 'express';
 import * as db from '../db.js';
 import { documentVisibleSql } from '../services/document-access.js';
-import { nextOccurrenceAfter } from '../services/recurrence.js';
+import { nextDueAfterCompletion } from '../services/recurrence.js';
 import { syncTaskRewards } from '../services/rewards.js';
 import { normalizeVisibility, visibilityWhere } from '../services/visibility.js';
 import {
   flushOutbound, markTodoOutbound, queueTodoDeletion,
 } from '../services/caldav-todo-outbound.js';
 import { uniqueKey } from '../utils/category-slug.js';
+import { serverTimeZone, utcToWall } from '../utils/timezone.js';
 import {
   allTags, applyTagChanges, loadTags, loadTagsFor, normalizeTags,
   removeTagEverywhere, renameTag, setTags, tagKey, tagsKey, taskIdsWithTag,
@@ -59,6 +60,22 @@ function validTaskCategoryKeys() {
 /** Anzahl Aufgaben, die eine Kategorie referenzieren (Guard vor dem Löschen). */
 function taskCategoryInUseCount(key) {
   return db.get().prepare('SELECT COUNT(*) AS n FROM tasks WHERE category = ?').get(key).n;
+}
+
+/**
+ * Der heutige Tag in der Zone des Haushalts (YYYY-MM-DD).
+ *
+ * Wichtig für die Serienrechnung (#658): "an dem Tag, an dem ich sie erledigt
+ * habe" ist eine Wanduhr-Aussage. Wer um 00:30 in Berlin abhakt, hat es am
+ * neuen Tag getan, auch wenn in UTC noch der Vortag läuft - eine wöchentliche
+ * Aufgabe wäre sonst sechs statt sieben Tage später fällig. Dieselbe Zone
+ * begrenzt auch das Aufholen der fälligkeitsverankerten Serien, damit die
+ * Folgeinstanz nicht in einem Zeitzonen-Saum als überfällig entsteht;
+ * `due_date` ist ohnehin ein reiner Wanduhr-Wert (siehe utils/timezone.js).
+ */
+function todayInHouseholdZone() {
+  return utcToWall(new Date().toISOString(), serverTimeZone())?.date
+    ?? new Date().toISOString().slice(0, 10);
 }
 
 /** Punktewert einer Aufgabe auf eine nichtnegative Ganzzahl normalisieren. */
@@ -607,6 +624,7 @@ router.post('/', (req, res) => {
       parent_task_id  = null,
       is_recurring    = 0,
       recurrence_rule = null,
+      recurrence_from_completion = 0,
     } = req.body;
     // Ohne expliziten Wert greift der Haushalt-Standard (#578) — aber nur für
     // Hauptaufgaben: Subtasks sind Checklisten-Punkte der Elternaufgabe und
@@ -632,12 +650,13 @@ router.post('/', (req, res) => {
       const result = db.get().prepare(`
         INSERT INTO tasks
           (title, description, category, priority, start_date, due_date, due_time,
-           assigned_to, created_by, parent_task_id, is_recurring, recurrence_rule, points, visibility)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           assigned_to, created_by, parent_task_id, is_recurring, recurrence_rule,
+           recurrence_from_completion, points, visibility)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         title.trim(), description, category, priority,
         start_date, due_date, due_time, firstUid, req.authUserId || req.session.userId, parent_task_id,
-        is_recurring ? 1 : 0, recurrence_rule, points, visibility
+        is_recurring ? 1 : 0, recurrence_rule, recurrence_from_completion ? 1 : 0, points, visibility
       );
       setAssignments(db.get(), result.lastInsertRowid, userIds);
       if (req.body.tags !== undefined) setTags(db.get(), result.lastInsertRowid, req.body.tags);
@@ -687,6 +706,7 @@ router.put('/:id', (req, res) => {
       due_time        = task.due_time,
       is_recurring    = task.is_recurring,
       recurrence_rule = task.recurrence_rule,
+      recurrence_from_completion = task.recurrence_from_completion,
     } = req.body;
     const points = req.body.points !== undefined ? clampPoints(req.body.points) : task.points;
     const visibility = req.body.visibility !== undefined
@@ -714,11 +734,13 @@ router.put('/:id', (req, res) => {
         UPDATE tasks SET
           title = ?, description = ?, category = ?, priority = ?,
           status = ?, start_date = ?, due_date = ?, due_time = ?, assigned_to = ?,
-          is_recurring = ?, recurrence_rule = ?, points = ?, visibility = ?
+          is_recurring = ?, recurrence_rule = ?, recurrence_from_completion = ?,
+          points = ?, visibility = ?
         WHERE id = ?
       `).run(title.trim(), description, category, priority,
              status, start_date, due_date, due_time, firstUid,
-             is_recurring ? 1 : 0, recurrence_rule, points, visibility, req.params.id);
+             is_recurring ? 1 : 0, recurrence_rule, recurrence_from_completion ? 1 : 0,
+             points, visibility, req.params.id);
       setAssignments(db.get(), task.id, userIds);
       if (req.body.tags !== undefined) setTags(db.get(), task.id, req.body.tags);
       syncHousekeepingPaymentStatus(db.get(), req.params.id, status);
@@ -838,11 +860,16 @@ function spawnRecurrenceFollowup(task) {
   // Höchstens eine Folgeinstanz je Erledigung - sonst legt doppeltes Abhaken nach.
   if (recurrenceFollowupOf(task.id)) return;
 
-  // Überfällige Serien aufholen: nächste Instanz liegt immer in der Zukunft,
-  // statt blind altes Fälligkeitsdatum + Intervall (das selbst überfällig sein kann).
-  // Schwelle "heute" in UTC, konsistent zur Listen-Filterung mit SQL date('now').
-  const today = new Date().toISOString().slice(0, 10);
-  const nextDate = nextOccurrenceAfter(task.due_date, task.recurrence_rule, today);
+  // Zwei Verankerungen, die Aufgabe entscheidet (#658): ab Fälligkeit
+  // (Vorgabe, holt übersprungene Vorkommen auf, damit die nächste Instanz
+  // nicht selbst überfällig entsteht) oder ab dem Tag des Abhakens.
+  const completedOn = todayInHouseholdZone();
+  const nextDate = nextDueAfterCompletion({
+    anchorDate: task.due_date,
+    rule: task.recurrence_rule,
+    completedOn,
+    fromCompletion: !!task.recurrence_from_completion,
+  });
   if (!nextDate) return;
 
   const existingAssignments = db.get()
@@ -857,13 +884,17 @@ function spawnRecurrenceFollowup(task) {
     const newTask = db.get().prepare(`
       INSERT INTO tasks (title, description, category, priority, status,
         start_date, due_date, due_time, assigned_to, created_by, is_recurring, recurrence_rule,
-        points, visibility, recurrence_origin_id)
-      VALUES (?, ?, ?, ?, 'open', ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)
+        points, visibility, recurrence_from_completion, recurrence_origin_id)
+      VALUES (?, ?, ?, ?, 'open', ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?)
     `).run(
       task.title, task.description, task.category, task.priority,
       shiftedStartDate(task.start_date, task.due_date, nextDate),
       nextDate, task.due_time, task.assigned_to, task.created_by,
       task.recurrence_rule, task.points, task.visibility,
+      // Ohne das Mitnehmen fiele die Serie ab der zweiten Instanz auf die
+      // Fälligkeitsrechnung zurück - lautlos, weil die Folgeinstanz sonst
+      // vollständig aussieht (wie bei den Tags oben).
+      task.recurrence_from_completion ? 1 : 0,
       task.id
     );
     setAssignments(db.get(), newTask.lastInsertRowid, existingAssignments);

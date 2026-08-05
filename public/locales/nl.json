@@ -2235,7 +2235,10 @@
         "unitYears": "jaar",
         "summaryUntil": "tot {{date}}",
         "summaryCount": "{{count}} herhalingen",
-        "summaryCount_one": "{{count}} herhaling"
+        "summaryCount_one": "{{count}} herhaling",
+        "fromCompletionLabel": "Herhalen vanaf voltooiing",
+        "fromCompletionHint": "Het interval begint op de dag dat je de taak afvinkt, niet op de vervaldatum.",
+        "summaryFromCompletion": "vanaf voltooiing"
     },
     "reminders": {
         "sectionTitle": "Herinnering",
