@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.80.1] - 2026-08-05
+
 ### Fixed
 
 - Ticking a recurring task off through the edit dialog ended the series. Only the checkbox on the task card created the next instance; saving the form with the status set to "Done" completed the task and left nothing behind, so a weekly task finished that way simply stopped coming back, with nothing to show that it had. Both ways of ticking off now write the series forward, including the repeat anchor released in v1.80.0, and if the rule or due date is changed in the same save, the next instance already follows the new one. Taking the tick back has removed the follow-up on either path since v1.75.2; this is the other half of it (#650)
