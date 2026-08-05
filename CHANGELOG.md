@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The Portainer stack now keeps third-party modules. The image creates `/data`, `/backups` and `/app/modules`, but the Portainer compose mounted only the first two, so anything dropped into the modules folder lived in the container layer and was gone with the next image pull. It has its own named volume now, like the other two.
+
 ## [1.82.0] - 2026-08-05
 
 ### Added
