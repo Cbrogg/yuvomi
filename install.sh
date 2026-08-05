@@ -664,7 +664,7 @@ main() {
   set -- ${positional[@]+"${positional[@]}"}
 
   printf "\n%s%s  ╔══════════════════════════════╗\n" "$BOLD" "$BLUE"
-  printf "  ║      Yuvomi  Installer        ║\n"
+  printf "  ║       Yuvomi Installer       ║\n"
   printf "  ╚══════════════════════════════╝%s\n\n" "$RESET"
 
   if [ "${1:-}" = "--env-file" ]; then

@@ -835,6 +835,19 @@ Then restart the container so the new values take effect:
 docker compose up -d
 ```
 
+### Alternative: Caddy
+
+If you prefer Caddy, certificates are obtained and renewed automatically — the whole
+reverse proxy is two lines in a `Caddyfile`:
+
+```
+yuvomi.example.com {
+    reverse_proxy 127.0.0.1:3000
+}
+```
+
+Set `SESSION_SECURE=true` and `TRUST_PROXY=1` in `.env` as above, then reload Caddy.
+
 ---
 
 ## Podman & systemd Autostart (rootless)
@@ -1062,7 +1075,7 @@ podman compose -f podman-compose.yml up -d
 To relabel existing host folders manually:
 
 ```bash
-chcon -Rt container_file_t ./data ./backups ./modules
+chcon -Rt container_file_t ./data ./backups ./modules ./documents
 ```
 
 </details>

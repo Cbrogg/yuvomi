@@ -32,7 +32,7 @@ COPY --from=build /app/node_modules ./node_modules
 COPY . .
 
 # Daten-Volume-Verzeichnisse anlegen (Permissions werden zur Laufzeit gesetzt)
-RUN mkdir -p /data /backups /app/modules
+RUN mkdir -p /data /backups /app/modules /documents
 
 # Container-Default für das Backup-Ziel. Ohne diesen ENV fällt die App auf ihren
 # Bare-Metal-Default './backups' (= /app/backups) zurück - dort hat der node-User

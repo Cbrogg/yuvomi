@@ -14,7 +14,7 @@
 #   DB_ENCRYPTION_KEY=<random-string-min-32-chars>
 #
 # Generate secrets:
-#   openssl rand -base64 32
+#   openssl rand -hex 32
 #
 # Strongly recommended:
 #   BASE_URL=https://yuvomi.example.com   # without it, password reset mails

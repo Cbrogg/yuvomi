@@ -13,7 +13,7 @@ Include:
 - Potential impact
 - Suggested fix (if you have one)
 
-You should receive an acknowledgment within 48 hours. Fixes for confirmed vulnerabilities will be released as soon as possible.
+You should typically receive an acknowledgment within a few days (this is a solo-maintained project). Fixes for confirmed vulnerabilities will be released as soon as possible.
 
 ## Scope
 

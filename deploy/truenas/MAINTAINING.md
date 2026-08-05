@@ -47,10 +47,10 @@ hängen am deprecateten `oikos`-Eintrag und werden davon nicht berührt.
 
 TrueNAS zieht neue Versionen mit einem eigenen Bot und hat ausdrücklich darum
 gebeten, **dafür keine Pull Requests zu öffnen**. Das gilt auch dann, wenn der
-Katalog sichtbar hinterherhängt - Stand 2026-08-05 steht dort `app_version 1.45.1`
-bei App-Version 1.81.0, und
+Katalog sichtbar hinterherhängt - zeitweise lag dort eine `app_version` viele
+Minor-Versionen hinter dem aktuellen Release, und ein Bot-PR wie
 [truenas/apps#5494](https://github.com/truenas/apps/pull/5494) („yuvomi: update to
-1.71.0") liegt seit 2026-08-02 mergebar herum. Beides ist deren Warteschlange,
+1.71.0") kann tagelang mergebar herumliegen. Beides ist deren Warteschlange,
 nicht unser Rückstand.
 
 Der Rückstand ist damit kein Handlungsauftrag, sondern höchstens ein Grund
