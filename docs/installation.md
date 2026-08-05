@@ -26,7 +26,7 @@ Running it again on an existing installation is safe, in two ways:
 - **Security keys are never regenerated.** `SESSION_SECRET` and `DB_ENCRYPTION_KEY` already present in your `.env` are kept, so the database stays readable. Remove a key from `.env` if you deliberately want a new one.
 - **Settings the script does not ask about are carried over.** Anything you added by hand or through the web installer — `EMAIL_SMTP_*`, `OIDC_*`, `WEBDAV_BACKUP_*`, `VAPID_SUBJECT`, `LOG_LEVEL` and the rest — is copied from the previous `.env` into the new one, and the script reports how many entries it kept. Only the values the dialog itself asks about are replaced by your answers. The previous file is still backed up to `.env.bak-<timestamp>` first.
 
-> **Base URL.** The script asks for the absolute origin your household will open (default `http://<host>:<port>`) and writes it as `BASE_URL`. Behind a reverse proxy, enter the public address there — for example `https://yuvomi.example.com`. Without it the server sends no password-reset emails at all, because it deliberately does not trust the request's `Host` header.
+> **Base URL.** The script asks for the absolute origin your household will open (default `http://<host>:<port>`) and writes it as `BASE_URL`. Behind a reverse proxy, enter the public address there — for example `https://yuvomi.example.com`. Without it the server sends no password-reset or invitation emails at all, because it deliberately does not trust the request's `Host` header.
 
 Force a specific language with `--lang` (one of `de en es fr it sv el ru tr zh ja ar hi pt uk pl nl cs vi hu ko id fa fil`):
 
@@ -274,9 +274,9 @@ docker compose logs -f
 You should see output like:
 
 ```
-yuvomi  | [Yuvomi] Server läuft auf Port 3000
-yuvomi  | [Yuvomi] Umgebung: production
-yuvomi  | [Sync] Auto-Sync alle 15 Minuten aktiv.
+yuvomi  | [Yuvomi] Server running on port 3000 | Version 1.84.0
+yuvomi  | [Yuvomi] Environment: production
+yuvomi  | [Sync] Auto-sync active every 15 minutes.
 ```
 
 Press `Ctrl+C` to stop following the logs (the container keeps running).
@@ -393,7 +393,7 @@ All configuration happens in the `.env` file. The container reads these values o
 | `TZ` | Container timezone (e.g. `Europe/Berlin`). Affects timestamps, the automated-backup schedule, and serves as the household zone wherever a time carries none of its own: events pushed to Google Calendar when the target calendar reports no zone, and the due times of CalDAV reminders synced into Tasks. | `UTC` | No |
 | `NODE_ENV` | Runtime environment | `production` | No |
 | `LOG_LEVEL` | Lowest severity written to the container log (`debug`, `info`, `warn`, `error`). Set to `debug` to see the per-run detail of the calendar, contact and holiday sync, which stays quiet at `info` when a run has nothing to do. | `info` | No |
-| `TRUST_PROXY` | Number of reverse-proxy hops to trust, or a subnet string (e.g. `1`, `172.16.0.0/12`, `loopback`). Set to `1` when running behind a single Traefik/Nginx hop so `req.ip` returns the real client IP. Numeric values are treated as a hop count; subnet strings and named values (`loopback`, `linklocal`, `uniquelocal`) work as expected. | `false` | No |
+| `TRUST_PROXY` | Number of reverse-proxy hops to trust, or a subnet string (e.g. `1`, `172.16.0.0/12`, `loopback`). The default already trusts a single hop, so `req.ip` returns the real client IP behind one Caddy/Nginx/Traefik proxy without any configuration. Set to `loopback` for direct, proxy-less deployments, or to a subnet/higher hop count behind multiple proxy layers. Numeric values are treated as a hop count; named values (`loopback`, `linklocal`, `uniquelocal`) work as expected. | `1` | No |
 
 ### Security
 
@@ -403,7 +403,6 @@ All configuration happens in the `.env` file. The container reads these values o
 | `SESSION_SECURE` | Set to `true` when running behind an HTTPS reverse proxy (Caddy, Nginx, Traefik). Leave unset for direct HTTP access (e.g. TrueNAS, bare Docker). | `false` | No |
 | `RATE_LIMIT_WINDOW_MS` | Time window for rate limiting (ms) | `60000` | No |
 | `RATE_LIMIT_MAX_ATTEMPTS` | Max login attempts per window | `5` | No |
-| `RATE_LIMIT_BLOCK_DURATION_MS` | Block duration after exceeding limit (ms) | `900000` | No |
 | `ENABLE_API_DOCS` | API documentation (`/docs`, `/openapi.json`) is admin-only and hidden entirely in production. Set to `true` to expose it to signed-in admins in production too. | `false` (hidden) | No |
 | `MCP_INTERNAL_BASE_URL` | Base URL the built-in MCP endpoint (`/mcp`) uses when its `call_api_operation` bridge calls the REST API back over loopback. Only needed for non-standard bind addresses. | `BASE_URL` or `http://127.0.0.1:<PORT>` | No |
 
@@ -473,7 +472,9 @@ every start, and the test button re-registers and retries once before reporting 
 
 Configuring an outgoing SMTP server enables the self-service **"Forgot password"** flow on the
 login page. Without it, only an admin can reset another user's password. Can also be configured
-in Settings → Administration → Email (non-empty env values here override the database).
+in Settings → Administration → Email. Precedence is per field, like WebDAV document storage
+below: every non-empty environment value overrides only its corresponding database value and
+makes exactly that field read-only in the settings UI; empty values fall back to the database.
 
 | Variable | Description | Default | Required |
 |----------|-------------|---------|----------|
@@ -484,7 +485,7 @@ in Settings → Administration → Email (non-empty env values here override the
 | `EMAIL_SMTP_PASS` | SMTP auth password. | - | No |
 | `EMAIL_FROM_ADDRESS` | Sender email address. | - | No |
 | `EMAIL_FROM_NAME` | Sender display name. | `Yuvomi` | No |
-| `BASE_URL` | Absolute origin used to build password-reset links and calendar export-feed URLs, e.g. `https://yuvomi.example.com`. **Required for reset emails to be sent** — the request `Host` header is never trusted as a fallback, to prevent reset-link poisoning. The export feed falls back to the request's protocol/host when unset. | - | No* |
+| `BASE_URL` | Absolute origin used to build password-reset links, invitation links in emails, and calendar export-feed URLs, e.g. `https://yuvomi.example.com`. **Required for password-reset and invitation emails to be sent** — the request `Host` header is never trusted as a fallback, to prevent reset-link poisoning. The invite link shown in the admin UI works without it (it is built from the browser's origin); the export feed falls back to the request's protocol/host when unset. | - | No* |
 
 \* Not required to start Yuvomi. Without it (or without SMTP configured) the self-service reset
 cannot deliver a mail, so the login page hides the "Forgot password" link entirely rather than
@@ -631,7 +632,7 @@ The weather widget defaults to **Open-Meteo** — free, ECMWF-backed, and requir
 | `OPENWEATHER_API_KEY` | API key from [openweathermap.org](https://openweathermap.org/api) | - | No |
 | `OPENWEATHER_CITY` | City name for weather display | `Berlin` | No |
 | `OPENWEATHER_UNITS` | Unit system (`metric` or `imperial`) | `metric` | No |
-| `OPENWEATHER_LANG` | Language for weather descriptions | `de` | No |
+| `OPENWEATHER_LANG` | Language for weather descriptions | `en` | No |
 
 ### Calendar Subscriptions — ICS Feeds (Optional)
 
@@ -738,7 +739,7 @@ Built-in cron-based database backup (default: 2 AM daily, keep last 7 copies). S
 | `WEBDAV_BACKUP_URL` | WebDAV server URL (e.g. `https://cloud.example.com/remote.php/dav/files/user/`) | — | No |
 | `WEBDAV_BACKUP_USERNAME` | WebDAV username | — | No |
 | `WEBDAV_BACKUP_PASSWORD` | WebDAV password | — | No |
-| `WEBDAV_BACKUP_PATH` | Remote directory path for backup files | `/oikos/backups/` | No |
+| `WEBDAV_BACKUP_PATH` | Remote directory path for backup files | `/yuvomi/backups/` | No |
 | `WEBDAV_BACKUP_KEEP` | Number of remote backup files to keep | `7` | No |
 
 ---
@@ -823,7 +824,7 @@ ships a ready-made unit at `tools/quadlet/oikos.container`.
 
 ```bash
 # 1. Create the data folders and drop your generated .env in place
-mkdir -p ~/.local/share/oikos/{data,backups,modules} ~/.config/oikos
+mkdir -p ~/.local/share/oikos/{data,backups,modules,documents} ~/.config/oikos
 cp /path/to/oikos/.env ~/.config/oikos/.env
 
 # 2. Install the Quadlet unit
@@ -1073,11 +1074,14 @@ chcon -Rt container_file_t ./data ./backups ./modules
 
 If the logs show SQLCipher errors, the `DB_ENCRYPTION_KEY` in your `.env` file is either missing or does not match the key used when the database was created.
 
-If this is a fresh install, delete the volume and start over:
+If this is a fresh install, remove the database folder and start over. The compose file
+uses bind mounts, so `docker compose down -v` does **not** delete anything here — the
+encrypted database survives it and the error persists. Remove the host folder itself:
 
 ```bash
-docker compose down -v
-docker compose up -d --build
+docker compose down
+rm -rf ./data   # your DATA_DIR, if you changed it — this permanently deletes the database
+docker compose up -d
 ```
 
 If you have existing data, you need the original encryption key. There is no way to recover data without it.
@@ -1111,7 +1115,7 @@ This means Nginx cannot reach the Docker container. Check:
 
 3. Is the container listening on the expected port?
    ```bash
-   docker compose logs | grep "Server läuft"
+   docker compose logs | grep "Server running"
    ```
 
 </details>
@@ -1164,16 +1168,28 @@ appointments on task lists, which left the mirror empty against Radicale and Nex
 
 ## Uninstall
 
-Remove the container, volumes, and all data:
+Stop and remove the container:
 
 ```bash
-docker compose down -v
+docker compose down
 ```
 
-Remove the repository:
+The compose file uses bind mounts, so `docker compose down -v` does **not** delete your
+data — the folders stay on the host. To remove all data, delete them yourself:
+
+```bash
+rm -rf ./data ./backups ./modules ./documents
+```
+
+If you cloned the repository (Options A/C), those folders live inside it, so removing the
+repository removes everything at once. If you installed with only the downloaded compose
+file (Option B), the folders sit next to that file — the `rm` above is the step that
+actually deletes your data:
 
 ```bash
 cd .. && rm -rf yuvomi
 ```
 
-> **Warning**: `docker compose down -v` permanently deletes all data including the database. Create a backup first if needed.
+> **Warning**: Deleting these folders permanently removes all data including the database.
+> Create a backup first if needed. Only the Portainer stack uses named volumes; there
+> `docker compose down -v` (or deleting the stack incl. volumes) removes the data.

@@ -107,7 +107,6 @@ const INTENTIONALLY_NOT_IN_INSTALLER = {
   MCP_INTERNAL_BASE_URL: 'Betriebs-Feinjustage.',
   RATE_LIMIT_WINDOW_MS: 'Betriebs-Feinjustage.',
   RATE_LIMIT_MAX_ATTEMPTS: 'Betriebs-Feinjustage.',
-  RATE_LIMIT_BLOCK_DURATION_MS: 'Betriebs-Feinjustage. Nebenbefund: wird von keiner Codezeile gelesen (tote Doku-Variable).',
 };
 
 /** Alle in .env.example dokumentierten Variablennamen, auch die auskommentierten. */
