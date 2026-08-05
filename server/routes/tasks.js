@@ -723,6 +723,12 @@ router.put('/:id', (req, res) => {
     // Tags wirklich geändert haben (#586).
     const tagsBefore = loadTags(db.get(), task.id);
 
+    // Wie in PATCH umfasst die Transaktion auch die Serien-Bewegung: eine
+    // gespeicherte Aufgabe ohne die Folgeinstanz, die zu ihr gehört, wäre
+    // derselbe stille Serienabbruch, den dieser Weg gerade erst verloren hat.
+    let pending = false;
+    let undone  = 0;
+    let updated;
     db.get().transaction(() => {
       db.get().prepare(`
         UPDATE tasks SET
@@ -740,33 +746,43 @@ router.put('/:id', (req, res) => {
       syncHousekeepingPaymentStatus(db.get(), req.params.id, status);
       // Punkte erst nach setAssignments: die Zuständigen werden daraus abgeleitet.
       syncTaskRewards(db.get(), task.id, task.status, status, req.authUserId || req.session.userId);
+
+      // Auch über das Bearbeiten-Formular lässt sich ein Abhaken zurücknehmen -
+      // die Folgeinstanz muss dann genauso verschwinden wie beim Klick auf die
+      // Checkbox (#650).
+      if (task.status === 'done' && status !== 'done') {
+        undone = discardRecurrenceFollowup(task.id);
+      }
+
+      // Nur was die Schreibarbeit unten braucht, liegt in der Transaktion: die
+      // frische Zeile und ihre Tags (der Feldvergleich kennt tags_key). Das
+      // Ausschmücken für die Antwort wartet draußen, damit die Schreibsperre
+      // nicht über Lesearbeit gehalten wird.
+      updated = db.get().prepare(`
+        SELECT t.*, u.display_name AS assigned_name, u.avatar_color AS assigned_color,
+          u.avatar_data AS assigned_avatar, ${ASSIGNED_USERS_SQL}
+        FROM tasks t LEFT JOIN users u ON t.assigned_to = u.id
+        WHERE t.id = ?
+      `).get(req.params.id);
+      attachTags([updated]);
+
+      // Änderung an einer gespiegelten Aufgabe auf dem CalDAV-Server nachziehen (#617).
+      // Die Tags reisen als kanonischer Schlüssel mit, weil sie in einer eigenen
+      // Tabelle liegen und der Feldvergleich nur die Zeile selbst sieht (#586).
+      pending = markTodoOutbound(
+        'tasks',
+        { ...task,    tags_key: tagsKey(tagsBefore) },
+        { ...updated, tags_key: tagsKey(updated.tags) },
+      );
+
+      // Das Status-Dropdown im Bearbeiten-Formular hakt genauso ab wie die Checkbox -
+      // also muss es die Serie genauso weiterschreiben. Grundlage ist die frisch
+      // gelesene Zeile, damit im selben Zug geänderte Regel/Fälligkeit schon zählen.
+      if (status === 'done' && task.status !== 'done') spawnRecurrenceFollowup(updated);
     })();
 
-    // Auch über das Bearbeiten-Formular lässt sich ein Abhaken zurücknehmen -
-    // die Folgeinstanz muss dann genauso verschwinden wie beim Klick auf die
-    // Checkbox (#650).
-    const undone = task.status === 'done' && status !== 'done'
-      ? discardRecurrenceFollowup(task.id)
-      : 0;
-
-    const updated = db.get().prepare(`
-      SELECT t.*, u.display_name AS assigned_name, u.avatar_color AS assigned_color,
-        u.avatar_data AS assigned_avatar, ${ASSIGNED_USERS_SQL}
-      FROM tasks t LEFT JOIN users u ON t.assigned_to = u.id
-      WHERE t.id = ?
-    `).get(req.params.id);
     addAssignedUsers(updated);
     updated.subtasks = loadSubtasks(updated.id, req.authUserId || req.session.userId);
-    attachTags([updated]);
-
-    // Änderung an einer gespiegelten Aufgabe auf dem CalDAV-Server nachziehen (#617).
-    // Die Tags reisen als kanonischer Schlüssel mit, weil sie in einer eigenen
-    // Tabelle liegen und der Feldvergleich nur die Zeile selbst sieht (#586).
-    const pending = markTodoOutbound(
-      'tasks',
-      { ...task,    tags_key: tagsKey(tagsBefore) },
-      { ...updated, tags_key: tagsKey(updated.tags) },
-    );
 
     res.json({ data: updated });
 
@@ -811,6 +827,85 @@ function discardRecurrenceFollowup(taskId) {
   return queued;
 }
 
+/**
+ * Der Vorlauf gehört zum Durchlauf, nicht zum Kalender: beginnt eine Aufgabe
+ * drei Tage vor ihrer Fälligkeit, tut sie das auch beim nächsten Mal.
+ *
+ * Ohne Start- oder Fälligkeitsdatum gibt es nichts zu verschieben (NULL). Der
+ * zweite Fall ist erreichbar: eine erledigungsverankerte Serie (#658) läuft
+ * auch ohne Fälligkeitsdatum weiter, und dann fehlt der Bezugspunkt, an dem ein
+ * Vorlauf gemessen wäre.
+ */
+function shiftedStartDate(startDate, dueDate, nextDue) {
+  if (!startDate || !dueDate) return null;
+  const lead = Date.parse(`${dueDate}T00:00:00Z`) - Date.parse(`${startDate}T00:00:00Z`);
+  if (!Number.isFinite(lead)) return null;
+  return new Date(Date.parse(`${nextDue}T00:00:00Z`) - lead).toISOString().slice(0, 10);
+}
+
+/**
+ * Schreibt die Serie weiter: nächste Instanz anlegen, wenn eine wiederkehrende
+ * Aufgabe erledigt wurde. Erwartet die bereits auf 'done' gesetzte Zeile.
+ *
+ * Beide Wege zum Haken müssen hier durch - die Checkbox (PATCH /:id/status) und
+ * das Status-Dropdown im Bearbeiten-Dialog (PUT /:id). Lag der Spawn nur im
+ * einen, beendete der andere die Serie lautlos.
+ *
+ * Ohne Rückgabewert, anders als discardRecurrenceFollowup: die Folgeinstanz
+ * entsteht ohne external_uid/external_source, markTodoOutbound lässt sie
+ * deshalb liegen. Es gibt nichts zu pushen.
+ *
+ * Beide Aufrufer halten bereits eine Transaktion, die eigene läuft darin als
+ * Savepoint. Sie bleibt trotzdem stehen: sie hält Aufgabe, Zuweisungen und Tags
+ * auch dann zusammen, wenn später jemand von außerhalb einer Transaktion ruft.
+ */
+function spawnRecurrenceFollowup(task) {
+  if (!task?.is_recurring || !task.recurrence_rule || task.parent_task_id) return;
+  // Höchstens eine Folgeinstanz je Erledigung - sonst legt doppeltes Abhaken nach.
+  if (recurrenceFollowupOf(task.id)) return;
+
+  // Zwei Verankerungen, die Aufgabe entscheidet (#658): ab Fälligkeit
+  // (Vorgabe, holt übersprungene Vorkommen auf, damit die nächste Instanz
+  // nicht selbst überfällig entsteht) oder ab dem Tag des Abhakens.
+  const completedOn = todayInHouseholdZone();
+  const nextDate = nextDueAfterCompletion({
+    anchorDate: task.due_date,
+    rule: task.recurrence_rule,
+    completedOn,
+    fromCompletion: !!task.recurrence_from_completion,
+  });
+  if (!nextDate) return;
+
+  const existingAssignments = db.get()
+    .prepare('SELECT user_id FROM task_assignments WHERE task_id = ?')
+    .all(task.id).map((r) => r.user_id);
+  // Die Tags gehören zur Aufgabe, nicht zum einzelnen Durchlauf (#586).
+  // Ohne das Mitnehmen verlöre eine wöchentliche Aufgabe ihre Etiketten
+  // beim ersten Abhaken - und zwar lautlos, weil die Folgeinstanz sonst
+  // vollständig aussieht.
+  const existingTags = loadTags(db.get(), task.id);
+  db.get().transaction(() => {
+    const newTask = db.get().prepare(`
+      INSERT INTO tasks (title, description, category, priority, status,
+        start_date, due_date, due_time, assigned_to, created_by, is_recurring, recurrence_rule,
+        points, visibility, recurrence_from_completion, recurrence_origin_id)
+      VALUES (?, ?, ?, ?, 'open', ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?)
+    `).run(
+      task.title, task.description, task.category, task.priority,
+      shiftedStartDate(task.start_date, task.due_date, nextDate),
+      nextDate, task.due_time, task.assigned_to, task.created_by,
+      task.recurrence_rule, task.points, task.visibility,
+      // Ohne das Mitnehmen fiele die Serie ab der zweiten Instanz auf die
+      // Fälligkeitsrechnung zurück - lautlos, weil die Folgeinstanz sonst
+      // vollständig aussieht (wie bei den Tags oben).
+      task.recurrence_from_completion ? 1 : 0,
+      task.id
+    );
+    setAssignments(db.get(), newTask.lastInsertRowid, existingAssignments);
+    setTags(db.get(), newTask.lastInsertRowid, existingTags);
+  })();
+}
+
 // --------------------------------------------------------
 // PATCH /api/v1/tasks/:id/status
 // Status einer Aufgabe schnell wechseln (z.B. Swipe-Geste / Checkbox).
@@ -829,67 +924,34 @@ router.patch('/:id/status', (req, res) => {
     if (!prev)
       return res.status(404).json({ error: 'Task not found.', code: 404 });
 
-    db.get().prepare('UPDATE tasks SET status = ? WHERE id = ?').run(status, req.params.id);
-    const pending = markTodoOutbound('tasks', prev, { ...prev, status });
+    // Statuswechsel und die Serien-Bewegung, die daraus folgt, sind eine Einheit:
+    // scheitert das Nachlegen oder das Zurücknehmen der Folgeinstanz, darf die
+    // Aufgabe nicht trotzdem umgeschaltet zurückbleiben. Sonst endete die Serie
+    // still (kein Nachfolger) oder stünde doppelt da - genau die beiden Fehler,
+    // gegen die dieser Block gebaut ist. Der Outbound-Marker gehört mit hinein:
+    // ohne Statuswechsel gibt es auch nichts zu pushen.
+    let pending = false;
+    let undone  = 0;
+    db.get().transaction(() => {
+      db.get().prepare('UPDATE tasks SET status = ? WHERE id = ?').run(status, req.params.id);
+      pending = markTodoOutbound('tasks', prev, { ...prev, status });
 
-    syncHousekeepingPaymentStatus(db.get(), req.params.id, status);
-    // Punkte-Gutschrift/Storno an den Aufgaben-Statuswechsel koppeln.
-    syncTaskRewards(db.get(), Number(req.params.id), prev.status, status, req.authUserId || req.session.userId);
+      syncHousekeepingPaymentStatus(db.get(), req.params.id, status);
+      // Punkte-Gutschrift/Storno an den Aufgaben-Statuswechsel koppeln.
+      syncTaskRewards(db.get(), Number(req.params.id), prev.status, status, req.authUserId || req.session.userId);
 
-    // Zurückgenommenes Abhaken macht auch die Folgeinstanz rückgängig (#650).
-    // Sonst stünde die beim Erledigen erzeugte nächste Instanz neben der wieder
-    // geöffneten Aufgabe - die Serie sähe doppelt aus.
-    let undone = 0;
-    if (prev.status === 'done' && status !== 'done') {
-      undone = discardRecurrenceFollowup(Number(req.params.id));
-    }
-
-    // Wiederkehrende Aufgabe: nächste Instanz erstellen wenn erledigt
-    if (status === 'done' && prev.status !== 'done') {
-      const task = db.get().prepare('SELECT * FROM tasks WHERE id = ?').get(req.params.id);
-      if (task?.is_recurring && task.recurrence_rule && !task.parent_task_id
-          && !recurrenceFollowupOf(task.id)) {
-        // Zwei Verankerungen, die Aufgabe entscheidet (#658): ab Fälligkeit
-        // (Vorgabe, holt übersprungene Vorkommen auf, damit die nächste Instanz
-        // nicht selbst überfällig entsteht) oder ab dem Tag des Abhakens.
-        const completedOn = todayInHouseholdZone();
-        const nextDate = nextDueAfterCompletion({
-          anchorDate: task.due_date,
-          rule: task.recurrence_rule,
-          completedOn,
-          fromCompletion: !!task.recurrence_from_completion,
-        });
-        if (nextDate) {
-          const existingAssignments = db.get()
-            .prepare('SELECT user_id FROM task_assignments WHERE task_id = ?')
-            .all(task.id).map((r) => r.user_id);
-          // Die Tags gehören zur Aufgabe, nicht zum einzelnen Durchlauf (#586).
-          // Ohne das Mitnehmen verlöre eine wöchentliche Aufgabe ihre Etiketten
-          // beim ersten Abhaken - und zwar lautlos, weil die Folgeinstanz sonst
-          // vollständig aussieht.
-          const existingTags = loadTags(db.get(), task.id);
-          db.get().transaction(() => {
-            const newTask = db.get().prepare(`
-              INSERT INTO tasks (title, description, category, priority, status,
-                due_date, due_time, assigned_to, created_by, is_recurring, recurrence_rule, points, visibility,
-                recurrence_from_completion, recurrence_origin_id)
-              VALUES (?, ?, ?, ?, 'open', ?, ?, ?, ?, 1, ?, ?, ?, ?, ?)
-            `).run(
-              task.title, task.description, task.category, task.priority,
-              nextDate, task.due_time, task.assigned_to, task.created_by,
-              task.recurrence_rule, task.points, task.visibility,
-              // Ohne das Mitnehmen fiele die Serie ab der zweiten Instanz auf die
-              // Fälligkeitsrechnung zurück - lautlos, weil die Folgeinstanz sonst
-              // vollständig aussieht (wie bei den Tags oben).
-              task.recurrence_from_completion ? 1 : 0,
-              task.id
-            );
-            setAssignments(db.get(), newTask.lastInsertRowid, existingAssignments);
-            setTags(db.get(), newTask.lastInsertRowid, existingTags);
-          })();
-        }
+      // Zurückgenommenes Abhaken macht auch die Folgeinstanz rückgängig (#650).
+      // Sonst stünde die beim Erledigen erzeugte nächste Instanz neben der wieder
+      // geöffneten Aufgabe - die Serie sähe doppelt aus.
+      if (prev.status === 'done' && status !== 'done') {
+        undone = discardRecurrenceFollowup(Number(req.params.id));
       }
-    }
+
+      // Wiederkehrende Aufgabe: nächste Instanz erstellen wenn erledigt
+      if (status === 'done' && prev.status !== 'done') {
+        spawnRecurrenceFollowup(db.get().prepare('SELECT * FROM tasks WHERE id = ?').get(req.params.id));
+      }
+    })();
 
     res.json({ data: { id: Number(req.params.id), status } });
 
