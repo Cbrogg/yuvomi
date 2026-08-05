@@ -38,6 +38,10 @@ services:
       # Scheduled and manual backups. Without this volume the files would only
       # live inside the container layer and vanish on the next image update.
       - oikos_backups:/backups
+      # Drop-in folder for additional Yuvomi modules. The image creates
+      # /app/modules, so without this volume anything dropped in there lives in
+      # the container layer and is gone on the next image update.
+      - oikos_modules:/app/modules
       # Optional: mount a host folder for storing uploaded documents locally.
       # Both ends come from the .env so the host folder and the path the app
       # writes to cannot drift apart.
@@ -153,4 +157,6 @@ volumes:
   oikos_data:
     driver: local
   oikos_backups:
+    driver: local
+  oikos_modules:
     driver: local
