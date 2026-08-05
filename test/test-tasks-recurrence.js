@@ -3,8 +3,9 @@
  * Zweck: Aufholen übersprungener wiederkehrender Aufgaben (Discussion #405) und
  *        die Wahl des Ankers: ab Fälligkeit oder ab Erledigungstag (#658).
  *        Unit: nextOccurrenceAfter, nextDueAfterCompletion. Integration:
- *        PATCH /:id/status erzeugt genau eine Folgeinstanz, deren Fälligkeit am
- *        gewählten Anker hängt.
+ *        PATCH /:id/status und PUT /:id erzeugen beim Erledigen genau eine
+ *        Folgeinstanz, deren Fälligkeit am gewählten Anker hängt - und nehmen
+ *        sie beim Zurücknehmen wieder weg.
  * Ausführen: node --test test/test-tasks-recurrence.js
  */
 import assert from 'node:assert/strict';
@@ -312,6 +313,175 @@ test('PUT: Statuswechsel weg von done entfernt die Folgeinstanz ebenfalls', asyn
   assert.equal(db.prepare('SELECT status FROM tasks WHERE id = ?').get(id).status, 'done');
 });
 
+test('PUT done: Abhaken im Bearbeiten-Dialog erzeugt die Folgeinstanz genauso', async () => {
+  const id = insertTask({
+    title: 'Fenster putzen', category: 'Haushalt', priority: 'medium', status: 'open',
+    due_date: dayKey(-21), created_by: uid, is_recurring: 1, recurrence_rule: 'FREQ=WEEKLY',
+  });
+  db.prepare('INSERT INTO task_assignments (task_id, user_id) VALUES (?, ?)').run(id, uid);
+
+  const res = await call('PUT', `/${id}`, { title: 'Fenster putzen', status: 'done' });
+  assert.equal(res.status, 200);
+
+  const open = openInstances('Fenster putzen');
+  assert.equal(open.length, 1, 'Das Status-Dropdown muss die Serie weiterschreiben');
+  assert.ok(open[0].due_date >= todayKey(), 'Folgeinstanz muss in der Zukunft fällig sein');
+  assert.equal(open[0].is_recurring, 1);
+  assert.equal(open[0].recurrence_origin_id, id);
+  const assignees = db.prepare('SELECT user_id FROM task_assignments WHERE task_id = ?').all(open[0].id);
+  assert.deepEqual(assignees.map((a) => a.user_id), [uid]);
+});
+
+test('PUT done: erneutes Speichern ohne Statuswechsel erzeugt keine zweite Folgeinstanz', async () => {
+  const id = insertTask({
+    title: 'Handtücher wechseln', status: 'open', due_date: dayKey(0), created_by: uid,
+    is_recurring: 1, recurrence_rule: 'FREQ=DAILY',
+  });
+  await call('PUT', `/${id}`, { title: 'Handtücher wechseln', status: 'done' });
+  await call('PUT', `/${id}`, { title: 'Handtücher wechseln', status: 'done' });
+  assert.equal(openInstances('Handtücher wechseln').length, 1);
+});
+
+test('PUT: Zurücknehmen entfernt die per PUT erzeugte Folgeinstanz wieder', async () => {
+  const id = insertTask({
+    title: 'Bettwäsche', status: 'open', due_date: dayKey(0), created_by: uid,
+    is_recurring: 1, recurrence_rule: 'FREQ=DAILY',
+  });
+  await call('PUT', `/${id}`, { title: 'Bettwäsche', status: 'done' });
+  assert.equal(openInstances('Bettwäsche').length, 1);
+
+  await call('PUT', `/${id}`, { title: 'Bettwäsche', status: 'open' });
+  const open = openInstances('Bettwäsche');
+  assert.equal(open.length, 1, 'Nach dem Zurücknehmen bleibt nur die wieder geöffnete Aufgabe');
+  assert.equal(open[0].id, id);
+});
+
+test('PUT done: im selben Speichern geänderte Regel gilt schon für die Folgeinstanz', async () => {
+  // Der Aufruf übergibt bewusst die frisch gelesene Zeile, nicht den Stand von
+  // vorher. Wer im Bearbeiten-Dialog die Wiederholung umstellt und gleich abhakt,
+  // bekommt sonst die nächste Instanz nach der alten Regel.
+  const id = insertTask({
+    title: 'Filter wechseln', status: 'open', due_date: dayKey(-1), created_by: uid,
+    is_recurring: 1, recurrence_rule: 'FREQ=WEEKLY',
+  });
+  const newDue = dayKey(-1);
+  await call('PUT', `/${id}`, {
+    title: 'Filter wechseln', status: 'done',
+    recurrence_rule: 'FREQ=MONTHLY', due_date: newDue,
+  });
+
+  const open = openInstances('Filter wechseln');
+  assert.equal(open.length, 1);
+  assert.equal(open[0].recurrence_rule, 'FREQ=MONTHLY', 'Die neue Regel reist mit');
+  assert.equal(
+    open[0].due_date,
+    nextOccurrenceAfter(newDue, 'FREQ=MONTHLY', todayKey()),
+    'Fälligkeit liegt auf dem Monats-, nicht auf dem Wochenraster',
+  );
+});
+
+test('PUT done: im selben Speichern abgeschaltete Wiederholung erzeugt keine Folgeinstanz', async () => {
+  const id = insertTask({
+    title: 'Filter entkalken', status: 'open', due_date: dayKey(-1), created_by: uid,
+    is_recurring: 1, recurrence_rule: 'FREQ=WEEKLY',
+  });
+  await call('PUT', `/${id}`, { title: 'Filter entkalken', status: 'done', is_recurring: 0 });
+
+  const rows = db.prepare(`SELECT COUNT(*) AS n FROM tasks WHERE title = 'Filter entkalken'`).get();
+  assert.equal(rows.n, 1, 'Wer die Wiederholung abschaltet, beendet die Serie bewusst');
+});
+
+test('PUT done: Subtask einer Serie erzeugt keine Folgeinstanz', async () => {
+  const parent = insertTask({
+    title: 'Eltern-Serie PUT', status: 'open', due_date: dayKey(-7), created_by: uid,
+    is_recurring: 1, recurrence_rule: 'FREQ=WEEKLY',
+  });
+  const sub = insertTask({
+    title: 'Sub PUT', status: 'open', due_date: dayKey(-7), created_by: uid,
+    parent_task_id: parent, is_recurring: 1, recurrence_rule: 'FREQ=WEEKLY',
+  });
+  await call('PUT', `/${sub}`, { title: 'Sub PUT', status: 'done' });
+  const rows = db.prepare(`SELECT COUNT(*) AS n FROM tasks WHERE title = 'Sub PUT'`).get();
+  assert.equal(rows.n, 1, 'Subtasks dürfen keine Folgeinstanz auslösen');
+});
+
+// --------------------------------------------------------
+// Erledigen und Folgeinstanz sind eine Einheit
+// --------------------------------------------------------
+
+/**
+ * Lässt genau den Spawn-INSERT scheitern (nur er setzt recurrence_origin_id)
+ * und lässt alles andere in Ruhe.
+ */
+async function withFailingSpawn(fn) {
+  db.exec(`CREATE TRIGGER spawn_boom BEFORE INSERT ON tasks
+    WHEN NEW.recurrence_origin_id IS NOT NULL
+    BEGIN SELECT RAISE(ABORT, 'spawn failed'); END`);
+  try {
+    await fn();
+  } finally {
+    db.exec('DROP TRIGGER spawn_boom');
+  }
+}
+
+test('PATCH: scheitert der Spawn, bleibt die Aufgabe offen', async () => {
+  await withFailingSpawn(async () => {
+    const id = insertTask({
+      title: 'Rauchmelder prüfen', status: 'open', due_date: dayKey(0), created_by: uid,
+      is_recurring: 1, recurrence_rule: 'FREQ=MONTHLY',
+    });
+    const res = await call('PATCH', `/${id}/status`, { status: 'done' });
+    assert.equal(res.status, 500);
+    assert.equal(
+      db.prepare('SELECT status FROM tasks WHERE id = ?').get(id).status, 'open',
+      'Ohne Folgeinstanz darf die Aufgabe nicht erledigt zurückbleiben - die Serie endete sonst still',
+    );
+  });
+});
+
+test('PUT: scheitert der Spawn, rollt das ganze Speichern zurück', async () => {
+  await withFailingSpawn(async () => {
+    const id = insertTask({
+      title: 'Sieb reinigen', status: 'open', due_date: dayKey(0), created_by: uid,
+      priority: 'low', is_recurring: 1, recurrence_rule: 'FREQ=MONTHLY',
+    });
+    // Titel und Priorität ändern sich mit: die Transaktion deckt das ganze
+    // UPDATE ab, nicht nur die Status-Spalte.
+    const res = await call('PUT', `/${id}`, {
+      title: 'Sieb reinigen NEU', status: 'done', priority: 'high',
+    });
+    assert.equal(res.status, 500);
+
+    const row = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id);
+    assert.equal(row.status, 'open', 'Auch das Bearbeiten-Formular rollt den Statuswechsel mit zurück');
+    assert.equal(row.title, 'Sieb reinigen', 'Und den Rest des Speicherns gleich mit');
+    assert.equal(row.priority, 'low');
+  });
+});
+
+test('Folgeinstanz behält den Vorlauf zwischen Start- und Fälligkeitsdatum', async () => {
+  const id = insertTask({
+    title: 'Steuer vorbereiten', status: 'open',
+    start_date: dayKey(-24), due_date: dayKey(-21), created_by: uid,
+    is_recurring: 1, recurrence_rule: 'FREQ=WEEKLY',
+  });
+  await call('PATCH', `/${id}/status`, { status: 'done' });
+
+  const next = openInstances('Steuer vorbereiten')[0];
+  assert.ok(next.start_date, 'Das Startdatum darf nicht verlorengehen');
+  const lead = (Date.parse(`${next.due_date}T00:00:00Z`) - Date.parse(`${next.start_date}T00:00:00Z`)) / DAY;
+  assert.equal(lead, 3, 'Drei Tage Vorlauf wie beim Durchlauf davor');
+});
+
+test('Folgeinstanz ohne Startdatum bekommt auch keines', async () => {
+  const id = insertTask({
+    title: 'Backup prüfen', status: 'open', due_date: dayKey(-2), created_by: uid,
+    is_recurring: 1, recurrence_rule: 'FREQ=WEEKLY',
+  });
+  await call('PATCH', `/${id}/status`, { status: 'done' });
+  assert.equal(openInstances('Backup prüfen')[0].start_date, null);
+});
+
 // --------------------------------------------------------
 // Anker ab Erledigungstag gegen den Router (#658)
 // --------------------------------------------------------
@@ -370,6 +540,61 @@ test('PATCH done: ohne Anker bleibt es beim bisherigen Verhalten', async () => {
   });
   await call('PATCH', `/${id}/status`, { status: 'done' });
   assert.equal(openInstances('Müllabfuhr')[0].due_date, dayKey(4));
+});
+
+test('PUT done: der Anker gilt auch beim Abhaken über den Bearbeiten-Dialog', async () => {
+  // Die Naht zwischen beiden Wegen: der Dialog geht durch dieselbe Funktion,
+  // also muss er den Erledigungstag genauso als Anker nehmen - und ihn vererben.
+  const id = insertTask({
+    title: 'Kaffeemaschine entkalken', status: 'open',
+    start_date: dayKey(-5), due_date: dayKey(-3), created_by: uid,
+    is_recurring: 1, recurrence_rule: 'FREQ=WEEKLY', recurrence_from_completion: 1,
+  });
+  const res = await call('PUT', `/${id}`, { title: 'Kaffeemaschine entkalken', status: 'done' });
+  assert.equal(res.status, 200);
+
+  const followup = openInstances('Kaffeemaschine entkalken')[0];
+  assert.equal(followup.due_date, dayKey(7), 'eine Woche ab heute, nicht ab dem alten Raster');
+  assert.equal(followup.recurrence_from_completion, 1, 'und der Anker reist mit');
+  // Der Vorlauf hängt am Durchlauf, nicht am Anker: er bleibt derselbe, egal
+  // woher das neue Fälligkeitsdatum kommt.
+  assert.equal(followup.start_date, dayKey(5), 'zwei Tage vor der neuen Fälligkeit');
+});
+
+test('Die Folgeinstanz mit Vorlauf wartet auf ihren Starttag', async () => {
+  // Folge des Vorlaufs, bewusst so: die Liste blendet Aufgaben bis zu ihrem
+  // Startdatum aus. Wer den Vorlauf setzt, will die nächste Instanz erst dann
+  // sehen - sichtbar wird sie über "Zukünftige Aufgaben anzeigen".
+  const id = insertTask({
+    title: 'Reifen wechseln', status: 'open',
+    start_date: dayKey(-2), due_date: dayKey(-1), created_by: uid,
+    is_recurring: 1, recurrence_rule: 'FREQ=MONTHLY',
+  });
+  await call('PATCH', `/${id}/status`, { status: 'done' });
+
+  const hidden = await call('GET', '/?status=open');
+  assert.ok(
+    !hidden.body.data.some((t) => t.title === 'Reifen wechseln'),
+    'Vor ihrem Starttag taucht die Folgeinstanz in der Standardliste nicht auf',
+  );
+  const shown = await call('GET', '/?status=open&include_future=1');
+  assert.ok(
+    shown.body.data.some((t) => t.title === 'Reifen wechseln'),
+    'Mit "Zukünftige Aufgaben anzeigen" schon',
+  );
+});
+
+test('PUT done: im selben Speichern gesetzter Anker gilt sofort', async () => {
+  // Wer die Verankerung im Dialog umstellt und gleich abhakt, bekommt die
+  // Folgeinstanz nach der neuen Wahl - der Spawn liest die frische Zeile.
+  const id = insertTask({
+    title: 'Kalkfilter tauschen', status: 'open', due_date: dayKey(-3), created_by: uid,
+    is_recurring: 1, recurrence_rule: 'FREQ=WEEKLY',
+  });
+  await call('PUT', `/${id}`, {
+    title: 'Kalkfilter tauschen', status: 'done', recurrence_from_completion: 1,
+  });
+  assert.equal(openInstances('Kalkfilter tauschen')[0].due_date, dayKey(7));
 });
 
 test('PATCH done: Subtask einer Serie erzeugt keine Folgeinstanz', async () => {
