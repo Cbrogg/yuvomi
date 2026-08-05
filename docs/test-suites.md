@@ -1,10 +1,10 @@
 # Test-Suiten
 
-Vollständige, annotierte Liste aller `npm run test:*`-Suiten. Ausgelagert aus `CLAUDE.md`, damit die pro Session geladene Projekt-Instruktion schlank bleibt.
+Vollständige, annotierte Liste aller `npm run test:*`-Suiten - welche Suite deckt welche Invariante ab.
 
 Testinfrastruktur: In-Memory-SQLite (`--experimental-sqlite`), Node >= 22. Kein laufender Server nötig - Tests importieren die Route-Handler direkt.
 
-Neue Suite: `test/test-[module].js` anlegen + `test:[module]`-Skript in `package.json` eintragen. Imports von App-Code (`server/`, `public/`, `tools/`) und Root-Dateien via `../`.
+Neue Suite - drei Schritte, alle drei Pflicht: (1) `test/test-[module].js` anlegen, (2) `test:[module]`-Skript in `package.json` eintragen, (3) das Skript in die `test`-Kette (`package.json`, Script `test`) einhängen - sonst läuft die Suite weder unter `npm test` noch in CI. Genau so sind fünf Suiten monatelang CI-blind geblieben. Imports von App-Code (`server/`, `public/`, `tools/`) und Root-Dateien via `../`.
 
 ```bash
 npm test             # Alle Suiten (Node >=22)
@@ -67,7 +67,7 @@ npm run test:budget-entries-routes   # Eintrags-Routen: summary/export (CSV-Inje
 npm run test:split-expenses-attachments   # Belege an geteilten Ausgaben (#583-Nachrüstung): Sichtbarkeitsprüfung beim Verknüpfen/Serialisieren (privater Beleg bleibt vor der Gruppe und vor Admins verborgen), PUT ohne Feld lässt Belege stehen, fremder privater Beleg überlebt fremdes Speichern, proof_document_id einer Zahlung wird geprüft
 npm run test:budget-attachments   # Belege an Buchungen (#583): attachment_document_ids in POST/PUT, Batch-Laden in GET; Sichtbarkeit des Dokumente-Moduls gilt weiter (privater Fremd-Beleg weder lesbar noch beim Speichern löschbar, kein Admin-Bypass), unbekannte IDs still verworfen, PUT ohne Feld lässt Belege stehen, Serien-PUT fasst sie nicht an, Cascade in beide Richtungen
 npm run test:calendar-routes    # Kalender-Routen: GET//upcoming/search, Sichtbarkeit (kein Admin-Bypass), Serien-Expansion, requireAdmin-Sync-Gates, subscriptions/import/feed/holidays, CRUD, reset/exceptions (EXDATE)
-npm run test:calendar-structure  # Kalender-Routen-Split: 45-Routen-Tabelle + Cluster-Disjunktheit + /:id-Reihenfolge-Vertrag + Re-Export-Fläche gepinnt
+npm run test:calendar-structure  # Kalender-Routen-Split: 46-Routen-Tabelle + Cluster-Disjunktheit + /:id-Reihenfolge-Vertrag + Re-Export-Fläche gepinnt
 npm run test:calendar-exceptions  # Einzeltermin-Ausnahmen für Serien (EXDATE, #489): Migration v85 + POST /calendar/:id/exceptions
 npm run test:calendar-defaults    # Standardwerte für neue Termine (#497/#498): per-User calendar_default_reminders (Offset-Liste, Cap, Validierung)
 npm run test:preferences-calendar-target  # Standard-Sync-Ziel (#620): GET-Default '', PUT google:/caldav:-Kennungen, Formfehler -> 400, Per-User-Isolation, Wert auch in der PUT-Antwort
