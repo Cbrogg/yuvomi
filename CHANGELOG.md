@@ -793,6 +793,8 @@ This release changes nothing in the application itself. Apart from the service w
 - The calendar header no longer sits detached from the top edge and jumps into place on the first scroll (#577).
 - Long module titles are now shortened with an ellipsis instead of running out of the header. This affected languages with longer words than German (#577).
 
+## [1.45.14] - 2026-07-26
+
 ### Fixed
 - Shared expenses: the "Aufteilen" tab no longer overlaps its own cards on desktop. The layout used to switch to a single column at a fixed window width, which ignored the space the expanded sidebar takes up, so at a 1024px window the balances card was squeezed to a sliver and its "simplified debts" subtitle ran across the neighbouring card. Panel and card grid now each reflow from the width actually available to them, which also means collapsing the sidebar widens the content as expected (#575).
 - Shared expenses: the activity feed showed raw text such as `splitExpenses.activityType.expense_added` instead of a readable entry. Removing a member from a group had never been translated in any of the 23 languages, and the demo data recorded two activity types the app itself never writes (#575).
@@ -987,6 +989,13 @@ Fix for contact-card import corrupting names that use non-ASCII letters.
 ### Fixed
 - Importing a contact card (.vcf) whose name is QUOTED-PRINTABLE encoded (common in vCard 2.1 exports from phone and mail apps) now decodes non-ASCII letters correctly. A name such as "Kalaycı" with the Turkish "ı" was previously imported literally as "Kalayc=C4=B1"; it now imports as written. Soft line breaks and the declared charset are honored, and the CardDAV sync parser decodes the same encoding. Plain values containing "=" (without a QUOTED-PRINTABLE declaration) are left untouched.
 
+## [1.40.5] - 2026-07-21
+
+Fix for contact-card import corrupting names that use non-ASCII letters.
+
+### Fixed
+- Importing a contact card (.vcf) whose name is QUOTED-PRINTABLE encoded (common in vCard 2.1 exports from phone and mail apps) now decodes non-ASCII letters correctly. A name such as "Kalaycı" with the Turkish "ı" was previously imported literally as "Kalayc=C4=B1"; it now imports as written. Soft line breaks and the declared charset are honored, and the CardDAV sync parser decodes the same encoding. Plain values containing "=" (without a QUOTED-PRINTABLE declaration) are left untouched.
+
 ## [1.40.4] - 2026-07-21
 
 Follow-up pass on the accessibility and interaction findings surfaced by the design critique.
@@ -1010,6 +1019,20 @@ Bug-fix pass on three reported issues: modal saves, finance account colors, and 
 - Editing a task or document and clicking "Save"/"Apply" now applies the change. The modal footer is lifted out of its form to stay pinned above the fold, which detached the submit button from the form so the click silently did nothing. The button now keeps its form association and submits as before. (#543)
 - Creating or editing a finance account with a color no longer fails with "Color must be a valid HEX color". The account color picker stores theme-aware accent tokens (so the swatch also lightens in dark mode), and the server now accepts those tokens alongside plain hex colors, while still rejecting arbitrary CSS. (#542)
 - Reminder and notification delivery (Web Push, Gotify, ntfy) no longer breaks silently when the `reminders.pushed_at` column is missing after inconsistent migration history (e.g. a backup restored mid-migration). The database now self-heals the known critical column on startup and logs the repair, instead of the scheduler failing every 60 seconds on "no such column". (#538)
+
+Polish pass clearing the remaining P2/P3 findings from the design critique (design health 33 to 34), plus a Kanban board fix uncovered along the way.
+
+### Fixed
+- The Kanban board now shows tasks of every status. The default "open" filter was still being applied in Kanban, so the "In progress" and "Done" columns stayed empty even when tasks existed. The columns already are the status, so the filter no longer applies there, the view reloads all tasks on switch, and the filter badge counts only the filters shown as chips.
+- The month calendar no longer clips the last event mid-cell in short rows: visible capacity is measured from the real cell height (recomputed on resize) and the "+N more" row is always reserved, so nothing is cut off.
+- Empty Kanban columns show a "No tasks" hint that turns into a "Drag here" drop target while a card is being dragged, so empty columns read as valid destinations.
+- Budget tabs on narrow screens reveal the next tab (about a third peeking in) with a sharper edge fade, instead of ending flush and hiding three tabs behind an invisible one.
+- The active person chip in the Health module scrolls into view on mobile instead of sitting off-screen.
+- Recipe cards in the meal-planner sidebar show meal-type chips only for a real subset of meal types, not when a recipe fits every type (or none) where the chips carry no information.
+- Budget category bars keep a visible minimum width for non-zero amounts instead of rounding a tiny value down to an empty bar.
+- Accessibility: the mobile "More" button announces its popup (aria-haspopup), and the quick-actions FAB exposes its keyboard shortcut (aria-keyshortcuts "n" plus a tooltip); the sidebar active-pill easing moved to a single named token.
+
+## [1.40.2] - 2026-07-21
 
 Polish pass clearing the remaining P2/P3 findings from the design critique (design health 33 to 34), plus a Kanban board fix uncovered along the way.
 
@@ -1245,6 +1268,11 @@ App-wide UX/UI audit (all modules, light/dark, desktop/mobile). The findings, th
 ### Fixed
 - Birthday calendar entries now show the birthday label in your own language (e.g. "Geburtstag: …" in German) instead of always "Birthday: …". The entry title and description are translated on display across the calendar (month, week, day, agenda), the event popup, the dashboard's upcoming-events widget, and search results, in all 23 supported languages. Existing birthdays are covered automatically; nothing needs re-importing.
 
+## [1.31.2] - 2026-07-19
+
+### Fixed
+- Birthday calendar entries now show the birthday label in your own language (e.g. "Geburtstag: …" in German) instead of always "Birthday: …". The entry title and description are translated on display across the calendar (month, week, day, agenda), the event popup, the dashboard's upcoming-events widget, and search results, in all 23 supported languages. Existing birthdays are covered automatically; nothing needs re-importing.
+
 ## [1.31.1] - 2026-07-19
 
 ### Fixed
@@ -1432,6 +1460,18 @@ App-wide UX/UI audit (all modules, light/dark, desktop/mobile). The findings, th
 ### Fixed
 - CalDAV reminders: a single failed fetch could delete every mirrored reminder of an account. The sync mirrors Apple Reminders lists into Tasks or Shopping and prunes rows that vanished remotely, but it treated "the server returned nothing" as "everything was deleted remotely" — including when the fetch had just failed and the sync had already skipped that list. One transient iCloud error was therefore enough to wipe all imported tasks or shopping items of that account, taking their subtasks, assignments and document links with them via CASCADE; a re-import could not restore those, since it creates new rows. An empty result now never deletes anything and logs a warning instead, and a list that could not be fetched suspends deletion for its whole target module. Found while auditing the other sync providers for the issues fixed in #508.
 - Apple Calendar (legacy single-account sync via `APPLE_*`): events deleted in iCloud stayed in Yuvomi forever, the same defect fixed for multi-account CalDAV in v1.23.1. The inbound sync only ever inserted and updated. It now runs the same deletion pass, with the same guards: only synced Apple events of that calendar are affected, calendars whose fetch failed are never pruned, and a calendar returning no events at all is left alone with a warning.
+
+### Fixed
+- CalDAV calendars never synced automatically (#508). The auto-sync scheduler ran Google, Apple, ICS, CalDAV reminders and holidays, but the CalDAV calendar sync was never wired into it. Calendars therefore only updated when "Sync now" was pressed in Settings, even though the log announced "Auto-sync active every 15 minutes". CalDAV calendars now sync on the same `SYNC_INTERVAL_MINUTES` schedule (default 15) as every other provider.
+- CalDAV: events deleted on the server stayed in Yuvomi forever (#508). The inbound sync only ever inserted and updated events, so deleting an event in iCloud or Nextcloud never reached Yuvomi. Each sync now also removes local events that the calendar no longer returns. Only synced CalDAV events of that calendar are affected: local events and events still waiting to be uploaded are never touched, and an event moved between two calendars of the same account keeps its assignments instead of being deleted and re-created. If a calendar returns no events at all while local events still reference it, nothing is deleted and a warning is logged, since an empty response is far more often a server or auth error than a genuinely emptied calendar.
+
+## [1.23.2] - 2026-07-15
+
+### Fixed
+- CalDAV reminders: a single failed fetch could delete every mirrored reminder of an account. The sync mirrors Apple Reminders lists into Tasks or Shopping and prunes rows that vanished remotely, but it treated "the server returned nothing" as "everything was deleted remotely" — including when the fetch had just failed and the sync had already skipped that list. One transient iCloud error was therefore enough to wipe all imported tasks or shopping items of that account, taking their subtasks, assignments and document links with them via CASCADE; a re-import could not restore those, since it creates new rows. An empty result now never deletes anything and logs a warning instead, and a list that could not be fetched suspends deletion for its whole target module. Found while auditing the other sync providers for the issues fixed in #508.
+- Apple Calendar (legacy single-account sync via `APPLE_*`): events deleted in iCloud stayed in Yuvomi forever, the same defect fixed for multi-account CalDAV in v1.23.1. The inbound sync only ever inserted and updated. It now runs the same deletion pass, with the same guards: only synced Apple events of that calendar are affected, calendars whose fetch failed are never pruned, and a calendar returning no events at all is left alone with a warning.
+
+## [1.23.1] - 2026-07-15
 
 ### Fixed
 - CalDAV calendars never synced automatically (#508). The auto-sync scheduler ran Google, Apple, ICS, CalDAV reminders and holidays, but the CalDAV calendar sync was never wired into it. Calendars therefore only updated when "Sync now" was pressed in Settings, even though the log announced "Auto-sync active every 15 minutes". CalDAV calendars now sync on the same `SYNC_INTERVAL_MINUTES` schedule (default 15) as every other provider.
@@ -1818,6 +1858,11 @@ App-wide UX/UI audit (all modules, light/dark, desktop/mobile). The findings, th
 ### Added
 - Calendar: one-time import of events from an `.ics` file or a shared calendar feed URL into editable local events, under Settings → Sync → Calendar → "Import calendar". Unlike an ICS subscription (which stays read-only and auto-synced), imported events become your own editable events and are not synced afterwards — the migration path when moving from another calendar. Recurring events are kept as a series (the recurrence rule is reduced to the supported daily/weekly/monthly/yearly subset), all-day and timed events are preserved, and re-importing the same feed skips events that were already imported. The URL path reuses the SSRF-protected fetch (10 MB / 15 s limits) used by subscriptions. (#437)
 
+## [1.5.0] - 2026-07-09
+
+### Added
+- Calendar: one-time import of events from an `.ics` file or a shared calendar feed URL into editable local events, under Settings → Sync → Calendar → "Import calendar". Unlike an ICS subscription (which stays read-only and auto-synced), imported events become your own editable events and are not synced afterwards — the migration path when moving from another calendar. Recurring events are kept as a series (the recurrence rule is reduced to the supported daily/weekly/monthly/yearly subset), all-day and timed events are preserved, and re-importing the same feed skips events that were already imported. The URL path reuses the SSRF-protected fetch (10 MB / 15 s limits) used by subscriptions. (#437)
+
 ## [1.4.1] - 2026-07-09
 
 ### Changed
@@ -1867,6 +1912,11 @@ App-wide UX/UI audit (all modules, light/dark, desktop/mobile). The findings, th
 
 ### Security
 - API Tokens: scoped tokens are enforced across both the REST API and the MCP endpoint. A scoped token can only reach modules on its allow-list — every other `/api/v1` path is denied, `tools/list` hides MCP tools the token cannot use, out-of-scope `tools/call` is refused, and the OpenAPI bridge inherits the same limits because it loops back through the REST layer with the same token.
+
+### Added
+- Kitchen (Meals): recurring meals can now be edited or deleted as a whole series. Editing or deleting a weekly meal offers a scope choice — "only this date" or "whole series". A series edit propagates the meal's content and ingredients to every occurrence; a series deletion removes the recurrence template together with all of its occurrences.
+
+## [1.1.0] - 2026-07-08
 
 ### Added
 - Kitchen (Meals): recurring meals can now be edited or deleted as a whole series. Editing or deleting a weekly meal offers a scope choice — "only this date" or "whole series". A series edit propagates the meal's content and ingredients to every occurrence; a series deletion removes the recurrence template together with all of its occurrences.
@@ -1963,6 +2013,16 @@ A design and accessibility overhaul of three core areas — the Dashboard, the K
 - **Multiple reminders per calendar event** — an event can now carry several reminders (e.g. 15 minutes before *and* 1 day before) instead of just one. The event dialog manages them as an add/remove list (up to 5 per event); each reminder is delivered independently via in-app badges, Web Push, and notification channels (#436).
 - **Default appointment duration** — Settings → Modules → Calendar lets you choose a default duration (15–120 minutes) that sets the end time of new events automatically from the start. Inside the event dialog the duration is remembered dynamically: adjust the end and a later change to the start re-applies your chosen length (#441).
 - **Flexible time entry** — time fields now accept compact and separator notation (`0930`, `930`, `09.30`, `9,30`, `9h30`) in addition to `09:30`, normalizing to your locale's format on blur. Applies to every time input across the app, making entry easier on keyboards where the colon is awkward (#442).
+
+### Added
+- **Settings → Modules → Health** page: admins can show or hide the Cycle tab household-wide (opt-in, on by default). When off, the tab is hidden and its route redirects to the Health overview.
+- **Settings → Modules → Rewards** page: admins can enable or disable the Rewards module and choose whether reward redemptions require parent/admin approval (on by default; when off, redemptions are granted immediately).
+
+### Fixed
+- The **Rewards** module could not be hidden or reordered in Settings → Modules → Navigation — the enable switch and drag order silently reset because the server did not recognize `rewards` as a toggleable module. Rewards is now a fully toggleable and orderable module.
+- The **Health** and **Rewards** page modules and their new settings pages are now precached by the service worker like every other module, so they are available offline and refresh reliably on each release.
+
+## [0.98.3] - 2026-07-07
 
 ### Added
 - **Settings → Modules → Health** page: admins can show or hide the Cycle tab household-wide (opt-in, on by default). When off, the tab is hidden and its route redirects to the Health overview.
@@ -2683,6 +2743,12 @@ A design and accessibility overhaul of three core areas — the Dashboard, the K
 - **Week view day numbers highlight on hover again**: hovering a non-today day header in the calendar's week view now shows the intended circular highlight; it previously referenced an undefined colour token and had no effect.
 
 
+
+### Changed
+- **Dashboard "Today at a glance" is easier to scan on phones**: the important-today cards now use a compact 2×2 glance grid instead of a full-height stack, so the actionable lists below appear without scrolling; very narrow screens fall back to a single column.
+- **Dashboard glance cards read more calmly**: the task and event cards show an open-count badge and now use neutral titles with a single coloured module icon, reducing the colour load at the top of the screen.
+
+## [0.71.39] - 2026-06-13
 
 ### Changed
 - **Dashboard "Today at a glance" is easier to scan on phones**: the important-today cards now use a compact 2×2 glance grid instead of a full-height stack, so the actionable lists below appear without scrolling; very narrow screens fall back to a single column.
@@ -3697,6 +3763,11 @@ All DMS operations are admin-only, and the API token is never returned in respon
 
 ### Changed
 - **Liquid Glass – stronger specular on elevated surfaces:** The sidebar and bottom navigation now carry an inset top-highlight driven by `--lg-specular`, per the canonical glass recipe, giving the elevated glass panels a crisper specular edge.
+
+### Changed
+- **Calendar – week view time-slot click opens create-event modal:** Clicking an empty time slot in the week view time grid now opens the create-event modal again (reverts the day-view navigation introduced in v0.54.8). Navigating to the day view on time-slot clicks was too disruptive for users who intentionally tap a specific hour to create an event quickly.
+
+## [0.54.9] - 2026-05-29
 
 ### Changed
 - **Calendar – week view time-slot click opens create-event modal:** Clicking an empty time slot in the week view time grid now opens the create-event modal again (reverts the day-view navigation introduced in v0.54.8). Navigating to the day view on time-slot clicks was too disruptive for users who intentionally tap a specific hour to create an event quickly.
@@ -5002,6 +5073,11 @@ All DMS operations are admin-only, and the API token is never returned in respon
 - `install.sh`: interactive CLI wizard (7 steps) guiding users from a blank server to a running Oikos instance — prerequisites check, domain/port/timezone config, auto-generated or manual security secrets, optional weather and calendar integrations, Docker startup with health polling, and admin account creation. Supports `--env-file` for non-interactive/CI deployments.
 - Web installer (`tools/installer/`): browser-based setup wizard served by a zero-dependency Node.js server on `localhost:8090`. Covers the same steps as the CLI installer through a single-file SPA. Auto-terminates after successful setup or 30 minutes of inactivity.
 
+## [0.20.44] - 2026-04-21
+
+### Added
+- `install.sh`: interactive CLI wizard that guides users from a blank server to a running Oikos instance, covering prerequisites check, basic config, secret generation, optional weather/calendar integrations, Docker startup, and admin account creation via the setup endpoint. Supports `--env-file` for non-interactive/CI use.
+
 ## [0.20.43] - 2026-04-21
 
 ### Added
@@ -5556,6 +5632,11 @@ All DMS operations are admin-only, and the API token is never returned in respon
 - Shopping list category dropdown now shows translated labels instead of hardcoded German strings (#21)
 - Recurrence fields in task and calendar modals now fully translated (labels, frequency options, weekday abbreviations, unit labels) (#21)
 
+## [0.11.4] - 2026-04-05
+
+### Fixed
+- UX micro-interaction polish: swipe hint, locale-reload feedback, haptics, weather toast and FAB backdrop behave consistently; native `confirm()` dialogs replaced with an undo toast; `prefers-reduced-motion` is honored.
+
 ## [0.11.3] - 2026-04-05
 
 ### Added
@@ -5906,22 +5987,3 @@ Initial release of Oikos - a self-hosted family planner for 2–6 person househo
 - Rate limiting on login endpoint and global API limiter (300 req/min/IP)
 - No user data cached by service worker (API requests are network-only)
 - Hardened `.gitignore` and `.dockerignore` to prevent accidental secret or binary leakage
-
-[Unreleased]: https://github.com/ulsklyc/oikos/compare/v0.7.0...HEAD
-[0.7.0]: https://github.com/ulsklyc/oikos/compare/v0.6.0...v0.7.0
-[0.6.0]: https://github.com/ulsklyc/oikos/compare/v0.5.9...v0.6.0
-[0.5.9]: https://github.com/ulsklyc/oikos/compare/v0.5.8...v0.5.9
-[0.5.8]: https://github.com/ulsklyc/oikos/compare/v0.5.7...v0.5.8
-[0.5.7]: https://github.com/ulsklyc/oikos/compare/v0.5.6...v0.5.7
-[0.5.6]: https://github.com/ulsklyc/oikos/compare/v0.5.5...v0.5.6
-[0.5.5]: https://github.com/ulsklyc/oikos/compare/v0.5.4...v0.5.5
-[0.5.4]: https://github.com/ulsklyc/oikos/compare/v0.5.3...v0.5.4
-[0.5.3]: https://github.com/ulsklyc/oikos/compare/v0.5.2...v0.5.3
-[0.5.2]: https://github.com/ulsklyc/oikos/compare/v0.5.1...v0.5.2
-[0.5.1]: https://github.com/ulsklyc/oikos/compare/v0.5.0...v0.5.1
-[0.5.0]: https://github.com/ulsklyc/oikos/compare/v0.4.0...v0.5.0
-[0.4.0]: https://github.com/ulsklyc/oikos/compare/v0.3.0...v0.4.0
-[0.3.0]: https://github.com/ulsklyc/oikos/compare/v0.2.1...v0.3.0
-[0.2.1]: https://github.com/ulsklyc/oikos/compare/v0.2.0...v0.2.1
-[0.2.0]: https://github.com/ulsklyc/oikos/compare/v0.1.0...v0.2.0
-[0.1.0]: https://github.com/ulsklyc/oikos/releases/tag/v0.1.0
