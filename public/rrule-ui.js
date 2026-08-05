@@ -132,7 +132,7 @@ export function renderRRuleFields(prefix, existingRule, opts = {}) {
             <div class="rrule-interval-wrap">
               <input class="input form-input" type="number" id="${prefix}-rrule-interval"
                      min="1" max="99" value="${parsed.interval}" inputmode="numeric" style="width:64px;text-align:center">
-              <span class="rrule-interval-unit" id="${prefix}-rrule-unit">${unitLabel(parsed.freq, parsed.interval)}</span>
+              <span class="rrule-interval-unit" id="${prefix}-rrule-unit">${intervalUnitLabel(parsed.freq, parsed.interval)}</span>
             </div>
           </div>
           <div class="form-group" style="margin-bottom:0">
@@ -179,14 +179,27 @@ export function renderRRuleFields(prefix, existingRule, opts = {}) {
   `;
 }
 
-function unitLabel(freq, interval) {
-  const n = interval > 1;
-  if (freq === 'DAILY')   return n ? t('rrule.unitDays')   : t('rrule.unitDay');
-  if (freq === 'WEEKLY')  return n ? t('rrule.unitWeeks')  : t('rrule.unitWeek');
-  if (freq === 'MONTHLY') return n ? t('rrule.unitMonths') : t('rrule.unitMonth');
-  if (freq === 'YEARLY')  return n ? t('rrule.unitYears')  : t('rrule.unitYear');
-  return '';
+/**
+ * Das Wort hinter „Alle N": Einheit in Ein- oder Mehrzahl.
+ *
+ * Versteht beide Schreibweisen - die RRULE-Frequenz (`WEEKLY`) und die
+ * Budget-Einheit (`weekly`, #636). Die Zuordnung Einheit → Wort lag sonst ein
+ * zweites Mal im Budget-Modal, sobald auch dort „alle N Monate" wählbar wurde.
+ *
+ * @param {string} unit   DAILY|WEEKLY|MONTHLY|YEARLY oder weekly|monthly|yearly
+ * @param {number} count  Anzahl, entscheidet über Ein-/Mehrzahl
+ */
+export function intervalUnitLabel(unit, count = 1) {
+  const n = count > 1;
+  switch (String(unit || '').toUpperCase()) {
+    case 'DAILY':   return n ? t('rrule.unitDays')   : t('rrule.unitDay');
+    case 'WEEKLY':  return n ? t('rrule.unitWeeks')  : t('rrule.unitWeek');
+    case 'MONTHLY': return n ? t('rrule.unitMonths') : t('rrule.unitMonth');
+    case 'YEARLY':  return n ? t('rrule.unitYears')  : t('rrule.unitYear');
+    default:        return '';
+  }
 }
+
 
 /**
  * Beschreibt eine RRULE in einem Satz: „Alle 2 Wochen (Mo, Do) bis 31.12.2026".
@@ -211,7 +224,7 @@ export function describeRRule(rule, opts = {}) {
   // an zwei Stellen zu pflegen.
   const parts = [
     p.interval > 1
-      ? `${t('rrule.labelEvery')} ${p.interval} ${unitLabel(p.freq, p.interval)}`
+      ? `${t('rrule.labelEvery')} ${p.interval} ${intervalUnitLabel(p.freq, p.interval)}`
       : (FREQ_OPTIONS().find((o) => o.value === p.freq)?.label ?? t('rrule.freqDaily')),
   ];
 
@@ -290,7 +303,7 @@ export function bindRRuleEvents(root, prefix) {
   function updateUnit() {
     if (!unitEl) return;
     const interval = parseInt(intervalEl?.value, 10) || 1;
-    unitEl.textContent = unitLabel(freqSelect.value, interval);
+    unitEl.textContent = intervalUnitLabel(freqSelect.value, interval);
   }
 }
 

@@ -20,6 +20,7 @@ import { renderPlans } from '/pages/budget-plans.js';
 import { toLocalDateKey, parseLocalDateKey, addLocalDays } from '/utils/date.js';
 import { formatMoney, formatSignedAmount, amountPlaceholder, amountStep, amountMin, applyAmountFormat, amountIsSavable, smallestUnitLabel } from '/utils/money.js';
 import { budgetCategoryLabel } from '/utils/category-labels.js';
+import { intervalUnitLabel } from '/rrule-ui.js';
 import { appendCurrencyOptions } from '/settings/currency.js';
 import '/components/category-manager.js';
 
@@ -671,6 +672,21 @@ function renderBody() {
       : 'budget-summary-card--balance-negative';
   const prevLabel = p ? formatMonthLabel(p.month).split(' ')[0].slice(0, 3) : '';
 
+  // Erwartete Buchungen stecken in keiner der drei Karten (#637). Ohne diese
+  // Zeile verschwaende das Geld zwischen zwei Monatsansichten: die Buchung steht
+  // in der Liste, taucht aber in keiner Summe auf, und niemand koennte sagen,
+  // um wie viel die Uebersicht deshalb daneben liegt.
+  const pendingTotal = (s.pending?.income || 0) + (s.pending?.expenses || 0);
+  const pendingNote = s.pending?.count
+    ? `<p class="budget-pending-note">
+         <i data-lucide="clock" class="icon-sm" aria-hidden="true"></i>
+         <span>${esc(t('budget.pendingSummary', {
+           count: s.pending.count,
+           amount: amountByRole(pendingTotal, 'flow').text,
+         }))}</span>
+       </p>`
+    : '';
+
   // „Nur Ausgaben" (#504): Einnahmen- und Saldo-Karte entfallen ganz, die Ausgaben-
   // Karte trägt die Zeile allein. Wer ausschließlich Ausgaben erfasst, sieht so keinen
   // (neutralen) Saldo und keine Dauer-Null bei den Einnahmen. Liste, Diagramm und
@@ -715,6 +731,7 @@ function renderBody() {
     <div class="budget-summary${expensesOnly ? ' budget-summary--expenses-only' : ''}">
       ${expensesOnly ? expensesCard : incomeCard + expensesCard + balanceCard}
     </div>
+    ${pendingNote}
 
     <!-- Kategorie-Balken -->
     ${s.byCategory.length ? `
@@ -778,6 +795,9 @@ function renderBody() {
   _container.querySelector('#budget-list')?.addEventListener('click', async (e) => {
     const delBtn = e.target.closest('[data-action="delete"]');
     if (delBtn) { await deleteEntry(parseInt(delBtn.dataset.id, 10)); return; }
+
+    const confirmBtn = e.target.closest('[data-action="confirm"]');
+    if (confirmBtn) { await openConfirmBookingModal(parseInt(confirmBtn.dataset.id, 10)); return; }
 
     const item = e.target.closest('.budget-entry[data-id]');
     if (item && !e.target.closest('[data-action]')) {
@@ -930,19 +950,33 @@ function renderEntries() {
       ? ` <span class="budget-recur-mark" role="img" aria-label="${esc(t('budget.receiptsAttachedLabel', { count: receiptCount }))}"><i data-lucide="paperclip" class="icon-sm" aria-hidden="true"></i></span>`
       : '';
 
+    // Erwartete Buchung (#637): sichtbar, aber erkennbar noch nicht passiert -
+    // sie zaehlt in keiner Summe mit, und das muss die Zeile sagen, sonst wirkt
+    // die Monatsuebersicht falsch.
+    const pending = !!e.is_pending;
+    const pendingBadge = pending
+      ? ` <span class="budget-badge budget-badge--pending">${esc(t('budget.pendingBadge'))}</span>`
+      : '';
+    const confirmBtn = pending
+      ? `<button class="row-action" data-action="confirm" data-id="${e.id}" aria-label="${esc(t('budget.confirmAction'))}: ${esc(e.title)}">
+          <i data-lucide="check" class="icon-md" aria-hidden="true"></i>
+        </button>`
+      : '';
+
     // Die Zeile ist die Edit-Fläche und braucht deshalb Tastaturzugang
     // (role=button + tabindex); ein echtes <button> geht nicht, weil der
     // Lösch-Button darin verschachtelt ist. Das aria-label hält den
     // Lösch-Button-Namen aus dem Zeilen-Namen heraus.
     return `
-      <div class="budget-entry" data-id="${e.id}" role="button" tabindex="0"
+      <div class="budget-entry${pending ? ' budget-entry--pending' : ''}" data-id="${e.id}" role="button" tabindex="0"
            aria-label="${esc(t('budget.editEntry'))}: ${esc(e.title)}, ${amountText}">
         <div class="budget-entry__indicator ${indClass}"></div>
         <div class="budget-entry__body">
-          <div class="budget-entry__title">${esc(e.title)}${sharedBadge}</div>
+          <div class="budget-entry__title">${esc(e.title)}${sharedBadge}${pendingBadge}</div>
           <div class="budget-entry__meta">${date} · ${esc(categoryMeta)}${acctMeta}${recurTag}${receiptMark}</div>
         </div>
         <div class="budget-entry__amount ${amtClass}">${amountText}</div>
+        ${confirmBtn}
         <button class="row-action row-action--danger" data-action="delete" data-id="${e.id}" aria-label="${t('budget.deleteLabel')}">
           <i data-lucide="trash-2" class="icon-md" aria-hidden="true"></i>
         </button>
@@ -1723,6 +1757,8 @@ function openBudgetModal({ mode, entry = null, initialType = '' }) {
   // solcher Bestandswert nicht ins Raster passt, fängt amountStep ab.
   const absAmount  = isEdit ? String(Math.abs(editAmount)) : '';
   const curInterval = isEdit && entry.recurrence_interval ? entry.recurrence_interval : 'monthly';
+  // „Alle N" (#636). Bestandsserien tragen 1, solange niemand etwas anderes wählt.
+  const curCount = Math.min(99, Math.max(1, Number(isEdit && entry.recurrence_interval_count) || 1));
   const intervalOption = (val, key) =>
     `<option value="${val}" ${curInterval === val ? 'selected' : ''}>${t(key)}</option>`;
 
@@ -1816,16 +1852,28 @@ function openBudgetModal({ mode, entry = null, initialType = '' }) {
         <div class="form-group" id="bm-recurrence-options" ${isEdit && entry.is_recurring ? '' : 'hidden'}>
           <label class="form-label" for="bm-interval">${t('budget.recurringIntervalLabel')}</label>
           <select class="form-input" id="bm-interval">
+            ${intervalOption('weekly', 'budget.intervalWeekly')}
             ${intervalOption('monthly', 'budget.intervalMonthly')}
-            ${intervalOption('half_year', 'budget.intervalHalfYear')}
             ${intervalOption('yearly', 'budget.intervalYearly')}
           </select>
+          <div class="rrule-interval-wrap" style="margin-top:var(--space-3)">
+            <label class="form-label" for="bm-interval-count" style="margin:0">${t('rrule.labelEvery')}</label>
+            <input class="form-input" type="number" id="bm-interval-count" min="1" max="99"
+                   value="${curCount}" inputmode="numeric" style="width:64px;text-align:center">
+            <span class="rrule-interval-unit" id="bm-interval-unit">${intervalUnitLabel(curInterval, curCount)}</span>
+          </div>
           <label class="toggle" style="margin-top:var(--space-3)">
             <input type="checkbox" id="bm-virtual" ${isEdit && entry.recurrence_virtual ? 'checked' : ''}>
             <span class="toggle__track"></span>
             <span>${t('budget.virtualBudgetLabel')}</span>
           </label>
           <p style="color:var(--color-text-secondary);font-size:var(--text-sm);margin-top:var(--space-1)">${t('budget.virtualBudgetHint')}</p>
+          <label class="toggle" style="margin-top:var(--space-3)">
+            <input type="checkbox" id="bm-confirm-first" ${isEdit && entry.recurrence_confirm ? 'checked' : ''}>
+            <span class="toggle__track"></span>
+            <span>${t('budget.confirmFirstLabel')}</span>
+          </label>
+          <p style="color:var(--color-text-secondary);font-size:var(--text-sm);margin-top:var(--space-1)">${t('budget.confirmFirstHint')}</p>
         </div>
 
         ${renderDocumentAttachField({
@@ -1999,6 +2047,20 @@ function openBudgetModal({ mode, entry = null, initialType = '' }) {
       panel.querySelector('#bm-recurring').addEventListener('change', (e) => {
         panel.querySelector('#bm-recurrence-options').hidden = !e.target.checked;
       });
+
+      // „Alle 2 Wochen" muss beim Umschalten mitwandern (#636): das Wort hinter
+      // der Zahl gehört zur Einheit, nicht zum Feld.
+      const intervalSel   = panel.querySelector('#bm-interval');
+      const intervalCount = panel.querySelector('#bm-interval-count');
+      const intervalUnit  = panel.querySelector('#bm-interval-unit');
+      const syncIntervalUnit = () => {
+        intervalUnit.textContent = intervalUnitLabel(
+          intervalSel.value,
+          parseInt(intervalCount.value, 10) || 1,
+        );
+      };
+      intervalSel.addEventListener('change', syncIntervalUnit);
+      intervalCount.addEventListener('input', syncIntervalUnit);
       panel.querySelector('#bm-add-category').addEventListener('click', addCategory);
       panel.querySelector('#bm-add-subcategory').addEventListener('click', addSubcategory);
       panel.querySelector('#bm-cancel').addEventListener('click', closeModal);
@@ -2022,7 +2084,9 @@ function openBudgetModal({ mode, entry = null, initialType = '' }) {
         const date       = panel.querySelector('#bm-date').value;
         const recurring  = panel.querySelector('#bm-recurring').checked ? 1 : 0;
         const interval   = panel.querySelector('#bm-interval').value;
+        const intervalN  = Math.min(99, Math.max(1, parseInt(panel.querySelector('#bm-interval-count').value, 10) || 1));
         const virtual    = recurring && panel.querySelector('#bm-virtual').checked ? 1 : 0;
+        const confirmFirst = recurring && panel.querySelector('#bm-confirm-first').checked ? 1 : 0;
         const accountSel = panel.querySelector('#bm-account');
         // Konto-Feld erscheint nur, wenn Konten existieren. Fehlt es, bleibt die
         // Zuordnung beim Bearbeiten unverändert (account_id nicht mitsenden).
@@ -2050,7 +2114,14 @@ function openBudgetModal({ mode, entry = null, initialType = '' }) {
         saveBtn.textContent = '…';
 
         try {
-          const body = { title, amount, category, subcategory, date, is_recurring: recurring, recurrence_interval: interval, recurrence_virtual: virtual };
+          const body = {
+            title, amount, category, subcategory, date,
+            is_recurring: recurring,
+            recurrence_interval: interval,
+            recurrence_interval_count: intervalN,
+            recurrence_virtual: virtual,
+            recurrence_confirm: confirmFirst,
+          };
           if (accountId !== undefined) body.account_id = accountId;
           // Sichtbarkeit nur im personal-Modus mitsenden (#476/#505).
           const sharedEl = panel.querySelector('#bm-shared');
@@ -2711,6 +2782,66 @@ async function deleteLoanPayment(loanId, paymentId) {
 // --------------------------------------------------------
 // Eintrag löschen
 // --------------------------------------------------------
+
+/**
+ * Erwartete Buchung verbuchen (#637).
+ *
+ * Betrag und Datum stehen im Dialog, weil ihre Abweichung der Anlass ist: der
+ * Dienst bucht am 3. statt am 1. ab, und 19,99 statt 20,00. Ein reines
+ * Bestaetigen haette die Diskrepanz zum Kontoauszug bestehen lassen.
+ */
+async function openConfirmBookingModal(id) {
+  const entry = state.entries.find((e) => e.id === id);
+  if (!entry) return;
+
+  const absAmount = Math.abs(entry.amount);
+  const content = `
+    <div class="form-group">
+      <p class="form-hint">${esc(t('budget.confirmHint'))}</p>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="cb-amount">${t('budget.amountLabel')}</label>
+      <input type="number" class="form-input" id="cb-amount" inputmode="decimal"
+             step="${amountStep(state.currency, absAmount)}"
+             min="${amountMin(state.currency)}" value="${absAmount}">
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="cb-date">${t('budget.dateLabel')}</label>
+      <yuvomi-datepicker type="date" id="cb-date" value="${esc(entry.date)}"></yuvomi-datepicker>
+    </div>
+    <div class="modal-panel__footer modal-panel__footer--plain">
+      <button class="btn btn--secondary" id="cb-cancel">${t('common.cancel')}</button>
+      <button class="btn btn--primary" id="cb-save">${t('budget.confirmAction')}</button>
+    </div>`;
+
+  openSharedModal({
+    title: t('budget.confirmTitle'),
+    content,
+    size: 'sm',
+    onSave(panel) {
+      panel.querySelector('#cb-cancel').addEventListener('click', closeModal);
+      panel.querySelector('#cb-save').addEventListener('click', async () => {
+        const amountEl = panel.querySelector('#cb-amount');
+        const value = parseFloat(amountEl.value);
+        if (!Number.isFinite(value) || value <= 0) {
+          reportFieldError(amountEl, t('budget.validAmountRequired'));
+          return;
+        }
+        if (rejectOffGridAmount(amountEl, value, state.currency, { original: absAmount })) return;
+        const date = panel.querySelector('#cb-date').value;
+        try {
+          await api.patch(`/budget/${id}/confirm`, { amount: value, date: date || undefined });
+          closeModal({ force: true });
+          await loadMonth(state.month);
+          renderBody();
+          window.yuvomi?.showToast(t('budget.confirmSaved'), 'success');
+        } catch (err) {
+          window.yuvomi?.showToast(err.message || t('common.errorGeneric'), 'danger');
+        }
+      });
+    },
+  });
+}
 
 async function deleteEntry(id) {
   const entry = state.entries.find((e) => e.id === id);

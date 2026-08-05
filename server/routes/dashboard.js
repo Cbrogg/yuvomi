@@ -216,13 +216,15 @@ router.get('/', (req, res) => {
         SUM(amount) AS balance,
         COUNT(*) AS entry_count
       FROM budget_entries
-      WHERE date BETWEEN ? AND ?${ownerClause}
+      -- Erwartete, noch unbestaetigte Buchungen zaehlen nicht mit (#637), wie in
+      -- Uebersicht, Statistik, Plan und Kontostand.
+      WHERE date BETWEEN ? AND ?${ownerClause} AND is_pending = 0
     `).get(from, to, ...ownerParams);
 
     const topExpense = d.prepare(`
       SELECT category, SUM(amount) AS amount
       FROM budget_entries
-      WHERE amount < 0 AND date BETWEEN ? AND ?${ownerClause}
+      WHERE amount < 0 AND date BETWEEN ? AND ?${ownerClause} AND is_pending = 0
       GROUP BY category
       ORDER BY ABS(SUM(amount)) DESC
       LIMIT 1

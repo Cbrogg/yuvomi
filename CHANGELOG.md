@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Recurring budget entries take any rhythm now: pick weekly, monthly or yearly and say how many of them lie between two bookings. Every two weeks, every three months, every second year - none of that was expressible before, when the only choices were monthly, half-yearly and yearly. A weekly series books several times in the same month; the day of the month, or the weekday, is the one the entry itself carries. Existing entries keep their rhythm exactly: half-yearly ones now read as "every 6 months" (#636)
+- A recurring series can now wait for your confirmation before its bookings count. Not every service debits on the same day or to the cent, and an entry that has not actually happened yet was still moving the monthly balance. Turn it on per series: its bookings appear in the list marked as expected, count towards no total until you confirm them, and confirming lets you correct the amount and the date to what the bank actually did. What is still outstanding is shown under the summary cards, so nothing disappears quietly. Existing series are unaffected unless you turn it on (#637)
+
+### Changed
+
+- Deleting a single booking of a recurring series no longer suppresses the whole month, only that one date. The difference was invisible while a series could book at most once a month, but a deleted Tuesday of a weekly series would have taken the rest of the month with it
+
 ## [1.80.0] - 2026-08-05
 
 ### Added

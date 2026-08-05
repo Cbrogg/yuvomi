@@ -180,6 +180,52 @@
   white-space: nowrap;
 }
 
+/* Erwartete, noch nicht bestätigte Buchung (#637). Teilt die Pillen-Grammatik
+ * des Haushalt-Badges, färbt aber in der Warn-Rolle: die Zeile steht in der
+ * Liste, zählt aber in keiner Summe mit, und dieser Unterschied darf nicht auf
+ * derselben Farbe liegen wie eine bloße Zuordnung. */
+.budget-badge--pending {
+  display: inline-block;
+  vertical-align: middle;
+  margin-inline-start: var(--space-1);
+  padding: var(--space-px) var(--space-2);
+  border-radius: var(--radius-full);
+  font-size: var(--text-2xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.5;
+  color: color-mix(in srgb, var(--color-warning) 72%, var(--color-text-primary));
+  background: color-mix(in srgb, var(--color-warning) 14%, transparent);
+  white-space: nowrap;
+}
+
+/* Der Betrag einer erwarteten Buchung wird zurückgenommen: er ist eine Ansage,
+ * keine Tatsache. Nur der Betrag - Titel und Datum bleiben voll lesbar, sonst
+ * wäre die Zeile schwerer zu erfassen als die daneben. */
+.budget-entry--pending .budget-entry__amount {
+  opacity: 0.65;
+}
+
+.budget-entry--pending .budget-entry__indicator {
+  background: repeating-linear-gradient(
+    135deg,
+    var(--color-warning) 0,
+    var(--color-warning) var(--space-1),
+    transparent var(--space-1),
+    transparent var(--space-2)
+  );
+}
+
+/* Was diesen Monat noch aussteht, direkt unter den Karten - die Zahl fehlt in
+ * allen dreien. */
+.budget-pending-note {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
 /* Scroll-Affordance der Tab-Leiste: geteilte has-fade-*-Masken aus
  * filter-chip.css, verdrahtet via wireScrollFade (utils/ux.js, Audit F-06). */
 

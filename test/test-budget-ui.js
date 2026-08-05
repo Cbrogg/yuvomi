@@ -928,3 +928,71 @@ test('die Platzhalter der neuen Sätze bleiben in jeder Locale erhalten', () => 
     }
   }
 });
+
+// --------------------------------------------------------
+// Wiederholung: Einheit + Anzahl (#636)
+// --------------------------------------------------------
+
+test('das Intervall-Feld bietet Einheit und Anzahl, ohne half_year', () => {
+  const start = budget.indexOf('id="bm-recurrence-options"');
+  const modal = budget.slice(start, budget.indexOf('renderDocumentAttachField', start));
+  for (const key of ['budget.intervalWeekly', 'budget.intervalMonthly', 'budget.intervalYearly']) {
+    assert.ok(modal.includes(key), `${key} fehlt im Intervall-Feld`);
+  }
+  assert.ok(!budget.includes('intervalHalfYear'), 'half_year ist als Rhythmus abgelöst (monatlich x 6)');
+  assert.ok(!budget.includes("'half_year'"), 'kein half_year-Literal mehr im Frontend');
+  assert.match(modal, /id="bm-interval-count"[\s\S]*?min="1"[\s\S]*?max="99"/, 'Anzahl-Feld mit Grenzen 1..99');
+  assert.ok(modal.includes('id="bm-interval-unit"'), 'Einheitenwort neben der Zahl');
+});
+
+test('das Einheitenwort kommt aus der geteilten Quelle, nicht aus einer zweiten Zuordnung', () => {
+  // Die Zuordnung Einheit -> Wort lebt in rrule-ui.js. Eine eigene Liste im
+  // Budget-Modal wäre beim nächsten Sprachwechsel die Stelle, die zurückbleibt.
+  assert.match(budget, /import \{ intervalUnitLabel \} from '\/rrule-ui\.js'/);
+  assert.ok(budget.includes('intervalUnitLabel('), 'Label über die geteilte Funktion');
+  for (const key of ['rrule.unitWeek', 'rrule.unitMonths', 'rrule.unitYears']) {
+    assert.ok(!budget.includes(key), `${key} gehört nicht ins Budget-Modal`);
+  }
+});
+
+test('die Anzahl reist mit dem Eintrag zum Server', () => {
+  assert.ok(budget.includes('recurrence_interval_count: intervalN'), 'Anzahl fehlt im Request-Body');
+  assert.match(budget, /Math\.min\(99, Math\.max\(1,[^)]*bm-interval-count/, 'Anzahl wird vor dem Senden geklemmt');
+});
+
+// --------------------------------------------------------
+// Bestätigung vor der Buchung (#637)
+// --------------------------------------------------------
+
+test('eine erwartete Buchung ist in der Liste als solche erkennbar und buchbar', () => {
+  assert.ok(budget.includes('budget-badge--pending'), 'Marke an der Zeile fehlt');
+  assert.ok(budget.includes('budget.pendingBadge'), 'Beschriftung der Marke fehlt');
+  assert.match(budget, /data-action="confirm"/, 'Buchen-Aktion fehlt an der Zeile');
+  assert.ok(budget.includes('budget-entry--pending'), 'Zeile trägt keinen eigenen Zustand');
+  assert.ok(budgetCss.includes('.budget-badge--pending'), 'Marke ohne Stil');
+  assert.ok(budgetCss.includes('.budget-entry--pending'), 'Zeilenzustand ohne Stil');
+});
+
+test('der Bestätigen-Dialog lässt Betrag und Datum korrigieren', () => {
+  const modal = budget.slice(budget.indexOf('async function openConfirmBookingModal'));
+  assert.ok(modal.includes('cb-amount'), 'Betragsfeld fehlt');
+  assert.ok(modal.includes('cb-date'), 'Datumsfeld fehlt');
+  assert.ok(modal.includes('yuvomi-datepicker'), 'Datum über die geteilte Komponente');
+  assert.match(modal, /api\.patch\(`\/budget\/\$\{id\}\/confirm`/, 'ruft die Bestätigungs-Route nicht auf');
+  assert.ok(modal.includes('rejectOffGridAmount'), 'Betrag ohne Währungsraster-Prüfung');
+});
+
+test('was noch aussteht, steht unter den Summenkarten', () => {
+  // Sonst verschwände das Geld: die Buchung ist in der Liste, aber in keiner
+  // Karte, und niemand könnte sagen, um wie viel die Übersicht danebenliegt.
+  assert.ok(budget.includes('budget.pendingSummary'), 'Hinweiszeile fehlt');
+  assert.ok(budget.includes('budget-pending-note'), 'Hinweiszeile ohne eigene Klasse');
+  assert.ok(budgetCss.includes('.budget-pending-note'), 'Hinweiszeile ohne Stil');
+});
+
+test('die Bestätigungspflicht ist eine Eigenschaft der Serie', () => {
+  const modal = budget.slice(budget.indexOf('id="bm-recurrence-options"'), budget.indexOf('renderDocumentAttachField', budget.indexOf('id="bm-recurrence-options"')));
+  assert.ok(modal.includes('bm-confirm-first'), 'Schalter fehlt im Wiederholungs-Block');
+  assert.ok(modal.includes('budget.confirmFirstLabel'), 'Beschriftung fehlt');
+  assert.ok(budget.includes('recurrence_confirm: confirmFirst'), 'Feld reist nicht zum Server');
+});
