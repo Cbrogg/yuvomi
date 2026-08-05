@@ -829,8 +829,12 @@ function discardRecurrenceFollowup(taskId) {
 
 /**
  * Der Vorlauf gehört zum Durchlauf, nicht zum Kalender: beginnt eine Aufgabe
- * drei Tage vor ihrer Fälligkeit, tut sie das auch beim nächsten Mal. Ohne
- * Start- oder Fälligkeitsdatum gibt es nichts zu verschieben (NULL).
+ * drei Tage vor ihrer Fälligkeit, tut sie das auch beim nächsten Mal.
+ *
+ * Ohne Start- oder Fälligkeitsdatum gibt es nichts zu verschieben (NULL). Der
+ * zweite Fall ist erreichbar: eine erledigungsverankerte Serie (#658) läuft
+ * auch ohne Fälligkeitsdatum weiter, und dann fehlt der Bezugspunkt, an dem ein
+ * Vorlauf gemessen wäre.
  */
 function shiftedStartDate(startDate, dueDate, nextDue) {
   if (!startDate || !dueDate) return null;

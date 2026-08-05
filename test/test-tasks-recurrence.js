@@ -546,7 +546,8 @@ test('PUT done: der Anker gilt auch beim Abhaken über den Bearbeiten-Dialog', a
   // Die Naht zwischen beiden Wegen: der Dialog geht durch dieselbe Funktion,
   // also muss er den Erledigungstag genauso als Anker nehmen - und ihn vererben.
   const id = insertTask({
-    title: 'Kaffeemaschine entkalken', status: 'open', due_date: dayKey(-3), created_by: uid,
+    title: 'Kaffeemaschine entkalken', status: 'open',
+    start_date: dayKey(-5), due_date: dayKey(-3), created_by: uid,
     is_recurring: 1, recurrence_rule: 'FREQ=WEEKLY', recurrence_from_completion: 1,
   });
   const res = await call('PUT', `/${id}`, { title: 'Kaffeemaschine entkalken', status: 'done' });
@@ -555,6 +556,32 @@ test('PUT done: der Anker gilt auch beim Abhaken über den Bearbeiten-Dialog', a
   const followup = openInstances('Kaffeemaschine entkalken')[0];
   assert.equal(followup.due_date, dayKey(7), 'eine Woche ab heute, nicht ab dem alten Raster');
   assert.equal(followup.recurrence_from_completion, 1, 'und der Anker reist mit');
+  // Der Vorlauf hängt am Durchlauf, nicht am Anker: er bleibt derselbe, egal
+  // woher das neue Fälligkeitsdatum kommt.
+  assert.equal(followup.start_date, dayKey(5), 'zwei Tage vor der neuen Fälligkeit');
+});
+
+test('Die Folgeinstanz mit Vorlauf wartet auf ihren Starttag', async () => {
+  // Folge des Vorlaufs, bewusst so: die Liste blendet Aufgaben bis zu ihrem
+  // Startdatum aus. Wer den Vorlauf setzt, will die nächste Instanz erst dann
+  // sehen - sichtbar wird sie über "Zukünftige Aufgaben anzeigen".
+  const id = insertTask({
+    title: 'Reifen wechseln', status: 'open',
+    start_date: dayKey(-2), due_date: dayKey(-1), created_by: uid,
+    is_recurring: 1, recurrence_rule: 'FREQ=MONTHLY',
+  });
+  await call('PATCH', `/${id}/status`, { status: 'done' });
+
+  const hidden = await call('GET', '/?status=open');
+  assert.ok(
+    !hidden.body.data.some((t) => t.title === 'Reifen wechseln'),
+    'Vor ihrem Starttag taucht die Folgeinstanz in der Standardliste nicht auf',
+  );
+  const shown = await call('GET', '/?status=open&include_future=1');
+  assert.ok(
+    shown.body.data.some((t) => t.title === 'Reifen wechseln'),
+    'Mit "Zukünftige Aufgaben anzeigen" schon',
+  );
 });
 
 test('PUT done: im selben Speichern gesetzter Anker gilt sofort', async () => {
