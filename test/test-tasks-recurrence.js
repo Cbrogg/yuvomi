@@ -322,6 +322,42 @@ test('PUT done: Subtask einer Serie erzeugt keine Folgeinstanz', async () => {
   assert.equal(rows.n, 1, 'Subtasks dürfen keine Folgeinstanz auslösen');
 });
 
+// --------------------------------------------------------
+// Erledigen und Folgeinstanz sind eine Einheit
+// --------------------------------------------------------
+test('Scheitert der Spawn, bleibt die Aufgabe offen - in beiden Pfaden', async () => {
+  // Der Trigger lässt genau den Spawn-INSERT scheitern (nur er setzt
+  // recurrence_origin_id) und lässt alles andere in Ruhe.
+  db.exec(`CREATE TRIGGER spawn_boom BEFORE INSERT ON tasks
+    WHEN NEW.recurrence_origin_id IS NOT NULL
+    BEGIN SELECT RAISE(ABORT, 'spawn failed'); END`);
+  try {
+    const viaPatch = insertTask({
+      title: 'Rauchmelder prüfen', status: 'open', due_date: dayKey(0), created_by: uid,
+      is_recurring: 1, recurrence_rule: 'FREQ=MONTHLY',
+    });
+    const patched = await call('PATCH', `/${viaPatch}/status`, { status: 'done' });
+    assert.equal(patched.status, 500);
+    assert.equal(
+      db.prepare('SELECT status FROM tasks WHERE id = ?').get(viaPatch).status, 'open',
+      'Ohne Folgeinstanz darf die Aufgabe nicht erledigt zurückbleiben - die Serie endete sonst still',
+    );
+
+    const viaPut = insertTask({
+      title: 'Sieb reinigen', status: 'open', due_date: dayKey(0), created_by: uid,
+      is_recurring: 1, recurrence_rule: 'FREQ=MONTHLY',
+    });
+    const put = await call('PUT', `/${viaPut}`, { title: 'Sieb reinigen', status: 'done' });
+    assert.equal(put.status, 500);
+    assert.equal(
+      db.prepare('SELECT status FROM tasks WHERE id = ?').get(viaPut).status, 'open',
+      'Auch das Bearbeiten-Formular rollt den Statuswechsel mit zurück',
+    );
+  } finally {
+    db.exec('DROP TRIGGER spawn_boom');
+  }
+});
+
 test('PATCH done: Subtask einer Serie erzeugt keine Folgeinstanz', async () => {
   const parent = insertTask({
     title: 'Eltern-Serie', status: 'open', due_date: dayKey(-7), created_by: uid,

@@ -703,6 +703,12 @@ router.put('/:id', (req, res) => {
     // Tags wirklich geändert haben (#586).
     const tagsBefore = loadTags(db.get(), task.id);
 
+    // Wie in PATCH umfasst die Transaktion auch die Serien-Bewegung: eine
+    // gespeicherte Aufgabe ohne die Folgeinstanz, die zu ihr gehört, wäre
+    // derselbe stille Serienabbruch, den dieser Weg gerade erst verloren hat.
+    let pending = false;
+    let undone  = 0;
+    let updated;
     db.get().transaction(() => {
       db.get().prepare(`
         UPDATE tasks SET
@@ -718,40 +724,38 @@ router.put('/:id', (req, res) => {
       syncHousekeepingPaymentStatus(db.get(), req.params.id, status);
       // Punkte erst nach setAssignments: die Zuständigen werden daraus abgeleitet.
       syncTaskRewards(db.get(), task.id, task.status, status, req.authUserId || req.session.userId);
+
+      // Auch über das Bearbeiten-Formular lässt sich ein Abhaken zurücknehmen -
+      // die Folgeinstanz muss dann genauso verschwinden wie beim Klick auf die
+      // Checkbox (#650).
+      if (task.status === 'done' && status !== 'done') {
+        undone = discardRecurrenceFollowup(task.id);
+      }
+
+      updated = db.get().prepare(`
+        SELECT t.*, u.display_name AS assigned_name, u.avatar_color AS assigned_color,
+          u.avatar_data AS assigned_avatar, ${ASSIGNED_USERS_SQL}
+        FROM tasks t LEFT JOIN users u ON t.assigned_to = u.id
+        WHERE t.id = ?
+      `).get(req.params.id);
+      addAssignedUsers(updated);
+      updated.subtasks = loadSubtasks(updated.id, req.authUserId || req.session.userId);
+      attachTags([updated]);
+
+      // Änderung an einer gespiegelten Aufgabe auf dem CalDAV-Server nachziehen (#617).
+      // Die Tags reisen als kanonischer Schlüssel mit, weil sie in einer eigenen
+      // Tabelle liegen und der Feldvergleich nur die Zeile selbst sieht (#586).
+      pending = markTodoOutbound(
+        'tasks',
+        { ...task,    tags_key: tagsKey(tagsBefore) },
+        { ...updated, tags_key: tagsKey(updated.tags) },
+      );
+
+      // Das Status-Dropdown im Bearbeiten-Formular hakt genauso ab wie die Checkbox -
+      // also muss es die Serie genauso weiterschreiben. Grundlage ist die frisch
+      // gelesene Zeile, damit im selben Zug geänderte Regel/Fälligkeit schon zählen.
+      if (status === 'done' && task.status !== 'done') spawnRecurrenceFollowup(updated);
     })();
-
-    // Auch über das Bearbeiten-Formular lässt sich ein Abhaken zurücknehmen -
-    // die Folgeinstanz muss dann genauso verschwinden wie beim Klick auf die
-    // Checkbox (#650).
-    const undone = task.status === 'done' && status !== 'done'
-      ? discardRecurrenceFollowup(task.id)
-      : 0;
-
-    const updated = db.get().prepare(`
-      SELECT t.*, u.display_name AS assigned_name, u.avatar_color AS assigned_color,
-        u.avatar_data AS assigned_avatar, ${ASSIGNED_USERS_SQL}
-      FROM tasks t LEFT JOIN users u ON t.assigned_to = u.id
-      WHERE t.id = ?
-    `).get(req.params.id);
-    addAssignedUsers(updated);
-    updated.subtasks = loadSubtasks(updated.id, req.authUserId || req.session.userId);
-    attachTags([updated]);
-
-    // Änderung an einer gespiegelten Aufgabe auf dem CalDAV-Server nachziehen (#617).
-    // Die Tags reisen als kanonischer Schlüssel mit, weil sie in einer eigenen
-    // Tabelle liegen und der Feldvergleich nur die Zeile selbst sieht (#586).
-    const pending = markTodoOutbound(
-      'tasks',
-      { ...task,    tags_key: tagsKey(tagsBefore) },
-      { ...updated, tags_key: tagsKey(updated.tags) },
-    );
-
-    // Das Status-Dropdown im Bearbeiten-Formular hakt genauso ab wie die Checkbox -
-    // also muss es die Serie genauso weiterschreiben. Grundlage ist die frisch
-    // gelesene Zeile, damit im selben Zug geänderte Regel/Fälligkeit schon zählen.
-    // Wie in PATCH steht der Spawn hinter dem Vormerken: die Aufgabe selbst ist
-    // schon geschrieben, ein Fehler beim Nachlegen darf ihren Push nicht fressen.
-    if (status === 'done' && task.status !== 'done') spawnRecurrenceFollowup(updated);
 
     res.json({ data: updated });
 
@@ -863,25 +867,34 @@ router.patch('/:id/status', (req, res) => {
     if (!prev)
       return res.status(404).json({ error: 'Task not found.', code: 404 });
 
-    db.get().prepare('UPDATE tasks SET status = ? WHERE id = ?').run(status, req.params.id);
-    const pending = markTodoOutbound('tasks', prev, { ...prev, status });
+    // Statuswechsel und die Serien-Bewegung, die daraus folgt, sind eine Einheit:
+    // scheitert das Nachlegen oder das Zurücknehmen der Folgeinstanz, darf die
+    // Aufgabe nicht trotzdem umgeschaltet zurückbleiben. Sonst endete die Serie
+    // still (kein Nachfolger) oder stünde doppelt da - genau die beiden Fehler,
+    // gegen die dieser Block gebaut ist. Der Outbound-Marker gehört mit hinein:
+    // ohne Statuswechsel gibt es auch nichts zu pushen.
+    let pending = false;
+    let undone  = 0;
+    db.get().transaction(() => {
+      db.get().prepare('UPDATE tasks SET status = ? WHERE id = ?').run(status, req.params.id);
+      pending = markTodoOutbound('tasks', prev, { ...prev, status });
 
-    syncHousekeepingPaymentStatus(db.get(), req.params.id, status);
-    // Punkte-Gutschrift/Storno an den Aufgaben-Statuswechsel koppeln.
-    syncTaskRewards(db.get(), Number(req.params.id), prev.status, status, req.authUserId || req.session.userId);
+      syncHousekeepingPaymentStatus(db.get(), req.params.id, status);
+      // Punkte-Gutschrift/Storno an den Aufgaben-Statuswechsel koppeln.
+      syncTaskRewards(db.get(), Number(req.params.id), prev.status, status, req.authUserId || req.session.userId);
 
-    // Zurückgenommenes Abhaken macht auch die Folgeinstanz rückgängig (#650).
-    // Sonst stünde die beim Erledigen erzeugte nächste Instanz neben der wieder
-    // geöffneten Aufgabe - die Serie sähe doppelt aus.
-    let undone = 0;
-    if (prev.status === 'done' && status !== 'done') {
-      undone = discardRecurrenceFollowup(Number(req.params.id));
-    }
+      // Zurückgenommenes Abhaken macht auch die Folgeinstanz rückgängig (#650).
+      // Sonst stünde die beim Erledigen erzeugte nächste Instanz neben der wieder
+      // geöffneten Aufgabe - die Serie sähe doppelt aus.
+      if (prev.status === 'done' && status !== 'done') {
+        undone = discardRecurrenceFollowup(Number(req.params.id));
+      }
 
-    // Wiederkehrende Aufgabe: nächste Instanz erstellen wenn erledigt
-    if (status === 'done' && prev.status !== 'done') {
-      spawnRecurrenceFollowup(db.get().prepare('SELECT * FROM tasks WHERE id = ?').get(req.params.id));
-    }
+      // Wiederkehrende Aufgabe: nächste Instanz erstellen wenn erledigt
+      if (status === 'done' && prev.status !== 'done') {
+        spawnRecurrenceFollowup(db.get().prepare('SELECT * FROM tasks WHERE id = ?').get(req.params.id));
+      }
+    })();
 
     res.json({ data: { id: Number(req.params.id), status } });
 
