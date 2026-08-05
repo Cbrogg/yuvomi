@@ -610,9 +610,33 @@ function collectCandidates(conn, account) {
 }
 
 /**
+ * id → changeKey aller Events eines Kalenders (Serien zählen als ein Master) —
+ * die Basis der Drift-Erkennung, eine (paginierte) Anfrage je Kalender und Lauf.
+ * @returns {Promise<Map<string, string|null>|null>} null, wenn das Listing
+ *          scheitert; der Push läuft dann ohne Drift-Erkennung weiter.
+ */
+async function fetchRemoteEventStates(calendarId, accessToken, fetchImpl = fetch) {
+  try {
+    const states = new Map();
+    let path = `/me/calendars/${encodeURIComponent(calendarId)}/events?$select=id,changeKey&$top=500`;
+    while (path) {
+      const data = await graphJson(path, accessToken, {}, fetchImpl);
+      for (const ev of data.value || []) states.set(ev.id, ev.changeKey ?? null);
+      path = data['@odata.nextLink'] ? data['@odata.nextLink'].replace(GRAPH_BASE, '') : null;
+    }
+    return states;
+  } catch (err) {
+    log.warn(`Drift check failed for calendar ${calendarId}:`, err.message);
+    return null;
+  }
+}
+
+/**
  * Pusht je Konto die Kandidatenmenge (Auto-Sync + explizite Ziele) in die
- * Zielkalender und löscht Remote-Events, deren lokales Event aus der Menge
- * gefallen ist (gelöscht, Sichtbarkeit verloren, Auto-Sync deaktiviert).
+ * Zielkalender, löscht Remote-Events, deren lokales Event aus der Menge
+ * gefallen ist (gelöscht, Sichtbarkeit verloren, Auto-Sync deaktiviert), und
+ * setzt in Outlook veränderte oder gelöschte Termine auf den Yuvomi-Stand
+ * zurück (changeKey-Reconciliation - Yuvomi ist Source of Truth).
  * Kein Inbound. Konto-Fehler brechen nur das jeweilige Konto ab.
  * @param {{fetchImpl?: typeof fetch}} [options] - fetch injizierbar (Tests)
  */
@@ -631,12 +655,13 @@ async function sync({ fetchImpl = fetch } = {}) {
   const selLink = conn.prepare('SELECT * FROM outlook_event_links WHERE event_id = ? AND account_id = ?');
   const insLink = conn.prepare(`
     INSERT INTO outlook_event_links
-      (event_id, account_id, outlook_calendar_id, outlook_event_id, content_hash, last_pushed_at, last_error)
-    VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ','now'), NULL)
+      (event_id, account_id, outlook_calendar_id, outlook_event_id, content_hash, outlook_change_key, last_pushed_at, last_error)
+    VALUES (?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ','now'), NULL)
     ON CONFLICT(event_id, account_id) DO UPDATE SET
       outlook_calendar_id = excluded.outlook_calendar_id,
       outlook_event_id = excluded.outlook_event_id,
       content_hash = excluded.content_hash,
+      outlook_change_key = excluded.outlook_change_key,
       last_pushed_at = excluded.last_pushed_at,
       last_error = NULL
   `);
@@ -658,23 +683,39 @@ async function sync({ fetchImpl = fetch } = {}) {
     try {
       const accessToken = await ensureAccessToken(account, fetchImpl);
       const candidates = collectCandidates(conn, account);
+      const linkRows = conn.prepare(
+        'SELECT * FROM outlook_event_links WHERE account_id = ?'
+      ).all(account.id);
+
+      // ------------------------------------------------
+      // Drift-Erkennung: je verlinktem Kalender EINMAL id+changeKey listen
+      // (eine kleine Anfrage pro Kalender und Lauf). Fehlt ein Event remote,
+      // wurde es in Outlook gelöscht; weicht der changeKey ab, wurde es dort
+      // verändert - beides setzt der Push unten auf den Yuvomi-Stand zurück.
+      // ------------------------------------------------
+      const remoteStates = new Map();
+      for (const calId of new Set(linkRows.map((l) => l.outlook_calendar_id))) {
+        remoteStates.set(calId, await fetchRemoteEventStates(calId, accessToken, fetchImpl));
+      }
 
       // ------------------------------------------------
       // 1) Deletions: Links dieses Kontos, deren Event nicht (mehr) in der
       //    Kandidatenmenge ist. Zuerst, damit Ziel-Wechsel sauber konvergieren.
       // ------------------------------------------------
-      const orphans = conn.prepare(
-        'SELECT * FROM outlook_event_links WHERE account_id = ?'
-      ).all(account.id).filter((link) => !candidates.has(link.event_id));
+      const orphans = linkRows.filter((link) => !candidates.has(link.event_id));
 
       for (const link of orphans) {
         try {
-          const res = await graphRequest(
-            `/me/events/${encodeURIComponent(link.outlook_event_id)}`,
-            accessToken, { method: 'DELETE' }, fetchImpl
-          );
-          if (!res.ok && res.status !== 404) {
-            throw new Error(`HTTP ${res.status}`);
+          // Remote nachweislich schon weg → Tombstone ohne Request abräumen.
+          const remote = remoteStates.get(link.outlook_calendar_id);
+          if (!remote || remote.has(link.outlook_event_id)) {
+            const res = await graphRequest(
+              `/me/events/${encodeURIComponent(link.outlook_event_id)}`,
+              accessToken, { method: 'DELETE' }, fetchImpl
+            );
+            if (!res.ok && res.status !== 404) {
+              throw new Error(`HTTP ${res.status}`);
+            }
           }
           delLink.run(link.event_id, link.account_id);
           deleted++;
@@ -709,13 +750,21 @@ async function sync({ fetchImpl = fetch } = {}) {
         const payload = localEventToGraph(event, assigneeNames);
         const hash = contentHash(payload, calendarId);
 
+        // Drift gegen den zuletzt selbst geschriebenen changeKey. Ein Link ohne
+        // gespeicherten Key (Alt-Bestand) wird einmalig zurückgesetzt und trägt
+        // den Key danach.
+        const remote = link ? remoteStates.get(link.outlook_calendar_id) : null;
+        const remoteMissing = !!(link && remote && !remote.has(link.outlook_event_id));
+        const remoteDrifted = !!(link && remote && !remoteMissing
+          && (!link.outlook_change_key || remote.get(link.outlook_event_id) !== link.outlook_change_key));
+
         try {
           if (!link) {
             const created = await graphJson(
               `/me/calendars/${encodeURIComponent(calendarId)}/events`,
               accessToken, { method: 'POST', body: payload }, fetchImpl
             );
-            insLink.run(event.id, account.id, calendarId, created.id, hash);
+            insLink.run(event.id, account.id, calendarId, created.id, hash, created.changeKey ?? null);
             pushed++;
           } else if (link.outlook_calendar_id !== calendarId) {
             // Zielkalender gewechselt → Delete + Create (Graph-"move" wäre ein
@@ -729,27 +778,36 @@ async function sync({ fetchImpl = fetch } = {}) {
               `/me/calendars/${encodeURIComponent(calendarId)}/events`,
               accessToken, { method: 'POST', body: payload }, fetchImpl
             );
-            insLink.run(event.id, account.id, calendarId, created.id, hash);
+            insLink.run(event.id, account.id, calendarId, created.id, hash, created.changeKey ?? null);
             updated++;
-          } else if (link.content_hash !== hash) {
+          } else if (remoteMissing) {
+            // In Outlook von Hand gelöscht → Yuvomi ist Source of Truth: neu anlegen.
+            const created = await graphJson(
+              `/me/calendars/${encodeURIComponent(calendarId)}/events`,
+              accessToken, { method: 'POST', body: payload }, fetchImpl
+            );
+            insLink.run(event.id, account.id, calendarId, created.id, hash, created.changeKey ?? null);
+            updated++;
+          } else if (link.content_hash !== hash || remoteDrifted) {
             try {
-              await graphJson(
+              const patched = await graphJson(
                 `/me/events/${encodeURIComponent(link.outlook_event_id)}`,
                 accessToken, { method: 'PATCH', body: payload }, fetchImpl
               );
-              insLink.run(event.id, account.id, calendarId, link.outlook_event_id, hash);
+              insLink.run(event.id, account.id, calendarId, link.outlook_event_id, hash, patched.changeKey ?? null);
             } catch (err) {
-              // Remote von Hand gelöscht → Yuvomi ist Source of Truth: neu anlegen.
+              // Fallback ohne Drift-Erkennung (Listing fehlgeschlagen): Remote
+              // von Hand gelöscht → neu anlegen.
               if (err.status !== 404) throw err;
               const created = await graphJson(
                 `/me/calendars/${encodeURIComponent(calendarId)}/events`,
                 accessToken, { method: 'POST', body: payload }, fetchImpl
               );
-              insLink.run(event.id, account.id, calendarId, created.id, hash);
+              insLink.run(event.id, account.id, calendarId, created.id, hash, created.changeKey ?? null);
             }
             updated++;
           }
-          // Hash unverändert → No-Op (0 Requests).
+          // Hash unverändert + kein Drift → No-Op (keine weitere Anfrage).
         } catch (err) {
           log.error(`Push failed for event ${event.id} (account ${account.id}):`, err.message);
           if (link) setLinkError.run(err.message, event.id, account.id);
@@ -811,6 +869,7 @@ export const __test = {
   localEventToGraph,
   contentHash,
   collectCandidates,
+  fetchRemoteEventStates,
   ensureAccessToken,
   refreshCalendarSelection,
   ReauthRequiredError,

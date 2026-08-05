@@ -171,6 +171,26 @@ describe('Datums- und Payload-Konvertierung', () => {
 // One-Way-Push (sync mit injiziertem fetch)
 // --------------------------------------------------------
 
+// Antwort der Drift-Erkennung (GET .../events?$select=id,changeKey) aus den
+// aktuellen Link-Zeilen bauen - Default "kein Drift": remote sieht exakt so
+// aus, wie Yuvomi zuletzt geschrieben hat.
+function remoteListFor(calendarId) {
+  return db.prepare(
+    'SELECT outlook_event_id AS id, outlook_change_key AS changeKey FROM outlook_event_links WHERE outlook_calendar_id = ?'
+  ).all(calendarId);
+}
+
+const DRIFT_LIST_RE = /\/me\/calendars\/([^/]+)\/events\?/;
+
+/** GET-Listing der Drift-Erkennung beantworten; null, wenn der Call keiner ist. */
+function answerDriftList(call, overrides = {}) {
+  const m = call.method === 'GET' ? call.url.match(DRIFT_LIST_RE) : null;
+  if (!m) return null;
+  const calId = decodeURIComponent(m[1]);
+  const value = calId in overrides ? overrides[calId] : remoteListFor(calId);
+  return jsonRes(200, { value });
+}
+
 describe('Outlook one-way push', () => {
   let userId;
   let accountId;
@@ -209,10 +229,10 @@ describe('Outlook one-way push', () => {
     ).run(userId, accountId).lastInsertRowid;
   });
 
-  it('legt neue Events im Zielkalender an und speichert die Link-Zeile', async () => {
+  it('legt neue Events im Zielkalender an und speichert Link + changeKey', async () => {
     const fetchImpl = makeFetch((call) => {
       if (call.method === 'POST' && call.url.includes('/me/calendars/cal-A/events')) {
-        return jsonRes(201, { id: 'graph-evt-1' });
+        return jsonRes(201, { id: 'graph-evt-1', changeKey: 'ck-1' });
       }
       throw new Error(`Unexpected request: ${call.method} ${call.url}`);
     });
@@ -220,68 +240,117 @@ describe('Outlook one-way push', () => {
     const result = await outlook.sync({ fetchImpl });
     assert.equal(result.pushed, 1);
     assert.equal(result.syncedAccounts, 1);
+    // Ohne bestehende Links kein Drift-Listing → genau der eine Create.
+    assert.equal(fetchImpl.calls.length, 1);
 
     const link = linkRow(eventId);
     assert.equal(link.outlook_event_id, 'graph-evt-1');
     assert.equal(link.outlook_calendar_id, 'cal-A');
+    assert.equal(link.outlook_change_key, 'ck-1');
     assert.ok(link.content_hash);
     assert.equal(accountRow().last_error, null);
   });
 
-  it('unverändertes Event erzeugt keinen einzigen Graph-Request', async () => {
+  it('unverändertes Event kostet nur das eine Drift-Listing pro Kalender', async () => {
     const fetchImpl = makeFetch((call) => {
+      const drift = answerDriftList(call);
+      if (drift) return drift;
       throw new Error(`Unexpected request: ${call.method} ${call.url}`);
     });
     const result = await outlook.sync({ fetchImpl });
-    assert.equal(fetchImpl.calls.length, 0);
+    assert.equal(fetchImpl.calls.length, 1, 'genau ein GET-Listing, keine Schreibzugriffe');
+    assert.equal(fetchImpl.calls[0].method, 'GET');
     assert.equal(result.pushed + result.updated + result.deleted, 0);
   });
 
-  it('geändertes Event wird per PATCH aktualisiert', async () => {
+  it('geändertes Event wird per PATCH aktualisiert und trägt den neuen changeKey', async () => {
     db.prepare('UPDATE calendar_events SET title = ? WHERE id = ?').run('Zahnarzt (neu)', eventId);
     const fetchImpl = makeFetch((call) => {
+      const drift = answerDriftList(call);
+      if (drift) return drift;
       if (call.method === 'PATCH' && call.url.includes('/me/events/graph-evt-1')) {
-        return jsonRes(200, { id: 'graph-evt-1' });
+        return jsonRes(200, { id: 'graph-evt-1', changeKey: 'ck-2' });
       }
       throw new Error(`Unexpected request: ${call.method} ${call.url}`);
     });
 
     const result = await outlook.sync({ fetchImpl });
     assert.equal(result.updated, 1);
-    assert.equal(fetchImpl.calls.length, 1);
-    assert.equal(fetchImpl.calls[0].body.subject, 'Zahnarzt (neu)');
+    assert.deepEqual(fetchImpl.calls.map((c) => c.method), ['GET', 'PATCH']);
+    assert.equal(fetchImpl.calls[1].body.subject, 'Zahnarzt (neu)');
+    assert.equal(linkRow(eventId).outlook_change_key, 'ck-2');
+  });
+
+  it('in Outlook veränderter Termin (changeKey-Drift) wird zurückgesetzt', async () => {
+    // Lokal unverändert - nur der remote gemeldete changeKey weicht ab.
+    const fetchImpl = makeFetch((call) => {
+      const drift = answerDriftList(call, {
+        'cal-A': [{ id: 'graph-evt-1', changeKey: 'ck-extern' }],
+      });
+      if (drift) return drift;
+      if (call.method === 'PATCH' && call.url.includes('/me/events/graph-evt-1')) {
+        return jsonRes(200, { id: 'graph-evt-1', changeKey: 'ck-3' });
+      }
+      throw new Error(`Unexpected request: ${call.method} ${call.url}`);
+    });
+
+    const result = await outlook.sync({ fetchImpl });
+    assert.equal(result.updated, 1, 'Reassert trotz unverändertem lokalen Hash');
+    assert.equal(fetchImpl.calls[1].body.subject, 'Zahnarzt (neu)', 'Yuvomi-Stand gewinnt');
+    assert.equal(linkRow(eventId).outlook_change_key, 'ck-3');
   });
 
   it('Zielkalender-Wechsel löst Delete + Create aus', async () => {
     db.prepare('UPDATE calendar_events SET target_outlook_calendar_id = ? WHERE id = ?').run('cal-B', eventId);
     const fetchImpl = makeFetch((call) => {
+      const drift = answerDriftList(call);
+      if (drift) return drift;
       if (call.method === 'DELETE' && call.url.includes('/me/events/graph-evt-1')) return jsonRes(204);
       if (call.method === 'POST' && call.url.includes('/me/calendars/cal-B/events')) {
-        return jsonRes(201, { id: 'graph-evt-2' });
+        return jsonRes(201, { id: 'graph-evt-2', changeKey: 'ck-b1' });
       }
       throw new Error(`Unexpected request: ${call.method} ${call.url}`);
     });
 
     const result = await outlook.sync({ fetchImpl });
     assert.equal(result.updated, 1);
-    assert.deepEqual(fetchImpl.calls.map((c) => c.method), ['DELETE', 'POST']);
+    assert.deepEqual(fetchImpl.calls.map((c) => c.method), ['GET', 'DELETE', 'POST']);
     assert.equal(linkRow(eventId).outlook_event_id, 'graph-evt-2');
     assert.equal(linkRow(eventId).outlook_calendar_id, 'cal-B');
   });
 
-  it('remote gelöschtes Event wird neu angelegt (Yuvomi = Source of Truth)', async () => {
-    db.prepare('UPDATE calendar_events SET title = ? WHERE id = ?').run('Zahnarzt (v3)', eventId);
+  it('in Outlook gelöschter Termin wird ohne lokale Änderung neu angelegt', async () => {
     const fetchImpl = makeFetch((call) => {
-      if (call.method === 'PATCH') return jsonRes(404, { error: { message: 'ErrorItemNotFound' } });
+      const drift = answerDriftList(call, { 'cal-B': [] });
+      if (drift) return drift;
       if (call.method === 'POST' && call.url.includes('/me/calendars/cal-B/events')) {
-        return jsonRes(201, { id: 'graph-evt-3' });
+        return jsonRes(201, { id: 'graph-evt-3', changeKey: 'ck-b2' });
       }
       throw new Error(`Unexpected request: ${call.method} ${call.url}`);
     });
 
     const result = await outlook.sync({ fetchImpl });
     assert.equal(result.updated, 1);
+    assert.deepEqual(fetchImpl.calls.map((c) => c.method), ['GET', 'POST']);
     assert.equal(linkRow(eventId).outlook_event_id, 'graph-evt-3');
+  });
+
+  it('Fallback ohne Drift-Listing: PATCH-404 legt neu an', async () => {
+    db.prepare('UPDATE calendar_events SET title = ? WHERE id = ?').run('Zahnarzt (v3)', eventId);
+    const fetchImpl = makeFetch((call) => {
+      if (call.method === 'GET' && DRIFT_LIST_RE.test(call.url)) {
+        return jsonRes(500, { error: { message: 'listing down' } });
+      }
+      if (call.method === 'PATCH') return jsonRes(404, { error: { message: 'ErrorItemNotFound' } });
+      if (call.method === 'POST' && call.url.includes('/me/calendars/cal-B/events')) {
+        return jsonRes(201, { id: 'graph-evt-4', changeKey: 'ck-b3' });
+      }
+      throw new Error(`Unexpected request: ${call.method} ${call.url}`);
+    });
+
+    const result = await outlook.sync({ fetchImpl });
+    assert.equal(result.updated, 1);
+    assert.equal(linkRow(eventId).outlook_event_id, 'graph-evt-4');
   });
 
   it('Events mit Nur-lesen-Ziel werden übersprungen', async () => {
@@ -292,25 +361,30 @@ describe('Outlook one-way push', () => {
     ).run(userId, accountId).lastInsertRowid;
 
     const fetchImpl = makeFetch((call) => {
+      const drift = answerDriftList(call);
+      if (drift) return drift;
       throw new Error(`Unexpected request: ${call.method} ${call.url}`);
     });
-    await outlook.sync({ fetchImpl });
-    assert.equal(fetchImpl.calls.length, 0);
+    const result = await outlook.sync({ fetchImpl });
+    assert.equal(result.pushed + result.updated, 0);
     assert.equal(linkRow(roEventId), undefined);
     db.prepare('DELETE FROM calendar_events WHERE id = ?').run(roEventId);
   });
 
-  it('lokal gelöschtes Event wird remote gelöscht (Tombstone-Link)', async () => {
+  it('lokal gelöschtes Event: remote schon weg → Tombstone ohne DELETE-Request', async () => {
     db.prepare('DELETE FROM calendar_events WHERE id = ?').run(eventId);
     assert.ok(linkRow(eventId), 'Link-Zeile muss das Event-Delete überleben');
 
+    // Listing meldet den Termin als nicht (mehr) vorhanden → kein DELETE nötig.
     const fetchImpl = makeFetch((call) => {
-      if (call.method === 'DELETE' && call.url.includes('/me/events/graph-evt-3')) return jsonRes(204);
+      const drift = answerDriftList(call, { 'cal-B': [] });
+      if (drift) return drift;
       throw new Error(`Unexpected request: ${call.method} ${call.url}`);
     });
 
     const result = await outlook.sync({ fetchImpl });
     assert.equal(result.deleted, 1);
+    assert.equal(fetchImpl.calls.length, 1, 'nur das Drift-Listing');
     assert.equal(linkRow(eventId), undefined);
   });
 
@@ -338,7 +412,6 @@ describe('Outlook one-way push', () => {
     assert.equal(quietFetch.calls.length, 0);
   });
 });
-
 // --------------------------------------------------------
 // Auto-Sync (v2): alle für den Konto-Owner sichtbaren lokalen Events
 // --------------------------------------------------------
@@ -455,8 +528,9 @@ describe('Outlook auto-sync', () => {
 
   it('pusht in beide Konten mit Titel-Suffix (Composite-PK) bzw. ohne Suffix', async () => {
     const fetchImpl = makeFetch((call) => {
-      if (call.method === 'POST' && /\/me\/calendars\/yuvomi-cal-[AB]\/events$/.test(call.url)) {
-        return jsonRes(201, { id: `graph-${call.url.includes('cal-A') ? 'A' : 'B'}-${call.body.subject}` });
+      if (call.method === 'POST' && /\/me\/calendars\/yuvomi-cal-[AB]\/events\??$/.test(call.url)) {
+        const side = call.url.includes('cal-A') ? 'A' : 'B';
+        return jsonRes(201, { id: `graph-${side}-${call.body.subject}`, changeKey: `ck-${side}-1` });
       }
       throw new Error(`Unexpected request: ${call.method} ${call.url}`);
     });
@@ -481,12 +555,14 @@ describe('Outlook auto-sync', () => {
     db.prepare('DELETE FROM event_assignments WHERE event_id = ? AND user_id = ?').run(familyEvent, ben);
 
     const fetchImpl = makeFetch((call) => {
-      if (call.method === 'PATCH') return jsonRes(200, {});
+      const drift = answerDriftList(call);
+      if (drift) return drift;
+      if (call.method === 'PATCH') return jsonRes(200, { changeKey: 'ck-after-patch' });
       throw new Error(`Unexpected request: ${call.method} ${call.url}`);
     });
     const result = await outlook.sync({ fetchImpl });
     assert.equal(result.updated, 2, 'beide Konten patchen');
-    for (const call of fetchImpl.calls) {
+    for (const call of fetchImpl.calls.filter((c) => c.method === 'PATCH')) {
       assert.equal(call.body.subject, 'Familienessen (Anna)');
     }
   });
@@ -499,6 +575,8 @@ describe('Outlook auto-sync', () => {
     db.prepare('DELETE FROM event_assignments WHERE event_id = ?').run(familyEvent);
 
     const fetchImpl = makeFetch((call) => {
+      const drift = answerDriftList(call);
+      if (drift) return drift;
       if (call.method === 'DELETE') return jsonRes(204);
       throw new Error(`Unexpected request: ${call.method} ${call.url}`);
     });
@@ -511,6 +589,8 @@ describe('Outlook auto-sync', () => {
     outlook.updateAccount(accountB, { autoSyncCalendarId: null });
 
     const fetchImpl = makeFetch((call) => {
+      const drift = answerDriftList(call);
+      if (drift) return drift;
       if (call.method === 'DELETE') return jsonRes(204);
       throw new Error(`Unexpected request: ${call.method} ${call.url}`);
     });

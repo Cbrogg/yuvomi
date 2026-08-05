@@ -4999,6 +4999,11 @@ const MIGRATIONS = [
         outlook_calendar_id TEXT NOT NULL,
         outlook_event_id    TEXT NOT NULL,
         content_hash        TEXT,
+        -- Graph-ETag des Events nach dem letzten eigenen Schreibzugriff. Der Sync
+        -- listet je Kalender einmal id+changeKey: weicht der Key ab, wurde der
+        -- Termin in Outlook veraendert und wird auf den Yuvomi-Stand zurueckgesetzt;
+        -- fehlt die id, wurde er in Outlook geloescht und wird neu angelegt.
+        outlook_change_key  TEXT,
         last_pushed_at      TEXT,
         last_error          TEXT,
         PRIMARY KEY (event_id, account_id)
