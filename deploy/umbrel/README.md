@@ -8,8 +8,23 @@ Prozesswissen und Begründungen stehen deshalb hier, nicht als Kommentar in den
 gespiegelten Dateien.
 
 Die Ersteinreichung `getumbrel/umbrel-apps#5732` ist **gemergt** - Yuvomi ist im
-offiziellen App Store. Die Bilder liegen separat in `umbrel-apps-gallery` (Quelle:
-`icon.svg` + `gallery/` hier im Ordner).
+offiziellen App Store. Die Bilder liegen separat in
+[`umbrel-apps-gallery`](https://github.com/getumbrel/umbrel-apps-gallery/tree/master/yuvomi)
+(`yuvomi/1.webp` … `5.webp` + `icon.svg`).
+
+## Gallery
+
+Der Store nutzt **2160x1350-WebP-Kompositionen** im Umbrel-Hausstil
+(Pastellgradient, Headline, Safari-Fenster mit `umbrel.local`) - keine rohen
+Screenshots. Die Quellen hier in `gallery/` (`1.webp` … `5.webp`) baut
+`scripts/build-umbrel-gallery.mjs` aus den EN-Light-Screenshots unter
+`docs/screenshots/` in genau diesem Stil; nach einem Screenshot-Refresh einmal
+laufen lassen. Aktualisiert werden die Store-Bilder wahlweise über einen PR an
+`umbrel-apps-gallery` (gleiche Dateinamen, dann ist kein Manifest-Change noetig)
+oder, der offizielle Weg, indem man die Roh-Screenshots dem naechsten
+`umbrel-apps`-PR in den Body legt und das Umbrel-Team um einen Gallery-Refresh
+bittet. Die frueheren `1.jpg` … `5.jpg` (1440x900, Stand Oikos v0.65.6) sind
+durch die WebP-Quellen ersetzt.
 
 ## Wer aktualisiert den Store
 
