@@ -129,23 +129,53 @@ jobs:
           fi
           # releaseNotes from the GitHub release body (JSON-encoded string is valid YAML)
           python3 - <<'PY'
-          import json, os, re
+          import json, os, re, sys
           body = os.environ.get("RELEASE_BODY", "").strip()
+
+          # The upstream value is a BLOCK scalar spanning many indented lines:
+          #
+          #   releaseNotes: >-
+          #     Loans can now track whether …
+          #     assign installments to an account …
+          #
+          # Matching only "^releaseNotes:.*$" replaced its first line and left the
+          # indented continuation behind, so the file became invalid YAML and the
+          # PR carried a broken manifest (seen on the v1.79.0 release). Consume the
+          # whole block: up to the next line starting a top-level key, or EOF.
           p = "yuvomi/umbrel-app.yml"
           t = open(p).read()
-          t = re.sub(
-            r"^releaseNotes:.*$",
-            lambda _: "releaseNotes: " + json.dumps(body),
+
+          # Markdown belongs in a changelog, not in an app-store field: strip the
+          # "### Added" headings and bullet markers so the store shows prose.
+          lines = []
+          for line in body.splitlines():
+            line = line.strip()
+            if not line or line.startswith("#"):
+              if lines and lines[-1] != "":
+                lines.append("")
+              continue
+            lines.append(re.sub(r"^[-*]\s+", "", line))
+          notes = "\n".join(lines).strip()
+
+          t, n = re.subn(
+            r"^releaseNotes:.*?(?=^[A-Za-z]|\Z)",
+            lambda _: "releaseNotes: " + json.dumps(notes) + "\n",
             t,
             count=1,
-            flags=re.M,
+            flags=re.M | re.S,
           )
+          if n != 1:
+            sys.exit("::error::releaseNotes block not found in yuvomi/umbrel-app.yml")
           open(p, "w").write(t)
           PY
 
           echo "--- updated ---"
           grep -E '^(version|releaseNotes):' yuvomi/umbrel-app.yml
           grep 'image:' yuvomi/docker-compose.yml
+
+          # A malformed manifest must never reach the maintainers' PR: fail here
+          # instead. python3 on ubuntu-latest ships PyYAML.
+          python3 -c "import yaml,sys; yaml.safe_load(open('yuvomi/umbrel-app.yml')); yaml.safe_load(open('yuvomi/docker-compose.yml')); print('YAML OK')"
 
           if git diff --quiet -- yuvomi/; then
             echo "Catalog already at v$VERSION — nothing to do."
