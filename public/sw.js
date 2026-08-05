@@ -117,6 +117,7 @@ const APP_SHELL = [
   '/utils/tablist.js',
   '/utils/ux.js',
   '/utils/vcard.js',
+  '/utils/version.js',
   '/offline.html',
   '/manifest.json',
   '/favicon.ico',

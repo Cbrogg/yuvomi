@@ -488,6 +488,7 @@ html:has(.search-overlay--visible) yuvomi-install-prompt {
 /* System-Item: Icon-über-Label, monochrom — leichter als die farbigen
  * Modul-App-Icons, klar als „Meta/System" lesbar. */
 .more-action {
+  position: relative; /* Anker für den Update-Punkt (.nav-dot, #490) */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -848,6 +849,27 @@ html:has(.search-overlay--visible) yuvomi-install-prompt {
   position: absolute;
   top: calc(-1 * var(--space-1));
   right: calc(-1 * var(--space-1));
+}
+
+/* Punkt ohne Zahl: markiert eine ungelesene Neuigkeit, keine Menge (#490).
+   Akzentviolett statt Danger-Rot - eine neue Version ist eine Nachricht, kein
+   Alarm. Der Ring in der Nav-Fläche trennt ihn vom Icon darunter. */
+.nav-dot {
+  position: absolute;
+  top: calc(-1 * var(--space-0h));
+  right: calc(-1 * var(--space-0h));
+  width: var(--space-2);
+  height: var(--space-2);
+  border-radius: var(--radius-full);
+  background-color: var(--color-accent);
+  box-shadow: 0 0 0 2px var(--color-surface);
+  pointer-events: none;
+}
+
+/* Listenzeile im „Mehr"-Sheet: kein Icon-Well, der Punkt hängt an der Zeile. */
+.more-action > .nav-dot {
+  top: var(--space-1);
+  right: var(--space-1);
 }
 
 /* ── Nav-Item: Aktiv ── */
@@ -2207,6 +2229,13 @@ p.field-hint--warn[hidden] {
 
 .changelog-version-note--warning {
   color: var(--color-warning, var(--color-text-secondary));
+}
+
+/* „Version X ist verfügbar" - dieselbe Nachricht wie der Punkt an der
+   Navigation, deshalb derselbe Akzent statt einer Warnfarbe (#490). */
+.changelog-version-note--update {
+  color: var(--color-accent);
+  font-weight: var(--font-weight-medium);
 }
 
 .changelog-status {

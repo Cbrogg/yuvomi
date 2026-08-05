@@ -18,6 +18,7 @@ import { getLastHealthRoute, HEALTH_ROUTES } from '/utils/health-tabs.js';
 import { activityType } from '/utils/health-activity.js';
 import { buildHelpRows } from '/utils/help.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
+import { isNewerVersion, displayVersion } from '/utils/version.js';
 import {
   rememberScrollPosition,
   scrollPositionFor,
@@ -1083,6 +1084,8 @@ async function renderPage(route, previousPath = null, scrollTarget = 0) {
     else if (!document.querySelector('.nav-bottom') && currentUser) {
       renderAppShell(app);
       _navBuiltForUserId = currentUser.id;
+      // Nebenläufig und still: der Hinweis darf das erste Rendern nicht aufhalten.
+      checkForUpdate();
     } else if (currentUser && _navBuiltForUserId !== currentUser.id) {
       // Shell besteht bereits, aber der Nutzer hat gewechselt → Nav mit den
       // Modul-Rechten des aktuellen Nutzers neu aufbauen (#467).
@@ -1742,6 +1745,94 @@ function showHelpModal() {
   if (window.lucide) window.lucide.createIcons({ el: panel });
 }
 
+// --------------------------------------------------------
+// Update-Hinweis (#490)
+// --------------------------------------------------------
+
+// Zuletzt vom Server gemeldete neueste Release-Version. Persistiert, damit der
+// Punkt nach einem Reload sofort wieder steht, statt bis zur nächsten Prüfung
+// zu verschwinden und dann grundlos zurückzukommen.
+const UPDATE_LATEST_KEY = 'yuvomi.update.latest';
+// Version, für die der Nutzer den Änderungsverlauf zuletzt geöffnet hat.
+const UPDATE_SEEN_KEY = 'yuvomi.update.seen';
+const UPDATE_CHECKED_AT_KEY = 'yuvomi.update.checkedAt';
+// Der Server hält GitHub-Releases 30 Minuten im Cache; häufigeres Fragen wäre
+// reiner Verkehr für eine Information, die sich um Wochen bewegt.
+const UPDATE_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
+
+/** Neuere Version, die noch niemand angesehen hat - oder '' wenn alles gesehen/aktuell. */
+function pendingUpdateVersion() {
+  const latest = localStorage.getItem(UPDATE_LATEST_KEY) || '';
+  if (!latest) return '';
+  if (!isNewerVersion(latest, getAppVersion())) return '';
+  const seen = localStorage.getItem(UPDATE_SEEN_KEY) || '';
+  if (seen && !isNewerVersion(latest, seen)) return '';
+  return latest;
+}
+
+/**
+ * Setzt bzw. entfernt den Punkt an allen Einstiegen zum Änderungsverlauf.
+ * Auf Mobil liegt der Eintrag im „Mehr"-Sheet - ohne Punkt am Sheet-Button
+ * bliebe der Hinweis dort unsichtbar, deshalb bekommt auch dieser einen.
+ */
+function toggleUpdateDot(el, on) {
+  const existing = el.querySelector('.nav-dot');
+  if (!on) { existing?.remove(); return; }
+  if (existing) return;
+  const dot = document.createElement('span');
+  dot.className = 'nav-dot';
+  dot.setAttribute('aria-hidden', 'true');
+  // Am Icon-Well hängt der Punkt auch in der eingeklappten Sidebar am richtigen
+  // Fleck; die Listenzeile im „Mehr"-Sheet hat keins.
+  (el.querySelector('.nav-item__icon-wrap') ?? el).appendChild(dot);
+}
+
+/**
+ * Der Punkt ist rein visuell - die Ansage steckt im Namen des Elements.
+ * Ohne `version` bleibt der Name unverändert.
+ */
+function withUpdateHint(label, version) {
+  if (!version) return label;
+  return `${label} - ${t('changelog.updateAvailable', { version: displayVersion(version) })}`.trim();
+}
+
+function applyUpdateBadge() {
+  const version = pendingUpdateVersion();
+  for (const el of document.querySelectorAll('.nav-item--changelog, .more-item--changelog, #more-btn')) {
+    toggleUpdateDot(el, Boolean(version));
+  }
+  // Den Namen des „Mehr"-Buttons setzt setMoreButtonState bei jeder Navigation
+  // neu; sein Zusatz gehört deshalb dorthin und nicht hierher, sonst wäre er
+  // nach dem ersten Seitenwechsel wieder weg.
+  for (const el of document.querySelectorAll('.nav-item--changelog, .more-item--changelog')) {
+    const label = withUpdateHint(t('nav.changelog'), version);
+    el.setAttribute('aria-label', label);
+    if (el.hasAttribute('title')) el.setAttribute('title', label);
+  }
+}
+
+/**
+ * Fragt den Änderungsverlauf-Proxy nach der neuesten Version. Bewusst still:
+ * schlägt der Abruf fehl (kein Netz, GitHub nicht erreichbar), bleibt der zuletzt
+ * bekannte Stand stehen - eine Fehlermeldung für eine Nebeninformation wäre Lärm.
+ */
+async function checkForUpdate({ force = false } = {}) {
+  const lastCheck = Number(localStorage.getItem(UPDATE_CHECKED_AT_KEY) || 0);
+  const age = Date.now() - lastCheck;
+  if (!force && lastCheck && age >= 0 && age < UPDATE_CHECK_INTERVAL_MS) {
+    applyUpdateBadge();
+    return;
+  }
+
+  try {
+    const payload = await api.get('/changelog');
+    const latest = String(payload?.data?.latest_version || '').trim();
+    localStorage.setItem(UPDATE_CHECKED_AT_KEY, String(Date.now()));
+    if (latest) localStorage.setItem(UPDATE_LATEST_KEY, latest);
+  } catch { /* still: siehe oben */ }
+  applyUpdateBadge();
+}
+
 function versionText(value) {
   return String(value || '').trim() || t('changelog.unknownVersion');
 }
@@ -1820,11 +1911,28 @@ function renderChangelog(panel, payload) {
   panel.querySelector('#changelog-current-version').textContent = versionText(currentVersion);
   panel.querySelector('#changelog-latest-version').textContent = versionText(latestVersion);
 
+  // Steht ein Update an, ist das die Nachricht - ob die laufende Version in der
+  // GitHub-Liste auftaucht, interessiert dann niemanden mehr.
+  const updateAvailable = isNewerVersion(latestVersion, currentVersion);
   const note = panel.querySelector('#changelog-version-note');
-  note.textContent = data.current_in_releases
-    ? t('changelog.currentFound')
-    : t('changelog.currentMissing');
-  note.classList.toggle('changelog-version-note--warning', !data.current_in_releases);
+  if (updateAvailable) {
+    note.textContent = t('changelog.updateAvailable', { version: displayVersion(latestVersion) });
+  } else {
+    note.textContent = data.current_in_releases
+      ? t('changelog.currentFound')
+      : t('changelog.currentMissing');
+  }
+  note.classList.toggle('changelog-version-note--warning', !updateAvailable && !data.current_in_releases);
+  note.classList.toggle('changelog-version-note--update', updateAvailable);
+
+  // Der Nutzer sieht die Liste gerade - der Punkt an der Navigation hat seinen
+  // Zweck erfüllt und verschwindet, bis eine noch neuere Version erscheint.
+  if (latestVersion) {
+    localStorage.setItem(UPDATE_LATEST_KEY, String(latestVersion));
+    localStorage.setItem(UPDATE_SEEN_KEY, String(latestVersion));
+    localStorage.setItem(UPDATE_CHECKED_AT_KEY, String(Date.now()));
+    applyUpdateBadge();
+  }
 
   const status = panel.querySelector('#changelog-status');
   if (status) status.hidden = true;
@@ -2811,7 +2919,9 @@ function setMoreButtonState(moreBtn, activeSecondary) {
     moreBtn.style.setProperty('--item-module-accent', 'var(--color-accent)');
   }
 
-  moreBtn.setAttribute('aria-label', moreLabel);
+  // Der Änderungsverlauf liegt auf Mobil im „Mehr"-Sheet: steht ein Update an,
+  // muss der Name des Buttons das sagen - der Punkt daneben ist aria-hidden.
+  moreBtn.setAttribute('aria-label', withUpdateHint(moreLabel, pendingUpdateVersion()));
   moreBtn.setAttribute('title', t('nav.more'));
 
   const moreBtnLabel = moreBtn.querySelector('.nav-item__label');
@@ -3200,6 +3310,9 @@ function rebuildNavigation({ updateLabels = true } = {}) {
 
   updateNav(currentPath);
   updateBranding(currentPath || '/');
+  // Die Einstiege zum Änderungsverlauf sind gerade neu entstanden - ein noch
+  // offener Hinweis muss ihnen folgen, sonst fällt er beim Sprachwechsel weg.
+  applyUpdateBadge();
 }
 
 // Sprache geändert: Navigation und aktuelle Seite gemeinsam neu rendern.

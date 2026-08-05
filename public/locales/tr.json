@@ -2905,6 +2905,7 @@
         "title": "Değişiklikler",
         "currentVersion": "Geçerli sürüm",
         "latestVersion": "En son sürüm",
+        "updateAvailable": "{{version}} sürümü mevcut.",
         "loadingShort": "...",
         "loading": "Değişiklikler yükleniyor...",
         "loadError": "Değişiklikler şu anda yüklenemedi.",

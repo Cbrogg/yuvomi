@@ -2905,6 +2905,7 @@
         "title": "Novedades",
         "currentVersion": "Versión actual",
         "latestVersion": "Última versión",
+        "updateAvailable": "La versión {{version}} está disponible.",
         "loadingShort": "...",
         "loading": "Cargando novedades...",
         "loadError": "No se pudo cargar el registro de cambios.",

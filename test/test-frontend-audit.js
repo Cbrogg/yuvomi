@@ -1271,8 +1271,13 @@ test('More button active state keeps visible More identity and accessible active
 
   assert.match(source, /function\s+setMoreButtonState/);
   assert.match(source, /moreBtn\.setAttribute\('aria-current',\s*'page'\)/);
-  assert.match(source, /moreBtn\.setAttribute\('aria-label',\s*moreLabel\)/);
+  // Der zugängliche Name muss aus `moreLabel` entstehen (es trägt den aktiven
+  // Abschnitt). Ob noch etwas angehängt wird - seit #490 der Update-Hinweis -
+  // ist offen; ersetzt werden darf `moreLabel` nicht.
+  assert.match(source, /moreBtn\.setAttribute\('aria-label',[^;]*\bmoreLabel\b/);
   assert.match(source, /moreBtn\.setAttribute\('title',\s*t\('nav\.more'\)\)/);
+  // Der sichtbare Text bleibt „Mehr", egal was im Namen steht.
+  assert.match(source, /moreBtnLabel\.textContent\s*=\s*t\('nav\.more'\)/);
   assert.doesNotMatch(source, /moreBtn\.toggleAttribute\('aria-current',\s*inMoreSheet\)/);
 });
 

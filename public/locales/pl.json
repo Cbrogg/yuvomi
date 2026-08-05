@@ -2905,6 +2905,7 @@
         "title": "Zmiany",
         "currentVersion": "Obecna wersja",
         "latestVersion": "Najnowsza wersja",
+        "updateAvailable": "Wersja {{version}} jest dostępna.",
         "loadingShort": "...",
         "loading": "Ładowanie zmian...",
         "loadError": "Nie można teraz wczytać zmian.",

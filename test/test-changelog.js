@@ -7,6 +7,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import express from 'express';
 import changelogRouter, { buildRouter, __test } from '../server/routes/changelog.js';
+import { compareVersions, isNewerVersion, displayVersion } from '../public/utils/version.js';
 
 test('parseReleaseBody keeps release sections and removes GitHub noise', () => {
   const sections = __test.parseReleaseBody(`
@@ -92,4 +93,51 @@ test('changelog router fetches and sanitizes GitHub release JSON', async () => {
 
 test('default changelog router is an express router', () => {
   assert.equal(typeof changelogRouter, 'function');
+});
+
+// --------------------------------------------------------
+// Update-Hinweis (#490): der Vergleich hinter dem Punkt an der Navigation
+// --------------------------------------------------------
+
+test('isNewerVersion compares numeric segments, not strings', () => {
+  // Der String-Vergleich, den diese Funktion ersetzt, hielte '1.9.0' für neuer.
+  assert.equal(isNewerVersion('1.10.0', '1.9.0'), true);
+  assert.equal(isNewerVersion('1.9.0', '1.10.0'), false);
+  assert.equal(isNewerVersion('2.0.0', '1.99.99'), true);
+});
+
+test('isNewerVersion tolerates the v prefix of GitHub tags', () => {
+  assert.equal(isNewerVersion('v1.84.0', '1.83.0'), true);
+  assert.equal(isNewerVersion('v1.83.0', '1.83.0'), false);
+  assert.equal(isNewerVersion('1.83.0', 'v1.83.0'), false);
+});
+
+test('isNewerVersion treats missing segments as zero', () => {
+  assert.equal(compareVersions('1.84', '1.84.0'), 0);
+  assert.equal(isNewerVersion('1.84.1', '1.84'), true);
+});
+
+test('isNewerVersion ranks a prerelease below its final release', () => {
+  assert.equal(isNewerVersion('1.84.0-rc.1', '1.84.0'), false);
+  assert.equal(isNewerVersion('1.84.0', '1.84.0-rc.1'), true);
+  assert.equal(isNewerVersion('1.84.0-rc.2', '1.84.0-rc.1'), true);
+});
+
+test('displayVersion drops the tag prefix so the label reads once', () => {
+  // "Version {{version}} ist verfügbar" mit einem GitHub-Tag ergäbe sonst
+  // "Version v1.84.0".
+  assert.equal(displayVersion('v1.84.0'), '1.84.0');
+  assert.equal(displayVersion('1.84.0'), '1.84.0');
+  assert.equal(displayVersion('  V1.84.0  '), '1.84.0');
+  assert.equal(displayVersion(null), '');
+});
+
+test('unreadable versions never trigger the hint', () => {
+  // Ein falscher Punkt an der Navigation wäre schlimmer als ein fehlender:
+  // alles Unlesbare gilt als "unbekannt", nicht als "neuer".
+  assert.equal(compareVersions('latest', '1.83.0'), null);
+  assert.equal(isNewerVersion('latest', '1.83.0'), false);
+  assert.equal(isNewerVersion('1.84.0', ''), false);
+  assert.equal(isNewerVersion('', '1.83.0'), false);
+  assert.equal(isNewerVersion(null, undefined), false);
 });

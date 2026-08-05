@@ -2905,6 +2905,7 @@
         "title": "Alterações",
         "currentVersion": "Versão atual",
         "latestVersion": "Versão mais recente",
+        "updateAvailable": "A versão {{version}} está disponível.",
         "loadingShort": "...",
         "loading": "A carregar alterações...",
         "loadError": "Não foi possível carregar as alterações agora.",

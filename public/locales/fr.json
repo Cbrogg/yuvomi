@@ -2905,6 +2905,7 @@
         "title": "Journal des changements",
         "currentVersion": "Version actuelle",
         "latestVersion": "Dernière version",
+        "updateAvailable": "La version {{version}} est disponible.",
         "loadingShort": "...",
         "loading": "Chargement des changements...",
         "loadError": "Le journal des changements ne peut pas être chargé.",

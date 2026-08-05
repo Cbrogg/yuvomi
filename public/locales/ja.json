@@ -2905,6 +2905,7 @@
         "title": "変更履歴",
         "currentVersion": "現在のバージョン",
         "latestVersion": "最新バージョン",
+        "updateAvailable": "バージョン {{version}} が利用可能です。",
         "loadingShort": "...",
         "loading": "変更履歴を読み込み中...",
         "loadError": "変更履歴を読み込めませんでした。",

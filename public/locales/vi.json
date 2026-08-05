@@ -2905,6 +2905,7 @@
         "title": "Nhật ký thay đổi",
         "currentVersion": "Phiên bản hiện tại",
         "latestVersion": "Phiên bản mới nhất",
+        "updateAvailable": "Đã có phiên bản {{version}}.",
         "loadingShort": "...",
         "loading": "Đang tải thay đổi...",
         "loadError": "Chưa thể tải thay đổi.",

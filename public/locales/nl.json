@@ -2905,6 +2905,7 @@
         "title": "Wijzigingen",
         "currentVersion": "Huidige versie",
         "latestVersion": "Nieuwste versie",
+        "updateAvailable": "Versie {{version}} is beschikbaar.",
         "loadingShort": "...",
         "loading": "Wijzigingen laden...",
         "loadError": "De wijzigingen kunnen nu niet worden geladen.",

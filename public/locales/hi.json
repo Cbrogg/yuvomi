@@ -2905,6 +2905,7 @@
         "title": "बदलाव",
         "currentVersion": "वर्तमान संस्करण",
         "latestVersion": "नवीनतम संस्करण",
+        "updateAvailable": "संस्करण {{version}} उपलब्ध है।",
         "loadingShort": "...",
         "loading": "बदलाव लोड हो रहे हैं...",
         "loadError": "बदलाव अभी लोड नहीं हो सके।",

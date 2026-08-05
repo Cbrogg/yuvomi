@@ -2905,6 +2905,7 @@
         "title": "Changelog",
         "currentVersion": "Current version",
         "latestVersion": "Latest version",
+        "updateAvailable": "Version {{version}} is available.",
         "loadingShort": "...",
         "loading": "Loading changelog...",
         "loadError": "The changelog could not be loaded right now.",

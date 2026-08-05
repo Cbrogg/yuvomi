@@ -2905,6 +2905,7 @@
         "title": "تغییرات",
         "currentVersion": "نسخه فعلی",
         "latestVersion": "جدیدترین نسخه",
+        "updateAvailable": "نسخه {{version}} در دسترس است.",
         "loadingShort": "...",
         "loading": "در حال بارگذاری تغییرات...",
         "loadError": "امکان بارگذاری تغییرات وجود ندارد.",

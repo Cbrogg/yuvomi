@@ -2905,6 +2905,7 @@
         "title": "سجل التغييرات",
         "currentVersion": "الإصدار الحالي",
         "latestVersion": "أحدث إصدار",
+        "updateAvailable": "الإصدار {{version}} متاح.",
         "loadingShort": "...",
         "loading": "جارٍ تحميل سجل التغييرات...",
         "loadError": "تعذر تحميل سجل التغييرات الآن.",

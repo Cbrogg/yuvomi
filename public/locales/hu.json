@@ -2905,6 +2905,7 @@
         "title": "Változások",
         "currentVersion": "Aktuális verzió",
         "latestVersion": "Legújabb verzió",
+        "updateAvailable": "A(z) {{version}} verzió elérhető.",
         "loadingShort": "...",
         "loading": "Változások betöltése...",
         "loadError": "A változások most nem tölthetők be.",

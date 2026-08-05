@@ -2905,6 +2905,7 @@
         "title": "Changelog",
         "currentVersion": "Kasalukuyang bersyon",
         "latestVersion": "Pinakabagong bersyon",
+        "updateAvailable": "Available na ang bersyon {{version}}.",
         "loadingShort": "...",
         "loading": "Nilo-load ang changelog...",
         "loadError": "Hindi ma-load ang changelog sa ngayon.",

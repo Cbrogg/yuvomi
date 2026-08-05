@@ -107,7 +107,7 @@ npm run test:date-utils
 npm run test:time-input     # flexible Zeiteingabe: 0930/09.30/9h30 → HH:MM parsing (#442)
 npm run test:html-entities
 npm run test:help
-npm run test:changelog      # Changelog: GitHub-Releases-Proxy (normalizeVersion/cleanMarkdownText/parseReleaseBody/buildChangelogPayload)
+npm run test:changelog      # Changelog: GitHub-Releases-Proxy (normalizeVersion/cleanMarkdownText/parseReleaseBody/buildChangelogPayload) + der Versionsvergleich hinter dem Update-Punkt (#490): numerisch statt lexikografisch (1.10.0 > 1.9.0), v-Präfix der Tags, Vorabversion unter ihrem Release, Unlesbares löst nie einen Hinweis aus
 npm run test:i18n           # App-Locales: Dateiabdeckung, Schlüsselidentität zu de.json, Platzhalter-Parität ({{name}}), 4-Space-Format
 npm run test:i18n-plural    # Pluralformen in t(): Intl.PluralRules-Auswahl, Fallback auf Basisschlüssel, Varianten-Parität; dazu die Platzhalter-Ersetzung: Nutzerwerte werden eingesetzt statt interpretiert (kein `$&`/`` $` ``-Rückverweis, kein zweiter Durchgang über bereits Eingesetztes), unbekannte Platzhalter bleiben sichtbar
 npm run test:lang-init
