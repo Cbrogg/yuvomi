@@ -104,6 +104,19 @@ jobs:
           git config --global user.name "$OWNER"
           git config --global user.email "$ACTOR@users.noreply.github.com"
 
+          # Check the credential once, before anything uses it. `gh repo fork`
+          # below ends in `|| true`, so a bad token used to be swallowed there and
+          # surfaced two lines later as git's "URL rejected: Malformed input to a
+          # URL function" - which points at the clone URL, not at the secret
+          # (2026-08-05). Reporting the login also catches a token that is valid
+          # but belongs to the wrong account.
+          TOKEN_USER="$(gh api user --jq .login 2>/dev/null || true)"
+          if [ -z "$TOKEN_USER" ]; then
+            echo "::error::UMBREL_FORK_TOKEN was rejected by the API. A stray newline or space in the secret value is the usual cause (piping it through 'echo' adds one). Re-set it with: gh auth token | tr -d '[:space:]' | gh secret set UMBREL_FORK_TOKEN --repo $OWNER/yuvomi"
+            exit 1
+          fi
+          echo "UMBREL_FORK_TOKEN authenticates as: $TOKEN_USER"
+
           gh repo fork "$UPSTREAM" --clone=false || true
 
           git clone --depth 1 "https://x-access-token:${GH_TOKEN}@github.com/$FORK.git" fork
