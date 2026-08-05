@@ -1041,6 +1041,14 @@ function renderAccountsPage() {
     const archivedBadge = a.archived
       ? `<span class="budget-account__badge">${t('budget.archivedBadge')}</span>`
       : '';
+    // Zweite Zeile nur, wenn eine Kreditkarte auch etwas zu sagen hat: Bank als
+    // Herausgeber, verfügbarer Rahmen nur bei gepflegtem Limit.
+    const creditMeta = a.type === 'credit' && (a.credit_bank || a.available_limit != null)
+      ? `<span class="budget-account__meta">${[
+          a.credit_bank ? esc(a.credit_bank) : '',
+          a.available_limit != null ? `${t('budget.availableLimitShort')} ${formatAmount(a.available_limit)}` : '',
+        ].filter(Boolean).join(' · ')}</span>`
+      : '';
     return `
       <div class="budget-account ${a.archived ? 'budget-account--archived' : ''}" style="--account-accent:${accountAccent(a.color)}">
         <button class="budget-account__main" type="button" data-drill="${a.id}"
@@ -1049,6 +1057,7 @@ function renderAccountsPage() {
           <span class="budget-account__body">
             <span class="budget-account__name"><span class="budget-account__name-text">${esc(a.name)}</span>${archivedBadge}</span>
             <span class="budget-account__type">${esc(accountTypeLabel(a.type))}</span>
+            ${creditMeta}
           </span>
           <span class="budget-account__figures">
             <span class="budget-account__balance ${balClass}">${formatAmount(a.current_balance)}</span>
@@ -1112,6 +1121,7 @@ function openAccountModal(account = null) {
   ).join('');
 
   const currentColor = isEdit ? (account.color || '') : '';
+  const activeType = isEdit ? account.type : 'checking';
   // Einfachauswahl wie die Filterleisten des Moduls: role="radiogroup" und die
   // geteilte Verhaltensschicht statt role="group" mit eigenem Klick-Handler.
   // Die Standardfarbe hat den leeren Wert und trägt deshalb den Sentinel als
@@ -1141,6 +1151,23 @@ function openAccountModal(account = null) {
              step="${amountStep(accountCurrency, isEdit ? account.starting_balance : '')}" inputmode="decimal"
              placeholder="${amountPlaceholder(accountCurrency)}" value="${isEdit ? account.starting_balance : ''}">
       <p class="form-hint">${t('budget.startingBalanceHint')}</p>
+    </div>
+    <div id="am-credit-fields" ${activeType === 'credit' ? '' : 'hidden'}>
+      <div class="form-group">
+        <label class="form-label" for="am-credit-bank">${t('budget.creditBankLabel')}</label>
+        <input type="text" class="form-input" id="am-credit-bank" maxlength="100"
+               placeholder="${t('budget.creditBankPlaceholder')}" value="${esc(isEdit ? (account.credit_bank ?? '') : '')}">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="am-credit-limit">${t('budget.creditLimitLabel')}</label>
+        <!-- Schrittweite und Platzhalter aus der Kontowährung: bei JPY ist ein
+             Hundertstel keine Einheit, die es gibt. min bleibt 0 - ein Rahmen
+             ist nie negativ, und leer heisst "kein Rahmen gepflegt". -->
+        <input type="number" class="form-input" id="am-credit-limit" min="0" inputmode="decimal"
+               step="${amountStep(accountCurrency, isEdit ? (account.credit_limit ?? '') : '')}"
+               placeholder="${amountPlaceholder(accountCurrency)}" value="${isEdit ? (account.credit_limit ?? '') : ''}">
+        <p class="form-hint">${t('budget.creditLimitHint')}</p>
+      </div>
     </div>
     <div class="form-group">
       <label class="form-label">${t('budget.accountColorLabel')}</label>
@@ -1178,6 +1205,13 @@ function openAccountModal(account = null) {
       });
 
       panel.querySelector('#am-cancel').addEventListener('click', closeModal);
+
+      // Bank und Limit gehören nur zur Kreditkarte; bei jedem anderen Typ wären
+      // sie ein Feld ohne Bedeutung.
+      const creditFields = panel.querySelector('#am-credit-fields');
+      panel.querySelector('#am-type').addEventListener('change', (ev) => {
+        creditFields.hidden = ev.target.value !== 'credit';
+      });
 
       panel.querySelector('#am-archive')?.addEventListener('click', async () => {
         const nextArchived = !account.archived;
@@ -1217,6 +1251,8 @@ function openAccountModal(account = null) {
         const type    = panel.querySelector('#am-type').value;
         const rawBal  = panel.querySelector('#am-balance').value;
         const startingBalance = rawBal === '' ? 0 : parseFloat(rawBal);
+        const rawLimit = panel.querySelector('#am-credit-limit').value.trim();
+        const creditLimit = rawLimit === '' ? null : parseFloat(rawLimit);
 
         if (!name) {
           reportFieldError(panel.querySelector('#am-name'), t('common.titleRequired'));
@@ -1229,11 +1265,19 @@ function openAccountModal(account = null) {
         if (rejectOffGridAmount(panel.querySelector('#am-balance'), startingBalance, accountCurrency, {
           original: isEdit ? account.starting_balance : null,
         })) return;
+        if (type === 'credit' && creditLimit !== null && (isNaN(creditLimit) || creditLimit < 0)) {
+          reportFieldError(panel.querySelector('#am-credit-limit'), t('budget.validAmountRequired'));
+          return;
+        }
 
         saveBtn.disabled = true;
         saveBtn.textContent = '…';
         try {
           const body = { name, type, starting_balance: startingBalance, color: selectedColor || null };
+          // Ein Typwechsel weg von der Kreditkarte räumt die Felder mit ab, sonst
+          // blieben Bank und Limit unsichtbar am Konto hängen.
+          body.credit_bank  = type === 'credit' ? (panel.querySelector('#am-credit-bank').value.trim() || null) : null;
+          body.credit_limit = type === 'credit' ? creditLimit : null;
           if (isEdit) {
             await api.put(`/budget/accounts/${account.id}`, body);
           } else {

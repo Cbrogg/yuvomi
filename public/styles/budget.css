@@ -519,6 +519,17 @@
   color: var(--color-text-secondary);
 }
 
+/* Bank und verfügbarer Rahmen einer Kreditkarte (#541). Einzeilig mit Ellipse:
+   ein langer Herausgebername darf die Karte nicht in die Höhe ziehen. */
+.budget-account__meta {
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
 .budget-account__figures {
   display: flex;
   flex-direction: column;
@@ -1485,7 +1496,8 @@
 }
 
 .modal-panel .js-entry-field[hidden],
-.modal-panel #bm-loan-fields[hidden] {
+.modal-panel #bm-loan-fields[hidden],
+.modal-panel #am-credit-fields[hidden] {
   display: none !important;
 }
 
