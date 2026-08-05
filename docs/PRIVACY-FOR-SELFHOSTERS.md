@@ -153,6 +153,7 @@ Betreiber daraus resultieren.
   | Mailbox.org / Posteo / mailcow | DE | unkritisch |
   | Apple iCloud | USA (Apple Inc.) | DPF-zertifiziert; AVV via Apple Business |
   | Google Workspace | USA (Google LLC) | DPF-zertifiziert; AVV + DPF-Status prüfen |
+  | Microsoft Graph / Outlook.com (`server/services/outlook-calendar.js`, One-Way-Push von Terminen) | USA (Microsoft Corp.) | DPF-zertifiziert; bei privaten Konten gilt das Microsoft Services Agreement — für den Familiengebrauch Haushaltsausnahme prüfen |
   | Mailbox-Provider Drittland (sonstige) | Einzelfall | individuelle TIA |
 - **AVV:** ja, bei kommerziellen Anbietern.
 - **Google-Kalender-Sync läuft nicht über CalDAV:** Yuvomi synchronisiert Google
