@@ -369,7 +369,7 @@ docker compose up -d --build
 
 > **Neu bei Docker oder Podman?** Der **[Installations-Leitfaden](docs/installation.md)** deckt Engine-Setup, HTTPS/Reverse-Proxy, Backups und Troubleshooting Schritt für Schritt ab.
 
-> **Katalog-Einträge sind weiterhin unter dem alten Namen `oikos` registriert** (TrueNAS `oikos_community`, Unraid `oikos-…`). Die App zeigt und installiert sich als **Yuvomi**; der technische Slug bleibt erhalten, damit bestehende Installationen (Datenbankpfade und Containernamen) nahtlos aktualisieren. Suche nach **Yuvomi**; taucht ein Store den Eintrag noch als *oikos* auf, ist es dieselbe App.
+> **Einige Katalog-Slugs tragen noch den alten Namen `oikos`** (z. B. Unraid `oikos-…`). TrueNAS ist vollständig zu `community/yuvomi` umbenannt - der alte Eintrag bleibt als *Oikos (Deprecated)* für Bestandsinstallationen eingefroren. Die App zeigt und installiert sich überall als **Yuvomi**; wo der technische Slug `oikos` bleibt, sichert das bestehenden Installationen (Datenbankpfade und Containernamen) ein nahtloses Update. Suche nach **Yuvomi**; taucht ein Store einen Eintrag noch als *oikos* auf, ist es dieselbe App.
 
 ---
 
