@@ -3210,7 +3210,9 @@
                 "glucose": "血糖値",
                 "weight": "体重",
                 "spo2": "酸素飽和度",
-                "temp": "体温"
+                "temp": "体温",
+                "sleep": "睡眠",
+                "mood": "気分"
             },
             "channel": {
                 "systolic": "収縮期",
@@ -3226,7 +3228,10 @@
                 "visibility": "公開範囲",
                 "systolic": "収縮期",
                 "diastolic": "拡張期",
-                "pulse": "脈拍"
+                "pulse": "脈拍",
+                "hours": "時間",
+                "minutes": "分",
+                "mood": "今の気分は？"
             },
             "visibility": {
                 "private": "非公開",
@@ -3235,7 +3240,14 @@
             "sparse": "傾向を表示するには測定値が少なすぎます。",
             "recentMeasurements": "最近の測定",
             "deleteMeasurement": "測定を削除",
-            "measurementDeleted": "測定を削除しました"
+            "measurementDeleted": "測定を削除しました",
+            "mood": {
+                "veryBad": "とても悪い",
+                "bad": "悪い",
+                "okay": "ふつう",
+                "good": "良い",
+                "veryGood": "とても良い"
+            }
         },
         "meds": {
             "doseQty": "{{count}}×",
@@ -3648,6 +3660,11 @@
                 "pregnancyHint": "妊娠モードでは生理と排卵の予測が一時停止します。毎日の記録は引き続き利用できます。",
                 "saved": "設定を保存しました。"
             }
+        },
+        "duration": {
+            "hm": "{{hours}}時間{{minutes}}分",
+            "h": "{{hours}}時間",
+            "m": "{{minutes}}分"
         }
     },
     "rewards": {

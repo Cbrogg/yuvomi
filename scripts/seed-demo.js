@@ -1058,6 +1058,13 @@ const insertVital = db.prepare(`
 // SpO₂ (%) and temperature (°C)
 [[-10, 98], [-2, 99]].forEach(([d, v]) => insertVital.run(lindaId, 'spo2', v, null, null, '%', dateTimeFromNow(d, 8, 30), null));
 insertVital.run(lindaId, 'temp', 36.7, null, null, '°C', dateTimeFromNow(-5, 20, 0), null);
+// Sleep (decimal hours, measured_at = the morning the night ended)
+[[-13, 7.5], [-12, 6.75], [-11, 7.25], [-10, 8.0], [-9, 6.5], [-8, 7.0], [-7, 7.75],
+ [-6, 7.25], [-5, 6.25], [-4, 7.5], [-3, 8.25], [-2, 7.0], [-1, 7.5]]
+  .forEach(([d, hours]) => insertVital.run(lindaId, 'sleep', hours, null, null, 'h', dateTimeFromNow(d, 7, 0), null));
+// Mood on the 1-5 scale — no unit, the number is a step
+[[-13, 4], [-11, 3], [-9, 2], [-7, 4], [-5, 3], [-3, 5], [-1, 4]]
+  .forEach(([d, step]) => insertVital.run(lindaId, 'mood', step, null, null, null, dateTimeFromNow(d, 20, 30), null));
 
 // ── Health: Activities ───────────────────────────────────────────────────────
 

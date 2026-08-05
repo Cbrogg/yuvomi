@@ -1565,8 +1565,8 @@ makes **no diagnostic claims**; reference ranges and flags are neutral, user-sup
 | Column | Type | Constraint |
 |--------|------|-----------|
 | user_id | INTEGER | FK → Users (CASCADE delete), NOT NULL |
-| type | TEXT | NOT NULL — `bp` \| `glucose` \| `weight` \| `pulse` \| `spo2` \| `temp` \| custom slug |
-| value_num | REAL | primary value; for `bp` = systolic |
+| type | TEXT | NOT NULL — `bp` \| `glucose` \| `weight` \| `pulse` \| `spo2` \| `temp` \| `sleep` \| `mood` \| custom slug |
+| value_num | REAL | primary value; for `bp` = systolic, `sleep` = decimal hours, `mood` = step 1-5 |
 | value_num2 | REAL | `bp` diastolic |
 | value_num3 | REAL | `bp` optional pulse |
 | unit | TEXT | |
@@ -1976,7 +1976,7 @@ Module for managing household staff workflows. Navigation uses violet accent the
 One page module with six deep-link routes (pattern like Settings, not like the Kitchen cluster), sharing a sub-tab bar: Overview (`/health`), Vitals (`/health/vitals`), Cycle (`/health/cycle`), Medications (`/health/meds`), Labs (`/health/labs`), Activity (`/health/activity`). Toggleable like any module; disabled → router redirects to the dashboard. Health data is sensitive — enable `DB_ENCRYPTION_KEY` (SQLCipher). **Not a medical device; no diagnostic claims.**
 
 - **Per-member scoping:** a person switcher (chip row) filters to one family member; each row is `private` (owner only) or `family` (all members). Editing is limited to the owner's own view; foreign members show family-visible rows read-only.
-- **Vitals:** capture blood pressure (sys/dia/pulse), glucose, weight, pulse, optional SpO₂/temperature; per-metric cards with last value + delta; native SVG trend charts with selectable range.
+- **Vitals:** capture blood pressure (sys/dia/pulse), glucose, weight, pulse, optional SpO₂/temperature, sleep duration and mood; per-metric cards with last value + delta; native SVG trend charts with selectable range. A metric declares how its numbers read (`format`: pair, duration, scale) — sleep is entered as hours + minutes and stored as decimal hours, mood as one of five steps on a scale whose chart axis stays clamped to the full 1-5 range.
 - **Medications:** medication list (name, dose, form, active/PRN), schedule editor (time slots + weekday mask + dose), "due today" view with take/skip, 7-day adherence bar, and stock/refill warnings. Reminders are delivered through the existing push/notification-channel layer (`server/services/medication-scheduler.js`) — no separate reminder table.
 - **Labs:** reports with multiple analytes (value, unit, reference low/high); `low`/`normal`/`high` flag derived from value + range and colour-coded via tokens; per-analyte trend chart with a reference band; neutral medical disclaimer.
 - **Activity:** training log (preset or custom type, duration, optional distance/intensity/calories, note); weekly summary cards and a native SVG bar chart per weekday.

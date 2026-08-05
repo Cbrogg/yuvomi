@@ -3210,7 +3210,9 @@
                 "glucose": "قند خون",
                 "weight": "وزن",
                 "spo2": "اشباع اکسیژن",
-                "temp": "دما"
+                "temp": "دما",
+                "sleep": "خواب",
+                "mood": "حال روحی"
             },
             "channel": {
                 "systolic": "سیستولیک",
@@ -3226,7 +3228,10 @@
                 "visibility": "نمایانی",
                 "systolic": "سیستولیک",
                 "diastolic": "دیاستولیک",
-                "pulse": "نبض"
+                "pulse": "نبض",
+                "hours": "ساعت",
+                "minutes": "دقیقه",
+                "mood": "چه احساسی داری؟"
             },
             "visibility": {
                 "private": "خصوصی",
@@ -3235,7 +3240,14 @@
             "sparse": "اندازه‌گیری‌ها برای نمایش روند بسیار کم است.",
             "recentMeasurements": "آخرین اندازه‌گیری‌ها",
             "deleteMeasurement": "حذف اندازه‌گیری",
-            "measurementDeleted": "اندازه‌گیری حذف شد"
+            "measurementDeleted": "اندازه‌گیری حذف شد",
+            "mood": {
+                "veryBad": "خیلی بد",
+                "bad": "بد",
+                "okay": "متوسط",
+                "good": "خوب",
+                "veryGood": "خیلی خوب"
+            }
         },
         "meds": {
             "doseQty": "{{count}}×",
@@ -3648,6 +3660,11 @@
                 "pregnancyHint": "در حالت بارداری، پیش‌بینی‌های قاعدگی و تخمک‌گذاری متوقف می‌شود. ثبت روزانه همچنان در دسترس است.",
                 "saved": "تنظیمات ذخیره شد."
             }
+        },
+        "duration": {
+            "hm": "{{hours}} ساعت {{minutes}} دقیقه",
+            "h": "{{hours}} ساعت",
+            "m": "{{minutes}} دقیقه"
         }
     },
     "rewards": {

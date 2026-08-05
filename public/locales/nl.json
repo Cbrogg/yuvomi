@@ -3210,7 +3210,9 @@
                 "glucose": "Bloedsuiker",
                 "weight": "Gewicht",
                 "spo2": "Zuurstofsaturatie",
-                "temp": "Temperatuur"
+                "temp": "Temperatuur",
+                "sleep": "Slaap",
+                "mood": "Stemming"
             },
             "channel": {
                 "systolic": "Systolisch",
@@ -3226,7 +3228,10 @@
                 "visibility": "Zichtbaarheid",
                 "systolic": "Systolisch",
                 "diastolic": "Diastolisch",
-                "pulse": "Hartslag"
+                "pulse": "Hartslag",
+                "hours": "Uren",
+                "minutes": "Minuten",
+                "mood": "Hoe voel je je?"
             },
             "visibility": {
                 "private": "Privé",
@@ -3235,7 +3240,14 @@
             "sparse": "Te weinig metingen om een trend te tonen.",
             "recentMeasurements": "Recente metingen",
             "deleteMeasurement": "Meting verwijderen",
-            "measurementDeleted": "Meting verwijderd"
+            "measurementDeleted": "Meting verwijderd",
+            "mood": {
+                "veryBad": "Heel slecht",
+                "bad": "Slecht",
+                "okay": "Gaat wel",
+                "good": "Goed",
+                "veryGood": "Heel goed"
+            }
         },
         "meds": {
             "doseQty": "{{count}}×",
@@ -3648,6 +3660,11 @@
                 "pregnancyHint": "In de zwangerschapsmodus worden voorspellingen voor menstruatie en eisprong gepauzeerd. Dagelijks loggen blijft mogelijk.",
                 "saved": "Instellingen opgeslagen."
             }
+        },
+        "duration": {
+            "hm": "{{hours}} u {{minutes}} min",
+            "h": "{{hours}} u",
+            "m": "{{minutes}} min"
         }
     },
     "rewards": {

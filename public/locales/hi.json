@@ -3210,7 +3210,9 @@
                 "glucose": "रक्त शर्करा",
                 "weight": "वज़न",
                 "spo2": "ऑक्सीजन संतृप्ति",
-                "temp": "तापमान"
+                "temp": "तापमान",
+                "sleep": "नींद",
+                "mood": "मनोदशा"
             },
             "channel": {
                 "systolic": "सिस्टोलिक",
@@ -3226,7 +3228,10 @@
                 "visibility": "दृश्यता",
                 "systolic": "सिस्टोलिक",
                 "diastolic": "डायस्टोलिक",
-                "pulse": "नाड़ी"
+                "pulse": "नाड़ी",
+                "hours": "घंटे",
+                "minutes": "मिनट",
+                "mood": "आप कैसा महसूस कर रहे हैं?"
             },
             "visibility": {
                 "private": "निजी",
@@ -3235,7 +3240,14 @@
             "sparse": "रुझान दिखाने के लिए बहुत कम माप।",
             "recentMeasurements": "हाल की मापें",
             "deleteMeasurement": "माप हटाएँ",
-            "measurementDeleted": "माप हटाई गई"
+            "measurementDeleted": "माप हटाई गई",
+            "mood": {
+                "veryBad": "बहुत खराब",
+                "bad": "खराब",
+                "okay": "ठीक-ठाक",
+                "good": "अच्छा",
+                "veryGood": "बहुत अच्छा"
+            }
         },
         "meds": {
             "doseQty": "{{count}}×",
@@ -3648,6 +3660,11 @@
                 "pregnancyHint": "गर्भावस्था मोड में मासिक धर्म और ओव्यूलेशन के पूर्वानुमान रुक जाते हैं। दैनिक लॉगिंग उपलब्ध रहती है।",
                 "saved": "सेटिंग्स सहेजी गईं।"
             }
+        },
+        "duration": {
+            "hm": "{{hours}} घं {{minutes}} मि",
+            "h": "{{hours}} घं",
+            "m": "{{minutes}} मि"
         }
     },
     "rewards": {

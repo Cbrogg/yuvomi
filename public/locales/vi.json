@@ -3210,7 +3210,9 @@
                 "glucose": "Đường huyết",
                 "weight": "Cân nặng",
                 "spo2": "Độ bão hòa oxy",
-                "temp": "Nhiệt độ"
+                "temp": "Nhiệt độ",
+                "sleep": "Giấc ngủ",
+                "mood": "Tâm trạng"
             },
             "channel": {
                 "systolic": "Tâm thu",
@@ -3226,7 +3228,10 @@
                 "visibility": "Khả năng hiển thị",
                 "systolic": "Tâm thu",
                 "diastolic": "Tâm trương",
-                "pulse": "Mạch"
+                "pulse": "Mạch",
+                "hours": "Giờ",
+                "minutes": "Phút",
+                "mood": "Bạn cảm thấy thế nào?"
             },
             "visibility": {
                 "private": "Riêng tư",
@@ -3235,7 +3240,14 @@
             "sparse": "Quá ít số đo để hiển thị xu hướng.",
             "recentMeasurements": "Các lần đo gần đây",
             "deleteMeasurement": "Xóa lần đo",
-            "measurementDeleted": "Đã xóa lần đo"
+            "measurementDeleted": "Đã xóa lần đo",
+            "mood": {
+                "veryBad": "Rất tệ",
+                "bad": "Tệ",
+                "okay": "Bình thường",
+                "good": "Tốt",
+                "veryGood": "Rất tốt"
+            }
         },
         "meds": {
             "doseQty": "{{count}}×",
@@ -3648,6 +3660,11 @@
                 "pregnancyHint": "Ở chế độ thai kỳ, dự đoán kinh nguyệt và rụng trứng được tạm dừng. Ghi nhật ký hằng ngày vẫn khả dụng.",
                 "saved": "Đã lưu cài đặt."
             }
+        },
+        "duration": {
+            "hm": "{{hours}} giờ {{minutes}} phút",
+            "h": "{{hours}} giờ",
+            "m": "{{minutes}} phút"
         }
     },
     "rewards": {

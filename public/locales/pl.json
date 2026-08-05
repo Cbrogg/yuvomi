@@ -3210,7 +3210,9 @@
                 "glucose": "Poziom cukru",
                 "weight": "Waga",
                 "spo2": "Saturacja tlenem",
-                "temp": "Temperatura"
+                "temp": "Temperatura",
+                "sleep": "Sen",
+                "mood": "Nastrój"
             },
             "channel": {
                 "systolic": "Skurczowe",
@@ -3226,7 +3228,10 @@
                 "visibility": "Widoczność",
                 "systolic": "Skurczowe",
                 "diastolic": "Rozkurczowe",
-                "pulse": "Tętno"
+                "pulse": "Tętno",
+                "hours": "Godziny",
+                "minutes": "Minuty",
+                "mood": "Jak się czujesz?"
             },
             "visibility": {
                 "private": "Prywatne",
@@ -3235,7 +3240,14 @@
             "sparse": "Za mało pomiarów, aby pokazać trend.",
             "recentMeasurements": "Ostatnie pomiary",
             "deleteMeasurement": "Usuń pomiar",
-            "measurementDeleted": "Pomiar usunięty"
+            "measurementDeleted": "Pomiar usunięty",
+            "mood": {
+                "veryBad": "Bardzo źle",
+                "bad": "Źle",
+                "okay": "Tak sobie",
+                "good": "Dobrze",
+                "veryGood": "Bardzo dobrze"
+            }
         },
         "meds": {
             "doseQty": "{{count}}×",
@@ -3648,6 +3660,11 @@
                 "pregnancyHint": "W trybie ciąży prognozy miesiączki i owulacji są wstrzymane. Codzienne zapisy pozostają dostępne.",
                 "saved": "Ustawienia zapisane."
             }
+        },
+        "duration": {
+            "hm": "{{hours}} godz. {{minutes}} min",
+            "h": "{{hours}} godz.",
+            "m": "{{minutes}} min"
         }
     },
     "rewards": {

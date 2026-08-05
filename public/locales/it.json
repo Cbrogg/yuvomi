@@ -3210,7 +3210,9 @@
                 "glucose": "Glicemia",
                 "weight": "Peso",
                 "spo2": "Saturazione di ossigeno",
-                "temp": "Temperatura"
+                "temp": "Temperatura",
+                "sleep": "Sonno",
+                "mood": "Umore"
             },
             "channel": {
                 "systolic": "Sistolica",
@@ -3226,7 +3228,10 @@
                 "visibility": "Visibilità",
                 "systolic": "Sistolica",
                 "diastolic": "Diastolica",
-                "pulse": "Battito"
+                "pulse": "Battito",
+                "hours": "Ore",
+                "minutes": "Minuti",
+                "mood": "Come ti senti?"
             },
             "visibility": {
                 "private": "Privato",
@@ -3235,7 +3240,14 @@
             "sparse": "Troppe poche misurazioni per mostrare un andamento.",
             "recentMeasurements": "Ultime misurazioni",
             "deleteMeasurement": "Elimina misurazione",
-            "measurementDeleted": "Misurazione eliminata"
+            "measurementDeleted": "Misurazione eliminata",
+            "mood": {
+                "veryBad": "Molto male",
+                "bad": "Male",
+                "okay": "Così così",
+                "good": "Bene",
+                "veryGood": "Molto bene"
+            }
         },
         "meds": {
             "doseQty": "{{count}}×",
@@ -3648,6 +3660,11 @@
                 "pregnancyHint": "In modalità gravidanza le previsioni di mestruazioni e ovulazione sono in pausa. Il diario giornaliero resta disponibile.",
                 "saved": "Impostazioni salvate."
             }
+        },
+        "duration": {
+            "hm": "{{hours}} h {{minutes}} min",
+            "h": "{{hours}} h",
+            "m": "{{minutes}} min"
         }
     },
     "rewards": {

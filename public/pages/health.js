@@ -18,7 +18,10 @@ import { wireScrollFade, scheduleUndoableDelete } from '/utils/ux.js';
 import { toLocalDateKey, parseLocalDateKey, addLocalDays } from '/utils/date.js';
 import { openModal, closeModal, confirmOverModal, reportFieldError } from '/components/modal.js';
 import { createPageFab, setPageFabAction } from '/utils/fab.js';
-import { computeVitalSeries, VITAL_METRICS, vitalMetric } from '/utils/health-vitals.js';
+import {
+  computeVitalSeries, VITAL_METRICS, vitalMetric,
+  MOOD_SCALE, moodStep, splitDuration, durationToHours,
+} from '/utils/health-vitals.js';
 import {
   computeDueDoses, computeAdherence, refillState,
   daysMaskToIndices, indicesToDaysMask, WEEKDAY_COUNT,
@@ -89,7 +92,7 @@ function chartScales() {
 
 // Fünf horizontale Gitterlinien mit Y-Wert-Beschriftung am linken Rand — ersetzt
 // die früheren zwei frei schwebenden Min-/Max-Zahlen durch eine echte Werteachse.
-function chartGridMarkup(min, max) {
+function chartGridMarkup(min, max, metric) {
   const { W, PAD_L, PAD_R } = CHART;
   const { top, bottom } = chartScales();
   const out = [];
@@ -101,9 +104,25 @@ function chartGridMarkup(min, max) {
     const gy = top + (k * (bottom - top)) / 4;
     const val = max - (k * (max - min)) / 4;
     out.push(`<line class="health-chart__grid" x1="${PAD_L}" y1="${gy.toFixed(1)}" x2="${W - PAD_R}" y2="${gy.toFixed(1)}" />`);
-    out.push(`<text x="${PAD_L - 6}" y="${(gy + 3.5).toFixed(1)}" class="health-chart__axis health-chart__axis--y" text-anchor="end">${esc(fmtNum(wholeTicks ? Math.round(val) : val))}</text>`);
+    out.push(`<text x="${PAD_L - 6}" y="${(gy + 3.5).toFixed(1)}" class="health-chart__axis health-chart__axis--y" text-anchor="end">${esc(axisTickText(metric, val, wholeTicks))}</text>`);
   }
   return out.join('');
+}
+
+// Achsen-Tick. Eine Dauer darf hier nicht dezimal stehen: „8,4" neben einer
+// Verlaufszeile mit „8 Std. 24 Min." wäre dieselbe Größe in zwei Zahlensystemen.
+// Kompakt (8:24) statt ausgeschrieben, weil eine Y-Achse keinen Platz für Wörter
+// hat - die Zahl bleibt dabei dieselbe.
+function axisTickText(metric, value, wholeTicks) {
+  if (metric?.format === 'duration') {
+    const parts = splitDuration(value);
+    if (!parts) return '–';
+    return `${fmtNum(parts.hours, { maximumFractionDigits: 0 })}:${String(parts.minutes).padStart(2, '0')}`;
+  }
+  // Die Stimmungs-Skala kennt nur ganze Stufen; Zwischenwerte an der Achse
+  // wären eine Genauigkeit, die es in der Erfassung nicht gibt.
+  if (metric?.format === 'scale') return fmtNum(Math.round(value), { maximumFractionDigits: 0 });
+  return fmtNum(wholeTicks ? Math.round(value) : value);
 }
 
 // X-Achsen-Datumslabels (erstes, mittleres, letztes Datum) unter dem Plot,
@@ -443,6 +462,31 @@ function disclaimerMarkup(modal = false) {
   return `<p class="health-disclaimer${modal ? ' health-disclaimer--modal' : ''}">${esc(t('health.disclaimer'))}</p>`;
 }
 
+// Einfachauswahl über eine .health-choices-Reihe: ein Klick wählt, ein zweiter
+// auf dieselbe Stufe wählt wieder ab. `optional: false` lässt die getroffene
+// Wahl stehen - für Skalen, bei denen „nichts" keine Aussage ist.
+// Delegiert am Container, damit ein neu aufgebauter Inhalt (Metrikwechsel im
+// Erfassungs-Dialog) nicht jedes Mal neu verdrahtet werden muss.
+function wireChoiceGroup(root, group, { optional = true } = {}) {
+  const host = root.querySelector(`[data-group="${group}"]`);
+  if (!host) return;
+  host.addEventListener('click', (e) => {
+    const btn = e.target.closest('.health-choice');
+    if (!btn || !host.contains(btn)) return;
+    const on = btn.getAttribute('aria-pressed') === 'true';
+    host.querySelectorAll('.health-choice').forEach((b) => b.setAttribute('aria-pressed', 'false'));
+    btn.setAttribute('aria-pressed', on && optional ? 'false' : 'true');
+    // Eine getroffene Wahl beantwortet eine zuvor gemeldete Pflichtfeld-Meldung.
+    // reportFieldError() räumt selbst nur bei input/change auf - Ereignisse, die
+    // eine Buttonreihe nie feuert, sodass die Meldung sonst rot stehen bliebe.
+    const field = host.closest('.form-field');
+    if (field?.classList.contains('form-field--error')) {
+      field.classList.remove('form-field--error');
+      host.querySelectorAll('.health-choice[aria-invalid]').forEach((b) => b.setAttribute('aria-invalid', 'false'));
+    }
+  });
+}
+
 // Screenreader-Alternative zu den nativen SVG-Charts: eine visuell versteckte
 // Tabelle mit denselben Datenpunkten. Der Chart selbst bleibt role="img" mit
 // Kurz-Label; die Tabelle liefert die eigentlichen Werte. `rows` = [[c1,c2], …].
@@ -565,17 +609,12 @@ function cardMarkup(metric, series) {
   let metaHtml = `<div class="health-metric-card__empty">${esc(t('health.vitals.noValue'))}</div>`;
 
   if (latest) {
-    const unit = esc(latest.unit || '');
-    let valueText;
-    if (metric.type === 'bp') {
-      valueText = `${fmtNum(latest.value_num)}/${fmtNum(latest.value_num2)}`;
-    } else {
-      valueText = fmtNum(latest.value_num);
-    }
+    const unit = esc(vitalUnitText(metric, latest));
+    const valueText = vitalValueText(metric, latest);
     valueHtml = `<span class="health-metric-card__value">${esc(valueText)}</span>${unit ? ` <span class="health-metric-card__unit">${unit}</span>` : ''}`;
     metaHtml = `
       <div class="health-metric-card__meta">
-        ${deltaMarkup(series.deltas.value_num)}
+        ${deltaMarkup(series.deltas.value_num, metric)}
         <span class="health-metric-card__date">${esc(formatDate(String(latest.measured_at).slice(0, 10)))}</span>
       </div>`;
   } else {
@@ -590,7 +629,7 @@ function cardMarkup(metric, series) {
         <span class="health-metric-card__label">${esc(label)}</span>
       </span>
       <span class="health-metric-card__body">${valueHtml}</span>
-      ${latest ? sparklineMarkup(series.points, 'value_num') : ''}
+      ${latest ? sparklineMarkup(series.points, 'value_num', metric) : ''}
       ${metaHtml}
     </button>`;
 }
@@ -598,7 +637,7 @@ function cardMarkup(metric, series) {
 // Mini-Trendlinie für die Metrik-Karte: gibt der Karte Sub-Domänen-Charakter, ohne
 // den vollen Chart zu wiederholen. Rein dekorativ (aria-hidden) — die exakten Werte
 // liefern Karte, Detail-Chart und Screenreader-Tabelle. Nur bei ≥2 Datenpunkten.
-function sparklineMarkup(points, key) {
+function sparklineMarkup(points, key, metric) {
   const withVal = points
     .map((p, i) => ({ v: p[key], i }))
     .filter((o) => o.v !== null && o.v !== undefined);
@@ -609,6 +648,9 @@ function sparklineMarkup(points, key) {
   const vals = withVal.map((o) => o.v);
   let min = Math.min(...vals);
   let max = Math.max(...vals);
+  // Feste Skala auch hier: sonst zeigte die Mini-Linie einer Karte einen
+  // anderen Verlauf als der Chart darunter, aus denselben Werten.
+  if (metric?.domain) ({ min, max } = metric.domain);
   if (min === max) { min -= 1; max += 1; }
   const n = withVal.length;
   const x = (idx) => PAD + (idx * (W - 2 * PAD)) / (n - 1);
@@ -623,13 +665,13 @@ function sparklineMarkup(points, key) {
     </svg>`;
 }
 
-function deltaMarkup(delta) {
+function deltaMarkup(delta, metric) {
   if (delta === null || delta === undefined) return '<span class="health-metric-card__delta"></span>';
   const icon = delta > 0 ? 'trending-up' : (delta < 0 ? 'trending-down' : 'minus');
   const dir = delta > 0 ? 'up' : (delta < 0 ? 'down' : 'flat');
   return `
     <span class="health-metric-card__delta health-metric-card__delta--${dir}">
-      <i data-lucide="${icon}" aria-hidden="true"></i>${esc(fmtDelta(delta))}
+      <i data-lucide="${icon}" aria-hidden="true"></i>${esc(fmtVitalDelta(metric, delta))}
     </span>`;
 }
 
@@ -696,9 +738,7 @@ function recentMeasurementsMarkup(metric) {
     .slice(0, 8);
   if (!rows.length) return '';
   const own = isOwnView();
-  const valueText = (r) => metric.type === 'bp'
-    ? `${fmtNum(r.value_num)}/${fmtNum(r.value_num2)}`
-    : fmtNum(r.value_num);
+  const valueText = (r) => vitalValueText(metric, r);
   return `
     <div class="health-recent">
       <div class="health-recent__title">${esc(t('health.vitals.recentMeasurements'))}</div>
@@ -706,7 +746,7 @@ function recentMeasurementsMarkup(metric) {
         ${rows.map((r) => `
           <li class="health-recent__row">
             <span class="health-recent__date">${esc(formatDate(String(r.measured_at).slice(0, 10)))}</span>
-            <span class="health-recent__value">${esc(valueText(r))}${r.unit ? ` <small>${esc(r.unit)}</small>` : ''}</span>
+            <span class="health-recent__value">${esc(valueText(r))}${vitalUnitText(metric, r) ? ` <small>${esc(vitalUnitText(metric, r))}</small>` : ''}</span>
             ${own ? `
             <button type="button" class="row-action row-action--danger" data-delete-vital="${r.id}"
                     aria-label="${esc(t('health.vitals.deleteMeasurement'))}">
@@ -750,12 +790,19 @@ function chartMarkup(metric, series) {
   }
 
   const allValues = channels.flatMap(({ key }) => pts.map((p) => p[key]).filter((v) => v !== null));
-  let min = Math.min(...allValues);
-  let max = Math.max(...allValues);
-  if (min === max) { min -= 1; max += 1; }
-  const span = max - min;
-  const pad = span * 0.1;
-  min -= pad; max += pad;
+  let min;
+  let max;
+  if (metric.domain) {
+    // Feste Skala: keine Polsterung, die Grenzen sind die Aussage.
+    ({ min, max } = metric.domain);
+  } else {
+    min = Math.min(...allValues);
+    max = Math.max(...allValues);
+    if (min === max) { min -= 1; max += 1; }
+    const span = max - min;
+    const pad = span * 0.1;
+    min -= pad; max += pad;
+  }
 
   const { W, H } = CHART;
   const { left, right, top, bottom } = chartScales();
@@ -790,7 +837,7 @@ function chartMarkup(metric, series) {
       const px = x(i).toFixed(1);
       const py = y(p[key]).toFixed(1);
       linePts.push(`${px},${py}`);
-      dots.push(`<circle cx="${px}" cy="${py}" r="3.5" fill="${color}"><title>${esc(`${chName} · ${formatDate(p.date)}: ${fmtNum(p[key])}`)}</title></circle>`);
+      dots.push(`<circle cx="${px}" cy="${py}" r="3.5" fill="${color}"><title>${esc(`${chName} · ${formatDate(p.date)}: ${fmtChannelValue(metric, p[key])}`)}</title></circle>`);
     });
     return `
       <polyline fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"
@@ -806,14 +853,14 @@ function chartMarkup(metric, series) {
         </span>`).join('')}</div>`
     : '';
 
-  const grid = chartGridMarkup(min, max);
+  const grid = chartGridMarkup(min, max, metric);
 
   // Screenreader-Datentabelle: nur Buckets mit mindestens einem Wert.
   const chLabel = (idx) => (metric.channelLabelKeys?.[idx] ? t(metric.channelLabelKeys[idx]) : t(metric.labelKey));
   const tableHeaders = [t('health.vitals.field.measuredAt'), ...channels.map(({ idx }) => chLabel(idx))];
   const dataPoints = pts.filter((p) => channels.some(({ key }) => p[key] !== null));
   const tableRows = dataPoints
-    .map((p) => [formatDate(p.date), ...channels.map(({ key }) => (p[key] !== null ? fmtNum(p[key]) : '–'))]);
+    .map((p) => [formatDate(p.date), ...channels.map(({ key }) => fmtChannelValue(metric, p[key]))]);
   const table = tableRows.length ? chartTableMarkup(t(metric.labelKey), tableHeaders, tableRows) : '';
   const xLabels = chartXLabelsMarkup(dataPoints.map((p) => p.date));
 
@@ -842,7 +889,43 @@ function localDateTimeValue(date) {
 
 function valueFieldsMarkup(type) {
   const metric = vitalMetric(type) || VITAL_METRICS[0];
-  if (type === 'bp') {
+
+  // Schlaf wird in Stunden und Minuten erfasst, nicht als Dezimalzahl - „7,5"
+  // ist eine Rechnung, die der Erfassende sonst im Kopf machen müsste.
+  if (metric.format === 'duration') {
+    return `
+      <div class="modal-grid modal-grid--2">
+        <div class="form-field">
+          <label class="label" for="vital-hours">${esc(t('health.vitals.field.hours'))}</label>
+          <input class="input" id="vital-hours" type="number" inputmode="numeric" step="1" min="0" max="24" required>
+        </div>
+        <div class="form-field">
+          <label class="label" for="vital-minutes">${esc(t('health.vitals.field.minutes'))}</label>
+          <input class="input" id="vital-minutes" type="number" inputmode="numeric" step="1" min="0" max="59" value="0">
+        </div>
+      </div>
+      <input type="hidden" id="vital-unit" value="${esc(metric.units[0] || '')}">`;
+  }
+
+  // Stimmung als Skala: fünf Gesichter statt eines Zahlenfelds - derselbe
+  // Auswahl-Chip wie Flow und Symptome im Zyklus-Tagebuch (.health-choice).
+  if (metric.format === 'scale') {
+    return `
+      <div class="form-field">
+        <span class="label">${esc(t('health.vitals.field.mood'))}</span>
+        <div class="health-choices health-choices--scale" data-group="mood" role="group"
+             aria-label="${esc(t('health.vitals.field.mood'))}">
+          ${MOOD_SCALE.map((step) => `
+            <button type="button" class="health-choice" data-mood="${esc(step.value)}" aria-pressed="false">
+              <i data-lucide="${esc(step.icon)}" aria-hidden="true"></i>
+              <span class="health-choice-label">${esc(t(step.labelKey))}</span>
+            </button>`).join('')}
+        </div>
+      </div>
+      <input type="hidden" id="vital-unit" value="">`;
+  }
+
+  if (metric.format === 'pair') {
     return `
       <div class="modal-grid modal-grid--3">
         <div class="form-field">
@@ -921,9 +1004,19 @@ function openVitalModal(opts = {}) {
       const typeSelect = panel.querySelector('#vital-type');
       const fieldsHost = panel.querySelector('#vital-value-fields');
 
+      // Die Stimmungs-Skala bringt Icons mit; nach jedem Feldwechsel neu zeichnen.
+      // Die Stimmungs-Skala ist eine Einfachauswahl, die stehen bleiben muss:
+      // eine abgewählte Stufe wäre kein Eintrag, sondern ein leeres Formular.
+      const paintFields = () => {
+        if (window.lucide) window.lucide.createIcons({ el: fieldsHost });
+        wireChoiceGroup(fieldsHost, 'mood', { optional: false });
+      };
+      paintFields();
+
       typeSelect.addEventListener('change', () => {
         fieldsHost.replaceChildren();
         fieldsHost.insertAdjacentHTML('beforeend', valueFieldsMarkup(typeSelect.value));
+        paintFields();
       });
 
       panel.querySelector('[data-action="cancel"]')?.addEventListener('click', () => closeModal({ force: true }));
@@ -935,8 +1028,14 @@ function openVitalModal(opts = {}) {
         if (!body) {
           submitBtn.disabled = false;
           // Fehler am Wertefeld statt als ortloser Toast (geteiltes Muster,
-          // Critique P1): erstes Eingabefeld der Metrik markieren.
-          reportFieldError(panel.querySelector('#vital-value-fields input'), t('health.vitals.invalidValue'));
+          // Critique P1): erstes Eingabefeld der Metrik markieren. Bei der
+          // Stimmungs-Skala gibt es kein Eingabefeld - dort trägt die erste
+          // Stufe die Meldung, das versteckte Einheiten-Feld könnte sie nicht
+          // zeigen.
+          reportFieldError(
+            fieldsHost.querySelector('input:not([type="hidden"])') || fieldsHost.querySelector('.health-choice'),
+            t('health.vitals.invalidValue'),
+          );
           return;
         }
         submitBtn.disabled = true;
@@ -969,8 +1068,30 @@ function collectVitalBody(panel, type) {
   if (!measuredAt) return null;
 
   const body = { type, measured_at: measuredAt, visibility, note };
+  const metric = vitalMetric(type);
 
-  if (type === 'bp') {
+  if (metric?.format === 'duration') {
+    const hours = numOrNull(panel.querySelector('#vital-hours'));
+    const minutes = numOrNull(panel.querySelector('#vital-minutes'));
+    if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+    const total = durationToHours(hours || 0, minutes || 0);
+    // Null Stunden null Minuten ist keine Nacht, sondern ein leeres Formular.
+    if (total === null || total <= 0 || total > 24) return null;
+    body.value_num = total;
+    body.unit = panel.querySelector('#vital-unit')?.value || undefined;
+    return body;
+  }
+
+  if (metric?.format === 'scale') {
+    const chosen = panel.querySelector('[data-group="mood"] .health-choice[aria-pressed="true"]');
+    if (!chosen) return null;
+    const step = moodStep(chosen.dataset.mood);
+    if (!step) return null;
+    body.value_num = step.value;
+    return body;
+  }
+
+  if (metric?.format === 'pair') {
     const sys = numOrNull(panel.querySelector('#vital-sys'));
     const dia = numOrNull(panel.querySelector('#vital-dia'));
     const pulse = numOrNull(panel.querySelector('#vital-pulse'));
@@ -1014,6 +1135,59 @@ function fmtNum(value, opts) {
 function fmtDelta(value) {
   if (value === null || value === undefined) return '';
   return getNumberFormat({ maximumFractionDigits: 1, signDisplay: 'exceptZero' }).format(value);
+}
+
+// --------------------------------------------------------
+// Metrik-abhängige Wertdarstellung
+// --------------------------------------------------------
+// Eine Metrik sagt über `format`, wie ihre Zahlen gelesen werden; Karten,
+// Verlaufsliste, Chart-Tooltips und Übersicht fragen ausschließlich hier nach.
+// Vorher trug jede dieser Stellen ihren eigenen `type === 'bp'`-Zweig - mit
+// Schlaf und Stimmung wären daraus fünf dreifache Verzweigungen geworden.
+
+/** Dezimalstunden als „7 h 30 min". */
+function fmtDuration(value) {
+  const parts = splitDuration(value);
+  if (!parts) return '–';
+  const hours = fmtNum(parts.hours, { maximumFractionDigits: 0 });
+  const minutes = fmtNum(parts.minutes, { maximumFractionDigits: 0 });
+  if (parts.hours && parts.minutes) return t('health.duration.hm', { hours, minutes });
+  if (parts.hours) return t('health.duration.h', { hours });
+  return t('health.duration.m', { minutes });
+}
+
+/** Ein einzelner Kanalwert (Chart-Punkt, Screenreader-Tabelle). */
+function fmtChannelValue(metric, value) {
+  if (value === null || value === undefined) return '–';
+  if (metric?.format === 'duration') return fmtDuration(value);
+  if (metric?.format === 'scale') return t(moodStep(value)?.labelKey || 'health.vitals.noValue');
+  return fmtNum(value);
+}
+
+/** Der Wert einer ganzen Messung, wie er auf Karte und Verlaufszeile steht. */
+function vitalValueText(metric, row) {
+  if (!row) return '–';
+  if (metric?.format === 'pair') return `${fmtNum(row.value_num)}/${fmtNum(row.value_num2)}`;
+  return fmtChannelValue(metric, row.value_num);
+}
+
+// Die Einheit steckt bei Dauer und Skala schon im Wertetext („7 h 30 min") oder
+// existiert gar nicht - sie ein zweites Mal danebenzusetzen ergäbe „7 h 30 min h".
+function vitalUnitText(metric, row) {
+  if (metric?.format === 'duration' || metric?.format === 'scale') return '';
+  return row?.unit || '';
+}
+
+/** Delta zum Vorwert. Bei Schlaf in Minuten, weil „+0,5" niemand als Zeit liest. */
+function fmtVitalDelta(metric, delta) {
+  if (delta === null || delta === undefined) return '';
+  if (metric?.format === 'duration') {
+    const minutes = Math.round(delta * 60);
+    return t('health.duration.m', {
+      minutes: getNumberFormat({ maximumFractionDigits: 0, signDisplay: 'exceptZero' }).format(minutes),
+    });
+  }
+  return fmtDelta(delta);
 }
 
 // ========================================================
@@ -3117,14 +3291,12 @@ function overviewVitalCardMarkup(metric, series) {
   let valueHtml;
   let metaHtml = `<div class="health-metric-card__empty">${esc(t('health.vitals.noValue'))}</div>`;
   if (latest) {
-    const unit = esc(latest.unit || '');
-    const valueText = metric.type === 'bp'
-      ? `${fmtNum(latest.value_num)}/${fmtNum(latest.value_num2)}`
-      : fmtNum(latest.value_num);
+    const unit = esc(vitalUnitText(metric, latest));
+    const valueText = vitalValueText(metric, latest);
     valueHtml = `<span class="health-metric-card__value">${esc(valueText)}</span>${unit ? ` <span class="health-metric-card__unit">${unit}</span>` : ''}`;
     metaHtml = `
       <div class="health-metric-card__meta">
-        ${deltaMarkup(series.deltas.value_num)}
+        ${deltaMarkup(series.deltas.value_num, metric)}
         <span class="health-metric-card__date">${esc(formatDate(String(latest.measured_at).slice(0, 10)))}</span>
       </div>`;
   } else {
@@ -3950,10 +4122,10 @@ function openDayLogModal(dateKey) {
   const currentMood = existing?.mood || '';
 
   const flowButtons = [{ value: '', labelKey: 'health.cycle.flow.none' }, ...FLOW_LEVELS.map((f) => ({ value: f.value, labelKey: f.labelKey }))]
-    .map((f) => `<button type="button" class="cycle-choice" data-flow="${esc(f.value)}" aria-pressed="${f.value === currentFlow}">${esc(t(f.labelKey))}</button>`).join('');
+    .map((f) => `<button type="button" class="health-choice" data-flow="${esc(f.value)}" aria-pressed="${f.value === currentFlow}">${esc(t(f.labelKey))}</button>`).join('');
 
   const symptomButtons = SYMPTOM_TYPES.map((s) =>
-    `<button type="button" class="cycle-choice cycle-choice--chip" data-symptom="${esc(s.value)}" aria-pressed="${activeSymptoms.has(s.value)}">
+    `<button type="button" class="health-choice health-choice--chip" data-symptom="${esc(s.value)}" aria-pressed="${activeSymptoms.has(s.value)}">
       <i data-lucide="${esc(s.icon)}" aria-hidden="true"></i>${esc(t(s.labelKey))}</button>`).join('');
 
   const moodOptions = [`<option value="" ${currentMood ? '' : 'selected'}>${esc(t('health.cycle.mood.none'))}</option>`,
@@ -3966,11 +4138,11 @@ function openDayLogModal(dateKey) {
       <form id="cycle-log-form" class="form-stack">
         <div class="form-field">
           <span class="label">${esc(t('health.cycle.flow.label'))}</span>
-          <div class="cycle-choices" data-group="flow" role="group" aria-label="${esc(t('health.cycle.flow.label'))}">${flowButtons}</div>
+          <div class="health-choices" data-group="flow" role="group" aria-label="${esc(t('health.cycle.flow.label'))}">${flowButtons}</div>
         </div>
         <div class="form-field">
           <span class="label">${esc(t('health.cycle.symptom.label'))}</span>
-          <div class="cycle-choices cycle-choices--wrap" data-group="symptoms">${symptomButtons}</div>
+          <div class="health-choices health-choices--wrap" data-group="symptoms">${symptomButtons}</div>
         </div>
         <div class="modal-grid modal-grid--2">
           <div class="form-field">
@@ -3997,12 +4169,7 @@ function openDayLogModal(dateKey) {
       </form>`,
     onSave(panel) {
       // Flow: Einfachauswahl (Toggle). Symptome: Mehrfachauswahl.
-      panel.querySelectorAll('[data-group="flow"] .cycle-choice').forEach((btn) =>
-        btn.addEventListener('click', () => {
-          const on = btn.getAttribute('aria-pressed') === 'true';
-          panel.querySelectorAll('[data-group="flow"] .cycle-choice').forEach((b) => b.setAttribute('aria-pressed', 'false'));
-          btn.setAttribute('aria-pressed', on ? 'false' : 'true');
-        }));
+      wireChoiceGroup(panel, 'flow');
       panel.querySelectorAll('[data-symptom]').forEach((btn) =>
         btn.addEventListener('click', () => btn.setAttribute('aria-pressed', btn.getAttribute('aria-pressed') === 'true' ? 'false' : 'true')));
 
@@ -4012,7 +4179,7 @@ function openDayLogModal(dateKey) {
       panel.querySelector('#cycle-log-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const submitBtn = panel.querySelector('[type="submit"]');
-        const flowBtn = panel.querySelector('[data-group="flow"] .cycle-choice[aria-pressed="true"]');
+        const flowBtn = panel.querySelector('[data-group="flow"] .health-choice[aria-pressed="true"]');
         const symptoms = [...panel.querySelectorAll('[data-symptom][aria-pressed="true"]')].map((b) => b.dataset.symptom);
         const body = {
           log_date: key,

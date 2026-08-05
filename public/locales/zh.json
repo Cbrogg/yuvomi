@@ -3210,7 +3210,9 @@
                 "glucose": "血糖",
                 "weight": "体重",
                 "spo2": "血氧饱和度",
-                "temp": "体温"
+                "temp": "体温",
+                "sleep": "睡眠",
+                "mood": "心情"
             },
             "channel": {
                 "systolic": "收缩压",
@@ -3226,7 +3228,10 @@
                 "visibility": "可见性",
                 "systolic": "收缩压",
                 "diastolic": "舒张压",
-                "pulse": "脉搏"
+                "pulse": "脉搏",
+                "hours": "小时",
+                "minutes": "分钟",
+                "mood": "你今天感觉如何？"
             },
             "visibility": {
                 "private": "私密",
@@ -3235,7 +3240,14 @@
             "sparse": "测量数据太少，无法显示趋势。",
             "recentMeasurements": "最近的测量",
             "deleteMeasurement": "删除测量",
-            "measurementDeleted": "测量已删除"
+            "measurementDeleted": "测量已删除",
+            "mood": {
+                "veryBad": "很差",
+                "bad": "较差",
+                "okay": "一般",
+                "good": "不错",
+                "veryGood": "很好"
+            }
         },
         "meds": {
             "doseQty": "{{count}}×",
@@ -3648,6 +3660,11 @@
                 "pregnancyHint": "在怀孕模式下，月经和排卵预测将暂停。每日记录仍可使用。",
                 "saved": "设置已保存。"
             }
+        },
+        "duration": {
+            "hm": "{{hours}} 小时 {{minutes}} 分钟",
+            "h": "{{hours}} 小时",
+            "m": "{{minutes}} 分钟"
         }
     },
     "rewards": {

@@ -3210,7 +3210,9 @@
                 "glucose": "Asukal sa dugo",
                 "weight": "Timbang",
                 "spo2": "Saturasyon ng oksiheno",
-                "temp": "Temperatura"
+                "temp": "Temperatura",
+                "sleep": "Tulog",
+                "mood": "Kalooban"
             },
             "channel": {
                 "systolic": "Systolic",
@@ -3226,7 +3228,10 @@
                 "visibility": "Pagiging nakikita",
                 "systolic": "Systolic",
                 "diastolic": "Diastolic",
-                "pulse": "Pulso"
+                "pulse": "Pulso",
+                "hours": "Oras",
+                "minutes": "Minuto",
+                "mood": "Kumusta ang pakiramdam mo?"
             },
             "visibility": {
                 "private": "Pribado",
@@ -3235,7 +3240,14 @@
             "sparse": "Kulang ang sukat para magpakita ng takbo.",
             "recentMeasurements": "Mga kamakailang sukat",
             "deleteMeasurement": "Tanggalin ang sukat",
-            "measurementDeleted": "Natanggal ang sukat"
+            "measurementDeleted": "Natanggal ang sukat",
+            "mood": {
+                "veryBad": "Napakasama",
+                "bad": "Masama",
+                "okay": "Katamtaman",
+                "good": "Mabuti",
+                "veryGood": "Napakabuti"
+            }
         },
         "meds": {
             "doseQty": "{{count}}×",
@@ -3648,6 +3660,11 @@
                 "pregnancyHint": "Sa mode ng pagbubuntis, nakahinto ang mga hula sa regla at obulasyon. Nananatiling available ang pang-araw-araw na pagtatala.",
                 "saved": "Na-save ang mga setting."
             }
+        },
+        "duration": {
+            "hm": "{{hours}} oras {{minutes}} min",
+            "h": "{{hours}} oras",
+            "m": "{{minutes}} min"
         }
     },
     "rewards": {

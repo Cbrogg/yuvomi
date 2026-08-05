@@ -3210,7 +3210,9 @@
                 "glucose": "Glycémie",
                 "weight": "Poids",
                 "spo2": "Saturation en oxygène",
-                "temp": "Température"
+                "temp": "Température",
+                "sleep": "Sommeil",
+                "mood": "Humeur"
             },
             "channel": {
                 "systolic": "Systolique",
@@ -3226,7 +3228,10 @@
                 "visibility": "Visibilité",
                 "systolic": "Systolique",
                 "diastolic": "Diastolique",
-                "pulse": "Pouls"
+                "pulse": "Pouls",
+                "hours": "Heures",
+                "minutes": "Minutes",
+                "mood": "Comment vous sentez-vous ?"
             },
             "visibility": {
                 "private": "Privé",
@@ -3235,7 +3240,14 @@
             "sparse": "Trop peu de mesures pour afficher une tendance.",
             "recentMeasurements": "Dernières mesures",
             "deleteMeasurement": "Supprimer la mesure",
-            "measurementDeleted": "Mesure supprimée"
+            "measurementDeleted": "Mesure supprimée",
+            "mood": {
+                "veryBad": "Très mauvaise",
+                "bad": "Mauvaise",
+                "okay": "Moyenne",
+                "good": "Bonne",
+                "veryGood": "Très bonne"
+            }
         },
         "meds": {
             "doseQty": "{{count}}×",
@@ -3648,6 +3660,11 @@
                 "pregnancyHint": "En mode grossesse, les prévisions de règles et d'ovulation sont en pause. Le suivi quotidien reste disponible.",
                 "saved": "Paramètres enregistrés."
             }
+        },
+        "duration": {
+            "hm": "{{hours}} h {{minutes}} min",
+            "h": "{{hours}} h",
+            "m": "{{minutes}} min"
         }
     },
     "rewards": {

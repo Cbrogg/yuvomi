@@ -3210,7 +3210,9 @@
                 "glucose": "Gula darah",
                 "weight": "Berat badan",
                 "spo2": "Saturasi oksigen",
-                "temp": "Suhu"
+                "temp": "Suhu",
+                "sleep": "Tidur",
+                "mood": "Suasana hati"
             },
             "channel": {
                 "systolic": "Sistolik",
@@ -3226,7 +3228,10 @@
                 "visibility": "Visibilitas",
                 "systolic": "Sistolik",
                 "diastolic": "Diastolik",
-                "pulse": "Denyut nadi"
+                "pulse": "Denyut nadi",
+                "hours": "Jam",
+                "minutes": "Menit",
+                "mood": "Bagaimana perasaanmu?"
             },
             "visibility": {
                 "private": "Pribadi",
@@ -3235,7 +3240,14 @@
             "sparse": "Terlalu sedikit pengukuran untuk menampilkan tren.",
             "recentMeasurements": "Pengukuran terakhir",
             "deleteMeasurement": "Hapus pengukuran",
-            "measurementDeleted": "Pengukuran dihapus"
+            "measurementDeleted": "Pengukuran dihapus",
+            "mood": {
+                "veryBad": "Sangat buruk",
+                "bad": "Buruk",
+                "okay": "Biasa saja",
+                "good": "Baik",
+                "veryGood": "Sangat baik"
+            }
         },
         "meds": {
             "doseQty": "{{count}}×",
@@ -3648,6 +3660,11 @@
                 "pregnancyHint": "Dalam mode kehamilan, prediksi menstruasi dan ovulasi dijeda. Pencatatan harian tetap tersedia.",
                 "saved": "Pengaturan disimpan."
             }
+        },
+        "duration": {
+            "hm": "{{hours}} j {{minutes}} mnt",
+            "h": "{{hours}} j",
+            "m": "{{minutes}} mnt"
         }
     },
     "rewards": {

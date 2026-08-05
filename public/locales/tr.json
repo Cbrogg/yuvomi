@@ -3210,7 +3210,9 @@
                 "glucose": "Kan şekeri",
                 "weight": "Kilo",
                 "spo2": "Oksijen satürasyonu",
-                "temp": "Sıcaklık"
+                "temp": "Sıcaklık",
+                "sleep": "Uyku",
+                "mood": "Ruh hali"
             },
             "channel": {
                 "systolic": "Sistolik",
@@ -3226,7 +3228,10 @@
                 "visibility": "Görünürlük",
                 "systolic": "Sistolik",
                 "diastolic": "Diyastolik",
-                "pulse": "Nabız"
+                "pulse": "Nabız",
+                "hours": "Saat",
+                "minutes": "Dakika",
+                "mood": "Kendini nasıl hissediyorsun?"
             },
             "visibility": {
                 "private": "Özel",
@@ -3235,7 +3240,14 @@
             "sparse": "Bir eğilim göstermek için ölçüm sayısı çok az.",
             "recentMeasurements": "Son ölçümler",
             "deleteMeasurement": "Ölçümü sil",
-            "measurementDeleted": "Ölçüm silindi"
+            "measurementDeleted": "Ölçüm silindi",
+            "mood": {
+                "veryBad": "Çok kötü",
+                "bad": "Kötü",
+                "okay": "İdare eder",
+                "good": "İyi",
+                "veryGood": "Çok iyi"
+            }
         },
         "meds": {
             "doseQty": "{{count}}×",
@@ -3648,6 +3660,11 @@
                 "pregnancyHint": "Gebelik modunda regl ve yumurtlama tahminleri duraklatılır. Günlük kayıt kullanılmaya devam eder.",
                 "saved": "Ayarlar kaydedildi."
             }
+        },
+        "duration": {
+            "hm": "{{hours}} sa {{minutes}} dk",
+            "h": "{{hours}} sa",
+            "m": "{{minutes}} dk"
         }
     },
     "rewards": {

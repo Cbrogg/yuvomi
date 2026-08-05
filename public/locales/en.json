@@ -3210,7 +3210,9 @@
                 "glucose": "Blood glucose",
                 "weight": "Weight",
                 "spo2": "Oxygen saturation",
-                "temp": "Temperature"
+                "temp": "Temperature",
+                "sleep": "Sleep",
+                "mood": "Mood"
             },
             "channel": {
                 "systolic": "Systolic",
@@ -3226,7 +3228,10 @@
                 "visibility": "Visibility",
                 "systolic": "Systolic",
                 "diastolic": "Diastolic",
-                "pulse": "Pulse"
+                "pulse": "Pulse",
+                "hours": "Hours",
+                "minutes": "Minutes",
+                "mood": "How are you feeling?"
             },
             "visibility": {
                 "private": "Private",
@@ -3235,7 +3240,14 @@
             "sparse": "Too few readings to show a trend.",
             "recentMeasurements": "Recent measurements",
             "deleteMeasurement": "Delete measurement",
-            "measurementDeleted": "Measurement deleted"
+            "measurementDeleted": "Measurement deleted",
+            "mood": {
+                "veryBad": "Very bad",
+                "bad": "Bad",
+                "okay": "Okay",
+                "good": "Good",
+                "veryGood": "Very good"
+            }
         },
         "meds": {
             "doseQty": "{{count}}×",
@@ -3648,6 +3660,11 @@
                 "pregnancyHint": "In pregnancy mode, period and ovulation predictions are paused. Daily logging stays available.",
                 "saved": "Settings saved."
             }
+        },
+        "duration": {
+            "hm": "{{hours}} h {{minutes}} min",
+            "h": "{{hours}} h",
+            "m": "{{minutes}} min"
         }
     },
     "rewards": {

@@ -3210,7 +3210,9 @@
                 "glucose": "Blutzucker",
                 "weight": "Gewicht",
                 "spo2": "Sauerstoffsättigung",
-                "temp": "Temperatur"
+                "temp": "Temperatur",
+                "sleep": "Schlaf",
+                "mood": "Stimmung"
             },
             "channel": {
                 "systolic": "Systolisch",
@@ -3226,7 +3228,10 @@
                 "visibility": "Sichtbarkeit",
                 "systolic": "Systolisch",
                 "diastolic": "Diastolisch",
-                "pulse": "Puls"
+                "pulse": "Puls",
+                "hours": "Stunden",
+                "minutes": "Minuten",
+                "mood": "Wie geht es dir?"
             },
             "visibility": {
                 "private": "Privat",
@@ -3235,7 +3240,14 @@
             "sparse": "Zu wenige Messwerte für einen Trend.",
             "recentMeasurements": "Letzte Messungen",
             "deleteMeasurement": "Messung löschen",
-            "measurementDeleted": "Messung gelöscht"
+            "measurementDeleted": "Messung gelöscht",
+            "mood": {
+                "veryBad": "Sehr schlecht",
+                "bad": "Schlecht",
+                "okay": "Geht so",
+                "good": "Gut",
+                "veryGood": "Sehr gut"
+            }
         },
         "meds": {
             "doseQty": "{{count}}×",
@@ -3648,6 +3660,11 @@
                 "pregnancyHint": "Im Schwangerschafts-Modus werden Perioden- und Eisprung-Vorhersagen angehalten. Tages-Logging bleibt möglich.",
                 "saved": "Einstellungen gespeichert."
             }
+        },
+        "duration": {
+            "hm": "{{hours}} Std. {{minutes}} Min.",
+            "h": "{{hours}} Std.",
+            "m": "{{minutes}} Min."
         }
     },
     "rewards": {

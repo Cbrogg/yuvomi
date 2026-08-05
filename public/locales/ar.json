@@ -3210,7 +3210,9 @@
                 "glucose": "سكر الدم",
                 "weight": "الوزن",
                 "spo2": "تشبّع الأكسجين",
-                "temp": "درجة الحرارة"
+                "temp": "درجة الحرارة",
+                "sleep": "النوم",
+                "mood": "المزاج"
             },
             "channel": {
                 "systolic": "الانقباضي",
@@ -3226,7 +3228,10 @@
                 "visibility": "الظهور",
                 "systolic": "الانقباضي",
                 "diastolic": "الانبساطي",
-                "pulse": "النبض"
+                "pulse": "النبض",
+                "hours": "ساعات",
+                "minutes": "دقائق",
+                "mood": "كيف تشعر؟"
             },
             "visibility": {
                 "private": "خاص",
@@ -3235,7 +3240,14 @@
             "sparse": "قياسات قليلة جدًا لعرض اتجاه.",
             "recentMeasurements": "آخر القياسات",
             "deleteMeasurement": "حذف القياس",
-            "measurementDeleted": "تم حذف القياس"
+            "measurementDeleted": "تم حذف القياس",
+            "mood": {
+                "veryBad": "سيئ جدًا",
+                "bad": "سيئ",
+                "okay": "مقبول",
+                "good": "جيد",
+                "veryGood": "جيد جدًا"
+            }
         },
         "meds": {
             "doseQty": "{{count}}×",
@@ -3648,6 +3660,11 @@
                 "pregnancyHint": "في وضع الحمل، تتوقف تنبؤات الدورة والإباضة مؤقتًا. يبقى التسجيل اليومي متاحًا.",
                 "saved": "تم حفظ الإعدادات."
             }
+        },
+        "duration": {
+            "hm": "{{hours}} س {{minutes}} د",
+            "h": "{{hours}} س",
+            "m": "{{minutes}} د"
         }
     },
     "rewards": {

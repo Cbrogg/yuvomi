@@ -3210,7 +3210,9 @@
                 "glucose": "Krevní cukr",
                 "weight": "Hmotnost",
                 "spo2": "Saturace kyslíkem",
-                "temp": "Teplota"
+                "temp": "Teplota",
+                "sleep": "Spánek",
+                "mood": "Nálada"
             },
             "channel": {
                 "systolic": "Systolický",
@@ -3226,7 +3228,10 @@
                 "visibility": "Viditelnost",
                 "systolic": "Systolický",
                 "diastolic": "Diastolický",
-                "pulse": "Tep"
+                "pulse": "Tep",
+                "hours": "Hodiny",
+                "minutes": "Minuty",
+                "mood": "Jak se cítíš?"
             },
             "visibility": {
                 "private": "Soukromé",
@@ -3235,7 +3240,14 @@
             "sparse": "Příliš málo měření pro zobrazení trendu.",
             "recentMeasurements": "Poslední měření",
             "deleteMeasurement": "Smazat měření",
-            "measurementDeleted": "Měření smazáno"
+            "measurementDeleted": "Měření smazáno",
+            "mood": {
+                "veryBad": "Velmi špatná",
+                "bad": "Špatná",
+                "okay": "Ujde to",
+                "good": "Dobrá",
+                "veryGood": "Velmi dobrá"
+            }
         },
         "meds": {
             "doseQty": "{{count}}×",
@@ -3648,6 +3660,11 @@
                 "pregnancyHint": "V režimu těhotenství jsou předpovědi menstruace a ovulace pozastaveny. Denní záznamy zůstávají dostupné.",
                 "saved": "Nastavení uloženo."
             }
+        },
+        "duration": {
+            "hm": "{{hours}} h {{minutes}} min",
+            "h": "{{hours}} h",
+            "m": "{{minutes}} min"
         }
     },
     "rewards": {

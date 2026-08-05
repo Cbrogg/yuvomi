@@ -3210,7 +3210,9 @@
                 "glucose": "Blodsocker",
                 "weight": "Vikt",
                 "spo2": "Syremättnad",
-                "temp": "Temperatur"
+                "temp": "Temperatur",
+                "sleep": "Sömn",
+                "mood": "Humör"
             },
             "channel": {
                 "systolic": "Systoliskt",
@@ -3226,7 +3228,10 @@
                 "visibility": "Synlighet",
                 "systolic": "Systoliskt",
                 "diastolic": "Diastoliskt",
-                "pulse": "Puls"
+                "pulse": "Puls",
+                "hours": "Timmar",
+                "minutes": "Minuter",
+                "mood": "Hur mår du?"
             },
             "visibility": {
                 "private": "Privat",
@@ -3235,7 +3240,14 @@
             "sparse": "För få mätvärden för att visa en trend.",
             "recentMeasurements": "Senaste mätningar",
             "deleteMeasurement": "Ta bort mätning",
-            "measurementDeleted": "Mätning borttagen"
+            "measurementDeleted": "Mätning borttagen",
+            "mood": {
+                "veryBad": "Mycket dåligt",
+                "bad": "Dåligt",
+                "okay": "Sådär",
+                "good": "Bra",
+                "veryGood": "Mycket bra"
+            }
         },
         "meds": {
             "doseQty": "{{count}}×",
@@ -3648,6 +3660,11 @@
                 "pregnancyHint": "I graviditetsläge pausas prognoser för mens och ägglossning. Daglig loggning är fortfarande tillgänglig.",
                 "saved": "Inställningarna sparades."
             }
+        },
+        "duration": {
+            "hm": "{{hours}} tim {{minutes}} min",
+            "h": "{{hours}} tim",
+            "m": "{{minutes}} min"
         }
     },
     "rewards": {

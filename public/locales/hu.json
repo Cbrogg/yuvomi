@@ -3210,7 +3210,9 @@
                 "glucose": "Vércukor",
                 "weight": "Testsúly",
                 "spo2": "Oxigéntelítettség",
-                "temp": "Hőmérséklet"
+                "temp": "Hőmérséklet",
+                "sleep": "Alvás",
+                "mood": "Hangulat"
             },
             "channel": {
                 "systolic": "Szisztolés",
@@ -3226,7 +3228,10 @@
                 "visibility": "Láthatóság",
                 "systolic": "Szisztolés",
                 "diastolic": "Diasztolés",
-                "pulse": "Pulzus"
+                "pulse": "Pulzus",
+                "hours": "Óra",
+                "minutes": "Perc",
+                "mood": "Hogy érzed magad?"
             },
             "visibility": {
                 "private": "Privát",
@@ -3235,7 +3240,14 @@
             "sparse": "Túl kevés mérés a trend megjelenítéséhez.",
             "recentMeasurements": "Legutóbbi mérések",
             "deleteMeasurement": "Mérés törlése",
-            "measurementDeleted": "Mérés törölve"
+            "measurementDeleted": "Mérés törölve",
+            "mood": {
+                "veryBad": "Nagyon rossz",
+                "bad": "Rossz",
+                "okay": "Elmegy",
+                "good": "Jó",
+                "veryGood": "Nagyon jó"
+            }
         },
         "meds": {
             "doseQty": "{{count}}×",
@@ -3648,6 +3660,11 @@
                 "pregnancyHint": "Terhesség módban a menstruáció- és ovulációs előrejelzések szünetelnek. A napi naplózás továbbra is elérhető.",
                 "saved": "Beállítások mentve."
             }
+        },
+        "duration": {
+            "hm": "{{hours}} ó {{minutes}} p",
+            "h": "{{hours}} ó",
+            "m": "{{minutes}} p"
         }
     },
     "rewards": {
