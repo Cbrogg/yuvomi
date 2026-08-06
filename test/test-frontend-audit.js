@@ -6832,9 +6832,15 @@ test('Der Sortiergriff nimmt sich die Geste aus der Wischbedienung', () => {
   // Griff und Wischgeste teilen sich dieselbe Zeile. Ohne die Ausnahme im
   // touchstart liefe das seitliche Wackeln beim Hochziehen als Wischweg mit und
   // die Karte rutschte unter dem Finger auf "erledigt".
-  const source = read('../public/pages/shopping.js');
-  assert.match(source, /touchstart[\s\S]{0,600}kitchen-row__drag/,
-    'wireSwipeGestures muss den Sortiergriff im touchstart ausnehmen.');
+  //
+  // Die Zusage liegt seit dem Herausziehen des Wisch-Helfers (Runde 4, C-2) auf
+  // ZWEI Ebenen, und beide werden hier geprueft: das Modul benennt den Griff,
+  // der geteilte Helfer nimmt ihn im touchstart aus. Vorher stand beides in
+  // shopping.js - der Guard prueft die Zusage, nicht ihren Ort.
+  assert.match(read('../public/pages/shopping.js'), /ignore:\s*'\.kitchen-row__drag'/,
+    'Die Einkaufsliste muss ihren Sortiergriff als Ausnahme benennen.');
+  assert.match(read('../public/utils/swipe-row.js'), /touchstart[\s\S]{0,600}ignore[\s\S]{0,120}closest/,
+    'Der geteilte Wisch-Helfer muss die Ausnahme im touchstart auswerten.');
 });
 
 test('Die Einkaufsliste sagt Umsortierungen über eine Live-Region an', () => {

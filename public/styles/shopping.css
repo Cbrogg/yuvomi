@@ -791,13 +791,6 @@
 }
 
 /* Rechts hinter der Karte = Löschen (Swipe nach rechts) */
-.swipe-reveal--delete {
-  left: 0;
-  background-color: var(--color-danger);
-  color: var(--color-ink-on-vivid);
-  border-radius: var(--radius-md) 0 0 var(--radius-md);
-}
-
 /* Touch-Feedback: leichte Hervorhebung während Swipe */
 .swipe-row--swiping .shopping-item {
   box-shadow: var(--shadow-lg);

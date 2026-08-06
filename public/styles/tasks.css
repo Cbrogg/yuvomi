@@ -335,7 +335,7 @@
 
 /* --------------------------------------------------------
  * Swipe-Wrapper - Task-spezifische Styles
- * Basis-Styles (.swipe-row, .swipe-reveal, .swipe-reveal--done)
+ * Basis-Styles (.swipe-row, .swipe-reveal und alle drei Reveal-Rollen)
  * liegen in layout.css
  * -------------------------------------------------------- */
 
@@ -346,14 +346,6 @@
   position: relative;
   z-index: 1;
   will-change: transform;
-}
-
-/* Rechts hinter der Karte = Bearbeiten (Swipe nach rechts) */
-.swipe-reveal--edit {
-  left: 0;
-  background-color: var(--color-accent);
-  color: var(--color-ink-on-vivid);
-  border-radius: var(--radius-md) 0 0 var(--radius-md);
 }
 
 /* Touch-Feedback: leichte Hervorhebung während Swipe */

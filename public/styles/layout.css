@@ -3903,9 +3903,11 @@ textarea::placeholder {
 }
 
 /* --------------------------------------------------------
- * Swipe-Wrapper - Gemeinsame Basis (Tasks + Shopping)
- * Modul-spezifische Styles (.swipe-reveal--edit, .swipe-reveal--delete,
- * .swipe-row .task-card, .swipe-row .shopping-item) liegen in den Modul-CSS.
+ * Swipe-Wrapper - Gemeinsame Basis (Aufgaben, Einkauf, Geburtstage)
+ * Modulsache bleibt allein, wie die KARTE in der Zeile sich verhält
+ * (.swipe-row .task-card, .swipe-row .shopping-item, .swipe-row
+ * .birthday-item); die Geste, die Reveal-Rollen und der Hinweis sind geteilt.
+ * Der JS-Teil liegt in utils/swipe-row.js.
  * -------------------------------------------------------- */
 .swipe-row {
   position: relative;
@@ -4009,13 +4011,30 @@ textarea::placeholder {
   .swipe-row::after { display: none; }
 }
 
-/* Gemeinsam: Erledigt / Abhaken (Swipe nach links) */
-.swipe-reveal--done {
+/* Reveal-Panels: ZWEI ACHSEN, getrennt gehalten.
+ *
+ * Die SEITE folgt der Wischrichtung (`--leading` erscheint beim Wisch nach
+ * rechts, `--trailing` beim Wisch nach links), die ROLLE trägt allein die
+ * Bedeutung. Bis Runde 4 steckte beides in einer Klasse - `--delete` hiess
+ * „löschen UND links", weil der einzige Nutzer, der Einkauf, nach rechts
+ * löscht. Die Geburtstage löschen nach links, und dieselbe Rolle war damit
+ * nicht wiederverwendbar, ohne eine vierte zu erfinden.
+ *
+ * Beides sind geteilte Rollen, keine Modulsache: dieselbe Geste soll in jeder
+ * Liste dasselbe bedeuten. */
+.swipe-reveal--leading {
+  left: 0;
+  border-radius: var(--radius-md) 0 0 var(--radius-md);
+}
+
+.swipe-reveal--trailing {
   right: 0;
-  background-color: var(--color-success);
-  color: var(--color-ink-on-vivid);
   border-radius: 0 var(--radius-md) var(--radius-md) 0;
 }
+
+.swipe-reveal--done   { background-color: var(--color-success); color: var(--color-ink-on-vivid); }
+.swipe-reveal--edit   { background-color: var(--color-accent);  color: var(--color-ink-on-vivid); }
+.swipe-reveal--delete { background-color: var(--color-danger);  color: var(--color-ink-on-vivid); }
 
 /* --------------------------------------------------------
  * Reduced Transparency — layout.css Fallbacks

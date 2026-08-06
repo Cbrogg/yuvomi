@@ -9,6 +9,7 @@ import { renderRRuleFields, bindRRuleEvents, getRRuleValues, recurrenceRow } fro
 import { openModal as openSharedModal, closeModal, wireBlurValidation, validateAll, btnSuccess, btnError, btnLoading, promptModal, advancedSection } from '/components/modal.js';
 import { openDetailView, closeDetailView, visibilityRow, assignedRow } from '/components/detail-view.js';
 import { stagger, vibrate, scheduleUndoableDelete } from '/utils/ux.js';
+import { wireSwipeRows, maybeShowSwipeHint } from '/utils/swipe-row.js';
 import { t, getLocale, formatDate, formatTime, formatDateInput, parseDateInput, isDateInputValid, formatTimeInput, parseTimeInput } from '/i18n.js';
 import { esc } from '/utils/html.js';
 import { refresh as refreshReminders } from '/reminders.js';
@@ -219,11 +220,11 @@ function renderSwipeRow(task, innerHtml) {
   const isDone = task.status === 'done';
   return `
     <div class="swipe-row" data-swipe-id="${task.id}" data-swipe-status="${task.status}">
-      <div class="swipe-reveal swipe-reveal--done" aria-hidden="true">
+      <div class="swipe-reveal swipe-reveal--done swipe-reveal--trailing" aria-hidden="true">
         <i data-lucide="${isDone ? 'rotate-ccw' : 'check'}" class="icon-xl" aria-hidden="true"></i>
         <span>${isDone ? t('tasks.swipeOpen') : t('tasks.swipeDone')}</span>
       </div>
-      <div class="swipe-reveal swipe-reveal--edit" aria-hidden="true">
+      <div class="swipe-reveal swipe-reveal--edit swipe-reveal--leading" aria-hidden="true">
         <i data-lucide="eye" class="icon-xl" aria-hidden="true"></i>
         <span>${t('tasks.swipeView')}</span>
       </div>
@@ -2309,12 +2310,6 @@ function updateOverdueBadge() {
 // Swipe-Gesten (Mobil: links = erledigt, rechts = bearbeiten)
 // --------------------------------------------------------
 
-const SWIPE_THRESHOLD    = 80;   // px - Mindestweg für Aktion
-const SWIPE_MAX_VERT     = 12;   // px - vertikaler Bewegungs-Toleranzbereich (darunter: kein Scroll-Abbruch)
-const SWIPE_LOCK_VERT    = 30;   // px - ab diesem Weg gilt es als Scroll (Swipe abgebrochen)
-
-const SWIPE_HINT_KEY  = 'yuvomi:swipeHintSeen';
-const SWIPE_HINT_MAX  = 3;
 const RECENT_FILTERS_KEY = 'yuvomi:recentTaskFilters';
 const RECENT_FILTERS_MAX = 3;
 const SHOW_FUTURE_KEY = 'yuvomi:taskShowFuture';
@@ -2414,125 +2409,45 @@ function wireSwipeGestures(container) {
   const listEl = container.querySelector('#task-list');
   if (!listEl) return;
 
-  listEl.querySelectorAll('.swipe-row').forEach((row) => {
-    let startX = 0, startY = 0;
-    let dx = 0;
-    let locked = false;    // false = unentschieden, 'swipe' | 'scroll'
-    let thresholdHit = false; // Haptic-Feedback am Threshold nur einmal
-    const card = row.querySelector('.task-card');
-    if (!card) return;
-
-    function resetCard(animate = true) {
-      card.style.transition = animate ? 'transform 0.25s ease' : '';
-      card.style.transform  = '';
-      row.classList.remove('swipe-row--swiping');
-      // Reveal-Panels zurücksetzen
-      row.querySelector('.swipe-reveal--done').style.opacity = '0';
-      row.querySelector('.swipe-reveal--edit').style.opacity = '0';
-    }
-
-    row.addEventListener('touchstart', (e) => {
-      // Geste ignorieren wenn Modal offen
-      if (document.getElementById('shared-modal-overlay')) return;
-      startX = e.touches[0].clientX;
-      startY = e.touches[0].clientY;
-      dx     = 0;
-      locked = false;
-      thresholdHit = false;
-      card.style.transition = '';
-    }, { passive: true });
-
-    row.addEventListener('touchmove', (e) => {
-      if (locked === 'scroll') return;
-
-      const currentX = e.touches[0].clientX;
-      const currentY = e.touches[0].clientY;
-      dx = currentX - startX;
-      const dy = Math.abs(currentY - startY);
-
-      // Scroll-Richtung früh erkennen
-      if (locked === false) {
-        if (dy > SWIPE_MAX_VERT && Math.abs(dx) < dy) {
-          locked = 'scroll';
-          resetCard(false);
-          return;
-        }
-        if (Math.abs(dx) > SWIPE_MAX_VERT) {
-          locked = 'swipe';
-        }
-      }
-
-      if (locked !== 'swipe') return;
-
-      // Vertikalen Scroll verhindern sobald Swipe erkannt
-      if (dy < SWIPE_LOCK_VERT) e.preventDefault();
-
-      // Karte verschieben (gedämpft nach THRESHOLD)
-      const dampened = dx > 0
-        ? Math.min(dx, SWIPE_THRESHOLD + (dx - SWIPE_THRESHOLD) * 0.2)
-        : Math.max(dx, -(SWIPE_THRESHOLD + (-dx - SWIPE_THRESHOLD) * 0.2));
-
-      card.style.transform = `translateX(${dampened}px)`;
-      row.classList.add('swipe-row--swiping');
-
-      // Reveal-Panels einblenden (0 → 1 über Threshold)
-      const progress = Math.min(Math.abs(dx) / SWIPE_THRESHOLD, 1);
-      if (dx < 0) {
-        row.querySelector('.swipe-reveal--done').style.opacity = String(progress);
-        row.querySelector('.swipe-reveal--edit').style.opacity = '0';
-      } else {
-        row.querySelector('.swipe-reveal--edit').style.opacity = String(progress);
-        row.querySelector('.swipe-reveal--done').style.opacity = '0';
-      }
-
-      // Haptic-Feedback beim Erreichen des Schwellwerts
-      if (!thresholdHit && Math.abs(dx) >= SWIPE_THRESHOLD) {
-        thresholdHit = true;
-        vibrate(15);
-      }
-    }, { passive: false });
-
-    row.addEventListener('touchend', async () => {
-      if (locked !== 'swipe') { resetCard(false); return; }
-
-      const taskId = row.dataset.swipeId;
-      const status = row.dataset.swipeStatus;
-
-      if (dx < -SWIPE_THRESHOLD) {
-        // Swipe links → Status-Toggle (offen ↔ erledigt)
-        card.style.transition = 'transform 0.2s ease';
-        card.style.transform  = 'translateX(-110%)';
-        vibrate(40);
-        const capturedStatus = status;
+  wireSwipeRows(listEl, {
+    card: '.task-card',
+    // Links: Status umschalten. Die Karte fliegt hinaus, weil die Zeile
+    // danach in einer anderen Gruppe steht - ohne den Flug spränge sie
+    // einfach weg.
+    left: {
+      reveal: '.swipe-reveal--done',
+      flyOut: true,
+      run: async (row) => {
+        const taskId = row.dataset.swipeId;
+        const capturedStatus = row.dataset.swipeStatus;
         const nextStatus = capturedStatus === 'done' ? 'open' : 'done';
-        setTimeout(async () => {
-          resetCard(false);
-          try {
-            await toggleTaskStatus(taskId, capturedStatus);
-            await loadTasks(container);
-            window.yuvomi.showToast(
-              t(nextStatus === 'done' ? 'tasks.swipedDoneToast' : 'tasks.swipedOpenToast'),
-              'default',
-              5000,
-              async () => {
-                try {
-                  await toggleTaskStatus(taskId, nextStatus);
-                  await loadTasks(container);
-                } catch (err) {
-                  window.yuvomi.showToast(err.message, 'danger');
-                }
-              },
-            );
-          } catch (err) {
-            window.yuvomi.showToast(err.message, 'danger');
-            await loadTasks(container);
-          }
-        }, 200);
-
-      } else if (dx > SWIPE_THRESHOLD) {
-        // Swipe rechts → Detailansicht
-        resetCard(true);
-        vibrate(20);
+        try {
+          await toggleTaskStatus(taskId, capturedStatus);
+          await loadTasks(container);
+          window.yuvomi.showToast(
+            t(nextStatus === 'done' ? 'tasks.swipedDoneToast' : 'tasks.swipedOpenToast'),
+            'default',
+            5000,
+            async () => {
+              try {
+                await toggleTaskStatus(taskId, nextStatus);
+                await loadTasks(container);
+              } catch (err) {
+                window.yuvomi.showToast(err.message, 'danger');
+              }
+            },
+          );
+        } catch (err) {
+          window.yuvomi.showToast(err.message, 'danger');
+          await loadTasks(container);
+        }
+      },
+    },
+    // Rechts: Detailansicht. Die Zeile bleibt, also federt die Karte zurueck.
+    right: {
+      reveal: '.swipe-reveal--edit',
+      run: async (row) => {
+        const taskId = row.dataset.swipeId;
         try {
           const [task, reminder] = await Promise.all([
             loadTaskForEdit(taskId),
@@ -2542,33 +2457,9 @@ function wireSwipeGestures(container) {
         } catch (err) {
           window.yuvomi.showToast(t('tasks.loadError'), 'danger');
         }
-
-      } else {
-        resetCard(true);
-      }
-    }, { passive: true });
+      },
+    },
   });
-}
-
-// --------------------------------------------------------
-// Swipe-Affordance Hint (Long Loop)
-// Zeigt den Nudge-Hinweis maximal 3x (gespeichert in localStorage).
-// --------------------------------------------------------
-
-function maybeShowSwipeHint(container) {
-  if (window.innerWidth >= 1024) return; // Desktop: Swipe nicht relevant
-  const count = parseInt(localStorage.getItem(SWIPE_HINT_KEY) ?? '0', 10);
-  if (count >= SWIPE_HINT_MAX) return;
-
-  const firstRow = container.querySelector('.swipe-row');
-  if (!firstRow) return;
-
-  firstRow.classList.add('swipe-row--hint');
-  firstRow.addEventListener('animationend', () => {
-    firstRow.classList.remove('swipe-row--hint');
-  }, { once: true });
-
-  localStorage.setItem(SWIPE_HINT_KEY, String(count + 1));
 }
 
 // --------------------------------------------------------

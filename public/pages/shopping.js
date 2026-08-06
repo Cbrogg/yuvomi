@@ -6,6 +6,7 @@
 
 import { api } from '/api.js';
 import { stagger, vibrate, scheduleUndoableDelete } from '/utils/ux.js';
+import { wireSwipeRows, maybeShowSwipeHint } from '/utils/swipe-row.js';
 import { t } from '/i18n.js';
 import { esc } from '/utils/html.js';
 import { promptModal, openModal, closeModal, confirmModal, reportFieldError } from '/components/modal.js';
@@ -21,11 +22,6 @@ import { makeSortable } from '/utils/sortable.js';
 // --------------------------------------------------------
 // Konstanten
 // --------------------------------------------------------
-
-// Swipe-Gesten Konstanten (identisch zu tasks.js)
-const SWIPE_THRESHOLD = 80;   // px - Mindestweg für Aktion
-const SWIPE_MAX_VERT  = 12;   // px - vertikaler Toleranzbereich
-const SWIPE_LOCK_VERT = 30;   // px - ab diesem Weg gilt es als Scroll
 
 /** Icon für eine Kategorie (aus state.categories, Fallback 'tag'). */
 function catIcon(name) {
@@ -407,11 +403,11 @@ function renderItem(item) {
   const isDone = Boolean(item.is_checked);
   return `
     <div class="swipe-row" data-swipe-id="${item.id}" data-swipe-checked="${item.is_checked}">
-      <div class="swipe-reveal swipe-reveal--done" aria-hidden="true">
+      <div class="swipe-reveal swipe-reveal--done swipe-reveal--trailing" aria-hidden="true">
         <i data-lucide="${isDone ? 'rotate-ccw' : 'check'}" class="icon-xl" aria-hidden="true"></i>
         <span>${isDone ? t('shopping.swipeBack') : t('shopping.swipeCheck')}</span>
       </div>
-      <div class="swipe-reveal swipe-reveal--delete" aria-hidden="true">
+      <div class="swipe-reveal swipe-reveal--delete swipe-reveal--leading" aria-hidden="true">
         <i data-lucide="trash-2" class="icon-xl" aria-hidden="true"></i>
         <span>${t('shopping.swipeDelete')}</span>
       </div>
@@ -661,25 +657,6 @@ function wireQuickAdd(container) {
 // Zeigt den Nudge-Hinweis maximal 3x (gespeichert in localStorage).
 // --------------------------------------------------------
 
-const SWIPE_HINT_KEY  = 'yuvomi:swipeHintSeen';
-const SWIPE_HINT_MAX  = 3;
-
-function maybeShowSwipeHint(container) {
-  if (window.innerWidth >= 1024) return; // Desktop: Swipe nicht relevant
-  const count = parseInt(localStorage.getItem(SWIPE_HINT_KEY) ?? '0', 10);
-  if (count >= SWIPE_HINT_MAX) return;
-
-  const firstRow = container.querySelector('.swipe-row');
-  if (!firstRow) return;
-
-  firstRow.classList.add('swipe-row--hint');
-  firstRow.addEventListener('animationend', () => {
-    firstRow.classList.remove('swipe-row--hint');
-  }, { once: true });
-
-  localStorage.setItem(SWIPE_HINT_KEY, String(count + 1));
-}
-
 // --------------------------------------------------------
 // Handsortierung innerhalb einer Kategorie (#678)
 // --------------------------------------------------------
@@ -904,143 +881,60 @@ function wireSwipeGestures(container) {
   const listEl = container.querySelector('#items-list');
   if (!listEl) return;
 
-  listEl.querySelectorAll('.swipe-row').forEach((row) => {
-    let startX = 0, startY = 0;
-    let dx = 0;
-    let locked = false; // false | 'swipe' | 'scroll'
-    let thresholdHit = false;
-    const card = row.querySelector('.shopping-item');
-    if (!card) return;
-
-    function resetCard(animate = true) {
-      card.style.transition = animate ? 'transform 0.25s ease' : '';
-      card.style.transform  = '';
-      row.classList.remove('swipe-row--swiping');
-      row.querySelector('.swipe-reveal--done').style.opacity    = '0';
-      row.querySelector('.swipe-reveal--delete').style.opacity  = '0';
-    }
-
-    row.addEventListener('touchstart', (e) => {
-      if (document.getElementById('shared-modal-overlay')) return;
-      // Am Sortiergriff gehört die Geste dem Ziehen (#678). Ohne diese Ausnahme
-      // liefe beim Hochziehen einer Zeile das seitliche Wackeln als Wischweg mit
-      // und die Karte würde unter dem Finger nach „erledigt" rutschen.
-      if (e.target.closest?.('.kitchen-row__drag')) { locked = 'scroll'; return; }
-      startX = e.touches[0].clientX;
-      startY = e.touches[0].clientY;
-      dx     = 0;
-      locked = false;
-      thresholdHit = false;
-      card.style.transition = '';
-    }, { passive: true });
-
-    row.addEventListener('touchmove', (e) => {
-      if (locked === 'scroll') return;
-
-      const currentX = e.touches[0].clientX;
-      const currentY = e.touches[0].clientY;
-      dx = currentX - startX;
-      const dy = Math.abs(currentY - startY);
-
-      if (locked === false) {
-        if (dy > SWIPE_MAX_VERT && Math.abs(dx) < dy) {
-          locked = 'scroll';
-          resetCard(false);
-          return;
+  wireSwipeRows(listEl, {
+    card: '.shopping-item',
+    ignore: '.kitchen-row__drag',
+    // Links: abhaken / zurueck. Die Karte fliegt hinaus, die Zeile bleibt -
+    // nur ihr Zustand wechselt (Issue #276: kein Re-Render der Liste).
+    left: {
+      reveal: '.swipe-reveal--done',
+      flyOut: true,
+      run: async (row) => {
+        const itemId  = Number(row.dataset.swipeId);
+        const checked = Number(row.dataset.swipeChecked);
+        const newVal  = checked ? 0 : 1;
+        const item    = state.items.find((i) => i.id === itemId);
+        if (item) {
+          item.is_checked = newVal;
+          updateItemRow(container, item);
+          updateCheckedActions(container);
+          updateListCounter(state.activeListId, 0, newVal ? 1 : -1);
+          renderTabs(container);
         }
-        if (Math.abs(dx) > SWIPE_MAX_VERT) {
-          locked = 'swipe';
-        }
-      }
-
-      if (locked !== 'swipe') return;
-
-      if (dy < SWIPE_LOCK_VERT) e.preventDefault();
-
-      const dampened = dx > 0
-        ? Math.min(dx,  SWIPE_THRESHOLD + (dx  - SWIPE_THRESHOLD) * 0.2)
-        : Math.max(dx, -(SWIPE_THRESHOLD + (-dx - SWIPE_THRESHOLD) * 0.2));
-
-      card.style.transform = `translateX(${dampened}px)`;
-      row.classList.add('swipe-row--swiping');
-
-      const progress = Math.min(Math.abs(dx) / SWIPE_THRESHOLD, 1);
-      if (dx < 0) {
-        row.querySelector('.swipe-reveal--done').style.opacity   = String(progress);
-        row.querySelector('.swipe-reveal--delete').style.opacity = '0';
-      } else {
-        row.querySelector('.swipe-reveal--delete').style.opacity = String(progress);
-        row.querySelector('.swipe-reveal--done').style.opacity   = '0';
-      }
-
-      // Haptic-Feedback beim Erreichen des Schwellwerts
-      if (!thresholdHit && Math.abs(dx) >= SWIPE_THRESHOLD) {
-        thresholdHit = true;
-        vibrate(15);
-      }
-    }, { passive: false });
-
-    row.addEventListener('touchend', async () => {
-      if (locked !== 'swipe') { resetCard(false); return; }
-
-      const itemId  = Number(row.dataset.swipeId);
-      const checked = Number(row.dataset.swipeChecked);
-
-      if (dx < -SWIPE_THRESHOLD) {
-        // Swipe links → abhaken / zurück
-        card.style.transition = 'transform 0.2s ease';
-        card.style.transform  = 'translateX(-110%)';
-        vibrate(40);
-        setTimeout(async () => {
-          resetCard(false);
-          const newVal = checked ? 0 : 1;
-          const item   = state.items.find((i) => i.id === itemId);
+        try {
+          await api.patch(`/shopping/items/${itemId}`, { is_checked: newVal });
+          vibrate(10);
+        } catch (err) {
           if (item) {
-            item.is_checked = newVal;
-            // Nur die Zeile aktualisieren — Scroll-Position bewahren (Issue #276).
+            item.is_checked = checked;
             updateItemRow(container, item);
             updateCheckedActions(container);
-            updateListCounter(state.activeListId, 0, newVal ? 1 : -1);
+            updateListCounter(state.activeListId, 0, newVal ? -1 : 1);
             renderTabs(container);
           }
-          try {
-            await api.patch(`/shopping/items/${itemId}`, { is_checked: newVal });
-            vibrate(10);
-          } catch (err) {
-            if (item) {
-              item.is_checked = checked;
-              updateItemRow(container, item);
-              updateCheckedActions(container);
-              updateListCounter(state.activeListId, 0, newVal ? -1 : 1);
-              renderTabs(container);
-            }
-            window.yuvomi.showToast(err.data?.error ?? t('common.errorGeneric'), 'danger');
-          }
-        }, 200);
-
-      } else if (dx > SWIPE_THRESHOLD) {
-        // Swipe rechts → löschen
-        card.style.transition = 'transform 0.2s ease';
-        card.style.transform  = 'translateX(110%)';
-        vibrate(40);
-        setTimeout(async () => {
-          const item = state.items.find((i) => i.id === itemId);
-          try {
-            await api.delete(`/shopping/items/${itemId}`);
-            state.items = state.items.filter((i) => i.id !== itemId);
-            updateItemsList(container);
-            updateListCounter(state.activeListId, -1, item?.is_checked ? -1 : 0);
-            renderTabs(container);
-          } catch (err) {
-            resetCard(true);
-            window.yuvomi.showToast(err.data?.error ?? t('common.errorGeneric'), 'danger');
-          }
-        }, 200);
-
-      } else {
-        resetCard(true);
-      }
-    });
+          window.yuvomi.showToast(err.data?.error ?? t('common.errorGeneric'), 'danger');
+        }
+      },
+    },
+    // Rechts: loeschen. Auch hier fliegt die Karte - sie kommt nicht zurueck.
+    right: {
+      reveal: '.swipe-reveal--delete',
+      flyOut: true,
+      run: async (row) => {
+        const itemId = Number(row.dataset.swipeId);
+        const item = state.items.find((i) => i.id === itemId);
+        try {
+          await api.delete(`/shopping/items/${itemId}`);
+          state.items = state.items.filter((i) => i.id !== itemId);
+          updateItemsList(container);
+          updateListCounter(state.activeListId, -1, item?.is_checked ? -1 : 0);
+          renderTabs(container);
+        } catch (err) {
+          updateItemsList(container);
+          window.yuvomi.showToast(err.data?.error ?? t('common.errorGeneric'), 'danger');
+        }
+      },
+    },
   });
 }
 

@@ -45,8 +45,22 @@
   padding: var(--space-3) var(--space-4);
 }
 
-.birthday-item + .birthday-item {
+/* Trennlinie an den direkten Kindern des Traegers, NICHT an der Zeile selbst -
+ * dasselbe Muster wie `.kitchen-rows > * + *` im Einkauf, und aus demselben
+ * Grund: seit der Wischbedienung (Runde 4, C-2) liegt zwischen Traeger und
+ * Zeile der `.swipe-row`-Wrapper. `.birthday-item + .birthday-item` fand danach
+ * keine Geschwister mehr und alle Haarlinien waren verschwunden. `> * + *`
+ * misst den Traeger und ist gegen solche Zwischenebenen immun. */
+.birthdays-list > * + * {
   border-top: 1px solid var(--color-border-subtle);
+}
+
+/* Der Wischwrapper ist eine reine Buehne fuer die Geste: kein eigener Radius,
+ * kein eigener Abstand. Beides traegt der Traeger, der die Wischflaeche mit
+ * seinem overflow: hidden beschneidet. */
+.birthdays-list .swipe-row {
+  border-radius: 0;
+  margin-bottom: 0;
 }
 
 /* „Heute"-Höhepunkt: der einzige emotionale Peak des Moduls. Er trägt jetzt die
@@ -103,6 +117,26 @@
   display: flex;
   gap: var(--space-1);
   flex-shrink: 0;
+}
+
+/* Auf Touch tragen die Wischrichtungen die beiden Zeilenaktionen, und die
+ * Knoepfe verschwinden - in einer Grouped-Liste waren sie die lauteste Stelle
+ * des Bildschirms. Auf Zeigergeraeten bleiben sie: dort gibt es keine Geste.
+ * Die Reserve rechts gehoert dann dem Wisch-Chevron (.swipe-row::after,
+ * layout.css), genau wie im Einkauf.
+ *
+ * STEHT BEWUSST HIER UNTEN, nicht oben beim Traeger: die Basisregel darueber
+ * setzt `display: flex` mit derselben Spezifitaet, und eine Media-Query davor
+ * verliert gegen sie allein durch die Reihenfolge (gemessen: die Knoepfe
+ * blieben sichtbar, obwohl `(hover: none)` griff). */
+@media (hover: none) {
+  .birthday-item__actions {
+    display: none;
+  }
+
+  .birthday-item {
+    padding-inline-end: calc(var(--space-2) + var(--space-3) + var(--space-2));
+  }
 }
 
 /* --------------------------------------------------------

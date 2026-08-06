@@ -113,6 +113,7 @@ const APP_SHELL = [
   '/utils/shopping-categories.js',
   '/utils/skeleton.js',
   '/utils/sub-tabs.js',
+  '/utils/swipe-row.js',
   '/utils/sync-target.js',
   '/utils/tablist.js',
   '/utils/ux.js',
