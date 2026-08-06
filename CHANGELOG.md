@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.86.1] - 2026-08-06
+
+### Fixed
+
+- The add button no longer disappears when entering a module. It is a floating button anchored to the screen, but it was rendered inside the scrolling page, and on iOS a fixed element inside a scrolling container is not reliably anchored to the viewport - it resolves against the scrolled content instead. So it appeared mid-right while the module still showed its loading skeleton, then drifted down past the bottom of the screen as the list loaded, with no way back. That is why it broke in Tasks and the Pantry, where the page really scrolls, while other modules only showed it snapping into place after loading. The button now lives in the app shell, next to the scrolling area rather than inside it, where nothing can position it against anything but the viewport. The bottom navigation bar had walked into the same trap once and was moved out of it years ago; this was the last fixed element left in the scroll port. Third and final mechanism behind #634, after the scroll retract (v1.71.2) and the viewport-only keyboard detection (v1.73.1) - both of those hid the button, this one moved it out of sight (#634)
+
 ## [1.86.0] - 2026-08-05
 
 ### Added
