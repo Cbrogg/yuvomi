@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.86.2] - 2026-08-06
+
+### Fixed
+
+- The round create button on the dashboard now answers a tap immediately. Pressing it and the plus turning into an X are two different movements, but they shared one animation: a 350ms curve that overshoots and springs back. That is right for the turn, where it acknowledges the change of state, and wrong for a press, which was left feeling spongy and bouncing past its own size on release. The press is now short and direct; the spring stays where it says something.
+
 ## [1.86.1] - 2026-08-06
 
 ### Fixed
