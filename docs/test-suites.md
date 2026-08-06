@@ -13,6 +13,7 @@ npm run test:rename-migration   # Oikos→Yuvomi Identifier-Migration: seamless 
 npm run test:schema-reconcile   # Schema-Selbstheilung gegen Migrations-Drift (#538): reconcileCriticalSchema ergänzt fehlende Spalten, obwohl die Migration als angewendet vermerkt ist
 npm run test:db-encryption      # DB_ENCRYPTION_KEY wirkt wirklich: Datei-Header verschlüsselt, Bestands-DB wird migriert, falscher Key bricht den Start ab
 npm run test:db-isolation       # Test-Isolation: keine Suite lädt server/db.js ohne wirksames DB_PATH (init() beim Import würde sonst eine echte yuvomi.db im Repo-Root anlegen); prüft auch die Reihenfolge, da eine Zuweisung nach einem statischen Import zu spät kommt
+npm run test:suite-chain        # Suite-Registry-Guard: jedes test:*-Script hängt in der npm-test-Kette (5 Suiten liefen 2026 monatelang CI-blind) + jede test/test-*.js hat ein Script
 npm run test:tasks
 npm run test:tasks-recurrence   # recurring task catch-up: nextOccurrenceAfter + Folgeinstanz über BEIDE Wege (PATCH status und PUT /:id, #650), Rücknahme, Vorlauf start_date→due_date; Atomarität via Trigger (scheitert der Spawn, bleibt die Aufgabe offen); Anker ab Erledigungstag (#658): nextDueAfterCompletion, Vererbung des Ankers auf die Folgeinstanz, POST/PUT-Rundreise (TZ=UTC festgenagelt, sonst wackelt "heute")
 npm run test:tasks-routes       # Tasks-Routen-Schicht: PUT/:id, meta/options, Kategorie-CRUD (404/400/409), Filter (Mehrfachwerte je Achse ODER-verknüpft, #671), Verschachtelung, PATCH-Status, DELETE
@@ -107,7 +108,7 @@ npm run test:date-utils
 npm run test:time-input     # flexible Zeiteingabe: 0930/09.30/9h30 → HH:MM parsing (#442)
 npm run test:html-entities
 npm run test:help
-npm run test:changelog      # Changelog: GitHub-Releases-Proxy (normalizeVersion/cleanMarkdownText/parseReleaseBody/buildChangelogPayload) + der Versionsvergleich hinter dem Update-Punkt (#490): numerisch statt lexikografisch (1.10.0 > 1.9.0), v-Präfix der Tags, Vorabversion unter ihrem Release, Unlesbares löst nie einen Hinweis aus
+npm run test:changelog      # Changelog: GitHub-Releases-Proxy (normalizeVersion/cleanMarkdownText/parseReleaseBody/buildChangelogPayload) + der Versionsvergleich hinter dem Update-Punkt (#490): numerisch statt lexikografisch (1.10.0 > 1.9.0), v-Präfix der Tags, Vorabversion unter ihrem Release, Unlesbares löst nie einen Hinweis aus; dazu der Tag↔CHANGELOG-Paritäts-Guard (jeder getaggte Release hat einen Eintrag, kein Heading doppelt; skippt ohne Tags im Checkout)
 npm run test:i18n           # App-Locales: Dateiabdeckung, Schlüsselidentität zu de.json, Platzhalter-Parität ({{name}}), 4-Space-Format
 npm run test:i18n-plural    # Pluralformen in t(): Intl.PluralRules-Auswahl, Fallback auf Basisschlüssel, Varianten-Parität; dazu die Platzhalter-Ersetzung: Nutzerwerte werden eingesetzt statt interpretiert (kein `$&`/`` $` ``-Rückverweis, kein zweiter Durchgang über bereits Eingesetztes), unbekannte Platzhalter bleiben sichtbar
 npm run test:lang-init
