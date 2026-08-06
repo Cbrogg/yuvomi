@@ -238,14 +238,14 @@
   text-align: left;
 }
 
-/* Übersichts-Widget „Letzte Vitalwerte": das 2-Spalten-Raster (minmax(0,1fr))
- * schrumpft die Karte mobil auf ~119px - zu schmal für „Sauerstoffsättigung".
- * Hier trennt hyphens:auto sprachkorrekt an Silbengrenzen (<html lang> ist die
- * Nutzer-Locale) statt overflow-wrap das Wort mittig zu zerhacken (Critique P2).
- * Nur dieser Kontext; die breitere Vitalwerte-Tab-Karte bleibt bei manual. */
-.health-overview__vitals-grid .health-metric-card__label {
-  hyphens: auto;
-}
+/* Die frühere Ausnahme `hyphens: auto` für das Übersichts-Widget ist mit Runde 3
+ * entfallen, und zwar als URSACHE des Trennwortbruchs, nicht nur als Symptom:
+ * mit auto ist die min-content-Breite des Labels eine SILBE, also unterschreitet
+ * das Flex-Item nie seine Mindestbreite und wrappt nie auf die eigene Zeile
+ * unter dem Icon - es trennt stattdessen („Sauerstoffsätti-gung"). Mit manual
+ * ist die min-content-Breite das ganze Wort, das Item rutscht auf die volle
+ * Zeile, und dort passt es. Den früher gefürchteten 119px-Fall löst jetzt das
+ * auto-fit-Raster (siehe .health-overview__vitals-grid). */
 
 .health-metric-card__icon {
   flex-shrink: 0;
@@ -258,9 +258,13 @@
   font-size: var(--text-sm);
 }
 
+/* Wert und Einheit stehen auf einer gemeinsamen Grundlinie. Sie dürfen
+ * gemeinsam umbrechen (lange Dauern wie „7 Std. 30 Min."), aber nie mitten im
+ * Wort - deshalb wrap statt Ellipse und `overflow-wrap: normal`. */
 .health-metric-card__body {
   display: flex;
   align-items: baseline;
+  flex-wrap: wrap;
   gap: var(--space-1);
 }
 
@@ -268,6 +272,15 @@
   font-size: var(--text-2xl);
   font-weight: var(--font-weight-semibold, 600);
   color: var(--color-text-primary);
+  overflow-wrap: normal;
+  hyphens: manual;
+}
+
+/* In der Übersichtskachel ist die Spalte schmaler als auf dem Vitalwerte-Tab:
+ * eine Stufe kleiner hält „7 Std. 30 Min." und die Einheit häufiger in einer
+ * Zeile, ohne die Hierarchie zu drehen (der Wert bleibt das Größte der Kachel). */
+.health-overview__vitals-grid .health-metric-card__value {
+  font-size: var(--text-xl);
 }
 
 .health-metric-card__value--empty {
@@ -442,7 +455,9 @@
   margin-inline-start: auto;
 }
 
-/* „Heute fällig"-Liste - Haarlinien-Liste, der Trenner ersetzt den Abstand. */
+/* „Heute fällig"-Liste - Haarlinien-Liste, der Trenner ersetzt den Abstand.
+ * Auf dem Medikamente-Tab liegt sie auf dem Grouped-Grund und braucht deshalb
+ * einen eigenen Träger (Zeilenlisten-Regel, tokens.css). */
 .health-meds__due-list {
   list-style: none;
   margin: 0;
@@ -450,6 +465,19 @@
   display: flex;
   flex-direction: column;
   gap: 0;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+/* Der Träger entscheidet: in der Übersichtskarte liegt die Liste schon in einer
+ * Karte - dort trägt sie nichts (Muster .health-overview__card ...). */
+.health-overview__card .health-meds__due-list {
+  background: none;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: visible;
 }
 
 /* Leerzustand: zentrierter Sekundärtext ohne Kasten - ein gestrichelter Rahmen
@@ -471,7 +499,7 @@
   gap: var(--space-1) var(--space-3);
   /* Dichtere Zeile: geringeres vertikales Padding, damit mehr Dosen ohne Scrollen
    * sichtbar sind (Kern-Interaktion des Tabs). */
-  padding: var(--space-2) 0;
+  padding: var(--space-2) var(--space-4);
   border: none;
   background: transparent;
 }
@@ -1419,9 +1447,19 @@ button.health-med-card:hover {
 }
 
 /* Letzte Vitalwerte */
+/* Eine Kachelhöhe je Rasterzeile (Finish-Review Runde 2, Fix 6). Die Ursache
+ * der ungleichen Höhen war NICHT das Raster, sondern das umbrechende Label:
+ * „Sauerstoffsättigung" machte seine Zeile dreizeilig, „Kopfumfang" blieb
+ * einzeilig. auto-fit statt fester Zweispaltigkeit löst genau das - unter
+ * ~310px Panelbreite fällt das Raster auf eine Spalte, statt den längsten
+ * Metriknamen in eine 119px-Spalte zu quetschen (der Fall, für den vorher
+ * `hyphens: auto` eingebaut war). Mit gleich hohen Kacheln gleicht das Grid
+ * die Zeilen dann von selbst über `stretch` aus; ein `grid-auto-rows: 1fr`
+ * darüber wäre in der einspaltigen Fassung schädlich - es zöge die leere
+ * „Größe"-Kachel auf die Höhe der Blutdruck-Kachel mit Trendzeile. */
 .health-overview__vitals-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: var(--space-2);
 }
 

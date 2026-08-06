@@ -457,7 +457,7 @@ function renderList({ animate = false } = {}) {
     .map(([cat, items]) => `
       <div class="contact-group ${catTintClass(cat)}">
         <div class="contact-group__header">${categoryIcon(cat)} ${esc(catLabel(cat))}</div>
-        ${items.map((c) => renderContactItem(c)).join('')}
+        <div class="contact-group__list">${items.map((c) => renderContactItem(c)).join('')}</div>
       </div>
     `).join(''));
 

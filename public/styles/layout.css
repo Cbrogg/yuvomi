@@ -2579,13 +2579,20 @@ p.field-hint--warn[hidden] {
 /* --------------------------------------------------------
  * Buttons
  * -------------------------------------------------------- */
+/* BUTTONFORM, app-weit EINE (HIG-Rollout Runde 3): die Kapsel. Der Direction
+ * Contract nennt „Kapsel-Controls" ausdrücklich, und die Liquid-Glass-Ära hat
+ * Apples Buttons durchgehend auf capsule gestellt. Bis Runde 3 stand hier
+ * --radius-md, während glass.css .btn--primary/.btn--secondary auf
+ * --radius-full zog (gleiche Spezifität, spätere Datei) - Modul-Aktionen
+ * rendern deshalb als Vollkapsel, Ghost- und Danger-Buttons als 12px-Ecke.
+ * Zwei Sprachen aus einer Ladereihenfolge; jetzt eine aus einer Regel. */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-full);
   font-size: var(--text-sm);
   font-weight: var(--font-weight-medium);
   min-height: var(--target-lg);

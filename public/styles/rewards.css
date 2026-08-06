@@ -81,23 +81,26 @@
 /* --------------------------------------------------------
    Übersicht: Punktestände (gleichwertige Zeilenliste, bewusst flach)
    -------------------------------------------------------- */
+/* EIN Träger, Zeilen per Haarlinie (Zeilenlisten-Regel, tokens.css) - vorher
+ * trug jede Punktestandszeile ihre eigene Karte. */
 .rw-standings {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
 }
 .rw-standing {
   display: grid;
   grid-template-columns: minmax(180px, 1.2fr) minmax(0, 1.6fr) auto;
   align-items: center;
   gap: var(--space-4);
-  padding: var(--space-3);
-  background: var(--color-surface);
-  border: 1px solid transparent;
-  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+}
+.rw-standing + .rw-standing {
+  border-top: 1px solid var(--color-border-subtle);
 }
 
 /* Fokussierbarer Öffner (Tastatur/Screenreader) für das Mitglieds-Detail. */
@@ -321,15 +324,35 @@
   color: var(--color-ink-on-vivid);
 }
 
-.rw-ledger { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+/* Verlaufsliste: EIN Träger (Zeilenlisten-Regel, tokens.css). Der Träger endet
+ * mit der Liste, deshalb trennt der +-Kombinator statt border-bottom je Zeile. */
+.rw-ledger {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
 .rw-ledger-row {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-3) 0;
-  border-bottom: 1px solid var(--color-border-subtle);
+  padding: var(--space-3) var(--space-4);
 }
-.rw-ledger-row:last-child { border-bottom: 0; }
+.rw-ledger-row + .rw-ledger-row {
+  border-top: 1px solid var(--color-border-subtle);
+}
+/* Der Träger entscheidet (tokens.css): im Modal ist der Grund schon
+ * --color-surface, eine zweite weisse Karte darauf wäre unsichtbar. Die
+ * Kurzfassung der Liste bleibt deshalb trägerlos, nur mit Haarlinien. */
+.rw-ledger--compact {
+  background: none;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: visible;
+}
 .rw-ledger-row--compact { padding: var(--space-2) 0; }
 .rw-ledger-row__icon {
   flex: 0 0 auto;
@@ -391,14 +414,16 @@
 .rw-redeem-summary__row--neg strong { color: var(--color-danger); }
 
 .rw-participant-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+/* Im Modal, also trägerlos (Träger-Regel) - nur die Haarlinie trennt. */
 .rw-participant {
   display: flex;
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-3) 0;
-  border-bottom: 1px solid var(--color-border-subtle);
 }
-.rw-participant:last-child { border-bottom: 0; }
+.rw-participant + .rw-participant {
+  border-top: 1px solid var(--color-border-subtle);
+}
 .rw-participant__name { flex: 1 1 auto; font-weight: 500; color: var(--color-text-primary); }
 
 .rw-detail-head { display: flex; align-items: center; gap: var(--space-4); margin-bottom: var(--space-4); }

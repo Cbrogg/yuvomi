@@ -3498,9 +3498,19 @@ test('responsive adaptation uses tablet space without crowding module toolbars',
     documents,
     /\.documents-filter-chips\s*\{[^}]*overflow-x:\s*auto/
   );
+  // Die Settings-Uebersicht war auf Tablets zweispaltig. Mit der
+  // Zeilenlisten-Regel (HIG-Rollout Runde 3, tokens.css) ist sie EINE
+  // gruppierte Liste in EINEM Traeger: nebeneinander gestellt braeuchte jede
+  // Zeile wieder ihren eigenen Rand und waere damit wieder eine Karte pro
+  // Zeile. Der Guard haelt jetzt die Zusage „ein Traeger, keine Spalten"
+  // statt der abgeloesten Zweispaltigkeit.
   assert.match(
     settings,
-    /@media \(min-width:\s*768px\) and \(max-width:\s*1023px\)[\s\S]*\.settings-mobile-overview__links\s*\{[\s\S]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/
+    /\.settings-mobile-overview__links\s*\{[^}]*background:\s*var\(--color-surface-work\)[^}]*overflow:\s*hidden/
+  );
+  assert.doesNotMatch(
+    settings,
+    /\.settings-mobile-overview__links\s*\{[^}]*grid-template-columns/
   );
 });
 
@@ -3614,21 +3624,31 @@ test('route failures expose a localized recoverable alert instead of raw technic
   assert.match(notesPage, /catch \(err\)\s*\{[\s\S]*console\.error\([\s\S]*throw err;/);
 });
 
-test('Notes uses the shared WCAG contrast helper without dimming readable content', () => {
+test('Notes keeps user colours off the reading surface', () => {
   const notesPage = read('../public/pages/notes.js');
   const notesCss = read('../public/styles/notes.css');
 
-  assert.match(notesPage, /import \{ getReadableTextColor \} from '\/utils\/color\.js'/);
+  // Der Guard hielt bis Runde 3 die Zusage „die Textfarbe wird zur Laufzeit
+  // aus der Zettelfarbe gerechnet" (getReadableTextColor). Die neue Welt gibt
+  // eine staerkere: die Zettelfarbe traegt die Flaeche gar nicht mehr allein,
+  // sie wird im gemessenen 16-%-Rezept auf die Kartenflaeche gemischt - damit
+  // haengt die Lesbarkeit an keiner Nutzerfarbe mehr, auch nicht an
+  // Alt-Hex-Werten ausserhalb der Palette (DESIGN.md, User-Farben-Regel).
   assert.doesNotMatch(notesPage, /function isLightColor/);
-  assert.match(notesPage, /getReadableTextColor\(note\.color\)/);
-  assert.match(notesPage, /const avatarColor\s*=\s*note\.creator_color[\s\S]*getReadableTextColor\(avatarColor\)/);
+  assert.doesNotMatch(notesPage, /getReadableTextColor/,
+    'Eine zur Laufzeit gerechnete Textfarbe waere wieder eine ungemessene Paarung.');
+  assert.match(notesPage, /style="--note-color:\$\{esc\(note\.color\)\};"/,
+    'Die Zettelfarbe reist als CSS-Variable, nicht als background-color.');
+  assert.match(notesPage, /style="--avatar-color:\$\{esc\(avatarColor\)\};"/);
+
+  const cardRule = notesCss.match(/\n\.note-card\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
+  assert.match(cardRule, /background:\s*color-mix\(in srgb, var\(--note-color[^)]*\) 16%, var\(--color-surface\)\)/);
+  assert.match(cardRule, /color:\s*var\(--color-text-primary\)/);
+  assert.match(cardRule, /border:\s*none/, 'Karten sind randlos auf dem Grouped-Grund.');
+
   assert.doesNotMatch(
     notesCss.match(/\.note-card__content\s*\{[\s\S]*?\n\}/)?.[0] ?? '',
     /opacity:/,
-  );
-  assert.match(
-    notesCss.match(/\.note-card__footer\s*\{[\s\S]*?\n\}/)?.[0] ?? '',
-    /color:\s*inherit/,
   );
 });
 
@@ -6869,4 +6889,65 @@ test('Die Handsortierung bindet ihre Anfrage an die Liste, in der gezogen wurde'
     'Der State darf nur nachziehen, solange dieselbe Liste offen ist.');
   assert.match(source, /if \(listId !== state\.activeListId\) return false;/,
     'Ein Fehler einer nicht mehr offenen Liste darf weder tosten noch die sichtbare Liste neu bauen.');
+});
+
+// --------------------------------------------------------------------------
+// Zeilenlisten-Regel (HIG-Rollout Runde 3, dokumentiert in tokens.css)
+//
+// Eine Folge gleichartiger Zeilen liegt in GENAU EINEM Traeger; die Zeilen
+// darin sind flaechen- und kantenlos und trennen sich ueber den +-Kombinator.
+// Der Guard prueft die REGEL, nicht eine Liste von Dateien: er liest ALLE
+// Stylesheets, sucht jede Haarlinien-Trennung `X + X { border-top: … }` und
+// haelt die zugehoerige Basisregel `X { … }` frei von Karten-Merkmalen.
+// Damit greift er auch fuer Zeilenlisten, die es heute noch nicht gibt.
+// (Lehre aus der Kuechen-Zusammenfuehrung: ein Guard ueber eine Allowlist
+// deckt keine Regel ab, sondern N Dateien.)
+// --------------------------------------------------------------------------
+test('row lists sit in exactly one carrier', () => {
+  const files = readdirSync(new URL('../public/styles/', import.meta.url))
+    .filter((name) => name.endsWith('.css'));
+
+  // Eine Zeile, die sich per +-Kombinator von der naechsten trennt, ist Teil
+  // einer Liste in einem Traeger. Sie darf deshalb selbst keine Karte sein.
+  // Werte werden ausgelesen und geprueft, nicht per Lookahead ausgeschlossen:
+  // `border-radius:\s*(?!0)` ist wahr, sobald `\s*` leer matchen darf - der
+  // Lookahead sieht dann das Leerzeichen statt der Null.
+  const declared = (body, prop) => {
+    const hits = [...body.matchAll(new RegExp(`(?:^|;)\\s*${prop}:([^;]*)`, 'g'))];
+    return hits.map((m) => m[1].trim());
+  };
+  const CARD_MARKERS = [
+    { prop: 'box-shadow', isCard: (v) => v !== 'none' },
+    { prop: 'border-radius', isCard: (v) => !/^0(px|rem)?$/.test(v) },
+    { prop: 'background', isCard: (v) => /^var\(--color-surface(-work|-raised|-elevated)?\)$/.test(v) },
+    { prop: 'background-color', isCard: (v) => /^var\(--color-surface(-work|-raised|-elevated)?\)$/.test(v) },
+  ];
+
+  const offenders = [];
+  for (const name of files) {
+    const css = read(`../public/styles/${name}`);
+    // `X + X { … border-top … }` — derselbe Selektor auf beiden Seiten ist die
+    // Signatur der Haarlinien-Trennung (im Unterschied zu `.a + .b`, das ein
+    // Geschwister-Abstand sein kann).
+    const seen = new Set();
+    for (const m of css.matchAll(/(?:^|[},])\s*(\.[\w-]+)\s*\+\s*\1\s*\{([^}]*)\}/g)) {
+      const [, selector, body] = m;
+      if (!/border-top:/.test(body)) continue;
+      if (seen.has(selector)) continue;
+      seen.add(selector);
+
+      // Basisregel des Selektors: exakt `X {`, nicht `.foo X {` und nicht
+      // `X--modifier {` (cssRuleBody matcht ungebunden, siehe Handoff-Falle).
+      const base = css.match(new RegExp(`(?:^|[},])\\s*\\${selector}\\s*\\{([^}]*)\\}`, 'm'));
+      if (!base) continue;
+      for (const marker of CARD_MARKERS) {
+        for (const value of declared(base[1], marker.prop)) {
+          if (marker.isCard(value)) {
+            offenders.push(`${name} ${selector} traegt ${marker.prop}: ${value} — eine Zeile in einer Liste ist keine Karte`);
+          }
+        }
+      }
+    }
+  }
+  assert.deepEqual(offenders, []);
 });

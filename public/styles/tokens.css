@@ -152,6 +152,30 @@
    * Rahmen, kein Well - sonst muesste jeder Leerzustand seinen Traeger kennen. */
   --color-fill-well:          var(--color-surface-3);
 
+  /* DIE ZEILENLISTEN-REGEL (HIG-Rollout Runde 3, 2026-08-06).
+   * Die Kasten-in-Kasten-Regel sagt, wie eine Zeile INNEN aussieht. Diese hier
+   * sagt, worauf sie liegt - drei Vokabulare koexistierten (Zeile-in-Karte,
+   * Zeile traeglos auf dem Grund, eine Karte pro Zeile), DESIGN.md kennt nur
+   * eine Kernform. Ab jetzt app-weit:
+   *   Eine Folge gleichartiger Zeilen liegt in GENAU EINEM Traeger: einer
+   *   randlosen Karte (`background: var(--color-surface)`, `--radius-lg`,
+   *   `box-shadow: var(--shadow-sm)`, `overflow: hidden`). Die Zeilen darin
+   *   sind flaechen- und kantenlos; getrennt wird ueber den +-Kombinator
+   *   (`+ selector { border-top: 1px solid var(--color-border-subtle) }`),
+   *   NIE per `border-bottom` auf jeder Zeile - das zieht eine Linie unter die
+   *   letzte und macht den Traegerrand doppelt.
+   *   Der Sektionskopf (Versal-Mikro-Label) steht UEBER dem Traeger auf dem
+   *   Grund, nie in ihm.
+   * Es gibt damit weder eine traegerlose Zeilenfolge auf dem Grouped-Grund noch
+   * eine Karte pro Zeile. Einzige Ausnahme: ein RASTER aus Objekten mit eigenem
+   * Medium (Foto, Dokumentvorschau) - dort ist jede Kachel eine eigene Karte,
+   * weil sie nebeneinander steht statt untereinander.
+   * Warum ueberhaupt ein Traeger: eine Zeilenfolge direkt auf dem Grund hat
+   * keinen linken Rand, an dem das Auge die Liste als EIN Objekt fasst; eine
+   * Karte pro Zeile hat N Raender und damit N Objekte. Apples Grouped-Listen
+   * loesen beides mit demselben Griff. Guard:
+   * `row lists sit in exactly one carrier` in test-frontend-audit.js. */
+
   /* --------------------------------------------------------
    * 2. Farben - Akzent (konfigurierbar)
    *    Apple Indigo, auf AA vertieft (#5856D6 → #4F4DC9: 5.2:1 auf
@@ -164,7 +188,9 @@
   --color-accent-hover:       var(--_color-accent-hover);
   --_color-accent-active:     #3A38A6;
   --color-accent-active:      var(--_color-accent-active);
-  --color-accent-deep:        #32309A;       /* Tiefer Akzent für Gradienten, Wetter-Widget */
+  /* --color-accent-deep ist mit dem Wetter-Widget entfallen (Runde 3): es hatte
+   * genau einen Nutzer, den Verlauf dieses Widgets, und Verläufe auf Inhalt
+   * kennt diese Welt nicht mehr. */
 
   /* Die --greeting-*-Gradiententokens sind mit dem HIG-Rollout entfallen.
    * Sie speisten den Tageszeit-Verlauf des Dashboard-Grusses; DESIGN.md
@@ -760,7 +786,11 @@
   --radius-glass-card:   26px;
   --radius-glass-inner:  18px;
   --radius-glass-chip:   var(--radius-full);
-  --radius-glass-button: var(--radius-full);
+  /* --radius-glass-button ist mit Runde 3 entfallen: die Kapsel ist jetzt die
+   * Form JEDES Buttons und steht als --radius-full in der .btn-Basisregel
+   * (layout.css). Ein eigener Token dafuer legte nahe, es gaebe daneben noch
+   * eine zweite, nicht-glaeserne Buttonform - genau die Spaltung, die der
+   * Finish-Review als Befund fuehrte. */
 
   /* g) Glass-Übergänge */
   --ease-glass:       cubic-bezier(0.34, 1.56, 0.64, 1);

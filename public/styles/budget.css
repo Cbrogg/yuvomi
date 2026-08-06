@@ -874,17 +874,28 @@
   margin-bottom: var(--space-2);
 }
 
+/* Ein Träger für die Kategoriezeilen (Zeilenlisten-Regel, tokens.css) - sie
+ * lagen vorher direkt auf dem Grouped-Grund. Der Versal-Sektionskopf
+ * (.budget-chart-section__title) bleibt darüber auf dem Grund. */
 .budget-chart {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
 }
 
 .budget-bar-row {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+}
+
+.budget-bar-row + .budget-bar-row {
+  border-top: 1px solid var(--color-border-subtle);
 }
 
 .budget-bar-row__label {
@@ -1279,12 +1290,14 @@
 /* --------------------------------------------------------
  * Transaktions-Liste
  * -------------------------------------------------------- */
+/* Die Haarlinie zwischen Kategoriebalken und Transaktionsliste ist mit der
+ * Zeilenlisten-Regel entfallen: beide Sektionen tragen jetzt ihre eigene Karte,
+ * die Trennung liegt in den Rändern statt in einer zusätzlichen Linie. */
 .budget-list-section {
   flex: 1;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border-top: 1px solid var(--color-border);
   min-height: 0;
 }
 
@@ -1334,11 +1347,17 @@
   color: var(--color-text-tertiary);
 }
 
+/* Ein Träger für die Transaktionszeilen (Zeilenlisten-Regel, tokens.css). Die
+ * Liste ist zugleich der Scrollport des Panels: overflow-y clippt mit dem
+ * Radius, ein zweiter Wrapper wäre nur eine Ebene ohne Aufgabe. */
 .budget-list {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
 }
 
 .budget-list,
@@ -1374,9 +1393,12 @@
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-4);
-  border-bottom: 1px solid var(--color-border-subtle);
   cursor: pointer;
   transition: background-color var(--transition-fast);
+}
+
+.budget-entry + .budget-entry {
+  border-top: 1px solid var(--color-border-subtle);
 }
 
 .budget-entry:hover {

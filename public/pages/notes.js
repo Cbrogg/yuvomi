@@ -9,7 +9,6 @@ import { openModal as openSharedModal, closeModal, btnError, advancedSection, re
 import { stagger, vibrate, scheduleUndoableDelete } from '/utils/ux.js';
 import { t } from '/i18n.js';
 import { esc, renderMarkdownLight } from '/utils/html.js';
-import { getReadableTextColor } from '/utils/color.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
 import { renderPageSearch, wirePageSearch } from '/utils/page-search.js';
 import { findPageFab } from '/utils/fab.js';
@@ -18,12 +17,13 @@ import { findPageFab } from '/utils/fab.js';
 // Konstanten
 // --------------------------------------------------------
 
-// Gedämpfte, paper-kompatible Sticker-Palette. Die frühere Material-Primär-
-// Palette (#FFEB3B/#80DEEA/#CE93D8 …) las gegen Warm-Paper, Violett-Akzent
-// und Plus Jakarta Sans wie eine billigere App (Critique P3). Diese Töne sind
-// hell + niedrig gesättigt, damit getReadableTextColor() dunklen Text wählt
-// und die Karten zur warmen Marken-Umgebung passen. Bestehende Notizen mit
-// alten Hex-Werten rendern weiterhin korrekt; die Palette gilt für neue Wahl.
+// Gedämpfte Sticker-Palette. Die frühere Material-Primär-Palette
+// (#FFEB3B/#80DEEA/#CE93D8 …) las wie eine billigere App (Critique P3).
+// Seit dem HIG-Rollout tragen diese Werte die Karte nicht mehr als Vollfläche,
+// sondern nur noch als 16-%-Tönung darauf (siehe .note-card in notes.css) -
+// die Lesbarkeit hängt damit an keiner dieser Farben mehr, auch nicht an
+// Alt-Hex-Werten ausserhalb der Palette. Die Palette bleibt trotzdem gedämpft:
+// bei 16 % soll sie eine leise Ordnungshilfe sein, kein Signal.
 const NOTE_COLORS = [
   '#EFE3BE', '#E7D2A9', '#D2DEC6', '#C7DED9',
   '#CAD8E4', '#D8D0E2', '#EBD1C2', '#FBFAF7',
@@ -241,14 +241,16 @@ function renderNoteCard(note) {
     ? note.creator_name.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2)
     : '?';
 
-  const textColor = getReadableTextColor(note.color);
+  // Zettel- und Avatarfarbe sind Nutzerfarben und deshalb nur noch Variablen:
+  // die Flaeche mischt sie im gemessenen 16-%-Rezept, den Text traegt ein
+  // Token. Eine zur Laufzeit gerechnete Textfarbe braucht es dafuer nicht mehr
+  // (DESIGN.md, User-Farben-Regel).
   const avatarColor = note.creator_color || '#8E8E93';
-  const avatarTextColor = getReadableTextColor(avatarColor);
 
   return `
     <div class="note-card ${note.pinned ? 'note-card--pinned' : ''}"
          data-id="${note.id}"
-         style="background-color:${esc(note.color)};color:${textColor};">
+         style="--note-color:${esc(note.color)};">
       <button class="note-card__pin" data-action="pin" data-id="${note.id}"
               aria-label="${note.pinned ? t('notes.unpinAction') : t('notes.pinAction')}">
         <i data-lucide="${note.pinned ? 'pin-off' : 'pin'}" class="icon-sm" aria-hidden="true"></i>
@@ -258,7 +260,7 @@ function renderNoteCard(note) {
       <div class="note-card__footer">
         <div class="note-card__creator">
           <span class="note-card__avatar"
-                style="background-color:${esc(avatarColor)};color:${avatarTextColor}">
+                style="--avatar-color:${esc(avatarColor)};">
             ${note.creator_avatar
               ? `<img src="${esc(note.creator_avatar)}" alt="${esc(note.creator_name || '')}" loading="lazy">`
               : initials}

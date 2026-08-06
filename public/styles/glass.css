@@ -170,10 +170,14 @@
 }
 
 /* ================================================================
- * 4. Buttons — Capsule Shape + Specular Highlight
+ * 4. Buttons — Specular Highlight
+ *
+ * Die Kapselform steht seit Runde 3 in der Basisregel (.btn in layout.css) und
+ * gilt damit für ALLE Buttons. Hier stand sie nur für --primary und
+ * --secondary und gewann allein über die Ladereihenfolge - Ghost- und
+ * Danger-Buttons blieben deshalb eckig.
  * ================================================================ */
 .btn--primary {
-  border-radius: var(--radius-glass-button);
   box-shadow:
     var(--shadow-sm),
     var(--glass-inset-medium);
@@ -183,10 +187,6 @@
   box-shadow:
     var(--shadow-md),
     var(--glass-inset-soft);
-}
-
-.btn--secondary {
-  border-radius: var(--radius-glass-button);
 }
 
 /* Ghost-Buttons */
