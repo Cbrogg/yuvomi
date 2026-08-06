@@ -6718,3 +6718,114 @@ test('Render-Funktionen mit mehreren Aufrufern materialisieren ihre Icons selbst
     'Diese Funktionen fügen <i data-lucide> ein, überlassen das Materialisieren aber '
     + `ihren Aufrufern. Ein lucide.createIcons({ el: ... }) gehört ans Ende:\n${violations.join('\n')}`);
 });
+
+test('Jeder Sortable-Nutzer hat einen tastaturbedienbaren Reorder-Pfad', () => {
+  // Die Regel steht im Kopf von public/utils/sortable.js: "Drag ist NIE der
+  // einzige Weg". Sie gilt für JEDEN Aufrufer, nicht für eine Liste bekannter
+  // Dateien - deshalb sucht der Guard die Aufrufer selbst. Ohne ihn wäre die
+  // Zusage eine wandernde Annahme: der nächste makeSortable()-Aufruf erbt sie
+  // aus einem Kommentar, den niemand liest.
+  //
+  // Als Pfad zählt eine Tastenbehandlung, die die Reihenfolge ändert: entweder
+  // Auf/Ab-Bedienelemente (Kategorie-Manager) oder Pfeiltasten an einem
+  // fokussierbaren Griff (Einkaufsliste, #678).
+  const violations = [];
+
+  for (const file of [...walkJsFiles('../public/pages/'), ...walkJsFiles('../public/components/')]) {
+    const source = read(file);
+    if (!/\bmakeSortable\s*\(/.test(source)) continue;
+
+    const hasArrowKeys   = /['"]ArrowUp['"]/.test(source) && /['"]ArrowDown['"]/.test(source);
+    const hasMoveButtons = /data-action="(up|down)"/.test(source)
+      || /'(up|down)'/.test(source) && /addEventListener\(\s*['"]click['"]/.test(source);
+    if (hasArrowKeys || hasMoveButtons) continue;
+
+    violations.push(file);
+  }
+
+  assert.deepEqual(violations, [],
+    'Diese Dateien machen Listen per Drag sortierbar, ohne einen Tastaturpfad daneben. '
+    + 'Drag allein ist für Tastatur- und Screenreader-Bedienung kein Weg (siehe den Kopf '
+    + `von public/utils/sortable.js):\n${violations.join('\n')}`);
+});
+
+test('Die Handsortierung der Einkaufsliste sichert über einen gemeinsamen Pfad', () => {
+  // Zwei Bedienwege (Ziehen, Pfeiltasten) auf EINEN Persistenz-Handler: liefe
+  // die Tastatur über eine eigene Schreibweise, driftete sie beim nächsten Fix
+  // still am Drag-Pfad vorbei - der Fehlerfall (Rollback-Render) ist der Teil,
+  // der dabei zuerst verloren geht.
+  const source = read('../public/pages/shopping.js');
+  const persistCalls = source.match(/persistItemOrder\s*\(/g) ?? [];
+
+  assert.ok(persistCalls.length >= 3,
+    `Erwartet: Definition + Drag-Ende + Tastaturpfad rufen persistItemOrder. Gefunden: ${persistCalls.length}`);
+  assert.match(source, /onEnd:\s*\([^)]*\)\s*=>\s*persistItemOrder\(/,
+    'Das Drag-Ende muss über persistItemOrder sichern.');
+  assert.match(source, /moveItemRow\([^)]*\)/,
+    'Der Tastaturpfad braucht moveItemRow, das seinerseits persistItemOrder aufruft.');
+  assert.match(source, /catch[\s\S]{0,400}updateItemsList\(container\)/,
+    'Der Fehlerfall muss die Liste aus dem unveränderten State neu aufbauen (Rollback).');
+});
+
+test('Der Sortiergriff nimmt sich die Geste aus der Wischbedienung', () => {
+  // Griff und Wischgeste teilen sich dieselbe Zeile. Ohne die Ausnahme im
+  // touchstart liefe das seitliche Wackeln beim Hochziehen als Wischweg mit und
+  // die Karte rutschte unter dem Finger auf "erledigt".
+  const source = read('../public/pages/shopping.js');
+  assert.match(source, /touchstart[\s\S]{0,600}kitchen-row__drag/,
+    'wireSwipeGestures muss den Sortiergriff im touchstart ausnehmen.');
+});
+
+test('Die Einkaufsliste sagt Umsortierungen über eine Live-Region an', () => {
+  // Wie im Kategorie-Manager: das aria-label des Griffs allein ist keine
+  // verlässliche Rückmeldung - ob ein Screenreader die Label-Änderung am
+  // fokussierten Element vorliest, unterscheidet sich von Programm zu Programm.
+  const source = read('../public/pages/shopping.js');
+  assert.match(source, /role="status" aria-live="polite" id="items-reorder-announce"/,
+    'Die Live-Region muss im Listen-Markup stehen.');
+  assert.match(source, /announceItemMove\(container, movedRow\)/,
+    'Der geteilte Persistenz-Pfad muss ansagen - dann gilt es für Drag UND Tastatur.');
+  assert.match(source, /t\('category\.reorderAnnounce'/,
+    'Wiederverwendeter Ansage-Text statt einer zweiten Fassung in 24 Sprachen.');
+});
+
+test('Die Handsortierung schickt je Kategorie nur eine Anfrage gleichzeitig', () => {
+  // Zwei schnell gedrückte Pfeiltasten schickten sonst zwei PATCHes parallel,
+  // und es entschied die Ankunftsreihenfolge beim Server statt die
+  // Bedienreihenfolge: traf der erste zuletzt ein, schrieb er den Zwischenstand
+  // fest, während das DOM den zweiten Zug zeigte. Der Nutzer sah seine
+  // Reihenfolge und bekam beim nächsten Laden eine andere.
+  const source = read('../public/pages/shopping.js');
+
+  assert.match(source, /orderRuns\s*=\s*new Map\(\)/,
+    'Es braucht eine Buchführung über laufende Sicherungen je Kategorie.');
+  assert.match(source, /const running = orderRuns\.get\(category\);\s*\n\s*if \(running\) \{ running\.again = true; return; \}/,
+    'Ein Zug während eines Laufs darf nur eine Nachfolge vormerken, keine zweite Anfrage starten.');
+  assert.match(source, /while \(run\.again/,
+    'Nach dem Lauf muss eine vorgemerkte Nachfolge abgearbeitet werden.');
+  assert.match(source, /orderRuns\.delete\(category\)/,
+    'Der Eintrag muss auch im Fehlerfall verschwinden (finally), sonst blockiert die Kategorie dauerhaft.');
+
+  // Die Reihenfolge wird IM Lauf aus dem DOM gelesen, nicht beim Einreihen
+  // eingefroren - nur so trägt eine Nachfolge den Endstand statt eines
+  // Zwischenstands, und N Züge kommen mit zwei Anfragen aus.
+  assert.match(source, /async function sendItemOrder\(groupEl, container, listId\)[\s\S]{0,600}querySelectorAll\(':scope > \.swipe-row'\)/,
+    'sendItemOrder muss die Reihenfolge beim Senden frisch aus dem DOM lesen.');
+});
+
+test('Die Handsortierung bindet ihre Anfrage an die Liste, in der gezogen wurde', () => {
+  // Wechselt der Nutzer die Liste, während eine Nachfolge aussteht, hält das
+  // Gruppen-Element noch die abgehängten Zeilen der alten Liste. Deren IDs
+  // gegen die inzwischen aktive Liste zu schicken, quittiert die Route zu Recht
+  // mit 400 - und die Antwort dürfte den State der neuen Liste nie überschreiben.
+  const source = read('../public/pages/shopping.js');
+
+  assert.match(source, /const listId = state\.activeListId;/,
+    'Die Listen-ID muss beim Einreihen feststehen, nicht beim Senden gelesen werden.');
+  assert.match(source, /api\.patch\(`\/shopping\/\$\{listId\}\/items\/reorder`/,
+    'Die Anfrage muss an die festgehaltene Liste gehen, nicht an state.activeListId.');
+  assert.match(source, /if \(listId === state\.activeListId\) state\.items =/,
+    'Der State darf nur nachziehen, solange dieselbe Liste offen ist.');
+  assert.match(source, /if \(listId !== state\.activeListId\) return false;/,
+    'Ein Fehler einer nicht mehr offenen Liste darf weder tosten noch die sichtbare Liste neu bauen.');
+});
