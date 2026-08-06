@@ -120,6 +120,13 @@ export function scheduleUndoableDelete({ commit, restore, message, duration = 50
  */
 export function wireScrollFade(el, { axis = 'x' } = {}) {
   if (!el) return { update: () => {}, destroy: () => {} };
+  // Marker für die geteilte Scroll-Affordanz-Regel (filter-chip.css): die Maske
+  // allein reicht nicht, die Leiste braucht auch ein Scroll-Polster, damit ein
+  // per scrollIntoView angesteuertes Element nicht bündig an der Kante klebt
+  // und den Nachbarn wortmittig abschneidet. Der Marker sitzt hier statt in
+  // jedem Modul-CSS, damit die Regel jede Leiste erfasst, die diesen Helfer
+  // nutzt - auch die, die es noch nicht gibt.
+  el.classList.add('u-scroll-fade');
   const eps = 8; // Toleranz: kein Fade bei minimalem Sub-Pixel-Offset
   const update = () => {
     const pos = axis === 'y' ? el.scrollTop : el.scrollLeft;

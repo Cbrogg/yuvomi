@@ -6951,3 +6951,37 @@ test('row lists sit in exactly one carrier', () => {
   }
   assert.deepEqual(offenders, []);
 });
+
+// --------------------------------------------------------------------------
+// Buttonform (HIG-Rollout Runde 3): die Kapsel, app-weit EINE.
+//
+// Der Befund, den dieser Guard fernhaelt, war nie eine falsche Zahl, sondern
+// eine zweite Regel: `.btn` stand auf --radius-md, glass.css zog
+// `.btn--primary`/`.btn--secondary` auf --radius-full, und `.btn--icon` blieb
+// bei --radius-sm - welche Form ein Button bekam, entschied die
+// Ladereihenfolge. Der Guard prueft deshalb nicht den Wert der Basisregel,
+// sondern dass ueberhaupt KEINE andere Regel den Buttonradius neu setzt.
+// --------------------------------------------------------------------------
+test('one button shape app-wide', () => {
+  const files = readdirSync(new URL('../public/styles/', import.meta.url))
+    .filter((name) => name.endsWith('.css'));
+
+  const base = cssRuleBody(read('../public/styles/layout.css'), '\n.btn');
+  assert.match(base, /border-radius:\s*var\(--radius-full\)/,
+    'Die Kapsel steht in der .btn-Basisregel (Direction Contract: „Kapsel-Controls").');
+
+  const offenders = [];
+  for (const name of files) {
+    // Kommentare strippen, sonst wandert die Prosa davor in den Selektor
+    // (dieselbe Falle wie bei parseTokenMap, Handoff §6).
+    const css = read(`../public/styles/${name}`).replace(/\/\*[\s\S]*?\*\//g, '');
+    // Jede Regel, deren Selektorliste eine .btn-Variante enthaelt.
+    for (const m of css.matchAll(/(?:^|[}])\s*([^{}]*\.btn[\w-]*[^{}]*)\{([^}]*)\}/g)) {
+      const [, selector, body] = m;
+      if (name === 'layout.css' && /^\s*\.btn\s*$/.test(selector)) continue;
+      if (!/border-radius:/.test(body)) continue;
+      offenders.push(`${name}: ${selector.trim().replace(/\s+/g, ' ')} setzt border-radius neu`);
+    }
+  }
+  assert.deepEqual(offenders, []);
+});

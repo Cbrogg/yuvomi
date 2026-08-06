@@ -2805,11 +2805,14 @@ p.field-hint--warn[hidden] {
   height: 18px;
 }
 
+/* Auch der Icon-Button ist eine Kapsel, hier also ein Kreis - Apples eigene
+ * Icon-Buttons sind rund. Die frühere --radius-sm-Ecke war der letzte Rest der
+ * zwei Buttonformen: sie überschrieb die Basisregel und stand damit neben der
+ * Kapsel, die dieselbe Datei zwei Bildschirme weiter oben setzt. */
 .btn--icon {
   padding: var(--space-2);
   min-height: var(--target-lg);
   min-width: var(--target-lg);
-  border-radius: var(--radius-sm);
 }
 
 @media (min-width: 1024px) {
@@ -2853,6 +2856,17 @@ p.field-hint--warn[hidden] {
     min-height: var(--target-md);
     font-size: var(--text-base);
   }
+}
+
+/* Ein Select rendert sein Chevron INNERHALB der Box, rechtsbündig. Mit dem
+ * Feld-Padding von 12px läuft ein langer Optionstext darunter und wird
+ * mittendrin gekappt („Nächstes Fälligkei|"). Das Polster ist deshalb kein
+ * Modul-Detail, sondern gehört zum Feldkanon - app-weit, damit es nicht in
+ * jedem Modul neu entdeckt werden muss. */
+select.input,
+select.form-input {
+  padding-inline-end: var(--space-8);
+  text-overflow: ellipsis;
 }
 
 .input:focus,
@@ -4072,12 +4086,13 @@ button svg { pointer-events: none; }
 /* Tabular numbers: gleichbreite Ziffern für Zahlen/Beträge */
 .tabular-nums { font-variant-numeric: tabular-nums; }
 
-/* Kompakter Icon-Button: 44px Klickfläche, optisch kompakt durch geringes Padding */
+/* Kompakter Icon-Button: 44px Klickfläche, optisch kompakt durch geringes
+ * Padding. Die Form kommt aus der .btn-Basisregel (Kapsel), nicht von hier -
+ * eine eigene Ecke waere die zweite Buttonsprache. */
 .btn--icon-sm {
   padding: var(--space-1);
   min-height: var(--target-base);
   min-width: var(--target-base);
-  border-radius: var(--radius-sm);
 }
 
 /* Textarea: vertikale Größenänderung ist nutzbar */

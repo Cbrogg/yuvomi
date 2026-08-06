@@ -883,6 +883,23 @@
     display: contents;
   }
 
+  /* Die Ecke oben links. Die Körperzeilen decken die Gutter-Gasse mit ihrem
+   * sticky Label ab, die KOPFZEILE hatte dort gar kein Grid-Item - der erste
+   * Tageskopf scrollte darunter sichtbar durch, während sein Karteninhalt eine
+   * Zeile tiefer korrekt maskiert war (Finish-Review Runde 3). Ein
+   * Pseudo-Element des Grid-Containers ist selbst ein Grid-Item und schliesst
+   * die Lücke ohne Markup-Umbau; es liegt über dem Tageskopf (z-sticky), weil
+   * es ihn genau dort verdecken soll. */
+  .week-grid::before {
+    content: '';
+    grid-column: 1;
+    grid-row: 1;
+    position: sticky;
+    left: 0;
+    z-index: calc(var(--z-sticky) + 1);
+    background-color: var(--color-bg);
+  }
+
   /* Scroll-Affordance des Boards (Critique-Folgebefund): wireScrollFade setzt
    * die geteilten has-fade-*-Klassen (filter-chip.css). Der End-Anriss zeigt
    * „rechts liegen weitere Tage" — auch wenn eine Spalte zufällig bündig mit

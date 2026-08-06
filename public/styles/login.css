@@ -21,16 +21,12 @@
   min-height: 100dvh;
   width: 100%;
   padding: var(--space-4);
-  /* Ein einzelner, zurückhaltender Violett-Hauch am oberen Rand – genug für den
-   * warmen Marken-Peak, ohne die Akzent-Scarcity-Regel (≤10 %) zu sprengen. Die
-   * violette Identität trägt die Marke selbst (Tile/Wortmarke/CTA), nicht der BG. */
-  background:
-    radial-gradient(
-      ellipse 160% 60% at 50% -20%,
-      color-mix(in srgb, var(--color-accent) 10%, transparent),
-      transparent 60%
-    ),
-    var(--color-bg);
+  /* Der Seitengrund, ohne Verlauf. Hier stand bis Runde 3 ein radialer
+   * Akzent-Hauch mit der Begründung der abgelösten Welt („Akzent-Scarcity-Regel
+   * ≤10 %") - der letzte chromatische Verlauf der App, und ausgerechnet auf der
+   * einzigen Seite, die ein abgemeldeter Nutzer je sieht. Die Marke trägt hier
+   * das Tile, nicht die Bühne. */
+  background: var(--color-bg);
 }
 
 /* Hero-Bereich über dem Login-Formular */
@@ -68,10 +64,15 @@
   height: 55%;
 }
 
+/* Large Title wie jeder Seitentitel, in Label-Farbe. Der Titel stand bis Runde 3
+ * auf einer eigenen 48px-Stufe und in --color-accent - beides verbietet
+ * DESIGN.md ausdruecklich (Ueberschriften enden bei 34px; Large Titles tragen
+ * immer --color-text-primary). Die Marke trägt das Tile darueber, das laut
+ * PRODUCT.md unantastbar ist. */
 .login-hero__title {
-  font-size: var(--type-login-hero-size);
+  font-size: var(--type-page-title-mobile);
   font-weight: var(--font-weight-bold);
-  color: var(--color-accent);
+  color: var(--color-text-primary);
   letter-spacing: var(--tracking-tight);
   margin-bottom: var(--space-2);
 }

@@ -164,8 +164,11 @@
    *   (`+ selector { border-top: 1px solid var(--color-border-subtle) }`),
    *   NIE per `border-bottom` auf jeder Zeile - das zieht eine Linie unter die
    *   letzte und macht den Traegerrand doppelt.
-   *   Der Sektionskopf (Versal-Mikro-Label) steht UEBER dem Traeger auf dem
-   *   Grund, nie in ihm.
+   *   Der Kopf steht UEBER dem Traeger auf dem Grund, nie in ihm. Welche der
+   *   beiden Kopfrollen er traegt, entscheidet nicht der Traeger, sondern was
+   *   er benennt: einen BEREICH der Seite (Ueberschrift, Satzschreibung) oder
+   *   eine GRUPPE, die sich mit wechselndem Wert ueber eine Liste wiederholt
+   *   (Versal-Mikro-Label). Abgrenzung ausgeschrieben in typography.css.
    * Es gibt damit weder eine traegerlose Zeilenfolge auf dem Grouped-Grund noch
    * eine Karte pro Zeile. Einzige Ausnahme: ein RASTER aus Objekten mit eigenem
    * Medium (Foto, Dokumentvorschau) - dort ist jede Kachel eine eigene Karte,
@@ -512,8 +515,11 @@
   --type-caption:              0.8125rem;  /* 13px — Footnote */
   --type-micro:                0.6875rem;  /* 11px — Caption 2 */
 
-  /* Einzelfall-Größe außerhalb der authentifizierten Produktoberfläche. */
-  --type-login-hero-size: clamp(2.125rem, 5vw, 3rem);                  /* Login-Hero */
+  /* --type-login-hero-size ist mit Runde 3 entfallen. Es wuchs auf 48px und
+   * riss damit die Obergrenze der Ueberschriften-Skala (34px, DESIGN.md: die
+   * Display-Stufen sind exklusiv fuer Anzeigewerte auf dem Wandtablet). Die
+   * Anmeldeseite ist keine Ausnahme von der Skala, sondern die erste Seite der
+   * App - sie traegt jetzt --type-page-title wie jede andere. */
 
   /* Line-Heights */
   --line-height-tight:   1.21;   /* Large Title 34/41 */

@@ -27,8 +27,12 @@
 
 .subscriptions-toolbar {
   display: grid;
-  /* Suche · 4 beschriftete Filter · Zurücksetzen · 2 Icon-Aktionen */
-  grid-template-columns: minmax(220px, 1fr) repeat(4, minmax(130px, auto)) auto auto auto;
+  /* Suche · 4 beschriftete Filter · Zurücksetzen · 2 Icon-Aktionen
+   * Die Filterspalten stehen auf minmax(0, …): mit `auto` wuchsen sie auf die
+   * längste Option („Nächstes Fälligkeitsdatum") und schoben die Leiste bei
+   * 1280px über die Content-Breite hinaus. Jetzt schrumpfen sie zuerst, und
+   * der gekappte Text bekommt seine Ellipse aus dem Feldkanon (layout.css). */
+  grid-template-columns: minmax(180px, 1.4fr) repeat(4, minmax(0, 1fr)) auto auto auto;
   gap: var(--space-2);
   /* An der Unterkante ausrichten: die Filterfelder tragen jetzt eine Labelzeile
    * über dem Select, die Suche nicht — sonst stünden die Eingaben versetzt. */

@@ -63,8 +63,24 @@
 
 /* --------------------------------------------------------------------------
  * Section-/Bereichs-Überschrift (normale Schreibweise)
+ *
+ * ABGRENZUNG zum Versal-Mikro-Label darunter (HIG-Rollout Runde 3, der
+ * Finish-Review fand zwei Schreibweisen über demselben Trägertyp):
+ *   BEREICH einer Seite  → diese Rolle. Ein Heading-Element, Satzschreibung.
+ *                          Es gibt eine Handvoll pro Seite, jede benennt etwas
+ *                          anderes („Heute wichtig", „Punktestände",
+ *                          „Nach Kategorie", „Transaktionen").
+ *   GRUPPE in einer Liste → das Versal-Mikro-Label. Kein Heading, sondern ein
+ *                          Sortierschlüssel, der sich über die Liste
+ *                          wiederholt (Kategorie in Kontakten, Mahlzeitentyp
+ *                          im Wochenplan, Monat in einer Chronik).
+ * Die Faustregel: wiederholt sich der Kopf mit wechselndem Wert über EINE
+ * Liste, ist er versal; benennt er einen eigenen Bereich, ist er Überschrift.
  * ------------------------------------------------------------------------ */
 .u-section-title,
+.budget-page .split-title,
+.budget-chart-section__title,
+.budget-list-header__title,
 .birthdays-toolbar__title,
 .birthdays-section__header h2,
 .list-header__name,
@@ -104,11 +120,8 @@
  * ------------------------------------------------------------------------ */
 .event-icon-picker__category-label,
 .budget-summary-card__label,
-.budget-chart-section__title,
 .loan-report__section-title,
-.budget-list-header__title,
 .budget-panel-head__title,
-.budget-page .split-title,
 .contact-group__header,
 .day-header__name,
 .meal-slot__type-label,

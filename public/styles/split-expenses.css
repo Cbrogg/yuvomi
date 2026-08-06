@@ -56,13 +56,10 @@
   min-height: 0;
 }
 
-/* Eingebettet ist der Split-Titel eine Sektionsüberschrift, kein Seitentitel -
- * der Modulkopf sagt bereits „Budget". Die Auszeichnung steht deshalb in der
- * geteilten Eyebrow-Liste in typography.css, zusammen mit
- * .budget-panel-head__title; hier bleibt nur die Farbe. */
-.budget-page .split-title {
-  color: var(--color-text-secondary);
-}
+/* Eingebettet ist der Split-Titel eine Bereichsüberschrift, kein Seitentitel -
+ * der Modulkopf sagt bereits „Budget". Er stand bis Runde 3 in der Versal-
+ * Liste und las damit als Eyebrow über der Beschreibung; die Rolle ist jetzt
+ * die Bereichs-Überschrift (Satzschreibung, Label-Farbe, typography.css). */
 
 .split-subtitle,
 .split-group-header p,
@@ -172,32 +169,35 @@
   flex: 1;
 }
 
+/* Zeilenliste im Panel (Zeilenlisten-Regel, tokens.css): das Panel ist der
+ * Träger, die Zeilen trennen sich per Haarlinie. Der Aktivzustand trug vorher
+ * Fläche UND Kante in einer bereits randlosen Karte - ein Kasten im Kasten.
+ * Jetzt trägt ihn die Fläche allein, wie die Sidebar-Pille. */
 .split-groups {
   margin-top: var(--space-3);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
 }
 
 .split-group {
   width: 100%;
   min-height: 64px;
-  padding: var(--space-2);
+  padding: var(--space-2) var(--space-3);
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  border: 1px solid transparent;
-  border-radius: var(--radius-md);
+  border: none;
   background: transparent;
   color: inherit;
   text-align: left;
   cursor: pointer;
 }
 
+.split-group + .split-group {
+  border-top: 1px solid var(--color-border-subtle);
+}
+
 .split-group--active,
 .split-group:hover {
   background: color-mix(in srgb, var(--module-accent) 10%, var(--color-surface));
-  border-color: color-mix(in srgb, var(--module-accent) 24%, var(--color-border));
 }
 
 .split-group__avatar,

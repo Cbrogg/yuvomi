@@ -869,13 +869,16 @@
   flex-shrink: 0;
 }
 
+/* Bereichs-Überschrift, nicht Gruppenkopf: „Nach Kategorie" benennt einen
+ * eigenen Bereich der Seite und wiederholt sich nicht über eine Liste - damit
+ * Satzschreibung und Label-Farbe (Abgrenzung in typography.css). */
 .budget-chart-section__title {
-  color: var(--color-text-secondary);
+  color: var(--color-text-primary);
   margin-bottom: var(--space-2);
 }
 
 /* Ein Träger für die Kategoriezeilen (Zeilenlisten-Regel, tokens.css) - sie
- * lagen vorher direkt auf dem Grouped-Grund. Der Versal-Sektionskopf
+ * lagen vorher direkt auf dem Grouped-Grund. Die Bereichs-Überschrift
  * (.budget-chart-section__title) bleibt darüber auf dem Grund. */
 .budget-chart {
   width: 100%;
@@ -1328,7 +1331,7 @@
 }
 
 .budget-list-header__title {
-  color: var(--color-text-secondary);
+  color: var(--color-text-primary);
 }
 
 .budget-csv-export,

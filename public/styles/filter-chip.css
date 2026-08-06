@@ -119,3 +119,21 @@
   mask-image: linear-gradient(to right, transparent, #000 var(--space-6), #000 calc(100% - var(--space-6)), transparent);
   -webkit-mask-image: linear-gradient(to right, transparent, #000 var(--space-6), #000 calc(100% - var(--space-6)), transparent);
 }
+
+/* --------------------------------------------------------
+ * Scroll-Polster für jede Leiste mit Rand-Fade (HIG-Rollout Runde 3).
+ *
+ * Die Maske sagt „hier geht es weiter"; sie sagt nicht, wo eine Leiste zum
+ * Stehen kommt. Ohne Polster hält `scrollIntoView({ inline: 'nearest' })` das
+ * angesteuerte Element bündig an der Kante und schneidet den Nachbarn
+ * wortmittig ab - genau das, was die Fade-Maske verdecken sollte (gefunden an
+ * der Personen-Chipreihe der Gesundheit, mobil).
+ *
+ * Der Marker `u-scroll-fade` kommt aus wireScrollFade (utils/ux.js), nicht aus
+ * dem Markup: so gilt diese Regel für JEDE Leiste, die den geteilten Helfer
+ * nutzt, statt für eine Liste von Modulen. Die Lehre der Küchen-
+ * Zusammenführung, wörtlich angewandt.
+ * -------------------------------------------------------- */
+.u-scroll-fade {
+  scroll-padding-inline: var(--space-6);
+}
