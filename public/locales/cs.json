@@ -3353,7 +3353,8 @@
             "visibility": {
                 "private": "Soukromé",
                 "family": "Rodina"
-            }
+            },
+            "allTitle": "Všechny léky"
         },
         "labs": {
             "title": "Laboratorní hodnoty",

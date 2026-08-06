@@ -3353,7 +3353,8 @@
             "visibility": {
                 "private": "निजी",
                 "family": "परिवार"
-            }
+            },
+            "allTitle": "सभी दवाइयाँ"
         },
         "labs": {
             "title": "लैब मान",

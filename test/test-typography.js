@@ -212,6 +212,48 @@ test('Settings-Blätter wiederholen ihren eigenen Titel nicht als Unterüberschr
   assert.deepEqual(failures, []);
 });
 
+test('ein Panel wiederholt nicht sichtbar den Namen seiner eigenen Leiste', async () => {
+  // Die Regel darüber galt nur für die Einstellungen - Gesundheit hatte
+  // denselben Defekt und war davon unberührt: alle SECHS Panels führten den
+  // Namen ihres aktiven Sub-Tabs wortgleich als h2 direkt darunter
+  // („Übersicht" über „Übersicht", Finish-Review Runde 4, Befund 6). Eine
+  // Regel, die nur eine Modulfamilie kennt, ist eine Allowlist - deshalb prüft
+  // dieser Test die zweite Familie mit derselben Bauart (Leiste + Panels).
+  //
+  // Erlaubt bleibt die UNSICHTBARE Wiederholung: die Überschrift hält die
+  // Dokumentgliederung zwischen dem h1 des Moduls und den h3 der Abschnitte.
+  // Verboten ist nur, sie zu ZEIGEN.
+  // health-tabs.js importiert `/i18n.js` - ein Browser-Pfad, den Node nicht
+  // aufloest. Die labelKeys stehen dort als Literale, also aus der Quelle lesen
+  // statt das Modul zu laden.
+  const de = JSON.parse(readFileSync(new URL('../public/locales/de.json', import.meta.url), 'utf8'));
+  const translate = (key) => key.split('.').reduce((value, segment) => value?.[segment], de);
+  const normalize = (value) => String(value ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+
+  const tabsSource = readFileSync(new URL('../public/utils/health-tabs.js', import.meta.url), 'utf8');
+  const source = readFileSync(new URL('../public/pages/health.js', import.meta.url), 'utf8');
+  const tabLabels = new Set(
+    [...tabsSource.matchAll(/labelKey:\s*['"]([\w.]+)['"]/g)]
+      .map((m) => normalize(translate(m[1]))),
+  );
+  assert.ok(tabLabels.size >= 5, 'Die Sub-Tab-Labels der Gesundheit sind lesbar');
+
+  const failures = [];
+  for (const match of source.matchAll(/<h([1-3])\b([^>]*)>\s*\$\{(?:esc\()?\s*t\(\s*(?:panel\.titleKey|['"]([\w.]+)['"])/g)) {
+    const [, level, attrs, key] = match;
+    if (/\bsr-only\b/.test(attrs)) continue;
+    // `panel.titleKey` ist die Schleifenvariable über alle Panels - ihre Werte
+    // sind genau die Titel, die auch die Leiste führt.
+    const titles = key ? [normalize(translate(key))] : [...tabLabels];
+    for (const title of titles) {
+      if (tabLabels.has(title)) {
+        failures.push(`health.js: sichtbares <h${level}> wiederholt den Leisten-Namen "${title}"`);
+      }
+    }
+  }
+  assert.deepEqual(failures, []);
+});
+
 test('lange Inhalts- und interaktive Texte verwenden mindestens die Sekundärrolle', () => {
   const dashboard = readFileSync(new URL('../public/styles/dashboard.css', import.meta.url), 'utf8');
   const notes = readFileSync(new URL('../public/styles/notes.css', import.meta.url), 'utf8');

@@ -3353,7 +3353,8 @@
             "visibility": {
                 "private": "Özel",
                 "family": "Aile"
-            }
+            },
+            "allTitle": "Tüm ilaçlar"
         },
         "labs": {
             "title": "Laboratuvar",

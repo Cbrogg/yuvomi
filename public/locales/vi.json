@@ -3353,7 +3353,8 @@
             "visibility": {
                 "private": "Riêng tư",
                 "family": "Gia đình"
-            }
+            },
+            "allTitle": "Tất cả thuốc"
         },
         "labs": {
             "title": "Xét nghiệm",

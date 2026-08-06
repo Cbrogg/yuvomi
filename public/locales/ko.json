@@ -3353,7 +3353,8 @@
             "visibility": {
                 "private": "비공개",
                 "family": "가족"
-            }
+            },
+            "allTitle": "모든 약"
         },
         "labs": {
             "title": "검사 결과",

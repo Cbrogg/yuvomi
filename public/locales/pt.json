@@ -3353,7 +3353,8 @@
             "visibility": {
                 "private": "Privado",
                 "family": "Família"
-            }
+            },
+            "allTitle": "Todos os medicamentos"
         },
         "labs": {
             "title": "Exames",

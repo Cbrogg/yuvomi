@@ -3353,7 +3353,8 @@
             "visibility": {
                 "private": "私密",
                 "family": "家庭"
-            }
+            },
+            "allTitle": "所有药物"
         },
         "labs": {
             "title": "化验值",

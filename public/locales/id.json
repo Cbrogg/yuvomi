@@ -3353,7 +3353,8 @@
             "visibility": {
                 "private": "Pribadi",
                 "family": "Keluarga"
-            }
+            },
+            "allTitle": "Semua obat"
         },
         "labs": {
             "title": "Hasil lab",

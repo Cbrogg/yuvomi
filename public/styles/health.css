@@ -33,12 +33,10 @@
   display: none;
 }
 
-.health-panel__head {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding-top: var(--space-2);
-}
+/* Hier stand `.health-panel__head` - der Traeger des Panel-Titels, den die
+ * Sub-Tab-Leiste darueber bereits wortgleich fuehrt. Der Titel ist jetzt
+ * .sr-only und braucht keinen sichtbaren Kopf mehr (Finish-Review Runde 4,
+ * Befund 6); die Klasse hatte danach keinen Nutzer im Markup. */
 
 /* Empty-State: zentriertes Panel mit getöntem Icon-Well im Modul-Akzent.
  * Randlos wie jede Karte auf dem Grouped-Grund; der frühere radial-gradient

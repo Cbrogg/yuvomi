@@ -259,9 +259,16 @@ function panelMarkup(panel, activeRoute) {
   return `
     <section class="health-panel" data-health-panel="${esc(panel.route)}"
              role="tabpanel" aria-label="${esc(t(panel.titleKey))}" ${hidden}>
-      <header class="health-panel__head">
-        <h2 class="health-panel__title u-toolbar-title">${esc(t(panel.titleKey))}</h2>
-      </header>
+      <!-- Der Panel-Titel steht sichtbar schon in der Sub-Tab-Leiste darueber:
+           alle sechs Panels wiederholten ihn wortgleich als h2 direkt darunter
+           ("Uebersicht" ueber "Uebersicht"), also verdoppelte der Kopf
+           Information, statt eine Ebene zu benennen (Finish-Review Runde 4,
+           Befund 6). Dieselbe Regel hat die Einstellungen schon einmal
+           eingeholt - der Guard dazu prueft sie jetzt fuer beide.
+           Als Ueberschrift bleibt er stehen, nur unsichtbar: er haelt die
+           Dokumentgliederung zwischen dem h1 des Moduls und den h3 der
+           Abschnitte, und das tabpanel traegt denselben Namen im aria-label. -->
+      <h2 class="health-panel__title sr-only">${esc(t(panel.titleKey))}</h2>
       ${body}
     </section>
   `;
@@ -1359,7 +1366,11 @@ function renderMedsShell() {
     </div>
     <div class="health-meds__due">${dueTodayMarkup()}</div>
     <div class="health-meds__adherence-wrap">${adherenceMarkup()}${medLogHistoryMarkup()}</div>
-    <h3 class="health-meds__section-title u-toolbar-title">${esc(t('health.meds.title'))}</h3>
+    <!-- „Alle Medikamente", nicht „Medikamente": der Abschnitt stand unter dem
+         gleichnamigen Tab und trug denselben Namen wie das Panel, benannte sich
+         also gegen „Heute faellig" gar nicht. Gefunden vom Guard, der die
+         Titelwiederholung seit Runde 5 fuer Leiste UND Abschnitt prueft. -->
+    <h3 class="health-meds__section-title u-toolbar-title">${esc(t('health.meds.allTitle'))}</h3>
     <div class="health-meds__list" id="health-meds-list">${medListMarkup()}</div>
   `);
   if (window.lucide) window.lucide.createIcons({ el: meds.root });
