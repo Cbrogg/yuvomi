@@ -77,9 +77,12 @@
  * .page-toolbar--wrap: der Monats-Block (.budget-nav__month = Center-Slot)
  * rutscht als Gruppe auf Zeile 2. Hier nur Budget-Spezifika.
  * -------------------------------------------------------- */
-.budget-nav {
-  background-color: var(--color-surface);
-}
+/* KEINE eigene Kopffläche. `.page-toolbar` steht auf --color-bg, dem
+ * Seitengrund; Budget trug hier als einziges Modul --color-surface und war
+ * damit der einzige weisse Modulkopf der App. Vor der kollabierenden
+ * Large-Title-Leiste fiel das kaum auf - seither steht die Titelzone am
+ * Scroll-Anfang nahtlos auf dem Grund, und die weisse Fläche zog eine Kante
+ * quer durch die eine Komponente, die alle 17 Module teilen. */
 
 /* [hidden] durchsetzen: die Icon-Buttons (.btn) setzen display:flex mit gleicher
  * Spezifität wie [hidden] und blieben so trotz hidden=true sichtbar. Betrifft den
@@ -94,23 +97,14 @@
 }
 
 /* Aktion, keine Selektion: bewusst Outline-Grammatik statt getönter Pille, damit
- * „Aktuell" neben der aktiven Tab-Pille nicht wie eine zweite Auswahl aussieht. */
+ * „Aktuell" neben der aktiven Tab-Pille nicht wie eine zweite Auswahl aussieht.
+ * Das IST .btn--secondary - die Regel stand hier einmal handkopiert, mit dem
+ * einen Unterschied, der sie zum Verstoss machte: --radius-sm statt der Kapsel
+ * (Finish-Review Runde 4, Befund 4). Jetzt trägt das Markup .btn.btn--secondary
+ * und hier steht nur noch die Verdichtung für den Kopf-Slot. */
 .budget-nav__today {
-  min-height: var(--target-lg);
-  font-size: var(--text-sm);
+  padding: var(--space-1) var(--space-3);
   color: var(--module-accent, var(--color-accent));
-  font-weight: var(--font-weight-medium);
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-sm);
-  background: transparent;
-  cursor: pointer;
-  border: 1px solid var(--color-border);
-  white-space: nowrap;
-}
-
-.budget-nav__today:hover {
-  background: color-mix(in srgb, var(--module-accent, var(--color-accent)) 9%, transparent);
-  border-color: var(--module-accent, var(--color-accent));
 }
 
 /* Kontexttext für Tabs ohne Zeitbezug: hält den Kopf-Slot besetzt, ohne sich als

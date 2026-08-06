@@ -1039,7 +1039,7 @@ function renderToolbar() {
   bar.insertAdjacentHTML('beforeend', `
     <h1 class="page-toolbar__title">${t('calendar.title')}</h1>
     <div class="page-toolbar__center cal-toolbar__month">
-      <button class="cal-toolbar__today" id="cal-today">${t('calendar.today')}</button>
+      <button class="btn btn--secondary cal-toolbar__today" id="cal-today">${t('calendar.today')}</button>
       <button class="btn btn--icon" id="cal-prev" aria-label="${t('calendar.back')}">
         <i data-lucide="chevron-left" aria-hidden="true"></i>
       </button>

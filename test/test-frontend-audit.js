@@ -5022,7 +5022,13 @@ test('audited profile, birthday, navigation, and budget controls meet mobile tou
   // .budget-tab-Buttons — Touch-Target dort prüfen (44px, iOS-Minimum, wie alle
   // Sub-Tab-Module: Belohnungen/Haushaltshilfe/Küche/Gesundheit).
   assert.match(subTabs, /\.sub-tab\s*\{[\s\S]*height:\s*var\(--target-base\)/);
-  assert.match(budget, /\.budget-nav__today\s*\{[\s\S]*min-height:\s*var\(--target-lg\)/);
+  // „Aktuell" (Budget) bezieht seine 48px seit dem Buttonform-Fix aus .btn -
+  // der Knopf war eine handkopierte .btn--secondary mit --radius-sm und trug
+  // deshalb auch seine Zielgroesse selbst. Geprueft wird die ZUSAGE (48px), und
+  // die steht jetzt an ihrem einen Ort; das Modul-CSS darf sie nicht kleiner
+  // ueberschreiben.
+  assert.match(layout, /\n\.btn\s*\{[\s\S]*min-height:\s*var\(--target-lg\)/);
+  assert.doesNotMatch(budget, /\.budget-nav__today\s*\{[^}]*min-height/);
   assert.match(
     contacts,
     /@media \(max-width:\s*767px\)[\s\S]*\.contact-filter-chip\s*\{[\s\S]*min-height:\s*var\(--target-lg\)/,
@@ -5037,7 +5043,9 @@ test('remaining audited mobile controls use 48px touch targets', () => {
   const settings = read('../public/styles/settings.css');
 
   assertRuleUsesToken(tasks, '.filter-toggle-btn', 'min-height', '--target-lg', '../public/styles/tasks.css');
-  assertRuleUsesToken(calendar, '.cal-toolbar__today', 'min-height', '--target-lg', '../public/styles/calendar.css');
+  // „Heute" (Kalender) holt seine 48px aus .btn - siehe die Begruendung beim
+  // Budget-Zwilling im Guard darueber.
+  assert.doesNotMatch(calendar, /\.cal-toolbar__today\s*\{[^}]*min-height/);
   // Der Darlehens-Statusfilter ist in .budget-segmented aufgegangen. Der Baustein
   // nimmt --target-base (44px Zeiger / 48px Finger) statt --target-lg fest: das
   // Kriterium ist die Zeigerfähigkeit, nicht die Viewport-Breite (tokens.css).
@@ -6990,6 +6998,38 @@ test('one button shape app-wide', () => {
     }
   }
   assert.deepEqual(offenders, []);
+
+  // ZWEITE HAELFTE, nachgeruestet in Runde 5: der Guard oben prueft nur
+  // Selektoren, die `.btn` ENTHALTEN - und lief damit an drei Knoepfen vorbei,
+  // die die Kapsel gar nicht erst beanspruchten. „Aktuell" (Budget), „Heute"
+  // (Kalender) und „Heute" (Wochenplan) waren dieselbe Funktion in drei Formen
+  // und zwei Farbgrammatiken; der Budget-Knopf war Deklaration fuer Deklaration
+  // eine .btn--secondary, nur mit --radius-sm statt der Kapsel. Eine Allowlist
+  // dieser drei haette den vierten nicht gefangen (Handoff §6).
+  //
+  // Geprueft wird deshalb die SIGNATUR der geteilten Variante: wer ihre Kante
+  // (--color-border) mit ihrer Tinte (Modul-/App-Akzent) kombiniert, baut sie
+  // nach und gehoert auf die Klasse. Bewusst nicht geprueft wird „jedes
+  // klickbare Element traegt die Kapsel" - Toggles, Checkboxen, Wochentags-
+  // waehler und Drop-Ziele sind Griffe mit eigener Form, und eine Regel, die
+  // sie einzeln ausnehmen muesste, waere wieder eine Allowlist. Fuer die
+  // Gegenprobe am gerenderten Dokument gibt es
+  // .impeccable/redesign-tools/button-shapes.mjs.
+  const handCopied = [];
+  for (const name of files) {
+    const css = read(`../public/styles/${name}`).replace(/\/\*[\s\S]*?\*\//g, '');
+    for (const m of css.matchAll(/(?:^|[}])\s*([^{}]*)\{([^}]*)\}/g)) {
+      const [, selector, body] = m;
+      if (/\.btn(?![\w-])|\.btn--/.test(selector)) continue;
+      if (!/border:\s*[\d.]+px\s+solid\s+var\(--color-border\)/.test(body)) continue;
+      if (!/color:\s*var\(--(?:module-accent|active-module-accent|color-accent)/.test(body)) continue;
+      handCopied.push(
+        `${name}: ${selector.trim().replace(/\s+/g, ' ')} baut .btn--secondary nach `
+        + '- die Klasse nehmen statt die Grammatik kopieren',
+      );
+    }
+  }
+  assert.deepEqual(handCopied, []);
 });
 
 // --------------------------------------------------------------------------

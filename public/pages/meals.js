@@ -233,7 +233,7 @@ export async function render(container, { user }) {
           </button>
         </div>
         <div class="page-toolbar__actions">
-          <button class="week-nav__today" id="week-today">${t('meals.today')}</button>
+          <button class="btn btn--secondary week-nav__today" id="week-today">${t('meals.today')}</button>
           <!-- Nur Desktop: klappt die Rezept-Spalte weg, damit alle sieben
                Tagesspalten in voller Breite ins Board passen. -->
           <button class="btn btn--icon week-nav__rail-toggle" id="rail-toggle"

@@ -422,7 +422,7 @@ export async function render(container, { user }) {
           </button>
           <!-- „Aktuell" ist ein Reset, kein Navigationsschritt: hinter dem
                Stepper statt zwischen Pfeil und Wert. -->
-          <button class="budget-nav__today" id="budget-today">${t('budget.currentMonth')}</button>
+          <button class="btn btn--secondary budget-nav__today" id="budget-today">${t('budget.currentMonth')}</button>
           <span class="budget-nav__note" id="budget-period-note" hidden></span>
         </div>
         ${state.budgetMode === 'personal' ? `

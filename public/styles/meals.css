@@ -108,21 +108,18 @@
   color: var(--module-accent);
 }
 
-/* Akzent-Text auf akzent-getöntem Grund folgt der Hauskonvention aus
- * .pantry-badge--danger: der rohe Ton scheitert dort am Kontrast, weil der
- * Grund eine Tönung derselben Farbe ist. Roh gemessen ergab #C2410C auf
- * 12 % #C2410C nur 3.92:1 bei 14px/500 - unter den geforderten 4.5. Mit 30 %
- * Ink beigemischt sind es 6.5:1, ohne dass die Modul-Identität verloren geht. */
+/* „Heute" trägt .btn.btn--secondary - die Kapsel und die Outline-Grammatik, die
+ * auch „Aktuell" im Budget und „Heute" im Kalender führen. Vorher war es eine
+ * getönte Fläche mit --radius-sm: dieselbe Funktion in einer dritten Form, und
+ * auf getöntem Grund brauchte der Text zusätzlich einen eigenen Ink-Mix, um AA
+ * zu halten (#C2410C auf 12 % #C2410C ergab roh nur 3.92:1). Die transparente
+ * Kapsel stellt die Frage nicht mehr: der rohe Modulton steht auf dem
+ * Seitengrund und misst dort 4.64:1 light (#C2410C auf #F2F2F7) und 8.74:1 dark
+ * (#FB923C auf #0A0A0C). Die Zwillinge messen 4.90/10.63:1 (Budget) und
+ * 6.37/7.27:1 (Kalender). (Finish-Review Runde 4, Befund 4.) */
 .week-nav__today {
-  font-size: var(--text-sm);
-  color: color-mix(in srgb, var(--module-accent) 70%, var(--color-text-primary));
-  font-weight: var(--font-weight-medium);
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--module-accent) 12%, transparent);
-  cursor: pointer;
-  border: none;
-  white-space: nowrap;
+  padding: var(--space-1) var(--space-3);
+  color: var(--module-accent);
   /* Gemessen 57x29 und damit unter --target-md, der projekteigenen
    * Desktop-Untergrenze (Critique 2026-07-29). */
   min-height: var(--target-md);
