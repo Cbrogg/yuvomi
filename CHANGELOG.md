@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.86.3] - 2026-08-06
+
+### Fixed
+
+- Archiving a task no longer un-finishes it. Filing away and finishing are two different statements, but they shared one field, so archiving a completed task overwrote its "done": the task came back as unfinished, the reward points it had earned were withdrawn along with it, and it then turned up in "Today at a glance" as something still to do - where tapping it led nowhere, because every list hides the archive. A task now keeps the status it had while it is filed away, and comes back exactly as it went in. The archive is left out of the dashboard, the calendar chips and the overdue badge for the same reason: a filed-away task is not waiting for anyone. Existing archived tasks are read as finished, since what they were before is no longer recorded (#688)
+
 ## [1.86.2] - 2026-08-06
 
 ### Fixed
