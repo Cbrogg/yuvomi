@@ -389,7 +389,7 @@ Click **Apply**. Once the container is running, click the Yuvomi icon → **WebU
 
 All configuration happens in the `.env` file. The container reads these values on startup.
 
-> **Self-hosting under the GDPR?** Several optional integrations below (weather, Google/OIDC SSO, WebDAV backup, WebDAV document storage) can send data to third parties, some outside the EU/EEA. See [Privacy for self-hosters](PRIVACY-FOR-SELFHOSTERS.md) for per-service third-country assessments, data-processing-agreement notes and log-retention guidance before enabling them.
+> **Self-hosting under the GDPR?** Several optional integrations below (weather, Google/OIDC SSO, the Outlook push via Microsoft Graph, WebDAV backup, WebDAV document storage) can send data to third parties, some outside the EU/EEA. See [Privacy for self-hosters](PRIVACY-FOR-SELFHOSTERS.md) for per-service third-country assessments, data-processing-agreement notes and log-retention guidance before enabling them. The Outlook push deserves a look before you switch it on: event titles, notes and locations leave the server as free text, assigned members' names travel in the title, and a personal Microsoft account cannot be covered by a data-processing agreement (see section 2.16 there).
 
 ### Server
 
@@ -700,7 +700,7 @@ One-way push **Yuvomi → Outlook.com** for personal Microsoft accounts (outlook
 7. Set the three `MS_*` variables in `.env`, restart Yuvomi, then connect each family member's account under **Settings → Synchronization → More providers → Outlook** (admin only).
 8. After connecting, no calendars are enabled yet. Recommended setup: create a **dedicated calendar in Outlook** (e.g. "Yuvomi"), refresh the calendar list, pick it as the **auto-sync target calendar**, and choose which family member the account belongs to — from then on all Yuvomi events visible to that person are pushed there automatically, with assigned members appended to the title (`Dinner (Anna, Ben)`). Alternatively (or additionally), individual events can pick an explicit Outlook target in the event dialog; an explicit target overrides the auto-sync calendar for that event.
 
-**Limitations (one-way push):** recurring events support Yuvomi's RRULE subset only; excluded single occurrences (EXDATE) are not propagated; times are pushed with the `Europe/Berlin` timezone (parity with the Google outbound sync); no attendees, reminders, attachments, or colors. Refresh tokens for personal accounts expire after ~90 days of inactivity — the account then shows a "reconnect" button.
+**Limitations (one-way push):** recurring events support Yuvomi's RRULE subset only; excluded single occurrences (EXDATE) are not propagated; times are pushed with the `Europe/Berlin` timezone (parity with the Google outbound sync) — this is a fixed value and does **not** follow your `TZ` setting; no attendees, reminders, attachments, or colors. Refresh tokens for personal accounts expire after ~90 days of inactivity — the account then shows a "reconnect" button.
 
 ### Apple Calendar Sync — Legacy Single-Account (Optional)
 
@@ -1229,6 +1229,46 @@ iCloud account whose calendars sync perfectly can still offer no usable reminder
 setting on either side changes that. The reminders page states this on every iCloud
 account. If you want your Apple tasks in Yuvomi, keep them in a CalDAV-backed list (Nextcloud,
 Radicale, Baikal) and subscribe to it from the Reminders app's "Other" account rather than iCloud.
+
+</details>
+
+<details>
+<summary>Outlook events are not appearing</summary>
+
+Work through this in order — each step rules out one of the four things that stop a push.
+
+**1. Is the provider configured at all?** All three of `MS_CLIENT_ID`, `MS_CLIENT_SECRET` and
+`MS_REDIRECT_URI` must be set; with one missing, the Outlook panel stays inactive and nothing is
+ever sent. `MS_REDIRECT_URI` has to match the redirect URI in the Entra app registration
+character for character, including the scheme and any trailing path.
+
+**2. Is a target calendar picked?** Connecting an account enables nothing on its own — newly
+discovered calendars start switched **off** by design, so that the first push cannot land in a
+personal main calendar unannounced. Pick an auto-sync target calendar **and** the family member
+the account belongs to; without both, the automatic push does not run at all. A calendar that
+Microsoft reports as read-only is skipped even when enabled.
+
+**3. Which events are eligible?** Only local events are pushed. Appointments that came in from
+Google, CalDAV, iCloud or an ICS subscription are excluded on purpose — they usually already
+exist in Outlook natively, and pushing them would duplicate them. The auto-sync also honours
+per-event visibility: an event the chosen family member is not allowed to see is not pushed to
+their calendar.
+
+**4. Has the sign-in expired?** Refresh tokens for personal Microsoft accounts expire after about
+90 days of inactivity, and the client secret of the app registration expires after at most 24
+months. In the first case the account shows a "reconnect" button; in the second, every account
+stops working at once and a new secret has to be created in Entra and written to
+`MS_CLIENT_SECRET`.
+
+A push is not immediate: it happens on the shared sync run (`SYNC_INTERVAL_MINUTES`, 15 minutes by
+default), right after connecting, and whenever an admin triggers it manually. The same applies in
+reverse — deleting an event in Yuvomi removes it from Outlook on the *next* run, not instantly.
+
+Editing a pushed event in Outlook is pointless: Yuvomi is the source of truth and resets it to its
+own state on the next run, and re-creates it if you delete it there. To get rid of an event for
+good, delete it in Yuvomi. Note also that disconnecting an account leaves everything already
+pushed behind in Outlook — clear those events in Yuvomi *before* disconnecting, or delete them by
+hand in Outlook afterwards.
 
 </details>
 
