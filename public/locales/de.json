@@ -3219,6 +3219,8 @@
                 "bp": "Blutdruck",
                 "glucose": "Blutzucker",
                 "weight": "Gewicht",
+                "height": "Größe",
+                "headCircumference": "Kopfumfang",
                 "spo2": "Sauerstoffsättigung",
                 "temp": "Temperatur",
                 "sleep": "Schlaf",

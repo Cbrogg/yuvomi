@@ -3219,6 +3219,8 @@
                 "bp": "혈압",
                 "glucose": "혈당",
                 "weight": "체중",
+                "height": "키",
+                "headCircumference": "머리둘레",
                 "spo2": "산소 포화도",
                 "temp": "체온",
                 "sleep": "수면",

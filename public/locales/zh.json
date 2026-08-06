@@ -3219,6 +3219,8 @@
                 "bp": "血压",
                 "glucose": "血糖",
                 "weight": "体重",
+                "height": "身高",
+                "headCircumference": "头围",
                 "spo2": "血氧饱和度",
                 "temp": "体温",
                 "sleep": "睡眠",

@@ -27,9 +27,25 @@ const {
 // Metrik-Definitionen
 // --------------------------------------------------------
 
-test('VITAL_TYPES enthält alle sieben Metriken', () => {
-  assert.deepEqual(VITAL_TYPES, ['bp', 'glucose', 'weight', 'spo2', 'temp', 'sleep', 'mood']);
-  assert.equal(VITAL_METRICS.length, 7);
+test('VITAL_TYPES enthält alle neun Metriken', () => {
+  assert.deepEqual(VITAL_TYPES, [
+    'bp', 'glucose', 'weight', 'height', 'head_circumference', 'spo2', 'temp', 'sleep', 'mood',
+  ]);
+  assert.equal(VITAL_METRICS.length, 9);
+});
+
+// #683: Körpermaße für Säuglinge. Rohe Messwerte ohne Bewertung - hier steht,
+// was das heißt, damit eine spätere Perzentil-Idee als bewusste Erweiterung
+// erkennbar ist und nicht als vergessenes Detail.
+test('Körpermaße sind schlichte Längen in derselben Einheitenwahl', () => {
+  for (const type of ['height', 'head_circumference']) {
+    const m = vitalMetric(type);
+    assert.ok(m, `${type} fehlt`);
+    assert.deepEqual(m.channels, ['value_num'], `${type}: ein Kanal`);
+    assert.deepEqual(m.units, ['cm', 'in'], `${type}: metrisch und imperial`);
+    assert.equal(m.format, undefined, `${type}: kein Sonderformat`);
+    assert.equal(m.domain, undefined, `${type}: keine geklemmte Achse - ein Kind waechst aus jeder`);
+  }
 });
 
 test('Blutdruck belegt drei Kanäle, übrige Metriken einen', () => {

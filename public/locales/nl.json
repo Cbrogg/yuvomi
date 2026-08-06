@@ -3219,6 +3219,8 @@
                 "bp": "Bloeddruk",
                 "glucose": "Bloedsuiker",
                 "weight": "Gewicht",
+                "height": "Lengte",
+                "headCircumference": "Hoofdomtrek",
                 "spo2": "Zuurstofsaturatie",
                 "temp": "Temperatuur",
                 "sleep": "Slaap",

@@ -3219,6 +3219,8 @@
                 "bp": "Blood pressure",
                 "glucose": "Blood glucose",
                 "weight": "Weight",
+                "height": "Height",
+                "headCircumference": "Head circumference",
                 "spo2": "Oxygen saturation",
                 "temp": "Temperature",
                 "sleep": "Sleep",

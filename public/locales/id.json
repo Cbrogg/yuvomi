@@ -3219,6 +3219,8 @@
                 "bp": "Tekanan darah",
                 "glucose": "Gula darah",
                 "weight": "Berat badan",
+                "height": "Tinggi badan",
+                "headCircumference": "Lingkar kepala",
                 "spo2": "Saturasi oksigen",
                 "temp": "Suhu",
                 "sleep": "Tidur",

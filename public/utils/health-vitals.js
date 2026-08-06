@@ -75,6 +75,27 @@ export const VITAL_METRICS = Object.freeze([
     channelLabelKeys: ['health.vitals.metric.weight'],
     units: ['kg', 'lb'],
   },
+  // Körpermaße (#683). Stehen bewusst neben dem Gewicht: bei einem Säugling
+  // werden die drei gemeinsam erhoben, und wer eines eintragen will, sucht die
+  // anderen daneben. Beide bleiben rohe Messwerte ohne Bewertung - eine
+  // Perzentile braucht Referenzdaten nach Geschlecht und Alter und wäre ein
+  // eigenes Vorhaben, keine Eigenschaft der Metrik.
+  {
+    type: 'height',
+    icon: 'ruler',
+    labelKey: 'health.vitals.metric.height',
+    channels: ['value_num'],
+    channelLabelKeys: ['health.vitals.metric.height'],
+    units: ['cm', 'in'],
+  },
+  {
+    type: 'head_circumference',
+    icon: 'circle-dot',
+    labelKey: 'health.vitals.metric.headCircumference',
+    channels: ['value_num'],
+    channelLabelKeys: ['health.vitals.metric.headCircumference'],
+    units: ['cm', 'in'],
+  },
   {
     type: 'spo2',
     icon: 'activity',

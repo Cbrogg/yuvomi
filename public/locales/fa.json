@@ -3219,6 +3219,8 @@
                 "bp": "فشار خون",
                 "glucose": "قند خون",
                 "weight": "وزن",
+                "height": "قد",
+                "headCircumference": "دور سر",
                 "spo2": "اشباع اکسیژن",
                 "temp": "دما",
                 "sleep": "خواب",

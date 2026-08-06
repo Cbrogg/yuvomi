@@ -3219,6 +3219,8 @@
                 "bp": "Tensión arterial",
                 "glucose": "Glucosa",
                 "weight": "Peso",
+                "height": "Estatura",
+                "headCircumference": "Perímetro cefálico",
                 "spo2": "Saturación de oxígeno",
                 "temp": "Temperatura",
                 "sleep": "Sueño",

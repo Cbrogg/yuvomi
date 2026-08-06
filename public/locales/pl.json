@@ -3219,6 +3219,8 @@
                 "bp": "Ciśnienie krwi",
                 "glucose": "Poziom cukru",
                 "weight": "Waga",
+                "height": "Wzrost",
+                "headCircumference": "Obwód głowy",
                 "spo2": "Saturacja tlenem",
                 "temp": "Temperatura",
                 "sleep": "Sen",

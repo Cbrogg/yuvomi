@@ -3219,6 +3219,8 @@
                 "bp": "Huyết áp",
                 "glucose": "Đường huyết",
                 "weight": "Cân nặng",
+                "height": "Chiều cao",
+                "headCircumference": "Vòng đầu",
                 "spo2": "Độ bão hòa oxy",
                 "temp": "Nhiệt độ",
                 "sleep": "Giấc ngủ",

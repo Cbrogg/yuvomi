@@ -3219,6 +3219,8 @@
                 "bp": "Presyon ng dugo",
                 "glucose": "Asukal sa dugo",
                 "weight": "Timbang",
+                "height": "Taas",
+                "headCircumference": "Sukat ng ulo",
                 "spo2": "Saturasyon ng oksiheno",
                 "temp": "Temperatura",
                 "sleep": "Tulog",

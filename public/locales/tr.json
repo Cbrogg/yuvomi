@@ -3219,6 +3219,8 @@
                 "bp": "Kan basıncı",
                 "glucose": "Kan şekeri",
                 "weight": "Kilo",
+                "height": "Boy",
+                "headCircumference": "Baş çevresi",
                 "spo2": "Oksijen satürasyonu",
                 "temp": "Sıcaklık",
                 "sleep": "Uyku",

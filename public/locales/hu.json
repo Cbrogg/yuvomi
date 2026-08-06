@@ -3219,6 +3219,8 @@
                 "bp": "Vérnyomás",
                 "glucose": "Vércukor",
                 "weight": "Testsúly",
+                "height": "Testmagasság",
+                "headCircumference": "Fejkörfogat",
                 "spo2": "Oxigéntelítettség",
                 "temp": "Hőmérséklet",
                 "sleep": "Alvás",

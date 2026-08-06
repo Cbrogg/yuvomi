@@ -3219,6 +3219,8 @@
                 "bp": "Krevní tlak",
                 "glucose": "Krevní cukr",
                 "weight": "Hmotnost",
+                "height": "Výška",
+                "headCircumference": "Obvod hlavy",
                 "spo2": "Saturace kyslíkem",
                 "temp": "Teplota",
                 "sleep": "Spánek",

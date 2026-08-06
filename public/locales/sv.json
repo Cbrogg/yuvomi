@@ -3219,6 +3219,8 @@
                 "bp": "Blodtryck",
                 "glucose": "Blodsocker",
                 "weight": "Vikt",
+                "height": "Längd",
+                "headCircumference": "Huvudomfång",
                 "spo2": "Syremättnad",
                 "temp": "Temperatur",
                 "sleep": "Sömn",
