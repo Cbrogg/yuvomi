@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.87.0] - 2026-08-06
+
+### Added
+
+- Shopping items can now be reordered by hand within their category, by dragging the handle in the row or with the arrow keys once it has focus. The list groups by aisle and that order was already yours to arrange in the category manager, but inside an aisle the items stayed in the order they were typed, which is not the order a shop is walked in. New items keep landing at the end of their category, including the ones that arrive from the meal plan, a recipe, the pantry or a synced reminder list - the position is assigned by the database itself, so no path can forget it. Moving an item to another category, and the items that move along when a category is deleted, join the end of their new group rather than wedging themselves between what is already sorted there. Checked-off items stay at the bottom of their aisle and are exempt: they are done, and a drag on them would have sprung back on the next load. Existing lists keep the order they show today (#678)
+
 ## [1.86.3] - 2026-08-06
 
 ### Fixed

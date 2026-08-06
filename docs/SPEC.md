@@ -192,10 +192,23 @@ Points-and-rewards system. A member earns a task's `points` when the task is mar
 | added_from_meal | INTEGER | FK → Meals, nullable |
 | notes | TEXT | Optional free-text note (brand, size, instructions); searchable |
 | url | TEXT | Optional http(s) product/store link (scheme-validated) |
+| sort_order | INTEGER | NOT NULL DEFAULT 0 — manual rank **within (list, category)** (migration v133, #678) |
 
 Notes and links are edited in a per-item detail drawer (progressive disclosure); the quick-add row
 stays name/quantity/category only. A subtle inline icon marks items that carry a note or link. The
 note is indexed in the global search.
+
+`sort_order` is the rank inside one aisle; the aisle order itself is
+`shopping_categories.sort_order`. Read order is category → `is_checked` → `sort_order` →
+`created_at`, so checked items stay at the end of their group regardless of rank. Ranks start at 1:
+0 means "not yet placed" and is the marker an `AFTER INSERT` trigger watches, which appends new rows
+to the end of their category. The trigger, rather than the callers, owns that rule because nine
+insert sites across six modules (shopping, meals, recipes, housekeeping, `mcp/tools`,
+`caldav-reminders-sync`) write into this table, and a row left at 0 would silently jump to the top.
+Changing an item's category re-ranks it to the end of the target, as does the fallback move when a
+category is deleted — that offset is computed per list *before* the update, since a subquery would
+already count the row it is moving. Migration v133 backfills existing rows by `created_at`, so the
+order a list shows today survives the upgrade.
 
 ### Shopping Categories
 Custom, household-wide category list for shopping items. Replaces the old hardcoded category set.
@@ -1835,6 +1848,7 @@ Skeleton loading instead of spinners (the skeleton mirrors the default-visible w
 - Integration with meal plan: "Add ingredients to shopping list" transfers with source reference
 - **Bulk import from meal plan (v1.3.0):** a "From meal plan" action in the list header opens a date-range dialog (defaults to the next 7 days) and imports the ingredients of every planned meal in that range into the active list. Repeated ingredients are aggregated before insertion — numeric quantities with a matching unit are summed, purely textual quantities collapse to a `N × …` note. Already-transferred ingredients are skipped via the existing `on_shopping_list` flag (`POST /api/v1/shopping/:listId/import-meal-plan`).
 - Checked items shown with strikethrough + moved to bottom
+- **Manual item order within an aisle (v1.87.0, #678):** every row carries a drag handle next to its edit and delete actions. Dragging reorders within the category group only — a drag across groups would be a category change, which the item dialog already does, and ranks are per category anyway. The handle is a real button and takes ArrowUp/ArrowDown once focused, sharing one persistence path with the drag; that keyboard route is required of every `makeSortable` caller (see the header of `public/utils/sortable.js`) and is guarded in `test:frontend-audit`. Its `aria-label` carries the position, and a `role="status"` live region announces each move, reusing `category.reorderAnnounce`. Checked rows are filtered out of the drag and their handle is disabled — they sort last in their group regardless of rank. A category holding a single row hides its handle via `:only-child`. `PATCH /api/v1/shopping/:listId/items/reorder` takes `{ category, order }` and requires the **complete** group: a partial list would leave the omitted ranks colliding with the newly assigned ones. Requests are serialised per category with at most one follow-up queued, so rapid moves settle in the order they were made instead of letting the arrival order at the server decide; the follow-up reads the DOM when it starts, so any number of moves costs two requests. The list id is captured when a move is queued, so switching lists mid-flight neither misroutes the write nor overwrites the new list's state.
 - "Clear list" = remove checked items only
 - Autocomplete from previous entries (local)
 - **Category management lives in Shopping** (no longer in Settings): a "Manage categories" action opens the shared `yuvomi-category-manager` modal (also reachable directly via `/shopping?manage=categories`) for add, rename, reorder, and delete - the same component as Tasks, Contacts and Budget, resolving default category names through their localization and preserving the API's last-category-deletion guard. The legacy Settings → Shopping tab redirects here.
