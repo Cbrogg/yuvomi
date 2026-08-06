@@ -452,13 +452,16 @@ export function loadBudgetMeta() {
 
   const expenseCategories = categories.filter((c) => c.type === 'expense');
   const incomeCategories = categories.filter((c) => c.type === 'income');
-  const expenseSubcategories = {};
+  // Nach Kategorie gruppiert, über beide Typen: Subkategorien gehören seit
+  // #691 auch an Einnahmen-Kategorien. Der Schlüssel ist die Kategorie, nicht
+  // ihr Typ - eine Aufteilung nach expense/income hätte hier keinen Leser.
+  const subcategoriesByCategory = {};
   for (const sub of subcategories) {
-    if (!expenseSubcategories[sub.category_key]) expenseSubcategories[sub.category_key] = [];
-    expenseSubcategories[sub.category_key].push(sub);
+    if (!subcategoriesByCategory[sub.category_key]) subcategoriesByCategory[sub.category_key] = [];
+    subcategoriesByCategory[sub.category_key].push(sub);
   }
 
-  return { categories, expenseCategories, incomeCategories, expenseSubcategories };
+  return { categories, expenseCategories, incomeCategories, subcategories: subcategoriesByCategory };
 }
 
 export function validCategoryKeys() {
@@ -484,7 +487,6 @@ export function defaultSubcategory(category) {
 }
 
 export function validateSubcategory(category, subcategory) {
-  if (!validExpenseCategoryKeys().includes(category)) return '';
   if (!subcategory) return defaultSubcategory(category);
   const row = db.get().prepare(`
     SELECT 1 FROM budget_subcategories WHERE category_key = ? AND key = ?
