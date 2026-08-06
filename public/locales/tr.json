@@ -2165,6 +2165,7 @@
         "notificationChannelNtfyToken": "ntfy tokenı",
         "notificationChannelNtfyUsername": "ntfy kullanıcı adı",
         "notificationChannelNtfyPassword": "ntfy parolası",
+        "notificationChannelWebhookToken": "Bearer tokenı (isteğe bağlı)",
         "notificationChannelSave": "Kanalı kaydet",
         "notificationChannelSaved": "Kanal kaydedildi.",
         "notificationChannelTest": "Test gönder",

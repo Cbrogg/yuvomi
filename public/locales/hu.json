@@ -2165,6 +2165,7 @@
         "notificationChannelNtfyToken": "ntfy token",
         "notificationChannelNtfyUsername": "ntfy felhasználónév",
         "notificationChannelNtfyPassword": "ntfy jelszó",
+        "notificationChannelWebhookToken": "Bearer token (opcionális)",
         "notificationChannelSave": "Csatorna mentése",
         "notificationChannelSaved": "Csatorna mentve.",
         "notificationChannelTest": "Teszt küldése",
