@@ -934,10 +934,32 @@ html:has(.search-overlay--visible) yuvomi-install-prompt {
 /* Aktive Icons als „filled variant": Lucide bleibt Stroke-Bibliothek, die
  * Tab-Bar-Sprache des Kanons (gefülltes Symbol im aktiven Tab) entsteht über
  * eine getönte Innenfüllung unter vollem Stroke. Wirkt nur auf geschlossene
- * Pfade; Linien-Icons bleiben unverändert. */
+ * Pfade; Linien-Icons bleiben unverändert.
+ *
+ * DIE REGEL GILT FÜR JEDEN AUSGEWÄHLTEN ZUSTAND, nicht nur für die Tab-Bar
+ * (Redesign Runde 4, C-6). Bis dahin trug ausgewählt-sein in Segmenten, Tabs
+ * und Chips allein die FLÄCHE; das Symbol darin blieb dasselbe wie im
+ * unausgewählten Nachbarn. Apple wechselt an dieser Stelle die Symbolvariante,
+ * und der Kanon kennt dafür nur eine Sprache - also spricht sie überall.
+ *
+ * Ein zweiter Kanal, kein Ersatz: die Fläche trägt den Zustand weiter, die
+ * Füllung verstärkt ihn. Kontrast kann sie nicht kosten - sie macht das Symbol
+ * dichter, nicht blasser, und zwar in seiner eigenen Farbe. */
 .nav-item[aria-current="page"] .nav-item__icon-well svg,
 .nav-item--active .nav-item__icon-well svg,
-.more-item[aria-current="page"] .more-item__icon-well svg {
+.more-item[aria-current="page"] .more-item__icon-well svg,
+.sub-tab--active svg,
+.list-tab--active svg,
+.kitchen-tab--active svg,
+.filter-chip--active svg,
+.contact-filter-chip--active svg,
+.group-toggle__btn--active svg,
+.documents-view-toggle__btn--active svg,
+.budget-segmented__item.is-active svg,
+.cal-toolbar__view-btn--active svg,
+.cal-toolbar__layer-btn--active svg,
+.theme-toggle__btn--active svg,
+.perm-modeswitch__btn.is-active svg {
   /* 30 % statt 16 %: auf Tab-Bar-Größe (20px) las die schwächere Füllung
    * weiter als Outline (Finish-Verdict Fundament-Phase, Fix 8). */
   fill: color-mix(in srgb, currentColor 30%, transparent);
