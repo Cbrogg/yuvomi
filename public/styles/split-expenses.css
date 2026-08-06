@@ -97,6 +97,9 @@
 .split-groups-panel {
   padding: var(--space-3);
   min-height: 0;
+  /* Träger der Zeilenliste (tokens.css): die Zeilen laufen bis an die Kante,
+   * also muss der Träger sie an seinem Radius beschneiden. */
+  overflow: hidden;
   /* Grid-Item mit min-width:auto wächst sonst auf die Breite der breitesten
    * Gruppenkarte (240px + Inhalt) und schiebt Suchfeld und Statusfilter im
    * Einspalten-Layout aus dem Viewport. */
@@ -178,7 +181,12 @@
 }
 
 .split-group {
-  width: 100%;
+  /* Die Zeile läuft bis an die Trägerkante: das Panel trägt --space-3 Polster,
+   * und eine Zeile ohne Radius, die davor stehenbleibt, wäre ein rechtwinkliges
+   * Farbrechteck in einer runden Karte - der Kasten im Kasten in neuer Form.
+   * Das Textpolster kommt deshalb aus der Zeile selbst zurück. */
+  width: calc(100% + var(--space-3) * 2);
+  margin-inline: calc(var(--space-3) * -1);
   min-height: 64px;
   padding: var(--space-2) var(--space-3);
   display: flex;

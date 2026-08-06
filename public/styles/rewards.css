@@ -226,7 +226,11 @@
 .rw-pending-panel {
   padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-lg);
-  background: color-mix(in srgb, var(--module-accent) 8%, var(--color-surface));
+  /* 16 %, nicht 8: gemessen hebt sich die Toenung erst dort in BEIDEN Themes
+   * wahrnehmbar von der Karte ab (1.25:1 light / 1.29:1 dark gegen 1.12:1 bei
+   * 8 %, wo das Signal im Dark verschwand). Es ist zugleich das eine
+   * Toenungsrezept dieser Welt - dasselbe wie Notizkarte und Icon-Kachel. */
+  background: color-mix(in srgb, var(--module-accent) 16%, var(--color-surface));
   box-shadow: var(--shadow-sm);
 }
 .rw-pending-list { list-style: none; margin: 0; padding: 0; }

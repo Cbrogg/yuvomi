@@ -179,7 +179,7 @@ export async function render(target, { user } = {}) {
         <label class="subscriptions-filter-field">
           <span class="subscriptions-filter-field__label">${t('subscriptions.filterLabelStatus')}</span>
           <select class="form-input subscriptions-filter" id="subscriptions-status-filter">
-            <option value="all">${t('subscriptions.statusAll')}</option>
+            <option value="all">${t('common.all')}</option>
             <option value="active">${t('subscriptions.statusActive')}</option>
             <option value="paused">${t('subscriptions.statusDisabled')}</option>
             <option value="completed">${t('subscriptions.completed')}</option>
@@ -230,14 +230,19 @@ export async function render(target, { user } = {}) {
 }
 
 function renderFilters() {
+  // Die Neutral-Option jedes Filters heisst „Alle", nicht „Alle Kategorien" /
+  // „Alle Zahlungsarten" / „Alle Status": das Feldlabel steht sichtbar darueber
+  // und der Wert wiederholte es nur. Die Wiederholung forderte fuer alle vier
+  // Selects dieselbe Breite und kappte am Ende den einzigen Wert, der wirklich
+  // Platz braucht (die Sortierung).
   const category = container.querySelector('#subscriptions-category-filter');
   const method = container.querySelector('#subscriptions-method-filter');
   setHtml(category, `
-    <option value="">${t('subscriptions.allCategories')}</option>
+    <option value="">${t('common.all')}</option>
     ${state.meta.categories.map((item) => `<option value="${item.id}">${esc(categoryLabel(item))}</option>`).join('')}
   `);
   setHtml(method, `
-    <option value="">${t('subscriptions.allPaymentMethods')}</option>
+    <option value="">${t('common.all')}</option>
     ${state.meta.payment_methods.map((item) => `<option value="${item.id}">${esc(item.name)}</option>`).join('')}
   `);
   category.value = state.categoryId;

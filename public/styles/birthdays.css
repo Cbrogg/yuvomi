@@ -53,7 +53,7 @@
  * getönte Zeilenfläche des 16-%-Rezepts statt Kante + Verlauf + Extraschatten -
  * in einem Träger ist die Fläche das einzige Mittel, das keine Kante braucht. */
 .birthday-item--today {
-  background: color-mix(in srgb, var(--module-accent) 12%, var(--color-surface));
+  background: color-mix(in srgb, var(--module-accent) 16%, var(--color-surface));
 }
 
 .birthday-item__body {

@@ -29,10 +29,12 @@
   display: grid;
   /* Suche · 4 beschriftete Filter · Zurücksetzen · 2 Icon-Aktionen
    * Die Filterspalten stehen auf minmax(0, …): mit `auto` wuchsen sie auf die
-   * längste Option („Nächstes Fälligkeitsdatum") und schoben die Leiste bei
-   * 1280px über die Content-Breite hinaus. Jetzt schrumpfen sie zuerst, und
-   * der gekappte Text bekommt seine Ellipse aus dem Feldkanon (layout.css). */
-  grid-template-columns: minmax(180px, 1.4fr) repeat(4, minmax(0, 1fr)) auto auto auto;
+   * längste Option und schoben die Leiste bei 1280px über die Content-Breite.
+   * Die Anteile sind aber NICHT gleich - die drei Neutral-Filter zeigen „Alle"
+   * und ein paar Kategorienamen, die Sortierung „Nächstes Fälligkeitsdatum".
+   * Gleiche Anteile hätten den einzigen Wert gekappt, der Platz braucht. */
+  grid-template-columns:
+    minmax(160px, 1.3fr) repeat(3, minmax(0, 0.85fr)) minmax(0, 1.7fr) auto auto auto;
   gap: var(--space-2);
   /* An der Unterkante ausrichten: die Filterfelder tragen jetzt eine Labelzeile
    * über dem Select, die Suche nicht — sonst stünden die Eingaben versetzt. */
