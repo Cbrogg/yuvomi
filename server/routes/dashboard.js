@@ -95,6 +95,10 @@ router.get('/', (req, res) => {
       FROM tasks t
       LEFT JOIN users u ON t.assigned_to = u.id
       WHERE t.status != 'done'
+        -- Abgelegtes gehört nicht in „Heute auf einen Blick" (#688): eine
+        -- archivierte Aufgabe ist aus dem Lauf genommen, und wer sie von hier aus
+        -- öffnete, fand sie in der Liste nicht wieder.
+        AND t.archived_at IS NULL
         AND ${visibilityWhere('t', 'task_assignments', 'task_id', '@me')}
       ORDER BY
         CASE WHEN __due_sort IS NOT NULL AND __due_sort < @now THEN 0 ELSE 1 END ASC,

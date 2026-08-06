@@ -214,14 +214,17 @@ test('Priorität überlebt den Roundtrip bandtreu, urgent bleibt urgent', () => 
   assert.strictEqual(mapVtodoPriority(9), 'low');
 });
 
-test('Status: erledigt gewinnt, in Arbeit und archiviert überleben ein NEEDS-ACTION', () => {
+test('Status: erledigt gewinnt, in Arbeit überlebt ein NEEDS-ACTION', () => {
   const open = { completed: false, status: 'needs-action' };
   assert.strictEqual(mapVtodoStatus({ completed: true, status: 'completed' }, 'open'), 'done');
   assert.strictEqual(mapVtodoStatus({ completed: false, status: 'in-process' }, 'open'), 'in_progress');
   assert.strictEqual(mapVtodoStatus(open, 'in_progress'), 'in_progress');
-  assert.strictEqual(mapVtodoStatus(open, 'archived'), 'archived');
   assert.strictEqual(mapVtodoStatus(open, 'done'), 'open', 'Wiederöffnen auf dem Server gewinnt');
   assert.strictEqual(mapVtodoStatus(open), 'open');
+  // Die Ablage steht seit #688 nicht mehr im Statusfeld - sie kann hier also
+  // weder ankommen noch überschrieben werden. Eine abgelegte Aufgabe trägt ihren
+  // echten Status, und der wird wie jeder andere abgeglichen.
+  assert.strictEqual(mapVtodoStatus(open, 'archived'), 'open');
 });
 
 test('Erledigt-Zustand wandert als STATUS, COMPLETED und PERCENT-COMPLETE', () => {

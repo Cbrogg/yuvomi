@@ -54,13 +54,21 @@ function listTasks(db, actorId, args) {
       AND ${visibilityWhere('t', 'task_assignments', 'task_id', '@me')}
   `;
   const params = { me: actorId };
+  // Das Archiv ist seit #688 eine eigene Achse (tasks.archived_at), kein
+  // Statuswert mehr. `status: 'archived'` bleibt als Eingabe erlaubt und meint
+  // unverändert „zeig mir die Ablage" - nur wird jetzt die Ablage gefragt und
+  // nicht das Statusfeld, das es dort nie sauber ausdrücken konnte.
   if (args.status) {
     const s = v.oneOf(args.status, ['open', 'in_progress', 'done', 'archived'], 'status');
     if (s.error) throw new ToolError(s.error);
-    sql += ' AND t.status = @status';
-    params.status = args.status;
+    if (args.status === 'archived') {
+      sql += ' AND t.archived_at IS NOT NULL';
+    } else {
+      sql += ' AND t.status = @status AND t.archived_at IS NULL';
+      params.status = args.status;
+    }
   } else {
-    sql += " AND t.status != 'archived'";
+    sql += ' AND t.archived_at IS NULL';
   }
   // Tag-Filter, gleiche Semantik wie GET /api/v1/tasks: mehrere Tags engen
   // UND-verknüpft ein, die Schreibweise zählt nicht.
@@ -497,7 +505,7 @@ const CORE_TOOLS = [
     inputSchema: {
       type: 'object',
       properties: {
-        status: { type: 'string', enum: ['open', 'in_progress', 'done', 'archived'], description: 'Filter by task status.' },
+        status: { type: 'string', enum: ['open', 'in_progress', 'done', 'archived'], description: 'Filter by task status. "archived" is not a status but the separate archive: it lists the filed-away tasks with whatever status they carry.' },
         tag: {
           type: 'array',
           items: { type: 'string' },

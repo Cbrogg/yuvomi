@@ -44,10 +44,11 @@ function mapVtodoPriority(p, current = null) {
 }
 
 // Lokale Zustände, die VTODO nicht ausdrückt und die ein „nicht erledigt" vom
-// Server deshalb nicht zurücksetzen darf. `archived` ist kein Erledigt-Zustand,
-// sondern eine lokale Ablage; `in_progress` schreibt kaum ein Client als
-// IN-PROCESS heraus.
-const LOCAL_OPEN_STATES = new Set(['in_progress', 'archived']);
+// Server deshalb nicht zurücksetzen darf: `in_progress` schreibt kaum ein Client
+// als IN-PROCESS heraus.
+// Die Ablage steht seit #688 nicht mehr im Statusfeld, sondern in archived_at -
+// der Sync fasst sie gar nicht mehr an und kann sie also auch nicht überschreiben.
+const LOCAL_OPEN_STATES = new Set(['in_progress']);
 
 /**
  * VTODO-Status → Yuvomi-Aufgabenstatus, unter Rücksicht auf den lokalen Stand:

@@ -34,12 +34,24 @@ const PRIORITIES = () => [
 
 const PRIO_ORDER = { urgent: 0, high: 1, medium: 2, low: 3, none: 4 };
 
+// Die Zustände, die eine Aufgabe im Lauf durchläuft. Das Archiv steht seit #688
+// NICHT mehr darunter: Ablegen und Erledigen sind zwei Aussagen, und solange sie
+// sich ein Feld teilten, löschte das Ablegen das Erledigt-Sein.
 const STATUSES = () => [
   { value: 'open',        label: t('tasks.statusOpen')       },
   { value: 'in_progress', label: t('tasks.statusInProgress') },
   { value: 'done',        label: t('tasks.statusDone')       },
-  { value: 'archived',    label: t('tasks.statusArchived')   },
 ];
+
+// In der Filterleiste bleibt das Archiv ein Wert neben den Status - dort ist es
+// eine Frage („was zeige ich?"), keine Eigenschaft. Der Server nimmt
+// `status=archived` genau dafür entgegen.
+const FILTER_STATUSES = () => [...STATUSES(), { value: 'archived', label: t('tasks.statusArchived') }];
+
+/** Liegt die Aufgabe in der Ablage? Einzige Stelle, die das entscheidet. */
+function isArchived(task) {
+  return !!task?.archived_at;
+}
 
 // Fallback-Kategorie (kanonischer Key). Kategorien sind seit #494 benutzer-
 // verwaltbar und werden aus /tasks/meta/options in state.categories geladen.
@@ -55,7 +67,7 @@ function catLabel(key) {
 }
 
 const PRIORITY_LABELS = () => Object.fromEntries(PRIORITIES().map((p) => [p.value, p.label]));
-const STATUS_LABELS   = () => Object.fromEntries(STATUSES().map((s)  => [s.value, s.label]));
+const STATUS_LABELS   = () => Object.fromEntries(FILTER_STATUSES().map((s) => [s.value, s.label]));
 
 // --------------------------------------------------------
 // Verknüpfte Dokumente (#503)
@@ -222,6 +234,7 @@ function renderSwipeRow(task, innerHtml) {
 function renderTaskCard(task, opts = {}) {
   const { expandedSubtasks = false, showCheckbox = false, isChecked = false } = opts;
   const isDone = task.status === 'done';
+  const archived = isArchived(task);
   const progress = task.subtask_total > 0
     ? Math.round((task.subtask_done / task.subtask_total) * 100)
     : null;
@@ -240,7 +253,7 @@ function renderTaskCard(task, opts = {}) {
     : '';
 
   return `
-    <div class="task-card ${isDone ? 'task-card--done' : ''}" data-task-id="${task.id}">
+    <div class="task-card ${isDone ? 'task-card--done' : ''} ${archived ? 'task-card--archived' : ''}" data-task-id="${task.id}">
       <div class="task-card__main">
         ${showCheckbox ? `
         <input type="checkbox" class="task-bulk-checkbox" data-task-id="${task.id}"
@@ -257,9 +270,10 @@ function renderTaskCard(task, opts = {}) {
             ${esc(task.title)}
           </button>
           <div class="task-card__meta">
+            ${archived ? `<span class="due-date task-card__archived"><i data-lucide="archive" class="icon-sm" aria-hidden="true"></i>${t('tasks.statusArchived')}</span>` : ''}
             ${renderPriorityBadge(task.priority)}
             ${renderStartDateBadge(task.start_date)}
-            ${renderDueDate(task.due_date, task.due_time, task.status === 'done' || task.status === 'archived')}
+            ${renderDueDate(task.due_date, task.due_time, isDone || archived)}
             ${task.is_recurring ? `<span class="due-date" aria-label="${t('tasks.recurring')}"><i data-lucide="repeat" class="icon-sm" aria-hidden="true"></i></span>` : ''}
             ${task.document_count > 0 ? `<span class="due-date task-card__docs" aria-label="${t('tasks.documentsCount', { count: task.document_count })}"><i data-lucide="paperclip" class="icon-sm" aria-hidden="true"></i>${task.document_count}</span>` : ''}
             ${renderVisibilityBadge(task.visibility)}
@@ -270,7 +284,7 @@ function renderTaskCard(task, opts = {}) {
 
         ${renderAvatarStack(task.assigned_users ?? [], { size: 28 })}
 
-        ${!(task.subtask_total > 0) && task.status !== 'archived' && !task.parent_task_id ? `
+        ${!(task.subtask_total > 0) && !archived && !task.parent_task_id ? `
         <button class="btn btn--ghost btn--icon btn--icon-sm task-card__inline-action" data-action="add-subtask" data-parent="${task.id}"
                 aria-label="${t('tasks.subtaskAdd')}" title="${t('tasks.subtaskAdd')}">
           <i data-lucide="list-plus" class="icon-md" aria-hidden="true"></i>
@@ -279,11 +293,12 @@ function renderTaskCard(task, opts = {}) {
                 aria-label="${t('tasks.editButton')}">
           <i data-lucide="pencil" class="icon-md" aria-hidden="true"></i>
         </button>
-        ${task.status !== 'archived' ? `
-        <button class="btn btn--ghost btn--icon btn--icon-sm task-card__inline-action" data-action="archive-task" data-id="${task.id}"
-                aria-label="${t('tasks.archiveButton')}">
-          <i data-lucide="archive" class="icon-md" aria-hidden="true"></i>
-        </button>` : ''}
+        <button class="btn btn--ghost btn--icon btn--icon-sm task-card__inline-action"
+                data-action="${archived ? 'unarchive-task' : 'archive-task'}" data-id="${task.id}"
+                aria-label="${archived ? t('tasks.unarchiveButton') : t('tasks.archiveButton')}"
+                title="${archived ? t('tasks.unarchiveButton') : t('tasks.archiveButton')}">
+          <i data-lucide="${archived ? 'archive-restore' : 'archive'}" class="icon-md" aria-hidden="true"></i>
+        </button>
       </div>
 
       ${progress !== null ? `
@@ -774,6 +789,9 @@ function taskQuery() {
   // ein Tag mit Komma im Namen am Server nicht in zwei zerfällt; bei den übrigen
   // Achsen, weil sie seit #671 mehrere Werte tragen (ODER-verknüpft).
   if (state.viewMode !== 'kanban') state.filters.status.forEach((v) => params.append('status', v));
+  // Im Kanban ist die Ablage eine Spalte — sie muss also mitkommen, obwohl der
+  // Server sie sonst ausblendet (#688).
+  else params.set('archived', '1');
   state.filters.priority.forEach((v) => params.append('priority', v));
   state.filters.assigned_to.forEach((v) => params.append('assigned_to', v));
   state.filters.tags.forEach((tag) => params.append('tag', tag));
@@ -804,6 +822,11 @@ async function refreshTags() {
 async function toggleTaskStatus(id, currentStatus) {
   const next = currentStatus === 'done' ? 'open' : 'done';
   await api.patch(`/tasks/${id}/status`, { status: next });
+}
+
+/** Ablegen bzw. zurückholen (#688) - der Status bleibt dabei, wie er war. */
+async function setTaskArchived(id, archived) {
+  await api.patch(`/tasks/${id}/archive`, { archived });
 }
 
 async function toggleSubtaskStatus(id, currentStatus) {
@@ -1037,8 +1060,9 @@ function wireTaskForm(panel, { task = null, container }) {
 // Aufgaben-Detailansicht
 // --------------------------------------------------------
 
-// Was aus dem aktuellen Status als Nächstes kommt. Archivierte Aufgaben führen
-// keine Weiterschaltung: sie sind aus dem Lauf genommen, nicht angehalten.
+// Was aus dem aktuellen Status als Nächstes kommt. Abgelegte Aufgaben führen
+// keine Weiterschaltung: sie sind aus dem Lauf genommen, nicht angehalten - ihr
+// Knopf holt zurück (siehe openTaskDetail).
 const NEXT_STATUS = {
   open:        { status: 'in_progress', labelKey: 'tasks.detailStart',  icon: 'circle-dot' },
   in_progress: { status: 'done',        labelKey: 'tasks.detailFinish', icon: 'check' },
@@ -1159,10 +1183,13 @@ function taskReminderSummary(reminders) {
 }
 
 function renderTaskDetail(task, reminders = [], container = null) {
-  const due = formatDueDate(task.due_date, task.due_time, task.status === 'done' || task.status === 'archived');
+  const due = formatDueDate(task.due_date, task.due_time, task.status === 'done' || isArchived(task));
 
   return [
     { icon: 'circle-dot', label: t('tasks.statusLabel'), value: STATUS_LABELS()[task.status] ?? task.status },
+    // Eigene Zeile statt eines Ersatzes für den Status: die Ablage sagt etwas
+    // ANDERES als „offen/erledigt", nicht dasselbe anders (#688).
+    { icon: 'archive', label: t('tasks.archivedLabel'), value: isArchived(task) ? formatDate(task.archived_at) : '' },
     { icon: 'flag', label: t('tasks.priorityLabel'), node: priorityNode(task.priority) },
     { icon: 'clock', label: t('tasks.dueDateLabel'), value: due?.label ?? '' },
     { icon: 'calendar-clock', label: t('tasks.startDateLabel'), value: task.start_date ? formatDate(task.start_date) : '' },
@@ -1187,7 +1214,8 @@ function renderTaskDetail(task, reminders = [], container = null) {
  * Zeile wäre für Teilaufgaben, Tags und Dokumente zu eng.
  */
 function openTaskDetail({ task, users = [], reminder = null }, container) {
-  const next = NEXT_STATUS[task.status];
+  const archived = isArchived(task);
+  const next = archived ? null : NEXT_STATUS[task.status];
 
   const actions = [{
     id: 'task-detail-delete',
@@ -1215,6 +1243,16 @@ function openTaskDetail({ task, users = [], reminder = null }, container) {
       onClick: ({ button }) => advanceTaskStatus(task, next.status, button, container),
     });
   }
+
+  // Ablegen und Zurückholen sind derselbe Schalter - was er tut, hängt daran, wo
+  // die Aufgabe gerade liegt.
+  actions.push({
+    id: 'task-detail-archive',
+    label: archived ? t('tasks.unarchiveButton') : t('tasks.archiveButton'),
+    variant: 'ghost',
+    icon: archived ? 'archive-restore' : 'archive',
+    onClick: ({ button }) => toggleTaskArchive(task, button, container),
+  });
 
   openDetailView({
     title: task.title,
@@ -1255,6 +1293,26 @@ async function advanceTaskStatus(task, status, button, container) {
     stop();
     // Gescheitert ist ein Schreibvorgang, kein Laden - tasks.loadError („Aufgabe
     // konnte nicht geladen werden") beschriebe den falschen Vorgang.
+    window.yuvomi.showToast(err.message ?? t('common.errorGeneric'), 'danger');
+  }
+}
+
+/**
+ * Ablegen bzw. Zurückholen aus der Detailansicht. Wie advanceTaskStatus schließt
+ * die Ansicht danach: die Aufgabe wechselt die Liste, und ein Panel, das über
+ * einem verschwundenen Eintrag stehen bleibt, hat nichts mehr zu zeigen.
+ */
+async function toggleTaskArchive(task, button, container) {
+  const stop = btnLoading(button);
+  const archived = isArchived(task);
+  try {
+    await setTaskArchived(task.id, !archived);
+    task.archived_at = archived ? null : new Date().toISOString();
+    await closeDetailView({ force: true });
+    window.yuvomi.showToast(archived ? t('tasks.unarchivedToast') : t('tasks.archivedToast'), 'success');
+    await loadTasks(container);
+  } catch (err) {
+    stop();
     window.yuvomi.showToast(err.message ?? t('common.errorGeneric'), 'danger');
   }
 }
@@ -1554,6 +1612,9 @@ async function handleAddSubtask(parentId, container) {
 // Kanban-Ansicht
 // --------------------------------------------------------
 
+// Die Spalten sind der Weg einer Aufgabe. Die letzte ist keine Station dieses
+// Wegs, sondern die Ablage daneben (#688) - deshalb steht dort 'archived' und
+// nicht ein vierter Status.
 const KANBAN_COLS = () => [
   { status: 'open',        label: t('tasks.kanbanOpen'),       colorVar: '--color-text-secondary' },
   { status: 'in_progress', label: t('tasks.kanbanInProgress'), colorVar: '--color-warning'        },
@@ -1561,21 +1622,75 @@ const KANBAN_COLS = () => [
   { status: 'archived',    label: t('tasks.kanbanArchived'),   colorVar: '--color-text-tertiary'  },
 ];
 
+/** In welcher Spalte steht die Aufgabe? Die Ablage sticht den Status. */
+function kanbanColumnOf(task) {
+  return isArchived(task) ? 'archived' : task.status;
+}
+
 function kanbanNextStatus(status) {
   if (status === 'open')        return 'in_progress';
   if (status === 'in_progress') return 'done';
   return 'open';
 }
 
+/**
+ * Eine Aufgabe in eine Spalte bewegen - der einzige Weg, auf dem das Board
+ * schreibt (Maus-Drop, Touch-Drop und der Weiterschalt-Knopf).
+ *
+ * Aus der Ablage zurück heißt: zurückholen, Status unangetastet lassen. Genau
+ * das ging vorher nicht, weil die Spalte den Status SETZTE - eine erledigte
+ * Aufgabe kam als offene zurück (#688).
+ */
+async function moveTaskToColumn(before, column) {
+  // `before` ist der Stand VOR dem optimistischen Update - der State ist zu
+  // diesem Zeitpunkt schon umgeschrieben, und die Entscheidung, ob überhaupt ein
+  // Statuswechsel nötig ist, muss sich auf den alten Stand beziehen.
+  if (column === 'archived') {
+    await setTaskArchived(before.id, true);
+    return;
+  }
+  if (before.archived_at) await setTaskArchived(before.id, false);
+  if (before.status !== column) await api.patch(`/tasks/${before.id}/status`, { status: column });
+}
+
+/** Optimistisches Spiegelbild von moveTaskToColumn auf dem State-Objekt. */
+function applyColumnLocally(task, column) {
+  if (column === 'archived') {
+    task.archived_at = new Date().toISOString();
+    return;
+  }
+  task.archived_at = null;
+  task.status = column;
+}
+
+/** Board-Bewegung mit optimistischem Vorgriff - der eine Weg für alle drei Gesten. */
+async function runColumnMove(task, column, container) {
+  const before = { id: task.id, status: task.status, archived_at: task.archived_at };
+  applyColumnLocally(task, column);
+  renderKanban(container);
+  try {
+    await moveTaskToColumn(before, column);
+  } catch (err) {
+    window.yuvomi.showToast(err.message, 'danger');
+  }
+  await loadTasks(container);
+}
+
 function renderKanbanCard(task) {
-  const due  = formatDueDate(task.due_date, task.due_time, task.status === 'done' || task.status === 'archived');
-  const next = kanbanNextStatus(task.status);
-  const icon = next === 'done' ? 'check' : next === 'in_progress' ? 'circle-play' : 'rotate-ccw';
-  const nextLabel = next === 'done'
-    ? t('tasks.kanbanMoveToDone')
-    : next === 'in_progress'
-      ? t('tasks.kanbanMoveToInProgress')
-      : t('tasks.kanbanMoveToOpen');
+  const archived = isArchived(task);
+  const due  = formatDueDate(task.due_date, task.due_time, task.status === 'done' || archived);
+  // Aus der Ablage führt nur ein Schritt: zurück. Wohin, sagt der Status, den
+  // die Aufgabe die ganze Zeit behalten hat.
+  const next = archived ? task.status : kanbanNextStatus(task.status);
+  const icon = archived ? 'archive-restore'
+    : next === 'done' ? 'check' : next === 'in_progress' ? 'circle-play' : 'rotate-ccw';
+  const nextLabel = archived
+    ? t('tasks.unarchiveButton')
+    : next === 'done'
+      ? t('tasks.kanbanMoveToDone')
+      : next === 'in_progress'
+        ? t('tasks.kanbanMoveToInProgress')
+        : t('tasks.kanbanMoveToOpen');
   return `
     <div class="kanban-card ${task.status === 'done' ? 'kanban-card--done' : ''}"
          data-task-id="${task.id}" draggable="true">
@@ -1605,7 +1720,8 @@ function renderKanban(container) {
   const grouped = {};
   for (const col of cols) grouped[col.status] = [];
   for (const t of filteredTasks()) {
-    if (grouped[t.status]) grouped[t.status].push(t);
+    const column = kanbanColumnOf(t);
+    if (grouped[column]) grouped[column].push(t);
     else grouped['open'].push(t);
   }
 
@@ -1726,22 +1842,11 @@ function wireKanbanDrag(container) {
     if (!zone || !state.dragTaskId) return;
     zone.classList.remove('kanban-col__body--over');
 
-    const newStatus = zone.dataset.dropZone;
-    const taskId    = state.dragTaskId;
-    const task      = state.tasks.find((t) => String(t.id) === String(taskId));
-    if (!task || task.status === newStatus) return;
+    const column = zone.dataset.dropZone;
+    const task   = state.tasks.find((t) => String(t.id) === String(state.dragTaskId));
+    if (!task || kanbanColumnOf(task) === column) return;
 
-    // Optimistisches Update
-    task.status = newStatus;
-    renderKanban(container);
-
-    try {
-      await api.patch(`/tasks/${taskId}/status`, { status: newStatus });
-      await loadTasks(container); // sync
-    } catch (err) {
-      window.yuvomi.showToast(err.message, 'danger');
-      await loadTasks(container);
-    }
+    await runColumnMove(task, column, container);
   });
 
   // Klick auf Status-Button: Status ohne Modal wechseln
@@ -1751,19 +1856,11 @@ function wireKanbanDrag(container) {
       e.stopPropagation();
       const card      = statusBtn.closest('.kanban-card[data-task-id]');
       if (!card) return;
-      const taskId    = card.dataset.taskId;
-      const newStatus = statusBtn.dataset.nextStatus;
-      const task      = state.tasks.find((t) => String(t.id) === String(taskId));
+      const task = state.tasks.find((t) => String(t.id) === String(card.dataset.taskId));
       if (!task) return;
-      task.status = newStatus;
-      renderKanban(container);
-      try {
-        await api.patch(`/tasks/${taskId}/status`, { status: newStatus });
-        await loadTasks(container);
-      } catch (err) {
-        window.yuvomi.showToast(err.message, 'danger');
-        await loadTasks(container);
-      }
+      // Der Knopf einer abgelegten Karte holt zurück, statt weiterzuschalten -
+      // sein data-next-status trägt dann den Status, den die Aufgabe behalten hat.
+      await runColumnMove(task, statusBtn.dataset.nextStatus, container);
       return;
     }
 
@@ -1878,18 +1975,10 @@ function wireKanbanTouch(container) {
     cleanup();
 
     if (!zone || !task) return;
-    const newStatus = zone.dataset.dropZone;
-    if (task.status === newStatus) return;
+    const column = zone.dataset.dropZone;
+    if (kanbanColumnOf(task) === column) return;
 
-    task.status = newStatus;
-    renderKanban(container);
-    try {
-      await api.patch(`/tasks/${tid}/status`, { status: newStatus });
-      await loadTasks(container);
-    } catch (err) {
-      window.yuvomi.showToast(err.message, 'danger');
-      await loadTasks(container);
-    }
+    await runColumnMove(task, column, container);
   }, { passive: true });
 
   board.addEventListener('touchcancel', cleanup, { passive: true });
@@ -2108,7 +2197,7 @@ function renderFilters(container) {
       ...(state.viewMode !== 'kanban' ? [{
         key: 'status',
         label: t('tasks.filterGroupStatus'),
-        items: STATUSES().map((s) => ({ value: s.value, label: s.label })),
+        items: FILTER_STATUSES().map((s) => ({ value: s.value, label: s.label })),
       }] : []),
       {
         key: 'priority',
@@ -2177,8 +2266,11 @@ function renderFilters(container) {
 }
 
 function updateOverdueBadge() {
+  // Ein Badge zählt, was wartet. Eine abgelegte Aufgabe wartet nicht - sie
+  // erschiene sonst im Kanban und unter aktivem Archiv-Chip als offene Schuld
+  // (#688), obwohl kein Weg von der Zahl zu ihr führt.
   const overdue = state.tasks.filter((t) => {
-    if (!t.due_date || t.status === 'done') return false;
+    if (!t.due_date || t.status === 'done' || isArchived(t)) return false;
     return new Date(t.due_date) < new Date().setHours(0, 0, 0, 0);
   }).length;
 
@@ -2687,7 +2779,7 @@ function wireBulkActions(container) {
         await Promise.all(taskIds.map(id => api.patch(`/tasks/${id}/status`, { status })));
         window.yuvomi.showToast(t('tasks.bulkStatusChanged'), 'success');
       } else if (action === 'bulk-archive') {
-        await Promise.all(taskIds.map(id => api.patch(`/tasks/${id}/status`, { status: 'archived' })));
+        await Promise.all(taskIds.map(id => setTaskArchived(id, true)));
         window.yuvomi.showToast(t('tasks.bulkArchived'), 'success');
       }
 
@@ -2784,10 +2876,11 @@ function wireTaskList(container) {
       }
     }
 
-    if (action === 'archive-task') {
+    if (action === 'archive-task' || action === 'unarchive-task') {
+      const archive = action === 'archive-task';
       try {
-        await api.patch(`/tasks/${id}/status`, { status: 'archived' });
-        window.yuvomi.showToast(t('tasks.archivedToast'), 'success');
+        await setTaskArchived(id, archive);
+        window.yuvomi.showToast(archive ? t('tasks.archivedToast') : t('tasks.unarchivedToast'), 'success');
         await loadTasks(container);
       } catch (err) {
         window.yuvomi.showToast(err.message, 'danger');

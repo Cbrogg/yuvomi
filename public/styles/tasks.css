@@ -355,6 +355,18 @@
   transition: opacity var(--transition-base);
 }
 
+/* Abgelegt (#688): zurückgenommen wie „erledigt", aber ohne den Durchstrich -
+   die Aufgabe ist aus dem Lauf, nicht zwingend fertig. Der linke Streifen bleibt
+   die Priorität, deshalb tritt hier nur die Fläche zurück. */
+.task-card--archived {
+  opacity: 0.55;
+  background-color: var(--color-surface-2);
+}
+
+.task-card__archived {
+  color: var(--color-text-tertiary);
+}
+
 .task-card__main {
   display: flex;
   align-items: flex-start;

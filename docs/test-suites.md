@@ -16,7 +16,7 @@ npm run test:db-isolation       # Test-Isolation: keine Suite lädt server/db.js
 npm run test:suite-chain        # Suite-Registry-Guard: jedes test:*-Script hängt in der npm-test-Kette (5 Suiten liefen 2026 monatelang CI-blind) + jede test/test-*.js hat ein Script
 npm run test:tasks
 npm run test:tasks-recurrence   # recurring task catch-up: nextOccurrenceAfter + Folgeinstanz über BEIDE Wege (PATCH status und PUT /:id, #650), Rücknahme, Vorlauf start_date→due_date; Atomarität via Trigger (scheitert der Spawn, bleibt die Aufgabe offen); Anker ab Erledigungstag (#658): nextDueAfterCompletion, Vererbung des Ankers auf die Folgeinstanz, POST/PUT-Rundreise (TZ=UTC festgenagelt, sonst wackelt "heute")
-npm run test:tasks-routes       # Tasks-Routen-Schicht: PUT/:id, meta/options, Kategorie-CRUD (404/400/409), Filter (Mehrfachwerte je Achse ODER-verknüpft, #671), Verschachtelung, PATCH-Status, DELETE
+npm run test:tasks-routes       # Tasks-Routen-Schicht: PUT/:id, meta/options, Kategorie-CRUD (404/400/409), Filter (Mehrfachwerte je Achse ODER-verknüpft, #671), Verschachtelung, PATCH-Status, DELETE; Archiv als eigene Achse (#688): Ablegen lässt den Status stehen und storniert keine Punkte, Zurückholen bringt ihn unverändert wieder, Listen blenden das Archiv aus bis ?archived=1/only bzw. ?status=archived danach fragt
 npm run test:task-default-points # Standard-Punkte (#578): Preference admin-only + Validierung, Prefill nur ohne expliziten Wert und nur für Hauptaufgaben, Rebase fasst nur offene Hauptaufgaben an (erledigte Punkte sind im Ledger gebucht)
 npm run test:task-categories    # Aufgaben-Kategorien (#494/#357): Migration (Seed, Sonstiges→misc, Orphan-Adoption) + CRUD-Guards
 npm run test:visibility         # Sichtbarkeit (#474): all|assignees|private Durchsetzung (Tasks+Termine), kein Admin-Bypass, normalizeVisibility
@@ -92,7 +92,7 @@ npm run test:mcp            # MCP-Server: JSON-RPC-Dispatch (initialize/tools/li
 npm run test:token-scopes   # API-/MCP-Token-Scopes: scopes.js-Modell + Enforcement (tools/list-Filter, tools/call-Deny)
 npm run test:permissions    # Rollen & Rechte: Resolver (Admin-Bypass, Rolle/Mitglied-Override, Widget-Kaskade), Session-Enforcement-Map, Sparse-Speicherung (#467); dazu der Abgleich der drei Widget-Listen (WIDGET_IDS in dashboard.js, PERMISSION_WIDGETS serverseitig, WIDGET_LABEL_KEYS in der Rechte-UI) - ein neues Widget fehlt sonst still in den Rechten oder trägt dort seinen rohen Slug
 npm run test:permissions-routes   # Rechte-Routen: requireAdmin-Gate (kein Privilege-Escalation), Payload-Validierung, sparse-Persistenz/Round-Trip, Admin-Ziel-Sonderregel
-npm run test:dashboard
+npm run test:dashboard      # Widgets + Endpunkt; darunter der Guard, dass abgelegte Aufgaben (archived_at, #688) nicht in "Heute auf einen Blick" landen - sie tragen weiter ihren echten Status und rutschten sonst als offen durch
 npm run test:ics-parser
 npm run test:ics-sub        # ICS-Abos: SSRF-Guards, ETag/304, und unveränderte Läufe schreiben nicht (kein Rowid-Verbrauch, kein info-Log)
 npm run test:ics-export     # ICS-Kalenderexport

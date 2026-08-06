@@ -41,9 +41,37 @@ const router = express.Router();
 // --------------------------------------------------------
 
 const VALID_PRIORITIES = ['none', 'low', 'medium', 'high', 'urgent'];
-const VALID_STATUSES   = ['open', 'in_progress', 'done', 'archived'];
+
+// Die drei Zustände, die eine Aufgabe im Lauf durchläuft. Mehr steht nicht im
+// Statusfeld.
+const REAL_STATUSES = ['open', 'in_progress', 'done'];
+
+// 'archived' war bis v1.86.2 ein vierter Statuswert und ist seit #688 eine eigene
+// Achse (tasks.archived_at). Als Eingabe bleibt es erlaubt: Bestandsclients, die
+// MCP-Schnittstelle und der Filterchip der Oberfläche sprechen weiter so darüber,
+// und für sie bedeutet es unverändert „ablegen" bzw. „das Archiv zeigen". Was es
+// nicht mehr tut: den Status überschreiben.
+const ARCHIVE_STATUS = 'archived';
+const VALID_STATUSES = [...REAL_STATUSES, ARCHIVE_STATUS];
+
 const MAX_POINTS = 10000;
 const FALLBACK_CATEGORY = 'misc';
+
+/** Zeitstempel im Format der übrigen Spalten (UTC, sekundengenau). */
+function nowStamp() {
+  return new Date().toISOString().slice(0, 19) + 'Z';
+}
+
+/**
+ * Eine Aufgabe ablegen oder zurückholen (#688). Rührt den Status nicht an: was
+ * erledigt war, bleibt erledigt, was offen war, bleibt offen.
+ * Rückgabe: der neue archived_at-Wert (null = zurückgeholt).
+ */
+function setArchived(taskId, archived) {
+  const value = archived ? nowStamp() : null;
+  db.get().prepare('UPDATE tasks SET archived_at = ? WHERE id = ?').run(value, taskId);
+  return value;
+}
 
 /** Verwaltbare Kategorien aus der DB (nach sort_order). */
 function loadTaskCategories() {
@@ -99,10 +127,11 @@ function defaultTaskPoints() {
 // reward_ledger eine earn-Buchung über den damaligen Punktwert
 // (awardForCompletion in server/services/rewards.js); ein nachträglicher Wechsel
 // ließe Aufgabenwert und Gutschrift auseinanderlaufen.
-// Alle übrigen Status sind buchungsfrei — auch 'archived': eine archivierte
-// Aufgabe war entweder nie 'done', oder der Übergang 'done' → 'archived' hat die
-// Buchung über reverseTaskEarnings wieder entfernt. Sie mitzuziehen verhindert,
-// dass eine später reaktivierte Aufgabe einen veralteten Wert auszahlt.
+// Alle übrigen Status sind buchungsfrei. Sie mitzuziehen verhindert, dass eine
+// später reaktivierte Aufgabe einen veralteten Wert auszahlt.
+// Das Archiv spielt hier bewusst keine Rolle: es sagt nichts über eine Buchung
+// aus. Eine abgelegte erledigte Aufgabe steht auf 'done' und ist damit ohnehin
+// ausgenommen; eine abgelegte offene ist buchungsfrei wie jede andere offene.
 const REBASE_EXCLUDED_STATUS = 'done';
 
 /** Nicht erledigte Hauptaufgaben, die exakt auf einem Punktwert stehen. */
@@ -476,12 +505,12 @@ router.delete('/categories/:key', (req, res) => {
 // --------------------------------------------------------
 // GET /api/v1/tasks
 // Listet Top-Level-Aufgaben mit optionalen Filtern.
-// Query-Parameter: status, priority, assigned_to, category
+// Query-Parameter: status, priority, assigned_to, category, archived
 // Response: { data: Task[] }  (jede Task enthält subtask_progress)
 // --------------------------------------------------------
 router.get('/', (req, res) => {
   try {
-    const { status, priority, assigned_to, category, tag, include_future } = req.query;
+    const { status, priority, assigned_to, category, tag, include_future, archived } = req.query;
 
     let sql = `
       SELECT
@@ -513,10 +542,32 @@ router.get('/', (req, res) => {
     // Ein einzelner Wert kommt weiterhin als String an (API-Token, Bookmarks).
     const asList = (v) => (v === undefined ? [] : [v].flat().filter((x) => x !== ''));
 
-    const statuses = asList(status);
-    if (statuses.length) {
-      sql += ` AND t.status IN (${statuses.map(() => '?').join(', ')})`;
+    // Archiv (#688): eine eigene Achse, kein Status. Ohne Zutun bleibt es
+    // ausgeblendet - eine abgelegte Aufgabe soll sich wie gelöscht anfühlen und
+    // nicht mit ihrem Status („offen") durch jede Liste wandern.
+    //   ?archived=1     - zusätzlich zeigen (Kanban: die Ablage ist dort eine Spalte)
+    //   ?archived=only  - nur das Archiv
+    //   ?status=archived - für Bestandsclients und den Filterchip: das Archiv ist
+    //                      dort ein Wert neben den Status. Es bleibt deshalb auch
+    //                      ODER-verknüpft wie jeder andere Wert dieser Achse -
+    //                      „offen und archiviert" muss beides zeigen, nicht den
+    //                      Schnitt aus beidem.
+    const rawStatuses  = asList(status);
+    const statuses     = rawStatuses.filter((s) => s !== ARCHIVE_STATUS);
+    const statusArchiv = rawStatuses.includes(ARCHIVE_STATUS);
+    const archiveQuery = archived === 'only' ? 'only'
+      : (archived === '1' || archived === 'true' ? 'include' : null);
+
+    if (statuses.length && statusArchiv) {
+      sql += ` AND (t.status IN (${statuses.map(() => '?').join(', ')}) OR t.archived_at IS NOT NULL)`;
       params.push(...statuses);
+    } else {
+      if (statuses.length) {
+        sql += ` AND t.status IN (${statuses.map(() => '?').join(', ')})`;
+        params.push(...statuses);
+      }
+      if (statusArchiv || archiveQuery === 'only') sql += ' AND t.archived_at IS NOT NULL';
+      else if (!archiveQuery)                      sql += ' AND t.archived_at IS NULL';
     }
 
     const priorities = asList(priority);
@@ -700,7 +751,6 @@ router.put('/:id', (req, res) => {
       description     = task.description,
       category        = task.category,
       priority        = task.priority,
-      status          = task.status,
       start_date      = task.start_date,
       due_date        = task.due_date,
       due_time        = task.due_time,
@@ -712,6 +762,13 @@ router.put('/:id', (req, res) => {
     const visibility = req.body.visibility !== undefined
       ? normalizeVisibility(req.body.visibility, task.visibility)
       : task.visibility;
+
+    // `status: 'archived'` aus einem Bestandsclient legt ab, statt den Status zu
+    // überschreiben (#688). Das Statusfeld selbst kennt den Wert nicht mehr.
+    const archiveRequested = req.body.status === ARCHIVE_STATUS;
+    const status = (req.body.status === undefined || archiveRequested)
+      ? task.status
+      : req.body.status;
 
     const userIds  = req.body.assigned_to !== undefined
       ? parseAssignedTo(req.body.assigned_to)
@@ -743,6 +800,7 @@ router.put('/:id', (req, res) => {
              points, visibility, req.params.id);
       setAssignments(db.get(), task.id, userIds);
       if (req.body.tags !== undefined) setTags(db.get(), task.id, req.body.tags);
+      if (archiveRequested && !task.archived_at) setArchived(task.id, true);
       syncHousekeepingPaymentStatus(db.get(), req.params.id, status);
       // Punkte erst nach setAssignments: die Zuständigen werden daraus abgeleitet.
       syncTaskRewards(db.get(), task.id, task.status, status, req.authUserId || req.session.userId);
@@ -909,8 +967,9 @@ function spawnRecurrenceFollowup(task) {
 // --------------------------------------------------------
 // PATCH /api/v1/tasks/:id/status
 // Status einer Aufgabe schnell wechseln (z.B. Swipe-Geste / Checkbox).
-// Body: { status: 'open' | 'in_progress' | 'done' }
-// Response: { data: { id, status } }
+// Body: { status: 'open' | 'in_progress' | 'done' | 'archived' }
+// Response: { data: { id, status, archived_at } }
+// 'archived' legt die Aufgabe ab, ohne ihren Status anzufassen (#688).
 // --------------------------------------------------------
 router.patch('/:id/status', (req, res) => {
   try {
@@ -923,6 +982,14 @@ router.patch('/:id/status', (req, res) => {
     const prev = db.get().prepare('SELECT * FROM tasks WHERE id = ?').get(req.params.id);
     if (!prev)
       return res.status(404).json({ error: 'Task not found.', code: 404 });
+
+    // Ablegen ist kein Statuswechsel: kein Punkte-Storno, keine Serien-Bewegung,
+    // kein CalDAV-Push. Genau daran hing #688 - die Ablage überschrieb das 'done'
+    // und syncTaskRewards nahm die Gutschrift dafür wieder zurück.
+    if (status === ARCHIVE_STATUS) {
+      const archivedAt = setArchived(req.params.id, true);
+      return res.json({ data: { id: Number(req.params.id), status: prev.status, archived_at: archivedAt } });
+    }
 
     // Statuswechsel und die Serien-Bewegung, die daraus folgt, sind eine Einheit:
     // scheitert das Nachlegen oder das Zurücknehmen der Folgeinstanz, darf die
@@ -953,11 +1020,35 @@ router.patch('/:id/status', (req, res) => {
       }
     })();
 
-    res.json({ data: { id: Number(req.params.id), status } });
+    res.json({ data: { id: Number(req.params.id), status, archived_at: prev.archived_at } });
 
     if (pending || undone) pushToCalDAV('Statuswechsel');
   } catch (err) {
     log.error('PATCH /:id/status error:', err);
+    res.status(500).json({ error: 'Internal server error.', code: 500 });
+  }
+});
+
+// --------------------------------------------------------
+// PATCH /api/v1/tasks/:id/archive
+// Aufgabe ablegen oder zurückholen (#688).
+// Body: { archived: boolean }  (fehlt/true = ablegen, wie bei den Dokumenten)
+// Response: { data: { id, status, archived_at } }
+// --------------------------------------------------------
+router.patch('/:id/archive', (req, res) => {
+  try {
+    const task = db.get().prepare('SELECT id, status FROM tasks WHERE id = ?').get(req.params.id);
+    if (!task) return res.status(404).json({ error: 'Task not found.', code: 404 });
+
+    if (req.body.archived !== undefined && typeof req.body.archived !== 'boolean')
+      return res.status(400).json({ error: 'archived must be a boolean.', code: 400 });
+
+    // Der Status bleibt unangetastet - eine zurückgeholte Aufgabe steht wieder
+    // genau dort, wo sie beim Ablegen stand.
+    const archivedAt = setArchived(task.id, req.body.archived !== false);
+    res.json({ data: { id: task.id, status: task.status, archived_at: archivedAt } });
+  } catch (err) {
+    log.error('PATCH /:id/archive error:', err);
     res.status(500).json({ error: 'Internal server error.', code: 500 });
   }
 });

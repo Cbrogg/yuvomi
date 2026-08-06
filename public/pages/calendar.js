@@ -777,10 +777,14 @@ function agendaSegmentKind(ev, dayStr) {
   return 'middle';
 }
 
-/** Filtert Tasks: nur open/in_progress mit due_date werden angezeigt. */
+/**
+ * Filtert Tasks: nur open/in_progress mit due_date werden angezeigt.
+ * Abgelegte bleiben draußen - der Server liefert sie hier ohnehin nicht mehr mit
+ * (#688), die Prüfung steht als Rückfalllinie für vorgefüllte Listen.
+ */
 function filterTasksForCalendar(tasks) {
   return tasks.filter(
-    (t) => t.due_date && t.status !== 'done' && t.status !== 'archived'
+    (t) => t.due_date && t.status !== 'done' && !t.archived_at
   );
 }
 
