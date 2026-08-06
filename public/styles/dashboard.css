@@ -1308,8 +1308,13 @@ svg.weather-forecast__icon {
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  /* Zwei Bewegungen teilten sich hier eine Kurve, obwohl sie Gegensätzliches
+     verlangen. Der Grundzustand gehört dem Druck-Feedback (:active): das muss
+     unmittelbar antworten, und eine Feder ließe den Knopf beim Loslassen über
+     seine Ausgangsgröße hinausschießen. Die Feder sitzt jetzt dort, wo sie
+     etwas aussagt - an der Drehung zum X (siehe .fab-main--open). */
   transition:
-    transform 350ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    transform var(--duration-2xs) ease-out,
     background-color var(--transition-fast);
   border: none;
   flex-shrink: 0;
@@ -1333,6 +1338,10 @@ svg.weather-forecast__icon {
 
 .fab-main--open {
   transform: rotate(45deg);
+  /* Plus wird zum X: hier ist das Nachfedern die Aussage, nicht Zierrat - sie
+     quittiert den Zustandswechsel. Über das Token statt als Literal, damit die
+     Kurve eine benannte Entscheidung bleibt (tokens.css §g). */
+  transition: transform var(--transition-glass);
   background-color: var(--neutral-600);
 }
 
