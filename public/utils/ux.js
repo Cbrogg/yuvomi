@@ -153,6 +153,158 @@ export function wireScrollFade(el, { axis = 'x' } = {}) {
 }
 
 /**
+ * Kollabierende Large-Title-Leiste (HIG, Redesign Runde 4 / C-1).
+ *
+ * Der Modulkopf steht mobil in mehreren Zeilen: Large Title, darunter der
+ * Center-Slot (Suche oder Zeitraum-Navigation), zuunterst die Bar-Zeile mit
+ * den Aktionen. Beim Scrollen verliert der Kopf seine Large-Title-Zeile; der
+ * Titel steht danach im Inline-Schnitt in der Bar-Zeile - genau Apples
+ * Verhalten, wo der Large Title in die Navigationsleiste hineinschrumpft und
+ * die Leiste dabei ihre Trennlinie bekommt.
+ *
+ * DIE APP HAT ZWEI SCROLLPORT-ARCHITEKTUREN, und der Kopf braucht in jeder
+ * einen anderen Mechanismus. Gemessen, nicht vermutet:
+ *
+ *   (1) DIE SEITE SCROLLT (Aufgaben, Geburtstage, Dokumente, Belohnungen,
+ *       Haushaltshilfe): der Kopf liegt IM Scrollport. Er dockt per NEGATIVEM
+ *       `top` an - `--page-toolbar-lead` ist die Höhe der Zeilen über der
+ *       letzten, also klebt er erst, wenn diese aus dem Bild gewandert sind.
+ *       Seine Höhe ändert sich dabei NIE. Das ist wichtig: ein Klassen-
+ *       Umschalter, der Zeilen ausblendet, verkürzt ein Element im Fluss, der
+ *       Inhalt darunter rutscht nach, der Scroll-Offset verschiebt sich, die
+ *       Schwelle wird wieder unterschritten - und der Kopf oszilliert.
+ *       Was in der Lead-Zone steht, wandert mit aus dem Bild; bei diesen fünf
+ *       Modulen ist das die Suche, also genau Apples
+ *       `hidesSearchBarWhenScrolling`.
+ *
+ *   (2) EINE INNERE LISTE SCROLLT (Budget, Kalender, Notizen, Kontakte): der
+ *       Modul-Root ist `overflow: hidden`, der Kopf liegt AUSSERHALB des
+ *       Scrollports und bewegt sich nie. Dort wirkt kein `top` - hier ist der
+ *       Klassen-Umschalter richtig, und zwar gefahrlos: der Höhenwechsel
+ *       verlängert nur den inneren Port, ohne dessen Scroll-Offset anzufassen.
+ *       Es kollabiert allein die Large-Title-Zeile; der Center-Slot bleibt,
+ *       weil er hier den Zeitraum der Seite trägt (Monat, Datum) und nicht
+ *       eine Suche.
+ *
+ * Gehalten wird der Zustand über einen ResizeObserver (Umbruch, Fenstergröße,
+ * Font-Nachladen) und einen MutationObserver (Modul rendert seinen Kopfinhalt
+ * neu). `is-docked` trägt allein die Trennlinie und ändert keine Geometrie.
+ *
+ * @param {HTMLElement} toolbar - eine `.page-toolbar`
+ * @returns {{ update: () => void, destroy: () => void }|null}
+ */
+export function wireCollapsingHeader(toolbar) {
+  const noop = { update: () => {}, destroy: () => {} };
+  if (!toolbar) return null;
+  // Idempotent: Router und Modul dürfen beide verdrahten wollen.
+  if (toolbar.dataset.collapsingHeader) return noop;
+  toolbar.dataset.collapsingHeader = '1';
+
+  const scrollport = (() => {
+    let el = toolbar.parentElement;
+    while (el && el !== document.body) {
+      const oy = getComputedStyle(el).overflowY;
+      if (oy === 'auto' || oy === 'scroll') return el;
+      el = el.parentElement;
+    }
+    return null;
+  })();
+
+  // Architektur (2): liegt zwischen Kopf und Scrollport ein gedeckelter
+  // Container, scrollt der Kopf nicht mit. Der erste solche Vorfahr ist der
+  // Modul-Root und trägt den Scroll-Lauscher.
+  const capped = (() => {
+    let el = toolbar.parentElement;
+    while (el && el !== scrollport && el !== document.body) {
+      if (getComputedStyle(el).overflowY === 'hidden') return el;
+      el = el.parentElement;
+    }
+    return null;
+  })();
+
+  let io = null;
+  let lead = 0;
+
+  // Hysterese, damit der Kopf nicht um seine eigene Schwelle flattert.
+  const onInnerScroll = (e) => {
+    const port = e.target;
+    if (!(port instanceof Element) || port === toolbar || toolbar.contains(port)) return;
+    const reserve = port.scrollHeight - port.clientHeight;
+    // Nur kollabieren, wenn der Port das Ausklappen danach auch verkraftet -
+    // sonst schiebt die zurückkehrende Kopfhöhe den Scroll auf 0, der Kopf
+    // klappt wieder aus und beides pendelt gegeneinander.
+    if (reserve < lead + 48) { toolbar.classList.remove('is-collapsed', 'is-docked'); return; }
+    const top = port.scrollTop;
+    if (top > 24) toolbar.classList.add('is-collapsed', 'is-docked');
+    else if (top < 8) toolbar.classList.remove('is-collapsed', 'is-docked');
+  };
+  const update = () => {
+    // Im kollabierten Zustand ist der Kopf einzeilig - eine Messung würde jetzt
+    // lead 0 ergeben und dem CSS die Grundlage entziehen, die es zum Ausklappen
+    // braucht. Der Wert der ausgeklappten Form bleibt stehen.
+    if (toolbar.classList.contains('is-collapsed')) return;
+    const rows = [...toolbar.children].filter((c) => c.offsetParent !== null || c.getClientRects().length);
+    const tb = toolbar.getBoundingClientRect();
+    const padTop = parseFloat(getComputedStyle(toolbar).paddingBlockStart) || 0;
+    // Die letzte Zeile ist die mit dem grössten Abstand zur Oberkante. Bei
+    // einem einzeiligen Kopf ist das die erste - lead wird 0 und die Leiste
+    // klebt wie zuvor bei top:0.
+    let lastTop = 0;
+    let firstEl = null;
+    let firstTop = Infinity;
+    for (const c of rows) {
+      const top = c.getBoundingClientRect().top - tb.top;
+      if (top > lastTop + 1) lastTop = top;
+      if (top < firstTop - 1) { firstTop = top; firstEl = c; }
+    }
+    lead = Math.max(0, Math.round(lastTop - padTop));
+    toolbar.style.setProperty('--page-toolbar-lead', `${lead}px`);
+    toolbar.classList.toggle('page-toolbar--stacked', lead > 0);
+    toolbar.classList.toggle('page-toolbar--capped', Boolean(capped) && lead > 0);
+
+    // Die Trennlinie erscheint, sobald die erste Zeile aus dem Scrollport
+    // gewandert ist. Ohne Lead gibt es nichts zu beobachten - dann trägt die
+    // Leiste ihre Linie durchgehend (einzeilige Köpfe, Desktop). In der
+    // gedeckelten Architektur wandert nichts; dort hängt die Linie am
+    // Kollaps-Zustand und wird von onInnerScroll gesetzt.
+    io?.disconnect();
+    io = null;
+    if (!lead || !firstEl || !scrollport || capped) {
+      toolbar.classList.toggle('is-docked', !lead);
+      return;
+    }
+    io = new IntersectionObserver(
+      ([entry]) => toolbar.classList.toggle('is-docked', !entry.isIntersecting),
+      { root: scrollport, threshold: 0 },
+    );
+    io.observe(firstEl);
+  };
+
+  const ro = new ResizeObserver(update);
+  ro.observe(toolbar);
+  const mo = new MutationObserver(update);
+  mo.observe(toolbar, { childList: true, subtree: true });
+  // Scroll blubbert nicht - in der gedeckelten Architektur wird deshalb in der
+  // Capture-Phase am Modul-Root gelauscht. Damit ist jede innere Liste erfasst,
+  // auch die eines Tabs, den es beim Verdrahten noch nicht gab.
+  capped?.addEventListener('scroll', onInnerScroll, { capture: true, passive: true });
+  update();
+
+  return {
+    update,
+    destroy: () => {
+      io?.disconnect();
+      ro.disconnect();
+      mo.disconnect();
+      capped?.removeEventListener('scroll', onInnerScroll, { capture: true });
+      delete toolbar.dataset.collapsingHeader;
+      toolbar.style.removeProperty('--page-toolbar-lead');
+      toolbar.classList.remove('page-toolbar--stacked', 'page-toolbar--capped', 'is-collapsed', 'is-docked');
+    },
+  };
+}
+
+/**
  * Führt eine asynchrone Aktion aus und markiert das auslösende Control derweil
  * als beschäftigt: `disabled` gegen Doppelauslösung, `aria-busy` für Screenreader,
  * optional eine Lade-Klasse.

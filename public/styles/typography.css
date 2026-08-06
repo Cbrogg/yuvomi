@@ -62,6 +62,30 @@
 }
 
 /* --------------------------------------------------------------------------
+ * Canonical Page Head, LARGE-TITLE-ZUSTAND (HIG, Redesign Runde 4 / C-1)
+ *
+ * Dieselbe Rolle, zwei Schnitte: in der kompakten Grössenklasse steht der
+ * Modul-Titel am Scroll-Anfang als Large Title (34px) auf eigener Zeile und
+ * fällt auf den Inline-Schnitt (22px) zurück, sobald die Leiste angedockt ist.
+ * Ab 1024px regiert die Sidebar - dort bleibt es beim Inline-Schnitt, wie in
+ * Apples regulärer Grössenklasse.
+ *
+ * Den UMBRUCH (eigene Zeile, Andocken, Einklappen) macht layout.css; hier
+ * steht nur, welche Stufe der Titel dabei trägt. Beides zusammen an einem Ort
+ * hätte die Rolle aus typography.css herausgezogen - genau das, was die
+ * Canonical-Page-Head-Rolle einmal beendet hat (18/22/28px gestreut).
+ * ------------------------------------------------------------------------ */
+@media (max-width: 1023px) {
+  .page-toolbar:not(.page-toolbar--in-group) > .page-toolbar__title {
+    font-size: var(--type-page-title-mobile);
+  }
+
+  .page-toolbar--capped.is-collapsed > .page-toolbar__title {
+    font-size: var(--type-toolbar-title);
+  }
+}
+
+/* --------------------------------------------------------------------------
  * Section-/Bereichs-Überschrift (normale Schreibweise)
  *
  * ABGRENZUNG zum Versal-Mikro-Label darunter (HIG-Rollout Runde 3, der

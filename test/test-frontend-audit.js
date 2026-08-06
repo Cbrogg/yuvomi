@@ -6985,3 +6985,91 @@ test('one button shape app-wide', () => {
   }
   assert.deepEqual(offenders, []);
 });
+
+// --------------------------------------------------------------------------
+// KOLLABIERENDE LARGE-TITLE-LEISTE (Redesign Runde 4, C-1)
+//
+// Der Modulkopf traegt in der kompakten Groessenklasse zwei Titel-Schnitte:
+// den Large Title am Scroll-Anfang und den Inline-Titel, sobald die Leiste
+// angedockt ist. Welcher gilt, entscheidet die SHELL - eine zweite font-size
+// aus einem Modul-CSS haette genau die Uneindeutigkeit zurueckgeholt, die die
+// Canonical-Page-Head-Rolle einmal aufgeloest hat (18/22/28px gestreut).
+//
+// Wie beim Buttonform-Guard prueft dieser Test deshalb nicht den Wert, sondern
+// dass ausser der Shell NIEMAND ihn setzt - eine Regel, keine Dateiliste.
+// --------------------------------------------------------------------------
+test('one page-head title scale, owned by the shell', () => {
+  const SHELL = new Set(['layout.css', 'typography.css']);
+  const files = readdirSync(new URL('../public/styles/', import.meta.url))
+    .filter((name) => name.endsWith('.css'));
+
+  const typography = read('../public/styles/typography.css');
+  assert.match(
+    typography,
+    /\.page-toolbar:not\(\.page-toolbar--in-group\)\s*>\s*\.page-toolbar__title\s*\{[^}]*font-size:\s*var\(--type-page-title-mobile\)/,
+    'Die Large-Title-Zone traegt --type-page-title-mobile - die Rolle steht in typography.css.',
+  );
+  assert.match(
+    typography,
+    /\.page-toolbar--capped\.is-collapsed\s*>\s*\.page-toolbar__title\s*\{[^}]*font-size:\s*var\(--type-toolbar-title\)/,
+    'Der eingeklappte Kopf faellt auf den Inline-Schnitt zurueck.',
+  );
+  // Der UMBRUCH gehoert dagegen in layout.css: die Zone ist eine Layout-
+  // Bedingung, ihre Stufe eine Typo-Rolle. Beides an einem Ort haette eine
+  // der beiden Dateien zur Ausnahme gemacht.
+  assert.match(
+    read('../public/styles/layout.css'),
+    /\.page-toolbar:not\(\.page-toolbar--in-group\)\s*>\s*\.page-toolbar__title\s*\{[^}]*flex-basis:\s*100%/,
+    'Die eigene Zeile des Large Title steht in layout.css.',
+  );
+
+  const offenders = [];
+  for (const name of files) {
+    if (SHELL.has(name)) continue;
+    // Kommentare strippen, sonst wandert die Prosa davor in den Selektor
+    // (dieselbe Falle wie bei parseTokenMap, Handoff §6).
+    const css = read(`../public/styles/${name}`).replace(/\/\*[\s\S]*?\*\//g, '');
+    for (const m of css.matchAll(/(?:^|[}])\s*([^{}]*\.page-toolbar__title[^{}]*)\{([^}]*)\}/g)) {
+      const [, selector, body] = m;
+      if (!/font-size:/.test(body)) continue;
+      offenders.push(`${name}: ${selector.trim().replace(/\s+/g, ' ')} setzt eine eigene Titelgroesse`);
+    }
+  }
+  assert.deepEqual(offenders, []);
+});
+
+// --------------------------------------------------------------------------
+// Das Andocken ist Shell-Mechanik, kein Modul-Opt-in: `--page-toolbar-lead`
+// wird von genau einem Helfer gemessen und von genau einer Regel gelesen.
+// Setzte ein Modul den Wert selbst, klebte sein Kopf an einer anderen Stelle
+// als der aller anderen - und der Kopf ist die eine Komponente, die alle
+// siebzehn teilen.
+// --------------------------------------------------------------------------
+test('the collapsing header is wired once, by the shell', () => {
+  const pageFiles = readdirSync(new URL('../public/pages/', import.meta.url))
+    .filter((name) => name.endsWith('.js'));
+  const offenders = [];
+  for (const name of pageFiles) {
+    const js = read(`../public/pages/${name}`);
+    if (/wireCollapsingHeader|--page-toolbar-lead/.test(js)) {
+      offenders.push(`${name}: verdrahtet den Modulkopf selbst`);
+    }
+  }
+  assert.deepEqual(offenders, [], 'Nur der Router verdrahtet die Modulkoepfe.');
+
+  assert.match(
+    read('../public/router.js'),
+    /wireCollapsingHeader/,
+    'Der Router verdrahtet die Koepfe der frisch gerenderten Seite.',
+  );
+
+  const styles = readdirSync(new URL('../public/styles/', import.meta.url))
+    .filter((name) => name.endsWith('.css') && name !== 'layout.css');
+  for (const name of styles) {
+    assert.doesNotMatch(
+      read(`../public/styles/${name}`),
+      /--page-toolbar-lead/,
+      `${name} liest den Andock-Versatz - der gehoert in layout.css.`,
+    );
+  }
+});

@@ -1157,6 +1157,9 @@ html.fab-anim-done .page-fab {
    * entfallen ist — die Warnung gilt weiterhin für jeden Modul-Kopf. */
   background-color: var(--color-bg);
   position: sticky;
+  /* Das Andocken der Large-Title-Leiste (Redesign Runde 4, C-1) ist eine Sache
+   * der KOMPAKTEN Grössenklasse und steht deshalb in deren Media-Query weiter
+   * unten. Hier bleibt die Leiste bei top: 0. */
   top: 0;
   z-index: var(--z-sticky);
   /* Wirkt nur in Flex-Spalten-Pages (Notizen/Kalender), verhindert dort
@@ -1268,6 +1271,140 @@ html.fab-anim-done .page-fab {
  * weiter bis zur Shell-Kante, nur die Zeile darin wird kürzer. */
 .page-toolbar--narrow > :last-child {
   margin-inline-end: max(0px, calc(100% - var(--content-max-width-narrow)));
+}
+
+/* --------------------------------------------------------
+ * Large-Title-Zone des Modulkopfes (HIG, Redesign Runde 4 / C-1)
+ *
+ * In der KOMPAKTEN Grössenklasse - der Welt mit Tab-Bar unten, unter 1024px -
+ * steht der Seitentitel als Large Title auf einer eigenen Zeile über der
+ * Bar-Zeile. Beim Scrollen wandert er aus dem Scrollport, die Bar-Zeile bleibt
+ * (siehe das negative `top` an der Basisregel). Ab 1024px regiert die Sidebar;
+ * dort ist der Titel Teil der Leiste und bleibt beim Inline-Schnitt, genau wie
+ * Apples reguläre Grössenklasse es hält.
+ *
+ * WER: jeder Kopf mit eigenem Seitentitel. Die Gruppen-Variante ist
+ * ausgenommen - ihr `.page-toolbar__title` ist kein Seitentitel, sondern der
+ * umbenennbare Name der gerade offenen Liste (Einkauf), und über ihr steht
+ * bereits die Tab-Leiste des Moduls.
+ *
+ * WARUM ALS REGEL statt als Modul-Opt-in: der Kopf ist die einzige Komponente,
+ * die alle 17 Module teilen. Eine Klasse, die jedes Modul selbst setzen müsste,
+ * fehlt beim achtzehnten.
+ * -------------------------------------------------------- */
+@media (max-width: 1023px) {
+  .page-toolbar:not(.page-toolbar--in-group):has(> .page-toolbar__title) {
+    flex-wrap: wrap;
+    row-gap: var(--space-2);
+  }
+
+  /* Der Kopf klebt nicht mit seiner ganzen Höhe, sondern erst, wenn seine
+   * oberen Zeilen aus dem Scrollport gewandert sind: `--page-toolbar-lead` ist
+   * genau deren Höhe, gemessen von `wireCollapsingHeader` (utils/ux.js). Übrig
+   * bleibt die Bar-Zeile - Apples Navigationsleiste, in die der Large Title
+   * hineinscrollt.
+   *
+   * NEGATIVES top STATT KLASSEN-UMSCHALTER: eine Klasse, die beim Scrollen
+   * Zeilen ausblendet, ändert die Höhe eines Elements im Fluss; der Inhalt
+   * darunter rutscht nach, der Scroll-Offset verschiebt sich und der Kopf
+   * oszilliert um seine eigene Schwelle. Hier ändert sich die Höhe nie.
+   * Ohne Lead (einzeiliger Kopf) ist der Wert 0 und die Leiste klebt bei 0. */
+  .page-toolbar--stacked {
+    top: calc(-1 * var(--page-toolbar-lead, 0px));
+  }
+
+  /* In der gedeckelten Architektur wandert der Kopf nicht; dort klappt er ein
+   * (siehe unten) und muss bei 0 kleben bleiben. */
+  .page-toolbar--capped {
+    top: 0;
+  }
+
+  /* Nur der UMBRUCH steht hier. Welche Schriftgrösse die beiden Zustände der
+   * Zone tragen, entscheidet die Canonical-Page-Head-Rolle in typography.css -
+   * dort liegen alle Titel-Schnitte an EINEM Ort, und ein Guard hält das
+   * (test:typography, „globale Toolbar- und Kartentitel folgen den
+   * semantischen Rollen"). */
+  .page-toolbar:not(.page-toolbar--in-group) > .page-toolbar__title {
+    flex-basis: 100%;
+    /* Auf voller Zeilenbreite braucht kein Modultitel mehr die Ellipse; das
+     * nowrap der Basisregel bleibt trotzdem stehen, damit lange Locales die
+     * Zeile nicht auf zwei Zeilen Large Title aufblähen. */
+  }
+
+  /* Der Center-Slot (Suche, Zeitraum-Navigation) gehört zur Lead-Zone und
+   * scrollt mit weg. Die --wrap-Variante schob ihn bisher UNTER die Aktionen;
+   * mit eigener Titelzeile ist die DOM-Reihenfolge die richtige: Titel, dann
+   * Kontext, dann Bar-Zeile. */
+  .page-toolbar--wrap:not(.page-toolbar--in-group):has(> .page-toolbar__title) > .page-toolbar__center {
+    order: 0;
+  }
+
+  /* Das `margin-left: auto` der Basisregel drängt die Aktionen an den rechten
+   * Rand - richtig, solange sie sich die Zeile mit dem Titel teilen. Steht der
+   * Titel auf eigener Zeile, hat die Bar-Zeile nur noch diesen einen Slot, und
+   * der Rechtsschub liess das Segment mit einer leeren halben Zeile links
+   * daneben stehen. Ohne Titel in der Zeile beginnt sie an der Fluchtlinie.
+   * Im eingeklappten Zustand steht der Titel wieder daneben - dort gilt der
+   * Rechtsschub der Basisregel weiter.
+   *
+   * Dasselbe für den Center-Slot und die geteilte Suche: Notizen schob sie mit
+   * demselben Auto-Rand ans Zeilenende und deckelte sie auf 280px - beides
+   * richtig, solange sie sich die Zeile mit dem Titel teilte, beides falsch,
+   * sobald sie eine eigene hat. Die Zeilenordnung ist eine Entscheidung der
+   * Shell, nicht des Moduls; also nimmt die Shell sie zurück. */
+  .page-toolbar--stacked:not(.is-collapsed) > .page-toolbar__actions,
+  .page-toolbar--stacked:not(.is-collapsed) > .page-toolbar__center,
+  .page-toolbar--stacked:not(.is-collapsed) > .page-search {
+    margin-inline-start: 0;
+  }
+
+  .page-toolbar--stacked:not(.is-collapsed) > .page-search {
+    max-width: none;
+  }
+
+  /* Die Trennlinie erscheint erst, wenn die Leiste angedockt ist - am
+   * Scroll-Anfang steht der Large Title nahtlos auf dem Seitengrund.
+   * `--stacked` setzt der Helfer nur, wenn es überhaupt eine Lead-Zone gibt;
+   * ein einzeiliger Kopf behält seine Linie durchgehend. */
+  .page-toolbar--stacked:not(.is-docked) {
+    border-bottom-color: transparent;
+  }
+
+  /* GEDECKELTE ARCHITEKTUR (Budget, Kalender, Notizen, Kontakte): dort ist der
+   * Modul-Root `overflow: hidden` und eine innere Liste scrollt - der Kopf
+   * liegt ausserhalb des Scrollports und bewegt sich nie, ein negatives `top`
+   * bliebe wirkungslos. Hier klappt die Large-Title-Zeile beim Scrollen
+   * tatsächlich ein, und das ist genau hier gefahrlos: der Höhenwechsel
+   * verlängert nur den inneren Port, ohne dessen Scroll-Offset anzufassen (in
+   * der scrollenden Architektur wäre er die Quelle einer Oszillation).
+   *
+   * WAS KOLLABIERT, ENTSCHEIDET DER INHALT DES SLOTS - dieselbe Abgrenzung wie
+   * beim Kopf zwischen Bereich und Gruppe:
+   *   ZEITRAUM der Seite (Monat im Budget, Datum im Kalender) → bleibt stehen.
+   *     Er beantwortet beim Scrollen weiter „wo bin ich".
+   *   SUCHE (Kontakte) → klappt mit ein, genau wie sie in der scrollenden
+   *     Architektur aus dem Bild wandert (Apples `hidesSearchBarWhenScrolling`).
+   *     Nicht aber, solange sie den Fokus hat oder einen Wert trägt - eine
+   *     Suche, die einem beim Scrollen der eigenen Treffer unter den Händen
+   *     verschwindet, wäre der falsche Gehorsam gegenüber der Regel. */
+  .page-toolbar--capped.is-collapsed > .page-toolbar__title {
+    flex-basis: auto;
+  }
+
+  .page-toolbar--capped.is-collapsed
+    > .page-search.page-toolbar__center:not(:focus-within):not(:has(input:not(:placeholder-shown))) {
+    display: none;
+  }
+
+  .page-toolbar--capped > .page-toolbar__title {
+    transition: font-size var(--duration-sm) var(--ease-out);
+  }
+}
+
+@media (max-width: 1023px) and (prefers-reduced-motion: reduce) {
+  .page-toolbar--capped > .page-toolbar__title {
+    transition: none;
+  }
 }
 
 @media (max-width: 640px) {

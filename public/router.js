@@ -9,7 +9,7 @@ import { canAccessNavModule, navModuleAccess } from '/permissions.js';
 import { clearApiCache } from '/sw-register.js';
 import { initI18n, getLocale, t, formatDate, formatTime } from '/i18n.js';
 import { esc } from '/utils/html.js';
-import { wireScrollFade } from '/utils/ux.js';
+import { wireScrollFade, wireCollapsingHeader } from '/utils/ux.js';
 import { init as initReminders, stop as stopReminders } from '/reminders.js';
 import { initPush, stopPush } from '/push.js';
 import { numberLocaleFor } from '/settings/region-presets.js';
@@ -1152,6 +1152,7 @@ async function renderPage(route, previousPath = null, scrollTarget = 0) {
     // ihren FAB im synchronen Teil an, und er soll gar nicht erst im Scrollport
     // erscheinen. Der zweite Aufruf unten holt die Nachzügler.
     adoptPageFab();
+    wirePageToolbars();
 
     // Sichtbar machen und Einblend-Animation starten (Skeleton/Grundgerüst).
     pageWrapper.style.opacity = shouldAnimate ? '' : '1';
@@ -1181,6 +1182,8 @@ async function renderPage(route, previousPath = null, scrollTarget = 0) {
     // Ab hier kann das Modul Soft-Navigationen bedienen (sofern es update() bietet).
     _renderedModule = module;
     _renderedModuleName = route.module;
+
+    wirePageToolbars();
 
     // FAB Long Loop: Einstiegsanimation nach FAB_SEEN_MAX Views pro Modul deaktivieren
     const pageFab = adoptPageFab();
@@ -1663,6 +1666,41 @@ function adoptPageFab() {
   const fresh = document.querySelector('#main-content .page-fab');
   if (fresh) layer.replaceChildren(fresh);
   return layer.firstElementChild;
+}
+
+/**
+ * Modulköpfe verdrahten (Redesign Runde 4, C-1).
+ *
+ * Die Shell macht das, nicht die Module: der Kopf ist die eine Komponente, die
+ * alle 17 teilen, und ein Opt-in, das jedes Modul selbst setzen müsste, fehlt
+ * beim achtzehnten.
+ *
+ * ZWEI AUFRUFE PRO RENDER REICHEN NICHT - gemessen: Budget und Kalender bauen
+ * ihren Kopf ein zweites Mal, wenn die Daten da sind, und liefern damit eine
+ * NEUE Node, die kein Aufrufzeitpunkt mehr erwischt (beide klebten daraufhin
+ * unverändert mit voller Höhe, während Aufgaben schon andockte). Deshalb hängt
+ * hier ein Beobachter an der Shell statt eines Aufrufs am Render: er sieht
+ * jeden Kopf, auch den eines Moduls, das es noch nicht gibt.
+ *
+ * Der Callback bleibt billig: er fragt nur die HINZUGEFÜGTEN Knoten, nicht bei
+ * jeder Mutation den ganzen Teilbaum ab. `wireCollapsingHeader` ist idempotent.
+ */
+let _toolbarObserverRoot = null;
+function wirePageToolbars() {
+  const main = document.getElementById('main-content');
+  if (!main) return;
+  main.querySelectorAll('.page-toolbar').forEach(wireCollapsingHeader);
+  if (_toolbarObserverRoot === main) return;
+  _toolbarObserverRoot = main;
+  new MutationObserver((mutations) => {
+    for (const m of mutations) {
+      for (const node of m.addedNodes) {
+        if (node.nodeType !== Node.ELEMENT_NODE) continue;
+        if (node.matches('.page-toolbar')) wireCollapsingHeader(node);
+        else node.querySelectorAll('.page-toolbar').forEach(wireCollapsingHeader);
+      }
+    }
+  }).observe(main, { childList: true, subtree: true });
 }
 
 /** FAB der alten Seite abräumen - zusammen mit deren Inhalt, nicht später. */
