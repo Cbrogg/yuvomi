@@ -33,9 +33,12 @@
   min-height: var(--target-base);
   padding-block: var(--space-2);
   padding-inline: 36px calc(var(--space-2) + 24px);
-  border: 1.5px solid var(--glass-border-subtle);
-  border-radius: var(--radius-glass-button);
-  background: var(--color-surface-2);
+  /* Feldkanon aus DESIGN.md: 1.5px --color-border auf Surface-Grund. Die
+   * frühere surface-2-Fläche lag im Dark unter dem Seitengrund und ließ das
+   * Feld mit seiner subtilen Kante fast verschwinden. */
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
   color: var(--color-text-primary);
   font-size: var(--text-base);
   /* Strip the native search chrome (WebKit draws its own leading magnifier for

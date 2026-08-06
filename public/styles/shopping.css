@@ -90,14 +90,27 @@
   color: var(--color-text-primary);
 }
 
-/* Aktive Liste: getönte Pille wie .sub-tab--active/.budget-tab--active.
- * Tint + Border tragen die Modul-Identität; das Label bleibt Ink + semibold,
- * da Modul-Akzent-Text auf Hell nur ~3.5:1 erreicht (unter AA 4.5). */
+/* Aktive Liste: Modul-Akzent GEFÜLLT - die eine Segment-Sprache der Shell
+ * (DESIGN.md „Segmented Controls", Muster .sub-tab--active). Die
+ * Listen-Auswahl steht direkt unter der Küchen-Tab-Leiste, die seit dem
+ * HIG-Rollout gefüllt ist; eine 14 %-Tönung darunter las sich als zweiter,
+ * schwächerer Zustandsbegriff für dieselbe Handlung.
+ *
+ * Das frühere Ink-Label war mit der Tönung richtig (Modul-Akzent als TEXT auf
+ * Hell erreicht nur ~3.5:1); auf der Vollfläche erbt --color-ink-on-vivid den
+ * verifizierten Akzent-auf-Weiß-Wert (>=5:1). */
 .list-tab--active {
-  background-color: color-mix(in srgb, var(--module-accent) 14%, transparent);
-  border-color: color-mix(in srgb, var(--module-accent) 40%, transparent);
-  color: var(--color-text-primary);
+  background-color: var(--module-accent);
+  border-color: var(--module-accent);
+  color: var(--color-ink-on-vivid);
   font-weight: var(--font-weight-semibold);
+}
+
+/* Der Zähler kehrt sich auf der gefüllten Pille um - gleiche Rechnung wie
+ * .sub-tab--active .sub-tab__badge. */
+.list-tab--active .list-tab__count {
+  background-color: var(--color-ink-on-vivid);
+  color: var(--module-accent);
 }
 
 .list-tab__count {
@@ -398,7 +411,7 @@
 .quick-add__input {
   width: 100%;
   padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-glass-button);
+  border-radius: var(--radius-sm);
   /* --color-border wie die beiden Nachbarfelder, nicht --glass-border-subtle.
    * Das Glas-Token ist ein weißes Alpha (35 % hell / 12 % dunkel) und erreichte
    * auf der opaken Arbeitsfläche 1.03:1 gegen den Grund - die schwächste

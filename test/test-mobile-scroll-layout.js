@@ -62,8 +62,17 @@ test('mobile bottom navigation reserves safe-area space without scroll-time root
   const navRule = cssRuleBody(layoutCss, '.nav-bottom');
   const rootRule = cssRuleBody(layoutCss, ':root');
 
-  assert.match(navRule, /padding-bottom:\s*var\(--safe-area-inset-bottom\)/);
-  assert.match(tokensCss, /--nav-bottom-height:\s*calc\(var\(--nav-height-mobile\)\s*\+\s*var\(--safe-area-inset-bottom\)\)/);
+  // Der Guard hält die ZUSAGE fest (die Bar reserviert die Safe-Area selbst,
+  // niemand mutiert sie beim Scrollen am :root), nicht die Schreibweise. Seit
+  // dem HIG-Rollout ist die Bar eine transparente Zone mit schwebender
+  // Glas-Kapsel: die Reserve steht als dritter Wert im padding-Shorthand und
+  // trägt zusätzlich die Luft unter der Kapsel.
+  assert.match(
+    navRule,
+    /padding(-bottom)?:[^;]*var\(--safe-area-inset-bottom\)/,
+    'die Bar muss die Safe-Area selbst reservieren',
+  );
+  assert.match(tokensCss, /--nav-bottom-height:\s*calc\(var\(--nav-height-mobile\)[^;]*var\(--safe-area-inset-bottom\)\)/);
   assert.equal(rootRule.includes('nav-bottom--hidden'), false);
 });
 

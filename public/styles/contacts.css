@@ -81,10 +81,14 @@
   color: var(--color-text-primary);
 }
 
+/* Geteilte Chip-Grammatik (filter-chip.css): 18 % Fläche, 50 % Kante, Tinte
+ * nach der Akzent-auf-Tönung-Regel. Der frühere Vollton war AA-sicher, las sich
+ * aber wie ein aktives SEGMENT - und seit der Segment-Sprache aus Runde 1 ist
+ * die gefüllte Kapsel für Segmente reserviert. */
 .contact-filter-chip--active {
-  background-color: var(--c-accent);
-  border-color: var(--c-accent);
-  color: var(--color-ink-on-vivid);
+  background-color: color-mix(in srgb, var(--c-accent) 18%, transparent);
+  border-color: color-mix(in srgb, var(--c-accent) 50%, transparent);
+  color: color-mix(in srgb, var(--c-accent) 70%, var(--color-text-primary));
 }
 
 @media (max-width: 767px) {

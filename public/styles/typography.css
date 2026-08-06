@@ -87,13 +87,21 @@
 }
 
 /* --------------------------------------------------------------------------
- * Eyebrow / Uppercase-Mikro-Label — der EINE konsistente Tracking-Wert.
- * Ersetzt die zuvor gestreuten 0/0.05/0.06/0.07/0.08/0.1em-Werte.
+ * Versal-Mikro-Label (Grouped-List-Sektionskopf) — der EINE konsistente
+ * Tracking-Wert. Ersetzt die zuvor gestreuten 0/0.05/0.06/0.07/0.08/0.1em-Werte.
+ *
+ * Rollenwechsel mit dem HIG-Rollout: das ist der SEKTIONSKOPF einer
+ * Grouped-Liste (Apples eigenes Muster: „NACH KATEGORIE", „OBST & GEMÜSE"),
+ * nicht mehr der dekorative Eyebrow über einer Überschrift. Den verbietet
+ * DESIGN.md ausdrücklich; erlaubt ist die Versal-Zeile nur als ECHTE
+ * Information (Apple-News-Muster, z. B. das Masthead-Datum).
+ *
+ * Entfallen sind mit dem Rollout .u-eyebrow (die generische Opt-in-Klasse - ohne
+ * Nutzer im Markup und mit einem Namen, der zur Rückkehr des Musters einlädt),
+ * .dashboard-metric__title, .today-cockpit-card__label (die Cockpit-Zeile trägt
+ * jetzt Titel + Untertitel statt Versal-Label), .dashboard-hero__summary-label
+ * und .item-category__header - alle fünf ohne Fundstelle im Markup.
  * ------------------------------------------------------------------------ */
-.u-eyebrow,
-.dashboard-metric__title,
-.today-cockpit-card__label,
-.dashboard-hero__summary-label,
 .event-icon-picker__category-label,
 .budget-summary-card__label,
 .budget-chart-section__title,
@@ -105,7 +113,6 @@
 .day-header__name,
 .meal-slot__type-label,
 .week-gutter-label,
-.item-category__header,
 .documents-folder-browser__title {
   font-size: var(--text-xs);
   font-weight: var(--font-weight-semibold);

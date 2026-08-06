@@ -3161,20 +3161,24 @@ test('die Touch-Zielgröße folgt DESIGN.md statt einer dritten Zahl', () => {
 /**
  * Nicht-Text-Kontrast: gemessen, dokumentiert, bewusst offen.
  *
- * Die Kanten der Bedienelemente erreichen die 3:1 aus WCAG 1.4.11 nicht (1.13:1
- * hell / 1.96:1 dunkel an den Eingabefeldern). Der Betreiber hat am 2026-07-30
- * entschieden, das vorerst nur zu dokumentieren statt --color-border anzuheben -
- * die Änderung ginge durch jedes Modul.
+ * Die Kanten der Bedienelemente erreichen die 3:1 aus WCAG 1.4.11 nicht. Der
+ * Betreiber hat am 2026-07-30 entschieden, das vorerst nur zu dokumentieren
+ * statt --color-border anzuheben - die Änderung ginge durch jedes Modul.
  *
  * Der Guard hält die MESSUNG fest, nicht den Fix: verschwindet der Kommentar,
- * verschwindet auch das Wissen, warum die Zahl so steht.
+ * verschwindet auch das Wissen, warum die Zahl so steht. Messwerte und Zielwert
+ * sind mit dem HIG-Rollout (2026-08) neu erhoben worden - die alte Zahlenreihe
+ * galt gegen die warme Prä-Redesign-Palette und wäre gegen die kühle
+ * iOS-27-Rampe schlicht falsch.
  */
 test('der offene Nicht-Text-Kontrast bleibt an den Tokens dokumentiert', () => {
   const tokens = read('../public/styles/tokens.css');
   const block = tokens.slice(0, tokens.indexOf('--color-border:'));
   assert.match(block, /WCAG 1\.4\.11/, 'der Befund muss an --color-border dokumentiert bleiben');
-  assert.match(block, /1\.13:1/, 'der gemessene Ist-Wert gehört dazu');
-  assert.match(block, /#8A8A86/, 'der Zielwert für 3:1 gehört dazu, sonst muss ihn jeder neu ausrechnen');
+  assert.match(block, /1\.13:1/, 'der gemessene Ist-Wert auf dem Grouped-Grund gehört dazu');
+  assert.match(block, /1\.26:1/, 'der Wert auf --color-surface gehört dazu (Eingabefeld auf Weiß)');
+  assert.match(block, /1\.60:1/, 'der Dark-Wert gehört dazu');
+  assert.match(block, /#949494/, 'der Zielwert für 3:1 gegen die kühle Rampe gehört dazu, sonst muss ihn jeder neu ausrechnen');
   assert.match(block, /nicht für dekorative Gruppierung/,
     'die Abgrenzung Bedienelement gegen Kartenkante gehört dazu - der Critique warf beides zusammen');
 });
@@ -3871,18 +3875,32 @@ test('calendar month view uses tinted event surfaces derived from --ev-color', (
   const calendar = read('../public/styles/calendar.css');
   const gridBody = cssRuleBody(calendar, '.month-grid');
   const dayBody = cssRuleBody(calendar, '.month-day');
-  const eventBody = cssRuleBody(calendar, '.month-day__event');
+  // Anker auf Zeilenanfang: `.month-day--outside .month-day__event` steht früher
+  // in der Datei und würde den ungebundenen Selektor-Match abfangen.
+  const eventBody = cssRuleBody(calendar, '\n.month-day__event');
+  const outsideEventBody = cssRuleBody(calendar, '.month-day--outside .month-day__event');
+  const outsideDayBody = cssRuleBody(calendar, '\n.month-day--outside');
 
   assert.match(gridBody, /background-color:\s*var\(--color-border-subtle\)/, 'month grid should expose clear cell boundaries');
   assert.match(gridBody, /gap:\s*var\(--space-px\)/, 'month grid boundaries should use tokenized one-pixel gaps');
   assert.match(dayBody, /background-color:\s*var\(--color-surface-work\)/, 'month cells should use a stable work surface');
-  // Getönte „Ton"-Fläche statt vollgesättigter Füllung: Tönung, lesbare Tinte und
-  // Kante werden per color-mix aus --ev-color abgeleitet — theme-korrekt, weil
+  // Getönte „Ton"-Fläche statt vollgesättigter Füllung: Tönung und lesbare Tinte
+  // werden per color-mix aus --ev-color abgeleitet — theme-korrekt, weil
   // --color-surface-work und --color-text-primary im Dark Mode kippen.
   assert.match(eventBody, /background:\s*color-mix\(in srgb,\s*var\(--ev-color\)\s*\d+%,\s*var\(--color-surface-work\)\)/, 'event chips should sit on a tinted work surface, not a saturated fill');
   assert.match(eventBody, /color:\s*color-mix\(in srgb,\s*var\(--ev-color\)\s*\d+%,\s*var\(--color-text-primary\)\)/, 'event chip text should be a readable ink derived from the event colour');
-  assert.match(eventBody, /border:\s*var\(--space-px\)\s+solid\s+color-mix\(in srgb,\s*var\(--ev-color\)/, 'event chips need a visible boundary derived from --ev-color, not color alone');
+  // HIG-Rollout 2026-08: die Bar ist FLACH. Die frühere Kante aus --ev-color war
+  // der dritte Farbträger derselben Information (Fläche, Tinte, Kante) und ließ
+  // ein Monatsraster aus 30 umrandeten Kästchen entstehen. Apple Calendar zeigt
+  // ebenfalls randlose Tint-Bars; die Zellgrenze trägt das 1px-Gap des Grids.
+  assert.doesNotMatch(eventBody, /border:/, 'month bars read flat: the cell gap carries the boundary, not a per-bar border');
   assert.doesNotMatch(eventBody, /box-shadow/, 'tinted event chips should read flat, without a drop shadow');
+  // Nachbarmonatstage dimmen über FLÄCHE und ZIFFER, nie über eine Opacity auf
+  // dem Text: gemessen fiel die frühere `opacity: 0.5` auf 2.3-3.4:1 (unter AA).
+  // Die Bars behalten dort ihr volles Ink-Rezept auf schwächerer Tönung.
+  assert.match(outsideDayBody, /background-color:\s*var\(--color-bg\)/, 'previous/next month cells dim via their surface, not via text opacity');
+  assert.doesNotMatch(outsideDayBody, /opacity:/, 'a blanket opacity on the cell would drag its text below AA');
+  assert.match(outsideEventBody, /background:\s*color-mix\(in srgb,\s*var\(--ev-color\)\s*\d+%,\s*var\(--color-surface-work\)\)/, 'outside-month bars keep the tint recipe, only weaker');
 });
 
 test('calendar agenda events and task chips keep readable contrast in mobile agenda', () => {
@@ -4131,27 +4149,47 @@ test('phase 2 dashboard primary titles do not split words mid-token', () => {
   }
 });
 
-test('phase 2 mobile dashboard cockpit uses a 2x2 glance grid with tokenized stable sizing', () => {
+/**
+ * „Heute wichtig" ist seit dem HIG-Rollout (2026-08) EINE Inset-Grouped-Liste,
+ * kein 2×2-Kachelraster mehr.
+ *
+ * Der abgelöste Guard hielt das 2×2-Glance-Raster fest: vier pastellgefüllte
+ * Stat-Kacheln mit fester Mindesthöhe. Genau diese Bauart hat das Finish-Review
+ * der Fundament-Phase abgeräumt - vier gerahmte Kacheln in einem gerahmten
+ * Masthead waren genestete Karten, und der Hero-Metrik-Look ist der
+ * Kategorie-Default, den der Kanon verweigert. Die neue Form ist Apples
+ * Grouped-Liste: eine Fläche, Zeilen mit Haarlinien, getönte Icon-Kachel pro
+ * Zeile, trailing Count.
+ *
+ * Der Guard hält jetzt die FORM fest, nicht die alte Geometrie.
+ */
+test('dashboard „Heute wichtig" is one inset-grouped list, not a tile grid', () => {
   const dashboard = read('../public/styles/dashboard.css');
+  const gridBody = cssRuleBody(dashboard, '.today-cockpit__grid');
+  const cardBody = cssRuleBody(dashboard, '\n.today-cockpit-card');
+  const iconBody = cssRuleBody(dashboard, '.today-cockpit-card__icon');
 
+  // Die GRUPPE trägt Fläche, Rundung und Schatten - genau einmal.
+  assert.match(gridBody, /grid-template-columns:\s*1fr/, 'the group is a single column of rows, not a tile grid');
+  assert.match(gridBody, /background:\s*var\(--color-surface\)/, 'the group carries one opaque surface');
+  assert.match(gridBody, /border-radius:\s*var\(--radius-lg\)/, 'the group is the rounded container, not each row');
+  assert.match(gridBody, /overflow:\s*hidden/, 'rows must clip to the group radius');
+  assert.doesNotMatch(gridBody, /repeat\(2,/, 'the 2×2 glance grid belongs to the superseded world');
+
+  // Die ZEILE trägt keine eigene Karte.
+  assert.match(cardBody, /background:\s*transparent/, 'rows sit on the group surface, not on their own');
+  assert.match(cardBody, /border:\s*none/, 'rows are separated by hairlines, never framed');
+  assert.match(cardBody, /min-height:\s*var\(--target-base\)/, 'row height stays tokenized against the touch target');
   assert.match(
     dashboard,
-    /@media \(max-width:\s*640px\)[\s\S]*\.today-cockpit-card\s*\{[\s\S]*min-height:\s*calc\(var\(--target-lg\)\s*\+\s*var\(--space-4\)\)/,
-    'mobile cockpit cards should keep stable tokenized min-height'
+    /\.today-cockpit-card \+ \.today-cockpit-card\s*\{[^}]*border-top:\s*1px solid var\(--color-border-subtle\)/,
+    'consecutive rows are divided by a hairline',
   );
-  // 2×2-Glance-Raster: zwei Spalten auf Mobil, halbe Höhe ggü. 1×4
-  assert.match(
-    dashboard,
-    /@media \(max-width:\s*640px\)[\s\S]*\.today-cockpit__grid\s*\{[\s\S]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/,
-    'mobile cockpit should use a two-column glance grid'
-  );
-  // Karten erzwingen keine Vollbreite mehr — sonst entsteht wieder ein 1×4-Stapel
-  assert.doesNotMatch(
-    dashboard,
-    /\.today-cockpit-card--task,\s*\n\s*\.today-cockpit-card--event\s*\{[\s\S]*?grid-column:\s*1\s*\/\s*-1/,
-    'task/event cards must not force full-width on mobile (breaks the 2×2 grid)'
-  );
-  // Sehr schmale Container fallen auf eine Spalte zurück (Container-Query, kein Viewport-BP)
+
+  // Modul-Identität lebt in der getönten Icon-Kachel, nicht in der Zeilenfüllung.
+  assert.match(iconBody, /background:\s*color-mix\(in srgb,\s*var\(--today-card-accent\)\s*\d+%,\s*var\(--color-surface\)\)/, 'the icon well carries the module tint');
+
+  // Sehr schmale Container bleiben einspaltig (Container-Query, kein Viewport-BP)
   assert.match(
     dashboard,
     /@container today-cockpit \(max-width:\s*270px\)[\s\S]*grid-template-columns:\s*1fr/,
@@ -4247,7 +4285,10 @@ function flattenLocaleKeys(obj, prefix = '') {
 // --- Kontrast-Helfer (WCAG 2.x relative luminance) ---
 function parseTokenMap(block) {
   const map = new Map();
-  for (const [, name, value] of block.matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)) {
+  // Kommentare zuerst entfernen: eine Prosa-Zeile wie "…gemessen gegen --color-bg:
+  // 1.16:1" sieht fuer die Deklarations-Regex wie eine Zuweisung aus und
+  // ueberschreibt dann den echten Token-Wert (2026-08-06 genau so passiert).
+  for (const [, name, value] of block.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)) {
     map.set(name, value.trim());
   }
   return map;
@@ -4626,11 +4667,11 @@ test('module accent is recomputed on every runtime theme switch', () => {
 /**
  * Der Akzent ist nicht die einzige eingefrorene Momentaufnahme.
  *
- * `updateThemeColorForRoute` loest `--module-<name>` ueber denselben
- * `getCSSToken` auf und schreibt das Ergebnis in beide
- * `<meta name="theme-color">`. Ein Attribut nimmt an keiner Kaskade teil, also
- * behielt die Statusbar nach hell/dunkel die Modulfarbe des alten Themes,
- * waehrend die Shell darunter laengst umgeschaltet hatte. Sichtbar nur in der
+ * `updateThemeColorForRoute` schreibt in beide `<meta name="theme-color">`.
+ * Ein Attribut nimmt an keiner Kaskade teil, also behielt die Statusbar nach
+ * hell/dunkel den Wert des alten Themes, waehrend die Shell darunter laengst
+ * umgeschaltet hatte. (Seit dem HIG-Rollout ist der Wert der Seitengrund und
+ * nicht mehr der Modul-Tint - die Nachzieh-Pflicht bleibt.) Sichtbar nur in der
  * installierten PWA (`setThemeColor` steigt sonst frueh aus), weshalb es neben
  * dem Akzent-Befund durchrutschte - die Regel ist aber dieselbe: Jeder Weg, der
  * das Theme zur Laufzeit umschaltet, muss BEIDE neu berechnen.

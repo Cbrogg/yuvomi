@@ -35,8 +35,8 @@
   display: inline-flex;
   padding: var(--space-0h);
   gap: var(--space-0h);
-  border-radius: var(--radius-glass-chip);
-  background: var(--glass-bg-input);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-work);
 }
 
 .documents-view-toggle__btn {
@@ -45,7 +45,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: calc(var(--radius-glass-chip) - 2px);
+  border-radius: calc(var(--radius-full) - 2px);
   color: var(--color-text-secondary);
 }
 
@@ -54,10 +54,13 @@
   height: 17px;
 }
 
+/* Aktiv: Modul-Akzent gefüllt + --color-ink-on-vivid - die eine Segment-Sprache
+ * der Shell (DESIGN.md „Segmented Controls"). Vorher: erhabene Glas-Kachel mit
+ * Akzent-Glyph - Glas-Material auf einem Inhalts-Control und zugleich die
+ * zweite Segment-Optik neben der Tab-Leiste desselben Moduls. */
 .documents-view-toggle__btn--active {
-  color: var(--module-accent);
-  background: var(--glass-bg-elevated);
-  box-shadow: var(--glass-shadow-sm);
+  color: var(--color-ink-on-vivid);
+  background: var(--module-accent, var(--color-accent));
 }
 
 /* Eigene Filterzeile unter dem Kopf (wie Kontakte): Status- + Kategorie-Chips
@@ -165,7 +168,7 @@
   width: 42px;
   height: 42px;
   flex-shrink: 0;
-  border-radius: var(--radius-glass-inner);
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--module-accent) 12%, transparent);
   cursor: pointer;
 }
@@ -180,7 +183,7 @@
 .document-card.is-selected,
 .document-row.is-selected {
   border-color: var(--module-accent);
-  box-shadow: 0 0 0 1px var(--module-accent), var(--glass-shadow-md);
+  box-shadow: 0 0 0 1px var(--module-accent), var(--shadow-md);
 }
 
 .documents-browser-layout {
@@ -195,10 +198,10 @@
 .documents-folder-browser {
   position: sticky;
   top: var(--space-4);
-  border: 1px solid var(--glass-border-subtle);
-  border-radius: var(--radius-glass-card);
-  background-color: var(--glass-bg-card);
-  box-shadow: var(--glass-shadow-sm);
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg);
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-sm);
   overflow: hidden;
 }
 
@@ -466,22 +469,22 @@
  * geteilte Karten-Vokabel genutzt, KEIN Blur. Kein backdrop-filter ergänzen. */
 .document-card,
 .document-row {
-  border: 1px solid var(--glass-border-subtle);
-  background-color: var(--glass-bg-card);
-  box-shadow: var(--glass-shadow-sm);
+  border: 1px solid var(--color-border-subtle);
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .document-card {
-  border-radius: var(--radius-glass-card);
+  border-radius: var(--radius-lg);
 }
 
 .document-row {
-  border-radius: var(--radius-glass-inner);
+  border-radius: var(--radius-md);
 }
 
 .document-row:hover {
-  background-color: var(--glass-bg-card-hover);
-  box-shadow: var(--glass-shadow-md);
+  background-color: var(--color-surface-hover);
+  box-shadow: var(--shadow-md);
 }
 
 /* Inhaltsgetriebene Höhe statt fixer min-height: kompaktere Karten, weniger
@@ -500,7 +503,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-glass-inner);
+  border-radius: var(--radius-md);
   color: var(--module-accent);
   background: color-mix(in srgb, var(--module-accent) 12%, transparent);
 }
@@ -669,7 +672,7 @@
   min-height: 148px;
   padding: var(--space-5);
   border: 1.5px dashed color-mix(in srgb, var(--module-accent) 48%, var(--color-border));
-  border-radius: var(--radius-glass-card);
+  border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--module-accent) 7%, var(--color-surface));
   color: var(--color-text-secondary);
   text-align: center;
@@ -703,10 +706,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-glass-inner);
+  border-radius: var(--radius-md);
   color: var(--module-accent);
-  background-color: var(--glass-bg-elevated);
-  box-shadow: var(--glass-shadow-sm);
+  background-color: var(--color-surface-elevated);
+  box-shadow: var(--shadow-sm);
 }
 
 .document-dropzone__icon svg {
@@ -735,10 +738,10 @@
 
 .document-member-picker {
   margin-top: var(--space-2);
-  border: 1px solid var(--glass-border-subtle);
-  border-radius: var(--radius-glass-inner);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
   padding: var(--space-3);
-  background-color: var(--glass-bg-card);
+  background-color: var(--color-surface);
 }
 
 .document-member-picker__grid {
@@ -901,14 +904,14 @@
 }
 
 .document-card:hover {
-  background-color: var(--glass-bg-card-hover);
-  box-shadow: var(--glass-shadow-md);
+  background-color: var(--color-surface-hover);
+  box-shadow: var(--shadow-md);
   transform: translateY(-2px);
 }
 
 .document-row:hover {
-  background-color: var(--glass-bg-card-hover);
-  box-shadow: var(--glass-shadow-md);
+  background-color: var(--color-surface-hover);
+  box-shadow: var(--shadow-md);
 }
 
 /* Buttons innerhalb von Karten/Zeilen: Cursor zurücksetzen */

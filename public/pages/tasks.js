@@ -2936,7 +2936,7 @@ export async function render(container, { user }) {
           className: 'tasks-toolbar__search page-toolbar__center',
         })}
         <div class="page-toolbar__actions">
-          <div class="group-toggle" id="view-toggle" role="group" aria-label="${t('tasks.viewToggleLabel')}">
+          <div class="group-toggle group-toggle--icons" id="view-toggle" role="group" aria-label="${t('tasks.viewToggleLabel')}">
             <button type="button" class="group-toggle__btn ${isKanban ? '' : 'group-toggle__btn--active'}" data-view="list"
                     title="${t('tasks.listView')}" aria-label="${t('tasks.listView')}" aria-pressed="${!isKanban}">
               <i data-lucide="list" class="icon-md" aria-hidden="true"></i>

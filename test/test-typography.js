@@ -98,17 +98,26 @@ test('die Typografie-Rollen-Schicht ist vorhanden und eingebunden', () => {
 test('die Produkt-Typografie nutzt feste semantische Rollenwerte', () => {
   const tokens = readFileSync(new URL('../public/styles/tokens.css', import.meta.url), 'utf8');
 
+  // Apple-Typo-Skala (HIG-Rollout 2026-08, DESIGN.md „Typography"): Large Title
+  // 34 / Title 2 22 / Title 3 20 / Headline 17 / Body 17 / Subheadline 15 /
+  // Footnote 13 / Caption 2 11. Die abgelöste Reihe (Hero 24→30, Body 16) war
+  // die eigene Skala des Violett-Glas-Hybrids.
+  //
+  // Hero UND Page-Title stehen bewusst auf demselben Wert: in der HIG-Welt ist
+  // der Dashboard-Gruß derselbe Large Title wie jeder Seitentitel, und er wächst
+  // auf dem Desktop NICHT mit - die Überschriften-Skala endet bei 34px.
   const expectedTokens = [
-    ['--type-hero-mobile', '1.5rem'],
-    ['--type-hero-desktop', '1.875rem'],
-    ['--type-page-title-mobile', '1.375rem'],
-    ['--type-page-title-desktop', '1.75rem'],
-    ['--type-section-title', '1.125rem'],
-    ['--type-card-title', '1rem'],
-    ['--type-body', '1rem'],
-    ['--type-secondary', '0.875rem'],
-    ['--type-caption', '0.75rem'],
-    ['--type-micro', '0.625rem'],
+    ['--type-hero-mobile', '2.125rem'],
+    ['--type-hero-desktop', '2.125rem'],
+    ['--type-page-title-mobile', '2.125rem'],
+    ['--type-page-title-desktop', '2.125rem'],
+    ['--type-toolbar-title', '1.375rem'],
+    ['--type-section-title', '1.25rem'],
+    ['--type-card-title', '1.0625rem'],
+    ['--type-body', '1.0625rem'],
+    ['--type-secondary', '0.9375rem'],
+    ['--type-caption', '0.8125rem'],
+    ['--type-micro', '0.6875rem'],
   ];
 
   for (const [token, value] of expectedTokens) {

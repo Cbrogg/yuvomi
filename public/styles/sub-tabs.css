@@ -66,11 +66,19 @@
   transition-duration: 0.06s;
 }
 
-/* Aktiv: Akzent-Tint trägt die Modul-Identität, das Label bleibt Ink + semibold
- * (Modul-Akzent-Text auf Hell erreicht nur ~3.5:1 — unter AA 4.5). */
+/* Aktiv: Modul-Akzent GEFÜLLT + --color-ink-on-vivid - die eine
+ * Segment-Sprache der Shell (dieselbe wie .group-toggle__btn--active in
+ * tasks.css und .cal-toolbar__view-btn--active im Kalender, DESIGN.md
+ * „Segmented Controls").
+ *
+ * Vorher: 14 %-Tönung mit Ink-Label. Die Begründung dafür war, dass
+ * Modul-Akzent als TEXT auf Hell nur ~3.5:1 erreicht - das gilt weiter und
+ * ist genau der Grund, warum der Akzent hier zur FLÄCHE wird: alle
+ * Modul-Tints sind gegen Weiß auf >=5:1 vertieft, weiße Tinte darauf erbt
+ * denselben Wert. */
 .sub-tab--active {
-  background-color: color-mix(in srgb, var(--active-module-accent, var(--color-accent)) 14%, transparent);
-  color: var(--color-text-primary);
+  background-color: var(--active-module-accent, var(--color-accent));
+  color: var(--color-ink-on-vivid);
   font-weight: var(--font-weight-semibold);
 }
 
@@ -100,8 +108,8 @@
  *
  * DIESELBE GRAMMATIK WIE `.list-tab__count` in der Einkaufsliste: getönte
  * currentColor-Pille, tabellarische Ziffern. Der Zähler erbt damit die Farbe seines
- * Tabs und braucht keine eigene Kontrastrechnung - auf dem aktiven Tab wird er von
- * selbst dunkler, weil `.sub-tab--active` auf Ink schaltet. */
+ * Tabs und braucht keine eigene Kontrastrechnung. Auf dem AKTIVEN Tab kehrt er
+ * sich um (Regel weiter unten): dort ist der Grund der Vollton-Akzent. */
 .sub-tab__badge {
   display: inline-flex;
   align-items: center;
@@ -133,6 +141,24 @@
  * layout.css greift hier nicht, weil sie nur App-Shell-Komponenten führt. */
 .sub-tab__badge[hidden] {
   display: none;
+}
+
+/* Auf dem aktiven Tab kehrt der Zähler sich um: Tinte als Fläche, Akzent als
+ * Ziffer (Apple-Muster für Badges auf gefüllten Segmenten). Die 15 %-Tönung von
+ * oben würde hier eine leicht aufgehellte Akzentfläche ergeben, auf der
+ * --color-text-primary (dunkles Ink) auf einem satten Modul-Tint stünde - der
+ * einzige Ort, an dem der Fill-Umbau die alte Badge-Rechnung gekippt hätte.
+ * Umgekehrt erbt die Ziffer exakt den verifizierten Akzent-auf-Weiß-Wert
+ * (>=5:1 über alle 17 Tints). */
+.sub-tab--active .sub-tab__badge {
+  background-color: var(--color-ink-on-vivid);
+  color: var(--active-module-accent, var(--color-accent));
+}
+
+/* Der Vorrats-Warnzähler bleibt sein eigenes Signal - auch auf dem aktiven Tab. */
+.sub-tab--active .sub-tab__badge--warning {
+  background-color: var(--color-warning);
+  color: var(--color-ink-on-vivid);
 }
 
 /* Der einzige Ton-Ausschlag: der Vorrat ist das einzige Küchen-Signal mit einer

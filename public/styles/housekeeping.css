@@ -64,21 +64,39 @@
   padding-bottom: calc(var(--space-16) + env(safe-area-inset-bottom));
 }
 
+/* HIG-Karte: randlos auf dem Grouped-Grund, opake Fläche, shadow-sm - dieselbe
+ * Bauart wie das Dashboard-Widget und .budget-summary-card. Die Kante bleibt als
+ * transparenter Träger stehen, damit Zustände (Auswahl, Hover) sie einfärben
+ * können, ohne das Layout zu verschieben. */
 .housekeeping-card,
 .housekeeping-worker-strip,
 .housekeeping-metric,
-.housekeeping-task,
-.housekeeping-report-item {
-  background-color: var(--glass-bg-card);
-  border: 1px solid var(--glass-border-subtle);
-  border-radius: var(--radius-glass-inner);
+.housekeeping-task {
+  background-color: var(--color-surface);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
 }
 
 .housekeeping-card {
-  border-color: color-mix(in srgb, var(--module-accent) 24%, var(--glass-border-subtle));
-  border-radius: var(--radius-glass-card);
-  box-shadow: var(--glass-shadow-sm);
+  /* Die frühere modul-getönte Kante (24 % Akzent) war der einzige Ort der App,
+   * an dem eine Karte ihre Modulfarbe als Umriss trug. */
+  border-radius: var(--radius-lg);
   padding: var(--space-4);
+}
+
+/* Zeilen INNERHALB einer Karte: Haarlinien statt eigener Kästen.
+ * „Letzte Besuche" und das Einsatz-Protokoll rahmten jede Zeile in einer schon
+ * gerahmten Karte - genestete umrandete Rows, die DESIGN.md ausdrücklich
+ * ausschließt (Inset-Grouped-Liste ist die Kernform). */
+.housekeeping-report-item {
+  background-color: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+.housekeeping-report-item + .housekeeping-report-item {
+  border-top: 1px solid var(--color-border-subtle);
 }
 
 .housekeeping-card h2 {
@@ -306,8 +324,8 @@
 .housekeeping-template {
   min-width: 180px;
   border: 1.5px dashed var(--color-border);
-  border-radius: var(--radius-glass-inner);
-  background-color: var(--glass-bg-card);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface);
   color: var(--color-text-primary);
   padding: var(--space-3);
   text-align: left;
@@ -388,7 +406,7 @@
 .housekeeping-photo {
   min-height: 72px;
   border: 1.5px dashed color-mix(in srgb, var(--module-accent) 55%, var(--color-border));
-  border-radius: var(--radius-glass-inner);
+  border-radius: var(--radius-md);
   color: var(--module-accent);
   display: flex;
   align-items: center;
@@ -408,8 +426,8 @@
   width: 100%;
   max-height: 260px;
   object-fit: cover;
-  border-radius: var(--radius-glass-inner);
-  border: 1px solid var(--glass-border-subtle);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-subtle);
 }
 
 .housekeeping-report-item {
@@ -488,9 +506,11 @@
   gap: var(--space-3);
   align-items: center;
   padding: var(--space-3);
-  border: 1px solid var(--glass-border-subtle);
-  border-radius: var(--radius-glass-inner);
-  background-color: var(--glass-bg-card);
+  /* Zeile in der Karte, kein eigener Kasten (siehe .housekeeping-report-item).
+   * Die Kante bleibt transparent, weil Auswahl und Hover sie einfärben. */
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background-color: transparent;
 }
 
 .housekeeping-staff-row[role="button"] {
@@ -501,7 +521,7 @@
 .housekeeping-staff-row[role="button"]:focus-visible,
 .housekeeping-staff-row--active {
   border-color: var(--module-accent);
-  background-color: color-mix(in srgb, var(--module-accent) 8%, var(--glass-bg-card-hover));
+  background-color: color-mix(in srgb, var(--module-accent) 8%, var(--color-surface-hover));
 }
 
 .housekeeping-staff-row div:nth-child(2) {
@@ -542,9 +562,12 @@
   gap: var(--space-3);
   align-items: center;
   padding: var(--space-3);
-  border: 1px solid var(--glass-border-subtle);
-  border-radius: var(--radius-glass-inner);
-  background-color: var(--glass-bg-card);
+  border: 0;
+  background-color: transparent;
+}
+
+.housekeeping-staff-log-row + .housekeeping-staff-log-row {
+  border-top: 1px solid var(--color-border-subtle);
 }
 
 .housekeeping-staff-log-row > div:first-child {
@@ -584,8 +607,8 @@
   min-height: 132px;
   padding: var(--space-4);
   border: 1.5px dashed color-mix(in srgb, var(--module-accent) 48%, var(--color-border));
-  border-radius: var(--radius-glass-inner);
-  background: color-mix(in srgb, var(--module-accent) 7%, var(--glass-bg-card));
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--module-accent) 7%, var(--color-surface));
   color: var(--color-text-secondary);
   text-align: center;
   cursor: pointer;
@@ -597,10 +620,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-glass-inner);
+  border-radius: var(--radius-md);
   color: var(--module-accent);
-  background-color: var(--glass-bg-card);
-  box-shadow: var(--glass-shadow-sm);
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .modal-panel .document-dropzone__title {

@@ -810,8 +810,10 @@ function holidaysOnDay(dateStr) {
 /** Rendert einen read-only Task-Chip für Kalenderansichten. In der Monatsansicht
  *  (interactive:false) ist die Tageszelle selbst der Drill-in-Button; die Chips
  *  sind dort nur visuelles Signal und dürfen kein eigenes role/tabindex tragen -
- *  sonst entsteht ein fokussierbarer Button im Zellen-Button (Audit P1). */
-function renderTaskChip(task, { interactive = true } = {}) {
+ *  sonst entsteht ein fokussierbarer Button im Zellen-Button (Audit P1).
+ *  icon:false lässt das check-square-Icon weg: die Monats-Bars sind nach Kanon
+ *  icon-frei, Woche/Tag/Agenda behalten es als Termin/Aufgabe-Unterscheidung. */
+function renderTaskChip(task, { interactive = true, icon = true } = {}) {
   const priority = task.priority || 'none';
   const label    = esc(task.title);
   const timeStr  = task.due_time ? ` · ${task.due_time.slice(0, 5)}` : '';
@@ -821,7 +823,7 @@ function renderTaskChip(task, { interactive = true } = {}) {
   return `<div class="cal-task-chip cal-task-chip--${priority}"
                data-task-id="${task.id}"${button}
                title="${label}${esc(timeStr)}">
-    <i data-lucide="check-square" class="icon-sm" aria-hidden="true"></i>
+    ${icon ? '<i data-lucide="check-square" class="icon-sm" aria-hidden="true"></i>' : ''}
     <span>${label}${esc(timeStr)}</span>
   </div>`;
 }
@@ -1447,15 +1449,18 @@ function renderMonthDay(date, inMonth) {
     </div>
   `).join('');
 
+  // Monatsgrid-Kanon (Apple Kalender / Fantastical): flache getönte Bar mit nur
+  // dem Titel. Icon und Avatar-Stack leben in der Tages-/Detailansicht; die
+  // "Wer"-Information bleibt für Tooltip/Screenreader im title-Attribut erhalten.
   const evHtml = evShown.map((ev) => `
     <div class="month-day__event"
          data-id="${ev.id}"
          style="${eventSurfaceStyle(ev)}"
-         title="${esc(ev.title)}${ev.cal_name ? ' · ' + ev.cal_name : ''}${chipAssigneeTitleSuffix(ev)}"
-    >${eventIconHtml(ev.icon, 'event-icon event-icon--compact')}<span>${esc(ev.title)}</span>${chipAssigneeStack(ev, { size: 15, maxVisible: 2 })}</div>
+         title="${esc(ev.title)}${ev.cal_name ? ' · ' + esc(ev.cal_name) : ''}${chipAssigneeTitleSuffix(ev)}"
+    ><span>${esc(ev.title)}</span></div>
   `).join('');
 
-  const taskHtml = taskShown.map((tk) => renderTaskChip(tk, { interactive: false })).join('');
+  const taskHtml = taskShown.map((tk) => renderTaskChip(tk, { interactive: false, icon: false })).join('');
 
   return `
     <div class="${classes}" data-date="${date}" data-total="${total}"

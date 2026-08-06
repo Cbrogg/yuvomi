@@ -370,12 +370,19 @@
   color: var(--color-text-primary);
 }
 
-/* Erhabene Kachel statt Vollton-Akzent: der aktive Zustand muss sich vom
- * Primärbutton daneben unterscheiden, sonst liest er sich als Aktion. */
+/* Aktiv: Modul-Akzent gefüllt + --color-ink-on-vivid - die eine Segment-Sprache
+ * der Shell (DESIGN.md „Segmented Controls", Muster .sub-tab--active /
+ * .group-toggle__btn--active / .cal-toolbar__view-btn--active).
+ *
+ * Hier stand die erhabene weiße Kachel der abgelösten Welt, begründet mit
+ * „muss sich vom Primärbutton daneben unterscheiden". In der HIG-Welt trennt
+ * die FORM: der Primärbutton ist ein 12px-Rechteck mit Schatten, das Segment
+ * eine randlose Kapsel in einer umrandeten Leiste - dieselbe Unterscheidung,
+ * die Apple zwischen „Aktion" und „Zustand" zieht. Innenradius konzentrisch
+ * (radius-sm im radius-md-Träger). */
 .budget-segmented__item.is-active {
-  background: var(--color-surface);
-  color: var(--color-text-primary);
-  box-shadow: var(--shadow-sm);
+  background: var(--module-accent, var(--color-accent));
+  color: var(--color-ink-on-vivid);
 }
 
 .budget-segmented__item i {
@@ -428,8 +435,11 @@
   --account-accent: var(--module-accent);
   display: flex;
   align-items: stretch;
-  background: var(--color-surface-elevated);
-  border: 1px solid var(--color-border-subtle);
+  /* HIG-Karte: opake Fläche, randlos, 16px - wie .budget-summary-card und das
+   * Dashboard-Widget. Die Kante bleibt als transparenter Träger stehen, weil
+   * der Hover sie einfärbt. */
+  background: var(--color-surface);
+  border: 1px solid transparent;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   overflow: hidden;
@@ -730,8 +740,13 @@
    * und split-expenses.css hatten hier Glass und widersprachen damit dieser
    * Zeile im selben Modul. */
   background-color: var(--color-surface);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-glass-card);
+  /* HIG-Karte: randlos auf dem Grouped-Grund, 16px Rundung, shadow-sm -
+   * dieselbe Bauart wie das Dashboard-Widget. Vorher: 26px
+   * (--radius-glass-card, der Radius für Glas-Chrome und Sheets) plus
+   * sichtbare Kante plus ein 3 %-Modul-Tint-Overlay aus der Glas-Phase. Drei
+   * Merkmale, die eine Kennzahlkarte wie ein Sheet aussehen ließen. */
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg);
   padding: var(--space-3);
   box-shadow: var(--shadow-sm);
   display: flex;
@@ -739,20 +754,6 @@
   gap: var(--space-0h);
   min-width: 0;
   position: relative;
-}
-
-.budget-summary-card::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background-color: color-mix(
-    in srgb,
-    var(--module-accent, var(--color-accent)) calc(var(--glass-tint-strength) / 2),
-    transparent
-  );
-  pointer-events: none;
-  z-index: 0;
 }
 
 .budget-summary-card__label,
@@ -1028,8 +1029,10 @@
   grid-template-columns: minmax(0, 1fr) auto;
   gap: var(--space-2) var(--space-3);
   padding: var(--space-3);
-  border: 1px solid var(--glass-border-subtle);
-  border-radius: var(--radius-glass-inner);
+  /* Randlose Karte auf dem Grouped-Grund. */
+  border: none;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
   cursor: pointer;
   transition: border-color var(--transition-fast), background-color var(--transition-fast), transform var(--transition-fast);
 }
@@ -1152,14 +1155,23 @@
   gap: var(--space-2);
 }
 
+/* Zeile in einer Liste: Haarlinie statt Kasten (tokens.css). */
+.budget-loan-transactions__list,
+.loan-report__transactions {
+  gap: 0;
+}
+
 .budget-loan-transaction {
   display: flex;
   justify-content: space-between;
   gap: var(--space-3);
-  padding: var(--space-3);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-glass-inner);
-  background-color: var(--color-surface);
+  padding: var(--space-3) 0;
+  border: none;
+  background-color: transparent;
+}
+
+.budget-loan-transaction + .budget-loan-transaction {
+  border-top: 1px solid var(--color-border-subtle);
 }
 
 .budget-loan-transaction span {
@@ -1276,13 +1288,16 @@
   min-height: 0;
 }
 
+/* Der 3px-Akzentstreifen zwischen Kategoriebalken und Transaktionsliste ist mit
+ * dem HIG-Rollout entfallen (DESIGN.md: kein Akzentstreifen). Die Trennung
+ * trägt die Haarlinie von .budget-list-section darüber - sie stand ohnehin
+ * schon da und wurde vom Streifen nur verdeckt. */
 .budget-list-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding-block: var(--space-3) var(--space-2);
   flex-shrink: 0;
-  border-top: 3px solid var(--module-accent);
 }
 
 .budget-list-header__actions {
@@ -1692,11 +1707,12 @@
   padding: var(--space-4);
   text-align: left;
   background-color: var(--color-surface);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-glass-card);
+  /* Randlose Karte auf dem Grouped-Grund. */
+  border: none;
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   cursor: pointer;
-  transition: box-shadow var(--transition-base), transform var(--transition-base), border-color var(--transition-base);
+  transition: box-shadow var(--transition-base), transform var(--transition-base);
 }
 .budget-plan-savings:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
 .budget-plan-savings:focus-visible {
@@ -1788,12 +1804,14 @@
   padding: var(--space-3) var(--space-4);
   text-align: left;
   background-color: var(--color-surface);
-  border: 1px solid var(--color-border-subtle);
+  /* Randlose Karte auf dem Grouped-Grund. */
+  border: none;
   border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
   cursor: pointer;
-  transition: box-shadow var(--transition-base), border-color var(--transition-base);
+  transition: box-shadow var(--transition-base);
 }
-.budget-plan-row:hover { box-shadow: var(--shadow-sm); border-color: var(--color-border); }
+.budget-plan-row:hover { box-shadow: var(--shadow-md); }
 .budget-plan-row:focus-visible {
   outline: var(--focus-ring-width) solid var(--focus-ring-color);
   outline-offset: var(--focus-ring-offset);

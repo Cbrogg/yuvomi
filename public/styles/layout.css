@@ -225,27 +225,34 @@
   /* Flex-Kind von .app-shell statt position: fixed - zuverlässiger auf iOS PWA.
    * position: fixed kann durch will-change: transform in iOS-Compositor-Layern
    * falsch referenziert werden. Als Flex-Kind am Ende der 100dvh-App-Shell ist
-   * die Position garantiert am Viewport-Bottom. */
+   * die Position garantiert am Viewport-Bottom.
+   *
+   * Liquid Glass (iOS 27): die Bar selbst ist eine transparente Zone; das
+   * Glas-Material trägt die schwebende Kapsel .nav-bottom__items. Der
+   * gleitende Indikator bleibt Kind von .nav-bottom und misst echte Rects
+   * (positionTabIndicator) — die Kapsel-Margins rechnen sich automatisch ein. */
   position: relative;
   flex-shrink: 0;
   width: 100%;
-  background-color: color-mix(in srgb, var(--color-surface) 85%, transparent);
-  border-top: 1px solid var(--color-border-subtle);
+  background: transparent;
   display: flex;
   flex-direction: column;
-  padding-bottom: var(--safe-area-inset-bottom);
+  padding: var(--space-2) var(--space-3) calc(var(--safe-area-inset-bottom) + var(--space-2));
   z-index: var(--z-nav);
-  backdrop-filter: var(--blur-md) saturate(180%);
-  -webkit-backdrop-filter: var(--blur-md) saturate(180%);
 }
 
-/* ── Items-Reihe ── */
+/* ── Items-Reihe: die schwebende Glas-Kapsel ── */
 .nav-bottom__items {
   display: flex;
   /* min-height statt fixer Höhe: lange Labels (de/fr, z. B. „Haushaltsbuch",
    * „Paramètres") dürfen die Bar auf zwei Zeilen wachsen lassen, statt zu
    * clippen. Kurze Labels behalten die kompakte Höhe. */
   min-height: var(--nav-height-mobile);
+  width: 100%;
+  max-width: 560px;
+  margin-inline: auto;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--glass-border);
 }
 
 /* ── More-Button (Button-Basis, ansonsten wie nav-item) ── */
@@ -924,6 +931,18 @@ html:has(.search-overlay--visible) yuvomi-install-prompt {
   box-shadow: none;
 }
 
+/* Aktive Icons als „filled variant": Lucide bleibt Stroke-Bibliothek, die
+ * Tab-Bar-Sprache des Kanons (gefülltes Symbol im aktiven Tab) entsteht über
+ * eine getönte Innenfüllung unter vollem Stroke. Wirkt nur auf geschlossene
+ * Pfade; Linien-Icons bleiben unverändert. */
+.nav-item[aria-current="page"] .nav-item__icon-well svg,
+.nav-item--active .nav-item__icon-well svg,
+.more-item[aria-current="page"] .more-item__icon-well svg {
+  /* 30 % statt 16 %: auf Tab-Bar-Größe (20px) las die schwächere Füllung
+   * weiter als Outline (Finish-Verdict Fundament-Phase, Fix 8). */
+  fill: color-mix(in srgb, currentColor 30%, transparent);
+}
+
 /* Bottom-Nav aktiv: die gleitende Indikatorfläche übernimmt den Zustand. */
 .nav-bottom .nav-item[aria-current="page"],
 .nav-bottom .nav-item--active {
@@ -1127,7 +1146,9 @@ html.fab-anim-done .page-fab {
   gap: var(--space-2);
   padding-block: var(--space-3);
   padding-inline: var(--page-inline-pad);
-  border-top: 3px solid var(--module-accent);
+  /* HIG (iOS 27): kein farbiger Akzentbalken an der Nav-Bar — Modul-Identität
+   * spricht über den Tint der Controls und den Titel. Der 3px-border-top der
+   * Alt-Welt ist bewusst entfallen (Redesign 2026-08). */
   border-bottom: 1px solid var(--color-border);
   /* Opaker Hintergrund, bewusst OHNE backdrop-filter: position:sticky plus
    * backdrop-filter innerhalb eines overflow:auto-Containers leert auf
@@ -1197,18 +1218,12 @@ html.fab-anim-done .page-fab {
 
 /* Opt-in: der Kopf sitzt UNTER einer Tab-Gruppenleiste (.sub-tabs-bar).
  *
- * Ohne diese Variante konnte die Küche den kanonischen Kopf nicht benutzen:
- * `.kitchen-tabs-bar` trägt den 3px-Akzentstreifen der Gruppe
- * (kitchen-tabs.css), ein `.page-toolbar` darunter hätte einen zweiten
- * Streifen in derselben Farbe direkt darunter gesetzt - genau der
- * Doppelstreifen aus Issue #577. Statt den Kopf zu meiden, haben sich alle
- * vier Küchen-Tabs eigene Köpfe gebaut (week-nav / list-header / recipes-
- * toolbar / pantry-toolbar), mit gemessenen Bauhöhen von 54 bis 188px und
- * vier verschiedenen Slot-Ordnungen (Critique 2026-07-29).
- *
- * Die Variante gibt genau EINE Eigenschaft ab: den Akzentstreifen, den die
- * Gruppenleiste schon trägt. Alles andere - Padding, Bleed, Hintergrund,
- * Sticky-Rolle, Titel-Typografie, Slot-Grammatik - bleibt der kanonische Kopf.
+ * Historisch gab die Variante genau eine Eigenschaft ab: den 3px-Akzentstreifen,
+ * den die Gruppenleiste schon trug (Doppelstreifen aus Issue #577). Seit dem
+ * HIG-Rollout trägt weder `.page-toolbar` noch `.kitchen-tabs-bar` einen
+ * Streifen - die Deklaration ist ein No-op und bleibt nur als benannter Ort,
+ * falls die Gruppen-Variante wieder etwas abzugeben hat. Der Wert der Klasse
+ * liegt heute in ihrem zweiten Teil: dem `top`-Hinweis unten.
  *
  * Das `top` NICHT verschieben. Naheliegend wäre, den Kopf um die Höhe der
  * Gruppenleiste nach unten zu versetzen, damit er „darunter" klebt. Das
@@ -1261,8 +1276,17 @@ html.fab-anim-done .page-fab {
      * --page-inline-pad: er muss mit dem Seiten-Body fluchten, und ein
      * eigener Wert hier war genau die Quelle des 16px-Versatzes. */
     padding-block: var(--space-2);
+    /* Engere Nähte, damit Titel + Aktionen EINE Zeile teilen statt zu
+     * umbrechen - der gestapelte Kopf hielt die erste Karte bei ~40 %
+     * Viewport (Finish-Verdict Fundament-Phase, Fix 6). Wirkt shell-weit
+     * auf alle .page-toolbar-Module; wer trotzdem nicht passt, bricht
+     * weiter kontrolliert um (flex-wrap bleibt). */
+    gap: var(--space-1);
   }
 
+  .page-toolbar__actions {
+    gap: var(--space-1);
+  }
 }
 
 /* --------------------------------------------------------

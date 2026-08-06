@@ -139,20 +139,26 @@ function applyModuleAccentForRoute(route) {
   document.documentElement.style.setProperty('--active-module-accent', accent);
 }
 
-/** Setzt theme-color passend zum aktuellen Modul */
+/**
+ * Setzt theme-color - app-weit auf den Seitengrund, NICHT pro Modul.
+ *
+ * Bis zum HIG-Rollout trug die Statusbar der installierten PWA den vollen
+ * Modul-Tint. In der neuen Welt ist das Chrome direkt darunter neutral
+ * (--color-bg, Toolbar ohne Akzentstreifen), der satte Ton darüber war damit
+ * eine sichtbare Naht und der lauteste Ton im Bild. Entscheidung von Ulas am
+ * 2026-08-06: vereinheitlichen. Die Modul-Identität tragen weiter Nav-Icons,
+ * Segmente, Chips und der FAB.
+ *
+ * Dieselben Werte wie die statischen theme-color-Metas in index.html; sie
+ * gelten auch für den modullosen Fall (Login, Setup, Join). Fremdmodule mit
+ * eigenem Akzent behalten ihre Farbe - ihre Seiten sind nicht Teil dieser Welt.
+ */
 function updateThemeColorForRoute(route) {
   if (route?.thirdPartyModule?.accent) {
     setThemeColor(route.thirdPartyModule.accent, route.thirdPartyModule.accent);
     return;
   }
-  if (!route?.module) {
-    setThemeColor('#007AFF', '#1C1C1E');
-    return;
-  }
-  const color = getCSSToken(`--module-${route.module}`);
-  if (color) {
-    setThemeColor(color, color);
-  }
+  setThemeColor('#F2F2F7', '#0C0C0E');
 }
 
 // --------------------------------------------------------

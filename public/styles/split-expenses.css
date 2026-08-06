@@ -15,9 +15,9 @@
    * Budget-Tab zieht die ausgeklappte Sidebar rund 345px ab, eine Query bei
    * 1023px hielte .split-layout dort fälschlich zweispaltig. */
   container: split-page / inline-size;
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--module-accent) 9%, transparent), transparent 280px),
-    var(--color-bg);
+  /* Die frühere modul-getönte Kopfwäsche (9 % über 280px) kannten nur zwei der
+   * 17 Module - ein Alt-Welt-Rest. Der Seitengrund ist überall derselbe. */
+  background: var(--color-bg);
 }
 
 .split-topbar,
@@ -84,8 +84,8 @@
 .split-card,
 .split-groups-panel {
   background-color: var(--color-surface);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-glass-card);
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
 }
 
@@ -187,7 +187,7 @@
   align-items: center;
   gap: var(--space-3);
   border: 1px solid transparent;
-  border-radius: var(--radius-glass-inner);
+  border-radius: var(--radius-md);
   background: transparent;
   color: inherit;
   text-align: left;
@@ -207,7 +207,7 @@
   flex: 0 0 42px;
   display: grid;
   place-items: center;
-  border-radius: var(--radius-glass-inner);
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--module-accent) 14%, var(--color-surface-2));
   color: var(--module-accent);
 }
@@ -273,8 +273,8 @@
   padding: var(--space-4);
   /* Arbeitsfläche, also opak - dieselbe Regel wie .split-card darüber. */
   background-color: var(--color-surface);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-glass-card);
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg);
 }
 
 /* Archiv-Marker im Gruppenkopf: sagt beim Direkteinstieg (Deep-Link, Suche),
@@ -292,12 +292,14 @@
   font-weight: var(--font-weight-medium);
 }
 
-.split-kicker {
-  margin-bottom: var(--space-1);
-  color: var(--module-accent);
-  font-weight: 800;
-  text-transform: uppercase;
-  font-size: var(--text-xs);
+/* Der Gruppentyp stand bis zum HIG-Rollout als Versal-Kicker ÜBER dem Namen -
+ * das verbotene Eyebrow-Muster, dazu mit --module-accent auf 13px unter AA
+ * (~3.5:1). Er ist jetzt Untertitel unter dem Namen: dieselbe Information,
+ * in der Sekundaerrolle, ohne Sonderformat. */
+.split-group-type {
+  margin: var(--space-0h) 0 0;
+  color: var(--color-text-secondary);
+  font-size: var(--type-secondary);
 }
 
 .split-header-actions {
@@ -411,11 +413,13 @@ button.split-expense:hover {
   flex: 1 1 0;
 }
 
+/* Formular-Gruppen im Sheet: Inset-Well statt Kasten (tokens.css). */
 .split-participants,
 .split-defaults {
-  border: 1px solid var(--glass-border-subtle);
-  border-radius: var(--radius-glass-inner);
+  border: none;
+  border-radius: var(--radius-md);
   padding: var(--space-3);
+  background: var(--color-fill-well);
 }
 
 .split-check {

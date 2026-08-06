@@ -17,11 +17,10 @@
   padding-bottom: calc(var(--nav-bottom-height) + var(--space-6));
 }
 
-/* Geteilte Tabs-Leiste trägt den Modul-Akzent-Streifen (wechselt je aktivem Tab
- * über --active-module-accent, vom Router gesetzt). Muster wie .kitchen-tabs-bar. */
-.health-tabs-bar {
-  border-top: 3px solid var(--active-module-accent, var(--color-accent));
-}
+/* Der 3px-Akzentstreifen über der Tabs-Leiste ist mit dem HIG-Rollout entfallen
+ * (DESIGN.md: „Don't Akzentstreifen an Toolbars oder Köpfen") - genauso wie bei
+ * .kitchen-tabs-bar, dem Muster, dem er nachgebaut war. Die Modul-Identität
+ * trägt der gefüllte aktive Tab. */
 
 .health-panel {
   display: flex;
@@ -41,17 +40,17 @@
   padding-top: var(--space-2);
 }
 
-/* Empty-State: zentriertes Panel mit getöntem Icon-Well im Modul-Akzent. */
+/* Empty-State: zentriertes Panel mit getöntem Icon-Well im Modul-Akzent.
+ * Randlos wie jede Karte auf dem Grouped-Grund; der frühere radial-gradient
+ * war Dekoration ohne Aussage und ist mit der HIG-Welt entfallen. */
 .health-empty {
   align-items: center;
   text-align: center;
   gap: var(--space-3);
   padding: var(--space-8) var(--space-4);
-  border: 1px solid var(--color-border);
+  border: none;
   border-radius: calc(var(--radius-md) + 4px);
-  background:
-    radial-gradient(circle at top, color-mix(in srgb, var(--module-accent) 8%, transparent), transparent 55%),
-    var(--color-surface);
+  background: var(--color-surface);
   box-shadow: var(--shadow-sm);
 }
 
@@ -182,26 +181,35 @@
   gap: var(--space-3);
 }
 
+/* Auf dem Grouped-Grund ist diese Kachel eine randlose Karte (Vitalwerte-Tab),
+ * INNERHALB der Übersichtskarte ein Inset-Well (tokens.css,
+ * Kasten-in-Kasten-Vokabular) - ein Well auf dem Grund wäre unsichtbar.
+ * Auswahl und Hover sprechen in beiden Fällen über einen Innenring. */
 .health-metric-card {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
   padding: var(--space-3);
-  border: 1px solid var(--color-border);
+  border: none;
   border-radius: var(--radius-md);
   background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
   text-align: start;
   cursor: pointer;
-  transition: border-color var(--transition-fast, var(--duration-sm)), box-shadow var(--transition-fast, var(--duration-sm));
+  transition: box-shadow var(--transition-fast, var(--duration-sm));
+}
+
+.health-overview__card .health-metric-card {
+  background: var(--color-fill-well);
+  box-shadow: none;
 }
 
 .health-metric-card:hover {
-  border-color: var(--module-accent);
+  box-shadow: inset 0 0 0 1px var(--module-accent);
 }
 
 .health-metric-card.is-active {
-  border-color: var(--module-accent);
-  box-shadow: 0 0 0 1px var(--module-accent);
+  box-shadow: inset 0 0 0 2px var(--module-accent);
 }
 
 /* Flex mit Umbruch: passt der Metrik-Name nicht mehr NEBEN das Icon, wrappt
@@ -320,7 +328,7 @@
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-4);
-  border: 1px solid var(--color-border);
+  border: 1px solid transparent;
   border-radius: var(--radius-md);
   background: var(--color-surface);
 }
@@ -434,24 +442,26 @@
   margin-inline-start: auto;
 }
 
-/* „Heute fällig"-Liste */
+/* „Heute fällig"-Liste - Haarlinien-Liste, der Trenner ersetzt den Abstand. */
 .health-meds__due-list {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: 0;
 }
 
+/* Leerzustand: zentrierter Sekundärtext ohne Kasten - ein gestrichelter Rahmen
+ * wäre in einer randlosen Karte ein Kasten-in-Kasten, und eine eigene Fläche
+ * trüge je nach Träger (Karte oder Grund) unterschiedlich. */
 .health-meds__due-empty,
 .health-meds__empty {
   padding: var(--space-4);
   text-align: center;
   color: var(--color-text-secondary);
   font-size: var(--text-sm);
-  border: 1px dashed var(--color-border);
-  border-radius: var(--radius-md);
+  border: none;
 }
 
 .health-dose {
@@ -461,10 +471,13 @@
   gap: var(--space-1) var(--space-3);
   /* Dichtere Zeile: geringeres vertikales Padding, damit mehr Dosen ohne Scrollen
    * sichtbar sind (Kern-Interaktion des Tabs). */
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
+  padding: var(--space-2) 0;
+  border: none;
+  background: transparent;
+}
+
+.health-dose + .health-dose {
+  border-top: 1px solid var(--color-border-subtle);
 }
 
 .health-dose__time {
@@ -513,7 +526,7 @@
   flex-direction: column;
   gap: var(--space-2);
   padding: var(--space-4);
-  border: 1px solid var(--color-border);
+  border: 1px solid transparent;
   border-radius: var(--radius-md);
   background: var(--color-surface);
 }
@@ -577,7 +590,7 @@
   flex-direction: column;
   gap: var(--space-2);
   padding: var(--space-3);
-  border: 1px solid var(--color-border);
+  border: 1px solid transparent;
   border-radius: var(--radius-md);
   background: var(--color-surface);
   text-align: start;
@@ -700,22 +713,26 @@ button.health-med-card:hover {
   color: var(--color-text-secondary);
 }
 
+/* Haarlinien-Liste: der Trenner ersetzt den Abstand (siehe tokens.css). */
 .health-sched-list {
   list-style: none;
   margin: 0 0 var(--space-2);
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: 0;
 }
 
 .health-sched-row {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  padding: var(--space-2) 0;
+  border: none;
+}
+
+.health-sched-row + .health-sched-row {
+  border-top: 1px solid var(--color-border-subtle);
 }
 
 .health-sched-row__time {
@@ -811,14 +828,14 @@ button.health-med-card:hover {
   gap: var(--space-3);
 }
 
+/* Leerzustand: zentrierter Sekundärtext ohne Kasten (siehe .health-meds__empty). */
 .health-labs__empty,
 .health-labs__detail-empty {
   padding: var(--space-4);
   text-align: center;
   color: var(--color-text-secondary);
   font-size: var(--text-sm);
-  border: 1px dashed var(--color-border);
-  border-radius: var(--radius-md);
+  border: none;
 }
 
 .health-lab-card {
@@ -826,7 +843,7 @@ button.health-med-card:hover {
   flex-direction: column;
   gap: var(--space-2);
   padding: var(--space-3);
-  border: 1px solid var(--color-border);
+  border: 1px solid transparent;
   border-radius: var(--radius-md);
   background: var(--color-surface);
   text-align: start;
@@ -892,7 +909,7 @@ button.health-med-card:hover {
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-4);
-  border: 1px solid var(--color-border);
+  border: 1px solid transparent;
   border-radius: var(--radius-md);
   background: var(--color-surface);
 }
@@ -1037,22 +1054,26 @@ button.health-med-card:hover {
   color: var(--color-text-secondary);
 }
 
+/* Haarlinien-Liste: der Trenner ersetzt den Abstand (siehe tokens.css). */
 .health-results-list {
   list-style: none;
   margin: 0 0 var(--space-2);
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: 0;
 }
 
 .health-results-row {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  padding: var(--space-2) 0;
+  border: none;
+}
+
+.health-results-row + .health-results-row {
+  border-top: 1px solid var(--color-border-subtle);
 }
 
 .health-results-row__analyte {
@@ -1136,14 +1157,16 @@ button.health-med-card:hover {
   gap: var(--space-3);
 }
 
+/* Kennzahl-Kachel: liegt auf dem Grouped-Grund, also randlose Karte. */
 .health-activity-stat {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
   padding: var(--space-3);
-  border: 1px solid var(--color-border);
+  border: none;
   border-radius: var(--radius-md);
   background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .health-activity-stat__icon {
@@ -1166,7 +1189,7 @@ button.health-med-card:hover {
 /* Balken-Chart */
 .health-activity__chart {
   padding: var(--space-4);
-  border: 1px solid var(--color-border);
+  border: 1px solid transparent;
   border-radius: var(--radius-md);
   background: var(--color-surface);
 }
@@ -1182,23 +1205,27 @@ button.health-med-card:hover {
   color: var(--color-text-secondary);
 }
 
+/* Haarlinien-Liste: der Trenner ersetzt den Abstand (siehe tokens.css). */
 .health-activity-list {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: 0;
 }
 
 .health-activity-row {
   display: flex;
   align-items: flex-start;
   gap: var(--space-3);
-  padding: var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
+  padding: var(--space-3) 0;
+  border: none;
+  background: transparent;
+}
+
+.health-activity-row + .health-activity-row {
+  border-top: 1px solid var(--color-border-subtle);
 }
 
 .health-activity-row__icon {
@@ -1324,7 +1351,7 @@ button.health-med-card:hover {
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-4);
-  border: 1px solid var(--color-border);
+  border: 1px solid transparent;
   border-radius: calc(var(--radius-md) + 2px);
   background: var(--color-surface);
   box-shadow: var(--shadow-sm);
@@ -1399,23 +1426,27 @@ button.health-med-card:hover {
 }
 
 /* Nächste Erinnerungen */
+/* Haarlinien-Liste: der Trenner ersetzt den Abstand (siehe tokens.css). */
 .health-overview__reminders-list {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: 0;
 }
 
 .health-overview-reminder {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface-2);
-  border: 1px solid var(--color-border);
+  padding: var(--space-2) 0;
+  background: transparent;
+  border: none;
+}
+
+.health-overview-reminder + .health-overview-reminder {
+  border-top: 1px solid var(--color-border-subtle);
 }
 
 .health-overview__reminders-empty,
@@ -1638,11 +1669,12 @@ button.health-med-card:hover {
   align-items: flex-start;
   margin-top: var(--space-4);
   padding: var(--space-5);
-  border: 1px solid color-mix(in srgb, var(--module-accent) 30%, var(--color-border));
+  /* Randlose Karte wie überall; die Hervorhebung trägt der Inhalt (getöntes
+   * Icon), nicht ein Kartendekor aus getönter Kante plus Verlauf. */
+  border: none;
   border-radius: var(--radius-lg);
-  background:
-    radial-gradient(circle at top left, color-mix(in srgb, var(--module-accent) 12%, transparent), transparent 60%),
-    var(--color-surface);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .cycle-preg__icon {
@@ -1723,14 +1755,18 @@ button.health-med-card:hover {
   gap: var(--space-2);
 }
 
+/* Kennzahlkarte auf dem Grouped-Grund: randlose Karte. Die frühere
+ * surface-2-Fläche lag im Dark UNTER dem Grund (#050507 auf #0A0A0C) und
+ * verschwand dort fast vollständig. */
 .cycle-stat {
   display: flex;
   flex-direction: column;
   gap: var(--space-0h);
   padding: var(--space-3);
-  background: var(--color-surface-2);
-  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  border: none;
   border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
 }
 
 .cycle-stat__head {
@@ -1777,9 +1813,11 @@ button.health-med-card:hover {
   flex-wrap: wrap;
   margin-top: var(--space-4);
   padding: var(--space-3) var(--space-4);
-  background: var(--color-surface-2);
-  border: 1px solid var(--color-border);
+  /* Aktionsleiste auf dem Grouped-Grund: randlose Karte (siehe .cycle-stat). */
+  background: var(--color-surface);
+  border: none;
   border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
 }
 
 .cycle-today__label { font-weight: 600; font-size: var(--text-sm); color: var(--color-text-secondary); }
@@ -1948,22 +1986,26 @@ button.cycle-cal__day:not(:disabled):hover { background: var(--color-surface-2);
 
 .cycle-history { margin-top: var(--space-6); }
 
+/* Haarlinien-Liste: der Trenner ersetzt den Abstand (siehe tokens.css). */
 .cycle-history__list {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: 0;
 }
 
 .cycle-history__row {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  padding: var(--space-2) 0;
+  border: none;
+}
+
+.cycle-history__row + .cycle-history__row {
+  border-top: 1px solid var(--color-border-subtle);
 }
 
 .cycle-history__dot {
@@ -2073,8 +2115,9 @@ button.cycle-cal__day:not(:disabled):hover { background: var(--color-surface-2);
 .cycle-bulk__confirm {
   width: 100%;
   padding: var(--space-3);
-  background: var(--color-surface-raised);
-  border: 1px solid var(--color-border-subtle);
+  /* Inline-Panel in einer Karte: Inset-Well, kein Kasten (siehe tokens.css). */
+  background: var(--color-fill-well);
+  border: none;
   border-radius: var(--radius-md);
   flex-direction: column;
   gap: var(--space-3);
@@ -2099,7 +2142,7 @@ button.cycle-cal__day:not(:disabled):hover { background: var(--color-surface-2);
  * Löschen als row-action nur in der eigenen Ansicht. */
 .health-recent {
   margin-top: var(--space-3);
-  border: 1px solid var(--color-border-subtle);
+  border: 1px solid transparent;
   border-radius: var(--radius-md);
   background: var(--color-surface-work);
   padding: var(--space-2) var(--space-3);
@@ -2146,7 +2189,7 @@ button.cycle-cal__day:not(:disabled):hover { background: var(--color-surface-2);
 /* Einnahmeprotokoll-Aufklapper unter der Adhärenz (Audit R2, A2-22). */
 .health-medlog {
   margin-top: var(--space-2);
-  border: 1px solid var(--color-border-subtle);
+  border: 1px solid transparent;
   border-radius: var(--radius-md);
   background: var(--color-surface-work);
   padding: var(--space-2) var(--space-3);

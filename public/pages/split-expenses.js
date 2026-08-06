@@ -318,8 +318,8 @@ function renderMain() {
   setHtml(main, `
     <section class="split-group-header">
       <div>
-        <div class="split-kicker">${t(`splitExpenses.groupType.${group.type}`)}</div>
         <h2>${esc(group.name)}</h2>
+        <p class="split-group-type">${t(`splitExpenses.groupType.${group.type}`)}</p>
         ${archived ? `<p class="split-archived-badge"><i data-lucide="archive" class="icon-md" aria-hidden="true"></i>${t('splitExpenses.statusArchived')}</p>` : ''}
         <p>${esc(group.description || t('splitExpenses.groupDefaultDescription'))}</p>
       </div>

@@ -412,6 +412,14 @@ function greetingPeriod() {
   return 'evening';
 }
 
+// Masthead-Datum nach Apple-Kanon („Mittwoch, 6. August"): Wochentag + Tag +
+// Monat in der aktiven App-Locale; die Versalisierung uebernimmt die CSS-Rolle
+// (.dashboard-overview__date, text-transform). Bewusst lokales new Date()
+// (reines Anzeige-Datum, keine ISO-Konvertierung - Zeitzonen-Falle).
+function mastheadDateLabel(now = new Date()) {
+  return new Intl.DateTimeFormat(getLocale(), { weekday: 'long', day: 'numeric', month: 'long' }).format(now);
+}
+
 // Relatives Datumslabel: „Heute"/„Morgen", sonst das locale-formatierte Datum.
 // Eigene Funktion, damit Aufrufer nur den Datumsteil brauchen, ohne ein
 // zusammengesetztes „Datum, Zeit" per Komma zu zerschneiden (locale-fragil:
@@ -1137,11 +1145,18 @@ function renderTodayCard(icon, label, value, route, tone, count = null) {
   const badge = Number.isFinite(count) && count > 0
     ? `<span class="today-cockpit-card__count">${count}</span>`
     : '';
+  // Inset-Grouped-Zeile (Apple-Systemapp-Muster): getoente Icon-Kachel traegt
+  // die Modulzugehoerigkeit, der Inhalt steht als Titel in Textfarbe, das
+  // Modul-Label lebt als ruhiger Untertitel weiter (nie versal, nie ueber dem
+  // Titel), der Zaehler als trailing Badge.
   return `
     <button type="button" class="today-cockpit-card today-cockpit-card--${tone}" data-route="${route}">
       <span class="today-cockpit-card__icon"><i data-lucide="${icon}" aria-hidden="true"></i></span>
-      <span class="today-cockpit-card__label">${esc(label)}${badge}</span>
-      <strong class="today-cockpit-card__value">${esc(value)}</strong>
+      <span class="today-cockpit-card__body">
+        <strong class="today-cockpit-card__value">${esc(value)}</strong>
+        <span class="today-cockpit-card__sub">${esc(label)}</span>
+      </span>
+      ${badge}
     </button>
   `;
 }
@@ -1197,7 +1212,7 @@ function renderTodayCockpit(data, cfg = []) {
 
 
 function renderDashboardOverview(user, editing = false) {
-  const dateLabel = formatDate(new Date());
+  const dateLabel = mastheadDateLabel();
 
   return `
     <section class="dashboard-overview">
@@ -2183,7 +2198,7 @@ export async function render(container, { user }) {
       titleEl.classList.add(`dashboard-overview__title--${greetingPeriod()}`);
     }
     const dateEl  = container.querySelector('.dashboard-overview__date');
-    if (dateEl)  dateEl.textContent = formatDate(new Date());
+    if (dateEl)  dateEl.textContent = mastheadDateLabel();
     // Hintergrund-Tabs bekommen gedrosselte Timer: die Uhr könnte beim
     // Zurückkehren Minuten nachhängen und muss sofort nachziehen (#651).
     updateClockWidget(container);

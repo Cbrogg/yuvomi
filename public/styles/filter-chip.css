@@ -4,9 +4,11 @@
  *
  * Vorher definierten Tasks (.filter-chip), Kontakte (.contact-filter-chip) und
  * Dokumente (.documents-filter-chip) drei nahezu identische Chips nebeneinander.
- * Tasks und Dokumente teilen sich jetzt diese Datei; Kontakte bleiben bewusst
- * eigenständig, weil ihr Aktiv-Zustand eine andere Füllung (--c-accent, deckend)
- * fährt und eine Angleichung deren Erscheinungsbild ändern würde.
+ * Tasks und Dokumente teilen sich jetzt diese Datei. Kontakte behalten ihren
+ * eigenen Selektor (eigene Zeilen-Geometrie), fahren aber seit dem HIG-Rollout
+ * denselben Aktiv-Zustand: 18 % Fläche / 50 % Kante / 70 % Tinte. Ihre frühere
+ * deckende Füllung las sich wie ein aktives Segment, und die gefüllte Kapsel
+ * gehört seit Runde 1 den Segmenten.
  *
  * Reihenfolge-Hinweis: global NACH glass.css eingebunden, damit die bestehende
  * Tasks-Darstellung unverändert bleibt.
@@ -41,21 +43,17 @@
  * (dokumentiert in tokens.css, Abschnitt Modul-Akzente), nicht als roher
  * Akzent: der Chip-Grund ist selbst eine Tönung derselben Farbe, dadurch hing
  * der Kontrast allein an der Akzent-Helligkeit (tasks 3.60:1, notes 3.57:1).
- * Füllung und Rahmen bleiben unberührt, der Chip behält seine Modulfarbe. */
+ * Füllung und Rahmen bleiben unberührt, der Chip behält seine Modulfarbe.
+ *
+ * Die Werte (18 % Fläche, 50 % Kante) standen bis zum HIG-Rollout in einem
+ * @supports-Zwilling, der zusätzlich blur-xs und einen Specular-Inset auflegte
+ * - Glas auf einem INHALTS-Element und damit gegen die Glas-ist-Chrome-Regel.
+ * Weil jeder Browser mit backdrop-filter ohnehin diesen Zweig sah, sind seine
+ * Farbwerte hier der Bestand; nur Blur und Specular sind weg. */
 .filter-chip--active {
-  background-color: color-mix(in srgb, var(--module-accent, var(--color-accent)) 14%, transparent);
-  border-color: var(--module-accent, var(--color-accent));
+  background-color: color-mix(in srgb, var(--module-accent, var(--color-accent)) 18%, transparent);
+  border-color: color-mix(in srgb, var(--module-accent, var(--color-accent)) 50%, transparent);
   color: color-mix(in srgb, var(--module-accent, var(--color-accent)) 70%, var(--color-text-primary));
-}
-
-@supports (backdrop-filter: blur(1px)) {
-  .filter-chip--active {
-    background: color-mix(in srgb, var(--module-accent, var(--color-accent)) 18%, transparent);
-    backdrop-filter: var(--blur-xs);
-    -webkit-backdrop-filter: var(--blur-xs);
-    border-color: color-mix(in srgb, var(--module-accent, var(--color-accent)) 50%, transparent);
-    box-shadow: var(--glass-inset-base);
-  }
 }
 
 /* Dichtere Variante für Filterzeilen mit vielen Chips (Dokumente). Das Touch-Maß
