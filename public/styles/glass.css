@@ -19,7 +19,7 @@
  * ================================================================ */
 
 /* Immer aktiv: Glass-Hintergrund, Border, Shadow — auf der schwebenden
- * Kapsel (.nav-bottom__items), nicht mehr auf der Bar-Zone (iOS 27).
+ * Kapsel (.nav-bottom__items), nicht mehr auf der Bar-Zone (Liquid Glass).
  * Eigener Schatten statt --glass-shadow-md: dessen weißer Ring ist auf dem
  * hellen Grouped Background unsichtbar — die Kapsel braucht dunklen Halt
  * (Offset + weiche Streuung + 0.5px-Kontur), sonst schwimmt sie formlos. */

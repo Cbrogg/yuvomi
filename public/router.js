@@ -724,10 +724,11 @@ async function navigate(path, userOrPushState = true, pushState = true) {
     }
 
     // Küchen-Routen lösen auf --module-kitchen auf, nicht auf ihr eigenes
-    // --module-*: die vier Tabs sind EIN Modul (kitchenGroup) und teilen einen
-    // Akzent. Sonst wechselte der 3px-Streifen der Tab-Leiste und der FAB beim
-    // Tabwechsel die Farbe - dieselbe Botschaft wie ein echter Modulwechsel
-    // (Critique 2026-07-29). Begründung am Token in tokens.css.
+    // --module-*: die Küche ist im Routing vier Module, in Navigation, Akzent
+    // und Statusbar eines (kitchenGroup). Sonst wechselte der 3px-Streifen der
+    // Tab-Leiste und der FAB beim Tabwechsel die Farbe - dieselbe Botschaft wie
+    // ein echter Modulwechsel (Critique 2026-07-29). Begründung am Token in
+    // tokens.css, Wortlaut bei moduleAccentToken().
     applyModuleAccentForRoute(route);
 
     // Optimistisches Chrome-Feedback: aktive Nav-Markierung + Indikator-Pille und
@@ -2683,10 +2684,17 @@ async function disableFailedThirdPartyModule(moduleId) {
 
 /**
  * Akzent-Token-Name eines Moduls. Die vier Küchen-Module lösen gemeinsam auf
- * --module-kitchen auf: sie sind EIN Modul mit einem Nav-Eintrag, und ein
- * Farbwechsel beim Tabwechsel sendet dieselbe Botschaft wie ein Modulwechsel
- * (Critique 2026-07-29). Ein Auflöser für alle Nav-Pfade - Bottom-Nav, Sidebar,
- * More-Sheet und Streifen -, damit die Regel nicht viermal einzeln steht.
+ * --module-kitchen auf.
+ *
+ * Die belegbare Lage, an allen drei Stellen derselbe Satz (DESIGN.md,
+ * tokens.css, hier): die Küche ist im ROUTING vier Module - vier Einträge in
+ * ROUTES mit vier eigenen `module:`-Werten -, in NAVIGATION, AKZENT und
+ * STATUSBAR aber eines. Was sie zusammenhält, ist `kitchenGroup: true` in den
+ * Nav-Einträgen und dieses eine Token; ein Farbwechsel beim Tabwechsel sendete
+ * dieselbe Botschaft wie ein Modulwechsel (Critique 2026-07-29).
+ *
+ * Ein Auflöser für alle Nav-Pfade - Bottom-Nav, Sidebar, More-Sheet und
+ * Streifen -, damit die Regel nicht viermal einzeln steht.
  */
 function moduleAccentToken(mod) {
   if (!mod) return '';

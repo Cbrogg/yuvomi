@@ -3,7 +3,7 @@
  * Zweck: CSS Custom Properties fuer das gesamte Design-System
  * Abhängigkeiten: keine
  *
- * WELT: Apple HIG, Liquid Glass nach iOS 27 / macOS 27 (Redesign 2026-08,
+ * WELT: Apple HIG, Liquid-Glass-Designphilosophie (Redesign 2026-08,
  * Direction Contract in index.html). System-Font-Stack, Apple-Typo-Skala,
  * kuehle System-Neutrale, Apple-Indigo-Tint, Modul-Farben im Apple-Vokabular.
  * iOS-27-Linie: Lesbarkeit vor Transparenz — Glas ist diffus und satt statt
@@ -330,9 +330,10 @@
   --module-shopping:   var(--_module-shopping);    /* Pink-600 - Einkaufen; 5.02:1 auf weiß — WCAG AA */
   --_module-pantry:    #4C7A0F;
   --module-pantry:     var(--_module-pantry);      /* Oliv-Grün (86°) - Vorrat; 4.99:1 auf weiß — WCAG AA */
-  /* Akzent der KÜCHEN-GRUPPE. Mahlzeiten/Rezepte/Einkaufen/Vorrat sind EIN
-   * Modul mit vier Ansichten (router.js: `kitchenGroup: true`) - also EIN
-   * Akzent, nicht vier. Ein Farbwechsel beim Tabwechsel wäre die stärkste
+  /* Akzent der KÜCHEN-GRUPPE. Mahlzeiten/Rezepte/Einkaufen/Vorrat sind im
+   * ROUTING vier Module mit vier eigenen `module:`-Werten, in NAVIGATION,
+   * AKZENT und STATUSBAR aber eines (router.js: `kitchenGroup: true`) - also
+   * EIN Akzent, nicht vier. Ein Farbwechsel beim Tabwechsel wäre die stärkste
    * „du hast den Kontext verlassen"-Botschaft der App (Critique 2026-07-29).
    * Die vier --module-{meals,recipes,shopping,pantry} bleiben bestehen:
    * Dashboard-Widgets und Nav-Icons referenzieren sie einzeln. */
@@ -742,7 +743,7 @@
    * 12. Layout
    * -------------------------------------------------------- */
   --nav-height-mobile: 60px;
-  /* Schwebende Kapsel (iOS 27): Zone = Kapsel + 8px Luft oben und unten. */
+  /* Schwebende Kapsel (Liquid Glass): Zone = Kapsel + 8px Luft oben und unten. */
   --nav-bottom-height: calc(var(--nav-height-mobile) + var(--space-4) + var(--safe-area-inset-bottom));
   --sidebar-width: 56px;             /* Fallback (mobile: sidebar hidden) */
   --sidebar-width-expanded: 220px;   /* full sidebar (≥1024px), max 240px laut Spec */

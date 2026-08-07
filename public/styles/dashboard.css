@@ -1867,7 +1867,7 @@ svg.weather-forecast__icon {
  * (Pseudo-Element wie die Wetterkarte) und den Verlaufstext der Begrüßung —
  * nie über eine Flächenfüllung des Bandes.
  * -------------------------------------------------------- */
-/* HIG (iOS 27): der Kopf ist KEINE Karte. Large-Title-Gruß und Glance-Cockpit
+/* HIG: der Kopf ist KEINE Karte. Large-Title-Gruß und Glance-Cockpit
  * stehen direkt auf dem Grouped Background — wie der „Heute"-Kopf in Apple
  * News/Fitness. Das frühere Material-Band (Tint-Fläche, Rahmen, Eck-Glow)
  * gehörte zur abgelösten Welt. */
@@ -1940,7 +1940,7 @@ svg.weather-forecast__icon {
   hyphens: manual;
 }
 
-/* HIG (iOS 27): Large Titles tragen IMMER Label-Farbe — kein Gradient-Text.
+/* HIG: Large Titles tragen IMMER Label-Farbe — kein Gradient-Text.
  * Der frühere Tageszeit-Verlauf gehörte zur abgelösten Welt; die Tageszeit
  * spricht jetzt allein über den Grußtext selbst. Die --morning/--day/
  * --evening-Klassen bleiben als No-Op bestehen (router setzt sie weiter). */

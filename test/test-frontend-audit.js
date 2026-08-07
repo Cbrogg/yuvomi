@@ -6992,6 +6992,51 @@ test('Der Sortiergriff nimmt sich die Geste aus der Wischbedienung', () => {
     'Der geteilte Wisch-Helfer muss die Ausnahme im touchstart auswerten.');
 });
 
+test('Der Modulkopf trägt kein Glas, und das bleibt so', () => {
+  // Eine BEGRÜNDETE Abweichung vom Kanon, und deshalb braucht sie einen Guard:
+  // die belegte Liquid-Glass-Linie führt Navigationsleisten transparent. Yuvomi
+  // stellt den Kopf nahtlos und opak auf den Seitengrund, weil die
+  // kollabierende Large-Title-Leiste davon lebt - Glas zeigte am Scroll-Anfang
+  // eine Fläche, wo gerade keine sein soll. Dazu kommt der WebKit-Grund, der an
+  // der Regel selbst steht: sticky plus backdrop-filter in einem
+  // overflow:auto-Container leert auf iOS den ganzen Scrollport.
+  //
+  // Ohne diesen Guard liest sich die Abweichung als Auslassung, und jemand baut
+  // sie „zurück zum Kanon".
+  //
+  // Die Klassen, die MIT dem Kopf auf einem Element sitzen, kommen aus dem
+  // Markup, nicht aus einer Liste: ein Modul, das seiner eigenen Kopfklasse Glas
+  // gäbe, wäre sonst unsichtbar (dieselbe Lehre wie beim Umzug eines geteilten
+  // Bausteins - der Konflikt sitzt im ELEMENT, nicht im Selektortext).
+  const headClasses = new Set(['page-toolbar']);
+  for (const file of walkFrontendFiles('../public/')) {
+    for (const [, value] of read(file).matchAll(/class="([^"]*\bpage-toolbar\b[^"]*)"/g)) {
+      for (const cls of value.split(/\s+/)) {
+        if (cls && !cls.startsWith('${') && !cls.includes('--')) headClasses.add(cls);
+      }
+    }
+  }
+
+  const offenders = [];
+  for (const file of readdirSync(new URL('../public/styles/', import.meta.url)).filter((f) => f.endsWith('.css'))) {
+    for (const { selector, body, at } of eachRule(read(`../public/styles/${file}`))) {
+      if (!/backdrop-filter\s*:\s*(?!none)/.test(body)) continue;
+      const hit = [...headClasses].find((cls) => new RegExp(`\\.${cls}(?![\\w-])`).test(selector));
+      if (hit) offenders.push(`${file}: ${at.join(' ')} ${selector} (über .${hit})`);
+    }
+  }
+
+  assert.deepEqual(offenders, [],
+    'Der Modulkopf ist opak - eine begründete Abweichung vom Kanon, siehe DESIGN.md '
+    + '„Die Glas-ist-Chrome-Regel".\n  ' + offenders.join('\n  '));
+
+  // Eine Sonde, die nichts gesehen hat, darf nicht urteilen: fände sie den Kopf
+  // im Markup nicht mehr, bliebe sie mit jedem Verstoß grün.
+  assert.ok(headClasses.size >= 4,
+    `Nur ${headClasses.size} Kopf-Klassen im Markup gefunden - erwartet ist .page-toolbar `
+    + 'plus die Modul-Klassen, die sich ein Element mit ihr teilen.');
+});
+
 test('Eine Wischgeste, die löscht, hat einen Rückgängig-Weg', () => {
   // Der Rechtswisch im Einkauf rief `api.delete` direkt: sofort und endgültig,
   // ohne Undo-Toast, mit flyOut. Es war die einzige Stelle der App, an der eine
