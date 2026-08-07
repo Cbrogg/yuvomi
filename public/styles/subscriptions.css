@@ -295,13 +295,30 @@
 
 .subscription-card {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: var(--space-2);
   align-items: center;
   padding: var(--space-2);
   border: 1px solid transparent;
   border-radius: var(--radius-md);
   background: var(--color-surface);
+}
+
+/* Der Zeilenkörper ist ein echter `<button>` und trägt die Grammatik der
+ * app-weiten klickbaren Zeile (.list-row__main--interactive, list-row.css):
+ * Fokusring, Zielgröße, kein Knopf-Aussehen. Er öffnet das Bearbeiten, das
+ * vorher ein eigener Icon-Knopf in der Zeile war.
+ *
+ * Die Spalten der Karte sind damit auf ihn gewandert - vier Icon-Knöpfe je
+ * Zeile waren die lauteste Stelle des Bildschirms, und ein Tap-Handler auf dem
+ * `<article>` hätte den Knopf entfernt, ohne einen Tastaturweg an seine Stelle
+ * zu setzen. */
+.subscription-card__main {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  align-items: center;
+  min-width: 0;
 }
 
 .subscription-card--disabled {
@@ -903,12 +920,19 @@
     grid-template-columns: 1fr;
   }
 
-  .subscription-card {
-    grid-template-columns: auto minmax(0, 1fr) auto;
+  /* Unter 1024px stapelt der Zeilenkörper Betrag und Text: die Spalten
+     gehören seit Runde 6 ihm, nicht der Karte - die trägt nur noch Körper
+     und Aktionen nebeneinander. */
+  .subscription-card__main {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .subscription-card__cost {
+    grid-column: 2 / -1;
+    align-items: flex-start;
   }
 
   .subscription-card__actions {
-    grid-column: 2 / -1;
     justify-content: flex-end;
   }
 }
@@ -944,20 +968,6 @@
 
   .subscriptions-toolbar__actions .btn--icon {
     flex: 1;
-  }
-
-  .subscription-card {
-    grid-template-columns: auto minmax(0, 1fr);
-  }
-
-  .subscription-card__cost {
-    grid-column: 1 / -1;
-    align-items: flex-start;
-  }
-
-  .subscription-card__actions {
-    grid-column: 1 / -1;
-    justify-content: space-between;
   }
 
   .subscription-card__actions .btn {
@@ -1007,5 +1017,28 @@
 
   .subscriptions-logo-results {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Auf Touch tragen die Wischrichtungen die beiden Zeilenaktionen (Zahlung
+ * buchen am Zeilenanfang, löschen am Zeilenende) und die Knöpfe verschwinden -
+ * dasselbe Muster wie in den Geburtstagen und im Einkauf. Auf Zeigergeräten
+ * bleiben sie: dort gibt es keine Geste. Der Zeilenkörper ist davon nicht
+ * betroffen, er ist kein Icon-Knopf, sondern die Zeile selbst.
+ *
+ * STEHT BEWUSST GANZ UNTEN, nicht bei der Basisregel: `.subscription-card__actions`
+ * bekommt in zwei Media-Queries darüber `display`- und `justify-content`-Werte
+ * mit derselben Spezifität, und eine Regel davor verlöre allein durch die
+ * Reihenfolge (in birthdays.css genau so gemessen). */
+@media (hover: none) {
+  .subscription-card__actions {
+    display: none;
+  }
+
+  /* Die Reserve am Zeilenende gehört dann dem Wisch-Chevron
+     (.swipe-row::after, layout.css). */
+  .subscription-card {
+    grid-template-columns: minmax(0, 1fr);
+    padding-inline-end: calc(var(--space-2) + var(--space-3) + var(--space-2));
   }
 }

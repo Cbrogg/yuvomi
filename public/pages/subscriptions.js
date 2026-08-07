@@ -15,6 +15,7 @@ import {
 import { esc } from '/utils/html.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
 import { toLocalDateKey } from '/utils/date.js';
+import { wireSwipeRows, maybeShowSwipeHint } from '/utils/swipe-row.js';
 import { formatMoney, amountPlaceholder, amountStep, applyAmountFormat, amountIsSavable, smallestUnitLabel } from '/utils/money.js';
 
 let state = {
@@ -557,6 +558,12 @@ function endInfoLabel(subscription) {
   return null;
 }
 
+// Die Zeile fuehrt ZWEI Aktionen, und welche, sagt der Rang (§2, Session 16):
+// der Zeilenanfang die primaere positive - eine Zahlung buchen -, das Zeilenende
+// das Destruktive. Bearbeiten liegt auf dem TAP, nicht auf einer Wischrichtung
+// und nicht mehr auf einem eigenen Knopf; der Zustandsschalter ist ganz
+// entfallen, weil dasselbe Feld im Bearbeiten-Formular steht. Vier Icon-Knoepfe
+// je Zeile waren die lauteste Stelle des Bildschirms, uebrig sind zwei.
 function renderCard(subscription) {
   const brandColor = subscription.brand_color || subscription.category_color || '#0F766E';
   const converted = subscription.monthly_base === null
@@ -565,51 +572,99 @@ function renderCard(subscription) {
   const status = statusMeta(subscription);
   const endInfo = endInfoLabel(subscription);
   return `
+    <div class="swipe-row" data-swipe-id="${subscription.id}">
+      <div class="swipe-reveal swipe-reveal--done swipe-reveal--leading" aria-hidden="true">
+        <i data-lucide="calendar-check" class="icon-md"></i>
+        <span>${t('subscriptions.markRenewed')}</span>
+      </div>
+      <div class="swipe-reveal swipe-reveal--delete swipe-reveal--trailing" aria-hidden="true">
+        <i data-lucide="trash-2" class="icon-md"></i>
+        <span>${t('common.delete')}</span>
+      </div>
     <article class="subscription-card ${status.cardClass}"
              data-id="${subscription.id}" style="--subscription-color:${esc(brandColor)}">
-      <div class="subscription-card__brand">
-        ${subscription.logo_data
-          ? `<img src="${esc(subscription.logo_data)}" alt="">`
-          : `<span>${esc(subscription.name.slice(0, 2).toUpperCase())}</span>`}
-      </div>
-      <div class="subscription-card__body">
-        <div class="subscription-card__title-row">
-          <div>
-            <h3>${esc(subscription.name)}</h3>
-            <p>${esc(subscription.description || categoryLabel(subscription.category_name))}</p>
-          </div>
-          <span class="subscription-status ${status.badgeClass}">
-            ${status.label}
+      <button type="button" class="subscription-card__main list-row__main--interactive"
+              data-action="edit" aria-label="${t('subscriptions.edit')}">
+        <span class="subscription-card__brand">
+          ${subscription.logo_data
+            ? `<img src="${esc(subscription.logo_data)}" alt="">`
+            : `<span>${esc(subscription.name.slice(0, 2).toUpperCase())}</span>`}
+        </span>
+        <span class="subscription-card__body">
+          <span class="subscription-card__title-row">
+            <span>
+              <h3>${esc(subscription.name)}</h3>
+              <p>${esc(subscription.description || categoryLabel(subscription.category_name))}</p>
+            </span>
+            <span class="subscription-status ${status.badgeClass}">
+              ${status.label}
+            </span>
           </span>
-        </div>
-        <div class="subscription-card__meta">
-          <span><i data-lucide="calendar-clock" aria-hidden="true"></i>${formatDate(subscription.next_payment_date)} · ${dueLabel(subscription)}</span>
-          <span><i data-lucide="repeat-2" aria-hidden="true"></i>${cycleLabel(subscription)}</span>
-          <span><i data-lucide="wallet-cards" aria-hidden="true"></i>${esc(subscription.payment_method_name || t('subscriptions.unspecified'))}</span>
-          <span><i data-lucide="bell" aria-hidden="true"></i>${t('subscriptions.reminderMeta', { count: subscription.reminder_days })}</span>
-          ${endInfo ? `<span><i data-lucide="${endInfo.icon}" aria-hidden="true"></i>${esc(endInfo.text)}</span>` : ''}
-        </div>
-      </div>
-      <div class="subscription-card__cost">
-        <strong>${money(subscription.amount, subscription.currency)}</strong>
-        <span>${converted}</span>
-      </div>
+          <span class="subscription-card__meta">
+            <span><i data-lucide="calendar-clock" aria-hidden="true"></i>${formatDate(subscription.next_payment_date)} · ${dueLabel(subscription)}</span>
+            <span><i data-lucide="repeat-2" aria-hidden="true"></i>${cycleLabel(subscription)}</span>
+            <span><i data-lucide="wallet-cards" aria-hidden="true"></i>${esc(subscription.payment_method_name || t('subscriptions.unspecified'))}</span>
+            <span><i data-lucide="bell" aria-hidden="true"></i>${t('subscriptions.reminderMeta', { count: subscription.reminder_days })}</span>
+            ${endInfo ? `<span><i data-lucide="${endInfo.icon}" aria-hidden="true"></i>${esc(endInfo.text)}</span>` : ''}
+          </span>
+        </span>
+        <span class="subscription-card__cost">
+          <strong>${money(subscription.amount, subscription.currency)}</strong>
+          <span>${converted}</span>
+        </span>
+      </button>
       <div class="subscription-card__actions">
-        <button class="btn btn--secondary btn--icon" data-action="toggle" aria-label="${subscription.enabled ? t('subscriptions.disable') : t('subscriptions.enable')}">
-          <i data-lucide="${subscription.enabled ? 'pause' : 'play'}" aria-hidden="true"></i>
-        </button>
         <button class="btn btn--secondary btn--icon" data-action="renew" aria-label="${t('subscriptions.markRenewed')}">
           <i data-lucide="calendar-check" aria-hidden="true"></i>
-        </button>
-        <button class="btn btn--secondary btn--icon" data-action="edit" aria-label="${t('subscriptions.edit')}">
-          <i data-lucide="pencil" aria-hidden="true"></i>
         </button>
         <button class="btn btn--secondary btn--icon" data-action="delete" aria-label="${t('subscriptions.delete')}">
           <i data-lucide="trash-2" aria-hidden="true"></i>
         </button>
       </div>
     </article>
+    </div>
   `;
+}
+
+/**
+ * Die Wischgesten der Abo-Liste. Zuordnung nach dem app-weiten Rang: der
+ * Zeilenanfang traegt die primaere positive Aktion (eine Zahlung buchen), das
+ * Zeilenende das Destruktive.
+ *
+ * KEINE der beiden Richtungen laesst die Zeile hinausfliegen. Beide fuehren
+ * ueber eine Bestaetigung, und was danach kommt, entscheidet der Nutzer - eine
+ * Zeile, die schon weg ist, waehrend der Dialog noch fragt, hat die Antwort
+ * vorweggenommen. Der Knopf daneben ruft dieselbe Funktion, damit die Geste
+ * keine zweite Schreibweise derselben Arbeit wird.
+ */
+function wireSubscriptionSwipe(host) {
+  wireSwipeRows(host, {
+    card: '.subscription-card',
+    leading: {
+      reveal: '.swipe-reveal--done',
+      run: (row) => {
+        const subscription = subscriptionFor(row);
+        if (subscription) renewSubscription(subscription);
+      },
+    },
+    trailing: {
+      reveal: '.swipe-reveal--delete',
+      run: (row) => {
+        const subscription = subscriptionFor(row);
+        if (subscription) deleteSubscription(subscription);
+      },
+    },
+  });
+}
+
+// Beide Richtungen RUFEN ihre Funktion, statt sie einem Helfer zu uebergeben.
+// Der Guard auf Ebene 3 folgt von der Wischrichtung der Aufrufkante zu der
+// Funktion, in der der Rueckweg steht - eine als Argument durchgereichte
+// Referenz waere fuer ihn keine Kante, und er haette den Rueckweg nicht
+// gefunden, obwohl er da ist. Eine Verdrahtung, die ein Guard nicht lesen kann,
+// ist eine, die beim naechsten Mal niemand prueft.
+function subscriptionFor(row) {
+  return state.subscriptions.find((item) => item.id === Number(row.dataset.swipeId));
 }
 
 function renderEmpty() {
@@ -640,17 +695,27 @@ function bindContent() {
   container.querySelector('#subscriptions-refresh-rates')?.addEventListener('click', () => reload({ refreshRates: true }));
   container.querySelector('#subscriptions-empty-add')?.addEventListener('click', () => openSubscriptionModal());
   container.querySelector('#subscriptions-empty-reset')?.addEventListener('click', resetFilters);
-  container.querySelector('#subscriptions-list')?.addEventListener('click', async (event) => {
+  const list = container.querySelector('#subscriptions-list');
+  list?.addEventListener('click', async (event) => {
     const action = event.target.closest('[data-action]');
-    if (!action) return;
-    const card = action.closest('[data-id]');
+    const card = event.target.closest('.subscription-card');
     const subscription = state.subscriptions.find((row) => row.id === Number(card?.dataset.id));
     if (!subscription) return;
+
+    if (!action) return;
+    // Der Zeilenkoerper OEFFNET das Bearbeiten und ist dafuer ein echter
+    // `<button>` (`.list-row__main--interactive`, das app-weite Vokabular fuer
+    // eine klickbare Zeile). Ein blosser Tap-Handler auf dem `<article>` haette
+    // den Bearbeiten-Knopf entfernt, ohne einen Tastaturweg an seine Stelle zu
+    // setzen - das waere kein Aufraeumen, sondern ein Regress.
     if (action.dataset.action === 'edit') openSubscriptionModal(subscription);
-    if (action.dataset.action === 'toggle') await toggleSubscription(subscription);
     if (action.dataset.action === 'renew') await renewSubscription(subscription);
     if (action.dataset.action === 'delete') await deleteSubscription(subscription);
   });
+  if (list) {
+    wireSubscriptionSwipe(list);
+    maybeShowSwipeHint(list);
+  }
 }
 
 function currencyItems() {
@@ -1196,17 +1261,17 @@ function openLogoPickerModal(panel, initialQuery, onSelect) {
   setTimeout(() => input.focus(), 50);
 }
 
-async function toggleSubscription(subscription) {
-  try {
-    await api.put(`/budget/subscriptions/${subscription.id}`, { enabled: !subscription.enabled });
-    await reload();
-    window.yuvomi?.showToast(t(subscription.enabled ? 'subscriptions.disabledToast' : 'subscriptions.enabledToast'), 'success');
-  } catch (err) {
-    window.yuvomi?.showToast(err.data?.error || t('common.unknownError'), 'danger');
-  }
-}
-
+// Eine Zahlung zu buchen schiebt das Faelligkeitsdatum und legt einen
+// Budget-Eintrag an. Beides ist mit einem zweiten Wisch NICHT umkehrbar - anders
+// als das Abhaken einer Aufgabe, das dieselbe Kante traegt. Deshalb fragt die
+// Aktion nach, und deshalb fragt sie an BEIDEN Wegen nach, Geste wie Knopf: eine
+// Bestaetigung, die nur an einem der beiden haengt, ist keine Regel, sondern
+// eine Eigenschaft des Wegs.
 async function renewSubscription(subscription) {
+  const confirmed = await confirmModal(
+    t('subscriptions.renewConfirm', { name: subscription.name }),
+    { detail: t('subscriptions.renewConfirmDetail', { date: formatDate(subscription.next_payment_date) }) });
+  if (!confirmed) return;
   try {
     const response = await api.post(`/budget/subscriptions/${subscription.id}/renew`, {});
     await reload();

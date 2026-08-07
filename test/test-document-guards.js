@@ -34,6 +34,39 @@ import {
 const ROUTE_NAMES = Object.keys(ROUTES);
 let harness;
 
+/**
+ * Jeden Budget-Untertab oeffnen und `visit(name)` darin laufen lassen.
+ *
+ * WARUM DAS SEIN MUSS: die Budget-Untertabs wechseln nach der Leisten-Regel
+ * eine SICHT innerhalb eines Moduls, also keine Route. Wer nur `ROUTES`
+ * abfaehrt, sieht von sieben Kennzahlreihen eine und von den Wischlisten der
+ * App die Abo-Liste gar nicht - und „antwortet die Liste ueberhaupt" ist genau
+ * die Frage, die eine Ebene tiefer niemand beantworten kann.
+ *
+ * Es steht hier oben und nicht zweimal weiter unten: zwei Aufzaehlungen
+ * derselben Arbeit verlieren eine davon einen Schritt, und man sieht erst im
+ * Dokument, welchen.
+ */
+async function visitBudgetTabs(page, visit) {
+  await gotoRoute(page, ROUTES.budget);
+  const tabIds = await page.evaluate(() => [...document.querySelectorAll('[role="tab"][data-tab-id]')]
+    .map((b) => b.dataset.tabId));
+  for (const id of tabIds) {
+    const clicked = await page.evaluate((tabId) => {
+      const btn = document.querySelector(`[data-tab-id="${tabId}"]`);
+      if (!btn) return false;
+      btn.click();
+      return true;
+    }, id);
+    if (!clicked) continue;
+    // Der Tabwechsel laedt seine Daten nach; ohne das Warten misst die Sonde
+    // den VORIGEN Tab (dieselbe Falle wie in Session 11, „eine Sonde misst nur,
+    // was zum Messzeitpunkt existiert").
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    await visit(`budget/${id}`);
+  }
+}
+
 before(async () => {
   harness = await startHarness();
 });
@@ -731,6 +764,23 @@ test('Sonde 4 - keine Zielgroessen-Ausnahme ueberlebt ihre Klasse', () => {
 const ROLE_SIDE = { 'swipe-reveal--delete': 'trailing', 'swipe-reveal--done': 'leading' };
 
 async function uncoveredPanel(page, sign) {
+  // ERST IN DEN VIEWPORT HOLEN. `page.touchscreen` setzt Viewport-Koordinaten;
+  // eine Zeile unter der Falz bekaeme einen Finger, der ausserhalb des Bildes
+  // aufsetzt, und die Sonde meldete „nicht verdrahtet", wo in Wahrheit nur
+  // niemand hingefasst hat. Auf den Hauptrouten steht die erste Wischzeile weit
+  // oben, im Abo-Tab liegt sie hinter Kennzahlen und Auswertung.
+  //
+  // Gemessen wird NACH dem Warten: der kollabierende Kopf verschiebt beim
+  // Scrollen alles unter sich, und ein Rechteck von vorher zeigt daneben.
+  const scrolled = await page.evaluate(() => {
+    const row = document.querySelector('.swipe-row');
+    if (!row) return false;
+    row.scrollIntoView({ block: 'center' });
+    return true;
+  });
+  if (!scrolled) return null;
+  await new Promise((resolve) => setTimeout(resolve, 250));
+
   const box = await page.evaluate(() => {
     const row = document.querySelector('.swipe-row');
     if (!row) return null;
@@ -762,10 +812,9 @@ describe('Sonde 5 - eine Wischzeile antwortet, und jede Rolle liegt an ihrer Kan
       const findings = [];
       let listsSeen = 0;
 
-      for (const name of ROUTE_NAMES) {
-        await gotoRoute(page, ROUTES[name]);
+      const measure = async (name) => {
         const hasRows = await page.evaluate(() => Boolean(document.querySelector('.swipe-row .swipe-reveal')));
-        if (!hasRows) continue;
+        if (!hasRows) return;
         listsSeen += 1;
 
         // In RTL deckt derselbe Finger die andere Kante auf - die Erwartung
@@ -788,14 +837,22 @@ describe('Sonde 5 - eine Wischzeile antwortet, und jede Rolle liegt an ihrer Kan
             }
           }
         }
+      };
+
+      for (const name of ROUTE_NAMES) {
+        await gotoRoute(page, ROUTES[name]);
+        await measure(name);
       }
+      // Die Abo-Liste liegt hinter einem Untertab und waere sonst die einzige
+      // Wischliste der App, die nie gefahren wird.
+      await visitBudgetTabs(page, measure);
       await page.close();
 
       // Eine Sonde, die nichts gemessen hat, darf nicht urteilen (dieselbe
       // Zusicherung wie bei Sonde 3 und 4).
-      assert.ok(listsSeen >= 3,
-        `Nur ${listsSeen} Wischlisten gesehen - erwartet sind mindestens Aufgaben, Einkauf und Geburtstage. `
-        + 'Entweder hat der Seed keine Zeilen geliefert, oder die Bauart hat sich geaendert.');
+      assert.ok(listsSeen >= 4,
+        `Nur ${listsSeen} Wischlisten gesehen - erwartet sind mindestens Aufgaben, Einkauf, Geburtstage `
+        + 'und Abonnements. Entweder hat der Seed keine Zeilen geliefert, oder die Bauart hat sich geaendert.');
 
       assert.deepEqual(findings, [],
         'Wischsemantik im gerenderten Dokument. Die Regel lautet: rechts (zum Zeilenanfang hin) '
@@ -863,23 +920,7 @@ describe('Sonde 6 - die Kacheln einer Kennzahlreihe sind gleich hoch', () => {
       // Die Budget-Untertabs wechseln keine Route (§2, Leisten-Regel: sie
       // wechseln die SICHT innerhalb eines Moduls). Ohne diesen Durchlauf
       // saehe die Sonde von sieben Kennzahlreihen genau eine.
-      await gotoRoute(page, ROUTES.budget);
-      const tabIds = await page.evaluate(() => [...document.querySelectorAll('#budget-tabs [data-tab-id], [role="tab"][data-tab-id]')]
-        .map((b) => b.dataset.tabId));
-      for (const id of tabIds) {
-        const clicked = await page.evaluate((tabId) => {
-          const btn = document.querySelector(`[data-tab-id="${tabId}"]`);
-          if (!btn) return false;
-          btn.click();
-          return true;
-        }, id);
-        if (!clicked) continue;
-        // Der Tabwechsel laedt seine Daten nach; ohne das Warten misst die
-        // Sonde die Reihe des VORIGEN Tabs (dieselbe Falle wie in Session 11,
-        // „eine Sonde misst nur, was zum Messzeitpunkt existiert").
-        await new Promise((resolve) => setTimeout(resolve, 1200));
-        check(`budget/${id}`, await metricRowHeights(page));
-      }
+      await visitBudgetTabs(page, async (where) => check(where, await metricRowHeights(page)));
       await page.close();
 
       // Eine Sonde, die nichts gemessen hat, darf nicht urteilen (dieselbe
