@@ -460,7 +460,7 @@ function updateBranding(path = currentPath) {
     sidebarVersion.hidden = !version;
   }
 
-  const loginTitle = document.querySelector('.login-hero__title');
+  const loginTitle = document.querySelector('.auth-hero__title');
   if ((path === '/login' || path === '/setup') && loginTitle) loginTitle.textContent = appName;
 
   document.title = (path === '/login' || path === '/setup')

@@ -293,7 +293,7 @@
 /* Der persistente Install-Promo-Banner (z-toast) weicht JEDEM fokussierten
  * Overlay — regulären Modals (.modal-overlay: Hilfe, Änderungen, Löschdialoge,
  * Formulare …), dem More-Sheet und dem Such-Overlay — statt deren Inhalt zu
- * überlagern. Deklarativ via :has() (im Projekt etabliert: login.css,
+ * überlagern. Deklarativ via :has() (im Projekt etabliert: auth.css,
  * user-multi-select.css); reaktiv beim Ein-/Ausblenden, ohne JS-Hooks. */
 html:has(.modal-overlay) yuvomi-install-prompt,
 html:has(.more-sheet[aria-hidden="false"]) yuvomi-install-prompt,
@@ -2632,6 +2632,41 @@ p.field-hint--warn[hidden] {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+}
+
+/* --------------------------------------------------------
+ * Rückmeldung eines Formulars
+ *
+ * Beide Boxen standen bis zur Namensbereinigung als `.login-error` /
+ * `.login-success` im Auth-Stylesheet, obwohl der Fehler-Kasten längst auch in
+ * Aufgaben, Dokumenten und Belohnungen stand. Ein Formular kann überall stehen,
+ * also steht seine Rückmeldung in der Shell-Ebene.
+ * -------------------------------------------------------- */
+.form-error {
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--color-danger-light);
+  color: var(--color-danger);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  margin-bottom: var(--space-4);
+}
+
+/* Die Fehlerregion wird nach einem Fehlschlag programmatisch fokussiert
+ * (tabindex="-1"), damit sehende Tastaturnutzer sie bemerken. Die rote Box
+ * kommuniziert den Zustand bereits - kein zusätzlicher Fokusring nötig. */
+.form-error:focus {
+  outline: none;
+}
+
+/* Gegenstück zur Fehlerbox: die Erfolgsmeldung nach dem Einlösen einer
+ * Einladung oder eines Reset-Links stand bisher unausgezeichnet im Fließtext. */
+.form-success {
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--color-success-light);
+  color: var(--color-success);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  margin-bottom: var(--space-4);
 }
 
 /* --------------------------------------------------------

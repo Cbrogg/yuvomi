@@ -1214,7 +1214,7 @@ function openDocumentModal(doc = null) {
           <div class="document-member-picker__grid">${memberOptions(doc?.allowed_member_ids || [])}</div>
         </div>
         ${advancedSection(advancedFieldsHtml, { open: advancedOpen })}
-        <div id="document-error" class="login-error" hidden></div>
+        <div id="document-error" class="form-error" hidden></div>
         <div class="modal-panel__footer modal-panel__footer--plain">
           <button type="submit" class="btn btn--primary" id="document-submit">${isEdit ? t('common.save') : t('documents.uploadAction')}</button>
         </div>
@@ -1362,7 +1362,7 @@ function openFolderModal() {
           <label class="label" for="document-folder-name">${t('documents.folderNameLabel')}</label>
           <input class="input" id="document-folder-name" required maxlength="200" autocomplete="off">
         </div>
-        <div id="document-folder-error" class="login-error" hidden></div>
+        <div id="document-folder-error" class="form-error" hidden></div>
         <div class="modal-panel__footer modal-panel__footer--plain">
           <button type="submit" class="btn btn--primary">${t('documents.createFolderAction')}</button>
         </div>

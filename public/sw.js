@@ -48,7 +48,7 @@ const APP_SHELL = [
   '/styles/pwa.css',
   '/styles/layout.css',
   '/styles/glass.css',
-  '/styles/login.css',
+  '/styles/auth.css',
   '/styles/reminders.css',
   '/styles/dashboard.css',
   '/styles/tasks.css',

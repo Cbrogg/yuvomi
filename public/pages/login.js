@@ -19,7 +19,7 @@ function getStoredAppName() {
 function setAppBranding(appName) {
   const name = String(appName || '').trim() || DEFAULT_APP_NAME;
   document.title = name;
-  const titleEl = document.querySelector('.login-hero__title');
+  const titleEl = document.querySelector('.auth-hero__title');
   if (titleEl) titleEl.textContent = name;
 }
 
@@ -39,9 +39,9 @@ export async function render(container) {
 
   container.replaceChildren();
   container.insertAdjacentHTML('beforeend', `
-    <main class="login-page" id="main-content">
-      <div class="login-hero">
-        <span class="login-hero__mark" aria-hidden="true">
+    <main class="auth-page" id="main-content">
+      <div class="auth-hero">
+        <span class="auth-hero__mark" aria-hidden="true">
           <svg viewBox="0 0 160 160" fill="currentColor">
             <g fill-opacity="0.82">
               <circle cx="64" cy="72" r="27" />
@@ -50,12 +50,12 @@ export async function render(container) {
             </g>
           </svg>
         </span>
-        <h1 class="login-hero__title">${esc(storedAppName)}</h1>
-        <p class="login-hero__tagline">${esc(t('login.tagline'))}</p>
+        <h1 class="auth-hero__title">${esc(storedAppName)}</h1>
+        <p class="auth-hero__tagline">${esc(t('login.tagline'))}</p>
       </div>
-      <div class="login-card card card--padded">
+      <div class="auth-card card card--padded">
 
-        <form class="login-form" id="login-form" novalidate>
+        <form class="auth-form" id="auth-form" novalidate>
           <div class="form-group">
             <label class="label" for="username">${esc(t('login.usernameLabel'))}</label>
             <input
@@ -80,34 +80,34 @@ export async function render(container) {
               autocomplete="current-password"
               required
             />
-            <p class="login-capslock" id="login-capslock" role="status" hidden>
+            <p class="auth-capslock" id="auth-capslock" role="status" hidden>
               <i data-lucide="arrow-up" aria-hidden="true"></i>
               <span>${esc(t('login.capsLockWarning'))}</span>
             </p>
           </div>
 
-          <div class="login-error" id="login-error" role="alert" tabindex="-1" hidden></div>
+          <div class="form-error" id="form-error" role="alert" tabindex="-1" hidden></div>
 
-          <button type="submit" class="btn btn--primary login-form__submit" id="login-btn">
-            <span class="login-btn__label">${esc(t('login.loginButton'))}</span>
+          <button type="submit" class="btn btn--primary auth-form__submit" id="auth-btn">
+            <span class="auth-btn__label">${esc(t('login.loginButton'))}</span>
           </button>
           ${ssoEnabled ? `
-          <div class="login-divider">${esc(t('login.orDivider'))}</div>
-          <a href="/api/v1/auth/oidc/start" class="btn btn--secondary login-form__submit">${esc(t('login.loginWithSso'))}</a>
+          <div class="auth-divider">${esc(t('login.orDivider'))}</div>
+          <a href="/api/v1/auth/oidc/start" class="btn btn--secondary auth-form__submit">${esc(t('login.loginWithSso'))}</a>
           ` : ''}
-          <p class="login-form__forgot" hidden>
+          <p class="auth-form__forgot" hidden>
             <a href="/forgot-password" data-link>${esc(t('login.forgotPassword'))}</a>
           </p>
         </form>
       </div>
-      <p class="login-version" id="login-version"></p>
+      <p class="auth-version" id="auth-version"></p>
     </main>
   `);
 
-  const form = container.querySelector('#login-form');
-  const errorEl = container.querySelector('#login-error');
-  const submitBtn = container.querySelector('#login-btn');
-  const versionEl = container.querySelector('#login-version');
+  const form = container.querySelector('#auth-form');
+  const errorEl = container.querySelector('#form-error');
+  const submitBtn = container.querySelector('#auth-btn');
+  const versionEl = container.querySelector('#auth-version');
 
   container.querySelectorAll('a[data-link]').forEach((a) =>
     a.addEventListener('click', (e) => { e.preventDefault(); window.yuvomi.navigate(a.getAttribute('href')); }));
@@ -146,7 +146,7 @@ export async function render(container) {
 
   // Caps-Lock-Hinweis: eine aktive Feststelltaste ist die häufigste Ursache für
   // vermeintlich falsche Passwörter. Nur am Passwortfeld, nur solange aktiv.
-  const capslockEl = container.querySelector('#login-capslock');
+  const capslockEl = container.querySelector('#auth-capslock');
   if (window.lucide) lucide.createIcons({ el: capslockEl });
   const updateCapsLock = (e) => {
     if (typeof e.getModifierState !== 'function') return;
@@ -177,7 +177,7 @@ export async function render(container) {
       // „Passwort vergessen?" wie SSO gaten: nur anbieten, wenn der Server eine
       // Reset-Mail tatsächlich zustellen kann (SMTP + BASE_URL). Sonst Sackgasse.
       if (d?.password_reset_enabled) {
-        const forgot = container.querySelector('.login-form__forgot');
+        const forgot = container.querySelector('.auth-form__forgot');
         if (forgot) forgot.hidden = false;
       }
       versionEl.textContent = d?.version ? t('login.version', { version: d.version }) : '';
@@ -208,14 +208,14 @@ export async function render(container) {
       return;
     }
 
-    const labelEl = submitBtn.querySelector('.login-btn__label');
+    const labelEl = submitBtn.querySelector('.auth-btn__label');
 
     submitBtn.disabled = true;
     usernameInput.disabled = true;
     passwordInput.disabled = true;
     labelEl.textContent = t('login.loggingIn');
     const spinner = document.createElement('span');
-    spinner.className = 'login-spinner';
+    spinner.className = 'auth-spinner';
     spinner.setAttribute('aria-hidden', 'true');
     submitBtn.insertBefore(spinner, labelEl);
 
@@ -239,8 +239,8 @@ export async function render(container) {
         passwordGroup.classList.add('form-group--error');
         usernameInput.setAttribute('aria-invalid', 'true');
         passwordInput.setAttribute('aria-invalid', 'true');
-        const forgot = container.querySelector('.login-form__forgot');
-        if (forgot && !forgot.hidden) forgot.classList.add('login-form__forgot--emphasis');
+        const forgot = container.querySelector('.auth-form__forgot');
+        if (forgot && !forgot.hidden) forgot.classList.add('auth-form__forgot--emphasis');
       }
 
       // Fokus auf die Fehlermeldung, damit auch sehende Tastaturnutzer sie

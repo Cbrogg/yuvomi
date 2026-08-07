@@ -711,7 +711,7 @@ function renderModalContent({ task = null, users = [], reminder = null } = {}) {
         </div>
       </div>
 
-      <div id="task-form-error" class="login-error" hidden></div>
+      <div id="task-form-error" class="form-error" hidden></div>
 
       <div class="modal-panel__footer modal-panel__footer--plain">
         ${isEdit ? `
