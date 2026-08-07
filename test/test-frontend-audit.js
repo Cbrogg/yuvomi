@@ -4107,7 +4107,6 @@ test('sticky section headers stack above glass cards via --z-sticky', () => {
     const body = cssRuleBody(read(file), selector);
     assert.match(body, /position:\s*sticky/, `${file} ${selector} should be sticky`);
     assert.match(body, /z-index:\s*var\(--z-sticky\)/, `${file} ${selector} must use --z-sticky so glass cards do not scroll over it`);
-    assert.doesNotMatch(body, /z-index:\s*var\(--z-base\)/, `${file} ${selector} must not sit on the base layer`);
   }
 });
 
@@ -4193,10 +4192,12 @@ test('phase 1 defines synchronized surface roles for readable work areas', () =>
   const publicSurfaceTokens = [
     '--color-surface-work',
     '--color-surface-raised',
-    '--color-surface-glass',
     '--app-backdrop-accent-strength',
     '--app-backdrop-secondary-strength',
   ];
+  // --_color-surface-glass hat KEINE oeffentliche Fassade mehr: die trug niemand
+  // im Stylesheet, waehrend der private Wert weiter --_glass-bg-card speist. Ein
+  // oeffentliches Token ohne Nutzer ist eine API-Zusage ohne Deckung.
   const privateSurfaceTokens = [
     '--_color-surface-work',
     '--_color-surface-raised',
@@ -5955,7 +5956,7 @@ test('border-radius wird ausschließlich über Radius-Tokens gesetzt', () => {
     for (const match of css.matchAll(/border-radius(?:-[a-z-]+)?:\s*([^;}]+)/g)) {
       const value = match[1].trim();
       if (/^(0|none|inherit|initial|unset)$/.test(value)) continue;
-      if (/%|var\(--radius|var\(--lg-card-radius/.test(value)) continue;
+      if (/%|var\(--radius/.test(value)) continue;
       const line = css.slice(0, match.index).split('\n').length;
       offenders.push(`${file}:${line} → ${value}`);
     }

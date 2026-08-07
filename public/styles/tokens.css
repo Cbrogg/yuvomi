@@ -121,7 +121,6 @@
   --_color-surface-raised:    #FBFBFD;
   --color-surface-raised:     var(--_color-surface-raised);
   --_color-surface-glass:     rgba(250, 250, 252, 0.62);
-  --color-surface-glass:      var(--_color-surface-glass);
 
   /* KASTEN-IN-KASTEN-VOKABULAR (HIG-Rollout Runde 2, 2026-08-06).
    * Karten sind randlos auf dem Grouped-Grund. Was IN einer Karte liegt, bekommt
@@ -218,8 +217,6 @@
   --color-accent:             var(--_color-accent);
   --_color-accent-hover:      #4340B8;
   --color-accent-hover:       var(--_color-accent-hover);
-  --_color-accent-active:     #3A38A6;
-  --color-accent-active:      var(--_color-accent-active);
   /* --color-accent-deep ist mit dem Wetter-Widget entfallen (Runde 3): es hatte
    * genau einen Nutzer, den Verlauf dieses Widgets, und Verläufe auf Inhalt
    * kennt diese Welt nicht mehr. */
@@ -324,6 +321,10 @@
   --_module-meals:     #C2410C;
   --module-meals:      var(--_module-meals);       /* Orange-700 - Essen, Wärme */
   --_module-recipes:   #0C7C5B;
+  /* OHNE var()-Nutzer, und das ist Absicht: die vier Küchenrouten lösen ihren
+   * Akzent auf --module-kitchen auf, deshalb greift niemand den Rezepte-Ton.
+   * Er bleibt trotzdem stehen - die 18 Tints sind EINE Familie, und eine Lücke
+   * darin wäre bei der nächsten Modulfrage ein Sonderfall statt einer Antwort. */
   --module-recipes:    var(--_module-recipes);     /* Teal-Grün - Rezepte; 5.19:1 auf weiß — WCAG AA */
   --_module-shopping:  #CF236F;
   --module-shopping:   var(--_module-shopping);    /* Pink-600 - Einkaufen; 5.02:1 auf weiß — WCAG AA */
@@ -534,7 +535,6 @@
   --radius-md: 12px;
   --radius-lg: 16px;
   --radius-xl: 26px;
-  --radius-2xl: 32px;
   --radius-full: 9999px;
 
   /* --------------------------------------------------------
@@ -603,7 +603,6 @@
   /* --------------------------------------------------------
    * 11. Abstände - 4px-Raster
    * -------------------------------------------------------- */
-  --space-0:  0px;
   --space-px: 1px;
   --space-0h: 2px;
   --space-1:  4px;
@@ -823,13 +822,10 @@
   --duration-2xl: 400ms;   /* = slow (Layout-Umbauten, Sidebar) */
 
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
 
   /* --------------------------------------------------------
    * 15. Z-Indizes
    * -------------------------------------------------------- */
-  --z-base:    0;
-  --z-card:    1;
   --z-sticky:  10;
   --z-dropdown: 50;
   --z-nav:     100;
@@ -854,10 +850,6 @@
    * -------------------------------------------------------- */
 
   /* a) Glass-Hintergründe */
-  --_glass-bg:          rgba(249, 249, 251, 0.68);
-  --glass-bg:           var(--_glass-bg);
-  --_glass-bg-hover:    rgba(249, 249, 251, 0.80);
-  --glass-bg-hover:     var(--_glass-bg-hover);
   --_glass-bg-elevated: rgba(250, 250, 252, 0.86);
   --glass-bg-elevated:  var(--_glass-bg-elevated);
   --_glass-border:      rgba(255, 255, 255, 0.65);
@@ -871,10 +863,6 @@
   --glass-bg-card:        var(--_glass-bg-card);
   --_glass-bg-card-hover: rgba(250, 250, 252, 0.74);
   --glass-bg-card-hover:  var(--_glass-bg-card-hover);
-  --_glass-bg-input:      rgba(255, 255, 255, 0.80);
-  --glass-bg-input:       var(--_glass-bg-input);
-  --_glass-bg-toolbar:    rgba(249, 249, 251, 0.82);
-  --glass-bg-toolbar:     var(--_glass-bg-toolbar);
 
   /* a3) Tint: Modul-Akzentfarbe als subtile Glass-Tonung */
   --_glass-tint-strength: 6%;
@@ -886,11 +874,8 @@
   --blur-sm:  blur(10px);
   --blur-md:  blur(20px);
   --blur-lg:  blur(32px);
-  --blur-xl:  blur(56px);
 
   /* c) Opazitäten */
-  --opacity-glass-subtle:   0.65;
-  --opacity-glass-base:     0.80;
   --opacity-glass-elevated: 0.92;
 
   /* d) Highlights / Specular */
@@ -958,8 +943,6 @@
   --app-backdrop-secondary-strength: var(--_app-backdrop-secondary-strength);
   --lg-blob-opacity:   0.16;
   --lg-glass-saturate: 200%;    /* Backdrop-Sättigung erhöhter Glass-Flächen */
-  --lg-card-radius:    var(--radius-glass-card);
-  --lg-density:        1;       /* multipliziert Schlüssel-Paddings (Reserve) */
   --lg-specular:       0.22;    /* Stärke des Inset-Top-Highlights */
 }
 
@@ -1045,7 +1028,6 @@
     /* Akzent — Apple Indigo Dark */
     --_color-accent:            #7D7AFF;   /* ~5:1 auf #1C1C1E */
     --_color-accent-hover:      #8E8BFF;
-    --_color-accent-active:     #6B68F0;
     --_color-accent-light:      #1E1C46;  /* >=4.5:1 unter --color-accent #7D7AFF */
     --_color-accent-subtle:     #191740;
     --_color-btn-primary:       #5E5CE6;   /* Weißes Label ~5.4:1 */
@@ -1138,8 +1120,6 @@
     --_shadow-xl: 0 18px 56px rgba(0, 0, 0, 0.65), 0 4px 12px rgba(0, 0, 0, 0.28);
     --_shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.35);
 
-    --_glass-bg:               rgba(22, 22, 24, 0.70);
-    --_glass-bg-hover:         rgba(34, 34, 36, 0.78);
     --_glass-bg-elevated:      rgba(44, 44, 46, 0.88);
     --_glass-border:           rgba(255, 255, 255, 0.12);
     --_glass-border-subtle:    rgba(255, 255, 255, 0.14);
@@ -1151,8 +1131,6 @@
     --_glass-shadow-lg: 0 10px 44px rgba(0, 0, 0, 0.60), 0 0 0 1px rgba(255, 255, 255, 0.05);
     --_glass-bg-card:          var(--_color-surface-glass);
     --_glass-bg-card-hover:    rgba(40, 40, 42, 0.80);
-    --_glass-bg-input:         rgba(28, 28, 30, 0.82);
-    --_glass-bg-toolbar:       rgba(24, 24, 26, 0.84);
     --_glass-tint-strength:    6%;
     --_app-backdrop-accent-strength: 1.5%;
     --_app-backdrop-secondary-strength: 0.75%;
@@ -1198,7 +1176,6 @@
     /* Akzent — Apple Indigo Dark */
     --_color-accent:            #7D7AFF;
     --_color-accent-hover:      #8E8BFF;
-    --_color-accent-active:     #6B68F0;
     --_color-accent-light:      #1E1C46;  /* >=4.5:1 unter --color-accent #7D7AFF */
     --_color-accent-subtle:     #191740;
     --_color-btn-primary:       #5E5CE6;
@@ -1295,8 +1272,6 @@
     --_shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.35);
 
     /* Glass */
-    --_glass-bg:              rgba(22, 22, 24, 0.70);
-    --_glass-bg-hover:        rgba(34, 34, 36, 0.78);
     --_glass-bg-elevated:     rgba(44, 44, 46, 0.88);
     --_glass-border:          rgba(255, 255, 255, 0.12);
     --_glass-border-subtle:   rgba(255, 255, 255, 0.14);
@@ -1308,8 +1283,6 @@
     --_glass-shadow-lg: 0 10px 44px rgba(0, 0, 0, 0.60), 0 0 0 1px rgba(255, 255, 255, 0.05);
     --_glass-bg-card:         var(--_color-surface-glass);
     --_glass-bg-card-hover:   rgba(40, 40, 42, 0.80);
-    --_glass-bg-input:        rgba(28, 28, 30, 0.82);
-    --_glass-bg-toolbar:      rgba(24, 24, 26, 0.84);
     --_glass-tint-strength:   6%;
     --_app-backdrop-accent-strength: 1.5%;
     --_app-backdrop-secondary-strength: 0.75%;
@@ -1322,13 +1295,9 @@
  * ================================================================ */
 @media (prefers-reduced-transparency: reduce) {
   :root {
-    --glass-bg:          var(--color-surface);
-    --glass-bg-hover:    var(--color-surface-2);
     --glass-bg-elevated: var(--color-surface);
     --glass-bg-card:     var(--color-surface);
     --glass-bg-card-hover: var(--color-surface-2);
-    --glass-bg-input:    var(--color-surface);
-    --glass-bg-toolbar:  var(--color-surface);
     --glass-border:      var(--color-border);
     --glass-border-subtle: var(--color-border-subtle);
     --glass-highlight:        transparent;
@@ -1340,9 +1309,6 @@
     --blur-sm:  blur(0px);
     --blur-md:  blur(0px);
     --blur-lg:  blur(0px);
-    --blur-xl:  blur(0px);
-    --opacity-glass-subtle:   1;
-    --opacity-glass-base:     1;
     --opacity-glass-elevated: 1;
     --lg-blob-opacity: 0;     /* Backdrop-Blobs aus */
     --lg-specular: 0;
@@ -1355,8 +1321,6 @@
  * ================================================================ */
 @media (prefers-contrast: more) {
   :root {
-    --glass-bg:          rgba(255, 255, 255, 0.97);
-    --glass-bg-hover:    #ffffff;
     --glass-bg-elevated: #ffffff;
     --glass-border:      var(--color-text-primary);
     --glass-border-subtle: var(--color-text-secondary);
@@ -1368,7 +1332,6 @@
     --blur-sm:  blur(0px);
     --blur-md:  blur(0px);
     --blur-lg:  blur(0px);
-    --blur-xl:  blur(0px);
 
     /* Notes-Token im Hochkontrast auf voll AA-taugliches Yellow-700 (6.3:1) heben */
     --module-notes: #A16207;
