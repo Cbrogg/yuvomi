@@ -651,6 +651,55 @@
    *    bleibt ein volles Ziel` in test-frontend-audit.js) — der Guard
    *    findet jede Regel, die ein Label ausblendet, und verlangt im selben
    *    At-Block die Zielgröße.
+   *
+   *
+   *    DIE ZIELGRÖSSEN-REGEL (Runde 6, Phase 3c)
+   *
+   *    EINE REIHE TRÄGT IHRE DICHTE GEMEINSAM, EIN EINZELZIEL MUSS ALLEIN
+   *    TREFFBAR SEIN. Daraus folgen genau zwei Fälle:
+   *
+   *      FREISTEHEND — kein gleichartiges Ziel engt es ein. Es hält die
+   *      Zielgröße seiner Gerätewelt (--target-md am Zeiger, --target-lg am
+   *      Finger; --target-base liefert beides) in MINDESTENS EINER Achse und
+   *      erfüllt in der anderen WCAG 2.5.8.
+   *
+   *      IN EINER REIHE — ein anderes Ziel, das mindestens eine Klasse mit
+   *      ihm teilt, steht weniger als 16px entfernt. Für es gilt allein
+   *      WCAG 2.5.8: 24x24 CSS-Pixel, oder kein anderes Zielzentrum näher
+   *      als 24px (die Spacing-Ausnahme des Standards).
+   *
+   *    DAS KRITERIUM IST DIE EINENGUNG, NICHT DIE ANZAHL. Ein Ziel in einer
+   *    Reihe kann nicht wachsen, ohne seinen Nachbarn zu verdrängen — genau
+   *    deshalb darf es dicht sein. Ein freistehendes Ziel hat den Platz und
+   *    keine Ausrede. Dieselbe Antwort gibt Fitts: ein isoliertes Ziel wird
+   *    einzeln angesteuert und braucht seine Fläche; ein Ziel in einer Reihe
+   *    wird im Kontext angesteuert, und Vergrößern kostet dort die Übersicht,
+   *    ohne Treffsicherheit zu bringen.
+   *
+   *    UND SIE IST EINE EIGENSCHAFT DES BAUTEILS, NICHT DER INSTANZ. Ein
+   *    Tagfilter an einer Aufgabe mit nur einem Tag steht allein da und bleibt
+   *    trotzdem ein Reihen-Bauteil. Wer je Instanz urteilt, misst den Seed.
+   *
+   *    WARUM NICHT „WIE OFT KOMMT DIE KLASSE VOR": auch das misst den Seed,
+   *    nur eine Ebene höher — bei einer einzigen Aufgabe wäre
+   *    .task-card__title ein Einzelziel und bei zweien eine Reihe. Die
+   *    Einengung steht dagegen im Layout.
+   *
+   *    KEINE NAMENSLISTE FÜR DICHTE. Die Spacing-Ausnahme deckt jeden
+   *    bewusst dichten Fall mechanisch ab — gemessen: Monatsraster-Chips
+   *    (Zentrumsabstand 31,5), Aufgaben-Tagfilter (29,3), Sidebar-Umschalter
+   *    (31,5). Wer eine Ausnahme braucht, braucht in Wahrheit Abstand.
+   *
+   *    GEMESSEN WIRD DIE TREFFERFLÄCHE, NICHT DIE BOX. .weather-widget__refresh
+   *    ist 34x34 groß und dehnt seine Fläche per ::before auf --target-base
+   *    aus; eine Box-Messung meldet ihn als Verstoß, obwohl der Finger 44px
+   *    findet. Das ist zugleich das Rezept für „kompakt aussehen, voll
+   *    treffen".
+   *
+   *    Geprüft auf Ebene 4 (Dokument, Puppeteer: `Sonde 4` in
+   *    test-document-guards.js). Im Stylesheet ist die Regel nicht prüfbar —
+   *    dort steht weder, wer neben wem liegt, noch was ein Pseudo-Element zur
+   *    Fläche beiträgt.
    * -------------------------------------------------------- */
   --target-sm: 32px;    /* Visuelle Größe (z.B. Logos) — kein Touch-Target */
   --target-md: 40px;    /* Desktop Touch-Target (Maus) */

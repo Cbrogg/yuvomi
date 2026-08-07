@@ -51,12 +51,10 @@
   max-width: 320px;
 }
 
-.tasks-toolbar .btn--icon {
-  width: var(--target-base);
-  height: var(--target-base);
-  min-width: var(--target-base);
-  min-height: var(--target-base);
-}
+/* Hier stand ein Override auf --target-base. Er hat die Shell repariert, nicht
+ * das Modul: .btn--icon schaltete seine Größe nach der Viewport-Breite statt
+ * nach der Zeigerfähigkeit. Seit Phase 3c steht die eine Antwort in
+ * layout.css. */
 
 /* Sichtbarkeit wird per [hidden] geschaltet (Kanban blendet Gruppierung und
  * Mehrfachauswahl aus). Ohne diese Regel gewinnt display:flex/inline-flex der

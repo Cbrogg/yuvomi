@@ -7336,6 +7336,70 @@ test('wer sein Label verliert, bleibt ein volles Ziel', () => {
 });
 
 /**
+ * REGEL (Redesign Runde 6, Phase 3c): Die Groesse des Icon-Knopfs gehoert der
+ * SHELL, und sie schaltet nach der ZEIGERFAEHIGKEIT.
+ *
+ * Warum ein eigener Guard und warum auf dieser Ebene. Die Zielgroessen-Regel
+ * selbst haengt an Nachbarschaft und Trefferflaeche und ist damit nur im
+ * Dokument pruefbar (Sonde 4, test-document-guards.js). Dieser Fall ist etwas
+ * anderes: `.btn--icon` mass 40px in Kalender und Kontakten und 44px in Aufgaben
+ * und Dokumenten - ZWEI ANTWORTEN AUF EINE FRAGE, und beide hielten die
+ * Zielgroessen-Regel. Ein Dokument-Guard sieht ihn deshalb prinzipiell nicht;
+ * im Stylesheet steht er offen da.
+ *
+ * Die Ursache war ein Kriterium, das keines war: die Shell-Regel schaltete ueber
+ * `@media (min-width: 1024px)`, also nach der BREITE, waehrend tokens.css als
+ * Kanon fuehrt „das Kriterium ist die Zeigerfaehigkeit, nicht die Breite". Ein
+ * Tablet ab 1024px bekam damit 40px. Zwei Module hatten den Shell-Fehler je fuer
+ * sich lokal repariert - und genau das ist die Signatur einer Shell-Frage, die
+ * ein Modul neu beantwortet.
+ */
+test('die Groesse des Icon-Knopfs gehoert der Shell', () => {
+  const SIZE = /^(?:width|height|min-width|min-height)$/;
+  const shell = [...eachRule(read('../public/styles/layout.css'))]
+    .filter((rule) => rule.selector.split(',').some((s) => s.trim() === '.btn--icon'));
+
+  const base = shell.find((rule) => rule.at.length === 0);
+  assert.ok(base, '.btn--icon braucht eine Basisregel in layout.css.');
+  assert.match(base.body, /min-height:\s*var\(--target-base\)/,
+    '.btn--icon nimmt --target-base - es schaltet ueber (hover: none) von 44px auf 48px '
+    + 'und ist damit das einzige Mass, das dem tokens.css-Kanon folgt.');
+  assert.match(base.body, /min-width:\s*var\(--target-base\)/);
+
+  // Keine zweite Antwort in einem At-Block: ein Breakpoint, der die Groesse
+  // umschaltet, ist genau das Kriterium, das hier verworfen wurde.
+  const inAt = shell.filter((rule) => rule.at.length > 0
+    && rule.body.split(';').some((d) => SIZE.test(d.split(':')[0]?.trim() ?? '')));
+  assert.deepEqual(inAt.map((r) => r.at.join(' | ')), [],
+    'Die Groesse von .btn--icon steht in genau einer Regel. Ein @media-Block, der '
+    + 'sie umschaltet, macht die Viewport-Breite wieder zum Kriterium.');
+
+  // Und kein Modul beantwortet sie neu.
+  const offenders = [];
+  for (const name of readdirSync(new URL('../public/styles/', import.meta.url))
+    .filter((file) => file.endsWith('.css') && file !== 'layout.css')) {
+    for (const rule of eachRule(read(`../public/styles/${name}`))) {
+      for (const raw of rule.selector.split(',').map((s) => s.trim())) {
+        // Nur zusammengesetzte Selektoren: `.btn--icon-sm` ist eine eigene
+        // Variante mit eigenem Namen, kein Override.
+        if (!/(?:^|[\s>+~.])\.btn--icon(?![\w-])/.test(raw)) continue;
+        if (raw === '.btn--icon') continue;
+        const sized = rule.body.split(';')
+          .map((d) => d.split(':')[0]?.trim())
+          .filter((prop) => SIZE.test(prop ?? ''));
+        if (!sized.length) continue;
+        offenders.push(`${name}: ${raw} setzt ${sized.join(', ')}`);
+      }
+    }
+  }
+  assert.deepEqual(offenders.sort(), [],
+    'Ein Modul, das die Groesse von .btn--icon neu setzt, gibt eine zweite Antwort '
+    + 'auf eine Shell-Frage. Genau so entstanden die 40px in Kalender/Kontakten '
+    + 'neben den 44px in Aufgaben/Dokumenten. Farbe und Abstand darf ein Modul '
+    + 'setzen, die Zielgroesse nicht.');
+});
+
+/**
  * REGEL (Redesign Runde 6, Phase 0): Der Modulkopf ist genau EINE
  * `.page-toolbar`, verdrahtet von der Shell. Kein Modul setzt eine eigene
  * Flex-Richtung, keine zweite Titelgroesse und kein `--page-toolbar-lead`. Eine

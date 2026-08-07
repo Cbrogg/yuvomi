@@ -408,10 +408,10 @@
   gap: var(--space-1);
 }
 
-.subscription-card__actions .btn--icon {
-  width: var(--target-md);
-  min-height: var(--target-md);
-}
+/* Hier stand `width/min-height: var(--target-md)` - 40px fest, also auch am
+ * FINGER, wo das Minimum 48px ist. Die Größe gehört der Shell (layout.css,
+ * .btn--icon auf --target-base); ein Modul, das sie neu beantwortet, gibt eine
+ * zweite Antwort auf eine Shell-Frage. */
 
 .subscriptions-enabled-row,
 .subscriptions-metadata-add,

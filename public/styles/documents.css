@@ -220,12 +220,17 @@
   font-weight: var(--font-weight-medium);
 }
 
+/* Freistehendes Ziel im Kopf der Ordnerliste - kein gleichartiges Ziel engt es
+ * ein, also die volle Zielgröße (tokens.css, „Die Zielgrößen-Regel").
+ * --target-sm ist laut Token ausdrücklich „kein Touch-Target": 32x32 am Zeiger,
+ * beide Achsen unter dem Minimum. --target-base löst zugleich den Finger-Fall,
+ * den der @media-(hover:none)-Block unten bisher nachtragen musste. */
 .documents-folder-browser__add {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: var(--target-sm);
-  height: var(--target-sm);
+  width: var(--target-base);
+  height: var(--target-base);
   flex-shrink: 0;
   border-radius: var(--radius-full);
   color: var(--module-accent);
@@ -314,16 +319,15 @@
   background: color-mix(in srgb, var(--module-accent) 14%, transparent);
 }
 
-/* Touch: kompakte 32px-Steuerungen (--target-sm, laut Token „kein Touch-Target")
- * auf Finger-Maße heben. Kebab ist auf Touch ohnehin dauerhaft sichtbar. */
+/* Touch: den Kebab auf Finger-Maße heben. Er ist ein REIHEN-Ziel (je Ordnerzeile
+ * einer, 8px Abstand zum nächsten) und hält damit am Zeiger schon mit 32x32 die
+ * Regel - am Finger fehlt ihm die Fläche trotzdem. Der Ordner-Hinzufügen-Knopf
+ * steht hier nicht mehr: er trägt seit Phase 3c --target-base und bekommt seine
+ * 48px damit aus demselben Token wie alle anderen. */
 @media (hover: none) {
   .documents-folder-item__menu {
     opacity: 1;
-  pointer-events: auto;
-  }
-
-  .documents-folder-browser__add,
-  .documents-folder-item__menu {
+    pointer-events: auto;
     width: var(--target-lg);
     height: var(--target-lg);
   }

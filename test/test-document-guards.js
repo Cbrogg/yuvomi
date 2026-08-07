@@ -438,3 +438,261 @@ test('Sonde 3 - es gibt EINE Buttonform, und die Ausnahmen sind Kategorien', asy
   assert.deepEqual(stale, [],
     'SHAPE_EXEMPT nennt Klassen, die in keinem Stylesheet mehr vorkommen.');
 });
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Sonde 4: Zielgroessen
+ *
+ * Die Regel steht im Sektionskommentar von tokens.css („Die Zielgroessen-
+ * Regel"): eine REIHE traegt ihre Dichte gemeinsam, ein EINZELZIEL muss allein
+ * treffbar sein.
+ *
+ *   freistehend  -> volle Zielgroesse in mindestens einer Achse, die andere
+ *                   erfuellt WCAG 2.5.8
+ *   in der Reihe -> allein WCAG 2.5.8 (24x24 oder Spacing-Ausnahme)
+ *
+ * WARUM DIESE EBENE UND KEINE ANDERE. Im Stylesheet steht weder, wer neben wem
+ * liegt, noch was ein Pseudo-Element zur Flaeche beitraegt - beides entscheidet
+ * hier ueber Verstoss oder nicht. Die zwei bisherigen Guards
+ * (test-frontend-audit.js) pruefen benannte Selektoren und finden damit nur,
+ * wer die Regel schon anerkennt; das ist die Allowlist-Signatur, die diese
+ * Runde abschafft.
+ *
+ * DREI FALLEN, DIE BEIM BAU GEMESSEN WURDEN:
+ *
+ *   (1) DIE BOX IST NICHT DIE TREFFERFLAECHE. `.weather-widget__refresh` ist
+ *       34x34 gross und dehnt sich per ::before auf --target-base aus. Eine
+ *       Box-Messung meldet ihn als Verstoss, obwohl der Finger 44px findet -
+ *       und haette damit ausgerechnet das Rezept fuer „kompakt aussehen, voll
+ *       treffen" zum Fehler erklaert. Getastet wird deshalb mit
+ *       elementFromPoint vom Zentrum nach aussen.
+ *   (2) DAS TASTEN ENDET AN JEDER KANTE, AUCH AN DER FALSCHEN. Am unteren
+ *       Viewport-Rand und an der Clip-Kante eines `overflow: hidden`-Moduls
+ *       (Kueche, Budget) liefert elementFromPoint den Shell-Container - vier
+ *       Ziele sahen dadurch aus, als waeren sie zu einem Drittel verdeckt.
+ *       Deshalb gilt `max(Box, getastet)`: die Box ist die Untergrenze, das
+ *       Tasten zaehlt nur, was sie ERWEITERT.
+ *   (3) DIE ANZAHL IST NICHT DIE EINENGUNG. „Wie oft kommt die Klasse vor"
+ *       misst den Seed: bei einer einzigen Aufgabe waere .task-card__title ein
+ *       Einzelziel, bei zweien eine Reihe. Die Einengung steht im Layout.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Klassenname -> Begruendung. Die UMKEHRUNG einer Allowlist: gemessen wird
+ * jedes Ziel des Dokuments, benannt sind nur die begruendeten Ausnahmen.
+ *
+ * Sie ist leer, und das ist das Ergebnis von Phase 3c: die Spacing-Ausnahme des
+ * Standards deckt jeden bewusst dichten Fall mechanisch ab - Monatsraster-Chips
+ * (Zentrumsabstand 31,5), Aufgaben-Tagfilter (29,3), Sidebar-Umschalter (31,5).
+ * Wer hier etwas eintraegt, hat in Wahrheit ein Abstandsproblem.
+ */
+const TARGET_EXEMPT = new Map([]);
+
+/** Ein Ziel gilt als eingeengt, wenn ein gleichartiges naeher steht als das. */
+const CROWDING_GAP = 16;
+
+async function measureTargets(page, min) {
+  return page.evaluate(({ min, gap }) => {
+    const SEL = 'button, a[href], [role="button"], input:not([type=hidden]), select, textarea, summary, [tabindex]:not([tabindex="-1"])';
+    const key = (el) => [...el.classList].filter((c) => !c.startsWith('is-')).join('.')
+      || `(${el.tagName.toLowerCase()}${el.id ? `#${el.id}` : ''})`;
+
+    const els = [];
+    for (const el of document.querySelectorAll(SEL)) {
+      const cs = getComputedStyle(el);
+      if (cs.display === 'none' || cs.visibility === 'hidden' || cs.pointerEvents === 'none') continue;
+      if (el.closest('.sr-only, [aria-hidden="true"], yuvomi-install-prompt')) continue;
+      const r = el.getBoundingClientRect();
+      if (r.width < 1 || r.height < 1) continue;
+      els.push(el);
+    }
+    const rects = els.map((el) => el.getBoundingClientRect());
+    const classes = els.map((el) => new Set([...el.classList].filter((c) => !c.startsWith('is-'))));
+
+    const out = [];
+    els.forEach((el, i) => {
+      const r = rects[i];
+      const cx = Math.round(r.left + r.width / 2);
+      const cy = Math.round(r.top + r.height / 2);
+      // Ein Ziel, dessen eigenes Zentrum es nicht selbst trifft, ist verdeckt
+      // oder ausserhalb des Viewports - dort misst die Sonde nichts, statt
+      // etwas Falsches zu messen.
+      const mine = (x, y) => {
+        const hit = document.elementFromPoint(x, y);
+        return !!hit && (hit === el || el.contains(hit));
+      };
+      if (!mine(cx, cy)) return;
+      const reach = (dx, dy) => {
+        let n = 0;
+        while (n < min && mine(cx + dx * (n + 1), cy + dy * (n + 1))) n += 1;
+        return n;
+      };
+      // max(Box, getastet): die Box ist die Untergrenze (Falle 2), das Tasten
+      // zaehlt nur, was ein Pseudo-Element hinzufuegt (Falle 1).
+      const w = Math.max(r.width, reach(-1, 0) + reach(1, 0) + 1);
+      const h = Math.max(r.height, reach(0, -1) + reach(0, 1) + 1);
+
+      // Eingeengt: ein Ziel, das mindestens eine Klasse teilt, steht naeher als
+      // CROWDING_GAP. Nur DAS ist der Grund, aus dem ein Ziel dicht sein darf -
+      // es kann nicht wachsen, ohne seinen Nachbarn zu verdraengen.
+      let crowded = false;
+      // Fuer die Spacing-Ausnahme (WCAG 2.5.8): naechstes Zielzentrum.
+      let nearestCenter = Infinity;
+      for (let j = 0; j < els.length && !(crowded && nearestCenter < 24); j += 1) {
+        if (j === i || els[j].contains(el) || el.contains(els[j])) continue;
+        const o = rects[j];
+        const dEdge = Math.hypot(
+          Math.max(o.left - r.right, r.left - o.right, 0),
+          Math.max(o.top - r.bottom, r.top - o.bottom, 0),
+        );
+        if (dEdge < gap && [...classes[i]].some((c) => classes[j].has(c))) crowded = true;
+        const dCenter = Math.hypot(
+          o.left + o.width / 2 - cx,
+          o.top + o.height / 2 - cy,
+        );
+        if (dCenter < nearestCenter) nearestCenter = dCenter;
+      }
+
+      // WCAG 2.5.8: 24x24, oder kein anderes Zielzentrum naeher als 24.
+      const wcag = (w >= 24 && h >= 24) || nearestCenter >= 24;
+      // Volle Zielgroesse in mindestens einer Achse - nur fuer freistehende.
+      const full = w >= min || h >= min;
+      // Das Urteil faellt NICHT hier: ob ein Bauteil in Reihen gebaut wird,
+      // entscheidet sich ueber alle Routen zusammen (siehe unten).
+      out.push({
+        key: key(el),
+        w: Math.round(w),
+        h: Math.round(h),
+        crowded,
+        wcag,
+        full,
+        center: Math.round(nearestCenter),
+      });
+    });
+    return out;
+  }, { min, gap: CROWDING_GAP });
+}
+
+/**
+ * Misst die Route an jeder Scrollposition und liefert die Messungen einzeln.
+ *
+ * Die App hat ZWEI Scrollport-Architekturen (Handoff §6): meist scrollt die
+ * Seite, in Kueche und Budget ist der Modul-Root `overflow: hidden` und ein
+ * Container darin scrollt. Gesucht wird deshalb der Container mit dem groessten
+ * Ueberhang, nicht ein fester Knoten.
+ */
+async function measureScrolled(page, min, maxSteps = 6) {
+  const pick = () => {
+    const el = document.scrollingElement;
+    let best = el;
+    let bestOver = el.scrollHeight - el.clientHeight;
+    for (const node of document.querySelectorAll('*')) {
+      const cs = getComputedStyle(node);
+      if (!/auto|scroll/.test(cs.overflowY)) continue;
+      const over = node.scrollHeight - node.clientHeight;
+      if (over > bestOver) { best = node; bestOver = over; }
+    }
+    return best;
+  };
+  const out = [];
+  await page.evaluate(pick).catch(() => {});
+  for (let step = 0; step < maxSteps; step += 1) {
+    out.push(await measureTargets(page, min));
+    const moved = await page.evaluate((pickSrc) => {
+      // eslint-disable-next-line no-new-func
+      const el = new Function(`return (${pickSrc})()`)();
+      const before = el.scrollTop;
+      // 70 % statt 100 %: was genau auf der Falz sitzt, wuerde sonst in keiner
+      // der beiden Messungen vollstaendig im Bild stehen.
+      el.scrollTop = before + el.clientHeight * 0.7;
+      return el.scrollTop > before + 1;
+    }, pick.toString());
+    if (!moved) break;
+    // Der kollabierende Kopf und die Sticky-Leisten brauchen einen Frame, sonst
+    // misst die Sonde eine Zwischenposition.
+    await new Promise((r) => { setTimeout(r, 250); });
+  }
+  return out;
+}
+
+describe('Sonde 4 - eine Reihe traegt ihre Dichte, ein Einzelziel ist allein treffbar', () => {
+  // Beide Geraetewelten, denn --target-base schaltet ueber (hover: none): am
+  // Zeiger 44px, am Finger 48px. Ein Guard, der nur eine Welt misst, prueft
+  // genau die Haelfte einer Regel, deren Kern der Wechsel ist.
+  for (const [device, min] of [['mobile', 48], ['desktop', 40]]) {
+    test(`${device} (Minimum ${min}px)`, async () => {
+      const page = await openPage(harness, { device, theme: 'light', locale: 'de' });
+      const found = new Map();
+      // DIE SONDE MUSS SCROLLEN. elementFromPoint kennt nur den Viewport - ein
+      // Ziel unterhalb der Falz meldet sein eigenes Zentrum als verdeckt und
+      // wird stillschweigend uebersprungen. Die Gegenprobe hat das aufgedeckt:
+      // .ydp__trigger auf 40x40 zurueckgedreht liess den Guard GRUEN, weil er
+      // auf /health unter der Falz liegt. Gemessen wird deshalb an jeder
+      // Scrollposition, so wie ein Nutzer die Seite durchgeht.
+      // Bauteile, die IRGENDWO in einer Reihe stehen. Siehe die Auswertung
+      // darunter - erst mit dieser Menge ist das Urteil vollstaendig.
+      const rowBuilt = new Set();
+      let seen = 0;
+      for (const name of ROUTE_NAMES) {
+        await gotoRoute(page, ROUTES[name]);
+        seen += await page.evaluate(
+          () => document.querySelectorAll('button, a[href], [role="button"]').length,
+        );
+        for (const rows of await measureScrolled(page, min)) {
+          for (const row of rows) {
+            if (row.crowded) rowBuilt.add(row.key);
+            if (row.wcag && row.full) continue;
+            const id = `${row.key}|${row.w}x${row.h}`;
+            if (!found.has(id)) found.set(id, { ...row, pages: new Set() });
+            found.get(id).pages.add(name);
+          }
+        }
+      }
+      await page.close();
+
+      // Eine Sonde, die nichts gemessen hat, darf nicht urteilen (dieselbe
+      // Zusicherung wie bei Sonde 3).
+      assert.ok(seen >= 200,
+        `Nur ${seen} Ziele im ganzen Dokument gesehen - die Sonde hat nichts `
+        + 'gemessen, statt nichts gefunden. Seiten nicht aufgebaut?');
+
+      // DIE EINENGUNG IST EINE EIGENSCHAFT DES BAUTEILS, NICHT DER INSTANZ.
+      // Die erste Fassung urteilte je Instanz und meldete prompt einen
+      // .task-tag--filter, der als einziger Tag an seiner Aufgabe hing: ein
+      // Reihen-Bauteil, das in dieser einen Zeile allein stand. Ob ein Bauteil
+      // in Reihen gebaut wird, steht nicht in einer Zeile, sondern im Bauteil -
+      // und ueber sechzehn Routen gemessen ist das eine stabile Aussage, waehrend
+      // die einzelne Instanz den Seed misst.
+      const offenders = [];
+      for (const value of found.values()) {
+        if (value.key.split('.').some((cls) => TARGET_EXEMPT.has(cls))) continue;
+        if (value.wcag && rowBuilt.has(value.key)) continue;
+        offenders.push(
+          `${value.key}: ${value.w}x${value.h} - `
+          + `${!value.wcag ? 'unter 24x24 ohne Spacing-Abstand' : 'freistehend und in KEINER Achse voll'}`
+          + ` (naechstes Zielzentrum ${value.center}px) auf ${[...value.pages].join(', ')}`,
+        );
+      }
+
+      assert.deepEqual(offenders.sort(), [],
+        `Ziele unter der Zielgroesse bei ${device}. Die Regel steht in tokens.css `
+        + '(„Die Zielgroessen-Regel"): ein freistehendes Ziel haelt die volle '
+        + 'Zielgroesse in mindestens einer Achse, ein eingeengtes erfuellt WCAG '
+        + '2.5.8. Wer kompakt aussehen und voll treffen will, dehnt seine Flaeche '
+        + 'per ::before aus - .weather-widget__refresh ist der Musterfall.');
+    });
+  }
+});
+
+test('Sonde 4 - keine Zielgroessen-Ausnahme ueberlebt ihre Klasse', () => {
+  // Gemessen gegen das STYLESHEET, nicht gegen das Dokument: ein Element, das
+  // nur unter bestimmten Daten erscheint, waere sonst je nach Seed
+  // „verschwunden" (dieselbe Begruendung wie bei Sonde 3).
+  const styles = new URL('../public/styles/', import.meta.url);
+  const allCss = readdirSync(styles)
+    .filter((entry) => entry.endsWith('.css'))
+    .map((entry) => readFileSync(new URL(entry, styles), 'utf8'))
+    .join('\n');
+  const stale = [...TARGET_EXEMPT.keys()].filter((cls) => !allCss.includes(`.${cls}`));
+  assert.deepEqual(stale, [],
+    'TARGET_EXEMPT nennt Klassen, die in keinem Stylesheet mehr vorkommen.');
+});

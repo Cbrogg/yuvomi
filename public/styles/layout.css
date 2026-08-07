@@ -3064,17 +3064,19 @@ p.field-hint--warn[hidden] {
  * Icon-Buttons sind rund. Die frühere --radius-sm-Ecke war der letzte Rest der
  * zwei Buttonformen: sie überschrieb die Basisregel und stand damit neben der
  * Kapsel, die dieselbe Datei zwei Bildschirme weiter oben setzt. */
+/* EINE Größe, und sie schaltet nach der ZEIGERFÄHIGKEIT: --target-base ist am
+ * Zeiger 44px und am Finger 48px (tokens.css). Vorher stand hier --target-lg
+ * mit einem Wechsel auf --target-md ab 1024px — also nach der Breite, während
+ * tokens.css als Kanon führt „das Kriterium ist die Zeigerfähigkeit, nicht die
+ * Breite". Ein Tablet ab 1024px bekam damit 40px, und die Aufgaben- und die
+ * Abo-Leiste hatten den Shell-Fehler je für sich lokal repariert: derselbe
+ * Kopf-Icon-Knopf mass 40px in Kalender und Kontakten und 44px in Aufgaben und
+ * Dokumenten. Zwei Antworten auf eine Frage, entstanden aus einem Kriterium,
+ * das keines war. */
 .btn--icon {
   padding: var(--space-2);
-  min-height: var(--target-lg);
-  min-width: var(--target-lg);
-}
-
-@media (min-width: 1024px) {
-  .btn--icon {
-    min-height: var(--target-md);
-    min-width: var(--target-md);
-  }
+  min-height: var(--target-base);
+  min-width: var(--target-base);
 }
 
 

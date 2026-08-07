@@ -50,6 +50,12 @@ yuvomi-datepicker {
   pointer-events: none;
 }
 
+/* Freistehendes Ziel: sein einziger Nachbar ist das Feld, in dem er sitzt - kein
+ * gleichartiges Ziel engt ihn ein, also gilt die volle Zielgröße (tokens.css,
+ * „Die Zielgrößen-Regel"). --target-md waren 40px auf JEDEM Gerät, am Finger
+ * also 8px unter dem Minimum. .ydp-navbtn unten bleibt bei --target-md: die
+ * beiden Monatspfeile stehen als Paar 4px nebeneinander und sind damit ein
+ * Reihen-Ziel. */
 .ydp__trigger {
   position: absolute;
   top: 50%;
@@ -58,8 +64,8 @@ yuvomi-datepicker {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: var(--target-md);
-  height: var(--target-md);
+  width: var(--target-base);
+  height: var(--target-base);
   padding: 0;
   border: 0;
   background: transparent;
