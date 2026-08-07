@@ -4046,8 +4046,13 @@ test('calendar agenda events and task chips keep readable contrast in mobile age
   assert.match(colorBody, /width:\s*var\(--space-2\)/, 'agenda color dot should use a spacing token for its width');
   assert.match(colorBody, /height:\s*var\(--space-2\)/, 'agenda color dot should be a fixed-size dot, not a full-height rail');
   assert.match(colorBody, /border-radius:\s*var\(--radius-full\)/, 'agenda color dot should be round');
+  // Die Toenung IST der zweite Kanal neben der Textfarbe. Kante und Schatten
+  // waren ein dritter und vierter Traeger derselben Information - dieselbe
+  // Zusage, die `.month-day__event` seit dem HIG-Rollout flach haelt, und der
+  // Grund, aus dem im Monatsraster flache Event-Bars neben umrandeten
+  // Aufgaben-Bars standen.
   assert.match(taskBody, /background:\s*color-mix\(in srgb,\s*currentColor/, 'task chips should tint from their readable text color');
-  assert.match(taskBody, /border-color:\s*color-mix\(in srgb,\s*currentColor/, 'task chips should have more than colored text');
+  assert.doesNotMatch(taskBody, /border(-color)?:|box-shadow:/, 'task chips read flat: the tint is the second channel, not an edge on top of it');
   assert.match(metaBody, /color:\s*var\(--color-text-secondary\)/, 'metadata should remain legible in light and dark themes');
 });
 
