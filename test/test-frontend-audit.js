@@ -7049,11 +7049,29 @@ test('Eine Wischgeste, die löscht, hat einen Rückgängig-Weg', () => {
   // die sie ruft - `run: (row) => deleteBirthday(...)` liegt eine Definition
   // weiter, und nur dort steht der Rückweg.
   //
+  // ES GIBT ZWEI RÜCKWEGE, UND WELCHER RICHTIG IST, ENTSCHEIDET DIE REICHWEITE
+  // DER TAT (Ulas, 2026-08-07). Lässt sie sich in einem Satz zurücknehmen,
+  // gehört ihr der Undo-Toast: er unterbricht nicht und hält den Weg fünf
+  // Sekunden offen. Wirkt sie ÜBER IHR MODUL HINAUS, gehört ihr die
+  // Bestätigung - denn dann muss der Rückweg die Nebenwirkung BENENNEN, und
+  // das kann nur ein Dialog vor der Tat. Ein Abo zu löschen nimmt seine
+  // Erinnerungen und die Budget-Buchung der nächsten Zahlung mit; ein
+  // Undo-Toast hätte diese Information stillschweigend verschluckt, um eine
+  // Guard-Zeile zu erfüllen.
+  //
+  // Beides ist ein Rückweg, keines ist die Ausnahme des anderen - dieselbe
+  // Trennung, die der Kanon zwischen Undo und Action Sheet zieht.
+  //
   // GRENZE: eine Löschgeste ohne `--delete` in ihrer Rollenklasse sieht er
   // nicht. Das ist derselbe Anker, den die Wisch-Semantik-Tabelle benutzt -
   // wer eine Rolle ohne ihre Rollenklasse baut, bricht schon die Achsen-Regel.
   const pagesDir = new URL('../public/pages/', import.meta.url);
   const seen = [];
+
+  // Eine Bestätigung zählt nur als Rückweg, wenn sie als destruktiv AUFTRITT.
+  // `confirmModal(...)` ohne `danger` ist ein beliebiger Dialog; die rote
+  // Bestätigungstaste ist das, was den Rückweg für den Nutzer erkennbar macht.
+  const guardsDestructively = (body) => /confirmModal\s*\(/.test(body) && /danger:\s*true/.test(body);
 
   for (const file of readdirSync(pagesDir).filter((name) => name.endsWith('.js'))) {
     const source = read(`../public/pages/${file}`);
@@ -7072,12 +7090,15 @@ test('Eine Wischgeste, die löscht, hat einen Rückgängig-Weg', () => {
 
     for (const body of actions) {
       seen.push(file);
-      const direct = /scheduleUndoableDelete/.test(body);
+      const hasWayBack = (text) => /scheduleUndoableDelete/.test(text) || guardsDestructively(text);
+      const direct = hasWayBack(body);
       const viaCall = [...body.matchAll(/([A-Za-z_$][\w$]*)\s*\(/g)]
-        .some(([, name]) => /scheduleUndoableDelete/.test(functionBody(source, name) ?? ''));
+        .some(([, name]) => hasWayBack(functionBody(source, name) ?? ''));
 
       assert.ok(direct || viaCall,
-        `${file}: der Löschwisch muss über scheduleUndoableDelete gehen, nicht direkt löschen.`);
+        `${file}: der Löschwisch braucht einen Rückweg - scheduleUndoableDelete, wenn die Tat `
+        + 'in einem Satz zurückzunehmen ist, sonst eine confirmModal-Bestätigung mit danger: true, '
+        + 'die die Nebenwirkung benennt. Direkt löschen ist keines von beidem.');
     }
   }
 
