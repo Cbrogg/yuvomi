@@ -171,7 +171,7 @@ export async function render(container) {
   // alle vier Küchen-Tabs eine andere Kopf-Grammatik hatten (Critique
   // 2026-07-29). Die Variante löst den Konflikt, ohne den Kopf zu meiden.
   const toolbar = document.createElement('div');
-  // --narrow: der Kopf endet beim Lesemaß der Liste darunter (.kitchen-list),
+  // --narrow: der Kopf endet beim Lesemaß der Liste darunter (.list-scroller),
   // nicht an der Content-Spalte. Siehe layout.css.
   toolbar.className = 'page-toolbar page-toolbar--in-group page-toolbar--narrow';
   const center = document.createElement('div');
@@ -206,7 +206,7 @@ export async function render(container) {
   toolbar.appendChild(actions);
 
   const list = document.createElement('div');
-  list.className = 'kitchen-list recipes-list';
+  list.className = 'list-scroller recipes-list';
   list.id = 'recipes-list';
   // Lade-Skeleton bis loadRecipes() aufgelöst ist (Router blendet den Wrapper
   // bereits vor dem Daten-await ein).
@@ -441,7 +441,7 @@ function renderRecipeList() {
   // 48px Bodenversatz in derselben Rasterzeile). Als Zeile teilt es Fläche,
   // Trennlinie, Textspalte und Bedienzone mit Einkauf und Vorrat.
   const rows = document.createElement('ul');
-  rows.className = 'kitchen-rows';
+  rows.className = 'list-rows';
 
   for (const recipe of visible) {
     // Mirror-Rezepte sind read-only (Mealie bleibt Quelle der Wahrheit); steuert
@@ -456,18 +456,18 @@ function renderRecipeList() {
     li.dataset.id = String(recipe.id);
 
     const row = document.createElement('div');
-    row.className = 'kitchen-row recipe-row';
+    row.className = 'list-row recipe-row';
 
     // Kanonisches Accordion-Muster: Überschrift umschließt den Button. Die
     // Überschrift trägt die Dokumentstruktur, der Button den Zustand - vorher
     // war die ganze Karte ein role="button" MIT Buttons darin, was für
     // Hilfsmittel ein verschachteltes Bedienelement ist.
     const heading = document.createElement('h2');
-    heading.className = 'kitchen-row__main recipe-row__heading';
+    heading.className = 'list-row__main recipe-row__heading';
 
     const toggle = document.createElement('button');
     toggle.type = 'button';
-    toggle.className = 'kitchen-row__main--interactive recipe-row__toggle';
+    toggle.className = 'list-row__main--interactive recipe-row__toggle';
     toggle.dataset.action = 'toggle-detail';
     toggle.dataset.id = String(recipe.id);
 
@@ -478,7 +478,7 @@ function renderRecipeList() {
     if (isMirrored) toggle.appendChild(recipeThumb(recipe));
 
     const name = document.createElement('span');
-    name.className = 'kitchen-row__name';
+    name.className = 'list-row__name';
     name.textContent = recipe.title;
     toggle.appendChild(name);
 
@@ -503,7 +503,7 @@ function renderRecipeList() {
     // dessen, was das Aufklappen zeigt.
     if (ingredients.length) {
       const meta = document.createElement('span');
-      meta.className = 'kitchen-row__meta';
+      meta.className = 'list-row__meta';
       meta.textContent = t('meals.ingredientCount', { count: ingredients.length });
       toggle.appendChild(meta);
     }
@@ -526,7 +526,7 @@ function renderRecipeList() {
       // Bearbeitungsformular öffnen, dessen Speichern serverseitig ohnehin
       // mit 403 abgewiesen wird (mealie_account_id-Guard, routes/recipes.js).
       delete toggle.dataset.action;
-      toggle.classList.remove('kitchen-row__main--interactive');
+      toggle.classList.remove('list-row__main--interactive');
       toggle.tabIndex = -1;
     }
 
@@ -546,7 +546,7 @@ function renderRecipeList() {
     ].filter(Boolean);
 
     const actions = document.createElement('div');
-    actions.className = 'kitchen-row__actions';
+    actions.className = 'list-row__actions';
 
     // Drei Zeilenaktionen kosten 152px von 262px Zeilenbreite bei 320px - 58% der
     // Zeile für Sekundäraktionen. Für den Namen blieben 98px, und weil er in einem

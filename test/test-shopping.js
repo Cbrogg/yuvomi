@@ -464,8 +464,8 @@ test('Detail-Refresh aktualisiert die Zeile, ohne das .shopping-item zu ersetzen
   const fn = source.match(/function refreshItemName[\s\S]*?\n\}/)?.[0] ?? '';
   assert(fn, 'refreshItemName muss existieren');
   assert(!/#items-list/.test(fn), 'refreshItemName darf die Liste nicht neu aufbauen');
-  assert(/kitchen-row__name/.test(fn), 'der Name muss aktualisiert werden');
-  assert(/kitchen-row__meta/.test(fn), 'die Menge muss aktualisiert werden - sie kann auch wegfallen');
+  assert(/list-row__name/.test(fn), 'der Name muss aktualisiert werden');
+  assert(/list-row__meta/.test(fn), 'die Menge muss aktualisiert werden - sie kann auch wegfallen');
   // Ein Kategoriewechsel verschiebt die Zeile in eine andere Gruppe; das kann keine
   // Zeilen-Auffrischung leisten, dafür muss die Liste neu gruppiert werden.
   const details = source.match(/function openItemDetails[\s\S]*?\n\}\n/)?.[0] ?? '';

@@ -20,8 +20,8 @@
   }
 }
 
-/* Scroller, Lesemaß, FAB-Auslauf und Gruppen-Abstand kommen aus .kitchen-list
- * (styles/kitchen-row.css); die Klasse steht im Markup neben .recipes-list. Hier
+/* Scroller, Lesemaß, FAB-Auslauf und Gruppen-Abstand kommen aus .list-scroller
+ * (styles/list-row.css); die Klasse steht im Markup neben .recipes-list. Hier
  * bleibt nur der Träger der Content-Spalte und der obere Auslauf.
  *
  * Das frühere Kartenraster (`repeat(auto-fit, minmax(320px, 1fr))`) ist weg. Es
@@ -35,8 +35,8 @@
   padding-block-start: var(--space-4);
 }
 
-/* Der Stretch-und-Clip-Fix für lange, ungruppierte .kitchen-rows-Listen sitzt
- * jetzt in kitchen-row.css selbst (align-self: start) - er galt hier zuerst
+/* Der Stretch-und-Clip-Fix für lange, ungruppierte .list-rows-Listen sitzt
+ * jetzt in list-row.css selbst (align-self: start) - er galt hier zuerst
  * nur für Rezepte, betrifft aber jede Küchenliste, deren Filter sie auf eine
  * einzige flache Gruppe reduziert (z. B. Vorrat unter "fast leer"). Siehe
  * dortigen Kommentar für die Messung. */
@@ -45,7 +45,7 @@
  * Rezeptzeile
  * -------------------------------------------------------- */
 
-/* Geometrie, Fläche, Trennlinie und Hover: .kitchen-row. */
+/* Geometrie, Fläche, Trennlinie und Hover: .list-row. */
 
 .recipe-row__heading {
   /* Die Überschrift ist der Flex-Slot, der Button füllt ihn. Ohne Reset brächte
@@ -66,7 +66,7 @@
   text-align: start;
 }
 
-/* `flex-basis: 0` statt der ererbten `auto` (kitchen-row.css): mit `auto`
+/* `flex-basis: 0` statt der ererbten `auto` (list-row.css): mit `auto`
  * zieht der Browser für die Zeilenumbruch-Entscheidung die VOLLE, unumbrochene
  * Textbreite als hypothetische Größe heran - bei einem langen Rezeptnamen
  * passte die nicht neben das Vorschaubild, und statt NUR den Text intern
@@ -76,13 +76,13 @@
  * Zeilen-Vorlage, je nach Titellänge). Mit `flex-basis: 0` startet der Name bei
  * null, „passt" also immer neben dem Bild, wächst danach in den Rest, und der
  * Text bricht dort ganz normal per `overflow-wrap: anywhere` intern um. */
-.recipe-row__toggle .kitchen-row__name {
+.recipe-row__toggle .list-row__name {
   flex-basis: 0;
 }
 
 /* Zutatenzahl und Chevron bleiben beim Namen, statt an die Zeilenkante zu
  * wandern: sie beschriften, was das Aufklappen zeigt. */
-.recipe-row__toggle .kitchen-row__meta {
+.recipe-row__toggle .list-row__meta {
   flex-shrink: 0;
   /* Ohne feste Mindestbreite verschiebt sich alles, was VOR ihr im Flex-Fluss
    * steht (das Mealie-Badge), von Zeile zu Zeile: der Name wächst per
@@ -139,7 +139,7 @@
 /* Das Badge sitzt in derselben Flex-Zeile wie Name und Zutatenzahl - ohne
  * eigenes flex-shrink würde ein langer Rezeptname es auf seine Buchstaben
  * zusammendrücken, bevor der Name selbst umbricht (er trägt overflow-wrap
- * bewusst, siehe .kitchen-row__name). */
+ * bewusst, siehe .list-row__name). */
 .recipe-row__toggle .source-badge {
   flex-shrink: 0;
 }
@@ -178,7 +178,7 @@
   display: none;
 }
 
-@container kitchen-rows (max-width: 30rem) {
+@container list-rows (max-width: 30rem) {
   .recipe-row__inline-actions {
     display: none;
   }
@@ -203,7 +203,7 @@
     order: 1;
   }
 
-  .recipe-row__toggle .kitchen-row__meta {
+  .recipe-row__toggle .list-row__meta {
     flex: 1 0 100%;
     order: 2;
   }
@@ -312,7 +312,7 @@
  *                            erzwingenden Renderer umging.
  *   .recipe-read*          - das Nur-Lese-Modal; sein Inhalt ist jetzt das
  *                            Aufklapp-Detail der Zeile (siehe .recipe-detail).
- *   .recipe-card__title    - der Name kommt aus .kitchen-row__name.
+ *   .recipe-card__title    - der Name kommt aus .list-row__name.
  *   .recipe-card__notes    - jetzt .recipe-detail__notes.
  *   .recipe-card__ingredients / __ingredient / __ingredient--more
  *                          - jetzt .recipe-detail__ingredients / __ingredient;
@@ -338,7 +338,7 @@
  *                              Tab war (Critique 2026-07-30, P3).
  *   .recipe-card__icon-actions
  *                            - die drei Icon-Aktionen sitzen in der geteilten
- *                              .kitchen-row__actions und sind DAUERHAFT sichtbar.
+ *                              .list-row__actions und sind DAUERHAFT sichtbar.
  *                              Das Hover-Reveal (`opacity: 0` + pointer-events)
  *                              ist bewusst weg: es hat in diesem Repo zweimal
  *                              dieselbe Defektklasse produziert, und der Vorrat
@@ -350,7 +350,7 @@
 
 /* Die Zeilen-Aktions-Buttons (Bearbeiten/Duplizieren/Löschen) nutzen die
  * geteilte .row-action-Grammatik aus layout.css in der geteilten
- * .kitchen-row__actions. Kein eigenes Reveal-Layout mehr. */
+ * .list-row__actions. Kein eigenes Reveal-Layout mehr. */
 
 .recipe-ingredient-list {
   display: grid;

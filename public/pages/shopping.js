@@ -207,7 +207,7 @@ function renderListContent(container) {
              max-content-Breite um), darunter brachen die beiden Labels
              (140px + 197px gegen 361px) noch einmal. Kopfhöhe 173px bei 393px,
              229px bei 320px. Sie sitzen jetzt in der geteilten
-             .kitchen-bulkbar über der Liste - derselben Leiste, in der der Vorrat
+             .list-bulkbar über der Liste - derselben Leiste, in der der Vorrat
              seine Sammelaktion trägt (Critique 2026-07-30, P1). -->
         <!-- Die drei dauerhaften Aktionen zweimal im DOM: einmal als Leiste (ab
              768px), einmal als Menü-Einträge (darunter). CSS entscheidet, welche
@@ -272,11 +272,11 @@ function renderListContent(container) {
          ohne die Liste neu zu bauen (Issue #276, Scroll-Position), und mountItems()
          leert #items-list komplett. Als Kind der Liste würde eines das andere
          überschreiben. -->
-    <div class="kitchen-bulkbar" id="list-header-checked" hidden></div>
+    <div class="list-bulkbar" id="list-header-checked" hidden></div>
 
     <!-- Artikel-Liste; Inhalt via mountItems(), damit der Leerzustand über den
          geteilten Renderer läuft statt als HTML-String hier drin. -->
-    <div class="kitchen-list items-list" id="items-list"></div>
+    <div class="list-scroller items-list" id="items-list"></div>
 
     <!-- Ansage für Umsortierungen (#678), wie im Kategorie-Manager: das
          aria-label des Griffs allein ist zu leise - ob ein Screenreader die
@@ -347,18 +347,18 @@ function mountItems(listEl, container) {
 
 function renderItems() {
   const groups = groupItemsByCategory(state.items);
-  // Geteilte Gruppen-Grammatik (styles/kitchen-row.css): .kitchen-group ordnet,
-  // .kitchen-rows trägt die weiße Fläche und die Trennlinien. Die Zeilen selbst
+  // Geteilte Gruppen-Grammatik (styles/list-row.css): .list-group ordnet,
+  // .list-rows trägt die weiße Fläche und die Trennlinien. Die Zeilen selbst
   // sind flächenlos - vorher war Einkaufen eine Trennlinien-Liste und der Vorrat
   // eine Kartenliste, dieselbe Sache in zwei Paradigmen (Critique 2026-07-30).
   return groups.map(([cat, items]) => `
-    <div class="kitchen-group item-category" data-category="${esc(cat)}">
-      <div class="kitchen-group__title">
+    <div class="list-group item-category" data-category="${esc(cat)}">
+      <div class="list-group__title">
         <i data-lucide="${catIcon(cat)}" class="icon-sm" aria-hidden="true"></i>
         ${esc(categoryLabel(cat))}
-        <span class="kitchen-group__count">${items.length}</span>
+        <span class="list-group__count">${items.length}</span>
       </div>
-      <div class="kitchen-rows">
+      <div class="list-rows">
         ${items.map(renderItem).join('')}
       </div>
     </div>`).join('');
@@ -391,12 +391,12 @@ function renderItemTags(tags) {
   if (!tags?.length) return '';
   const shown = tags.slice(0, ITEM_TAGS_VISIBLE);
   const rest  = tags.length - shown.length;
-  const chips = shown.map((tag) => `<span class="item-tag">${esc(tag)}</span>`);
+  const chips = shown.map((tag) => `<span class="list-row__tag">${esc(tag)}</span>`);
   if (rest > 0) {
-    chips.push(`<span class="item-tag item-tag--more"
+    chips.push(`<span class="list-row__tag list-row__tag--more"
                       title="${esc(tags.slice(ITEM_TAGS_VISIBLE).join(', '))}">+${rest}</span>`);
   }
-  return `<div class="kitchen-row__tags">${chips.join('')}</div>`;
+  return `<div class="list-row__tags">${chips.join('')}</div>`;
 }
 
 function renderItem(item) {
@@ -411,30 +411,30 @@ function renderItem(item) {
         <i data-lucide="trash-2" class="icon-xl" aria-hidden="true"></i>
         <span>${t('shopping.swipeDelete')}</span>
       </div>
-      <div class="kitchen-row shopping-item ${isDone ? 'shopping-item--checked' : ''}"
+      <div class="list-row shopping-item ${isDone ? 'shopping-item--checked' : ''}"
            data-item-id="${item.id}">
         <button class="item-check ${isDone ? 'item-check--checked' : ''}"
                 data-action="toggle-item" data-id="${item.id}" data-checked="${item.is_checked}"
                 aria-label="${isDone ? t('shopping.markUndoneLabel', { name: esc(item.name) }) : t('shopping.markDoneLabel', { name: esc(item.name) })}">
           <i data-lucide="check" class="item-check__icon" aria-hidden="true"></i>
         </button>
-        <div class="kitchen-row__main">
-          <div class="kitchen-row__name">${esc(item.name)}${renderItemMeta(item)}</div>
-          ${item.quantity ? `<div class="kitchen-row__meta">${esc(item.quantity)}</div>` : ''}
+        <div class="list-row__main">
+          <div class="list-row__name">${esc(item.name)}${renderItemMeta(item)}</div>
+          ${item.quantity ? `<div class="list-row__meta">${esc(item.quantity)}</div>` : ''}
           ${renderItemTags(item.tags)}
         </div>
         <!-- Geteilte .row-action-Grammatik aus layout.css (app-weit von sieben
-             Modulen genutzt), gruppiert in der geteilten .kitchen-row__actions -
+             Modulen genutzt), gruppiert in der geteilten .list-row__actions -
              vorher hingen die zwei Buttons als direkte Flex-Kinder in der Zeile,
              wodurch die Bedienzone in jedem Tab anders zusammengesetzt war. -->
-        <div class="kitchen-row__actions">
+        <div class="list-row__actions">
           <!-- Griff für die Handsortierung (#678). Ein BUTTON, kein role="img"
                wie im Kategorie-Manager: dort steht daneben ein Auf/Ab-Paar als
                Tastaturpfad, hier trägt der Griff ihn selbst (Pfeiltasten bei
                Fokus). Die Einkaufszeile hat schon Abhaken, Details, Löschen und
                zwei Wischgesten - zwei weitere Knöpfe hätten die Bedienzone auf
                dem Handy zugestellt. -->
-          <button class="row-action kitchen-row__drag" data-action="reorder-handle" data-id="${item.id}"
+          <button class="row-action list-row__drag" data-action="reorder-handle" data-id="${item.id}"
                   aria-label="${t('shopping.reorderHandle', { name: esc(item.name) })}"
                   title="${t('shopping.reorderHandleHint')}">
             <i data-lucide="grip-vertical" class="icon-md" aria-hidden="true"></i>
@@ -686,8 +686,8 @@ function refreshHandleLabels(rowsEl) {
   if (!rowsEl) return;
   const rows = movableRows(rowsEl);
   rows.forEach((row, idx) => {
-    const handle = row.querySelector('.kitchen-row__drag');
-    const name   = row.querySelector('.kitchen-row__name')?.textContent?.trim() ?? '';
+    const handle = row.querySelector('.list-row__drag');
+    const name   = row.querySelector('.list-row__name')?.textContent?.trim() ?? '';
     if (!handle) return;
     handle.removeAttribute('disabled');
     handle.setAttribute('aria-label', `${t('shopping.reorderHandle', { name })}, ${
@@ -700,7 +700,7 @@ function refreshHandleLabels(rowsEl) {
   // Beide Richtungen in EINER Funktion: das Zurückholen eines Artikels ist so
   // alltäglich wie das Abhaken, und ein nur gesetztes `disabled` hätte den Griff
   // bis zum nächsten Voll-Render tot gelassen.
-  rowsEl.querySelectorAll(':scope > [data-swipe-checked="1"] .kitchen-row__drag')
+  rowsEl.querySelectorAll(':scope > [data-swipe-checked="1"] .list-row__drag')
     .forEach((handle) => handle.setAttribute('disabled', ''));
 }
 
@@ -717,7 +717,7 @@ function announceItemMove(container, row) {
   const idx  = rows.indexOf(row);
   if (idx === -1) return;
   el.textContent = t('category.reorderAnnounce', {
-    name:     row.querySelector('.kitchen-row__name')?.textContent?.trim() ?? '',
+    name:     row.querySelector('.list-row__name')?.textContent?.trim() ?? '',
     position: idx + 1,
     total:    rows.length,
   });
@@ -736,7 +736,7 @@ const orderRuns = new Map();
  * in der alten Liste, und dorthin gehört er auch gesichert.
  */
 async function sendItemOrder(groupEl, container, listId) {
-  const rowsEl   = groupEl.querySelector('.kitchen-rows');
+  const rowsEl   = groupEl.querySelector('.list-rows');
   const category = groupEl.dataset.category;
   if (!rowsEl) return true;
 
@@ -789,7 +789,7 @@ function persistItemOrder(groupEl, container, movedRow) {
   const category = groupEl?.dataset.category;
   if (!groupEl || !category) return;
 
-  refreshHandleLabels(groupEl.querySelector('.kitchen-rows'));
+  refreshHandleLabels(groupEl.querySelector('.list-rows'));
   announceItemMove(container, movedRow);
 
   const running = orderRuns.get(category);
@@ -827,8 +827,8 @@ function moveItemRow(row, delta, container) {
   else           rowsEl.insertBefore(row, rows[target].nextSibling);
 
   vibrate(15);
-  row.querySelector('.kitchen-row__drag')?.focus();
-  persistItemOrder(rowsEl.closest('.kitchen-group'), container, row);
+  row.querySelector('.list-row__drag')?.focus();
+  persistItemOrder(rowsEl.closest('.list-group'), container, row);
 }
 
 /**
@@ -843,13 +843,13 @@ function wireItemReorder(container) {
   if (!listEl) return;
   destroyItemSortables();
 
-  listEl.querySelectorAll('.kitchen-group').forEach((groupEl) => {
-    const rowsEl = groupEl.querySelector('.kitchen-rows');
+  listEl.querySelectorAll('.list-group').forEach((groupEl) => {
+    const rowsEl = groupEl.querySelector('.list-rows');
     if (!rowsEl) return;
     refreshHandleLabels(rowsEl);
 
     makeSortable(rowsEl, {
-      handle: '.kitchen-row__drag',
+      handle: '.list-row__drag',
       draggable: '.swipe-row',
       // Abgehaktes bleibt liegen: es steht am Ende der Kategorie, und ein Zug
       // daran würde beim nächsten Laden zurückspringen.
@@ -866,7 +866,7 @@ function wireItemReorder(container) {
   listEl.dataset.reorderWired = '1';
   listEl.addEventListener('keydown', (e) => {
     if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
-    const handle = e.target.closest?.('.kitchen-row__drag');
+    const handle = e.target.closest?.('.list-row__drag');
     if (!handle || handle.disabled) return;
     e.preventDefault();
     moveItemRow(handle.closest('.swipe-row'), e.key === 'ArrowUp' ? -1 : 1, container);
@@ -883,7 +883,7 @@ function wireSwipeGestures(container) {
 
   wireSwipeRows(listEl, {
     card: '.shopping-item',
-    ignore: '.kitchen-row__drag',
+    ignore: '.list-row__drag',
     // Links: abhaken / zurueck. Die Karte fliegt hinaus, die Zeile bleibt -
     // nur ihr Zustand wechselt (Issue #276: kein Re-Render der Liste).
     left: {
@@ -967,7 +967,7 @@ function updateItemRow(container, item) {
 
   // Der Sortiergriff hängt am Erledigt-Zustand (#678): abgehaktes sortiert sich
   // nicht, und die Positionsangaben der Gruppe verschieben sich mit.
-  refreshHandleLabels(row.closest('.kitchen-rows'));
+  refreshHandleLabels(row.closest('.list-rows'));
 
   // Swipe-Affordance (links) spiegelt den neuen Status
   const reveal = row.querySelector('.swipe-reveal--done');
@@ -992,7 +992,7 @@ function updateItemRow(container, item) {
  */
 function refreshItemName(container, item) {
   const card = container.querySelector(`.shopping-item[data-item-id="${item.id}"]`);
-  const nameEl = card?.querySelector('.kitchen-row__name');
+  const nameEl = card?.querySelector('.list-row__name');
   if (!nameEl) return;
 
   nameEl.replaceChildren(document.createTextNode(item.name));
@@ -1002,13 +1002,13 @@ function refreshItemName(container, item) {
     if (window.lucide) window.lucide.createIcons({ el: nameEl });
   }
 
-  const main = card.querySelector('.kitchen-row__main');
-  const qtyEl = main?.querySelector('.kitchen-row__meta');
+  const main = card.querySelector('.list-row__main');
+  const qtyEl = main?.querySelector('.list-row__meta');
   if (item.quantity) {
     if (qtyEl) {
       qtyEl.textContent = item.quantity;
     } else {
-      main?.insertAdjacentHTML('beforeend', `<div class="kitchen-row__meta">${esc(item.quantity)}</div>`);
+      main?.insertAdjacentHTML('beforeend', `<div class="list-row__meta">${esc(item.quantity)}</div>`);
     }
   } else {
     qtyEl?.remove();
@@ -1329,7 +1329,7 @@ async function openPantryTransfer(container) {
  *
  * `hidden` statt eines leeren Containers: die Leiste hat eine Fläche, einen Rahmen
  * und Polsterung - leer wäre sie ein sichtbarer 42px-Streifen über der Liste. Die
- * [hidden]-Durchsetzung für `.kitchen-bulkbar` steht in layout.css, weil
+ * [hidden]-Durchsetzung für `.list-bulkbar` steht in layout.css, weil
  * `display: flex` das UA-`[hidden]` sonst schlägt.
  */
 function updateCheckedActions(container) {
@@ -1343,9 +1343,9 @@ function updateCheckedActions(container) {
 
   const pantryEnabled = !window.yuvomi?.isModuleDisabled?.('pantry');
   wrap.insertAdjacentHTML('beforeend', `
-    <span class="kitchen-bulkbar__label">${esc(t('shopping.checkedHint', { count: checkedCount }))}</span>
+    <span class="list-bulkbar__label">${esc(t('shopping.checkedHint', { count: checkedCount }))}</span>
     ${pantryEnabled ? `
-      <button class="btn btn--secondary kitchen-bulkbar__action" data-action="to-pantry">
+      <button class="btn btn--secondary list-bulkbar__action" data-action="to-pantry">
         <i data-lucide="archive" class="icon-sm" aria-hidden="true"></i>
         <span>${esc(t('shopping.toPantry'))}</span>
       </button>` : ''}
@@ -1356,7 +1356,7 @@ function updateCheckedActions(container) {
          253px und die Leiste bleibt auf allen Breiten zweizeilig. Die Aktion ist
          zudem rückholbar (scheduleUndoableDelete), das Löschen der ganzen Liste
          sitzt woanders (Überlaufmenü) und hat einen Bestätigungsdialog. -->
-    <button class="btn btn--ghost kitchen-bulkbar__action" data-action="clear-checked"
+    <button class="btn btn--ghost list-bulkbar__action" data-action="clear-checked"
             aria-label="${esc(t('shopping.clearChecked', { count: checkedCount }))}">
       <i data-lucide="trash-2" class="icon-sm" aria-hidden="true"></i>
       <span>${esc(t('common.delete'))}</span>
@@ -1877,7 +1877,7 @@ export async function render(container, { user }) {
            „genau einmal pro Ahnenkette"-Bedingung aus tokens.css, an der auch
            der 16px-Versatz im Budget-Modul hing. Draußen fluchtet er mit der
            Listen-Chip-Leiste darüber und trägt sein Chrome full-bleed. -->
-      <!-- --narrow: der Kopf endet beim Lesemaß des Körpers (.kitchen-list),
+      <!-- --narrow: der Kopf endet beim Lesemaß des Körpers (.list-scroller),
            nicht an der Content-Spalte. Siehe layout.css. -->
       <div class="page-toolbar page-toolbar--in-group page-toolbar--narrow" id="list-head" hidden></div>
       <div id="list-content" style="flex:1;display:flex;flex-direction:column;overflow:hidden"></div>

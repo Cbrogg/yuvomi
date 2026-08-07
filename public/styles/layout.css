@@ -1345,7 +1345,7 @@ html.fab-anim-done .page-fab {
  * Lesemaß (--content-max-width-narrow) statt an der Content-Spalte.
  *
  * Nutzer: die drei Küchen-Listen (Rezepte, Einkaufen, Vorrat). Ihr Körper ist
- * über .kitchen-list auf 720px gekappt, ihr Kopf lief bis an die Content-Spalte:
+ * über .list-scroller auf 720px gekappt, ihr Kopf lief bis an die Content-Spalte:
  * gemessen bei 1280px Fensterbreite endete die Liste bei x=972, der
  * Lagerort-Knopf im Vorrat und die drei Listen-Aktionen im Einkauf aber bei
  * x=1248 - 276px über leerer Fläche. DESIGN.md macht die gemeinsame Fluchtlinie
@@ -1725,7 +1725,7 @@ html.fab-anim-done .page-fab {
  * „zu" zeigte - dieselbe Falle, drittes Mal. Ein Prüfskript, das nur die
  * DOM-Property `hidden` liest, sieht sie NICHT; es braucht das berechnete
  * `display`. */
-/* Und `.kitchen-bulkbar`: die Sammelaktions-Leiste des Einkaufs trägt
+/* Und `.list-bulkbar`: die Sammelaktions-Leiste des Einkaufs trägt
  * `display: flex` und ist nur bei abgehakten Artikeln gefüllt - ohne diese Zeile
  * blieb bei null Treffern ein leerer, gerahmter und getönter Streifen über der
  * Liste stehen. Vierte Fundstelle derselben Falle. */
@@ -1734,7 +1734,7 @@ html.fab-anim-done .page-fab {
 .form-group[hidden],
 .page-toolbar[hidden],
 .recipe-detail[hidden],
-.kitchen-bulkbar[hidden],
+.list-bulkbar[hidden],
 p.field-hint--warn[hidden] {
   display: none !important;
 }

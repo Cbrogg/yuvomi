@@ -220,7 +220,7 @@ export async function render(container) {
   // layout.css): Suche im __center-Slot, Lagerort-Verwaltung im __actions-Slot -
   // dieselbe Slot-Ordnung wie in den drei Geschwister-Tabs.
   const toolbar = document.createElement('div');
-  // --narrow: der Kopf endet beim Lesemaß der Liste darunter (.kitchen-list),
+  // --narrow: der Kopf endet beim Lesemaß der Liste darunter (.list-scroller),
   // nicht an der Content-Spalte. Siehe layout.css.
   toolbar.className = 'page-toolbar page-toolbar--in-group page-toolbar--narrow';
   toolbar.insertAdjacentHTML('beforeend', `
@@ -258,7 +258,7 @@ export async function render(container) {
   bulk.id = 'pantry-bulkbar-slot';
 
   const list = document.createElement('div');
-  list.className = 'kitchen-list pantry-list';
+  list.className = 'list-scroller pantry-list';
   list.id = 'pantry-list';
   list.setAttribute('aria-busy', 'true');
   list.insertAdjacentHTML('beforeend', renderSkeletonList({ rows: 6, lines: 2 }));
@@ -429,20 +429,20 @@ function renderFilters() {
  * Liste statt als letztes Element der Chip-Leiste: dort lag sie hinter dem
  * horizontalen Scroll und war faktisch unsichtbar.
  *
- * Geteilte Grammatik `.kitchen-bulkbar` (styles/kitchen-row.css) - der Einkauf
+ * Geteilte Grammatik `.list-bulkbar` (styles/list-row.css) - der Einkauf
  * trägt seine Abschluss-Aktionen jetzt in derselben Leiste.
  */
 function bulkBarEl() {
   const bar = document.createElement('div');
-  bar.className = 'kitchen-bulkbar';
+  bar.className = 'list-bulkbar';
 
   const label = document.createElement('span');
-  label.className = 'kitchen-bulkbar__label';
+  label.className = 'list-bulkbar__label';
   label.textContent = t('pantry.bulkHint');
 
   const bulk = document.createElement('button');
   bulk.type = 'button';
-  bulk.className = 'btn btn--secondary kitchen-bulkbar__action';
+  bulk.className = 'btn btn--secondary list-bulkbar__action';
   bulk.insertAdjacentHTML('beforeend', '<i data-lucide="shopping-cart" class="icon-sm" aria-hidden="true"></i>');
   bulk.append(document.createTextNode(t('pantry.toShoppingAll')));
   bulk.addEventListener('click', () => sendToShopping(visibleItems(), bulk));
@@ -499,26 +499,26 @@ function renderList() {
 
   for (const group of groupedItems(items)) {
     const section = document.createElement('section');
-    // Geteilte Gruppen-Grammatik (styles/kitchen-row.css): die Gruppe trägt die
+    // Geteilte Gruppen-Grammatik (styles/list-row.css): die Gruppe trägt die
     // weiße Fläche, die Zeilen darin nur Trennlinien.
-    section.className = 'kitchen-group pantry-group';
+    section.className = 'list-group pantry-group';
 
     if (group.label) {
       const heading = document.createElement('h2');
-      heading.className = 'kitchen-group__title';
+      heading.className = 'list-group__title';
       heading.insertAdjacentHTML('beforeend',
         `<i data-lucide="${esc(group.icon || 'package')}" class="icon-sm" aria-hidden="true"></i>`);
       const name = document.createElement('span');
       name.textContent = group.label;
       const count = document.createElement('span');
-      count.className = 'kitchen-group__count';
+      count.className = 'list-group__count';
       count.textContent = String(group.items.length);
       heading.append(name, count);
       section.appendChild(heading);
     }
 
     const rows = document.createElement('ul');
-    rows.className = 'kitchen-rows pantry-rows';
+    rows.className = 'list-rows pantry-rows';
     for (const item of group.items) rows.appendChild(rowEl(item));
     section.appendChild(rows);
     list.appendChild(section);
@@ -579,10 +579,10 @@ function rowEl(item) {
   const status = pantryItemStatus(item, state.todayKey);
 
   const li = document.createElement('li');
-  // Geteilte Zeilen-Grammatik (styles/kitchen-row.css). Ohne --reserve-end: der
+  // Geteilte Zeilen-Grammatik (styles/list-row.css). Ohne --reserve-end: der
   // Warenkorb sitzt nicht mehr an der Zeilenkante, sondern in einem festen Slot
   // am Anfang der Bedienzone (siehe unten).
-  li.className = 'kitchen-row pantry-row';
+  li.className = 'list-row pantry-row';
   li.dataset.id = String(item.id);
   if (status.out) li.classList.add('pantry-row--out');
 
@@ -596,7 +596,7 @@ function rowEl(item) {
   // Zusatz ans Ende.
   const main = document.createElement('button');
   main.type = 'button';
-  main.className = 'kitchen-row__main kitchen-row__main--interactive pantry-row__main';
+  main.className = 'list-row__main list-row__main--interactive pantry-row__main';
   main.dataset.action = 'edit';
 
   // Name und Status in EINER Zeile: das Badge qualifiziert den Artikel, es ist
@@ -606,7 +606,7 @@ function rowEl(item) {
   headline.className = 'pantry-row__headline';
 
   const name = document.createElement('span');
-  name.className = 'kitchen-row__name';
+  name.className = 'list-row__name';
   name.textContent = item.name;
   headline.appendChild(name);
 
@@ -636,7 +636,7 @@ function rowEl(item) {
   }
   if (metaParts.length) {
     const meta = document.createElement('span');
-    meta.className = 'kitchen-row__meta';
+    meta.className = 'list-row__meta';
     meta.textContent = metaParts.join(' · ');
     main.appendChild(meta);
   }
@@ -659,7 +659,7 @@ function rowEl(item) {
   // deshalb wandert der Knoten selbst. Jeder Button trägt den Artikelnamen im
   // Label, die Tab-Folge bleibt also auch ohne vorangehenden Namen eindeutig.
   const actions = document.createElement('div');
-  actions.className = 'kitchen-row__actions';
+  actions.className = 'list-row__actions';
 
   // Der Warenkorb sitzt am ANFANG der Bedienzone, nicht an der rechten
   // Zeilenkante.

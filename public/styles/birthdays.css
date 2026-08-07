@@ -46,7 +46,7 @@
 }
 
 /* Trennlinie an den direkten Kindern des Traegers, NICHT an der Zeile selbst -
- * dasselbe Muster wie `.kitchen-rows > * + *` im Einkauf, und aus demselben
+ * dasselbe Muster wie `.list-rows > * + *` im Einkauf, und aus demselben
  * Grund: seit der Wischbedienung (Runde 4, C-2) liegt zwischen Traeger und
  * Zeile der `.swipe-row`-Wrapper. `.birthday-item + .birthday-item` fand danach
  * keine Geschwister mehr und alle Haarlinien waren verschwunden. `> * + *`

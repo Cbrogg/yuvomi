@@ -188,7 +188,7 @@
  * gar nicht zu lösen gab: mobil brachen sie trotzdem in zwei zusätzliche Zeilen
  * (Kopfhöhe 173px bei 393px, 229px bei 320px).
  *
- * Die Aktionen sitzen jetzt in der geteilten .kitchen-bulkbar über der Liste, mit
+ * Die Aktionen sitzen jetzt in der geteilten .list-bulkbar über der Liste, mit
  * vollen Labels und einer Zeile, die sagt, worauf sie wirken (Critique
  * 2026-07-30, P1). */
 
@@ -318,7 +318,7 @@
  *
  * Sie passen jetzt, weil es zwei sind: der Titel und ein Menü-Trigger. Die drei
  * dauerhaften Aktionen stehen mit Label im Menü, die zwei Abschluss-Aktionen in der
- * .kitchen-bulkbar über der Liste. Gemessen 173px Kopfhöhe vorher (229px bei
+ * .list-bulkbar über der Liste. Gemessen 173px Kopfhöhe vorher (229px bei
  * 320px), erste Datenzeile bei y=439 von 852.
  *
  * DER UMBRUCH BLEIBT ALS RÜCKFALL: eine Locale mit langem Listennamen oder eine
@@ -556,8 +556,8 @@
 /* Bottom-Padding hält die letzte Zeile frei vom FAB, der sonst den untersten
  * Artikel überdeckt. Gleiche Formel wie --budget-fab-clearance und
  * --rw-fab-clearance, damit die Freiräume app-weit gleich groß sind. */
-/* Scroller, Lesemaß, FAB-Auslauf und Gruppen-Abstand kommen aus .kitchen-list
- * (styles/kitchen-row.css); die Klasse steht im Markup neben .items-list.
+/* Scroller, Lesemaß, FAB-Auslauf und Gruppen-Abstand kommen aus .list-scroller
+ * (styles/list-row.css); die Klasse steht im Markup neben .items-list.
  *
  * Weggefallen ist dabei das eigene `padding: 0 var(--space-4)`: #list-content
  * trägt schon --page-inline-pad, und das Eigenpolster addierte sich darauf.
@@ -583,7 +583,7 @@
  * unter dem FAB liegt - eine Antwort für alle vier Tabs, statt einer Gasse hier
  * und 14 Überdeckungen dort. */
 
-/* Der Abstand zwischen den Gruppen kommt aus dem gap von .kitchen-list. */
+/* Der Abstand zwischen den Gruppen kommt aus dem gap von .list-scroller. */
 
 /* Web: Einkauf-Content als breitenbegrenzte Lesespalte statt links auslaufender
  * Vollbreite (die Liste liest sich auf ≥1024px ruhiger).
@@ -613,14 +613,14 @@
   }
 }
 
-/* Gruppenkopf und Gruppenfläche kommen aus .kitchen-group__title /
- * .kitchen-rows. Das eigene .item-category__icon entfällt: der Kopf nutzt jetzt
+/* Gruppenkopf und Gruppenfläche kommen aus .list-group__title /
+ * .list-rows. Das eigene .item-category__icon entfällt: der Kopf nutzt jetzt
  * die geteilte .icon-sm-Größe wie die Geschwistertabs. */
 
 /* --------------------------------------------------------
  * Einkaufsartikel
  * -------------------------------------------------------- */
-/* Geometrie, Trennlinie, Hover und Zielhöhe kommen aus .kitchen-row. Hier bleibt
+/* Geometrie, Trennlinie, Hover und Zielhöhe kommen aus .list-row. Hier bleibt
  * nur, was den Einkauf unterscheidet. */
 .shopping-item {
   cursor: pointer;
@@ -710,8 +710,8 @@
 
 .item-check--checked .item-check__icon { display: block; }
 
-/* Textspalte, Name und Menge kommen aus .kitchen-row__main / __name / __meta
- * (styles/kitchen-row.css).
+/* Textspalte, Name und Menge kommen aus .list-row__main / __name / __meta
+ * (styles/list-row.css).
  *
  * Entfallen ist dabei die Ellipse auf dem Artikelnamen
  * (`white-space: nowrap; text-overflow: ellipsis`): sie war die Ursache des
@@ -719,14 +719,14 @@
  * gegen 176px Bedarf, lesbar blieben vier Zeichen („Broc…", „Cherr…"), und das
  * in genau der Situation, für die diese Liste gebaut ist. Der geteilte Name
  * bricht stattdessen um, wie es das MHD im Vorrat schon tat. */
-.shopping-item--checked .kitchen-row__name {
+.shopping-item--checked .list-row__name {
   text-decoration: line-through;
   color: var(--color-text-secondary);
 }
 
 /* Tabellenziffern nur für die Menge: der geteilte Meta-Slot trägt in den
  * Geschwistertabs auch Text (MHD, Lagerort), dort wären sie falsch. */
-.shopping-item .kitchen-row__meta {
+.shopping-item .list-row__meta {
   font-variant-numeric: tabular-nums;
 }
 
@@ -779,7 +779,7 @@
 
 /* Kein Margin mehr am shopping-item selbst (übernimmt swipe-row).
  *
- * KEIN border-radius mehr: den trägt jetzt die Gruppe (.kitchen-rows, 12px, mit
+ * KEIN border-radius mehr: den trägt jetzt die Gruppe (.list-rows, 12px, mit
  * overflow: hidden), und die klippt die Swipe-Fläche mit. Ein eigener Radius auf
  * der Zeile war der letzte Rest des Karten-Paradigmas im Einkauf und hätte
  * innerhalb der Gruppenfläche als doppelte Rundung gelesen. */

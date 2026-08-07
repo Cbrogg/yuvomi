@@ -1916,24 +1916,24 @@ function topLevelFunctions(src) {
  * Token. Das ist eine dokumentierte Ausnahme, kein vergessener Tab.
  */
 test('die Küchen-Listen teilen eine Zeilen-Grammatik', () => {
-  const shared = read('../public/styles/kitchen-row.css');
+  const shared = read('../public/styles/list-row.css');
   const indexHtml = read('../public/index.html');
 
-  assert.match(indexHtml, /<link rel="stylesheet" href="\/styles\/kitchen-row\.css" \/>/,
-    'kitchen-row.css muss in index.html eingehängt sein (Router lädt nur EIN Page-CSS pro Seite)');
+  assert.match(indexHtml, /<link rel="stylesheet" href="\/styles\/list-row\.css" \/>/,
+    'list-row.css muss in index.html eingehängt sein (Router lädt nur EIN Page-CSS pro Seite)');
 
   // Die Gruppe trägt die Fläche, die Zeile nur Inhalt.
-  const rowsBlock = shared.match(/\.kitchen-rows\s*\{([^}]*)\}/)?.[1] ?? '';
+  const rowsBlock = shared.match(/\.list-rows\s*\{([^}]*)\}/)?.[1] ?? '';
   assert.match(rowsBlock, /background-color:\s*var\(--color-surface-work\)/,
-    '.kitchen-rows muss die opake Arbeitsfläche tragen (DESIGN.md: kein Glas unter Fließtext)');
+    '.list-rows muss die opake Arbeitsfläche tragen (DESIGN.md: kein Glas unter Fließtext)');
   assert.match(rowsBlock, /border-radius:\s*var\(--radius-md\)/,
-    '.kitchen-rows muss den Inhaltsflächen-Radius aus DESIGN.md §5 tragen');
+    '.list-rows muss den Inhaltsflächen-Radius aus DESIGN.md §5 tragen');
 
   // Keine Zeilenaktion an der rechten Zeilenkante: das ist die Ecke, die der
   // fixierte FAB besetzt (87% Überdeckung auf dem Vorrats-Warenkorb im
   // Ruhezustand, Critique 2026-07-30). Kontextuelle Aktionen sitzen in einem
   // festen Slot am Anfang der Bedienzone.
-  assert.doesNotMatch(shared.replace(/\/\*[\s\S]*?\*\//g, ''), /\.kitchen-row__end-action/,
+  assert.doesNotMatch(shared.replace(/\/\*[\s\S]*?\*\//g, ''), /\.list-row__end-action/,
     'an der Zeilenkante verankerte Aktionen liegen in der FAB-Ecke - fester Slot am Anfang der Bedienzone stattdessen');
   const pantryCss = read('../public/styles/pantry.css');
   const slot = pantryCss.match(/\.pantry-row__cart-slot\s*\{([^}]*)\}/)?.[1] ?? '';
@@ -1945,11 +1945,11 @@ test('die Küchen-Listen teilen eine Zeilen-Grammatik', () => {
 
   // Umbrechen statt abschneiden. Ein gekürzter Artikelname ("Broc…") war bei
   // 320px der Verlust des einzigen Zwecks der Einkaufsliste.
-  const nameBlock = shared.match(/\.kitchen-row__name\s*\{([^}]*)\}/)?.[1] ?? '';
+  const nameBlock = shared.match(/\.list-row__name\s*\{([^}]*)\}/)?.[1] ?? '';
   assert.doesNotMatch(nameBlock, /text-overflow|white-space:\s*nowrap/,
-    '.kitchen-row__name darf nicht ellipsieren: bei 320px blieben vier lesbare Zeichen');
+    '.list-row__name darf nicht ellipsieren: bei 320px blieben vier lesbare Zeichen');
   assert.match(nameBlock, /overflow-wrap:\s*anywhere/,
-    '.kitchen-row__name muss umbrechen dürfen');
+    '.list-row__name muss umbrechen dürfen');
 
   // Keine Zeile bringt ihre eigene Fläche mit.
   //
@@ -1967,14 +1967,14 @@ test('die Küchen-Listen teilen eine Zeilen-Grammatik', () => {
       .map((m) => m[1]).join('\n');
     for (const prop of ['border-radius', 'background-color', 'padding']) {
       assert.doesNotMatch(blocks, new RegExp(`^\\s*${prop}:`, 'm'),
-        `${tab}: ${selector} darf kein eigenes ${prop} setzen - das trägt .kitchen-row bzw. .kitchen-rows`);
+        `${tab}: ${selector} darf kein eigenes ${prop} setzen - das trägt .list-row bzw. .list-rows`);
     }
   }
 
   // Alle drei Listen-Tabs benutzen die geteilten Klassen im Markup.
   for (const page of ['shopping', 'pantry', 'recipes']) {
     const src = read(`../public/pages/${page}.js`);
-    for (const cls of ['kitchen-list', 'kitchen-rows', 'kitchen-row', 'kitchen-row__main', 'kitchen-row__name', 'kitchen-row__actions']) {
+    for (const cls of ['list-scroller', 'list-rows', 'list-row', 'list-row__main', 'list-row__name', 'list-row__actions']) {
       assert.ok(src.includes(cls), `${page}.js muss ${cls} verwenden`);
     }
   }
@@ -2008,8 +2008,8 @@ test('die Küchen-Listen teilen eine Zeilen-Grammatik', () => {
   const itemsList = shoppingCss.match(/^\.items-list\s*\{([^}]*)\}/m)?.[1] ?? '';
   assert.doesNotMatch(itemsList, /padding-inline:|padding:\s*\S+\s+\S+/,
     '.items-list darf kein horizontales Polster setzen: #list-content trägt schon --page-inline-pad');
-  assert.doesNotMatch(shared.match(/\.kitchen-list\s*\{([^}]*)\}/)?.[1] ?? '', /padding-inline:/,
-    '.kitchen-list darf kein padding-inline setzen: wo der Spalten-Träger sitzt, ist pro Tab verschieden');
+  assert.doesNotMatch(shared.match(/\.list-scroller\s*\{([^}]*)\}/)?.[1] ?? '', /padding-inline:/,
+    '.list-scroller darf kein padding-inline setzen: wo der Spalten-Träger sitzt, ist pro Tab verschieden');
 
   // Die Kappung aufs Lesemaß sitzt an den KINDERN des Scrollers, nicht am
   // Scroller selbst (PR #614). Die Begründung dafür stand bisher nur als
@@ -2018,7 +2018,7 @@ test('die Küchen-Listen teilen eine Zeilen-Grammatik', () => {
   // Gescannt wird JEDE Regel JEDER Stylesheet-Datei, nicht der erste Textblock
   // je Selektor. Zwei Wege führen sonst am Guard vorbei: ein zweiter Block
   // hinter einem Breakpoint, und das Modul-CSS, das später lädt und auf
-  // demselben Element sitzt (`class="kitchen-list items-list"`).
+  // demselben Element sitzt (`class="list-scroller items-list"`).
   //
   // Und jede Regel weiß, OB sie bedingt gilt. cssRules() wirft das At-Rule-
   // Präludium weg; eine geforderte Kappung, die nur unter `@media (max-width:
@@ -2123,13 +2123,13 @@ test('die Küchen-Listen teilen eine Zeilen-Grammatik', () => {
   };
 
   // Zielt der Selektor auf das Element selbst, nicht auf einen Nachfahren?
-  // Geprüft wird der LETZTE Compound, damit auch `.kitchen-list#items-list`,
-  // `.kitchen-list:hover` und `:is(.kitchen-list)` als Treffer gelten -
-  // `.kitchen-list .row` dagegen nicht.
+  // Geprüft wird der LETZTE Compound, damit auch `.list-scroller#items-list`,
+  // `.list-scroller:hover` und `:is(.list-scroller)` als Treffer gelten -
+  // `.list-scroller .row` dagegen nicht.
   //
   // `:not(…)` und `:has(…)` fallen vorher weg, und zwar VOR dem Zerlegen:
   // beide nennen die Klasse, ohne dass die Regel sie stylt. `.page:has(
-  // .kitchen-list)` gestaltet den Vorfahren, nicht den Scroller - dort rot zu
+  // .list-scroller)` gestaltet den Vorfahren, nicht den Scroller - dort rot zu
   // werden hieße, eine korrekte Layoutregel zu blockieren.
   // Das Token ist `.klasse` oder `#id`: dasselbe Element lässt sich über beide
   // ansprechen, und eine Regel auf der ID nennt keine seiner Klassen.
@@ -2155,22 +2155,22 @@ test('die Küchen-Listen teilen eine Zeilen-Grammatik', () => {
   //    Mindestzahl genügt nicht: fiele nur eine Seite aus der Erkennung, würden
   //    die beiden anderen sie weiter erfüllen, und deren Modul-Klasse wäre
   //    ungeprüft.
-  const scrollerTokens = new Set(['.kitchen-list']);
+  const scrollerTokens = new Set(['.list-scroller']);
   for (const page of ['shopping', 'pantry', 'recipes']) {
     const src = read(`../public/pages/${page}.js`);
-    const combos = [...src.matchAll(/class(?:Name)?\s*=\s*(['"`])([^'"`]*\bkitchen-list\b[^'"`]*)\1/g)];
+    const combos = [...src.matchAll(/class(?:Name)?\s*=\s*(['"`])([^'"`]*\blist-scroller\b[^'"`]*)\1/g)];
     assert.ok(combos.length > 0,
-      `${page}.js hängt seine Klasse nicht mehr literal an .kitchen-list - dieser Scan findet sie dann nicht und prüft den Scroller des Tabs ungewollt gar nicht`);
+      `${page}.js hängt seine Klasse nicht mehr literal an .list-scroller - dieser Scan findet sie dann nicht und prüft den Scroller des Tabs ungewollt gar nicht`);
     combos.forEach(([, , combo]) => combo.trim().split(/\s+/).forEach((cls) => scrollerTokens.add(`.${cls}`)));
 
     // Und über die ID, die alle drei Scroller tragen: `#recipes-list` trifft
     // dasselbe Element, ohne eine seiner Klassen zu nennen. Keine ID im
     // Markup heißt umgekehrt, dass kein ID-Selektor es treffen kann - deshalb
     // ist hier nichts zu fordern, nur einzusammeln.
-    const inTag = (src.match(/<[^>]*\bkitchen-list\b[^>]*>/g) ?? [])
+    const inTag = (src.match(/<[^>]*\blist-scroller\b[^>]*>/g) ?? [])
       .map((tag) => tag.match(/\bid="([^"]+)"/)?.[1]);
     const nextToClassName = [...src.matchAll(
-      /(\w+)\.className\s*=\s*['"`][^'"`]*\bkitchen-list\b[^'"`]*['"`];\s*\1\.id\s*=\s*['"`]([^'"`]+)/g)]
+      /(\w+)\.className\s*=\s*['"`][^'"`]*\blist-scroller\b[^'"`]*['"`];\s*\1\.id\s*=\s*['"`]([^'"`]+)/g)]
       .map(([, , id]) => id);
     [...inTag, ...nextToClassName].filter(Boolean).forEach((id) => scrollerTokens.add(`#${id}`));
 
@@ -2178,7 +2178,7 @@ test('die Küchen-Listen teilen eine Zeilen-Grammatik', () => {
     // trotzdem jede Regel darin. Der Scroller wird im JS gebaut, also muss
     // der Scan dort nachsehen - an derselben Variablen, die die Klasse bekommt,
     // und im Tag, das sie im Markup trägt.
-    for (const [, variable] of src.matchAll(/(\w+)\.className\s*=\s*['"`][^'"`]*\bkitchen-list\b/g)) {
+    for (const [, variable] of src.matchAll(/(\w+)\.className\s*=\s*['"`][^'"`]*\blist-scroller\b/g)) {
       const name = escapeForRegExp(variable);
       assert.doesNotMatch(src, new RegExp(`\\b${name}\\.style\\.(?:max)?(?:Width|InlineSize)\\s*=`, 'i'),
         `${page}.js setzt eine Inline-Breite am Scroller - die schlägt jede Regel im Stylesheet und damit auch diesen Guard`);
@@ -2193,13 +2193,13 @@ test('die Küchen-Listen teilen eine Zeilen-Grammatik', () => {
       assert.doesNotMatch(src, new RegExp(`\\b${name}\\.style\\.margin(?:Inline|Left|Right)?[A-Za-z]*\\s*=`),
         `${page}.js setzt eine Inline-Marge am Scroller - die zieht als gestrecktes Flex-Item direkt von seiner Breite ab`);
     }
-    (src.match(/<[^>]*\bkitchen-list\b[^>]*>/g) ?? []).forEach((tag) => {
+    (src.match(/<[^>]*\blist-scroller\b[^>]*>/g) ?? []).forEach((tag) => {
       assert.doesNotMatch(tag, /\sstyle\s*=/,
         `${page}.js gibt dem Scroller ein style-Attribut - Inline-Stile schlagen jede Regel im Stylesheet`);
     });
   }
-  assert.ok(rulesFor('.kitchen-list').length > 0,
-    '.kitchen-list ist nirgends definiert: ein leerer Treffer darf hier nicht still grün bleiben');
+  assert.ok(rulesFor('.list-scroller').length > 0,
+    '.list-scroller ist nirgends definiert: ein leerer Treffer darf hier nicht still grün bleiben');
   for (const cls of scrollerTokens) {
     for (const { file, selectors, body } of rulesFor(cls)) {
       for (const axis of WIDTH_AXES) {
@@ -2266,21 +2266,21 @@ test('die Küchen-Listen teilen eine Zeilen-Grammatik', () => {
     `--content-max-width-narrow ist auf "${tokenValue}" gesetzt - das ist keine Breite, und die Kappung der Kinder läuft ins Leere`);
 
   // 2. Tragen muss die Kappung stattdessen jedes Kind, das ALLEIN Kind des
-  //    Scrollers sein kann: .kitchen-group bei gruppierten Tabs (Einkauf,
-  //    Vorrat), .kitchen-rows ungruppiert (Rezepte). Fehlt sie an einem der
+  //    Scrollers sein kann: .list-group bei gruppierten Tabs (Einkauf,
+  //    Vorrat), .list-rows ungruppiert (Rezepte). Fehlt sie an einem der
   //    beiden, läuft der betroffene Tab bildschirmbreit - und ein zweiter
   //    Block darf sie auch nicht auf einen abweichenden Wert ziehen.
-  for (const cls of ['.kitchen-group', '.kitchen-rows']) {
+  for (const cls of ['.list-group', '.list-rows']) {
     const rules = rulesFor(cls);
     // Unbedingt heißt dreierlei: nicht hinter einem Breakpoint, nicht an einen
     // Zustand gebunden, und nicht an einen Vorfahren geknüpft.
-    // `.kitchen-rows:hover` kappt nur unter dem Mauszeiger;
-    // `.shopping-page .kitchen-rows` kappt die Rezeptliste gar nicht, obwohl
+    // `.list-rows:hover` kappt nur unter dem Mauszeiger;
+    // `.shopping-page .list-rows` kappt die Rezeptliste gar nicht, obwohl
     // der Selektor die Klasse nennt und dieser Scan ihn findet.
     // Anders als in targets() bleiben :not() und :has() hier STEHEN. Dort
     // sagen sie nur, dass die genannte Klasse nicht das Subjekt ist; hier
     // sagen sie, dass die Kappung an eine Bedingung geknüpft ist -
-    // `.kitchen-rows:not(.uncapped)` lässt jede Zeile mit dieser Klasse
+    // `.list-rows:not(.uncapped)` lässt jede Zeile mit dieser Klasse
     // ungekappt. `:is()`/`:where()` gehören zum Subjekt: Inhalt behalten.
     const plain = (sel) => {
       const bare = sel.replace(/:(?:is|where)\(([^)]*)\)/g, '$1');
@@ -2298,7 +2298,7 @@ test('die Küchen-Listen teilen eine Zeilen-Grammatik', () => {
       assert.ok(definite === null || definite === 'auto' || definite === '100%',
         `${file}: ${cls} bekommt hier eine feste Breite (${definite}) - gekappt wird über max-width, sonst steht die Liste unabhängig vom Lesemaß schmal`);
 
-      // Dasselbe ohne Breitenangabe: als Grid-Item von .kitchen-list füllt das
+      // Dasselbe ohne Breitenangabe: als Grid-Item von .list-scroller füllt das
       // Kind seine Spur per Voreinstellung. `justify-self: start` nimmt ihm
       // das, und die auto-Breite fällt auf den Inhalt zusammen - das Lesemaß
       // bleibt dabei unangetastet und unwirksam.
@@ -2322,16 +2322,16 @@ test('die Küchen-Listen teilen eine Zeilen-Grammatik', () => {
   //    die Eckenradien) macht aus dem gekappten Kind einen Clipper. Ohne
   //    `align-self: start` streckt das voreingestellte `align-items: stretch`
   //    es auf die volle Spurhöhe, und es schneidet alles darüber still ab,
-  //    bevor .kitchen-list den Überlauf je sieht. Gemessen an einer Rezeptliste
+  //    bevor .list-scroller den Überlauf je sieht. Gemessen an einer Rezeptliste
   //    mit 50 gespiegelten Einträgen: scrollHeight 3249px gegen clientHeight
   //    657px, kein Scrollbalken, kein Weg an die übrigen Zeilen. Harmlos ist
   //    das nur, solange mehrere kurze Gruppen dieselbe Spur teilen.
   //
-  //    Der Scan bleibt auf kitchen-row.css, wo die geteilten Bausteine
+  //    Der Scan bleibt auf list-row.css, wo die geteilten Bausteine
   //    definiert werden. Andere Module kappen mit demselben Token Elemente, die
   //    nie Grid-Item dieses Scrollers werden (shopping.css die Eingabezeile,
   //    layout.css den Leerzustand) - für die wäre `align-self: start` falsch.
-  //    Innerhalb dieser Datei gilt dieselbe Einschränkung für .kitchen-bulkbar:
+  //    Innerhalb dieser Datei gilt dieselbe Einschränkung für .list-bulkbar:
   //    sie steht ÜBER dem Scroller (siehe dort) und trägt das Lesemaß, clippt
   //    aber nicht. Käme dort ein `overflow: hidden` dazu, meldet dieser Guard
   //    einen Fall, den ein Mensch entscheiden muss.
@@ -2340,8 +2340,8 @@ test('die Küchen-Listen teilen eine Zeilen-Grammatik', () => {
   //    Stünden Kappung und `overflow` in zwei getrennten Blöcken, sähe eine
   //    Prüfung pro Block in keinem von beiden ein gekapptes, clippendes
   //    Element - und genau das ist es.
-  //    Gruppiert wird nach dem ELEMENT, nicht nach dem Selektortext: `.kitchen-rows`
-  //    und `ul.kitchen-rows` treffen dasselbe `ul`, stünden als zwei Einträge
+  //    Gruppiert wird nach dem ELEMENT, nicht nach dem Selektortext: `.list-rows`
+  //    und `ul.list-rows` treffen dasselbe `ul`, stünden als zwei Einträge
   //    aber je unvollständig da. Maßgeblich sind die Klassen und IDs im
   //    Subjekt; eine Regel zählt zu jedem Element, dessen Merkmale sie
   //    vollständig enthält.
@@ -2353,8 +2353,8 @@ test('die Küchen-Listen teilen eine Zeilen-Grammatik', () => {
     return new Set(subject.match(/[.#][\w-]+/g) ?? []);
   };
   //    Der Vorfahren-Kontext bleibt dabei erhalten. Ohne ihn landeten
-  //    `.context-a .kitchen-rows { overflow: hidden }` und
-  //    `.context-b .kitchen-rows { align-self: start }` im selben Topf,
+  //    `.context-a .list-rows { overflow: hidden }` und
+  //    `.context-b .list-rows { align-self: start }` im selben Topf,
   //    obwohl kein Element je beide Regeln sieht - der Guard hielte das
   //    Clipping für ausgeglichen, das es in Kontext A nicht ist.
   const contextOf = (selector) => {
@@ -2362,7 +2362,7 @@ test('die Küchen-Listen teilen eine Zeilen-Grammatik', () => {
     return parts.slice(0, -1).join(' ');
   };
   // Der Zustand des Subjekts gehört ebenfalls zum Schlüssel: sonst gliche
-  // `.kitchen-rows:hover { align-self: start }` eine Lücke aus, die im
+  // `.list-rows:hover { align-self: start }` eine Lücke aus, die im
   // Ruhezustand - also fast immer - besteht.
   const stateOf = (selector) => {
     const subject = selector.replace(/:(?:is|where)\(([^)]*)\)/g, '$1')
@@ -2396,16 +2396,16 @@ test('die Küchen-Listen teilen eine Zeilen-Grammatik', () => {
     const overflow = declaredValue(body, ['overflow', 'overflow-y', 'overflow-block']);
     if (overflow === null || !/\b(?:hidden|clip)\b/.test(overflow)) continue;
     assert.equal(declaredValue(body, ALIGN_SELF), 'start',
-      `${selectors.join(', ')} kappt aufs Lesemaß und clippt zugleich, ist also ein gekapptes Kind des Scroller-Grids: ohne align-self: start schneidet es den Überlauf ab, bevor .kitchen-list ihn sieht`);
+      `${selectors.join(', ')} kappt aufs Lesemaß und clippt zugleich, ist also ein gekapptes Kind des Scroller-Grids: ohne align-self: start schneidet es den Überlauf ab, bevor .list-scroller ihn sieht`);
   }
 
   // Und kein später geladenes Modul-Stylesheet biegt den Wert wieder um -
   // auch nicht über die Kurzschreibweise place-self.
-  for (const { file, body } of rulesFor('.kitchen-rows')) {
+  for (const { file, body } of rulesFor('.list-rows')) {
     const align = declaredValue(body, ALIGN_SELF);
     if (align === null) continue;
     assert.equal(align, 'start',
-      `${file}: .kitchen-rows bekommt hier ein anderes align-self - genau der Rückfall, den die Regel darüber verhindert`);
+      `${file}: .list-rows bekommt hier ein anderes align-self - genau der Rückfall, den die Regel darüber verhindert`);
   }
 });
 
@@ -2839,7 +2839,7 @@ test('jeder Ein-Tipp-Transfer in eine fremde Liste ist rücknehmbar', () => {
  *
  * Drei Züge, jeder mit eigener Begründung:
  *   1. Die drei dauerhaften Aktionen wandern MIT LABEL in ein Überlaufmenü.
- *   2. Die zwei Abschluss-Aktionen wandern in die geteilte .kitchen-bulkbar -
+ *   2. Die zwei Abschluss-Aktionen wandern in die geteilte .list-bulkbar -
  *      dieselbe Leiste, in der der Vorrat seine Sammelaktion trägt.
  *   3. Das Quick-Add klappt auf Touch ein; der FAB öffnet es und tut damit
  *      dasselbe wie in den drei Geschwistertabs.
@@ -2908,27 +2908,27 @@ test('der Einkaufs-Kopf trägt mobil keine unbeschrifteten Aktionen', () => {
  * und zahlte dafür zwei Kopfzeilen. Jetzt ist es derselbe Baustein.
  */
 test('die Küchen-Tabs teilen eine Sammelaktions-Leiste', () => {
-  const shared = read('../public/styles/kitchen-row.css');
+  const shared = read('../public/styles/list-row.css');
   const layout = read('../public/styles/layout.css');
   const pantryCss = read('../public/styles/pantry.css');
 
-  assert.match(shared, /^\.kitchen-bulkbar \{/m,
-    '.kitchen-bulkbar gehört in die geteilte Grammatik, nicht in ein Modul-CSS');
+  assert.match(shared, /^\.list-bulkbar \{/m,
+    '.list-bulkbar gehört in die geteilte Grammatik, nicht in ein Modul-CSS');
   assert.doesNotMatch(pantryCss.replace(/\/\*[\s\S]*?\*\//g, ''), /^\.pantry-bulkbar\s*\{/m,
     'der Vorrat darf keine private Kopie der Leiste behalten');
 
   for (const page of ['shopping', 'pantry']) {
     const src = read(`../public/pages/${page}.js`);
-    assert.ok(src.includes('kitchen-bulkbar'), `${page}.js muss die geteilte Leiste verwenden`);
-    assert.ok(src.includes('kitchen-bulkbar__label'),
+    assert.ok(src.includes('list-bulkbar'), `${page}.js muss die geteilte Leiste verwenden`);
+    assert.ok(src.includes('list-bulkbar__label'),
       `${page}.js muss die erklärende Zeile führen - sie ist der Teil, der im Einkauf fehlte`);
   }
 
   // Die Leiste hat Fläche, Rahmen und Polsterung: leer wäre sie ein sichtbarer
   // Streifen. `display: flex` schlägt das UA-`[hidden]`, also braucht sie die
   // Durchsetzung - vierte Fundstelle derselben Falle in diesem Repo.
-  assert.match(layout, /\.kitchen-bulkbar\[hidden\][^{}]*\{\s*display:\s*none\s*!important/,
-    '.kitchen-bulkbar setzt display und muss deshalb in der [hidden]-Durchsetzungsliste stehen');
+  assert.match(layout, /\.list-bulkbar\[hidden\][^{}]*\{\s*display:\s*none\s*!important/,
+    '.list-bulkbar setzt display und muss deshalb in der [hidden]-Durchsetzungsliste stehen');
   assert.match(read('../public/pages/shopping.js'), /wrap\.hidden = !checkedCount/,
     'ohne abgehakte Artikel muss die Leiste verschwinden, nicht leer stehen');
 
@@ -2952,17 +2952,17 @@ test('die Küchen-Tabs teilen eine Sammelaktions-Leiste', () => {
  * 369px. Danach: 106px Namensbreite, Zeilenhöhen 85 bis 155px.
  */
 test('die Vorratszeile misst sich selbst, nicht das Fenster', () => {
-  const shared = read('../public/styles/kitchen-row.css');
+  const shared = read('../public/styles/list-row.css');
   const pantryCss = read('../public/styles/pantry.css');
 
-  const rows = shared.match(/\.kitchen-rows\s*\{([^}]*)\}/)?.[1] ?? '';
+  const rows = shared.match(/\.list-rows\s*\{([^}]*)\}/)?.[1] ?? '';
   assert.match(rows, /container-type:\s*inline-size/,
-    '.kitchen-rows muss abfragbarer Container sein - ein Container kann sich selbst nicht abfragen');
-  assert.match(rows, /container-name:\s*kitchen-rows/, 'der Container braucht einen Namen');
+    '.list-rows muss abfragbarer Container sein - ein Container kann sich selbst nicht abfragen');
+  assert.match(rows, /container-name:\s*list-rows/, 'der Container braucht einen Namen');
 
-  assert.match(pantryCss, /@container kitchen-rows \(max-width: 30rem\)/,
+  assert.match(pantryCss, /@container list-rows \(max-width: 30rem\)/,
     'die Kompaktform muss an der ZEILENbreite hängen, nicht an einem Viewport-Breakpoint');
-  const compact = pantryCss.slice(pantryCss.indexOf('@container kitchen-rows'));
+  const compact = pantryCss.slice(pantryCss.indexOf('@container list-rows'));
   assert.match(compact, /\.pantry-stepper\s*\{[\s\S]*?flex-wrap:\s*wrap/,
     'der Stepper muss umbrechen dürfen');
   assert.match(compact, /width:\s*calc\(var\(--pantry-step-btn\) \* 2 \+ var\(--space-1\)\)/,
@@ -3288,7 +3288,7 @@ test('die Küche animiert benannte Properties und sagt Abbrechen überall gleich
   // filter-chip.css und sub-tabs.css gehören dazu: die Küche nutzt beide (Vorrats-
   // Filter, Tab-Leiste), und `transition: all` auf .filter-chip war der Rest, den
   // die auf die vier Modul-CSS beschränkte Prüfung nicht sah.
-  for (const file of ['shopping.css', 'meals.css', 'recipes.css', 'pantry.css', 'kitchen-row.css', 'kitchen-tabs.css', 'filter-chip.css', 'sub-tabs.css']) {
+  for (const file of ['shopping.css', 'meals.css', 'recipes.css', 'pantry.css', 'list-row.css', 'kitchen-tabs.css', 'filter-chip.css', 'sub-tabs.css']) {
     const css = read(`../public/styles/${file}`);
     assert.doesNotMatch(css, /transition:\s*all\b/,
       `${file}: transition: all animiert implizit auch Layout-Properties`);
@@ -3319,7 +3319,7 @@ test('die Küche animiert benannte Properties und sagt Abbrechen überall gleich
  * Der geteilte Zeilenname überlebt auch einen FLEX-Elternteil.
  *
  * Die schwerste Regression des Umbaus (Critique 2026-07-30, P0), gemessen bei 320px:
- * `.kitchen-row__name` = **8px breit, 432px hoch**. „Chicken Tikka Masala" stand ein
+ * `.list-row__name` = **8px breit, 432px hoch**. „Chicken Tikka Masala" stand ein
  * Zeichen pro Zeile, eine Zeile war 448px hoch, auf den Bildschirm passte EIN
  * Rezept.
  *
@@ -3335,11 +3335,11 @@ test('die Küche animiert benannte Properties und sagt Abbrechen überall gleich
  * Danach: Namensbreite 182px bei 320px, Zeilenhöhe 69px, Desktop unverändert.
  */
 test('der Zeilenname bricht in Wörtern, nicht in Zeichen', () => {
-  const shared = read('../public/styles/kitchen-row.css');
+  const shared = read('../public/styles/list-row.css');
   const recipes = read('../public/styles/recipes.css');
   const recipesJs = read('../public/pages/recipes.js');
 
-  const nameBlock = shared.match(/\.kitchen-row__name\s*\{([^}]*)\}/)?.[1] ?? '';
+  const nameBlock = shared.match(/\.list-row__name\s*\{([^}]*)\}/)?.[1] ?? '';
   assert.match(nameBlock, /overflow-wrap:\s*anywhere/,
     'der Name muss umbrechen dürfen - die Ellipse war der P0 des vorigen Laufs');
   assert.match(nameBlock, /flex:\s*1 1 auto/,
@@ -3352,17 +3352,17 @@ test('der Zeilenname bricht in Wörtern, nicht in Zeichen', () => {
   assert.match(recipesJs, /id: `recipe-menu-\$\{recipe\.id\}`/, 'jede Zeile braucht eine eigene Menü-ID');
   assert.match(recipesJs, /installPopoverMenus\(page\)/, 'das Menü muss an der stabilen Seitenwurzel verdrahtet sein');
 
-  assert.match(recipes, /@container kitchen-rows \(max-width: 30rem\)/,
+  assert.match(recipes, /@container list-rows \(max-width: 30rem\)/,
     'die Umschaltung hängt an der ZEILENbreite, wie beim Vorrats-Stepper');
   // Die Quellreihenfolge entscheidet: `@container` erhöht die Spezifität nicht.
   const inlineBase = recipes.indexOf('.recipe-row__inline-actions {');
-  const query = recipes.indexOf('@container kitchen-rows');
+  const query = recipes.indexOf('@container list-rows');
   assert.ok(inlineBase !== -1 && inlineBase < query,
     'der Basiszustand muss VOR der Container-Query stehen, sonst gewinnt er gegen sie');
   const compact = recipes.slice(query);
   assert.match(compact, /\.recipe-row__inline-actions\s*\{\s*display:\s*none/,
     'die drei Inline-Aktionen müssen in der schmalen Zeile weichen');
-  assert.match(compact, /\.recipe-row__toggle \.kitchen-row__meta\s*\{[\s\S]*?flex:\s*1 0 100%/,
+  assert.match(compact, /\.recipe-row__toggle \.list-row__meta\s*\{[\s\S]*?flex:\s*1 0 100%/,
     'die Zutatenzahl muss unter den Namen rücken - sie ist flex-shrink: 0 und nähme ihm sonst 70px');
 });
 
@@ -3379,12 +3379,12 @@ test('phase 3 high-frequency controls use tokenized touch targets', () => {
   assert.match(tasks, /\.bulk-actions-bar__actions \.btn[\s\S]*min-height:\s*var\(--target-base\)/);
   assert.match(shopping, /\.item-check[\s\S]*(?:min-width|width):\s*var\(--target-base\)/);
   // Die Zeilenhöhe liegt seit der geteilten Zeilen-Grammatik in
-  // kitchen-row.css und ist dort mit --target-lg (48px) strenger als die alte
+  // list-row.css und ist dort mit --target-lg (48px) strenger als die alte
   // --target-base-Untergrenze (44px) auf .shopping-item. Ein Tab-lokales
   // min-height gibt es nicht mehr - es wäre genau die Divergenz, die der Guard
   // „die Küchen-Listen teilen eine Zeilen-Grammatik" verbietet.
-  assert.match(read('../public/styles/kitchen-row.css'),
-    /\.kitchen-row\s*\{[\s\S]*?min-height:\s*var\(--target-lg\)/);
+  assert.match(read('../public/styles/list-row.css'),
+    /\.list-row\s*\{[\s\S]*?min-height:\s*var\(--target-lg\)/);
   // Die beiden Zeilenaktionen der Einkaufsliste trugen bis zum Audit
   // 2026-07-29 eigene .item-details/.item-delete-Regeln mit --target-base.
   // Sie nutzen jetzt die geteilte .row-action-Komponente aus layout.css, die
@@ -5345,7 +5345,7 @@ function scopedRules(css) {
       if (prelude.startsWith('@')) {
         const inner = conditional || CONDITIONAL_AT_RULE.test(prelude);
         // Steht die Gruppe IN einer Style-Regel, gelten ihre eigenen
-        // Deklarationen dem Elternselektor: `.kitchen-list { @media … {
+        // Deklarationen dem Elternselektor: `.list-scroller { @media … {
         // max-width: 20rem } }`. Ohne diesen Zweig verschwindet die Kappung.
         if (parents.length) {
           const own = ownDeclarations(live.slice(i + 1, close));
@@ -5545,7 +5545,7 @@ test('page-inline-pad contract holds across every stylesheet (#577)', () => {
 });
 
 test('wer seinen Körper aufs Lesemaß kappt, kappt auch seinen Kopf', () => {
-  // REGEL, KEINE LISTE: geprüft wird jede Seite, die .kitchen-list rendert -
+  // REGEL, KEINE LISTE: geprüft wird jede Seite, die .list-scroller rendert -
   // nicht eine Aufzählung der heute drei Küchen-Listen. Genau als Aufzählung
   // stand die Vorgängerregel da (je ein `> * { max-width }`-Block in
   // shopping.css und pantry.css), und die Rezepte fehlten darin schlicht.
@@ -5556,10 +5556,10 @@ test('wer seinen Körper aufs Lesemaß kappt, kappt auch seinen Kopf', () => {
   // Gemessen bei 1280px: Liste bis x=972, Lagerort-Knopf bis x=1248.
   // `.page-toolbar--narrow` (layout.css) setzt die Marge am LETZTEN Slot und
   // trifft damit das Ende der Zeile statt der Slot-Breiten.
-  const narrowBody = /class(?:Name)?\s*=\s*['"`][^'"`]*\bkitchen-list\b/;
+  const narrowBody = /class(?:Name)?\s*=\s*['"`][^'"`]*\blist-scroller\b/;
   const pages = walkJsFiles('../public/pages/')
     .filter((file) => narrowBody.test(read(file)));
-  assert.ok(pages.length >= 3, 'keine Seite mit .kitchen-list gefunden - Scan ist blind geworden');
+  assert.ok(pages.length >= 3, 'keine Seite mit .list-scroller gefunden - Scan ist blind geworden');
 
   for (const file of pages) {
     const src = read(file);
@@ -5579,17 +5579,17 @@ test('wer seinen Körper aufs Lesemaß kappt, kappt auch seinen Kopf', () => {
   }
 
   // Und die Variante muss das auch tun: Marge am letzten Slot, gegen dasselbe
-  // Token, das .kitchen-list kappt.
+  // Token, das .list-scroller kappt.
   const layout = stripCssComments(read('../public/styles/layout.css'));
   assert.match(
     layout,
     /\.page-toolbar--narrow\s*>\s*:last-child\s*\{[^}]*margin-inline-end:\s*max\(\s*0px,\s*calc\(100% - var\(--content-max-width-narrow\)\)\s*\)/,
     'layout.css: .page-toolbar--narrow muss den letzten Slot auf --content-max-width-narrow zurückholen',
   );
-  // Ohne Breakpoint: .kitchen-list kappt unbedingt, der Kopf muss das auch.
+  // Ohne Breakpoint: .list-scroller kappt unbedingt, der Kopf muss das auch.
   // Der Vorgänger stand in `@media (min-width: 1024px)` und ließ den Versatz
   // zwischen 720px und 1024px stehen (gemessen 148px bei 900px Fensterbreite).
-  for (const file of ['shopping.css', 'pantry.css', 'recipes.css', 'kitchen-row.css']) {
+  for (const file of ['shopping.css', 'pantry.css', 'recipes.css', 'list-row.css']) {
     assert.doesNotMatch(
       stripCssComments(read(`../public/styles/${file}`)),
       /page-toolbar[^{]*>\s*\*\s*\{[^}]*max-width/,
@@ -6920,7 +6920,7 @@ test('Der Sortiergriff nimmt sich die Geste aus der Wischbedienung', () => {
   // ZWEI Ebenen, und beide werden hier geprueft: das Modul benennt den Griff,
   // der geteilte Helfer nimmt ihn im touchstart aus. Vorher stand beides in
   // shopping.js - der Guard prueft die Zusage, nicht ihren Ort.
-  assert.match(read('../public/pages/shopping.js'), /ignore:\s*'\.kitchen-row__drag'/,
+  assert.match(read('../public/pages/shopping.js'), /ignore:\s*'\.list-row__drag'/,
     'Die Einkaufsliste muss ihren Sortiergriff als Ausnahme benennen.');
   assert.match(read('../public/utils/swipe-row.js'), /touchstart[\s\S]{0,600}ignore[\s\S]{0,120}closest/,
     'Der geteilte Wisch-Helfer muss die Ausnahme im touchstart auswerten.');

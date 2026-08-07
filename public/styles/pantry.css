@@ -56,8 +56,8 @@
 }
 
 /* Die Sammelaktions-Leiste („Alles auf die Einkaufsliste", sobald der
- * Fast-leer-Filter aktiv ist) ist jetzt der geteilte .kitchen-bulkbar-Baustein
- * (styles/kitchen-row.css). Der Einkauf trug dieselbe Sache als zwei Buttons im
+ * Fast-leer-Filter aktiv ist) ist jetzt der geteilte .list-bulkbar-Baustein
+ * (styles/list-row.css). Der Einkauf trug dieselbe Sache als zwei Buttons im
  * Kopf und zahlte dafür zwei Kopfzeilen - eine Leiste, zwei Tabs.
  *
  * Hier bleibt nur der Träger der Content-Spalte: die Leiste hängt nicht mehr IM
@@ -73,12 +73,12 @@
   display: none;
 }
 
-/* Scroller, Lesemaß, FAB-Auslauf, Gruppen-Abstand: .kitchen-list
- * (styles/kitchen-row.css), im Markup neben .pantry-list.
+/* Scroller, Lesemaß, FAB-Auslauf, Gruppen-Abstand: .list-scroller
+ * (styles/list-row.css), im Markup neben .pantry-list.
  *
  * Hier bleibt nur der Träger der Content-Spalte: im Vorrat ist die Liste selbst
  * der Träger (im Einkauf ist es #list-content darüber). Genau deshalb setzt
- * .kitchen-list KEIN padding-inline - es würde sich in einem der beiden Tabs
+ * .list-scroller KEIN padding-inline - es würde sich in einem der beiden Tabs
  * addieren. */
 .pantry-list {
   padding-inline: var(--page-inline-pad);
@@ -111,8 +111,8 @@
  * -------------------------------------------------------- */
 
 /* Gruppe, Gruppenkopf, Gruppenfläche und Zähler kommen aus der geteilten
- * Grammatik (styles/kitchen-row.css): .kitchen-group, .kitchen-group__title,
- * .kitchen-group__count, .kitchen-rows. Der Vorrat war hier der Ausreißer -
+ * Grammatik (styles/list-row.css): .list-group, .list-group__title,
+ * .list-group__count, .list-rows. Der Vorrat war hier der Ausreißer -
  * 14px/text-transform:none gegen 12px/uppercase in den beiden Geschwistertabs. */
 
 /* --------------------------------------------------------
@@ -120,7 +120,7 @@
  * -------------------------------------------------------- */
 
 /* Geometrie, Fläche, Trennlinie, Hover und Umbruchverhalten der Zeile kommen aus
- * .kitchen-row (styles/kitchen-row.css). Hier bleibt nur, was den Vorrat
+ * .list-row (styles/list-row.css). Hier bleibt nur, was den Vorrat
  * unterscheidet: der Leer-Zustand, die Kopfzeile mit Badges, der Stepper und die
  * Farbe der Abschluss-Aktion.
  *
@@ -135,11 +135,11 @@
  * Der Name verträgt die Opazität (5,30:1), die Meta-Zeile nicht: sie startet
  * bei --color-text-secondary und fiel mit 0.65 auf 2,65:1 (Critique P1, WCAG
  * 1.4.3). Sie bekommt deshalb das Tertiär-Token statt einer Ausblendung. */
-.pantry-row--out .kitchen-row__name {
+.pantry-row--out .list-row__name {
   opacity: 0.65;
 }
 
-.pantry-row--out .kitchen-row__meta {
+.pantry-row--out .list-row__meta {
   color: var(--color-text-tertiary);
 }
 
@@ -154,8 +154,8 @@
  * stand der Stepper davor und schob die Kante je nach Wertbreite um bis zu
  * 95px hin und her - „Butter" begann bei x=485, „Naturjoghurt" bei x=390. */
 /* Textspalte, Button-Reset, Zielgröße, Fokusring und die vertikale Zentrierung
- * per align-content kommen aus .kitchen-row__main und
- * .kitchen-row__main--interactive (styles/kitchen-row.css) - inklusive des
+ * per align-content kommen aus .list-row__main und
+ * .list-row__main--interactive (styles/list-row.css) - inklusive des
  * Kommentars, warum es align-content und nicht justify-content sein muss. */
 
 .pantry-row__headline {
@@ -166,7 +166,7 @@
   min-width: 0;
 }
 
-/* Name und Metazeile kommen aus .kitchen-row__name / .kitchen-row__meta. Die
+/* Name und Metazeile kommen aus .list-row__name / .list-row__meta. Die
  * Regel „umbrechen statt abschneiden" ist dort verallgemeinert: sie galt zuerst
  * für das MHD im Vorrat, gilt jetzt genauso für den Artikelnamen im Einkauf, der
  * bei 320px auf vier lesbare Zeichen gekürzt war. */
@@ -204,7 +204,7 @@
   color: color-mix(in srgb, var(--color-warning) 70%, var(--color-text-primary));
 }
 
-/* Die Bedien-Gruppe kommt aus .kitchen-row__actions.
+/* Die Bedien-Gruppe kommt aus .list-row__actions.
  *
  * Der Warenkorb sitzt in einem festen Slot an ihrem ANFANG. Vorher stand er
  * absolut an der rechten Zeilenkante - also genau in der Ecke, die der fixierte
@@ -321,12 +321,12 @@
  * 30rem: bei 480px Gruppenbreite gibt die einzeilige Form noch 223px an den Namen
  * ab, darunter kippt sie schnell. Gemessene Gruppenbreiten: 288 (320px-Viewport),
  * 361 (393px), 720 (ab 768px) - der Schnitt liegt sauber zwischen 361 und 720. */
-@container kitchen-rows (max-width: 30rem) {
+@container list-rows (max-width: 30rem) {
   .pantry-stepper {
     flex-wrap: wrap;
     justify-content: center;
     /* Ohne feste Breite wickelt der Flex-Container nie um: seine max-content-
-     * Breite ist die Summe aller drei Kinder, und .kitchen-row__actions darf
+     * Breite ist die Summe aller drei Kinder, und .list-row__actions darf
      * nicht schrumpfen. Die Breite ist genau die der Knopfzeile. */
     width: calc(var(--pantry-step-btn) * 2 + var(--space-1));
   }
@@ -361,7 +361,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  /* .kitchen-row bringt seine eigene reduced-motion-Rücknahme mit. */
+  /* .list-row bringt seine eigene reduced-motion-Rücknahme mit. */
   .pantry-stepper__btn {
     transition: none;
   }

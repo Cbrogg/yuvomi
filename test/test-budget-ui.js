@@ -106,10 +106,10 @@ test('hidden greift bei geteilten Bedienelementen trotz display-Klasse', () => {
   // und Deklaration im SELBEN Regelblock stehen - kein `}` und kein zweites `{`
   // dazwischen. Das frühere `[\s\S]{0,120}` maß stattdessen die Länge der
   // Selektorliste und schlug damit bei jeder legitimen Ergänzung an; die Liste ist
-  // aber ausdrücklich zum Wachsen gedacht (bei `.kitchen-bulkbar` war sie 141
+  // aber ausdrücklich zum Wachsen gedacht (bei `.list-bulkbar` war sie 141
   // Zeichen lang und der Guard rot, obwohl die Struktur korrekt war).
   const sameBlock = (selector) => new RegExp(`${selector}[^{}]*\\{\\s*display:\\s*none\\s*!important`);
-  for (const selector of ['\\.page-fab\\[hidden\\]', '\\.btn\\[hidden\\]', '\\.form-group\\[hidden\\]', '\\.kitchen-bulkbar\\[hidden\\]']) {
+  for (const selector of ['\\.page-fab\\[hidden\\]', '\\.btn\\[hidden\\]', '\\.form-group\\[hidden\\]', '\\.list-bulkbar\\[hidden\\]']) {
     assert.match(layoutCss, sameBlock(selector), `${selector} steht nicht im Durchsetzungsblock`);
   }
 });
