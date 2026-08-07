@@ -1,5 +1,6 @@
 {
     "common": {
+        "swipeSidesSwapped": "As direções de deslize foram trocadas - a ação principal está agora do outro lado.",
         "apply": "Adicionar",
         "searchClear": "Limpar pesquisa",
         "save": "Salvar",

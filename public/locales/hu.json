@@ -1,5 +1,6 @@
 {
     "common": {
+        "swipeSidesSwapped": "A csúsztatási irányok felcserélődtek - a fő művelet most a másik oldalon található.",
         "apply": "Hozzáadás",
         "searchClear": "Keresés törlése",
         "save": "Mentés",

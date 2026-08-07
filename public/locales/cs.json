@@ -1,5 +1,6 @@
 {
     "common": {
+        "swipeSidesSwapped": "Směry přejetí byly prohozeny - hlavní akce je nyní na druhé straně.",
         "apply": "Přidat",
         "searchClear": "Vymazat hledání",
         "save": "Uložit",

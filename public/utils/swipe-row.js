@@ -16,6 +16,7 @@
  */
 
 import { vibrate } from '/utils/ux.js';
+import { t } from '/i18n.js';
 
 export const SWIPE_THRESHOLD = 80;   // px - Mindestweg für Aktion
 export const SWIPE_MAX_VERT  = 12;   // px - vertikaler Toleranzbereich
@@ -23,6 +24,27 @@ export const SWIPE_LOCK_VERT = 30;   // px - ab diesem Weg gilt es als Scroll
 
 const SWIPE_HINT_KEY = 'yuvomi:swipeHintSeen';
 const SWIPE_HINT_MAX = 3;
+const SWIPE_SWAP_KEY = 'yuvomi:swipeSidesSwapped';
+
+/**
+ * Einmaliger Hinweis, dass die Seiten getauscht wurden - beim ersten
+ * ausgeführten Wisch nach dem Update, nicht beim Öffnen einer Seite.
+ *
+ * Hier und nicht in den Modulen: gelernt wird die GESTE, nicht die Liste
+ * (derselbe Grund wie beim Nudge-Zähler). Wer in Aufgaben umlernt, hat es im
+ * Einkauf schon gelernt.
+ *
+ * Der Text nennt keine Seite. „Rechts" wäre in `ar` und `fa` falsch, und die
+ * Zeile, die der Nutzer gerade gewischt hat, zeigt ihm die neue Zuordnung
+ * ohnehin gerade an.
+ */
+function noticeSwappedSides() {
+  try {
+    if (localStorage.getItem(SWIPE_SWAP_KEY)) return;
+    localStorage.setItem(SWIPE_SWAP_KEY, '1');
+  } catch { return; }
+  window.yuvomi?.showToast(t('common.swipeSidesSwapped'), 'default', 6000);
+}
 
 /**
  * Verdrahtet alle `.swipe-row` unterhalb von `listEl`.
@@ -141,6 +163,8 @@ export function wireSwipeRows(listEl, { card, ignore = null, leading = null, tra
 
       const dir = Math.abs(dx) > SWIPE_THRESHOLD ? sideFor(dx) : null;
       if (!dir) { resetCard(true); return; }
+
+      noticeSwappedSides();
 
       if (dir.flyOut) {
         // Die Karte verlässt das Bild, die Aktion läuft danach - so sieht man

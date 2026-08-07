@@ -1,5 +1,6 @@
 {
     "common": {
+        "swipeSidesSwapped": "Swipe directions have been swapped - the main action is now on the other side.",
         "apply": "Add",
         "searchClear": "Clear search",
         "save": "Save",

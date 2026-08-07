@@ -1,5 +1,6 @@
 {
     "common": {
+        "swipeSidesSwapped": "Les directions de balayage ont été inversées - l'action principale se trouve maintenant de l'autre côté.",
         "apply": "Ajouter",
         "searchClear": "Effacer la recherche",
         "save": "Enregistrer",

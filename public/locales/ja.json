@@ -1,5 +1,6 @@
 {
     "common": {
+        "swipeSidesSwapped": "スワイプの方向が入れ替わりました。主なアクションは反対側になりました。",
         "apply": "追加",
         "searchClear": "検索をクリア",
         "save": "保存",

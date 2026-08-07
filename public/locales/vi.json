@@ -1,5 +1,6 @@
 {
     "common": {
+        "swipeSidesSwapped": "Các hướng vuốt đã được hoán đổi - hành động chính giờ nằm ở phía bên kia.",
         "apply": "Thêm",
         "searchClear": "Xóa tìm kiếm",
         "save": "Lưu",

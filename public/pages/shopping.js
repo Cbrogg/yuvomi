@@ -445,11 +445,11 @@ function renderItem(item) {
   const isDone = Boolean(item.is_checked);
   return `
     <div class="swipe-row" data-swipe-id="${item.id}" data-swipe-checked="${item.is_checked}">
-      <div class="swipe-reveal swipe-reveal--done swipe-reveal--trailing" aria-hidden="true">
+      <div class="swipe-reveal swipe-reveal--done swipe-reveal--leading" aria-hidden="true">
         <i data-lucide="${isDone ? 'rotate-ccw' : 'check'}" class="icon-xl" aria-hidden="true"></i>
         <span>${isDone ? t('shopping.swipeBack') : t('shopping.swipeCheck')}</span>
       </div>
-      <div class="swipe-reveal swipe-reveal--delete swipe-reveal--leading" aria-hidden="true">
+      <div class="swipe-reveal swipe-reveal--delete swipe-reveal--trailing" aria-hidden="true">
         <i data-lucide="trash-2" class="icon-xl" aria-hidden="true"></i>
         <span>${t('shopping.swipeDelete')}</span>
       </div>
@@ -929,9 +929,10 @@ function wireSwipeGestures(container) {
     // Beide Seiten führen dieselbe Aktion aus wie der Knopf in der Zeile -
     // über dieselbe Funktion, nicht über eine zweite Schreibweise daneben.
     //
-    // Zeilenende: abhaken / zurueck. Die Karte fliegt hinaus, die Zeile bleibt -
-    // nur ihr Zustand wechselt (Issue #276: kein Re-Render der Liste).
-    trailing: {
+    // Zeilenanfang: abhaken / zurueck - die primäre positive Aktion der Liste
+    // (§2). Die Karte fliegt hinaus, die Zeile bleibt - nur ihr Zustand
+    // wechselt (Issue #276: kein Re-Render der Liste).
+    leading: {
       reveal: '.swipe-reveal--done',
       flyOut: true,
       run: (row) => toggleShoppingItem(
@@ -940,11 +941,12 @@ function wireSwipeGestures(container) {
         container,
       ),
     },
-    // Zeilenanfang: loeschen, widerrufbar. Die Karte federt zurück statt
-    // hinauszufliegen - dieselbe Begründung wie bei den Geburtstagen: eine
-    // hinausgeflogene Karte behauptet, die Sache sei erledigt, während der
-    // Rückgängig-Weg noch fünf Sekunden offen steht.
-    leading: {
+    // Zeilenende: loeschen, widerrufbar - dieselbe Kante wie bei den
+    // Geburtstagen. Die Karte federt zurück statt hinauszufliegen, aus
+    // demselben Grund wie dort: eine hinausgeflogene Karte behauptet, die
+    // Sache sei erledigt, während der Rückgängig-Weg noch fünf Sekunden
+    // offen steht.
+    trailing: {
       reveal: '.swipe-reveal--delete',
       run: (row) => deleteItemUndoable(Number(row.dataset.swipeId), container),
     },

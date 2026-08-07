@@ -1,5 +1,6 @@
 {
     "common": {
+        "swipeSidesSwapped": "Die Wischrichtungen wurden getauscht - die Hauptaktion liegt jetzt auf der anderen Seite.",
         "apply": "Übernehmen",
         "searchClear": "Suche leeren",
         "save": "Speichern",

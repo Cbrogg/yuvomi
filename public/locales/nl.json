@@ -1,5 +1,6 @@
 {
     "common": {
+        "swipeSidesSwapped": "De veegrichtingen zijn verwisseld - de hoofdactie staat nu aan de andere kant.",
         "apply": "Toevoegen",
         "searchClear": "Zoekopdracht wissen",
         "save": "Opslaan",

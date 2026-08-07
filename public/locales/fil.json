@@ -1,5 +1,6 @@
 {
     "common": {
+        "swipeSidesSwapped": "Napagpalit ang mga direksyon ng pag-swipe - nasa kabilang panig na ang pangunahing aksyon.",
         "apply": "Idagdag",
         "searchClear": "I-clear ang paghahanap",
         "save": "I-save",

@@ -220,11 +220,11 @@ function renderSwipeRow(task, innerHtml) {
   const isDone = task.status === 'done';
   return `
     <div class="swipe-row" data-swipe-id="${task.id}" data-swipe-status="${task.status}">
-      <div class="swipe-reveal swipe-reveal--done swipe-reveal--trailing" aria-hidden="true">
+      <div class="swipe-reveal swipe-reveal--done swipe-reveal--leading" aria-hidden="true">
         <i data-lucide="${isDone ? 'rotate-ccw' : 'check'}" class="icon-xl" aria-hidden="true"></i>
         <span>${isDone ? t('tasks.swipeOpen') : t('tasks.swipeDone')}</span>
       </div>
-      <div class="swipe-reveal swipe-reveal--edit swipe-reveal--leading" aria-hidden="true">
+      <div class="swipe-reveal swipe-reveal--edit swipe-reveal--trailing" aria-hidden="true">
         <i data-lucide="eye" class="icon-xl" aria-hidden="true"></i>
         <span>${t('tasks.swipeView')}</span>
       </div>
@@ -2413,10 +2413,11 @@ function wireSwipeGestures(container) {
 
   wireSwipeRows(listEl, {
     card: '.task-card',
-    // Zeilenende: Status umschalten. Die Karte fliegt hinaus, weil die Zeile
-    // danach in einer anderen Gruppe steht - ohne den Flug spränge sie
-    // einfach weg.
-    trailing: {
+    // Zeilenanfang: Status umschalten - die primäre positive Aktion der Liste
+    // (§2: dieselbe Kante trägt sie in jeder Liste). Die Karte fliegt hinaus,
+    // weil die Zeile danach in einer anderen Gruppe steht - ohne den Flug
+    // spränge sie einfach weg.
+    leading: {
       reveal: '.swipe-reveal--done',
       flyOut: true,
       run: async (row) => {
@@ -2445,8 +2446,9 @@ function wireSwipeGestures(container) {
         }
       },
     },
-    // Zeilenanfang: Detailansicht. Die Zeile bleibt, also federt die Karte zurueck.
-    leading: {
+    // Zeilenende: Detailansicht - hier die sekundäre Aktion, weil die Liste
+    // eine positive führt. Die Zeile bleibt, also federt die Karte zurueck.
+    trailing: {
       reveal: '.swipe-reveal--edit',
       run: async (row) => {
         const taskId = row.dataset.swipeId;

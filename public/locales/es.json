@@ -1,5 +1,6 @@
 {
     "common": {
+        "swipeSidesSwapped": "Se han invertido las direcciones de deslizamiento: la acción principal está ahora en el otro lado.",
         "apply": "Añadir",
         "searchClear": "Borrar búsqueda",
         "save": "Guardar",

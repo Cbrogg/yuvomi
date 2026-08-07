@@ -696,3 +696,111 @@ test('Sonde 4 - keine Zielgroessen-Ausnahme ueberlebt ihre Klasse', () => {
   assert.deepEqual(stale, [],
     'TARGET_EXEMPT nennt Klassen, die in keinem Stylesheet mehr vorkommen.');
 });
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Sonde 5: Wischsemantik
+ *
+ * Die Wischbedienung ist die einzige Bedienung der App, die im Stylesheet und
+ * im Quelltext vollstaendig richtig aussehen und im Dokument trotzdem gar nicht
+ * stattfinden kann. Genau das war der Fall: der Einkauf verdrahtete seine
+ * Gesten nur in `updateItemsList`, also erst, wenn die Liste ein zweites Mal
+ * gebaut wurde - beim ersten Oeffnen der Seite antwortete keine Zeile. Der
+ * Aufruf stand seit dem Tag falsch, an dem die Geste eingefuehrt wurde.
+ *
+ * Deshalb faehrt diese Sonde die Geste wirklich, statt eine Zuordnung zu lesen.
+ * Sie misst dabei ZWEI Zusagen auf einmal:
+ *
+ *   (a) eine Liste mit Wischzeilen antwortet auf die Geste, und zwar beim
+ *       ersten Aufbau der Seite;
+ *   (b) die Rolle liegt an der vereinbarten Kante - das Zeilenende traegt das
+ *       Destruktive, der Zeilenanfang das Primaere und Positive (§2).
+ *
+ * Und sie faehrt beides in `de` UND `ar`: die Kante ist logisch, die
+ * Fingerbewegung dahin ist in RTL die andere. Eine Sonde, die nur LTR misst,
+ * wuerde die Spiegelung nie bemerken.
+ *
+ * SIE LOEST NICHTS AUS: der Finger geht vor dem Loslassen unter die Schwelle
+ * zurueck. Eine Sonde, die abhakt und loescht, misst beim zweiten Lauf einen
+ * anderen Seed.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+// Die Rollen benennen ihre Bedeutung selbst (layout.css, „ZWEI ACHSEN"). Das
+// ist keine Allowlist ueber Dateien, sondern die Regel in Code: `--edit` fehlt
+// hier bewusst, weil sein RANG von der Liste abhaengt - primaer, wo es die
+// einzige nicht-destruktive Aktion ist, sekundaer neben einer positiven.
+const ROLE_SIDE = { 'swipe-reveal--delete': 'trailing', 'swipe-reveal--done': 'leading' };
+
+async function uncoveredPanel(page, sign) {
+  const box = await page.evaluate(() => {
+    const row = document.querySelector('.swipe-row');
+    if (!row) return null;
+    const r = row.getBoundingClientRect();
+    return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+  });
+  if (!box) return null;
+
+  await page.touchscreen.touchStart(box.x, box.y);
+  for (const step of [20, 60, 120]) {
+    await page.touchscreen.touchMove(box.x + sign * step, box.y);
+    await new Promise((resolve) => setTimeout(resolve, 30));
+  }
+  const shown = await page.evaluate(() => [...document.querySelectorAll('.swipe-row:first-of-type .swipe-reveal')]
+    .filter((el) => Number(el.style.opacity) > 0.5)
+    .map((el) => [...el.classList].filter((c) => c !== 'swipe-reveal')));
+  // Zurueck unter die Schwelle, damit das Loslassen keine Aktion ausloest.
+  await page.touchscreen.touchMove(box.x, box.y);
+  await page.touchscreen.touchEnd();
+  await new Promise((resolve) => setTimeout(resolve, 250));
+  return shown[0] ?? [];
+}
+
+describe('Sonde 5 - eine Wischzeile antwortet, und jede Rolle liegt an ihrer Kante', () => {
+  for (const locale of ['de', 'ar']) {
+    test(`Locale ${locale}`, async () => {
+      const page = await openPage(harness, { device: 'mobile', theme: 'light', locale });
+      const rtl = locale === 'ar';
+      const findings = [];
+      let listsSeen = 0;
+
+      for (const name of ROUTE_NAMES) {
+        await gotoRoute(page, ROUTES[name]);
+        const hasRows = await page.evaluate(() => Boolean(document.querySelector('.swipe-row .swipe-reveal')));
+        if (!hasRows) continue;
+        listsSeen += 1;
+
+        // In RTL deckt derselbe Finger die andere Kante auf - die Erwartung
+        // spiegelt mit, die Kante bleibt dieselbe.
+        for (const [sign, side] of [[1, rtl ? 'trailing' : 'leading'], [-1, rtl ? 'leading' : 'trailing']]) {
+          const classes = await uncoveredPanel(page, sign);
+          const move = sign > 0 ? 'nach rechts' : 'nach links';
+
+          if (!classes?.length) {
+            findings.push(`${name}: der Wisch ${move} deckt nichts auf - die Zeilen sind nicht verdrahtet.`);
+            continue;
+          }
+          if (!classes.includes(`swipe-reveal--${side}`)) {
+            findings.push(`${name}: der Wisch ${move} deckt ${classes.join('.')} auf, erwartet war die ${side}-Kante.`);
+            continue;
+          }
+          for (const cls of classes) {
+            if (ROLE_SIDE[cls] && ROLE_SIDE[cls] !== side) {
+              findings.push(`${name}: die Rolle ${cls} liegt an der ${side}-Kante, app-weit gehoert sie an die ${ROLE_SIDE[cls]}-Kante.`);
+            }
+          }
+        }
+      }
+      await page.close();
+
+      // Eine Sonde, die nichts gemessen hat, darf nicht urteilen (dieselbe
+      // Zusicherung wie bei Sonde 3 und 4).
+      assert.ok(listsSeen >= 3,
+        `Nur ${listsSeen} Wischlisten gesehen - erwartet sind mindestens Aufgaben, Einkauf und Geburtstage. `
+        + 'Entweder hat der Seed keine Zeilen geliefert, oder die Bauart hat sich geaendert.');
+
+      assert.deepEqual(findings, [],
+        'Wischsemantik im gerenderten Dokument. Die Regel lautet: rechts (zum Zeilenanfang hin) '
+        + 'traegt die primaere positive Aktion, links das Destruktive oder Sekundaere - und in RTL '
+        + 'spiegelt die Fingerbewegung, nicht die Kante.\n  ' + findings.join('\n  '));
+    });
+  }
+});

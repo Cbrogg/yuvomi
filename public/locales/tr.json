@@ -1,5 +1,6 @@
 {
     "common": {
+        "swipeSidesSwapped": "Kaydırma yönleri değiştirildi - ana eylem artık diğer tarafta.",
         "apply": "Ekle",
         "searchClear": "Aramayı temizle",
         "save": "Kaydet",

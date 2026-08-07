@@ -1,5 +1,6 @@
 {
     "common": {
+        "swipeSidesSwapped": "스와이프 방향이 서로 바뀌었습니다. 주요 작업이 이제 반대쪽에 있습니다.",
         "apply": "추가",
         "searchClear": "검색 지우기",
         "save": "저장",

@@ -1,5 +1,6 @@
 {
     "common": {
+        "swipeSidesSwapped": "滑动方向已互换，主要操作现在位于另一侧。",
         "apply": "添加",
         "searchClear": "清除搜索",
         "save": "保存",

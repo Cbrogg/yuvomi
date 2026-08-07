@@ -1,5 +1,6 @@
 {
     "common": {
+        "swipeSidesSwapped": "Kierunki przesuwania zostały zamienione - główna akcja jest teraz po drugiej stronie.",
         "apply": "Dodaj",
         "searchClear": "Wyczyść wyszukiwanie",
         "save": "Zapisz",

@@ -1,5 +1,6 @@
 {
     "common": {
+        "swipeSidesSwapped": "Svepriktningarna har bytt plats - huvudåtgärden finns nu på andra sidan.",
         "apply": "Lägg till",
         "searchClear": "Rensa sökning",
         "save": "Spara",
