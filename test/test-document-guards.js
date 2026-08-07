@@ -1141,3 +1141,164 @@ test('Sonde 7 - eine Zeilenfolge ist keine Spalte aus Karten', async () => {
     + 'Gruppe gemeint ist - und ein Schatten je Zeile erzeugt in einer langen Liste Streifen.\n  '
     + findings.join('\n  '));
 });
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Sonde 8: ein Kopf mit Lead-Zone dockt beim Scrollen auch an
+ *
+ * Die Regel (§2, Session 7, praezisiert Session 19): die Trennlinie erscheint
+ * beim Andocken - und andocken kann nur ein Kopf mit Lead-Zone. Die eine
+ * Haelfte ist trivial und stimmte immer: ohne Lead-Zone traegt die Leiste ihre
+ * Linie durchgehend. Die andere lag DREI RUNDEN falsch, ohne dass ein Test es
+ * sah: drei Koepfe mit Lead-Zone (Gesundheit, Belohnungen, Haushaltshilfe)
+ * dockten mobil nie an und trugen damit in KEINEM Zustand eine Kante.
+ *
+ * WARUM EBENE 4: der Fehler stand in keinem Stylesheet und in keinem
+ * Modulcode. Er entstand aus einer Geometrie, die genau aufgeht - der
+ * beobachtete Zeuge der ersten Zeile ist ein Kind des KLEBENDEN Kopfes und
+ * wandert nur so weit, wie das negative `top` ihn hochzieht, also exakt
+ * `--page-toolbar-lead`. Bei einem ZWEIZEILIGEN Kopf ist das die Unterkante
+ * der ersten Zeile: sie endet buendig auf der Port-Kante, beruehrt sie also,
+ * statt sie zu ueberschreiten. Ob eine Kante beruehrt oder ueberschritten
+ * wird, weiss erst das Dokument.
+ *
+ * WARUM NUR MOBIL: die kollabierende Leiste ist eine Regel der KOMPAKTEN
+ * Groessenklasse. Ab 1024px steht jeder Kopf einzeilig und traegt seine Linie
+ * durchgehend - dort gibt es kein Andocken zu pruefen.
+ *
+ * WARUM KEIN `visitViews`: die Regel gilt am MODULKOPF, und davon hat jedes
+ * Modul genau einen; er ueberlebt den Sichtwechsel. Das ist eine Aussage ueber
+ * die Regel, keine Bequemlichkeit - und sie haelt diese Sonde bei rund zwei
+ * Minuten statt bei zwanzig.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Liest Lead-Zone, Andock-Zustand, Linienfarbe UND die echte Zeiligkeit des
+ * Modulkopfs.
+ *
+ * Die Zeiligkeit wird hier unabhaengig von `wireCollapsingHeader` bestimmt -
+ * eine Sonde, die dessen eigene Rechnung nachspricht, prueft nichts. Zwei
+ * Kaesten stehen auf derselben Zeile, wenn sich ihre vertikalen Intervalle
+ * ueberlappen; ein Kasten ohne Hoehe macht keine Zeile auf.
+ */
+async function headDocking(page) {
+  return page.evaluate(() => {
+    const head = document.querySelector('.page-toolbar');
+    if (!head) return null;
+    const cs = getComputedStyle(head);
+    const visible = (c) => !/rgba\(0, 0, 0, 0\)|\/\s*0\)/.test(c);
+    const boxes = [...head.children]
+      .filter((c) => c.offsetParent !== null || c.getClientRects().length)
+      .map((c) => c.getBoundingClientRect())
+      .filter((r) => r.height > 0)
+      .sort((a, b) => a.top - b.top);
+    const lines = [];
+    for (const r of boxes) {
+      const line = lines.find((l) => r.top < l.bottom - 1 && r.bottom > l.top + 1);
+      if (line) { line.top = Math.min(line.top, r.top); line.bottom = Math.max(line.bottom, r.bottom); }
+      else lines.push({ top: r.top, bottom: r.bottom });
+    }
+    return {
+      lead: parseFloat(cs.getPropertyValue('--page-toolbar-lead')) || 0,
+      rows: lines.length,
+      docked: head.classList.contains('is-docked'),
+      line: visible(cs.borderBottomColor) && parseFloat(cs.borderBottomWidth) > 0,
+    };
+  });
+}
+
+/** Scrollt jeden Port bis ans Ende und meldet die groesste gefundene Reserve. */
+async function scrollEveryPort(page) {
+  return page.evaluate(() => {
+    let most = 0;
+    for (const el of document.querySelectorAll('*')) {
+      const oy = getComputedStyle(el).overflowY;
+      const reserve = el.scrollHeight - el.clientHeight;
+      if ((oy === 'auto' || oy === 'scroll') && reserve > 8) {
+        el.scrollTop = reserve;
+        most = Math.max(most, reserve);
+      }
+    }
+    return most;
+  });
+}
+
+test('Sonde 8 - ein Kopf mit Lead-Zone traegt seine Linie erst angedockt, und dockt auch an', async () => {
+  const page = await openPage(harness, { device: 'mobile', theme: 'light', locale: 'de' });
+  const findings = [];
+  let headsSeen = 0;
+  let leadHeads = 0;
+
+  for (const name of ROUTE_NAMES) {
+    await gotoRoute(page, ROUTES[name]);
+    // Der Kopf misst sich ueber ResizeObserver und MutationObserver, und der
+    // IntersectionObserver feuert asynchron - eine Messung direkt nach dem
+    // Aufbau liest den Zwischenstand.
+    await new Promise((r) => setTimeout(r, 700));
+    const before = await headDocking(page);
+    if (!before) continue;
+    headsSeen += 1;
+
+    // Ohne Lead-Zone gilt die andere Haelfte der Regel: die Linie steht
+    // durchgehend. Ein Kopf, der DANN keine traegt, hat gar keine Kante - das
+    // war der Zustand der Rezepte, verursacht von einem leeren Slot, den die
+    // Zeilenmessung fuer eine zweite Zeile hielt.
+    if (!before.lead) {
+      if (!before.line) {
+        findings.push(`${name}: ohne Lead-Zone und ohne Linie - der Kopf hat in keinem Zustand eine Kante.`);
+      }
+      continue;
+    }
+    leadHeads += 1;
+
+    // EINE LEAD-ZONE AUF EINEM EINZEILIGEN KOPF IST KEINE. Sie kostet dann
+    // nicht nur nichts, sie verbirgt die Linie dauerhaft: `--stacked` schaltet
+    // `border-bottom-color: transparent`, und ohne Zeile, die wegwandern kann,
+    // gibt es kein Andocken, das sie zurueckholt. Genau so stand der
+    // Rezepte-Kopf da - ein leerer Slot ohne Hoehe galt als zweite Zeile.
+    if (before.rows < 2) {
+      findings.push(
+        `${name}: Lead-Zone ${before.lead}px, aber der Kopfinhalt steht in EINER Zeile - `
+        + 'eine Lead-Zone ohne zweite Zeile verbirgt die Linie dauerhaft.',
+      );
+      continue;
+    }
+
+    // Mit Lead-Zone: am Scroll-Anfang nahtlos. Ein Kopf, der beim Aufbau schon
+    // gescrollt ist (der Essensplan springt auf „jetzt"), ist zu Recht
+    // angedockt und wird hier nicht beurteilt.
+    if (!before.docked && before.line) {
+      findings.push(`${name}: Lead-Zone ${before.lead}px, nicht angedockt, traegt aber schon die Linie.`);
+    }
+
+    const reserve = await scrollEveryPort(page);
+    await new Promise((r) => setTimeout(r, 700));
+    // Ein Kopf, unter dem nichts wegscrollt, MUSS nicht andocken - sonst misst
+    // die Sonde den Seed statt der Regel. Die Schwelle ist die Lead-Zone
+    // selbst: erst dahinter gibt es ueberhaupt etwas zu beobachten.
+    if (reserve <= before.lead) continue;
+    const after = await headDocking(page);
+    if (!after.docked || !after.line) {
+      findings.push(
+        `${name}: Lead-Zone ${before.lead}px und ${reserve}px Scroll-Reserve, aber nach dem Scrollen `
+        + `${after.docked ? 'angedockt ohne Linie' : 'nicht angedockt'} - die Kopfkante erscheint nie.`,
+      );
+    }
+  }
+  await page.close();
+
+  // Eine Sonde, die nichts gesehen hat, darf nicht urteilen (dieselbe
+  // Zusicherung wie bei Sonde 3 bis 7). Hier braucht es BEIDES: Koepfe
+  // ueberhaupt, und Koepfe MIT Lead-Zone - sonst belegt ein gruener Lauf nur
+  // die triviale Haelfte der Regel, und genau die andere war kaputt.
+  assert.ok(headsSeen >= ROUTE_NAMES.length - 3,
+    `Nur ${headsSeen} Modulkoepfe von ${ROUTE_NAMES.length} Routen gesehen - die Sonde erreicht die Koepfe nicht mehr.`);
+  assert.ok(leadHeads >= 5,
+    `Nur ${leadHeads} Koepfe mit Lead-Zone gesehen (gemessen: 10). Ohne sie prueft diese Sonde nur, `
+    + 'dass einzeilige Koepfe eine Linie tragen.');
+
+  assert.deepEqual(findings, [],
+    'Die Trennlinie erscheint beim Andocken, und andocken kann nur ein Kopf mit Lead-Zone - wer eine '
+    + 'hat, muss es dann aber auch tun. Wo keine ist, steht die Linie durchgehend und markiert die '
+    + 'Kopfkante.\n  '
+    + findings.join('\n  '));
+});

@@ -243,20 +243,52 @@ export function wireCollapsingHeader(toolbar) {
     // lead 0 ergeben und dem CSS die Grundlage entziehen, die es zum Ausklappen
     // braucht. Der Wert der ausgeklappten Form bleibt stehen.
     if (toolbar.classList.contains('is-collapsed')) return;
-    const rows = [...toolbar.children].filter((c) => c.offsetParent !== null || c.getClientRects().length);
+    // EIN KASTEN OHNE HÖHE MACHT KEINE ZEILE AUF. Ein leerer Slot bleibt im
+    // Markup stehen (das Modul füllt ihn je nach Zustand) und sitzt als
+    // Flex-Item mit Höhe 0 unter seinen Geschwistern - die Zeilenmessung unten
+    // vergleicht nur `top` und hielt ihn deshalb für eine zweite Zeile. Bei
+    // den Rezepten ergab das 24px Lead-Zone auf einem einzeiligen Kopf, und
+    // damit ein `--stacked`, das seine Trennlinie dauerhaft verbarg.
+    const rows = [...toolbar.children].filter(
+      (c) => (c.offsetParent !== null || c.getClientRects().length) && c.getBoundingClientRect().height > 0,
+    );
     const tb = toolbar.getBoundingClientRect();
     const padTop = parseFloat(getComputedStyle(toolbar).paddingBlockStart) || 0;
+    // WAS EINE ZEILE IST, ENTSCHEIDET DIE ÜBERLAPPUNG, NICHT DIE OBERKANTE.
+    // Ein Vergleich der `top`-Werte hält jeden vertikalen Versatz für einen
+    // Umbruch: Flex-Items unterschiedlicher Höhe sitzen mittig ausgerichtet
+    // nebeneinander und beginnen dabei bis zu 15px auseinander. Auf Desktop
+    // trugen dadurch 11 von 14 Köpfen ein `--stacked`, obwohl ihr Inhalt in
+    // EINER Zeile stand - folgenlos nur deshalb, weil jede Regel dazu in der
+    // kompakten Grössenklasse steht. Zwei Kästen stehen auf derselben Zeile,
+    // wenn sich ihre vertikalen Intervalle überlappen; die Lead-Zone ist die
+    // Oberkante der letzten so gebildeten Zeile.
+    const boxes = rows
+      .map((c) => {
+        const r = c.getBoundingClientRect();
+        return { el: c, top: r.top - tb.top, bottom: r.bottom - tb.top };
+      })
+      .sort((a, b) => a.top - b.top);
+    const lines = [];
+    for (const b of boxes) {
+      const line = lines.find((l) => b.top < l.bottom - 1 && b.bottom > l.top + 1);
+      if (line) {
+        line.top = Math.min(line.top, b.top);
+        line.bottom = Math.max(line.bottom, b.bottom);
+        line.els.push(b.el);
+      } else {
+        lines.push({ top: b.top, bottom: b.bottom, els: [b.el] });
+      }
+    }
     // Die letzte Zeile ist die mit dem grössten Abstand zur Oberkante. Bei
     // einem einzeiligen Kopf ist das die erste - lead wird 0 und die Leiste
     // klebt wie zuvor bei top:0.
-    let lastTop = 0;
-    let firstEl = null;
-    let firstTop = Infinity;
-    for (const c of rows) {
-      const top = c.getBoundingClientRect().top - tb.top;
-      if (top > lastTop + 1) lastTop = top;
-      if (top < firstTop - 1) { firstTop = top; firstEl = c; }
-    }
+    const lastTop = lines.length ? lines[lines.length - 1].top : 0;
+    // `firstEl` ist der beobachtete Zeuge der ERSTEN Zeile. Von mehreren
+    // Kästen darin trägt der höchste die Kante, an der das Andocken hängt.
+    const firstEl = lines.length
+      ? lines[0].els.reduce((a, b) => (b.getBoundingClientRect().height > a.getBoundingClientRect().height ? b : a))
+      : null;
     lead = Math.max(0, Math.round(lastTop - padTop));
     toolbar.style.setProperty('--page-toolbar-lead', `${lead}px`);
     toolbar.classList.toggle('page-toolbar--stacked', lead > 0);
@@ -273,9 +305,19 @@ export function wireCollapsingHeader(toolbar) {
       toolbar.classList.toggle('is-docked', !lead);
       return;
     }
+    // DER BEOBACHTUNGSRAHMEN IST UM EINEN PIXEL KLEINER ALS DER SCROLLPORT,
+    // weil `firstEl` ein Kind des KLEBENDEN Kopfes ist: es wandert nicht frei
+    // mit dem Inhalt davon, sondern nur so weit, wie das negative `top` den
+    // Kopf hochzieht - und das ist exakt `lead`. Bei einem ZWEIZEILIGEN Kopf
+    // ist `lead` genau die Unterkante der ersten Zeile; sie endet bündig auf
+    // der Port-Kante, berührt sie also, statt sie zu überschreiten, und der
+    // Observer wechselt nie auf `false`. Gemessen an drei Modulen (Gesundheit,
+    // Belohnungen, Haushaltshilfe): der Kopf trug mobil NIE eine Trennlinie.
+    // Bei drei Zeilen fiel es nicht auf - dort ist `lead` die Höhe von zwei
+    // Zeilen und schiebt die erste weit über die Kante hinaus.
     io = new IntersectionObserver(
       ([entry]) => toolbar.classList.toggle('is-docked', !entry.isIntersecting),
-      { root: scrollport, threshold: 0 },
+      { root: scrollport, threshold: 0, rootMargin: '-1px 0px 0px 0px' },
     );
     io.observe(firstEl);
   };
