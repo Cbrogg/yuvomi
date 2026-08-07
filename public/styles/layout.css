@@ -1208,6 +1208,50 @@ html.fab-anim-done .page-fab {
   /* Drängt die Aktionen an den rechten Rand, wenn kein wachsender
    * Mittelteil (z.B. Suche mit flex:1) vorhanden ist. */
   margin-left: auto;
+  /* Ohne das behält der Slot die max-content-Breite seiner Kinder und schiebt
+   * den ganzen Kopf über die Viewport-Kante — im Kalender gemessen (uk, 375px:
+   * 431px breit, 72px hinaus). Das Clipping von `main.app-content` macht den
+   * Bruch unsichtbar, nicht harmlos. */
+  min-width: 0;
+}
+
+/* --------------------------------------------------------
+ * Tab-Leiste im Modulkopf (Redesign Runde 6, Phase 0)
+ *
+ * REGEL: Der Modulkopf ist genau EINE `.page-toolbar`, verdrahtet von der
+ * Shell. Kein Modul setzt `--page-toolbar-lead`, keine zweite Titelgrösse und
+ * KEINE EIGENE FLEX-RICHTUNG. Eine Tab-Leiste im Kopf ist eine eigene,
+ * horizontal scrollende Zeile.
+ *
+ * WARUM ALS SHELL-REGEL: zwei Module (Haushaltshilfe, Belohnungen) kippten
+ * ihren Kopf unter dem Modul-Breakpoint auf `flex-direction: column`, während
+ * die Large-Title-Zone `flex-wrap: wrap` und `flex-basis: 100%` setzt. In
+ * Spaltenrichtung bedeutet `flex-basis` die HÖHE und `wrap` erzeugt eine zweite
+ * SPALTE - der Kopf der Haushaltshilfe ragte bei 375px 79px über die rechte
+ * Kante (uk 129px, vi 117px), sichtbar wurde es nur nicht, weil
+ * `main.app-content` horizontal clippt. Die Richtung des Kopfes ist damit keine
+ * Modulentscheidung mehr.
+ *
+ * WARUM ÜBER `[role="tablist"]` UND NICHT ÜBER KLASSENNAMEN: die vier Leisten
+ * heissen `.housekeeping-tabs`, `.rewards-tabs`, `.cal-toolbar__views` und
+ * `.budget-tabs`. Eine Regel über diese Liste gilt für vier Dateien, nicht für
+ * die Bauart - und beim fünften Modul fehlt sie. Die ARIA-Rolle ist das
+ * Merkmal, das die Leiste zur Leiste macht, und sie ist im Markup ohnehin
+ * Pflicht.
+ *
+ * Guards: Ebene 3 (`test:frontend-audit`, kein Modul-CSS setzt eine
+ * Flex-Richtung auf einer Kopf-Klasse) und Ebene 4
+ * (`test:document-guards`, Sonde 1: kein Kopf-Nachfahre ragt bei 375px hinaus).
+ * -------------------------------------------------------- */
+.page-toolbar [role="tablist"] {
+  min-width: 0;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.page-toolbar [role="tablist"]::-webkit-scrollbar {
+  display: none;
 }
 
 /* Center-Slot des Canonical Page Head: wachsende Mitte (Suche, Datums-Nav).
@@ -1348,9 +1392,29 @@ html.fab-anim-done .page-fab {
    * semantischen Rollen"). */
   .page-toolbar:not(.page-toolbar--in-group) > .page-toolbar__title {
     flex-basis: 100%;
-    /* Auf voller Zeilenbreite braucht kein Modultitel mehr die Ellipse; das
-     * nowrap der Basisregel bleibt trotzdem stehen, damit lange Locales die
-     * Zeile nicht auf zwei Zeilen Large Title aufblähen. */
+    /* NOWRAP BLEIBT, DIE ELLIPSE DER BASISREGEL IST DIE ANTWORT - gemessen,
+     * nicht geraten (Runde 6, Phase 0). Bei 375px stehen 343px zur Verfügung;
+     * von 360 Paaren aus 24 Locales und 15 Modultiteln reisst GENAU EINES die
+     * Zeile: `id`/Haushaltshilfe („Asisten Rumah Tangga", 351px, 8px zu breit).
+     *
+     * Umbrechen wäre für diesen einen Fall der teurere Weg: die kollabierende
+     * Leiste misst `--page-toolbar-lead` EINMAL, und ein Titel, der je nach
+     * Sprache ein- oder zweizeilig ist, verschiebt die Schwelle, an der der
+     * Kopf andockt. Ein höhenstabiler Kopf ist die Voraussetzung von C-1; die
+     * Ellipse kostet in einer Sprache acht Pixel Text, den die Navigation
+     * ohnehin ein zweites Mal führt. */
+  }
+
+  /* Steht die Tab-Leiste direkt im Kopf, ist sie die Bar-Zeile UNTER dem Large
+   * Title - dieselbe Rollenverteilung wie bei Titel + Aktionen, nur dass die
+   * Leiste die ganze Zeile führt. Ihr `margin-inline-start: auto`
+   * (Belohnungen) und ihr `justify-content: flex-end` (Haushaltshilfe) waren
+   * richtig, solange sie sich die Zeile mit dem Titel teilte, und sind falsch,
+   * sobald sie eine eigene hat. Die Zeilenordnung entscheidet die Shell. */
+  .page-toolbar:not(.page-toolbar--in-group):has(> .page-toolbar__title) > [role="tablist"] {
+    flex-basis: 100%;
+    margin-inline-start: 0;
+    justify-content: flex-start;
   }
 
   /* Der Center-Slot (Suche, Zeitraum-Navigation) gehört zur Lead-Zone und

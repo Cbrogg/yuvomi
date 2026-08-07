@@ -191,3 +191,27 @@ npm run test:installer-cli-i18n
 npm run test:installer-prereq
 npm run test:installer-a11y
 ```
+
+## Dokument-Guards (eigene Kette, nicht in `npm test`)
+
+```bash
+npm run test:document-guards   # Guard-Ebene 4: Invarianten, die nur das GERENDERTE Dokument kennt
+```
+
+Diese Suite ist die einzige, die **nicht** in der `npm test`-Kette hängt, und das ist Absicht: sie startet einen Serverprozess und einen Browser (Puppeteer, bereits devDependency), während die übrige Infrastruktur netzfrei und serverlos gegen In-Memory-SQLite läuft. `test:suite-chain` kennt die Zweiteilung als **Regel** und nicht als Namensausnahme - eine Suite, deren Datei den Browsertreiber importiert, gehört in diese Kette; jede andere in `npm test`. Wer eine zweite Browser-Suite anlegt, hängt sie an `test:document-guards` an, sonst schlägt der Registry-Guard fehl.
+
+**Wozu eine vierte Ebene.** Drei Befundklassen des Architektur-Audits vom 2026-08-07 sind im Stylesheet unsichtbar und im Dokument offensichtlich: ein Kontrastverstoß, der erst durch die Komposition zweier Regeln entsteht (1.13:1, seit Runde 1 live, während beide Token-Paare für sich AA hielten); ein Kopf-Überlauf von 79px, den `overflow-x: hidden` verdeckte; Zielgrößen, die keine Textsuche misst. Alle drei fand ein Reviewer - das ist keine wiederholbare Absicherung.
+
+**Sonden:**
+
+| Sonde | Was sie misst | Umfang |
+|---|---|---|
+| 1 - Kopf-Überlauf | kein Nachfahre einer `.page-toolbar` ragt über die Viewport-Kante; Nachfahren in einem scrollenden oder clippenden Container sind ausgenommen, denn genau so schreibt die Shell-Regel die Tab-Leiste vor | 16 Routen × 375px × `de`/`uk`/`vi` |
+
+**Fallen, teuer bezahlt:**
+
+- `color-mix()` rendert als `color(srgb …)`, nicht als `rgba()`. Ein Parser, der nur eine Notation kennt, meldet Fehltreffer - im ersten Auditlauf zwei falsche AA-Befunde. Der Parser im Harness liest beide.
+- Der Service Worker wird abgeschnitten, indem `/sw.js` nicht ausgeliefert wird. `navigator.serviceWorker` wegzudefinieren lässt die App beim Aufbau abstürzen, und die Sonden messen dann ein leeres Dokument statt eines Moduls.
+- Angemeldet wird **einmal** pro Lauf, das Cookie geht an alle Seiten. Der Login-Limiter lässt fünf Versuche pro Minute zu; eine Suite, die pro Sprache neu anmeldet, fällt beim zweiten Lauf hinein - und der 429 sieht aus wie ein fehlender Seed.
+
+**Entwicklung:** `DOCUMENT_GUARDS_BASE_URL=http://localhost:PORT npm run test:document-guards` misst gegen einen bereits laufenden Server und spart Migration und Seed. Ohne die Variable legt der Harness eine temporäre SQLite-Datei an, migriert sie, seedet sie über `scripts/seed-demo.js` und räumt am Ende auf.

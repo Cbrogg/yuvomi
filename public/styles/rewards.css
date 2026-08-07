@@ -15,10 +15,11 @@
   flex-direction: column;
 }
 
-/* Toolbar: Titel links, Tab-Reihe füllt den Rest und bleibt rechtsbündig. */
+/* Toolbar: Titel links, Tab-Reihe bleibt rechtsbündig. Schrumpfen, Scrollen und
+ * die eigene Zeile in der kompakten Grössenklasse kommen aus der Shell-Regel
+ * „Tab-Leiste im Modulkopf" (layout.css). */
 .rewards-tabs {
   display: flex;
-  flex-wrap: wrap;
   gap: var(--space-1);
   margin-left: auto;
 }
@@ -460,17 +461,12 @@
   .rw-pending__actions { gap: var(--space-3); }
 }
 
-@media (max-width: 767px) {
-  .rewards-toolbar { flex-direction: column; align-items: stretch; }
-  .rewards-tabs {
-    margin-left: 0;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-  .rewards-tabs::-webkit-scrollbar { display: none; }
-  .rewards-tabs .sub-tab { flex: 1 1 0; justify-content: center; }
-}
+/* Der Kopf trug hier `flex-direction: column`, die Leiste ihr eigenes
+ * Scroll-Rezept und ihre Tabs ein `flex: 1 1 0`. Alle drei sind mit der
+ * Shell-Regel entfallen (layout.css, „Tab-Leiste im Modulkopf"). Das
+ * Schrumpfenlassen der Tabs war eine MODUL-Lösung für ein SHELL-Problem: sie
+ * hat Belohnungen zufällig vor dem Überlauf bewahrt, der die Haushaltshilfe mit
+ * derselben Bauart traf. */
 
 @media (max-width: 640px) {
   .rewards-content__inner { gap: var(--space-6); padding-top: var(--space-4); }

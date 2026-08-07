@@ -94,6 +94,21 @@ function assertKeysExistInEveryLocale(keys) {
 // als gemeint (CodeQL js/incomplete-sanitization).
 const escapeForRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+/**
+ * Macht verschachtelte At-Regeln (`@media`, `@supports`, `@container`) flach,
+ * damit der Regelscanner darunter die Regeln IN ihnen sieht.
+ *
+ * FALLE, teuer gefunden (Runde 6, Phase 0): das Muster
+ * `(?:^|[}])\s*([^{}]*)\{([^}]*)\}` verschluckt die ERSTE Regel jedes
+ * At-Blocks - `[^}]*` im Rumpf erlaubt `{`, also frisst der Match der
+ * `@media`-Praeambel die Regel dahinter mit. Ein Guard, der so sucht, ist in
+ * genau den Media-Queries blind, in denen die responsiven Verstoesse stehen;
+ * die Gegenprobe (bekannten Verstoss wieder einbauen) meldete nichts.
+ */
+function flattenAtRules(css) {
+  return css.replace(/@(?:media|supports|container)[^{]*\{/g, '\n}\n');
+}
+
 function cssRuleBody(css, selector) {
   const match = css.match(new RegExp(`${escapeForRegExp(selector)}\\s*\\{([^}]*)\\}`, 'm'));
   return match?.[1] ?? '';
@@ -6987,8 +7002,10 @@ test('one button shape app-wide', () => {
   const offenders = [];
   for (const name of files) {
     // Kommentare strippen, sonst wandert die Prosa davor in den Selektor
-    // (dieselbe Falle wie bei parseTokenMap, Handoff §6).
-    const css = read(`../public/styles/${name}`).replace(/\/\*[\s\S]*?\*\//g, '');
+    // (dieselbe Falle wie bei parseTokenMap, Handoff §6). At-Regeln flach
+    // machen, sonst bleibt die erste Regel jeder Media-Query ungesehen
+    // (Runde 6, Phase 0 - siehe flattenAtRules).
+    const css = flattenAtRules(read(`../public/styles/${name}`).replace(/\/\*[\s\S]*?\*\//g, ''));
     // Jede Regel, deren Selektorliste eine .btn-Variante enthaelt.
     for (const m of css.matchAll(/(?:^|[}])\s*([^{}]*\.btn[\w-]*[^{}]*)\{([^}]*)\}/g)) {
       const [, selector, body] = m;
@@ -7017,7 +7034,7 @@ test('one button shape app-wide', () => {
   // .impeccable/redesign-tools/button-shapes.mjs.
   const handCopied = [];
   for (const name of files) {
-    const css = read(`../public/styles/${name}`).replace(/\/\*[\s\S]*?\*\//g, '');
+    const css = flattenAtRules(read(`../public/styles/${name}`).replace(/\/\*[\s\S]*?\*\//g, ''));
     for (const m of css.matchAll(/(?:^|[}])\s*([^{}]*)\{([^}]*)\}/g)) {
       const [, selector, body] = m;
       if (/\.btn(?![\w-])|\.btn--/.test(selector)) continue;
@@ -7030,6 +7047,81 @@ test('one button shape app-wide', () => {
     }
   }
   assert.deepEqual(handCopied, []);
+});
+
+/**
+ * REGEL (Redesign Runde 6, Phase 0): Der Modulkopf ist genau EINE
+ * `.page-toolbar`, verdrahtet von der Shell. Kein Modul setzt eine eigene
+ * Flex-Richtung, keine zweite Titelgroesse und kein `--page-toolbar-lead`. Eine
+ * Tab-Leiste im Kopf ist eine eigene, horizontal scrollende Zeile.
+ *
+ * WARUM ER ANDERS SUCHT ALS DIE ALTE FASSUNG DIESER IDEE: eine Suche nach
+ * Regeln, deren Selektor `.page-toolbar` ENTHAELT, findet die Verstoesse nicht.
+ * Die Module schreiben ihre Kopf-Klasse allein - `.housekeeping-toolbar`,
+ * `.rewards-toolbar`, `.cal-toolbar` -, und `page-toolbar` steht nur im
+ * Markup daneben. Der Guard leitet die Menge deshalb aus dem MARKUP ab: jede
+ * Klasse, die in einem class-Attribut neben `page-toolbar` steht, ist eine
+ * Kopf-Klasse. Das ist Guard-Ebene 2 (Struktur, aus deklarativer Quelle) plus
+ * Ebene 3 (Signatur im CSS) - und es findet auch das achtzehnte Modul.
+ *
+ * Gemessener Anlass: `.housekeeping-toolbar` und `.rewards-toolbar` kippten
+ * unter 768px auf `flex-direction: column`, waehrend die Shell-Regel der
+ * Large-Title-Zone `flex-wrap: wrap` und `flex-basis: 100%` setzt. In
+ * Spaltenrichtung ist `flex-basis` die HOEHE und `wrap` erzeugt eine zweite
+ * SPALTE: der Kopf der Haushaltshilfe ragte bei 375px 79px ueber die rechte
+ * Viewport-Kante (uk 129px, vi 117px), verdeckt vom `overflow-x: hidden` des
+ * Scrollports. Die Gegenprobe am gerenderten Dokument ist Sonde 1 in
+ * `npm run test:document-guards`.
+ */
+test('der Modulkopf gehoert der Shell - kein Modul setzt seine Richtung oder seinen Lead', () => {
+  const styleDir = new URL('../public/styles/', import.meta.url);
+  const cssFiles = readdirSync(styleDir).filter((name) => name.endsWith('.css'));
+
+  // 1. Kopf-Klassen aus dem Markup ableiten, nicht aus einer Liste im Test.
+  const headClasses = new Set(['page-toolbar']);
+  for (const file of walkFrontendFiles('../public/')) {
+    for (const m of read(file).matchAll(/class="([^"]*\bpage-toolbar\b[^"]*)"/g)) {
+      for (const cls of m[1].split(/\s+/)) {
+        if (cls && !cls.startsWith('${') && !cls.startsWith('page-toolbar__')) headClasses.add(cls);
+      }
+    }
+  }
+  assert.ok(
+    headClasses.size >= 4,
+    `Aus dem Markup kamen nur ${headClasses.size} Kopf-Klassen - der Guard misst dann nichts. `
+    + 'Hat sich die Schreibweise des class-Attributs geaendert?',
+  );
+
+  const selectorMatchesHead = (selector) =>
+    [...headClasses].some((cls) => new RegExp(`\\.${escapeForRegExp(cls)}(?![\\w-])`).test(selector));
+
+  const offenders = [];
+  for (const name of cssFiles) {
+    // Kommentare strippen (sonst wandert die Prosa in den Selektor) UND
+    // At-Regeln flach machen: die Verstoesse standen alle in Media-Queries.
+    const css = flattenAtRules(read(`../public/styles/${name}`).replace(/\/\*[\s\S]*?\*\//g, ''));
+    for (const m of css.matchAll(/(?:^|[}])\s*([^{}]*)\{([^}]*)\}/g)) {
+      const [, rawSelector, body] = m;
+      const selector = rawSelector.trim().replace(/\s+/g, ' ');
+      if (!selector || selector.startsWith('@')) continue;
+
+      // (a) Die Richtung des Kopfes gehoert der Shell.
+      if (selectorMatchesHead(selector) && /flex-direction:/.test(body)) {
+        offenders.push(`${name}: ${selector} setzt flex-direction auf einer Kopf-Klasse`);
+      }
+      // (b) Die Lead-Hoehe misst `wireCollapsingHeader` (utils/ux.js). Ein
+      //     geschriebener Wert waere eine zweite Wahrheit ueber dieselbe Zahl.
+      //     `the collapsing header is wired once, by the shell` prueft dasselbe
+      //     im JS; das CSS war dort nicht abgedeckt.
+      if (name !== 'layout.css' && /--page-toolbar-lead:/.test(body)) {
+        offenders.push(`${name}: ${selector} setzt --page-toolbar-lead - das misst die Shell`);
+      }
+      // Die dritte Haelfte der Regel - keine zweite Titelgroesse - haelt bereits
+      // `one page-head title scale, owned by the shell`. Sie hier zu wiederholen
+      // waere eine zweite Wahrheit ueber dieselbe Zusage.
+    }
+  }
+  assert.deepEqual(offenders, []);
 });
 
 // --------------------------------------------------------------------------
@@ -7073,8 +7165,9 @@ test('one page-head title scale, owned by the shell', () => {
   for (const name of files) {
     if (SHELL.has(name)) continue;
     // Kommentare strippen, sonst wandert die Prosa davor in den Selektor
-    // (dieselbe Falle wie bei parseTokenMap, Handoff §6).
-    const css = read(`../public/styles/${name}`).replace(/\/\*[\s\S]*?\*\//g, '');
+    // (dieselbe Falle wie bei parseTokenMap, Handoff §6). At-Regeln flach
+    // machen, sonst bleibt die erste Regel jeder Media-Query ungesehen.
+    const css = flattenAtRules(read(`../public/styles/${name}`).replace(/\/\*[\s\S]*?\*\//g, ''));
     for (const m of css.matchAll(/(?:^|[}])\s*([^{}]*\.page-toolbar__title[^{}]*)\{([^}]*)\}/g)) {
       const [, selector, body] = m;
       if (!/font-size:/.test(body)) continue;

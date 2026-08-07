@@ -145,19 +145,14 @@
 
 /* Mobiles Umbrechen kommt jetzt aus .page-toolbar--wrap (layout.css): die
  * Datums-Navigation (.cal-toolbar__month = Center-Slot) rutscht als Gruppe auf
- * Zeile 2, Titel + Ansichts-Umschalter bleiben auf Zeile 1. Die Ansichts-Buttons
- * dürfen bei Enge horizontal scrollen. */
+ * Zeile 2, Titel + Ansichts-Umschalter bleiben auf Zeile 1.
+ *
+ * Das Scrollen der Ansichts-Leiste stand hier als Modul-Rezept - ohne
+ * `min-width: 0`, also scrollte sie zwar, schrumpfte aber nie: in `uk` lief der
+ * Kopf damit bei 375px um 72px über die Viewport-Kante. Es kommt jetzt aus der
+ * Shell-Regel „Tab-Leiste im Modulkopf" (layout.css), die über `[role=tablist]`
+ * greift und deshalb jede Leiste erfasst, nicht die vier bekannten. */
 @media (max-width: 767px) {
-  .cal-toolbar__views {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-
-  .cal-toolbar__views::-webkit-scrollbar {
-    display: none;
-  }
-
   .cal-toolbar__view-btn {
     flex: 0 0 auto;
     min-height: var(--target-base);
