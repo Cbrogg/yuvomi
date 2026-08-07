@@ -169,14 +169,35 @@
    *   eine GRUPPE, die sich mit wechselndem Wert ueber eine Liste wiederholt
    *   (Versal-Mikro-Label). Abgrenzung ausgeschrieben in typography.css.
    * Es gibt damit weder eine traegerlose Zeilenfolge auf dem Grouped-Grund noch
-   * eine Karte pro Zeile. Einzige Ausnahme: ein RASTER aus Objekten mit eigenem
-   * Medium (Foto, Dokumentvorschau) - dort ist jede Kachel eine eigene Karte,
-   * weil sie nebeneinander steht statt untereinander.
+   * eine Karte pro Zeile - und „eine Karte pro Zeile" hat ZWEI Bauarten, die
+   * derselbe Satz meint: die Zeile bringt ihren Stapelabstand selbst mit, ODER
+   * sie ueberlaesst ihn dem `gap` ihres Traegers. Die zweite sieht im
+   * Stylesheet harmlos aus (der Traeger ist eine JS-Variable, siehe unten) und
+   * ist dieselbe Aussage an den Nutzer: „jedes davon ist ein eigenes Objekt",
+   * wo die Gruppe gemeint war.
+   * Einzige Ausnahme: ein RASTER aus Objekten mit eigenem Medium (Foto,
+   * Dokumentvorschau) - dort ist jede Kachel eine eigene Karte, weil sie
+   * nebeneinander steht statt untereinander. UND EIN RASTER BLEIBT EINES, WENN
+   * ES MOBIL AUF EINE SPALTE UMBRICHT: bei 375px steht jedes Raster der App
+   * untereinander (gemessen: 16 Kandidaten mobil, 6 auf dem Desktop). Wer nur
+   * dort misst, haelt die Kennzahlraster der Gesundheit, die Notiz-Masonry und
+   * die Dashboard-Widgets fuer Zeilenlisten. Eine Kartenspalte ist eine Spalte
+   * in JEDER Groessenklasse.
    * Warum ueberhaupt ein Traeger: eine Zeilenfolge direkt auf dem Grund hat
    * keinen linken Rand, an dem das Auge die Liste als EIN Objekt fasst; eine
-   * Karte pro Zeile hat N Raender und damit N Objekte. Apples Grouped-Listen
-   * loesen beides mit demselben Griff. Guard:
-   * `row lists sit in exactly one carrier` in test-frontend-audit.js. */
+   * Karte pro Zeile hat N Raender und damit N Objekte - und N Schatten
+   * untereinander lesen als Streifen. Apples Grouped-Listen loesen beides mit
+   * demselben Griff.
+   * Die Traegergrammatik steht geteilt als `.row-carrier` (list-row.css), samt
+   * der Ausnahme fuer Leerzustaende; `.list-rows` ist dieselbe Grammatik plus
+   * dem Lesemass der Kuechenlisten.
+   * ZWEI GUARDS AUF ZWEI EBENEN, weil die Regel auf beiden etwas anderes
+   * zeigt: `row lists sit in exactly one carrier` (test-frontend-audit.js)
+   * prueft die Zeile, die ihren Abstand selbst mitbringt - im Stylesheet
+   * sichtbar. „Sonde 7" (test-document-guards.js) prueft die gap-Variante, und
+   * die kann nur das Dokument beantworten: `list.insertAdjacentHTML(...)`
+   * bindet den Traeger an eine JS-Variable, wo das `gap` steht weiss kein
+   * Stylesheet. */
 
   /* DIE LEISTEN-REGEL (HIG-Rollout Runde 6, 2026-08-07).
    * Ob ein Seitentitel ueber einer Leiste steht, entscheidet der `module:`-Wert

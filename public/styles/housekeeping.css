@@ -66,10 +66,11 @@
  * Bauart wie das Dashboard-Widget und .metric-card. Die Kante bleibt als
  * transparenter Träger stehen, damit Zustände (Auswahl, Hover) sie einfärben
  * können, ohne das Layout zu verschieben. */
+/* `.housekeeping-task` stand hier mit in der Reihe und ist herausgenommen: sie
+ * ist keine Karte mehr, sondern eine Zeile in einer Liste (siehe unten). */
 .housekeeping-card,
 .housekeeping-worker-strip,
-.housekeeping-metric,
-.housekeeping-task {
+.housekeeping-metric {
   background-color: var(--color-surface);
   border: 1px solid transparent;
   border-radius: var(--radius-md);
@@ -347,13 +348,30 @@
   color: var(--color-text-secondary);
 }
 
-.housekeeping-task-list,
+/* Nur das Layout - die Trägergrammatik kommt aus `.row-carrier` (list-row.css).
+ * Vorher trug jede Aufgabe ihre eigene Fläche und wurde über das `gap`
+ * getrennt: acht Objekte, wo eine Gruppe gemeint ist. */
+.housekeeping-task-list {
+  display: flex;
+  flex-direction: column;
+}
+
 .housekeeping-reports {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
 }
 
+/* Eine ZEILE, keine Karte: KEINE eigene Fläche, KEIN Radius, KEINE Kante - das
+ * leistet der Träger (`.row-carrier`, list-row.css). Den Status trägt die
+ * Tönung allein; die frühere Vollborder wäre in einer Zeilenliste eine zweite
+ * Linie neben der Trennlinie gewesen.
+ *
+ * Und sie darf hier auch nicht auf `none` gesetzt werden: die Trennlinie des
+ * Trägers steht in `.row-carrier > * + *` mit GLEICHER Spezifität, und dieses
+ * Stylesheet lädt später - ein `border: none` hier hätte sie gelöscht. Gemessen
+ * im Dokument als `border-top-width: 0px` über alle Zeilen (der Budget-Plan lag
+ * genau so daneben). */
 .housekeeping-task {
   display: grid;
   grid-template-columns: 56px 1fr;
@@ -361,18 +379,20 @@
   align-items: center;
   min-height: 88px;
   padding: var(--space-3);
-  /* Status über Vollborder + Hintergrund-Tönung statt 6px-Seitenstreifen (DESIGN.md-konform) */
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-md);
 }
 
+/* BEIDE Zustände tragen ihre Tönung allein. Die früher zusätzliche
+ * `border-color` ist mit der Kante der Zeile entfallen - und sie war nicht nur
+ * wirkungslos geworden, sondern schädlich: die einzige Kante, die eine Zeile in
+ * einer Zeilenliste noch hat, ist die TRENNLINIE des Trägers
+ * (`.row-carrier > * + *`, list-row.css, gleiche Spezifität, später geladen).
+ * `border-color` hätte also die Trennlinie eingefärbt - gemessen im Dokument
+ * als orange Linie zwischen zwei Aufgaben. */
 .housekeeping-task--today {
-  border-color: color-mix(in srgb, var(--color-warning) 45%, var(--color-border));
   background-color: color-mix(in srgb, var(--color-warning) 8%, transparent);
 }
 
 .housekeeping-task--overdue {
-  border-color: color-mix(in srgb, var(--color-danger) 45%, var(--color-border));
   background-color: color-mix(in srgb, var(--color-danger) 8%, transparent);
 }
 

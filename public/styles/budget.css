@@ -1568,9 +1568,25 @@
 .budget-plan__section-head .btn i { width: 16px; height: 16px; }
 .budget-plan__empty { padding: var(--space-6) var(--space-4); }
 
-#budget-plan-rows { display: flex; flex-direction: column; gap: var(--space-3); }
+/* Nur das Layout - Fläche, Radius, Schatten und Trennlinien kommen aus
+ * `.row-carrier` (list-row.css). Vorher trug jede Zeile ihre eigene Karte und
+ * wurde über das `gap` hier getrennt: sieben Objekte statt einer Gruppe, und
+ * sieben Schatten untereinander lesen als Streifen. */
+#budget-plan-rows {
+  display: flex;
+  flex-direction: column;
+}
 
-/* Kategorie-Plan-Zeile */
+/* Kategorie-Plan-Zeile. KEINE eigene Fläche, KEIN Radius, KEIN Schatten: das
+ * leistet der Träger. Ein `<button>` darf hier flach sein - die Buttonform-Regel
+ * nimmt ZEILEN ausdrücklich aus (§2, Session 11).
+ *
+ * KEIN `border: none` hier, obwohl ein `<button>` seine Voreinstellung mitbringt:
+ * die Trennlinie des Trägers steht in `.row-carrier > * + *` mit GLEICHER
+ * Spezifität, und dieses Stylesheet lädt später - `none` hätte sie gelöscht.
+ * Gemessen im Dokument als `border-top-width: 0px` über alle sieben Zeilen.
+ * `border-style: none` allein nimmt die Voreinstellung, ohne die Breite oder
+ * die Farbe der Trennlinie anzufassen. */
 .budget-plan-row {
   --plan-tone-color: var(--color-success);
   display: flex;
@@ -1579,15 +1595,12 @@
   width: 100%;
   padding: var(--space-3) var(--space-4);
   text-align: left;
-  background-color: var(--color-surface);
-  /* Randlose Karte auf dem Grouped-Grund. */
-  border: none;
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  background-color: transparent;
+  border-radius: 0;
   cursor: pointer;
-  transition: box-shadow var(--transition-base);
+  transition: background-color var(--transition-base);
 }
-.budget-plan-row:hover { box-shadow: var(--shadow-md); }
+.budget-plan-row:hover { background-color: var(--color-surface-hover); }
 .budget-plan-row:focus-visible {
   outline: var(--focus-ring-width) solid var(--focus-ring-color);
   outline-offset: var(--focus-ring-offset);

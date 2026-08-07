@@ -288,20 +288,24 @@
   color: var(--color-warning-text);
 }
 
+/* Nur das Layout - die Trägergrammatik kommt aus `.row-carrier` (list-row.css).
+ * Die `.swipe-row` dazwischen bleibt eine Bühne und trägt weder Form noch
+ * Abstand; die Trennlinie sitzt deshalb am Träger, nicht an ihr (`> * + *` ist
+ * gegen solche Zwischenebenen immun). */
 .subscriptions-list {
   display: grid;
-  gap: var(--space-2);
 }
 
+/* KEINE eigene Flaeche, KEIN Radius: das leistet der Traeger. Waehrend der Geste
+ * bekommt die Zeile ihre Flaeche zurueck (`.swipe-row--swiping > :first-child`,
+ * layout.css) - sonst laege ihr Text ueber dem aufgedeckten Reveal-Panel. */
 .subscription-card {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: var(--space-2);
   align-items: center;
   padding: var(--space-2);
-  border: 1px solid transparent;
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
+  background: transparent;
 }
 
 /* Der Zeilenkörper ist ein echter `<button>` und trägt die Grammatik der

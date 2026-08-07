@@ -180,10 +180,18 @@
   cursor: pointer;
 }
 
-.document-card.is-selected,
-.document-row.is-selected {
+/* Die RASTERKARTE traegt ihre Auswahl als Ring - sie ist ein eigenes Objekt mit
+ * eigener Kante. Die ZEILE hat beides nicht mehr und traegt sie als getoente
+ * Flaeche: dasselbe Vokabular wie jeder andere ausgewaehlte Zustand der App
+ * (§2, getoente Flaeche statt Kante). Ein Ring um eine Zeile in einer Liste
+ * malte ihr die Karte zurueck, die sie gerade abgegeben hat. */
+.document-card.is-selected {
   border-color: var(--module-accent);
   box-shadow: 0 0 0 1px var(--module-accent), var(--shadow-md);
+}
+
+.document-row.is-selected {
+  background-color: color-mix(in srgb, var(--module-accent) 16%, var(--color-surface));
 }
 
 .documents-browser-layout {
@@ -461,34 +469,32 @@
   display: block;
 }
 
+/* Die LISTENANSICHT ist eine Zeilenliste, keine Kartenspalte: der Träger ist die
+ * eine randlose Karte, die Zeilen darin sind flächenlos und trennen sich über
+ * den `+`-Kombinator. Die RASTERANSICHT darüber bleibt ein Raster aus Objekten
+ * mit eigenem Medium - das ist die benannte Ausnahme der Regel, und dieselbe
+ * Datei zeigt damit beide Antworten nebeneinander. */
 .documents-list--list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
 }
 
 /* Hinweis: die glass-* Tokens lösen für diese Datenkarten bewusst zu OPAKEN
  * Werten auf (--glass-bg-card == --color-surface im Basistheme). Der DESIGN.md-Ban
  * „kein backdrop-filter auf Datenkarten" bleibt gewahrt — hier wird nur die
  * geteilte Karten-Vokabel genutzt, KEIN Blur. Kein backdrop-filter ergänzen. */
-.document-card,
-.document-row {
+.document-card {
   border: 1px solid var(--color-border-subtle);
   background-color: var(--color-surface);
   box-shadow: var(--shadow-sm);
-}
-
-.document-card {
   border-radius: var(--radius-lg);
 }
 
-.document-row {
-  border-radius: var(--radius-md);
-}
-
-.document-row:hover {
+/* `:not(.is-selected)` ist hier kein Feinschliff: beide Regeln setzen dieselbe
+ * Eigenschaft mit gleicher Spezifitaet, und diese steht spaeter - ohne den
+ * Ausschluss verschwaende der Hover die Auswahl, solange der Zeiger draufsteht. */
+.document-row:not(.is-selected):hover {
   background-color: var(--color-surface-hover);
-  box-shadow: var(--shadow-md);
 }
 
 /* Inhaltsgetriebene Höhe statt fixer min-height: kompaktere Karten, weniger

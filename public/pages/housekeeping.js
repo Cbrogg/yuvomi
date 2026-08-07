@@ -440,7 +440,7 @@ function renderTasks(content) {
         </button>
       </form>
     </section>
-    <section class="housekeeping-task-list">
+    <section class="housekeeping-task-list row-carrier">
       ${taskRows || `
         <div class="empty-state">
           <i class="empty-state__icon" data-lucide="list-checks" aria-hidden="true"></i>

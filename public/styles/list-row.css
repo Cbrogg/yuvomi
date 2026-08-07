@@ -502,3 +502,61 @@
     transition: none;
   }
 }
+
+/* --------------------------------------------------------
+ * Der Träger einer Zeilenfolge, ohne Lesemaß
+ * -------------------------------------------------------- */
+
+/* Dieselbe Grammatik wie `.list-rows`, aber OHNE dessen `max-width`: die
+ * Zeilenlisten außerhalb der Küche sind breiter als das Lesemaß der Küche
+ * (gemessen auf 1280px: Abos 955px, Haushaltshilfe 981px, Dokumente 725px).
+ * Das Lesemaß ist app-weit EIN Wert (§2, Session 15) - deshalb wird es hier
+ * nicht anders gesetzt, sondern gar nicht: es gehört zur Küchenliste, nicht
+ * zur Trägergrammatik.
+ *
+ * WARUM ÜBERHAUPT GETEILT: die Regel „eine Folge gleichartiger Zeilen liegt in
+ * genau einem Träger" hat vier weitere Nutzer bekommen. Vier Kopien derselben
+ * fünf Deklarationen wären vier Orte, an denen der Leerzustand vergessen wird -
+ * und genau das ist beim Bau einmal passiert. */
+/* ZWEI Klassen, weil „wer trägt" und „wer trennt" nicht dieselbe Frage sind.
+ * Meist ist es dieselbe Box - dann steht `.row-carrier` allein. Liegt die Liste
+ * aber schon IN einer Karte (die Abo-Liste steckt in `.subscriptions-list-section`,
+ * gemessen: weiß, 16px Radius, Schatten), dann ist DIE der Träger, und eine
+ * zweite Fläche darin wäre genau der Kasten-in-Kasten, den §2 verbietet. Dort
+ * trägt die Liste nur `.row-divided`.
+ *
+ * Dieselbe Grammatik wie beim Well und beim Lesemaß: der Träger entscheidet. */
+/* Der Träger nimmt seinen Zeilen die Kante, statt dass jedes Modul sie sich
+ * selbst abgewöhnt. Das ist nicht Bequemlichkeit, sondern die einzige Fassung,
+ * die trägt: die Trennlinie unten steht mit GLEICHER Spezifität, und jedes
+ * Modul-Stylesheet lädt später - ein `border: none` in der Zeile hätte sie
+ * gelöscht, und zwar lautlos. Gemessen im Dokument: `border-top-width: 0px`
+ * über alle sieben Zeilen des Budget-Plans, während im Stylesheet beide Regeln
+ * richtig dastanden. (`border-style: none` tut dasselbe: bei style `none`
+ * rechnet CSS die Breite auf 0.) Ein `<button>` als Zeile bringt außerdem seine
+ * UA-Kante mit - auch die ist hier erledigt. */
+.row-divided > *,
+.row-carrier > * {
+  border: none;
+}
+
+.row-divided > * + *,
+.row-carrier > * + * {
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.row-carrier {
+  background-color: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+/* Ein LEERZUSTAND bekommt gar keine Fläche (§2, Session 5). Trägt die Liste nur
+ * ihn, gibt der Träger seine Karte ab - sonst stünde ein leerer weißer Kasten
+ * da, wo gerade nichts ist. Steht hier einmal statt in jedem Modul: die
+ * Ausnahme gehört zur Regel, nicht zu ihren Nutzern. */
+.row-carrier:has(> .empty-state) {
+  background-color: transparent;
+  box-shadow: none;
+}

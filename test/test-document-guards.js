@@ -35,35 +35,86 @@ const ROUTE_NAMES = Object.keys(ROUTES);
 let harness;
 
 /**
- * Jeden Budget-Untertab oeffnen und `visit(name)` darin laufen lassen.
+ * Die aktuelle Route besuchen UND jede SICHT, die sie selbst als umschaltbar
+ * deklariert. `visit(where)` laeuft in jedem Zustand einmal.
  *
- * WARUM DAS SEIN MUSS: die Budget-Untertabs wechseln nach der Leisten-Regel
- * eine SICHT innerhalb eines Moduls, also keine Route. Wer nur `ROUTES`
- * abfaehrt, sieht von sieben Kennzahlreihen eine und von den Wischlisten der
- * App die Abo-Liste gar nicht - und „antwortet die Liste ueberhaupt" ist genau
- * die Frage, die eine Ebene tiefer niemand beantworten kann.
+ * WARUM DAS SEIN MUSS: eine Route ist nicht dasselbe wie eine Sicht. Von sieben
+ * Kennzahlreihen der App liegt genau eine auf einer eigenen Route, die
+ * Abo-Wischliste auf gar keiner, und die Listenansicht der Dokumente ebenso
+ * wenig - Standard ist dort das Raster. Wer nur `ROUTES` abfaehrt, bekommt
+ * seinen Guard gruen und hat die Haelfte der App nie gesehen. Die Leisten-Regel
+ * (§2) sagt es von der anderen Seite: ein Untertab wechselt die SICHT, nicht
+ * die Route.
  *
- * Es steht hier oben und nicht zweimal weiter unten: zwei Aufzaehlungen
- * derselben Arbeit verlieren eine davon einen Schritt, und man sieht erst im
- * Dokument, welchen.
+ * DIE SICHTEN KOMMEN AUS DEM MARKUP, NICHT AUS EINER LISTE: gefahren wird, was
+ * die Seite selbst als exklusive Auswahl auszeichnet - `role="tab"` in einer
+ * Tablist und Gruppen von `aria-pressed`-Knoepfen unter einem Traeger. Das ist
+ * dieselbe Ableitung wie beim Glas-Guard (Session 16): die Zusage steht im
+ * Element, nicht in einem Namen. Damit erreicht der Helfer alle vier Bauarten,
+ * die es heute gibt (Budget-Untertabs, Health-Routen, Housekeeping-Tabs, der
+ * Raster/Listen-Umschalter der Dokumente) und die, die noch kommen.
+ *
+ * NICHT ANGEFASST WIRD EIN `<select>`: das ist ein Eingabefeld. Eine Sonde, die
+ * eines umstellt, schreibt in den Seed - genau die Grenze, die Sonde 5 fuer die
+ * Wischgeste zieht.
+ *
+ * ZURUECKGESTELLT WIRD IMMER: `localStorage` haengt am Origin, nicht an der
+ * Page. Ein hier umgeschalteter Zustand (die Dokumente merken sich ihre
+ * Ansicht) fuende sich sonst in der naechsten Sonde wieder, und die maesse dann
+ * eine Seite, die so nie jemand oeffnet.
  */
-async function visitBudgetTabs(page, visit) {
-  await gotoRoute(page, ROUTES.budget);
-  const tabIds = await page.evaluate(() => [...document.querySelectorAll('[role="tab"][data-tab-id]')]
-    .map((b) => b.dataset.tabId));
-  for (const id of tabIds) {
-    const clicked = await page.evaluate((tabId) => {
-      const btn = document.querySelector(`[data-tab-id="${tabId}"]`);
-      if (!btn) return false;
-      btn.click();
-      return true;
-    }, id);
-    if (!clicked) continue;
-    // Der Tabwechsel laedt seine Daten nach; ohne das Warten misst die Sonde
-    // den VORIGEN Tab (dieselbe Falle wie in Session 11, „eine Sonde misst nur,
-    // was zum Messzeitpunkt existiert").
-    await new Promise((resolve) => setTimeout(resolve, 1200));
-    await visit(`budget/${id}`);
+async function visitViews(page, where, visit) {
+  await visit(where);
+
+  const groups = await page.evaluate(() => {
+    const vis = (el) => {
+      const r = el.getBoundingClientRect();
+      return r.width > 0 && r.height > 0;
+    };
+    const out = [];
+    for (const list of document.querySelectorAll('[role="tablist"]')) {
+      const tabs = [...list.querySelectorAll('[role="tab"]')].filter(vis);
+      const cls = [...list.classList][0];
+      if (tabs.length > 1 && cls) out.push({ sel: `.${cls} [role="tab"]`, n: tabs.length });
+    }
+    const byParent = new Map();
+    for (const btn of document.querySelectorAll('[aria-pressed]')) {
+      if (!vis(btn) || btn.closest('[role="tablist"]')) continue;
+      const parent = btn.parentElement;
+      if (!parent) continue;
+      if (!byParent.has(parent)) byParent.set(parent, []);
+      byParent.get(parent).push(btn);
+    }
+    for (const [parent, btns] of byParent) {
+      const cls = [...parent.classList][0];
+      if (btns.length > 1 && cls) out.push({ sel: `.${cls} > [aria-pressed]`, n: btns.length });
+    }
+    return out;
+  });
+
+  const active = (sel) => page.evaluate((s) => [...document.querySelectorAll(s)]
+    .findIndex((e) => e.getAttribute('aria-selected') === 'true' || e.getAttribute('aria-pressed') === 'true'), sel);
+  const clickAt = (sel, idx) => page.evaluate((s, i) => {
+    const el = document.querySelectorAll(s)[i];
+    if (!el) return false;
+    el.click();
+    return true;
+  }, sel, idx);
+
+  for (const group of groups) {
+    const before = await active(group.sel);
+    for (let i = 0; i < group.n; i += 1) {
+      if (!(await clickAt(group.sel, i))) continue;
+      // Der Wechsel laedt seine Daten nach; ohne das Warten misst die Sonde die
+      // VORIGE Sicht (dieselbe Falle wie in Session 11, „eine Sonde misst nur,
+      // was zum Messzeitpunkt existiert").
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await visit(`${where}:${i}`);
+    }
+    if (before >= 0) {
+      await clickAt(group.sel, before);
+      await new Promise((resolve) => setTimeout(resolve, 600));
+    }
   }
 }
 
@@ -841,11 +892,11 @@ describe('Sonde 5 - eine Wischzeile antwortet, und jede Rolle liegt an ihrer Kan
 
       for (const name of ROUTE_NAMES) {
         await gotoRoute(page, ROUTES[name]);
-        await measure(name);
+        // Auch die Sichten hinter den Leisten: die Abo-Liste liegt hinter einem
+        // Untertab und waere sonst die einzige Wischliste der App, die nie
+        // gefahren wird.
+        await visitViews(page, name, measure);
       }
-      // Die Abo-Liste liegt hinter einem Untertab und waere sonst die einzige
-      // Wischliste der App, die nie gefahren wird.
-      await visitBudgetTabs(page, measure);
       await page.close();
 
       // Eine Sonde, die nichts gemessen hat, darf nicht urteilen (dieselbe
@@ -912,15 +963,13 @@ describe('Sonde 6 - die Kacheln einer Kennzahlreihe sind gleich hoch', () => {
         }
       };
 
+      // Auch die Sichten hinter den Leisten: sie wechseln nach der
+      // Leisten-Regel (§2) die SICHT innerhalb eines Moduls, nicht die Route.
+      // Ohne sie saehe die Sonde von sieben Kennzahlreihen genau eine.
       for (const name of ROUTE_NAMES) {
         await gotoRoute(page, ROUTES[name]);
-        check(name, await metricRowHeights(page));
+        await visitViews(page, name, async (where) => check(where, await metricRowHeights(page)));
       }
-
-      // Die Budget-Untertabs wechseln keine Route (§2, Leisten-Regel: sie
-      // wechseln die SICHT innerhalb eines Moduls). Ohne diesen Durchlauf
-      // saehe die Sonde von sieben Kennzahlreihen genau eine.
-      await visitBudgetTabs(page, async (where) => check(where, await metricRowHeights(page)));
       await page.close();
 
       // Eine Sonde, die nichts gemessen hat, darf nicht urteilen (dieselbe
@@ -935,4 +984,160 @@ describe('Sonde 6 - die Kacheln einer Kennzahlreihe sind gleich hoch', () => {
         + 'nicht dem laengsten Text einer Zelle.\n  ' + findings.join('\n  '));
     });
   }
+});
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Sonde 7: keine gap-getrennte Kartenspalte
+ *
+ * Die Zeilenlisten-Regel (§2, Session 6) sagt: eine Folge gleichartiger Zeilen
+ * liegt in GENAU EINEM Traeger, und die Zeilen darin sind flaechenlos und
+ * trennen sich ueber den `+`-Kombinator. Phase 5 hat die statisch pruefbare
+ * Haelfte gezogen - eine Zeile, die ihre Flaeche UND ihren Stapelabstand selbst
+ * mitbringt. Die hier gemeinte Bauart ist dieselbe Regelverletzung, nur mit dem
+ * Abstand am TRAEGER: die Karte traegt Flaeche, Radius und Schatten, getrennt
+ * wird ueber dessen `gap`.
+ *
+ * WARUM EBENE 4 UND NICHT DAS STYLESHEET: der Traeger ist in dieser Codebasis
+ * statisch nicht auflösbar (§2, Session 15). `list.insertAdjacentHTML(...)`
+ * bindet ihn an eine JS-Variable; ein Rueckwaerts-Tag-Lauf fand ihn fuer vier
+ * Module gar nicht. Wo das `gap` steht, weiss erst das Dokument.
+ *
+ * WAS EINE KARTENSPALTE IST, UND WAS NICHT - jedes Merkmal gemessen, keines
+ * benannt:
+ *   - Eine SPALTE IN JEDER GROESSENKLASSE. Mobil bricht jedes mehrspaltige
+ *     Raster auf eine Spalte um; wer nur dort misst, meldet die Kennzahlraster
+ *     der Gesundheit, die Notiz-Masonry und die Dashboard-Widgets - allesamt
+ *     Raster aus Objekten mit eigenem Medium, also die benannte Ausnahme der
+ *     Regel. Gemeldet wird deshalb nur, was in BEIDEN Geraetewelten ein
+ *     vertikaler Stapel ist. Gemessen: 16 Kandidaten mobil, 6 im Schnitt.
+ *   - EINE KARTE HAT EINEN RADIUS. `.week-gutter-label` traegt Flaeche und
+ *     Schatten bei Radius 0 - eine Rasterbeschriftung, keine Karte.
+ *   - EINE KAPSEL IST EIN GRIFF. Die Buttonform-Regel sagt es positiv: die
+ *     Kapsel ist die EINE Form fuer Elemente, die eine Aktion ausloesen.
+ *   - EINE BUEHNE TRAEGT EINE ZEILE, KEINE STRUKTUR. `.subscription-card` liegt
+ *     in einer `.swipe-row`, die bewusst flaechenlos ist; ohne Durchgriff waere
+ *     jede Wischliste unsichtbar. Der Durchgriff greift durch genau EIN Kind im
+ *     Fluss - `.list-group` hat zwei (Gruppenkopf und Zeilenliste) und ist
+ *     damit das Gegenteil eines Verstosses.
+ *   - WAS MAN ZIEHT, IST EIN OBJEKT. `.kanban-card` ist `draggable`; ein Board
+ *     ist keine Liste.
+ *   - EIN DROP-ZIEL BEHAELT SEINE KANTE (§2, Kasten-in-Kasten). `.meal-slot`
+ *     traegt sie gestrichelt und sitzt per `grid-row` in einem Wochenraster.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/** Jede Folge gleichartiger Karten, die ihre Trennung dem `gap` ihres Traegers ueberlaesst. */
+async function cardColumns(page) {
+  return page.evaluate(() => {
+    const shown = (n) => {
+      const r = n.getBoundingClientRect();
+      return r.width > 1 && r.height > 1;
+    };
+    const opaque = (bg) => bg && bg !== 'rgba(0, 0, 0, 0)' && !/\/\s*0?\.\d+\)/.test(bg);
+    const inFlow = (el) => [...el.children].filter((c) => {
+      const pos = getComputedStyle(c).position;
+      return pos !== 'absolute' && pos !== 'fixed';
+    });
+    const hits = [];
+    const seen = new Set();
+
+    for (const el of document.querySelectorAll('*')) {
+      const parent = el.parentElement;
+      if (!parent) continue;
+      const cls = [...el.classList][0];
+      if (!cls) continue;
+      const key = `${parent.className}>${cls}`;
+      if (seen.has(key)) continue;
+
+      // Eine FOLGE, kein Einzelfall - und sichtbar, nicht bloss im DOM: ein
+      // inaktives Tab-Panel bleibt stehen, und seine Karten messen 0x0.
+      const sibs = [...parent.children].filter((s) => s.classList.contains(cls) && shown(s));
+      if (sibs.length < 3) continue;
+
+      // Die Trennung liegt am TRAEGER. Ohne `row-gap` trennt etwas anderes.
+      const rowGap = parseFloat(getComputedStyle(parent).rowGap) || 0;
+      if (!(rowGap > 0)) continue;
+
+      // Ein vertikaler Stapel: das zweite Geschwister steht UNTER dem ersten,
+      // an derselben Kante. Nebeneinander ist ein Raster.
+      const first = sibs[0].getBoundingClientRect();
+      const second = sibs[1].getBoundingClientRect();
+      if (!(second.top >= first.bottom - 1 && Math.abs(second.left - first.left) < 2)) continue;
+
+      let card = el;
+      let via = '';
+      if (!opaque(getComputedStyle(el).backgroundColor)) {
+        const kids = inFlow(el).filter(shown);
+        if (kids.length !== 1) continue;
+        [card] = kids;
+        via = `${cls} > .`;
+      }
+      const cs = getComputedStyle(card);
+      if (!opaque(cs.backgroundColor)) continue;
+      if (cs.breakInside === 'avoid') continue;
+      if (el.draggable || card.draggable) continue;
+      if (cs.borderTopStyle === 'dashed') continue;
+
+      const rect = card.getBoundingClientRect();
+      const radius = parseFloat(cs.borderTopLeftRadius) || 0;
+      if (radius <= 0) continue;
+      if (radius >= rect.height / 2 - 0.5) continue;
+
+      seen.add(key);
+      hits.push({
+        cls: `${via}${[...card.classList][0]}`,
+        parent: parent.className.split(' ')[0] || parent.tagName.toLowerCase(),
+        count: sibs.length,
+        gap: rowGap,
+      });
+    }
+    return hits;
+  });
+}
+
+test('Sonde 7 - eine Zeilenfolge ist keine Spalte aus Karten', async () => {
+  const perDevice = new Map();
+  let viewsSeen = 0;
+
+  for (const device of ['desktop', 'mobile']) {
+    const page = await openPage(harness, { device, theme: 'light', locale: 'de' });
+    const found = new Map();
+    const note = async (where) => {
+      viewsSeen += 1;
+      for (const hit of await cardColumns(page)) {
+        if (!found.has(hit.cls)) found.set(hit.cls, { ...hit, where });
+      }
+    };
+    for (const name of ROUTE_NAMES) {
+      await gotoRoute(page, ROUTES[name]);
+      await visitViews(page, name, note);
+    }
+    await page.close();
+    perDevice.set(device, found);
+  }
+
+  // Der SCHNITT beider Groessenklassen: was mobil untereinander steht und auf
+  // dem Desktop nebeneinander, ist ein Raster, das umbricht.
+  const desktop = perDevice.get('desktop');
+  const mobile = perDevice.get('mobile');
+  const findings = [...desktop.entries()]
+    .filter(([cls]) => mobile.has(cls))
+    .map(([cls, hit]) => `${hit.where} · .${cls}: ${hit.count} Karten in .${hit.parent}, getrennt ueber gap ${hit.gap}px.`);
+
+  // Eine Sonde, die nichts gesehen hat, darf nicht urteilen (dieselbe
+  // Zusicherung wie bei Sonde 3, 4, 5 und 6) - und hier ist es die REICHWEITE,
+  // die belegt werden muss, nicht die Zahl der Befunde. Gemessen sind es 92 je
+  // Geraet: 16 Routen plus die Sichten dahinter. Faellt der Helfer auf die
+  // blossen Routen zurueck, ist ein gruener Lauf keine Aussage mehr, sondern
+  // genau die Luecke, wegen der es diese Sonde gibt.
+  assert.ok(viewsSeen >= 2 * (ROUTE_NAMES.length + 30),
+    `Nur ${viewsSeen} Sichten besucht (erwartet: deutlich mehr als die ${2 * ROUTE_NAMES.length} Routen). `
+    + 'Der Reichweiten-Helfer erreicht die Sichten hinter den Leisten nicht mehr - '
+    + 'Budget-Untertabs, Health-Routen, Housekeeping-Tabs, Raster/Liste der Dokumente.');
+
+  assert.deepEqual(findings, [],
+    'Kartenspalten im gerenderten Dokument. Eine Folge gleichartiger Zeilen liegt in GENAU EINEM '
+    + 'Traeger (randlose Karte, `overflow: hidden`); die Zeilen darin sind flaechenlos und trennen '
+    + 'sich ueber `> * + *`. Eine Karte je Zeile sagt „jedes davon ist ein eigenes Objekt", wo die '
+    + 'Gruppe gemeint ist - und ein Schatten je Zeile erzeugt in einer langen Liste Streifen.\n  '
+    + findings.join('\n  '));
 });

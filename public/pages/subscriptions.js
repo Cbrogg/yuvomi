@@ -350,7 +350,7 @@ function renderContent() {
               <i data-lucide="refresh-cw" aria-hidden="true"></i>${t('subscriptions.refreshRates')}
             </button>`}
       </div>
-      <div class="subscriptions-list" id="subscriptions-list">
+      <div class="subscriptions-list row-divided" id="subscriptions-list">
         ${rows.length ? rows.map(renderCard).join('') : renderEmpty()}
       </div>
     </section>
