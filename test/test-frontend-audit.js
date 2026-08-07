@@ -4031,8 +4031,16 @@ test('calendar agenda events and task chips keep readable contrast in mobile age
   const taskBody = cssRuleBody(calendar, '.cal-task-chip');
   const metaBody = cssRuleBody(calendar, '.agenda-event__meta');
 
-  assert.match(eventBody, /background:\s*var\(--color-surface-work\)/, 'agenda rows need a solid surface for mobile contrast');
-  assert.match(eventBody, /border:\s*var\(--space-px\)\s+solid\s+var\(--color-border-subtle\)/, 'agenda rows need a boundary in both themes');
+  // Die Flaeche, die den Kontrast traegt, gehoert seit der Zeilenlisten-Regel
+  // (Runde 6, Phase 5) dem TRAEGER, nicht der Zeile: `.list-rows` steht auf
+  // --color-surface-work und klippt die Gruppe, die Trennung ist seine
+  // Haarlinie. Die Zusage bleibt dieselbe - eine Agenda-Zeile liegt auf einer
+  // opaken Flaeche und hat eine sichtbare Grenze zur naechsten -, sie wird nur
+  // eine Ebene hoeher eingeloest.
+  assert.doesNotMatch(eventBody, /background(-color)?:/, 'the agenda row is a row: its surface belongs to the carrier');
+  assert.doesNotMatch(eventBody, /border:|box-shadow:/, 'the agenda row is a row: no own edge, no own shadow');
+  assert.match(read('../public/pages/calendar.js'), /<div class="list-rows">\$\{events/,
+    'agenda events must sit in exactly one carrier (.list-rows), which carries surface and hairlines');
   // Kalenderfarbe ist ein zentrierter Dot (kein vollhoher Seitenstreifen) —
   // tokenisiert und sichtbar, konsistent mit den Status-Dots der Aufgabenliste.
   assert.match(colorBody, /width:\s*var\(--space-2\)/, 'agenda color dot should use a spacing token for its width');
@@ -7045,6 +7053,145 @@ test('row lists sit in exactly one carrier', () => {
         }
       }
     }
+  }
+  assert.deepEqual(offenders, []);
+});
+
+// --------------------------------------------------------------------------
+// Zeilenlisten-Regel, ZWEITE HAELFTE (Runde 6, Phase 5a) - Ebene 3, Signatur.
+//
+// Die erste Haelfte oben sucht `X + X { border-top }` und findet damit NUR,
+// wer die Regel schon befolgt. Eine Liste, die sie nie angewandt hat, hat
+// keine solche Deklaration und wird nie besucht - genau deshalb blieben
+// `.task-card` und `.agenda-event` bis zum Finish-Review unentdeckt.
+//
+// DIE SIGNATUR EINER KARTE PRO ZEILE, in zwei Teilen:
+//   (1) Die Klasse wird in einer Render-Schleife WIEDERHOLT ausgegeben - sie
+//       steht also fuer eine Folge gleichartiger Elemente, nicht fuer ein
+//       Einzelstueck. Abgeleitet aus `.map(`-Rueckgaben in public/pages/,
+//       nicht aus einer Dateiliste.
+//   (2) Sie traegt eine eigene KARTENFLAECHE (`--color-surface*`) UND ihren
+//       Stapelabstand SELBST (`margin-bottom` / `margin-block-end`). Das ist
+//       der Kern: eine Karte pro Zeile ist die Flaeche UND der Abstand zur
+//       naechsten. In einer Zeilenliste gehoert beides dem Traeger - die
+//       Flaeche der Gruppe, die Trennung `.list-rows > * + *`.
+//
+// WARUM DER SCHATTEN NICHT DAS MERKMAL IST: er hebt, was schon eine Flaeche
+// hat. `.cal-task-chip` traegt einen Schatten auf einer color-mix-Toenung und
+// ist eine Tint-Bar im Monatsraster, keine Karte in einer Zeilenliste.
+//
+// AUSNAHME, MECHANISCH STATT NAMENTLICH: wer `break-inside: avoid` traegt,
+// fliesst in einer Multicolumn-Masonry (`.health-overview__grid`), und dort
+// IST der eigene Aussenabstand der einzige Weg, Kacheln zu trennen - `gap`
+// wirkt zwischen Spalten, nicht zwischen Elementen einer Spalte. Das ist die
+// Raster-Ausnahme der Regel, an der Kachel selbst ablesbar.
+//
+// GRENZE, BEWUSST BENANNT: eine Kartenspalte, die ihre Trennung dem `gap`
+// ihres Traegers ueberlaesst (`.documents-list--list > .document-row`), sieht
+// diese Haelfte NICHT - der Traeger einer Liste ist in dieser Codebasis
+// statisch nicht aufloesbar (`list.insertAdjacentHTML(..., docs.map(...))`).
+// Vollstaendig ist das nur im gerenderten Dokument (Ebene 4).
+// --------------------------------------------------------------------------
+
+// Wurzelklassen, die in einer Render-Schleife wiederholt ausgegeben werden.
+// Quelle ist das Markup, nicht eine Namensliste: jede `.map(`-Rueckgabe, die
+// ein Element oeffnet, und jede render*-Funktion, die aus einer solchen
+// Rueckgabe heraus aufgerufen wird (`renderSwipeRow(t, renderTaskCard(t))`
+// liefert BEIDE - der Wrapper und die Karte darin).
+function repeatedRootClasses() {
+  const firstClass = (text) => {
+    const value = text.match(/class="([^"$]*)/)?.[1]?.trim().split(/\s+/)[0];
+    return value && /^[a-z][\w-]*$/.test(value) ? value : null;
+  };
+  // Klammerweise statt per Regex: ein Callback enthaelt selbst Klammern.
+  const callArgs = (source, parenIndex) => {
+    let depth = 0;
+    for (let i = parenIndex; i < source.length; i += 1) {
+      if (source[i] === '(') depth += 1;
+      else if (source[i] === ')') {
+        depth -= 1;
+        if (depth === 0) return source.slice(parenIndex + 1, i);
+      }
+    }
+    return '';
+  };
+
+  const roots = new Map();
+  for (const path of walkJsFiles('../public/pages/')) {
+    const source = read(path);
+
+    // Wurzelklasse je Funktion: die erste Klasse NACH ihrem `return \``, nicht
+    // die erste der Funktion - sonst gewinnt eine innere Schleife (in
+    // renderTaskCard steht die Subtask-Zeile vor dem return).
+    const returned = new Map();
+    for (const match of source.matchAll(/function\s+([A-Za-z_$][\w$]*)\s*\(/g)) {
+      const slice = source.slice(match.index, match.index + 6000);
+      const start = slice.indexOf('return `');
+      const value = start >= 0 ? firstClass(slice.slice(start, start + 900)) : null;
+      if (value) returned.set(match[1], value);
+    }
+
+    for (const match of source.matchAll(/\.map\s*\(/g)) {
+      const body = callArgs(source, match.index + match[0].length - 1);
+      if (!body) continue;
+      const found = new Set();
+      const inline = firstClass(body.slice(0, 600));
+      if (inline) found.add(inline);
+      for (const call of body.matchAll(/([A-Za-z_$][\w$]*)\s*\(/g)) {
+        if (returned.has(call[1])) found.add(returned.get(call[1]));
+      }
+      if (returned.has(body.trim())) found.add(returned.get(body.trim()));
+      for (const value of found) {
+        if (!roots.has(value)) roots.set(value, new Set());
+        roots.get(value).add(path.replace('../public/pages/', ''));
+      }
+    }
+  }
+  return roots;
+}
+
+test('row lists: a repeated sheet that stacks itself is a card per row', () => {
+  const roots = repeatedRootClasses();
+  assert.ok(roots.size > 50,
+    `Nur ${roots.size} wiederholte Wurzelklassen gefunden - die Ableitung aus den `
+    + 'Render-Schleifen greift nicht mehr, und ein Guard, der nichts gesehen hat, '
+    + 'darf nicht urteilen.');
+
+  const rules = new Map(); // Klasse -> [{ file, body }]
+  for (const name of readdirSync(new URL('../public/styles/', import.meta.url)).filter((n) => n.endsWith('.css'))) {
+    for (const { selector, body } of eachRule(read(`../public/styles/${name}`))) {
+      for (const part of selector.split(',')) {
+        const single = part.trim().match(/^\.([\w-]+)$/);
+        if (!single) continue;
+        if (!rules.has(single[1])) rules.set(single[1], []);
+        rules.get(single[1]).push({ file: name, body });
+      }
+    }
+  }
+
+  const values = (body, prop) =>
+    [...body.matchAll(new RegExp(`(?:^|;)\\s*${prop}:([^;]*)`, 'g'))].map((m) => m[1].trim());
+  const CARD_SURFACE = /^var\(--color-surface(-work|-raised|-elevated)?\)$/;
+  const isZero = (value) => /^0(px|rem|em)?$/.test(value);
+
+  const offenders = [];
+  for (const [cls, files] of [...roots].sort()) {
+    const own = rules.get(cls) ?? [];
+    const sheet = own.find((rule) =>
+      [...values(rule.body, 'background'), ...values(rule.body, 'background-color')]
+        .some((value) => CARD_SURFACE.test(value)));
+    if (!sheet) continue;
+    const spacing = own.find((rule) =>
+      [...values(rule.body, 'margin-bottom'), ...values(rule.body, 'margin-block-end')]
+        .some((value) => !isZero(value)));
+    if (!spacing) continue;
+    // Multicolumn-Masonry: der eigene Rand ist dort der einzige Trennweg.
+    if (own.some((rule) => values(rule.body, 'break-inside').includes('avoid'))) continue;
+
+    offenders.push(
+      `.${cls} (${[...files].join(', ')}) traegt in ${sheet.file} eine eigene Kartenflaeche `
+      + 'UND ihren Stapelabstand selbst - das ist eine Karte pro Zeile. '
+      + 'Flaeche und Trennung gehoeren dem Traeger (Muster: .list-rows > * + *).');
   }
   assert.deepEqual(offenders, []);
 });

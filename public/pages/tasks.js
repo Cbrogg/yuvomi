@@ -377,11 +377,13 @@ function renderTaskGroups(tasks, groupMode) {
         <span class="task-group__title">${esc(groupMode === 'category' ? catLabel(name) : name)}</span>
         <span class="task-group__count">${groupTasks.length}</span>
       </div>
-      ${sorted.map((t) => renderSwipeRow(t, renderTaskCard(t, {
-        showCheckbox: state.bulkSelectMode,
-        isChecked: state.selectedTaskIds.has(t.id),
-        expandedSubtasks: state.subtasksExpandedByDefault,
-      }))).join('')}
+      <div class="list-rows">
+        ${sorted.map((t) => renderSwipeRow(t, renderTaskCard(t, {
+          showCheckbox: state.bulkSelectMode,
+          isChecked: state.selectedTaskIds.has(t.id),
+          expandedSubtasks: state.subtasksExpandedByDefault,
+        }))).join('')}
+      </div>
     </div>`;
   }).join('');
 }

@@ -776,6 +776,10 @@
   margin-bottom: var(--space-4);
 }
 
+
+/* Der Kopf fluchtet mit dem Träger der Tageszeilen (.list-rows aus
+ * list-row.css, mit dem app-weit einen Lesemaß) - sonst stünde das Datum
+ * breiter als die Zeilen, die es benennt. */
 .agenda-day__header {
   display: flex;
   align-items: baseline;
@@ -783,6 +787,7 @@
   padding: var(--space-2) 0 var(--space-1);
   border-bottom: 2px solid var(--color-border);
   margin-bottom: var(--space-2);
+  max-width: var(--content-max-width-narrow);
   position: sticky;
   top: 0;
   background-color: var(--color-bg);
@@ -804,23 +809,26 @@
   color: var(--color-accent);
 }
 
+/* Zeile, keine Karte: KEINE eigene Fläche, KEINE Kante, KEIN Radius, KEIN
+ * Schatten, KEIN eigener Abstand. Das leistet der Träger (.list-rows), die
+ * Trennung seine Haarlinie `.list-rows > * + *`.
+ *
+ * Die abgelegte Fläche war `--color-surface-work` - der generische
+ * Arbeitsflächen-Token, derselbe, den `.list-rows` jetzt als Trägerfläche
+ * trägt. Er trug hier KEINE Semantik (kein Zustand, keine Kalenderfarbe),
+ * deshalb braucht das Entkarten keinen Zweitkanal: die Kalenderfarbe hängt
+ * seit jeher am Punkt (.agenda-event__color). */
 .agenda-event {
   display: flex;
   align-items: stretch;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-sm);
-  border: var(--space-px) solid var(--color-border-subtle);
-  background: var(--color-surface-work);
-  box-shadow: var(--shadow-xs);
-  margin-bottom: var(--space-1);
   cursor: pointer;
-  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+  transition: background-color var(--transition-fast);
 }
 
 .agenda-event:hover {
   background-color: var(--color-surface-hover);
-  border-color: var(--color-border);
 }
 
 .agenda-event:focus-visible {

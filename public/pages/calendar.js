@@ -1839,7 +1839,7 @@ function renderAgendaView(container) {
                 <span class="agenda-holiday__dot"></span>
                 <span>${esc(h.name)}</span>
               </div>`).join('')}</div>` : ''}
-            ${events.map((ev) => renderAgendaEvent(ev, date)).join('')}
+            ${events.length ? `<div class="list-rows">${events.map((ev) => renderAgendaEvent(ev, date)).join('')}</div>` : ''}
             ${tasks.length ? `<div class="agenda-tasks">${tasks.map(renderTaskChip).join('')}</div>` : ''}
           </div>
         `).join('')
@@ -2055,7 +2055,7 @@ function renderCalendarSearchResults(body) {
             <span class="agenda-day__date">${formatDate(date, { long: true })}</span>
             <span class="agenda-day__weekday">${DAY_NAMES_LONG()[new Date(date + 'T00:00:00').getDay()]}</span>
           </div>
-          ${events.map((ev) => renderAgendaEvent(ev, date)).join('')}
+          <div class="list-rows">${events.map((ev) => renderAgendaEvent(ev, date)).join('')}</div>
         </div>
       `).join('')}
     </div>

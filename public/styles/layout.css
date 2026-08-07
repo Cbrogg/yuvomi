@@ -4069,13 +4069,31 @@ textarea::placeholder {
  * .birthday-item); die Geste, die Reveal-Rollen und der Hinweis sind geteilt.
  * Der JS-Teil liegt in utils/swipe-row.js.
  * -------------------------------------------------------- */
+/* Der Wischwrapper ist eine reine Buehne fuer die Geste: KEIN eigener Radius,
+ * KEIN eigener Abstand. Beides gehoert dem Traeger der Zeilenliste, der die
+ * Wischflaeche mit seinem `overflow: hidden` ohnehin beschneidet.
+ *
+ * Die Zusage stand vorher dreimal: die Geburtstage setzten sie zurueck, die
+ * Aufgaben trugen sie mit (Karte pro Zeile), und im Einkauf blieb sie
+ * unbemerkt stehen - gemessen 8px Luft ZWISCHEN Haarlinie und Zeile, in
+ * genau der Liste, die als Vorbild der Zeilenlisten-Regel gilt. Eine geteilte
+ * Regel ohne Guard ist eine wandernde Annahme; hier traegt sie die Basis. */
 .swipe-row {
   position: relative;
   overflow: hidden;
-  border-radius: var(--radius-md);
-  margin-bottom: var(--space-2);
   /* Verhindert ungewolltes Flackern auf iOS */
   -webkit-backface-visibility: hidden;
+}
+
+/* Waehrend der Geste traegt die bewegte Zeile die Traegerflaeche: das
+ * Reveal-Panel liegt unter ihr und darf nur dort sichtbar werden, wo sie
+ * weggewischt ist. Solange jede Zeile eine eigene Kartenflaeche hatte, fiel
+ * das nicht auf - in dem Moment, in dem sie flach wird, laege der Zeilentext
+ * ueber dem aufgedeckten Panel. Geteilt statt je Modul: die drei Wischlisten
+ * hatten dafuer drei Regeln, die alle nur den Schatten setzten. */
+.swipe-row--swiping > :first-child {
+  background-color: var(--color-surface-work);
+  box-shadow: var(--shadow-lg);
 }
 
 /* Reveal-Panels hinter der Karte */

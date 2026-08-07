@@ -309,12 +309,18 @@
   margin-bottom: var(--space-6);
 }
 
+/* Der Träger der Zeilenliste ist die geteilte Gruppe aus list-row.css - mit
+ * ihrem Lesemaß. Das ist EIN Wert app-weit (Guard „die Küchen-Listen teilen
+ * eine Zeilen-Grammatik"), und die Aufgabenliste stand bisher als einzige
+ * Zeilenliste ungekappt bei 996px. Der Gruppenkopf fluchtet deshalb mit dem
+ * Träger, sonst stünde die Beschriftung breiter als das, was sie benennt. */
 .task-group__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: var(--space-2);
   padding: 0 var(--space-1);
+  max-width: var(--content-max-width-narrow);
 }
 
 .task-group__title {
@@ -337,18 +343,14 @@
  * liegen in layout.css
  * -------------------------------------------------------- */
 
-/* Kein Margin mehr am Task-Card selbst (übernimmt swipe-row) */
+/* KEIN eigener Radius, KEIN eigener Abstand: beides gehört dem Träger
+ * (.list-rows), der die Wischfläche mit seinem overflow: hidden klippt.
+ * Das Touch-Feedback während der Geste trägt die geteilte Bühne
+ * (.swipe-row--swiping > :first-child in layout.css). */
 .swipe-row .task-card {
-  margin-bottom: 0;
-  border-radius: var(--radius-md);
   position: relative;
   z-index: 1;
   will-change: transform;
-}
-
-/* Touch-Feedback: leichte Hervorhebung während Swipe */
-.swipe-row--swiping .task-card {
-  box-shadow: var(--shadow-lg);
 }
 
 /* Swipe-Affordanz: der geteilte Chevron-Hint aus layout.css (.swipe-row::after)
@@ -361,18 +363,18 @@
 /* --------------------------------------------------------
  * Task-Card
  * -------------------------------------------------------- */
+/* Zeile, keine Karte: KEINE eigene Fläche, KEIN Radius, KEIN Schatten, KEIN
+ * eigener Abstand. Das leistet alles der Träger (.list-rows), die Trennung
+ * seine Haarlinie `.list-rows > * + *`. Vorher war jede Aufgabe eine weiße
+ * Karte auf dem Grouped-Grund - das Karten-Paradigma, das der Einkauf in
+ * Runde 3 abgelegt hat und die Aufgaben behielten, weil der Zeilenlisten-Guard
+ * nur fand, wer die Regel schon befolgt. */
 .task-card {
-  background-color: var(--color-surface);
-  /* HIG-Zelle: symmetrische Rundung (Inset-Grouped-Sprache). */
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
-  margin-bottom: var(--space-2);
-  overflow: hidden;
-  transition: box-shadow var(--transition-fast);
+  transition: background-color var(--transition-fast);
 }
 
 .task-card:hover {
-  box-shadow: var(--shadow-md);
+  background-color: var(--color-surface-hover);
 }
 
 .task-card--done {

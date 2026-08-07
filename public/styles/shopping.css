@@ -791,10 +791,9 @@
 }
 
 /* Rechts hinter der Karte = Löschen (Swipe nach rechts) */
-/* Touch-Feedback: leichte Hervorhebung während Swipe */
-.swipe-row--swiping .shopping-item {
-  box-shadow: var(--shadow-lg);
-}
+/* Das Touch-Feedback während der Geste trägt jetzt die geteilte Bühne
+ * (.swipe-row--swiping > :first-child in layout.css), zusammen mit der
+ * Trägerfläche, die das Reveal-Panel verdeckt. */
 
 /* × Löschen-Button ausblenden, wo Swipe übernimmt. Greift über das
  * data-Attribut, weil die Zeilenaktionen die geteilte .row-action-Klasse
