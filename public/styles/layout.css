@@ -1017,8 +1017,21 @@ html:has(.search-overlay--visible) yuvomi-install-prompt {
  *
  * Das ICON behält den vollen Akzent - für Nicht-Text gilt 3:1, und die
  * Konvention sagt das ausdrücklich. */
+/* Und dieselbe Konvention in der SIDEBAR, aus demselben Grund (Runde 6,
+ * Phase 3). Der gleitende Indikator tönt dort dieselbe Farbe, die das Label
+ * schreibt; gemessen im Dark auf der Übersicht: 4.20:1 gegen #29292D, also
+ * unter AA.
+ *
+ * Warum das Phase 0b entging, obwohl sie genau diesen Fall behandelte: die
+ * Kontrast-Sonde maß, BEVOR der Indikator an seiner Position angekommen war
+ * (§6, „Wandernder Sidebar-Indikator"). Erst nachdem der Harness auf Ruhe
+ * wartet statt auf das erste Kind, stand die Pille beim Messen da. Ein Guard
+ * misst nur, was zum Messzeitpunkt existiert - und das ist eine Eigenschaft
+ * des Guards, nicht der Regel. */
 .nav-bottom .nav-item[aria-current="page"] .nav-item__label,
-.nav-bottom .nav-item--active .nav-item__label {
+.nav-bottom .nav-item--active .nav-item__label,
+.nav-sidebar .nav-item[aria-current="page"] .nav-item__label,
+.nav-sidebar .nav-item--active .nav-item__label {
   color: color-mix(
     in srgb,
     var(--item-module-accent, var(--active-module-accent, var(--color-accent))) 70%,
@@ -2403,7 +2416,7 @@ p.field-hint--warn[hidden] {
 .modal-panel__action {
   min-height: var(--target-base);
   padding: 0 var(--space-3);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-full);
   /* Modul-Akzent führt (DESIGN.md §2): Die Kopf-Aktion gehört zum Modul, in dem
    * das Modal steht, nicht zur Shell. */
   color: var(--active-module-accent, var(--color-accent));
@@ -3007,7 +3020,7 @@ p.field-hint--warn[hidden] {
   border: none;
   background: transparent;
   color: var(--color-text-tertiary);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-full);
   cursor: pointer;
   transition: background-color var(--transition-fast), color var(--transition-fast);
 }
@@ -3228,7 +3241,7 @@ textarea::placeholder {
 .ingredient-row__remove {
   width: 32px;
   height: 32px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-full);
   background: none;
   border: none;
   cursor: pointer;
@@ -3775,7 +3788,7 @@ textarea::placeholder {
   padding: var(--space-1) var(--space-2);
   background: transparent;
   border: 1px solid currentColor;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-full);
   color: inherit;
   font-size: var(--text-xs);
   font-weight: var(--font-weight-semibold);

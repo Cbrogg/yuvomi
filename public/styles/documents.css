@@ -227,7 +227,7 @@
   width: var(--target-sm);
   height: var(--target-sm);
   flex-shrink: 0;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-full);
   color: var(--module-accent);
   transition: background-color var(--transition-fast);
 }
@@ -288,7 +288,7 @@
   height: var(--target-sm);
   margin-right: var(--space-0h);
   flex-shrink: 0;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-full);
   color: var(--color-text-tertiary);
   opacity: 0;
   /* Unsichtbar heisst auch unklickbar: ohne pointer-events bleibt hier ein
@@ -1362,7 +1362,7 @@
   height: 32px;
   padding: 0;
   border: 0;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-full);
   background: transparent;
   color: var(--color-text-secondary);
   cursor: pointer;

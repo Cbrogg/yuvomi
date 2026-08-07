@@ -19,6 +19,7 @@
 
 import { test, before, after, describe } from 'node:test';
 import assert from 'node:assert/strict';
+import { readdirSync, readFileSync } from 'node:fs';
 import {
   ROUTES,
   startHarness,
@@ -310,4 +311,130 @@ describe('Sonde 2 - jeder sichtbare Text haelt WCAG AA auf seinem KOMPONIERTEN U
       });
     }
   }
+});
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Sonde 3: Buttonform im gerenderten Dokument
+ *
+ * Es gibt EINE Buttonform: die Kapsel. Das Stylesheet kann diese Regel nur zur
+ * Haelfte pruefen - dort steht weder Tag noch Rolle, und ein Knopf kann seine
+ * Form von einer Regel bekommen, deren Selektor ihn gar nicht nennt. Was das
+ * Stylesheet scharf sieht (gleiche Breite und Hoehe = umgrenztes Ziel), prueft
+ * `ein quadratischer Icon-Knopf ist ein Kreis` auf Ebene 3. Hier steht der Rest.
+ *
+ * Die vier Ausnahme-KATEGORIEN stehen im Sektionskommentar von tokens.css:
+ * Zustandsschalter, Drop-Ziele, Rasterzellen und ZEILEN einer Zeilenliste.
+ * Unten stehen ihre Vertreter - jeder mit seiner Kategorie. Das ist die
+ * Umkehrung einer Allowlist: gemessen wird JEDER Knopf des Dokuments, benannt
+ * sind nur die begruendeten Ausnahmen, und alles Neue faellt durch.
+ *
+ * FORMLOS zaehlt nicht als zweite Form: ein Knopf ohne Radius, ohne Flaeche und
+ * ohne Kante ist eine Textaktion, kein Kasten.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+// Klassenname -> Kategorie. Der Eintrag ist nur gueltig, wenn seine Kategorie
+// eine der vier ist; wer eine fuenfte braucht, aendert erst tokens.css.
+const SHAPE_EXEMPT = new Map([
+  // 1. Zustandsschalter
+  ['item-check', 'Zustandsschalter: Checkbox der Einkaufsliste'],
+  ['group-toggle__btn', 'Zustandsschalter: Segment der Aufgaben-Gruppierung'],
+  ['cal-toolbar__view-btn', 'Zustandsschalter: Segment der Kalender-Ansicht'],
+  ['ydp__trigger', 'Griff: Feld-Oeffner des Datepickers, traegt Feldkante'],
+  ['more-sheet__search', 'Griff: Suchfeld des More-Sheets, traegt Feldkante'],
+  // 3. Zellen eines Rasters
+  ['month-day', 'Rasterzelle: Tag im Kalender-Monat'],
+  ['more-action', 'Rasterzelle: Kachel im More-Sheet-Raster'],
+  ['health-metric-card', 'Rasterzelle: Kennzahlkachel der Gesundheit'],
+  // 4. Zeilen einer Zeilenliste
+  ['nav-item', 'Zeile: Eintrag der Sidebar-Navigation'],
+  ['note-item', 'Zeile: Notiz im Dashboard-Widget'],
+  ['rewards-widget-row', 'Zeile: Rang im Belohnungs-Widget'],
+  ['rw-standing__id', 'Zeile: Oeffner einer Mitglieds-Zeile'],
+  ['documents-folder-item__select', 'Zeile: Ordner in der Dokumentenliste'],
+]);
+
+test('Sonde 3 - es gibt EINE Buttonform, und die Ausnahmen sind Kategorien', async () => {
+  const page = await openPage(harness, { device: 'desktop', theme: 'light', locale: 'de' });
+  const found = new Map();
+  const seen = new Set();
+
+  for (const name of ROUTE_NAMES) {
+    await gotoRoute(page, ROUTES[name]);
+    const rows = await page.evaluate(() => {
+      const out = [];
+      for (const el of document.querySelectorAll('button, a.btn, [role="button"]')) {
+        const rect = el.getBoundingClientRect();
+        if (!rect.width || !rect.height) continue;
+        const style = getComputedStyle(el);
+        const radius = parseFloat(style.borderTopLeftRadius);
+        // Kapsel = Radius >= halbe Hoehe. So rendert --radius-full, und bei
+        // gleicher Breite und Hoehe ist das genau der Kreis.
+        const pill = radius >= rect.height / 2 - 1;
+        // Formlos: kein Radius, keine Flaeche, kein KASTEN -> Textaktion oder
+        // Zeile, keine zweite Buttonform.
+        //
+        // Eine Kante zaehlt nur RINGSUM als Kasten. Das Messwerkzeug fragte
+        // `borderTopWidth` allein und stufte damit jede Zeile einer
+        // Zeilenliste als Kasten ein - deren `X + X { border-top }` ist die
+        // vorgeschriebene Trennung, also gerade das Merkmal einer ZEILE
+        // (`.budget-entry` war der Fall, der es zeigte).
+        const boxed = ['Top', 'Right', 'Bottom', 'Left']
+          .every((side) => parseFloat(style[`border${side}Width`]) > 0);
+        const flat = radius === 0
+          && style.backgroundColor === 'rgba(0, 0, 0, 0)'
+          && !boxed;
+        // ALLE Knoepfe werden gemeldet, mit ihrem Urteil - sonst kann die
+        // Pruefung unten nicht zwischen „Ausnahme entfaellt" und „Knopf haelt
+        // die Regel jetzt" unterscheiden.
+        const shaped = !pill && !flat;
+        const key = [...el.classList].filter((cls) => !cls.startsWith('is-')).join('.')
+          || `(klassenlos:${el.id || el.tagName})`;
+        out.push({ key, radius, height: Math.round(rect.height), shaped });
+      }
+      return out;
+    });
+    for (const row of rows) {
+      row.key.split('.').forEach((cls) => seen.add(cls));
+      if (!row.shaped) continue;
+      if (!found.has(row.key)) found.set(row.key, { ...row, pages: new Set() });
+      found.get(row.key).pages.add(name);
+    }
+  }
+  await page.close();
+
+  // Eine Sonde, die nichts gemessen hat, darf nicht urteilen. Ohne diese
+  // Zusicherung ist ein leeres Dokument (abgelaufene Sitzung, nicht
+  // aufgebaute Route) von „alles in Ordnung" nicht zu unterscheiden - und die
+  // Stale-Pruefung unten meldet dann ihre gesamte Liste als verschwunden.
+  assert.ok(seen.size >= 20,
+    `Nur ${seen.size} Knopf-Klassen im ganzen Dokument gesehen - die Sonde hat `
+    + 'nichts gemessen, statt nichts gefunden. Seiten nicht aufgebaut?');
+
+  const offenders = [];
+  for (const [key, value] of found) {
+    const classes = key.split('.');
+    if (classes.some((cls) => SHAPE_EXEMPT.has(cls))) continue;
+    offenders.push(
+      `${key} (${value.radius}px auf h=${value.height}) auf ${[...value.pages].join(', ')}`,
+    );
+  }
+
+  assert.deepEqual(offenders.sort(), [],
+    'Knoepfe mit eigener Form ausserhalb der vier Ausnahme-Kategorien. Entweder '
+    + 'die Kapsel tragen oder in SHAPE_EXEMPT stehen - mit der Kategorie, nicht '
+    + 'mit dem Grund „gewachsen".');
+
+  // Eine Ausnahme fuer einen Knopf, den es nicht mehr gibt, ist eine Allowlist,
+  // die niemand mehr liest. Gemessen wird gegen das STYLESHEET, nicht gegen
+  // das Dokument: ein Element, das nur unter bestimmten Daten erscheint, waere
+  // sonst je nach Seed „verschwunden" - die Sonde pruefte dann Timing statt
+  // Ehrlichkeit. Der Klassenname im CSS ist die stabile Quelle.
+  const styles = new URL('../public/styles/', import.meta.url);
+  const allCss = readdirSync(styles)
+    .filter((entry) => entry.endsWith('.css'))
+    .map((entry) => readFileSync(new URL(entry, styles), 'utf8'))
+    .join('\n');
+  const stale = [...SHAPE_EXEMPT.keys()].filter((cls) => !allCss.includes(`.${cls}`));
+  assert.deepEqual(stale, [],
+    'SHAPE_EXEMPT nennt Klassen, die in keinem Stylesheet mehr vorkommen.');
 });

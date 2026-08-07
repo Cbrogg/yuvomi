@@ -276,7 +276,7 @@
   transition: opacity var(--transition-fast), color var(--transition-fast), background-color var(--transition-fast);
   min-height: var(--target-base);
   padding: 0 var(--space-2);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-full);
   margin-right: calc(-1 * var(--space-2));
 }
 
@@ -361,7 +361,7 @@
   gap: var(--space-1);
   min-height: var(--target-base);
   padding: 0 var(--space-2);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-full);
   color: var(--widget-accent, var(--color-accent));
   font-size: var(--type-secondary);
   font-weight: var(--font-weight-medium);
@@ -2092,7 +2092,7 @@ svg.weather-forecast__icon {
   width: var(--target-md);
   height: var(--target-md);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-full);
   background: var(--color-surface);
   color: var(--color-text-secondary);
   display: inline-flex;
@@ -2121,7 +2121,7 @@ svg.weather-forecast__icon {
   width: var(--target-md);
   height: var(--target-md);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-full);
   background: var(--color-surface);
   color: var(--color-text-secondary);
   display: inline-flex;
@@ -2346,12 +2346,16 @@ svg.weather-forecast__icon {
  * Schlagschatten und der Glas-Refresh-Knopf entfallen: auf einer opaken Karte
  * braucht ein Icon keinen Schatten, um zu sitzen. Die Basisregel oben trägt
  * das Widget jetzt allein. */
+/* Die border-radius-Zeile ist mit Runde 6 Phase 3 entfallen: sie ueberschrieb
+ * die Kapsel der Basisregel (dashboard.css:894) 1455 Zeilen spaeter mit 0-2-0.
+ * Der Kommentar direkt darueber warnt vor genau dieser Spezifitaetsfalle und
+ * hat die Regel unter sich nicht geschuetzt - ein Kommentar ist Dokumentation,
+ * kein Guard. Diese Regel braucht nur Position und Groesse. */
 .dashboard .weather-widget__refresh {
   top: var(--space-3);
   right: var(--space-3);
   width: 34px;
   height: 34px;
-  border-radius: var(--radius-sm);
 }
 
 .birthday-widget-item {
@@ -2727,7 +2731,7 @@ svg.weather-forecast__icon {
   gap: var(--space-2);
   margin-top: var(--space-2);
   padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-full);
   --module-accent: var(--module-rewards);
   background: color-mix(in srgb, var(--module-accent) 10%, transparent);
   color: color-mix(in srgb, var(--module-accent, var(--color-accent)) 70%, var(--color-text-primary));

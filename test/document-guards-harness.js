@@ -286,6 +286,22 @@ export async function settle(page) {
   } catch {
     /* Die Sonden melden ohnehin, wenn nichts zu messen war. */
   }
+  // `main.children.length > 0` ist erfuellt, sobald der Modulkopf steht - die
+  // LISTEN holt das Modul danach per API nach. Wer nur darauf wartet, misst
+  // ein halbes Dokument: in einem Volllauf fehlten so die Einkaufszeilen, die
+  // Kalendertage und die Notizkarten, waehrend Kopf und Navigation da waren.
+  // Das ist kein Stale-Problem einer Ausnahmeliste, sondern eine Sonde, die
+  // einen Verstoss uebersehen kann (Session 11).
+  // Das Zeitbudget ist knapp bemessen, und zwar gemessen: mit 8000ms lief die
+  // Suite von 15s auf 153s je Locale, weil mindestens ein Modul dauerhaft
+  // pollt und die Ruhe nie eintritt - der Timeout wurde zur Regel statt zur
+  // Ausnahme. 2000ms kosten den Polling-Fall zwei Sekunden und geben allen
+  // anderen ihre Liste.
+  try {
+    await page.waitForNetworkIdle({ idleTime: 400, timeout: 2000 });
+  } catch {
+    /* Ein Modul mit dauerndem Polling erreicht nie Ruhe - dann zaehlt wait(). */
+  }
   await wait(700);
   // Der Aufruf faellt gelegentlich in eine Weiterleitung, die die App selbst
   // ausloest („Execution context was destroyed"). Das ist kein Messfehler,

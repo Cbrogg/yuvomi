@@ -540,7 +540,7 @@
 .meal-card__action-btn {
   width: 24px;
   height: 24px;
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-full);
   background: none;
   border: none;
   cursor: pointer;

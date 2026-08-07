@@ -492,7 +492,7 @@
 .quick-add__btn {
   width: var(--target-base);
   height: var(--target-base);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-full);
   /* Modul-Akzent wie FAB und Fokus-Ringe daneben (Audit F-05) — vorher stand
    * der einzige violette App-Akzent-Button neben lauter Pink. */
   background-color: var(--module-accent, var(--color-accent));

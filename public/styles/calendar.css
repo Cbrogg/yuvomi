@@ -121,7 +121,12 @@
   font-size: var(--type-secondary);
   font-weight: var(--font-weight-medium);
   padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-xs);
+  /* Konzentrik statt eigener Stufe: das Segment sitzt in einem Traeger mit
+   * --radius-sm und 2px Innenabstand, sein Innenradius ist damit rechnerisch
+   * festgelegt (DESIGN.md, Radien-Kanon). Es stand als einziges Segment der
+   * App auf --radius-xs, waehrend .group-toggle__btn dieselbe Formel bereits
+   * traegt - zwei Innenradien fuer dieselbe Bauart. */
+  border-radius: calc(var(--radius-sm) - 2px);
   border: none;
   background: none;
   color: var(--color-text-secondary);

@@ -365,7 +365,7 @@
   min-height: var(--target-md);
   padding-inline: var(--space-1);
   margin-inline: calc(var(--space-1) * -1);
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-full);
   transition:
     background-color var(--transition-fast),
     color var(--transition-fast);
@@ -2191,7 +2191,7 @@
   width: var(--target-base);
   height: var(--target-base);
   border: 0;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-full);
   background: transparent;
   color: var(--color-text-secondary);
   cursor: grab;
@@ -2220,7 +2220,7 @@
   width: var(--target-base);
   height: var(--target-base);
   border: var(--space-px) solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-full);
   background: var(--color-surface);
   color: var(--color-text-secondary);
   transition:

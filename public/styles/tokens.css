@@ -495,6 +495,38 @@
    * 9. Border-Radien
    *    Apple-Kurvatur: Formfelder/Zellen 10, Karten 12–16,
    *    Grouped-Inset 10, Sheets/Glass-Chrome 26+.
+   *
+   *    DIE BUTTONFORM (Runde 6, Phase 3 — positiv formuliert)
+   *
+   *    Es gibt EINE Buttonform: die Kapsel (--radius-full). Sie gilt für
+   *    jedes Element, das eine Aktion auslöst und eine eigene Fläche oder
+   *    Kante trägt. Bei einem quadratischen Icon-Knopf ist die Kapsel ein
+   *    Kreis — Apples eigene Icon-Buttons sind rund.
+   *
+   *    Ausgenommen sind VIER Kategorien:
+   *      1. Zustandsschalter (Checkbox, Toggle, Segment, Wochentagswähler)
+   *      2. Drop-Ziele
+   *      3. Zellen eines Rasters
+   *      4. ZEILEN einer Zeilenliste
+   *
+   *    Die vierte kam mit Phase 3 dazu und ist keine neue Idee, sondern
+   *    dasselbe Vokabular wie beim Kasten-in-Kasten (Sektion oben) und bei
+   *    der Zeilenlisten-Regel: eine ZEILE ist kein Kasten. Ihre
+   *    Hervorhebung — Hover, Auswahl, Rang — folgt der Form ihres Trägers,
+   *    nicht der eines Knopfes. Ein Knopf IN einer Zeile ist davon nicht
+   *    gedeckt; .row-action ist rund.
+   *
+   *    Die Ausnahme ist eine Liste von KATEGORIEN, keine Liste von
+   *    Selektoren. Wer einen fünften Fall findet, nennt seine Kategorie
+   *    oder trägt die Kapsel.
+   *
+   *    Innerhalb eines Trägers gilt die Konzentrik-Formel:
+   *    calc(var(--radius-*) - Npx) mit N = Innenabstand des Trägers
+   *    (.group-toggle__btn, .cal-toolbar__view-btn — beide 2px).
+   *
+   *    Geprüft auf Ebene 3 (Signatur, statisch: `one button shape
+   *    app-wide` in test-frontend-audit.js) und Ebene 4 (Dokument,
+   *    gerendert: Sonde „Buttonform" in test-document-guards.js).
    * -------------------------------------------------------- */
   --radius-2xs: 2px;
   --radius-xs: 4px;

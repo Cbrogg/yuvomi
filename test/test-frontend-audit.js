@@ -1426,13 +1426,25 @@ test('mobile navigation Quiet Precision keeps state feedback stable and accessib
 
   assert.match(indicatorSurfaceRule, /inset-inline:\s*var\(--space-1\)/);
   assert.doesNotMatch(indicatorRule, /transition:[^;]*\bwidth\b/);
+  // Gesucht ist die REGEL, die das aktive Tab-Bar-Label faerbt, nicht ihre
+  // Selektorliste: die Erweiterung um die Sidebar (Runde 6, Phase 3) haette
+  // eine wortwoertliche Suche gebrochen, ohne dass sich an der Zusage etwas
+  // aendert. Ein Guard auf eine Schreibweise ist ein Guard auf die Formatierung.
+  //
+  // Die alte Fassung suchte `\{[\s\S]*?color:\s*var\(` und lief dabei ueber die
+  // Regelgrenze hinaus - sie matchte irgendwo spaeter in layout.css und war
+  // damit grün, ohne die Regel zu lesen. `[\s\S]*?` kennt kein `}`.
+  const activeNavLabelRule = [...eachRule(layout)].find(({ selector }) =>
+    selector.includes('.nav-bottom .nav-item--active .nav-item__label'))?.body ?? '';
+  // Der Ink-Mix aus Phase 0b: 70 % Modulakzent auf der Primaertinte. Roher
+  // Akzent auf akzent-getoenter Flaeche riss AA in zwei von vier Modulen.
   assert.match(
-    layout,
-    /\.nav-bottom \.nav-item\[aria-current="page"\] \.nav-item__label,\s*\.nav-bottom \.nav-item--active \.nav-item__label\s*\{[\s\S]*?color:\s*var\(--item-module-accent,\s*var\(--active-module-accent,\s*var\(--color-accent\)\)\)/,
+    activeNavLabelRule,
+    /color:\s*color-mix\(\s*in srgb,\s*var\(--item-module-accent,\s*var\(--active-module-accent,\s*var\(--color-accent\)\)\)\s*70%,\s*var\(--color-text-primary\)\s*\)/,
   );
   assert.match(
-    layout,
-    /\.nav-bottom \.nav-item\[aria-current="page"\] \.nav-item__label,\s*\.nav-bottom \.nav-item--active \.nav-item__label\s*\{[\s\S]*?font-weight:\s*var\(--font-weight-semibold\)/,
+    activeNavLabelRule,
+    /font-weight:\s*var\(--font-weight-semibold\)/,
   );
   // Fokusring liegt AUSSEN um die Icon-Well (nicht innen ins Item) — so ist er
   // für Tastatur-/Sehbeeinträchtigte klar zu orten statt hinter Icon+Label zu
@@ -7061,6 +7073,91 @@ test('one button shape app-wide', () => {
     }
   }
   assert.deepEqual(handCopied, []);
+});
+
+/**
+ * REGEL (Redesign Runde 6, Phase 3): Ein quadratischer Icon-Knopf traegt die
+ * Kapsel, und bei gleicher Breite und Hoehe ist die Kapsel ein Kreis. Apples
+ * eigene Icon-Buttons sind rund.
+ *
+ * WARUM GENAU DIESER AUSSCHNITT. Die Buttonform-Regel gilt fuer „jedes
+ * Element, das eine Aktion ausloest und eine eigene Flaeche oder Kante
+ * traegt" - im Stylesheet ist das nicht scharf, weil dort weder `role` noch
+ * Tag steht. Was DORT scharf ist, ist die Form eines umgrenzten Ziels:
+ * gleiche Breite und Hoehe. Der Rest der Regel gehoert auf Ebene 4, wo das
+ * gerenderte Dokument Tag, Rolle und Kategorie kennt (test-document-guards).
+ * Zwei Ebenen fuer eine Regel, jede prueft, was auf ihr pruefbar IST.
+ *
+ * Die vier Ausnahme-KATEGORIEN stehen im Sektionskommentar von tokens.css.
+ * Hier unten stehen ihre quadratischen Vertreter - jeder mit seiner
+ * Kategorie, keiner mit „historisch gewachsen". Das ist die Umkehrung einer
+ * Allowlist: geprueft werden ALLE quadratischen Formen, benannt sind nur die
+ * begruendeten Ausnahmen, und alles Neue faellt durch.
+ */
+test('ein quadratischer Icon-Knopf ist ein Kreis', () => {
+  const files = readdirSync(new URL('../public/styles/', import.meta.url))
+    .filter((name) => name.endsWith('.css'));
+
+  // Ausnahmen mit KATEGORIE. Die Kategorie ist der Pruefstein: wer hier einen
+  // Eintrag ergaenzt, muss ihn einer der vier Kategorien zuordnen koennen.
+  const EXEMPT = new Map([
+    // 1. Zustandsschalter
+    ['.item-check', 'Zustandsschalter: Checkbox der Einkaufsliste'],
+    ['.subtask-item__checkbox', 'Zustandsschalter: Checkbox einer Teilaufgabe'],
+    ['.rrule-day', 'Zustandsschalter: Wochentagswaehler der Wiederholung'],
+    ['.health-weekday', 'Zustandsschalter: Wochentagswaehler der Gesundheit'],
+    ['.document-select', 'Zustandsschalter: Traeger der Auswahl-Checkbox'],
+    // 3. Zellen eines Rasters
+    ['.ydp-cal__day', 'Rasterzelle: Tag im Datepicker-Monat'],
+    ['.cycle-cal__day', 'Rasterzelle: Tag im Zyklus-Monat'],
+    // Griffe mit eigener Form (Kasten-in-Kasten: Bedienelemente behalten ihre
+    // Kante). Ein FELD ist kein Knopf, auch wenn es sich anklicken laesst.
+    ['.ydp__trigger', 'Feld: Oeffner des Datepickers, traegt Feldkante'],
+  ]);
+
+  const decl = (body, prop) =>
+    body.match(new RegExp(`(?:^|;)\\s*${prop}:\\s*([^;]+)`))?.[1]?.trim();
+
+  const offenders = [];
+  for (const name of files) {
+    for (const { selector, body } of eachRule(read(`../public/styles/${name}`))) {
+      const radius = decl(body, 'border-radius');
+      if (!radius || /--radius-full|9999px|50%/.test(radius)) continue;
+
+      // Quadratisch heisst: gleiche Breite und Hoehe, als fester Wert. Eine
+      // prozentuale oder auf 100% gesetzte Breite ist eine Zeile, keine Form.
+      const width = decl(body, 'width') ?? decl(body, 'min-width');
+      const height = decl(body, 'height') ?? decl(body, 'min-height');
+      if (!width || !height || width !== height) continue;
+      if (/%|auto/.test(width)) continue;
+
+      // Klickbar: eigener `cursor: pointer`/`grab`, oder der Selektor nennt
+      // sich Knopf. Icon-KACHELN (`__icon`, `__avatar`, `__swatch`) sind
+      // Traeger eines Bildes und loesen nichts aus.
+      const clickable = /cursor:\s*(?:pointer|grab)/.test(body)
+        || /(?:__|-)(?:btn|button)(?![\w-])/.test(selector);
+      if (!clickable) continue;
+
+      const exemptKey = [...EXEMPT.keys()].find(
+        (key) => new RegExp(`${escapeForRegExp(key)}(?![\\w-])`).test(selector),
+      );
+      if (exemptKey) continue;
+
+      offenders.push(`${name}: ${selector} (${width}) traegt ${radius} statt der Kapsel`);
+    }
+  }
+
+  assert.deepEqual(offenders, [],
+    'Ein quadratischer, klickbarer Icon-Knopf ist ein Kreis. Wer hier steht, '
+    + 'traegt entweder die Kapsel oder gehoert in EXEMPT - mit seiner Kategorie.');
+
+  // Die Ausnahmeliste ist nur so ehrlich wie ihre Eintraege: jeder muss noch
+  // existieren. Eine Ausnahme fuer einen Selektor, den es nicht mehr gibt,
+  // ist eine Allowlist, die niemand mehr liest.
+  const allCss = files.map((name) => read(`../public/styles/${name}`)).join('\n');
+  for (const key of EXEMPT.keys()) {
+    assert.ok(allCss.includes(key), `EXEMPT nennt ${key}, das es nicht mehr gibt.`);
+  }
 });
 
 /**
