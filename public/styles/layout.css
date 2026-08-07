@@ -1004,9 +1004,26 @@ html:has(.search-overlay--visible) yuvomi-install-prompt {
   line-height: 1.1;
 }
 
+/* Das Label steht auf der getönten Indikator-Pille, also auf einer Tönung
+ * SEINER EIGENEN FARBE - genau der Fall, für den tokens.css die Konvention
+ * „Akzent-Text auf akzent-getöntem Grund" führt (70 % Akzent + 30 %
+ * text-primary). Zehn Stylesheets wenden sie an; die Tab-Bar war die einzige
+ * Stelle, die den rohen Akzent schrieb.
+ *
+ * Gemessen am gerenderten Pixel im Dark, vorher → nachher: Übersicht 3.41 →
+ * 4.92:1, Kalender 4.14 → 5.51:1, Aufgaben 5.88 → 6.58:1, Einkauf 4.85 →
+ * 5.94:1. Zwei der vier lagen unter AA, und kein Token-Guard konnte das sehen:
+ * das Paar entsteht erst aus Fläche plus Tint plus Glas im Dokument.
+ *
+ * Das ICON behält den vollen Akzent - für Nicht-Text gilt 3:1, und die
+ * Konvention sagt das ausdrücklich. */
 .nav-bottom .nav-item[aria-current="page"] .nav-item__label,
 .nav-bottom .nav-item--active .nav-item__label {
-  color: var(--item-module-accent, var(--active-module-accent, var(--color-accent)));
+  color: color-mix(
+    in srgb,
+    var(--item-module-accent, var(--active-module-accent, var(--color-accent))) 70%,
+    var(--color-text-primary)
+  );
   font-weight: var(--font-weight-semibold);
 }
 

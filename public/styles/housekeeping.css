@@ -122,7 +122,19 @@
   min-width: 0;
 }
 
-.housekeeping-worker-strip span,
+/* AN DIE IDENTITÄTSZEILE GEBUNDEN, nicht an die ganze Zeile. Als
+ * `.housekeeping-worker-strip span` griff die Regel als Nachfahren-Selektor
+ * (0-1-1) auch in den Handlungsknopf daneben und färbte dessen Label auf
+ * Sekundärtext: „Einchecken" stand mit 1.13:1 auf der gefüllten Kapsel
+ * (dark 1.29:1) - der primäre Knopf des Moduls war im Ruhezustand in beiden
+ * Themes praktisch unlesbar.
+ *
+ * KEIN VERSTÄRKTER BUTTON-SELEKTOR: der hätte den Fall repariert und die
+ * Ursache stehen lassen. Warum kein bestehender Guard das sah: der
+ * Token-Guard prüft PAARE aus tokens.css, und dieses Paar entsteht erst durch
+ * die Komposition zweier Regeln im Dokument. Die Antwort darauf ist Sonde 2
+ * in `npm run test:document-guards`. */
+.housekeeping-worker-strip__identity span,
 .housekeeping-muted {
   color: var(--color-text-secondary);
 }

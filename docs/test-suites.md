@@ -207,6 +207,9 @@ Diese Suite ist die einzige, die **nicht** in der `npm test`-Kette hängt, und d
 | Sonde | Was sie misst | Umfang |
 |---|---|---|
 | 1 - Kopf-Überlauf | kein Nachfahre einer `.page-toolbar` ragt über die Viewport-Kante; Nachfahren in einem scrollenden oder clippenden Container sind ausgenommen, denn genau so schreibt die Shell-Regel die Tab-Leiste vor | 16 Routen × 375px × `de`/`uk`/`vi` |
+| 2 - komponierter Kontrast | jeder sichtbare Text hält WCAG AA auf seinem **komponierten** Untergrund: die Vorfahren-Kette wird bis zur ersten deckenden Fläche zusammengerechnet, Alpha, `color-mix` und die Farbstops von Verläufen inklusive (bei einem Verlauf zählt der ungünstigste Stop) | 16 Routen × light/dark × desktop/mobile |
+
+**Bekannte Grenze von Sonde 2, gemessen statt vermutet:** sie liest den BAUM. Eine Fläche, die unter dem Text liegt, ohne ihn zu enthalten - die absolut positionierte Pille der Tab-Bar gleitet als Geschwister des aktiven Eintrags -, fällt heraus. Am gerenderten Pixel nachgeprüft: die Sonde meldet dort 4.20:1, das Bild zeigt 3.41:1. Sie findet den Fall also, urteilt aber zu milde. Ein Versuch über `elementsFromPoint` machte es schlechter (die Pille trägt `pointer-events: none` und fällt aus dem Stapel, dafür verschwand der Befund ganz); der ehrliche nächste Schritt ist der gerenderte Pixel, nicht der Elementstapel.
 
 **Fallen, teuer bezahlt:**
 
