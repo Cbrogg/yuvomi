@@ -322,18 +322,23 @@ function renderListContent(container) {
     <div class="sr-only" role="status" aria-live="polite" id="items-reorder-announce"></div>
   `);
 
-  mountItems(content.querySelector('#items-list'), container);
+  // Der Listenteil kommt aus updateItemsList - mountItems, Stagger,
+  // Wischgesten, Sortierung und die Sammelaktions-Leiste, die erst dann
+  // feststeht, wenn die abgehakten Artikel im DOM stehen.
+  //
+  // NICHT ein zweites Mal aufgezählt: die Aufzählung stand hier neben der in
+  // updateItemsList und hatte genau einen Schritt verloren. `wireSwipeGestures`
+  // lief nur im Nachlade-Pfad, also erst, wenn die Liste ein ZWEITES Mal gebaut
+  // wurde - beim ersten Öffnen der Seite antwortete keine Zeile auf die Geste.
+  // Der Aufruf stand seit dem Tag falsch, an dem die Geste eingeführt wurde.
+  updateItemsList(container);
 
+  // Für den ganzen Inhalt, nicht nur die Liste: Quick-Add und Kopfzeile tragen
+  // eigene Icons. Der Lauf in updateItemsList hat die Zeilen schon ersetzt.
   if (window.lucide) window.lucide.createIcons({ el: content });
-  stagger(content.querySelectorAll('.shopping-item'));
-  wireItemReorder(container);
   wireAutocomplete(container);
   wireQuickAdd(container);
   syncQuickAddDisclosure(container, false);
-  maybeShowSwipeHint(container);
-  // Der Kopf rendert den Container leer; erst hier stehen die abgehakten
-  // Artikel fest, aus denen die Aktionen entstehen.
-  updateCheckedActions(container);
 }
 
 /**
