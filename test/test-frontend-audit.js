@@ -3666,12 +3666,19 @@ test('polished rounded cards use subtle full borders instead of thick accent cap
 
   const overview = dashboard.match(/\.dashboard-overview\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
   const cockpit = dashboard.match(/\.today-cockpit\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
-  const widget = dashboard.match(/\.dashboard \.widget::before\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
   const housekeepingCard = housekeeping.match(/\.housekeeping-card\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
 
   assert.doesNotMatch(overview, /border-top:\s*(?:3px|var\(--space-1\))/);
   assert.doesNotMatch(cockpit, /border-top:\s*(?:3px|var\(--space-1\))/);
-  assert.match(widget, /height:\s*1px/);
+  // Die Widget-Oberkante trug bis a326283c ein ::before mit `height: 1px` -
+  // eine Glanzkante, die hier als BELEG dafür stand, dass dort keine dicke
+  // Akzentkappe sitzt. Das Pseudoelement ist entfallen (1.00:1 im Light, Glas-
+  // Vokabular auf einer Inhaltskarte), womit die Zusage strenger gilt als
+  // vorher. Geprüft wird deshalb die Zusage selbst: keine Kappe an der Kante.
+  const widgetBase = dashboard.match(/\n\.widget\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
+  assert.ok(widgetBase, '.widget muss eine Basisregel haben');
+  assert.doesNotMatch(widgetBase, /border-top:\s*(?:[2-9]px|var\(--space-[1-9])/);
+  assert.doesNotMatch(dashboard, /\.widget::before/);
   assert.doesNotMatch(housekeepingCard, /border-top:\s*3px/);
 });
 
