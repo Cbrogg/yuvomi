@@ -101,6 +101,43 @@ async function toggleShoppingItem(id, checked, container) {
   }
 }
 
+/**
+ * Löschen eines Artikels, fünf Sekunden lang widerrufbar: die Zeile geht sofort,
+ * der Server-Delete erst nach Ablauf des Fensters (`scheduleUndoableDelete`).
+ *
+ * Benannt und geteilt, weil das Löschen in dieser Liste über ZWEI Wege geht -
+ * den Knopf in der Zeile und die Wischgeste. Als Kopie nebeneinander lief das
+ * auseinander: der Knopf hatte den Rückweg, der Wisch rief `api.delete` direkt
+ * und löschte sofort und endgültig. Das war die einzige Stelle der App, an der
+ * eine Geste unwiderruflich Daten entfernt - wer sie in Aufgaben und
+ * Geburtstagen als harmlos gelernt hat, verlor hier ohne Rückweg.
+ */
+function deleteItemUndoable(id, container) {
+  const item     = state.items.find((i) => i.id === id);
+  const snapshot = item ? { ...item } : null;
+
+  // Optimistisch entfernen
+  state.items = state.items.filter((i) => i.id !== id);
+  updateItemsList(container);
+  updateListCounter(state.activeListId, -1, snapshot?.is_checked ? -1 : 0);
+  renderTabs(container);
+
+  scheduleUndoableDelete({
+    message: t('shopping.itemDeletedToast', { name: snapshot?.name ?? '' }),
+    commit: ({ keepalive }) => api.delete(`/shopping/items/${id}`, { keepalive }),
+    restore: (err) => {
+      if (snapshot) {
+        state.items.push(snapshot);
+        state.items.sort((a, b) => a.id - b.id);
+        updateItemsList(container);
+        updateListCounter(state.activeListId, 1, snapshot.is_checked ? 1 : 0);
+        renderTabs(container);
+      }
+      if (err) window.yuvomi.showToast(err.data?.error ?? t('common.errorGeneric'), 'danger');
+    },
+  });
+}
+
 // --------------------------------------------------------
 // Render-Bausteine
 // --------------------------------------------------------
@@ -884,56 +921,27 @@ function wireSwipeGestures(container) {
   wireSwipeRows(listEl, {
     card: '.shopping-item',
     ignore: '.list-row__drag',
+    // Beide Richtungen führen dieselbe Aktion aus wie der Knopf in der Zeile -
+    // über dieselbe Funktion, nicht über eine zweite Schreibweise daneben.
+    //
     // Links: abhaken / zurueck. Die Karte fliegt hinaus, die Zeile bleibt -
     // nur ihr Zustand wechselt (Issue #276: kein Re-Render der Liste).
     left: {
       reveal: '.swipe-reveal--done',
       flyOut: true,
-      run: async (row) => {
-        const itemId  = Number(row.dataset.swipeId);
-        const checked = Number(row.dataset.swipeChecked);
-        const newVal  = checked ? 0 : 1;
-        const item    = state.items.find((i) => i.id === itemId);
-        if (item) {
-          item.is_checked = newVal;
-          updateItemRow(container, item);
-          updateCheckedActions(container);
-          updateListCounter(state.activeListId, 0, newVal ? 1 : -1);
-          renderTabs(container);
-        }
-        try {
-          await api.patch(`/shopping/items/${itemId}`, { is_checked: newVal });
-          vibrate(10);
-        } catch (err) {
-          if (item) {
-            item.is_checked = checked;
-            updateItemRow(container, item);
-            updateCheckedActions(container);
-            updateListCounter(state.activeListId, 0, newVal ? -1 : 1);
-            renderTabs(container);
-          }
-          window.yuvomi.showToast(err.data?.error ?? t('common.errorGeneric'), 'danger');
-        }
-      },
+      run: (row) => toggleShoppingItem(
+        Number(row.dataset.swipeId),
+        Number(row.dataset.swipeChecked),
+        container,
+      ),
     },
-    // Rechts: loeschen. Auch hier fliegt die Karte - sie kommt nicht zurueck.
+    // Rechts: loeschen, widerrufbar. Die Karte federt zurück statt hinaus-
+    // zufliegen - dieselbe Begründung wie bei den Geburtstagen: eine
+    // hinausgeflogene Karte behauptet, die Sache sei erledigt, während der
+    // Rückgängig-Weg noch fünf Sekunden offen steht.
     right: {
       reveal: '.swipe-reveal--delete',
-      flyOut: true,
-      run: async (row) => {
-        const itemId = Number(row.dataset.swipeId);
-        const item = state.items.find((i) => i.id === itemId);
-        try {
-          await api.delete(`/shopping/items/${itemId}`);
-          state.items = state.items.filter((i) => i.id !== itemId);
-          updateItemsList(container);
-          updateListCounter(state.activeListId, -1, item?.is_checked ? -1 : 0);
-          renderTabs(container);
-        } catch (err) {
-          updateItemsList(container);
-          window.yuvomi.showToast(err.data?.error ?? t('common.errorGeneric'), 'danger');
-        }
-      },
+      run: (row) => deleteItemUndoable(Number(row.dataset.swipeId), container),
     },
   });
 }
@@ -1600,30 +1608,7 @@ function wireListContentEvents(container) {
 
     // ---- Artikel löschen (mit Undo, 5s Fenster) ----
     if (action === 'delete-item') {
-      const id        = Number(target.dataset.id);
-      const item      = state.items.find((i) => i.id === id);
-      const snapshot  = item ? { ...item } : null;
-
-      // Optimistisch entfernen
-      state.items = state.items.filter((i) => i.id !== id);
-      updateItemsList(container);
-      updateListCounter(state.activeListId, -1, snapshot?.is_checked ? -1 : 0);
-      renderTabs(container);
-
-      scheduleUndoableDelete({
-        message: t('shopping.itemDeletedToast', { name: snapshot?.name ?? '' }),
-        commit: ({ keepalive }) => api.delete(`/shopping/items/${id}`, { keepalive }),
-        restore: (err) => {
-          if (snapshot) {
-            state.items.push(snapshot);
-            state.items.sort((a, b) => a.id - b.id);
-            updateItemsList(container);
-            updateListCounter(state.activeListId, 1, snapshot.is_checked ? 1 : 0);
-            renderTabs(container);
-          }
-          if (err) window.yuvomi.showToast(err.data?.error ?? t('common.errorGeneric'), 'danger');
-        },
-      });
+      deleteItemUndoable(Number(target.dataset.id), container);
     }
 
     // ---- Abgehakte löschen (mit Undo, 5s Fenster) ----

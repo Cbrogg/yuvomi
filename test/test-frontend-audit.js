@@ -64,6 +64,51 @@ function settledCalls(source) {
   }
 }
 
+// Schneidet das Objektliteral heraus, in dem eine Fundstelle steht - rueckwaerts
+// bis zur oeffnenden Klammer der eigenen Ebene, dann vorwaerts bis zu ihrem
+// Partner. Dieselbe Klammerzaehlung wie in settledCalls; ein Regex kann eine
+// Richtung mit verschachteltem Rumpf nicht abgrenzen.
+function enclosingObject(source, at) {
+  let start = at;
+  let depth = 0;
+  while (start >= 0) {
+    const char = source[start];
+    if (char === '}') depth += 1;
+    else if (char === '{') { if (depth === 0) break; depth -= 1; }
+    start -= 1;
+  }
+  if (start < 0) return null;
+
+  let end = start;
+  depth = 0;
+  while (end < source.length) {
+    const char = source[end];
+    if (char === '{') depth += 1;
+    else if (char === '}') { depth -= 1; if (depth === 0) break; }
+    end += 1;
+  }
+  return source.slice(start, end + 1);
+}
+
+// Rumpf einer im Modul definierten Funktion, damit ein Guard der Kante von einem
+// Aufruf zu seiner Definition folgen kann statt nur den Aufrufer zu lesen.
+function functionBody(source, name) {
+  const match = new RegExp(`(?:async\\s+)?function\\s+${name}\\s*\\(|(?:const|let)\\s+${name}\\s*=`).exec(source);
+  if (!match) return null;
+  const open = source.indexOf('{', match.index + match[0].length);
+  if (open === -1) return null;
+
+  let depth = 0;
+  let end = open;
+  while (end < source.length) {
+    const char = source[end];
+    if (char === '{') depth += 1;
+    else if (char === '}') { depth -= 1; if (depth === 0) break; }
+    end += 1;
+  }
+  return source.slice(open, end + 1);
+}
+
 function resolveLocaleKey(obj, key) {
   return key.split('.').reduce((value, part) => (value != null ? value[part] : undefined), obj);
 }
@@ -6945,6 +6990,54 @@ test('Der Sortiergriff nimmt sich die Geste aus der Wischbedienung', () => {
     'Die Einkaufsliste muss ihren Sortiergriff als Ausnahme benennen.');
   assert.match(read('../public/utils/swipe-row.js'), /touchstart[\s\S]{0,600}ignore[\s\S]{0,120}closest/,
     'Der geteilte Wisch-Helfer muss die Ausnahme im touchstart auswerten.');
+});
+
+test('Eine Wischgeste, die löscht, hat einen Rückgängig-Weg', () => {
+  // Der Rechtswisch im Einkauf rief `api.delete` direkt: sofort und endgültig,
+  // ohne Undo-Toast, mit flyOut. Es war die einzige Stelle der App, an der eine
+  // Geste unwiderruflich Daten entfernt - und wer sie in Aufgaben und
+  // Geburtstagen als harmlos gelernt hatte, verlor hier ohne Rückweg.
+  //
+  // Geprüft wird die ROLLE, nicht der Ort: die Rollenklasse des Reveal-Panels
+  // trägt die Bedeutung der Geste (§2, Runde 6: Seite und Rolle sind zwei
+  // Achsen). Von der Richtung aus folgt der Guard der Kante zu der Funktion,
+  // die sie ruft - `run: (row) => deleteBirthday(...)` liegt eine Definition
+  // weiter, und nur dort steht der Rückweg.
+  //
+  // GRENZE: eine Löschgeste ohne `--delete` in ihrer Rollenklasse sieht er
+  // nicht. Das ist derselbe Anker, den die Wisch-Semantik-Tabelle benutzt -
+  // wer eine Rolle ohne ihre Rollenklasse baut, bricht schon die Achsen-Regel.
+  const pagesDir = new URL('../public/pages/', import.meta.url);
+  const seen = [];
+
+  for (const file of readdirSync(pagesDir).filter((name) => name.endsWith('.js'))) {
+    const source = read(`../public/pages/${file}`);
+
+    const actions = [];
+    for (const match of source.matchAll(/reveal:\s*'([^']+)'/g)) {
+      if (!match[1].includes('--delete')) continue;
+      const body = enclosingObject(source, match.index);
+      if (body) actions.push(body);
+    }
+
+    // Vollständigkeit: nennt das Markup ein Lösch-Reveal, muss auch eine
+    // Richtung dazu geparst sein. Sonst ist der Guard still blind geworden.
+    assert.equal(source.includes('swipe-reveal--delete') && actions.length === 0, false,
+      `${file} rendert ein Lösch-Reveal, aber keine Wischrichtung verweist darauf.`);
+
+    for (const body of actions) {
+      seen.push(file);
+      const direct = /scheduleUndoableDelete/.test(body);
+      const viaCall = [...body.matchAll(/([A-Za-z_$][\w$]*)\s*\(/g)]
+        .some(([, name]) => /scheduleUndoableDelete/.test(functionBody(source, name) ?? ''));
+
+      assert.ok(direct || viaCall,
+        `${file}: der Löschwisch muss über scheduleUndoableDelete gehen, nicht direkt löschen.`);
+    }
+  }
+
+  assert.ok(seen.length >= 2,
+    `Erwartet: Einkauf und Geburtstage tragen einen Löschwisch. Gefunden: ${seen.join(', ') || 'keinen'}`);
 });
 
 test('Die Einkaufsliste sagt Umsortierungen über eine Live-Region an', () => {
