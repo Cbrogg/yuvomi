@@ -11,10 +11,12 @@
   /* Full-bleed-Rail wie .page-toolbar (Issue #577): Hintergrund, Akzentstreifen
    * und Trennlinie laufen bis zur Shell-Kante, der Tab-Inhalt sitzt in der
    * zentrierten Content-Spalte und fluchtet mit dem Seiten-Body darunter.
-   * Konsumenten sind ausschließlich kitchen-tabs.js und health-tabs.js; beide
-   * hängen die Leiste als GESCHWISTER des Modul-Roots in den Router-Wrapper,
-   * womit das `100%` die volle Shell-Breite trifft. (Settings nutzt eine andere
-   * Tab-Mechanik, utils/tablist.js, und rendert keine .sub-tabs-bar.) */
+   * Das gilt für die Leiste ALS EIGENE RAIL: kitchen-tabs.js hängt sie als
+   * GESCHWISTER des Modul-Roots in den Router-Wrapper, womit das `100%` die
+   * volle Shell-Breite trifft. Liegt sie dagegen IM Modulkopf (health-tabs.js),
+   * gibt sie das Rail-Verhalten ab - siehe die Trägerregel unten. (Settings
+   * nutzt eine andere Tab-Mechanik, utils/tablist.js, und rendert keine
+   * .sub-tabs-bar.) */
   padding-inline: var(--page-inline-pad);
   height: var(--sub-tabs-height);
   box-sizing: border-box;
@@ -31,6 +33,31 @@
 
 .sub-tabs-bar::-webkit-scrollbar {
   display: none;
+}
+
+/* TRÄGERREGEL: eine Sub-Tab-Leiste IM Modulkopf ist keine eigene Rail mehr,
+ * sondern dessen Bar-Zeile.
+ *
+ * Derselbe Satz wie beim Well (Session 5): der Träger entscheidet, nicht das
+ * Bauteil. Sticky-Position, Seitengrund, Trennlinie, Höhe und die Fluchtlinie
+ * gehören dem Kopf; trüge die Leiste sie ein zweites Mal, stünden zwei
+ * Trennlinien untereinander, das Padding läge doppelt und die Leiste klebte
+ * gegen den Kopf, in dem sie liegt.
+ *
+ * Was BLEIBT, ist die Bauart der Leiste: `overflow-x: auto` samt
+ * Scroll-Affordanz. Genau darauf setzt die Shell-Regel „Tab-Leiste im
+ * Modulkopf" (layout.css) auf, die jeder `[role="tablist"]` im Kopf eine eigene
+ * Zeile gibt.
+ *
+ * Nutzer: health-tabs.js. Die Küchen-Leiste bleibt eine eigene Rail - sie
+ * wechselt das MODUL und steht deshalb über dem Kopf, nicht in ihm. */
+.page-toolbar > .sub-tabs-bar {
+  position: static;
+  z-index: auto;
+  height: auto;
+  padding: 0;
+  background-color: transparent;
+  border-bottom: none;
 }
 
 /* Optionaler Modul-Titel links der Tabs (Canonical Page Head).

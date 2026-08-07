@@ -1114,7 +1114,7 @@
         "loanPaymentTitle": "Låneåterbetalning: {{borrower}}",
         "typeLoan": "Lån",
         "tabsLabel": "Budgetsektioner",
-        "budgetTab": "Budget",
+        "budgetTab": "Översikt",
         "loansTab": "Lån",
         "filteredTransactions": "Filtrerade transaktioner",
         "clearLoanFilter": "Rensa filter",

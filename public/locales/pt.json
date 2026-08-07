@@ -1114,7 +1114,7 @@
         "loanPaymentTitle": "Pagamento do empréstimo: {{borrower}}",
         "typeLoan": "Empréstimo",
         "tabsLabel": "Seções do orçamento",
-        "budgetTab": "Orçamento",
+        "budgetTab": "Visão geral",
         "loansTab": "Empréstimos",
         "filteredTransactions": "Transações filtradas",
         "clearLoanFilter": "Limpar filtro",

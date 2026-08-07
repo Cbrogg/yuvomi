@@ -1126,7 +1126,7 @@
         "loanPaymentTitle": "대출 상환: {{borrower}}",
         "typeLoan": "대출",
         "tabsLabel": "예산 영역",
-        "budgetTab": "예산",
+        "budgetTab": "개요",
         "loansTab": "대출",
         "filteredTransactions": "필터된 거래",
         "clearLoanFilter": "필터 지우기",

@@ -1114,7 +1114,7 @@
         "loanPaymentTitle": "Hitel visszafizetés: {{borrower}}",
         "typeLoan": "Hitel",
         "tabsLabel": "Költségvetési szakaszok",
-        "budgetTab": "Költségvetés",
+        "budgetTab": "Áttekintés",
         "loansTab": "Hitelek",
         "filteredTransactions": "Szűrt tranzakciók",
         "clearLoanFilter": "Szűrő törlése",

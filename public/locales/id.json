@@ -1126,7 +1126,7 @@
         "loanPaymentTitle": "Pelunasan pinjaman: {{borrower}}",
         "typeLoan": "Pinjaman",
         "tabsLabel": "Area anggaran",
-        "budgetTab": "Anggaran",
+        "budgetTab": "Ringkasan",
         "loansTab": "Pinjaman",
         "filteredTransactions": "Transaksi terfilter",
         "clearLoanFilter": "Hapus filter",

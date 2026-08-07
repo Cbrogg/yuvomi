@@ -1126,7 +1126,7 @@
         "loanPaymentTitle": "Bayad sa utang: {{borrower}}",
         "typeLoan": "Utang",
         "tabsLabel": "Mga bahagi ng badyet",
-        "budgetTab": "Badyet",
+        "budgetTab": "Pangkalahatang-tanaw",
         "loansTab": "Mga Utang",
         "filteredTransactions": "Mga na-filter na transaksyon",
         "clearLoanFilter": "I-clear ang filter",

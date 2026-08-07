@@ -1126,7 +1126,7 @@
         "loanPaymentTitle": "Spłata pożyczki: {{borrower}}",
         "typeLoan": "Pożyczka",
         "tabsLabel": "Sekcje budżetu",
-        "budgetTab": "Budżet",
+        "budgetTab": "Przegląd",
         "loansTab": "Pożyczki",
         "filteredTransactions": "Przefiltrowane transakcje",
         "clearLoanFilter": "Wyczyść filtr",

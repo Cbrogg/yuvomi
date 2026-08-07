@@ -1114,7 +1114,7 @@
         "loanPaymentTitle": "Платіж за позикою: {{borrower}}",
         "typeLoan": "Позика",
         "tabsLabel": "Розділи бюджету",
-        "budgetTab": "Бюджет",
+        "budgetTab": "Огляд",
         "loansTab": "Позики",
         "filteredTransactions": "Відфільтровані операції",
         "clearLoanFilter": "Очистити фільтр",

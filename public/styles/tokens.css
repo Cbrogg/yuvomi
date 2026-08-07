@@ -179,6 +179,35 @@
    * loesen beides mit demselben Griff. Guard:
    * `row lists sit in exactly one carrier` in test-frontend-audit.js. */
 
+  /* DIE LEISTEN-REGEL (HIG-Rollout Runde 6, 2026-08-07).
+   * Ob ein Seitentitel ueber einer Leiste steht, entscheidet der `module:`-Wert
+   * der Zielroute (ROUTES in router.js):
+   *   Wechselt die Leiste ihn, ist SIE die Kopf-Navigation und traegt keinen
+   *   Titel ueber sich - der Tab-Name IST der Modulname (Kueche: vier
+   *   eigenstaendige Module unter einer Leiste).
+   *   Wechselt sie ihn nicht, oder wechselt sie gar keine Route, gehoert sie
+   *   unter den Large Title in den kanonischen `page-toolbar`-Kopf
+   *   (Gesundheit, Budget, Belohnungen, Haushaltshilfe).
+   *   Sektionen mit eigener Shell (Einstellungen) fuehren ihren Titel in ihrem
+   *   eigenen Kopf. Das ist der DRITTE FALL der Regel, keine Ausnahme von ihr:
+   *   waere er eine Ausnahme, stuende er beim achtzehnten Modul wieder offen.
+   * WARUM DIE ROUTE UND NICHT DIE BAUART: `renderSubTabs` gegen `wireTablist`
+   * ist eine Implementierungswahl. Die Gesundheit zeigt, dass beides
+   * auseinanderfaellt - ihre Tabs sind echte Routen und tragen trotzdem alle
+   * `module: 'health'`. Bis Runde 6 stand an der Stelle, die das haette
+   * beantworten muessen (utils/tablist.js), „aus Layout-Gruenden": eine
+   * Beobachtung, kein Kriterium - und weil keines dastand, entschied jedes
+   * Modul neu.
+   * Liegt die Leiste IM Kopf, gibt sie dessen Rail-Verhalten ab (Sticky, Grund,
+   * Trennlinie, Hoehe); die Traegerregel dazu steht in sub-tabs.css - derselbe
+   * Satz wie beim Well: der Traeger entscheidet.
+   * Zweite Haelfte derselben Frage: unter der Leiste wiederholt kein sichtbarer
+   * Titel den Namen eines ihrer Tabs. Guards:
+   * `ob ein Seitentitel ueber einer Leiste steht, entscheidet der module:-Wert
+   * der Zielroute` (test-frontend-audit.js, Ebene 2) und
+   * `kein sichtbarer Titel wiederholt den Namen eines Tabs seiner eigenen
+   * Leiste` (test-typography.js). */
+
   /* --------------------------------------------------------
    * 2. Farben - Akzent (konfigurierbar)
    *    Apple Indigo, auf AA vertieft (#5856D6 → #4F4DC9: 5.2:1 auf

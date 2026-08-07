@@ -5519,36 +5519,17 @@ test('wer seinen Körper aufs Lesemaß kappt, kappt auch seinen Kopf', () => {
   }
 });
 
-test('module-head families stay split: in-page tabs vs route clusters', () => {
-  // Familie 1: page-toolbar-Kopf + wireTablist, keine sub-tabs-bar.
-  for (const mod of ['budget', 'housekeeping', 'rewards']) {
-    const src = read(`../public/pages/${mod}.js`);
-    assert.match(src, /wireTablist/, `${mod}: erwartet wireTablist (In-Page-Tab-Familie)`);
-    assert.match(src, /<h1 class="page-toolbar__title"/, `${mod}: erwartet sichtbares <h1 page-toolbar__title>`);
-    assert.match(src, /role="tablist"/, `${mod}: Tabs tragen role="tablist" im page-toolbar`);
-    assert.doesNotMatch(src, /renderSubTabs\b/, `${mod}: In-Page-Tab-Familie nutzt keine sub-tabs-bar`);
-  }
-
-  // Familie 2: geteilte sub-tabs-bar via renderSubTabs, sichtbarer Titel in der
-  // Leiste, separates sr-only <h1> als semantische Überschrift.
-  const healthTabs = read('../public/utils/health-tabs.js');
-  const kitchenTabs = read('../public/utils/kitchen-tabs.js');
-  assert.match(healthTabs, /renderSubTabs/, 'health-tabs.js: erwartet renderSubTabs');
-  assert.match(healthTabs, /title:\s*t\('nav\.health'\)/, 'health-tabs.js: sichtbarer Inline-Titel in der Leiste');
-  assert.match(kitchenTabs, /renderSubTabs/, 'kitchen-tabs.js: erwartet renderSubTabs');
-
-  const health = read('../public/pages/health.js');
-  assert.match(health, /renderHealthTabsBar/, 'health: erwartet renderHealthTabsBar');
-  assert.match(health, /<h1 class="sr-only">/, 'health: sr-only <h1> (die sub-tabs-bar trägt den sichtbaren Titel)');
-  // Präzise auf den Import des geteilten wireTablist-Utils prüfen — der lokale
-  // Helfer `wireTablistKeys` (Panel-interne Pfeiltasten) ist bewusst unberührt.
-  assert.doesNotMatch(health, /from '\/utils\/tablist\.js'/, 'health bleibt Routen-Cluster (kein wireTablist-Util-Import)');
-
-  // Der Interaktions-Baustein dokumentiert den bewussten Split (eine Grammatik,
-  // zwei Layout-Familien) — damit der Guard eine benannte Quelle hat.
-  const tablist = read('../public/utils/tablist.js');
-  assert.match(tablist, /renderSubTabs/, 'tablist.js dokumentiert die Abgrenzung zu renderSubTabs');
-});
+// Hier stand `module-head families stay split: in-page tabs vs route clusters`.
+// Er schrieb die IMPLEMENTIERUNGSWAHL fest - `wireTablist` gegen
+// `renderSubTabs`, je Modul namentlich - und leitete daraus ab, wer einen
+// sichtbaren Titel traegt. Genau das war das Kriterium, das Session 8 als
+// „aus Layout-Gruenden" entlarvt hat: eine Beobachtung, keine Regel. Er hielt
+// deshalb die Gesundheit als Sonderfall fest, statt sie in ein bestehendes
+// Muster einzureihen. Die Zusage prueft jetzt
+// `ob ein Seitentitel ueber einer Leiste steht, entscheidet der module:-Wert
+// der Zielroute` (Redesign Runde 6, Phase 2) - ueber die deklarative
+// Routenliste statt ueber drei Modulnamen. Zwei Guards fuer dieselbe Zusage
+// waeren zwei Wahrheiten.
 
 // #565: Element.scrollIntoView() beim aktiven Tab scrollt jeden scrollbaren
 // Vorfahren mit — auch overflow:hidden-Container wie .calendar-page, die per JS
@@ -7156,6 +7137,194 @@ test('der Modulkopf gehoert der Shell - kein Modul setzt seine Richtung oder sei
       // Die dritte Haelfte der Regel - keine zweite Titelgroesse - haelt bereits
       // `one page-head title scale, owned by the shell`. Sie hier zu wiederholen
       // waere eine zweite Wahrheit ueber dieselbe Zusage.
+    }
+  }
+  assert.deepEqual(offenders, []);
+});
+
+/**
+ * REGEL (Redesign Runde 6, Phase 2): Ob ein Seitentitel ueber einer Leiste
+ * steht, entscheidet der `module:`-Wert der Zielroute.
+ *
+ *   Wechselt die Leiste ihn, ist SIE die Kopf-Navigation und traegt keinen
+ *   Titel ueber sich - der Tab-Name IST der Modulname (Kueche: vier
+ *   eigenstaendige Module unter einer Leiste).
+ *   Wechselt sie ihn nicht, oder wechselt sie gar keine Route, gehoert sie
+ *   unter den Large Title in den kanonischen `page-toolbar`-Kopf (Gesundheit,
+ *   Budget, Belohnungen, Haushaltshilfe).
+ *   Sektionen mit eigener Shell (Einstellungen) fuehren ihren Titel in ihrem
+ *   eigenen Kopf.
+ *
+ * DER DRITTE FALL IST EINE REGEL, KEINE AUSNAHME. Die Einstellungen tragen
+ * `module: 'settings'` auf allen Blaettern und fielen nach Fall 2 unter „Titel
+ * ueber der Leiste" - sie haben aber eine eigene Shell mit eigenem Kopf. Waere
+ * das hier eine Ausnahme, stuende sie beim achtzehnten Modul wieder offen.
+ * Erkennbar ist der Fall an seiner deklarativen Quelle: eine Sektion mit
+ * eigener Shell speist ihre Routen aus einer BLATT-REGISTRY (`*_LEAVES`), die
+ * neben dem Pfad auch Label und Loader fuehrt - genau die Angaben, aus denen
+ * die Shell ihre eigene Navigation und ihren eigenen Kopf baut. Eine blosse
+ * Pfadliste (`HEALTH_ROUTES`) tut das nicht. Der Fall wird deshalb nicht
+ * uebersprungen, sondern anders geprueft: die Sektion MUSS einen eigenen
+ * sichtbaren Titel fuehren und darf keinen `page-toolbar__title` tragen.
+ *
+ * WARUM DIE ROUTE UND NICHT DER HELFERNAME: `renderSubTabs` gegen
+ * `wireTablist` ist eine Implementierungswahl, keine Regel. Sie faellt bei der
+ * Gesundheit auseinander, deren Tabs echte Routen sind und trotzdem alle
+ * `module: 'health'` tragen. Ein Guard auf den Helfernamen waere nach Phase 2
+ * entweder verletzt oder falsch. `ROUTES` (router.js) ist deklarativ und damit
+ * die einzige Groesse, die mechanisch pruefbar UND semantisch gemeint ist.
+ * Guard-Ebene 2 (Struktur, aus deklarativer Quelle).
+ *
+ * KEIN DATEINAME UND KEIN HELFERNAME IM TEST: Modulliste, Seitendateien und
+ * Sektions-Erkennung kommen alle aus router.js; die Quellen eines Moduls sind
+ * seine Seitendatei plus deren eigene Importe.
+ *
+ * Gemessener Anlass: die Gesundheit war das einzige Modul mit Sichtwechsel ohne
+ * Seitentitel - ihr h1 stand `.sr-only` und der Modulname lief als dekorative
+ * Beschriftung in der Leiste mit. Der Titelwiederholungs-Guard in
+ * test-typography.js prueft die zweite Haelfte derselben Frage: dass unter der
+ * Leiste kein Panel ihren Namen wiederholt.
+ */
+test('ob ein Seitentitel ueber einer Leiste steht, entscheidet der module:-Wert der Zielroute', () => {
+  const router = read('../public/router.js');
+
+  // 1. Routentabelle aus der deklarativen Liste.
+  const routes = [];
+  for (const m of router.matchAll(/path:\s*'([^']+)'\s*,\s*page:\s*'([^']+)'\s*,\s*requiresAuth:\s*\w+\s*,\s*module:\s*(null|'[^']*')/g)) {
+    routes.push({ path: m[1], page: m[2], module: m[3] === 'null' ? null : m[3].slice(1, -1) });
+  }
+
+  // 1b. UND die programmatisch erzeugten Unterrouten. Genau hier war die erste
+  //     Fassung dieses Guards blind: `HEALTH_PAGE_ROUTES` und `SETTINGS_ROUTES`
+  //     schreiben ihren Pfad als Shorthand (`{ path, page: …, module: … }`),
+  //     also stand `module: 'health'` in KEINEM Eintrag mit ausgeschriebenem
+  //     Pfad - die Gesundheit fehlte in der Tabelle und wurde nie geprueft. Der
+  //     Guard war gruen mit wieder eingebautem Verstoss. Die Pfade stehen in der
+  //     importierten Konstante; von dort kommen sie jetzt.
+  const importedFrom = new Map();
+  for (const m of router.matchAll(/import\s*\{([^}]+)\}\s*from\s*'([^']+)'/g)) {
+    for (const symbol of m[1].split(',')) {
+      const name = symbol.split(/\s+as\s+/).pop().trim();
+      if (name) importedFrom.set(name, m[2]);
+    }
+  }
+  for (const m of router.matchAll(/(\w+)\.map\(([\s\S]{0,300}?)module:\s*'([^']+)'/g)) {
+    const [, symbol, block, mod] = m;
+    const page = block.match(/page:\s*'([^']+)'/)?.[1];
+    const file = importedFrom.get(symbol);
+    if (!page || !file) continue;
+    let source;
+    try { source = read(`../public${file}`); } catch { continue; }
+    const declaration = source.slice(source.indexOf(`export const ${symbol}`));
+    const body = declaration.slice(0, declaration.indexOf('\n]'));
+    const paths = [...body.matchAll(/path:\s*'([^']+)'/g)].map((p) => p[1]);
+    const literals = paths.length ? paths : [...body.matchAll(/'(\/[^']*)'/g)].map((p) => p[1]);
+    for (const path of literals) routes.push({ path, page, module: mod });
+  }
+
+  assert.ok(
+    routes.length >= 15,
+    `Aus router.js kamen nur ${routes.length} Routen - der Guard misst dann nichts. `
+    + 'Hat sich die Schreibweise der ROUTES-Eintraege geaendert?',
+  );
+  for (const mod of ['health', 'settings', 'shopping']) {
+    assert.ok(
+      routes.some((r) => r.module === mod),
+      `Modul "${mod}" fehlt in der abgeleiteten Routentabelle - der Guard ist genau dort blind, `
+      + 'wo die Routen programmatisch entstehen.',
+    );
+  }
+
+  // 2. Sektionen mit eigener Shell: aus router.js abgeleitet (siehe oben).
+  const sectionModules = new Set(
+    [...router.matchAll(/\w*LEAVES\.map\([\s\S]{0,300}?module:\s*'([^']+)'/g)].map((m) => m[1]),
+  );
+
+  const moduleOf = (path) => {
+    const exact = routes.find((r) => r.path === path);
+    if (exact) return exact.module;
+    let best = null;
+    for (const r of routes) {
+      if (r.path.length <= 1) continue;
+      if (path === r.path || path.startsWith(`${r.path}/`)) {
+        if (!best || r.path.length > best.path.length) best = r;
+      }
+    }
+    return best?.module ?? null;
+  };
+
+  // 3. Quellen je Modul: die Seitendatei aus der Route plus ihre eigenen
+  //    Importe aus /utils/ und /settings/. Dort liegen die geteilten
+  //    Leisten-Bauteile (Sub-Tabs, Tablist, Sektions-Shell); /components/
+  //    bleibt aussen vor, weil dort keine Modul-Navigation entsteht.
+  const pageOf = new Map();
+  for (const r of routes) if (r.module && !pageOf.has(r.module)) pageOf.set(r.module, r.page);
+
+  const sourcesOf = (pagePath) => {
+    let pageSrc;
+    try { pageSrc = read(`../public${pagePath}`); } catch { return []; }
+    const out = [pageSrc];
+    for (const m of pageSrc.matchAll(/from\s+'(\/(?:utils|settings)\/[\w./-]+\.js)'/g)) {
+      try { out.push(read(`../public${m[1]}`)); } catch { /* nicht aufloesbar - ueberspringen */ }
+    }
+    return out;
+  };
+
+  const TABLIST = /role="tablist"|setAttribute\(\s*'role'\s*,\s*'tablist'\s*\)|\bwireTablist\(|\brenderSubTabs\(/;
+  const classAttrs = (src, needle) =>
+    [...src.matchAll(/(?:class="|className\s*=\s*')([^"']*)/g)]
+      .map((m) => m[1])
+      .filter((value) => new RegExp(`\\b${needle}\\b`).test(value));
+
+  const offenders = [];
+  for (const [mod, page] of pageOf) {
+    const sources = sourcesOf(page);
+    if (!sources.length) continue;
+
+    // Die Regel spricht ueber Module MIT Leiste. Eine Sektion mit eigener Shell
+    // hat immer eine (ihre Blatt-Navigation), auch ohne role="tablist".
+    const isSection = sectionModules.has(mod);
+    if (!isSection && !sources.some((src) => TABLIST.test(src))) continue;
+
+    // Ein sichtbarer Seitentitel ist ein `page-toolbar__title` OHNE `sr-only`
+    // in einem KANONISCHEN Kopf. Die Gruppen-Variante zaehlt nicht: ihr Titel
+    // ist kein Seitentitel, sondern der Name der gerade offenen Liste
+    // (Einkauf), und ueber ihr steht bereits die Leiste des Moduls.
+    const hasCanonicalHead = sources.some((src) =>
+      classAttrs(src, 'page-toolbar').some((value) => !/\bpage-toolbar--in-group\b/.test(value)));
+    const hasTitle = sources.some((src) =>
+      classAttrs(src, 'page-toolbar__title').some((value) => !/\bsr-only\b/.test(value)));
+    const visibleTitle = hasCanonicalHead && hasTitle;
+
+    if (isSection) {
+      const ownTitle = sources.some((src) =>
+        /<h1\b(?![^>]*\bsr-only\b)/.test(src) || /createElement\(\s*'h1'\s*\)/.test(src));
+      if (!ownTitle) {
+        offenders.push(`${mod}: Sektion mit eigener Shell, fuehrt aber keinen eigenen sichtbaren Titel`);
+      }
+      if (hasTitle) {
+        offenders.push(`${mod}: Sektion mit eigener Shell traegt zusaetzlich einen page-toolbar__title - zwei Koepfe fuer einen Titel`);
+      }
+      continue;
+    }
+
+    const targeted = new Set(
+      [...new Set(sources.flatMap((src) => [...src.matchAll(/\broute:\s*'([^']+)'/g)].map((m) => m[1])))]
+        .map(moduleOf)
+        .filter(Boolean),
+    );
+
+    if (targeted.size > 1 && visibleTitle) {
+      offenders.push(
+        `${mod}: die Leiste wechselt den module:-Wert (${[...targeted].sort().join(', ')}) und ist damit `
+        + 'selbst die Kopf-Navigation - ueber ihr steht kein Seitentitel',
+      );
+    }
+    if (targeted.size <= 1 && !visibleTitle) {
+      offenders.push(
+        `${mod}: die Leiste wechselt keinen module:-Wert - der Modulname gehoert als sichtbarer `
+        + '.page-toolbar__title in den kanonischen Kopf darueber',
+      );
     }
   }
   assert.deepEqual(offenders, []);

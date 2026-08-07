@@ -1114,7 +1114,7 @@
         "loanPaymentTitle": "借款还款：{{borrower}}",
         "typeLoan": "借款",
         "tabsLabel": "预算分区",
-        "budgetTab": "预算",
+        "budgetTab": "概览",
         "loansTab": "借款",
         "filteredTransactions": "已筛选交易",
         "clearLoanFilter": "清除筛选",

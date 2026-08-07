@@ -1114,7 +1114,7 @@
         "loanPaymentTitle": "Платеж по займу: {{borrower}}",
         "typeLoan": "Займ",
         "tabsLabel": "Разделы бюджета",
-        "budgetTab": "Бюджет",
+        "budgetTab": "Обзор",
         "loansTab": "Займы",
         "filteredTransactions": "Отфильтрованные операции",
         "clearLoanFilter": "Сбросить фильтр",

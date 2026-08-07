@@ -1114,7 +1114,7 @@
         "loanPaymentTitle": "Remboursement du prêt : {{borrower}}",
         "typeLoan": "Prêt",
         "tabsLabel": "Sections du budget",
-        "budgetTab": "Budget",
+        "budgetTab": "Aperçu",
         "loansTab": "Prêts",
         "filteredTransactions": "Transactions filtrées",
         "clearLoanFilter": "Effacer le filtre",

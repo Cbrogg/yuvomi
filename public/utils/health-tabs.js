@@ -42,17 +42,32 @@ export function getLastHealthRoute() {
   return '/health';
 }
 
+/**
+ * Haengt die Sub-Tab-Leiste als zweite Zeile in den Modulkopf der Gesundheit.
+ *
+ * WARUM IN DEN KOPF UND NICHT DARUEBER: die Leiste wechselt keinen `module:`-Wert
+ * (alle Health-Routen tragen `module: 'health'`, router.js), sie wechselt eine
+ * SICHT innerhalb des Moduls. Damit gehoert sie unter den Large Title in den
+ * kanonischen `page-toolbar`-Kopf - dieselbe Rollenverteilung wie in Budget,
+ * Belohnungen und Haushaltshilfe. Sticky-Position, Seitengrund und Trennlinie
+ * kommen dort vom Kopf; die Leiste gibt sie ab (Traegerregel in sub-tabs.css).
+ *
+ * Kein `title:` mehr: den Modulnamen fuehrt der `page-toolbar__title` des Kopfes.
+ *
+ * @param {HTMLElement} container - der Seiten-Container; muss die `.page-toolbar`
+ *                                  der Gesundheit enthalten.
+ */
 export function renderHealthTabsBar(container, activeRoute, { cycleEnabled = true } = {}) {
-  container.classList.add('has-health-tabs');
+  const toolbar = container.querySelector('.page-toolbar');
+  if (!toolbar) return;
 
-  renderSubTabs(container, {
+  renderSubTabs(toolbar, {
     tabs: HEALTH_TABS({ cycleEnabled }).map(({ route, labelKey, icon }) => ({ id: route, label: t(labelKey), icon })),
     activeId: activeRoute,
     storageKey: HEALTH_STORAGE_KEY,
     extraClass: 'health-tabs-bar',
     ariaLabel: t('nav.health'),
-    title: t('nav.health'),
-    insertPosition: 'afterbegin',
+    insertPosition: 'beforeend',
     onChange: (route) => window.yuvomi?.navigate(route),
   });
 }

@@ -1114,7 +1114,7 @@
         "loanPaymentTitle": "Rimborso del prestito: {{borrower}}",
         "typeLoan": "Prestito",
         "tabsLabel": "Sezioni del bilancio",
-        "budgetTab": "Bilancio",
+        "budgetTab": "Panoramica",
         "loansTab": "Prestiti",
         "filteredTransactions": "Movimenti filtrati",
         "clearLoanFilter": "Cancella filtro",

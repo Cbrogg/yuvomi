@@ -1114,7 +1114,7 @@
         "loanPaymentTitle": "Splátka půjčky: {{borrower}}",
         "typeLoan": "Půjčka",
         "tabsLabel": "Oblasti rozpočtu",
-        "budgetTab": "Rozpočet",
+        "budgetTab": "Přehled",
         "loansTab": "Půjčky",
         "filteredTransactions": "Filtrované transakce",
         "clearLoanFilter": "Zrušit filtr",

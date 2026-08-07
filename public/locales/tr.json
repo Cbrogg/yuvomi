@@ -1114,7 +1114,7 @@
         "loanPaymentTitle": "Kredi geri ödemesi: {{borrower}}",
         "typeLoan": "Borç",
         "tabsLabel": "Bütçe bölümleri",
-        "budgetTab": "Bütçe",
+        "budgetTab": "Genel bakış",
         "loansTab": "Borçlar",
         "filteredTransactions": "Filtrelenmiş işlemler",
         "clearLoanFilter": "Filtreyi temizle",

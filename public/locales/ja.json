@@ -1114,7 +1114,7 @@
         "loanPaymentTitle": "ローン返済: {{borrower}}",
         "typeLoan": "貸付",
         "tabsLabel": "予算セクション",
-        "budgetTab": "予算",
+        "budgetTab": "概要",
         "loansTab": "貸付",
         "filteredTransactions": "絞り込み済み取引",
         "clearLoanFilter": "フィルター解除",

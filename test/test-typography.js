@@ -212,45 +212,104 @@ test('Settings-Blätter wiederholen ihren eigenen Titel nicht als Unterüberschr
   assert.deepEqual(failures, []);
 });
 
-test('ein Panel wiederholt nicht sichtbar den Namen seiner eigenen Leiste', async () => {
-  // Die Regel darüber galt nur für die Einstellungen - Gesundheit hatte
-  // denselben Defekt und war davon unberührt: alle SECHS Panels führten den
-  // Namen ihres aktiven Sub-Tabs wortgleich als h2 direkt darunter
-  // („Übersicht" über „Übersicht", Finish-Review Runde 4, Befund 6). Eine
-  // Regel, die nur eine Modulfamilie kennt, ist eine Allowlist - deshalb prüft
-  // dieser Test die zweite Familie mit derselben Bauart (Leiste + Panels).
+test('kein sichtbarer Titel wiederholt den Namen eines Tabs seiner eigenen Leiste', async () => {
+  // WAS SICH GEÄNDERT HAT (Redesign Runde 6, Phase 2): Dieser Guard las bis
+  // hierher ZWEI fest verdrahtete Dateien - health-tabs.js und health.js. Sein
+  // eigener Kommentar sagte, „eine Regel, die nur eine Modulfamilie kennt, ist
+  // eine Allowlist", und behob das, indem er eine ZWEITE Familie aufnahm. Das
+  // ist eine Allowlist mit zwei Einträgen. Er prüft jetzt JEDES Modul, das eine
+  // Leiste rendert, und leitet Leiste wie Überschriften aus dem Markup ab.
+  //
+  // Gemessener Anlass für die Verallgemeinerung: das Budget zeigte live genau
+  // die Verdopplung, die der Guard verbietet - Titel „Budget" über einem Tab
+  // „Budget". Kein Bericht hat sie gemeldet; der erste Lauf der Regel fand sie.
   //
   // Erlaubt bleibt die UNSICHTBARE Wiederholung: die Überschrift hält die
   // Dokumentgliederung zwischen dem h1 des Moduls und den h3 der Abschnitte.
   // Verboten ist nur, sie zu ZEIGEN.
-  // health-tabs.js importiert `/i18n.js` - ein Browser-Pfad, den Node nicht
-  // aufloest. Die labelKeys stehen dort als Literale, also aus der Quelle lesen
-  // statt das Modul zu laden.
   const de = JSON.parse(readFileSync(new URL('../public/locales/de.json', import.meta.url), 'utf8'));
   const translate = (key) => key.split('.').reduce((value, segment) => value?.[segment], de);
   const normalize = (value) => String(value ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
 
-  const tabsSource = readFileSync(new URL('../public/utils/health-tabs.js', import.meta.url), 'utf8');
-  const source = readFileSync(new URL('../public/pages/health.js', import.meta.url), 'utf8');
-  const tabLabels = new Set(
-    [...tabsSource.matchAll(/labelKey:\s*['"]([\w.]+)['"]/g)]
-      .map((m) => normalize(translate(m[1]))),
-  );
-  assert.ok(tabLabels.size >= 5, 'Die Sub-Tab-Labels der Gesundheit sind lesbar');
+  // Quellen je Seite: die Seitendatei plus ihre eigenen /utils/-Importe. Dort
+  // liegen die geteilten Leisten (health-tabs.js, kitchen-tabs.js); die Module
+  // stehen nicht als Liste im Test.
+  const readPublic = (path) => readFileSync(new URL(`../public${path}`, import.meta.url), 'utf8');
+  const pageFiles = readdirSync(new URL('../public/pages/', import.meta.url))
+    .filter((name) => name.endsWith('.js'));
 
   const failures = [];
-  for (const match of source.matchAll(/<h([1-3])\b([^>]*)>\s*\$\{(?:esc\()?\s*t\(\s*(?:panel\.titleKey|['"]([\w.]+)['"])/g)) {
-    const [, level, attrs, key] = match;
-    if (/\bsr-only\b/.test(attrs)) continue;
-    // `panel.titleKey` ist die Schleifenvariable über alle Panels - ihre Werte
-    // sind genau die Titel, die auch die Leiste führt.
-    const titles = key ? [normalize(translate(key))] : [...tabLabels];
-    for (const title of titles) {
-      if (tabLabels.has(title)) {
-        failures.push(`health.js: sichtbares <h${level}> wiederholt den Leisten-Namen "${title}"`);
+  let barsSeen = 0;
+
+  for (const name of pageFiles) {
+    const page = readPublic(`/pages/${name}`);
+    const sources = [page];
+    for (const m of page.matchAll(/from\s+'(\/utils\/[\w./-]+\.js)'/g)) {
+      try { sources.push(readPublic(m[1])); } catch { /* nicht aufloesbar */ }
+    }
+
+    // 1. Die Labels der Leiste. Zwei Bauarten, beide über ihre Signatur
+    //    gefunden statt über einen Helfernamen:
+    //    (a) deklarative Tab-Listen tragen `route:` UND `labelKey:` im selben
+    //        Eintrag. Das `route:` gehört zur Signatur: ein blosses
+    //        `labelKey:` trägt auch jede Optionsliste (ACTIVITY_TYPES in
+    //        health-activity.js hat sieben davon), und die sind keine Tabs.
+    //    (b) Markup-Leisten tragen ihre Labels als `t('x.y')` INNERHALB des
+    //        Elements mit role="tablist" - auch dann, wenn ein Helfer sie
+    //        entgegennimmt (`${renderTabButton('id', 'icon', t('x.y'))}`).
+    const labelKeys = new Set();
+    for (const src of sources) {
+      for (const entry of src.matchAll(/\{[^{}]*\}/g)) {
+        if (!/\broute:\s*['"]/.test(entry[0])) continue;
+        const key = entry[0].match(/\blabelKey:\s*['"]([\w.]+)['"]/)?.[1];
+        if (key) labelKeys.add(key);
+      }
+      for (const m of src.matchAll(/role="tablist"/g)) {
+        const open = src.indexOf('>', m.index);
+        if (open === -1) continue;
+        const rest = src.slice(open + 1);
+        const end = Math.min(
+          ...[rest.indexOf('</nav>'), rest.indexOf('</div>')].filter((i) => i >= 0),
+          rest.length,
+        );
+        for (const label of rest.slice(0, end).matchAll(/\bt\(\s*['"]([\w.]+)['"]/g)) {
+          labelKeys.add(label[1]);
+        }
+      }
+    }
+    if (!labelKeys.size) continue;
+    barsSeen += 1;
+
+    const tabLabels = new Set([...labelKeys].map((key) => normalize(translate(key))).filter(Boolean));
+
+    // 2. Alle SICHTBAREN Überschriften der Seite. `panel.titleKey` ist die
+    //    Schleifenvariable über alle Panels - ihre Werte sind genau die Titel,
+    //    die auch die Leiste führt.
+    //
+    //    BEWUSST JE SEITE, NICHT JE LEISTE: eine Seite kann mehrere Leisten
+    //    tragen (die Gesundheit hat neben den Sub-Tabs je Panel eine
+    //    Personen- und eine Zeitraum-Reihe), und ihre Labels landen in einem
+    //    Topf. Das ist strenger als der Regelsatz - gemeldet wird auch eine
+    //    Überschrift, die den Namen einer NACHBAR-Leiste trägt. Es bleibt
+    //    richtig: zwei wortgleiche Beschriftungen auf einer Seite benennen
+    //    keine Ebene, egal welche Leiste die zweite führt.
+    for (const match of page.matchAll(/<h([1-3])\b([^>]*)>\s*\$\{(?:esc\()?\s*t\(\s*(?:(panel\.titleKey)|['"]([\w.]+)['"])/g)) {
+      const [, level, attrs, loopVar, key] = match;
+      if (/\bsr-only\b/.test(attrs)) continue;
+      const titles = loopVar ? [...tabLabels] : [normalize(translate(key))];
+      for (const title of titles) {
+        if (title && tabLabels.has(title)) {
+          failures.push(`${name}: sichtbares <h${level}> wiederholt den Leisten-Namen „${title}"`);
+        }
       }
     }
   }
+
+  assert.ok(
+    barsSeen >= 5,
+    `Nur ${barsSeen} Module mit Leiste gefunden - der Guard misst dann fast nichts. `
+    + 'Hat sich die Schreibweise der Tab-Leisten geändert?',
+  );
   assert.deepEqual(failures, []);
 });
 

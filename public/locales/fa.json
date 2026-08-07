@@ -1126,7 +1126,7 @@
         "loanPaymentTitle": "بازپرداخت وام: {{borrower}}",
         "typeLoan": "وام",
         "tabsLabel": "بخش‌های بودجه",
-        "budgetTab": "بودجه",
+        "budgetTab": "نمای کلی",
         "loansTab": "وام‌ها",
         "filteredTransactions": "تراکنش‌های فیلترشده",
         "clearLoanFilter": "پاک کردن فیلتر",

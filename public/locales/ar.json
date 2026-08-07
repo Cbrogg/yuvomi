@@ -1114,7 +1114,7 @@
         "loanPaymentTitle": "سداد القرض: {{borrower}}",
         "typeLoan": "قرض",
         "tabsLabel": "أقسام الميزانية",
-        "budgetTab": "الميزانية",
+        "budgetTab": "نظرة عامة",
         "loansTab": "القروض",
         "filteredTransactions": "المعاملات المصفاة",
         "clearLoanFilter": "مسح الفلتر",

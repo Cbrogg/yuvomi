@@ -1114,7 +1114,7 @@
         "loanPaymentTitle": "Πληρωμή δανείου: {{borrower}}",
         "typeLoan": "Δάνειο",
         "tabsLabel": "Ενότητες προϋπολογισμού",
-        "budgetTab": "Προϋπολογισμός",
+        "budgetTab": "Επισκόπηση",
         "loansTab": "Δάνεια",
         "filteredTransactions": "Φιλτραρισμένες συναλλαγές",
         "clearLoanFilter": "Καθαρισμός φίλτρου",

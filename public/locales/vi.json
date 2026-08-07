@@ -1114,7 +1114,7 @@
         "loanPaymentTitle": "Trả nợ khoản vay: {{borrower}}",
         "typeLoan": "Khoản vay",
         "tabsLabel": "Các phần ngân sách",
-        "budgetTab": "Ngân sách",
+        "budgetTab": "Tổng quan",
         "loansTab": "Khoản vay",
         "filteredTransactions": "Giao dịch đã lọc",
         "clearLoanFilter": "Xóa bộ lọc",
