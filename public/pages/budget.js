@@ -573,7 +573,7 @@ function wireNav() {
 // Ohne Rückgabe des Fokus endet die Tastaturnavigation nach dem ersten
 // Pfeildruck im Nichts - der Nutzer müsste sich von vorn durchtabben.
 function refocusSegmented(barSelector) {
-  _container.querySelector(`${barSelector} .budget-segmented__item.is-active`)?.focus();
+  _container.querySelector(`${barSelector} .segmented__item.is-active`)?.focus();
 }
 
 function updateLabel() {
@@ -618,7 +618,7 @@ function renderBody() {
     return;
   }
   if (state.activeTab === 'plan') {
-    setHtml(body, '<div class="budget-tab-panel budget-panel--reading budget-tab-panel--plan" id="budget-plan-panel"></div>');
+    setHtml(body, '<div class="budget-tab-panel budget-tab-panel--reading budget-tab-panel--plan" id="budget-plan-panel"></div>');
     renderPlans(body.querySelector('#budget-plan-panel'), {
       user: _user, currency: state.currency, month: state.month,
       formatAmount, categoryLabel, esc,
@@ -667,10 +667,10 @@ function renderBody() {
   // Mehrausgabe, grün = Überschuss).
   const balanceNeutral = s.income === 0 && s.balance < 0;
   const balanceClass = balanceNeutral
-    ? 'budget-summary-card--balance-neutral'
+    ? 'metric-card--balance-neutral'
     : s.balance >= 0
-      ? 'budget-summary-card--balance-positive'
-      : 'budget-summary-card--balance-negative';
+      ? 'metric-card--balance-positive'
+      : 'metric-card--balance-negative';
   const prevLabel = p ? formatMonthLabel(p.month).split(' ')[0].slice(0, 3) : '';
 
   // Erwartete Buchungen stecken in keiner der drei Karten (#637). Ohne diese
@@ -697,22 +697,22 @@ function renderBody() {
   // im Vorzeichen. Das frühere Math.abs stand nur bei den Ausgaben und war damit
   // eine stille Ausnahme - jetzt ist es die Rolle, die für beide Karten gilt.
   const incomeCard = `
-      <div class="budget-summary-card budget-summary-card--income">
-        <div class="budget-summary-card__label">${t('budget.income')}</div>
-        <div class="budget-summary-card__amount">${amountByRole(s.income, 'total').text}</div>
+      <div class="metric-card metric-card--income">
+        <div class="metric-card__label">${t('budget.income')}</div>
+        <div class="metric-card__amount">${amountByRole(s.income, 'total').text}</div>
         ${p ? renderTrend(s.income, p.income, prevLabel) : ''}
       </div>`;
   const expensesCard = `
-      <div class="budget-summary-card budget-summary-card--expenses">
-        <div class="budget-summary-card__label">${t('budget.expenses')}</div>
-        <div class="budget-summary-card__amount">${amountByRole(s.expenses, 'total').text}</div>
+      <div class="metric-card metric-card--expenses">
+        <div class="metric-card__label">${t('budget.expenses')}</div>
+        <div class="metric-card__amount">${amountByRole(s.expenses, 'total').text}</div>
         ${p ? renderTrend(s.expenses, p.expenses, prevLabel) : ''}
       </div>`;
   // Rolle `balance`: hier trägt die Zahl selbst die Richtung.
   const balanceCard = `
-      <div class="budget-summary-card ${balanceClass}">
-        <div class="budget-summary-card__label">${t('budget.balance')}</div>
-        <div class="budget-summary-card__amount">${amountByRole(s.balance, 'balance').text}</div>
+      <div class="metric-card ${balanceClass}">
+        <div class="metric-card__label">${t('budget.balance')}</div>
+        <div class="metric-card__amount">${amountByRole(s.balance, 'balance').text}</div>
         ${p && !balanceNeutral ? renderTrend(s.balance, p.balance, prevLabel) : ''}
       </div>`;
 
@@ -729,7 +729,7 @@ function renderBody() {
       </button>
     </div>
     <!-- Zusammenfassung -->
-    <div class="budget-summary${expensesOnly ? ' budget-summary--expenses-only' : ''}">
+    <div class="metric-grid${expensesOnly ? ' metric-grid--expenses-only' : ''}">
       ${expensesOnly ? expensesCard : incomeCard + expensesCard + balanceCard}
     </div>
     ${pendingNote}
@@ -993,7 +993,7 @@ function renderAccountsPage() {
   // Rolle `balance`: das Vorzeichen steckt in der Zahl. Nebenbei behebt die
   // Rollenlogik, dass ein Nettovermögen von exakt 0 vorher als Erfolg grün
   // erschien - null Vermögen ist keine gute Nachricht, sondern gar keine.
-  const netWorth = amountByRole(state.netWorth, 'balance', { block: 'budget-summary-card' });
+  const netWorth = amountByRole(state.netWorth, 'balance', { block: 'metric-card' });
 
   const archiveToggle = hasArchived ? `
       <button class="budget-accounts__toggle" id="budget-toggle-archived" type="button" aria-pressed="${state.accountsShowArchived}">
@@ -1005,19 +1005,19 @@ function renderAccountsPage() {
   // Vorher stand das Nettovermögen als Label-plus-Wert direkt im Kopf und war
   // damit die vierte Kartenbauart des Moduls (Critique 2026-07-30, P0).
   const header = `
-    <div class="budget-panel-head">
-      <span class="budget-panel-head__title">${t('budget.accountsTab')}</span>
-      <div class="budget-panel-head__actions">
+    <div class="panel-head">
+      <span class="panel-head__title">${t('budget.accountsTab')}</span>
+      <div class="panel-head__actions">
         ${archiveToggle}
         <button class="btn btn--secondary" id="budget-add-account" type="button">
           <i data-lucide="plus" class="icon-sm" aria-hidden="true"></i>${t('budget.addAccount')}
         </button>
       </div>
     </div>
-    <div class="budget-summary">
-      <div class="budget-summary-card ${netWorth.className}">
-        <div class="budget-summary-card__label">${t('budget.netWorth')}</div>
-        <div class="budget-summary-card__amount">${netWorth.text}</div>
+    <div class="metric-grid">
+      <div class="metric-card ${netWorth.className}">
+        <div class="metric-card__label">${t('budget.netWorth')}</div>
+        <div class="metric-card__amount">${netWorth.text}</div>
       </div>
     </div>`;
 
@@ -1306,16 +1306,16 @@ function renderLoansDashboard() {
 
   return `
     <section class="budget-loans">
-      <div class="budget-panel-head budget-loans__header">
+      <div class="panel-head budget-loans__header">
         <div>
-          <div class="budget-panel-head__title">${t('budget.loansTitle')}</div>
+          <div class="panel-head__title">${t('budget.loansTitle')}</div>
           <div class="budget-loans__summary">${t('budget.loansSummary', {
             count: summary.active_count ?? 0,
             amount: formatAmount(summary.remaining_principal ?? summary.remaining_amount ?? 0),
           })}</div>
           ${state.loanFilterId ? `<div class="budget-list-header__filter">${esc(activeLoanLabel())}</div>` : ''}
         </div>
-        <div class="budget-panel-head__actions">
+        <div class="panel-head__actions">
           ${state.loanFilterId ? `
           <button class="btn btn--secondary btn--sm" type="button" id="budget-clear-loan-filter">
             <i data-lucide="x" aria-hidden="true"></i>${t('budget.clearLoanFilter')}
@@ -1323,11 +1323,11 @@ function renderLoansDashboard() {
           <!-- Einfachauswahl, keine Sicht: role="radiogroup" statt des früheren
                role="group", damit der Zustand angesagt wird UND die geteilte
                Verhaltensschicht Pfeiltasten liefert (Critique 2026-07-30, P1). -->
-          <div class="budget-segmented budget-loans__filters" role="radiogroup" aria-label="${t('budget.loanStatusFilterLabel')}">
+          <div class="segmented budget-loans__filters" role="radiogroup" aria-label="${t('budget.loanStatusFilterLabel')}">
             ${[['active', 'budget.loanStatusActive'], ['paid', 'budget.loanStatusPaid'], ['all', 'budget.loanStatusAll']]
               .map(([id, key]) => {
                 const on = state.loanStatusFilter === id;
-                return `<button class="budget-segmented__item${on ? ' is-active' : ''}"
+                return `<button class="segmented__item${on ? ' is-active' : ''}"
                     type="button" role="radio" data-tab-id="${id}" aria-checked="${on}"
                     tabindex="${on ? '0' : '-1'}">${t(key)}</button>`;
               }).join('')}
@@ -1337,18 +1337,18 @@ function renderLoansDashboard() {
       <!-- Geteilte Kennzahl-Zeile statt der früheren eigenen budget-loans__stats
            (fünfte Kartenbauart des Moduls, Critique 2026-07-30, P0). Rolle
            total: die Richtung steht im Label, nicht im Vorzeichen. -->
-      <div class="budget-summary">
-        <div class="budget-summary-card">
-          <div class="budget-summary-card__label">${t(summary.has_interest ? 'budget.loanRemainingPrincipal' : 'budget.loanRemainingAmount')}</div>
-          <div class="budget-summary-card__amount">${amountByRole(summary.remaining_principal ?? summary.remaining_amount ?? 0, 'total').text}</div>
+      <div class="metric-grid">
+        <div class="metric-card">
+          <div class="metric-card__label">${t(summary.has_interest ? 'budget.loanRemainingPrincipal' : 'budget.loanRemainingAmount')}</div>
+          <div class="metric-card__amount">${amountByRole(summary.remaining_principal ?? summary.remaining_amount ?? 0, 'total').text}</div>
         </div>
-        <div class="budget-summary-card">
-          <div class="budget-summary-card__label">${t('budget.loanRemainingInstallments')}</div>
-          <div class="budget-summary-card__amount">${summary.remaining_installments ?? 0}</div>
+        <div class="metric-card">
+          <div class="metric-card__label">${t('budget.loanRemainingInstallments')}</div>
+          <div class="metric-card__amount">${summary.remaining_installments ?? 0}</div>
         </div>
-        <div class="budget-summary-card">
-          <div class="budget-summary-card__label">${t('budget.loanPaidAmount')}</div>
-          <div class="budget-summary-card__amount">${amountByRole(summary.paid_amount ?? 0, 'total').text}</div>
+        <div class="metric-card">
+          <div class="metric-card__label">${t('budget.loanPaidAmount')}</div>
+          <div class="metric-card__amount">${amountByRole(summary.paid_amount ?? 0, 'total').text}</div>
         </div>
       </div>
       ${summary.has_foreign_currency ? `<p class="form-hint budget-loan-hint">${t('budget.loanSummaryConverted', {
@@ -1722,18 +1722,18 @@ function renderLoanCard(loan) {
 function renderTrend(current, prev, prevLabel) {
   const delta = current - prev;
   if (Math.abs(delta) < 0.005) {
-    return `<div class="budget-summary-card__trend budget-summary-card__trend--neutral">${t('budget.trendNeutral', { month: prevLabel })}</div>`;
+    return `<div class="metric-card__trend metric-card__trend--neutral">${t('budget.trendNeutral', { month: prevLabel })}</div>`;
   }
   const positive = delta > 0;
   // Rolle `flow`: eine Veränderung gegenüber dem Vormonat trägt immer ein
   // Vorzeichen, aus demselben Zahlformat wie die Buchungen selbst.
   const deltaText = amountByRole(delta, 'flow').text;
-  const cls      = positive ? 'budget-summary-card__trend--positive' : 'budget-summary-card__trend--negative';
+  const cls      = positive ? 'metric-card__trend--positive' : 'metric-card__trend--negative';
   // Pfeil als Lucide-Icon statt ▲/▼: die Textglyphen fallen aus der Icon-Familie
   // und sind je nach Font unterschiedlich breit (Zeilenzittern). Das „vs." stand
   // bisher fest im Template — jetzt trägt der Key den ganzen Satz.
   const icon = positive ? 'trending-up' : 'trending-down';
-  return `<div class="budget-summary-card__trend ${cls}">
+  return `<div class="metric-card__trend ${cls}">
     <i data-lucide="${icon}" class="icon-sm" aria-hidden="true"></i>
     ${esc(t('budget.trendDelta', { amount: deltaText, month: prevLabel }))}
   </div>`;

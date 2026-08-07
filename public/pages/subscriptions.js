@@ -378,29 +378,29 @@ function renderSummary() {
   // Bauarten im selben Modul (Critique 2026-07-30, P0).
   // Rolle `plain`: Abo-Kosten sind Rechnungsbeträge ohne Kontorichtung.
   return `
-    <section class="budget-summary budget-summary--quad">
-      <article class="budget-summary-card">
-        <div class="budget-summary-card__label">${t('subscriptions.monthlyCost')}</div>
-        <div class="budget-summary-card__amount">${money(used)}</div>
-        <div class="budget-summary-card__note">${t('subscriptions.activeCount', { count: summary.active_count })}</div>
+    <section class="metric-grid metric-grid--quad">
+      <article class="metric-card">
+        <div class="metric-card__label">${t('subscriptions.monthlyCost')}</div>
+        <div class="metric-card__amount">${money(used)}</div>
+        <div class="metric-card__note">${t('subscriptions.activeCount', { count: summary.active_count })}</div>
       </article>
-      <article class="budget-summary-card">
-        <div class="budget-summary-card__label">${t('subscriptions.monthlyBudget')}</div>
-        <div class="budget-summary-card__amount">${money(budget)}</div>
-        <div class="budget-summary-card__progress${isOverBudget ? ' budget-summary-card__progress--over' : ''}"
+      <article class="metric-card">
+        <div class="metric-card__label">${t('subscriptions.monthlyBudget')}</div>
+        <div class="metric-card__amount">${money(budget)}</div>
+        <div class="metric-card__progress${isOverBudget ? ' metric-card__progress--over' : ''}"
              role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${percentage}" aria-valuetext="${realPercentage}%">
           <span style="--fill:${percentage / 100}"></span>
         </div>
       </article>
-      <article class="budget-summary-card${isOverBudget ? ' budget-summary-card--negative' : ''}">
-        <div class="budget-summary-card__label">${hasBudget ? (isOverBudget ? t('subscriptions.overBudget') : t('subscriptions.remainingBudget')) : t('subscriptions.noBudgetLimit')}</div>
-        <div class="budget-summary-card__amount">${hasBudget ? money(Math.abs(summary.remaining_budget)) : t('subscriptions.unlimited')}</div>
-        <div class="budget-summary-card__note${isOverBudget ? ' budget-summary-card__note--danger' : ''}">${hasBudget ? `${realPercentage}% ${t('subscriptions.budgetUsed')}` : t('subscriptions.setBudgetHint')}</div>
+      <article class="metric-card${isOverBudget ? ' metric-card--negative' : ''}">
+        <div class="metric-card__label">${hasBudget ? (isOverBudget ? t('subscriptions.overBudget') : t('subscriptions.remainingBudget')) : t('subscriptions.noBudgetLimit')}</div>
+        <div class="metric-card__amount">${hasBudget ? money(Math.abs(summary.remaining_budget)) : t('subscriptions.unlimited')}</div>
+        <div class="metric-card__note${isOverBudget ? ' metric-card__note--danger' : ''}">${hasBudget ? `${realPercentage}% ${t('subscriptions.budgetUsed')}` : t('subscriptions.setBudgetHint')}</div>
       </article>
-      <article class="budget-summary-card">
-        <div class="budget-summary-card__label">${t('subscriptions.yearlyProjection')}</div>
-        <div class="budget-summary-card__amount">${money(used * 12)}</div>
-        <div class="budget-summary-card__note">${esc(summary.base_currency)}</div>
+      <article class="metric-card">
+        <div class="metric-card__label">${t('subscriptions.yearlyProjection')}</div>
+        <div class="metric-card__amount">${money(used * 12)}</div>
+        <div class="metric-card__note">${esc(summary.base_currency)}</div>
       </article>
     </section>
   `;

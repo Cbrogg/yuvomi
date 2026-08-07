@@ -955,7 +955,7 @@ html:has(.search-overlay--visible) yuvomi-install-prompt {
 .contact-filter-chip--active svg,
 .group-toggle__btn--active svg,
 .documents-view-toggle__btn--active svg,
-.budget-segmented__item.is-active svg,
+.segmented__item.is-active svg,
 .cal-toolbar__view-btn--active svg,
 .cal-toolbar__layer-btn--active svg,
 .cal-toolbar__search-btn--active svg,

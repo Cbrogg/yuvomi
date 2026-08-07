@@ -115,13 +115,13 @@
   margin: 0;
 }
 
-/* Die Kennzahl-Zeile ist .budget-summary (budget.css) mit --summary-cards: 4.
+/* Die Kennzahl-Zeile ist .metric-grid (budget.css) mit --summary-cards: 4.
  * Die frühere eigene .subscriptions-summary-card war die zweite von fünf
  * Kartenbauarten im selben Modul (Critique 2026-07-30, P0) - sie ist ersatzlos
- * entfallen, das Markup trägt jetzt .budget-summary-card. */
+ * entfallen, das Markup trägt jetzt .metric-card. */
 
 /* Arbeitsflächen sind opak, auch hier: Glass bleibt Overlays und Modals
- * vorbehalten (Begründung an .budget-summary-card in budget.css). Diese Datei
+ * vorbehalten (Begründung an .metric-card in budget.css). Diese Datei
  * setzte auf denselben Rollen --glass-bg-card und widersprach damit der Regel
  * innerhalb des eigenen Moduls. */
 .subscriptions-chart,
@@ -133,7 +133,7 @@
 }
 
 /* .subscriptions-budget-progress ist entfallen: der Balken in der Kennzahlkarte
- * ist jetzt .budget-summary-card__progress (budget.css) und färbt sich bei
+ * ist jetzt .metric-card__progress (budget.css) und färbt sich bei
  * Überschreitung um, statt stumm bei voller Breite stehen zu bleiben. */
 
 .subscriptions-analytics {
@@ -896,7 +896,7 @@
     justify-content: flex-end;
   }
 
-  /* Der Umbruch der Kennzahl-Zeile liegt jetzt an .budget-summary--quad
+  /* Der Umbruch der Kennzahl-Zeile liegt jetzt an .metric-grid--quad
      (budget.css) als Container-Query. */
 
   .subscriptions-analytics {
@@ -925,7 +925,7 @@
 
   /* Kennzahlen bleiben zweispaltig (kompakte Bento-Dichte statt vier
    * vollbreiter Einzelwert-Karten, Audit F5) - jetzt über
-   * .budget-summary--quad in budget.css. */
+   * .metric-grid--quad in budget.css. */
 
   .subscriptions-notifications li {
     grid-template-columns: auto minmax(0, 1fr) auto;

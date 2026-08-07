@@ -143,9 +143,9 @@
  * und .item-category__header - alle fünf ohne Fundstelle im Markup.
  * ------------------------------------------------------------------------ */
 .event-icon-picker__category-label,
-.budget-summary-card__label,
+.metric-card__label,
 .loan-report__section-title,
-.budget-panel-head__title,
+.panel-head__title,
 .contact-group__header,
 .day-header__name,
 .meal-slot__type-label,

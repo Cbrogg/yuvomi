@@ -69,13 +69,13 @@
   color: var(--color-text-secondary);
 }
 
-/* Die Kennzahl-Zeile ist .budget-summary (budget.css). Die frühere eigene
+/* Die Kennzahl-Zeile ist .metric-grid (budget.css). Die frühere eigene
  * .split-summary-card war die dritte von fünf Kartenbauarten im selben Modul
  * (Critique 2026-07-30, P0) - ersatzlos entfallen, das Markup trägt jetzt
- * .budget-summary-card. */
+ * .metric-card. */
 
 /* Arbeitsflächen sind opak: Glass bleibt Overlays und Modals vorbehalten
- * (Begründung an .budget-summary-card in budget.css). Diese Datei setzte auf
+ * (Begründung an .metric-card in budget.css). Diese Datei setzte auf
  * denselben Rollen --glass-bg-card und widersprach damit der Regel innerhalb
  * des eigenen Moduls. */
 .split-card,
@@ -160,7 +160,7 @@
 
 /* Statusfilter der Gruppenliste (Aktiv/Archiviert, #574). Teilt die
  * .filter-chip-Vokabel mit Aufgaben/Dokumenten. */
-/* Optik kommt aus .budget-segmented; hier bleibt nur, was die Seitenleiste
+/* Optik kommt aus .segmented; hier bleibt nur, was die Seitenleiste
  * braucht: volle Breite statt inline-flex, damit die zwei Zustände die Spalte
  * ausfüllen. */
 .split-status-filter {
@@ -168,7 +168,7 @@
   margin-top: var(--space-2);
 }
 
-.split-status-filter .budget-segmented__item {
+.split-status-filter .segmented__item {
   flex: 1;
 }
 
@@ -487,7 +487,7 @@ button.split-expense:hover {
 }
 
 @container split-page (max-width: 639px) {
-  /* Die Kennzahl-Zeile bricht über .budget-summary (budget.css) um; die frühere
+  /* Die Kennzahl-Zeile bricht über .metric-grid (budget.css) um; die frühere
      2+1-Reihe ließ die dritte Karte auf halber Breite mit einem Loch daneben. */
 
   .split-group-header,

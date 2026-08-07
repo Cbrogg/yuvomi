@@ -63,7 +63,7 @@
 }
 
 /* HIG-Karte: randlos auf dem Grouped-Grund, opake Fläche, shadow-sm - dieselbe
- * Bauart wie das Dashboard-Widget und .budget-summary-card. Die Kante bleibt als
+ * Bauart wie das Dashboard-Widget und .metric-card. Die Kante bleibt als
  * transparenter Träger stehen, damit Zustände (Auswahl, Hover) sie einfärben
  * können, ohne das Layout zu verschieben. */
 .housekeeping-card,

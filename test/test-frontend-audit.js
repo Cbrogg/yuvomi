@@ -5140,10 +5140,10 @@ test('remaining audited mobile controls use 48px touch targets', () => {
   // „Heute" (Kalender) holt seine 48px aus .btn - siehe die Begruendung beim
   // Budget-Zwilling im Guard darueber.
   assert.doesNotMatch(calendar, /\.cal-toolbar__today\s*\{[^}]*min-height/);
-  // Der Darlehens-Statusfilter ist in .budget-segmented aufgegangen. Der Baustein
+  // Der Darlehens-Statusfilter ist in .segmented aufgegangen. Der Baustein
   // nimmt --target-base (44px Zeiger / 48px Finger) statt --target-lg fest: das
   // Kriterium ist die Zeigerfähigkeit, nicht die Viewport-Breite (tokens.css).
-  assertRuleUsesToken(budget, '.budget-segmented__item', 'min-height', '--target-base', '../public/styles/budget.css');
+  assertRuleUsesToken(read('../public/styles/panel.css'), '.segmented__item', 'min-height', '--target-base', '../public/styles/panel.css');
   assertRuleUsesToken(budget, '.budget-loan-card__filter', 'width', '--target-lg', '../public/styles/budget.css');
   assertRuleUsesToken(budget, '.budget-loan-card__filter', 'height', '--target-lg', '../public/styles/budget.css');
   assert.match(
@@ -5440,7 +5440,7 @@ const isException = (file, selector) => RAIL_PAD_EXCEPTIONS.some(
 // nur noch im Kommentar.
 //
 // BEKANNTE GRENZE: Ein Textscan sieht keine Verschachtelung. Polstert ein
-// NACHFAHRE eines Spaltenträgers noch einmal horizontal (z. B. .budget-summary
+// NACHFAHRE eines Spaltenträgers noch einmal horizontal (z. B. .metric-grid
 // unterhalb von #budget-body), addieren sich die Ränder, ohne dass hier etwas
 // anschlägt - der Selektor ist weder ein Rail noch selbst ein Träger. Genau so
 // entstand der 16px-Versatz im Budget-Modul nach dem ersten #577-Anlauf.
