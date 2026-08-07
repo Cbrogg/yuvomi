@@ -921,12 +921,12 @@ function wireSwipeGestures(container) {
   wireSwipeRows(listEl, {
     card: '.shopping-item',
     ignore: '.list-row__drag',
-    // Beide Richtungen führen dieselbe Aktion aus wie der Knopf in der Zeile -
+    // Beide Seiten führen dieselbe Aktion aus wie der Knopf in der Zeile -
     // über dieselbe Funktion, nicht über eine zweite Schreibweise daneben.
     //
-    // Links: abhaken / zurueck. Die Karte fliegt hinaus, die Zeile bleibt -
+    // Zeilenende: abhaken / zurueck. Die Karte fliegt hinaus, die Zeile bleibt -
     // nur ihr Zustand wechselt (Issue #276: kein Re-Render der Liste).
-    left: {
+    trailing: {
       reveal: '.swipe-reveal--done',
       flyOut: true,
       run: (row) => toggleShoppingItem(
@@ -935,11 +935,11 @@ function wireSwipeGestures(container) {
         container,
       ),
     },
-    // Rechts: loeschen, widerrufbar. Die Karte federt zurück statt hinaus-
-    // zufliegen - dieselbe Begründung wie bei den Geburtstagen: eine
+    // Zeilenanfang: loeschen, widerrufbar. Die Karte federt zurück statt
+    // hinauszufliegen - dieselbe Begründung wie bei den Geburtstagen: eine
     // hinausgeflogene Karte behauptet, die Sache sei erledigt, während der
     // Rückgängig-Weg noch fünf Sekunden offen steht.
-    right: {
+    leading: {
       reveal: '.swipe-reveal--delete',
       run: (row) => deleteItemUndoable(Number(row.dataset.swipeId), container),
     },

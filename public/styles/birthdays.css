@@ -118,7 +118,7 @@
 /* Auf Touch tragen die Wischrichtungen die beiden Zeilenaktionen, und die
  * Knoepfe verschwinden - in einer Grouped-Liste waren sie die lauteste Stelle
  * des Bildschirms. Auf Zeigergeraeten bleiben sie: dort gibt es keine Geste.
- * Die Reserve rechts gehoert dann dem Wisch-Chevron (.swipe-row::after,
+ * Die Reserve am Zeilenende gehoert dann dem Wisch-Chevron (.swipe-row::after,
  * layout.css), genau wie im Einkauf.
  *
  * STEHT BEWUSST HIER UNTEN, nicht oben beim Traeger: die Basisregel darueber

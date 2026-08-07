@@ -2413,10 +2413,10 @@ function wireSwipeGestures(container) {
 
   wireSwipeRows(listEl, {
     card: '.task-card',
-    // Links: Status umschalten. Die Karte fliegt hinaus, weil die Zeile
+    // Zeilenende: Status umschalten. Die Karte fliegt hinaus, weil die Zeile
     // danach in einer anderen Gruppe steht - ohne den Flug spränge sie
     // einfach weg.
-    left: {
+    trailing: {
       reveal: '.swipe-reveal--done',
       flyOut: true,
       run: async (row) => {
@@ -2445,8 +2445,8 @@ function wireSwipeGestures(container) {
         }
       },
     },
-    // Rechts: Detailansicht. Die Zeile bleibt, also federt die Karte zurueck.
-    right: {
+    // Zeilenanfang: Detailansicht. Die Zeile bleibt, also federt die Karte zurueck.
+    leading: {
       reveal: '.swipe-reveal--edit',
       run: async (row) => {
         const taskId = row.dataset.swipeId;

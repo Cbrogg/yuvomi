@@ -790,7 +790,8 @@
   will-change: transform;
 }
 
-/* Rechts hinter der Karte = Löschen (Swipe nach rechts) */
+/* Welche Rolle hinter welcher Kante liegt, steht am Aufruf von wireSwipeRows
+ * in pages/shopping.js - und die Kanten sind logisch, nicht links und rechts. */
 /* Das Touch-Feedback während der Geste trägt jetzt die geteilte Bühne
  * (.swipe-row--swiping > :first-child in layout.css), zusammen mit der
  * Trägerfläche, die das Reveal-Panel verdeckt. */

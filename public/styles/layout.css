@@ -4145,11 +4145,14 @@ textarea::placeholder {
  * Einmalig per JS: .swipe-row--hint auf das erste Element.
  * Gibt nach Seitenladezeit einen kurzen Nudge-Hinweis.
  * -------------------------------------------------------- */
+/* Der Nudge zeigt in die Richtung, in die gewischt werden kann - und die ist
+ * in RTL die andere. Ein Vorzeichen statt einer zweiten Keyframe-Liste: die
+ * Bewegung ist dieselbe, nur ihre Achse folgt der Schreibrichtung. */
 @keyframes swipe-nudge {
   0%   { transform: translateX(0); }
-  20%  { transform: translateX(-18px); }
+  20%  { transform: translateX(calc(-18px * var(--swipe-nudge-dir, 1))); }
   45%  { transform: translateX(0); }
-  60%  { transform: translateX(-9px); }
+  60%  { transform: translateX(calc(-9px * var(--swipe-nudge-dir, 1))); }
   80%  { transform: translateX(0); }
   100% { transform: translateX(0); }
 }
@@ -4158,11 +4161,15 @@ textarea::placeholder {
   animation: swipe-nudge 800ms var(--ease-out) 1200ms both;
 }
 
+[dir='rtl'] .swipe-row--hint > :first-child {
+  --swipe-nudge-dir: -1;
+}
+
 /* Swipe-Affordanz: permanente Chevron-Hints an den Kartenrändern */
 .swipe-row::after {
   content: '';
   position: absolute;
-  right: var(--space-2);
+  inset-inline-end: var(--space-2);
   top: 50%;
   transform: translateY(-50%);
   width: 12px;
@@ -4181,6 +4188,12 @@ textarea::placeholder {
   opacity: 0.55;
 }
 
+/* Der Chevron ist eine Richtungsangabe, kein Ornament: er zeigt zum
+ * Zeilenende, und das liegt in RTL links. */
+[dir='rtl'] .swipe-row::after {
+  transform: translateY(-50%) scaleX(-1);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .swipe-row::after { display: none; }
 }
@@ -4191,23 +4204,31 @@ textarea::placeholder {
 
 /* Reveal-Panels: ZWEI ACHSEN, getrennt gehalten.
  *
- * Die SEITE folgt der Wischrichtung (`--leading` erscheint beim Wisch nach
- * rechts, `--trailing` beim Wisch nach links), die ROLLE trägt allein die
- * Bedeutung. Bis Runde 4 steckte beides in einer Klasse - `--delete` hiess
- * „löschen UND links", weil der einzige Nutzer, der Einkauf, nach rechts
- * löscht. Die Geburtstage löschen nach links, und dieselbe Rolle war damit
- * nicht wiederverwendbar, ohne eine vierte zu erfinden.
+ * Die SEITE ist die Kante, an der das Panel liegt (`--leading` am Zeilenanfang,
+ * `--trailing` am Zeilenende), die ROLLE trägt allein die Bedeutung. Bis
+ * Runde 4 steckte beides in einer Klasse - `--delete` hiess „löschen UND
+ * links", weil der einzige Nutzer, der Einkauf, nach rechts löschte. Die
+ * Geburtstage löschen zur anderen Seite, und dieselbe Rolle war damit nicht
+ * wiederverwendbar, ohne eine vierte zu erfinden.
+ *
+ * Anfang und Ende sind LOGISCH, nicht links und rechts: in `ar` und `fa` setzt
+ * die App `dir=rtl`, und bis Runde 6 trugen die logischen Namen physische
+ * Eigenschaften - dort fielen Name und Wirkung auseinander, ohne dass jemand
+ * etwas ändert. `swipe-row.js` leitet die Fingerbewegung aus derselben
+ * Schreibrichtung ab.
  *
  * Beides sind geteilte Rollen, keine Modulsache: dieselbe Geste soll in jeder
  * Liste dasselbe bedeuten. */
 .swipe-reveal--leading {
-  left: 0;
-  border-radius: var(--radius-md) 0 0 var(--radius-md);
+  inset-inline-start: 0;
+  border-start-start-radius: var(--radius-md);
+  border-end-start-radius: var(--radius-md);
 }
 
 .swipe-reveal--trailing {
-  right: 0;
-  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  inset-inline-end: 0;
+  border-start-end-radius: var(--radius-md);
+  border-end-end-radius: var(--radius-md);
 }
 
 .swipe-reveal--done   { background-color: var(--color-success); color: var(--color-ink-on-vivid); }

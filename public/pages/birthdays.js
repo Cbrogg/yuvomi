@@ -222,8 +222,8 @@ function renderList() {
 
 /**
  * Wischbedienung der Liste (Redesign Runde 4, C-2). Dieselben zwei Aktionen,
- * die auf Zeigergeräten als Knöpfe in der Zeile stehen - rechts wischen
- * bearbeitet, links wischen löscht.
+ * die auf Zeigergeräten als Knöpfe in der Zeile stehen - zum Zeilenanfang hin
+ * wischen bearbeitet, zum Zeilenende hin löscht.
  *
  * Beide federn zurück, statt hinauszufliegen: das Bearbeiten öffnet nur einen
  * Dialog und die Zeile bleibt, und das Löschen ist über den geteilten
@@ -233,11 +233,11 @@ function renderList() {
 function wireBirthdaySwipe(host) {
   wireSwipeRows(host, {
     card: '.birthday-item',
-    left: {
+    trailing: {
       reveal: '.swipe-reveal--delete',
       run: (row) => deleteBirthday(Number(row.dataset.swipeId)),
     },
-    right: {
+    leading: {
       reveal: '.swipe-reveal--edit',
       run: (row) => {
         const birthday = state.birthdays.find((item) => item.id === Number(row.dataset.swipeId));

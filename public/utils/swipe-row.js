@@ -27,24 +27,37 @@ const SWIPE_HINT_MAX = 3;
 /**
  * Verdrahtet alle `.swipe-row` unterhalb von `listEl`.
  *
- * Jede Richtung ist optional; fehlt sie, läuft ein Wisch dorthin ins Leere und
+ * Eine Geste wird über das PANEL benannt, das sie aufdeckt, nicht über die
+ * physische Richtung: `leading` liegt am Zeilenanfang, `trailing` am Zeilenende,
+ * und die Karte gibt das jeweils andere Ende frei. Welche Fingerbewegung das
+ * ist, entscheidet die Schreibrichtung - in `ar` und `fa` (die App setzt
+ * `dir=rtl`) sind Anfang und Ende gespiegelt. Solange die Optionen `left` und
+ * `right` hiessen, drehte RTL die Bedeutung mit, ohne dass jemand etwas ändert.
+ *
+ * Jede Seite ist optional; fehlt sie, läuft ein Wisch dorthin ins Leere und
  * die Karte federt zurück. `run` bekommt die Zeile und darf asynchron sein.
  *
- * @param {HTMLElement} listEl                  - Container der Zeilen
+ * @param {HTMLElement} listEl                     - Container der Zeilen
  * @param {Object} opts
- * @param {string} opts.card                    - Selektor der Karte IN der Zeile
- * @param {string} [opts.ignore]                - Selektor, an dem die Geste einem
- *                                                anderen Zweck gehört (Sortiergriff)
- * @param {Object} [opts.left]                  - Wisch nach links
- * @param {string} opts.left.reveal             - Selektor des Reveal-Panels
- * @param {boolean} [opts.left.flyOut=false]    - Karte fliegt hinaus, statt zurückzufedern
- * @param {(row: HTMLElement) => any} opts.left.run
- * @param {Object} [opts.right]                 - Wisch nach rechts, gleiche Form
+ * @param {string} opts.card                       - Selektor der Karte IN der Zeile
+ * @param {string} [opts.ignore]                   - Selektor, an dem die Geste einem
+ *                                                   anderen Zweck gehört (Sortiergriff)
+ * @param {Object} [opts.leading]                  - Panel am Zeilenanfang
+ * @param {string} opts.leading.reveal             - Selektor des Reveal-Panels
+ * @param {boolean} [opts.leading.flyOut=false]    - Karte fliegt hinaus, statt zurückzufedern
+ * @param {(row: HTMLElement) => any} opts.leading.run
+ * @param {Object} [opts.trailing]                 - Panel am Zeilenende, gleiche Form
  */
-export function wireSwipeRows(listEl, { card, ignore = null, left = null, right = null } = {}) {
+export function wireSwipeRows(listEl, { card, ignore = null, leading = null, trailing = null } = {}) {
   if (!listEl || !card) return;
 
-  const panels = [left?.reveal, right?.reveal].filter(Boolean);
+  const panels = [leading?.reveal, trailing?.reveal].filter(Boolean);
+
+  // Die Schreibrichtung wird pro Geste gelesen, nicht beim Verdrahten: die
+  // Sprache lässt sich ohne Reload wechseln, und die Zeilen bleiben dabei stehen.
+  const sideFor = (dx) => (document.documentElement.dir === 'rtl'
+    ? (dx < 0 ? leading : trailing)
+    : (dx < 0 ? trailing : leading));
 
   listEl.querySelectorAll('.swipe-row').forEach((row) => {
     const cardEl = row.querySelector(card);
@@ -111,7 +124,7 @@ export function wireSwipeRows(listEl, { card, ignore = null, left = null, right 
 
       // Reveal-Panels einblenden (0 → 1 über den Schwellwert)
       const progress = String(Math.min(Math.abs(dx) / SWIPE_THRESHOLD, 1));
-      const shown = dx < 0 ? left?.reveal : right?.reveal;
+      const shown = sideFor(dx)?.reveal;
       for (const sel of panels) {
         const el = revealEl(sel);
         if (el) el.style.opacity = sel === shown ? progress : '0';
@@ -126,7 +139,7 @@ export function wireSwipeRows(listEl, { card, ignore = null, left = null, right 
     row.addEventListener('touchend', async () => {
       if (locked !== 'swipe') { resetCard(false); return; }
 
-      const dir = dx < -SWIPE_THRESHOLD ? left : dx > SWIPE_THRESHOLD ? right : null;
+      const dir = Math.abs(dx) > SWIPE_THRESHOLD ? sideFor(dx) : null;
       if (!dir) { resetCard(true); return; }
 
       if (dir.flyOut) {
