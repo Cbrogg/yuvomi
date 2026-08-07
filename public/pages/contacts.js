@@ -631,7 +631,6 @@ function renderContactItem(c) {
           <span class="contact-item__name">${esc(c.name)}</span>
           ${renderMeta(c)}
         </span>
-        <i data-lucide="chevron-right" class="contact-item__chevron" aria-hidden="true"></i>
       </button>
       <div class="row-actions contact-item__actions">
         ${callBtn}

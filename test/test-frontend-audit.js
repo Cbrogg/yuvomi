@@ -7073,6 +7073,43 @@ test('one button shape app-wide', () => {
  * Scrollports. Die Gegenprobe am gerenderten Dokument ist Sonde 1 in
  * `npm run test:document-guards`.
  */
+/**
+ * REGEL (Redesign Runde 6, Phase 1): Eine Zeile mit eigenen Aktionen verspricht
+ * keine Navigation. Ein Chevron entfaellt, WO die Zeile Aktionen traegt - eine
+ * Zeile ohne Aktionen darf ihn behalten, dort ist Oeffnen das Einzige, was sie
+ * tut.
+ *
+ * Gemessener Anlass: in den Kontaktzeilen stand der Chevron als letztes Kind des
+ * Oeffnen-Knopfes, waehrend `.row-actions` als GESCHWISTER folgen - er landete
+ * damit optisch in der Zeilenmitte und versprach Navigation, wo die Knoepfe
+ * daneben etwas anderes liefern. Der Auftrag nannte diesen einen Fall; die
+ * Suche nach Geschwistern fand einen zweiten, in derselben Bauart: die
+ * Budget-Konten (Chevron im Oeffnen-Knopf, Bearbeiten-Knopf daneben).
+ *
+ * WAS DIE SIGNATUR TRENNT: eine Zeilen-Affordanz traegt eine eigene
+ * `*__chevron`-Klasse, weil sie gestylt werden muss. Ein Zeitraum-Stepper
+ * (Kalender, Budget, Wochenplan) rendert den Chevron dagegen als blossen Inhalt
+ * eines `.btn--icon` - dort IST der Chevron der Knopf, und die Regel meint ihn
+ * nicht.
+ */
+test('eine Zeile mit eigenen Aktionen verspricht keine Navigation', () => {
+  const offenders = [];
+  for (const file of walkJsFiles('../public/pages/')) {
+    const src = read(file);
+    // Template-Literale einzeln betrachten: ein Zeilen-Markup steht in genau
+    // einem, und „danach noch ein <button" ist damit eine Aussage ueber DIESE
+    // Zeile statt ueber die Datei.
+    for (const literal of src.match(/`[^`]*`/g) || []) {
+      const chevron = literal.search(/class="[^"]*__chevron/);
+      if (chevron === -1) continue;
+      if (!/<button/.test(literal.slice(chevron))) continue;
+      const name = literal.slice(chevron).match(/class="([^"]*__chevron[^"]*)"/)?.[1] ?? '?';
+      offenders.push(`${file.replace('../', '')}: ${name} steht in einer Zeile, die danach noch einen Knopf traegt`);
+    }
+  }
+  assert.deepEqual(offenders, []);
+});
+
 test('der Modulkopf gehoert der Shell - kein Modul setzt seine Richtung oder seinen Lead', () => {
   const styleDir = new URL('../public/styles/', import.meta.url);
   const cssFiles = readdirSync(styleDir).filter((name) => name.endsWith('.css'));

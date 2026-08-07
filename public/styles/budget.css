@@ -558,10 +558,9 @@
   white-space: nowrap;
 }
 
-.budget-account__chevron {
-  flex: 0 0 auto;
-  color: var(--color-text-tertiary);
-}
+/* Der Chevron ist entfallen (Redesign Runde 6, Phase 1) - dieselbe Bauart wie
+ * bei den Kontaktzeilen: letztes Kind des Öffnen-Knopfes, Bearbeiten-Knopf als
+ * Geschwister daneben. Regel und Guard stehen bei den Kontakten. */
 
 .budget-account__edit {
   flex: 0 0 auto;

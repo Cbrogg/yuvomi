@@ -1064,7 +1064,6 @@ function renderAccountsPage() {
             <span class="budget-account__balance ${balClass}">${formatAmount(a.current_balance)}</span>
             <span class="budget-account__starting">${t('budget.startingBalanceShort')} ${formatAmount(a.starting_balance)}</span>
           </span>
-          <i data-lucide="chevron-right" class="budget-account__chevron icon-sm" aria-hidden="true"></i>
         </button>
         <button class="budget-account__edit" type="button" data-edit="${a.id}" aria-label="${t('budget.editAccount')}">
           <i data-lucide="pencil" class="icon-sm" aria-hidden="true"></i>

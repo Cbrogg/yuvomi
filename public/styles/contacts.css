@@ -256,29 +256,15 @@ html:has(.contacts-page.is-selecting) .page-fab {
   border-radius: var(--radius-md);
 }
 
-/* Chevron: dezente „Zeile öffnet Detail"-Affordanz. Sichtbar (leise) für Touch,
- * verstärkt bei Hover/Fokus der Zeile. */
-.contact-item__chevron {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-  color: var(--color-text-disabled);
-  opacity: 0.6;
-  transition: opacity var(--transition-fast), color var(--transition-fast), transform var(--transition-fast);
-}
-
-.contact-item:hover .contact-item__chevron,
-.contact-item__open:focus-visible .contact-item__chevron {
-  opacity: 1;
-  color: var(--c-accent);
-  transform: translateX(2px);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .contact-item__chevron { transition: opacity var(--transition-fast), color var(--transition-fast); }
-  .contact-item:hover .contact-item__chevron,
-  .contact-item__open:focus-visible .contact-item__chevron { transform: none; }
-}
+/* Der Chevron ist entfallen (Redesign Runde 6, Phase 1). Er stand als letztes
+ * Kind des Öffnen-Knopfes, während die Zeilenaktionen als Geschwister daneben
+ * liegen - optisch landete er damit in der Zeilenmitte und versprach
+ * Navigation, wo die Knöpfe daneben etwas anderes liefern.
+ *
+ * REGEL, nicht Einzelfall: ein Chevron entfällt, WO eine Zeile eigene Aktionen
+ * trägt. Eine Zeile ohne Aktionen darf ihn behalten - dort ist Öffnen das
+ * Einzige, was sie tut. Gehalten von `eine Zeile mit eigenen Aktionen
+ * verspricht keine Navigation` (test:frontend-audit). */
 
 .contact-item__icon {
   width: var(--target-md);
