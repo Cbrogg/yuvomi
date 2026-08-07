@@ -109,6 +109,32 @@ function flattenAtRules(css) {
   return css.replace(/@(?:media|supports|container)[^{]*\{/g, '\n}\n');
 }
 
+/**
+ * Der EINE Regelscanner. Liefert `{ selector, body }` fuer jede Regel einer
+ * Stylesheet-Quelle - Kommentare gestrippt, At-Bloecke flach.
+ *
+ * ZWEITE FALLE desselben Musters, gefunden in Runde 6 Phase 3: `(?:^|[}])`
+ * KONSUMIERT das schliessende `}` der Vorgaengerregel. Nach einem Treffer
+ * steht `lastIndex` hinter diesem `}`, und die naechste Regel findet kein
+ * Trennzeichen mehr - **jede zweite Regel blieb ungesehen**. Gegenprobe:
+ * `.a{} .b{} .c{} .d{}` liefert mit dem alten Muster `.a, .c`. Der
+ * Buttonform-Guard uebersprang damit systematisch jeden zweiten Treffer einer
+ * Trefferfolge; genau deshalb konnte die Regel im gerenderten Dokument fuer
+ * 41 Knoepfe nicht gelten, obwohl ein gruener Guard sie bewachte.
+ *
+ * Die Loesung ist ein Lookbehind: es prueft das `}`, ohne es zu verbrauchen.
+ * Und sie steht ab jetzt an GENAU EINER Stelle - vier Kopien des Musters
+ * waren vier Gelegenheiten, dieselbe Falle wieder einzubauen.
+ */
+function* eachRule(css) {
+  const flat = flattenAtRules(css.replace(/\/\*[\s\S]*?\*\//g, ''));
+  for (const match of flat.matchAll(/(?:^|(?<=\}))\s*([^{}]*)\{([^}]*)\}/g)) {
+    const selector = match[1].trim().replace(/\s+/g, ' ');
+    if (!selector) continue;
+    yield { selector, body: match[2] };
+  }
+}
+
 function cssRuleBody(css, selector) {
   const match = css.match(new RegExp(`${escapeForRegExp(selector)}\\s*\\{([^}]*)\\}`, 'm'));
   return match?.[1] ?? '';
@@ -6982,17 +7008,18 @@ test('one button shape app-wide', () => {
 
   const offenders = [];
   for (const name of files) {
-    // Kommentare strippen, sonst wandert die Prosa davor in den Selektor
-    // (dieselbe Falle wie bei parseTokenMap, Handoff §6). At-Regeln flach
-    // machen, sonst bleibt die erste Regel jeder Media-Query ungesehen
-    // (Runde 6, Phase 0 - siehe flattenAtRules).
-    const css = flattenAtRules(read(`../public/styles/${name}`).replace(/\/\*[\s\S]*?\*\//g, ''));
-    // Jede Regel, deren Selektorliste eine .btn-Variante enthaelt.
-    for (const m of css.matchAll(/(?:^|[}])\s*([^{}]*\.btn[\w-]*[^{}]*)\{([^}]*)\}/g)) {
-      const [, selector, body] = m;
-      if (name === 'layout.css' && /^\s*\.btn\s*$/.test(selector)) continue;
-      if (!/border-radius:/.test(body)) continue;
-      offenders.push(`${name}: ${selector.trim().replace(/\s+/g, ' ')} setzt border-radius neu`);
+    for (const { selector, body } of eachRule(read(`../public/styles/${name}`))) {
+      // Jede Regel, deren Selektorliste eine .btn-Variante enthaelt.
+      if (!/\.btn[\w-]*/.test(selector)) continue;
+      if (name === 'layout.css' && selector === '.btn') continue;
+      const radius = body.match(/(?:^|;)\s*border-radius:\s*([^;]+)/)?.[1]?.trim();
+      if (!radius) continue;
+      // Die Regel verbietet eine ZWEITE Form, nicht das Wiederholen der einen.
+      // Der Lade-Spinner `.btn--loading::after` ist ein Kreis aus --radius-full
+      // und stand nur deshalb nicht in dieser Liste, weil der alte Scanner
+      // jede zweite Regel uebersprang (siehe eachRule).
+      if (/--radius-full/.test(radius)) continue;
+      offenders.push(`${name}: ${selector} setzt eine zweite Buttonform (${radius})`);
     }
   }
   assert.deepEqual(offenders, []);
@@ -7015,14 +7042,20 @@ test('one button shape app-wide', () => {
   // .impeccable/redesign-tools/button-shapes.mjs.
   const handCopied = [];
   for (const name of files) {
-    const css = flattenAtRules(read(`../public/styles/${name}`).replace(/\/\*[\s\S]*?\*\//g, ''));
-    for (const m of css.matchAll(/(?:^|[}])\s*([^{}]*)\{([^}]*)\}/g)) {
-      const [, selector, body] = m;
+    for (const { selector, body } of eachRule(read(`../public/styles/${name}`))) {
       if (/\.btn(?![\w-])|\.btn--/.test(selector)) continue;
       if (!/border:\s*[\d.]+px\s+solid\s+var\(--color-border\)/.test(body)) continue;
       if (!/color:\s*var\(--(?:module-accent|active-module-accent|color-accent)/.test(body)) continue;
+      // AUSNAHME als Kategorie, nicht als Name: ein MEDIENRAHMEN traegt
+      // dieselbe Kante und dieselbe Tinte wie .btn--secondary, hat aber feste
+      // Bildmasse in Pixeln und clippt seinen Inhalt - er zeigt etwas, statt
+      // etwas zu beschriften (`.dms-result__media`, die 72x96-Dokumentvorschau
+      // im Papierverhaeltnis). Ein beschrifteter Knopf hat keine feste
+      // Pixelhoehe mit overflow: hidden.
+      if (/width:\s*\d+px/.test(body) && /height:\s*\d+px/.test(body)
+        && /overflow:\s*hidden/.test(body)) continue;
       handCopied.push(
-        `${name}: ${selector.trim().replace(/\s+/g, ' ')} baut .btn--secondary nach `
+        `${name}: ${selector} baut .btn--secondary nach `
         + '- die Klasse nehmen statt die Grammatik kopieren',
       );
     }
@@ -7115,13 +7148,8 @@ test('der Modulkopf gehoert der Shell - kein Modul setzt seine Richtung oder sei
 
   const offenders = [];
   for (const name of cssFiles) {
-    // Kommentare strippen (sonst wandert die Prosa in den Selektor) UND
-    // At-Regeln flach machen: die Verstoesse standen alle in Media-Queries.
-    const css = flattenAtRules(read(`../public/styles/${name}`).replace(/\/\*[\s\S]*?\*\//g, ''));
-    for (const m of css.matchAll(/(?:^|[}])\s*([^{}]*)\{([^}]*)\}/g)) {
-      const [, rawSelector, body] = m;
-      const selector = rawSelector.trim().replace(/\s+/g, ' ');
-      if (!selector || selector.startsWith('@')) continue;
+    for (const { selector, body } of eachRule(read(`../public/styles/${name}`))) {
+      if (selector.startsWith('@')) continue;
 
       // (a) Die Richtung des Kopfes gehoert der Shell.
       if (selectorMatchesHead(selector) && /flex-direction:/.test(body)) {
@@ -7370,14 +7398,10 @@ test('one page-head title scale, owned by the shell', () => {
   const offenders = [];
   for (const name of files) {
     if (SHELL.has(name)) continue;
-    // Kommentare strippen, sonst wandert die Prosa davor in den Selektor
-    // (dieselbe Falle wie bei parseTokenMap, Handoff §6). At-Regeln flach
-    // machen, sonst bleibt die erste Regel jeder Media-Query ungesehen.
-    const css = flattenAtRules(read(`../public/styles/${name}`).replace(/\/\*[\s\S]*?\*\//g, ''));
-    for (const m of css.matchAll(/(?:^|[}])\s*([^{}]*\.page-toolbar__title[^{}]*)\{([^}]*)\}/g)) {
-      const [, selector, body] = m;
+    for (const { selector, body } of eachRule(read(`../public/styles/${name}`))) {
+      if (!selector.includes('.page-toolbar__title')) continue;
       if (!/font-size:/.test(body)) continue;
-      offenders.push(`${name}: ${selector.trim().replace(/\s+/g, ' ')} setzt eine eigene Titelgroesse`);
+      offenders.push(`${name}: ${selector} setzt eine eigene Titelgroesse`);
     }
   }
   assert.deepEqual(offenders, []);
