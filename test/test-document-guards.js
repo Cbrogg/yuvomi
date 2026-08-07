@@ -804,3 +804,94 @@ describe('Sonde 5 - eine Wischzeile antwortet, und jede Rolle liegt an ihrer Kan
     });
   }
 });
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Sonde 6: gleiche Hoehe in einer Kennzahlreihe
+ *
+ * Die Kacheln EINER Kennzahlreihe sind gleich hoch. Die Hoehe gehoert dem
+ * TRAEGER, nicht dem laengsten Text einer Zelle - dieselbe Grammatik wie beim
+ * Well („der Traeger entscheidet") und beim Lesemass.
+ *
+ * WARUM EBENE 4 UND NICHT DAS STYLESHEET: im CSS steht `grid-auto-rows: 1fr`,
+ * also eine Deklaration. Die ZUSAGE ist „gleich hoch", und ob sie ankommt,
+ * haengt daran, wieviele Zeilen das Raster bei dieser Breite bildet und ob eine
+ * Host-Stufe die Spaltenzahl aendert. Genau so entstand der Befund: die
+ * Abo-Reihe bricht unter 720px Containerbreite auf zwei mal zwei um, und die
+ * beiden Rasterzeilen streckten sich unabhaengig - 78px oben, 95px unten, weil
+ * eine einzige Fussnote umbrach. Im Stylesheet sah nichts davon falsch aus.
+ *
+ * SIE PRUEFT DIE ZUSAGE, NICHT IHREN FUNDORT: gesucht wird jede `.metric-grid`
+ * auf jeder Route - und zusaetzlich hinter jedem Budget-Untertab, weil die
+ * Reihen dort hinter einer Leiste liegen, die keine Route wechselt. Damit
+ * findet sie auch eine Kennzahlreihe, die es heute noch gar nicht gibt.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/** Alle Kennzahlreihen der aktuellen Ansicht mit den Hoehen ihrer Kacheln. */
+async function metricRowHeights(page) {
+  return page.evaluate(() => [...document.querySelectorAll('.metric-grid')]
+    .map((grid) => ({
+      grid: grid.className,
+      // Sub-Pixel runden: das Raster verteilt Restpixel, und ein halber Pixel
+      // Unterschied ist keine Unruhe, sondern Layout-Arithmetik.
+      heights: [...grid.querySelectorAll('.metric-card')].map((c) => Math.round(c.getBoundingClientRect().height)),
+    }))
+    .filter((row) => row.heights.length > 1));
+}
+
+describe('Sonde 6 - die Kacheln einer Kennzahlreihe sind gleich hoch', () => {
+  for (const device of ['mobile', 'desktop']) {
+    test(`Geraet ${device}`, async () => {
+      const page = await openPage(harness, { device, theme: 'light', locale: 'de' });
+      const findings = [];
+      let rowsSeen = 0;
+
+      const check = (where, rows) => {
+        for (const row of rows) {
+          rowsSeen += 1;
+          const spread = Math.max(...row.heights) - Math.min(...row.heights);
+          if (spread > 0) {
+            findings.push(`${where} · ${row.grid}: Hoehen ${row.heights.join(', ')} (Streuung ${spread}px).`);
+          }
+        }
+      };
+
+      for (const name of ROUTE_NAMES) {
+        await gotoRoute(page, ROUTES[name]);
+        check(name, await metricRowHeights(page));
+      }
+
+      // Die Budget-Untertabs wechseln keine Route (§2, Leisten-Regel: sie
+      // wechseln die SICHT innerhalb eines Moduls). Ohne diesen Durchlauf
+      // saehe die Sonde von sieben Kennzahlreihen genau eine.
+      await gotoRoute(page, ROUTES.budget);
+      const tabIds = await page.evaluate(() => [...document.querySelectorAll('#budget-tabs [data-tab-id], [role="tab"][data-tab-id]')]
+        .map((b) => b.dataset.tabId));
+      for (const id of tabIds) {
+        const clicked = await page.evaluate((tabId) => {
+          const btn = document.querySelector(`[data-tab-id="${tabId}"]`);
+          if (!btn) return false;
+          btn.click();
+          return true;
+        }, id);
+        if (!clicked) continue;
+        // Der Tabwechsel laedt seine Daten nach; ohne das Warten misst die
+        // Sonde die Reihe des VORIGEN Tabs (dieselbe Falle wie in Session 11,
+        // „eine Sonde misst nur, was zum Messzeitpunkt existiert").
+        await new Promise((resolve) => setTimeout(resolve, 1200));
+        check(`budget/${id}`, await metricRowHeights(page));
+      }
+      await page.close();
+
+      // Eine Sonde, die nichts gemessen hat, darf nicht urteilen (dieselbe
+      // Zusicherung wie bei Sonde 3, 4 und 5).
+      assert.ok(rowsSeen >= 4,
+        `Nur ${rowsSeen} Kennzahlreihen gesehen - erwartet sind mindestens Budget, Abos, Aufteilen und Darlehen. `
+        + 'Entweder hat der Seed keine Zahlen geliefert, oder die Bauart hat sich geaendert.');
+
+      assert.deepEqual(findings, [],
+        'Kennzahlreihen im gerenderten Dokument. Gleichartige Kacheln nebeneinander sind gleich hoch, '
+        + 'auch wenn die Reihe umbricht - die Hoehe gehoert dem Traeger (.metric-grid, panel.css), '
+        + 'nicht dem laengsten Text einer Zelle.\n  ' + findings.join('\n  '));
+    });
+  }
+});

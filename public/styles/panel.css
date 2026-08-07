@@ -142,6 +142,17 @@
   /* Immer eine volle Zeile: der frühere Mobil-Stapel (3 volle Karten,
    * ~600px) schob jeden Inhalt unter den Fold (Audit A2-06). */
   grid-template-columns: repeat(var(--summary-cards, 3), minmax(0, 1fr));
+  /* Die Kacheln EINER Kennzahlreihe sind gleich hoch, auch wenn die Reihe
+   * umbricht. Ohne das strecken sich die Rasterzeilen unabhängig voneinander:
+   * die Abo-Reihe stand mobil als 2x2 mit 78px oben und 95px unten da, weil
+   * eine einzige Fußnote in der unteren Zeile umbrach. Gleichartige Kacheln
+   * verschieden hoch nebeneinander lesen sich als Unruhe genau dort, wo die
+   * Zahl auf einen Blick erfasst werden soll.
+   * Die Höhe gehört damit dem TRÄGER, nicht dem längsten Text einer Zelle -
+   * dieselbe Grammatik wie beim Well und beim Lesemaß. Geprüft auf Ebene 4
+   * (Sonde 6), weil im Stylesheet nur die Deklaration steht und nicht die
+   * Zusage. */
+  grid-auto-rows: 1fr;
   gap: var(--space-2);
   padding-block: var(--space-3);
   flex-shrink: 0;
