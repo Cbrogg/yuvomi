@@ -958,8 +958,10 @@ html:has(.search-overlay--visible) yuvomi-install-prompt {
 .budget-segmented__item.is-active svg,
 .cal-toolbar__view-btn--active svg,
 .cal-toolbar__layer-btn--active svg,
+.cal-toolbar__search-btn--active svg,
 .theme-toggle__btn--active svg,
-.perm-modeswitch__btn.is-active svg {
+.perm-modeswitch__btn.is-active svg,
+.perm-seg__opt.is-active svg {
   /* 30 % statt 16 %: auf Tab-Bar-Größe (20px) las die schwächere Füllung
    * weiter als Outline (Finish-Verdict Fundament-Phase, Fix 8). */
   fill: color-mix(in srgb, currentColor 30%, transparent);

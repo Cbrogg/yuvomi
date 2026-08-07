@@ -831,7 +831,9 @@
 
   /* „Aus DMS verknüpfen" fällt mobil zum kompakten Icon-Button zusammen
    * (Text via aria-label/title erhalten), damit er die Kopfzeile nicht
-   * sprengt und neben der Ansicht-Umschaltung gleich groß sitzt (#523). */
+   * sprengt und neben der Ansicht-Umschaltung gleich groß sitzt (#523).
+   * Das ist der Musterfall der LABEL-VERLUST-REGEL (Runde 6, Phase 3b): Form
+   * der Familie, Zielgröße `--target-base`, Zustand über Fläche und Icon. */
   .documents-dms-link-btn {
     width: var(--target-base);
     height: var(--target-base);

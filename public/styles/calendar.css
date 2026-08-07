@@ -1553,15 +1553,22 @@
   opacity: 1;
 }
 
+/* DIE LABEL-VERLUST-REGEL (Runde 6, Phase 3b): unter 640px fällt das Label,
+ * und der Chip wird zum freistehenden Icon-Ziel - also trägt er die Zielgröße
+ * `--target-base` statt der 28px, die aus dem beschrifteten Chip übrig blieben.
+ * Ein Label zu verlieren darf ein Ziel nie verkleinern. Den Zustand tragen
+ * weiterhin die getönte Fläche (`--active`) und das gefüllte Icon bzw. der
+ * volldeckende Punkt - nie die Kante allein. */
 @media (max-width: 640px) {
   .cal-toolbar__layer-btn span:not(.cal-toolbar__layer-dot) {
     display: none;
   }
   .cal-toolbar__layer-btn {
-    padding: var(--space-1);
+    padding: 0;
     border-radius: var(--radius-full);
-    width: 28px;
-    height: 28px;
+    width: var(--target-base);
+    height: var(--target-base);
+    flex-shrink: 0;
     justify-content: center;
   }
 }

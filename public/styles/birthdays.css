@@ -471,12 +471,20 @@
 }
 
 @media (max-width: 640px) {
-  /* Icon-only: der Button trägt sein Label via aria-label weiter. */
+  /* Icon-only: der Button trägt sein Label via aria-label weiter.
+   * DIE LABEL-VERLUST-REGEL (Runde 6, Phase 3b): er wechselt dabei in die
+   * Icon-Form seiner Familie - quadratisch auf `--target-base`, die Kapsel wird
+   * damit zum Kreis. Das bloße Zusammenziehen des Innenabstands ließ ihn als
+   * 50x48-Oval zurück, also in einer Form, die es sonst nirgends gibt. */
   .birthdays-toolbar__import span {
     display: none;
   }
 
   .birthdays-toolbar__import {
-    padding-inline: var(--space-3);
+    width: var(--target-base);
+    height: var(--target-base);
+    padding: 0;
+    flex-shrink: 0;
+    justify-content: center;
   }
 }

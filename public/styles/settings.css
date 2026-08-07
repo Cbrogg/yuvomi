@@ -2655,13 +2655,19 @@
   pointer-events: none;
 }
 
+/* DIE LABEL-VERLUST-REGEL (Runde 6, Phase 3b), hier im umgekehrten Fall: das
+ * Label faellt auf dem BREITEN Viewport (siehe .perm-seg__label). Damit ist das
+ * Segment dort ein Icon-Ziel und traegt `--target-base` in beiden Richtungen -
+ * vorher blieben 34x30 uebrig, also unter jedem Zielmass, das die App kennt.
+ * Segmente stehen aneinander; die Spacing-Ausnahme aus WCAG 2.5.8 greift fuer
+ * sie gerade nicht. */
 .perm-seg__opt {
   position: relative;
   z-index: 1;
   display: inline-grid;
   place-items: center;
-  width: 34px;
-  min-height: 30px;
+  min-width: var(--target-base);
+  min-height: var(--target-base);
   border: none;
   border-radius: var(--radius-full);
   background: transparent;
@@ -2767,11 +2773,13 @@
 
   /* Icon über Wort: nebeneinander passen vier Stufen ("Erben" kommt im
      Mitglieds-Modus dazu) bei 390px nicht in eine Zeile. */
+  /* Hier traegt das Segment sein Label wieder - es ist kein Icon-Ziel mehr und
+   * gibt die quadratische Mindestbreite an die Rasterspalte ab. */
   .perm-seg__opt {
     grid-auto-flow: row;
     align-content: center;
     gap: var(--space-0h);
-    width: auto;
+    min-width: 0;
     min-height: var(--target-base);
     padding: var(--space-1) var(--space-0h);
   }

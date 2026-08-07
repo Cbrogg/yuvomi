@@ -619,6 +619,38 @@
 
   /* --------------------------------------------------------
    * 11b. Touch-Target Sizes
+   *
+   *    DIE LABEL-VERLUST-REGEL (Runde 6, Phase 3b)
+   *
+   *    Verliert ein beschriftetes Bedienelement sein Label — weil der
+   *    Viewport schmal wird oder weil es in seiner Icon-only-Variante
+   *    steht —, dann
+   *      (a) wechselt es in die Icon-Form seiner Familie (quadratisch,
+   *          damit die Kapsel ein Kreis wird — siehe Sektion 9),
+   *      (b) behält es die Zielgröße --target-base, und
+   *      (c) trägt es seinen Zustand über getönte Fläche PLUS gefülltes
+   *          Icon — nie über die Kante allein.
+   *
+   *    (b) ist der Kern: EIN LABEL ZU VERLIEREN DARF EIN ZIEL NIE
+   *    VERKLEINERN. Genau das war der Bestand — .cal-toolbar__mine-btn
+   *    schrumpfte unter 640px von einem beschrifteten Chip auf 28x28,
+   *    .perm-seg__opt stand als Icon-Segment auf 34x30. Beides sind
+   *    Reste eines Elements, das sein Label mitgerechnet hatte.
+   *
+   *    (c) schließt die Lücke, dass es für Icon-Knöpfe gar keine
+   *    Zustandssprache gab: eine Kante liest niemand als „eingeschaltet".
+   *    Das gefüllte Icon ist dieselbe Filled-Variant-Regel, die jeder
+   *    ausgewählte Zustand trägt (layout.css) — ein zweiter Kanal, kein
+   *    Ersatz für die Fläche.
+   *
+   *    NICHT geregelt ist, WANN ein Label fällt: das entscheidet die
+   *    Leiste, in der das Element steht, denn es hängt daran, was sonst
+   *    noch in ihr liegt. Geregelt ist nur, was dann passiert.
+   *
+   *    Geprüft auf Ebene 3 (Signatur, statisch: `wer sein Label verliert,
+   *    bleibt ein volles Ziel` in test-frontend-audit.js) — der Guard
+   *    findet jede Regel, die ein Label ausblendet, und verlangt im selben
+   *    At-Block die Zielgröße.
    * -------------------------------------------------------- */
   --target-sm: 32px;    /* Visuelle Größe (z.B. Logos) — kein Touch-Target */
   --target-md: 40px;    /* Desktop Touch-Target (Maus) */

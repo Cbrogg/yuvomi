@@ -95,43 +95,84 @@ function assertKeysExistInEveryLocale(keys) {
 const escapeForRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /**
- * Macht verschachtelte At-Regeln (`@media`, `@supports`, `@container`) flach,
- * damit der Regelscanner darunter die Regeln IN ihnen sieht.
+ * Der EINE Regelscanner. Liefert `{ selector, body, at }` fuer jede Regel einer
+ * Stylesheet-Quelle - Kommentare gestrippt, At-Bloecke aufgeloest, und `at`
+ * traegt die Kette der At-Praeambeln, in denen die Regel steht (leer auf der
+ * Basisebene).
  *
- * FALLE, teuer gefunden (Runde 6, Phase 0): das Muster
- * `(?:^|[}])\s*([^{}]*)\{([^}]*)\}` verschluckt die ERSTE Regel jedes
- * At-Blocks - `[^}]*` im Rumpf erlaubt `{`, also frisst der Match der
- * `@media`-Praeambel die Regel dahinter mit. Ein Guard, der so sucht, ist in
- * genau den Media-Queries blind, in denen die responsiven Verstoesse stehen;
- * die Gegenprobe (bekannten Verstoss wieder einbauen) meldete nichts.
+ * DREI FALLEN STECKEN IN SEINER GESCHICHTE, alle drei in Runde 6 bezahlt, und
+ * alle drei mit einem gruenen Guard darueber:
+ *
+ * 1. (Phase 0) `(?:^|[}])\s*([^{}]*)\{([^}]*)\}` verschluckt die ERSTE Regel
+ *    jedes At-Blocks - `[^}]*` im Rumpf erlaubt `{`, also frisst der Match der
+ *    `@media`-Praeambel die Regel dahinter mit. Jeder Guard auf diesem Muster
+ *    war in Media-Queries blind, also genau dort, wo responsive Verstoesse
+ *    leben.
+ * 2. (Phase 3a) `(?:^|[}])` KONSUMIERT sein Trennzeichen: nach einem Treffer
+ *    steht `lastIndex` hinter dem `}` der gefundenen Regel, und die naechste
+ *    findet keines mehr vor sich - **jede zweite Regel blieb ungesehen**.
+ *    Gegenprobe: `.a{} .b{} .c{} .d{}` liefert mit dem alten Muster `.a, .c`.
+ * 3. (Phase 3b) Das Muster kannte den KONTEXT einer Regel nicht. Das Flachmachen
+ *    der At-Bloecke war der Preis fuer Falle 1 - es macht die Regeln darin
+ *    sichtbar und wirft dabei die Angabe weg, die eine responsive Regel
+ *    braucht: in welchem Block sie steht.
+ *
+ * Deshalb laeuft er jetzt ueber die Klammern statt ueber ein Regex: er steigt
+ * in `@media`, `@supports`, `@container` und `@layer` hinab und merkt sich die
+ * Praeambel. `@keyframes` wird uebersprungen - seine Prozentmarken sind
+ * Animationsstufen, keine Selektoren, und das alte Muster lieferte dort ohnehin
+ * nur die Praeambel mit angebrochenem Rumpf.
+ *
+ * Er steht an GENAU EINER Stelle - vier Kopien des alten Musters waren vier
+ * Gelegenheiten, dieselbe Falle wieder einzubauen.
  */
-function flattenAtRules(css) {
-  return css.replace(/@(?:media|supports|container)[^{]*\{/g, '\n}\n');
-}
+const AT_RULES_WITH_RULES = /^@(?:media|supports|container|layer|scope)\b/;
 
-/**
- * Der EINE Regelscanner. Liefert `{ selector, body }` fuer jede Regel einer
- * Stylesheet-Quelle - Kommentare gestrippt, At-Bloecke flach.
- *
- * ZWEITE FALLE desselben Musters, gefunden in Runde 6 Phase 3: `(?:^|[}])`
- * KONSUMIERT das schliessende `}` der Vorgaengerregel. Nach einem Treffer
- * steht `lastIndex` hinter diesem `}`, und die naechste Regel findet kein
- * Trennzeichen mehr - **jede zweite Regel blieb ungesehen**. Gegenprobe:
- * `.a{} .b{} .c{} .d{}` liefert mit dem alten Muster `.a, .c`. Der
- * Buttonform-Guard uebersprang damit systematisch jeden zweiten Treffer einer
- * Trefferfolge; genau deshalb konnte die Regel im gerenderten Dokument fuer
- * 41 Knoepfe nicht gelten, obwohl ein gruener Guard sie bewachte.
- *
- * Die Loesung ist ein Lookbehind: es prueft das `}`, ohne es zu verbrauchen.
- * Und sie steht ab jetzt an GENAU EINER Stelle - vier Kopien des Musters
- * waren vier Gelegenheiten, dieselbe Falle wieder einzubauen.
- */
 function* eachRule(css) {
-  const flat = flattenAtRules(css.replace(/\/\*[\s\S]*?\*\//g, ''));
-  for (const match of flat.matchAll(/(?:^|(?<=\}))\s*([^{}]*)\{([^}]*)\}/g)) {
-    const selector = match[1].trim().replace(/\s+/g, ' ');
-    if (!selector) continue;
-    yield { selector, body: match[2] };
+  const src = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  const at = [];
+  let index = 0;
+  let start = 0;
+
+  while (index < src.length) {
+    const char = src[index];
+
+    if (char === '}') {
+      at.pop();
+      index += 1;
+      start = index;
+      continue;
+    }
+
+    if (char !== '{') {
+      index += 1;
+      continue;
+    }
+
+    const preamble = src.slice(start, index).trim().replace(/\s+/g, ' ');
+
+    if (AT_RULES_WITH_RULES.test(preamble)) {
+      at.push(preamble);
+      index += 1;
+      start = index;
+      continue;
+    }
+
+    // Alles andere ist ein Block mit Deklarationen (oder @keyframes). Bis zur
+    // passenden schliessenden Klammer springen, damit verschachtelte
+    // Keyframe-Stufen nicht als eigene Regeln durchgehen.
+    let depth = 1;
+    let end = index + 1;
+    while (end < src.length && depth > 0) {
+      if (src[end] === '{') depth += 1;
+      else if (src[end] === '}') depth -= 1;
+      end += 1;
+    }
+    if (preamble && !preamble.startsWith('@keyframes')) {
+      yield { selector: preamble, body: src.slice(index + 1, end - 1), at: [...at] };
+    }
+    index = end;
+    start = index;
   }
 }
 
@@ -7158,6 +7199,140 @@ test('ein quadratischer Icon-Knopf ist ein Kreis', () => {
   for (const key of EXEMPT.keys()) {
     assert.ok(allCss.includes(key), `EXEMPT nennt ${key}, das es nicht mehr gibt.`);
   }
+});
+
+/**
+ * REGEL (Redesign Runde 6, Phase 3b): Verliert ein beschriftetes Bedienelement
+ * sein Label, wechselt es in die Icon-Form seiner Familie, BEHAELT die
+ * Zielgroesse `--target-base` und traegt seinen Zustand ueber getoente Flaeche
+ * plus gefuelltes Icon. Wortlaut und Herleitung: Sektion 11b in tokens.css.
+ *
+ * WAS DIESER GUARD PRUEFT UND WARUM GENAU DAS. Pruefbar im Stylesheet ist die
+ * Zielgroesse - und sie ist der Kern der Regel: ein Label zu verlieren darf ein
+ * Ziel nie verkleinern. Genau das war viermal passiert, jedes Mal in einer
+ * eigenen Antwort: 28x28 im Kalender, ein 50x48-Oval in den Geburtstagen,
+ * 34x30 in den Einstellungen, und nur die Dokumente hatten es richtig.
+ *
+ * ER SUCHT DIE SIGNATUR, NICHT DIE VIER NAMEN. Gesucht wird die Regel, die ein
+ * Label AUSBLENDET (`display: none` auf einem `span` oder einem `__label`/
+ * `__text`/`__name`-Element). Wer diese Regel schreibt, hat den Label-Verlust
+ * gebaut - und muss im selben At-Block seinem Traeger die Zielgroesse geben.
+ * Damit faellt auch das fuenfte Modul durch, das die Regel noch nie kannte;
+ * eine Liste der vier haette genau das nicht getan (Handoff §6).
+ *
+ * DAFUER BRAUCHT ER DEN AT-KONTEXT. „Im selben Block" ist die eigentliche
+ * Zusage: eine Zielgroesse, die in einer ANDEREN Media-Query steht, gilt bei
+ * der Breite, bei der das Label faellt, nicht. Genau diese Angabe hat der
+ * Regelscanner bis Phase 3b weggeworfen (siehe eachRule).
+ */
+test('wer sein Label verliert, bleibt ein volles Ziel', () => {
+  const files = readdirSync(new URL('../public/styles/', import.meta.url))
+    .filter((name) => name.endsWith('.css'));
+
+  // Ein LABEL ist ein `span` als letzter Teil eines Nachfahren-Selektors oder
+  // ein BEM-Element, das sich Label/Text/Name/Titel nennt.
+  const LABEL_PART = /^(?:span|[a-z]*\.[\w-]+__(?:label|text|name|title))$/;
+  // `--target-md` (40px) zaehlt bewusst NICHT: die Regel nennt --target-base,
+  // und ein Zielmass, das sie unterschreitet, waere ein Guard, der laxer ist als
+  // sein Regeltext. Braucht ein kuenftiger Fall am Zeiger die 40px, ist das eine
+  // Aenderung der Regel und keine stille Ausnahme im Guard.
+  const targetOf = (value) => {
+    if (/var\(--target-(?:base|lg)\)/.test(value)) return true;
+    const px = Number.parseFloat(value);
+    return Number.isFinite(px) && px >= 44;
+  };
+  const decl = (body, prop) =>
+    body.match(new RegExp(`(?:^|;)\\s*${prop}:\\s*([^;]+)`))?.[1]?.trim();
+
+  // Klickbar aus dem MARKUP, nicht aus dem Klassennamen. Die erste Fassung
+  // dieses Guards fragte nur nach `cursor: pointer` und nach Namen auf `-btn`
+  // - und war damit blind fuer jeden Knopf, der seine Klickbarkeit von `.btn`
+  // erbt und sich nach seiner Funktion nennt. `.birthdays-toolbar__import` ist
+  // genau das: der wiedereingebaute Verstoss blieb gruen. Dieselbe Signatur wie
+  // die .btn-Guard-Luecke aus Session 8 - ein Guard ueber „wer sich Knopf
+  // nennt" ist eine Allowlist mit extra Schritten.
+  const markupControls = new Set();
+  for (const file of walkFrontendFiles('../public/')) {
+    for (const tag of read(file).matchAll(/<(button|a)\b([^>]*)>/g)) {
+      const attrs = tag[2];
+      const classAttr = attrs.match(/class=["']([^"']*)["']/)?.[1] ?? '';
+      const isControl = tag[1] === 'button'
+        || /role=["']button["']/.test(attrs)
+        || /\bbtn\b/.test(classAttr);
+      if (!isControl) continue;
+      for (const token of classAttr.split(/\s+/)) {
+        if (/^[\w-]+$/.test(token)) markupControls.add(`.${token}`);
+      }
+    }
+  }
+  assert.ok(markupControls.size > 50,
+    'Die Knopfklassen kommen aus dem Markup - findet der Scanner keine, prueft der Guard nichts.');
+
+  const offenders = [];
+
+  for (const name of files) {
+    const rules = [...eachRule(read(`../public/styles/${name}`))];
+    // Klickbar heisst hier: das Markup baut daraus einen Knopf, irgendeine Regel
+    // gibt dem Selektor einen Zeiger, oder er nennt sich Knopf. Eine Leiste,
+    // deren TITEL ausgeblendet wird (`.kitchen-tabs-bar .sub-tabs-bar__title`),
+    // ist damit draussen - sie loest nichts aus.
+    const pointers = new Set();
+    for (const rule of rules) {
+      if (!/cursor:\s*(?:pointer|grab)/.test(rule.body)) continue;
+      for (const sel of rule.selector.split(',')) pointers.add(sel.trim());
+    }
+    const isControl = (sel) => markupControls.has(sel)
+      || pointers.has(sel)
+      || [...pointers].some((p) => p.startsWith(`${sel}.`) || p.startsWith(`${sel}:`))
+      || /(?:__|-)(?:btn|button|opt)(?![\w-])/.test(sel);
+
+    for (const rule of rules) {
+      if (!/(?:^|;)\s*display:\s*none/.test(rule.body)) continue;
+
+      for (const raw of rule.selector.split(',').map((s) => s.trim())) {
+        const parts = raw.split(/\s+/);
+        const last = parts.at(-1).replace(/:not\([^)]*\)/g, '');
+        if (!LABEL_PART.test(last)) continue;
+
+        // Der Traeger: bei `X span` das X, bei `.X__label` das `.X` - und
+        // zusaetzlich dessen klickbare Kinder, denn nicht jeder BEM-Block ist
+        // selbst das Bedienelement (`.perm-seg` traegt, `.perm-seg__opt` klickt).
+        const owners = parts.length > 1
+          ? [parts.slice(0, -1).join(' ')]
+          : (() => {
+            const block = last.match(/^\.([\w-]+)__/)?.[1];
+            if (!block) return [];
+            const kin = [...pointers].filter((p) => p.startsWith(`.${block}__`)
+              && !LABEL_PART.test(p));
+            return kin.length ? kin : [`.${block}`];
+          })();
+
+        for (const owner of owners) {
+          if (!isControl(owner)) continue;
+
+          // Im SELBEN At-Kontext muss der Traeger beide Achsen als Zielmass
+          // bekommen. Die Basisregel zaehlt nur, wenn auch das Label dort faellt.
+          const sized = rules.filter((r) => r.at.join('|') === rule.at.join('|')
+            && r.selector.split(',').some((s) => s.trim() === owner));
+          const width = sized.map((r) => decl(r.body, 'width') ?? decl(r.body, 'min-width'))
+            .find(Boolean);
+          const height = sized.map((r) => decl(r.body, 'height') ?? decl(r.body, 'min-height'))
+            .find(Boolean);
+
+          if (width && height && targetOf(width) && targetOf(height)) continue;
+          const at = rule.at.join(' | ') || 'Basisebene';
+          offenders.push(
+            `${name} [${at}]: ${owner} verliert sein Label (${last}), `
+            + `bleibt aber ohne Zielgroesse (${width ?? 'keine Breite'} x ${height ?? 'keine Hoehe'})`,
+          );
+        }
+      }
+    }
+  }
+
+  assert.deepEqual(offenders, [],
+    'Ein Label zu verlieren darf ein Ziel nie verkleinern: wer ein Label '
+    + 'ausblendet, gibt seinem Traeger im selben At-Block --target-base.');
 });
 
 /**
