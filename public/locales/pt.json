@@ -3002,7 +3002,6 @@
         "categoryFilter": "Filtrar por categoria",
         "paymentMethodFilter": "Filtrar por método de pagamento",
         "statusFilter": "Filtrar por estado",
-        "statusAll": "Todos os estados",
         "statusActive": "Ativa",
         "statusDisabled": "Desativada",
         "sortLabel": "Ordenar assinaturas",
@@ -3013,8 +3012,6 @@
         "manageMetadata": "Gerenciar categorias e métodos de pagamento",
         "settingsTitle": "Configurações de assinaturas",
         "loadError": "Não foi possível carregar as assinaturas.",
-        "allCategories": "Todas as categorias",
-        "allPaymentMethods": "Todos os métodos de pagamento",
         "cycle": {
             "daily": "Diária",
             "weekly": "Semanal",

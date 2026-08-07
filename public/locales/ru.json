@@ -3002,7 +3002,6 @@
         "categoryFilter": "Фильтр по категории",
         "paymentMethodFilter": "Фильтр по способу оплаты",
         "statusFilter": "Фильтр по статусу",
-        "statusAll": "Все статусы",
         "statusActive": "Активна",
         "statusDisabled": "Отключена",
         "sortLabel": "Сортировать подписки",
@@ -3013,8 +3012,6 @@
         "manageMetadata": "Управлять категориями и способами оплаты",
         "settingsTitle": "Настройки подписок",
         "loadError": "Не удалось загрузить подписки.",
-        "allCategories": "Все категории",
-        "allPaymentMethods": "Все способы оплаты",
         "cycle": {
             "daily": "Ежедневно",
             "weekly": "Еженедельно",

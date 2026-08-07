@@ -3002,7 +3002,6 @@
         "categoryFilter": "Filtruj według kategorii",
         "paymentMethodFilter": "Filtruj według metody płatności",
         "statusFilter": "Filtruj według statusu",
-        "statusAll": "Wszystkie statusy",
         "statusActive": "Aktywna",
         "statusDisabled": "Wyłączona",
         "sortLabel": "Sortuj subskrypcje",
@@ -3013,8 +3012,6 @@
         "manageMetadata": "Zarządzaj kategoriami i metodami płatności",
         "settingsTitle": "Ustawienia subskrypcji",
         "loadError": "Nie udało się załadować subskrypcji.",
-        "allCategories": "Wszystkie kategorie",
-        "allPaymentMethods": "Wszystkie metody płatności",
         "cycle": {
             "daily": "Codziennie",
             "weekly": "Co tydzień",

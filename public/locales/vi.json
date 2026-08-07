@@ -3002,7 +3002,6 @@
         "categoryFilter": "Lọc theo danh mục",
         "paymentMethodFilter": "Lọc theo phương thức thanh toán",
         "statusFilter": "Lọc theo trạng thái",
-        "statusAll": "Tất cả trạng thái",
         "statusActive": "Đang hoạt động",
         "statusDisabled": "Đã tắt",
         "sortLabel": "Sắp xếp đăng ký",
@@ -3013,8 +3012,6 @@
         "manageMetadata": "Quản lý danh mục và phương thức thanh toán",
         "settingsTitle": "Cài đặt đăng ký",
         "loadError": "Không thể tải đăng ký.",
-        "allCategories": "Tất cả danh mục",
-        "allPaymentMethods": "Tất cả phương thức thanh toán",
         "cycle": {
             "daily": "Hằng ngày",
             "weekly": "Hằng tuần",

@@ -3002,7 +3002,6 @@
         "categoryFilter": "I-filter ayon sa kategorya",
         "paymentMethodFilter": "I-filter ayon sa paraan ng pagbabayad",
         "statusFilter": "I-filter ayon sa katayuan",
-        "statusAll": "Lahat ng katayuan",
         "statusActive": "Aktibo",
         "statusDisabled": "Naka-disable",
         "sortLabel": "Ayusin ang mga subscription",
@@ -3013,8 +3012,6 @@
         "manageMetadata": "Pamahalaan ang mga kategorya at paraan ng pagbabayad",
         "settingsTitle": "Mga setting ng subscription",
         "loadError": "Hindi ma-load ang mga subscription.",
-        "allCategories": "Lahat ng kategorya",
-        "allPaymentMethods": "Lahat ng paraan ng pagbabayad",
         "cycle": {
             "daily": "Araw-araw",
             "weekly": "Lingguhan",

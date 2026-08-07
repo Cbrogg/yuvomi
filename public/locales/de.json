@@ -3002,7 +3002,6 @@
         "categoryFilter": "Nach Kategorie filtern",
         "paymentMethodFilter": "Nach Zahlungsart filtern",
         "statusFilter": "Nach Status filtern",
-        "statusAll": "Alle Status",
         "statusActive": "Aktiv",
         "statusDisabled": "Deaktiviert",
         "sortLabel": "Abonnements sortieren",
@@ -3013,8 +3012,6 @@
         "manageMetadata": "Kategorien und Zahlungsarten verwalten",
         "settingsTitle": "Abonnement-Einstellungen",
         "loadError": "Abonnements konnten nicht geladen werden.",
-        "allCategories": "Alle Kategorien",
-        "allPaymentMethods": "Alle Zahlungsarten",
         "cycle": {
             "daily": "Täglich",
             "weekly": "Wöchentlich",

@@ -223,3 +223,92 @@ a.doc-attach__chip-name:focus-visible {
   color: var(--color-text-tertiary);
   font-size: var(--text-xs);
 }
+
+/* --------------------------------------------------------
+ * Ablegefläche für eine Datei (.document-dropzone)
+ *
+ * EINE Definition. Sie stand zweimal - in documents.css und in calendar.css -
+ * und die beiden Fassungen waren auseinandergelaufen: verschiedener Radius,
+ * verschiedene Icon-Kachel, verschiedener Dateiname, und nur eine von beiden
+ * hatte einen Fokusring. Dasselbe Markup, zwei Optiken.
+ *
+ * Maßgeblich ist die Dokumente-Fassung (Radius --radius-lg wie jede große
+ * Fläche, Fokusring, Dateiname als getönte Pille) mit EINER Korrektur: ihre
+ * Icon-Kachel stand auf --color-surface-elevated plus Schatten, also als Karte
+ * in einer Karte. Sie trägt jetzt das Tönungsrezept (16 % Modulfarbe), das für
+ * getönte Flächen app-weit gilt.
+ * -------------------------------------------------------- */
+
+.document-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 148px;
+  padding: var(--space-5);
+  border: 1.5px dashed color-mix(in srgb, var(--module-accent) 48%, var(--color-border));
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--module-accent) 7%, var(--color-surface));
+  color: var(--color-text-secondary);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.document-dropzone:hover,
+.document-dropzone--active {
+  border-color: var(--module-accent);
+  background: color-mix(in srgb, var(--module-accent) 12%, var(--color-surface));
+}
+
+/* Der Datei-Input liegt sr-only (1x1px, geclippt) im Label und ist trotzdem
+ * tab-fokussierbar. Ohne diese Regel verschwand der Fokus beim Durchtabben
+ * spurlos - der Ring muss auf der sichtbaren Dropzone erscheinen. */
+.document-dropzone:focus-within {
+  border-color: var(--module-accent);
+  border-style: solid;
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.document-dropzone--active {
+  transform: translateY(-1px);
+}
+
+/* Getönte Icon-Kachel nach dem einen Tönungsrezept: 16 % Modulfarbe auf der
+ * Fläche. Erst das trägt in BEIDEN Themes sichtbar. */
+.document-dropzone__icon {
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  color: var(--module-accent);
+  background: color-mix(in srgb, var(--module-accent) 16%, transparent);
+}
+
+.document-dropzone__icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.document-dropzone__title {
+  color: var(--color-text-primary);
+}
+
+.document-dropzone__hint,
+.document-dropzone__file {
+  max-width: 100%;
+  font-size: var(--text-xs);
+  overflow-wrap: anywhere;
+}
+
+.document-dropzone__file {
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  color: var(--module-accent);
+  background: color-mix(in srgb, var(--module-accent) 14%, transparent);
+  font-weight: var(--font-weight-semibold);
+}

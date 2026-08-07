@@ -189,14 +189,11 @@
     var(--glass-inset-soft);
 }
 
-/* Ghost-Buttons */
-@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
-  .btn--ghost:hover {
-    background: color-mix(in srgb, var(--color-text-tertiary) 10%, transparent);
-    backdrop-filter: var(--blur-xs);
-    -webkit-backdrop-filter: var(--blur-xs);
-  }
-}
+/* Ghost-Buttons: hier stand ihr Hover mit einem backdrop-filter. Ein
+ * Ghost-Button steht in Karten und Zeilen, also auf INHALT, und Glas gehört dem
+ * Chrome (DESIGN.md) - damit hatte er in dieser Datei nichts mehr zu suchen.
+ * Seine Tönung steht jetzt in layout.css bei der Basisregel, wo sie vorher
+ * doppelt und mit einem zweiten Farbwert danebenstand. */
 
 /* ================================================================
  * 5. FAB — Specular Highlight

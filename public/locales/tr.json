@@ -3002,7 +3002,6 @@
         "categoryFilter": "Kategoriye göre filtrele",
         "paymentMethodFilter": "Ödeme yöntemine göre filtrele",
         "statusFilter": "Duruma göre filtrele",
-        "statusAll": "Tüm durumlar",
         "statusActive": "Etkin",
         "statusDisabled": "Devre dışı",
         "sortLabel": "Abonelikleri sırala",
@@ -3013,8 +3012,6 @@
         "manageMetadata": "Kategorileri ve ödeme yöntemlerini yönet",
         "settingsTitle": "Abonelik ayarları",
         "loadError": "Abonelikler yüklenemedi.",
-        "allCategories": "Tüm kategoriler",
-        "allPaymentMethods": "Tüm ödeme yöntemleri",
         "cycle": {
             "daily": "Günlük",
             "weekly": "Haftalık",

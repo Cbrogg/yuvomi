@@ -3002,7 +3002,6 @@
         "categoryFilter": "Filtrovat podle kategorie",
         "paymentMethodFilter": "Filtrovat podle platební metody",
         "statusFilter": "Filtrovat podle stavu",
-        "statusAll": "Všechny stavy",
         "statusActive": "Aktivní",
         "statusDisabled": "Vypnuté",
         "sortLabel": "Řadit předplatná",
@@ -3013,8 +3012,6 @@
         "manageMetadata": "Spravovat kategorie a platební metody",
         "settingsTitle": "Nastavení předplatných",
         "loadError": "Předplatná se nepodařilo načíst.",
-        "allCategories": "Všechny kategorie",
-        "allPaymentMethods": "Všechny platební metody",
         "cycle": {
             "daily": "Denně",
             "weekly": "Týdně",

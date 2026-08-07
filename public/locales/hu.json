@@ -3002,7 +3002,6 @@
         "categoryFilter": "Szűrés kategória szerint",
         "paymentMethodFilter": "Szűrés fizetési mód szerint",
         "statusFilter": "Szűrés státusz szerint",
-        "statusAll": "Minden státusz",
         "statusActive": "Aktív",
         "statusDisabled": "Letiltva",
         "sortLabel": "Előfizetések rendezése",
@@ -3013,8 +3012,6 @@
         "manageMetadata": "Kategóriák és fizetési módok kezelése",
         "settingsTitle": "Előfizetés beállításai",
         "loadError": "Az előfizetések betöltése sikertelen.",
-        "allCategories": "Minden kategória",
-        "allPaymentMethods": "Minden fizetési mód",
         "cycle": {
             "daily": "Napi",
             "weekly": "Heti",

@@ -3002,7 +3002,6 @@
         "categoryFilter": "Filter op categorie",
         "paymentMethodFilter": "Filter op betaalmethode",
         "statusFilter": "Filter op status",
-        "statusAll": "Alle statussen",
         "statusActive": "Actief",
         "statusDisabled": "Uitgeschakeld",
         "sortLabel": "Abonnementen sorteren",
@@ -3013,8 +3012,6 @@
         "manageMetadata": "Categorieën en betaalmethoden beheren",
         "settingsTitle": "Abonnementsinstellingen",
         "loadError": "Abonnementen konden niet worden geladen.",
-        "allCategories": "Alle categorieën",
-        "allPaymentMethods": "Alle betaalmethoden",
         "cycle": {
             "daily": "Dagelijks",
             "weekly": "Wekelijks",

@@ -3002,7 +3002,6 @@
         "categoryFilter": "श्रेणी के अनुसार फ़िल्टर करें",
         "paymentMethodFilter": "भुगतान विधि के अनुसार फ़िल्टर करें",
         "statusFilter": "स्थिति के अनुसार फ़िल्टर करें",
-        "statusAll": "सभी स्थितियाँ",
         "statusActive": "सक्रिय",
         "statusDisabled": "अक्षम",
         "sortLabel": "सदस्यताओं को क्रमबद्ध करें",
@@ -3013,8 +3012,6 @@
         "manageMetadata": "श्रेणियाँ और भुगतान विधियाँ प्रबंधित करें",
         "settingsTitle": "सदस्यता सेटिंग्स",
         "loadError": "सदस्यताएँ लोड नहीं हो सकीं।",
-        "allCategories": "सभी श्रेणियाँ",
-        "allPaymentMethods": "सभी भुगतान विधियाँ",
         "cycle": {
             "daily": "दैनिक",
             "weekly": "साप्ताहिक",

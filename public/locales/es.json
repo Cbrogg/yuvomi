@@ -3002,7 +3002,6 @@
         "categoryFilter": "Filtrar por categoría",
         "paymentMethodFilter": "Filtrar por método de pago",
         "statusFilter": "Filtrar por estado",
-        "statusAll": "Todos los estados",
         "statusActive": "Activa",
         "statusDisabled": "Desactivada",
         "sortLabel": "Ordenar suscripciones",
@@ -3013,8 +3012,6 @@
         "manageMetadata": "Gestionar categorías y métodos de pago",
         "settingsTitle": "Configuración de suscripciones",
         "loadError": "No se pudieron cargar las suscripciones.",
-        "allCategories": "Todas las categorías",
-        "allPaymentMethods": "Todos los métodos de pago",
         "cycle": {
             "daily": "Diario",
             "weekly": "Semanal",

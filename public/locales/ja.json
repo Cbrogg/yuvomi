@@ -3002,7 +3002,6 @@
         "categoryFilter": "カテゴリで絞り込み",
         "paymentMethodFilter": "支払い方法で絞り込み",
         "statusFilter": "ステータスで絞り込み",
-        "statusAll": "すべてのステータス",
         "statusActive": "有効",
         "statusDisabled": "無効",
         "sortLabel": "サブスクリプションを並べ替え",
@@ -3013,8 +3012,6 @@
         "manageMetadata": "カテゴリと支払い方法を管理",
         "settingsTitle": "サブスクリプション設定",
         "loadError": "サブスクリプションを読み込めませんでした。",
-        "allCategories": "すべてのカテゴリ",
-        "allPaymentMethods": "すべての支払い方法",
         "cycle": {
             "daily": "毎日",
             "weekly": "毎週",

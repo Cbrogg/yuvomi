@@ -3002,7 +3002,6 @@
         "categoryFilter": "카테고리로 필터",
         "paymentMethodFilter": "결제 수단으로 필터",
         "statusFilter": "상태로 필터",
-        "statusAll": "모든 상태",
         "statusActive": "활성",
         "statusDisabled": "비활성",
         "sortLabel": "구독 정렬",
@@ -3013,8 +3012,6 @@
         "manageMetadata": "카테고리 및 결제 수단 관리",
         "settingsTitle": "구독 설정",
         "loadError": "구독을 불러오지 못했습니다.",
-        "allCategories": "모든 카테고리",
-        "allPaymentMethods": "모든 결제 수단",
         "cycle": {
             "daily": "매일",
             "weekly": "매주",

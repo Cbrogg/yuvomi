@@ -2972,8 +2972,13 @@ p.field-hint--warn[hidden] {
   color: var(--color-text-secondary);
 }
 
+/* EINE Hover-Deklaration. Bis zur Aufräumrunde standen hier --color-surface-2
+ * und in glass.css derselbe Selektor mit dieser Tönung plus backdrop-filter -
+ * zwei Farbwerte für denselben Zustand, von denen faktisch immer der zweite
+ * gewann. Der Blur ist entfallen (Glas gehört dem Chrome), der Farbwert ist
+ * geblieben. */
 .btn--ghost:hover {
-  background-color: var(--color-surface-2);
+  background-color: color-mix(in srgb, var(--color-text-tertiary) 10%, transparent);
   color: var(--color-text-primary);
 }
 

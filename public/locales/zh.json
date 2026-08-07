@@ -3002,7 +3002,6 @@
         "categoryFilter": "按类别筛选",
         "paymentMethodFilter": "按付款方式筛选",
         "statusFilter": "按状态筛选",
-        "statusAll": "所有状态",
         "statusActive": "启用",
         "statusDisabled": "停用",
         "sortLabel": "排序订阅",
@@ -3013,8 +3012,6 @@
         "manageMetadata": "管理类别和付款方式",
         "settingsTitle": "订阅设置",
         "loadError": "无法加载订阅。",
-        "allCategories": "所有类别",
-        "allPaymentMethods": "所有付款方式",
         "cycle": {
             "daily": "每日",
             "weekly": "每周",

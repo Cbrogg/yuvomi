@@ -3002,7 +3002,6 @@
         "categoryFilter": "Filter by category",
         "paymentMethodFilter": "Filter by payment method",
         "statusFilter": "Filter by status",
-        "statusAll": "All statuses",
         "statusActive": "Active",
         "statusDisabled": "Disabled",
         "sortLabel": "Sort subscriptions",
@@ -3013,8 +3012,6 @@
         "manageMetadata": "Manage categories and payment methods",
         "settingsTitle": "Subscription settings",
         "loadError": "Subscriptions could not be loaded.",
-        "allCategories": "All categories",
-        "allPaymentMethods": "All payment methods",
         "cycle": {
             "daily": "Daily",
             "weekly": "Weekly",

@@ -3002,7 +3002,6 @@
         "categoryFilter": "فیلتر بر اساس دسته",
         "paymentMethodFilter": "فیلتر بر اساس روش پرداخت",
         "statusFilter": "فیلتر بر اساس وضعیت",
-        "statusAll": "همه وضعیت‌ها",
         "statusActive": "فعال",
         "statusDisabled": "غیرفعال",
         "sortLabel": "مرتب‌سازی اشتراک‌ها",
@@ -3013,8 +3012,6 @@
         "manageMetadata": "مدیریت دسته‌ها و روش‌های پرداخت",
         "settingsTitle": "تنظیمات اشتراک",
         "loadError": "اشتراک‌ها بارگذاری نشدند.",
-        "allCategories": "همه دسته‌ها",
-        "allPaymentMethods": "همه روش‌های پرداخت",
         "cycle": {
             "daily": "روزانه",
             "weekly": "هفتگی",

@@ -3002,7 +3002,6 @@
         "categoryFilter": "Filtrera efter kategori",
         "paymentMethodFilter": "Filtrera efter betalningsmetod",
         "statusFilter": "Filtrera efter status",
-        "statusAll": "Alla statusar",
         "statusActive": "Aktiva",
         "statusDisabled": "Inaktiverad",
         "sortLabel": "Sortera prenumerationer",
@@ -3013,8 +3012,6 @@
         "manageMetadata": "Hantera kategorier och betalningsmetoder",
         "settingsTitle": "Prenumerationsinställningar",
         "loadError": "Prenumerationer kunde inte laddas.",
-        "allCategories": "Alla kategorier",
-        "allPaymentMethods": "Alla betalningsmetoder",
         "cycle": {
             "daily": "Dagligen",
             "weekly": "Veckovis",

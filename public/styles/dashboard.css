@@ -228,19 +228,6 @@
   position: relative;
 }
 
-.widget::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: var(--glass-highlight-subtle);
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-  pointer-events: none;
-  z-index: 1;
-}
-
 .widget__header {
   display: flex;
   align-items: center;
@@ -2272,14 +2259,6 @@ svg.weather-forecast__icon {
   background: var(--color-surface);
   box-shadow: var(--shadow-md);
   min-width: 0;
-}
-
-.dashboard .widget::before {
-  /* Neutraler Glas-Highlight statt Modul-Tint: die Oberkante gehoert dem
-   * Material, nicht dem Modul (Fix: keine getoenten Kanten auf Karten). */
-  height: 1px;
-  background: var(--glass-highlight-subtle);
-  opacity: 1;
 }
 
 .dashboard .widget__header {

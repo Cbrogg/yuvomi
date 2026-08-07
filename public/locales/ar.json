@@ -3002,7 +3002,6 @@
         "categoryFilter": "التصفية حسب الفئة",
         "paymentMethodFilter": "التصفية حسب طريقة الدفع",
         "statusFilter": "التصفية حسب الحالة",
-        "statusAll": "كل الحالات",
         "statusActive": "نشط",
         "statusDisabled": "معطل",
         "sortLabel": "فرز الاشتراكات",
@@ -3013,8 +3012,6 @@
         "manageMetadata": "إدارة الفئات وطرق الدفع",
         "settingsTitle": "إعدادات الاشتراكات",
         "loadError": "تعذر تحميل الاشتراكات.",
-        "allCategories": "كل الفئات",
-        "allPaymentMethods": "كل طرق الدفع",
         "cycle": {
             "daily": "يومي",
             "weekly": "أسبوعي",

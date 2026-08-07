@@ -3002,7 +3002,6 @@
         "categoryFilter": "Фільтр за категорією",
         "paymentMethodFilter": "Фільтр за способом оплати",
         "statusFilter": "Фільтр за статусом",
-        "statusAll": "Усі статуси",
         "statusActive": "Активна",
         "statusDisabled": "Вимкнена",
         "sortLabel": "Сортувати підписки",
@@ -3013,8 +3012,6 @@
         "manageMetadata": "Керувати категоріями та способами оплати",
         "settingsTitle": "Налаштування підписок",
         "loadError": "Не вдалося завантажити підписки.",
-        "allCategories": "Усі категорії",
-        "allPaymentMethods": "Усі способи оплати",
         "cycle": {
             "daily": "Щодня",
             "weekly": "Щотижня",
