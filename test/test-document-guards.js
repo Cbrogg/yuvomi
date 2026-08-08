@@ -514,12 +514,14 @@ const SHAPE_EXEMPT = new Map([
   ['cal-toolbar__view-btn', 'Zustandsschalter: Segment der Kalender-Ansicht'],
   ['ydp__trigger', 'Griff: Feld-Oeffner des Datepickers, traegt Feldkante'],
   ['more-sheet__search', 'Griff: Suchfeld des More-Sheets, traegt Feldkante'],
+  ['theme-toggle__btn', 'Zustandsschalter: Segment der Farbwelt-Wahl'],
   // 3. Zellen eines Rasters
   ['month-day', 'Rasterzelle: Tag im Kalender-Monat'],
   ['more-action', 'Rasterzelle: Kachel im More-Sheet-Raster'],
   ['health-metric-card', 'Rasterzelle: Kennzahlkachel der Gesundheit'],
   // 4. Zeilen einer Zeilenliste
   ['nav-item', 'Zeile: Eintrag der Sidebar-Navigation'],
+  ['settings-shell__navigation-toggle', 'Zeile: Domaenenkopf der Settings-Navigation (Akkordeon)'],
   ['note-item', 'Zeile: Notiz im Dashboard-Widget'],
   ['rewards-widget-row', 'Zeile: Rang im Belohnungs-Widget'],
   ['rw-standing__id', 'Zeile: Oeffner einer Mitglieds-Zeile'],
@@ -701,8 +703,31 @@ async function measureTargets(page, min) {
       };
       // max(Box, getastet): die Box ist die Untergrenze (Falle 2), das Tasten
       // zaehlt nur, was ein Pseudo-Element hinzufuegt (Falle 1).
-      const w = Math.max(r.width, reach(-1, 0) + reach(1, 0) + 1);
-      const h = Math.max(r.height, reach(0, -1) + reach(0, 1) + 1);
+      let w = Math.max(r.width, reach(-1, 0) + reach(1, 0) + 1);
+      let h = Math.max(r.height, reach(0, -1) + reach(0, 1) + 1);
+
+      // FALLE 4, gemessen an den Settings-Blaettern: EIN BEDIENELEMENT IN
+      // EINEM LABEL IST SO GROSS WIE SEIN LABEL. `toggleRowHtml`
+      // (settings/components.js) baut `<label class="toggle-row"><input
+      // type="checkbox" 18x18>…<span>Text</span></label>`; die Zeile traegt
+      // `min-height: var(--target-lg)` und volle Breite, und ein Klick
+      // irgendwo darauf schaltet. Die Sonde mass den INPUT und meldete
+      // 18x19 - dreissigmal, quer ueber die Blaetter, und jedes Mal falsch.
+      //
+      // Das Tasten allein rettet sie nicht: `elementFromPoint` liefert
+      // ausserhalb des Inputs das LABEL, nicht den Input, also endet `reach`
+      // an der Kante der Checkbox. Was hier fehlt, ist keine Geometrie,
+      // sondern eine HTML-Beziehung - und die ist eine Regel, keine
+      // Ausnahmeliste: `label.control` bzw. `label[for]` sagt verbindlich,
+      // welches Element das Label bedient.
+      const label = el.closest('label') ?? (el.id ? document.querySelector(`label[for="${CSS.escape(el.id)}"]`) : null);
+      if (label && (label.control === el || label.contains(el))) {
+        const lr = label.getBoundingClientRect();
+        if (lr.width > 0 && lr.height > 0) {
+          w = Math.max(w, lr.width);
+          h = Math.max(h, lr.height);
+        }
+      }
 
       // Eingeengt: ein Ziel, das mindestens eine Klasse teilt, steht naeher als
       // CROWDING_GAP. Nur DAS ist der Grund, aus dem ein Ziel dicht sein darf -
@@ -1750,6 +1775,22 @@ test('Sonde 10 - jedes Dokument traegt dieselbe Struktur, angemeldet wie davor',
  * SIE FAEHRT NUR DEN SEITENINHALT (`#main-content`). Die Shell ist auf jeder
  * Route dieselbe; ein Befund dort kaeme sechzehnmal.
  *
+ * EIN TRAEGER OHNE ZIEL VERSCHLUCKT KEINEN KLICK - es ist keines da. Gemessen
+ * an den Settings-Blaettern: die Einladungs- und die Token-Liste
+ * (`ul.settings-members`) bekommen ihren delegierenden Listener beim Aufbau der
+ * Seite, ihre Zeilen kommen per API danach. Wo der Seed keine liefert, steht
+ * dort ein einzelnes `<p class="form-hint">` mit „noch nichts vorhanden" - und
+ * die Sonde meldete eine Tastatur-Sackgasse, obwohl jede echte Zeile ihren
+ * eigenen Knopf traegt (`button.row-action`) und die Delegation genau richtig
+ * gebaut ist. Der Unterschied ist nicht Timing, sondern Bedeutung: ein
+ * Sackgassen-Befund braucht etwas, das in der Sackgasse steht.
+ *
+ * GEPRUEFT WIRD DIE FORM, NICHT DIE KLASSE. Ein Guard auf `.empty-state` oder
+ * `.form-hint` faende nur, wer den Namen schon traegt (die Session-8-Lehre).
+ * Die Form eines Leerzustands ist: gar kein Kind, oder GENAU EIN kinderloses
+ * Element mit Text darin. Alles andere - eine Zeile, ein Raster, irgendetwas
+ * mit Struktur - bleibt ein Befund.
+ *
  * KOSTEN: rund eine Minute. Sie nimmt `visitViews` NICHT - aus demselben Grund
  * wie Sonde 8: die Verdrahtung einer Liste haengt an ihrem Modul, nicht an der
  * Sicht, und die 16 Routen erreichen jedes Modul einmal.
@@ -1796,11 +1837,19 @@ async function keyboardlessClickTargets(page) {
               cls: (typeof this.className === 'string' ? this.className : '').trim().slice(0, 60),
               focusable: native || (tabindex !== null && Number(tabindex) >= 0),
               delegates: Boolean(this.querySelector('a[href],button,input,select,textarea,summary,[tabindex]:not([tabindex="-1"])')),
+              // Ein Traeger OHNE ZIEL verschluckt keinen Klick - es ist keines
+              // da. Siehe den Absatz "Ein Traeger ohne Ziel" im Sondenkommentar.
+              // Zwei Formen, beide gemessen: gar kein Kind, oder genau ein
+              // kinderloses Textelement (der Leerzustand).
+              targetless: this.childElementCount === 0
+                || (this.childElementCount === 1
+                  && this.firstElementChild.childElementCount === 0
+                  && this.firstElementChild.textContent.trim().length > 0),
             };
           }`,
         });
         const el = meta.value;
-        if (el.focusable || hasKeyListener || el.delegates) continue;
+        if (el.focusable || hasKeyListener || el.delegates || el.targetless) continue;
         findings.push(`<${el.tag}${el.cls ? ` class="${el.cls}"` : ''}>`);
       } finally {
         await cdp.send('Runtime.releaseObject', { objectId: handle.objectId });

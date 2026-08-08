@@ -975,9 +975,24 @@
   align-items: center;
 }
 
+/* Die Zielgröße kommt aus dem Token, nicht aus einer Zahl. Hier standen 44px
+ * fest verdrahtet - das ist exakt der ZEIGER-Wert von --target-base, eingefroren
+ * bevor er den Finger kannte: das Token wächst unter `@media (hover: none)` auf
+ * --target-lg, die Kopie hier nicht. Gemessen 44x45 am Finger gegen ein Minimum
+ * von 48, und zwar freistehend (nächstes Zielzentrum 161px, die Spacing-Ausnahme
+ * greift also nicht).
+ *
+ * Warum nicht die Trefferfläche per ::before dehnen wie .weather-widget__refresh:
+ * das geht hier technisch nicht. `<input type="color">` ist ein replaced element
+ * und rendert keine Pseudo-Elemente. Die Wahl bestand also gar nicht - und sie
+ * wäre auch inhaltlich falsch gewesen: bei einem Farbfeld IST die sichtbare
+ * Fläche die Funktion, anders als bei einem Icon in einem dichten Widget.
+ *
+ * Der Platz kostet nichts Nennenswertes: die Zeile ist
+ * `minmax(0, 1fr) auto`, die 4px gehen bei 375px zu ~1,4 % vom Namensfeld ab. */
 .settings-color-button {
-  width: 44px;
-  height: 44px;
+  width: var(--target-base);
+  height: var(--target-base);
   padding: var(--space-0h);
   border: var(--space-px) solid var(--color-border);
   border-radius: var(--radius-full);
@@ -2095,10 +2110,16 @@
    Third-party Modules
    -------------------------------------------------------- */
 
+/* EIN Träger, Zeilen per Haarlinie (Zeilenlisten-Regel, §2). Vorher trug jede
+ * Modulzeile ihre eigene Karte und die Trennung lag im `gap` der Liste - die
+ * Bauart, die in einer langen Liste Schattenstreifen erzeugt und „jedes davon
+ * ist ein eigenes Objekt" sagt, wo die Gruppe gemeint ist. Sonde 7 hat sie
+ * gefunden, als die Settings-Blätter zum ersten Mal unter die Sonden kamen.
+ * Fläche, Radius, Schatten und die Trennlinien kommen aus `.row-carrier`
+ * (list-row.css) - hier steht nur noch, dass die Zeilen stapeln. */
 .settings-modules-list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
 }
 
 .settings-mobile-nav-slots {
@@ -2165,24 +2186,20 @@
   border-bottom: var(--space-px) solid var(--color-border-subtle);
 }
 
+/* Flächenlos: die Fläche gehört dem Träger. Kante und Radius stehen bewusst
+ * nicht mehr hier - `.row-carrier > * + *` setzt die Haarlinie, und ein Radius
+ * je Zeile wäre wieder die Karte, die gerade entfallen ist. */
 .settings-module-row {
   display: grid;
   grid-template-columns: var(--target-base) var(--target-base) var(--target-base) minmax(0, 1fr) auto;
   gap: var(--space-3);
   align-items: center;
   padding: var(--space-4);
-  /* Randlose Karte auf dem Grouped-Grund (tokens.css, Kasten-in-Kasten). */
-  border: none;
-  border-radius: var(--radius-md);
-  background-color: var(--color-surface-work);
-  transition:
-    background-color var(--transition-fast),
-    border-color var(--transition-fast);
+  transition: background-color var(--transition-fast);
 }
 
 .settings-module-row:hover {
-  border-color: var(--color-border);
-  background-color: var(--color-surface-raised);
+  background-color: var(--color-surface-hover);
 }
 
 .settings-module-row--fixed {
