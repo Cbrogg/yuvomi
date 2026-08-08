@@ -76,10 +76,6 @@
   .inventory-item-row__location {
     display: none;
   }
-
-  .inventory-form-row {
-    grid-template-columns: 1fr;
-  }
 }
 
 /* Zwei-Spalten-Formularzeile fuer das Item-Formular (Anlegen/Bearbeiten).
