@@ -1,0 +1,146 @@
+/**
+ * Test: Inventar-Gegenstaende-Routen (Stufe 1)
+ * Zweck: CRUD, volles Replace (kein Feld behaelt den Altwert), Kategorie muss in
+ *        inventory_categories existieren (Ablehnung, keine Normalisierung - anders
+ *        als in der ersten, einfacheren Version dieses Projekts, weil Kategorien
+ *        hier eine echte verwaltbare Tabelle sind, kein fester Code-Vorrat), Ort muss
+ *        existieren, Waehrung faellt auf die Haushaltswaehrung zurueck, Filter,
+ *        Volltextsuche, Ortspfad-Anzeige.
+ * Ausfuehren: node --experimental-sqlite --test test/test-inventory-items-routes.js
+ */
+
+process.env.SESSION_SECRET = process.env.SESSION_SECRET || 'test-secret';
+process.env.DB_PATH = ':memory:';
+
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import express from 'express';
+
+const dbmod = await import('../server/db.js');
+const { default: itemsRouter } = await import('../server/routes/inventory/items.js');
+const db = dbmod.get();
+
+const USER = db.prepare(`
+  INSERT INTO users (username, display_name, password_hash, role)
+  VALUES ('owner', 'Owner', 'x', 'member')
+`).run().lastInsertRowid;
+
+const app = express();
+app.use(express.json());
+app.use((req, _res, next) => {
+  req.authUserId = USER;
+  req.session = { userId: USER };
+  next();
+});
+app.use('/items', itemsRouter);
+const server = app.listen(0);
+const baseUrl = await new Promise((r) => server.on('listening', () => r(`http://127.0.0.1:${server.address().port}`)));
+test.after(() => server.close());
+
+async function call(method, path, body) {
+  const res = await fetch(`${baseUrl}${path}`, {
+    method,
+    headers: body ? { 'Content-Type': 'application/json' } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  let json = null;
+  try { json = await res.json(); } catch { /* 204/leer */ }
+  return { status: res.status, body: json };
+}
+
+function makeLocation(name, parentId = null) {
+  return db.prepare('INSERT INTO inventory_locations (name, parent_id) VALUES (?, ?)').run(name, parentId).lastInsertRowid;
+}
+
+test('POST /items: minimaler Body bekommt Defaults', async () => {
+  const r = await call('POST', '/items', { name: 'Laptop' });
+  assert.equal(r.status, 201);
+  assert.equal(r.body.data.category, 'other');
+  assert.equal(r.body.data.condition, 'good');
+  assert.equal(r.body.data.status, 'active');
+  assert.equal(r.body.data.currency, 'EUR');
+  assert.equal(r.body.data.location_path, null);
+});
+
+test('POST /items: unbekannte Kategorie -> 400 (abgelehnt, nicht normalisiert)', async () => {
+  const r = await call('POST', '/items', { name: 'X', category: 'not-a-real-category' });
+  assert.equal(r.status, 400);
+});
+
+test('POST /items: gueltige Kategorie wird uebernommen und im Namen aufgeloest', async () => {
+  const r = await call('POST', '/items', { name: 'Router', category: 'electronics' });
+  assert.equal(r.status, 201);
+  assert.equal(r.body.data.category, 'electronics');
+  assert.equal(r.body.data.category_name, 'Elektronik');
+});
+
+test('POST /items: nicht existenter Ort -> 400', async () => {
+  const r = await call('POST', '/items', { name: 'X', location_id: 999999 });
+  assert.equal(r.status, 400);
+});
+
+test('POST /items: gueltiger Ort wird uebernommen, Ortspfad fuer einen Unterort zeigt beide Ebenen', async () => {
+  const parent = makeLocation('Keller');
+  const child = makeLocation('Regal 2', parent);
+  const r = await call('POST', '/items', { name: 'Werkzeugkiste', location_id: child });
+  assert.equal(r.status, 201);
+  assert.equal(r.body.data.location_path, 'Keller · Regal 2');
+});
+
+test('POST /items: negativer Kaufpreis -> 400', async () => {
+  const r = await call('POST', '/items', { name: 'X', purchase_price: -5 });
+  assert.equal(r.status, 400);
+});
+
+test('POST /items: Garantiemonate ausserhalb 0-600 -> 400', async () => {
+  const r = await call('POST', '/items', { name: 'X', warranty_months: 700 });
+  assert.equal(r.status, 400);
+});
+
+test('POST /items: ungueltige Waehrung -> 400, gueltige wird gross geschrieben uebernommen', async () => {
+  assert.equal((await call('POST', '/items', { name: 'X', currency: 'eur1' })).status, 400);
+  const r = await call('POST', '/items', { name: 'Y', currency: 'chf' });
+  assert.equal(r.status, 201);
+  assert.equal(r.body.data.currency, 'CHF');
+});
+
+test('PUT /items/:id: volles Replace - weggelassene Felder werden NICHT beibehalten', async () => {
+  const created = await call('POST', '/items', {
+    name: 'Espressomaschine', category: 'household', vendor: 'DeLonghi', current_value: 200,
+  });
+  const r = await call('PUT', `/items/${created.body.data.id}`, { name: 'Espressomaschine' });
+  assert.equal(r.status, 200);
+  assert.equal(r.body.data.category, 'other'); // nicht mehr 'household'
+  assert.equal(r.body.data.vendor, null);
+  assert.equal(r.body.data.current_value, null);
+});
+
+test('DELETE /items/:id: 204, danach 404', async () => {
+  const created = await call('POST', '/items', { name: 'Temp' });
+  const del = await call('DELETE', `/items/${created.body.data.id}`);
+  assert.equal(del.status, 204);
+  assert.equal((await call('GET', `/items/${created.body.data.id}`)).status, 404);
+});
+
+test('GET /items: Filter nach category, location_id, status', async () => {
+  const loc = makeLocation('Filterort');
+  await call('POST', '/items', { name: 'Gefiltert 1', category: 'sports', location_id: loc, status: 'sold' });
+  await call('POST', '/items', { name: 'Gefiltert 2', category: 'sports' });
+
+  const byCategory = await call('GET', '/items?category=sports');
+  assert.ok(byCategory.body.data.length >= 2);
+  assert.ok(byCategory.body.data.every((i) => i.category === 'sports'));
+
+  const byLocation = await call('GET', `/items?location_id=${loc}`);
+  assert.ok(byLocation.body.data.some((i) => i.name === 'Gefiltert 1'));
+
+  const byStatus = await call('GET', '/items?status=sold');
+  assert.ok(byStatus.body.data.some((i) => i.name === 'Gefiltert 1'));
+});
+
+test('GET /items: Volltextsuche ueber Name/Marke/Modell/Seriennummer', async () => {
+  await call('POST', '/items', { name: 'Kaffeemuehle', brand: 'Eureka', model: 'Mignon', serial_number: 'ABC123' });
+  assert.ok((await call('GET', '/items?q=Eureka')).body.data.some((i) => i.name === 'Kaffeemuehle'));
+  assert.ok((await call('GET', '/items?q=ABC123')).body.data.some((i) => i.name === 'Kaffeemuehle'));
+  assert.equal((await call('GET', '/items?q=NichtsPasstHier')).body.data.length, 0);
+});
