@@ -8840,3 +8840,61 @@ test('jede Stufe der Toenungsskala hat mindestens einen Nutzer', () => {
     'Eine Stufe ohne Nutzer ist eine Einladung, sie beim naechsten Mal falsch zu belegen.',
   );
 });
+
+/**
+ * REGEL: --color-text-disabled ist die Farbe DEAKTIVIERTER Bedienelemente und
+ * sonst nichts. Sie traegt auf keiner Flaeche der App 3:1 (1,36 bis 2,17), und
+ * das ist richtig so: WCAG 1.4.3 nimmt Deaktiviertes ausdruecklich aus. Genau
+ * deshalb ist sie an einem ERREICHBAREN Element immer ein Fehler - dort gilt
+ * die Ausnahme nicht, und die Ruhefarbe faellt unter jede Schwelle.
+ *
+ * Der Guard steht hier, weil die Regel dreimal als Fundstelle behandelt wurde
+ * statt als Regel:
+ *   Runde: vier Icon-Knoepfe (ccd61d33), danach faende sich der fuenfte
+ *   (.ingredient-row__remove), der sechste und siebte (.meal-slot__* im
+ *   Dashboard, waehrend der Kuechen-Zwilling laengst gefixt war) und ein
+ *   Zustand, der kein Knopf ist (.shopping-item--checked .item-meta).
+ * Acht Fundstellen, eine Regel. Eine Allowlist haette hier N Dateien gedeckt
+ * und keine Zusage; deshalb entscheidet der SELEKTOR, nicht eine Liste.
+ *
+ * Absichtlich nur die direkte Zuweisung `color: var(--color-text-disabled)`:
+ * ein `color-mix()` mit dem Token ist eine abgeleitete Farbe mit eigenem
+ * Kontrast (.empty-state__icon mischt es mit dem Modul-Akzent), keine
+ * uebernommene Zusage. Hintergruende sind ebenfalls draussen - ein Punkt ist
+ * Grafik und wird an 3:1 fuer nicht-textuelle Inhalte gemessen, nicht an 4,5.
+ */
+test('die Deaktiviert-Farbe steht an keinem erreichbaren Bedienelement', () => {
+  const DISABLED_SELECTOR = /:disabled\b|\[disabled\]|\[aria-disabled(?:="true")?\]|(?:^|[\s.>+~])[\w-]*(?:--disabled|\.is-disabled)\b/;
+  const DIRECT_COLOR = /(?:^|[;{\s])color:\s*var\(--color-text-disabled\s*\)/;
+
+  const styleDir = new URL('../public/styles/', import.meta.url);
+  let rulesSeen = 0;
+  let usesSeen = 0;
+  const offenders = [];
+
+  for (const name of readdirSync(styleDir).filter((f) => f.endsWith('.css'))) {
+    if (name === 'tokens.css') continue;
+    for (const { selector, body } of eachRule(read(`../public/styles/${name}`))) {
+      rulesSeen += 1;
+      if (!DIRECT_COLOR.test(body)) continue;
+      usesSeen += 1;
+      if (!DISABLED_SELECTOR.test(selector)) offenders.push(`${name}: ${selector}`);
+    }
+  }
+
+  // Eine Sonde, die nichts gemessen hat, darf nicht urteilen: ohne diese zwei
+  // Zeilen waere ein umbenanntes Token oder ein kaputter Scanner als gruenes
+  // "keine Verstoesse" durchgegangen.
+  assert.ok(rulesSeen >= 2000, `Nur ${rulesSeen} Regeln gelesen - der Scanner hat nichts gesehen.`);
+  assert.ok(usesSeen > 0, 'Keine einzige Verwendung von --color-text-disabled gefunden. '
+    + 'Wurde das Token umbenannt? Dann prueft dieser Guard seit dem Umbenennen nichts mehr.');
+
+  assert.deepEqual(
+    offenders,
+    [],
+    '--color-text-disabled als Ruhefarbe eines erreichbaren Elements. Die Farbe traegt\n'
+    + 'nirgends 3:1 - erlaubt ist sie nur, wo der Selektor den deaktivierten Zustand\n'
+    + 'auch benennt (:disabled, [disabled], [aria-disabled]). Ein Element, das nur\n'
+    + `zuruecktreten soll, nimmt --color-text-tertiary (4,86 bis 6,90).\n${offenders.join('\n')}`,
+  );
+});

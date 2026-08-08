@@ -3305,7 +3305,10 @@ textarea::placeholder {
   background: none;
   border: none;
   cursor: pointer;
-  color: var(--color-text-disabled);
+  /* NICHT --color-text-disabled: der Knopf ist bedienbar, er tritt nur zurueck.
+   * Die Ruhefarbe eines erreichbaren Bedienelements traegt 3:1 (dieselbe Regel
+   * wie bei .meal-slot__add-btn in meals.css). */
+  color: var(--color-text-tertiary);
   display: flex;
   align-items: center;
   justify-content: center;

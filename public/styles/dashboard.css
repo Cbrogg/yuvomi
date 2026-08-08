@@ -622,7 +622,10 @@
 .meal-slot__icon {
   width: 16px;
   height: 16px;
-  color: var(--color-text-disabled);
+  /* NICHT --color-text-disabled: der ganze Slot ist role=button (dashboard.js),
+   * auch der leere. Der Kuechen-Zwilling .meal-slot__add-btn traegt dieselbe
+   * Regel in meals.css. */
+  color: var(--color-text-tertiary);
   flex-shrink: 0;
 }
 
@@ -665,7 +668,7 @@
 /* Leerer Slot: gedämpfter Em-Dash liest als bewusst leer (kein verirrter
  * Bindestrich). Der ganze Slot ist klickbar (role=button → /meals). */
 .meal-slot__title--empty {
-  color: var(--color-text-disabled);
+  color: var(--color-text-tertiary);
 }
 
 /* --------------------------------------------------------

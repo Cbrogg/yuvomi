@@ -757,8 +757,11 @@
   height: 0.9em;
 }
 
+/* Erledigt ist ein Zustand, kein deaktivierter Knopf: die Zeile laesst sich
+ * weiter antippen (wieder aufmachen), also greift die WCAG-Ausnahme fuer
+ * Deaktiviertes nicht. Gedaempft bleibt sie ueber tertiary. */
 .shopping-item--checked .item-meta {
-  color: var(--color-text-disabled);
+  color: var(--color-text-tertiary);
 }
 
 /* Klickbare Link-Vorschau im Detail-Drawer. */
