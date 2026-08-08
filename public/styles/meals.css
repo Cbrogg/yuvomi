@@ -362,7 +362,14 @@
   background: none;
   border: none;
   cursor: pointer;
-  color: var(--color-text-disabled);
+  /* NICHT --color-text-disabled: der Knopf ist bedienbar, er sieht nur
+   * zurueckgenommen aus. Dieselbe Unterscheidung, die tokens.css schon fuer den
+   * Placeholder-Fuehrungstext trifft. Als einzige sichtbare Information seines
+   * Knopfes faellt das Plus-Icon unter WCAG 1.4.11 (3:1) - `disabled` traegt das
+   * auf keiner Flaeche (gemessen 1.36 bis 2.17), `tertiary` auf jeder
+   * (4.86 bis 6.90) und bleibt gegen --color-text-primary (12 bis 17) sichtbar
+   * leiser. Guard: Sonde 14 in test-document-guards.js. */
+  color: var(--color-text-tertiary);
   font-size: var(--text-sm);
   padding: var(--space-2);
   transition: color var(--transition-fast);
@@ -382,7 +389,8 @@
   border: none;
   border-top: 1px dashed var(--color-border);
   cursor: pointer;
-  color: var(--color-text-disabled);
+  /* tertiary, nicht disabled - siehe .meal-slot__add-btn. */
+  color: var(--color-text-tertiary);
   padding: var(--space-1) var(--space-2);
   /* 28px lagen unter --target-md; der Button ist auf Desktop der Weg, eine
    * zweite Mahlzeit in denselben Slot zu legen (Critique 2026-07-29). */
@@ -544,7 +552,10 @@
   background: none;
   border: none;
   cursor: pointer;
-  color: var(--color-text-disabled);
+  /* tertiary, nicht disabled - siehe .meal-slot__add-btn. Betraf hier das
+   * Papierkorb-Icon der Basisregel; --shopping und --recipe setzen ihre eigene
+   * Farbe (--module-accent) und trugen schon vorher. */
+  color: var(--color-text-tertiary);
   display: flex;
   align-items: center;
   justify-content: center;

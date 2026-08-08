@@ -176,7 +176,12 @@
 .list-header__edit-icon {
   width: var(--space-4);
   height: var(--space-4);
-  color: var(--color-text-disabled);
+  /* tertiary, nicht disabled (gemessen 1.36:1 auf --color-bg im Light).
+   * Der Stift steht zwar neben Text, aber der Text ist der LISTENNAME - er sagt
+   * nirgends, dass die Zeile bedienbar ist. Das Icon ist die einzige Affordanz
+   * fuers Umbenennen und traegt damit Information (WCAG 1.4.11), auch wenn es
+   * aria-hidden ist: das gilt fuer den Screenreader, nicht fuers Auge. */
+  color: var(--color-text-tertiary);
   flex-shrink: 0;
 }
 
