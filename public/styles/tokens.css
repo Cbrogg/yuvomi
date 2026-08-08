@@ -96,6 +96,16 @@
   --_color-text-tertiary: #68686F;
   --color-text-tertiary:  var(--_color-text-tertiary);  /* WCAG AA: ≥4.6:1 auf --color-bg, ≥5.2:1 auf weiß */
   --color-text-quaternary: var(--neutral-500);  /* nur dekorativ (z.B. Kbd-Hint), nie für Fließtext */
+  /* NUR für wirklich Deaktiviertes. Der Wert trägt auf KEINER Fläche der App
+     3:1 (gemessen 1.36 bis 2.17) - das ist beabsichtigt, denn WCAG 1.4.3 und
+     1.4.11 nehmen Deaktiviertes aus. Ein bedienbares Element darf ihn deshalb
+     nie tragen, auch wenn es zurückgenommen aussehen soll; dafür ist
+     --color-text-tertiary da (4.86 bis 6.90 auf allen Flächen beider Themes,
+     und gegen --color-text-primary mit 12 bis 17 immer noch sichtbar leiser).
+     Die Unterscheidung galt zuerst nur für den Placeholder (Zeile darunter) und
+     hatte für ICONS keinen Guard: vier Icon-Knöpfe der Küche und der
+     Einkaufsliste standen bis Sonde 14 auf `disabled`, obwohl jeder von ihnen
+     klickbar war. Sieht-deaktiviert-aus ist kein Zustand, sondern eine Farbe. */
   --color-text-disabled:  var(--neutral-300);
   /* Placeholder-Führungstext: folgt --color-text-tertiary (gethemt, WCAG AA in Light
      UND Dark) — NICHT --color-text-disabled verwenden. */
@@ -443,7 +453,19 @@
    * galt zwölf Sessions lang für beides und war für die Zahl nie gemeint -
    * genau daraus wurden 37 Prozentstufen. Formel und Wert sind zwei Fragen.
    * Fundstellen: `grep -rn "var(--tint-ink)" public/styles`.
-   * NUR für Text. Icons tragen weiter den vollen Akzent — dort gilt 3:1. */
+   *
+   * NUR für Text. Icons tragen weiter den vollen Akzent — dort gilt 3:1.
+   * Dieser Satz stand zwölf Sessions ohne Guard, weil er auf JEDER Ebene aus
+   * einem anderen guten Grund herausfiel: `.btn` bildete kein Farbpaar (es
+   * setzte gar keine `color`), der Tönungs-Guard prüft Prozentwerte statt
+   * Kontraste, Sonde 2 misst Textknoten und ein Icon hat keinen, und die
+   * Farbpaar-Ebene überspringt `color-mix`-Untergründe ausdrücklich. Jede Ebene
+   * sah für sich vollständig aus. Seit Sonde 14 (test-document-guards.js) ist
+   * der Satz gemessen — über jedes Icon der App, nicht an einer Fundstelle.
+   *
+   * DER GRUND IST AUCH EINE ZUSAGE: ein Akzentwert nennt die Fläche, auf der er
+   * trägt, und muss für die HELLSTE gelten, auf der er als Text vorkommt — nicht
+   * für eine ausgesuchte. Siehe --_color-accent im Dark-Block. */
 
   /* --------------------------------------------------------
    * 5. Farben - Mahlzeit-Typen
@@ -1233,10 +1255,26 @@
     --_sidebar-shadow-light: rgba(255, 255, 255, 0.04);
     --_sidebar-shadow-dark:  rgba(0, 0, 0, 0.5);
 
-    /* Akzent — Apple Indigo Dark */
-    --_color-accent:            #7D7AFF;   /* ~5:1 auf #1C1C1E */
-    --_color-accent-hover:      #8E8BFF;
-    --_color-accent-light:      #1E1C46;  /* >=4.5:1 unter --color-accent #7D7AFF */
+    /* Akzent — Apple Indigo Dark
+     *
+     * DIE ZUSAGE GILT FUER DIE HELLSTE FLAECHE, AUF DER DER AKZENT ALS TEXT
+     * STEHT, nicht fuer eine ausgesuchte. #7D7AFF hielt „~5:1 auf #1C1C1E"
+     * woertlich (4.94), aber die App setzt Akzent-Text auch auf
+     * --color-surface-raised #2C2C2E, und dort waren es 4.05 - unter AA. Der
+     * Fehler war die Zusage, nicht die Fundstelle: sie nannte eine Flaeche und
+     * galt fuer drei. Gefunden am aktiven Domaenenkopf der Settings-Navigation
+     * (zwei Regeln, 23 Blaetter).
+     *
+     * Der Lift ist der Weg und NICHT der Ink-Mix aus Abschnitt 4: der gilt
+     * ausdruecklich fuer akzent-getoenten Grund, hier ist der Grund neutral.
+     * Die FLAECHEN-Rolle bleibt unberuehrt - sie haengt an --_color-btn-primary,
+     * das weisses Label traegt und darum nicht mitwandern darf. */
+    --_color-accent:            #8A87FF;   /* Text: 4.64 auf #2C2C2E, 5.66 auf #1C1C1E, 6.58 auf #0A0A0C */
+    /* Zieht mit: gegen #8A87FF laege der alte Wert bei 1.04 und waere als Hover
+     * nicht mehr zu sehen. 1.19 ist exakt der Abstand, den das Paar vorher
+     * hatte (#7D7AFF/#8E8BFF = 1.195) - die Leiter wandert, ihre Sprosse nicht. */
+    --_color-accent-hover:      #9B98FF;
+    --_color-accent-light:      #1E1C46;  /* >=4.5:1 unter --color-accent (mit #8A87FF: 5.34) */
     --_color-accent-subtle:     #191740;
     --_color-btn-primary:       #5E5CE6;   /* Weißes Label ~5.4:1 */
     --_color-btn-primary-hover: #4E4CD6;
@@ -1418,10 +1456,10 @@
     --_sidebar-shadow-light: rgba(255, 255, 255, 0.04);
     --_sidebar-shadow-dark:  rgba(0, 0, 0, 0.5);
 
-    /* Akzent — Apple Indigo Dark */
-    --_color-accent:            #7D7AFF;
-    --_color-accent-hover:      #8E8BFF;
-    --_color-accent-light:      #1E1C46;  /* >=4.5:1 unter --color-accent #7D7AFF */
+    /* Akzent — Apple Indigo Dark (Werte und Begruendung: Dark-Block oben) */
+    --_color-accent:            #8A87FF;
+    --_color-accent-hover:      #9B98FF;
+    --_color-accent-light:      #1E1C46;  /* >=4.5:1 unter --color-accent (mit #8A87FF: 5.34) */
     --_color-accent-subtle:     #191740;
     --_color-btn-primary:       #5E5CE6;
     --_color-btn-primary-hover: #4E4CD6;
