@@ -2280,3 +2280,200 @@ test('Sonde 13 - die Formulare hinter dem FAB halten dieselbe Grundlage wie die 
     + 'keine Sonde gesehen - ein Feld ohne Label ist WCAG 3.3.2 (Level A).\n  '
     + findings.join('\n  '));
 });
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Sonde 14: ein Icon auf getoentem Grund haelt 3:1
+ *
+ * DIE LUECKE, DIE PAKET 5 WIRKLICH HAT. Die Akzent-auf-Toenung-Konvention endet
+ * mit einem Satz, der bisher auf KEINER Ebene einen Guard hatte: „NUR fuer
+ * Text. Icons tragen weiter den vollen Akzent - dort gilt 3:1."
+ *
+ *   - Ebene 3 (`jede Regel, die Farbe UND Untergrund setzt`) ueberspringt
+ *     `color-mix`-Untergruende ausdruecklich, und zu Recht: eine Toenung hat
+ *     keinen Untergrund ohne die Flaeche darunter. Das sind 152 Regeln.
+ *   - Sonde 2 misst TEXTKNOTEN. Ein `<svg>` hat keine, faellt also heraus.
+ *
+ * Ein Icon auf einer Toenung SEINER EIGENEN FARBE ist damit der eine Fall, den
+ * beide Ebenen einander zuschieben - und es ist derselbe Fall, an dem Sonde 2
+ * als „zu milde" notiert ist: die Tab-Bar-Pille traegt ein Icon, gemessen
+ * 3.41:1 am Bild gegen 4.20:1 im Baum, also 0,41 Reserve auf die 3:1 fuer
+ * grafische Objekte (WCAG 1.4.11). Ein Token-Wechsel rutschte dort unbemerkt
+ * darunter, und genau davor schuetzt diese Sonde - nicht an einer Stelle,
+ * sondern ueber jedes Icon der App.
+ *
+ * DIE GESCHWISTER-FLAECHE GEHOERT DAZU, UND NUR HIER. Sonde 2 komponiert die
+ * VORFAHRENKETTE; eine Flaeche, die unter dem Icon liegt, ohne es zu enthalten
+ * (die gleitende Pille ist ein Geschwister), faellt heraus. Ueber alle Texte
+ * gemessen ist diese Signatur unbrauchbar - 221 Fundstellen, und die Mehrzahl
+ * ist Glas ueber scrollendem Inhalt, wo es gar keinen festen Untergrund gibt
+ * (`.impeccable/redesign-tools/overlap-probe.mjs`). Ueber ICONS ist sie eng:
+ * gesucht wird eine Flaeche im SELBEN Container, die das Icon ueberlappt und
+ * im Dokument vor ihm steht. Das ist die Bauform der Pille und nicht die einer
+ * Bar ueber einem Scrollport.
+ *
+ * DEAKTIVIERTE UND DEKORATIVE ICONS SIND AUSGENOMMEN, beides Kategorien aus
+ * dem Standard: WCAG 1.4.11 gilt fuer Objekte, die INFORMATION tragen, und
+ * 1.4.3 nimmt Deaktiviertes aus.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+async function collectIconSamples(page) {
+  return page.evaluate(() => {
+    const path3 = (el) => {
+      const parts = [];
+      for (let n = el; n && n.nodeType === 1 && parts.length < 3; n = n.parentElement) {
+        let s = n.tagName.toLowerCase();
+        if (n.id) { parts.unshift(`${s}#${n.id}`); break; }
+        const cls = (typeof n.className === 'string' ? n.className : n.className?.baseVal || '').trim().split(/\s+/).filter(Boolean).slice(0, 2);
+        if (cls.length) s += `.${cls.join('.')}`;
+        parts.unshift(s);
+      }
+      return parts.join(' > ');
+    };
+
+    // Alle gemalten Flaechen einmal einsammeln - fuer die Geschwister-Frage.
+    const painted = [];
+    for (const el of document.querySelectorAll('*')) {
+      const cs = getComputedStyle(el);
+      if (!cs.backgroundColor || cs.backgroundColor === 'rgba(0, 0, 0, 0)') continue;
+      const r = el.getBoundingClientRect();
+      if (r.width < 2 || r.height < 2) continue;
+      if (cs.visibility === 'hidden' || cs.display === 'none') continue;
+      painted.push({ el, r, bg: cs.backgroundColor });
+    }
+
+    const out = [];
+    for (const icon of document.querySelectorAll('svg')) {
+      // Dekoratives und Deaktiviertes nimmt der Standard aus.
+      if (icon.closest('[aria-hidden="true"] > *') && !icon.closest('button, a[href], [role="button"]')) continue;
+      if (icon.closest(':disabled, [aria-disabled="true"], .sr-only, yuvomi-install-prompt')) continue;
+      const cs = getComputedStyle(icon);
+      if (cs.visibility === 'hidden' || cs.display === 'none' || parseFloat(cs.opacity) < 0.5) continue;
+      const r = icon.getBoundingClientRect();
+      if (r.width < 6 || r.height < 6) continue;
+      // Ein Icon ohne eigene Farbe erbt sie - dann ist es der Textfall, den
+      // Sonde 2 schon misst.
+      const stroke = cs.stroke && cs.stroke !== 'none' ? cs.stroke : null;
+      const fill = cs.fill && cs.fill !== 'none' && cs.fill !== 'rgba(0, 0, 0, 0)' ? cs.fill : null;
+      const ink = stroke || fill || cs.color;
+      if (!ink) continue;
+
+      // PSEUDOELEMENTE ZAEHLEN MIT. `.item-check` traegt seine gefuellte
+      // Kastenflaeche in einem `::before` - das Element selbst hat
+      // `background: none`, und eine Sonde, die nur echte Elemente kettet,
+      // rechnet dort „weisses Haken auf weiss" (1.00:1) und meldet zwoelfmal
+      // einen Verstoss, den es nicht gibt. Dieselbe Falle wie bei Sonde 4, wo
+      // `.weather-widget__refresh` seine Trefferflaeche per `::before` dehnt:
+      // in dieser App ist ein Pseudoelement regelmaessig der Traeger.
+      const layers = [];
+      for (let n = icon.parentElement; n; n = n.parentElement) {
+        const ncs = getComputedStyle(n);
+        for (const pseudo of ['::before', '::after']) {
+          const ps = getComputedStyle(n, pseudo);
+          if (!ps.content || ps.content === 'none') continue;
+          if (!ps.backgroundColor || ps.backgroundColor === 'rgba(0, 0, 0, 0)') continue;
+          // Nur was das Icon wirklich unterlegt - ein Pseudoelement daneben
+          // (Badge, Punkt, Specular) ist kein Untergrund.
+          const pr = { w: parseFloat(ps.width), h: parseFloat(ps.height) };
+          if (!(pr.w >= r.width && pr.h >= r.height)) continue;
+          layers.push({ bg: ps.backgroundColor, image: ps.backgroundImage });
+        }
+        layers.push({ bg: ncs.backgroundColor, image: ncs.backgroundImage });
+      }
+
+      // Die Geschwister-Flaeche: im selben Container, ueberlappend, im Dokument
+      // VOR dem Icon - die Bauform der gleitenden Pille.
+      let sibling = null;
+      for (const p of painted) {
+        if (p.el === icon || p.el.contains(icon) || icon.contains(p.el)) continue;
+        if (!(p.r.left < r.right && p.r.right > r.left && p.r.top < r.bottom && p.r.bottom > r.top)) continue;
+        if (!(p.el.compareDocumentPosition(icon) & Node.DOCUMENT_POSITION_FOLLOWING)) continue;
+        // ENG, und das ist der ganze Zuschnitt: der gemeinsame Vorfahre liegt
+        // hoechstens drei Ebenen ueber dem Icon UND die Flaeche ist sein
+        // DIREKTES Kind. Das ist die Bauform der gleitenden Pille
+        // (`.nav-bottom__items` > `.nav-bottom__indicator` neben
+        // `a.nav-item` > `svg`) und nicht die einer Liste unter einem FAB:
+        // dort ist der gemeinsame Vorfahre `#app`, und die erste Fassung liess
+        // ihn durch, weil sie nur die Tiefe zaehlte und nicht die Bindung. Sie
+        // legte daraufhin die Liste UEBER den FAB-Grund und meldete elf
+        // Plus-Icons mit „#FFFFFF auf #FFFFFF".
+        let depth = 0;
+        let common = icon.parentElement;
+        while (common && !common.contains(p.el) && depth < 3) { common = common.parentElement; depth += 1; }
+        if (!common || !common.contains(p.el) || depth >= 3) continue;
+        if (p.el.parentElement !== common) continue;
+        sibling = { bg: p.bg, sel: path3(p.el) };
+        break;
+      }
+
+      out.push({ sel: path3(icon), ink, layers, sibling });
+    }
+    return out;
+  });
+}
+
+test('Sonde 14 - ein Icon auf getoentem Grund haelt 3:1', async () => {
+  const findings = [];
+  let seen = 0;
+  let withSibling = 0;
+
+  for (const theme of ['light', 'dark']) {
+    for (const device of ['mobile', 'desktop']) {
+      const page = await openPage(harness, { device, theme, locale: 'de' });
+      const base = parseColor(
+        await page.evaluate(() => getComputedStyle(document.documentElement).backgroundColor),
+      );
+      const pageBase = base[3] > 0 ? composite(base, [255, 255, 255]) : [255, 255, 255];
+      for (const name of sweep('Sonde 14')) {
+        await gotoRoute(page, ALL_ROUTES[name]);
+        await settleAnimations(page);
+        for (const s of await collectIconSamples(page)) {
+          // Untergrund komponieren - dieselbe Mechanik wie Sonde 2, bis zur
+          // ersten deckenden Ebene.
+          let opaqueAt = s.layers.length - 1;
+          for (let i = 0; i < s.layers.length; i += 1) {
+            if (parseColor(s.layers[i].bg)[3] >= 1) { opaqueAt = i; break; }
+          }
+          let bg = pageBase;
+          // DIE GESCHWISTER-FLAECHE LIEGT UNTER DER EIGENEN KETTE, nicht ueber
+          // ihr - sie steht im Dokument VOR dem Icon und wird deshalb zuerst
+          // komponiert. Die erste Fassung legte sie zuletzt auf und rechnete
+          // damit den Grund des Icons weg.
+          if (s.sibling) {
+            withSibling += 1;
+            const sib = parseColor(s.sibling.bg);
+            if (sib[3] > 0) bg = composite(sib, bg);
+          }
+          let unpaintable = false;
+          for (let i = opaqueAt; i >= 0; i -= 1) {
+            if (/url\(/i.test(s.layers[i].image || '')) { unpaintable = true; break; }
+            const layer = parseColor(s.layers[i].bg);
+            if (layer[3] > 0) bg = composite(layer, bg);
+          }
+          if (unpaintable) continue;
+          seen += 1;
+          const fg = composite(parseColor(s.ink), bg);
+          const ratio = contrastRatio(fg, bg);
+          if (ratio + 0.005 < 3) {
+            findings.push(
+              `${name}/${theme}/${device}: ${ratio.toFixed(2)}:1 (soll 3)  ${toHex(fg)} auf ${toHex(bg)}  `
+              + `${s.sel}${s.sibling ? `  [ueber ${s.sibling.sel}]` : ''}`,
+            );
+          }
+        }
+      }
+      await page.close();
+    }
+  }
+
+  assert.ok(seen >= 200, `Nur ${seen} Icons gemessen - die Sonde hat nichts gesehen.`);
+  // Die Geschwister-Ergaenzung ist der Grund, aus dem es diese Sonde gibt.
+  // Findet sie keinen einzigen Fall, misst sie dasselbe wie die Vorfahrenkette.
+  assert.ok(withSibling > 0,
+    'Keine einzige Geschwister-Flaeche gefunden - die Bauform, wegen der Sonde 2 an der '
+    + 'Tab-Bar-Pille zu milde urteilt, wird nicht mehr erkannt.');
+
+  assert.deepEqual(findings, [],
+    `Icon unter 3:1 auf seinem komponierten Untergrund (WCAG 1.4.11, grafische Objekte; `
+    + `${withSibling} davon auf einer Flaeche, die die Vorfahrenkette nicht sieht).\n  `
+    + findings.join('\n  '));
+});
