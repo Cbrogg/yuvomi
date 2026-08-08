@@ -584,6 +584,50 @@ test('die Wischgeste setzt und loest das Compositor-Versprechen selbst', () => {
 });
 
 /**
+ * Der Wischhinweis kostet hoechstens eine Einblendung je Seitenbesuch.
+ *
+ * Sein Budget ist app-weit und drei Einblendungen gross. Alle vier rufenden
+ * Module rufen ihn aus einem NEU-RENDER-Pfad heraus - `updateItemsList`,
+ * `bindContent`, `renderList`, `renderTaskList` haengen an Sortier-, Filter-
+ * und Loeschvorgaengen. Ohne Sperre verbrauchten drei Filterklicks das ganze
+ * Budget, bevor der Nutzer je eine Zeile gesehen hatte, und die Nudge-Animation
+ * spielte nach jedem Loeschen erneut.
+ *
+ * Die Sperre gehoert ins geteilte Modul und nicht an die vier Aufrufstellen:
+ * vier richtig gesetzte Aufrufe waeren vier Annahmen, die beim naechsten Umbau
+ * wieder wandern - genau so ist der Aufruf aus `renderListContent` in die
+ * Render-Pfade gerutscht.
+ */
+test('der Wischhinweis feuert hoechstens einmal je Seitenbesuch', () => {
+  const swipe = read('../public/utils/swipe-row.js');
+  const fn = swipe.match(/export function maybeShowSwipeHint\([\s\S]*?\n\}/);
+  assert.ok(fn, 'expected maybeShowSwipeHint to exist');
+
+  assert.match(fn[0], /if \(hintShownForPath === location\.pathname\) return;/,
+    'die Sperre muss VOR der Arbeit stehen, sonst zaehlt jeder Re-Render mit');
+  assert.match(swipe, /^let hintShownForPath = null;$/m,
+    'die Sperre gehoert auf Modulebene - der Pfad als Schluessel laesst den Hinweis bei einem spaeteren Besuch wieder zu');
+  assert.ok(
+    fn[0].indexOf('hintShownForPath = location.pathname') > fn[0].indexOf("querySelector('.swipe-row')"),
+    'gesetzt wird die Sperre erst, wenn eine Zeile da war - eine leere Liste darf den Besuch nicht verbrauchen',
+  );
+
+  // localStorage kann werfen (Safari privat, blockierter Storage), und dieser
+  // Aufruf steht mitten im Render-Pfad - in shopping.js sogar VOR
+  // updateCheckedActions(). noticeSwappedSides im selben Modul bringt dafuer
+  // seit jeher ein try/catch mit.
+  for (const access of fn[0].matchAll(/localStorage\.\w+\(/g)) {
+    const before = fn[0].slice(0, access.index);
+    assert.ok(
+      before.lastIndexOf('try {') > before.lastIndexOf('} catch'),
+      `ungeschuetzter localStorage-Zugriff in maybeShowSwipeHint: ${access[0]}`,
+    );
+  }
+  assert.ok([...fn[0].matchAll(/localStorage\.\w+\(/g)].length >= 2,
+    'Reichweiten-Nachweis: kein localStorage-Zugriff gefunden - der Guard prueft nichts mehr');
+});
+
+/**
  * Jede Frontend-Datei parst.
  *
  * KLINGT TRIVIAL, IST ES NICHT: eine Datei unter `public/` wird nur dann
@@ -8966,5 +9010,169 @@ test('die Deaktiviert-Farbe steht an keinem erreichbaren Bedienelement', () => {
     + 'nirgends 3:1 - erlaubt ist sie nur, wo der Selektor den deaktivierten Zustand\n'
     + 'auch benennt (:disabled, [disabled], [aria-disabled]). Ein Element, das nur\n'
     + `zuruecktreten soll, nimmt --color-text-tertiary (4,86 bis 6,90).\n${offenders.join('\n')}`,
+  );
+});
+
+/**
+ * Die Statusleiste der installierten PWA IST der Seitengrund.
+ *
+ * `<meta name="theme-color">` nimmt an keiner Kaskade teil - der Wert muss als
+ * Literal danebenstehen, und zwar dreimal: in `index.html`, in `offline.html`
+ * und in `router.js`, das ihn zur Laufzeit fuer den modullosen Fall neu setzt.
+ * Drei Kopien ohne Guard sind drei Gelegenheiten zum Auseinanderlaufen, und
+ * genau das war passiert: alle drei trugen dunkel `#0C0C0E`, waehrend
+ * `--color-bg` bei `#0A0A0C` stand. Sichtbar nur im Dark Mode der installierten
+ * PWA - also im einzigen Theme, in dem man die Naht auch sieht - und der
+ * Kommentar in `router.js` behauptete dabei, es seien "dieselben Werte".
+ *
+ * Geprueft wird gegen das TOKEN, nicht gegen einen vierten hartkodierten Wert:
+ * die Erwartung wird aus `tokens.css` aufgeloest, indem die `var()`-Kette von
+ * `--color-bg` verfolgt wird - hell aus `:root`, dunkel aus `[data-theme=dark]`.
+ */
+test('the status bar colour is the page background, in both themes', () => {
+  const tokens = read('../public/styles/tokens.css');
+
+  /** Custom Properties eines Basisebenen-Selektors (ohne At-Block). */
+  const propsOf = (wanted) => {
+    const map = new Map();
+    for (const { selector, body, at } of eachRule(tokens)) {
+      if (at.length || selector !== wanted) continue;
+      for (const [, name, value] of body.matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)) {
+        map.set(name, value.trim());
+      }
+    }
+    return map;
+  };
+
+  const light = propsOf(':root');
+  const dark = new Map([...light, ...propsOf('[data-theme="dark"]')]);
+
+  /** Folgt `var(--a)` -> `var(--b)` -> `#hex`, hoechstens zehn Stufen tief. */
+  const resolve = (scope, name) => {
+    let value = scope.get(name);
+    for (let step = 0; step < 10 && value; step += 1) {
+      const ref = value.match(/^var\(\s*(--[\w-]+)\s*\)$/);
+      if (!ref) break;
+      value = scope.get(ref[1]);
+    }
+    return value?.toUpperCase();
+  };
+
+  const expected = {
+    light: resolve(light, '--color-bg'),
+    dark: resolve(dark, '--color-bg'),
+  };
+
+  // Reichweiten-Nachweis: loest die Kette ins Leere, prueft der Guard nichts.
+  assert.match(expected.light ?? '', /^#[0-9A-F]{6}$/, '--color-bg (hell) liess sich nicht bis auf einen Hexwert aufloesen');
+  assert.match(expected.dark ?? '', /^#[0-9A-F]{6}$/, '--color-bg (dunkel) liess sich nicht bis auf einen Hexwert aufloesen');
+  assert.notEqual(expected.light, expected.dark, 'Hell und Dunkel loesen auf denselben Wert auf - die Dark-Quelle wurde nicht gelesen');
+
+  const offenders = [];
+
+  for (const file of ['../public/index.html', '../public/offline.html']) {
+    const html = read(file);
+    const metas = [...html.matchAll(/<meta\b[^>]*\bname=["']theme-color["'][^>]*>/g)].map((m) => m[0]);
+    assert.equal(metas.length, 2, `${file}: erwartet je ein theme-color-Meta fuer hell und dunkel, gefunden ${metas.length}`);
+    for (const meta of metas) {
+      const value = meta.match(/\bcontent=["']([^"']+)["']/)?.[1]?.toUpperCase();
+      const scheme = /prefers-color-scheme:\s*dark/.test(meta) ? 'dark' : 'light';
+      if (value !== expected[scheme]) offenders.push(`${file} (${scheme}): ${value} statt ${expected[scheme]}`);
+    }
+  }
+
+  const call = read('../public/router.js').match(/setThemeColor\(\s*'(#[0-9A-Fa-f]{6})'\s*,\s*'(#[0-9A-Fa-f]{6})'\s*\)/);
+  assert.ok(call, 'expected router.js to set the route-independent status bar colour from two literals');
+  if (call[1].toUpperCase() !== expected.light) offenders.push(`router.js (light): ${call[1]} statt ${expected.light}`);
+  if (call[2].toUpperCase() !== expected.dark) offenders.push(`router.js (dark): ${call[2]} statt ${expected.dark}`);
+
+  assert.deepEqual(
+    offenders,
+    [],
+    'theme-color weicht von --color-bg ab. Die Statusleiste der installierten PWA sitzt\n'
+    + `dann neben der Seite, die sie rahmt:\n${offenders.join('\n')}`,
+  );
+});
+
+/**
+ * Ein Zeilenkoerper, der den ganzen Zeileninhalt umschliesst, traegt kein
+ * aria-label.
+ *
+ * `role=button` ist per ARIA "children presentational": ein aria-label ERSETZT
+ * den Inhalt, es ergaenzt ihn nicht. An `.list-row__main--interactive` haengt
+ * aber genau der Inhalt, den sehende Nutzer auf einen Blick bekommen - Name,
+ * Status, Faelligkeit, Betrag. Mit Label hoert ein Screenreader davon nichts
+ * mehr, sondern nur "Bearbeiten, Schaltflaeche" (Critique P1, WCAG 1.3.1/4.1.2).
+ * Was der Knopf TUT, kommt als sr-only Zusatz ans Ende - so machen es
+ * `pantry.js` und `contacts.js`.
+ *
+ * Der Beschluss war einmal gefasst und `subscriptions.js` hatte ihn nicht
+ * mitbekommen. Ein Guard ueber die KLASSE beendet das; eine Notiz im Kommentar
+ * der einen reparierten Datei haette es nicht getan. Geprueft werden beide
+ * Schreibweisen, die es im Bestand gibt: das Template-Markup und der DOM-Weg.
+ *
+ * Dieselbe Regel deckt die zweite Haelfte desselben Befunds ab: der Inhalt eines
+ * `<button>` ist Phrasing Content, also keine `<h1>`-`<h6>`, kein `<p>`, kein
+ * `<div>`. Im Abo-Modul waren im selben Umbau alle `div` zu `span` geworden -
+ * `<h3>` und `<p>` blieben stehen.
+ */
+test('a row body that wraps the whole row carries no aria-label and no block elements', () => {
+  const ROW_BODY = 'list-row__main--interactive';
+  const BLOCK_IN_BUTTON = /<(h[1-6]|p|div)[\s>]/;
+  const pages = readdirSync(new URL('../public/pages/', import.meta.url)).filter((f) => f.endsWith('.js'));
+  const offenders = [];
+  let markupSeen = 0;
+  let domSeen = 0;
+
+  for (const file of pages) {
+    const src = read(`../public/pages/${file}`).replace(/^\s*\/\/.*$/gm, '');
+
+    // (a) Template-Markup: `<button ... class="... ROW_BODY ...">` bis zum
+    // passenden `</button>`. Die Zaehlung der offenen `<button` haelt
+    // verschachtelte Knoepfe auseinander - im Abo-Modul steht die Aktionszeile
+    // direkt hinter dem Zeilenkoerper.
+    for (const open of src.matchAll(/<button\b[^>]*>/g)) {
+      if (!open[0].includes(ROW_BODY)) continue;
+      markupSeen += 1;
+      if (/\baria-label\s*=/.test(open[0])) offenders.push(`${file}: aria-label am Zeilenkoerper (Markup)`);
+
+      let depth = 1;
+      let cursor = open.index + open[0].length;
+      const tags = /<button\b[^>]*>|<\/button>/g;
+      tags.lastIndex = cursor;
+      let tag;
+      while (depth > 0 && (tag = tags.exec(src))) {
+        depth += tag[0] === '</button>' ? -1 : 1;
+        if (depth === 0) cursor = tag.index;
+      }
+      const inner = src.slice(open.index + open[0].length, cursor);
+      const block = inner.match(BLOCK_IN_BUTTON);
+      if (block) offenders.push(`${file}: <${block[1]}> im Zeilenkoerper (Markup) - Content-Model ist Phrasing Content`);
+    }
+
+    // (b) DOM-Weg: `x.className = '... ROW_BODY ...'`, danach dieselbe Variable
+    // mit einem aria-label. Das Fenster endet an der naechsten Leerzeile mit
+    // schliessender Klammer - weiter reicht keine Zeilenfabrik.
+    for (const assign of src.matchAll(/(\w+)\.className\s*=\s*(['"`])([^'"`]*)\2/g)) {
+      if (!assign[3].includes(ROW_BODY)) continue;
+      domSeen += 1;
+      const rest = src.slice(assign.index, assign.index + 3000);
+      const label = new RegExp(`\\b${assign[1]}\\.(?:setAttribute\\(\\s*['"]aria-label|ariaLabel\\s*=)`);
+      if (label.test(rest)) offenders.push(`${file}: aria-label am Zeilenkoerper (DOM)`);
+    }
+  }
+
+  // Reichweiten-Nachweis: findet der Scanner keinen Zeilenkoerper, prueft er
+  // nichts - und beide Schreibweisen muessen einzeln nachgewiesen sein, sonst
+  // deckt die eine die Blindheit der anderen zu.
+  assert.ok(markupSeen >= 1, `Kein Zeilenkoerper im Template-Markup gefunden (${ROW_BODY}) - der Scanner greift nicht mehr.`);
+  assert.ok(domSeen >= 2, `Nur ${domSeen} Zeilenkoerper ueber den DOM-Weg gefunden - der Scanner greift nicht mehr.`);
+
+  assert.deepEqual(
+    offenders,
+    [],
+    'Ein Zeilenkoerper umschliesst den ganzen Zeileninhalt. Ein aria-label ersetzt ihn\n'
+    + 'fuer Hilfsmittel vollstaendig, und Blockelemente stehen ausserhalb des\n'
+    + `Content-Models eines <button>:\n${offenders.join('\n')}`,
   );
 });
