@@ -1382,12 +1382,12 @@
 
 .doc-badge--dms {
   background: var(--color-info-light);
-  color: var(--color-info);
+  color: var(--color-info-ink);
 }
 
 .doc-badge--webdav {
   background: var(--color-success-light);
-  color: var(--color-success);
+  color: var(--color-success-ink);
 }
 
 /* Google Drive: eigener Violett-Tint, klar getrennt vom Info-Blau des DMS-Badges,
@@ -1399,7 +1399,7 @@
 
 .doc-badge--unavailable {
   background: var(--color-danger-light);
-  color: var(--color-danger);
+  color: var(--color-danger-ink);
 }
 
 /* Local folder storage: neutral, distinct from the semantic-colored backends. */
@@ -1436,7 +1436,7 @@
   padding: var(--space-3);
   border-radius: var(--radius-md);
   background: var(--color-danger-light);
-  color: var(--color-danger);
+  color: var(--color-danger-ink);
   font-size: var(--text-sm);
 }
 

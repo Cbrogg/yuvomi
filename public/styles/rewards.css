@@ -71,10 +71,17 @@
   justify-content: center;
   border-radius: var(--radius-full);
   overflow: hidden;
+  /* Platzhalterfläche, solange ein Avatarbild lädt. */
   background: var(--color-surface-3);
   font-weight: 600;
   font-size: var(--text-sm);
-  color: var(--color-text-on-accent);
+  /* KEINE Textfarbe hier. Sie stand als `--color-text-on-accent` (weiß) über
+     dieser grauen Platzhalterfläche und ergab 1,19:1 - sie kam nur deshalb nie
+     an, weil beide Varianten sie überschreiben: die Bildvariante hat gar keinen
+     Text, die Initialenvariante setzt ihre Farbe inline aus
+     `getReadableTextColor(Nutzerfarbe)` (rewards.js:98, Regel 3: auf einer
+     Nutzerfarbe wählt der Text seinen Ton). Eine zugesagte Farbe, die nie gilt,
+     ist eine Zusage, die beim ersten neuen Markup bricht. */
 }
 .rw-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .rw-avatar--initials { background: var(--rw-avatar-bg, var(--module-accent)); }

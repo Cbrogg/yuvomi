@@ -2645,7 +2645,7 @@ p.field-hint--warn[hidden] {
 .form-error {
   padding: var(--space-3) var(--space-4);
   background-color: var(--color-danger-light);
-  color: var(--color-danger);
+  color: var(--color-danger-ink);
   border-radius: var(--radius-sm);
   font-size: var(--text-sm);
   margin-bottom: var(--space-4);
@@ -2663,7 +2663,7 @@ p.field-hint--warn[hidden] {
 .form-success {
   padding: var(--space-3) var(--space-4);
   background-color: var(--color-success-light);
-  color: var(--color-success);
+  color: var(--color-success-ink);
   border-radius: var(--radius-sm);
   font-size: var(--text-sm);
   margin-bottom: var(--space-4);
@@ -3083,7 +3083,7 @@ p.field-hint--warn[hidden] {
 
 .row-action--danger:hover {
   background: var(--color-danger-light);
-  color: var(--color-danger);
+  color: var(--color-danger-ink);
 }
 
 .row-action--success {
@@ -3092,7 +3092,7 @@ p.field-hint--warn[hidden] {
 
 .row-action--success:hover {
   background: var(--color-success-light);
-  color: var(--color-success);
+  color: var(--color-success-ink);
 }
 
 .row-action svg {
@@ -3334,10 +3334,13 @@ textarea::placeholder {
   border-radius: var(--radius-full);
 }
 
-.meal-type-badge--breakfast { background: var(--meal-breakfast-light); color: var(--meal-breakfast); }
-.meal-type-badge--lunch     { background: var(--meal-lunch-light);    color: var(--meal-lunch); }
-.meal-type-badge--dinner    { background: var(--meal-dinner-light);   color: var(--meal-dinner); }
-.meal-type-badge--snack     { background: var(--meal-snack-light);    color: var(--meal-snack); }
+/* Die Beschriftung nimmt die lesbare Stufe, nicht die Vollfarbe: auf der eigenen
+   blassen Füllung trug die Vollfarbe keine 4,5 mehr (Frühstück 4,42:1 light,
+   Abendessen 4,46:1 dark). Siehe tokens.css, "die LESBARE STUFE". */
+.meal-type-badge--breakfast { background: var(--meal-breakfast-light); color: var(--meal-breakfast-ink); }
+.meal-type-badge--lunch     { background: var(--meal-lunch-light);    color: var(--meal-lunch-ink); }
+.meal-type-badge--dinner    { background: var(--meal-dinner-light);   color: var(--meal-dinner-ink); }
+.meal-type-badge--snack     { background: var(--meal-snack-light);    color: var(--meal-snack-ink); }
 
 /* --------------------------------------------------------
  * Toggle-Switch
@@ -4366,7 +4369,7 @@ textarea::placeholder {
   gap: var(--space-2);
   padding: var(--space-2) var(--space-4);
   background-color: var(--color-warning-light);
-  color: var(--color-warning);
+  color: var(--color-warning-ink);
   font-size: var(--text-sm);
   font-weight: var(--font-weight-medium);
   border-bottom: 1px solid color-mix(in srgb, var(--color-warning) 20%, transparent);

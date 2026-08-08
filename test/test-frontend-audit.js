@@ -4819,6 +4819,14 @@ test('text/surface token pairs meet WCAG AA 4.5:1 in both themes', () => {
   for (const [k, v] of parseTokenMap(darkBlock[1])) dark.set(k, v);
 
   // Normaltext-Paare, die laut Design AA erfüllen müssen.
+  //
+  // DIESE SECHS SIND EINE ZUSAGE, KEINE ABDECKUNG. Sie halten die Grundpaarung
+  // der Leseflächen fest, auch wenn heute keine Regel sie zusammen deklariert -
+  // ein Vertrag, gegen den jemand ein Token verschieben könnte. Was der Bestand
+  // TATSÄCHLICH baut, prüft `jede Regel, die Farbe UND Untergrund setzt, haelt
+  // ihr eigenes Paar` (unten, 198 Paare aus dem Stylesheet abgeleitet). Wer hier
+  // ein Paar ergänzt, ergänzt einen Vertrag; wer eine Regel absichern will,
+  // braucht hier nichts zu tun.
   const pairs = [
     ['--color-text-primary', '--color-surface'],
     ['--color-text-primary', '--color-bg'],
@@ -4839,6 +4847,137 @@ test('text/surface token pairs meet WCAG AA 4.5:1 in both themes', () => {
       );
     }
   }
+});
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Jedes Paar, das eine Regel SELBST baut - nicht sechs, die jemand aufschrieb
+ *
+ * Der Guard darueber prueft eine Liste von sechs Token-Paaren. Am 2026-08-08
+ * lagen VIER Kontrastbefunde in der App, und keiner stand darunter:
+ *
+ *   .btn--danger:hover                dark  2,87:1   (--color-danger-hover)
+ *   .settings-module-status--enabled  dark  1,97:1   (--color-success-hover)
+ *   .settings-banner--error u. a.     light 4,45:1   (Semantik auf eigener Fuellung)
+ *   .meal-type-badge--dinner          dark  4,46:1   (dieselbe Bauart, andere Familie)
+ *
+ * Das ist die Allowlist-Signatur, die dieses Repo bei der Kueche und beim Budget
+ * schon zweimal eingeholt hat: ein Guard ueber eine Aufzaehlung deckt keine
+ * Regel ab, sondern N Eintraege. Hier kommt das Paar deshalb aus dem
+ * STYLESHEET - jede Regel, die Textfarbe UND Untergrund im selben Block setzt,
+ * hat sich ihr Paar selbst gebaut und muss es halten. Gemessen: 198 solche
+ * Regeln, und der Bestand haelt sie (die Regel meint also den Bestand - Falle 4).
+ *
+ * WAS ER NICHT SIEHT, UND WER ES SIEHT: eine Regel, die nur `color` setzt und
+ * ihren Untergrund vom Vorfahren erbt. Das ist keine Luecke dieses Guards,
+ * sondern die Frage einer anderen Ebene - Sonde 2 komponiert die Vorfahrenkette
+ * im gerenderten Dokument und hat genau so die drei Settings-Befunde gefunden.
+ * Uebersprungen werden ausserdem `color-mix()`-Untergruende (152 Stueck): was
+ * eine Toenung ergibt, haengt an der Flaeche darunter, und die kennt nur das
+ * Dokument.
+ *
+ * DIE ZWEI AUSNAHMEN SIND KATEGORIEN AUS DEM STANDARD, keine Einzelfaelle:
+ * ein deaktiviertes Bedienelement nimmt WCAG 1.4.3 ausdruecklich aus, und ein
+ * Ziel, das ein ICON traegt statt Text, faellt unter 1.4.11 mit 3:1. Wer hier
+ * etwas eintraegt, nennt die Kategorie - nicht den Grund „gewachsen".
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+// Selektor-Teilstring -> Kategorie. Geprueft wird gegen den Standard, nicht
+// gegen eine Meinung; die Stale-Pruefung darunter haelt sie ehrlich.
+const COPAIR_CATEGORY = new Map([
+  ['[disabled] .ydp__input', { min: 0, why: 'WCAG 1.4.3 nimmt deaktivierte Bedienelemente aus; Sonde 2 tut dasselbe' }],
+  ['.ydp__trigger:hover', { min: 3, why: 'Ziel traegt ein 18px-Icon, keinen Text - WCAG 1.4.11 (3:1), gemessen 3,30:1 dark' }],
+]);
+
+test('jede Regel, die Farbe UND Untergrund setzt, haelt ihr eigenes Paar', () => {
+  const tokens = read('../public/styles/tokens.css');
+  const rootBlock = tokens.match(/:root\s*\{([\s\S]*?)\n\}/);
+  const darkBlock = tokens.match(/\n\[data-theme="dark"\]\s*\{([\s\S]*?)\n\}/);
+  assert.ok(rootBlock && darkBlock, 'expected :root and [data-theme="dark"] token blocks');
+  const light = parseTokenMap(rootBlock[1]);
+  const dark = new Map(light);
+  for (const [k, v] of parseTokenMap(darkBlock[1])) dark.set(k, v);
+
+  // `var(--x, fallback)` mitnehmen: `.settings-backup-card__icon` schreibt so,
+  // und ein Parser, der nur `var(--x)` kennt, uebersieht die Regel still.
+  const resolveValue = (value, map, depth = 0) => {
+    if (!value || depth > 12) return null;
+    const v = value.trim();
+    const ref = v.match(/^var\(\s*(--[\w-]+)\s*(?:,\s*(.+))?\)$/);
+    if (ref) return resolveValue(map.get(ref[1]) ?? ref[2], map, depth + 1);
+    return /^#[0-9a-f]{6}$/i.test(v) ? v.toUpperCase() : null;
+  };
+  const lastDecl = (body, prop) => {
+    let found = null;
+    for (const m of body.matchAll(new RegExp(`(?:^|;)\\s*${prop}\\s*:\\s*([^;]+)`, 'g'))) found = m[1].trim();
+    return found;
+  };
+
+  // Nur die Stufen, die als Textgroesse vorkommen. Ein unbekanntes Token faellt
+  // auf 4.5 zurueck - strenger urteilen als noetig ist hier richtig herum.
+  const SIZE_PX = {
+    '--text-xs': 12, '--text-sm': 14, '--text-base': 16, '--text-lg': 18, '--text-xl': 20, '--text-2xl': 24, '--text-3xl': 30,
+  };
+
+  const styles = new URL('../public/styles/', import.meta.url);
+  const files = readdirSync(styles).filter((entry) => entry.endsWith('.css') && entry !== 'tokens.css');
+  const findings = [];
+  const usedCategories = new Set();
+  let pairs = 0;
+
+  for (const file of files) {
+    for (const rule of eachRule(readFileSync(new URL(file, styles), 'utf8'))) {
+      const fgRaw = lastDecl(rule.body, 'color');
+      const bgRaw = lastDecl(rule.body, 'background-color') ?? lastDecl(rule.body, 'background');
+      if (!fgRaw || !bgRaw) continue;
+      // Ein Verlauf hat keinen EINEN Untergrund, eine Toenung keinen ohne die
+      // Flaeche darunter, und `currentColor` ist gar keine Farbe an dieser
+      // Stelle. Alle drei gehoeren dem Dokument, nicht dem Stylesheet.
+      if (/gradient|color-mix|transparent|currentColor|inherit|none/i.test(bgRaw)) continue;
+      if (/color-mix|currentColor|inherit/i.test(fgRaw)) continue;
+      pairs += 1;
+
+      const category = [...COPAIR_CATEGORY.entries()].find(([needle]) => rule.selector.includes(needle));
+      if (category) usedCategories.add(category[0]);
+      const sizeToken = lastDecl(rule.body, 'font-size')?.match(/--[\w-]+/)?.[0];
+      const px = sizeToken ? SIZE_PX[sizeToken] : null;
+      const bold = /bold|[6-9]00/.test(lastDecl(rule.body, 'font-weight') ?? '');
+      const large = px !== null && px !== undefined && (px >= 24 || (px >= 18.66 && bold));
+      const min = category ? category[1].min : (large ? 3 : 4.5);
+      if (min === 0) continue;
+
+      for (const [theme, map] of [['light', light], ['dark', dark]]) {
+        const fg = resolveValue(fgRaw, map);
+        const bg = resolveValue(bgRaw, map);
+        if (!fg || !bg) continue;
+        const ratio = contrastRatio(fg, bg);
+        if (ratio + 0.005 < min) {
+          findings.push(
+            `${theme}: ${ratio.toFixed(2)}:1 (soll ${min})  ${fg} auf ${bg}  ${file}  ${rule.selector}`
+            + `${rule.at.length ? `  [${rule.at.join(' ')}]` : ''}`,
+          );
+        }
+      }
+    }
+  }
+
+  // Ein Guard, der nichts gemessen hat, darf nicht urteilen - dieselbe
+  // Zusicherung wie bei den Sonden. Ohne sie waere ein kaputter Parser von
+  // „alles in Ordnung" nicht zu unterscheiden.
+  assert.ok(pairs >= 150,
+    `Nur ${pairs} ko-deklarierte Farbpaare gefunden (gemessen: 198). Der Regelscanner `
+    + 'oder die Deklarations-Suche greift nicht mehr - der Guard misst nichts, statt nichts zu finden.');
+
+  assert.deepEqual(findings.sort(), [],
+    'Regeln, die ihr eigenes Farbpaar nicht halten. Die Antwort ist fast nie ein neuer '
+    + 'Sonderwert: eine Semantikfarbe auf ihrer EIGENEN blassen Fuellung nimmt die lesbare '
+    + 'Stufe (`--color-<n>-ink` / `--meal-<n>-ink`, tokens.css). Wer die Fuellung stattdessen '
+    + 'aufhellt, tauscht den Textkontrast gegen die Sichtbarkeit der Flaeche.');
+
+  // Eine Kategorie fuer eine Regel, die es nicht mehr gibt, ist eine Allowlist,
+  // die niemand mehr liest (dieselbe Pruefung wie bei SHAPE_EXEMPT).
+  const stale = [...COPAIR_CATEGORY.keys()].filter((needle) => !usedCategories.has(needle));
+  assert.deepEqual(stale, [],
+    'COPAIR_CATEGORY nennt Selektoren, die in keinem Stylesheet mehr ein Farbpaar bauen.');
 });
 
 test('module accents stay readable as text on the page background in both themes', () => {

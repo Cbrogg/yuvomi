@@ -262,26 +262,68 @@
   /* --------------------------------------------------------
    * 3. Farben - Semantisch (Apple-Vokabular, AA-vertieft)
    * -------------------------------------------------------- */
+  /* Die vier `-hover` standen hier als LITERAL, während jeder Nachbar über die
+   * `--_`-Indirektion läuft. Das war kein Schreibstil, sondern der Grund, aus
+   * dem der Dark-Block sie nicht erreichen konnte: ein Theme überschreibt die
+   * privaten Werte, und wo keiner steht, gilt der Light-Wert weiter. Drei
+   * AA-Brüche hingen daran (Messwerte im Dark-Block). Wer hier eine Farbe
+   * ergänzt, ergänzt beide Zeilen - das ist die Bauart, an der das Theming
+   * hängt. */
   --_color-success:       #1E7B35;
   --color-success:        var(--_color-success);   /* Apple Green, accessible: 5.1:1 auf weiß */
-  --color-success-hover:  #186A2C;
+  --_color-success-hover: #186A2C;
+  --color-success-hover:  var(--_color-success-hover);
   --_color-success-light: #DFF6E4;
   --color-success-light:  var(--_color-success-light);
   --_color-warning:       #A85D00;
   --color-warning:        var(--_color-warning);   /* Amber-Braun: klar von Danger-Rot getrennt (Farbfehlsicht), 4.9:1 auf weiß */
-  --color-warning-hover:  #8F4F00;
+  --_color-warning-hover: #8F4F00;
+  --color-warning-hover:  var(--_color-warning-hover);
   --_color-warning-light: #FFF0D9;
   --color-warning-light:  var(--_color-warning-light);
   --_color-danger:        #D70015;
   --color-danger:         var(--_color-danger);    /* Apple Red, accessible: 5.4:1 auf weiß */
-  --color-danger-hover:   #B80012;
+  --_color-danger-hover:  #B80012;
+  --color-danger-hover:   var(--_color-danger-hover);
   --_color-danger-light:  #FFE3E3;
   --color-danger-light:   var(--_color-danger-light);
   --_color-info:          #0663C7;
   --color-info:           var(--_color-info);  /* Apple Blue, AA-vertieft: 5.4:1 auf weiß; getrennt von --module-contacts */
-  --color-info-hover:     #0552A6;
+  --_color-info-hover:    #0552A6;
+  --color-info-hover:     var(--_color-info-hover);
   --_color-info-light:    #E0EFFF;
   --color-info-light:     var(--_color-info-light);
+
+  /* Die LESBARE STUFE einer Semantikfarbe auf ihrer EIGENEN hellen Füllung.
+   *
+   * 21 Regeln bauen dieses Paar (Badge, Banner, Zeilenaktion, Feldfehler) - und
+   * 15 davon lagen mit der ungedimmten Farbe unter AA: Warnung 4,42:1, Gefahr
+   * 4,45:1 auf ihrer Füllung. Das ist keine Reihe von Einzelfällen, sondern ein
+   * fehlendes Wort: die Füllung ist so blass, dass die Vollfarbe darauf keine
+   * 4,5 mehr trägt, und die Antwort darauf hatte das Repo an genau EINER Stelle
+   * schon gefunden (settings.css: „--color-success-hover ist die dunklere Stufe
+   * derselben Farbe; auf dem eigenen 14%-Grund ergibt sie 5,90:1, das
+   * ungedimmte Grün nur 4,15:1"). Jetzt heißt sie so, wie sie gemeint ist.
+   *
+   * Warum nicht die Füllung aufhellen: Warnung käme damit auf 1,071 gegen die
+   * weiße Karte - unter die 1,12, die als „kommt nicht an" vermessen ist. Man
+   * tauschte den Textkontrast gegen die Sichtbarkeit der Fläche.
+   *
+   * Warum eigene Tokens neben `-hover`: der Wert ist heute derselbe Schritt,
+   * die ABSICHT ist eine andere. `-hover` beantwortet „was passiert unter dem
+   * Zeiger", `-ink` beantwortet „was ist hier lesbar". Wer eines von beiden
+   * später verschiebt, soll das andere nicht mitziehen.
+   *
+   * Gemessen auf der eigenen Füllung: 5,88 / 5,70 / 5,69 / 6,50 (light),
+   * 8,73 / 8,81 / 6,99 / 6,46 (dark). */
+  --_color-success-ink:   #186A2C;
+  --color-success-ink:    var(--_color-success-ink);
+  --_color-warning-ink:   #8F4F00;
+  --color-warning-ink:    var(--_color-warning-ink);
+  --_color-danger-ink:    #B80012;
+  --color-danger-ink:     var(--_color-danger-ink);
+  --_color-info-ink:      #0552A6;
+  --color-info-ink:       var(--_color-info-ink);
 
   /* Toast-Textfarben: weiß auf dunklen semantischen Bg (light mode).
    * Dark mode überschreibt auf dunkel, weil --color-success/warning/danger
@@ -418,6 +460,24 @@
   --meal-snack:            var(--_meal-snack);           /* = --module-meals — Snack ist Sub-Domain */
   --_meal-snack-light:     #FFECE3;
   --meal-snack-light:      var(--_meal-snack-light);
+
+  /* Dieselbe lesbare Stufe wie bei der Semantik oben - die Mahlzeitenfarben
+   * sind eine PARALLELE Familie mit derselben Bauart (Vollfarbe + blasse
+   * Füllung) und hatten deshalb dieselbe Lücke: `.meal-type-badge--breakfast`
+   * lag bei 4,42:1 (light), `--dinner` bei 4,46:1 (dark). Breakfast teilt sich
+   * seinen Ton mit `--color-warning` und landet folgerichtig auf demselben
+   * Ink-Wert; Lunch und Snack haben kein semantisches Gegenstück und bekommen
+   * denselben SCHRITT (Verhältnis 1,28 light / 1,195 dark).
+   * Gemessen auf der eigenen Füllung: 5,70 / 6,01 / 7,22 / 5,83 (light),
+   * 8,81 / 10,15 / 5,33 / 7,85 (dark). */
+  --_meal-breakfast-ink:   #8F4F00;
+  --meal-breakfast-ink:    var(--_meal-breakfast-ink);
+  --_meal-lunch-ink:       #1A6831;
+  --meal-lunch-ink:        var(--_meal-lunch-ink);
+  --_meal-dinner-ink:      #4240A8;
+  --meal-dinner-ink:       var(--_meal-dinner-ink);
+  --_meal-snack-ink:       #A5370A;
+  --meal-snack-ink:        var(--_meal-snack-ink);
 
   /* GEPRÜFT UND BEWUSST SO GELASSEN (2026-07-30, gilt fort): drei der vier
    * Mahlzeit-Farben teilen den Wert eines semantischen/strukturellen Tokens
@@ -1076,6 +1136,38 @@
     --_color-danger-light:  #3A1210;
     --_color-info-light:    #10263E;
 
+    /* Die Hover-Stufe der Semantik geht im Dark Mode NACH OBEN, nicht nach
+     * unten. Sie fehlte hier zwölf Sessions lang, und damit galt der
+     * Light-Wert weiter - eine abgedunkelte Hellfarbe auf einem Near-Black-
+     * Grund. Gemessen war das kein Schönheitsfehler, sondern drei AA-Brüche
+     * aus EINER Ursache:
+     *   .btn--danger:hover        #0A0A0C auf #B80012   2,87:1
+     *   .btn--danger-ghost:hover  #B80012 auf #050507   2,95:1
+     *   .settings-module-status--enabled
+     *                             #186A2C auf 14%-Grün  1,97:1
+     * Der Bestand wusste die Antwort schon: --_color-accent-hover (#8E8BFF)
+     * steht oben HELLER als --_color-accent (#7D7AFF). Die Semantik ist beim
+     * Dark-Rollout einfach nicht mitgekommen.
+     *
+     * Die Werte sind auf die SCHRITTWEITE eingestellt, nicht geraten: das
+     * Verhältnis Basis zu Hover liegt im Light bei 1,26-1,31 und beim
+     * Dark-Akzent bei 1,195. Diese vier treffen 1,19-1,20 (+17 bis +28 %
+     * Weiß, je nach Ausgangshelligkeit - Orange braucht mehr als Blau).
+     * Danach: 8,39:1 / 8,64:1 / 7,78:1 an denselben drei Stellen. */
+    --_color-success-hover: #6ADE87;
+    --_color-warning-hover: #FFB84A;
+    --_color-danger-hover:  #FF857E;
+    --_color-info-hover:    #60ACFF;
+
+    /* Die lesbare Stufe geht im Dark Mode aus demselben Grund nach oben wie die
+     * Hover-Stufe: die Füllung ist hier die DUNKLE Variante, die Tinte darauf
+     * muss heller sein als die Vollfarbe, nicht dunkler. Ohne diese vier stünde
+     * auf `#3A1210` ein `#B80012` - der Light-Wert, wieder. */
+    --_color-success-ink:   #6ADE87;
+    --_color-warning-ink:   #FFB84A;
+    --_color-danger-ink:    #FF857E;
+    --_color-info-ink:      #60ACFF;
+
     /* Toast: dunkler Text auf vividen Farben */
     --_toast-success-text: #04200D;   /* auf #30D158 */
     --_toast-warning-text: #2B1A00;   /* auf #FF9F0A */
@@ -1128,6 +1220,11 @@
     --_meal-dinner-light:    #211F4D;
     --_meal-snack:           #FB923C;
     --_meal-snack-light:     #3D2010;
+    /* Die lesbare Stufe geht im Dark nach oben, wie bei der Semantik. */
+    --_meal-breakfast-ink:   #FFB84A;
+    --_meal-lunch-ink:       #89EAAC;
+    --_meal-dinner-ink:      #8E8BFF;
+    --_meal-snack-ink:       #FCAA67;
 
     --_source-mealie:        #2DD4BF;
     --_source-mealie-light:  #0F2E2A;
@@ -1224,6 +1321,38 @@
     --_color-danger-light:  #3A1210;
     --_color-info-light:    #10263E;
 
+    /* Die Hover-Stufe der Semantik geht im Dark Mode NACH OBEN, nicht nach
+     * unten. Sie fehlte hier zwölf Sessions lang, und damit galt der
+     * Light-Wert weiter - eine abgedunkelte Hellfarbe auf einem Near-Black-
+     * Grund. Gemessen war das kein Schönheitsfehler, sondern drei AA-Brüche
+     * aus EINER Ursache:
+     *   .btn--danger:hover        #0A0A0C auf #B80012   2,87:1
+     *   .btn--danger-ghost:hover  #B80012 auf #050507   2,95:1
+     *   .settings-module-status--enabled
+     *                             #186A2C auf 14%-Grün  1,97:1
+     * Der Bestand wusste die Antwort schon: --_color-accent-hover (#8E8BFF)
+     * steht oben HELLER als --_color-accent (#7D7AFF). Die Semantik ist beim
+     * Dark-Rollout einfach nicht mitgekommen.
+     *
+     * Die Werte sind auf die SCHRITTWEITE eingestellt, nicht geraten: das
+     * Verhältnis Basis zu Hover liegt im Light bei 1,26-1,31 und beim
+     * Dark-Akzent bei 1,195. Diese vier treffen 1,19-1,20 (+17 bis +28 %
+     * Weiß, je nach Ausgangshelligkeit - Orange braucht mehr als Blau).
+     * Danach: 8,39:1 / 8,64:1 / 7,78:1 an denselben drei Stellen. */
+    --_color-success-hover: #6ADE87;
+    --_color-warning-hover: #FFB84A;
+    --_color-danger-hover:  #FF857E;
+    --_color-info-hover:    #60ACFF;
+
+    /* Die lesbare Stufe geht im Dark Mode aus demselben Grund nach oben wie die
+     * Hover-Stufe: die Füllung ist hier die DUNKLE Variante, die Tinte darauf
+     * muss heller sein als die Vollfarbe, nicht dunkler. Ohne diese vier stünde
+     * auf `#3A1210` ein `#B80012` - der Light-Wert, wieder. */
+    --_color-success-ink:   #6ADE87;
+    --_color-warning-ink:   #FFB84A;
+    --_color-danger-ink:    #FF857E;
+    --_color-info-ink:      #60ACFF;
+
     /* Toast: dunkler Text auf vividen Farben */
     --_toast-success-text: #04200D;
     --_toast-warning-text: #2B1A00;
@@ -1276,6 +1405,11 @@
     --_meal-dinner-light:    #211F4D;
     --_meal-snack:           #FB923C;
     --_meal-snack-light:     #3D2010;
+    /* Die lesbare Stufe geht im Dark nach oben, wie bei der Semantik. */
+    --_meal-breakfast-ink:   #FFB84A;
+    --_meal-lunch-ink:       #89EAAC;
+    --_meal-dinner-ink:      #8E8BFF;
+    --_meal-snack-ink:       #FCAA67;
 
     --_source-mealie:        #2DD4BF;
     --_source-mealie-light:  #0F2E2A;

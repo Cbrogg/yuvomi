@@ -157,6 +157,14 @@
   transform: rotate(180deg);
 }
 
+/* Bewusste Layout-Transition (Detector layout-transition, geprüft): das
+ * Aufklappen ändert eine echte Höhe, und `transform` kann sie nicht - eine
+ * skalierte Gruppe verzerrt ihre Beschriftungen und schiebt nichts unter sich
+ * weg. `grid-template-rows: 0fr -> 1fr` ist der Weg, der ohne feste Zielhöhe
+ * auskommt; `max-height` bräuchte eine geratene Obergrenze und liefe bei kurzen
+ * Gruppen sichtbar zu lange nach. Es ist EIN Element je Domäne, einmal pro
+ * Klick. Abgeschaltet im prefers-reduced-motion-Block dieser Datei, der
+ * `.settings-shell__navigation-panel` namentlich führt. */
 .settings-shell__navigation-panel {
   display: grid;
   grid-template-rows: 0fr;
@@ -738,19 +746,19 @@
 
 .settings-banner--success {
   background: var(--color-success-light);
-  color: var(--color-success);
+  color: var(--color-success-ink);
   border: var(--space-px) solid var(--color-success);
 }
 
 .settings-banner--error {
   background: var(--color-danger-light);
-  color: var(--color-danger);
+  color: var(--color-danger-ink);
   border: var(--space-px) solid var(--color-danger);
 }
 
 .settings-banner--info {
   background: var(--color-info-light);
-  color: var(--color-info);
+  color: var(--color-info-ink);
   border: var(--space-px) solid var(--color-info);
 }
 
@@ -930,7 +938,7 @@
 
 .settings-avatar-action--danger:hover,
 .settings-avatar-action--danger:focus-visible {
-  color: var(--color-danger);
+  color: var(--color-danger-ink);
   border-color: var(--color-danger);
   background: var(--color-danger-light);
 }
@@ -1048,7 +1056,7 @@
 
 .form-error {
   font-size: var(--text-sm);
-  color: var(--color-danger);
+  color: var(--color-danger-ink);
   padding: var(--space-2) var(--space-3);
   background: var(--color-danger-light);
   border-radius: var(--radius-sm);
@@ -1172,7 +1180,7 @@
    "Nicht konfiguriert") bleiben grau - kein Fehler, nur noch nicht eingerichtet. */
 .settings-provider__badge--connected {
   background: var(--color-success-light);
-  color: var(--color-success);
+  color: var(--color-success-ink);
 }
 
 /* Eigenständige Statuszeile am Kopf eines Provider-Panels (ersetzt die zuvor
@@ -1210,7 +1218,7 @@
 
 .settings-legacy-badge {
   background: var(--color-warning-light);
-  color: var(--color-warning);
+  color: var(--color-warning-ink);
 }
 
 .settings-legacy-hint {
@@ -1360,7 +1368,7 @@
 
 .settings-backup-card--danger .settings-backup-card__icon {
   background: var(--color-warning-light, var(--color-surface-2));
-  color: var(--color-warning, var(--color-text-primary));
+  color: var(--color-warning-ink, var(--color-text-primary));
 }
 
 .settings-backup-card__icon svg {
@@ -1725,7 +1733,7 @@
   padding: var(--space-3);
   border-radius: var(--radius-md);
   background: var(--color-warning-light);
-  color: var(--color-warning);
+  color: var(--color-warning-ink);
   font-size: var(--text-sm);
 }
 

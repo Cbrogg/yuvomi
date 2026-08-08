@@ -928,7 +928,7 @@ button.health-med-card:hover {
 
 .health-lab-badge--warn {
   background: var(--color-warning-light);
-  color: var(--color-warning);
+  color: var(--color-warning-ink);
 }
 
 /* Befund-Detail */

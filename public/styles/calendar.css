@@ -20,7 +20,7 @@
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
   background: var(--color-warning-light);
-  color: var(--color-warning);
+  color: var(--color-warning-ink);
   font-size: var(--text-xs);
 }
 .cal-offline-notice i { flex: 0 0 auto; }
