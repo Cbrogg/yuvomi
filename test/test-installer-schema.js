@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import test from 'node:test';
 import { ENV_SCHEMA } from '../tools/installer/env-schema.js';
 
@@ -682,46 +682,113 @@ test('Optionale Dokument-WebDAV-Werte erzeugen keine TrueNAS- oder Umbrel-Fragen
 // Die Regel: eine env-Variable, die ein UI-Feld sperrt, darf im Descriptor nur
 // mit LEEREM Default stehen. Der Server bringt seine eigenen Defaults mit.
 
-/** Die env-Namen, an denen eine UI-Sperre hängt - aus der Quelle gelesen, nicht abgeschrieben. */
-function uiLockingEnvKeys() {
-  const email = readFileSync(new URL('../server/services/email.js', import.meta.url), 'utf8');
-  const block = email.match(/const CONFIG_KEYS = \{([\s\S]*?)\n\};/);
-  assert.ok(block, 'CONFIG_KEYS in server/services/email.js nicht gefunden');
-  const keys = [...block[1].matchAll(/env:\s*'([A-Z_]+)'/g)].map(m => m[1]);
-  assert.ok(keys.length >= 7, `erwartete die SMTP-Felder, fand ${keys.length}`);
+/* ────────────────────────────────────────────────────────────────────────────
+ * Die sperrenden Schlüssel kommen aus DEN SERVICES, nicht aus dieser Datei
+ *
+ * Die Vorfassung las die sieben SMTP-Felder aus `email.js` (richtig) und hängte
+ * `WEBDAV_BACKUP_URL` von Hand an (die Allowlist-Signatur). Die Regel ist aber
+ * breiter als diese beiden: sie gilt für JEDEN Service, der env über die
+ * Datenbank stellt. Nachgezählt waren es DREI - `document-storage.js` trägt
+ * dieselbe Bauart und hatte nie einen Guard, also lagen fünf sperrende
+ * Schlüssel (die WebDAV-Ablage der Dokumente) ungeprüft da. Aus 8 geprüften
+ * Schlüsseln werden damit 18.
+ *
+ * DAS MERKMAL IST `envControlled`. So heißt in allen drei Services die Zusage
+ * „dieses Feld kommt aus der Umgebung, die UI ist dafür gesperrt" - der Name
+ * steht im Code, nicht in einer Liste hier.
+ *
+ * DIE DREI SCHREIBWEISEN SIND DIE REGEL, NICHT DREI AUSNAHMEN: ein Service
+ * benennt seine env-Felder als Map (`CONFIG_KEYS`, `ENV_FIELDS`) oder als
+ * `const ENV_*`-Bindung. Ein blosses `process.env.X` zählt bewusst NICHT -
+ * `backup-webdav.js` liest so `DB_ENCRYPTION_KEY` in einer Wächterklausel, und
+ * das ist kein UI-Feld. Damit eine VIERTE Schreibweise nicht still nichts
+ * beiträgt, verlangt der Guard unten von jedem `envControlled`-Service
+ * mindestens einen Schlüssel.
+ *
+ * UND DIE DESCRIPTOREN WERDEN NICHT MEHR AUFGEZÄHLT: gesucht wird die
+ * Interpolationsform im ganzen Repo. Ein neuer Descriptor ist damit ab dem Tag
+ * abgedeckt, an dem er entsteht - die alte Liste nannte vier, und es gibt mehr
+ * Dateien, die env führen. (`tools/quadlet/oikos.container` kann den Fehler
+ * bauartbedingt nicht haben und sagt das selbst: Quadlet interpoliert keine
+ * `${VAR:-default}`.)
+ * ──────────────────────────────────────────────────────────────────────────── */
 
-  // backup-webdav sperrt seine UI an genau einer Variable (envControlled: Boolean(ENV_URL)).
-  const backup = readFileSync(new URL('../server/services/backup-webdav.js', import.meta.url), 'utf8');
-  if (/envControlled:\s*Boolean\(ENV_URL\)/.test(backup)) keys.push('WEBDAV_BACKUP_URL');
-  return keys;
+/** Jede .js unter server/services/, auch in Unterordnern. */
+function serviceFiles(dir = '../server/services/') {
+  const out = [];
+  for (const entry of readdirSync(new URL(dir, import.meta.url), { withFileTypes: true })) {
+    if (entry.isDirectory()) out.push(...serviceFiles(`${dir}${entry.name}/`));
+    else if (entry.name.endsWith('.js')) out.push(`${dir}${entry.name}`);
+  }
+  return out;
+}
+
+/** Die env-Namen, an denen eine UI-Sperre hängt - aus den Services abgeleitet. */
+function uiLockingEnvKeys() {
+  const SHAPES = [
+    /env:\s*'([A-Z][A-Z0-9_]{2,})'/g,                                    // CONFIG_KEYS (email.js)
+    /^const ENV_[A-Z0-9_]*\s*=\s*process\.env\.([A-Z][A-Z0-9_]{2,})/gm,  // const ENV_URL (backup-webdav.js)
+    /:\s*'([A-Z][A-Z0-9_]{2,})'/g,                                       // ENV_FIELDS (document-storage.js)
+  ];
+  const keys = new Set();
+  let services = 0;
+
+  for (const file of serviceFiles()) {
+    const src = readFileSync(new URL(file, import.meta.url), 'utf8');
+    if (!/envControlled/.test(src)) continue;
+    services += 1;
+    const own = new Set();
+    for (const shape of SHAPES) for (const m of src.matchAll(shape)) own.add(m[1]);
+    // Ein Service, der die Sperre zusagt und keinen Schluessel hergibt, hat eine
+    // vierte Schreibweise - dann fehlt hier eine, und der Guard sagt es, statt
+    // still weniger zu pruefen.
+    assert.ok(own.size > 0,
+      `${file.replace('../', '')} sagt eine UI-Sperre zu (envControlled), aber keine der drei `
+      + 'bekannten Schreibweisen liefert einen env-Namen. Die Ableitung gehoert erweitert.');
+    for (const key of own) keys.add(key);
+  }
+
+  assert.ok(services >= 3,
+    `Nur ${services} Services mit envControlled gefunden (gemessen: email, backup-webdav, `
+    + 'document-storage). Die Ableitung greift nicht mehr.');
+  assert.ok(keys.size >= 15,
+    `Nur ${keys.size} sperrende Schluessel abgeleitet (gemessen: 18).`);
+  return [...keys];
+}
+
+/** Jede Datei, in der eine `${VAR:-default}`-Interpolation ueberhaupt wirken kann. */
+function envDescriptors(dir = '../') {
+  const out = [];
+  for (const entry of readdirSync(new URL(dir, import.meta.url), { withFileTypes: true })) {
+    if (entry.name.startsWith('.') || entry.name === 'node_modules') continue;
+    const next = `${dir}${entry.name}`;
+    if (entry.isDirectory()) out.push(...envDescriptors(`${next}/`));
+    else if (/\.(ya?ml|container)$|^\.env/.test(entry.name)) out.push(next);
+  }
+  return out;
 }
 
 test('kein Deploy-Descriptor gibt einem UI-sperrenden Schlüssel einen nicht-leeren Default', () => {
-  // Repo-relativ gehalten, damit derselbe String die Datei findet UND in der
-  // Fehlermeldung stehen kann. Ein nachträgliches Abschneiden von '../' wäre
-  // eine Textersetzung, die nur das erste Vorkommen trifft (CodeQL-Regel
-  // "Incomplete string escaping or encoding") - hier unnötig, weil der Präfix
-  // ohnehin nur beim Lesen gebraucht wird.
-  const descriptors = [
-    'docs/docker-compose.portainer.yml',
-    'docker-compose.yml',
-    'podman-compose.yml',
-    'deploy/umbrel/docker-compose.yml',
-  ];
+  const keys = uiLockingEnvKeys();
+  const files = envDescriptors();
   const offenders = [];
 
-  for (const key of uiLockingEnvKeys()) {
-    for (const path of descriptors) {
-      const src = readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
+  // Eine Pruefung, die nichts gelesen hat, darf nicht urteilen.
+  assert.ok(files.length >= 5,
+    `Nur ${files.length} Descriptor-Dateien gefunden - der Suchlauf greift nicht mehr.`);
+
+  for (const file of files) {
+    const src = readFileSync(new URL(file, import.meta.url), 'utf8');
+    for (const key of keys) {
       // ${KEY:-<default>} - alles ausser sofort schliessender Klammer ist ein Wert.
       for (const m of src.matchAll(new RegExp(`\\$\\{${key}:-([^}]*)\\}`, 'g'))) {
         if (m[1].trim() === '') continue;
-        offenders.push(`${path}: ${key} defaultet auf "${m[1]}"`);
+        offenders.push(`${file.replace('../', '')}: ${key} defaultet auf "${m[1]}"`);
       }
     }
   }
 
-  assert.deepEqual(offenders, [],
+  assert.deepEqual(offenders.sort(), [],
     'Diese Defaults setzen eine env-Variable, die ein UI-Feld sperrt - der Nutzer kann das '
     + `Feld danach in den Einstellungen nicht mehr ändern:\n${offenders.join('\n')}`);
 });
