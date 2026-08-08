@@ -13,6 +13,7 @@ import { createLogger } from '../../logger.js';
 import {
   str, oneOf, num, date, id as idParam, collectErrors, MAX_TITLE, MAX_TEXT, MAX_SHORT,
 } from '../../middleware/validate.js';
+import { documentLinksFor, loadDocumentLinks, replaceDocumentLinks } from '../../services/document-links.js';
 
 const log = createLogger('Inventory');
 const router = express.Router();
@@ -20,6 +21,7 @@ const router = express.Router();
 const CONDITIONS = ['new', 'good', 'fair', 'poor'];
 const STATUSES = ['active', 'sold', 'disposed', 'lost'];
 const CURRENCY_RE = /^[A-Z]{3}$/;
+const DOCS = { table: 'inventory_item_documents', ownerColumn: 'item_id' };
 
 /** Gleiches Muster wie server/routes/subscriptions.js#budgetCurrency(). */
 function householdCurrency() {
@@ -43,7 +45,7 @@ function locationPath(locationId) {
   return parent ? `${parent.name} · ${loc.name}` : loc.name;
 }
 
-function loadItem(id) {
+function loadItem(id, userId) {
   const item = db.get().prepare('SELECT * FROM inventory_items WHERE id = ?').get(id);
   if (!item) return null;
   const category = db.get().prepare('SELECT name, icon FROM inventory_categories WHERE key = ?').get(item.category);
@@ -52,10 +54,11 @@ function loadItem(id) {
     category_name: category?.name ?? item.category,
     category_icon: category?.icon ?? 'package',
     location_path: locationPath(item.location_id),
+    attachments: documentLinksFor(db.get(), { ...DOCS, ownerId: item.id, userId }),
   };
 }
 
-function loadItems({ category, locationId, status, q } = {}) {
+function loadItems({ category, locationId, status, q } = {}, userId) {
   const clauses = [];
   const params = [];
   if (category !== undefined) { clauses.push('ii.category = ?'); params.push(category); }
@@ -74,7 +77,12 @@ function loadItems({ category, locationId, status, q } = {}) {
     ${where}
     ORDER BY ii.name COLLATE NOCASE ASC
   `).all(...params);
-  return rows.map((row) => ({ ...row, location_path: locationPath(row.location_id) }));
+  const byItem = loadDocumentLinks(db.get(), { ...DOCS, ownerIds: rows.map((r) => r.id), userId });
+  return rows.map((row) => ({
+    ...row,
+    location_path: locationPath(row.location_id),
+    attachments: byItem.get(row.id) || [],
+  }));
 }
 
 /**
@@ -194,8 +202,9 @@ router.get('/', (req, res) => {
     }
     const status = typeof req.query.status === 'string' && STATUSES.includes(req.query.status) ? req.query.status : undefined;
     const q = typeof req.query.q === 'string' ? req.query.q.trim().slice(0, 100) : undefined;
+    const userId = req.authUserId || req.session.userId;
 
-    res.json({ data: loadItems({ category, locationId, status, q }) });
+    res.json({ data: loadItems({ category, locationId, status, q }, userId) });
   } catch (err) {
     log.error('GET / error:', err);
     res.status(500).json({ error: 'Internal server error.', code: 500 });
@@ -209,7 +218,8 @@ router.get('/:id', (req, res) => {
   try {
     const vId = idParam(req.params.id, 'Gegenstand-ID');
     if (vId.error) return res.status(400).json({ error: vId.error, code: 400 });
-    const item = loadItem(vId.value);
+    const userId = req.authUserId || req.session.userId;
+    const item = loadItem(vId.value, userId);
     if (!item) return res.status(404).json({ error: 'Item not found.', code: 404 });
     res.json({ data: item });
   } catch (err) {
@@ -240,7 +250,13 @@ router.post('/', (req, res) => {
       values.notes, userId,
     );
 
-    res.status(201).json({ data: loadItem(result.lastInsertRowid) });
+    // Belege sind optional, deshalb erst nach dem Insert - der Gegenstand
+    // steht auch ohne sie, ein unbekanntes Dokument darf ihn nicht scheitern lassen.
+    replaceDocumentLinks(db.get(), {
+      ...DOCS, ownerId: result.lastInsertRowid, documentIds: req.body.attachment_document_ids, userId,
+    });
+
+    res.status(201).json({ data: loadItem(result.lastInsertRowid, userId) });
   } catch (err) {
     log.error('POST / error:', err);
     res.status(500).json({ error: 'Internal server error.', code: 500 });
@@ -273,7 +289,17 @@ router.put('/:id', (req, res) => {
       values.notes, item.id,
     );
 
-    res.json({ data: loadItem(item.id) });
+    const userId = req.authUserId || req.session.userId;
+    // Belege nur anfassen, wenn das Feld mitkommt - ein PUT, das nur einen
+    // Wert korrigiert, darf angehaengte Belege nicht stillschweigend abraeumen
+    // (gleiches Muster wie server/routes/budget/entries.js#PUT /:id).
+    if (req.body.attachment_document_ids !== undefined) {
+      replaceDocumentLinks(db.get(), {
+        ...DOCS, ownerId: item.id, documentIds: req.body.attachment_document_ids, userId,
+      });
+    }
+
+    res.json({ data: loadItem(item.id, userId) });
   } catch (err) {
     log.error('PUT /:id error:', err);
     res.status(500).json({ error: 'Internal server error.', code: 500 });

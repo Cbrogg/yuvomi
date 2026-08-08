@@ -39,6 +39,200 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The widget grid runs to the bottom of the window again.** On desktop the shell kept a 96px strip free below the scroll port so the floating action button could never cover anything - a margin that shortened the scrollable area across its full width. On a board of cards that is the one place it must not come from: the grid broke off 96px above the window edge, mid-card, with a dead band underneath, and the default board needed 25% more scrolling than it had content for. The room is now a trailing pad *inside* the scroll port, so the reserve sits behind the last row instead of in front of the window edge. The promise it protects is the one that was actually needed - nothing is unreachable, rather than nothing is ever covered: both measured failures were at the scroll end, where nothing can be pushed aside any more, and there the pad is what lies under the button. In between, content passes beneath it and can be scrolled clear in either direction, and a mis-tap lands on the button's own create action rather than on the row action below it. Phones are unaffected: the reserve is zero there, because the button sits inside the navigation capsule.
 - **A dashboard card's title row is a band, not a box.** It measured 73px for a 17px title and a 24px seal - up to 29.9% of the whole card on a phone - because the "All" link beside the title claimed a full 48px touch box inside a 12px-padded row. A free-standing target owes its size in one axis, so the link takes it in the width while its visible box shrinks and its touch area stays 48px by reaching into the header's own padding. The band is 49px now, the touch target is unchanged, and the title keeps its size: the row was bulky, not the type. The tinted sender band introduced in 2.6.0 reads as a band because of it, instead of as an empty coloured field.
 - **The speed dial's action list follows the writing direction.** It anchored to the physical right edge while the button itself has followed the logical axis since 2.6.0, so in Arabic and Farsi the button sat at one end of the capsule and its actions lined up against the other.
+
+## [2.6.0] - 2026-08-12
+
+### Changed
+
+- **Every dashboard card now wears its module's colour, as a surface instead of a stroke.** Module identity on the board was a 2px hairline along the top edge - just about visible in the light theme and, in the dark one, not at all: the board read as a wall of equally grey rectangles. The card header carries the family tone as a tinted band now, at the wash step of the tint scale, which is the rung defined for a tint that sits *under* foreign content - the seal, the title, the badge and the link all belong to the card, not to the tone. The seal on that band gets the band as its own base, or its disc would mix against the card surface and sit at 1.06:1 on the tint. Measured across all five default cards: title 15.3:1 light and 12.1:1 dark, header link 5.5:1 and 6.1:1, badge 6.0:1 and 6.3:1.
+- **The day programme is the principal object of the page again.** "Heute wichtig" sat on a smaller radius and a lighter shadow than the widgets below it, so the most important block on the surface was optically the quietest - "what is on today?" weighed less than "birthdays". It now carries the larger card radius and one elevation step above the grid, and its rows have the breathing room of a programme rather than the density of a list. Touching a row tints it in the tone of the room it comes from instead of neutral grey; the seal on the left already said where the row belongs, and a grey hover threw that away at the moment of contact. On phones the programme no longer shrinks: padding *and* title size used to drop there, so on the device PRODUCT.md names as the primary scene the day programme was the smallest version of itself while five full-size cards stood underneath it.
+- **A tile is wide enough for the names in it.** At 1440px the grid laid out four 270px columns, and in them the ellipsis cut through real content - "Familienmitg…", "Tante Claire Bec…", "Leo John…". The minimum column is 280px now, which at that width means three calm columns instead of four cramped ones; the auto-fill mechanism is untouched, so the fourth column returns on its own around 1700px, with room for text. The family card's member names moved up to the row-title step the rest of the board uses - 14px was the exception, and next to a 38px avatar it read like a caption.
+- **Leftover height became breathing room instead of a hole.** Row heights follow the 1x1 tiles, so a tile spanning two rows gets the sum of both plus the gap - measured 489px of slot for 319px of content in the family card, and the difference sat as a dead block below the last element. The card body stretches now and anchors its footer to the bottom, so the surplus falls *between* content and closing line: a deliberate frame with head, body and foot. The family card gained that closing line - the household's task tally for the day, from the same server-side aggregates the rows use, since counting the rendered rows would lie as soon as the household outgrows the limit. The savings rate gained a second channel: a track where the month's income is the full width and the filled part is exactly the percentage printed beside it.
+- **The monthly balance is a readout, not a number at the end of a label row.** It sat as a 22px amount on the right of a caption line - the same anatomy as "Sparquote 45 %" directly below, so the card's headline fact was built like its supporting one. Stacked, at 28px, it is what it is: the number you open the card for.
+- **A list tile takes its row count from its height.** The birthday list was cut to three on the server, for every tile size there is, so the two-row default ran a third of its card empty and no layout could fix it - the material was not there. The supply now covers the tallest version and the tile decides how much of it appears: three rows for one grid row, five for two. The rule sits in one place so the next list widget inherits it instead of inventing another constant.
+- **The demo board shows the weather card.** It is off by default, because the masthead line under the greeting already says the current conditions - but the card is what the wall-tablet case looks like, and it carries the location and the forecast the line has no room for. In the demo it sits before the two flat tiles, which is also where the screenshot frame ends. The echo rule applies as always: with the card visible, the masthead line steps aside.
+
+### Fixed
+
+- **A select in the settings was 23px tall.** The token subject picker and the default calendar target carried `class="form-select"` - a name no stylesheet has ever defined - so both fell back to the browser default while the input beside them in the same form group wore the field material. They now use the canonical `form-input`, which also brings the chevron padding: 40px at the pointer, 48px at the finger. A guard now checks the shape rather than a list of names, so the next invented `form-*` class fails on the first run instead of on a 55-minute browser sweep.
+
+- **A pinned note keeps its colour on the dashboard.** Two things had to line up for this one. Notes without a colour rendered `--note-color:;` - a valid *empty* value, which takes `var()` its fallback and invalidates the whole recipe - and notes *with* a colour never reached the recipe at all, because `glass.css` carries the more specific dashboard rule and set a neutral well there. The tinted recipe in `dashboard.css` had been dead code since the HIG rollout while claiming the opposite of what was on screen. The well is still a well - a box inside a box is a recess, not a second card - it just carries the note's tone now.
+- **Note tiles follow their card's width, not the window's.** Three columns from 1024px up, even when the note card is one grid column wide: three notes in ~105px each, and what was left was "Urlaubs-…", "WLAN & …", "Emmas …". The tile count is a container query on the widget now, with thresholds that are tile widths rather than device classes.
+- **A note tile no longer dims itself on hover.** It took `opacity: 0.8` - making its own text harder to read in order to show it could be touched - and lifted a pixel like a control. It steps up one rung of the tint scale instead.
+- **The masthead tools hang at the top instead of floating mid-title.** They were centred against a greeting stack three lines tall, and four on a phone, so the "Stand 21:39" anchor landed halfway up beside the title with nothing to relate to.
+
+## [2.5.0] - 2026-08-11
+
+### Added
+
+- **Wall mode: the dashboard as a display for the hallway tablet.** Three pieces existed for that scene and served it only one at a time: the clock tile, the weather card as an opt-in, and the photo screensaver after five minutes of quiet. Together they were three checkboxes, not a state. Wall mode is the state, and it is the *awake* one to the screensaver's resting one: the same `/` route in a different gait, carrying the time in the 48/72px display steps that until now had no user at all, the day program, who is up today as faces with a count, and the weather with its forecast. Sidebar, tab bar and the plus button step aside; nothing on the surface is touchable, because the point is to read it from two metres while walking past. The way out is quietly present rather than hidden: a glyph in the corner that any touch raises to a labelled capsule for a few seconds, plus Escape. Between 22:00 and 06:00 it dims - the dark ground is forced even for a light theme (the stored preference is untouched and restored in the morning), and the only filled area on the page becomes a hairline, because the problem in a dark hallway is luminance, not colour mode. A load failure heals itself every 60 seconds instead of showing a retry button nobody at a wall presses, with the clock still running beside it to prove the device is alive. The switch is device-local like theme and language and sits in Settings → Appearance; the normal dashboard, saved layouts, Customize and the screensaver are untouched.
+
+### Changed
+
+- **The dashboard's day program now says what it does.** A row that leads somewhere is a link, so Cmd-click and middle-click open it in a new tab and "copy link" yields one - the same thing the widget headers have done since the last round. The task row stays a button, because it does not navigate: it opens the quick-action dialog on its own object, and an href there would be a promise the handler breaks. The widget cards no longer lift on hover: the card was never the click target - its rows, its header link and its empty-state entry are, and each has its own hover. The card promised a destination that does not exist under the cursor.
+- **One module, one name.** The shopping module was called "Einkaufen" (a verb) in the navigation and "Einkauf" everywhere else; it is now the noun in both places, which is what the other sixteen modules already were. Split expenses lost its verb form too, in German and in eleven other languages that carried an infinitive or imperative. The API token dialog kept its own list of module names and had drifted independently: it called the start page "Dashboard" in seventeen of twenty-four languages while the navigation calls it "Overview", and the housekeeping module "Haushalt" instead of "Haushaltshilfe". A guard now compares both lists in every language and found three more on its first run - the English and Filipino notes module was called "Board", and Filipino search was a verb in one list and a noun in the other.
+- **The dashboard says when it last looked.** The silent refresh does its work invisibly, which on a wall tablet is exactly the problem: a surface that never visibly moves cannot be told apart from a frozen one, and "nothing else today" is not believable without a reload. A quiet "Stand 19:24" now sits under the customize button - an absolute time, not a "3 minutes ago" that would need a second timer just to contradict itself.
+- **The dark hover no longer shouts.** It stood two ramp steps above the surface while the light one stands one below white - measured on a cockpit row, 1.414:1 against 1.201:1, and the louder answer belonged to the theme where a brightness jump is more noticeable. It is now the next surface step in both themes. Correcting that one number exposed three places that had been living off the excess: elements already sitting on a raised surface used the same token and would have landed on their own color (measured 1:1 - no hover at all). They now use `--color-surface-elevated-hover`, a step that was never new, only never named, and a guard keeps the two apart.
+
+### Fixed
+
+- **A widget title no longer runs through its own header link.** In a narrow tile the title text was a bare node between the seal and the badge - an anonymous flex item no selector could reach - so it shrank its box and kept drawing straight across "Manage". It now truncates, and the header keeps a minimum gap: `space-between` distributes surplus, and where there is none it distributes nothing.
+- **An empty widget no longer wears a "0" badge.** The header counted zero next to its title while the body below already said the empty state in words - two voices for the same fact, and the badge was the worse one.
+- **Escape closes the dashboard's speed dial.** Only a click anywhere did; whoever opened it with the keyboard could not close it again without a mouse and stood in a list of four destinations they had not aimed for. The focus returns to the button. The first-run dialog also has an accessible name now - it was `role="dialog" aria-modal="true"` with nothing to announce but "dialog".
+- **The rewards footer chip meets the touch target.** It was 38px tall, under the device world's minimum, while being a real control that jumps into the rewards module.
+- **"1 Tage" is gone.** The birthday countdown had no singular variant in any of the 24 locales.
+- **The loading skeleton promises the layout that actually arrives.** It drew the default grid while the saved arrangement only turns up with `/preferences`, so anyone who had rearranged their dashboard watched foreign tiles flash and then jump on every load. The demo seed's own layout also left a hole in the bottom right corner: five tiles covering seven grid cells across four columns, with nothing left for `dense` to fill it with.
+
+## [2.4.0] - 2026-08-11
+
+### Added
+
+- **An API token can act as a chosen family member.** Only an admin can create one, so until now every request a token made belonged to the admin - and a budget entry's owner is fixed to whoever creates it. A bank-import connector could therefore only ever file transactions under the administrator, never under the member they belong to. Creating a token now asks which member it acts as: that member supplies the identity, role, ownership and module permissions, while the administrator stays recorded as the creator for the audit trail. The subject can only narrow access, never widen it - module permissions are resolved for the member on every request, a non-admin subject cannot reach admin-only routes, and scopes remain an additional limit on top. Split-expense guests cannot be selected. Existing tokens keep behaving exactly as before. (#697)
+
+### Changed
+
+- **The day program looks past midnight.** The closing line now names tomorrow's first due task ("Nothing else today - tomorrow: permission slip"), and the free-day state row picks whichever comes first, the next appointment or the next due task - an evening glance no longer promises "nothing else" while something is due at school in the morning. On free days the family card tells each member what is next instead of stacking four identical "Free today" lines.
+- **Dashboard rows act on the object they name, and an open tab stays current.** The cockpit's task row opens the same quick-action dialog as the tasks widget (mark done / edit) instead of dropping the user into the task list to search again; the meal row needs no special path, because /meals already scrolls today's slot into view. Dashboard content also refreshes silently when the tab becomes visible again and every 15 minutes while it stays visible - a wall tablet shows the evening's truth, not the morning's.
+- **The dashboard cockpit now tells the day instead of summarizing modules.** "Heute wichtig" was three module aggregates (one task, one count, one meal); it is now a chronological day program: today's remaining appointments with their time, tasks due today ("by 17:00", overdue first), the next planned meal, and open shopping as a timeless closing row - each row carrying its module seal and, where someone is assigned, the member's avatar, plus the object id as an anchor for future deep links. An empty day finally answers instead of disappearing: "Free today" or "All done for today", with the next upcoming appointment as an outlook, and a complete program closes with "Nothing else today". The weather moved from a card into a quiet line under the greeting - the card stays available as a wall-tablet opt-in, and a visible weather card silences the masthead line. The family widget now shows per member what today holds (next appointment, open tasks counted server-side and visibility-filtered) instead of a member count that never changes. Saved layouts keep their exact view; only the author defaults changed.
+
+### Fixed
+
+- **The dashboard stops inventing deadlines and speaking in two tones.** A task due tomorrow with no set time no longer shows an invented "23:59" - that was the internal sort placeholder leaking into the UI as a deadline nobody set. The family card's seal now carries the same module tone as its hairline (contacts) instead of borrowing the settings gray from its "Manage" link, and the module hairline sits on every widget card instead of only on tall ones - a signal that appeared on one of five cards read as an accident, not a system.
+- **Dashboard accessibility and first-run copy.** The focus ring in "Heute wichtig" is no longer clipped by the list's rounded corners; the weather card carries a visually hidden heading, so screen-reader heading navigation finally reaches it; the pinned-notes widget puts only the visible excerpt into the DOM instead of the full note - screen readers read Wi-Fi passwords and school notes out loud while the eye saw two clamped lines; and the onboarding no longer describes the mobile bottom bar and swipe gestures to desktop users, nor calls the plus button a "FAB".
+
+## [2.3.0] - 2026-08-11
+
+### Added
+
+- **An idle wall tablet can show photos from Immich instead of a fixed dashboard.** A dashboard that never changes burns itself into the panel. An administrator connects the server under Settings -> Administration -> Immich, where the API key stays on Yuvomi's side and never reaches the browser, optionally limits the source to a single album, tests the connection and previews the result. After five minutes without input, photos rotate every 20 seconds until the next touch, pointer, key or scroll; the caption changes corners so the protection does not introduce a bright fixed area of its own. `IMMICH_URL`, `IMMICH_API_KEY` and `IMMICH_SCREENSAVER_ALBUM_ID` set the same values and take precedence over the database. (#693)
+- **Income categories can carry subcategories too.** They were an expense-only concept, so "Salary" could not be broken down into monthly pay, overtime and bonus the way "Groceries" could be broken down. Both types now behave the same, and the subcategory field sits directly under the category in the entry form instead of below the fold under "Advanced". (#691)
+- **Tandoor as a second recipe source, next to Mealie.** Adding a recipe mirror under Settings -> Kitchen now starts with the question which server it is. Tandoor recipes land in the same list as Mealie and native ones, with their own source badge, and get the same read-only mirroring, thumbnail proxy and meal-plan integration. (#530)
+
+### Changed
+
+- **The Mealie mirror from v1.73.0 is now provider-neutral.** `mealie_accounts` became `recipe_provider_accounts` with a `provider` column, and one shared adapter interface replaced the Mealie-only client, mirroring how document storage already handles Paperless and Papra. A third provider needs an adapter, not another copy of the sync, route and frontend logic. Existing Mealie accounts notice nothing: the migration renames tables and columns in place, no data moves. The API path `/api/v1/mealie` is now `/api/v1/recipe-providers`, which matters only for anything calling it directly with an API token. (#530)
+
+### Fixed
+
+- A Tandoor sync stopped after the first page when Tandoor sat behind a reverse proxy that rewrites its own URLs in the paging links. (#530)
+- **Installing the app worked again behind an authenticating reverse proxy.** A `<link rel="manifest">` is fetched with credentials omitted by default, even same-origin, so Cloudflare Access, Authelia, Authentik or basic auth answered it with their login page instead of the manifest. Without a valid manifest the browser never offers installation: the button under Settings -> Personal -> This device stayed disabled and the install banner never appeared, while every other page behaved normally and hid the cause. The manifest link now carries `crossorigin="use-credentials"`. Installations without a proxy are unaffected. (#715)
+
+### Security
+
+- Recipe provider sync (Mealie and Tandoor) goes through the same SSRF-hardened HTTP client as calendar subscriptions and document storage. **This needs an action from anyone whose Mealie sits on a Docker-internal or LAN-only address**, which is the common case: that target is now refused, and the account shows "URL resolves to a private IP address" as its last sync error until `RECIPE_PROVIDER_ALLOW_PRIVATE_NETWORK=true` is set in the environment. Mirrored recipes already in the database are untouched while the sync is refused. (#530)
+- Tandoor's thumbnail proxy no longer follows an image URL to a host outside the configured account. Tandoor names the image host in its own API response, and the server attached the account's Bearer token to whatever it named - any household member viewing a mirrored recipe could have made the server send that token elsewhere. (#530)
+
+## [2.2.3] - 2026-08-11
+
+### Changed
+
+- **The shopping list no longer names the selected list twice.** Its name stood in the list picker as the active chip and again as a heading right below it, with a rename pencil and a menu. The chip is the title now; rename, "From meal plan", "Manage categories" and "Delete list" moved into a menu at the trailing end of the chip row, on every screen width. That gives the items about 64 px more room on a phone - the route now uses 64% of the screen for content where it used 53%, level with tasks and budget.
+- The second colour of the budget charts moves from teal to petrol. It was the exact tone the budget itself wears, so an account coloured "Teal" was indistinguishable from the module around it. Existing accounts and categories keep their choice and simply render in the new tone.
+
+## [2.2.2] - 2026-08-11
+
+### Changed
+
+- Updated the production dependencies: `better-sqlite3-multiple-ciphers` to 13, plus `express-rate-limit`, `nodemailer` and `googleapis`. The database binding is now a Node-API build that ships its own prebuilt binaries, so the Docker image neither downloads nor compiles one. The development-only `puppeteer` moved along with them, and the `allowScripts` build-script pins were realigned to match. (#720, #721)
+- `package-lock.json` now carries a download URL and an integrity hash for every entry. 184 of 238 had neither, which left `npm ci` with nothing to verify what it had downloaded against. (#725)
+- Dependabot no longer proposes Node major versions for the Docker image. Those stay manual until a new line reaches LTS, so an install never moves from a supported Node to a short-lived one on its own. (#724)
+
+## [2.2.1] - 2026-08-11
+
+### Added
+
+- **Portainer install guide**, for both a pasted stack and a Git/GitOps stack. Portainer never places a `.env` next to the compose file, so a stack manifest has to list every variable explicitly - `docs/docker-compose.portainer.yml` does, and a Git stack should point its compose path at it.
+
+### Fixed
+
+- **Yuvomi kept a browser's GPU busy while nothing was happening.** The tinted shapes drifting behind the interface carried their blur on the same element that moved, so the browser re-rendered that blur on every single frame - for as long as the page stayed open. Measured on an idle dashboard, the app now holds 60 frames per second where it managed about 20, and a laptop no longer heats up with Yuvomi merely open in a tab.
+- **A red "unexpected error" appeared when the app started.** Behind it was a browser notice about layout measurements being delivered one frame later - routine, not a fault, and nothing was ever broken by it.
+- Deploying from a Git-managed stack (Portainer, Komodo, Dockge) no longer fails with `env file .env not found`. The repository's `docker-compose.yml` is written for a local clone with a generated `.env` beside it; a missing one is now tolerated instead of aborting the deployment.
+
+## [2.2.0] - 2026-08-10
+
+### Changed
+
+- **The app has one colour again.** The violet of the app icon carries the navigation, the add button, buttons, switches, links and focus rings - in every module, the same. Module colours stay where they answer "where am I": the badge in the module header, the module's own bars and chips, its widget on the dashboard, its icon in the sidebar. Opening the budget no longer repaints the whole frame teal.
+- **Warmer surfaces in both themes.** The page background moves from a cool grey to warm paper in light mode, and from near-black to warm charcoal in dark mode, where cards now separate visibly from the background instead of floating on it.
+- **The add button sits inside the navigation bar** on phones and tablets, at its trailing end, instead of floating above it. On pages without an add action the bar uses the full width.
+- The sidebar shows every module's icon in its own colour, so the colour vocabulary is legible in one place instead of being worn by the whole app.
+- The calendar's colour moves from violet to azure - next to a violet app colour, the two were the same tone.
+- Tab bar labels are one step smaller (the size iOS itself uses for them), so the longest German label fits on one line down to 360 px wide.
+- **The search in list modules collapses to its icon on phones**, as it already did in short windows. One header row instead of two.
+- Filters and grouping share a single row in tasks and documents instead of wrapping onto two; the grouping choice shows its icons when the row gets narrow.
+
+### Fixed
+
+- **Phones lost up to three quarters of the screen to interface chrome.** On a 375x812 phone the task list left 210 px for content and now leaves 507 px; the budget goes from 329 to 514 px, shopping from 244 to 429, recipes from 413 to 598.
+- The add button reserved a full-width strip above the navigation on every screen - 92 px, whether or not anything lay underneath it.
+- The install banner sat 8 px inside the navigation bar instead of above it.
+
+## [2.1.0] - 2026-08-10
+
+### Added
+
+- **Module seal** — a circular, tinted chip with the module's icon, derived from the brand mark. It names where an object comes from wherever modules are mixed (global search, "Today", dashboard widget headers, the "More" list) and stands exactly once per module head as its sender.
+- **Overlap mark** — an avatar overlapping the seal in "Today", so an entry says not only which module it comes from but whom it concerns. It appears only when the entry carries a person and the household has more than one member.
+- **Solo households** are recognised automatically. With exactly one member, the family widget, the visibility field and "assigned to" disappear from the interface; entries keep their stored values, and the fields return as soon as a second member joins.
+
+### Changed
+
+- Module colours come from **nine colour families** instead of eighteen individual tints. Modules of the same life domain (kitchen, money, people …) share one tone and are told apart by their icon; two colliding pairs disappear as a result.
+- **System notifications name their module in the title** — "Calendar", "Tasks", "Subscriptions", "Medication" instead of "Yuvomi" — and tapping one now opens that module instead of the dashboard.
+- The **task form** shows title and note, with everything else behind "More settings", whose summary names what it holds ("Urgent · Finances · 5 points"). Every field in the form is the same height.
+- The **dashboard greeting uses the first name** only, so it no longer wraps to a second line on phones.
+- **Short viewports** (a laptop at 200 % browser zoom, a phone in landscape, a split-screen tablet) get a single-row module header, so content is visible instead of chrome.
+- Widget titles on the dashboard are **headings**, and the "All" jumps are links — they can be opened in a new tab and are announced with their module name.
+- Pinned notes on the dashboard and the recipe rail in the meal plan follow the shared row-list pattern instead of stacking one card per row.
+
+### Fixed
+
+- The install banner **covered the add button** on every mobile screen, so the most frequent action failed silently on first launch.
+- In the budget, **red meant two opposite things**: spending less than last month was flagged like an overrun. Colour now shows whether a change is good or bad, the arrow shows its direction, and the category chart mirrors income and expenses around a shared axis.
+- **In-app reminders did not appear at all** since v0.52.15 — they were looking for a toast container that had been split in two and renamed.
+- The **large title vanished while scrolling** instead of collapsing; the docked bar now names the module.
+- At 200 % browser zoom, **the task list showed no task at all**.
+- Task titles, the sidebar toggle and other single targets were **smaller than they needed to be**, even where their surroundings left room.
+- Reward progress bars were **invisible to screen readers**; they now announce their value ("37 of 60 points").
+- Metric rows in health, budget and housekeeping had their **numbers on different lines** despite equal tile heights.
+- Em dashes in the interface text of all 24 languages are now hyphens, as the project's own style requires.
+
+## [2.0.1] - 2026-08-10
+
+### Changed
+
+- The setup wizard follows the redesigned app. It already borrowed the app's design tokens, so in normal use it looked current, but the colours it falls back on when those tokens cannot be loaded still described the previous release: a packaging or volume mistake produced a page that looked like the old version and pointed the diagnosis in the wrong direction. The tinted wash across the top is gone as well, for the same reason the login screen lost it - the mark is carried by the tile, not by the backdrop
+
+### Fixed
+
+- On the overview, the quick-action button behaved unlike the one in every other module. It slid out of sight whenever you scrolled down and only came back on the way up, which meant a single downward nudge you never made - an address bar sliding out on iOS, a widget growing as its data arrived - could take the button away and leave it away. It was also the last floating button still living inside the scrolling area, the arrangement that made it drift off screen on iPhone in the first place (#634). It now sits in the same place as every other module's button, keeps still while you scroll, and the room reserved for it below the last row comes from the same measurement the rest of the app uses, so the button can no longer cover a link at the bottom of a widget
+- The error panel in Settings, the one that appears when a page cannot load and offers to try again, printed its message and its button in tones that fell short of the contrast requirement against their own red tint, at 4.45:1 and 4.16:1. Both now use the darker ink tone the app already used on every other tinted surface, and the retry button belongs to the message it sits in rather than borrowing the module's colour
+
+## [2.0.0] - 2026-08-09
+
+### Changed
+
+- The whole interface has been redesigned in Apple's Human Interface Guidelines and its liquid-glass design language. Yuvomi should now feel like an app that shipped with the device: the system font stack and Apple's type scale, cool system neutrals, capsule controls and inset-grouped lists. Glass is chrome and nothing else - the tab bar, the sidebar, sheets and the action button are made of it, while everything you actually read sits on an opaque surface. Each of the seventeen modules keeps its own accent colour so you can tell at a glance where you are, and all of them were verified against the surfaces they are used on: WCAG AA in light *and* dark, with the same values holding under reduced transparency and increased contrast. On phones the module title now starts as a large title and collapses into the bar as you scroll, the way it does elsewhere on the platform. Nothing about your data, your household or your integrations changes
+- The same swipe now means the same thing in every list. Until now only the shopping list and tasks answered a swipe at all, and they disagreed: swiping right checked off a shopping item but opened a task for editing. The start of the row now always carries the positive action and the end the destructive or secondary one, so **tasks and the shopping list have swapped sides** - a swipe that used to open a task now completes it. Because this is muscle memory, a one-time hint appears the first time you complete a swipe after updating. **Birthdays and subscriptions gained the two gestures**, which they never had: in birthdays a swipe towards the start of the row edits and one towards the end deletes, with the same five-second undo the delete button already offered; in subscriptions the pair replaces four buttons per row. The rule assigns a rank rather than a fixed role, which is why editing sits at the end in tasks and at the start in birthdays: it is the secondary action where a positive one stands beside it, and the primary one where none does
+
+### Fixed
+
+- Printing from a device in dark mode produced an unreadable page. The print stylesheet forced text to black but only recoloured the page body, so every surface underneath kept its dark theme colour - the result was black ink on a black background, measured at 1.06:1 on module titles and 1.23:1 inside cards, across eleven of the sixteen routes measured. Both dark-mode sources now apply to screens only, so a printout always uses the light palette regardless of the theme you are working in. Light mode was never affected
+- Swiping to delete a shopping item removed it immediately and for good: no undo, no confirmation, and the row flew out as if the job were done. It was the only gesture in the app that destroyed data without a way back, which is exactly the trap for anyone who learned the same gesture as harmless in tasks or birthdays. Deleting by gesture now goes through the same undoable path the row button already used
+- The shopping list ignored swipes entirely until something rebuilt it. Opening the page gave you rows that answered no gesture at all; they only started working after you added an item, checked one off with the button, or switched lists. This had been the case since the gesture was introduced
+- Screen readers announced every subscription row as just "Edit, button". The row body wraps all of its content - name, description, status, due date, billing cycle, payment method, amount - and carried an edit label that replaced that content instead of adding to it. The row now announces what it contains, with the action named at the end
+- A number of colours that were readable in light mode failed the contrast requirement in dark mode, among them the hover states of the semantic colours, several module accents on tinted backgrounds, and icon-only buttons that fell back to the browser's default text colour instead of inheriting their own
+- On a touch device, the edit and delete buttons in birthdays and subscriptions were not merely hidden but removed: with the swipe gestures carrying those two actions, the buttons were taken out of the focus order and out of the screen reader tree as well. Since the gestures are touch-only and the rows themselves carry no action, anyone driving a phone or tablet by keyboard, switch control or VoiceOver could no longer edit or delete an entry at all. The buttons now step out of the way visually but stay reachable, and come back on focus
+- Deleting a contact or a document from its context menu was announced in a red that fell just short of the contrast requirement while the row was highlighted, at 4.45:1 against the tinted background. Both now use the darker ink tone the rest of the app already used on tinted surfaces
+- In Arabic and Persian, every horizontally scrolling bar faded the wrong edge: the filter rows in tasks, the budget tabs and the meal week all dimmed the chips you could see while cutting off the ones you could not. The scroll position was measured in a way that never reported "there is more at the start" in a right-to-left layout, and the fade itself had a fixed physical direction
+- During a swipe, the coloured action panel behind the row briefly turned into a plain surface, and the moving row lost the backing that keeps its text off the panel underneath
+- In the installed app, choosing a theme that disagreed with the system left the status bar in the other one: dark mode on a light phone kept a light bar above a dark page, and the reverse for light mode on a dark phone. The status bar now follows your choice, and only falls back to the system setting when the theme is set to automatic
+- On pantry and shopping, swiping a filter row or list tab sideways popped the page header back open even though the list underneath was still scrolled, and it stayed open until the next vertical scroll
+- Navigating between modules left one observer behind per page header, attached to a header that no longer existed
+- Undoing a deletion in the shopping list acted on whichever list you happened to be looking at, not the one the item came from. Switching lists inside the five-second window put the restored item into the wrong list and miscounted both tabs; deleting all checked items was worse, because the deletion itself was sent five seconds later to the list open at that moment, clearing a list you never asked to clear. Both now stay with the list the action started in
+- The offline page had the same status bar mismatch as the app, and no way to correct it after the fact
+
 ## [1.87.0] - 2026-08-06
 
 ### Added
