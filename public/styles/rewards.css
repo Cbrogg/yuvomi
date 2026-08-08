@@ -154,7 +154,7 @@
   color: var(--module-accent);
   font-variant-numeric: tabular-nums;
 }
-.rw-standing__points strong.rw-countup--active { color: color-mix(in srgb, var(--module-accent) 70%, var(--color-text-primary)); }
+.rw-standing__points strong.rw-countup--active { color: color-mix(in srgb, var(--module-accent) var(--tint-ink), var(--color-text-primary)); }
 .rw-standing__progress { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
 .rw-standing__actions { display: flex; justify-content: flex-end; }
 
@@ -198,7 +198,7 @@
   font-weight: 600;
   cursor: pointer;
 }
-.rw-setup-step__go:hover { background: color-mix(in srgb, var(--module-accent) 10%, transparent); }
+.rw-setup-step__go:hover { background: color-mix(in srgb, var(--module-accent) var(--tint-state), transparent); }
 
 /* Fortschritt zur nächsten Prämie */
 .rw-progress { display: flex; flex-direction: column; gap: var(--space-2); }
@@ -238,7 +238,7 @@
    * wahrnehmbar von der Karte ab (1.25:1 light / 1.29:1 dark gegen 1.12:1 bei
    * 8 %, wo das Signal im Dark verschwand). Es ist zugleich das eine
    * Toenungsrezept dieser Welt - dasselbe wie Notizkarte und Icon-Kachel. */
-  background: color-mix(in srgb, var(--module-accent) 16%, var(--color-surface));
+  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), var(--color-surface));
   box-shadow: var(--shadow-sm);
 }
 .rw-pending-list { list-style: none; margin: 0; padding: 0; }
@@ -280,7 +280,7 @@
   width: 48px;
   height: 48px;
   border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--module-accent) 12%, var(--color-surface-2));
+  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), var(--color-surface-2));
   font-size: var(--text-2xl);
 }
 .rw-reward-card__icon i { width: 22px; height: 22px; color: var(--module-accent); }
@@ -382,9 +382,9 @@
   color: var(--color-text-secondary);
 }
 .rw-ledger-row__icon i { width: 17px; height: 17px; }
-.rw-ledger-row__icon--earn  { background: color-mix(in srgb, var(--module-tasks) 16%, transparent); color: var(--module-tasks); }
-.rw-ledger-row__icon--bonus { background: color-mix(in srgb, var(--module-accent) 16%, transparent); color: var(--module-accent); }
-.rw-ledger-row__icon--redeem { background: color-mix(in srgb, var(--module-budget) 16%, transparent); color: var(--module-budget); }
+.rw-ledger-row__icon--earn  { background: color-mix(in srgb, var(--module-tasks) var(--tint-surface), transparent); color: var(--module-tasks); }
+.rw-ledger-row__icon--bonus { background: color-mix(in srgb, var(--module-accent) var(--tint-surface), transparent); color: var(--module-accent); }
+.rw-ledger-row__icon--redeem { background: color-mix(in srgb, var(--module-budget) var(--tint-surface), transparent); color: var(--module-budget); }
 .rw-ledger-row__text { flex: 1 1 auto; min-width: 0; }
 .rw-ledger-row__reason { margin: 0; font-weight: 500; color: var(--color-text-primary); }
 .rw-ledger-row__meta { margin: var(--space-1) 0 0; font-size: var(--text-xs); color: var(--color-text-secondary); }

@@ -1000,7 +1000,7 @@
 .kanban-board--dragging .kanban-col__empty {
   border-color: var(--module-accent, var(--color-accent));
   color: var(--module-accent, var(--color-accent));
-  background-color: color-mix(in srgb, var(--module-accent, var(--color-accent)) 8%, transparent);
+  background-color: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-state), transparent);
 }
 
 .kanban-board--dragging .kanban-col__empty-idle {

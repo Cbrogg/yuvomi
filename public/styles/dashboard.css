@@ -187,7 +187,7 @@
 .widget-size--4x2 > .widget,
 .widget-size--4x3 > .widget,
 .widget-size--4x4 > .widget {
-  border-top: 2px solid color-mix(in srgb, var(--active-module-accent, var(--color-accent)) 40%, var(--color-border));
+  border-top: 2px solid color-mix(in srgb, var(--active-module-accent, var(--color-accent)) var(--tint-hint), var(--color-border));
 }
 
 /* --------------------------------------------------------
@@ -270,7 +270,7 @@
 .widget__link:hover {
   opacity: 1;
   color: var(--widget-accent, var(--color-accent));
-  background-color: color-mix(in srgb, var(--widget-accent, var(--color-accent)) 10%, transparent);
+  background-color: color-mix(in srgb, var(--widget-accent, var(--color-accent)) var(--tint-state), transparent);
 }
 
 .widget__badge {
@@ -281,11 +281,11 @@
    * plus Haarlinie, Link und Icon — summierte sich über ein volles Board zu ~8–10
    * schreienden Farbtupfern. Der Zähler bleibt modul-getönt, aber ruhig; die
    * Identität tragen Icon + Haarlinie. */
-  background-color: color-mix(in srgb, var(--widget-accent, var(--color-accent)) 15%, var(--color-surface));
+  background-color: color-mix(in srgb, var(--widget-accent, var(--color-accent)) var(--tint-surface), var(--color-surface));
   /* Text stärker zur Ink-Seite gemischt (58% statt 72% Akzent) → sicherer
    * AA-Kontrast für den kleinen Bold-Zähler auf der hellen Tönung, auch bei
    * helleren Modultönen (Critique R3, Sam). */
-  color: color-mix(in srgb, var(--widget-accent, var(--color-accent)) 58%, var(--color-text-primary));
+  color: color-mix(in srgb, var(--widget-accent, var(--color-accent)) var(--tint-ink), var(--color-text-primary));
   font-size: var(--text-xs);
   font-weight: var(--font-weight-bold);
   min-width: 16px;
@@ -332,7 +332,7 @@
  * „kaputt" auf einen Blick von „leer" unterscheidbar ist, ohne zu schreien.
  * Der Retry rutscht ans Zeilenende wie die Empty-State-CTA. */
 .widget--error {
-  border-color: color-mix(in srgb, var(--color-danger) 35%, var(--color-border));
+  border-color: color-mix(in srgb, var(--color-danger) var(--tint-hint), var(--color-border));
 }
 
 .widget__retry {
@@ -357,7 +357,7 @@
 }
 
 .widget__empty-cta:hover {
-  background-color: color-mix(in srgb, var(--widget-accent, var(--color-accent)) 10%, transparent);
+  background-color: color-mix(in srgb, var(--widget-accent, var(--color-accent)) var(--tint-state), transparent);
 }
 
 .widget__empty-cta svg {
@@ -592,8 +592,8 @@
 }
 
 .meal-slot:hover {
-  border-color: color-mix(in srgb, var(--slot-color, var(--color-accent)) 50%, var(--color-border-strong));
-  background-color: color-mix(in srgb, var(--slot-color, var(--color-accent)) 8%, var(--color-surface-3));
+  border-color: color-mix(in srgb, var(--slot-color, var(--color-accent)) var(--tint-hint), var(--color-border-strong));
+  background-color: color-mix(in srgb, var(--slot-color, var(--color-accent)) var(--tint-state), var(--color-surface-3));
   box-shadow: var(--shadow-xs);
 }
 
@@ -797,7 +797,7 @@
   touch-action: pan-y;
   transition: opacity var(--transition-fast), transform var(--transition-fast);
   /* Notiz-Identität über Hintergrund-Tönung statt Seitenstreifen (DESIGN.md-konform) */
-  background-color: color-mix(in srgb, var(--note-color, var(--color-accent)) 10%, var(--color-surface-2));
+  background-color: color-mix(in srgb, var(--note-color, var(--color-accent)) var(--tint-surface), var(--color-surface-2));
 }
 
 .note-item:hover {
@@ -1692,7 +1692,7 @@ svg.weather-forecast__icon {
   /* Teil des Masthead-Bands: kein eigener Rahmen, nur ein feiner Divider trennt
    * die Glance-Zeile von der Begrüßung darüber. */
   padding-top: var(--space-4);
-  border-top: 1px solid color-mix(in srgb, var(--module-accent) 16%, var(--color-border));
+  border-top: 1px solid color-mix(in srgb, var(--module-accent) var(--tint-hint), var(--color-border));
   /* Container bleibt deklariert: der Schmal-Fallback unten fragt den EIGENEN
    * Platz ab (sidebar-bewusst, nicht Viewport). Siehe tokens.css §11c. */
   container: today-cockpit / inline-size;
@@ -1760,7 +1760,7 @@ svg.weather-forecast__icon {
   /* Getoente Icon-Kachel: ~16% Modul-Tint auf der opaken Zeilenflaeche,
    * Icon im Modulton - sie traegt die Domaene, die die Versal-Eyebrows
    * frueher behaupteten. */
-  background: color-mix(in srgb, var(--today-card-accent) 16%, var(--color-surface));
+  background: color-mix(in srgb, var(--today-card-accent) var(--tint-surface), var(--color-surface));
   color: var(--today-card-accent);
 }
 
@@ -1810,11 +1810,11 @@ svg.weather-forecast__icon {
   height: var(--space-5);
   padding: 0 var(--space-2);
   border-radius: var(--radius-full);
-  background: color-mix(in srgb, var(--today-card-accent) 16%, var(--color-surface));
+  background: color-mix(in srgb, var(--today-card-accent) var(--tint-surface), var(--color-surface));
   /* Zur Ink-Seite gemischte Domaenenfarbe - haelt die Badge-Zahl bei allen
    * Modultoenen ueber AA 4.5:1 (statt reinem Akzent, der bei Pink/Gruen/
    * Orange auf ~3.5:1 fiel). */
-  color: color-mix(in srgb, var(--today-card-accent) 78%, var(--color-text-primary));
+  color: color-mix(in srgb, var(--today-card-accent) var(--tint-ink), var(--color-text-primary));
   font-size: var(--type-caption);
   font-weight: var(--font-weight-bold);
   line-height: 1;
@@ -1994,14 +1994,14 @@ svg.weather-forecast__icon {
 
 .dashboard-icon-btn--hint {
   color: var(--color-text-primary);
-  border-color: color-mix(in srgb, var(--active-module-accent, var(--color-accent)) 55%, var(--color-border));
+  border-color: color-mix(in srgb, var(--active-module-accent, var(--color-accent)) var(--tint-hint), var(--color-border));
   animation: dashboard-icon-hint 1.6s var(--ease-out) 3;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .dashboard-icon-btn--hint {
     animation: none;
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--active-module-accent, var(--color-accent)) 22%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--active-module-accent, var(--color-accent)) var(--tint-shadow), transparent);
   }
 }
 
@@ -2031,9 +2031,9 @@ svg.weather-forecast__icon {
 
 .dashboard__grid--editing {
   padding: var(--space-2);
-  border: 1px dashed color-mix(in srgb, var(--module-accent) 48%, var(--color-border));
+  border: 1px dashed color-mix(in srgb, var(--module-accent) var(--tint-hint), var(--color-border));
   border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--module-accent) 4%, transparent);
+  background: color-mix(in srgb, var(--module-accent) var(--tint-state), transparent);
 }
 
 .widget-wrapper--editing {
@@ -2043,7 +2043,7 @@ svg.weather-forecast__icon {
      den Inhalt exakt um ihre echte Höhe nach unten. */
   padding: 6px;
   gap: var(--space-2);
-  outline: 1px solid color-mix(in srgb, var(--module-accent) 36%, var(--color-border));
+  outline: 1px solid color-mix(in srgb, var(--module-accent) var(--tint-hint), var(--color-border));
   outline-offset: -1px;
   border-radius: var(--radius-sm);
 }
@@ -2165,7 +2165,7 @@ svg.weather-forecast__icon {
 
 .widget-size-btn--active {
   border-color: var(--module-accent);
-  background: color-mix(in srgb, var(--module-accent) 12%, var(--color-surface));
+  background: color-mix(in srgb, var(--module-accent) var(--tint-state), var(--color-surface));
 }
 
 .widget-size-btn:focus-visible {
@@ -2205,7 +2205,7 @@ svg.weather-forecast__icon {
   z-index: 5;
   border-radius: var(--radius-full);
   background: var(--module-accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--module-accent) 18%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--module-accent) var(--tint-shadow), transparent);
   pointer-events: none;
 }
 
@@ -2365,8 +2365,8 @@ svg.weather-forecast__icon {
    * statt des Dashboard-Violetts. Initialen sind Text: der rohe Akzent auf
    * eigener Tönung lag bei 3.61:1 (Konvention siehe tokens.css). */
   --module-accent: var(--module-birthdays);
-  background: color-mix(in srgb, var(--module-accent) 14%, transparent);
-  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) 70%, var(--color-text-primary));
+  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), transparent);
+  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-ink), var(--color-text-primary));
   font-weight: var(--font-weight-bold);
   font-size: var(--text-sm);
 }
@@ -2405,8 +2405,8 @@ svg.weather-forecast__icon {
   border-radius: var(--radius-full);
   /* Trailing Badge statt eingefasster Mini-Box: getoent wie der Avatar,
    * Textfarbe zur Ink-Seite gemischt (AA, Konvention siehe tokens.css). */
-  background: color-mix(in srgb, var(--module-birthdays) 14%, var(--color-surface));
-  color: color-mix(in srgb, var(--module-birthdays) 70%, var(--color-text-primary));
+  background: color-mix(in srgb, var(--module-birthdays) var(--tint-surface), var(--color-surface));
+  color: color-mix(in srgb, var(--module-birthdays) var(--tint-ink), var(--color-text-primary));
   font-size: var(--text-sm);
   font-weight: var(--font-weight-bold);
 }
@@ -2647,11 +2647,11 @@ svg.weather-forecast__icon {
 }
 
 .rewards-widget-row--leader {
-  background: color-mix(in srgb, var(--module-rewards) 9%, transparent);
+  background: color-mix(in srgb, var(--module-rewards) var(--tint-wash), transparent);
 }
 
 .rewards-widget-row--leader:hover {
-  background: color-mix(in srgb, var(--module-rewards) 15%, transparent);
+  background: color-mix(in srgb, var(--module-rewards) var(--tint-state), transparent);
 }
 
 .rewards-widget-row__rank {
@@ -2712,8 +2712,8 @@ svg.weather-forecast__icon {
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-full);
   --module-accent: var(--module-rewards);
-  background: color-mix(in srgb, var(--module-accent) 10%, transparent);
-  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) 70%, var(--color-text-primary));
+  background: color-mix(in srgb, var(--module-accent) var(--tint-wash), transparent);
+  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-ink), var(--color-text-primary));
   font-size: var(--type-secondary);
   font-weight: var(--font-weight-medium);
   cursor: pointer;
@@ -2721,7 +2721,7 @@ svg.weather-forecast__icon {
 }
 
 .rewards-widget__footer:hover {
-  background: color-mix(in srgb, var(--module-rewards) 16%, transparent);
+  background: color-mix(in srgb, var(--module-rewards) var(--tint-state), transparent);
 }
 
 .rewards-widget__footer svg {
@@ -2794,8 +2794,8 @@ svg.weather-forecast__icon {
   padding: var(--space-px) var(--space-2);
   border-radius: var(--radius-full);
   --module-accent: var(--module-health);
-  background: color-mix(in srgb, var(--module-accent) 14%, transparent);
-  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) 70%, var(--color-text-primary));
+  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), transparent);
+  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-ink), var(--color-text-primary));
   font-size: var(--text-xs);
   font-weight: var(--font-weight-semibold);
   font-variant-numeric: tabular-nums;
@@ -2926,7 +2926,7 @@ svg.weather-forecast__icon {
   gap: var(--space-1h);
   padding: var(--space-1h) var(--space-2h);
   border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--color-warning) 12%, transparent);
+  background: color-mix(in srgb, var(--color-warning) var(--tint-surface), transparent);
   color: var(--color-warning);
   font-size: var(--type-secondary);
   font-weight: var(--font-weight-medium);
@@ -2966,7 +2966,7 @@ svg.weather-forecast__icon {
 
 .housekeeping-widget__status--present .housekeeping-widget__dot {
   background: var(--color-success);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-success) 22%, transparent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-success) var(--tint-shadow), transparent);
 }
 
 .housekeeping-widget__lines {
@@ -2997,8 +2997,8 @@ svg.weather-forecast__icon {
   padding: var(--space-1h) var(--space-2h);
   border-radius: var(--radius-sm);
   --module-accent: var(--module-housekeeping);
-  background: color-mix(in srgb, var(--module-accent) 10%, transparent);
-  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) 70%, var(--color-text-primary));
+  background: color-mix(in srgb, var(--module-accent) var(--tint-wash), transparent);
+  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-ink), var(--color-text-primary));
   font-size: var(--type-secondary);
   font-weight: var(--font-weight-medium);
   align-self: flex-start;

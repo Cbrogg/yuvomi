@@ -413,7 +413,7 @@
 
 .meal-slot__add-more-btn:hover {
   color: var(--module-accent);
-  background-color: color-mix(in srgb, var(--module-accent) 12%, transparent);
+  background-color: color-mix(in srgb, var(--module-accent) var(--tint-state), transparent);
 }
 
 /* Touch-Geräte kennen kein Hover: Button dauerhaft sichtbar und auf
@@ -586,7 +586,7 @@
 
 .meal-card__action-btn--shopping:hover {
   color: var(--module-accent);
-  background-color: color-mix(in srgb, var(--module-accent) 12%, transparent);
+  background-color: color-mix(in srgb, var(--module-accent) var(--tint-state), transparent);
 }
 
 .meal-card__action-btn--recipe {
@@ -626,7 +626,7 @@
 
 .meal-modal__autocomplete-item:hover,
 .meal-modal__autocomplete-item--active {
-  background-color: color-mix(in srgb, var(--module-accent) 12%, transparent);
+  background-color: color-mix(in srgb, var(--module-accent) var(--tint-state), transparent);
   color: var(--module-accent);
 }
 
@@ -660,7 +660,7 @@
   flex-direction: column;
   gap: var(--space-2);
   padding: var(--space-3);
-  background-color: color-mix(in srgb, var(--module-accent) 12%, transparent);
+  background-color: color-mix(in srgb, var(--module-accent) var(--tint-surface), transparent);
   border-radius: var(--radius-sm);
   /* Getönte Fläche ohne Kante: die Tönung trägt die Hervorhebung allein
    * (Kasten-in-Kasten-Vokabular, tokens.css). */
@@ -736,7 +736,7 @@
   padding: var(--space-3);
   border: none;
   border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--module-meals) 8%, transparent);
+  background: color-mix(in srgb, var(--module-meals) var(--tint-wash), transparent);
 }
 
 .meal-recurrence-note {
@@ -775,7 +775,7 @@
 .meal-slot--drop-target {
   outline: 2px dashed var(--module-accent);
   outline-offset: 2px;
-  background: color-mix(in srgb, var(--module-accent) 8%, transparent);
+  background: color-mix(in srgb, var(--module-accent) var(--tint-state), transparent);
 }
 
 @media (prefers-reduced-motion: reduce) {

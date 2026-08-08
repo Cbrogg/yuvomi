@@ -433,12 +433,16 @@
    * Initialen-Avatare): der rohe Akzent scheitert dort, weil der Grund eine
    * Tönung derselben Farbe ist. Es gilt:
    *
-   *   color: color-mix(in srgb, var(--module-accent) 70%, var(--color-text-primary));
+   *   color: color-mix(in srgb, var(--module-accent) var(--tint-ink), var(--color-text-primary));
    *
-   * BEWUSST KEIN Token: ein hier definiertes --accent-on-tint würde bereits in
-   * :root ausgewertet, wo --module-accent noch nicht gesetzt ist. Die Formel
-   * muss dort stehen, wo --module-accent gilt.
-   * Fundstellen: `grep -rn "70%, var(--color-text-primary)" public/styles`.
+   * BEWUSST KEIN Token FÜR DIE FORMEL: ein hier definiertes --accent-on-tint
+   * würde bereits in :root ausgewertet, wo --module-accent noch nicht gesetzt
+   * ist. Die Formel muss dort stehen, wo --module-accent gilt.
+   *
+   * DIE ZAHL DAGEGEN IST EIN TOKEN (--tint-ink, Abschnitt 6b). Der Satz oben
+   * galt zwölf Sessions lang für beides und war für die Zahl nie gemeint -
+   * genau daraus wurden 37 Prozentstufen. Formel und Wert sind zwei Fragen.
+   * Fundstellen: `grep -rn "var(--tint-ink)" public/styles`.
    * NUR für Text. Icons tragen weiter den vollen Akzent — dort gilt 3:1. */
 
   /* --------------------------------------------------------
@@ -518,6 +522,119 @@
   --color-priority-high-bg:    var(--_color-priority-high-bg);
   --_color-priority-urgent-bg: rgba(185, 28, 28, 0.12);
   --color-priority-urgent-bg:  var(--_color-priority-urgent-bg);
+
+  /* --------------------------------------------------------
+   * 6b. Tönungsskala
+   *
+   * WOFÜR: eine Fläche, eine Kante, ein Text oder ein Schatten, der aus einer
+   * Modul-, Semantik- oder Nutzerfarbe gemischt wird. Immer als
+   * `color-mix(in srgb, <farbe> var(--tint-*), <ziel>)`.
+   *
+   * WARUM SIE ES GIBT: gemessen tönte die App an 214 Stellen in 37
+   * Prozentstufen (`.impeccable/redesign-tools/tint-inventory.mjs`). Die Regel
+   * davor sagte „16 %, EIN Rezept, app-weit" und beschrieb damit 23 davon.
+   * Sie hat den Bestand nie beschrieben - jede neue Fläche schrieb ihren Wert
+   * selbst hin, weil es keinen gab, den sie hätte greifen können.
+   *
+   * FORMEL UND WERT SIND ZWEI FRAGEN. Der Satz „BEWUSST KEIN Token" weiter
+   * oben gilt für die FORMEL des Ink-Mix - sie muss dort ausgewertet werden,
+   * wo `--module-accent` gilt, und ein in `:root` definiertes
+   * `--accent-on-tint` wäre dort schon aufgelöst. Für die ZAHL gilt er nicht:
+   * `color-mix()` nimmt eine Custom Property als Prozentwert und liefert
+   * bitgleich dasselbe wie das Literal (am gerenderten Pixel gegengeprüft,
+   * `.impeccable/redesign-tools/mixprobe.mjs`). Zwölf Sessions lang wurde der
+   * Satz für die Zahl gelesen, und genau daher kommen die 37 Stufen.
+   *
+   * KEINE `--_`-INDIREKTION, anders als bei jeder Farbe hier: die Indirektion
+   * existiert, damit der Dark-Block einen Wert erreichen kann. Ein
+   * Prozentwert ist in beiden Farbwelten derselbe - er beschreibt, WIE VIEL
+   * Farbe einfließt, nicht welche. Beide Themes sind gemessen (siehe unten),
+   * und keine Stufe braucht dort eine andere Zahl.
+   *
+   * DIE VIER FLÄCHENSTUFEN SIND EINE LEITER, und ein Zustand steigt EINE
+   * Sprosse: wash → state → surface → raised. Genau so rechnete der Bestand,
+   * nur jedes Mal von Hand: `.month-day__event` 16→24, `.allday-event` 16→24,
+   * `.week-event` 18→26, `.budget-account-chip` 12→20. Der Schritt war viermal
+   * derselbe, die Basis viermal eine andere Zahl - deshalb sah die Verteilung
+   * wie Streuung aus. Wer eine Fläche tönt und ihren Zustand braucht, nimmt
+   * die nächste Sprosse, nicht die nächste Zahl.
+   *
+   *   --tint-wash     8%  Waschung: die Tönung untergreift FREMDEN Inhalt -
+   *                       Leisten, Banner, ganze Zeilen, Kalenderfelder. Ihre
+   *                       17 Fundstellen sind im Dokument im Median
+   *                       47.520 px² groß, die der Objekt-Stufe 1.764 px² -
+   *                       Faktor 27 (`tint-correlate.mjs`). Auf dieser Fläche
+   *                       trägt 1,07-1,17:1 gegen den Grund; dasselbe
+   *                       Verhältnis verschwindet auf einem 24px-Badge. DAS
+   *                       war die Zweigipfligkeit: nicht 19 Meinungen, sondern
+   *                       zwei Rollen mit einem gemessenen Unterschied.
+   *   --tint-state   12%  Zustand auf einer ungetönten Fläche - Hover ODER
+   *                       stehend. EINE Stufe, weil die Messung nur eine
+   *                       hergibt: 32 Hover-Regeln und 19 stehende haben
+   *                       denselben Median (12 %) und dieselbe Häufung. Die
+   *                       naheliegende Zweiteilung „flüchtig schwächer als
+   *                       stehend" steht nicht in den Daten - was den
+   *                       Unterschied trägt, ist die Sprosse unter dem
+   *                       Zustand, nicht seine Flüchtigkeit.
+   *   --tint-surface 16%  Objekt: die Tönung IST das Element - Chip, Badge,
+   *                       Icon-Well, Notizkarte, Event-Bar. Trägt in beiden
+   *                       Themes (1,19-1,41:1 gegen den jeweiligen Grund).
+   *   --tint-raised  24%  Die oberste Sprosse: ein Zustand auf einer Fläche,
+   *                       die bereits als OBJEKT tönt.
+   *   --tint-hint    50%  Andeutung: Kante, Linie, Scrollbar-Daumen,
+   *                       Unterstreichung, Leerzustands-Icon. SIE TRÄGT NIE
+   *                       ALLEIN - gemessen hält keine getönte Kante 3:1 im
+   *                       Light, auch bei 70 % nicht (2,77-3,39 je nach Ton,
+   *                       `tint-edge-probe.mjs`). Das ist kein Mangel der
+   *                       Stufe, sondern dieselbe Aussage, die die
+   *                       Label-Verlust-Regel macht: eine Kante liest niemand
+   *                       als „eingeschaltet". Wo sie steht, steht die Fläche
+   *                       daneben. Sie heißt deshalb nach ihrer ROLLE und
+   *                       nicht nach `border` - dieselbe Andeutung ist an vier
+   *                       weiteren Stellen keine Kante.
+   *   --tint-ink     70%  Text auf getönter Fläche - die lesbare Stufe einer
+   *                       Farbe auf ihrer eigenen blassen Füllung. Siehe die
+   *                       Konvention bei den Modul-Akzenten; dort steht auch,
+   *                       warum sie nur für kuratierte Töne gilt.
+   *   --tint-shadow  20%  Schatten aus einer Tönung (Fokusring, Drop-Marker).
+   *                       Der Bestand hatte hier bereits praktisch eine Stufe:
+   *                       11 Stellen auf 18/20/22 %.
+   *
+   * EINE ABWEICHUNG SCHREIBT SICH ALS `calc()` AUF IHRE STUFE, nie als neue
+   * Zahl. Der Navigations-Indikator ist der eine Fall: sein Grund wechselt
+   * dreimal (Glas, opak, reduzierte Transparenz), und 12 % auf
+   * `--glass-bg-card` liefern gemessen dasselbe wie 16 % auf
+   * `--color-surface-elevated` (1,306/1,261 gegen 1,267/1,236). Als
+   * `calc(var(--tint-surface) - 4%)` steht der Bezug da und die Kompensation
+   * ist beziffert; als `12%` stünde die dreizehnte Meinung da. `calc()` ist am
+   * gerenderten Pixel gegengeprüft und bitgleich mit dem Literal.
+   *
+   * WAS KEINE TÖNUNG IST und deshalb nicht über die Skala läuft - beides über
+   * eine Signatur erkennbar, nicht über eine Liste von Selektoren:
+   *   - DECKWERTE ab 45 % (`.btn--primary` 88 %, `.page-fab:hover` 85 %,
+   *     `.month-day__holiday` 90 %). Das ist eine Abdunkelungs-Geste, keine
+   *     Tönung: die Farbe IST dort die Fläche und wird verdunkelt, statt einer
+   *     Fläche beigemischt zu werden. Zwischen der höchsten Stufe (24 %) und
+   *     dem niedrigsten Deckwert (72 %) liegt im Bestand nichts mehr.
+   *   - NUTZERFARBEN ALS TEXT (`.month-day__event`, `.allday-event`,
+   *     `.week-event`; 35/38 %). Für sie gilt die User-Farben-Regel, nicht die
+   *     Ink-Stufe - die Formel bricht an den Enden der Helligkeitsachse, und
+   *     eine frei gewählte Farbe hat keine kuratierte Mitte.
+   *   - ANIMATIONSSTUFEN in `@keyframes`. Ein Puls-Ring läuft von 45 % auf 0 %;
+   *     eine Stufe der Skala hat dort keine Bedeutung. Der Guard sieht sie gar
+   *     nicht erst, weil `eachRule()` `@keyframes` überspringt - keine
+   *     Ausnahme, sondern die Reichweite des Scanners.
+   *
+   * Gehalten von `jede Toenung nimmt eine Stufe der Toenungsskala` in
+   * test/test-frontend-audit.js.
+   * -------------------------------------------------------- */
+  --tint-wash:     8%;
+  --tint-state:   12%;
+  --tint-surface: 16%;
+  --tint-raised:  24%;
+  --tint-hint:    50%;
+  --tint-ink:     70%;
+  --tint-shadow:  20%;
 
   /* --------------------------------------------------------
    * 7. Overlay / Backdrop

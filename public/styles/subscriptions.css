@@ -173,7 +173,7 @@
 }
 
 .subscriptions-area-chart polygon {
-  fill: color-mix(in srgb, var(--module-accent) 18%, transparent);
+  fill: color-mix(in srgb, var(--module-accent) var(--tint-surface), transparent);
 }
 
 .subscriptions-area-chart polyline {
@@ -346,9 +346,9 @@
   height: 40px;
   place-items: center;
   overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--subscription-color) 45%, transparent);
+  border: 1px solid color-mix(in srgb, var(--subscription-color) var(--tint-hint), transparent);
   border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--subscription-color) 16%, var(--color-surface));
+  background: color-mix(in srgb, var(--subscription-color) var(--tint-surface), var(--color-surface));
   color: var(--color-text-primary);
   font-weight: var(--font-weight-bold);
 }
@@ -397,8 +397,8 @@
 }
 
 .subscription-status--completed {
-  background: color-mix(in srgb, var(--module-accent) 16%, var(--color-surface));
-  color: color-mix(in srgb, var(--module-accent) 72%, var(--color-text-primary));
+  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), var(--color-surface));
+  color: color-mix(in srgb, var(--module-accent) var(--tint-ink), var(--color-text-primary));
 }
 
 .subscription-card__meta {
@@ -643,8 +643,8 @@
 .subscriptions-combobox__options button:focus,
 .subscriptions-combobox__options button[aria-selected="true"] {
   outline: none;
-  background: color-mix(in srgb, var(--module-accent) 12%, transparent);
-  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) 70%, var(--color-text-primary));
+  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), transparent);
+  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-ink), var(--color-text-primary));
 }
 
 /* Tastatur-Fokus zusätzlich mit Inset-Ring markieren (Audit F-16): die reine
@@ -753,7 +753,7 @@
 .subscriptions-logo-option:focus-visible {
   outline: none;
   border-color: var(--module-accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--module-accent) 18%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--module-accent) var(--tint-shadow), transparent);
 }
 
 .subscriptions-logo-option img {

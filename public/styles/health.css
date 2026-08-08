@@ -62,7 +62,7 @@
   height: 56px;
   border-radius: var(--radius-full);
   color: var(--module-accent);
-  background: color-mix(in srgb, var(--module-accent) 14%, transparent);
+  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), transparent);
 }
 
 .health-empty__icon i {
@@ -120,7 +120,7 @@
 
 .health-person-chip.is-active {
   border-color: var(--module-accent);
-  background: color-mix(in srgb, var(--module-accent) 12%, transparent);
+  background: color-mix(in srgb, var(--module-accent) var(--tint-state), transparent);
   color: var(--color-text-primary);
   font-weight: var(--font-weight-medium, 500);
 }
@@ -662,8 +662,8 @@ button.health-med-card:hover {
   padding: var(--space-0h) var(--space-2);
   border-radius: var(--radius-full);
   font-size: var(--text-2xs);
-  background: color-mix(in srgb, var(--module-accent) 14%, transparent);
-  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) 70%, var(--color-text-primary));
+  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), transparent);
+  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-ink), var(--color-text-primary));
 }
 
 .health-med-badge--muted {
@@ -808,7 +808,7 @@ button.health-med-card:hover {
 
 .health-weekday.is-active {
   border-color: var(--module-accent);
-  background: color-mix(in srgb, var(--module-accent) 14%, transparent);
+  background: color-mix(in srgb, var(--module-accent) var(--tint-state), transparent);
   color: var(--color-text-primary);
   font-weight: var(--font-weight-medium, 500);
 }
@@ -1573,11 +1573,11 @@ button.health-med-card:hover {
 }
 
 .health-chart__band {
-  fill: color-mix(in srgb, var(--color-success) 12%, transparent);
+  fill: color-mix(in srgb, var(--color-success) var(--tint-wash), transparent);
 }
 
 .health-chart__band-line {
-  stroke: color-mix(in srgb, var(--color-success) 45%, transparent);
+  stroke: color-mix(in srgb, var(--color-success) var(--tint-hint), transparent);
   stroke-width: 1;
   stroke-dasharray: 4 3;
 }
@@ -1723,7 +1723,7 @@ button.health-med-card:hover {
   height: 48px;
   border-radius: var(--radius-full);
   color: var(--module-accent);
-  background: color-mix(in srgb, var(--module-accent) 16%, transparent);
+  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), transparent);
 }
 
 .cycle-preg__body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: var(--space-2); }
@@ -1748,8 +1748,8 @@ button.health-med-card:hover {
   font-weight: 600;
   padding: 2px var(--space-2);
   border-radius: var(--radius-full);
-  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) 70%, var(--color-text-primary));
-  background: color-mix(in srgb, var(--module-accent) 14%, transparent);
+  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-ink), var(--color-text-primary));
+  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), transparent);
 }
 
 .cycle-preg__countdown { font-size: var(--text-sm); color: var(--color-text-secondary); }

@@ -195,13 +195,13 @@
 }
 
 .pantry-badge--danger {
-  background-color: color-mix(in srgb, var(--color-danger) 14%, transparent);
-  color: color-mix(in srgb, var(--color-danger) 70%, var(--color-text-primary));
+  background-color: color-mix(in srgb, var(--color-danger) var(--tint-surface), transparent);
+  color: color-mix(in srgb, var(--color-danger) var(--tint-ink), var(--color-text-primary));
 }
 
 .pantry-badge--warning {
-  background-color: color-mix(in srgb, var(--color-warning) 16%, transparent);
-  color: color-mix(in srgb, var(--color-warning) 70%, var(--color-text-primary));
+  background-color: color-mix(in srgb, var(--color-warning) var(--tint-surface), transparent);
+  color: color-mix(in srgb, var(--color-warning) var(--tint-ink), var(--color-text-primary));
 }
 
 /* Die Bedien-Gruppe kommt aus .list-row__actions.
@@ -258,7 +258,7 @@
 }
 
 .pantry-stepper__btn:hover:not(:disabled) {
-  background-color: color-mix(in srgb, var(--module-accent) 12%, transparent);
+  background-color: color-mix(in srgb, var(--module-accent) var(--tint-state), transparent);
   border-color: var(--module-accent);
   color: var(--color-text-primary);
 }

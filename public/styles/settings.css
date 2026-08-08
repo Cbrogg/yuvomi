@@ -509,17 +509,17 @@
 
 .settings-status-summary--success {
   --settings-status-tone: var(--color-success);
-  --settings-status-bg: color-mix(in srgb, var(--color-success) 7%, var(--color-surface-work));
+  --settings-status-bg: color-mix(in srgb, var(--color-success) var(--tint-wash), var(--color-surface-work));
 }
 
 .settings-status-summary--warning {
   --settings-status-tone: var(--color-warning);
-  --settings-status-bg: color-mix(in srgb, var(--color-warning) 8%, var(--color-surface-work));
+  --settings-status-bg: color-mix(in srgb, var(--color-warning) var(--tint-wash), var(--color-surface-work));
 }
 
 .settings-status-summary--danger {
   --settings-status-tone: var(--color-danger);
-  --settings-status-bg: color-mix(in srgb, var(--color-danger) 7%, var(--color-surface-work));
+  --settings-status-bg: color-mix(in srgb, var(--color-danger) var(--tint-wash), var(--color-surface-work));
 }
 
 .settings-status-summary__title,
@@ -2049,7 +2049,7 @@
 /* Gescheiterte Adressbuch-Zeile: der Fehler steht dort, wo er entstanden ist.
    Kein Seitenstreifen - die Tönung der Fläche trägt die Markierung. */
 .caldav-calendar-item--failed {
-  background-color: color-mix(in srgb, var(--color-danger) 7%, transparent);
+  background-color: color-mix(in srgb, var(--color-danger) var(--tint-wash), transparent);
 }
 
 .caldav-calendar-error {
@@ -2265,7 +2265,7 @@
   height: var(--target-base);
   border-radius: var(--radius-md);
   color: var(--module-row-accent, var(--color-accent));
-  background: color-mix(in srgb, var(--module-row-accent, var(--color-accent)) 14%, transparent);
+  background: color-mix(in srgb, var(--module-row-accent, var(--color-accent)) var(--tint-surface), transparent);
 }
 
 .settings-module-row__body {
@@ -2299,7 +2299,7 @@
    eigenen 14%-Grund ergibt sie 5,90:1, das ungedimmte Grün nur 4,15:1. */
 .settings-module-row__title .settings-module-status--enabled {
   color: var(--color-success-hover);
-  background: color-mix(in srgb, var(--color-success) 14%, transparent);
+  background: color-mix(in srgb, var(--color-success) var(--tint-surface), transparent);
 }
 
 .settings-module-status--disabled {
@@ -2309,7 +2309,7 @@
 
 .settings-module-status--error {
   color: var(--color-danger);
-  background: color-mix(in srgb, var(--color-danger) 14%, transparent);
+  background: color-mix(in srgb, var(--color-danger) var(--tint-surface), transparent);
 }
 
 /* `--pyamortiza-accent` als erster Fallback war ein projektfremder Name: die
@@ -2319,8 +2319,13 @@
   padding: var(--space-0h) var(--space-2);
   border-radius: var(--radius-full);
   font-weight: var(--font-weight-semibold);
-  color: var(--color-accent);
-  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  /* Akzent-TEXT auf akzent-getoenter Flaeche - der rohe Akzent scheitert hier,
+   * weil der Grund eine Toenung DERSELBEN Farbe ist (gemessen 3,99:1 dark).
+   * Das ist die Akzent-auf-Toenung-Regel, und sie hat seit Runde 1 auf diesen
+   * Fall gewartet: die Regel stand in tokens.css, die Fundstelle sah niemand,
+   * weil kein Guard bis in die Settings-Blaetter reichte. */
+  color: color-mix(in srgb, var(--color-accent) var(--tint-ink), var(--color-text-primary));
+  background: color-mix(in srgb, var(--color-accent) var(--tint-surface), transparent);
 }
 
 .settings-module-row__toggle {

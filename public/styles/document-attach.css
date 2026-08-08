@@ -25,9 +25,9 @@
   gap: var(--space-2);
   max-width: 100%;
   padding: var(--space-1) var(--space-1) var(--space-1) var(--space-3);
-  border: 1px solid color-mix(in srgb, var(--module-accent) 30%, var(--color-border-subtle));
+  border: 1px solid color-mix(in srgb, var(--module-accent) var(--tint-hint), var(--color-border-subtle));
   border-radius: var(--radius-full);
-  background: color-mix(in srgb, var(--module-accent) 10%, var(--color-surface));
+  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), var(--color-surface));
   color: var(--color-text-primary);
   font-size: var(--text-sm);
 }
@@ -43,7 +43,7 @@
  * Dokumente-Modul" und „geht erst beim Speichern raus" sichtbar ist. */
 .doc-attach__chip--pending {
   border-style: dashed;
-  background: color-mix(in srgb, var(--module-accent) 5%, var(--color-surface));
+  background: color-mix(in srgb, var(--module-accent) var(--tint-wash), var(--color-surface));
 }
 
 .doc-attach__chip-name {
@@ -58,7 +58,7 @@
 a.doc-attach__chip-name {
   color: inherit;
   text-decoration: underline;
-  text-decoration-color: color-mix(in srgb, var(--module-accent) 55%, transparent);
+  text-decoration-color: color-mix(in srgb, var(--module-accent) var(--tint-hint), transparent);
   text-underline-offset: 2px;
 }
 
@@ -87,7 +87,7 @@ a.doc-attach__chip-name:focus-visible {
 }
 
 .doc-attach__chip-remove:hover {
-  background: color-mix(in srgb, var(--module-accent) 18%, transparent);
+  background: color-mix(in srgb, var(--module-accent) var(--tint-raised), transparent);
   color: var(--color-text-primary);
 }
 
@@ -197,7 +197,7 @@ a.doc-attach__chip-name:focus-visible {
 }
 
 .doc-attach-picker__item:hover {
-  background: color-mix(in srgb, var(--module-accent) 10%, transparent);
+  background: color-mix(in srgb, var(--module-accent) var(--tint-state), transparent);
 }
 
 .doc-attach-picker__item:focus-within {
@@ -247,9 +247,9 @@ a.doc-attach__chip-name:focus-visible {
   gap: var(--space-2);
   min-height: 148px;
   padding: var(--space-5);
-  border: 1.5px dashed color-mix(in srgb, var(--module-accent) 48%, var(--color-border));
+  border: 1.5px dashed color-mix(in srgb, var(--module-accent) var(--tint-hint), var(--color-border));
   border-radius: var(--radius-lg);
-  background: color-mix(in srgb, var(--module-accent) 7%, var(--color-surface));
+  background: color-mix(in srgb, var(--module-accent) var(--tint-wash), var(--color-surface));
   color: var(--color-text-secondary);
   text-align: center;
   cursor: pointer;
@@ -259,7 +259,7 @@ a.doc-attach__chip-name:focus-visible {
 .document-dropzone:hover,
 .document-dropzone--active {
   border-color: var(--module-accent);
-  background: color-mix(in srgb, var(--module-accent) 12%, var(--color-surface));
+  background: color-mix(in srgb, var(--module-accent) var(--tint-state), var(--color-surface));
 }
 
 /* Der Datei-Input liegt sr-only (1x1px, geclippt) im Label und ist trotzdem
@@ -286,7 +286,7 @@ a.doc-attach__chip-name:focus-visible {
   justify-content: center;
   border-radius: var(--radius-md);
   color: var(--module-accent);
-  background: color-mix(in srgb, var(--module-accent) 16%, transparent);
+  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), transparent);
 }
 
 .document-dropzone__icon svg {
@@ -309,6 +309,6 @@ a.doc-attach__chip-name:focus-visible {
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
   color: var(--module-accent);
-  background: color-mix(in srgb, var(--module-accent) 14%, transparent);
+  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), transparent);
   font-weight: var(--font-weight-semibold);
 }

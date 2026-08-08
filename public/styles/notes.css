@@ -175,7 +175,7 @@
   cursor: pointer;
   position: relative;
   transition: transform var(--transition-fast), box-shadow var(--transition-fast);
-  background: color-mix(in srgb, var(--note-color, transparent) 16%, var(--color-surface));
+  background: color-mix(in srgb, var(--note-color, transparent) var(--tint-surface), var(--color-surface));
   color: var(--color-text-primary);
   border: none;
   box-shadow: var(--shadow-sm);
@@ -302,7 +302,7 @@
   justify-content: center;
   font-size: var(--text-xs);
   font-weight: var(--font-weight-bold);
-  background: color-mix(in srgb, var(--avatar-color, var(--color-accent)) 16%, var(--color-surface));
+  background: color-mix(in srgb, var(--avatar-color, var(--color-accent)) var(--tint-surface), var(--color-surface));
   color: var(--color-text-primary);
   flex-shrink: 0;
   overflow: hidden;
@@ -396,8 +396,8 @@
 .note-read-view {
   padding: var(--space-4);
   border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--note-color, transparent) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--note-color, transparent) 26%, transparent);
+  background: color-mix(in srgb, var(--note-color, transparent) var(--tint-surface), transparent);
+  border: 1px solid color-mix(in srgb, var(--note-color, transparent) var(--tint-hint), transparent);
 }
 
 .note-read__body {

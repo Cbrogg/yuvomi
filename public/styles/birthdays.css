@@ -63,7 +63,7 @@
  * getönte Zeilenfläche des 16-%-Rezepts statt Kante + Verlauf + Extraschatten -
  * in einem Träger ist die Fläche das einzige Mittel, das keine Kante braucht. */
 .birthday-item--today {
-  background: color-mix(in srgb, var(--module-accent) 16%, var(--color-surface));
+  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), var(--color-surface));
 }
 
 .birthday-item__body {
@@ -148,14 +148,14 @@
 }
 
 .birthday-chip--default {
-  background: color-mix(in srgb, var(--module-accent) 10%, transparent);
+  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), transparent);
   /* Text zur Ink-Seite gezogen → AA auf hellem Tint (statt reinem Akzent 3,9:1). */
-  color: color-mix(in srgb, var(--module-accent) 72%, var(--color-text-primary));
+  color: color-mix(in srgb, var(--module-accent) var(--tint-ink), var(--color-text-primary));
 }
 
 .birthday-chip--soon {
-  background: color-mix(in srgb, var(--module-accent) 16%, transparent);
-  color: color-mix(in srgb, var(--module-accent) 74%, var(--color-text-primary));
+  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), transparent);
+  color: color-mix(in srgb, var(--module-accent) var(--tint-ink), var(--color-text-primary));
 }
 
 .birthday-chip--today {
@@ -181,8 +181,8 @@
   align-items: center;
   justify-content: center;
   /* Theme-aware: Surface statt hartcodiertem white → korrekt in Dark Mode. */
-  background: color-mix(in srgb, var(--module-accent) 18%, var(--color-surface));
-  color: color-mix(in srgb, var(--module-accent) 76%, var(--color-text-primary));
+  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), var(--color-surface));
+  color: color-mix(in srgb, var(--module-accent) var(--tint-ink), var(--color-text-primary));
   font-weight: var(--font-weight-bold);
 }
 
@@ -207,7 +207,7 @@
   align-items: center;
   justify-content: center;
   /* Theme-aware statt hartcodiertem white. */
-  background: color-mix(in srgb, var(--module-accent) 16%, var(--color-surface));
+  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), var(--color-surface));
   cursor: pointer;
 }
 
@@ -218,7 +218,7 @@
 }
 
 .birthday-preview__fallback {
-  color: color-mix(in srgb, var(--module-accent) 76%, var(--color-text-primary));
+  color: color-mix(in srgb, var(--module-accent) var(--tint-ink), var(--color-text-primary));
   font-size: var(--text-xl);
   font-weight: var(--font-weight-bold);
 }

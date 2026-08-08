@@ -207,7 +207,7 @@
 
 .cat-row.sortable-chosen,
 .cat-subrow.sortable-chosen {
-  background: color-mix(in srgb, var(--active-module-accent, var(--color-accent)) 10%, var(--color-surface));
+  background: color-mix(in srgb, var(--active-module-accent, var(--color-accent)) var(--tint-state), var(--color-surface));
 }
 
 .cat-row.sortable-drag,

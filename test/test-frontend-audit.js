@@ -3997,7 +3997,8 @@ test('Notes keeps user colours off the reading surface', () => {
   // Der Guard hielt bis Runde 3 die Zusage „die Textfarbe wird zur Laufzeit
   // aus der Zettelfarbe gerechnet" (getReadableTextColor). Die neue Welt gibt
   // eine staerkere: die Zettelfarbe traegt die Flaeche gar nicht mehr allein,
-  // sie wird im gemessenen 16-%-Rezept auf die Kartenflaeche gemischt - damit
+  // sie wird auf der Objekt-Stufe der Toenungsskala auf die Kartenflaeche
+  // gemischt (--tint-surface, tokens.css 6b) - damit
   // haengt die Lesbarkeit an keiner Nutzerfarbe mehr, auch nicht an
   // Alt-Hex-Werten ausserhalb der Palette (DESIGN.md, User-Farben-Regel).
   assert.doesNotMatch(notesPage, /function isLightColor/);
@@ -4008,7 +4009,7 @@ test('Notes keeps user colours off the reading surface', () => {
   assert.match(notesPage, /style="--avatar-color:\$\{esc\(avatarColor\)\};"/);
 
   const cardRule = notesCss.match(/\n\.note-card\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
-  assert.match(cardRule, /background:\s*color-mix\(in srgb, var\(--note-color[^)]*\) 16%, var\(--color-surface\)\)/);
+  assert.match(cardRule, /background:\s*color-mix\(in srgb, var\(--note-color[^)]*\) var\(--tint-surface\), var\(--color-surface\)\)/);
   assert.match(cardRule, /color:\s*var\(--color-text-primary\)/);
   assert.match(cardRule, /border:\s*none/, 'Karten sind randlos auf dem Grouped-Grund.');
 
@@ -4336,7 +4337,12 @@ test('calendar month view uses tinted event surfaces derived from --ev-color', (
   // Getönte „Ton"-Fläche statt vollgesättigter Füllung: Tönung und lesbare Tinte
   // werden per color-mix aus --ev-color abgeleitet — theme-korrekt, weil
   // --color-surface-work und --color-text-primary im Dark Mode kippen.
-  assert.match(eventBody, /background:\s*color-mix\(in srgb,\s*var\(--ev-color\)\s*\d+%,\s*var\(--color-surface-work\)\)/, 'event chips should sit on a tinted work surface, not a saturated fill');
+  assert.match(eventBody, /background:\s*color-mix\(in srgb,\s*var\(--ev-color\)\s*var\(--tint-surface\),\s*var\(--color-surface-work\)\)/, 'event chips should sit on a tinted work surface, not a saturated fill');
+  // Die TINTE bleibt eine Zahl, und das ist die User-Farben-Regel: die
+  // Ink-Stufe gilt fuer kuratierte Modultoene, nicht fuer eine frei gewaehlte
+  // Layer-Farbe (weiss auf light 1.92:1). Hier steht deshalb absichtlich keine
+  // Stufe - wer sie einsetzt, hebelt die Ausnahme aus, die tokens.css 6b
+  // benennt.
   assert.match(eventBody, /color:\s*color-mix\(in srgb,\s*var\(--ev-color\)\s*\d+%,\s*var\(--color-text-primary\)\)/, 'event chip text should be a readable ink derived from the event colour');
   // HIG-Rollout 2026-08: die Bar ist FLACH. Die frühere Kante aus --ev-color war
   // der dritte Farbträger derselben Information (Fläche, Tinte, Kante) und ließ
@@ -4349,7 +4355,11 @@ test('calendar month view uses tinted event surfaces derived from --ev-color', (
   // Die Bars behalten dort ihr volles Ink-Rezept auf schwächerer Tönung.
   assert.match(outsideDayBody, /background-color:\s*var\(--color-bg\)/, 'previous/next month cells dim via their surface, not via text opacity');
   assert.doesNotMatch(outsideDayBody, /opacity:/, 'a blanket opacity on the cell would drag its text below AA');
-  assert.match(outsideEventBody, /background:\s*color-mix\(in srgb,\s*var\(--ev-color\)\s*\d+%,\s*var\(--color-surface-work\)\)/, 'outside-month bars keep the tint recipe, only weaker');
+  // „Nur schwaecher" ist jetzt pruefbar statt behauptet: die Nachbarmonats-Bar
+  // steht eine Sprosse UNTER der Bar im laufenden Monat (wash statt surface).
+  // Vorher stand hier `\d+%` gegen `\d+%` - der Guard war gruen, egal welche
+  // der beiden Zahlen groesser war.
+  assert.match(outsideEventBody, /background:\s*color-mix\(in srgb,\s*var\(--ev-color\)\s*var\(--tint-wash\),\s*var\(--color-surface-work\)\)/, 'outside-month bars keep the tint recipe, only weaker');
 });
 
 test('calendar agenda events and task chips keep readable contrast in mobile agenda', () => {
@@ -4650,7 +4660,7 @@ test('dashboard „Heute wichtig" is one inset-grouped list, not a tile grid', (
   );
 
   // Modul-Identität lebt in der getönten Icon-Kachel, nicht in der Zeilenfüllung.
-  assert.match(iconBody, /background:\s*color-mix\(in srgb,\s*var\(--today-card-accent\)\s*\d+%,\s*var\(--color-surface\)\)/, 'the icon well carries the module tint');
+  assert.match(iconBody, /background:\s*color-mix\(in srgb,\s*var\(--today-card-accent\)\s*var\(--tint-surface\),\s*var\(--color-surface\)\)/, 'the icon well carries the module tint');
 
   // Sehr schmale Container bleiben einspaltig (Container-Query, kein Viewport-BP)
   assert.match(
@@ -8681,5 +8691,91 @@ test('kein Inline-Style in public/ schreibt einen Design-Wert als Literal', () =
     offenders,
     [],
     `Design-Wert inline statt aus tokens.css - eine Klasse dafuer anlegen:\n${offenders.join('\n')}`,
+  );
+});
+
+/**
+ * Die Toenungsskala: jede Toenung nimmt eine Stufe, keine schreibt eine Zahl.
+ *
+ * WARUM ES DIESEN GUARD BRAUCHT: die App toente vor dieser Runde an 214
+ * Stellen in 37 Prozentstufen, und die Regel davor („16 %, EIN Rezept,
+ * app-weit") beschrieb 23 davon. Der Grund stand in tokens.css: der Satz
+ * „BEWUSST KEIN Token" galt fuer die FORMEL des Ink-Mix und wurde zwoelf
+ * Sessions lang fuer die ZAHL gelesen. Ohne einen Guard ueber die Skala
+ * entsteht die Streuung exakt so wieder - jede neue Flaeche haette wieder
+ * keinen Wert zu greifen und schriebe ihren eigenen hin.
+ *
+ * DREI DINGE SIND KEINE TOENUNG, und alle drei haengen an einer SIGNATUR
+ * statt an einer Selektorliste - eine Allowlist ueber 197 Fundstellen waere
+ * genau die Bauart, die dieses Repo bei der Kueche und beim Budget schon
+ * zweimal eingeholt hat:
+ *
+ *   1. DECKWERTE ab 45 %. Die Farbe IST dort die Flaeche und wird verdunkelt
+ *      (`.btn--primary` 88 %, `.page-fab:hover` 85 %, `.month-day__holiday`
+ *      90 %). Die Grenze ist gemessen und nicht gewaehlt: zwischen der
+ *      hoechsten Stufe (24 %) und dem niedrigsten Deckwert (72 %) liegt im
+ *      Bestand nichts.
+ *   2. NUTZERFARBEN ALS TEXT. Die Ink-Stufe gilt fuer kuratierte Modultoene;
+ *      auf einer frei gewaehlten Layer-Farbe bricht die Formel an den Enden
+ *      der Helligkeitsachse (weiss auf light 1.92:1). Signatur: die Quelle ist
+ *      eine `--*-color`-Nutzerfarbe UND die Eigenschaft ist `color`.
+ *   3. ANIMATIONSSTUFEN. Ein Puls-Ring laeuft von 45 % auf 0 %; eine Stufe hat
+ *      dort keine Bedeutung. Sie stehen nicht als Ausnahme hier, sondern
+ *      fallen aus der REICHWEITE: `eachRule()` steigt nicht in `@keyframes`.
+ *
+ * Die Gegenrichtung steht darunter: eine Stufe ohne Nutzer waere eine
+ * Einladung, sie beim naechsten Mal falsch zu belegen.
+ */
+const TINT_SOURCE = /--(module-[\w-]+|meal-[\w-]+|cycle-[\w-]+|layer-color|note-color|holi-color|ev-color|c-accent|active-module-accent|item-module-accent|color-accent|color-warning|color-danger|color-success|today-card-accent|widget-accent|subscription-color|rw-[\w-]+)/;
+const TINT_USER_COLOUR = /--(layer-color|note-color|holi-color|ev-color|subscription-color|c-accent)/;
+/** Ab hier ist die Farbe die Flaeche und wird verdunkelt, statt beigemischt. */
+const TINT_OPAQUE_FLOOR = 45;
+
+test('jede Toenung nimmt eine Stufe der Toenungsskala', () => {
+  const offenders = [];
+  let seen = 0;
+  for (const file of readdirSync(new URL('../public/styles/', import.meta.url)).filter((n) => n.endsWith('.css'))) {
+    if (file === 'tokens.css') continue; // dort stehen die Stufen selbst
+    for (const rule of eachRule(read(`../public/styles/${file}`))) {
+      for (const mix of rule.body.matchAll(/([a-z-]+)\s*:[^;]*?color-mix\(\s*in srgb\s*,\s*([^;{}]+?)\s+(?:(\d+)%|var\(--tint-[a-z]+\)|calc\([^)]*--tint-[a-z]+[^)]*\))\s*,/g)) {
+        const [, prop, source, pct] = mix;
+        if (!TINT_SOURCE.test(source)) continue;
+        seen += 1;
+        if (pct === undefined) continue;                       // eine Stufe, direkt oder in calc()
+        if (Number(pct) >= TINT_OPAQUE_FLOOR) continue;
+        if (prop === 'color' && TINT_USER_COLOUR.test(source)) continue;
+        offenders.push(`${file}: ${rule.selector} -> ${prop}: ${pct}% (${source.trim()})`);
+      }
+    }
+  }
+  // Ein Guard, der nichts gesehen hat, darf nicht urteilen - dieselbe
+  // Zusicherung wie bei den Dokument-Sonden. Ein Tippfehler in TINT_SOURCE
+  // machte ihn sonst gruen und blind zugleich. Keine feste Zahl: eine neue
+  // Toenung soll die Suite nicht rot faerben, nur weil sie dazukommt.
+  assert.ok(seen >= 150, `Nur ${seen} Toenungen gesehen - die Signatur greift nicht mehr.`);
+  assert.deepEqual(
+    offenders,
+    [],
+    'Toenung mit einer eigenen Zahl statt einer Stufe aus tokens.css (6b).\n'
+    + 'Waehle die Stufe nach der ROLLE: wash (untergreift fremden Inhalt), state\n'
+    + '(Zustand), surface (die Toenung IST das Element), raised (Zustand darauf),\n'
+    + `hint (Andeutung), ink (Text), shadow.\n${offenders.join('\n')}`,
+  );
+});
+
+test('jede Stufe der Toenungsskala hat mindestens einen Nutzer', () => {
+  const tokens = read('../public/styles/tokens.css');
+  const declared = [...tokens.matchAll(/^\s*(--tint-[a-z]+):/gm)].map((m) => m[1]);
+  assert.ok(declared.length >= 7, `Nur ${declared.length} Stufen gefunden - die Skala ist weg.`);
+
+  const used = new Set();
+  for (const file of readdirSync(new URL('../public/styles/', import.meta.url)).filter((n) => n.endsWith('.css'))) {
+    if (file === 'tokens.css') continue;
+    for (const hit of read(`../public/styles/${file}`).matchAll(/var\((--tint-[a-z]+)\)/g)) used.add(hit[1]);
+  }
+  assert.deepEqual(
+    declared.filter((t) => !used.has(t)),
+    [],
+    'Eine Stufe ohne Nutzer ist eine Einladung, sie beim naechsten Mal falsch zu belegen.',
   );
 });

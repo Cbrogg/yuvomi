@@ -247,7 +247,7 @@
 }
 
 .month-day--outside .month-day__event {
-  background: color-mix(in srgb, var(--ev-color) 10%, var(--color-surface-work));
+  background: color-mix(in srgb, var(--ev-color) var(--tint-wash), var(--color-surface-work));
 }
 
 /* Wochenende dezent zur Orientierung getönt (Richtung Modul-Akzent). Nur Tage
@@ -257,7 +257,7 @@
  * 7-Spalten-Raster: 7n = Sonntag, 7n-1 = Samstag. */
 .month-day:nth-child(7n):not(.month-day--outside),
 .month-day:nth-child(7n-1):not(.month-day--outside) {
-  background-color: color-mix(in srgb, var(--module-accent) 4%, var(--color-surface-work));
+  background-color: color-mix(in srgb, var(--module-accent) var(--tint-wash), var(--color-surface-work));
 }
 
 .month-day__number {
@@ -308,13 +308,13 @@
   text-overflow: ellipsis;
   cursor: pointer;
   line-height: 1.4;
-  background: color-mix(in srgb, var(--ev-color) 16%, var(--color-surface-work));
+  background: color-mix(in srgb, var(--ev-color) var(--tint-surface), var(--color-surface-work));
   color: color-mix(in srgb, var(--ev-color) 35%, var(--color-text-primary));
   transition: background-color var(--transition-fast);
 }
 
 .month-day__event:hover {
-  background: color-mix(in srgb, var(--ev-color) 24%, var(--color-surface-work));
+  background: color-mix(in srgb, var(--ev-color) var(--tint-raised), var(--color-surface-work));
 }
 
 /* Voll gesättigtes Icon trägt das Farbsignal (der "Dot") in Woche/Tag, während
@@ -497,7 +497,7 @@
  * sichtbar; die getönten Event-Blöcke liegen deckend darüber und bleiben lesbar. */
 .week-view__col:hover,
 .day-view__col:hover {
-  background-color: color-mix(in srgb, var(--module-accent) 3%, transparent);
+  background-color: color-mix(in srgb, var(--module-accent) var(--tint-state), transparent);
 }
 
 .week-view__hour-line {
@@ -537,9 +537,9 @@
   padding: var(--space-0h) var(--space-1);
   font-size: var(--text-xs);
   font-weight: var(--font-weight-medium);
-  background: color-mix(in srgb, var(--ev-color) 18%, var(--color-surface-work));
+  background: color-mix(in srgb, var(--ev-color) var(--tint-surface), var(--color-surface-work));
   color: color-mix(in srgb, var(--ev-color) 38%, var(--color-text-primary));
-  border: var(--space-px) solid color-mix(in srgb, var(--ev-color) 42%, transparent);
+  border: var(--space-px) solid color-mix(in srgb, var(--ev-color) var(--tint-hint), transparent);
   overflow: hidden;
   cursor: pointer;
   z-index: 1;
@@ -548,7 +548,7 @@
 }
 
 .week-event:hover {
-  background: color-mix(in srgb, var(--ev-color) 26%, var(--color-surface-work));
+  background: color-mix(in srgb, var(--ev-color) var(--tint-raised), var(--color-surface-work));
 }
 
 .week-event__title {
@@ -1178,8 +1178,8 @@
   font-weight: var(--font-weight-medium);
   padding: var(--space-px) var(--space-1);
   border-radius: var(--radius-xs);
-  border: var(--space-px) solid color-mix(in srgb, var(--ev-color) 30%, transparent);
-  background: color-mix(in srgb, var(--ev-color) 16%, var(--color-surface-work));
+  border: var(--space-px) solid color-mix(in srgb, var(--ev-color) var(--tint-hint), transparent);
+  background: color-mix(in srgb, var(--ev-color) var(--tint-surface), var(--color-surface-work));
   color: color-mix(in srgb, var(--ev-color) 35%, var(--color-text-primary));
   white-space: nowrap;
   overflow: hidden;
@@ -1190,7 +1190,7 @@
 }
 
 .allday-event:hover {
-  background: color-mix(in srgb, var(--ev-color) 24%, var(--color-surface-work));
+  background: color-mix(in srgb, var(--ev-color) var(--tint-raised), var(--color-surface-work));
 }
 
 @media (max-width: 640px) {
@@ -1439,8 +1439,8 @@
   color: var(--color-text-primary);
   padding: 2px var(--space-2);
   border-radius: var(--radius-full);
-  background: color-mix(in srgb, var(--holi-color) 15%, var(--color-surface));
-  border: 1px solid color-mix(in srgb, var(--holi-color) 40%, transparent);
+  background: color-mix(in srgb, var(--holi-color) var(--tint-surface), var(--color-surface));
+  border: 1px solid color-mix(in srgb, var(--holi-color) var(--tint-hint), transparent);
 }
 
 .agenda-holiday__dot {
@@ -1470,7 +1470,7 @@
   /* 60% statt 40%: erst damit erreicht die Kontur >=3:1 (non-text) auf
    * beiden Grundfarben; das Label traegt die Layer-Farbe selbst
    * (dark #A78BFA 7.2:1, light #6D28D9 6.4:1 - beide AA). */
-  border: 1px solid color-mix(in srgb, var(--layer-color) 60%, transparent);
+  border: 1px solid color-mix(in srgb, var(--layer-color) var(--tint-hint), transparent);
   background: transparent;
   color: var(--color-text-secondary);
   font-size: var(--text-xs);
@@ -1481,14 +1481,14 @@
 }
 
 .cal-toolbar__layer-btn:hover {
-  background: color-mix(in srgb, var(--layer-color) 12%, transparent);
+  background: color-mix(in srgb, var(--layer-color) var(--tint-state), transparent);
   color: var(--color-text-primary);
 }
 
 .cal-toolbar__layer-btn--active {
-  background: color-mix(in srgb, var(--layer-color) 18%, var(--color-surface));
+  background: color-mix(in srgb, var(--layer-color) var(--tint-state), var(--color-surface));
   color: var(--color-text-primary);
-  border-color: color-mix(in srgb, var(--layer-color) 60%, transparent);
+  border-color: color-mix(in srgb, var(--layer-color) var(--tint-hint), transparent);
 }
 
 /* Nur der Mir-zugewiesen-Chip traegt sein Label in der Layer-Farbe: sie ist

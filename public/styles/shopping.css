@@ -428,7 +428,7 @@
 .quick-add__input:focus {
   outline: none;
   border-color: var(--module-accent, var(--color-accent));
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--module-accent, var(--color-accent)) 20%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-shadow), transparent);
 }
 
 .quick-add__qty {
@@ -452,7 +452,7 @@
 .quick-add__qty:focus {
   outline: none;
   border-color: var(--module-accent, var(--color-accent));
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--module-accent, var(--color-accent)) 20%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-shadow), transparent);
 }
 
 .quick-add__cat {
@@ -472,7 +472,7 @@
 .quick-add__cat:focus {
   outline: none;
   border-color: var(--module-accent, var(--color-accent));
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--module-accent, var(--color-accent)) 20%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-shadow), transparent);
 }
 
 @media (min-width: 1024px) {

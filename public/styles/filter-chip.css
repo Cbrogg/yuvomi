@@ -51,9 +51,9 @@
  * Weil jeder Browser mit backdrop-filter ohnehin diesen Zweig sah, sind seine
  * Farbwerte hier der Bestand; nur Blur und Specular sind weg. */
 .filter-chip--active {
-  background-color: color-mix(in srgb, var(--module-accent, var(--color-accent)) 18%, transparent);
-  border-color: color-mix(in srgb, var(--module-accent, var(--color-accent)) 50%, transparent);
-  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) 70%, var(--color-text-primary));
+  background-color: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-state), transparent);
+  border-color: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-hint), transparent);
+  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-ink), var(--color-text-primary));
 }
 
 /* Dichtere Variante für Filterzeilen mit vielen Chips (Dokumente). Das Touch-Maß

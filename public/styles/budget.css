@@ -169,8 +169,8 @@
   font-size: var(--text-2xs);
   font-weight: var(--font-weight-semibold);
   line-height: 1.5;
-  color: color-mix(in srgb, var(--module-accent) 72%, var(--color-text-primary));
-  background: color-mix(in srgb, var(--module-accent) 14%, transparent);
+  color: color-mix(in srgb, var(--module-accent) var(--tint-ink), var(--color-text-primary));
+  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), transparent);
   white-space: nowrap;
 }
 
@@ -187,8 +187,8 @@
   font-size: var(--text-2xs);
   font-weight: var(--font-weight-semibold);
   line-height: 1.5;
-  color: color-mix(in srgb, var(--color-warning) 72%, var(--color-text-primary));
-  background: color-mix(in srgb, var(--color-warning) 14%, transparent);
+  color: color-mix(in srgb, var(--color-warning) var(--tint-ink), var(--color-text-primary));
+  background: color-mix(in srgb, var(--color-warning) var(--tint-surface), transparent);
   white-space: nowrap;
 }
 
@@ -495,15 +495,15 @@
   padding: 2px var(--space-2);
   font-size: var(--text-xs);
   font-weight: 500;
-  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) 70%, var(--color-text-primary));
-  background: color-mix(in srgb, var(--module-accent) 12%, transparent);
+  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-ink), var(--color-text-primary));
+  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), transparent);
   border: none;
   border-radius: var(--radius-full);
   cursor: pointer;
   transition: background var(--transition-fast);
 }
 
-.budget-account-chip:hover { background: color-mix(in srgb, var(--module-accent) 20%, transparent); }
+.budget-account-chip:hover { background: color-mix(in srgb, var(--module-accent) var(--tint-raised), transparent); }
 .budget-account-chip:focus-visible { outline: var(--focus-ring-width) solid var(--focus-ring-color); outline-offset: var(--focus-ring-offset); }
 
 /* Farbwahl im Konto-Modal */
@@ -580,13 +580,13 @@
 }
 
 .budget-expenses-toggle:hover {
-  background: color-mix(in srgb, var(--module-accent, var(--color-accent)) 12%, transparent);
+  background: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-state), transparent);
   color: var(--color-text-primary);
 }
 
 .budget-expenses-toggle--active {
-  background: color-mix(in srgb, var(--module-accent, var(--color-accent)) 18%, var(--color-surface));
-  border-color: color-mix(in srgb, var(--module-accent, var(--color-accent)) 60%, transparent);
+  background: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-state), var(--color-surface));
+  border-color: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-hint), transparent);
   color: var(--color-text-primary);
 }
 
@@ -1136,7 +1136,7 @@
 .budget-list::-webkit-scrollbar-thumb,
 .budget-loans__list::-webkit-scrollbar-thumb,
 .budget-tab-panel--loans::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--module-accent) 55%, transparent);
+  background: color-mix(in srgb, var(--module-accent) var(--tint-hint), transparent);
   border: 3px solid transparent;
   border-radius: var(--radius-full);
   background-clip: padding-box;

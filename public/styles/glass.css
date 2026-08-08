@@ -123,7 +123,7 @@
 
   /* Active-State in Sidebar */
   .nav-sidebar .nav-item[aria-current="page"] {
-    background: color-mix(in srgb, var(--active-module-accent, var(--color-accent)) 12%, transparent);
+    background: color-mix(in srgb, var(--active-module-accent, var(--color-accent)) var(--tint-state), transparent);
     border-radius: var(--radius-sm);
     box-shadow: inset 0 1px 0 var(--glass-highlight-subtle);
   }
@@ -227,10 +227,18 @@
  * 7. Accessibility Overrides — Phase 1
  * ================================================================ */
 @media (prefers-reduced-transparency: reduce) {
+  /* DIESE ZWEI WERTE GEHOEREN ZUSAMMEN, und ohne diesen Absatz sieht das
+   * niemand: `.nav-bottom__indicator` toent hier eine Sprosse ueber der
+   * Objekt-Stufe (+6 %), weil ihm ohne Glas die Tiefe fehlt - allein gemessen
+   * kaeme er damit auf 1,438 (light) / 1,644 (dark) gegen die Bar und waere
+   * deutlich kraeftiger als die Glas-Fassung. Dieses ::before legt sich OPAK
+   * darueber und holt ihn zurueck: zusammen 1,231 / 1,203, gegen 1,259 / 1,190
+   * in der Glas-Fassung. Wer einen der beiden Werte anfasst, kippt den anderen
+   * still - deshalb steht beiden ihre Stufe als Bezug voran statt einer Zahl. */
   .nav-bottom__indicator::before {
     background: color-mix(
       in srgb,
-      var(--active-module-accent, var(--color-accent)) 14%,
+      var(--active-module-accent, var(--color-accent)) calc(var(--tint-surface) - 2%),
       var(--color-surface)
     );
     box-shadow: none;
@@ -299,7 +307,7 @@ textarea.form-input {
 .form-input:focus {
   border-color: var(--active-module-accent, var(--color-accent));
   box-shadow:
-    0 0 0 3px color-mix(in srgb, var(--active-module-accent, var(--color-accent)) 20%, transparent),
+    0 0 0 3px color-mix(in srgb, var(--active-module-accent, var(--color-accent)) var(--tint-shadow), transparent),
     var(--glass-inset-input);
 }
 
@@ -659,7 +667,7 @@ html.navigating .app-content *::after {
 
 .dashboard .meal-slot--filled,
 .meals-page .meal-slot--filled {
-  background-color: color-mix(in srgb, var(--module-accent, var(--module-meals)) 4%, var(--color-surface-raised));
+  background-color: color-mix(in srgb, var(--module-accent, var(--module-meals)) var(--tint-wash), var(--color-surface-raised));
 }
 
 /* ================================================================
@@ -686,16 +694,16 @@ textarea.form-input {
 }
 
 .tasks-page .task-card:hover {
-  background-color: color-mix(in srgb, var(--module-accent, var(--color-accent)) 4%, var(--color-surface-raised));
+  background-color: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-state), var(--color-surface-raised));
 }
 
 .shopping-page .shopping-item:hover {
-  background-color: color-mix(in srgb, var(--module-accent, var(--color-accent)) 4%, var(--color-surface-raised));
+  background-color: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-state), var(--color-surface-raised));
   border-radius: var(--radius-sm);
 }
 
 .contacts-page .contact-item:hover {
-  background-color: color-mix(in srgb, var(--module-accent, var(--color-accent)) 4%, var(--color-surface-raised));
+  background-color: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-state), var(--color-surface-raised));
   border-radius: var(--radius-sm);
 }
 
@@ -816,7 +824,7 @@ textarea.form-input {
  * ================================================================ */
 @media (min-width: 1024px) {
   .nav-sidebar__indicator {
-    background: color-mix(in srgb, var(--active-module-accent, var(--color-accent)) 12%, var(--glass-bg-card));
+    background: color-mix(in srgb, var(--active-module-accent, var(--color-accent)) calc(var(--tint-surface) - 4%), var(--glass-bg-card));
     border: 1px solid var(--glass-border-subtle);
     box-shadow:
       var(--glass-inset-soft),
@@ -832,7 +840,7 @@ textarea.form-input {
 
   @media (prefers-reduced-transparency: reduce) {
     .nav-sidebar__indicator {
-      background: color-mix(in srgb, var(--active-module-accent, var(--color-accent)) 16%, var(--color-surface-elevated));
+      background: color-mix(in srgb, var(--active-module-accent, var(--color-accent)) var(--tint-surface), var(--color-surface-elevated));
       backdrop-filter: none;
       -webkit-backdrop-filter: none;
     }
@@ -845,14 +853,18 @@ textarea.form-input {
 /* iOS-Tab-Pille: crisp und randlos — solide Tönung statt Blur+Border,
  * die auf der Kapsel als verschwommener Fleck lasen. */
 .nav-bottom__indicator {
-  background: color-mix(in srgb, var(--active-module-accent, var(--color-accent)) 16%, transparent);
+  background: color-mix(in srgb, var(--active-module-accent, var(--color-accent)) var(--tint-surface), transparent);
   border: none;
   box-shadow: none;
 }
 
 @media (prefers-reduced-transparency: reduce) {
+  /* Eine Sprosse ueber der Objekt-Stufe, weil ohne Glas die Tiefe fehlt. Der
+   * Wert steht NICHT allein: das ::before in §7 deckt ihn opak zurueck, und
+   * erst beide zusammen treffen die Glas-Fassung (1,231/1,203 gegen
+   * 1,259/1,190). Die Rechnung steht dort. */
   .nav-bottom__indicator {
-    background: color-mix(in srgb, var(--active-module-accent, var(--color-accent)) 22%, var(--color-surface-elevated));
+    background: color-mix(in srgb, var(--active-module-accent, var(--color-accent)) calc(var(--tint-surface) + 6%), var(--color-surface-elevated));
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
   }

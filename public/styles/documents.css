@@ -135,7 +135,7 @@
   padding-block: var(--space-2);
   padding-inline: var(--page-inline-pad);
   border-bottom: 1px solid var(--color-border);
-  background: color-mix(in srgb, var(--module-accent) 8%, var(--color-bg));
+  background: color-mix(in srgb, var(--module-accent) var(--tint-wash), var(--color-bg));
   flex-wrap: wrap;
 }
 
@@ -169,7 +169,7 @@
   height: 42px;
   flex-shrink: 0;
   border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--module-accent) 12%, transparent);
+  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), transparent);
   cursor: pointer;
 }
 
@@ -191,7 +191,7 @@
 }
 
 .document-row.is-selected {
-  background-color: color-mix(in srgb, var(--module-accent) 16%, var(--color-surface));
+  background-color: color-mix(in srgb, var(--module-accent) var(--tint-surface), var(--color-surface));
 }
 
 .documents-browser-layout {
@@ -246,7 +246,7 @@
 }
 
 .documents-folder-browser__add:hover {
-  background: color-mix(in srgb, var(--module-accent) 12%, transparent);
+  background: color-mix(in srgb, var(--module-accent) var(--tint-state), transparent);
 }
 
 .documents-folder-browser__add svg {
@@ -284,7 +284,7 @@
 
 .documents-folder-item:hover,
 .documents-folder-item--active {
-  background: color-mix(in srgb, var(--module-accent) 12%, transparent);
+  background: color-mix(in srgb, var(--module-accent) var(--tint-state), transparent);
 }
 
 .documents-folder-item:hover .documents-folder-item__select,
@@ -324,7 +324,7 @@
 
 .documents-folder-item__menu:hover {
   color: var(--module-accent);
-  background: color-mix(in srgb, var(--module-accent) 14%, transparent);
+  background: color-mix(in srgb, var(--module-accent) var(--tint-state), transparent);
 }
 
 /* Touch: den Kebab auf Finger-Maße heben. Er ist ein REIHEN-Ziel (je Ordnerzeile
@@ -435,8 +435,8 @@
 }
 
 .documents-folder-item--active .documents-folder-item__count {
-  background: color-mix(in srgb, var(--module-accent) 16%, var(--color-surface));
-  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) 70%, var(--color-text-primary));
+  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), var(--color-surface));
+  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-ink), var(--color-text-primary));
 }
 
 .documents-list {
@@ -515,7 +515,7 @@
   justify-content: center;
   border-radius: var(--radius-md);
   color: var(--module-accent);
-  background: color-mix(in srgb, var(--module-accent) 12%, transparent);
+  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), transparent);
 }
 
 .document-card__icon svg,
@@ -1064,7 +1064,7 @@
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-glass-inner);
-  background: color-mix(in srgb, var(--module-accent) 12%, transparent);
+  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), transparent);
   color: var(--module-accent);
   flex-shrink: 0;
 }
@@ -1171,7 +1171,7 @@
   justify-content: center;
   border-radius: var(--radius-md);
   overflow: hidden;
-  background: color-mix(in srgb, var(--module-accent) 12%, transparent);
+  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), transparent);
   color: var(--module-accent);
 }
 

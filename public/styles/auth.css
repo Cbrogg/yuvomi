@@ -248,7 +248,7 @@
 /* Feld-Fehler-Zustand */
 .form-group--error .input {
   border-color: var(--color-danger);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-danger) 20%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-danger) var(--tint-shadow), transparent);
 }
 
 .form-group--error .label {

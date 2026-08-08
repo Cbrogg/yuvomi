@@ -205,7 +205,7 @@
 
 .split-group--active,
 .split-group:hover {
-  background: color-mix(in srgb, var(--module-accent) 10%, var(--color-surface));
+  background: color-mix(in srgb, var(--module-accent) var(--tint-state), var(--color-surface));
 }
 
 .split-group__avatar,
@@ -216,7 +216,7 @@
   display: grid;
   place-items: center;
   border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--module-accent) 14%, var(--color-surface-2));
+  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), var(--color-surface-2));
   color: var(--module-accent);
 }
 
@@ -294,7 +294,7 @@
   margin: var(--space-1) 0 0;
   padding: var(--space-0h) var(--space-2);
   border-radius: var(--radius-full);
-  background: color-mix(in srgb, var(--module-accent) 12%, var(--color-surface-2));
+  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), var(--color-surface-2));
   color: var(--color-text-secondary);
   font-size: var(--text-sm);
   font-weight: var(--font-weight-medium);
@@ -390,7 +390,7 @@ button.split-expense {
 }
 
 button.split-expense:hover {
-  background: color-mix(in srgb, var(--module-accent) 8%, transparent);
+  background: color-mix(in srgb, var(--module-accent) var(--tint-state), transparent);
 }
 
 .split-activity-dot {
