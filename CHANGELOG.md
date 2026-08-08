@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - New Inventory module (Stage 1 of a larger design aimed at upstream contribution): track owned belongings with hierarchical storage locations, a manageable category list, purchase price, an independently-maintained current value estimate, warranty length, condition and status. Budget/document/subscription linking, derived deadlines and calendar integration follow in later stages.
+- Inventory items can now be linked to documents from the Documents module (receipts, warranty cards, manuals), reusing the same document-linking mechanism Budget entries already use (Stage 2 of the Inventory module design). Items stay household-visible as before; each linked document is still filtered per viewer.
 
 ## [2.7.1] - 2026-08-12
 
