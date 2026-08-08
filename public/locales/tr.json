@@ -3049,7 +3049,6 @@
         "active": "Etkin",
         "disabled": "Devre dışı",
         "markRenewed": "Yenilendi olarak işaretle",
-        "edit": "Aboneliği düzenle",
         "delete": "Aboneliği sil",
         "conversionUnavailable": "Dönüştürme kullanılamıyor",
         "monthlyEquivalent": "Ayda {{amount}}",

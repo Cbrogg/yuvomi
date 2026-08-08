@@ -3049,7 +3049,6 @@
         "active": "Aktív",
         "disabled": "Letiltva",
         "markRenewed": "Megújítás jelölése",
-        "edit": "Előfizetés szerkesztése",
         "delete": "Előfizetés törlése",
         "conversionUnavailable": "Átváltás nem elérhető",
         "monthlyEquivalent": "{{amount}} havonta",

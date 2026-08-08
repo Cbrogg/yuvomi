@@ -3049,7 +3049,6 @@
         "active": "Aktivní",
         "disabled": "Vypnuté",
         "markRenewed": "Označit jako obnoveno",
-        "edit": "Upravit předplatné",
         "delete": "Smazat předplatné",
         "conversionUnavailable": "Převod není k dispozici",
         "monthlyEquivalent": "{{amount}} za měsíc",

@@ -3049,7 +3049,6 @@
         "active": "نشط",
         "disabled": "معطل",
         "markRenewed": "وضع علامة كمجدد",
-        "edit": "تعديل الاشتراك",
         "delete": "حذف الاشتراك",
         "conversionUnavailable": "التحويل غير متاح",
         "monthlyEquivalent": "{{amount}} شهريًا",

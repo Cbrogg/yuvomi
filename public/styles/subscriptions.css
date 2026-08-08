@@ -366,12 +366,16 @@
   align-items: center;
 }
 
-.subscription-card h3,
-.subscription-card p {
+/* Name und Beschreibung sind SPANs, keine Überschrift und kein Absatz: der
+ * Zeilenkörper ist ein `<button>`, dessen Content-Model Phrasing Content ist -
+ * dieselbe Angleichung, die `pantry.js` und `contacts.js` schon tragen. */
+.subscription-card__name,
+.subscription-card__desc {
+  display: block;
   margin: 0;
 }
 
-.subscription-card p,
+.subscription-card__desc,
 .subscription-card__cost span {
   color: var(--color-text-secondary);
   font-size: var(--text-sm);

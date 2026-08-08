@@ -3049,7 +3049,6 @@
         "active": "启用",
         "disabled": "停用",
         "markRenewed": "标记为已续订",
-        "edit": "编辑订阅",
         "delete": "删除订阅",
         "conversionUnavailable": "无法换算",
         "monthlyEquivalent": "每月 {{amount}}",

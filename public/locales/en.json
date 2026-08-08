@@ -3049,7 +3049,6 @@
         "active": "Active",
         "disabled": "Disabled",
         "markRenewed": "Mark as renewed",
-        "edit": "Edit subscription",
         "delete": "Delete subscription",
         "conversionUnavailable": "Conversion unavailable",
         "monthlyEquivalent": "{{amount}} per month",

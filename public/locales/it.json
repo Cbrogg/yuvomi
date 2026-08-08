@@ -3049,7 +3049,6 @@
         "active": "Attivo",
         "disabled": "Disattivato",
         "markRenewed": "Segna come rinnovato",
-        "edit": "Modifica abbonamento",
         "delete": "Elimina abbonamento",
         "conversionUnavailable": "Conversione non disponibile",
         "monthlyEquivalent": "{{amount}} al mese",

@@ -564,6 +564,14 @@ function endInfoLabel(subscription) {
 // und nicht mehr auf einem eigenen Knopf; der Zustandsschalter ist ganz
 // entfallen, weil dasselbe Feld im Bearbeiten-Formular steht. Vier Icon-Knoepfe
 // je Zeile waren die lauteste Stelle des Bildschirms, uebrig sind zwei.
+//
+// BEWUSST kein aria-label am Zeilenkoerper: `role=button` ist per ARIA "children
+// presentational", das Label haette also den ganzen Inhalt ersetzt - Name,
+// Status, Faelligkeit, Zyklus, Zahlungsart und Betrag zusammen zu "Bearbeiten,
+// Schaltfläche". Genau derselbe Beschluss steht in `pantry.js` (Critique P1,
+// WCAG 1.3.1/4.1.2) und `contacts.js`. Aus demselben Grund tragen Name und
+// Beschreibung `<span>` statt `<h3>`/`<p>`: Content-Model eines `<button>` ist
+// Phrasing Content. Was der Knopf TUT, kommt als sr-only Zusatz ans Ende.
 function renderCard(subscription) {
   const brandColor = subscription.brand_color || subscription.category_color || '#0F766E';
   const converted = subscription.monthly_base === null
@@ -584,7 +592,7 @@ function renderCard(subscription) {
     <article class="subscription-card ${status.cardClass}"
              data-id="${subscription.id}" style="--subscription-color:${esc(brandColor)}">
       <button type="button" class="subscription-card__main list-row__main--interactive"
-              data-action="edit" aria-label="${t('subscriptions.edit')}">
+              data-action="edit">
         <span class="subscription-card__brand">
           ${subscription.logo_data
             ? `<img src="${esc(subscription.logo_data)}" alt="">`
@@ -593,8 +601,8 @@ function renderCard(subscription) {
         <span class="subscription-card__body">
           <span class="subscription-card__title-row">
             <span>
-              <h3>${esc(subscription.name)}</h3>
-              <p>${esc(subscription.description || categoryLabel(subscription.category_name))}</p>
+              <span class="subscription-card__name">${esc(subscription.name)}</span>
+              <span class="subscription-card__desc">${esc(subscription.description || categoryLabel(subscription.category_name))}</span>
             </span>
             <span class="subscription-status ${status.badgeClass}">
               ${status.label}
@@ -612,6 +620,7 @@ function renderCard(subscription) {
           <strong>${money(subscription.amount, subscription.currency)}</strong>
           <span>${converted}</span>
         </span>
+        <span class="sr-only">${t('common.edit')}</span>
       </button>
       <div class="subscription-card__actions">
         <button class="btn btn--secondary btn--icon" data-action="renew" aria-label="${t('subscriptions.markRenewed')}">

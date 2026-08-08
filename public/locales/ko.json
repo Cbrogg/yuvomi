@@ -3049,7 +3049,6 @@
         "active": "활성",
         "disabled": "비활성",
         "markRenewed": "갱신됨으로 표시",
-        "edit": "구독 편집",
         "delete": "구독 삭제",
         "conversionUnavailable": "환산 불가",
         "monthlyEquivalent": "월 {{amount}}",

@@ -3049,7 +3049,6 @@
         "active": "有効",
         "disabled": "無効",
         "markRenewed": "更新済みにする",
-        "edit": "サブスクリプションを編集",
         "delete": "サブスクリプションを削除",
         "conversionUnavailable": "換算できません",
         "monthlyEquivalent": "月額 {{amount}}",

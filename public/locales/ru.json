@@ -3049,7 +3049,6 @@
         "active": "Активна",
         "disabled": "Отключена",
         "markRenewed": "Отметить как продленную",
-        "edit": "Редактировать подписку",
         "delete": "Удалить подписку",
         "conversionUnavailable": "Конвертация недоступна",
         "monthlyEquivalent": "{{amount}} в месяц",

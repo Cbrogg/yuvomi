@@ -3049,7 +3049,6 @@
         "active": "Ενεργή",
         "disabled": "Απενεργοποιημένη",
         "markRenewed": "Σήμανση ως ανανεωμένη",
-        "edit": "Επεξεργασία συνδρομής",
         "delete": "Διαγραφή συνδρομής",
         "conversionUnavailable": "Η μετατροπή δεν είναι διαθέσιμη",
         "monthlyEquivalent": "{{amount}} ανά μήνα",

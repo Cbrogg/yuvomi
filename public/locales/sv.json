@@ -3049,7 +3049,6 @@
         "active": "Aktiva",
         "disabled": "Inaktiverad",
         "markRenewed": "Markera som förnyad",
-        "edit": "Redigera prenumeration",
         "delete": "Ta bort prenumeration",
         "conversionUnavailable": "Konvertering inte tillgänglig",
         "monthlyEquivalent": "{{amount}} per månad",
