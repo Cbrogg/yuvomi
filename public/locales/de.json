@@ -2640,7 +2640,8 @@
         "dmsSearchError": "Das DMS ist gerade nicht erreichbar.",
         "storageGoogleDrive": "Google Drive",
         "budgetFolder": "Belege",
-        "splitExpensesFolder": "Geteilte Ausgaben"
+        "splitExpensesFolder": "Geteilte Ausgaben",
+        "inventoryFolder": "Inventar"
     },
     "userMultiSelect": {
         "nobody": "- Niemand -",
@@ -3983,7 +3984,12 @@
         "manageCategoriesHint": "Kategorien umbenennen, ergänzen oder neu sortieren. Gegenstände einer gelöschten Kategorie fallen auf \"Sonstiges\" zurück.",
         "addCategory": "Neue Kategorie",
         "categoryDeleteConfirmDetail": "Gegenstände dieser Kategorie bleiben erhalten und fallen danach auf die Kategorie \"Sonstiges\" zurück.",
-        "categoryOtherNotDeletable": "\"Sonstiges\" kann nicht gelöscht werden."
+        "categoryOtherNotDeletable": "\"Sonstiges\" kann nicht gelöscht werden.",
+        "attachmentsLabel": "Belege",
+        "attachmentsHint": "Rechnung, Garantiekarte oder Anleitung anhängen.",
+        "attachmentCategoryLabel": "Dokumentkategorie",
+        "attachmentDocumentName": "{{name}} – Beleg",
+        "hasAttachmentsLabel": "Hat Anhänge"
     },
     "documentAttach": {
         "label": "Anhänge",
