@@ -1905,6 +1905,20 @@ test('Sonde 11 - was einen Klick annimmt, nimmt auch eine Taste an', async () =>
  *     Dokument. Hier ist sie es: liegt das Element innerhalb von
  *     `#main-content`, ist es Inhalt.
  *
+ *     WAS DIE ROT-PROBE ANS LICHT BRACHTE, und es ist der eigentliche Befund:
+ *     ein eingebauter Verstoss (`backdrop-filter` auf `.list-rows`) liess die
+ *     Sonde GRUEN. Der Grund ist `.app-content *` in glass.css - eine
+ *     Blanket-Regel, die `backdrop-filter` im Scroll-Container mit
+ *     `!important` abraeumt. Sie steht dort NICHT wegen dieser Regel, sondern
+ *     gegen den Blank-Screen-Bug (#166, iOS/Android-Compositor). Erst mit
+ *     `!important` im Verstoss wurde die Sonde rot.
+ *     Die Glas-ist-Chrome-Regel wird im Dokument also von einer Regel
+ *     getragen, die es aus einem ganz anderen Grund gibt. Solange beide
+ *     bestehen, ist sie doppelt gesichert; faellt die
+ *     Compositor-Gegenmassnahme irgendwann weg, ist diese Sonde die einzige,
+ *     die es merkt. Genau deshalb bleibt sie stehen, obwohl sie heute nur
+ *     bestaetigt.
+ *
  * (B) DIE FALLBACK-REGEL, ihre zweite Haelfte. `jeder Blur kommt aus der
  *     --blur-Skala` (Ebene 3) sichert, dass jede Glasflaeche einen Blur nimmt,
  *     der unter `prefers-reduced-transparency` und `prefers-contrast: more` auf
@@ -1945,6 +1959,68 @@ async function withMedia(page, features) {
     features,
   );
   return { cdp, applied };
+}
+
+/**
+ * Jede Flaeche, deren GRUND aus einem `--glass-bg-*`-Token kommt.
+ *
+ * DAS TOKEN IST DIE SIGNATUR, nicht `backdrop-filter`. Die Fallback-Regel sagt
+ * woertlich: `prefers-reduced-transparency` kippt „alle Glas-Tokens auf
+ * --color-surface-Werte" - sie spricht also ueber die Flaechen, die ihren Grund
+ * von dort beziehen, nicht ueber alles, was einen Blur traegt.
+ *
+ * Der Unterschied ist gemessen und kein Detail: die erste Fassung fragte nach
+ * `backdrop-filter` und meldete elf FABs, die unter beiden Zustaenden bei
+ * alpha 0,78 bleiben. Das ist kein Verstoss, sondern ihre Bauart - ein
+ * `.page-fab` traegt seine MODULFARBE zu 78 % und keinen Glasgrund; sein
+ * `backdrop-filter` ist ein Specular, kein Lesegrund. Die Regel meinte ihn nie.
+ */
+async function glassBackedSurfaces(page) {
+  return page.evaluate(() => {
+    const path3 = (el) => {
+      const parts = [];
+      for (let n = el; n && n.nodeType === 1 && parts.length < 3; n = n.parentElement) {
+        let s = n.tagName.toLowerCase();
+        if (n.id) { parts.unshift(`${s}#${n.id}`); break; }
+        const cls = (typeof n.className === 'string' ? n.className : '').trim().split(/\s+/).filter(Boolean).slice(0, 2);
+        if (cls.length) s += `.${cls.join('.')}`;
+        parts.unshift(s);
+      }
+      return parts.join(' > ');
+    };
+    const selectors = new Set();
+    const walk = (rules) => {
+      for (const rule of rules) {
+        // `rule.cssRules` ist seit CSS Nesting KEIN Verzweigungskriterium mehr:
+        // jede CSSStyleRule traegt eine leere CSSRuleList, und die ist truthy.
+        if (rule.cssRules?.length) { walk(rule.cssRules); continue; }
+        if (!rule.style || !rule.selectorText) continue;
+        if (/background(-color)?:[^;]*var\(--glass-bg-/.test(rule.cssText)) selectors.add(rule.selectorText);
+      }
+    };
+    for (const sheet of document.styleSheets) {
+      try { walk(sheet.cssRules); } catch { /* fremde Herkunft - hier gibt es keine */ }
+    }
+
+    const out = [];
+    const seen = new Set();
+    for (const selector of selectors) {
+      let hits = [];
+      try { hits = [...document.querySelectorAll(selector)]; } catch { continue; }
+      for (const el of hits) {
+        if (seen.has(el)) continue;
+        seen.add(el);
+        const cs = getComputedStyle(el);
+        const r = el.getBoundingClientRect();
+        if (r.width < 2 || r.height < 2) continue;
+        if (cs.visibility === 'hidden' || cs.display === 'none') continue;
+        const bf = cs.backdropFilter && cs.backdropFilter !== 'none' ? cs.backdropFilter : cs.webkitBackdropFilter;
+        const blur = [...String(bf || '').matchAll(/blur\(\s*([\d.]+)px\s*\)/g)].map((m) => Number(m[1])).filter((v) => v > 0);
+        out.push({ sel: path3(el), blur: blur.length ? Math.max(...blur) : 0, bg: cs.backgroundColor });
+      }
+    }
+    return out;
+  });
 }
 
 /** Jede Flaeche, die Glas traegt - samt Ort im Baum und Deckkraft. */
@@ -2025,13 +2101,19 @@ for (const [label, features] of [
       `Der Medienzustand liegt nicht an (${JSON.stringify(applied)}) - die Sonde misst den Normalfall.`);
 
     const findings = [];
-    let seen = 0;
+    let blurred = 0;
+    let backed = 0;
     for (const name of sweep('Sonde 12')) {
       await gotoRoute(page, ALL_ROUTES[name]);
       await settleAnimations(page);
+      // (1) KEIN wirksamer Blur mehr - ueber alles, was `backdrop-filter` traegt.
       for (const g of await glassSurfaces(page)) {
-        seen += 1;
+        blurred += 1;
         if (g.blur > 0) findings.push(`${name}: ${g.sel} traegt weiter blur(${g.blur}px)`);
+      }
+      // (2) Und die Flaechen, deren GRUND ein Glas-Token ist, sind opak.
+      for (const g of await glassBackedSurfaces(page)) {
+        backed += 1;
         const alpha = parseColor(g.bg)[3];
         if (alpha < 1) {
           findings.push(`${name}: ${g.sel} bleibt durchsichtig (alpha ${alpha.toFixed(2)}) - `
@@ -2042,10 +2124,159 @@ for (const [label, features] of [
     await cdp.detach();
     await page.close();
 
-    assert.ok(seen > 0, 'Keine Glasflaeche gesehen - die Sonde hat nichts gemessen.');
+    assert.ok(blurred > 0, 'Keine Glasflaeche gesehen - die Sonde hat nichts gemessen.');
+    assert.ok(backed > 0, 'Keine Flaeche mit Glas-Grund gesehen - die CSSOM-Suche greift nicht mehr.');
     assert.deepEqual(findings, [],
       `Die Fallback-Regel kommt im Dokument nicht an (${label}). Das Stylesheet kippt `
       + '--blur-2xs..lg auf blur(0px) und die --glass-bg-* auf --color-surface-Werte; '
       + `gemessen wird, ob das die Flaeche erreicht.\n  ${findings.join('\n  ')}`);
   });
 }
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Sonde 13: die Modals - die Formulare der App, die keine Sonde je gesehen hat
+ *
+ * DIE REICHWEITENLUECKE. Alle zwoelf Sonden davor messen ROUTEN. Ein Modal ist
+ * keine Route - es kommt auf Klick, und dort stehen die Formulare: 20
+ * unterscheidbare Dialoge mit 2 bis 12 Feldern und 3 bis 17 Knoepfen. Das ist
+ * dieselbe Klasse Luecke wie die 23 Settings-Blaetter vor Session 22, nur eine
+ * Ebene tiefer - und der Ort, an dem jede neue Funktion ihr Feld einbaut.
+ *
+ * DER WEG HINEIN IST DER FAB, weil er der einzige app-weite ist
+ * (`findPageFab()`, seit #634 in der Shell-Layer). Vier Module haben keinen,
+ * der ein Modal oeffnet, und Einstellungen hat gar keinen - die Sonde
+ * ueberspringt sie und sagt es im Reichweiten-Beleg, statt sie stillschweigend
+ * zu zaehlen.
+ *
+ * SIE PRUEFT NICHT DIE DOKUMENTSTRUKTUR, und das ist kein Versehen: ein Modal
+ * liegt IM Dokument, das seine `h1`, seine `main`-Landmarke und seinen Titel
+ * schon hat. Sonde 10 wuerde dort dreimal dasselbe melden. Was im Modal NEU
+ * ist, sind Formularfelder, und die haben ihre eigene Regel (WCAG 3.3.2,
+ * Level A).
+ *
+ * DIE ZWEI FILTER SIND DER UNTERSCHIED ZWISCHEN EINEM BEFUND UND 32
+ * FEHLTREFFERN. Beim Messen meldete die erste Fassung 32 Felder ohne Label.
+ * Keines davon war eines: der Datepicker haelt ein `input[type=date]` mit
+ * `tabindex="-1" aria-hidden="true"` vor, das nur den nativen Picker oeffnet,
+ * und der Foto-Upload ist ein `.sr-only`-Feld hinter einem Knopf mit
+ * `aria-label`. Beide sind fuer die Zugaenglichkeitsschicht unsichtbar und
+ * brauchen kein Label. Sonde 10 filtert genau diese zwei seit jeher.
+ *
+ * DIE REICHWEITE WIRD BELEGT, NICHT GEZAEHLT (die Sonde-10-Lehre): geprueft
+ * wird, dass die geoeffneten Modals sich UNTERSCHEIDEN. Zwei Module, die
+ * denselben Titel mit derselben Feld- und Knopfzahl liefern, waeren ein
+ * Verdacht auf einen Dialog, der ueberall derselbe ist.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+async function openFabModal(page) {
+  return page.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const fab = document.querySelector('#fab-layer .page-fab, #fab-layer .fab-main, .page-fab, .fab-main');
+    if (!fab) return { skipped: 'kein FAB' };
+    fab.click();
+    await wait(700);
+    // Ein FAB oeffnet entweder ein Modal ODER ein Aktionsmenue.
+    let panel = document.querySelector('.modal-panel');
+    if (!panel) {
+      const action = document.querySelector('.fab-action__btn, .fab-actions button');
+      if (!action) return { skipped: 'kein Modal und kein Aktionsmenue' };
+      action.click();
+      await wait(700);
+      panel = document.querySelector('.modal-panel');
+    }
+    if (!panel) return { skipped: 'Aktionsmenue oeffnete kein Modal' };
+
+    const path3 = (el) => {
+      const parts = [];
+      for (let n = el; n && n.nodeType === 1 && parts.length < 3; n = n.parentElement) {
+        let s = n.tagName.toLowerCase();
+        if (n.id) { parts.unshift(`${s}#${n.id}`); break; }
+        const cls = (typeof n.className === 'string' ? n.className : '').trim().split(/\s+/).filter(Boolean).slice(0, 2);
+        if (cls.length) s += `.${cls.join('.')}`;
+        parts.unshift(s);
+      }
+      return parts.join(' > ');
+    };
+    // Dieselben zwei Ausnahmen wie in Sonde 10 - siehe Sondenkommentar.
+    const vis = (el) => {
+      if (el.closest('[aria-hidden="true"], .sr-only')) return false;
+      const r = el.getBoundingClientRect();
+      const cs = getComputedStyle(el);
+      return r.width > 1 && r.height > 1 && cs.visibility !== 'hidden' && cs.display !== 'none';
+    };
+
+    const fields = [...panel.querySelectorAll('input:not([type=hidden]), select, textarea')].filter(vis);
+    const targets = [...panel.querySelectorAll('button, [role="button"], a[href], input[type=checkbox], input[type=radio], select')].filter(vis);
+    const min = window.innerWidth < 768 ? 44 : 24;
+
+    return {
+      title: (panel.querySelector('.modal-panel__title, h2, h3')?.textContent || '').trim().slice(0, 40),
+      fields: fields.length,
+      targets: targets.length,
+      unlabelled: fields.filter((el) => {
+        const lab = (el.id && document.querySelector(`label[for="${CSS.escape(el.id)}"]`)) || el.closest('label');
+        return !lab && !el.getAttribute('aria-label') && !el.getAttribute('aria-labelledby');
+      }).map((el) => `${path3(el)} (${el.getAttribute('type') || el.tagName.toLowerCase()})`),
+      badRefs: [...panel.querySelectorAll('[aria-labelledby],[aria-describedby],[aria-controls]')].flatMap((el) =>
+        ['aria-labelledby', 'aria-describedby', 'aria-controls'].flatMap((attr) => {
+          const v = el.getAttribute(attr);
+          if (!v) return [];
+          const missing = v.split(/\s+/).filter((id) => id && !document.getElementById(id));
+          return missing.length ? [`${path3(el)} ${attr}="${missing.join(' ')}"`] : [];
+        })),
+      small: targets.filter((el) => {
+        const r = el.getBoundingClientRect();
+        // DAS LABEL IST DAS ZIEL, nicht die Checkbox darin - dieselbe
+        // HTML-Beziehung, die Sonde 4 in Session 22 gekostet hat. Ohne sie
+        // meldet diese Sonde die vier 20x20-Haken der Mahlzeitentypen im
+        // Rezept-Modal, die in einem `label.form-check` ueber die volle
+        // Zeilenbreite sitzen. Gesucht wird die BEZIEHUNG (`label.control`),
+        // nicht eine Klasse.
+        const label = el.closest('label') ?? (el.id ? document.querySelector(`label[for="${CSS.escape(el.id)}"]`) : null);
+        const box = label && (label.control === el || label.contains(el)) ? label.getBoundingClientRect() : r;
+        const w = Math.max(r.width, box.width);
+        const h = Math.max(r.height, box.height);
+        return w < min && h < min;
+      }).map((el) => {
+        const r = el.getBoundingClientRect();
+        return `${path3(el)} ${Math.round(r.width)}x${Math.round(r.height)} (min ${min})`;
+      }),
+    };
+  });
+}
+
+test('Sonde 13 - die Formulare hinter dem FAB halten dieselbe Grundlage wie die Seiten', async () => {
+  const findings = [];
+  const shapes = new Set();
+  let opened = 0;
+  const skipped = [];
+
+  for (const device of ['mobile', 'desktop']) {
+    const page = await openPage(harness, { device, theme: 'light', locale: 'de' });
+    for (const name of ROUTE_NAMES) {
+      await gotoRoute(page, ALL_ROUTES[name]);
+      await settleAnimations(page);
+      const r = await openFabModal(page);
+      if (r.skipped) { skipped.push(`${device}/${name}: ${r.skipped}`); continue; }
+      opened += 1;
+      shapes.add(`${device}|${r.title}|${r.fields}|${r.targets}`);
+      const at = `${device}/${name} „${r.title}"`;
+      for (const f of r.unlabelled) findings.push(`${at}: Eingabefeld ohne Label - ${f}`);
+      for (const b of r.badRefs) findings.push(`${at}: ARIA-Verweis ins Leere - ${b}`);
+      for (const s of r.small) findings.push(`${at}: Zielgroesse unter dem Minimum - ${s}`);
+    }
+    await page.close();
+  }
+
+  // Die REICHWEITE wird belegt, nicht gezaehlt: eine Sonde, die 22-mal
+  // denselben Dialog oeffnet, waere gruen und haette nichts gesehen.
+  assert.ok(opened >= 18, `Nur ${opened} Modals geoeffnet (uebersprungen: ${skipped.join(', ')}).`);
+  assert.ok(shapes.size >= 16,
+    `${opened} Modals geoeffnet, aber nur ${shapes.size} unterscheidbare - die Sonde misst `
+    + 'moeglicherweise mehrfach denselben Dialog.');
+
+  assert.deepEqual(findings, [],
+    'Befund in einem Modal. Dort stehen die Formulare der App, und bis Session 23 hat sie '
+    + 'keine Sonde gesehen - ein Feld ohne Label ist WCAG 3.3.2 (Level A).\n  '
+    + findings.join('\n  '));
+});
