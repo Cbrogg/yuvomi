@@ -2428,8 +2428,14 @@ p.field-hint--warn[hidden] {
   transition: background-color var(--transition-fast);
 }
 
+/* Sobald eine Flaeche darunter faehrt, zieht der Text auf primary - dieselbe
+ * Bewegung wie bei .btn--ghost:hover. Der Modul-Akzent haelt seine Zusage
+ * ">=5:1 auf weiss" (tokens.css) auf dem Kopf-Grund, aber nicht mehr auf dem
+ * Hover-Grau: dort standen elf der achtzehn Tints zwischen 4,24 und 4,31.
+ * Die Modul-Identitaet traegt der Ruhezustand, nicht der Hover. */
 .modal-panel__action:hover {
   background-color: var(--color-surface-3);
+  color: var(--color-text-primary);
 }
 
 .modal-panel__body {

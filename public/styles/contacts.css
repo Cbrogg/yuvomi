@@ -558,8 +558,12 @@ html:has(.contacts-page.is-selecting) .page-fab {
   border-radius: var(--radius-sm);
 }
 
+/* Text auf primary, sobald die Hover-Flaeche steht - siehe .btn--ghost:hover
+ * und .modal-panel__action:hover. Auf #EBEBF0 lag der Modul-Akzent hier bei
+ * 4,37 (light) und 4,46 (dark), beides unter AA fuer 14px. */
 .vcard-import__toggle:hover {
   background: var(--color-surface-hover);
+  color: var(--color-text-primary);
 }
 
 .vcard-import__list {
