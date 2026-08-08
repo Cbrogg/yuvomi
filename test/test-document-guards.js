@@ -1602,3 +1602,119 @@ test('Sonde 10 - jedes Dokument traegt dieselbe Struktur, angemeldet wie davor',
     + 'und der Weg jedes neuen Familienmitglieds; die dahinter halten dieselbe Grundlage.\n  '
     + findings.join('\n  '));
 });
+
+/**
+ * Sonde 11 - was klickbar ist, ist auch mit der Tastatur erreichbar.
+ *
+ * WARUM DAS EINE SONDE IST UND KEIN SCANNER. Der Cursor sagt es nicht:
+ * `cursor: pointer` vererbt, also sieht jedes Kind einer klickbaren Karte
+ * klickbar aus. Der Klassenname sagt es auch nicht - `.birthdays-toolbar__import`
+ * ist ein Knopf und heisst nach seiner Funktion (Session 12). Gefragt ist die
+ * LISTENER-REGISTRY DER ENGINE, und die kennt nur der laufende Browser:
+ * `DOMDebugger.getEventListeners` ueber CDP. Puppeteer bringt den Zugang mit,
+ * es kommt kein Fremdcode dazu.
+ *
+ * DER POSITIVBEFUND WAR DER ANLASS. Der Implementierungs-Audit vom 2026-08-08
+ * fuehrte unter „Was traegt": *Tastaturbedienung: 0 Befunde. Alle 29 Elemente
+ * mit click-Listener ohne eigenen Tastaturzugang sind Container mit
+ * Event-Delegation ueber echte Buttons.* Gemessen, gestimmt, nie abgesichert -
+ * und ein Positivbefund ohne Guard ist eine Momentaufnahme. Dieselbe Bauform
+ * hat bei Sonde 10 sofort einen 47. toten ARIA-Verweis geliefert, den der Audit
+ * selbst uebersehen hatte.
+ *
+ * WAS SIE DURCHLAESST, UND WARUM DAS DIE REGEL IST: ein Container, der einen
+ * click-Listener traegt und im Inneren ein echtes Bedienelement hat, ist
+ * EVENT-DELEGATION - das Muster, mit dem diese App ihre Listen verdrahtet, und
+ * die Tastatur erreicht das Ziel ueber den Knopf darin. Gemeldet wird der
+ * Container OHNE inneres Ziel: dort endet der Klick, und die Tastatur kommt
+ * nirgends an.
+ *
+ * SIE FAEHRT NUR DEN SEITENINHALT (`#main-content`). Die Shell ist auf jeder
+ * Route dieselbe; ein Befund dort kaeme sechzehnmal.
+ *
+ * KOSTEN: rund eine Minute. Sie nimmt `visitViews` NICHT - aus demselben Grund
+ * wie Sonde 8: die Verdrahtung einer Liste haengt an ihrem Modul, nicht an der
+ * Sicht, und die 16 Routen erreichen jedes Modul einmal.
+ */
+async function keyboardlessClickTargets(page) {
+  const cdp = await page.createCDPSession();
+  try {
+    // DOMDebugger hat kein `enable` - die Domain ist ohne Aktivierung nutzbar.
+    await cdp.send('DOM.enable');
+    await cdp.send('Runtime.enable');
+
+    const { result } = await cdp.send('Runtime.evaluate', {
+      expression: `
+        (() => {
+          const scope = document.querySelector('#main-content') || document.body;
+          window.__kbCandidates = [...scope.querySelectorAll('*')].filter((el) => {
+            const r = el.getBoundingClientRect();
+            const cs = getComputedStyle(el);
+            return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden'
+              && !el.closest('[hidden],[aria-hidden="true"]');
+          });
+          return window.__kbCandidates.length;
+        })()
+      `,
+      returnByValue: true,
+    });
+
+    const findings = [];
+    for (let i = 0; i < result.value; i += 1) {
+      const { result: handle } = await cdp.send('Runtime.evaluate', { expression: `window.__kbCandidates[${i}]` });
+      try {
+        const { listeners } = await cdp.send('DOMDebugger.getEventListeners', { objectId: handle.objectId, depth: 0 });
+        if (!listeners.some((l) => l.type === 'click')) continue;
+        const hasKeyListener = listeners.some((l) => l.type === 'keydown' || l.type === 'keypress');
+
+        const { result: meta } = await cdp.send('Runtime.callFunctionOn', {
+          objectId: handle.objectId,
+          returnByValue: true,
+          functionDeclaration: `function () {
+            const native = this.matches('a[href],button,input,select,textarea,summary,[contenteditable]');
+            const tabindex = this.getAttribute('tabindex');
+            return {
+              tag: this.tagName.toLowerCase(),
+              cls: (typeof this.className === 'string' ? this.className : '').trim().slice(0, 60),
+              focusable: native || (tabindex !== null && Number(tabindex) >= 0),
+              delegates: Boolean(this.querySelector('a[href],button,input,select,textarea,summary,[tabindex]:not([tabindex="-1"])')),
+            };
+          }`,
+        });
+        const el = meta.value;
+        if (el.focusable || hasKeyListener || el.delegates) continue;
+        findings.push(`<${el.tag}${el.cls ? ` class="${el.cls}"` : ''}>`);
+      } finally {
+        await cdp.send('Runtime.releaseObject', { objectId: handle.objectId });
+      }
+    }
+    return findings;
+  } finally {
+    await cdp.detach();
+  }
+}
+
+test('Sonde 11 - was einen Klick annimmt, nimmt auch eine Taste an', async () => {
+  const findings = [];
+  let seen = 0;
+
+  const page = await openPage(harness, { device: 'desktop', theme: 'light', locale: 'de' });
+  for (const name of ROUTE_NAMES) {
+    await gotoRoute(page, ROUTES[name]);
+    await settleAnimations(page);
+    seen += 1;
+    for (const el of await keyboardlessClickTargets(page)) {
+      findings.push(`${name}: ${el}`);
+    }
+  }
+  await page.close();
+
+  // Eine Sonde, die nichts gesehen hat, darf nicht urteilen.
+  assert.equal(seen, ROUTE_NAMES.length, `Nur ${seen} von ${ROUTE_NAMES.length} Routen gesehen.`);
+
+  assert.deepEqual(findings, [],
+    'Element mit click-Listener, ohne eigenen Tastaturzugang UND ohne inneres Bedienelement, '
+    + 'an das es delegieren koennte - hier endet der Klick und die Tastatur kommt nicht an '
+    + '(WCAG 2.1.1, Level A).\n  '
+    + findings.join('\n  '));
+});

@@ -13,6 +13,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
+import { eachRule } from './css-rules.js';
 
 const STYLES_DIR = new URL('../public/styles/', import.meta.url);
 
@@ -83,16 +84,66 @@ test('die kanonischen Breakpoint-Tokens existieren in tokens.css', () => {
   }
 });
 
-test('die Typografie-Rollen-Schicht ist vorhanden und eingebunden', () => {
+/**
+ * Die Rollen-Schicht traegt, was sie als REGEL fuehrt - nicht, was ihr
+ * Kommentar erwaehnt.
+ *
+ * Die Vorfassung prüfte `typography.includes('.u-eyebrow')` und war damit
+ * ZWEIMAL falsch. Erstens las sie Kommentare mit: `.u-eyebrow` steht seit dem
+ * HIG-Rollout nur noch in dem Absatz, der sein ENTFALLEN begruendet
+ * (typography.css:139) - der Guard war gruen auf einer Fundstelle, die das
+ * Gegenteil seiner Zusage belegt. Zweitens verlangte er damit ausgerechnet die
+ * Klasse, die die Echte-Information-Regel VERBIETET: „Dekorative Kicker und
+ * Eyebrows ohne Informationswert bleiben verboten; die generische Opt-in-Klasse
+ * dafuer ist mit dem Rollout entfallen, weil ihr Name zur Rueckkehr des Musters
+ * einlud." Ein Guard, der ein Verbot als Pflicht fuehrt, haelt die Tuer auf.
+ *
+ * Deshalb laeuft die Pruefung ueber `eachRule()` statt ueber `includes()`:
+ * gezaehlt wird nur, was als Selektor einer Regel dasteht.
+ */
+test('die Typografie-Rollen-Schicht steht als Regel, und der Eyebrow bleibt entfallen', () => {
   const typography = readFileSync(new URL('../public/styles/typography.css', import.meta.url), 'utf8');
-  for (const role of ['.u-eyebrow', '.u-card-title', '.u-section-title', '.u-page-title']) {
-    assert.ok(typography.includes(role), `Rollen-Klasse ${role} fehlt in typography.css`);
+  const selectors = [...eachRule(typography)].flatMap(({ selector }) => selector.split(','))
+    .map((part) => part.trim());
+
+  for (const role of ['.u-card-title', '.u-section-title', '.u-page-title']) {
+    const declared = selectors.some((selector) => new RegExp(`(^|[\\s>+~])\\${role}([\\s.:[]|$)`).test(selector));
+    assert.ok(declared, `Rollen-Klasse ${role} steht in typography.css in keiner Regel (nur ein Kommentar zaehlt nicht)`);
   }
+
+  const eyebrow = selectors.filter((selector) => /(^|[\s>+~])\.u-eyebrow([\s.:[]|$)/.test(selector));
+  assert.deepEqual(
+    eyebrow,
+    [],
+    'Die Echte-Information-Regel verbietet die generische Eyebrow-Klasse - sie ist mit dem Rollout entfallen und darf nicht zurueckkehren',
+  );
+
   const indexHtml = readFileSync(new URL('../public/index.html', import.meta.url), 'utf8');
   assert.ok(
     indexHtml.includes('styles/typography.css'),
     'typography.css ist nicht in index.html eingebunden',
   );
+});
+
+/**
+ * Und sie bleibt auch aus dem MARKUP weg. Ein Guard nur ueber das Stylesheet
+ * haette den Ruecksprung durch die andere Tuer gelassen: eine Klasse ohne Regel
+ * ist stumm, aber sie ist der Wiedereinstieg - erst steht sie im Markup, dann
+ * „fehlt" ihr Stil.
+ */
+test('kein Markup greift die entfallene Eyebrow-Klasse wieder auf', () => {
+  const roots = ['../public/pages/', '../public/components/', '../public/settings/', '../public/utils/'];
+  const offenders = [];
+  const walk = (dir) => {
+    for (const entry of readdirSync(new URL(dir, import.meta.url), { withFileTypes: true })) {
+      const path = `${dir}${entry.name}`;
+      if (entry.isDirectory()) { walk(`${path}/`); continue; }
+      if (!entry.name.endsWith('.js')) continue;
+      if (/\bu-eyebrow\b/.test(readFileSync(new URL(path, import.meta.url), 'utf8'))) offenders.push(path);
+    }
+  };
+  for (const root of roots) walk(root);
+  assert.deepEqual(offenders, [], `u-eyebrow ist entfallen und steht wieder im Markup:\n${offenders.join('\n')}`);
 });
 
 test('die Produkt-Typografie nutzt feste semantische Rollenwerte', () => {

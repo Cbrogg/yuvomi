@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { SETTINGS_DOMAINS, SETTINGS_LEAVES } from '../public/settings/registry.js';
+import { eachRule } from './css-rules.js';
 
 const read = (path) => readFileSync(new URL(path, import.meta.url), 'utf8').replace(/\r/g, '');
 
@@ -140,87 +141,10 @@ function assertKeysExistInEveryLocale(keys) {
 // als gemeint (CodeQL js/incomplete-sanitization).
 const escapeForRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-/**
- * Der EINE Regelscanner. Liefert `{ selector, body, at }` fuer jede Regel einer
- * Stylesheet-Quelle - Kommentare gestrippt, At-Bloecke aufgeloest, und `at`
- * traegt die Kette der At-Praeambeln, in denen die Regel steht (leer auf der
- * Basisebene).
- *
- * DREI FALLEN STECKEN IN SEINER GESCHICHTE, alle drei in Runde 6 bezahlt, und
- * alle drei mit einem gruenen Guard darueber:
- *
- * 1. (Phase 0) `(?:^|[}])\s*([^{}]*)\{([^}]*)\}` verschluckt die ERSTE Regel
- *    jedes At-Blocks - `[^}]*` im Rumpf erlaubt `{`, also frisst der Match der
- *    `@media`-Praeambel die Regel dahinter mit. Jeder Guard auf diesem Muster
- *    war in Media-Queries blind, also genau dort, wo responsive Verstoesse
- *    leben.
- * 2. (Phase 3a) `(?:^|[}])` KONSUMIERT sein Trennzeichen: nach einem Treffer
- *    steht `lastIndex` hinter dem `}` der gefundenen Regel, und die naechste
- *    findet keines mehr vor sich - **jede zweite Regel blieb ungesehen**.
- *    Gegenprobe: `.a{} .b{} .c{} .d{}` liefert mit dem alten Muster `.a, .c`.
- * 3. (Phase 3b) Das Muster kannte den KONTEXT einer Regel nicht. Das Flachmachen
- *    der At-Bloecke war der Preis fuer Falle 1 - es macht die Regeln darin
- *    sichtbar und wirft dabei die Angabe weg, die eine responsive Regel
- *    braucht: in welchem Block sie steht.
- *
- * Deshalb laeuft er jetzt ueber die Klammern statt ueber ein Regex: er steigt
- * in `@media`, `@supports`, `@container` und `@layer` hinab und merkt sich die
- * Praeambel. `@keyframes` wird uebersprungen - seine Prozentmarken sind
- * Animationsstufen, keine Selektoren, und das alte Muster lieferte dort ohnehin
- * nur die Praeambel mit angebrochenem Rumpf.
- *
- * Er steht an GENAU EINER Stelle - vier Kopien des alten Musters waren vier
- * Gelegenheiten, dieselbe Falle wieder einzubauen.
- */
-const AT_RULES_WITH_RULES = /^@(?:media|supports|container|layer|scope)\b/;
-
-function* eachRule(css) {
-  const src = css.replace(/\/\*[\s\S]*?\*\//g, '');
-  const at = [];
-  let index = 0;
-  let start = 0;
-
-  while (index < src.length) {
-    const char = src[index];
-
-    if (char === '}') {
-      at.pop();
-      index += 1;
-      start = index;
-      continue;
-    }
-
-    if (char !== '{') {
-      index += 1;
-      continue;
-    }
-
-    const preamble = src.slice(start, index).trim().replace(/\s+/g, ' ');
-
-    if (AT_RULES_WITH_RULES.test(preamble)) {
-      at.push(preamble);
-      index += 1;
-      start = index;
-      continue;
-    }
-
-    // Alles andere ist ein Block mit Deklarationen (oder @keyframes). Bis zur
-    // passenden schliessenden Klammer springen, damit verschachtelte
-    // Keyframe-Stufen nicht als eigene Regeln durchgehen.
-    let depth = 1;
-    let end = index + 1;
-    while (end < src.length && depth > 0) {
-      if (src[end] === '{') depth += 1;
-      else if (src[end] === '}') depth -= 1;
-      end += 1;
-    }
-    if (preamble && !preamble.startsWith('@keyframes')) {
-      yield { selector: preamble, body: src.slice(index + 1, end - 1), at: [...at] };
-    }
-    index = end;
-    start = index;
-  }
-}
+// Der EINE Regelscanner liegt seit 2026-08-08 in test/css-rules.js - er wird
+// inzwischen von zwei Suiten gebraucht, und eine Kopie waere die fuenfte
+// Gelegenheit gewesen, dieselbe Falle wieder einzubauen. Seine Geschichte
+// (drei bezahlte Blindstellen) steht dort im Kopfkommentar.
 
 function cssRuleBody(css, selector) {
   const match = css.match(new RegExp(`${escapeForRegExp(selector)}\\s*\\{([^}]*)\\}`, 'm'));
@@ -8455,4 +8379,168 @@ test('the collapsing header is wired once, by the shell', () => {
       `${name} liest den Andock-Versatz - der gehoert in layout.css.`,
     );
   }
+});
+
+// --------------------------------------------------------------------------
+// GUARD-ABDECKUNG (2026-08-08): fuenf Regeln, die bis hierher NUR an ihrer
+// Einzelfundstelle abgesichert waren oder gar nicht. Jede von ihnen stand als
+// gemessener Positivbefund im Implementierungs-Audit - und ein Positivbefund
+// ohne Guard ist eine Momentaufnahme, keine Zusage.
+// --------------------------------------------------------------------------
+
+/**
+ * DIE FALLBACK-REGEL HAT AUF DIESER EBENE KEINEN GUARD, SONDERN EINEN PUNKT -
+ * und der ist der Guard direkt darunter. Zwei Fassungen gebaut, beide gemessen,
+ * beide verworfen:
+ *
+ * (a) „Der Blur steht in einem `@supports`-Block." Klingt nach dem Wortlaut der
+ *     Regel und ist die falsche Frage. Sechs Flaechen setzen ihn ausserhalb
+ *     (`.onboarding-overlay`, `.document-viewer__pdf-indicator`,
+ *     `.more-backdrop`, `.search-overlay`, `.modal-overlay`, `body::after` in
+ *     pwa.css) und KEINE davon ist ein Verstoss: der
+ *     Zugaenglichkeits-Fallback dieser App haengt nicht am Block, sondern am
+ *     TOKEN. `--blur-2xs..lg` kippen unter `prefers-reduced-transparency` und
+ *     `prefers-contrast: more` selbst auf `blur(0px)` (tokens.css:1338-1342 und
+ *     1361-1365). Der Kommentar an `.modal-overlay` (layout.css:2313-2317) sagt
+ *     das seit Runde 1 ausdruecklich.
+ * (b) „Nicht-Blur-Stile stehen ausserhalb des Blocks." Neun Treffer, davon
+ *     sieben genau das Muster, das die Regel MEINT - opaker Grund draussen,
+ *     getoenter Glas-Grund drinnen - und zwei legitime Sonderformen
+ *     (`.page-fab::before` ist ein Specular, das es ohne Glas gar nicht gibt;
+ *     `.fab-backdrop--visible` ist ein Modifier, dessen Basisregel den Grund
+ *     traegt).
+ *
+ * WAS BLEIBT, IST DER TOKEN - und den prueft der naechste Guard. Er ist damit
+ * nicht die Kosmetik-Haelfte der Regel, sondern ihre Zugaenglichkeits-Haelfte:
+ * ein roher `blur(8px)` staende unter reduzierter Transparenz weiter da.
+ * Ob eine Glasflaeche OHNE Blur noch traegt, sieht erst das Dokument in genau
+ * diesem Medienzustand - und dass der nie im laufenden Dokument gemessen wurde,
+ * fuehrt der Handoff selbst als bekannte Prueflücke (§8, „Kandidat fuer die
+ * zweite Ausbaustufe der Dokument-Suite").
+ */
+
+/**
+ * Die Blur-Skala ist kanonisch (2/6/10/20/32px als `--blur-2xs..lg`) - und sie
+ * ist zugleich der Schalter, mit dem `prefers-reduced-transparency` und
+ * `prefers-contrast: more` alles Glas der App abraeumen. Ein Blur, der nicht
+ * aus ihr kommt, ist deshalb nicht nur eine siebte Stufe neben sechsen (die
+ * Bauart des zweiten Buttonradius), sondern eine Flaeche, die sich der
+ * Zugaenglichkeitsschaltung entzieht.
+ */
+test('jeder Blur kommt aus der --blur-Skala', () => {
+  const offenders = [];
+  for (const file of readdirSync(new URL('../public/styles/', import.meta.url)).filter((n) => n.endsWith('.css'))) {
+    for (const rule of eachRule(read(`../public/styles/${file}`))) {
+      for (const declared of rule.body.matchAll(/(?:-webkit-)?backdrop-filter\s*:\s*([^;]+)/g)) {
+        for (const blur of declared[1].matchAll(/blur\(\s*([^)]+?)\s*\)/g)) {
+          if (blur[1].startsWith('var(--blur-') || blur[1] === '0') continue;
+          offenders.push(`${file}: ${rule.selector} -> blur(${blur[1]})`);
+        }
+      }
+    }
+  }
+  assert.deepEqual(offenders, [], `Blur ausserhalb der Skala:\n${offenders.join('\n')}`);
+});
+
+/**
+ * Die Kasten-in-Kasten-Regel, die im Stylesheet scharfe Haelfte: ein Well ist
+ * die Antwort fuer eine KACHEL in einer Karte, und seine Definition lautet
+ * „Flaeche, KEINE Kante, Radius bleibt". Ein Well mit eigener Kante waere
+ * genau der umrandete Kasten in der kantenlosen Karte, den die Regel abschafft.
+ *
+ * Warum der Guard ueber `--color-fill-well` geht und nicht ueber Klassennamen:
+ * der Token IST die Signatur. Wer eine Kachel eintieft, nimmt ihn - und wer
+ * ihn nimmt, hat sich fuer die Well-Antwort entschieden. Ein Guard ueber
+ * `.*-well`-Namen waere blind fuer jede Kachel, die sich nach ihrer Funktion
+ * nennt (dieselbe Lehre wie bei `.birthdays-toolbar__import`).
+ *
+ * `border: none` zaehlt nicht als Kante - neun der elf Well-Regeln schreiben
+ * genau das, weil sie eine geerbte Kante abraeumen.
+ */
+test('ein Well traegt keine eigene Kante', () => {
+  const offenders = [];
+  for (const file of readdirSync(new URL('../public/styles/', import.meta.url)).filter((n) => n.endsWith('.css'))) {
+    if (file === 'tokens.css') continue; // die Definition des Tokens selbst
+    for (const rule of eachRule(read(`../public/styles/${file}`))) {
+      if (!/background(?:-color)?\s*:[^;]*var\(--color-fill-well\)/.test(rule.body)) continue;
+      for (const declared of rule.body.matchAll(/(?:^|[;{}\s])(border(?:-(?:top|right|bottom|left|block|inline)(?:-(?:start|end))?)?)\s*:\s*([^;]+)/g)) {
+        const value = declared[2].trim();
+        if (/^(none|0|unset|initial)\b/.test(value)) continue;
+        offenders.push(`${file}: ${rule.selector} -> ${declared[1]}: ${value}`);
+      }
+    }
+  }
+  assert.deepEqual(
+    offenders,
+    [],
+    `Ein Well ist eine Vertiefung, kein umrandeter Kasten:\n${offenders.join('\n')}`,
+  );
+});
+
+/**
+ * Die Label-Farben-Regel: Large Titles tragen `--color-text-primary`, und es
+ * gibt keinen Gradient-Text. Beides gehoerte zur abgeloesten Welt.
+ *
+ * Gradient-Text hat im CSS eine eindeutige Signatur - `background-clip: text`
+ * zusammen mit einem transparenten Fuellwert. Sie steht heute nirgends
+ * (gemessen 2026-08-08: 0 Fundstellen); das war der Positivbefund, den bisher
+ * nichts gehalten hat.
+ */
+test('kein Titel wird zu Gradient-Text, und der Large Title bleibt in der Textfarbe', () => {
+  const gradientText = [];
+  const tintedTitle = [];
+  for (const file of readdirSync(new URL('../public/styles/', import.meta.url)).filter((n) => n.endsWith('.css'))) {
+    for (const rule of eachRule(read(`../public/styles/${file}`))) {
+      if (/(?:-webkit-)?background-clip\s*:\s*text/.test(rule.body)
+        || /-webkit-text-fill-color\s*:\s*transparent/.test(rule.body)) {
+        gradientText.push(`${file}: ${rule.selector}`);
+      }
+      // Die kanonische Seitentitel-Rolle - wer sie faerbt, faerbt den Large Title.
+      if (!/(^|[\s,>])\.page-toolbar__title\b/.test(rule.selector)) continue;
+      const colour = rule.body.match(/(?:^|[;{}\s])color\s*:\s*([^;]+)/);
+      if (colour && !/var\(--color-text-primary\)|inherit/.test(colour[1])) {
+        tintedTitle.push(`${file}: ${rule.selector} -> color: ${colour[1].trim()}`);
+      }
+    }
+  }
+  assert.deepEqual(gradientText, [], `Gradient-Text gehoert der abgeloesten Welt:\n${gradientText.join('\n')}`);
+  assert.deepEqual(tintedTitle, [], `Der Large Title traegt --color-text-primary:\n${tintedTitle.join('\n')}`);
+});
+
+/**
+ * Design-Werte kommen aus tokens.css - auch in einem JS-Template-String.
+ *
+ * Der Typo-Guard (`test:typography`) scannt Stylesheets; ein `style="…"` in
+ * einem Template-Literal sieht er nicht. Session 20 fand dort genau eine
+ * Fundstelle (drei Werte am Notiz-Formularlabel, aufgeloest zu
+ * `.form-label__hint`) und sicherte GENAU DIESE STELLE ab - die Klasse blieb
+ * offen. Das ist der Unterschied zwischen einem Guard ueber eine Regel und
+ * einem ueber N Dateien, nur in der kleinstmoeglichen Form: N = 1.
+ *
+ * Geprueft wird das LITERAL. Ein `var(--token)` ist die richtige Antwort, und
+ * ein berechneter Wert (`${…}`) ist eine andere Frage - dort steht eine
+ * Nutzerfarbe oder eine Geometrie, und ob die stimmt, entscheiden die
+ * Kontrast-Guards und Sonde 4, nicht dieser hier. GEMESSEN 2026-08-08: 185
+ * Inline-Deklarationen in public/, davon 0 als Design-Literal.
+ */
+test('kein Inline-Style in public/ schreibt einen Design-Wert als Literal', () => {
+  const DESIGN_PROPS = /^(font-size|font-weight|letter-spacing|line-height|border-radius|box-shadow|color|background|background-color|border-color)$/;
+  const offenders = [];
+  for (const path of walkJsFiles('../public/')) {
+    if (path.includes('/vendor/')) continue;
+    for (const attr of read(path).matchAll(/style\s*=\s*(["'])([^"']*?)\1/g)) {
+      for (const declared of attr[2].matchAll(/(?:^|[;\s])([a-z-]+)\s*:\s*([^;"'`]+)/g)) {
+        const [, prop, raw] = declared;
+        if (!DESIGN_PROPS.test(prop)) continue;
+        const value = raw.trim();
+        if (/var\(--|\$\{/.test(value)) continue;
+        offenders.push(`${path}: ${prop}: ${value}`);
+      }
+    }
+  }
+  assert.deepEqual(
+    offenders,
+    [],
+    `Design-Wert inline statt aus tokens.css - eine Klasse dafuer anlegen:\n${offenders.join('\n')}`,
+  );
 });
