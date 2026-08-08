@@ -496,6 +496,13 @@
    * der App (Critique 2026-07-29). Die vier Einzel-Tokens bleiben bestehen:
    * Dashboard-Widgets und Nav-Icons referenzieren sie einzeln. */
   --module-kitchen:   var(--_family-kitchen);
+  /* Inventar teilt den Kuechen-Ton (Betreiber-Entscheidung 2026-08-12): kein
+   * eigenstaendiger Hex mehr seit der Familientoenen-Konsolidierung (Block 2,
+   * 2026-08-10) - die Familienregel verlangt, dass jedes --module-* aus einer
+   * der neun Familien bezieht. Inventar ist wie Vorrat ein Lagerort-Konzept
+   * (Orte, Kategorien) und schliesst sich der Kuechen-Familie an; die
+   * Unterscheidung traegt das Siegel-Icon, nicht der Ton. */
+  --module-inventory: var(--_family-kitchen);
   --module-notes:     var(--_family-records);
   --module-contacts:  var(--_family-people);
   --module-birthdays: var(--_family-people);
