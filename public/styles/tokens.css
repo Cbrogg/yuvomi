@@ -1300,8 +1300,8 @@
      *   .btn--danger-ghost:hover  #B80012 auf #050507   2,95:1
      *   .settings-module-status--enabled
      *                             #186A2C auf 14%-Grün  1,97:1
-     * Der Bestand wusste die Antwort schon: --_color-accent-hover (#8E8BFF)
-     * steht oben HELLER als --_color-accent (#7D7AFF). Die Semantik ist beim
+     * Der Bestand wusste die Antwort schon: --_color-accent-hover (#9B98FF)
+     * steht oben HELLER als --_color-accent (#8A87FF). Die Semantik ist beim
      * Dark-Rollout einfach nicht mitgekommen.
      *
      * Die Werte sind auf die SCHRITTWEITE eingestellt, nicht geraten: das
@@ -1343,7 +1343,14 @@
 
     /* Modul-Akzente — Dark-Varianten (Bestandswerte, verifiziert;
      * NUR dashboard und calendar im Redesign 2026-08 verschoben) */
-    --_module-dashboard: #7D7AFF;   /* Indigo Dark = Akzent */
+    --_module-dashboard: #8A87FF;   /* Indigo Dark = Akzent: zieht mit --_color-accent MIT.
+                                     * Der Share ist die Zusage, nicht der Wert - blieb der Tint
+                                     * auf #7D7AFF, loeste der Router auf /dashboard genau den
+                                     * Wert in --active-module-accent auf, den der Akzent als
+                                     * zu dunkel abgelegt hat (4,05 auf #2C2C2E). Traegt beide
+                                     * Rollen besser: als Text 4,64 statt 4,05, als Flaeche unter
+                                     * --color-ink-on-vivid (#0A0A0C) 6,58 statt 5,75 - damit im
+                                     * Feld der uebrigen Dark-Tints (6,17 bis 11,35) statt darunter. */
     --_module-tasks:     #4ADE80;
     --_module-calendar:  #A78BFA;   /* Violett-400 — Familien-Distanz zum Indigo-Akzent */
     --_module-meals:     #FB923C;
@@ -1485,8 +1492,8 @@
      *   .btn--danger-ghost:hover  #B80012 auf #050507   2,95:1
      *   .settings-module-status--enabled
      *                             #186A2C auf 14%-Grün  1,97:1
-     * Der Bestand wusste die Antwort schon: --_color-accent-hover (#8E8BFF)
-     * steht oben HELLER als --_color-accent (#7D7AFF). Die Semantik ist beim
+     * Der Bestand wusste die Antwort schon: --_color-accent-hover (#9B98FF)
+     * steht oben HELLER als --_color-accent (#8A87FF). Die Semantik ist beim
      * Dark-Rollout einfach nicht mitgekommen.
      *
      * Die Werte sind auf die SCHRITTWEITE eingestellt, nicht geraten: das
@@ -1526,7 +1533,7 @@
     --_chart-series-7: #4ADE80;
 
     /* Modul-Akzente */
-    --_module-dashboard: #7D7AFF;
+    --_module-dashboard: #8A87FF;   /* zieht mit --_color-accent MIT, siehe Dark-Block oben */
     --_module-tasks:     #4ADE80;
     --_module-calendar:  #A78BFA;
     --_module-meals:     #FB923C;
