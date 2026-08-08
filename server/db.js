@@ -5091,7 +5091,7 @@ const MIGRATIONS = [
     version: 135,
     description: 'Inventory: link items to documents from the Documents module (Stage 2)',
     up: `
-      -- Spiegelt budget_entry_attachments 1:1 (server/db.js, Migration 111):
+      -- Spiegelt budget_entry_attachments 1:1 (server/db.js, Migration 112):
       -- gleiche Spaltenform, gleiche CASCADE-Begruendung. Das Dokument selbst
       -- bleibt beim Loeschen des Gegenstands im Dokumente-Modul erhalten -
       -- CASCADE steht nur auf der Verknuepfungszeile, nicht auf family_documents.

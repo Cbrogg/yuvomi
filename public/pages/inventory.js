@@ -333,12 +333,6 @@ function openItemModal(mode, item = null) {
       panel.querySelector('#inv-condition').value = isEdit ? item.condition : 'good';
       panel.querySelector('#inv-notes').value = isEdit && item.notes ? item.notes : '';
 
-      panel.querySelector('#inv-save').addEventListener('click', () => saveItem(panel, mode, item, attachments));
-      panel.querySelector('#inv-delete')?.addEventListener('click', async () => {
-        closeSharedModal({ force: true });
-        await removeItem(item);
-      });
-
       wireBlurValidation(panel);
       const attachments = bindDocumentAttachField(panel, {
         category: () => panel.querySelector('#inv-attachment-category').value,
@@ -347,6 +341,12 @@ function openItemModal(mode, item = null) {
           name: panel.querySelector('#inv-name').value.trim() || file.name,
         }),
       });
+      panel.querySelector('#inv-save').addEventListener('click', () => saveItem(panel, mode, item, attachments));
+      panel.querySelector('#inv-delete')?.addEventListener('click', async () => {
+        closeSharedModal({ force: true });
+        await removeItem(item);
+      });
+
       if (window.lucide) window.lucide.createIcons({ el: panel });
     },
   });
