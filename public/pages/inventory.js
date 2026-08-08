@@ -8,7 +8,7 @@
  */
 
 import { api } from '/api.js';
-import { t, formatDate } from '/i18n.js';
+import { t } from '/i18n.js';
 import { esc } from '/utils/html.js';
 import {
   openModal as openSharedModal,
@@ -71,10 +71,16 @@ async function openLocationManager() {
         subDeleteDetailKey: 'inventory.locationDeleteConfirmDetail',
       });
     },
-    onClose: () => {
+    onClose: async () => {
       manager?.removeEventListener('category-manager-changed', onChanged);
       manager = null;
-      if (changed && typeof renderList === 'function') renderList();
+      if (changed) {
+        // Loeschen einer Location NULLt location_id betroffener Items
+        // server-seitig - die Liste muss neu geladen werden, sonst zeigt sie
+        // veraltete location_path-Werte bis zum naechsten vollen Reload.
+        await loadItems();
+        renderList();
+      }
     },
   });
 }
@@ -104,10 +110,16 @@ async function openCategoryManager() {
         deleteDetailKey: 'inventory.categoryDeleteConfirmDetail',
       });
     },
-    onClose: () => {
+    onClose: async () => {
       manager?.removeEventListener('category-manager-changed', onChanged);
       manager = null;
-      if (changed && typeof renderList === 'function') renderList();
+      if (changed) {
+        // Loeschen einer Kategorie weist betroffene Items server-seitig
+        // 'other' zu - die Liste muss neu geladen werden, sonst zeigt sie
+        // veraltete category_name-Werte bis zum naechsten vollen Reload.
+        await loadItems();
+        renderList();
+      }
     },
   });
 }
@@ -115,10 +127,6 @@ async function openCategoryManager() {
 // --------------------------------------------------------
 // Gegenstands-Liste
 // --------------------------------------------------------
-
-function categoryLabel(key) {
-  return state.categories.find((c) => c.key === key)?.name ?? key;
-}
 
 function statusLabel(status) {
   return t(`inventory.status${status.charAt(0).toUpperCase()}${status.slice(1)}`);
@@ -138,7 +146,7 @@ function renderItemRow(item) {
       <div class="inventory-item-row__category">${esc(item.category_name)}</div>
       <div class="inventory-item-row__location">${item.location_path ? esc(item.location_path) : ''}</div>
       <span class="inventory-status-badge inventory-status-badge--${esc(item.status)}">${esc(statusLabel(item.status))}</span>
-      <span class="inventory-item-row__value">${esc(formatMoney(item.current_value, item.currency))}</span>
+      <span class="inventory-item-row__value">${item.current_value != null ? esc(formatMoney(item.current_value, item.currency)) : ''}</span>
     </div>`;
 }
 
@@ -217,7 +225,7 @@ function openItemModal(mode, item = null) {
         <label class="form-label" for="inv-name">${esc(t('common.nameLabel'))}</label>
         <input id="inv-name" class="form-input" type="text" required placeholder="${esc(t('inventory.namePlaceholder'))}">
       </div>
-      <div class="pantry-form-row">
+      <div class="inventory-form-row">
         <div class="form-group">
           <label class="form-label" for="inv-category">${esc(t('inventory.categoryLabel'))}</label>
           <select id="inv-category" class="form-input">${categoryOptions}</select>
@@ -227,7 +235,7 @@ function openItemModal(mode, item = null) {
           <select id="inv-location" class="form-input">${locationOptions.join('')}</select>
         </div>
       </div>
-      <div class="pantry-form-row">
+      <div class="inventory-form-row">
         <div class="form-group">
           <label class="form-label" for="inv-purchase-date">${esc(t('inventory.purchaseDateLabel'))}</label>
           <yuvomi-datepicker id="inv-purchase-date" type="date"
@@ -238,7 +246,7 @@ function openItemModal(mode, item = null) {
           <input id="inv-purchase-price" class="form-input" type="number" min="0" step="0.01" inputmode="decimal">
         </div>
       </div>
-      <div class="pantry-form-row">
+      <div class="inventory-form-row">
         <div class="form-group">
           <label class="form-label" for="inv-current-value">${esc(t('inventory.currentValueLabel'))}</label>
           <input id="inv-current-value" class="form-input" type="number" min="0" step="0.01" inputmode="decimal">
@@ -250,7 +258,7 @@ function openItemModal(mode, item = null) {
         </div>
       </div>
       ${advancedSection(`
-        <div class="pantry-form-row">
+        <div class="inventory-form-row">
           <div class="form-group">
             <label class="form-label" for="inv-brand">${esc(t('inventory.brandLabel'))}</label>
             <input id="inv-brand" class="form-input" type="text">
@@ -260,7 +268,7 @@ function openItemModal(mode, item = null) {
             <input id="inv-model" class="form-input" type="text">
           </div>
         </div>
-        <div class="pantry-form-row">
+        <div class="inventory-form-row">
           <div class="form-group">
             <label class="form-label" for="inv-serial">${esc(t('inventory.serialNumberLabel'))}</label>
             <input id="inv-serial" class="form-input" type="text">
@@ -270,7 +278,7 @@ function openItemModal(mode, item = null) {
             <input id="inv-vendor" class="form-input" type="text">
           </div>
         </div>
-        <div class="pantry-form-row">
+        <div class="inventory-form-row">
           <div class="form-group">
             <label class="form-label" for="inv-warranty">${esc(t('inventory.warrantyMonthsLabel'))}</label>
             <input id="inv-warranty" class="form-input" type="number" min="0" max="600" step="1" inputmode="numeric">
