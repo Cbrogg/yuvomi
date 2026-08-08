@@ -22,9 +22,12 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import {
   ROUTES,
+  ANON_ROUTES,
   startHarness,
   openPage,
+  openAnonPage,
   gotoRoute,
+  gotoAnonRoute,
   parseColor,
   composite,
   contrastRatio,
@@ -1300,5 +1303,302 @@ test('Sonde 8 - ein Kopf mit Lead-Zone traegt seine Linie erst angedockt, und do
     'Die Trennlinie erscheint beim Andocken, und andocken kann nur ein Kopf mit Lead-Zone - wer eine '
     + 'hat, muss es dann aber auch tun. Wo keine ist, steht die Linie durchgehend und markiert die '
     + 'Kopfkante.\n  '
+    + findings.join('\n  '));
+});
+
+// ============================================================
+// Sonde 9 - Compositor-Ebenen im Ruhezustand
+// ============================================================
+
+/**
+ * Zaehlt im Ruhezustand jedes Element mit einem `will-change`, das eine eigene
+ * Compositor-Ebene erzwingt, und gruppiert nach Klassensignatur.
+ *
+ * DIE SIGNATUR IST DER MASSSTAB, NICHT EINE OBERGRENZE. Die Frage ist nicht
+ * „wie viele Ebenen sind zu viele", sondern „waechst die Zahl mit dem Inhalt".
+ * Ein einmaliges Chrome-Element (die Sidebar-Pille, der Tab-Indikator, ein
+ * Backdrop-Blob) darf sein Versprechen dauerhaft halten - es gibt genau eins
+ * davon, egal wie lang die Liste wird. Eine Zeile darf es nicht: dieselbe
+ * Signatur zweimal heisst, sie kommt auch 200-mal.
+ *
+ * Genau diese Unterscheidung sieht ein Stylesheet-Scanner nicht: `.lg-blob--1`
+ * und `.task-card` tragen dieselbe Deklaration.
+ */
+// Nur Versprechen, die tatsaechlich eine eigene Ebene erzwingen. `will-change:
+// opacity` allein tut das in Blink nicht zwingend, `transform` und `filter`
+// schon - und das sind die Faelle, um die es geht.
+const LAYER_PROPS = ['transform', 'filter', 'backdrop-filter'];
+
+async function restingLayers(page) {
+  return page.evaluate((props) => {
+    const out = [];
+    for (const el of document.querySelectorAll('*')) {
+      const wc = getComputedStyle(el).willChange;
+      if (!wc || wc === 'auto') continue;
+      if (!props.some((p) => wc.includes(p))) continue;
+      const r = el.getBoundingClientRect();
+      if (r.width === 0 || r.height === 0) continue;
+      const cls = (typeof el.className === 'string' ? el.className : '').trim().replace(/\s+/g, '.');
+      out.push({ sig: `${el.tagName.toLowerCase()}${cls ? `.${cls}` : ''}`, wc });
+    }
+    return out;
+  }, LAYER_PROPS);
+}
+
+test('Sonde 9 - ein Compositor-Versprechen im Ruhezustand ist einmalig, nie eine Zeile', async () => {
+  const page = await openPage(harness, { device: 'mobile', theme: 'light', locale: 'de' });
+  const findings = [];
+  let routesSeen = 0;
+  let layersSeen = 0;
+
+  for (const name of ROUTE_NAMES) {
+    await gotoRoute(page, ROUTES[name]);
+    // Die Zeilenlisten bauen sich nach dem ersten Frame auf; eine Messung
+    // direkt danach faende die leere Seite und waere immer gruen.
+    await new Promise((r) => setTimeout(r, 500));
+    routesSeen += 1;
+
+    const counts = new Map();
+    for (const { sig, wc } of await restingLayers(page)) {
+      layersSeen += 1;
+      const entry = counts.get(sig) ?? { count: 0, wc };
+      entry.count += 1;
+      counts.set(sig, entry);
+    }
+
+    for (const [sig, { count, wc }] of counts) {
+      if (count < 2) continue;
+      findings.push(`${name}: ${count}x ${sig} traegt "will-change: ${wc}" im Ruhezustand.`);
+    }
+  }
+  await page.close();
+
+  // Eine Sonde, die nichts gesehen hat, darf nicht urteilen (dieselbe
+  // Zusicherung wie bei Sonde 3 bis 8). Hier zaehlt BEIDES: die Routen, und
+  // dass ueberhaupt Ebenen gefunden werden - die Shell traegt drei einmalige
+  // (Sidebar-Pille, Sidebar-Hover, Tab-Indikator) plus die Backdrop-Blobs.
+  // Findet die Sonde gar keine, misst sie den Selektor falsch statt die App.
+  assert.ok(routesSeen >= ROUTE_NAMES.length - 1,
+    `Nur ${routesSeen} von ${ROUTE_NAMES.length} Routen gesehen.`);
+  assert.ok(layersSeen >= routesSeen,
+    `Nur ${layersSeen} Ebenen ueber ${routesSeen} Routen gefunden - die Shell allein traegt `
+    + 'mehrere je Seite. Die Sonde misst nicht mehr, was sie messen soll.');
+
+  assert.deepEqual(findings, [],
+    'Wiederholte Compositor-Versprechen im Ruhezustand. Eine Signatur, die zweimal vorkommt, kommt '
+    + 'auch 200-mal: die Ebenen-Last waechst dann mit der Zeilenzahl, auf genau den aelteren '
+    + 'Telefonen, die laut PRODUCT.md die Hauptszene sind. Das Versprechen gehoert an die GESTE '
+    + '(.swipe-row--armed in layout.css), nicht an die Zeile.\n  '
+    + findings.join('\n  '));
+});
+
+// ============================================================
+// Sonde 10 - die Struktur jedes Dokuments, angemeldet wie davor
+// ============================================================
+
+/**
+ * Die A11y-Grundlage als GUARD statt als einmalige Messung.
+ *
+ * Genau ein `h1`, genau ein `main`, ein `lang`, ein beschreibender Titel, ein
+ * Name an jedem Ziel, ein Label an jedem Feld, keine doppelte ID, kein
+ * Ueberschriftensprung, kein ARIA-Verweis ins Leere, kein Ueberlauf.
+ *
+ * ZWEI LUECKEN AUF EINMAL. Erstens: `ROUTES` sind angemeldete Zustaende, und
+ * `openPage` reicht dafuer ein Cookie durch - Anmelden, Passwort vergessen,
+ * Passwort zuruecksetzen, Einladung annehmen, Ersteinrichtung und die
+ * Offline-Huelle hatten nie eine Sonde gesehen (Audit 2026-08-08, P2-5).
+ * Zweitens: fuer die angemeldete App war diese Grundlage zwar GEMESSEN, aber
+ * nie abgesichert - der Audit fuehrte sie unter „Was traegt", und ein
+ * Positivbefund ohne Guard ist eine Momentaufnahme. Der Beleg kam sofort: die
+ * Nachmessung fand einen 47. toten ARIA-Verweis (`#cal-search` zeigte auf eine
+ * Suchleiste, die erst beim Oeffnen entsteht), den der Audit selbst uebersehen
+ * hatte. Die Sonde faehrt deshalb BEIDE Welten mit denselben Fragen.
+ *
+ * ZIELGROESSEN NUR VOR DER ANMELDUNG: dahinter gehoeren sie Sonde 4, und die
+ * misst die TREFFERFLAECHE an jeder Scrollposition und unterscheidet
+ * freistehende von eingeengten Zielen. Eine zweite, groebere Messung daneben
+ * wuerde genau die Fehltreffer melden, die Sonde 4 gelernt hat zu vermeiden
+ * (ein 34x34-Knopf, der per `::before` auf 44px ausdehnt). Vor der Anmeldung
+ * hat Sonde 4 keine Reichweite - dort ist die grobe Messung besser als keine.
+ */
+/**
+ * Wartet, bis keine ENDLICHE Animation mehr laeuft.
+ *
+ * `settle()` wartet auf den Aufbau, nicht auf die Ruhe: der Router blendet
+ * jede Seite mit einer 200ms-Slide-Animation ein, und waehrend dieser
+ * Animation steht der Seiteninhalt auf `opacity: 0`. Genau dort hat diese
+ * Sonde einmal gemessen und `desktop/notes: 0 h1` gemeldet - der Titel steht
+ * im synchronen Markup, war aber im Sinne der Sichtbarkeitspruefung nicht da.
+ * Ein Guard, der von einer Animation abhaengt, meldet Zufall statt Regel.
+ *
+ * NUR ENDLICHE Animationen: die Backdrop-Blobs laufen mit
+ * `animation: lg-drift 26s infinite alternate` und werden NIE fertig - ein
+ * naives `Promise.all(getAnimations().map(a => a.finished))` haengt bis zum
+ * Timeout der Suite.
+ */
+async function settleAnimations(page) {
+  try {
+    await page.evaluate(() => {
+      const finite = document.getAnimations().filter((a) => {
+        try { return a.effect?.getTiming().iterations !== Infinity; } catch { return false; }
+      });
+      return Promise.race([
+        Promise.all(finite.map((a) => a.finished.catch(() => {}))),
+        new Promise((r) => setTimeout(r, 1500)),
+      ]);
+    });
+  } catch {
+    /* Kontext beim Navigieren zerstoert - der naechste Aufruf misst ohnehin neu. */
+  }
+}
+
+async function documentStructure(page) {
+  return page.evaluate(() => {
+    const path = (el) => {
+      const parts = [];
+      for (let n = el; n && n.nodeType === 1 && parts.length < 3; n = n.parentElement) {
+        let s = n.tagName.toLowerCase();
+        if (n.id) { parts.unshift(`${s}#${n.id}`); break; }
+        const cls = (typeof n.className === 'string' ? n.className : '').trim().split(/\s+/).filter(Boolean).slice(0, 2);
+        if (cls.length) s += `.${cls.join('.')}`;
+        parts.unshift(s);
+      }
+      return parts.join(' > ');
+    };
+    const visible = (el) => {
+      const r = el.getBoundingClientRect();
+      const cs = getComputedStyle(el);
+      return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none'
+        && cs.opacity !== '0' && !el.closest('[hidden],[aria-hidden="true"]');
+    };
+    const accName = (el) => {
+      const a = el.getAttribute('aria-label'); if (a?.trim()) return a.trim();
+      const lb = el.getAttribute('aria-labelledby');
+      if (lb) {
+        const txt = lb.split(/\s+/).map((id) => document.getElementById(id)?.textContent || '').join(' ').trim();
+        if (txt) return txt;
+      }
+      const ti = el.getAttribute('title'); if (ti?.trim()) return ti.trim();
+      const tx = (el.textContent || '').replace(/\s+/g, ' ').trim(); if (tx) return tx;
+      return el.querySelector('img[alt]')?.alt.trim() || '';
+    };
+
+    const out = { nameless: [], inputsNoLabel: [], dupIds: [], headings: [], badRefs: [], smallTargets: [] };
+
+    for (const el of document.querySelectorAll('button, a[href], [role="button"], summary, input[type="submit"]')) {
+      if (visible(el) && !accName(el)) out.nameless.push(path(el));
+    }
+    for (const el of document.querySelectorAll('input:not([type="hidden"]), select, textarea')) {
+      if (!visible(el)) continue;
+      const labelled = (el.id && document.querySelector(`label[for="${CSS.escape(el.id)}"]`)) || el.closest('label');
+      if (!labelled && !el.getAttribute('aria-label') && !el.getAttribute('aria-labelledby')) {
+        out.inputsNoLabel.push(`${path(el)} (${el.getAttribute('type') || el.tagName.toLowerCase()})`);
+      }
+    }
+    const seen = new Map();
+    for (const el of document.querySelectorAll('[id]')) seen.set(el.id, (seen.get(el.id) || 0) + 1);
+    for (const [id, n] of seen) if (n > 1) out.dupIds.push(`#${id} (${n}x)`);
+
+    const hs = [...document.querySelectorAll('h1,h2,h3,h4,h5,h6')].filter(visible);
+    let prev = 0;
+    for (const h of hs) {
+      const lvl = Number(h.tagName[1]);
+      if (prev && lvl > prev + 1) out.headings.push(`${path(h)}: h${prev} -> h${lvl}`);
+      prev = lvl;
+    }
+    // Dieselbe Pruefung, die die zehn toten aria-controls gefunden hat.
+    for (const el of document.querySelectorAll('[aria-labelledby],[aria-describedby],[aria-controls]')) {
+      for (const attr of ['aria-labelledby', 'aria-describedby', 'aria-controls']) {
+        const v = el.getAttribute(attr);
+        if (!v) continue;
+        const missing = v.split(/\s+/).filter((id) => id && !document.getElementById(id));
+        if (missing.length) out.badRefs.push(`${path(el)} ${attr}="${missing.join(' ')}"`);
+      }
+    }
+
+    const min = window.innerWidth < 768 ? 44 : 24;
+    for (const el of document.querySelectorAll('button, a[href], [role="button"], input[type="checkbox"], input[type="radio"], select')) {
+      if (!visible(el)) continue;
+      const r = el.getBoundingClientRect();
+      if (r.width < min && r.height < min) {
+        out.smallTargets.push(`${path(el)} ${Math.round(r.width)}x${Math.round(r.height)} (min ${min})`);
+      }
+    }
+
+
+    return {
+      ...out,
+      h1: hs.filter((h) => h.tagName === 'H1').length,
+      main: document.querySelectorAll('main,[role="main"]').length,
+      lang: document.documentElement.lang || null,
+      title: document.title,
+      overflowX: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    };
+  });
+}
+
+test('Sonde 10 - jedes Dokument traegt dieselbe Struktur, angemeldet wie davor', async () => {
+  const anonNames = Object.keys(ANON_ROUTES);
+  const authNames = ROUTE_NAMES;
+  const findings = [];
+  let seen = 0;
+
+  const judge = (at, r, { targets }) => {
+    seen += 1;
+
+    // Genau EIN h1 und EIN main: eine Seite braucht einen Namen und eine
+    // Landmarke, sonst laeuft ein Screenreader sie von oben durch.
+    if (r.h1 !== 1) findings.push(`${at}: ${r.h1} h1 (erwartet: genau eins)`);
+    if (r.main !== 1) findings.push(`${at}: ${r.main} main-Landmarken (erwartet: genau eine)`);
+    if (!r.lang) findings.push(`${at}: kein lang-Attribut am Dokument`);
+
+    // Der Titel ist in einer SPA die einzige Ansage beim Seitenwechsel
+    // (WCAG 2.4.2, Level A). „Yuvomi · Yuvomi" war der gemessene Verstoss.
+    const parts = r.title.split('·').map((s) => s.trim());
+    if (!r.title.trim()) findings.push(`${at}: leerer Dokumenttitel`);
+    else if (parts.length > 1 && parts[0] === parts[1]) {
+      findings.push(`${at}: Dokumenttitel "${r.title}" wiederholt nur den App-Namen`);
+    }
+
+    for (const sel of r.nameless) findings.push(`${at}: Ziel ohne zugaenglichen Namen - ${sel}`);
+    for (const sel of r.inputsNoLabel) findings.push(`${at}: Eingabefeld ohne Label - ${sel}`);
+    for (const id of r.dupIds) findings.push(`${at}: doppelte ID ${id}`);
+    for (const h of r.headings) findings.push(`${at}: Ueberschriftensprung ${h}`);
+    for (const ref of r.badRefs) findings.push(`${at}: ARIA-Verweis ins Leere - ${ref}`);
+    if (targets) {
+      for (const s of r.smallTargets) findings.push(`${at}: Zielgroesse unter dem Minimum - ${s}`);
+    }
+    if (r.overflowX > 1) findings.push(`${at}: ${r.overflowX}px horizontaler Ueberlauf`);
+  };
+
+  for (const device of ['mobile', 'desktop']) {
+    // Vor der Anmeldung: eigene Seite ohne Cookie (openPage wuerde von genau
+    // diesen Routen wegleiten).
+    const anon = await openAnonPage(harness, { device, theme: 'light' });
+    for (const name of anonNames) {
+      await gotoAnonRoute(anon, ANON_ROUTES[name]);
+      await settleAnimations(anon);
+      judge(`${device}/${name}`, await documentStructure(anon), { targets: true });
+    }
+    await anon.close();
+
+    // Dahinter: dieselben Fragen, ohne die Zielgroessen (die gehoeren Sonde 4).
+    const auth = await openPage(harness, { device, theme: 'light', locale: 'de' });
+    for (const name of authNames) {
+      await gotoRoute(auth, ROUTES[name]);
+      await settleAnimations(auth);
+      judge(`${device}/${name}`, await documentStructure(auth), { targets: false });
+    }
+    await auth.close();
+  }
+
+  // Eine Sonde, die nichts gesehen hat, darf nicht urteilen (dieselbe
+  // Zusicherung wie bei Sonde 3 bis 9).
+  const expected = 2 * (anonNames.length + authNames.length);
+  assert.equal(seen, expected, `Nur ${seen} von ${expected} Zustaenden gesehen.`);
+
+  assert.deepEqual(findings, [],
+    'Struktur-Befunde im gerenderten Dokument. Die Seiten VOR der Anmeldung sind der Erstkontakt '
+    + 'und der Weg jedes neuen Familienmitglieds; die dahinter halten dieselbe Grundlage.\n  '
     + findings.join('\n  '));
 });

@@ -624,11 +624,20 @@
 
   /* --------------------------------------------------------
    * 11. Abstände - 4px-Raster
+   *
+   * Die `h`-Stufen sind die HALBEN Schritte des Rasters (2/6/10px). Sie sind
+   * Teil der Skala, keine Ausnahme: `--space-0h` trägt sie seit jeher durch 21
+   * Stylesheets. `--space-1h` und `--space-2h` fehlten trotzdem - das Dashboard
+   * schrieb sie an sieben Stellen mit einem Fallback hin, der die Rechnung des
+   * Namens vorwegnahm (`var(--space-1h, 6px)`), und weil der Fallback griff,
+   * fiel nie auf, dass die Stufe nicht existierte (Audit 2026-08-08, P3-3).
    * -------------------------------------------------------- */
   --space-px: 1px;
   --space-0h: 2px;
   --space-1:  4px;
+  --space-1h: 6px;
   --space-2:  8px;
+  --space-2h: 10px;
   --space-3:  12px;
   --space-4:  16px;
   --space-5:  20px;

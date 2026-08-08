@@ -1058,9 +1058,15 @@ function renderToolbar() {
           <span>${t('calendar.assignedToMe')}</span>
         </button>
       ` : ''}
+      <!-- KEIN aria-controls im geschlossenen Zustand: die Suchleiste entsteht
+           erst beim Öffnen (openCalendarSearch), und ein Verweis auf eine ID, die
+           es noch nicht gibt, kündigt einem Screenreader ein Ziel an, das nicht
+           existiert. Gesetzt wird es dort, wo die Leiste entsteht, und beim
+           Schließen wieder entfernt - dieselbe Regel wie in utils/sub-tabs.js:
+           ohne aufgelöstes Ziel bleibt das Attribut weg. -->
       <button class="btn btn--icon cal-toolbar__search-btn" id="cal-search"
               aria-label="${t('calendar.searchOpen')}" title="${t('calendar.searchOpen')}"
-              aria-expanded="false" aria-controls="cal-search-bar">
+              aria-expanded="false">
         <i data-lucide="search" aria-hidden="true"></i>
       </button>
       <div class="cal-toolbar__views" role="tablist" aria-label="${t('nav.calendar')}">
@@ -1897,6 +1903,8 @@ function openCalendarSearch() {
 
   const toggle = _container.querySelector('#cal-search');
   toggle?.setAttribute('aria-expanded', 'true');
+  // Erst jetzt gibt es ein Ziel, also erst jetzt der Verweis darauf.
+  toggle?.setAttribute('aria-controls', 'cal-search-bar');
   toggle?.classList.add('cal-toolbar__search-btn--active');
 
   toolbar.insertAdjacentHTML('afterend', `
@@ -1943,6 +1951,8 @@ function closeCalendarSearch({ restoreView = true } = {}) {
 
   const toggle = _container.querySelector('#cal-search');
   toggle?.setAttribute('aria-expanded', 'false');
+  // Die Leiste ist gerade entfernt worden - der Verweis geht mit ihr.
+  toggle?.removeAttribute('aria-controls');
   toggle?.classList.remove('cal-toolbar__search-btn--active');
 
   if (restoreView) renderView();

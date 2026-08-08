@@ -419,8 +419,8 @@
 }
 .task-item__priority--high {
   background-color: var(--color-priority-high);
-  width: var(--space-2h, 10px);
-  height: var(--space-2h, 10px);
+  width: var(--space-2h);
+  height: var(--space-2h);
 }
 .task-item__priority--medium {
   background-color: transparent;
@@ -2635,7 +2635,7 @@ svg.weather-forecast__icon {
   grid-template-columns: 20px 32px minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-1h, 6px) var(--space-2);
+  padding: var(--space-1h) var(--space-2);
   border-radius: var(--radius-sm);
   cursor: pointer;
   touch-action: pan-y;
@@ -2811,7 +2811,7 @@ svg.weather-forecast__icon {
 .health-widget__status {
   display: flex;
   align-items: center;
-  gap: var(--space-1h, 6px);
+  gap: var(--space-1h);
   font-size: var(--text-sm);
   font-weight: var(--font-weight-medium);
   color: var(--color-text-secondary);
@@ -2923,8 +2923,8 @@ svg.weather-forecast__icon {
 .health-widget__refill {
   display: flex;
   align-items: center;
-  gap: var(--space-1h, 6px);
-  padding: var(--space-1h, 6px) var(--space-2h, 10px);
+  gap: var(--space-1h);
+  padding: var(--space-1h) var(--space-2h);
   border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--color-warning) 12%, transparent);
   color: var(--color-warning);
@@ -2993,8 +2993,8 @@ svg.weather-forecast__icon {
 .housekeeping-widget__unpaid {
   display: flex;
   align-items: center;
-  gap: var(--space-1h, 6px);
-  padding: var(--space-1h, 6px) var(--space-2h, 10px);
+  gap: var(--space-1h);
+  padding: var(--space-1h) var(--space-2h);
   border-radius: var(--radius-sm);
   --module-accent: var(--module-housekeeping);
   background: color-mix(in srgb, var(--module-accent) 10%, transparent);

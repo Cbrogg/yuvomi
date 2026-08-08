@@ -506,7 +506,7 @@ function openNoteModal({ mode, note = null }) {
              placeholder="${t('notes.titlePlaceholder')}" value="${esc(isEdit && note.title ? note.title : '')}">
     </div>
     <div class="form-group">
-      <label class="form-label" for="note-content">${t('notes.contentLabel')} <span style="font-weight:400;color:var(--text-tertiary);font-size:.85em;">${t('notes.contentMarkdownHint')}</span></label>
+      <label class="form-label" for="note-content">${t('notes.contentLabel')} <span class="form-label__hint">${t('notes.contentMarkdownHint')}</span></label>
       ${renderFormatToolbar()}
       <textarea class="form-input" id="note-content" rows="6"
                 placeholder="${t('notes.contentPlaceholder')}"

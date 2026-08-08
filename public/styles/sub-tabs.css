@@ -68,6 +68,11 @@
   color: var(--color-text-primary);
 }
 
+/* Ein Selektor für zwei Elementtypen: die Küchen-Leiste rendert `<a href>`
+ * (Zielorte), die Gesundheits-Leiste `<button role="tab">` (Sichten) - siehe
+ * den Kopf von utils/sub-tabs.js. Die Pille sieht in beiden Fällen gleich aus;
+ * `text-decoration` und `font` sind die einzigen Stellen, an denen die
+ * Browser-Defaults auseinanderlaufen. */
 .sub-tab {
   display: inline-flex;
   align-items: center;
@@ -81,6 +86,7 @@
   font-family: inherit;
   font-size: var(--text-sm);
   font-weight: var(--font-weight-medium);
+  text-decoration: none;
   cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;

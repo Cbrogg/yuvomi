@@ -5,6 +5,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { SETTINGS_DOMAINS, SETTINGS_LEAVES } from '../public/settings/registry.js';
 
 const read = (path) => readFileSync(new URL(path, import.meta.url), 'utf8').replace(/\r/g, '');
@@ -443,11 +444,306 @@ test('meals and budget pages do not slice toISOString for date keys', () => {
   }
 });
 
-test('shared sub-tabs wire tabs to panels with aria-controls and aria-labelledby support', () => {
+/**
+ * Die geteilte Leiste trägt ZWEI Semantiken, und der Aufrufer muss sagen welche.
+ *
+ * Gemessener Anlass: sie schrieb unbesehen `role="tab"` samt `aria-controls` auf
+ * eine Panel-ID, die nur `syncTabPanels` vergeben hätte - und die suchte
+ * `[data-panel]`, ein Attribut, das der Guard weiter unten in dieser Datei
+ * verbietet. Zehn Tabs zeigten damit auf nichts (Audit 2026-08-08, P1-1). Vier
+ * davon waren gar keine Tabs, sondern Modulwechsel.
+ *
+ * Der Guard prüft die Bauform, nicht die Aufrufer: ein Default für `semantics`
+ * wäre der Weg, auf dem sich die falsche Variante wieder still verbreitet.
+ */
+test('die geteilte Sub-Tab-Leiste verlangt eine erklärte Semantik und verspricht kein Panel ohne Panel', () => {
   const source = read('../public/utils/sub-tabs.js');
-  assert.match(source, /btn\.id\s*=/);
-  assert.match(source, /aria-controls/);
-  assert.match(source, /aria-labelledby/);
+
+  assert.match(source, /semantics !== 'nav' && semantics !== 'tabs'/,
+    'renderSubTabs muss eine unbekannte Semantik ablehnen');
+  assert.doesNotMatch(source, /semantics\s*=\s*['"]/,
+    'semantics darf keinen Default haben - ein Default verbreitet die falsche Variante still');
+  assert.match(source, /semantics === 'tabs' && typeof panelFor !== 'function'/,
+    "eine Tablist ohne Panels ist eine Navigation - 'tabs' muss panelFor verlangen");
+
+  // Navigation: echte Links mit aria-current, kein Tab-Vokabular.
+  assert.match(source, /createElement\(isNav \? 'a' : 'button'\)/,
+    'Zielorte sind Links, Sichten sind Buttons');
+  assert.match(source, /setAttribute\('aria-current', 'page'\)/,
+    'der aktive Zielort braucht aria-current="page"');
+
+  // Tablist: aria-controls entsteht NUR mit aufgelöstem Panel.
+  assert.match(source, /const panel = panelFor\(btn\.dataset\.tabId\);/,
+    'die Panels kommen vom Aufrufer, nicht aus einer Attributsuche im Baum');
+  assert.match(source, /if \(!panel\) \{\s*\n\s*btn\.removeAttribute\('aria-controls'\);/,
+    'ohne Panel muss aria-controls WEG statt ins Leere zu zeigen');
+  assert.match(source, /btn\.setAttribute\('aria-controls', panel\.id\)/,
+    'aria-controls muss auf die ID des gefundenen Panels zeigen');
+  assert.match(source, /panel\.setAttribute\('aria-labelledby', btn\.id\)/);
+  // Auf die SUCHE prüfen, nicht auf die Zeichenfolge: der Kopf der Datei nennt
+  // `[data-panel]` als abgelöstes Muster, und das soll er auch dürfen.
+  assert.doesNotMatch(source, /querySelectorAll\(\s*'\[data-panel\]'\s*\)/,
+    'die Suche nach dem gesperrten data-panel darf nicht zurückkommen');
+});
+
+/**
+ * `will-change` ist ein Hinweis auf eine BEVORSTEHENDE Aenderung, keine
+ * Grundausstattung: jedes Element damit haelt eine eigene Compositor-Ebene
+ * samt Speicher, dauerhaft.
+ *
+ * Gemessener Anlass: die Regel stand fest auf `.swipe-row .shopping-item` und
+ * `.swipe-row .task-card`. Im Demo-Seed trugen sie 26 Einkaufszeilen und 11
+ * Aufgabenkarten gleichzeitig, im Ruhezustand - 54 Ebenen und ~15,2 MB auf
+ * /tasks (Audit 2026-08-08, P2-1).
+ *
+ * HIER STEHT NUR DIE BAUFORM. Die eigentliche Groesse - waechst die Zahl der
+ * Ebenen mit der Zeilenzahl? - kann ein Stylesheet-Scanner nicht sehen:
+ * `.nav-sidebar__indicator` und `.lg-blob--1` tragen dasselbe `will-change`
+ * und sind einmalig, `.task-card` ist es nicht, und dem Selektor sieht man das
+ * nicht an. Diese Frage misst Sonde 9 der Dokument-Guards am gerenderten
+ * Dokument, ueber die Wiederholung der Klassensignatur.
+ */
+/**
+ * Jedes benutzte Token muss auch existieren.
+ *
+ * DIE GEGENRICHTUNG WAR ABGEDECKT, DIESE NICHT. Alle Token-Guards des Repos
+ * pruefen „kein Literal im Stylesheet". Dass ein *benutztes* Token auch
+ * *definiert* ist, prueft keiner - und ein `var(--x)` ohne Fallback auf ein
+ * undefiniertes Token ist ungueltig: die ganze Deklaration faellt weg, der
+ * Wert wird geerbt. Das sieht man nicht im Diff, sondern nur im Browser, und
+ * auch dort nur, wenn man weiss, wie es aussehen sollte.
+ *
+ * Vier Faelle standen so in der App (Audit 2026-08-08); der Scanner fand einen
+ * fuenften, den der Audit nicht hatte:
+ *   --color-warning-text  ein Warnhinweis, der wie normaler Text aussah
+ *   --color-primary       Endglied einer var()-Kette, damit die ganze Kette
+ *   --text-tertiary       heisst --color-text-tertiary
+ *   --space-1h/-2h        Namen, die die Skala nicht kannte
+ *
+ * MIT FALLBACK ZAEHLT AUCH. `var(--space-1h, 6px)` funktioniert und ist
+ * trotzdem der Fehler: der Fallback verdeckt, dass die Stufe fehlt, und der
+ * Wert steht dann ausserhalb der Skala statt in ihr.
+ * Guard-Ebene 3 (statisch ueber public/).
+ */
+test('jedes benutzte Design-Token ist auch definiert', () => {
+  // walkFrontendFiles kennt nur html/js - die Tokens leben aber in CSS.
+  const walkCss = (dir) => readdirSync(new URL(dir, import.meta.url), { withFileTypes: true })
+    .flatMap((entry) => {
+      const path = `${dir}${entry.name}`;
+      if (entry.isDirectory()) return entry.name === 'vendor' ? [] : walkCss(`${path}/`);
+      return entry.isFile() && entry.name.endsWith('.css') ? [path] : [];
+    });
+  const files = [...walkFrontendFiles('../public/'), ...walkCss('../public/')];
+  assert.ok(files.length > 100, `Nur ${files.length} Dateien gescannt - der Scanner findet public/ nicht mehr.`);
+  assert.ok(files.some((f) => f.endsWith('tokens.css')), 'tokens.css muss im Scan liegen');
+
+  // Kommentare raus: der Kopf von tokens.css erklaert die Konvention anhand von
+  // `--_name` und `--neutral-*`, und ein Scanner, der das fuer Nutzung haelt,
+  // meldet die Doku als Verstoss.
+  const strip = (src) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^[ \t]*\/\/.*$/gm, '');
+
+  const defined = new Set();
+  const setFromJs = new Set();
+  const used = new Map();
+
+  for (const file of files) {
+    const src = strip(read(file));
+    for (const m of src.matchAll(/(--[a-zA-Z0-9_-]+)\s*:/g)) defined.add(m[1]);
+    // Zur Laufzeit gesetzte Properties (--active-module-accent u.a.) sind
+    // definiert, nur eben nicht im Stylesheet.
+    for (const m of src.matchAll(/setProperty\(\s*['"`](--[a-zA-Z0-9_-]+)/g)) setFromJs.add(m[1]);
+    for (const m of src.matchAll(/var\(\s*(--[a-zA-Z0-9_-]+)(\$\{)?\s*(,)?/g)) {
+      // `var(--chart-series-${i})` ist ein zusammengesetzter Name; welches
+      // Glied dabei herauskommt, weiss erst die Laufzeit.
+      if (m[2]) continue;
+      const entry = used.get(m[1]) ?? { withFallback: false, bare: false, files: new Set() };
+      if (m[3]) entry.withFallback = true; else entry.bare = true;
+      entry.files.add(file.replace('../public/', ''));
+      used.set(m[1], entry);
+    }
+  }
+
+  assert.ok(defined.size > 300, `Nur ${defined.size} Tokens gefunden - der Scanner liest tokens.css nicht mehr.`);
+  assert.ok(used.size > 300, `Nur ${used.size} Token-Nutzungen gefunden - der Scanner misst nichts.`);
+
+  const offenders = [...used]
+    .filter(([name]) => !defined.has(name) && !setFromJs.has(name))
+    .map(([name, entry]) => `${name} (${entry.bare ? 'ohne Fallback' : 'mit Fallback'}) in ${[...entry.files].join(', ')}`);
+
+  assert.deepEqual(offenders, [],
+    'Benutzte Tokens ohne Definition:\n  ' + offenders.join('\n  ')
+    + '\nOhne Fallback faellt die ganze Deklaration weg. Mit Fallback funktioniert sie und der Wert '
+    + 'steht trotzdem ausserhalb der Skala - dann fehlt die Stufe, nicht der Fallback.');
+});
+
+/**
+ * Wer einen Shadow Root aufmacht, bringt den Motion-Schutz selbst mit.
+ *
+ * Der globale `*, *::before, *::after`-Block in reset.css endet an der
+ * Schattengrenze - ein Selektor steigt nicht in einen Shadow Tree hinab.
+ * Gemessen: unter emuliertem `prefers-reduced-motion: reduce` lieferte
+ * dieselbe Deklaration im Light DOM 0s und im Shadow Tree 0.35s (Audit
+ * 2026-08-08, P2-2). Betroffen war der PWA-Installationsbanner, also die erste
+ * Begegnung mit der App auf dem Telefon.
+ *
+ * Der Guard prueft eine REGEL ueber alle Komponenten, keine Datei: heute gibt
+ * es genau einen Shadow-DOM-Bewohner, und die naechste Komponente mit
+ * `attachShadow` faende die Zusage sonst wieder offen.
+ */
+test('jede Shadow-DOM-Komponente bringt ihren eigenen reduced-motion-Block mit', () => {
+  const offenders = [];
+
+  for (const file of walkFrontendFiles('../public/components/')) {
+    const source = read(file);
+    if (!/attachShadow\(/.test(source)) continue;
+    // Nur Bewegung zaehlt: eine Komponente ohne Transition/Animation braucht
+    // keinen Schutz und soll auch keinen leeren Block tragen muessen.
+    if (!/transition:\s*(?!none)|animation:\s*(?!none)/.test(source)) continue;
+
+    if (!/@media \(prefers-reduced-motion: reduce\)/.test(source)) {
+      offenders.push(file.replace('../public/', ''));
+    }
+  }
+
+  assert.deepEqual(offenders, [],
+    'Shadow-DOM-Komponenten mit Bewegung, aber ohne eigenen reduced-motion-Block:\n  '
+    + offenders.join('\n  ')
+    + '\nDer globale Block in reset.css erreicht keinen Shadow Tree. PRODUCT.md sagt zu, dass jede '
+    + 'Animation prefers-reduced-motion respektiert - diese Zusage muss die Komponente selbst halten.');
+});
+
+test('das Install-Banner faellt nicht in die abgeloeste Welt zurueck', () => {
+  const source = read('../public/components/yuvomi-install-prompt.js');
+
+  // Acht Token-Fallbacks stammten aus der Vor-Redesign-Palette (#5b2fd4 Violett,
+  // #e8e7e2 warmes Beige, ...). Alle acht Token existieren heute, die Fallbacks
+  // waren also tot - und haetten die Komponente beim Wegfall eines Tokens in die
+  // abgeloeste Welt zurueckgefaerbt (Audit 2026-08-08, P3-2). Ein var() ohne
+  // Fallback ist hier das ehrlichere Verhalten: der Token-Existenz-Guard
+  // oben deckt den Wegfall ab, ein Fallback wuerde ihn nur verstecken.
+  assert.doesNotMatch(source, /var\(\s*--[a-zA-Z0-9_-]+\s*,/,
+    'Token-Fallbacks in der Komponente - der Token-Existenz-Guard deckt den Wegfall ab, '
+    + 'ein Fallback konserviert nur eine alte Palette.');
+
+  // Der Rueckweg darf nicht an einem Ereignis haengen, das ohne Transition
+  // ausbleibt - sonst bleibt das Host-Element samt Listenern im Dokument.
+  assert.match(source, /setTimeout\(finish/,
+    '_remove() braucht eine Frist als zweiten Weg hinaus (transitionend feuert ohne Transition nie)');
+});
+
+test('der Hinweis am Formularlabel ist eine Klasse, kein Inline-Design-Wert', () => {
+  assert.match(read('../public/styles/layout.css'), /\.form-label__hint \{[\s\S]{0,200}?color: var\(--color-text-tertiary\)/,
+    'die abgestufte Label-Ergaenzung gehoert ins Stylesheet');
+  assert.match(read('../public/pages/notes.js'), /<span class="form-label__hint">/,
+    'notes.js muss die Klasse nutzen statt drei Werte inline zu schreiben');
+});
+
+test('die Wischgeste setzt und loest das Compositor-Versprechen selbst', () => {
+  const swipe = read('../public/utils/swipe-row.js');
+  const layout = read('../public/styles/layout.css');
+
+  assert.match(layout, /\.swipe-row--armed > :first-child \{\s*\n\s*will-change: transform;/,
+    'die geteilte Buehne traegt das Versprechen, nicht die einzelnen Module');
+  assert.match(swipe, /addEventListener\('touchstart'[\s\S]{0,900}?arm\(\);/,
+    'gesetzt wird bei touchstart - bei der ersten Bewegung waere es einen Frame zu spaet');
+  assert.match(swipe, /addEventListener\('touchcancel'/,
+    'ein abgebrochener Kontakt muss die Ebene ebenfalls freigeben');
+  assert.match(swipe, /disarm\(animate \? SWIPE_RESET_MS : 0\)/,
+    'die Ebene faellt erst nach der Rueckfeder-Animation weg');
+
+  for (const [file, selector] of [['shopping.css', '.shopping-item'], ['tasks.css', '.task-card']]) {
+    const css = read(`../public/styles/${file}`);
+    const body = [...eachRule(css)].find((rule) => rule.selector === `.swipe-row ${selector}`)?.body ?? '';
+    assert.doesNotMatch(body, /will-change/,
+      `${file}: die Dauerregel auf ${selector} darf nicht zurueckkommen`);
+  }
+});
+
+/**
+ * Jede Frontend-Datei parst.
+ *
+ * KLINGT TRIVIAL, IST ES NICHT: eine Datei unter `public/` wird nur dann
+ * geparst, wenn irgendein Test sie importiert. Wer keinen hat, faellt erst im
+ * Browser auf - und ein Modul, das beim Laden wirft, laesst die Seite leer,
+ * waehrend die Dokument-Sonden dort brav „keine Verstoesse" melden.
+ *
+ * Gemessener Anlass: ein HTML-Kommentar IN einem Template-Literal enthielt
+ * Backticks (`<!-- KEIN \`aria-controls\` ... -->`) - die schliessen das
+ * Literal, und calendar.js parste nicht mehr. Aufgefallen ist es erst in
+ * `test:calendar`, mitten in einem Suite-Lauf, und in einer parallel laufenden
+ * Browser-Suite fuehrte es zu gruenen Sonden auf einer kaputten Seite.
+ *
+ * Der Preis ist ein Bruchteil einer Sekunde je Datei; der Nutzen ist, dass der
+ * Fehler dort gemeldet wird, wo er entstanden ist.
+ */
+test('jede JS-Datei unter public/ ist syntaktisch gueltiges ESM', () => {
+  const files = walkFrontendFiles('../public/').filter((f) => f.endsWith('.js') && !f.includes('/vendor/'));
+  assert.ok(files.length > 100, `Nur ${files.length} JS-Dateien gefunden - der Scanner findet public/ nicht mehr.`);
+
+  const offenders = [];
+  for (const file of files) {
+    try {
+      // `node --check` liest den Modultyp aus package.json ("type": "module"),
+      // parst also als ESM - `import`/`export` auf oberster Ebene sind erlaubt.
+      execFileSync(process.execPath, ['--check', new URL(file, import.meta.url).pathname], { stdio: 'pipe' });
+    } catch (err) {
+      const detail = String(err.stderr || err.message).split('\n').find((l) => /SyntaxError/.test(l)) || String(err.message).slice(0, 120);
+      offenders.push(`${file.replace('../public/', '')}: ${detail.trim()}`);
+    }
+  }
+
+  assert.deepEqual(offenders, [],
+    'Dateien, die nicht parsen:\n  ' + offenders.join('\n  ')
+    + '\nHaeufigste Ursache: ein Backtick in einem Kommentar INNERHALB eines Template-Literals.');
+});
+
+/**
+ * ZU DIESER REGEL GIBT ES HIER BEWUSST KEINEN GUARD.
+ *
+ * „Loest dieses `aria-controls` auf, wenn das Element sichtbar ist?" ist eine
+ * Frage an das DOKUMENT, und jede statische Naeherung ist entweder blind oder
+ * falsch - beides gemessen, nicht vermutet:
+ *
+ *   Massstab DATEI    gruen mit wieder eingebautem Verstoss. `#cal-search-bar`
+ *                     steht sehr wohl in calendar.js, nur in einem Template,
+ *                     das erst beim Oeffnen der Suche eingefuegt wird.
+ *   Massstab TEMPLATE rot beim Verstoss, aber zusaetzlich drei Fehltreffer
+ *                     (budget-body, housekeeping-content, rewards-content) -
+ *                     dort liegt das Ziel in einem anderen Template, das
+ *                     IMMER mitgerendert wird. Der Verweis loest auf.
+ *
+ * Die Regel gehoert deshalb auf Guard-Ebene 4: Sonde 10 der Dokument-Guards
+ * loest jedes `aria-controls`/`aria-labelledby`/`aria-describedby` im
+ * gerenderten Dokument auf - ueber 16 Routen und 6 anonyme Seiten, beide
+ * Groessenklassen. Sie hat den Fall auch gefunden (Audit-Nachmessung
+ * 2026-08-08); der Audit selbst hatte ihn uebersehen.
+ *
+ * Ein Guard, der nicht rot werden kann, ist eine Hoffnung - und einer, der bei
+ * korrektem Code rot wird, wird abgeschaltet. Beide waeren schlechter als der
+ * ehrliche Verweis auf die Ebene, die es messen kann.
+ */
+
+test('jede Sub-Tab-Leiste erklärt ihre Semantik, und zwar die, die ihre Routen hergeben', () => {
+  // Küche: vier eigenständige Module (eigener `module:`-Wert je Route) -> Navigation.
+  const kitchen = read('../public/utils/kitchen-tabs.js');
+  assert.match(kitchen, /semantics:\s*'nav'/,
+    'die Küchen-Leiste wechselt das Modul; das ist Navigation, keine Tabs');
+  assert.doesNotMatch(kitchen, /panelFor/,
+    'ein Modulwechsel hat kein Panel im selben Dokument');
+
+  // Gesundheit: ein Modul, alle Panels gleichzeitig im DOM -> echte Tabs.
+  const health = read('../public/utils/health-tabs.js');
+  assert.match(health, /semantics:\s*'tabs'/,
+    'die Gesundheits-Leiste tauscht ein Panel im selben Dokument; das sind Tabs');
+  assert.match(health, /panelFor:\s*\(route\) =>[\s\S]*?data-health-panel/,
+    'die Tabs müssen ihre echten Panels benennen');
+
+  // Und die Panels müssen existieren, sonst zeigt panelFor ins Leere.
+  const healthPage = read('../public/pages/health.js');
+  assert.match(healthPage, /data-health-panel="\$\{esc\(panel\.route\)\}"/,
+    'health.js muss die Panels mit genau dem Attribut rendern, das panelFor sucht');
+  assert.doesNotMatch(healthPage, /function showPanel\(/,
+    'Auswahl und Panel-Sichtbarkeit sind eine Operation - zwei Besitzer laufen auseinander');
 });
 
 test('settings theme toggle exposes pressed state', () => {
@@ -4002,6 +4298,69 @@ test('settings cutover: the access-redirected notice is consumed once on the acc
   assert.match(account, /yuvomi:settings:notice/, 'account leaf must read the one-time redirect notice');
   assert.match(account, /accessRedirected/, 'account leaf must surface the access-redirected message');
   assert.match(account, /removeItem\(/, 'account leaf must consume the notice once');
+});
+
+/**
+ * Jede Route erklärt ihren Dokumenttitel - in der Routentabelle, nicht daneben.
+ *
+ * Gemessener Anlass: die Titel standen in einer Map in `routeTitle()`. ROUTES
+ * wuchs auf 20 Einträge, die Map kannte 13, und /forgot-password,
+ * /reset-password und /join lieferten „Yuvomi · Yuvomi" - WCAG 2.4.2 ist Level
+ * A, und es traf die drei Wege, über die ein neues Familienmitglied hereinkommt
+ * (Audit 2026-08-08, P1-2). Dieselbe Bauform - Liste neben der Wahrheit - hat
+ * das Repo bei den Modulregistern schon einmal eingeholt.
+ *
+ * `titleKey: null` zählt als erklärt: auf /login und /setup IST der App-Name der
+ * Titel. Ein FEHLENDES titleKey ist der Fehler, nicht ein leeres.
+ * Guard-Ebene 2 (Struktur, aus deklarativer Quelle).
+ */
+test('jede Route erklärt ihren Dokumenttitel, und jeder erklärte Key existiert in de.json', () => {
+  const router = read('../public/router.js');
+
+  // Nur die Einträge mit ausgeschriebenem Pfad; die programmatisch erzeugten
+  // Sektionsrouten prüft der zweite Block, weil ihre Pfade woanders stehen.
+  const entries = [...router.matchAll(/\{\s*path:\s*'([^']+)'\s*,\s*page:\s*'[^']+'\s*,\s*requiresAuth:\s*\w+\s*,\s*module:\s*(?:null|'[^']*')\s*,?([^}]*)\}/g)]
+    .map((m) => ({ path: m[1], rest: m[2] }));
+
+  assert.ok(entries.length >= 19,
+    `Aus ROUTES kamen nur ${entries.length} Einträge - der Guard misst dann nichts. `
+    + 'Hat sich die Schreibweise der Routen-Einträge geändert?');
+
+  const untitled = entries.filter(({ rest }) => !/titleKey:/.test(rest)).map(({ path }) => path);
+  assert.deepEqual(untitled, [],
+    `Routen ohne titleKey: ${untitled.join(', ')}. Eine Route ohne Titel muss auffallen, `
+    + 'nicht still auf den App-Namen fallen (WCAG 2.4.2, Level A). `titleKey: null` ist die '
+    + 'erklärte Ausnahme für Anmelden/Ersteinrichtung.');
+
+  // Die drei Auth-Routen namentlich: sie waren der gemessene Verstoß und sind
+  // die einzigen anonymen Seiten, die einen eigenen Titel brauchen.
+  for (const path of ['/forgot-password', '/reset-password', '/join']) {
+    const entry = entries.find((e) => e.path === path);
+    assert.ok(entry && /titleKey:\s*'[^']+'/.test(entry.rest),
+      `${path} braucht einen eigenen Titel - es ist ein Weg in die App, kein Zwischenschritt`);
+  }
+
+  // Die Sektionsrouten führen ihren Titel in der jeweiligen map().
+  assert.match(router, /SETTINGS_LEAVES\.map\([\s\S]{0,200}?titleKey:\s*'nav\.settings'/,
+    'jedes Settings-Blatt braucht den Sektionstitel');
+  assert.match(router, /HEALTH_ROUTES\.map\([\s\S]*?titleKey:\s*'nav\.health'/,
+    'jede Health-Route braucht den Sektionstitel');
+
+  // Kein toter Key: routeTitle() ruft t() darauf auf, und ein fehlender Key
+  // liefert den Key selbst als Titel - sichtbar erst im Browser-Tab.
+  const de = JSON.parse(read('../public/locales/de.json'));
+  const lookup = (key) => key.split('.').reduce((node, part) => (node == null ? node : node[part]), de);
+  const missing = [...router.matchAll(/titleKey:\s*'([^']+)'/g)]
+    .map((m) => m[1])
+    .filter((key) => typeof lookup(key) !== 'string');
+  assert.deepEqual([...new Set(missing)], [],
+    `titleKey ohne Eintrag in de.json: ${missing.join(', ')}`);
+
+  // Und der Titel wird AUS der Tabelle gelesen, nicht aus einer zweiten Liste.
+  assert.match(router, /ROUTES\.find\(\(route\) => route\.path === path\)\?\.titleKey/,
+    'routeTitle muss ROUTES lesen');
+  assert.doesNotMatch(router, /const map = \{\s*\n\s*'\/':\s*t\(/,
+    'die abgelöste Titel-Map darf nicht zurückkommen');
 });
 
 test('settings cutover: route direction treats settings sub-paths as one section', () => {

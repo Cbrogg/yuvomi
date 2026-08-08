@@ -124,9 +124,16 @@ test('router.js: topLevelSection faltet /health/* auf /health', () => {
   assert.match(src, /path\.startsWith\('\/health'\)\) return '\/health'/);
 });
 
-test('router.js: routeTitle liefert nav.health für /health*', () => {
+// Der Titel kam bis 2026-08-08 aus einer Praefixregel in routeTitle(). Er steht
+// jetzt an der Route selbst - dieselbe Wahrheit, nur nicht mehr in einer
+// zweiten Liste daneben (Audit P1-2; drei Auth-Routen waren dort durchgefallen).
+// Geprueft wird deshalb die Quelle, nicht mehr die Regel.
+test('router.js: jede /health-Route traegt nav.health als Titel', () => {
   const src = read('public/router.js');
-  assert.match(src, /path\.startsWith\('\/health'\)\) return t\('nav\.health'\)/);
+  assert.match(src, /HEALTH_ROUTES\.map\([\s\S]{0,200}?titleKey:\s*'nav\.health'/,
+    'die Health-Routen muessen ihren Titel selbst fuehren');
+  assert.match(src, /ROUTES\.find\(\(route\) => route\.path === path\)\?\.titleKey/,
+    'routeTitle muss den Titel aus ROUTES lesen');
 });
 
 test('router.js: Keyboard-Shortcut g h navigiert ins Gesundheitsmodul', () => {

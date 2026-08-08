@@ -3195,6 +3195,22 @@ textarea::placeholder {
   margin-bottom: var(--space-1);
 }
 
+/* Nebensatz IM Label - der Hinweis, der zum Feld gehoert, aber nicht sein Name
+ * ist („(Markdown-Formatierung moeglich)"). Eine Stufe leiser als das Label:
+ * eine Groesse kleiner, regulaeres Gewicht, tertiaerer Text.
+ *
+ * WARUM ALS KLASSE: die Stelle trug ihre drei Werte inline im
+ * JS-Template-String (`font-weight:400;color:var(--text-tertiary);
+ * font-size:.85em`) - mit einem Token, das es nie gab (es heisst
+ * `--color-text-tertiary`), also erbte der Hinweis die Label-Farbe und stufte
+ * gar nicht ab. Der Typo-Guard sieht Stylesheets, keine Template-Strings; die
+ * Werte kamen so aus dem System heraus (Audit 2026-08-08, P3-1). */
+.form-label__hint {
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-tertiary);
+}
+
 .required-marker {
   color: var(--color-danger);
   margin-left: var(--space-0h);
@@ -4089,6 +4105,28 @@ textarea::placeholder {
 .swipe-row--swiping > :first-child {
   background-color: var(--color-surface-work);
   box-shadow: var(--shadow-lg);
+}
+
+/* DAS COMPOSITOR-VERSPRECHEN HAENGT AN DER GESTE, NICHT AN DER ZEILE.
+ *
+ * `will-change: transform` stand fest auf `.swipe-row .shopping-item` und
+ * `.swipe-row .task-card`: im Demo-Seed trugen es 26 Einkaufszeilen und 11
+ * Aufgabenkarten GLEICHZEITIG, im Ruhezustand, ohne dass ein Finger die Liste
+ * beruehrt haette - jede mit eigener Compositor-Ebene samt Speicher (gemessen
+ * 54 Ebenen / ~15,2 MB auf /tasks, Audit 2026-08-08, P2-1). Die Last waechst
+ * linear mit der Zeilenzahl, und eine echte Familienliste ist laenger als der
+ * Seed - auf genau den aelteren Telefonen, die laut PRODUCT.md die Hauptszene
+ * sind.
+ *
+ * `--armed` setzt swipe-row.js bei `touchstart`, also BEVOR die erste
+ * Bewegung kommt: das haelt den ersten Frame ruhig, ohne mehr als die eine
+ * beruehrte Zeile zu promoten. `--swiping` waere zu spaet (es entsteht erst,
+ * wenn die Richtung feststeht), eine Dauerregel zu frueh.
+ *
+ * Geteilt statt je Modul: die Geste ist geteilt, die Geburtstage hatten das
+ * Versprechen ueberhaupt nie und wischen dieselbe Bewegung. */
+.swipe-row--armed > :first-child {
+  will-change: transform;
 }
 
 /* Reveal-Panels hinter der Karte */

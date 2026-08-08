@@ -254,8 +254,12 @@ function panelMarkup(panel, activeRoute) {
       </div>`;
 
   // Eigenes data-health-panel-Attribut statt des (per Frontend-Audit gesperrten)
-  // Legacy-„data-panel". Die Sichtbarkeit steuert showPanel() lokal — renderSubTabs
-  // synchronisiert bewusst keine Panels für dieses Modul.
+  // Legacy-„data-panel". Über dieses Attribut reicht health-tabs.js die Panels an
+  // renderSubTabs weiter (`panelFor`); von dort kommen `id`, `aria-labelledby` zum
+  // zugehörigen Tab und der Hidden-Zustand. Rolle und `aria-label` stehen hier
+  // trotzdem: sie tragen das Panel in dem Moment zwischen Markup-Einbau und
+  // Leisten-Render, in dem die Verknüpfung noch nicht steht. Danach ersetzt der
+  // Tabname das Label (zwei Namen wären einer zu viel).
   return `
     <section class="health-panel" data-health-panel="${esc(panel.route)}"
              role="tabpanel" aria-label="${esc(t(panel.titleKey))}" ${hidden}>
@@ -274,12 +278,11 @@ function panelMarkup(panel, activeRoute) {
   `;
 }
 
-function showPanel(activeRoute) {
-  if (!_container) return;
-  _container.querySelectorAll('[data-health-panel]').forEach((panel) => {
-    panel.hidden = panel.dataset.healthPanel !== activeRoute;
-  });
-}
+// Kein eigenes showPanel() mehr: Auswahl und Panel-Sichtbarkeit sind EINE
+// Operation (WAI-ARIA APG „Tabs"), und sie gehört dorthin, wo auch
+// `aria-selected` gesetzt wird - in renderSubTabs. Zwei Besitzer für denselben
+// Zustand sind genau die Naht, an der `aria-selected` und `hidden` auseinander
+// laufen können.
 
 // Routen-basierter Kontext-FAB: die Primäraktion folgt der aktiven Health-Route.
 // Auf der Übersicht (keine Erstellen-Aktion) ausgeblendet.
@@ -355,7 +358,6 @@ export async function render(container, ctx = {}) {
   container.querySelector('.health-page').appendChild(_fab);
 
   if (window.lucide) window.lucide.createIcons({ el: container });
-  showPanel(activeRoute);
   renderHealthTabsBar(container, activeRoute, { cycleEnabled });
   updateHealthFab(activeRoute);
   maybeMountOverview(activeRoute);
@@ -374,7 +376,6 @@ export async function update({ path, user } = {}) {
   if (user?.id) { vitals.meId = user.id; meds.meId = user.id; labs.meId = user.id; activity.meId = user.id; cycle.meId = user.id; overview.meId = user.id; }
   const activeRoute = normalizeHealthPath(path || window.location.pathname);
 
-  showPanel(activeRoute);
   _container.querySelector('.sub-tabs-bar')?.remove();
   renderHealthTabsBar(_container, activeRoute, { cycleEnabled });
   updateHealthFab(activeRoute);

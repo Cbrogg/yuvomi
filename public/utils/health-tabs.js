@@ -62,6 +62,14 @@ export function renderHealthTabsBar(container, activeRoute, { cycleEnabled = tru
   if (!toolbar) return;
 
   renderSubTabs(toolbar, {
+    // Sichten, keine Zielorte: alle sechs Routen tragen `module: 'health'` und
+    // alle sechs Panels stehen gleichzeitig im DOM (health.js, panelMarkup) -
+    // der Tabwechsel tauscht ein Panel, er laedt keine Seite. Die Route ist ein
+    // Deep-Link in den Tab-Zustand; das macht die Leiste nicht zur Navigation.
+    semantics: 'tabs',
+    // Die Panels kommen vom Aufrufer, nicht aus einer Attributsuche im Baum:
+    // ein `aria-controls` entsteht nur dort, wo es wirklich ein Panel gibt.
+    panelFor: (route) => container.querySelector(`[data-health-panel="${CSS.escape(route)}"]`),
     tabs: HEALTH_TABS({ cycleEnabled }).map(({ route, labelKey, icon }) => ({ id: route, label: t(labelKey), icon })),
     activeId: activeRoute,
     storageKey: HEALTH_STORAGE_KEY,

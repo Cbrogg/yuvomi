@@ -120,6 +120,11 @@ const APP_SHELL = [
   '/utils/vcard.js',
   '/utils/version.js',
   '/offline.html',
+  // offline.html laedt theme-init.js, damit die Huelle dieselbe Farbwelt
+  // trifft wie die App (gespeicherter Wunsch schlaegt Systemeinstellung).
+  // Ohne Precache waere die Wahl genau dann wirkungslos, wenn die Seite
+  // gebraucht wird - offline.
+  '/theme-init.js',
   '/manifest.json',
   '/favicon.ico',
   '/icons/favicon-32.png',

@@ -22,6 +22,10 @@ export const SWIPE_THRESHOLD = 80;   // px - Mindestweg für Aktion
 export const SWIPE_MAX_VERT  = 12;   // px - vertikaler Toleranzbereich
 export const SWIPE_LOCK_VERT = 30;   // px - ab diesem Weg gilt es als Scroll
 
+// Dauer der Rückfeder-Animation in resetCard(); die Konstante hält sie mit dem
+// Zeitpunkt zusammen, an dem die Compositor-Ebene wieder freigegeben wird.
+const SWIPE_RESET_MS = 250;
+
 const SWIPE_HINT_KEY = 'yuvomi:swipeHintSeen';
 const SWIPE_HINT_MAX = 3;
 const SWIPE_SWAP_KEY = 'yuvomi:swipeSidesSwapped';
@@ -92,10 +96,31 @@ export function wireSwipeRows(listEl, { card, ignore = null, leading = null, tra
 
     const revealEl = (sel) => (sel ? row.querySelector(sel) : null);
 
+    // Compositor-Versprechen: NUR fuer die Dauer einer Beruehrung, und nur auf
+    // der beruehrten Zeile. Vorher stand `will-change: transform` als
+    // Dauerregel im Stylesheet - im Demo-Seed 26 Einkaufszeilen und 11
+    // Aufgabenkarten gleichzeitig, jede mit eigener Ebene samt Speicher
+    // (Audit 2026-08-08, P2-1). Gesetzt wird bei `touchstart`, nicht erst bei
+    // der ersten Bewegung: sonst faellt die Promotion in den ersten Frame der
+    // Geste, also genau dorthin, wo sie stoert.
+    let disarmTimer = null;
+    function arm() {
+      clearTimeout(disarmTimer);
+      row.classList.add('swipe-row--armed');
+    }
+    function disarm(afterMs = 0) {
+      clearTimeout(disarmTimer);
+      if (!afterMs) { row.classList.remove('swipe-row--armed'); return; }
+      // Die Rueckfeder-Animation laeuft noch; das Versprechen erst danach
+      // einloesen, sonst verliert genau die letzte Bewegung ihre Ebene.
+      disarmTimer = setTimeout(() => row.classList.remove('swipe-row--armed'), afterMs);
+    }
+
     function resetCard(animate = true) {
-      cardEl.style.transition = animate ? 'transform 0.25s ease' : '';
+      cardEl.style.transition = animate ? `transform ${SWIPE_RESET_MS}ms ease` : '';
       cardEl.style.transform = '';
       row.classList.remove('swipe-row--swiping');
+      disarm(animate ? SWIPE_RESET_MS : 0);
       for (const sel of panels) {
         const el = revealEl(sel);
         if (el) el.style.opacity = '0';
@@ -115,7 +140,13 @@ export function wireSwipeRows(listEl, { card, ignore = null, leading = null, tra
       locked = false;
       thresholdHit = false;
       cardEl.style.transition = '';
+      arm();
     }, { passive: true });
+
+    // Ein abgebrochener Kontakt (Anruf, Systemgeste) laeuft nicht ueber
+    // `touchend`; ohne diesen Zweig bliebe die Ebene stehen, bis die Zeile neu
+    // gerendert wird.
+    row.addEventListener('touchcancel', () => { resetCard(false); }, { passive: true });
 
     row.addEventListener('touchmove', (e) => {
       if (locked === 'scroll') return;

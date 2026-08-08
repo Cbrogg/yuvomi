@@ -454,16 +454,20 @@ test('every approved settings leaf is registered as an exact SPA route', async (
   // Der Router muss seine Settings-Routen aus der Registry ableiten, nie aus
   // einer Handliste - sonst driften Registry und Routentabelle auseinander.
   assert.match(source, /import\s*\{[^}]*\bSETTINGS_LEAVES\b[^}]*\}\s*from\s*'\/settings\/registry\.js'/);
+  // Die Pflichtfelder, nicht das ganze Objektliteral: der Eintrag hat seit dem
+  // Titel-Umbau (Audit P1-2) ein `titleKey`, und ein Guard, der die exakte
+  // Feldliste festnagelt, bricht bei jedem weiteren Feld ohne einen Verstoss
+  // zu melden. Was hier zaehlt, ist Pfad + Seite + Auth + Modul.
   assert.match(
     source,
-    /SETTINGS_LEAVES\.map\(\(\{\s*path\s*\}\)\s*=>\s*\(\{\s*path,\s*page:\s*'\/pages\/settings\.js',\s*requiresAuth:\s*true,\s*module:\s*'settings'\s*\}\)\)/,
+    /SETTINGS_LEAVES\.map\(\(\{\s*path\s*\}\)\s*=>\s*\(\{\s*path,\s*page:\s*'\/pages\/settings\.js',\s*requiresAuth:\s*true,\s*module:\s*'settings'\s*[,}]/,
   );
   // Und die vom IA-Umbau verschobenen Alt-Pfade ebenso: ohne eigene Route
   // matcht ein alter Bookmark gar nichts und die Umleitung käme nie zum Zug.
   assert.match(source, /import\s*\{[^}]*\bRENAMED_SETTINGS_SOURCE_PATHS\b[^}]*\}\s*from\s*'\/settings\/registry\.js'/);
   assert.match(
     source,
-    /RENAMED_SETTINGS_SOURCE_PATHS\.map\(\(path\)\s*=>\s*\(\{\s*path,\s*page:\s*'\/pages\/settings\.js',\s*requiresAuth:\s*true,\s*module:\s*'settings'\s*\}\)\)/,
+    /RENAMED_SETTINGS_SOURCE_PATHS\.map\(\(path\)\s*=>\s*\(\{\s*path,\s*page:\s*'\/pages\/settings\.js',\s*requiresAuth:\s*true,\s*module:\s*'settings'\s*[,}]/,
   );
   assert.ok(RENAMED_SETTINGS_SOURCE_PATHS.length > 0);
 });

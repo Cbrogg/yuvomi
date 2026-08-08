@@ -63,6 +63,30 @@ export const ROUTES = {
   settings: '/settings',
 };
 
+/**
+ * Die Seiten VOR der Anmeldung.
+ *
+ * WARUM SIE EIGENS STEHEN: `ROUTES` oben sind angemeldete Zustaende, und
+ * `openPage` reicht dafuer ein Sitzungs-Cookie durch. Alle vier Guard-Ebenen
+ * und alle Sonden massen deshalb ausschliesslich die App hinter dem Login -
+ * der Erstkontakt und der Weg jedes neuen Familienmitglieds hatte nie eine
+ * Sonde gesehen (Audit 2026-08-08, P2-5).
+ *
+ * `offline.html` gehoert dazu: sie ist die Service-Worker-Huelle, laedt kein
+ * App-Stylesheet und faellt damit aus jeder anderen Pruefung heraus.
+ *
+ * Die Tokens sind Attrappen - beide Seiten rendern ihr Formular auch mit einem
+ * ungueltigen Token; geprueft wird die Struktur, nicht der Einloeseweg.
+ */
+export const ANON_ROUTES = {
+  login: '/login',
+  'forgot-password': '/forgot-password',
+  'reset-password': '/reset-password?token=demo-token-for-audit',
+  join: '/join?token=demo-token-for-audit',
+  setup: '/setup',
+  offline: '/offline.html',
+};
+
 export const DEVICES = {
   desktop: { width: 1280, height: 900, deviceScaleFactor: 1, isMobile: false, hasTouch: false },
   mobile: { width: 375, height: 812, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
@@ -333,6 +357,42 @@ export async function gotoRoute(page, path) {
   }
   await settle(page);
   await page.evaluate((t) => document.documentElement.setAttribute('data-theme', t), page.__yuvomiTheme);
+}
+
+/**
+ * Oeffnet eine Seite OHNE Sitzung - fuer die Zustaende vor der Anmeldung.
+ *
+ * Kein Cookie, kein Einstieg ueber `/`: beides wuerde die App genau von den
+ * Seiten wegleiten, um die es hier geht. `settle()` entfaellt aus demselben
+ * Grund - es wartet auf `#main-content` mit Kindern, und `offline.html` ist
+ * kein SPA-Dokument. Stattdessen wird auf den ersten stabilen Aufbau gewartet.
+ */
+export async function openAnonPage(harness, { device = 'mobile', theme = 'light' } = {}) {
+  const page = await harness.browser.newPage();
+  await page.setViewport(DEVICES[device]);
+  await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: theme }]);
+  await page.setRequestInterception(true);
+  page.on('request', (req) => {
+    if (new URL(req.url()).pathname === '/sw.js') req.abort();
+    else req.continue();
+  });
+  page.__yuvomiBase = harness.baseUrl;
+  page.__yuvomiTheme = theme;
+  return page;
+}
+
+/** Navigiert eine anonyme Seite an und wartet, bis sie steht. */
+export async function gotoAnonRoute(page, path) {
+  await page.goto(`${page.__yuvomiBase}${path}`, { waitUntil: 'domcontentloaded' });
+  try {
+    await page.waitForFunction(
+      () => document.querySelector('h1, [role="heading"]') !== null,
+      { timeout: 15000 },
+    );
+  } catch {
+    /* Die Sonde meldet selbst, wenn nichts zu messen war. */
+  }
+  await wait(400);
 }
 
 /**

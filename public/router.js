@@ -36,39 +36,55 @@ import {
 
 // --------------------------------------------------------
 // Routen-Definitionen
-// Jede Route hat: path, page (dynamisch geladen), requiresAuth, module (für theme-color)
+// Jede Route hat: path, page (dynamisch geladen), requiresAuth, module (für theme-color),
+// titleKey (Locale-Key für den Dokumenttitel).
+//
+// WARUM DER TITEL HIER STEHT UND NICHT IN EINER ZWEITEN LISTE: er stand einmal
+// daneben, in einer Map in routeTitle(). Die Liste wuchs, die Map nicht, und
+// /forgot-password, /reset-password und /join lieferten „Yuvomi · Yuvomi" -
+// WCAG 2.4.2 ist Level A, und es traf ausgerechnet die drei Wege, über die ein
+// neues Familienmitglied hereinkommt (Audit 2026-08-08, P1-2). Eine Route ohne
+// Titel soll auffallen, nicht still auf den App-Namen fallen; der Guard in
+// test-frontend-audit.js prüft die Vollständigkeit gegen genau diese Tabelle.
+//
+// `titleKey: null` ist eine ERKLÄRTE Entscheidung, kein Loch: auf dem Anmelde-
+// und dem Einrichtungsbildschirm IST der App-Name der Titel (siehe
+// updateBranding) - dort steht noch keine Seite, auf die er sich beziehen könnte.
 // --------------------------------------------------------
 const ROUTES = [
-  { path: '/login',    page: '/pages/login.js',    requiresAuth: false, module: null        },
-  { path: '/setup',    page: '/pages/setup.js',    requiresAuth: false, module: null        },
-  { path: '/forgot-password', page: '/pages/forgot-password.js', requiresAuth: false, module: null },
-  { path: '/reset-password',  page: '/pages/reset-password.js',  requiresAuth: false, module: null },
-  { path: '/join',     page: '/pages/join.js',     requiresAuth: false, module: null        },
-  { path: '/',         page: '/pages/dashboard.js', requiresAuth: true, module: 'dashboard' },
-  { path: '/tasks',    page: '/pages/tasks.js',     requiresAuth: true, module: 'tasks'     },
-  { path: '/shopping', page: '/pages/shopping.js',  requiresAuth: true, module: 'shopping'  },
-  { path: '/meals',    page: '/pages/meals.js',     requiresAuth: true, module: 'meals'     },
-  { path: '/calendar', page: '/pages/calendar.js',  requiresAuth: true, module: 'calendar'  },
-  { path: '/birthdays', page: '/pages/birthdays.js', requiresAuth: true, module: 'birthdays' },
-  { path: '/notes',    page: '/pages/notes.js',     requiresAuth: true, module: 'notes'     },
-  { path: '/recipes',  page: '/pages/recipes.js',   requiresAuth: true, module: 'recipes'   },
-  { path: '/pantry',   page: '/pages/pantry.js',    requiresAuth: true, module: 'pantry'    },
-  { path: '/contacts', page: '/pages/contacts.js',  requiresAuth: true, module: 'contacts'  },
-  { path: '/budget',   page: '/pages/budget.js',    requiresAuth: true, module: 'budget'    },
-  { path: '/documents', page: '/pages/documents.js', requiresAuth: true, module: 'documents' },
-  { path: '/housekeeping', page: '/pages/housekeeping.js', requiresAuth: true, module: 'housekeeping' },
-  { path: '/rewards',  page: '/pages/rewards.js',    requiresAuth: true, module: 'rewards'   },
+  { path: '/login',    page: '/pages/login.js',    requiresAuth: false, module: null,        titleKey: null },
+  { path: '/setup',    page: '/pages/setup.js',    requiresAuth: false, module: null,        titleKey: null },
+  { path: '/forgot-password', page: '/pages/forgot-password.js', requiresAuth: false, module: null, titleKey: 'forgotPassword.title' },
+  { path: '/reset-password',  page: '/pages/reset-password.js',  requiresAuth: false, module: null, titleKey: 'resetPassword.title' },
+  { path: '/join',     page: '/pages/join.js',     requiresAuth: false, module: null,        titleKey: 'join.title' },
+  { path: '/',         page: '/pages/dashboard.js', requiresAuth: true, module: 'dashboard', titleKey: 'dashboard.title' },
+  { path: '/tasks',    page: '/pages/tasks.js',     requiresAuth: true, module: 'tasks',     titleKey: 'nav.tasks' },
+  { path: '/shopping', page: '/pages/shopping.js',  requiresAuth: true, module: 'shopping',  titleKey: 'nav.shopping' },
+  { path: '/meals',    page: '/pages/meals.js',     requiresAuth: true, module: 'meals',     titleKey: 'nav.meals' },
+  { path: '/calendar', page: '/pages/calendar.js',  requiresAuth: true, module: 'calendar',  titleKey: 'nav.calendar' },
+  { path: '/birthdays', page: '/pages/birthdays.js', requiresAuth: true, module: 'birthdays', titleKey: 'nav.birthdays' },
+  { path: '/notes',    page: '/pages/notes.js',     requiresAuth: true, module: 'notes',     titleKey: 'nav.notes' },
+  { path: '/recipes',  page: '/pages/recipes.js',   requiresAuth: true, module: 'recipes',   titleKey: 'nav.recipes' },
+  { path: '/pantry',   page: '/pages/pantry.js',    requiresAuth: true, module: 'pantry',    titleKey: 'nav.pantry' },
+  { path: '/contacts', page: '/pages/contacts.js',  requiresAuth: true, module: 'contacts',  titleKey: 'nav.contacts' },
+  { path: '/budget',   page: '/pages/budget.js',    requiresAuth: true, module: 'budget',    titleKey: 'nav.budget' },
+  { path: '/documents', page: '/pages/documents.js', requiresAuth: true, module: 'documents', titleKey: 'nav.documents' },
+  { path: '/housekeeping', page: '/pages/housekeeping.js', requiresAuth: true, module: 'housekeeping', titleKey: 'nav.housekeeping' },
+  { path: '/rewards',  page: '/pages/rewards.js',    requiresAuth: true, module: 'rewards',   titleKey: 'nav.rewards' },
 ];
 
 // Settings ist eine Sektion mit einer Wurzel und je einer exakten Route pro
 // Blatt (Leaf). Die Routen werden aus der Registry abgeleitet, damit es keine
 // doppelten Pfad-Definitionen gibt.
+// Beide Sektionen führen EINEN Titel über alle Blätter: das Blatt ist eine
+// Sicht innerhalb der Sektion, kein eigener Ort - dieselbe Begründung, aus der
+// beide auch nur einen `module:`-Wert tragen.
 const SETTINGS_ROUTES = [
-  { path: '/settings', page: '/pages/settings.js', requiresAuth: true, module: 'settings' },
-  ...SETTINGS_LEAVES.map(({ path }) => ({ path, page: '/pages/settings.js', requiresAuth: true, module: 'settings' })),
+  { path: '/settings', page: '/pages/settings.js', requiresAuth: true, module: 'settings', titleKey: 'nav.settings' },
+  ...SETTINGS_LEAVES.map(({ path }) => ({ path, page: '/pages/settings.js', requiresAuth: true, module: 'settings', titleKey: 'nav.settings' })),
   // Vom IA-Umbau verschobene Blätter: als Route registriert, damit ein alter
   // Bookmark überhaupt matcht. settings.js leitet dann auf den neuen Pfad um.
-  ...RENAMED_SETTINGS_SOURCE_PATHS.map((path) => ({ path, page: '/pages/settings.js', requiresAuth: true, module: 'settings' })),
+  ...RENAMED_SETTINGS_SOURCE_PATHS.map((path) => ({ path, page: '/pages/settings.js', requiresAuth: true, module: 'settings', titleKey: 'nav.settings' })),
 ];
 
 ROUTES.push(...SETTINGS_ROUTES);
@@ -77,7 +93,7 @@ ROUTES.push(...SETTINGS_ROUTES);
 // einer exakten Route pro Sub-Tab. Alle Routen laden dasselbe Seitenmodul; die
 // Soft-Navigation zwischen den Tabs läuft über dessen update()-Funktion.
 const HEALTH_PAGE_ROUTES = HEALTH_ROUTES.map((path) => ({
-  path, page: '/pages/health.js', requiresAuth: true, module: 'health',
+  path, page: '/pages/health.js', requiresAuth: true, module: 'health', titleKey: 'nav.health',
 }));
 
 ROUTES.push(...HEALTH_PAGE_ROUTES);
@@ -427,26 +443,26 @@ function setAppVersion(version) {
   }
 }
 
+/**
+ * Dokumenttitel einer Route - die einzige Ansage, die ein Screenreader beim
+ * Seitenwechsel in einer SPA bekommt (WCAG 2.4.2, Level A). Zugleich Tab-Text,
+ * Verlaufseintrag und Lesezeichen.
+ *
+ * Die Titel kommen aus ROUTES, nicht aus einer zweiten Liste daneben - siehe
+ * die Begründung am Kopf der Routentabelle.
+ */
 function routeTitle(path) {
-  if (typeof path === 'string' && path.startsWith('/settings')) return t('nav.settings');
-  if (typeof path === 'string' && path.startsWith('/health')) return t('nav.health');
-  const map = {
-    '/': t('dashboard.title'),
-    '/tasks': t('nav.tasks'),
-    '/calendar': t('nav.calendar'),
-    '/birthdays': t('nav.birthdays'),
-    '/meals': t('nav.meals'),
-    '/recipes': t('nav.recipes'),
-    '/shopping': t('nav.shopping'),
-    '/pantry': t('nav.pantry'),
-    '/notes': t('nav.notes'),
-    '/contacts': t('nav.contacts'),
-    '/budget': t('nav.budget'),
-    '/documents': t('nav.documents'),
-    '/housekeeping': t('nav.housekeeping'),
-    '/rewards': t('nav.rewards'),
-  };
-  return map[path] || _thirdPartyModules.find((module) => module.route?.path === path)?.menu?.label || getAppName();
+  const titleKey = ROUTES.find((route) => route.path === path)?.titleKey;
+  if (titleKey) return t(titleKey);
+
+  // Dritt-Module bringen ihren Titel im eigenen Manifest mit; sie stehen nicht
+  // in ROUTES, sondern kommen zur Laufzeit dazu.
+  const thirdParty = _thirdPartyModules.find((module) => module.route?.path === path)?.menu?.label;
+  if (thirdParty) return thirdParty;
+
+  // Unbekannter Pfad oder eine der beiden erklärt titellosen Routen
+  // (/login, /setup): der App-Name ist dort der Titel.
+  return getAppName();
 }
 
 function updateBranding(path = currentPath) {
@@ -463,7 +479,13 @@ function updateBranding(path = currentPath) {
   const loginTitle = document.querySelector('.auth-hero__title');
   if ((path === '/login' || path === '/setup') && loginTitle) loginTitle.textContent = appName;
 
-  document.title = (path === '/login' || path === '/setup')
+  // Eine Route mit `titleKey: null` erklärt, dass der App-Name IHR Titel ist
+  // (Anmelden, Ersteinrichtung - dort steht noch keine Seite, auf die er sich
+  // beziehen könnte). Alles andere bekommt „Seite · App". Die Bedingung liest
+  // die Routentabelle, statt zwei Pfade ein zweites Mal aufzuzählen: sonst
+  // steht die Entscheidung an zwei Stellen und driftet an einer davon.
+  const declaresOwnTitle = ROUTES.find((route) => route.path === path)?.titleKey === null;
+  document.title = declaresOwnTitle
     ? appName
     : `${routeTitle(path || '/')} · ${appName}`;
 

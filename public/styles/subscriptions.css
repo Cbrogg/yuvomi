@@ -284,8 +284,12 @@
   font-size: var(--text-sm);
 }
 
+/* `--color-warning-text` gab es nie (Audit 2026-08-08, P2-3). Ein var() ohne
+ * Fallback auf ein undefiniertes Token ist ungueltig: die Deklaration fiel weg,
+ * und „Wechselkurse nicht verfuegbar" las sich wie normaler Text - der Zustand
+ * fiel nicht auf, den er melden soll. `--color-warning` haelt 4.9:1 auf weiss. */
 .subscriptions-rate-status--warning {
-  color: var(--color-warning-text);
+  color: var(--color-warning);
 }
 
 /* Nur das Layout - die Trägergrammatik kommt aus `.row-carrier` (list-row.css).

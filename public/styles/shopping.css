@@ -766,7 +766,10 @@
   align-items: center;
   gap: var(--space-1);
   font-size: var(--text-sm);
-  color: var(--module-accent, var(--color-primary));
+  /* Fallback auf --color-accent: `--color-primary` gab es nie, und eine
+   * var()-Kette mit undefiniertem Endglied ist als Ganzes ungueltig - der Link
+   * haette dann die Textfarbe geerbt statt den Akzent (Audit 2026-08-08). */
+  color: var(--module-accent, var(--color-accent));
   text-decoration: none;
   word-break: break-all;
 }
@@ -783,11 +786,15 @@
  * overflow: hidden), und die klippt die Swipe-Fläche mit. Ein eigener Radius auf
  * der Zeile war der letzte Rest des Karten-Paradigmas im Einkauf und hätte
  * innerhalb der Gruppenfläche als doppelte Rundung gelesen. */
+/* KEIN `will-change: transform` mehr: das Compositor-Versprechen haengt an der
+ * Geste (.swipe-row--armed > :first-child in layout.css), nicht an der Zeile.
+ * Hier stand es dauerhaft - 26 Einkaufszeilen gleichzeitig im Demo-Seed, jede
+ * mit eigener Ebene, ohne dass ein Finger die Liste beruehrt haette
+ * (Audit 2026-08-08, P2-1). */
 .swipe-row .shopping-item {
   margin-bottom: 0;
   position: relative;
   z-index: 1;
-  will-change: transform;
 }
 
 /* Welche Rolle hinter welcher Kante liegt, steht am Aufruf von wireSwipeRows

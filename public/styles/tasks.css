@@ -346,11 +346,15 @@
 /* KEIN eigener Radius, KEIN eigener Abstand: beides gehört dem Träger
  * (.list-rows), der die Wischfläche mit seinem overflow: hidden klippt.
  * Das Touch-Feedback während der Geste trägt die geteilte Bühne
- * (.swipe-row--swiping > :first-child in layout.css). */
+ * (.swipe-row--swiping > :first-child in layout.css).
+ *
+ * KEIN `will-change: transform` mehr - auch das Compositor-Versprechen ist
+ * geteilt und hängt an der Geste (.swipe-row--armed). Hier stand es dauerhaft:
+ * 11 Aufgabenkarten gleichzeitig, 54 Ebenen und ~15,2 MB Ebenen-Speicher auf
+ * /tasks im Ruhezustand (Audit 2026-08-08, P2-1). */
 .swipe-row .task-card {
   position: relative;
   z-index: 1;
-  will-change: transform;
 }
 
 /* Swipe-Affordanz: der geteilte Chevron-Hint aus layout.css (.swipe-row::after)
