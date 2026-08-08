@@ -231,7 +231,7 @@
 }
 
 .password-toggle:hover {
-  color: var(--color-text);
+  color: var(--color-text-primary);
 }
 
 .password-toggle:focus-visible {

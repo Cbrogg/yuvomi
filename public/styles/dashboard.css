@@ -1577,7 +1577,7 @@ svg.weather-forecast__icon {
 .onboarding-title {
   font-size: var(--text-xl);
   font-weight: var(--font-weight-semibold);
-  color: var(--color-text);
+  color: var(--color-text-primary);
   margin: 0;
 }
 

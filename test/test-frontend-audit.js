@@ -8842,6 +8842,76 @@ test('jede Stufe der Toenungsskala hat mindestens einen Nutzer', () => {
 });
 
 /**
+ * REGEL: `var(--x)` ohne Fallback verlangt, dass --x auch irgendwo entsteht.
+ *
+ * Ein Verweis auf ein Token, das es nicht gibt, ist zur Laufzeit KEIN Fehler:
+ * die Deklaration wird ungueltig und die Eigenschaft faellt auf ihren geerbten
+ * Wert zurueck. Genau deshalb ueberlebt so etwas Jahre - es sieht meistens
+ * richtig aus. `color: var(--color-text)` stand an vier Stellen (auth.css,
+ * dashboard.css, subscriptions.css x2); das Vokabular der App kennt nur
+ * --color-text-primary. Drei der vier fielen auf eine Vererbung zurueck, die
+ * zufaellig dasselbe lieferte, und der vierte war ein Hover, der nichts tat.
+ *
+ * Der Guard muss die Laufzeit mitzaehlen, sonst meldet er 29 Fehlalarme: die
+ * App setzt Tokens per style.setProperty() und ueber inline-style-Attribute in
+ * Templates (--point-x, --module-accent, --cal-color ...). Beide Quellen
+ * werden aus dem JS gelesen, nicht aus einer gepflegten Liste - eine Liste
+ * waere beim naechsten neuen Token still veraltet.
+ */
+test('kein var() auf ein Token, das nirgends entsteht', () => {
+  const styleDir = new URL('../public/styles/', import.meta.url);
+  const defined = new Set();
+  const used = new Map();
+
+  for (const name of readdirSync(styleDir).filter((f) => f.endsWith('.css'))) {
+    const css = read(`../public/styles/${name}`).replace(/\/\*[\s\S]*?\*\//g, '');
+    for (const m of css.matchAll(/(--[\w-]+)\s*:/g)) defined.add(m[1]);
+    // Nur ohne Fallback: `var(--x, ...)` ist ein gueltiges Muster fuer Tokens,
+    // die erst zur Laufzeit gesetzt werden.
+    for (const m of css.matchAll(/var\(\s*(--[\w-]+)\s*\)/g)) {
+      if (!used.has(m[1])) used.set(m[1], new Set());
+      used.get(m[1]).add(name);
+    }
+  }
+
+  const runtime = new Set();
+  const collectJs = (dir) => {
+    for (const entry of readdirSync(new URL(dir, import.meta.url), { withFileTypes: true })) {
+      if (entry.isDirectory()) {
+        if (entry.name !== 'vendor') collectJs(`${dir}${entry.name}/`);
+        continue;
+      }
+      if (!entry.name.endsWith('.js')) continue;
+      const src = read(`${dir}${entry.name}`);
+      for (const m of src.matchAll(/setProperty\(\s*['"`](--[\w-]+)/g)) runtime.add(m[1]);
+      // Ein style-Attribut kann MEHRERE Properties tragen
+      // (`style="--point-x:..;--point-slots:.."`): erst das Attribut greifen,
+      // dann alle Namen darin. Ein Muster, das direkt auf das erste --x zielt,
+      // uebersieht jedes weitere - und meldet es als Waise.
+      for (const attr of src.matchAll(/style\s*=\s*(?:"([^"]*)"|'([^']*)'|`([^`]*)`)/g)) {
+        for (const m of (attr[1] ?? attr[2] ?? attr[3] ?? '').matchAll(/(--[\w-]+)\s*:/g)) runtime.add(m[1]);
+      }
+    }
+  };
+  collectJs('../public/');
+
+  assert.ok(defined.size >= 400, `Nur ${defined.size} Token-Definitionen gefunden - der Scanner misst nichts.`);
+  assert.ok(used.size >= 100, `Nur ${used.size} fallback-freie var()-Verwendungen gefunden - dito.`);
+
+  const orphans = [...used.keys()]
+    .filter((token) => !defined.has(token) && !runtime.has(token))
+    .map((token) => `${token} (in ${[...used.get(token)].join(', ')})`);
+
+  assert.deepEqual(
+    orphans,
+    [],
+    'var() auf ein Token, das weder in einem Stylesheet noch zur Laufzeit entsteht.\n'
+    + 'Die Deklaration ist ungueltig und die Eigenschaft erbt still weiter - das faellt\n'
+    + `im Betrieb nicht auf, aber sie tut nicht, was dasteht.\n${orphans.join('\n')}`,
+  );
+});
+
+/**
  * REGEL: --color-text-disabled ist die Farbe DEAKTIVIERTER Bedienelemente und
  * sonst nichts. Sie traegt auf keiner Flaeche der App 3:1 (1,36 bis 2,17), und
  * das ist richtig so: WCAG 1.4.3 nimmt Deaktiviertes ausdruecklich aus. Genau

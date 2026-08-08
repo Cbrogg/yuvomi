@@ -90,7 +90,7 @@
   /* Eingabefelder sind opak: Glass auf einem Feld, in das getippt wird, lässt
    * den Text über den durchscheinenden Untergrund laufen (DESIGN.md §6). */
   background: var(--color-surface);
-  color: var(--color-text);
+  color: var(--color-text-primary);
   /* Drop WebKit's native type=search magnifier; the explicit leading icon is
    * the only magnifier this field should show. */
   -webkit-appearance: none;
@@ -634,7 +634,7 @@
   border: 0;
   border-radius: var(--radius-sm);
   background: transparent;
-  color: var(--color-text);
+  color: var(--color-text-primary);
   text-align: start;
   cursor: pointer;
 }

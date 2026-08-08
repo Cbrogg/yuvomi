@@ -1648,7 +1648,13 @@
  * ================================================================ */
 @media (prefers-contrast: more) {
   :root {
-    --glass-bg-elevated: #ffffff;
+    /* Muss dem Theme folgen, wie im Schwesterblock prefers-reduced-transparency
+     * darueber. Als Literal #ffffff ueberschrieb es das OEFFENTLICHE Token und
+     * gewann damit auch im Dark (die Dark-Bloecke setzen nur die private
+     * --_-Haelfte und stehen weiter oben): weisses Glas unter --color-text-primary
+     * #F2F2F7 ist 1,12:1 - unlesbar, ausgerechnet im Modus fuer Menschen, die
+     * mehr Kontrast brauchen. */
+    --glass-bg-elevated: var(--color-surface);
     --glass-border:      var(--color-text-primary);
     --glass-border-subtle: var(--color-text-secondary);
     --glass-highlight:        transparent;
@@ -1660,8 +1666,14 @@
     --blur-md:  blur(0px);
     --blur-lg:  blur(0px);
 
-    /* Notes-Token im Hochkontrast auf voll AA-taugliches Yellow-700 (6.3:1) heben */
-    --module-notes: #A16207;
+    /* Hier stand `--module-notes: #A16207` mit der Notiz "voll AA-tauglich
+     * (6.3:1)". Nachgemessen traegt der Wert 6,3 auf keiner Flaeche der App und
+     * ist ueberall SCHLECHTER als der Normalwert, den er anheben sollte:
+     *   auf #FFFFFF  4,92 statt 5,11      auf #F2F2F7  4,41 statt 4,58
+     *   auf #1C1C1E  3,46 statt 11,80  (Dark: das oeffentliche Token
+     *                                   ueberschrieb den hellen Dark-Wert)
+     * Ein Hochkontrast-Block, der den Kontrast senkt, ist schlimmer als keiner.
+     * Ohne Eintrag gilt der regulaere Modul-Tint, und der haelt seine Zusage. */
 
     --lg-blob-opacity: 0;     /* Backdrop-Blobs aus */
     --lg-specular: 0;
