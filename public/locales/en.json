@@ -109,7 +109,8 @@
         "sectionCustomModules": "Custom modules",
         "health": "Health",
         "rewards": "Rewards",
-        "pantry": "Pantry"
+        "pantry": "Pantry",
+        "inventory": "Inventory"
     },
     "dashboard": {
         "title": "Overview",
@@ -1582,7 +1583,8 @@
             "weather": "Weather",
             "family": "Family",
             "dashboard": "Overview",
-            "search": "Search"
+            "search": "Search",
+            "inventory": "Inventory"
         },
         "ics": {
             "title": "ICS Subscriptions",
@@ -2482,7 +2484,8 @@
         "goShop": "Shopping list",
         "goNotes": "Notes",
         "goKitchen": "Kitchen",
-        "goHealth": "Health"
+        "goHealth": "Health",
+        "goInventory": "Inventory"
     },
     "emptyHint": {
         "tasks": "Tap + to create your first task. Swipe a card left to check off, right to view.",
@@ -3930,6 +3933,56 @@
             "jar": "jar",
             "bag": "bag"
         }
+    },
+    "inventory": {
+        "title": "Inventory",
+        "searchPlaceholder": "Search inventory",
+        "addItem": "Add item",
+        "namePlaceholder": "e.g. MacBook Air",
+        "brandLabel": "Brand",
+        "modelLabel": "Model",
+        "serialNumberLabel": "Serial number",
+        "categoryLabel": "Category",
+        "locationLabel": "Location",
+        "unlocated": "No location",
+        "purchaseDateLabel": "Purchase date",
+        "purchasePriceLabel": "Purchase price",
+        "currentValueLabel": "Current value",
+        "currentValueHint": "Estimated current value, maintained manually.",
+        "currencyLabel": "Currency",
+        "vendorLabel": "Vendor",
+        "warrantyMonthsLabel": "Warranty (months)",
+        "conditionLabel": "Condition",
+        "conditionNew": "New",
+        "conditionGood": "Good",
+        "conditionFair": "Fair",
+        "conditionPoor": "Poor",
+        "statusLabel": "Status",
+        "statusActive": "Owned",
+        "statusSold": "Sold",
+        "statusDisposed": "Disposed",
+        "statusLost": "Lost",
+        "notesLabel": "Note",
+        "notesPlaceholder": "e.g. receipt is in the folder",
+        "deleteConfirm": "Delete \"{{name}}\"?",
+        "created": "Item added.",
+        "updated": "Item updated.",
+        "deleted": "Item deleted.",
+        "emptyTitle": "Your inventory is still empty",
+        "emptyDescription": "Record what you own - with location, category and purchase price.",
+        "loadErrorTitle": "Could not load the inventory",
+        "noResultsTitle": "Nothing found",
+        "noResultsDescription": "No items match your search.",
+        "resetSearch": "Reset search",
+        "manageLocations": "Manage locations",
+        "manageLocationsHint": "Rename, add or reorder locations. Items from a deleted location are kept.",
+        "addLocation": "New location",
+        "locationDeleteConfirmDetail": "Items and child locations at this location are kept, but end up without a location.",
+        "manageCategories": "Manage categories",
+        "manageCategoriesHint": "Rename, add or reorder categories. Items from a deleted category fall back to \"Other\".",
+        "addCategory": "New category",
+        "categoryDeleteConfirmDetail": "Items in this category fall back to \"Other\".",
+        "categoryOtherNotDeletable": "The \"Other\" category cannot be deleted."
     },
     "documentAttach": {
         "label": "Attachments",

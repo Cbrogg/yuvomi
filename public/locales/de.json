@@ -109,7 +109,8 @@
         "sectionCustomModules": "Benutzerdefinierte Module",
         "health": "Gesundheit",
         "rewards": "Belohnungen",
-        "pantry": "Vorrat"
+        "pantry": "Vorrat",
+        "inventory": "Inventar"
     },
     "search": {
         "emptyHint": "Ab 2 Zeichen durchsuchst du Aufgaben, Termine, Notizen, Kontakte, Einkauf und Gesundheit.",
@@ -1612,7 +1613,8 @@
             "weather": "Wetter",
             "family": "Familie",
             "dashboard": "Übersicht",
-            "search": "Suche"
+            "search": "Suche",
+            "inventory": "Inventar"
         },
         "ics": {
             "title": "ICS-Abonnements",
@@ -2494,7 +2496,8 @@
         "goShop": "Einkaufsliste",
         "goNotes": "Notizen",
         "goKitchen": "Küche",
-        "goHealth": "Gesundheit"
+        "goHealth": "Gesundheit",
+        "goInventory": "Inventar"
     },
     "documents": {
         "title": "Dokumente",
@@ -3930,6 +3933,56 @@
             "jar": "Glas",
             "bag": "Beutel"
         }
+    },
+    "inventory": {
+        "title": "Inventar",
+        "searchPlaceholder": "Inventar durchsuchen",
+        "addItem": "Gegenstand hinzufügen",
+        "namePlaceholder": "z. B. MacBook Air",
+        "brandLabel": "Marke",
+        "modelLabel": "Modell",
+        "serialNumberLabel": "Seriennummer",
+        "categoryLabel": "Kategorie",
+        "locationLabel": "Ort",
+        "unlocated": "Ohne Ort",
+        "purchaseDateLabel": "Kaufdatum",
+        "purchasePriceLabel": "Kaufpreis",
+        "currentValueLabel": "Zeitwert",
+        "currentValueHint": "Geschätzter aktueller Wert, manuell gepflegt.",
+        "currencyLabel": "Währung",
+        "vendorLabel": "Händler",
+        "warrantyMonthsLabel": "Garantie (Monate)",
+        "conditionLabel": "Zustand",
+        "conditionNew": "Neu",
+        "conditionGood": "Gut",
+        "conditionFair": "Ordentlich",
+        "conditionPoor": "Abgenutzt",
+        "statusLabel": "Status",
+        "statusActive": "Vorhanden",
+        "statusSold": "Verkauft",
+        "statusDisposed": "Entsorgt",
+        "statusLost": "Verloren",
+        "notesLabel": "Notiz",
+        "notesPlaceholder": "z. B. Kaufbeleg liegt im Ordner",
+        "deleteConfirm": "\"{{name}}\" wirklich löschen?",
+        "created": "Gegenstand hinzugefügt.",
+        "updated": "Gegenstand aktualisiert.",
+        "deleted": "Gegenstand gelöscht.",
+        "emptyTitle": "Das Inventar ist noch leer",
+        "emptyDescription": "Trage ein, was du besitzt - mit Ort, Kategorie und Kaufpreis.",
+        "loadErrorTitle": "Inventar konnte nicht geladen werden",
+        "noResultsTitle": "Nichts gefunden",
+        "noResultsDescription": "Keine Gegenstände passen zu deiner Suche.",
+        "resetSearch": "Suche zurücksetzen",
+        "manageLocations": "Lagerorte verwalten",
+        "manageLocationsHint": "Orte umbenennen, ergänzen oder neu sortieren. Gegenstände eines gelöschten Ortes bleiben erhalten.",
+        "addLocation": "Neuer Ort",
+        "locationDeleteConfirmDetail": "Gegenstände und Unterorte an diesem Ort bleiben erhalten, stehen danach aber ohne Ort da.",
+        "manageCategories": "Kategorien verwalten",
+        "manageCategoriesHint": "Kategorien umbenennen, ergänzen oder neu sortieren. Gegenstände einer gelöschten Kategorie fallen auf \"Sonstiges\" zurück.",
+        "addCategory": "Neue Kategorie",
+        "categoryDeleteConfirmDetail": "Gegenstände dieser Kategorie fallen auf \"Sonstiges\" zurück.",
+        "categoryOtherNotDeletable": "\"Sonstiges\" kann nicht gelöscht werden."
     },
     "documentAttach": {
         "label": "Anhänge",
