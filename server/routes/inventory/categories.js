@@ -128,6 +128,17 @@ router.patch('/reorder', (req, res) => {
   try {
     const order = Array.isArray(req.body.order) ? req.body.order : [];
     if (!order.length) return res.status(400).json({ error: 'order must be a non-empty array of keys.', code: 400 });
+
+    // Jeder Key muss existieren, sonst liefert stmt.get(key) weiter unten
+    // undefined -> null in der JSON-Antwort (stale Client, Tippfehler, Race mit
+    // gleichzeitigem Loeschen). Vorab pruefen und bei Luecken gar nichts
+    // anwenden, statt eine teilweise Umsortierung durchzufuehren.
+    const existsStmt = db.get().prepare('SELECT 1 FROM inventory_categories WHERE key = ?');
+    const unknown = order.filter((key) => !existsStmt.get(key));
+    if (unknown.length) {
+      return res.status(400).json({ error: `Unknown category key(s): ${unknown.join(', ')}.`, code: 400 });
+    }
+
     const update = db.get().prepare('UPDATE inventory_categories SET sort_order = ? WHERE key = ?');
     db.get().transaction(() => { order.forEach((key, i) => update.run(i, key)); })();
     // Return categories in the specified order
