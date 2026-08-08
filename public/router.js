@@ -165,16 +165,21 @@ function applyModuleAccentForRoute(route) {
  * 2026-08-06: vereinheitlichen. Die Modul-Identität tragen weiter Nav-Icons,
  * Segmente, Chips und der FAB.
  *
- * Dieselben Werte wie die statischen theme-color-Metas in index.html; sie
- * gelten auch für den modullosen Fall (Login, Setup, Join). Fremdmodule mit
- * eigenem Akzent behalten ihre Farbe - ihre Seiten sind nicht Teil dieser Welt.
+ * Dieselben Werte wie die statischen theme-color-Metas in index.html und
+ * offline.html, und dieselben wie `--color-bg` in tokens.css; sie gelten auch
+ * für den modullosen Fall (Login, Setup, Join). Fremdmodule mit eigenem Akzent
+ * behalten ihre Farbe - ihre Seiten sind nicht Teil dieser Welt.
+ *
+ * Der Kommentar hat das schon einmal behauptet, ohne dass es stimmte: dunkel
+ * stand hier #0C0C0E gegen ein --color-bg von #0A0A0C. Seither hält der Guard
+ * "the status bar colour is the page background" alle drei Kopien am Token.
  */
 function updateThemeColorForRoute(route) {
   if (route?.thirdPartyModule?.accent) {
     setThemeColor(route.thirdPartyModule.accent, route.thirdPartyModule.accent);
     return;
   }
-  setThemeColor('#F2F2F7', '#0C0C0E');
+  setThemeColor('#F2F2F7', '#0A0A0C');
 }
 
 // --------------------------------------------------------

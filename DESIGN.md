@@ -292,7 +292,7 @@ reduced-transparency und prefers-contrast auf 0).
   >=5:1 auf Weiss). Dark Mode kippt auf vivide Hell-Varianten mit dunkler Tinte
   (`--color-ink-on-vivid`).
 - **Die Modul-Identitaet lebt in den Elementen, nicht in der Flaeche.** Die PWA-theme-color
-  ist app-weit der Seitengrund (#F2F2F7 / #0C0C0E), nicht der Modul-Tint.
+  ist app-weit der Seitengrund (#F2F2F7 / #0A0A0C, also `--color-bg`), nicht der Modul-Tint.
 
 ### Tertiary
 - **Semantik im Apple-Vokabular, AA-vertieft**: Success (Apple Green, 5.1:1), Warning
