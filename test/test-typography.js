@@ -41,6 +41,74 @@ function declarations(css, prop) {
 
 const LITERAL = /(^|[\s(])-?\d*\.?\d+(px|rem|em)\b/; // roher Längen-Literalwert
 
+/**
+ * Prueft die Schriftrolle eines Selektors ueber SEINE Regeln.
+ *
+ * Der Vorgaenger war `new RegExp(selector + '[\\s\\S]*?font-size: var(--rolle)')`
+ * ueber die ganze Datei - und der ist unbegrenzt: der Lazy-Match ueberspringt
+ * die eigene Regel des Selektors und laeuft bis zur naechsten passenden
+ * Deklaration IRGENDWO danach. Nachgestellt: setzt man .widget__link in
+ * dashboard.css auf --type-micro, bleibt die Assertion gruen, weil der Match
+ * bei einer fremden Regel weiter unten faellig wird. Behauptet wurde "dieser
+ * Selektor traegt die Rolle", geprueft wurde "der Klassenname steht irgendwo
+ * vor irgendeiner passenden Deklaration".
+ *
+ * Drei Zusagen statt einer, alle drei ueber `eachRule` (der kennt den
+ * Regelkontext und steigt korrekt in @media ab):
+ *   1. Der Selektor existiert ueberhaupt. Ein Guard auf einem Selektor, den es
+ *      nicht mehr gibt, ist vakuum-wahr und faellt nie wieder um.
+ *   2. Mindestens eine seiner Regeln setzt die erwartete Rolle.
+ *   3. KEINE seiner Regeln setzt eine abweichende font-size - auch nicht in
+ *      einer Media-Query. Das deckt zusaetzlich ab, was vorher als eigene
+ *      doesNotMatch-Assertion danebenstand.
+ */
+function assertTypeRole(css, file, selector, token, message, alsoAllowed = []) {
+  // Der gesuchte Ausdruck muss das ZIEL des Selektors sein, nicht ein Vorfahre
+  // darin: `.note-item__content .note-md-p { font-size: inherit }` setzt die
+  // Groesse der Kinder und sagt nichts ueber die Rolle des Containers. Deshalb
+  // muss der Komma-Teil auf den Ausdruck enden - nachfolgende Pseudoklassen und
+  // Attributselektoren zaehlen noch dazu, ein weiteres Compound nicht mehr.
+  // Funktioniert dadurch fuer `.widget__link` wie fuer `.split-card h3`.
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
+  const targets = new RegExp(`${escaped}(?![\\w-])(?:[:[][^\\s]*)*$`);
+  const targetsSelector = (selectorText) => selectorText
+    .split(',')
+    .some((part) => targets.test(part.trim().replace(/\s+/g, ' ')));
+
+  const rules = [...eachRule(css)].filter((rule) => targetsSelector(rule.selector));
+
+  assert.ok(
+    rules.length > 0,
+    `${selector} kommt in ${file} in keiner Regel vor. Der Guard prueft damit nichts - `
+    + 'wurde die Klasse umbenannt oder entfernt?',
+  );
+
+  const sizes = rules.flatMap((rule) => [...rule.body.matchAll(/font-size:\s*([^;]+)/g)]
+    .map((m) => ({ value: m[1].trim(), where: rule.at.length ? `${rule.at.join(' / ')} { ${rule.selector} }` : rule.selector })));
+
+  assert.ok(
+    sizes.some(({ value }) => value === `var(${token})`),
+    `${message}\n  ${selector} in ${file} setzt ${token} in keiner seiner ${rules.length} Regeln.`
+    + `\n  Gefunden: ${sizes.map((s) => s.value).join(', ') || '(gar keine font-size)'}`,
+  );
+
+  // `inherit`/`0`/`normal` sind keine konkurrierende Groesse, sondern die
+  // ausdrueckliche Weitergabe der geerbten - sie widersprechen der Rolle nicht.
+  // `alsoAllowed` ist fuer den Fall, dass ein Selektor in einem Breakpoint
+  // bewusst eine ZWEITE Rolle traegt (der Modul-Kopftitel wird mobil zum Large
+  // Title). Die Ausnahme steht am Aufrufort und muss dort begruendet sein - im
+  // Helper waere sie eine unsichtbare Aufweichung fuer alle.
+  const NEUTRAL = new Set(['inherit', 'unset', 'revert', '0', 'normal']);
+  const allowed = new Set([`var(${token})`, ...alsoAllowed.map((t) => `var(${t})`)]);
+  const wrong = sizes.filter(({ value }) => !allowed.has(value) && !NEUTRAL.has(value));
+  assert.deepEqual(
+    wrong.map((w) => `${w.where}: font-size: ${w.value}`),
+    [],
+    `${message}\n  ${selector} in ${file} setzt daneben eine abweichende Groesse - `
+    + 'die spaetere gewinnt, die Rolle ist dann nur noch behauptet.',
+  );
+}
+
 test('font-size wird ausschließlich über Tokens gesetzt (außer reset.css-Basis)', () => {
   const violations = [];
   for (const file of cssFiles) {
@@ -202,16 +270,10 @@ test('Raster und Liste der Dokumente verwenden dieselbe Titelrolle', () => {
 test('sichtbare Split-Expense-Überschriften besitzen explizite Rollen', () => {
   const typography = readFileSync(new URL('../public/styles/typography.css', import.meta.url), 'utf8');
 
-  assert.match(
-    typography,
-    /\.split-group-header h2[\s\S]*?font-size:\s*var\(--type-section-title\)/,
-    'Gruppenüberschriften dürfen nicht auf die Browser-Standardgröße zurückfallen',
-  );
-  assert.match(
-    typography,
-    /\.split-card h3[\s\S]*?font-size:\s*var\(--type-card-title\)/,
-    'Kartenüberschriften dürfen nicht auf die Browser-Standardgröße zurückfallen',
-  );
+  assertTypeRole(typography, 'typography.css', '.split-group-header h2', '--type-section-title',
+    'Gruppenüberschriften dürfen nicht auf die Browser-Standardgröße zurückfallen');
+  assertTypeRole(typography, 'typography.css', '.split-card h3', '--type-card-title',
+    'Kartenüberschriften dürfen nicht auf die Browser-Standardgröße zurückfallen');
 });
 
 test('Settings zeigen auf Leaf-Seiten nur den Leaf-Titel als sichtbare Hauptüberschrift', () => {
@@ -378,31 +440,19 @@ test('lange Inhalts- und interaktive Texte verwenden mindestens die Sekundärrol
     '.note-item__content',
     '.budget-widget__footer',
   ]) {
-    assert.match(
-      dashboard,
-      new RegExp(`${selector.replace('.', '\\.')}[\\s\\S]*?font-size:\\s*var\\(--type-secondary\\)`),
-      `${selector} muss mindestens die 14px-Sekundärrolle verwenden`,
-    );
+    assertTypeRole(dashboard, 'dashboard.css', selector, '--type-secondary',
+      `${selector} muss mindestens die 14px-Sekundärrolle verwenden`);
   }
-  assert.match(
-    notes,
-    /\.note-card__content[\s\S]*?font-size:\s*var\(--type-body\)/,
-    'Notiz-Fließtext muss die 16px-Bodyrolle verwenden',
-  );
+  assertTypeRole(notes, 'notes.css', '.note-card__content', '--type-body',
+    'Notiz-Fließtext muss die 16px-Bodyrolle verwenden');
   // Umbenannt mit dem Wechsel von der Rezeptkarte zur Rezeptzeile mit
   // Aufklapp-Detail: die Fließtext-Rolle gilt jetzt für den Detail-Inhalt.
   for (const selector of ['.recipe-detail__notes', '.recipe-detail__ingredient']) {
-    assert.match(
-      recipes,
-      new RegExp(`${selector.replace('.', '\\.')}[\\s\\S]*?font-size:\\s*var\\(--type-body\\)`),
-      `${selector} muss die 16px-Bodyrolle verwenden`,
-    );
+    assertTypeRole(recipes, 'recipes.css', selector, '--type-body',
+      `${selector} muss die 16px-Bodyrolle verwenden`);
   }
-  assert.match(
-    calendar,
-    /\.cal-toolbar__view-btn[\s\S]*?font-size:\s*var\(--type-secondary\)/,
-    'interaktive Kalender-Ansichtsschalter müssen mindestens 14px groß sein',
-  );
+  assertTypeRole(calendar, 'calendar.css', '.cal-toolbar__view-btn', '--type-secondary',
+    'interaktive Kalender-Ansichtsschalter müssen mindestens 14px groß sein');
 });
 
 test('globale Toolbar- und Kartentitel folgen den semantischen Rollen', () => {
@@ -412,26 +462,30 @@ test('globale Toolbar- und Kartentitel folgen den semantischen Rollen', () => {
   // Canonical Page Head: der Modul-Toolbartitel folgt der 20px-Rolle in
   // typography.css (gemeinsam mit Settings-Leaf + Split), nicht mehr der
   // Abschnittsrolle (18px) in layout.css.
-  assert.match(
-    typography,
-    /\.page-toolbar__title[\s\S]*?font-size:\s*var\(--type-toolbar-title\)/,
-    'Modul-Toolbartitel müssen die Canonical-Page-Head-Rolle (--type-toolbar-title, 20px) verwenden',
+  // Mobil traegt derselbe Titel bewusst den Large Title: --type-page-title-mobile
+  // ist 34px gegen 22px, also GROESSER - die Zusage "faellt mobil auf keine
+  // kleinere Stufe" bleibt damit gewahrt. Jede dritte Groesse faellt auf.
+  assertTypeRole(typography, 'typography.css', '.page-toolbar__title', '--type-toolbar-title',
+    'Modul-Toolbartitel müssen die Canonical-Page-Head-Rolle (--type-toolbar-title, 22px) verwenden',
+    ['--type-page-title-mobile']);
+
+  // layout.css darf die Groesse gar nicht setzen - die Rolle in typography.css
+  // ist die Quelle. Deckt zugleich ab, was hier vorher als zweite Assertion mit
+  // einem @media-Muster stand: `eachRule` steigt in jede At-Regel ab, also faellt
+  // eine mobile Verkleinerung genauso auf wie eine auf der Basisebene.
+  const toolbarTitleInLayout = [...eachRule(layout)]
+    .filter((rule) => /\.page-toolbar__title(?![\w-])/.test(rule.selector))
+    .flatMap((rule) => [...rule.body.matchAll(/font-size:\s*([^;]+)/g)]
+      .map((m) => `${rule.at.join(' / ') || 'Basisebene'}: ${rule.selector} -> ${m[1].trim()}`));
+  assert.deepEqual(
+    toolbarTitleInLayout,
+    [],
+    'layout.css darf die Toolbartitel-Größe nicht mehr setzen - die Rolle in typography.css ist die Quelle, '
+    + 'und mobil darf der Titel auf keine kleinere semantische Stufe fallen.',
   );
-  assert.doesNotMatch(
-    layout,
-    /\.page-toolbar__title\s*\{[^}]*font-size:/,
-    'layout.css darf die Toolbartitel-Größe nicht mehr setzen — die Rolle in typography.css ist die Quelle',
-  );
-  assert.doesNotMatch(
-    layout,
-    /@media \(max-width:\s*640px\)[\s\S]*?\.page-toolbar__title\s*\{[\s\S]*?font-size:/,
-    'Toolbartitel dürfen mobil nicht auf eine kleinere semantische Stufe fallen',
-  );
-  assert.match(
-    layout,
-    /\.card__title[\s\S]*?font-size:\s*var\(--type-card-title\)/,
-    'generische Kartentitel müssen die 16px-Kartentitelrolle verwenden',
-  );
+
+  assertTypeRole(layout, 'layout.css', '.card__title', '--type-card-title',
+    'generische Kartentitel müssen die 16px-Kartentitelrolle verwenden');
 });
 
 test('Such- und Schnellformular-Eingaben bleiben bei 16px', () => {
@@ -439,16 +493,15 @@ test('Such- und Schnellformular-Eingaben bleiben bei 16px', () => {
   const contacts = readFileSync(new URL('../public/styles/contacts.css', import.meta.url), 'utf8');
   const shopping = readFileSync(new URL('../public/styles/shopping.css', import.meta.url), 'utf8');
 
-  assert.doesNotMatch(
-    notes,
-    /\.notes-toolbar__search-input\s*\{\s*font-size:\s*var\(--text-sm\)/,
-    'die Notizsuche darf auf Desktop nicht unter 16px fallen',
-  );
-  assert.doesNotMatch(
-    contacts,
-    /\.contacts-toolbar__search-input\s*\{\s*font-size:\s*var\(--text-sm\)/,
-    'die Kontaktsuche darf auf Desktop nicht unter 16px fallen',
-  );
+  // Hier standen zwei doesNotMatch auf .notes-toolbar__search-input und
+  // .contacts-toolbar__search-input. Beide Klassen existieren in keinem der 37
+  // Stylesheets mehr - die Suchfelder sind zur geteilten .page-search-Komponente
+  // zusammengezogen worden. Zwei Assertions, die seitdem vakuum-wahr waren und
+  // es fuer immer geblieben waeren. Die Zusage gilt jetzt an der einen Stelle,
+  // an der sie noch etwas bedeutet: 16px, damit iOS beim Fokus nicht zoomt.
+  const pageSearch = readFileSync(new URL('../public/styles/page-search.css', import.meta.url), 'utf8');
+  assertTypeRole(pageSearch, 'page-search.css', '.page-search__input', '--text-base',
+    'die geteilte Seitensuche darf nicht unter 16px fallen (sonst zoomt iOS beim Fokus)');
   for (const selector of ['quick-add__qty', 'quick-add__cat']) {
     assert.doesNotMatch(
       shopping,
