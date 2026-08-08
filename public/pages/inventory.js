@@ -22,6 +22,7 @@ import { renderSkeletonList } from '/utils/skeleton.js';
 import { emptyStateEl } from '/utils/empty-state.js';
 import { renderPageSearch, wirePageSearch } from '/utils/page-search.js';
 import { formatMoney } from '/utils/money.js';
+import { renderDocumentAttachField, bindDocumentAttachField } from '/components/document-attach.js';
 
 let _container = null;
 let _search = null;
@@ -140,9 +141,13 @@ function matchesQuery(item) {
 }
 
 function renderItemRow(item) {
+  const hasAttachments = (item.attachments?.length ?? 0) > 0;
   return `
     <div class="inventory-item-row" data-id="${item.id}" role="button" tabindex="0">
-      <div class="inventory-item-row__name">${esc(item.name)}</div>
+      <div class="inventory-item-row__name">
+        <span class="inventory-item-row__name-text">${esc(item.name)}</span>
+        ${hasAttachments ? `<i data-lucide="paperclip" class="icon-sm" aria-hidden="true"></i><span class="sr-only">${esc(t('inventory.hasAttachmentsLabel'))}</span>` : ''}
+      </div>
       <div class="inventory-item-row__category">${esc(item.category_name)}</div>
       <div class="inventory-item-row__location">${item.location_path ? esc(item.location_path) : ''}</div>
       <span class="inventory-status-badge inventory-status-badge--${esc(item.status)}">${esc(statusLabel(item.status))}</span>
@@ -202,6 +207,10 @@ async function loadItems() {
 const CONDITIONS = ['new', 'good', 'fair', 'poor'];
 const STATUSES = ['active', 'sold', 'disposed', 'lost'];
 
+// Gleiche Liste wie public/pages/documents.js#CATEGORIES - dort hardcodiert
+// statt aus GET /documents/meta/options geladen, hier aus Konsistenz genauso.
+const DOCUMENT_CATEGORIES = ['medical', 'school', 'identity', 'insurance', 'finance', 'home', 'vehicle', 'legal', 'travel', 'pets', 'warranty', 'taxes', 'work', 'other'];
+
 function openItemModal(mode, item = null) {
   const isEdit = mode === 'edit';
 
@@ -216,6 +225,8 @@ function openItemModal(mode, item = null) {
   }
   const conditionOptions = CONDITIONS.map((c) => `<option value="${c}">${esc(t(`inventory.condition${c.charAt(0).toUpperCase()}${c.slice(1)}`))}</option>`).join('');
   const statusOptions = STATUSES.map((s) => `<option value="${s}">${esc(t(`inventory.status${s.charAt(0).toUpperCase()}${s.slice(1)}`))}</option>`).join('');
+  const documentCategoryOptions = DOCUMENT_CATEGORIES
+    .map((c) => `<option value="${c}" ${c === 'warranty' ? 'selected' : ''}>${esc(t(`documents.category.${c}`))}</option>`).join('');
 
   openSharedModal({
     title: isEdit ? t('common.editItem') : t('inventory.addItem'),
@@ -291,8 +302,17 @@ function openItemModal(mode, item = null) {
         <div class="form-group">
           <label class="form-label" for="inv-notes">${esc(t('inventory.notesLabel'))}</label>
           <textarea id="inv-notes" class="form-input" rows="3" placeholder="${esc(t('inventory.notesPlaceholder'))}"></textarea>
-        </div>`,
-      { open: isEdit && (!!item.brand || !!item.model || !!item.serial_number || !!item.notes) })}
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="inv-attachment-category">${esc(t('inventory.attachmentCategoryLabel'))}</label>
+          <select id="inv-attachment-category" class="form-input">${documentCategoryOptions}</select>
+        </div>
+        ${renderDocumentAttachField({
+          attachments: isEdit ? (item.attachments || []) : [],
+          label: t('inventory.attachmentsLabel'),
+          hint: t('inventory.attachmentsHint'),
+        })}`,
+      { open: isEdit && (!!item.brand || !!item.model || !!item.serial_number || !!item.notes || (item.attachments?.length ?? 0) > 0) })}
       <div class="modal-panel__footer modal-panel__footer--plain">
         ${isEdit ? `<button type="button" class="btn btn--danger-ghost" id="inv-delete">${esc(t('common.delete'))}</button>` : ''}
         <button type="button" class="btn btn--secondary" data-action="close-modal">${esc(t('common.cancel'))}</button>
@@ -313,19 +333,26 @@ function openItemModal(mode, item = null) {
       panel.querySelector('#inv-condition').value = isEdit ? item.condition : 'good';
       panel.querySelector('#inv-notes').value = isEdit && item.notes ? item.notes : '';
 
-      panel.querySelector('#inv-save').addEventListener('click', () => saveItem(panel, mode, item));
+      panel.querySelector('#inv-save').addEventListener('click', () => saveItem(panel, mode, item, attachments));
       panel.querySelector('#inv-delete')?.addEventListener('click', async () => {
         closeSharedModal({ force: true });
         await removeItem(item);
       });
 
       wireBlurValidation(panel);
+      const attachments = bindDocumentAttachField(panel, {
+        category: () => panel.querySelector('#inv-attachment-category').value,
+        folderName: t('documents.inventoryFolder'),
+        documentName: (file) => t('inventory.attachmentDocumentName', {
+          name: panel.querySelector('#inv-name').value.trim() || file.name,
+        }),
+      });
       if (window.lucide) window.lucide.createIcons({ el: panel });
     },
   });
 }
 
-async function saveItem(panel, mode, item) {
+async function saveItem(panel, mode, item, attachments) {
   const saveBtn = panel.querySelector('#inv-save');
   const nameInput = panel.querySelector('#inv-name');
   const name = nameInput.value.trim();
@@ -354,6 +381,7 @@ async function saveItem(panel, mode, item) {
 
   saveBtn.disabled = true;
   try {
+    if (attachments) payload.attachment_document_ids = await attachments.commit();
     if (mode === 'create') await api.post('/inventory/items', payload);
     else await api.put(`/inventory/items/${item.id}`, payload);
     await loadItems();
