@@ -69,6 +69,7 @@ const ROUTES = [
   { path: '/notes',    page: '/pages/notes.js',     requiresAuth: true, module: 'notes',     titleKey: 'nav.notes' },
   { path: '/recipes',  page: '/pages/recipes.js',   requiresAuth: true, module: 'recipes',   titleKey: 'nav.recipes' },
   { path: '/pantry',   page: '/pages/pantry.js',    requiresAuth: true, module: 'pantry',    titleKey: 'nav.pantry' },
+  { path: '/inventory', page: '/pages/inventory.js', requiresAuth: true, module: 'inventory', titleKey: 'nav.inventory' },
   { path: '/contacts', page: '/pages/contacts.js',  requiresAuth: true, module: 'contacts',  titleKey: 'nav.contacts' },
   { path: '/budget',   page: '/pages/budget.js',    requiresAuth: true, module: 'budget',    titleKey: 'nav.budget' },
   { path: '/documents', page: '/pages/documents.js', requiresAuth: true, module: 'documents', titleKey: 'nav.documents' },
@@ -406,7 +407,7 @@ let _setupRequired = false;
 // --------------------------------------------------------
 
 const ROUTE_ORDER = ['/', '/calendar', '/tasks', '/meals', '/recipes', '/shopping', '/pantry',
-                     '/birthdays', '/notes', '/contacts', '/budget', '/documents', '/housekeeping', '/health', '/settings'];
+                     '/birthdays', '/notes', '/contacts', '/budget', '/inventory', '/documents', '/housekeeping', '/health', '/settings'];
 
 const MOBILE_FAVORITE_COUNT = 3;
 
@@ -1897,6 +1898,7 @@ const SHORTCUTS = [
   { key: 'g k r', description: () => t('nav.recipes'),         action: () => navigate('/recipes')           },
   { key: 'g k s', description: () => t('nav.shopping'),        action: () => navigate('/shopping')          },
   { key: 'g k v', description: () => t('nav.pantry'),          action: () => navigate('/pantry')            },
+  { key: 'g i', description: () => t('shortcuts.goInventory'), action: () => navigate('/inventory') },
 ];
 
 let _pendingKey = null;
@@ -2656,6 +2658,7 @@ function navItems() {
     { path: '/health',    label: t('nav.health'),    icon: 'heart-pulse',      module: 'health',      section: NAV_SECTION.people },
     // Finanzen
     { path: '/budget',    label: t('nav.budget'),    icon: 'wallet',           module: 'budget',      section: NAV_SECTION.finance },
+    { path: '/inventory', label: t('nav.inventory'), icon: 'package',          module: 'inventory',   section: NAV_SECTION.finance },
     // Settings ist am Ende gepinnt (siehe unten).
     { path: '/settings',  navHref: '/settings?view=domains', label: t('nav.settings'),  icon: 'settings',         module: 'settings',    section: NAV_SECTION.household },
   ];

@@ -708,6 +708,7 @@ test('navigation sections match the grouped desktop information architecture', (
   assert.equal(moduleSection('birthdays'), NAV_SECTION.people);
   assert.equal(moduleSection('health'), NAV_SECTION.people);
   assert.equal(moduleSection('budget'), NAV_SECTION.finance);
+  assert.equal(moduleSection('inventory'), NAV_SECTION.finance);
   assert.equal(moduleSection('third-party-weather-station'), NAV_SECTION.customModules);
   assert.equal(moduleSection('settings'), NAV_SECTION.household);
 });
