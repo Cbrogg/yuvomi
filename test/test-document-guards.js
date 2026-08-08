@@ -72,6 +72,11 @@ const LEAVES_SKIPPED = new Map([
     + '`.page-toolbar`, und die gibt es auf einem Blatt nicht (siehe Sonde 1). Ohne '
     + 'Lead-Zone faellt jedes Blatt in die triviale Haelfte der Regel, die die Sonde dann '
     + '23-mal bestaetigt.'],
+  ['Sonde 12', 'misst Glasflaechen, und die sitzen in der SHELL - Tab-Bar, Sidebar, Sheets, '
+    + 'Toast, Datepicker-Popover, FAB. Die ist auf jeder Route dieselbe, also kaeme ein Befund '
+    + 'dort 39-mal statt 16-mal (dieselbe Begruendung wie bei Sonde 11). Gegengeprueft, dass '
+    + 'die Blaetter keine eigene Glasflaeche mitbringen: `public/settings/**` setzt nirgends '
+    + '`backdrop-filter`, und der einzige Glastraeger ihrer Shell ist die Sidebar der App.'],
 ]);
 
 /** Die Zustaende, die eine Sonde abfaehrt: die 16 Routen, dazu die Blaetter. */
@@ -1886,3 +1891,161 @@ test('Sonde 11 - was einen Klick annimmt, nimmt auch eine Taste an', async () =>
     + '(WCAG 2.1.1, Level A).\n  '
     + findings.join('\n  '));
 });
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Sonde 12: die Glas-Familie - wo Glas sitzt, und was ohne es bleibt
+ *
+ * Zwei Regeln, eine Sonde, weil beide dieselbe Menge brauchen: alle Flaechen,
+ * die im Dokument `backdrop-filter` tragen.
+ *
+ * (F) DIE GLAS-IST-CHROME-REGEL. Der Architektur-Audit mass 54
+ *     `backdrop-filter`-Instanzen, ausnahmslos an Navigation und Knoepfen -
+ *     gemessen, gestimmt, nie abgesichert. Im STYLESHEET ist die Aussage nicht
+ *     scharf: ob ein Selektor Chrome oder Inhalt adressiert, weiss erst das
+ *     Dokument. Hier ist sie es: liegt das Element innerhalb von
+ *     `#main-content`, ist es Inhalt.
+ *
+ * (B) DIE FALLBACK-REGEL, ihre zweite Haelfte. `jeder Blur kommt aus der
+ *     --blur-Skala` (Ebene 3) sichert, dass jede Glasflaeche einen Blur nimmt,
+ *     der unter `prefers-reduced-transparency` und `prefers-contrast: more` auf
+ *     `blur(0px)` kippt. Was er NICHT sehen kann, ist, ob die Regel im DOKUMENT
+ *     ankommt - „im Stylesheet vorhanden, im Dokument wirkungslos" ist derselbe
+ *     Fehlertyp wie B-13, und der Handoff notiert ihn seit dem Architektur-Audit
+ *     als bekannte Pruefluecke.
+ *
+ *     GEPRUEFT WIRD NICHT NUR DER BLUR, SONDERN DIE DECKKRAFT. Ein Blur, der
+ *     ausgeht, ist die halbe Regel; die andere Haelfte entscheidet ueber
+ *     Lesbarkeit. Eine Glasflaeche ohne Blur, die weiter halbdurchsichtig ist,
+ *     laesst den Inhalt darunter UNVERWISCHT durchscheinen - der Text davor
+ *     steht dann vor allem, was gerade vorbeiscrollt, und sein Kontrast ist
+ *     keine Zahl mehr, sondern eine Wette. Genau deshalb kippt tokens.css unter
+ *     beiden Zustaenden die `--glass-bg-*` auf `--color-surface`-Werte. Ob das
+ *     ankommt, sieht nur das Dokument.
+ *
+ * KEINE TOLERANZ, und das ist der Grund, warum diese zwei Fragen gebaut sind
+ * und die Konzentrik-Frage nicht: „liegt drin" und „Alpha ist 1" sind scharf.
+ *
+ * DER MEDIENZUSTAND KOMMT UEBER CDP, NICHT UEBER PUPPETEER.
+ * `page.emulateMediaFeatures` fuehrt eine Allowlist und kennt
+ * `prefers-reduced-transparency` nicht (`Unsupported media feature`) - was den
+ * Handoff-Vorschlag „Puppeteer kann beide Medienzustaende emulieren" fuer
+ * genau den Zustand widerlegt, um den es hier geht. `Emulation.setEmulatedMedia`
+ * kann es, und die Sonde prueft mit `matchMedia`, dass der Zustand wirklich
+ * anliegt, statt ihn anzunehmen.
+ *
+ * SIE FAEHRT DIE 16 ROUTEN, NICHT DIE BLAETTER - siehe LEAVES_SKIPPED.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/** Setzt einen Medienzustand ueber CDP und belegt, dass er anliegt. */
+async function withMedia(page, features) {
+  const cdp = await page.createCDPSession();
+  await cdp.send('Emulation.setEmulatedMedia', { features });
+  const applied = await page.evaluate(
+    (list) => list.map((f) => matchMedia(`(${f.name}: ${f.value})`).matches),
+    features,
+  );
+  return { cdp, applied };
+}
+
+/** Jede Flaeche, die Glas traegt - samt Ort im Baum und Deckkraft. */
+async function glassSurfaces(page) {
+  return page.evaluate(() => {
+    const path3 = (el) => {
+      const parts = [];
+      for (let n = el; n && n.nodeType === 1 && parts.length < 3; n = n.parentElement) {
+        let s = n.tagName.toLowerCase();
+        if (n.id) { parts.unshift(`${s}#${n.id}`); break; }
+        const cls = (typeof n.className === 'string' ? n.className : '').trim().split(/\s+/).filter(Boolean).slice(0, 2);
+        if (cls.length) s += `.${cls.join('.')}`;
+        parts.unshift(s);
+      }
+      return parts.join(' > ');
+    };
+    const main = document.querySelector('#main-content');
+    const out = [];
+    for (const el of document.querySelectorAll('*')) {
+      const cs = getComputedStyle(el);
+      const bf = cs.backdropFilter && cs.backdropFilter !== 'none' ? cs.backdropFilter : cs.webkitBackdropFilter;
+      if (!bf || bf === 'none') continue;
+      const r = el.getBoundingClientRect();
+      if (r.width < 2 || r.height < 2) continue;
+      if (cs.visibility === 'hidden' || cs.display === 'none') continue;
+      // Ein Blur mit einem Wert > 0 - `blur(0px)` ist der abgeschaltete Zustand
+      // und kein Verstoss.
+      const blur = [...bf.matchAll(/blur\(\s*([\d.]+)px\s*\)/g)].map((m) => Number(m[1])).filter((v) => v > 0);
+      out.push({
+        sel: path3(el),
+        inMain: Boolean(main && main.contains(el)),
+        blur: blur.length ? Math.max(...blur) : 0,
+        bg: cs.backgroundColor,
+      });
+    }
+    return out;
+  });
+}
+
+test('Sonde 12 - Glas sitzt auf Chrome, nie im Seiteninhalt', async () => {
+  const findings = [];
+  const seen = new Set();
+  for (const device of ['mobile', 'desktop']) {
+    const page = await openPage(harness, { device, theme: 'light', locale: 'de' });
+    for (const name of sweep('Sonde 12')) {
+      await gotoRoute(page, ALL_ROUTES[name]);
+      await settleAnimations(page);
+      for (const g of await glassSurfaces(page)) {
+        seen.add(g.sel);
+        if (g.inMain) findings.push(`${device}/${name}: ${g.sel}`);
+      }
+    }
+    await page.close();
+  }
+  // Eine Sonde, die nichts gesehen hat, darf nicht urteilen.
+  assert.ok(seen.size >= 5,
+    `Nur ${seen.size} Glasflaechen im ganzen Dokument gesehen - die Sonde hat nichts gemessen.`);
+
+  assert.deepEqual(findings, [],
+    'backdrop-filter INNERHALB von #main-content. Glas ist Chrome: Tab-Bar, Sidebar, Sheets, '
+    + 'Toast, Datepicker-Popover, FAB samt Backdrop. Inhalte - Karten, Listen, Widgets, Text - '
+    + `sind opak (Die Glas-ist-Chrome-Regel).\n  ${findings.join('\n  ')}`);
+});
+
+for (const [label, features] of [
+  ['reduzierter Transparenz', [{ name: 'prefers-reduced-transparency', value: 'reduce' }]],
+  ['erhoehtem Kontrast', [{ name: 'prefers-contrast', value: 'more' }]],
+]) {
+  test(`Sonde 12 - unter ${label} bleibt keine Glasflaeche durchsichtig`, async () => {
+    const page = await openPage(harness, { device: 'mobile', theme: 'light', locale: 'de' });
+    const { cdp, applied } = await withMedia(page, [
+      { name: 'prefers-color-scheme', value: 'light' },
+      ...features,
+    ]);
+    // Der Zustand wird BELEGT, nicht angenommen: eine Emulation, die still
+    // nicht greift, macht diese Sonde gruen und blind zugleich.
+    assert.ok(applied.every(Boolean),
+      `Der Medienzustand liegt nicht an (${JSON.stringify(applied)}) - die Sonde misst den Normalfall.`);
+
+    const findings = [];
+    let seen = 0;
+    for (const name of sweep('Sonde 12')) {
+      await gotoRoute(page, ALL_ROUTES[name]);
+      await settleAnimations(page);
+      for (const g of await glassSurfaces(page)) {
+        seen += 1;
+        if (g.blur > 0) findings.push(`${name}: ${g.sel} traegt weiter blur(${g.blur}px)`);
+        const alpha = parseColor(g.bg)[3];
+        if (alpha < 1) {
+          findings.push(`${name}: ${g.sel} bleibt durchsichtig (alpha ${alpha.toFixed(2)}) - `
+            + 'ohne Blur scheint der Inhalt darunter unverwischt durch');
+        }
+      }
+    }
+    await cdp.detach();
+    await page.close();
+
+    assert.ok(seen > 0, 'Keine Glasflaeche gesehen - die Sonde hat nichts gemessen.');
+    assert.deepEqual(findings, [],
+      `Die Fallback-Regel kommt im Dokument nicht an (${label}). Das Stylesheet kippt `
+      + '--blur-2xs..lg auf blur(0px) und die --glass-bg-* auf --color-surface-Werte; '
+      + `gemessen wird, ob das die Flaeche erreicht.\n  ${findings.join('\n  ')}`);
+  });
+}

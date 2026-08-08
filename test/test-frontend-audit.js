@@ -6446,6 +6446,38 @@ test('Dialoge laufen über die Modal-Komponente, nicht über native Browser-Dial
   assert.deepEqual(offenders, [], 'nativer Browser-Dialog — confirmModal/promptModal aus components/modal.js verwenden');
 });
 
+/**
+ * DIE KONZENTRIK-REGEL HAT KEINEN GUARD, UND DAS IST DIE ENTSCHEIDUNG.
+ *
+ * Sie sagt: der innere Radius ist der aeussere minus Abstand
+ * (`calc(var(--radius-*) - Npx)`). Statisch ist ablesbar, ob eine
+ * Verschachtelung GERECHNET wurde - fuenf Fundstellen tun es -, aber nicht, ob
+ * sie RICHTIG gerechnet wurde, und schon gar nicht, wo sie FEHLT.
+ *
+ * Auf Ebene 4 ist die erste Haelfte messbar, und sie wurde gemessen
+ * (`.impeccable/redesign-tools/tree-probe.mjs`, 78 Zustaende): 56 Eltern-Kind-
+ * Paare mit zwei Radien, 14 verschiedene, davon 8 anwendbar - alle acht mit
+ * einer Abweichung von 0 oder 1px. Die Toleranz waere sogar begruendbar
+ * gewesen: der engste Abstand der Radius-Skala betraegt 2px (--radius-sm 10 auf
+ * --radius-md 12), also muss sie <= 1px sein, und genau dort endet die
+ * gemessene Verteilung.
+ *
+ * GEBAUT WURDE SIE TROTZDEM NICHT, weil sie die Frage nicht beantwortet. Ein
+ * Kind OHNE Radius bildet kein Paar; die Sonde kann deshalb nur bestaetigen,
+ * was die Regel bereits anerkennt - dieselbe Signatur wie eine Allowlist, nur
+ * in Sondenform. Und sie kostet dafuer einen vollen Baumlauf.
+ *
+ * ZWEI ANWENDBARKEITSBEDINGUNGEN sind beim Messen aufgefallen und gehoeren
+ * hierher, weil ohne sie jede kuenftige Fassung dieselben Fehltreffer meldet:
+ *   1. Eine KAPSEL ist keine verschachtelte Rundung. `--radius-full` ist 9999px
+ *      und heisst „so rund wie moeglich" - es gibt dort keinen aeusseren
+ *      Radius, von dem ein innerer abgeleitet werden koennte. Kapseln machten
+ *      22 der ersten 32 Paare aus.
+ *   2. Ist der Abstand GROESSER als der aeussere Radius, beruehrt die Ecke des
+ *      Kindes die aeussere Kruemmung nicht mehr, und sein Radius ist frei. Die
+ *      erste Fassung rechnete dort `max(0, aussen - abstand)` = 0 und meldete
+ *      vier Fehltreffer in Folge, alle mit Abstand 20 gegen aussen 16.
+ */
 test('border-radius wird ausschließlich über Radius-Tokens gesetzt', () => {
   const offenders = [];
   for (const { file, css } of stylesheetFiles()) {
@@ -8549,9 +8581,11 @@ test('the collapsing header is wired once, by the shell', () => {
  *     pwa.css) und KEINE davon ist ein Verstoss: der
  *     Zugaenglichkeits-Fallback dieser App haengt nicht am Block, sondern am
  *     TOKEN. `--blur-2xs..lg` kippen unter `prefers-reduced-transparency` und
- *     `prefers-contrast: more` selbst auf `blur(0px)` (tokens.css:1338-1342 und
- *     1361-1365). Der Kommentar an `.modal-overlay` (layout.css:2313-2317) sagt
- *     das seit Runde 1 ausdruecklich.
+ *     `prefers-contrast: more` selbst auf `blur(0px)` - beide Bloecke stehen in
+ *     tokens.css unter „Accessibility: prefers-…". Der Kommentar an
+ *     `.modal-overlay` in layout.css sagt das seit Runde 1 ausdruecklich.
+ *     (KEINE ZEILENNUMMERN mehr: die hier standen, waren still veraltet, und
+ *     eine Angabe, die niemand nachprueft, ist schlechter als eine Suche.)
  * (b) „Nicht-Blur-Stile stehen ausserhalb des Blocks." Neun Treffer, davon
  *     sieben genau das Muster, das die Regel MEINT - opaker Grund draussen,
  *     getoenter Glas-Grund drinnen - und zwei legitime Sonderformen
@@ -8605,6 +8639,33 @@ test('jeder Blur kommt aus der --blur-Skala', () => {
  *
  * `border: none` zaehlt nicht als Kante - neun der elf Well-Regeln schreiben
  * genau das, weil sie eine geerbte Kante abraeumen.
+ */
+/**
+ * DIE ZWEITE HAELFTE DER TRAEGER-REGEL BLEIBT UNGEPRUEFT, UND ZWAR GEMESSEN.
+ *
+ * Sie lautet: der Well gilt nur INNERHALB einer Karte, steht also im
+ * Kontextselektor (`.health-overview__card .health-metric-card`) und nie in der
+ * Basisregel. Das ist eine Aussage ueber den gerenderten BAUM - im Stylesheet
+ * ist „hat einen Kartenkontext" nur als Heuristik ablesbar.
+ *
+ * Auf Ebene 4 waere sie stellbar, und die Sonde ist gebaut worden
+ * (`.impeccable/redesign-tools/tree-probe.mjs`). Sie ist NICHT in die Suite
+ * gewandert, weil die Messung ihre Reichweite zeigt: von den zehn Regeln, die
+ * `--color-fill-well` setzen, sind ueber acht Routen genau ZWEI mit einem
+ * sichtbaren Element vertreten (`.weather-widget__refresh` und
+ * `.health-metric-card`), und beide stehen korrekt in einer Karte. Die anderen
+ * acht liegen hinter Zustaenden, die kein Routenbesuch zeigt - Formulare,
+ * Bestaetigungsbereiche, `[hidden]`-Bloecke.
+ *
+ * EIN GUARD, DER 20 % SEINER REGEL MISST UND DAFUER EINEN VOLLEN BAUMLAUF
+ * KOSTET, IST KEINE ABSICHERUNG, SONDERN EINE BERUHIGUNG. Die Kantenhaelfte
+ * unten deckt dagegen alle zehn Regeln, statisch und vollstaendig.
+ *
+ * (Beim Bau der Sonde steckten DREI Werkzeugfehler hintereinander, und der
+ * dritte gehoert hierher, weil ihn der naechste genauso baut: `rule.cssRules`
+ * ist seit CSS Nesting KEIN Verzweigungskriterium mehr - jede `CSSStyleRule`
+ * traegt eine leere `CSSRuleList`, und die ist truthy. Wer die CSSOM
+ * durchlaeuft, fragt `rule.cssRules?.length`.)
  */
 test('ein Well traegt keine eigene Kante', () => {
   const offenders = [];
