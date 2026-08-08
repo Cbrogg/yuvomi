@@ -35,6 +35,7 @@ import shoppingRouter from './routes/shopping.js';
 import mealsRouter from './routes/meals.js';
 import recipesRouter from './routes/recipes.js';
 import pantryRouter from './routes/pantry.js';
+import inventoryRouter from './routes/inventory/index.js';
 import kitchenRouter from './routes/kitchen.js';
 import calendarRouter from './routes/calendar.js';
 import notesRouter from './routes/notes.js';
@@ -410,6 +411,7 @@ app.use('/api/v1/meals', mealsRouter);
 app.use('/api/v1/recipes', recipesRouter);
 app.use('/api/v1/recipe-providers', recipeProvidersRouter);
 app.use('/api/v1/pantry', pantryRouter);
+app.use('/api/v1/inventory', inventoryRouter);
 // Kreislauf-Zustand der vier Küchen-Tabs in einer Abfrage (utils/kitchen-tabs.js).
 app.use('/api/v1/kitchen', kitchenRouter);
 app.use('/api/v1/calendar', calendarRouter);

@@ -135,12 +135,12 @@ const DEFAULT_WIDGET_CONFIG = '[]';
 // Modul-Slugs, die per Settings deaktiviert werden können.
 // Dashboard und Settings sind absichtlich nicht enthalten — sie sind essentiell.
 const TOGGLEABLE_MODULES = [
-  'tasks', 'calendar', 'meals', 'recipes', 'shopping', 'pantry',
+  'tasks', 'calendar', 'meals', 'recipes', 'shopping', 'pantry', 'inventory',
   'birthdays', 'notes', 'contacts', 'budget', 'documents',
   'housekeeping', 'rewards', 'health',
 ];
-const MODULE_ORDER_RE = /^(dashboard|tasks|calendar|meals|recipes|shopping|pantry|birthdays|notes|contacts|budget|documents|housekeeping|rewards|health|third-party-[a-z0-9][a-z0-9-]{1,62}[a-z0-9])$/;
-const MOBILE_NAV_ORDER_RE = /^(tasks|calendar|kitchen|meals|recipes|shopping|pantry|birthdays|notes|contacts|budget|documents|housekeeping|rewards|health|third-party-[a-z0-9][a-z0-9-]{1,62}[a-z0-9])$/;
+const MODULE_ORDER_RE = /^(dashboard|tasks|calendar|meals|recipes|shopping|pantry|inventory|birthdays|notes|contacts|budget|documents|housekeeping|rewards|health|third-party-[a-z0-9][a-z0-9-]{1,62}[a-z0-9])$/;
+const MOBILE_NAV_ORDER_RE = /^(tasks|calendar|kitchen|meals|recipes|shopping|pantry|inventory|birthdays|notes|contacts|budget|documents|housekeeping|rewards|health|third-party-[a-z0-9][a-z0-9-]{1,62}[a-z0-9])$/;
 const KITCHEN_NAV_IDS = new Set(['kitchen', 'meals', 'recipes', 'shopping', 'pantry']);
 
 // --------------------------------------------------------
