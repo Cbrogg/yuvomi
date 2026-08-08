@@ -1146,11 +1146,16 @@ Tokens can optionally be **scoped** to individual modules and access levels — 
 | token_hash | TEXT | NOT NULL UNIQUE (SHA-256) |
 | token_prefix | TEXT | NOT NULL (first 8 chars, for display) |
 | created_by | INTEGER | FK → Users (CASCADE delete), NOT NULL |
+| subject_user_id | INTEGER | FK → Users (CASCADE delete), nullable (migration v135) - the member the token acts as; NULL falls back to `created_by` |
 | scopes | TEXT | JSON array of `<module>:read`/`<module>:write`; NULL = full access (nullable) |
 | expires_at | TEXT | ISO 8601, nullable |
 | revoked_at | TEXT | ISO 8601, nullable |
 | last_used_at | TEXT | ISO 8601, nullable |
 | created_at | TEXT | ISO 8601 NOT NULL |
+
+**Subject vs. creator (v2.3.1 · migration v135):** only an admin can mint a token, so without a subject every request it makes is the admin's - and `budget_entries.owner_id` is fixed to whoever creates the entry (see [Budget Entries](#budget-entries), migration v88). A bank-import connector could therefore only ever file transactions under the administrator, never under the household member they belong to. The two roles are now separate: `created_by` stays with the admin who is accountable for the credential and is what the token list shows for audit, while `subject_user_id` supplies the identity, role, ownership and module permissions of the requests. Making `owner_id` settable per request would have been the alternative and is the weaker one - it lets any caller claim any ownership on every call, where the subject is fixed once by an admin and not selectable afterwards.
+
+The subject can only narrow, never widen: module permissions (#467) are resolved for the subject on every request, a non-admin subject cannot reach admin-only routes, and token scopes remain an additional allow-list on top. A split-expense guest cannot be a subject (the household guard would refuse its requests anyway). Deleting either user removes the token via `ON DELETE CASCADE`, and existing tokens keep behaving as before because the migration backfills `subject_user_id = created_by`.
 
 ### ICS Subscriptions
 External calendar feeds subscribed by users (read-only, auto-synced).

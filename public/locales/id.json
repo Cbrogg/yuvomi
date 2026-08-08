@@ -1508,6 +1508,7 @@
         "apiTokensTitle": "Token API",
         "apiTokensCardTitle": "Token akses",
         "apiTokensHint": "Buat token API untuk integrasi eksternal. Token lengkap hanya ditampilkan sekali setelah dibuat.",
+        "apiTokenSubjectLabel": "Acts as",
         "apiTokenNameLabel": "Nama token",
         "apiTokenExpiresLabel": "Tanggal kedaluwarsa",
         "apiTokenExpiresHint": "Biarkan kosong untuk membuat token tanpa tanggal kedaluwarsa.",

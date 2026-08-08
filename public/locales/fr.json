@@ -1472,6 +1472,7 @@
         "apiTokensTitle": "Jetons API",
         "apiTokensCardTitle": "Jetons d'accès",
         "apiTokensHint": "Créez des jetons API pour des intégrations externes. Le jeton complet n'est affiché qu'une seule fois après sa création.",
+        "apiTokenSubjectLabel": "Acts as",
         "apiTokenNameLabel": "Nom du jeton",
         "apiTokenExpiresLabel": "Date d'expiration",
         "apiTokenExpiresHint": "Laissez vide pour créer un jeton sans expiration.",

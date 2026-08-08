@@ -1508,6 +1508,7 @@
         "apiTokensTitle": "توکن‌های API",
         "apiTokensCardTitle": "توکن‌های دسترسی",
         "apiTokensHint": "برای یکپارچه‌سازی‌های خارجی توکن API بسازید. توکن کامل فقط یک‌بار پس از ایجاد نمایش داده می‌شود.",
+        "apiTokenSubjectLabel": "Acts as",
         "apiTokenNameLabel": "نام توکن",
         "apiTokenExpiresLabel": "تاریخ انقضا",
         "apiTokenExpiresHint": "برای ساخت توکن بدون تاریخ انقضا خالی بگذارید.",

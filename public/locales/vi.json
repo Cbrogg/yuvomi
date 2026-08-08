@@ -1478,6 +1478,7 @@
         "apiTokensTitle": "Mã API",
         "apiTokensCardTitle": "Mã truy cập",
         "apiTokensHint": "Tạo mã API cho tích hợp bên ngoài. Mã hoàn chỉnh chỉ hiển thị một lần sau khi tạo.",
+        "apiTokenSubjectLabel": "Acts as",
         "apiTokenNameLabel": "Tên mã",
         "apiTokenExpiresLabel": "Ngày hết hạn",
         "apiTokenExpiresHint": "Để trống để tạo mã không có ngày hết hạn.",

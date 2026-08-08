@@ -1472,6 +1472,7 @@
         "apiTokensTitle": "Token API",
         "apiTokensCardTitle": "Token di accesso",
         "apiTokensHint": "Crea token API per integrazioni esterne. Il token completo viene mostrato solo una volta dopo la creazione.",
+        "apiTokenSubjectLabel": "Acts as",
         "apiTokenNameLabel": "Nome token",
         "apiTokenExpiresLabel": "Data di scadenza",
         "apiTokenExpiresHint": "Lascia vuoto per creare un token senza scadenza.",

@@ -1472,6 +1472,7 @@
         "apiTokensTitle": "API-tokens",
         "apiTokensCardTitle": "Åtkomsttoken",
         "apiTokensHint": "Skapa API-tokens för externa integrationer. Den fullständiga token visas endast en gång efter skapandet.",
+        "apiTokenSubjectLabel": "Acts as",
         "apiTokenNameLabel": "Tokennamn",
         "apiTokenExpiresLabel": "Utgångsdatum",
         "apiTokenExpiresHint": "Lämna tomt för att skapa en token utan utgång.",

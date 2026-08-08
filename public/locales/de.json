@@ -1531,6 +1531,7 @@
         "apiTokensTitle": "API-Tokens",
         "apiTokensCardTitle": "Zugriffstoken",
         "apiTokensHint": "Erstelle API-Tokens für externe Integrationen. Der vollständige Token wird nach der Erstellung nur einmal angezeigt.",
+        "apiTokenSubjectLabel": "Handelt als",
         "apiTokenNameLabel": "Tokenname",
         "apiTokenExpiresLabel": "Ablaufdatum",
         "apiTokenExpiresHint": "Leer lassen, um einen Token ohne Ablaufdatum zu erstellen.",

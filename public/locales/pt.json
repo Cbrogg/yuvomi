@@ -1472,6 +1472,7 @@
         "apiTokensTitle": "Tokens de API",
         "apiTokensCardTitle": "Tokens de acesso",
         "apiTokensHint": "Crie tokens de API para integrações externas. O token completo é mostrado apenas uma vez após a criação.",
+        "apiTokenSubjectLabel": "Acts as",
         "apiTokenNameLabel": "Nome do token",
         "apiTokenExpiresLabel": "Data de validade",
         "apiTokenExpiresHint": "Deixe vazio para criar um token sem validade.",

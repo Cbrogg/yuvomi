@@ -1472,6 +1472,7 @@
         "apiTokensTitle": "Διακριτικά API",
         "apiTokensCardTitle": "Διακριτικά πρόσβασης",
         "apiTokensHint": "Δημιούργησε διακριτικά API για εξωτερικές ενσωματώσεις. Το πλήρες διακριτικό εμφανίζεται μόνο μία φορά μετά τη δημιουργία.",
+        "apiTokenSubjectLabel": "Acts as",
         "apiTokenNameLabel": "Όνομα διακριτικού",
         "apiTokenExpiresLabel": "Ημερομηνία λήξης",
         "apiTokenExpiresHint": "Άφησέ το κενό για διακριτικό χωρίς λήξη.",

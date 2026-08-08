@@ -1508,6 +1508,7 @@
         "apiTokensTitle": "API 토큰",
         "apiTokensCardTitle": "액세스 토큰",
         "apiTokensHint": "외부 통합을 위한 API 토큰을 만드세요. 전체 토큰은 생성 후 한 번만 표시됩니다.",
+        "apiTokenSubjectLabel": "Acts as",
         "apiTokenNameLabel": "토큰 이름",
         "apiTokenExpiresLabel": "만료일",
         "apiTokenExpiresHint": "만료일 없는 토큰을 만들려면 비워 두세요.",

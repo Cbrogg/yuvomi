@@ -1472,6 +1472,7 @@
         "apiTokensTitle": "Токены API",
         "apiTokensCardTitle": "Токены доступа",
         "apiTokensHint": "Создавайте токены API для внешних интеграций. Полный токен показывается только один раз после создания.",
+        "apiTokenSubjectLabel": "Acts as",
         "apiTokenNameLabel": "Название токена",
         "apiTokenExpiresLabel": "Дата окончания",
         "apiTokenExpiresHint": "Оставьте пустым, чтобы создать токен без срока действия.",

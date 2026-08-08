@@ -1472,6 +1472,7 @@
         "apiTokensTitle": "API टोकन",
         "apiTokensCardTitle": "एक्सेस टोकन",
         "apiTokensHint": "बाहरी इंटीग्रेशन के लिए API टोकन बनाएँ। पूरा टोकन बनाने के बाद केवल एक बार दिखता है।",
+        "apiTokenSubjectLabel": "Acts as",
         "apiTokenNameLabel": "टोकन नाम",
         "apiTokenExpiresLabel": "समाप्ति तिथि",
         "apiTokenExpiresHint": "बिना समाप्ति तिथि वाला टोकन बनाने के लिए खाली छोड़ें।",

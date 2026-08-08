@@ -1472,6 +1472,7 @@
         "apiTokensTitle": "API トークン",
         "apiTokensCardTitle": "アクセストークン",
         "apiTokensHint": "外部連携用の API トークンを作成します。完全なトークンは作成直後に一度だけ表示されます。",
+        "apiTokenSubjectLabel": "Acts as",
         "apiTokenNameLabel": "トークン名",
         "apiTokenExpiresLabel": "有効期限",
         "apiTokenExpiresHint": "有効期限なしのトークンを作成する場合は空欄のままにします。",

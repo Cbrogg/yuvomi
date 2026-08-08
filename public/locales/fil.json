@@ -1531,6 +1531,7 @@
         "apiTokensTitle": "Mga API Token",
         "apiTokensCardTitle": "Mga Access Token",
         "apiTokensHint": "Gumawa ng mga API token para sa panlabas na integrasyon. Isang beses lang ipinapakita ang buong token pagkatapos gawin.",
+        "apiTokenSubjectLabel": "Acts as",
         "apiTokenNameLabel": "Pangalan ng token",
         "apiTokenExpiresLabel": "Petsa ng pag-expire",
         "apiTokenExpiresHint": "Iwanang blangko para gumawa ng token na walang pag-expire.",

@@ -1478,6 +1478,7 @@
         "apiTokensTitle": "API-tokens",
         "apiTokensCardTitle": "Toegangstokens",
         "apiTokensHint": "Maak API-tokens aan voor externe integraties. Het volledige token wordt slechts eenmaal getoond na aanmaak.",
+        "apiTokenSubjectLabel": "Acts as",
         "apiTokenNameLabel": "Tokennaam",
         "apiTokenExpiresLabel": "Vervaldatum",
         "apiTokenExpiresHint": "Laat leeg om een token zonder vervaldatum aan te maken.",

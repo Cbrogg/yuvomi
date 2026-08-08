@@ -1472,6 +1472,7 @@
         "apiTokensTitle": "API belirteçleri",
         "apiTokensCardTitle": "Erişim belirteçleri",
         "apiTokensHint": "Dış entegrasyonlar için API belirteçleri oluşturun. Belirtecin tamamı yalnızca oluşturulduktan sonra bir kez gösterilir.",
+        "apiTokenSubjectLabel": "Acts as",
         "apiTokenNameLabel": "Belirteç adı",
         "apiTokenExpiresLabel": "Son kullanma tarihi",
         "apiTokenExpiresHint": "Son kullanma tarihi olmayan bir belirteç oluşturmak için boş bırakın.",

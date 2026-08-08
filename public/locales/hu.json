@@ -1478,6 +1478,7 @@
         "apiTokensTitle": "API Tokenek",
         "apiTokensCardTitle": "Hozzáférési tokenek",
         "apiTokensHint": "Hozzon létre API tokeneket külső integrációkhoz. A teljes token csak egyszer jelenik meg a létrehozás után.",
+        "apiTokenSubjectLabel": "Acts as",
         "apiTokenNameLabel": "Token neve",
         "apiTokenExpiresLabel": "Lejárati dátum",
         "apiTokenExpiresHint": "Hagyja üresen, ha lejárat nélküli tokent szeretne létrehozni.",

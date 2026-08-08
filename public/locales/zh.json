@@ -1472,6 +1472,7 @@
         "apiTokensTitle": "API 令牌",
         "apiTokensCardTitle": "访问令牌",
         "apiTokensHint": "为外部集成创建 API 令牌。完整令牌仅在创建后显示一次。",
+        "apiTokenSubjectLabel": "Acts as",
         "apiTokenNameLabel": "令牌名称",
         "apiTokenExpiresLabel": "到期日期",
         "apiTokenExpiresHint": "留空可创建不过期的令牌。",

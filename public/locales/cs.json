@@ -1496,6 +1496,7 @@
         "apiTokensTitle": "API tokeny",
         "apiTokensCardTitle": "Přístupové tokeny",
         "apiTokensHint": "Vytvářejte API tokeny pro externí integrace. Úplný token se zobrazí pouze jednou po vytvoření.",
+        "apiTokenSubjectLabel": "Acts as",
         "apiTokenNameLabel": "Název tokenu",
         "apiTokenExpiresLabel": "Datum vypršení",
         "apiTokenExpiresHint": "Nechte prázdné pro vytvoření tokenu bez data vypršení.",

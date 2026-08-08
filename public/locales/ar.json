@@ -1472,6 +1472,7 @@
         "apiTokensTitle": "رموز API",
         "apiTokensCardTitle": "رموز الوصول",
         "apiTokensHint": "أنشئ رموز API للتكاملات الخارجية. يظهر الرمز الكامل مرة واحدة فقط بعد الإنشاء.",
+        "apiTokenSubjectLabel": "Acts as",
         "apiTokenNameLabel": "اسم الرمز",
         "apiTokenExpiresLabel": "تاريخ الانتهاء",
         "apiTokenExpiresHint": "اتركه فارغًا لإنشاء رمز بلا تاريخ انتهاء.",
