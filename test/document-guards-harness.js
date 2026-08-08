@@ -40,6 +40,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import puppeteer from 'puppeteer';
+import { SETTINGS_LEAVES } from '../public/settings/registry.js';
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -62,6 +63,33 @@ export const ROUTES = {
   housekeeping: '/housekeeping',
   settings: '/settings',
 };
+
+/**
+ * Die Settings-Blaetter - ABGELEITET, nicht aufgezaehlt.
+ *
+ * `ROUTES` oben faehrt `/settings` und landet damit auf der Domaenen-Uebersicht.
+ * Dahinter liegen 23 Blaetter mit eigener Route, und keines davon hatte je eine
+ * Sonde gesehen: die Rechtevergabe, die Familienverwaltung, die API-Token, die
+ * Backup-Wiederherstellung und jedes Sync-Konto. Elf Sonden massen 16 Module und
+ * ein Uebersichtsraster.
+ *
+ * DIE QUELLE IST DIE REGISTRY, WEIL SIE DIE ROUTEN AUCH ERZEUGT: `router.js:84`
+ * baut die Routentabelle aus genau diesem Array. Eine Handliste hier wuerde beim
+ * naechsten IA-Umbau still veralten - und zwar in die falsche Richtung: ein neu
+ * dazugekommenes Blatt fiele lautlos aus jeder Messung, so wie es diese 23 zwoelf
+ * Sessions lang getan haben. Der Preis dafuer ist ein Import aus `public/` in den
+ * Testbaum, und den zahlt `test-settings-navigation.js` fuer dieselbe Quelle
+ * bereits.
+ *
+ * ES SIND ALLE 23, NICHT DIE OEFFENTLICHEN SIEBEN: der Harness meldet sich als
+ * `linda` an, und die ist im Seed `admin` (scripts/seed-demo.js:279). Ein
+ * nicht-administrativer Aufruf wuerde von `findSettingsLeaf` auf
+ * `/settings/personal/account` umgeleitet, und die Sonde maesse sechzehnmal
+ * dasselbe Konto-Formular, ohne es zu merken.
+ */
+export const SETTINGS_ROUTES = Object.freeze(Object.fromEntries(
+  SETTINGS_LEAVES.map((leaf) => [`settings/${leaf.id}`, leaf.path]),
+));
 
 /**
  * Die Seiten VOR der Anmeldung.

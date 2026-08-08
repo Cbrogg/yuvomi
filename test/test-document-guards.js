@@ -23,6 +23,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import {
   ROUTES,
   ANON_ROUTES,
+  SETTINGS_ROUTES,
   startHarness,
   openPage,
   openAnonPage,
@@ -35,7 +36,92 @@ import {
 } from './document-guards-harness.js';
 
 const ROUTE_NAMES = Object.keys(ROUTES);
+const SETTINGS_NAMES = Object.keys(SETTINGS_ROUTES);
+const ALL_ROUTES = { ...ROUTES, ...SETTINGS_ROUTES };
 let harness;
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Welche Sonde faehrt die 23 Settings-Blaetter - und welche nicht
+ *
+ * Die Blaetter kommen aus der Registry (siehe `SETTINGS_ROUTES` im Harness).
+ * Sie an JEDE Sonde zu haengen waere bequem und falsch: die Suite liegt bei
+ * ~26 Minuten, und 23 zusaetzliche Zustaende mal elf Sonden sind nicht gratis.
+ *
+ * DIE VOREINSTELLUNG IST „JA". Wer ein Blatt auslaesst, traegt hier ein, WARUM
+ * die Regel dort nichts zu messen hat - das ist eine Aussage ueber die Regel,
+ * keine Bequemlichkeit (Sonde 8 faehrt aus genau diesem Grund seit jeher nur
+ * mobil). Eine neu gebaute Sonde sieht die Blaetter damit automatisch; das
+ * Vergessen faellt auf die Seite der Vollstaendigkeit, nicht auf die der Luecke.
+ *
+ * Jeder Eintrag ist gegen den Bestand geprueft, nicht vermutet.
+ * ──────────────────────────────────────────────────────────────────────────── */
+const LEAVES_SKIPPED = new Map([
+  ['Sonde 1', 'misst `.page-toolbar`. Ein Settings-Blatt traegt keine - sein Kopf ist '
+    + '`.settings-leaf-header` (settings/shell.js:509), und das ist die Leisten-Regel (§2) '
+    + 'und keine Auslassung: `/settings` fuehrt der Router als EINE Route mit einem '
+    + 'Modulkopf, die Blaetter darunter sind Detailseiten. Die Sonde faende dort null '
+    + 'Leisten und meldete 69 gruene Zustaende, die nie gemessen wurden. Den '
+    + 'Dokument-Ueberlauf der Blaetter misst Sonde 10, und die faehrt sie.'],
+  ['Sonde 5', 'faehrt eine Wischgeste auf `.swipe-row`. In `public/settings/**` kommt die '
+    + 'Klasse nicht vor (geprueft, 0 Treffer); die Sonde ueberspringt einen Zustand ohne '
+    + 'Wischzeile ohnehin. 23 Blaetter mal zwei Sprachen waeren reine Ladezeit ohne eine '
+    + 'einzige Messung.'],
+  ['Sonde 6', 'misst `.metric-grid`. Kommt in `public/settings/**` nicht vor (0 Treffer). '
+    + 'Kennzahlreihen sind eine Bauform der Module, nicht der Einstellungen.'],
+  ['Sonde 8', 'prueft das Andocken eines Kopfes MIT `--page-toolbar-lead`. Den setzt nur '
+    + '`.page-toolbar`, und die gibt es auf einem Blatt nicht (siehe Sonde 1). Ohne '
+    + 'Lead-Zone faellt jedes Blatt in die triviale Haelfte der Regel, die die Sonde dann '
+    + '23-mal bestaetigt.'],
+]);
+
+/** Die Zustaende, die eine Sonde abfaehrt: die 16 Routen, dazu die Blaetter. */
+function sweep(probe) {
+  return LEAVES_SKIPPED.has(probe) ? ROUTE_NAMES : [...ROUTE_NAMES, ...SETTINGS_NAMES];
+}
+
+/**
+ * Auf einem Settings-Blatt wird NICHT durch die Sichten geklickt.
+ *
+ * `visitViews` faehrt jede exklusive Auswahl, die eine Seite deklariert - in den
+ * Modulen ist das ein Sichtwechsel. In `public/settings/**` sind es drei
+ * Gruppen, und zwei davon SCHREIBEN: der Themenschalter
+ * (personal-appearance.js:165, setzt die Farbwelt fuer alles danach) und der
+ * Wochenstart (modules-calendar.js:88, eine haushaltweite Einstellung in der
+ * Datenbank). Nur der Modus-Umschalter der Rechtevergabe
+ * (admin-permissions.js:547) ist ein reiner Sichtwechsel.
+ *
+ * Eine Sonde, die zwei von drei Gruppen umstellt, schreibt in den Seed und misst
+ * beim naechsten Lauf eine andere App - genau die Grenze, die `visitViews` fuer
+ * das `<select>` schon zieht. Die Signatur unterscheidet die drei nicht: ein
+ * Themenknopf und ein Sicht-Umschalter tragen beide `aria-pressed`. Deshalb hier
+ * die Regel und keine Ausnahmeliste; der Preis ist die zweite Sicht der
+ * Rechtevergabe, deren erste (Rollen) im Standardzustand gemessen wird.
+ */
+const isLeaf = (name) => name.startsWith('settings/');
+
+test('die Auslassungen der Settings-Blaetter nennen eine Sonde, die es gibt', () => {
+  // Eine Begruendung fuer eine Sonde, die niemand mehr faehrt, ist eine
+  // Allowlist, die keiner liest - dieselbe Stale-Pruefung wie bei SHAPE_EXEMPT
+  // und TARGET_EXEMPT, nur ueber die eigene Datei.
+  //
+  // GESUCHT WIRD DER AUFRUF, NICHT DER NAME. Ein `includes('Sonde 1 -')` waere
+  // gruen auf dem Kommentar, der das Entfallen der Sonde begruendet - genau die
+  // Bauart, mit der der Eyebrow-Guard drei Runden lang das Gegenteil seiner
+  // Regel bestaetigt hat. Ein Kommentar ist kein Aufruf von `test`/`describe`.
+  const source = readFileSync(new URL(import.meta.url), 'utf8');
+  const stale = [...LEAVES_SKIPPED.keys()]
+    .filter((probe) => !new RegExp(`(?:test|describe)\\(\\s*'${probe} -`).test(source));
+  assert.deepEqual(stale, [],
+    'LEAVES_SKIPPED begruendet eine Auslassung fuer eine Sonde, die es nicht mehr gibt.');
+
+  // Und die Gegenrichtung: die Ableitung muss ueberhaupt etwas liefern. Keine
+  // feste Zahl - die Registry ist die Quelle, und ein neues Blatt soll die Suite
+  // erweitern statt sie rot zu faerben (dieselbe Zusicherung wie „eine Sonde,
+  // die nichts gemessen hat, darf nicht urteilen").
+  assert.ok(SETTINGS_NAMES.length >= 20,
+    `Nur ${SETTINGS_NAMES.length} Settings-Blaetter aus der Registry abgeleitet - `
+    + 'die Ableitung greift nicht mehr, und die Sonden faehren wieder nur `/settings`.');
+});
 
 /**
  * Die aktuelle Route besuchen UND jede SICHT, die sie selbst als umschaltbar
@@ -197,8 +283,8 @@ describe('Sonde 1 - kein Modulkopf laeuft bei 375px ueber die Viewport-Kante', (
     test(`Locale ${locale}`, async () => {
       const page = await openPage(harness, { device: 'mobile', theme: 'light', locale });
       const findings = [];
-      for (const name of ROUTE_NAMES) {
-        await gotoRoute(page, ROUTES[name]);
+      for (const name of sweep('Sonde 1')) {
+        await gotoRoute(page, ALL_ROUTES[name]);
         for (const f of await measureHeadOverflow(page)) {
           findings.push(`${name}/${locale}: ${f.el} in ${f.toolbar} ragt ${f.over}px hinaus (Breite ${f.width}px)`);
         }
@@ -370,8 +456,8 @@ describe('Sonde 2 - jeder sichtbare Text haelt WCAG AA auf seinem KOMPONIERTEN U
         const pageBase = base[3] > 0 ? composite(base, [255, 255, 255]) : [255, 255, 255];
         const findings = [];
         let unpainted = 0;
-        for (const name of ROUTE_NAMES) {
-          await gotoRoute(page, ROUTES[name]);
+        for (const name of sweep('Sonde 2')) {
+          await gotoRoute(page, ALL_ROUTES[name]);
           for (const sample of await collectTextSamples(page)) {
             const result = evaluateSample(sample, pageBase);
             if (!result) {
@@ -445,8 +531,8 @@ test('Sonde 3 - es gibt EINE Buttonform, und die Ausnahmen sind Kategorien', asy
   const found = new Map();
   const seen = new Set();
 
-  for (const name of ROUTE_NAMES) {
-    await gotoRoute(page, ROUTES[name]);
+  for (const name of sweep('Sonde 3')) {
+    await gotoRoute(page, ALL_ROUTES[name]);
     const rows = await page.evaluate(() => {
       const out = [];
       for (const el of document.querySelectorAll('button, a.btn, [role="button"]')) {
@@ -719,8 +805,8 @@ describe('Sonde 4 - eine Reihe traegt ihre Dichte, ein Einzelziel ist allein tre
       // darunter - erst mit dieser Menge ist das Urteil vollstaendig.
       const rowBuilt = new Set();
       let seen = 0;
-      for (const name of ROUTE_NAMES) {
-        await gotoRoute(page, ROUTES[name]);
+      for (const name of sweep('Sonde 4')) {
+        await gotoRoute(page, ALL_ROUTES[name]);
         seen += await page.evaluate(
           () => document.querySelectorAll('button, a[href], [role="button"]').length,
         );
@@ -893,8 +979,8 @@ describe('Sonde 5 - eine Wischzeile antwortet, und jede Rolle liegt an ihrer Kan
         }
       };
 
-      for (const name of ROUTE_NAMES) {
-        await gotoRoute(page, ROUTES[name]);
+      for (const name of sweep('Sonde 5')) {
+        await gotoRoute(page, ALL_ROUTES[name]);
         // Auch die Sichten hinter den Leisten: die Abo-Liste liegt hinter einem
         // Untertab und waere sonst die einzige Wischliste der App, die nie
         // gefahren wird.
@@ -969,8 +1055,8 @@ describe('Sonde 6 - die Kacheln einer Kennzahlreihe sind gleich hoch', () => {
       // Auch die Sichten hinter den Leisten: sie wechseln nach der
       // Leisten-Regel (§2) die SICHT innerhalb eines Moduls, nicht die Route.
       // Ohne sie saehe die Sonde von sieben Kennzahlreihen genau eine.
-      for (const name of ROUTE_NAMES) {
-        await gotoRoute(page, ROUTES[name]);
+      for (const name of sweep('Sonde 6')) {
+        await gotoRoute(page, ALL_ROUTES[name]);
         await visitViews(page, name, async (where) => check(where, await metricRowHeights(page)));
       }
       await page.close();
@@ -1110,9 +1196,12 @@ test('Sonde 7 - eine Zeilenfolge ist keine Spalte aus Karten', async () => {
         if (!found.has(hit.cls)) found.set(hit.cls, { ...hit, where });
       }
     };
-    for (const name of ROUTE_NAMES) {
-      await gotoRoute(page, ROUTES[name]);
-      await visitViews(page, name, note);
+    for (const name of sweep('Sonde 7')) {
+      await gotoRoute(page, ALL_ROUTES[name]);
+      // Auf einem Blatt nur der Zustand selbst - siehe `isLeaf`: zwei der drei
+      // Umschaltergruppen in den Einstellungen schreiben eine Einstellung.
+      if (isLeaf(name)) await note(name);
+      else await visitViews(page, name, note);
     }
     await page.close();
     perDevice.set(device, found);
@@ -1132,10 +1221,12 @@ test('Sonde 7 - eine Zeilenfolge ist keine Spalte aus Karten', async () => {
   // Geraet: 16 Routen plus die Sichten dahinter. Faellt der Helfer auf die
   // blossen Routen zurueck, ist ein gruener Lauf keine Aussage mehr, sondern
   // genau die Luecke, wegen der es diese Sonde gibt.
-  assert.ok(viewsSeen >= 2 * (ROUTE_NAMES.length + 30),
-    `Nur ${viewsSeen} Sichten besucht (erwartet: deutlich mehr als die ${2 * ROUTE_NAMES.length} Routen). `
+  const reach = ROUTE_NAMES.length + SETTINGS_NAMES.length;
+  assert.ok(viewsSeen >= 2 * (reach + 30),
+    `Nur ${viewsSeen} Sichten besucht (erwartet: deutlich mehr als die ${2 * reach} Zustaende). `
     + 'Der Reichweiten-Helfer erreicht die Sichten hinter den Leisten nicht mehr - '
-    + 'Budget-Untertabs, Health-Routen, Housekeeping-Tabs, Raster/Liste der Dokumente.');
+    + 'Budget-Untertabs, Health-Routen, Housekeeping-Tabs, Raster/Liste der Dokumente - '
+    + 'oder die Settings-Blaetter fallen wieder aus der Ableitung.');
 
   assert.deepEqual(findings, [],
     'Kartenspalten im gerenderten Dokument. Eine Folge gleichartiger Zeilen liegt in GENAU EINEM '
@@ -1231,8 +1322,8 @@ test('Sonde 8 - ein Kopf mit Lead-Zone traegt seine Linie erst angedockt, und do
   let headsSeen = 0;
   let leadHeads = 0;
 
-  for (const name of ROUTE_NAMES) {
-    await gotoRoute(page, ROUTES[name]);
+  for (const name of sweep('Sonde 8')) {
+    await gotoRoute(page, ALL_ROUTES[name]);
     // Der Kopf misst sich ueber ResizeObserver und MutationObserver, und der
     // IntersectionObserver feuert asynchron - eine Messung direkt nach dem
     // Aufbau liest den Zwischenstand.
@@ -1311,6 +1402,32 @@ test('Sonde 8 - ein Kopf mit Lead-Zone traegt seine Linie erst angedockt, und do
 // ============================================================
 
 /**
+ * ZWEI NACHBARFRAGEN BLEIBEN HIER BEWUSST UNGEPRUEFT, und beide stehen hier,
+ * weil das die Stelle ist, an der jemand nach „ist die Laufzeit abgesichert"
+ * sucht (Guard-Abdeckung 2026-08-08, Befund G und die Positivbefund-Tabelle):
+ *
+ *   KEIN LAYOUT-THRASHING. Gemessen im Implementierungs-Audit: 4 Layout-
+ *   Lesungen innerhalb von Schleifen in 61.274 Zeilen, keine Lese-Schreib-
+ *   Kaskade. Ein statischer Guard muesste den DATENFLUSS verfolgen - welche
+ *   Schreiboperation invalidiert welches Layout -, und jede Naeherung darunter
+ *   („eine Layout-Lesung in einer Schleife") meldet Fehltreffer an genau den
+ *   vier Stellen, die heute begruendet dastehen. Auf Ebene 4 waere es auch
+ *   keine Regel: ein `PerformanceObserver` misst, wie lang der SEED ist, nicht,
+ *   ob der Code kaskadiert - eine leere Liste ist immer schnell.
+ *
+ *   DIE BEGRUENDUNGSDICHTE DER LAYOUT-TRANSITIONS. Sechs Regeln animieren eine
+ *   echte Layout-Eigenschaft (detail-view.css:222, layout.css:165/1765/1789/2017,
+ *   settings.css:163), und jede traegt im Code, warum `transform` es dort nicht
+ *   kann, und ist im passenden `prefers-reduced-motion`-Block abgeschaltet. Ein
+ *   Guard koennte die Fundstellen zaehlen und den Reduced-Motion-Block pruefen -
+ *   die ZUSAGE ist aber, dass die BEGRUENDUNG traegt, und das ist eine Aussage
+ *   ueber einen Prosatext. Ein Guard, der die Existenz eines Kommentars prueft,
+ *   erzieht zum Kommentar, nicht zur Begruendung; er waere gruen an dem Tag, an
+ *   dem jemand „// bewusst" darueberschreibt. Beim Nachzaehlen fuer diesen
+ *   Eintrag fehlte die Begruendung an genau einer Stelle (settings.css:163) und
+ *   ist jetzt da - gefunden durch Lesen, nicht durch einen Guard, und das ist
+ *   der ehrliche Weg fuer diese Zusage.
+ *
  * Zaehlt im Ruhezustand jedes Element mit einem `will-change`, das eine eigene
  * Compositor-Ebene erzwingt, und gruppiert nach Klassensignatur.
  *
@@ -1351,8 +1468,9 @@ test('Sonde 9 - ein Compositor-Versprechen im Ruhezustand ist einmalig, nie eine
   let routesSeen = 0;
   let layersSeen = 0;
 
-  for (const name of ROUTE_NAMES) {
-    await gotoRoute(page, ROUTES[name]);
+  const routes = sweep('Sonde 9');
+  for (const name of routes) {
+    await gotoRoute(page, ALL_ROUTES[name]);
     // Die Zeilenlisten bauen sich nach dem ersten Frame auf; eine Messung
     // direkt danach faende die leere Seite und waere immer gruen.
     await new Promise((r) => setTimeout(r, 500));
@@ -1378,8 +1496,8 @@ test('Sonde 9 - ein Compositor-Versprechen im Ruhezustand ist einmalig, nie eine
   // dass ueberhaupt Ebenen gefunden werden - die Shell traegt drei einmalige
   // (Sidebar-Pille, Sidebar-Hover, Tab-Indikator) plus die Backdrop-Blobs.
   // Findet die Sonde gar keine, misst sie den Selektor falsch statt die App.
-  assert.ok(routesSeen >= ROUTE_NAMES.length - 1,
-    `Nur ${routesSeen} von ${ROUTE_NAMES.length} Routen gesehen.`);
+  assert.ok(routesSeen >= routes.length - 1,
+    `Nur ${routesSeen} von ${routes.length} Zustaenden gesehen.`);
   assert.ok(layersSeen >= routesSeen,
     `Nur ${layersSeen} Ebenen ueber ${routesSeen} Routen gefunden - die Shell allein traegt `
     + 'mehrere je Seite. Die Sonde misst nicht mehr, was sie messen soll.');
@@ -1539,7 +1657,7 @@ async function documentStructure(page) {
 
 test('Sonde 10 - jedes Dokument traegt dieselbe Struktur, angemeldet wie davor', async () => {
   const anonNames = Object.keys(ANON_ROUTES);
-  const authNames = ROUTE_NAMES;
+  const authNames = sweep('Sonde 10');
   const findings = [];
   let seen = 0;
 
@@ -1585,7 +1703,7 @@ test('Sonde 10 - jedes Dokument traegt dieselbe Struktur, angemeldet wie davor',
     // Dahinter: dieselben Fragen, ohne die Zielgroessen (die gehoeren Sonde 4).
     const auth = await openPage(harness, { device, theme: 'light', locale: 'de' });
     for (const name of authNames) {
-      await gotoRoute(auth, ROUTES[name]);
+      await gotoRoute(auth, ALL_ROUTES[name]);
       await settleAnimations(auth);
       judge(`${device}/${name}`, await documentStructure(auth), { targets: false });
     }
@@ -1698,9 +1816,10 @@ test('Sonde 11 - was einen Klick annimmt, nimmt auch eine Taste an', async () =>
   const findings = [];
   let seen = 0;
 
+  const routes = sweep('Sonde 11');
   const page = await openPage(harness, { device: 'desktop', theme: 'light', locale: 'de' });
-  for (const name of ROUTE_NAMES) {
-    await gotoRoute(page, ROUTES[name]);
+  for (const name of routes) {
+    await gotoRoute(page, ALL_ROUTES[name]);
     await settleAnimations(page);
     seen += 1;
     for (const el of await keyboardlessClickTargets(page)) {
@@ -1710,7 +1829,7 @@ test('Sonde 11 - was einen Klick annimmt, nimmt auch eine Taste an', async () =>
   await page.close();
 
   // Eine Sonde, die nichts gesehen hat, darf nicht urteilen.
-  assert.equal(seen, ROUTE_NAMES.length, `Nur ${seen} von ${ROUTE_NAMES.length} Routen gesehen.`);
+  assert.equal(seen, routes.length, `Nur ${seen} von ${routes.length} Zustaenden gesehen.`);
 
   assert.deepEqual(findings, [],
     'Element mit click-Listener, ohne eigenen Tastaturzugang UND ohne inneres Bedienelement, '
