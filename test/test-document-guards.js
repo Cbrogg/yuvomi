@@ -77,6 +77,12 @@ const LEAVES_SKIPPED = new Map([
     + 'dort 39-mal statt 16-mal (dieselbe Begruendung wie bei Sonde 11). Gegengeprueft, dass '
     + 'die Blaetter keine eigene Glasflaeche mitbringen: `public/settings/**` setzt nirgends '
     + '`backdrop-filter`, und der einzige Glastraeger ihrer Shell ist die Sidebar der App.'],
+  ['Sonde 13', 'oeffnet Modals ueber den FAB, und die Einstellungen haben keinen - weder die '
+    + 'Uebersicht noch eines der 23 Blaetter. Die Sonde wuerde 23 Zustaende laden und '
+    + '23-mal „kein FAB" in den Uebersprungsbeleg schreiben. Der Eintrag steht hier, weil sie '
+    + 'bis Session 24 `ROUTE_NAMES` direkt nahm und die Blaetter damit STILLSCHWEIGEND '
+    + 'ausliess: die Auslassung war richtig, aber nicht an der Stelle begruendet, an der '
+    + 'jemand sie sucht - und genau dafuer gibt es diese Map.'],
 ]);
 
 /** Die Zustaende, die eine Sonde abfaehrt: die 16 Routen, dazu die Blaetter. */
@@ -2253,7 +2259,7 @@ test('Sonde 13 - die Formulare hinter dem FAB halten dieselbe Grundlage wie die 
 
   for (const device of ['mobile', 'desktop']) {
     const page = await openPage(harness, { device, theme: 'light', locale: 'de' });
-    for (const name of ROUTE_NAMES) {
+    for (const name of sweep('Sonde 13')) {
       await gotoRoute(page, ALL_ROUTES[name]);
       await settleAnimations(page);
       const r = await openFabModal(page);
