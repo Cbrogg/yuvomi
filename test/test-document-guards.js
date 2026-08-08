@@ -1925,6 +1925,23 @@ test('Sonde 11 - was einen Klick annimmt, nimmt auch eine Taste an', async () =>
  *     die es merkt. Genau deshalb bleibt sie stehen, obwohl sie heute nur
  *     bestaetigt.
  *
+ *     ZWEITE EBENE (2026-08-08), und sie kann rot werden, wo die erste es nie
+ *     kann: `declaredGlassInMain()` liest das CSSOM statt der berechneten
+ *     Werte, sieht also, was GESCHRIEBEN steht, bevor `.app-content *` es
+ *     abraeumt. Damit ist die Rot-Probe von oben nicht mehr auf ein
+ *     `!important` im Verstoss angewiesen.
+ *
+ *     SIE HAT BEIM ERSTEN LAUF SOFORT ETWAS GEFUNDEN, und der Befund ist
+ *     groesser als die Glas-Regel: `.fab-action__btn` und `.fab-action__label`
+ *     deklarieren Glas und liegen in `#main-content`. Sie sind kein verirrtes
+ *     Glas im Inhalt - sie sind CHROME AM FALSCHEN ORT. Das Dashboard baut
+ *     seinen Speed-Dial als eigenen `.fab-container` (dashboard.js) und hat
+ *     gar keine `.page-fab`; `adoptPageFab()` in router.js sucht aber genau
+ *     die, um den FAB in die Shell-Layer `#fab-layer` zu ziehen. Die Haertung
+ *     aus #634 (FAB raus aus dem Scrollport) greift auf der Startseite also
+ *     nicht. Die Sonde bleibt so lange rot, bis das entschieden ist - ein
+ *     gruener Guard waere hier eine Aussage, die nicht stimmt.
+ *
  * (B) DIE FALLBACK-REGEL, ihre zweite Haelfte. `jeder Blur kommt aus der
  *     --blur-Skala` (Ebene 3) sichert, dass jede Glasflaeche einen Blur nimmt,
  *     der unter `prefers-reduced-transparency` und `prefers-contrast: more` auf
@@ -2030,6 +2047,63 @@ async function glassBackedSurfaces(page) {
 }
 
 /** Jede Flaeche, die Glas traegt - samt Ort im Baum und Deckkraft. */
+/**
+ * Jede Flaeche, an der eine Regel Glas DEKLARIERT - unabhaengig davon, ob es
+ * ankommt.
+ *
+ * `glassSurfaces()` liest `getComputedStyle`, und genau dort kann die
+ * Glas-ist-Chrome-Regel nie rot werden: `.app-content *` in glass.css raeumt
+ * `backdrop-filter` im Scroll-Container mit `!important` ab (gegen den
+ * Blank-Screen-Bug #166), und `#main-content` IST `.app-content`. Jeder
+ * Nachfahre kommt als `none` heraus, also ist `inMain` fuer nichts wahr - der
+ * eingebaute Verstoss der Rot-Probe blieb deshalb gruen.
+ *
+ * Diese Ebene liest stattdessen das CSSOM: sie sieht, was JEMAND GESCHRIEBEN
+ * hat. Ein Glas, das in den Seiteninhalt geschrieben und nur von einer fremden
+ * Gegenmassnahme neutralisiert wird, ist der Verstoss, den die Regel meint - er
+ * wirkt in dem Moment, in dem das Element aus `.app-content` wandert oder die
+ * Compositor-Regel faellt. Beide Ebenen zusammen: die eine wacht ueber den
+ * Effekt, die andere ueber die Absicht.
+ */
+async function declaredGlassInMain(page) {
+  return page.evaluate(() => {
+    const selectors = new Set();
+    const walk = (rules) => {
+      for (const rule of rules) {
+        // Wie in glassBackedSurfaces: `rule.cssRules` ist seit CSS Nesting kein
+        // Verzweigungskriterium, jede CSSStyleRule traegt eine leere Liste.
+        if (rule.cssRules?.length) { walk(rule.cssRules); continue; }
+        if (!rule.style || !rule.selectorText) continue;
+        // Ueber cssText und nicht ueber rule.style.backdropFilter: die App
+        // schreibt den Blur als TOKEN (`backdrop-filter: var(--blur-md)
+        // saturate(120%)`), nie als Literal. Ein Muster auf `blur(Npx)` fand
+        // deshalb null Regeln - der Reichweiten-Nachweis unten hat genau das
+        // beim ersten Lauf gemeldet.
+        const declared = /backdrop-filter:\s*([^;}]+)/i.exec(rule.cssText)?.[1] ?? '';
+        if (/^\s*none\s*$/i.test(declared)) continue;          // das Abraeumen selbst
+        const viaToken = /var\(\s*--blur-/.test(declared);
+        const viaLiteral = [...declared.matchAll(/blur\(\s*([\d.]+)px\s*\)/g)].some((m) => Number(m[1]) > 0);
+        if (!viaToken && !viaLiteral) continue;                 // u.a. blur(0px)
+        selectors.add(rule.selectorText);
+      }
+    };
+    for (const sheet of document.styleSheets) {
+      try { walk(sheet.cssRules); } catch { /* fremde Herkunft - hier gibt es keine */ }
+    }
+
+    const main = document.querySelector('#main-content');
+    const out = [];
+    for (const selector of selectors) {
+      let hits = [];
+      try { hits = [...document.querySelectorAll(selector)]; } catch { continue; }
+      // Das Abraeum-Ziel selbst ist kein Verstoss: `.app-content` traegt die
+      // Regel, es liegt nicht IN ihr.
+      if (main && hits.some((el) => el !== main && main.contains(el))) out.push(selector);
+    }
+    return { selectorsSeen: selectors.size, offenders: out };
+  });
+}
+
 async function glassSurfaces(page) {
   return page.evaluate(() => {
     const path3 = (el) => {
@@ -2068,27 +2142,43 @@ async function glassSurfaces(page) {
 
 test('Sonde 12 - Glas sitzt auf Chrome, nie im Seiteninhalt', async () => {
   const findings = [];
+  const declaredFindings = [];
   const seen = new Set();
+  let declaredSeen = 0;
   for (const device of ['mobile', 'desktop']) {
     const page = await openPage(harness, { device, theme: 'light', locale: 'de' });
     for (const name of sweep('Sonde 12')) {
       await gotoRoute(page, ALL_ROUTES[name]);
       await settleAnimations(page);
+      // Ebene 1 - der EFFEKT. Sie bestaetigt heute nur (siehe Kopf): die
+      // Compositor-Gegenmassnahme raeumt jeden backdrop-filter im Scrollport ab.
+      // Sie bleibt, weil sie die einzige ist, die es merkt, wenn diese Regel faellt.
       for (const g of await glassSurfaces(page)) {
         seen.add(g.sel);
         if (g.inMain) findings.push(`${device}/${name}: ${g.sel}`);
       }
+      // Ebene 2 - die ABSICHT. Sie kann rot werden, wo Ebene 1 es nie kann.
+      const declared = await declaredGlassInMain(page);
+      declaredSeen = Math.max(declaredSeen, declared.selectorsSeen);
+      for (const sel of declared.offenders) declaredFindings.push(`${device}/${name}: ${sel}`);
     }
     await page.close();
   }
-  // Eine Sonde, die nichts gesehen hat, darf nicht urteilen.
+  // Eine Sonde, die nichts gesehen hat, darf nicht urteilen - je Ebene einzeln,
+  // sonst deckt der Reichweiten-Nachweis der einen die Blindheit der anderen zu.
   assert.ok(seen.size >= 5,
-    `Nur ${seen.size} Glasflaechen im ganzen Dokument gesehen - die Sonde hat nichts gemessen.`);
+    `Nur ${seen.size} Glasflaechen im Dokument gesehen - Ebene 1 hat nichts gemessen.`);
+  assert.ok(declaredSeen >= 5,
+    `Nur ${declaredSeen} Regeln mit deklariertem Blur gefunden - Ebene 2 hat nichts gemessen. `
+    + 'Traegt das CSSOM die Regeln noch, oder ist die Blur-Schreibweise eine andere?');
 
-  assert.deepEqual(findings, [],
+  assert.deepEqual([...findings, ...declaredFindings], [],
     'backdrop-filter INNERHALB von #main-content. Glas ist Chrome: Tab-Bar, Sidebar, Sheets, '
     + 'Toast, Datepicker-Popover, FAB samt Backdrop. Inhalte - Karten, Listen, Widgets, Text - '
-    + `sind opak (Die Glas-ist-Chrome-Regel).\n  ${findings.join('\n  ')}`);
+    + 'sind opak (Die Glas-ist-Chrome-Regel).\n'
+    + 'Treffer aus der zweiten Ebene sind DEKLARIERT und heute womoeglich wirkungslos, weil '
+    + '`.app-content *` sie mit !important abraeumt - sie wirken, sobald das Element aus dem '
+    + `Scrollport wandert oder jene Regel faellt.\n  ${[...findings, ...declaredFindings].join('\n  ')}`);
 });
 
 for (const [label, features] of [
