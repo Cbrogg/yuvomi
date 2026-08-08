@@ -3965,6 +3965,7 @@
         "notesLabel": "Notiz",
         "notesPlaceholder": "z. B. Kaufbeleg liegt im Ordner",
         "deleteConfirm": "\"{{name}}\" wirklich löschen?",
+        "deleteConfirmDetail": "Der Gegenstand wird sofort endgültig aus dem Inventar gelöscht, einen Papierkorb gibt es nicht.",
         "created": "Gegenstand hinzugefügt.",
         "updated": "Gegenstand aktualisiert.",
         "deleted": "Gegenstand gelöscht.",

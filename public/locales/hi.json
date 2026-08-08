@@ -3965,6 +3965,7 @@
         "notesLabel": "Note",
         "notesPlaceholder": "e.g. receipt is in the folder",
         "deleteConfirm": "Delete \"{{name}}\"?",
+        "deleteConfirmDetail": "The item is permanently removed from the inventory right away, there is no trash to recover it from.",
         "created": "Item added.",
         "updated": "Item updated.",
         "deleted": "Item deleted.",
