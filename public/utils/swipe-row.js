@@ -224,10 +224,32 @@ export function wireSwipeRows(listEl, { card, ignore = null, leading = null, tra
  *
  * Der Zähler ist bewusst app-weit und nicht pro Modul: gelernt wird die GESTE,
  * nicht die Liste.
+ *
+ * HÖCHSTENS EINMAL JE SEITENBESUCH, und zwar hier und nicht an den Aufrufstellen:
+ * alle vier rufenden Module tun das aus einem Neu-Render-Pfad heraus
+ * (`updateItemsList`, `bindContent`, `renderList`, `renderTaskList`), der auch an
+ * Sortier-, Filter- und Löschvorgängen hängt. Ohne die Sperre verbrauchten drei
+ * Filterklicks das Budget, bevor der Nutzer je eine Zeile gesehen hat, und die
+ * Nudge-Animation spielte nach jedem Löschen erneut. Eine Regel im geteilten
+ * Modul hält das an allen vier Stellen; vier richtig gesetzte Aufrufe wären vier
+ * Annahmen, die beim nächsten Umbau wieder wandern.
+ *
+ * Der Pfad ist der Schlüssel und nicht ein Flag: wer die Seite verlässt und
+ * wiederkommt, darf den Hinweis erneut sehen, solange das Budget reicht.
  */
+let hintShownForPath = null;
+
 export function maybeShowSwipeHint(container) {
   if (window.innerWidth >= 1024) return;
-  const count = parseInt(localStorage.getItem(SWIPE_HINT_KEY) ?? '0', 10);
+  if (hintShownForPath === location.pathname) return;
+
+  // try/catch wie in noticeSwappedSides: bei blockiertem Storage (Safari privat)
+  // wirft schon `getItem`, und dieser Aufruf steht mitten im Render-Pfad -
+  // in `shopping.js` sogar VOR `updateCheckedActions()`.
+  let count = 0;
+  try {
+    count = parseInt(localStorage.getItem(SWIPE_HINT_KEY) ?? '0', 10) || 0;
+  } catch { return; }
   if (count >= SWIPE_HINT_MAX) return;
 
   const firstRow = container.querySelector('.swipe-row');
@@ -238,5 +260,8 @@ export function maybeShowSwipeHint(container) {
     firstRow.classList.remove('swipe-row--hint');
   }, { once: true });
 
-  localStorage.setItem(SWIPE_HINT_KEY, String(count + 1));
+  hintShownForPath = location.pathname;
+  try {
+    localStorage.setItem(SWIPE_HINT_KEY, String(count + 1));
+  } catch { /* der Hinweis lief, nur das Merken schlug fehl */ }
 }
