@@ -2626,7 +2626,8 @@
         "dmsSearchError": "نظام إدارة المستندات غير متاح حاليًا.",
         "storageGoogleDrive": "Google Drive",
         "budgetFolder": "الإيصالات",
-        "splitExpensesFolder": "النفقات المشتركة"
+        "splitExpensesFolder": "النفقات المشتركة",
+        "inventoryFolder": "Inventory"
     },
     "shortcuts": {
         "goKitchen": "المطبخ",
@@ -3983,7 +3984,12 @@
         "manageCategoriesHint": "Rename, add or reorder categories. Items from a deleted category fall back to \"Other\".",
         "addCategory": "New category",
         "categoryDeleteConfirmDetail": "Items in this category are kept, they just fall back to the \"Other\" category afterwards.",
-        "categoryOtherNotDeletable": "The \"Other\" category cannot be deleted."
+        "categoryOtherNotDeletable": "The \"Other\" category cannot be deleted.",
+        "attachmentsLabel": "Documents",
+        "attachmentsHint": "Attach a receipt, warranty card, or manual.",
+        "attachmentCategoryLabel": "Document category",
+        "attachmentDocumentName": "{{name}} – attachment",
+        "hasAttachmentsLabel": "Has attachments"
     },
     "documentAttach": {
         "label": "المرفقات",

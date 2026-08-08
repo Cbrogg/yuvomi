@@ -2626,7 +2626,8 @@
         "dmsSearchError": "DMS इस समय उपलब्ध नहीं है।",
         "storageGoogleDrive": "Google Drive",
         "budgetFolder": "रसीदें",
-        "splitExpensesFolder": "साझा खर्च"
+        "splitExpensesFolder": "साझा खर्च",
+        "inventoryFolder": "Inventory"
     },
     "shortcuts": {
         "goKitchen": "रसोई",
@@ -3983,7 +3984,12 @@
         "manageCategoriesHint": "Rename, add or reorder categories. Items from a deleted category fall back to \"Other\".",
         "addCategory": "New category",
         "categoryDeleteConfirmDetail": "Items in this category are kept, they just fall back to the \"Other\" category afterwards.",
-        "categoryOtherNotDeletable": "The \"Other\" category cannot be deleted."
+        "categoryOtherNotDeletable": "The \"Other\" category cannot be deleted.",
+        "attachmentsLabel": "Documents",
+        "attachmentsHint": "Attach a receipt, warranty card, or manual.",
+        "attachmentCategoryLabel": "Document category",
+        "attachmentDocumentName": "{{name}} – attachment",
+        "hasAttachmentsLabel": "Has attachments"
     },
     "documentAttach": {
         "label": "अनुलग्नक",
