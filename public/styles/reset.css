@@ -35,8 +35,23 @@ img, svg, video {
   max-width: 100%;
 }
 
+/* `color: inherit` ist hier die WICHTIGSTE Zeile, und sie hat gefehlt: `a` und
+ * `input, textarea, select` erben ihre Farbe direkt darunter, `button` als
+ * einziges der vier tat es nicht. Ohne sie nimmt ein Button die UA-Farbe
+ * `buttontext`, also Schwarz - in BEIDEN Themes. Im Light faellt das nicht auf,
+ * im Dark stand ein schwarzes Icon auf #0A0A0C: 1.06:1 (gemessen an
+ * #cal-prev/#cal-next, #budget-prev/#budget-next, #rail-toggle).
+ *
+ * Sichtbar wurde es nur an Knöpfen OHNE Variantenklasse: `.btn--primary`,
+ * `--secondary` und `--ghost` setzen alle eine Farbe, `.btn--icon` allein nicht.
+ * Deshalb ist der Ort hier und nicht bei `.btn` - der Reset hat `font`, `border`
+ * und `background` zurückgesetzt und `color` bei genau dem Element vergessen,
+ * das es am nötigsten hat. `inherit` statt eines festen Tokens, weil ein Button
+ * auf farbigem Grund die Farbe seiner Flaeche braucht, nicht die des Bodys.
+ * Guard: Sonde 14 in test-document-guards.js. */
 button {
   font: inherit;
+  color: inherit;
   cursor: pointer;
   border: none;
   background: none;
