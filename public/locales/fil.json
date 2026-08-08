@@ -109,7 +109,8 @@
         "sectionCustomModules": "Mga custom na modyul",
         "health": "Kalusugan",
         "rewards": "Mga Gantimpala",
-        "pantry": "Despensa"
+        "pantry": "Despensa",
+        "inventory": "Inventory"
     },
     "search": {
         "emptyHint": "Mag-type ng hindi bababa sa 2 karakter para maghanap ng mga gawain, kaganapan, tala, kontak, pamimili at kalusugan.",
@@ -1612,7 +1613,8 @@
             "weather": "Panahon",
             "family": "Pamilya",
             "dashboard": "Pangkalahatang-tanaw",
-            "search": "Paghahanap"
+            "search": "Paghahanap",
+            "inventory": "Inventory"
         },
         "ics": {
             "title": "Mga ICS Subscription",
@@ -2494,7 +2496,8 @@
         "goShop": "Listahan ng pamimili",
         "goNotes": "Mga Tala",
         "goKitchen": "Kusina",
-        "goHealth": "Kalusugan"
+        "goHealth": "Kalusugan",
+        "goInventory": "Inventory"
     },
     "documents": {
         "title": "Mga Dokumento",
@@ -3930,6 +3933,56 @@
             "jar": "garapon",
             "bag": "supot"
         }
+    },
+    "inventory": {
+        "title": "Inventory",
+        "searchPlaceholder": "Search inventory",
+        "addItem": "Add item",
+        "namePlaceholder": "e.g. MacBook Air",
+        "brandLabel": "Brand",
+        "modelLabel": "Model",
+        "serialNumberLabel": "Serial number",
+        "categoryLabel": "Category",
+        "locationLabel": "Location",
+        "unlocated": "No location",
+        "purchaseDateLabel": "Purchase date",
+        "purchasePriceLabel": "Purchase price",
+        "currentValueLabel": "Current value",
+        "currentValueHint": "Estimated current value, maintained manually.",
+        "currencyLabel": "Currency",
+        "vendorLabel": "Vendor",
+        "warrantyMonthsLabel": "Warranty (months)",
+        "conditionLabel": "Condition",
+        "conditionNew": "New",
+        "conditionGood": "Good",
+        "conditionFair": "Fair",
+        "conditionPoor": "Poor",
+        "statusLabel": "Status",
+        "statusActive": "Owned",
+        "statusSold": "Sold",
+        "statusDisposed": "Disposed",
+        "statusLost": "Lost",
+        "notesLabel": "Note",
+        "notesPlaceholder": "e.g. receipt is in the folder",
+        "deleteConfirm": "Delete \"{{name}}\"?",
+        "created": "Item added.",
+        "updated": "Item updated.",
+        "deleted": "Item deleted.",
+        "emptyTitle": "Your inventory is still empty",
+        "emptyDescription": "Record what you own - with location, category and purchase price.",
+        "loadErrorTitle": "Could not load the inventory",
+        "noResultsTitle": "Nothing found",
+        "noResultsDescription": "No items match your search.",
+        "resetSearch": "Reset search",
+        "manageLocations": "Manage locations",
+        "manageLocationsHint": "Rename, add or reorder locations. Items from a deleted location are kept.",
+        "addLocation": "New location",
+        "locationDeleteConfirmDetail": "Items and child locations at this location are kept, but end up without a location.",
+        "manageCategories": "Manage categories",
+        "manageCategoriesHint": "Rename, add or reorder categories. Items from a deleted category fall back to \"Other\".",
+        "addCategory": "New category",
+        "categoryDeleteConfirmDetail": "Items in this category fall back to \"Other\".",
+        "categoryOtherNotDeletable": "The \"Other\" category cannot be deleted."
     },
     "documentAttach": {
         "label": "Mga kalakip",

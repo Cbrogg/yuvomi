@@ -109,7 +109,8 @@
         "sectionCustomModules": "Користувацькі модулі",
         "health": "Здоровʼя",
         "rewards": "Нагороди",
-        "pantry": "Запаси"
+        "pantry": "Запаси",
+        "inventory": "Inventory"
     },
     "dashboard": {
         "title": "Огляд",
@@ -1553,7 +1554,8 @@
             "weather": "Погода",
             "family": "Родина",
             "dashboard": "Огляд",
-            "search": "Пошук"
+            "search": "Пошук",
+            "inventory": "Inventory"
         },
         "ics": {
             "title": "ICS-підписки",
@@ -2637,7 +2639,8 @@
         "new": "Створити новий запис",
         "searchCalendar": "Пошук у календарі",
         "search": "Відкрити пошук",
-        "goHealth": "Здоровʼя"
+        "goHealth": "Здоровʼя",
+        "goInventory": "Inventory"
     },
     "housekeeping": {
         "title": "Прибирання",
@@ -3930,6 +3933,56 @@
             "jar": "скляна банка",
             "bag": "пакет"
         }
+    },
+    "inventory": {
+        "title": "Inventory",
+        "searchPlaceholder": "Search inventory",
+        "addItem": "Add item",
+        "namePlaceholder": "e.g. MacBook Air",
+        "brandLabel": "Brand",
+        "modelLabel": "Model",
+        "serialNumberLabel": "Serial number",
+        "categoryLabel": "Category",
+        "locationLabel": "Location",
+        "unlocated": "No location",
+        "purchaseDateLabel": "Purchase date",
+        "purchasePriceLabel": "Purchase price",
+        "currentValueLabel": "Current value",
+        "currentValueHint": "Estimated current value, maintained manually.",
+        "currencyLabel": "Currency",
+        "vendorLabel": "Vendor",
+        "warrantyMonthsLabel": "Warranty (months)",
+        "conditionLabel": "Condition",
+        "conditionNew": "New",
+        "conditionGood": "Good",
+        "conditionFair": "Fair",
+        "conditionPoor": "Poor",
+        "statusLabel": "Status",
+        "statusActive": "Owned",
+        "statusSold": "Sold",
+        "statusDisposed": "Disposed",
+        "statusLost": "Lost",
+        "notesLabel": "Note",
+        "notesPlaceholder": "e.g. receipt is in the folder",
+        "deleteConfirm": "Delete \"{{name}}\"?",
+        "created": "Item added.",
+        "updated": "Item updated.",
+        "deleted": "Item deleted.",
+        "emptyTitle": "Your inventory is still empty",
+        "emptyDescription": "Record what you own - with location, category and purchase price.",
+        "loadErrorTitle": "Could not load the inventory",
+        "noResultsTitle": "Nothing found",
+        "noResultsDescription": "No items match your search.",
+        "resetSearch": "Reset search",
+        "manageLocations": "Manage locations",
+        "manageLocationsHint": "Rename, add or reorder locations. Items from a deleted location are kept.",
+        "addLocation": "New location",
+        "locationDeleteConfirmDetail": "Items and child locations at this location are kept, but end up without a location.",
+        "manageCategories": "Manage categories",
+        "manageCategoriesHint": "Rename, add or reorder categories. Items from a deleted category fall back to \"Other\".",
+        "addCategory": "New category",
+        "categoryDeleteConfirmDetail": "Items in this category fall back to \"Other\".",
+        "categoryOtherNotDeletable": "The \"Other\" category cannot be deleted."
     },
     "documentAttach": {
         "label": "Вкладення",
