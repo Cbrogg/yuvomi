@@ -3981,7 +3981,7 @@
         "manageCategories": "Kategorien verwalten",
         "manageCategoriesHint": "Kategorien umbenennen, ergänzen oder neu sortieren. Gegenstände einer gelöschten Kategorie fallen auf \"Sonstiges\" zurück.",
         "addCategory": "Neue Kategorie",
-        "categoryDeleteConfirmDetail": "Gegenstände dieser Kategorie fallen auf \"Sonstiges\" zurück.",
+        "categoryDeleteConfirmDetail": "Gegenstände dieser Kategorie bleiben erhalten und fallen danach auf die Kategorie \"Sonstiges\" zurück.",
         "categoryOtherNotDeletable": "\"Sonstiges\" kann nicht gelöscht werden."
     },
     "documentAttach": {
