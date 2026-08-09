@@ -52,6 +52,20 @@ test('buildInventoryDeadlinesFeed escaped Sonderzeichen im Namen', () => {
   assert.match(ics, /SUMMARY:Garantie endet: Kaffee\\; Maschine\\, Pro/);
 });
 
+test('buildInventoryDeadlinesFeed überspringt unparsbare Kaufdaten statt den Feed zu sprengen', () => {
+  db.exec('DELETE FROM inventory_items');
+  // Kalendarisch unmögliches Datum - so etwas kam frueher durch die reine
+  // Formatpruefung in server/middleware/validate.js#date. Eine einzige solche
+  // Zeile darf den Feed nicht fuer alle Abonnenten stilllegen.
+  insertItem({ name: 'Kaputtes Datum', purchase_date: '2026-02-30', warranty_months: 12 });
+  insertItem({ name: 'Heiles Datum', purchase_date: '2026-01-01', warranty_months: 12 });
+
+  const ics = deadlinesIcs.buildInventoryDeadlinesFeed(db);
+  assert.equal((ics.match(/BEGIN:VEVENT/g) || []).length, 1);
+  assert.match(ics, /Heiles Datum/);
+  assert.doesNotMatch(ics, /Kaputtes Datum/);
+});
+
 test('buildInventoryDeadlinesFeed liefert ein valides VCALENDAR-Gerüst auch ohne Gegenstände', () => {
   db.exec('DELETE FROM inventory_items');
   const ics = deadlinesIcs.buildInventoryDeadlinesFeed(db);

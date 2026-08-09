@@ -304,25 +304,33 @@ router.post('/', (req, res) => {
     const { values, errors } = validateItemFields(effectiveBody);
     if (errors.length) return res.status(400).json({ error: errors.join(' '), code: 400 });
 
-    const result = db.get().prepare(`
-      INSERT INTO inventory_items
-        (name, brand, model, serial_number, category, location_id, purchase_date,
-         purchase_price, current_value, currency, vendor, warranty_months, condition,
-         status, notes, created_by)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      values.name, values.brand, values.model, values.serial_number, values.category,
-      values.location_id, values.purchase_date, values.purchase_price, values.current_value,
-      values.currency, values.vendor, values.warranty_months, values.condition, values.status,
-      values.notes, userId,
-    );
+    // Insert und Erinnerungs-Sync in einer Transaktion (gleiches Muster wie
+    // DELETE /:id): wirft syncReminder - etwa an einem Kaufdatum, das die
+    // Datumsrechnung nicht parsen kann -, darf der Gegenstand nicht trotzdem
+    // geschrieben bleiben, waehrend die Anfrage mit 500 endet.
+    const result = db.get().transaction(() => {
+      const inserted = db.get().prepare(`
+        INSERT INTO inventory_items
+          (name, brand, model, serial_number, category, location_id, purchase_date,
+           purchase_price, current_value, currency, vendor, warranty_months, condition,
+           status, notes, created_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        values.name, values.brand, values.model, values.serial_number, values.category,
+        values.location_id, values.purchase_date, values.purchase_price, values.current_value,
+        values.currency, values.vendor, values.warranty_months, values.condition, values.status,
+        values.notes, userId,
+      );
 
-    syncReminder({
-      id: result.lastInsertRowid,
-      purchase_date: values.purchase_date,
-      warranty_months: values.warranty_months,
-      created_by: userId,
-    });
+      syncReminder({
+        id: inserted.lastInsertRowid,
+        purchase_date: values.purchase_date,
+        warranty_months: values.warranty_months,
+        created_by: userId,
+      });
+
+      return inserted;
+    })();
 
     // Belege sind optional, deshalb erst nach dem Insert - der Gegenstand
     // steht auch ohne sie, ein unbekanntes Dokument darf ihn nicht scheitern lassen.
@@ -354,25 +362,29 @@ router.put('/:id', (req, res) => {
     const { values, errors } = validateItemFields(req.body);
     if (errors.length) return res.status(400).json({ error: errors.join(' '), code: 400 });
 
-    db.get().prepare(`
-      UPDATE inventory_items
-      SET name = ?, brand = ?, model = ?, serial_number = ?, category = ?, location_id = ?,
-          purchase_date = ?, purchase_price = ?, current_value = ?, currency = ?, vendor = ?,
-          warranty_months = ?, condition = ?, status = ?, notes = ?
-      WHERE id = ?
-    `).run(
-      values.name, values.brand, values.model, values.serial_number, values.category,
-      values.location_id, values.purchase_date, values.purchase_price, values.current_value,
-      values.currency, values.vendor, values.warranty_months, values.condition, values.status,
-      values.notes, item.id,
-    );
+    // Update und Erinnerungs-Sync in einer Transaktion, gleiche Begruendung wie
+    // im POST-Handler: kein halb geschriebener Zustand, wenn syncReminder wirft.
+    db.get().transaction(() => {
+      db.get().prepare(`
+        UPDATE inventory_items
+        SET name = ?, brand = ?, model = ?, serial_number = ?, category = ?, location_id = ?,
+            purchase_date = ?, purchase_price = ?, current_value = ?, currency = ?, vendor = ?,
+            warranty_months = ?, condition = ?, status = ?, notes = ?
+        WHERE id = ?
+      `).run(
+        values.name, values.brand, values.model, values.serial_number, values.category,
+        values.location_id, values.purchase_date, values.purchase_price, values.current_value,
+        values.currency, values.vendor, values.warranty_months, values.condition, values.status,
+        values.notes, item.id,
+      );
 
-    syncReminder({
-      id: item.id,
-      purchase_date: values.purchase_date,
-      warranty_months: values.warranty_months,
-      created_by: item.created_by,
-    });
+      syncReminder({
+        id: item.id,
+        purchase_date: values.purchase_date,
+        warranty_months: values.warranty_months,
+        created_by: item.created_by,
+      });
+    })();
 
     const userId = req.authUserId || req.session.userId;
     // Belege nur anfassen, wenn das Feld mitkommt - ein PUT, das nur einen

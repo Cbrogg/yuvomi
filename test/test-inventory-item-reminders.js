@@ -129,3 +129,31 @@ test('DELETE /items/:id räumt die zugehörige Erinnerung ab', async () => {
   assert.equal(deleted.status, 204);
   assert.equal(reminderFor(created.body.data.id), undefined);
 });
+
+test('POST mit kalendarisch ungültigem Kaufdatum antwortet 400 und schreibt nichts', async () => {
+  const before = db.prepare('SELECT COUNT(*) AS c FROM inventory_items').get().c;
+  // 2026-02-30 hat die reine Formatpruefung frueher passiert, wurde geschrieben
+  // und liess erst syncReminder werfen - Item angelegt, Antwort 500.
+  const r = await call('POST', '/items', {
+    body: { name: 'Unmögliches Datum', purchase_date: '2026-02-30', warranty_months: 12 },
+  });
+  assert.equal(r.status, 400, JSON.stringify(r.body));
+  assert.equal(db.prepare('SELECT COUNT(*) AS c FROM inventory_items').get().c, before);
+});
+
+test('PUT mit kalendarisch ungültigem Kaufdatum antwortet 400 und lässt die Zeile unverändert', async () => {
+  const created = await call('POST', '/items', {
+    body: { name: 'Trockner', purchase_date: FUTURE_PURCHASE, warranty_months: 12 },
+  });
+  const id = created.body.data.id;
+
+  const r = await call('PUT', `/items/${id}`, {
+    body: { name: 'Trockner', purchase_date: '2027-13-01', warranty_months: 12 },
+  });
+  assert.equal(r.status, 400, JSON.stringify(r.body));
+  assert.equal(
+    db.prepare('SELECT purchase_date FROM inventory_items WHERE id = ?').get(id).purchase_date,
+    FUTURE_PURCHASE,
+  );
+  assert.ok(reminderFor(id), 'die bestehende Erinnerung bleibt bestehen');
+});

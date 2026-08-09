@@ -55,7 +55,14 @@ function oneOf(val, allowed, field) {
 }
 
 /**
- * Validiert ein Datumsformat YYYY-MM-DD.
+ * Validiert ein Datumsformat YYYY-MM-DD - Form UND Kalendergueltigkeit.
+ *
+ * Die reine Regex liesse 2026-02-30 oder 2026-13-01 durch. Solche Werte landeten
+ * frueher unbemerkt in der Datenbank und sprengten erst spaeter die Dienste, die
+ * das Datum wirklich parsen (server/services/inventory-deadlines.js#parseDateKey,
+ * server/services/subscriptions.js#parseDateKey) - also nach dem Schreibvorgang,
+ * mit halb geschriebenem Zustand und dauerhaft kaputtem ICS-Feed. Der
+ * UTC-Round-Trip hier spiegelt genau die Pruefung dieser beiden parseDateKey.
  * @param {any}    val
  * @param {string} field
  * @param {boolean} required
@@ -65,9 +72,20 @@ function date(val, field, required = false) {
     if (required) return { value: null, error: `${field} is required.` };
     return { value: null, error: null };
   }
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(val)))
+  const raw = String(val);
+  const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match)
     return { value: null, error: `${field} must be in YYYY-MM-DD format.` };
-  return { value: String(val), error: null };
+  const [, y, m, d] = match;
+  const parsed = new Date(Date.UTC(Number(y), Number(m) - 1, Number(d)));
+  const roundTrip = [
+    parsed.getUTCFullYear(),
+    String(parsed.getUTCMonth() + 1).padStart(2, '0'),
+    String(parsed.getUTCDate()).padStart(2, '0'),
+  ].join('-');
+  if (roundTrip !== raw)
+    return { value: null, error: `${field} must be a valid calendar date.` };
+  return { value: raw, error: null };
 }
 
 /**

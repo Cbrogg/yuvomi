@@ -14,9 +14,11 @@
  */
 
 import { randomBytes } from 'node:crypto';
+import { createLogger } from '../logger.js';
 import { escapeICSText, foldLine } from './ics-export.js';
 import { warrantyEndDate } from './inventory-deadlines.js';
 
+const log = createLogger('InventoryDeadlinesICS');
 const TOKEN_KEY = 'inventory_deadlines_feed_token';
 
 function pad(n) { return String(n).padStart(2, '0'); }
@@ -68,7 +70,18 @@ function buildInventoryDeadlinesFeed(conn, now = new Date()) {
     'X-WR-CALNAME:Yuvomi Garantien',
   ];
   for (const item of rows) {
-    const warrantyEnd = warrantyEndDate(item.purchase_date, item.warranty_months);
+    // Ein einzelner unparsbarer Gegenstand darf nicht den ganzen Feed fuer alle
+    // Abonnenten stilllegen. Solche Zeilen koennen aus der Zeit stammen, in der
+    // die Datumsvalidierung nur die Form pruefte (server/middleware/validate.js
+    // #date liess z. B. 2026-02-30 durch) - der Feed ueberspringt sie und
+    // liefert alles andere weiter aus.
+    let warrantyEnd;
+    try {
+      warrantyEnd = warrantyEndDate(item.purchase_date, item.warranty_months);
+    } catch (err) {
+      log.warn(`Skipping inventory item ${item.id} in the warranty feed: ${err?.message || err}`);
+      continue;
+    }
     out.push(...buildVEvent(item, warrantyEnd, dtstamp));
   }
   out.push('END:VCALENDAR');
