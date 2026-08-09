@@ -19,6 +19,7 @@ import * as googleCalendar from './services/google-calendar.js';
 import * as appleCalendar from './services/apple-calendar.js';
 import * as icsSubscription from './services/ics-subscription.js';
 import * as icsExport from './services/ics-export.js';
+import * as inventoryDeadlinesIcs from './services/inventory-deadlines-ics.js';
 import * as caldavReminders from './services/caldav-reminders-sync.js';
 import * as caldavSync from './services/caldav-sync.js';
 import * as carddavSync from './services/cardav-sync.js';
@@ -342,6 +343,22 @@ app.get('/feed/calendar/:token.ics', feedLimiter, (req, res) => {
     const ics = icsExport.buildFeed(db.get(), userId);
     res.set('Cache-Control', 'private, no-store');
     res.set('Content-Disposition', 'inline; filename="yuvomi.ics"');
+    res.type('text/calendar; charset=utf-8').send(ics);
+  } catch (err) {
+    log.error('', err);
+    res.status(500).type('text/plain').send('Internal error');
+  }
+});
+
+// Eigenständiger Feed für Inventar-Garantiefristen (Stufe 4) - getrennt vom
+// Haushaltskalender-Feed oben, siehe server/services/inventory-deadlines-ics.js.
+app.get('/feed/inventory-deadlines/:token.ics', feedLimiter, (req, res) => {
+  try {
+    const valid = inventoryDeadlinesIcs.isValidFeedToken(db.get(), req.params.token);
+    if (!valid) return res.status(404).type('text/plain').send('Not found');
+    const ics = inventoryDeadlinesIcs.buildInventoryDeadlinesFeed(db.get());
+    res.set('Cache-Control', 'private, no-store');
+    res.set('Content-Disposition', 'inline; filename="yuvomi-inventory-deadlines.ics"');
     res.type('text/calendar; charset=utf-8').send(ics);
   } catch (err) {
     log.error('', err);
