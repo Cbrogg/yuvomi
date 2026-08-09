@@ -195,7 +195,7 @@
  *
  * Gefragt wird an der SHELL, nicht am Scrollport: der FAB hängt seit #634 in
  * `.fab-layer` neben `.app-content`, nicht mehr darin. */
-.app-shell:has(.fab-layer > .page-fab:not([hidden])) .app-content {
+.app-shell:has(.fab-layer .page-fab:not([hidden])) .app-content {
   margin-block-end: var(--fab-safe-zone);
 }
 
@@ -1104,13 +1104,39 @@ html:has(.search-overlay--visible) yuvomi-install-prompt {
   --module-accent: var(--active-module-accent, var(--color-accent));
 }
 
-.page-fab {
+/* Die Verankerung des FAB - einmal, für den Knopf UND für die Gruppe.
+ *
+ * Ein Speed-Dial ist ein FAB mit ausklappbarer Liste, und die Liste muss mit
+ * ihm wandern. Deshalb trägt in diesem Fall die Gruppe die Fixierung und der
+ * Knopf darin gibt seine ab (siehe `.page-fab-group`) - die Geometrie steht
+ * aber weiterhin nur an DIESER Stelle. Die zweite Handschrift war genau der
+ * Weg, auf dem sie auseinanderlief: das Dashboard schrieb 52px von Hand und
+ * kannte die Touch-Stufe von --fab-size (tokens.css) dadurch nicht. */
+.page-fab,
+.page-fab-group {
   position: fixed;
   /* Geometrie aus tokens.css (--fab-size / --fab-offset-bottom): der Freiraum
-   * unter Listen (--fab-clearance) leitet sich daraus ab und kann so nicht
-   * mehr vom FAB wegdriften. */
+   * unter Listen (--fab-safe-zone, oben an `.app-content`) leitet sich daraus
+   * ab und kann so nicht mehr vom FAB wegdriften. */
   bottom: var(--fab-offset-bottom);
   right: var(--space-4);
+  z-index: calc(var(--z-nav) - 1);
+}
+
+/* Der FAB einer Speed-Dial-Gruppe positioniert sich nicht selbst: er ist das
+ * einzige Kind im Fluss, die Gruppe schrumpft dadurch exakt auf seine Fläche,
+ * und die Aktionsliste hängt absolut darüber, ohne die Gruppe aufzublähen.
+ * Das ersetzt das frühere `pointer-events: none` am Kasten - ein Kasten, der
+ * nur so gross ist wie der Knopf, fängt nichts ab, was ihm nicht gehört. */
+.page-fab-group {
+  display: flex;
+}
+
+.page-fab-group > .page-fab {
+  position: static;
+}
+
+.page-fab {
   width: var(--fab-size);
   height: var(--fab-size);
   border-radius: var(--radius-full);
@@ -1129,7 +1155,6 @@ html:has(.search-overlay--visible) yuvomi-install-prompt {
   justify-content: center;
   cursor: pointer;
   border: none;
-  z-index: calc(var(--z-nav) - 1);
   transition: transform var(--transition-base), background-color var(--transition-fast);
   -webkit-tap-highlight-color: transparent;
   animation: fab-in 420ms var(--ease-out) backwards;
@@ -1179,9 +1204,13 @@ html.fab-anim-done .page-fab {
 
 /* Desktop: FAB Position anpassen (keine Bottom-Nav) und etwas kleiner */
 @media (min-width: 1024px) {
-  .page-fab {
+  .page-fab,
+  .page-fab-group {
     bottom: var(--space-8);
     right: var(--space-8);
+  }
+
+  .page-fab {
     width: var(--target-lg);
     height: var(--target-lg);
   }

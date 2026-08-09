@@ -12,6 +12,7 @@ import { esc, fmtLocation, renderMarkdownLight } from '/utils/html.js';
 import { toLocalDateKey, parseLocalDateKey } from '/utils/date.js';
 import { predictCycle, PHASE } from '/utils/health-cycle.js';
 import { localizeBirthdayEvent } from '/utils/birthday-event.js';
+import { findPageFab } from '/utils/fab.js';
 import { openModal, closeModal, confirmModal } from '/components/modal.js';
 import { renderAvatarStack } from '/components/user-multi-select.js';
 
@@ -1657,10 +1658,15 @@ function renderFab() {
     </button>
   `).join('');
 
+  // Der Knopf ist ein `.page-fab` und die Gruppe eine `.page-fab-group`: nur so
+  // hebt `adoptPageFab()` den Speed-Dial nach dem Rendern aus dem Scrollport in
+  // die Shell-Layer (#634). Backdrop und Aktionsliste liegen deshalb IN der
+  // Gruppe - sie sind beide `position: fixed`/`absolute` und müssen den Umzug
+  // mitmachen, sonst bleibt die halbe Mechanik im Scroller zurück.
   return `
-    <div class="fab-backdrop" id="fab-backdrop"></div>
-    <div class="fab-container" id="fab-container">
-      <button class="fab-main" id="fab-main" aria-label="${t('nav.quickActions')}" title="${t('nav.quickActions')} (n)" aria-keyshortcuts="n" aria-expanded="false">
+    <div class="page-fab-group" id="fab-group">
+      <div class="fab-backdrop" id="fab-backdrop"></div>
+      <button type="button" class="page-fab" id="fab-main" aria-label="${t('nav.quickActions')}" title="${t('nav.quickActions')} (n)" aria-keyshortcuts="n" aria-expanded="false">
         <i data-lucide="plus" aria-hidden="true"></i>
       </button>
       <div class="fab-actions" id="fab-actions" aria-hidden="true">
@@ -1670,11 +1676,21 @@ function renderFab() {
   `;
 }
 
-function initFab(container, signal) {
-  const fabMain     = container.querySelector('#fab-main');
-  const fabActions  = container.querySelector('#fab-actions');
-  const fabBackdrop = container.querySelector('#fab-backdrop');
-  if (!fabMain) return;
+/**
+ * Speed-Dial verdrahten - dokumentweit gesucht, nicht im Seiten-Container.
+ *
+ * Der Router zieht die Gruppe direkt nach dem Rendern in die Shell-Layer
+ * (adoptPageFab, #634). Ein `container.querySelector('#fab-main')` fände sie
+ * danach still nicht mehr, und die Verdrahtung entfiele lautlos: der Knopf wäre
+ * sichtbar und täte nichts - genau der Bug hinter #634. `findPageFab()` ist die
+ * eine Stelle, an der der Ort steht.
+ */
+function initFab(signal) {
+  const fabMain     = findPageFab('fab-main');
+  const fabGroup    = fabMain?.closest('.page-fab-group');
+  const fabActions  = fabGroup?.querySelector('#fab-actions');
+  const fabBackdrop = fabGroup?.querySelector('#fab-backdrop');
+  if (!fabMain || !fabActions) return;
 
   // "Neu"-Button-Selector auf der jeweiligen Zielseite
   const FAB_NEW_BTN = {
@@ -1688,7 +1704,8 @@ function initFab(container, signal) {
 
   function toggleFab(force) {
     open = force !== undefined ? force : !open;
-    fabMain.classList.toggle('fab-main--open', open);
+    // Kein zweiter Zustandsträger neben `aria-expanded`: die Drehung zum X
+    // hängt in dashboard.css direkt am Attribut.
     fabMain.setAttribute('aria-expanded', String(open));
     fabActions.classList.toggle('fab-actions--visible', open);
     fabActions.setAttribute('aria-hidden', String(!open));
@@ -1696,7 +1713,7 @@ function initFab(container, signal) {
     fabActions.querySelectorAll('.fab-action').forEach((el) => {
       el.tabIndex = open ? 0 : -1;
     });
-    if (window.lucide) window.lucide.createIcons({ el: container });
+    if (window.lucide) window.lucide.createIcons({ el: fabGroup });
   }
 
   fabMain.addEventListener('click', (e) => { e.stopPropagation(); toggleFab(); });
@@ -2175,11 +2192,12 @@ export async function render(container, { user }) {
     // Kein FAB im Fehler-Zustand: seine Schnellaktionen würden in Module
     // navigieren, deren Daten gerade nicht geladen werden konnten — das würde
     // dem Fehler-Banner widersprechen. Retry stellt bei Erfolg alles her.
-    container.querySelector('#fab-container')?.remove();
-    container.querySelector('#fab-backdrop')?.remove();
+    // Dokumentweit, nicht im Container: die Gruppe kann zu diesem Zeitpunkt
+    // schon in der Shell-Layer hängen (adoptPageFab, #634). Das Backdrop reist
+    // als ihr Kind mit und braucht keine zweite Zeile.
+    findPageFab('fab-main')?.closest('.page-fab-group')?.remove();
   } else {
-    initFab(container, _fabController.signal);
-    wireFabAutoHide(container, _fabController.signal);
+    initFab(_fabController.signal);
   }
 
   document.addEventListener('visibilitychange', () => {
@@ -2274,29 +2292,19 @@ function wireWeatherRefresh(container, onUpdated = null) {
   refreshBtn.addEventListener('click', doWeatherRefresh, { signal: _fabController.signal });
 }
 
-// Scroll-bewusstes Ausblenden des FAB: beim Runterscrollen weicht der schwebende
-// FAB nach unten aus, damit er die „Alle"-Header-Links der Widgets nicht überdeckt
-// und ihre Klicks nicht abfängt (Critique P2, per Hit-Test belegt); beim Hochscrollen
-// (Handlungsabsicht) und nahe dem oberen Rand kommt er zurück. Offen (Speed-Dial
-// ausgeklappt) wird nie versteckt. `passive` + rAF halten das Scrollen flüssig.
-function wireFabAutoHide(container, signal) {
-  const scroller = container.closest('.app-content') || document.querySelector('.app-content');
-  const fab = container.querySelector('#fab-container');
-  if (!scroller || !fab) return;
-  let lastY = scroller.scrollTop;
-  let ticking = false;
-  scroller.addEventListener('scroll', () => {
-    if (ticking) return;
-    ticking = true;
-    requestAnimationFrame(() => {
-      const y = scroller.scrollTop;
-      const isOpen = fab.querySelector('.fab-main')?.classList.contains('fab-main--open');
-      if (!isOpen) {
-        if (y < 24 || y < lastY - 4) fab.classList.remove('fab-container--hidden');
-        else if (y > lastY + 4) fab.classList.add('fab-container--hidden');
-      }
-      lastY = y;
-      ticking = false;
-    });
-  }, { passive: true, signal });
-}
+// HIER STAND `wireFabAutoHide()` - der Speed-Dial wich beim Runterscrollen nach
+// unten aus, damit er die „Alle"-Header-Links der Widgets nicht überdeckte
+// (Critique P2). Diese Begründung ist entfallen, bevor der Mechanismus fiel:
+// `--fab-safe-zone` verkürzt den Scrollport, sodass bei JEDEM Scrollstand nichts
+// Bedienbares mehr unter dem FAB liegt - und seit der Speed-Dial ein `.page-fab`
+// ist, gilt das auch hier.
+//
+// Übrig blieb dieselbe Mechanik, die `.page-fab--retracted` schon einmal gekostet
+// hat (#634): ein Zustand an einer Klasse, den nur ein weiteres Scroll-Ereignis
+// wieder abnahm. Ein einziges Abwärts-Delta ohne Nutzergeste - die iOS-
+// Adressleiste, Scroll-Anchoring beim Nachladen eines Widgets - machte die
+// Primäraktion unerreichbar.
+//
+// Die CSS-Seite davon hält test-frontend-audit.js als Regel fest: keine Regel,
+// die `.page-fab` trifft, darf `opacity: 0` oder `pointer-events: none`
+// schreiben - und seit der Dial eine `.page-fab-group` ist, trifft das auch ihn.

@@ -14,13 +14,14 @@
 /* --------------------------------------------------------
  * Dashboard-Layout
  * -------------------------------------------------------- */
+/* HIER STAND DIE EIGENE FAB-CLEARANCE des Dashboards (52px mobil, 48px am
+ * Desktop, beides von Hand). Seit sein Speed-Dial ein `.page-fab` ist, trägt
+ * `--fab-safe-zone` den Freiraum an `.app-content` - für alle 17 Module aus
+ * einer Quelle. Eine zweite Reserve daneben stapelte sich zu totem Raum am
+ * Seitenende (Audit A1-16), und die Handschrift kannte die Touch-Stufe von
+ * --fab-size ohnehin nicht. */
 .dashboard {
   padding: var(--space-4);
-  /* FAB-Clearance: der schwebende FAB (52px, --space-6 über der Bottom-Nav) darf
-   * keinen Widget-Header-Link am unteren Rand verdecken. Das Scroll-Gutter reicht
-   * über die FAB-Höhe hinaus, damit die letzte Widget-Reihe frei über ihm liegt
-   * statt dahinter zu klemmen (Critique P1: FAB-Kollision, Mobile). */
-  padding-bottom: calc(52px + var(--space-6) * 2 + var(--space-4));
   max-width: var(--content-max-width);
   margin: 0 auto;
 }
@@ -28,8 +29,6 @@
 @media (min-width: 1024px) {
   .dashboard {
     padding: var(--space-6) var(--space-8);
-    /* Desktop-FAB: 48px, --space-8 über dem Rand */
-    padding-bottom: calc(48px + var(--space-8) + var(--space-6));
   }
 }
 
@@ -1269,94 +1268,41 @@ svg.weather-forecast__icon {
 
 /* --------------------------------------------------------
  * FAB Speed-Dial
+ *
+ * Der Knopf IST der geteilte `.page-fab` (layout.css): dadurch zieht ihn
+ * `adoptPageFab()` aus dem Scrollport in die Shell-Layer (#634), er erbt Grösse,
+ * Position, Glas, Fokusring, Tastatur- und Nur-Lesen-Zustand, und `--fab-safe-zone`
+ * hält den Freiraum unter der letzten Widget-Reihe frei. Hier steht nur noch,
+ * was ihn zum Speed-Dial macht: die Aktionsliste und das Backdrop.
  * -------------------------------------------------------- */
-.fab-container {
-  position: fixed;
-  bottom: calc(var(--nav-bottom-height) + var(--space-6));
-  right: calc(var(--space-4) * 2);
-  z-index: calc(var(--z-nav) - 1);
+
+/* Die Liste hängt absolut über dem Knopf statt ihn in einen Flex-Kasten zu
+ * setzen. So bleibt die Gruppe genau so gross wie der FAB (siehe
+ * `.page-fab-group` in layout.css) und braucht kein `pointer-events: none`,
+ * um beim Scrollen nicht die halbe rechte Seite abzufangen. */
+.fab-actions {
+  position: absolute;
+  bottom: calc(100% + var(--space-3));
+  right: 0;
   display: flex;
-  flex-direction: column-reverse;
+  flex-direction: column;
   align-items: flex-end;
-  gap: var(--space-3);
-  pointer-events: none;
-  transition:
-    transform var(--duration-xl) cubic-bezier(0.16, 1, 0.3, 1),
-    opacity var(--duration-xl) cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-/* Desktop hat keine Bottom-Nav (Sidebar-Navigation), daher entfällt der
- * 60px-Nav-Offset: der FAB rutscht in die untere rechte Ecke, in die vorhandene
- * Bottom-Safe-Area der Seite — statt ~84px hochzuschweben und den Inhalt der
- * unteren rechten Kachel (Budget) zu überlappen (Critique R3 P1). */
-@media (min-width: 1024px) {
-  .fab-container {
-    bottom: var(--space-8);
-  }
-}
-
-/* Scroll-Ausblenden: gleitet nach unten aus dem Weg, damit der FAB keine Widget-
- * Header-Links überdeckt/abfängt; kein Pointer-Fang, solange versteckt. */
-.fab-container--hidden {
-  transform: translateY(calc(100% + var(--nav-bottom-height) + var(--space-6)));
+  gap: var(--space-2);
   opacity: 0;
   pointer-events: none;
+  transform: translateY(8px);
+  transition: opacity var(--transition-base), transform var(--transition-base);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .fab-container {
-    transition: opacity var(--duration-sm) linear;
-  }
-  .fab-container--hidden {
-    transform: none;
-    opacity: 0;
-  }
-}
-
-.fab-main {
-  width: 52px;
-  height: 52px;
-  border-radius: var(--radius-full);
-  background-color: var(--module-accent, var(--color-accent));
-  color: var(--color-ink-on-vivid);
-  box-shadow: var(--shadow-lg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  /* Zwei Bewegungen teilten sich hier eine Kurve, obwohl sie Gegensätzliches
-     verlangen. Der Grundzustand gehört dem Druck-Feedback (:active): das muss
-     unmittelbar antworten, und eine Feder ließe den Knopf beim Loslassen über
-     seine Ausgangsgröße hinausschießen. Die Feder sitzt jetzt dort, wo sie
-     etwas aussagt - an der Drehung zum X (siehe .fab-main--open). */
-  transition:
-    transform var(--duration-2xs) ease-out,
-    background-color var(--transition-fast);
-  border: none;
-  flex-shrink: 0;
-  pointer-events: auto;
-}
-
-@media (min-width: 1024px) {
-  .fab-main {
-    width: 48px;
-    height: 48px;
-  }
-}
-
-.fab-main:hover {
-  background-color: color-mix(in srgb, var(--module-accent, var(--color-accent)) 85%, black);
-}
-
-.fab-main:active {
-  transform: scale(0.95);
-}
-
-.fab-main--open {
+/* Plus wird zum X. Der Zustand steht schon im `aria-expanded`, das der
+ * Speed-Dial ohnehin pflegen muss - eine Klasse daneben wäre eine zweite
+ * Wahrheit über denselben Zustand, und die beiden liefen bisher schon
+ * auseinander, wenn eine von ihnen vergessen wurde. */
+.page-fab[aria-expanded="true"] {
   transform: rotate(45deg);
-  /* Plus wird zum X: hier ist das Nachfedern die Aussage, nicht Zierrat - sie
-     quittiert den Zustandswechsel. Über das Token statt als Literal, damit die
-     Kurve eine benannte Entscheidung bleibt (tokens.css §g). */
+  /* Hier ist das Nachfedern die Aussage, nicht Zierrat - es quittiert den
+     Zustandswechsel. Über das Token statt als Literal, damit die Kurve eine
+     benannte Entscheidung bleibt (tokens.css §g). */
   transition: transform var(--transition-glass);
   background-color: var(--neutral-600);
 }
@@ -1371,24 +1317,17 @@ svg.weather-forecast__icon {
   position: fixed;
   inset: 0;
   background: var(--color-backdrop-fab);
-  z-index: calc(var(--z-nav) - 10);
+  /* Negativ statt `--z-nav - 10`: das Backdrop liegt jetzt IN der Gruppe, und
+   * die ist ein eigener Stapelkontext. Ein positiver Wert darin hätte es über
+   * den FAB und seine Aktionen gehoben, statt unter sie. Gegenüber Bottom-Nav
+   * und Modal bleibt die Reihenfolge, die die Gruppe selbst hat. */
+  z-index: -1;
   pointer-events: none;
 }
 
 .fab-backdrop--visible {
   display: block;
   pointer-events: auto;
-}
-
-.fab-actions {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: var(--space-2);
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(8px);
-  transition: opacity var(--transition-base), transform var(--transition-base);
 }
 
 .fab-actions--visible {
@@ -1421,8 +1360,11 @@ svg.weather-forecast__icon {
 }
 
 .fab-action__btn {
-  width: 40px;
-  height: 40px;
+  /* Die Mini-FABs der Liste sind Zielgrössen, keine Zeichnung: --target-md am
+     Zeiger, darunter --target-base am Finger (das die Coarse-Regel in
+     tokens.css ohnehin auf --target-lg hebt). */
+  width: var(--target-md);
+  height: var(--target-md);
   border-radius: var(--radius-full);
   background-color: var(--color-surface);
   color: var(--color-accent);

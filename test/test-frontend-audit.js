@@ -4759,19 +4759,35 @@ test('dashboard „Heute wichtig" is one inset-grouped list, not a tile grid', (
   );
 });
 
-test('phase 2 dashboard FAB uses tokenized position and reserved mobile scroll room', () => {
+/**
+ * Der Speed-Dial des Dashboards ist ein Page-FAB, kein Nachbau.
+ *
+ * Er war der einzige FAB der App mit eigener Geometrie: `.fab-main` schrieb
+ * 52px (48px am Desktop) von Hand und kannte die Touch-Stufe von `--fab-size`
+ * dadurch nicht, und `.dashboard` trug seinen eigenen `padding-bottom` als
+ * FAB-Freiraum. Beides ist mit dem Folgevorgang zu #634 entfallen: der Knopf
+ * ist ein `.page-fab`, `adoptPageFab()` hebt ihn samt Liste aus dem Scrollport,
+ * und `--fab-safe-zone` traegt den Freiraum an `.app-content` fuer alle Module
+ * aus einer Quelle.
+ *
+ * Geprueft wird die REGEL, nicht der Klassenname: dashboard.css darf ueberhaupt
+ * keine FAB-Geometrie mehr schreiben. Eine Allowlist der drei bekannten
+ * Selektoren haette den vierten nicht gesehen.
+ */
+test('the dashboard speed dial owns no FAB geometry of its own', () => {
   const dashboard = read('../public/styles/dashboard.css');
-  const fabRule = cssRuleBody(dashboard, '.fab-container');
+  const live = dashboard.replace(/\/\*[\s\S]*?\*\//g, '');
 
-  assert.match(fabRule, /bottom:\s*calc\(var\(--nav-bottom-height\)\s*\+\s*var\(--space-6\)\)/);
-  assert.doesNotMatch(fabRule, /\b24px\b/, 'FAB position should use spacing tokens');
-  // Die Scroll-Reserve traegt .dashboard selbst (FAB-Clearance); eine zweite
-  // Reserve auf .dashboard-shell stapelte sich zu ~200px totem Raum (Audit A1-16).
-  assert.match(
-    dashboard,
-    /\.dashboard\s*\{[\s\S]*?padding-bottom:\s*calc\(52px \+ var\(--space-6\) \* 2 \+ var\(--space-4\)\)/,
-    'mobile dashboard should reserve scroll room for the fixed FAB'
-  );
+  assert.doesNotMatch(live, /\.fab-container|\.fab-main/,
+    'der eigene Kasten des Dashboards ist entfallen - der Dial ist eine '
+    + '.page-fab-group mit einem .page-fab darin (#634)');
+  for (const rule of live.match(/[^{}]*\bfab\b[^{]*\{[^}]*\}/g) ?? []) {
+    assert.doesNotMatch(rule, /\b(?:width|height):\s*\d/,
+      `dashboard.css schreibt wieder eine FAB-Groesse von Hand statt --fab-size:\n${rule}`);
+  }
+  assert.doesNotMatch(cssRuleBody(dashboard, '.dashboard'), /padding-bottom/,
+    'die FAB-Reserve kommt aus --fab-safe-zone an .app-content; eine zweite '
+    + 'Reserve am Modul stapelt sich zu totem Raum (Audit A1-16)');
   assert.doesNotMatch(
     dashboard,
     /@media \(max-width:\s*640px\)[\s\S]*\.dashboard-shell\s*\{[^}]*padding-bottom/,
