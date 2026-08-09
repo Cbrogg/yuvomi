@@ -2172,9 +2172,9 @@ User management and app configuration. Logged-in users only.
 - Transaction list: chronological, filterable
 - **Tab capabilities (v1.37.0):** each Budget tab declares whether the month is its frame of reference and whether it has a "new" action. Month navigation (arrows, month label, "current month") therefore appears as a whole or not at all — it shows on the Budget, Plan and Statistics tabs and is absent on Accounts, Subscriptions, Loans and Split Expenses. The floating action button follows the same table: it creates the item that belongs to the active tab (entry, account, budget, subscription, loan, shared expense) and is hidden on Statistics, which has no create action.
 - **New entries follow the displayed month (v1.37.0):** the date field of a new entry defaults to today only while the current month is on screen; after paging back it defaults to the first of the month being viewed, so an entry created while looking at March is not silently filed under today.
-- **One set of building blocks across the seven tabs (v1.63.0):** the tabs shared the toolbar, the tab bar, the FAB and the module accent, but from the panel edge inward they had diverged into five metric-card variants, five row namespaces, four panel-header class names, three container patterns, three panel paddings and three scroll axes. They now share `.budget-summary-card` (one card, left-aligned, with `__note` for footnotes and `__progress` for the subscription budget bar, which recolours past 100% instead of sitting silently at full width), `.budget-tab-panel` (padding and scroll axis; the Budget tab's own inner scroll region is a named modifier, as is `.budget-panel--reading` for the form-like Plan tab) and `.budget-panel-head` with `.budget-panel-head__title`, which joins the shared eyebrow list in `typography.css` instead of being a sixth heading treatment. Net worth and the loan statistics are ordinary metric cards, and the Loans tab no longer frames itself as a card containing cards. Subscriptions and Split Expenses drop their own page gradient and padding while embedded, so the work surface no longer changes tint at a tab switch. Guards in `test:budget-ui` are written as rules over every file of the module rather than as allow-lists of selectors.
+- **One set of building blocks across the seven tabs (v1.63.0):** the tabs shared the toolbar, the tab bar, the FAB and the module accent, but from the panel edge inward they had diverged into five metric-card variants, five row namespaces, four panel-header class names, three container patterns, three panel paddings and three scroll axes. They now share one metric card (with `__note` for footnotes and `__progress` for the subscription budget bar, which recolours past 100% instead of sitting silently at full width), `.budget-tab-panel` (padding and scroll axis; the Budget tab's own inner scroll region is a named modifier, as is the form-like Plan tab) and one panel head with its own title role, instead of a sixth heading treatment. **The names moved in v2.0.0:** these blocks turned out to be shared beyond Budget and now live in `panel.css` as `.metric-card`, `.metric-grid`, `.segmented` and `.panel-head` - a component that three modules use should not carry the name of the one it was born in. Net worth and the loan statistics are ordinary metric cards, and the Loans tab no longer frames itself as a card containing cards. Subscriptions and Split Expenses drop their own page gradient and padding while embedded, so the work surface no longer changes tint at a tab switch. Guards in `test:budget-ui` are written as rules over every file of the module rather than as allow-lists of selectors.
 - **One time axis for the module (v1.64.0):** the header slot is never emptied, only rewritten. Tabs without a time frame (Accounts, Subscriptions, Loans, Split Expenses) show a quiet context line in place of the stepper ("Current balances", "All active subscriptions", "All loans", "All groups") instead of leaving a gap that read as "the month I picked still applies". The Statistics tab no longer builds a second period picker of its own: it uses the shared header stepper, and its Week/Month/Year switcher now only picks the resolution the stepper moves in. Both ends are reconciled on a tab switch in either direction, so a March picked on the Budget tab no longer reappears as July under Statistics, and a week stepped into August carries that month back. Month and year are formatted exactly as on the Budget tab (`July 2026`, `2026`); week bounds come from the server, so the week logic exists once. `TAB_CAPS` remains the single source and gained two fields for this (`note`, `range`).
-- **One switcher, one behaviour layer (v1.64.0):** the module had four looks for the same question — a tinted capsule, a square accent-filled rectangle inside a rounded container, a white tile and an outlined pill — and two of those bars carried `role="group"`, so the arrow-key navigation learned on Budget and Statistics was silently lost on Loans and Split Expenses. All of them now use `.budget-segmented`, extracted from the Statistics switcher, at the shared touch size (`--target-base`). `wireTablist` gained a `mode`: `tabs` switches a view (`role="tablist"`, `aria-selected`), `select` picks one value from a filter bar (`role="radiogroup"`, `aria-checked`). Loan status, group status and the account colour picker all run through it, so the colour picker gained arrow-key navigation as a side effect. The guard for this is written as a rule over the whole module — no `role="group"` whose children report a selection state, and every `tablist`/`radiogroup` bar found in the markup must be wired to `wireTablist` — replacing an allow-list of three selectors that had not seen the two offending bars.
+- **One switcher, one behaviour layer (v1.64.0):** the module had four looks for the same question — a tinted capsule, a square accent-filled rectangle inside a rounded container, a white tile and an outlined pill — and two of those bars carried `role="group"`, so the arrow-key navigation learned on Budget and Statistics was silently lost on Loans and Split Expenses. All of them now use the shared segmented control, extracted from the Statistics switcher, at the shared touch size (`--target-base`); since v2.0.0 it is `.segmented` in `panel.css`. `wireTablist` gained a `mode`: `tabs` switches a view (`role="tablist"`, `aria-selected`), `select` picks one value from a filter bar (`role="radiogroup"`, `aria-checked`). Loan status, group status and the account colour picker all run through it, so the colour picker gained arrow-key navigation as a side effect. The guard for this is written as a rule over the whole module — no `role="group"` whose children report a selection state, and every `tablist`/`radiogroup` bar found in the markup must be wired to `wireTablist` — replacing an allow-list of three selectors that had not seen the two offending bars.
 - **Contrast never depends on the data (v1.64.0):** subscription monograms drew text and surface from the *same* brand colour (a solid tone on a lightened version of itself), so the ratio was purely a matter of which brands a household happens to track: ten WCAG AA failures across seven seeded brands, down to 1.83:1, with no way for a user to fix it other than changing the brand colour. The brand now carries the surface and the border while the label comes from the text token (measured 12.9:1 light, 10.7:1 dark). The same mechanism sat unnoticed in the account tile (`--account-accent` as both icon and fill) and was fixed with it. The rule is guarded: a data colour — one fed in from JS via `style="--x:…"`, as opposed to a token from `tokens.css` — may not supply both foreground and background of the same surface.
 - **One money vocabulary (v1.63.0):** `public/utils/money.js` replaces the three separate currency formatters in `budget.js`, `subscriptions.js` and `split-expenses.js`. Every amount carries one of four roles, and the role decides sign and colour together: `flow` (a single account movement — always signed, coloured by sign), `total` (a sum whose direction is already in its label — unsigned), `balance` (signed only when negative) and `plain` (an invoice amount with no account direction: subscription price, shared expense). The sign comes from `Intl`'s `signDisplay`, not a prepended `+`, so it stays on the correct side in RTL locales. Previously the same tab could show `−134.20 €` on a row and `3,046.11 €` unsigned on the summary card above it; that `Math.abs` was a silent exception and is now the `total` role applying to both cards. A net worth of exactly 0 is no longer green, because `balance` resolves zero as neutral. A shared expense deliberately stays unsigned — it is a group invoice line, not a movement on the viewer's account — but that is now a named role rather than an accident.
 
@@ -2305,110 +2305,86 @@ A stateless [Model Context Protocol](https://modelcontextprotocol.io) endpoint i
 
 ### Colors (CSS Custom Properties)
 
-Source of truth: `public/styles/tokens.css`. The excerpt below carries the values that encode a
-decision (palette anchors, severity, module identity) — the glass, chart-series, and neutral-ramp
-tokens live only in `tokens.css`, where every value has its measured contrast ratio next to it.
-Each public token is a `var(--_private)` indirection there, so light and dark are declared once
-instead of being repeated across `@media` and `[data-theme]`. Values as of v1.64.0.
+**Source of truth: `public/styles/tokens.css`** — and only there. Every value carries its measured
+contrast ratio next to it, and every public token is a `var(--_private)` indirection, so light and
+dark are declared once instead of being repeated across `@media` and `[data-theme]`. This section
+describes the *decisions*; it deliberately no longer reprints the values. The excerpt it used to
+carry was a second spelling of the palette, and by v2.0.0 twenty-three of its forty-five hex values
+no longer existed anywhere in the codebase.
 
-**Palette rationale:** Warm-tinted neutral scale (`#F5F4F1 → #1C1C1A`) anchored by a **Violet primary** (`#6c3aed`) that unifies the brand identity and the Calendar module color. Module colors are semantically separated from severity colors — no hue is shared without explicit documentation in `tokens.css`.
+**The stage is Apple's cool system neutrals.** The app ground is the grouped background
+(`--color-bg`, systemGray6 in light, near-black in dark); cards, cells and work areas sit on
+`--color-surface` and its work/raised variants. One inset-well fill (`--color-surface-3`) is the
+only permitted tint for a tile *inside* a card.
 
-```css
-:root {
-  /* Neutral canvas — warm linen/unbleached-paper atmosphere */
-  --color-bg:              #F5F4F1;   /* neutral-100 */
-  --color-surface:         #FFFFFF;
-  --color-surface-work:    #FFFFFF;   /* readable productive surfaces */
-  --color-surface-raised:  #FAFAF8;   /* subtle elevated surfaces */
-  --color-surface-glass:   rgba(255,255,255,0.70); /* decorative/light glass */
-  --color-border:          #E8E7E2;   /* neutral-200 */
-  --color-text-primary:    #1C1C1A;   /* neutral-900, 14.7:1 on bg */
-  --color-text-secondary:  #6C6B67;   /* neutral-600, 5.33:1 on white */
-  --color-text-tertiary:   #6A6964;   /* 5.00:1 on bg, 5.50:1 on white */
+**The voice is one accent, deepened to AA.** `--color-accent` is Apple's indigo, darkened until it
+holds against both white and the grouped ground. Its tinted twin `--color-accent-light` carries
+focus glows and today-chips.
 
-  /* Primary accent — Violet */
-  --color-accent:           #6c3aed;  /* Violet-600, 6.06:1 on white (AA) */
-  --color-accent-hover:     #5b2fd4;  /* Violet-700 */
-  --color-accent-active:    #4a26bb;  /* Violet-800 */
-  --color-accent-deep:      #3d1f9e;  /* deep Violet for gradients/weather */
-  --color-accent-secondary: #8b5cf6;  /* Violet-500 — logo gradient */
-  --color-accent-light:     #f5f3ff;  /* Violet-50 */
-  --color-accent-subtle:    #ede9fe;  /* Violet-100 */
-  --color-btn-primary:      #5b2fd4;  /* Violet — WCAG AAA on white */
-  --color-btn-primary-hover:#4a26bb;
+**Seventeen module tints** (`--module-*`) give each module its own colour on nav icons, active
+segments, chips and the FAB; the router sets `--active-module-accent` on `<html>` and components
+read `var(--module-accent, var(--color-accent))`. The four kitchen modules deliberately share the
+meals tint — a colour change on a tab switch would be the strongest "you have left the context"
+signal in the app. Dark mode flips these to vivid light variants carrying dark ink
+(`--color-ink-on-vivid`), not white.
 
-  /* Severity — hue-separated from module colors */
-  --color-success:       #15803D;     /* 4.54:1 */
-  --color-warning:       #A15C0A;     /* 5.18:1 — Amber, distinct from --module-meals */
-  --color-danger:        #B91C1C;     /* Red-700, 6.47:1 */
-  --color-info:          #0B66C3;     /* 5.67:1 — own value, split from --module-contacts */
+**Severity is hue-separated from module identity**, and warning is kept distinct from danger for
+colour-vision deficiency. Chart series have their **own** palette (`--chart-series-1..7`) rather
+than borrowing module tints, because a module colour means something that would be wrong in a
+spending donut. Priorities encode rank by colour alone on the dashboard and the mobile calendar, so
+"high" stays separable from "urgent" by lightness as well as hue.
 
-  /* Module accents — domain-specific, not interchangeable with severity.
-     One accent per top-level module, not per tab inside one: the Kitchen group
-     is a single sidebar entry with four tabs and therefore carries a single
-     accent (v1.58.0). Before that each tab set its own, so the same nav entry
-     changed colour on every tab switch — the strongest "you left this module"
-     signal the UI has, spent on staying put. The four per-tab tokens remain for
-     dashboard widgets and nav icons, which reference them individually. */
-  --module-kitchen:         var(--module-meals);  /* Shared by Meals, Recipes,
-                                         Shopping and Pantry; orange because
-                                         Meals is the group's entry tab */
-  --module-dashboard:       #6c3aed;  /* Violet — follows primary accent */
-  --module-tasks:           #15803D;  /* Green — intentional share with --color-success */
-  --module-calendar:        #4F46E5;  /* Violet-indigo — Appointments, time */
-  --module-meals:           #C2410C;  /* Orange-700 — Food, warmth */
-  --module-shopping:        #D12370;  /* Pink-600 — distinct from Meals (5.02:1, WCAG AA) */
-  --module-recipes:         #0C7C5B;  /* Teal-green (166°) — Recipes, hue-separated from
-                                         Budget 186° and Tasks 150° (5.19:1, WCAG AA) */
-  --module-pantry:          #4D7C0F;  /* Olive green (86°) — Pantry; fills the only free hue gap
-                                         between Notes 36° and Tasks 142° (4.99:1, WCAG AA).
-                                         Earthy, not fresh: the pantry is the store, not the harvest */
-  --module-notes:           #9F6107;  /* Amber-700 — Notes (5.02:1, WCAG AA) */
-  --module-contacts:        #0969DA;  /* Blue — distinct from Violet primary */
-  --module-birthdays:       #D02A64;  /* Rose — Birthdays, decoupled from --color-danger (5.01:1) */
-  --module-budget:          #0F766E;  /* Teal-700 — Finance, stability */
-  --module-split-expenses:  #1976A7;  /* Azure-cyan (201°) — Shared family finance (5.01:1) */
-  --module-documents:       #42587E;  /* Steel blue — Secure family documents (7.17:1) */
-  --module-housekeeping:    #7C3AED;  /* Violet — Focused service workflow */
-  --module-health:          #9E1E88;  /* Berry fuchsia (310°) — Health (7.01:1, WCAG AAA) */
-  --module-reminders:       #0E7490;  /* Cyan-700 — Reminders (5.36:1, WCAG AA) */
-  --module-rewards:         #BC4569;  /* Rose-copper (342°) — Rewards (5.01:1, WCAG AA) */
-  --module-settings:        #677079;  /* Neutral grey (5.03:1, WCAG AA) */
+**The per-background rule.** AA holds *per background*, not per colour. A tint that passes on white
+can break on the grouped ground — seven module tints did exactly that and were deepened. Every new
+colour/surface pairing is measured against its real ground, in light **and** dark, never estimated
+and never carried over from another palette. Probe 2 of `test:document-guards` measures the
+composed contrast on the rendered document.
 
-  /* Priority — own values, no longer aliases of --module-meals / --color-danger.
-     The priority dot on the dashboard and the mobile calendar encodes rank by
-     colour alone, so "high" has to stay separable from "urgent": #B4400E sits
-     at ~1.8× the lightness of #991B1B (still perceivable with red-green
-     deficiency) and holds 4.79:1 for the badge label on its own tinted badge
-     ground — the composed surface the old alias had never been measured against
-     (v1.40.4). */
-  --color-priority-none:   var(--neutral-400);
-  --color-priority-low:    #5F5E5A;
-  --color-priority-medium: #854D0E;
-  --color-priority-high:   #B4400E;
-  --color-priority-urgent: #991B1B;
-}
-```
+**Dark mode** keeps the hue and adjusts lightness and saturation, with two deliberate exceptions:
 
-**Dark mode** keeps the hue and adjusts lightness/saturation only. Two things are not simply
-lightened counterparts and are therefore worth naming here:
+- **Edges are set independently, not derived from the neutral ramp.** The ramp sits too close to
+  the surface colour in dark, so the subtle step would resolve to the surface itself.
+- **Accent tints go darker, not lighter** — a "light" accent surface on a dark canvas has to sit
+  *below* the text, not above it. The hover step of the semantics, by contrast, goes **up**: a
+  darkened light colour on a near-black ground was three AA breaks from one cause.
 
-- **Edges are set independently, not derived from the neutral ramp** (v1.57.0): `--color-border-subtle: #3A3A37`, `--color-border: #4A4A46`, `--color-border-strong: #6B6B68`. The ramp sits so close to `--color-surface` (`#222220`) that the subtle step resolved to *exactly* the surface colour — see [Components → Edge tokens in dark mode](#components).
-- **Accent tints go darker, not lighter**: `--color-accent-light: #1e1040`, `--color-accent-subtle: #160b30`, and `--color-btn-primary: #7c3aed` (hover `#6d28d9`), because a "light" accent surface on a dark canvas has to sit *below* the text, not above it.
+One known, documented deviation: the edges of controls do not reach the 3:1 of WCAG 1.4.11
+(measured 1.26:1 light on surface, 1.60:1 dark), as with Apple's own grouped-list separators. Text
+contrast is without violation throughout.
 
-The full dark set — including every module accent, the chart-series palette, and the vivid-fill ink
-token — lives in `tokens.css`; the glass tokens are described under [Glass Layer](#glass-layer-publicstylesglasscss).
 
 ### Typography
-- Plus Jakarta Sans is the single self-hosted UI family; headings use weight 600–700.
-- Hero: 24px mobile / 30px desktop, reserved for the dashboard greeting.
-- Page title: 22px mobile / 28px desktop, one primary title per page or settings leaf.
-- Section title: 18px; card title and body: 16px.
-- Secondary text and compact controls: 14px.
-- Caption/label: 12px for short navigation, badge, chip, kicker, and constrained calendar-grid text only.
-- Micro: 10px for numeric counters and notification indicators only.
-- Typography is assigned through semantic `--type-*` tokens. Hero and page-title roles switch at the 1024px breakpoint; app headings do not use fluid `clamp()` sizing.
-- Inputs and prose stay at 16px. Readable supporting text and interactive controls have a 14px minimum.
+
+The voice is the operating system's. `--font-sans` is a system stack (`-apple-system`,
+`BlinkMacSystemFont`, `"SF Pro Text"`, then the platform grotesques), `--font-mono` the matching
+monospace stack — **no self-hosted UI webfont**. Until v2.0.0 this was Plus Jakarta Sans; the
+files under `public/fonts/` stay because the installer serves them for its own page.
+
+Sizes follow Apple's type scale, assigned through semantic `--type-*` tokens in `tokens.css` and
+taken up either by a `u-*` utility class or by the BEM selector registered for that role in
+`typography.css`. Each role is defined exactly once.
+
+- **Large Title** 34px bold — page titles and the dashboard greeting. Stays 34px on desktop
+  instead of growing, and always carries `--color-text-primary`.
+- **Title 2** 22px bold — the module head title in the canonical page head, one role for every
+  module, settings leaf and split view.
+- **Title 3** 20px semibold — section headings, in sentence case.
+- **Headline / Body** 17px — card and item titles (semibold) and running text (regular, line
+  height 1.47 = Apple's 17/25). `.u-compact` drops the headline to 15px where density is a
+  deliberate decision rather than a per-selector override.
+- **Subheadline** 15px — secondary lines. **Footnote** 13px medium — meta rows, field labels.
+  **Caption 2** 11px semibold — badges and counters.
+- **All-caps micro label** 12px semibold with `--tracking-label` (0.05em) — the section head of a
+  grouped list, and the only place caps are used. Navigation grouping labels (sidebar sections,
+  settings domains, task groups) stay in sentence case: whole phrases read as shouting in caps.
+- Inputs never go below 16px (`--text-base`, the iOS zoom threshold). The heading scale ends at
+  34px on purpose; the 48/72px display steps exist only for readouts on a wall tablet.
+
+Two rules decide which head role applies, both written out in `typography.css`: a head that names
+a **section** of the page is a sentence-case heading, while one that repeats with a changing value
+over **one list** is an all-caps micro label — what is named decides, not what carries it. And a
+heading that a bar above it already names is not shown at all; it stays as `.sr-only` so the
+document outline survives.
 
 ### Icons
 - Lucide is the single icon family, self-hosted as `public/lucide.min.js`; placeholders are `<i data-lucide="…">` and are replaced by `lucide.createIcons({ el: container })` after insertion.
@@ -2428,54 +2404,63 @@ token — lives in `tokens.css`; the glass tokens are described under [Glass Lay
 
 ### Glass Layer (`public/styles/glass.css`)
 
-Additive CSS file loaded globally after `layout.css`. Implements a Liquid Glass design language inspired by Apple's iOS 26 Liquid Glass, adapted for CSS/web:
+Additive stylesheet loaded globally after `layout.css`. It implements the Liquid Glass design
+philosophy — introduced by Apple with iOS 26 / macOS 26 at WWDC25 — adapted for CSS. The line is
+**readability before transparency**: the glass is diffuse and saturated rather than raw-transparent.
 
-**Phase 1-3 (Shell + Components + Polish):**
-- **Translucent surfaces:** `backdrop-filter: blur()` on bottom nav, sidebar, modal overlay, cards on hover. All blur effects are inside `@supports (backdrop-filter: blur(1px))` for progressive enhancement.
-- **Glass tokens:** Section 16 of `tokens.css` defines `--glass-bg*`, `--glass-border*`, `--blur-2xs` through `--blur-xl`, `--opacity-glass-*`, `--glass-highlight*`, `--glass-shadow-sm/md/lg`, `--radius-glass-card/inner/chip/button`, `--ease-glass`, `--transition-glass`. Full dark mode overrides.
-- **Capsule shapes:** Buttons, FAB, and search inputs use `--radius-glass-button` (pill shape).
-- **Spring animations:** Modal entrance (`glass-modal-scale-in` / `glass-sheet-in`), page transitions, and list stagger all use `cubic-bezier(0.34, 1.56, 0.64, 1)` spring easing.
-- **FAB attention pulse:** `fab-ring-pulse` keyframe expands a ring around the FAB to signal readiness.
-- **Persistent mobile navigation:** The bottom bar stays visible while content scrolls so primary destinations never move away from the user's thumb.
+**Glass is chrome, and only chrome.** `backdrop-filter` exists on the tab-bar capsule, the sidebar,
+sheets and modals, the toast, the date-picker popover, and the FAB with its backdrop and actions.
+Content — cards, lists, widgets, text — is opaque. Until v2.0.0 the opposite was true: dashboard
+widgets, task cards, note items, meal slots, form inputs and toolbars all carried a translucent
+card background with a module-tint overlay. Probe 12 of `test:document-guards` measures the rule on
+the rendered document.
 
-**Phase 4 (Vibrancy + Tint):**
-- **Deeper glass penetration:** Dashboard widgets, task cards, note items, meal slots, form inputs, toolbars, group toggles, and FAB speed-dial actions all use semi-transparent glass backgrounds (`--glass-bg-card`, 52% opacity) with `backdrop-filter: blur() saturate()` so underlying content shines through.
-- **Module tint:** Each glass surface receives a subtle accent color gradient overlay via `::after` pseudo-element using `color-mix(in srgb, var(--module-accent) var(--glass-tint-strength), transparent)`. Strength is 6% in light mode, 8% in dark mode.
-- **App vibrancy background:** `.app-shell` (the viewport container, `height: 100dvh`, never scrolls) carries a radial gradient with the active module accent at 3% opacity to provide an ambient color base that glass elements refract. `.app-content` (the scroll container) has a transparent background so the gradient shows through. This split is intentional: placing a complex `color-mix()` gradient on a scrolling `overflow: auto` element causes blank-screen rasterization bugs in iOS WebKit and Android Blink (v0.52.32).
-- **Load-order safety:** All Phase 4 glass selectors use parent-scoped specificity (`.dashboard .widget`, `.tasks-page .task-card`, `.meals-page .meal-slot`) to prevent override by on-demand page CSS that loads after `glass.css`.
+**The module head deliberately carries no glass**, and that is an argued deviation from the canon
+rather than an omission. Two measured reasons: the collapsing large-title bar depends on it (glass
+would show a surface at the very start of the scroll where none should be), and `position: sticky`
+plus `backdrop-filter` inside an `overflow: auto` container blanks the whole scroll port on
+iOS 26+ (a WebKit compositor bug). A guard learns the head classes from the markup, so a module
+that gave glass to its *own* head class would still be caught.
 
-**Mobile compositor safety (v0.52.26):** a single permanent CSS rule disables `backdrop-filter` for all children of the `.app-content` scroll container. Bottom navigation, modals, and toasts sit outside the scroll container and retain their blur. This prevents mobile WebKit/Blink from creating excessive GPU compositor layers during scroll that would trigger blank-screen rendering bugs on iOS Safari and Android Chrome.
+**Blur steps** are `--blur-2xs` (2px) through `--blur-lg` (32px) — five steps, no `--blur-xl`. The
+token **is** the accessibility switch: under `prefers-reduced-transparency` and
+`prefers-contrast: more` every step collapses to `blur(0px)` in `tokens.css`, so a fallback does
+not depend on the `@supports` block.
 
-**Phase 5 — Navigation Liquid Glass (v0.54.0):**
-- **Sliding glass pill indicator:** The sidebar (desktop) and mobile bottom bar display an animated pill that slides to the active navigation entry. The mobile indicator uses a restrained 200 ms transform/opacity transition without animated width; hovering an inactive sidebar entry shows the destination indicator at 50 % opacity as a preview.
-- **Custom monoline SVG icons:** `public/nav-icons.js` provides a full icon set for all navigation entries, built with the DOM API (`createElementNS`) — no `innerHTML`. A Lucide icon is used as fallback for entries without a custom SVG.
-- **Grouped sidebar headings:** The sidebar separates Overview (Dashboard), Plan (Calendar, Tasks, Notes), Home (Kitchen and household modules), and Custom modules (enabled third-party modules) with localized labels. User ordering is applied only within each group.
-- **Accessibility:** Navigation animations are suppressed when `prefers-reduced-motion` is active; glass pill and blur effects are disabled when `prefers-reduced-transparency` is active.
+**The fallback rule.** Every glass surface has an opaque fallback. Non-blur styles (background,
+border, shadow) sit **outside** `@supports` and apply everywhere; only `backdrop-filter` sits
+inside — always in both spellings, standard and `-webkit-`, because Safari < 18 knows only the
+prefix and iOS is this PWA's primary device. Both are guarded in `test:frontend-audit`.
 
-**Phase 6 — Module CSS Migration (v0.54.1–v0.54.5):** The Liquid Glass design language has been extended to all remaining core modules via targeted CSS-only changes to each module's stylesheet. All `--shadow-*`, `--radius-md/lg`, and `--color-surface` values on card containers have been replaced with the Glass tokens (`--glass-bg-card`, `--glass-border-subtle`, `--radius-glass-card/inner/chip`, `--glass-shadow-sm/md/lg`). Modules completed:
-- **Budget** (`budget.css`, v0.54.1) — summary cards, loan cards, list sections, transaction rows; summary cards include module-accent tint via `::after`; overlay backdrop uses `--color-overlay-glass`
-- **Settings** (`settings.css`) — responsive settings shell (tile overview on the root, sticky local navigation inside a leaf, mobile drill-down), setting rows, status summaries, accessible disclosures, CalDAV/CardDAV account items, module rows, one shared toggle row
-- **Housekeeping** (`housekeeping.css`, v0.54.3) — main cards, inner elements (worker strip, metrics, tasks, photos), staff rows with hover accent tint
-- **Meals & Recipes** (`meals.css`, `recipes.css`, v0.54.4) — autocomplete dropdown, drag-ghost card, ingredient rows, recipe cards with hover state; `.meal-slot` unchanged (already in `glass.css` §30)
-- **Documents & Split Expenses** (`documents.css`, `split-expenses.css`, v0.54.5) — folder browser, document cards/rows, drop zone, member picker, view toggle; split summary card with module-accent tint via `::after`; split cards, group panels, group headers, participant rows
+**Specular edges** come from `--glass-inset-*` (top light edge), `--glass-inset-bottom-*` (dark
+lower edge) and `--glass-inset-bottom-lift` (a faint light edge for surfaces that float free and
+have nothing below them to cast onto). All of them carry the factor `--glass-inset-strength`, which
+drops to 0 under the two accessibility states — a raw `rgba` at these places would survive the
+switch, and a guard forbids it.
 
-**Phase 7 — Living Drifting Backdrop (v0.54.10):**
-- **`.lg-backdrop` layer:** Four blurred, slowly drifting color blobs are rendered behind the entire app shell on a non-scrolling layer outside `.app-content`. Blob 1 follows `--active-module-accent` so the ambient color shifts per section (e.g. violet on Calendar, teal on Budget); blobs 2–4 use fixed module tints for variety. Because the backdrop lives outside the scroll container, it neither triggers nor is affected by the iOS/Android blank-screen mitigation.
-- **`--lg-*` design tokens** (`tokens.css`): `--lg-blob-opacity` (0.4 light / 0.55 dark, collapses to 0 under `prefers-reduced-transparency` / `prefers-contrast: more`), `--lg-glass-saturate`, `--lg-card-radius`, `--lg-density`, `--lg-specular`.
-- The drift animation is frozen under `prefers-reduced-motion`; the backdrop is hidden entirely under `prefers-reduced-transparency` / `prefers-contrast: more`.
+**Mobile compositor safety (#166).** One permanent rule disables `backdrop-filter` and `filter`
+for every element inside the `.app-content` scroll container. With many blurred compositor layers
+in a scrolling container, mobile WebKit and Blink fail and render a blank screen. Elements outside
+the scroll container — tab bar, modals, toasts — keep their blur. Note the consequence for guards:
+this rule enforces "glass is chrome" in the document *as a side effect*, so a probe that only asks
+the rendered document can pass tautologically; the written rule is checked in the stylesheet as
+well.
 
-**Phase 8 — Frontend UI/UX Audit Rollout (v0.55.7–v0.55.10):**
-- **Glass discipline:** `tokens.css` now separates `--color-surface-work`, `--color-surface-raised`, and `--color-surface-glass` so productive pages can use stronger, more readable surfaces while nav, modals, dashboard hero, and lightweight widgets keep decorative glass.
-- **Mobile ergonomics:** dashboard cockpit cards, Tasks secondary controls, Shopping quick-add controls, and Budget row actions use tokenized touch targets and responsive constraints tested at 390px width.
-- **Navigation identity:** Overview and More are fixed in the mobile bar, with three user-selected favorites between them. Kitchen and More keep stable labels/icons; the active subsection is exposed through localized accessible labels instead of replacing the visible identity.
-- **Calendar and Settings polish:** calendar month/agenda views use explicit readable surfaces and boundaries; Settings shows a tile overview on its root and a sticky local navigation column inside a leaf on desktop, with a history-aware drill-down on mobile.
+**The drifting backdrop** (`.lg-backdrop`) remains the app's only chromatic drama: four slowly
+moving blurred blobs on a non-scrolling layer inside `.app-shell`, the first following
+`--active-module-accent`. `--lg-blob-opacity` is deliberately low (0.16 light / 0.20 dark) so
+content dominates, and collapses to 0 under `prefers-reduced-transparency` / `prefers-contrast`.
+The drift freezes under `prefers-reduced-motion`.
 
-**Accessibility:** `prefers-reduced-transparency`, `prefers-reduced-motion`, and `prefers-contrast: more` blocks deactivate blur/animation and restore solid fallbacks across all phases.
+**Navigation** keeps its sliding pill indicator on the sidebar and the mobile bar, and its custom
+monoline SVG icon set (`public/nav-icons.js`, built with `createElementNS` — no `innerHTML`), with
+Lucide as the fallback for entries without a custom glyph.
+
 
 ### Components
-- **Cards:** Glass tokens applied app-wide — `var(--glass-bg-card)` background, `var(--glass-border-subtle)` border, `var(--radius-glass-card)` (20 px) for containers, `var(--radius-glass-inner)` (14 px) for inner rows, `var(--glass-shadow-sm/md/lg)` for elevation. Module tint overlay via `::after` pseudo-element using `color-mix(in srgb, var(--module-accent) var(--glass-tint-strength), transparent)`. Consistent padding `var(--space-4)` (16 px) across all modules. `backdrop-filter` is disabled for all elements inside `.app-content` (see Mobile compositor safety above); glass appearance inside scrolling content is achieved through the semi-transparent background + border + shadow alone. **Work surfaces in the Budget module are opaque (v1.63.0):** `budget.css` had documented the rule at `.budget-summary-card` ("glass stays with overlays and modals, content must be readable at a glance") while `subscriptions.css` and `split-expenses.css` set `--glass-bg-card` on summary cards, charts, list sections, the group header, a search input, and two row-hover states — the module contradicted its own rule inside itself. All of those are now `--color-surface` / `--color-surface-raised`. The guard in `test:budget-ui` does not check an allow-list of selectors: it scans **every** rule in `budget.css`, `subscriptions.css`, and `split-expenses.css` and requires any rule carrying `--glass-bg-card` or `--glass-shadow` to name an overlay role in its selector (`modal`, `dialog`, `popover`, `overlay`, `picker-panel`, `form__section`, `tooltip`, `menu`), so a new work surface cannot quietly reintroduce glass. It found two hover states on the first run.
-- **Buttons:** Primary = accent + white. Secondary = outline. Min-height 44px. Capsule shape via `--radius-glass-button`. Submit buttons show success (checkmark, 700ms green via `.btn--success`) and error (shake via `.btn--shaking`).
-- **Inputs:** `var(--radius-sm)`, 1.5px border, padding 12px 16px. Search inputs use `--radius-glass-button` and `--glass-border-subtle`. `[required]` fields receive validation status on blur (`.form-field--error` / `.form-field--valid`), and re-validate live on input while marked invalid. **Field-anchored form errors (v1.40.1):** modal save paths report validation failures at the offending field instead of a detached toast — the shared helpers `validateAll` / `reportFieldError(input, message)` (`public/components/modal.js`) render the message directly below the field (`.form-field__error`, `role="alert"`, linked via `aria-describedby`), set `aria-invalid` plus the error border, and focus/scroll the first invalid field into view; custom messages (e.g. "end before start") clear themselves on the next input. Used across the calendar event modal and the meals, notes, recipes, budget, budget-plans, subscriptions, and health modal forms. Enter in a **single-line field** submits the modal form (standard web convention, v0.55.0); in a multi-line textarea Enter inserts a newline.
+- **Cards:** Opaque and borderless on the grouped ground — `var(--color-surface)`, `var(--radius-md)` (12 px) for the card, `var(--radius-lg)` (16 px) for a row carrier, `var(--shadow-sm)` at rest. **The separation is done by the shadow, not by an edge**, which is why nothing inside a card carries an edge of its own: a row becomes a hairline (`+` combinator), a tile becomes an inset well (`--color-fill-well`, no border, radius kept). Real controls — inputs, buttons, chips, checkboxes, steppers, drop targets — keep their edge; they are handles, not boxes. Nested radii are concentric, written out as `calc(var(--radius-*) - Npx)`. Internal padding `var(--space-4)`, compact 12 px. Until v2.0.0 cards carried `--glass-bg-card` with a module-tint `::after` overlay app-wide; glass is now chrome only (see Glass Layer).
+- **Buttons:** One shape for every variant — the capsule (`--radius-full`), declared once in the `.btn` base rule, min-height 48 px. `--radius-glass-button` is gone: a token of its own suggested there was a second, non-glass button shape. Primary is the module accent slightly deepened (88 % mix with `--neutral-950`) carrying `--color-ink-on-vivid`, which is white in light and dark ink in dark — not static white. Secondary is an outline. The rule holds for buttons that are not `.btn` too, and it is guarded by the signature of the variant rather than by its name. Submit buttons show success (checkmark, 700 ms) and error (shake).
+- **Inputs:** `var(--radius-sm)`, 1.5px border, padding 12px 16px. Search inputs take the same capsule as every other control. `[required]` fields receive validation status on blur (`.form-field--error` / `.form-field--valid`), and re-validate live on input while marked invalid. **Field-anchored form errors (v1.40.1):** modal save paths report validation failures at the offending field instead of a detached toast — the shared helpers `validateAll` / `reportFieldError(input, message)` (`public/components/modal.js`) render the message directly below the field (`.form-field__error`, `role="alert"`, linked via `aria-describedby`), set `aria-invalid` plus the error border, and focus/scroll the first invalid field into view; custom messages (e.g. "end before start") clear themselves on the next input. Used across the calendar event modal and the meals, notes, recipes, budget, budget-plans, subscriptions, and health modal forms. Enter in a **single-line field** submits the modal form (standard web convention, v0.55.0); in a multi-line textarea Enter inserts a newline.
 - **Search field (`public/utils/page-search.js`):** the canonical search affordance for list/filter modules — `renderPageSearch()` emits a `<label for>` with an sr-only name, a leading magnifier, the input (`enterkeyhint="search"`, `autocomplete="off"`, `spellcheck="false"`) and a clear button that appears with the first character; `wirePageSearch()` adds the debounce (200ms default) and returns a handle whose `clear()` also hides that button. Modules pass an id, labels and one `onQuery` callback; only toolbar positioning (flex/max-width) stays a thin per-module class. **Pantry and Recipes joined it in v1.60.0** — they had each rebuilt a bare `<input type="search">` with none of the above, the placeholder carrying the only label, and no debounce in front of a full list re-render. The guard in `test:frontend-audit` no longer checks an allow-list of files but scans **every** page for a hand-built search input, so a new module cannot quietly repeat it; documented exceptions (Calendar's server-FTS bar, Split-expenses' visible label, Subscriptions' server-filtered field) are named with their reason.
 - **Date & time picker:** Every date and time field across the app uses one shared `yuvomi-datepicker` web component (calendar appointments, tasks, meal planning, budget, health, birthdays, shopping, split-expenses, housekeeping, subscriptions, settings, and the recurrence "until" date). Free-text entry stays the fast path — locale-aware parsing keeps the flexible shorthands (`0930`/`9h30` → `09:30`, `5.1.2027` → the locale date) — while a trailing icon opens a themed calendar/time popover on desktop and the **native OS picker on touch** (`showPicker()`). The popover renders in the top layer via the native Popover API (never clipped inside a modal), takes the module accent from `--active-module-accent`, marks today and traps focus. The component is **form-associated** (participates in `form.elements`/`FormData`), exposes a canonical ISO `value` (`YYYY-MM-DD` / `HH:MM` / `YYYY-MM-DDTHH:MM`), enforces optional `min`/`max` on both typing and the grid, adopts an associated `<label>` as its accessible name, and mirrors direction for RTL. Weekday/month names come from `Intl`; no dedicated locale strings.
 - **FAB (Floating Action Button):** Color follows the module accent - in the shell layer it reads `--active-module-accent`, which the router sets per route and per theme. Specular inner highlight + attention ring pulse. Hidden while the virtual keyboard is open, which counts as open only when a text field has the focus *and* the visual viewport is shrunk (v1.73.1; the viewport alone also shrinks for the iOS address bar, which took the button away without any keyboard). **The FAB lives in the app shell, not in the page (#634):** a page creates it in its own root, but the router lifts it into `#fab-layer`, a sibling of the scrolling `.app-content`, and drops it again with the outgoing page. A fixed element inside a scrolling container is not reliably viewport-anchored on iOS - it resolves against the scrolled content and drifts out of sight as a list loads. The bottom nav left `position: fixed` for the same reason; the FAB was the last fixed element in the scroll port. Consequences: modules look it up document-wide via `findPageFab()` (a `container.querySelector('#fab-…')` returns null silently and leaves a visible button that does nothing), and no stylesheet may address it through a module context - only `html`, `body`, `:root`, `.app-shell`, `.fab-layer` or `.keyboard-visible` survive the move, which `test:frontend-audit` enforces as a rule over every stylesheet. Rendered from one shared helper `public/utils/fab.js` (`pageFabHtml` / `createPageFab` / `findPageFab` / `setPageFabAction`); tab/route modules (Health, Rewards, Housekeeping) drive a **context-aware, permission-gated** FAB whose action follows the active tab/route and hides where no create action applies, and Budget's FAB covers its embedded Subscriptions sub-tab (v0.94.0). **The scroll port ends above the FAB (v1.60.0):** `--fab-safe-zone` shortens `.app-content` by a margin wherever a page carries a FAB, so nothing operable can sit under it at *any* scroll position. The previous answer was `padding-bottom` at the end of the list — padding sits at the end of the *content* and scrolls with it, so it only worked once the user was already at the bottom; at `scrollTop = 0` up to 80.6% of a row action was covered. `--fab-gap` is the single source for both the button's offset and the zone, so moving the FAB moves the free space with it. Three drifted copies of the old token (`--budget-fab-clearance`, `--rw-fab-clearance`, and a third in Shopping) are gone; they recomputed the formula without `--nav-bottom-height` and were over 60px too small on phones. This required module roots to *read* the available height instead of recomputing it from `100dvh` — nine of them did, so they ignored any shortening of the shell.
@@ -2487,7 +2472,7 @@ Additive CSS file loaded globally after `layout.css`. Implements a Liquid Glass 
   Three things are **not** tints, each excluded by a signature rather than a selector list: opaque values from 45 % up (the colour *is* the surface there and is being darkened), user colours as text (the user-colour rule applies, since the formula breaks at the ends of the lightness axis), and animation steps inside `@keyframes`. Guarded by `jede Toenung nimmt eine Stufe der Toenungsskala` (`test:frontend-audit`).
 
 - **Accent text on an accent-tinted ground (v1.48.2):** wherever text sits on a tint of its own accent (active filter chips, count badges, initials avatars, module badges), the text uses `color-mix(in srgb, var(--module-accent) 70%, var(--color-text-primary))` rather than the raw accent. With the raw accent the contrast depends solely on that accent's lightness, and 13 of 17 modules missed AA (Recipes 2.84:1, Shopping 3.21:1 against `--color-bg`); the 30% ink admixture shifts the text away from the ground in a theme-aware direction (darker in light, lighter in dark) because `--color-text-primary` flips with the theme. Worst case 4.99:1 (light, Settings) and 5.32:1 (dark, Health), with the hue unchanged so module identity is preserved. **Text only** — icons keep the full accent, where 3:1 applies. The FORMULA is deliberately not a `:root` token: custom properties are substituted in the defining scope, where `--module-accent` is not yet set, which would freeze the `--color-accent` fallback and tint every module violet. The **percentage**, however, is one — `var(--tint-ink)` from the tint scale (see below). Formula and value are two questions, and reading the sentence above as covering both is what produced 37 percentage steps across the app.
-- **Edge tokens in dark mode (v1.57.0):** the three border steps are set independently under dark instead of being derived from the neutral ramp. The ramp sits so close to `--color-surface` (`#222220`) there that `--color-border-subtle` resolved to **exactly the surface colour** — a card edge in the colour of its own face (1.00:1), which left cards, list rows and form fields without a visible boundary. Dark now carries `--color-border-subtle: #3A3A37` (1.40:1), `--color-border: #4A4A46` (1.79:1) and `--color-border-strong: #6B6B68` (2.98:1), plus `--glass-border-subtle` at 12% white (1.50:1) for the glass-styled search and quick-add fields. Note that the light theme's field edge (`#E8E7E2`, 1.24:1 on white) is still below the 3:1 that WCAG 1.4.11 asks of a control boundary; raising it changes the look of every input in the app and is therefore a separate, deliberate decision.
+- **Edge tokens in dark mode:** the three border steps are set independently under dark instead of being derived from the neutral ramp. The ramp sits so close to `--color-surface` there that `--color-border-subtle` resolved to **exactly the surface colour** (1.00:1) - a card edge in the colour of its own face, which left cards, list rows and form fields without a visible boundary. Dark therefore carries its own three values, each with its measured ratio next to it in `tokens.css`. **Known and deliberate:** the edges of controls stay below the 3:1 that WCAG 1.4.11 asks of a control boundary, in both themes (measured 1.26:1 light on surface, 1.13:1 on the grouped ground, 1.60:1 dark), as with Apple's own grouped-list separators. Raising `--color-border` globally would harden every card edge in the app along with it; the clean route would be a separate `--color-border-control`. Text contrast is without violation.
 - **Module head width and bleed (v1.45.15):** the head is a full-bleed rail. Its chrome - accent stripe, divider, background, sticky surface - runs to the shell edge, while the head *content* sits in the same centred content column as the page body below it. The column comes from `--page-inline-pad: max(var(--page-gutter), calc((100% - var(--content-max-width)) / 2))` applied to the direct children of a module root; no module root carries its own `max-width`. Previously each root capped itself at 1280px with the head inside that cap, so the accent stripe ended mid-surface and the modules had drifted onto four different head widths. Dashboard and Settings are the documented exceptions - they have no module head and keep their centred block. Guarded by `page-inline-pad contract holds across every stylesheet (#577)` in `test/test-frontend-audit.js`.
 - **Navigation:** The persistent mobile bottom bar contains exactly five destinations: fixed Overview, three configurable favorites (default Calendar, Tasks, Kitchen), and fixed More. Inactive buttons are neutral; the active module alone supplies color to the icon and 200 ms sliding indicator. That indicator is a capsule **behind the icon only**, sized and vertically aligned to the icon well, at most 64 px wide and inset from the slot edges (v1.45.12), so it never crops its own rounding against the bar edge in the first/last slot, never crosses the label baseline, and never reaches into the bottom safe area. The desktop sidebar uses the same glass surface and groups entries under localized headings — Overview (Dashboard), Plan (Calendar, Tasks, Notes), Home (Kitchen, Contacts, Birthdays, Budget, Documents, Housekeeping), and Custom modules when enabled third-party modules are loaded — with Settings pinned at the end. Ordering is user-specific and limited to each group. Custom monoline SVG icons are served from `public/nav-icons.js` (DOM API, no `innerHTML`); Lucide is the fallback. Kitchen and More keep stable visible labels/icons; active subsections use localized `aria-label`/`aria-current`. **Collapsible sidebar (desktop only):** a toggle button collapses the sidebar to icon-only mode (56 px); state persists in `yuvomi.sidebar.collapsed`, and native title tooltips preserve discoverability.
 - **Sub-tabs:** `public/utils/sub-tabs.js` renders the sticky pill-style bar used by Kitchen and Health. One look, **two semantics**, and the caller must declare which via the mandatory `semantics` option — there is no default, because a default is how the wrong variant spreads silently. `semantics: 'nav'` (Kitchen) builds a `<nav>` of real `<a href>` links with `aria-current="page"`: the four kitchen routes are four independent modules with their own `module:` value, so a click changes the module, and cmd/middle-click behave like anywhere else in the shell; arrow keys move focus only. `semantics: 'tabs'` (Health) builds a WAI-ARIA tablist — `role="tablist"`/`role="tab"`, `aria-selected`, roving tabindex, arrow keys activate — and wires `aria-controls`/`aria-labelledby` **only against panels the caller hands in** via `panelFor(id)`; without a resolved panel the attribute is omitted rather than pointing nowhere. `'tabs'` without `panelFor` throws. Until v1.87.0 the helper wrote `role="tab"` unconditionally and guessed panels via `[data-panel]`, an attribute the frontend guard forbids — ten tabs pointed at panels that never existed, four of them were module switches, and the panel sync was a no-op (audit 2026-08-08, P1-1). (Settings no longer uses sub-tabs; it has its own responsive shell — see the Settings section.)
