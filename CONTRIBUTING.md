@@ -208,10 +208,18 @@ npm test              # All tests pass
 
 PRs are reviewed by the maintainer. Expect feedback within a few days. Same-repo PRs
 additionally get an automated AI review comment (Claude Code) shortly after opening, and
-mentioning `@claude` in an issue or PR comment triggers an AI assistant — both are
+mentioning `@claude` in an issue or PR comment triggers an AI assistant. Their findings are
 informational; the maintainer's review decides. PRs from forks are excluded from the
 automation. Once approved, PRs are merged by the maintainer, usually squashed into a
 single commit.
+
+**A red `claude-review` check is not a review finding.** The job fails when the review ran
+but left nothing behind - no summary, no inline comment - which for five PRs meant a green
+check over a review that never happened. Almost always the cause is a tool permission: look
+for `permission_denials_count` in the job log and add the missing tool to `claude_args` in
+`.github/workflows/claude-code-review.yml`. The one exception is a PR that edits that
+workflow itself; the action then skips for security reasons and the check steps aside with a
+notice explaining why.
 
 ---
 
