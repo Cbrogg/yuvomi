@@ -81,10 +81,14 @@
   color: var(--color-text-primary);
 }
 
+/* Geteilte Chip-Grammatik (filter-chip.css): 18 % Fläche, 50 % Kante, Tinte
+ * nach der Akzent-auf-Tönung-Regel. Der frühere Vollton war AA-sicher, las sich
+ * aber wie ein aktives SEGMENT - und seit der Segment-Sprache aus Runde 1 ist
+ * die gefüllte Kapsel für Segmente reserviert. */
 .contact-filter-chip--active {
-  background-color: var(--c-accent);
-  border-color: var(--c-accent);
-  color: var(--color-ink-on-vivid);
+  background-color: color-mix(in srgb, var(--c-accent) var(--tint-state), transparent);
+  border-color: color-mix(in srgb, var(--c-accent) var(--tint-hint), transparent);
+  color: color-mix(in srgb, var(--c-accent) var(--tint-ink), var(--color-text-primary));
 }
 
 @media (max-width: 767px) {
@@ -103,8 +107,19 @@
   padding-inline: var(--page-inline-pad);
 }
 
+/* Ein Träger pro Kategorie (Zeilenlisten-Regel, tokens.css): die Zeilen lagen
+ * vorher direkt auf dem Grouped-Grund und hatten damit keinen Rand, an dem das
+ * Auge die Gruppe als EIN Objekt fasst. Der Versal-Sektionskopf bleibt bewusst
+ * ausserhalb - er sitzt sticky auf dem Grund, wie in Apples Kontakten. */
 .contact-group {
-  margin-bottom: 0;
+  margin-bottom: var(--space-4);
+}
+
+.contact-group__list {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
 }
 
 /* Pro Kategorie ein abgeleiteter Farbton (--cat). KEIN neuer Modul-Akzent
@@ -123,9 +138,8 @@
   align-items: center;
   gap: var(--space-2);
   color: var(--color-text-secondary);
-  padding: var(--space-2) var(--space-4) var(--space-1);
+  padding: var(--space-4) var(--space-1) var(--space-2);
   background-color: var(--color-bg);
-  border-bottom: 1px solid var(--color-border);
   position: sticky;
   top: 0;
   z-index: var(--z-sticky);
@@ -145,8 +159,13 @@
   align-items: center;
   gap: var(--space-2);
   padding-right: var(--space-4);
-  border-bottom: 1px solid var(--color-border-subtle);
   transition: background-color var(--transition-fast);
+}
+
+/* Haarlinie über den +-Kombinator: border-bottom auf jeder Zeile zöge auch eine
+ * unter die letzte und damit einen zweiten Rand in den Träger. */
+.contact-item + .contact-item {
+  border-top: 1px solid var(--color-border-subtle);
 }
 
 .contact-item:hover {
@@ -203,7 +222,7 @@
 }
 
 .contact-item--selected {
-  background-color: color-mix(in srgb, var(--c-accent) 12%, transparent);
+  background-color: color-mix(in srgb, var(--c-accent) var(--tint-state), transparent);
 }
 
 /* Auswahlmodus verdeckt die Anlege-Affordance. Gefragt wird über :has() am
@@ -237,35 +256,21 @@ html:has(.contacts-page.is-selecting) .page-fab {
   border-radius: var(--radius-md);
 }
 
-/* Chevron: dezente „Zeile öffnet Detail"-Affordanz. Sichtbar (leise) für Touch,
- * verstärkt bei Hover/Fokus der Zeile. */
-.contact-item__chevron {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-  color: var(--color-text-disabled);
-  opacity: 0.6;
-  transition: opacity var(--transition-fast), color var(--transition-fast), transform var(--transition-fast);
-}
-
-.contact-item:hover .contact-item__chevron,
-.contact-item__open:focus-visible .contact-item__chevron {
-  opacity: 1;
-  color: var(--c-accent);
-  transform: translateX(2px);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .contact-item__chevron { transition: opacity var(--transition-fast), color var(--transition-fast); }
-  .contact-item:hover .contact-item__chevron,
-  .contact-item__open:focus-visible .contact-item__chevron { transform: none; }
-}
+/* Der Chevron ist entfallen (Redesign Runde 6, Phase 1). Er stand als letztes
+ * Kind des Öffnen-Knopfes, während die Zeilenaktionen als Geschwister daneben
+ * liegen - optisch landete er damit in der Zeilenmitte und versprach
+ * Navigation, wo die Knöpfe daneben etwas anderes liefern.
+ *
+ * REGEL, nicht Einzelfall: ein Chevron entfällt, WO eine Zeile eigene Aktionen
+ * trägt. Eine Zeile ohne Aktionen darf ihn behalten - dort ist Öffnen das
+ * Einzige, was sie tut. Gehalten von `eine Zeile mit eigenen Aktionen
+ * verspricht keine Navigation` (test:frontend-audit). */
 
 .contact-item__icon {
   width: var(--target-md);
   height: var(--target-md);
   border-radius: var(--radius-full);
-  background-color: color-mix(in srgb, var(--cat, var(--c-accent)) 15%, transparent);
+  background-color: color-mix(in srgb, var(--cat, var(--c-accent)) var(--tint-surface), transparent);
   color: var(--cat, var(--c-accent));
   display: flex;
   align-items: center;
@@ -425,9 +430,18 @@ html:has(.contacts-page.is-selecting) .page-fab {
   color: var(--color-danger);
 }
 
+/* Auf der Tönung trägt --color-danger nur 4,45:1 - deshalb hier der Ink-Ton
+ * (5,69:1), wie auf jeder anderen -light-Fläche der App. Das Symbol wandert
+ * mit, sonst steht die Zeile im Hover zweifarbig da. */
 .contact-menu-item--danger:hover,
 .contact-menu-item--danger:focus-visible {
   background-color: var(--color-danger-light);
+  color: var(--color-danger-ink);
+}
+
+.contact-menu-item--danger:hover .contact-menu-item__icon,
+.contact-menu-item--danger:focus-visible .contact-menu-item__icon {
+  color: var(--color-danger-ink);
 }
 
 /* --------------------------------------------------------
@@ -447,7 +461,7 @@ html:has(.contacts-page.is-selecting) .page-fab {
   height: var(--target-md);
   flex-shrink: 0;
   border-radius: var(--radius-full);
-  background-color: color-mix(in srgb, var(--c-accent) 15%, transparent);
+  background-color: color-mix(in srgb, var(--c-accent) var(--tint-surface), transparent);
   color: var(--c-accent);
 }
 
@@ -553,8 +567,12 @@ html:has(.contacts-page.is-selecting) .page-fab {
   border-radius: var(--radius-sm);
 }
 
+/* Text auf primary, sobald die Hover-Flaeche steht - siehe .btn--ghost:hover
+ * und .modal-panel__action:hover. Auf #EBEBF0 lag der Modul-Akzent hier bei
+ * 4,37 (light) und 4,46 (dark), beides unter AA fuer 14px. */
 .vcard-import__toggle:hover {
   background: var(--color-surface-hover);
+  color: var(--color-text-primary);
 }
 
 .vcard-import__list {

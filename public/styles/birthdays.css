@@ -26,13 +26,16 @@
 }
 
 /* --------------------------------------------------------
- * Liste (nach Nähe sortiert) — eine Elevation-Ebene: nur die Karten.
+ * Liste (nach Nähe sortiert) — EIN Träger, Zeilen per Haarlinie
+ * (Zeilenlisten-Regel, tokens.css). Vorher trug jede Zeile ihre eigene Karte:
+ * sechs Geburtstage waren sechs Objekte statt einer Liste.
  * -------------------------------------------------------- */
 .birthdays-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding-inline: var(--page-inline-pad);
+  margin-inline: var(--page-inline-pad);
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
 }
 
 .birthday-item {
@@ -40,18 +43,27 @@
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
 }
 
-/* „Heute"-Höhepunkt: der einzige emotionale Peak des Moduls. */
+/* Trennlinie an den direkten Kindern des Traegers, NICHT an der Zeile selbst -
+ * dasselbe Muster wie `.list-rows > * + *` im Einkauf, und aus demselben
+ * Grund: seit der Wischbedienung (Runde 4, C-2) liegt zwischen Traeger und
+ * Zeile der `.swipe-row`-Wrapper. `.birthday-item + .birthday-item` fand danach
+ * keine Geschwister mehr und alle Haarlinien waren verschwunden. `> * + *`
+ * misst den Traeger und ist gegen solche Zwischenebenen immun. */
+.birthdays-list > * + * {
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+/* Dass der Wischwrapper weder Radius noch Abstand traegt, steht jetzt in seiner
+ * Basisregel (layout.css) - hier war es der Modul-Reset, den die Aufgaben und
+ * der Einkauf nicht hatten. */
+
+/* „Heute"-Höhepunkt: der einzige emotionale Peak des Moduls. Er trägt jetzt die
+ * getönte Zeilenfläche des 16-%-Rezepts statt Kante + Verlauf + Extraschatten -
+ * in einem Träger ist die Fläche das einzige Mittel, das keine Kante braucht. */
 .birthday-item--today {
-  border-color: color-mix(in srgb, var(--module-accent) 45%, var(--color-border));
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--module-accent) 9%, var(--color-surface)), var(--color-surface));
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--module-accent) 24%, transparent), var(--shadow-md);
+  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), var(--color-surface));
 }
 
 .birthday-item__body {
@@ -103,6 +115,45 @@
   flex-shrink: 0;
 }
 
+/* Auf Touch tragen die Wischrichtungen die beiden Zeilenaktionen, und die
+ * Knoepfe verschwinden - in einer Grouped-Liste waren sie die lauteste Stelle
+ * des Bildschirms. Auf Zeigergeraeten bleiben sie: dort gibt es keine Geste.
+ * Die Reserve am Zeilenende gehoert dann dem Wisch-Chevron (.swipe-row::after,
+ * layout.css), genau wie im Einkauf.
+ *
+ * STEHT BEWUSST HIER UNTEN, nicht oben beim Traeger: die Basisregel darueber
+ * setzt `display: flex` mit derselben Spezifitaet, und eine Media-Query davor
+ * verliert gegen sie allein durch die Reihenfolge (gemessen: die Knoepfe
+ * blieben sichtbar, obwohl `(hover: none)` griff). */
+@media (hover: none) {
+  /* VERSTECKT, NICHT ENTFERNT: `display: none` nahm die beiden Knoepfe auch aus
+   * dem Fokus- und Screenreader-Baum. Die Gesten haengen ausschliesslich an
+   * `touchstart`/`touchmove`, die Reveal-Panels sind `aria-hidden`, und die
+   * Zeile selbst traegt keine Aktion - wer sein Telefon per Tastatur,
+   * Schaltersteuerung oder VoiceOver bedient, kam damit an keinen Geburtstag
+   * mehr heran. Optisch bleibt es dasselbe: aus dem Fluss genommen gibt die
+   * Zeile den Platz genauso frei. Beim Fokus kommen sie zurueck. */
+  .birthday-item__actions {
+    position: absolute;
+    width: var(--space-px);
+    height: var(--space-px);
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .birthday-item__actions:focus-within {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
+  }
+
+  .birthday-item {
+    padding-inline-end: calc(var(--space-2) + var(--space-3) + var(--space-2));
+  }
+}
+
 /* --------------------------------------------------------
  * Countdown-Chip — einheitliches Wort-Register, kontrastgeprüft (AA).
  * -------------------------------------------------------- */
@@ -116,14 +167,14 @@
 }
 
 .birthday-chip--default {
-  background: color-mix(in srgb, var(--module-accent) 10%, transparent);
+  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), transparent);
   /* Text zur Ink-Seite gezogen → AA auf hellem Tint (statt reinem Akzent 3,9:1). */
-  color: color-mix(in srgb, var(--module-accent) 72%, var(--color-text-primary));
+  color: color-mix(in srgb, var(--module-accent) var(--tint-ink), var(--color-text-primary));
 }
 
 .birthday-chip--soon {
-  background: color-mix(in srgb, var(--module-accent) 16%, transparent);
-  color: color-mix(in srgb, var(--module-accent) 74%, var(--color-text-primary));
+  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), transparent);
+  color: color-mix(in srgb, var(--module-accent) var(--tint-ink), var(--color-text-primary));
 }
 
 .birthday-chip--today {
@@ -149,8 +200,8 @@
   align-items: center;
   justify-content: center;
   /* Theme-aware: Surface statt hartcodiertem white → korrekt in Dark Mode. */
-  background: color-mix(in srgb, var(--module-accent) 18%, var(--color-surface));
-  color: color-mix(in srgb, var(--module-accent) 76%, var(--color-text-primary));
+  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), var(--color-surface));
+  color: color-mix(in srgb, var(--module-accent) var(--tint-ink), var(--color-text-primary));
   font-weight: var(--font-weight-bold);
 }
 
@@ -175,7 +226,7 @@
   align-items: center;
   justify-content: center;
   /* Theme-aware statt hartcodiertem white. */
-  background: color-mix(in srgb, var(--module-accent) 16%, var(--color-surface));
+  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), var(--color-surface));
   cursor: pointer;
 }
 
@@ -186,7 +237,7 @@
 }
 
 .birthday-preview__fallback {
-  color: color-mix(in srgb, var(--module-accent) 76%, var(--color-text-primary));
+  color: color-mix(in srgb, var(--module-accent) var(--tint-ink), var(--color-text-primary));
   font-size: var(--text-xl);
   font-weight: var(--font-weight-bold);
 }
@@ -435,12 +486,20 @@
 }
 
 @media (max-width: 640px) {
-  /* Icon-only: der Button trägt sein Label via aria-label weiter. */
+  /* Icon-only: der Button trägt sein Label via aria-label weiter.
+   * DIE LABEL-VERLUST-REGEL (Runde 6, Phase 3b): er wechselt dabei in die
+   * Icon-Form seiner Familie - quadratisch auf `--target-base`, die Kapsel wird
+   * damit zum Kreis. Das bloße Zusammenziehen des Innenabstands ließ ihn als
+   * 50x48-Oval zurück, also in einer Form, die es sonst nirgends gibt. */
   .birthdays-toolbar__import span {
     display: none;
   }
 
   .birthdays-toolbar__import {
-    padding-inline: var(--space-3);
+    width: var(--target-base);
+    height: var(--target-base);
+    padding: 0;
+    flex-shrink: 0;
+    justify-content: center;
   }
 }

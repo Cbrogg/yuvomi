@@ -1,5 +1,6 @@
 {
     "common": {
+        "swipeSidesSwapped": "スワイプの方向が入れ替わりました。主なアクションは反対側になりました。",
         "apply": "追加",
         "searchClear": "検索をクリア",
         "save": "保存",
@@ -1114,7 +1115,7 @@
         "loanPaymentTitle": "ローン返済: {{borrower}}",
         "typeLoan": "貸付",
         "tabsLabel": "予算セクション",
-        "budgetTab": "予算",
+        "budgetTab": "概要",
         "loansTab": "貸付",
         "filteredTransactions": "絞り込み済み取引",
         "clearLoanFilter": "フィルター解除",
@@ -3002,7 +3003,6 @@
         "categoryFilter": "カテゴリで絞り込み",
         "paymentMethodFilter": "支払い方法で絞り込み",
         "statusFilter": "ステータスで絞り込み",
-        "statusAll": "すべてのステータス",
         "statusActive": "有効",
         "statusDisabled": "無効",
         "sortLabel": "サブスクリプションを並べ替え",
@@ -3013,8 +3013,6 @@
         "manageMetadata": "カテゴリと支払い方法を管理",
         "settingsTitle": "サブスクリプション設定",
         "loadError": "サブスクリプションを読み込めませんでした。",
-        "allCategories": "すべてのカテゴリ",
-        "allPaymentMethods": "すべての支払い方法",
         "cycle": {
             "daily": "毎日",
             "weekly": "毎週",
@@ -3050,10 +3048,7 @@
         "unspecified": "未指定",
         "active": "有効",
         "disabled": "無効",
-        "disable": "サブスクリプションを無効化",
-        "enable": "サブスクリプションを有効化",
         "markRenewed": "更新済みにする",
-        "edit": "サブスクリプションを編集",
         "delete": "サブスクリプションを削除",
         "conversionUnavailable": "換算できません",
         "monthlyEquivalent": "月額 {{amount}}",
@@ -3082,11 +3077,11 @@
         "invalidDate": "有効な支払日を入力してください。",
         "savedToast": "サブスクリプションを保存しました。",
         "addedToast": "サブスクリプションを追加しました。",
-        "disabledToast": "サブスクリプションを無効化しました。",
-        "enabledToast": "サブスクリプションを有効化しました。",
         "renewedToast": "更新日を更新しました。",
         "deleteConfirm": "サブスクリプション「{{name}}」を削除しますか？",
         "deleteConfirmDetail": "サブスクリプションと一緒に、そのリマインダーと次回支払い分の予算記録も削除されます。すでに完了した支払いは月次の概要に残ります。",
+        "renewConfirm": "「{{name}}」の支払いを記録しますか？",
+        "renewConfirmDetail": "次回の支払日が繰り上がり、{{date}} の支払いが予算に支出として記録されます。",
         "deletedToast": "サブスクリプションを削除しました。",
         "monthlyBudgetLabel": "月間サブスクリプション予算",
         "baseCurrencyLabel": "基準通貨",
@@ -3353,7 +3348,8 @@
             "visibility": {
                 "private": "非公開",
                 "family": "家族"
-            }
+            },
+            "allTitle": "すべての薬"
         },
         "labs": {
             "title": "検査値",

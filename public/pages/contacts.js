@@ -457,7 +457,7 @@ function renderList({ animate = false } = {}) {
     .map(([cat, items]) => `
       <div class="contact-group ${catTintClass(cat)}">
         <div class="contact-group__header">${categoryIcon(cat)} ${esc(catLabel(cat))}</div>
-        ${items.map((c) => renderContactItem(c)).join('')}
+        <div class="contact-group__list">${items.map((c) => renderContactItem(c)).join('')}</div>
       </div>
     `).join(''));
 
@@ -631,7 +631,6 @@ function renderContactItem(c) {
           <span class="contact-item__name">${esc(c.name)}</span>
           ${renderMeta(c)}
         </span>
-        <i data-lucide="chevron-right" class="contact-item__chevron" aria-hidden="true"></i>
       </button>
       <div class="row-actions contact-item__actions">
         ${callBtn}

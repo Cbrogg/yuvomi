@@ -1,5 +1,6 @@
 {
     "common": {
+        "swipeSidesSwapped": "Le direzioni di scorrimento sono state invertite: l'azione principale ora si trova sull'altro lato.",
         "apply": "Aggiungi",
         "searchClear": "Cancella ricerca",
         "save": "Salva",
@@ -1114,7 +1115,7 @@
         "loanPaymentTitle": "Rimborso del prestito: {{borrower}}",
         "typeLoan": "Prestito",
         "tabsLabel": "Sezioni del bilancio",
-        "budgetTab": "Bilancio",
+        "budgetTab": "Panoramica",
         "loansTab": "Prestiti",
         "filteredTransactions": "Movimenti filtrati",
         "clearLoanFilter": "Cancella filtro",
@@ -3002,7 +3003,6 @@
         "categoryFilter": "Filtra per categoria",
         "paymentMethodFilter": "Filtra per metodo di pagamento",
         "statusFilter": "Filtra per stato",
-        "statusAll": "Tutti gli stati",
         "statusActive": "Attivo",
         "statusDisabled": "Disattivato",
         "sortLabel": "Ordina abbonamenti",
@@ -3013,8 +3013,6 @@
         "manageMetadata": "Gestisci categorie e metodi di pagamento",
         "settingsTitle": "Impostazioni abbonamenti",
         "loadError": "Impossibile caricare gli abbonamenti.",
-        "allCategories": "Tutte le categorie",
-        "allPaymentMethods": "Tutti i metodi di pagamento",
         "cycle": {
             "daily": "Giornaliero",
             "weekly": "Settimanale",
@@ -3050,10 +3048,7 @@
         "unspecified": "Non specificato",
         "active": "Attivo",
         "disabled": "Disattivato",
-        "disable": "Disattiva abbonamento",
-        "enable": "Attiva abbonamento",
         "markRenewed": "Segna come rinnovato",
-        "edit": "Modifica abbonamento",
         "delete": "Elimina abbonamento",
         "conversionUnavailable": "Conversione non disponibile",
         "monthlyEquivalent": "{{amount}} al mese",
@@ -3082,11 +3077,11 @@
         "invalidDate": "Inserisci una data di pagamento valida.",
         "savedToast": "Abbonamento salvato.",
         "addedToast": "Abbonamento aggiunto.",
-        "disabledToast": "Abbonamento disattivato.",
-        "enabledToast": "Abbonamento attivato.",
         "renewedToast": "Data di rinnovo aggiornata.",
         "deleteConfirm": "Eliminare l’abbonamento \"{{name}}\"?",
         "deleteConfirmDetail": "Con l'abbonamento vengono eliminati i promemoria e la registrazione di budget del prossimo pagamento. I pagamenti già conclusi restano nel riepilogo mensile.",
+        "renewConfirm": "Registrare il pagamento di \"{{name}}\"?",
+        "renewConfirmDetail": "La data di scadenza avanza e il pagamento del {{date}} viene registrato come spesa nel budget.",
         "deletedToast": "Abbonamento eliminato.",
         "monthlyBudgetLabel": "Budget mensile per abbonamenti",
         "baseCurrencyLabel": "Valuta base",
@@ -3353,7 +3348,8 @@
             "visibility": {
                 "private": "Privato",
                 "family": "Famiglia"
-            }
+            },
+            "allTitle": "Tutti i farmaci"
         },
         "labs": {
             "title": "Esami",

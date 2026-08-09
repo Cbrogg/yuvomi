@@ -90,14 +90,27 @@
   color: var(--color-text-primary);
 }
 
-/* Aktive Liste: getönte Pille wie .sub-tab--active/.budget-tab--active.
- * Tint + Border tragen die Modul-Identität; das Label bleibt Ink + semibold,
- * da Modul-Akzent-Text auf Hell nur ~3.5:1 erreicht (unter AA 4.5). */
+/* Aktive Liste: Modul-Akzent GEFÜLLT - die eine Segment-Sprache der Shell
+ * (DESIGN.md „Segmented Controls", Muster .sub-tab--active). Die
+ * Listen-Auswahl steht direkt unter der Küchen-Tab-Leiste, die seit dem
+ * HIG-Rollout gefüllt ist; eine 14 %-Tönung darunter las sich als zweiter,
+ * schwächerer Zustandsbegriff für dieselbe Handlung.
+ *
+ * Das frühere Ink-Label war mit der Tönung richtig (Modul-Akzent als TEXT auf
+ * Hell erreicht nur ~3.5:1); auf der Vollfläche erbt --color-ink-on-vivid den
+ * verifizierten Akzent-auf-Weiß-Wert (>=5:1). */
 .list-tab--active {
-  background-color: color-mix(in srgb, var(--module-accent) 14%, transparent);
-  border-color: color-mix(in srgb, var(--module-accent) 40%, transparent);
-  color: var(--color-text-primary);
+  background-color: var(--module-accent);
+  border-color: var(--module-accent);
+  color: var(--color-ink-on-vivid);
   font-weight: var(--font-weight-semibold);
+}
+
+/* Der Zähler kehrt sich auf der gefüllten Pille um - gleiche Rechnung wie
+ * .sub-tab--active .sub-tab__badge. */
+.list-tab--active .list-tab__count {
+  background-color: var(--color-ink-on-vivid);
+  color: var(--module-accent);
 }
 
 .list-tab__count {
@@ -163,7 +176,12 @@
 .list-header__edit-icon {
   width: var(--space-4);
   height: var(--space-4);
-  color: var(--color-text-disabled);
+  /* tertiary, nicht disabled (gemessen 1.36:1 auf --color-bg im Light).
+   * Der Stift steht zwar neben Text, aber der Text ist der LISTENNAME - er sagt
+   * nirgends, dass die Zeile bedienbar ist. Das Icon ist die einzige Affordanz
+   * fuers Umbenennen und traegt damit Information (WCAG 1.4.11), auch wenn es
+   * aria-hidden ist: das gilt fuer den Screenreader, nicht fuers Auge. */
+  color: var(--color-text-tertiary);
   flex-shrink: 0;
 }
 
@@ -175,7 +193,7 @@
  * gar nicht zu lösen gab: mobil brachen sie trotzdem in zwei zusätzliche Zeilen
  * (Kopfhöhe 173px bei 393px, 229px bei 320px).
  *
- * Die Aktionen sitzen jetzt in der geteilten .kitchen-bulkbar über der Liste, mit
+ * Die Aktionen sitzen jetzt in der geteilten .list-bulkbar über der Liste, mit
  * vollen Labels und einer Zeile, die sagt, worauf sie wirken (Critique
  * 2026-07-30, P1). */
 
@@ -305,7 +323,7 @@
  *
  * Sie passen jetzt, weil es zwei sind: der Titel und ein Menü-Trigger. Die drei
  * dauerhaften Aktionen stehen mit Label im Menü, die zwei Abschluss-Aktionen in der
- * .kitchen-bulkbar über der Liste. Gemessen 173px Kopfhöhe vorher (229px bei
+ * .list-bulkbar über der Liste. Gemessen 173px Kopfhöhe vorher (229px bei
  * 320px), erste Datenzeile bei y=439 von 852.
  *
  * DER UMBRUCH BLEIBT ALS RÜCKFALL: eine Locale mit langem Listennamen oder eine
@@ -398,7 +416,7 @@
 .quick-add__input {
   width: 100%;
   padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-glass-button);
+  border-radius: var(--radius-sm);
   /* --color-border wie die beiden Nachbarfelder, nicht --glass-border-subtle.
    * Das Glas-Token ist ein weißes Alpha (35 % hell / 12 % dunkel) und erreichte
    * auf der opaken Arbeitsfläche 1.03:1 gegen den Grund - die schwächste
@@ -415,7 +433,7 @@
 .quick-add__input:focus {
   outline: none;
   border-color: var(--module-accent, var(--color-accent));
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--module-accent, var(--color-accent)) 20%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-shadow), transparent);
 }
 
 .quick-add__qty {
@@ -439,7 +457,7 @@
 .quick-add__qty:focus {
   outline: none;
   border-color: var(--module-accent, var(--color-accent));
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--module-accent, var(--color-accent)) 20%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-shadow), transparent);
 }
 
 .quick-add__cat {
@@ -459,7 +477,7 @@
 .quick-add__cat:focus {
   outline: none;
   border-color: var(--module-accent, var(--color-accent));
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--module-accent, var(--color-accent)) 20%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-shadow), transparent);
 }
 
 @media (min-width: 1024px) {
@@ -479,7 +497,7 @@
 .quick-add__btn {
   width: var(--target-base);
   height: var(--target-base);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-full);
   /* Modul-Akzent wie FAB und Fokus-Ringe daneben (Audit F-05) — vorher stand
    * der einzige violette App-Akzent-Button neben lauter Pink. */
   background-color: var(--module-accent, var(--color-accent));
@@ -543,8 +561,8 @@
 /* Bottom-Padding hält die letzte Zeile frei vom FAB, der sonst den untersten
  * Artikel überdeckt. Gleiche Formel wie --budget-fab-clearance und
  * --rw-fab-clearance, damit die Freiräume app-weit gleich groß sind. */
-/* Scroller, Lesemaß, FAB-Auslauf und Gruppen-Abstand kommen aus .kitchen-list
- * (styles/kitchen-row.css); die Klasse steht im Markup neben .items-list.
+/* Scroller, Lesemaß, FAB-Auslauf und Gruppen-Abstand kommen aus .list-scroller
+ * (styles/list-row.css); die Klasse steht im Markup neben .items-list.
  *
  * Weggefallen ist dabei das eigene `padding: 0 var(--space-4)`: #list-content
  * trägt schon --page-inline-pad, und das Eigenpolster addierte sich darauf.
@@ -570,7 +588,7 @@
  * unter dem FAB liegt - eine Antwort für alle vier Tabs, statt einer Gasse hier
  * und 14 Überdeckungen dort. */
 
-/* Der Abstand zwischen den Gruppen kommt aus dem gap von .kitchen-list. */
+/* Der Abstand zwischen den Gruppen kommt aus dem gap von .list-scroller. */
 
 /* Web: Einkauf-Content als breitenbegrenzte Lesespalte statt links auslaufender
  * Vollbreite (die Liste liest sich auf ≥1024px ruhiger).
@@ -600,14 +618,14 @@
   }
 }
 
-/* Gruppenkopf und Gruppenfläche kommen aus .kitchen-group__title /
- * .kitchen-rows. Das eigene .item-category__icon entfällt: der Kopf nutzt jetzt
+/* Gruppenkopf und Gruppenfläche kommen aus .list-group__title /
+ * .list-rows. Das eigene .item-category__icon entfällt: der Kopf nutzt jetzt
  * die geteilte .icon-sm-Größe wie die Geschwistertabs. */
 
 /* --------------------------------------------------------
  * Einkaufsartikel
  * -------------------------------------------------------- */
-/* Geometrie, Trennlinie, Hover und Zielhöhe kommen aus .kitchen-row. Hier bleibt
+/* Geometrie, Trennlinie, Hover und Zielhöhe kommen aus .list-row. Hier bleibt
  * nur, was den Einkauf unterscheidet. */
 .shopping-item {
   cursor: pointer;
@@ -697,8 +715,8 @@
 
 .item-check--checked .item-check__icon { display: block; }
 
-/* Textspalte, Name und Menge kommen aus .kitchen-row__main / __name / __meta
- * (styles/kitchen-row.css).
+/* Textspalte, Name und Menge kommen aus .list-row__main / __name / __meta
+ * (styles/list-row.css).
  *
  * Entfallen ist dabei die Ellipse auf dem Artikelnamen
  * (`white-space: nowrap; text-overflow: ellipsis`): sie war die Ursache des
@@ -706,14 +724,14 @@
  * gegen 176px Bedarf, lesbar blieben vier Zeichen („Broc…", „Cherr…"), und das
  * in genau der Situation, für die diese Liste gebaut ist. Der geteilte Name
  * bricht stattdessen um, wie es das MHD im Vorrat schon tat. */
-.shopping-item--checked .kitchen-row__name {
+.shopping-item--checked .list-row__name {
   text-decoration: line-through;
   color: var(--color-text-secondary);
 }
 
 /* Tabellenziffern nur für die Menge: der geteilte Meta-Slot trägt in den
  * Geschwistertabs auch Text (MHD, Lagerort), dort wären sie falsch. */
-.shopping-item .kitchen-row__meta {
+.shopping-item .list-row__meta {
   font-variant-numeric: tabular-nums;
 }
 
@@ -739,8 +757,11 @@
   height: 0.9em;
 }
 
+/* Erledigt ist ein Zustand, kein deaktivierter Knopf: die Zeile laesst sich
+ * weiter antippen (wieder aufmachen), also greift die WCAG-Ausnahme fuer
+ * Deaktiviertes nicht. Gedaempft bleibt sie ueber tertiary. */
 .shopping-item--checked .item-meta {
-  color: var(--color-text-disabled);
+  color: var(--color-text-tertiary);
 }
 
 /* Klickbare Link-Vorschau im Detail-Drawer. */
@@ -753,7 +774,10 @@
   align-items: center;
   gap: var(--space-1);
   font-size: var(--text-sm);
-  color: var(--module-accent, var(--color-primary));
+  /* Fallback auf --color-accent: `--color-primary` gab es nie, und eine
+   * var()-Kette mit undefiniertem Endglied ist als Ganzes ungueltig - der Link
+   * haette dann die Textfarbe geerbt statt den Akzent (Audit 2026-08-08). */
+  color: var(--module-accent, var(--color-accent));
   text-decoration: none;
   word-break: break-all;
 }
@@ -766,29 +790,26 @@
 
 /* Kein Margin mehr am shopping-item selbst (übernimmt swipe-row).
  *
- * KEIN border-radius mehr: den trägt jetzt die Gruppe (.kitchen-rows, 12px, mit
+ * KEIN border-radius mehr: den trägt jetzt die Gruppe (.list-rows, 12px, mit
  * overflow: hidden), und die klippt die Swipe-Fläche mit. Ein eigener Radius auf
  * der Zeile war der letzte Rest des Karten-Paradigmas im Einkauf und hätte
  * innerhalb der Gruppenfläche als doppelte Rundung gelesen. */
+/* KEIN `will-change: transform` mehr: das Compositor-Versprechen haengt an der
+ * Geste (.swipe-row--armed > :first-child in layout.css), nicht an der Zeile.
+ * Hier stand es dauerhaft - 26 Einkaufszeilen gleichzeitig im Demo-Seed, jede
+ * mit eigener Ebene, ohne dass ein Finger die Liste beruehrt haette
+ * (Audit 2026-08-08, P2-1). */
 .swipe-row .shopping-item {
   margin-bottom: 0;
   position: relative;
   z-index: 1;
-  will-change: transform;
 }
 
-/* Rechts hinter der Karte = Löschen (Swipe nach rechts) */
-.swipe-reveal--delete {
-  left: 0;
-  background-color: var(--color-danger);
-  color: var(--color-ink-on-vivid);
-  border-radius: var(--radius-md) 0 0 var(--radius-md);
-}
-
-/* Touch-Feedback: leichte Hervorhebung während Swipe */
-.swipe-row--swiping .shopping-item {
-  box-shadow: var(--shadow-lg);
-}
+/* Welche Rolle hinter welcher Kante liegt, steht am Aufruf von wireSwipeRows
+ * in pages/shopping.js - und die Kanten sind logisch, nicht links und rechts. */
+/* Das Touch-Feedback während der Geste trägt jetzt die geteilte Bühne
+ * (.swipe-row--swiping > :first-child in layout.css), zusammen mit der
+ * Trägerfläche, die das Reveal-Panel verdeckt. */
 
 /* × Löschen-Button ausblenden, wo Swipe übernimmt. Greift über das
  * data-Attribut, weil die Zeilenaktionen die geteilte .row-action-Klasse

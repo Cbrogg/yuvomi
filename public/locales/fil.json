@@ -1,5 +1,6 @@
 {
     "common": {
+        "swipeSidesSwapped": "Napagpalit ang mga direksyon ng pag-swipe - nasa kabilang panig na ang pangunahing aksyon.",
         "apply": "Idagdag",
         "searchClear": "I-clear ang paghahanap",
         "save": "I-save",
@@ -1126,7 +1127,7 @@
         "loanPaymentTitle": "Bayad sa utang: {{borrower}}",
         "typeLoan": "Utang",
         "tabsLabel": "Mga bahagi ng badyet",
-        "budgetTab": "Badyet",
+        "budgetTab": "Pangkalahatang-tanaw",
         "loansTab": "Mga Utang",
         "filteredTransactions": "Mga na-filter na transaksyon",
         "clearLoanFilter": "I-clear ang filter",
@@ -3002,7 +3003,6 @@
         "categoryFilter": "I-filter ayon sa kategorya",
         "paymentMethodFilter": "I-filter ayon sa paraan ng pagbabayad",
         "statusFilter": "I-filter ayon sa katayuan",
-        "statusAll": "Lahat ng katayuan",
         "statusActive": "Aktibo",
         "statusDisabled": "Naka-disable",
         "sortLabel": "Ayusin ang mga subscription",
@@ -3013,8 +3013,6 @@
         "manageMetadata": "Pamahalaan ang mga kategorya at paraan ng pagbabayad",
         "settingsTitle": "Mga setting ng subscription",
         "loadError": "Hindi ma-load ang mga subscription.",
-        "allCategories": "Lahat ng kategorya",
-        "allPaymentMethods": "Lahat ng paraan ng pagbabayad",
         "cycle": {
             "daily": "Araw-araw",
             "weekly": "Lingguhan",
@@ -3050,10 +3048,7 @@
         "unspecified": "Hindi tinukoy",
         "active": "Aktibo",
         "disabled": "Naka-disable",
-        "disable": "I-disable ang subscription",
-        "enable": "I-enable ang subscription",
         "markRenewed": "Markahang na-renew",
-        "edit": "I-edit ang subscription",
         "delete": "Tanggalin ang subscription",
         "conversionUnavailable": "Hindi available ang conversion",
         "monthlyEquivalent": "{{amount}} bawat buwan",
@@ -3082,11 +3077,11 @@
         "invalidDate": "Maglagay ng wastong petsa ng bayad.",
         "savedToast": "Na-save ang subscription.",
         "addedToast": "Naidagdag ang subscription.",
-        "disabledToast": "Na-disable ang subscription.",
-        "enabledToast": "Na-enable ang subscription.",
         "renewedToast": "Na-update ang petsa ng pag-renew.",
         "deleteConfirm": "Tanggalin ang subscription na \"{{name}}\"?",
         "deleteConfirmDetail": "Tinatanggal kasama ng subscription ang mga paalala nito at ang entry sa badyet para sa susunod na bayad. Nananatili sa buwanang pangkalahatang-tanaw ang mga natapos nang bayad.",
+        "renewConfirm": "Itala ang bayad para sa \"{{name}}\"?",
+        "renewConfirmDetail": "Uusog nang pasulong ang takdang petsa, at itatala ang bayad noong {{date}} bilang gastos sa badyet.",
         "deletedToast": "Natanggal ang subscription.",
         "monthlyBudgetLabel": "Buwanang badyet para sa subscription",
         "baseCurrencyLabel": "Batayang pera",
@@ -3353,7 +3348,8 @@
             "visibility": {
                 "private": "Pribado",
                 "family": "Pamilya"
-            }
+            },
+            "allTitle": "Lahat ng Gamot"
         },
         "labs": {
             "title": "Resulta ng lab",

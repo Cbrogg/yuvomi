@@ -1,5 +1,6 @@
 {
     "common": {
+        "swipeSidesSwapped": "滑动方向已互换，主要操作现在位于另一侧。",
         "apply": "添加",
         "searchClear": "清除搜索",
         "save": "保存",
@@ -1114,7 +1115,7 @@
         "loanPaymentTitle": "借款还款：{{borrower}}",
         "typeLoan": "借款",
         "tabsLabel": "预算分区",
-        "budgetTab": "预算",
+        "budgetTab": "概览",
         "loansTab": "借款",
         "filteredTransactions": "已筛选交易",
         "clearLoanFilter": "清除筛选",
@@ -3002,7 +3003,6 @@
         "categoryFilter": "按类别筛选",
         "paymentMethodFilter": "按付款方式筛选",
         "statusFilter": "按状态筛选",
-        "statusAll": "所有状态",
         "statusActive": "启用",
         "statusDisabled": "停用",
         "sortLabel": "排序订阅",
@@ -3013,8 +3013,6 @@
         "manageMetadata": "管理类别和付款方式",
         "settingsTitle": "订阅设置",
         "loadError": "无法加载订阅。",
-        "allCategories": "所有类别",
-        "allPaymentMethods": "所有付款方式",
         "cycle": {
             "daily": "每日",
             "weekly": "每周",
@@ -3050,10 +3048,7 @@
         "unspecified": "未指定",
         "active": "启用",
         "disabled": "停用",
-        "disable": "停用订阅",
-        "enable": "启用订阅",
         "markRenewed": "标记为已续订",
-        "edit": "编辑订阅",
         "delete": "删除订阅",
         "conversionUnavailable": "无法换算",
         "monthlyEquivalent": "每月 {{amount}}",
@@ -3082,11 +3077,11 @@
         "invalidDate": "请输入有效的付款日期。",
         "savedToast": "订阅已保存。",
         "addedToast": "订阅已添加。",
-        "disabledToast": "订阅已停用。",
-        "enabledToast": "订阅已启用。",
         "renewedToast": "续订日期已更新。",
         "deleteConfirm": "删除订阅“{{name}}”？",
         "deleteConfirmDetail": "订阅连同它的提醒和下次付款的预算记录一并删除。已完成的付款仍留在月度概览中。",
+        "renewConfirm": "记录「{{name}}」的付款吗？",
+        "renewConfirmDetail": "到期日将向后推移，{{date}} 的付款会作为支出记入预算。",
         "deletedToast": "订阅已删除。",
         "monthlyBudgetLabel": "每月订阅预算",
         "baseCurrencyLabel": "基础货币",
@@ -3353,7 +3348,8 @@
             "visibility": {
                 "private": "私密",
                 "family": "家庭"
-            }
+            },
+            "allTitle": "所有药物"
         },
         "labs": {
             "title": "化验值",

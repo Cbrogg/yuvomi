@@ -1,5 +1,6 @@
 {
     "common": {
+        "swipeSidesSwapped": "Arah geser telah ditukar - tindakan utama kini ada di sisi lain.",
         "apply": "Tambahkan",
         "searchClear": "Hapus pencarian",
         "save": "Simpan",
@@ -1126,7 +1127,7 @@
         "loanPaymentTitle": "Pelunasan pinjaman: {{borrower}}",
         "typeLoan": "Pinjaman",
         "tabsLabel": "Area anggaran",
-        "budgetTab": "Anggaran",
+        "budgetTab": "Ringkasan",
         "loansTab": "Pinjaman",
         "filteredTransactions": "Transaksi terfilter",
         "clearLoanFilter": "Hapus filter",
@@ -3002,7 +3003,6 @@
         "categoryFilter": "Filter menurut kategori",
         "paymentMethodFilter": "Filter menurut metode pembayaran",
         "statusFilter": "Filter menurut status",
-        "statusAll": "Semua status",
         "statusActive": "Aktif",
         "statusDisabled": "Nonaktif",
         "sortLabel": "Urutkan langganan",
@@ -3013,8 +3013,6 @@
         "manageMetadata": "Kelola kategori dan metode pembayaran",
         "settingsTitle": "Pengaturan langganan",
         "loadError": "Langganan tidak dapat dimuat.",
-        "allCategories": "Semua kategori",
-        "allPaymentMethods": "Semua metode pembayaran",
         "cycle": {
             "daily": "Harian",
             "weekly": "Mingguan",
@@ -3050,10 +3048,7 @@
         "unspecified": "Tidak ditentukan",
         "active": "Aktif",
         "disabled": "Nonaktif",
-        "disable": "Nonaktifkan langganan",
-        "enable": "Aktifkan langganan",
         "markRenewed": "Tandai diperpanjang",
-        "edit": "Ubah langganan",
         "delete": "Hapus langganan",
         "conversionUnavailable": "Konversi tidak tersedia",
         "monthlyEquivalent": "{{amount}} per bulan",
@@ -3082,11 +3077,11 @@
         "invalidDate": "Masukkan tanggal pembayaran yang valid.",
         "savedToast": "Langganan disimpan.",
         "addedToast": "Langganan ditambahkan.",
-        "disabledToast": "Langganan dinonaktifkan.",
-        "enabledToast": "Langganan diaktifkan.",
         "renewedToast": "Tanggal perpanjangan diperbarui.",
         "deleteConfirm": "Hapus langganan \"{{name}}\"?",
         "deleteConfirmDetail": "Bersama langganan, pengingatnya dan catatan anggaran untuk pembayaran berikutnya ikut dihapus. Pembayaran yang sudah selesai tetap ada di ikhtisar bulanan.",
+        "renewConfirm": "Catat pembayaran untuk \"{{name}}\"?",
+        "renewConfirmDetail": "Tanggal jatuh tempo bergeser maju dan pembayaran tanggal {{date}} dicatat sebagai pengeluaran di anggaran.",
         "deletedToast": "Langganan dihapus.",
         "monthlyBudgetLabel": "Anggaran langganan bulanan",
         "baseCurrencyLabel": "Mata uang dasar",
@@ -3353,7 +3348,8 @@
             "visibility": {
                 "private": "Pribadi",
                 "family": "Keluarga"
-            }
+            },
+            "allTitle": "Semua obat"
         },
         "labs": {
             "title": "Hasil lab",

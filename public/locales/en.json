@@ -1,5 +1,6 @@
 {
     "common": {
+        "swipeSidesSwapped": "Swipe directions have been swapped - the main action is now on the other side.",
         "apply": "Add",
         "searchClear": "Clear search",
         "save": "Save",
@@ -1114,7 +1115,7 @@
         "loanPaymentTitle": "Loan repayment: {{borrower}}",
         "typeLoan": "Loan",
         "tabsLabel": "Budget sections",
-        "budgetTab": "Budget",
+        "budgetTab": "Overview",
         "loansTab": "Loans",
         "filteredTransactions": "Filtered transactions",
         "clearLoanFilter": "Clear filter",
@@ -3002,7 +3003,6 @@
         "categoryFilter": "Filter by category",
         "paymentMethodFilter": "Filter by payment method",
         "statusFilter": "Filter by status",
-        "statusAll": "All statuses",
         "statusActive": "Active",
         "statusDisabled": "Disabled",
         "sortLabel": "Sort subscriptions",
@@ -3013,8 +3013,6 @@
         "manageMetadata": "Manage categories and payment methods",
         "settingsTitle": "Subscription settings",
         "loadError": "Subscriptions could not be loaded.",
-        "allCategories": "All categories",
-        "allPaymentMethods": "All payment methods",
         "cycle": {
             "daily": "Daily",
             "weekly": "Weekly",
@@ -3050,10 +3048,7 @@
         "unspecified": "Unspecified",
         "active": "Active",
         "disabled": "Disabled",
-        "disable": "Disable subscription",
-        "enable": "Enable subscription",
         "markRenewed": "Mark as renewed",
-        "edit": "Edit subscription",
         "delete": "Delete subscription",
         "conversionUnavailable": "Conversion unavailable",
         "monthlyEquivalent": "{{amount}} per month",
@@ -3082,11 +3077,11 @@
         "invalidDate": "Enter a valid payment date.",
         "savedToast": "Subscription saved.",
         "addedToast": "Subscription added.",
-        "disabledToast": "Subscription disabled.",
-        "enabledToast": "Subscription enabled.",
         "renewedToast": "Renewal date updated.",
         "deleteConfirm": "Delete subscription \"{{name}}\"?",
         "deleteConfirmDetail": "Its reminders and the budget entry for the next payment are deleted along with the subscription. Payments already completed stay in the monthly overview.",
+        "renewConfirm": "Book the payment for \"{{name}}\"?",
+        "renewConfirmDetail": "The due date moves forward, and the payment from {{date}} is recorded as an expense in the budget.",
         "deletedToast": "Subscription deleted.",
         "monthlyBudgetLabel": "Monthly subscription budget",
         "baseCurrencyLabel": "Base currency",
@@ -3353,7 +3348,8 @@
             "visibility": {
                 "private": "Private",
                 "family": "Family"
-            }
+            },
+            "allTitle": "All medications"
         },
         "labs": {
             "title": "Lab values",

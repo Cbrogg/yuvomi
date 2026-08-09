@@ -15,10 +15,11 @@
   flex-direction: column;
 }
 
-/* Toolbar: Titel links, Tab-Reihe füllt den Rest und bleibt rechtsbündig. */
+/* Toolbar: Titel links, Tab-Reihe bleibt rechtsbündig. Schrumpfen, Scrollen und
+ * die eigene Zeile in der kompakten Grössenklasse kommen aus der Shell-Regel
+ * „Tab-Leiste im Modulkopf" (layout.css). */
 .rewards-tabs {
   display: flex;
-  flex-wrap: wrap;
   gap: var(--space-1);
   margin-left: auto;
 }
@@ -70,10 +71,17 @@
   justify-content: center;
   border-radius: var(--radius-full);
   overflow: hidden;
+  /* Platzhalterfläche, solange ein Avatarbild lädt. */
   background: var(--color-surface-3);
   font-weight: 600;
   font-size: var(--text-sm);
-  color: var(--color-text-on-accent);
+  /* KEINE Textfarbe hier. Sie stand als `--color-text-on-accent` (weiß) über
+     dieser grauen Platzhalterfläche und ergab 1,19:1 - sie kam nur deshalb nie
+     an, weil beide Varianten sie überschreiben: die Bildvariante hat gar keinen
+     Text, die Initialenvariante setzt ihre Farbe inline aus
+     `getReadableTextColor(Nutzerfarbe)` (rewards.js:98, Regel 3: auf einer
+     Nutzerfarbe wählt der Text seinen Ton). Eine zugesagte Farbe, die nie gilt,
+     ist eine Zusage, die beim ersten neuen Markup bricht. */
 }
 .rw-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .rw-avatar--initials { background: var(--rw-avatar-bg, var(--module-accent)); }
@@ -81,23 +89,26 @@
 /* --------------------------------------------------------
    Übersicht: Punktestände (gleichwertige Zeilenliste, bewusst flach)
    -------------------------------------------------------- */
+/* EIN Träger, Zeilen per Haarlinie (Zeilenlisten-Regel, tokens.css) - vorher
+ * trug jede Punktestandszeile ihre eigene Karte. */
 .rw-standings {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
 }
 .rw-standing {
   display: grid;
   grid-template-columns: minmax(180px, 1.2fr) minmax(0, 1.6fr) auto;
   align-items: center;
   gap: var(--space-4);
-  padding: var(--space-3);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+}
+.rw-standing + .rw-standing {
+  border-top: 1px solid var(--color-border-subtle);
 }
 
 /* Fokussierbarer Öffner (Tastatur/Screenreader) für das Mitglieds-Detail. */
@@ -143,7 +154,7 @@
   color: var(--module-accent);
   font-variant-numeric: tabular-nums;
 }
-.rw-standing__points strong.rw-countup--active { color: color-mix(in srgb, var(--module-accent) 70%, var(--color-text-primary)); }
+.rw-standing__points strong.rw-countup--active { color: color-mix(in srgb, var(--module-accent) var(--tint-ink), var(--color-text-primary)); }
 .rw-standing__progress { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
 .rw-standing__actions { display: flex; justify-content: flex-end; }
 
@@ -152,7 +163,7 @@
    -------------------------------------------------------- */
 .rw-setup {
   padding: var(--space-4);
-  border: 1px solid var(--color-border-subtle);
+  border: 1px solid transparent;
   border-radius: var(--radius-lg);
   background: var(--color-surface-2);
 }
@@ -187,7 +198,7 @@
   font-weight: 600;
   cursor: pointer;
 }
-.rw-setup-step__go:hover { background: color-mix(in srgb, var(--module-accent) 10%, transparent); }
+.rw-setup-step__go:hover { background: color-mix(in srgb, var(--module-accent) var(--tint-state), transparent); }
 
 /* Fortschritt zur nächsten Prämie */
 .rw-progress { display: flex; flex-direction: column; gap: var(--space-2); }
@@ -216,18 +227,26 @@
 /* --------------------------------------------------------
    Offene Anfragen
    -------------------------------------------------------- */
+/* Randlose Karte wie jede andere: die getönte Fläche MIT getönter Kante war
+ * dasselbe Muster, das Runde 1 in der Haushaltshilfe entfernt hat. Die Tönung
+ * bleibt als Dringlichkeitssignal, die Kante geht - sie sagte nichts, was die
+ * Fläche nicht schon sagt. */
 .rw-pending-panel {
-  padding: var(--space-4);
-  border: 1px solid color-mix(in srgb, var(--module-accent) 30%, var(--color-border-subtle));
+  padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-lg);
-  background: color-mix(in srgb, var(--module-accent) 6%, var(--color-surface));
+  /* 16 %, nicht 8: gemessen hebt sich die Toenung erst dort in BEIDEN Themes
+   * wahrnehmbar von der Karte ab (1.25:1 light / 1.29:1 dark gegen 1.12:1 bei
+   * 8 %, wo das Signal im Dark verschwand). Es ist zugleich das eine
+   * Toenungsrezept dieser Welt - dasselbe wie Notizkarte und Icon-Kachel. */
+  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), var(--color-surface));
+  box-shadow: var(--shadow-sm);
 }
-.rw-pending-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.rw-pending-list { list-style: none; margin: 0; padding: 0; }
 .rw-pending {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-2) 0;
+  padding: var(--space-3) 0;
 }
 .rw-pending + .rw-pending { border-top: 1px solid var(--color-border-subtle); }
 .rw-pending__text { flex: 1 1 auto; min-width: 0; }
@@ -249,7 +268,7 @@
   gap: var(--space-3);
   padding: var(--space-5);
   background: var(--color-surface);
-  border: 1px solid var(--color-border-subtle);
+  border: 1px solid transparent;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-xs);
 }
@@ -261,7 +280,7 @@
   width: 48px;
   height: 48px;
   border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--module-accent) 12%, var(--color-surface-2));
+  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), var(--color-surface-2));
   font-size: var(--text-2xl);
 }
 .rw-reward-card__icon i { width: 22px; height: 22px; color: var(--module-accent); }
@@ -321,15 +340,35 @@
   color: var(--color-ink-on-vivid);
 }
 
-.rw-ledger { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+/* Verlaufsliste: EIN Träger (Zeilenlisten-Regel, tokens.css). Der Träger endet
+ * mit der Liste, deshalb trennt der +-Kombinator statt border-bottom je Zeile. */
+.rw-ledger {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
 .rw-ledger-row {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-3) 0;
-  border-bottom: 1px solid var(--color-border-subtle);
+  padding: var(--space-3) var(--space-4);
 }
-.rw-ledger-row:last-child { border-bottom: 0; }
+.rw-ledger-row + .rw-ledger-row {
+  border-top: 1px solid var(--color-border-subtle);
+}
+/* Der Träger entscheidet (tokens.css): im Modal ist der Grund schon
+ * --color-surface, eine zweite weisse Karte darauf wäre unsichtbar. Die
+ * Kurzfassung der Liste bleibt deshalb trägerlos, nur mit Haarlinien. */
+.rw-ledger--compact {
+  background: none;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: visible;
+}
 .rw-ledger-row--compact { padding: var(--space-2) 0; }
 .rw-ledger-row__icon {
   flex: 0 0 auto;
@@ -343,9 +382,9 @@
   color: var(--color-text-secondary);
 }
 .rw-ledger-row__icon i { width: 17px; height: 17px; }
-.rw-ledger-row__icon--earn  { background: color-mix(in srgb, var(--module-tasks) 16%, transparent); color: var(--module-tasks); }
-.rw-ledger-row__icon--bonus { background: color-mix(in srgb, var(--module-accent) 16%, transparent); color: var(--module-accent); }
-.rw-ledger-row__icon--redeem { background: color-mix(in srgb, var(--module-budget) 16%, transparent); color: var(--module-budget); }
+.rw-ledger-row__icon--earn  { background: color-mix(in srgb, var(--module-tasks) var(--tint-surface), transparent); color: var(--module-tasks); }
+.rw-ledger-row__icon--bonus { background: color-mix(in srgb, var(--module-accent) var(--tint-surface), transparent); color: var(--module-accent); }
+.rw-ledger-row__icon--redeem { background: color-mix(in srgb, var(--module-budget) var(--tint-surface), transparent); color: var(--module-budget); }
 .rw-ledger-row__text { flex: 1 1 auto; min-width: 0; }
 .rw-ledger-row__reason { margin: 0; font-weight: 500; color: var(--color-text-primary); }
 .rw-ledger-row__meta { margin: var(--space-1) 0 0; font-size: var(--text-xs); color: var(--color-text-secondary); }
@@ -391,14 +430,16 @@
 .rw-redeem-summary__row--neg strong { color: var(--color-danger); }
 
 .rw-participant-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+/* Im Modal, also trägerlos (Träger-Regel) - nur die Haarlinie trennt. */
 .rw-participant {
   display: flex;
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-3) 0;
-  border-bottom: 1px solid var(--color-border-subtle);
 }
-.rw-participant:last-child { border-bottom: 0; }
+.rw-participant + .rw-participant {
+  border-top: 1px solid var(--color-border-subtle);
+}
 .rw-participant__name { flex: 1 1 auto; font-weight: 500; color: var(--color-text-primary); }
 
 .rw-detail-head { display: flex; align-items: center; gap: var(--space-4); margin-bottom: var(--space-4); }
@@ -427,17 +468,12 @@
   .rw-pending__actions { gap: var(--space-3); }
 }
 
-@media (max-width: 767px) {
-  .rewards-toolbar { flex-direction: column; align-items: stretch; }
-  .rewards-tabs {
-    margin-left: 0;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-  .rewards-tabs::-webkit-scrollbar { display: none; }
-  .rewards-tabs .sub-tab { flex: 1 1 0; justify-content: center; }
-}
+/* Der Kopf trug hier `flex-direction: column`, die Leiste ihr eigenes
+ * Scroll-Rezept und ihre Tabs ein `flex: 1 1 0`. Alle drei sind mit der
+ * Shell-Regel entfallen (layout.css, „Tab-Leiste im Modulkopf"). Das
+ * Schrumpfenlassen der Tabs war eine MODUL-Lösung für ein SHELL-Problem: sie
+ * hat Belohnungen zufällig vor dem Überlauf bewahrt, der die Haushaltshilfe mit
+ * derselben Bauart traf. */
 
 @media (max-width: 640px) {
   .rewards-content__inner { gap: var(--space-6); padding-top: var(--space-4); }

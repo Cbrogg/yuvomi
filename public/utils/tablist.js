@@ -4,15 +4,32 @@ import { wireScrollFade } from '/utils/ux.js';
  * Modul: Tablist-Verhalten — geteilte WAI-ARIA-Tab-Navigation
  *
  * EINE Verhaltens-Quelle (Klick + Pfeiltasten/Home/End + Roving-Tabindex + ARIA)
- * für modul-eigene Tab-Leisten, die aus Layout-Gründen NICHT die volle
- * `sub-tabs-bar`-Struktur (renderSubTabs) nutzen, sondern ihre Tabs im
- * kanonischen `page-toolbar`-Kopf tragen (rewards, housekeeping, …).
- *
- * `renderSubTabs` bleibt die Variante für eigenständige sticky Sub-Tab-Leisten
- * (health, kitchen, settings); `wireTablist` ist die Verhaltens-Variante für
- * bereits im Markup vorhandene Tab-Buttons. So teilen beide dieselbe
+ * für Tab-Leisten, deren Buttons bereits im Markup stehen (rewards,
+ * housekeeping, budget, calendar). `renderSubTabs` ist die Variante, die die
+ * Leiste selbst baut und dabei Deep-Link-Routen, Zustandszahlen und
+ * Panel-Synchronisierung mitbringt (health, kitchen). So teilen beide dieselbe
  * Interaktions-Grammatik, ohne dass ein Modul die Tastatur-Navigation erneut
  * von Hand nachbaut.
+ *
+ * WO DIE LEISTE STEHT, ENTSCHEIDET NICHT DIESE WAHL. Hier stand bis Runde 6
+ * „aus Layout-Gründen" - das war eine Beobachtung, kein Kriterium, und weil
+ * keines dastand, entschied jedes Modul neu. Das Kriterium ist der
+ * `module:`-Wert der Zielroute (ROUTES in router.js):
+ *
+ *   Wechselt die Leiste ihn, ist SIE die Kopf-Navigation und trägt keinen Titel
+ *   über sich - der Tab-Name IST der Modulname (Küche: vier eigenständige
+ *   Module unter einer Leiste).
+ *   Wechselt sie ihn nicht, oder wechselt sie gar keine Route, gehört sie unter
+ *   den Large Title in den kanonischen `page-toolbar`-Kopf (Gesundheit, Budget,
+ *   Belohnungen, Haushaltshilfe).
+ *   Sektionen mit eigener Shell (Einstellungen) führen ihren Titel in ihrem
+ *   eigenen Kopf. Das ist der dritte Fall der Regel, keine Ausnahme von ihr.
+ *
+ * Warum die Route und nicht der Helfername: Gesundheits Tabs SIND echte Routen
+ * (HEALTH_ROUTES), tragen aber alle `module: 'health'`. Ein Guard auf
+ * „renderSubTabs gegen wireTablist" wäre damit entweder verletzt oder falsch.
+ * Geprüft wird die Regel auf Ebene 2 (Struktur, aus ROUTES abgeleitet) in
+ * test-frontend-audit.js.
  *
  * Erwartetes Markup:
  *   - Container: role="tablist"    (mode 'tabs')  bzw. role="radiogroup" ('select')

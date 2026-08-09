@@ -136,7 +136,7 @@ export async function render(container) {
           </div>
           <div class="documents-folder-browser__list" id="documents-folder-browser"></div>
         </aside>
-        <div id="documents-list" class="documents-list documents-list--${state.view}" aria-busy="true">${renderSkeletonList({ rows: 6, lines: 2 })}</div>
+        <div id="documents-list" class="${listClasses()}" aria-busy="true">${renderSkeletonList({ rows: 6, lines: 2 })}</div>
       </div>
       <button class="page-fab" id="fab-new-document" aria-label="${t('documents.addButton')}">
         <i data-lucide="upload" class="icon-xl" aria-hidden="true"></i>
@@ -359,6 +359,25 @@ function filteredDocuments() {
   );
 }
 
+/**
+ * Die Klassen des Listen-Trägers. EINE Stelle statt drei: dieselbe Klassenliste
+ * stand an drei Orten, und zwei Aufzählungen derselben Arbeit verlieren eine
+ * davon einen Schritt (die Auswahl-Klasse fehlte im Ladezustand bereits).
+ *
+ * Die LISTENANSICHT ist eine Zeilenliste und trägt deren Trägergrammatik
+ * (`.row-carrier`, list-row.css): eine randlose Karte, Zeilen darin flächenlos,
+ * getrennt über den `+`-Kombinator. Die RASTERANSICHT bleibt ein Raster aus
+ * Objekten mit eigenem Medium - die benannte Ausnahme der Zeilenlisten-Regel.
+ */
+function listClasses() {
+  return [
+    'documents-list',
+    `documents-list--${state.view}`,
+    state.view === 'list' ? 'row-carrier' : '',
+    state.selectMode ? 'documents-list--selecting' : '',
+  ].filter(Boolean).join(' ');
+}
+
 // Ladezustand beim Netzwerk-gebundenen Filterwechsel (Status/Kategorie):
 // dieselbe Skeleton-Sprache wie beim Erstaufbau, statt die veraltete Liste
 // stumm stehen zu lassen. `aria-busy` schaltet die Grid/Flex-Ansicht via CSS
@@ -366,7 +385,7 @@ function filteredDocuments() {
 function showDocumentsLoading() {
   const list = _container?.querySelector('#documents-list');
   if (!list) return;
-  list.className = `documents-list documents-list--${state.view}`;
+  list.className = listClasses();
   list.setAttribute('aria-busy', 'true');
   list.replaceChildren();
   list.insertAdjacentHTML('beforeend', renderSkeletonList({ rows: 6, lines: 2 }));
@@ -460,7 +479,7 @@ function renderDocuments() {
   if (!list) return;
   list.removeAttribute('aria-busy');
   const docs = filteredDocuments();
-  list.className = `documents-list documents-list--${state.view}${state.selectMode ? ' documents-list--selecting' : ''}`;
+  list.className = listClasses();
   if (!docs.length) {
     renderEmptyState(list);
     return;
@@ -1214,7 +1233,7 @@ function openDocumentModal(doc = null) {
           <div class="document-member-picker__grid">${memberOptions(doc?.allowed_member_ids || [])}</div>
         </div>
         ${advancedSection(advancedFieldsHtml, { open: advancedOpen })}
-        <div id="document-error" class="login-error" hidden></div>
+        <div id="document-error" class="form-error" hidden></div>
         <div class="modal-panel__footer modal-panel__footer--plain">
           <button type="submit" class="btn btn--primary" id="document-submit">${isEdit ? t('common.save') : t('documents.uploadAction')}</button>
         </div>
@@ -1362,7 +1381,7 @@ function openFolderModal() {
           <label class="label" for="document-folder-name">${t('documents.folderNameLabel')}</label>
           <input class="input" id="document-folder-name" required maxlength="200" autocomplete="off">
         </div>
-        <div id="document-folder-error" class="login-error" hidden></div>
+        <div id="document-folder-error" class="form-error" hidden></div>
         <div class="modal-panel__footer modal-panel__footer--plain">
           <button type="submit" class="btn btn--primary">${t('documents.createFolderAction')}</button>
         </div>

@@ -810,8 +810,10 @@ function holidaysOnDay(dateStr) {
 /** Rendert einen read-only Task-Chip für Kalenderansichten. In der Monatsansicht
  *  (interactive:false) ist die Tageszelle selbst der Drill-in-Button; die Chips
  *  sind dort nur visuelles Signal und dürfen kein eigenes role/tabindex tragen -
- *  sonst entsteht ein fokussierbarer Button im Zellen-Button (Audit P1). */
-function renderTaskChip(task, { interactive = true } = {}) {
+ *  sonst entsteht ein fokussierbarer Button im Zellen-Button (Audit P1).
+ *  icon:false lässt das check-square-Icon weg: die Monats-Bars sind nach Kanon
+ *  icon-frei, Woche/Tag/Agenda behalten es als Termin/Aufgabe-Unterscheidung. */
+function renderTaskChip(task, { interactive = true, icon = true } = {}) {
   const priority = task.priority || 'none';
   const label    = esc(task.title);
   const timeStr  = task.due_time ? ` · ${task.due_time.slice(0, 5)}` : '';
@@ -821,7 +823,7 @@ function renderTaskChip(task, { interactive = true } = {}) {
   return `<div class="cal-task-chip cal-task-chip--${priority}"
                data-task-id="${task.id}"${button}
                title="${label}${esc(timeStr)}">
-    <i data-lucide="check-square" class="icon-sm" aria-hidden="true"></i>
+    ${icon ? '<i data-lucide="check-square" class="icon-sm" aria-hidden="true"></i>' : ''}
     <span>${label}${esc(timeStr)}</span>
   </div>`;
 }
@@ -1037,7 +1039,7 @@ function renderToolbar() {
   bar.insertAdjacentHTML('beforeend', `
     <h1 class="page-toolbar__title">${t('calendar.title')}</h1>
     <div class="page-toolbar__center cal-toolbar__month">
-      <button class="cal-toolbar__today" id="cal-today">${t('calendar.today')}</button>
+      <button class="btn btn--secondary cal-toolbar__today" id="cal-today">${t('calendar.today')}</button>
       <button class="btn btn--icon" id="cal-prev" aria-label="${t('calendar.back')}">
         <i data-lucide="chevron-left" aria-hidden="true"></i>
       </button>
@@ -1056,9 +1058,15 @@ function renderToolbar() {
           <span>${t('calendar.assignedToMe')}</span>
         </button>
       ` : ''}
+      <!-- KEIN aria-controls im geschlossenen Zustand: die Suchleiste entsteht
+           erst beim Öffnen (openCalendarSearch), und ein Verweis auf eine ID, die
+           es noch nicht gibt, kündigt einem Screenreader ein Ziel an, das nicht
+           existiert. Gesetzt wird es dort, wo die Leiste entsteht, und beim
+           Schließen wieder entfernt - dieselbe Regel wie in utils/sub-tabs.js:
+           ohne aufgelöstes Ziel bleibt das Attribut weg. -->
       <button class="btn btn--icon cal-toolbar__search-btn" id="cal-search"
               aria-label="${t('calendar.searchOpen')}" title="${t('calendar.searchOpen')}"
-              aria-expanded="false" aria-controls="cal-search-bar">
+              aria-expanded="false">
         <i data-lucide="search" aria-hidden="true"></i>
       </button>
       <div class="cal-toolbar__views" role="tablist" aria-label="${t('nav.calendar')}">
@@ -1447,15 +1455,18 @@ function renderMonthDay(date, inMonth) {
     </div>
   `).join('');
 
+  // Monatsgrid-Kanon (Apple Kalender / Fantastical): flache getönte Bar mit nur
+  // dem Titel. Icon und Avatar-Stack leben in der Tages-/Detailansicht; die
+  // "Wer"-Information bleibt für Tooltip/Screenreader im title-Attribut erhalten.
   const evHtml = evShown.map((ev) => `
     <div class="month-day__event"
          data-id="${ev.id}"
          style="${eventSurfaceStyle(ev)}"
-         title="${esc(ev.title)}${ev.cal_name ? ' · ' + ev.cal_name : ''}${chipAssigneeTitleSuffix(ev)}"
-    >${eventIconHtml(ev.icon, 'event-icon event-icon--compact')}<span>${esc(ev.title)}</span>${chipAssigneeStack(ev, { size: 15, maxVisible: 2 })}</div>
+         title="${esc(ev.title)}${ev.cal_name ? ' · ' + esc(ev.cal_name) : ''}${chipAssigneeTitleSuffix(ev)}"
+    ><span>${esc(ev.title)}</span></div>
   `).join('');
 
-  const taskHtml = taskShown.map((tk) => renderTaskChip(tk, { interactive: false })).join('');
+  const taskHtml = taskShown.map((tk) => renderTaskChip(tk, { interactive: false, icon: false })).join('');
 
   return `
     <div class="${classes}" data-date="${date}" data-total="${total}"
@@ -1834,7 +1845,7 @@ function renderAgendaView(container) {
                 <span class="agenda-holiday__dot"></span>
                 <span>${esc(h.name)}</span>
               </div>`).join('')}</div>` : ''}
-            ${events.map((ev) => renderAgendaEvent(ev, date)).join('')}
+            ${events.length ? `<div class="list-rows">${events.map((ev) => renderAgendaEvent(ev, date)).join('')}</div>` : ''}
             ${tasks.length ? `<div class="agenda-tasks">${tasks.map(renderTaskChip).join('')}</div>` : ''}
           </div>
         `).join('')
@@ -1892,6 +1903,8 @@ function openCalendarSearch() {
 
   const toggle = _container.querySelector('#cal-search');
   toggle?.setAttribute('aria-expanded', 'true');
+  // Erst jetzt gibt es ein Ziel, also erst jetzt der Verweis darauf.
+  toggle?.setAttribute('aria-controls', 'cal-search-bar');
   toggle?.classList.add('cal-toolbar__search-btn--active');
 
   toolbar.insertAdjacentHTML('afterend', `
@@ -1938,6 +1951,8 @@ function closeCalendarSearch({ restoreView = true } = {}) {
 
   const toggle = _container.querySelector('#cal-search');
   toggle?.setAttribute('aria-expanded', 'false');
+  // Die Leiste ist gerade entfernt worden - der Verweis geht mit ihr.
+  toggle?.removeAttribute('aria-controls');
   toggle?.classList.remove('cal-toolbar__search-btn--active');
 
   if (restoreView) renderView();
@@ -2050,7 +2065,7 @@ function renderCalendarSearchResults(body) {
             <span class="agenda-day__date">${formatDate(date, { long: true })}</span>
             <span class="agenda-day__weekday">${DAY_NAMES_LONG()[new Date(date + 'T00:00:00').getDay()]}</span>
           </div>
-          ${events.map((ev) => renderAgendaEvent(ev, date)).join('')}
+          <div class="list-rows">${events.map((ev) => renderAgendaEvent(ev, date)).join('')}</div>
         </div>
       `).join('')}
     </div>

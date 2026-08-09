@@ -1,5 +1,6 @@
 {
     "common": {
+        "swipeSidesSwapped": "Kierunki przesuwania zostały zamienione - główna akcja jest teraz po drugiej stronie.",
         "apply": "Dodaj",
         "searchClear": "Wyczyść wyszukiwanie",
         "save": "Zapisz",
@@ -1126,7 +1127,7 @@
         "loanPaymentTitle": "Spłata pożyczki: {{borrower}}",
         "typeLoan": "Pożyczka",
         "tabsLabel": "Sekcje budżetu",
-        "budgetTab": "Budżet",
+        "budgetTab": "Przegląd",
         "loansTab": "Pożyczki",
         "filteredTransactions": "Przefiltrowane transakcje",
         "clearLoanFilter": "Wyczyść filtr",
@@ -3002,7 +3003,6 @@
         "categoryFilter": "Filtruj według kategorii",
         "paymentMethodFilter": "Filtruj według metody płatności",
         "statusFilter": "Filtruj według statusu",
-        "statusAll": "Wszystkie statusy",
         "statusActive": "Aktywna",
         "statusDisabled": "Wyłączona",
         "sortLabel": "Sortuj subskrypcje",
@@ -3013,8 +3013,6 @@
         "manageMetadata": "Zarządzaj kategoriami i metodami płatności",
         "settingsTitle": "Ustawienia subskrypcji",
         "loadError": "Nie udało się załadować subskrypcji.",
-        "allCategories": "Wszystkie kategorie",
-        "allPaymentMethods": "Wszystkie metody płatności",
         "cycle": {
             "daily": "Codziennie",
             "weekly": "Co tydzień",
@@ -3050,10 +3048,7 @@
         "unspecified": "Nie określono",
         "active": "Aktywna",
         "disabled": "Wyłączona",
-        "disable": "Wyłącz subskrypcję",
-        "enable": "Włącz subskrypcję",
         "markRenewed": "Oznacz jako odnowioną",
-        "edit": "Edytuj subskrypcję",
         "delete": "Usuń subskrypcję",
         "conversionUnavailable": "Konwersja niedostępna",
         "monthlyEquivalent": "{{amount}} miesięcznie",
@@ -3082,11 +3077,11 @@
         "invalidDate": "Podaj prawidłową datę płatności.",
         "savedToast": "Subskrypcja zapisana.",
         "addedToast": "Subskrypcja dodana.",
-        "disabledToast": "Subskrypcja wyłączona.",
-        "enabledToast": "Subskrypcja włączona.",
         "renewedToast": "Data odnowienia zaktualizowana.",
         "deleteConfirm": "Usunąć subskrypcję \"{{name}}\"?",
         "deleteConfirmDetail": "Razem z subskrypcją usuwane są jej przypomnienia i zapis budżetowy najbliższej płatności. Płatności już zrealizowane pozostają w podsumowaniu miesięcznym.",
+        "renewConfirm": "Zaksięgować płatność za \"{{name}}\"?",
+        "renewConfirmDetail": "Termin płatności przesunie się, a płatność z {{date}} zostanie zapisana jako wydatek w budżecie.",
         "deletedToast": "Subskrypcja usunięta.",
         "monthlyBudgetLabel": "Miesięczny budżet subskrypcji",
         "baseCurrencyLabel": "Waluta bazowa",
@@ -3353,7 +3348,8 @@
             "visibility": {
                 "private": "Prywatne",
                 "family": "Rodzina"
-            }
+            },
+            "allTitle": "Wszystkie leki"
         },
         "labs": {
             "title": "Wyniki badań",

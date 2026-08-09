@@ -5,9 +5,15 @@
   <!-- Viewport: edge-to-edge, kein Zoom (PWA-native feel) -->
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=5" />
 
-  <!-- PWA / Theme -->
-  <meta name="theme-color" content="#6c3aed" media="(prefers-color-scheme: light)" />
-  <meta name="theme-color" content="#222220" media="(prefers-color-scheme: dark)" />
+  <!-- PWA / Theme.
+       Die Werte SIND --color-bg aus tokens.css (hell --neutral-100 #F2F2F7,
+       dunkel #0A0A0C). Ein Meta-Attribut nimmt an keiner Kaskade teil, also
+       muessen sie hier als Literal stehen - dass sie es bleiben, haelt der
+       Guard "the status bar colour is the page background" im frontend-audit.
+       Vorher stand hier dunkel #0C0C0E, zwei Stufen neben der Seite, die die
+       Statusleiste rahmt. -->
+  <meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0A0A0C" media="(prefers-color-scheme: dark)" />
   <meta name="mobile-web-app-capable" content="yes" />
 
   <!-- iOS-spezifisch -->
@@ -51,13 +57,14 @@
   <link rel="stylesheet" href="/styles/sub-tabs.css" />
   <link rel="stylesheet" href="/styles/page-search.css" />
   <link rel="stylesheet" href="/styles/kitchen-tabs.css" />
-  <link rel="stylesheet" href="/styles/kitchen-row.css" />
+  <link rel="stylesheet" href="/styles/list-row.css" />
+  <link rel="stylesheet" href="/styles/panel.css" />
   <link rel="stylesheet" href="/styles/user-multi-select.css" />
   <link rel="stylesheet" href="/styles/datepicker.css" />
   <link rel="stylesheet" href="/styles/category-manager.css" />
   <link rel="stylesheet" href="/styles/document-attach.css" />
   <link rel="stylesheet" href="/styles/detail-view.css" />
-  <link rel="stylesheet" href="/styles/login.css" />
+  <link rel="stylesheet" href="/styles/auth.css" />
   <link rel="stylesheet" href="/styles/typography.css" />
 
   <!-- Lucide Icons (lokal, v0.469.0) -->

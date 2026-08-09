@@ -1,5 +1,6 @@
 {
     "common": {
+        "swipeSidesSwapped": "Các hướng vuốt đã được hoán đổi - hành động chính giờ nằm ở phía bên kia.",
         "apply": "Thêm",
         "searchClear": "Xóa tìm kiếm",
         "save": "Lưu",
@@ -1114,7 +1115,7 @@
         "loanPaymentTitle": "Trả nợ khoản vay: {{borrower}}",
         "typeLoan": "Khoản vay",
         "tabsLabel": "Các phần ngân sách",
-        "budgetTab": "Ngân sách",
+        "budgetTab": "Tổng quan",
         "loansTab": "Khoản vay",
         "filteredTransactions": "Giao dịch đã lọc",
         "clearLoanFilter": "Xóa bộ lọc",
@@ -3002,7 +3003,6 @@
         "categoryFilter": "Lọc theo danh mục",
         "paymentMethodFilter": "Lọc theo phương thức thanh toán",
         "statusFilter": "Lọc theo trạng thái",
-        "statusAll": "Tất cả trạng thái",
         "statusActive": "Đang hoạt động",
         "statusDisabled": "Đã tắt",
         "sortLabel": "Sắp xếp đăng ký",
@@ -3013,8 +3013,6 @@
         "manageMetadata": "Quản lý danh mục và phương thức thanh toán",
         "settingsTitle": "Cài đặt đăng ký",
         "loadError": "Không thể tải đăng ký.",
-        "allCategories": "Tất cả danh mục",
-        "allPaymentMethods": "Tất cả phương thức thanh toán",
         "cycle": {
             "daily": "Hằng ngày",
             "weekly": "Hằng tuần",
@@ -3050,10 +3048,7 @@
         "unspecified": "Chưa chỉ định",
         "active": "Đang hoạt động",
         "disabled": "Đã tắt",
-        "disable": "Tắt đăng ký",
-        "enable": "Bật đăng ký",
         "markRenewed": "Đánh dấu đã gia hạn",
-        "edit": "Sửa đăng ký",
         "delete": "Xóa đăng ký",
         "conversionUnavailable": "Không thể chuyển đổi",
         "monthlyEquivalent": "{{amount}} mỗi tháng",
@@ -3082,11 +3077,11 @@
         "invalidDate": "Nhập ngày thanh toán hợp lệ.",
         "savedToast": "Đã lưu đăng ký.",
         "addedToast": "Đã thêm đăng ký.",
-        "disabledToast": "Đã tắt đăng ký.",
-        "enabledToast": "Đã bật đăng ký.",
         "renewedToast": "Đã cập nhật ngày gia hạn.",
         "deleteConfirm": "Xóa đăng ký \"{{name}}\"?",
         "deleteConfirmDetail": "Cùng với gói đăng ký, các nhắc việc và bút toán ngân sách của lần thanh toán kế tiếp cũng bị xoá. Những khoản đã thanh toán vẫn nằm trong bảng tháng.",
+        "renewConfirm": "Ghi nhận khoản thanh toán cho \"{{name}}\"?",
+        "renewConfirmDetail": "Ngày đến hạn sẽ dời về sau và khoản thanh toán ngày {{date}} được ghi là chi phí trong ngân sách.",
         "deletedToast": "Đã xóa đăng ký.",
         "monthlyBudgetLabel": "Ngân sách đăng ký hằng tháng",
         "baseCurrencyLabel": "Tiền tệ cơ sở",
@@ -3353,7 +3348,8 @@
             "visibility": {
                 "private": "Riêng tư",
                 "family": "Gia đình"
-            }
+            },
+            "allTitle": "Tất cả thuốc"
         },
         "labs": {
             "title": "Xét nghiệm",

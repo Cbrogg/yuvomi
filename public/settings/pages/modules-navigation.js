@@ -315,7 +315,7 @@ function desktopGroupHtml(section, rows, isAdmin) {
   return `
     <section class="settings-navigation-group" data-module-section="${section}">
       <h3 class="settings-navigation-group__title">${esc(t(NAV_SECTION_LABEL_KEYS[section]))}</h3>
-      <div class="settings-modules-list settings-modules-list--sortable" data-module-list>
+      <div class="row-carrier settings-modules-list settings-modules-list--sortable" data-module-list>
         ${sectionRows.map((row) => rowHtml(row, isAdmin)).join('')}
       </div>
     </section>

@@ -66,7 +66,7 @@ export async function render(container, { user } = {}) {
   state.user = user || null;
   setHtml(container, `
     <div class="split-page">
-      <header class="budget-panel-head split-topbar">
+      <header class="panel-head split-topbar">
         <div>
           <h1 class="split-title">${t('splitExpenses.title')}</h1>
           <p class="split-subtitle">${t('splitExpenses.subtitle')}</p>
@@ -76,7 +76,7 @@ export async function render(container, { user } = {}) {
           ${t('splitExpenses.addExpense')}
         </button>
       </header>
-      <section class="budget-summary" id="split-summary"></section>
+      <section class="metric-grid" id="split-summary"></section>
       <div class="split-layout">
         <aside class="split-groups-panel">
           <div class="split-panel-head">
@@ -96,10 +96,10 @@ export async function render(container, { user } = {}) {
                Pillen-Optik, und role="radiogroup" statt role="group": eine
                Einfachauswahl, die ihren Zustand ansagt und über die geteilte
                Verhaltensschicht Pfeiltasten mitbringt (Critique 2026-07-30, P1). -->
-          <div class="budget-segmented split-status-filter" id="split-status-filter" role="radiogroup" aria-label="${t('splitExpenses.statusLabel')}">
+          <div class="segmented split-status-filter" id="split-status-filter" role="radiogroup" aria-label="${t('splitExpenses.statusLabel')}">
             ${[['active', 'splitExpenses.statusActive'], ['archived', 'splitExpenses.statusArchived']].map(([id, key]) => {
               const on = state.groupStatus === id;
-              return `<button type="button" class="budget-segmented__item${on ? ' is-active' : ''}"
+              return `<button type="button" class="segmented__item${on ? ' is-active' : ''}"
                   role="radio" data-tab-id="${id}" aria-checked="${on}"
                   tabindex="${on ? '0' : '-1'}">${t(key)}</button>`;
             }).join('')}
@@ -250,17 +250,17 @@ function renderSummary() {
   // Rolle `total`: die Richtung steht im Label („Du bekommst" / „Du schuldest"),
   // nicht im Vorzeichen - deshalb der Ton explizit statt aus der Zahl.
   setHtml(summary, `
-    <div class="budget-summary-card budget-summary-card--positive">
-      <div class="budget-summary-card__label">${t('splitExpenses.youAreOwed')}</div>
-      <div class="budget-summary-card__amount">${owed.length ? owed.map((r) => money(r.amount, r.currency)).join(' · ') : money(0, state.meta.default_currency)}</div>
+    <div class="metric-card metric-card--positive">
+      <div class="metric-card__label">${t('splitExpenses.youAreOwed')}</div>
+      <div class="metric-card__amount">${owed.length ? owed.map((r) => money(r.amount, r.currency)).join(' · ') : money(0, state.meta.default_currency)}</div>
     </div>
-    <div class="budget-summary-card budget-summary-card--negative">
-      <div class="budget-summary-card__label">${t('splitExpenses.youOwe')}</div>
-      <div class="budget-summary-card__amount">${owing.length ? owing.map((r) => money(r.amount, r.currency)).join(' · ') : money(0, state.meta.default_currency)}</div>
+    <div class="metric-card metric-card--negative">
+      <div class="metric-card__label">${t('splitExpenses.youOwe')}</div>
+      <div class="metric-card__amount">${owing.length ? owing.map((r) => money(r.amount, r.currency)).join(' · ') : money(0, state.meta.default_currency)}</div>
     </div>
-    <div class="budget-summary-card">
-      <div class="budget-summary-card__label">${isArchivedView() ? t('splitExpenses.statusArchived') : t('splitExpenses.activeGroups')}</div>
-      <div class="budget-summary-card__amount">${state.groups.length}</div>
+    <div class="metric-card">
+      <div class="metric-card__label">${isArchivedView() ? t('splitExpenses.statusArchived') : t('splitExpenses.activeGroups')}</div>
+      <div class="metric-card__amount">${state.groups.length}</div>
     </div>
   `);
 }
@@ -318,8 +318,8 @@ function renderMain() {
   setHtml(main, `
     <section class="split-group-header">
       <div>
-        <div class="split-kicker">${t(`splitExpenses.groupType.${group.type}`)}</div>
         <h2>${esc(group.name)}</h2>
+        <p class="split-group-type">${t(`splitExpenses.groupType.${group.type}`)}</p>
         ${archived ? `<p class="split-archived-badge"><i data-lucide="archive" class="icon-md" aria-hidden="true"></i>${t('splitExpenses.statusArchived')}</p>` : ''}
         <p>${esc(group.description || t('splitExpenses.groupDefaultDescription'))}</p>
       </div>

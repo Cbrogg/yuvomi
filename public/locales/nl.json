@@ -1,5 +1,6 @@
 {
     "common": {
+        "swipeSidesSwapped": "De veegrichtingen zijn verwisseld - de hoofdactie staat nu aan de andere kant.",
         "apply": "Toevoegen",
         "searchClear": "Zoekopdracht wissen",
         "save": "Opslaan",
@@ -1114,7 +1115,7 @@
         "loanPaymentTitle": "Leningaflossing: {{borrower}}",
         "typeLoan": "Lening",
         "tabsLabel": "Budgetsecties",
-        "budgetTab": "Budget",
+        "budgetTab": "Overzicht",
         "loansTab": "Leningen",
         "filteredTransactions": "Gefilterde transacties",
         "clearLoanFilter": "Filter wissen",
@@ -3002,7 +3003,6 @@
         "categoryFilter": "Filter op categorie",
         "paymentMethodFilter": "Filter op betaalmethode",
         "statusFilter": "Filter op status",
-        "statusAll": "Alle statussen",
         "statusActive": "Actief",
         "statusDisabled": "Uitgeschakeld",
         "sortLabel": "Abonnementen sorteren",
@@ -3013,8 +3013,6 @@
         "manageMetadata": "Categorieën en betaalmethoden beheren",
         "settingsTitle": "Abonnementsinstellingen",
         "loadError": "Abonnementen konden niet worden geladen.",
-        "allCategories": "Alle categorieën",
-        "allPaymentMethods": "Alle betaalmethoden",
         "cycle": {
             "daily": "Dagelijks",
             "weekly": "Wekelijks",
@@ -3050,10 +3048,7 @@
         "unspecified": "Niet opgegeven",
         "active": "Actief",
         "disabled": "Uitgeschakeld",
-        "disable": "Abonnement uitschakelen",
-        "enable": "Abonnement inschakelen",
         "markRenewed": "Als verlengd markeren",
-        "edit": "Abonnement bewerken",
         "delete": "Abonnement verwijderen",
         "conversionUnavailable": "Conversie niet beschikbaar",
         "monthlyEquivalent": "{{amount}} per maand",
@@ -3082,11 +3077,11 @@
         "invalidDate": "Voer een geldige betaaldatum in.",
         "savedToast": "Abonnement opgeslagen.",
         "addedToast": "Abonnement toegevoegd.",
-        "disabledToast": "Abonnement uitgeschakeld.",
-        "enabledToast": "Abonnement ingeschakeld.",
         "renewedToast": "Verlengingsdatum bijgewerkt.",
         "deleteConfirm": "Abonnement \"{{name}}\" verwijderen?",
         "deleteConfirmDetail": "Met het abonnement verdwijnen de herinneringen en de budgetboeking van de volgende betaling. Al afgeronde betalingen blijven in het maandoverzicht staan.",
+        "renewConfirm": "Betaling voor \"{{name}}\" boeken?",
+        "renewConfirmDetail": "De vervaldatum schuift op en de betaling van {{date}} wordt als uitgave in het budget geboekt.",
         "deletedToast": "Abonnement verwijderd.",
         "monthlyBudgetLabel": "Maandbudget voor abonnementen",
         "baseCurrencyLabel": "Basisvaluta",
@@ -3353,7 +3348,8 @@
             "visibility": {
                 "private": "Privé",
                 "family": "Gezin"
-            }
+            },
+            "allTitle": "Alle medicijnen"
         },
         "labs": {
             "title": "Labwaarden",

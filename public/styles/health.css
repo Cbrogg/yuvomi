@@ -6,52 +6,61 @@
 
 .health-page {
   --module-accent: var(--module-health);
+  /* Der Zyklus-Ring und sein Lade-Skeleton müssen dasselbe Maß halten - das
+   * Skeleton hält den Platz frei, den der Ring danach einnimmt, und laufen sie
+   * auseinander, springt das Layout beim Übergang. Der Wert stand zweimal von
+   * Hand da. Die viewBox des SVG bleibt bewusst unabhängig: sie ist ein
+   * Koordinatensystem, keine Größe (das SVG skaliert per width: 100%). */
+  --cycle-ring-size: 220px;
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  /* Full-bleed-Root (Issue #577): die Health-Tab-Leiste hängt außerhalb dieses
-   * Roots im Router-Wrapper und lief schon immer voll durch — der Inhalt
-   * darunter saß aber in einer 1280er-Insel. Beide teilen jetzt dieselbe
-   * Content-Spalte über --page-inline-pad. */
-  padding-inline: var(--page-inline-pad);
+  /* Full-bleed-Root (Issue #577): der Modulkopf ist ein direktes Kind dieses
+   * Roots und sein Chrome - Grund, Trennlinie, Sticky-Fläche - muss bis zur
+   * Shell-Kante laufen. Deshalb trägt der Root KEIN padding-inline; die
+   * Content-Spalte kommt über --page-inline-pad auf den Kindern (Kopf aus der
+   * Shell-Regel, Panels hier darunter). Vorher hing die Tab-Leiste außerhalb
+   * des Roots im Router-Wrapper, da war das Padding hier richtig. */
   padding-bottom: calc(var(--nav-bottom-height) + var(--space-6));
 }
 
-/* Geteilte Tabs-Leiste trägt den Modul-Akzent-Streifen (wechselt je aktivem Tab
- * über --active-module-accent, vom Router gesetzt). Muster wie .kitchen-tabs-bar. */
-.health-tabs-bar {
-  border-top: 3px solid var(--active-module-accent, var(--color-accent));
-}
+/* Der 3px-Akzentstreifen über der Tabs-Leiste ist mit dem HIG-Rollout entfallen
+ * (DESIGN.md: „Don't Akzentstreifen an Toolbars oder Köpfen") - genauso wie bei
+ * .kitchen-tabs-bar, dem Muster, dem er nachgebaut war. Die Modul-Identität
+ * trägt der gefüllte aktive Tab. */
 
 .health-panel {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
   min-width: 0;
+  padding-inline: var(--page-inline-pad);
 }
 
 .health-panel[hidden] {
   display: none;
 }
 
-.health-panel__head {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding-top: var(--space-2);
-}
+/* Hier stand `.health-panel__head` - der Traeger des Panel-Titels, den die
+ * Sub-Tab-Leiste darueber bereits wortgleich fuehrt. Der Titel ist jetzt
+ * .sr-only und braucht keinen sichtbaren Kopf mehr (Finish-Review Runde 4,
+ * Befund 6); die Klasse hatte danach keinen Nutzer im Markup. */
 
-/* Empty-State: zentriertes Panel mit getöntem Icon-Well im Modul-Akzent. */
+/* Empty-State: zentriertes Panel mit getöntem Icon-Well im Modul-Akzent.
+ * Randlos wie jede Karte auf dem Grouped-Grund; der frühere radial-gradient
+ * war Dekoration ohne Aussage und ist mit der HIG-Welt entfallen. */
 .health-empty {
   align-items: center;
   text-align: center;
   gap: var(--space-3);
   padding: var(--space-8) var(--space-4);
-  border: 1px solid var(--color-border);
-  border-radius: calc(var(--radius-md) + 4px);
-  background:
-    radial-gradient(circle at top, color-mix(in srgb, var(--module-accent) 8%, transparent), transparent 55%),
-    var(--color-surface);
+  border: none;
+  /* --radius-lg, nicht `calc(var(--radius-md) + 4px)`: die Konzentrik-Formel
+   * leitet einen INNEREN Radius von einem äußeren ab, und diese Karte steht
+   * freistehend auf dem Grouped-Grund. Der Wert war identisch (16px), band die
+   * Karte aber an ein Token, mit dem sie nichts zu tun hat. */
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
   box-shadow: var(--shadow-sm);
 }
 
@@ -63,7 +72,7 @@
   height: 56px;
   border-radius: var(--radius-full);
   color: var(--module-accent);
-  background: color-mix(in srgb, var(--module-accent) 14%, transparent);
+  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), transparent);
 }
 
 .health-empty__icon i {
@@ -121,7 +130,7 @@
 
 .health-person-chip.is-active {
   border-color: var(--module-accent);
-  background: color-mix(in srgb, var(--module-accent) 12%, transparent);
+  background: color-mix(in srgb, var(--module-accent) var(--tint-state), transparent);
   color: var(--color-text-primary);
   font-weight: var(--font-weight-medium, 500);
 }
@@ -182,26 +191,35 @@
   gap: var(--space-3);
 }
 
+/* Auf dem Grouped-Grund ist diese Kachel eine randlose Karte (Vitalwerte-Tab),
+ * INNERHALB der Übersichtskarte ein Inset-Well (tokens.css,
+ * Kasten-in-Kasten-Vokabular) - ein Well auf dem Grund wäre unsichtbar.
+ * Auswahl und Hover sprechen in beiden Fällen über einen Innenring. */
 .health-metric-card {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
   padding: var(--space-3);
-  border: 1px solid var(--color-border);
+  border: none;
   border-radius: var(--radius-md);
   background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
   text-align: start;
   cursor: pointer;
-  transition: border-color var(--transition-fast, var(--duration-sm)), box-shadow var(--transition-fast, var(--duration-sm));
+  transition: box-shadow var(--transition-fast, var(--duration-sm));
+}
+
+.health-overview__card .health-metric-card {
+  background: var(--color-fill-well);
+  box-shadow: none;
 }
 
 .health-metric-card:hover {
-  border-color: var(--module-accent);
+  box-shadow: inset 0 0 0 1px var(--module-accent);
 }
 
 .health-metric-card.is-active {
-  border-color: var(--module-accent);
-  box-shadow: 0 0 0 1px var(--module-accent);
+  box-shadow: inset 0 0 0 2px var(--module-accent);
 }
 
 /* Flex mit Umbruch: passt der Metrik-Name nicht mehr NEBEN das Icon, wrappt
@@ -230,14 +248,14 @@
   text-align: left;
 }
 
-/* Übersichts-Widget „Letzte Vitalwerte": das 2-Spalten-Raster (minmax(0,1fr))
- * schrumpft die Karte mobil auf ~119px - zu schmal für „Sauerstoffsättigung".
- * Hier trennt hyphens:auto sprachkorrekt an Silbengrenzen (<html lang> ist die
- * Nutzer-Locale) statt overflow-wrap das Wort mittig zu zerhacken (Critique P2).
- * Nur dieser Kontext; die breitere Vitalwerte-Tab-Karte bleibt bei manual. */
-.health-overview__vitals-grid .health-metric-card__label {
-  hyphens: auto;
-}
+/* Die frühere Ausnahme `hyphens: auto` für das Übersichts-Widget ist mit Runde 3
+ * entfallen, und zwar als URSACHE des Trennwortbruchs, nicht nur als Symptom:
+ * mit auto ist die min-content-Breite des Labels eine SILBE, also unterschreitet
+ * das Flex-Item nie seine Mindestbreite und wrappt nie auf die eigene Zeile
+ * unter dem Icon - es trennt stattdessen („Sauerstoffsätti-gung"). Mit manual
+ * ist die min-content-Breite das ganze Wort, das Item rutscht auf die volle
+ * Zeile, und dort passt es. Den früher gefürchteten 119px-Fall löst jetzt das
+ * auto-fit-Raster (siehe .health-overview__vitals-grid). */
 
 .health-metric-card__icon {
   flex-shrink: 0;
@@ -250,9 +268,13 @@
   font-size: var(--text-sm);
 }
 
+/* Wert und Einheit stehen auf einer gemeinsamen Grundlinie. Sie dürfen
+ * gemeinsam umbrechen (lange Dauern wie „7 Std. 30 Min."), aber nie mitten im
+ * Wort - deshalb wrap statt Ellipse und `overflow-wrap: normal`. */
 .health-metric-card__body {
   display: flex;
   align-items: baseline;
+  flex-wrap: wrap;
   gap: var(--space-1);
 }
 
@@ -260,6 +282,15 @@
   font-size: var(--text-2xl);
   font-weight: var(--font-weight-semibold, 600);
   color: var(--color-text-primary);
+  overflow-wrap: normal;
+  hyphens: manual;
+}
+
+/* In der Übersichtskachel ist die Spalte schmaler als auf dem Vitalwerte-Tab:
+ * eine Stufe kleiner hält „7 Std. 30 Min." und die Einheit häufiger in einer
+ * Zeile, ohne die Hierarchie zu drehen (der Wert bleibt das Größte der Kachel). */
+.health-overview__vitals-grid .health-metric-card__value {
+  font-size: var(--text-xl);
 }
 
 .health-metric-card__value--empty {
@@ -320,7 +351,7 @@
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-4);
-  border: 1px solid var(--color-border);
+  border: 1px solid transparent;
   border-radius: var(--radius-md);
   background: var(--color-surface);
 }
@@ -434,24 +465,41 @@
   margin-inline-start: auto;
 }
 
-/* „Heute fällig"-Liste */
+/* „Heute fällig"-Liste - Haarlinien-Liste, der Trenner ersetzt den Abstand.
+ * Auf dem Medikamente-Tab liegt sie auf dem Grouped-Grund und braucht deshalb
+ * einen eigenen Träger (Zeilenlisten-Regel, tokens.css). */
 .health-meds__due-list {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: 0;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
 }
 
+/* Der Träger entscheidet: in der Übersichtskarte liegt die Liste schon in einer
+ * Karte - dort trägt sie nichts (Muster .health-overview__card ...). */
+.health-overview__card .health-meds__due-list {
+  background: none;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: visible;
+}
+
+/* Leerzustand: zentrierter Sekundärtext ohne Kasten - ein gestrichelter Rahmen
+ * wäre in einer randlosen Karte ein Kasten-in-Kasten, und eine eigene Fläche
+ * trüge je nach Träger (Karte oder Grund) unterschiedlich. */
 .health-meds__due-empty,
 .health-meds__empty {
   padding: var(--space-4);
   text-align: center;
   color: var(--color-text-secondary);
   font-size: var(--text-sm);
-  border: 1px dashed var(--color-border);
-  border-radius: var(--radius-md);
+  border: none;
 }
 
 .health-dose {
@@ -461,10 +509,13 @@
   gap: var(--space-1) var(--space-3);
   /* Dichtere Zeile: geringeres vertikales Padding, damit mehr Dosen ohne Scrollen
    * sichtbar sind (Kern-Interaktion des Tabs). */
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
+  padding: var(--space-2) var(--space-4);
+  border: none;
+  background: transparent;
+}
+
+.health-dose + .health-dose {
+  border-top: 1px solid var(--color-border-subtle);
 }
 
 .health-dose__time {
@@ -513,7 +564,7 @@
   flex-direction: column;
   gap: var(--space-2);
   padding: var(--space-4);
-  border: 1px solid var(--color-border);
+  border: 1px solid transparent;
   border-radius: var(--radius-md);
   background: var(--color-surface);
 }
@@ -577,7 +628,7 @@
   flex-direction: column;
   gap: var(--space-2);
   padding: var(--space-3);
-  border: 1px solid var(--color-border);
+  border: 1px solid transparent;
   border-radius: var(--radius-md);
   background: var(--color-surface);
   text-align: start;
@@ -621,8 +672,8 @@ button.health-med-card:hover {
   padding: var(--space-0h) var(--space-2);
   border-radius: var(--radius-full);
   font-size: var(--text-2xs);
-  background: color-mix(in srgb, var(--module-accent) 14%, transparent);
-  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) 70%, var(--color-text-primary));
+  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), transparent);
+  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-ink), var(--color-text-primary));
 }
 
 .health-med-badge--muted {
@@ -700,22 +751,26 @@ button.health-med-card:hover {
   color: var(--color-text-secondary);
 }
 
+/* Haarlinien-Liste: der Trenner ersetzt den Abstand (siehe tokens.css). */
 .health-sched-list {
   list-style: none;
   margin: 0 0 var(--space-2);
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: 0;
 }
 
 .health-sched-row {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  padding: var(--space-2) 0;
+  border: none;
+}
+
+.health-sched-row + .health-sched-row {
+  border-top: 1px solid var(--color-border-subtle);
 }
 
 .health-sched-row__time {
@@ -763,7 +818,7 @@ button.health-med-card:hover {
 
 .health-weekday.is-active {
   border-color: var(--module-accent);
-  background: color-mix(in srgb, var(--module-accent) 14%, transparent);
+  background: color-mix(in srgb, var(--module-accent) var(--tint-state), transparent);
   color: var(--color-text-primary);
   font-weight: var(--font-weight-medium, 500);
 }
@@ -811,14 +866,14 @@ button.health-med-card:hover {
   gap: var(--space-3);
 }
 
+/* Leerzustand: zentrierter Sekundärtext ohne Kasten (siehe .health-meds__empty). */
 .health-labs__empty,
 .health-labs__detail-empty {
   padding: var(--space-4);
   text-align: center;
   color: var(--color-text-secondary);
   font-size: var(--text-sm);
-  border: 1px dashed var(--color-border);
-  border-radius: var(--radius-md);
+  border: none;
 }
 
 .health-lab-card {
@@ -826,7 +881,7 @@ button.health-med-card:hover {
   flex-direction: column;
   gap: var(--space-2);
   padding: var(--space-3);
-  border: 1px solid var(--color-border);
+  border: 1px solid transparent;
   border-radius: var(--radius-md);
   background: var(--color-surface);
   text-align: start;
@@ -883,7 +938,7 @@ button.health-med-card:hover {
 
 .health-lab-badge--warn {
   background: var(--color-warning-light);
-  color: var(--color-warning);
+  color: var(--color-warning-ink);
 }
 
 /* Befund-Detail */
@@ -892,7 +947,7 @@ button.health-med-card:hover {
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-4);
-  border: 1px solid var(--color-border);
+  border: 1px solid transparent;
   border-radius: var(--radius-md);
   background: var(--color-surface);
 }
@@ -1037,22 +1092,26 @@ button.health-med-card:hover {
   color: var(--color-text-secondary);
 }
 
+/* Haarlinien-Liste: der Trenner ersetzt den Abstand (siehe tokens.css). */
 .health-results-list {
   list-style: none;
   margin: 0 0 var(--space-2);
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: 0;
 }
 
 .health-results-row {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  padding: var(--space-2) 0;
+  border: none;
+}
+
+.health-results-row + .health-results-row {
+  border-top: 1px solid var(--color-border-subtle);
 }
 
 .health-results-row__analyte {
@@ -1136,14 +1195,16 @@ button.health-med-card:hover {
   gap: var(--space-3);
 }
 
+/* Kennzahl-Kachel: liegt auf dem Grouped-Grund, also randlose Karte. */
 .health-activity-stat {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
   padding: var(--space-3);
-  border: 1px solid var(--color-border);
+  border: none;
   border-radius: var(--radius-md);
   background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .health-activity-stat__icon {
@@ -1166,7 +1227,7 @@ button.health-med-card:hover {
 /* Balken-Chart */
 .health-activity__chart {
   padding: var(--space-4);
-  border: 1px solid var(--color-border);
+  border: 1px solid transparent;
   border-radius: var(--radius-md);
   background: var(--color-surface);
 }
@@ -1182,23 +1243,27 @@ button.health-med-card:hover {
   color: var(--color-text-secondary);
 }
 
+/* Haarlinien-Liste: der Trenner ersetzt den Abstand (siehe tokens.css). */
 .health-activity-list {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: 0;
 }
 
 .health-activity-row {
   display: flex;
   align-items: flex-start;
   gap: var(--space-3);
-  padding: var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
+  padding: var(--space-3) 0;
+  border: none;
+  background: transparent;
+}
+
+.health-activity-row + .health-activity-row {
+  border-top: 1px solid var(--color-border-subtle);
 }
 
 .health-activity-row__icon {
@@ -1324,7 +1389,7 @@ button.health-med-card:hover {
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-4);
-  border: 1px solid var(--color-border);
+  border: 1px solid transparent;
   border-radius: calc(var(--radius-md) + 2px);
   background: var(--color-surface);
   box-shadow: var(--shadow-sm);
@@ -1392,30 +1457,44 @@ button.health-med-card:hover {
 }
 
 /* Letzte Vitalwerte */
+/* Eine Kachelhöhe je Rasterzeile (Finish-Review Runde 2, Fix 6). Die Ursache
+ * der ungleichen Höhen war NICHT das Raster, sondern das umbrechende Label:
+ * „Sauerstoffsättigung" machte seine Zeile dreizeilig, „Kopfumfang" blieb
+ * einzeilig. auto-fit statt fester Zweispaltigkeit löst genau das - unter
+ * ~310px Panelbreite fällt das Raster auf eine Spalte, statt den längsten
+ * Metriknamen in eine 119px-Spalte zu quetschen (der Fall, für den vorher
+ * `hyphens: auto` eingebaut war). Mit gleich hohen Kacheln gleicht das Grid
+ * die Zeilen dann von selbst über `stretch` aus; ein `grid-auto-rows: 1fr`
+ * darüber wäre in der einspaltigen Fassung schädlich - es zöge die leere
+ * „Größe"-Kachel auf die Höhe der Blutdruck-Kachel mit Trendzeile. */
 .health-overview__vitals-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: var(--space-2);
 }
 
 /* Nächste Erinnerungen */
+/* Haarlinien-Liste: der Trenner ersetzt den Abstand (siehe tokens.css). */
 .health-overview__reminders-list {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: 0;
 }
 
 .health-overview-reminder {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface-2);
-  border: 1px solid var(--color-border);
+  padding: var(--space-2) 0;
+  background: transparent;
+  border: none;
+}
+
+.health-overview-reminder + .health-overview-reminder {
+  border-top: 1px solid var(--color-border-subtle);
 }
 
 .health-overview__reminders-empty,
@@ -1504,11 +1583,11 @@ button.health-med-card:hover {
 }
 
 .health-chart__band {
-  fill: color-mix(in srgb, var(--color-success) 12%, transparent);
+  fill: color-mix(in srgb, var(--color-success) var(--tint-wash), transparent);
 }
 
 .health-chart__band-line {
-  stroke: color-mix(in srgb, var(--color-success) 45%, transparent);
+  stroke: color-mix(in srgb, var(--color-success) var(--tint-hint), transparent);
   stroke-width: 1;
   stroke-dasharray: 4 3;
 }
@@ -1539,8 +1618,8 @@ button.health-med-card:hover {
 }
 
 .cycle-skeleton__ring {
-  width: 220px;
-  height: 220px;
+  width: var(--cycle-ring-size);
+  height: var(--cycle-ring-size);
   border-radius: var(--radius-full);
   flex: 0 0 auto;
   margin-inline: auto;
@@ -1579,8 +1658,8 @@ button.health-med-card:hover {
 
 .cycle-ring {
   position: relative;
-  width: 220px;
-  height: 220px;
+  width: var(--cycle-ring-size);
+  height: var(--cycle-ring-size);
   flex: 0 0 auto;
   margin-inline: auto;
 }
@@ -1638,11 +1717,12 @@ button.health-med-card:hover {
   align-items: flex-start;
   margin-top: var(--space-4);
   padding: var(--space-5);
-  border: 1px solid color-mix(in srgb, var(--module-accent) 30%, var(--color-border));
+  /* Randlose Karte wie überall; die Hervorhebung trägt der Inhalt (getöntes
+   * Icon), nicht ein Kartendekor aus getönter Kante plus Verlauf. */
+  border: none;
   border-radius: var(--radius-lg);
-  background:
-    radial-gradient(circle at top left, color-mix(in srgb, var(--module-accent) 12%, transparent), transparent 60%),
-    var(--color-surface);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .cycle-preg__icon {
@@ -1653,7 +1733,7 @@ button.health-med-card:hover {
   height: 48px;
   border-radius: var(--radius-full);
   color: var(--module-accent);
-  background: color-mix(in srgb, var(--module-accent) 16%, transparent);
+  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), transparent);
 }
 
 .cycle-preg__body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: var(--space-2); }
@@ -1678,8 +1758,8 @@ button.health-med-card:hover {
   font-weight: 600;
   padding: 2px var(--space-2);
   border-radius: var(--radius-full);
-  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) 70%, var(--color-text-primary));
-  background: color-mix(in srgb, var(--module-accent) 14%, transparent);
+  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-ink), var(--color-text-primary));
+  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), transparent);
 }
 
 .cycle-preg__countdown { font-size: var(--text-sm); color: var(--color-text-secondary); }
@@ -1723,14 +1803,18 @@ button.health-med-card:hover {
   gap: var(--space-2);
 }
 
+/* Kennzahlkarte auf dem Grouped-Grund: randlose Karte. Die frühere
+ * surface-2-Fläche lag im Dark UNTER dem Grund (#050507 auf #0A0A0C) und
+ * verschwand dort fast vollständig. */
 .cycle-stat {
   display: flex;
   flex-direction: column;
   gap: var(--space-0h);
   padding: var(--space-3);
-  background: var(--color-surface-2);
-  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  border: none;
   border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
 }
 
 .cycle-stat__head {
@@ -1777,9 +1861,11 @@ button.health-med-card:hover {
   flex-wrap: wrap;
   margin-top: var(--space-4);
   padding: var(--space-3) var(--space-4);
-  background: var(--color-surface-2);
-  border: 1px solid var(--color-border);
+  /* Aktionsleiste auf dem Grouped-Grund: randlose Karte (siehe .cycle-stat). */
+  background: var(--color-surface);
+  border: none;
   border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
 }
 
 .cycle-today__label { font-weight: 600; font-size: var(--text-sm); color: var(--color-text-secondary); }
@@ -1948,22 +2034,26 @@ button.cycle-cal__day:not(:disabled):hover { background: var(--color-surface-2);
 
 .cycle-history { margin-top: var(--space-6); }
 
+/* Haarlinien-Liste: der Trenner ersetzt den Abstand (siehe tokens.css). */
 .cycle-history__list {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: 0;
 }
 
 .cycle-history__row {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  padding: var(--space-2) 0;
+  border: none;
+}
+
+.cycle-history__row + .cycle-history__row {
+  border-top: 1px solid var(--color-border-subtle);
 }
 
 .cycle-history__dot {
@@ -2073,8 +2163,9 @@ button.cycle-cal__day:not(:disabled):hover { background: var(--color-surface-2);
 .cycle-bulk__confirm {
   width: 100%;
   padding: var(--space-3);
-  background: var(--color-surface-raised);
-  border: 1px solid var(--color-border-subtle);
+  /* Inline-Panel in einer Karte: Inset-Well, kein Kasten (siehe tokens.css). */
+  background: var(--color-fill-well);
+  border: none;
   border-radius: var(--radius-md);
   flex-direction: column;
   gap: var(--space-3);
@@ -2099,7 +2190,7 @@ button.cycle-cal__day:not(:disabled):hover { background: var(--color-surface-2);
  * Löschen als row-action nur in der eigenen Ansicht. */
 .health-recent {
   margin-top: var(--space-3);
-  border: 1px solid var(--color-border-subtle);
+  border: 1px solid transparent;
   border-radius: var(--radius-md);
   background: var(--color-surface-work);
   padding: var(--space-2) var(--space-3);
@@ -2146,7 +2237,7 @@ button.cycle-cal__day:not(:disabled):hover { background: var(--color-surface-2);
 /* Einnahmeprotokoll-Aufklapper unter der Adhärenz (Audit R2, A2-22). */
 .health-medlog {
   margin-top: var(--space-2);
-  border: 1px solid var(--color-border-subtle);
+  border: 1px solid transparent;
   border-radius: var(--radius-md);
   background: var(--color-surface-work);
   padding: var(--space-2) var(--space-3);

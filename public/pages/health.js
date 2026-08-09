@@ -254,25 +254,35 @@ function panelMarkup(panel, activeRoute) {
       </div>`;
 
   // Eigenes data-health-panel-Attribut statt des (per Frontend-Audit gesperrten)
-  // Legacy-„data-panel". Die Sichtbarkeit steuert showPanel() lokal — renderSubTabs
-  // synchronisiert bewusst keine Panels für dieses Modul.
+  // Legacy-„data-panel". Über dieses Attribut reicht health-tabs.js die Panels an
+  // renderSubTabs weiter (`panelFor`); von dort kommen `id`, `aria-labelledby` zum
+  // zugehörigen Tab und der Hidden-Zustand. Rolle und `aria-label` stehen hier
+  // trotzdem: sie tragen das Panel in dem Moment zwischen Markup-Einbau und
+  // Leisten-Render, in dem die Verknüpfung noch nicht steht. Danach ersetzt der
+  // Tabname das Label (zwei Namen wären einer zu viel).
   return `
     <section class="health-panel" data-health-panel="${esc(panel.route)}"
              role="tabpanel" aria-label="${esc(t(panel.titleKey))}" ${hidden}>
-      <header class="health-panel__head">
-        <h2 class="health-panel__title u-toolbar-title">${esc(t(panel.titleKey))}</h2>
-      </header>
+      <!-- Der Panel-Titel steht sichtbar schon in der Sub-Tab-Leiste darueber:
+           alle sechs Panels wiederholten ihn wortgleich als h2 direkt darunter
+           ("Uebersicht" ueber "Uebersicht"), also verdoppelte der Kopf
+           Information, statt eine Ebene zu benennen (Finish-Review Runde 4,
+           Befund 6). Dieselbe Regel hat die Einstellungen schon einmal
+           eingeholt - der Guard dazu prueft sie jetzt fuer beide.
+           Als Ueberschrift bleibt er stehen, nur unsichtbar: er haelt die
+           Dokumentgliederung zwischen dem h1 des Moduls und den h3 der
+           Abschnitte, und das tabpanel traegt denselben Namen im aria-label. -->
+      <h2 class="health-panel__title sr-only">${esc(t(panel.titleKey))}</h2>
       ${body}
     </section>
   `;
 }
 
-function showPanel(activeRoute) {
-  if (!_container) return;
-  _container.querySelectorAll('[data-health-panel]').forEach((panel) => {
-    panel.hidden = panel.dataset.healthPanel !== activeRoute;
-  });
-}
+// Kein eigenes showPanel() mehr: Auswahl und Panel-Sichtbarkeit sind EINE
+// Operation (WAI-ARIA APG „Tabs"), und sie gehört dorthin, wo auch
+// `aria-selected` gesetzt wird - in renderSubTabs. Zwei Besitzer für denselben
+// Zustand sind genau die Naht, an der `aria-selected` und `hidden` auseinander
+// laufen können.
 
 // Routen-basierter Kontext-FAB: die Primäraktion folgt der aktiven Health-Route.
 // Auf der Übersicht (keine Erstellen-Aktion) ausgeblendet.
@@ -332,7 +342,14 @@ export async function render(container, ctx = {}) {
   container.replaceChildren();
   container.insertAdjacentHTML('beforeend', `
     <div class="health-page">
-      <h1 class="sr-only">${esc(t('nav.health'))}</h1>
+      <!-- Kanonischer Modulkopf: die Sub-Tab-Leiste wechselt eine SICHT
+           innerhalb der Gesundheit (alle Health-Routen tragen module: 'health'),
+           also steht der Modulname als Large Title ueber ihr - dasselbe Muster
+           wie Budget, Belohnungen und Haushaltshilfe. renderHealthTabsBar haengt
+           die Leiste als zweite Zeile in diesen Kopf. -->
+      <header class="page-toolbar health-toolbar">
+        <h1 class="page-toolbar__title">${esc(t('nav.health'))}</h1>
+      </header>
       ${panels.map((panel) => panelMarkup(panel, activeRoute)).join('')}
     </div>
   `);
@@ -341,7 +358,6 @@ export async function render(container, ctx = {}) {
   container.querySelector('.health-page').appendChild(_fab);
 
   if (window.lucide) window.lucide.createIcons({ el: container });
-  showPanel(activeRoute);
   renderHealthTabsBar(container, activeRoute, { cycleEnabled });
   updateHealthFab(activeRoute);
   maybeMountOverview(activeRoute);
@@ -360,7 +376,6 @@ export async function update({ path, user } = {}) {
   if (user?.id) { vitals.meId = user.id; meds.meId = user.id; labs.meId = user.id; activity.meId = user.id; cycle.meId = user.id; overview.meId = user.id; }
   const activeRoute = normalizeHealthPath(path || window.location.pathname);
 
-  showPanel(activeRoute);
   _container.querySelector('.sub-tabs-bar')?.remove();
   renderHealthTabsBar(_container, activeRoute, { cycleEnabled });
   updateHealthFab(activeRoute);
@@ -1359,7 +1374,11 @@ function renderMedsShell() {
     </div>
     <div class="health-meds__due">${dueTodayMarkup()}</div>
     <div class="health-meds__adherence-wrap">${adherenceMarkup()}${medLogHistoryMarkup()}</div>
-    <h3 class="health-meds__section-title u-toolbar-title">${esc(t('health.meds.title'))}</h3>
+    <!-- „Alle Medikamente", nicht „Medikamente": der Abschnitt stand unter dem
+         gleichnamigen Tab und trug denselben Namen wie das Panel, benannte sich
+         also gegen „Heute faellig" gar nicht. Gefunden vom Guard, der die
+         Titelwiederholung seit Runde 5 fuer Leiste UND Abschnitt prueft. -->
+    <h3 class="health-meds__section-title u-toolbar-title">${esc(t('health.meds.allTitle'))}</h3>
     <div class="health-meds__list" id="health-meds-list">${medListMarkup()}</div>
   `);
   if (window.lucide) window.lucide.createIcons({ el: meds.root });

@@ -50,6 +50,12 @@ yuvomi-datepicker {
   pointer-events: none;
 }
 
+/* Freistehendes Ziel: sein einziger Nachbar ist das Feld, in dem er sitzt - kein
+ * gleichartiges Ziel engt ihn ein, also gilt die volle Zielgröße (tokens.css,
+ * „Die Zielgrößen-Regel"). --target-md waren 40px auf JEDEM Gerät, am Finger
+ * also 8px unter dem Minimum. .ydp-navbtn unten bleibt bei --target-md: die
+ * beiden Monatspfeile stehen als Paar 4px nebeneinander und sind damit ein
+ * Reihen-Ziel. */
 .ydp__trigger {
   position: absolute;
   top: 50%;
@@ -58,8 +64,8 @@ yuvomi-datepicker {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: var(--target-md);
-  height: var(--target-md);
+  width: var(--target-base);
+  height: var(--target-base);
   padding: 0;
   border: 0;
   background: transparent;
@@ -125,9 +131,14 @@ yuvomi-datepicker[disabled] .ydp__trigger {
     display var(--transition-fast) allow-discrete;
 }
 
-@supports (backdrop-filter: blur(1px)) {
+/* Zweizweigig, wie im Kopf von glass.css vorgeschrieben: Safari < 18 kennt nur
+ * den -webkit-Zweig, und iOS ist das Hauptgerät dieser PWA. Bis 2026-08-09 fragte
+ * dieser Block nur nach der Standardschreibweise und setzte auch nur sie - das
+ * Popover stand dort ohne Glas. */
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
   .ydp-popover {
     backdrop-filter: var(--blur-lg) saturate(var(--lg-glass-saturate));
+    -webkit-backdrop-filter: var(--blur-lg) saturate(var(--lg-glass-saturate));
   }
 }
 
@@ -183,7 +194,7 @@ yuvomi-datepicker[disabled] .ydp__trigger {
   border: 0;
   background: transparent;
   color: var(--color-text-secondary);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-full);
   cursor: pointer;
   transition: color var(--transition-fast), background-color var(--transition-fast);
 }
@@ -288,7 +299,7 @@ yuvomi-datepicker[disabled] .ydp__trigger {
   background: transparent;
   font-size: var(--text-sm);
   font-weight: var(--font-weight-medium);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-full);
   cursor: pointer;
   transition: background-color var(--transition-fast);
 }

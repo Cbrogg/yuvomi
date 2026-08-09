@@ -187,7 +187,7 @@
 .widget-size--4x2 > .widget,
 .widget-size--4x3 > .widget,
 .widget-size--4x4 > .widget {
-  border-top: 2px solid color-mix(in srgb, var(--active-module-accent, var(--color-accent)) 40%, var(--color-border));
+  border-top: 2px solid color-mix(in srgb, var(--active-module-accent, var(--color-accent)) var(--tint-hint), var(--color-border));
 }
 
 /* --------------------------------------------------------
@@ -215,27 +215,17 @@
  * Internes Spacing: 8–12px (enger als vorher 16–24px).
  * -------------------------------------------------------- */
 .widget {
+  /* HIG-Karte: randlos auf dem Grouped Background, weiche Rundung (16px),
+   * subtiler Schatten. Der transparente Rahmen bleibt als Träger für
+   * .widget--error (Danger-Tint) bestehen. */
   background-color: var(--color-surface);
-  border-radius: var(--radius-md);
-  box-shadow: var(--glass-shadow-sm);
-  border: 1px solid var(--glass-border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid transparent;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   position: relative;
-}
-
-.widget::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: var(--glass-highlight-subtle);
-  border-radius: var(--radius-md) var(--radius-md) 0 0;
-  pointer-events: none;
-  z-index: 1;
 }
 
 .widget__header {
@@ -273,14 +263,14 @@
   transition: opacity var(--transition-fast), color var(--transition-fast), background-color var(--transition-fast);
   min-height: var(--target-base);
   padding: 0 var(--space-2);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-full);
   margin-right: calc(-1 * var(--space-2));
 }
 
 .widget__link:hover {
   opacity: 1;
   color: var(--widget-accent, var(--color-accent));
-  background-color: color-mix(in srgb, var(--widget-accent, var(--color-accent)) 10%, transparent);
+  background-color: color-mix(in srgb, var(--widget-accent, var(--color-accent)) var(--tint-state), transparent);
 }
 
 .widget__badge {
@@ -291,11 +281,11 @@
    * plus Haarlinie, Link und Icon — summierte sich über ein volles Board zu ~8–10
    * schreienden Farbtupfern. Der Zähler bleibt modul-getönt, aber ruhig; die
    * Identität tragen Icon + Haarlinie. */
-  background-color: color-mix(in srgb, var(--widget-accent, var(--color-accent)) 15%, var(--color-surface));
+  background-color: color-mix(in srgb, var(--widget-accent, var(--color-accent)) var(--tint-surface), var(--color-surface));
   /* Text stärker zur Ink-Seite gemischt (58% statt 72% Akzent) → sicherer
    * AA-Kontrast für den kleinen Bold-Zähler auf der hellen Tönung, auch bei
    * helleren Modultönen (Critique R3, Sam). */
-  color: color-mix(in srgb, var(--widget-accent, var(--color-accent)) 58%, var(--color-text-primary));
+  color: color-mix(in srgb, var(--widget-accent, var(--color-accent)) var(--tint-ink), var(--color-text-primary));
   font-size: var(--text-xs);
   font-weight: var(--font-weight-bold);
   min-width: 16px;
@@ -342,7 +332,7 @@
  * „kaputt" auf einen Blick von „leer" unterscheidbar ist, ohne zu schreien.
  * Der Retry rutscht ans Zeilenende wie die Empty-State-CTA. */
 .widget--error {
-  border-color: color-mix(in srgb, var(--color-danger) 35%, var(--color-border));
+  border-color: color-mix(in srgb, var(--color-danger) var(--tint-hint), var(--color-border));
 }
 
 .widget__retry {
@@ -358,7 +348,7 @@
   gap: var(--space-1);
   min-height: var(--target-base);
   padding: 0 var(--space-2);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-full);
   color: var(--widget-accent, var(--color-accent));
   font-size: var(--type-secondary);
   font-weight: var(--font-weight-medium);
@@ -367,7 +357,7 @@
 }
 
 .widget__empty-cta:hover {
-  background-color: color-mix(in srgb, var(--widget-accent, var(--color-accent)) 10%, transparent);
+  background-color: color-mix(in srgb, var(--widget-accent, var(--color-accent)) var(--tint-state), transparent);
 }
 
 .widget__empty-cta svg {
@@ -429,8 +419,8 @@
 }
 .task-item__priority--high {
   background-color: var(--color-priority-high);
-  width: var(--space-2h, 10px);
-  height: var(--space-2h, 10px);
+  width: var(--space-2h);
+  height: var(--space-2h);
 }
 .task-item__priority--medium {
   background-color: transparent;
@@ -602,8 +592,8 @@
 }
 
 .meal-slot:hover {
-  border-color: color-mix(in srgb, var(--slot-color, var(--color-accent)) 50%, var(--color-border-strong));
-  background-color: color-mix(in srgb, var(--slot-color, var(--color-accent)) 8%, var(--color-surface-3));
+  border-color: color-mix(in srgb, var(--slot-color, var(--color-accent)) var(--tint-hint), var(--color-border-strong));
+  background-color: color-mix(in srgb, var(--slot-color, var(--color-accent)) var(--tint-state), var(--color-surface-3));
   box-shadow: var(--shadow-xs);
 }
 
@@ -632,7 +622,10 @@
 .meal-slot__icon {
   width: 16px;
   height: 16px;
-  color: var(--color-text-disabled);
+  /* NICHT --color-text-disabled: der ganze Slot ist role=button (dashboard.js),
+   * auch der leere. Der Kuechen-Zwilling .meal-slot__add-btn traegt dieselbe
+   * Regel in meals.css. */
+  color: var(--color-text-tertiary);
   flex-shrink: 0;
 }
 
@@ -675,28 +668,29 @@
 /* Leerer Slot: gedämpfter Em-Dash liest als bewusst leer (kein verirrter
  * Bindestrich). Der ganze Slot ist klickbar (role=button → /meals). */
 .meal-slot__title--empty {
-  color: var(--color-text-disabled);
+  color: var(--color-text-tertiary);
 }
 
 /* --------------------------------------------------------
  * Shopping-Widget
  * -------------------------------------------------------- */
+/* Zeile im Widget-Träger (Zeilenlisten-Regel, tokens.css): kein eigener Radius,
+ * und ENTWEDER Haarlinie ODER Abstand - beides zugleich zeichnet die Trennung
+ * doppelt. Der Hover läuft dafür über die volle Zeilenbreite. */
 .shopping-widget-list {
   cursor: pointer;
   touch-action: pan-y;
   transition: background-color var(--transition-fast);
-  border-radius: var(--radius-sm);
-  padding: var(--space-2) 0;
+  padding: var(--space-2) var(--space-4);
+  margin-inline: calc(var(--space-4) * -1);
 }
 
 .shopping-widget-list:hover {
-  background-color: var(--color-surface-2);
+  background-color: var(--color-surface-hover);
 }
 
 .shopping-widget-list + .shopping-widget-list {
   border-top: 1px solid var(--color-border-subtle);
-  margin-top: var(--space-2);
-  padding-top: var(--space-3);
 }
 
 .shopping-widget-list__header {
@@ -806,7 +800,7 @@
   touch-action: pan-y;
   transition: opacity var(--transition-fast), transform var(--transition-fast);
   /* Notiz-Identität über Hintergrund-Tönung statt Seitenstreifen (DESIGN.md-konform) */
-  background-color: color-mix(in srgb, var(--note-color, var(--color-accent)) 10%, var(--color-surface-2));
+  background-color: color-mix(in srgb, var(--note-color, var(--color-accent)) var(--tint-surface), var(--color-surface-2));
 }
 
 .note-item:hover {
@@ -855,14 +849,20 @@
 /* --------------------------------------------------------
  * Wetter-Widget
  *
- * Eigener Gradient, ueberschreibt .widget Hintergrund.
+ * Der Verlauf aus Akzent-Hover nach Akzent-Tief war der letzte chromatische
+ * Verlauf auf Inhalt und stand im ersten Viewport (Finish-Review Runde 2,
+ * Fix 3). Er ist entfallen, nicht ersetzt: eine opake Vollfläche in derselben
+ * Farbe hätte im Dark-Theme einen HELLEN Block ins dunkle Dashboard gesetzt
+ * (--color-accent kippt dort auf #7D7AFF), und die Fläche trug den globalen
+ * Akzent, nicht die Wetter-Domäne. Das Widget ist jetzt eine randlose Karte
+ * wie seine sechs Nachbarn; die Wetterlage tragen Glyphe und Zahl.
+ *
  * Die Inhalte reagieren auf die tatsaechliche Widget-Breite statt auf den
  * Viewport, damit Tiny/Narrow/Standard/Large eigene sinnvolle Dichten haben.
  * -------------------------------------------------------- */
 .weather-widget {
   position: relative;
-  background: linear-gradient(135deg, var(--color-accent-hover) 0%, var(--color-accent-deep) 100%);
-  color: var(--color-text-on-accent);
+  color: var(--color-text-primary);
   min-height: 100%;
   --weather-temp-size: var(--text-3xl);
   --weather-icon-size: 56px;
@@ -879,8 +879,8 @@
   width: 28px;
   height: 28px;
   border: none;
-  background: var(--color-glass);
-  color: var(--color-text-on-accent);
+  background: var(--color-fill-well);
+  color: var(--color-text-secondary);
   border-radius: var(--radius-full);
   cursor: pointer;
   z-index: 1;
@@ -900,7 +900,7 @@
 }
 
 .weather-widget__refresh:hover {
-  background: var(--color-glass-hover);
+  background: var(--color-surface-hover);
 }
 
 .weather-widget__refresh:disabled {
@@ -961,7 +961,7 @@
 .weather-widget__city {
   font-size: var(--text-sm);
   font-weight: var(--font-weight-medium);
-  opacity: 0.92;
+  color: var(--color-text-secondary);
   margin-bottom: var(--space-1);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -970,10 +970,10 @@
 
 .weather-widget__meta {
   font-size: var(--text-xs);
-  /* 12px-Text auf dem Violett-Verlauf: 0.85 statt 0.7 hält auch über der
-   * hellsten Glow-Region (oben rechts) den AA-Kontrast (4.5:1) für Kleintext,
-   * bleibt aber sichtbar sekundär gegenüber Temp/Beschreibung. */
-  opacity: 0.85;
+  /* Auf der opaken Karte trägt die Sekundärfarbe die Abstufung; die frühere
+   * opacity war nur nötig, weil der Text auf dem Verlauf stand und dort keine
+   * gemessene Farbe haben konnte. */
+  color: var(--color-text-secondary);
   line-height: 1.3;
 }
 
@@ -981,12 +981,20 @@
   width: var(--weather-icon-size);
   height: var(--weather-icon-size);
   flex-shrink: 0;
+  /* Der einzige Farbträger des Widgets, seit die Vollfläche entfallen ist. */
+  color: var(--module-accent, var(--color-accent));
+  /* Freiraum für den absolut positionierten Refresh-Button in der Ecke
+   * (top/right --space-2, 28px breit): ohne die Marge schoben sich die
+   * Sonnenstrahlen der Glyphe unter den Button (Finish-Verdict
+   * Fundament-Phase, Neubefund a - mobil sichtbar, gilt aber in jeder
+   * Widget-Breite, weil beide rechtsbündig ankern). */
+  margin-inline-end: var(--space-6);
 }
 
 .weather-forecast {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  border-top: 1px solid color-mix(in srgb, white 20%, transparent);
+  border-top: 1px solid var(--color-border-subtle);
   padding-top: var(--space-3);
   gap: var(--space-2);
   min-width: 0;
@@ -1008,7 +1016,7 @@
 .weather-forecast__label {
   font-size: var(--text-xs);
   font-weight: var(--font-weight-semibold);
-  opacity: 0.85;
+  color: var(--color-text-secondary);
   text-transform: capitalize;
   max-width: 100%;
   overflow: hidden;
@@ -1042,10 +1050,10 @@ svg.weather-forecast__icon {
 }
 
 .weather-forecast__low {
-  /* Tiefsttemperatur bleibt gegenüber der semibold-Höchsttemperatur zurück,
-   * aber 0.85 statt 0.72 sichert AA für die 12px-Zahl auch am hellsten Rand
-   * des Verlaufs. */
-  opacity: 0.85;
+  /* Tiefsttemperatur bleibt gegenüber der semibold-Höchsttemperatur zurück -
+   * über die Sekundärfarbe, nicht über opacity (auf der opaken Karte ist die
+   * Farbe gemessen, die Deckung wäre es nicht). */
+  color: var(--color-text-secondary);
 }
 
 /* ── Uhr (#651) ──────────────────────────────────────────────────────────
@@ -1167,12 +1175,24 @@ svg.weather-forecast__icon {
 
   .weather-forecast {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+    /* Steht die Vorhersage NEBEN dem Jetzt-Cluster, trennt sie eine senkrechte
+     * Linie statt der waagerechten aus der Basisregel. Sie stand hier als
+     * `color-mix(in srgb, white 20%, transparent)` - ein Rest der violetten
+     * Vollfarb-Karte, auf der Weiß mit 20 % eine sichtbare Kante war. Seit die
+     * Karte randlos und weiß ist (Runde 3, kein Verlauf mehr auf Inhalt), stand
+     * die einzige Gliederung des Widgets weiß auf weiß. Denselben Rest hat der
+     * Rollout eine Regel weiter unten schon einmal gefunden (siehe der
+     * `color: white`-Kommentar in diesem Stylesheet); diese Stelle blieb übrig,
+     * weil eine unsichtbare Trennlinie keinen Textkontrast verletzt und deshalb
+     * durch jeden Guard fällt.
+     * Logische Kanten, nicht links: in `ar` und `fa` läuft das Widget in RTL,
+     * und dort gehört die Linie auf die andere Seite. */
     border-top: none;
-    border-left: 1px solid color-mix(in srgb, white 20%, transparent);
+    border-inline-start: 1px solid var(--color-border-subtle);
     flex: 1;
     align-items: center;
     padding-top: 0;
-    padding-left: var(--space-5);
+    padding-inline-start: var(--space-5);
   }
 }
 
@@ -1199,7 +1219,9 @@ svg.weather-forecast__icon {
   .weather-forecast {
     grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: var(--space-4);
-    padding-left: var(--space-5);
+    /* Logisch wie die Kante eine Stufe darüber - der Wert ist derselbe und
+     * stünde physisch in RTL auf der falschen Seite. */
+    padding-inline-start: var(--space-5);
   }
 
   .weather-forecast__day--extended {
@@ -1288,12 +1310,6 @@ svg.weather-forecast__icon {
   .fab-container--hidden {
     transform: none;
     opacity: 0;
-  }
-}
-
-@media (min-width: 1024px) {
-  .fab-container {
-    bottom: var(--space-8);
   }
 }
 
@@ -1569,7 +1585,7 @@ svg.weather-forecast__icon {
 .onboarding-title {
   font-size: var(--text-xl);
   font-weight: var(--font-weight-semibold);
-  color: var(--color-text);
+  color: var(--color-text-primary);
   margin: 0;
 }
 
@@ -1687,9 +1703,9 @@ svg.weather-forecast__icon {
   /* Teil des Masthead-Bands: kein eigener Rahmen, nur ein feiner Divider trennt
    * die Glance-Zeile von der Begrüßung darüber. */
   padding-top: var(--space-4);
-  border-top: 1px solid color-mix(in srgb, var(--module-accent) 16%, var(--color-border));
-  /* Container: die Glance-Metriken werden vierspaltig nach EIGENEM Platz,
-   * sidebar-bewusst, nicht nach Viewport. Siehe tokens.css §11c. */
+  border-top: 1px solid color-mix(in srgb, var(--module-accent) var(--tint-hint), var(--color-border));
+  /* Container bleibt deklariert: der Schmal-Fallback unten fragt den EIGENEN
+   * Platz ab (sidebar-bewusst, nicht Viewport). Siehe tokens.css §11c. */
   container: today-cockpit / inline-size;
 }
 
@@ -1705,46 +1721,44 @@ svg.weather-forecast__icon {
   color: var(--color-text-primary);
 }
 
+/* Inset-Grouped-Liste (Apple-Systemapp-Muster, z.B. Erinnerungen-Widget):
+ * EINE gruppierte Sektion auf opaker neutraler Flaeche statt vier pastell-
+ * gefuellter Stat-Kacheln. Die Modulzugehoerigkeit traegt die getoente
+ * Icon-Kachel pro Zeile; Zeilen trennen sich per Hairline, nie per Rahmen. */
 .today-cockpit__grid {
   display: grid;
-  /* auto-fit: das Raster passt sich der ANZAHL sichtbarer Karten an. Deckt der
-   * Nutzer Domänen über Widgets ab (Echo-Fix), füllen die verbliebenen Karten
-   * die Breite, statt leere Spalten zu hinterlassen. */
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  grid-auto-rows: 1fr;
-  gap: var(--space-3);
+  grid-template-columns: 1fr;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
 }
 
 .today-cockpit-card {
   --today-card-accent: var(--module-accent);
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  grid-template-rows: auto 1fr;
-  align-items: start;
-  gap: var(--space-2) var(--space-3);
-  min-height: calc(var(--target-lg) + var(--space-12));
-  height: 100%;
-  padding: var(--space-3);
-  /* Entrahmt: die Karten leben INNERHALB der Cockpit-Karte, daher am Ruhezustand
-   * kein eigener Vollrahmen (keine Karte-in-Karte) — nur eine dezente Domänen-
-   * tönung trennt die Zellen. Der Rahmen erscheint erst bei Hover/Fokus als
-   * Affordance. */
-  border: 1px solid transparent;
-  border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--today-card-accent) 7%, var(--color-surface));
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--target-base);
+  padding: var(--space-2) var(--space-4);
+  border: none;
+  background: transparent;
   color: var(--color-text-primary);
   text-align: left;
   cursor: pointer;
   touch-action: pan-y;
-  box-shadow: none;
-  transition: border-color var(--transition-fast), background-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition: background-color var(--transition-fast);
+}
+
+/* Hairline zwischen den Zeilen: bestehender Separator-Token, volle Breite. */
+.today-cockpit-card + .today-cockpit-card {
+  border-top: 1px solid var(--color-border-subtle);
 }
 
 .today-cockpit-card:hover,
 .today-cockpit-card:focus-visible {
-  border-color: color-mix(in srgb, var(--today-card-accent) 50%, var(--color-border));
-  background: color-mix(in srgb, var(--today-card-accent) 9%, var(--color-surface));
-  box-shadow: var(--shadow-xs);
+  background: var(--color-surface-hover);
 }
 
 .today-cockpit-card__icon {
@@ -1754,25 +1768,23 @@ svg.weather-forecast__icon {
   width: var(--target-sm);
   height: var(--target-sm);
   border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--today-card-accent) 18%, var(--color-surface-elevated));
+  /* Getoente Icon-Kachel: ~16% Modul-Tint auf der opaken Zeilenflaeche,
+   * Icon im Modulton - sie traegt die Domaene, die die Versal-Eyebrows
+   * frueher behaupteten. */
+  background: color-mix(in srgb, var(--today-card-accent) var(--tint-surface), var(--color-surface));
   color: var(--today-card-accent);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, white 25%, transparent);
-  grid-row: 1 / span 2;
 }
 
 .today-cockpit-card__icon svg {
-  /* Ornament tritt hinter den Value zurück: der Titel ist das glanzbare Datum,
-   * das Icon nur der Domänen-Marker (16px statt zuvor 20px). */
   width: var(--space-4);
   height: var(--space-4);
 }
 
-.today-cockpit-card__label {
-  /* Kategorielabel trägt den Modulton statt Neutralgrau — eine zur Ink-Seite
-   * gemischte, dunklere Schattierung der Domänenfarbe (Regel „shade of the
-   * background's own hue"). Mix Richtung --color-text-primary hält den Kontrast
-   * in Light wie Dark, da text-primary das Theme spiegelt. */
-  color: color-mix(in srgb, var(--today-card-accent) 78%, var(--color-text-primary));
+.today-cockpit-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0h);
+  min-width: 0;
 }
 
 .today-cockpit-card__value {
@@ -1781,36 +1793,40 @@ svg.weather-forecast__icon {
   -webkit-line-clamp: 2;
   line-clamp: 2;
   overflow: hidden;
-  align-self: start;
   color: var(--color-text-primary);
-  /* Der Value ist das glanzbare Datum der Karte („was kommt als Nächstes?") —
-   * er trägt die Card-Title-Rolle (16px) statt Sekundärtext (14px), damit die
-   * Information den Icon-Chip überwiegt statt umgekehrt. */
+  /* Der Value ist das glanzbare Datum der Zeile („was kommt als Naechstes?") -
+   * Card-Title-Rolle, weiterhin unter der Section-Heading „Heute wichtig". */
   font-size: var(--type-card-title);
-  font-weight: var(--font-weight-bold);
+  font-weight: var(--font-weight-semibold);
   line-height: var(--line-height-snug);
   overflow-wrap: normal;
   word-break: normal;
   hyphens: manual;
 }
 
-/* Aggregat-Count: macht die Karte zur Zusammenfassung statt zum Echo der
- * ersten Widget-Zeile. Getönt in der Domänenfarbe, klein und ruhig. */
+/* Modul-Label als ruhiger Untertitel (Footnote, Sekundaerfarbe) - nie versal,
+ * nie ueber dem Titel (Craft-Floor-Bann Eyebrow). */
+.today-cockpit-card__sub {
+  color: var(--color-text-secondary);
+  font-size: var(--type-caption);
+  line-height: var(--line-height-tight);
+}
+
+/* Aggregat-Count als trailing Detail: getoent in der Domaenenfarbe, ruhig. */
 .today-cockpit-card__count {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: var(--space-4);
-  height: var(--space-4);
-  margin-left: var(--space-1);
-  padding: 0 var(--space-1);
+  min-width: var(--space-5);
+  height: var(--space-5);
+  padding: 0 var(--space-2);
   border-radius: var(--radius-full);
-  background: color-mix(in srgb, var(--today-card-accent) 16%, var(--color-surface-elevated));
-  /* Dieselbe zur Ink-Seite gemischte Domänenfarbe wie das Label — hält die
-   * kleine Badge-Zahl bei allen Modultönen über AA 4.5:1 (statt reinem Akzent,
-   * der bei Pink/Grün/Orange auf ~3.5:1 fiel). */
-  color: color-mix(in srgb, var(--today-card-accent) 78%, var(--color-text-primary));
-  font-size: var(--type-micro);
+  background: color-mix(in srgb, var(--today-card-accent) var(--tint-surface), var(--color-surface));
+  /* Zur Ink-Seite gemischte Domaenenfarbe - haelt die Badge-Zahl bei allen
+   * Modultoenen ueber AA 4.5:1 (statt reinem Akzent, der bei Pink/Gruen/
+   * Orange auf ~3.5:1 fiel). */
+  color: color-mix(in srgb, var(--today-card-accent) var(--tint-ink), var(--color-text-primary));
+  font-size: var(--type-caption);
   font-weight: var(--font-weight-bold);
   line-height: 1;
 }
@@ -1831,12 +1847,9 @@ svg.weather-forecast__icon {
   --today-card-accent: var(--module-meals);
 }
 
-/* Spaltenzahl regelt jetzt auto-fit (minmax 150px) — passt sich Container-Breite
- * UND Kartenzahl an, daher kein fester 4-Spalten-Override mehr. */
-
-/* Sehr schmale Container (iPhone-SE-Klasse): explizit auf eine Spalte — auto-fit
- * täte dies zwar faktisch, die Regel bleibt aber als bewusster, getesteter
- * Fallback erhalten (Container-Query statt Viewport-Breakpoint, Token-Doktrin §11c). */
+/* Sehr schmale Container (iPhone-SE-Klasse): die Liste ist bereits einspaltig;
+ * die Regel bleibt als bewusster, getesteter Fallback erhalten (Container-Query
+ * statt Viewport-Breakpoint, Token-Doktrin §11c). */
 @container today-cockpit (max-width: 270px) {
   .today-cockpit__grid {
     grid-template-columns: 1fr;
@@ -1865,78 +1878,22 @@ svg.weather-forecast__icon {
  * (Pseudo-Element wie die Wetterkarte) und den Verlaufstext der Begrüßung —
  * nie über eine Flächenfüllung des Bandes.
  * -------------------------------------------------------- */
+/* HIG: der Kopf ist KEINE Karte. Large-Title-Gruß und Glance-Cockpit
+ * stehen direkt auf dem Grouped Background — wie der „Heute"-Kopf in Apple
+ * News/Fitness. Das frühere Material-Band (Tint-Fläche, Rahmen, Eck-Glow)
+ * gehörte zur abgelösten Welt. */
 .dashboard-masthead {
   position: relative;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  padding: var(--space-5);
-  border: 1px solid color-mix(in srgb, var(--module-accent) 20%, var(--color-border));
-  border-radius: var(--radius-md);
-  background-color: color-mix(in srgb, var(--module-accent) 6%, var(--color-surface));
-  box-shadow: var(--shadow-md);
+  padding: var(--space-2) 0 0;
 }
 
-@media (min-width: 1024px) {
-  .dashboard-masthead {
-    padding: var(--space-6);
-  }
-}
-
-/* Tageszeit-Signatur: weicher Glow oben rechts, Farbe folgt dem Begrüßungs-
- * Verlauf. Pseudo-Element (opak-sicher), rein dekorativ, hinter dem Inhalt. */
-.dashboard-masthead::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background: radial-gradient(115% 125% at 100% 0%,
-    color-mix(in srgb, var(--masthead-glow, var(--module-accent)) 20%, transparent) 0%,
-    transparent 58%);
-}
-
-.dashboard-masthead > * {
-  position: relative;
-  z-index: 1;
-}
-
-.dashboard-masthead--morning { --masthead-glow: var(--greeting-morning-from); }
-.dashboard-masthead--day     { --masthead-glow: var(--greeting-day-from); }
-.dashboard-masthead--evening { --masthead-glow: var(--greeting-evening-from); }
-
-@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
-  .dashboard-masthead::before { display: none; }
-}
-
-/* Dark-Mode: der 20%-Warmmix über Fast-Schwarz liest als brauner Schmier
- * (Critique R3 P2). Auf 10% + engeren Falloff zurücknehmen → eine faint-warme
- * Ecke statt eines Render-Artefakts. Beide Dark-Mechanismen abdecken. */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .dashboard-masthead::before {
-    background: radial-gradient(115% 125% at 100% 0%,
-      color-mix(in srgb, var(--masthead-glow, var(--module-accent)) 10%, transparent) 0%,
-      transparent 52%);
-  }
-}
-[data-theme="dark"] .dashboard-masthead::before {
-  background: radial-gradient(115% 125% at 100% 0%,
-    color-mix(in srgb, var(--masthead-glow, var(--module-accent)) 10%, transparent) 0%,
-    transparent 52%);
-}
-
-/* Leeres Cockpit → kein Material-Band, nur eine schlanke Gruß-Leiste statt eines
- * großen leeren Rechtecks (Critique R3 P1). Nach der Desktop-Padding-Media-Regel
- * platziert, damit das Zurücksetzen bei gleicher Spezifität gewinnt. */
+/* Legacy-Zeitklassen bleiben als No-Op bestehen (router setzt sie weiter). */
 .dashboard-masthead--slim {
   padding: 0;
-  border: none;
-  background: transparent;
-  box-shadow: none;
 }
-
-.dashboard-masthead--slim::before { display: none; }
 
 /* Entrahmte innere Zone: das Masthead-Band trägt Rahmen/Schatten/Padding. */
 .dashboard-overview {
@@ -1976,10 +1933,14 @@ svg.weather-forecast__icon {
 }
 
 .dashboard-overview__date {
+  /* Apple-News-Muster: Datum als Versal-Footnote über dem Large Title.
+   * Echte Information, kein dekorativer Kicker — Kanon-Bestandteil. */
   display: block;
   color: var(--color-text-secondary);
-  font-size: var(--text-sm);
-  font-weight: var(--font-weight-medium);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
 }
 
 .dashboard-overview__title {
@@ -1990,42 +1951,14 @@ svg.weather-forecast__icon {
   hyphens: manual;
 }
 
-/* Begrüßungs-Hero: der eine sanktionierte Zwei-Stopp-Verlauf pro Screen
- * (DESIGN.md §2 „Greeting Gradients"). Tageszeit steuert die Stops; reiner
- * Text-Clip, keine Flächenfüllung. Solid-Ink-Fallback für fehlende
- * background-clip-Unterstützung, prefers-reduced-transparency und
- * prefers-contrast: more — der Kopf muss ohne Verlauf voll lesbar bleiben. */
+/* HIG: Large Titles tragen IMMER Label-Farbe — kein Gradient-Text.
+ * Der frühere Tageszeit-Verlauf gehörte zur abgelösten Welt; die Tageszeit
+ * spricht jetzt allein über den Grußtext selbst. Die --morning/--day/
+ * --evening-Klassen bleiben als No-Op bestehen (router setzt sie weiter). */
 .dashboard-overview__title--morning,
 .dashboard-overview__title--day,
 .dashboard-overview__title--evening {
-  background-image: linear-gradient(100deg, var(--greeting-from), var(--greeting-to));
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
-}
-.dashboard-overview__title--morning { --greeting-from: var(--greeting-morning-from); --greeting-to: var(--greeting-morning-to); }
-.dashboard-overview__title--day     { --greeting-from: var(--greeting-day-from);     --greeting-to: var(--greeting-day-to); }
-.dashboard-overview__title--evening { --greeting-from: var(--greeting-evening-from); --greeting-to: var(--greeting-evening-to); }
-
-@supports not ((background-clip: text) or (-webkit-background-clip: text)) {
-  .dashboard-overview__title--morning,
-  .dashboard-overview__title--day,
-  .dashboard-overview__title--evening {
-    background-image: none;
-    -webkit-text-fill-color: var(--color-text-primary);
-    color: var(--color-text-primary);
-  }
-}
-
-@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
-  .dashboard-overview__title--morning,
-  .dashboard-overview__title--day,
-  .dashboard-overview__title--evening {
-    background-image: none;
-    -webkit-text-fill-color: var(--color-text-primary);
-    color: var(--color-text-primary);
-  }
+  color: var(--color-text-primary);
 }
 
 .dashboard-overview__tools {
@@ -2037,24 +1970,24 @@ svg.weather-forecast__icon {
 }
 
 .dashboard-icon-btn {
+  /* HIG-Kreis-Button (Apple-Toolbar-Muster): graue Kreisfläche, kein Rahmen. */
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: var(--target-lg);
   height: var(--target-lg);
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
+  border-radius: var(--radius-full);
+  border: none;
+  background: var(--neutral-200);
   color: var(--color-text-secondary);
   flex: 0 0 auto;
-  transition: color var(--transition-fast), border-color var(--transition-fast), background-color var(--transition-fast);
+  transition: color var(--transition-fast), background-color var(--transition-fast);
 }
 
 .dashboard-icon-btn:hover,
 .dashboard-icon-btn:focus-visible {
   color: var(--color-text-primary);
-  border-color: color-mix(in srgb, var(--module-accent) 42%, var(--color-border));
-  background: var(--color-surface-hover);
+  background: var(--neutral-250);
 }
 
 .dashboard-icon-btn svg {
@@ -2072,14 +2005,14 @@ svg.weather-forecast__icon {
 
 .dashboard-icon-btn--hint {
   color: var(--color-text-primary);
-  border-color: color-mix(in srgb, var(--active-module-accent, var(--color-accent)) 55%, var(--color-border));
+  border-color: color-mix(in srgb, var(--active-module-accent, var(--color-accent)) var(--tint-hint), var(--color-border));
   animation: dashboard-icon-hint 1.6s var(--ease-out) 3;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .dashboard-icon-btn--hint {
     animation: none;
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--active-module-accent, var(--color-accent)) 22%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--active-module-accent, var(--color-accent)) var(--tint-shadow), transparent);
   }
 }
 
@@ -2109,9 +2042,9 @@ svg.weather-forecast__icon {
 
 .dashboard__grid--editing {
   padding: var(--space-2);
-  border: 1px dashed color-mix(in srgb, var(--module-accent) 48%, var(--color-border));
+  border: 1px dashed color-mix(in srgb, var(--module-accent) var(--tint-hint), var(--color-border));
   border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--module-accent) 4%, transparent);
+  background: color-mix(in srgb, var(--module-accent) var(--tint-state), transparent);
 }
 
 .widget-wrapper--editing {
@@ -2121,7 +2054,7 @@ svg.weather-forecast__icon {
      den Inhalt exakt um ihre echte Höhe nach unten. */
   padding: 6px;
   gap: var(--space-2);
-  outline: 1px solid color-mix(in srgb, var(--module-accent) 36%, var(--color-border));
+  outline: 1px solid color-mix(in srgb, var(--module-accent) var(--tint-hint), var(--color-border));
   outline-offset: -1px;
   border-radius: var(--radius-sm);
 }
@@ -2157,7 +2090,7 @@ svg.weather-forecast__icon {
   width: var(--target-md);
   height: var(--target-md);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-full);
   background: var(--color-surface);
   color: var(--color-text-secondary);
   display: inline-flex;
@@ -2186,7 +2119,7 @@ svg.weather-forecast__icon {
   width: var(--target-md);
   height: var(--target-md);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-full);
   background: var(--color-surface);
   color: var(--color-text-secondary);
   display: inline-flex;
@@ -2243,7 +2176,7 @@ svg.weather-forecast__icon {
 
 .widget-size-btn--active {
   border-color: var(--module-accent);
-  background: color-mix(in srgb, var(--module-accent) 12%, var(--color-surface));
+  background: color-mix(in srgb, var(--module-accent) var(--tint-state), var(--color-surface));
 }
 
 .widget-size-btn:focus-visible {
@@ -2283,7 +2216,7 @@ svg.weather-forecast__icon {
   z-index: 5;
   border-radius: var(--radius-full);
   background: var(--module-accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--module-accent) 18%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--module-accent) var(--tint-shadow), transparent);
   pointer-events: none;
 }
 
@@ -2327,22 +2260,16 @@ svg.weather-forecast__icon {
 
 .dashboard .widget,
 .dashboard .widget-skeleton {
-  /* Geteiltes Kartenmaterial (Critique P2): eine spürbare, aber weiche Elevation
-   * (--shadow-md) hebt jede Kachel vom warmen Papier ab, statt als flaches
-   * Rechteck zu liegen — dieselbe Tiefe wie die Wetterkarte, damit das Grid als
-   * EIN Kartensystem liest statt „elf flache + eine reiche". Radius-md eint die
-   * Rundung mit dem Masthead. */
+  /* Geteiltes Kartenmaterial (Critique P2): eine spuerbare, aber weiche Elevation
+   * (--shadow-md) hebt jede Kachel vom Grouped Background ab, statt als flaches
+   * Rechteck zu liegen - dieselbe Tiefe wie die Wetterkarte, damit das Grid als
+   * EIN Kartensystem liest. Randlos (HIG): keine module-getoenten Vollraender;
+   * den transparenten Border-Traeger fuer .widget--error stellt die Basisregel
+   * .widget, hier wird border bewusst NICHT gesetzt. */
   border-radius: var(--radius-md);
-  border: 1px solid color-mix(in srgb, var(--widget-accent, var(--module-accent)) 20%, var(--color-border));
   background: var(--color-surface);
   box-shadow: var(--shadow-md);
   min-width: 0;
-}
-
-.dashboard .widget::before {
-  height: 1px;
-  background: color-mix(in srgb, var(--widget-accent, var(--module-accent)) 32%, transparent);
-  opacity: 1;
 }
 
 .dashboard .widget__header {
@@ -2403,46 +2330,22 @@ svg.weather-forecast__icon {
   box-shadow: var(--shadow-sm);
 }
 
-.dashboard .weather-widget {
-  border-radius: var(--radius-md);
-  /* Atmosphärischer Verlauf statt flachem dunklen Slab: ein weicher „Sonnen"-Glow
-   * in der oberen rechten Ecke gibt dem Modulton (Dashboard-Violett) Tiefe und Licht.
-   * Beide Verlaufs-Stops sind bewusst tiefviolett-dominant (Deep-Violet als Anker) —
-   * so bleibt weißer Text in Light UND Dark über AA (im Dark Mode ist --color-accent
-   * mit ~2.7:1 zu hell für weißen Text, daher nicht als heller Stop verwenden). */
-  background:
-    radial-gradient(120% 130% at 100% 0%,
-      color-mix(in srgb, white 18%, transparent) 0%,
-      transparent 55%),
-    linear-gradient(150deg,
-      color-mix(in srgb, var(--color-accent) 45%, var(--color-accent-deep)) 0%,
-      var(--color-accent-deep) 100%);
-  color: var(--color-text-on-accent);
-  border-color: transparent;
-  box-shadow: var(--shadow-md);
-}
-
+/* Hier stand der zweite, spezifischere Verlauf des Wetter-Widgets
+ * (`.dashboard .weather-widget`, 0-2-0 - dieselbe Spezifitätsfalle wie in
+ * glass.css, siehe Handoff §6). Mit ihm sind die aufgesetzten Glyph-
+ * Schlagschatten und der Glas-Refresh-Knopf entfallen: auf einer opaken Karte
+ * braucht ein Icon keinen Schatten, um zu sitzen. Die Basisregel oben trägt
+ * das Widget jetzt allein. */
+/* Die border-radius-Zeile ist mit Runde 6 Phase 3 entfallen: sie ueberschrieb
+ * die Kapsel der Basisregel (dashboard.css:894) 1455 Zeilen spaeter mit 0-2-0.
+ * Der Kommentar direkt darueber warnt vor genau dieser Spezifitaetsfalle und
+ * hat die Regel unter sich nicht geschuetzt - ein Kommentar ist Dokumentation,
+ * kein Guard. Diese Regel braucht nur Position und Groesse. */
 .dashboard .weather-widget__refresh {
   top: var(--space-3);
   right: var(--space-3);
   width: 34px;
   height: 34px;
-  border-radius: var(--radius-sm);
-  background: color-mix(in srgb, white 16%, transparent);
-}
-
-.dashboard .weather-widget__refresh:hover {
-  background: color-mix(in srgb, white 26%, transparent);
-}
-
-/* Haupt-Icon bekommt Tiefe gegen den Verlauf; die dünnen Lucide-Linien wirken so
- * gesetzt statt aufgeklebt. Forecast-Icons nur minimal, um sie nicht zu beschweren. */
-.dashboard .weather-widget__icon {
-  filter: drop-shadow(0 2px 5px color-mix(in srgb, black 24%, transparent));
-}
-
-.dashboard .weather-forecast__icon {
-  filter: drop-shadow(0 1px 2px color-mix(in srgb, black 16%, transparent));
 }
 
 .birthday-widget-item {
@@ -2450,15 +2353,15 @@ svg.weather-forecast__icon {
   grid-template-columns: 40px minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-2);
-  border: 1px solid color-mix(in srgb, var(--color-border) 72%, transparent);
-  background: var(--color-surface-2);
+  padding: var(--space-2) 0;
+  /* Inset-Rows statt Karte-in-Karte (Apple: Zeilen trennen sich per Hairline,
+   * nie per Rahmen): kein eigener Rahmen, keine eigene Flaeche. */
   cursor: pointer;
   touch-action: pan-y;
 }
 
 .birthday-widget-item + .birthday-widget-item {
-  margin-top: var(--space-2);
+  border-top: 1px solid var(--color-border-subtle);
 }
 
 .birthday-widget-item__avatar {
@@ -2473,8 +2376,8 @@ svg.weather-forecast__icon {
    * statt des Dashboard-Violetts. Initialen sind Text: der rohe Akzent auf
    * eigener Tönung lag bei 3.61:1 (Konvention siehe tokens.css). */
   --module-accent: var(--module-birthdays);
-  background: color-mix(in srgb, var(--module-accent) 14%, transparent);
-  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) 70%, var(--color-text-primary));
+  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), transparent);
+  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-ink), var(--color-text-primary));
   font-weight: var(--font-weight-bold);
   font-size: var(--text-sm);
 }
@@ -2510,10 +2413,11 @@ svg.weather-forecast__icon {
   min-width: 34px;
   text-align: center;
   padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  color: var(--color-text-primary);
+  border-radius: var(--radius-full);
+  /* Trailing Badge statt eingefasster Mini-Box: getoent wie der Avatar,
+   * Textfarbe zur Ink-Seite gemischt (AA, Konvention siehe tokens.css). */
+  background: color-mix(in srgb, var(--module-birthdays) var(--tint-surface), var(--color-surface));
+  color: color-mix(in srgb, var(--module-birthdays) var(--tint-ink), var(--color-text-primary));
   font-size: var(--text-sm);
   font-weight: var(--font-weight-bold);
 }
@@ -2549,7 +2453,10 @@ svg.weather-forecast__icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  /* Keine Textfarbe hier: `renderFamilyWidget` (dashboard.js) setzt sie inline
+   * aus `getReadableTextColor(avatar_color)` - je nach Avatarfarbe hell ODER
+   * dunkel. Das `color: white`, das hier stand, war seitdem wirkungslos und
+   * versprach das Gegenteil der Regel, die tatsächlich greift. */
   font-weight: var(--font-weight-bold);
   font-size: var(--text-xs);
   border: 2px solid var(--color-surface);
@@ -2716,10 +2623,11 @@ svg.weather-forecast__icon {
 }
 
 .budget-widget__footer {
+  /* Hairline-getrennte Inset-Row statt eingefasstem Tint-Kasten (Apple:
+   * Zeilen trennen sich per Hairline, nie per Rahmen oder eigene Box). */
   margin-top: var(--space-3);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--module-budget) 10%, transparent);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border-subtle);
   color: var(--color-text-secondary);
   font-size: var(--type-secondary);
   line-height: 1.4;
@@ -2741,7 +2649,7 @@ svg.weather-forecast__icon {
   grid-template-columns: 20px 32px minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-1h, 6px) var(--space-2);
+  padding: var(--space-1h) var(--space-2);
   border-radius: var(--radius-sm);
   cursor: pointer;
   touch-action: pan-y;
@@ -2753,11 +2661,11 @@ svg.weather-forecast__icon {
 }
 
 .rewards-widget-row--leader {
-  background: color-mix(in srgb, var(--module-rewards) 9%, transparent);
+  background: color-mix(in srgb, var(--module-rewards) var(--tint-wash), transparent);
 }
 
 .rewards-widget-row--leader:hover {
-  background: color-mix(in srgb, var(--module-rewards) 15%, transparent);
+  background: color-mix(in srgb, var(--module-rewards) var(--tint-state), transparent);
 }
 
 .rewards-widget-row__rank {
@@ -2816,10 +2724,10 @@ svg.weather-forecast__icon {
   gap: var(--space-2);
   margin-top: var(--space-2);
   padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-full);
   --module-accent: var(--module-rewards);
-  background: color-mix(in srgb, var(--module-accent) 10%, transparent);
-  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) 70%, var(--color-text-primary));
+  background: color-mix(in srgb, var(--module-accent) var(--tint-wash), transparent);
+  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-ink), var(--color-text-primary));
   font-size: var(--type-secondary);
   font-weight: var(--font-weight-medium);
   cursor: pointer;
@@ -2827,7 +2735,7 @@ svg.weather-forecast__icon {
 }
 
 .rewards-widget__footer:hover {
-  background: color-mix(in srgb, var(--module-rewards) 16%, transparent);
+  background: color-mix(in srgb, var(--module-rewards) var(--tint-state), transparent);
 }
 
 .rewards-widget__footer svg {
@@ -2900,8 +2808,8 @@ svg.weather-forecast__icon {
   padding: var(--space-px) var(--space-2);
   border-radius: var(--radius-full);
   --module-accent: var(--module-health);
-  background: color-mix(in srgb, var(--module-accent) 14%, transparent);
-  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) 70%, var(--color-text-primary));
+  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), transparent);
+  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-ink), var(--color-text-primary));
   font-size: var(--text-xs);
   font-weight: var(--font-weight-semibold);
   font-variant-numeric: tabular-nums;
@@ -2917,7 +2825,7 @@ svg.weather-forecast__icon {
 .health-widget__status {
   display: flex;
   align-items: center;
-  gap: var(--space-1h, 6px);
+  gap: var(--space-1h);
   font-size: var(--text-sm);
   font-weight: var(--font-weight-medium);
   color: var(--color-text-secondary);
@@ -3029,10 +2937,10 @@ svg.weather-forecast__icon {
 .health-widget__refill {
   display: flex;
   align-items: center;
-  gap: var(--space-1h, 6px);
-  padding: var(--space-1h, 6px) var(--space-2h, 10px);
+  gap: var(--space-1h);
+  padding: var(--space-1h) var(--space-2h);
   border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--color-warning) 12%, transparent);
+  background: color-mix(in srgb, var(--color-warning) var(--tint-surface), transparent);
   color: var(--color-warning);
   font-size: var(--type-secondary);
   font-weight: var(--font-weight-medium);
@@ -3072,7 +2980,7 @@ svg.weather-forecast__icon {
 
 .housekeeping-widget__status--present .housekeeping-widget__dot {
   background: var(--color-success);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-success) 22%, transparent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-success) var(--tint-shadow), transparent);
 }
 
 .housekeeping-widget__lines {
@@ -3099,12 +3007,12 @@ svg.weather-forecast__icon {
 .housekeeping-widget__unpaid {
   display: flex;
   align-items: center;
-  gap: var(--space-1h, 6px);
-  padding: var(--space-1h, 6px) var(--space-2h, 10px);
+  gap: var(--space-1h);
+  padding: var(--space-1h) var(--space-2h);
   border-radius: var(--radius-sm);
   --module-accent: var(--module-housekeeping);
-  background: color-mix(in srgb, var(--module-accent) 10%, transparent);
-  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) 70%, var(--color-text-primary));
+  background: color-mix(in srgb, var(--module-accent) var(--tint-wash), transparent);
+  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-ink), var(--color-text-primary));
   font-size: var(--type-secondary);
   font-weight: var(--font-weight-medium);
   align-self: flex-start;
@@ -3153,7 +3061,7 @@ svg.weather-forecast__icon {
 
   .today-cockpit {
     gap: var(--space-2);
-    padding: var(--space-3);
+    padding: var(--space-3) 0 0;
   }
 
   .today-cockpit__header {
@@ -3161,19 +3069,11 @@ svg.weather-forecast__icon {
     gap: var(--space-2);
   }
 
-  /* 2×2-Glance-Raster: halbe Höhe ggü. 1×4, damit die Aufgabenliste
-   * above the fold rückt. Karten belegen je eine Spalte (kein 1/-1-Span). */
-  .today-cockpit__grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-auto-rows: 1fr;
-    gap: var(--space-2);
-  }
-
+  /* Die Inset-Grouped-Liste bleibt auch mobil einspaltig (Apple-Muster:
+   * Zeilen, kein Kachelraster); nur die Zeilen werden etwas kompakter. */
   .today-cockpit-card {
-    min-height: calc(var(--target-lg) + var(--space-4));
-    height: 100%;
     padding: var(--space-2) var(--space-3);
-    gap: var(--space-1) var(--space-2);
+    gap: var(--space-2);
   }
 
   .today-cockpit-card__value {

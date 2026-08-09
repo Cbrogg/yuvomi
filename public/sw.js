@@ -15,7 +15,7 @@
  *   → bypassCacheUntil (in-memory + Cache API für SW-Restart-Robustheit)
  */
 
-const APP_RELEASE   = '1.87.0';
+const APP_RELEASE   = '2.0.0';
 const SHELL_CACHE   = `yuvomi-shell-${APP_RELEASE}`;
 const PAGES_CACHE   = `yuvomi-pages-${APP_RELEASE}`;
 const LOCALES_CACHE = `yuvomi-locales-${APP_RELEASE}`;
@@ -43,12 +43,26 @@ const APP_SHELL = [
   '/push.js',
   '/sw-register.js',
   '/lucide.min.js',
+  // Alles, was `index.html` als `<link rel="stylesheet">` eager lädt, gehört
+  // hierher - sonst rendert der allererste Offline-Start ungestylt. Die Regel
+  // hält `test:sw-precache`; sie ist keine Liste, die man von Hand nachträgt.
   '/styles/tokens.css',
   '/styles/reset.css',
   '/styles/pwa.css',
   '/styles/layout.css',
   '/styles/glass.css',
-  '/styles/login.css',
+  '/styles/typography.css',
+  '/styles/filter-chip.css',
+  '/styles/sub-tabs.css',
+  '/styles/page-search.css',
+  '/styles/kitchen-tabs.css',
+  '/styles/list-row.css',
+  '/styles/panel.css',
+  '/styles/user-multi-select.css',
+  '/styles/datepicker.css',
+  '/styles/category-manager.css',
+  '/styles/document-attach.css',
+  '/styles/auth.css',
   '/styles/reminders.css',
   '/styles/dashboard.css',
   '/styles/tasks.css',
@@ -113,12 +127,18 @@ const APP_SHELL = [
   '/utils/shopping-categories.js',
   '/utils/skeleton.js',
   '/utils/sub-tabs.js',
+  '/utils/swipe-row.js',
   '/utils/sync-target.js',
   '/utils/tablist.js',
   '/utils/ux.js',
   '/utils/vcard.js',
   '/utils/version.js',
   '/offline.html',
+  // offline.html laedt theme-init.js, damit die Huelle dieselbe Farbwelt
+  // trifft wie die App (gespeicherter Wunsch schlaegt Systemeinstellung).
+  // Ohne Precache waere die Wahl genau dann wirkungslos, wenn die Seite
+  // gebraucht wird - offline.
+  '/theme-init.js',
   '/manifest.json',
   '/favicon.ico',
   '/icons/favicon-32.png',

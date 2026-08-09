@@ -87,7 +87,7 @@ function renderBody(body) {
           <i data-lucide="plus" class="icon-md" aria-hidden="true"></i>${t('budget.planAddBudget')}
         </button>
       </div>
-      <div id="budget-plan-rows">${renderRows(d.plans)}</div>
+      <div id="budget-plan-rows" class="row-carrier">${renderRows(d.plans)}</div>
     </div>
   `);
   if (window.lucide) lucide.createIcons({ el: body });

@@ -45,8 +45,12 @@ data/
 .github/hooks/
 AGENTS.md
 CLAUDE.md
-DESIGN.md
 PRODUCT.md
+# DESIGN.md steht bewusst NICHT hier: 42 Kommentare in 30 versionierten Dateien
+# verweisen darauf als verbindliche Quelle ("DESIGN.md §6", "Canonical Page
+# Head"). Ignoriert war es ein Paragraphenverweis auf ein Dokument, das niemand
+# ausser dem Autor hat. Es beschreibt das Produkt, nicht die Arbeitsweise mit
+# einem Werkzeug - im Unterschied zu den Eintraegen darueber.
 
 # graphify knowledge graph — the generated artifact plus the tooling that only
 # ever runs against it. Regenerated locally, never published.

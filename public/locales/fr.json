@@ -1,5 +1,6 @@
 {
     "common": {
+        "swipeSidesSwapped": "Les directions de balayage ont été inversées - l'action principale se trouve maintenant de l'autre côté.",
         "apply": "Ajouter",
         "searchClear": "Effacer la recherche",
         "save": "Enregistrer",
@@ -1114,7 +1115,7 @@
         "loanPaymentTitle": "Remboursement du prêt : {{borrower}}",
         "typeLoan": "Prêt",
         "tabsLabel": "Sections du budget",
-        "budgetTab": "Budget",
+        "budgetTab": "Aperçu",
         "loansTab": "Prêts",
         "filteredTransactions": "Transactions filtrées",
         "clearLoanFilter": "Effacer le filtre",
@@ -3002,7 +3003,6 @@
         "categoryFilter": "Filtrer par catégorie",
         "paymentMethodFilter": "Filtrer par moyen de paiement",
         "statusFilter": "Filtrer par statut",
-        "statusAll": "Tous les statuts",
         "statusActive": "Actif",
         "statusDisabled": "Désactivé",
         "sortLabel": "Trier les abonnements",
@@ -3013,8 +3013,6 @@
         "manageMetadata": "Gérer les catégories et les moyens de paiement",
         "settingsTitle": "Paramètres des abonnements",
         "loadError": "Impossible de charger les abonnements.",
-        "allCategories": "Toutes les catégories",
-        "allPaymentMethods": "Tous les moyens de paiement",
         "cycle": {
             "daily": "Quotidien",
             "weekly": "Hebdomadaire",
@@ -3050,10 +3048,7 @@
         "unspecified": "Non spécifié",
         "active": "Actif",
         "disabled": "Désactivé",
-        "disable": "Désactiver l’abonnement",
-        "enable": "Activer l’abonnement",
         "markRenewed": "Marquer comme renouvelé",
-        "edit": "Modifier l’abonnement",
         "delete": "Supprimer l’abonnement",
         "conversionUnavailable": "Conversion indisponible",
         "monthlyEquivalent": "{{amount}} par mois",
@@ -3082,11 +3077,11 @@
         "invalidDate": "Saisissez une date de paiement valide.",
         "savedToast": "Abonnement enregistré.",
         "addedToast": "Abonnement ajouté.",
-        "disabledToast": "Abonnement désactivé.",
-        "enabledToast": "Abonnement activé.",
         "renewedToast": "Date de renouvellement mise à jour.",
         "deleteConfirm": "Supprimer l’abonnement \"{{name}}\" ?",
         "deleteConfirmDetail": "Ses rappels et l'écriture budgétaire du prochain paiement sont supprimés avec l'abonnement. Les paiements déjà effectués restent dans le récapitulatif mensuel.",
+        "renewConfirm": "Enregistrer le paiement de « {{name}} » ?",
+        "renewConfirmDetail": "La date d'échéance avance et le paiement du {{date}} est enregistré comme dépense dans le budget.",
         "deletedToast": "Abonnement supprimé.",
         "monthlyBudgetLabel": "Budget mensuel des abonnements",
         "baseCurrencyLabel": "Devise de base",
@@ -3353,7 +3348,8 @@
             "visibility": {
                 "private": "Privé",
                 "family": "Famille"
-            }
+            },
+            "allTitle": "Tous les médicaments"
         },
         "labs": {
             "title": "Analyses",

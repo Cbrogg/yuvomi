@@ -1,5 +1,6 @@
 {
     "common": {
+        "swipeSidesSwapped": "Kaydırma yönleri değiştirildi - ana eylem artık diğer tarafta.",
         "apply": "Ekle",
         "searchClear": "Aramayı temizle",
         "save": "Kaydet",
@@ -1114,7 +1115,7 @@
         "loanPaymentTitle": "Kredi geri ödemesi: {{borrower}}",
         "typeLoan": "Borç",
         "tabsLabel": "Bütçe bölümleri",
-        "budgetTab": "Bütçe",
+        "budgetTab": "Genel bakış",
         "loansTab": "Borçlar",
         "filteredTransactions": "Filtrelenmiş işlemler",
         "clearLoanFilter": "Filtreyi temizle",
@@ -3002,7 +3003,6 @@
         "categoryFilter": "Kategoriye göre filtrele",
         "paymentMethodFilter": "Ödeme yöntemine göre filtrele",
         "statusFilter": "Duruma göre filtrele",
-        "statusAll": "Tüm durumlar",
         "statusActive": "Etkin",
         "statusDisabled": "Devre dışı",
         "sortLabel": "Abonelikleri sırala",
@@ -3013,8 +3013,6 @@
         "manageMetadata": "Kategorileri ve ödeme yöntemlerini yönet",
         "settingsTitle": "Abonelik ayarları",
         "loadError": "Abonelikler yüklenemedi.",
-        "allCategories": "Tüm kategoriler",
-        "allPaymentMethods": "Tüm ödeme yöntemleri",
         "cycle": {
             "daily": "Günlük",
             "weekly": "Haftalık",
@@ -3050,10 +3048,7 @@
         "unspecified": "Belirtilmedi",
         "active": "Etkin",
         "disabled": "Devre dışı",
-        "disable": "Aboneliği devre dışı bırak",
-        "enable": "Aboneliği etkinleştir",
         "markRenewed": "Yenilendi olarak işaretle",
-        "edit": "Aboneliği düzenle",
         "delete": "Aboneliği sil",
         "conversionUnavailable": "Dönüştürme kullanılamıyor",
         "monthlyEquivalent": "Ayda {{amount}}",
@@ -3082,11 +3077,11 @@
         "invalidDate": "Geçerli bir ödeme tarihi girin.",
         "savedToast": "Abonelik kaydedildi.",
         "addedToast": "Abonelik eklendi.",
-        "disabledToast": "Abonelik devre dışı bırakıldı.",
-        "enabledToast": "Abonelik etkinleştirildi.",
         "renewedToast": "Yenileme tarihi güncellendi.",
         "deleteConfirm": "\"{{name}}\" aboneliği silinsin mi?",
         "deleteConfirmDetail": "Abonelikle birlikte hatırlatıcıları ve bir sonraki ödemenin bütçe kaydı silinir. Tamamlanmış ödemeler aylık özette kalır.",
+        "renewConfirm": "\"{{name}}\" ödemesi kaydedilsin mi?",
+        "renewConfirmDetail": "Ödeme tarihi ileri kayar ve {{date}} tarihli ödeme bütçeye gider olarak kaydedilir.",
         "deletedToast": "Abonelik silindi.",
         "monthlyBudgetLabel": "Aylık abonelik bütçesi",
         "baseCurrencyLabel": "Temel para birimi",
@@ -3353,7 +3348,8 @@
             "visibility": {
                 "private": "Özel",
                 "family": "Aile"
-            }
+            },
+            "allTitle": "Tüm ilaçlar"
         },
         "labs": {
             "title": "Laboratuvar",

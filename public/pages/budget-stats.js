@@ -61,13 +61,13 @@ function renderShell() {
     <div class="budget-stats">
       <!-- Nur noch die Auflösung: der Zeitraum selbst wird über den geteilten
            Kopf-Stepper des Moduls gewählt. Optik aus dem geteilten
-           .budget-segmented-Baustein. -->
+           .segmented-Baustein. -->
       <div class="budget-stats__controls">
-        <div class="budget-segmented budget-stats__ranges" role="tablist" aria-label="${t('budget.statsRangeLabel')}">
+        <div class="segmented budget-stats__ranges" role="tablist" aria-label="${t('budget.statsRangeLabel')}">
           ${['week', 'month', 'year'].map((r) => {
             const on = r === view.range;
             return `
-            <button type="button" role="tab" class="budget-segmented__item${on ? ' is-active' : ''}"
+            <button type="button" role="tab" class="segmented__item${on ? ' is-active' : ''}"
               data-tab-id="${r}" aria-selected="${on}" tabindex="${on ? '0' : '-1'}"
               aria-controls="budget-stats-body">${t(RANGE_LABELS[r])}</button>`;
           }).join('')}
@@ -129,18 +129,18 @@ function renderBodyContent(body) {
   }
   body.replaceChildren();
   body.insertAdjacentHTML('beforeend', `
-    <div class="budget-summary">
-      <div class="budget-summary-card budget-summary-card--income">
-        <div class="budget-summary-card__label">${t('budget.statsIncome')}</div>
-        <div class="budget-summary-card__amount">${fmtAmount(d.totals.income)}</div>
+    <div class="metric-grid">
+      <div class="metric-card metric-card--income">
+        <div class="metric-card__label">${t('budget.statsIncome')}</div>
+        <div class="metric-card__amount">${fmtAmount(d.totals.income)}</div>
       </div>
-      <div class="budget-summary-card budget-summary-card--expenses">
-        <div class="budget-summary-card__label">${t('budget.statsExpenses')}</div>
-        <div class="budget-summary-card__amount">${fmtAmount(Math.abs(d.totals.expenses))}</div>
+      <div class="metric-card metric-card--expenses">
+        <div class="metric-card__label">${t('budget.statsExpenses')}</div>
+        <div class="metric-card__amount">${fmtAmount(Math.abs(d.totals.expenses))}</div>
       </div>
-      <div class="budget-summary-card ${d.totals.balance >= 0 ? 'budget-summary-card--balance-positive' : 'budget-summary-card--balance-negative'}">
-        <div class="budget-summary-card__label">${t('budget.statsBalance')}</div>
-        <div class="budget-summary-card__amount">${fmtAmount(d.totals.balance)}</div>
+      <div class="metric-card ${d.totals.balance >= 0 ? 'metric-card--balance-positive' : 'metric-card--balance-negative'}">
+        <div class="metric-card__label">${t('budget.statsBalance')}</div>
+        <div class="metric-card__amount">${fmtAmount(d.totals.balance)}</div>
       </div>
     </div>
     <div id="budget-stats-trend"></div>

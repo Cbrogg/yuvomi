@@ -1,5 +1,6 @@
 {
     "common": {
+        "swipeSidesSwapped": "Svepriktningarna har bytt plats - huvudåtgärden finns nu på andra sidan.",
         "apply": "Lägg till",
         "searchClear": "Rensa sökning",
         "save": "Spara",
@@ -1114,7 +1115,7 @@
         "loanPaymentTitle": "Låneåterbetalning: {{borrower}}",
         "typeLoan": "Lån",
         "tabsLabel": "Budgetsektioner",
-        "budgetTab": "Budget",
+        "budgetTab": "Översikt",
         "loansTab": "Lån",
         "filteredTransactions": "Filtrerade transaktioner",
         "clearLoanFilter": "Rensa filter",
@@ -3002,7 +3003,6 @@
         "categoryFilter": "Filtrera efter kategori",
         "paymentMethodFilter": "Filtrera efter betalningsmetod",
         "statusFilter": "Filtrera efter status",
-        "statusAll": "Alla statusar",
         "statusActive": "Aktiva",
         "statusDisabled": "Inaktiverad",
         "sortLabel": "Sortera prenumerationer",
@@ -3013,8 +3013,6 @@
         "manageMetadata": "Hantera kategorier och betalningsmetoder",
         "settingsTitle": "Prenumerationsinställningar",
         "loadError": "Prenumerationer kunde inte laddas.",
-        "allCategories": "Alla kategorier",
-        "allPaymentMethods": "Alla betalningsmetoder",
         "cycle": {
             "daily": "Dagligen",
             "weekly": "Veckovis",
@@ -3050,10 +3048,7 @@
         "unspecified": "Ej angivet",
         "active": "Aktiva",
         "disabled": "Inaktiverad",
-        "disable": "Inaktivera prenumeration",
-        "enable": "Aktivera prenumeration",
         "markRenewed": "Markera som förnyad",
-        "edit": "Redigera prenumeration",
         "delete": "Ta bort prenumeration",
         "conversionUnavailable": "Konvertering inte tillgänglig",
         "monthlyEquivalent": "{{amount}} per månad",
@@ -3082,11 +3077,11 @@
         "invalidDate": "Ange ett giltigt betalningsdatum.",
         "savedToast": "Prenumeration sparad.",
         "addedToast": "Prenumeration tillagd.",
-        "disabledToast": "Prenumeration inaktiverad.",
-        "enabledToast": "Prenumeration aktiverad.",
         "renewedToast": "Förnyelsedatum uppdaterat.",
         "deleteConfirm": "Ta bort prenumerationen \"{{name}}\"?",
         "deleteConfirmDetail": "Med abonnemanget raderas påminnelserna och budgetposten för nästa betalning. Redan genomförda betalningar ligger kvar i månadsöversikten.",
+        "renewConfirm": "Bokföra betalningen för \"{{name}}\"?",
+        "renewConfirmDetail": "Förfallodatumet flyttas fram och betalningen från {{date}} bokförs som en utgift i budgeten.",
         "deletedToast": "Prenumeration borttagen.",
         "monthlyBudgetLabel": "Månadsbudget för prenumerationer",
         "baseCurrencyLabel": "Basvaluta",
@@ -3353,7 +3348,8 @@
             "visibility": {
                 "private": "Privat",
                 "family": "Familj"
-            }
+            },
+            "allTitle": "Alla mediciner"
         },
         "labs": {
             "title": "Provsvar",

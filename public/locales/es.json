@@ -1,5 +1,6 @@
 {
     "common": {
+        "swipeSidesSwapped": "Se han invertido las direcciones de deslizamiento: la acción principal está ahora en el otro lado.",
         "apply": "Añadir",
         "searchClear": "Borrar búsqueda",
         "save": "Guardar",
@@ -1114,7 +1115,7 @@
         "loanPaymentTitle": "Pago del préstamo: {{borrower}}",
         "typeLoan": "Préstamo",
         "tabsLabel": "Secciones del presupuesto",
-        "budgetTab": "Presupuesto",
+        "budgetTab": "Resumen",
         "loansTab": "Préstamos",
         "filteredTransactions": "Transacciones filtradas",
         "clearLoanFilter": "Limpiar filtro",
@@ -3002,7 +3003,6 @@
         "categoryFilter": "Filtrar por categoría",
         "paymentMethodFilter": "Filtrar por método de pago",
         "statusFilter": "Filtrar por estado",
-        "statusAll": "Todos los estados",
         "statusActive": "Activa",
         "statusDisabled": "Desactivada",
         "sortLabel": "Ordenar suscripciones",
@@ -3013,8 +3013,6 @@
         "manageMetadata": "Gestionar categorías y métodos de pago",
         "settingsTitle": "Configuración de suscripciones",
         "loadError": "No se pudieron cargar las suscripciones.",
-        "allCategories": "Todas las categorías",
-        "allPaymentMethods": "Todos los métodos de pago",
         "cycle": {
             "daily": "Diario",
             "weekly": "Semanal",
@@ -3050,10 +3048,7 @@
         "unspecified": "Sin especificar",
         "active": "Activa",
         "disabled": "Desactivada",
-        "disable": "Desactivar suscripción",
-        "enable": "Activar suscripción",
         "markRenewed": "Marcar como renovada",
-        "edit": "Editar suscripción",
         "delete": "Eliminar suscripción",
         "conversionUnavailable": "Conversión no disponible",
         "monthlyEquivalent": "{{amount}} al mes",
@@ -3082,11 +3077,11 @@
         "invalidDate": "Introduce una fecha de pago válida.",
         "savedToast": "Suscripción guardada.",
         "addedToast": "Suscripción añadida.",
-        "disabledToast": "Suscripción desactivada.",
-        "enabledToast": "Suscripción activada.",
         "renewedToast": "Fecha de renovación actualizada.",
         "deleteConfirm": "¿Eliminar la suscripción \"{{name}}\"?",
         "deleteConfirmDetail": "Con la suscripción se borran sus recordatorios y el apunte de presupuesto del próximo pago. Los pagos ya completados siguen en el resumen mensual.",
+        "renewConfirm": "¿Registrar el pago de \"{{name}}\"?",
+        "renewConfirmDetail": "La fecha de vencimiento avanza y el pago del {{date}} se registra como gasto en el presupuesto.",
         "deletedToast": "Suscripción eliminada.",
         "monthlyBudgetLabel": "Presupuesto mensual de suscripciones",
         "baseCurrencyLabel": "Moneda base",
@@ -3353,7 +3348,8 @@
             "visibility": {
                 "private": "Privado",
                 "family": "Familia"
-            }
+            },
+            "allTitle": "Todos los medicamentos"
         },
         "labs": {
             "title": "Analíticas",

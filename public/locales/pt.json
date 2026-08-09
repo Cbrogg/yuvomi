@@ -1,5 +1,6 @@
 {
     "common": {
+        "swipeSidesSwapped": "As direções de deslize foram trocadas - a ação principal está agora do outro lado.",
         "apply": "Adicionar",
         "searchClear": "Limpar pesquisa",
         "save": "Salvar",
@@ -1114,7 +1115,7 @@
         "loanPaymentTitle": "Pagamento do empréstimo: {{borrower}}",
         "typeLoan": "Empréstimo",
         "tabsLabel": "Seções do orçamento",
-        "budgetTab": "Orçamento",
+        "budgetTab": "Visão geral",
         "loansTab": "Empréstimos",
         "filteredTransactions": "Transações filtradas",
         "clearLoanFilter": "Limpar filtro",
@@ -3002,7 +3003,6 @@
         "categoryFilter": "Filtrar por categoria",
         "paymentMethodFilter": "Filtrar por método de pagamento",
         "statusFilter": "Filtrar por estado",
-        "statusAll": "Todos os estados",
         "statusActive": "Ativa",
         "statusDisabled": "Desativada",
         "sortLabel": "Ordenar assinaturas",
@@ -3013,8 +3013,6 @@
         "manageMetadata": "Gerenciar categorias e métodos de pagamento",
         "settingsTitle": "Configurações de assinaturas",
         "loadError": "Não foi possível carregar as assinaturas.",
-        "allCategories": "Todas as categorias",
-        "allPaymentMethods": "Todos os métodos de pagamento",
         "cycle": {
             "daily": "Diária",
             "weekly": "Semanal",
@@ -3050,10 +3048,7 @@
         "unspecified": "Não especificado",
         "active": "Ativa",
         "disabled": "Desativada",
-        "disable": "Desativar assinatura",
-        "enable": "Ativar assinatura",
         "markRenewed": "Marcar como renovada",
-        "edit": "Editar assinatura",
         "delete": "Excluir assinatura",
         "conversionUnavailable": "Conversão indisponível",
         "monthlyEquivalent": "{{amount}} por mês",
@@ -3082,11 +3077,11 @@
         "invalidDate": "Insira uma data de pagamento válida.",
         "savedToast": "Assinatura salva.",
         "addedToast": "Assinatura adicionada.",
-        "disabledToast": "Assinatura desativada.",
-        "enabledToast": "Assinatura ativada.",
         "renewedToast": "Data de renovação atualizada.",
         "deleteConfirm": "Excluir a assinatura \"{{name}}\"?",
         "deleteConfirmDetail": "Com a subscrição são apagados os lembretes e o lançamento de orçamento do próximo pagamento. Os pagamentos já concluídos mantêm-se no resumo mensal.",
+        "renewConfirm": "Registar o pagamento de \"{{name}}\"?",
+        "renewConfirmDetail": "A data de vencimento avança e o pagamento de {{date}} é registado como despesa no orçamento.",
         "deletedToast": "Assinatura excluída.",
         "monthlyBudgetLabel": "Orçamento mensal de assinaturas",
         "baseCurrencyLabel": "Moeda base",
@@ -3353,7 +3348,8 @@
             "visibility": {
                 "private": "Privado",
                 "family": "Família"
-            }
+            },
+            "allTitle": "Todos os medicamentos"
         },
         "labs": {
             "title": "Exames",

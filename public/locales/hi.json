@@ -1,5 +1,6 @@
 {
     "common": {
+        "swipeSidesSwapped": "स्वाइप दिशाएँ बदल दी गई हैं - मुख्य क्रिया अब दूसरी ओर है।",
         "apply": "जोड़ें",
         "searchClear": "खोज साफ़ करें",
         "save": "सहेजें",
@@ -1114,7 +1115,7 @@
         "loanPaymentTitle": "ऋण भुगतान: {{borrower}}",
         "typeLoan": "उधार",
         "tabsLabel": "बजट अनुभाग",
-        "budgetTab": "बजट",
+        "budgetTab": "अवलोकन",
         "loansTab": "उधार",
         "filteredTransactions": "फ़िल्टर किए गए लेन-देन",
         "clearLoanFilter": "फ़िल्टर हटाएं",
@@ -3002,7 +3003,6 @@
         "categoryFilter": "श्रेणी के अनुसार फ़िल्टर करें",
         "paymentMethodFilter": "भुगतान विधि के अनुसार फ़िल्टर करें",
         "statusFilter": "स्थिति के अनुसार फ़िल्टर करें",
-        "statusAll": "सभी स्थितियाँ",
         "statusActive": "सक्रिय",
         "statusDisabled": "अक्षम",
         "sortLabel": "सदस्यताओं को क्रमबद्ध करें",
@@ -3013,8 +3013,6 @@
         "manageMetadata": "श्रेणियाँ और भुगतान विधियाँ प्रबंधित करें",
         "settingsTitle": "सदस्यता सेटिंग्स",
         "loadError": "सदस्यताएँ लोड नहीं हो सकीं।",
-        "allCategories": "सभी श्रेणियाँ",
-        "allPaymentMethods": "सभी भुगतान विधियाँ",
         "cycle": {
             "daily": "दैनिक",
             "weekly": "साप्ताहिक",
@@ -3050,10 +3048,7 @@
         "unspecified": "निर्दिष्ट नहीं",
         "active": "सक्रिय",
         "disabled": "अक्षम",
-        "disable": "सदस्यता अक्षम करें",
-        "enable": "सदस्यता सक्षम करें",
         "markRenewed": "नवीनीकृत के रूप में चिह्नित करें",
-        "edit": "सदस्यता संपादित करें",
         "delete": "सदस्यता हटाएँ",
         "conversionUnavailable": "रूपांतरण उपलब्ध नहीं",
         "monthlyEquivalent": "{{amount}} प्रति माह",
@@ -3082,11 +3077,11 @@
         "invalidDate": "एक मान्य भुगतान तिथि दर्ज करें।",
         "savedToast": "सदस्यता सहेजी गई।",
         "addedToast": "सदस्यता जोड़ी गई।",
-        "disabledToast": "सदस्यता अक्षम की गई।",
-        "enabledToast": "सदस्यता सक्षम की गई।",
         "renewedToast": "नवीनीकरण तिथि अपडेट की गई।",
         "deleteConfirm": "सदस्यता \"{{name}}\" हटाएँ?",
         "deleteConfirmDetail": "सदस्यता के साथ उसके रिमाइंडर और अगली भुगतान की बजट प्रविष्टि मिट जाती है। पहले पूरे हो चुके भुगतान मासिक अवलोकन में बने रहते हैं।",
+        "renewConfirm": "\"{{name}}\" का भुगतान दर्ज करें?",
+        "renewConfirmDetail": "देय तिथि आगे बढ़ जाएगी और {{date}} का भुगतान बजट में व्यय के रूप में दर्ज होगा।",
         "deletedToast": "सदस्यता हटाई गई।",
         "monthlyBudgetLabel": "मासिक सदस्यता बजट",
         "baseCurrencyLabel": "आधार मुद्रा",
@@ -3353,7 +3348,8 @@
             "visibility": {
                 "private": "निजी",
                 "family": "परिवार"
-            }
+            },
+            "allTitle": "सभी दवाइयाँ"
         },
         "labs": {
             "title": "लैब मान",

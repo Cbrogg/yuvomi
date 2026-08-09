@@ -22,6 +22,11 @@ const money = read('../public/utils/money.js');
 const layoutCss = read('../public/styles/layout.css');
 const tokensCss = read('../public/styles/tokens.css');
 const budgetCss = read('../public/styles/budget.css');
+// Die geteilten Auswertungs-Bauteile (.panel-head, .segmented, .metric-grid,
+// .metric-card) stehen seit der Namensbereinigung in panel.css - sie sind
+// app-weites Vokabular, kein Budget-Baustein. Die Kompaktstufen, die am
+// Container der Budget-Seite haengen, stehen weiter in budget.css.
+const panelCss = read('../public/styles/panel.css');
 const subscriptionsCss = read('../public/styles/subscriptions.css');
 const splitCss = read('../public/styles/split-expenses.css');
 
@@ -106,10 +111,10 @@ test('hidden greift bei geteilten Bedienelementen trotz display-Klasse', () => {
   // und Deklaration im SELBEN Regelblock stehen - kein `}` und kein zweites `{`
   // dazwischen. Das frühere `[\s\S]{0,120}` maß stattdessen die Länge der
   // Selektorliste und schlug damit bei jeder legitimen Ergänzung an; die Liste ist
-  // aber ausdrücklich zum Wachsen gedacht (bei `.kitchen-bulkbar` war sie 141
+  // aber ausdrücklich zum Wachsen gedacht (bei `.list-bulkbar` war sie 141
   // Zeichen lang und der Guard rot, obwohl die Struktur korrekt war).
   const sameBlock = (selector) => new RegExp(`${selector}[^{}]*\\{\\s*display:\\s*none\\s*!important`);
-  for (const selector of ['\\.page-fab\\[hidden\\]', '\\.btn\\[hidden\\]', '\\.form-group\\[hidden\\]', '\\.kitchen-bulkbar\\[hidden\\]']) {
+  for (const selector of ['\\.page-fab\\[hidden\\]', '\\.btn\\[hidden\\]', '\\.form-group\\[hidden\\]', '\\.list-bulkbar\\[hidden\\]']) {
     assert.match(layoutCss, sameBlock(selector), `${selector} steht nicht im Durchsetzungsblock`);
   }
 });
@@ -177,9 +182,9 @@ test('jede Umschalter-Leiste des Moduls läuft durch die geteilte Verhaltensschi
 test('es gibt genau eine Umschalter-Optik im Modul', () => {
   // Vier Optiken für dieselbe Frage - getönte Kapsel, eckig gefülltes Rechteck,
   // weiße Kachel, umrandete Pille - hießen, dass derselbe Zustand pro Tab anders
-  // aussah. .budget-segmented ist der Baustein; wer eine Leiste baut, greift ihn.
-  assert.ok(/\n\.budget-segmented\s*\{/.test(budgetCss), '.budget-segmented fehlt in budget.css');
-  assert.ok(/\n\.budget-segmented__item\s*\{/.test(budgetCss), '.budget-segmented__item fehlt');
+  // aussah. .segmented ist der Baustein; wer eine Leiste baut, greift ihn.
+  assert.ok(/\n\.segmented\s*\{/.test(panelCss), '.segmented fehlt in panel.css');
+  assert.ok(/\n\.segmented__item\s*\{/.test(panelCss), '.segmented__item fehlt');
 
   for (const [file, src] of BUDGET_PAGES) {
     for (const bar of src.matchAll(/<div class="([^"]+)"([^>]*)role="(tablist|radiogroup)"/g)) {
@@ -189,8 +194,8 @@ test('es gibt genau eine Umschalter-Optik im Modul', () => {
       if (/budget-tabs|budget-scope|budget-color-picker/.test(classes)) continue;
       assert.match(
         classes,
-        /budget-segmented/,
-        `${file}: Leiste "${classes}" baut eine eigene Optik statt .budget-segmented`,
+        /segmented/,
+        `${file}: Leiste "${classes}" baut eine eigene Optik statt .segmented`,
       );
     }
   }
@@ -198,14 +203,14 @@ test('es gibt genau eine Umschalter-Optik im Modul', () => {
   // Und die abgelösten Optiken kommen nicht zurück.
   const liveCss = withoutComments(budgetCss);
   for (const dead of ['budget-loans__filter\\b', 'budget-stats__range\\b']) {
-    assert.doesNotMatch(liveCss, new RegExp(`\\.${dead}`), `.${dead} ist durch .budget-segmented ersetzt`);
+    assert.doesNotMatch(liveCss, new RegExp(`\\.${dead}`), `.${dead} ist durch .segmented ersetzt`);
   }
 });
 
 test('das Touch-Maß der Umschalter kommt aus dem Token, nicht aus der Leiste', () => {
   // Die abgelösten Leisten lagen bei 40px (Zeitraum) und 28px (Nur-Ausgaben).
-  const item = budgetCss.match(/\n\.budget-segmented__item\s*\{([^}]*)\}/);
-  assert.ok(item, '.budget-segmented__item fehlt');
+  const item = panelCss.match(/\n\.segmented__item\s*\{([^}]*)\}/);
+  assert.ok(item, '.segmented__item fehlt');
   assert.match(item[1], /min-height:\s*var\(--target-base\)/);
 });
 
@@ -355,8 +360,13 @@ const BUDGET_PAGES = [
   ['split-expenses.js', splitExpenses],
 ];
 
-const BUDGET_STYLESHEETS = [
+// Die Stylesheets, in denen die Bauteile dieses Moduls stehen. panel.css ist
+// KEIN Budget-Stylesheet, aber .metric-card und .segmented wohnen dort - waere
+// es nicht in der Liste, waeren die Guards darunter genau fuer die Datei blind,
+// in der der Baustein steht.
+const AUDITED_STYLESHEETS = [
   ['budget.css', budgetCss],
+  ['panel.css', panelCss],
   ['subscriptions.css', subscriptionsCss],
   ['split-expenses.css', splitCss],
 ];
@@ -630,33 +640,33 @@ test('jede Rolle des Geld-Vokabulars ist in money.js dokumentiert und behandelt'
 
 test('es gibt genau eine Kennzahlkarte im Modul', () => {
   // Fünf Bauarten hießen fünfmal neu lernen, wo die Zahl steht. Wer eine neue
-  // Kennzahl zeigt, nimmt .budget-summary-card - oder dieser Guard schlägt an.
-  for (const [file, css] of BUDGET_STYLESHEETS) {
+  // Kennzahl zeigt, nimmt .metric-card - oder dieser Guard schlägt an.
+  for (const [file, css] of AUDITED_STYLESHEETS) {
     for (const match of css.matchAll(/^\.([a-z-]*summary-card[a-z_-]*)/gm)) {
       assert.ok(
-        match[1].startsWith('budget-summary-card'),
-        `${file}: .${match[1]} ist eine zweite Kennzahlkarte - .budget-summary-card ist der Baustein`,
+        match[1].startsWith('metric-card'),
+        `${file}: .${match[1]} ist eine zweite Kennzahlkarte - .metric-card ist der Baustein`,
       );
     }
   }
   for (const [file, src] of BUDGET_PAGES) {
     for (const match of src.matchAll(/class="([^"]*summary-card[^"]*)"/g)) {
       assert.ok(
-        /budget-summary-card/.test(match[1]),
-        `${file}: Kennzahlkarte "${match[1]}" nutzt nicht .budget-summary-card`,
+        /metric-card/.test(match[1]),
+        `${file}: Kennzahlkarte "${match[1]}" nutzt nicht .metric-card`,
       );
     }
   }
 });
 
 test('Arbeitsflächen des Moduls sind opak, Glass bleibt den Overlays', () => {
-  // budget.css begründet die Regel an .budget-summary-card. Sie galt nur dort,
+  // budget.css begründet die Regel an .metric-card. Sie galt nur dort,
   // während subscriptions.css und split-expenses.css im selben Modul Glass auf
   // Karten, Panels und sogar auf einem Eingabefeld setzten.
   // Overlay-Rollen tragen ihr Rollenwort im Selektor; alles andere ist
   // Arbeitsfläche. Neue Arbeitsflächen fallen damit automatisch durch.
   const OVERLAY_ROLES = /modal|dialog|popover|overlay|picker-panel|form__section|tooltip|menu/;
-  for (const [file, css] of BUDGET_STYLESHEETS) {
+  for (const [file, css] of AUDITED_STYLESHEETS) {
     // Regelblöcke grob zerlegen: Selektorliste bis '{', Body bis '}'.
     for (const rule of css.matchAll(/([^{}]+)\{([^}]*)\}/g)) {
       const selector = rule[1].split('*/').pop().trim();
@@ -687,7 +697,7 @@ test('kein Kontrast im Modul hängt an der Datenlage', () => {
   assert.ok(DATA_COLORS.size > 0, 'keine Datenfarben gefunden - der Guard misst nichts');
 
   const varsIn = (decls) => [...decls.matchAll(/var\(\s*(--[a-z0-9-]+)/gi)].map((m) => m[1]);
-  for (const [file, css] of BUDGET_STYLESHEETS) {
+  for (const [file, css] of AUDITED_STYLESHEETS) {
     for (const rule of css.matchAll(/([^{}]+)\{([^}]*)\}/g)) {
       const body = rule[2];
       const fg = [...body.matchAll(/(?:^|;)\s*color\s*:([^;]*)/g)].map((m) => m[1]).join(' ');
@@ -727,8 +737,8 @@ test('Panel-Fläche und Kopfleiste sind geteilt, nicht pro Tab gebaut', () => {
   assert.match(panel[1], /overflow-y:\s*auto/);
   assert.match(panel[1], /padding-block-start:\s*var\(--space/);
 
-  assert.ok(/\n\.budget-panel-head\s*\{/.test(budgetCss), '.budget-panel-head fehlt in budget.css');
-  assert.ok(/\n\.budget-panel-head__title\s*\{/.test(budgetCss), '.budget-panel-head__title fehlt');
+  assert.ok(/\n\.panel-head\s*\{/.test(panelCss), '.panel-head fehlt in panel.css');
+  assert.ok(/\n\.panel-head__title\s*\{/.test(panelCss), '.panel-head__title fehlt');
 
   // Kein Tab setzt Scroll-Achse oder Panel-Padding noch selbst. Ausnahmen sind
   // benannte Modifier (--budget hält seine eigene innere Scroll-Region).
@@ -776,10 +786,10 @@ test('Saldo wird neutral, wenn keine Einnahmen erfasst sind', () => {
   // Ohne Einnahmen ist balance = -Ausgaben eine Tautologie; die rote Zahl liest
   // sich fälschlich als „im Minus". Bedingung: income === 0 && balance < 0.
   assert.match(budget, /const balanceNeutral = s\.income === 0 && s\.balance < 0;/);
-  assert.match(budget, /balanceNeutral[\s\S]{0,80}budget-summary-card--balance-neutral/);
+  assert.match(budget, /balanceNeutral[\s\S]{0,80}metric-card--balance-neutral/);
   // Echte Einnahmen behalten die Farbsemantik (grün Überschuss / rot Mehrausgabe).
-  assert.match(budget, /budget-summary-card--balance-positive/);
-  assert.match(budget, /budget-summary-card--balance-negative/);
+  assert.match(budget, /metric-card--balance-positive/);
+  assert.match(budget, /metric-card--balance-negative/);
 });
 
 test('der Saldo-Trend entfällt im neutralen Ausgaben-Fall', () => {
@@ -789,8 +799,8 @@ test('der Saldo-Trend entfällt im neutralen Ausgaben-Fall', () => {
 });
 
 test('die neutrale Saldo-Farbe kommt aus einem Token, nicht als Literal', () => {
-  const rule = budgetCss.match(/\.budget-summary-card--balance-neutral[^\n]*\{[^}]*\}/);
-  assert.ok(rule, '.budget-summary-card--balance-neutral fehlt in budget.css');
+  const rule = panelCss.match(/\.metric-card--balance-neutral[^\n]*\{[^}]*\}/);
+  assert.ok(rule, '.metric-card--balance-neutral fehlt in panel.css');
   assert.match(rule[0], /var\(--color-text-primary\)/);
   assert.doesNotMatch(rule[0], /var\(--color-danger\)|var\(--color-success\)/);
 });
@@ -822,12 +832,12 @@ test('die Ausgaben-Karte trägt im „Nur Ausgaben"-Modus die volle Breite', () 
   // Die Spaltenzahl der geteilten Kennzahl-Zeile kommt seit der Baustein-
   // Extraktion aus --summary-cards; geprüft wird die Invariante (eine Spalte),
   // nicht mehr die grid-template-columns-Schreibweise.
-  const rule = budgetCss.match(/\.budget-summary--expenses-only[^\n]*\{[^}]*\}/);
-  assert.ok(rule, '.budget-summary--expenses-only fehlt in budget.css');
+  const rule = panelCss.match(/\.metric-grid--expenses-only[^\n]*\{[^}]*\}/);
+  assert.ok(rule, '.metric-grid--expenses-only fehlt in panel.css');
   assert.match(rule[0], /--summary-cards:\s*1/);
 
-  const base = budgetCss.match(/\n\.budget-summary\s*\{[^}]*\}/);
-  assert.ok(base, '.budget-summary fehlt in budget.css');
+  const base = panelCss.match(/\n\.metric-grid\s*\{[^}]*\}/);
+  assert.ok(base, '.metric-grid fehlt in panel.css');
   assert.match(base[0], /grid-template-columns:\s*repeat\(var\(--summary-cards[^)]*\)/);
 });
 

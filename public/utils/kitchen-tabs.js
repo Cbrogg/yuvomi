@@ -147,6 +147,11 @@ export function renderKitchenTabsBar(container, activeRoute) {
   _activeRoute = activeRoute;
 
   _bar = renderSubTabs(container, {
+    // Zielorte, keine Sichten: die vier Küchen-Routen sind vier eigenständige
+    // Module (eigener `module:`-Wert in router.js, eigene Seitendatei, einzeln
+    // abschaltbar). Die Leiste wird damit zur Navigation aus echten Links -
+    // cmd-Klick öffnet den Vorrat im neuen Tab, wie überall sonst in der Shell.
+    semantics: 'nav',
     tabs: TABS().map(({ route, labelKey, icon }) => ({ id: route, label: t(labelKey), icon })),
     activeId: activeRoute,
     storageKey: KITCHEN_STORAGE_KEY,

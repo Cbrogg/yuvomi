@@ -1,5 +1,6 @@
 {
     "common": {
+        "swipeSidesSwapped": "A csúsztatási irányok felcserélődtek - a fő művelet most a másik oldalon található.",
         "apply": "Hozzáadás",
         "searchClear": "Keresés törlése",
         "save": "Mentés",
@@ -1114,7 +1115,7 @@
         "loanPaymentTitle": "Hitel visszafizetés: {{borrower}}",
         "typeLoan": "Hitel",
         "tabsLabel": "Költségvetési szakaszok",
-        "budgetTab": "Költségvetés",
+        "budgetTab": "Áttekintés",
         "loansTab": "Hitelek",
         "filteredTransactions": "Szűrt tranzakciók",
         "clearLoanFilter": "Szűrő törlése",
@@ -3002,7 +3003,6 @@
         "categoryFilter": "Szűrés kategória szerint",
         "paymentMethodFilter": "Szűrés fizetési mód szerint",
         "statusFilter": "Szűrés státusz szerint",
-        "statusAll": "Minden státusz",
         "statusActive": "Aktív",
         "statusDisabled": "Letiltva",
         "sortLabel": "Előfizetések rendezése",
@@ -3013,8 +3013,6 @@
         "manageMetadata": "Kategóriák és fizetési módok kezelése",
         "settingsTitle": "Előfizetés beállításai",
         "loadError": "Az előfizetések betöltése sikertelen.",
-        "allCategories": "Minden kategória",
-        "allPaymentMethods": "Minden fizetési mód",
         "cycle": {
             "daily": "Napi",
             "weekly": "Heti",
@@ -3050,10 +3048,7 @@
         "unspecified": "Nincs megadva",
         "active": "Aktív",
         "disabled": "Letiltva",
-        "disable": "Előfizetés letiltása",
-        "enable": "Előfizetés engedélyezése",
         "markRenewed": "Megújítás jelölése",
-        "edit": "Előfizetés szerkesztése",
         "delete": "Előfizetés törlése",
         "conversionUnavailable": "Átváltás nem elérhető",
         "monthlyEquivalent": "{{amount}} havonta",
@@ -3082,11 +3077,11 @@
         "invalidDate": "Érvényes fizetési dátumot adjon meg.",
         "savedToast": "Előfizetés mentve.",
         "addedToast": "Előfizetés hozzáadva.",
-        "disabledToast": "Előfizetés letiltva.",
-        "enabledToast": "Előfizetés engedélyezve.",
         "renewedToast": "Megújítás dátuma frissítve.",
         "deleteConfirm": "Törli az \"{{name}}\" előfizetést?",
         "deleteConfirmDetail": "Az előfizetéssel együtt törlődnek az emlékeztetői és a következő fizetés költségvetési tétele. A már teljesített fizetések a havi áttekintésben maradnak.",
+        "renewConfirm": "Könyveljük a(z) \"{{name}}\" fizetését?",
+        "renewConfirmDetail": "Az esedékesség dátuma előrelép, és a(z) {{date}} napi fizetés kiadásként kerül a költségvetésbe.",
         "deletedToast": "Előfizetés törölve.",
         "monthlyBudgetLabel": "Havi előfizetési költségvetés",
         "baseCurrencyLabel": "Alappénznem",
@@ -3353,7 +3348,8 @@
             "visibility": {
                 "private": "Privát",
                 "family": "Család"
-            }
+            },
+            "allTitle": "Összes gyógyszer"
         },
         "labs": {
             "title": "Laborértékek",

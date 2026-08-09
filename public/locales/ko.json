@@ -1,5 +1,6 @@
 {
     "common": {
+        "swipeSidesSwapped": "스와이프 방향이 서로 바뀌었습니다. 주요 작업이 이제 반대쪽에 있습니다.",
         "apply": "추가",
         "searchClear": "검색 지우기",
         "save": "저장",
@@ -1126,7 +1127,7 @@
         "loanPaymentTitle": "대출 상환: {{borrower}}",
         "typeLoan": "대출",
         "tabsLabel": "예산 영역",
-        "budgetTab": "예산",
+        "budgetTab": "개요",
         "loansTab": "대출",
         "filteredTransactions": "필터된 거래",
         "clearLoanFilter": "필터 지우기",
@@ -3002,7 +3003,6 @@
         "categoryFilter": "카테고리로 필터",
         "paymentMethodFilter": "결제 수단으로 필터",
         "statusFilter": "상태로 필터",
-        "statusAll": "모든 상태",
         "statusActive": "활성",
         "statusDisabled": "비활성",
         "sortLabel": "구독 정렬",
@@ -3013,8 +3013,6 @@
         "manageMetadata": "카테고리 및 결제 수단 관리",
         "settingsTitle": "구독 설정",
         "loadError": "구독을 불러오지 못했습니다.",
-        "allCategories": "모든 카테고리",
-        "allPaymentMethods": "모든 결제 수단",
         "cycle": {
             "daily": "매일",
             "weekly": "매주",
@@ -3050,10 +3048,7 @@
         "unspecified": "미지정",
         "active": "활성",
         "disabled": "비활성",
-        "disable": "구독 비활성화",
-        "enable": "구독 활성화",
         "markRenewed": "갱신됨으로 표시",
-        "edit": "구독 편집",
         "delete": "구독 삭제",
         "conversionUnavailable": "환산 불가",
         "monthlyEquivalent": "월 {{amount}}",
@@ -3082,11 +3077,11 @@
         "invalidDate": "유효한 결제 날짜를 입력하세요.",
         "savedToast": "구독이 저장되었습니다.",
         "addedToast": "구독이 추가되었습니다.",
-        "disabledToast": "구독이 비활성화되었습니다.",
-        "enabledToast": "구독이 활성화되었습니다.",
         "renewedToast": "갱신 날짜가 업데이트되었습니다.",
         "deleteConfirm": "\"{{name}}\" 구독을 삭제할까요?",
         "deleteConfirmDetail": "구독과 함께 알림과 다음 결제분의 예산 기록도 삭제됩니다. 이미 완료된 결제는 월간 개요에 남습니다.",
+        "renewConfirm": "\"{{name}}\" 결제를 기록할까요?",
+        "renewConfirmDetail": "다음 결제일이 앞당겨지고 {{date}} 결제가 예산에 지출로 기록됩니다.",
         "deletedToast": "구독이 삭제되었습니다.",
         "monthlyBudgetLabel": "월 구독 예산",
         "baseCurrencyLabel": "기준 통화",
@@ -3353,7 +3348,8 @@
             "visibility": {
                 "private": "비공개",
                 "family": "가족"
-            }
+            },
+            "allTitle": "모든 약"
         },
         "labs": {
             "title": "검사 결과",

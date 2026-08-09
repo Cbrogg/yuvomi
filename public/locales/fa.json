@@ -1,5 +1,6 @@
 {
     "common": {
+        "swipeSidesSwapped": "جهت‌های کشیدن جابه‌جا شدند - کنش اصلی اکنون در سمت دیگر است.",
         "apply": "افزودن",
         "searchClear": "پاک کردن جستجو",
         "save": "ذخیره",
@@ -1126,7 +1127,7 @@
         "loanPaymentTitle": "بازپرداخت وام: {{borrower}}",
         "typeLoan": "وام",
         "tabsLabel": "بخش‌های بودجه",
-        "budgetTab": "بودجه",
+        "budgetTab": "نمای کلی",
         "loansTab": "وام‌ها",
         "filteredTransactions": "تراکنش‌های فیلترشده",
         "clearLoanFilter": "پاک کردن فیلتر",
@@ -3002,7 +3003,6 @@
         "categoryFilter": "فیلتر بر اساس دسته",
         "paymentMethodFilter": "فیلتر بر اساس روش پرداخت",
         "statusFilter": "فیلتر بر اساس وضعیت",
-        "statusAll": "همه وضعیت‌ها",
         "statusActive": "فعال",
         "statusDisabled": "غیرفعال",
         "sortLabel": "مرتب‌سازی اشتراک‌ها",
@@ -3013,8 +3013,6 @@
         "manageMetadata": "مدیریت دسته‌ها و روش‌های پرداخت",
         "settingsTitle": "تنظیمات اشتراک",
         "loadError": "اشتراک‌ها بارگذاری نشدند.",
-        "allCategories": "همه دسته‌ها",
-        "allPaymentMethods": "همه روش‌های پرداخت",
         "cycle": {
             "daily": "روزانه",
             "weekly": "هفتگی",
@@ -3050,10 +3048,7 @@
         "unspecified": "نامشخص",
         "active": "فعال",
         "disabled": "غیرفعال",
-        "disable": "غیرفعال‌سازی اشتراک",
-        "enable": "فعال‌سازی اشتراک",
         "markRenewed": "علامت‌گذاری به عنوان تمدیدشده",
-        "edit": "ویرایش اشتراک",
         "delete": "حذف اشتراک",
         "conversionUnavailable": "تبدیل در دسترس نیست",
         "monthlyEquivalent": "{{amount}} در ماه",
@@ -3082,11 +3077,11 @@
         "invalidDate": "یک تاریخ پرداخت معتبر وارد کنید.",
         "savedToast": "اشتراک ذخیره شد.",
         "addedToast": "اشتراک افزوده شد.",
-        "disabledToast": "اشتراک غیرفعال شد.",
-        "enabledToast": "اشتراک فعال شد.",
         "renewedToast": "تاریخ تمدید به‌روزرسانی شد.",
         "deleteConfirm": "اشتراک «{{name}}» حذف شود؟",
         "deleteConfirmDetail": "همراه با اشتراک، یادآورهای آن و ثبت بودجه پرداخت بعدی حذف می‌شوند. پرداخت‌های انجام‌شده در نمای ماهانه باقی می‌مانند.",
+        "renewConfirm": "پرداخت «{{name}}» ثبت شود؟",
+        "renewConfirmDetail": "تاریخ سررسید جلو می‌رود و پرداخت {{date}} به عنوان هزینه در بودجه ثبت می‌شود.",
         "deletedToast": "اشتراک حذف شد.",
         "monthlyBudgetLabel": "بودجه ماهانه اشتراک",
         "baseCurrencyLabel": "واحد پول پایه",
@@ -3353,7 +3348,8 @@
             "visibility": {
                 "private": "خصوصی",
                 "family": "خانواده"
-            }
+            },
+            "allTitle": "همه داروها"
         },
         "labs": {
             "title": "آزمایش‌ها",

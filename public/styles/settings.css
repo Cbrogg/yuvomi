@@ -39,7 +39,8 @@
 
 .settings-shell__navigation {
   padding: var(--space-3);
-  border: var(--space-px) solid var(--color-border-subtle);
+  /* Randlose Karte auf dem Grouped-Grund (tokens.css, Kasten-in-Kasten). */
+  border: none;
   border-radius: var(--radius-lg);
   background: var(--color-surface-raised);
   box-shadow: var(--shadow-sm);
@@ -156,6 +157,14 @@
   transform: rotate(180deg);
 }
 
+/* Bewusste Layout-Transition (Detector layout-transition, geprüft): das
+ * Aufklappen ändert eine echte Höhe, und `transform` kann sie nicht - eine
+ * skalierte Gruppe verzerrt ihre Beschriftungen und schiebt nichts unter sich
+ * weg. `grid-template-rows: 0fr -> 1fr` ist der Weg, der ohne feste Zielhöhe
+ * auskommt; `max-height` bräuchte eine geratene Obergrenze und liefe bei kurzen
+ * Gruppen sichtbar zu lange nach. Es ist EIN Element je Domäne, einmal pro
+ * Klick. Abgeschaltet im prefers-reduced-motion-Block dieser Datei, der
+ * `.settings-shell__navigation-panel` namentlich führt. */
 .settings-shell__navigation-panel {
   display: grid;
   grid-template-rows: 0fr;
@@ -246,9 +255,14 @@
   line-height: var(--line-height-relaxed);
 }
 
+/* EIN Träger für die Übersichtszeilen (Zeilenlisten-Regel, tokens.css). Vorher
+ * war jede Zeile eine eigene Karte in einem Grid mit Abstand - genau die Form,
+ * die Apples Einstellungen als EINE gruppierte Liste zeigt. */
 .settings-mobile-overview__links {
-  display: grid;
-  gap: var(--space-3);
+  background: var(--color-surface-work);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
 }
 
 .settings-desktop-overview {
@@ -264,21 +278,21 @@
   width: 100%;
   min-width: 0;
   min-height: var(--target-lg);
-  padding: var(--space-3);
-  border: var(--space-px) solid var(--color-border-subtle);
-  border-radius: var(--radius-md);
-  background: var(--color-surface-work);
-  box-shadow: var(--shadow-sm);
-  transition:
-    border-color var(--transition-fast),
-    box-shadow var(--transition-fast),
-    transform var(--transition-fast);
+  padding: var(--space-3) var(--space-4);
+  /* Zeile im Träger: keine eigene Fläche, keine Kante, kein Radius. */
+  border: none;
+  background: none;
+  transition: background-color var(--transition-fast);
+}
+
+/* Rahmenbreite aus --space-px: Token-Disziplin dieser Datei (Guard
+ * `settings.css haelt Zeilenlaenge, Token-Disziplin und keine toten Regeln`). */
+.settings-overview-link + .settings-overview-link {
+  border-top: var(--space-px) solid var(--color-border-subtle);
 }
 
 .settings-overview-link:hover {
-  border-color: var(--color-border-strong);
-  box-shadow: var(--shadow-md);
-  transform: translateY(calc(var(--space-px) * -1));
+  background-color: var(--color-surface-hover);
 }
 
 .settings-overview-link__icon {
@@ -359,7 +373,7 @@
   min-height: var(--target-md);
   padding-inline: var(--space-1);
   margin-inline: calc(var(--space-1) * -1);
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-full);
   transition:
     background-color var(--transition-fast),
     color var(--transition-fast);
@@ -438,7 +452,8 @@
 
 .settings-disclosure {
   overflow: hidden;
-  border: var(--space-px) solid var(--color-border-subtle);
+  /* Randlose Karte auf dem Grouped-Grund (tokens.css, Kasten-in-Kasten). */
+  border: none;
   border-radius: var(--radius-md);
   background: var(--color-surface-work);
 }
@@ -494,17 +509,17 @@
 
 .settings-status-summary--success {
   --settings-status-tone: var(--color-success);
-  --settings-status-bg: color-mix(in srgb, var(--color-success) 7%, var(--color-surface-work));
+  --settings-status-bg: color-mix(in srgb, var(--color-success) var(--tint-wash), var(--color-surface-work));
 }
 
 .settings-status-summary--warning {
   --settings-status-tone: var(--color-warning);
-  --settings-status-bg: color-mix(in srgb, var(--color-warning) 8%, var(--color-surface-work));
+  --settings-status-bg: color-mix(in srgb, var(--color-warning) var(--tint-wash), var(--color-surface-work));
 }
 
 .settings-status-summary--danger {
   --settings-status-tone: var(--color-danger);
-  --settings-status-bg: color-mix(in srgb, var(--color-danger) 7%, var(--color-surface-work));
+  --settings-status-bg: color-mix(in srgb, var(--color-danger) var(--tint-wash), var(--color-surface-work));
 }
 
 .settings-status-summary__title,
@@ -596,23 +611,16 @@
 
   .settings-desktop-overview {
     display: grid;
-    gap: var(--space-2);
+    gap: var(--space-6);
   }
 
+  /* Der Domänen-Titel steht auf dem Grund, seine Blätter liegen in EINEM
+   * Träger (Zeilenlisten-Regel, tokens.css). Vorher trennten Haarlinien die
+   * Domänen auf dem Grund - eine Liste ohne Rand, an dem sie als ein Objekt
+   * fassbar wäre. */
   .settings-desktop-overview__domain {
     display: grid;
     gap: var(--space-3);
-    padding-block: var(--space-4);
-    border-bottom: var(--space-px) solid var(--color-border-subtle);
-  }
-
-  .settings-desktop-overview__domain:first-child {
-    padding-top: 0;
-  }
-
-  .settings-desktop-overview__domain:last-child {
-    padding-bottom: 0;
-    border-bottom: 0;
   }
 
   .settings-desktop-overview__domain-title {
@@ -632,7 +640,10 @@
 
   .settings-desktop-overview__leaf-list {
     display: grid;
-    gap: var(--space-1);
+    background: var(--color-surface-work);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
   }
 
   .settings-desktop-overview__leaf {
@@ -641,15 +652,18 @@
     gap: var(--space-3);
     align-items: center;
     min-height: var(--target-lg);
-    padding: var(--space-2);
-    border-radius: var(--radius-sm);
+    padding: var(--space-2) var(--space-4);
     transition:
       background-color var(--transition-fast),
       color var(--transition-fast);
   }
 
+  .settings-desktop-overview__leaf + .settings-desktop-overview__leaf {
+    border-top: var(--space-px) solid var(--color-border-subtle);
+  }
+
   .settings-desktop-overview__leaf:hover {
-    background: var(--color-surface-raised);
+    background: var(--color-surface-hover);
   }
 
   .settings-desktop-overview__leaf-icon {
@@ -699,11 +713,9 @@
   }
 }
 
-@media (min-width: 768px) and (max-width: 1023px) {
-  .settings-mobile-overview__links {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
+/* Die Zweispaltigkeit auf Tablets ist mit dem Träger entfallen: eine gruppierte
+ * Liste ist EINE Spalte - nebeneinander gestellt bräuchte jede Zeile wieder
+ * ihren eigenen Rand und wäre damit wieder eine Karte pro Zeile. */
 
 @media (prefers-reduced-motion: reduce) {
   .settings-shell__navigation-link,
@@ -717,10 +729,6 @@
   .settings-shell__navigation-chevron,
   .settings-shell__navigation-toggle {
     transition: none;
-  }
-
-  .settings-overview-link:hover {
-    transform: none;
   }
 }
 
@@ -738,19 +746,19 @@
 
 .settings-banner--success {
   background: var(--color-success-light);
-  color: var(--color-success);
+  color: var(--color-success-ink);
   border: var(--space-px) solid var(--color-success);
 }
 
 .settings-banner--error {
   background: var(--color-danger-light);
-  color: var(--color-danger);
+  color: var(--color-danger-ink);
   border: var(--space-px) solid var(--color-danger);
 }
 
 .settings-banner--info {
   background: var(--color-info-light);
-  color: var(--color-info);
+  color: var(--color-info-ink);
   border: var(--space-px) solid var(--color-info);
 }
 
@@ -773,9 +781,10 @@
 
 .settings-card {
   background-color: var(--color-surface-work);
-  border: var(--space-px) solid var(--color-border-subtle);
-  border-radius: var(--radius-glass-card);
-  box-shadow: var(--glass-shadow-sm);
+  /* Randlose Karte auf dem Grouped-Grund (tokens.css, Kasten-in-Kasten). */
+  border: none;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
   padding: var(--space-4);
   margin-bottom: var(--space-3);
   position: relative;
@@ -888,14 +897,14 @@
 
 .settings-avatar-button:hover {
   transform: translateY(-1px);
-  box-shadow: var(--glass-shadow-md);
+  box-shadow: var(--shadow-md);
 }
 
 /* Tastatur-Fokus braucht einen echten Ring (Audit F-10) — der frühere
  * Schatten+Lift allein war als Fokus-Indikator nicht verlässlich sichtbar. */
 .settings-avatar-button:focus-visible {
   transform: translateY(-1px);
-  box-shadow: var(--glass-shadow-md);
+  box-shadow: var(--shadow-md);
   outline: var(--focus-ring-width) solid var(--focus-ring-color);
   outline-offset: var(--focus-ring-offset);
 }
@@ -929,7 +938,7 @@
 
 .settings-avatar-action--danger:hover,
 .settings-avatar-action--danger:focus-visible {
-  color: var(--color-danger);
+  color: var(--color-danger-ink);
   border-color: var(--color-danger);
   background: var(--color-danger-light);
 }
@@ -966,9 +975,24 @@
   align-items: center;
 }
 
+/* Die Zielgröße kommt aus dem Token, nicht aus einer Zahl. Hier standen 44px
+ * fest verdrahtet - das ist exakt der ZEIGER-Wert von --target-base, eingefroren
+ * bevor er den Finger kannte: das Token wächst unter `@media (hover: none)` auf
+ * --target-lg, die Kopie hier nicht. Gemessen 44x45 am Finger gegen ein Minimum
+ * von 48, und zwar freistehend (nächstes Zielzentrum 161px, die Spacing-Ausnahme
+ * greift also nicht).
+ *
+ * Warum nicht die Trefferfläche per ::before dehnen wie .weather-widget__refresh:
+ * das geht hier technisch nicht. `<input type="color">` ist ein replaced element
+ * und rendert keine Pseudo-Elemente. Die Wahl bestand also gar nicht - und sie
+ * wäre auch inhaltlich falsch gewesen: bei einem Farbfeld IST die sichtbare
+ * Fläche die Funktion, anders als bei einem Icon in einem dichten Widget.
+ *
+ * Der Platz kostet nichts Nennenswertes: die Zeile ist
+ * `minmax(0, 1fr) auto`, die 4px gehen bei 375px zu ~1,4 % vom Namensfeld ab. */
 .settings-color-button {
-  width: 44px;
-  height: 44px;
+  width: var(--target-base);
+  height: var(--target-base);
   padding: var(--space-0h);
   border: var(--space-px) solid var(--color-border);
   border-radius: var(--radius-full);
@@ -1047,7 +1071,7 @@
 
 .form-error {
   font-size: var(--text-sm);
-  color: var(--color-danger);
+  color: var(--color-danger-ink);
   padding: var(--space-2) var(--space-3);
   background: var(--color-danger-light);
   border-radius: var(--radius-sm);
@@ -1171,7 +1195,7 @@
    "Nicht konfiguriert") bleiben grau - kein Fehler, nur noch nicht eingerichtet. */
 .settings-provider__badge--connected {
   background: var(--color-success-light);
-  color: var(--color-success);
+  color: var(--color-success-ink);
 }
 
 /* Eigenständige Statuszeile am Kopf eines Provider-Panels (ersetzt die zuvor
@@ -1209,7 +1233,7 @@
 
 .settings-legacy-badge {
   background: var(--color-warning-light);
-  color: var(--color-warning);
+  color: var(--color-warning-ink);
 }
 
 .settings-legacy-hint {
@@ -1261,9 +1285,10 @@
 
 .settings-token-output {
   padding: var(--space-3);
-  border: var(--space-px) solid var(--color-border);
+  /* Inset-Well statt Kasten in der Karte (tokens.css). */
+  border: none;
   border-radius: var(--radius-sm);
-  background: var(--color-surface-2);
+  background: var(--color-fill-well);
 }
 
 /* Eingabe und Kopieren nebeneinander (wie der WebDAV-Reveal-Button). */
@@ -1292,8 +1317,10 @@
 
 .api-token-scopes {
   margin-top: var(--space-3);
-  border: var(--space-px) solid var(--color-border);
+  /* Inset-Well statt Kasten in der Karte (tokens.css). */
+  border: none;
   border-radius: var(--radius-sm);
+  background: var(--color-fill-well);
   overflow: hidden;
 }
 
@@ -1356,7 +1383,7 @@
 
 .settings-backup-card--danger .settings-backup-card__icon {
   background: var(--color-warning-light, var(--color-surface-2));
-  color: var(--color-warning, var(--color-text-primary));
+  color: var(--color-warning-ink, var(--color-text-primary));
 }
 
 .settings-backup-card__icon svg {
@@ -1377,7 +1404,7 @@
   min-height: 148px;
   padding: var(--space-5);
   border: 1.5px dashed var(--color-border);
-  border-radius: var(--radius-glass-card);
+  border-radius: var(--radius-lg);
   background: var(--color-surface-2);
   color: var(--color-text-secondary);
   text-align: center;
@@ -1421,8 +1448,9 @@
   padding: var(--space-3);
   overflow-x: auto;
   border-radius: var(--radius-sm);
-  background: var(--color-surface-2);
-  border: var(--space-px) solid var(--color-border);
+  background: var(--color-fill-well);
+  /* Inset-Well statt Kasten in der Karte (tokens.css). */
+  border: none;
   color: var(--color-text-primary);
   font-size: var(--text-sm);
   line-height: 1.5;
@@ -1477,15 +1505,14 @@
   color: var(--color-text-primary);
 }
 
-.theme-toggle__btn--active {
-  background: var(--color-accent-light);
-  border-color: var(--color-accent);
-  color: var(--color-accent);
-}
-
+/* Hell / Dunkel / System ist ein Segment, kein Chip: aktiv = Modul-Akzent
+ * gefüllt + --color-ink-on-vivid (DESIGN.md „Segmented Controls"). Die Kante
+ * läuft mit der Füllung mit, damit die drei Knöpfe eine Leiste bleiben. */
+.theme-toggle__btn--active,
 .theme-toggle__btn--active:hover {
-  border-color: var(--color-accent);
-  color: var(--color-accent);
+  background: var(--module-accent, var(--color-accent));
+  border-color: var(--module-accent, var(--color-accent));
+  color: var(--color-ink-on-vivid);
 }
 
 .theme-toggle__btn:focus-visible {
@@ -1539,14 +1566,14 @@
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-glass-inner);
+  border-radius: var(--radius-md);
   cursor: pointer;
   transition: background-color var(--transition-fast);
   min-height: var(--target-lg);
 }
 
 .toggle-row:hover {
-  background-color: var(--glass-bg-card-hover);
+  background-color: var(--color-surface-hover);
 }
 
 .toggle-row:focus-within {
@@ -1721,7 +1748,7 @@
   padding: var(--space-3);
   border-radius: var(--radius-md);
   background: var(--color-warning-light);
-  color: var(--color-warning);
+  color: var(--color-warning-ink);
   font-size: var(--text-sm);
 }
 
@@ -1851,7 +1878,7 @@
 }
 
 .caldav-account-item .settings-disclosure__trigger:hover {
-  background: var(--glass-bg-card-hover);
+  background: var(--color-surface-hover);
 }
 
 .caldav-account-item .settings-disclosure__panel {
@@ -1904,7 +1931,7 @@
 /* Dieselbe Hover-Fläche wie die Zeilen darunter - zwei Hover-Farben in einer
    Liste lesen sich wie zwei verschiedene Listen. */
 .caldav-calendars-summary:hover {
-  background-color: var(--glass-bg-card-hover);
+  background-color: var(--color-surface-hover);
 }
 
 .caldav-calendars-list,
@@ -1941,7 +1968,7 @@
 
 .caldav-calendar-item:hover,
 .caldav-reminder-item:hover {
-  background-color: var(--glass-bg-card-hover);
+  background-color: var(--color-surface-hover);
 }
 
 .caldav-calendar-checkbox,
@@ -2022,7 +2049,7 @@
 /* Gescheiterte Adressbuch-Zeile: der Fehler steht dort, wo er entstanden ist.
    Kein Seitenstreifen - die Tönung der Fläche trägt die Markierung. */
 .caldav-calendar-item--failed {
-  background-color: color-mix(in srgb, var(--color-danger) 7%, transparent);
+  background-color: color-mix(in srgb, var(--color-danger) var(--tint-wash), transparent);
 }
 
 .caldav-calendar-error {
@@ -2083,10 +2110,16 @@
    Third-party Modules
    -------------------------------------------------------- */
 
+/* EIN Träger, Zeilen per Haarlinie (Zeilenlisten-Regel, §2). Vorher trug jede
+ * Modulzeile ihre eigene Karte und die Trennung lag im `gap` der Liste - die
+ * Bauart, die in einer langen Liste Schattenstreifen erzeugt und „jedes davon
+ * ist ein eigenes Objekt" sagt, wo die Gruppe gemeint ist. Sonde 7 hat sie
+ * gefunden, als die Settings-Blätter zum ersten Mal unter die Sonden kamen.
+ * Fläche, Radius, Schatten und die Trennlinien kommen aus `.row-carrier`
+ * (list-row.css) - hier steht nur noch, dass die Zeilen stapeln. */
 .settings-modules-list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
 }
 
 .settings-mobile-nav-slots {
@@ -2118,7 +2151,8 @@
   display: grid;
   gap: var(--space-2);
   padding: var(--space-3);
-  border: var(--space-px) solid var(--color-border-subtle);
+  /* Randlose Karte auf dem Grouped-Grund (tokens.css, Kasten-in-Kasten). */
+  border: none;
   border-radius: var(--radius-md);
   background: var(--color-surface-raised);
 }
@@ -2152,23 +2186,20 @@
   border-bottom: var(--space-px) solid var(--color-border-subtle);
 }
 
+/* Flächenlos: die Fläche gehört dem Träger. Kante und Radius stehen bewusst
+ * nicht mehr hier - `.row-carrier > * + *` setzt die Haarlinie, und ein Radius
+ * je Zeile wäre wieder die Karte, die gerade entfallen ist. */
 .settings-module-row {
   display: grid;
   grid-template-columns: var(--target-base) var(--target-base) var(--target-base) minmax(0, 1fr) auto;
   gap: var(--space-3);
   align-items: center;
   padding: var(--space-4);
-  border: var(--space-px) solid var(--color-border-subtle);
-  border-radius: var(--radius-md);
-  background-color: var(--color-surface-work);
-  transition:
-    background-color var(--transition-fast),
-    border-color var(--transition-fast);
+  transition: background-color var(--transition-fast);
 }
 
 .settings-module-row:hover {
-  border-color: var(--color-border);
-  background-color: var(--color-surface-raised);
+  background-color: var(--color-surface-hover);
 }
 
 .settings-module-row--fixed {
@@ -2185,7 +2216,7 @@
   width: var(--target-base);
   height: var(--target-base);
   border: 0;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-full);
   background: transparent;
   color: var(--color-text-secondary);
   cursor: grab;
@@ -2214,7 +2245,7 @@
   width: var(--target-base);
   height: var(--target-base);
   border: var(--space-px) solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-full);
   background: var(--color-surface);
   color: var(--color-text-secondary);
   transition:
@@ -2234,7 +2265,7 @@
   height: var(--target-base);
   border-radius: var(--radius-md);
   color: var(--module-row-accent, var(--color-accent));
-  background: color-mix(in srgb, var(--module-row-accent, var(--color-accent)) 14%, transparent);
+  background: color-mix(in srgb, var(--module-row-accent, var(--color-accent)) var(--tint-surface), transparent);
 }
 
 .settings-module-row__body {
@@ -2268,7 +2299,7 @@
    eigenen 14%-Grund ergibt sie 5,90:1, das ungedimmte Grün nur 4,15:1. */
 .settings-module-row__title .settings-module-status--enabled {
   color: var(--color-success-hover);
-  background: color-mix(in srgb, var(--color-success) 14%, transparent);
+  background: color-mix(in srgb, var(--color-success) var(--tint-surface), transparent);
 }
 
 .settings-module-status--disabled {
@@ -2278,7 +2309,7 @@
 
 .settings-module-status--error {
   color: var(--color-danger);
-  background: color-mix(in srgb, var(--color-danger) 14%, transparent);
+  background: color-mix(in srgb, var(--color-danger) var(--tint-surface), transparent);
 }
 
 /* `--pyamortiza-accent` als erster Fallback war ein projektfremder Name: die
@@ -2288,8 +2319,13 @@
   padding: var(--space-0h) var(--space-2);
   border-radius: var(--radius-full);
   font-weight: var(--font-weight-semibold);
-  color: var(--color-accent);
-  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  /* Akzent-TEXT auf akzent-getoenter Flaeche - der rohe Akzent scheitert hier,
+   * weil der Grund eine Toenung DERSELBEN Farbe ist (gemessen 3,99:1 dark).
+   * Das ist die Akzent-auf-Toenung-Regel, und sie hat seit Runde 1 auf diesen
+   * Fall gewartet: die Regel stand in tokens.css, die Fundstelle sah niemand,
+   * weil kein Guard bis in die Settings-Blaetter reichte. */
+  color: color-mix(in srgb, var(--color-accent) var(--tint-ink), var(--color-text-primary));
+  background: color-mix(in srgb, var(--color-accent) var(--tint-surface), transparent);
 }
 
 .settings-module-row__toggle {
@@ -2421,10 +2457,11 @@
 
 .perm-modeswitch__btn i { width: 16px; height: 16px; }
 
+/* Aktiv: gefülltes Segment statt erhabener Kachel (DESIGN.md „Segmented
+ * Controls"). */
 .perm-modeswitch__btn.is-active {
-  background: var(--color-surface-work);
-  color: var(--color-accent);
-  box-shadow: var(--shadow-sm);
+  background: var(--module-accent, var(--color-accent));
+  color: var(--color-ink-on-vivid);
 }
 
 /* Subjekt-Auswahl (Rollen-/Mitglieder-Chips) */
@@ -2549,9 +2586,10 @@
 
 /* Liste: Modul-Gruppen, jede mit eingerückten Widgets darunter. */
 .perm-list {
-  border: var(--space-px) solid var(--color-border);
+  /* Inset-Well statt Kasten in der Karte (tokens.css). */
+  border: none;
   border-radius: var(--radius-md);
-  background: var(--color-surface-work);
+  background: var(--color-fill-well);
   overflow: hidden;
 }
 
@@ -2637,31 +2675,44 @@
   left: 2px;
   width: calc((100% - 4px) / var(--seg-count, 3));
   border-radius: var(--radius-full);
-  background: var(--color-surface-work);
-  box-shadow: var(--shadow-sm);
+  /* Der gleitende Daumen IST das aktive Segment - er trägt deshalb die
+   * Segment-Sprache der Shell (Modul-Akzent gefüllt), nicht die erhabene weiße
+   * Kachel der abgelösten Welt. Das aktive Icon schaltet dazu auf
+   * --color-ink-on-vivid (siehe .perm-seg__opt.is-active). */
+  background: var(--module-accent, var(--color-accent));
   transform: translateX(calc(var(--seg-index, 0) * 100%));
   transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
   pointer-events: none;
 }
 
+/* DIE LABEL-VERLUST-REGEL (Runde 6, Phase 3b), hier im umgekehrten Fall: das
+ * Label faellt auf dem BREITEN Viewport (siehe .perm-seg__label). Damit ist das
+ * Segment dort ein Icon-Ziel und traegt `--target-base` in beiden Richtungen -
+ * vorher blieben 34x30 uebrig, also unter jedem Zielmass, das die App kennt.
+ * Segmente stehen aneinander; die Spacing-Ausnahme aus WCAG 2.5.8 greift fuer
+ * sie gerade nicht. */
 .perm-seg__opt {
   position: relative;
   z-index: 1;
   display: inline-grid;
   place-items: center;
-  width: 34px;
-  min-height: 30px;
+  min-width: var(--target-base);
+  min-height: var(--target-base);
   border: none;
   border-radius: var(--radius-full);
   background: transparent;
   color: var(--color-text-secondary);
   cursor: pointer;
-  transition: color var(--transition-fast);
+  transition: color var(--transition-fast), background-color var(--transition-fast);
 }
 
 .perm-seg__opt i { width: 16px; height: 16px; }
 .perm-seg__opt:disabled { cursor: not-allowed; }
-.perm-seg__opt.is-active { color: var(--color-accent); }
+/* Die Fläche liefert der gleitende Daumen; das Glyph darauf braucht die
+ * Vivid-Tinte. Vorher stand hier --color-accent auf weißer Kachel. */
+.perm-seg__opt.is-active {
+  color: var(--color-ink-on-vivid);
+}
 
 /* Am Zeiger traegt der Tooltip den Klartext; unter 768px wird er sichtbar. */
 .perm-seg__label { display: none; }
@@ -2705,7 +2756,8 @@
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-4);
-  border: var(--space-px) solid var(--color-border);
+  /* Randlose Karte auf dem Grouped-Grund (tokens.css, Kasten-in-Kasten). */
+  border: none;
   border-radius: var(--radius-md);
   background: var(--color-surface-raised);
   color: var(--color-text-secondary);
@@ -2751,11 +2803,13 @@
 
   /* Icon über Wort: nebeneinander passen vier Stufen ("Erben" kommt im
      Mitglieds-Modus dazu) bei 390px nicht in eine Zeile. */
+  /* Hier traegt das Segment sein Label wieder - es ist kein Icon-Ziel mehr und
+   * gibt die quadratische Mindestbreite an die Rasterspalte ab. */
   .perm-seg__opt {
     grid-auto-flow: row;
     align-content: center;
     gap: var(--space-0h);
-    width: auto;
+    min-width: 0;
     min-height: var(--target-base);
     padding: var(--space-1) var(--space-0h);
   }

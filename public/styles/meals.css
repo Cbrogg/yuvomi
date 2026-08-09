@@ -108,21 +108,18 @@
   color: var(--module-accent);
 }
 
-/* Akzent-Text auf akzent-getöntem Grund folgt der Hauskonvention aus
- * .pantry-badge--danger: der rohe Ton scheitert dort am Kontrast, weil der
- * Grund eine Tönung derselben Farbe ist. Roh gemessen ergab #C2410C auf
- * 12 % #C2410C nur 3.92:1 bei 14px/500 - unter den geforderten 4.5. Mit 30 %
- * Ink beigemischt sind es 6.5:1, ohne dass die Modul-Identität verloren geht. */
+/* „Heute" trägt .btn.btn--secondary - die Kapsel und die Outline-Grammatik, die
+ * auch „Aktuell" im Budget und „Heute" im Kalender führen. Vorher war es eine
+ * getönte Fläche mit --radius-sm: dieselbe Funktion in einer dritten Form, und
+ * auf getöntem Grund brauchte der Text zusätzlich einen eigenen Ink-Mix, um AA
+ * zu halten (#C2410C auf 12 % #C2410C ergab roh nur 3.92:1). Die transparente
+ * Kapsel stellt die Frage nicht mehr: der rohe Modulton steht auf dem
+ * Seitengrund und misst dort 4.64:1 light (#C2410C auf #F2F2F7) und 8.74:1 dark
+ * (#FB923C auf #0A0A0C). Die Zwillinge messen 4.90/10.63:1 (Budget) und
+ * 6.37/7.27:1 (Kalender). (Finish-Review Runde 4, Befund 4.) */
 .week-nav__today {
-  font-size: var(--text-sm);
-  color: color-mix(in srgb, var(--module-accent) 70%, var(--color-text-primary));
-  font-weight: var(--font-weight-medium);
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--module-accent) 12%, transparent);
-  cursor: pointer;
-  border: none;
-  white-space: nowrap;
+  padding: var(--space-1) var(--space-3);
+  color: var(--module-accent);
   /* Gemessen 57x29 und damit unter --target-md, der projekteigenen
    * Desktop-Untergrenze (Critique 2026-07-29). */
   min-height: var(--target-md);
@@ -299,9 +296,12 @@
   transition: border-color var(--transition-fast);
 }
 
+/* Belegter Slot ist eine randlose Karte auf dem Grouped-Grund; die gestrichelte
+ * Kante des LEEREN Slots bleibt, sie ist die Drop-/Add-Affordanz und damit ein
+ * Griff, kein Kasten (Kasten-in-Kasten-Vokabular, tokens.css). */
 .meal-slot--has-meal {
-  border-style: solid;
-  border-color: var(--color-border);
+  border-color: transparent;
+  box-shadow: var(--shadow-xs);
 }
 
 .meal-slot__type-label {
@@ -362,7 +362,14 @@
   background: none;
   border: none;
   cursor: pointer;
-  color: var(--color-text-disabled);
+  /* NICHT --color-text-disabled: der Knopf ist bedienbar, er sieht nur
+   * zurueckgenommen aus. Dieselbe Unterscheidung, die tokens.css schon fuer den
+   * Placeholder-Fuehrungstext trifft. Als einzige sichtbare Information seines
+   * Knopfes faellt das Plus-Icon unter WCAG 1.4.11 (3:1) - `disabled` traegt das
+   * auf keiner Flaeche (gemessen 1.36 bis 2.17), `tertiary` auf jeder
+   * (4.86 bis 6.90) und bleibt gegen --color-text-primary (12 bis 17) sichtbar
+   * leiser. Guard: Sonde 14 in test-document-guards.js. */
+  color: var(--color-text-tertiary);
   font-size: var(--text-sm);
   padding: var(--space-2);
   transition: color var(--transition-fast);
@@ -382,7 +389,8 @@
   border: none;
   border-top: 1px dashed var(--color-border);
   cursor: pointer;
-  color: var(--color-text-disabled);
+  /* tertiary, nicht disabled - siehe .meal-slot__add-btn. */
+  color: var(--color-text-tertiary);
   padding: var(--space-1) var(--space-2);
   /* 28px lagen unter --target-md; der Button ist auf Desktop der Weg, eine
    * zweite Mahlzeit in denselben Slot zu legen (Critique 2026-07-29). */
@@ -413,7 +421,7 @@
 
 .meal-slot__add-more-btn:hover {
   color: var(--module-accent);
-  background-color: color-mix(in srgb, var(--module-accent) 12%, transparent);
+  background-color: color-mix(in srgb, var(--module-accent) var(--tint-state), transparent);
 }
 
 /* Touch-Geräte kennen kein Hover: Button dauerhaft sichtbar und auf
@@ -540,11 +548,14 @@
 .meal-card__action-btn {
   width: 24px;
   height: 24px;
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-full);
   background: none;
   border: none;
   cursor: pointer;
-  color: var(--color-text-disabled);
+  /* tertiary, nicht disabled - siehe .meal-slot__add-btn. Betraf hier das
+   * Papierkorb-Icon der Basisregel; --shopping und --recipe setzen ihre eigene
+   * Farbe (--module-accent) und trugen schon vorher. */
+  color: var(--color-text-tertiary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -586,7 +597,7 @@
 
 .meal-card__action-btn--shopping:hover {
   color: var(--module-accent);
-  background-color: color-mix(in srgb, var(--module-accent) 12%, transparent);
+  background-color: color-mix(in srgb, var(--module-accent) var(--tint-state), transparent);
 }
 
 .meal-card__action-btn--recipe {
@@ -626,7 +637,7 @@
 
 .meal-modal__autocomplete-item:hover,
 .meal-modal__autocomplete-item--active {
-  background-color: color-mix(in srgb, var(--module-accent) 12%, transparent);
+  background-color: color-mix(in srgb, var(--module-accent) var(--tint-state), transparent);
   color: var(--module-accent);
 }
 
@@ -660,9 +671,11 @@
   flex-direction: column;
   gap: var(--space-2);
   padding: var(--space-3);
-  background-color: color-mix(in srgb, var(--module-accent) 12%, transparent);
+  background-color: color-mix(in srgb, var(--module-accent) var(--tint-surface), transparent);
   border-radius: var(--radius-sm);
-  border: 1px solid var(--module-accent);
+  /* Getönte Fläche ohne Kante: die Tönung trägt die Hervorhebung allein
+   * (Kasten-in-Kasten-Vokabular, tokens.css). */
+  border: none;
 }
 
 .shopping-transfer__label {
@@ -678,7 +691,9 @@
   width: 100%;
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
-  border: 1px solid var(--module-accent);
+  /* Feldkante nach dem Input-Kanon (DESIGN.md: 1.5px --color-border), nicht
+   * im Modul-Akzent - die Akzentkante gehörte zur abgelösten Welt. */
+  border: 1.5px solid var(--color-border);
   background-color: var(--color-surface);
   color: var(--color-text-primary);
   font-size: var(--type-body);
@@ -722,15 +737,17 @@
   font-size: var(--text-sm);
 }
 
+/* Getönte Hinweisfläche im Formular - ohne Kante, sonst stünde ein umrandeter
+ * Kasten im Sheet (Kasten-in-Kasten-Vokabular, tokens.css). */
 .meal-recurrence-option,
 .meal-recurrence-note {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
   padding: var(--space-3);
-  border: 1px solid var(--glass-border-subtle);
-  border-radius: var(--radius-glass-inner);
-  background: color-mix(in srgb, var(--module-meals) 8%, transparent);
+  border: none;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--module-meals) var(--tint-wash), transparent);
 }
 
 .meal-recurrence-note {
@@ -769,7 +786,7 @@
 .meal-slot--drop-target {
   outline: 2px dashed var(--module-accent);
   outline-offset: 2px;
-  background: color-mix(in srgb, var(--module-accent) 8%, transparent);
+  background: color-mix(in srgb, var(--module-accent) var(--tint-state), transparent);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -874,6 +891,23 @@
     display: contents;
   }
 
+  /* Die Ecke oben links. Die Körperzeilen decken die Gutter-Gasse mit ihrem
+   * sticky Label ab, die KOPFZEILE hatte dort gar kein Grid-Item - der erste
+   * Tageskopf scrollte darunter sichtbar durch, während sein Karteninhalt eine
+   * Zeile tiefer korrekt maskiert war (Finish-Review Runde 3). Ein
+   * Pseudo-Element des Grid-Containers ist selbst ein Grid-Item und schliesst
+   * die Lücke ohne Markup-Umbau; es liegt über dem Tageskopf (z-sticky), weil
+   * es ihn genau dort verdecken soll. */
+  .week-grid::before {
+    content: '';
+    grid-column: 1;
+    grid-row: 1;
+    position: sticky;
+    left: 0;
+    z-index: calc(var(--z-sticky) + 1);
+    background-color: var(--color-bg);
+  }
+
   /* Scroll-Affordance des Boards (Critique-Folgebefund): wireScrollFade setzt
    * die geteilten has-fade-*-Klassen (filter-chip.css). Der End-Anriss zeigt
    * „rechts liegen weitere Tage" — auch wenn eine Spalte zufällig bündig mit
@@ -905,8 +939,15 @@
   }
 
   .week-grid.has-fade-start.has-fade-end {
-    mask-image: linear-gradient(to right, #000 calc(100% - var(--space-6)), transparent);
-    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - var(--space-6)), transparent);
+    mask-image: linear-gradient(to right, var(--mask-opaque) calc(100% - var(--space-6)), transparent);
+    -webkit-mask-image: linear-gradient(to right, var(--mask-opaque) calc(100% - var(--space-6)), transparent);
+  }
+
+  /* Achse gespiegelt, Werte gleich - Begruendung an den Basisregeln in
+     filter-chip.css. */
+  [dir="rtl"] .week-grid.has-fade-start.has-fade-end {
+    mask-image: linear-gradient(to left, var(--mask-opaque) calc(100% - var(--space-6)), transparent);
+    -webkit-mask-image: linear-gradient(to left, var(--mask-opaque) calc(100% - var(--space-6)), transparent);
   }
 
   .recipe-sidebar {
@@ -940,7 +981,7 @@
     display: grid;
     gap: var(--space-2);
     padding: var(--space-3);
-    border: 1px solid var(--color-border-subtle);
+    border: 1px solid transparent;
     border-radius: var(--radius-sm);
     background: var(--color-surface);
     cursor: grab;

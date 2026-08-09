@@ -1,6 +1,7 @@
 import { api } from '/api.js';
 import { openModal as openSharedModal, closeModal, advancedSection } from '/components/modal.js';
 import { stagger, scheduleUndoableDelete } from '/utils/ux.js';
+import { wireSwipeRows, maybeShowSwipeHint } from '/utils/swipe-row.js';
 import { t, formatDate, parseDateInput, isDateInputValid } from '/i18n.js';
 import { esc } from '/utils/html.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
@@ -135,7 +136,20 @@ function updateBirthdayBadge() {
 function birthdayItemHtml(birthday) {
   const chip = countdownChip(birthday);
   const isToday = chip.mod === 'today';
+  // Wischbedienung (Redesign Runde 4, C-2): auf Touch tragen die beiden
+  // Richtungen, was bis dahin zwei Icon-Knoepfe in jeder Zeile trugen - in
+  // einer Grouped-Liste die lauteste Stelle des Bildschirms. Auf
+  // Zeigergeraeten bleiben die Knoepfe, dort gibt es keine Geste.
   return `
+    <div class="swipe-row" data-swipe-id="${birthday.id}">
+      <div class="swipe-reveal swipe-reveal--edit swipe-reveal--leading" aria-hidden="true">
+        <i data-lucide="pencil" class="icon-md"></i>
+        <span>${t('common.edit')}</span>
+      </div>
+      <div class="swipe-reveal swipe-reveal--delete swipe-reveal--trailing" aria-hidden="true">
+        <i data-lucide="trash-2" class="icon-md"></i>
+        <span>${t('common.delete')}</span>
+      </div>
     <article class="birthday-item ${isToday ? 'birthday-item--today' : ''}" data-id="${birthday.id}">
       <div class="birthday-item__media">${photoAvatar(birthday)}</div>
       <div class="birthday-item__body">
@@ -156,7 +170,8 @@ function birthdayItemHtml(birthday) {
           <i data-lucide="trash-2" aria-hidden="true"></i>
         </button>
       </div>
-    </article>`;
+    </article>
+    </div>`;
 }
 
 function emptyStateHtml() {
@@ -201,6 +216,35 @@ function renderList() {
 
   if (window.lucide) window.lucide.createIcons({ el: host });
   stagger(host.querySelectorAll('.birthday-item'));
+  wireBirthdaySwipe(host);
+  maybeShowSwipeHint(host);
+}
+
+/**
+ * Wischbedienung der Liste (Redesign Runde 4, C-2). Dieselben zwei Aktionen,
+ * die auf Zeigergeräten als Knöpfe in der Zeile stehen - zum Zeilenanfang hin
+ * wischen bearbeitet, zum Zeilenende hin löscht.
+ *
+ * Beide federn zurück, statt hinauszufliegen: das Bearbeiten öffnet nur einen
+ * Dialog und die Zeile bleibt, und das Löschen ist über den geteilten
+ * Rückgängig-Weg (`scheduleUndoableDelete`) fünf Sekunden lang widerrufbar -
+ * eine hinausgeflogene Karte hätte behauptet, die Sache sei erledigt.
+ */
+function wireBirthdaySwipe(host) {
+  wireSwipeRows(host, {
+    card: '.birthday-item',
+    trailing: {
+      reveal: '.swipe-reveal--delete',
+      run: (row) => deleteBirthday(Number(row.dataset.swipeId)),
+    },
+    leading: {
+      reveal: '.swipe-reveal--edit',
+      run: (row) => {
+        const birthday = state.birthdays.find((item) => item.id === Number(row.dataset.swipeId));
+        if (birthday) openBirthdayModal({ mode: 'edit', birthday });
+      },
+    },
+  });
 }
 
 function renderPage() {

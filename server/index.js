@@ -295,8 +295,10 @@ app.get('/manifest.webmanifest', apiLimiter, (req, res) => {
     display: 'standalone',
     display_override: ['standalone', 'minimal-ui'],
     orientation: 'portrait-primary',
-    theme_color: '#007AFF',
-    background_color: '#F5F5F7',
+    // Muss mit public/manifest.json und den theme-color-Metas in index.html
+    // zusammenbleiben: der App-Grund der HIG-Welt (#F2F2F7 = systemGray6).
+    theme_color: '#F2F2F7',
+    background_color: '#F2F2F7',
     lang: 'de-DE',
     categories: ['productivity', 'lifestyle'],
     icons: [

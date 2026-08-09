@@ -1,5 +1,6 @@
 {
     "common": {
+        "swipeSidesSwapped": "Направления смахивания поменялись местами - основное действие теперь с другой стороны.",
         "apply": "Добавить",
         "searchClear": "Очистить поиск",
         "save": "Сохранить",
@@ -1114,7 +1115,7 @@
         "loanPaymentTitle": "Платеж по займу: {{borrower}}",
         "typeLoan": "Займ",
         "tabsLabel": "Разделы бюджета",
-        "budgetTab": "Бюджет",
+        "budgetTab": "Обзор",
         "loansTab": "Займы",
         "filteredTransactions": "Отфильтрованные операции",
         "clearLoanFilter": "Сбросить фильтр",
@@ -3002,7 +3003,6 @@
         "categoryFilter": "Фильтр по категории",
         "paymentMethodFilter": "Фильтр по способу оплаты",
         "statusFilter": "Фильтр по статусу",
-        "statusAll": "Все статусы",
         "statusActive": "Активна",
         "statusDisabled": "Отключена",
         "sortLabel": "Сортировать подписки",
@@ -3013,8 +3013,6 @@
         "manageMetadata": "Управлять категориями и способами оплаты",
         "settingsTitle": "Настройки подписок",
         "loadError": "Не удалось загрузить подписки.",
-        "allCategories": "Все категории",
-        "allPaymentMethods": "Все способы оплаты",
         "cycle": {
             "daily": "Ежедневно",
             "weekly": "Еженедельно",
@@ -3050,10 +3048,7 @@
         "unspecified": "Не указано",
         "active": "Активна",
         "disabled": "Отключена",
-        "disable": "Отключить подписку",
-        "enable": "Включить подписку",
         "markRenewed": "Отметить как продленную",
-        "edit": "Редактировать подписку",
         "delete": "Удалить подписку",
         "conversionUnavailable": "Конвертация недоступна",
         "monthlyEquivalent": "{{amount}} в месяц",
@@ -3082,11 +3077,11 @@
         "invalidDate": "Введите действительную дату платежа.",
         "savedToast": "Подписка сохранена.",
         "addedToast": "Подписка добавлена.",
-        "disabledToast": "Подписка отключена.",
-        "enabledToast": "Подписка включена.",
         "renewedToast": "Дата продления обновлена.",
         "deleteConfirm": "Удалить подписку \"{{name}}\"?",
         "deleteConfirmDetail": "Вместе с подпиской удаляются её напоминания и бюджетная запись следующего платежа. Уже завершённые платежи остаются в месячном обзоре.",
+        "renewConfirm": "Записать платёж по «{{name}}»?",
+        "renewConfirmDetail": "Дата следующего платежа сдвинется, а платёж от {{date}} будет записан как расход в бюджете.",
         "deletedToast": "Подписка удалена.",
         "monthlyBudgetLabel": "Месячный бюджет подписок",
         "baseCurrencyLabel": "Базовая валюта",
@@ -3353,7 +3348,8 @@
             "visibility": {
                 "private": "Личное",
                 "family": "Семья"
-            }
+            },
+            "allTitle": "Все лекарства"
         },
         "labs": {
             "title": "Анализы",

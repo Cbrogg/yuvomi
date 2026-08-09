@@ -1,5 +1,6 @@
 {
     "common": {
+        "swipeSidesSwapped": "Směry přejetí byly prohozeny - hlavní akce je nyní na druhé straně.",
         "apply": "Přidat",
         "searchClear": "Vymazat hledání",
         "save": "Uložit",
@@ -1114,7 +1115,7 @@
         "loanPaymentTitle": "Splátka půjčky: {{borrower}}",
         "typeLoan": "Půjčka",
         "tabsLabel": "Oblasti rozpočtu",
-        "budgetTab": "Rozpočet",
+        "budgetTab": "Přehled",
         "loansTab": "Půjčky",
         "filteredTransactions": "Filtrované transakce",
         "clearLoanFilter": "Zrušit filtr",
@@ -3002,7 +3003,6 @@
         "categoryFilter": "Filtrovat podle kategorie",
         "paymentMethodFilter": "Filtrovat podle platební metody",
         "statusFilter": "Filtrovat podle stavu",
-        "statusAll": "Všechny stavy",
         "statusActive": "Aktivní",
         "statusDisabled": "Vypnuté",
         "sortLabel": "Řadit předplatná",
@@ -3013,8 +3013,6 @@
         "manageMetadata": "Spravovat kategorie a platební metody",
         "settingsTitle": "Nastavení předplatných",
         "loadError": "Předplatná se nepodařilo načíst.",
-        "allCategories": "Všechny kategorie",
-        "allPaymentMethods": "Všechny platební metody",
         "cycle": {
             "daily": "Denně",
             "weekly": "Týdně",
@@ -3050,10 +3048,7 @@
         "unspecified": "Neuvedeno",
         "active": "Aktivní",
         "disabled": "Vypnuté",
-        "disable": "Deaktivovat předplatné",
-        "enable": "Aktivovat předplatné",
         "markRenewed": "Označit jako obnoveno",
-        "edit": "Upravit předplatné",
         "delete": "Smazat předplatné",
         "conversionUnavailable": "Převod není k dispozici",
         "monthlyEquivalent": "{{amount}} za měsíc",
@@ -3082,11 +3077,11 @@
         "invalidDate": "Zadejte platné datum platby.",
         "savedToast": "Předplatné uloženo.",
         "addedToast": "Předplatné přidáno.",
-        "disabledToast": "Předplatné deaktivováno.",
-        "enabledToast": "Předplatné aktivováno.",
         "renewedToast": "Datum obnovení aktualizováno.",
         "deleteConfirm": "Smazat předplatné \"{{name}}\"?",
         "deleteConfirmDetail": "S předplatným se smažou jeho připomínky a rozpočtový záznam příští platby. Již dokončené platby v měsíčním přehledu zůstanou.",
+        "renewConfirm": "Zaúčtovat platbu za \"{{name}}\"?",
+        "renewConfirmDetail": "Datum splatnosti se posune a platba z {{date}} se zapíše jako výdaj v rozpočtu.",
         "deletedToast": "Předplatné smazáno.",
         "monthlyBudgetLabel": "Měsíční rozpočet předplatných",
         "baseCurrencyLabel": "Základní měna",
@@ -3353,7 +3348,8 @@
             "visibility": {
                 "private": "Soukromé",
                 "family": "Rodina"
-            }
+            },
+            "allTitle": "Všechny léky"
         },
         "labs": {
             "title": "Laboratorní hodnoty",

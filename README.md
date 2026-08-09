@@ -415,7 +415,7 @@ Nothing. Yuvomi is free and MIT-licensed. You provide the server; there is no su
 
 ## Under the hood
 
-- **Disciplined Liquid Glass UI** - readable work surfaces, subtle translucent navigation, spring animations, and module-tinted overlays, built in pure CSS with no framework.
+- **Apple HIG in the Liquid Glass language** - the system font stack and Apple's type scale, capsule controls, inset-grouped lists and spring motion. Glass is reserved for navigation, sheets and the action button; everything you read sits on an opaque surface. Each module keeps its own accent, verified for WCAG AA in light and dark. Pure CSS, no framework.
 - **Zero build step** - pure ES modules, no bundler, no transpiler, no framework.
 - **Privacy first** - fully self-hosted, optional SQLCipher AES-256 database encryption, zero telemetry.
 - **SSO / OpenID Connect** - optional single sign-on via any OIDC provider (Authentik, Keycloak, Google, Microsoft Entra), configured with four env vars using the Authorization Code + PKCE flow.

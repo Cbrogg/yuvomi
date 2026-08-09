@@ -1,5 +1,6 @@
 {
     "common": {
+        "swipeSidesSwapped": "Напрямки проведення помінялися місцями - основна дія тепер з іншого боку.",
         "apply": "Додати",
         "searchClear": "Очистити пошук",
         "save": "Зберегти",
@@ -1114,7 +1115,7 @@
         "loanPaymentTitle": "Платіж за позикою: {{borrower}}",
         "typeLoan": "Позика",
         "tabsLabel": "Розділи бюджету",
-        "budgetTab": "Бюджет",
+        "budgetTab": "Огляд",
         "loansTab": "Позики",
         "filteredTransactions": "Відфільтровані операції",
         "clearLoanFilter": "Очистити фільтр",
@@ -3002,7 +3003,6 @@
         "categoryFilter": "Фільтр за категорією",
         "paymentMethodFilter": "Фільтр за способом оплати",
         "statusFilter": "Фільтр за статусом",
-        "statusAll": "Усі статуси",
         "statusActive": "Активна",
         "statusDisabled": "Вимкнена",
         "sortLabel": "Сортувати підписки",
@@ -3013,8 +3013,6 @@
         "manageMetadata": "Керувати категоріями та способами оплати",
         "settingsTitle": "Налаштування підписок",
         "loadError": "Не вдалося завантажити підписки.",
-        "allCategories": "Усі категорії",
-        "allPaymentMethods": "Усі способи оплати",
         "cycle": {
             "daily": "Щодня",
             "weekly": "Щотижня",
@@ -3050,10 +3048,7 @@
         "unspecified": "Не вказано",
         "active": "Активна",
         "disabled": "Вимкнена",
-        "disable": "Вимкнути підписку",
-        "enable": "Увімкнути підписку",
         "markRenewed": "Позначити як поновлену",
-        "edit": "Редагувати підписку",
         "delete": "Видалити підписку",
         "conversionUnavailable": "Конвертація недоступна",
         "monthlyEquivalent": "{{amount}} на місяць",
@@ -3082,11 +3077,11 @@
         "invalidDate": "Введіть дійсну дату платежу.",
         "savedToast": "Підписку збережено.",
         "addedToast": "Підписку додано.",
-        "disabledToast": "Підписку вимкнено.",
-        "enabledToast": "Підписку увімкнено.",
         "renewedToast": "Дату поновлення оновлено.",
         "deleteConfirm": "Видалити підписку \"{{name}}\"?",
         "deleteConfirmDetail": "Разом із підпискою видаляються її нагадування та бюджетний запис наступного платежу. Уже завершені платежі залишаються в місячному огляді.",
+        "renewConfirm": "Записати платіж за «{{name}}»?",
+        "renewConfirmDetail": "Дата наступного платежу зсунеться, а платіж від {{date}} буде записано як витрату в бюджеті.",
         "deletedToast": "Підписку видалено.",
         "monthlyBudgetLabel": "Щомісячний бюджет підписок",
         "baseCurrencyLabel": "Базова валюта",
@@ -3353,7 +3348,8 @@
             "visibility": {
                 "private": "Приватне",
                 "family": "Родина"
-            }
+            },
+            "allTitle": "Усі ліки"
         },
         "labs": {
             "title": "Аналізи",
