@@ -4026,6 +4026,8 @@
         "warrantyStatusExpiringSoon": "Warranty ends in {{days}} days",
         "warrantyStatusExpired": "Warranty expired on {{date}}",
         "warrantyAlertLabel": "Warranty ending soon or already expired",
+        "icsWarrantySummary": "Warranty ends: {{name}}",
+        "icsCalendarName": "Yuvomi Warranties",
         "removeBookingAction": "Remove \"{{title}}\""
     },
     "documentAttach": {

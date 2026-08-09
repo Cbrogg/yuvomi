@@ -20,6 +20,12 @@ const deadlinesIcs = await import('../server/services/inventory-deadlines-ics.js
 const { default: deadlinesFeedRouter } = await import('../server/routes/inventory/deadlines-feed.js');
 const db = dbmod.get();
 
+// Der ICS-Text folgt der Datensprache des Haushalts (sync_config.language),
+// genau wie die Geburtstags-Termine - nicht mehr fest Deutsch.
+function setHouseholdLanguage(language) {
+  db.prepare("INSERT INTO sync_config (key, value) VALUES ('language', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(language);
+}
+
 function insertItem(fields = {}) {
   const f = { name: 'Espressomaschine', purchase_date: null, warranty_months: null, ...fields };
   return db.prepare(`
@@ -37,6 +43,7 @@ test('buildInventoryDeadlinesFeed enthält nur Gegenstände mit vollständigen G
   insertItem({ name: 'Ohne Kaufdatum', warranty_months: 12 });
   insertItem({ name: 'Ohne Garantiemonate', purchase_date: '2026-01-01' });
 
+  setHouseholdLanguage('de');
   const ics = deadlinesIcs.buildInventoryDeadlinesFeed(db);
   const veventCount = (ics.match(/BEGIN:VEVENT/g) || []).length;
   assert.equal(veventCount, 1);
@@ -48,6 +55,7 @@ test('buildInventoryDeadlinesFeed escaped Sonderzeichen im Namen', () => {
   db.exec('DELETE FROM inventory_items');
   insertItem({ name: 'Kaffee; Maschine, Pro', purchase_date: '2026-06-15', warranty_months: 6 });
 
+  setHouseholdLanguage('de');
   const ics = deadlinesIcs.buildInventoryDeadlinesFeed(db);
   assert.match(ics, /SUMMARY:Garantie endet: Kaffee\\; Maschine\\, Pro/);
 });
@@ -158,4 +166,19 @@ test('Nicht-Admins duerfen den Feed weder lesen noch rotieren noch abschalten', 
   // Der Feed muss die abgewiesenen Zugriffe unveraendert ueberstehen.
   const get = await call('GET', '/inventory/deadlines-feed');
   assert.ok(get.body.data.token);
+});
+
+test('Feed-Texte folgen der Haushaltssprache statt fest deutsch zu sein', () => {
+  db.exec('DELETE FROM inventory_items');
+  insertItem({ name: 'Espressomaschine', purchase_date: '2026-01-01', warranty_months: 12 });
+
+  setHouseholdLanguage('de');
+  const de = deadlinesIcs.buildInventoryDeadlinesFeed(db);
+  assert.match(de, /X-WR-CALNAME:Yuvomi Garantien/);
+  assert.match(de, /SUMMARY:Garantie endet: Espressomaschine/);
+
+  setHouseholdLanguage('en');
+  const en = deadlinesIcs.buildInventoryDeadlinesFeed(db);
+  assert.match(en, /X-WR-CALNAME:Yuvomi Warranties/);
+  assert.match(en, /SUMMARY:Warranty ends: Espressomaschine/);
 });

@@ -4026,6 +4026,8 @@
         "warrantyStatusExpiringSoon": "Garantie läuft in {{days}} Tagen ab",
         "warrantyStatusExpired": "Garantie abgelaufen seit {{date}}",
         "warrantyAlertLabel": "Garantie läuft bald ab oder ist abgelaufen",
+        "icsWarrantySummary": "Garantie endet: {{name}}",
+        "icsCalendarName": "Yuvomi Garantien",
         "removeBookingAction": "\"{{title}}\" entfernen"
     },
     "documentAttach": {

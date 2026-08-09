@@ -20,6 +20,14 @@ const INVENTORY_LINES = [
   '        "warrantyAlertLabel": "Warranty ending soon or already expired",',
 ];
 
+// Nachtrag aus dem Abschluss-Review: der ICS-Feed erzeugte SUMMARY und
+// X-WR-CALNAME fest auf Deutsch, unabhaengig von der Haushaltssprache. Beide
+// Texte laufen jetzt ueber server/utils/i18n.js#translate.
+const INVENTORY_ICS_LINES = [
+  '        "icsWarrantySummary": "Warranty ends: {{name}}",',
+  '        "icsCalendarName": "Yuvomi Warranties",',
+];
+
 const SETTINGS_LINES = [
   '        "inventoryFeedTitle": "Export warranty deadlines",',
   '        "inventoryFeedDescription": "Subscribe to upcoming warranty end dates from your inventory read-only in Apple Calendar, Google Calendar, or Thunderbird.",',
@@ -47,13 +55,32 @@ function insertAfterAnchor(lines, anchorPattern, newLines) {
   lines.splice(idx + 1, 0, ...newLines);
 }
 
+/**
+ * Idempotenz-Wache: das Skript wurde nachtraeglich um weitere Bloecke ergaenzt
+ * (Abschluss-Review). Ohne diese Pruefung wuerde ein zweiter Lauf die bereits
+ * eingefuegten Bloecke ein zweites Mal einspielen und doppelte Schluessel
+ * hinterlassen.
+ */
+function insertBlockOnce(lines, anchorPattern, newLines) {
+  const firstKey = newLines[0].trim().split('"')[1];
+  if (lines.some((line) => new RegExp(`^\\s*"${firstKey}":`).test(line))) return false;
+  insertAfterAnchor(lines, anchorPattern, newLines);
+  return true;
+}
+
 for (const locale of LOCALES) {
   const path = `public/locales/${locale}.json`;
   const lines = readFileSync(path, 'utf8').split('\n');
 
-  insertAfterAnchor(lines, /^\s*"hasBookingsLabel":/, INVENTORY_LINES);
-  insertAfterAnchor(lines, /^\s*"feedExportSaved":/, SETTINGS_LINES);
+  let changed = false;
+  changed = insertBlockOnce(lines, /^\s*"hasBookingsLabel":/, INVENTORY_LINES) || changed;
+  changed = insertBlockOnce(lines, /^\s*"warrantyAlertLabel":/, INVENTORY_ICS_LINES) || changed;
+  changed = insertBlockOnce(lines, /^\s*"feedExportSaved":/, SETTINGS_LINES) || changed;
 
+  if (!changed) {
+    console.log(`unchanged ${path}`);
+    continue;
+  }
   writeFileSync(path, lines.join('\n'));
   console.log(`updated ${path}`);
 }

@@ -15,6 +15,7 @@
 
 import { randomBytes } from 'node:crypto';
 import { createLogger } from '../logger.js';
+import { resolveHouseholdFormats, translate } from '../utils/i18n.js';
 import { escapeICSText, foldLine } from './ics-export.js';
 import { warrantyEndDate } from './inventory-deadlines.js';
 
@@ -38,7 +39,7 @@ function addDaysDateKey(dateKey, days) {
   return `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}`;
 }
 
-function buildVEvent(item, warrantyEnd, dtstamp) {
+function buildVEvent(item, warrantyEnd, dtstamp, locale) {
   const lines = [
     'BEGIN:VEVENT',
     `UID:inventory-warranty-${item.id}@yuvomi`,
@@ -46,7 +47,7 @@ function buildVEvent(item, warrantyEnd, dtstamp) {
     `DTSTART;VALUE=DATE:${formatDateValue(warrantyEnd)}`,
     // DTEND ist exklusiv (RFC 5545), wie server/services/ics-export.js#buildVEvent.
     `DTEND;VALUE=DATE:${addDaysDateKey(warrantyEnd, 1)}`,
-    `SUMMARY:${escapeICSText(`Garantie endet: ${item.name}`)}`,
+    `SUMMARY:${escapeICSText(translate(locale, 'inventory.icsWarrantySummary', { name: item.name }))}`,
     'END:VEVENT',
   ];
   return lines.map(foldLine);
@@ -60,6 +61,12 @@ function buildInventoryDeadlinesFeed(conn, now = new Date()) {
     ORDER BY id ASC
   `).all();
 
+  // Serverseitig erzeugter Kalendertext folgt der Datensprache des Haushalts,
+  // genau wie die Geburtstags-Termine (server/services/birthdays.js): der
+  // Abonnent sieht den Text roh aus dem Feed, es laeuft keine clientseitige
+  // Uebersetzung mehr darueber.
+  const { locale } = resolveHouseholdFormats(conn);
+
   const dtstamp = formatUTCStamp(now);
   const out = [
     'BEGIN:VCALENDAR',
@@ -67,7 +74,7 @@ function buildInventoryDeadlinesFeed(conn, now = new Date()) {
     'PRODID:-//Yuvomi//Inventory Deadlines Feed//DE',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
-    'X-WR-CALNAME:Yuvomi Garantien',
+    `X-WR-CALNAME:${escapeICSText(translate(locale, 'inventory.icsCalendarName'))}`,
   ];
   for (const item of rows) {
     // Ein einzelner unparsbarer Gegenstand darf nicht den ganzen Feed fuer alle
@@ -82,7 +89,7 @@ function buildInventoryDeadlinesFeed(conn, now = new Date()) {
       log.warn(`Skipping inventory item ${item.id} in the warranty feed: ${err?.message || err}`);
       continue;
     }
-    out.push(...buildVEvent(item, warrantyEnd, dtstamp));
+    out.push(...buildVEvent(item, warrantyEnd, dtstamp, locale));
   }
   out.push('END:VCALENDAR');
   return out.join('\r\n') + '\r\n';
