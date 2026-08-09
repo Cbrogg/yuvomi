@@ -1175,12 +1175,24 @@ svg.weather-forecast__icon {
 
   .weather-forecast {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+    /* Steht die Vorhersage NEBEN dem Jetzt-Cluster, trennt sie eine senkrechte
+     * Linie statt der waagerechten aus der Basisregel. Sie stand hier als
+     * `color-mix(in srgb, white 20%, transparent)` - ein Rest der violetten
+     * Vollfarb-Karte, auf der Weiß mit 20 % eine sichtbare Kante war. Seit die
+     * Karte randlos und weiß ist (Runde 3, kein Verlauf mehr auf Inhalt), stand
+     * die einzige Gliederung des Widgets weiß auf weiß. Denselben Rest hat der
+     * Rollout eine Regel weiter unten schon einmal gefunden (siehe der
+     * `color: white`-Kommentar in diesem Stylesheet); diese Stelle blieb übrig,
+     * weil eine unsichtbare Trennlinie keinen Textkontrast verletzt und deshalb
+     * durch jeden Guard fällt.
+     * Logische Kanten, nicht links: in `ar` und `fa` läuft das Widget in RTL,
+     * und dort gehört die Linie auf die andere Seite. */
     border-top: none;
-    border-left: 1px solid color-mix(in srgb, white 20%, transparent);
+    border-inline-start: 1px solid var(--color-border-subtle);
     flex: 1;
     align-items: center;
     padding-top: 0;
-    padding-left: var(--space-5);
+    padding-inline-start: var(--space-5);
   }
 }
 
@@ -1207,7 +1219,9 @@ svg.weather-forecast__icon {
   .weather-forecast {
     grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: var(--space-4);
-    padding-left: var(--space-5);
+    /* Logisch wie die Kante eine Stufe darüber - der Wert ist derselbe und
+     * stünde physisch in RTL auf der falschen Seite. */
+    padding-inline-start: var(--space-5);
   }
 
   .weather-forecast__day--extended {
