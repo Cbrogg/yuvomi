@@ -985,7 +985,7 @@ textarea.form-input {
 .nav-bottom__items {
   box-shadow:
     inset 0 1px 0 color-mix(in srgb, white calc(var(--lg-specular) * 100%), transparent),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.04),
+    var(--glass-inset-bottom-lift),
     0 8px 24px rgba(0, 0, 0, 0.14),
     0 2px 8px rgba(0, 0, 0, 0.08),
     0 0 0 0.5px rgba(0, 0, 0, 0.06);
@@ -995,7 +995,7 @@ textarea.form-input {
   .nav-sidebar {
     box-shadow:
       inset 0 1px 0 color-mix(in srgb, white calc(var(--lg-specular) * 100%), transparent),
-      inset 0 -1px 0 rgba(255, 255, 255, 0.04),
+      var(--glass-inset-bottom-lift),
       var(--glass-shadow-md);
   }
 }

@@ -1116,7 +1116,14 @@ html:has(.search-overlay--visible) yuvomi-install-prompt {
   border-radius: var(--radius-full);
   background-color: var(--module-accent, var(--color-accent));
   color: var(--color-ink-on-vivid);
-  box-shadow: var(--shadow-lg), inset 0 1px 0 rgba(255, 255, 255, 0.22), inset 0 -1px 0 rgba(0, 0, 0, 0.10);
+  /* Specular über die Inset-Tokens, nicht als rohe rgba: sie tragen den Faktor
+   * --glass-inset-strength, der unter prefers-reduced-transparency und
+   * prefers-contrast auf 0 fällt. Der rohe Wert überlebte den Schalter genau
+   * dort, wo dieser Fallback greift - ohne backdrop-filter überschreibt
+   * glass.css die Zeile nicht. Der Fallback bleibt bewusst eine Stufe schwächer
+   * als der Glaspfad (medium statt strong): dort trägt die Kante das Material,
+   * hier nur die Kapselform. */
+  box-shadow: var(--shadow-lg), var(--glass-inset-medium), var(--glass-inset-bottom-base);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -4425,14 +4432,30 @@ textarea::placeholder {
     display: block;
   }
 
-  body {
-    background: #ffffff;
-    color: #000000;
+  /* Gedruckt wird hell. Die Farbwelt regelt das nicht hier, sondern an der
+   * Quelle: beide Dark-Blöcke in tokens.css stehen unter `@media screen` und
+   * greifen auf Papier gar nicht erst (die Begründung und die Messung stehen
+   * dort). Bis 2026-08-09 färbte dieser Block nur den `body`, während jede
+   * Fläche darunter ihren Dark-Token behielt - schwarze Tinte auf schwarzem
+   * Grund.
+   *
+   * Hier bleibt allein, was Papier-Eigenheit ist und keine Theme-Frage: der
+   * Bogen ist weiß, nicht der Grouped-Grund. */
+  :root {
+    color-scheme: light;
+    --color-bg: #ffffff;
   }
 
   .card {
     box-shadow: none;
-    border: 1px solid #cccccc;
+    /* Die Kante trägt hier die Trennung, die der Schatten nicht mehr leistet -
+     * und dafür ist jedes Kanten-Token zu hell: sie sind für feine Linien auf
+     * einem leuchtenden Display gebaut und drucken als nichts. Der Wert steht
+     * deshalb lokal statt als Token-Override. `--color-border-subtle` global
+     * anzuheben war der erste Versuch und ein Regress: es ist an vier Stellen
+     * auch FLÄCHE (Kalenderraster, Dokument-Trenner), und der dunklere Wert
+     * drückte den Text darauf auf 3.73:1. */
+    border: 1px solid #c9c9c9;
     break-inside: avoid;
   }
 

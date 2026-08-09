@@ -1147,6 +1147,12 @@
    * oben) - und deshalb am selben Schalter. */
   --glass-inset-bottom-base:  inset 0 -1px 0 rgba(0, 0, 0, calc(0.12 * var(--glass-inset-strength)));
   --glass-inset-bottom-hover: inset 0 -1px 0 rgba(0, 0, 0, calc(0.16 * var(--glass-inset-strength)));
+  /* Gegenlicht statt Schatten: die SCHWEBENDEN Chrome-Flächen (Tab-Bar-Kapsel,
+   * Sidebar) haben unter sich keine Fläche, auf die sie einen Unterrand-Schatten
+   * werfen könnten - dort hebt eine sehr schwache helle Kante sie ab. Stand bis
+   * 2026-08-09 an beiden Stellen als rohes rgba, eine Zeile unter dem oberen
+   * Specular, der den Schalter korrekt las. */
+  --glass-inset-bottom-lift:  inset 0 -1px 0 rgba(255, 255, 255, calc(0.04 * var(--glass-inset-strength)));
   --glass-inset-thumb:        inset 0  1px 0 rgba(255, 255, 255, calc(0.90 * var(--glass-inset-strength))),
                               inset 0 -1px 0 rgba(0, 0, 0, calc(0.08 * var(--glass-inset-strength)));
   --glass-inset-input:        inset 0  1px 2px rgba(0, 0, 0, calc(0.04 * var(--glass-inset-strength)));
@@ -1242,8 +1248,23 @@
  * Zwei Selektoren aktivieren Dark Mode:
  *   1. @media (prefers-color-scheme: dark) — System-Präferenz
  *   2. [data-theme="dark"] — expliziter Override durch den Nutzer
+ *
+ * BEIDE gelten nur am BILDSCHIRM (`@media screen`). Papier leuchtet nicht: eine
+ * Farbwelt für dunkle Displays wird auf ihm unlesbar, und das galt hier bis
+ * 2026-08-09 in voller Breite. Der Druckblock in layout.css färbte nur den
+ * `body` ein - seine Textfarbe griff app-weit, sein Grund aber nur auf ihm
+ * selbst, während jede Fläche darunter ihren Dark-Token behielt. Gemessen kam
+ * schwarze Tinte auf schwarzem Grund aus dem Drucker (1.06:1 am Modultitel,
+ * 1.23:1 auf Karten, 11 von 16 Modulen); nach dem Neutralisieren der Flächen
+ * standen die vividen Dark-Akzente auf weißem Papier bei 1.4-2.8:1 (78
+ * Paarungen auf 37 Routenzuständen).
+ *
+ * DIE BEDINGUNG STATT DER WERTE: der Druck könnte auch die Light-Werte
+ * wiederholen, aber das wären über fünfzig - Neutrale, Semantik, 17 Modul-Tints,
+ * sieben Chart-Serien - und jeder neue Token liefe still daneben. `screen` sagt
+ * dasselbe einmal, und ein Token, den es morgen gibt, ist von selbst mitgemeint.
  * ================================================================ */
-@media (prefers-color-scheme: dark) {
+@media screen and (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     /* Neutral-Skala — Apple Dark */
     --_neutral-50:  #050507;
@@ -1453,7 +1474,10 @@
   }
 }
 
-[data-theme="dark"] {
+/* `screen` aus demselben Grund wie oben beim System-Dark: die ausdrückliche
+ * Wahl des Nutzers gilt für sein Display, nicht für seinen Drucker. */
+@media screen {
+  [data-theme="dark"] {
     /* Neutral-Skala — Apple Dark */
     --_neutral-50:  #050507;
     --_neutral-100: #0A0A0C;
@@ -1639,6 +1663,7 @@
     --_app-backdrop-accent-strength: 1.5%;
     --_app-backdrop-secondary-strength: 0.75%;
     --lg-blob-opacity:        0.20;
+  }
 }
 
 /* ================================================================

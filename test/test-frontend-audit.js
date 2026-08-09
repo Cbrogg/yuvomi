@@ -34,6 +34,44 @@ function walkFrontendFiles(dir) {
   });
 }
 
+/**
+ * Die beiden Dark-Bloecke von tokens.css - ueber `eachRule()`, nicht ueber ein
+ * eigenes Muster.
+ *
+ * Zehn Guards suchten sie mit `/\n\[data-theme="dark"\]\s*\{([\s\S]*?)\n\}/`,
+ * also ueber die SPALTE der Klammern: Selektor auf Spalte 0, schliessende
+ * Klammer auf Spalte 0. Das haelt genau so lange, wie niemand die Einrueckung
+ * anfasst - und am 2026-08-09 wanderten beide Bloecke unter `@media screen`
+ * (Papier druckt keine Bildschirmfarben, Begruendung in tokens.css). Zehn
+ * Zusicherungen ueber Dark-Kontraste wurden in derselben Sekunde rot, ohne dass
+ * sich ein einziger Farbwert geaendert haette.
+ *
+ * Das Muster war zehnmal kopiert - zehn Gelegenheiten fuer denselben Fehler,
+ * genau die Falle, die `test/css-rules.js` fuer CSS schon einmal geloest hat.
+ * Der Scanner kennt die At-Kette einer Regel und findet die Bloecke deshalb
+ * unabhaengig davon, wie tief sie liegen und wie sie eingerueckt sind.
+ *
+ * Beide geben den Rumpf als String zurueck, in der Form
+ * `{ 1: body }` - das ist die Signatur eines `String.match()`, damit die
+ * Aufrufer unveraendert `block[1]` lesen koennen.
+ */
+function darkSchemeBlock(tokensCss) {
+  for (const rule of eachRule(tokensCss)) {
+    const chain = rule.at.join(' ');
+    if (/prefers-color-scheme:\s*dark/.test(chain) && /:root/.test(rule.selector)) {
+      return { 1: rule.body };
+    }
+  }
+  return null;
+}
+
+function darkAttrBlock(tokensCss) {
+  for (const rule of eachRule(tokensCss)) {
+    if (/^\[data-theme="dark"\]$/.test(rule.selector.trim())) return { 1: rule.body };
+  }
+  return null;
+}
+
 // Zerlegt jedes `Promise.allSettled([...])` einer Datei in die Namen der
 // Destrukturierung und die Top-Level-Eintraege des Arrays, damit der Index eines
 // Aufrufs zu seinem Ergebnis-Bezeichner passt.
@@ -4555,8 +4593,8 @@ test('phase 7 locale files keep the de reference key set complete', () => {
 test('dark-mode token blocks stay in sync between @media and [data-theme="dark"]', () => {
   const tokens = read('../public/styles/tokens.css');
 
-  const mediaBlock = tokens.match(/@media \(prefers-color-scheme: dark\)\s*\{\s*:root:not\(\[data-theme="light"\]\)\s*\{([\s\S]*?)\n {2}\}\n\}/);
-  const attrBlock = tokens.match(/\n\[data-theme="dark"\]\s*\{([\s\S]*?)\n\}/);
+  const mediaBlock = darkSchemeBlock(tokens);
+  const attrBlock = darkAttrBlock(tokens);
 
   assert.ok(mediaBlock, 'expected a prefers-color-scheme dark block');
   assert.ok(attrBlock, 'expected a [data-theme="dark"] block');
@@ -4581,8 +4619,8 @@ test('dark-mode token blocks stay in sync between @media and [data-theme="dark"]
 test('phase 1 defines synchronized surface roles for readable work areas', () => {
   const tokens = read('../public/styles/tokens.css');
   const rootBlock = tokens.match(/:root\s*\{([\s\S]*?)\n\}/);
-  const mediaBlock = tokens.match(/@media \(prefers-color-scheme: dark\)\s*\{\s*:root:not\(\[data-theme="light"\]\)\s*\{([\s\S]*?)\n {2}\}\n\}/);
-  const attrBlock = tokens.match(/\n\[data-theme="dark"\]\s*\{([\s\S]*?)\n\}/);
+  const mediaBlock = darkSchemeBlock(tokens);
+  const attrBlock = darkAttrBlock(tokens);
 
   assert.ok(rootBlock, 'expected a :root token block');
   assert.ok(mediaBlock, 'expected a prefers-color-scheme dark block');
@@ -4767,7 +4805,7 @@ test('calendar draws its gutter from the shared page token and compacts weekday 
 test('dashboard and calendar keep distinct navigation accents in light and dark themes', () => {
   const tokens = read('../public/styles/tokens.css');
   const rootBlock = tokens.match(/:root\s*\{([\s\S]*?)\n\}/);
-  const darkBlock = tokens.match(/\n\[data-theme="dark"\]\s*\{([\s\S]*?)\n\}/);
+  const darkBlock = darkAttrBlock(tokens);
 
   assert.ok(rootBlock, 'expected a :root token block');
   assert.ok(darkBlock, 'expected a [data-theme="dark"] block');
@@ -4864,7 +4902,7 @@ function compositeColor(foreground, background) {
 test('text/surface token pairs meet WCAG AA 4.5:1 in both themes', () => {
   const tokens = read('../public/styles/tokens.css');
   const rootBlock = tokens.match(/:root\s*\{([\s\S]*?)\n\}/);
-  const darkBlock = tokens.match(/\n\[data-theme="dark"\]\s*\{([\s\S]*?)\n\}/);
+  const darkBlock = darkAttrBlock(tokens);
   assert.ok(rootBlock, 'expected a :root token block');
   assert.ok(darkBlock, 'expected a [data-theme="dark"] block');
 
@@ -4945,7 +4983,7 @@ const COPAIR_CATEGORY = new Map([
 test('jede Regel, die Farbe UND Untergrund setzt, haelt ihr eigenes Paar', () => {
   const tokens = read('../public/styles/tokens.css');
   const rootBlock = tokens.match(/:root\s*\{([\s\S]*?)\n\}/);
-  const darkBlock = tokens.match(/\n\[data-theme="dark"\]\s*\{([\s\S]*?)\n\}/);
+  const darkBlock = darkAttrBlock(tokens);
   assert.ok(rootBlock && darkBlock, 'expected :root and [data-theme="dark"] token blocks');
   const light = parseTokenMap(rootBlock[1]);
   const dark = new Map(light);
@@ -5042,7 +5080,7 @@ test('module accents stay readable as text on the page background in both themes
   // "Kanal hinzufuegen", 4.20:1 bei "Aus Kontakten importieren").
   const tokens = read('../public/styles/tokens.css');
   const rootBlock = tokens.match(/:root\s*\{([\s\S]*?)\n\}/);
-  const darkBlock = tokens.match(/\n\[data-theme="dark"\]\s*\{([\s\S]*?)\n\}/);
+  const darkBlock = darkAttrBlock(tokens);
   assert.ok(rootBlock && darkBlock, 'expected :root and [data-theme="dark"] token blocks');
 
   const light = parseTokenMap(rootBlock[1]);
@@ -5087,7 +5125,7 @@ function localModuleAccent(src) {
 function themeTokenMaps() {
   const tokens = read('../public/styles/tokens.css');
   const rootBlock = tokens.match(/:root\s*\{([\s\S]*?)\n\}/);
-  const darkBlock = tokens.match(/\n\[data-theme="dark"\]\s*\{([\s\S]*?)\n\}/);
+  const darkBlock = darkAttrBlock(tokens);
   assert.ok(rootBlock && darkBlock, 'expected :root and [data-theme="dark"] token blocks');
   const light = parseTokenMap(rootBlock[1]);
   const dark = new Map(light);
@@ -6174,7 +6212,7 @@ test('wireTablist scrolls only its own bar, never via scrollIntoView (#565)', ()
 test('priority badges and meal labels meet WCAG AA contrast in both themes', () => {
   const tokens = read('../public/styles/tokens.css');
   const rootBlock = tokens.match(/:root\s*\{([\s\S]*?)\n\}/);
-  const darkBlock = tokens.match(/\n\[data-theme="dark"\]\s*\{([\s\S]*?)\n\}/);
+  const darkBlock = darkAttrBlock(tokens);
   assert.ok(rootBlock, 'expected a :root token block');
   assert.ok(darkBlock, 'expected a [data-theme="dark"] block');
 
@@ -8775,6 +8813,149 @@ test('ein Maskenstopp kommt aus --mask-opaque, nie als roher Farbwert', () => {
 });
 
 /**
+ * EIN SPECULAR HAENGT AM A11Y-SCHALTER, IMMER.
+ *
+ * glass.css sagt seit Runde 1 zu, dass Opazitaet und Specular unter
+ * prefers-reduced-transparency und prefers-contrast ueber die Tokens auf 0
+ * fallen. Dafuer gibt es ZWEI Schreibweisen, und tokens.css:1667 fuehrt sie
+ * ausdruecklich als dasselbe Konzept: `--lg-specular` ist die Staerke des einen
+ * freien Highlights, `--glass-inset-strength` der Faktor der abgestuften
+ * Inset-Tokens. Erlaubt sind beide. Verboten ist die dritte Schreibweise, die an
+ * beiden vorbeilaeuft: ein rohes rgba in einem `inset`-Segment.
+ *
+ * Session 27 hat 17 Leser von `--glass-inset-*` in die Reihe gebracht; drei
+ * Stellen standen NICHT darunter, weil sie den Token nie lasen und deshalb in
+ * keiner Suche auftauchten - `.page-fab` (layout.css, der opake Fallback der
+ * Signature Component) sowie `.nav-bottom__items` und `.nav-sidebar`, die
+ * ihren OBEREN Specular korrekt ueber `--lg-specular` fuehren und den unteren
+ * eine Zeile darunter roh schrieben. Der letzte Fall brauchte einen Token, den
+ * es noch nicht gab (`--glass-inset-bottom-lift`): die bestehenden
+ * Bottom-Tokens sind schwarze Unterrand-SCHATTEN, gebraucht wurde ein helles
+ * Gegenlicht fuer die schwebenden Flaechen.
+ *
+ * WARUM ueber die Signatur und nicht ueber eine Dateiliste: die drei lagen in
+ * zwei Dateien, und `.page-fab` ausgerechnet in layout.css - wer glass.css
+ * durchsucht, findet ihn nie. Die Signatur ist das `inset`-Segment selbst.
+ *
+ * NICHT gemeint sind Schatten ohne `inset` (`0 8px 24px rgba(0,0,0,.14)` steht
+ * legitim direkt daneben) und die Token-DEFINITIONEN in tokens.css: dort IST
+ * der rohe Wert die Aussage. Der Guard liest deshalb nur `box-shadow`, also die
+ * Verwendung, nie eine `--name:`-Deklaration.
+ */
+test('ein Inset-Specular kommt aus dem Token, nie als rohes rgba', () => {
+  const files = readdirSync(new URL('../public/styles/', import.meta.url)).filter((n) => n.endsWith('.css'));
+  const offenders = [];
+  let seenShadows = 0;
+  let seenInsets = 0;
+
+  for (const file of files) {
+    for (const rule of eachRule(read(`../public/styles/${file}`))) {
+      for (const decl of rule.body.matchAll(/box-shadow\s*:\s*([^;]+)/g)) {
+        seenShadows += 1;
+        // Die Segmente eines box-shadow trennt das Komma auf oberster Ebene.
+        // `color-mix(in srgb, ...)` traegt selbst Kommas, deshalb wird die
+        // Klammertiefe mitgezaehlt statt naiv gesplittet.
+        const segments = [];
+        let depth = 0;
+        let current = '';
+        for (const ch of decl[1]) {
+          if (ch === '(') depth += 1;
+          if (ch === ')') depth -= 1;
+          if (ch === ',' && depth === 0) { segments.push(current); current = ''; continue; }
+          current += ch;
+        }
+        segments.push(current);
+
+        for (const seg of segments) {
+          if (!/\binset\b/.test(seg)) continue;
+          seenInsets += 1;
+          const rawRgba = seg.match(/rgba?\([^)]*\)/);
+          if (rawRgba) offenders.push(`${file}: ${rule.selector} -> ${rawRgba[0]}`);
+        }
+      }
+    }
+  }
+
+  assert.ok(seenShadows >= 100 && seenInsets >= 20,
+    `Nur ${seenShadows} box-shadow-Deklarationen und ${seenInsets} inset-Segmente gelesen - `
+    + 'der Guard hat nichts gemessen, statt nichts zu finden.');
+
+  assert.deepEqual(offenders, [],
+    'Ein Inset-Specular nimmt ein `--glass-inset-*`-Token oder die color-mix-Formel '
+    + 'ueber `--lg-specular`. Ein rohes rgba traegt den a11y-Schalter nicht: unter '
+    + 'prefers-reduced-transparency und prefers-contrast muss die Lichtkante '
+    + `verschwinden, und ein fester Wert tut das nie.\n${offenders.join('\n')}`);
+});
+
+/**
+ * GEDRUCKT WIRD HELL - und die Regel steht an der QUELLE, nicht im Druckblock.
+ *
+ * Papier leuchtet nicht. Eine Farbwelt fuer dunkle Displays wird auf ihm
+ * unlesbar, und zwar in zwei Schichten nacheinander:
+ *
+ *   1. Bis 2026-08-09 faerbte `@media print` nur den `body` (`background:#fff;
+ *      color:#000`). Die Textfarbe griff app-weit, der Grund aber nur auf dem
+ *      `body` selbst - jede Flaeche darunter behielt ihren Dark-Token. Gemessen
+ *      im gerenderten Dokument mit emulierter Druckausgabe: 1.06:1 am Modultitel
+ *      (#000 auf --color-bg #0A0A0C) und 1.23:1 auf Karteninhalten (#000 auf
+ *      --color-surface #1C1C1E), auf 11 von 16 Modulen.
+ *   2. Nach dem Neutralisieren der FLAECHEN kam die zweite Schicht zum Vorschein:
+ *      die vividen Dark-Varianten der Akzente und der Semantik standen nun auf
+ *      weissem Papier - 78 Paarungen unter AA auf 37 Routenzustaenden, von
+ *      #30D158-Gruen bei 2.02:1 bis #FCD34D-Gelb bei 1.44:1.
+ *
+ * DESHALB DIE BEDINGUNG STATT DER WERTE. Der Druckblock koennte die Light-Werte
+ * wiederholen, aber das waeren ueber fuenfzig - Neutrale, Semantik, 17
+ * Modul-Tints, sieben Chart-Serien, die Prioritaeten - und der Token von morgen
+ * liefe still daneben. `@media screen` um die Theme-Bloecke sagt dasselbe
+ * einmal: was das Display umfaerbt, gilt fuers Display.
+ *
+ * Der Guard prueft die Regel, nicht die Liste: JEDE Regel, die private
+ * Theme-Tokens setzt und dabei ein bestimmtes Theme meint - erkennbar an
+ * `prefers-color-scheme` in ihrer At-Kette oder an `[data-theme=` in ihrem
+ * Selektor -, steht unter `@media screen`. Ein dritter Theme-Block waere damit
+ * von selbst mitgemeint. Die a11y-Bloecke (`prefers-reduced-transparency`,
+ * `prefers-contrast`) sind ausdruecklich NICHT gemeint: sie schalten keine
+ * Farbwelt um, sie haerten - und beides soll auf Papier gelten.
+ */
+test('was das Display umfaerbt, gilt nur fuers Display', () => {
+  const css = read('../public/styles/tokens.css');
+  const offenders = [];
+  let themeRules = 0;
+  let themedTokens = 0;
+
+  for (const rule of eachRule(css)) {
+    const declared = [...rule.body.matchAll(/(--_[a-z0-9-]+)\s*:/gi)];
+    if (!declared.length) continue;
+
+    const chain = rule.at.join(' ');
+    const meansOneTheme = /prefers-color-scheme/.test(chain) || /\[data-theme=/.test(rule.selector);
+    if (!meansOneTheme) continue;
+
+    // Der Zaehler geht an derselben Stelle hoch, an der auch ein Finding
+    // entstehen koennte - nicht davor.
+    themeRules += 1;
+    themedTokens += declared.length;
+
+    if (!/\bscreen\b/.test(chain)) {
+      offenders.push(`${rule.selector} (At-Kette: ${chain || 'keine'}) setzt `
+        + `${declared.length} Theme-Tokens ohne @media screen`);
+    }
+  }
+
+  assert.ok(themeRules >= 2 && themedTokens >= 100,
+    `Nur ${themeRules} Theme-Regeln mit ${themedTokens} Tokens gelesen - der Guard hat `
+    + 'nichts gemessen, statt nichts zu finden. tokens.css fuehrt zwei Dark-Bloecke '
+    + '(System-Praeferenz und expliziter Nutzer-Override) mit je ueber siebzig Tokens.');
+
+  assert.deepEqual(offenders, [],
+    'Ein Block, der die Farbwelt umschaltet, gehoert unter `@media screen`. Ohne ihn '
+    + 'druckt die App ihre Bildschirmfarben auf Papier: erst schwarze Tinte auf '
+    + 'schwarzem Grund, nach dem Neutralisieren der Flaechen vivide Dark-Akzente auf '
+    + `Weiss.\n${offenders.join('\n')}`);
+});
+
+/**
  * Die Kasten-in-Kasten-Regel, die im Stylesheet scharfe Haelfte: ein Well ist
  * die Antwort fuer eine KACHEL in einer Karte, und seine Definition lautet
  * „Flaeche, KEINE Kante, Radius bleibt". Ein Well mit eigener Kante waere
@@ -9137,11 +9318,21 @@ test('die Deaktiviert-Farbe steht an keinem erreichbaren Bedienelement', () => {
 test('the status bar colour is the page background, in both themes', () => {
   const tokens = read('../public/styles/tokens.css');
 
-  /** Custom Properties eines Basisebenen-Selektors (ohne At-Block). */
+  /**
+   * Custom Properties eines Selektors der Grundebene.
+   *
+   * „Grundebene" heisst: keine At-Kette, oder eine, die nur aus `@media screen`
+   * besteht. Der Dark-Block liegt seit dem 2026-08-09 darin (Papier druckt keine
+   * Bildschirmfarben), und `screen` schraenkt die Farbwelt nicht bedingt ein -
+   * es nennt nur das Medium, fuer das sie ohnehin gilt. Ein
+   * `prefers-contrast`-Block bliebe weiter draussen, und das ist der Sinn der
+   * Einschraenkung.
+   */
   const propsOf = (wanted) => {
     const map = new Map();
     for (const { selector, body, at } of eachRule(tokens)) {
-      if (at.length || selector !== wanted) continue;
+      const conditional = at.some((a) => !/^@media\s+screen$/.test(a.trim()));
+      if (conditional || selector !== wanted) continue;
       for (const [, name, value] of body.matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)) {
         map.set(name, value.trim());
       }
