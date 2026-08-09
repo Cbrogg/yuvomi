@@ -50,7 +50,22 @@ jobs:
           claude_code_oauth_token: ${{ env.CLAUDE_CODE_OAUTH_TOKEN }}
           plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
           plugins: 'code-review@claude-code-plugins'
-          prompt: '/code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }}'
+          # `--comment` IST DER GRUND, WARUM SIE NIE ETWAS GESAGT HAT. Die
+          # Anleitung des Plugins steuert das Posten ueber genau dieses Argument:
+          #
+          #   "If `--comment` argument was NOT provided, stop here.
+          #    Do not post any GitHub comments."
+          #
+          # Ohne das Flag prueft es also vollstaendig und schweigt danach
+          # absichtlich - genau das Bild, das die Laeufe zeigten: 20 Turns,
+          # fuenf Minuten, `is_error: false`, kein Kommentar. Es war die ganze
+          # Zeit gehorsam, nicht kaputt.
+          #
+          # Mit dem Flag postet es IMMER: eine Zusammenfassung, wenn es nichts
+          # findet, und Inline-Anmerkungen, wenn doch. Erst dadurch wird der
+          # Nachweis-Schritt weiter unten zu einer richtigen Zusicherung -
+          # vorher haette er auch einen sauberen PR rot gefaerbt.
+          prompt: '/code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }} --comment'
           allowed_bots: 'dependabot[bot]'
           # DIESE LISTE ERSETZT, SIE ERGÄNZT NICHT. Das war die Annahme, die den
           # zweiten Anlauf gekostet hat: `--allowed-tools` verdrängt die acht
@@ -142,9 +157,15 @@ jobs:
           echo "Zusammenfassungen: $issue · Reviews: $review · Inline-Anmerkungen: $inline"
           if [ "$((issue + review + inline))" -eq 0 ]; then
             echo "::error::Die Review ist durchgelaufen, hat aber nichts hinterlassen." \
-                 "Fast immer sind das Werkzeug-Sperren: im Job-Log steht" \
-                 "\"permission_denials_count\" im result-Objekt. Mit show_full_output: true" \
-                 "erneut laufen lassen, um zu sehen, WELCHES Werkzeug verweigert wurde," \
-                 "und es in claude_args nachtragen. Ein gruener Haken ohne Befund ist keiner."
+                 "Zwei Ursachen sind bekannt, in dieser Reihenfolge pruefen." \
+                 "(1) FEHLT --comment IM PROMPT? Ohne das Argument prueft das Plugin" \
+                 "vollstaendig und schweigt danach absichtlich - das war die Ursache," \
+                 "als dieser Schritt entstand, und sie sieht einer Sperre zum Verwechseln" \
+                 "aehnlich: is_error false, zwanzig Turns, kein Kommentar." \
+                 "(2) EINE WERKZEUG-SPERRE: im result-Objekt des Job-Logs steht" \
+                 "\"permission_denials_count\". Mit show_full_output: true erneut laufen" \
+                 "lassen, um zu sehen, WELCHES Werkzeug verweigert wurde, und es in" \
+                 "claude_args nachtragen - die Liste dort ERSETZT die des Plugins." \
+                 "Ein gruener Haken ohne Befund ist keiner."
             exit 1
           fi
