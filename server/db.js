@@ -5088,7 +5088,7 @@ const MIGRATIONS = [
     `,
   },
   {
-    version: 135,
+    version: 137,
     description: 'Inventory: link items to documents from the Documents module (Stage 2)',
     up: `
       -- Spiegelt budget_entry_attachments 1:1 (server/db.js, Migration 112):
@@ -5111,11 +5111,11 @@ const MIGRATIONS = [
     `,
   },
   {
-    version: 136,
+    version: 138,
     description: 'Inventory: link items to budget entries with a role (Stage 3)',
     up: `
       -- created_by ist SET NULL, NICHT CASCADE wie bei inventory_item_documents
-      -- (Migration 135): eine Buchungsverknuepfung ist Haushaltseigentum wie
+      -- (Migration 137): eine Buchungsverknuepfung ist Haushaltseigentum wie
       -- der Gegenstand selbst (gleiche Begruendung wie inventory_items.created_by),
       -- keine persoenliche Handlungsnotiz wie ein Dokument-Anhang.
       --
