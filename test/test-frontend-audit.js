@@ -8319,7 +8319,7 @@ test('eine Zeile mit eigenen Aktionen verspricht keine Navigation', () => {
       if (chevron === -1) continue;
       if (!/<button/.test(literal.slice(chevron))) continue;
       const name = literal.slice(chevron).match(/class="([^"]*__chevron[^"]*)"/)?.[1] ?? '?';
-      offenders.push(`${file.replace('../', '')}: ${name} steht in einer Zeile, die danach noch einen Knopf traegt`);
+      offenders.push(`${file.replace(/^\.\.\//, '')}: ${name} steht in einer Zeile, die danach noch einen Knopf traegt`);
     }
   }
   assert.deepEqual(offenders, []);

@@ -743,7 +743,7 @@ function uiLockingEnvKeys() {
     // vierte Schreibweise - dann fehlt hier eine, und der Guard sagt es, statt
     // still weniger zu pruefen.
     assert.ok(own.size > 0,
-      `${file.replace('../', '')} sagt eine UI-Sperre zu (envControlled), aber keine der drei `
+      `${file.replace(/^\.\.\//, '')} sagt eine UI-Sperre zu (envControlled), aber keine der drei `
       + 'bekannten Schreibweisen liefert einen env-Namen. Die Ableitung gehoert erweitert.');
     for (const key of own) keys.add(key);
   }
@@ -783,7 +783,7 @@ test('kein Deploy-Descriptor gibt einem UI-sperrenden Schlüssel einen nicht-lee
       // ${KEY:-<default>} - alles ausser sofort schliessender Klammer ist ein Wert.
       for (const m of src.matchAll(new RegExp(`\\$\\{${key}:-([^}]*)\\}`, 'g'))) {
         if (m[1].trim() === '') continue;
-        offenders.push(`${file.replace('../', '')}: ${key} defaultet auf "${m[1]}"`);
+        offenders.push(`${file.replace(/^\.\.\//, '')}: ${key} defaultet auf "${m[1]}"`);
       }
     }
   }

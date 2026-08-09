@@ -384,7 +384,7 @@ test('das app-weite Username-Format steht ueberall gleich da', () => {
     lines.forEach((line, index) => {
       for (const match of line.matchAll(USERNAME_PATTERN_SHAPE)) {
         if (!SPEAKS_OF_USER.test(line)) continue;
-        const at = `${file.replace('../', '')}:${index + 1}`;
+        const at = `${file.replace(/^\.\.\//, '')}:${index + 1}`;
         sites.push(at);
         if (match[0] !== expected) {
           findings.push(`${at}: ${match[0]} statt ${expected}`);
