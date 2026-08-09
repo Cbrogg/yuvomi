@@ -52,5 +52,90 @@ jobs:
           plugins: 'code-review@claude-code-plugins'
           prompt: '/code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }}'
           allowed_bots: 'dependabot[bot]'
+          # Die Review braucht mehr, als ihr Plugin deklariert. Dessen
+          # `allowed-tools` nennt nur gh-Aufrufe und das Inline-Kommentar-MCP -
+          # also den Weg zum DIFF und den Weg zum Posten, aber keinen einzigen,
+          # um die geänderten Dateien zu LESEN. Genau daran ist sie bisher jedes
+          # Mal gescheitert: `permission_denials_count: 5` bei zehn Turns, Job
+          # grün, kein Kommentar (nachgemessen an #706, #703, #684, #674, #667 -
+          # sie hat noch nie etwas gepostet).
+          #
+          # Read/Grep/Glob geben ihr den Quelltext um den Diff herum; ohne den
+          # kann sie einen Befund nicht gegenprüfen. `git rev-parse` verlangt die
+          # Plugin-Anleitung selbst für die SHA-gebundenen Codelinks.
+          claude_args: '--allowed-tools "Read,Grep,Glob,Bash(git rev-parse:*),Bash(git log:*),Bash(git diff:*)"'
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
+
+      # DER EIGENTLICHE FEHLER WAR NICHT DIE SPERRE, SONDERN DIE STILLE.
+      #
+      # Die Action endet mit Erfolg, wenn sie ohne Ausnahme durchläuft - ob die
+      # Review dabei etwas gesagt hat, prüft niemand. So stand fünf PRs lang ein
+      # grüner Haken für eine Prüfung, die nie stattgefunden hat, und ein grüner
+      # Haken, der nichts misst, ist schlimmer als gar keiner: er lädt dazu ein,
+      # sich auf ihn zu verlassen.
+      #
+      # Geprüft wird der WIRKUNG nach, nicht dem Ablauf: hat claude irgendwo an
+      # diesem PR etwas hinterlassen - Zusammenfassung, Review oder Inline-
+      # Anmerkung? Der Lauf auf `synchronize` bleibt grün, wenn schon ein
+      # Kommentar von einem früheren Lauf steht; das Plugin sucht danach und
+      # schreibt bewusst nicht zweimal dasselbe.
+      # AUSGENOMMEN: ein PR, der DIESE Datei aendert. Die Action prueft, ob der
+      # Workflow im PR zeichengleich mit dem auf dem Default-Branch ist, und
+      # ueberspringt sich sonst selbst - sonst koennte ein PR sich per
+      # `claude_args` beliebige Werkzeuge freischalten und die Review gegen sich
+      # selbst laufen lassen. Sie tut das mit `outcome=success`, also mit
+      # demselben stillen Gruen, das dieser Schritt aufdeckt.
+      #
+      # Die Ausnahme hat ein Verfallsdatum: sie greift NUR, solange der PR den
+      # Workflow anfasst. Sobald er gemergt ist, prueft der naechste PR wieder
+      # scharf. Ohne sie waere jede kuenftige Workflow-Aenderung automatisch rot,
+      # und eine Ausnahme, die man wegklickt, ist bald keine mehr.
+      - name: Prueft die Review-Datei sich selbst?
+        id: self-edit
+        if: env.CLAUDE_CODE_OAUTH_TOKEN != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          if gh api "repos/$REPO/pulls/$PR/files" --paginate --jq '.[].filename' \
+             | grep -qx '.github/workflows/claude-code-review.yml'; then
+            echo "self=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::Dieser PR aendert den Review-Workflow selbst." \
+                 "Die Action ueberspringt sich dann aus Sicherheitsgruenden" \
+                 "(Workflow-Validierung), also kann hier keine Review entstehen." \
+                 "Der Nachweis-Schritt ist ausgesetzt und greift ab dem naechsten PR wieder."
+          else
+            echo "self=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Die Review muss gesprochen haben
+        if: env.CLAUDE_CODE_OAUTH_TOKEN != '' && steps.claude-review.outcome == 'success' && steps.self-edit.outputs.self != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          # `--paginate` mit einem jq, das ein Array baut, druckt EINE Zahl JE
+          # SEITE - `$((a + b))` stirbt daran, sobald ein PR über 30 Kommentare
+          # kommt. Deshalb ein Treffer je Zeile und `wc -l` als Zähler.
+          zaehle() {
+            gh api "$1" --paginate \
+              --jq '.[] | select(.user.login | ascii_downcase | contains("claude")) | .id' \
+              | wc -l | tr -d ' '
+          }
+          issue=$(zaehle "repos/$REPO/issues/$PR/comments")
+          review=$(zaehle "repos/$REPO/pulls/$PR/reviews")
+          inline=$(zaehle "repos/$REPO/pulls/$PR/comments")
+          echo "Zusammenfassungen: $issue · Reviews: $review · Inline-Anmerkungen: $inline"
+          if [ "$((issue + review + inline))" -eq 0 ]; then
+            echo "::error::Die Review ist durchgelaufen, hat aber nichts hinterlassen." \
+                 "Fast immer sind das Werkzeug-Sperren: im Job-Log steht" \
+                 "\"permission_denials_count\" im result-Objekt. Mit show_full_output: true" \
+                 "erneut laufen lassen, um zu sehen, WELCHES Werkzeug verweigert wurde," \
+                 "und es in claude_args nachtragen. Ein gruener Haken ohne Befund ist keiner."
+            exit 1
+          fi
