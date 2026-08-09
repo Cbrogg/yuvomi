@@ -2,7 +2,7 @@
  * Modul: Reminders-Routen-Test (Härtung Coverage-Track)
  * Zweck: HTTP-Schicht von server/routes/reminders.js gegen den echten Router,
  *        die vom bestehenden test-multi-reminders.js NICHT berührt wird:
- *        GET /pending (entity_title-Join task/event/subscription + Fälligkeits-/
+ *        GET /pending (entity_title-Join task/event/subscription/inventory_item + Fälligkeits-/
  *        dismissed-/Nutzer-Filter + Birthday-Sync-Seiteneffekt), POST/GET/PUT-
  *        Validierungspfade (400), PATCH /:id/dismiss, DELETE /:id, DELETE /?entity
  *        - jeweils mit created_by-Isolation (kein Fremdzugriff, kein Bypass).
@@ -70,6 +70,11 @@ function makeSubscription(owner, name = 'Netflix') {
      VALUES (?, 9.99, 'EUR', 'monthly', '2026-06-01', ?)`,
   ).run(name, owner).lastInsertRowid;
 }
+function makeInventoryItem(owner, name = 'Kühlschrank') {
+  return db.prepare(
+    `INSERT INTO inventory_items (name, created_by) VALUES (?, ?)`,
+  ).run(name, owner).lastInsertRowid;
+}
 // remind_at direkt einfügen (umgeht die Route, um Fälligkeit/dismissed frei zu setzen)
 function insertReminder(owner, entityType, entityId, remindAt, dismissed = 0) {
   return db.prepare(
@@ -111,25 +116,28 @@ const at = (h, m) => `2026-05-01T${String(h).padStart(2, '0')}:${String(m).padSt
 // --------------------------------------------------------
 // GET /pending - entity_title-Join, Fälligkeit, Filter, Isolation
 // --------------------------------------------------------
-test('GET /pending liefert fällige Erinnerungen mit entity_title über alle drei Typen', async () => {
+test('GET /pending liefert fällige Erinnerungen mit entity_title über alle vier Typen', async () => {
   const owner = freshUser();
   currentUid = owner;
 
   const taskId = makeTask(owner, 'Steuererklärung');
   const eventId = makeEvent(owner, 'Zahnarzttermin');
   const subId = makeSubscription(owner, 'Spotify');
+  const itemId = makeInventoryItem(owner, 'Kühlschrank');
   insertReminder(owner, 'task', taskId, PAST);
   insertReminder(owner, 'event', eventId, PAST);
   insertReminder(owner, 'subscription', subId, PAST);
+  insertReminder(owner, 'inventory_item', itemId, PAST);
 
   const res = await call('GET', '/pending');
   assert.equal(res.status, 200);
-  // Nur die drei fälligen dieses Nutzers (Isolation via created_by).
-  assert.equal(res.body.data.length, 3);
+  // Nur die vier fälligen dieses Nutzers (Isolation via created_by).
+  assert.equal(res.body.data.length, 4);
   const byType = Object.fromEntries(res.body.data.map((r) => [r.entity_type, r.entity_title]));
   assert.equal(byType.task, 'Steuererklärung');
   assert.equal(byType.event, 'Zahnarzttermin');
   assert.equal(byType.subscription, 'Spotify');
+  assert.equal(byType.inventory_item, 'Kühlschrank');
 });
 
 test('GET /pending schließt zukünftige und verworfene Erinnerungen aus', async () => {
@@ -218,7 +226,7 @@ test('POST / lehnt ungültigen entity_type ab (400)', async () => {
   currentUid = owner;
   const res = await call('POST', '', { entity_type: 'bogus', entity_id: makeTask(owner), remind_at: at(9, 0) });
   assert.equal(res.status, 400);
-  assert.match(res.body.error, /task, event, or subscription/);
+  assert.match(res.body.error, /task, event, subscription, or inventory_item/);
 });
 
 test('POST / lehnt fehlenden entity_type ab (400)', async () => {

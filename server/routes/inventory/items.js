@@ -18,6 +18,7 @@ import {
   ROLES, visibleEntry, linkabilityError, entryHasLinks, linkEntry, unlinkEntry,
   loadLinkedEntriesForItems, loadLinkedEntries, computeTotal,
 } from './entry-links.js';
+import { warrantyEndDate, reminderDateForWarranty } from '../../services/inventory-deadlines.js';
 
 const log = createLogger('Inventory');
 const router = express.Router();
@@ -26,6 +27,37 @@ const CONDITIONS = ['new', 'good', 'fair', 'poor'];
 const STATUSES = ['active', 'sold', 'disposed', 'lost'];
 const CURRENCY_RE = /^[A-Z]{3}$/;
 const DOCS = { table: 'inventory_item_documents', ownerColumn: 'item_id' };
+
+const WARRANTY_REMINDER_OFFSET_DAYS = 30;
+
+/**
+ * Erinnerungs-Lebenszyklus, identisches Muster wie server/routes/subscriptions.js
+ * #syncReminder: bei jedem Schreiben erst löschen, dann - falls die Bedingungen
+ * greifen - neu anlegen. Kein Diffing, keine Sonderfälle für "nur ein Feld hat
+ * sich geändert".
+ */
+function syncReminder(item) {
+  const database = db.get();
+  database.prepare(`
+    DELETE FROM reminders WHERE entity_type = 'inventory_item' AND entity_id = ?
+  `).run(item.id);
+
+  if (!item.purchase_date || item.warranty_months == null || !item.created_by) return;
+
+  const warrantyEnd = warrantyEndDate(item.purchase_date, item.warranty_months);
+  const remindAt = reminderDateForWarranty(warrantyEnd, WARRANTY_REMINDER_OFFSET_DAYS);
+
+  // Bereits vergangene Erinnerungstermine nicht anlegen (Design-Doc §4): sonst
+  // nagt ein zurückdatiertes Altgerät sofort nach dem Anlegen. remind_at ist
+  // naiv-UTC (siehe public/utils/reminder-offset.js) - ein 'Z'-Suffix macht den
+  // Vergleich gegen Date.now() korrekt statt einen zweiten Zeitzonen-Offset einzuführen.
+  if (new Date(`${remindAt}Z`).getTime() <= Date.now()) return;
+
+  database.prepare(`
+    INSERT INTO reminders (entity_type, entity_id, remind_at, created_by)
+    VALUES ('inventory_item', ?, ?, ?)
+  `).run(item.id, remindAt, item.created_by);
+}
 
 /** Gleiches Muster wie server/routes/subscriptions.js#budgetCurrency(). */
 function householdCurrency() {
@@ -285,6 +317,13 @@ router.post('/', (req, res) => {
       values.notes, userId,
     );
 
+    syncReminder({
+      id: result.lastInsertRowid,
+      purchase_date: values.purchase_date,
+      warranty_months: values.warranty_months,
+      created_by: userId,
+    });
+
     // Belege sind optional, deshalb erst nach dem Insert - der Gegenstand
     // steht auch ohne sie, ein unbekanntes Dokument darf ihn nicht scheitern lassen.
     replaceDocumentLinks(db.get(), {
@@ -309,7 +348,7 @@ router.put('/:id', (req, res) => {
   try {
     const vId = idParam(req.params.id, 'Gegenstand-ID');
     if (vId.error) return res.status(400).json({ error: vId.error, code: 400 });
-    const item = db.get().prepare('SELECT id FROM inventory_items WHERE id = ?').get(vId.value);
+    const item = db.get().prepare('SELECT id, created_by FROM inventory_items WHERE id = ?').get(vId.value);
     if (!item) return res.status(404).json({ error: 'Item not found.', code: 404 });
 
     const { values, errors } = validateItemFields(req.body);
@@ -327,6 +366,13 @@ router.put('/:id', (req, res) => {
       values.currency, values.vendor, values.warranty_months, values.condition, values.status,
       values.notes, item.id,
     );
+
+    syncReminder({
+      id: item.id,
+      purchase_date: values.purchase_date,
+      warranty_months: values.warranty_months,
+      created_by: item.created_by,
+    });
 
     const userId = req.authUserId || req.session.userId;
     // Belege nur anfassen, wenn das Feld mitkommt - ein PUT, das nur einen
@@ -414,8 +460,13 @@ router.delete('/:id', (req, res) => {
   try {
     const vId = idParam(req.params.id, 'Gegenstand-ID');
     if (vId.error) return res.status(400).json({ error: vId.error, code: 400 });
-    const result = db.get().prepare('DELETE FROM inventory_items WHERE id = ?').run(vId.value);
-    if (result.changes === 0) return res.status(404).json({ error: 'Item not found.', code: 404 });
+
+    const deleted = db.get().transaction(() => {
+      db.get().prepare("DELETE FROM reminders WHERE entity_type = 'inventory_item' AND entity_id = ?").run(vId.value);
+      return db.get().prepare('DELETE FROM inventory_items WHERE id = ?').run(vId.value);
+    })();
+
+    if (deleted.changes === 0) return res.status(404).json({ error: 'Item not found.', code: 404 });
     res.status(204).end();
   } catch (err) {
     log.error('DELETE /:id error:', err);
