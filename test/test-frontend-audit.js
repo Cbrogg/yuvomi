@@ -8670,6 +8670,111 @@ test('jeder Blur kommt aus der --blur-Skala', () => {
 });
 
 /**
+ * DIE ZWEIZWEIG-REGEL - sie steht seit Runde 1 im Kopf von glass.css (Zeile
+ * 11-14) und war bis 2026-08-09 eine Disziplin statt einer Zusicherung:
+ *
+ *   „Blur-Filter sind INNERHALB von @supports mit webkit-Fallback.
+ *    @supports-Check: (backdrop-filter) OR (-webkit-backdrop-filter) -
+ *    deckt Safari < 18 (nur webkit-Prefix) und moderne Browser ab."
+ *
+ * Alle acht eigenen Bloecke in glass.css halten sie. Geprueft wurde sie nie, und
+ * beim ersten Lauf fielen prompt ZWEI Flaechen durch, die keiner der bisherigen
+ * Guards sehen konnte - `.ydp-popover` (`@supports` ohne den webkit-Zweig, also
+ * blurlos in Safari < 18) und `.document-viewer__pdf-indicator` (ganz ohne
+ * `@supports` UND ohne den webkit-Zwilling).
+ *
+ * DAS IST EINE REGEL UND KEINE LISTE, und zwar in beiden Richtungen: jede Regel,
+ * die `backdrop-filter` schreibt, schreibt beide Schreibweisen; jede
+ * `@supports`-Praeambel, die danach fragt, fragt nach beiden. Yuvomi ist eine
+ * PWA fuer den Homescreen - iOS ist ihr Hauptgeraet, und ein Glas, das dort
+ * einzweigig ausfaellt, faellt auf der wichtigsten Plattform aus.
+ */
+test('backdrop-filter steht immer zweizweigig - Standard und -webkit-', () => {
+  const files = readdirSync(new URL('../public/styles/', import.meta.url)).filter((n) => n.endsWith('.css'));
+  const offenders = [];
+  let seenRules = 0;
+  let seenSupports = 0;
+
+  for (const file of files) {
+    const css = read(`../public/styles/${file}`);
+    for (const rule of eachRule(css)) {
+      // `(?<!-webkit-)` trennt die beiden Schreibweisen: ohne den Blick nach
+      // links faende `backdrop-filter\s*:` auch das Praefix-Wort mit und
+      // erklaerte jede webkit-only-Regel fuer vollstaendig.
+      const std = /(?<!-webkit-)backdrop-filter\s*:/.test(rule.body);
+      const webkit = /-webkit-backdrop-filter\s*:/.test(rule.body);
+      if (!std && !webkit) continue;
+      seenRules += 1;
+      if (std !== webkit) {
+        offenders.push(`${file}: ${rule.selector} schreibt nur `
+          + `${std ? 'backdrop-filter' : '-webkit-backdrop-filter'}`);
+      }
+    }
+    // Die Praeambeln kommen NICHT aus eachRule: der Scanner liefert die
+    // At-Kette, aber die Fragestellung ist hier der Text der Bedingung selbst.
+    // Kommentare sind vorher weg, sonst zaehlte der Kopf von glass.css mit -
+    // er zitiert die Regel woertlich.
+    for (const m of css.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/@supports([^{]*)\{/g)) {
+      if (!/backdrop-filter/.test(m[1])) continue;
+      seenSupports += 1;
+      if (!/-webkit-backdrop-filter/.test(m[1]) || !/(?<!-webkit-)backdrop-filter/.test(m[1])) {
+        offenders.push(`${file}: @supports${m[1].trim()} fragt nur nach einer Schreibweise`);
+      }
+    }
+  }
+
+  // Ein Guard, der nichts gelesen hat, darf nicht urteilen.
+  assert.ok(seenRules >= 10 && seenSupports >= 5,
+    `Nur ${seenRules} Blur-Regeln und ${seenSupports} @supports-Bloecke gefunden - der `
+    + 'Guard hat nichts gemessen, statt nichts zu finden.');
+
+  assert.deepEqual(offenders, [],
+    'Die Zweizweig-Regel aus dem Kopf von glass.css: jede Regel schreibt beide '
+    + 'Schreibweisen, jede @supports-Praeambel fragt nach beiden. Safari < 18 kennt '
+    + `nur das Praefix - und iOS ist das Hauptgeraet dieser PWA.\n${offenders.join('\n')}`);
+});
+
+/**
+ * DER MASKENSTOPP IST KEIN FARBWERT.
+ *
+ * 18 Zeilen in vier Dateien schrieben `#000` als vollen Stopp einer
+ * `mask-image`-Rampe, `tasks.css` dieselbe Maske als `black` - derselbe Wert,
+ * nur am Farbdetektor vorbei. Beide sind keine Farbe: eine Maske liest allein
+ * den Alpha-Kanal, `#000` heisst dort „voll deckend" und nie „schwarz".
+ *
+ * Der Ausweg war ausdruecklich NICHT ein Ignore-Eintrag: der haette 18 Zeilen
+ * stummgeschaltet und dabei jedes kuenftige ECHTE `#000` in diesen vier Dateien
+ * mitverschluckt. `--mask-opaque` loest beides und bringt `tasks.css` in die
+ * Reihe - eine Schreibweise, ein Token, ein Guard.
+ */
+test('ein Maskenstopp kommt aus --mask-opaque, nie als roher Farbwert', () => {
+  const files = readdirSync(new URL('../public/styles/', import.meta.url)).filter((n) => n.endsWith('.css'));
+  const offenders = [];
+  let seen = 0;
+
+  for (const file of files) {
+    for (const rule of eachRule(read(`../public/styles/${file}`))) {
+      for (const decl of rule.body.matchAll(/(?:-webkit-)?mask-image\s*:\s*([^;]+)/g)) {
+        seen += 1;
+        // Nur der volle Stopp ist gemeint. Eine Maske, die mit `transparent`
+        // arbeitet, sagt dasselbe von der anderen Seite und braucht kein Token.
+        for (const raw of decl[1].matchAll(/(?:^|[\s,(])(#000{1,3}(?:[0-9a-f]{2})?|black)(?=[\s,)])/gi)) {
+          offenders.push(`${file}: ${rule.selector} -> ${raw[1]}`);
+        }
+      }
+    }
+  }
+
+  assert.ok(seen >= 10,
+    `Nur ${seen} Masken-Deklarationen gefunden - der Guard hat nichts gemessen.`);
+
+  assert.deepEqual(offenders, [],
+    'Ein Maskenstopp ist kein Farbwert - er nimmt `var(--mask-opaque)`. Ein rohes '
+    + '`#000` oder `black` an dieser Stelle sieht wie eine Farbentscheidung aus, ist '
+    + `aber „voll deckend" und hat mit der Farbwelt nichts zu tun.\n${offenders.join('\n')}`);
+});
+
+/**
  * Die Kasten-in-Kasten-Regel, die im Stylesheet scharfe Haelfte: ein Well ist
  * die Antwort fuer eine KACHEL in einer Karte, und seine Definition lautet
  * „Flaeche, KEINE Kante, Radius bleibt". Ein Well mit eigener Kante waere

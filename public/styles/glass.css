@@ -286,12 +286,16 @@
 /* ================================================================
  * 8. Form-Inputs — Glass Border + verbesserter Focus-Ring
  * ================================================================ */
+/* Nur die KANTE. Der Grund steht in Abschnitt 31 (`--color-surface-work`) und
+ * gewinnt bei gleicher Spezifität durch seine spätere Stelle - die transluzente
+ * 95%-Variante, die hier bis 2026-08-09 stand, hat nie gegriffen. Zwei Regeln
+ * für dieselbe Fläche in einer Datei sind eine Frage ohne Antwort: wer den
+ * Eingabefeld-Grund sucht, findet zuerst die falsche. */
 .input,
 .form-input,
 select.form-input,
 textarea.form-input {
   border-color: var(--color-border);
-  background-color: color-mix(in srgb, var(--color-surface) 95%, transparent);
 }
 
 @media (prefers-contrast: more) {

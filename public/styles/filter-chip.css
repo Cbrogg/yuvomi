@@ -106,18 +106,18 @@
  * ist kein Grund, Lesbarkeit einzutauschen.
  * -------------------------------------------------------- */
 .has-fade-end {
-  mask-image: linear-gradient(to right, #000 calc(100% - var(--space-6)), transparent);
-  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - var(--space-6)), transparent);
+  mask-image: linear-gradient(to right, var(--mask-opaque) calc(100% - var(--space-6)), transparent);
+  -webkit-mask-image: linear-gradient(to right, var(--mask-opaque) calc(100% - var(--space-6)), transparent);
 }
 
 .has-fade-start {
-  mask-image: linear-gradient(to right, transparent, #000 var(--space-6));
-  -webkit-mask-image: linear-gradient(to right, transparent, #000 var(--space-6));
+  mask-image: linear-gradient(to right, transparent, var(--mask-opaque) var(--space-6));
+  -webkit-mask-image: linear-gradient(to right, transparent, var(--mask-opaque) var(--space-6));
 }
 
 .has-fade-start.has-fade-end {
-  mask-image: linear-gradient(to right, transparent, #000 var(--space-6), #000 calc(100% - var(--space-6)), transparent);
-  -webkit-mask-image: linear-gradient(to right, transparent, #000 var(--space-6), #000 calc(100% - var(--space-6)), transparent);
+  mask-image: linear-gradient(to right, transparent, var(--mask-opaque) var(--space-6), var(--mask-opaque) calc(100% - var(--space-6)), transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, var(--mask-opaque) var(--space-6), var(--mask-opaque) calc(100% - var(--space-6)), transparent);
 }
 
 /* --------------------------------------------------------

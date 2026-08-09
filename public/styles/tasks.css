@@ -113,8 +113,8 @@
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
     padding-inline-end: var(--space-6);
-    -webkit-mask-image: linear-gradient(to right, black calc(100% - var(--space-6)), transparent);
-    mask-image: linear-gradient(to right, black calc(100% - var(--space-6)), transparent);
+    -webkit-mask-image: linear-gradient(to right, var(--mask-opaque) calc(100% - var(--space-6)), transparent);
+    mask-image: linear-gradient(to right, var(--mask-opaque) calc(100% - var(--space-6)), transparent);
   }
 
   .tasks-filters-row .tasks-filters::-webkit-scrollbar {

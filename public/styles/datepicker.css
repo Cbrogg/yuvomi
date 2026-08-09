@@ -131,9 +131,14 @@ yuvomi-datepicker[disabled] .ydp__trigger {
     display var(--transition-fast) allow-discrete;
 }
 
-@supports (backdrop-filter: blur(1px)) {
+/* Zweizweigig, wie im Kopf von glass.css vorgeschrieben: Safari < 18 kennt nur
+ * den -webkit-Zweig, und iOS ist das Hauptgerät dieser PWA. Bis 2026-08-09 fragte
+ * dieser Block nur nach der Standardschreibweise und setzte auch nur sie - das
+ * Popover stand dort ohne Glas. */
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
   .ydp-popover {
     backdrop-filter: var(--blur-lg) saturate(var(--lg-glass-saturate));
+    -webkit-backdrop-filter: var(--blur-lg) saturate(var(--lg-glass-saturate));
   }
 }
 

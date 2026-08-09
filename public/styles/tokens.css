@@ -1123,19 +1123,33 @@
   --_glass-sheen: rgba(255, 255, 255, 0.35);
   --glass-sheen:  var(--_glass-sheen);
 
-  /* d2) Inset-Specular: Oberrand-Sheen für Glass-Elemente (volle inset-Kurzform) */
-  --glass-inset-soft:     inset 0 1px 0 rgba(255, 255, 255, 0.18);
-  --glass-inset-base:     inset 0 1px 0 rgba(255, 255, 255, 0.20);
-  --glass-inset-medium:   inset 0 1px 0 rgba(255, 255, 255, 0.22);
-  --glass-inset-elevated: inset 0 1px 0 rgba(255, 255, 255, 0.28);
-  --glass-inset-strong:   inset 0 1px 0 rgba(255, 255, 255, 0.32);
+  /* d2) Inset-Specular: Oberrand-Sheen für Glass-Elemente (volle inset-Kurzform)
+   *
+   * DER FAKTOR IST DER SCHALTER. glass.css sagt in Abschnitt 40 zu, dass
+   * "Opazität/Specular in prefers-reduced-transparency / prefers-contrast über
+   * die Tokens auf 0 gesetzt" werden - bis 2026-08-09 galt das nur für
+   * --lg-specular, während diese siebzehn Leser hier mit statischem rgba an
+   * beiden a11y-Blöcken vorbeiliefen. Gleiches Konzept, gegensätzliche
+   * Behandlung: --glass-highlight, -subtle und --glass-sheen fallen dort auf
+   * `transparent`, der Inset-Specular blieb stehen.
+   *
+   * Ein Faktor statt siebzehn Einzelüberschreibungen, denn die Abstufung
+   * (0.18 … 0.32) ist die Aussage dieser Tokens und soll sie bleiben - abzuschalten
+   * ist der Effekt, nicht seine Staffelung. */
+  --glass-inset-strength: 1;
+  --glass-inset-soft:     inset 0 1px 0 rgba(255, 255, 255, calc(0.18 * var(--glass-inset-strength)));
+  --glass-inset-base:     inset 0 1px 0 rgba(255, 255, 255, calc(0.20 * var(--glass-inset-strength)));
+  --glass-inset-medium:   inset 0 1px 0 rgba(255, 255, 255, calc(0.22 * var(--glass-inset-strength)));
+  --glass-inset-elevated: inset 0 1px 0 rgba(255, 255, 255, calc(0.28 * var(--glass-inset-strength)));
+  --glass-inset-strong:   inset 0 1px 0 rgba(255, 255, 255, calc(0.32 * var(--glass-inset-strength)));
 
-  /* d3) Dark-Inset-Specular: Unterrand-Schatten (komplementär zu den White-Insets oben) */
-  --glass-inset-bottom-base:  inset 0 -1px 0 rgba(0, 0, 0, 0.12);
-  --glass-inset-bottom-hover: inset 0 -1px 0 rgba(0, 0, 0, 0.16);
-  --glass-inset-thumb:        inset 0  1px 0 rgba(255, 255, 255, 0.90),
-                              inset 0 -1px 0 rgba(0, 0, 0, 0.08);
-  --glass-inset-input:        inset 0  1px 2px rgba(0, 0, 0, 0.04);
+  /* d3) Dark-Inset-Specular: Unterrand-Schatten (komplementär zu den White-Insets
+   * oben) - und deshalb am selben Schalter. */
+  --glass-inset-bottom-base:  inset 0 -1px 0 rgba(0, 0, 0, calc(0.12 * var(--glass-inset-strength)));
+  --glass-inset-bottom-hover: inset 0 -1px 0 rgba(0, 0, 0, calc(0.16 * var(--glass-inset-strength)));
+  --glass-inset-thumb:        inset 0  1px 0 rgba(255, 255, 255, calc(0.90 * var(--glass-inset-strength))),
+                              inset 0 -1px 0 rgba(0, 0, 0, calc(0.08 * var(--glass-inset-strength)));
+  --glass-inset-input:        inset 0  1px 2px rgba(0, 0, 0, calc(0.04 * var(--glass-inset-strength)));
 
   /* e) Glass-Schatten */
   --_glass-shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(255, 255, 255, 0.55);
@@ -1174,6 +1188,17 @@
   --lg-blob-opacity:   0.16;
   --lg-glass-saturate: 200%;    /* Backdrop-Sättigung erhöhter Glass-Flächen */
   --lg-specular:       0.22;    /* Stärke des Inset-Top-Highlights */
+
+  /* i) Maskenstopp — voll deckend. KEIN FARBWERT.
+   *
+   * Eine `mask-image`-Rampe liest allein den Alpha-Kanal; `#000` heißt dort
+   * "hier bleibt alles stehen" und nie "schwarz". Es stand in 18 Zeilen in vier
+   * Dateien, und tasks.css schrieb denselben Wert als `black` - derselbe Stopp,
+   * nur am Farbdetektor vorbei. Ein Ignore-Eintrag hätte diese 18 Zeilen
+   * stummgeschaltet und dabei jedes künftige ECHTE #000 in ihren Dateien
+   * mitverschluckt; der Token sagt stattdessen, was gemeint ist. Guard:
+   * "ein Maskenstopp kommt aus --mask-opaque" (test-frontend-audit.js). */
+  --mask-opaque: #000;
 }
 
 /* ================================================================
@@ -1638,7 +1663,11 @@
     --blur-lg:  blur(0px);
     --opacity-glass-elevated: 1;
     --lg-blob-opacity: 0;     /* Backdrop-Blobs aus */
+    /* Specular aus - beide Schreibweisen. --lg-specular ist die Stärke des
+     * einen freien Highlights, --glass-inset-strength der Faktor der
+     * abgestuften Inset-Tokens; sie sind dasselbe Konzept und fallen zusammen. */
     --lg-specular: 0;
+    --glass-inset-strength: 0;
   }
 }
 
@@ -1676,6 +1705,8 @@
      * Ohne Eintrag gilt der regulaere Modul-Tint, und der haelt seine Zusage. */
 
     --lg-blob-opacity: 0;     /* Backdrop-Blobs aus */
+    /* Specular aus - beide Schreibweisen, siehe der Schwesterblock oben. */
     --lg-specular: 0;
+    --glass-inset-strength: 0;
   }
 }

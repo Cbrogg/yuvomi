@@ -444,9 +444,15 @@ html:has(.search-overlay--visible) yuvomi-install-prompt {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  /* Der Inset-Specular kommt aus den Tokens, nicht von Hand. Hier standen 30/12
+   * gegen die 28/12 der Tokens - dieselbe Absicht, eine Ziffer daneben, und
+   * damit die dritte Schreibweise eines Effekts, den es schon zweimal gab.
+   * Wichtiger als die Ziffer: die Tokens hängen am --glass-inset-strength-
+   * Schalter und fallen unter prefers-reduced-transparency / prefers-contrast
+   * mit; ein handgeschriebener Wert bliebe dort stehen. */
   box-shadow:
-    inset 0 1px 0 color-mix(in srgb, white 30%, transparent),
-    inset 0 -1px 0 color-mix(in srgb, black 12%, transparent);
+    var(--glass-inset-elevated),
+    var(--glass-inset-bottom-base);
   transition: transform var(--duration-xs) var(--ease-out);
 }
 
@@ -950,7 +956,6 @@ html:has(.search-overlay--visible) yuvomi-install-prompt {
 .more-item[aria-current="page"] .more-item__icon-well svg,
 .sub-tab--active svg,
 .list-tab--active svg,
-.kitchen-tab--active svg,
 .filter-chip--active svg,
 .contact-filter-chip--active svg,
 .group-toggle__btn--active svg,
@@ -1876,18 +1881,18 @@ p.field-hint--warn[hidden] {
    * Der weiche Anriss ersetzt den bewusst versteckten Scrollbalken — ohne ihn
    * waren Budget/Gesundheit/Einstellungen auf 800er-Laptops unauffindbar. */
   .nav-sidebar__items.has-fade-end {
-    mask-image: linear-gradient(to bottom, #000 calc(100% - var(--space-8)), transparent);
-    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - var(--space-8)), transparent);
+    mask-image: linear-gradient(to bottom, var(--mask-opaque) calc(100% - var(--space-8)), transparent);
+    -webkit-mask-image: linear-gradient(to bottom, var(--mask-opaque) calc(100% - var(--space-8)), transparent);
   }
 
   .nav-sidebar__items.has-fade-start {
-    mask-image: linear-gradient(to bottom, transparent, #000 var(--space-8));
-    -webkit-mask-image: linear-gradient(to bottom, transparent, #000 var(--space-8));
+    mask-image: linear-gradient(to bottom, transparent, var(--mask-opaque) var(--space-8));
+    -webkit-mask-image: linear-gradient(to bottom, transparent, var(--mask-opaque) var(--space-8));
   }
 
   .nav-sidebar__items.has-fade-start.has-fade-end {
-    mask-image: linear-gradient(to bottom, transparent, #000 var(--space-8), #000 calc(100% - var(--space-8)), transparent);
-    -webkit-mask-image: linear-gradient(to bottom, transparent, #000 var(--space-8), #000 calc(100% - var(--space-8)), transparent);
+    mask-image: linear-gradient(to bottom, transparent, var(--mask-opaque) var(--space-8), var(--mask-opaque) calc(100% - var(--space-8)), transparent);
+    -webkit-mask-image: linear-gradient(to bottom, transparent, var(--mask-opaque) var(--space-8), var(--mask-opaque) calc(100% - var(--space-8)), transparent);
   }
 
   /* Footer ist eine eigene, nicht-scrollende Region (flex-shrink:0) und setzt

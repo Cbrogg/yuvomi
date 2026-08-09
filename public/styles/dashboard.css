@@ -1299,12 +1299,6 @@ svg.weather-forecast__icon {
   }
 }
 
-@media (min-width: 1024px) {
-  .fab-container {
-    bottom: var(--space-8);
-  }
-}
-
 .fab-main {
   width: 52px;
   height: 52px;
@@ -2445,7 +2439,10 @@ svg.weather-forecast__icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  /* Keine Textfarbe hier: `renderFamilyWidget` (dashboard.js) setzt sie inline
+   * aus `getReadableTextColor(avatar_color)` - je nach Avatarfarbe hell ODER
+   * dunkel. Das `color: white`, das hier stand, war seitdem wirkungslos und
+   * versprach das Gegenteil der Regel, die tatsächlich greift. */
   font-weight: var(--font-weight-bold);
   font-size: var(--text-xs);
   border: 2px solid var(--color-surface);
