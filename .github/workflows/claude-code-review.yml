@@ -67,6 +67,23 @@ jobs:
           # vorher haette er auch einen sauberen PR rot gefaerbt.
           prompt: '/code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }} --comment'
           allowed_bots: 'dependabot[bot]'
+          # VORUEBERGEHEND, NUR ZUR DIAGNOSE - gehoert im naechsten PR wieder raus.
+          #
+          # Der Lauf an #711 brach nach VIER Turns und 15 Sekunden ab, mit einer
+          # Verweigerung und ohne etwas zu posten. Zum Vergleich der erfolgreiche
+          # Lauf an #708: 29 Turns, 4:45 min, zehn Verweigerungen - und er hat
+          # gepostet. Die Sperre sitzt hier also ganz am Anfang, nicht am Ende.
+          #
+          # Ich habe die Ursache dreimal geraten und dreimal falsch gelegen.
+          # `permission_denials_count` ist eine Zahl und nennt kein Werkzeug;
+          # diese Zeile ist der einzige Weg, den Namen zu sehen, und sowohl die
+          # Fehlermeldung des Nachweis-Schritts als auch CONTRIBUTING schreiben
+          # sie fuer genau diesen Fall vor.
+          #
+          # Der Preis: die volle SDK-Ausgabe steht im Actions-Log eines
+          # oeffentlichen Repos. Inhalt ist ein Review oeffentlicher Dateien,
+          # Secrets maskiert Actions ohnehin. Von Ulas fuer EINEN Lauf freigegeben.
+          show_full_output: true
           # DIESE LISTE ERSETZT, SIE ERGÄNZT NICHT. Das war die Annahme, die den
           # zweiten Anlauf gekostet hat: `--allowed-tools` verdrängt die acht
           # Werkzeuge, die das Plugin `code-review@claude-code-plugins` in seinem
