@@ -13,9 +13,18 @@ import { readFileSync, writeFileSync } from 'node:fs';
 
 const LOCALES = ['es', 'fr', 'it', 'sv', 'el', 'ru', 'tr', 'zh', 'ja', 'ar', 'hi', 'pt', 'uk', 'pl', 'nl', 'cs', 'vi', 'hu', 'ko', 'id', 'fa', 'fil'];
 
+// Der Zaehl-String braucht Pluralvarianten und muss dafuer `count` heissen -
+// public/i18n.js waehlt _one/_other ausschliesslich ueber einen numerischen
+// `count`-Parameter. Mit dem urspruenglichen `{{days}}` stand dort "in 1 days"
+// (#534, gleiche Fehlerklasse).
+const WARRANTY_EXPIRING_LINES = [
+  '        "warrantyStatusExpiringSoon_one": "Warranty ends in {{count}} day",',
+  '        "warrantyStatusExpiringSoon": "Warranty ends in {{count}} days",',
+];
+
 const INVENTORY_LINES = [
   '        "warrantyStatusValid": "Under warranty until {{date}}",',
-  '        "warrantyStatusExpiringSoon": "Warranty ends in {{days}} days",',
+  ...WARRANTY_EXPIRING_LINES,
   '        "warrantyStatusExpired": "Warranty expired on {{date}}",',
   '        "warrantyAlertLabel": "Warranty ending soon or already expired",',
 ];
@@ -68,12 +77,25 @@ function insertBlockOnce(lines, anchorPattern, newLines) {
   return true;
 }
 
+/**
+ * Ersetzt die alte, nicht pluralisierbare `{{days}}`-Zeile durch das
+ * _one/-Basis-Paar. Betrifft nur Dateien aus dem ersten Lauf dieses Skripts;
+ * frisch eingefuegte Bloecke tragen die neue Form bereits.
+ */
+function replacePluralizedWarrantyLine(lines) {
+  const idx = lines.findIndex((line) => /^\s*"warrantyStatusExpiringSoon":\s*".*\{\{days\}\}/.test(line));
+  if (idx === -1) return false;
+  lines.splice(idx, 1, ...WARRANTY_EXPIRING_LINES);
+  return true;
+}
+
 for (const locale of LOCALES) {
   const path = `public/locales/${locale}.json`;
   const lines = readFileSync(path, 'utf8').split('\n');
 
   let changed = false;
   changed = insertBlockOnce(lines, /^\s*"hasBookingsLabel":/, INVENTORY_LINES) || changed;
+  changed = replacePluralizedWarrantyLine(lines) || changed;
   changed = insertBlockOnce(lines, /^\s*"warrantyAlertLabel":/, INVENTORY_ICS_LINES) || changed;
   changed = insertBlockOnce(lines, /^\s*"feedExportSaved":/, SETTINGS_LINES) || changed;
 

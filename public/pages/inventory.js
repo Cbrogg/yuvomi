@@ -448,7 +448,10 @@ function updateWarrantyStatus(panel) {
   if (status.state === 'expired') {
     statusEl.textContent = t('inventory.warrantyStatusExpired', { date: formattedDate });
   } else if (status.state === 'expiring') {
-    statusEl.textContent = t('inventory.warrantyStatusExpiringSoon', { days: status.days });
+    // Parameter heisst `count`, nicht `days`: nur ein numerischer `count` waehlt
+    // in public/i18n.js die Pluralvariante (_one/_other). Mit `days` stand hier
+    // "in 1 Tagen" (#534, gleiche Fehlerklasse).
+    statusEl.textContent = t('inventory.warrantyStatusExpiringSoon', { count: status.days });
   } else {
     statusEl.textContent = t('inventory.warrantyStatusValid', { date: formattedDate });
   }
