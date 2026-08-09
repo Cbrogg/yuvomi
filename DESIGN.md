@@ -529,7 +529,7 @@ mehr Trennung vom Near-Black-Grund).
 **Die Glas-ist-Chrome-Regel.** backdrop-filter existiert nur auf Chrome-Elementen:
 Tab-Bar-Kapsel, Sidebar, Sheets/Modals, Toast, Datepicker-Popover, FAB samt seinem
 Backdrop und seinen Aktionen. Inhalte - Karten, Listen, Widgets, Text - sind opak.
-Blur-Stufen kanonisch 2/6/10/20/32/56px (`--blur-2xs..xl`).
+Blur-Stufen kanonisch 2/6/10/20/32px (`--blur-2xs..lg`).
 
 **Der Modulkopf traegt KEIN Glas, und das ist eine begruendete Abweichung vom Kanon, keine
 Auslassung.** Die belegte Liquid-Glass-Linie fuehrt Navigationsleisten transparent; Yuvomi
@@ -949,8 +949,8 @@ Hover geht auf Vollton, der Fallback ist opak. Einblendung als Feder (420ms `--e
 plus Ring-Pulse), reduced-motion-sicher.
 
 ### Monatsgrid-Event-Bars (Signature Component, Kalender)
-Flache Tint-Bars statt satter Farbfelder: Flaeche nach dem Ein-Toenungsrezept
-(16 % Layer-Farbe auf `--color-surface-work`), Tinte
+Flache Tint-Bars statt satter Farbfelder: Flaeche auf `--tint-surface` (Layer-Farbe auf
+`--color-surface-work`, Hover eine Sprosse hoeher auf `--tint-raised`), Tinte
 `color-mix(in srgb, var(--ev-color) 35%, var(--color-text-primary))`; gemessen 7.2-9.5:1
 ueber die Layer-Farben. Keine Borders, Icons oder Avatar-Stacks im Monat (das "wer" traegt
 das title-Attribut). "Heute" ist NUR ein gefuellter Akzent-Kreis auf der Ziffer;
@@ -970,7 +970,10 @@ Text allein.
   `+`-Kombinator trennen (Zeilenlisten-Regel).
 - **Do** in einer Karte zwischen ZEILE (Haarlinie) und KACHEL (Inset-Well) waehlen; nur
   Bedienelemente behalten ihre Kante.
-- **Do** getoente Flaechen mit 16 % auf `--color-surface` mischen - ein Rezept, app-weit.
+- **Do** jede Toenung eine benannte Stufe der Toenungsskala nehmen lassen (`--tint-wash` 8 /
+  `--tint-state` 12 / `--tint-surface` 16 / `--tint-raised` 24 / `--tint-hint` 50 /
+  `--tint-ink` 70 / `--tint-shadow` 20), nie eine eigene Zahl; die vier Flaechenstufen sind
+  eine Leiter, ein Zustand steigt eine Sprosse.
 - **Do** verschachtelte Radien konzentrisch rechnen (`calc(var(--radius-*) - Npx)`).
 - **Do** opake Fallbacks fuer jedes Glas-Element mitliefern (reduced-transparency,
   prefers-contrast, fehlender backdrop-filter).
