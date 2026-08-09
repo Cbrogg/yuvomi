@@ -23,9 +23,11 @@ function makeDb() {
     CREATE TABLE calendar_events (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL);
     CREATE TABLE budget_subscriptions (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL,
       amount REAL, currency TEXT, next_payment_date TEXT);
+    CREATE TABLE inventory_items (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL,
+      purchase_date TEXT, warranty_months INTEGER);
     CREATE TABLE reminders (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      entity_type TEXT NOT NULL CHECK(entity_type IN ('task','event','subscription')),
+      entity_type TEXT NOT NULL CHECK(entity_type IN ('task','event','subscription','inventory_item')),
       entity_id INTEGER NOT NULL,
       remind_at TEXT NOT NULL,
       dismissed INTEGER NOT NULL DEFAULT 0,
