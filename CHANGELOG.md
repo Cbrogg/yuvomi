@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- On the overview, the quick-action button behaved unlike the one in every other module. It slid out of sight whenever you scrolled down and only came back on the way up, which meant a single downward nudge you never made - an address bar sliding out on iOS, a widget growing as its data arrived - could take the button away and leave it away. It was also the last floating button still living inside the scrolling area, the arrangement that made it drift off screen on iPhone in the first place (#634). It now sits in the same place as every other module's button, keeps still while you scroll, and the room reserved for it below the last row comes from the same measurement the rest of the app uses, so the button can no longer cover a link at the bottom of a widget
+- The error panel in Settings, the one that appears when a page cannot load and offers to try again, printed its message and its button in tones that fell short of the contrast requirement against their own red tint, at 4.45:1 and 4.16:1. Both now use the darker ink tone the app already used on every other tinted surface, and the retry button belongs to the message it sits in rather than borrowing the module's colour
+
 ## [2.0.0] - 2026-08-09
 
 ### Changed
