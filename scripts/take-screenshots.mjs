@@ -151,7 +151,13 @@ async function dismissOverlays(page) {
   await page.evaluate(() => {
     document.querySelectorAll('.onboarding-overlay, yuvomi-install-prompt').forEach((el) => el.remove());
   });
-  const closeBtn = page.locator('.modal-close').first();
+  // `[data-action="close-modal"]` statt einer Klasse: modal.js verdrahtet das
+  // Schliessen ueber genau dieses Attribut (modal.js:610) und meint damit das
+  // Header-X UND jedes Footer-"Abbrechen". Hier stand `.modal-close`, das es
+  // seit der Namensschulden-Runde nicht mehr gibt - der Aufruf fiel still auf
+  // `count() === 0` zurueck, also war das Sicherheitsnetz weg, ohne dass ein
+  // Lauf je fehlgeschlagen waere.
+  const closeBtn = page.locator('[data-action="close-modal"]').first();
   if (await closeBtn.count() > 0) {
     try { await closeBtn.click({ timeout: 400 }); } catch {}
   }
