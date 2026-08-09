@@ -227,7 +227,12 @@ tools were refused but not which - re-run with `show_full_output: true` to see t
 the workflow matches the default branch) and makes this check stand aside, so it would turn
 green without any review having run. Report the denied tool instead and let a maintainer add
 it to `claude_args` on `main` - note that the list there **replaces** the review plugin's
-own, so existing entries have to stay - then re-run the original PR.
+own, so existing entries have to stay.
+
+Once that has landed, **"Re-run jobs" on the old run will not pick it up.** A rerun replays
+the same workflow file at the same commit, so it hits the same denial and looks like the fix
+failed. The PR needs a fresh `pull_request` event to be evaluated against the new default
+branch: push to it, or merge `main` into the branch, or close and reopen it.
 
 One limit worth knowing: the check asks whether the PR carries *any* comment from the
 reviewer, not whether *this run* produced one. That is deliberate - the plugin looks for its
