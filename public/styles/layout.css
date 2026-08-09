@@ -4755,11 +4755,13 @@ textarea.input { resize: vertical; }
     transition: opacity 0.01ms;
   }
 
-  /* Flyout-Labels ohne Einblend-Verzögerung — sofort sichtbar statt 0.22s Delay. */
-  html.sidebar-collapsed .nav-sidebar .nav-item__label,
-  html.sidebar-collapsed .nav-sidebar .nav-section-label {
-    transition: opacity 0.01ms;
-  }
+  /* Die Flyout-Labels standen hier mit `transition: opacity 0.01ms` und dem
+   * Hinweis „sofort sichtbar statt 0.22s Delay". Beides trug nicht: `reset.css`
+   * setzt in diesem Medienzustand `transition-duration: 0s !important`, und
+   * einen `transition-delay` gibt es in der ganzen App an keiner Stelle - die
+   * Basisregeln beider Labels schreiben `transition: opacity var(--duration-xs)
+   * ease`, also eine Dauer ohne Verzögerung. Eine wirkungslose Zeile, die eine
+   * Feinsteuerung behauptet, kostet beim Lesen mehr als sie leistet. */
 
   .nav-bottom .nav-item:active .nav-item__icon-well {
     transform: none;

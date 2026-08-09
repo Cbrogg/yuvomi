@@ -6,6 +6,12 @@
 
 .health-page {
   --module-accent: var(--module-health);
+  /* Der Zyklus-Ring und sein Lade-Skeleton müssen dasselbe Maß halten - das
+   * Skeleton hält den Platz frei, den der Ring danach einnimmt, und laufen sie
+   * auseinander, springt das Layout beim Übergang. Der Wert stand zweimal von
+   * Hand da. Die viewBox des SVG bleibt bewusst unabhängig: sie ist ein
+   * Koordinatensystem, keine Größe (das SVG skaliert per width: 100%). */
+  --cycle-ring-size: 220px;
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
@@ -49,7 +55,11 @@
   gap: var(--space-3);
   padding: var(--space-8) var(--space-4);
   border: none;
-  border-radius: calc(var(--radius-md) + 4px);
+  /* --radius-lg, nicht `calc(var(--radius-md) + 4px)`: die Konzentrik-Formel
+   * leitet einen INNEREN Radius von einem äußeren ab, und diese Karte steht
+   * freistehend auf dem Grouped-Grund. Der Wert war identisch (16px), band die
+   * Karte aber an ein Token, mit dem sie nichts zu tun hat. */
+  border-radius: var(--radius-lg);
   background: var(--color-surface);
   box-shadow: var(--shadow-sm);
 }
@@ -1608,8 +1618,8 @@ button.health-med-card:hover {
 }
 
 .cycle-skeleton__ring {
-  width: 220px;
-  height: 220px;
+  width: var(--cycle-ring-size);
+  height: var(--cycle-ring-size);
   border-radius: var(--radius-full);
   flex: 0 0 auto;
   margin-inline: auto;
@@ -1648,8 +1658,8 @@ button.health-med-card:hover {
 
 .cycle-ring {
   position: relative;
-  width: 220px;
-  height: 220px;
+  width: var(--cycle-ring-size);
+  height: var(--cycle-ring-size);
   flex: 0 0 auto;
   margin-inline: auto;
 }
