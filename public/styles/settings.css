@@ -556,9 +556,15 @@
   margin-top: var(--space-2);
 }
 
+/* `-ink`, nicht `--color-danger`: der Fehlertext steht auf --color-danger-light
+   und traf dort 4,45:1 - unter AA, gemessen von Sonde 2 (light/mobile). Die
+   Signalfarbe ist für die FLÄCHE gebaut, das Ink-Token für den Text darauf
+   (tokens.css §Ink). Auf weissem Grund bleibt es korrekt (6,89:1), die Regel
+   gilt also unabhängig davon, wo die Zeile landet - genau wie bei `.form-error`
+   in layout.css, dem Vorbild, das diese Stelle als einzige nicht mitmachte. */
 .settings-inline-error {
   margin: 0;
-  color: var(--color-danger);
+  color: var(--color-danger-ink);
   font-size: var(--text-sm);
   font-weight: var(--font-weight-medium);
 }
@@ -571,6 +577,26 @@
   border: var(--space-px) solid var(--color-danger);
   border-radius: var(--radius-md);
   background: var(--color-danger-light);
+}
+
+/* Der Wiederholen-Knopf gehört dem Kasten, nicht dem Modul.
+ *
+ * Als `.btn--secondary` trug er `--active-module-accent` - in den Einstellungen
+ * #677079, auf der Tönung 4,16:1. Der Kontrast ist der messbare Teil des
+ * Befunds; der andere ist die Aussage: ein Modulakzent behauptet Zugehörigkeit
+ * zum Modul, und ein „Erneut versuchen" IN einer Fehlermeldung gehört zu ihr.
+ * Die Sekundärform (transparent, Rand) bleibt - getauscht wird nur, aus welcher
+ * Quelle sie ihre Farbe nimmt. */
+.settings-retry-state__button {
+  color: var(--color-danger-ink);
+  /* --tint-hint ist die Stufe für Kanten (tokens.css 6b), nicht eine Zahl nach
+     Augenmass: der Rand deutet die Knopfform an, er trägt sie nicht. */
+  border-color: color-mix(in srgb, var(--color-danger-ink) var(--tint-hint), transparent);
+}
+
+.settings-retry-state__button:hover {
+  background-color: color-mix(in srgb, var(--color-danger-ink) var(--tint-state), transparent);
+  border-color: var(--color-danger-ink);
 }
 
 @media (min-width: 1024px) {
