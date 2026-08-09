@@ -11,6 +11,7 @@ import { gotifyProvider } from './notification-providers/gotify.js';
 import { ntfyProvider } from './notification-providers/ntfy.js';
 import { syncAllBirthdayReminders } from './birthdays.js';
 import { resolveHouseholdLocale, translate } from '../utils/i18n.js';
+import { warrantyEndDate } from './inventory-deadlines.js';
 
 const log = createLogger('Notifications');
 const APP_NAME = 'Yuvomi';
@@ -87,23 +88,44 @@ function subscriptionBody(reminder) {
  * genaueste Antwort, die das Ziel heute geben kann, und immer noch eine.
  */
 const REMINDER_ORIGINS = {
-  task:         { titleKey: 'nav.tasks',                url: '/tasks' },
-  event:        { titleKey: 'nav.calendar',             url: '/calendar' },
-  subscription: { titleKey: 'subscriptions.tabLabel',   url: '/budget' },
+  task:           { titleKey: 'nav.tasks',              url: '/tasks' },
+  event:          { titleKey: 'nav.calendar',           url: '/calendar' },
+  subscription:   { titleKey: 'subscriptions.tabLabel', url: '/budget' },
+  inventory_item: { titleKey: 'nav.inventory',          url: '/inventory' },
 };
+
+/**
+ * Body einer Garantie-Erinnerung: Gegenstandsname und Garantieende.
+ * Gleiche Begruendung wie bei subscriptionBody - reine Daten, kein Satzbau,
+ * weil der Server die Sprache des Empfaengers nicht kennt. Faellt das
+ * Garantieende nicht berechenbar aus (unplausibles Kaufdatum, geloeschte
+ * Felder), bleibt der Name allein stehen statt die Zustellung zu sprengen.
+ */
+function warrantyBody(reminder) {
+  if (!reminder.inv_purchase_date || reminder.inv_warranty_months == null) return reminder.entity_title;
+  try {
+    return `${reminder.entity_title} - ${warrantyEndDate(reminder.inv_purchase_date, reminder.inv_warranty_months)}`;
+  } catch {
+    return reminder.entity_title;
+  }
+}
 
 function reminderPayload(reminder, locale) {
   const title = reminder.entity_title || FALLBACK_BODY;
   const origin = REMINDER_ORIGINS[reminder.entity_type];
+  let body = title;
+  if (reminder.entity_type === 'subscription' && reminder.entity_title) {
+    body = subscriptionBody(reminder);
+  } else if (reminder.entity_type === 'inventory_item' && reminder.entity_title) {
+    body = warrantyBody(reminder);
+  }
   return {
     // Ohne bekannte Herkunft bleibt der App-Name: er ist nichtssagend, aber nie
     // falsch - und ein roher `entity_type` im Titel waere beides. Das Ziel
     // faellt aus demselben Grund auf die Uebersicht: sie ist die einzige Seite,
     // die es mit Sicherheit gibt.
     title: origin ? translate(locale, origin.titleKey) : APP_NAME,
-    body: reminder.entity_type === 'subscription' && reminder.entity_title
-      ? subscriptionBody(reminder)
-      : title,
+    body,
     url: origin ? origin.url : '/',
     tag: `reminder-${reminder.id}`,
     priority: 'default',
@@ -243,7 +265,12 @@ export async function processDueNotifications({
         WHEN 'task'  THEN (SELECT title FROM tasks           WHERE id = r.entity_id)
         WHEN 'event' THEN (SELECT title FROM calendar_events WHERE id = r.entity_id)
         WHEN 'subscription' THEN (SELECT name FROM budget_subscriptions WHERE id = r.entity_id)
+        WHEN 'inventory_item' THEN (SELECT name FROM inventory_items WHERE id = r.entity_id)
       END AS entity_title,
+      CASE WHEN r.entity_type = 'inventory_item'
+        THEN (SELECT purchase_date FROM inventory_items WHERE id = r.entity_id) END AS inv_purchase_date,
+      CASE WHEN r.entity_type = 'inventory_item'
+        THEN (SELECT warranty_months FROM inventory_items WHERE id = r.entity_id) END AS inv_warranty_months,
       CASE WHEN r.entity_type = 'subscription'
         THEN (SELECT amount FROM budget_subscriptions WHERE id = r.entity_id) END AS sub_amount,
       CASE WHEN r.entity_type = 'subscription'
