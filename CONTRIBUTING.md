@@ -213,16 +213,27 @@ informational; the maintainer's review decides. PRs from forks are excluded from
 automation. Once approved, PRs are merged by the maintainer, usually squashed into a
 single commit.
 
-**A red `claude-review` check is not a review finding.** The job fails when the review ran
-but left nothing behind - no summary, no inline comment - which for five PRs meant a green
-check over a review that never happened. The likely cause is a tool permission, and the job
-log names it in two steps: `permission_denials_count` in the result object tells you *how
-many* tools were refused but not which, so re-run the workflow with `show_full_output: true`
-to see the name, then add that tool to `claude_args` in
-`.github/workflows/claude-code-review.yml` - the list there **replaces** the review plugin's
-own, so anything you add has to keep the existing entries. The one exception is a PR that
-edits that workflow itself; the action then skips for security reasons and the check steps
-aside with a notice explaining why.
+**A red `claude-review` check is not a review finding.** Open the job and read which step
+failed first - the job goes red for ordinary reasons too (checkout, the action itself, a
+GitHub API call), and only one specific failure is about the review staying silent.
+
+That one is the step **"Die Review muss gesprochen haben"**. It exists because for five PRs
+the check was green over a review that never happened. Its message names the two known
+causes; the second needs the job log, where `permission_denials_count` tells you *how many*
+tools were refused but not which - re-run with `show_full_output: true` to see the name.
+
+**Do not add the tool in the PR that failed.** A PR touching
+`.github/workflows/claude-code-review.yml` makes the action skip itself (it only runs when
+the workflow matches the default branch) and makes this check stand aside, so it would turn
+green without any review having run. Report the denied tool instead and let a maintainer add
+it to `claude_args` on `main` - note that the list there **replaces** the review plugin's
+own, so existing entries have to stay - then re-run the original PR.
+
+One limit worth knowing: the check asks whether the PR carries *any* comment from the
+reviewer, not whether *this run* produced one. That is deliberate - the plugin looks for its
+own earlier comment and will not repeat itself on a later push - but it means a silent rerun
+on a PR that was already reviewed stays green. The assertion covers "this PR was never
+reviewed", not "every run reviewed it".
 
 ---
 
