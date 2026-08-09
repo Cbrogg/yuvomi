@@ -153,6 +153,14 @@ function renderPage(container, user) {
         <div id="feed-export-body"></div>
       </div>
     </section>
+
+    <section class="settings-section">
+      <h2 class="settings-section__title">${t('settings.inventoryFeedTitle')}</h2>
+      <div class="settings-card">
+        <p class="settings-card-description">${t('settings.inventoryFeedDescription')}</p>
+        <div id="inventory-feed-body"></div>
+      </div>
+    </section>
   `);
 }
 
@@ -1323,6 +1331,100 @@ async function loadFeedExport(container, user) {
 }
 
 // --------------------------------------------------------------------------
+// Read-only ICS export feed - inventory warranty deadlines (Stage 4)
+// --------------------------------------------------------------------------
+
+function renderInventoryFeedInactive(body) {
+  body.replaceChildren();
+  body.insertAdjacentHTML('beforeend', `
+    <p class="settings-card-description">${t('settings.inventoryFeedInactive')}</p>
+    <div class="settings-form-actions">
+      <button type="button" class="btn btn--primary" id="inventory-feed-activate">${t('settings.inventoryFeedActivate')}</button>
+    </div>
+  `);
+}
+
+function renderInventoryFeedActive(body, data) {
+  const webcal = data.url.replace(/^https?:\/\//i, 'webcal://');
+  body.replaceChildren();
+  body.insertAdjacentHTML('beforeend', `
+    <div class="form-group">
+      <label class="form-label" for="inventory-feed-url">${t('settings.inventoryFeedUrlLabel')}</label>
+      <input id="inventory-feed-url" class="form-input" type="text" readonly value="${esc(data.url)}">
+      <p class="form-hint">${t('settings.inventoryFeedHint')}</p>
+    </div>
+    <div class="settings-form-actions">
+      <button type="button" class="btn btn--secondary" id="inventory-feed-copy">${t('settings.inventoryFeedCopy')}</button>
+      <a class="btn btn--secondary" href="${esc(webcal)}">${t('settings.inventoryFeedSubscribe')}</a>
+      <button type="button" class="btn btn--secondary" id="inventory-feed-regen">${t('settings.inventoryFeedRegenerate')}</button>
+      <button type="button" class="btn btn--danger-outline" id="inventory-feed-disable">${t('settings.inventoryFeedDisable')}</button>
+    </div>
+  `);
+}
+
+async function loadInventoryFeed(container) {
+  const body = container.querySelector('#inventory-feed-body');
+  if (!body) return;
+
+  const reload = () => loadInventoryFeed(container);
+
+  let res;
+  try {
+    res = await api.get('/inventory/deadlines-feed');
+  } catch (err) {
+    body.replaceChildren();
+    body.appendChild(createInlineError(err.message || t('common.errorGeneric')));
+    return;
+  }
+
+  const data = res?.data;
+  if (!data) {
+    renderInventoryFeedInactive(body);
+    body.querySelector('#inventory-feed-activate')?.addEventListener('click', async () => {
+      try {
+        await api.post('/inventory/deadlines-feed/regenerate');
+        showToast(t('settings.inventoryFeedTitle'), 'success');
+        await reload();
+      } catch (err) {
+        showToast(err.message || t('common.errorGeneric'), 'danger');
+      }
+    });
+    return;
+  }
+
+  renderInventoryFeedActive(body, data);
+
+  body.querySelector('#inventory-feed-copy')?.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard?.writeText(data.url);
+      showToast(t('settings.inventoryFeedCopied'), 'success');
+    } catch (err) {
+      showToast(err.message || t('common.errorGeneric'), 'danger');
+    }
+  });
+  body.querySelector('#inventory-feed-regen')?.addEventListener('click', async () => {
+    if (!await confirmModal(t('settings.inventoryFeedRegenerateConfirm'),
+      { danger: true, detail: t('settings.inventoryFeedRegenerateConfirmDetail') })) return;
+    try {
+      await api.post('/inventory/deadlines-feed/regenerate');
+      await reload();
+    } catch (err) {
+      showToast(err.message || t('common.errorGeneric'), 'danger');
+    }
+  });
+  body.querySelector('#inventory-feed-disable')?.addEventListener('click', async () => {
+    if (!await confirmModal(t('settings.inventoryFeedDisableConfirm'),
+      { danger: true, detail: t('settings.inventoryFeedDisableConfirmDetail') })) return;
+    try {
+      await api.delete('/inventory/deadlines-feed');
+      await reload();
+    } catch (err) {
+      showToast(err.message || t('common.errorGeneric'), 'danger');
+    }
+  });
+}
+
+// --------------------------------------------------------------------------
 // OAuth callback banner
 // --------------------------------------------------------------------------
 
@@ -1391,6 +1493,7 @@ export async function render(container, { user, query } = {}) {
   await loadCalDAVAccounts(container, user);
   await renderMoreProviders(container, user);
   await loadFeedExport(container, user);
+  await loadInventoryFeed(container);
 
   handleOAuthCallback(container, query);
 
