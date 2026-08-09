@@ -67,23 +67,6 @@ jobs:
           # vorher haette er auch einen sauberen PR rot gefaerbt.
           prompt: '/code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }} --comment'
           allowed_bots: 'dependabot[bot]'
-          # VORUEBERGEHEND, NUR ZUR DIAGNOSE - gehoert im naechsten PR wieder raus.
-          #
-          # Der Lauf an #711 brach nach VIER Turns und 15 Sekunden ab, mit einer
-          # Verweigerung und ohne etwas zu posten. Zum Vergleich der erfolgreiche
-          # Lauf an #708: 29 Turns, 4:45 min, zehn Verweigerungen - und er hat
-          # gepostet. Die Sperre sitzt hier also ganz am Anfang, nicht am Ende.
-          #
-          # Ich habe die Ursache dreimal geraten und dreimal falsch gelegen.
-          # `permission_denials_count` ist eine Zahl und nennt kein Werkzeug;
-          # diese Zeile ist der einzige Weg, den Namen zu sehen, und sowohl die
-          # Fehlermeldung des Nachweis-Schritts als auch CONTRIBUTING schreiben
-          # sie fuer genau diesen Fall vor.
-          #
-          # Der Preis: die volle SDK-Ausgabe steht im Actions-Log eines
-          # oeffentlichen Repos. Inhalt ist ein Review oeffentlicher Dateien,
-          # Secrets maskiert Actions ohnehin. Von Ulas fuer EINEN Lauf freigegeben.
-          show_full_output: true
           # DIESE LISTE ERSETZT, SIE ERGÄNZT NICHT. Das war die Annahme, die den
           # zweiten Anlauf gekostet hat: `--allowed-tools` verdrängt die acht
           # Werkzeuge, die das Plugin `code-review@claude-code-plugins` in seinem
@@ -98,13 +81,26 @@ jobs:
           #                            gescheitert - an `gh pr comment`, dem
           #                            einzigen Weg, ihr Ergebnis abzuliefern.
           #
-          # Reihenfolge unten: erst die acht des Plugins, dann die sechs, die es
-          # nicht deklariert, aber braucht. Read/Grep/Glob geben ihr den Quelltext
-          # um den Diff herum; `git rev-parse` verlangt seine eigene Anleitung für
+          # `Skill` STEHT ZUERST, UND ZWAR AUS EINEM GRUND. Der Prompt ruft
+          # `/code-review:code-review …` auf, und das ist ein Plugin-Kommando -
+          # ohne das Skill-Werkzeug kann die Review ihr eigenes Kommando nicht
+          # ausfuehren. Ein Diagnoselauf mit `show_full_output` hat es benannt:
+          #
+          #   "tool_use_result": "Error: Execute skill: code-review:code-review"
+          #
+          # Das war eine Regression aus dem ersten Anlauf: vor `claude_args` gab
+          # es keine Liste, also war `Skill` da. Sie erklaert auch, warum die
+          # Laeufe so sprunghaft aussahen - ohne ihr Kommando improvisierte das
+          # Modell die Review, mal ueber 29 Turns mit Ergebnis, mal Abbruch nach
+          # vier. Dieselbe Messung nannte `gh repo view` als zweiten Treffer.
+          #
+          # Reihenfolge: Skill, dann die acht des Plugins, dann was es nicht
+          # deklariert, aber braucht. Read/Grep/Glob geben ihr den Quelltext um
+          # den Diff herum; `git rev-parse` verlangt seine eigene Anleitung für
           # die SHA-gebundenen Codelinks.
           claude_args: >-
             --allowed-tools
-            "Bash(gh issue view:*),Bash(gh search:*),Bash(gh issue list:*),Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*),mcp__github_inline_comment__create_inline_comment,Read,Grep,Glob,Bash(git rev-parse:*),Bash(git log:*),Bash(git diff:*)"
+            "Skill,Bash(gh issue view:*),Bash(gh search:*),Bash(gh issue list:*),Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*),Bash(gh repo view:*),mcp__github_inline_comment__create_inline_comment,Read,Grep,Glob,Bash(git rev-parse:*),Bash(git log:*),Bash(git diff:*)"
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
 
