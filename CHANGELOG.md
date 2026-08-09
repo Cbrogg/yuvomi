@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The whole interface has been redesigned in Apple's Human Interface Guidelines and its liquid-glass design language. Yuvomi should now feel like an app that shipped with the device: the system font stack and Apple's type scale, cool system neutrals, capsule controls and inset-grouped lists. Glass is chrome and nothing else - the tab bar, the sidebar, sheets and the action button are made of it, while everything you actually read sits on an opaque surface. Each of the seventeen modules keeps its own accent colour so you can tell at a glance where you are, and all of them were verified against the surfaces they are used on: WCAG AA in light *and* dark, with the same values holding under reduced transparency and increased contrast. On phones the module title now starts as a large title and collapses into the bar as you scroll, the way it does elsewhere on the platform. Nothing about your data, your household or your integrations changes
+- The same swipe now means the same thing in every list. Until now swiping right checked off a shopping item, opened a task for editing, and deleted nothing in birthdays. The start of the row now always carries the positive action and the end the destructive or secondary one, so **tasks and the shopping list have swapped sides** - a swipe that used to open a task now completes it. Because this is muscle memory, a one-time hint appears the first time you open an affected list after updating. Birthdays are unchanged. The rule assigns a rank rather than a fixed role, which is why editing sits at the end in tasks and at the start in birthdays: it is the secondary action where a positive one stands beside it, and the primary one where none does. Subscriptions gained the two gestures as well, replacing four buttons per row
+
+### Fixed
+
+- Printing from a device in dark mode produced an unreadable page. The print stylesheet forced text to black but only recoloured the page body, so every surface underneath kept its dark theme colour - the result was black ink on a black background, measured at 1.06:1 on module titles and 1.23:1 inside cards, across eleven of the sixteen modules. Both dark-mode sources now apply to screens only, so a printout always uses the light palette regardless of the theme you are working in. Light mode was never affected
+- Swiping to delete a shopping item removed it immediately and for good: no undo, no confirmation, and the row flew out as if the job were done. It was the only gesture in the app that destroyed data without a way back, which is exactly the trap for anyone who learned the same gesture as harmless in tasks or birthdays. Deleting by gesture now goes through the same undoable path the row button already used
+- The shopping list ignored swipes entirely until something rebuilt it. Opening the page gave you rows that answered no gesture at all; they only started working after you added an item, checked one off with the button, or switched lists. This had been the case since the gesture was introduced
+- Screen readers announced every subscription row as just "Edit, button". The row body wraps all of its content - name, description, status, due date, billing cycle, payment method, amount - and carried an edit label that replaced that content instead of adding to it. The row now announces what it contains, with the action named at the end
+- A number of colours that were readable in light mode failed the contrast requirement in dark mode, among them the hover states of the semantic colours, several module accents on tinted backgrounds, and icon-only buttons that fell back to the browser's default text colour instead of inheriting their own
+
 ## [1.87.0] - 2026-08-06
 
 ### Added
