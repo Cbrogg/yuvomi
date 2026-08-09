@@ -80,8 +80,39 @@ jobs:
       # Anmerkung? Der Lauf auf `synchronize` bleibt grün, wenn schon ein
       # Kommentar von einem früheren Lauf steht; das Plugin sucht danach und
       # schreibt bewusst nicht zweimal dasselbe.
+      # AUSGENOMMEN: ein PR, der DIESE Datei aendert. Die Action prueft, ob der
+      # Workflow im PR zeichengleich mit dem auf dem Default-Branch ist, und
+      # ueberspringt sich sonst selbst - sonst koennte ein PR sich per
+      # `claude_args` beliebige Werkzeuge freischalten und die Review gegen sich
+      # selbst laufen lassen. Sie tut das mit `outcome=success`, also mit
+      # demselben stillen Gruen, das dieser Schritt aufdeckt.
+      #
+      # Die Ausnahme hat ein Verfallsdatum: sie greift NUR, solange der PR den
+      # Workflow anfasst. Sobald er gemergt ist, prueft der naechste PR wieder
+      # scharf. Ohne sie waere jede kuenftige Workflow-Aenderung automatisch rot,
+      # und eine Ausnahme, die man wegklickt, ist bald keine mehr.
+      - name: Prueft die Review-Datei sich selbst?
+        id: self-edit
+        if: env.CLAUDE_CODE_OAUTH_TOKEN != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          if gh api "repos/$REPO/pulls/$PR/files" --paginate --jq '.[].filename' \
+             | grep -qx '.github/workflows/claude-code-review.yml'; then
+            echo "self=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::Dieser PR aendert den Review-Workflow selbst." \
+                 "Die Action ueberspringt sich dann aus Sicherheitsgruenden" \
+                 "(Workflow-Validierung), also kann hier keine Review entstehen." \
+                 "Der Nachweis-Schritt ist ausgesetzt und greift ab dem naechsten PR wieder."
+          else
+            echo "self=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Die Review muss gesprochen haben
-        if: env.CLAUDE_CODE_OAUTH_TOKEN != '' && steps.claude-review.outcome == 'success'
+        if: env.CLAUDE_CODE_OAUTH_TOKEN != '' && steps.claude-review.outcome == 'success' && steps.self-edit.outputs.self != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
