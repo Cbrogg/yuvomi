@@ -129,7 +129,12 @@ export function wireScrollFade(el, { axis = 'x' } = {}) {
   el.classList.add('u-scroll-fade');
   const eps = 8; // Toleranz: kein Fade bei minimalem Sub-Pixel-Offset
   const update = () => {
-    const pos = axis === 'y' ? el.scrollTop : el.scrollLeft;
+    // `Math.abs` wegen RTL: in `ar` und `fa` setzt die App `dir=rtl`, und dort
+    // steht `scrollLeft` nach CSSOM am Anfang auf 0 und laeuft beim Scrollen ins
+    // NEGATIVE. Ohne den Betrag waere `pos > eps` nie wahr und `pos < max - eps`
+    // immer - der Anfangs-Fade kaeme nie, der End-Fade ginge nie weg. Die
+    // Klassennamen sind schon logisch (start/end), die Messung war es nicht.
+    const pos = axis === 'y' ? el.scrollTop : Math.abs(el.scrollLeft);
     const max = axis === 'y'
       ? el.scrollHeight - el.clientHeight
       : el.scrollWidth - el.clientWidth;

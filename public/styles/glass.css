@@ -18,17 +18,12 @@
  * 1. Bottom Navigation — Glass Bar
  * ================================================================ */
 
-/* Immer aktiv: Glass-Hintergrund, Border, Shadow — auf der schwebenden
- * Kapsel (.nav-bottom__items), nicht mehr auf der Bar-Zone (Liquid Glass).
- * Eigener Schatten statt --glass-shadow-md: dessen weißer Ring ist auf dem
- * hellen Grouped Background unsichtbar — die Kapsel braucht dunklen Halt
- * (Offset + weiche Streuung + 0.5px-Kontur), sonst schwimmt sie formlos. */
+/* Immer aktiv: Glass-Hintergrund auf der schwebenden Kapsel
+ * (.nav-bottom__items), nicht mehr auf der Bar-Zone (Liquid Glass).
+ * Der Schatten der Kapsel steht vollstaendig in §41 - hier stand er ein
+ * zweites Mal, wortgleich, und wurde von dort ohnehin ueberschrieben. */
 .nav-bottom__items {
   background-color: var(--glass-bg-elevated);
-  box-shadow:
-    0 8px 24px rgba(0, 0, 0, 0.14),
-    0 2px 8px rgba(0, 0, 0, 0.08),
-    0 0 0 0.5px rgba(0, 0, 0, 0.06);
 }
 
 /* Blur nur wenn unterstützt (webkit-Fallback für Safari < 18) */
@@ -981,14 +976,15 @@ textarea.form-input {
  * Fläche erhält einen Inset-Top-Highlight, dessen Stärke über
  * --lg-specular gesteuert wird (0 in prefers-reduced-transparency /
  * prefers-contrast → Highlight verschwindet).
+ *
+ * --glass-shadow-capsule darunter ist der einzige Schatten der Kapsel; die
+ * Begruendung, warum es nicht --glass-shadow-md ist, steht am Token.
  * ================================================================ */
 .nav-bottom__items {
   box-shadow:
-    inset 0 1px 0 color-mix(in srgb, white calc(var(--lg-specular) * 100%), transparent),
+    inset 0 var(--space-px) 0 color-mix(in srgb, white calc(var(--lg-specular) * 100%), transparent),
     var(--glass-inset-bottom-lift),
-    0 8px 24px rgba(0, 0, 0, 0.14),
-    0 2px 8px rgba(0, 0, 0, 0.08),
-    0 0 0 0.5px rgba(0, 0, 0, 0.06);
+    var(--glass-shadow-capsule);
 }
 
 @media (min-width: 1024px) {

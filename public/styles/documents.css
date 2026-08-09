@@ -401,9 +401,18 @@
   color: var(--color-danger);
 }
 
+/* Auf der Tönung trägt --color-danger nur 4,45:1 - deshalb hier der Ink-Ton
+ * (5,69:1), wie auf jeder anderen -light-Fläche der App. Das svg braucht den
+ * eigenen Selektor, weil die Basisregel oben spezifischer ist. */
 .documents-context-menu__item--danger:hover,
 .documents-context-menu__item--danger:focus-visible {
   background: var(--color-danger-light);
+  color: var(--color-danger-ink);
+}
+
+.documents-context-menu__item--danger:hover svg,
+.documents-context-menu__item--danger:focus-visible svg {
+  color: var(--color-danger-ink);
 }
 
 .documents-folder-item__icon {

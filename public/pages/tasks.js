@@ -2413,6 +2413,9 @@ function wireSwipeGestures(container) {
 
   wireSwipeRows(listEl, {
     card: '.task-card',
+    // Vor 2.0.0 öffnete derselbe Wisch hier den Bearbeiten-Dialog: eine der
+    // zwei Listen, in denen die Seiten wirklich getauscht haben.
+    sidesSwapped: true,
     // Zeilenanfang: Status umschalten - die primäre positive Aktion der Liste
     // (§2: dieselbe Kante trägt sie in jeder Liste). Die Karte fliegt hinaus,
     // weil die Zeile danach in einer anderen Gruppe steht - ohne den Flug

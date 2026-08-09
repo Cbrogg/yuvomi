@@ -926,6 +926,9 @@ function wireSwipeGestures(container) {
   wireSwipeRows(listEl, {
     card: '.shopping-item',
     ignore: '.list-row__drag',
+    // Vor 2.0.0 löschte der Wisch zum Zeilenende hier sofort: eine der zwei
+    // Listen, in denen die Seiten wirklich getauscht haben.
+    sidesSwapped: true,
     // Beide Seiten führen dieselbe Aktion aus wie der Knopf in der Zeile -
     // über dieselbe Funktion, nicht über eine zweite Schreibweise daneben.
     //

@@ -604,8 +604,15 @@ test('die Wischgeste setzt und loest das Compositor-Versprechen selbst', () => {
   const swipe = read('../public/utils/swipe-row.js');
   const layout = read('../public/styles/layout.css');
 
-  assert.match(layout, /\.swipe-row--armed > :first-child \{\s*\n\s*will-change: transform;/,
+  // `:not(.swipe-reveal)` und nicht `:first-child`: die Reveal-Panels stehen im
+  // Markup VOR der Karte, der alte Selektor promotete also das falsche Element
+  // (und faerbte im Geschwister-Guard darunter das fuehrende Panel um).
+  assert.match(layout, /\.swipe-row--armed > :not\(\.swipe-reveal\) \{\s*\n\s*will-change: transform;/,
     'die geteilte Buehne traegt das Versprechen, nicht die einzelnen Module');
+  assert.match(layout, /\.swipe-row--swiping > :not\(\.swipe-reveal\) \{/,
+    'die Traegerflaeche gehoert auf die bewegte Karte, nicht auf ein Reveal-Panel');
+  assert.doesNotMatch(layout, /\.swipe-row--(?:armed|swiping) > :first-child/,
+    ':first-child trifft in einer Wischzeile immer das Panel, nie die Karte');
   assert.match(swipe, /addEventListener\('touchstart'[\s\S]{0,900}?arm\(\);/,
     'gesetzt wird bei touchstart - bei der ersten Bewegung waere es einen Frame zu spaet');
   assert.match(swipe, /addEventListener\('touchcancel'/,
@@ -5259,6 +5266,201 @@ test('--color-ink-on-vivid traegt auf jedem Modulakzent, --color-text-on-accent 
     .map((name) => contrastRatio(staticWhite, resolveColor(name, dark)));
   assert.ok(Math.min(...worst) < 3,
     'Dark-Modulakzente muessen weissen Text unterschreiten, sonst ist die Regel gegenstandslos');
+});
+
+/**
+ * Die Schwesterregel - und die Luecke, die der Guard darueber bauartbedingt
+ * NICHT sieht.
+ *
+ * Jene Regel misst eine Fuellung gegen die Textfarbe DESSELBEN Blocks. Die
+ * getoenten Flaechen (`--color-*-light`) werden aber fast immer im Zustand
+ * gesetzt und die Textfarbe in der Basis:
+ *
+ *     .contact-menu-item--danger        { color: var(--color-danger); }
+ *     .contact-menu-item--danger:hover  { background: var(--color-danger-light); }
+ *
+ * Zwei Bloecke, ein Bauteil - der Blockguard sah nie beide zusammen. Genau so
+ * sind in Runde 8 zwei Stellen davongedriftet: `--color-danger` wanderte von
+ * #B91C1C auf #D70015 und stand damit mit 4,45:1 auf der Toenung, waehrend acht
+ * andere Stellen laengst `--color-danger-ink` (5,69:1) trugen. Beide Suiten
+ * blieben gruen, und im Dark faellt es nicht auf (5,84:1) - eine Pruefung, die
+ * nur ein Theme ansieht, haette hier nichts gefunden.
+ *
+ * Deshalb schluesselt dieser Guard ueber das BAUTEIL: Selektor ohne
+ * Zustandsteil, im selben At-Kontext. Trifft dort eine Toenung auf eine
+ * Textfarbe, wird gerechnet - in beiden Themes, ohne Allowlist. Eine Toenung
+ * ohne eigene Textfarbe (`.settings-retry-state`) erbt Fliesstext und ist kein
+ * Paar; sie bleibt zu Recht ungeprueft.
+ */
+test('Text auf getoenter Flaeche haelt WCAG AA in beiden Themes', () => {
+  const { light, dark } = themeTokenMaps();
+  const dir = new URL('../public/styles/', import.meta.url);
+  const TINT = /^--color-[\w-]+-light$/;
+  const PURE_VAR = /^var\(\s*(--[\w-]+)\s*\)$/;
+
+  // Der Zustand gehoert nicht zum Bauteil: `.x`, `.x:hover` und `.x:focus-visible`
+  // sind dieselbe Flaeche, und die Kaskade legt ihre Deklarationen uebereinander.
+  const componentKeys = (selector, at) => selector
+    .split(',')
+    .map((part) => part.trim().replace(/::?[\w-]+(?:\([^)]*\))?/g, '').replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
+    .map((part) => `${at.join(' | ')}||${part}`);
+
+  const declaration = (body, prop) => {
+    const m = body.match(new RegExp(`(?:^|[\\s;])${prop}\\s*:\\s*([^;]+)`));
+    return m ? m[1].trim() : null;
+  };
+
+  // Bauteil -> { tints, base } - `base` sind die Textfarben, die das Bauteil
+  // ausserhalb seiner Toenungsregeln traegt.
+  const components = new Map();
+  const entryFor = (key) => {
+    if (!components.has(key)) components.set(key, { tints: [], base: [] });
+    return components.get(key);
+  };
+
+  for (const file of readdirSync(dir).filter((n) => n.endsWith('.css') && n !== 'tokens.css')) {
+    for (const { selector, body, at } of eachRule(read(`../public/styles/${file}`))) {
+      const fill = declaration(body, 'background(?:-color)?')?.match(PURE_VAR)?.[1];
+      const text = declaration(body, 'color')?.match(PURE_VAR)?.[1];
+      if (!fill && !text) continue;
+      const where = `${file} {${selector}}`;
+
+      for (const key of componentKeys(selector, at)) {
+        const entry = entryFor(key);
+        // Setzt die Toenungsregel ihre Textfarbe selbst, gilt SIE - sie ist
+        // durch den Zustandsteil mindestens so spezifisch wie die Basis. Sonst
+        // erbt die Flaeche, was das Bauteil sonst traegt.
+        if (fill && TINT.test(fill)) entry.tints.push({ token: fill, own: text, where });
+        else if (text) entry.base.push({ token: text, where });
+      }
+    }
+  }
+
+  const violations = [];
+  for (const { tints, base } of components.values()) {
+    for (const tint of tints) {
+      const inks = tint.own
+        ? [{ token: tint.own, where: tint.where }]
+        : base;
+      for (const ink of inks) {
+        for (const [theme, map] of [['light', light], ['dark', dark]]) {
+          const surface = resolveColor(tint.token, map);
+          const color = resolveColor(ink.token, map);
+          if (!/^#[0-9a-f]{6}$/i.test(surface ?? '') || !/^#[0-9a-f]{6}$/i.test(color ?? '')) continue;
+          const ratio = contrastRatio(color, surface);
+          if (ratio >= 4.5) continue;
+          violations.push(
+            `${theme}: ${ink.token} (${color}, ${ink.where}) auf ${tint.token} `
+            + `(${surface}, ${tint.where}) = ${ratio.toFixed(2)}:1`,
+          );
+        }
+      }
+    }
+  }
+
+  assert.deepEqual([...new Set(violations)].sort(), [],
+    'Text auf einer -light-Toenung gehoert auf den zugehoerigen -ink-Ton');
+});
+
+/**
+ * Ein Verlauf kennt keine Schreibrichtung.
+ *
+ * Die Rand-Fades der Scroll-Leisten heissen logisch (`has-fade-start` /
+ * `has-fade-end`), ihre Masken sind aber physisch: `linear-gradient(to right,
+ * …)`. In `ar` und `fa` setzt die App `dir=rtl` - dort liegt der Anfang rechts,
+ * und dieselbe Maske daempfte die sichtbaren Chips, waehrend die verborgenen
+ * hart abgeschnitten blieben. Genau verkehrt herum.
+ *
+ * Der Guard formuliert die Regel: JEDE horizontale Maskenregel braucht ihr
+ * RTL-Gegenstueck. `to bottom` bleibt aussen vor - die Blockrichtung dreht mit
+ * `dir` nicht.
+ */
+test('jede horizontale Fade-Maske hat ihr RTL-Gegenstueck', () => {
+  const dir = new URL('../public/styles/', import.meta.url);
+  const HORIZONTAL = /mask-image\s*:\s*linear-gradient\(\s*to (?:right|left)/;
+  const missing = [];
+  let physical = 0;
+
+  for (const file of readdirSync(dir).filter((n) => n.endsWith('.css'))) {
+    const rules = [...eachRule(read(`../public/styles/${file}`))];
+    const rtl = new Set(
+      rules
+        .filter(({ selector }) => selector.includes('[dir="rtl"]'))
+        .map(({ selector, at }) => `${at.join(' | ')}||${selector.replace(/\[dir="rtl"\]\s*/g, '').trim()}`),
+    );
+
+    for (const { selector, body, at } of rules) {
+      if (selector.includes('[dir="rtl"]')) continue;
+      if (!HORIZONTAL.test(body)) continue;
+      physical += 1;
+      if (!rtl.has(`${at.join(' | ')}||${selector.trim()}`)) {
+        missing.push(`${file} {${selector}}: physische Maskenachse ohne [dir="rtl"]-Spiegelung`);
+      }
+    }
+  }
+
+  // Reichweite vor dem Urteil - ohne Fundstellen prueft die Zusicherung nichts.
+  assert.ok(physical >= 4, `erwartet: horizontale Maskenregeln, gefunden: ${physical}`);
+  assert.deepEqual(missing, [],
+    'eine physische Verlaufsachse muss in RTL gespiegelt werden, sonst fadet die falsche Kante');
+});
+
+/**
+ * Wer die Zeilenknoepfe auf Touch versteckt, darf sie nicht ENTFERNEN.
+ *
+ * Geburtstage und Abos blendeten ihre `__actions` unter `(hover: none)` per
+ * `display: none` aus - optisch richtig (die Geste traegt dort dieselben zwei
+ * Aktionen), fuer die Bedienung aber fatal: `display: none` nimmt die Knoepfe
+ * auch aus dem Fokus- und Screenreader-Baum. Die Gesten haengen ausschliesslich
+ * an `touchstart`/`touchmove`, die Reveal-Panels sind `aria-hidden`, und die
+ * Zeilen selbst tragen keine Aktion. Wer sein Telefon per Tastatur,
+ * Schaltersteuerung oder VoiceOver bedient, kam an keinen Eintrag mehr heran.
+ *
+ * Die Regel, nicht die zwei Fundstellen: JEDE Zeilenaktionsgruppe, die sich auf
+ * Touch zurueckzieht, muss fokussierbar bleiben. Das naechste Modul, das die
+ * Gesten uebernimmt, faellt sonst in dieselbe Grube.
+ */
+test('Zeilenaktionen ziehen sich auf Touch zurueck, ohne unerreichbar zu werden', () => {
+  const dir = new URL('../public/styles/', import.meta.url);
+  const ACTIONS = /(?:^|[\s,>+~])\.[\w-]*(?:row-actions|__actions)\b/;
+  const violations = [];
+  let seen = 0;
+
+  for (const file of readdirSync(dir).filter((n) => n.endsWith('.css'))) {
+    for (const { selector, body, at } of eachRule(read(`../public/styles/${file}`))) {
+      if (!at.some((preamble) => /hover:\s*none/.test(preamble))) continue;
+      if (!ACTIONS.test(selector)) continue;
+      seen += 1;
+      if (/(?:^|[\s;])display\s*:\s*none/.test(body)) {
+        violations.push(`${file} {${selector}}: display: none nimmt die Knoepfe aus dem Fokusbaum`);
+      }
+    }
+  }
+
+  // Reichweite VOR dem Urteil: ohne Fundstellen prueft die Zusicherung nichts.
+  assert.ok(seen >= 2, `erwartet: Zeilenaktionsregeln unter (hover: none), gefunden: ${seen}`);
+  assert.deepEqual(violations, [],
+    'auf Touch versteckt heisst aus dem Fluss nehmen (clip-path), nicht display: none');
+});
+
+/**
+ * Die Gegenprobe: der Guard darueber taugt nur, wenn es die Paare, die er
+ * pruefen soll, ueberhaupt gibt. Eine Zusicherung ueber eine leere Liste ist
+ * keine - die Suite haette den Fall auch gruen gemeldet, wenn der Scanner
+ * keine einzige Toenung gefunden haette.
+ */
+test('der Toenungs-Guard sieht die Toenungsflaechen der App', () => {
+  const dir = new URL('../public/styles/', import.meta.url);
+  const pairs = [];
+
+  for (const file of readdirSync(dir).filter((n) => n.endsWith('.css') && n !== 'tokens.css')) {
+    const src = read(`../public/styles/${file}`);
+    if (/background(?:-color)?\s*:\s*var\(\s*--color-[\w-]+-light\s*\)/.test(src)) pairs.push(file);
+  }
+
+  assert.ok(pairs.length >= 4,
+    `erwartet: mehrere Dateien mit -light-Toenungen, gefunden: ${pairs.join(', ') || 'keine'}`);
 });
 
 /**

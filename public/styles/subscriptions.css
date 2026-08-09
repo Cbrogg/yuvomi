@@ -1043,8 +1043,25 @@
  * mit derselben Spezifität, und eine Regel davor verlöre allein durch die
  * Reihenfolge (in birthdays.css genau so gemessen). */
 @media (hover: none) {
+  /* VERSTECKT, NICHT ENTFERNT - dieselbe Begruendung wie in birthdays.css:
+   * `display: none` nahm die Zeilenaktionen auch aus dem Fokus- und
+   * Screenreader-Baum, und die Wischgesten sind reine `touch*`-Handler. Aus dem
+   * Fluss genommen gibt die Zeile den Platz genauso frei; beim Fokus kommen sie
+   * zurueck. */
   .subscription-card__actions {
-    display: none;
+    position: absolute;
+    width: var(--space-px);
+    height: var(--space-px);
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .subscription-card__actions:focus-within {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
   }
 
   /* Die Reserve am Zeilenende gehört dann dem Wisch-Chevron

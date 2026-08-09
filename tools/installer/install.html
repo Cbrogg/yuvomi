@@ -65,8 +65,14 @@
       font-family: var(--font-sans); color: var(--color-text-primary);
       min-height: 100dvh; display: flex; flex-direction: column;
       align-items: center; padding: 48px 16px 80px;
-      /* Ein einzelner Violett-Hauch am oberen Rand, wie auf der Login-Seite der
-         App (public/styles/login.css:26-32): der Marken-Peak ohne farbige Fläche. */
+      /* Ein einzelner Akzent-Hauch am oberen Rand: der Marken-Peak ohne farbige
+         Fläche. Stand bis v2.0.0 wortgleich auf der Login-Seite der App
+         (public/styles/login.css, heute auth.css); dort ist der Verlauf mit dem
+         HIG-Redesign gefallen - die Marke trägt jetzt das Tile, nicht die Bühne.
+         Der Installer zieht bewusst noch nicht nach: er ist eine der drei
+         Flächen ausserhalb der App, die als eigener Vorgang umgestellt werden.
+         Wer das hier anfasst, macht ihn - der Zeiger auf die App-Datei ist
+         seither kein Vorbild mehr, sondern eine Herkunftsangabe. */
       background:
         radial-gradient(
           ellipse 160% 60% at 50% -20%,

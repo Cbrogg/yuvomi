@@ -760,10 +760,18 @@ function uiLockingEnvKeys() {
 function envDescriptors(dir = '../') {
   const out = [];
   for (const entry of readdirSync(new URL(dir, import.meta.url), { withFileTypes: true })) {
-    if (entry.name.startsWith('.') || entry.name === 'node_modules') continue;
+    // Punktordner bleiben aussen vor (.git, .github, agentenlokale Ordner) - mit
+    // EINER benannten Ausnahme: `.env.example` ist die kommentierte Referenz und
+    // versioniert. Der frueher hier stehende `^\.env`-Zweig im Dateimuster war
+    // unerreichbar, weil dieser Sprung vor ihm lief: das Muster sagte eine
+    // Abdeckung zu, die der Suchlauf nie hatte. Bewusst NUR `.env.example` und
+    // nicht `.env*`: eine echte `.env` ist entwicklerlokal, und ein Guard, der
+    // sie liest, urteilt bei jedem anders.
+    const versionedDotFile = entry.isFile() && entry.name === '.env.example';
+    if (!versionedDotFile && (entry.name.startsWith('.') || entry.name === 'node_modules')) continue;
     const next = `${dir}${entry.name}`;
     if (entry.isDirectory()) out.push(...envDescriptors(`${next}/`));
-    else if (/\.(ya?ml|container)$|^\.env/.test(entry.name)) out.push(next);
+    else if (/\.(ya?ml|container)$/.test(entry.name) || versionedDotFile) out.push(next);
   }
   return out;
 }

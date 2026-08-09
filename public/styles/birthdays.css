@@ -126,8 +126,27 @@
  * verliert gegen sie allein durch die Reihenfolge (gemessen: die Knoepfe
  * blieben sichtbar, obwohl `(hover: none)` griff). */
 @media (hover: none) {
+  /* VERSTECKT, NICHT ENTFERNT: `display: none` nahm die beiden Knoepfe auch aus
+   * dem Fokus- und Screenreader-Baum. Die Gesten haengen ausschliesslich an
+   * `touchstart`/`touchmove`, die Reveal-Panels sind `aria-hidden`, und die
+   * Zeile selbst traegt keine Aktion - wer sein Telefon per Tastatur,
+   * Schaltersteuerung oder VoiceOver bedient, kam damit an keinen Geburtstag
+   * mehr heran. Optisch bleibt es dasselbe: aus dem Fluss genommen gibt die
+   * Zeile den Platz genauso frei. Beim Fokus kommen sie zurueck. */
   .birthday-item__actions {
-    display: none;
+    position: absolute;
+    width: var(--space-px);
+    height: var(--space-px);
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .birthday-item__actions:focus-within {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
   }
 
   .birthday-item {

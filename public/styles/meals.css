@@ -943,6 +943,13 @@
     -webkit-mask-image: linear-gradient(to right, var(--mask-opaque) calc(100% - var(--space-6)), transparent);
   }
 
+  /* Achse gespiegelt, Werte gleich - Begruendung an den Basisregeln in
+     filter-chip.css. */
+  [dir="rtl"] .week-grid.has-fade-start.has-fade-end {
+    mask-image: linear-gradient(to left, var(--mask-opaque) calc(100% - var(--space-6)), transparent);
+    -webkit-mask-image: linear-gradient(to left, var(--mask-opaque) calc(100% - var(--space-6)), transparent);
+  }
+
   .recipe-sidebar {
     display: flex;
     flex-direction: column;

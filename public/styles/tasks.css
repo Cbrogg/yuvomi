@@ -117,6 +117,13 @@
     mask-image: linear-gradient(to right, var(--mask-opaque) calc(100% - var(--space-6)), transparent);
   }
 
+  /* Achse gespiegelt, Werte gleich - Begruendung an den Basisregeln in
+     filter-chip.css. Die Endkante liegt in `ar` und `fa` links. */
+  [dir="rtl"] .tasks-filters-row .tasks-filters {
+    -webkit-mask-image: linear-gradient(to left, var(--mask-opaque) calc(100% - var(--space-6)), transparent);
+    mask-image: linear-gradient(to left, var(--mask-opaque) calc(100% - var(--space-6)), transparent);
+  }
+
   .tasks-filters-row .tasks-filters::-webkit-scrollbar {
     display: none;
   }

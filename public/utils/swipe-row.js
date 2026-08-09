@@ -29,14 +29,42 @@ const SWIPE_RESET_MS = 250;
 const SWIPE_HINT_KEY = 'yuvomi:swipeHintSeen';
 const SWIPE_HINT_MAX = 3;
 const SWIPE_SWAP_KEY = 'yuvomi:swipeSidesSwapped';
+const SWIPE_PRIOR_KEY = 'yuvomi:swipePriorInstall';
+
+/**
+ * Hatte dieser Browser die App schon VOR dem Seitentausch?
+ *
+ * Nur wer die alte Zuordnung kannte, hat etwas umzulernen; einer frischen
+ * 2.0.0-Installation „die Seiten wurden getauscht" zu melden, erklärt einen
+ * Zustand, den sie nie hatte.
+ *
+ * Der Beleg ist `swipeHintSeen`: den Zähler schrieb schon 1.x beim Öffnen von
+ * Aufgaben und Einkauf. Er taugt aber nur, solange 2.0 ihn noch nicht selbst
+ * gesetzt hat - deshalb steht die Frage HIER, beim Laden des Moduls, und nicht
+ * im Wisch-Handler: `maybeShowSwipeHint()` schreibt den Zähler beim ersten
+ * Render, also Millisekunden später. Die Antwort friert einmalig ein.
+ *
+ * Wer vor dem Update nie gewischt hat, gilt als neu - richtig so, auch dort
+ * gibt es keine Gewohnheit gegen die neue Zuordnung.
+ */
+function rememberPriorInstall() {
+  try {
+    if (localStorage.getItem(SWIPE_PRIOR_KEY)) return;
+    localStorage.setItem(SWIPE_PRIOR_KEY, localStorage.getItem(SWIPE_HINT_KEY) ? '1' : '0');
+  } catch { /* Storage gesperrt (Safari privat): dann eben ohne Hinweis */ }
+}
+rememberPriorInstall();
 
 /**
  * Einmaliger Hinweis, dass die Seiten getauscht wurden - beim ersten
  * ausgeführten Wisch nach dem Update, nicht beim Öffnen einer Seite.
  *
- * Hier und nicht in den Modulen: gelernt wird die GESTE, nicht die Liste
- * (derselbe Grund wie beim Nudge-Zähler). Wer in Aufgaben umlernt, hat es im
- * Einkauf schon gelernt.
+ * Der Merker ist geteilt, der Auslöser nicht: gelernt wird die GESTE, nicht die
+ * Liste (derselbe Grund wie beim Nudge-Zähler) - wer in Aufgaben umlernt, hat es
+ * im Einkauf schon gelernt, und der Hinweis kommt genau einmal. Auslösen dürfen
+ * ihn aber nur die beiden Listen, in denen tatsächlich etwas getauscht hat:
+ * Geburtstage und Abos hatten vor 2.0.0 überhaupt keine Geste, dort wäre die
+ * Meldung schlicht unwahr.
  *
  * Der Text nennt keine Seite. „Rechts" wäre in `ar` und `fa` falsch, und die
  * Zeile, die der Nutzer gerade gewischt hat, zeigt ihm die neue Zuordnung
@@ -44,6 +72,7 @@ const SWIPE_SWAP_KEY = 'yuvomi:swipeSidesSwapped';
  */
 function noticeSwappedSides() {
   try {
+    if (localStorage.getItem(SWIPE_PRIOR_KEY) !== '1') return;
     if (localStorage.getItem(SWIPE_SWAP_KEY)) return;
     localStorage.setItem(SWIPE_SWAP_KEY, '1');
   } catch { return; }
@@ -73,8 +102,13 @@ function noticeSwappedSides() {
  * @param {boolean} [opts.leading.flyOut=false]    - Karte fliegt hinaus, statt zurückzufedern
  * @param {(row: HTMLElement) => any} opts.leading.run
  * @param {Object} [opts.trailing]                 - Panel am Zeilenende, gleiche Form
+ * @param {boolean} [opts.sidesSwapped=false]      - Diese Liste hatte vor 2.0.0 schon eine
+ *                                                   Geste, und zwar andersherum. Nur sie
+ *                                                   darf den Umlern-Hinweis auslösen.
  */
-export function wireSwipeRows(listEl, { card, ignore = null, leading = null, trailing = null } = {}) {
+export function wireSwipeRows(listEl, {
+  card, ignore = null, leading = null, trailing = null, sidesSwapped = false,
+} = {}) {
   if (!listEl || !card) return;
 
   const panels = [leading?.reveal, trailing?.reveal].filter(Boolean);
@@ -195,7 +229,7 @@ export function wireSwipeRows(listEl, { card, ignore = null, leading = null, tra
       const dir = Math.abs(dx) > SWIPE_THRESHOLD ? sideFor(dx) : null;
       if (!dir) { resetCard(true); return; }
 
-      noticeSwappedSides();
+      if (sidesSwapped) noticeSwappedSides();
 
       if (dir.flyOut) {
         // Die Karte verlässt das Bild, die Aktion läuft danach - so sieht man

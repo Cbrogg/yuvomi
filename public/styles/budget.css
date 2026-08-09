@@ -252,6 +252,18 @@
     mask-image: linear-gradient(to right, transparent, var(--mask-opaque) var(--space-3), var(--mask-opaque) calc(100% - var(--space-3)), transparent);
     -webkit-mask-image: linear-gradient(to right, transparent, var(--mask-opaque) var(--space-3), var(--mask-opaque) calc(100% - var(--space-3)), transparent);
   }
+
+  /* Achse gespiegelt, Werte gleich - Begruendung an den Basisregeln in
+     filter-chip.css. */
+  [dir="rtl"] .budget-tabs.has-fade-end {
+    mask-image: linear-gradient(to left, var(--mask-opaque) calc(100% - var(--space-3)), transparent);
+    -webkit-mask-image: linear-gradient(to left, var(--mask-opaque) calc(100% - var(--space-3)), transparent);
+  }
+
+  [dir="rtl"] .budget-tabs.has-fade-start.has-fade-end {
+    mask-image: linear-gradient(to left, transparent, var(--mask-opaque) var(--space-3), var(--mask-opaque) calc(100% - var(--space-3)), transparent);
+    -webkit-mask-image: linear-gradient(to left, transparent, var(--mask-opaque) var(--space-3), var(--mask-opaque) calc(100% - var(--space-3)), transparent);
+  }
 }
 
 /* --------------------------------------------------------

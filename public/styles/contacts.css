@@ -430,9 +430,18 @@ html:has(.contacts-page.is-selecting) .page-fab {
   color: var(--color-danger);
 }
 
+/* Auf der Tönung trägt --color-danger nur 4,45:1 - deshalb hier der Ink-Ton
+ * (5,69:1), wie auf jeder anderen -light-Fläche der App. Das Symbol wandert
+ * mit, sonst steht die Zeile im Hover zweifarbig da. */
 .contact-menu-item--danger:hover,
 .contact-menu-item--danger:focus-visible {
   background-color: var(--color-danger-light);
+  color: var(--color-danger-ink);
+}
+
+.contact-menu-item--danger:hover .contact-menu-item__icon,
+.contact-menu-item--danger:focus-visible .contact-menu-item__icon {
+  color: var(--color-danger-ink);
 }
 
 /* --------------------------------------------------------

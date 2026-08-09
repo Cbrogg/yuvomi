@@ -474,16 +474,14 @@ button.split-expense:hover {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  /* Einspaltig wird aus der Panel-Spalte eine horizontale Gruppen-Leiste. */
-  .split-groups {
-    flex-direction: row;
-    overflow-x: auto;
-    padding-bottom: var(--space-1);
-  }
-
-  .split-group {
-    min-width: 240px;
-  }
+  /* HIER STAND EINE HORIZONTALE GRUPPEN-LEISTE (flex-direction: row,
+     overflow-x, min-width: 240px). Sie war die Antwort der alten Welt auf die
+     schmale Spalte. Seit die Gruppen eine Zeilenliste im Panel sind, ist die
+     Basisregel kein Flex-Container mehr - `flex-direction` lief damit ins
+     Leere, und die 240px-Mindestbreite haette die Zeilen mit ihren negativen
+     Aussenraendern ueber die Panelkante geschoben. Ausgeliefert (und in den
+     Screenshots belegt) ist die vertikale Liste; die Regeln beschrieben ein
+     Layout, das es nicht mehr gibt. */
 }
 
 @container split-page (max-width: 639px) {

@@ -80,6 +80,16 @@ test('die Browser-Suiten laufen unter test:document-guards', () => {
   const browserSuites = suiteScripts.filter((n) => n !== BROWSER_CHAIN && needsBrowser(n));
   const entry = pkg.scripts[BROWSER_CHAIN];
   assert.ok(entry, `${BROWSER_CHAIN} fehlt - die Browser-Kette braucht einen Einstieg.`);
+
+  // REICHWEITE VOR DEM URTEIL. `browserSuites` ist heute LEER - es gibt genau
+  // eine Suite mit Browserbedarf, und das ist die Kette selbst. Die Zusicherung
+  // darunter laeuft damit ueber eine leere Liste und sagt fuer sich genommen
+  // nichts. Was sie traegt, ist der Nachweis, dass das Kriterium ueberhaupt
+  // greift: erkennt `needsBrowser()` den Einstieg nicht mehr, ist jede zweite
+  // Browser-Suite unsichtbar geworden, und die leere Liste waere eine
+  // Falschmeldung statt eines Befunds.
+  assert.ok(needsBrowser(BROWSER_CHAIN),
+    'needsBrowser() erkennt den Browserbedarf nicht mehr - ab hier prueft dieser Test nichts');
   const missing = browserSuites.filter((n) => !runsIn(entry, n));
   assert.deepEqual(
     missing,

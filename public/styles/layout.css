@@ -4125,8 +4125,14 @@ textarea::placeholder {
  * weggewischt ist. Solange jede Zeile eine eigene Kartenflaeche hatte, fiel
  * das nicht auf - in dem Moment, in dem sie flach wird, laege der Zeilentext
  * ueber dem aufgedeckten Panel. Geteilt statt je Modul: die drei Wischlisten
- * hatten dafuer drei Regeln, die alle nur den Schatten setzten. */
-.swipe-row--swiping > :first-child {
+ * hatten dafuer drei Regeln, die alle nur den Schatten setzten.
+ *
+ * NICHT `:first-child`: die Reveal-Panels stehen im Markup VOR der Karte, und
+ * absolut positioniert liegen sie ohnehin darunter. Der Selektor traf damit
+ * das fuehrende Panel (0,2,0 schlaegt .swipe-reveal--done mit 0,1,0) - das
+ * Panel verlor seine Aktionsfarbe, und die bewegte Karte blieb ohne Traeger.
+ * `:not(.swipe-reveal)` benennt, was gemeint war: alles, was kein Panel ist. */
+.swipe-row--swiping > :not(.swipe-reveal) {
   background-color: var(--color-surface-work);
   box-shadow: var(--shadow-lg);
 }
@@ -4148,8 +4154,11 @@ textarea::placeholder {
  * wenn die Richtung feststeht), eine Dauerregel zu frueh.
  *
  * Geteilt statt je Modul: die Geste ist geteilt, die Geburtstage hatten das
- * Versprechen ueberhaupt nie und wischen dieselbe Bewegung. */
-.swipe-row--armed > :first-child {
+ * Versprechen ueberhaupt nie und wischen dieselbe Bewegung.
+ *
+ * `:not(.swipe-reveal)` aus demselben Grund wie oben: bewegt wird die Karte,
+ * nicht das Panel - `:first-child` promotete das falsche Element. */
+.swipe-row--armed > :not(.swipe-reveal) {
   will-change: transform;
 }
 

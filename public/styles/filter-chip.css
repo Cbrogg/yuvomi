@@ -120,6 +120,27 @@
   -webkit-mask-image: linear-gradient(to right, transparent, var(--mask-opaque) var(--space-6), var(--mask-opaque) calc(100% - var(--space-6)), transparent);
 }
 
+/* SPIEGELUNG FÜR RTL. `has-fade-start` heisst „am ANFANG geht es weiter" - in
+ * `ar` und `fa` (die App setzt `dir=rtl`) liegt der Anfang rechts. Ein
+ * Verlauf kennt keine logische Richtung: `to right` bleibt physisch, also
+ * fadete die Leiste dort die falsche Kante - sichtbare Chips wurden gedämpft,
+ * verborgene hart abgeschnitten. Die Werte sind dieselben, nur die Achse dreht.
+ * Nur `to left` statt einer eigenen Rezeptur, damit die beiden nicht driften. */
+[dir="rtl"] .has-fade-end {
+  mask-image: linear-gradient(to left, var(--mask-opaque) calc(100% - var(--space-6)), transparent);
+  -webkit-mask-image: linear-gradient(to left, var(--mask-opaque) calc(100% - var(--space-6)), transparent);
+}
+
+[dir="rtl"] .has-fade-start {
+  mask-image: linear-gradient(to left, transparent, var(--mask-opaque) var(--space-6));
+  -webkit-mask-image: linear-gradient(to left, transparent, var(--mask-opaque) var(--space-6));
+}
+
+[dir="rtl"] .has-fade-start.has-fade-end {
+  mask-image: linear-gradient(to left, transparent, var(--mask-opaque) var(--space-6), var(--mask-opaque) calc(100% - var(--space-6)), transparent);
+  -webkit-mask-image: linear-gradient(to left, transparent, var(--mask-opaque) var(--space-6), var(--mask-opaque) calc(100% - var(--space-6)), transparent);
+}
+
 /* --------------------------------------------------------
  * Scroll-Polster für jede Leiste mit Rand-Fade (HIG-Rollout Runde 3).
  *

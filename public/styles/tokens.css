@@ -1164,6 +1164,18 @@
   --glass-shadow-md:  var(--_glass-shadow-md);
   --_glass-shadow-lg: 0 10px 44px rgba(0, 0, 0, 0.14), 0 0 0 1px rgba(255, 255, 255, 0.45);
   --glass-shadow-lg:  var(--_glass-shadow-lg);
+  /* Die schwebende Tab-Kapsel braucht dunklen Halt statt des weissen Rings der
+     drei Stufen darueber: auf dem hellen Grouped Background ist der Ring
+     unsichtbar, und die Kapsel schwimmt formlos. Offset + weiche Streuung +
+     0,5px-Kontur.
+     ABSICHTLICH OHNE DUNKEL-VARIANTE: die Kapsel trug diese Werte in beiden
+     Themes, seit es sie gibt, und so ist sie gemessen. Wer hier eine dunkle
+     Fassung ergaenzt, aendert das Aussehen - das ist eine Entscheidung, kein
+     Nachziehen einer Luecke. */
+  --_glass-shadow-capsule: 0 8px 24px rgba(0, 0, 0, 0.14),
+                           0 2px 8px rgba(0, 0, 0, 0.08),
+                           0 0 0 0.5px rgba(0, 0, 0, 0.06);
+  --glass-shadow-capsule:  var(--_glass-shadow-capsule);
 
   /* f) Glass-Radien — iOS-26-Kurvatur */
   --radius-glass-card:   26px;
