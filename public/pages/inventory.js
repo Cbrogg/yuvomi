@@ -24,6 +24,7 @@ import { renderPageSearch, wirePageSearch } from '/utils/page-search.js';
 import { formatMoney } from '/utils/money.js';
 import { formatDate, getLocale } from '/i18n.js';
 import { renderDocumentAttachField, bindDocumentAttachField } from '/components/document-attach.js';
+import { warrantyStatus, hasWarrantyAlert } from '/utils/inventory-warranty.js';
 
 let _container = null;
 let _search = null;
@@ -145,12 +146,14 @@ function matchesQuery(item) {
 function renderItemRow(item) {
   const hasAttachments = (item.attachments?.length ?? 0) > 0;
   const hasBookings = (item.linked_entries?.length ?? 0) > 0;
+  const warrantyAlert = hasWarrantyAlert(item);
   return `
     <div class="inventory-item-row" data-id="${item.id}" role="button" tabindex="0">
       <div class="inventory-item-row__name">
         <span class="inventory-item-row__name-text">${esc(item.name)}</span>
         ${hasAttachments ? `<i data-lucide="paperclip" class="icon-sm" aria-hidden="true"></i><span class="sr-only">${esc(t('inventory.hasAttachmentsLabel'))}</span>` : ''}
         ${hasBookings ? `<i data-lucide="receipt" class="icon-sm" aria-hidden="true"></i><span class="sr-only">${esc(t('inventory.hasBookingsLabel'))}</span>` : ''}
+        ${warrantyAlert ? `<i data-lucide="shield-alert" class="icon-sm" aria-hidden="true"></i><span class="sr-only">${esc(t('inventory.warrantyAlertLabel'))}</span>` : ''}
       </div>
       <div class="inventory-item-row__category">${esc(item.category_name)}</div>
       <div class="inventory-item-row__location">${item.location_path ? esc(item.location_path) : ''}</div>
@@ -424,6 +427,33 @@ function renderLinkedEntries(panel, item) {
   if (window.lucide) window.lucide.createIcons({ el: container });
 }
 
+function updateWarrantyStatus(panel) {
+  const statusEl = panel.querySelector('#inv-warranty-status');
+  const purchaseDate = panel.querySelector('#inv-purchase-date').value;
+  const warrantyRaw = panel.querySelector('#inv-warranty').value.trim();
+  const status = warrantyStatus({
+    purchase_date: purchaseDate || null,
+    warranty_months: warrantyRaw === '' ? null : Number(warrantyRaw),
+  });
+
+  if (!status) {
+    statusEl.hidden = true;
+    statusEl.className = 'inventory-warranty-status';
+    return;
+  }
+
+  statusEl.hidden = false;
+  statusEl.className = `inventory-warranty-status inventory-warranty-status--${status.state}`;
+  const formattedDate = formatDate(new Date(`${status.endDateKey}T00:00:00`));
+  if (status.state === 'expired') {
+    statusEl.textContent = t('inventory.warrantyStatusExpired', { date: formattedDate });
+  } else if (status.state === 'expiring') {
+    statusEl.textContent = t('inventory.warrantyStatusExpiringSoon', { days: status.days });
+  } else {
+    statusEl.textContent = t('inventory.warrantyStatusValid', { date: formattedDate });
+  }
+}
+
 function openItemModal(mode, item = null) {
   const isEdit = mode === 'edit';
   let pickedBooking = null; // nur im Anlegen-Fluss: {entry, role:'purchase'} vor dem Speichern
@@ -522,6 +552,7 @@ function openItemModal(mode, item = null) {
           <div class="form-group">
             <label class="form-label" for="inv-warranty">${esc(t('inventory.warrantyMonthsLabel'))}</label>
             <input id="inv-warranty" class="form-input" type="number" min="0" max="600" step="1" inputmode="numeric">
+            <p class="inventory-warranty-status" id="inv-warranty-status" hidden></p>
           </div>
           <div class="form-group">
             <label class="form-label" for="inv-condition">${esc(t('inventory.conditionLabel'))}</label>
@@ -561,6 +592,10 @@ function openItemModal(mode, item = null) {
       panel.querySelector('#inv-warranty').value = isEdit && item.warranty_months != null ? String(item.warranty_months) : '';
       panel.querySelector('#inv-condition').value = isEdit ? item.condition : 'good';
       panel.querySelector('#inv-notes').value = isEdit && item.notes ? item.notes : '';
+
+      updateWarrantyStatus(panel);
+      panel.querySelector('#inv-purchase-date').addEventListener('input', () => updateWarrantyStatus(panel));
+      panel.querySelector('#inv-warranty').addEventListener('input', () => updateWarrantyStatus(panel));
 
       wireBlurValidation(panel);
       const attachments = bindDocumentAttachField(panel, {

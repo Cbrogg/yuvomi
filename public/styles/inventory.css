@@ -291,3 +291,25 @@
   justify-content: flex-end;
   gap: var(--space-2);
 }
+
+/* --------------------------------------------------------
+ * Garantiestatus-Zeile (Stufe 4) - eigene Klasse statt .form-hint, das nur in
+ * der page-scoped settings.css gestylt ist und hier fehlt.
+ * -------------------------------------------------------- */
+
+.inventory-warranty-status {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-sm);
+}
+
+.inventory-warranty-status--valid {
+  color: var(--color-text-secondary);
+}
+
+.inventory-warranty-status--expiring {
+  color: var(--color-warning);
+}
+
+.inventory-warranty-status--expired {
+  color: var(--color-danger);
+}
