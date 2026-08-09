@@ -11,47 +11,59 @@
        genau die fehlkonfigurierte Umgebung, in der ein Installer läuft. -->
   <style>
     :root {
-      --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      --font-mono: ui-monospace, 'SF Mono', 'Fira Code', 'Roboto Mono', monospace;
-      --color-bg: #F5F4F1;
+      /* Der System-Font-Stack, nicht Plus Jakarta Sans: die Schrift ist mit dem
+         HIG-Redesign aus der App entfallen, und ein Fallback, der sie lädt,
+         zeigt eine Welt, die es nicht mehr gibt. */
+      --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "Segoe UI", Roboto, Arial, sans-serif;
+      --font-mono: ui-monospace, 'SF Mono', 'Fira Code', 'Fira Mono', 'Roboto Mono', monospace;
+      --color-bg: #F2F2F7;
       --color-surface: #FFFFFF;
-      --color-surface-2: #FAFAF8;
-      --color-border: #E8E7E2;
-      --color-text-primary: #1C1C1A;
-      --color-text-secondary: #6C6B67;
-      --color-accent: #6C3AED;
-      --color-accent-hover: #4A26BB;
+      --color-surface-2: #FBFBFD;
+      --color-border: #E5E5EA;
+      --color-text-primary: #1C1C1E;
+      --color-text-secondary: #636366;
+      --color-accent: #4F4DC9;
+      --color-accent-hover: #4340B8;
       /* Tinte auf farbiger Fläche. Muss dem Theme folgen: --color-accent hellt
-         im Dark-Mode auf #A78BFA auf, weißer Text fällt dort auf 2,72:1.
+         im Dark-Mode auf #8A87FF auf, weißer Text fällt dort durch.
          tokens.css definiert dasselbe Token; dessen --color-text-on-accent ist
          dagegen statisch weiß und taugt hier deshalb nicht. */
       --color-ink-on-vivid: #FFFFFF;
-      --color-success: #15803D;
-      --color-warning: #A15C0A;
-      --color-danger: #B91C1C;
+      --color-success: #1E7B35;
+      --color-warning: #A85D00;
+      --color-danger: #D70015;
       --radius-xs: 4px;
-      --radius-sm: 8px;
+      --radius-sm: 10px;
       --radius-md: 12px;
       --radius-lg: 16px;
       --radius-full: 9999px;
       /* Typo-Rampe aus tokens.css. Der Installer rechnete vorher in rohen px und
-         lag mit der Hälfte der Werte zwischen zwei Stufen. */
+         lag mit der Hälfte der Werte zwischen zwei Stufen. Seit dem Redesign ist
+         die Rampe Apples: --text-base ist Callout (17px am Body, hier 16px als
+         iOS-Zoom-Schwelle), --text-2xl ist Title 2 mit 22px statt 24px. */
       --text-2xs:  0.625rem;
       --text-xs:   0.75rem;
       --text-sm:   0.875rem;
       --text-base: 1rem;
       --text-lg:   1.125rem;
       --text-xl:   1.25rem;
-      --text-2xl:  1.5rem;
-      --shadow-md: 0 2px 8px rgba(18,14,8,.09), 0 1px 2px rgba(18,14,8,.05);
-      --shadow-lg: 0 8px 24px rgba(18,14,8,.13), 0 2px 6px rgba(18,14,8,.05);
+      --text-2xl:  1.375rem;
+      --shadow-md: 0 2px 10px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+      --shadow-lg: 0 8px 28px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.04);
     }
     @media (prefers-color-scheme: dark) {
       :root {
-        --color-bg: #16151A; --color-surface: #201F26; --color-surface-2: #2A2932;
-        --color-border: #35343E; --color-text-primary: #F4F3F7; --color-text-secondary: #A9A7B4;
-        --color-accent: #A78BFA; --color-accent-hover: #9066F5; --color-ink-on-vivid: #1A1A18;
-        --color-success: #4ADE80; --color-warning: #FBBF24; --color-danger: #F87171;
+        /* --color-surface-2 liegt hier TIEFER als --color-bg (#050507 gegen
+           #0A0A0C) - das ist kein Vertipper, sondern die Dunkelseite der App:
+           die gehobene Fläche ist die Karte (--color-surface), der Grund darunter
+           wird dunkler statt heller. --color-border folgt nicht der
+           Neutralen-Rampe, tokens.css setzt es im Dark-Mode eigens. */
+        --color-bg: #0A0A0C; --color-surface: #1C1C1E; --color-surface-2: #050507;
+        --color-border: #3E3E42; --color-text-primary: #F2F2F7; --color-text-secondary: #AEAEB2;
+        --color-accent: #8A87FF; --color-accent-hover: #9B98FF; --color-ink-on-vivid: #0A0A0C;
+        --color-success: #30D158; --color-warning: #FF9F0A; --color-danger: #FF6961;
+        --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.40);
+        --shadow-lg: 0 8px 28px rgba(0, 0, 0, 0.50);
       }
     }
   </style>
@@ -65,21 +77,16 @@
       font-family: var(--font-sans); color: var(--color-text-primary);
       min-height: 100dvh; display: flex; flex-direction: column;
       align-items: center; padding: 48px 16px 80px;
-      /* Ein einzelner Akzent-Hauch am oberen Rand: der Marken-Peak ohne farbige
-         Fläche. Stand bis v2.0.0 wortgleich auf der Login-Seite der App
-         (public/styles/login.css, heute auth.css); dort ist der Verlauf mit dem
-         HIG-Redesign gefallen - die Marke trägt jetzt das Tile, nicht die Bühne.
-         Der Installer zieht bewusst noch nicht nach: er ist eine der drei
-         Flächen ausserhalb der App, die als eigener Vorgang umgestellt werden.
-         Wer das hier anfasst, macht ihn - der Zeiger auf die App-Datei ist
-         seither kein Vorbild mehr, sondern eine Herkunftsangabe. */
-      background:
-        radial-gradient(
-          ellipse 160% 60% at 50% -20%,
-          color-mix(in srgb, var(--color-accent) 10%, transparent),
-          transparent 60%
-        ),
-        var(--color-bg);
+      /* HIER STAND EIN AKZENT-HAUCH am oberen Rand - ein radialer Verlauf, der
+         bis v2.0.0 wortgleich auf der Login-Seite der App stand. Dort ist er mit
+         dem HIG-Redesign gefallen, und der Grund gilt hier genauso: die Marke
+         trägt das Tile, nicht die Bühne. Der Installer HAT das Tile (.brand__mark
+         weiter unten, 64px auf Akzentfläche) - der Verlauf war die zweite
+         Markenaussage auf derselben Fläche, und die leisere von beiden.
+
+         Der Grund bleibt notiert, damit die Fläche nicht beim nächsten Durchgang
+         als „kahl" wieder gefüllt wird: sie ist absichtlich der Seitengrund. */
+      background: var(--color-bg);
       /* Die Karte hing oben und liess rund 40 % der Höhe leer. `safe` verhindert
          den klassischen Zentrier-Bug: ohne das Schlüsselwort schneidet ein
          überhoher Schritt (Advanced sind 4 Bildschirme) oben unscrollbar ab.
