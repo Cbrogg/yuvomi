@@ -52,18 +52,27 @@ jobs:
           plugins: 'code-review@claude-code-plugins'
           prompt: '/code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }}'
           allowed_bots: 'dependabot[bot]'
-          # Die Review braucht mehr, als ihr Plugin deklariert. Dessen
-          # `allowed-tools` nennt nur gh-Aufrufe und das Inline-Kommentar-MCP -
-          # also den Weg zum DIFF und den Weg zum Posten, aber keinen einzigen,
-          # um die geänderten Dateien zu LESEN. Genau daran ist sie bisher jedes
-          # Mal gescheitert: `permission_denials_count: 5` bei zehn Turns, Job
-          # grün, kein Kommentar (nachgemessen an #706, #703, #684, #674, #667 -
-          # sie hat noch nie etwas gepostet).
+          # DIESE LISTE ERSETZT, SIE ERGÄNZT NICHT. Das war die Annahme, die den
+          # zweiten Anlauf gekostet hat: `--allowed-tools` verdrängt die acht
+          # Werkzeuge, die das Plugin `code-review@claude-code-plugins` in seinem
+          # Frontmatter deklariert. Sie müssen deshalb hier alle wieder auftauchen.
           #
-          # Read/Grep/Glob geben ihr den Quelltext um den Diff herum; ohne den
-          # kann sie einen Befund nicht gegenprüfen. `git rev-parse` verlangt die
-          # Plugin-Anleitung selbst für die SHA-gebundenen Codelinks.
-          claude_args: '--allowed-tools "Read,Grep,Glob,Bash(git rev-parse:*),Bash(git log:*),Bash(git diff:*)"'
+          # Der Weg dahin, in Zahlen, damit die nächste Runde nicht wieder rät:
+          #   #706, ohne diese Zeile:  10 Turns,  28 s, 5 Verweigerungen, nichts
+          #                            gepostet. Es fehlte alles zum LESEN.
+          #   #708, mit Read/Grep/Glob: 23 Turns, 4,5 min, 1 Verweigerung, immer
+          #                            noch nichts gepostet. Die Review hat also
+          #                            wirklich gearbeitet und ist erst am Ende
+          #                            gescheitert - an `gh pr comment`, dem
+          #                            einzigen Weg, ihr Ergebnis abzuliefern.
+          #
+          # Reihenfolge unten: erst die acht des Plugins, dann die sechs, die es
+          # nicht deklariert, aber braucht. Read/Grep/Glob geben ihr den Quelltext
+          # um den Diff herum; `git rev-parse` verlangt seine eigene Anleitung für
+          # die SHA-gebundenen Codelinks.
+          claude_args: >-
+            --allowed-tools
+            "Bash(gh issue view:*),Bash(gh search:*),Bash(gh issue list:*),Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*),mcp__github_inline_comment__create_inline_comment,Read,Grep,Glob,Bash(git rev-parse:*),Bash(git log:*),Bash(git diff:*)"
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
 
