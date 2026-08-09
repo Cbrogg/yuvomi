@@ -121,11 +121,32 @@ const darkSchemeQuery = window.matchMedia?.('(prefers-color-scheme: dark)') ?? n
 function setThemeColor(lightColor, darkColor) {
   if (!isStandalone) return;
   const metas = document.querySelectorAll('meta[name="theme-color"]');
+  const dark = darkColor || lightColor;
+
+  // DIE METAS FOLGEN DEM SYSTEM, DIE APP FOLGT DER WAHL DES NUTZERS.
+  //
+  // Die beiden `<meta name="theme-color">` in index.html tragen ein
+  // `media="(prefers-color-scheme: …)"`; welche davon gilt, entscheidet also das
+  // BETRIEBSSYSTEM. Die App entscheidet es ueber `data-theme` auf <html>. Wer in
+  // der installierten PWA auf einem hellen System ausdruecklich Dunkel waehlt,
+  // bekam deshalb eine helle Statusbar ueber einer dunklen Seite - und
+  // umgekehrt. Ein erneuter Aufruf half nicht: er schrieb dasselbe Paar noch
+  // einmal, und die Auswahl davon blieb dieselbe.
+  //
+  // Bei ausdruecklicher Wahl tragen deshalb BEIDE Metas die aktive Farbe; dann
+  // ist gleichgueltig, welche der Browser nimmt. Nur im Automatik-Modus (kein
+  // `data-theme`) bleibt das Paar ein Paar - dort ist das System die richtige
+  // Quelle.
+  const forced = document.documentElement.getAttribute('data-theme');
+  const [first, second] = forced === 'dark' ? [dark, dark]
+    : forced === 'light' ? [lightColor, lightColor]
+      : [lightColor, dark];
+
   if (metas.length >= 2) {
-    metas[0].setAttribute('content', lightColor);
-    metas[1].setAttribute('content', darkColor || lightColor);
+    metas[0].setAttribute('content', first);
+    metas[1].setAttribute('content', second);
   } else if (metas.length === 1) {
-    metas[0].setAttribute('content', lightColor);
+    metas[0].setAttribute('content', first);
   }
 }
 
@@ -1714,18 +1735,57 @@ function adoptPageFab() {
  * jeder Mutation den ganzen Teilbaum ab. `wireCollapsingHeader` ist idempotent.
  */
 let _toolbarObserverRoot = null;
+/**
+ * Die Verdrahtung eines Kopfes haelt Beobachter - und einer davon ueberlebt
+ * seinen Kopf.
+ *
+ * `wireCollapsingHeader()` gibt ein `destroy()` zurueck; es wurde hier
+ * weggeworfen. Bei Resize- und Mutation-Observer verzeiht das die
+ * Speicherbereinigung: sie beobachten nur Knoten aus demselben abgehaengten
+ * Teilbaum, der als Ganzes unerreichbar wird. Der IntersectionObserver nicht -
+ * seine `root` ist der Scrollport, und der ist ein Vorfahr, den
+ * `content.replaceChildren()` NICHT mitnimmt. Ein registrierter Observer an
+ * einer lebenden Wurzel haelt sein abgehaengtes Ziel fest, und das waechst mit
+ * jeder Navigation.
+ *
+ * Deshalb merkt sich die Shell die Handles und raeumt sie beim Entfernen des
+ * Kopfes ab - im selben Beobachter, der sie anlegt. Ein zweiter Ort waere eine
+ * zweite Annahme darueber, wann ein Kopf verschwindet.
+ */
+const _toolbarHandles = new WeakMap();
+
+function wireToolbar(el) {
+  const handle = wireCollapsingHeader(el);
+  // Der erste Handle gewinnt: `wireCollapsingHeader` ist idempotent und liefert
+  // beim zweiten Anlauf ein wirkungsloses Paar zurueck. Wer das eintraegt,
+  // ueberschreibt genau das `destroy()`, um das es hier geht.
+  if (handle && !_toolbarHandles.has(el)) _toolbarHandles.set(el, handle);
+}
+
+function unwireToolbar(el) {
+  _toolbarHandles.get(el)?.destroy();
+  _toolbarHandles.delete(el);
+}
+
 function wirePageToolbars() {
   const main = document.getElementById('main-content');
   if (!main) return;
-  main.querySelectorAll('.page-toolbar').forEach(wireCollapsingHeader);
+  main.querySelectorAll('.page-toolbar').forEach(wireToolbar);
   if (_toolbarObserverRoot === main) return;
   _toolbarObserverRoot = main;
   new MutationObserver((mutations) => {
     for (const m of mutations) {
       for (const node of m.addedNodes) {
         if (node.nodeType !== Node.ELEMENT_NODE) continue;
-        if (node.matches('.page-toolbar')) wireCollapsingHeader(node);
-        else node.querySelectorAll('.page-toolbar').forEach(wireCollapsingHeader);
+        if (node.matches('.page-toolbar')) wireToolbar(node);
+        else node.querySelectorAll('.page-toolbar').forEach(wireToolbar);
+      }
+    }
+    for (const m of mutations) {
+      for (const node of m.removedNodes) {
+        if (node.nodeType !== Node.ELEMENT_NODE) continue;
+        if (node.matches('.page-toolbar')) unwireToolbar(node);
+        else node.querySelectorAll('.page-toolbar').forEach(unwireToolbar);
       }
     }
   }).observe(main, { childList: true, subtree: true });

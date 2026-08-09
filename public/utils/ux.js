@@ -235,6 +235,14 @@ export function wireCollapsingHeader(toolbar) {
     const port = e.target;
     if (!(port instanceof Element) || port === toolbar || toolbar.contains(port)) return;
     const reserve = port.scrollHeight - port.clientHeight;
+    // EIN WAAGERECHTER STREIFEN IST NICHT DER SCROLLPORT DER SEITE. Der
+    // Lauscher haengt in der Capture-Phase am Modul-Root und faengt damit auch
+    // die Scroll-Ereignisse der Filterreihen und Listen-Tabs ab. Senkrecht
+    // haben die keine Reserve, also landete jeder Filterwisch im Ruecksetzer
+    // darunter: der Kopf klappte auf, obwohl die Liste gescrollt blieb, und
+    // blieb es bis zum naechsten senkrechten Scroll. Wer waagerecht Reserve
+    // hat und senkrecht keine, ist nicht gemeint.
+    if (reserve <= 0 && port.scrollWidth > port.clientWidth) return;
     // Nur kollabieren, wenn der Port das Ausklappen danach auch verkraftet -
     // sonst schiebt die zurückkehrende Kopfhöhe den Scroll auf 0, der Kopf
     // klappt wieder aus und beides pendelt gegeneinander.

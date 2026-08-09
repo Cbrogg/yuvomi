@@ -23,6 +23,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Deleting a contact or a document from its context menu was announced in a red that fell just short of the contrast requirement while the row was highlighted, at 4.45:1 against the tinted background. Both now use the darker ink tone the rest of the app already used on tinted surfaces
 - In Arabic and Persian, every horizontally scrolling bar faded the wrong edge: the filter rows in tasks, the budget tabs and the meal week all dimmed the chips you could see while cutting off the ones you could not. The scroll position was measured in a way that never reported "there is more at the start" in a right-to-left layout, and the fade itself had a fixed physical direction
 - During a swipe, the coloured action panel behind the row briefly turned into a plain surface, and the moving row lost the backing that keeps its text off the panel underneath
+- In the installed app, choosing a theme that disagreed with the system left the status bar in the other one: dark mode on a light phone kept a light bar above a dark page, and the reverse for light mode on a dark phone. The status bar now follows your choice, and only falls back to the system setting when the theme is set to automatic
+- On pantry and shopping, swiping a filter row or list tab sideways popped the page header back open even though the list underneath was still scrolled, and it stayed open until the next vertical scroll
+- Navigating between modules left one observer behind per page header, attached to a header that no longer existed
 
 ## [1.87.0] - 2026-08-06
 

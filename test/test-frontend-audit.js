@@ -5611,6 +5611,37 @@ test('the standalone status bar colour is recomputed on a runtime theme switch t
   );
 });
 
+/**
+ * Nachziehen allein genuegt nicht, wenn die Auswahl beim System liegt.
+ *
+ * Die beiden `<meta name="theme-color">` tragen ein `media="(prefers-color-
+ * scheme: …)"` - WELCHE gilt, entscheidet damit das Betriebssystem, waehrend die
+ * App es ueber `data-theme` entscheidet. Der Guard darueber belegt nur, dass
+ * beide Umschaltwege `setThemeColor` erneut aufrufen; genau das half hier nicht,
+ * weil derselbe Aufruf dasselbe Paar noch einmal schrieb. Wer auf einem hellen
+ * System ausdruecklich Dunkel waehlte, behielt die helle Statusbar ueber der
+ * dunklen Seite.
+ *
+ * Deshalb muss die Funktion die AUSDRUECKLICHE Wahl kennen und bei ihr beide
+ * Metas auf die aktive Farbe setzen. Nur ohne `data-theme` bleibt das Paar ein
+ * Paar - dort ist das System die richtige Quelle.
+ */
+test('die Statusbar folgt der ausdruecklichen Theme-Wahl, nicht nur dem System', () => {
+  const router = read('../public/router.js');
+  const fn = router.match(/function setThemeColor\([\s\S]*?\n\}/);
+  assert.ok(fn, 'expected setThemeColor to own the meta writes');
+
+  assert.match(fn[0], /getAttribute\('data-theme'\)/,
+    'setThemeColor muss die ausdrueckliche Wahl lesen - die Metas folgen sonst dem System');
+
+  // Die Metas selbst tragen die Systembedingung; ohne sie waere die ganze
+  // Unterscheidung gegenstandslos und dieser Guard eine leere Zusicherung.
+  const index = read('../public/index.html');
+  const scoped = [...index.matchAll(/<meta name="theme-color"[^>]*media="\(prefers-color-scheme/g)];
+  assert.equal(scoped.length, 2,
+    `erwartet: zwei system-gebundene theme-color-Metas, gefunden: ${scoped.length}`);
+});
+
 test('modal Enter submits the form instead of advancing to the next field (audit 1.4)', () => {
   const src = read('../public/components/modal.js');
   const enterBlock = src.match(/if \(e\.key === 'Enter'\) \{[\s\S]*?\n {4}\}/);
