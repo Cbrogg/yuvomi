@@ -306,13 +306,13 @@ function openBookingPicker(panel, { initialMonth, includeRole = false } = {}) {
       </div>`);
     panel.append(overlay);
     if (window.lucide) window.lucide.createIcons({ el: overlay });
+    const opener = document.activeElement;
     overlay.querySelector('[data-picker-close]').focus();
 
     const listEl = overlay.querySelector('[data-picker-list]');
     const monthEl = overlay.querySelector('[data-picker-month]');
     const roleEl = overlay.querySelector('[data-picker-role]');
     const navEl = overlay.querySelector('.inventory-booking-picker__nav');
-    const opener = document.activeElement;
 
     const close = (result) => {
       overlay.remove();
@@ -342,7 +342,7 @@ function openBookingPicker(panel, { initialMonth, includeRole = false } = {}) {
       listEl.replaceChildren();
       listEl.insertAdjacentHTML('afterbegin', `<p class="inventory-booking-picker__status">${esc(t('common.loading'))}</p>`);
       api.get(`/budget?month=${month}`).then((res) => {
-        entries = res.data || [];
+        entries = (res.data || []).filter((e) => !e.recurrence_parent_id && !e.is_pending);
         renderList();
       }).catch(() => {
         listEl.replaceChildren();
@@ -409,7 +409,7 @@ function renderLinkedEntries(panel, item) {
       <span class="inventory-linked-entry-row__title">${esc(link.title)}</span>
       <span class="inventory-linked-entry-row__role">${esc(roleLabel(link.role))}</span>
       <span class="inventory-linked-entry-row__date">${esc(formatDate(link.date))}</span>
-      <span class="inventory-linked-entry-row__amount">${esc(formatMoney(link.amount, item.currency))}</span>
+      <span class="inventory-linked-entry-row__amount">${esc(formatMoney(link.amount, _householdCurrency))}</span>
       <button class="btn btn--icon btn--sm" type="button" data-remove-entry="${link.entry_id}"
               aria-label="${esc(t('inventory.removeBookingAction', { title: link.title }))}">
         <i data-lucide="x" aria-hidden="true"></i>
@@ -418,7 +418,7 @@ function renderLinkedEntries(panel, item) {
   container.insertAdjacentHTML('beforeend', `
     <div class="inventory-linked-entry-total">
       <span>${esc(t('inventory.totalLinkedLabel'))}</span>
-      <span>${esc(formatMoney(item.linked_entries_total, item.currency))}</span>
+      <span>${esc(formatMoney(item.linked_entries_total, _householdCurrency))}</span>
     </div>`);
 
   if (window.lucide) window.lucide.createIcons({ el: container });
@@ -625,9 +625,9 @@ function openItemModal(mode, item = null) {
             chip.replaceChildren();
           });
           if (window.lucide) window.lucide.createIcons({ el: chip });
-          // Kaufpreis nur vorbelegen, wenn das Feld noch leer ist - der Server
-          // prueft beim Speichern ohnehin nochmal, ob die Buchung schon
-          // verknuepft ist. Das hier ist nur die Komfort-Vorschau im Formular.
+          // Kaufpreis nur vorbelegen, wenn das Feld noch leer ist - das ist nur
+          // eine editierbare Komfort-Vorschau und prueft NICHT erneut, ob die
+          // Buchung schon verknuepft ist (das tut der Server nur, wenn das Feld leer bleibt).
           const priceInput = panel.querySelector('#inv-purchase-price');
           if (!priceInput.value.trim()) priceInput.value = String(Math.abs(picked.entry.amount));
         });

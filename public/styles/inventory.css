@@ -231,6 +231,12 @@
   gap: var(--space-1);
 }
 
+/* [hidden] hat gegenüber display:flex zu geringe Spezifität - explizit übersteuern. */
+.inventory-booking-picker__list[hidden],
+.inventory-booking-picker__nav[hidden] {
+  display: none;
+}
+
 .inventory-booking-picker__status {
   margin: auto;
   color: var(--color-text-tertiary);
