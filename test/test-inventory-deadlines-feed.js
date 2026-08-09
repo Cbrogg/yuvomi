@@ -99,14 +99,17 @@ test('Token-Lebenszyklus: null ohne Token, regenerate erzeugt, clear entfernt', 
 // Verwaltungs-Router
 // --------------------------------------------------------
 
+let actorRole = 'admin';
 const app = express();
 app.use(express.json());
+app.use((req, _res, next) => { req.authRole = actorRole; next(); });
 app.use('/inventory/deadlines-feed', deadlinesFeedRouter);
 const server = app.listen(0);
 const baseUrl = await new Promise((r) => server.on('listening', () => r(`http://127.0.0.1:${server.address().port}`)));
 test.after(() => server.close());
 
-async function call(method, path) {
+async function call(method, path, { as = 'admin' } = {}) {
+  actorRole = as;
   const res = await fetch(`${baseUrl}${path}`, { method });
   let json = null;
   try { json = await res.json(); } catch { /* leer */ }
@@ -138,4 +141,21 @@ test('DELETE /deadlines-feed deaktiviert den Feed', async () => {
 
   const get = await call('GET', '/inventory/deadlines-feed');
   assert.equal(get.body.data, null);
+});
+
+test('Nicht-Admins duerfen den Feed weder lesen noch rotieren noch abschalten', async () => {
+  // Das Token ist ein haushaltweites Artefakt, seine Oberflaeche ist admin-only
+  // registriert - die rohe API muss dieselbe Grenze ziehen.
+  await call('POST', '/inventory/deadlines-feed/regenerate');
+  for (const [method, path] of [
+    ['GET', '/inventory/deadlines-feed'],
+    ['POST', '/inventory/deadlines-feed/regenerate'],
+    ['DELETE', '/inventory/deadlines-feed'],
+  ]) {
+    const r = await call(method, path, { as: 'member' });
+    assert.equal(r.status, 403, `${method} ${path} sollte 403 liefern`);
+  }
+  // Der Feed muss die abgewiesenen Zugriffe unveraendert ueberstehen.
+  const get = await call('GET', '/inventory/deadlines-feed');
+  assert.ok(get.body.data.token);
 });

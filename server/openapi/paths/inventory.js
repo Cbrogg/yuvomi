@@ -80,11 +80,11 @@ export function inventoryPaths() {
       }),
     },
     '/api/v1/inventory/deadlines-feed': {
-      get: op({ summary: 'Get inventory warranty-deadlines ICS feed status', tag: 'Inventory' }),
-      delete: op({ summary: 'Disable inventory warranty-deadlines ICS feed', tag: 'Inventory', stateChanging: true }),
+      get: op({ summary: 'Get inventory warranty-deadlines ICS feed status', tag: 'Inventory', admin: true }),
+      delete: op({ summary: 'Disable inventory warranty-deadlines ICS feed', tag: 'Inventory', stateChanging: true, admin: true }),
     },
     '/api/v1/inventory/deadlines-feed/regenerate': {
-      post: op({ summary: 'Regenerate inventory warranty-deadlines ICS feed token', tag: 'Inventory', stateChanging: true }),
+      post: op({ summary: 'Regenerate inventory warranty-deadlines ICS feed token', tag: 'Inventory', stateChanging: true, admin: true }),
     },
   };
 }
