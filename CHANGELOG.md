@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.1] - 2026-08-10
+
+### Changed
+
+- The setup wizard follows the redesigned app. It already borrowed the app's design tokens, so in normal use it looked current, but the colours it falls back on when those tokens cannot be loaded still described the previous release: a packaging or volume mistake produced a page that looked like the old version and pointed the diagnosis in the wrong direction. The tinted wash across the top is gone as well, for the same reason the login screen lost it - the mark is carried by the tile, not by the backdrop
+
 ### Fixed
 
 - On the overview, the quick-action button behaved unlike the one in every other module. It slid out of sight whenever you scrolled down and only came back on the way up, which meant a single downward nudge you never made - an address bar sliding out on iOS, a widget growing as its data arrived - could take the button away and leave it away. It was also the last floating button still living inside the scrolling area, the arrangement that made it drift off screen on iPhone in the first place (#634). It now sits in the same place as every other module's button, keeps still while you scroll, and the room reserved for it below the last row comes from the same measurement the rest of the app uses, so the button can no longer cover a link at the bottom of a widget

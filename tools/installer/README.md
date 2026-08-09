@@ -137,12 +137,15 @@ wins over the derivation.
 
 ## Design
 
-The wizard reuses the app's design language: shared design tokens
-(`public/styles/tokens.css`) and the Plus Jakarta Sans variable font are served
-read-only from the repo, so the installer matches the app's violet accent,
-radii, shadows, and automatic dark mode. An inline fallback token block (with a
-dark-mode variant) precedes the `tokens.css` link, so the wizard stays legible
-even if that stylesheet cannot be served. The wizard meets WCAG 2.1 AA
+The wizard reuses the app's design language: the shared design tokens
+(`public/styles/tokens.css`) are served read-only from the repo, so the
+installer matches the app's Indigo accent, radii, shadows, and automatic dark
+mode. No font is served any more - the app took the system font stack with the
+v2.0.0 redesign, and the `/fonts/` route went with the typeface it carried.
+An inline fallback token block (with a dark-mode variant) precedes the
+`tokens.css` link, so the wizard stays legible even if that stylesheet cannot be
+served; its values mirror the current tokens, because a fallback that shows the
+previous release sends the diagnosis in the wrong direction. The wizard meets WCAG 2.1 AA
 (keyboard-operable accordions, ARIA live regions for Docker status, focus
 management, labelled controls, a `<main>` landmark, and field-level error
 identification — `aria-invalid` plus focus moved to the offending input).
