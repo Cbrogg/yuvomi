@@ -27,6 +27,7 @@ import { renderDocumentAttachField, bindDocumentAttachField } from '/components/
 
 let _container = null;
 let _search = null;
+let _householdCurrency = 'EUR';
 
 const state = {
   items: [],
@@ -305,6 +306,7 @@ function openBookingPicker(panel, { initialMonth, includeRole = false } = {}) {
       </div>`);
     panel.append(overlay);
     if (window.lucide) window.lucide.createIcons({ el: overlay });
+    overlay.querySelector('[data-picker-close]').focus();
 
     const listEl = overlay.querySelector('[data-picker-list]');
     const monthEl = overlay.querySelector('[data-picker-month]');
@@ -331,7 +333,7 @@ function openBookingPicker(panel, { initialMonth, includeRole = false } = {}) {
           <button class="inventory-booking-picker__item" type="button" data-picker-item="${entry.id}">
             <span class="inventory-booking-picker__item-title">${esc(entry.title)}</span>
             <span class="inventory-booking-picker__item-meta">${esc(formatDate(entry.date))}</span>
-            <span class="inventory-booking-picker__item-amount">${esc(formatMoney(entry.amount))}</span>
+            <span class="inventory-booking-picker__item-amount">${esc(formatMoney(entry.amount, _householdCurrency))}</span>
           </button>`);
       }
     };
@@ -762,7 +764,12 @@ export async function render(container) {
   fab.addEventListener('click', () => openItemModal('create'));
 
   try {
-    await Promise.all([loadLocations(), loadCategories(), loadItems()]);
+    await Promise.all([
+      loadLocations(),
+      loadCategories(),
+      loadItems(),
+      api.get('/preferences').then((res) => { _householdCurrency = res.data?.currency ?? 'EUR'; }).catch(() => {}),
+    ]);
     renderList();
   } catch (err) {
     window.yuvomi?.showToast(err.data?.error ?? t('common.errorGeneric'), 'danger');
