@@ -24,123 +24,41 @@
   <meta name="twitter:title" content="Install Yuvomi - Self-Hosted Family Planner">
   <meta name="twitter:description" content="Get Yuvomi running in minutes: guided web installer, Docker, Podman, TrueNAS, Umbrel or Unraid.">
   <meta name="twitter:image" content="https://yuvomi.cloud/twitter-image.png">
-  <meta name="theme-color" content="#fafaf8" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#1a1a18" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#FBFBFD" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0A0A0C" media="(prefers-color-scheme: dark)">
   <link rel="canonical" href="https://yuvomi.cloud/install.html">
   <link rel="icon" type="image/svg+xml" href="logo.svg">
 
+  <!-- Geteiltes Token-System der vier Seiten. Frueher stand es hier viermal. -->
+  <link rel="stylesheet" href="assets/site.css">
   <style>
-    @font-face {
-      font-family: 'Plus Jakarta Sans';
-      src: url('fonts/plus-jakarta-sans-variable.woff2') format('woff2-variations');
-      font-weight: 200 800; font-style: normal; font-display: swap;
-    }
-    @font-face {
-      font-family: 'Plus Jakarta Sans';
-      src: url('fonts/plus-jakarta-sans-variable-italic.woff2') format('woff2-variations');
-      font-weight: 200 800; font-style: italic; font-display: swap;
-    }
+    /* Seiteneigen: die Semantikfarben des Installationsleitfadens. Nur diese
+       Seite kennt Erfolg, Warnung, Gefahr und Hinweis - die drei anderen nicht,
+       deshalb stehen sie hier und nicht im geteilten Stylesheet. Die Werte
+       kommen aus den gleichnamigen App-Tokens: `--success` aus
+       --color-success, `--*-soft` aus --color-*-light.
 
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
+       `--danger` fehlte hier ganz: die einzige Fundstelle ruft
+       `var(--danger, #B91C1C)` und lief seit jeher in den Fallback - ein Rot
+       aus der abgeloesten Palette, das kein Theme je mitnahm. */
     :root {
-      --ff: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      --ff-mono: 'SF Mono', 'Fira Code', 'JetBrains Mono', ui-monospace, monospace;
-
-      --bg: #FAFAF8;
-      --bg-alt: #F2F1ED;
-      --surface: #FFFFFF;
-      --surface-2: #FAFAF8;
-      --border: #E8E7E2;
-      --border-strong: #D8D7D1;
-      --text-1: #1C1C1A;
-      --text-2: #56554F;
-      --text-3: #6E6D67;
-
-      --accent: #6c3aed;
-      --accent-hover: #5b2fd4;
-      --accent-deep: #3d1f9e;
-      --accent-soft: #EDE9FE;
-      --accent-light: #F5F3FF;
-      --accent-glow: rgba(108, 58, 237, 0.16);
-      --accent-ink: #FFFFFF;
-
-      /* Focus ring, overridable per surface. The theme accent clears SC 2.4.11
-         on every paper surface but not on the fixed near-black code plate. */
-      --focus-ring: var(--accent);
-
-      --success: #15803D; --success-soft: #DAFBE1;
-      --warning: #A15C0A; --warning-soft: #FFF4D4;
-      --info: #0969DA; --info-soft: #DDF4FF;
-      /* Ink variants for 11px bold labels sitting on a 16% tint of their own
-         hue. The plain semantic colours land at 4.03:1 (.tb-one) and 4.20:1
-         (.env-irrev) against that composite - the same trap --success-ink was
-         minted for on index.html. Fills and callouts keep the base colours. */
-      --success-ink: #146C34;
-      --warn-ink: #8A4E08;
-
-      --code-bg: #1B1A22;
-      --code-text: #E6E4F0;
-      --code-comment: #9A98AB;
-      /* Highlight ink on the code plate. Theme-independent like the plate it sits
-         on, and doubling as the focus ring there (9.3:1 on --code-bg). */
-      --code-accent: #C4B5FD;
-
-      /* --r-xs is the inline-chip radius. It existed as a hardcoded 4px in four
-         places and as a stray 5px in one more, on a scale that starts at 8px. */
-      --r-xs: 4px; --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-xl: 22px; --r-2xl: 28px; --r-full: 999px;
-
-      --shadow-sm: 0 1px 2px rgba(18,14,8,0.05), 0 1px 4px rgba(18,14,8,0.04);
-      --shadow-md: 0 2px 8px rgba(18,14,8,0.08), 0 1px 3px rgba(18,14,8,0.05);
-      --shadow-lg: 0 10px 30px rgba(18,14,8,0.12), 0 3px 8px rgba(18,14,8,0.05);
-      --shadow-xl: 0 22px 60px rgba(18,14,8,0.18), 0 6px 16px rgba(18,14,8,0.07);
-
-      --glass-bg: rgba(255,255,255,0.70);
-      --glass-border: rgba(255,255,255,0.65);
-      --glass-blur: blur(18px) saturate(180%);
-
-      /* One curve, one name. Both pages used to call this --ease-spring with
-         different values. Exponential ease-out: nothing here is a glass element,
-         and overshoot on a hover lift reads as wobble. */
-      --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-      --grain: 0.025;
+      --success: #1E7B35; --success-soft: #DFF6E4;
+      --warning: #A85D00; --warning-soft: #FFF0D9;
+      --danger:  #D70015; --danger-soft:  #FFE3E3;
+      --info:    #0663C7; --info-soft:    #E0EFFF;
     }
-
     [data-theme="dark"] {
-      /* Card ladder, kept identical to index.html. --surface was 1.09:1 on --bg
-         and --border 1.21:1, so a card in dark mode was a shadow rather than a
-         plane; every rung moves up one step (surface 1.21:1, border 1.53:1,
-         border-strong 1.96:1). --text-3 follows, or .prereq-hint on the lighter
-         surface drops to 4.33:1. Change both dark paths or they drift. */
-      --bg: #1A1A18; --bg-alt: #141413; --surface: #2A2A28; --surface-2: #1C1C1A;
-      --border: #3A3A37; --border-strong: #4A4A46;
-      --text-1: #F5F4F1; --text-2: #B4B3B0; --text-3: #9B9A96;
-      --accent: #a78bfa; --accent-hover: #9066f5; --accent-deep: #c4b5fd;
-      --accent-soft: #1E1040; --accent-light: #160B30; --accent-glow: rgba(167,139,250,0.22); --accent-ink: #1A1A18;
-      --success: #4ADE80; --success-soft: #1A3325; --success-ink: #4ADE80;
-      --warning: #F59E0B; --warning-soft: #332400; --warn-ink: #F59E0B;
-      --info: #60A5FA; --info-soft: #1A2D40;
-      --code-bg: #141413; --code-text: #E2E1DC; --code-comment: #9B998F;
-      --shadow-sm: 0 1px 3px rgba(0,0,0,0.30);
-      --shadow-md: 0 4px 12px rgba(0,0,0,0.38);
-      --shadow-lg: 0 12px 30px rgba(0,0,0,0.48);
-      --shadow-xl: 0 22px 60px rgba(0,0,0,0.60);
-      --glass-bg: rgba(28,28,26,0.66); --glass-border: rgba(255,255,255,0.10);
+      --success: #30D158; --success-soft: #0E2E17;
+      --warning: #FF9F0A; --warning-soft: #33230A;
+      --danger:  #FF6961; --danger-soft:  #3A1210;
+      --info:    #409CFF; --info-soft:    #10263E;
     }
     @media (prefers-color-scheme: dark) {
       :root:not([data-theme="light"]) {
-        --bg: #1A1A18; --bg-alt: #141413; --surface: #2A2A28; --surface-2: #1C1C1A;
-        --border: #3A3A37; --border-strong: #4A4A46;
-        --text-1: #F5F4F1; --text-2: #B4B3B0; --text-3: #9B9A96;
-        --accent: #a78bfa; --accent-hover: #9066f5; --accent-deep: #c4b5fd;
-        --accent-soft: #1E1040; --accent-light: #160B30; --accent-glow: rgba(167,139,250,0.22); --accent-ink: #1A1A18;
-        --success: #4ADE80; --success-soft: #1A3325; --success-ink: #4ADE80;
-        --warning: #F59E0B; --warning-soft: #332400; --warn-ink: #F59E0B;
-        --info: #60A5FA; --info-soft: #1A2D40;
-        --code-bg: #141413; --code-text: #E2E1DC; --code-comment: #9B998F;
-        --shadow-sm: 0 1px 3px rgba(0,0,0,0.30); --shadow-md: 0 4px 12px rgba(0,0,0,0.38);
-        --shadow-lg: 0 12px 30px rgba(0,0,0,0.48); --shadow-xl: 0 22px 60px rgba(0,0,0,0.60);
-        --glass-bg: rgba(28,28,26,0.66); --glass-border: rgba(255,255,255,0.10);
+        --success: #30D158; --success-soft: #0E2E17;
+        --warning: #FF9F0A; --warning-soft: #33230A;
+        --danger:  #FF6961; --danger-soft:  #3A1210;
+        --info:    #409CFF; --info-soft:    #10263E;
       }
     }
 
@@ -148,7 +66,7 @@
     body {
       font-family: var(--ff); background: var(--bg); color: var(--text-1);
       line-height: 1.65; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
-      overflow-x: hidden; font-feature-settings: 'ss01';
+      overflow-x: hidden;
     }
     body::after {
       content: ''; position: fixed; inset: 0; z-index: 9999; pointer-events: none; opacity: var(--grain);
@@ -273,8 +191,12 @@
     .tab-btn .tb-one { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; padding: 2px 6px; border-radius: var(--r-full);
       background: color-mix(in srgb, var(--success) 16%, transparent); color: var(--success-ink); }
     /* On the active (accent-filled) tab this was white on light violet: 2.13:1
-       in dark mode. The badge keeps its shape but takes readable ink. */
-    .tab-btn.active .tb-one { background: rgba(255,255,255,0.92); color: #3d1f9e; }
+       in dark mode. The badge keeps its shape but takes readable ink.
+       A literal, not var(--accent-deep): the plate under it is a fixed
+       near-white in BOTH themes, so its ink has to be dark in both - the shared
+       token follows the theme and would go pale here. The value is
+       --color-accent-hover's light step (7.88:1 on the plate). */
+    .tab-btn.active .tb-one { background: rgba(255,255,255,0.92); color: #4340B8; }
 
     .tab-panel { display: none; }
     .tab-panel.active { display: block; animation: fade .35s var(--ease-out); }
@@ -641,7 +563,7 @@
         <button class="tab-btn" role="tab" aria-selected="false" aria-describedby="tabgrp-store" aria-controls="panel-truenas" id="tab-truenas" type="button" style="--pc:#0095D5">
           <span class="tb-logo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M24 10.049v5.114l-10.949 6.324v-5.114L24 10.049zm-24 0v5.114l10.956 6.324v-5.114L0 10.049zm12.004-.605l-4.433 2.559 4.433 2.559 4.429-2.559-4.429-2.559zm10.952-1.207l-9.905-5.723v5.118l5.473 3.164 4.432-2.559zm-12-.605V2.513L1.044 8.236l4.432 2.555 5.48-3.159z"/></svg></span><span data-t="tab_truenas">TrueNAS</span> <span class="tb-one" data-t="tab_one">1-click</span>
         </button>
-        <button class="tab-btn" role="tab" aria-selected="false" aria-describedby="tabgrp-store" aria-controls="panel-umbrel" id="tab-umbrel" type="button" style="--pc:#6c3aed">
+        <button class="tab-btn" role="tab" aria-selected="false" aria-describedby="tabgrp-store" aria-controls="panel-umbrel" id="tab-umbrel" type="button" style="--pc:#5351FB">
           <span class="tb-logo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11.853 8.302c2.628-.05 4.698.656 6.303 2.05 1.166 1.01 2.14 2.43 2.895 4.305a7.584 7.584 0 0 0-1.818-.21c-1.345 0-2.552.31-3.558.987-1.127-.687-2.339-1.049-3.623-1.049-1.313 0-2.573.378-3.77 1.087-1.154-.726-2.456-1.087-3.875-1.087-.513 0-1.003.048-1.466.147.678-1.724 1.575-3.054 2.664-4.028 1.557-1.393 3.607-2.15 6.248-2.202zM1.842 17.616c.04-.037.078-.076.112-.119.48-.557 1.233-.91 2.453-.91 1.151 0 2.139.32 3.002.952l.035.025c.469.35 1.108.364 1.592.036 1.032-.698 2.032-1.014 3.017-1.014.967 0 1.906.304 2.836.965l.02.014a1.376 1.376 0 0 0 1.699-.078c.614-.53 1.455-.84 2.625-.84 1.232 0 2.186.344 2.94.98a1.092 1.092 0 0 0 .435.235 1.095 1.095 0 0 0 .806-.087 1.103 1.103 0 0 0 .547-1.267c-.873-3.383-2.3-6.03-4.363-7.82-2.084-1.808-4.712-2.646-7.787-2.588-3.063.06-5.653.955-7.673 2.762-2.003 1.793-3.344 4.39-4.104 7.67a1.1 1.1 0 0 0 1.807 1.083z"/></svg></span><span data-t="tab_umbrel">Umbrel</span> <span class="tb-one" data-t="tab_one">1-click</span>
         </button>
         <button class="tab-btn" role="tab" aria-selected="false" aria-describedby="tabgrp-store" aria-controls="panel-unraid" id="tab-unraid" type="button" style="--pc:#FF8C2F">
@@ -857,7 +779,7 @@ openssl rand -hex 32  <span class="comment"># run twice → SESSION_SECRET + DB_
 
       <!-- Umbrel -->
       <div class="tab-panel" id="panel-umbrel" role="tabpanel" tabindex="0" aria-labelledby="tab-umbrel">
-        <h3 class="panel-head" style="--pc:#6c3aed" data-t="tab_umbrel">Umbrel</h3>
+        <h3 class="panel-head" style="--pc:#5351FB" data-t="tab_umbrel">Umbrel</h3>
         <div class="callout callout-success">
           <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
           <span data-t="opt_umbrel_info">No terminal required. Install Yuvomi straight from the Umbrel App Store - everything runs on, and stays on, your Umbrel.</span>

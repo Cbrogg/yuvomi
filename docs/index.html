@@ -11,8 +11,8 @@
   <meta name="color-scheme" content="light dark">
   <title>Yuvomi - The Self-Hosted Family Planner</title>
   <meta name="description" content="A privacy-first, self-hosted family planner. Tasks, shopping, meals, calendar sync, budget - one private home for everything your household runs on. No cloud, no subscriptions.">
-  <meta name="theme-color" content="#fafaf8" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#1a1a18" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#FBFBFD" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0A0A0C" media="(prefers-color-scheme: dark)">
   <meta property="og:type" content="website">
   <meta property="og:title" content="Yuvomi - The Self-Hosted Family Planner">
   <meta property="og:description" content="Tasks, shopping, meals, calendar, budget - all self-hosted, no cloud dependency.">
@@ -29,199 +29,13 @@
   <link rel="canonical" href="https://yuvomi.cloud/">
   <link rel="icon" type="image/svg+xml" href="logo.svg">
 
+  <!-- Geteiltes Token-System der vier Seiten. Frueher stand es hier viermal.
+       Der Rest dieses <style> ist seitenspezifisch und bleibt lokal. -->
+  <link rel="stylesheet" href="assets/site.css">
   <style>
-    /* ============================================================
-       Plus Jakarta Sans - self-hosted variable font (no CDN).
-       Matches the Yuvomi app exactly. Roman + italic for editorial accents.
-       ============================================================ */
-    @font-face {
-      font-family: 'Plus Jakarta Sans';
-      src: url('fonts/plus-jakarta-sans-variable.woff2') format('woff2-variations');
-      font-weight: 200 800; font-style: normal; font-display: swap;
-    }
-    @font-face {
-      font-family: 'Plus Jakarta Sans';
-      src: url('fonts/plus-jakarta-sans-variable-italic.woff2') format('woff2-variations');
-      font-weight: 200 800; font-style: italic; font-display: swap;
-    }
-
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --ff: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      --ff-mono: 'SF Mono', 'Fira Code', 'JetBrains Mono', ui-monospace, monospace;
-
-      /* Warm neutral surfaces - mirrors the app's tokens.css */
-      --bg: #FAFAF8;
-      --bg-alt: #F2F1ED;
-      --surface: #FFFFFF;
-      --surface-2: #FAFAF8;
-      --border: #E8E7E2;
-      --border-strong: #D8D7D1;
-      --text-1: #1C1C1A;
-      --text-2: #56554F;
-      --text-3: #6E6D67;
-
-      --accent: #6c3aed;
-      --accent-hover: #5b2fd4;
-      --accent-deep: #3d1f9e;
-      --accent-soft: #EDE9FE;
-      --accent-light: #F5F3FF;
-      --accent-glow: rgba(108, 58, 237, 0.16);
-      --accent-ink: #FFFFFF;
-
-      /* Focus ring, overridable per surface. The theme accent clears SC 2.4.11
-         on every paper surface (6.1:1 light, 5.3:1 dark) but not on the fixed
-         near-black code plate, which is the same colour in both themes. */
-      --focus-ring: var(--accent);
-
-      /* Module accent signature (from the app) */
-      --m-tasks: #15803D;
-      --m-calendar: #4F46E5;
-      --m-meals: #C2410C;
-      --m-recipes: #0C7C5B;
-      --m-shopping: #DB2777;
-      --m-notes: #A16207;
-      --m-contacts: #0969DA;
-      --m-birthdays: #D6336C;
-      --m-budget: #0F766E;
-      --m-documents: #42587E;
-      --m-housekeeping: #7C3AED;
-      --m-health: #9E1E88;
-      --m-rewards: #BE4B6E;
-      --m-split: #1A7BAE;
-
-      --code-bg: #1B1A22;
-      --code-text: #E6E4F0;
-      --code-comment: #9A98AB;
-      /* Highlight ink on the code plate. Theme-independent like the plate it sits
-         on, and doubling as the focus ring there (9.3:1 on --code-bg). */
-      --code-accent: #C4B5FD;
-
-      /* --r-xs is the inline-chip radius. It existed as a hardcoded 4px in five
-         places and as a stray 5px in two more, on a scale that starts at 8px. */
-      --r-xs: 4px; --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-xl: 22px; --r-2xl: 28px; --r-full: 999px;
-      /* Device-frame radii, deliberately off the UI scale: they trace the corner
-         of a photographed phone, not a card. They had drifted to three raw
-         literals - 26px on .hero-float and the carousel, 20px on .feat-mobile,
-         --r-2xl on the narrow gallery frame - which is why the same phone wore a
-         different corner in three places. The inset variant is a third of the
-         width, where the full radius reads as a squircle. */
-      --r-phone: 26px; --r-phone-inset: 20px;
-
-      --shadow-sm: 0 1px 2px rgba(18,14,8,0.05), 0 1px 4px rgba(18,14,8,0.04);
-      --shadow-md: 0 2px 8px rgba(18,14,8,0.08), 0 1px 3px rgba(18,14,8,0.05);
-      --shadow-lg: 0 10px 30px rgba(18,14,8,0.12), 0 3px 8px rgba(18,14,8,0.05);
-      --shadow-xl: 0 22px 60px rgba(18,14,8,0.18), 0 6px 16px rgba(18,14,8,0.07);
-      --shadow-hero: 0 32px 80px rgba(40,22,90,0.22), 0 10px 30px rgba(18,14,8,0.10);
-
-      --glass-bg: rgba(255,255,255,0.70);
-      --glass-border: rgba(255,255,255,0.65);
-      --glass-blur: blur(18px) saturate(180%);
-
-      /* One curve, one name. Both pages used to call this --ease-spring with
-         different values, and index declared it twice on top of that. Exponential
-         ease-out: nothing here is a glass element, and overshoot on a hover lift
-         reads as wobble. */
-      --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-      /* Status green for badges, dark enough for AA on small bold text. */
-      --success-ink: #146C34;
-      /* Amber for the one irreversible step on this page. Mirrors install.html's
-         --warning so the same warning wears the same colour on both. */
-      --warn-ink: #8A4E08;
-
-      --maxw: 1200px;
-      --grain: 0.025;
-    }
-
-    [data-theme="dark"] {
-      /* The card ladder used to sit inside 1.1:1 of itself: --surface was 1.09:1
-         on --bg and --border 1.21:1, so a card in dark mode was a shadow, not a
-         plane. Every rung moves up one step - surface takes the old border value,
-         border the old border-strong, and border-strong a new lighter step - which
-         keeps the same relative order while roughly doubling the separation
-         (surface 1.21:1, border 1.53:1, border-strong 1.96:1 on --bg).
-         Deliberately short of the 3:1 that SC 1.4.11 asks for on component
-         boundaries: the 3:1 grey is #656565, a hard outline around every card on
-         a warm-neutral palette. The cards are identified by their fill, and the
-         controls that do need a boundary carry --border-strong.
-         --text-3 follows, or the lighter surface would push .prereq-hint under
-         4.5:1 (it measured 4.33:1 against the new --surface). */
-      --bg: #1A1A18;
-      --bg-alt: #141413;
-      --surface: #2A2A28;
-      --surface-2: #1C1C1A;
-      --border: #3A3A37;
-      --border-strong: #4A4A46;
-      --text-1: #F5F4F1;
-      --text-2: #B4B3B0;
-      --text-3: #9B9A96;
-
-      --accent: #a78bfa;
-      --accent-hover: #9066f5;
-      --accent-deep: #c4b5fd;
-      --success-ink: #4ADE80;
-      --warn-ink: #F59E0B;
-      --accent-soft: #1E1040;
-      --accent-light: #160B30;
-      --accent-glow: rgba(167, 139, 250, 0.22);
-      --accent-ink: #1A1A18;
-
-      --m-tasks: #4ADE80;
-      --m-calendar: #818CF8;
-      --m-meals: #FB923C;
-      --m-recipes: #2ECC99;
-      --m-shopping: #F472B6;
-      --m-notes: #FCD34D;
-      --m-contacts: #60A5FA;
-      --m-birthdays: #FB7185;
-      --m-budget: #2DD4BF;
-      --m-documents: #7E9BCC;
-      --m-housekeeping: #C4B5FD;
-      --m-health: #DB60CB;
-      --m-rewards: #E68CA6;
-      --m-split: #7DA3FF;
-
-      --code-bg: #141413;
-      --code-text: #E2E1DC;
-      --code-comment: #9B998F;
-      /* --code-accent is deliberately NOT mirrored here: the code plate is the
-         one surface that keeps its own palette in both themes. */
-
-      --shadow-sm: 0 1px 3px rgba(0,0,0,0.30);
-      --shadow-md: 0 4px 12px rgba(0,0,0,0.38);
-      --shadow-lg: 0 12px 30px rgba(0,0,0,0.48);
-      --shadow-xl: 0 22px 60px rgba(0,0,0,0.60);
-      --shadow-hero: 0 32px 80px rgba(0,0,0,0.66), 0 10px 30px rgba(108,58,237,0.18);
-
-      --glass-bg: rgba(28,28,26,0.66);
-      --glass-border: rgba(255,255,255,0.10);
-    }
-
-    @media (prefers-color-scheme: dark) {
-      :root:not([data-theme="light"]) {
-        --bg: #1A1A18; --bg-alt: #141413; --surface: #2A2A28; --surface-2: #1C1C1A;
-        --border: #3A3A37; --border-strong: #4A4A46;
-        --text-1: #F5F4F1; --text-2: #B4B3B0; --text-3: #9B9A96;
-        --accent: #a78bfa; --accent-hover: #9066f5; --accent-deep: #c4b5fd;
-        --accent-soft: #1E1040; --accent-light: #160B30; --accent-glow: rgba(167,139,250,0.22); --accent-ink: #1A1A18;
-        --m-tasks: #4ADE80; --m-calendar: #818CF8; --m-meals: #FB923C; --m-recipes: #2ECC99;
-        --m-shopping: #F472B6; --m-notes: #FCD34D; --m-contacts: #60A5FA; --m-birthdays: #FB7185;
-        --m-budget: #2DD4BF; --m-documents: #7E9BCC; --m-housekeeping: #C4B5FD; --m-health: #DB60CB; --m-rewards: #E68CA6; --m-split: #7DA3FF;
-        /* This block mirrors [data-theme="dark"] for visitors who never touched
-           the toggle - the common case, since the head script only sets
-           data-theme when localStorage holds one. --success-ink was the single
-           token missing from the mirror, which left the "1 click" badges at
-           2.45:1 (#146C34 on #222220) for exactly those visitors. --m-split had
-           drifted to a third value here; the two dark paths now agree. */
-        --success-ink: #4ADE80; --warn-ink: #F59E0B;
-        --code-bg: #141413; --code-text: #E2E1DC; --code-comment: #9B998F;
-        --shadow-sm: 0 1px 3px rgba(0,0,0,0.30); --shadow-md: 0 4px 12px rgba(0,0,0,0.38);
-        --shadow-lg: 0 12px 30px rgba(0,0,0,0.48); --shadow-xl: 0 22px 60px rgba(0,0,0,0.60);
-        --shadow-hero: 0 32px 80px rgba(0,0,0,0.66), 0 10px 30px rgba(108,58,237,0.18);
-        --glass-bg: rgba(28,28,26,0.66); --glass-border: rgba(255,255,255,0.10);
-      }
-    }
+    /* Seiteneigene Masse: die Landing-Page ist 1200px breit, die Rechtstexte
+       820px. Deshalb steht --maxw hier und nicht im geteilten Stylesheet. */
+    :root { --maxw: 1200px; }
 
     html { scroll-behavior: smooth; scroll-padding-top: 80px; -webkit-text-size-adjust: 100%; }
     body {
@@ -233,7 +47,6 @@
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
       overflow-x: hidden;
-      font-feature-settings: 'ss01';
     }
     /* Subtle film grain for texture (no flat sterility) */
     body::after {
@@ -622,8 +435,12 @@
       background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.14); color: var(--code-text); cursor: pointer;
       padding: 7px 11px; min-height: 44px; border-radius: var(--r-sm); font-family: var(--ff); font-size: 0.75rem; font-weight: 600; transition: all .15s; }
     .copy-btn:hover { background: rgba(255,255,255,0.18); color: #fff; }
-    .copy-btn.copied { background: #15803D; border-color: #15803D; color: #fff; }
-    .copy-btn.failed { background: #A15C0A; border-color: #A15C0A; color: #fff; }
+    /* Zwei gefuellte Zustands-Chips, bewusst themenunabhaengig: sie erscheinen
+       fuer zwei Sekunden nach einem Klick, und weisse Tinte auf diesen Tiefen
+       traegt auf jedem Grund (5.33:1 / 4.98:1). Die Werte sind --color-success
+       und --color-warning der App; hier standen die der abgeloesten Palette. */
+    .copy-btn.copied { background: #1E7B35; border-color: #1E7B35; color: #fff; }
+    .copy-btn.failed { background: #A85D00; border-color: #A85D00; color: #fff; }
     .copy-btn svg { width: 13px; height: 13px; }
     /* What the reader is actually deciding at the moment they paste a curl into
        the machine that will hold their family's health records: what runs, how
@@ -1338,7 +1155,7 @@
         <p data-t="plat_truenas">In the SCALE Community Apps catalog: install from the web UI, no terminal.</p>
         <span class="plat-go"><span data-t="plat_guide">Guide</span><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span>
       </a>
-      <a class="plat-card reveal" style="--pc:#6c3aed" href="install.html#umbrel">
+      <a class="plat-card reveal" style="--pc:#5351FB" href="install.html#umbrel">
         <span class="plat-badge" data-t="plat_oneclick">1-click</span>
         <span class="plat-logo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11.853 8.302c2.628-.05 4.698.656 6.303 2.05 1.166 1.01 2.14 2.43 2.895 4.305a7.584 7.584 0 0 0-1.818-.21c-1.345 0-2.552.31-3.558.987-1.127-.687-2.339-1.049-3.623-1.049-1.313 0-2.573.378-3.77 1.087-1.154-.726-2.456-1.087-3.875-1.087-.513 0-1.003.048-1.466.147.678-1.724 1.575-3.054 2.664-4.028 1.557-1.393 3.607-2.15 6.248-2.202zM1.842 17.616c.04-.037.078-.076.112-.119.48-.557 1.233-.91 2.453-.91 1.151 0 2.139.32 3.002.952l.035.025c.469.35 1.108.364 1.592.036 1.032-.698 2.032-1.014 3.017-1.014.967 0 1.906.304 2.836.965l.02.014a1.376 1.376 0 0 0 1.699-.078c.614-.53 1.455-.84 2.625-.84 1.232 0 2.186.344 2.94.98a1.092 1.092 0 0 0 .435.235 1.095 1.095 0 0 0 .806-.087 1.103 1.103 0 0 0 .547-1.267c-.873-3.383-2.3-6.03-4.363-7.82-2.084-1.808-4.712-2.646-7.787-2.588-3.063.06-5.653.955-7.673 2.762-2.003 1.793-3.344 4.39-4.104 7.67a1.1 1.1 0 0 0 1.807 1.083z"/></svg></span>
         <h3>Umbrel</h3>

@@ -240,10 +240,20 @@ test('the modules with an inner scroll container are the documented eight', () =
 
 test('closed dashboard speed dial cannot capture first-scroll gestures', () => {
   const dashboardCss = readFileSync(new URL('../public/styles/dashboard.css', import.meta.url), 'utf8');
-  const containerRule = cssRuleBody(dashboardCss, '.fab-container');
-  const mainRule = cssRuleBody(dashboardCss, '.fab-main');
+  const layoutCss = readFileSync(new URL('../public/styles/layout.css', import.meta.url), 'utf8');
+  const actionsRule = cssRuleBody(dashboardCss, '.fab-actions');
 
-  assert.match(containerRule, /pointer-events:\s*none/);
-  assert.match(mainRule, /pointer-events:\s*auto/);
+  // Der geschlossene Dial darf nur so viel Fläche belegen wie sein Knopf. Das
+  // hing früher an `pointer-events: none` am Kasten - einer Zusicherung, die
+  // jede spätere Regel mit `auto` still aushebeln konnte. Jetzt trägt es die
+  // Geometrie: die Aktionsliste ist absolut positioniert und bläht die Gruppe
+  // gar nicht erst auf, es gibt also keine tote Fläche, die man freistellen müsste.
+  assert.match(actionsRule, /position:\s*absolute/,
+    'die Aktionsliste muss aus dem Fluss der Gruppe heraus - sonst ist der '
+    + 'geschlossene Dial so hoch wie seine ausgeklappte Liste');
+  assert.match(actionsRule, /pointer-events:\s*none/,
+    'die geschlossene Liste ist unsichtbar und darf keine Klicks fangen');
   assert.match(dashboardCss, /\.fab-actions--visible\s*\{[^}]*pointer-events:\s*auto/s);
+  assert.doesNotMatch(cssRuleBody(layoutCss, '.page-fab-group'), /pointer-events/,
+    'die Gruppe braucht keinen Pointer-Freibrief mehr - ihr Kasten ist der FAB');
 });

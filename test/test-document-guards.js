@@ -2013,16 +2013,21 @@ test('Sonde 11 - was einen Klick annimmt, nimmt auch eine Taste an', async () =>
  *     abraeumt. Damit ist die Rot-Probe von oben nicht mehr auf ein
  *     `!important` im Verstoss angewiesen.
  *
- *     SIE HAT BEIM ERSTEN LAUF SOFORT ETWAS GEFUNDEN, und der Befund ist
+ *     SIE HAT BEIM ERSTEN LAUF SOFORT ETWAS GEFUNDEN, und der Befund war
  *     groesser als die Glas-Regel: `.fab-action__btn` und `.fab-action__label`
- *     deklarieren Glas und liegen in `#main-content`. Sie sind kein verirrtes
- *     Glas im Inhalt - sie sind CHROME AM FALSCHEN ORT. Das Dashboard baut
- *     seinen Speed-Dial als eigenen `.fab-container` (dashboard.js) und hat
- *     gar keine `.page-fab`; `adoptPageFab()` in router.js sucht aber genau
- *     die, um den FAB in die Shell-Layer `#fab-layer` zu ziehen. Die Haertung
- *     aus #634 (FAB raus aus dem Scrollport) greift auf der Startseite also
- *     nicht. Die Sonde bleibt so lange rot, bis das entschieden ist - ein
- *     gruener Guard waere hier eine Aussage, die nicht stimmt.
+ *     deklarierten Glas und lagen in `#main-content`. Sie waren kein verirrtes
+ *     Glas im Inhalt - sie waren CHROME AM FALSCHEN ORT. Das Dashboard baute
+ *     seinen Speed-Dial als eigenen `.fab-container` und hatte gar keine
+ *     `.page-fab`; `adoptPageFab()` in router.js sucht aber genau die, um den
+ *     FAB in die Shell-Layer `#fab-layer` zu ziehen. Die Haertung aus #634
+ *     griff auf der Startseite also nicht.
+ *
+ *     DIE SONDE BLIEB ROT, BIS DER ANLASS FIEL, statt sich eine Dauerausnahme
+ *     zu geben: der Dial ist seit dem Folgevorgang zu #634 eine
+ *     `.page-fab-group` mit einem `.page-fab` darin, sein Glas sitzt in der
+ *     Shell, und die benannte Ausnahme ist ersatzlos entfallen. Was hier
+ *     bleibt, ist die Lehre - eine Ausnahme braucht ein Verfallsdatum an
+ *     BEIDEN Enden, am Anlass wie am Verstoss.
  *
  * (B) DIE FALLBACK-REGEL, ihre zweite Haelfte. `jeder Blur kommt aus der
  *     --blur-Skala` (Ebene 3) sichert, dass jede Glasflaeche einen Blur nimmt,
@@ -2222,85 +2227,10 @@ async function glassSurfaces(page) {
   });
 }
 
-/* ────────────────────────────────────────────────────────────────────────────
- * DIE EINE BENANNTE AUSNAHME DIESER SONDE - eingetragen am 2026-08-09
- *
- * `public/pages/dashboard.js` baut seinen Speed-Dial als EIGENEN
- * `.fab-container` (`position: fixed`), nicht als `.page-fab`. `adoptPageFab()`
- * in `public/router.js` sucht `#main-content .page-fab`, um den FAB in die
- * Shell-Layer `#fab-layer` zu ziehen - die Haertung aus #634 (v1.86.1, „FAB raus
- * aus dem Scrollport") greift auf der Startseite deshalb nicht. Der Speed-Dial
- * bleibt als einziger FAB der App IM Seiteninhalt stehen, und mit ihm sein Glas.
- *
- * `.fab-action__label` und `.fab-action__btn` sind damit kein verirrtes Glas -
- * sie sind CHROME AM FALSCHEN ORT. Deshalb findet sie die Glas-ist-Chrome-Regel
- * und nicht die FAB-Regel: die Sonde misst richtig, der Befund sitzt woanders.
- *
- * DIE AUSNAHME IST KEIN URTEIL, SONDERN EIN AUFSCHUB. Ulas hat am 2026-08-09
- * entschieden, den Speed-Dial auf `.page-fab` umzustellen - aber als eigenen
- * Vorgang NACH dem Merge des Redesign-Branches, mit Bezug auf #634. Mit dieser
- * Umstellung ENTFAELLT die Ausnahme ersatzlos; die Stale-Pruefung darunter
- * stoesst den naechsten Durchgang darauf, statt es ihm zu ueberlassen.
- *
- * Benannt sind die vier Treffer einzeln - nicht die Route, nicht die Datei, nicht
- * die Regel. Wer `/dashboard` ausklammerte, kaufte sich die naechste Glasflaeche
- * dieser Seite gratis mit ein.
- * ──────────────────────────────────────────────────────────────────────────── */
-const FAB_GLASS_REASON = 'Speed-Dial des Dashboards: Chrome im Scrollport, weil `.fab-container` '
-  + 'statt `.page-fab` (siehe #634 / adoptPageFab). Entfaellt mit der Umstellung.';
-const GLASS_IN_MAIN_EXEMPT = new Map([
-  ['mobile/dashboard: .fab-action__label', FAB_GLASS_REASON],
-  ['desktop/dashboard: .fab-action__label', FAB_GLASS_REASON],
-  ['mobile/dashboard: .fab-action__btn', FAB_GLASS_REASON],
-  ['desktop/dashboard: .fab-action__btn', FAB_GLASS_REASON],
-]);
-
-test('Sonde 12 - die FAB-Ausnahme faellt mit ihrem Anlass', () => {
-  // Eine Ausnahme ohne Verfallsdatum ist die vierte Allowlist derselben Bauart.
-  // Diese hier hat zwei Enden, und beide muessen halten.
-
-  // (1) DER ANLASS. Sobald das Dashboard eine `.page-fab` baut, adoptiert
-  //     `adoptPageFab()` den Speed-Dial in die Shell-Layer, das Glas verlaesst
-  //     `#main-content` - und die Ausnahme ist Muell. Gesucht wird in der SEITE,
-  //     nicht im Stylesheet: `.page-fab` steht dort laengst (andere Module
-  //     tragen sie), der Unterschied liegt allein im Markup des Dashboards.
-  const dashboard = readFileSync(new URL('../public/pages/dashboard.js', import.meta.url), 'utf8');
-  assert.ok(!/page-fab/.test(dashboard),
-    'Das Dashboard baut jetzt eine `.page-fab` - dann adoptiert adoptPageFab() den '
-    + 'Speed-Dial, das Glas sitzt in der Shell, und GLASS_IN_MAIN_EXEMPT gehoert '
-    + 'ersatzlos geloescht (der Folgevorgang zu #634).');
-
-  // (2) DIE TRAEGER. Ueber `eachRule()` und nicht ueber `includes()`: ein
-  //     `allCss.includes('.fab-action__btn')` waere auf dem Kommentar gruen, der
-  //     das Entfallen der Regel begruendet - genau die Bauart, mit der der
-  //     Eyebrow-Guard drei Runden lang das Gegenteil seiner Regel bestaetigt hat.
-  //     Gesucht wird die Regel, die den Blur DEKLARIERT, also der Verstoss selbst.
-  const glassy = new Set();
-  for (const rule of allStyleRules()) {
-    const declared = /backdrop-filter:\s*([^;}]+)/i.exec(rule.body)?.[1] ?? '';
-    if (!declared || /^\s*none\s*$/i.test(declared)) continue;
-    if (!/var\(\s*--blur-/.test(declared)
-      && ![...declared.matchAll(/blur\(\s*([\d.]+)px\s*\)/g)].some((m) => Number(m[1]) > 0)) continue;
-    for (const part of rule.selector.split(',')) glassy.add(part.trim());
-  }
-  assert.ok(glassy.size >= 5,
-    `Nur ${glassy.size} Regeln mit deklariertem Blur im Stylesheet - der Regelscanner hat `
-    + 'nichts gelesen, statt nichts zu finden.');
-
-  const orphaned = [...GLASS_IN_MAIN_EXEMPT.keys()]
-    .map((key) => key.slice(key.indexOf(': ') + 2))
-    .filter((selector, i, all) => all.indexOf(selector) === i)
-    .filter((selector) => !glassy.has(selector));
-  assert.deepEqual(orphaned, [],
-    'GLASS_IN_MAIN_EXEMPT nennt Selektoren, die kein Blur mehr deklarieren - die '
-    + 'Ausnahme hat ihren Verstoss ueberlebt.');
-});
-
 test('Sonde 12 - Glas sitzt auf Chrome, nie im Seiteninhalt', async () => {
   const findings = [];
   const declaredFindings = [];
   const seen = new Set();
-  const exemptSeen = new Set();
   let declaredSeen = 0;
   for (const device of ['mobile', 'desktop']) {
     const page = await openPage(harness, { device, theme: 'light', locale: 'de' });
@@ -2317,24 +2247,14 @@ test('Sonde 12 - Glas sitzt auf Chrome, nie im Seiteninhalt', async () => {
       // Ebene 2 - die ABSICHT. Sie kann rot werden, wo Ebene 1 es nie kann.
       const declared = await declaredGlassInMain(page);
       declaredSeen = Math.max(declaredSeen, declared.selectorsSeen);
-      for (const sel of declared.offenders) {
-        const key = `${device}/${name}: ${sel}`;
-        // Die eine benannte Ausnahme (siehe der Block darueber). Sie greift je
-        // TREFFER, nicht je Route: eine zweite Glasflaeche auf `/dashboard`
-        // faellt weiter durch.
-        if (GLASS_IN_MAIN_EXEMPT.has(key)) { exemptSeen.add(key); continue; }
-        declaredFindings.push(key);
-      }
+      // Ohne Ausnahmen. Die eine, die es hier gab, hatte einen Anlass - der
+      // Speed-Dial des Dashboards stand als `.fab-container` im Scrollport - und
+      // ist mit ihm entfallen (Folgevorgang zu #634): der Dial ist jetzt eine
+      // `.page-fab-group`, `adoptPageFab()` hebt ihn samt Glas in die Shell.
+      for (const sel of declared.offenders) declaredFindings.push(`${device}/${name}: ${sel}`);
     }
     await page.close();
   }
-  // Und die Gegenrichtung der Ausnahme: ein Eintrag, dessen Treffer nicht mehr
-  // auftritt, ist eine Allowlist, die niemand liest. Die Stale-Pruefung oben
-  // sieht nur das Stylesheet - DIESE hier sieht das gerenderte Dokument.
-  const unusedExempt = [...GLASS_IN_MAIN_EXEMPT.keys()].filter((key) => !exemptSeen.has(key));
-  assert.deepEqual(unusedExempt, [],
-    'GLASS_IN_MAIN_EXEMPT nennt Treffer, die die Sonde nicht mehr findet - die '
-    + 'Ausnahme hat ihren Verstoss ueberlebt und gehoert geloescht.');
   // Eine Sonde, die nichts gesehen hat, darf nicht urteilen - je Ebene einzeln,
   // sonst deckt der Reichweiten-Nachweis der einen die Blindheit der anderen zu.
   assert.ok(seen.size >= 5,
@@ -2438,7 +2358,9 @@ for (const [label, features] of [
 async function openFabModal(page) {
   return page.evaluate(async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-    const fab = document.querySelector('#fab-layer .page-fab, #fab-layer .fab-main, .page-fab, .fab-main');
+    // Ein Selektor genuegt seit dem Folgevorgang zu #634: auch der Speed-Dial
+    // des Dashboards ist ein `.page-fab` und haengt in der Shell-Layer.
+    const fab = document.querySelector('#fab-layer .page-fab, .page-fab');
     if (!fab) return { skipped: 'kein FAB' };
     fab.click();
     await wait(700);

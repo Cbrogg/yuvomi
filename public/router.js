@@ -1713,8 +1713,12 @@ function adoptPageFab() {
   const layer = document.getElementById('fab-layer');
   if (!layer) return null;
   const fresh = document.querySelector('#main-content .page-fab');
-  if (fresh) layer.replaceChildren(fresh);
-  return layer.firstElementChild;
+  // Umgezogen wird die GRUPPE, wenn es eine gibt: das Speed-Dial des Dashboards
+  // ist ein FAB plus Aktionsliste plus Backdrop, und beide sind fixiert. Zöge
+  // nur der Knopf um, bliebe die Mechanik im Scrollport zurück - der halbe
+  // Umzug wäre schlimmer als keiner, weil er nach Erledigung aussieht.
+  if (fresh) layer.replaceChildren(fresh.closest('.page-fab-group') ?? fresh);
+  return layer.querySelector('.page-fab');
 }
 
 /**
@@ -1804,9 +1808,10 @@ const SHORTCUTS = [
   // Direkt auf die Overlay-Funktion — der alte Umweg über einen Klick auf die
   // Suchleiste im (geschlossenen, inerten) Mehr-Sheet war eine fragile Kette.
   { key: '/',   description: () => t('shortcuts.search'),  action: () => _openSearch?.() },
-  // Fallback auf den Schnellaktionen-FAB des Dashboards (#fab-main): dort gibt
-  // es keinen .page-fab und `n` war ein stilles No-op (Audit A1-12).
-  { key: 'n',   description: () => t('shortcuts.new'),     action: () => (document.querySelector('.page-fab') ?? document.querySelector('#fab-main'))?.click() },
+  // Ein Selektor reicht: der Schnellaktionen-FAB des Dashboards war der einzige
+  // Grund für den früheren Zweitweg über `#fab-main` (Audit A1-12), und er ist
+  // seit dem Folgevorgang zu #634 selbst ein `.page-fab`.
+  { key: 'n',   description: () => t('shortcuts.new'),     action: () => document.querySelector('.page-fab')?.click() },
   { key: 'f',   description: () => t('shortcuts.searchCalendar'), action: () => {
     if (location.pathname === '/calendar') document.querySelector('#cal-search')?.click();
   } },
