@@ -5141,7 +5141,13 @@ const MIGRATIONS = [
   {
     version: 139,
     description: 'Allow inventory_item entities in the existing reminder center (Stage 4)',
+    foreignKeysOff: true,
     up: `
+      -- SQLite kann einen Spalten-CHECK nicht per ALTER erweitern, daher Tabelle
+      -- neu erstellen (Muster wie v98/v101). foreignKeysOff ist Pflicht: mit
+      -- aktiver FK-Durchsetzung wuerde DROP TABLE reminders die gekoppelten
+      -- Zustellprotokolle (notification_deliveries.reminder_id ... ON DELETE
+      -- CASCADE) auf jeder bestehenden Installation mitloeschen.
       CREATE TABLE reminders_new (
         id          INTEGER PRIMARY KEY AUTOINCREMENT,
         entity_type TEXT    NOT NULL CHECK(entity_type IN ('task', 'event', 'subscription', 'inventory_item')),
