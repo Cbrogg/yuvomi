@@ -29,6 +29,17 @@ const suiteFile = (name) => pkg.scripts[name].match(/test\/[\w.-]+\.js/)?.[0];
  * test:document-guards") wäre wieder eine Allowlist, die beim zweiten Fall
  * fehlt. Geprüft wird deshalb die Bauart der Datei.
  */
+/**
+ * Der Einstieg der Browser-Kette - ein NAME, und trotzdem keine Namensausnahme.
+ *
+ * Der Docblock darüber verbietet, eine Suite nach ihrem Namen der einen oder
+ * anderen Kette zuzuordnen; das entscheidet `needsBrowser()` über die Bauart.
+ * Dieses Script ist aber keine Suite, sondern die KETTE selbst - es kann nicht
+ * in sich hängen, so wie `pkg.scripts.test` nicht in sich hängt. Deshalb steht
+ * es hier einmal benannt und nicht in einer Liste, die wachsen könnte.
+ */
+const BROWSER_CHAIN = 'test:document-guards';
+
 function needsBrowser(name) {
   const file = suiteFile(name);
   if (!file) return false;
@@ -52,7 +63,7 @@ test('jedes test:*-Script hängt in genau einer Kette', () => {
   // direktes node-Kommando - dann genügt der Testdatei-Pfad als Nachweis.
   const wrong = [];
   for (const name of suiteScripts) {
-    if (name === 'test:document-guards') continue; // die Browser-Kette selbst
+    if (name === BROWSER_CHAIN) continue; // die Kette selbst, siehe oben
     const browser = needsBrowser(name);
     const inChain = runsIn(chain, name);
     if (browser && inChain) {
@@ -66,9 +77,9 @@ test('jedes test:*-Script hängt in genau einer Kette', () => {
 });
 
 test('die Browser-Suiten laufen unter test:document-guards', () => {
-  const browserSuites = suiteScripts.filter((n) => n !== 'test:document-guards' && needsBrowser(n));
-  const entry = pkg.scripts['test:document-guards'];
-  assert.ok(entry, 'test:document-guards fehlt - die Browser-Kette braucht einen Einstieg.');
+  const browserSuites = suiteScripts.filter((n) => n !== BROWSER_CHAIN && needsBrowser(n));
+  const entry = pkg.scripts[BROWSER_CHAIN];
+  assert.ok(entry, `${BROWSER_CHAIN} fehlt - die Browser-Kette braucht einen Einstieg.`);
   const missing = browserSuites.filter((n) => !runsIn(entry, n));
   assert.deepEqual(
     missing,

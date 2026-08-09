@@ -34,6 +34,7 @@ import {
   contrastRatio,
   toHex,
 } from './document-guards-harness.js';
+import { eachRule } from './css-rules.js';
 
 const ROUTE_NAMES = Object.keys(ROUTES);
 const SETTINGS_NAMES = Object.keys(SETTINGS_ROUTES);
@@ -74,7 +75,9 @@ const LEAVES_SKIPPED = new Map([
     + '23-mal bestaetigt.'],
   ['Sonde 12', 'misst Glasflaechen, und die sitzen in der SHELL - Tab-Bar, Sidebar, Sheets, '
     + 'Toast, Datepicker-Popover, FAB. Die ist auf jeder Route dieselbe, also kaeme ein Befund '
-    + 'dort 39-mal statt 16-mal (dieselbe Begruendung wie bei Sonde 11). Gegengeprueft, dass '
+    + 'dort 39-mal statt 16-mal. (Hier stand „dieselbe Begruendung wie bei Sonde 11" - Sonde 11 '
+    + 'steht gar nicht in dieser Map, sie FAEHRT die Blaetter. Der Kopf oben verspricht „gegen '
+    + 'den Bestand geprueft, nicht vermutet"; dieser Verweis war es nicht.) Gegengeprueft, dass '
     + 'die Blaetter keine eigene Glasflaeche mitbringen: `public/settings/**` setzt nirgends '
     + '`backdrop-filter`, und der einzige Glastraeger ihrer Shell ist die Sidebar der App.'],
   ['Sonde 13', 'oeffnet Modals ueber den FAB, und die Einstellungen haben keinen - weder die '
@@ -133,6 +136,44 @@ test('die Auslassungen der Settings-Blaetter nennen eine Sonde, die es gibt', ()
     `Nur ${SETTINGS_NAMES.length} Settings-Blaetter aus der Registry abgeleitet - `
     + 'die Ableitung greift nicht mehr, und die Sonden faehren wieder nur `/settings`.');
 });
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Die Stylesheet-Quelle der Stale-Pruefungen
+ *
+ * Drei Ausnahmelisten dieser Datei fragen „gibt es die Klasse noch?". Bis
+ * 2026-08-09 fragten zwei davon `allCss.includes('.' + cls)` ueber
+ * zusammengehaengte, KOMMENTARBEHAFTETE Quellen - dieselbe Falle, die den
+ * CSS-Regelscanner ueberhaupt erst noetig gemacht hat, in ihrer Schwesterform:
+ *
+ *   1. Eine Klasse, die nur noch in einem Kommentar steht („frueher trug
+ *      `.item-check` hier…"), behaelt ihre Ausnahme fuer immer.
+ *   2. `includes('.item-check')` ist auf `.item-checkbox` gruen. Eine
+ *      Teilzeichenkette ist kein Klassenname.
+ *
+ * `eachRule()` (test/css-rules.js) ist seit Session 25 DER eine Regelscanner -
+ * er strippt Kommentare und liefert Selektoren. Die Klassen kommen aus dem
+ * SELEKTOR und als ganze Token, damit beide Fallen zu sind.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/** Jede Regel aller App-Stylesheets, mit ihrer Datei. */
+function allStyleRules() {
+  const styles = new URL('../public/styles/', import.meta.url);
+  const out = [];
+  for (const entry of readdirSync(styles).filter((name) => name.endsWith('.css'))) {
+    const css = readFileSync(new URL(entry, styles), 'utf8');
+    for (const rule of eachRule(css)) out.push({ ...rule, file: entry });
+  }
+  return out;
+}
+
+/** Jeder Klassenname, den irgendein Selektor nennt - als ganzes Token. */
+function selectorClasses(rules = allStyleRules()) {
+  const out = new Set();
+  for (const rule of rules) {
+    for (const match of rule.selector.matchAll(/\.(-?[_a-zA-Z][\w-]*)/g)) out.add(match[1]);
+  }
+  return out;
+}
 
 /**
  * Die aktuelle Route besuchen UND jede SICHT, die sie selbst als umschaltbar
@@ -467,6 +508,7 @@ describe('Sonde 2 - jeder sichtbare Text haelt WCAG AA auf seinem KOMPONIERTEN U
         const pageBase = base[3] > 0 ? composite(base, [255, 255, 255]) : [255, 255, 255];
         const findings = [];
         let unpainted = 0;
+        let measured = 0;
         for (const name of sweep('Sonde 2')) {
           await gotoRoute(page, ALL_ROUTES[name]);
           for (const sample of await collectTextSamples(page)) {
@@ -475,6 +517,9 @@ describe('Sonde 2 - jeder sichtbare Text haelt WCAG AA auf seinem KOMPONIERTEN U
               unpainted += 1;
               continue;
             }
+            // Der Zaehler steht an DERSELBEN Stelle, an der auch ein Finding
+            // entstehen koennte - siehe der Nachweis unten.
+            measured += 1;
             const { ratio, min, bg, fg } = result;
             if (ratio + 0.005 < min) {
               findings.push(
@@ -486,6 +531,18 @@ describe('Sonde 2 - jeder sichtbare Text haelt WCAG AA auf seinem KOMPONIERTEN U
           }
         }
         await page.close();
+        // EINE SONDE, DIE NICHTS GEMESSEN HAT, DARF NICHT URTEILEN. Sie war bis
+        // 2026-08-09 die einzige der 14 ohne diesen Nachweis - ausgerechnet die,
+        // die die ganze Guard-Ebene rechtfertigt. `unpainted` stand nur im
+        // Meldungstext und zaehlte die NICHT rechenbaren Proben; liefert
+        // `collectTextSamples()` auf jeder Route `[]` (umbenanntes
+        // `#main-content`, `settle()`-Regress, abgelaufene Sitzung), sind beide
+        // Zahlen null und alle vier Theme/Device-Tests gruen.
+        assert.ok(
+          measured >= 600,
+          `Nur ${measured} Textproben im ganzen Dokument gerechnet - die Sonde hat nichts ` +
+            'gemessen, statt nichts gefunden. Seiten nicht aufgebaut?',
+        );
         assert.deepEqual(
           findings,
           [],
@@ -609,20 +666,6 @@ test('Sonde 3 - es gibt EINE Buttonform, und die Ausnahmen sind Kategorien', asy
     'Knoepfe mit eigener Form ausserhalb der vier Ausnahme-Kategorien. Entweder '
     + 'die Kapsel tragen oder in SHAPE_EXEMPT stehen - mit der Kategorie, nicht '
     + 'mit dem Grund „gewachsen".');
-
-  // Eine Ausnahme fuer einen Knopf, den es nicht mehr gibt, ist eine Allowlist,
-  // die niemand mehr liest. Gemessen wird gegen das STYLESHEET, nicht gegen
-  // das Dokument: ein Element, das nur unter bestimmten Daten erscheint, waere
-  // sonst je nach Seed „verschwunden" - die Sonde pruefte dann Timing statt
-  // Ehrlichkeit. Der Klassenname im CSS ist die stabile Quelle.
-  const styles = new URL('../public/styles/', import.meta.url);
-  const allCss = readdirSync(styles)
-    .filter((entry) => entry.endsWith('.css'))
-    .map((entry) => readFileSync(new URL(entry, styles), 'utf8'))
-    .join('\n');
-  const stale = [...SHAPE_EXEMPT.keys()].filter((cls) => !allCss.includes(`.${cls}`));
-  assert.deepEqual(stale, [],
-    'SHAPE_EXEMPT nennt Klassen, die in keinem Stylesheet mehr vorkommen.');
 });
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -843,11 +886,16 @@ describe('Sonde 4 - eine Reihe traegt ihre Dichte, ein Einzelziel ist allein tre
       let seen = 0;
       for (const name of sweep('Sonde 4')) {
         await gotoRoute(page, ALL_ROUTES[name]);
-        seen += await page.evaluate(
-          () => document.querySelectorAll('button, a[href], [role="button"]').length,
-        );
         for (const rows of await measureScrolled(page, min)) {
           for (const row of rows) {
+            // DER ZAEHLER STEHT IN DER MESSUNG, NICHT DAVOR. Bis 2026-08-09
+            // zaehlte er `querySelectorAll(...).length` - rohe DOM-Knoten, in
+            // den Tausenden. `measureTargets()` steigt aber pro Element bei
+            // `if (!mine(cx, cy)) return;` aus: bricht `elementFromPoint`, ist
+            // `offenders` leer und der alte Nachweis hielt trotzdem muehelos.
+            // Eine Zeile weiter oben zu zaehlen war der ganze Unterschied
+            // zwischen „nichts gefunden" und „nichts gemessen".
+            seen += 1;
             if (row.crowded) rowBuilt.add(row.key);
             if (row.wcag && row.full) continue;
             const id = `${row.key}|${row.w}x${row.h}`;
@@ -859,10 +907,12 @@ describe('Sonde 4 - eine Reihe traegt ihre Dichte, ein Einzelziel ist allein tre
       await page.close();
 
       // Eine Sonde, die nichts gemessen hat, darf nicht urteilen (dieselbe
-      // Zusicherung wie bei Sonde 3).
-      assert.ok(seen >= 200,
-        `Nur ${seen} Ziele im ganzen Dokument gesehen - die Sonde hat nichts `
-        + 'gemessen, statt nichts gefunden. Seiten nicht aufgebaut?');
+      // Zusicherung wie bei Sonde 3). Gezaehlt sind GETASTETE Ziele, also
+      // Messungen - dasselbe wie bei Sonde 14, wo der Zaehler ebenfalls in der
+      // Schleife steht, aus der die Findings kommen.
+      assert.ok(seen >= 600,
+        `Nur ${seen} Ziele im ganzen Dokument getastet - die Sonde hat nichts `
+        + 'gemessen, statt nichts gefunden. Bricht elementFromPoint?');
 
       // DIE EINENGUNG IST EINE EIGENSCHAFT DES BAUTEILS, NICHT DER INSTANZ.
       // Die erste Fassung urteilte je Instanz und meldete prompt einen
@@ -892,18 +942,33 @@ describe('Sonde 4 - eine Reihe traegt ihre Dichte, ein Einzelziel ist allein tre
   }
 });
 
-test('Sonde 4 - keine Zielgroessen-Ausnahme ueberlebt ihre Klasse', () => {
-  // Gemessen gegen das STYLESHEET, nicht gegen das Dokument: ein Element, das
-  // nur unter bestimmten Daten erscheint, waere sonst je nach Seed
-  // „verschwunden" (dieselbe Begruendung wie bei Sonde 3).
-  const styles = new URL('../public/styles/', import.meta.url);
-  const allCss = readdirSync(styles)
-    .filter((entry) => entry.endsWith('.css'))
-    .map((entry) => readFileSync(new URL(entry, styles), 'utf8'))
-    .join('\n');
-  const stale = [...TARGET_EXEMPT.keys()].filter((cls) => !allCss.includes(`.${cls}`));
+test('Sonde 3+4 - keine Form- und keine Zielgroessen-Ausnahme ueberlebt ihre Klasse', () => {
+  // EINE Pruefung fuer beide Listen, und zwar aus einem Grund, der ueber
+  // Sparsamkeit hinausgeht: `TARGET_EXEMPT` ist heute leer (Phase 3c), und eine
+  // eigene Assertion darueber ist tautologisch - sie kann nicht rot werden und
+  // zaehlte trotzdem als eine der gemeldeten Zusicherungen dieser Suite. Zusammen
+  // mit `SHAPE_EXEMPT` und dem Reichweiten-Nachweis unten prueft sie etwas.
+  //
+  // Gemessen wird gegen das STYLESHEET, nicht gegen das Dokument: ein Element,
+  // das nur unter bestimmten Daten erscheint, waere sonst je nach Seed
+  // „verschwunden" - die Pruefung urteilte dann ueber Timing statt ueber
+  // Ehrlichkeit. Der Klassenname im Selektor ist die stabile Quelle.
+  const classes = selectorClasses();
+
+  // Eine Pruefung, die nichts gelesen hat, darf nicht urteilen: liefert der
+  // Scanner nichts, waere JEDE Ausnahme „veraltet" - und die Assertion meldete
+  // ihre gesamte Liste statt ihres Defekts.
+  assert.ok(classes.size >= 500,
+    `Nur ${classes.size} Klassennamen aus den Stylesheets gelesen - der Regelscanner `
+    + 'hat nichts gefunden, statt nichts zu finden.');
+
+  const stale = [];
+  for (const [label, list] of [['SHAPE_EXEMPT', SHAPE_EXEMPT], ['TARGET_EXEMPT', TARGET_EXEMPT]]) {
+    for (const cls of list.keys()) if (!classes.has(cls)) stale.push(`${label}: .${cls}`);
+  }
   assert.deepEqual(stale, [],
-    'TARGET_EXEMPT nennt Klassen, die in keinem Stylesheet mehr vorkommen.');
+    'Eine Ausnahme fuer einen Knopf, den es nicht mehr gibt, ist eine Allowlist, die '
+    + 'niemand mehr liest. Diese Klassen nennt kein Selektor mehr.');
 });
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -1830,11 +1895,19 @@ async function keyboardlessClickTargets(page) {
     });
 
     const findings = [];
+    // Der Reichweiten-Nachweis dieser Sonde: NICHT die besuchten Routen, sondern
+    // die Elemente, aus denen hier ueberhaupt ein Finding entstehen kann. Das
+    // sind die mit einem click-Listener - alles davor ist Vorauswahl, alles
+    // danach Freispruch. Degradiert der CDP-Pfad (DOMDebugger weg, Handles tot),
+    // bleibt `withClick` null, waehrend `result.value` und die Routenzahl
+    // unveraendert aussehen.
+    let withClick = 0;
     for (let i = 0; i < result.value; i += 1) {
       const { result: handle } = await cdp.send('Runtime.evaluate', { expression: `window.__kbCandidates[${i}]` });
       try {
         const { listeners } = await cdp.send('DOMDebugger.getEventListeners', { objectId: handle.objectId, depth: 0 });
         if (!listeners.some((l) => l.type === 'click')) continue;
+        withClick += 1;
         const hasKeyListener = listeners.some((l) => l.type === 'keydown' || l.type === 'keypress');
 
         const { result: meta } = await cdp.send('Runtime.callFunctionOn', {
@@ -1866,7 +1939,7 @@ async function keyboardlessClickTargets(page) {
         await cdp.send('Runtime.releaseObject', { objectId: handle.objectId });
       }
     }
-    return findings;
+    return { findings, withClick };
   } finally {
     await cdp.detach();
   }
@@ -1875,6 +1948,7 @@ async function keyboardlessClickTargets(page) {
 test('Sonde 11 - was einen Klick annimmt, nimmt auch eine Taste an', async () => {
   const findings = [];
   let seen = 0;
+  let withClick = 0;
 
   const routes = sweep('Sonde 11');
   const page = await openPage(harness, { device: 'desktop', theme: 'light', locale: 'de' });
@@ -1882,14 +1956,22 @@ test('Sonde 11 - was einen Klick annimmt, nimmt auch eine Taste an', async () =>
     await gotoRoute(page, ALL_ROUTES[name]);
     await settleAnimations(page);
     seen += 1;
-    for (const el of await keyboardlessClickTargets(page)) {
+    const probed = await keyboardlessClickTargets(page);
+    withClick += probed.withClick;
+    for (const el of probed.findings) {
       findings.push(`${name}: ${el}`);
     }
   }
   await page.close();
 
-  // Eine Sonde, die nichts gesehen hat, darf nicht urteilen.
+  // Eine Sonde, die nichts gesehen hat, darf nicht urteilen - und „gesehen" heisst
+  // hier nicht „besucht". Der Routenzaehler steht VOR der Messung: er haelt auch
+  // dann, wenn die CDP-Schleife in `keyboardlessClickTargets()` nie laeuft.
+  // Deshalb steht der zweite Nachweis daneben, und der zaehlt in der Messung.
   assert.equal(seen, routes.length, `Nur ${seen} von ${routes.length} Zustaenden gesehen.`);
+  assert.ok(withClick >= 250,
+    `Nur ${withClick} Elemente mit click-Listener gefunden - der CDP-Pfad misst nicht `
+    + '(DOMDebugger.getEventListeners tot, Handles nicht aufloesbar?), statt nichts zu finden.');
 
   assert.deepEqual(findings, [],
     'Element mit click-Listener, ohne eigenen Tastaturzugang UND ohne inneres Bedienelement, '
@@ -2140,10 +2222,85 @@ async function glassSurfaces(page) {
   });
 }
 
+/* ────────────────────────────────────────────────────────────────────────────
+ * DIE EINE BENANNTE AUSNAHME DIESER SONDE - eingetragen am 2026-08-09
+ *
+ * `public/pages/dashboard.js` baut seinen Speed-Dial als EIGENEN
+ * `.fab-container` (`position: fixed`), nicht als `.page-fab`. `adoptPageFab()`
+ * in `public/router.js` sucht `#main-content .page-fab`, um den FAB in die
+ * Shell-Layer `#fab-layer` zu ziehen - die Haertung aus #634 (v1.86.1, „FAB raus
+ * aus dem Scrollport") greift auf der Startseite deshalb nicht. Der Speed-Dial
+ * bleibt als einziger FAB der App IM Seiteninhalt stehen, und mit ihm sein Glas.
+ *
+ * `.fab-action__label` und `.fab-action__btn` sind damit kein verirrtes Glas -
+ * sie sind CHROME AM FALSCHEN ORT. Deshalb findet sie die Glas-ist-Chrome-Regel
+ * und nicht die FAB-Regel: die Sonde misst richtig, der Befund sitzt woanders.
+ *
+ * DIE AUSNAHME IST KEIN URTEIL, SONDERN EIN AUFSCHUB. Ulas hat am 2026-08-09
+ * entschieden, den Speed-Dial auf `.page-fab` umzustellen - aber als eigenen
+ * Vorgang NACH dem Merge des Redesign-Branches, mit Bezug auf #634. Mit dieser
+ * Umstellung ENTFAELLT die Ausnahme ersatzlos; die Stale-Pruefung darunter
+ * stoesst den naechsten Durchgang darauf, statt es ihm zu ueberlassen.
+ *
+ * Benannt sind die vier Treffer einzeln - nicht die Route, nicht die Datei, nicht
+ * die Regel. Wer `/dashboard` ausklammerte, kaufte sich die naechste Glasflaeche
+ * dieser Seite gratis mit ein.
+ * ──────────────────────────────────────────────────────────────────────────── */
+const FAB_GLASS_REASON = 'Speed-Dial des Dashboards: Chrome im Scrollport, weil `.fab-container` '
+  + 'statt `.page-fab` (siehe #634 / adoptPageFab). Entfaellt mit der Umstellung.';
+const GLASS_IN_MAIN_EXEMPT = new Map([
+  ['mobile/dashboard: .fab-action__label', FAB_GLASS_REASON],
+  ['desktop/dashboard: .fab-action__label', FAB_GLASS_REASON],
+  ['mobile/dashboard: .fab-action__btn', FAB_GLASS_REASON],
+  ['desktop/dashboard: .fab-action__btn', FAB_GLASS_REASON],
+]);
+
+test('Sonde 12 - die FAB-Ausnahme faellt mit ihrem Anlass', () => {
+  // Eine Ausnahme ohne Verfallsdatum ist die vierte Allowlist derselben Bauart.
+  // Diese hier hat zwei Enden, und beide muessen halten.
+
+  // (1) DER ANLASS. Sobald das Dashboard eine `.page-fab` baut, adoptiert
+  //     `adoptPageFab()` den Speed-Dial in die Shell-Layer, das Glas verlaesst
+  //     `#main-content` - und die Ausnahme ist Muell. Gesucht wird in der SEITE,
+  //     nicht im Stylesheet: `.page-fab` steht dort laengst (andere Module
+  //     tragen sie), der Unterschied liegt allein im Markup des Dashboards.
+  const dashboard = readFileSync(new URL('../public/pages/dashboard.js', import.meta.url), 'utf8');
+  assert.ok(!/page-fab/.test(dashboard),
+    'Das Dashboard baut jetzt eine `.page-fab` - dann adoptiert adoptPageFab() den '
+    + 'Speed-Dial, das Glas sitzt in der Shell, und GLASS_IN_MAIN_EXEMPT gehoert '
+    + 'ersatzlos geloescht (der Folgevorgang zu #634).');
+
+  // (2) DIE TRAEGER. Ueber `eachRule()` und nicht ueber `includes()`: ein
+  //     `allCss.includes('.fab-action__btn')` waere auf dem Kommentar gruen, der
+  //     das Entfallen der Regel begruendet - genau die Bauart, mit der der
+  //     Eyebrow-Guard drei Runden lang das Gegenteil seiner Regel bestaetigt hat.
+  //     Gesucht wird die Regel, die den Blur DEKLARIERT, also der Verstoss selbst.
+  const glassy = new Set();
+  for (const rule of allStyleRules()) {
+    const declared = /backdrop-filter:\s*([^;}]+)/i.exec(rule.body)?.[1] ?? '';
+    if (!declared || /^\s*none\s*$/i.test(declared)) continue;
+    if (!/var\(\s*--blur-/.test(declared)
+      && ![...declared.matchAll(/blur\(\s*([\d.]+)px\s*\)/g)].some((m) => Number(m[1]) > 0)) continue;
+    for (const part of rule.selector.split(',')) glassy.add(part.trim());
+  }
+  assert.ok(glassy.size >= 5,
+    `Nur ${glassy.size} Regeln mit deklariertem Blur im Stylesheet - der Regelscanner hat `
+    + 'nichts gelesen, statt nichts zu finden.');
+
+  const orphaned = [...GLASS_IN_MAIN_EXEMPT.keys()]
+    .map((key) => key.slice(key.indexOf(': ') + 2))
+    .filter((selector, i, all) => all.indexOf(selector) === i)
+    .filter((selector) => !glassy.has(selector));
+  assert.deepEqual(orphaned, [],
+    'GLASS_IN_MAIN_EXEMPT nennt Selektoren, die kein Blur mehr deklarieren - die '
+    + 'Ausnahme hat ihren Verstoss ueberlebt.');
+});
+
 test('Sonde 12 - Glas sitzt auf Chrome, nie im Seiteninhalt', async () => {
   const findings = [];
   const declaredFindings = [];
   const seen = new Set();
+  const exemptSeen = new Set();
   let declaredSeen = 0;
   for (const device of ['mobile', 'desktop']) {
     const page = await openPage(harness, { device, theme: 'light', locale: 'de' });
@@ -2160,10 +2317,24 @@ test('Sonde 12 - Glas sitzt auf Chrome, nie im Seiteninhalt', async () => {
       // Ebene 2 - die ABSICHT. Sie kann rot werden, wo Ebene 1 es nie kann.
       const declared = await declaredGlassInMain(page);
       declaredSeen = Math.max(declaredSeen, declared.selectorsSeen);
-      for (const sel of declared.offenders) declaredFindings.push(`${device}/${name}: ${sel}`);
+      for (const sel of declared.offenders) {
+        const key = `${device}/${name}: ${sel}`;
+        // Die eine benannte Ausnahme (siehe der Block darueber). Sie greift je
+        // TREFFER, nicht je Route: eine zweite Glasflaeche auf `/dashboard`
+        // faellt weiter durch.
+        if (GLASS_IN_MAIN_EXEMPT.has(key)) { exemptSeen.add(key); continue; }
+        declaredFindings.push(key);
+      }
     }
     await page.close();
   }
+  // Und die Gegenrichtung der Ausnahme: ein Eintrag, dessen Treffer nicht mehr
+  // auftritt, ist eine Allowlist, die niemand liest. Die Stale-Pruefung oben
+  // sieht nur das Stylesheet - DIESE hier sieht das gerenderte Dokument.
+  const unusedExempt = [...GLASS_IN_MAIN_EXEMPT.keys()].filter((key) => !exemptSeen.has(key));
+  assert.deepEqual(unusedExempt, [],
+    'GLASS_IN_MAIN_EXEMPT nennt Treffer, die die Sonde nicht mehr findet - die '
+    + 'Ausnahme hat ihren Verstoss ueberlebt und gehoert geloescht.');
   // Eine Sonde, die nichts gesehen hat, darf nicht urteilen - je Ebene einzeln,
   // sonst deckt der Reichweiten-Nachweis der einen die Blindheit der anderen zu.
   assert.ok(seen.size >= 5,
