@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-08-09
+
 ### Changed
 
 - The whole interface has been redesigned in Apple's Human Interface Guidelines and its liquid-glass design language. Yuvomi should now feel like an app that shipped with the device: the system font stack and Apple's type scale, cool system neutrals, capsule controls and inset-grouped lists. Glass is chrome and nothing else - the tab bar, the sidebar, sheets and the action button are made of it, while everything you actually read sits on an opaque surface. Each of the seventeen modules keeps its own accent colour so you can tell at a glance where you are, and all of them were verified against the surfaces they are used on: WCAG AA in light *and* dark, with the same values holding under reduced transparency and increased contrast. On phones the module title now starts as a large title and collapses into the bar as you scroll, the way it does elsewhere on the platform. Nothing about your data, your household or your integrations changes
