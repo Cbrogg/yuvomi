@@ -5139,7 +5139,7 @@ const MIGRATIONS = [
     `,
   },
   {
-    version: 137,
+    version: 139,
     description: 'Allow inventory_item entities in the existing reminder center (Stage 4)',
     up: `
       CREATE TABLE reminders_new (
