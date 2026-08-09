@@ -1,7 +1,7 @@
 /**
  * Modul: Inventar – Gegenstaende
- * Zweck: CRUD + Liste. Stufe 1 - keine Buchungs-/Dokument-/Abo-Verknuepfung,
- *        die kommen in spaeteren Stufen als eigene Routen dazu.
+ * Zweck: CRUD + Liste + Dokument-/Buchungsverknuepfung (Stufen 1-3). Keine
+ *        Abo-Verknuepfung, die kommt in einer spaeteren Stufe.
  *
  * Kein Eigentuemer-Gate: Inventar ist Haushaltseigentum wie der Vorrat.
  * created_by bleibt als Herkunftsnachweis (nullable, ON DELETE SET NULL).
@@ -14,6 +14,10 @@ import {
   str, oneOf, num, date, id as idParam, collectErrors, MAX_TITLE, MAX_TEXT, MAX_SHORT,
 } from '../../middleware/validate.js';
 import { documentLinksFor, loadDocumentLinks, replaceDocumentLinks } from '../../services/document-links.js';
+import {
+  ROLES, visibleEntry, linkabilityError, entryHasLinks, linkEntry, unlinkEntry,
+  loadLinkedEntriesForItems, loadLinkedEntries, computeTotal,
+} from './entry-links.js';
 
 const log = createLogger('Inventory');
 const router = express.Router();
@@ -49,12 +53,15 @@ function loadItem(id, userId) {
   const item = db.get().prepare('SELECT * FROM inventory_items WHERE id = ?').get(id);
   if (!item) return null;
   const category = db.get().prepare('SELECT name, icon FROM inventory_categories WHERE key = ?').get(item.category);
+  const linkedEntries = loadLinkedEntries(item.id, userId);
   return {
     ...item,
     category_name: category?.name ?? item.category,
     category_icon: category?.icon ?? 'package',
     location_path: locationPath(item.location_id),
     attachments: documentLinksFor(db.get(), { ...DOCS, ownerId: item.id, userId }),
+    linked_entries: linkedEntries,
+    linked_entries_total: computeTotal(linkedEntries),
   };
 }
 
@@ -78,11 +85,17 @@ function loadItems({ category, locationId, status, q } = {}, userId) {
     ORDER BY ii.name COLLATE NOCASE ASC
   `).all(...params);
   const byItem = loadDocumentLinks(db.get(), { ...DOCS, ownerIds: rows.map((r) => r.id), userId });
-  return rows.map((row) => ({
-    ...row,
-    location_path: locationPath(row.location_id),
-    attachments: byItem.get(row.id) || [],
-  }));
+  const entriesByItem = loadLinkedEntriesForItems(rows.map((r) => r.id), userId);
+  return rows.map((row) => {
+    const linkedEntries = entriesByItem.get(row.id) || [];
+    return {
+      ...row,
+      location_path: locationPath(row.location_id),
+      attachments: byItem.get(row.id) || [],
+      linked_entries: linkedEntries,
+      linked_entries_total: computeTotal(linkedEntries),
+    };
+  });
 }
 
 /**
@@ -233,10 +246,32 @@ router.get('/:id', (req, res) => {
 // --------------------------------------------------------
 router.post('/', (req, res) => {
   try {
-    const { values, errors } = validateItemFields(req.body);
+    const userId = req.authUserId || req.session.userId;
+
+    // Kaufpreis-Vorbelegung (Design-Doc §5.6): entry_id wird VOR dem Insert
+    // geprueft, damit eine ungueltige Buchung nie einen verwaisten Gegenstand
+    // anlegt. Vorbelegt wird nur, wenn purchase_price fehlt UND die Buchung
+    // noch keine andere Verknuepfung hat (Sammelrechnung, zweiter Gegenstand).
+    let effectiveBody = req.body;
+    let entry = null;
+    const rawEntryId = req.body.entry_id;
+    if (rawEntryId !== undefined && rawEntryId !== null && rawEntryId !== '') {
+      const vEntryId = idParam(rawEntryId, 'Buchung');
+      if (vEntryId.error) return res.status(400).json({ error: vEntryId.error, code: 400 });
+      entry = visibleEntry(vEntryId.value, userId);
+      if (!entry) return res.status(404).json({ error: 'Booking not found.', code: 404 });
+      const linkError = linkabilityError(entry);
+      if (linkError) return res.status(linkError.code).json({ error: linkError.error, code: linkError.code });
+
+      const priceOmitted = req.body.purchase_price === undefined || req.body.purchase_price === null || req.body.purchase_price === '';
+      if (priceOmitted && !entryHasLinks(entry.id)) {
+        effectiveBody = { ...req.body, purchase_price: Math.abs(entry.amount) };
+      }
+    }
+
+    const { values, errors } = validateItemFields(effectiveBody);
     if (errors.length) return res.status(400).json({ error: errors.join(' '), code: 400 });
 
-    const userId = req.authUserId || req.session.userId;
     const result = db.get().prepare(`
       INSERT INTO inventory_items
         (name, brand, model, serial_number, category, location_id, purchase_date,
@@ -255,6 +290,10 @@ router.post('/', (req, res) => {
     replaceDocumentLinks(db.get(), {
       ...DOCS, ownerId: result.lastInsertRowid, documentIds: req.body.attachment_document_ids, userId,
     });
+
+    if (entry) {
+      linkEntry({ itemId: result.lastInsertRowid, entryId: entry.id, role: 'purchase', amountShare: null, userId });
+    }
 
     res.status(201).json({ data: loadItem(result.lastInsertRowid, userId) });
   } catch (err) {
@@ -302,6 +341,68 @@ router.put('/:id', (req, res) => {
     res.json({ data: loadItem(item.id, userId) });
   } catch (err) {
     log.error('PUT /:id error:', err);
+    res.status(500).json({ error: 'Internal server error.', code: 500 });
+  }
+});
+
+// --------------------------------------------------------
+// POST /api/v1/inventory/items/:id/entries   Body: { entry_id, role?, amount_share? }
+// --------------------------------------------------------
+router.post('/:id/entries', (req, res) => {
+  try {
+    const vId = idParam(req.params.id, 'Gegenstand-ID');
+    if (vId.error) return res.status(400).json({ error: vId.error, code: 400 });
+    const item = db.get().prepare('SELECT id FROM inventory_items WHERE id = ?').get(vId.value);
+    if (!item) return res.status(404).json({ error: 'Item not found.', code: 404 });
+
+    const vEntryId = idParam(req.body.entry_id, 'Buchung');
+    if (vEntryId.error) return res.status(400).json({ error: vEntryId.error, code: 400 });
+
+    const vRole = oneOf(req.body.role || 'purchase', ROLES, 'Rolle');
+    if (vRole.error) return res.status(400).json({ error: vRole.error, code: 400 });
+
+    let amountShare = null;
+    if (req.body.amount_share !== undefined && req.body.amount_share !== null && req.body.amount_share !== '') {
+      const vShare = num(req.body.amount_share, 'Anteil');
+      if (vShare.error) return res.status(400).json({ error: vShare.error, code: 400 });
+      if (vShare.value !== null && vShare.value < 0) {
+        return res.status(400).json({ error: 'Anteil darf nicht negativ sein.', code: 400 });
+      }
+      amountShare = vShare.value;
+    }
+
+    const userId = req.authUserId || req.session.userId;
+    const result = linkEntry({ itemId: item.id, entryId: vEntryId.value, role: vRole.value, amountShare, userId });
+    if (result.error) return res.status(result.code).json({ error: result.error, code: result.code });
+
+    res.status(201).json({ data: loadItem(item.id, userId) });
+  } catch (err) {
+    log.error('POST /:id/entries error:', err);
+    res.status(500).json({ error: 'Internal server error.', code: 500 });
+  }
+});
+
+// --------------------------------------------------------
+// DELETE /api/v1/inventory/items/:id/entries/:entryId
+// Entfernt ALLE Verknuepfungen zwischen Gegenstand und Buchung (rollenunabhaengig).
+// --------------------------------------------------------
+router.delete('/:id/entries/:entryId', (req, res) => {
+  try {
+    const vId = idParam(req.params.id, 'Gegenstand-ID');
+    if (vId.error) return res.status(400).json({ error: vId.error, code: 400 });
+    const item = db.get().prepare('SELECT id FROM inventory_items WHERE id = ?').get(vId.value);
+    if (!item) return res.status(404).json({ error: 'Item not found.', code: 404 });
+
+    const vEntryId = idParam(req.params.entryId, 'Buchung-ID');
+    if (vEntryId.error) return res.status(400).json({ error: vEntryId.error, code: 400 });
+
+    const userId = req.authUserId || req.session.userId;
+    const result = unlinkEntry({ itemId: item.id, entryId: vEntryId.value, userId });
+    if (result.error) return res.status(result.code).json({ error: result.error, code: result.code });
+
+    res.json({ data: loadItem(item.id, userId) });
+  } catch (err) {
+    log.error('DELETE /:id/entries/:entryId error:', err);
     res.status(500).json({ error: 'Internal server error.', code: 500 });
   }
 });

@@ -48,12 +48,36 @@ export function inventoryPaths() {
     },
     '/api/v1/inventory/items': {
       get: op({ summary: 'List inventory items', description: 'Filters: category, location_id, status, q.', tag: 'Inventory' }),
-      post: op({ summary: 'Create an inventory item (optional `attachment_document_ids`: documents from the documents module)', tag: 'Inventory', stateChanging: true, requestBody: jsonBody(null) }),
+      post: op({ summary: 'Create an inventory item (optional `attachment_document_ids`: documents from the documents module; optional `entry_id`: prefills purchase_price from that booking if it has no existing links)', tag: 'Inventory', stateChanging: true, requestBody: jsonBody(null) }),
     },
     '/api/v1/inventory/items/{id}': {
       get: op({ summary: 'Get an inventory item', tag: 'Inventory', params: [idParam('id', 'Item ID')] }),
       put: op({ summary: 'Replace an inventory item (`attachment_document_ids` replaces the document links; omit the field to leave them untouched)', tag: 'Inventory', params: [idParam('id', 'Item ID')], stateChanging: true, requestBody: jsonBody(null) }),
       delete: op({ summary: 'Delete an inventory item', tag: 'Inventory', params: [idParam('id', 'Item ID')], stateChanging: true }),
+    },
+    '/api/v1/inventory/items/{id}/entries': {
+      post: op({
+        summary: "Link a budget entry to an inventory item (role defaults to 'purchase')",
+        tag: 'Inventory',
+        params: [idParam('id', 'Item ID')],
+        stateChanging: true,
+        requestBody: jsonBody(null),
+      }),
+    },
+    '/api/v1/inventory/items/{id}/entries/{entryId}': {
+      delete: op({
+        summary: 'Unlink a budget entry from an inventory item (removes all roles for this pair)',
+        tag: 'Inventory',
+        params: [idParam('id', 'Item ID'), idParam('entryId', 'Budget entry ID')],
+        stateChanging: true,
+      }),
+    },
+    '/api/v1/inventory/entries/{entryId}/items': {
+      get: op({
+        summary: 'List inventory items linked to a budget entry',
+        tag: 'Inventory',
+        params: [idParam('entryId', 'Budget entry ID')],
+      }),
     },
   };
 }
