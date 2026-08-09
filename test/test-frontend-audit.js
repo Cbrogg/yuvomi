@@ -5634,12 +5634,33 @@ test('die Statusbar folgt der ausdruecklichen Theme-Wahl, nicht nur dem System',
   assert.match(fn[0], /getAttribute\('data-theme'\)/,
     'setThemeColor muss die ausdrueckliche Wahl lesen - die Metas folgen sonst dem System');
 
-  // Die Metas selbst tragen die Systembedingung; ohne sie waere die ganze
-  // Unterscheidung gegenstandslos und dieser Guard eine leere Zusicherung.
-  const index = read('../public/index.html');
-  const scoped = [...index.matchAll(/<meta name="theme-color"[^>]*media="\(prefers-color-scheme/g)];
-  assert.equal(scoped.length, 2,
-    `erwartet: zwei system-gebundene theme-color-Metas, gefunden: ${scoped.length}`);
+  // Der Anfangszustand gehoert dorthin, wo die Theme-Entscheidung faellt: der
+  // Router korrigiert die Bewegung, aber die Offline-Huelle hat keinen Router.
+  const init = read('../public/theme-init.js');
+  assert.match(init, /meta\[name="theme-color"\]/,
+    'theme-init.js muss die Statusbar auf die gewaehlte Farbe stellen - sonst haengt die Offline-Huelle');
+
+  // DIE REGEL, NICHT DIE ZWEI DATEIEN: jedes Dokument mit system-gebundenen
+  // theme-color-Metas braucht das Skript, das die Wahl darauf anwendet. Ohne
+  // diesen Teil deckte der Guard genau die Seiten ab, die heute existieren -
+  // und offline.html war genau die, die beim ersten Anlauf fehlte.
+  const docs = ['index.html', 'offline.html'];
+  const scopedDocs = [];
+  const unfixed = [];
+  for (const name of docs) {
+    const src = read(`../public/${name}`);
+    const scoped = [...src.matchAll(/<meta name="theme-color"[^>]*media="\(prefers-color-scheme/g)];
+    if (!scoped.length) continue;
+    scopedDocs.push(name);
+    assert.equal(scoped.length, 2, `${name}: erwartet zwei system-gebundene Metas, gefunden ${scoped.length}`);
+    if (!/<script[^>]+src="\/theme-init\.js"/.test(src)) unfixed.push(name);
+  }
+
+  // Reichweite vor dem Urteil.
+  assert.deepEqual(scopedDocs, docs,
+    `erwartet: beide Dokumente tragen die system-gebundenen Metas, gefunden: ${scopedDocs.join(', ')}`);
+  assert.deepEqual(unfixed, [],
+    'ein Dokument mit system-gebundenen theme-color-Metas muss theme-init.js laden');
 });
 
 test('modal Enter submits the form instead of advancing to the next field (audit 1.4)', () => {

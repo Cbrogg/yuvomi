@@ -115,11 +115,18 @@ async function toggleShoppingItem(id, checked, container) {
 function deleteItemUndoable(id, container) {
   const item     = state.items.find((i) => i.id === id);
   const snapshot = item ? { ...item } : null;
+  // DIE LISTE GEHOERT ZUR AKTION, NICHT ZUM ZEITPUNKT DER RUECKNAHME. Das
+  // Undo-Fenster ist fuenf Sekunden lang, und ein Listenwechsel darin tauscht
+  // `state.items` samt `state.activeListId` aus. Wer danach zurueckholte, legte
+  // den Artikel in die FALSCHE Liste und zaehlte deren Zaehler hoch. Steht so
+  // schon seit dem Knopf; mit dem Wisch daneben ist es nur viel leichter zu
+  // treffen.
+  const listId = state.activeListId;
 
   // Optimistisch entfernen
   state.items = state.items.filter((i) => i.id !== id);
   updateItemsList(container);
-  updateListCounter(state.activeListId, -1, snapshot?.is_checked ? -1 : 0);
+  updateListCounter(listId, -1, snapshot?.is_checked ? -1 : 0);
   renderTabs(container);
 
   scheduleUndoableDelete({
@@ -127,10 +134,16 @@ function deleteItemUndoable(id, container) {
     commit: ({ keepalive }) => api.delete(`/shopping/items/${id}`, { keepalive }),
     restore: (err) => {
       if (snapshot) {
-        state.items.push(snapshot);
-        state.items.sort((a, b) => a.id - b.id);
-        updateItemsList(container);
-        updateListCounter(state.activeListId, 1, snapshot.is_checked ? 1 : 0);
+        // Der sichtbare Zustand nur, wenn die Liste noch die gezeigte ist -
+        // sonst gehoert `state.items` bereits einer anderen. Der Server hat
+        // nichts geloescht, also bringt `switchList` den Artikel beim
+        // Zurueckwechseln ohnehin mit.
+        if (state.activeListId === listId) {
+          state.items.push(snapshot);
+          state.items.sort((a, b) => a.id - b.id);
+          updateItemsList(container);
+        }
+        updateListCounter(listId, 1, snapshot.is_checked ? 1 : 0);
         renderTabs(container);
       }
       if (err) window.yuvomi.showToast(err.data?.error ?? t('common.errorGeneric'), 'danger');
@@ -1628,21 +1641,29 @@ function wireListContentEvents(container) {
       if (!count) return;
 
       const snapshot = checked.map((i) => ({ ...i }));
+      // DIESELBE REGEL WIE BEIM EINZELNEN ARTIKEL, hier mit schwererem Preis:
+      // `commit` schlug die Liste bisher ERST beim Ausfuehren nach. Ein
+      // Listenwechsel im Undo-Fenster schickte das DELETE damit an die gerade
+      // geoeffnete Liste und raeumte deren abgehakte Artikel ab - waehrend der
+      // Snapshot zur alten gehoerte und sie also nicht zurueckholen konnte.
+      const listId = state.activeListId;
 
       // Optimistisch entfernen
       state.items = state.items.filter((i) => !i.is_checked);
       updateItemsList(container);
-      updateListCounter(state.activeListId, -count, -count);
+      updateListCounter(listId, -count, -count);
       renderTabs(container);
 
       scheduleUndoableDelete({
         message: t('shopping.itemsRemovedToast', { count }),
-        commit: ({ keepalive }) => api.delete(`/shopping/${state.activeListId}/items/checked`, { keepalive }),
+        commit: ({ keepalive }) => api.delete(`/shopping/${listId}/items/checked`, { keepalive }),
         restore: (err) => {
-          snapshot.forEach((item) => state.items.push(item));
-          state.items.sort((a, b) => a.id - b.id);
-          updateItemsList(container);
-          updateListCounter(state.activeListId, count, count);
+          if (state.activeListId === listId) {
+            snapshot.forEach((item) => state.items.push(item));
+            state.items.sort((a, b) => a.id - b.id);
+            updateItemsList(container);
+          }
+          updateListCounter(listId, count, count);
           renderTabs(container);
           if (err) window.yuvomi.showToast(err.data?.error ?? t('common.errorGeneric'), 'danger');
         },

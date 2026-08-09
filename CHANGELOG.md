@@ -26,6 +26,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - In the installed app, choosing a theme that disagreed with the system left the status bar in the other one: dark mode on a light phone kept a light bar above a dark page, and the reverse for light mode on a dark phone. The status bar now follows your choice, and only falls back to the system setting when the theme is set to automatic
 - On pantry and shopping, swiping a filter row or list tab sideways popped the page header back open even though the list underneath was still scrolled, and it stayed open until the next vertical scroll
 - Navigating between modules left one observer behind per page header, attached to a header that no longer existed
+- Undoing a deletion in the shopping list acted on whichever list you happened to be looking at, not the one the item came from. Switching lists inside the five-second window put the restored item into the wrong list and miscounted both tabs; deleting all checked items was worse, because the deletion itself was sent five seconds later to the list open at that moment, clearing a list you never asked to clear. Both now stay with the list the action started in
+- The offline page had the same status bar mismatch as the app, and no way to correct it after the fact
 
 ## [1.87.0] - 2026-08-06
 
