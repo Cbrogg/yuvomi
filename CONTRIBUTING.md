@@ -215,11 +215,14 @@ single commit.
 
 **A red `claude-review` check is not a review finding.** The job fails when the review ran
 but left nothing behind - no summary, no inline comment - which for five PRs meant a green
-check over a review that never happened. Almost always the cause is a tool permission: look
-for `permission_denials_count` in the job log and add the missing tool to `claude_args` in
-`.github/workflows/claude-code-review.yml`. The one exception is a PR that edits that
-workflow itself; the action then skips for security reasons and the check steps aside with a
-notice explaining why.
+check over a review that never happened. The likely cause is a tool permission, and the job
+log names it in two steps: `permission_denials_count` in the result object tells you *how
+many* tools were refused but not which, so re-run the workflow with `show_full_output: true`
+to see the name, then add that tool to `claude_args` in
+`.github/workflows/claude-code-review.yml` - the list there **replaces** the review plugin's
+own, so anything you add has to keep the existing entries. The one exception is a PR that
+edits that workflow itself; the action then skips for security reasons and the check steps
+aside with a notice explaining why.
 
 ---
 
