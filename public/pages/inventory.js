@@ -22,6 +22,7 @@ import { renderSkeletonList } from '/utils/skeleton.js';
 import { emptyStateEl } from '/utils/empty-state.js';
 import { renderPageSearch, wirePageSearch } from '/utils/page-search.js';
 import { formatMoney } from '/utils/money.js';
+import { formatDate, getLocale } from '/i18n.js';
 import { renderDocumentAttachField, bindDocumentAttachField } from '/components/document-attach.js';
 
 let _container = null;
@@ -142,11 +143,13 @@ function matchesQuery(item) {
 
 function renderItemRow(item) {
   const hasAttachments = (item.attachments?.length ?? 0) > 0;
+  const hasBookings = (item.linked_entries?.length ?? 0) > 0;
   return `
     <div class="inventory-item-row" data-id="${item.id}" role="button" tabindex="0">
       <div class="inventory-item-row__name">
         <span class="inventory-item-row__name-text">${esc(item.name)}</span>
         ${hasAttachments ? `<i data-lucide="paperclip" class="icon-sm" aria-hidden="true"></i><span class="sr-only">${esc(t('inventory.hasAttachmentsLabel'))}</span>` : ''}
+        ${hasBookings ? `<i data-lucide="receipt" class="icon-sm" aria-hidden="true"></i><span class="sr-only">${esc(t('inventory.hasBookingsLabel'))}</span>` : ''}
       </div>
       <div class="inventory-item-row__category">${esc(item.category_name)}</div>
       <div class="inventory-item-row__location">${item.location_path ? esc(item.location_path) : ''}</div>
@@ -207,12 +210,221 @@ async function loadItems() {
 const CONDITIONS = ['new', 'good', 'fair', 'poor'];
 const STATUSES = ['active', 'sold', 'disposed', 'lost'];
 
+// Muss mit server/routes/inventory/entry-links.js#ROLES uebereinstimmen.
+const ROLES = ['purchase', 'refund', 'instalment', 'maintenance', 'accessory'];
+
+function roleLabel(role) {
+  return t(`inventory.role${role.charAt(0).toUpperCase()}${role.slice(1)}`);
+}
+
+// Lokale Kopien der gleichnamigen (nicht exportierten) Helfer aus
+// public/pages/budget.js - keine gemeinsame Datei, da nur diese beiden
+// Module Monatsnavigation brauchen und ein Export-Refactor von budget.js
+// ausserhalb dieses Plans liegt.
+function getMonthName(monthIndex) {
+  const monthDate = new Date(2000, monthIndex, 1);
+  return new Intl.DateTimeFormat(getLocale(), { month: 'long' }).format(monthDate);
+}
+
+function formatMonthLabel(ym) {
+  const [y, m] = ym.split('-');
+  return `${getMonthName(parseInt(m, 10) - 1)} ${y}`;
+}
+
+function addMonths(ym, n) {
+  const [y, m] = ym.split('-').map(Number);
+  const shifted = new Date(y, m - 1 + n, 1);
+  return `${shifted.getFullYear()}-${String(shifted.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function currentMonthStr() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
 // Gleiche Liste wie public/pages/documents.js#CATEGORIES - dort hardcodiert
 // statt aus GET /documents/meta/options geladen, hier aus Konsistenz genauso.
 const DOCUMENT_CATEGORIES = ['medical', 'school', 'identity', 'insurance', 'finance', 'home', 'vehicle', 'legal', 'travel', 'pets', 'warranty', 'taxes', 'work', 'other'];
 
+// --------------------------------------------------------
+// Buchungs-Auswahl (Overlay im Modal-Panel, wie openDocumentPicker in
+// document-attach.js - ein zweites Modal wuerde das Formular darunter
+// schliessen). Monatsweise geblaettert wie die Budget-Seite selbst statt
+// Volltextsuche - es gibt keine bestehende Suche ueber Buchungen im Projekt.
+//
+// `includeRole: true` fragt nach der Auswahl noch die Rolle ab (fuer
+// "Buchung hinzufuegen" am bestehenden Gegenstand); `false` loest sofort
+// mit role:'purchase' auf (Anlegen-Fluss, Kaufpreis-Vorbelegung).
+//
+// @returns {Promise<{entry: object, role: string}|null>}
+// --------------------------------------------------------
+function openBookingPicker(panel, { initialMonth, includeRole = false } = {}) {
+  return new Promise((resolve) => {
+    let month = initialMonth || currentMonthStr();
+    let entries = [];
+    let picked = null;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'inventory-booking-picker';
+    overlay.insertAdjacentHTML('afterbegin', `
+      <div class="inventory-booking-picker__panel" role="dialog" aria-modal="true"
+           aria-label="${esc(t('inventory.bookingPickerTitle'))}">
+        <div class="inventory-booking-picker__header">
+          <strong>${esc(t('inventory.bookingPickerTitle'))}</strong>
+          <button class="btn btn--icon" type="button" data-picker-close
+                  aria-label="${esc(t('common.cancel'))}">
+            <i data-lucide="x" aria-hidden="true"></i>
+          </button>
+        </div>
+        <div class="inventory-booking-picker__nav">
+          <button class="btn btn--icon" type="button" data-picker-prev
+                  aria-label="${esc(t('inventory.bookingPickerPrevMonth'))}">
+            <i data-lucide="chevron-left" aria-hidden="true"></i>
+          </button>
+          <strong data-picker-month></strong>
+          <button class="btn btn--icon" type="button" data-picker-next
+                  aria-label="${esc(t('inventory.bookingPickerNextMonth'))}">
+            <i data-lucide="chevron-right" aria-hidden="true"></i>
+          </button>
+        </div>
+        <div class="inventory-booking-picker__list" data-picker-list>
+          <p class="inventory-booking-picker__status">${esc(t('common.loading'))}</p>
+        </div>
+        <div class="inventory-booking-picker__role" data-picker-role hidden>
+          <div class="form-group">
+            <label class="form-label" for="inv-picker-role-select">${esc(t('inventory.roleLabel'))}</label>
+            <select id="inv-picker-role-select" class="form-input">
+              ${ROLES.map((r) => `<option value="${r}">${esc(roleLabel(r))}</option>`).join('')}
+            </select>
+          </div>
+          <div class="inventory-booking-picker__role-footer">
+            <button class="btn btn--secondary" type="button" data-picker-role-back>${esc(t('common.back'))}</button>
+            <button class="btn btn--primary" type="button" data-picker-role-confirm>${esc(t('inventory.addBooking'))}</button>
+          </div>
+        </div>
+      </div>`);
+    panel.append(overlay);
+    if (window.lucide) window.lucide.createIcons({ el: overlay });
+
+    const listEl = overlay.querySelector('[data-picker-list]');
+    const monthEl = overlay.querySelector('[data-picker-month]');
+    const roleEl = overlay.querySelector('[data-picker-role]');
+    const navEl = overlay.querySelector('.inventory-booking-picker__nav');
+    const opener = document.activeElement;
+
+    const close = (result) => {
+      overlay.remove();
+      if (opener?.isConnected) opener.focus();
+      resolve(result);
+    };
+
+    const renderList = () => {
+      monthEl.textContent = formatMonthLabel(month);
+      listEl.replaceChildren();
+      if (!entries.length) {
+        listEl.insertAdjacentHTML('afterbegin',
+          `<p class="inventory-booking-picker__status">${esc(t('inventory.noBookingsThisMonth'))}</p>`);
+        return;
+      }
+      for (const entry of entries) {
+        listEl.insertAdjacentHTML('beforeend', `
+          <button class="inventory-booking-picker__item" type="button" data-picker-item="${entry.id}">
+            <span class="inventory-booking-picker__item-title">${esc(entry.title)}</span>
+            <span class="inventory-booking-picker__item-meta">${esc(formatDate(entry.date))}</span>
+            <span class="inventory-booking-picker__item-amount">${esc(formatMoney(entry.amount))}</span>
+          </button>`);
+      }
+    };
+
+    const loadMonth = () => {
+      listEl.replaceChildren();
+      listEl.insertAdjacentHTML('afterbegin', `<p class="inventory-booking-picker__status">${esc(t('common.loading'))}</p>`);
+      api.get(`/budget?month=${month}`).then((res) => {
+        entries = res.data || [];
+        renderList();
+      }).catch(() => {
+        listEl.replaceChildren();
+        listEl.insertAdjacentHTML('afterbegin',
+          `<p class="inventory-booking-picker__status">${esc(t('common.errorGeneric'))}</p>`);
+      });
+    };
+
+    listEl.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-picker-item]');
+      if (!button) return;
+      picked = entries.find((e) => e.id === Number(button.dataset.pickerItem));
+      if (!picked) return;
+      if (!includeRole) { close({ entry: picked, role: 'purchase' }); return; }
+      roleEl.hidden = false;
+      listEl.hidden = true;
+      navEl.hidden = true;
+    });
+
+    overlay.querySelector('[data-picker-prev]').addEventListener('click', () => { month = addMonths(month, -1); loadMonth(); });
+    overlay.querySelector('[data-picker-next]').addEventListener('click', () => { month = addMonths(month, 1); loadMonth(); });
+    overlay.querySelectorAll('[data-picker-close]').forEach((button) => button.addEventListener('click', () => close(null)));
+    overlay.querySelector('[data-picker-role-back]').addEventListener('click', () => {
+      picked = null;
+      roleEl.hidden = true;
+      listEl.hidden = false;
+      navEl.hidden = false;
+    });
+    overlay.querySelector('[data-picker-role-confirm]').addEventListener('click', () => {
+      const role = overlay.querySelector('#inv-picker-role-select').value;
+      close({ entry: picked, role });
+    });
+    overlay.addEventListener('mousedown', (event) => { if (event.target === overlay) close(null); });
+    overlay.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') { event.stopPropagation(); close(null); return; }
+      if (event.key !== 'Tab') return;
+      const focusable = [...overlay.querySelectorAll('button, select')].filter((el) => !el.disabled && !el.closest('[hidden]'));
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    });
+
+    loadMonth();
+  });
+}
+
+/** (Re-)rendert die "Verknuepfte Buchungen"-Sektion im Bearbeiten-Formular. */
+function renderLinkedEntries(panel, item) {
+  const container = panel.querySelector('[data-linked-entries]');
+  if (!container) return;
+  const links = item.linked_entries || [];
+
+  if (!links.length) {
+    container.replaceChildren();
+    container.insertAdjacentHTML('beforeend', `<p class="form-hint">${esc(t('inventory.noLinkedBookings'))}</p>`);
+    return;
+  }
+
+  container.replaceChildren();
+  container.insertAdjacentHTML('beforeend', links.map((link) => `
+    <div class="inventory-linked-entry-row" data-entry-id="${link.entry_id}">
+      <span class="inventory-linked-entry-row__title">${esc(link.title)}</span>
+      <span class="inventory-linked-entry-row__role">${esc(roleLabel(link.role))}</span>
+      <span class="inventory-linked-entry-row__date">${esc(formatDate(link.date))}</span>
+      <span class="inventory-linked-entry-row__amount">${esc(formatMoney(link.amount, item.currency))}</span>
+      <button class="btn btn--icon btn--sm" type="button" data-remove-entry="${link.entry_id}"
+              aria-label="${esc(t('inventory.removeBookingAction', { title: link.title }))}">
+        <i data-lucide="x" aria-hidden="true"></i>
+      </button>
+    </div>`).join(''));
+  container.insertAdjacentHTML('beforeend', `
+    <div class="inventory-linked-entry-total">
+      <span>${esc(t('inventory.totalLinkedLabel'))}</span>
+      <span>${esc(formatMoney(item.linked_entries_total, item.currency))}</span>
+    </div>`);
+
+  if (window.lucide) window.lucide.createIcons({ el: container });
+}
+
 function openItemModal(mode, item = null) {
   const isEdit = mode === 'edit';
+  let pickedBooking = null; // nur im Anlegen-Fluss: {entry, role:'purchase'} vor dem Speichern
 
   const categoryOptions = state.categories
     .map((c) => `<option value="${esc(c.key)}">${esc(c.name)}</option>`).join('');
@@ -257,6 +469,13 @@ function openItemModal(mode, item = null) {
           <input id="inv-purchase-price" class="form-input" type="number" min="0" step="0.01" inputmode="decimal">
         </div>
       </div>
+      ${!isEdit ? `
+      <div class="form-group">
+        <button class="btn btn--secondary btn--sm" type="button" data-action="link-booking">
+          <i data-lucide="link" aria-hidden="true"></i> ${esc(t('inventory.linkBooking'))}
+        </button>
+        <div data-picked-booking-chip hidden></div>
+      </div>` : ''}
       <div class="inventory-form-row">
         <div class="form-group">
           <label class="form-label" for="inv-current-value">${esc(t('inventory.currentValueLabel'))}</label>
@@ -268,6 +487,14 @@ function openItemModal(mode, item = null) {
           <select id="inv-status" class="form-input">${statusOptions}</select>
         </div>
       </div>
+      ${isEdit ? `
+      <div class="form-group">
+        <span class="form-label">${esc(t('inventory.linkedBookingsLabel'))}</span>
+        <div class="inventory-linked-entries" data-linked-entries></div>
+        <button class="btn btn--secondary btn--sm" type="button" data-action="add-booking">
+          <i data-lucide="plus" aria-hidden="true"></i> ${esc(t('inventory.addBooking'))}
+        </button>
+      </div>` : ''}
       ${advancedSection(`
         <div class="inventory-form-row">
           <div class="form-group">
@@ -341,7 +568,70 @@ function openItemModal(mode, item = null) {
           name: panel.querySelector('#inv-name').value.trim() || file.name,
         }),
       });
-      panel.querySelector('#inv-save').addEventListener('click', () => saveItem(panel, mode, item, attachments));
+      if (isEdit) {
+        renderLinkedEntries(panel, item);
+        panel.querySelector('[data-action="add-booking"]').addEventListener('click', async () => {
+          const picked = await openBookingPicker(panel, {
+            includeRole: true,
+            initialMonth: item.purchase_date ? item.purchase_date.slice(0, 7) : undefined,
+          });
+          if (!picked) return;
+          try {
+            const res = await api.post(`/inventory/items/${item.id}/entries`, {
+              entry_id: picked.entry.id, role: picked.role,
+            });
+            item = res.data;
+            renderLinkedEntries(panel, item);
+            await loadItems();
+            renderList();
+          } catch (err) {
+            window.yuvomi?.showToast(err.data?.error ?? t('common.errorGeneric'), 'danger');
+          }
+        });
+        panel.querySelector('[data-linked-entries]').addEventListener('click', async (event) => {
+          const button = event.target.closest('[data-remove-entry]');
+          if (!button) return;
+          try {
+            const res = await api.delete(`/inventory/items/${item.id}/entries/${button.dataset.removeEntry}`);
+            item = res.data;
+            renderLinkedEntries(panel, item);
+            await loadItems();
+            renderList();
+          } catch (err) {
+            window.yuvomi?.showToast(err.data?.error ?? t('common.errorGeneric'), 'danger');
+          }
+        });
+      } else {
+        panel.querySelector('[data-action="link-booking"]').addEventListener('click', async () => {
+          const picked = await openBookingPicker(panel, { includeRole: false });
+          if (!picked) return;
+          pickedBooking = picked;
+          const chip = panel.querySelector('[data-picked-booking-chip]');
+          chip.hidden = false;
+          chip.replaceChildren();
+          chip.insertAdjacentHTML('beforeend', `
+            <span class="inventory-picked-booking-chip">
+              ${esc(t('inventory.pendingBookingLabel', { title: picked.entry.title }))}
+              <button type="button" data-clear-picked-booking
+                      aria-label="${esc(t('inventory.removeBookingAction', { title: picked.entry.title }))}">
+                <i data-lucide="x" aria-hidden="true"></i>
+              </button>
+            </span>`);
+          chip.querySelector('[data-clear-picked-booking]').addEventListener('click', () => {
+            pickedBooking = null;
+            chip.hidden = true;
+            chip.replaceChildren();
+          });
+          if (window.lucide) window.lucide.createIcons({ el: chip });
+          // Kaufpreis nur vorbelegen, wenn das Feld noch leer ist - der Server
+          // prueft beim Speichern ohnehin nochmal, ob die Buchung schon
+          // verknuepft ist. Das hier ist nur die Komfort-Vorschau im Formular.
+          const priceInput = panel.querySelector('#inv-purchase-price');
+          if (!priceInput.value.trim()) priceInput.value = String(Math.abs(picked.entry.amount));
+        });
+      }
+
+      panel.querySelector('#inv-save').addEventListener('click', () => saveItem(panel, mode, item, attachments, pickedBooking));
       panel.querySelector('#inv-delete')?.addEventListener('click', async () => {
         closeSharedModal({ force: true });
         await removeItem(item);
@@ -352,7 +642,7 @@ function openItemModal(mode, item = null) {
   });
 }
 
-async function saveItem(panel, mode, item, attachments) {
+async function saveItem(panel, mode, item, attachments, pickedBooking) {
   const saveBtn = panel.querySelector('#inv-save');
   const nameInput = panel.querySelector('#inv-name');
   const name = nameInput.value.trim();
@@ -382,6 +672,7 @@ async function saveItem(panel, mode, item, attachments) {
   saveBtn.disabled = true;
   try {
     if (attachments) payload.attachment_document_ids = await attachments.commit();
+    if (pickedBooking) payload.entry_id = pickedBooking.entry.id;
     if (mode === 'create') await api.post('/inventory/items', payload);
     else await api.put(`/inventory/items/${item.id}`, payload);
     await loadItems();

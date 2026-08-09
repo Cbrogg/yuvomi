@@ -117,3 +117,171 @@
   background: color-mix(in srgb, var(--color-danger) 15%, transparent);
   color: var(--color-danger);
 }
+
+/* --------------------------------------------------------
+ * Verknuepfte Buchungen (Formular, Bearbeiten-Modus)
+ * -------------------------------------------------------- */
+
+.inventory-linked-entries {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.inventory-linked-entry-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto auto;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+}
+
+.inventory-linked-entry-row__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.inventory-linked-entry-row__role,
+.inventory-linked-entry-row__date {
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.inventory-linked-entry-row__amount {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.inventory-linked-entry-total {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  font-weight: 600;
+  border-top: 1px solid var(--color-border);
+}
+
+.inventory-picked-booking-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding: var(--space-1) var(--space-1) var(--space-1) var(--space-3);
+  border: 1px dashed color-mix(in srgb, var(--module-accent) 30%, var(--glass-border-subtle));
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--module-accent) 5%, var(--color-surface));
+  font-size: var(--text-sm);
+}
+
+/* --------------------------------------------------------
+ * Buchungs-Auswahl-Overlay (im Modal-Panel, spiegelt die Masse von
+ * .doc-attach-picker in document-attach.css)
+ * -------------------------------------------------------- */
+
+.inventory-booking-picker {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background: var(--color-overlay-glass);
+}
+
+.inventory-booking-picker__panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: min(100%, 460px);
+  max-height: min(80vh, 560px);
+  padding: var(--space-4);
+  border: 1px solid var(--glass-border-subtle);
+  border-radius: var(--radius-glass-card);
+  background-color: var(--glass-bg-card);
+  box-shadow: var(--glass-shadow-lg);
+}
+
+.inventory-booking-picker__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.inventory-booking-picker__nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+}
+
+.inventory-booking-picker__list {
+  flex: 1;
+  min-height: 120px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.inventory-booking-picker__status {
+  margin: auto;
+  color: var(--color-text-tertiary);
+  font-size: var(--text-sm);
+  text-align: center;
+}
+
+.inventory-booking-picker__item {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--target-md);
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  border-radius: var(--radius-glass-inner);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font-size: var(--text-sm);
+}
+
+.inventory-booking-picker__item:hover {
+  background: color-mix(in srgb, var(--module-accent) 10%, transparent);
+}
+
+.inventory-booking-picker__item:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.inventory-booking-picker__item-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.inventory-booking-picker__item-meta {
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+}
+
+.inventory-booking-picker__item-amount {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.inventory-booking-picker__role-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
