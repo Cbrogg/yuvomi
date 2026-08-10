@@ -85,6 +85,7 @@ async function openLocationManager() {
         // veraltete location_path-Werte bis zum naechsten vollen Reload.
         await loadItems();
         renderList();
+        updateAttentionBadge();
       }
     },
   });
@@ -124,6 +125,7 @@ async function openCategoryManager() {
         // veraltete category_name-Werte bis zum naechsten vollen Reload.
         await loadItems();
         renderList();
+        updateAttentionBadge();
       }
     },
   });
@@ -164,6 +166,45 @@ function computeMetrics(items) {
     totalValue,
     needsAttention: countUpcomingDeadlines(items),
   };
+}
+
+/**
+ * Zaehler-Badge am Inventar-Nav-Icon - gleiches Muster wie
+ * public/pages/tasks.js#updateOverdueBadge. Rein clientseitig aus der schon
+ * geladenen Item-Liste berechnet, keine eigene Abfrage.
+ */
+function updateAttentionBadge() {
+  const needsAttention = countUpcomingDeadlines(state.items);
+
+  document.querySelectorAll('[data-route="/inventory"] .nav-badge').forEach((el) => el.remove());
+  document.querySelectorAll('[data-route="/inventory"]').forEach((navItem) => {
+    const baseLabel = t('nav.inventory');
+    navItem.setAttribute('aria-label', needsAttention > 0
+      ? t('inventory.navLabelAttention', { count: needsAttention })
+      : baseLabel
+    );
+  });
+  if (needsAttention > 0) {
+    document.querySelectorAll('[data-route="/inventory"]').forEach((navItem) => {
+      let anchor = navItem.querySelector('.nav-item__icon-wrap');
+      if (!anchor) {
+        const icon = navItem.querySelector('.nav-item__icon');
+        anchor = document.createElement('span');
+        anchor.className = 'nav-item__icon-wrap';
+        if (icon) {
+          icon.replaceWith(anchor);
+          anchor.appendChild(icon);
+        } else {
+          navItem.prepend(anchor);
+        }
+      }
+      const badge = document.createElement('span');
+      badge.className = 'nav-badge';
+      badge.setAttribute('aria-hidden', 'true');
+      badge.textContent = String(needsAttention);
+      anchor.appendChild(badge);
+    });
+  }
 }
 
 function renderMetrics() {
@@ -1052,6 +1093,7 @@ async function saveItem(panel, mode, item, attachments, pickedBooking) {
     await loadItems();
     closeSharedModal({ force: true });
     renderList();
+    updateAttentionBadge();
     window.yuvomi?.showToast(mode === 'create' ? t('inventory.created') : t('inventory.updated'), 'success');
   } catch (err) {
     saveBtn.disabled = false;
@@ -1069,6 +1111,7 @@ async function removeItem(item) {
     await api.delete(`/inventory/items/${item.id}`);
     await loadItems();
     renderList();
+    updateAttentionBadge();
     window.yuvomi?.showToast(t('inventory.deleted'), 'success');
   } catch (err) {
     window.yuvomi?.showToast(err.data?.error ?? t('common.errorGeneric'), 'danger');
@@ -1143,6 +1186,7 @@ export async function render(container) {
       api.get('/preferences').then((res) => { _householdCurrency = res.data?.currency ?? 'EUR'; }).catch(() => {}),
     ]);
     renderList();
+    updateAttentionBadge();
   } catch (err) {
     window.yuvomi?.showToast(err.data?.error ?? t('common.errorGeneric'), 'danger');
     list.replaceChildren();
