@@ -868,13 +868,32 @@
   .shopping-page {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
-    align-content: start;
+    /* ZWEI ZEILEN, UND DIE ZWEITE WÄCHST. Die erste Fassung stand auf
+     * `align-content: start` und liess damit jede Zeile nur so hoch werden wie
+     * ihr Inhalt - fatal, weil `#list-content` seine Hoehe per `flex: 1` aus
+     * dem Elternteil bezog (Inline-Style in shopping.js) und ein `flex`-Wert
+     * unter `display: grid` wirkungslos ist. Gemessen auf 640x400: die
+     * Artikelliste bekam `clientHeight: 0` bei `scrollHeight: 2177` und lag
+     * 42px hinter der Clip-Kante - schlechter als der Zustand, den diese
+     * Media-Query reparieren sollte.
+     *
+     * Der Vorrat blieb heil, weil dort der scrollende Container SELBST das
+     * Grid-Kind ist; im Einkauf sitzt `#list-content` dazwischen. */
+    grid-template-rows: auto 1fr;
   }
 
   /* Alles ausser den beiden Leisten behält die volle Breite - ohne diese
    * Zeile rutschte die Artikelliste in die zweite Spalte. */
   .shopping-page > * {
     grid-column: 1 / -1;
+  }
+
+  /* Die Inhaltszeile nimmt den Rest - und `min-height: 0`, weil ein Grid-Kind
+   * sonst nicht unter seine Inhaltshoehe schrumpft und der innere Scroller
+   * damit nie einen Grund zum Scrollen bekaeme. */
+  .shopping-page > #list-content {
+    grid-row: 2;
+    min-height: 0;
   }
 
   .shopping-page > .list-tabs-bar {

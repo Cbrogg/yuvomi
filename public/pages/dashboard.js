@@ -291,6 +291,13 @@ function isWidgetModuleEnabled(id) {
   // eines Moduls ohne Zugriff — die Modulsperre wird bereits serverseitig auf die
   // Widget-Map durchgereicht) hier nicht anbieten.
   if (!canSeeWidget(id)) return false;
+  // Im Solo-Haushalt ist das Familien-Widget kein VERFUEGBARES Widget, kein
+  // leer gerendertes. Der Unterschied ist die „Anpassen"-Ablage: ein Renderer,
+  // der '' zurueckgibt, verschwindet aus dem Raster, bleibt aber `visible: true`
+  // und taucht damit auch in der Ablage der versteckten Widgets nicht auf - es
+  // waere aus der Oberflaeche heraus nicht mehr erreichbar. Hier faellt es aus
+  // beiden Listen, so wie ein abgeschaltetes Modul auch.
+  if (id === 'family' && isSoloHousehold()) return false;
   return true;
 }
 
@@ -864,13 +871,11 @@ function renderPinnedNotes(notes) {
 }
 
 function renderFamilyWidget(users) {
-  // IM SOLO-HAUSHALT ENTFAELLT ES STILL (utils/household.js). Es war das
-  // prominenteste Widget rechts oben und zeigte einer Solo-Nutzerin eine grosse
-  // 1 mit „im Haushalt" - ein Zaehler, dessen einziger Inhalt ist, dass sie
-  // allein ist, mit ihrem eigenen Avatar als Beleg (Critique 2026-08-10,
-  // Persona Miriam). Kommt ein zweites Mitglied dazu, steht es wieder da.
-  if (isSoloHousehold()) return '';
-
+  // IM SOLO-HAUSHALT GIBT ES DIESES WIDGET NICHT - entschieden in
+  // `isWidgetModuleEnabled`, damit es auch aus der „Anpassen"-Ablage faellt.
+  // Es war das prominenteste Widget rechts oben und zeigte einer Solo-Nutzerin
+  // eine grosse 1 mit „im Haushalt", ein Zaehler, dessen einziger Inhalt ist,
+  // dass sie allein ist (Critique 2026-08-10, Persona Miriam).
   const visible = users.slice(0, 6);
   const avatars = visible.map((u) => `
     <span class="family-widget-avatar" style="background:${esc(u.avatar_color || AVATAR_FALLBACK_COLOR)};color:${getReadableTextColor(u.avatar_color || AVATAR_FALLBACK_COLOR)}" title="${esc(u.display_name)}">
@@ -1853,7 +1858,16 @@ function wireLinks(container, rerender, { editing = false } = {}) {
     if (editing && el.closest('.widget-wrapper--editing')) return;
     const go = () => window.yuvomi.navigate(el.dataset.route);
     if (el.tagName === 'A') {
-      el.addEventListener('click', (e) => { e.preventDefault(); go(); });
+      el.addEventListener('click', (e) => {
+        // DER BROWSER BEHÄLT SEINEN KLICK. Ein bedingungsloses
+        // `preventDefault()` nimmt dem `<a href>` genau das wieder weg, wofür
+        // der Widget-Kopf von `<button>` auf Link umgestellt wurde: Cmd- und
+        // Mittelklick öffnen einen neuen Tab, Shift ein Fenster. Ohne diese
+        // Zeile wäre der href ein Versprechen, das der Handler bricht.
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+        e.preventDefault();
+        go();
+      });
     } else {
       el.addEventListener('click', go);
       el.addEventListener('keydown', (e) => {

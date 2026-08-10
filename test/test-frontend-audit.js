@@ -6777,15 +6777,25 @@ test('die Höhen-Achse der Größenklasse hält denselben Kontrakt', () => {
   //
   // EINE Grenze (--bp-short) plus ihr Komplement. Wer eine zweite braucht,
   // trägt sie in §11c ein und begründet sie dort — nicht hier.
-  const allowed = new Set([499, 500]);
+  //
+  // DIE RICHTUNG GEHÖRT ZUR ZAHL, und ohne sie war dieser Guard blind für den
+  // einen Verstoß, den es beim Schreiben schon gab: `typography.css` stand auf
+  // `max-height: 500px`, alle sieben anderen Blöcke auf 499. Bei exakt 500px
+  // Viewporthöhe fiel der Titel damit auf den Inline-Schnitt, während
+  // layout.css noch die Large-Title-Zeile baute. Eine Menge aus {499, 500}
+  // erlaubt beide Zahlen in beide Richtungen und kann genau das nicht sehen.
+  //
+  // `max-height` ist das Komplement (< 500, also 499), `min-height` die Grenze
+  // selbst (>= 500).
+  const allowed = { max: 499, min: 500 };
   const offenders = [];
 
   for (const { file, css } of stylesheetFiles()) {
-    for (const match of css.matchAll(/@media[^{]*?\((?:min|max)-height:\s*(\d+)px\)/g)) {
-      const px = Number(match[1]);
-      if (!allowed.has(px)) {
+    for (const match of css.matchAll(/@media[^{]*?\((min|max)-height:\s*(\d+)px\)/g)) {
+      const px = Number(match[2]);
+      if (px !== allowed[match[1]]) {
         const line = css.slice(0, match.index).split('\n').length;
-        offenders.push(`${file}:${line} → ${px}px`);
+        offenders.push(`${file}:${line} → ${match[1]}-height: ${px}px`);
       }
     }
   }
@@ -6793,8 +6803,8 @@ test('die Höhen-Achse der Größenklasse hält denselben Kontrakt', () => {
   assert.deepEqual(
     offenders,
     [],
-    'nicht-kanonische Höhen-Schwelle — erlaubt ist nur 500 (+ Komplement 499), '
-    + 'siehe tokens.css §11c und DESIGN.md „Die Chrome-Regel"',
+    'nicht-kanonische Höhen-Schwelle — erlaubt sind nur `max-height: 499px` und '
+    + '`min-height: 500px`, siehe tokens.css §11c und DESIGN.md „Die Chrome-Regel"',
   );
 });
 

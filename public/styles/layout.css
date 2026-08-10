@@ -899,8 +899,17 @@ html:has(.fab-layer .page-fab:not([hidden])) yuvomi-install-prompt {
 }
 
 /* Scope-Kacheln sind eine Mischstelle: das Siegel traegt den Familienton
- * des Zielmoduls (--seal-accent setzt der Aufbau in router.js). */
+ * des Zielmoduls (--seal-accent setzt der Aufbau in router.js).
+ *
+ * --seal-base MITSETZEN, weil die Kachel NICHT auf --color-surface steht,
+ * sondern auf --color-surface-elevated. Genau dafuer ist der Parameter da, und
+ * ohne ihn mischt das Siegel gegen den falschen Grund: gemessen im Dark ueber
+ * alle neun Familien 1,02-1,15:1 gegen den echten Untergrund (health 1,02),
+ * also unter dem 1,19-1,33er Band, das die Vollton-Regel als Schwelle nennt.
+ * Die Scheibe war dort keine Scheibe mehr, sondern ein Hauch. Light war
+ * unauffaellig (1,21 vs 1,27) - deshalb faellt so etwas nur beim Messen auf. */
 .search-scope__seal {
+  --seal-base: var(--color-surface-elevated);
   flex-shrink: 0;
 }
 

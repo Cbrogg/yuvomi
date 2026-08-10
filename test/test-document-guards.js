@@ -725,6 +725,21 @@ const TARGET_EXEMPT = new Map([]);
 /** Ein Ziel gilt als eingeengt, wenn ein gleichartiges naeher steht als das. */
 const CROWDING_GAP = 16;
 
+/**
+ * Der Schluessel eines Bauteils OHNE seine Varianten.
+ *
+ * `key` ist die volle Klassenliste, und damit ist
+ * `cal-task-chip.cal-task-chip--high` ein anderes Bauteil als `--medium`. Ein
+ * Bauteil, das in fuenf von sechs Varianten in einer Reihe steht, ist es auch
+ * in der sechsten - die Variante faerbt, sie baut nicht um. Geschnitten wird
+ * deshalb am BEM-Modifier, nicht an jedem Token: `btn--ghost` faellt auf `btn`
+ * zurueck, `btn` selbst bleibt `btn`, und eine Liste aus mehreren Klassen
+ * behaelt ihre erste als Traeger.
+ */
+function baseKey(key) {
+  return String(key).split('.')[0].split('--')[0];
+}
+
 async function measureTargets(page, min) {
   return page.evaluate(({ min, gap }) => {
     const SEL = 'button, a[href], [role="button"], input:not([type=hidden]), select, textarea, summary, [tabindex]:not([tabindex="-1"])';
@@ -980,9 +995,18 @@ describe('Sonde 4 - eine Reihe traegt ihre Dichte, ein Einzelziel ist allein tre
             // blieben drei `--high`-Chips gemeldet, waehrend `--medium` und
             // `--urgent` als Reihe erkannt wurden. Dieselbe Blindheit wie bei
             // Sonde 6, die nach `.metric-grid` fragte und die Reihe nicht sah.
+            //
+            // GENAU DIE BASISKLASSE, NICHT JEDER TOKEN. Die erste Fassung warf
+            // JEDE Klasse des Schluessels in `rowBuilt` und hat damit die
+            // freistehende Haelfte der Sonde app-weit abgeschaltet: zwei
+            // benachbarte `.btn` (die Modal-Aktionen stehen mit --space-2
+            // Abstand, also unter CROWDING_GAP) legen den blanken Token `btn`
+            // hinein, und von da an ist jedes Element mit `btn` als „in einer
+            // Reihe" entschuldigt. Ein Guard, der sich selbst eine Ausnahme
+            // baut, ist keiner.
             if (row.crowded) {
               rowBuilt.add(row.key);
-              for (const cls of row.key.split('.')) if (cls) rowBuilt.add(cls);
+              rowBuilt.add(baseKey(row.key));
             }
             if (row.wcag && row.full && !row.roomy) continue;
             const id = `${row.key}|${row.w}x${row.h}`;
@@ -1011,8 +1035,7 @@ describe('Sonde 4 - eine Reihe traegt ihre Dichte, ein Einzelziel ist allein tre
       const offenders = [];
       for (const value of found.values()) {
         if (value.key.split('.').some((cls) => TARGET_EXEMPT.has(cls))) continue;
-        const inRow = rowBuilt.has(value.key)
-          || value.key.split('.').some((cls) => cls && rowBuilt.has(cls));
+        const inRow = rowBuilt.has(value.key) || rowBuilt.has(baseKey(value.key));
         if (value.wcag && inRow) continue;
         offenders.push(
           `${value.key}: ${value.w}x${value.h} - `

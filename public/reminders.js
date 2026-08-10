@@ -170,7 +170,10 @@ function createOriginSeal(entityType) {
   seal.className = 'module-seal module-seal--sm module-seal--vivid';
   seal.setAttribute('aria-hidden', 'true');
   seal.style.setProperty('--seal-accent', origin?.accent ?? 'var(--module-reminders)');
-  seal.appendChild(origin ? NAV_ICONS[origin.icon]() : createBellSvg());
+  // `?.()` wie nav-icons.js es dokumentiert: der Fallback oben deckt einen
+  // unbekannten entity_type ab, nicht einen umbenannten Icon-Namen - der
+  // wuerde hier werfen und den ganzen Erinnerungs-Toast mitnehmen.
+  seal.appendChild(NAV_ICONS[origin?.icon]?.() ?? createBellSvg());
   return seal;
 }
 

@@ -196,10 +196,24 @@ const auth = {
   },
   setup: (username, display_name, password) => api.post('/auth/setup', { username, display_name, password }),
   getUsers: () => api.get('/auth/users'),
-  createUser: (data) => api.post('/auth/users', data),
+  // DER HAUSHALT KANN SICH AENDERN, UND DANN AENDERT SICH, WAS GEFRAGT WIRD.
+  // `householdSize` kommt sonst nur aus /auth/me und /auth/login, wird also
+  // erst beim naechsten Kaltstart neu gezaehlt - ein Haushalt, der gerade sein
+  // zweites Mitglied bekommen hat, bliebe bis dahin in der Solo-Darstellung
+  // und zeigte weder Sichtbarkeit noch Zuweisung. Ein Rundweg bei einer
+  // Handlung, die ein Haushalt selten macht, ist dafuer der billige Preis.
+  createUser: async (data) => {
+    const res = await api.post('/auth/users', data);
+    await auth.me().catch(() => {});
+    return res;
+  },
   updateUser: (id, data) => api.patch(`/auth/users/${id}`, data),
   updateProfile: (data) => api.patch('/auth/me/profile', data),
-  deleteUser: (id) => api.delete(`/auth/users/${id}`),
+  deleteUser: async (id) => {
+    const res = await api.delete(`/auth/users/${id}`);
+    await auth.me().catch(() => {});
+    return res;
+  },
   forgotPassword: (identifier) => api.post('/auth/forgot-password', { identifier }),
   resetPassword: (token, password) => api.post('/auth/reset-password', { token, password }),
   // Einladungen: die ersten drei sind Admin-Routen, die letzten beiden öffentlich

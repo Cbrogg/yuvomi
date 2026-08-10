@@ -95,7 +95,7 @@
  * steht der Titel inline, wie ihn iOS im Querformat führt. Den Umbruch dazu
  * macht layout.css; hier steht, dass er dabei auf den Inline-Schnitt
  * zurückfällt - sonst stünden 34px in einer 54px hohen Leiste. */
-@media (max-width: 1023px) and (max-height: 500px) {
+@media (max-width: 1023px) and (max-height: 499px) {
   .page-toolbar:not(.page-toolbar--in-group) > .page-toolbar__title {
     font-size: var(--type-toolbar-title);
   }

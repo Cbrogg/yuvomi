@@ -711,9 +711,18 @@ function renderModalContent({ task = null, users = [], reminder = null } = {}) {
            anderen Zahl - der geladenen Nutzerliste dieses Moduls statt der
            gezaehlten Haushaltsgroesse. Zwei Quellen fuer eine Frage laufen
            auseinander, sobald eine von beiden einen Sonderfall bekommt
-           (Split-Gaeste zaehlen in der Nutzerliste mit, im Haushalt nicht). -->
-      ${!isSoloHousehold() ? `
-      <div class="form-group" style="margin-top:var(--space-4)">
+           (Split-Gaeste zaehlen in der Nutzerliste mit, im Haushalt nicht).
+
+           UND VERBORGEN, NICHT ENTFERNT - das ist hier kein Stilfrage, sondern
+           die Regel selbst. Der Absende-Pfad liest
+           "#task-visibility?.value || 'all'" (unten): ohne den Knoten schreibt
+           JEDES Speichern im Solo-Haushalt "all" ueber den gespeicherten Wert,
+           und eine als "private" angelegte Aufgabe verliert ihre Sichtbarkeit
+           stillschweigend. Der Fehler steckte schon in der alten
+           users.length-Bedingung; die Solo-Regel sagt ausdruecklich, dass sie
+           keine Daten aendert (utils/household.js), also muss der Knoten
+           stehenbleiben. Dokumente machen es an ihrer Stelle genauso. --> 
+      <div class="form-group" style="margin-top:var(--space-4)"${isSoloHousehold() ? ' hidden' : ''}>
         <label class="label" for="task-visibility">${t('common.visibility.label')}</label>
         <select class="input" id="task-visibility" name="visibility">
           <option value="all"       ${visibility === 'all'       ? 'selected' : ''}>${t('common.visibility.all')}</option>
@@ -722,7 +731,7 @@ function renderModalContent({ task = null, users = [], reminder = null } = {}) {
         </select>
         <p class="task-field-hint">${t('common.visibility.hint')}</p>
         <p class="task-field-hint field-hint--warn" id="task-visibility-warning" role="status" hidden><i data-lucide="alert-triangle" aria-hidden="true"></i><span>${t('common.visibility.assigneesNobodyHint')}</span></p>
-      </div>` : ''}
+      </div>
 
       ${advancedSection(advancedFieldsHtml, { label: advancedLabel })}
 
