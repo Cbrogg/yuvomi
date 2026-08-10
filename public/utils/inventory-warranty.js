@@ -73,3 +73,9 @@ export function hasUpcomingDeadline(item, todayKey = toLocalDateKey()) {
     return !!status && status.state !== 'valid';
   });
 }
+
+/** Wie viele Items haben eine bald ablaufende/abgelaufene Garantie oder
+ *  getrackte Frist? Fuer die Kennzahl-Karte und das Nav-Badge (Design-Doc §4). */
+export function countUpcomingDeadlines(items, todayKey = toLocalDateKey()) {
+  return items.filter((item) => hasUpcomingDeadline(item, todayKey)).length;
+}

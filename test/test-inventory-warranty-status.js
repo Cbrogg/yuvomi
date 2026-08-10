@@ -10,7 +10,7 @@ import assert from 'node:assert/strict';
 
 const {
   WARRANTY_ALERT_DAYS, warrantyEndDateKey, warrantyStatus, hasWarrantyAlert,
-  dateStatus, hasUpcomingDeadline,
+  dateStatus, hasUpcomingDeadline, countUpcomingDeadlines,
 } = await import('../public/utils/inventory-warranty.js');
 
 const TODAY = '2026-07-29';
@@ -106,4 +106,24 @@ test('hasUpcomingDeadline: true wenn eine getrackte Frist bald ansteht, auch ohn
 test('hasUpcomingDeadline: false wenn alle Fristen weit in der Zukunft liegen', () => {
   const farFuture = { ...item(), tracked_dates: [{ date: '2030-01-01' }] };
   assert.equal(hasUpcomingDeadline(farFuture, TODAY), false);
+});
+
+test('countUpcomingDeadlines: 0 bei leerer Liste', () => {
+  assert.equal(countUpcomingDeadlines([], TODAY), 0);
+});
+
+test('countUpcomingDeadlines: zaehlt nur Items mit hasUpcomingDeadline', () => {
+  const items = [
+    item({ purchase_date: '2026-07-01', warranty_months: 1 }),   // bald ablaufend
+    item({ purchase_date: '2020-01-01', warranty_months: 12 }),  // laengst abgelaufen
+    item({ purchase_date: '2026-01-01', warranty_months: 24 }),  // valid, weit in der Zukunft
+    { ...item(), tracked_dates: [{ date: '2026-08-01' }] },      // Frist bald faellig
+    item(),                                                       // keine Garantie, keine Fristen
+  ];
+  assert.equal(countUpcomingDeadlines(items, TODAY), 3);
+});
+
+test('countUpcomingDeadlines: 0 wenn alles valid oder leer ist', () => {
+  const items = [item({ purchase_date: '2026-01-01', warranty_months: 24 }), item()];
+  assert.equal(countUpcomingDeadlines(items, TODAY), 0);
 });
