@@ -225,15 +225,7 @@
   overflow-wrap: break-word;
 }
 
-/* EINE KENNZAHLREIHE RICHTET IHRE ZAHLEN AUS, NICHT NUR IHRE KAESTEN. Die
- * Kacheln einer Reihe sind gleich hoch (das misst Sonde 6) - ihre Zahlen waren
- * es nicht: ein Label, das eine Zeile mehr braucht, schob seinen Wert nach
- * unten. Gemessen in der Aktivitaets-Reihe der Gesundheit 22px Versatz zwischen
- * zwei Werten derselben Zeile, bei gleich hohen Kacheln. `margin-top: auto`
- * setzt den Wert an den Fuss seiner Kachel; die Kopfzeile darueber darf dann
- * wachsen, ohne die Zahlen auseinanderzuziehen. */
 .metric-card__value {
-  margin-top: auto;
   font-size: var(--text-xl);
   font-weight: var(--font-weight-bold);
   font-variant-numeric: tabular-nums;

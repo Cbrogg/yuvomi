@@ -1118,49 +1118,63 @@ describe('Sonde 5 - eine Wischzeile antwortet, und jede Rolle liegt an ihrer Kan
  * beiden Rasterzeilen streckten sich unabhaengig - 78px oben, 95px unten, weil
  * eine einzige Fussnote umbrach. Im Stylesheet sah nichts davon falsch aus.
  *
- * SIE PRUEFT DIE ZUSAGE, NICHT IHREN FUNDORT: gesucht wird jede `.metric-grid`
- * auf jeder Route - und zusaetzlich hinter jedem Budget-Untertab, weil die
- * Reihen dort hinter einer Leiste liegen, die keine Route wechselt. Damit
- * findet sie auch eine Kennzahlreihe, die es heute noch gar nicht gibt.
+ * SIE PRUEFT DIE ZUSAGE, NICHT IHREN FUNDORT: gesucht wird jede Reihe aus
+ * mehreren Kennzahlkarten auf jeder Route - und zusaetzlich hinter jedem
+ * Budget-Untertab, weil die Reihen dort hinter einer Leiste liegen, die keine
+ * Route wechselt. Damit findet sie auch eine Kennzahlreihe, die es heute noch
+ * gar nicht gibt.
  * ──────────────────────────────────────────────────────────────────────────── */
 
 /**
- * Alle Kennzahlreihen der aktuellen Ansicht mit den Hoehen ihrer Kacheln - und
- * mit der Grundlinie ihrer ZAHLEN.
+ * Alle Kennzahlreihen der aktuellen Ansicht mit den Hoehen ihrer Kacheln.
  *
- * DIE HOEHE ALLEIN WAR DIE HALBE ZUSAGE. Gleich hohe Kacheln koennen ihre Werte
- * trotzdem auf zwei Linien tragen: braucht ein Label eine Zeile mehr als sein
- * Nachbar, rutscht seine Zahl mit nach unten. Gemessen in der Aktivitaets-Reihe
- * der Gesundheit - beide Kacheln 96px hoch, die Werte 22px auseinander, und
- * diese Sonde war gruen. Was eine Reihe lesbar macht, ist die gemeinsame Linie
- * der Zahlen; die gleiche Hoehe ist nur ihre Voraussetzung.
- *
- * Gemessen wird PRO RASTERZEILE, nicht ueber die ganze Reihe: bricht das Raster
- * auf zwei mal zwei um, haben die Zahlen der zweiten Zeile naturgemaess eine
- * andere Linie als die der ersten. Die Zeile erkennt die Sonde an der Oberkante
- * der Kachel, nicht an einer angenommenen Spaltenzahl.
+ * DIE REIHE KOMMT AUS DEN KARTEN, NICHT AUS EINEM KLASSENNAMEN. Bis 2026-08-10
+ * fragte diese Sonde nach `.metric-grid` und pruefte damit N Fundstellen statt
+ * einer Regel - genau das Muster, das die Guard-Lehre verbietet. Blind blieb
+ * ausgerechnet die Reihe, die den Anlass gab: die Aktivitaets-Kacheln der
+ * Gesundheit liegen in `.health-activity__summary`, tragen dieselben
+ * `.metric-card` und wurden nie gemessen. Eine Reihe ist jetzt, was sie im
+ * Dokument ist: ein Elternknoten mit mehr als einer Kennzahlkarte.
  */
 async function metricRowHeights(page) {
-  return page.evaluate(() => [...document.querySelectorAll('.metric-grid')]
-    .map((grid) => {
-      const cards = [...grid.querySelectorAll('.metric-card')];
+  return page.evaluate(() => {
+    const carriers = new Map();
+    for (const card of document.querySelectorAll('.metric-card')) {
+      const parent = card.parentElement;
+      if (!parent) continue;
+      if (!carriers.has(parent)) carriers.set(parent, []);
+      carriers.get(parent).push(card);
+    }
+    const out = [];
+    for (const [grid, cards] of carriers) {
+      if (cards.length < 2) continue;
+      const name = grid.className || grid.tagName.toLowerCase();
+      // Sub-Pixel runden: das Raster verteilt Restpixel, und ein halber Pixel
+      // Unterschied ist keine Unruhe, sondern Layout-Arithmetik.
+      const box = (c) => c.getBoundingClientRect();
       const lines = new Map();
       for (const card of cards) {
-        const value = card.querySelector('.metric-card__value');
-        if (!value) continue;
-        const top = Math.round(card.getBoundingClientRect().top);
+        const top = Math.round(box(card).top);
         if (!lines.has(top)) lines.set(top, []);
-        lines.get(top).push(Math.round(value.getBoundingClientRect().top));
+        lines.get(top).push(Math.round(box(card).height));
       }
-      return {
-        grid: grid.className,
-        // Sub-Pixel runden: das Raster verteilt Restpixel, und ein halber Pixel
-        // Unterschied ist keine Unruhe, sondern Layout-Arithmetik.
-        heights: cards.map((c) => Math.round(c.getBoundingClientRect().height)),
-        valueLines: [...lines.values()].filter((tops) => tops.length > 1),
-      };
-    })
-    .filter((row) => row.heights.length > 1));
+      // (1) NEBENEINANDER: was eine Zeile teilt, ist gleich hoch. Das gilt fuer
+      //     jede Reihe aus Kennzahlkarten, gleich in welchem Traeger.
+      for (const heights of lines.values()) {
+        if (heights.length > 1) out.push({ grid: name, scope: 'Zeile', heights });
+      }
+      // (2) UEBER DEN UMBRUCH: nur wer gleich hohe Rasterzeilen ZUSAGT, muss sie
+      //     auch halten. `.metric-grid` tut das mit `grid-auto-rows: 1fr` - und
+      //     genau daran brach es einmal (Abo-Reihe 78px oben, 95px unten). Ein
+      //     Kartenraster ohne diese Zusage (die Vitalwerte der Gesundheit)
+      //     bemisst jede Zeile fuer sich; das ist keine Unruhe, sondern seine
+      //     Bauart. Gelesen wird die Zusage im Dokument, nicht an einem Namen.
+      if (getComputedStyle(grid).gridAutoRows === '1fr' && lines.size > 1) {
+        out.push({ grid: name, scope: 'Umbruch', heights: cards.map((c) => Math.round(box(c).height)) });
+      }
+    }
+    return out;
+  });
 }
 
 describe('Sonde 6 - die Kacheln einer Kennzahlreihe sind gleich hoch', () => {
@@ -1169,24 +1183,13 @@ describe('Sonde 6 - die Kacheln einer Kennzahlreihe sind gleich hoch', () => {
       const page = await openPage(harness, { device, theme: 'light', locale: 'de' });
       const findings = [];
       let rowsSeen = 0;
-      let valueLinesSeen = 0;
 
       const check = (where, rows) => {
         for (const row of rows) {
           rowsSeen += 1;
           const spread = Math.max(...row.heights) - Math.min(...row.heights);
           if (spread > 0) {
-            findings.push(`${where} · ${row.grid}: Hoehen ${row.heights.join(', ')} (Streuung ${spread}px).`);
-          }
-          for (const tops of row.valueLines) {
-            valueLinesSeen += 1;
-            const drift = Math.max(...tops) - Math.min(...tops);
-            if (drift > 0) {
-              findings.push(
-                `${where} · ${row.grid}: Werte einer Rasterzeile auf ${tops.join(', ')} `
-                + `(Versatz ${drift}px) - gleiche Hoehe, verschiedene Grundlinie.`,
-              );
-            }
+            findings.push(`${where} · ${row.grid} (${row.scope}): Hoehen ${row.heights.join(', ')} (Streuung ${spread}px).`);
           }
         }
       };
@@ -1202,20 +1205,18 @@ describe('Sonde 6 - die Kacheln einer Kennzahlreihe sind gleich hoch', () => {
 
       // Eine Sonde, die nichts gemessen hat, darf nicht urteilen (dieselbe
       // Zusicherung wie bei Sonde 3, 4 und 5).
-      assert.ok(rowsSeen >= 4,
-        `Nur ${rowsSeen} Kennzahlreihen gesehen - erwartet sind mindestens Budget, Abos, Aufteilen und Darlehen. `
-        + 'Entweder hat der Seed keine Zahlen geliefert, oder die Bauart hat sich geaendert.');
-      // Die zweite Haelfte der Zusage braucht ihren eigenen Nachweis: eine
-      // Rasterzeile mit nur EINER Kachel hat keine gemeinsame Grundlinie, und
-      // eine Messung, die nur solche gesehen haette, prueft nichts.
-      assert.ok(valueLinesSeen >= 4,
-        `Nur ${valueLinesSeen} Rasterzeilen mit mehreren Werten gesehen - die Grundlinien-Zusage misst nichts mehr.`);
+      // Der Reichweiten-Nachweis steigt mit der Reichweite: seit die Reihe aus
+      // den KARTEN kommt statt aus `.metric-grid`, gehoert die Aktivitaets-Reihe
+      // der Gesundheit dazu, die vorher unsichtbar war.
+      assert.ok(rowsSeen >= 5,
+        `Nur ${rowsSeen} Kennzahlreihen gesehen - erwartet sind mindestens Budget, Abos, Aufteilen, `
+        + 'Darlehen und die Aktivitaets-Reihe der Gesundheit. Entweder hat der Seed keine Zahlen '
+        + 'geliefert, oder die Bauart hat sich geaendert.');
 
       assert.deepEqual(findings, [],
         'Kennzahlreihen im gerenderten Dokument. Gleichartige Kacheln nebeneinander sind gleich hoch, '
         + 'auch wenn die Reihe umbricht - die Hoehe gehoert dem Traeger (.metric-grid, panel.css), '
-        + 'nicht dem laengsten Text einer Zelle. Und die Zahlen einer Rasterzeile stehen auf EINER '
-        + 'Grundlinie: gleiche Hoehe allein macht eine Reihe noch nicht lesbar.\n  ' + findings.join('\n  '));
+        + 'nicht dem laengsten Text einer Zelle.\n  ' + findings.join('\n  '));
     });
   }
 });
