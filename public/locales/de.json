@@ -4026,7 +4026,7 @@
         "warrantyStatusExpiringSoon_one": "Garantie läuft in {{count}} Tag ab",
         "warrantyStatusExpiringSoon": "Garantie läuft in {{count}} Tagen ab",
         "warrantyStatusExpired": "Garantie abgelaufen seit {{date}}",
-        "warrantyAlertLabel": "Garantie läuft bald ab oder ist abgelaufen",
+        "warrantyAlertLabel": "Frist läuft bald ab oder ist überfällig",
         "trackedDatesLabel": "Verfolgte Fristen",
         "trackedDatesHint": "Beliebige weitere Termine verfolgen - TÜV, Service, Versicherung.",
         "addTrackedDate": "Datum hinzufügen",
