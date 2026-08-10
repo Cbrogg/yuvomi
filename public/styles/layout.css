@@ -422,6 +422,47 @@ html:has(.fab-layer .page-fab:not([hidden])) yuvomi-install-prompt {
   flex: 1;
 }
 
+/* ── Das Markensiegel (Block 2, 2026-08-10) ──
+ * Yuvomis Ausweisform, abgeleitet aus der Bildmarke (drei transluzente
+ * Kreise mit Sheen): ein kreisrunder, getoenter Chip, der die Herkunft
+ * eines Objekts benennt - Flaeche als --tint-surface des Familientons,
+ * Icon im vollen Ton, Sheen-Lichtkante als Gradient aus --glass-sheen.
+ * KEIN Glas (kein backdrop-filter): der Sheen-Stop kippt in
+ * prefers-reduced-transparency und prefers-contrast mit dem Token auf
+ * transparent, der Fallback ist die flache Toenung.
+ * Einsatzgesetz (Herkunfts-Regel, .impeccable/block2-brief.md): Siegel
+ * stehen an Mischstellen (Suche, Heute wichtig, Widget-Koepfe, Mehr) und
+ * im eigenen Modul genau einmal im Kopf - nie als Dauer-Dekor in den
+ * Listen eines einzelnen Moduls.
+ * Farbe pro Instanz ueber --seal-accent (moduleAccentVar bzw.
+ * var(--module-*)); ohne Angabe erbt das Siegel den aktiven Modul-Akzent. */
+.module-seal {
+  --seal-accent: var(--module-accent, var(--color-accent));
+  --seal-icon: var(--icon-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: var(--target-sm);
+  height: var(--target-sm);
+  border-radius: var(--radius-full);
+  background:
+    linear-gradient(to bottom, var(--glass-sheen), transparent 55%),
+    color-mix(in srgb, var(--seal-accent) var(--tint-surface), var(--color-surface));
+  color: var(--seal-accent);
+}
+
+.module-seal svg {
+  width: var(--seal-icon);
+  height: var(--seal-icon);
+}
+
+/* Kleine Rolle: Inline-Siegel in Koepfen und Sektionszeilen. */
+.module-seal--sm {
+  width: var(--space-6);
+  height: var(--space-6);
+}
+
 /* ── More-Item: App-Icon (farbiges Icon = Held, kein Kasten) ── */
 .more-item {
   display: flex;
@@ -448,19 +489,18 @@ html:has(.fab-layer .page-fab:not([hidden])) yuvomi-install-prompt {
   font-weight: var(--font-weight-semibold);
 }
 
-/* Das farbige Rounded-Square IST das Modul (echte App-Icon-Sprache): solide
- * Akzentfläche + kontrastierender Glyph (--color-ink-on-vivid: weiß im Light-,
- * dunkle Tinte im Dark-Mode). Solide Flächen trennen ähnliche Hues (Rose ≠
- * Mauve ≠ Beere) deutlich besser als blasse 20%-Pastelle. */
+/* Das Markensiegel traegt das Modul (Block 2): getoenter Kreis + Icon im
+ * vollen Familienton statt der frueheren soliden App-Icon-Kachel. Deren
+ * Begruendung ("solide Flaechen trennen aehnliche Hues besser als blasse
+ * Pastelle") ist strukturell beantwortet: aehnliche Hues gibt es seit den
+ * Familientoenen nicht mehr, innerhalb einer Familie unterscheidet das
+ * Icon. Form und Material kommen vom .module-seal-Baustein; hier stehen
+ * nur die Grid-Groesse und die Akzent-Weiterleitung. */
 .more-item__icon-well {
+  --seal-accent: var(--item-module-accent, var(--color-text-secondary));
+  --seal-icon: var(--icon-xl);
   width: 48px;
   height: 48px;
-  border-radius: var(--radius-md);
-  background: var(--item-module-accent, var(--color-text-secondary));
-  color: var(--color-ink-on-vivid);
-  display: flex;
-  align-items: center;
-  justify-content: center;
   flex-shrink: 0;
   /* Der Inset-Specular kommt aus den Tokens, nicht von Hand. Hier standen 30/12
    * gegen die 28/12 der Tokens - dieselbe Absicht, eine Ziffer daneben, und
@@ -687,7 +727,14 @@ html:has(.fab-layer .page-fab:not([hidden])) yuvomi-install-prompt {
   color: var(--color-text-secondary);
 }
 
+/* Sektionskopf einer Mischstelle (Herkunfts-Regel, Block 2): das Siegel
+ * benennt das Herkunftsmodul der Gruppe, der Text bleibt das
+ * Navigations-Gruppierungslabel. Er steht UEBER dem Traeger auf dem
+ * Grund, nie in ihm (Zeilenlisten-Regel). */
 .search-section__heading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   font-size: var(--text-xs);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-secondary);
@@ -695,24 +742,42 @@ html:has(.fab-layer .page-fab:not([hidden])) yuvomi-install-prompt {
   margin-bottom: var(--space-2);
 }
 
+/* Zeilenlisten-Regel: eine Folge gleichartiger Treffer liegt in GENAU
+ * EINEM Traeger; vorher trug jede Trefferzeile Surface + Radius + Abstand
+ * und war damit eine Karte pro Zeile (Critique 2026-08-10, P2). */
+.search-section__rows {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
 .search-result {
   display: block;
   width: 100%;
   text-align: left;
   padding: var(--space-3);
-  border-radius: var(--radius-md);
   border: none;
-  background: var(--color-surface-elevated);
+  background: none;
   color: var(--color-text-primary);
   font-size: var(--text-sm);
   cursor: pointer;
-  margin-bottom: var(--space-2);
   transition: background-color var(--transition-fast);
   -webkit-tap-highlight-color: transparent;
 }
 
+.search-result + .search-result {
+  border-top: 1px solid var(--color-border-subtle);
+}
+
 .search-result:active {
   background-color: var(--color-surface-hover);
+}
+
+/* Zeile an der geclippten Traegerkante: der Fokusring rueckt nach innen,
+ * statt unter overflow:hidden zu verschwinden. */
+.search-result:focus-visible {
+  outline-offset: var(--focus-ring-offset-inset);
 }
 
 /* Scope-Launcher im Leerzustand: „Direkt öffnen"-Kacheln, die zugleich zeigen,
@@ -760,10 +825,9 @@ html:has(.fab-layer .page-fab:not([hidden])) yuvomi-install-prompt {
   background-color: var(--color-surface-hover);
 }
 
-.search-scope__icon {
-  width: var(--space-5);
-  height: var(--space-5);
-  color: var(--color-text-secondary);
+/* Scope-Kacheln sind eine Mischstelle: das Siegel traegt den Familienton
+ * des Zielmoduls (--seal-accent setzt der Aufbau in router.js). */
+.search-scope__seal {
   flex-shrink: 0;
 }
 

@@ -243,11 +243,8 @@
   gap: var(--space-2);
 }
 
-.widget__title-icon {
-  width: 16px;
-  height: 16px;
-  color: var(--color-text-secondary);
-}
+/* Das Widget-Titel-Icon sitzt seit Block 2 in einem Markensiegel
+ * (.module-seal--sm, layout.css); Groesse und Farbe kommen von dort. */
 
 .widget__link {
   font-size: var(--type-secondary);
@@ -1703,23 +1700,12 @@ svg.weather-forecast__icon {
   background: var(--color-surface-hover);
 }
 
+/* Markensiegel (Block 2): Form und Material kommen vom .module-seal-
+ * Baustein (layout.css), hier steht nur die Weiterleitung des Tone-Akzents.
+ * Die fruehere rounded-square-Kachel mit identischem Toenungsrezept ist im
+ * Baustein aufgegangen. */
 .today-cockpit-card__icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--target-sm);
-  height: var(--target-sm);
-  border-radius: var(--radius-sm);
-  /* Getoente Icon-Kachel: ~16% Modul-Tint auf der opaken Zeilenflaeche,
-   * Icon im Modulton - sie traegt die Domaene, die die Versal-Eyebrows
-   * frueher behaupteten. */
-  background: color-mix(in srgb, var(--today-card-accent) var(--tint-surface), var(--color-surface));
-  color: var(--today-card-accent);
-}
-
-.today-cockpit-card__icon svg {
-  width: var(--space-4);
-  height: var(--space-4);
+  --seal-accent: var(--today-card-accent);
 }
 
 .today-cockpit-card__body {

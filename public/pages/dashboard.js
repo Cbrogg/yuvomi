@@ -538,10 +538,18 @@ function widgetHeader(icon, title, count, linkHref, linkLabel) {
   const badge = count != null
     ? `<span class="widget__badge">${count}</span>`
     : '';
+  // Herkunfts-Regel (Block 2): das Dashboard ist eine Mischstelle, also
+  // traegt jeder Widget-Kopf das Markensiegel seines Moduls. Der Slug ist
+  // das erste Segment der Widget-Route; ein unbekannter Slug faellt im
+  // var()-Fallback auf den App-Akzent zurueck.
+  const slug = (linkHref || '').split('/')[1] || '';
+  const seal = slug ? ` style="--seal-accent: var(--module-${slug}, var(--color-accent))"` : '';
   return `
     <div class="widget__header">
       <span class="widget__title">
-        <i data-lucide="${icon}" class="widget__title-icon" aria-hidden="true"></i>
+        <span class="module-seal module-seal--sm"${seal} aria-hidden="true">
+          <i data-lucide="${icon}"></i>
+        </span>
         ${title}
         ${badge}
       </span>
@@ -1146,13 +1154,13 @@ function renderTodayCard(icon, label, value, route, tone, count = null) {
   const badge = Number.isFinite(count) && count > 0
     ? `<span class="today-cockpit-card__count">${count}</span>`
     : '';
-  // Inset-Grouped-Zeile (Apple-Systemapp-Muster): getoente Icon-Kachel traegt
-  // die Modulzugehoerigkeit, der Inhalt steht als Titel in Textfarbe, das
-  // Modul-Label lebt als ruhiger Untertitel weiter (nie versal, nie ueber dem
-  // Titel), der Zaehler als trailing Badge.
+  // Inset-Grouped-Zeile (Apple-Systemapp-Muster): das Markensiegel traegt
+  // die Modulzugehoerigkeit (Herkunfts-Regel, Block 2), der Inhalt steht als
+  // Titel in Textfarbe, das Modul-Label lebt als ruhiger Untertitel weiter
+  // (nie versal, nie ueber dem Titel), der Zaehler als trailing Badge.
   return `
     <button type="button" class="today-cockpit-card today-cockpit-card--${tone}" data-route="${route}">
-      <span class="today-cockpit-card__icon"><i data-lucide="${icon}" aria-hidden="true"></i></span>
+      <span class="module-seal today-cockpit-card__icon"><i data-lucide="${icon}" aria-hidden="true"></i></span>
       <span class="today-cockpit-card__body">
         <strong class="today-cockpit-card__value">${esc(value)}</strong>
         <span class="today-cockpit-card__sub">${esc(label)}</span>

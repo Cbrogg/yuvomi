@@ -4748,8 +4748,16 @@ test('dashboard „Heute wichtig" is one inset-grouped list, not a tile grid', (
     'consecutive rows are divided by a hairline',
   );
 
-  // Modul-Identität lebt in der getönten Icon-Kachel, nicht in der Zeilenfüllung.
-  assert.match(iconBody, /background:\s*color-mix\(in srgb,\s*var\(--today-card-accent\)\s*var\(--tint-surface\),\s*var\(--color-surface\)\)/, 'the icon well carries the module tint');
+  // Modul-Identität lebt im Markensiegel (Block 2): die Kachel leitet ihren
+  // Tone-Akzent an den geteilten .module-seal-Baustein weiter, der Baustein
+  // trägt das Tönungsrezept, und das Markup bindet beide Klassen aneinander.
+  // Reißt eines der drei Glieder, ist die Kachel wieder ein Eigenbau.
+  assert.match(iconBody, /--seal-accent:\s*var\(--today-card-accent\)/, 'the icon well forwards its tone accent to the seal');
+  const layout = read('../public/styles/layout.css');
+  const sealBody = cssRuleBody(layout, '\n.module-seal');
+  assert.match(sealBody, /background:[\s\S]*color-mix\(in srgb,\s*var\(--seal-accent\)\s*var\(--tint-surface\),\s*var\(--color-surface\)\)/, 'the seal carries the module tint recipe');
+  const dashboardJs = read('../public/pages/dashboard.js');
+  assert.match(dashboardJs, /class="module-seal today-cockpit-card__icon"/, 'the cockpit icon well takes its form from the seal');
 
   // Sehr schmale Container bleiben einspaltig (Container-Query, kein Viewport-BP)
   assert.match(

@@ -2336,13 +2336,18 @@ function initSearch(container) {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'search-scope';
+      // Markensiegel (Herkunfts-Regel, Block 2): die Kachel benennt ihr
+      // Zielmodul ueber Familienton + Icon; der Slug ist die Route selbst.
+      const seal = document.createElement('span');
+      seal.className = 'module-seal module-seal--sm search-scope__seal';
+      seal.setAttribute('aria-hidden', 'true');
+      seal.style.setProperty('--seal-accent', moduleAccentVar(scope.route.slice(1)));
       const icon = document.createElement('i');
       icon.dataset.lucide = scope.icon;
-      icon.className = 'search-scope__icon';
-      icon.setAttribute('aria-hidden', 'true');
+      seal.appendChild(icon);
       const label = document.createElement('span');
       label.textContent = t(scope.labelKey);
-      btn.append(icon, label);
+      btn.append(seal, label);
       btn.addEventListener('click', () => {
         closeSearch();
         navigate(scope.route);
@@ -2477,14 +2482,31 @@ function renderSearchResults(container, data, onClose) {
     return preset ? t(preset.labelKey) : item.title;
   };
 
-  function makeSection(labelKey, items, routeFn, labelFn, metaFn) {
+  // Die Suche ist DIE Mischstelle der App (Herkunfts-Regel, Block 2): jede
+  // Sektion traegt das Markensiegel ihres Herkunftsmoduls im Kopf; innerhalb
+  // der Sektion ist die Herkunft damit selbstverstaendlich, die Zeilen
+  // bleiben siegelfrei. Die Zeilen selbst liegen in GENAU EINEM Traeger
+  // (Zeilenlisten-Regel) statt als Karte pro Treffer.
+  function makeSection(labelKey, seal, items, routeFn, labelFn, metaFn) {
     if (!items.length) return;
     const section = document.createElement('div');
     section.className = 'search-section';
     const heading = document.createElement('h3');
     heading.className = 'search-section__heading';
-    heading.textContent = t(labelKey);
+    if (seal) {
+      const sealEl = document.createElement('span');
+      sealEl.className = 'module-seal module-seal--sm';
+      sealEl.setAttribute('aria-hidden', 'true');
+      sealEl.style.setProperty('--seal-accent', moduleAccentVar(seal.module));
+      const icon = document.createElement('i');
+      icon.dataset.lucide = seal.icon;
+      sealEl.appendChild(icon);
+      heading.appendChild(sealEl);
+    }
+    heading.appendChild(document.createTextNode(t(labelKey)));
     section.appendChild(heading);
+    const rows = document.createElement('div');
+    rows.className = 'search-section__rows';
     items.forEach((item) => {
       const btn = document.createElement('button');
       btn.className = 'search-result';
@@ -2505,22 +2527,27 @@ function renderSearchResults(container, data, onClose) {
         onClose();
         navigate(routeFn(item));
       });
-      section.appendChild(btn);
+      rows.appendChild(btn);
     });
+    section.appendChild(rows);
     container.appendChild(section);
   }
 
-  makeSection('nav.tasks',    tasks,    (i) => `/tasks?open=${i.id}`, null,
+  makeSection('nav.tasks',    { module: 'tasks',    icon: 'check-square' },  tasks,    (i) => `/tasks?open=${i.id}`, null,
     (i) => (i.due_date ? formatDate(i.due_date) : ''));
-  makeSection('nav.calendar', events,   (i) => `/calendar?open=${i.id}`, null,
+  makeSection('nav.calendar', { module: 'calendar', icon: 'calendar' },      events,   (i) => `/calendar?open=${i.id}`, null,
     (i) => (i.start_datetime ? `${formatDate(i.start_datetime)}${i.all_day ? '' : ` · ${formatTime(i.start_datetime)}`}` : ''));
-  makeSection('nav.notes',    notes,    (i) => `/notes?open=${i.id}`);
-  makeSection('nav.contacts', contacts, (i) => `/contacts?open=${i.id}`);
-  makeSection('nav.shopping', items,    (i) => `/shopping?list=${i.list_id}&highlight=${i.id}`);
-  makeSection('health.tabs.meds',     meds,       () => '/health/meds', null,
+  makeSection('nav.notes',    { module: 'notes',    icon: 'sticky-note' },   notes,    (i) => `/notes?open=${i.id}`);
+  makeSection('nav.contacts', { module: 'contacts', icon: 'book-user' },     contacts, (i) => `/contacts?open=${i.id}`);
+  makeSection('nav.shopping', { module: 'shopping', icon: 'shopping-cart' }, items,    (i) => `/shopping?list=${i.list_id}&highlight=${i.id}`);
+  makeSection('health.tabs.meds',     { module: 'health', icon: 'heart-pulse' }, meds,       () => '/health/meds', null,
     (i) => i.dosage_text || '');
-  makeSection('health.tabs.activity', activities, () => '/health/activity', activityLabel,
+  makeSection('health.tabs.activity', { module: 'health', icon: 'heart-pulse' }, activities, () => '/health/activity', activityLabel,
     (i) => (i.performed_at ? formatDate(i.performed_at) : ''));
+
+  // Die Siegel-Icons kommen als data-lucide-Platzhalter; der Treffer-Pfad
+  // rendert sie selbst (der Leerzustands-Pfad tut es bereits genauso).
+  window.lucide?.createIcons({ el: container });
 
   return total;
 }
@@ -3063,7 +3090,9 @@ function moreItemEl({ path, navHref, label, icon, module: mod, accent, navId }) 
   if (accent) a.style.setProperty('--item-module-accent', accent);
   else if (mod) a.style.setProperty('--item-module-accent', moduleAccentVar(mod));
   const well = document.createElement('div');
-  well.className = 'more-item__icon-well';
+  // Markensiegel (Block 2): das Well nimmt Form und Material vom Baustein,
+  // die Grid-Groesse und die Akzent-Weiterleitung stehen in layout.css.
+  well.className = 'module-seal more-item__icon-well';
   const iconFactory = NAV_ICONS[icon];
   if (iconFactory) {
     const svg = iconFactory();
