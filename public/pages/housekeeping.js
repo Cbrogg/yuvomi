@@ -232,16 +232,14 @@ async function toggleSession(container, workerId) {
 function renderWorkerSummary() {
   if (!state.workers.length) {
     return `
-      <section class="housekeeping-card housekeeping-worker-empty">
-        <i data-lucide="user-plus" aria-hidden="true"></i>
-        <div>
-          <h2>${esc(t('housekeeping.noWorkerTitle'))}</h2>
-          <p>${esc(t('housekeeping.noWorkerHint'))}</p>
-          <button class="btn btn--primary housekeeping-worker-empty__cta" type="button" id="housekeeping-create-profile">
-            <i data-lucide="plus" aria-hidden="true"></i>
-            <span>${esc(t('housekeeping.setupProfileAction'))}</span>
-          </button>
-        </div>
+      <section class="empty-state">
+        <i data-lucide="user-plus" class="empty-state__icon" aria-hidden="true"></i>
+        <h2 class="empty-state__title">${esc(t('housekeeping.noWorkerTitle'))}</h2>
+        <p class="empty-state__description">${esc(t('housekeeping.noWorkerHint'))}</p>
+        <button class="btn btn--primary empty-state__cta" type="button" id="housekeeping-create-profile">
+          <i data-lucide="plus" aria-hidden="true"></i>
+          <span>${esc(t('housekeeping.setupProfileAction'))}</span>
+        </button>
       </section>
     `;
   }
@@ -316,22 +314,22 @@ function renderDashboard(content) {
 
   content.insertAdjacentHTML('beforeend', `
     ${renderWorkerSummary()}
-    <section class="housekeeping-metrics">
-      <article class="housekeeping-metric">
-        <span>${esc(t('housekeeping.visitsThisMonth'))}</span>
-        <strong>${esc(data.visits_this_month ?? 0)}</strong>
+    <section class="metric-grid metric-grid--quad">
+      <article class="metric-card">
+        <div class="metric-card__label">${esc(t('housekeeping.visitsThisMonth'))}</div>
+        <div class="metric-card__value">${esc(data.visits_this_month ?? 0)}</div>
       </article>
-      <article class="housekeeping-metric">
-        <span>${esc(t('housekeeping.lastVisit'))}</span>
-        <strong>${esc(lastVisit)}</strong>
+      <article class="metric-card">
+        <div class="metric-card__label">${esc(t('housekeeping.lastVisit'))}</div>
+        <div class="metric-card__value">${esc(lastVisit)}</div>
       </article>
-      <article class="housekeeping-metric">
-        <span>${esc(t('housekeeping.pendingChores'))}</span>
-        <strong>${esc(data.pending_tasks ?? 0)}</strong>
+      <article class="metric-card">
+        <div class="metric-card__label">${esc(t('housekeeping.pendingChores'))}</div>
+        <div class="metric-card__value">${esc(data.pending_tasks ?? 0)}</div>
       </article>
-      <article class="housekeeping-metric">
-        <span>${esc(t('housekeeping.finishedChores'))}</span>
-        <strong>${esc(data.finished_tasks_this_month ?? 0)}</strong>
+      <article class="metric-card">
+        <div class="metric-card__label">${esc(t('housekeeping.finishedChores'))}</div>
+        <div class="metric-card__value">${esc(data.finished_tasks_this_month ?? 0)}</div>
       </article>
     </section>
     <section class="housekeeping-card">
@@ -560,18 +558,18 @@ function renderReports(content) {
         <h2>${esc(t('housekeeping.visitReports'))}</h2>
         <span>${esc(formatMonthLabel(state.visitReport?.month || ''))}</span>
       </div>
-      <section class="housekeeping-metrics housekeeping-metrics--compact">
-        <article class="housekeeping-metric">
-          <span>${esc(t('housekeeping.visitsThisMonth'))}</span>
-          <strong>${esc(visits.length)}</strong>
+      <section class="metric-grid">
+        <article class="metric-card metric-card--inset">
+          <div class="metric-card__label">${esc(t('housekeeping.visitsThisMonth'))}</div>
+          <div class="metric-card__value">${esc(visits.length)}</div>
         </article>
-        <article class="housekeeping-metric">
-          <span>${esc(t('housekeeping.pendingPayments'))}</span>
-          <strong>${esc(money(totals.pending || 0))}</strong>
+        <article class="metric-card metric-card--inset">
+          <div class="metric-card__label">${esc(t('housekeeping.pendingPayments'))}</div>
+          <div class="metric-card__value">${esc(money(totals.pending || 0))}</div>
         </article>
-        <article class="housekeeping-metric">
-          <span>${esc(t('housekeeping.paymentPaid'))}</span>
-          <strong>${esc(money(totals.paid || 0))}</strong>
+        <article class="metric-card metric-card--inset">
+          <div class="metric-card__label">${esc(t('housekeeping.paymentPaid'))}</div>
+          <div class="metric-card__value">${esc(money(totals.paid || 0))}</div>
         </article>
       </section>
     </section>

@@ -754,10 +754,16 @@ test('Panel-Fläche und Kopfleiste sind geteilt, nicht pro Tab gebaut', () => {
 });
 
 test('Trendpfeile sind Icons, keine Textglyphen', () => {
+  // Die Pfeil-Entscheidung wohnt seit Block 2 in der geteilten Trend-API
+  // (utils/metric-card.js) - budget.js formatiert nur noch den Text.
+  const metricCard = read('../public/utils/metric-card.js');
   assert.doesNotMatch(budget, /'▲'/);
   assert.doesNotMatch(budget, /'▼'/);
-  assert.match(budget, /trending-up/);
-  assert.match(budget, /trending-down/);
+  assert.doesNotMatch(metricCard, /'▲'/);
+  assert.doesNotMatch(metricCard, /'▼'/);
+  assert.match(metricCard, /trending-up/);
+  assert.match(metricCard, /trending-down/);
+  assert.match(budget, /trendMarkup\(/);
 });
 
 test('Konto-Farben kommen aus Tokens und tragen sprechende Labels', () => {

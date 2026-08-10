@@ -496,7 +496,7 @@ async function openImportModal() {
 
   const listHtml = hasCandidates
     ? `<div class="bd-import__list">${withBirthday.map(importCandidateRowHtml).join('')}</div>`
-    : `<div class="bd-import__empty">${t('birthdays.importEmpty')}</div>`;
+    : `<div class="empty-state empty-state--compact"><p class="empty-state__description">${t('birthdays.importEmpty')}</p></div>`;
 
   const withoutHtml = withoutBirthday.length
     ? `<details class="bd-import__without">

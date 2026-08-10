@@ -620,7 +620,7 @@
  * Basisdeklaration und die Kompaktstufe bleibt wirkungslos (Audit A2-06). */
 @container budget-page (max-width: 479px) {
   .metric-card { padding: var(--space-2); }
-  .metric-card__amount { font-size: var(--text-base); }
+  .metric-card__value { font-size: var(--text-base); }
   .metric-card__trend { display: none; }
 }
 

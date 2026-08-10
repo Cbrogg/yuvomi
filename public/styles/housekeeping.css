@@ -60,6 +60,22 @@
   padding-inline: var(--page-inline-pad);
   padding-top: var(--space-4);
   padding-bottom: calc(var(--space-16) + env(safe-area-inset-bottom));
+  /* Container für die Kompaktstufen der geteilten Kennzahl-Zeile (unten):
+   * der Container ist eine Eigenschaft der Seite, die das Bauteil einsetzt,
+   * nicht des Bauteils (Begründung in panel.css). */
+  container: housekeeping-page / inline-size;
+}
+
+/* Kompaktstufe der geteilten Kennzahl-Zeile, wie in budget.css: vier Karten
+ * passen auf schmalen Containern nicht nebeneinander - zwei mal zwei statt
+ * einer gequetschten Zeile. */
+@container housekeeping-page (max-width: 719px) {
+  .metric-grid--quad { --summary-cards: 2; }
+}
+
+@container housekeeping-page (max-width: 479px) {
+  .metric-card { padding: var(--space-2); }
+  .metric-card__value { font-size: var(--text-base); }
 }
 
 /* HIG-Karte: randlos auf dem Grouped-Grund, opake Fläche, shadow-sm - dieselbe
@@ -67,10 +83,11 @@
  * transparenter Träger stehen, damit Zustände (Auswahl, Hover) sie einfärben
  * können, ohne das Layout zu verschieben. */
 /* `.housekeeping-task` stand hier mit in der Reihe und ist herausgenommen: sie
- * ist keine Karte mehr, sondern eine Zeile in einer Liste (siehe unten). */
+ * ist keine Karte mehr, sondern eine Zeile in einer Liste (siehe unten).
+ * `.housekeeping-metric` ist seit Block 2 die geteilte .metric-card
+ * (panel.css) - die KPI-Reihe ist eine .metric-grid wie im Budget. */
 .housekeeping-card,
-.housekeeping-worker-strip,
-.housekeeping-metric {
+.housekeeping-worker-strip {
   background-color: var(--color-surface);
   border: 1px solid transparent;
   border-radius: var(--radius-md);
@@ -166,59 +183,12 @@
   font-size: var(--text-xl);
 }
 
-.housekeeping-worker-empty {
-  display: flex;
-  gap: var(--space-3);
-  align-items: center;
-}
+/* Der Profil-Leerzustand ist seit Block 2 die geteilte .empty-state
+ * (layout.css) - er war der einzige horizontale Ausreißer der App und stand
+ * als Karte, die die Keine-Fläche-Regel bricht. */
 
-.housekeeping-worker-empty svg {
-  width: 32px;
-  height: 32px;
-  color: var(--module-accent);
-}
-
-.housekeeping-worker-empty p {
-  margin: 0;
-  color: var(--color-text-secondary);
-}
-
-.housekeeping-worker-empty__cta {
-  margin-top: var(--space-4);
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.housekeeping-metrics {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-3);
-}
-
-.housekeeping-metrics--compact {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin-top: var(--space-3);
-}
-
-.housekeeping-metric {
-  /* Inhaltshöhe statt fixer 104px: die feste Höhe erzeugte bei kurzen
-   * Werten große Leerflächen in den KPI-Karten (Audit A2-23). */
-  padding: var(--space-3);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.housekeeping-metric span,
 .housekeeping-section-heading span {
   color: var(--color-text-secondary);
-}
-
-.housekeeping-metric strong {
-  font-size: var(--text-xl);
-  line-height: 1.15;
-  letter-spacing: var(--tracking-normal);
 }
 
 .housekeeping-section-heading {
@@ -691,10 +661,6 @@
   .housekeeping-form-grid--wide,
   .housekeeping-profile-editor {
     grid-template-columns: 1fr;
-  }
-
-  .housekeeping-metrics--compact {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .housekeeping-avatar--lg {

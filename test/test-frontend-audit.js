@@ -9278,16 +9278,18 @@ test('was das Display umfaerbt, gilt nur fuers Display', () => {
  * DIE ZWEITE HAELFTE DER TRAEGER-REGEL BLEIBT UNGEPRUEFT, UND ZWAR GEMESSEN.
  *
  * Sie lautet: der Well gilt nur INNERHALB einer Karte, steht also im
- * Kontextselektor (`.health-overview__card .health-metric-card`) und nie in der
- * Basisregel. Das ist eine Aussage ueber den gerenderten BAUM - im Stylesheet
- * ist „hat einen Kartenkontext" nur als Heuristik ablesbar.
+ * Kontextselektor oder in einem Modifier, den der Erzeuger nur im
+ * Kartenkontext setzt (`.metric-card--inset`), und nie in der Basisregel. Das
+ * ist eine Aussage ueber den gerenderten BAUM - im Stylesheet ist „hat einen
+ * Kartenkontext" nur als Heuristik ablesbar.
  *
  * Auf Ebene 4 waere sie stellbar, und die Sonde ist gebaut worden
  * (`.impeccable/redesign-tools/tree-probe.mjs`). Sie ist NICHT in die Suite
  * gewandert, weil die Messung ihre Reichweite zeigt: von den zehn Regeln, die
  * `--color-fill-well` setzen, sind ueber acht Routen genau ZWEI mit einem
  * sichtbaren Element vertreten (`.weather-widget__refresh` und
- * `.health-metric-card`), und beide stehen korrekt in einer Karte. Die anderen
+ * `.health-metric-card`, heute `.metric-card--inset`), und beide stehen
+ * korrekt in einer Karte. Die anderen
  * acht liegen hinter Zustaenden, die kein Routenbesuch zeigt - Formulare,
  * Bestaetigungsbereiche, `[hidden]`-Bloecke.
  *
@@ -9775,4 +9777,170 @@ test('a row body that wraps the whole row carries no aria-label and no block ele
     + 'fuer Hilfsmittel vollstaendig, und Blockelemente stehen ausserhalb des\n'
     + `Content-Models eines <button>:\n${offenders.join('\n')}`,
   );
+});
+
+// --------------------------------------------------------------------------
+// Kennzahlkarte (Block 2): EINE Bauart fuer den beschrifteten Zahlenblock.
+//
+// Der Befund, den dieser Guard fernhaelt: vier Familien fuer dieselbe Signatur
+// (.metric-card, .health-metric-card, .housekeeping-metric, .dashboard-metric)
+// hiessen viermal neu lernen, wo die Zahl steht. Wie beim Buttonform-Guard
+// prueft er nicht Klassennamen, sondern die SIGNATUR im Stylesheet - eine
+// Allowlist der vier Namen waere ab dem fuenften Nachbau blind gewesen
+// (dieselbe Lehre wie bei Kueche und Budget: ein Guard ueber eine Namensliste
+// deckt keine Regel ab, sondern N Dateien).
+//
+// Die Signatur eines Kennzahlkarten-Nachbaus, alle drei Merkmale im selben
+// BEM-Block:
+//   WERT   eine Regel mit font-size xl/2xl/3xl UND Gewicht semibold/bold
+//          (oder einem <strong> im Selektor - die housekeeping-Bauart),
+//   LABEL  eine Regel mit color: --color-text-secondary,
+//   KARTE  die Block-Wurzel traegt eine eigene Kartenflaeche
+//          (--color-surface oder --color-fill-well).
+//
+// Das dritte Merkmal zieht die Grenze zu den legitimen ANDEREN Formen des
+// Zahl+Label-Paars: Dashboard-Widgets (die Flaeche gehoert dem geteilten
+// .widget, nicht dem Block), Stat-Zeilen IN einer Karte
+// (.health-overview__stat) und Rasterzellen (Kalender-Datum). Beim Bau dieses
+// Guards fand die Signatur sofort zwei uebersehene Nachbauten
+// (.health-adherence, .health-activity-stat) - beide sind migriert.
+// --------------------------------------------------------------------------
+test('wer einen beschrifteten Zahlenblock als Karte baut, nimmt .metric-card', () => {
+  const files = readdirSync(new URL('../public/styles/', import.meta.url))
+    .filter((name) => name.endsWith('.css'));
+
+  // Ausnahmen mit KATEGORIE (Umkehrung einer Allowlist: geprueft werden ALLE
+  // Blocks, benannt sind nur die begruendeten Ausnahmen, Neues faellt durch).
+  const EXEMPT = new Map([
+    ['cycle-preg', 'Ereigniskarte: die grosse Zeile ist eine Aussage ueber ein '
+      + 'Ereignis („SSW 24"), kein Kennzahlensatz - Label und Wert stehen '
+      + 'nicht als Paar, die Karte traegt Icon-Well und Terminzeilen'],
+  ]);
+
+  const decl = (body, prop) =>
+    body.match(new RegExp(`(?:^|;)\\s*${prop}:\\s*([^;]+)`))?.[1]?.trim();
+  const blockOf = (sel) => {
+    const last = sel.split(/[\s>+~]+/).filter(Boolean).pop() || '';
+    const cls = last.match(/\.([a-z][\w-]*)/)?.[1];
+    return cls ? cls.split('__')[0].split('--')[0] : null;
+  };
+
+  const value = new Map(); // block -> fundstelle
+  const label = new Set();
+  const cardRoot = new Map();
+
+  for (const name of files) {
+    for (const { selector, body } of eachRule(read(`../public/styles/${name}`))) {
+      for (const sel of selector.split(',').map((s) => s.trim())) {
+        const block = blockOf(sel);
+        if (!block || block === 'metric-card') continue;
+
+        const fs = decl(body, 'font-size');
+        const fw = decl(body, 'font-weight');
+        const big = fs && /--text-(xl|2xl|3xl)/.test(fs);
+        const heavy = (fw && /--font-weight-(semibold|bold)|\b[67]00\b/.test(fw))
+          || /\bstrong\b/.test(sel);
+        if (big && heavy && !value.has(block)) value.set(block, `${name}: ${sel}`);
+
+        const col = decl(body, 'color');
+        if (col && /--color-text-secondary/.test(col)) label.add(block);
+
+        // Kartenflaeche an der Block-WURZEL: der Selektor endet auf die
+        // Block-Klasse selbst (ggf. mit Modifier), nicht auf ein __Element.
+        const rootLike = new RegExp(`\\.${block}(--[\\w-]+)?$`).test(sel);
+        const bg = decl(body, 'background') ?? decl(body, 'background-color');
+        if (rootLike && bg && /--color-(surface|fill-well)\b/.test(bg)) {
+          if (!cardRoot.has(block)) cardRoot.set(block, `${name}: ${sel}`);
+        }
+      }
+    }
+  }
+
+  const offenders = [];
+  for (const [block, where] of value) {
+    if (!label.has(block) || !cardRoot.has(block)) continue;
+    if (EXEMPT.has(block)) continue;
+    offenders.push(
+      `.${block} (${where}; Flaeche: ${cardRoot.get(block)}) baut die Kennzahlkarte nach `
+      + '- Zahl + Sekundaer-Label auf eigener Kartenflaeche ist .metric-card (panel.css)');
+  }
+  assert.deepEqual(offenders, []);
+
+  // Der Scanner muss die Signatur der EINEN Karte selbst noch sehen, sonst ist
+  // ein leerer Befund von einem blinden Scanner nicht zu unterscheiden.
+  const panel = read('../public/styles/panel.css');
+  assert.match(panel, /\.metric-card__value\s*\{[^}]*--text-xl/,
+    'Die Wert-Signatur von .metric-card ist verschwunden - der Guard misst ins Leere.');
+});
+
+// --------------------------------------------------------------------------
+// Leerzustand (Block 2): EIN Flaechen-Leerzustand, die geteilte .empty-state.
+//
+// Achtzehn modul-eigene Leerzustandsklassen neben der geteilten Grammatik
+// waren achtzehn Gelegenheiten, ihn anders zu bauen (Karte mit Schatten,
+// getoente Flaeche, horizontale Achse). Auch hier prueft der Guard die
+// SIGNATUR, nicht die Namen.
+//
+// Die Signatur eines Flaechen-Leerzustands im Stylesheet:
+//   text-align: center + Sekundaer-/Tertiaertext + spuerbarer Eigenraum
+//   (padding-block ab --space-6).
+//
+// Ausschluesse ueber die BAUART, nicht ueber Namen:
+//   - gestrichelte Kante: ein Drop-Ziel LAEDT EIN, es meldet kein Fehlen,
+//   - position: absolute: ein schwebender Hinweis (Now-Linie) zentriert
+//     nicht ueber einer Flaeche,
+//   - Transienz-Rollenwort im Selektor (loading/status/skeleton): ein
+//     Ladezustand wird gleich von Inhalt ersetzt; sein Muster ist der
+//     Skeleton, nicht der Leerzustand (Rollenwort-Ansatz wie beim
+//     Glass-Guard in test-budget-ui.js).
+// --------------------------------------------------------------------------
+test('ein Flaechen-Leerzustand ist die geteilte .empty-state', () => {
+  const files = readdirSync(new URL('../public/styles/', import.meta.url))
+    .filter((name) => name.endsWith('.css'));
+
+  const EXEMPT = new Map([
+    ['.document-viewer__pdf-page-error', 'Viewer-Zustand: beschreibt EINE Seite '
+      + 'des angezeigten Mediums im Overlay, nicht die Flaeche der App'],
+    ['.document-viewer__unsupported', 'Viewer-Zustand: das Medienformat hat '
+      + 'keine Vorschau - Aussage ueber das Medium, nicht ueber fehlende Daten'],
+  ]);
+  const TRANSIENT = /loading|status|skeleton/;
+
+  const decl = (body, prop) =>
+    body.match(new RegExp(`(?:^|;)\\s*${prop}:\\s*([^;]+)`))?.[1]?.trim();
+  // Erster Wert eines padding-Shorthands ist der Block-Anteil.
+  const paddingBlock = (body) => {
+    const raw = decl(body, 'padding-block') ?? decl(body, 'padding-top')
+      ?? decl(body, 'padding');
+    const step = raw?.match(/--space-(\d+)/)?.[1];
+    return step ? Number(step) : 0;
+  };
+
+  const offenders = [];
+  let seen = 0;
+  for (const name of files) {
+    for (const { selector, body } of eachRule(read(`../public/styles/${name}`))) {
+      if (!/text-align:\s*center/.test(body)) continue;
+      const col = decl(body, 'color');
+      if (!col || !/--color-text-(secondary|tertiary)/.test(col)) continue;
+      if (paddingBlock(body) < 6) continue;
+      seen += 1;
+      if (/\.empty-state/.test(selector)) continue;
+      if (/border[^;]*dashed/.test(body)) continue;
+      if (/position:\s*absolute/.test(decl(body, 'position') ?? '')) continue;
+      if (TRANSIENT.test(selector)) continue;
+      const key = selector.split(',')[0].trim();
+      if (EXEMPT.has(key)) continue;
+      offenders.push(
+        `${name}: ${selector} baut den Flaechen-Leerzustand nach `
+        + '- zentrierter Sekundaertext mit Eigenraum ist .empty-state (layout.css)');
+    }
+  }
+  assert.deepEqual(offenders, []);
+
+  // Reichweiten-Nachweis NACH der Messung: die Signatur muss die geteilte
+  // Grammatik selbst und mindestens einen kategorisierten Nachbarn gesehen
+  // haben, sonst misst der Scanner nichts mehr.
+  assert.ok(seen >= 2,
+    `Nur ${seen} Treffer der Leerzustands-Signatur im ganzen Stylesheet - der Scanner greift nicht mehr.`);
 });

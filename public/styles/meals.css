@@ -1002,11 +1002,6 @@
     gap: var(--space-1);
   }
 
-  .recipe-sidebar__empty {
-    color: var(--color-text-secondary);
-    padding: var(--space-3) 0;
-  }
-
   .day-header {
     grid-row: 1;
     grid-column: var(--day-col);

@@ -132,15 +132,15 @@ function renderBodyContent(body) {
     <div class="metric-grid">
       <div class="metric-card metric-card--income">
         <div class="metric-card__label">${t('budget.statsIncome')}</div>
-        <div class="metric-card__amount">${fmtAmount(d.totals.income)}</div>
+        <div class="metric-card__value">${fmtAmount(d.totals.income)}</div>
       </div>
       <div class="metric-card metric-card--expenses">
         <div class="metric-card__label">${t('budget.statsExpenses')}</div>
-        <div class="metric-card__amount">${fmtAmount(Math.abs(d.totals.expenses))}</div>
+        <div class="metric-card__value">${fmtAmount(Math.abs(d.totals.expenses))}</div>
       </div>
       <div class="metric-card ${d.totals.balance >= 0 ? 'metric-card--balance-positive' : 'metric-card--balance-negative'}">
         <div class="metric-card__label">${t('budget.statsBalance')}</div>
-        <div class="metric-card__amount">${fmtAmount(d.totals.balance)}</div>
+        <div class="metric-card__value">${fmtAmount(d.totals.balance)}</div>
       </div>
     </div>
     <div id="budget-stats-trend"></div>

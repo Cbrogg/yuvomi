@@ -382,12 +382,12 @@ function renderSummary() {
     <section class="metric-grid metric-grid--quad">
       <article class="metric-card">
         <div class="metric-card__label">${t('subscriptions.monthlyCost')}</div>
-        <div class="metric-card__amount">${money(used)}</div>
+        <div class="metric-card__value">${money(used)}</div>
         <div class="metric-card__note">${t('subscriptions.activeCount', { count: summary.active_count })}</div>
       </article>
       <article class="metric-card">
         <div class="metric-card__label">${t('subscriptions.monthlyBudget')}</div>
-        <div class="metric-card__amount">${money(budget)}</div>
+        <div class="metric-card__value">${money(budget)}</div>
         <div class="metric-card__progress${isOverBudget ? ' metric-card__progress--over' : ''}"
              role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${percentage}" aria-valuetext="${realPercentage}%">
           <span style="--fill:${percentage / 100}"></span>
@@ -395,12 +395,12 @@ function renderSummary() {
       </article>
       <article class="metric-card${isOverBudget ? ' metric-card--negative' : ''}">
         <div class="metric-card__label">${hasBudget ? (isOverBudget ? t('subscriptions.overBudget') : t('subscriptions.remainingBudget')) : t('subscriptions.noBudgetLimit')}</div>
-        <div class="metric-card__amount">${hasBudget ? money(Math.abs(summary.remaining_budget)) : t('subscriptions.unlimited')}</div>
+        <div class="metric-card__value">${hasBudget ? money(Math.abs(summary.remaining_budget)) : t('subscriptions.unlimited')}</div>
         <div class="metric-card__note${isOverBudget ? ' metric-card__note--danger' : ''}">${hasBudget ? `${realPercentage}% ${t('subscriptions.budgetUsed')}` : t('subscriptions.setBudgetHint')}</div>
       </article>
       <article class="metric-card">
         <div class="metric-card__label">${t('subscriptions.yearlyProjection')}</div>
-        <div class="metric-card__amount">${money(used * 12)}</div>
+        <div class="metric-card__value">${money(used * 12)}</div>
         <div class="metric-card__note">${esc(summary.base_currency)}</div>
       </article>
     </section>

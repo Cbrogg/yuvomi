@@ -1382,9 +1382,9 @@ function renderDashboardLayout(cfg, data, weather, currency, { editing = false, 
   // Alle Widgets ausgeblendet: kein toter Screen, sondern ein Hinweis zurück
   // in die Anpassung (das Cockpit oben bleibt als Orientierung erhalten).
   const gridInner = tiles || `
-    <div class="dashboard-empty-grid">
+    <div class="empty-state empty-state--compact">
       <i data-lucide="layout-dashboard" class="empty-state__icon" aria-hidden="true"></i>
-      <p>${t('dashboard.allWidgetsHidden')}</p>
+      <p class="empty-state__description">${t('dashboard.allWidgetsHidden')}</p>
     </div>
   `;
   // Beim Bearbeiten und bei bewusst umsortierten Layouts die Quellordnung bewahren

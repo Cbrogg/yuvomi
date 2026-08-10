@@ -134,8 +134,7 @@
 .housekeeping-card h2,
 .subscriptions-chart h2,
 .subscriptions-section-head h2,
-.subscriptions-logo-picker-head h3,
-.settings-empty-state__title {
+.subscriptions-logo-picker-head h3 {
   font-size: var(--type-section-title);
   font-weight: var(--font-weight-semibold);
   line-height: var(--line-height-snug);
@@ -164,7 +163,7 @@
  * Überschrift in Satzschreibung (Block darüber); einer, der sich mit
  * wechselndem Wert über eine Liste wiederholt, ist ein Versal-Mikro-Label
  * (dieser Block). Was ein Kopf benennt, ist keine Eigenschaft seines Markups -
- * `.panel-head__title` und `.settings-empty-state__title` sind strukturell
+ * `.panel-head__title` und `.settings-section__title` sind strukturell
  * dasselbe Element und stehen absichtlich in verschiedenen Blöcken.
  *
  * Ein Guard darüber wäre deshalb ein Guard über DIESE LISTE, nicht über die

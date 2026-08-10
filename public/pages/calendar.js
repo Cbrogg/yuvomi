@@ -239,7 +239,7 @@ function renderIconPickerResults(selectedIcon, query = '') {
       .flatMap((c) => c.icons)
       .filter((icon) => icon.label.toLowerCase().includes(q) || icon.value.includes(q));
     if (filtered.length === 0) {
-      return `<div class="event-icon-picker__no-results">${esc(t('calendar.iconSearchEmpty'))}</div>`;
+      return `<div class="empty-state empty-state--compact"><p class="empty-state__description">${esc(t('calendar.iconSearchEmpty'))}</p></div>`;
     }
     return `
       <div class="event-icon-picker__category-icons">

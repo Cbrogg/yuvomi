@@ -91,11 +91,8 @@
  * stattdessen `--fab-safe-zone` (Marge an .app-content, layout.css): kein Platz
  * in der Zeile, sondern ein kürzerer Scrollport. */
 
-.pantry-empty-hint {
-  padding: var(--space-6) var(--space-4);
-  text-align: center;
-  color: var(--color-text-tertiary);
-}
+/* `.pantry-empty-hint` ist entfallen (Block 2): ohne Fundstelle im Markup -
+ * der Vorrat rendert seine Leerzustände über mountEmptyState. */
 
 /* Kopf-Inhalt auf dasselbe Lesemaß wie der Körper: `.page-toolbar--narrow`
  * (layout.css), gesetzt im Markup neben `--in-group`. Hier stand dieselbe

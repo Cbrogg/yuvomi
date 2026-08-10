@@ -46,39 +46,10 @@
  * .sr-only und braucht keinen sichtbaren Kopf mehr (Finish-Review Runde 4,
  * Befund 6); die Klasse hatte danach keinen Nutzer im Markup. */
 
-/* Empty-State: zentriertes Panel mit getöntem Icon-Well im Modul-Akzent.
- * Randlos wie jede Karte auf dem Grouped-Grund; der frühere radial-gradient
- * war Dekoration ohne Aussage und ist mit der HIG-Welt entfallen. */
-.health-empty {
-  align-items: center;
-  text-align: center;
-  gap: var(--space-3);
-  padding: var(--space-8) var(--space-4);
-  border: none;
-  /* --radius-lg, nicht `calc(var(--radius-md) + 4px)`: die Konzentrik-Formel
-   * leitet einen INNEREN Radius von einem äußeren ab, und diese Karte steht
-   * freistehend auf dem Grouped-Grund. Der Wert war identisch (16px), band die
-   * Karte aber an ein Token, mit dem sie nichts zu tun hat. */
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-sm);
-}
-
-.health-empty__icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 56px;
-  height: 56px;
-  border-radius: var(--radius-full);
-  color: var(--module-accent);
-  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), transparent);
-}
-
-.health-empty__icon i {
-  width: 28px;
-  height: 28px;
-}
+/* Der frühere .health-empty (Leerzustand als KARTE mit eigenem Icon-Well) ist
+ * mit Block 2 in die geteilte .empty-state-Grammatik eingewandert: die
+ * Kreis-Ikonografie steht jetzt app-weit in layout.css, und ein Leerzustand
+ * bekommt keine Fläche (tokens.css, Keine-Fläche-Regel). */
 
 /* ==========================================================================
  * Vitalwerte-Tab (Phase 2)
@@ -191,159 +162,9 @@
   gap: var(--space-3);
 }
 
-/* Auf dem Grouped-Grund ist diese Kachel eine randlose Karte (Vitalwerte-Tab),
- * INNERHALB der Übersichtskarte ein Inset-Well (tokens.css,
- * Kasten-in-Kasten-Vokabular) - ein Well auf dem Grund wäre unsichtbar.
- * Auswahl und Hover sprechen in beiden Fällen über einen Innenring. */
-.health-metric-card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-3);
-  border: none;
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-sm);
-  text-align: start;
-  cursor: pointer;
-  transition: box-shadow var(--transition-fast, var(--duration-sm));
-}
-
-.health-overview__card .health-metric-card {
-  background: var(--color-fill-well);
-  box-shadow: none;
-}
-
-.health-metric-card:hover {
-  box-shadow: inset 0 0 0 1px var(--module-accent);
-}
-
-.health-metric-card.is-active {
-  box-shadow: inset 0 0 0 2px var(--module-accent);
-}
-
-/* Flex mit Umbruch: passt der Metrik-Name nicht mehr NEBEN das Icon, wrappt
- * er als ganzes Flex-Item auf eine eigene, volle Kartenzeile — erst dort darf
- * der break-word-Backstop überhaupt greifen. (Ein Float-Ansatz scheitert:
- * break-word füllt sonst die neben dem Icon verkürzte Zeile und chopt
- * „Sauerstoffsättigu|ng" wortmittig.) */
-.health-metric-card__head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-  color: var(--color-text-secondary);
-  min-width: 0;
-}
-
-/* Metrik-Namen werden nicht mehr silbengetrennt: hyphens:auto (F-11) zerhackte
- * „Sauerstoffsättigung" mitten im Wort (Critique P1). Die 160px-Mindestspalte
- * des Karten-Grids trägt den längsten Namen auf der vollen Zeile; break-word
- * bleibt reiner Backstop für Extremfälle jenseits der Kartenbreite. */
-.health-metric-card__label {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow-wrap: break-word;
-  hyphens: manual;
-  text-align: left;
-}
-
-/* Die frühere Ausnahme `hyphens: auto` für das Übersichts-Widget ist mit Runde 3
- * entfallen, und zwar als URSACHE des Trennwortbruchs, nicht nur als Symptom:
- * mit auto ist die min-content-Breite des Labels eine SILBE, also unterschreitet
- * das Flex-Item nie seine Mindestbreite und wrappt nie auf die eigene Zeile
- * unter dem Icon - es trennt stattdessen („Sauerstoffsätti-gung"). Mit manual
- * ist die min-content-Breite das ganze Wort, das Item rutscht auf die volle
- * Zeile, und dort passt es. Den früher gefürchteten 119px-Fall löst jetzt das
- * auto-fit-Raster (siehe .health-overview__vitals-grid). */
-
-.health-metric-card__icon {
-  flex-shrink: 0;
-  width: 18px;
-  height: 18px;
-  color: var(--module-accent);
-}
-
-.health-metric-card__label {
-  font-size: var(--text-sm);
-}
-
-/* Wert und Einheit stehen auf einer gemeinsamen Grundlinie. Sie dürfen
- * gemeinsam umbrechen (lange Dauern wie „7 Std. 30 Min."), aber nie mitten im
- * Wort - deshalb wrap statt Ellipse und `overflow-wrap: normal`. */
-.health-metric-card__body {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: var(--space-1);
-}
-
-.health-metric-card__value {
-  font-size: var(--text-2xl);
-  font-weight: var(--font-weight-semibold, 600);
-  color: var(--color-text-primary);
-  overflow-wrap: normal;
-  hyphens: manual;
-}
-
-/* In der Übersichtskachel ist die Spalte schmaler als auf dem Vitalwerte-Tab:
- * eine Stufe kleiner hält „7 Std. 30 Min." und die Einheit häufiger in einer
- * Zeile, ohne die Hierarchie zu drehen (der Wert bleibt das Größte der Kachel). */
-.health-overview__vitals-grid .health-metric-card__value {
-  font-size: var(--text-xl);
-}
-
-.health-metric-card__value--empty {
-  color: var(--color-text-tertiary, var(--color-text-secondary));
-}
-
-.health-metric-card__unit {
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-}
-
-/* Mini-Trendlinie: gibt jeder Metrik-Karte einen eigenen Sub-Domänen-Charakter.
- * preserveAspectRatio="none" streckt auf Kartenbreite; vector-effect hält die
- * Strichstärke konstant. */
-.health-metric-card__spark {
-  width: 100%;
-  height: 22px;
-  display: block;
-  opacity: 0.9;
-  overflow: visible;
-}
-
-.health-metric-card__meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  font-size: var(--text-xs);
-  color: var(--color-text-secondary);
-}
-
-.health-metric-card__delta {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-0h);
-}
-
-.health-metric-card__delta i {
-  width: 14px;
-  height: 14px;
-}
-
-/* Richtung wird allein über das Pfeil-Icon getragen, nicht über Farbe: „hoch" ist
- * je nach Metrik gut ODER schlecht (Gewichtsabnahme, SpO₂, Glukose-Kontrolle),
- * daher bewusst neutral — kein Danger-Rot für steigende Werte. */
-.health-metric-card__delta--up,
-.health-metric-card__delta--down,
-.health-metric-card__delta--flat { color: var(--color-text-secondary); }
-
-.health-metric-card__empty {
-  font-size: var(--text-xs);
-  color: var(--color-text-secondary);
-}
+/* Die Kachel selbst ist seit Block 2 die geteilte Kennzahlkarte:
+ * .metric-card mit --select (wählt eine Metrik) und in der Übersichtskarte
+ * zusätzlich --inset (Kasten-in-Kasten). Basisregeln in panel.css. */
 
 /* Trend-Chart-Sektion */
 .health-chart-section {
@@ -490,17 +311,8 @@
   overflow: visible;
 }
 
-/* Leerzustand: zentrierter Sekundärtext ohne Kasten - ein gestrichelter Rahmen
- * wäre in einer randlosen Karte ein Kasten-in-Kasten, und eine eigene Fläche
- * trüge je nach Träger (Karte oder Grund) unterschiedlich. */
-.health-meds__due-empty,
-.health-meds__empty {
-  padding: var(--space-4);
-  text-align: center;
-  color: var(--color-text-secondary);
-  font-size: var(--text-sm);
-  border: none;
-}
+/* Leerzustände dieser Sektionen sind seit Block 2 die geteilte
+ * .empty-state--compact (layout.css). */
 
 .health-dose {
   display: flex;
@@ -558,63 +370,8 @@
 .health-dose__status--taken { color: var(--color-success); }
 .health-dose__status--skipped { color: var(--color-text-secondary); }
 
-/* Adherence-Karte */
-.health-adherence {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-4);
-  border: 1px solid transparent;
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-}
-
-.health-adherence__head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-2);
-}
-
-.health-adherence__title {
-  font-size: var(--text-sm);
-  font-weight: var(--font-weight-medium, 500);
-  color: var(--color-text-primary);
-}
-
-.health-adherence__period {
-  font-size: var(--text-xs);
-  color: var(--color-text-secondary);
-}
-
-.health-adherence__value {
-  font-size: var(--text-2xl);
-  font-weight: var(--font-weight-semibold, 600);
-  /* Neutrale Tinte statt Modul-Magenta: der Prozentwert soll informieren, nicht
-   * alarmieren. Der Fortschrittsbalken trägt den Akzent. Konsistent mit dem
-   * Übersichts-Stat-Wert (--color-text-primary). */
-  color: var(--color-text-primary);
-}
-
-.health-adherence__bar {
-  height: 8px;
-  border-radius: var(--radius-full);
-  background: var(--color-surface-2);
-  overflow: hidden;
-}
-
-.health-adherence__bar > span {
-  display: block;
-  height: 100%;
-  border-radius: var(--radius-full);
-  background: var(--module-accent);
-}
-
-.health-adherence__summary,
-.health-adherence__empty {
-  font-size: var(--text-xs);
-  color: var(--color-text-secondary);
-}
+/* Die Adhärenz-Karte ist seit Block 2 die geteilte Kennzahlkarte
+ * (.metric-card, panel.css): Meta-Zeile, Wert, __progress als Balken. */
 
 /* Medikamenten-Karten */
 .health-meds__list {
@@ -864,16 +621,6 @@ button.health-med-card:hover {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: var(--space-3);
-}
-
-/* Leerzustand: zentrierter Sekundärtext ohne Kasten (siehe .health-meds__empty). */
-.health-labs__empty,
-.health-labs__detail-empty {
-  padding: var(--space-4);
-  text-align: center;
-  color: var(--color-text-secondary);
-  font-size: var(--text-sm);
-  border: none;
 }
 
 .health-lab-card {
@@ -1195,34 +942,8 @@ button.health-med-card:hover {
   gap: var(--space-3);
 }
 
-/* Kennzahl-Kachel: liegt auf dem Grouped-Grund, also randlose Karte. */
-.health-activity-stat {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--space-3);
-  border: none;
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-sm);
-}
-
-.health-activity-stat__icon {
-  width: 18px;
-  height: 18px;
-  color: var(--module-accent);
-}
-
-.health-activity-stat__value {
-  font-size: var(--text-xl);
-  font-weight: var(--font-weight-semibold, 600);
-  color: var(--color-text-primary);
-}
-
-.health-activity-stat__label {
-  font-size: var(--text-xs);
-  color: var(--color-text-secondary);
-}
+/* Die Kennzahl-Kacheln der Aktivität sind seit Block 2 die geteilte
+ * .metric-card (panel.css); das auto-fill-Raster darüber bleibt Modul-Layout. */
 
 /* Balken-Chart */
 .health-activity__chart {
@@ -1235,12 +956,6 @@ button.health-med-card:hover {
 /* Trainings-Log */
 .health-activity__log-title {
   margin-block-end: var(--space-2);
-}
-
-.health-activity__empty {
-  padding: var(--space-6) var(--space-4);
-  text-align: center;
-  color: var(--color-text-secondary);
 }
 
 /* Haarlinien-Liste: der Trenner ersetzt den Abstand (siehe tokens.css). */
@@ -1337,10 +1052,6 @@ button.health-med-card:hover {
    * --space-3 (12px) schlug --page-inline-pad (16px) und setzte den Inhalt
    * mobil 4px neben die eigene Tab-Leiste — genau der Versatz, den #577
    * beseitigt. Der Gutter kommt aus dem geteilten Token. */
-
-  .health-empty {
-    padding: var(--space-6) var(--space-3);
-  }
 
   .health-vitals__cards {
     grid-template-columns: repeat(2, 1fr);
@@ -1594,7 +1305,6 @@ button.health-med-card:hover {
 
 @media (prefers-reduced-motion: reduce) {
   .health-person-chip,
-  .health-metric-card,
   .health-med-card,
   .health-lab-card {
     transition: none;

@@ -16,6 +16,7 @@ import { t, formatDate, formatTime, getLocale, getNumberFormat } from '/i18n.js'
 import { esc } from '/utils/html.js';
 import { wireScrollFade, scheduleUndoableDelete } from '/utils/ux.js';
 import { toLocalDateKey, parseLocalDateKey, addLocalDays } from '/utils/date.js';
+import { trendMarkup } from '/utils/metric-card.js';
 import { openModal, closeModal, confirmOverModal, reportFieldError } from '/components/modal.js';
 import { createPageFab, setPageFabAction } from '/utils/fab.js';
 import {
@@ -245,11 +246,9 @@ function panelMarkup(panel, activeRoute) {
     : panel.route === '/health/activity'
     ? '<div class="health-activity" data-activity-root></div>'
     : `
-      <div class="empty-state health-empty">
-        <div class="health-empty__icon" aria-hidden="true">
-          <i data-lucide="${esc(panel.icon)}"></i>
-        </div>
-        <div class="empty-state__title">${esc(t(panel.emptyTitleKey))}</div>
+      <div class="empty-state">
+        <i data-lucide="${esc(panel.icon)}" class="empty-state__icon" aria-hidden="true"></i>
+        <h2 class="empty-state__title">${esc(t(panel.emptyTitleKey))}</h2>
         <div class="empty-state__description">${esc(t(panel.emptyDescKey))}</div>
       </div>`;
 
@@ -649,11 +648,16 @@ function renderCards() {
   host.insertAdjacentHTML('beforeend', cards);
   if (window.lucide) window.lucide.createIcons({ el: host });
 
-  host.querySelectorAll('.health-metric-card').forEach((card) =>
+  host.querySelectorAll('.metric-card--select').forEach((card) =>
     card.addEventListener('click', () => {
       vitals.selectedType = card.dataset.type;
-      host.querySelectorAll('.health-metric-card').forEach((c) =>
-        c.classList.toggle('is-active', c.dataset.type === vitals.selectedType));
+      host.querySelectorAll('.metric-card--select').forEach((c) => {
+        const on = c.dataset.type === vitals.selectedType;
+        c.classList.toggle('is-active', on);
+        // aria-pressed muss den Toggle mitgehen - vorher blieb der beim
+        // Render gesetzte Wert stehen und log nach dem ersten Klick.
+        c.setAttribute('aria-pressed', String(on));
+      });
       renderDetail();
     }));
 }
@@ -664,29 +668,29 @@ function cardMarkup(metric, series) {
   const label = t(metric.labelKey);
 
   let valueHtml;
-  let metaHtml = `<div class="health-metric-card__empty">${esc(t('health.vitals.noValue'))}</div>`;
+  let metaHtml = `<span class="metric-card__note">${esc(t('health.vitals.noValue'))}</span>`;
 
   if (latest) {
     const unit = esc(vitalUnitText(metric, latest));
     const valueText = vitalValueText(metric, latest);
-    valueHtml = `<span class="health-metric-card__value">${esc(valueText)}</span>${unit ? ` <span class="health-metric-card__unit">${unit}</span>` : ''}`;
+    valueHtml = `<span class="metric-card__value">${esc(valueText)}</span>${unit ? ` <span class="metric-card__unit">${unit}</span>` : ''}`;
     metaHtml = `
-      <div class="health-metric-card__meta">
+      <span class="metric-card__meta">
         ${deltaMarkup(series.deltas.value_num, metric)}
-        <span class="health-metric-card__date">${esc(formatDate(String(latest.measured_at).slice(0, 10)))}</span>
-      </div>`;
+        <span>${esc(formatDate(String(latest.measured_at).slice(0, 10)))}</span>
+      </span>`;
   } else {
-    valueHtml = '<span class="health-metric-card__value health-metric-card__value--empty">–</span>';
+    valueHtml = '<span class="metric-card__value metric-card__value--empty">–</span>';
   }
 
   return `
-    <button type="button" class="health-metric-card${active ? ' is-active' : ''}" data-type="${esc(metric.type)}"
+    <button type="button" class="metric-card metric-card--select${active ? ' is-active' : ''}" data-type="${esc(metric.type)}"
       aria-pressed="${active}">
-      <span class="health-metric-card__head">
-        <i data-lucide="${esc(metric.icon)}" class="health-metric-card__icon" aria-hidden="true"></i>
-        <span class="health-metric-card__label">${esc(label)}</span>
+      <span class="metric-card__head">
+        <i data-lucide="${esc(metric.icon)}" class="metric-card__icon" aria-hidden="true"></i>
+        <span class="metric-card__label">${esc(label)}</span>
       </span>
-      <span class="health-metric-card__body">${valueHtml}</span>
+      <span class="metric-card__body">${valueHtml}</span>
       ${latest ? sparklineMarkup(series.points, 'value_num', metric) : ''}
       ${metaHtml}
     </button>`;
@@ -716,7 +720,7 @@ function sparklineMarkup(points, key, metric) {
   const pts = withVal.map((o, idx) => `${x(idx).toFixed(1)},${y(o.v).toFixed(1)}`).join(' ');
   const lastX = x(n - 1).toFixed(1);
   const lastY = y(withVal[n - 1].v).toFixed(1);
-  return `<svg class="health-metric-card__spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
+  return `<svg class="metric-card__spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
       <polyline points="${pts}" fill="none" stroke="var(--module-accent)" stroke-width="1.5"
         stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" />
       <circle cx="${lastX}" cy="${lastY}" r="2" fill="var(--module-accent)" vector-effect="non-scaling-stroke" />
@@ -724,13 +728,11 @@ function sparklineMarkup(points, key, metric) {
 }
 
 function deltaMarkup(delta, metric) {
-  if (delta === null || delta === undefined) return '<span class="health-metric-card__delta"></span>';
-  const icon = delta > 0 ? 'trending-up' : (delta < 0 ? 'trending-down' : 'minus');
-  const dir = delta > 0 ? 'up' : (delta < 0 ? 'down' : 'flat');
-  return `
-    <span class="health-metric-card__delta health-metric-card__delta--${dir}">
-      <i data-lucide="${icon}" aria-hidden="true"></i>${esc(fmtVitalDelta(metric, delta))}
-    </span>`;
+  if (delta === null || delta === undefined) return '<span class="metric-card__trend"></span>';
+  // betterWhen bleibt null: „hoch" ist je nach Metrik gut ODER schlecht
+  // (Gewichtsabnahme, SpO₂, Glukose-Kontrolle) - die Farbe bleibt neutral,
+  // die Richtung trägt allein der Pfeil (utils/metric-card.js).
+  return trendMarkup({ delta, text: esc(fmtVitalDelta(metric, delta)) });
 }
 
 // --------------------------------------------------------
@@ -1390,7 +1392,7 @@ function dueTodayMarkup() {
   const today = toLocalDateKey(new Date());
   const due = computeDueDoses(allSchedules(), { from: today, to: today });
   if (!due.length) {
-    return `<div class="health-meds__due-empty">${esc(t('health.meds.dueToday.empty'))}</div>`;
+    return `<div class="empty-state empty-state--compact"><p class="empty-state__description">${esc(t('health.meds.dueToday.empty'))}</p></div>`;
   }
   const rows = due.map((dose) => {
     const med = meds.list.find((m) => m.id === dose.medicationId);
@@ -1435,29 +1437,32 @@ function adherenceMarkup() {
   const planned = computeDueDoses(allSchedules(), { from, to: today }).length;
   const a = computeAdherence(allLogsInRange(from, today), planned);
 
+  // Seit Block 2 die geteilte Kennzahlkarte: Titel + Zeitraum teilen sich die
+  // Meta-Zeile, der Balken ist der geteilte __progress (Zweitkanal zur Zahl).
   const head = `
-    <div class="health-adherence__head">
-      <span class="health-adherence__title">${esc(t('health.meds.adherence.title'))}</span>
-      <span class="health-adherence__period">${esc(t('health.meds.adherence.period', { days: meds.adherenceDays }))}</span>
+    <div class="metric-card__meta">
+      <span class="metric-card__label">${esc(t('health.meds.adherence.title'))}</span>
+      <span>${esc(t('health.meds.adherence.period', { days: meds.adherenceDays }))}</span>
     </div>`;
 
   if (a.rate === null) {
-    return `<div class="health-adherence">${head}
-      <div class="health-adherence__empty">${esc(t('health.meds.adherence.noData'))}</div></div>`;
+    return `<div class="metric-card">${head}
+      <div class="metric-card__note">${esc(t('health.meds.adherence.noData'))}</div></div>`;
   }
   // Geplant, aber noch nichts protokolliert: KEIN großes rotes „0 %" — das liest
   // sich als Vorwurf. Stattdessen ein neutraler Frühzustand (Adherence-Scham vermeiden).
   if (a.taken === 0) {
-    return `<div class="health-adherence">${head}
-      <div class="health-adherence__empty">${esc(t('health.meds.adherence.notStarted'))}</div></div>`;
+    return `<div class="metric-card">${head}
+      <div class="metric-card__note">${esc(t('health.meds.adherence.notStarted'))}</div></div>`;
   }
   const pct = Math.round(a.rate * 100);
   return `
-    <div class="health-adherence">
+    <div class="metric-card">
       ${head}
-      <div class="health-adherence__value">${esc(fmtNum(pct))}%</div>
-      <div class="health-adherence__bar"><span style="width:${pct}%"></span></div>
-      <div class="health-adherence__summary">${esc(t('health.meds.adherence.summary', { taken: a.taken, planned: a.planned }))}</div>
+      <div class="metric-card__value">${esc(fmtNum(pct))}%</div>
+      <div class="metric-card__progress" role="progressbar" aria-valuemin="0" aria-valuemax="100"
+           aria-valuenow="${pct}" aria-valuetext="${pct}%"><span style="--fill:${pct / 100}"></span></div>
+      <div class="metric-card__note">${esc(t('health.meds.adherence.summary', { taken: a.taken, planned: a.planned }))}</div>
     </div>`;
 }
 
@@ -1495,7 +1500,7 @@ function medLogHistoryMarkup() {
 
 function medListMarkup() {
   if (!meds.list.length) {
-    return `<div class="health-meds__empty">${esc(t('health.meds.noMeds'))}</div>`;
+    return `<div class="empty-state empty-state--compact"><p class="empty-state__description">${esc(t('health.meds.noMeds'))}</p></div>`;
   }
   return meds.list.map(medCardMarkup).join('');
 }
@@ -2010,7 +2015,7 @@ function renderLabsShell() {
 
 function labReportListMarkup() {
   if (!labs.reports.length) {
-    return `<div class="health-labs__empty">${esc(t('health.labs.noReports'))}</div>`;
+    return `<div class="empty-state empty-state--compact"><p class="empty-state__description">${esc(t('health.labs.noReports'))}</p></div>`;
   }
   return labs.reports.map(labReportCardMarkup).join('');
 }
@@ -2041,7 +2046,7 @@ function labReportCardMarkup(report) {
 function labDetailMarkup() {
   const report = selectedReport();
   if (!report) {
-    return `<div class="health-labs__detail-empty">${esc(t('health.labs.selectHint'))}</div>`;
+    return `<div class="empty-state empty-state--compact"><p class="empty-state__description">${esc(t('health.labs.selectHint'))}</p></div>`;
   }
 
   const own = canEditFor(labs.personId, labs.meId);
@@ -2063,7 +2068,7 @@ function labDetailMarkup() {
           <tbody>${results.map(resultRowMarkup).join('')}</tbody>
         </table>
       </div>`
-    : `<div class="health-labs__detail-empty">${esc(t('health.labs.noAnalytes'))}</div>`;
+    : `<div class="empty-state empty-state--compact"><p class="empty-state__description">${esc(t('health.labs.noAnalytes'))}</p></div>`;
 
   return `
     <div class="health-lab-detail">
@@ -2130,7 +2135,7 @@ function labTrendMarkup() {
 
   const body = points.length >= 2
     ? labTrendChart(points, selected)
-    : `<div class="health-labs__detail-empty">${esc(t('health.labs.trend.tooFew'))}</div>`;
+    : `<div class="empty-state empty-state--compact"><p class="empty-state__description">${esc(t('health.labs.trend.tooFew'))}</p></div>`;
 
   return `
     <div class="health-lab-trend">
@@ -2711,10 +2716,12 @@ function activityStatsMarkup(totals) {
     { icon: 'flame', labelKey: 'health.activity.totals.calories', value: t('health.activity.unit.kcal', { value: fmtNum(totals.calories) }) },
   ];
   return cards.map((c) => `
-    <div class="health-activity-stat">
-      <i data-lucide="${esc(c.icon)}" class="health-activity-stat__icon" aria-hidden="true"></i>
-      <span class="health-activity-stat__value">${esc(c.value)}</span>
-      <span class="health-activity-stat__label">${esc(t(c.labelKey))}</span>
+    <div class="metric-card">
+      <span class="metric-card__head">
+        <i data-lucide="${esc(c.icon)}" class="metric-card__icon" aria-hidden="true"></i>
+        <span class="metric-card__label">${esc(t(c.labelKey))}</span>
+      </span>
+      <span class="metric-card__value">${esc(c.value)}</span>
     </div>`).join('');
 }
 
@@ -2768,7 +2775,7 @@ function activityChartMarkup(summary) {
 
 function activityLogMarkup(rows) {
   if (!rows.length) {
-    return `<div class="health-activity__empty">${esc(t('health.activity.noEntries'))}</div>`;
+    return `<div class="empty-state empty-state--compact"><p class="empty-state__description">${esc(t('health.activity.noEntries'))}</p></div>`;
   }
   const own = canEditFor(activity.personId, activity.meId);
   return `
@@ -3200,7 +3207,7 @@ function overviewDueMarkup() {
   const today = toLocalDateKey(new Date());
   const due = computeDueDoses(overviewAllSchedules(), { from: today, to: today });
   if (!due.length) {
-    return `<div class="health-meds__due-empty">${esc(t('health.meds.dueToday.empty'))}</div>`;
+    return `<div class="empty-state empty-state--compact"><p class="empty-state__description">${esc(t('health.meds.dueToday.empty'))}</p></div>`;
   }
   const own = canEditFor(overview.personId, overview.meId);
   const rows = due.map((dose) => {
@@ -3291,11 +3298,11 @@ function overviewAdherenceMarkup() {
   const streak = computeAdherenceStreak(schedules, overviewAllLogs(), { today });
 
   if (a.rate === null) {
-    return `<div class="health-adherence__empty">${esc(t('health.overview.adherence.noData'))}</div>`;
+    return `<div class="metric-card__note">${esc(t('health.overview.adherence.noData'))}</div>`;
   }
   // Frühzustand ohne Vorwurf: solange nichts protokolliert ist, kein „0 %".
   if (a.taken === 0) {
-    return `<div class="health-adherence__empty">${esc(t('health.overview.adherence.notStarted'))}</div>`;
+    return `<div class="metric-card__note">${esc(t('health.overview.adherence.notStarted'))}</div>`;
   }
   const pct = Math.round(a.rate * 100);
   // Die Streak-Kachel erscheint erst ab Tag 1 — eine „🔥 0"-Serie zu zeigen wäre
@@ -3313,7 +3320,7 @@ function overviewAdherenceMarkup() {
       <div class="health-overview__stat">
         <span class="health-overview__stat-value">${esc(fmtNum(pct))}%</span>
         <span class="health-overview__stat-label">${esc(t('health.overview.adherence.period', { days: OVERVIEW_ADHERENCE_DAYS }))}</span>
-        <div class="health-adherence__bar"><span style="width:${pct}%"></span></div>
+        <div class="metric-card__progress"><span style="--fill:${pct / 100}"></span></div>
       </div>
       ${streakStat}
     </div>`;
@@ -3335,27 +3342,29 @@ function overviewVitalCardMarkup(metric, series) {
   const label = t(metric.labelKey);
 
   let valueHtml;
-  let metaHtml = `<div class="health-metric-card__empty">${esc(t('health.vitals.noValue'))}</div>`;
+  let metaHtml = `<span class="metric-card__note">${esc(t('health.vitals.noValue'))}</span>`;
   if (latest) {
     const unit = esc(vitalUnitText(metric, latest));
     const valueText = vitalValueText(metric, latest);
-    valueHtml = `<span class="health-metric-card__value">${esc(valueText)}</span>${unit ? ` <span class="health-metric-card__unit">${unit}</span>` : ''}`;
+    valueHtml = `<span class="metric-card__value">${esc(valueText)}</span>${unit ? ` <span class="metric-card__unit">${unit}</span>` : ''}`;
     metaHtml = `
-      <div class="health-metric-card__meta">
+      <span class="metric-card__meta">
         ${deltaMarkup(series.deltas.value_num, metric)}
-        <span class="health-metric-card__date">${esc(formatDate(String(latest.measured_at).slice(0, 10)))}</span>
-      </div>`;
+        <span>${esc(formatDate(String(latest.measured_at).slice(0, 10)))}</span>
+      </span>`;
   } else {
-    valueHtml = '<span class="health-metric-card__value health-metric-card__value--empty">–</span>';
+    valueHtml = '<span class="metric-card__value metric-card__value--empty">–</span>';
   }
 
+  // --inset: die Kachel liegt IN der Übersichtskarte (Kasten-in-Kasten,
+  // Muster vorher .health-overview__card .health-metric-card).
   return `
-    <button type="button" class="health-metric-card" data-vital-nav="${esc(metric.type)}">
-      <span class="health-metric-card__head">
-        <i data-lucide="${esc(metric.icon)}" class="health-metric-card__icon" aria-hidden="true"></i>
-        <span class="health-metric-card__label">${esc(label)}</span>
+    <button type="button" class="metric-card metric-card--select metric-card--inset" data-vital-nav="${esc(metric.type)}">
+      <span class="metric-card__head">
+        <i data-lucide="${esc(metric.icon)}" class="metric-card__icon" aria-hidden="true"></i>
+        <span class="metric-card__label">${esc(label)}</span>
       </span>
-      <span class="health-metric-card__body">${valueHtml}</span>
+      <span class="metric-card__body">${valueHtml}</span>
       ${metaHtml}
     </button>`;
 }
@@ -3663,9 +3672,9 @@ function renderCycleShell() {
   if (!prediction.hasData) {
     cycle.root.insertAdjacentHTML('beforeend', `
       ${persons}
-      <div class="empty-state health-empty">
-        <div class="health-empty__icon" aria-hidden="true"><i data-lucide="droplet"></i></div>
-        <div class="empty-state__title">${esc(t('health.cycle.emptyTitle'))}</div>
+      <div class="empty-state">
+        <i data-lucide="droplet" class="empty-state__icon" aria-hidden="true"></i>
+        <h2 class="empty-state__title">${esc(t('health.cycle.emptyTitle'))}</h2>
         <div class="empty-state__description">${esc(t('health.cycle.emptyDesc'))}</div>
         ${own ? `<button class="btn btn--primary empty-state__cta" data-action="cycle-first">
           <i data-lucide="plus" class="icon-md" aria-hidden="true"></i>${esc(t('health.cycle.emptyCta'))}</button>` : ''}

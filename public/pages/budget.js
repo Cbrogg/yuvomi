@@ -20,6 +20,7 @@ import { renderPlans } from '/pages/budget-plans.js';
 import { toLocalDateKey, parseLocalDateKey, addLocalDays } from '/utils/date.js';
 import { formatMoney, formatSignedAmount, amountPlaceholder, amountStep, amountMin, applyAmountFormat, amountIsSavable, smallestUnitLabel } from '/utils/money.js';
 import { budgetCategoryLabel } from '/utils/category-labels.js';
+import { trendMarkup } from '/utils/metric-card.js';
 import { intervalUnitLabel } from '/rrule-ui.js';
 import { appendCurrencyOptions } from '/settings/currency.js';
 import '/components/category-manager.js';
@@ -699,7 +700,7 @@ function renderBody() {
   const incomeCard = `
       <div class="metric-card metric-card--income">
         <div class="metric-card__label">${t('budget.income')}</div>
-        <div class="metric-card__amount">${amountByRole(s.income, 'total').text}</div>
+        <div class="metric-card__value">${amountByRole(s.income, 'total').text}</div>
         ${p ? renderTrend(s.income, p.income, prevLabel, 'higher') : ''}
       </div>`;
   // Ausgaben-Trend im Betragsraum (Math.abs), wie die Zahl auf der Karte:
@@ -708,14 +709,14 @@ function renderBody() {
   const expensesCard = `
       <div class="metric-card metric-card--expenses">
         <div class="metric-card__label">${t('budget.expenses')}</div>
-        <div class="metric-card__amount">${amountByRole(s.expenses, 'total').text}</div>
+        <div class="metric-card__value">${amountByRole(s.expenses, 'total').text}</div>
         ${p ? renderTrend(Math.abs(s.expenses), Math.abs(p.expenses), prevLabel, 'lower') : ''}
       </div>`;
   // Rolle `balance`: hier trägt die Zahl selbst die Richtung.
   const balanceCard = `
       <div class="metric-card ${balanceClass}">
         <div class="metric-card__label">${t('budget.balance')}</div>
-        <div class="metric-card__amount">${amountByRole(s.balance, 'balance').text}</div>
+        <div class="metric-card__value">${amountByRole(s.balance, 'balance').text}</div>
         ${p && !balanceNeutral ? renderTrend(s.balance, p.balance, prevLabel, 'higher') : ''}
       </div>`;
 
@@ -1024,7 +1025,7 @@ function renderAccountsPage() {
     <div class="metric-grid">
       <div class="metric-card ${netWorth.className}">
         <div class="metric-card__label">${t('budget.netWorth')}</div>
-        <div class="metric-card__amount">${netWorth.text}</div>
+        <div class="metric-card__value">${netWorth.text}</div>
       </div>
     </div>`;
 
@@ -1347,15 +1348,15 @@ function renderLoansDashboard() {
       <div class="metric-grid">
         <div class="metric-card">
           <div class="metric-card__label">${t(summary.has_interest ? 'budget.loanRemainingPrincipal' : 'budget.loanRemainingAmount')}</div>
-          <div class="metric-card__amount">${amountByRole(summary.remaining_principal ?? summary.remaining_amount ?? 0, 'total').text}</div>
+          <div class="metric-card__value">${amountByRole(summary.remaining_principal ?? summary.remaining_amount ?? 0, 'total').text}</div>
         </div>
         <div class="metric-card">
           <div class="metric-card__label">${t('budget.loanRemainingInstallments')}</div>
-          <div class="metric-card__amount">${summary.remaining_installments ?? 0}</div>
+          <div class="metric-card__value">${summary.remaining_installments ?? 0}</div>
         </div>
         <div class="metric-card">
           <div class="metric-card__label">${t('budget.loanPaidAmount')}</div>
-          <div class="metric-card__amount">${amountByRole(summary.paid_amount ?? 0, 'total').text}</div>
+          <div class="metric-card__value">${amountByRole(summary.paid_amount ?? 0, 'total').text}</div>
         </div>
       </div>
       ${summary.has_foreign_currency ? `<p class="form-hint budget-loan-hint">${t('budget.loanSummaryConverted', {
@@ -1735,22 +1736,19 @@ function renderLoanCard(loan) {
 function renderTrend(current, prev, prevLabel, betterWhen = 'higher') {
   const delta = current - prev;
   if (Math.abs(delta) < 0.005) {
-    return `<div class="metric-card__trend metric-card__trend--neutral">${t('budget.trendNeutral', { month: prevLabel })}</div>`;
+    return trendMarkup({
+      delta: 0, text: esc(t('budget.trendNeutral', { month: prevLabel })), icon: false,
+    });
   }
-  const rising   = delta > 0;
-  const improved = betterWhen === 'lower' ? !rising : rising;
   // Rolle `flow`: eine Veränderung gegenüber dem Vormonat trägt immer ein
-  // Vorzeichen, aus demselben Zahlformat wie die Buchungen selbst.
+  // Vorzeichen, aus demselben Zahlformat wie die Buchungen selbst. Valenz und
+  // Pfeil entscheidet utils/metric-card.js (Farbe = Valenz via betterWhen,
+  // Pfeil = Richtung) - die Trennung der beiden Kanäle ist dort API.
   const deltaText = amountByRole(delta, 'flow').text;
-  const cls      = improved ? 'metric-card__trend--positive' : 'metric-card__trend--negative';
-  // Pfeil als Lucide-Icon statt ▲/▼: die Textglyphen fallen aus der Icon-Familie
-  // und sind je nach Font unterschiedlich breit (Zeilenzittern). Das „vs." stand
-  // bisher fest im Template — jetzt trägt der Key den ganzen Satz.
-  const icon = rising ? 'trending-up' : 'trending-down';
-  return `<div class="metric-card__trend ${cls}">
-    <i data-lucide="${icon}" class="icon-sm" aria-hidden="true"></i>
-    ${esc(t('budget.trendDelta', { amount: deltaText, month: prevLabel }))}
-  </div>`;
+  return trendMarkup({
+    delta, betterWhen,
+    text: esc(t('budget.trendDelta', { amount: deltaText, month: prevLabel })),
+  });
 }
 
 function formatEntryDate(dateStr) {

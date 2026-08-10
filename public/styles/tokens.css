@@ -155,8 +155,9 @@
    * Kachel auf dem Grouped-Grund ist eine randlose Karte (--color-surface +
    * shadow-sm); ein Well auf dem Grund waere fast unsichtbar (#EBEBF0 auf
    * #F2F2F7). Traegt eine Komponente beide Kontexte, steht der Well im
-   * Kontextselektor der Karte, nicht in der Basisregel (Muster:
-   * `.health-overview__card .health-metric-card` in health.css).
+   * Kontextselektor der Karte oder in einem Modifier, den der Erzeuger nur im
+   * Kartenkontext setzt - nie in der Basisregel (Muster:
+   * `.metric-card--inset` in panel.css).
    * LEERZUSTAENDE bekommen gar keine Flaeche: zentrierter Sekundaertext, kein
    * Rahmen, kein Well - sonst muesste jeder Leerzustand seinen Traeger kennen. */
   --color-fill-well:          var(--color-surface-3);

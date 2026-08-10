@@ -586,7 +586,7 @@ const SHAPE_EXEMPT = new Map([
   // 3. Zellen eines Rasters
   ['month-day', 'Rasterzelle: Tag im Kalender-Monat'],
   ['more-action', 'Rasterzelle: Kachel im More-Sheet-Raster'],
-  ['health-metric-card', 'Rasterzelle: Kennzahlkachel der Gesundheit'],
+  ['metric-card--select', 'Rasterzelle: waehlbare Kennzahlkachel (.metric-card, Block-2-Konsolidierung)'],
   // 4. Zeilen einer Zeilenliste
   ['nav-item', 'Zeile: Eintrag der Sidebar-Navigation'],
   ['settings-shell__navigation-toggle', 'Zeile: Domaenenkopf der Settings-Navigation (Akkordeon)'],

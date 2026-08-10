@@ -9,6 +9,7 @@ import { canAccessNavModule, navModuleAccess } from '/permissions.js';
 import { clearApiCache } from '/sw-register.js';
 import { initI18n, getLocale, t, formatDate, formatTime } from '/i18n.js';
 import { esc } from '/utils/html.js';
+import { emptyHintEl } from '/utils/empty-state.js';
 import { wireScrollFade, wireCollapsingHeader } from '/utils/ux.js';
 import { init as initReminders, stop as stopReminders } from '/reminders.js';
 import { initPush, stopPush } from '/push.js';
@@ -2319,10 +2320,7 @@ function initSearch(container) {
     results.replaceChildren();
     results.removeAttribute('aria-busy');
     setStatus('');
-    const hint = document.createElement('p');
-    hint.className = 'search-overlay__empty';
-    hint.textContent = t('search.emptyHint');
-    results.appendChild(hint);
+    results.appendChild(emptyHintEl(t('search.emptyHint')));
 
     const scopes = document.createElement('div');
     scopes.className = 'search-scopes';
@@ -2447,10 +2445,7 @@ function initSearch(container) {
         // visuell (kein role=status), sonst läse der Screenreader ihn doppelt.
         results.replaceChildren();
         results.setAttribute('aria-busy', 'false');
-        const err = document.createElement('p');
-        err.className = 'search-overlay__empty';
-        err.textContent = t('search.error');
-        results.appendChild(err);
+        results.appendChild(emptyHintEl(t('search.error')));
         setStatus(t('search.error'));
       }
     }, 300);
@@ -2469,10 +2464,7 @@ function renderSearchResults(container, data, onClose) {
     + meds.length + activities.length;
 
   if (total === 0) {
-    const empty = document.createElement('p');
-    empty.className = 'search-overlay__empty';
-    empty.textContent = t('search.noResults');
-    container.appendChild(empty);
+    container.appendChild(emptyHintEl(t('search.noResults')));
     return 0;
   }
 

@@ -710,11 +710,8 @@ html:has(.fab-layer .page-fab:not([hidden])) yuvomi-install-prompt {
   padding: var(--space-3) var(--space-4) calc(var(--space-4) + var(--safe-area-inset-bottom));
 }
 
-.search-overlay__empty {
-  text-align: center;
-  color: var(--color-text-tertiary);
-  margin-top: var(--space-8);
-}
+/* Hinweis-, Fehler- und Kein-Treffer-Zustand der Suche sind seit Block 2 die
+ * geteilte .empty-state--compact (emptyHintEl, utils/empty-state.js). */
 
 .search-section {
   margin-bottom: var(--space-5);
@@ -3713,6 +3710,21 @@ textarea::placeholder {
   width: 56px;
   height: 56px;
   color: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-hint), var(--color-text-disabled));
+}
+
+/* Kreis-Ikonografie (Block 2): im Flächen-Leerzustand sitzt das Icon in einem
+ * getönten Kreis-Well - das Kreis-Motiv der Bildmarke, gedimmt auf
+ * Leerzustands-Lautstärke. Die Fläche nimmt die Objekt-Stufe (--tint-surface:
+ * „die Tönung IST das Element - Icon-Well"), die Tinte bleibt die
+ * Leerzustands-Stufe --tint-hint (oben). Eingewandert aus
+ * .health-empty__icon, dem einzigen Modul, das den Kreis schon hatte.
+ * NUR im .empty-state-Träger: Inline-Hinweise (z. B. die Widget-Leerzeile)
+ * tragen weiter das nackte Icon - ein Kreis-Well braucht die zentrierte
+ * Fläche, um nicht als Button zu lesen. */
+.empty-state .empty-state__icon {
+  padding: var(--space-4);
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-surface), transparent);
 }
 
 .empty-state__title {
