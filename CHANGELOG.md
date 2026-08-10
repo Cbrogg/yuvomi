@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-08-10
+
+### Added
+
+- **Module seal** — a circular, tinted chip with the module's icon, derived from the brand mark. It names where an object comes from wherever modules are mixed (global search, "Today", dashboard widget headers, the "More" list) and stands exactly once per module head as its sender.
+- **Overlap mark** — an avatar overlapping the seal in "Today", so an entry says not only which module it comes from but whom it concerns. It appears only when the entry carries a person and the household has more than one member.
+- **Solo households** are recognised automatically. With exactly one member, the family widget, the visibility field and "assigned to" disappear from the interface; entries keep their stored values, and the fields return as soon as a second member joins.
+
+### Changed
+
+- Module colours come from **nine colour families** instead of eighteen individual tints. Modules of the same life domain (kitchen, money, people …) share one tone and are told apart by their icon; two colliding pairs disappear as a result.
+- **System notifications name their module in the title** — "Calendar", "Tasks", "Subscriptions", "Medication" instead of "Yuvomi" — and tapping one now opens that module instead of the dashboard.
+- The **task form** shows title and note, with everything else behind "More settings", whose summary names what it holds ("Urgent · Finances · 5 points"). Every field in the form is the same height.
+- The **dashboard greeting uses the first name** only, so it no longer wraps to a second line on phones.
+- **Short viewports** (a laptop at 200 % browser zoom, a phone in landscape, a split-screen tablet) get a single-row module header, so content is visible instead of chrome.
+- Widget titles on the dashboard are **headings**, and the "All" jumps are links — they can be opened in a new tab and are announced with their module name.
+- Pinned notes on the dashboard and the recipe rail in the meal plan follow the shared row-list pattern instead of stacking one card per row.
+
+### Fixed
+
+- The install banner **covered the add button** on every mobile screen, so the most frequent action failed silently on first launch.
+- In the budget, **red meant two opposite things**: spending less than last month was flagged like an overrun. Colour now shows whether a change is good or bad, the arrow shows its direction, and the category chart mirrors income and expenses around a shared axis.
+- **In-app reminders did not appear at all** since v0.52.15 — they were looking for a toast container that had been split in two and renamed.
+- The **large title vanished while scrolling** instead of collapsing; the docked bar now names the module.
+- At 200 % browser zoom, **the task list showed no task at all**.
+- Task titles, the sidebar toggle and other single targets were **smaller than they needed to be**, even where their surroundings left room.
+- Reward progress bars were **invisible to screen readers**; they now announce their value ("37 of 60 points").
+- Metric rows in health, budget and housekeeping had their **numbers on different lines** despite equal tile heights.
+- Em dashes in the interface text of all 24 languages are now hyphens, as the project's own style requires.
+
 ## [2.0.1] - 2026-08-10
 
 ### Changed
