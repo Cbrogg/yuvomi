@@ -1340,7 +1340,12 @@ html:has(.search-overlay--visible) yuvomi-install-prompt {
    * unter Listen (--fab-safe-zone, oben an `.app-content`) leitet sich daraus
    * ab und kann so nicht mehr vom FAB wegdriften. */
   bottom: var(--fab-offset-bottom);
-  right: var(--space-4);
+  /* LOGISCHE Achse, nicht `right`. Die Kapsel reserviert ihr Ende ueber
+   * `padding-inline-end`, und das kippt unter `dir="rtl"` nach links. Ein
+   * physisches `right` liesse den Knopf dort auf dem ERSTEN Tab liegen,
+   * waehrend die reservierte Luecke auf der anderen Seite leer steht (Codex-
+   * Review zu PR #719). Betroffen waren ar und fa, also zwei der 24 Locales. */
+  inset-inline-end: var(--space-4);
   z-index: calc(var(--z-nav) - 1);
 }
 
@@ -1356,7 +1361,7 @@ html:has(.search-overlay--visible) yuvomi-install-prompt {
 @media (max-width: 1023px) {
   .page-fab,
   .page-fab-group {
-    right: calc(var(--nav-capsule-inset) + var(--space-1));
+    inset-inline-end: calc(var(--nav-capsule-inset) + var(--space-1));
     z-index: calc(var(--z-nav) + 1);
   }
 }
@@ -2021,11 +2026,21 @@ html.fab-anim-done .page-fab {
     color: transparent;
   }
 
+  /* RICHTUNGSUNABHAENGIG ZENTRIERT, nicht ueber inset + negativen Translate.
+   * Die alte Fassung mischte eine logische Kante (`inset-inline-start: 50%`)
+   * mit einer physischen Verschiebung (`translate(-50%)`): unter `dir="rtl"`
+   * misst die Kante von rechts, die Verschiebung geht aber weiter nach links,
+   * und das Symbol landete um seine eigene Breite neben der Mitte. Sie stand
+   * bisher nur in der kompakten Hoehe; mit der Ausweitung auf jedes Telefon
+   * haette sie ar und fa flaechendeckend getroffen (Codex-Review zu PR #719).
+   * `inset-inline: 0` plus `margin-inline: auto` zentriert in beiden
+   * Richtungen und braucht die X-Achse des Translates gar nicht. */
   .page-toolbar
     > .page-search:not(:focus-within):not(:has(input:not(:placeholder-shown)))
     .page-search__icon {
-    inset-inline-start: 50%;
-    transform: translate(-50%, -50%);
+    inset-inline: 0;
+    margin-inline: auto;
+    transform: translateY(-50%);
   }
 
   /* Im aufgeklappten Zustand nimmt die Suche die Zeile, die sie braucht - sie

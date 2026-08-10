@@ -1678,6 +1678,9 @@ function renderAppShell(container) {
   if (moreSheet)  shellNodes.push(moreSheet);
   shellNodes.push(searchOverlay, toastContainerPolite, toastContainerAssertive, routeAnnouncer);
   container.replaceChildren(...shellNodes);
+  // Die Kapsel ist ein NEUER Knoten; der Beobachter des Tab-Indikators haengt
+  // sonst am verworfenen (siehe observeNavCapsule weiter unten).
+  observeNavCapsule();
   applySidebarCollapsed(localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1');
   updateBranding(currentPath || '/');
 
@@ -3611,6 +3614,29 @@ window.addEventListener('resize', () => {
   positionSidebarIndicator();
   positionTabIndicator();
 }, { passive: true });
+
+/* DER INDIKATOR MISST ECHTE RECTS, ALSO MUSS ER JEDE BREITENAENDERUNG SEHEN -
+ * und `resize` ist nur EINE ihrer Ursachen.
+ *
+ * Seit die Nav-Kapsel ihr hinteres Ende fuer den FAB freihaelt (`:has()` in
+ * layout.css), aendert sich die Breite aller fuenf Slots, sobald ein FAB
+ * erscheint oder verschwindet. Das passiert auch OHNE Navigation: budget.js
+ * schaltet `fab.hidden` beim Tabwechsel, split-expenses.js beim Archivfilter.
+ * Der Indikator stand danach auf den Koordinaten der alten Slotbreiten, bis
+ * irgendwann ein Resize oder ein Routenwechsel kam (Codex-Review zu PR #719).
+ *
+ * Ein ResizeObserver AN DER KAPSEL statt Aufrufe an den beiden bekannten
+ * Stellen: die Ursache ist die Breite, nicht die Liste der Module, die sie
+ * gerade aendern. Der dritte Aufrufer waere sonst wieder einer, der es
+ * vergisst. */
+function observeNavCapsule() {
+  if (typeof ResizeObserver !== 'function') return;
+  const items = document.querySelector('.nav-bottom__items');
+  if (!items || items.dataset.indicatorObserved === '1') return;
+  items.dataset.indicatorObserved = '1';
+  new ResizeObserver(() => requestAnimationFrame(() => positionTabIndicator())).observe(items);
+}
+observeNavCapsule();
 
 // --------------------------------------------------------
 // Virtuelle Tastatur: FAB ausblenden, solange sie offen ist.
