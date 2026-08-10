@@ -541,7 +541,16 @@ function collectTrackedDates(panel) {
   }).filter((d) => d.label && d.date);
 }
 
-function openItemModal(mode, item = null) {
+/**
+ * Baut Titel, Markup und Verdrahtung des Gegenstands-Formulars in einem
+ * Stueck. Eigene Funktion, weil dasselbe Formular an zwei Stellen entsteht:
+ * im regulaeren Modal (Neuanlage/Bearbeiten ueber den Listen-Klick) und
+ * nachtraeglich gemountet im Formular-Pane der Detailansicht (Task 5).
+ * Gleiches Muster wie public/pages/contacts.js#buildContactForm.
+ *
+ * @returns {{title: string, content: string, wire: (panel: HTMLElement) => void}}
+ */
+function buildItemForm({ mode, item = null }) {
   const isEdit = mode === 'edit';
   let pickedBooking = null; // nur im Anlegen-Fluss: {entry, role:'purchase'} vor dem Speichern
 
@@ -559,10 +568,7 @@ function openItemModal(mode, item = null) {
   const documentCategoryOptions = DOCUMENT_CATEGORIES
     .map((c) => `<option value="${c}" ${c === 'warranty' ? 'selected' : ''}>${esc(t(`documents.category.${c}`))}</option>`).join('');
 
-  openSharedModal({
-    title: isEdit ? t('common.editItem') : t('inventory.addItem'),
-    size: 'md',
-    content: `
+  const content = `
       <div class="form-group">
         <label class="form-label" for="inv-name">${esc(t('common.nameLabel'))}</label>
         <input id="inv-name" class="form-input" type="text" required placeholder="${esc(t('inventory.namePlaceholder'))}">
@@ -674,108 +680,112 @@ function openItemModal(mode, item = null) {
         ${isEdit ? `<button type="button" class="btn btn--danger-ghost" id="inv-delete">${esc(t('common.delete'))}</button>` : ''}
         <button type="button" class="btn btn--secondary" data-action="close-modal">${esc(t('common.cancel'))}</button>
         <button type="button" class="btn btn--primary" id="inv-save">${esc(isEdit ? t('common.save') : t('common.add'))}</button>
-      </div>`,
-    onSave(panel) {
-      panel.querySelector('#inv-name').value = isEdit ? item.name : '';
-      panel.querySelector('#inv-category').value = isEdit ? item.category : 'other';
-      panel.querySelector('#inv-location').value = isEdit && item.location_id ? String(item.location_id) : '';
-      panel.querySelector('#inv-purchase-price').value = isEdit && item.purchase_price != null ? String(item.purchase_price) : '';
-      panel.querySelector('#inv-current-value').value = isEdit && item.current_value != null ? String(item.current_value) : '';
-      panel.querySelector('#inv-status').value = isEdit ? item.status : 'active';
-      panel.querySelector('#inv-brand').value = isEdit && item.brand ? item.brand : '';
-      panel.querySelector('#inv-model').value = isEdit && item.model ? item.model : '';
-      panel.querySelector('#inv-serial').value = isEdit && item.serial_number ? item.serial_number : '';
-      panel.querySelector('#inv-vendor').value = isEdit && item.vendor ? item.vendor : '';
-      panel.querySelector('#inv-warranty').value = isEdit && item.warranty_months != null ? String(item.warranty_months) : '';
-      panel.querySelector('#inv-condition').value = isEdit ? item.condition : 'good';
-      panel.querySelector('#inv-notes').value = isEdit && item.notes ? item.notes : '';
+      </div>`;
 
-      updateWarrantyStatus(panel);
-      panel.querySelector('#inv-purchase-date').addEventListener('input', () => updateWarrantyStatus(panel));
-      panel.querySelector('#inv-warranty').addEventListener('input', () => updateWarrantyStatus(panel));
+  function wire(panel) {
+    panel.querySelector('#inv-name').value = isEdit ? item.name : '';
+    panel.querySelector('#inv-category').value = isEdit ? item.category : 'other';
+    panel.querySelector('#inv-location').value = isEdit && item.location_id ? String(item.location_id) : '';
+    panel.querySelector('#inv-purchase-price').value = isEdit && item.purchase_price != null ? String(item.purchase_price) : '';
+    panel.querySelector('#inv-current-value').value = isEdit && item.current_value != null ? String(item.current_value) : '';
+    panel.querySelector('#inv-status').value = isEdit ? item.status : 'active';
+    panel.querySelector('#inv-brand').value = isEdit && item.brand ? item.brand : '';
+    panel.querySelector('#inv-model').value = isEdit && item.model ? item.model : '';
+    panel.querySelector('#inv-serial').value = isEdit && item.serial_number ? item.serial_number : '';
+    panel.querySelector('#inv-vendor').value = isEdit && item.vendor ? item.vendor : '';
+    panel.querySelector('#inv-warranty').value = isEdit && item.warranty_months != null ? String(item.warranty_months) : '';
+    panel.querySelector('#inv-condition').value = isEdit ? item.condition : 'good';
+    panel.querySelector('#inv-notes').value = isEdit && item.notes ? item.notes : '';
 
-      wireTrackedDateRows(panel);
+    updateWarrantyStatus(panel);
+    panel.querySelector('#inv-purchase-date').addEventListener('input', () => updateWarrantyStatus(panel));
+    panel.querySelector('#inv-warranty').addEventListener('input', () => updateWarrantyStatus(panel));
 
-      wireBlurValidation(panel);
-      const attachments = bindDocumentAttachField(panel, {
-        category: () => panel.querySelector('#inv-attachment-category').value,
-        folderName: t('documents.inventoryFolder'),
-        documentName: (file) => t('inventory.attachmentDocumentName', {
-          name: panel.querySelector('#inv-name').value.trim() || file.name,
-        }),
-      });
-      if (isEdit) {
-        renderLinkedEntries(panel, item);
-        panel.querySelector('[data-action="add-booking"]').addEventListener('click', async () => {
-          const picked = await openBookingPicker(panel, {
-            includeRole: true,
-            initialMonth: item.purchase_date ? item.purchase_date.slice(0, 7) : undefined,
+    wireTrackedDateRows(panel);
+
+    wireBlurValidation(panel);
+    const attachments = bindDocumentAttachField(panel, {
+      category: () => panel.querySelector('#inv-attachment-category').value,
+      folderName: t('documents.inventoryFolder'),
+      documentName: (file) => t('inventory.attachmentDocumentName', {
+        name: panel.querySelector('#inv-name').value.trim() || file.name,
+      }),
+    });
+    if (isEdit) {
+      renderLinkedEntries(panel, item);
+      panel.querySelector('[data-action="add-booking"]').addEventListener('click', async () => {
+        const picked = await openBookingPicker(panel, {
+          includeRole: true,
+          initialMonth: item.purchase_date ? item.purchase_date.slice(0, 7) : undefined,
+        });
+        if (!picked) return;
+        try {
+          const res = await api.post(`/inventory/items/${item.id}/entries`, {
+            entry_id: picked.entry.id, role: picked.role,
           });
-          if (!picked) return;
-          try {
-            const res = await api.post(`/inventory/items/${item.id}/entries`, {
-              entry_id: picked.entry.id, role: picked.role,
-            });
-            item = res.data;
-            renderLinkedEntries(panel, item);
-            await loadItems();
-            renderList();
-          } catch (err) {
-            window.yuvomi?.showToast(err.data?.error ?? t('common.errorGeneric'), 'danger');
-          }
-        });
-        panel.querySelector('[data-linked-entries]').addEventListener('click', async (event) => {
-          const button = event.target.closest('[data-remove-entry]');
-          if (!button) return;
-          try {
-            const res = await api.delete(`/inventory/items/${item.id}/entries/${button.dataset.removeEntry}`);
-            item = res.data;
-            renderLinkedEntries(panel, item);
-            await loadItems();
-            renderList();
-          } catch (err) {
-            window.yuvomi?.showToast(err.data?.error ?? t('common.errorGeneric'), 'danger');
-          }
-        });
-      } else {
-        panel.querySelector('[data-action="link-booking"]').addEventListener('click', async () => {
-          const picked = await openBookingPicker(panel, { includeRole: false });
-          if (!picked) return;
-          pickedBooking = picked;
-          const chip = panel.querySelector('[data-picked-booking-chip]');
-          chip.hidden = false;
+          item = res.data;
+          renderLinkedEntries(panel, item);
+          await loadItems();
+          renderList();
+        } catch (err) {
+          window.yuvomi?.showToast(err.data?.error ?? t('common.errorGeneric'), 'danger');
+        }
+      });
+      panel.querySelector('[data-linked-entries]').addEventListener('click', async (event) => {
+        const button = event.target.closest('[data-remove-entry]');
+        if (!button) return;
+        try {
+          const res = await api.delete(`/inventory/items/${item.id}/entries/${button.dataset.removeEntry}`);
+          item = res.data;
+          renderLinkedEntries(panel, item);
+          await loadItems();
+          renderList();
+        } catch (err) {
+          window.yuvomi?.showToast(err.data?.error ?? t('common.errorGeneric'), 'danger');
+        }
+      });
+    } else {
+      panel.querySelector('[data-action="link-booking"]').addEventListener('click', async () => {
+        const picked = await openBookingPicker(panel, { includeRole: false });
+        if (!picked) return;
+        pickedBooking = picked;
+        const chip = panel.querySelector('[data-picked-booking-chip]');
+        chip.hidden = false;
+        chip.replaceChildren();
+        chip.insertAdjacentHTML('beforeend', `
+          <span class="inventory-picked-booking-chip">
+            ${esc(t('inventory.pendingBookingLabel', { title: picked.entry.title }))}
+            <button type="button" data-clear-picked-booking
+                    aria-label="${esc(t('inventory.removeBookingAction', { title: picked.entry.title }))}">
+              <i data-lucide="x" aria-hidden="true"></i>
+            </button>
+          </span>`);
+        chip.querySelector('[data-clear-picked-booking]').addEventListener('click', () => {
+          pickedBooking = null;
+          chip.hidden = true;
           chip.replaceChildren();
-          chip.insertAdjacentHTML('beforeend', `
-            <span class="inventory-picked-booking-chip">
-              ${esc(t('inventory.pendingBookingLabel', { title: picked.entry.title }))}
-              <button type="button" data-clear-picked-booking
-                      aria-label="${esc(t('inventory.removeBookingAction', { title: picked.entry.title }))}">
-                <i data-lucide="x" aria-hidden="true"></i>
-              </button>
-            </span>`);
-          chip.querySelector('[data-clear-picked-booking]').addEventListener('click', () => {
-            pickedBooking = null;
-            chip.hidden = true;
-            chip.replaceChildren();
-          });
-          if (window.lucide) window.lucide.createIcons({ el: chip });
-          // Kaufpreis nur vorbelegen, wenn das Feld noch leer ist - das ist nur
-          // eine editierbare Komfort-Vorschau und prueft NICHT erneut, ob die
-          // Buchung schon verknuepft ist (das tut der Server nur, wenn das Feld leer bleibt).
-          const priceInput = panel.querySelector('#inv-purchase-price');
-          if (!priceInput.value.trim()) priceInput.value = String(Math.abs(picked.entry.amount));
         });
-      }
-
-      panel.querySelector('#inv-save').addEventListener('click', () => saveItem(panel, mode, item, attachments, pickedBooking));
-      panel.querySelector('#inv-delete')?.addEventListener('click', async () => {
-        closeSharedModal({ force: true });
-        await removeItem(item);
+        if (window.lucide) window.lucide.createIcons({ el: chip });
+        const priceInput = panel.querySelector('#inv-purchase-price');
+        if (!priceInput.value.trim()) priceInput.value = String(Math.abs(picked.entry.amount));
       });
+    }
 
-      if (window.lucide) window.lucide.createIcons({ el: panel });
-    },
-  });
+    panel.querySelector('#inv-save').addEventListener('click', () => saveItem(panel, mode, item, attachments, pickedBooking));
+    panel.querySelector('#inv-delete')?.addEventListener('click', async () => {
+      closeSharedModal({ force: true });
+      await removeItem(item);
+    });
+
+    if (window.lucide) window.lucide.createIcons({ el: panel });
+  }
+
+  return { title: isEdit ? t('common.editItem') : t('inventory.addItem'), content, wire };
+}
+
+function openItemModal(mode, item = null) {
+  const form = buildItemForm({ mode, item });
+  openSharedModal({ title: form.title, size: 'md', content: form.content, onSave: form.wire });
 }
 
 async function saveItem(panel, mode, item, attachments, pickedBooking) {
