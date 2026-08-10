@@ -115,6 +115,18 @@ function syncTrackedDateReminder(trackedDate, createdBy) {
 }
 
 /**
+ * Loescht alle Fristen-Erinnerungen eines Gegenstands in einem Statement.
+ * reminders.entity_id hat keinen FK auf inventory_item_dates, die Zuordnung
+ * laeuft also ueber die korrelierte Unterabfrage statt ueber ein CASCADE.
+ */
+function deleteTrackedDateReminders(database, itemId) {
+  database.prepare(`
+    DELETE FROM reminders WHERE entity_type = 'inventory_tracked_date'
+      AND entity_id IN (SELECT id FROM inventory_item_dates WHERE item_id = ?)
+  `).run(itemId);
+}
+
+/**
  * Volles Replace: alle bestehenden Zeilen (+ ihre Erinnerungen) loeschen, dann
  * die neue, bereits validierte Menge einfuegen. Wird innerhalb derselben
  * Transaktion wie der Item-Schreibvorgang aufgerufen (siehe items.js), damit
@@ -122,10 +134,7 @@ function syncTrackedDateReminder(trackedDate, createdBy) {
  */
 function writeTrackedDates(itemId, values, createdBy) {
   const database = db.get();
-  const existingIds = database.prepare('SELECT id FROM inventory_item_dates WHERE item_id = ?').all(itemId).map((r) => r.id);
-  for (const id of existingIds) {
-    database.prepare("DELETE FROM reminders WHERE entity_type = 'inventory_tracked_date' AND entity_id = ?").run(id);
-  }
+  deleteTrackedDateReminders(database, itemId);
   database.prepare('DELETE FROM inventory_item_dates WHERE item_id = ?').run(itemId);
 
   const insert = database.prepare(`
@@ -142,11 +151,7 @@ function writeTrackedDates(itemId, values, createdBy) {
  *  BEVOR die CASCADE die inventory_item_dates-Zeilen selbst entfernt -
  *  reminders.entity_id hat keinen FK, der das automatisch erledigt. */
 function removeTrackedDateReminders(itemId) {
-  const database = db.get();
-  const ids = database.prepare('SELECT id FROM inventory_item_dates WHERE item_id = ?').all(itemId).map((r) => r.id);
-  for (const id of ids) {
-    database.prepare("DELETE FROM reminders WHERE entity_type = 'inventory_tracked_date' AND entity_id = ?").run(id);
-  }
+  deleteTrackedDateReminders(db.get(), itemId);
 }
 
 export {

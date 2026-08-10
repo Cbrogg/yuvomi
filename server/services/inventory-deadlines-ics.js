@@ -1,7 +1,9 @@
 /**
- * Modul: Inventar-Garantiefristen-ICS-Export
- * Zweck: Eigenständiger, schreibgeschützter iCalendar-Feed aus den Garantie-
- *        Enddaten der Inventar-Gegenstände. Bewusst getrennt von
+ * Modul: Inventar-Fristen-ICS-Export
+ * Zweck: Eigenständiger, schreibgeschützter iCalendar-Feed aus den Fristen der
+ *        Inventar-Gegenstände - den abgeleiteten Garantie-Enddaten und den
+ *        frei definierbaren Fristen (TÜV, Service, ...) in einem Feed.
+ *        Bewusst getrennt von
  *        server/services/ics-export.js (bestehender Haushaltskalender-Feed) -
  *        eigener Nutzerwunsch, kein gemeinsamer Feed. Wiederverwendet von dort
  *        nur die beiden reinen Text-Helfer (escapeICSText, foldLine); buildVEvent
@@ -106,7 +108,7 @@ function buildInventoryDeadlinesFeed(conn, now = new Date()) {
     try {
       warrantyEnd = warrantyEndDate(item.purchase_date, item.warranty_months);
     } catch (err) {
-      log.warn(`Skipping inventory item ${item.id} in the warranty feed: ${err?.message || err}`);
+      log.warn(`Skipping inventory item ${item.id} in the inventory deadlines feed: ${err?.message || err}`);
       continue;
     }
     out.push(...buildVEvent(item, warrantyEnd, dtstamp, locale));

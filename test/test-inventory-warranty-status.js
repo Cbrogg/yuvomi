@@ -73,6 +73,22 @@ test('dateStatus: valid weit in der Zukunft, expiring innerhalb 30 Tagen, expire
   assert.equal(dateStatus('2020-01-01', TODAY).state, 'expired');
 });
 
+test('dateStatus: die expiring-Schwelle liegt exakt wie bei warrantyStatus', () => {
+  // dateStatus dupliziert die Zustands-Formel von warrantyStatus bewusst (es
+  // braucht dessen Monats-Arithmetik nicht). Diese Grenzfaelle sind das
+  // Gegenstueck zum warrantyStatus-Test oben und wuerden ein Auseinanderdriften
+  // der beiden Formeln sichtbar machen.
+  // TODAY + 30 Tage = 2026-08-28 -> noch "expiring" (inklusive Grenze).
+  const atThreshold = dateStatus('2026-08-28', TODAY);
+  assert.equal(atThreshold.days, 30);
+  assert.equal(atThreshold.state, 'expiring');
+
+  // TODAY + 31 Tage = 2026-08-29 -> schon "valid" (einen Tag jenseits der Grenze).
+  const pastThreshold = dateStatus('2026-08-29', TODAY);
+  assert.equal(pastThreshold.days, 31);
+  assert.equal(pastThreshold.state, 'valid');
+});
+
 test('hasUpcomingDeadline: false ohne jede Frist', () => {
   assert.equal(hasUpcomingDeadline(item(), TODAY), false);
 });
