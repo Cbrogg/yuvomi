@@ -6,6 +6,7 @@
 
 import { clearApiCache } from '/sw-register.js';
 import { setPermissions, clearPermissions } from '/permissions.js';
+import { setHouseholdSize, clearHouseholdSize } from '/utils/household.js';
 
 const API_BASE = '/api/v1';
 
@@ -169,6 +170,7 @@ const auth = {
   login: async (username, password) => {
     const res = await api.post('/auth/login', { username, password });
     setPermissions(res?.permissions);
+    setHouseholdSize(res?.householdSize);
     return res;
   },
   logout: async () => {
@@ -176,6 +178,7 @@ const auth = {
       return await api.post('/auth/logout');
     } finally {
       clearPermissions();
+      clearHouseholdSize();
       // API-Cache IMMER leeren — auch wenn der Logout-Request offline oder bei
       // nicht erreichbarem Server fehlschlägt. Der Settings-Handler navigiert in
       // seinem finally trotzdem zu /login, daher darf hier kein offline gecachter
@@ -186,6 +189,9 @@ const auth = {
   me: async () => {
     const res = await api.get('/auth/me');
     setPermissions(res?.permissions);
+    // Neben den Rechten die zweite Angabe, die JEDE Seite braucht und die
+    // niemand einzeln holen soll: die Haushaltsgroesse (utils/household.js).
+    setHouseholdSize(res?.householdSize);
     return res;
   },
   setup: (username, display_name, password) => api.post('/auth/setup', { username, display_name, password }),

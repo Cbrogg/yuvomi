@@ -32,6 +32,34 @@ const FAMILY_ROLES = ['dad', 'mom', 'parent', 'child', 'grandparent', 'relative'
 // Platzhalter-Hash für den Timing-Attack-Schutz beim Login unbekannter Benutzer.
 const DUMMY_PASSWORD_HASH = '$2b$12$invalidhashfortimingprotection000000000000000000000';
 const MAX_AVATAR_DATA_LENGTH = 768 * 1024;
+/**
+ * WIEVIELE MENSCHEN IM HAUSHALT LEBEN, und warum der Server das sagt.
+ *
+ * PRODUCT.md fuehrt seit 2026-08-06 Solo-Nutzer als bestaetigte zweite
+ * Zielgruppe. Die Oberflaeche wusste davon nichts: das prominenteste Widget
+ * zeigte eine grosse 1 mit „im Haushalt", jede Aufgabe trug ein Pflichtfeld
+ * „Sichtbarkeit: Alle Familienmitglieder" mit genau einer sinnvollen Belegung,
+ * jede Dokumentkarte wiederholte „Ganze Familie" (Critique 2026-08-10).
+ *
+ * Die Regel dagegen ist eine, keine Liste: WAS NUR EINE SINNVOLLE BELEGUNG HAT,
+ * WIRD NICHT GEFRAGT. Damit sie ueberall gleich faellt, braucht der Client eine
+ * Zahl, und die gehoert an `/auth/me` - dieselbe Antwort, die er ohnehin bei
+ * jedem Start holt, statt eines zweiten Rundwegs pro Modul.
+ *
+ * SPLIT-GAeSTE ZAEHLEN NICHT MIT. Sie sind externe Beteiligte einer
+ * Ausgabenteilung, keine Haushaltsmitglieder - dieselbe Grenze, die
+ * `access_scope` schon zieht. Ein Haushalt von einer Person mit drei
+ * Reisebekanntschaften ist ein Solo-Haushalt.
+ */
+const HOUSEHOLD_SIZE_SQL = `
+  SELECT COUNT(*) AS n FROM users
+  WHERE NOT EXISTS (SELECT 1 FROM split_expense_guest_users sg WHERE sg.user_id = users.id)
+`;
+
+function householdSize(database) {
+  return database.prepare(HOUSEHOLD_SIZE_SQL).get()?.n ?? 1;
+}
+
 const USER_PUBLIC_COLUMNS = `
   id,
   username,
@@ -690,6 +718,11 @@ router.post('/login', loginLimiter, async (req, res) => {
           access_scope: db.get().prepare('SELECT 1 FROM split_expense_guest_users WHERE user_id = ?').get(user.id) ? 'split_guest' : 'family',
         },
         permissions: clientPermissions(db.get(), user),
+        // Auch hier, nicht nur an /me: nach dem Login navigiert der Router
+        // direkt weiter, ohne /me noch einmal zu fragen. Ohne diese Zeile
+        // stuende ein Solo-Haushalt bis zum naechsten Kaltstart wieder voller
+        // Familienfelder.
+        householdSize: householdSize(db.get()),
         csrfToken: req.session.csrfToken,
       });
     } catch (sessionErr) {
@@ -1228,7 +1261,11 @@ router.get('/me', requireAuth, (req, res) => {
     }
 
     if (req.authMethod === 'api_token') {
-      return res.json({ user: publicUser(user), permissions: clientPermissions(db.get(), user) });
+      return res.json({
+        user: publicUser(user),
+        permissions: clientPermissions(db.get(), user),
+        householdSize: householdSize(db.get()),
+      });
     }
 
     // CSRF-Token erneuern falls vorhanden (wichtig fuer iOS-PWA-Resume:
@@ -1244,7 +1281,12 @@ router.get('/me', requireAuth, (req, res) => {
       maxAge: 1000 * 60 * 60 * 24 * 7,
     });
 
-    res.json({ user: publicUser(user), permissions: clientPermissions(db.get(), user), csrfToken: req.session.csrfToken });
+    res.json({
+      user: publicUser(user),
+      permissions: clientPermissions(db.get(), user),
+      householdSize: householdSize(db.get()),
+      csrfToken: req.session.csrfToken,
+    });
   } catch (err) {
     log.error('/me error:', err);
     res.status(500).json({ error: 'Internal server error.', code: 500 });

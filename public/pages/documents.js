@@ -13,6 +13,11 @@ import { renderSkeletonList } from '/utils/skeleton.js';
 import { renderPageSearch, wirePageSearch } from '/utils/page-search.js';
 import { previewKind } from '/utils/document-preview.js';
 import { findPageFab } from '/utils/fab.js';
+// Im Solo-Haushalt hat „Wer darf das sehen" genau eine Antwort - gefragt wird
+// dann nicht (utils/household.js). Das Feld bleibt im DOM und behaelt seinen
+// Wert, es ist nur `hidden`: der Absende-Pfad liest es unveraendert, und kommt
+// ein zweites Mitglied dazu, steht es wieder da.
+import { isSoloHousehold } from '/utils/household.js';
 
 const CATEGORIES = ['medical', 'school', 'identity', 'insurance', 'finance', 'home', 'vehicle', 'legal', 'travel', 'pets', 'warranty', 'taxes', 'work', 'other'];
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
@@ -746,7 +751,7 @@ function renderMeta(doc, { showSize = true } = {}) {
   return `
     <span><i data-lucide="${CATEGORY_ICONS[doc.category] || 'folder'}" aria-hidden="true"></i>${labels[doc.category] || doc.category}</span>
     ${doc.folder_name ? `<span><i data-lucide="folder" aria-hidden="true"></i>${esc(doc.folder_name)}</span>` : ''}
-    <span><i data-lucide="${doc.visibility === 'family' ? 'users' : doc.visibility === 'private' ? 'lock' : 'user-check'}" aria-hidden="true"></i>${t(`documents.visibility.${doc.visibility}`)}</span>
+    ${isSoloHousehold() ? '' : `<span><i data-lucide="${doc.visibility === 'family' ? 'users' : doc.visibility === 'private' ? 'lock' : 'user-check'}" aria-hidden="true"></i>${t(`documents.visibility.${doc.visibility}`)}</span>`}
     ${showSize ? `<span>${formatFileSize(doc.file_size)}</span>` : ''}
     ${storageBadgeHtml(doc)}
   `;
@@ -1219,7 +1224,7 @@ function openDocumentModal(doc = null) {
               ${state.folders.map((folder) => `<option value="${folder.id}" ${presetFolderId === String(folder.id) ? 'selected' : ''}>${esc(folder.name)}</option>`).join('')}
             </select>
           </div>
-          <div class="form-group">
+          <div class="form-group"${isSoloHousehold() ? ' hidden' : ''}>
             <label class="label" for="document-visibility">${t('documents.visibilityLabel')}</label>
             <select class="input" id="document-visibility">
               <option value="family" ${(doc?.visibility || 'family') === 'family' ? 'selected' : ''}>${t('documents.visibility.family')}</option>
