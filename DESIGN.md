@@ -277,6 +277,15 @@ reduced-transparency und prefers-contrast auf 0).
   `accent-light` (Indigo-Tint 50) traegt Fokus-Glows und Heute-Chips.
 
 ### Secondary
+- **Neun Familientoene, aus denen die Modul-Tints beziehen** (Frontmatter `family-*`,
+  Quelle `tokens.css` Abschnitt 4). Die siebzehn Einzeltoene waren siebzehn Entscheidungen und
+  enthielten Kollisionspaare, die niemand auseinanderhalten konnte - zwei Violetts, zwei
+  Teals. Jetzt gibt es neun klar trennbare Familien (`overview`, `time`, `work`, `kitchen`,
+  `money`, `people`, `health`, `records`, `neutral`), jedes `--module-*` bezieht aus seiner,
+  und **innerhalb einer Familie unterscheidet das Siegel-Icon, nicht der Ton**. Damit
+  verschwinden die Kollisionen strukturell statt durch Nachjustieren. Die Kueche war der
+  Praezedenzfall: vier Module, ein Ton, unterschieden durch ihr Zeichen. Die privaten
+  `--_family-*` tragen den Dark-Wechsel; die oeffentliche `--module-*`-API bleibt vollstaendig.
 - **17 Modul-Tints** (Frontmatter `module-*`): jedes Modul traegt seine eigene Akzentfarbe
   auf Nav-Icons, aktiven Segmenten, Chips und dem FAB. Der Router setzt
   `--active-module-accent` auf `<html>`; Komponenten greifen auf
@@ -813,12 +822,38 @@ nur das gerenderte Dokument sieht, ob eine Liste ueberhaupt verdrahtet ist.
   nie ihr Ersatz.
 
 ### Modulkopf (Signature Component)
-Eine `.page-toolbar` pro Modul, Titel links, Center-Slot (Suche oder Zeitraum-Navigation),
-Aktionen rechts. In der KOMPAKTEN Groessenklasse (<1024px, die Welt mit Tab-Bar) steht der
-Titel am Scroll-Anfang als **Large Title** (34px) auf eigener Zeile und faellt beim Scrollen
-auf den Inline-Schnitt (22px) zurueck; die Trennlinie erscheint erst beim Andocken, davor
-steht der Kopf nahtlos auf dem Seitengrund. Ab 1024px regiert die Sidebar - dort bleibt es
-beim Inline-Titel, wie in Apples regulaerer Groessenklasse.
+Eine `.page-toolbar` pro Modul, **Absender-Siegel und Titel links**, Center-Slot (Suche oder
+Zeitraum-Navigation), Aktionen rechts. In der KOMPAKTEN Groessenklasse (<1024px, die Welt mit
+Tab-Bar) steht der Titel am Scroll-Anfang als **Large Title** (34px) auf eigener Zeile und
+faellt beim Scrollen auf den Inline-Schnitt (22px) zurueck; die Trennlinie erscheint erst beim
+Andocken, davor steht der Kopf nahtlos auf dem Seitengrund. Ab 1024px regiert die Sidebar -
+dort bleibt es beim Inline-Titel, wie in Apples regulaerer Groessenklasse.
+
+**Der Absender steht genau einmal, und die Shell setzt ihn.** Das Markensiegel des Moduls
+sitzt unmittelbar vor dem Seitentitel und wird von `wireCollapsingHeader` angehaengt - am
+selben Ort und aus demselben Grund wie der angedockte Titel: der Kopf ist die eine
+Komponente, die alle Module teilen, und "genau eines" ist nur dort eine Eigenschaft des
+Bauteils, wo der Kopf es selbst anlegt. Als Opt-in fehlte es beim achtzehnten Modul, und als
+Modul-Markup waere die Dosierung eine Bitte an siebzehn Dateien. Es haengt am TITEL, nicht am
+Kopf: wo kein Seitentitel steht, hat der Kopf keinen Absender zu fuehren - dieselbe
+Abgrenzung, die die Leisten-Regel zieht.
+
+**Das Siegel nimmt den Rang seines Titels an.** Die zwei Schnitte der
+Canonical-Page-Head-Rolle haben ihre Entsprechung in EINEM Wertepaar an der Leiste
+(`--seal-head-size` / `--seal-head-icon`): 32px neben dem Large Title, 24px neben dem
+Inline-Schnitt, in denselben drei Zustaenden, die typography.css fuehrt. Die Titelbasis
+rechnet ab, was das Siegel belegt (`calc(100% - var(--seal-head-lead))`) - mit `100%` haette
+der Titel sich unter sein eigenes Siegel geschoben und die Lead-Zone waere um eine Zeile
+gewachsen. Gemessen ueber alle zehn Koepfe: Kopfhoehe und Lead-Zone sind mit und ohne Siegel
+identisch, es kostet also keine Zeile.
+
+**Die Kuechen-Leiste fuehrt ihren Absender selbst.** Nach der Leisten-Regel IST sie die
+Kopf-Navigation; ihr Siegel steht vor dem Titel "Kueche" und bleibt auch mobil stehen, wo der
+Titel selbst ausgeblendet ist - das Wort fuehrt dort die Bottom-Nav, das Zeichen den Raum.
+Die vier Kuechen-Koepfe bleiben siegellos: sie teilen einen Tint, weil sie ein Raum sind, und
+zwei von ihnen tragen gar keinen Seitentitel. `renderSubTabs` weist ein Siegel deshalb
+zurueck, wenn die Leiste das Modul nicht wechselt (`semantics: 'tabs'`, Gesundheit) - dort
+liegt sie IM Kopf, und der traegt seinen Absender bereits.
 
 **Andocken kann nur ein Kopf mit Lead-Zone** - und eine hat nur, wessen Inhalt auf mehr als
 einer Zeile steht. Wo keine ist, traegt die Leiste ihre Linie durchgehend und markiert
@@ -926,6 +961,74 @@ Panel sie aufdeckt - **ob eine Liste ueberhaupt verdrahtet ist, sieht nur diese 
 Der Einkauf verdrahtete seine Gesten nur im Nachlade-Pfad und antwortete beim ersten
 Oeffnen der Seite auf gar nichts; im Quelltext stand alles richtig da.
 
+### Das Markensiegel (Signature Component)
+Yuvomis eigene Ausweisform und die Antwort auf "Health hat die Ringe, was hat Yuvomi?" - die
+eine Stelle, an der die Marke etwas kann, was keine Systemapp braucht: **Yuvomi ist der
+einzige Ort, an dem siebzehn Apps in einem Raum leben, und das Siegel weist jedes Ding als
+"aus Raum X" aus.**
+
+**Material:** ein kreisrunder, getoenter Chip mit gefuelltem Modul-Icon und der Sheen-
+Lichtkante der Bildmarke (drei transluzente Kreise) - Flaeche auf `--tint-surface` des
+Familientons, Icon im vollen Ton, Sheen als Gradient aus `--glass-sheen`. **KEIN
+backdrop-filter**: die Glas-ist-Chrome-Regel bleibt unberuehrt, und der Sheen-Stop kippt unter
+`prefers-reduced-transparency` und `prefers-contrast` mit seinem Token auf die flache Toenung.
+
+**Die Herkunfts-Regel (das Einsatzgesetz).** Ein Siegel zeigt die Herkunft eines Objekts, und
+Herkunft zeigt man nur, wo sie nicht selbstverstaendlich ist. Daraus folgen genau zwei Faelle:
+
+- **Jede MISCHSTELLE** - eine Liste, deren Zeilen aus verschiedenen Modulen stammen
+  (moduluebergreifende Suche, "Heute wichtig", Dashboard-Widget-Koepfe, "Mehr"-Liste,
+  Benachrichtigungsdarstellung) - gibt jedem Objekt sein Siegel und BENENNT dabei die fremde
+  Herkunft, inline oder ueber die Klasse ihres Traegers.
+- **Im eigenen Modul** steht es genau einmal, als Absender im Kopf (siehe Modulkopf). Es
+  benennt dort nichts, sondern ERBT den Ton des Raumes, in dem es steht - genau daran ist die
+  Rolle zu erkennen.
+
+Damit ist die Dosierung Gesetz statt Geschmack. Vorher trug die Gesundheit vierzehn
+Vorkommen und die Dokumente keines. Anti-Ziel ist die Siegel-Inflation: in den Listen eines
+Moduls spraeche ein wiederholtes Siegel den Modul-Tint ueber die etablierten Elemente.
+**Pruefebene: Signatur** (`wer ein Markensiegel baut, benennt eine Herkunft oder ist der
+Kopf`, `test:frontend-audit`) - der Guard findet jede Bau-Stelle ueber ihre Bauart und
+verlangt von jeder eine der beiden Rollen; die Kopfrolle darf nur die Shell bauen.
+
+**Die Navigation traegt KEINES, und das ist dieselbe Regel, nicht ihre Ausnahme.** In der
+Tab-Bar und der Sidebar steht das Label unter dem Icon - die Herkunft ist dort
+selbstverstaendlich, ein Siegel waere Dekor. Die Leiste ist ausserdem der einzige Ort, der
+nicht "woher" beantwortet, sondern "wo bin ich"; getoente Scheiben auf allen Eintraegen nehmen
+der aktiven Pille ihre Alleinstellung, und Suche, Hilfe und Abmelden bekaemen Scheiben ohne
+Modul. Das Mehr-Sheet traegt Siegel, weil es ein VERZEICHNIS von Raeumen ist - der
+Unterschied bleibt nur lesbar, solange die Leiste keine traegt. (Entscheidung von Ulas am
+2026-08-10, am gerenderten Material getroffen.)
+
+**Zwei Groessenrollen:** Listenzeile `--sm` (24px, Icon 16px) und Modulkopf (32/24px je nach
+Rang seines Titels, siehe Modulkopf).
+
+**Der Traeger entscheidet, welches Gesicht es zeigt** - derselbe Satz wie beim Well, und aus
+demselben Grund, naemlich einer Messung. Die Toenung ist auf Flaechen der Seiten-Polaritaet
+geeicht und traegt dort 1,19-1,33:1; ihr Grund ist deshalb ein Parameter (`--seal-base`, per
+Voreinstellung `--color-surface`), damit sie auf dem Kopfgrund gegen `--color-bg` mischt statt
+gegen Weiss - mit dem alten, festverdrahteten Rezept laege die Scheibe dort bei 1,06:1 und
+verschwaende, genau wie ein Well auf dem Grouped-Grund. Auf einer UMGEKEHRTEN Flaeche zeigt
+das Siegel sein Vollton-Gesicht (`--vivid`): der Toast ist die eine Flaeche der App, die in
+beiden Themes die Umkehrung der Seite ist (`--neutral-800` ist hell im Dark-Theme und dunkel
+im Light), dort liegt jede Toenung bei 1,03-1,10:1. Der Vollton mit `--color-ink-on-vivid` ist
+dieselbe Sprache, die die App fuer jede vivide Flaeche schon fuehrt (Primaerknopf, FAB,
+aktives Segment, Marken-Tile); gemessen 5,1-9,8:1 fuer den Glyph in beiden Themes.
+
+**Das Ueberlappungszeichen** (Avatar ueberlappt Siegel, "wer ∩ was") ist das Familien-Zeichen
+aus der Drei-Kreise-Marke. Es erscheint nur, wenn es mehr als einen moeglichen Beteiligten
+gibt; im Solo-Haushalt entfaellt es still. **Nie Pflichtelement** - ein Personen-Zwang fuer
+Solo-Nutzer ist ein Anti-Ziel des Briefs.
+
+**Eine Systembenachrichtigung kann kein Siegel tragen**, und der Titel uebernimmt seine
+Aufgabe: sie hat kein DOM, ihr `icon` erreicht nur einen Teil der Plattformen, und Android
+maskiert ihr `badge` monochrom, womit der Familienton ohnehin verloren ginge. Der Titel
+erreicht jede Plattform und stand app-weit auf "Yuvomi" - auf dem, was das System darueber
+ohnehin anzeigt. Er nennt jetzt das Herkunftsmodul (Kalender, Aufgaben, Abonnements,
+Medikamente), serverseitig uebersetzt ueber die Datensprache des Haushalts, clientseitig ueber
+die Sprache des Nutzers. Die beiden Karten liegen beidseits der Schichtgrenze und sind an die
+`entity_type` gebunden, die der Server wirklich schreibt (Guard-Ebene Signatur).
+
 ### Anmeldeseite
 Die erste Seite der App ist Teil derselben Welt, keine Ausnahme. Die Buehne ist der reine
 Seitengrund ohne Verlauf (bis Runde 3 stand hier der letzte chromatische Verlauf der App).
@@ -975,6 +1078,10 @@ Text allein.
 - **Do** verschachtelte Radien konzentrisch rechnen (`calc(var(--radius-*) - Npx)`).
 - **Do** opake Fallbacks fuer jedes Glas-Element mitliefern (reduced-transparency,
   prefers-contrast, fehlender backdrop-filter).
+- **Do** ein Markensiegel nur setzen, wo es eine Rolle hat: an einer Mischstelle benennt es
+  eine fremde Herkunft, im eigenen Modul steht es genau einmal als Absender im Kopf
+  (Herkunfts-Regel). Und **Do** ihm seinen echten Grund mitgeben (`--seal-base`), statt die
+  Toenung gegen eine angenommene Flaeche zu mischen.
 
 ### Don't:
 - **Don't** einen zweiten Buttonradius einfuehren; die Kapsel steht in der `.btn`-Basisregel
@@ -997,3 +1104,6 @@ Text allein.
   Anzeigewerte (Wandtablet-Uhr).
 - **Don't** neue Viewport-Breakpoints erfinden; die vier Grenzen sind verbindlich,
   komponenteninterne Umbrueche laufen ueber Container-Queries.
+- **Don't** Siegel in die Listen eines Moduls streuen oder der Tab-Bar/Sidebar geben; im
+  eigenen Raum ist die Herkunft selbstverstaendlich, und die Leiste beantwortet "wo bin ich",
+  nicht "woher".
