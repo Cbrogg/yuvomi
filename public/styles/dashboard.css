@@ -243,11 +243,8 @@
   gap: var(--space-2);
 }
 
-.widget__title-icon {
-  width: 16px;
-  height: 16px;
-  color: var(--color-text-secondary);
-}
+/* Das Widget-Titel-Icon sitzt seit Block 2 in einem Markensiegel
+ * (.module-seal--sm, layout.css); Groesse und Farbe kommen von dort. */
 
 .widget__link {
   font-size: var(--type-secondary);
@@ -1618,24 +1615,11 @@ svg.weather-forecast__icon {
   max-width: 40ch;
 }
 
-/* Leeres Grid (alle Widgets ausgeblendet): ruhiger, voll-breiter Hinweis. */
-.dashboard-empty-grid {
+/* Leeres Grid (alle Widgets ausgeblendet): der geteilte Leerzustand
+ * (layout.css, Block 2) - hier steht nur, dass er die volle Rasterbreite
+ * einnimmt, denn die Spaltenzahl ist eine Eigenschaft DIESES Grids. */
+.dashboard__grid > .empty-state {
   grid-column: 1 / -1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: var(--space-3);
-  padding: var(--space-8) var(--space-4);
-  color: var(--color-text-secondary);
-  font-size: var(--text-sm);
-}
-
-.dashboard-empty-grid .empty-state__icon {
-  width: 28px;
-  height: 28px;
-  color: var(--color-text-tertiary);
-  opacity: 0.6;
 }
 
 .today-cockpit {
@@ -1703,23 +1687,12 @@ svg.weather-forecast__icon {
   background: var(--color-surface-hover);
 }
 
+/* Markensiegel (Block 2): Form und Material kommen vom .module-seal-
+ * Baustein (layout.css), hier steht nur die Weiterleitung des Tone-Akzents.
+ * Die fruehere rounded-square-Kachel mit identischem Toenungsrezept ist im
+ * Baustein aufgegangen. */
 .today-cockpit-card__icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--target-sm);
-  height: var(--target-sm);
-  border-radius: var(--radius-sm);
-  /* Getoente Icon-Kachel: ~16% Modul-Tint auf der opaken Zeilenflaeche,
-   * Icon im Modulton - sie traegt die Domaene, die die Versal-Eyebrows
-   * frueher behaupteten. */
-  background: color-mix(in srgb, var(--today-card-accent) var(--tint-surface), var(--color-surface));
-  color: var(--today-card-accent);
-}
-
-.today-cockpit-card__icon svg {
-  width: var(--space-4);
-  height: var(--space-4);
+  --seal-accent: var(--today-card-accent);
 }
 
 .today-cockpit-card__body {
@@ -2262,14 +2235,21 @@ svg.weather-forecast__icon {
 .dashboard .task-item:hover,
 .dashboard .event-item:hover,
 .dashboard .meal-slot:hover,
-.dashboard .shopping-widget-list:hover,
-.dashboard .note-item:hover {
+.dashboard .shopping-widget-list:hover {
   /* Konsistent mit task/event: Hover gibt Feedback OHNE Lesbarkeit zu senken.
    * Farbige Zettel vertragen keinen Flächen-Tint → sanfter Schatten-Lift statt
    * des früheren opacity:0.8-Dimmens. */
   transform: none;
   opacity: 1;
   box-shadow: var(--shadow-sm);
+}
+
+/* Die Notiz ist hier seit 2026-08-10 ein Inset-Well (glass.css) und damit
+ * VERTIEFT - ein Schatten-Lift beim Hover würde sie aus ihrer eigenen Mulde
+ * heben. Ihre Hover-Antwort steht deshalb dort, wo auch ihre Fläche steht. */
+.dashboard .note-item:hover {
+  transform: none;
+  opacity: 1;
 }
 
 /* Hier stand der zweite, spezifischere Verlauf des Wetter-Widgets

@@ -45,6 +45,8 @@
  * @param {string}      [opts.title]           - optional visible module title (left of the tabs).
  *                                               Decorative (aria-hidden): the bar's ariaLabel
  *                                               already names the cluster for assistive tech.
+ * @param {Function}    [opts.sealIcon]        - nur bei 'nav': Icon-Fabrik (NAV_ICONS) für das
+ *                                               Absender-Siegel links des Titels. Siehe unten.
  * @param {InsertPosition} [opts.insertPosition='afterbegin']
  * @returns {HTMLElement} the rendered bar element
  */
@@ -63,10 +65,23 @@ export function renderSubTabs(anchorEl, {
   extraClass,
   ariaLabel,
   title,
+  sealIcon,
   insertPosition = 'afterbegin',
 }) {
   if (semantics !== 'nav' && semantics !== 'tabs') {
     throw new Error(`renderSubTabs: semantics muss 'nav' oder 'tabs' sein (bekam: ${semantics}).`);
+  }
+  // DAS ABSENDER-SIEGEL GEHÖRT DER LEISTE, DIE DAS MODUL WECHSELT.
+  //
+  // Das ist die Leisten-Regel, in der Sprache dieses Helfers: wechselt die
+  // Leiste den `module:`-Wert - genau das heisst `semantics: 'nav'` -, dann ist
+  // SIE die Kopf-Navigation, führt den Modulnamen und damit auch den Absender.
+  // Wechselt sie ihn nicht ('tabs', Gesundheit), liegt sie im kanonischen Kopf,
+  // und der trägt sein Siegel bereits. Ein zweites wäre die Siegel-Inflation,
+  // gegen die die Herkunfts-Regel geschrieben ist - deshalb ein Fehler und kein
+  // stilles Ignorieren: still übergangen käme es beim nächsten Nutzer wieder.
+  if (sealIcon && semantics !== 'nav') {
+    throw new Error("renderSubTabs: sealIcon gehört nur einer Leiste, die das Modul wechselt (semantics 'nav') - im Modulkopf trägt der Kopf das Siegel.");
   }
   // Eine Tablist ohne Panels ist genau der Zustand, den dieser Umbau beseitigt:
   // `role="tab"` verspricht ein Panel, und wer keins anmelden kann, meint 'nav'.
@@ -85,6 +100,18 @@ export function renderSubTabs(anchorEl, {
   bar.className = 'sub-tabs-bar' + (extraClass ? ' ' + extraClass : '');
   if (!isNav) bar.setAttribute('role', 'tablist');
   if (ariaLabel) bar.setAttribute('aria-label', ariaLabel);
+
+  // Das Absender-Siegel steht VOR dem Titel und bleibt auch dort stehen, wo der
+  // Titel weicht: mobil blendet die Küchen-Leiste ihr Wort aus, weil die
+  // Bottom-Nav es bereits führt (kitchen-tabs.css). Das MARK ersetzt es dort
+  // nicht - es weist den Raum aus, während das Wort eine Leiste tiefer steht.
+  if (sealIcon) {
+    const sealEl = document.createElement('span');
+    sealEl.className = 'module-seal module-seal--head';
+    sealEl.setAttribute('aria-hidden', 'true');
+    sealEl.appendChild(sealIcon());
+    bar.appendChild(sealEl);
+  }
 
   // Optionaler Modul-Titel links der Tabs (Canonical Page Head). Dekorativ:
   // aria-hidden, da die Leiste via aria-label denselben Namen bereits trägt;

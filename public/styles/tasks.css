@@ -147,6 +147,49 @@
   }
 }
 
+/* KOMPAKTE HÖHE: die Filterreihe ist EINE Bedienzeile, nicht zwei.
+ *
+ * Die Chrome-Regel (DESIGN.md) lässt über dem Inhalt den Kopf und höchstens
+ * eine Bedienzeile. Der Kopf hält sie shell-weit ein (layout.css); hier steht,
+ * was das für die Zeile darunter heißt. Gemessen auf 640x400: die Reihe
+ * umbrach in Chips (52px) plus Gruppierungswahl (54px), zusammen 110px -
+ * anderthalb Bedienzeilen aus einem `flex-wrap: wrap`, das für 375px gedacht
+ * war, wo der Platz FEHLT. Hier ist die Breite da und die Höhe knapp.
+ *
+ * Die scrollende Chip-Reihe steht schon unter (max-width: 640px) und wird
+ * hier wiederholt statt geteilt: ein 800x400-Fenster ist breit genug für die
+ * erste Regel und trotzdem zu niedrig für zwei Zeilen. Eine gemeinsame
+ * Bedingung hätte auch das Padding und die Nähte mitgenommen, die dort aus
+ * der BREITE folgen und hier falsch wären. */
+@media (max-height: 499px) {
+  .tasks-filters-row {
+    flex-wrap: nowrap;
+  }
+
+  .tasks-filters-row .tasks-filters {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    padding-inline-end: var(--space-6);
+    -webkit-mask-image: linear-gradient(to right, var(--mask-opaque) calc(100% - var(--space-6)), transparent);
+    mask-image: linear-gradient(to right, var(--mask-opaque) calc(100% - var(--space-6)), transparent);
+  }
+
+  [dir="rtl"] .tasks-filters-row .tasks-filters {
+    -webkit-mask-image: linear-gradient(to left, var(--mask-opaque) calc(100% - var(--space-6)), transparent);
+    mask-image: linear-gradient(to left, var(--mask-opaque) calc(100% - var(--space-6)), transparent);
+  }
+
+  .tasks-filters-row .tasks-filters::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tasks-filters-row .tasks-filters > * {
+    flex-shrink: 0;
+  }
+}
+
 
 /* Gruppierungs-Toggle */
 .group-toggle {
@@ -589,6 +632,7 @@
    * Die Reset-Regeln (font/border/background) kommen aus reset.css, hier nur
    * die Block-Geometrie, damit der Button wie der frühere Div fließt. */
   display: block;
+  position: relative;
   width: 100%;
   padding: 0;
   text-align: start;
@@ -600,6 +644,28 @@
   transition:
     color var(--transition-fast),
     text-decoration-color var(--transition-base);
+}
+
+/* DER TITEL NIMMT DEN PLATZ, DEN SEINE KARTE IHM LÄSST (Zielgrössen-Regel,
+ * DESIGN.md). Die Box misst 22,1px - eine Textzeile im Body-Schnitt - und kam
+ * bisher allein über die Spacing-Ausnahme von WCAG 2.5.8 durch: das nächste
+ * Zielzentrum liegt weit genug weg. Genau das war der Fehlschluss. Die
+ * Ausnahme ist für Ziele gedacht, die dicht stehen MÜSSEN, weil sie nicht
+ * wachsen können, ohne ihren Nachbarn zu verdrängen. Dieser Titel kann: über
+ * ihm liegen 12px Karten-Padding und unter ihm 4px bis zur Metazeile, beide
+ * leer. Er war kurz aus Versehen, nicht aus Platznot.
+ *
+ * ::before statt Padding, weil der Text bleiben soll, wo er ist - dasselbe
+ * Rezept wie bei `.weather-widget__refresh` („kompakt aussehen, voll treffen",
+ * DESIGN.md). Die Fläche endet exakt an der Metazeile: `--space-1` unten ist
+ * der Wert des `margin-bottom` darüber, keinen Pixel mehr, sonst nähme sie den
+ * Tag-Filtern ihre eigenen Treffer weg. Ergebnis 38px statt 22,1px - nicht die
+ * volle Zielgrösse, aber alles, was die Karte hergibt, und das ist die Regel. */
+.task-card__title::before {
+  content: '';
+  position: absolute;
+  inset-block: calc(-1 * var(--space-3)) calc(-1 * var(--space-1));
+  inset-inline: 0;
 }
 
 .task-card--done .task-card__title {

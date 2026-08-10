@@ -86,6 +86,12 @@ const LEAVES_SKIPPED = new Map([
     + 'bis Session 24 `ROUTE_NAMES` direkt nahm und die Blaetter damit STILLSCHWEIGEND '
     + 'ausliess: die Auslassung war richtig, aber nicht an der Stelle begruendet, an der '
     + 'jemand sie sucht - und genau dafuer gibt es diese Map.'],
+  ['Sonde 15', 'misst die Bauhoehe von `.page-toolbar` - dieselbe Begruendung wie Sonde 1: '
+    + 'ein Settings-Blatt traegt keine, sein Kopf ist `.settings-leaf-header`. Die Sonde '
+    + 'faende dort null Koepfe, und ihre eigene „nichts gemessen"-Zusicherung (seen >= 12) '
+    + 'wuerde von 23 leeren Zustaenden nicht beruehrt - sie meldete gruen aus dem falschen '
+    + 'Grund. Die Chrome-Regel gilt fuer die Blaetter trotzdem; wer sie dort pruefen will, '
+    + 'misst `.settings-leaf-header` und nicht diesen Selektor.'],
 ]);
 
 /** Die Zustaende, die eine Sonde abfaehrt: die 16 Routen, dazu die Blaetter. */
@@ -586,7 +592,7 @@ const SHAPE_EXEMPT = new Map([
   // 3. Zellen eines Rasters
   ['month-day', 'Rasterzelle: Tag im Kalender-Monat'],
   ['more-action', 'Rasterzelle: Kachel im More-Sheet-Raster'],
-  ['health-metric-card', 'Rasterzelle: Kennzahlkachel der Gesundheit'],
+  ['metric-card--select', 'Rasterzelle: waehlbare Kennzahlkachel (.metric-card, Block-2-Konsolidierung)'],
   // 4. Zeilen einer Zeilenliste
   ['nav-item', 'Zeile: Eintrag der Sidebar-Navigation'],
   ['settings-shell__navigation-toggle', 'Zeile: Domaenenkopf der Settings-Navigation (Akkordeon)'],
@@ -719,6 +725,21 @@ const TARGET_EXEMPT = new Map([]);
 /** Ein Ziel gilt als eingeengt, wenn ein gleichartiges naeher steht als das. */
 const CROWDING_GAP = 16;
 
+/**
+ * Der Schluessel eines Bauteils OHNE seine Varianten.
+ *
+ * `key` ist die volle Klassenliste, und damit ist
+ * `cal-task-chip.cal-task-chip--high` ein anderes Bauteil als `--medium`. Ein
+ * Bauteil, das in fuenf von sechs Varianten in einer Reihe steht, ist es auch
+ * in der sechsten - die Variante faerbt, sie baut nicht um. Geschnitten wird
+ * deshalb am BEM-Modifier, nicht an jedem Token: `btn--ghost` faellt auf `btn`
+ * zurueck, `btn` selbst bleibt `btn`, und eine Liste aus mehreren Klassen
+ * behaelt ihre erste als Traeger.
+ */
+function baseKey(key) {
+  return String(key).split('.')[0].split('--')[0];
+}
+
 async function measureTargets(page, min) {
   return page.evaluate(({ min, gap }) => {
     const SEL = 'button, a[href], [role="button"], input:not([type=hidden]), select, textarea, summary, [tabindex]:not([tabindex="-1"])';
@@ -804,7 +825,75 @@ async function measureTargets(page, min) {
         if (dCenter < nearestCenter) nearestCenter = dCenter;
       }
 
-      // WCAG 2.5.8: 24x24, oder kein anderes Zielzentrum naeher als 24.
+      // WER DIE SPACING-AUSNAHME NIMMT, MUSS SIE BRAUCHEN.
+      //
+      // WCAG 2.5.8 laesst ein Ziel unter 24x24 durch, wenn kein anderes
+      // Zielzentrum naeher als 24px steht. Diese Ausnahme ist fuer Ziele
+      // gedacht, die dicht stehen MUESSEN - sie koennen nicht wachsen, ohne
+      // ihren Nachbarn zu verdraengen. Genau das ist auch die Begruendung der
+      // Zielgroessen-Regel („Das Kriterium ist die Einengung, nicht die
+      // Anzahl").
+      //
+      // `.task-card__title` nahm die Ausnahme in Anspruch, ohne sie zu
+      // brauchen: 22,1px hoch, mit 12px leerem Karten-Padding darueber und
+      // 4px darunter. Kurz aus Versehen, nicht aus Platznot - und die Sonde
+      // sagte gruen, weil das naechste Zielzentrum weit genug weg lag. Die
+      // Critique 2026-08-10 mass denselben Fall gegen einen pauschalen
+      // 44px-Massstab und hatte damit recht aus dem falschen Grund.
+      //
+      // Gemessen wird der Raum, den der TRAEGER laesst: bis zur Innenkante
+      // des Elternteils oder bis zur naechsten Geschwisterkante, je nachdem
+      // was naeher liegt. Wer damit ueber 24 kaeme, hat kein Platzproblem.
+      //
+      // NUR FUER FREISTEHENDE, und diese Grenze ist gemessen, nicht gesetzt:
+      // die erste Fassung meldete prompt die Aufgaben-Tagfilter und zwoelf
+      // `.cal-task-chip`. Formal zu Recht - sie stehen NEBENeinander, koennten
+      // also vertikal wachsen, ohne einander zu verdraengen. Nur ist das nicht
+      // mehr die Regel, sondern eine neue: ein Reihen-Bauteil traegt seine
+      // Dichte gemeinsam, und ob die Einengung horizontal oder vertikal wirkt,
+      // hat die Zielgroessen-Regel nie unterschieden. Wer sie unterscheiden
+      // will, aendert die Regel und misst die Reihen neu - er tut es nicht
+      // nebenbei in einer Klausel, die einen freistehenden Titel meinte.
+      //
+      // DIE AUSNAHME STEHT DESHALB IM URTEIL, NICHT HIER. `crowded` an dieser
+      // Stelle waere die INSTANZ-Frage, und die ist die falsche: ein Tagfilter
+      // an einer Aufgabe mit nur einem Tag steht allein da und bleibt ein
+      // Reihen-Bauteil (siehe `rowBuilt` unten). Genau daran ist der zweite
+      // Versuch gescheitert - er band die Klausel an `crowded`, und die vier
+      // einzeln haengenden Tagfilter blieben trotzdem gemeldet.
+      //
+      // DIE INLINE-AUSNAHME IST TEIL DES STANDARDS, nicht eine Milderung:
+      // WCAG 2.5.8 nimmt ein Ziel ausdruecklich aus, dessen Groesse „durch die
+      // Zeilenhoehe des Nicht-Ziel-Textes bestimmt" ist - ein Link in einem
+      // Satz. Ohne sie meldete die Klausel drei Hinweis-Links in
+      // `<p class="form-hint">` (18px hoch, weil eine Textzeile 18px hoch
+      // ist), und der einzige Weg, sie „zu reparieren", waere gewesen, den
+      // Fliesstext um sie herum auseinanderzuziehen.
+      const inline = /^inline($|-)/.test(getComputedStyle(el).display)
+        && !!el.parentElement
+        && el.parentElement.textContent.trim() !== el.textContent.trim();
+
+      let roomy = false;
+      if (h < 24 && !inline && el.parentElement) {
+        const pr = el.parentElement.getBoundingClientRect();
+        const sibs = [...el.parentElement.children]
+          .filter((c) => c !== el)
+          .map((c) => c.getBoundingClientRect())
+          .filter((s) => s.height > 0);
+        const above = Math.min(
+          r.top - pr.top,
+          ...sibs.filter((s) => s.bottom <= r.top + 1).map((s) => r.top - s.bottom),
+        );
+        const below = Math.min(
+          pr.bottom - r.bottom,
+          ...sibs.filter((s) => s.top >= r.bottom - 1).map((s) => s.top - r.bottom),
+        );
+        roomy = h + Math.max(0, above) + Math.max(0, below) >= 24;
+      }
+
+
+      // WCAG 2.5.8: 24x24, oder kein anderes Zielzentrum naeher als 24 - und
+      // die Ausnahme nur fuer den, der sie braucht.
       const wcag = (w >= 24 && h >= 24) || nearestCenter >= 24;
       // Volle Zielgroesse in mindestens einer Achse - nur fuer freistehende.
       const full = w >= min || h >= min;
@@ -816,6 +905,7 @@ async function measureTargets(page, min) {
         h: Math.round(h),
         crowded,
         wcag,
+        roomy,
         full,
         center: Math.round(nearestCenter),
       });
@@ -896,8 +986,29 @@ describe('Sonde 4 - eine Reihe traegt ihre Dichte, ein Einzelziel ist allein tre
             // Eine Zeile weiter oben zu zaehlen war der ganze Unterschied
             // zwischen „nichts gefunden" und „nichts gemessen".
             seen += 1;
-            if (row.crowded) rowBuilt.add(row.key);
-            if (row.wcag && row.full) continue;
+            // NICHT NUR DIE VOLLE KLASSENLISTE, AUCH JEDE EINZELKLASSE.
+            // `key` ist die ganze Liste, und damit ist
+            // `cal-task-chip.cal-task-chip--high` ein anderes Bauteil als
+            // `cal-task-chip.cal-task-chip--medium`: der Modifier macht aus
+            // EINEM Bauteil sechs, und wer nur in fuenf Varianten in einer
+            // Reihe vorkommt, gilt in der sechsten als freistehend. Genau so
+            // blieben drei `--high`-Chips gemeldet, waehrend `--medium` und
+            // `--urgent` als Reihe erkannt wurden. Dieselbe Blindheit wie bei
+            // Sonde 6, die nach `.metric-grid` fragte und die Reihe nicht sah.
+            //
+            // GENAU DIE BASISKLASSE, NICHT JEDER TOKEN. Die erste Fassung warf
+            // JEDE Klasse des Schluessels in `rowBuilt` und hat damit die
+            // freistehende Haelfte der Sonde app-weit abgeschaltet: zwei
+            // benachbarte `.btn` (die Modal-Aktionen stehen mit --space-2
+            // Abstand, also unter CROWDING_GAP) legen den blanken Token `btn`
+            // hinein, und von da an ist jedes Element mit `btn` als „in einer
+            // Reihe" entschuldigt. Ein Guard, der sich selbst eine Ausnahme
+            // baut, ist keiner.
+            if (row.crowded) {
+              rowBuilt.add(row.key);
+              rowBuilt.add(baseKey(row.key));
+            }
+            if (row.wcag && row.full && !row.roomy) continue;
             const id = `${row.key}|${row.w}x${row.h}`;
             if (!found.has(id)) found.set(id, { ...row, pages: new Set() });
             found.get(id).pages.add(name);
@@ -924,10 +1035,12 @@ describe('Sonde 4 - eine Reihe traegt ihre Dichte, ein Einzelziel ist allein tre
       const offenders = [];
       for (const value of found.values()) {
         if (value.key.split('.').some((cls) => TARGET_EXEMPT.has(cls))) continue;
-        if (value.wcag && rowBuilt.has(value.key)) continue;
+        const inRow = rowBuilt.has(value.key) || rowBuilt.has(baseKey(value.key));
+        if (value.wcag && inRow) continue;
         offenders.push(
           `${value.key}: ${value.w}x${value.h} - `
-          + `${!value.wcag ? 'unter 24x24 ohne Spacing-Abstand' : 'freistehend und in KEINER Achse voll'}`
+          + `${value.roomy ? 'nimmt die Spacing-Ausnahme, obwohl sein Traeger Platz laesst'
+            : !value.wcag ? 'unter 24x24 ohne Spacing-Abstand' : 'freistehend und in KEINER Achse voll'}`
           + ` (naechstes Zielzentrum ${value.center}px) auf ${[...value.pages].join(', ')}`,
         );
       }
@@ -1118,22 +1231,63 @@ describe('Sonde 5 - eine Wischzeile antwortet, und jede Rolle liegt an ihrer Kan
  * beiden Rasterzeilen streckten sich unabhaengig - 78px oben, 95px unten, weil
  * eine einzige Fussnote umbrach. Im Stylesheet sah nichts davon falsch aus.
  *
- * SIE PRUEFT DIE ZUSAGE, NICHT IHREN FUNDORT: gesucht wird jede `.metric-grid`
- * auf jeder Route - und zusaetzlich hinter jedem Budget-Untertab, weil die
- * Reihen dort hinter einer Leiste liegen, die keine Route wechselt. Damit
- * findet sie auch eine Kennzahlreihe, die es heute noch gar nicht gibt.
+ * SIE PRUEFT DIE ZUSAGE, NICHT IHREN FUNDORT: gesucht wird jede Reihe aus
+ * mehreren Kennzahlkarten auf jeder Route - und zusaetzlich hinter jedem
+ * Budget-Untertab, weil die Reihen dort hinter einer Leiste liegen, die keine
+ * Route wechselt. Damit findet sie auch eine Kennzahlreihe, die es heute noch
+ * gar nicht gibt.
  * ──────────────────────────────────────────────────────────────────────────── */
 
-/** Alle Kennzahlreihen der aktuellen Ansicht mit den Hoehen ihrer Kacheln. */
+/**
+ * Alle Kennzahlreihen der aktuellen Ansicht mit den Hoehen ihrer Kacheln.
+ *
+ * DIE REIHE KOMMT AUS DEN KARTEN, NICHT AUS EINEM KLASSENNAMEN. Bis 2026-08-10
+ * fragte diese Sonde nach `.metric-grid` und pruefte damit N Fundstellen statt
+ * einer Regel - genau das Muster, das die Guard-Lehre verbietet. Blind blieb
+ * ausgerechnet die Reihe, die den Anlass gab: die Aktivitaets-Kacheln der
+ * Gesundheit liegen in `.health-activity__summary`, tragen dieselben
+ * `.metric-card` und wurden nie gemessen. Eine Reihe ist jetzt, was sie im
+ * Dokument ist: ein Elternknoten mit mehr als einer Kennzahlkarte.
+ */
 async function metricRowHeights(page) {
-  return page.evaluate(() => [...document.querySelectorAll('.metric-grid')]
-    .map((grid) => ({
-      grid: grid.className,
+  return page.evaluate(() => {
+    const carriers = new Map();
+    for (const card of document.querySelectorAll('.metric-card')) {
+      const parent = card.parentElement;
+      if (!parent) continue;
+      if (!carriers.has(parent)) carriers.set(parent, []);
+      carriers.get(parent).push(card);
+    }
+    const out = [];
+    for (const [grid, cards] of carriers) {
+      if (cards.length < 2) continue;
+      const name = grid.className || grid.tagName.toLowerCase();
       // Sub-Pixel runden: das Raster verteilt Restpixel, und ein halber Pixel
       // Unterschied ist keine Unruhe, sondern Layout-Arithmetik.
-      heights: [...grid.querySelectorAll('.metric-card')].map((c) => Math.round(c.getBoundingClientRect().height)),
-    }))
-    .filter((row) => row.heights.length > 1));
+      const box = (c) => c.getBoundingClientRect();
+      const lines = new Map();
+      for (const card of cards) {
+        const top = Math.round(box(card).top);
+        if (!lines.has(top)) lines.set(top, []);
+        lines.get(top).push(Math.round(box(card).height));
+      }
+      // (1) NEBENEINANDER: was eine Zeile teilt, ist gleich hoch. Das gilt fuer
+      //     jede Reihe aus Kennzahlkarten, gleich in welchem Traeger.
+      for (const heights of lines.values()) {
+        if (heights.length > 1) out.push({ grid: name, scope: 'Zeile', heights });
+      }
+      // (2) UEBER DEN UMBRUCH: nur wer gleich hohe Rasterzeilen ZUSAGT, muss sie
+      //     auch halten. `.metric-grid` tut das mit `grid-auto-rows: 1fr` - und
+      //     genau daran brach es einmal (Abo-Reihe 78px oben, 95px unten). Ein
+      //     Kartenraster ohne diese Zusage (die Vitalwerte der Gesundheit)
+      //     bemisst jede Zeile fuer sich; das ist keine Unruhe, sondern seine
+      //     Bauart. Gelesen wird die Zusage im Dokument, nicht an einem Namen.
+      if (getComputedStyle(grid).gridAutoRows === '1fr' && lines.size > 1) {
+        out.push({ grid: name, scope: 'Umbruch', heights: cards.map((c) => Math.round(box(c).height)) });
+      }
+    }
+    return out;
+  });
 }
 
 describe('Sonde 6 - die Kacheln einer Kennzahlreihe sind gleich hoch', () => {
@@ -1148,7 +1302,7 @@ describe('Sonde 6 - die Kacheln einer Kennzahlreihe sind gleich hoch', () => {
           rowsSeen += 1;
           const spread = Math.max(...row.heights) - Math.min(...row.heights);
           if (spread > 0) {
-            findings.push(`${where} · ${row.grid}: Hoehen ${row.heights.join(', ')} (Streuung ${spread}px).`);
+            findings.push(`${where} · ${row.grid} (${row.scope}): Hoehen ${row.heights.join(', ')} (Streuung ${spread}px).`);
           }
         }
       };
@@ -1164,9 +1318,13 @@ describe('Sonde 6 - die Kacheln einer Kennzahlreihe sind gleich hoch', () => {
 
       // Eine Sonde, die nichts gemessen hat, darf nicht urteilen (dieselbe
       // Zusicherung wie bei Sonde 3, 4 und 5).
-      assert.ok(rowsSeen >= 4,
-        `Nur ${rowsSeen} Kennzahlreihen gesehen - erwartet sind mindestens Budget, Abos, Aufteilen und Darlehen. `
-        + 'Entweder hat der Seed keine Zahlen geliefert, oder die Bauart hat sich geaendert.');
+      // Der Reichweiten-Nachweis steigt mit der Reichweite: seit die Reihe aus
+      // den KARTEN kommt statt aus `.metric-grid`, gehoert die Aktivitaets-Reihe
+      // der Gesundheit dazu, die vorher unsichtbar war.
+      assert.ok(rowsSeen >= 5,
+        `Nur ${rowsSeen} Kennzahlreihen gesehen - erwartet sind mindestens Budget, Abos, Aufteilen, `
+        + 'Darlehen und die Aktivitaets-Reihe der Gesundheit. Entweder hat der Seed keine Zahlen '
+        + 'geliefert, oder die Bauart hat sich geaendert.');
 
       assert.deepEqual(findings, [],
         'Kennzahlreihen im gerenderten Dokument. Gleichartige Kacheln nebeneinander sind gleich hoch, '
@@ -2665,4 +2823,97 @@ test('Sonde 14 - ein Icon auf getoentem Grund haelt 3:1', async () => {
     `Icon unter 3:1 auf seinem komponierten Untergrund (WCAG 1.4.11, grafische Objekte; `
     + `${withSibling} davon auf einer Flaeche, die die Vorfahrenkette nicht sieht).\n  `
     + findings.join('\n  '));
+});
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Sonde 15: Die Chrome-Regel
+ *
+ * Die Regel steht in DESIGN.md („Die Chrome-Regel"): UEBER DEM INHALT STEHEN
+ * DER KOPF UND HOECHSTENS EINE BEDIENZEILE.
+ *
+ * WARUM DIESE EBENE UND KEINE ANDERE. Wie hoch ein Kopf BAUT, steht in keinem
+ * Stylesheet - er ist ein Flex-Container, und ob sein Inhalt in eine Zeile
+ * passt, entscheidet die Summe aus Titellaenge, Anzahl der Aktionen, Locale
+ * und Viewport. Genau daran ist die erste Fassung der Regel gescheitert: sie
+ * setzte `flex-wrap: nowrap` mit Spezifitaet 0,1,0 gegen eine Large-Title-Regel
+ * mit 0,3,0 und blieb LAUTLOS wirkungslos - gemessen stand `wrap` danach auf
+ * allen zehn Koepfen, und der Kalender baute weiter vier Zeilen. Ein Test ueber
+ * den Quelltext haette die Zeile gefunden und fuer erledigt erklaert.
+ *
+ * WAS ALS ZEILE ZAEHLT, ENTSCHEIDET DIE UEBERLAPPUNG DER VERTIKALEN INTERVALLE,
+ * NICHT DIE OBERKANTE. Denselben Satz fuehrt DESIGN.md beim Andocken, und hier
+ * gilt er aus demselben Grund: mittig ausgerichtete Flex-Items unterschiedlicher
+ * Hoehe beginnen bis zu 15px auseinander, ein Zaehler ueber Oberkanten meldet
+ * fuer einen 63px hohen, unzweifelhaft einzeiligen Kopf also vier „Zeilen".
+ * Gezaehlt werden deshalb disjunkte Cluster.
+ *
+ * DIE HOEHE ALLEIN WAR ZU MILDE, und das hat erst die Gegenprobe gezeigt. Die
+ * erste Fassung erlaubte zwei Bar-Zeilen plus Trennlinie, also 128px. Mit dem
+ * absichtlich wieder eingebauten Spezifitaetsfehler baute der Kalender 117px
+ * und das Budget 113px - drei Zeilen, und trotzdem unter der Schwelle. Ein
+ * Grenzwert, der den Anlassfall nicht faengt, ist kein Guard. Die Hoehe bleibt
+ * als zweite, groebere Zusicherung stehen (sie faengt „eine Zeile, aber
+ * riesig"), das Urteil faellt die Zeilenzahl.
+ *
+ * ZWEI ZEILEN SIND DIE GRENZE, und die zweite hat einen Namen: eine Tab-Leiste
+ * IM Kopf (Gesundheit, Belohnungen, Haushaltshilfe) ist die eine erlaubte
+ * Bedienzeile, und der Essensplan braucht seine Zeitraum-Navigation neben den
+ * Aktionen (DESIGN.md, Modulkopf). Alles darueber ist eine dritte Zeile, und
+ * die verbietet die Regel.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/** Eine Bar-Zeile: Zielgroesse plus die Naht der kompakten Hoehe, oben und unten. */
+const BAR_ROW = 48 + 2 * 4;
+/** Zwei Bar-Zeilen plus die Trennlinie - mehr ist auch als EINE Zeile zu viel. */
+const HEAD_MAX = 2 * BAR_ROW + 16;
+/** Der Kopf und hoechstens eine Bedienzeile. */
+const HEAD_ROWS_MAX = 2;
+
+describe('Sonde 15 - in der kompakten Hoehe traegt der Kopf hoechstens eine Bedienzeile', () => {
+  test('short 640x400', async () => {
+    const page = await openPage(harness, { device: 'short', theme: 'light', locale: 'de' });
+    const offenders = [];
+    let seen = 0;
+
+    for (const name of sweep('Sonde 15')) {
+      await gotoRoute(page, ALL_ROUTES[name]);
+      const heads = await page.evaluate(() => [...document.querySelectorAll('.page-toolbar')]
+        .filter((el) => el.getBoundingClientRect().height > 0)
+        .map((el) => {
+          // Disjunkte Cluster ueber die vertikalen Intervalle der Kinder.
+          const spans = [...el.children]
+            .map((c) => c.getBoundingClientRect())
+            .filter((r) => r.height > 0)
+            .map((r) => [r.top, r.bottom])
+            .sort((a, b) => a[0] - b[0]);
+          let rows = 0;
+          let end = -Infinity;
+          for (const [top, bottom] of spans) {
+            if (top >= end) rows += 1;
+            end = Math.max(end, bottom);
+          }
+          return { h: el.getBoundingClientRect().height, rows, cls: el.className };
+        }));
+      for (const head of heads) {
+        seen += 1;
+        if (head.rows <= HEAD_ROWS_MAX && head.h <= HEAD_MAX) continue;
+        offenders.push(
+          `${name}: ${head.rows} Zeilen / ${Math.round(head.h)}px `
+          + `(max ${HEAD_ROWS_MAX} / ${HEAD_MAX}) - ${head.cls}`,
+        );
+      }
+    }
+    await page.close();
+
+    // Eine Sonde, die nichts gemessen hat, darf nicht urteilen - dieselbe
+    // Zusicherung wie bei Sonde 3 und Sonde 4. Gezaehlt sind GEFUNDENE Koepfe.
+    assert.ok(seen >= 12,
+      `Nur ${seen} Modulkoepfe gefunden - die Sonde hat nichts gemessen, statt nichts `
+      + 'zu finden. Rendert die App in dieser Groessenklasse ueberhaupt?');
+
+    assert.deepEqual(offenders.sort(), [],
+      'Modulkopf baut in der kompakten Hoehe hoeher als zwei Bar-Zeilen - damit steht '
+      + 'ueber dem Inhalt mehr als der Kopf und eine Bedienzeile (DESIGN.md, Die '
+      + `Chrome-Regel).\n  ${offenders.join('\n  ')}`);
+  });
 });

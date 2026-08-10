@@ -173,6 +173,25 @@ export function mountLoadError(target, { title, description, error, retryLabel, 
 }
 
 /**
+ * Kompakter Nur-Text-Leerzustand: die --compact-Form der geteilten Grammatik
+ * ohne Icon und Titel, für Abschnitte, deren Kopf den Kontext schon nennt
+ * (Suchhinweis, leere Kontenliste). Ein Satz, zentriert, Sekundärtext -
+ * mehr Grammatik wäre dort Lärm, weniger wäre wieder eine eigene Klasse.
+ *
+ * @param {string} text  Aufgelöster Hinweistext.
+ * @returns {HTMLDivElement}
+ */
+export function emptyHintEl(text) {
+  const box = document.createElement('div');
+  box.className = 'empty-state empty-state--compact';
+  const desc = document.createElement('p');
+  desc.className = 'empty-state__description';
+  desc.textContent = plainText(text) ?? '';
+  box.appendChild(desc);
+  return box;
+}
+
+/**
  * Sprachneutrale Kurzform der Ursache, oder `null`.
  *
  * `status === 0` ist in `api.js` der Netzfehler ohne Antwort - dafür gibt es

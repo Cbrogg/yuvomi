@@ -15,6 +15,8 @@ import { localizeBirthdayEvent } from '/utils/birthday-event.js';
 import { findPageFab } from '/utils/fab.js';
 import { openModal, closeModal, confirmModal } from '/components/modal.js';
 import { renderAvatarStack } from '/components/user-multi-select.js';
+import { isSoloHousehold } from '/utils/household.js';
+import { whoMark } from '/utils/seal-pair.js';
 
 // Hält den AbortController des aktuellen FAB-Listeners - wird bei jedem render() erneuert.
 let _fabController = null;
@@ -289,6 +291,13 @@ function isWidgetModuleEnabled(id) {
   // eines Moduls ohne Zugriff — die Modulsperre wird bereits serverseitig auf die
   // Widget-Map durchgereicht) hier nicht anbieten.
   if (!canSeeWidget(id)) return false;
+  // Im Solo-Haushalt ist das Familien-Widget kein VERFUEGBARES Widget, kein
+  // leer gerendertes. Der Unterschied ist die „Anpassen"-Ablage: ein Renderer,
+  // der '' zurueckgibt, verschwindet aus dem Raster, bleibt aber `visible: true`
+  // und taucht damit auch in der Ablage der versteckten Widgets nicht auf - es
+  // waere aus der Oberflaeche heraus nicht mehr erreichbar. Hier faellt es aus
+  // beiden Listen, so wie ein abgeschaltetes Modul auch.
+  if (id === 'family' && isSoloHousehold()) return false;
   return true;
 }
 
@@ -397,11 +406,29 @@ const BUDGET_CATEGORY_LABEL_KEYS = {
 // Hilfsfunktionen
 // --------------------------------------------------------
 
+/**
+ * DER GRUSS NENNT DEN VORNAMEN (Critique 2026-08-10).
+ *
+ * „Guten Abend, Linda Johnson" brach den Large Title mobil auf zwei Zeilen
+ * (82px, 24 % des ersten Screens) und machte aus einem Gruss eine
+ * Datenbankzeile. Apple gruesst mit dem Vornamen, und ein Haushalt von 2-6
+ * Personen braucht keinen Nachnamen zur Unterscheidung.
+ *
+ * Das erste WORT, nicht das erste Zeichen bis zum Leerzeichen: `display_name`
+ * ist ein frei gesetztes Feld und kann alles enthalten, auch einen einzelnen
+ * Namen oder einen Spitznamen. Ohne Leerzeichen bleibt er, wie er ist - das
+ * Kuerzen darf nie mehr wegnehmen, als es findet.
+ */
+function firstName(displayName) {
+  return String(displayName ?? '').trim().split(/\s+/)[0] || String(displayName ?? '');
+}
+
 function greeting(displayName) {
   const h = new Date().getHours();
-  if (h >= 5 && h < 12) return t('dashboard.greetingMorning', { name: esc(displayName) });
-  if (h >= 12 && h < 18) return t('dashboard.greetingDay',    { name: esc(displayName) });
-  return t('dashboard.greetingEvening', { name: esc(displayName) });
+  const name = esc(firstName(displayName));
+  if (h >= 5 && h < 12) return t('dashboard.greetingMorning', { name });
+  if (h >= 12 && h < 18) return t('dashboard.greetingDay',    { name });
+  return t('dashboard.greetingEvening', { name });
 }
 
 // Tageszeit-Fenster für den Begrüßungs-Gradienten (deckt sich mit greeting()).
@@ -533,21 +560,54 @@ function formatPoints(value) {
   return getNumberFormat().format(Number(value) || 0);
 }
 
+/**
+ * Kopfzeile eines Dashboard-Widgets: Siegel, Titel, Zaehler, Sprung ins Modul.
+ *
+ * DER TITEL IST EINE UEBERSCHRIFT (Critique 2026-08-10). Er war ein `<span>`,
+ * und damit hatte die wichtigste Seite der App drei Ueberschriften fuer sieben
+ * Inhaltsbloecke: wer per H-Taste navigiert, sprang durch drei Marken und war
+ * am Ende. `/health` machte es die ganze Zeit richtig (h1, sr-only h2 je Panel,
+ * h3 je Abschnitt) - das Dashboard war der Ausreisser, nicht die Regel. h3,
+ * weil darueber `h1 Uebersicht` (sr-only) und die beiden `h2` des Grusses und
+ * von „Heute wichtig" stehen.
+ *
+ * UND DER SPRUNG IST EIN LINK, kein Knopf. Fuenf Knoepfe mit dem zugaenglichen
+ * Namen „Alle" sind keine Zielangabe - deshalb `aria-label` mit dem Modulnamen.
+ * Ein Knopf, der navigiert, nimmt dem Nutzer ausserdem Cmd-Klick, Mittelklick
+ * und „Link kopieren". `wireLinks` (unten) kennt `<a>` bereits, der Router
+ * faengt den Klick ueber `data-route` ab - der `href` ist der ehrliche
+ * Zweitkanal, kein toter Zierat.
+ *
+ * DER KOMMENTAR STEHT HIER UND NICHT AM `return`, und das ist kein Geschmack:
+ * der Siegel-Guard (test-frontend-audit.js) sucht die Herkunft in einem Fenster
+ * von acht Zeilen um die Bau-Stelle. Ein Erklaerblock dazwischen schiebt
+ * `--seal-accent` aus dem Fenster, und der Guard meldet ein Siegel ohne
+ * Herkunft - gemessen, nicht vermutet.
+ */
 function widgetHeader(icon, title, count, linkHref, linkLabel) {
   linkLabel = linkLabel ?? t('dashboard.allLink');
   const badge = count != null
     ? `<span class="widget__badge">${count}</span>`
     : '';
+  // Herkunfts-Regel (Block 2): das Dashboard ist eine Mischstelle, also
+  // traegt jeder Widget-Kopf das Markensiegel seines Moduls. Der Slug ist
+  // das erste Segment der Widget-Route; ein unbekannter Slug faellt im
+  // var()-Fallback auf den App-Akzent zurueck.
+  const slug = (linkHref || '').split('/')[1] || '';
+  const seal = slug ? ` style="--seal-accent: var(--module-${slug}, var(--color-accent))"` : '';
   return `
     <div class="widget__header">
-      <span class="widget__title">
-        <i data-lucide="${icon}" class="widget__title-icon" aria-hidden="true"></i>
+      <h3 class="widget__title">
+        <span class="module-seal module-seal--sm"${seal} aria-hidden="true">
+          <i data-lucide="${icon}"></i>
+        </span>
         ${title}
         ${badge}
-      </span>
-      <button type="button" data-route="${linkHref}" class="widget__link">
+      </h3>
+      <a href="${linkHref}" data-route="${linkHref}" class="widget__link"
+         aria-label="${esc(t('dashboard.allLinkFor', { module: title }))}">
         ${linkLabel}
-      </button>
+      </a>
     </div>
   `;
 }
@@ -811,6 +871,11 @@ function renderPinnedNotes(notes) {
 }
 
 function renderFamilyWidget(users) {
+  // IM SOLO-HAUSHALT GIBT ES DIESES WIDGET NICHT - entschieden in
+  // `isWidgetModuleEnabled`, damit es auch aus der „Anpassen"-Ablage faellt.
+  // Es war das prominenteste Widget rechts oben und zeigte einer Solo-Nutzerin
+  // eine grosse 1 mit „im Haushalt", ein Zaehler, dessen einziger Inhalt ist,
+  // dass sie allein ist (Critique 2026-08-10, Persona Miriam).
   const visible = users.slice(0, 6);
   const avatars = visible.map((u) => `
     <span class="family-widget-avatar" style="background:${esc(u.avatar_color || AVATAR_FALLBACK_COLOR)};color:${getReadableTextColor(u.avatar_color || AVATAR_FALLBACK_COLOR)}" title="${esc(u.display_name)}">
@@ -1142,17 +1207,27 @@ function renderHousekeepingWidget(hk, currency) {
   </div>`;
 }
 
-function renderTodayCard(icon, label, value, route, tone, count = null) {
+function renderTodayCard(icon, label, value, route, tone, count = null, who = null) {
   const badge = Number.isFinite(count) && count > 0
     ? `<span class="today-cockpit-card__count">${count}</span>`
     : '';
-  // Inset-Grouped-Zeile (Apple-Systemapp-Muster): getoente Icon-Kachel traegt
-  // die Modulzugehoerigkeit, der Inhalt steht als Titel in Textfarbe, das
-  // Modul-Label lebt als ruhiger Untertitel weiter (nie versal, nie ueber dem
-  // Titel), der Zaehler als trailing Badge.
+  /* DAS UEBERLAPPUNGSZEICHEN (Block-2-Brief, utils/seal-pair.js): „Heute
+   * wichtig" ist die Mischstelle des Dashboards - hier stehen Aufgabe, Termin,
+   * Einkauf und Essen nebeneinander, und das Siegel sagt bereits, aus welchem
+   * Raum jede Zeile kommt. Traegt die Zeile ausserdem eine Person, sagt der
+   * ueberlappende Avatar, wen sie angeht.
+   *
+   * Es erscheint NUR dann - nicht am Einkauf, nicht am Essen, und im
+   * Solo-Haushalt an keiner Zeile (`whoMark` entscheidet das selbst). Ein
+   * Zeichen, das immer da ist, sagt nichts. */
+  const mark = whoMark(who);
+  // Inset-Grouped-Zeile (Apple-Systemapp-Muster): das Markensiegel traegt
+  // die Modulzugehoerigkeit (Herkunfts-Regel, Block 2), der Inhalt steht als
+  // Titel in Textfarbe, das Modul-Label lebt als ruhiger Untertitel weiter
+  // (nie versal, nie ueber dem Titel), der Zaehler als trailing Badge.
   return `
     <button type="button" class="today-cockpit-card today-cockpit-card--${tone}" data-route="${route}">
-      <span class="today-cockpit-card__icon"><i data-lucide="${icon}" aria-hidden="true"></i></span>
+      <span class="${mark ? 'seal-pair' : ''}"><span class="module-seal today-cockpit-card__icon"><i data-lucide="${icon}" aria-hidden="true"></i></span>${mark}</span>
       <span class="today-cockpit-card__body">
         <strong class="today-cockpit-card__value">${esc(value)}</strong>
         <span class="today-cockpit-card__sub">${esc(label)}</span>
@@ -1189,8 +1264,8 @@ function renderTodayCockpit(data, cfg = []) {
   const showCard = (module) => !window.yuvomi?.isModuleDisabled(module) && !widgetShown(module) && hasContent[module];
 
   const cards = [
-    showCard('tasks')    ? renderTodayCard('check-square', t('dashboard.todayTask'),     taskTitle, '/tasks', 'task', highlights.taskCount) : '',
-    showCard('calendar') ? renderTodayCard('calendar',     t('dashboard.todayEvent'),    eventTitle, calendarEventRoute(highlights.nextEvent), 'event', highlights.eventCount) : '',
+    showCard('tasks')    ? renderTodayCard('check-square', t('dashboard.todayTask'),     taskTitle, '/tasks', 'task', highlights.taskCount, highlights.urgentTask?.assigned_users?.[0]) : '',
+    showCard('calendar') ? renderTodayCard('calendar',     t('dashboard.todayEvent'),    eventTitle, calendarEventRoute(highlights.nextEvent), 'event', highlights.eventCount, highlights.nextEvent?.assigned_users?.[0]) : '',
     showCard('shopping') ? renderTodayCard('shopping-cart', t('dashboard.todayShopping'), t('dashboard.todayShoppingCount', { count: highlights.openShoppingCount }), '/shopping', 'shopping') : '',
     showCard('meals')    ? renderTodayCard(mealIcon,        mealLabel,   mealTitle, '/meals', 'dinner') : '',
   ].filter(Boolean);
@@ -1374,9 +1449,9 @@ function renderDashboardLayout(cfg, data, weather, currency, { editing = false, 
   // Alle Widgets ausgeblendet: kein toter Screen, sondern ein Hinweis zurück
   // in die Anpassung (das Cockpit oben bleibt als Orientierung erhalten).
   const gridInner = tiles || `
-    <div class="dashboard-empty-grid">
+    <div class="empty-state empty-state--compact">
       <i data-lucide="layout-dashboard" class="empty-state__icon" aria-hidden="true"></i>
-      <p>${t('dashboard.allWidgetsHidden')}</p>
+      <p class="empty-state__description">${t('dashboard.allWidgetsHidden')}</p>
     </div>
   `;
   // Beim Bearbeiten und bei bewusst umsortierten Layouts die Quellordnung bewahren
@@ -1783,7 +1858,16 @@ function wireLinks(container, rerender, { editing = false } = {}) {
     if (editing && el.closest('.widget-wrapper--editing')) return;
     const go = () => window.yuvomi.navigate(el.dataset.route);
     if (el.tagName === 'A') {
-      el.addEventListener('click', (e) => { e.preventDefault(); go(); });
+      el.addEventListener('click', (e) => {
+        // DER BROWSER BEHÄLT SEINEN KLICK. Ein bedingungsloses
+        // `preventDefault()` nimmt dem `<a href>` genau das wieder weg, wofür
+        // der Widget-Kopf von `<button>` auf Link umgestellt wurde: Cmd- und
+        // Mittelklick öffnen einen neuen Tab, Shift ein Fenster. Ohne diese
+        // Zeile wäre der href ein Versprechen, das der Handler bricht.
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+        e.preventDefault();
+        go();
+      });
     } else {
       el.addEventListener('click', go);
       el.addEventListener('keydown', (e) => {

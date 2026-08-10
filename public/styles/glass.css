@@ -635,17 +635,42 @@ html.navigating .app-content *::after {
  * teilen jetzt dieselbe opake Kartenfläche; der @supports-Rahmen ist
  * entfallen, weil hier nichts mehr an backdrop-filter hängt.
  * ================================================================ */
-.dashboard .note-item,
 .notes-page .note-item {
   background-color: var(--color-surface-work);
   border: 1px solid var(--color-border-subtle);
   box-shadow: var(--shadow-sm);
 }
 
-.dashboard .note-item:hover,
 .notes-page .note-item:hover {
   background-color: var(--color-surface-raised);
   box-shadow: var(--shadow-md);
+}
+
+/* AUF DEM DASHBOARD IST DIE NOTIZ EIN INSET-WELL, keine zweite Karte
+ * (Critique 2026-08-10, P2 „Karte pro Zeile").
+ *
+ * Beide Zweige teilten dieselbe Kartenflaeche, und das war fuer den einen
+ * richtig und fuer den anderen falsch: auf `/notes` liegt das Kaertchen auf dem
+ * Seitengrund, im Widget liegt es IN einer Karte. Gemessen im Dark Mode:
+ * `--color-surface-work` ergab dort #1C1C1E auf #1C1C1E, also 1,00:1 - eine
+ * Karte, die sich von ihrem Traeger ueberhaupt nicht abhob und ihre Kontur
+ * allein aus einer 1px-Kante und einem Schatten bezog. Der Browser-Detektor
+ * markierte genau diese drei Elemente als `nested-cards`.
+ *
+ * Die Kasten-in-Kasten-Regel hat dafuer eine Antwort, und es ist nicht „andere
+ * Kartenfarbe": ein Kasten IN einem Kasten ist eine Vertiefung, kein
+ * Aufgesetztes. `--color-fill-well` liegt in beiden Themes unter der
+ * Kartenflaeche, braucht deshalb weder Kante noch Schatten und trennt ohne
+ * einen einzigen zusaetzlichen Kanal. */
+.dashboard .note-item {
+  background-color: var(--color-fill-well);
+  border: none;
+  box-shadow: none;
+}
+
+.dashboard .note-item:hover {
+  background-color: var(--color-surface-3);
+  box-shadow: none;
 }
 
 /* ================================================================

@@ -24,8 +24,15 @@
  * verschoben. Wer die Karte in einem anderen Modul einsetzt, setzt seinen
  * eigenen Container und wiederholt die Stufe.
  *
- * Abgrenzung: `.health-metric-card` ist ein anderes Bauteil - eine anklickbare
- * Kachel, die eine Metrik AUSWÄHLT, nicht eine, die eine Zahl anzeigt.
+ * SEIT BLOCK 2 AUCH DIE WÄHLBARE KACHEL: `.health-metric-card` stand hier als
+ * „anderes Bauteil" abgegrenzt - eine anklickbare Kachel, die eine Metrik
+ * AUSWÄHLT. Der Brief (block2-brief.md) beantwortet das anders: die Signatur
+ * ist dieselbe (beschrifteter Zahlenblock: Zahl + Label + optionaler Trend),
+ * und ob die Karte zusätzlich wählt, ist eine VARIANTE (--select), keine
+ * zweite Bauart. Vier Familien (.metric-card, .health-metric-card,
+ * .housekeeping-metric, .dashboard-metric) hießen viermal neu lernen, wo die
+ * Zahl steht - jetzt gibt es eine, und der Signatur-Guard in
+ * test-frontend-audit.js hält Nachbauten fern.
  */
 
 /* --------------------------------------------------------
@@ -200,7 +207,7 @@
 }
 
 .metric-card__label,
-.metric-card__amount,
+.metric-card__value,
 .metric-card__trend,
 .metric-card__note,
 .metric-card__progress {
@@ -218,7 +225,7 @@
   overflow-wrap: break-word;
 }
 
-.metric-card__amount {
+.metric-card__value {
   font-size: var(--text-xl);
   font-weight: var(--font-weight-bold);
   font-variant-numeric: tabular-nums;
@@ -267,18 +274,18 @@
 
 /* Tonwerte aus utils/money.js: der Formatierer entscheidet Vorzeichen und Farbe
  * gemeinsam und liefert die passende Modifier-Klasse gleich mit. */
-.metric-card--positive .metric-card__amount { color: var(--color-success); }
-.metric-card--negative .metric-card__amount { color: var(--color-danger); }
-.metric-card--neutral  .metric-card__amount { color: var(--color-text-primary); }
+.metric-card--positive .metric-card__value { color: var(--color-success); }
+.metric-card--negative .metric-card__value { color: var(--color-danger); }
+.metric-card--neutral  .metric-card__value { color: var(--color-text-primary); }
 
-.metric-card--income   .metric-card__amount { color: var(--color-success); }
-.metric-card--expenses .metric-card__amount { color: var(--color-danger);  }
-.metric-card--balance  .metric-card__amount { color: var(--color-text-primary); }
-.metric-card--balance-positive .metric-card__amount { color: var(--color-success); }
-.metric-card--balance-negative .metric-card__amount { color: var(--color-danger);  }
+.metric-card--income   .metric-card__value { color: var(--color-success); }
+.metric-card--expenses .metric-card__value { color: var(--color-danger);  }
+.metric-card--balance  .metric-card__value { color: var(--color-text-primary); }
+.metric-card--balance-positive .metric-card__value { color: var(--color-success); }
+.metric-card--balance-negative .metric-card__value { color: var(--color-danger);  }
 /* Reines Ausgaben-Tracking (keine Einnahmen im Monat): Saldo = -Ausgaben ist eine
    Tautologie, die rote Zahl wird als „im Minus" fehlgelesen (#504). Neutral statt rot. */
-.metric-card--balance-neutral  .metric-card__amount { color: var(--color-text-primary); }
+.metric-card--balance-neutral  .metric-card__value { color: var(--color-text-primary); }
 
 .metric-card__trend {
   font-size: var(--text-xs);
@@ -293,3 +300,132 @@
 .metric-card__trend--positive { color: var(--color-success); }
 .metric-card__trend--negative { color: var(--color-danger);  }
 .metric-card__trend--neutral  { color: var(--color-text-secondary); }
+
+/* --------------------------------------------------------
+ * Kopfzeile, Wert-Zeile und Meta-Zeile der Karte
+ *
+ * Eingewandert aus .health-metric-card (Block 2): eine Karte darf ein Icon
+ * neben dem Label, eine Einheit neben dem Wert, eine Mini-Trendlinie und eine
+ * Meta-Zeile (Trend + Datum) tragen - alles optional, die Signatur bleibt
+ * Zahl + Label + optionaler Trend.
+ * -------------------------------------------------------- */
+/* Flex mit Umbruch: passt das Label nicht mehr NEBEN das Icon, wrappt es als
+ * ganzes Flex-Item auf eine eigene, volle Kartenzeile - erst dort darf der
+ * break-word-Backstop überhaupt greifen. (Ein Float-Ansatz scheitert:
+ * break-word füllt sonst die neben dem Icon verkürzte Zeile und chopt
+ * „Sauerstoffsättigu|ng" wortmittig. Deshalb auch hyphens: manual - mit auto
+ * ist die min-content-Breite des Labels eine SILBE, das Item unterschreitet
+ * nie seine Mindestbreite und wrappt nie; es trennt stattdessen.) */
+/* EIN ZEICHEN BLEIBT BEI SEINEM WORT. `flex-wrap: wrap` liess das Icon allein
+ * auf einer ersten Zeile stehen, sobald sein Label die Spalte nicht in einer
+ * Zeile fuellte - gemessen in der Aktivitaets-Reihe der Gesundheit
+ * („Gesamt-Distanz" bei 375px). Das Label bricht dann in SICH um, statt sich
+ * vom Icon zu trennen; die Klasse traegt dafuer bereits `min-width: 0` und
+ * `overflow-wrap: break-word`. */
+.metric-card__head {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-secondary);
+  min-width: 0;
+}
+
+.metric-card__head .metric-card__label {
+  flex: 1 1 auto;
+  hyphens: manual;
+}
+
+.metric-card__icon {
+  flex-shrink: 0;
+  width: var(--icon-md);
+  height: var(--icon-md);
+  color: var(--module-accent, var(--color-accent));
+}
+
+/* Wert und Einheit stehen auf einer gemeinsamen Grundlinie. Sie dürfen
+ * gemeinsam umbrechen (lange Dauern wie „7 Std. 30 Min."), aber nie mitten im
+ * Wort - deshalb wrap statt Ellipse. */
+.metric-card__body {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.metric-card__unit {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.metric-card__value--empty {
+  color: var(--color-text-tertiary, var(--color-text-secondary));
+}
+
+/* Mini-Trendlinie: gibt einer Metrik-Karte Sub-Domänen-Charakter.
+ * preserveAspectRatio="none" streckt auf Kartenbreite; vector-effect hält die
+ * Strichstärke konstant. */
+.metric-card__spark {
+  width: 100%;
+  height: 22px;
+  display: block;
+  opacity: 0.9;
+  overflow: visible;
+}
+
+.metric-card__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+/* --------------------------------------------------------
+ * Variante --select: die Karte wählt zusätzlich aus
+ *
+ * Ein <button>, der eine Metrik AUSWÄHLT (Vitalwerte) oder zu ihr NAVIGIERT
+ * (Gesundheits-Übersicht). Auswahl und Hover sprechen über einen Innenring,
+ * damit sich das Layout nicht verschiebt. Die Trend-Farbe bleibt in dieser
+ * Variante Sekundärtext (betterWhen = null in utils/metric-card.js): „hoch"
+ * ist je nach Metrik gut ODER schlecht (Gewichtsabnahme, SpO₂), die Richtung
+ * trägt allein der Pfeil.
+ * -------------------------------------------------------- */
+.metric-card--select {
+  font: inherit;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition: box-shadow var(--transition-fast);
+}
+
+.metric-card--select:hover {
+  box-shadow: inset 0 0 0 1px var(--module-accent, var(--color-accent));
+}
+
+.metric-card--select.is-active {
+  box-shadow: inset 0 0 0 2px var(--module-accent, var(--color-accent));
+}
+
+.metric-card--select:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .metric-card--select { transition: none; }
+}
+
+/* --------------------------------------------------------
+ * Variante --inset: die Karte als Kachel IN einer Karte
+ *
+ * Kasten-in-Kasten-Vokabular (tokens.css): auf dem Grouped-Grund ist die
+ * Kennzahlkarte eine randlose Karte, INNERHALB einer Karte wird sie zum
+ * Inset-Well - ein Schatten in der Karte wäre eine Karte in der Karte.
+ * (Muster vorher: .health-overview__card .health-metric-card.)
+ * -------------------------------------------------------- */
+.metric-card--inset {
+  background-color: var(--color-fill-well);
+  box-shadow: none;
+}

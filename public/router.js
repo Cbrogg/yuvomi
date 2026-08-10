@@ -9,7 +9,9 @@ import { canAccessNavModule, navModuleAccess } from '/permissions.js';
 import { clearApiCache } from '/sw-register.js';
 import { initI18n, getLocale, t, formatDate, formatTime } from '/i18n.js';
 import { esc } from '/utils/html.js';
+import { emptyHintEl } from '/utils/empty-state.js';
 import { wireScrollFade, wireCollapsingHeader } from '/utils/ux.js';
+import { TOAST_SURFACES, toastSurface } from '/utils/toast-surface.js';
 import { init as initReminders, stop as stopReminders } from '/reminders.js';
 import { initPush, stopPush } from '/push.js';
 import { numberLocaleFor } from '/settings/region-presets.js';
@@ -1387,7 +1389,26 @@ function renderAppShell(container) {
   // Kein role="list": die Kinder sind Sektions-Gruppen (role="group") + das
   // gepinnte Settings-Item, keine listitems. Die <nav>-Hülle trägt die
   // Navigations-Semantik, die Gruppen die Sektions-Struktur.
-  sidebarNavItems().forEach((item) => sidebarItems.appendChild(item));
+  // DER GEPINNTE EINTRAG STEHT AUSSERHALB DES SCROLLERS (Critique 2026-08-10).
+  //
+  // Die Absicht gab es schon: `nav-item--pinned-end` plus `margin-top: auto`.
+  // Nur braucht ein Auto-Rand FREIEN RAUM - er wirkt also genau dann nicht,
+  // wenn er gebraucht wird. Gemessen auf 1280x720: scrollHeight 666 in
+  // clientHeight 448, und die Einstellungen lagen 218px unter der Falz,
+  // zusammen mit dem Budget - beides Module, die PRODUCT.md ausdruecklich als
+  // Desktop-Sitzung nennt. Eine Regel, die nur im unkritischen Fall greift, ist
+  // dieselbe stille Zusicherung wie eine Fade-Maske, die zeigt, dass es
+  // weitergeht, ohne dass man hinkaeme.
+  //
+  // Als Geschwister der Liste sitzt er immer am Fuss, ohne Auto-Rand: die
+  // Sidebar ist eine Flex-Spalte, und was nicht im Scroller liegt, scrollt
+  // nicht weg. Strukturell ist das ohnehin der richtige Ort - die Einstellungen
+  // sind Systemebene, kein Modul unter Modulen.
+  const pinnedSidebarItems = [];
+  sidebarNavItems().forEach((item) => {
+    if (item.classList?.contains('nav-item--pinned-end')) pinnedSidebarItems.push(item);
+    else sidebarItems.appendChild(item);
+  });
 
   // Scroll-Affordanz (Audit F-01): weiche Fade-Anrisse oben/unten, sobald die
   // Liste überläuft — der Scrollbalken ist bewusst versteckt, ohne Anriss waren
@@ -1458,6 +1479,11 @@ function renderAppShell(container) {
   sidebar.appendChild(sidebarSearch);
 
   sidebar.appendChild(sidebarItems);
+
+  // Der gepinnte Eintrag steht zwischen Liste und Fuss-Aktionen: er IST eine
+  // Route (data-route, Aktiv-Pille) und gehoert damit nicht zu den Aktionen
+  // darunter, aber auch nicht mehr in den Scroller darueber.
+  pinnedSidebarItems.forEach((el) => sidebar.appendChild(el));
 
   // Footer-Aktionen (keine Routen → kein data-route, damit Delegation/Indikator
   // sie ignorieren): Hilfe und Live-Changelog.
@@ -1616,14 +1642,16 @@ function renderAppShell(container) {
   searchPanel.appendChild(searchClose);
   searchOverlay.appendChild(searchPanel);
 
+  // Die Namen kommen aus utils/toast-surface.js - derselbe Ort, an dem sie
+  // gesucht werden. Die Begründung steht dort.
   const toastContainerPolite = document.createElement('div');
   toastContainerPolite.className = 'toast-container';
-  toastContainerPolite.id = 'toast-container-polite';
+  toastContainerPolite.id = TOAST_SURFACES.polite;
   toastContainerPolite.setAttribute('aria-live', 'polite');
 
   const toastContainerAssertive = document.createElement('div');
   toastContainerAssertive.className = 'toast-container';
-  toastContainerAssertive.id = 'toast-container-assertive';
+  toastContainerAssertive.id = TOAST_SURFACES.assertive;
   toastContainerAssertive.setAttribute('aria-live', 'assertive');
 
   const routeAnnouncer = document.createElement('div');
@@ -1758,8 +1786,28 @@ let _toolbarObserverRoot = null;
  */
 const _toolbarHandles = new WeakMap();
 
+/**
+ * Icon-Fabrik für das Absender-Siegel eines Modulkopfes.
+ *
+ * ABGELEITET, NICHT ZWEITGESCHRIEBEN: welches Zeichen ein Modul führt, steht
+ * bereits in `navItems()` - ein zweiter Katalog Modul→Icon wäre die Sorte
+ * Dublette, die beim achtzehnten Modul auseinanderläuft. Die Farbe braucht gar
+ * keine Angabe: das Modul-Stylesheet setzt `--module-accent` auf seinem Root,
+ * der Kopf liegt darin, das Siegel erbt.
+ *
+ * DRITTANBIETER-MODULE BEKOMMEN KEINES, und das ist kein Loch: das Siegel ist
+ * Yuvomis eigene Ausweisform. Ein fremdes Modul ist kein Raum dieser Familie,
+ * und sein Icon liegt ausserhalb von NAV_ICONS.
+ */
+function headSealIcon(mod) {
+  if (!mod) return null;
+  const name = navItems().find((item) => item.module === mod)?.icon;
+  const factory = name ? NAV_ICONS[name] : null;
+  return factory ? () => factory() : null;
+}
+
 function wireToolbar(el) {
-  const handle = wireCollapsingHeader(el);
+  const handle = wireCollapsingHeader(el, { sealIcon: headSealIcon(currentRoute()?.module) });
   // Der erste Handle gewinnt: `wireCollapsingHeader` ist idempotent und liefert
   // beim zweiten Anlauf ein wirkungsloses Paar zurueck. Wer das eintraegt,
   // ueberschreibt genau das `destroy()`, um das es hier geht.
@@ -2319,10 +2367,7 @@ function initSearch(container) {
     results.replaceChildren();
     results.removeAttribute('aria-busy');
     setStatus('');
-    const hint = document.createElement('p');
-    hint.className = 'search-overlay__empty';
-    hint.textContent = t('search.emptyHint');
-    results.appendChild(hint);
+    results.appendChild(emptyHintEl(t('search.emptyHint')));
 
     const scopes = document.createElement('div');
     scopes.className = 'search-scopes';
@@ -2336,13 +2381,18 @@ function initSearch(container) {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'search-scope';
+      // Markensiegel (Herkunfts-Regel, Block 2): die Kachel benennt ihr
+      // Zielmodul ueber Familienton + Icon; der Slug ist die Route selbst.
+      const seal = document.createElement('span');
+      seal.className = 'module-seal module-seal--sm search-scope__seal';
+      seal.setAttribute('aria-hidden', 'true');
+      seal.style.setProperty('--seal-accent', moduleAccentVar(scope.route.slice(1)));
       const icon = document.createElement('i');
       icon.dataset.lucide = scope.icon;
-      icon.className = 'search-scope__icon';
-      icon.setAttribute('aria-hidden', 'true');
+      seal.appendChild(icon);
       const label = document.createElement('span');
       label.textContent = t(scope.labelKey);
-      btn.append(icon, label);
+      btn.append(seal, label);
       btn.addEventListener('click', () => {
         closeSearch();
         navigate(scope.route);
@@ -2442,10 +2492,7 @@ function initSearch(container) {
         // visuell (kein role=status), sonst läse der Screenreader ihn doppelt.
         results.replaceChildren();
         results.setAttribute('aria-busy', 'false');
-        const err = document.createElement('p');
-        err.className = 'search-overlay__empty';
-        err.textContent = t('search.error');
-        results.appendChild(err);
+        results.appendChild(emptyHintEl(t('search.error')));
         setStatus(t('search.error'));
       }
     }, 300);
@@ -2464,10 +2511,7 @@ function renderSearchResults(container, data, onClose) {
     + meds.length + activities.length;
 
   if (total === 0) {
-    const empty = document.createElement('p');
-    empty.className = 'search-overlay__empty';
-    empty.textContent = t('search.noResults');
-    container.appendChild(empty);
+    container.appendChild(emptyHintEl(t('search.noResults')));
     return 0;
   }
 
@@ -2477,14 +2521,31 @@ function renderSearchResults(container, data, onClose) {
     return preset ? t(preset.labelKey) : item.title;
   };
 
-  function makeSection(labelKey, items, routeFn, labelFn, metaFn) {
+  // Die Suche ist DIE Mischstelle der App (Herkunfts-Regel, Block 2): jede
+  // Sektion traegt das Markensiegel ihres Herkunftsmoduls im Kopf; innerhalb
+  // der Sektion ist die Herkunft damit selbstverstaendlich, die Zeilen
+  // bleiben siegelfrei. Die Zeilen selbst liegen in GENAU EINEM Traeger
+  // (Zeilenlisten-Regel) statt als Karte pro Treffer.
+  function makeSection(labelKey, seal, items, routeFn, labelFn, metaFn) {
     if (!items.length) return;
     const section = document.createElement('div');
     section.className = 'search-section';
     const heading = document.createElement('h3');
     heading.className = 'search-section__heading';
-    heading.textContent = t(labelKey);
+    if (seal) {
+      const sealEl = document.createElement('span');
+      sealEl.className = 'module-seal module-seal--sm';
+      sealEl.setAttribute('aria-hidden', 'true');
+      sealEl.style.setProperty('--seal-accent', moduleAccentVar(seal.module));
+      const icon = document.createElement('i');
+      icon.dataset.lucide = seal.icon;
+      sealEl.appendChild(icon);
+      heading.appendChild(sealEl);
+    }
+    heading.appendChild(document.createTextNode(t(labelKey)));
     section.appendChild(heading);
+    const rows = document.createElement('div');
+    rows.className = 'search-section__rows';
     items.forEach((item) => {
       const btn = document.createElement('button');
       btn.className = 'search-result';
@@ -2505,22 +2566,27 @@ function renderSearchResults(container, data, onClose) {
         onClose();
         navigate(routeFn(item));
       });
-      section.appendChild(btn);
+      rows.appendChild(btn);
     });
+    section.appendChild(rows);
     container.appendChild(section);
   }
 
-  makeSection('nav.tasks',    tasks,    (i) => `/tasks?open=${i.id}`, null,
+  makeSection('nav.tasks',    { module: 'tasks',    icon: 'check-square' },  tasks,    (i) => `/tasks?open=${i.id}`, null,
     (i) => (i.due_date ? formatDate(i.due_date) : ''));
-  makeSection('nav.calendar', events,   (i) => `/calendar?open=${i.id}`, null,
+  makeSection('nav.calendar', { module: 'calendar', icon: 'calendar' },      events,   (i) => `/calendar?open=${i.id}`, null,
     (i) => (i.start_datetime ? `${formatDate(i.start_datetime)}${i.all_day ? '' : ` · ${formatTime(i.start_datetime)}`}` : ''));
-  makeSection('nav.notes',    notes,    (i) => `/notes?open=${i.id}`);
-  makeSection('nav.contacts', contacts, (i) => `/contacts?open=${i.id}`);
-  makeSection('nav.shopping', items,    (i) => `/shopping?list=${i.list_id}&highlight=${i.id}`);
-  makeSection('health.tabs.meds',     meds,       () => '/health/meds', null,
+  makeSection('nav.notes',    { module: 'notes',    icon: 'sticky-note' },   notes,    (i) => `/notes?open=${i.id}`);
+  makeSection('nav.contacts', { module: 'contacts', icon: 'book-user' },     contacts, (i) => `/contacts?open=${i.id}`);
+  makeSection('nav.shopping', { module: 'shopping', icon: 'shopping-cart' }, items,    (i) => `/shopping?list=${i.list_id}&highlight=${i.id}`);
+  makeSection('health.tabs.meds',     { module: 'health', icon: 'heart-pulse' }, meds,       () => '/health/meds', null,
     (i) => i.dosage_text || '');
-  makeSection('health.tabs.activity', activities, () => '/health/activity', activityLabel,
+  makeSection('health.tabs.activity', { module: 'health', icon: 'heart-pulse' }, activities, () => '/health/activity', activityLabel,
     (i) => (i.performed_at ? formatDate(i.performed_at) : ''));
+
+  // Die Siegel-Icons kommen als data-lucide-Platzhalter; der Treffer-Pfad
+  // rendert sie selbst (der Leerzustands-Pfad tut es bereits genauso).
+  window.lucide?.createIcons({ el: container });
 
   return total;
 }
@@ -2703,7 +2769,8 @@ function sidebarNavItems() {
 
   navItems().forEach((item) => {
     // Settings ist gepinnt und gehört zu keiner sichtbaren Sektionsgruppe —
-    // es bleibt direktes Kind von .nav-sidebar__items (margin-top:auto-Pin).
+    // der Aufrufer hebt es aus der Liste heraus und hängt es als Geschwister
+    // an die Sidebar-Spalte (siehe dort, und layout.css zum entfallenen Rand).
     if (item.module !== 'settings') startSection(item.section);
 
     if (item.kitchenGroup) {
@@ -2715,8 +2782,9 @@ function sidebarNavItems() {
     }
     const el = navItemEl(item);
     if (item.module === 'settings') {
-      // Ans Sidebar-Ende pinnen — als direktes Kind (nicht in einer Gruppe),
-      // über eine explizite Klasse statt ":last-child a".
+      // Ans Sidebar-Ende pinnen — über eine explizite Klasse statt
+      // ":last-child a". Der Aufrufer erkennt sie und hängt den Eintrag
+      // ausserhalb des Scrollers ein.
       el.classList.add('nav-item--pinned-end');
       elements.push(el);
       return;
@@ -3063,7 +3131,9 @@ function moreItemEl({ path, navHref, label, icon, module: mod, accent, navId }) 
   if (accent) a.style.setProperty('--item-module-accent', accent);
   else if (mod) a.style.setProperty('--item-module-accent', moduleAccentVar(mod));
   const well = document.createElement('div');
-  well.className = 'more-item__icon-well';
+  // Markensiegel (Block 2): das Well nimmt Form und Material vom Baustein,
+  // die Grid-Groesse und die Akzent-Weiterleitung stehen in layout.css.
+  well.className = 'module-seal more-item__icon-well';
   const iconFactory = NAV_ICONS[icon];
   if (iconFactory) {
     const svg = iconFactory();
@@ -3292,10 +3362,7 @@ const TOAST_ICONS = {
 };
 
 function showToast(message, type = 'default', duration = 3000, onUndo = null) {
-  const containerId = (type === 'danger' || type === 'warning')
-    ? 'toast-container-assertive'
-    : 'toast-container-polite';
-  const container = document.getElementById(containerId);
+  const container = toastSurface((type === 'danger' || type === 'warning') ? 'assertive' : 'polite');
   if (!container) return;
 
   // Aktions-Button: Legacy-Undo (Funktion) oder benannte Aktion ({ label, onClick }).

@@ -10,6 +10,7 @@ import { createNotificationChannelStore } from './notification-channels.js';
 import { gotifyProvider } from './notification-providers/gotify.js';
 import { ntfyProvider } from './notification-providers/ntfy.js';
 import { syncAllBirthdayReminders } from './birthdays.js';
+import { resolveHouseholdLocale, translate } from '../utils/i18n.js';
 
 const log = createLogger('Notifications');
 const APP_NAME = 'Yuvomi';
@@ -49,14 +50,61 @@ function subscriptionBody(reminder) {
   return parts.join(' - ');
 }
 
-function reminderPayload(reminder) {
+/**
+ * DER TITEL EINER MELDUNG NENNT IHRE HERKUNFT.
+ *
+ * Die Herkunfts-Regel (Block 2) gibt jeder Meldung ihr Siegel - eine
+ * Systembenachrichtigung kann keines tragen: sie hat kein DOM, ihr `icon` zeigt
+ * nur ein Teil der Plattformen, und ihr `badge` wird auf Android monochrom
+ * maskiert, wodurch der Familienton ohnehin verloren ginge. Was auf JEDER
+ * Plattform ankommt, ist der Titel, und der stand bisher app-weit auf „Yuvomi" -
+ * also auf dem, was das System darueber ohnehin schon anzeigt. „Kalender" ueber
+ * „Zahnarzttermin" beantwortet dieselbe Frage wie das Siegel im Toast.
+ *
+ * UEBERSETZT UEBER DIE DATENSPRACHE DES HAUSHALTS, nicht ueber die des
+ * Empfaengers: die kennt der Server nicht (Locale liegt im localStorage). Das
+ * ist dieselbe Sprache, in der er schon Geburtstagstermine ablegt, und dieselbe
+ * Quelle - public/locales/*.json ueber utils/i18n.js. Die Keys sind bestehende
+ * Modulnamen; eine Meldung braucht dafuer kein eigenes Vokabular.
+ */
+/*
+ * UND DIESELBE HERKUNFT SETZT DAS ZIEL (Critique 2026-08-10).
+ *
+ * Der Titel nannte das Modul, und der Tipp darauf landete trotzdem im
+ * Dashboard: `url` stand fest auf `/reminders`, und diese Route gibt es in
+ * `ROUTES` nicht - der Router fiel still auf `/` zurueck, Dokumenttitel
+ * „Yuvomi · Yuvomi". Der Befund war schon vorher einer und ist seit der
+ * Titel-Herkunft doppelt so teuer: die Meldung sagt jetzt, wo sie herkommt,
+ * und schickt den Nutzer trotzdem woandershin.
+ *
+ * Die Zuordnung stand die ganze Zeit hier - sie wurde nur nicht gefragt. Ein
+ * Eintrag traegt beides, Titel und Ziel, damit die zweite Antwort nicht von
+ * der ersten wegdriften kann. Push ist der zeitkritischste Pfad der App: wer
+ * eine Erinnerung antippt, will an das Ding, nicht an eine Uebersicht.
+ *
+ * Abonnements zeigen auf `/budget` und nicht auf ihren Tab darin - einen
+ * Deep-Link auf `budget.activeTab` gibt es nicht (geprueft). Das Modul ist die
+ * genaueste Antwort, die das Ziel heute geben kann, und immer noch eine.
+ */
+const REMINDER_ORIGINS = {
+  task:         { titleKey: 'nav.tasks',                url: '/tasks' },
+  event:        { titleKey: 'nav.calendar',             url: '/calendar' },
+  subscription: { titleKey: 'subscriptions.tabLabel',   url: '/budget' },
+};
+
+function reminderPayload(reminder, locale) {
   const title = reminder.entity_title || FALLBACK_BODY;
+  const origin = REMINDER_ORIGINS[reminder.entity_type];
   return {
-    title: APP_NAME,
+    // Ohne bekannte Herkunft bleibt der App-Name: er ist nichtssagend, aber nie
+    // falsch - und ein roher `entity_type` im Titel waere beides. Das Ziel
+    // faellt aus demselben Grund auf die Uebersicht: sie ist die einzige Seite,
+    // die es mit Sicherheit gibt.
+    title: origin ? translate(locale, origin.titleKey) : APP_NAME,
     body: reminder.entity_type === 'subscription' && reminder.entity_title
       ? subscriptionBody(reminder)
       : title,
-    url: '/reminders',
+    url: origin ? origin.url : '/',
     tag: `reminder-${reminder.id}`,
     priority: 'default',
   };
@@ -210,9 +258,11 @@ export async function processDueNotifications({
 
   const counters = { due: due.length, attempted: 0, sent: 0, failed: 0, skipped: 0 };
   const markPushed = activeDb.prepare('UPDATE reminders SET pushed_at = ? WHERE id = ?');
+  // Einmal je Lauf, nicht je Meldung: die Datensprache gehoert dem Haushalt.
+  const locale = resolveHouseholdLocale(activeDb);
 
   for (const reminder of due) {
-    const payload = reminderPayload(reminder);
+    const payload = reminderPayload(reminder, locale);
     const channels = store.listEnabledChannelsForUser(reminder.created_by);
     const pushCount = activeDb.prepare('SELECT COUNT(*) AS c FROM push_subscriptions WHERE user_id = ?').get(reminder.created_by).c;
     const targets = [];

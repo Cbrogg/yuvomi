@@ -770,6 +770,34 @@
     border-inline-start: none;
   }
 
+  /* KOMPAKTE HÖHE: der Umbruch von oben wird zurückgenommen. Er ist eine
+   * Antwort auf fehlende BREITE - unter 1024px passen Chips, Sortierung und
+   * Auswahl nicht in eine Zeile. Fehlt dagegen die HÖHE, kostet genau dieser
+   * Umbruch das Bild: gemessen auf 640x400 waren Kopf (69) und Filterzeile
+   * (121) zusammen 190px von 323px Sichtfläche, also mehr Chrome als Inhalt
+   * (Chrome-Regel, DESIGN.md). In einer Zeile scrollt die Filterzeile
+   * stattdessen seitlich, so wie sie es in der Küche schon tut. */
+  @media (max-height: 499px) {
+    .documents-filters {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .documents-filters::-webkit-scrollbar {
+      display: none;
+    }
+
+    .documents-filters > * {
+      flex-shrink: 0;
+    }
+
+    .documents-filter-chips {
+      order: 0;
+      flex-basis: auto;
+    }
+  }
+
   .documents-selectbar__actions {
     margin-inline-start: 0;
     width: 100%;

@@ -195,10 +195,22 @@ export function wireScrollFade(el, { axis = 'x' } = {}) {
  * Font-Nachladen) und einen MutationObserver (Modul rendert seinen Kopfinhalt
  * neu). `is-docked` trägt allein die Trennlinie und ändert keine Geometrie.
  *
+ * DAS ABSENDER-SIEGEL GEHÖRT AUS DEMSELBEN GRUND HIERHER wie der angedockte
+ * Titel: es ist Teil der Kopf-STRUKTUR, nicht des Modulinhalts. Die
+ * Herkunfts-Regel (Block 2) gibt jedem Kopf genau EIN Siegel als Absender -
+ * eine Zusage, die nur halten kann, wer das Siegel selbst anlegt. Setzte jedes
+ * Modul es in sein eigenes Markup, wäre „genau eines" eine Bitte an siebzehn
+ * Dateien; hier ist es eine Eigenschaft des Bauteils. Wo kein Seitentitel steht
+ * (die Gruppen-Variante der Küche), steht auch kein Absender: der Kopf benennt
+ * dort nichts, was einen Absender hätte.
+ *
  * @param {HTMLElement} toolbar - eine `.page-toolbar`
+ * @param {{ sealIcon?: () => SVGElement|null }} [opts] - `sealIcon` liefert das
+ *   Icon des Absender-Siegels (Fabrik aus NAV_ICONS). Ohne die Angabe bleibt
+ *   der Kopf siegellos.
  * @returns {{ update: () => void, destroy: () => void }|null}
  */
-export function wireCollapsingHeader(toolbar) {
+export function wireCollapsingHeader(toolbar, opts = {}) {
   const noop = { update: () => {}, destroy: () => {} };
   if (!toolbar) return null;
   // Idempotent: Router und Modul dürfen beide verdrahten wollen.
@@ -229,6 +241,44 @@ export function wireCollapsingHeader(toolbar) {
 
   let io = null;
   let lead = 0;
+  let dockTitle = null;
+  let headSeal = null;
+
+  // DAS ABSENDER-SIEGEL: genau eines, unmittelbar vor dem Seitentitel.
+  //
+  // Es hängt am TITEL, nicht am Kopf: wo kein Seitentitel steht, hat der Kopf
+  // keinen Absender zu führen. Das ist dieselbe Abgrenzung, die die
+  // Leisten-Regel zieht - trägt eine Leiste den Modulnamen (Küche), ist SIE die
+  // Kopf-Navigation, und der Kopf darunter benennt nur noch die offene Liste.
+  //
+  // Vor dem Titel und nicht dahinter, weil ein Absender vor dem steht, was er
+  // ausweist; in RTL dreht `flex-direction` die Zeile ohnehin mit.
+  const syncHeadSeal = () => {
+    const heading = toolbar.classList.contains('page-toolbar--in-group')
+      ? null
+      : toolbar.querySelector(':scope > .page-toolbar__title');
+    if (!opts.sealIcon || !heading) {
+      headSeal?.remove();
+      return;
+    }
+    if (!headSeal) {
+      const icon = opts.sealIcon();
+      if (!icon) return;
+      headSeal = document.createElement('span');
+      headSeal.className = 'module-seal module-seal--head';
+      // Dekor im strengen Sinn: den Modulnamen führt der Titel daneben, und
+      // die Navigation führt ihn ein zweites Mal. Ein Alternativtext hier wäre
+      // die dritte Ansage desselben Wortes.
+      headSeal.setAttribute('aria-hidden', 'true');
+      headSeal.appendChild(icon);
+    }
+    // NUR SCHREIBEN, WENN SICH ETWAS ÄNDERT - derselbe Grund wie beim
+    // angedockten Titel: der MutationObserver unten beobachtet diesen Teilbaum
+    // und ruft `update` erneut auf.
+    if (headSeal.parentElement !== toolbar || headSeal.nextElementSibling !== heading) {
+      toolbar.insertBefore(headSeal, heading);
+    }
+  };
 
   // Hysterese, damit der Kopf nicht um seine eigene Schwelle flattert.
   const onInnerScroll = (e) => {
@@ -252,6 +302,9 @@ export function wireCollapsingHeader(toolbar) {
     else if (top < 8) toolbar.classList.remove('is-collapsed', 'is-docked');
   };
   const update = () => {
+    // VOR der Messung: das Siegel steht in der Titelzeile und zählt zu ihr.
+    // Danach angehängt, hätte die Zeilenmessung eine Zeile ohne es gesehen.
+    syncHeadSeal();
     // Im kollabierten Zustand ist der Kopf einzeilig - eine Messung würde jetzt
     // lead 0 ergeben und dem CSS die Grundlage entziehen, die es zum Ausklappen
     // braucht. Der Wert der ausgeklappten Form bleibt stehen.
@@ -262,8 +315,14 @@ export function wireCollapsingHeader(toolbar) {
     // vergleicht nur `top` und hielt ihn deshalb für eine zweite Zeile. Bei
     // den Rezepten ergab das 24px Lead-Zone auf einem einzeiligen Kopf, und
     // damit ein `--stacked`, das seine Trennlinie dauerhaft verbarg.
+    // Der angedockte Titel ist von der Messung AUSGENOMMEN: er ist ihr
+    // Ergebnis, nicht ihr Gegenstand. Zählte er mit, würde die Zeilenordnung
+    // davon abhängen, ob der Kopf gerade angedockt ist - und die Schwelle, an
+    // der er andockt, hinge an ihm selbst.
     const rows = [...toolbar.children].filter(
-      (c) => (c.offsetParent !== null || c.getClientRects().length) && c.getBoundingClientRect().height > 0,
+      (c) => c !== dockTitle
+        && (c.offsetParent !== null || c.getClientRects().length)
+        && c.getBoundingClientRect().height > 0,
     );
     const tb = toolbar.getBoundingClientRect();
     const padTop = parseFloat(getComputedStyle(toolbar).paddingBlockStart) || 0;
@@ -306,6 +365,64 @@ export function wireCollapsingHeader(toolbar) {
     toolbar.style.setProperty('--page-toolbar-lead', `${lead}px`);
     toolbar.classList.toggle('page-toolbar--stacked', lead > 0);
     toolbar.classList.toggle('page-toolbar--capped', Boolean(capped) && lead > 0);
+
+    // DER ANGEDOCKTE TITEL - nur in der scrollenden Architektur.
+    //
+    // Dort wandert der Large Title aus dem Bild, statt einzuklappen: die Höhe
+    // des Kopfes darf sich nicht ändern (Begründung am negativen `top` oben),
+    // und ein schrumpfender Titel wäre genau das. Übrig blieb eine Leiste aus
+    // Icons, die nicht mehr beantwortet, wo man ist - der Zweck, für den ein
+    // kollabierender Titel überhaupt existiert. In der gedeckelten Architektur
+    // stellt sich die Frage nicht; dort klappt der echte Titel ein.
+    //
+    // Apples Antwort ist der zweite, kleine Titel IN der Leiste. Hier trägt ihn
+    // ein eigenes Element, weil das <h1> in der Lead-Zone bleiben muss: es wird
+    // nur angedockt sichtbar und macht mit `flex-basis: 0` (layout.css) nie
+    // eine eigene Zeile auf - die einmal gemessene Lead-Zone bleibt gültig.
+    // `aria-hidden`, denn das <h1> darüber ist und bleibt der Seitentitel; ein
+    // zweiter im Baum wäre eine Dublette.
+    // WIEVIEL PLATZ DIE BAR-ZEILE ÜBRIG LÄSST, entscheidet, ob er überhaupt
+    // hineinpasst. Vier von fünf Modulen lassen ihn stehen (auf 375px zwischen
+    // 94px und 343px), aber wo die letzte Zeile eine Tab-Leiste ist, füllt die
+    // sie ganz: der Titel begann dort eine SECHSTE Zeile, und mit ihr sprangen
+    // Kopfhöhe und Lead-Zone beim Andocken (Belohnungen 110→145px,
+    // Haushaltshilfe 122→157px). Das ist exakt die Oszillation, gegen die das
+    // negative `top` gewählt wurde - also lieber keinen Titel als einen, der
+    // den Kopf um seine eigene Schwelle pendeln lässt. Gemessen statt
+    // aufgezählt, damit die Regel auch beim sechsten Modul noch gilt.
+    const lastLine = lines.length ? lines[lines.length - 1] : null;
+    const tbCS = getComputedStyle(toolbar);
+    const innerWidth = toolbar.clientWidth
+      - (parseFloat(tbCS.paddingInlineStart) || 0)
+      - (parseFloat(tbCS.paddingInlineEnd) || 0);
+    const colGap = parseFloat(tbCS.columnGap) || 0;
+    const usedWidth = lastLine
+      ? lastLine.els.reduce((sum, el) => sum + el.getBoundingClientRect().width, 0)
+        + colGap * lastLine.els.length
+      : 0;
+    // Unter dieser Breite bliebe von jedem Modulnamen nur die Ellipse.
+    const roomForDockTitle = innerWidth - usedWidth >= 88;
+
+    const heading = toolbar.querySelector(':scope > .page-toolbar__title');
+    if (lead > 0 && !capped && heading && roomForDockTitle) {
+      if (!dockTitle) {
+        dockTitle = document.createElement('span');
+        dockTitle.className = 'page-toolbar__dock-title';
+        dockTitle.setAttribute('aria-hidden', 'true');
+      }
+      // NUR SCHREIBEN, WENN SICH ETWAS ÄNDERT: der MutationObserver unten
+      // beobachtet den Teilbaum und ruft `update` erneut auf. Ein
+      // bedingungsloses textContent tauscht den Textknoten jedes Mal aus und
+      // triggert sich damit selbst.
+      const text = heading.textContent.trim();
+      if (dockTitle.textContent !== text) dockTitle.textContent = text;
+      const anchor = toolbar.querySelector(':scope > .page-toolbar__actions');
+      if (dockTitle.parentElement !== toolbar || dockTitle.nextElementSibling !== anchor) {
+        toolbar.insertBefore(dockTitle, anchor);
+      }
+    } else if (dockTitle?.parentElement) {
+      dockTitle.remove();
+    }
 
     // Die Trennlinie erscheint, sobald die erste Zeile aus dem Scrollport
     // gewandert ist. Ohne Lead gibt es nichts zu beobachten - dann trägt die
@@ -352,6 +469,10 @@ export function wireCollapsingHeader(toolbar) {
       ro.disconnect();
       mo.disconnect();
       capped?.removeEventListener('scroll', onInnerScroll, { capture: true });
+      dockTitle?.remove();
+      dockTitle = null;
+      headSeal?.remove();
+      headSeal = null;
       delete toolbar.dataset.collapsingHeader;
       toolbar.style.removeProperty('--page-toolbar-lead');
       toolbar.classList.remove('page-toolbar--stacked', 'page-toolbar--capped', 'is-collapsed', 'is-docked');

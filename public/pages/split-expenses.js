@@ -252,15 +252,15 @@ function renderSummary() {
   setHtml(summary, `
     <div class="metric-card metric-card--positive">
       <div class="metric-card__label">${t('splitExpenses.youAreOwed')}</div>
-      <div class="metric-card__amount">${owed.length ? owed.map((r) => money(r.amount, r.currency)).join(' · ') : money(0, state.meta.default_currency)}</div>
+      <div class="metric-card__value">${owed.length ? owed.map((r) => money(r.amount, r.currency)).join(' · ') : money(0, state.meta.default_currency)}</div>
     </div>
     <div class="metric-card metric-card--negative">
       <div class="metric-card__label">${t('splitExpenses.youOwe')}</div>
-      <div class="metric-card__amount">${owing.length ? owing.map((r) => money(r.amount, r.currency)).join(' · ') : money(0, state.meta.default_currency)}</div>
+      <div class="metric-card__value">${owing.length ? owing.map((r) => money(r.amount, r.currency)).join(' · ') : money(0, state.meta.default_currency)}</div>
     </div>
     <div class="metric-card">
       <div class="metric-card__label">${isArchivedView() ? t('splitExpenses.statusArchived') : t('splitExpenses.activeGroups')}</div>
-      <div class="metric-card__amount">${state.groups.length}</div>
+      <div class="metric-card__value">${state.groups.length}</div>
     </div>
   `);
 }

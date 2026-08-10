@@ -1,6 +1,7 @@
 import { api } from '/api.js';
 import { formatDate, formatTime, t } from '/i18n.js';
 import { esc } from '/utils/html.js';
+import { emptyHintEl } from '/utils/empty-state.js';
 import {
   closeModal,
   confirmModal,
@@ -463,10 +464,7 @@ async function loadAccounts(container, user) {
 
   if (accounts.length === 0) {
     listEl.replaceChildren();
-    const empty = document.createElement('p');
-    empty.className = 'caldav-empty-state';
-    empty.textContent = t('settings.cardavEmptyState');
-    listEl.appendChild(empty);
+    listEl.appendChild(emptyHintEl(t('settings.cardavEmptyState')));
     return;
   }
 

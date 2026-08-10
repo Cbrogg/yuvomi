@@ -8,12 +8,18 @@
 import { api } from '/api.js';
 import { t } from '/i18n.js';
 import { isPushSubscribed } from '/push.js';
+import { NAV_ICONS } from '/nav-icons.js';
+import { toastSurface } from '/utils/toast-surface.js';
 
 // --------------------------------------------------------
 // Konfiguration
 // --------------------------------------------------------
 
 const POLL_INTERVAL_MS = 60_000; // 1 Minute
+
+// Wie oft ein Poll kurz nachfassen darf, solange die Toast-Fläche der Shell noch
+// nicht steht (Begründung in processReminders).
+const MAX_DEFERRED_RETRIES = 5;
 
 // --------------------------------------------------------
 // Zustand
@@ -22,6 +28,7 @@ const POLL_INTERVAL_MS = 60_000; // 1 Minute
 let _pollTimer     = null;
 let _shownIds      = new Set(); // bereits angezeigte Reminder-IDs in dieser Session
 let _isInitialized = false;
+let _deferredRetries = 0;
 
 // --------------------------------------------------------
 // Browser-Benachrichtigungen
@@ -48,6 +55,14 @@ async function requestPermission() {
 
 /**
  * Zeigt eine native Browser-Benachrichtigung an.
+ *
+ * Ihr Titel nennt die HERKUNFT, nicht den App-Namen - dieselbe Antwort, die das
+ * Siegel im Toast gibt, auf dem einzigen Kanal, der sie tragen kann: eine
+ * Systembenachrichtigung hat kein DOM, ihr `icon` zeigt nur ein Teil der
+ * Plattformen. Denselben Titel setzt der Server fuer den Push-Weg
+ * (REMINDER_TITLE_KEYS in server/services/notifications.js); hier uebersetzt der
+ * Client, der seine eigene Sprache kennt.
+ *
  * @param {string} title
  * @param {string} body
  */
@@ -114,6 +129,55 @@ function createBellSvg() {
 }
 
 // --------------------------------------------------------
+// Herkunft einer Erinnerung (Markensiegel, Block 2)
+// --------------------------------------------------------
+
+/**
+ * DIE ERINNERUNGEN SIND EINE MISCHSTELLE, und zwar die einzige, die den Nutzer
+ * von sich aus anspricht: eine Meldung erscheint, ohne dass man den Raum
+ * betreten hat, in dem sie entstanden ist. Genau dort ist die Herkunft nicht
+ * selbstverstaendlich - also traegt jede Meldung ihr Siegel (Herkunfts-Regel,
+ * .impeccable/block2-brief.md).
+ *
+ * ERHOBEN, NICHT GERATEN: durch `/reminders/pending` laufen exakt drei
+ * `entity_type`-Werte, und alle drei sind an ihrer Schreibstelle im Server
+ * belegt - `VALID_ENTITY_TYPES` in server/routes/reminders.js deckt `task` und
+ * `event` (die der Nutzer selbst setzt), server/routes/subscriptions.js legt
+ * `subscription` automatisch an. Medikamente laufen NICHT hierueber.
+ *
+ * GEBURTSTAGE SPRECHEN MIT DER STIMME DES KALENDERS, und das ist richtig:
+ * `syncBirthdayReminder` (server/services/birthdays.js) haengt die Erinnerung an
+ * den KALENDEREINTRAG des Geburtstags, nicht an den Geburtstag selbst. Die
+ * Meldung zeigt damit die Herkunft, die die Zeile wirklich hat. Sie am `icon`
+ * des Termins ('cake') zu erkennen waere ein Marker, der ungenauer schluesselt
+ * als das Markierte - jeder Termin darf dieses Icon tragen.
+ *
+ * WER HIER FEHLT, FAELLT AUF DIE GLOCKE ZURUECK statt zu verschwinden: ein
+ * kuenftiger vierter `entity_type` zeigt den Erinnerungs-Ton und das
+ * Glocken-Zeichen, bis er hier eingetragen ist.
+ */
+const REMINDER_ORIGINS = {
+  task:         { accent: 'var(--module-tasks)',    icon: 'check-square', labelKey: 'nav.tasks' },
+  event:        { accent: 'var(--module-calendar)', icon: 'calendar',     labelKey: 'nav.calendar' },
+  subscription: { accent: 'var(--module-budget)',   icon: 'wallet',       labelKey: 'subscriptions.tabLabel' },
+};
+
+function createOriginSeal(entityType) {
+  const origin = REMINDER_ORIGINS[entityType];
+  const seal = document.createElement('span');
+  // --vivid, weil der Toast die eine umgekehrte Flaeche der App ist; die
+  // Begruendung samt Messung steht an der Klasse in layout.css.
+  seal.className = 'module-seal module-seal--sm module-seal--vivid';
+  seal.setAttribute('aria-hidden', 'true');
+  seal.style.setProperty('--seal-accent', origin?.accent ?? 'var(--module-reminders)');
+  // `?.()` wie nav-icons.js es dokumentiert: der Fallback oben deckt einen
+  // unbekannten entity_type ab, nicht einen umbenannten Icon-Namen - der
+  // wuerde hier werfen und den ganzen Erinnerungs-Toast mitnehmen.
+  seal.appendChild(NAV_ICONS[origin?.icon]?.() ?? createBellSvg());
+  return seal;
+}
+
+// --------------------------------------------------------
 // Erinnerungen anzeigen
 // --------------------------------------------------------
 
@@ -125,23 +189,48 @@ function processReminders(reminders) {
   const newOnes = reminders.filter((r) => !_shownIds.has(r.id));
   if (!newOnes.length) return;
 
+  let deferred = false;
   newOnes.forEach((reminder) => {
+    // NUR MERKEN, WAS AUCH ERSCHIENEN IST.
+    //
+    // Vorher wanderte jede Erinnerung in `_shownIds`, BEVOR feststand, ob sie
+    // eine Fläche gefunden hat. Beim ersten Laden gibt es die noch nicht:
+    // `initReminders()` läuft im Auth-Guard von `navigate()`, die App-Shell mit
+    // ihren Toast-Regionen entsteht ein paar hundert Zeilen später im SELBEN
+    // Aufruf. Wer sich das Ungezeigte merkt, zeigt es nie wieder - die
+    // Erinnerung war für diese Sitzung verbraucht, ohne je erschienen zu sein.
+    if (!showReminderToast(reminder)) { deferred = true; return; }
     _shownIds.add(reminder.id);
-    showReminderToast(reminder);
+    const labelKey = REMINDER_ORIGINS[reminder.entity_type]?.labelKey;
     showBrowserNotification(
-      t('reminders.toastTitle'),
+      labelKey ? t(labelKey) : t('reminders.toastTitle'),
       reminder.entity_title || ''
     );
   });
+
+  // Die Fläche entsteht im selben Rendergang wie dieser Poll, also lohnt ein
+  // kurzer zweiter Anlauf statt der vollen Minute bis zum nächsten Intervall.
+  // Begrenzt, damit ein Zustand ohne Shell (Logout mitten im Poll) nicht in
+  // eine Dauerschleife läuft; der reguläre Poll bleibt der Auffangweg.
+  if (deferred && _deferredRetries < MAX_DEFERRED_RETRIES) {
+    _deferredRetries += 1;
+    setTimeout(poll, 500);
+  } else if (!deferred) {
+    _deferredRetries = 0;
+  }
 }
 
 /**
  * Zeigt einen persistenten Toast für eine Erinnerung mit Verwerfen-Button.
- * @param {{ id: number, entity_title: string }} reminder
+ * @param {{ id: number, entity_type: string, entity_title: string }} reminder
+ * @returns {boolean} ob der Toast tatsächlich angehängt wurde
  */
 function showReminderToast(reminder) {
-  const container = document.getElementById('toast-container');
-  if (!container) return;
+  // Höflich, nicht bestimmend: die bestimmte Live-Region gehört den Meldungen,
+  // die eine laufende Vorlesung unterbrechen dürfen (Fehler, Warnungen) -
+  // dieselbe Zuordnung, die auch `showToast` in der Shell trifft.
+  const container = toastSurface('polite');
+  if (!container) return false;
 
   const existing = container.querySelectorAll('.toast');
   if (existing.length >= 3) existing[0].remove();
@@ -151,10 +240,7 @@ function showReminderToast(reminder) {
   toast.setAttribute('role', 'alert');
   toast.dataset.reminderId = reminder.id;
 
-  const iconWrap = document.createElement('span');
-  iconWrap.className = 'toast__reminder-icon';
-  iconWrap.setAttribute('aria-hidden', 'true');
-  iconWrap.appendChild(createBellSvg());
+  const seal = createOriginSeal(reminder.entity_type);
 
   const textSpan = document.createElement('span');
   textSpan.className = 'toast__reminder-text';
@@ -162,13 +248,16 @@ function showReminderToast(reminder) {
   const titleEl = document.createElement('strong');
   titleEl.textContent = t('reminders.toastTitle');
 
-  const sep = document.createTextNode(': ');
-
   const bodyEl = document.createElement('span');
   bodyEl.textContent = reminder.entity_title || '';
 
+  // KEIN DOPPELPUNKT MEHR ZWISCHEN BEIDEN. Er stammt aus einer einzeiligen
+  // Fassung („Erinnerung: Zahnarzttermin"); der Textblock ist längst eine
+  // Spalte (`flex-direction: column`), und ein Textknoten in einer Spalte ist
+  // ein eigenes Flex-Item - der Doppelpunkt stand als eigene Zeile zwischen
+  // Versal-Label und Titel. Ein Versal-Mikro-Label über seinem Wert braucht
+  // ihn ohnehin nicht; die Zeile darunter IST der Wert.
   textSpan.appendChild(titleEl);
-  textSpan.appendChild(sep);
   textSpan.appendChild(bodyEl);
 
   const dismissBtn = document.createElement('button');
@@ -179,7 +268,7 @@ function showReminderToast(reminder) {
     toast.remove();
   });
 
-  toast.appendChild(iconWrap);
+  toast.appendChild(seal);
   toast.appendChild(textSpan);
   toast.appendChild(dismissBtn);
   container.appendChild(toast);
@@ -196,6 +285,8 @@ function showReminderToast(reminder) {
     dismissReminder(reminder.id);
     toast.remove();
   });
+
+  return true;
 }
 
 // --------------------------------------------------------
@@ -253,6 +344,7 @@ function stop() {
   }
   _isInitialized = false;
   _shownIds.clear();
+  _deferredRetries = 0;
   updateBellBadge(0);
 }
 

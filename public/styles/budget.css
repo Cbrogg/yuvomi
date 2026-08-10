@@ -620,7 +620,7 @@
  * Basisdeklaration und die Kompaktstufe bleibt wirkungslos (Audit A2-06). */
 @container budget-page (max-width: 479px) {
   .metric-card { padding: var(--space-2); }
-  .metric-card__amount { font-size: var(--text-base); }
+  .metric-card__value { font-size: var(--text-base); }
   .metric-card__trend { display: none; }
 }
 
@@ -683,7 +683,10 @@
 .budget-bar-row__track {
   flex: 1;
   height: var(--space-2);
-  background-color: var(--color-surface-2);
+  /* Fill-Well statt Surface-2: der Track lag bei 1.02:1 auf der weißen Karte
+   * und war als Bezugsgröße unsichtbar (Critique 2026-08-10). Der Well ist die
+   * kanonische Kachel-Fassung in einer Karte (1.19:1 light / 1.22:1 dark). */
+  background-color: var(--color-fill-well);
   border-radius: var(--radius-full);
   overflow: hidden;
 }
@@ -699,6 +702,53 @@
 
 .budget-bar-row__fill--income   { background-color: var(--color-success); }
 .budget-bar-row__fill--expenses { background-color: var(--color-danger);  }
+
+/* Mittelachsen-Spiegelung (Critique 2026-08-10, P0): Einnahmen und Ausgaben
+ * wuchsen von derselben Nulllinie in dieselbe Richtung - die Richtung steckte
+ * allein im Farbton und kollabierte bei Rot-Gruen-Schwaeche zu identischen
+ * Balken. Im gespiegelten Chart teilen sich beide eine Mittelachse: Einnahmen
+ * wachsen zum Zeilenende, Ausgaben zum Zeilenanfang (logische Kanten, spiegelt
+ * in RTL). Die Fills laufen hier ueber width statt scaleX: transform-origin
+ * kennt keine logischen Keywords, und die Balken stehen beim Rendern fest -
+ * eine Layout-Transition entsteht nicht (transition: none). */
+.budget-bar-row--mirrored .budget-bar-row__track {
+  overflow: visible;
+}
+.budget-bar-row--mirrored .budget-bar-row__track::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  inset-inline-start: 50%;
+  width: 2px;
+  margin-inline-start: -1px;
+  border-radius: var(--radius-full);
+  background-color: var(--color-text-quaternary);
+}
+.budget-bar-row--mirrored .budget-bar-row__fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: calc(var(--bar-scale, 0) * 50%);
+  transform: none;
+  transition: none;
+}
+.budget-bar-row--mirrored .budget-bar-row__fill--income {
+  inset-inline-start: 50%;
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+}
+.budget-bar-row--mirrored .budget-bar-row__fill--expenses {
+  inset-inline-end: 50%;
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+}
+/* Budgetplan-Ziel im gespiegelten Chart: Ausgaben laufen von der Mitte zum
+ * Zeilenanfang, ein Ziel von x (Anteil am Maximum) liegt also bei 50% - x/2. */
+.budget-bar-row--mirrored .budget-bar-row__target {
+  left: auto;
+  inset-inline-start: calc(50% - var(--target-pos, 0) * 50%);
+}
 
 /* Breite in ch statt px: 64px fassten den formatierten Betrag nicht — gemessen
  * brauchten alle Zeilen 75–91px ("+5.050,00 €" = 91,4px), der Text lief aus

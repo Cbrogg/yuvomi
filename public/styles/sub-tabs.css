@@ -60,6 +60,22 @@
   border-bottom: none;
 }
 
+/* Das Absender-Siegel einer Leiste, die selbst die Kopf-Navigation ist
+ * (Leisten-Regel; heute die Küche). Form, Größe und Tönungsgrund kommen von
+ * .module-seal--head in layout.css - hier steht nur, WESSEN Ton es trägt.
+ *
+ * --active-module-accent, nicht --module-accent: die Leiste hängt als
+ * GESCHWISTER des Modul-Roots im Router-Wrapper (kitchen-tabs.js), also gilt
+ * dort keine der Modul-Root-Variablen. Der aktive Akzent auf <html> ist
+ * dieselbe Quelle, aus der schon der aktive Tab seine Füllung nimmt - womit
+ * Siegel und Tab per Konstruktion denselben Ton tragen. */
+.sub-tabs-bar > .module-seal--head {
+  --seal-accent: var(--active-module-accent, var(--color-accent));
+  /* Mit dem `gap` der Leiste ergibt das die 8px, die auch im Modulkopf
+   * zwischen Siegel und Titel stehen. */
+  margin-inline-end: var(--space-1);
+}
+
 /* Optionaler Modul-Titel links der Tabs (Canonical Page Head).
  * Größe/Weight aus der u-toolbar-title-Rolle (typography.css). */
 .sub-tabs-bar__title {

@@ -118,6 +118,17 @@ export const ANON_ROUTES = {
 export const DEVICES = {
   desktop: { width: 1280, height: 900, deviceScaleFactor: 1, isMobile: false, hasTouch: false },
   mobile: { width: 375, height: 812, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
+  /* DIE KOMPAKTE HOEHENKLASSE (tokens.css §11c, DESIGN.md „Die Chrome-Regel").
+   *
+   * 640x400 ist kein erfundener Wert: es ist ein 1280x800-Laptop bei 200 %
+   * Browserzoom, also genau der Zustand, den WCAG 1.4.4 verlangt. Dieselben
+   * Masse hat ein Splitscreen-Tablet und ungefaehr jedes Telefon im Querformat.
+   *
+   * Bewusst KEIN Touch: wer auf 200 % zoomt, sitzt in aller Regel an einem
+   * Zeigergeraet, und `--target-base` schaltet ueber `(hover: none)`. Eine
+   * dritte Welt mit Touch waere ein vierter Zustand fuer jede Sonde, die sie
+   * faehrt - dieselbe Rechnung, die LEAVES_SKIPPED oben fuehrt. */
+  short: { width: 640, height: 400, deviceScaleFactor: 1, isMobile: false, hasTouch: false },
 };
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));

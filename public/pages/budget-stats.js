@@ -132,15 +132,15 @@ function renderBodyContent(body) {
     <div class="metric-grid">
       <div class="metric-card metric-card--income">
         <div class="metric-card__label">${t('budget.statsIncome')}</div>
-        <div class="metric-card__amount">${fmtAmount(d.totals.income)}</div>
+        <div class="metric-card__value">${fmtAmount(d.totals.income)}</div>
       </div>
       <div class="metric-card metric-card--expenses">
         <div class="metric-card__label">${t('budget.statsExpenses')}</div>
-        <div class="metric-card__amount">${fmtAmount(Math.abs(d.totals.expenses))}</div>
+        <div class="metric-card__value">${fmtAmount(Math.abs(d.totals.expenses))}</div>
       </div>
       <div class="metric-card ${d.totals.balance >= 0 ? 'metric-card--balance-positive' : 'metric-card--balance-negative'}">
         <div class="metric-card__label">${t('budget.statsBalance')}</div>
-        <div class="metric-card__amount">${fmtAmount(d.totals.balance)}</div>
+        <div class="metric-card__value">${fmtAmount(d.totals.balance)}</div>
       </div>
     </div>
     <div id="budget-stats-trend"></div>
@@ -175,7 +175,9 @@ function renderCatBars() {
   const plans = view.data.range === 'month' ? (view.data.plans || {}) : {};
   const rows = cats.map((c) => {
     const isExp = c.total < 0;
-    const pct = Math.round((Math.abs(c.total) / maxAbs) * 100);
+    // Mindestwert 6 wie im Monats-Chart: gleiche Bauart, gleiche Regel - und im
+    // gespiegelten Chart trägt jede Seite nur die halbe Trackbreite.
+    const pct = Math.max(6, Math.round((Math.abs(c.total) / maxAbs) * 100));
     const target = isExp ? plans[c.category] : undefined;
     const targetPos = target != null ? Math.min(1, target / maxAbs) : null;
     const targetMarker = targetPos != null
@@ -183,8 +185,10 @@ function renderCatBars() {
              title="${t('budget.planTarget', { amount: view.ctx.formatAmount(target) })}"></div>`
       : '';
     const catLabel = view.ctx.esc(view.ctx.categoryLabel(c.category));
+    // --mirrored: gemeinsame Mittelachse wie im Monats-Chart (Critique
+    // 2026-08-10, P0); der Budgetplan-Zielmarker rechnet im CSS mit.
     return `
-      <div class="budget-bar-row">
+      <div class="budget-bar-row budget-bar-row--mirrored">
         <div class="budget-bar-row__label" title="${catLabel}">${catLabel}</div>
         <div class="budget-bar-row__track">
           <div class="budget-bar-row__fill ${isExp ? 'budget-bar-row__fill--expenses' : 'budget-bar-row__fill--income'}"

@@ -1,6 +1,7 @@
 import { t } from '/i18n.js';
 import { api } from '/api.js';
 import { renderSubTabs, setSubTabBadge, scrollActiveSubTabIntoView } from '/utils/sub-tabs.js';
+import { NAV_ICONS } from '/nav-icons.js';
 import { toLocalDateKey } from '/utils/date.js';
 
 // Reihenfolge = Küchen-Kreislauf: planen → kochen → einkaufen → lagern.
@@ -158,6 +159,13 @@ export function renderKitchenTabsBar(container, activeRoute) {
     extraClass: 'kitchen-tabs-bar',
     ariaLabel: t('nav.kitchen'),
     title: t('nav.kitchen'),
+    // DER ABSENDER DER KÜCHE STEHT EINMAL, UND ZWAR HIER. Die vier Küchen-Köpfe
+    // bekommen keinen: sie teilen EINEN Tint, weil sie EIN Raum sind - vier
+    // Siegel wiederholten denselben Absender bei jedem Tabwechsel, und zwei der
+    // vier Köpfe (Rezepte, Vorrat) tragen gar keinen Seitentitel, hätten also
+    // einen Absender ohne Brief. Das Besteck ist dasselbe Zeichen, das die
+    // Bottom-Nav für „Küche" führt (kitchenNavButtonEl in router.js).
+    sealIcon: () => NAV_ICONS.utensils(),
     insertPosition: 'afterbegin',
     onChange: (route) => window.yuvomi?.navigate(route),
   });

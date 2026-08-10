@@ -239,7 +239,7 @@ function renderIconPickerResults(selectedIcon, query = '') {
       .flatMap((c) => c.icons)
       .filter((icon) => icon.label.toLowerCase().includes(q) || icon.value.includes(q));
     if (filtered.length === 0) {
-      return `<div class="event-icon-picker__no-results">${esc(t('calendar.iconSearchEmpty'))}</div>`;
+      return `<div class="empty-state empty-state--compact"><p class="empty-state__description">${esc(t('calendar.iconSearchEmpty'))}</p></div>`;
     }
     return `
       <div class="event-icon-picker__category-icons">
@@ -1836,10 +1836,12 @@ function renderAgendaView(container) {
            </div>`
         : groups.map(({ date, events, tasks, holidays }) => `
           <div class="agenda-day">
-            <div class="agenda-day__header ${date === state.today ? 'agenda-day__header--today' : ''}">
+            <!-- Tageskopf als echte Ueberschrift (Critique 2026-08-10):
+                 /calendar hatte genau EIN h-Element im ganzen Dokument. -->
+            <h2 class="agenda-day__header ${date === state.today ? 'agenda-day__header--today' : ''}">
               <span class="agenda-day__date">${formatDate(date)}</span>
               <span class="agenda-day__weekday">${DAY_NAMES_LONG()[new Date(date + 'T00:00:00').getDay()]}</span>
-            </div>
+            </h2>
             ${holidays.length ? `<div class="agenda-holidays">${holidays.map((h) => `
               <div class="agenda-holiday" style="--holi-color:${esc(h.color)}">
                 <span class="agenda-holiday__dot"></span>
@@ -2061,10 +2063,10 @@ function renderCalendarSearchResults(body) {
       <p class="cal-search-results__count" aria-hidden="true">${esc(calendarSearchCountLabel())}</p>
       ${groups.map(({ date, events }) => `
         <div class="agenda-day" data-date="${esc(date)}">
-          <div class="agenda-day__header ${date === state.today ? 'agenda-day__header--today' : ''}">
+          <h2 class="agenda-day__header ${date === state.today ? 'agenda-day__header--today' : ''}">
             <span class="agenda-day__date">${formatDate(date, { long: true })}</span>
             <span class="agenda-day__weekday">${DAY_NAMES_LONG()[new Date(date + 'T00:00:00').getDay()]}</span>
-          </div>
+          </h2>
           <div class="list-rows">${events.map((ev) => renderAgendaEvent(ev, date)).join('')}</div>
         </div>
       `).join('')}

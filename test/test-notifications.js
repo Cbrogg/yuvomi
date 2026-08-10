@@ -266,7 +266,40 @@ test('subscription reminders carry name, amount and renewal date as body (#581)'
   await processDueNotifications({ database: db, channelStore: store, pushService, providers, now: new Date() });
   assert.equal(payloads.length, 1);
   assert.equal(payloads[0].body, 'Netflix - 12.99 EUR - 2026-06-22');
-  assert.equal(payloads[0].title, 'Yuvomi');
+  // Der Titel nennt die Herkunft, nicht den App-Namen (Block 2): ein Siegel
+  // kann eine Systembenachrichtigung nicht tragen, der Titel schon.
+  assert.equal(payloads[0].title, 'Subscriptions');
+});
+
+test('a notification names its origin in the title, in the household language', async () => {
+  const { createNotificationChannelStore } = await import('../server/services/notification-channels.js');
+  const { processDueNotifications } = await import('../server/services/notifications.js');
+  const db = makeDb();
+  const store = createNotificationChannelStore({ db });
+  store.createChannel({ provider: 'ntfy', name: 'ntfy', enabled: true, config: { baseUrl: 'https://ntfy.test', topic: 'family' }, secrets: {} });
+  // Die Datensprache des Haushalts, wie sie auch der Geburtstags-Titel liest.
+  db.exec('CREATE TABLE sync_config (key TEXT PRIMARY KEY, value TEXT);');
+  db.prepare("INSERT INTO sync_config (key, value) VALUES ('language', 'de')").run();
+  db.prepare("INSERT INTO tasks (id, title, created_by) VALUES (1, 'Müll rausbringen', 1)").run();
+  db.prepare("INSERT INTO calendar_events (id, title) VALUES (2, 'Zahnarzt')").run();
+  db.prepare("INSERT INTO budget_subscriptions (id, name) VALUES (3, 'Netflix')").run();
+  for (const [id, type, entity] of [[1, 'task', 1], [2, 'event', 2], [3, 'subscription', 3]]) {
+    db.prepare('INSERT INTO reminders (id, entity_type, entity_id, remind_at, created_by) VALUES (?, ?, ?, ?, 1)')
+      .run(id, type, entity, '2026-06-19T09:59:00.000Z');
+  }
+  const payloads = [];
+  const providers = {
+    ntfy: { id: 'ntfy', send: async ({ payload }) => { payloads.push(payload); return { ok: true, status: 200 }; } },
+  };
+  const pushService = { sendPushToUser: async () => 0 };
+
+  await processDueNotifications({ database: db, channelStore: store, pushService, providers, now: new Date() });
+
+  const titles = payloads.map((p) => p.title);
+  assert.deepEqual(titles, ['Aufgaben', 'Kalender', 'Abonnements'],
+    'Jede Meldung nennt ihr Herkunftsmodul im Titel, uebersetzt in die Datensprache des Haushalts.');
+  // Und der Body bleibt die Sache selbst - der Titel ersetzt ihn nicht.
+  assert.deepEqual(payloads.map((p) => p.body), ['Müll rausbringen', 'Zahnarzt', 'Netflix']);
 });
 
 test('subscription reminders degrade to the bare name when amount or date are missing (#581)', async () => {

@@ -1851,12 +1851,8 @@
   line-height: 1.5;
 }
 
-.caldav-empty-state {
-  padding: var(--space-6) var(--space-4);
-  text-align: center;
-  color: var(--color-text-secondary);
-  font-size: var(--text-sm);
-}
+/* Der Konten-Leerzustand ist seit Block 2 die geteilte .empty-state--compact
+ * (layout.css). */
 
 /* Die Karte IST das Konto: ein Rahmen um alles, was zu ihm gehört - Status,
    Adressbücher, Aktionen. Genau eine Rahmenebene; die Statuszeile darin wird

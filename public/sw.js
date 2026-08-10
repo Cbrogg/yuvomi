@@ -107,10 +107,12 @@ const APP_SHELL = [
   '/utils/health-tabs.js',
   '/utils/health-vitals.js',
   '/utils/help.js',
+  '/utils/household.js',
   '/utils/html.js',
   '/utils/ingredient-row.js',
   '/utils/kitchen-tabs.js',
   '/utils/kitchen-transfer.js',
+  '/utils/metric-card.js',
   '/utils/money.js',
   '/utils/page-search.js',
   '/utils/pantry-locations.js',
@@ -124,12 +126,14 @@ const APP_SHELL = [
   '/utils/recurrence-scope.js',
   '/utils/reminder-offset.js',
   '/utils/scroll-restore.js',
+  '/utils/seal-pair.js',
   '/utils/shopping-categories.js',
   '/utils/skeleton.js',
   '/utils/sub-tabs.js',
   '/utils/swipe-row.js',
   '/utils/sync-target.js',
   '/utils/tablist.js',
+  '/utils/toast-surface.js',
   '/utils/ux.js',
   '/utils/vcard.js',
   '/utils/version.js',
@@ -545,14 +549,19 @@ self.addEventListener('push', (event) => {
     icon: '/icons/icon-192.png',
     badge: '/icons/icon-192.png',
     tag: payload.tag || 'yuvomi-push',
-    data: { url: payload.url || '/reminders' },
+    // `/` UND NICHT `/reminders`: diese Route hat es nie gegeben (Critique
+    // 2026-08-10). Der Router kannte sie nicht und fiel still auf die
+    // Uebersicht zurueck - ein Fallback, der wie ein Ziel aussah. Die Uebersicht
+    // ist jetzt der ausgesprochene Fallback; das echte Ziel kommt aus
+    // `payload.url`, das der Server je Herkunft setzt (services/notifications.js).
+    data: { url: payload.url || '/' },
   };
   event.waitUntil(self.registration.showNotification(title, options));
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const targetUrl = (event.notification.data && event.notification.data.url) || '/reminders';
+  const targetUrl = (event.notification.data && event.notification.data.url) || '/';
   event.waitUntil((async () => {
     const all = await clients.matchAll({ type: 'window', includeUncontrolled: true });
     for (const client of all) {

@@ -120,7 +120,7 @@ export function renderRRuleFields(prefix, existingRule, opts = {}) {
     <div class="rrule-fields" id="${prefix}-rrule-fields">
       <div class="form-group">
         <label class="label form-label" for="${prefix}-rrule-freq">${t('rrule.labelRepeat')}</label>
-        <select class="input form-input" id="${prefix}-rrule-freq" style="min-height:44px">
+        <select class="input form-input" id="${prefix}-rrule-freq">
           ${freqOpts}
         </select>
       </div>
@@ -137,7 +137,7 @@ export function renderRRuleFields(prefix, existingRule, opts = {}) {
           </div>
           <div class="form-group" style="margin-bottom:0">
             <label class="label form-label" for="${prefix}-rrule-end">${t('rrule.labelEnds')}</label>
-            <select class="input form-input" id="${prefix}-rrule-end" style="min-height:44px">
+            <select class="input form-input" id="${prefix}-rrule-end">
               ${endOpts}
             </select>
           </div>
