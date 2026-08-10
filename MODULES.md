@@ -45,7 +45,12 @@ Optional fields:
 - `style`: a relative `.css` file loaded only for this module page.
 - `menu.show`: set to `false` if the module should not appear in the left menu.
 - `menu.label`, `menu.icon`, `menu.order`: left-menu label, Lucide icon name, and order.
-- `accent`: a `#RRGGBB` color used for menu highlighting.
+- `accent`: a `#RRGGBB` color. It is your module's **tone**: the app exposes it as
+  `--active-module-accent` while your page is open, so your own content can use it, and it colors
+  the browser/PWA status bar on your route. Since v2.2.0 it no longer colors the app's chrome -
+  the navigation, the action button and shared controls carry the app's own accent in every module
+  (see the one-voice rule in `docs/SPEC.md`), so the frame does not change color when a visitor
+  opens your page.
 
 ## Client Entry
 

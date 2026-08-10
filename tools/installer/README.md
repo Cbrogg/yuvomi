@@ -139,7 +139,7 @@ wins over the derivation.
 
 The wizard reuses the app's design language: the shared design tokens
 (`public/styles/tokens.css`) are served read-only from the repo, so the
-installer matches the app's Indigo accent, radii, shadows, and automatic dark
+installer matches the app's violet accent, radii, shadows, and automatic dark
 mode. No font is served any more - the app took the system font stack with the
 v2.0.0 redesign, and the `/fonts/` route went with the typeface it carried.
 An inline fallback token block (with a dark-mode variant) precedes the

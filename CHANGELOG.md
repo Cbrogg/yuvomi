@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **The app has one colour again.** The violet of the app icon carries the navigation, the add button, buttons, switches, links and focus rings - in every module, the same. Module colours stay where they answer "where am I": the badge in the module header, the module's own bars and chips, its widget on the dashboard, its icon in the sidebar. Opening the budget no longer repaints the whole frame teal.
+- **Warmer surfaces in both themes.** The page background moves from a cool grey to warm paper in light mode, and from near-black to warm charcoal in dark mode, where cards now separate visibly from the background instead of floating on it.
+- **The add button sits inside the navigation bar** on phones and tablets, at its trailing end, instead of floating above it. On pages without an add action the bar uses the full width.
+- The sidebar shows every module's icon in its own colour, so the colour vocabulary is legible in one place instead of being worn by the whole app.
+- The calendar's colour moves from violet to azure - next to a violet app colour, the two were the same tone.
+- Tab bar labels are one step smaller (the size iOS itself uses for them), so the longest German label fits on one line down to 360 px wide.
+- **The search in list modules collapses to its icon on phones**, as it already did in short windows. One header row instead of two.
+- Filters and grouping share a single row in tasks and documents instead of wrapping onto two; the grouping choice shows its icons when the row gets narrow.
+
+### Fixed
+
+- **Phones lost up to three quarters of the screen to interface chrome.** On a 375x812 phone the task list left 210 px for content and now leaves 507 px; the budget goes from 329 to 514 px, shopping from 244 to 429, recipes from 413 to 598.
+- The add button reserved a full-width strip above the navigation on every screen - 92 px, whether or not anything lay underneath it.
+- The install banner sat 8 px inside the navigation bar instead of above it.
+
 ## [2.1.0] - 2026-08-10
 
 ### Added

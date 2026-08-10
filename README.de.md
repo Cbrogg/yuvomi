@@ -11,8 +11,8 @@
   </p>
 
   <p>
-    <a href="https://github.com/ulsklyc/yuvomi/releases"><img src="https://img.shields.io/github/v/release/ulsklyc/yuvomi?style=flat-square&color=4F4DC9&label=release" alt="Neuestes Release"></a>
-    <a href="https://github.com/ulsklyc/yuvomi/stargazers"><img src="https://img.shields.io/github/stars/ulsklyc/yuvomi?style=flat-square&color=4F4DC9&label=stars" alt="GitHub-Sterne"></a>
+    <a href="https://github.com/ulsklyc/yuvomi/releases"><img src="https://img.shields.io/github/v/release/ulsklyc/yuvomi?style=flat-square&color=6C3AED&label=release" alt="Neuestes Release"></a>
+    <a href="https://github.com/ulsklyc/yuvomi/stargazers"><img src="https://img.shields.io/github/stars/ulsklyc/yuvomi?style=flat-square&color=6C3AED&label=stars" alt="GitHub-Sterne"></a>
     <img src="https://img.shields.io/badge/PWA-installable-5A0FC8?style=flat-square&logo=pwa&logoColor=white" alt="PWA">
     <a href="https://github.com/ulsklyc/yuvomi/pkgs/container/yuvomi"><img src="https://img.shields.io/badge/ghcr.io-yuvomi-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker-Image"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="MIT-Lizenz"></a>
@@ -415,7 +415,7 @@ Nichts. Yuvomi ist kostenlos und MIT-lizenziert. Du stellst den Server; es gibt 
 
 ## Unter der Haube
 
-- **Disziplinierte Liquid-Glass-UI** - lesbare Arbeitsflächen, dezent transluzente Navigation, Spring-Animationen und modul-getönte Overlays, in reinem CSS gebaut, ohne Framework.
+- **Apple HIG in der Liquid-Glass-Sprache** - der System-Font-Stack und Apples Typo-Skala, Kapsel-Controls, Inset-Grouped-Listen und Feder-Animationen. Glas ist der Navigation, den Sheets und dem Aktionsknopf vorbehalten; alles Lesbare steht auf einer opaken Fläche. Eine Farbe trägt die Oberfläche in jedem Modul, jedes Modul behält seinen eigenen Ton auf Siegel, Leisten und Chips - beides für WCAG AA in Hell und Dunkel verifiziert. Reines CSS, kein Framework.
 - **Kein Build-Schritt** - reine ES-Module, kein Bundler, kein Transpiler, kein Framework.
 - **Datenschutz zuerst** - vollständig selbstgehostet, optionale SQLCipher-AES-256-Datenbankverschlüsselung, keine Telemetrie.
 - **SSO / OpenID Connect** - optionales Single Sign-on über jeden OIDC-Provider (Authentik, Keycloak, Google, Microsoft Entra), konfiguriert mit vier Umgebungsvariablen; Authorization-Code- + PKCE-Flow.
