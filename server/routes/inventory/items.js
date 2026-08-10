@@ -19,6 +19,9 @@ import {
   loadLinkedEntriesForItems, loadLinkedEntries, computeTotal,
 } from './entry-links.js';
 import { warrantyEndDate, reminderDateForWarranty } from '../../services/inventory-deadlines.js';
+import {
+  validateTrackedDatesInput, writeTrackedDates, removeTrackedDateReminders, loadTrackedDates, loadTrackedDatesForItems,
+} from './item-dates.js';
 
 const log = createLogger('Inventory');
 const router = express.Router();
@@ -94,6 +97,7 @@ function loadItem(id, userId) {
     attachments: documentLinksFor(db.get(), { ...DOCS, ownerId: item.id, userId }),
     linked_entries: linkedEntries,
     linked_entries_total: computeTotal(linkedEntries),
+    tracked_dates: loadTrackedDates(item.id),
   };
 }
 
@@ -118,6 +122,7 @@ function loadItems({ category, locationId, status, q } = {}, userId) {
   `).all(...params);
   const byItem = loadDocumentLinks(db.get(), { ...DOCS, ownerIds: rows.map((r) => r.id), userId });
   const entriesByItem = loadLinkedEntriesForItems(rows.map((r) => r.id), userId);
+  const datesByItem = loadTrackedDatesForItems(rows.map((r) => r.id));
   return rows.map((row) => {
     const linkedEntries = entriesByItem.get(row.id) || [];
     return {
@@ -126,6 +131,7 @@ function loadItems({ category, locationId, status, q } = {}, userId) {
       attachments: byItem.get(row.id) || [],
       linked_entries: linkedEntries,
       linked_entries_total: computeTotal(linkedEntries),
+      tracked_dates: datesByItem.get(row.id) || [],
     };
   });
 }
@@ -304,6 +310,9 @@ router.post('/', (req, res) => {
     const { values, errors } = validateItemFields(effectiveBody);
     if (errors.length) return res.status(400).json({ error: errors.join(' '), code: 400 });
 
+    const { values: trackedDateValues, errors: trackedDateErrors } = validateTrackedDatesInput(req.body.tracked_dates);
+    if (trackedDateErrors.length) return res.status(400).json({ error: trackedDateErrors.join(' '), code: 400 });
+
     // Insert und Erinnerungs-Sync in einer Transaktion (gleiches Muster wie
     // DELETE /:id): wirft syncReminder - etwa an einem Kaufdatum, das die
     // Datumsrechnung nicht parsen kann -, darf der Gegenstand nicht trotzdem
@@ -328,6 +337,8 @@ router.post('/', (req, res) => {
         warranty_months: values.warranty_months,
         created_by: userId,
       });
+
+      writeTrackedDates(inserted.lastInsertRowid, trackedDateValues, userId);
 
       return inserted;
     })();
@@ -362,6 +373,13 @@ router.put('/:id', (req, res) => {
     const { values, errors } = validateItemFields(req.body);
     if (errors.length) return res.status(400).json({ error: errors.join(' '), code: 400 });
 
+    let trackedDateValues = null;
+    if (req.body.tracked_dates !== undefined) {
+      const result = validateTrackedDatesInput(req.body.tracked_dates);
+      if (result.errors.length) return res.status(400).json({ error: result.errors.join(' '), code: 400 });
+      trackedDateValues = result.values;
+    }
+
     // Update und Erinnerungs-Sync in einer Transaktion, gleiche Begruendung wie
     // im POST-Handler: kein halb geschriebener Zustand, wenn syncReminder wirft.
     db.get().transaction(() => {
@@ -384,6 +402,10 @@ router.put('/:id', (req, res) => {
         warranty_months: values.warranty_months,
         created_by: item.created_by,
       });
+
+      if (trackedDateValues !== null) {
+        writeTrackedDates(item.id, trackedDateValues, item.created_by);
+      }
     })();
 
     const userId = req.authUserId || req.session.userId;
@@ -475,6 +497,7 @@ router.delete('/:id', (req, res) => {
 
     const deleted = db.get().transaction(() => {
       db.get().prepare("DELETE FROM reminders WHERE entity_type = 'inventory_item' AND entity_id = ?").run(vId.value);
+      removeTrackedDateReminders(vId.value);
       return db.get().prepare('DELETE FROM inventory_items WHERE id = ?').run(vId.value);
     })();
 

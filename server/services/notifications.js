@@ -88,10 +88,11 @@ function subscriptionBody(reminder) {
  * genaueste Antwort, die das Ziel heute geben kann, und immer noch eine.
  */
 const REMINDER_ORIGINS = {
-  task:           { titleKey: 'nav.tasks',              url: '/tasks' },
-  event:          { titleKey: 'nav.calendar',           url: '/calendar' },
-  subscription:   { titleKey: 'subscriptions.tabLabel', url: '/budget' },
-  inventory_item: { titleKey: 'nav.inventory',          url: '/inventory' },
+  task:                   { titleKey: 'nav.tasks',              url: '/tasks' },
+  event:                  { titleKey: 'nav.calendar',           url: '/calendar' },
+  subscription:           { titleKey: 'subscriptions.tabLabel', url: '/budget' },
+  inventory_item:         { titleKey: 'nav.inventory',          url: '/inventory' },
+  inventory_tracked_date: { titleKey: 'nav.inventory',          url: '/inventory' },
 };
 
 /**
@@ -110,6 +111,16 @@ function warrantyBody(reminder) {
   }
 }
 
+/**
+ * Body einer Fristen-Erinnerung: Gegenstand · Bezeichnung, plus das Datum.
+ * Gleiche Begruendung wie subscriptionBody/warrantyBody - reine Daten, kein
+ * Satzbau, weil der Server die Sprache des Empfaengers nicht kennt.
+ */
+function trackedDateBody(reminder) {
+  if (!reminder.inv_tracked_date) return reminder.entity_title;
+  return `${reminder.entity_title} - ${reminder.inv_tracked_date}`;
+}
+
 function reminderPayload(reminder, locale) {
   const title = reminder.entity_title || FALLBACK_BODY;
   const origin = REMINDER_ORIGINS[reminder.entity_type];
@@ -118,6 +129,8 @@ function reminderPayload(reminder, locale) {
     body = subscriptionBody(reminder);
   } else if (reminder.entity_type === 'inventory_item' && reminder.entity_title) {
     body = warrantyBody(reminder);
+  } else if (reminder.entity_type === 'inventory_tracked_date' && reminder.entity_title) {
+    body = trackedDateBody(reminder);
   }
   return {
     // Ohne bekannte Herkunft bleibt der App-Name: er ist nichtssagend, aber nie
@@ -266,11 +279,18 @@ export async function processDueNotifications({
         WHEN 'event' THEN (SELECT title FROM calendar_events WHERE id = r.entity_id)
         WHEN 'subscription' THEN (SELECT name FROM budget_subscriptions WHERE id = r.entity_id)
         WHEN 'inventory_item' THEN (SELECT name FROM inventory_items WHERE id = r.entity_id)
+        WHEN 'inventory_tracked_date' THEN (
+          SELECT ii.name || ' · ' || d.label
+          FROM inventory_item_dates d JOIN inventory_items ii ON ii.id = d.item_id
+          WHERE d.id = r.entity_id
+        )
       END AS entity_title,
       CASE WHEN r.entity_type = 'inventory_item'
         THEN (SELECT purchase_date FROM inventory_items WHERE id = r.entity_id) END AS inv_purchase_date,
       CASE WHEN r.entity_type = 'inventory_item'
         THEN (SELECT warranty_months FROM inventory_items WHERE id = r.entity_id) END AS inv_warranty_months,
+      CASE WHEN r.entity_type = 'inventory_tracked_date'
+        THEN (SELECT date FROM inventory_item_dates WHERE id = r.entity_id) END AS inv_tracked_date,
       CASE WHEN r.entity_type = 'subscription'
         THEN (SELECT amount FROM budget_subscriptions WHERE id = r.entity_id) END AS sub_amount,
       CASE WHEN r.entity_type = 'subscription'

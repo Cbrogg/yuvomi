@@ -226,7 +226,7 @@ test('POST / lehnt ungültigen entity_type ab (400)', async () => {
   currentUid = owner;
   const res = await call('POST', '', { entity_type: 'bogus', entity_id: makeTask(owner), remind_at: at(9, 0) });
   assert.equal(res.status, 400);
-  assert.match(res.body.error, /task, event, subscription, or inventory_item/);
+  assert.match(res.body.error, /task, event, subscription, inventory_item, or inventory_tracked_date/);
 });
 
 test('POST / lehnt fehlenden entity_type ab (400)', async () => {
