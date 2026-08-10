@@ -67,23 +67,44 @@ function subscriptionBody(reminder) {
  * Quelle - public/locales/*.json ueber utils/i18n.js. Die Keys sind bestehende
  * Modulnamen; eine Meldung braucht dafuer kein eigenes Vokabular.
  */
-const REMINDER_TITLE_KEYS = {
-  task: 'nav.tasks',
-  event: 'nav.calendar',
-  subscription: 'subscriptions.tabLabel',
+/*
+ * UND DIESELBE HERKUNFT SETZT DAS ZIEL (Critique 2026-08-10).
+ *
+ * Der Titel nannte das Modul, und der Tipp darauf landete trotzdem im
+ * Dashboard: `url` stand fest auf `/reminders`, und diese Route gibt es in
+ * `ROUTES` nicht - der Router fiel still auf `/` zurueck, Dokumenttitel
+ * „Yuvomi · Yuvomi". Der Befund war schon vorher einer und ist seit der
+ * Titel-Herkunft doppelt so teuer: die Meldung sagt jetzt, wo sie herkommt,
+ * und schickt den Nutzer trotzdem woandershin.
+ *
+ * Die Zuordnung stand die ganze Zeit hier - sie wurde nur nicht gefragt. Ein
+ * Eintrag traegt beides, Titel und Ziel, damit die zweite Antwort nicht von
+ * der ersten wegdriften kann. Push ist der zeitkritischste Pfad der App: wer
+ * eine Erinnerung antippt, will an das Ding, nicht an eine Uebersicht.
+ *
+ * Abonnements zeigen auf `/budget` und nicht auf ihren Tab darin - einen
+ * Deep-Link auf `budget.activeTab` gibt es nicht (geprueft). Das Modul ist die
+ * genaueste Antwort, die das Ziel heute geben kann, und immer noch eine.
+ */
+const REMINDER_ORIGINS = {
+  task:         { titleKey: 'nav.tasks',                url: '/tasks' },
+  event:        { titleKey: 'nav.calendar',             url: '/calendar' },
+  subscription: { titleKey: 'subscriptions.tabLabel',   url: '/budget' },
 };
 
 function reminderPayload(reminder, locale) {
   const title = reminder.entity_title || FALLBACK_BODY;
-  const key = REMINDER_TITLE_KEYS[reminder.entity_type];
+  const origin = REMINDER_ORIGINS[reminder.entity_type];
   return {
     // Ohne bekannte Herkunft bleibt der App-Name: er ist nichtssagend, aber nie
-    // falsch - und ein roher `entity_type` im Titel waere beides.
-    title: key ? translate(locale, key) : APP_NAME,
+    // falsch - und ein roher `entity_type` im Titel waere beides. Das Ziel
+    // faellt aus demselben Grund auf die Uebersicht: sie ist die einzige Seite,
+    // die es mit Sicherheit gibt.
+    title: origin ? translate(locale, origin.titleKey) : APP_NAME,
     body: reminder.entity_type === 'subscription' && reminder.entity_title
       ? subscriptionBody(reminder)
       : title,
-    url: '/reminders',
+    url: origin ? origin.url : '/',
     tag: `reminder-${reminder.id}`,
     priority: 'default',
   };
