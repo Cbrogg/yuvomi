@@ -692,6 +692,40 @@ nur einem Tag steht allein da und bleibt ein Reihen-Bauteil.
 dichten Fall mechanisch ab - gemessen: Monatsraster-Chips (Zentrumsabstand 31,5),
 Aufgaben-Tagfilter (29,3), Sidebar-Umschalter (31,5). Die Ausnahmeliste des Guards ist leer.
 
+**Wer die Spacing-Ausnahme nimmt, muss sie brauchen (Critique 2026-08-10, Befund 3).** Ein
+FREISTEHENDES Ziel nimmt den Platz, den sein Traeger ihm laesst. Die Ausnahme ist fuer Ziele
+gedacht, die dicht stehen MUESSEN - dieselbe Begruendung wie die Einengung selbst. Wer unter
+24px bleibt, obwohl sein Traeger ihm den Raum laesst, ist kurz aus Versehen, nicht aus
+Platznot.
+
+Der Anlass: `.task-card__title` mass 22,1px in einer Karte mit 12px leerem Padding darueber
+und 4px darunter, und Sonde 4 sagte gruen, weil das naechste Zielzentrum weit genug weg lag.
+Die Critique mass denselben Fall gegen einen pauschalen 44px-Massstab - und hatte damit recht
+aus dem falschen Grund. Nicht 44px ist der Massstab (die Regel oben begruendet ausfuehrlich,
+warum nicht), sondern die ungenutzte Reserve. Der Titel traegt jetzt 38px Trefferflaeche ueber
+ein `::before`, der Text steht unveraendert.
+
+**Zwei Grenzen gehoeren zur Klausel, und beide sind gemessen, nicht gesetzt.** Sie gilt NICHT
+fuer Reihen-Bauteile - die erste Fassung meldete die Aufgaben-Tagfilter und zwoelf
+`.cal-task-chip`, formal zu Recht (sie stehen nebeneinander, koennten also vertikal wachsen),
+aber das waere eine neue Regel gewesen, keine Klausel. Und sie gilt NICHT fuer Inline-Ziele:
+WCAG 2.5.8 nimmt ein Ziel ausdruecklich aus, dessen Groesse durch die Zeilenhoehe des
+umgebenden Textes bestimmt ist. Ohne diese Ausnahme meldete sie drei Hinweis-Links in
+`<p class="form-hint">`, und der einzige Weg sie „zu reparieren" waere gewesen, den Fliesstext
+um sie herum auseinanderzuziehen.
+
+Gefunden hat die Klausel ausser dem Titel genau einen weiteren echten Fall: der
+`.nav-sidebar__toggle` mass 219x23 am Fuss der Sidebar, mit Platz nach beiden Seiten - 23px
+ist die Hoehe seines 15px-Icons plus Zeilenrest, keine Entscheidung. Er traegt jetzt
+`--target-md`.
+
+**Dabei fiel eine Modifier-Blindheit von Sonde 4 auf.** `rowBuilt` schluesselte ueber die
+volle Klassenliste, und damit war `cal-task-chip.cal-task-chip--high` ein anderes Bauteil als
+`--medium`: wer nur in fuenf von sechs Varianten in einer Reihe vorkommt, galt in der sechsten
+als freistehend. Drei `--high`-Chips blieben so gemeldet, waehrend die uebrigen als Reihe
+erkannt wurden. Die Sonde fuehrt jetzt zusaetzlich jede EINZELKLASSE - dieselbe Blindheit, die
+Sonde 6 hatte, als sie nach `.metric-grid` fragte und die Reihe nicht sah.
+
 **Gemessen wird die TREFFERFLAECHE, nicht die Box.** `.weather-widget__refresh` ist 34x34
 gross und dehnt seine Flaeche per `::before` auf `--target-base` aus; eine Box-Messung meldet
 ihn als Verstoss, obwohl der Finger 44px findet. Das ist zugleich das Rezept fuer „kompakt
@@ -872,6 +906,144 @@ Zustand fuellt, macht gar keine Zeile auf. Beide Faelle sind einmal als Lead-Zon
 durchgegangen und haben dabei genau die Linie verborgen, die zu zeigen war - auf Desktop bei
 11 von 14 Koepfen folgenlos (jede Regel dazu steht in der kompakten Groessenklasse), bei den
 Rezepten sichtbar.
+
+### Der Solo-Haushalt (Critique 2026-08-10, Persona Miriam)
+
+**Was nur eine sinnvolle Belegung hat, wird nicht gefragt.**
+
+PRODUCT.md fuehrt seit 2026-08-06 Solo-Nutzer als bestaetigte zweite Zielgruppe, und die
+Oberflaeche wusste davon nichts: das prominenteste Widget zeigte eine grosse 1 mit „im
+Haushalt" - ein Zaehler, dessen einziger Inhalt ist, dass man allein ist. Jede Aufgabe trug
+das Pflichtfeld „Sichtbarkeit" mit genau einer Antwort, jede Dokumentkarte wiederholte „Ganze
+Familie", „Zugewiesen an" bot einen selbst und „- Niemand -".
+
+**Ein stiller Schalter, keine Einstellung.** Der Haushalt hat eine Groesse, die App kann sie
+zaehlen (`/auth/me` liefert `householdSize`, `utils/household.js` haelt sie), und ein
+Schalter fuer etwas Zaehlbares waere ein Formular fuer eine Frage, die niemand stellen
+wollte - dazu einer, den Solo-Nutzer erst faenden, nachdem sie die Bevormundung schon gesehen
+haben. Es ist derselbe Mechanismus, den der Block-2-Brief fuer das Ueberlappungszeichen
+festgelegt hat: „erscheint nur, wenn es mehr als einen moeglichen Beteiligten gibt; im
+Solo-Haushalt entfaellt es still".
+
+**Der Schalter aendert keine Daten.** Ein Eintrag behaelt seine `visibility` und seine
+Zuweisung; nur gefragt wird nicht mehr danach - die Felder bleiben im DOM und tragen ihren
+Wert, sie sind `hidden`. Kommt ein zweites Mitglied dazu, stehen sie wieder da, und alles, was
+inzwischen entstanden ist, hat schon die richtigen Werte. Ein Schalter, der Daten wegnimmt,
+waere eine Migration; dieser ist eine Darstellung.
+
+**Split-Gaeste zaehlen nicht mit** - sie sind externe Beteiligte einer Ausgabenteilung, keine
+Haushaltsmitglieder (dieselbe Grenze, die `access_scope` zieht). Ein Haushalt von einer Person
+mit drei Reisebekanntschaften ist ein Solo-Haushalt.
+
+**Eine Quelle, nicht zwei.** Das Aufgaben-Formular fragte vorher `users.length > 1` - dieselbe
+Frage aus einer anderen Zahl, naemlich der geladenen Nutzerliste des Moduls. Zwei Quellen
+laufen auseinander, sobald eine einen Sonderfall bekommt, und diese hatte schon einen: die
+Nutzerliste zaehlt Split-Gaeste mit.
+
+**Zusaetzlich eine Wurzelklasse** (`html.household-solo`): manche Stellen sind reines Layout
+und haben kein JS, das fragen koennte. Eine Quelle, zwei Wege.
+
+### Das Ueberlappungszeichen (Block-2-Brief, gebaut 2026-08-10)
+
+Der dritte Teil der Formfamilie, neben dem Siegel und seiner Herkunfts-Regel. **Ein Avatar
+ueberlappt das Markensiegel - wer ∩ was**, das Familien-Zeichen der Drei-Kreise-Bildmarke, auf
+zwei Kreise gebracht: einer sagt, aus welchem Raum das Objekt kommt, der andere, wen es
+angeht.
+
+**Sein Einsatzgesetz ist das des Siegels plus zwei Bedingungen.** Es erscheint, wo ohnehin ein
+Siegel steht (also an Mischstellen), UND das Objekt traegt eine Person, UND der Haushalt hat
+mehr als ein Mitglied. Nie Pflichtelement: wer keine Person hat, bekommt sein Siegel wie
+bisher. Das ist der Sinn und keine Bequemlichkeit - ein Zeichen, das immer da ist, sagt
+nichts.
+
+**Die Ueberlappung IST das Zeichen, nicht die Nachbarschaft.** Zwei Kreise nebeneinander
+waeren zwei Angaben; erst der Schnitt macht daraus eine. Der Versatz betraegt ein Drittel des
+Avatars, und der Ring darum nimmt `--seal-base` - denselben Parameter, mit dem das Siegel
+schon seinen echten Untergrund kennt. Ohne ihn laufen zwei getoente Flaechen ineinander,
+sobald die Toene sich aehneln.
+
+**Gebaut ist es an der Mischstelle „Heute wichtig"**, wo es das „von wem" der Aufgabe und des
+Termins traegt; Einkauf und Essen bekommen keines, weil sie keine Person haben. Gehalten von
+`utils/seal-pair.js` und einem Guard („das Ueberlappungszeichen kommt aus einer Hand"), der
+Handnachbauten verbietet - sie haetten die drei Bedingungen nicht.
+
+**NICHT gebaut im Monatsraster**, und das ist eine Entscheidung: der Chip misst dort 20px und
+traegt bewusst nur den Titel (Apple-Kalender-Kanon, im Quelltext begruendet). Ein Zeichen
+darin waere die Siegel-Inflation, die der Brief als Anti-Ziel fuehrt. Das „Wer" eines
+Monatstermins bleibt damit ein offener Befund - seine Antwort liegt in der Tages- und
+Detailansicht, nicht in einer kleineren Marke.
+
+**Auch nicht im Erinnerungs-Toast**, aus einem anderen Grund: `/reminders` liefert keine
+Personendaten (geprueft 2026-08-10, nur `entity_title`). Das waere eine Server-Erweiterung und
+gehoert in einen eigenen Schritt.
+
+### Die Chrome-Regel (Critique 2026-08-10, Frage 4)
+
+**Ueber dem Inhalt stehen der Kopf und hoechstens EINE Bedienzeile. Was nicht hineinpasst,
+wandert hinter einen Einstieg, nicht in eine dritte Zeile.**
+
+Das ist die vierte Regel dieser Bauart, neben der Wischsemantik (die Reichweite der Tat
+entscheidet den Rueckweg), dem Kopf-Kontrakt (der `module:`-Wert der Route entscheidet die
+Leiste) und der Zielgroessen-Regel. Sie beantwortet die Frage, an der laut Critique Aufgaben,
+Kalender, Einkaufen und Budget gleichzeitig scheiterten: was ist der primaere Inhalt einer
+Modulseite, und wieviel Chrome darf davorstehen.
+
+**Die Groessenklasse hat dafuer eine zweite Achse** (tokens.css §11c): unter 500px
+Viewporthoehe faellt der Kopf auf seine Bar-Zeile, die Suche in ihre Icon-Form, jede Leiste
+gibt eine Padding-Stufe ab, und `--fab-safe-zone` schrumpft auf Gap plus Knopf. Die Breite
+allein konnte das nicht entscheiden - nach ihr ist ein 640x400-Fenster (ein 1280x800-Laptop
+bei 200 % Zoom, also WCAG 1.4.4) von einem 375x812-Telefon nicht zu unterscheiden, auf dem
+dieselben 296px Kopf unauffaellig sind. Dieselbe Lage haben Splitscreen-Tablets, kleine
+Fenster und jedes Telefon im Querformat; iOS fuehrt sie als `verticalSizeClass`.
+
+**Die Suche wechselt in ihre Icon-Form, nicht in ein leeres Feld.** Das ist die
+Label-Verlust-Regel, angewandt auf den Flaechenverlust, und sie braucht dafuer weder Markup
+noch JS: `.page-search` IST ein `<label for>`, ein Klick darauf fokussiert den Input, und
+`:focus-within` klappt das Feld wieder auf - der Einstieg ist derselbe Knoten wie das Feld.
+Die Bedingung ist woertlich die der gedeckelten Architektur (nur ohne Fokus UND ohne Wert):
+eine Suche, die einem beim Scrollen der eigenen Treffer unter den Haenden verschwindet, waere
+der falsche Gehorsam gegenueber der Regel.
+
+**Was NICHT passiert: keine Leiste verschwindet, keine Zielgroesse schrumpft.** Eine Leiste
+wegzunehmen hiesse, eine Navigationsebene zu verstecken, die es nur in dieser Groessenklasse
+nicht gaebe. Die Tabs behalten `--target-base` und verlieren nur die Luft um sich herum.
+
+**Und die FAB-Zone faellt so weit, wie sie kann, und keinen Pixel weiter.** Die erste Fassung
+setzte sie auf 0 und war damit falsch: am Scroll-Ende lagen `.pantry-stepper__btn` und
+`.contact-more-menu` unter dem Knopf und waren nicht mehr erreichbar - genau die Zusicherung
+aus #634, an einem Scrollstand, den niemand mehr aufloesen kann, weil es unter ihm nichts
+mehr gibt. Verzichtbar sind die 16px Luft und ein Teil des Schwebeabstands, nicht die Flaeche
+des Knopfes. Der grosse Gewinn kommt ohnehin aus dem Kopf: auf /tasks 296px Chrome ueber
+231px Scrollport vorher, 137px ueber 263px nachher - von "keine einzige Aufgabe sichtbar" auf
+zwei.
+
+**Gemessen wird sie an der Sichtflaeche, nicht am Scrollport** - der Unterschied ist bei
+dieser Regel entscheidend und war zweimal die Quelle einer falschen Messung. Die App hat zwei
+Scrollport-Architekturen: in Kueche, Budget, Kalender, Notizen und Kontakten liegt der Kopf
+AUSSERHALB des scrollenden Containers. Eine Sonde, die ab Scrollport-Oberkante misst, sieht
+sein Chrome dort gar nicht und meldet 0 %, obwohl 252px Leisten darueber stehen.
+
+**In der Kueche ist der Kopf zweiteilig, und das ist kein Sonderfall.** Nach der
+Leisten-Regel IST die Kuechen-Leiste die Kopf-Navigation (siehe „Modulkopf"); der Modulkopf
+darunter benennt den Platz IN dem Raum. Zusammen sind sie DER Kopf, und die Regel zaehlt sie
+als einen. Das ist die einzige ehrliche Lesart: die Leiste traegt bei 375px schon 347-375px
+Inhalt in 375px Breite, ein Zusammenfuehren zu einer physischen Zeile braeuchte horizontales
+Scrollen - und dann waere der Modulkopf weg, sobald jemand die Tabs bedient.
+
+Damit sind die Rezepte konform (Kopf plus die eine Bedienzeile ihres Center-Slots) und der
+Essensplan traegt seinen dokumentierten zweizeiligen Kopf. Uebrig blieben genau zwei Routen
+mit einer Zeile zu viel, und beide sind lokal geloest, ohne die Kuechen-Architektur
+anzufassen:
+
+- **Einkauf:** Listenwahl und Listenkopf teilen sich eine Zeile (Grid, zwei Spalten). Der
+  Listenname im Kopf ist ohnehin eine Dublette der aktiven Tab links - ausblenden schied
+  trotzdem aus, weil er dort kein Text ist, sondern das Ziel zum Umbenennen. Er schrumpft
+  stattdessen als Erster. Gemessen 640x400: Scrollport 27 → 84px, die erste Artikelzeile ist
+  wieder da.
+- **Vorrat:** Modulkopf und Filterzeile teilen sich eine Zeile. Das ist ein direkter Gewinn
+  aus der Kopf-Regel - die Suche steht in der kompakten Hoehe als Icon da statt als
+  291px-Feld, und den Platz nimmt die Filterzeile. Gemessen: Chrome 173 → 105px, Scrollport
+  106 → 158px, zwei volle Artikelzeilen.
 
 **Was aus der Lead-Zone mitgeht, entscheidet der Inhalt des Slots** - dieselbe Abgrenzung
 wie zwischen Bereich und Gruppe: eine SUCHE verschwindet (Apples
