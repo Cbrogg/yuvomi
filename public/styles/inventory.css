@@ -47,10 +47,9 @@
   min-height: var(--target-lg);
 }
 
-/* Der native Button-UA-Rahmen liefert sonst eine sichtbare Kante an der
- * ERSTEN Zeile jeder Gruppe (die einzige, die `.list-rows > * + *` nicht
- * trifft). Hoehere Spezifitaet als beide oben genannten Regeln macht das
- * unabhaengig von der Ladereihenfolge deterministisch. */
+/* Rein defensiv: reset.css setzt `button { border: none }` bereits global,
+ * die native UA-Kante des Buttons kann hier also gar nicht durchschlagen.
+ * Diese Regel sichert nur zusaetzlich ab, falls sich das je aendert. */
 .list-rows > .inventory-item-row:first-child {
   border-top: none;
 }

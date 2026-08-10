@@ -25,7 +25,7 @@ import { formatMoney } from '/utils/money.js';
 import { formatDate, getLocale } from '/i18n.js';
 import { renderDocumentAttachField, bindDocumentAttachField } from '/components/document-attach.js';
 import { warrantyStatus, hasUpcomingDeadline, dateStatus, countUpcomingDeadlines } from '/utils/inventory-warranty.js';
-import { openDetailView, detailRowEl } from '/components/detail-view.js';
+import { openDetailView } from '/components/detail-view.js';
 
 let _container = null;
 let _search = null;
@@ -237,7 +237,7 @@ function groupItemsByCategory(items) {
   const grouped = new Map();
   for (const item of items) {
     if (!grouped.has(item.category)) {
-      grouped.set(item.category, { key: item.category, name: item.category_name, icon: item.category_icon, items: [] });
+      grouped.set(item.category, { key: item.category, name: item.category_name || item.category, icon: item.category_icon || 'package', items: [] });
     }
     grouped.get(item.category).items.push(item);
   }
@@ -356,7 +356,7 @@ function inventoryDetailListNode(entries) {
       a.className = 'inventory-detail-list__link';
       a.href = href;
       a.target = '_blank';
-      a.rel = 'noopener';
+      a.rel = 'noopener noreferrer';
       a.textContent = text;
       line.appendChild(a);
     } else {
@@ -1041,9 +1041,10 @@ function buildItemForm({ mode, item = null }) {
 
     panel.querySelector('#inv-save').addEventListener('click', () => saveItem(panel, mode, item, attachments, pickedBooking));
     panel.querySelector('#inv-delete')?.addEventListener('click', async () => {
-      closeSharedModal({ force: true });
+      await closeSharedModal({ force: true });
       await removeItem(item);
     });
+    panel.querySelector('[data-action="close-modal"]')?.addEventListener('click', () => closeSharedModal());
 
     if (window.lucide) window.lucide.createIcons({ el: panel });
   }

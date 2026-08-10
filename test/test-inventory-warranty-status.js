@@ -127,3 +127,11 @@ test('countUpcomingDeadlines: 0 wenn alles valid oder leer ist', () => {
   const items = [item({ purchase_date: '2026-01-01', warranty_months: 24 }), item()];
   assert.equal(countUpcomingDeadlines(items, TODAY), 0);
 });
+
+test('countUpcomingDeadlines: alle Items brauchen Aufmerksamkeit', () => {
+  const items = [
+    item({ purchase_date: '2026-07-01', warranty_months: 1 }),
+    { ...item(), tracked_dates: [{ date: '2026-08-01' }] },
+  ];
+  assert.equal(countUpcomingDeadlines(items, TODAY), 2);
+});
