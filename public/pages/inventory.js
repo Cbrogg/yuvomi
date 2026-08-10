@@ -264,26 +264,33 @@ function renderGroupedItems(items) {
     </div>`).join('');
 }
 
+/**
+ * Zeile ueber die geteilte Grammatik (styles/list-row.css) statt eigener
+ * Geometrie: .list-row traegt Flaeche/Trennlinie/Hoehe, .list-row__main
+ * (--interactive) den Klickbereich, .list-row__name/.list-row__meta Name und
+ * Ort - exakt wie pantry.js#rowEl, damit Inventar optisch nicht vom Vorrat
+ * abweicht (Groesse, Abstand, Trennlinie sind app-weit EIN Wert, nicht
+ * modulweise nachgebaut). Nur Statusbadge und Zeitwert sind Inventar-eigen
+ * (Vorrat hat kein Aequivalent zu beidem).
+ */
 function renderItemRow(item) {
   const hasAttachments = (item.attachments?.length ?? 0) > 0;
   const hasBookings = (item.linked_entries?.length ?? 0) > 0;
   const deadlineAlert = hasUpcomingDeadline(item);
   return `
-    <button type="button" class="inventory-item-row" data-id="${item.id}">
-      <span class="inventory-item-row__main">
-        <span class="inventory-item-row__headline">
-          <span class="inventory-item-row__name-text">${esc(item.name)}</span>
+    <div class="list-row" data-id="${item.id}">
+      <button type="button" class="list-row__main list-row__main--interactive" data-action="open-detail">
+        <span class="inventory-row__headline">
+          <span class="list-row__name">${esc(item.name)}</span>
           ${hasAttachments ? `<i data-lucide="paperclip" class="icon-sm" aria-hidden="true"></i><span class="sr-only">${esc(t('inventory.hasAttachmentsLabel'))}</span>` : ''}
           ${hasBookings ? `<i data-lucide="receipt" class="icon-sm" aria-hidden="true"></i><span class="sr-only">${esc(t('inventory.hasBookingsLabel'))}</span>` : ''}
           ${deadlineAlert ? `<i data-lucide="shield-alert" class="icon-sm" aria-hidden="true"></i><span class="sr-only">${esc(t('inventory.warrantyAlertLabel'))}</span>` : ''}
+          <span class="inventory-status-badge inventory-status-badge--${esc(item.status)}">${esc(statusLabel(item.status))}</span>
         </span>
-        ${item.location_path ? `<span class="inventory-item-row__location">${esc(item.location_path)}</span>` : ''}
-      </span>
-      <span class="inventory-item-row__trailing">
-        <span class="inventory-status-badge inventory-status-badge--${esc(item.status)}">${esc(statusLabel(item.status))}</span>
-        <span class="inventory-item-row__value">${item.current_value != null ? esc(formatMoney(item.current_value, item.currency)) : ''}</span>
-      </span>
-    </button>`;
+        ${item.location_path ? `<span class="list-row__meta">${esc(item.location_path)}</span>` : ''}
+      </button>
+      <span class="inventory-row__value">${item.current_value != null ? esc(formatMoney(item.current_value, item.currency)) : ''}</span>
+    </div>`;
 }
 
 function renderList() {
@@ -316,9 +323,10 @@ function renderList() {
 
   list.insertAdjacentHTML('beforeend', renderGroupedItems(filtered));
 
-  list.querySelectorAll('.inventory-item-row').forEach((row) => {
-    row.addEventListener('click', () => {
-      const item = state.items.find((i) => i.id === Number(row.dataset.id));
+  list.querySelectorAll('[data-action="open-detail"]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const id = Number(button.closest('.list-row')?.dataset.id);
+      const item = state.items.find((i) => i.id === id);
       if (item) openItemDetail(item);
     });
   });

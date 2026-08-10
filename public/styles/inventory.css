@@ -1,10 +1,14 @@
 /**
  * Modul: Inventar (Inventory)
- * Zweck: Seiten-Layout, Listen-Zeilen und Status-Badges. Bewusst KEINE
- *        .kitchen-list-Wiederverwendung (kitchen-row.css): das Inventar ist
- *        nicht Teil der Kuechen-Gruppe (Mahlzeiten/Rezepte/Einkauf/Vorrat),
- *        sondern folgt dem Muster von documents.css - eigene, einfache
- *        Listen-Klasse statt eines domaenenfremden Primitivs.
+ * Zweck: Seiten-Layout, Statusbadges und Detailansicht. Die Liste selbst
+ *        traegt KEINE eigene Zeilen-Geometrie mehr: .list-group/.list-rows/
+ *        .list-row/.list-row__main--interactive/.list-row__name/
+ *        .list-row__meta (styles/list-row.css) sind dasselbe geteilte
+ *        Vokabular, das Vorrat und Einkauf schon nutzen - Inventar soll
+ *        optisch identisch aussehen (Groesse, Abstand, Trennlinie), nicht nur
+ *        aehnlich. Hier bleibt nur, was Inventar von Vorrat unterscheidet:
+ *        Statusbadge und Zeitwert, so wie pantry.css nur Badges und Stepper
+ *        beitraegt.
  */
 
 .inventory-page {
@@ -19,94 +23,24 @@
   padding-bottom: var(--space-8);
 }
 
-/* Echter Button als Klickfläche (kein role="button"/tabindex-Nachbau) - trägt
- * keine eigene Trennlinie/Fläche mehr, das übernimmt .list-rows (list-row.css,
- * .list-rows > * + *). Keine Kategorie-Spalte mehr: die Kategorie steht jetzt
- * als Gruppen-Überschrift darüber. */
-.inventory-item-row {
+/* Kopfzeile im Klickbereich: Name, Indikator-Icons, Statusbadge - exakt wie
+ * .pantry-row__headline (gleiche Klasse waere hier falsch benannt, aber
+ * identische Werte). */
+.inventory-row__headline {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
-  /* KEIN `border`/`border-top` hier (auch nicht per Shorthand): beide haben
-   * dieselbe Spezifitaet wie `.list-rows > * + *` (list-row.css), und
-   * router.js haengt das Seiten-CSS nach dem geteilten list-row.css ein -
-   * bei gleicher Spezifitaet gewinnt die spaetere Regel und loeschte damit
-   * lautlos die geteilte Trennlinie. Nur die Seiten zuruecksetzen, die
-   * KEINE Trennlinie tragen; border-top bleibt der geteilten Regel
-   * ueberlassen (Ausnahme: erste Zeile je Gruppe, siehe unten). */
-  border-inline: none;
-  border-bottom: none;
-  background: none;
-  font: inherit;
-  color: inherit;
-  text-align: start;
-  cursor: pointer;
-  min-height: var(--target-lg);
-}
-
-/* Rein defensiv: reset.css setzt `button { border: none }` bereits global,
- * die native UA-Kante des Buttons kann hier also gar nicht durchschlagen.
- * Diese Regel sichert nur zusaetzlich ab, falls sich das je aendert. */
-.list-rows > .inventory-item-row:first-child {
-  border-top: none;
-}
-
-.inventory-item-row:hover {
-  background: var(--color-surface-hover);
-}
-
-.inventory-item-row:focus-visible {
-  outline: var(--focus-ring-width) solid var(--focus-ring-color);
-  outline-offset: var(--focus-ring-offset);
-}
-
-.inventory-item-row__main {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-0h);
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
   min-width: 0;
 }
 
-.inventory-item-row__headline {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 0;
-}
-
-.inventory-item-row__name-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.inventory-item-row__location {
-  color: var(--color-text-secondary);
-  font-size: var(--text-sm);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.inventory-item-row__trailing {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
+/* Zeitwert, trailing außerhalb des Klickbereichs (wie der Stepper im Vorrat) -
+ * reine Anzeige, kein eigenes Bedienelement, deshalb kein .list-row__actions. */
+.inventory-row__value {
   flex-shrink: 0;
-}
-
-.inventory-item-row__value {
+  color: var(--color-text-secondary);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-}
-
-@media (max-width: 640px) {
-  .inventory-item-row__location {
-    display: none;
-  }
 }
 
 /* --------------------------------------------------------
