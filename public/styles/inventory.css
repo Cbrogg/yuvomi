@@ -110,6 +110,43 @@
   }
 }
 
+/* --------------------------------------------------------
+ * Listen-Zeilen in der Detailansicht (Anhaenge, Buchungen, Fristen) -
+ * gleiche Grammatik wie .contact-detail__values in contacts.css.
+ * -------------------------------------------------------- */
+
+.inventory-detail-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.inventory-detail-list__item {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.inventory-detail-list__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--target-base);
+  color: var(--module-inventory, var(--color-accent));
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.inventory-detail-list__link:hover,
+.inventory-detail-list__link:focus-visible {
+  text-decoration: underline;
+}
+
+.inventory-detail-list__sub {
+  font-size: var(--type-caption);
+  color: var(--color-text-tertiary);
+}
+
 /* Zwei-Spalten-Formularzeile fuer das Item-Formular (Anlegen/Bearbeiten).
  * Repliziert .pantry-form-row (pantry.css) 1:1, weil inventory.css und
  * pantry.css sich beim Routenwechsel gegenseitig ausschliessen - nur das

@@ -25,6 +25,7 @@ import { formatMoney } from '/utils/money.js';
 import { formatDate, getLocale } from '/i18n.js';
 import { renderDocumentAttachField, bindDocumentAttachField } from '/components/document-attach.js';
 import { warrantyStatus, hasUpcomingDeadline, dateStatus, countUpcomingDeadlines } from '/utils/inventory-warranty.js';
+import { openDetailView, detailRowEl } from '/components/detail-view.js';
 
 let _container = null;
 let _search = null;
@@ -277,7 +278,7 @@ function renderList() {
   list.querySelectorAll('.inventory-item-row').forEach((row) => {
     row.addEventListener('click', () => {
       const item = state.items.find((i) => i.id === Number(row.dataset.id));
-      if (item) openItemModal('edit', item);
+      if (item) openItemDetail(item);
     });
   });
 
@@ -290,8 +291,151 @@ async function loadItems() {
 }
 
 // --------------------------------------------------------
-// Gegenstands-Formular (Anlegen/Bearbeiten - dient in Stufe 1 auch als
-// De-facto-Detailansicht, es gibt keine separate Nur-Lese-Ansicht)
+// Detailansicht (nur Lesen, mit Inline-Wechsel ins Formular)
+// --------------------------------------------------------
+
+/**
+ * Eine Liste aus Text(+Link)/Unterzeile-Paaren fuer eine Detail-Zeile -
+ * gleiches Muster wie public/pages/contacts.js#contactLinksNode, wiederverwendet
+ * fuer Anhaenge, verknuepfte Buchungen und getrackte Fristen (alle drei sind
+ * strukturell "eine Liste aus Eintraegen mit optionalem Link und Unterzeile").
+ * @param {{href?: string, text: string, sub?: string}[]} entries
+ * @returns {HTMLElement|null}
+ */
+function inventoryDetailListNode(entries) {
+  if (!entries.length) return null;
+  const wrap = document.createElement('div');
+  wrap.className = 'inventory-detail-list';
+  entries.forEach(({ href, text, sub }) => {
+    const line = document.createElement('div');
+    line.className = 'inventory-detail-list__item';
+
+    if (href) {
+      const a = document.createElement('a');
+      a.className = 'inventory-detail-list__link';
+      a.href = href;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.textContent = text;
+      line.appendChild(a);
+    } else {
+      const span = document.createElement('span');
+      span.className = 'inventory-detail-list__text';
+      span.textContent = text;
+      line.appendChild(span);
+    }
+
+    if (sub) {
+      const s = document.createElement('span');
+      s.className = 'inventory-detail-list__sub';
+      s.textContent = sub;
+      line.appendChild(s);
+    }
+    wrap.appendChild(line);
+  });
+  return wrap;
+}
+
+/** Garantie-Zeile: kombiniert die reine Monatsangabe mit dem berechneten
+ *  Status, wenn ein Kaufdatum vorliegt - sonst nur "X Monate". */
+function warrantyDetailValue(item) {
+  if (item.warranty_months == null) return '';
+  const status = warrantyStatus(item);
+  if (!status) return t('inventory.warrantyMonthsValue', { count: item.warranty_months });
+  const formattedDate = formatDate(new Date(`${status.endDateKey}T00:00:00`));
+  if (status.state === 'expired') return t('inventory.warrantyStatusExpired', { date: formattedDate });
+  if (status.state === 'expiring') return t('inventory.warrantyStatusExpiringSoon', { count: status.days });
+  return t('inventory.warrantyStatusValid', { date: formattedDate });
+}
+
+/** Fristen-Zeile je getrackter Frist: Bezeichnung + Datum + Countdown. */
+function trackedDateDetailEntries(item) {
+  return (item.tracked_dates || []).map((d) => {
+    const status = dateStatus(d.date);
+    const countdown = !status ? '' : status.days < 0
+      ? t('inventory.trackedDateOverdueDays', { count: Math.abs(status.days) })
+      : status.days === 0 ? t('inventory.trackedDateDueToday')
+      : t('inventory.trackedDateInDays', { count: status.days });
+    return { text: d.label, sub: countdown ? `${formatDate(d.date)} · ${countdown}` : formatDate(d.date) };
+  });
+}
+
+/**
+ * Lese-Zeilen fuer die Detailansicht. Zeilen ohne Inhalt fallen selbst weg
+ * (detailRowEl), also keine Fallunterscheidung hier noetig.
+ * @returns {Array} Sections fuer openDetailView
+ */
+function renderItemDetail(item) {
+  const bookingEntries = (item.linked_entries || []).map((link) => ({
+    text: `${link.title} · ${formatMoney(link.amount, _householdCurrency)}`,
+    sub: `${roleLabel(link.role)} · ${formatDate(link.date)}`,
+  }));
+  const attachmentEntries = (item.attachments || []).map((doc) => ({
+    text: doc.name || doc.original_name || '',
+    href: `/api/v1/documents/${doc.document_id}/preview`,
+  }));
+
+  return [
+    { icon: item.category_icon, label: t('inventory.categoryLabel'), value: item.category_name },
+    { icon: 'map-pin', label: t('inventory.locationLabel'), value: item.location_path || '' },
+    { icon: 'building-2', label: t('inventory.brandLabel'), value: item.brand || '' },
+    { icon: 'package', label: t('inventory.modelLabel'), value: item.model || '' },
+    { icon: 'hash', label: t('inventory.serialNumberLabel'), value: item.serial_number || '' },
+    { icon: 'calendar', label: t('inventory.purchaseDateLabel'), value: item.purchase_date ? formatDate(item.purchase_date) : '' },
+    { icon: 'banknote', label: t('inventory.purchasePriceLabel'), value: item.purchase_price != null ? formatMoney(item.purchase_price, item.currency) : '' },
+    { icon: 'trending-up', label: t('inventory.currentValueLabel'), value: item.current_value != null ? formatMoney(item.current_value, item.currency) : '' },
+    { icon: 'store', label: t('inventory.vendorLabel'), value: item.vendor || '' },
+    { icon: 'shield', label: t('inventory.warrantyMonthsLabel'), value: warrantyDetailValue(item) },
+    { icon: 'gauge', label: t('inventory.conditionLabel'), value: t(`inventory.condition${item.condition.charAt(0).toUpperCase()}${item.condition.slice(1)}`) },
+    { icon: 'info', label: t('inventory.statusLabel'), value: statusLabel(item.status) },
+    { icon: 'align-left', label: t('inventory.notesLabel'), value: item.notes || '', multiline: true },
+    { icon: 'calendar-clock', label: t('inventory.trackedDatesLabel'), node: inventoryDetailListNode(trackedDateDetailEntries(item)) },
+    { icon: 'receipt', label: t('inventory.linkedBookingsLabel'), node: inventoryDetailListNode(bookingEntries) },
+    { icon: 'paperclip', label: t('inventory.attachmentsLabel'), node: inventoryDetailListNode(attachmentEntries) },
+  ];
+}
+
+/**
+ * Antippen zeigt den Gegenstand, bevor es ihn bearbeiten laesst - gleiches
+ * Muster wie public/pages/contacts.js#openContactDetail. Kein Anker, damit
+ * die Ansicht immer als Sheet erscheint statt als Desktop-Popover: das ist,
+ * was "Bearbeiten" das Formular INLINE mounten laesst (Design-Doc §3),
+ * anstatt einen zweiten Weg fuer den Popover-Fall zu brauchen.
+ *
+ * Die Liste liefert bereits das volle Item (Anhaenge, Buchungen, Fristen) -
+ * kein Einzelabruf noetig, anders als bei Kontakten.
+ */
+function openItemDetail(item) {
+  openDetailView({
+    title: item.name,
+    size: 'md',
+    sections: renderItemDetail(item),
+    actions: [{
+      id: 'inventory-detail-delete',
+      label: t('common.delete'),
+      variant: 'danger-ghost',
+      icon: 'trash-2',
+      align: 'start',
+      onClick: async ({ close }) => {
+        await close({ force: true });
+        await removeItem(item);
+      },
+    }],
+    edit: {
+      label: t('common.edit'),
+      title: t('common.editItem'),
+      mount: (panel, pane) => {
+        const form = buildItemForm({ mode: 'edit', item });
+        pane.insertAdjacentHTML('beforeend', form.content);
+        form.wire(panel);
+      },
+    },
+  });
+}
+
+// --------------------------------------------------------
+// Gegenstands-Formular (Anlegen/Bearbeiten, ausserdem inline in die
+// Detailansicht oben gemountet, siehe buildItemForm/openItemDetail)
 // --------------------------------------------------------
 
 const CONDITIONS = ['new', 'good', 'fair', 'poor'];
