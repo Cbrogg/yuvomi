@@ -48,6 +48,12 @@
  * ------------------------------------------------------------------------ */
 .u-toolbar-title,
 .page-toolbar__title,
+/* Der angedockte Titel der scrollenden Architektur ist derselbe Seitentitel in
+ * seinem Inline-Zustand, nur ein zweites Element (der echte bleibt in der
+ * Lead-Zone, siehe wireCollapsingHeader). Er gehört deshalb in DIESE Rolle und
+ * braucht keinen eigenen Schnitt: der Large-Title-Zustand unten hebt nur
+ * `.page-toolbar__title` an, an ihm geht er vorbei. */
+.page-toolbar__dock-title,
 .settings-leaf-header__title,
 /* Die Settings-Übersicht lief als .page__title auf 22px mobil / 28px Desktop,
  * während jedes andere Modul seinen Seitentitel mit 20px rendert - zwei
@@ -81,6 +87,16 @@
   }
 
   .page-toolbar--capped.is-collapsed > .page-toolbar__title {
+    font-size: var(--type-toolbar-title);
+  }
+}
+
+/* In der kompakten HÖHENKLASSE gibt es den Large-Title-Zustand nicht: dort
+ * steht der Titel inline, wie ihn iOS im Querformat führt. Den Umbruch dazu
+ * macht layout.css; hier steht, dass er dabei auf den Inline-Schnitt
+ * zurückfällt - sonst stünden 34px in einer 54px hohen Leiste. */
+@media (max-width: 1023px) and (max-height: 500px) {
+  .page-toolbar:not(.page-toolbar--in-group) > .page-toolbar__title {
     font-size: var(--type-toolbar-title);
   }
 }

@@ -301,6 +301,24 @@ html:has(.search-overlay--visible) yuvomi-install-prompt {
   display: none;
 }
 
+/* … UND ER WEICHT DEM FAB, statt ihn zu verschlucken. Beide sind unten rechts
+ * fixiert und ihre Kästen überlappen: der Banner steht 8px über der Tab-Bar und
+ * ist 89px hoch, der FAB beginnt --fab-gap darüber - gemessen auf 375×812
+ * liegen die 52px des Knopfes vollständig in der Bannerfläche. Da der Banner
+ * auf der Toast-Ebene liegt und der FAB unter der Navigation, gewann der Banner
+ * jeden Treffer: „etwas anlegen" war mobil auf jeder Seite tot, ohne sichtbaren
+ * Grund und ohne Rückmeldung - und das ausgerechnet beim ersten Öffnen, wenn
+ * der Banner erscheint.
+ *
+ * Der Ausweg ist die Geometrie, nicht die Stapelreihenfolge: ein Banner UNTER
+ * dem FAB wäre erreichbar, aber halb verdeckt. Er stellt sich stattdessen über
+ * den Knopf - dieselbe Rechnung, aus der --fab-safe-zone entsteht, nur vom
+ * Viewport statt vom Scrollport aus gezählt. Ohne FAB (Module ohne Anlegen-
+ * Aktion) bleibt es beim Wert der Komponente. */
+html:has(.fab-layer .page-fab:not([hidden])) yuvomi-install-prompt {
+  bottom: calc(var(--fab-offset-bottom) + var(--fab-size) + var(--space-2));
+}
+
 /* ── More-Sheet ── */
 .more-sheet {
   position: fixed;
@@ -1274,6 +1292,15 @@ html.fab-anim-done .page-fab {
   min-width: 0;
 }
 
+/* Der angedockte Titel (Shell: `wireCollapsingHeader`). Er gehört allein der
+ * kompakten Grössenklasse und dort allein der scrollenden Architektur - ab
+ * 1024px trägt der Kopf ohnehin durchgehend seinen Inline-Titel, und in der
+ * gedeckelten Architektur klappt der echte ein. Die Sichtbarkeitsregel steht
+ * unten im Media-Block; hier steht nur, dass er im Normalfall nicht existiert. */
+.page-toolbar__dock-title {
+  display: none;
+}
+
 .page-toolbar__actions {
   display: flex;
   align-items: center;
@@ -1521,6 +1548,25 @@ html.fab-anim-done .page-fab {
     max-width: none;
   }
 
+  /* DER ANGEDOCKTE TITEL beantwortet in der scrollenden Architektur das „wo bin
+   * ich", das der weggewanderte Large Title nicht mehr beantwortet. Er erscheint
+   * mit derselben Schwelle wie die Trennlinie darunter.
+   *
+   * `flex: 1 1 0` IST DIE BEDINGUNG, UNTER DER ER UNGEFÄHRLICH IST: mit
+   * Basis 0 passt er in jede Zeile, wächst nur in den Platz, den die Aktionen
+   * übrig lassen (auf 375px gemessen 127px), und kann die Bar-Zeile damit nie
+   * umbrechen. Ein Umbruch wäre eine Höhenänderung, und die ist genau das, was
+   * das negative `top` oben vermeidet. Die Ellipse kürzt statt umzubrechen -
+   * dieselbe Antwort wie beim Large Title selbst. */
+  .page-toolbar--stacked.is-docked > .page-toolbar__dock-title {
+    display: block;
+    flex: 1 1 0;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   /* Die Trennlinie erscheint erst, wenn die Leiste angedockt ist - am
    * Scroll-Anfang steht der Large Title nahtlos auf dem Seitengrund.
    * `--stacked` setzt der Helfer nur, wenn es überhaupt eine Lead-Zone gibt;
@@ -1563,6 +1609,32 @@ html.fab-anim-done .page-fab {
 @media (max-width: 1023px) and (prefers-reduced-motion: reduce) {
   .page-toolbar--capped > .page-toolbar__title {
     transition: none;
+  }
+}
+
+/* --------------------------------------------------------
+ * KOMPAKTE HÖHENKLASSE: kein Large Title.
+ *
+ * Der Large Title kostet eine eigene Zeile, und die ist ein Luxus der Höhe,
+ * nicht der Breite. Wo sie fehlt, frisst der Kopf den Inhalt: auf 640x400 -
+ * ein 1280x800-Laptop bei 200 % Browserzoom, und damit WCAG 1.4.4 - misst der
+ * Scrollport von /tasks 231px, während Kopf (172px) und Filterreihe (110px)
+ * zusammen 282px belegen. Die erste Aufgabe stand bei y=337 und war nie zu
+ * sehen, ohne dass ein einziges Pixel Inhalt daran schuld gewesen wäre.
+ *
+ * Dieselbe Lage kennt die Plattform: in der kompakten Höhenklasse (iPhone
+ * quer) zeigt iOS keinen Large Title, sondern führt den Titel inline. Die
+ * Grenze steht bei 500px, weil darunter keine der vier Viewport-Breiten mehr
+ * genug Höhe für Kopf plus zwei Inhaltszeilen hat.
+ *
+ * WELCHE GRÖSSE der Titel dann trägt, steht in typography.css bei der
+ * Canonical-Page-Head-Rolle - hier steht nur der Umbruch. Der angedockte
+ * Titel wird damit gegenstandslos: ohne eigene Zeile gibt es keine Lead-Zone,
+ * `lead` fällt auf 0, und die Shell legt ihn gar nicht erst an.
+ * -------------------------------------------------------- */
+@media (max-width: 1023px) and (max-height: 500px) {
+  .page-toolbar:not(.page-toolbar--in-group) > .page-toolbar__title {
+    flex-basis: auto;
   }
 }
 
