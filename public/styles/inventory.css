@@ -30,13 +30,29 @@
   width: 100%;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
-  border: none;
+  /* KEIN `border`/`border-top` hier (auch nicht per Shorthand): beide haben
+   * dieselbe Spezifitaet wie `.list-rows > * + *` (list-row.css), und
+   * router.js haengt das Seiten-CSS nach dem geteilten list-row.css ein -
+   * bei gleicher Spezifitaet gewinnt die spaetere Regel und loeschte damit
+   * lautlos die geteilte Trennlinie. Nur die Seiten zuruecksetzen, die
+   * KEINE Trennlinie tragen; border-top bleibt der geteilten Regel
+   * ueberlassen (Ausnahme: erste Zeile je Gruppe, siehe unten). */
+  border-inline: none;
+  border-bottom: none;
   background: none;
   font: inherit;
   color: inherit;
   text-align: start;
   cursor: pointer;
   min-height: var(--target-lg);
+}
+
+/* Der native Button-UA-Rahmen liefert sonst eine sichtbare Kante an der
+ * ERSTEN Zeile jeder Gruppe (die einzige, die `.list-rows > * + *` nicht
+ * trifft). Hoehere Spezifitaet als beide oben genannten Regeln macht das
+ * unabhaengig von der Ladereihenfolge deterministisch. */
+.list-rows > .inventory-item-row:first-child {
+  border-top: none;
 }
 
 .inventory-item-row:hover {
