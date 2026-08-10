@@ -28,6 +28,15 @@ test('fehlender Vorlauf bekommt den Default 30', () => {
   assert.equal(result.values[0].reminder_offset_days, 30);
 });
 
+test('expliziter Vorlauf 0 bleibt 0 und wird nicht zum Default umgeschrieben', () => {
+  // Regression gegen `Number(x) || 30`: 0 ("am Tag selbst erinnern") ist falsy
+  // und wurde im Frontend still zu 30. Der Validator darf denselben Fehler nicht
+  // machen - 0 ist ein gueltiger Wert (input min="0", DB-CHECK BETWEEN 0 AND 365).
+  const result = validateTrackedDatesInput([{ label: 'TÜV', date: '2027-06-01', reminder_offset_days: 0 }]);
+  assert.deepEqual(result.errors, []);
+  assert.equal(result.values[0].reminder_offset_days, 0);
+});
+
 test('fehlendes Label oder Datum ist ein Fehler', () => {
   assert.ok(validateTrackedDatesInput([{ label: '', date: '2027-06-01' }]).errors.length > 0);
   assert.ok(validateTrackedDatesInput([{ label: 'TÜV', date: '' }]).errors.length > 0);

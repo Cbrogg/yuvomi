@@ -527,11 +527,18 @@ function wireTrackedDateRows(panel) {
 }
 
 function collectTrackedDates(panel) {
-  return [...panel.querySelectorAll('[data-tracked-date-row]')].map((row) => ({
-    label: row.querySelector('.js-tracked-date-label').value.trim(),
-    date: row.querySelector('.js-tracked-date-date').value || null,
-    reminder_offset_days: Number(row.querySelector('.js-tracked-date-offset').value) || 30,
-  })).filter((d) => d.label && d.date);
+  return [...panel.querySelectorAll('[data-tracked-date-row]')].map((row) => {
+    // Kein `|| 30`: eine explizite 0 ("am Tag selbst erinnern") ist falsy und
+    // wuerde sonst still zu 30 umgeschrieben. 0 ist ueberall sonst gueltig
+    // (input min="0", Server-Validator >= 0, DB-CHECK BETWEEN 0 AND 365).
+    const rawOffset = row.querySelector('.js-tracked-date-offset').value.trim();
+    const offset = Number(rawOffset);
+    return {
+      label: row.querySelector('.js-tracked-date-label').value.trim(),
+      date: row.querySelector('.js-tracked-date-date').value || null,
+      reminder_offset_days: rawOffset === '' || !Number.isFinite(offset) ? 30 : offset,
+    };
+  }).filter((d) => d.label && d.date);
 }
 
 function openItemModal(mode, item = null) {
