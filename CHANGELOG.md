@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-08-10
+
 ### Changed
 
 - **The app has one colour again.** The violet of the app icon carries the navigation, the add button, buttons, switches, links and focus rings - in every module, the same. Module colours stay where they answer "where am I": the badge in the module header, the module's own bars and chips, its widget on the dashboard, its icon in the sidebar. Opening the budget no longer repaints the whole frame teal.
