@@ -175,7 +175,9 @@ function renderCatBars() {
   const plans = view.data.range === 'month' ? (view.data.plans || {}) : {};
   const rows = cats.map((c) => {
     const isExp = c.total < 0;
-    const pct = Math.round((Math.abs(c.total) / maxAbs) * 100);
+    // Mindestwert 6 wie im Monats-Chart: gleiche Bauart, gleiche Regel - und im
+    // gespiegelten Chart trägt jede Seite nur die halbe Trackbreite.
+    const pct = Math.max(6, Math.round((Math.abs(c.total) / maxAbs) * 100));
     const target = isExp ? plans[c.category] : undefined;
     const targetPos = target != null ? Math.min(1, target / maxAbs) : null;
     const targetMarker = targetPos != null
@@ -183,8 +185,10 @@ function renderCatBars() {
              title="${t('budget.planTarget', { amount: view.ctx.formatAmount(target) })}"></div>`
       : '';
     const catLabel = view.ctx.esc(view.ctx.categoryLabel(c.category));
+    // --mirrored: gemeinsame Mittelachse wie im Monats-Chart (Critique
+    // 2026-08-10, P0); der Budgetplan-Zielmarker rechnet im CSS mit.
     return `
-      <div class="budget-bar-row">
+      <div class="budget-bar-row budget-bar-row--mirrored">
         <div class="budget-bar-row__label" title="${catLabel}">${catLabel}</div>
         <div class="budget-bar-row__track">
           <div class="budget-bar-row__fill ${isExp ? 'budget-bar-row__fill--expenses' : 'budget-bar-row__fill--income'}"

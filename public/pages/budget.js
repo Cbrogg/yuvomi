@@ -700,20 +700,23 @@ function renderBody() {
       <div class="metric-card metric-card--income">
         <div class="metric-card__label">${t('budget.income')}</div>
         <div class="metric-card__amount">${amountByRole(s.income, 'total').text}</div>
-        ${p ? renderTrend(s.income, p.income, prevLabel) : ''}
+        ${p ? renderTrend(s.income, p.income, prevLabel, 'higher') : ''}
       </div>`;
+  // Ausgaben-Trend im Betragsraum (Math.abs), wie die Zahl auf der Karte:
+  // die API liefert expenses signiert negativ, aber „+954 € ggü. Jul" muss
+  // hier „954 € mehr ausgegeben" heißen. Valenz: weniger ist besser.
   const expensesCard = `
       <div class="metric-card metric-card--expenses">
         <div class="metric-card__label">${t('budget.expenses')}</div>
         <div class="metric-card__amount">${amountByRole(s.expenses, 'total').text}</div>
-        ${p ? renderTrend(s.expenses, p.expenses, prevLabel) : ''}
+        ${p ? renderTrend(Math.abs(s.expenses), Math.abs(p.expenses), prevLabel, 'lower') : ''}
       </div>`;
   // Rolle `balance`: hier trägt die Zahl selbst die Richtung.
   const balanceCard = `
       <div class="metric-card ${balanceClass}">
         <div class="metric-card__label">${t('budget.balance')}</div>
         <div class="metric-card__amount">${amountByRole(s.balance, 'balance').text}</div>
-        ${p && !balanceNeutral ? renderTrend(s.balance, p.balance, prevLabel) : ''}
+        ${p && !balanceNeutral ? renderTrend(s.balance, p.balance, prevLabel, 'higher') : ''}
       </div>`;
 
   setHtml(body, `
@@ -884,13 +887,17 @@ function renderCategoryBars(byCategory) {
     const isExpense = c.total < 0;
     // Nicht-null-Kategorien behalten einen sichtbaren Mindestbalken, statt bei
     // winzigem Anteil (z. B. -25 € neben +5050 €) auf 0 zu runden und leer zu
-    // wirken (Audit P3).
+    // wirken (Audit P3). Mindestwert 6 statt 3: im gespiegelten Chart trägt
+    // jede Seite nur die halbe Trackbreite.
     const rawPct    = (Math.abs(c.total) / maxAbs) * 100;
-    const pct       = c.total !== 0 ? Math.max(3, Math.round(rawPct)) : 0;
+    const pct       = c.total !== 0 ? Math.max(6, Math.round(rawPct)) : 0;
     const cls       = isExpense ? 'budget-bar-row__fill--expenses' : 'budget-bar-row__fill--income';
 
+    // --mirrored (Critique 2026-08-10, P0): Einnahmen und Ausgaben wuchsen von
+    // derselben Nulllinie in dieselbe Richtung, die Richtung steckte allein im
+    // Farbton. Jetzt spiegeln beide um eine gemeinsame Mittelachse.
     return `
-      <div class="budget-bar-row">
+      <div class="budget-bar-row budget-bar-row--mirrored">
         <div class="budget-bar-row__label" title="${esc(categoryLabel(c.category))}">${esc(categoryLabel(c.category))}</div>
         <div class="budget-bar-row__track">
           <div class="budget-bar-row__fill ${cls}" style="--bar-scale:${pct / 100}"></div>
@@ -1710,29 +1717,36 @@ function renderLoanCard(loan) {
 }
 
 /**
- * Rendert eine Trend-Zeile im Vergleich zum Vormonat.
- * Alle drei Metriken (income, expenses, balance) nutzen dieselbe Logik:
- *   delta > 0 → positiver Trend (▲ grün), delta < 0 → negativer Trend (▼ rot).
- * Ausgaben werden als negative Zahlen übergeben, daher gilt:
- *   weniger Ausgaben ↔ delta > 0 ↔ gut.
- * @param {number} current   Aktueller Wert
- * @param {number} prev      Vormonatswert
+ * Rendert eine Trend-Zeile im Vergleich zum Vormonat, in zwei getrennten
+ * Kanälen (Critique 2026-08-10, P0):
+ *   - PFEIL und Vorzeichen zeigen die Richtung der Zahl auf der Karte. Die
+ *     Karten zeigen Beträge („die Richtung steht im Label"), also rechnet auch
+ *     das Delta im Betragsraum - vorher lief es über die signierte Rohsumme,
+ *     und „-954 € ggü. Jul" unter „Ausgaben 3.000 €" behauptete weniger
+ *     Ausgaben, wo 954 € mehr ausgegeben wurden.
+ *   - Die FARBE trägt allein die Valenz: `betterWhen` sagt pro Kennzahl, ob
+ *     mehr oder weniger die gute Richtung ist. Vorher kodierte die Klasse das
+ *     Vorzeichen der Differenz, und gesunkene Ausgaben lasen sich als Alarm.
+ * @param {number} current   Aktueller Wert (im Anzeigeraum der Karte)
+ * @param {number} prev      Vormonatswert (im selben Raum)
  * @param {string} prevLabel Kurzname des Vormonats (z.B. "Mär")
+ * @param {'higher'|'lower'} betterWhen Welche Richtung die gute ist
  */
-function renderTrend(current, prev, prevLabel) {
+function renderTrend(current, prev, prevLabel, betterWhen = 'higher') {
   const delta = current - prev;
   if (Math.abs(delta) < 0.005) {
     return `<div class="metric-card__trend metric-card__trend--neutral">${t('budget.trendNeutral', { month: prevLabel })}</div>`;
   }
-  const positive = delta > 0;
+  const rising   = delta > 0;
+  const improved = betterWhen === 'lower' ? !rising : rising;
   // Rolle `flow`: eine Veränderung gegenüber dem Vormonat trägt immer ein
   // Vorzeichen, aus demselben Zahlformat wie die Buchungen selbst.
   const deltaText = amountByRole(delta, 'flow').text;
-  const cls      = positive ? 'metric-card__trend--positive' : 'metric-card__trend--negative';
+  const cls      = improved ? 'metric-card__trend--positive' : 'metric-card__trend--negative';
   // Pfeil als Lucide-Icon statt ▲/▼: die Textglyphen fallen aus der Icon-Familie
   // und sind je nach Font unterschiedlich breit (Zeilenzittern). Das „vs." stand
   // bisher fest im Template — jetzt trägt der Key den ganzen Satz.
-  const icon = positive ? 'trending-up' : 'trending-down';
+  const icon = rising ? 'trending-up' : 'trending-down';
   return `<div class="metric-card__trend ${cls}">
     <i data-lucide="${icon}" class="icon-sm" aria-hidden="true"></i>
     ${esc(t('budget.trendDelta', { amount: deltaText, month: prevLabel }))}
