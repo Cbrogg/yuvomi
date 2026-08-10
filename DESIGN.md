@@ -25,24 +25,22 @@ colors:
   warning: "#A85D00"
   danger: "#D70015"
   info: "#0663C7"
-  module-dashboard: "#4F4DC9"
-  module-tasks: "#157F3D"
-  module-calendar: "#6D28D9"
-  module-meals: "#C2410C"
-  module-recipes: "#0C7C5B"
-  module-shopping: "#CF236F"
-  module-pantry: "#4C7A0F"
-  module-notes: "#9D6007"
-  module-contacts: "#0969DA"
-  module-birthdays: "#CE2A63"
-  module-budget: "#0F766E"
-  module-split-expenses: "#1975A5"
-  module-documents: "#42587E"
-  module-housekeeping: "#7C3AED"
-  module-health: "#9E1E88"
-  module-settings: "#677079"
-  module-reminders: "#0E7490"
-  module-rewards: "#BA4468"
+  # Familientoene (Block 2, 2026-08-10): die 17 Modul-Einzeltoene sind neun
+  # Familien; jedes --module-* bezieht aus seiner Familie. Quelle der Wahrheit
+  # und Modul-Zuordnung: public/styles/tokens.css, Abschnitt 4.
+  # overview: dashboard - time: calendar, reminders - work: tasks,
+  # housekeeping, rewards - kitchen: meals, recipes, shopping, pantry -
+  # money: budget, split-expenses - people: contacts, birthdays -
+  # health: health - records: documents, notes - neutral: settings
+  family-overview: "#4F4DC9"
+  family-time: "#6D28D9"
+  family-work: "#157F3D"
+  family-kitchen: "#C2410C"
+  family-money: "#0F766E"
+  family-people: "#CE2A63"
+  family-health: "#9E1E88"
+  family-records: "#42587E"
+  family-neutral: "#677079"
 typography:
   large-title:
     fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', 'Segoe UI', Roboto, Arial, sans-serif"
