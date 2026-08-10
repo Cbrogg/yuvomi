@@ -10222,7 +10222,7 @@ test('jedes Push-Ziel zeigt auf eine Route, die es gibt', () => {
       const url = match[1].split(/[?#]/)[0];
       if (known.has(url) || settingsLeaf.test(url)) continue;
       const line = src.slice(0, match.index).split('\n').length;
-      offenders.push(`${file.replace('../', '')}:${line} → ${url}`);
+      offenders.push(`${file.replace(/^\.\.\//, '')}:${line} → ${url}`);
     }
   }
 
@@ -10247,7 +10247,7 @@ test('das Überlappungszeichen kommt aus einer Hand', () => {
     const src = read(rel);
     for (const match of src.matchAll(/seal-pair__who/g)) {
       const line = src.slice(0, match.index).split('\n').length;
-      offenders.push(`${rel.replace('../', '')}:${line}`);
+      offenders.push(`${rel.replace(/^\.\.\//, '')}:${line}`);
     }
   }
 
