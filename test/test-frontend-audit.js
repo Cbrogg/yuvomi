@@ -4825,7 +4825,14 @@ test('calendar draws its gutter from the shared page token and compacts weekday 
   );
 });
 
-test('dashboard and calendar keep distinct navigation accents in light and dark themes', () => {
+// Bis Block 2 (2026-08-10) verglich dieser Guard genau zwei Namen
+// (--_module-dashboard gegen --_module-calendar) - das Kollisionspaar von
+// damals. Seit den Familientoenen ist die Regel allgemein: die Modul-Akzente
+// leben in --_family-*-Werten, und KEIN Familienpaar darf denselben Wert
+// tragen, sonst kehrt die Kollision (zwei Violetts, zwei Teals) still zurueck.
+// Dazu bezieht jedes --module-* seinen Wert aus einer Familie: ein Solo-Hex an
+// einem Modul wuerde die Familienregel unterlaufen, ohne dass es ein Paar gibt.
+test('module accent families stay pairwise distinct and every module draws from one', () => {
   const tokens = read('../public/styles/tokens.css');
   const rootBlock = tokens.match(/:root\s*\{([\s\S]*?)\n\}/);
   const darkBlock = darkAttrBlock(tokens);
@@ -4835,10 +4842,29 @@ test('dashboard and calendar keep distinct navigation accents in light and dark 
 
   for (const [theme, block] of [['light', rootBlock[1]], ['dark', darkBlock[1]]]) {
     const values = parseTokenMap(block);
-    assert.notEqual(
-      values.get('--_module-dashboard')?.toLowerCase(),
-      values.get('--_module-calendar')?.toLowerCase(),
-      `${theme} dashboard and calendar accents must be visually distinct`,
+    const families = [...values.entries()].filter(([name]) => name.startsWith('--_family-'));
+    assert.ok(
+      families.length >= 9,
+      `${theme}: expected the module accent families in this block, found ${families.length}`,
+    );
+    const seen = new Map();
+    for (const [name, value] of families) {
+      const v = value.toLowerCase();
+      assert.ok(
+        !seen.has(v),
+        `${theme}: ${name} shares its value ${v} with ${seen.get(v)} - family accents must stay pairwise distinct`,
+      );
+      seen.set(v, name);
+    }
+  }
+
+  const rootValues = parseTokenMap(rootBlock[1]);
+  for (const [name, value] of rootValues) {
+    if (!name.startsWith('--module-')) continue;
+    assert.match(
+      value,
+      /^var\(--_family-[\w-]+\)$/,
+      `${name} must draw its value from a --_family-* token, got: ${value}`,
     );
   }
 });

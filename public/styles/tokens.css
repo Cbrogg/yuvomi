@@ -366,78 +366,81 @@
   --chart-series-7: var(--_chart-series-7);
 
   /* --------------------------------------------------------
-   * 4. Farben - Modul-Akzente
-   *    Jedes Modul hat eine eigene Akzentfarbe (Apple-Systemapp-Muster:
-   *    jede App ihr Tint). Die Hue-Zuordnung und ihre dokumentierten
-   *    AA-/Farbfehlsicht-Abstände bleiben aus dem Bestand erhalten;
-   *    NUR Dashboard (= neuer Indigo-Akzent) und Kalender (rückt auf
-   *    Violett-700, gleiche Familien-Distanz wie zuvor dokumentiert)
-   *    wurden im Redesign 2026-08 verschoben.
+   * 4. Farben - Modul-Akzente (Familientoene, Block 2 2026-08-10)
+   *    Jedes Modul hat einen Akzent (Apple-Systemapp-Muster: jede App
+   *    ihr Tint), aber die WERTE kommen aus acht Farbfamilien plus
+   *    Neutral: Module desselben Lebensbereichs teilen einen Ton,
+   *    innerhalb einer Familie unterscheidet das Modul-Icon
+   *    (Markensiegel, .impeccable/block2-brief.md). Vorher trugen 18
+   *    Einzeltoene zwei gemessene Kollisionspaare (Kalender/
+   *    Haushaltshilfe zwei Violetts, Budget/Rezepte zwei Teals) und
+   *    drei Beinahe-Paare (drei Pinks, drei Blaus, Cyan neben Teal).
+   *    17-fach unterscheidbar war nie noetig: gemischt treten Module
+   *    nur an den Mischstellen auf (Suche, Heute wichtig, Mehr), und
+   *    dort arbeitet das Siegel, nicht der Farbwert allein.
    *
-   *    Nachverifikation gegen den kuehlen Grouped-Grund #F2F2F7 (2026-08-06):
-   *    sieben Bestandswerte fielen dort auf 4.47-4.49:1 und wurden minimal
-   *    vertieft (Hue unveraendert, ~1% dunkler, Familien-Distanzen bleiben):
-   *    tasks #15803D->#157F3D, shopping #D12370->#CF236F,
-   *    pantry #4D7C0F->#4C7A0F, notes #9F6107->#9D6007,
-   *    birthdays #D02A64->#CE2A63, split-expenses #1976A7->#1975A5,
-   *    rewards #BC4569->#BA4468. Alle jetzt >=4.55:1 auf bg, >=5:1 auf weiss.
+   *    Die Familientoene SIND die verifizierten Bestandswerte ihrer
+   *    Spender-Module; die AA-Messlage ist unveraendert. Aus der
+   *    Nachvertiefung gegen den Grouped-Grund (2026-08-06) leben zwei
+   *    Werte als Familientoene weiter (tasks #15803D->#157F3D,
+   *    birthdays #D02A64->#CE2A63); die uebrigen fuenf vertieften
+   *    Toene sind mit Block 2 in ihren Familien aufgegangen.
+   *
+   *    Oeffentliche API unveraendert: JEDES --module-* bleibt bestehen
+   *    (Dashboard-Widgets und Nav-Icons referenzieren einzeln); nur
+   *    die private Wert-Ebene wechselt von 18 Toenen auf 9 Familien.
+   *    Die Dark-Bloecke ueberschreiben ausschliesslich --_family-*.
    * -------------------------------------------------------- */
-  --_module-dashboard: #4F4DC9;
-  --module-dashboard:  var(--_module-dashboard);  /* Indigo — Übersicht (= --color-accent, bewusster Share) */
-  /* 1 G-Stufe unter Bestand #15803D: der kuehle Grouped-Grund #F2F2F7 drueckte
-   * das Bestandsgruen auf 4.49:1 (AA-Riss); #157F3D: 4.55:1 auf bg, 5.08:1 auf
-   * Weiss. Familien-Distanz zu Akzent/Nachbarn unveraendert. */
-  --_module-tasks:     #157F3D;
-  --module-tasks:      var(--_module-tasks);       /* Grün - Erledigung */
-  --_module-calendar:  #6D28D9;
-  --module-calendar:   var(--_module-calendar);    /* Violett-700 - Termine, Zeit; 6.7:1 auf weiß. Bleibt in der Indigo-Familie des Akzents, klar getrennt (~20° Hue). */
-  --_module-meals:     #C2410C;
-  --module-meals:      var(--_module-meals);       /* Orange-700 - Essen, Wärme */
-  --_module-recipes:   #0C7C5B;
-  /* OHNE var()-Nutzer, und das ist Absicht: die vier Küchenrouten lösen ihren
-   * Akzent auf --module-kitchen auf, deshalb greift niemand den Rezepte-Ton.
-   * Er bleibt trotzdem stehen - die 18 Tints sind EINE Familie, und eine Lücke
-   * darin wäre bei der nächsten Modulfrage ein Sonderfall statt einer Antwort. */
-  --module-recipes:    var(--_module-recipes);     /* Teal-Grün - Rezepte; 5.19:1 auf weiß — WCAG AA */
-  --_module-shopping:  #CF236F;
-  --module-shopping:   var(--_module-shopping);    /* Pink-600 - Einkaufen; 5.02:1 auf weiß — WCAG AA */
-  --_module-pantry:    #4C7A0F;
-  --module-pantry:     var(--_module-pantry);      /* Oliv-Grün (86°) - Vorrat; 4.99:1 auf weiß — WCAG AA */
-  /* Akzent der KÜCHEN-GRUPPE. Mahlzeiten/Rezepte/Einkaufen/Vorrat sind im
+  --_family-overview: #4F4DC9;  /* Indigo - Uebersicht (= --color-accent, bewusster Share) */
+  --_family-time:     #6D28D9;  /* Violett-700 - Kalender, Erinnerungen; 6.7:1 auf weiss.
+                                 * Knappstes Familienpaar zum Indigo: ~20 Grad Hue plus
+                                 * Helligkeitsabstand - die beim Paar Kalender/Akzent
+                                 * bereits gebilligte Trennung. */
+  --_family-work:     #157F3D;  /* Gruen - Aufgaben, Haushaltshilfe, Belohnungen (der
+                                 * Verbund Erledigen -> Punkte -> Belohnung). 1 G-Stufe
+                                 * unter Bestand #15803D: der kuehle Grouped-Grund
+                                 * drueckte das Bestandsgruen auf 4.49:1 (AA-Riss);
+                                 * #157F3D: 4.55:1 auf bg, 5.08:1 auf Weiss. */
+  --_family-kitchen:  #C2410C;  /* Orange-700 - Mahlzeiten, Rezepte, Einkaufen, Vorrat */
+  --_family-money:    #0F766E;  /* Teal-700 - Budget, Kostenteilung */
+  --_family-people:   #CE2A63;  /* Rose - Kontakte, Geburtstage; 5.01:1 auf weiss */
+  --_family-health:   #9E1E88;  /* Beeren-Fuchsia (310 Grad) - Gesundheit; 7.0:1 auf
+                                 * weiss (AAA), kein Rot (Trennung von Danger) */
+  --_family-records:  #42587E;  /* Stahlblau - Dokumente, Notizen */
+  --_family-neutral:  #677079;  /* Grau - Einstellungen: Konfiguration gehoert keinem
+                                 * Lebensbereich; 5.03:1 auf weiss */
+
+  --module-dashboard: var(--_family-overview);
+  --module-tasks:     var(--_family-work);
+  --module-calendar:  var(--_family-time);
+  --module-meals:     var(--_family-kitchen);
+  --module-recipes:   var(--_family-kitchen);
+  --module-shopping:  var(--_family-kitchen);
+  --module-pantry:    var(--_family-kitchen);
+  /* Akzent der KUECHEN-GRUPPE. Mahlzeiten/Rezepte/Einkaufen/Vorrat sind im
    * ROUTING vier Module mit vier eigenen `module:`-Werten, in NAVIGATION,
-   * AKZENT und STATUSBAR aber eines (router.js: `kitchenGroup: true`) - also
-   * EIN Akzent, nicht vier. Ein Farbwechsel beim Tabwechsel wäre die stärkste
-   * „du hast den Kontext verlassen"-Botschaft der App (Critique 2026-07-29).
-   * Die vier --module-{meals,recipes,shopping,pantry} bleiben bestehen:
+   * AKZENT und STATUSBAR aber eines (router.js: `kitchenGroup: true`). Die
+   * Gruppe war der Praezedenzfall der Familientoene: ein Farbwechsel beim
+   * Tabwechsel waere die staerkste "du hast den Kontext verlassen"-Botschaft
+   * der App (Critique 2026-07-29). Die vier Einzel-Tokens bleiben bestehen:
    * Dashboard-Widgets und Nav-Icons referenzieren sie einzeln. */
-  --module-kitchen:    var(--_module-meals);
-  --_module-notes:     #9D6007;
-  --module-notes:      var(--_module-notes);       /* Amber-700 - Notizen; 5.02:1 auf weiß — WCAG AA */
-  --_module-contacts:  #0969DA;
-  --module-contacts:   var(--_module-contacts);    /* Kräftiges Blau - Kontakte */
-  --_module-birthdays: #CE2A63;
-  --module-birthdays:  var(--_module-birthdays);   /* Rosé - Geburtstage; 5.01:1 auf weiß — WCAG AA */
-  --_module-budget:    #0F766E;
-  --module-budget:     var(--_module-budget);      /* Teal-700 - Finanzen, Stabilität */
-  --_module-split-expenses: #1975A5;
-  --module-split-expenses:  var(--_module-split-expenses); /* Azur-Cyan - geteilte Familienfinanzen; 5.01:1 — WCAG AA */
-  --_module-documents: #42587E;
-  --module-documents:  var(--_module-documents);    /* Stahlblau - sichere Familiendokumente */
-  --_module-housekeeping: #7C3AED;
-  --module-housekeeping:  var(--_module-housekeeping); /* Violett - focused service workflow */
-  --_module-health:    #9E1E88;
-  --module-health:     var(--_module-health);      /* Beeren-Fuchsia (310°) — Gesundheit; 7.0:1 auf weiß (AAA), kein Rot (Trennung von Danger) */
+  --module-kitchen:   var(--_family-kitchen);
+  --module-notes:     var(--_family-records);
+  --module-contacts:  var(--_family-people);
+  --module-birthdays: var(--_family-people);
+  --module-budget:    var(--_family-money);
+  --module-split-expenses: var(--_family-money);
+  --module-documents: var(--_family-records);
+  --module-housekeeping: var(--_family-work);
+  --module-health:    var(--_family-health);
   /* Zyklus-Phasenfarben — nur im Zyklus-Tab (/health/cycle). Getrennt vom Modul-
      Akzent und vom semantischen --color-danger der Lab-Flags. */
   --cycle-period:    #C81E5A;   /* Menstruation/Blutung — Rosé-Rot (~5.0:1 auf weiß) */
   --cycle-fertile:   #0E8C74;   /* Fruchtbares Fenster — Teal-Grün (~4.5:1 auf weiß) */
   --cycle-ovulation: #0E7FB0;   /* Eisprung-Spitzentag — Cyan-Blau (~4.8:1 auf weiß) */
-  --_module-settings:   #677079;
-  --module-settings:    var(--_module-settings);   /* Grau - Konfiguration; 5.03:1 auf weiß — WCAG AA */
-  --_module-reminders:  #0E7490;
-  --module-reminders:   var(--_module-reminders);  /* Cyan-700 - Erinnerungen, 5.36:1 auf weiß — WCAG AA */
-  --_module-rewards:    #BA4468;
-  --module-rewards:     var(--_module-rewards);     /* Rosé-Kupfer (342°) — Belohnungen; 5.01:1 auf weiß — WCAG AA */
+  --module-settings:  var(--_family-neutral);
+  --module-reminders: var(--_family-time);
+  --module-rewards:   var(--_family-work);
 
   /* KONVENTION "Akzent-Text auf akzent-getöntem Grund" (Chips, Badges,
    * Initialen-Avatare): der rohe Akzent scheitert dort, weil der Grund eine
@@ -1399,38 +1402,27 @@
     --_chart-series-6: #F472B6;
     --_chart-series-7: #4ADE80;
 
-    /* Modul-Akzente — Dark-Varianten (Bestandswerte, verifiziert;
-     * NUR dashboard und calendar im Redesign 2026-08 verschoben) */
-    --_module-dashboard: #8A87FF;   /* Indigo Dark = Akzent: zieht mit --_color-accent MIT.
-                                     * Der Share ist die Zusage, nicht der Wert - blieb der Tint
-                                     * auf #7D7AFF, loeste der Router auf /dashboard genau den
-                                     * Wert in --active-module-accent auf, den der Akzent als
-                                     * zu dunkel abgelegt hat (4,05 auf #2C2C2E). Traegt beide
-                                     * Rollen besser: als Text 4,64 statt 4,05, als Flaeche unter
-                                     * --color-ink-on-vivid (#0A0A0C) 6,58 statt 5,75 - damit im
-                                     * Feld der uebrigen Dark-Tints (6,17 bis 11,35) statt darunter. */
-    --_module-tasks:     #4ADE80;
-    --_module-calendar:  #A78BFA;   /* Violett-400 — Familien-Distanz zum Indigo-Akzent */
-    --_module-meals:     #FB923C;
-    --_module-shopping:  #F472B6;
-    --_module-notes:     #FCD34D;
-    --_module-contacts:  #60A5FA;
-    --_module-birthdays: #FB7185;
-    --_module-budget:      #2DD4BF;
-    --_module-recipes:     #2ECC99;
-    --_module-pantry:      #A3E635;
-    --_module-split-expenses: #2FB6E8;
-    --_module-documents:   #7E9BCC;
-    --_module-housekeeping: #C4B5FD;
-    --_module-health:      #DB60CB;
+    /* Modul-Akzente — Dark-Varianten der Familientoene (Bestandswerte der
+     * Spender-Module, verifiziert; Feld unter --color-ink-on-vivid 6,17-11,35) */
+    --_family-overview: #8A87FF;   /* Indigo Dark = Akzent: zieht mit --_color-accent MIT.
+                                    * Der Share ist die Zusage, nicht der Wert - blieb der Tint
+                                    * auf #7D7AFF, loeste der Router auf /dashboard genau den
+                                    * Wert in --active-module-accent auf, den der Akzent als
+                                    * zu dunkel abgelegt hat (4,05 auf #2C2C2E). Traegt beide
+                                    * Rollen besser: als Text 4,64 statt 4,05, als Flaeche unter
+                                    * --color-ink-on-vivid (#0A0A0C) 6,58 statt 5,75 - damit im
+                                    * Feld der uebrigen Dark-Tints (6,17 bis 11,35) statt darunter. */
+    --_family-time:     #A78BFA;   /* Violett-400 — Familien-Distanz zum Indigo-Akzent */
+    --_family-work:     #4ADE80;
+    --_family-kitchen:  #FB923C;
+    --_family-money:    #2DD4BF;
+    --_family-people:   #FB7185;
+    --_family-health:   #DB60CB;
+    --_family-records:  #7E9BCC;
+    --_family-neutral:  #94A3B8;
     --cycle-period:    #F871A0;
     --cycle-fertile:   #34D3B0;
     --cycle-ovulation: #56C7F5;
-    --_module-settings:    #94A3B8;
-    --_module-reminders:   #22D3EE;
-    --_module-rewards:     #E68CA6;
-
-    /* Greeting-Gradienten Dark: hellere/höher-chromatische Stops */
 
     --_meal-breakfast:       #FF9F0A;
     --_meal-breakfast-light: #33230A;
@@ -1593,31 +1585,19 @@
     --_chart-series-6: #F472B6;
     --_chart-series-7: #4ADE80;
 
-    /* Modul-Akzente */
-    --_module-dashboard: #8A87FF;   /* zieht mit --_color-accent MIT, siehe Dark-Block oben */
-    --_module-tasks:     #4ADE80;
-    --_module-calendar:  #A78BFA;
-    --_module-meals:     #FB923C;
-    --_module-shopping:  #F472B6;
-    --_module-notes:     #FCD34D;
-    --_module-contacts:  #60A5FA;
-    --_module-birthdays: #FB7185;
-    --_module-budget:      #2DD4BF;
-    --_module-recipes:     #2ECC99;
-    --_module-pantry:      #A3E635;
-    --_module-split-expenses: #2FB6E8;
-    --_module-documents:   #7E9BCC;
-    --_module-housekeeping: #C4B5FD;
-    --_module-health:      #DB60CB;
+    /* Modul-Akzente (Familientoene) */
+    --_family-overview: #8A87FF;   /* zieht mit --_color-accent MIT, siehe Dark-Block oben */
+    --_family-time:     #A78BFA;
+    --_family-work:     #4ADE80;
+    --_family-kitchen:  #FB923C;
+    --_family-money:    #2DD4BF;
+    --_family-people:   #FB7185;
+    --_family-health:   #DB60CB;
+    --_family-records:  #7E9BCC;
+    --_family-neutral:  #94A3B8;
     --cycle-period:    #F871A0;
     --cycle-fertile:   #34D3B0;
     --cycle-ovulation: #56C7F5;
-
-    /* Greeting-Gradienten Dark */
-
-    --_module-settings:    #94A3B8;
-    --_module-reminders:   #22D3EE;
-    --_module-rewards:     #E68CA6;
 
     /* Mahlzeit-Typ */
     --_meal-breakfast:       #FF9F0A;
