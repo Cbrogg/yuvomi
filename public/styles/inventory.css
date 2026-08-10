@@ -313,3 +313,33 @@
 .inventory-warranty-status--expired {
   color: var(--color-danger);
 }
+
+/* --------------------------------------------------------
+ * Getrackte Fristen (frei definierbare Termine je Gegenstand)
+ * -------------------------------------------------------- */
+
+.inventory-tracked-dates-hint {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.inventory-tracked-dates-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.inventory-tracked-date-row {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr auto auto auto;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.inventory-tracked-date-row__countdown {
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}

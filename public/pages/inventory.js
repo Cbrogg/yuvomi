@@ -24,7 +24,7 @@ import { renderPageSearch, wirePageSearch } from '/utils/page-search.js';
 import { formatMoney } from '/utils/money.js';
 import { formatDate, getLocale } from '/i18n.js';
 import { renderDocumentAttachField, bindDocumentAttachField } from '/components/document-attach.js';
-import { warrantyStatus, hasWarrantyAlert } from '/utils/inventory-warranty.js';
+import { warrantyStatus, hasUpcomingDeadline, dateStatus } from '/utils/inventory-warranty.js';
 
 let _container = null;
 let _search = null;
@@ -146,14 +146,14 @@ function matchesQuery(item) {
 function renderItemRow(item) {
   const hasAttachments = (item.attachments?.length ?? 0) > 0;
   const hasBookings = (item.linked_entries?.length ?? 0) > 0;
-  const warrantyAlert = hasWarrantyAlert(item);
+  const deadlineAlert = hasUpcomingDeadline(item);
   return `
     <div class="inventory-item-row" data-id="${item.id}" role="button" tabindex="0">
       <div class="inventory-item-row__name">
         <span class="inventory-item-row__name-text">${esc(item.name)}</span>
         ${hasAttachments ? `<i data-lucide="paperclip" class="icon-sm" aria-hidden="true"></i><span class="sr-only">${esc(t('inventory.hasAttachmentsLabel'))}</span>` : ''}
         ${hasBookings ? `<i data-lucide="receipt" class="icon-sm" aria-hidden="true"></i><span class="sr-only">${esc(t('inventory.hasBookingsLabel'))}</span>` : ''}
-        ${warrantyAlert ? `<i data-lucide="shield-alert" class="icon-sm" aria-hidden="true"></i><span class="sr-only">${esc(t('inventory.warrantyAlertLabel'))}</span>` : ''}
+        ${deadlineAlert ? `<i data-lucide="shield-alert" class="icon-sm" aria-hidden="true"></i><span class="sr-only">${esc(t('inventory.warrantyAlertLabel'))}</span>` : ''}
       </div>
       <div class="inventory-item-row__category">${esc(item.category_name)}</div>
       <div class="inventory-item-row__location">${item.location_path ? esc(item.location_path) : ''}</div>
@@ -216,6 +216,9 @@ const STATUSES = ['active', 'sold', 'disposed', 'lost'];
 
 // Muss mit server/routes/inventory/entry-links.js#ROLES uebereinstimmen.
 const ROLES = ['purchase', 'refund', 'instalment', 'maintenance', 'accessory'];
+
+// Muss mit server/routes/inventory/item-dates.js#MAX_TRACKED_DATES_PER_ITEM uebereinstimmen.
+const MAX_TRACKED_DATES_PER_ITEM = 10;
 
 function roleLabel(role) {
   return t(`inventory.role${role.charAt(0).toUpperCase()}${role.slice(1)}`);
@@ -457,6 +460,80 @@ function updateWarrantyStatus(panel) {
   }
 }
 
+function trackedDateRowHtml({ label = '', date = '', reminder_offset_days = 30 } = {}) {
+  return `
+    <div class="inventory-tracked-date-row" data-tracked-date-row>
+      <input class="form-input js-tracked-date-label" type="text" maxlength="100"
+             placeholder="${esc(t('inventory.trackedDateLabelPlaceholder'))}" value="${esc(label)}">
+      <yuvomi-datepicker class="js-tracked-date-date" type="date" value="${esc(date)}"></yuvomi-datepicker>
+      <input class="form-input js-tracked-date-offset" type="number" min="0" max="365" step="1"
+             value="${reminder_offset_days}" aria-label="${esc(t('inventory.trackedDateRemindBeforeLabel'))}">
+      <span class="inventory-tracked-date-row__countdown" data-countdown></span>
+      <button type="button" class="btn btn--ghost btn--icon js-tracked-date-remove"
+              aria-label="${esc(t('inventory.removeTrackedDateAction'))}">
+        <i data-lucide="x" class="icon-md" aria-hidden="true"></i>
+      </button>
+    </div>`;
+}
+
+function updateTrackedDateRowCountdown(row) {
+  const countdownEl = row.querySelector('[data-countdown]');
+  const dateVal = row.querySelector('.js-tracked-date-date').value;
+  const status = dateStatus(dateVal || null);
+  if (!status) { countdownEl.textContent = ''; return; }
+  if (status.days < 0) countdownEl.textContent = t('inventory.trackedDateOverdueDays', { count: Math.abs(status.days) });
+  else if (status.days === 0) countdownEl.textContent = t('inventory.trackedDateDueToday');
+  else countdownEl.textContent = t('inventory.trackedDateInDays', { count: status.days });
+}
+
+/** Verdrahtet Hinzufuegen/Entfernen der Fristen-Zeilen, gleiches Muster wie
+ *  public/pages/calendar.js#wireReminderRows (Mehrfach-Erinnerungen). */
+function wireTrackedDateRows(panel) {
+  const rowsEl = panel.querySelector('#inv-tracked-dates-rows');
+  const addBtn = panel.querySelector('#inv-tracked-dates-add');
+  if (!rowsEl) return;
+
+  const rowCount = () => rowsEl.querySelectorAll('[data-tracked-date-row]').length;
+  const syncAddState = () => { if (addBtn) addBtn.disabled = rowCount() >= MAX_TRACKED_DATES_PER_ITEM; };
+
+  const wireRow = (row) => {
+    updateTrackedDateRowCountdown(row);
+    row.querySelector('.js-tracked-date-date').addEventListener('input', () => updateTrackedDateRowCountdown(row));
+  };
+
+  rowsEl.querySelectorAll('[data-tracked-date-row]').forEach(wireRow);
+
+  const appendRow = () => {
+    rowsEl.insertAdjacentHTML('beforeend', trackedDateRowHtml());
+    const newRow = rowsEl.lastElementChild;
+    if (window.lucide && newRow) lucide.createIcons({ el: newRow });
+    wireRow(newRow);
+    syncAddState();
+  };
+
+  rowsEl.addEventListener('click', (e) => {
+    const rm = e.target.closest('.js-tracked-date-remove');
+    if (!rm) return;
+    rm.closest('[data-tracked-date-row]')?.remove();
+    syncAddState();
+  });
+
+  addBtn?.addEventListener('click', () => {
+    if (rowCount() >= MAX_TRACKED_DATES_PER_ITEM) return;
+    appendRow();
+  });
+
+  syncAddState();
+}
+
+function collectTrackedDates(panel) {
+  return [...panel.querySelectorAll('[data-tracked-date-row]')].map((row) => ({
+    label: row.querySelector('.js-tracked-date-label').value.trim(),
+    date: row.querySelector('.js-tracked-date-date').value || null,
+    reminder_offset_days: Number(row.querySelector('.js-tracked-date-offset').value) || 30,
+  })).filter((d) => d.label && d.date);
+}
+
 function openItemModal(mode, item = null) {
   const isEdit = mode === 'edit';
   let pickedBooking = null; // nur im Anlegen-Fluss: {entry, role:'purchase'} vor dem Speichern
@@ -563,6 +640,16 @@ function openItemModal(mode, item = null) {
           </div>
         </div>
         <div class="form-group">
+          <span class="form-label">${esc(t('inventory.trackedDatesLabel'))}</span>
+          <p class="inventory-tracked-dates-hint">${esc(t('inventory.trackedDatesHint'))}</p>
+          <div class="inventory-tracked-dates-rows" id="inv-tracked-dates-rows">
+            ${(isEdit ? (item.tracked_dates || []) : []).map(trackedDateRowHtml).join('')}
+          </div>
+          <button type="button" class="btn btn--secondary btn--sm" id="inv-tracked-dates-add">
+            <i data-lucide="plus" aria-hidden="true"></i> ${esc(t('inventory.addTrackedDate'))}
+          </button>
+        </div>
+        <div class="form-group">
           <label class="form-label" for="inv-notes">${esc(t('inventory.notesLabel'))}</label>
           <textarea id="inv-notes" class="form-input" rows="3" placeholder="${esc(t('inventory.notesPlaceholder'))}"></textarea>
         </div>
@@ -599,6 +686,8 @@ function openItemModal(mode, item = null) {
       updateWarrantyStatus(panel);
       panel.querySelector('#inv-purchase-date').addEventListener('input', () => updateWarrantyStatus(panel));
       panel.querySelector('#inv-warranty').addEventListener('input', () => updateWarrantyStatus(panel));
+
+      wireTrackedDateRows(panel);
 
       wireBlurValidation(panel);
       const attachments = bindDocumentAttachField(panel, {
@@ -707,6 +796,7 @@ async function saveItem(panel, mode, item, attachments, pickedBooking) {
     warranty_months: warrantyRaw === '' ? null : Number(warrantyRaw),
     condition: panel.querySelector('#inv-condition').value,
     notes: panel.querySelector('#inv-notes').value.trim() || null,
+    tracked_dates: collectTrackedDates(panel),
   };
 
   saveBtn.disabled = true;

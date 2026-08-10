@@ -10,6 +10,7 @@ import assert from 'node:assert/strict';
 
 const {
   WARRANTY_ALERT_DAYS, warrantyEndDateKey, warrantyStatus, hasWarrantyAlert,
+  dateStatus, hasUpcomingDeadline,
 } = await import('../public/utils/inventory-warranty.js');
 
 const TODAY = '2026-07-29';
@@ -59,4 +60,34 @@ test('hasWarrantyAlert ist false für valid, true für expiring/expired', () => 
   assert.equal(hasWarrantyAlert(item({ purchase_date: '2026-07-01', warranty_months: 1 }), TODAY), true);
   assert.equal(hasWarrantyAlert(item({ purchase_date: '2020-01-01', warranty_months: 12 }), TODAY), true);
   assert.equal(hasWarrantyAlert(item(), TODAY), false);
+});
+
+test('dateStatus ohne Datum ist null', () => {
+  assert.equal(dateStatus(null), null);
+  assert.equal(dateStatus(''), null);
+});
+
+test('dateStatus: valid weit in der Zukunft, expiring innerhalb 30 Tagen, expired in der Vergangenheit', () => {
+  assert.equal(dateStatus('2026-12-01', TODAY).state, 'valid');
+  assert.equal(dateStatus('2026-08-10', TODAY).state, 'expiring');
+  assert.equal(dateStatus('2020-01-01', TODAY).state, 'expired');
+});
+
+test('hasUpcomingDeadline: false ohne jede Frist', () => {
+  assert.equal(hasUpcomingDeadline(item(), TODAY), false);
+});
+
+test('hasUpcomingDeadline: true wenn die Garantie bald ablaeuft, auch ohne getrackte Fristen', () => {
+  const withWarranty = item({ purchase_date: '2026-07-01', warranty_months: 1 });
+  assert.equal(hasUpcomingDeadline(withWarranty, TODAY), true);
+});
+
+test('hasUpcomingDeadline: true wenn eine getrackte Frist bald ansteht, auch ohne Garantie', () => {
+  const withTrackedDate = { ...item(), tracked_dates: [{ date: '2026-08-01' }] };
+  assert.equal(hasUpcomingDeadline(withTrackedDate, TODAY), true);
+});
+
+test('hasUpcomingDeadline: false wenn alle Fristen weit in der Zukunft liegen', () => {
+  const farFuture = { ...item(), tracked_dates: [{ date: '2030-01-01' }] };
+  assert.equal(hasUpcomingDeadline(farFuture, TODAY), false);
 });

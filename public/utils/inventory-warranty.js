@@ -50,3 +50,26 @@ export function hasWarrantyAlert(item, todayKey = toLocalDateKey()) {
   const status = warrantyStatus(item, todayKey);
   return !!status && status.state !== 'valid';
 }
+
+/**
+ * @param {string|null} dateKey - YYYY-MM-DD, oder null/leer
+ * @param {string} [todayKey]
+ * @returns {{ state: 'valid'|'expiring'|'expired', endDateKey: string, days: number } | null}
+ */
+export function dateStatus(dateKey, todayKey = toLocalDateKey()) {
+  if (!dateKey) return null;
+  const days = Math.round((parseLocalDateKey(dateKey) - parseLocalDateKey(todayKey)) / 86_400_000);
+  const state = days < 0 ? 'expired' : days <= WARRANTY_ALERT_DAYS ? 'expiring' : 'valid';
+  return { state, endDateKey: dateKey, days };
+}
+
+/** Trifft der Listen-Hinweis zu - Garantie ODER irgendeine getrackte Frist
+ *  laeuft bald ab/ist abgelaufen? Ein Icon fuer beide Quellen (Design-Doc). */
+export function hasUpcomingDeadline(item, todayKey = toLocalDateKey()) {
+  if (hasWarrantyAlert(item, todayKey)) return true;
+  const trackedDates = item?.tracked_dates || [];
+  return trackedDates.some((d) => {
+    const status = dateStatus(d.date, todayKey);
+    return !!status && status.state !== 'valid';
+  });
+}
