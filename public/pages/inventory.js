@@ -24,7 +24,7 @@ import { renderPageSearch, wirePageSearch } from '/utils/page-search.js';
 import { formatMoney } from '/utils/money.js';
 import { formatDate, getLocale } from '/i18n.js';
 import { renderDocumentAttachField, bindDocumentAttachField } from '/components/document-attach.js';
-import { warrantyStatus, hasUpcomingDeadline, dateStatus } from '/utils/inventory-warranty.js';
+import { warrantyStatus, hasUpcomingDeadline, dateStatus, countUpcomingDeadlines } from '/utils/inventory-warranty.js';
 
 let _container = null;
 let _search = null;
@@ -143,23 +143,105 @@ function matchesQuery(item) {
     .some((v) => v && String(v).toLowerCase().includes(q));
 }
 
+/**
+ * Kennzahlen fuer die drei Karten oben auf der Liste - immer aus der
+ * UNGEFILTERTEN Menge berechnet (wie budget-stats.js: eine Kennzahlzeile
+ * bezieht sich auf den ganzen Bestand, nicht auf einen aktiven Filter).
+ */
+function computeMetrics(items) {
+  // Nur Items in der Haushaltswaehrung fliessen in die Summe ein - eine
+  // Fremdwaehrung ohne Umrechnung mitzusummieren waere schlicht falsch,
+  // nicht nur ungenau. Seltener Randfall (die meisten Haushalte fuehren
+  // Inventar in einer Waehrung), deshalb ausgeschlossen statt umgerechnet.
+  const totalValue = items.reduce((sum, item) => (
+    item.current_value != null && item.currency === _householdCurrency
+      ? sum + item.current_value
+      : sum
+  ), 0);
+  return {
+    count: items.length,
+    totalValue,
+    needsAttention: countUpcomingDeadlines(items),
+  };
+}
+
+function renderMetrics() {
+  const { count, totalValue, needsAttention } = computeMetrics(state.items);
+  return `
+    <div class="metric-grid">
+      <div class="metric-card">
+        <div class="metric-card__label">${esc(t('inventory.metricItemsLabel'))}</div>
+        <div class="metric-card__amount">${count}</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-card__label">${esc(t('inventory.metricValueLabel'))}</div>
+        <div class="metric-card__amount">${esc(formatMoney(totalValue, _householdCurrency))}</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-card__label">${esc(t('inventory.metricAttentionLabel'))}</div>
+        <div class="metric-card__amount">${needsAttention}</div>
+      </div>
+    </div>`;
+}
+
+/**
+ * Gruppiert nach Kategorie, in der Reihenfolge von state.categories
+ * (DB-Sortierung), unbekannte Kategorien ans Ende - gleiches Muster wie
+ * public/pages/shopping.js#groupItemsByCategory. Anders als dort liefert
+ * die API bereits category_name/category_icon je Item mit (JOIN gegen
+ * inventory_categories), also keine separate catIcon()-Nachschau noetig.
+ */
+function groupItemsByCategory(items) {
+  const grouped = new Map();
+  for (const item of items) {
+    if (!grouped.has(item.category)) {
+      grouped.set(item.category, { key: item.category, name: item.category_name, icon: item.category_icon, items: [] });
+    }
+    grouped.get(item.category).items.push(item);
+  }
+  const orderedKeys = state.categories.map((c) => c.key);
+  const known = orderedKeys.filter((k) => grouped.has(k));
+  const unknown = [...grouped.keys()].filter((k) => !orderedKeys.includes(k));
+  return [...known, ...unknown].map((k) => grouped.get(k));
+}
+
+/** Geteilte Gruppen-Grammatik (styles/list-row.css), identisch zu
+ *  public/pages/shopping.js#renderItems. */
+function renderGroupedItems(items) {
+  const groups = groupItemsByCategory(items);
+  return groups.map((g) => `
+    <div class="list-group inventory-category" data-category="${esc(g.key)}">
+      <div class="list-group__title">
+        <i data-lucide="${esc(g.icon)}" class="icon-sm" aria-hidden="true"></i>
+        ${esc(g.name)}
+        <span class="list-group__count">${g.items.length}</span>
+      </div>
+      <div class="list-rows">
+        ${g.items.map(renderItemRow).join('')}
+      </div>
+    </div>`).join('');
+}
+
 function renderItemRow(item) {
   const hasAttachments = (item.attachments?.length ?? 0) > 0;
   const hasBookings = (item.linked_entries?.length ?? 0) > 0;
   const deadlineAlert = hasUpcomingDeadline(item);
   return `
-    <div class="inventory-item-row" data-id="${item.id}" role="button" tabindex="0">
-      <div class="inventory-item-row__name">
-        <span class="inventory-item-row__name-text">${esc(item.name)}</span>
-        ${hasAttachments ? `<i data-lucide="paperclip" class="icon-sm" aria-hidden="true"></i><span class="sr-only">${esc(t('inventory.hasAttachmentsLabel'))}</span>` : ''}
-        ${hasBookings ? `<i data-lucide="receipt" class="icon-sm" aria-hidden="true"></i><span class="sr-only">${esc(t('inventory.hasBookingsLabel'))}</span>` : ''}
-        ${deadlineAlert ? `<i data-lucide="shield-alert" class="icon-sm" aria-hidden="true"></i><span class="sr-only">${esc(t('inventory.warrantyAlertLabel'))}</span>` : ''}
-      </div>
-      <div class="inventory-item-row__category">${esc(item.category_name)}</div>
-      <div class="inventory-item-row__location">${item.location_path ? esc(item.location_path) : ''}</div>
-      <span class="inventory-status-badge inventory-status-badge--${esc(item.status)}">${esc(statusLabel(item.status))}</span>
-      <span class="inventory-item-row__value">${item.current_value != null ? esc(formatMoney(item.current_value, item.currency)) : ''}</span>
-    </div>`;
+    <button type="button" class="inventory-item-row" data-id="${item.id}">
+      <span class="inventory-item-row__main">
+        <span class="inventory-item-row__headline">
+          <span class="inventory-item-row__name-text">${esc(item.name)}</span>
+          ${hasAttachments ? `<i data-lucide="paperclip" class="icon-sm" aria-hidden="true"></i><span class="sr-only">${esc(t('inventory.hasAttachmentsLabel'))}</span>` : ''}
+          ${hasBookings ? `<i data-lucide="receipt" class="icon-sm" aria-hidden="true"></i><span class="sr-only">${esc(t('inventory.hasBookingsLabel'))}</span>` : ''}
+          ${deadlineAlert ? `<i data-lucide="shield-alert" class="icon-sm" aria-hidden="true"></i><span class="sr-only">${esc(t('inventory.warrantyAlertLabel'))}</span>` : ''}
+        </span>
+        ${item.location_path ? `<span class="inventory-item-row__location">${esc(item.location_path)}</span>` : ''}
+      </span>
+      <span class="inventory-item-row__trailing">
+        <span class="inventory-status-badge inventory-status-badge--${esc(item.status)}">${esc(statusLabel(item.status))}</span>
+        <span class="inventory-item-row__value">${item.current_value != null ? esc(formatMoney(item.current_value, item.currency)) : ''}</span>
+      </span>
+    </button>`;
 }
 
 function renderList() {
@@ -175,27 +257,28 @@ function renderList() {
     return;
   }
 
+  list.replaceChildren();
+  list.insertAdjacentHTML('beforeend', renderMetrics());
+
   const filtered = state.items.filter(matchesQuery);
   if (!filtered.length) {
-    list.replaceChildren(emptyStateEl({
+    list.appendChild(emptyStateEl({
       variant: 'no-results',
       title: t('inventory.noResultsTitle'),
       description: t('inventory.noResultsDescription'),
       action: { label: t('inventory.resetSearch'), onClick: () => { state.query = ''; _search?.clear(); renderList(); } },
     }));
+    if (window.lucide) window.lucide.createIcons({ el: list });
     return;
   }
 
-  list.replaceChildren();
-  list.insertAdjacentHTML('beforeend', filtered.map(renderItemRow).join(''));
+  list.insertAdjacentHTML('beforeend', renderGroupedItems(filtered));
 
   list.querySelectorAll('.inventory-item-row').forEach((row) => {
-    const open = () => {
+    row.addEventListener('click', () => {
       const item = state.items.find((i) => i.id === Number(row.dataset.id));
       if (item) openItemModal('edit', item);
-    };
-    row.addEventListener('click', open);
-    row.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
+    });
   });
 
   if (window.lucide) window.lucide.createIcons({ el: list });

@@ -19,29 +19,43 @@
   padding-bottom: var(--space-8);
 }
 
-/* Fuenf Spalten: Name, Kategorie, Ort, Status, Wert. Unter 640px bleiben nur
- * Name, Status und Wert - Kategorie/Ort wandern in die Detailansicht statt
- * auf fuenf Spalten gequetscht zu werden (Muster aus dem ersten, einfacheren
- * lokalen Build dieses Moduls, feat-inventory-module). */
+/* Echter Button als Klickfläche (kein role="button"/tabindex-Nachbau) - trägt
+ * keine eigene Trennlinie/Fläche mehr, das übernimmt .list-rows (list-row.css,
+ * .list-rows > * + *). Keine Kategorie-Spalte mehr: die Kategorie steht jetzt
+ * als Gruppen-Überschrift darüber. */
 .inventory-item-row {
-  display: grid;
-  grid-template-columns: minmax(120px, 1.5fr) minmax(80px, 1fr) minmax(80px, 1fr) auto auto;
+  display: flex;
   align-items: center;
+  justify-content: space-between;
+  width: 100%;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--color-border);
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: start;
   cursor: pointer;
-}
-
-.inventory-item-row:last-child {
-  border-bottom: none;
+  min-height: var(--target-lg);
 }
 
 .inventory-item-row:hover {
   background: var(--color-surface-hover);
 }
 
-.inventory-item-row__name {
+.inventory-item-row:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.inventory-item-row__main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0h);
+  min-width: 0;
+}
+
+.inventory-item-row__headline {
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -54,28 +68,27 @@
   white-space: nowrap;
 }
 
-.inventory-item-row__category,
 .inventory-item-row__location {
   color: var(--color-text-secondary);
   font-size: var(--text-sm);
-  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.inventory-item-row__trailing {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-shrink: 0;
+}
+
 .inventory-item-row__value {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-  text-align: right;
 }
 
 @media (max-width: 640px) {
-  .inventory-item-row {
-    grid-template-columns: 1fr auto auto;
-  }
-
-  .inventory-item-row__category,
   .inventory-item-row__location {
     display: none;
   }
