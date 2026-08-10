@@ -20,6 +20,7 @@ import { isPreviewable } from '/utils/document-preview.js';
 import '/components/category-manager.js';
 import '/components/tag-manager.js';
 import { findPageFab } from '/utils/fab.js';
+import { isSoloHousehold } from '/utils/household.js';
 
 // --------------------------------------------------------
 // Konstanten
@@ -374,7 +375,11 @@ function renderTaskGroups(tasks, groupMode) {
     return `
     <div class="task-group">
       <div class="task-group__header">
-        <span class="task-group__title">${esc(groupMode === 'category' ? catLabel(name) : name)}</span>
+        <!-- Gruppenkopf als echte Ueberschrift (Critique 2026-08-10): /tasks
+             hatte genau EIN h-Element im ganzen Dokument, und wer per H-Taste
+             navigiert, kam damit auf den Seitentitel und nicht weiter. Der
+             Seitentitel ist h1, die Gruppe darunter also h2. -->
+        <h2 class="task-group__title">${esc(groupMode === 'category' ? catLabel(name) : name)}</h2>
         <span class="task-group__count">${groupTasks.length}</span>
       </div>
       <div class="list-rows">
@@ -557,36 +562,54 @@ function renderModalContent({ task = null, users = [], reminder = null } = {}) {
     `<option value="${p.value}" ${(task?.priority ?? 'none') === p.value ? 'selected' : ''}>${p.label}</option>`
   ).join('');
 
-  // Sekundärfelder: hinter „Weitere Einstellungen". Beim Bearbeiten automatisch
-  // geöffnet, falls bereits Werte abseits der Defaults gesetzt sind.
-  const advancedFieldsOpen = isEdit && (
-    !!task.description
-    || (!!task.priority && task.priority !== 'none')
-    || (!!task.category && task.category !== FALLBACK_CATEGORY)
-    || !!task.start_date
-    || (Number(task.points) > 0)
-    || !!task.tags?.length
-  );
-
-  // Punkte neuer Aufgaben mit dem Haushalt-Standard vorbelegen (#578). Der Wert
-  // ist per Definition KEIN Abweichler, der Aufklapper bleibt deshalb zu — damit
-  // er trotzdem auffindbar bleibt, nennt die Zusammenfassung den Punktwert.
+  // Punkte neuer Aufgaben mit dem Haushalt-Standard vorbelegen (#578).
   const prefillPoints = !isEdit && state.defaultPoints > 0 ? state.defaultPoints : 0;
   const pointsValue = isEdit
     ? (Number(task?.points) > 0 ? Number(task.points) : '')
     : (prefillPoints || '');
-  const advancedLabel = prefillPoints
-    ? `${t('modal.moreSettings')} · ${t('tasks.pointsSummary', { count: prefillPoints })}`
+
+  /* WAS IN DER SEKTION STEHT, NENNT IHRE ZUSAMMENFASSUNG - dann muss sie nicht
+   * auf (Critique 2026-08-10, P1 „Enterprise-SaaS-Antireferenz").
+   *
+   * Das Formular mass 29 Labels und `scrollHeight 1410` in `clientHeight 528`,
+   * also 2,7 Bildschirme, um eine Aufgabe zu aendern - die haeufigste Handlung
+   * der App auf ihrem ueberladensten Screen. Die progressive Offenlegung war
+   * dabei nicht etwa nicht gebaut: sie war gebaut und abgeschaltet, und der
+   * Schalter war diese eine Zeile.
+   *
+   * `advancedFieldsOpen` verlangte „einen Wert abseits der Defaults", zaehlte
+   * dazu aber `category !== FALLBACK_CATEGORY`. Eine Kategorie hat fast jede
+   * Aufgabe - die Bedingung war also praktisch immer wahr, und die Sektion kam
+   * praktisch immer offen. Eine Regel, die jeden Fall zur Ausnahme erklaert,
+   * hat keine Ausnahme mehr.
+   *
+   * Der Grund hinter der Bedingung war richtig: ein gesetzter Wert darf nicht
+   * unsichtbar sein. Nur ist Aufklappen dafuer die teuerste Antwort. Das Muster
+   * fuer die billige stand schon zwei Zeilen weiter unten - bei den
+   * vorbelegten Punkten, wo der Aufklapper ZU blieb und die Zusammenfassung den
+   * Wert nannte. Es gilt jetzt fuer alle Sekundaerfelder.
+   *
+   * Die Beschreibung traegt die Zusammenfassung nicht: sie ist Freitext, und
+   * eine gekuerzte Notiz im Summary waere eine schlechtere Notiz. Sie steht
+   * deshalb OBEN beim Titel - Titel und Notiz sichtbar, alles andere hinter
+   * einem Einstieg, genau wie Apple Erinnerungen es haelt. */
+  const advancedSummary = [];
+  if (isEdit && task.priority && task.priority !== 'none') {
+    advancedSummary.push(PRIORITY_LABELS()[task.priority] ?? task.priority);
+  }
+  if (isEdit && task.category && task.category !== FALLBACK_CATEGORY) {
+    advancedSummary.push(catLabel(task.category));
+  }
+  if (isEdit && task.start_date) advancedSummary.push(formatDate(task.start_date));
+  const summaryPoints = isEdit ? Number(task.points) : prefillPoints;
+  if (summaryPoints > 0) advancedSummary.push(t('tasks.pointsSummary', { count: summaryPoints }));
+  if (isEdit && task.tags?.length) advancedSummary.push(task.tags.join(', '));
+
+  const advancedLabel = advancedSummary.length
+    ? `${t('modal.moreSettings')} · ${advancedSummary.join(' · ')}`
     : undefined;
 
   const advancedFieldsHtml = `
-      <div class="form-group">
-        <label class="label" for="task-description">${t('tasks.descriptionLabel')}</label>
-        <textarea class="input" id="task-description" name="description"
-                  rows="2" placeholder="${t('tasks.descriptionPlaceholder')}"
-                 >${esc(task?.description)}</textarea>
-      </div>
-
       <div class="modal-grid modal-grid--2">
         <div class="form-group">
           <label class="label" for="task-priority">${t('tasks.priorityLabel')}</label>
@@ -653,6 +676,15 @@ function renderModalContent({ task = null, users = [], reminder = null } = {}) {
         </div>
       </div>
 
+      <!-- Notiz steht beim Titel, nicht hinter dem Aufklapper: sie ist sein
+           Gegenstueck, und eine Zusammenfassung kann Freitext nicht tragen. -->
+      <div class="form-group">
+        <label class="label" for="task-description">${t('tasks.descriptionLabel')}</label>
+        <textarea class="input" id="task-description" name="description"
+                  rows="2" placeholder="${t('tasks.descriptionPlaceholder')}"
+                 >${esc(task?.description)}</textarea>
+      </div>
+
       <div class="modal-grid modal-grid--2">
         <div class="form-group">
           <label class="label" for="task-due-date">${t('tasks.dueDateLabel')}</label>
@@ -666,11 +698,21 @@ function renderModalContent({ task = null, users = [], reminder = null } = {}) {
         </div>
       </div>
 
-      <div class="form-group" style="margin-top:var(--space-4)">
+      <!-- „Zugewiesen an" bot einer Solo-Nutzerin eine Chip-Reihe mit ihr selbst
+           und „- Niemand -" (Critique 2026-08-10). Das Feld bleibt im DOM und
+           behaelt seinen Wert, es wird nur verborgen - der Absende-Pfad liest
+           es unveraendert (utils/household.js). -->
+      <div class="form-group" style="margin-top:var(--space-4)"${isSoloHousehold() ? ' hidden' : ''}>
         ${renderUserMultiSelect(users, selectedIds, 'task_assigned', 'tasks.assignedLabel')}
       </div>
 
-      ${users.length > 1 ? `
+      <!-- EINE QUELLE, NICHT ZWEI: die Bedingung war "users.length > 1" und
+           beantwortete dieselbe Frage wie der Solo-Schalter, nur aus einer
+           anderen Zahl - der geladenen Nutzerliste dieses Moduls statt der
+           gezaehlten Haushaltsgroesse. Zwei Quellen fuer eine Frage laufen
+           auseinander, sobald eine von beiden einen Sonderfall bekommt
+           (Split-Gaeste zaehlen in der Nutzerliste mit, im Haushalt nicht). -->
+      ${!isSoloHousehold() ? `
       <div class="form-group" style="margin-top:var(--space-4)">
         <label class="label" for="task-visibility">${t('common.visibility.label')}</label>
         <select class="input" id="task-visibility" name="visibility">
@@ -682,7 +724,7 @@ function renderModalContent({ task = null, users = [], reminder = null } = {}) {
         <p class="task-field-hint field-hint--warn" id="task-visibility-warning" role="status" hidden><i data-lucide="alert-triangle" aria-hidden="true"></i><span>${t('common.visibility.assigneesNobodyHint')}</span></p>
       </div>` : ''}
 
-      ${advancedSection(advancedFieldsHtml, { open: advancedFieldsOpen, label: advancedLabel })}
+      ${advancedSection(advancedFieldsHtml, { label: advancedLabel })}
 
       ${isEdit ? `
         <div class="form-group">
