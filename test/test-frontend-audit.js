@@ -6767,6 +6767,37 @@ test('Viewport-Breakpoints halten den Kontrakt aus tokens.css §11c', () => {
   );
 });
 
+test('die Höhen-Achse der Größenklasse hält denselben Kontrakt', () => {
+  // DIE ZWEITE ACHSE BRAUCHT DENSELBEN GUARD, und dass sie ihn bis 2026-08-10
+  // nicht hatte, ist der Beleg: der Guard darüber liest ausschließlich
+  // `min|max-width`, und so stand seit dem HIG-Rollout ein `max-height: 500px`
+  // in layout.css, das §11c gar nicht kannte — genau die private Schwelle, die
+  // die Breiten-Achse seit jeher verbietet. Eine Achse ohne Guard driftet, und
+  // zwar unbemerkt, weil niemand nach ihr sucht.
+  //
+  // EINE Grenze (--bp-short) plus ihr Komplement. Wer eine zweite braucht,
+  // trägt sie in §11c ein und begründet sie dort — nicht hier.
+  const allowed = new Set([499, 500]);
+  const offenders = [];
+
+  for (const { file, css } of stylesheetFiles()) {
+    for (const match of css.matchAll(/@media[^{]*?\((?:min|max)-height:\s*(\d+)px\)/g)) {
+      const px = Number(match[1]);
+      if (!allowed.has(px)) {
+        const line = css.slice(0, match.index).split('\n').length;
+        offenders.push(`${file}:${line} → ${px}px`);
+      }
+    }
+  }
+
+  assert.deepEqual(
+    offenders,
+    [],
+    'nicht-kanonische Höhen-Schwelle — erlaubt ist nur 500 (+ Komplement 499), '
+    + 'siehe tokens.css §11c und DESIGN.md „Die Chrome-Regel"',
+  );
+});
+
 test('Icon-Größen kommen aus der Utility-Skala, nie aus Inline-Styles', () => {
   const offenders = [];
   for (const path of walkFrontendFiles('../public/pages/')
@@ -10147,8 +10178,8 @@ test('die Herkuenfte des Erinnerungs-Toasts sind die entity_type des Servers', (
   // grenze). Zwei Karten, EINE Liste von Herkuenften - laufen sie auseinander,
   // zeigt der Toast ein Siegel und die Systembenachrichtigung „Yuvomi".
   const notifications = read('../server/services/notifications.js');
-  const titleMap = notifications.match(/const REMINDER_TITLE_KEYS\s*=\s*\{([\s\S]*?)\n\};/);
-  assert.ok(titleMap, 'REMINDER_TITLE_KEYS steht nicht mehr in server/services/notifications.js.');
+  const titleMap = notifications.match(/const REMINDER_ORIGINS\s*=\s*\{([\s\S]*?)\n\};/);
+  assert.ok(titleMap, 'REMINDER_ORIGINS steht nicht mehr in server/services/notifications.js.');
   const titleTypes = [...titleMap[1].matchAll(/^\s{2}([a-z_]+):/gm)].map((m) => m[1]).sort();
 
   assert.ok(serverTypes.length >= 3, `Nur ${serverTypes.length} entity_type im Server gefunden - das Muster greift nicht mehr.`);
@@ -10156,4 +10187,79 @@ test('die Herkuenfte des Erinnerungs-Toasts sind die entity_type des Servers', (
     'Der Toast kennt andere Herkuenfte als der Server schreibt - die unbekannten fallen still auf die Glocke zurueck.');
   assert.deepEqual(titleTypes, serverTypes,
     'Der Push-Titel kennt andere Herkuenfte als der Server schreibt - die unbekannten heissen wieder „Yuvomi".');
+
+  // UND JEDE HERKUNFT TRAEGT AUCH IHR ZIEL (Critique 2026-08-10). Titel und
+  // Ziel stehen bewusst in EINEM Eintrag, damit die zweite Antwort nicht von
+  // der ersten wegdriften kann: vorher nannte der Titel das Modul und die URL
+  // stand fest auf `/reminders`, einer Route, die es nie gab.
+  const withoutTarget = [...titleMap[1].matchAll(/^\s{2}([a-z_]+):\s*\{([^}]*)\}/gm)]
+    .filter(([, , body]) => !/\burl:\s*'/.test(body))
+    .map(([, type]) => type);
+  assert.deepEqual(withoutTarget, [],
+    'Herkunft ohne Ziel - der Titel nennt das Modul und der Tipp landet woanders.');
+});
+
+test('jedes Push-Ziel zeigt auf eine Route, die es gibt', () => {
+  // DER BEFUND, DEN DIESER GUARD SCHLIESST (Critique 2026-08-10): `url` stand
+  // im Reminder-Payload fest auf `/reminders`, und diese Route hat es nie
+  // gegeben. Der Router fiel still auf `/` zurück - ein Fallback, der wie ein
+  // Ziel aussah, und niemand bemerkte es, weil beide Enden für sich stimmten:
+  // der Server schrieb einen Pfad, der Client kannte ihn nicht, und keiner der
+  // beiden Tests las den anderen.
+  //
+  // Push ist der zeitkritischste Pfad der App. Ein Ziel, das ins Leere zeigt,
+  // entwertet die Benachrichtigung und lehrt, sie zu ignorieren.
+  const routerSrc = read('../public/router.js');
+  const known = new Set([...routerSrc.matchAll(/path:\s*'([^']+)'/g)].map((m) => m[1]));
+  // Die Settings-Blätter kommen aus der Registry, nicht aus einem `path:`.
+  const settingsLeaf = /^\/settings(\/|$)/;
+  assert.ok(known.size >= 15, `nur ${known.size} Routen aus router.js gelesen - Regex tot?`);
+
+  const offenders = [];
+  for (const file of ['../server/services/notifications.js', '../public/sw.js']) {
+    const src = read(file);
+    for (const match of src.matchAll(/\burl:\s*'(\/[^']*)'/g)) {
+      const url = match[1].split(/[?#]/)[0];
+      if (known.has(url) || settingsLeaf.test(url)) continue;
+      const line = src.slice(0, match.index).split('\n').length;
+      offenders.push(`${file.replace('../', '')}:${line} → ${url}`);
+    }
+  }
+
+  assert.deepEqual(offenders, [],
+    'Push-Ziel zeigt auf einen Pfad, den ROUTES nicht kennt - der Router fällt dort '
+    + 'still auf das Dashboard zurück');
+});
+
+test('das Überlappungszeichen kommt aus einer Hand', () => {
+  // DIE REGEL (Block-2-Brief, DESIGN.md „Das Überlappungszeichen"): es erscheint
+  // nur, wo ohnehin ein Siegel steht, das Objekt eine Person trägt UND es mehr
+  // als einen möglichen Beteiligten gibt — im Solo-Haushalt entfällt es still.
+  //
+  // Alle drei Bedingungen stehen in `utils/seal-pair.js`. Wer das Markup
+  // anderswo von Hand baut, hat sie nicht: er hat einen Avatar neben einem
+  // Siegel, und das ist die Siegel-Inflation, die der Brief als Anti-Ziel
+  // führt. Dieselbe Bauart wie die Signatur-Guards aus Block 2 — die Regel
+  // hängt am Bauteil, nicht an einer Liste von Aufrufern.
+  const offenders = [];
+  for (const rel of walkFrontendFiles('../public/')) {
+    if (rel.endsWith('utils/seal-pair.js')) continue;
+    const src = read(rel);
+    for (const match of src.matchAll(/seal-pair__who/g)) {
+      const line = src.slice(0, match.index).split('\n').length;
+      offenders.push(`${rel.replace('../', '')}:${line}`);
+    }
+  }
+
+  assert.deepEqual(offenders, [],
+    'Überlappungszeichen von Hand gebaut — `whoMark()`/`withWho()` aus utils/seal-pair.js '
+    + 'nehmen, sonst fehlen die Bedingungen (Person vorhanden, Haushalt > 1)');
+
+  // Und die Gegenrichtung: der Baustein muss die Solo-Bedingung tatsächlich
+  // führen. Ohne sie wäre der Guard oben eine Zusicherung über einen Ort, an
+  // dem nichts geprüft wird.
+  const pair = read('../public/utils/seal-pair.js');
+  assert.match(pair, /isSoloHousehold\(\)/,
+    'seal-pair.js prüft den Solo-Haushalt nicht mehr — das Zeichen erschiene dort, wo es '
+    + 'laut Brief still entfallen soll');
 });

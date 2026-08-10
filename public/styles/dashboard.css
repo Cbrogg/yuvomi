@@ -2235,14 +2235,21 @@ svg.weather-forecast__icon {
 .dashboard .task-item:hover,
 .dashboard .event-item:hover,
 .dashboard .meal-slot:hover,
-.dashboard .shopping-widget-list:hover,
-.dashboard .note-item:hover {
+.dashboard .shopping-widget-list:hover {
   /* Konsistent mit task/event: Hover gibt Feedback OHNE Lesbarkeit zu senken.
    * Farbige Zettel vertragen keinen Flächen-Tint → sanfter Schatten-Lift statt
    * des früheren opacity:0.8-Dimmens. */
   transform: none;
   opacity: 1;
   box-shadow: var(--shadow-sm);
+}
+
+/* Die Notiz ist hier seit 2026-08-10 ein Inset-Well (glass.css) und damit
+ * VERTIEFT - ein Schatten-Lift beim Hover würde sie aus ihrer eigenen Mulde
+ * heben. Ihre Hover-Antwort steht deshalb dort, wo auch ihre Fläche steht. */
+.dashboard .note-item:hover {
+  transform: none;
+  opacity: 1;
 }
 
 /* Hier stand der zweite, spezifischere Verlauf des Wetter-Widgets

@@ -970,21 +970,41 @@
     font-size: var(--text-sm);
   }
 
+  /* EIN TRAEGER, N ZEILEN (Critique 2026-08-10, P2 „Karte pro Zeile").
+   *
+   * Die Zeilenlisten-Regel begruendet sich selbst gut: N Raender sind N
+   * Objekte, ein Traeger ist ein Objekt. Der Rail trug bis hierher pro Rezept
+   * eine eigene Flaeche mit eigenem Radius und eigener Kante - ein Stapel
+   * Kaertchen dort, wo eine Liste steht, und ausgerechnet auf einem Screen, auf
+   * dem das Auge schnell scannen soll.
+   *
+   * Der Traeger nimmt die Flaeche und den Radius, `overflow: hidden` beschneidet
+   * die erste und letzte Zeile auf seine Ecken, und getrennt wird ueber den
+   * `+`-Kombinator: eine Haarlinie ZWISCHEN Zeilen, keine um jede. Dasselbe
+   * Muster wie bei `.search-result` (eea2291b). */
   .recipe-sidebar__list {
     display: grid;
-    gap: var(--space-2);
     overflow-y: auto;
-    padding-right: var(--space-1);
+    background: var(--color-surface);
+    border-radius: var(--radius-md);
+    /* Der Radius muss die Ecken der Randzeilen tatsaechlich beschneiden -
+     * ohne das steht die Fuellung der ersten Zeile quadratisch im runden
+     * Traeger. Mit `overflow-y: auto` ist die Achse ohnehin geklemmt. */
+    overflow-x: hidden;
   }
 
   .recipe-sidebar__card {
     display: grid;
     gap: var(--space-2);
     padding: var(--space-3);
-    border: 1px solid transparent;
-    border-radius: var(--radius-sm);
-    background: var(--color-surface);
     cursor: grab;
+  }
+
+  /* Die Trennlinie gehoert der ZWEITEN Zeile, nicht jeder: so hat die erste
+   * keine Kante ueber sich und die letzte keine unter sich, ohne dass eine
+   * Regel `:first-child`/`:last-child` nachpflegen muesste. */
+  .recipe-sidebar__card + .recipe-sidebar__card {
+    border-top: 1px solid var(--color-border-subtle);
   }
 
   .recipe-sidebar__card--dragging {

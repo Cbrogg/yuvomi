@@ -130,6 +130,7 @@
         "todayNoEvents": "没有日程",
         "todayNoDinner": "暂无计划",
         "allLink": "全部",
+        "allLinkFor": "全部: {{module}}",
         "weekLink": "本周",
         "urgentTasksChip": "{{count}} 个即将到期任务",
         "urgentTasksChipPlural": "{{count}} 个即将到期任务",
@@ -1355,7 +1356,7 @@
         "googleCalendarPrimary": "主日历",
         "googleReadonly": "只读",
         "googleReadonlyHint": "Yuvomi 从 Google 日历读取事件，但不写回任何事件。",
-        "calendarSwitched": "已切换日历 – 正在同步…",
+        "calendarSwitched": "已切换日历 - 正在同步…",
         "appleCalendar": "Apple 日历（iCloud）",
         "syncNow": "立即同步",
         "disconnect": "断开连接",
@@ -1675,7 +1676,7 @@
         "backupWebdavTriggerBtn": "立即上传",
         "backupWebdavTriggering": "上传中...",
         "backupWebdavTriggeredToast": "备份已成功上传到 WebDAV。",
-        "backupWebdavTestSuccess": "连接成功 – 找到 {{files}} 个备份。",
+        "backupWebdavTestSuccess": "连接成功 - 找到 {{files}} 个备份。",
         "backupWebdavTestFailed": "连接失败：{{error}}",
         "backupWebdavLastUpload": "上次上传",
         "backupWebdavLastError": "上次错误",
@@ -2407,14 +2408,14 @@
     },
     "offline": {
         "banner": "离线 - 正在重新连接…",
-        "staleData": "离线 – 数据截至：{{time}}"
+        "staleData": "离线 - 数据截至：{{time}}"
     },
     "emptyHint": {
         "recipes": "食谱可以直接进入用餐计划或购物清单。",
-        "birthdays": "添加生日 — 系统会在适时提醒您。",
+        "birthdays": "添加生日 - 系统会在适时提醒您。",
         "budget": "创建分类并记录收入和支出。",
         "calendar": "在设置 → 集成中连接 Google 日历以自动同步。",
-        "contacts": "添加重要联系人 — 医生、学校、紧急联系人 — 以便快速访问。",
+        "contacts": "添加重要联系人 - 医生、学校、紧急联系人 - 以便快速访问。",
         "meals": "计划排好后，购物清单一步就能填好。",
         "notes": "点击 + 创建新笔记。笔记支持全文搜索。",
         "shopping": "采购后，勾选的物品会移入储藏。",
@@ -3503,7 +3504,7 @@
             "hint": "将所选时段的数据下载为 CSV 文件。"
         },
         "disclaimer": "仅供个人记录，不能替代医疗咨询、诊断或治疗。",
-        "readOnlyBanner": "您正在查看 {{name}} 的数据 — 仅可查看。",
+        "readOnlyBanner": "您正在查看 {{name}} 的数据 - 仅可查看。",
         "cycle": {
             "title": "周期",
             "emptyTitle": "暂无周期数据",

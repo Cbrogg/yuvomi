@@ -279,8 +279,17 @@ function renderStandingRow(member) {
       </button>
       <div class="rw-standing__progress">
         ${hint ? `
-          <div class="rw-progress__track"><div class="rw-progress__fill" style="--rw-progress:${Math.max(0, Math.min(1, hint.pct / 100))}"></div></div>
-          <p class="rw-progress__label">${esc(hint.label)}</p>`
+          <!-- DER BALKEN IST EIN PROGRESSBAR (Critique 2026-08-10). Er hatte
+               weder Rolle noch Wert: die Textzeile darunter rettete die
+               Information, der Balken selbst existierte fuer Screenreader
+               nicht. aria-valuetext traegt dieselbe Zeile, damit die Ansage
+               "37 von 60 Punkten" lautet und nicht "62 Prozent" - der Prozent-
+               wert ist hier die Ableitung, nicht die Aussage. -->
+          <div class="rw-progress__track" role="progressbar"
+               aria-valuenow="${Math.round(Math.max(0, Math.min(100, hint.pct)))}"
+               aria-valuemin="0" aria-valuemax="100"
+               aria-valuetext="${esc(hint.label)}"><div class="rw-progress__fill" style="--rw-progress:${Math.max(0, Math.min(1, hint.pct / 100))}"></div></div>
+          <p class="rw-progress__label" aria-hidden="true">${esc(hint.label)}</p>`
         : `<p class="rw-progress__label rw-progress__label--muted">${esc(t('rewards.noRewardsYet'))}</p>`}
       </div>
       ${canRedeem ? `
