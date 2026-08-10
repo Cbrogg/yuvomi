@@ -48,11 +48,11 @@ export function inventoryPaths() {
     },
     '/api/v1/inventory/items': {
       get: op({ summary: 'List inventory items', description: 'Filters: category, location_id, status, q.', tag: 'Inventory' }),
-      post: op({ summary: 'Create an inventory item (optional `attachment_document_ids`: documents from the documents module; optional `entry_id`: prefills purchase_price from that booking if it has no existing links)', tag: 'Inventory', stateChanging: true, requestBody: jsonBody(null) }),
+      post: op({ summary: 'Create an inventory item (optional `attachment_document_ids`: documents from the documents module; optional `entry_id`: prefills purchase_price from that booking if it has no existing links; optional `tracked_dates`: array of custom {label, date, reminder_offset_days} entries)', tag: 'Inventory', stateChanging: true, requestBody: jsonBody(null) }),
     },
     '/api/v1/inventory/items/{id}': {
       get: op({ summary: 'Get an inventory item', tag: 'Inventory', params: [idParam('id', 'Item ID')] }),
-      put: op({ summary: 'Replace an inventory item (`attachment_document_ids` replaces the document links; omit the field to leave them untouched)', tag: 'Inventory', params: [idParam('id', 'Item ID')], stateChanging: true, requestBody: jsonBody(null) }),
+      put: op({ summary: 'Replace an inventory item (`attachment_document_ids` replaces the document links, omit to leave untouched; `tracked_dates` replaces the whole set of custom tracked dates, omit to leave untouched)', tag: 'Inventory', params: [idParam('id', 'Item ID')], stateChanging: true, requestBody: jsonBody(null) }),
       delete: op({ summary: 'Delete an inventory item', tag: 'Inventory', params: [idParam('id', 'Item ID')], stateChanging: true }),
     },
     '/api/v1/inventory/items/{id}/entries': {
@@ -80,11 +80,11 @@ export function inventoryPaths() {
       }),
     },
     '/api/v1/inventory/deadlines-feed': {
-      get: op({ summary: 'Get inventory warranty-deadlines ICS feed status', tag: 'Inventory', admin: true }),
-      delete: op({ summary: 'Disable inventory warranty-deadlines ICS feed', tag: 'Inventory', stateChanging: true, admin: true }),
+      get: op({ summary: 'Get inventory deadlines ICS feed status', tag: 'Inventory', admin: true }),
+      delete: op({ summary: 'Disable inventory deadlines ICS feed', tag: 'Inventory', stateChanging: true, admin: true }),
     },
     '/api/v1/inventory/deadlines-feed/regenerate': {
-      post: op({ summary: 'Regenerate inventory warranty-deadlines ICS feed token', tag: 'Inventory', stateChanging: true, admin: true }),
+      post: op({ summary: 'Regenerate inventory deadlines ICS feed token', tag: 'Inventory', stateChanging: true, admin: true }),
     },
   };
 }

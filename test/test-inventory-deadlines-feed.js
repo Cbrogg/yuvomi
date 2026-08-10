@@ -81,6 +81,30 @@ test('buildInventoryDeadlinesFeed liefert ein valides VCALENDAR-Gerüst auch ohn
   assert.match(ics, /END:VCALENDAR\r\n$/);
 });
 
+test('buildInventoryDeadlinesFeed enthält ein VEVENT je getrackter Frist zusätzlich zu Garantien', () => {
+  db.exec('DELETE FROM inventory_items');
+  const itemId = insertItem({ name: 'Auto', purchase_date: '2026-01-01', warranty_months: 12 });
+  db.prepare("INSERT INTO inventory_item_dates (item_id, label, date) VALUES (?, 'TÜV', '2027-03-01')").run(itemId);
+
+  const ics = deadlinesIcs.buildInventoryDeadlinesFeed(db);
+  const veventCount = (ics.match(/BEGIN:VEVENT/g) || []).length;
+  assert.equal(veventCount, 2, 'ein Garantie- und ein Fristen-VEVENT');
+  assert.match(ics, /SUMMARY:Garantie endet: Auto/);
+  assert.match(ics, /SUMMARY:TÜV: Auto/);
+  assert.match(ics, /DTSTART;VALUE=DATE:20270301/);
+});
+
+test('buildInventoryDeadlinesFeed erzeugt für einen Gegenstand ohne Garantie nur die Fristen-VEVENTs', () => {
+  db.exec('DELETE FROM inventory_items');
+  const itemId = insertItem({ name: 'Fahrrad' });
+  db.prepare("INSERT INTO inventory_item_dates (item_id, label, date) VALUES (?, 'Wartung', '2027-05-01')").run(itemId);
+
+  const ics = deadlinesIcs.buildInventoryDeadlinesFeed(db);
+  const veventCount = (ics.match(/BEGIN:VEVENT/g) || []).length;
+  assert.equal(veventCount, 1);
+  assert.match(ics, /SUMMARY:Wartung: Fahrrad/);
+});
+
 // --------------------------------------------------------
 // Token-Lebenszyklus (sync_config)
 // --------------------------------------------------------
@@ -174,11 +198,11 @@ test('Feed-Texte folgen der Haushaltssprache statt fest deutsch zu sein', () => 
 
   setHouseholdLanguage('de');
   const de = deadlinesIcs.buildInventoryDeadlinesFeed(db);
-  assert.match(de, /X-WR-CALNAME:Yuvomi Garantien/);
+  assert.match(de, /X-WR-CALNAME:Yuvomi Inventar/);
   assert.match(de, /SUMMARY:Garantie endet: Espressomaschine/);
 
   setHouseholdLanguage('en');
   const en = deadlinesIcs.buildInventoryDeadlinesFeed(db);
-  assert.match(en, /X-WR-CALNAME:Yuvomi Warranties/);
+  assert.match(en, /X-WR-CALNAME:Yuvomi Inventory/);
   assert.match(en, /SUMMARY:Warranty ends: Espressomaschine/);
 });

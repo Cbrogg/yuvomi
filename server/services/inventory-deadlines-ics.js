@@ -53,12 +53,32 @@ function buildVEvent(item, warrantyEnd, dtstamp, locale) {
   return lines.map(foldLine);
 }
 
+function buildTrackedDateVEvent(row, dtstamp, locale) {
+  const lines = [
+    'BEGIN:VEVENT',
+    `UID:inventory-tracked-date-${row.id}@yuvomi`,
+    `DTSTAMP:${dtstamp}`,
+    `DTSTART;VALUE=DATE:${formatDateValue(row.date)}`,
+    `DTEND;VALUE=DATE:${addDaysDateKey(row.date, 1)}`,
+    `SUMMARY:${escapeICSText(translate(locale, 'inventory.icsTrackedDateSummary', { label: row.label, name: row.item_name }))}`,
+    'END:VEVENT',
+  ];
+  return lines.map(foldLine);
+}
+
 function buildInventoryDeadlinesFeed(conn, now = new Date()) {
   const rows = conn.prepare(`
     SELECT id, name, purchase_date, warranty_months
     FROM inventory_items
     WHERE purchase_date IS NOT NULL AND warranty_months IS NOT NULL
     ORDER BY id ASC
+  `).all();
+
+  const trackedDateRows = conn.prepare(`
+    SELECT d.id, d.label, d.date, ii.name AS item_name
+    FROM inventory_item_dates d
+    JOIN inventory_items ii ON ii.id = d.item_id
+    ORDER BY d.id ASC
   `).all();
 
   // Serverseitig erzeugter Kalendertext folgt der Datensprache des Haushalts,
@@ -90,6 +110,9 @@ function buildInventoryDeadlinesFeed(conn, now = new Date()) {
       continue;
     }
     out.push(...buildVEvent(item, warrantyEnd, dtstamp, locale));
+  }
+  for (const row of trackedDateRows) {
+    out.push(...buildTrackedDateVEvent(row, dtstamp, locale));
   }
   out.push('END:VCALENDAR');
   return out.join('\r\n') + '\r\n';
