@@ -4755,7 +4755,12 @@ test('dashboard „Heute wichtig" is one inset-grouped list, not a tile grid', (
   assert.match(iconBody, /--seal-accent:\s*var\(--today-card-accent\)/, 'the icon well forwards its tone accent to the seal');
   const layout = read('../public/styles/layout.css');
   const sealBody = cssRuleBody(layout, '\n.module-seal');
-  assert.match(sealBody, /background:[\s\S]*color-mix\(in srgb,\s*var\(--seal-accent\)\s*var\(--tint-surface\),\s*var\(--color-surface\)\)/, 'the seal carries the module tint recipe');
+  assert.match(sealBody, /background:[\s\S]*color-mix\(in srgb,\s*var\(--seal-accent\)\s*var\(--tint-surface\),\s*var\(--seal-base\)\)/, 'the seal carries the module tint recipe');
+  // Und der GRUND der Mischung ist ein Parameter, kein festverdrahtetes
+  // --color-surface: die Pro-Hintergrund-Regel gilt für Tönungen genauso wie
+  // für Text. Der Kopf steht auf --color-bg, der Toast auf seinem dunklen
+  // Grund - dieselben 16 % ergeben dort ohne Parameter 1,06:1.
+  assert.match(sealBody, /--seal-base:\s*var\(--color-surface\)/, 'the seal defaults its ground to the surface it usually sits on');
   const dashboardJs = read('../public/pages/dashboard.js');
   assert.match(dashboardJs, /class="module-seal today-cockpit-card__icon"/, 'the cockpit icon well takes its form from the seal');
 
@@ -8894,9 +8899,12 @@ test('one page-head title scale, owned by the shell', () => {
   // Der UMBRUCH gehoert dagegen in layout.css: die Zone ist eine Layout-
   // Bedingung, ihre Stufe eine Typo-Rolle. Beides an einem Ort haette eine
   // der beiden Dateien zur Ausnahme gemacht.
+  // Die Zeile ist die volle Breite MINUS dem, was das Absender-Siegel davor
+  // belegt (--seal-head-lead, ohne Siegel 0px) - sonst schoebe der Titel sich
+  // unter sein eigenes Siegel und die Lead-Zone waeche um eine Zeile.
   assert.match(
     read('../public/styles/layout.css'),
-    /\.page-toolbar:not\(\.page-toolbar--in-group\)\s*>\s*\.page-toolbar__title\s*\{[^}]*flex-basis:\s*100%/,
+    /\.page-toolbar:not\(\.page-toolbar--in-group\)\s*>\s*\.page-toolbar__title\s*\{[^}]*flex-basis:\s*calc\(100% - var\(--seal-head-lead\)\)/,
     'Die eigene Zeile des Large Title steht in layout.css.',
   );
 
@@ -9943,4 +9951,198 @@ test('ein Flaechen-Leerzustand ist die geteilte .empty-state', () => {
   // haben, sonst misst der Scanner nichts mehr.
   assert.ok(seen >= 2,
     `Nur ${seen} Treffer der Leerzustands-Signatur im ganzen Stylesheet - der Scanner greift nicht mehr.`);
+});
+
+// --------------------------------------------------------------------------
+// DAS MARKENSIEGEL: WER ES BAUT, SAGT WOZU (Block 2, Schritt 3)
+//
+// Die Herkunfts-Regel des Briefs hat zwei Haelften, und beide sind hier
+// pruefbar:
+//
+//   MISCHSTELLE - eine Liste, deren Zeilen aus verschiedenen Modulen stammen
+//   (Suche, „Heute wichtig", Widget-Koepfe, Mehr-Sheet, Erinnerungen). Dort
+//   traegt JEDES Objekt sein Siegel, und weil das Objekt aus einem FREMDEN
+//   Modul kommt, muss die Bau-Stelle die Herkunft BENENNEN - inline im
+//   Quelltext oder ueber eine eigene Klasse im Stylesheet.
+//
+//   KOPF - der Absender des eigenen Moduls, genau einmal. Er benennt nichts:
+//   er ERBT den Ton des Raumes, in dem er steht. Genau daran ist er zu
+//   erkennen, und genau deshalb darf ihn nur die Shell bauen.
+//
+// DER VERSTOSS, DEN DAS FINDET, ist ein Siegel ohne Rolle: eines, das weder
+// eine fremde Herkunft benennt noch die Kopfrolle traegt - also Dekor mitten
+// in den Listen des eigenen Moduls. Das war der Bestand vor Block 2
+// (Gesundheit 14 Vorkommen, Dokumente null), und es ist das Anti-Ziel
+// „keine Siegel-Inflation".
+//
+// UEBER DIE BAUART, NICHT UEBER EINE DATEILISTE: gesucht wird jede Stelle, die
+// die Klasse zusammensetzt - gleich ob per `className`, per Template-Literal
+// oder per `classList`. Ein neues Modul mit einem Siegel steht damit
+// automatisch mit im Ergebnis.
+// --------------------------------------------------------------------------
+test('wer ein Markensiegel baut, benennt eine Herkunft oder ist der Kopf', () => {
+  const jsFiles = walkJsFiles('../public/');
+  const styleDir = new URL('../public/styles/', import.meta.url);
+
+  // Welche KLASSEN bekommen im Stylesheet eine Herkunft zugewiesen? Das ist der
+  // zweite legitime Weg: die Kachel leitet ihren Ton an das Siegel weiter
+  // (`.more-item__icon-well`, `.today-cockpit-card__icon`, die Kuechen-Leiste).
+  const classesWithOrigin = new Set();
+  for (const file of readdirSync(styleDir).filter((f) => f.endsWith('.css'))) {
+    for (const { selector, body } of eachRule(read(`../public/styles/${file}`))) {
+      if (!/--seal-accent\s*:/.test(body)) continue;
+      for (const cls of selector.match(/\.[A-Za-z0-9_-]+/g) ?? []) classesWithOrigin.add(cls.slice(1));
+    }
+  }
+
+  const offenders = [];
+  let heads = 0;
+  let mixers = 0;
+  let sites = 0;
+
+  // Die Herkunft steht selten in DERSELBEN Zeile wie die Klasse: dazwischen
+  // liegen `aria-hidden`, das Icon und im Dashboard die vorbereitete
+  // style-Zeichenkette. Ein Fenster um die Bau-Stelle ist die ehrliche
+  // Naeherung - eng genug, dass es kein fremdes Siegel einsammelt.
+  const WINDOW = 8;
+
+  for (const rel of jsFiles) {
+    const src = read(rel);
+    if (!src.includes('module-seal')) continue;
+    const lines = src.split('\n');
+    lines.forEach((line, i) => {
+      // Nur BAU-Stellen, keine Kommentare und keine Selektoren: gesucht ist die
+      // Zeile, die die Klasse zusammensetzt.
+      if (!/module-seal/.test(line)) return;
+      if (/^\s*(\/\/|\*|\/\*)/.test(line)) return;
+      if (!/className|class=|classList|classNames/.test(line)) return;
+      sites += 1;
+
+      const isHead = line.includes('module-seal--head');
+      const near = lines.slice(Math.max(0, i - WINDOW), i + WINDOW + 1).join('\n');
+      // Die MITGEFUEHRTEN Klassen der Bau-Stelle, aus der Zeichenkette selbst.
+      // Die Siegel-Klassen sind ausgenommen: `.module-seal` setzt in seiner
+      // Basisregel selbst ein `--seal-accent` (den geerbten Modulton als
+      // Voreinstellung), und wer die mitzaehlt, erklaert jede Bau-Stelle fuer
+      // benannt - der Guard waere gruen und blind. Was zaehlt, ist die Klasse
+      // des TRAEGERS, die den fremden Ton weiterreicht.
+      const ownClasses = (line.match(/['"`][^'"`]*module-seal[^'"`]*['"`]/g) ?? [])
+        .flatMap((quoted) => quoted.slice(1, -1).split(/\s+/))
+        .filter((cls) => cls && !cls.startsWith('module-seal'));
+      const namedInCss = ownClasses.some((cls) => classesWithOrigin.has(cls));
+      const namedInline = /--seal-accent|--item-module-accent/.test(near);
+
+      if (isHead) {
+        heads += 1;
+        // DIE KOPFROLLE GEHOERT DER SHELL. Sie erbt den Ton ihres Raumes, also
+        // kann kein Modul sie „richtig" selbst setzen - und genau eines pro Kopf
+        // haelt nur, wer das Siegel selbst anlegt. `public/utils/` ist die
+        // Shell-Ebene (der kollabierende Kopf, die Gruppenleiste); eine Seite
+        // oder Komponente, die hier auftaucht, hat sich einen zweiten Absender
+        // gebaut.
+        if (!rel.startsWith('../public/utils/')) {
+          offenders.push(`${rel}:${i + 1} baut die Kopfrolle des Siegels - die gehoert der Shell (public/utils/)`);
+        }
+        return;
+      }
+
+      if (!namedInline && !namedInCss) {
+        offenders.push(
+          `${rel}:${i + 1} baut ein Siegel ohne Herkunft - an einer Mischstelle benennt `
+          + 'jedes Siegel sein Modul (--seal-accent inline oder ueber die eigene Klasse im Stylesheet); '
+          + 'im eigenen Modul gibt es nur den Absender im Kopf',
+        );
+        return;
+      }
+      mixers += 1;
+    });
+  }
+
+  assert.deepEqual(offenders, []);
+
+  // Reichweiten-Nachweis NACH der Messung: der Scanner muss BEIDE Rollen
+  // gesehen haben. Eine Zusicherung ueber eine leere Liste ist keine - und ein
+  // Muster, das nur noch die Kopfrolle findet, haette die Haelfte der Regel
+  // still aufgegeben.
+  assert.ok(heads >= 2,
+    `Nur ${heads} Kopf-Bau-Stellen gefunden (erwartet: kollabierender Kopf + Gruppenleiste).`);
+  assert.ok(mixers >= 4,
+    `Nur ${mixers} Mischstellen-Siegel gefunden - die Signatur greift nicht mehr.`);
+  assert.ok(sites >= heads + mixers,
+    `Zaehlung inkonsistent: ${sites} Bau-Stellen, aber ${heads} + ${mixers} Rollen.`);
+});
+
+// --------------------------------------------------------------------------
+// EIN TOAST-CONTAINER HAT GENAU EINEN NAMENSGEBER
+//
+// ANLASS, und er ist gemessen: `reminders.js` suchte `#toast-container`. Den gab
+// es bis v0.52.15; dann teilte die Shell ihn in eine hoefliche und eine
+// bestimmte Live-Region und benannte beide um. Der Sucher blieb stehen, fand
+// nichts und brach still ab - fast drei Monate lang erschien keine einzige
+// In-App-Erinnerung, waehrend im Quelltext alles richtig dastand.
+//
+// Die Antwort ist nicht „die richtige ID eintragen", sondern EIN Ort fuer den
+// Namen: wer den Container anlegt und wer ihn sucht, lesen dieselbe Konstante
+// (public/utils/toast-surface.js). Dieser Guard haelt genau das - ein zweiter
+// Schreiber des Namens ist der Rueckweg in denselben Bruch.
+//
+// Die KLASSE `.toast-container` bleibt frei: sie ist Styling und Zaehlung
+// ("hoechstens drei Toasts"), kein Nachschlagen einer bestimmten Region.
+// --------------------------------------------------------------------------
+test('ein Toast-Container hat genau einen Namensgeber', () => {
+  const OWNER = '../public/utils/toast-surface.js';
+  // Zwei Muster, weil der Bruch zwei Gestalten hat:
+  //   (1) der zweite NAME - eine Region-ID, ausgeschrieben ausserhalb des
+  //       Besitzers. Sie kann von seiner umbenannt weglaufen.
+  //   (2) das eigene NACHSCHLAGEN - genau die Form des Bruchs von damals
+  //       (`getElementById('toast-container')`). Sein Name war mit der Klasse
+  //       identisch, ueber die Zeichenkette allein ist er nicht zu erkennen;
+  //       erkennbar ist er an der Suche.
+  const idLiteral = /['"`]toast-container-[a-z]+['"`]/;
+  const ownLookup = /(?:getElementById|querySelector(?:All)?)\(\s*['"`]#?toast-container/;
+
+  const offenders = [];
+  let ownerHits = 0;
+  for (const rel of walkJsFiles('../public/')) {
+    const src = read(rel);
+    if (rel === OWNER) { ownerHits = (src.match(new RegExp(idLiteral, 'g')) ?? []).length; continue; }
+    src.split('\n').forEach((line, i) => {
+      if (idLiteral.test(line)) offenders.push(`${rel}:${i + 1} schreibt den Namen einer Toast-Region selbst - er steht in ${OWNER}`);
+      else if (ownLookup.test(line)) offenders.push(`${rel}:${i + 1} sucht seine Toast-Region selbst - dafuer gibt es toastSurface() in ${OWNER}`);
+    });
+  }
+
+  assert.deepEqual(offenders, []);
+  // Reichweiten-Nachweis: der Besitzer muss die Namen wirklich fuehren, sonst
+  // prueft der Guard die Abwesenheit eines Musters, das es nirgends mehr gibt.
+  assert.ok(ownerHits >= 2,
+    `Nur ${ownerHits} Toast-Region-Namen in ${OWNER} - beide Dringlichkeiten gehoeren dorthin.`);
+});
+
+// --------------------------------------------------------------------------
+// DIE HERKUENFTE DER ERINNERUNGEN SIND DIE DES SERVERS
+//
+// Der Erinnerungs-Toast weist seit Block 2 aus, WORAUS eine Meldung stammt
+// (Herkunfts-Regel: eine Benachrichtigung ist eine Mischstelle). Die Zuordnung
+// `entity_type` → Modul steht im Client; geschrieben werden die Werte aber im
+// Server, und dort stehen sie an EINER Stelle: `VALID_ENTITY_TYPES`.
+//
+// Laufen beide auseinander, verschwindet nichts und nichts bricht - die neue
+// Herkunft faellt still auf die Glocke und den Erinnerungs-Ton zurueck und
+// sieht aus wie alle anderen. Genau die Sorte Drift, die niemand meldet.
+// --------------------------------------------------------------------------
+test('die Herkuenfte des Erinnerungs-Toasts sind die entity_type des Servers', () => {
+  const server = read('../server/routes/reminders.js');
+  const listed = server.match(/const VALID_ENTITY_TYPES\s*=\s*\[([^\]]*)\]/);
+  assert.ok(listed, 'VALID_ENTITY_TYPES steht nicht mehr in server/routes/reminders.js.');
+  const serverTypes = [...listed[1].matchAll(/['"]([a-z_]+)['"]/g)].map((m) => m[1]).sort();
+
+  const client = read('../public/reminders.js');
+  const map = client.match(/const REMINDER_ORIGINS\s*=\s*\{([\s\S]*?)\n\};/);
+  assert.ok(map, 'REMINDER_ORIGINS steht nicht mehr in public/reminders.js.');
+  const clientTypes = [...map[1].matchAll(/^\s{2}([a-z_]+):/gm)].map((m) => m[1]).sort();
+
+  assert.ok(serverTypes.length >= 3, `Nur ${serverTypes.length} entity_type im Server gefunden - das Muster greift nicht mehr.`);
+  assert.deepEqual(clientTypes, serverTypes,
+    'Der Toast kennt andere Herkuenfte als der Server schreibt - die unbekannten fallen still auf die Glocke zurueck.');
 });

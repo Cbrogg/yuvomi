@@ -438,6 +438,15 @@ html:has(.fab-layer .page-fab:not([hidden])) yuvomi-install-prompt {
  * var(--module-*)); ohne Angabe erbt das Siegel den aktiven Modul-Akzent. */
 .module-seal {
   --seal-accent: var(--module-accent, var(--color-accent));
+  /* DER GRUND, AUF DEM DAS SIEGEL LIEGT, IST EIN PARAMETER - nicht
+   * `--color-surface` festverdrahtet. Die Pro-Hintergrund-Regel gilt fuer die
+   * Toenung genauso wie fuer Text: dieselbe 16-%-Mischung, die auf Weiss eine
+   * sichtbare Scheibe ergibt, liegt auf dem Grouped-Grund bei 1,06:1 und
+   * verschwindet - derselbe Befund, aus dem die Traeger-Regel den Well auf
+   * Surface-3 gestellt hat. Wer das Siegel auf einen anderen Grund setzt
+   * (Modulkopf: --color-bg, Toast: der dunkle Toast-Grund), setzt --seal-base
+   * mit; die Mischung folgt dann seinem echten Hintergrund. */
+  --seal-base: var(--color-surface);
   --seal-icon: var(--icon-md);
   display: inline-flex;
   align-items: center;
@@ -448,7 +457,7 @@ html:has(.fab-layer .page-fab:not([hidden])) yuvomi-install-prompt {
   border-radius: var(--radius-full);
   background:
     linear-gradient(to bottom, var(--glass-sheen), transparent 55%),
-    color-mix(in srgb, var(--seal-accent) var(--tint-surface), var(--color-surface));
+    color-mix(in srgb, var(--seal-accent) var(--tint-surface), var(--seal-base));
   color: var(--seal-accent);
 }
 
@@ -461,6 +470,73 @@ html:has(.fab-layer .page-fab:not([hidden])) yuvomi-install-prompt {
 .module-seal--sm {
   width: var(--space-6);
   height: var(--space-6);
+}
+
+/* ── Das Siegel auf einer UMGEKEHRTEN Flaeche ──
+ * DER TRAEGER ENTSCHEIDET, WELCHES GESICHT DAS SIEGEL ZEIGT - derselbe Satz wie
+ * beim Well (Traeger-Regel) und aus demselben Grund, naemlich einer Messung.
+ * Die Toenung ist auf Flaechen der Seiten-Polaritaet geeicht und traegt dort
+ * 1,19-1,33:1. Der Toast ist die eine Flaeche der App, die in BEIDEN Themes die
+ * Umkehrung der Seite ist (--neutral-800 ist hell im Dark-Theme und dunkel im
+ * Light-Theme); dort liegt dieselbe Toenung bei 1,03-1,10:1 und ist keine
+ * Scheibe mehr, sondern ein Hauch. Auf einer umgekehrten Flaeche zeigt das
+ * Siegel deshalb sein VOLLTON-Gesicht - genau die Sprache, die die App fuer
+ * jede vivide Flaeche schon fuehrt (Primaerknopf, FAB, aktives Segment,
+ * Marken-Tile): der Ton ist die Flaeche, die Tinte ist --color-ink-on-vivid.
+ * Gemessen ueber die drei Herkuenfte des Erinnerungs-Toasts: Glyph auf Scheibe
+ * 5,1-9,8:1 in beiden Themes.
+ * Der Sheen bleibt, er ist der Materialbeweis - dasselbe Licht wie auf dem FAB. */
+.module-seal--vivid {
+  background:
+    linear-gradient(to bottom, var(--glass-sheen), transparent 55%),
+    var(--seal-accent);
+  color: var(--color-ink-on-vivid);
+}
+
+/* ── Kopfrolle: das Siegel als ABSENDER des Moduls ──
+ * Die zweite der beiden Groessenrollen des Briefs (Listenzeile, Modulkopf).
+ *
+ * WARUM GENAU HIER EINES UND SONST KEINES: die Herkunfts-Regel zeigt Herkunft
+ * nur, wo sie nicht selbstverstaendlich ist. In den Listen eines Moduls ist sie
+ * das - dort spraeche ein wiederholtes Siegel den Modul-Tint ueber die
+ * etablierten Elemente (Gesundheit trug vorher 14 Vorkommen, Dokumente null).
+ * Im Kopf ist es der Absender: einmal, neben dem Seitentitel, wie die Marke auf
+ * einem Briefkopf.
+ *
+ * ES GEHOERT DER SHELL, NICHT DEM MODUL. Angehaengt wird es von
+ * `wireCollapsingHeader` (utils/ux.js) - derselbe Ort, der den angedockten
+ * Titel anlegt, und aus demselben Grund: der Kopf ist die eine Komponente, die
+ * alle Module teilen, und ein Opt-in, das jedes Modul selbst setzen muesste,
+ * fehlt beim naechsten.
+ *
+ * SEIN GRUND IST DER SEITENGRUND: der Kopf steht auf --color-bg (opak, kein
+ * Glas). Ohne --seal-base laege die Scheibe auf ihm bei 1,06:1.
+ *
+ * DAS SIEGEL NIMMT DEN RANG SEINES TITELS AN. Die beiden Schnitte des
+ * Canonical Page Head (Large Title 34 / Inline 22, typography.css) haben hier
+ * ihre Entsprechung in EINEM Wertepaar am Kopf: --seal-head-size /
+ * --seal-head-icon. Deshalb steht die Groesse nicht am Siegel, sondern an der
+ * Leiste - so entscheidet ueber den Rang genau eine Stelle, und die drei
+ * Zustaende unten sind dieselben drei, die typography.css fuehrt. */
+.module-seal--head {
+  /* Der Rang kommt von der Leiste, in der das Siegel steht. Der Fallback ist
+   * der Inline-Rang und gilt fuer den zweiten Traeger dieser Rolle: die
+   * Kuechen-Leiste, die nach der Leisten-Regel selbst die Kopf-Navigation ist
+   * und deshalb ihren Absender fuehrt (sub-tabs.css). Sie steht auf demselben
+   * Seitengrund wie der Modulkopf, also gilt --seal-base fuer beide. */
+  width: var(--seal-head-size, var(--space-6));
+  height: var(--seal-head-size, var(--space-6));
+  --seal-icon: var(--seal-head-icon, var(--icon-md));
+  --seal-base: var(--color-bg);
+  transition:
+    width var(--duration-sm) var(--ease-out),
+    height var(--duration-sm) var(--ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .module-seal--head {
+    transition: none;
+  }
 }
 
 /* ── More-Item: App-Icon (farbiges Icon = Held, kein Kasten) ── */
@@ -1315,9 +1391,24 @@ html.fab-anim-done .page-fab {
  * Containing Block auf und die Fluchtlinie bricht.
  * ================================================================ */
 .page-toolbar {
+  /* Die Naht der Leiste als Wert, weil die Titelzeile mit ihr rechnen muss:
+   * das Siegel und der Large Title teilen sich eine Zeile nur, wenn die Basis
+   * des Titels exakt um Siegel PLUS Naht kleiner als 100 % ist (siehe die
+   * Large-Title-Zone unten). Bis 640px verdichtet sich die Naht - eine
+   * zweite Zahl an der Rechenstelle waere genau die Sorte stiller Drift, die
+   * ein Umbruch erst beim naechsten Locale zeigt. */
+  --page-toolbar-gap: var(--space-2);
+  /* Rang des Absender-Siegels. Voreinstellung ist der INLINE-Rang: er gilt ab
+   * 1024px (Sidebar-Welt) und in der kompakten Hoehenklasse - beides Zustaende,
+   * in denen der Titel selbst inline steht. Die Large-Title-Zone hebt ihn. */
+  --seal-head-size: var(--space-6);
+  --seal-head-icon: var(--icon-md);
+  /* Was das Siegel der Titelzeile wegnimmt. Ohne Siegel ist es nichts, und
+   * die Titelbasis unten rechnet unveraendert mit 100 %. */
+  --seal-head-lead: 0px;
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--page-toolbar-gap);
   padding-block: var(--space-3);
   padding-inline: var(--page-inline-pad);
   /* HIG: kein farbiger Akzentbalken an der Nav-Bar — Modul-Identität
@@ -1339,6 +1430,10 @@ html.fab-anim-done .page-fab {
   /* Wirkt nur in Flex-Spalten-Pages (Notizen/Kalender), verhindert dort
    * das Stauchen des Kopfes; in Block-Pages ist es ein No-op. */
   flex-shrink: 0;
+}
+
+.page-toolbar:has(> .module-seal--head) {
+  --seal-head-lead: calc(var(--seal-head-size) + var(--page-toolbar-gap));
 }
 
 .page-toolbar__title {
@@ -1523,6 +1618,19 @@ html.fab-anim-done .page-fab {
   .page-toolbar:not(.page-toolbar--in-group):has(> .page-toolbar__title) {
     flex-wrap: wrap;
     row-gap: var(--space-2);
+    /* Large-Title-Rang des Absender-Siegels - die Entsprechung zu den 34px,
+     * die typography.css dem Titel in genau diesem Zustand gibt. */
+    --seal-head-size: var(--target-sm);
+    --seal-head-icon: var(--icon-lg);
+  }
+
+  /* Im eingeklappten Zustand faellt der Titel auf den Inline-Schnitt zurueck
+   * (typography.css) - das Siegel mit ihm. Gleiche Spezifitaet wie die Regel
+   * darueber, entschieden durch die Quellreihenfolge; genau so steht das
+   * Paar auch in typography.css. */
+  .page-toolbar--capped.is-collapsed:has(> .page-toolbar__title) {
+    --seal-head-size: var(--space-6);
+    --seal-head-icon: var(--icon-md);
   }
 
   /* Der Kopf klebt nicht mit seiner ganzen Höhe, sondern erst, wenn seine
@@ -1552,7 +1660,11 @@ html.fab-anim-done .page-fab {
    * (test:typography, „globale Toolbar- und Kartentitel folgen den
    * semantischen Rollen"). */
   .page-toolbar:not(.page-toolbar--in-group) > .page-toolbar__title {
-    flex-basis: 100%;
+    /* Die ganze Zeile - abzueglich dessen, was das Absender-Siegel davor
+     * belegt. `100%` allein haette den Titel unter das Siegel geschoben und
+     * ihm eine eigene Zeile gegeben: die Lead-Zone waere um eine Zeile
+     * gewachsen und das Siegel stuende allein ueber dem Titel. */
+    flex-basis: calc(100% - var(--seal-head-lead));
     /* NOWRAP BLEIBT, DIE ELLIPSE DER BASISREGEL IST DIE ANTWORT - gemessen,
      * nicht geraten (Runde 6, Phase 0). Bei 375px stehen 343px zur Verfügung;
      * von 360 Paaren aus 24 Locales und 15 Modultiteln reisst GENAU EINES die
@@ -1697,6 +1809,13 @@ html.fab-anim-done .page-fab {
   .page-toolbar:not(.page-toolbar--in-group) > .page-toolbar__title {
     flex-basis: auto;
   }
+
+  /* Kein Large Title, also auch kein Large-Title-Siegel: beide fallen auf den
+   * Inline-Rang zurueck (dieselbe Paarung wie in typography.css). */
+  .page-toolbar:not(.page-toolbar--in-group):has(> .page-toolbar__title) {
+    --seal-head-size: var(--space-6);
+    --seal-head-icon: var(--icon-md);
+  }
 }
 
 @media (max-width: 640px) {
@@ -1710,7 +1829,7 @@ html.fab-anim-done .page-fab {
      * Viewport (Finish-Verdict Fundament-Phase, Fix 6). Wirkt shell-weit
      * auf alle .page-toolbar-Module; wer trotzdem nicht passt, bricht
      * weiter kontrolliert um (flex-wrap bleibt). */
-    gap: var(--space-1);
+    --page-toolbar-gap: var(--space-1);
   }
 
   .page-toolbar__actions {

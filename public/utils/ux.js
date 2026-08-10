@@ -195,10 +195,22 @@ export function wireScrollFade(el, { axis = 'x' } = {}) {
  * Font-Nachladen) und einen MutationObserver (Modul rendert seinen Kopfinhalt
  * neu). `is-docked` trägt allein die Trennlinie und ändert keine Geometrie.
  *
+ * DAS ABSENDER-SIEGEL GEHÖRT AUS DEMSELBEN GRUND HIERHER wie der angedockte
+ * Titel: es ist Teil der Kopf-STRUKTUR, nicht des Modulinhalts. Die
+ * Herkunfts-Regel (Block 2) gibt jedem Kopf genau EIN Siegel als Absender -
+ * eine Zusage, die nur halten kann, wer das Siegel selbst anlegt. Setzte jedes
+ * Modul es in sein eigenes Markup, wäre „genau eines" eine Bitte an siebzehn
+ * Dateien; hier ist es eine Eigenschaft des Bauteils. Wo kein Seitentitel steht
+ * (die Gruppen-Variante der Küche), steht auch kein Absender: der Kopf benennt
+ * dort nichts, was einen Absender hätte.
+ *
  * @param {HTMLElement} toolbar - eine `.page-toolbar`
+ * @param {{ sealIcon?: () => SVGElement|null }} [opts] - `sealIcon` liefert das
+ *   Icon des Absender-Siegels (Fabrik aus NAV_ICONS). Ohne die Angabe bleibt
+ *   der Kopf siegellos.
  * @returns {{ update: () => void, destroy: () => void }|null}
  */
-export function wireCollapsingHeader(toolbar) {
+export function wireCollapsingHeader(toolbar, opts = {}) {
   const noop = { update: () => {}, destroy: () => {} };
   if (!toolbar) return null;
   // Idempotent: Router und Modul dürfen beide verdrahten wollen.
@@ -230,6 +242,43 @@ export function wireCollapsingHeader(toolbar) {
   let io = null;
   let lead = 0;
   let dockTitle = null;
+  let headSeal = null;
+
+  // DAS ABSENDER-SIEGEL: genau eines, unmittelbar vor dem Seitentitel.
+  //
+  // Es hängt am TITEL, nicht am Kopf: wo kein Seitentitel steht, hat der Kopf
+  // keinen Absender zu führen. Das ist dieselbe Abgrenzung, die die
+  // Leisten-Regel zieht - trägt eine Leiste den Modulnamen (Küche), ist SIE die
+  // Kopf-Navigation, und der Kopf darunter benennt nur noch die offene Liste.
+  //
+  // Vor dem Titel und nicht dahinter, weil ein Absender vor dem steht, was er
+  // ausweist; in RTL dreht `flex-direction` die Zeile ohnehin mit.
+  const syncHeadSeal = () => {
+    const heading = toolbar.classList.contains('page-toolbar--in-group')
+      ? null
+      : toolbar.querySelector(':scope > .page-toolbar__title');
+    if (!opts.sealIcon || !heading) {
+      headSeal?.remove();
+      return;
+    }
+    if (!headSeal) {
+      const icon = opts.sealIcon();
+      if (!icon) return;
+      headSeal = document.createElement('span');
+      headSeal.className = 'module-seal module-seal--head';
+      // Dekor im strengen Sinn: den Modulnamen führt der Titel daneben, und
+      // die Navigation führt ihn ein zweites Mal. Ein Alternativtext hier wäre
+      // die dritte Ansage desselben Wortes.
+      headSeal.setAttribute('aria-hidden', 'true');
+      headSeal.appendChild(icon);
+    }
+    // NUR SCHREIBEN, WENN SICH ETWAS ÄNDERT - derselbe Grund wie beim
+    // angedockten Titel: der MutationObserver unten beobachtet diesen Teilbaum
+    // und ruft `update` erneut auf.
+    if (headSeal.parentElement !== toolbar || headSeal.nextElementSibling !== heading) {
+      toolbar.insertBefore(headSeal, heading);
+    }
+  };
 
   // Hysterese, damit der Kopf nicht um seine eigene Schwelle flattert.
   const onInnerScroll = (e) => {
@@ -253,6 +302,9 @@ export function wireCollapsingHeader(toolbar) {
     else if (top < 8) toolbar.classList.remove('is-collapsed', 'is-docked');
   };
   const update = () => {
+    // VOR der Messung: das Siegel steht in der Titelzeile und zählt zu ihr.
+    // Danach angehängt, hätte die Zeilenmessung eine Zeile ohne es gesehen.
+    syncHeadSeal();
     // Im kollabierten Zustand ist der Kopf einzeilig - eine Messung würde jetzt
     // lead 0 ergeben und dem CSS die Grundlage entziehen, die es zum Ausklappen
     // braucht. Der Wert der ausgeklappten Form bleibt stehen.
@@ -419,6 +471,8 @@ export function wireCollapsingHeader(toolbar) {
       capped?.removeEventListener('scroll', onInnerScroll, { capture: true });
       dockTitle?.remove();
       dockTitle = null;
+      headSeal?.remove();
+      headSeal = null;
       delete toolbar.dataset.collapsingHeader;
       toolbar.style.removeProperty('--page-toolbar-lead');
       toolbar.classList.remove('page-toolbar--stacked', 'page-toolbar--capped', 'is-collapsed', 'is-docked');

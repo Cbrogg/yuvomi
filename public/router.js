@@ -11,6 +11,7 @@ import { initI18n, getLocale, t, formatDate, formatTime } from '/i18n.js';
 import { esc } from '/utils/html.js';
 import { emptyHintEl } from '/utils/empty-state.js';
 import { wireScrollFade, wireCollapsingHeader } from '/utils/ux.js';
+import { TOAST_SURFACES, toastSurface } from '/utils/toast-surface.js';
 import { init as initReminders, stop as stopReminders } from '/reminders.js';
 import { initPush, stopPush } from '/push.js';
 import { numberLocaleFor } from '/settings/region-presets.js';
@@ -1617,14 +1618,16 @@ function renderAppShell(container) {
   searchPanel.appendChild(searchClose);
   searchOverlay.appendChild(searchPanel);
 
+  // Die Namen kommen aus utils/toast-surface.js - derselbe Ort, an dem sie
+  // gesucht werden. Die Begründung steht dort.
   const toastContainerPolite = document.createElement('div');
   toastContainerPolite.className = 'toast-container';
-  toastContainerPolite.id = 'toast-container-polite';
+  toastContainerPolite.id = TOAST_SURFACES.polite;
   toastContainerPolite.setAttribute('aria-live', 'polite');
 
   const toastContainerAssertive = document.createElement('div');
   toastContainerAssertive.className = 'toast-container';
-  toastContainerAssertive.id = 'toast-container-assertive';
+  toastContainerAssertive.id = TOAST_SURFACES.assertive;
   toastContainerAssertive.setAttribute('aria-live', 'assertive');
 
   const routeAnnouncer = document.createElement('div');
@@ -1759,8 +1762,28 @@ let _toolbarObserverRoot = null;
  */
 const _toolbarHandles = new WeakMap();
 
+/**
+ * Icon-Fabrik für das Absender-Siegel eines Modulkopfes.
+ *
+ * ABGELEITET, NICHT ZWEITGESCHRIEBEN: welches Zeichen ein Modul führt, steht
+ * bereits in `navItems()` - ein zweiter Katalog Modul→Icon wäre die Sorte
+ * Dublette, die beim achtzehnten Modul auseinanderläuft. Die Farbe braucht gar
+ * keine Angabe: das Modul-Stylesheet setzt `--module-accent` auf seinem Root,
+ * der Kopf liegt darin, das Siegel erbt.
+ *
+ * DRITTANBIETER-MODULE BEKOMMEN KEINES, und das ist kein Loch: das Siegel ist
+ * Yuvomis eigene Ausweisform. Ein fremdes Modul ist kein Raum dieser Familie,
+ * und sein Icon liegt ausserhalb von NAV_ICONS.
+ */
+function headSealIcon(mod) {
+  if (!mod) return null;
+  const name = navItems().find((item) => item.module === mod)?.icon;
+  const factory = name ? NAV_ICONS[name] : null;
+  return factory ? () => factory() : null;
+}
+
 function wireToolbar(el) {
-  const handle = wireCollapsingHeader(el);
+  const handle = wireCollapsingHeader(el, { sealIcon: headSealIcon(currentRoute()?.module) });
   // Der erste Handle gewinnt: `wireCollapsingHeader` ist idempotent und liefert
   // beim zweiten Anlauf ein wirkungsloses Paar zurueck. Wer das eintraegt,
   // ueberschreibt genau das `destroy()`, um das es hier geht.
@@ -3313,10 +3336,7 @@ const TOAST_ICONS = {
 };
 
 function showToast(message, type = 'default', duration = 3000, onUndo = null) {
-  const containerId = (type === 'danger' || type === 'warning')
-    ? 'toast-container-assertive'
-    : 'toast-container-polite';
-  const container = document.getElementById(containerId);
+  const container = toastSurface((type === 'danger' || type === 'warning') ? 'assertive' : 'polite');
   if (!container) return;
 
   // Aktions-Button: Legacy-Undo (Funktion) oder benannte Aktion ({ label, onClick }).
