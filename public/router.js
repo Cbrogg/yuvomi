@@ -1389,7 +1389,26 @@ function renderAppShell(container) {
   // Kein role="list": die Kinder sind Sektions-Gruppen (role="group") + das
   // gepinnte Settings-Item, keine listitems. Die <nav>-Hülle trägt die
   // Navigations-Semantik, die Gruppen die Sektions-Struktur.
-  sidebarNavItems().forEach((item) => sidebarItems.appendChild(item));
+  // DER GEPINNTE EINTRAG STEHT AUSSERHALB DES SCROLLERS (Critique 2026-08-10).
+  //
+  // Die Absicht gab es schon: `nav-item--pinned-end` plus `margin-top: auto`.
+  // Nur braucht ein Auto-Rand FREIEN RAUM - er wirkt also genau dann nicht,
+  // wenn er gebraucht wird. Gemessen auf 1280x720: scrollHeight 666 in
+  // clientHeight 448, und die Einstellungen lagen 218px unter der Falz,
+  // zusammen mit dem Budget - beides Module, die PRODUCT.md ausdruecklich als
+  // Desktop-Sitzung nennt. Eine Regel, die nur im unkritischen Fall greift, ist
+  // dieselbe stille Zusicherung wie eine Fade-Maske, die zeigt, dass es
+  // weitergeht, ohne dass man hinkaeme.
+  //
+  // Als Geschwister der Liste sitzt er immer am Fuss, ohne Auto-Rand: die
+  // Sidebar ist eine Flex-Spalte, und was nicht im Scroller liegt, scrollt
+  // nicht weg. Strukturell ist das ohnehin der richtige Ort - die Einstellungen
+  // sind Systemebene, kein Modul unter Modulen.
+  const pinnedSidebarItems = [];
+  sidebarNavItems().forEach((item) => {
+    if (item.classList?.contains('nav-item--pinned-end')) pinnedSidebarItems.push(item);
+    else sidebarItems.appendChild(item);
+  });
 
   // Scroll-Affordanz (Audit F-01): weiche Fade-Anrisse oben/unten, sobald die
   // Liste überläuft — der Scrollbalken ist bewusst versteckt, ohne Anriss waren
@@ -1460,6 +1479,11 @@ function renderAppShell(container) {
   sidebar.appendChild(sidebarSearch);
 
   sidebar.appendChild(sidebarItems);
+
+  // Der gepinnte Eintrag steht zwischen Liste und Fuss-Aktionen: er IST eine
+  // Route (data-route, Aktiv-Pille) und gehoert damit nicht zu den Aktionen
+  // darunter, aber auch nicht mehr in den Scroller darueber.
+  pinnedSidebarItems.forEach((el) => sidebar.appendChild(el));
 
   // Footer-Aktionen (keine Routen → kein data-route, damit Delegation/Indikator
   // sie ignorieren): Hilfe und Live-Changelog.
@@ -2745,7 +2769,8 @@ function sidebarNavItems() {
 
   navItems().forEach((item) => {
     // Settings ist gepinnt und gehört zu keiner sichtbaren Sektionsgruppe —
-    // es bleibt direktes Kind von .nav-sidebar__items (margin-top:auto-Pin).
+    // der Aufrufer hebt es aus der Liste heraus und hängt es als Geschwister
+    // an die Sidebar-Spalte (siehe dort, und layout.css zum entfallenen Rand).
     if (item.module !== 'settings') startSection(item.section);
 
     if (item.kitchenGroup) {
@@ -2757,8 +2782,9 @@ function sidebarNavItems() {
     }
     const el = navItemEl(item);
     if (item.module === 'settings') {
-      // Ans Sidebar-Ende pinnen — als direktes Kind (nicht in einer Gruppe),
-      // über eine explizite Klasse statt ":last-child a".
+      // Ans Sidebar-Ende pinnen — über eine explizite Klasse statt
+      // ":last-child a". Der Aufrufer erkennt sie und hängt den Eintrag
+      // ausserhalb des Scrollers ein.
       el.classList.add('nav-item--pinned-end');
       elements.push(el);
       return;

@@ -1786,26 +1786,40 @@ html.fab-anim-done .page-fab {
 }
 
 /* --------------------------------------------------------
- * KOMPAKTE HÖHENKLASSE: kein Large Title.
+ * KOMPAKTE HÖHENKLASSE: der Kopf trägt EINE Zeile.
+ *
+ * DIE CHROME-REGEL (DESIGN.md): über dem Inhalt stehen der Kopf und höchstens
+ * eine Bedienzeile. In der kompakten Höhe ist das keine Empfehlung mehr,
+ * sondern die Bedingung, unter der überhaupt Inhalt zu sehen ist.
  *
  * Der Large Title kostet eine eigene Zeile, und die ist ein Luxus der Höhe,
  * nicht der Breite. Wo sie fehlt, frisst der Kopf den Inhalt: auf 640x400 -
  * ein 1280x800-Laptop bei 200 % Browserzoom, und damit WCAG 1.4.4 - misst der
- * Scrollport von /tasks 231px, während Kopf (172px) und Filterreihe (110px)
- * zusammen 282px belegen. Die erste Aufgabe stand bei y=337 und war nie zu
- * sehen, ohne dass ein einziges Pixel Inhalt daran schuld gewesen wäre.
+ * Scrollport von /tasks 231px, während Kopf und Filterreihe zusammen 296px
+ * belegen. Die erste Aufgabe stand bei y=334 und war nie zu sehen, ohne dass
+ * ein einziges Pixel Inhalt daran schuld gewesen wäre.
  *
  * Dieselbe Lage kennt die Plattform: in der kompakten Höhenklasse (iPhone
  * quer) zeigt iOS keinen Large Title, sondern führt den Titel inline. Die
- * Grenze steht bei 500px, weil darunter keine der vier Viewport-Breiten mehr
- * genug Höhe für Kopf plus zwei Inhaltszeilen hat.
+ * Grenze steht bei 500px (--bp-short, tokens.css §11c), weil darunter keine
+ * der vier Viewport-Breiten mehr genug Höhe für Kopf plus zwei Inhaltszeilen
+ * hat.
+ *
+ * DER LARGE TITLE ALLEIN REICHTE NICHT, und das war der Messfehler dieser
+ * Stelle bis 2026-08-10: sein Wegfall spart 35px, gemessen wurden aber 162px
+ * Kopf. Den Rest trugen zwei Umbrüche, die aus der BREITE stammen -
+ * `.page-toolbar--wrap` gibt dem Center-Slot unter 768px eine eigene Zeile,
+ * und die Aktionen rutschen auf eine dritte. Beide sind auf einem 375px
+ * breiten Telefon richtig und auf einem 640px breiten Fenster falsch, weil
+ * dort die Breite reicht und die Höhe fehlt. Die Höhenachse nimmt sie deshalb
+ * zurück: nowrap, und der Kopf steht in einer Zeile.
  *
  * WELCHE GRÖSSE der Titel dann trägt, steht in typography.css bei der
  * Canonical-Page-Head-Rolle - hier steht nur der Umbruch. Der angedockte
  * Titel wird damit gegenstandslos: ohne eigene Zeile gibt es keine Lead-Zone,
  * `lead` fällt auf 0, und die Shell legt ihn gar nicht erst an.
  * -------------------------------------------------------- */
-@media (max-width: 1023px) and (max-height: 500px) {
+@media (max-width: 1023px) and (max-height: 499px) {
   .page-toolbar:not(.page-toolbar--in-group) > .page-toolbar__title {
     flex-basis: auto;
   }
@@ -1815,6 +1829,137 @@ html.fab-anim-done .page-fab {
   .page-toolbar:not(.page-toolbar--in-group):has(> .page-toolbar__title) {
     --seal-head-size: var(--space-6);
     --seal-head-icon: var(--icon-md);
+  }
+
+  /* Die Zeilen-Rücknahme gilt in JEDER Breite unter der Desktop-Grenze, auch
+   * unter 768px: ein 375x375-Fenster (Telefon quer, 200 % Zoom) hat dieselbe
+   * Not wie ein 640x400-Fenster.
+   *
+   * DIE SELEKTORFORM IST DIE DER REGEL, DIE SIE ZURÜCKNIMMT, und das ist keine
+   * Kosmetik: die Large-Title-Regel oben trägt `:not()` plus `:has()` und
+   * damit Spezifität 0,3,0. Ein schlichtes `.page-toolbar` (0,1,0) verlor
+   * gegen sie lautlos - gemessen blieb `flex-wrap: wrap` auf allen zehn
+   * Köpfen stehen, und der Kalender baute weiter vier Zeilen. */
+  .page-toolbar:not(.page-toolbar--in-group):has(> .page-toolbar__title),
+  .page-toolbar:not(.page-toolbar--in-group) {
+    flex-wrap: nowrap;
+  }
+
+  /* Ein Kopf bricht nicht um, weil er darf, sondern weil ein Slot eine ganze
+   * Zeile beansprucht: `.page-toolbar--wrap` gibt dem Center-Slot unter 768px
+   * `flex-basis: 100%`, und die Large-Title-Regel tut dasselbe mit dem Titel.
+   * `flex-wrap` ist die Erlaubnis, die Basis der Grund - beide gehoeren
+   * zurueckgenommen.
+   *
+   * DIE ARBEITSTEILUNG IST GEMESSEN, nicht vermutet (Gegenprobe zu Sonde 15,
+   * je Regel einzeln zurueckgedreht): die Icon-Form der Suche traegt die
+   * Module MIT Suche (Aufgaben, Dokumente, Notizen, Kontakte, Geburtstage,
+   * 163 → 63px), das `nowrap` oben traegt die mit Zeitraum-Navigation
+   * (Kalender 161 → 61, Budget 157 → 57), und das Leisten-Padding je 8px.
+   * Keine der drei allein reicht - wer eine davon fuer entbehrlich haelt,
+   * dreht sie zurueck und misst nach. */
+  .page-toolbar:not(.page-toolbar--in-group) > .page-toolbar__center,
+  .page-toolbar--wrap:not(.page-toolbar--in-group) > .page-toolbar__center {
+    flex-basis: auto;
+    order: 0;
+  }
+
+  /* Die Tab-Leiste im Kopf (Gesundheit, Belohnungen, Haushaltshilfe) IST die
+   * eine erlaubte Bedienzeile - sie behält ihre eigene Zeile, nur der Titel
+   * gibt seine ab. Ohne diese Zeile zöge `nowrap` sie neben den Titel und
+   * beide würden sich die Breite streitig machen. */
+  .page-toolbar:not(.page-toolbar--in-group):has(> .page-toolbar__title):has(> [role="tablist"]) {
+    flex-wrap: wrap;
+  }
+
+  /* DIE SUCHE WECHSELT IN IHRE ICON-FORM - die Label-Verlust-Regel, angewandt
+   * auf den Flächenverlust: ein Bedienelement, dem der Platz ausgeht, wird zum
+   * Einstieg seiner Familie und behält --target-base. Kein neues Markup und
+   * kein JS: `.page-search` IST ein `<label for>`, ein Klick darauf fokussiert
+   * also den Input, und `:focus-within` klappt das Feld wieder auf. Der
+   * Einstieg ist damit derselbe Knoten wie das Feld.
+   *
+   * Die Bedingung ist wörtlich die der gedeckelten Architektur oben: eine
+   * Suche, die einem beim Scrollen der eigenen Treffer unter den Händen
+   * verschwindet, wäre der falsche Gehorsam gegenüber der Regel. Also nur
+   * ohne Fokus UND ohne Wert. */
+  .page-toolbar > .page-search:not(:focus-within):not(:has(input:not(:placeholder-shown))) {
+    flex: 0 0 auto;
+    width: var(--target-base);
+    max-width: var(--target-base);
+  }
+
+  .page-toolbar
+    > .page-search:not(:focus-within):not(:has(input:not(:placeholder-shown)))
+    .page-search__input {
+    padding-inline: 0;
+    /* Der Text ist leer (kein Wert, sonst griffe die Regel nicht), unsichtbar
+     * bleibt damit nur der Placeholder - das Icon sagt dasselbe kürzer. */
+    color: transparent;
+    /* DIE ICON-FORM IST DIE DER FAMILIE, nicht ein leeres Feld. Der Feldkanon
+     * (1.5px --color-border auf Surface) sagt „hier wird getippt"; in der
+     * Icon-Rolle wäre das ein Versprechen, das der Knopf nicht hält, und
+     * daneben stünden drei echte `.btn--icon` in Ghost-Optik. Also übernimmt
+     * er ihre: keine Kante, kein Grund, und der Fokusring der Basisregel
+     * kommt zurück, sobald das Feld wieder eins ist. */
+    border-color: transparent;
+    background: transparent;
+  }
+
+  .page-toolbar
+    > .page-search:not(:focus-within):not(:has(input:not(:placeholder-shown)))
+    .page-search__input::placeholder {
+    color: transparent;
+  }
+
+  .page-toolbar
+    > .page-search:not(:focus-within):not(:has(input:not(:placeholder-shown)))
+    .page-search__icon {
+    inset-inline-start: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  /* Im aufgeklappten Zustand nimmt die Suche die Zeile, die sie braucht - sie
+   * ist dann das, was der Nutzer gerade tut. */
+  .page-toolbar > .page-search:focus-within {
+    flex: 1 1 auto;
+  }
+}
+
+/* --------------------------------------------------------
+ * KOMPAKTE HÖHE: jede Leiste über dem Inhalt gibt eine Padding-Stufe ab.
+ *
+ * Der Kopf allein reicht nicht, wo mehrere Leisten übereinander stehen. Die
+ * Küche trägt zwei Kopfebenen (Raum-Leiste plus Modulkopf), Einkauf dazu die
+ * Listenwahl, Vorrat und Dokumente je eine Filterzeile. Gemessen auf 640x400:
+ * /shopping 178px, /pantry 181px und /documents 190px Chrome über 323px
+ * Sichtfläche - mehr als die Hälfte des Bildes, bevor das erste Objekt kommt.
+ *
+ * WAS HIER NICHT PASSIERT, und zwar bewusst: keine Leiste verschwindet, und
+ * keine Zielgröße schrumpft. Die Tabs bleiben --target-base, sie verlieren nur
+ * die Luft um sich herum. Eine Leiste wegzunehmen hieße, eine Navigationsebene
+ * zu verstecken, die es nur in dieser Größenklasse nicht gäbe - genau die Art
+ * Sonderfall, die die Kopf-Regel oben vermeidet.
+ *
+ * DER `.app-shell`-ANKER IST PFLICHT UND KEINE ZIERDE. Der Router lädt je
+ * Seite genau ein Modul-Stylesheet, und zwar NACH layout.css: eine Regel mit
+ * derselben Spezifität verliert dort gegen jedes `padding-block`, das ein
+ * Modul für seinen eigenen Kopf schreibt. Ohne den Anker blieb die erste
+ * Fassung dieser Zeilen wirkungslos - gemessen an /documents und /pantry, die
+ * ihre 8px unverändert behielten. Die Begründung ist dieselbe wie bei „die
+ * Grösse des Icon-Knopfs gehört der Shell": wie hoch eine Leiste baut, ist
+ * eine Entscheidung der Shell über alle 17 Module, nicht siebzehn Antworten.
+ * -------------------------------------------------------- */
+@media (max-height: 499px) {
+  .app-shell .page-toolbar,
+  .app-shell .sub-tabs-bar,
+  .app-shell .list-tabs-bar {
+    padding-block: var(--space-1);
+  }
+
+  :root {
+    --kitchen-tabs-height: var(--target-lg);
+    --sub-tabs-height: var(--target-lg);
   }
 }
 
@@ -2287,9 +2432,36 @@ p.field-hint--warn[hidden] {
     transform: scale(0.97);
   }
 
-  /* ── Einstellungen ans Ende ── */
-  .nav-sidebar__items > .nav-item--pinned-end:not(:only-child) {
-    margin-top: auto;
+  /* ── Einstellungen ans Ende ──
+   *
+   * HIER STAND `margin-top: auto` AN `.nav-sidebar__items > …`. Ein Auto-Rand
+   * verteilt FREIEN Raum, und bei Ueberlauf gibt es keinen - der Pin fiel also
+   * genau in dem Fall aus, fuer den er gedacht war (gemessen 1280x720:
+   * scrollHeight 666 in clientHeight 448, Einstellungen 218px unter der Falz).
+   *
+   * Der Eintrag haengt seit 2026-08-10 als Geschwister der Liste in der
+   * Sidebar-Spalte (router.js) und braucht deshalb gar keinen Rand mehr: was
+   * nicht im Scroller liegt, scrollt nicht weg. Bleibt nur die Naht zur Liste
+   * darueber, damit er nicht an ihrem letzten Eintrag klebt. */
+  .nav-sidebar > .nav-item--pinned-end {
+    margin-top: var(--space-1);
+    flex-shrink: 0;
+  }
+
+  /* UND EINE KANTE, SOBALD DIE LISTE UEBERLAEUFT. Ohne sie liest sich der
+   * gepinnte Eintrag als naechster Listeneintrag - im Screenshot stand
+   * „Einstellungen" direkt unter „Belohnungen", waehrend „Menschen" und
+   * „Finanzen" dazwischen weggescrollt waren. Die Fade-Maske sagt „hier geht es
+   * weiter" und wird dadurch zur Falle: was darunter steht, gehoert nicht mehr
+   * dazu.
+   *
+   * `wireScrollFade` setzt `has-fade-end` genau dann, wenn unterhalb noch
+   * Eintraege liegen - dieselbe Bedingung, aus der die Naht ihre Berechtigung
+   * zieht. Passt die Liste, bleibt die Sidebar ununterbrochen. */
+  .nav-sidebar__items.has-fade-end + .nav-item--pinned-end {
+    margin-top: var(--space-2);
+    padding-top: var(--space-2);
+    border-top: 1px solid var(--color-border-subtle);
   }
 
   /* ── Sidebar Toggle ── */
@@ -2298,6 +2470,12 @@ p.field-hint--warn[hidden] {
     align-items: center;
     justify-content: flex-end;
     align-self: stretch;
+    /* NIMMT DEN PLATZ, DEN SEIN TRAEGER IHM LAESST (Zielgroessen-Regel,
+     * DESIGN.md). Er mass 219x23 und kam allein ueber die Spacing-Ausnahme
+     * durch - freistehend am Fuss der Sidebar, mit Platz nach oben und unten.
+     * Das war kein Dichte-Fall, sondern ein vergessener: 23px ist die Hoehe
+     * seines 15px-Icons plus Zeilenrest, nicht eine Entscheidung. */
+    min-height: var(--target-md);
     padding: 0 var(--space-4) var(--space-2);
     margin-top: calc(-1 * var(--space-2));
     background: none;
@@ -5159,4 +5337,63 @@ p.field-hint--warn svg {
   width: 14px;
   height: 14px;
   flex-shrink: 0;
+}
+
+/* ── Das Ueberlappungszeichen: wer ∩ was ──
+ *
+ * Der dritte Teil der Formfamilie (Block-2-Brief), neben dem Siegel und seiner
+ * Herkunfts-Regel. Zwei Kreise, die sich ueberlappen - das Motiv der
+ * Drei-Kreise-Bildmarke, auf die kleinste Aussage gebracht: einer sagt, aus
+ * welchem Raum das Objekt kommt, der andere, wen es angeht.
+ *
+ * DIE UEBERLAPPUNG IST DAS ZEICHEN, nicht die Nachbarschaft. Zwei Kreise
+ * nebeneinander waeren zwei Angaben; erst der Schnitt macht daraus eine. Der
+ * Versatz betraegt deshalb ein Drittel des Avatars - genug, dass die Kreise
+ * einander sichtbar schneiden, wenig genug, dass beide als ganze Scheibe
+ * lesbar bleiben.
+ *
+ * DER RING IST KEINE ZIERDE, sondern die Trennung: ohne ihn laufen zwei
+ * getoente Flaechen ineinander, und bei aehnlichem Ton (ein violetter Avatar
+ * auf dem Kalender-Siegel) verschwindet die Kante. Er nimmt --seal-base, also
+ * denselben Parameter, mit dem das Siegel schon seinen echten Untergrund
+ * kennt - auf dem Toast ist das der Toast-Grund, im Modulkopf --color-bg.
+ *
+ * Wer wann eines bekommt, steht in utils/seal-pair.js. */
+.seal-pair {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  /* Der Avatar ragt aus der Zeile heraus; ohne das ueberlappt er die Nachbarn
+   * statt das Siegel. */
+  position: relative;
+}
+
+.seal-pair__who {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: var(--space-5);
+  height: var(--space-5);
+  margin-inline-start: calc(-1 * var(--space-2));
+  border-radius: var(--radius-full);
+  box-shadow: 0 0 0 2px var(--seal-base, var(--color-surface));
+  font-size: var(--text-2xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1;
+  overflow: hidden;
+}
+
+.seal-pair__who img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Neben einem Siegel der kleinen Rolle schrumpft auch das Zeichen mit - sonst
+ * waere der Avatar groesser als das, was er ueberlappt. */
+.seal-pair:has(> .module-seal--sm) .seal-pair__who {
+  width: var(--space-4);
+  height: var(--space-4);
+  margin-inline-start: calc(-1 * var(--space-1) - 2px);
 }

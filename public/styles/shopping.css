@@ -846,3 +846,51 @@
 
 /* Kategorie-Manager: seit Audit F-15 die geteilte Komponente
  * <yuvomi-category-manager> (Styles global in category-manager.css). */
+
+/* --------------------------------------------------------
+ * KOMPAKTE HÖHE: Listenwahl und Listenkopf teilen sich eine Zeile.
+ *
+ * Der Einkauf ist die dichteste Route der App: Küchen-Leiste (der Kopf des
+ * Raums), Listenwahl, Listenkopf, dazu je nach Zustand die Sammelaktions-
+ * Leiste. Gemessen auf 640x400 blieben davon 27px Scrollport übrig - keine
+ * einzige Artikelzeile.
+ *
+ * Nach der Chrome-Regel (DESIGN.md) ist die Küchen-Leiste der Kopf und die
+ * Listenwahl die eine erlaubte Bedienzeile; der Listenkopf ist damit die
+ * Zeile zu viel. Er trägt aber den Listennamen, und der ist hier kein Text,
+ * sondern das Ziel zum Umbenennen - ausblenden scheidet aus.
+ *
+ * Also stehen beide nebeneinander. Der Name ist dabei ohnehin eine Dublette:
+ * die aktive Listen-Tab links zeigt denselben. Er darf deshalb als Erster
+ * schrumpfen und ellipsieren, während die Tabs seitlich scrollen.
+ * -------------------------------------------------------- */
+@media (max-height: 499px) {
+  .shopping-page {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-content: start;
+  }
+
+  /* Alles ausser den beiden Leisten behält die volle Breite - ohne diese
+   * Zeile rutschte die Artikelliste in die zweite Spalte. */
+  .shopping-page > * {
+    grid-column: 1 / -1;
+  }
+
+  .shopping-page > .list-tabs-bar {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .shopping-page > .page-toolbar--in-group {
+    grid-column: 2;
+    grid-row: 1;
+    /* Die Trennlinie der Listenwahl läuft über beide Spalten weiter; eine
+     * zweite darunter wäre eine Doppellinie in derselben Zeile. */
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .shopping-page > .page-toolbar--in-group > .list-header__name {
+    min-width: 0;
+  }
+}
