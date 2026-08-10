@@ -5168,7 +5168,7 @@ const MIGRATIONS = [
     `,
   },
   {
-    version: 138,
+    version: 140,
     description: 'Inventory: custom tracked dates per item, widen reminders for inventory_tracked_date',
     foreignKeysOff: true,
     up: `
