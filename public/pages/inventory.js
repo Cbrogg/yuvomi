@@ -1044,7 +1044,12 @@ function buildItemForm({ mode, item = null }) {
       await closeSharedModal({ force: true });
       await removeItem(item);
     });
-    panel.querySelector('[data-action="close-modal"]')?.addEventListener('click', () => closeSharedModal());
+    // `.modal-panel__footer` scoped, NICHT der ganze panel: sonst matcht dies
+    // zuerst den Header-X (`.modal-panel__close`, gleiches data-action), der
+    // ueber modal.js's eigenen Scan schon verdrahtet ist - ein zweiter
+    // Listener dort fuehrt bei ungespeicherten Aenderungen zu einem
+    // Doppel-Close-Rennen gegen den "verwerfen?"-Dialog.
+    panel.querySelector('.modal-panel__footer [data-action="close-modal"]')?.addEventListener('click', () => closeSharedModal());
 
     if (window.lucide) window.lucide.createIcons({ el: panel });
   }
