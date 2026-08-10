@@ -66,7 +66,7 @@
  * ================================================================ */
 @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
   .page-fab {
-    background-color: color-mix(in srgb, var(--module-accent, var(--color-accent)) 78%, transparent);
+    background-color: color-mix(in srgb, var(--color-accent) 78%, transparent);
     /* blur-md statt blur-sm: die weiche Streuung des Untergrunds ist auf
      * Kapselgröße der einzige Materialbeweis, wenn kein Text darunter
      * durchläuft (Finish-Verdict Fundament-Phase, Fix 3). Der Tint bleibt
@@ -95,7 +95,7 @@
   }
 
   .page-fab:hover {
-    background-color: var(--module-accent, var(--color-accent));
+    background-color: var(--color-accent);
   }
 }
 
@@ -118,7 +118,7 @@
 
   /* Active-State in Sidebar */
   .nav-sidebar .nav-item[aria-current="page"] {
-    background: color-mix(in srgb, var(--active-module-accent, var(--color-accent)) var(--tint-state), transparent);
+    background: color-mix(in srgb, var(--color-accent) var(--tint-state), transparent);
     border-radius: var(--radius-sm);
     box-shadow: inset 0 1px 0 var(--glass-highlight-subtle);
   }
@@ -233,7 +233,7 @@
   .nav-bottom__indicator::before {
     background: color-mix(
       in srgb,
-      var(--active-module-accent, var(--color-accent)) calc(var(--tint-surface) - 2%),
+      var(--color-accent) calc(var(--tint-surface) - 2%),
       var(--color-surface)
     );
     box-shadow: none;
@@ -304,9 +304,9 @@ textarea.form-input {
 
 .input:focus,
 .form-input:focus {
-  border-color: var(--active-module-accent, var(--color-accent));
+  border-color: var(--color-accent);
   box-shadow:
-    0 0 0 3px color-mix(in srgb, var(--active-module-accent, var(--color-accent)) var(--tint-shadow), transparent),
+    0 0 0 3px color-mix(in srgb, var(--color-accent) var(--tint-shadow), transparent),
     var(--glass-inset-input);
 }
 
@@ -548,7 +548,7 @@ html.navigating .app-content *::after {
  * 23. FAB — Attention Pulse
  * ================================================================ */
 @keyframes fab-ring-pulse {
-  0%   { box-shadow: var(--shadow-lg), var(--glass-inset-elevated), 0 0 0 0 color-mix(in srgb, var(--module-accent, var(--color-btn-primary)) 50%, transparent); }
+  0%   { box-shadow: var(--shadow-lg), var(--glass-inset-elevated), 0 0 0 0 color-mix(in srgb, var(--color-accent) 50%, transparent); }
   60%  { box-shadow: var(--shadow-lg), var(--glass-inset-elevated), 0 0 0 10px transparent; }
   100% { box-shadow: var(--shadow-lg), var(--glass-inset-elevated), 0 0 0 0 transparent; }
 }
@@ -786,12 +786,12 @@ textarea.form-input {
   background:
     radial-gradient(
       ellipse at 20% 0%,
-      color-mix(in srgb, var(--active-module-accent, var(--color-accent)) var(--app-backdrop-accent-strength), transparent),
+      color-mix(in srgb, var(--color-accent) var(--app-backdrop-accent-strength), transparent),
       transparent 60%
     ),
     radial-gradient(
       ellipse at 85% 90%,
-      color-mix(in srgb, var(--active-module-accent, var(--color-accent)) var(--app-backdrop-secondary-strength), transparent),
+      color-mix(in srgb, var(--color-accent) var(--app-backdrop-secondary-strength), transparent),
       transparent 50%
     ),
     var(--color-bg);
@@ -848,7 +848,7 @@ textarea.form-input {
  * ================================================================ */
 @media (min-width: 1024px) {
   .nav-sidebar__indicator {
-    background: color-mix(in srgb, var(--active-module-accent, var(--color-accent)) calc(var(--tint-surface) - 4%), var(--glass-bg-card));
+    background: color-mix(in srgb, var(--color-accent) calc(var(--tint-surface) - 4%), var(--glass-bg-card));
     border: 1px solid var(--glass-border-subtle);
     box-shadow:
       var(--glass-inset-soft),
@@ -864,7 +864,7 @@ textarea.form-input {
 
   @media (prefers-reduced-transparency: reduce) {
     .nav-sidebar__indicator {
-      background: color-mix(in srgb, var(--active-module-accent, var(--color-accent)) var(--tint-surface), var(--color-surface-elevated));
+      background: color-mix(in srgb, var(--color-accent) var(--tint-surface), var(--color-surface-elevated));
       backdrop-filter: none;
       -webkit-backdrop-filter: none;
     }
@@ -877,7 +877,7 @@ textarea.form-input {
 /* iOS-Tab-Pille: crisp und randlos — solide Tönung statt Blur+Border,
  * die auf der Kapsel als verschwommener Fleck lasen. */
 .nav-bottom__indicator {
-  background: color-mix(in srgb, var(--active-module-accent, var(--color-accent)) var(--tint-surface), transparent);
+  background: color-mix(in srgb, var(--color-accent) var(--tint-surface), transparent);
   border: none;
   box-shadow: none;
 }
@@ -888,7 +888,7 @@ textarea.form-input {
    * erst beide zusammen treffen die Glas-Fassung (1,231/1,203 gegen
    * 1,259/1,190). Die Rechnung steht dort. */
   .nav-bottom__indicator {
-    background: color-mix(in srgb, var(--active-module-accent, var(--color-accent)) calc(var(--tint-surface) + 6%), var(--color-surface-elevated));
+    background: color-mix(in srgb, var(--color-accent) calc(var(--tint-surface) + 6%), var(--color-surface-elevated));
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
   }
@@ -915,9 +915,11 @@ textarea.form-input {
  * Container zu rastern. Da sie nicht scrollen, lösen sie den
  * Blank-Screen-Bug nicht aus.
  *
- * Blob 1 folgt --active-module-accent → die ganze App rekoloriert
- * pro Sektion (Headline-Interaktion). Blobs 2–4 sind feste
- * Modul-Tints für Farbvielfalt.
+ * Blob 1 traegt die STIMME (--color-accent) und wechselt damit nicht
+ * mehr pro Route. Er folgte bis 2026-08-10 --active-module-accent und
+ * rekolorierte die ganze App pro Sektion - der Backdrop war damit die
+ * grossflaechigste Stelle, an der der Modulton ins Chrome griff.
+ * Blobs 2–4 sind feste Modul-Tints für Farbvielfalt.
  * Opazität/Specular werden in prefers-reduced-transparency /
  * prefers-contrast über die Tokens auf 0 gesetzt (tokens.css).
  * ================================================================ */
@@ -957,7 +959,7 @@ textarea.form-input {
  * auf /tasks stand ein grüner Blob exakt hinter der Tab-Bar-Kapsel). */
 .lg-blob--1 {
   width: 46vw; height: 46vw; top: -8%; left: 30%;
-  background: radial-gradient(circle, var(--active-module-accent, var(--color-accent)) 0%, transparent 70%);
+  background: radial-gradient(circle, var(--color-accent) 0%, transparent 70%);
 }
 .lg-blob--2 {
   width: 38vw; height: 38vw; top: 26%; right: 2%;

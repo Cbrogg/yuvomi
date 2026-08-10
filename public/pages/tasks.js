@@ -2920,12 +2920,24 @@ export async function render(container, { user }) {
         <div class="tasks-filters-row">
           <div class="tasks-filters" id="filter-bar" role="group" aria-label="${t('tasks.filterBtn')}"></div>
           <div class="tasks-filters__end">
+            <!-- Icon PLUS Label, nicht Icon ODER Label: unter 640px faellt das
+                 Label weg (Label-Verlust-Regel, tasks.css), und dann traegt das
+                 Icon allein. Das aria-label steht deshalb IMMER da - der
+                 zugaengliche Name darf nicht an einer Media-Query haengen. -->
             <div class="group-toggle" id="group-mode-toggle" role="group"
                  aria-label="${t('tasks.groupToggleLabel')}" ${isKanban ? 'hidden' : ''}>
               <button type="button" class="group-toggle__btn group-toggle__btn--active"
-                      data-mode="category" aria-pressed="true">${t('tasks.categoryLabel')}</button>
+                      data-mode="category" aria-pressed="true"
+                      aria-label="${t('tasks.categoryLabel')}">
+                <i data-lucide="folder" class="group-toggle__icon" aria-hidden="true"></i>
+                <span class="group-toggle__label">${t('tasks.categoryLabel')}</span>
+              </button>
               <button type="button" class="group-toggle__btn"
-                      data-mode="due" aria-pressed="false">${t('tasks.dueDateLabel')}</button>
+                      data-mode="due" aria-pressed="false"
+                      aria-label="${t('tasks.dueDateLabel')}">
+                <i data-lucide="calendar-clock" class="group-toggle__icon" aria-hidden="true"></i>
+                <span class="group-toggle__label">${t('tasks.dueDateLabel')}</span>
+              </button>
             </div>
           </div>
         </div>

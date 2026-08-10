@@ -1,25 +1,25 @@
 ---
 name: Yuvomi
-description: First-Party-Familienplaner in Apples Liquid-Glass-Sprache, WCAG AA als Invariante
+description: Familienplaner in Apples Handwerk und Yuvomis Handschrift - warme Buehne, eine violette Stimme, WCAG AA als Invariante
 colors:
-  accent-indigo: "#4F4DC9"
-  accent-indigo-hover: "#4340B8"
-  accent-indigo-active: "#3A38A6"
-  accent-indigo-dark: "#8A87FF"
-  accent-light: "#EEEEFB"
-  grouped-bg: "#F2F2F7"
+  accent-violet: "#6C3AED"
+  accent-violet-hover: "#5B2FD4"
+  accent-violet-active: "#4A26BB"
+  accent-violet-dark: "#A78BFA"
+  accent-light: "#F3EFFE"
+  grouped-bg: "#F5F3ED"
   surface: "#FFFFFF"
-  surface-dark: "#1C1C1E"
-  surface-3: "#EBEBF0"
-  fill-well: "#EBEBF0"
-  bg-dark: "#0A0A0C"
-  label: "#1C1C1E"
-  text-secondary: "#636366"
+  surface-dark: "#262422"
+  surface-3: "#EDEAE3"
+  fill-well: "#EDEAE3"
+  bg-dark: "#191816"
+  label: "#1D1B17"
+  text-secondary: "#63615B"
   text-tertiary: "#68686F"
-  text-quaternary: "#8E8E93"
-  border: "#E5E5EA"
-  border-subtle: "#EBEBF0"
-  border-strong: "#D1D1D6"
+  text-quaternary: "#8C8880"
+  border: "#E4E0D7"
+  border-subtle: "#EDEAE3"
+  border-strong: "#CFC9BC"
   ink-on-vivid: "#FFFFFF"
   success: "#1E7B35"
   warning: "#A85D00"
@@ -32,8 +32,8 @@ colors:
   # housekeeping, rewards - kitchen: meals, recipes, shopping, pantry -
   # money: budget, split-expenses - people: contacts, birthdays -
   # health: health - records: documents, notes - neutral: settings
-  family-overview: "#4F4DC9"
-  family-time: "#6D28D9"
+  family-overview: "#6C3AED"
+  family-time: "#00668F"
   family-work: "#157F3D"
   family-kitchen: "#C2410C"
   family-money: "#0F766E"
@@ -120,18 +120,18 @@ spacing:
   16: "64px"
 components:
   button-primary:
-    backgroundColor: "color-mix(in srgb, var(--active-module-accent, #4F4DC9) 88%, #0D0D0F)"
+    backgroundColor: "color-mix(in srgb, var(--color-accent) 88%, #0E0D0B)"
     textColor: "{colors.ink-on-vivid}"
     rounded: "{rounded.full}"
     padding: "8px 16px"
     height: "48px"
   button-primary-hover:
-    backgroundColor: "color-mix(in srgb, var(--active-module-accent, #4F4DC9) 76%, #0D0D0F)"
+    backgroundColor: "color-mix(in srgb, var(--color-accent) 76%, #0E0D0B)"
   button-icon:
     rounded: "{rounded.full}"
     size: "44px"
   segment-active:
-    backgroundColor: "var(--module-accent, #4F4DC9)"
+    backgroundColor: "var(--module-accent, #6C3AED)"
     textColor: "{colors.ink-on-vivid}"
     rounded: "{rounded.sm}"
   card:
@@ -153,12 +153,12 @@ components:
     padding: "8px 12px"
     height: "48px"
   fab-glass:
-    backgroundColor: "color-mix(in srgb, var(--module-accent, #4F4DC9) 78%, transparent)"
+    backgroundColor: "color-mix(in srgb, var(--color-accent) 78%, transparent)"
     textColor: "{colors.ink-on-vivid}"
     rounded: "{rounded.full}"
-    size: "52px"
+    size: "44px (mobil, in der Nav-Kapsel) / 48px (Desktop)"
   brand-tile:
-    backgroundColor: "{colors.accent-indigo}"
+    backgroundColor: "{colors.accent-violet}"
     textColor: "{colors.ink-on-vivid}"
     rounded: "{rounded.lg}"
     size: "64px"
@@ -178,42 +178,58 @@ Stand bis 2026-08-08 als HTML-Kommentar am Body-Anfang von `public/index.html`
 und wurde damit an jeden Browser ausgeliefert. Er gehoert hierher, wo die
 uebrigen Designentscheidungen stehen.
 
-**THESIS:** Yuvomi wird zur First-Party-App: der private Familien-Kommandostand
-in Apples eigener Sprache. Verweigert wird der Kategorie-Standard (freundlicher
-Pastell-Organizer) UND das bisherige Violett-Glas-Hybrid - stattdessen
-Plattform-Kanon in voller Treue.
+**THESIS:** Apples HANDWERK, Yuvomis HANDSCHRIFT. Die Struktur ist
+Plattform-Kanon (Gruppenlisten, Kapsel-Controls, Typo-Skala, Motion,
+AA-Disziplin); die Haut gehoert Yuvomi. Verweigert wird der Kategorie-Standard
+(freundlicher Pastell-Organizer) - und seit 2026-08-10 ausdruecklich auch die
+woertliche Uebernahme von Apples PALETTE und seinem Pro-App-Tint-Modell.
+
+**KORREKTUR VOM 2026-08-10, und der Anlass steht in einem Satz des Betreibers:**
+"Im Vergleich zum alten Yuvomi fuehlt sich die App nicht mehr wie aus einem Guss
+an." Hier stand vorher "Plattform-Kanon in voller Treue" mit kuehlen
+System-Neutralen (#F2F2F7 / Near-Black #0A0A0C) und Apple Indigo als globalem
+Tint. Drei Uebernahmen waren zu woertlich, und alle drei sind zurueckgenommen:
+die KUEHLE BUEHNE (Apples Grau war Apples Buehne, nicht Yuvomis - jetzt warmes
+Papier #F5F3ED / warme Kohle #191816), der INDIGO-TINT (die Bildmarke ist
+violett und gesetzt; Logo und App sprachen zwei Farben - jetzt #6C3AED) und das
+PRO-APP-TINT-MODELL (Apple faerbt pro App, Yuvomi hat siebzehn Zimmer in EINEM
+Haus - siehe die Eine-Stimme-Regel). Was BLEIBT, ist alles, was die Runden 1-9
+an Struktur und Messbarkeit gebaut haben. Der Kanon war nicht der Fehler, seine
+woertliche Anwendung auf die Haut war es.
 
 **OWN-WORLD:** Liquid-Glass-Designphilosophie (Lesbarkeit vor Transparenz:
 diffuses, sattes Glas, Inhalte opak). SF-Pro-System-Stack, Apple-Typo-Skala
-(Body 17, Large Title 34, Footnote 13). Kuehle System-Neutrale (#F2F2F7 grouped
-/ Near-Black-Dark mit #1C1C1E-Flaechen). Globaler Tint Apple Indigo #5856D6;
-17 Modul-Tints als AA-verifiziertes Apple-Farbvokabular. Glas nur als Chrome
-(Tab-Bar, Sidebar, Sheets), Inhalte opak. Kapsel-Controls,
+(Body 17, Large Title 34, Footnote 13). WARME Neutrale (#F5F3ED grouped /
+#191816 dunkel mit #262422-Flaechen). Eine Stimme: das Violett der Bildmarke
+#6C3AED. Neun Familientoene als Orientierungsvokabular, im INHALT. Glas nur als
+Chrome (Tab-Bar, Sidebar, Sheets), Inhalte opak. Kapsel-Controls,
 Inset-Grouped-Listen, Feder-Motion.
 
-**STORY:** Ein Familienmitglied oeffnet die App und sie fuehlt sich an, als
-waere sie mit dem Geraet ausgeliefert worden: Orientierung in zwei Sekunden,
-heute zuerst, jedes Modul ein vertrauter Raum mit eigenem Tint.
+**STORY:** Ein Familienmitglied oeffnet die App und sie fuehlt sich an wie ein
+Ort, der ihm gehoert: Orientierung in zwei Sekunden, heute zuerst, jedes Modul
+ein vertrauter Raum mit eigenem Zeichen - unter einem Dach, das nie die Farbe
+wechselt.
 
 **FIRST VIEWPORT:** Dashboard - Large-Title-Gruss, Heute-Programm als
-Inset-Grouped-Listen, Glas-Tab-Bar (mobil) / Glas-Sidebar (Desktop), FAB als
-getoente Glas-Kapsel.
+Inset-Grouped-Listen, Glas-Tab-Bar mit eingesetztem FAB (mobil) /
+Glas-Sidebar mit farbiger Modul-Legende (Desktop).
 
 **FORM:** User-pinned Kanon (Apple HIG, Liquid-Glass-Designphilosophie;
-Messlatte Apple-Systemapps + Fantastical), ueberstimmt Kandidat 7 der
-Runde-3-Liste.
+Messlatte Apple-Systemapps + Fantastical) als STRUKTUR, nicht als Palette.
 
 ## Overview
 
-**Creative North Star: "Die First-Party-App"**
+**Creative North Star: "Apples Handwerk, Yuvomis Handschrift"**
 
-Yuvomi fuehlt sich an, als waere die App mit dem Geraet ausgeliefert worden: der private
-Familien-Kommandostand in Apples eigener Sprache. Der Kanon ist die Apple Human Interface
-Guidelines in der Liquid-Glass-Designphilosophie, in voller Treue; die Messlatte sind
-Apple-Systemapps und Fantastical. Verweigert wird der Kategorie-Standard (freundlicher
-Pastell-Organizer) ebenso wie das abgeloeste violette Glas-Hybrid. Diese Linie heisst
-Lesbarkeit vor Transparenz: Glas ist diffus und satt statt roh-transparent, und es bleibt
-striktes Chrome-Material (Tab-Bar, Sidebar, Sheets, FAB); alle Inhalte sind opak.
+Yuvomi ist so gebaut, wie eine mitgelieferte App gebaut waere - und sieht aus wie Yuvomi.
+Der Kanon ist die Apple Human Interface Guidelines in der Liquid-Glass-Designphilosophie;
+die Messlatte sind Apple-Systemapps und Fantastical. Er gilt fuer die STRUKTUR: Gruppen-
+listen, Kapsel-Controls, Typo-Skala, Feder-Motion, die Messdisziplin. Er gilt NICHT fuer
+die Haut - warme Buehne, das Violett der Bildmarke als einzige Stimme, neun Familientoene
+im Inhalt. Verweigert wird der Kategorie-Standard (freundlicher Pastell-Organizer) ebenso
+wie eine App, die aussieht wie irgendeine Systemapp. Diese Linie heisst Lesbarkeit vor
+Transparenz: Glas ist diffus und satt statt roh-transparent, und es bleibt striktes
+Chrome-Material (Tab-Bar, Sidebar, Sheets, FAB); alle Inhalte sind opak.
 
 **Keine Versionsnummer in der Referenzzeile, und das ist eine gepruefte Angabe.** „iOS 27"
 stand bis Runde 6 an neun Stellen im Quelltext und war nicht belegbar: die Suche auf
@@ -225,7 +241,8 @@ von ihr sogar ausdruecklich bestaetigt. **Das war eine Korrektur der Referenzzei
 Design-Revision.**
 
 Jedes der 17 Module ist ein vertrauter Raum mit eigenem Tint (Apple-Systemapp-Muster:
-jede App ihre Farbe), zusammengehalten von kuehlen System-Neutralen, dem System-Font-Stack
+jede App ihre Farbe - hier aber im INHALT, siehe die Eine-Stimme-Regel), zusammengehalten
+von warmen Neutralen, dem System-Font-Stack
 und der Apple-Typo-Skala. WCAG AA ist Invariante, nicht Ambition: Apple-Rohwerte, die AA
 verfehlen, werden auf ihre Accessible-Variante vertieft (Apples eigenes
 Increased-Contrast-Muster); alle Modul-Tints sind gegen ihre realen Hintergruende
@@ -255,7 +272,8 @@ endgueltig loeschte.
 **Key Characteristics:**
 - Plattform-Kanon statt Eigenwelt: Apple HIG, Liquid Glass, System-Font-Stack
 - Glas nur als Chrome; Inhalte immer opak (Lesbarkeit vor Transparenz)
-- 17 AA-verifizierte Modul-Tints auf kuehlen System-Neutralen
+- Eine Stimme (Bildmarken-Violett) im Chrome, 17 AA-verifizierte Modul-Tints im Inhalt,
+  beides auf warmen Neutralen
 - Apple-Typo-Skala (Large Title 34 / Body 17 / Footnote 13), Kapsel-Controls, Inset-Grouped-Listen
 - Eine Kernform fuer Zeilenfolgen: genau ein Traeger, Zeilen als Haarlinien
 - Feder-Motion (Overshoot-Easing) fuer Glas-Elemente, dezente Dauern fuer alles andere
@@ -263,18 +281,26 @@ endgueltig loeschte.
 
 ## Colors
 
-Kuehle Apple-System-Neutrale als Buehne, ein Indigo-Tint als globale Stimme, 17 Modul-Tints
-als Orientierungsvokabular; alle Textfarben AA-vertieft. Es gibt keinen chromatischen
+Warme Neutrale als Buehne, das Violett der Bildmarke als Stimme, 17 Modul-Tints als
+Orientierungsvokabular; alle Textfarben AA-vertieft. Es gibt keinen chromatischen
 Verlauf auf Inhalt - die einzige verbliebene Farbdramatik der App sind die driftenden
 Backdrop-Blobs hinter dem Glas (`--lg-blob-opacity` 0.16 light / 0.20 dark, in
 reduced-transparency und prefers-contrast auf 0).
 
 ### Primary
-- **Apple Indigo, AA-vertieft** (`accent-indigo`): der globale Akzent (Apples #5856D6 auf
-  5.2:1 gegen Weiss, 4.7:1 gegen den Grouped-Grund vertieft). Brand-Naehe zur violetten
-  Bildmarke, ohne das alte Violett zu wiederholen. Dark-Variante ~5:1 auf der dunklen
-  Flaeche; Dashboard teilt diesen Wert bewusst als Modul-Tint. Der getoente Zwilling
-  `accent-light` (Indigo-Tint 50) traegt Fokus-Glows und Heute-Chips.
+- **Das Violett der Bildmarke** (`accent-violet` #6C3AED): die Stimme der App. 6.10:1 auf
+  Weiss, 5.49:1 auf dem Grouped-Grund; Dark-Variante `#A78BFA` (4.96:1 auf der hellsten
+  Flaeche, auf der sie als Text steht). Der getoente Zwilling `accent-light` traegt
+  Fokus-Glows und Heute-Chips. Das Dashboard teilt den Wert bewusst als Modul-Tint - es
+  ist der Raum der Marke.
+
+  **Hier stand bis 2026-08-10 Apple Indigo** (#5856D6, AA-vertieft auf #4F4DC9), mit der
+  Begruendung "Brand-Naehe zur violetten Bildmarke, ohne das alte Violett zu wiederholen".
+  Die Farbe war richtig gemessen und trotzdem falsch gewaehlt: die Bildmarke ist violett
+  und laut PRODUCT.md als Marke gesetzt, die App war es nicht mehr - Logo und Oberflaeche
+  sprachen zwei Farben. Und weil zusaetzlich jedes Modul das Chrome umfaerbte (siehe die
+  Eine-Stimme-Regel), kam das Indigo ohnehin nur auf dem Dashboard vor: es gab keine Farbe,
+  die app-weit "Yuvomi" hiess.
 
 ### Secondary
 - **Neun Familientoene, aus denen die Modul-Tints beziehen** (Frontmatter `family-*`,
@@ -287,19 +313,26 @@ reduced-transparency und prefers-contrast auf 0).
   Praezedenzfall: vier Module, ein Ton, unterschieden durch ihr Zeichen. Die privaten
   `--_family-*` tragen den Dark-Wechsel; die oeffentliche `--module-*`-API bleibt vollstaendig.
 - **17 Modul-Tints** (Frontmatter `module-*`): jedes Modul traegt seine eigene Akzentfarbe
-  auf Nav-Icons, aktiven Segmenten, Chips und dem FAB. Der Router setzt
-  `--active-module-accent` auf `<html>`; Komponenten greifen auf
+  auf seinem Siegel, seinen Leisten und Segmenten, seinen Chips und seinem Widget - aber
+  NICHT auf der Shell (Eine-Stimme-Regel). Der Router setzt `--active-module-accent` auf
+  `<html>`; Komponenten im Inhalt greifen auf
   `var(--module-accent, var(--color-accent))` zu. Die Kuechen-Gruppe (Mahlzeiten, Rezepte,
   Einkaufen, Vorrat) ist im ROUTING vier Module mit vier eigenen `module:`-Werten und in
   NAVIGATION, AKZENT und STATUSBAR eines; sie teilt den Meals-Tint
   (`--module-kitchen: var(--_module-meals)`) - ein Farbwechsel beim Tabwechsel waere die staerkste
   "du hast den Kontext verlassen"-Botschaft der App; die vier Einzel-Tokens bleiben fuer
   Dashboard-Widgets und Nav-Icons bestehen. Alle Tints sind AA-verifiziert; sieben
-  Light-Werte wurden gegen den kuehlen Grouped-Grund nachvertieft (jetzt >=4.55:1 auf bg,
+  Light-Werte wurden gegen den Grouped-Grund nachvertieft (jetzt >=4.55:1 auf bg,
   >=5:1 auf Weiss). Dark Mode kippt auf vivide Hell-Varianten mit dunkler Tinte
   (`--color-ink-on-vivid`).
 - **Die Modul-Identitaet lebt in den Elementen, nicht in der Flaeche.** Die PWA-theme-color
-  ist app-weit der Seitengrund (#F2F2F7 / #0A0A0C, also `--color-bg`), nicht der Modul-Tint.
+  ist app-weit der Seitengrund (#F5F3ED / #191816, also `--color-bg`), nicht der Modul-Tint.
+- **Die Sidebar ist die Legende der Modultoene.** Seit die Stimme das Chrome traegt, war die
+  Frage offen, wo die neun Familien noch SICHTBAR werden, ohne den Rahmen wieder
+  umzufaerben. Antwort: dort, wo alle Module nebeneinander stehen - jedes Zeichen in seinem
+  Ton, einmal statt in jedem Zimmer (Apples Settings-Muster). Der Ton sitzt auf dem ICON,
+  nie auf Label oder Flaeche: ein Icon ist Grafik (3:1), ein Label waere Text und muesste
+  4.5:1 gegen die Sidebar-Flaeche halten - was sieben der neun Familientoene reissen wuerden.
 
 ### Tertiary
 - **Semantik im Apple-Vokabular, AA-vertieft**: Success (Apple Green, 5.1:1), Warning
@@ -316,25 +349,58 @@ reduced-transparency und prefers-contrast auf 0).
   ist immer eine 12-%-Toenung derselben Farbe.
 
 ### Neutral
-- **Grouped Background** (`grouped-bg` = systemGray6): der App-Grund, Apples Grouped-Muster.
-  Dark: Near-Black `bg-dark`.
+- **Grouped Background** (`grouped-bg` #F5F3ED): der App-Grund - warmes Papier in Apples
+  Grouped-MUSTER, nicht in Apples Grau. Die Luminanz ist die des abgeloesten systemGray6
+  (L=0.8962 gegen 0.8910, also 0,6 % heller), damit der Tausch keinen dokumentierten
+  AA-Wert reissen kann. Dark: warme Kohle `bg-dark` #191816 - dreifach ueber dem
+  abgeloesten Near-Black #0A0A0C, das auf OLED schlicht "aus" hiess und Karten ohne
+  lesbare Tiefe darauf schwimmen liess.
 - **Surface** (`surface`, dark `surface-dark`): Karten, Zellen, Arbeitsflaechen
   (`--color-surface-work` fuer lesbare Arbeitsbereiche, `--color-surface-raised` fuer
   subtile Erhoehung).
 - **Inset-Well** (`fill-well` = `--color-surface-3`): die eine erlaubte Fuellung fuer eine
-  Kachel INNERHALB einer Karte. Gemessen 1.19:1 light unter Weiss und 1.22:1 dark ueber
-  #1C1C1E - in beiden Themes gleich weit abgehoben; Text darauf haelt AA (primary
-  14.3/12.5, secondary 5.04/6.30, tertiary 4.65/4.86:1).
-- **Label** (`label`): Primaertext. Sekundaer 5.75:1 auf Weiss, Tertiaer >=4.6:1 auf bg
-  (auch Placeholder-Farbe), Quartaer nur dekorativ, nie Fliesstext.
+  Kachel INNERHALB einer Karte. Gemessen 1.20:1 light unter Weiss und 1.16:1 dark ueber
+  `surface-dark`; Text darauf haelt AA in beiden Themes (Sonde 2 misst es am gerenderten
+  Dokument).
+- **Label** (`label` #1D1B17): Primaertext, 17.3:1 auf Weiss. Sekundaer 6.19:1 auf Weiss
+  und 5.58:1 auf bg, Tertiaer >=4.6:1 auf bg (auch Placeholder-Farbe), Quartaer nur
+  dekorativ, nie Fliesstext.
 - **Kanten** (`border` Standard, `border-subtle` Trenner, `border-strong` Hover): im Dark
-  Mode eigenstaendig gesetzt (#3E3E42 / #2E2E31 / #5C5C62), weil die Neutral-Rampe dort zu
+  Mode eigenstaendig gesetzt (#454039 / #37332E / #6F6A61), weil die Neutral-Rampe dort zu
   dicht an der Flaechenfarbe liegt. Bekannte, dokumentierte Betreiber-Entscheidung: Kanten
   von Bedienelementen erreichen die 3:1 von WCAG 1.4.11 nicht (gemessen 1.26:1 hell auf
   Surface, 1.13:1 auf dem Grouped-Grund, 1.60:1 dunkel; Zielwert waere #949494), wie Apples
   eigene Grouped-List-Separatoren. Der TEXT-Kontrast ist ueberall ohne Verstoss.
 
 ### Named Rules
+**Die Eine-Stimme-Regel (2026-08-10).** Die App hat GENAU EINE Akzentfarbe, und das ist
+das Violett der Bildmarke. Sie traegt alles, was in jedem Modul dasselbe tut: die
+Tab-Leiste und die Sidebar samt Aktiv-Pille, den FAB, den Primaer- und Sekundaerknopf,
+Umschalter und Checkboxen, den Fokusring, den Datepicker, die Suche und jedes
+Shell-Overlay. Der MODULTON traegt, was sagt, wo man ist: das Siegel im Kopf, die Leisten
+und Segmente INNERHALB des Moduls, seine Chips und Sektionsmarken, seine Zeilen-Hover,
+sein Widget auf dem Dashboard, sein Zeichen in der Sidebar-Legende.
+
+**Das Kriterium ist die Frage, die das Element beantwortet** - "was tut das hier" oder "wo
+bin ich". Die Shell beantwortet nie die zweite: sie ist in jedem Modul dieselbe.
+
+Der Anlass war das Urteil des Betreibers, die App fuehle sich "nicht mehr wie aus einem
+Guss" an, und die Ursache war genau hier. Der Modulton war ins Chrome gewandert: Tab-Leiste,
+FAB, Primaerknopf, Fokusring, sogar die Backdrop-Blobs lasen `--active-module-accent`. Beim
+Wechsel Budget → Einkaufen → Aufgaben faerbte sich damit der ganze RAHMEN der App von Tuerkis
+auf Rostrot auf Gruen um - nicht das Zimmer, das Haus. Apple faerbt pro APP, nicht pro TAB;
+in einer App bleibt der Tint konstant, und der Tab-Name sagt, wo man ist.
+
+**Gemessen und nicht behauptet:** vor der Regel las das Chrome an 43 Stellen in layout.css,
+19 in glass.css und 7 in datepicker.css einen Modulton. Danach kein einziges Mal.
+
+Pruefebene: **Struktur** (`test/test-frontend-audit.js`, Guard
+`die Shell traegt die Stimme, nicht den Modulton`). Er leitet das Chrome aus SELEKTOR-Formen
+ab - Shell-Wurzeln (`.nav-bottom`, `.nav-sidebar`, `.page-fab`, `.more-*`, `.search-overlay`,
+`.modal-overlay`, `.app-shell`, `.lg-blob`) plus geteilte Bedienelemente (`.btn--*`,
+`.toggle`, `.form-check`, `--focus-ring-color`) -, nicht aus einer Dateiliste; die Liste
+waere beim achtzehnten Modul wieder unvollstaendig.
+
 **Die Pro-Hintergrund-Regel.** AA gilt PRO Hintergrund, nicht pro Farbe. Ein Tint, der auf
 Weiss besteht, kann auf dem Grouped-Grund reissen (sieben Modul-Tints taten genau das und
 wurden nachvertieft). Jede neue Farb-Flaechen-Paarung wird gegen ihren realen Grund
@@ -509,10 +575,10 @@ Rueckkehr des Musters einlud.
 
 ## Elevation & Depth
 
-Hybrid aus zurueckhaltenden, kuehlen iOS-Schatten fuer opake Inhalte und Glas-Material fuer
+Hybrid aus zurueckhaltenden iOS-Schatten fuer opake Inhalte und Glas-Material fuer
 Chrome. Tiefe entsteht primaer ueber Material (Blur + Transluzenz + Specular-Kanten), nicht
 ueber dramatische Schatten. Dark Mode verstaerkt die Schatten deutlich (Glas braucht dort
-mehr Trennung vom Near-Black-Grund).
+mehr Trennung vom dunklen Grund).
 
 ### Shadow Vocabulary
 - **shadow-xs** (`0 1px 2px rgba(0,0,0,0.08)`): kleinste Abhebung.
@@ -585,7 +651,8 @@ blind nach innen kopieren.
   "Kapsel-Controls" ausdruecklich nennt.
 - **Primary:** Modul-Akzent leicht abgedunkelt (88-%-Mix mit `--neutral-950`) mit
   `--color-ink-on-vivid` (light weiss, dark dunkle Tinte) und shadow-sm plus
-  Specular-Inset. Auf modullosen Routen (Login, Setup) faellt der Akzent auf Indigo zurueck.
+  Specular-Inset. Die Farbe ist app-weit die Stimme (Eine-Stimme-Regel) - auf modullosen
+  Routen (Login, Setup) war sie das schon immer.
 - **Hover:** vertieft auf 76-%-Mix, shadow-md, Transitions 150ms.
 - **Fokus (app-weit):** 2px-Ring in `--focus-ring-color`
   (= `var(--active-module-accent, var(--color-accent))`), Offset 2px. Die zwei Zeilen werden

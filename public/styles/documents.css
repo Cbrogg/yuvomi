@@ -750,11 +750,32 @@
   /* Chip-Höhe kommt aus .filter-chip--sm (an `hover: none` gekoppelt, nicht an
    * der Breite) — deckt damit auch Tablets zwischen 768 und 1023px ab. */
 
-  /* Sortierung und Auswahl rutschen mobil unter die Chips, statt die Zeile zu
-   * sprengen; die Filterzeile darf dafür als einzige umbrechen. */
+  /* EINE Bedienzeile, die seitlich scrollt (2026-08-10).
+   *
+   * Hier stand `flex-wrap: wrap` mit `order: 3` und `flex-basis: 100%` fuer die
+   * Chips - Sortierung und Auswahl in Zeile 1, Chips in Zeile 2. Gemessen auf
+   * 375x812 waren das 177px Filterzeile unter einem 174px hohen Kopf: 351px
+   * Chrome, bevor der erste Ordner kam. Die Chrome-Regel (DESIGN.md) laesst
+   * Kopf plus EINE Bedienzeile.
+   *
+   * Die Antwort ist dieselbe wie in der kompakten Hoehe (Block darunter, der
+   * damit nur noch die Hoehen-Not abdeckt): eine Zeile, die seitlich scrollt,
+   * so wie sie es in der Kueche schon tut. Was die BREITE hier weiter regelt,
+   * sind die Naehte - die Trennlinien zwischen den Gruppen fallen weg, weil
+   * eine scrollende Zeile keine Spalten hat. */
   .documents-filters {
-    flex-wrap: wrap;
-    row-gap: var(--space-2);
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .documents-filters::-webkit-scrollbar {
+    display: none;
+  }
+
+  .documents-filters > * {
+    flex-shrink: 0;
   }
 
   .documents-filters__end {
@@ -764,39 +785,18 @@
   }
 
   .documents-filter-chips {
-    order: 3;
-    flex-basis: 100%;
+    order: 0;
+    flex-basis: auto;
     padding-inline-start: 0;
     border-inline-start: none;
   }
 
-  /* KOMPAKTE HÖHE: der Umbruch von oben wird zurückgenommen. Er ist eine
-   * Antwort auf fehlende BREITE - unter 1024px passen Chips, Sortierung und
-   * Auswahl nicht in eine Zeile. Fehlt dagegen die HÖHE, kostet genau dieser
-   * Umbruch das Bild: gemessen auf 640x400 waren Kopf (69) und Filterzeile
-   * (121) zusammen 190px von 323px Sichtfläche, also mehr Chrome als Inhalt
-   * (Chrome-Regel, DESIGN.md). In einer Zeile scrollt die Filterzeile
-   * stattdessen seitlich, so wie sie es in der Küche schon tut. */
-  @media (max-height: 499px) {
-    .documents-filters {
-      flex-wrap: nowrap;
-      overflow-x: auto;
-      scrollbar-width: none;
-    }
-
-    .documents-filters::-webkit-scrollbar {
-      display: none;
-    }
-
-    .documents-filters > * {
-      flex-shrink: 0;
-    }
-
-    .documents-filter-chips {
-      order: 0;
-      flex-basis: auto;
-    }
-  }
+  /* HIER STAND EIN VERSCHACHTELTER `max-height: 499px`-BLOCK mit genau den
+   * Regeln, die jetzt zwei Absaetze weiter oben stehen. Er nahm den Umbruch
+   * zurueck, wo die HOEHE fehlte; seit die Filterzeile auch auf dem Telefon
+   * nicht mehr umbricht, ist er wortgleich mit seinem Elternblock. Sein
+   * Geltungsbereich war ohnehin derselbe: er lag INNERHALB von
+   * (max-width: 767px). */
 
   .documents-selectbar__actions {
     margin-inline-start: 0;

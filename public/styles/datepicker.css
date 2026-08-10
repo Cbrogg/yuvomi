@@ -6,8 +6,10 @@
  *        auf Touch das native OS-Sheet.
  * Abhängigkeiten: tokens.css (alle Werte via Token), layout.css (.form-input)
  *
- * Akzent: --active-module-accent (vom Router pro Modul gesetzt) mit Fallback
- *         auf --color-accent — trägt die Modul-Identität ins Popover.
+ * Akzent: --color-accent, die Stimme der App. Der Datepicker ist ein
+ *         geteiltes Bedienelement und tut in jedem Modul dasselbe; bis
+ *         2026-08-10 trug er --active-module-accent und faerbte damit den
+ *         ausgewaehlten Tag in jedem Modul anders (Eine-Stimme-Regel).
  */
 
 yuvomi-datepicker {
@@ -76,13 +78,13 @@ yuvomi-datepicker {
 }
 
 .ydp__trigger:hover {
-  color: var(--active-module-accent, var(--color-accent));
+  color: var(--color-accent);
   background: var(--color-surface-hover);
 }
 
 .ydp__trigger:focus-visible {
   outline: none;
-  color: var(--active-module-accent, var(--color-accent));
+  color: var(--color-accent);
   box-shadow: 0 0 0 3px var(--color-accent-light);
 }
 
@@ -256,12 +258,12 @@ yuvomi-datepicker[disabled] .ydp__trigger {
 }
 
 .ydp-cal__day.is-today {
-  box-shadow: inset 0 0 0 1.5px var(--active-module-accent, var(--color-accent));
+  box-shadow: inset 0 0 0 1.5px var(--color-accent);
   font-weight: var(--font-weight-semibold);
 }
 
 .ydp-cal__day[aria-selected="true"] {
-  background: var(--active-module-accent, var(--color-accent));
+  background: var(--color-accent);
   /* Die Modul-Akzente hellen im Dark-Modus durchgehend auf; auf den hellsten
    * (Notizen, Vorrat) trug weisser Text nur 1,44:1. --color-ink-on-vivid kippt
    * mit dem Modus und hält in beiden Themes mindestens 4,99:1. */
@@ -305,7 +307,7 @@ yuvomi-datepicker[disabled] .ydp__trigger {
 }
 
 .ydp-textbtn--today {
-  color: var(--active-module-accent, var(--color-accent));
+  color: var(--color-accent);
 }
 
 .ydp-textbtn--clear {
@@ -355,12 +357,12 @@ yuvomi-datepicker[disabled] .ydp__trigger {
 }
 
 .ydp-time__opt[aria-selected="true"] {
-  background: var(--active-module-accent, var(--color-accent));
+  background: var(--color-accent);
   color: var(--color-ink-on-vivid);
   font-weight: var(--font-weight-semibold);
 }
 
 .ydp-time__opt:focus-visible {
   outline: none;
-  box-shadow: inset 0 0 0 2px var(--active-module-accent, var(--color-accent));
+  box-shadow: inset 0 0 0 2px var(--color-accent);
 }

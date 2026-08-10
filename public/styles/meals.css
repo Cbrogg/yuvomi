@@ -104,8 +104,11 @@
   align-self: start;
 }
 
+/* Die Pfeile tragen die Stimme wie jeder andere Knopf: eine geteilte
+ * Buttonvariante tut in jedem Modul dasselbe (Eine-Stimme-Regel). Der Kuechenton
+ * steht im Kopf dieser Seite am Siegel und an der Leiste. */
 .week-nav .btn--icon {
-  color: var(--module-accent);
+  color: var(--color-accent);
 }
 
 /* „Heute" trägt .btn.btn--secondary - die Kapsel und die Outline-Grammatik, die
@@ -113,13 +116,16 @@
  * getönte Fläche mit --radius-sm: dieselbe Funktion in einer dritten Form, und
  * auf getöntem Grund brauchte der Text zusätzlich einen eigenen Ink-Mix, um AA
  * zu halten (#C2410C auf 12 % #C2410C ergab roh nur 3.92:1). Die transparente
- * Kapsel stellt die Frage nicht mehr: der rohe Modulton steht auf dem
- * Seitengrund und misst dort 4.64:1 light (#C2410C auf #F2F2F7) und 8.74:1 dark
- * (#FB923C auf #0A0A0C). Die Zwillinge messen 4.90/10.63:1 (Budget) und
- * 6.37/7.27:1 (Kalender). (Finish-Review Runde 4, Befund 4.) */
+ * Kapsel stellt die Frage nicht mehr. (Finish-Review Runde 4, Befund 4.)
+ * Die Kontrastmessungen, die hier standen, galten dem Modulton auf dem
+ * Seitengrund - sie sind mit der Farbzeile entfallen, der Knopf traegt die
+ * Stimme und damit den app-weit gemessenen Wert. */
 .week-nav__today {
   padding: var(--space-1) var(--space-3);
-  color: var(--module-accent);
+  /* Die Farbzeile ist 2026-08-10 entfallen - sie faerbte eine geteilte Variante
+   * unter einem eigenen Klassennamen um (Eine-Stimme-Regel). Derselbe Fall wie
+   * `.budget-nav__today`, und die beiden waren ausdruecklich als Zwillinge
+   * gebaut: jetzt sind sie es auch in der Farbe. */
   /* Gemessen 57x29 und damit unter --target-md, der projekteigenen
    * Desktop-Untergrenze (Critique 2026-07-29). */
   min-height: var(--target-md);

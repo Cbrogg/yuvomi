@@ -56,7 +56,7 @@
   // ist die Bewegung, das hier der Anfangszustand.
   //
   // Die Werte kommen aus den Metas selbst, nicht als Literale: eine vierte
-  // Kopie von #F2F2F7/#0A0A0C waere eine vierte Stelle, an der die Farbe der
+  // Kopie von #F5F3ED/#191816 waere eine vierte Stelle, an der die Farbe der
   // Seite und die ihrer Statusbar auseinanderlaufen koennen.
   try {
     var metas = document.querySelectorAll('meta[name="theme-color"]');

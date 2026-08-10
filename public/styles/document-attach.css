@@ -266,7 +266,9 @@ a.doc-attach__chip-name:focus-visible {
  * tab-fokussierbar. Ohne diese Regel verschwand der Fokus beim Durchtabben
  * spurlos - der Ring muss auf der sichtbaren Dropzone erscheinen. */
 .document-dropzone:focus-within {
-  border-color: var(--module-accent);
+  /* Die Kante ist Teil derselben Fokus-Affordanz wie der Ring darunter und
+   * traegt darum dieselbe Farbe - die Stimme, nicht den Modulton. */
+  border-color: var(--color-accent);
   border-style: solid;
   outline: var(--focus-ring-width) solid var(--focus-ring-color);
   outline-offset: var(--focus-ring-offset);

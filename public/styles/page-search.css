@@ -1,9 +1,11 @@
 /* --------------------------------------------------------
  * Shared page-toolbar search field (see public/utils/page-search.js).
  * Canonical persistent, leading-icon, labeled search affordance for
- * list/filter modules. Focus tint follows the active module accent.
+ * list/filter modules.
  * Toolbar positioning (flex/max-width/margin) stays a per-module layout
  * class passed via `className`; only the control visual lives here.
+ * Der Fokus traegt die Stimme, nicht den Modulton: ein Suchfeld tut in jedem
+ * Modul dasselbe (Eine-Stimme-Regel, DESIGN.md).
  * -------------------------------------------------------- */
 
 .page-search {
@@ -63,9 +65,9 @@
 
 .page-search__input:focus {
   outline: none;
-  border-color: var(--module-accent, var(--color-accent));
+  border-color: var(--color-accent);
   background: var(--color-surface);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-shadow), transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) var(--tint-shadow), transparent);
 }
 
 .page-search__clear {

@@ -1831,11 +1831,17 @@ test('mobile navigation Quiet Precision keeps state feedback stable and accessib
   // damit grün, ohne die Regel zu lesen. `[\s\S]*?` kennt kein `}`.
   const activeNavLabelRule = [...eachRule(layout)].find(({ selector }) =>
     selector.includes('.nav-bottom .nav-item--active .nav-item__label'))?.body ?? '';
-  // Der Ink-Mix aus Phase 0b: 70 % Modulakzent auf der Primaertinte. Roher
-  // Akzent auf akzent-getoenter Flaeche riss AA in zwei von vier Modulen.
+  // Der Ink-Mix aus Phase 0b: 70 % Akzent auf der Primaertinte. Roher Akzent
+  // auf akzent-getoenter Flaeche riss AA in zwei von vier Modulen.
+  //
+  // DIE FARBE IST SEIT 2026-08-10 DIE STIMME, NICHT DER MODULTON. Die Leiste
+  // ist Shell: sie sieht in jedem Modul gleich aus, sonst wechselt der Rahmen
+  // der App mit dem Zimmer (Eine-Stimme-Regel, DESIGN.md). Der Ink-Mix bleibt,
+  // seine Begruendung haengt an der getoenten Flaeche darunter, nicht daran,
+  // WELCHE Farbe sie toent.
   assert.match(
     activeNavLabelRule,
-    /color:\s*color-mix\(\s*in srgb,\s*var\(--item-module-accent,\s*var\(--active-module-accent,\s*var\(--color-accent\)\)\)\s*70%,\s*var\(--color-text-primary\)\s*\)/,
+    /color:\s*color-mix\(\s*in srgb,\s*var\(--color-accent\)\s*70%,\s*var\(--color-text-primary\)\s*\)/,
   );
   assert.match(
     activeNavLabelRule,
@@ -1847,11 +1853,13 @@ test('mobile navigation Quiet Precision keeps state feedback stable and accessib
   assert.match(focusRule, /outline:\s*none/);
   const focusWellRule = cssRuleBody(layout, '.nav-bottom .nav-item:focus-visible .nav-item__icon-well');
   // Breite und Offset kommen aus den geteilten Fokus-Tokens (tokens.css §7b),
-  // vorher aus --space-0h. Abweichen darf hier nur die FARBE: ein Nav-Item zeigt
-  // auf SEIN Modul, nicht auf das gerade offene.
+  // vorher aus --space-0h. Die FARBE wich frueher ab (--item-module-accent: ein
+  // Nav-Item zeigt auf SEIN Modul); mit der Eine-Stimme-Regel ist die Ausnahme
+  // entfallen - ein Fokusring, der pro Tab die Farbe wechselt, macht aus einer
+  // Tastatur-Affordanz fuenf.
   assert.match(focusWellRule, /outline:\s*var\(--focus-ring-width\)\s+solid\s+var\(--focus-ring-color\)/);
   assert.match(focusWellRule, /outline-offset:\s*var\(--focus-ring-offset\)/);
-  assert.match(focusWellRule, /--focus-ring-color:\s*var\(--item-module-accent,/);
+  assert.match(focusWellRule, /--focus-ring-color:\s*var\(--color-accent\)/);
   assert.match(pressedWellRule, /transform:\s*translateY\(var\(--space-px\)\) scale\(0\.96\)/);
   assert.doesNotMatch(layout, /(^|\n)\.nav-item:active\s*\{[\s\S]*?transform:/);
   assert.doesNotMatch(layout, /\.nav-bottom \.nav-item:active\s*\{[\s\S]*?transform:/);
@@ -1860,7 +1868,7 @@ test('mobile navigation Quiet Precision keeps state feedback stable and accessib
   // Kante der gleitenden Pille).
   assert.match(
     glass,
-    /\.nav-bottom__indicator\s*\{[\s\S]*?background:\s*color-mix\(in srgb,\s*var\(--active-module-accent,\s*var\(--color-accent\)\)/,
+    /\.nav-bottom__indicator\s*\{[\s\S]*?background:\s*color-mix\(in srgb,\s*var\(--color-accent\)/,
   );
   assert.doesNotMatch(indicatorSurfaceGlass, /background:/);
   assert.match(
@@ -2799,10 +2807,36 @@ test('der FAB weicht der Zeile, statt eine Gasse zu reservieren', () => {
   // Element sitzt am Inhaltsende und wandert beim Scrollen mit - es wirkte
   // deshalb nur, wenn der Nutzer schon unten war, und ließ bei scrollTop=0 bis
   // 80,6% einer Zeilenaktion verdeckt (Critique P1, 2026-07-30).
+  //
+  // WO SIE UEBERHAUPT NOCH GILT, IST SEIT 2026-08-10 EINE FRAGE DER LEISTE.
+  // Solange der FAB ueber dem Scrollport schwebte, war die Zone der einzige
+  // Weg, die #634-Zusicherung zu halten - und sie kostete auf dem Telefon 92px
+  // ueber die volle Breite (11 % des Geraets). Sitzt er dagegen IN der
+  // Nav-Kapsel, steht unter ihm Chrome statt Inhalt, und dieselbe Zusicherung
+  // haelt ohne reservierten Streifen. Beides wird hier geprueft, weil beides
+  // gleichzeitig gilt: Desktop schwebend MIT Zone, mobil eingesetzt OHNE.
   assert.match(tokens, /--fab-safe-zone:\s*calc\([^;]*--fab-gap[^;]*--fab-size[^;]*;/,
-    '--fab-safe-zone muss aus --fab-gap und --fab-size abgeleitet werden');
-  assert.match(tokens, /--fab-offset-bottom:\s*calc\([^;]*--fab-gap[^;]*\)/,
-    '--fab-offset-bottom und --fab-safe-zone müssen dieselbe Quelle (--fab-gap) haben');
+    'der SCHWEBENDE Fall braucht seine Zone weiter, abgeleitet aus --fab-gap und --fab-size');
+  assert.match(
+    tokens,
+    /@media\s*\(max-width:\s*1023px\)\s*\{\s*:root\s*\{[^}]*--fab-safe-zone:\s*0px/,
+    'wo die Bottom-Nav steht, faellt --fab-safe-zone auf 0 - der FAB sitzt dort in der Kapsel'
+  );
+  // Der eingesetzte FAB rechnet aus der Kapselgeometrie, nicht aus --fab-gap:
+  // er soll in der Bar-Zeile ZENTRIERT sitzen, und das haengt an der Barhoehe
+  // und an seiner eigenen Groesse.
+  assert.match(
+    tokens,
+    /--fab-offset-bottom:\s*calc\([^;]*--nav-height-mobile[^;]*--fab-size[^;]*\)/s,
+    'der eingesetzte FAB zentriert sich aus --nav-height-mobile und --fab-size'
+  );
+  // Und die Kapsel macht ihm denselben Platz frei, aus derselben Groesse -
+  // sonst stuende der Knopf halb auf dem letzten Tab.
+  assert.match(
+    layout,
+    /\.nav-bottom__items\s*\{[^}]*padding-inline-end:\s*calc\(var\(--fab-size\)/,
+    'die Nav-Kapsel muss ihr hinteres Ende aus --fab-size freihalten'
+  );
   assert.match(layout, /:has\([^)]*\.page-fab[^)]*\)[^{]*\.app-content\s*\{[^}]*margin-block-end:\s*var\(--fab-safe-zone\)/,
     'der Scrollport muss über der FAB-Zone enden (Marge an .app-content)');
 
@@ -3542,12 +3576,16 @@ test('die beiden Küchen-Editoren sind derselbe Dialog', () => {
   // Die zwei Modal-Checkboxen tragen das geteilte Control.
   const layout = read('../public/styles/layout.css');
   assert.match(layout, /^\.form-check \{/m, '.form-check gehört in layout.css, nicht in ein Modul-CSS');
-  // --active-module-accent muss in der Kette stehen: das Modal hängt im Top-Layer
-  // außerhalb der Modul-Wurzel, und mit --module-accent allein fiel die Checkbox auf
-  // den violetten App-Akzent zurück (gemessen rgb(108,58,237) in einem Dialog, der
-  // rundum #C2410C trug).
-  assert.match(layout, /\.form-check input\[type="checkbox"\]\s*\{[\s\S]*?accent-color:\s*var\(--module-accent,\s*var\(--active-module-accent/,
-    'die Checkbox muss den Modul-Akzent tragen, auch im Modal - sechs andere Module kleiden ihre Checkboxen schon ein');
+  // DIE CHECKBOX TRAEGT DIE STIMME, NICHT DEN MODULTON (Eine-Stimme-Regel,
+  // 2026-08-10). Hier stand eine dreistufige Kette
+  // (--module-accent → --active-module-accent → --color-accent), und sie hatte
+  // ihren Grund: das Modal haengt im Top-Layer ausserhalb der Modul-Wurzel, mit
+  // --module-accent allein blieb die Box violett, waehrend der Dialog um sie
+  // herum #C2410C trug. Seit ein Zustandsschalter app-weit dieselbe Farbe hat,
+  // ist violett die richtige Antwort - und die Kette ueberfluessig. Bekleidet
+  // sein muss sie weiterhin: nackte System-Checkboxen waren der Anlass.
+  assert.match(layout, /\.form-check input\[type="checkbox"\]\s*\{[\s\S]*?accent-color:\s*var\(--color-accent\)/,
+    'die Checkbox muss eingekleidet sein und die Stimme tragen, auch im Modal');
   assert.match(shopping, /class="form-check pantry-transfer__clear"/,
     'die folgenreichste Checkbox des Moduls („Artikel von der Einkaufsliste löschen", standardmäßig aktiv) war die unauffälligste');
   assert.match(read('../public/pages/recipes.js'), /class="form-check recipe-meal-types__option"/,
@@ -4495,13 +4533,14 @@ test('desktop Meals and Calendar date-navigation icons use the accent color', ()
   const meals = read('../public/styles/meals.css');
   const calendar = read('../public/styles/calendar.css');
 
-  // Meals folgt der Module-Accent-Leads-Rule (DESIGN.md §2, 2026-07): innerhalb
-  // eines Moduls führt der Modul-Akzent, globales Violett bleibt der Shell
-  // vorbehalten. Die Wochennavigation ist Modul-Bedienung, keine Shell-Chrome -
-  // vorher stand die violette „Heute"-Pille direkt neben dem orangen
-  // Zufallsplan-Button und beide lasen sich wie Controls aus zwei Apps.
-  // Calendar zieht bewusst noch nicht mit: eigenes Modul, eigener Durchgang.
-  assert.match(cssRuleBody(meals, '.week-nav .btn--icon'), /color:\s*var\(--module-accent\)/);
+  // BEIDE tragen die Stimme, und das ist die Aufloesung eines Widerspruchs, den
+  // dieser Guard selbst dokumentiert hat: Mahlzeiten folgte der frueheren
+  // Module-Accent-Leads-Rule, der Kalender „bewusst noch nicht" - zwei
+  // Datums-Navigationen desselben Bauteils in zwei Farbgrammatiken, seit einem
+  // Durchgang, der nie kam. Die Eine-Stimme-Regel (DESIGN.md, 2026-08-10)
+  // beantwortet das an der Wurzel: `.btn--icon` ist eine geteilte Variante und
+  // tut in jedem Modul dasselbe. Der Modulton steht im Kopf am Siegel.
+  assert.match(cssRuleBody(meals, '.week-nav .btn--icon'), /color:\s*var\(--color-accent\)/);
   assert.match(cssRuleBody(calendar, '.cal-toolbar__nav .btn--icon'), /color:\s*var\(--color-accent\)/);
 });
 
@@ -10272,4 +10311,165 @@ test('das Überlappungszeichen kommt aus einer Hand', () => {
   assert.match(pair, /isSoloHousehold\(\)/,
     'seal-pair.js prüft den Solo-Haushalt nicht mehr — das Zeichen erschiene dort, wo es '
     + 'laut Brief still entfallen soll');
+});
+
+// ---------------------------------------------------------------------------
+// DIE EINE-STIMME-REGEL (DESIGN.md, 2026-08-10)
+//
+// Die App hat genau eine Akzentfarbe. Die SHELL traegt sie immer; der Modulton
+// traegt, was sagt, wo man ist - Siegel, modul-eigene Leisten und Segmente,
+// Chips, Zeilen-Hover, Widgets.
+//
+// DER GUARD LEITET DAS CHROME AUS SELEKTOR-FORMEN AB, NICHT AUS EINER
+// DATEILISTE. Eine Liste von Dateien deckt keine Regel ab, sondern N Dateien
+// (die Lehre aus Runde 6), und sie waere beim achtzehnten Modul wieder
+// unvollstaendig. Gesucht sind stattdessen zwei Bauarten, die beide
+// unabhaengig vom Modul gelten:
+//
+//   1. SHELL-WURZELN - Elemente, die es genau einmal gibt und die auf jeder
+//      Route dieselben sind (Leisten, FAB, Sheets, Overlays, Backdrop).
+//   2. GETEILTE BEDIENELEMENTE - Bauteile, die in jedem Modul dasselbe tun
+//      (Buttonvarianten, Umschalter, Checkbox, Fokusring).
+//
+// Die Ausnahme ist eine KATEGORIE, keine Selektorliste: ein Element, das die
+// Herkunft eines fremden Objekts benennt, traegt dessen Ton auch in der Shell -
+// das Markensiegel (--seal-accent) und das Modul-Zeichen der Sidebar-Legende
+// (--item-module-accent). Beide sind namentlich Herkunftszeichen, keine
+// Zustaende.
+// ---------------------------------------------------------------------------
+const SHELL_ROOTS = [
+  '.nav-bottom', '.nav-sidebar', '.nav-item', '.page-fab', '.fab-layer',
+  '.more-sheet', '.more-item', '.more-action', '.more-backdrop',
+  '.search-overlay', '.modal-overlay', '.app-shell', '.lg-blob', '.lg-backdrop',
+  '.changelog-release',
+];
+const SHARED_CONTROLS = ['.btn--', '.toggle', '.form-check', '.page-search', '.input:focus', '.form-input:focus'];
+// Ein Modulton kann auch unter seinem EIGENEN Token stehen (`--module-budget`)
+// statt unter dem generischen `--module-accent` - dieselbe Farbe, anderer Name.
+const MODULE_TONE = /var\(\s*--(?:active-)?module-(?!accent\b)[a-z-]+|var\(\s*--(?:active-)?module-accent|var\(\s*--_?family-/;
+// Herkunftszeichen: sie benennen ein fremdes Modul und duerfen dessen Ton
+// tragen, auch wenn sie in der Shell haengen.
+const ORIGIN_MARKS = ['--seal-accent', '--item-module-accent'];
+
+test('die Shell traegt die Stimme, nicht den Modulton', () => {
+  const styleDir = new URL('../public/styles/', import.meta.url);
+  const offenders = [];
+
+  for (const file of readdirSync(styleDir).filter((f) => f.endsWith('.css'))) {
+    for (const { selector, body, at } of eachRule(read(`../public/styles/${file}`))) {
+      if (!MODULE_TONE.test(body)) continue;
+      if (ORIGIN_MARKS.some((mark) => body.includes(mark))) continue;
+      // `:root`/`html` sind die TOKEN-Ebene, keine Elemente: dort werden die
+      // Modultoene definiert, und eine Definition ist keine Verwendung.
+      if (/^(?::root|html)\b/.test(selector.trim())) continue;
+
+      const isShell = SHELL_ROOTS.some((root) => selector.includes(root));
+      const isSharedControl = SHARED_CONTROLS.some((ctrl) => selector.includes(ctrl))
+        || /--focus-ring-color/.test(body);
+      if (!isShell && !isSharedControl) continue;
+
+      // AN DER SHELL IST DER VERSTOSS DAS MITWANDERN, nicht die Farbe. Ein
+      // FESTER Modulton dort ist eine Palettenwahl - die Backdrop-Blobs 2-4
+      // tragen vier feste Toene und sehen in jedem Modul gleich aus, was die
+      // Regel gerade verlangt. Verboten sind die routen- bzw.
+      // seitenabhaengigen Namen: --active-module-accent (Router, je Route) und
+      // --module-accent (Modul-Root, je Seite). An einem GETEILTEN
+      // BEDIENELEMENT ist dagegen jeder Modulton falsch, auch ein fester:
+      // derselbe Knopf traegt sonst in jedem Modul eine andere Farbe.
+      const followsRoute = /var\(\s*--(?:active-)?module-accent\b/.test(body);
+      if (isShell && !isSharedControl && !followsRoute) continue;
+
+      const why = isShell ? 'Shell-Wurzel' : 'geteiltes Bedienelement';
+      offenders.push(`${file}${at.length ? ` [${at.join(' ')}]` : ''}: ${selector} (${why})`);
+    }
+  }
+
+  assert.deepEqual(offenders, [],
+    'Die Shell und geteilte Bedienelemente tragen --color-accent, nicht den Modulton '
+    + '(Eine-Stimme-Regel, DESIGN.md). Der Modulton gehoert in den INHALT: Siegel, '
+    + 'modul-eigene Leisten und Segmente, Chips, Zeilen-Hover, Widgets. Wer eine Herkunft '
+    + 'benennt statt einen Zustand, nimmt --seal-accent bzw. --item-module-accent.\n'
+    + offenders.join('\n'));
+});
+
+test('die Sidebar zeigt die Modultoene als Legende', () => {
+  // Die Kehrseite der Regel oben: wenn die Stimme das Chrome traegt, muss der
+  // Modulton EINEN sichtbaren Ort behalten, sonst verschwindet die
+  // Modul-Identitaet ganz. Ohne diesen Guard waere die Legende der erste
+  // Kandidat fuer ein stilles Aufraeumen - sie ist die einzige Stelle, an der
+  // --item-module-accent noch Flaeche traegt.
+  const layout = read('../public/styles/layout.css');
+  // Der Selektor wird GANZ verglichen, nicht per includes(): `.nav-item__icon`
+  // ist ein Praefix von `.nav-item__icon-well`, und der erste Treffer war
+  // deshalb die Well-Regel (26x26, keine Farbe) statt der gesuchten.
+  const iconRule = [...eachRule(layout)].find(({ selector }) =>
+    selector.trim() === '.nav-sidebar .nav-item__icon');
+  assert.ok(iconRule, '.nav-sidebar .nav-item__icon fehlt - die Legende hat keinen Traeger mehr');
+  assert.match(iconRule.body, /color:\s*var\(--item-module-accent/,
+    'das Sidebar-Zeichen traegt den Ton SEINES Moduls (Legende, DESIGN.md „Colors")');
+  // Und der aktive Eintrag gewinnt die Stimme zurueck: eine Zeile, die als
+  // Ganzes violett ist, deren Icon aber allein seine Familienfarbe behielte,
+  // liest sich als „nicht mitgemeint".
+  const activeIcon = [...eachRule(layout)].find(({ selector }) =>
+    selector.trim() === '.nav-sidebar .nav-item[aria-current="page"] .nav-item__icon');
+  assert.ok(activeIcon, 'dem aktiven Sidebar-Eintrag fehlt die Icon-Regel');
+  assert.match(activeIcon.body, /color:\s*var\(--color-accent\)/);
+});
+
+test('kein geteiltes Bedienelement wird unter seinem eigenen Namen umgefaerbt', () => {
+  // DIE LUECKE, DIE DIE REGEL DARUEBER OFFEN LAESST, und sie ist dieselbe, an
+  // der die Eine-Buttonform-Regel schon einmal blind war: ein Guard, der eine
+  // KLASSE im Selektor sucht, findet nur, wer sie schon traegt. Der Knopf
+  // „Aktuell" im Budget trug `.btn.btn--secondary` UND `.budget-nav__today`,
+  // und die zweite Klasse faerbte ihn teal - eine geteilte Variante, umgefaerbt
+  // unter einem Namen, den der Selektor-Guard nie ansieht.
+  //
+  // Die Antwort ist dieselbe wie dort: ueber die SIGNATUR gehen. Welche Klassen
+  // ein geteiltes Bedienelement begleiten, steht im MARKUP - also wird es dort
+  // gelesen und dann gegen die Stylesheets gehalten.
+  const SHARED = /\b(btn--primary|btn--secondary|btn--ghost|btn--danger|btn--icon|toggle__track|form-check)\b/;
+  const companions = new Map();   // Begleitklasse -> Fundstelle im Markup
+  for (const rel of walkFrontendFiles('../public/')) {
+    if (!rel.endsWith('.js') && !rel.endsWith('.html')) continue;
+    const src = read(rel);
+    for (const m of src.matchAll(/class="([^"${}]+)"/g)) {
+      const classes = m[1].trim().split(/\s+/);
+      if (!classes.some((c) => SHARED.test(c))) continue;
+      for (const c of classes) {
+        if (SHARED.test(c) || c === 'btn' || c.startsWith('u-')) continue;
+        if (!companions.has(c)) companions.set(c, rel.replace(/^\.\.\//, ''));
+      }
+    }
+  }
+  assert.ok(companions.size > 5,
+    'keine Begleitklassen gefunden - der Guard liest das Markup nicht mehr richtig');
+
+  const styleDir = new URL('../public/styles/', import.meta.url);
+  const offenders = [];
+  for (const file of readdirSync(styleDir).filter((f) => f.endsWith('.css'))) {
+    for (const { selector, body } of eachRule(read(`../public/styles/${file}`))) {
+      if (!MODULE_TONE.test(body)) continue;
+      if (ORIGIN_MARKS.some((mark) => body.includes(mark))) continue;
+      // Nur die FARBE des Elements selbst zaehlt, nicht was es an Kindern oder
+      // an lokalen Variablen setzt: ein Bauteil darf einem Kind-Siegel weiter
+      // seinen Ton durchreichen.
+      if (!/(^|[;{\s])(?:color|background|background-color|border-color)\s*:/.test(body)) continue;
+      // EIN AUSGEWAEHLTES SEGMENT IST KEINE UMFAERBUNG, sondern die eine
+      // Segment-Sprache der Shell (DESIGN.md „Segmented Controls"): der aktive
+      // Zustand einer modul-eigenen Leiste traegt den Modulton, und zwar in
+      // Aufgaben, Dokumenten, Budget und Kalender gleich. Der Verstoss ist die
+      // BASIS-Farbe eines geteilten Knopfes, nicht sein Auswahl-Zustand.
+      if (/--active\b|--selected\b|\[aria-pressed="true"\]|\.is-active\b/.test(selector)) continue;
+      for (const [cls, where] of companions) {
+        if (!selector.includes(`.${cls}`)) continue;
+        offenders.push(`${file}: ${selector} faerbt ein geteiltes Bedienelement (Markup: ${where})`);
+      }
+    }
+  }
+
+  assert.deepEqual(offenders, [],
+    'Ein Element, das eine geteilte Bedienvariante traegt, darf sie nicht unter seinem '
+    + 'eigenen Klassennamen umfaerben - es traegt die Stimme (Eine-Stimme-Regel, DESIGN.md). '
+    + 'Wer eine andere Farbe braucht, braucht eine andere VARIANTE, keine zweite Regel.\n'
+    + offenders.join('\n'));
 });

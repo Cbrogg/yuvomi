@@ -194,7 +194,7 @@ function applyModuleAccentForRoute(route) {
  * behalten ihre Farbe - ihre Seiten sind nicht Teil dieser Welt.
  *
  * Der Kommentar hat das schon einmal behauptet, ohne dass es stimmte: dunkel
- * stand hier #0C0C0E gegen ein --color-bg von #0A0A0C. Seither hält der Guard
+ * stand hier #0C0C0E gegen ein --color-bg von #191816. Seither hält der Guard
  * "the status bar colour is the page background" alle drei Kopien am Token.
  */
 function updateThemeColorForRoute(route) {
@@ -202,7 +202,7 @@ function updateThemeColorForRoute(route) {
     setThemeColor(route.thirdPartyModule.accent, route.thirdPartyModule.accent);
     return;
   }
-  setThemeColor('#F2F2F7', '#0A0A0C');
+  setThemeColor('#F5F3ED', '#191816');
 }
 
 // --------------------------------------------------------
