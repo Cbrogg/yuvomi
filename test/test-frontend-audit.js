@@ -10142,7 +10142,18 @@ test('die Herkuenfte des Erinnerungs-Toasts sind die entity_type des Servers', (
   assert.ok(map, 'REMINDER_ORIGINS steht nicht mehr in public/reminders.js.');
   const clientTypes = [...map[1].matchAll(/^\s{2}([a-z_]+):/gm)].map((m) => m[1]).sort();
 
+  // Dieselbe Zuordnung noch einmal serverseitig: der Push-Titel nennt die
+  // Herkunft, und der Server kann die Karte des Clients nicht lesen (Schicht-
+  // grenze). Zwei Karten, EINE Liste von Herkuenften - laufen sie auseinander,
+  // zeigt der Toast ein Siegel und die Systembenachrichtigung „Yuvomi".
+  const notifications = read('../server/services/notifications.js');
+  const titleMap = notifications.match(/const REMINDER_TITLE_KEYS\s*=\s*\{([\s\S]*?)\n\};/);
+  assert.ok(titleMap, 'REMINDER_TITLE_KEYS steht nicht mehr in server/services/notifications.js.');
+  const titleTypes = [...titleMap[1].matchAll(/^\s{2}([a-z_]+):/gm)].map((m) => m[1]).sort();
+
   assert.ok(serverTypes.length >= 3, `Nur ${serverTypes.length} entity_type im Server gefunden - das Muster greift nicht mehr.`);
   assert.deepEqual(clientTypes, serverTypes,
     'Der Toast kennt andere Herkuenfte als der Server schreibt - die unbekannten fallen still auf die Glocke zurueck.');
+  assert.deepEqual(titleTypes, serverTypes,
+    'Der Push-Titel kennt andere Herkuenfte als der Server schreibt - die unbekannten heissen wieder „Yuvomi".');
 });

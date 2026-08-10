@@ -55,6 +55,14 @@ async function requestPermission() {
 
 /**
  * Zeigt eine native Browser-Benachrichtigung an.
+ *
+ * Ihr Titel nennt die HERKUNFT, nicht den App-Namen - dieselbe Antwort, die das
+ * Siegel im Toast gibt, auf dem einzigen Kanal, der sie tragen kann: eine
+ * Systembenachrichtigung hat kein DOM, ihr `icon` zeigt nur ein Teil der
+ * Plattformen. Denselben Titel setzt der Server fuer den Push-Weg
+ * (REMINDER_TITLE_KEYS in server/services/notifications.js); hier uebersetzt der
+ * Client, der seine eigene Sprache kennt.
+ *
  * @param {string} title
  * @param {string} body
  */
@@ -149,9 +157,9 @@ function createBellSvg() {
  * Glocken-Zeichen, bis er hier eingetragen ist.
  */
 const REMINDER_ORIGINS = {
-  task:         { accent: 'var(--module-tasks)',    icon: 'check-square' },
-  event:        { accent: 'var(--module-calendar)', icon: 'calendar'     },
-  subscription: { accent: 'var(--module-budget)',   icon: 'wallet'       },
+  task:         { accent: 'var(--module-tasks)',    icon: 'check-square', labelKey: 'nav.tasks' },
+  event:        { accent: 'var(--module-calendar)', icon: 'calendar',     labelKey: 'nav.calendar' },
+  subscription: { accent: 'var(--module-budget)',   icon: 'wallet',       labelKey: 'subscriptions.tabLabel' },
 };
 
 function createOriginSeal(entityType) {
@@ -190,8 +198,9 @@ function processReminders(reminders) {
     // Erinnerung war für diese Sitzung verbraucht, ohne je erschienen zu sein.
     if (!showReminderToast(reminder)) { deferred = true; return; }
     _shownIds.add(reminder.id);
+    const labelKey = REMINDER_ORIGINS[reminder.entity_type]?.labelKey;
     showBrowserNotification(
-      t('reminders.toastTitle'),
+      labelKey ? t(labelKey) : t('reminders.toastTitle'),
       reminder.entity_title || ''
     );
   });
