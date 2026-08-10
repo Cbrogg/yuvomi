@@ -186,7 +186,16 @@
 .widget-size--4x2 > .widget,
 .widget-size--4x3 > .widget,
 .widget-size--4x4 > .widget {
-  border-top: 2px solid color-mix(in srgb, var(--active-module-accent, var(--color-accent)) var(--tint-hint), var(--color-border));
+  /* DIE HAARLINIE TRAEGT DEN TON DES WIDGETS, NICHT DEN DER SEITE.
+   *
+   * Hier stand `--active-module-accent`: auf dem Dashboard loest das den
+   * Akzent der UEBERSICHT auf, also bekamen alle Widgets dieselbe Linie -
+   * ausgerechnet in dem Raster, in dem siebzehn Module nebeneinander stehen
+   * und die Linie das einzige durchgehende Farbsignal ist. Der Kommentar
+   * direkt darunter sagte schon das Richtige („Jedes Widget nutzt seine eigene
+   * Modulfarbe"), nur diese Zeile tat es nicht. --widget-accent setzt jede
+   * .widget--*-Klasse zwei Regeln weiter unten. */
+  border-top: 2px solid color-mix(in srgb, var(--widget-accent, var(--color-accent)) var(--tint-hint), var(--color-border));
 }
 
 /* --------------------------------------------------------

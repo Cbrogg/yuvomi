@@ -38,35 +38,51 @@
 :root {
   /* --------------------------------------------------------
    * 1. Farben - Neutral-Skala
-   *    Apples kuehle System-Grau-Rampe (systemGray6 … label).
-   *    Private --_neutral-* für Dark-Mode-Überschreibungen;
-   *    öffentliche --neutral-* sind die stabile API.
+   *    Yuvomis WARME Neutral-Rampe. Private --_neutral-* für
+   *    Dark-Mode-Überschreibungen; öffentliche --neutral-* sind die stabile API.
+   *
+   * WARUM WARM, UND WARUM DAS EINE KORREKTUR IST (2026-08-10).
+   * Bis v2.1.0 stand hier Apples kuehle System-Grau-Rampe (#F2F2F7 systemGray6
+   * hell, #0A0A0C dunkel). Sie war der Preis dafuer, den Plattform-Kanon
+   * woertlich zu nehmen - und sie war die eine Uebernahme, die Yuvomi nicht
+   * gutgetan hat: die App stand ab da auf Apples Buehne statt auf ihrer
+   * eigenen. Die Rampe ist deshalb warm zurueckgeholt (Hue ~40°, Chroma
+   * niedrig), die STRUKTUR aber unveraendert: Grouped-Grund plus Surface,
+   * dieselben Stufen, dieselben Rollen.
+   *
+   * DIE LUMINANZ IST GEHALTEN, NICHT GESCHAETZT. Der neue Grund #F5F3ED liegt
+   * bei L=0.8962, der alte #F2F2F7 bei L=0.8910 - 0,6 % HELLER. Damit kann
+   * kein dokumentierter AA-Wert der App durch den Tausch fallen; alle
+   * Text/Grund-Kontraste steigen minimal. Das war die Bedingung, unter der die
+   * Rampe ueberhaupt tauschbar war: die Pro-Hintergrund-Regel misst gegen den
+   * REALEN Grund, und sieben Modultoene liegen bei 4,55:1 - ein dunklerer
+   * Grund haette sie unter AA gezogen.
    * -------------------------------------------------------- */
-  --_neutral-50:  #FBFBFD;
+  --_neutral-50:  #FBFAF7;
   --neutral-50:   var(--_neutral-50);
-  --_neutral-100: #F2F2F7;   /* systemGray6 — Grouped Background */
+  --_neutral-100: #F5F3ED;   /* Grouped Background — warmes Papier, L=0.8962 */
   --neutral-100:  var(--_neutral-100);
-  --_neutral-150: #EBEBF0;
+  --_neutral-150: #EDEAE3;   /* Inset-Well — 1.20:1 unter Weiß */
   --neutral-150:  var(--_neutral-150);
-  --_neutral-200: #E5E5EA;   /* systemGray5 */
+  --_neutral-200: #E4E0D7;
   --neutral-200:  var(--_neutral-200);
-  --_neutral-250: #DADADF;
+  --_neutral-250: #D9D4C9;
   --neutral-250:  var(--_neutral-250);
-  --_neutral-300: #D1D1D6;   /* systemGray4 */
+  --_neutral-300: #CFC9BC;
   --neutral-300:  var(--_neutral-300);
-  --_neutral-400: #AEAEB2;   /* systemGray2 */
+  --_neutral-400: #AEAAA0;
   --neutral-400:  var(--_neutral-400);
-  --_neutral-500: #8E8E93;   /* systemGray */
+  --_neutral-500: #8C8880;
   --neutral-500:  var(--_neutral-500);
-  --_neutral-600: #636366;   /* WCAG AA: 5.75:1 auf weiß */
+  --_neutral-600: #63615B;   /* WCAG AA: 6.19:1 auf weiß, 5.58:1 auf --color-bg */
   --neutral-600:  var(--_neutral-600);
-  --_neutral-700: #48484A;
+  --_neutral-700: #4A4741;
   --neutral-700:  var(--_neutral-700);
-  --_neutral-800: #2C2C2E;
+  --_neutral-800: #2D2A25;
   --neutral-800:  var(--_neutral-800);
-  --_neutral-900: #1C1C1E;   /* Label */
+  --_neutral-900: #1D1B17;   /* Label — 17.3:1 auf weiß */
   --neutral-900:  var(--_neutral-900);
-  --_neutral-950: #0D0D0F;
+  --_neutral-950: #0E0D0B;
   --neutral-950:  var(--_neutral-950);
 
   /* Semantische Aliase (abwärtskompatibel) */
@@ -240,14 +256,26 @@
    * Leiste` (test-typography.js). */
 
   /* --------------------------------------------------------
-   * 2. Farben - Akzent (konfigurierbar)
-   *    Apple Indigo, auf AA vertieft (#5856D6 → #4F4DC9: 5.2:1 auf
-   *    weiß, 4.7:1 auf --color-bg). Brand-Nähe zur violetten Bildmarke,
-   *    ohne das alte Violett zu wiederholen.
+   * 2. Farben - Akzent: DIE STIMME DER APP
+   *
+   *    Das Violett der Bildmarke (#6C3AED). 6.10:1 auf weiß, 5.49:1 auf
+   *    --color-bg — WCAG AA auf beiden Gruenden.
+   *
+   * WARUM ZURUECK ZUM VIOLETT (2026-08-10). Hier stand Apple Indigo #4F4DC9.
+   * Es war korrekt gemessen und trotzdem die falsche Farbe: die Bildmarke ist
+   * violett und laut PRODUCT.md als Marke gesetzt, die App war es nicht mehr.
+   * Logo und Oberflaeche sprachen zwei Farben - und weil zusaetzlich jedes
+   * Modul das Chrome umfaerbte (siehe Die-Eine-Stimme-Regel, Abschnitt 4),
+   * kam das Indigo ohnehin nur auf dem Dashboard vor. Es gab damit KEINE
+   * Farbe, die app-weit "Yuvomi" hiess.
+   *
+   * Der Ton ist der Marken-Ton, nicht der alte Token: geprueft gegen die neue
+   * warme Buehne, nicht gegen die alte kuehle. Auf dem Grouped-Grund #F5F3ED
+   * liegt er bei 5.49:1.
    * -------------------------------------------------------- */
-  --_color-accent:            #4F4DC9;
+  --_color-accent:            #6C3AED;
   --color-accent:             var(--_color-accent);
-  --_color-accent-hover:      #4340B8;
+  --_color-accent-hover:      #5B2FD4;
   --color-accent-hover:       var(--_color-accent-hover);
   /* --color-accent-deep ist mit dem Wetter-Widget entfallen (Runde 3): es hatte
    * genau einen Nutzer, den Verlauf dieses Widgets, und Verläufe auf Inhalt
@@ -259,15 +287,15 @@
    * Tageszeit spricht seither allein über den Grusstext. Nach dem Umbau stand
    * die Reihe in drei Blöcken (Light, Dark, forced-dark) ohne einen einzigen
    * Nutzer im CSS oder JS. */
-  --_color-accent-secondary:  #7674E8;
-  --color-accent-secondary:   var(--_color-accent-secondary);  /* Indigo-hell — Sekundärer Akzent für Logo-Gradient */
-  --_color-accent-light:      #EEEEFB;
-  --color-accent-light:       var(--_color-accent-light);   /* Indigo-Tint 50 */
-  --_color-accent-subtle:     #E2E1F9;
-  --color-accent-subtle:      var(--_color-accent-subtle);  /* Indigo-Tint 100 */
-  --_color-btn-primary:       #4F4DC9;
-  --color-btn-primary:        var(--_color-btn-primary);    /* Weißes Label 5.2:1 — WCAG AA */
-  --_color-btn-primary-hover: #4340B8;
+  --_color-accent-secondary:  #8B5CF6;
+  --color-accent-secondary:   var(--_color-accent-secondary);  /* Violett-hell — Sekundärer Akzent für Logo-Gradient */
+  --_color-accent-light:      #F3EFFE;
+  --color-accent-light:       var(--_color-accent-light);   /* Violett-Tint 50 — Fokus-Glow, Heute-Chip */
+  --_color-accent-subtle:     #E7DDFD;
+  --color-accent-subtle:      var(--_color-accent-subtle);  /* Violett-Tint 100 */
+  --_color-btn-primary:       #6C3AED;
+  --color-btn-primary:        var(--_color-btn-primary);    /* Weißes Label 6.1:1 — WCAG AA */
+  --_color-btn-primary-hover: #5B2FD4;
   --color-btn-primary-hover:  var(--_color-btn-primary-hover);
 
   /* --------------------------------------------------------
@@ -392,11 +420,18 @@
    *    die private Wert-Ebene wechselt von 18 Toenen auf 9 Familien.
    *    Die Dark-Bloecke ueberschreiben ausschliesslich --_family-*.
    * -------------------------------------------------------- */
-  --_family-overview: #4F4DC9;  /* Indigo - Uebersicht (= --color-accent, bewusster Share) */
-  --_family-time:     #6D28D9;  /* Violett-700 - Kalender, Erinnerungen; 6.7:1 auf weiss.
-                                 * Knappstes Familienpaar zum Indigo: ~20 Grad Hue plus
-                                 * Helligkeitsabstand - die beim Paar Kalender/Akzent
-                                 * bereits gebilligte Trennung. */
+  --_family-overview: #6C3AED;  /* Violett - Uebersicht (= --color-accent, bewusster Share) */
+  --_family-time:     #00668F;  /* Azur - Kalender, Erinnerungen; 6.37:1 auf weiss,
+                                 * 5.74:1 auf --color-bg.
+                                 * ZOG UM, ALS DER AKZENT VIOLETT WURDE (2026-08-10).
+                                 * Hier stand Violett-700 #6D28D9 - neben dem Indigo-Akzent
+                                 * eine gebilligte 20-Grad-Trennung, neben dem Violett-Akzent
+                                 * #6C3AED aber derselbe Ton (Kontrast der beiden zueinander:
+                                 * 1.08). Der Kalender haette ausgesehen wie "das Modul der
+                                 * Marke", genau da, wo die Eine-Stimme-Regel Stimme und Ton
+                                 * gerade trennt. Azur 197 Grad ist die einzige Luecke, die
+                                 * zu BEIDEN Nachbarn >=20 Grad haelt (money 175, records 218)
+                                 * und dazu in der Saettigung klar von beiden absteht. */
   --_family-work:     #157F3D;  /* Gruen - Aufgaben, Haushaltshilfe, Belohnungen (der
                                  * Verbund Erledigen -> Punkte -> Belohnung). 1 G-Stufe
                                  * unter Bestand #15803D: der kuehle Grouped-Grund
@@ -482,9 +517,9 @@
   --meal-lunch:            var(--_meal-lunch);
   --_meal-lunch-light:     #DFF6E4;
   --meal-lunch-light:      var(--_meal-lunch-light);
-  --_meal-dinner:          #4F4DC9;
-  --meal-dinner:           var(--_meal-dinner);          /* Indigo — Abend (= --color-accent) */
-  --_meal-dinner-light:    #EEEEFB;
+  --_meal-dinner:          #6C3AED;
+  --meal-dinner:           var(--_meal-dinner);          /* Violett — Abend (= --color-accent) */
+  --_meal-dinner-light:    #F3EFFE;
   --meal-dinner-light:     var(--_meal-dinner-light);
   --_meal-snack:           #C2410C;
   --meal-snack:            var(--_meal-snack);           /* = --module-meals — Snack ist Sub-Domain */
@@ -504,7 +539,7 @@
   --meal-breakfast-ink:    var(--_meal-breakfast-ink);
   --_meal-lunch-ink:       #1A6831;
   --meal-lunch-ink:        var(--_meal-lunch-ink);
-  --_meal-dinner-ink:      #4240A8;
+  --_meal-dinner-ink:      #5B2FD4;
   --meal-dinner-ink:       var(--_meal-dinner-ink);
   --_meal-snack-ink:       #A5370A;
   --meal-snack-ink:        var(--_meal-snack-ink);
@@ -690,13 +725,15 @@
    * Kontrastring auf dem FAB) blieben wirkungslos. Komponenten schreiben die
    * zwei Zeilen aus; eine begründete Ausnahme setzt NUR --focus-ring-color.
    *
-   * FARBE: --active-module-accent setzt der Router auf <html>. Auf modullosen
-   * Seiten (Login, Setup) übernimmt der App-Akzent.
+   * FARBE: die STIMME der App (Eine-Stimme-Regel, DESIGN.md). Hier stand
+   * --active-module-accent - der Ring wechselte damit pro Modul die Farbe und
+   * war die groesste einzelne Fundstelle des Modultons im Chrome: jedes
+   * fokussierbare Element der App haengt an diesem Token.
    * OFFSET: --focus-ring-offset-inset ist für Elemente an einer geclippten
    * Kante — der einzige legitime Grund abzuweichen.
    * -------------------------------------------------------- */
   --focus-ring-width:        2px;
-  --focus-ring-color:        var(--active-module-accent, var(--color-accent));
+  --focus-ring-color:        var(--color-accent);
   --focus-ring-offset:       2px;
   --focus-ring-offset-inset: -2px;
 
@@ -1041,13 +1078,46 @@
    * Scrollport-Unterkante schwebt, und daraus folgen BEIDE anderen Werte.
    * --fab-safe-zone verkürzt den SCROLLPORT (Marge an .app-content, layout.css)
    * statt Padding am Inhaltsende: der Streifen unter dem FAB gehört ihm allein,
-   * bei jedem Scrollstand. Mobil zählt --fab-offset-bottom die Bottom-Nav mit,
-   * --fab-safe-zone nicht (Zone misst ab Scrollport-, Offset ab Viewport-
-   * Unterkante). ENTFALLEN bleibt --fab-lane (Guard in test-frontend-audit.js). */
+   * bei jedem Scrollstand. ENTFALLEN bleibt --fab-lane (Guard in
+   * test-frontend-audit.js).
+   *
+   * AUF DEM TELEFON GIBT ES DIESE ZONE NICHT MEHR (2026-08-10).
+   * Der FAB sass dort ueber der Bottom-Nav und hielt sich einen Streifen ueber
+   * die volle Breite frei - gemessen 92px, plus 77px Nav-Zone: 169px von 812,
+   * also 21 % des Geraets fuer einen Knopf, der 52px breit ist. Auf /tasks
+   * blieben dadurch 210px Inhalt (26 % des Viewports).
+   *
+   * Er sitzt jetzt IN der Nav-Zeile, am hinteren Ende der Kapsel: dieselbe
+   * Zeile, die die Navigation ohnehin kostet, und damit kein eigener Preis
+   * mehr. Die Ueberlappungsfrage aus #634, die die Zone urspruenglich
+   * begruendet hat, stellt sich dort nicht - unter ihm liegt Chrome, kein
+   * Inhalt. Auf dem Desktop (keine Bottom-Nav) schwebt er weiter frei und
+   * behaelt seine Zone. */
   --fab-size: 52px;
   --fab-gap: var(--space-6);
-  --fab-offset-bottom: calc(var(--nav-bottom-height) + var(--fab-gap));
+  /* Mitte der Nav-Kapsel: safe-area + Bar-Polster + halbe Resthoehe. */
+  --fab-offset-bottom: calc(
+    var(--safe-area-inset-bottom) + var(--space-2) +
+    (var(--nav-height-mobile) - var(--fab-size)) / 2
+  );
+  /* Basis ist der SCHWEBENDE Fall (Desktop, keine Bottom-Nav). Wo die Leiste
+   * existiert, faellt die Zone auf 0 - siehe den Block unter --bp-desktop.
+   * Das Kriterium ist die Leiste, nicht die Breite und nicht die Hoehe: nur
+   * mit ihr sitzt der Knopf ueber Chrome statt ueber Inhalt. */
   --fab-safe-zone: calc(var(--fab-gap) + var(--fab-size) + var(--space-4));
+  /* Innenkante der Nav-Kapsel, von der Viewport-Kante aus gemessen. EINE
+   * Quelle fuer die Kapsel (margin-inline: auto + max-width) und fuer den
+   * FAB, der an ihrem hinteren Ende sitzt - liefen die auseinander, stuende
+   * der Knopf halb daneben. */
+  --nav-capsule-max: 560px;
+  /* Der seitliche Rand der Bar-Zone. Er steht hier und nicht als Literal in
+   * layout.css, weil ZWEI Dinge ihn brauchen: die Zone selbst und der Inset
+   * unten, aus dem der eingesetzte FAB seine Position rechnet. Sie liefen
+   * einmal auseinander (Zone --space-2, Inset --space-3) - der Knopf sass
+   * daraufhin 8 statt 4px von der Kapselkante und ragte links in den letzten
+   * Tab. */
+  --nav-bar-gutter: var(--space-2);
+  --nav-capsule-inset: max(var(--nav-bar-gutter), calc((100% - var(--nav-capsule-max)) / 2));
 
   /* --------------------------------------------------------
    * 13. Sidebar
@@ -1259,7 +1329,14 @@
     --page-gutter: var(--space-8);
     /* Desktop hat keine Bottom-Nav: der FAB rückt näher an die Ecke und wird
      * kleiner. Ohne Bottom-Nav fallen Scrollport- und Viewport-Unterkante
-     * zusammen — der Offset ist der Gap selbst. */
+     * zusammen — der Offset ist der Gap selbst.
+     *
+     * HIER BLEIBT DIE ZONE. Sie ist auf dem Telefon entfallen, weil der FAB
+     * dort in der Nav-Zeile sitzt und ueber Chrome steht; auf dem Desktop
+     * schwebt er weiter ueber dem Inhalt, und die Ueberlappung aus #634 waere
+     * ohne Zone zurueck. Der Preis ist hier auch ein anderer: 96px am Fuss
+     * eines 800er-Fensters sind 12 %, nicht 21 % - und die Content-Spalte
+     * laesst rechts ohnehin Rand. */
     --fab-size: var(--target-lg);
     --fab-gap: var(--space-8);
     --fab-offset-bottom: var(--fab-gap);
@@ -1267,39 +1344,62 @@
 }
 
 /* ================================================================
+ * Wo die Bottom-Nav steht, kostet der FAB keine Flaeche mehr
+ *
+ * Er sitzt am hinteren Ende der Nav-Kapsel, also ueber Chrome. Damit
+ * entfaellt der Grund fuer --fab-safe-zone: unter ihm liegt kein Scrollport
+ * mehr, den er verdecken koennte. Die Zusicherung aus #634 - "bei jedem
+ * Scrollstand liegt nichts Bedienbares unter dem Knopf" - haelt dadurch
+ * strukturell statt durch einen reservierten Streifen.
+ *
+ * Der Streifen war 92px ueber die volle Breite, auf 812px Hoehe 11 % des
+ * Geraets. Ein frueherer Versuch, ihn auf 0 zu setzen, SOLANGE DER FAB NOCH
+ * UEBER DEM INHALT SCHWEBTE, machte am Scroll-Ende `.pantry-stepper__btn` und
+ * `.contact-more-menu` unerreichbar (gemessen 2026-08-10). Der Unterschied
+ * ist nicht die Zone, sondern wo der Knopf steht.
+ * ================================================================ */
+@media (max-width: 1023px) {
+  :root {
+    --fab-safe-zone: 0px;
+    /* UND ER WIRD KLEINER, WEIL ER JETZT IN ETWAS DRINSITZT.
+     *
+     * 52px waren die Groesse eines Knopfes, der FREI ueber der Seite schwebte -
+     * dort ist er das einzige Objekt seiner Groessenklasse und darf gross sein.
+     * In einer 60px hohen Kapsel laesst derselbe Wert 4px Luft und liest sich,
+     * als platze er heraus. --target-base ist die Zielgroesse der Geraetewelt
+     * (44px am Zeiger, 48 am Finger) und damit die richtige Antwort auf beides:
+     * 8 bzw. 6px Luft in der Kapsel, und die Reserve, die er der Leiste
+     * abnimmt, faellt von 60 auf 52px - gut 1,5px je Tab zurueck.
+     *
+     * Das allein haette den zweizeiligen Umbruch der Labels NICHT geloest:
+     * „Übersicht" will bei 12px 58px und bekommt auch danach nur 55,4. Geloest
+     * hat ihn die Schriftstufe (--type-micro, siehe layout.css); der kleinere
+     * Knopf gibt der Loesung ihren Spielraum. */
+    --fab-size: var(--target-base);
+  }
+}
+
+/* ================================================================
  * Kompakte Höhe — die zweite Achse der Größenklasse (§11c)
  *
- * DER FREIRAUM UNTER DEM FAB GEHÖRT HIER DEM INHALT. --fab-safe-zone verkürzt
- * den Scrollport um 92px über die volle Breite, damit unter dem FAB bei jedem
- * Scrollstand nichts Bedienbares liegt (#634). Auf einem 812px hohen Telefon
- * kostet das 12,5 % — vertretbar für einen Freiraum, den niemand als Verlust
- * bemerkt. Bei 400px Höhe sind es 28,5 %, und dort steht die Zone einem
- * WCAG-1.4.4-Verstoß im Weg: der Inhalt ist nicht knapp, er ist weg.
+ * DER FAB KOSTET HIER NICHTS MEHR, UND ZWAR NICHT ERST SEIT DER KOMPAKTEN
+ * HÖHE. Bis 2026-08-10 stand an dieser Stelle die Rechnung, wie weit
+ * --fab-safe-zone in einem flachen Viewport fallen darf (von 92 auf 60px), und
+ * die Warnung, dass 0 am Scroll-Ende `.pantry-stepper__btn` und
+ * `.contact-more-menu` unerreichbar macht. Beides ist erledigt, seit der Knopf
+ * in der Nav-Kapsel sitzt: er steht über Chrome, die Zone ist überall dort 0,
+ * wo die Leiste existiert, und dieser Block muss dafür nichts mehr tun.
  *
  * DER FAB SELBST BLEIBT UNANGETASTET. Naheliegend wäre gewesen, ihn beim
  * Scrollen wegfahren zu lassen — genau das war `.page-fab--retracted`, und es
  * ist bei #634 mit Begründung entfallen: ein einziges Abwärts-Delta ohne
  * Nutzergeste machte die Primäraktion des Moduls unerreichbar.
  *
- * DIE ZONE FÄLLT SO WEIT, WIE SIE KANN, UND KEINEN PIXEL WEITER. Die erste
- * Fassung setzte sie auf 0 und war damit falsch: am Scroll-Ende lagen
- * `.pantry-stepper__btn` und `.contact-more-menu` unter dem Knopf und waren
- * nicht mehr erreichbar (gemessen 2026-08-10 über alle Listen-Module) - genau
- * die Zusicherung, die #634 gegeben hat, und ein Scrollstand, den niemand
- * mehr auflösen kann, weil es unter ihm nichts mehr gibt.
- *
- * Von den 92px sind nur die 16px Luft und ein Teil des Schwebeabstands
- * verzichtbar, nicht die Fläche des Knopfes: --fab-gap fällt auf --space-2,
- * die Zone auf Gap plus Knopf. Bleiben 60px, gewonnen sind 32px. Der große
- * Rest kommt aus dem Kopf (162 → 71px) und der Filterreihe (110 → 54px), also
- * dort, wo tatsächlich Chrome stand.
+ * Was hier bleibt, ist die Kopf-Regel: bei 400px Höhe fällt der Kopf auf seine
+ * Bar-Zeile (162 → 71px) und die Filterreihe in ihre Icon-Form (110 → 54px),
+ * also dort, wo tatsächlich Chrome steht. Die Werte dafür stehen in
+ * layout.css; hier steht nur noch, dass der FAB nichts mehr beizutragen hat.
  * ================================================================ */
-@media (max-height: 499px) {
-  :root {
-    --fab-gap: var(--space-2);
-    --fab-safe-zone: calc(var(--fab-gap) + var(--fab-size));
-  }
-}
 
 /* ================================================================
  * Touch-Ziele auf Fingergeräten
@@ -1343,64 +1443,63 @@
 @media screen and (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     /* Neutral-Skala — Apple Dark */
-    --_neutral-50:  #050507;
-    --_neutral-100: #0A0A0C;
-    --_neutral-150: #1C1C1E;
-    --_neutral-200: #2C2C2E;
-    --_neutral-250: #3A3A3C;
-    --_neutral-300: #48484A;
-    --_neutral-400: #636366;
-    --_neutral-500: #8E8E93;
-    --_neutral-600: #AEAEB2;
-    --_neutral-700: #C7C7CC;
-    --_neutral-800: #E5E5EA;
-    --_neutral-900: #F2F2F7;
-    --_neutral-950: #FBFBFD;
+    --_neutral-50:  #0F0E0D;
+    --_neutral-100: #191816;   /* Buehne — warme Kohle, L=0.0092 (dreifach ueber #0A0A0C) */
+    --_neutral-150: #262422;   /* Surface — 1.18:1 ueber der Buehne */
+    --_neutral-200: #322F2B;
+    --_neutral-250: #403C37;
+    --_neutral-300: #4E4A44;
+    --_neutral-400: #6B665E;
+    --_neutral-500: #948E85;
+    --_neutral-600: #B4AEA5;   /* WCAG AA: 6.92:1 auf --color-surface, 6.06:1 auf -raised */
+    --_neutral-700: #CBC5BC;
+    --_neutral-800: #E7E2DA;
+    --_neutral-900: #F5F3ED;
+    --_neutral-950: #FBFAF7;
 
-    --_color-surface:          #1C1C1E;
-    --_color-surface-3:        #2C2C2E;
-    --_color-surface-elevated: #2C2C2E;
-    --_color-surface-hover:    #3A3A3C;
-    --_color-surface-work:     #1C1C1E;
-    --_color-surface-raised:   #2C2C2E;
-    --_color-surface-glass:    rgba(28, 28, 30, 0.66);
+    --_color-surface:          #262422;
+    --_color-surface-3:        #322F2B;
+    --_color-surface-elevated: #322F2B;
+    --_color-surface-hover:    #403C37;
+    --_color-surface-work:     #262422;
+    --_color-surface-raised:   #322F2B;
+    --_color-surface-glass:    rgba(38, 36, 34, 0.66);
 
     /* Kanten: im Dark eigenständig gesetzt statt aus der Neutral-Rampe
      * abgeleitet — die Rampe liegt zu dicht an --color-surface, eine
      * Kartenkante in der Farbe ihrer eigenen Fläche wäre unsichtbar
      * (Critique 2026-07-29). Ratios gegen --color-surface (#1C1C1E). */
-    --color-border-subtle: #2E2E31;  /* Trenner, ruhige Kartenkante */
-    --color-border:        #3E3E42;  /* Standardkante, Formfelder */
-    --color-border-strong: #5C5C62;  /* Hover, betonte Rahmen (~2.9:1) */
+    --color-border-subtle: #37332E;  /* Trenner, ruhige Kartenkante */
+    --color-border:        #454039;  /* Standardkante, Formfelder */
+    --color-border-strong: #6F6A61;  /* Hover, betonte Rahmen (~2.9:1) */
 
-    --_sidebar-bg:           #101012;
+    --_sidebar-bg:           #201E1C;
     --_sidebar-shadow-light: rgba(255, 255, 255, 0.04);
     --_sidebar-shadow-dark:  rgba(0, 0, 0, 0.5);
 
-    /* Akzent — Apple Indigo Dark
+    /* Akzent — Violett Dark
      *
      * DIE ZUSAGE GILT FUER DIE HELLSTE FLAECHE, AUF DER DER AKZENT ALS TEXT
-     * STEHT, nicht fuer eine ausgesuchte. #7D7AFF hielt „~5:1 auf #1C1C1E"
-     * woertlich (4.94), aber die App setzt Akzent-Text auch auf
-     * --color-surface-raised #2C2C2E, und dort waren es 4.05 - unter AA. Der
-     * Fehler war die Zusage, nicht die Fundstelle: sie nannte eine Flaeche und
-     * galt fuer drei. Gefunden am aktiven Domaenenkopf der Settings-Navigation
+     * STEHT, nicht fuer eine ausgesuchte. Die App setzt Akzent-Text auch auf
+     * --color-surface-raised (#322F2B), nicht nur auf --color-surface - eine
+     * Zusage, die nur eine der drei Flaechen nennt, gilt fuer drei und haelt
+     * fuer eine. Gefunden am aktiven Domaenenkopf der Settings-Navigation
      * (zwei Regeln, 23 Blaetter).
      *
      * Der Lift ist der Weg und NICHT der Ink-Mix aus Abschnitt 4: der gilt
      * ausdruecklich fuer akzent-getoenten Grund, hier ist der Grund neutral.
      * Die FLAECHEN-Rolle bleibt unberuehrt - sie haengt an --_color-btn-primary,
      * das weisses Label traegt und darum nicht mitwandern darf. */
-    --_color-accent:            #8A87FF;   /* Text: 4.64 auf #2C2C2E, 5.66 auf #1C1C1E, 6.58 auf #0A0A0C */
-    /* Zieht mit: gegen #8A87FF laege der alte Wert bei 1.04 und waere als Hover
-     * nicht mehr zu sehen. 1.19 ist exakt der Abstand, den das Paar vorher
-     * hatte (#7D7AFF/#8E8BFF = 1.195) - die Leiter wandert, ihre Sprosse nicht. */
-    --_color-accent-hover:      #9B98FF;
-    --_color-accent-light:      #1E1C46;  /* >=4.5:1 unter --color-accent (mit #8A87FF: 5.34) */
-    --_color-accent-subtle:     #191740;
-    --_color-btn-primary:       #5E5CE6;   /* Weißes Label ~5.4:1 */
-    --_color-btn-primary-hover: #4E4CD6;
-    --_color-accent-secondary:  #A5A3FF;
+    --_color-accent:            #A78BFA;   /* Text: 4.96 auf #322F2B, 5.66 auf #262422, 6.50 auf #191816 */
+    /* Zieht mit, und im Dark geht die Leiter NACH OBEN: eine abgedunkelte
+     * Hellfarbe auf warmer Kohle liest niemand als Hover. Abstand 1.19 wie
+     * zuvor - die Leiter wandert, ihre Sprosse nicht. */
+    --_color-accent-hover:      #BCA6FC;
+    --_color-accent-light:      #241A45;  /* >=4.5:1 unter --color-accent (5.87) */
+    --_color-accent-subtle:     #1D1438;
+    --_color-btn-primary:       #7C3AED;   /* Weißes Label 5.70:1 */
+    --_color-btn-primary-hover: #6D28D9;
+    --_color-accent-secondary:  #C4B5FD;
 
     /* Semantik — Apple Dark-Varianten */
     --_color-success:       #30D158;
@@ -1465,15 +1564,16 @@
 
     /* Modul-Akzente — Dark-Varianten der Familientoene (Bestandswerte der
      * Spender-Module, verifiziert; Feld unter --color-ink-on-vivid 6,17-11,35) */
-    --_family-overview: #8A87FF;   /* Indigo Dark = Akzent: zieht mit --_color-accent MIT.
-                                    * Der Share ist die Zusage, nicht der Wert - blieb der Tint
-                                    * auf #7D7AFF, loeste der Router auf /dashboard genau den
-                                    * Wert in --active-module-accent auf, den der Akzent als
-                                    * zu dunkel abgelegt hat (4,05 auf #2C2C2E). Traegt beide
-                                    * Rollen besser: als Text 4,64 statt 4,05, als Flaeche unter
-                                    * --color-ink-on-vivid (#0A0A0C) 6,58 statt 5,75 - damit im
-                                    * Feld der uebrigen Dark-Tints (6,17 bis 11,35) statt darunter. */
-    --_family-time:     #A78BFA;   /* Violett-400 — Familien-Distanz zum Indigo-Akzent */
+    --_family-overview: #A78BFA;   /* Violett Dark = Akzent: zieht mit --_color-accent MIT.
+                                    * Der Share ist die Zusage, nicht der Wert - stuende hier
+                                    * ein eigener Ton, loeste der Router auf /dashboard einen
+                                    * anderen Wert in --active-module-accent auf als den, den
+                                    * der Akzent als geprueft abgelegt hat. Traegt beide Rollen:
+                                    * als Text 4,96 auf --color-surface-raised, als Flaeche
+                                    * unter --color-ink-on-vivid 6,50 - im Feld der uebrigen
+                                    * Dark-Tints (6,17 bis 11,35). */
+    --_family-time:     #4CB8F0;   /* Azur hell - zog mit dem Light-Wert um (siehe dort);
+                                    * 6,00:1 als Text auf -raised, 7,86 unter der dunklen Tinte */
     --_family-work:     #4ADE80;
     --_family-kitchen:  #FB923C;
     --_family-money:    #2DD4BF;
@@ -1489,14 +1589,14 @@
     --_meal-breakfast-light: #33230A;
     --_meal-lunch:           #4ADE80;
     --_meal-lunch-light:     #0E2E17;
-    --_meal-dinner:          #7D7AFF;
-    --_meal-dinner-light:    #211F4D;
+    --_meal-dinner:          #A78BFA;
+    --_meal-dinner-light:    #241A45;
     --_meal-snack:           #FB923C;
     --_meal-snack-light:     #3D2010;
     /* Die lesbare Stufe geht im Dark nach oben, wie bei der Semantik. */
     --_meal-breakfast-ink:   #FFB84A;
     --_meal-lunch-ink:       #89EAAC;
-    --_meal-dinner-ink:      #8E8BFF;
+    --_meal-dinner-ink:      #BCA6FC;
     --_meal-snack-ink:       #FCAA67;
 
     --_source-mealie:        #2DD4BF;
@@ -1544,47 +1644,47 @@
 @media screen {
   [data-theme="dark"] {
     /* Neutral-Skala — Apple Dark */
-    --_neutral-50:  #050507;
-    --_neutral-100: #0A0A0C;
-    --_neutral-150: #1C1C1E;
-    --_neutral-200: #2C2C2E;
-    --_neutral-250: #3A3A3C;
-    --_neutral-300: #48484A;
-    --_neutral-400: #636366;
-    --_neutral-500: #8E8E93;
-    --_neutral-600: #AEAEB2;   /* WCAG AA: ~7.4:1 auf #1C1C1E */
-    --_neutral-700: #C7C7CC;
-    --_neutral-800: #E5E5EA;
-    --_neutral-900: #F2F2F7;
-    --_neutral-950: #FBFBFD;
+    --_neutral-50:  #0F0E0D;
+    --_neutral-100: #191816;   /* Buehne — warme Kohle, L=0.0092 (dreifach ueber #0A0A0C) */
+    --_neutral-150: #262422;   /* Surface — 1.18:1 ueber der Buehne */
+    --_neutral-200: #322F2B;
+    --_neutral-250: #403C37;
+    --_neutral-300: #4E4A44;
+    --_neutral-400: #6B665E;
+    --_neutral-500: #948E85;
+    --_neutral-600: #B4AEA5;   /* WCAG AA: 6.92:1 auf --color-surface, 6.06:1 auf -raised */
+    --_neutral-700: #CBC5BC;
+    --_neutral-800: #E7E2DA;
+    --_neutral-900: #F5F3ED;
+    --_neutral-950: #FBFAF7;
 
     /* Semantische Aliase folgen automatisch via var(--neutral-*) */
-    --_color-surface:          #1C1C1E;
-    --_color-surface-3:        #2C2C2E;
-    --_color-surface-elevated: #2C2C2E;
-    --_color-surface-hover:    #3A3A3C;
-    --_color-surface-work:     #1C1C1E;
-    --_color-surface-raised:   #2C2C2E;
-    --_color-surface-glass:    rgba(28, 28, 30, 0.66);
+    --_color-surface:          #262422;
+    --_color-surface-3:        #322F2B;
+    --_color-surface-elevated: #322F2B;
+    --_color-surface-hover:    #403C37;
+    --_color-surface-work:     #262422;
+    --_color-surface-raised:   #322F2B;
+    --_color-surface-glass:    rgba(38, 36, 34, 0.66);
 
     /* Kanten: eigenständig gesetzt (siehe Media-Block oben) */
-    --color-border-subtle: #2E2E31;
-    --color-border:        #3E3E42;
-    --color-border-strong: #5C5C62;
+    --color-border-subtle: #37332E;
+    --color-border:        #454039;
+    --color-border-strong: #6F6A61;
 
     /* Sidebar */
-    --_sidebar-bg:           #101012;
+    --_sidebar-bg:           #201E1C;
     --_sidebar-shadow-light: rgba(255, 255, 255, 0.04);
     --_sidebar-shadow-dark:  rgba(0, 0, 0, 0.5);
 
-    /* Akzent — Apple Indigo Dark (Werte und Begruendung: Dark-Block oben) */
-    --_color-accent:            #8A87FF;
-    --_color-accent-hover:      #9B98FF;
-    --_color-accent-light:      #1E1C46;  /* >=4.5:1 unter --color-accent (mit #8A87FF: 5.34) */
-    --_color-accent-subtle:     #191740;
-    --_color-btn-primary:       #5E5CE6;
-    --_color-btn-primary-hover: #4E4CD6;
-    --_color-accent-secondary:  #A5A3FF;
+    /* Akzent — Violett Dark (Werte und Begruendung: Dark-Block oben) */
+    --_color-accent:            #A78BFA;
+    --_color-accent-hover:      #BCA6FC;
+    --_color-accent-light:      #241A45;  /* >=4.5:1 unter --color-accent (5.87) */
+    --_color-accent-subtle:     #1D1438;
+    --_color-btn-primary:       #7C3AED;
+    --_color-btn-primary-hover: #6D28D9;
+    --_color-accent-secondary:  #C4B5FD;
 
     /* Semantische Farben */
     --_color-success:       #30D158;
@@ -1647,8 +1747,8 @@
     --_chart-series-7: #4ADE80;
 
     /* Modul-Akzente (Familientoene) */
-    --_family-overview: #8A87FF;   /* zieht mit --_color-accent MIT, siehe Dark-Block oben */
-    --_family-time:     #A78BFA;
+    --_family-overview: #A78BFA;   /* zieht mit --_color-accent MIT, siehe Dark-Block oben */
+    --_family-time:     #4CB8F0;
     --_family-work:     #4ADE80;
     --_family-kitchen:  #FB923C;
     --_family-money:    #2DD4BF;
@@ -1665,14 +1765,14 @@
     --_meal-breakfast-light: #33230A;
     --_meal-lunch:           #4ADE80;
     --_meal-lunch-light:     #0E2E17;
-    --_meal-dinner:          #7D7AFF;
-    --_meal-dinner-light:    #211F4D;
+    --_meal-dinner:          #A78BFA;
+    --_meal-dinner-light:    #241A45;
     --_meal-snack:           #FB923C;
     --_meal-snack-light:     #3D2010;
     /* Die lesbare Stufe geht im Dark nach oben, wie bei der Semantik. */
     --_meal-breakfast-ink:   #FFB84A;
     --_meal-lunch-ink:       #89EAAC;
-    --_meal-dinner-ink:      #8E8BFF;
+    --_meal-dinner-ink:      #BCA6FC;
     --_meal-snack-ink:       #FCAA67;
 
     --_source-mealie:        #2DD4BF;

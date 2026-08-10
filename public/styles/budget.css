@@ -101,10 +101,15 @@
  * Das IST .btn--secondary - die Regel stand hier einmal handkopiert, mit dem
  * einen Unterschied, der sie zum Verstoss machte: --radius-sm statt der Kapsel
  * (Finish-Review Runde 4, Befund 4). Jetzt trägt das Markup .btn.btn--secondary
- * und hier steht nur noch die Verdichtung für den Kopf-Slot. */
+ * und hier steht nur noch die Verdichtung für den Kopf-Slot.
+ *
+ * DIE FARBZEILE IST 2026-08-10 ENTFALLEN. Sie setzte `--module-accent` und
+ * faerbte den Knopf damit teal - eine geteilte Variante, unter einem eigenen
+ * Klassennamen umgefaerbt, also genau die Bauart, an der die Eine-Buttonform-
+ * Regel schon einmal blind war. Der Knopf nimmt jetzt die Farbe seiner
+ * Variante, und die ist die Stimme (Eine-Stimme-Regel). */
 .budget-nav__today {
   padding: var(--space-1) var(--space-3);
-  color: var(--module-accent, var(--color-accent));
 }
 
 /* Kontexttext für Tabs ohne Zeitbezug: hält den Kopf-Slot besetzt, ohne sich als

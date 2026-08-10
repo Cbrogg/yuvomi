@@ -140,7 +140,7 @@
 }
 
 .detail-subtask:focus-visible {
-  outline: var(--focus-ring-width) solid var(--active-module-accent, var(--color-accent));
+  outline: var(--focus-ring-width) solid var(--color-accent);
   outline-offset: var(--focus-ring-offset);
 }
 

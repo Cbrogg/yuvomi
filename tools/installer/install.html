@@ -16,16 +16,16 @@
          zeigt eine Welt, die es nicht mehr gibt. */
       --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "Segoe UI", Roboto, Arial, sans-serif;
       --font-mono: ui-monospace, 'SF Mono', 'Fira Code', 'Fira Mono', 'Roboto Mono', monospace;
-      --color-bg: #F2F2F7;
+      --color-bg: #F5F3ED;
       --color-surface: #FFFFFF;
-      --color-surface-2: #FBFBFD;
-      --color-border: #E5E5EA;
-      --color-text-primary: #1C1C1E;
-      --color-text-secondary: #636366;
-      --color-accent: #4F4DC9;
-      --color-accent-hover: #4340B8;
+      --color-surface-2: #FBFAF7;
+      --color-border: #E4E0D7;
+      --color-text-primary: #1D1B17;
+      --color-text-secondary: #63615B;
+      --color-accent: #6C3AED;
+      --color-accent-hover: #5B2FD4;
       /* Tinte auf farbiger Fläche. Muss dem Theme folgen: --color-accent hellt
-         im Dark-Mode auf #8A87FF auf, weißer Text fällt dort durch.
+         im Dark-Mode auf #A78BFA auf, weißer Text fällt dort durch.
          tokens.css definiert dasselbe Token; dessen --color-text-on-accent ist
          dagegen statisch weiß und taugt hier deshalb nicht. */
       --color-ink-on-vivid: #FFFFFF;
@@ -53,14 +53,14 @@
     }
     @media (prefers-color-scheme: dark) {
       :root {
-        /* --color-surface-2 liegt hier TIEFER als --color-bg (#050507 gegen
-           #0A0A0C) - das ist kein Vertipper, sondern die Dunkelseite der App:
+        /* --color-surface-2 liegt hier TIEFER als --color-bg (#0F0E0D gegen
+           #191816) - das ist kein Vertipper, sondern die Dunkelseite der App:
            die gehobene Fläche ist die Karte (--color-surface), der Grund darunter
            wird dunkler statt heller. --color-border folgt nicht der
            Neutralen-Rampe, tokens.css setzt es im Dark-Mode eigens. */
-        --color-bg: #0A0A0C; --color-surface: #1C1C1E; --color-surface-2: #050507;
-        --color-border: #3E3E42; --color-text-primary: #F2F2F7; --color-text-secondary: #AEAEB2;
-        --color-accent: #8A87FF; --color-accent-hover: #9B98FF; --color-ink-on-vivid: #0A0A0C;
+        --color-bg: #191816; --color-surface: #262422; --color-surface-2: #0F0E0D;
+        --color-border: #454039; --color-text-primary: #F5F3ED; --color-text-secondary: #B4AEA5;
+        --color-accent: #A78BFA; --color-accent-hover: #BCA6FC; --color-ink-on-vivid: #191816;
         --color-success: #30D158; --color-warning: #FF9F0A; --color-danger: #FF6961;
         --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.40);
         --shadow-lg: 0 8px 28px rgba(0, 0, 0, 0.50);

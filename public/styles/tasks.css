@@ -91,10 +91,53 @@
     padding-top: var(--space-3);
   }
 
+  /* EINE Bedienzeile, auch auf dem Telefon (2026-08-10).
+   *
+   * Hier stand `flex-wrap: wrap` mit `row-gap`, also die Erlaubnis, in zwei
+   * Zeilen zu brechen: Chips (52px) plus Gruppierungswahl (54px), gemessen
+   * 110px. Zusammen mit dem dreizeiligen Kopf standen auf 375x812 damit 341px
+   * Chrome ueber 210px Inhalt - die Chrome-Regel (DESIGN.md) laesst Kopf plus
+   * EINE Bedienzeile, und die Zeile hier war anderthalb.
+   *
+   * `nowrap` genuegt, weil die Reihe darunter schon richtig gebaut ist: die
+   * Chips scrollen INNERHALB von `.tasks-filters` (Regel gleich darunter), die
+   * Gruppierungswahl bleibt als letztes Kind der Reihe stehen. Ein Moduswahl-
+   * schalter, der seitlich aus dem Bild scrollt, waere der falsche Tausch. */
   .tasks-filters-row {
-    flex-wrap: wrap;
-    row-gap: var(--space-1);
+    flex-wrap: nowrap;
     margin-bottom: var(--space-3);
+  }
+
+  /* DIE GRUPPIERUNGSWAHL VERLIERT IHR LABEL (Label-Verlust-Regel, DESIGN.md).
+   *
+   * Mit Text mass sie 175px von 343 - mehr als die Haelfte der Zeile fuer eine
+   * Zwei-Wege-Wahl, und die Chips daneben wurden dadurch schon beim zweiten
+   * Chip von der Fade-Maske mitten im Wort abgeschnitten. Als Icon-Paar misst
+   * sie 88px und gibt den Rest den Chips zurueck.
+   *
+   * Die Regel verlangt drei Dinge, und alle drei stehen hier: die Icon-Form
+   * DERSELBEN Familie (das Icon stand vorher schon neben dem Label, es bleibt
+   * nur allein zurueck), die Zielgroesse in BEIDEN Achsen, und der Zustand
+   * ueber getoente Flaeche - den traegt `.group-toggle__btn--active`
+   * unveraendert weiter. Der zugaengliche Name haengt nicht an dieser Regel:
+   * `aria-label` steht im Markup, nicht in dieser Media-Query. */
+  .group-toggle__label {
+    display: none;
+  }
+
+  /* Die Zielgroesse steht am TRAEGER unter seinem eigenen Namen, nicht unter
+   * einem Nachkommen-Selektor: der Guard sucht die Signatur des Label-Verlusts
+   * und dann den Traeger im selben At-Block. Ein
+   * `.group-toggle:not(...) .group-toggle__btn` haette dieselbe Wirkung und
+   * waere fuer ihn unsichtbar - und damit fuer jeden, der die Regel spaeter
+   * pruefen will. Der Ansichts-Umschalter im Kopf bekommt sie mit; er ist
+   * dasselbe Bauteil und war mit 30px Hoehe ohnehin unter Mass. Seine engere
+   * Naht behaelt er ueber `.group-toggle--icons` (Regel weiter unten). */
+  .group-toggle__btn {
+    width: var(--target-base);
+    height: var(--target-base);
+    min-height: var(--target-base);
+    padding-inline: 0;
   }
 
   /* Chips in EINER seitlich scrollbaren Reihe statt zwei umbrochenen Zeilen -
@@ -201,6 +244,10 @@
 }
 
 .group-toggle__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
   padding: var(--space-1) var(--space-3);
   border-radius: calc(var(--radius-sm) - 2px);
   font-size: var(--text-sm);
@@ -209,6 +256,14 @@
   transition: background-color var(--transition-fast), color var(--transition-fast);
   min-height: var(--target-lg);
   cursor: pointer;
+}
+
+/* Das Icon steht neben dem Label, nicht statt seiner - solange Platz ist.
+ * Es ist der Teil, der bleibt, wenn das Label faellt (siehe die 640er-Regel). */
+.group-toggle__icon {
+  width: var(--icon-md);
+  height: var(--icon-md);
+  flex-shrink: 0;
 }
 
 .group-toggle__btn:hover:not(.group-toggle__btn--active) {

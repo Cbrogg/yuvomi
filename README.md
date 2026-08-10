@@ -11,8 +11,8 @@
   </p>
 
   <p>
-    <a href="https://github.com/ulsklyc/yuvomi/releases"><img src="https://img.shields.io/github/v/release/ulsklyc/yuvomi?style=flat-square&color=4F4DC9&label=release" alt="Latest Release"></a>
-    <a href="https://github.com/ulsklyc/yuvomi/stargazers"><img src="https://img.shields.io/github/stars/ulsklyc/yuvomi?style=flat-square&color=4F4DC9&label=stars" alt="GitHub Stars"></a>
+    <a href="https://github.com/ulsklyc/yuvomi/releases"><img src="https://img.shields.io/github/v/release/ulsklyc/yuvomi?style=flat-square&color=6C3AED&label=release" alt="Latest Release"></a>
+    <a href="https://github.com/ulsklyc/yuvomi/stargazers"><img src="https://img.shields.io/github/stars/ulsklyc/yuvomi?style=flat-square&color=6C3AED&label=stars" alt="GitHub Stars"></a>
     <img src="https://img.shields.io/badge/PWA-installable-5A0FC8?style=flat-square&logo=pwa&logoColor=white" alt="PWA">
     <a href="https://github.com/ulsklyc/yuvomi/pkgs/container/yuvomi"><img src="https://img.shields.io/badge/ghcr.io-yuvomi-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker Image"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="MIT License"></a>
@@ -415,7 +415,7 @@ Nothing. Yuvomi is free and MIT-licensed. You provide the server; there is no su
 
 ## Under the hood
 
-- **Apple HIG in the Liquid Glass language** - the system font stack and Apple's type scale, capsule controls, inset-grouped lists and spring motion. Glass is reserved for navigation, sheets and the action button; everything you read sits on an opaque surface. Each module keeps its own accent, verified for WCAG AA in light and dark. Pure CSS, no framework.
+- **Apple HIG in the Liquid Glass language** - the system font stack and Apple's type scale, capsule controls, inset-grouped lists and spring motion. Glass is reserved for navigation, sheets and the action button; everything you read sits on an opaque surface. One colour carries the interface in every module, while each module keeps its own tone on its badge, its bars and its chips - both verified for WCAG AA in light and dark. Pure CSS, no framework.
 - **Zero build step** - pure ES modules, no bundler, no transpiler, no framework.
 - **Privacy first** - fully self-hosted, optional SQLCipher AES-256 database encryption, zero telemetry.
 - **SSO / OpenID Connect** - optional single sign-on via any OIDC provider (Authentik, Keycloak, Google, Microsoft Entra), configured with four env vars using the Authorization Code + PKCE flow.

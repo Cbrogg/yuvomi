@@ -120,7 +120,14 @@ class YuvomiInstallPrompt extends HTMLElement {
       :host {
         display: block;
         position: fixed;
-        bottom: calc(var(--nav-height-mobile) + env(safe-area-inset-bottom, 0px) + 8px);
+        /* Ueber der GANZEN Nav-Zone, nicht ueber der Kapselhoehe.
+         * --nav-bottom-height zaehlt Kapsel PLUS Luft PLUS safe-area; die
+         * frueher hier nachgerechnete Summe (--nav-height-mobile + safe + 8)
+         * liess die 8px Luft ueber der Kapsel aus und legte den Banner damit
+         * 8px in die Leiste hinein. Seit der FAB in der Kapsel sitzt, deckt
+         * dieser eine Wert auch ihn ab - die Sonderregel in layout.css, die
+         * den Banner um den schwebenden Knopf herumschob, ist entfallen. */
+        bottom: calc(var(--nav-bottom-height) + var(--space-2));
         left: var(--space-3);
         right: var(--space-3);
         z-index: var(--z-toast);

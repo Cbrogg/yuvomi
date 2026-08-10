@@ -194,7 +194,7 @@ function applyModuleAccentForRoute(route) {
  * behalten ihre Farbe - ihre Seiten sind nicht Teil dieser Welt.
  *
  * Der Kommentar hat das schon einmal behauptet, ohne dass es stimmte: dunkel
- * stand hier #0C0C0E gegen ein --color-bg von #0A0A0C. Seither hält der Guard
+ * stand hier #0C0C0E gegen ein --color-bg von #191816. Seither hält der Guard
  * "the status bar colour is the page background" alle drei Kopien am Token.
  */
 function updateThemeColorForRoute(route) {
@@ -202,7 +202,7 @@ function updateThemeColorForRoute(route) {
     setThemeColor(route.thirdPartyModule.accent, route.thirdPartyModule.accent);
     return;
   }
-  setThemeColor('#F2F2F7', '#0A0A0C');
+  setThemeColor('#F5F3ED', '#191816');
 }
 
 // --------------------------------------------------------
@@ -1678,6 +1678,9 @@ function renderAppShell(container) {
   if (moreSheet)  shellNodes.push(moreSheet);
   shellNodes.push(searchOverlay, toastContainerPolite, toastContainerAssertive, routeAnnouncer);
   container.replaceChildren(...shellNodes);
+  // Die Kapsel ist ein NEUER Knoten; der Beobachter des Tab-Indikators haengt
+  // sonst am verworfenen (siehe observeNavCapsule weiter unten).
+  observeNavCapsule();
   applySidebarCollapsed(localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1');
   updateBranding(currentPath || '/');
 
@@ -3611,6 +3614,29 @@ window.addEventListener('resize', () => {
   positionSidebarIndicator();
   positionTabIndicator();
 }, { passive: true });
+
+/* DER INDIKATOR MISST ECHTE RECTS, ALSO MUSS ER JEDE BREITENAENDERUNG SEHEN -
+ * und `resize` ist nur EINE ihrer Ursachen.
+ *
+ * Seit die Nav-Kapsel ihr hinteres Ende fuer den FAB freihaelt (`:has()` in
+ * layout.css), aendert sich die Breite aller fuenf Slots, sobald ein FAB
+ * erscheint oder verschwindet. Das passiert auch OHNE Navigation: budget.js
+ * schaltet `fab.hidden` beim Tabwechsel, split-expenses.js beim Archivfilter.
+ * Der Indikator stand danach auf den Koordinaten der alten Slotbreiten, bis
+ * irgendwann ein Resize oder ein Routenwechsel kam (Codex-Review zu PR #719).
+ *
+ * Ein ResizeObserver AN DER KAPSEL statt Aufrufe an den beiden bekannten
+ * Stellen: die Ursache ist die Breite, nicht die Liste der Module, die sie
+ * gerade aendern. Der dritte Aufrufer waere sonst wieder einer, der es
+ * vergisst. */
+function observeNavCapsule() {
+  if (typeof ResizeObserver !== 'function') return;
+  const items = document.querySelector('.nav-bottom__items');
+  if (!items || items.dataset.indicatorObserved === '1') return;
+  items.dataset.indicatorObserved = '1';
+  new ResizeObserver(() => requestAnimationFrame(() => positionTabIndicator())).observe(items);
+}
+observeNavCapsule();
 
 // --------------------------------------------------------
 // Virtuelle Tastatur: FAB ausblenden, solange sie offen ist.
