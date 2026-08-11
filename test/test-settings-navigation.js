@@ -703,12 +703,12 @@ test('navigation sections match the grouped desktop information architecture', (
   assert.equal(moduleSection('kitchen'), NAV_SECTION.household);
   assert.equal(moduleSection('housekeeping'), NAV_SECTION.household);
   assert.equal(moduleSection('documents'), NAV_SECTION.household);
+  assert.equal(moduleSection('inventory'), NAV_SECTION.household);
   assert.equal(moduleSection('rewards'), NAV_SECTION.household);
   assert.equal(moduleSection('contacts'), NAV_SECTION.people);
   assert.equal(moduleSection('birthdays'), NAV_SECTION.people);
   assert.equal(moduleSection('health'), NAV_SECTION.people);
   assert.equal(moduleSection('budget'), NAV_SECTION.finance);
-  assert.equal(moduleSection('inventory'), NAV_SECTION.finance);
   assert.equal(moduleSection('third-party-weather-station'), NAV_SECTION.customModules);
   assert.equal(moduleSection('settings'), NAV_SECTION.household);
 });
