@@ -39,6 +39,33 @@
   max-width: var(--content-max-width-narrow);
 }
 
+/* --------------------------------------------------------
+ * Filter-Chips (All / Braucht Aufmerksamkeit) - gleiche einzeilige
+ * Scroll-Zeile wie .pantry-filters (pantry.css), .filter-chip selbst kommt
+ * aus dem geteilten filter-chip.css.
+ * -------------------------------------------------------- */
+
+.inventory-filters {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  padding-inline: var(--page-inline-pad);
+  padding-block: var(--space-3) 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.inventory-filters::-webkit-scrollbar {
+  display: none;
+}
+
+/* [hidden] hat gegenüber display:flex zu geringe Spezifität - explizit
+ * übersteuern (gleiches Muster wie .pantry-filters[hidden] in list-row.css). */
+.inventory-filters[hidden] {
+  display: none;
+}
+
 /* Kopfzeile im Klickbereich: Name, Indikator-Icons, Statusbadge - exakt wie
  * .pantry-row__headline (gleiche Klasse waere hier falsch benannt, aber
  * identische Werte). */

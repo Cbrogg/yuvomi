@@ -26,6 +26,7 @@ import { formatDate, getLocale } from '/i18n.js';
 import { renderDocumentAttachField, bindDocumentAttachField } from '/components/document-attach.js';
 import { warrantyStatus, hasUpcomingDeadline, dateStatus, countUpcomingDeadlines } from '/utils/inventory-warranty.js';
 import { openDetailView } from '/components/detail-view.js';
+import { wireScrollFade } from '/utils/ux.js';
 
 let _container = null;
 let _search = null;
@@ -36,6 +37,7 @@ const state = {
   locations: [],
   categories: [],
   query: '',
+  filterAttention: false,
 };
 
 async function loadLocations() {
@@ -144,6 +146,33 @@ function matchesQuery(item) {
   const q = state.query.toLowerCase();
   return [item.name, item.brand, item.model, item.serial_number]
     .some((v) => v && String(v).toLowerCase().includes(q));
+}
+
+function matchesAttentionFilter(item) {
+  return !state.filterAttention || hasUpcomingDeadline(item);
+}
+
+/**
+ * Fuellt die Filter-Zeile neu - eigene Funktion statt Teil von renderList(),
+ * weil die Zeile ausserhalb von #inventory-list liegt (gleiches Muster wie
+ * public/pages/documents.js#renderCategoryChips fuer #documents-category).
+ * Der Zaehler kommt immer aus der UNGEFILTERTEN Menge, wie die Kennzahlkarte.
+ */
+function updateFilterChips() {
+  const host = _container?.querySelector('#inventory-filters');
+  if (!host) return;
+  host.hidden = false;
+  const needsAttention = countUpcomingDeadlines(state.items);
+  host.replaceChildren();
+  host.insertAdjacentHTML('beforeend', `
+    <button type="button" class="filter-chip filter-chip--sm${!state.filterAttention ? ' filter-chip--active' : ''}"
+            data-filter="all" aria-pressed="${!state.filterAttention}">
+      ${esc(t('common.all'))}
+    </button>
+    <button type="button" class="filter-chip filter-chip--sm${state.filterAttention ? ' filter-chip--active' : ''}"
+            data-filter="attention" aria-pressed="${state.filterAttention}">
+      ${esc(t('inventory.metricAttentionLabel'))}<span class="filter-chip__count">${needsAttention}</span>
+    </button>`);
 }
 
 /**
@@ -298,6 +327,8 @@ function renderList() {
   if (!list) return;
 
   if (!state.items.length) {
+    const filtersHost = _container?.querySelector('#inventory-filters');
+    if (filtersHost) filtersHost.hidden = true;
     list.replaceChildren(emptyStateEl({
       title: t('inventory.emptyTitle'),
       description: t('inventory.emptyDescription'),
@@ -306,10 +337,12 @@ function renderList() {
     return;
   }
 
+  updateFilterChips();
+
   list.replaceChildren();
   list.insertAdjacentHTML('beforeend', renderMetrics());
 
-  const filtered = state.items.filter(matchesQuery);
+  const filtered = state.items.filter((item) => matchesQuery(item) && matchesAttentionFilter(item));
   if (!filtered.length) {
     list.appendChild(emptyStateEl({
       variant: 'no-results',
@@ -1168,6 +1201,13 @@ export async function render(container) {
       })}
     </div>`);
 
+  const filters = document.createElement('div');
+  filters.className = 'inventory-filters';
+  filters.id = 'inventory-filters';
+  filters.setAttribute('role', 'group');
+  filters.setAttribute('aria-label', t('inventory.filterGroupLabel'));
+  filters.hidden = true;
+
   const list = document.createElement('div');
   list.className = 'inventory-list';
   list.id = 'inventory-list';
@@ -1179,7 +1219,7 @@ export async function render(container) {
   fab.setAttribute('aria-label', t('inventory.addItem'));
   fab.insertAdjacentHTML('beforeend', '<i data-lucide="plus" aria-hidden="true"></i>');
 
-  page.append(title, toolbar, list, fab);
+  page.append(title, toolbar, filters, list, fab);
   container.replaceChildren(page);
 
   if (window.lucide) window.lucide.createIcons({ el: container });
@@ -1191,6 +1231,17 @@ export async function render(container) {
     id: 'inventory-search',
     onQuery: (value) => { state.query = value.trim(); renderList(); },
   });
+
+  filters.addEventListener('click', (e) => {
+    const chip = e.target.closest('[data-filter]');
+    if (!chip) return;
+    const next = chip.dataset.filter === 'attention';
+    if (next === state.filterAttention) return;
+    state.filterAttention = next;
+    renderList();
+  });
+  wireScrollFade(filters);
+
   fab.addEventListener('click', () => openItemModal('create'));
 
   try {
