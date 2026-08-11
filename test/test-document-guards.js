@@ -2917,3 +2917,188 @@ describe('Sonde 15 - in der kompakten Hoehe traegt der Kopf hoechstens eine Bedi
       + `Chrome-Regel).\n  ${offenders.join('\n  ')}`);
   });
 });
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Sonde 16: was im Leerlauf weiterlaeuft, darf nicht pro Frame neu rastern
+ *
+ * DIE REGEL: kein Element, dessen Animation endlos laeuft, traegt gleichzeitig
+ * einen `filter`. Ein Filter wird fuer seinen Inhalt gerastert; bewegt sich
+ * dieser Inhalt, faellt die Rasterung in JEDEM Frame an - und zwar solange die
+ * Seite offen ist, auch wenn niemand sie bedient.
+ *
+ * DER GEMESSENE ANLASS (Issue #716): `.lg-blob` trug `filter: blur(90px)` UND
+ * `animation: lg-drift ... infinite`, ueber vier Flaechen von 30-46vw. Im
+ * Leerlauf fielen dadurch 60 auf ~20 fps, bei einem Style-Recalc je Frame; ein
+ * Melder sah 100 % GPU auf integrierter Grafik. Die Reparatur trennt beides auf
+ * zwei Knoten - die Huelle bewegt sich, das Kind `.lg-blob__ink` traegt den
+ * Blur und steht still -, danach standen 60 fps.
+ *
+ * WARUM NICHT IM STYLESHEET. Die Zuordnung ist dort nicht sichtbar: Filter und
+ * Animation koennen in zwei getrennten Regeln stehen (`.lg-blob` und
+ * `.lg-blob--2`), oder ueber Vererbung von Kurzschreibweisen zusammenkommen.
+ * Ein Scanner ueber Regeltexte haette die Fassung von Issue #443 fuer repariert
+ * erklaert - deren Kommentar behauptete zwei Jahre lang genau das, was hier
+ * gemessen NICHT stimmte. Erst der berechnete Stil am fertigen Dokument
+ * beantwortet die Frage, welche beiden Werte wirklich auf EINEM Kasten liegen.
+ *
+ * SPINNER UND SKELETTE FALLEN NICHT DARUNTER, weil sie keinen Filter tragen -
+ * nicht, weil sie ausgenommen waeren. Es gibt hier bewusst keine Ausnahmeliste:
+ * die Regel gilt fuer jedes Element, und ein Element, das sie verletzt, ist
+ * kein Sonderfall, sondern der naechste Befund.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+describe('Sonde 16 - kein dauerlaufendes Element rastert pro Frame einen Filter', () => {
+  test('desktop 1280x900', async () => {
+    const page = await openPage(harness, { device: 'desktop', theme: 'light', locale: 'de' });
+    const offenders = [];
+    let seen = 0;
+
+    for (const name of sweep('Sonde 16')) {
+      await gotoRoute(page, ALL_ROUTES[name]);
+      const found = await page.evaluate(() => {
+        const out = { animated: 0, offenders: [] };
+        for (const el of document.querySelectorAll('*')) {
+          const cs = getComputedStyle(el);
+          // `infinite` liest sich berechnet als 'infinite'; mehrere Animationen
+          // stehen kommagetrennt, eine endlose unter ihnen genuegt.
+          const endless = cs.animationIterationCount.split(',')
+            .some((v) => v.trim() === 'infinite');
+          // Eine Animation mit `animation-play-state: paused` oder Dauer 0
+          // laeuft nicht - sie kostet auch nichts.
+          const running = cs.animationPlayState.split(',').some((v) => v.trim() === 'running')
+            && cs.animationDuration.split(',').some((v) => parseFloat(v) > 0);
+          if (!endless || !running) continue;
+          out.animated += 1;
+          const filter = cs.filter;
+          if (filter && filter !== 'none') {
+            out.offenders.push(`${el.tagName.toLowerCase()}.${el.className || '(ohne Klasse)'} -> ${filter}`);
+          }
+        }
+        return out;
+      });
+      seen += found.animated;
+      for (const o of found.offenders) offenders.push(`${name}: ${o}`);
+    }
+    await page.close();
+
+    // Dieselbe Zusicherung wie bei den Sonden 3, 4 und 15, und hier ist sie
+    // besonders leicht zu verlieren: waeren die Blobs eines Tages nicht mehr
+    // animiert, faende die Sonde nichts mehr zu pruefen und bliebe still gruen.
+    // Der lebende Backdrop laeuft auf JEDER Route, also sind vier Blobs mal der
+    // Zahl der abgefahrenen Zustaende die Untergrenze.
+    assert.ok(seen >= 4 * sweep('Sonde 16').length,
+      `Nur ${seen} dauerlaufende Animationen ueber ${sweep('Sonde 16').length} Zustaende `
+      + '- die Sonde hat nichts gemessen, statt nichts zu finden. Laeuft der lebende '
+      + 'Backdrop (.lg-blob) noch?');
+
+    assert.deepEqual(offenders.sort(), [],
+      'Ein endlos animiertes Element traegt einen `filter` und rastert ihn damit pro '
+      + 'Frame neu - im Leerlauf, solange die Seite offen ist (Issue #716). Bewegung '
+      + 'und Filter gehoeren auf zwei Knoten: die aeussere Huelle bewegt sich, das '
+      + `Kind traegt den Filter und steht still (siehe .lg-blob in glass.css).\n  ${offenders.join('\n  ')}`);
+  });
+});
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Sonde 17: eine Seite, die nur geladen wurde, meldet keinen Fehler
+ *
+ * DIE REGEL: Ansehen ist keine Handlung. Wer eine Route oeffnet und nichts tut,
+ * darf keinen Fehler-Toast bekommen - ein roter Balken ohne Anlass ist der
+ * teuerste Toast, den es gibt: er entwertet alle anderen.
+ *
+ * DER GEMESSENE ANLASS (2026-08-10): das Dashboard zeigte beim Laden „Ein
+ * unerwarteter Fehler ist aufgetreten", zweimal. Dahinter stand keine kaputte
+ * Anfrage, sondern „ResizeObserver loop completed with undelivered
+ * notifications" - eine Zustellnotiz der Spezifikation, die der globale
+ * `error`-Handler wie einen Anwendungsfehler behandelte. Instrumentiert man
+ * die Observer der Shell, feuert keiner mehr als einmal je Frame; es gab also
+ * nichts zu reparieren ausser der Meldung selbst (router.js,
+ * RESIZE_OBSERVER_NOTICE).
+ *
+ * WARUM AM DOKUMENT UND NICHT AM QUELLTEXT. Ein Test, der das Filtermuster in
+ * router.js sucht, ist gruen, sobald die Zeile dasteht - auch wenn ein
+ * Handler davor schon getoastet hat oder der Toast aus einer ganz anderen
+ * Quelle kommt. Gefragt ist nicht, ob der Filter im Code steht, sondern ob am
+ * Ende ein roter Balken auf dem Bildschirm liegt.
+ *
+ * ZWEI FASSUNGEN DAVOR WAREN BLIND, und beide auf dieselbe Art: sie warteten
+ * darauf, dass der Befund von SELBST vorbeikommt. Die erste sah 1,2 s nach dem
+ * Laden nach, welche Toasts noch dastehen - ein Toast raeumt sich nach 3 s ab,
+ * `settle()` wartet den Aufbau vorher ab, der Befund fiel in die Luecke. Die
+ * zweite schrieb ab Dokumentstart jeden Fehler-Toast mit und blieb trotzdem
+ * gruen: der Harness setzt `yuvomi-onboarded`, und die Meldung haengt gerade an
+ * dem Willkommensdialog, den er damit wegnimmt. Beide Male fiel das erst in der
+ * Gegenprobe auf - der ausgebaute Filter liess sie gruen.
+ *
+ * DESHALB WIRD DIE REGEL JETZT AUSGELOEST STATT ABGEWARTET. Die Sonde feuert
+ * beide Ereignisse selbst und sieht nach, was der Handler daraus macht. Das ist
+ * unabhaengig davon, welcher Zustand die Notiz gerade ausloest - und es prueft
+ * die GEGENRICHTUNG gleich mit: ein echter Fehler MUSS weiterhin toasten. Ohne
+ * die zweite Haelfte waere ein Filter, der alles verschluckt, ebenso gruen -
+ * und das waere der schlimmere Fehler von beiden.
+ *
+ * EINE ROUTE GENUEGT HIER, und das ist keine Auslassung: der Handler haengt an
+ * `window` und wird in router.js genau einmal registriert. Er ist auf jeder
+ * Route derselbe Code - ein Sweep wuerde sechzehnmal dasselbe messen. Deshalb
+ * steht die Sonde auch nicht in LEAVES_SKIPPED: sie faehrt keinen Sweep.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+describe('Sonde 17 - die Zustellnotiz des ResizeObservers ist kein Anwendungsfehler', () => {
+  test('desktop 1280x900', async () => {
+    const page = await openPage(harness, { device: 'desktop', theme: 'light', locale: 'de' });
+    await gotoRoute(page, ALL_ROUTES[ROUTE_NAMES[0]]);
+
+    const seen = await page.evaluate(async () => {
+      const count = () => document.querySelectorAll('.toast-container .toast--danger').length;
+      const settleFrame = () => new Promise((r) => requestAnimationFrame(() => r()));
+      const fire = (message, error) => window.dispatchEvent(
+        new ErrorEvent('error', { message, error, bubbles: false, cancelable: true }));
+      // Frei raeumen: showToast deckelt bei drei gleichzeitigen Toasts und
+      // wirft dann den aeltesten weg - unter dem Deckel zaehlt jedes Delta.
+      const clear = () => document.querySelectorAll('.toast-container .toast')
+        .forEach((el) => el.remove());
+
+      clear();
+      const start = count();
+      // Die Zustellnotiz - Chrome schreibt sie ohne `error`-Objekt.
+      fire('ResizeObserver loop completed with undelivered notifications.', null);
+      await settleFrame();
+      const afterNotice = count();
+      // Die aeltere Fassung derselben Notiz.
+      fire('ResizeObserver loop limit exceeded', null);
+      await settleFrame();
+      const afterOldNotice = count();
+
+      // Gegenrichtung, zweimal: MIT und OHNE `error`-Objekt. Ein Fehler aus
+      // fremdem Ursprung kommt ohne Objekt an ("Script error."), und genau ihn
+      // wuerde ein Filter verschlucken, der statt der Meldung nur „kein
+      // error-Objekt" prueft.
+      clear();
+      fire('Kaputt', new Error('Kaputt'));
+      await settleFrame();
+      const afterRealWithObject = count();
+      clear();
+      fire('Kaputt ohne Objekt', null);
+      await settleFrame();
+      const afterRealWithoutObject = count();
+      return { start, afterNotice, afterOldNotice, afterRealWithObject, afterRealWithoutObject };
+    });
+    await page.close();
+
+    assert.equal(seen.afterNotice, seen.start,
+      'Die ResizeObserver-Zustellnotiz hat einen Fehler-Toast erzeugt. Sie ist kein '
+      + 'Fehler, sondern die spezifikationsgemaesse Meldung, dass eine weitere '
+      + 'Observer-Runde einen Frame spaeter zugestellt wird (router.js, '
+      + 'RESIZE_OBSERVER_NOTICE).');
+    assert.equal(seen.afterOldNotice, seen.start,
+      'Die aeltere Schreibweise „ResizeObserver loop limit exceeded" kommt noch durch.');
+    assert.equal(seen.afterRealWithObject, 1,
+      'Ein ECHTER unbehandelter Fehler erzeugt keinen Toast mehr - der Filter ist zu '
+      + 'breit geworden und verschluckt jetzt, was er melden soll. Das ist der '
+      + 'schlimmere der beiden Fehler.');
+    assert.equal(seen.afterRealWithoutObject, 1,
+      'Ein Fehler OHNE `error`-Objekt wird verschluckt. So kommen Fehler aus fremdem '
+      + 'Ursprung an ("Script error."); wer auf das fehlende Objekt statt auf die '
+      + 'Meldung filtert, macht sie unsichtbar.');
+  });
+});

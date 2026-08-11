@@ -154,7 +154,7 @@ git --version              # git version 2.x.x
 
 ## Step-by-Step Installation
 
-There are six ways to get Yuvomi running. **Option A** (web installer) is recommended for most users — it walks you through every step in your browser. **Option B** (pre-built image) is a quick manual alternative. **Option C** (build from source) is for contributors or custom builds. **Options D–F** install directly from a NAS/home-server app store with no terminal required: **Option D** (TrueNAS SCALE), **Option E** (Umbrel), and **Option F** (Unraid).
+There are seven ways to get Yuvomi running. **Option A** (web installer) is recommended for most users — it walks you through every step in your browser. **Option B** (pre-built image) is a quick manual alternative. **Option C** (build from source) is for contributors or custom builds. **Options D–F** install directly from a NAS/home-server app store with no terminal required: **Option D** (TrueNAS SCALE), **Option E** (Umbrel), and **Option F** (Unraid). **Option G** covers Portainer, whether you paste the stack or let it follow this repository via Git.
 
 ---
 
@@ -234,9 +234,9 @@ docker compose up -d
 Docker pulls `ghcr.io/ulsklyc/yuvomi:latest` automatically. No build step, no Node.js installation needed.
 
 > **Pinning a version.** Every release is also published under immutable tags:
-> `2.2.0` (exact version), `2.2` (latest patch of that minor), plus a moving `main`
+> `2.2.1` (exact version), `2.2` (latest patch of that minor), plus a moving `main`
 > tag for the current development state. To pin production to a known-good release,
-> set `image: ghcr.io/ulsklyc/yuvomi:2.2.0` in your compose file and bump it
+> set `image: ghcr.io/ulsklyc/yuvomi:2.2.1` in your compose file and bump it
 > deliberately; `latest` always points at the newest release.
 
 Continue with [Step 4 — Verify](#4-verify-the-container-is-running).
@@ -282,7 +282,7 @@ docker compose logs -f
 You should see output like:
 
 ```
-yuvomi  | [Yuvomi] Server running on port 3000 | Version 2.2.0
+yuvomi  | [Yuvomi] Server running on port 3000 | Version 2.2.1
 yuvomi  | [Yuvomi] Environment: production
 yuvomi  | [Sync] Auto-sync active every 15 minutes.
 ```
@@ -382,6 +382,33 @@ Click **Install**. In the template, set:
 #### 3. Apply and Open
 
 Click **Apply**. Once the container is running, click the Yuvomi icon → **WebUI**. The first visit guides you through creating your admin account in the browser.
+
+---
+
+### Option G — Portainer (Stack or Git/GitOps)
+
+Portainer never places a `.env` file next to the compose file. Whatever you type under **Environment variables** is handed to Compose for `${...}` substitution instead, so the manifest has to list every variable it wants to reach the container. That is exactly what [`docker-compose.portainer.yml`](docker-compose.portainer.yml) does — use it rather than the repository's `docker-compose.yml`.
+
+#### Web editor stack
+
+**Stacks → Add stack → Web editor**, paste the contents of [`docker-compose.portainer.yml`](docker-compose.portainer.yml), then add at least these two under **Environment variables**:
+
+- `SESSION_SECRET` — a long random string (`openssl rand -hex 32`)
+- `DB_ENCRYPTION_KEY` — same generator; back it up, it cannot be recovered or changed on an existing database
+
+Every other variable is optional and falls back to the default shown in the file. `BASE_URL` is strongly recommended — without it, password reset and invitation mails are never sent.
+
+#### Git / GitOps stack
+
+**Stacks → Add stack → Repository**, repository `https://github.com/ulsklyc/yuvomi`, branch `main`, and set the **Compose path** to:
+
+```
+docs/docker-compose.portainer.yml
+```
+
+Add the same environment variables as above. Auto-update then follows `main` on its own.
+
+> **Do not point a Git stack at the repository's `docker-compose.yml`.** That file is written for a local clone with a generated `.env` beside it, so it passes most of its configuration through `env_file` — and Portainer clones the repository without one. The missing file no longer aborts the pull (issue #698), but the container then starts without `SESSION_SECRET` and exits.
 
 ---
 

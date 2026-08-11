@@ -17,8 +17,15 @@ services:
       # would send uploads into the container layer as soon as anyone changes
       # that path - and they would be gone on the next pull && up -d.
       - ${DOCUMENT_STORAGE_LOCAL_DIR:-./documents}:${DOCUMENT_STORAGE_LOCAL_PATH:-/documents}
+    # `required: false` (Compose-Spec, ab Compose v2.24): ohne das bricht der
+    # Deploy hart ab, sobald keine .env neben dem Manifest liegt. Genau das ist
+    # der Normalfall bei Git-/GitOps-Stacks (Portainer, Komodo, Dockge): dort
+    # klont die Engine nur das Repo - und die .env ist bewusst nicht committed -
+    # und die Variablen kommen stattdessen aus der Oberfläche der Engine.
+    # Issue #698.
     env_file:
-      - .env
+      - path: .env
+        required: false
     environment:
       - NODE_ENV=production
       - DB_PATH=${DB_PATH:-/data/yuvomi.db}

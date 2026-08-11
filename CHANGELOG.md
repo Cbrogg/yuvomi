@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.1] - 2026-08-11
+
+### Added
+
+- **Portainer install guide**, for both a pasted stack and a Git/GitOps stack. Portainer never places a `.env` next to the compose file, so a stack manifest has to list every variable explicitly - `docs/docker-compose.portainer.yml` does, and a Git stack should point its compose path at it.
+
+### Fixed
+
+- **Yuvomi kept a browser's GPU busy while nothing was happening.** The tinted shapes drifting behind the interface carried their blur on the same element that moved, so the browser re-rendered that blur on every single frame - for as long as the page stayed open. Measured on an idle dashboard, the app now holds 60 frames per second where it managed about 20, and a laptop no longer heats up with Yuvomi merely open in a tab.
+- **A red "unexpected error" appeared when the app started.** Behind it was a browser notice about layout measurements being delivered one frame later - routine, not a fault, and nothing was ever broken by it.
+- Deploying from a Git-managed stack (Portainer, Komodo, Dockge) no longer fails with `env file .env not found`. The repository's `docker-compose.yml` is written for a local clone with a generated `.env` beside it; a missing one is now tolerated instead of aborting the deployment.
+
 ## [2.2.0] - 2026-08-10
 
 ### Changed

@@ -1667,9 +1667,16 @@ function renderAppShell(container) {
   const lgBackdrop = document.createElement('div');
   lgBackdrop.className = 'lg-backdrop';
   lgBackdrop.setAttribute('aria-hidden', 'true');
+  // Zwei Knoten je Blob: die Hülle driftet, die Farbwolke darin steht still und
+  // trägt den Blur. Solange beides auf EINEM Element sass, rasterte der Browser
+  // den blur(90px) pro Frame neu - im Leerlauf 60 → 20 fps (Issue #716). Die
+  // Begründung samt Messung steht bei .lg-blob in glass.css.
   for (let i = 1; i <= 4; i++) {
     const blob = document.createElement('div');
     blob.className = `lg-blob lg-blob--${i}`;
+    const ink = document.createElement('div');
+    ink.className = 'lg-blob__ink';
+    blob.appendChild(ink);
     lgBackdrop.appendChild(blob);
   }
 
@@ -3462,9 +3469,29 @@ function friendlyError(err) {
 // Globale Fehler-Handler (Error Boundary)
 // --------------------------------------------------------
 
+/* „ResizeObserver loop completed with undelivered notifications" IST KEIN
+ * FEHLER, sondern eine Zustellnotiz. Die Spezifikation verlangt sie, sobald ein
+ * Observer-Callback das Layout so aendert, dass eine weitere Runde faellig
+ * wird: der Browser verschiebt diese Runde auf den naechsten Frame und meldet
+ * die Verschiebung ueber `window.onerror`. Danach ist alles zugestellt.
+ *
+ * GEMESSEN, NICHT VERMUTET (2026-08-10): auf dem Dashboard feuerte die Meldung
+ * zweimal beim Laden - und jeder Nutzer sah dafuer einen roten „Ein
+ * unerwarteter Fehler ist aufgetreten". Instrumentiert man die beiden
+ * Observer der Shell (wireScrollFade, observeNavCapsule), laufen sie 1x bzw.
+ * 2x und nie mehr als einmal je Frame. Es gibt also keine Schleife, die man
+ * zumachen koennte; die Meldung beschreibt den Normalfall.
+ *
+ * DER FILTER IST ABSICHTLICH ENG. Er nennt genau diese eine Meldung (Chrome
+ * schreibt sie in zwei Fassungen, „...loop limit exceeded" ist die aeltere).
+ * Ein `catch`-all ueber alle Meldungen ohne `e.error` waere die bequeme
+ * Variante und wuerde echte Fehler aus fremden Ursprüngen mitverschlucken. */
+const RESIZE_OBSERVER_NOTICE = /^ResizeObserver loop/;
+
 window.addEventListener('error', (e) => {
   // Ressource-Ladefehler (z.B. fehlgeschlagenes Bild): ignorieren
   if (e.target && e.target !== window) return;
+  if (RESIZE_OBSERVER_NOTICE.test(e.message || '')) return;
   console.error('[Yuvomi] Unbehandelter Fehler:', e.error ?? e.message);
   showToast(t('common.unexpectedError'), 'danger');
 });

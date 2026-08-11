@@ -939,18 +939,42 @@ textarea.form-input {
   position: relative;
 }
 
+/* ZWEI ELEMENTE, WEIL BEWEGUNG UND UNSCHÄRFE NICHT AUF DASSELBE DÜRFEN.
+ *
+ * Die Hülle bewegt sich und trägt sonst nichts; die Farbwolke steht still und
+ * trägt den blur(90px). Ein Filter wird für seinen Inhalt gerastert - solange
+ * er auf dem animierten Element selbst sass, fiel diese Rasterung PRO FRAME an,
+ * über 4 Flächen von 30-46vw Kantenlänge. Genau das hat Issue #716 gemessen:
+ * im Leerlauf 60 → 20 fps und ein Style-Recalc je Frame, die Fassung ohne
+ * `filter` auf der Hülle hält 60 fps. Getrennt rastert der Blur EINMAL, und die
+ * Animation verschiebt danach nur noch die fertige Textur.
+ *
+ * Das war schon der Anspruch von Issue #443 („die geblurrte Textur wird EINMAL
+ * gerastert") - `will-change: transform` und translate-only Keyframes allein
+ * haben ihn aber nicht eingelöst, solange der Filter mitanimiert wurde. Der
+ * Kommentar behauptete zwei Jahre lang etwas, das die Messung nicht hergab.
+ *
+ * Deshalb: kein `filter` auf .lg-blob, und kein `animation`/`transform` auf
+ * .lg-blob__ink. Guard: test-frontend-audit, „keine Dauer-Animation auf einem
+ * Element mit filter". */
 .lg-blob {
   position: absolute;
-  border-radius: 50%;
-  filter: blur(90px);
   opacity: var(--lg-blob-opacity);
   animation: lg-drift 26s ease-in-out infinite alternate;
-  transition: background 600ms var(--ease-out);
-  /* Auf eigenen Compositor-Layer heben: die geblurrte Textur wird EINMAL
-   * gerastert und pro Frame nur verschoben. Zusammen mit der translate-only-
-   * Keyframe (kein scale → keine Blur-Neuberechnung) fällt die GPU-Dauerlast
-   * von ~25–50 % (Issue #443) auf reines Compositing. */
+  /* Auf eigenen Compositor-Layer heben: pro Frame wird die Ebene nur noch
+   * verschoben. Zusammen mit der translate-only-Keyframe (kein scale) und dem
+   * ausgelagerten Blur oben bleibt davon reines Compositing übrig. */
   will-change: transform;
+}
+
+.lg-blob__ink {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  filter: blur(90px);
+  /* Blob 1 wechselt seine Farbe mit der Stimme - der Übergang gehört an die
+   * Farbe, also hierher zum Gradienten und nicht an die bewegte Hülle. */
+  transition: background 600ms var(--ease-out);
 }
 
 /* Blob-Positionen meiden die Chrome-Zonen (Sidebar links, schwebende Tab-Bar
@@ -959,25 +983,33 @@ textarea.form-input {
  * auf /tasks stand ein grüner Blob exakt hinter der Tab-Bar-Kapsel). */
 .lg-blob--1 {
   width: 46vw; height: 46vw; top: -8%; left: 30%;
+}
+.lg-blob--1 .lg-blob__ink {
   background: radial-gradient(circle, var(--color-accent) 0%, transparent 70%);
 }
 .lg-blob--2 {
   width: 38vw; height: 38vw; top: 26%; right: 2%;
-  background: radial-gradient(circle, var(--module-shopping) 0%, transparent 70%);
   animation-delay: -8s;
   opacity: calc(var(--lg-blob-opacity) * 0.7);
 }
+.lg-blob--2 .lg-blob__ink {
+  background: radial-gradient(circle, var(--module-shopping) 0%, transparent 70%);
+}
 .lg-blob--3 {
   width: 40vw; height: 40vw; bottom: 14%; left: 34%;
-  background: radial-gradient(circle, var(--module-tasks) 0%, transparent 70%);
   animation-delay: -14s;
   opacity: calc(var(--lg-blob-opacity) * 0.6);
 }
+.lg-blob--3 .lg-blob__ink {
+  background: radial-gradient(circle, var(--module-tasks) 0%, transparent 70%);
+}
 .lg-blob--4 {
   width: 30vw; height: 30vw; top: 40%; left: 28%;
-  background: radial-gradient(circle, var(--module-meals) 0%, transparent 70%);
   animation-delay: -19s;
   opacity: calc(var(--lg-blob-opacity) * 0.5);
+}
+.lg-blob--4 .lg-blob__ink {
+  background: radial-gradient(circle, var(--module-meals) 0%, transparent 70%);
 }
 
 /* translate-only: bewusst KEIN scale(). Ein Skalierungswechsel würde den

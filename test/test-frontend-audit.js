@@ -465,6 +465,59 @@ test('die geteilte Sub-Tab-Leiste verlangt eine erklärte Semantik und versprich
  * nicht an. Diese Frage misst Sonde 9 der Dokument-Guards am gerenderten
  * Dokument, ueber die Wiederholung der Klassensignatur.
  */
+
+/**
+ * Eine endlose Animation und ein `filter` gehoeren nicht auf DENSELBEN Kasten.
+ *
+ * Ein Filter wird fuer seinen Inhalt gerastert. Bewegt sich dieser Inhalt, faellt
+ * die Rasterung in jedem Frame an - und eine endlose Animation laeuft, solange
+ * die Seite offen ist, auch wenn niemand sie bedient. Gemessener Anlass:
+ * `.lg-blob` trug `filter: blur(90px)` neben `animation: lg-drift ... infinite`
+ * ueber vier Flaechen von 30-46vw; im Leerlauf fielen 60 auf ~20 fps, ein Melder
+ * sah 100 % GPU (Issue #716). Die Reparatur trennt beides auf zwei Knoten.
+ *
+ * DIESER GUARD SIEHT NUR DEN FALL, IN DEM BEIDES IN EINER REGEL STEHT - und das
+ * ist genau der Bestandsfall, aber nicht die ganze Regel: Filter und Animation
+ * koennen ueber zwei Regeln zusammenkommen (`.lg-blob` und `.lg-blob--2`), und
+ * welche Werte am Ende auf einem Kasten liegen, weiss nur das gerenderte
+ * Dokument. Die vollstaendige Fassung ist Sonde 16 der Dokument-Guards; sie ist
+ * genauer und laeuft nicht in dieser Kette mit. Was hier steht, ist die
+ * schnelle Rueckmeldung, nicht der Nachweis.
+ */
+test('kein endlos animiertes Element traegt in derselben Regel einen filter', () => {
+  const styleDir = new URL('../public/styles/', import.meta.url);
+  const offenders = [];
+  let seenEndless = 0;
+
+  for (const file of readdirSync(styleDir).filter((f) => f.endsWith('.css'))) {
+    for (const { selector, body, at } of eachRule(read(`../public/styles/${file}`))) {
+      if (!/\banimation(-iteration-count)?\s*:[^;]*\binfinite\b/.test(body)) continue;
+      seenEndless += 1;
+      // `backdrop-filter` filtert, was HINTER dem Kasten liegt, nicht seinen
+      // Inhalt - es haengt nicht an der Bewegung dieses Elements. Gemessen
+      // (Issue #716): Glasflaechen abzuschalten brachte 20 → 24 fps, der
+      // Blur auf dem bewegten Element allein 20 → 60.
+      const own = body.replace(/-webkit-backdrop-filter\s*:[^;]*;?/g, '')
+        .replace(/\bbackdrop-filter\s*:[^;]*;?/g, '');
+      const m = own.match(/(?:^|[;{\s])filter\s*:\s*([^;]+)/);
+      if (!m || m[1].trim() === 'none') continue;
+      offenders.push(`${file}${at.length ? ` [${at.join(' ')}]` : ''}: ${selector} -> filter: ${m[1].trim()}`);
+    }
+  }
+
+  // Ohne diese Zusicherung waere der Guard gruen, sobald der Scanner das
+  // Verzeichnis nicht mehr faende - eine leere Liste ist keine Zusicherung.
+  assert.ok(seenEndless >= 5,
+    `Nur ${seenEndless} endlose Animationen gefunden - der Scanner findet public/styles/ `
+    + 'nicht mehr, statt nichts zu beanstanden.');
+
+  assert.deepEqual(offenders.sort(), [],
+    'Bewegung und Filter liegen auf demselben Element: der Browser rastert den Filter '
+    + 'damit pro Frame neu, im Leerlauf und solange die Seite offen ist (Issue #716). '
+    + 'Beides gehoert auf zwei Knoten - die aeussere Huelle bewegt sich, das Kind traegt '
+    + `den Filter und steht still (Vorbild: .lg-blob / .lg-blob__ink in glass.css).\n${offenders.join('\n')}`);
+});
+
 /**
  * Jedes benutzte Token muss auch existieren.
  *
