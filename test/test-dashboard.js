@@ -234,6 +234,16 @@ test('Tagesprogramm: Überfälliges zuerst, Ganztägiges vor zeitlosen Aufgaben'
   nodeAssert.equal(result.rows[0].overdue, true, 'überfällige Zeile ist markiert');
 });
 
+test('Notiz-Widget: nur der Auszug landet im DOM, nie der Volltext (Paket 3)', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  // line-clamp kürzt rein visuell - Screenreader lasen die komplette Notiz vor.
+  const secret = 'GEHEIMES-WLAN-PASSWORT-AM-ENDE';
+  const long = `${'Wort '.repeat(60)}${secret}`;
+  const html = __test.renderPinnedNotes([{ title: 'WLAN', content: long, color: '#FFEB3B', pinned: 1 }]);
+  nodeAssert.ok(!html.includes(secret), 'der Volltext (inkl. Ende) steht nicht im DOM');
+  nodeAssert.match(html, /…/, 'der Auszug endet mit einer Ellipse');
+});
+
 test('Tagesprogramm: Aufgaben-Zeile trägt den Quick-Action-Anker (Paket 2)', async () => {
   const { __test } = await import('../public/pages/dashboard.js');
   const todayStr = toLocalDateKey(new Date());

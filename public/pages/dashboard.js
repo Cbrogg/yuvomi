@@ -62,10 +62,15 @@ function getAppName() {
 
 function getOnboardingSteps() {
   const appName = getAppName();
+  // Plattform-bewusste Copy (Critique P5/Paket 3): der allererste Eindruck darf
+  // keine UI beschreiben, die der Nutzer nicht sieht - Desktop mit Sidebar
+  // bekommt weder Bottom-Bar- noch Wischgesten-Text. Gleicher Breakpoint wie
+  // der Sidebar-Umbruch (layout.css, min-width: 1024px).
+  const desktop = window.matchMedia('(min-width: 1024px)').matches;
   return [
     { icon: 'home',         title: t('onboarding.step1Title', { name: appName }), body: t('onboarding.step1Body') },
-    { icon: 'navigation',   title: t('onboarding.step2Title'), body: t('onboarding.step2Body') },
-    { icon: 'plus-circle',  title: t('onboarding.step3Title'), body: t('onboarding.step3Body') },
+    { icon: 'navigation',   title: t('onboarding.step2Title'), body: t(desktop ? 'onboarding.step2BodyDesktop' : 'onboarding.step2Body') },
+    { icon: 'plus-circle',  title: t('onboarding.step3Title'), body: t(desktop ? 'onboarding.step3BodyDesktop' : 'onboarding.step3Body') },
   ];
 }
 
@@ -953,11 +958,22 @@ function renderPinnedNotes(notes) {
     </div>`;
   }
 
+  // Nur der sichtbare Auszug gehört ins DOM: line-clamp kürzt rein visuell,
+  // Screenreader lasen die KOMPLETTE Notiz vor - WLAN-Daten, Schulinfos
+  // (Critique P5). 200 Zeichen decken die zwei sichtbaren Zeilen reichlich;
+  // der Volltext wohnt auf /notes. Schnitt an der Wortgrenze, damit kein
+  // halbes Wort vor der Ellipse steht.
+  const excerpt = (text) => {
+    const s = String(text ?? '');
+    if (s.length <= 200) return s;
+    const cut = s.slice(0, 200);
+    return `${cut.slice(0, Math.max(cut.lastIndexOf(' '), 120))}…`;
+  };
   const items = notes.map((n) => `
     <div class="note-item" data-route="/notes" role="button" tabindex="0"
          style="--note-color:${esc(n.color)};">
       ${n.title ? `<div class="note-item__title">${esc(n.title)}</div>` : ''}
-      <div class="note-item__content">${renderMarkdownLight(n.content)}</div>
+      <div class="note-item__content">${renderMarkdownLight(excerpt(n.content))}</div>
     </div>
   `).join('');
 
@@ -1845,6 +1861,7 @@ function renderWeatherWidget(weather) {
 
   return `
     <div class="widget widget--weather weather-widget" id="weather-widget">
+      <h3 class="sr-only">${esc(t('dashboard.weather'))}</h3>
       <button class="weather-widget__refresh" id="weather-refresh-btn" aria-label="${t('dashboard.weatherRefresh')}" title="${t('dashboard.weatherRefreshTitle')}">
         <i data-lucide="refresh-cw" class="icon-md" aria-hidden="true"></i>
       </button>
@@ -2608,7 +2625,7 @@ export async function render(container, { user }) {
   }
 }
 
-export const __test = { buildTodayHighlights, buildTodayProgram, renderTodayCockpit, normalizeVisibleMealTypes, renderTodayMeals, calendarEventRoute, eventOccurrenceDateKey, eventStartDate };
+export const __test = { buildTodayHighlights, buildTodayProgram, renderTodayCockpit, renderPinnedNotes, normalizeVisibleMealTypes, renderTodayMeals, calendarEventRoute, eventOccurrenceDateKey, eventStartDate };
 
 function wireWeatherRefresh(container, onUpdated = null) {
   const refreshBtn = container.querySelector('#weather-refresh-btn');

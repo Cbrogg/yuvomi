@@ -1698,6 +1698,13 @@ button.today-cockpit-card:focus-visible {
   background: var(--color-surface-hover);
 }
 
+/* Der Träger clippt per overflow:hidden (Radius-Schnitt der Zeilenliste) -
+ * der Fokusring rückt deshalb nach innen (tokens.css: --focus-ring-offset-inset),
+ * statt an drei Kanten beschnitten zu werden (Critique P5, WCAG 2.4.7). */
+button.today-cockpit-card:focus-visible {
+  outline-offset: var(--focus-ring-offset-inset);
+}
+
 /* Markensiegel (Block 2): Form und Material kommen vom .module-seal-
  * Baustein (layout.css), hier steht nur die Weiterleitung des Tone-Akzents.
  * Die fruehere rounded-square-Kachel mit identischem Toenungsrezept ist im

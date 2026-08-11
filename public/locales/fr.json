@@ -2428,10 +2428,12 @@
         "step2Title": "Navigation & modules",
         "step2Body": "En bas, accédez directement au Tableau de bord et au Calendrier. Le bouton ··· ouvre d'autres modules comme Cuisine, Notes et Contacts.",
         "step3Title": "Démarrer rapidement",
-        "step3Body": "Avec le bouton +, créez de nouvelles entrées n'importe où. Faites glisser les éléments de liste à gauche ou à droite pour des actions rapides.",
+        "step3Body": "Le bouton + en bas de l'écran crée de nouvelles entrées partout. Balayez les éléments de liste vers la gauche ou la droite pour des actions rapides.",
         "next": "Suivant",
         "done": "Commencer",
-        "skip": "Passer"
+        "skip": "Passer",
+        "step2BodyDesktop": "La barre latérale à gauche mène à tous les modules - du calendrier et des tâches à la cuisine, aux documents et aux réglages.",
+        "step3BodyDesktop": "Le bouton + en bas de l'écran crée de nouvelles entrées partout."
     },
     "offline": {
         "banner": "Hors ligne - reconnexion…",

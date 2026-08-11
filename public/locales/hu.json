@@ -2428,10 +2428,12 @@
         "step2Title": "Navigáció és modulok",
         "step2Body": "Alul közvetlenül elérheti a Vezérlőpultot és a Naptárt. A ··· gomb további modulokat nyit meg, például Konyha, Jegyzetek és Kapcsolatok.",
         "step3Title": "Gyors kezdés",
-        "step3Body": "Használja a + FAB gombot új bejegyzések létrehozásához bárhol. Húzza el a listaelemeket balra vagy jobbra a gyors műveletekhez.",
+        "step3Body": "A jobb alsó + gombbal bárhol új bejegyzést hozhatsz létre. Húzd a listaelemeket balra vagy jobbra a gyorsműveletekhez.",
         "next": "Következő",
         "done": "Kezdés",
-        "skip": "Kihagyás"
+        "skip": "Kihagyás",
+        "step2BodyDesktop": "A bal oldali oldalsáv minden modulhoz elvezet - a naptártól és a feladatoktól a konyháig, a dokumentumokig és a beállításokig.",
+        "step3BodyDesktop": "A jobb alsó + gombbal bárhol új bejegyzést hozhatsz létre."
     },
     "offline": {
         "banner": "Offline - újracsatlakozás…",

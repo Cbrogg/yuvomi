@@ -184,16 +184,14 @@ cfgSet.run('weather_lon', '7.4653');
 cfgSet.run('weather_city', 'Dortmund');
 cfgSet.run('weather_units', 'metric');
 
-// Dashboard-Kacheln: kuratiert statt Vorgabe. Die Standardaufteilung ließ das
-// Budget-Widget als 1x2 stehen, obwohl sein Inhalt nur die halbe Höhe füllt
-// (209 px Loch), schob das Wetter als letztes Widget in eine eigene Zeile und
-// ließ links daneben eine leere Fläche. Gemessen, nicht geraten: die Web-Ansicht
-// hat vier Spalten, die beiden Zeilen unten gehen exakt auf (2+1+1 / 1+1+2).
-// Auf schmalen Geräten fällt das Raster einspaltig - dort zählt allein die
-// Reihenfolge, und das Wetter steht als erstes oben.
+// Dashboard-Kacheln: kuratiert statt Vorgabe, aber entlang der Autor-Defaults
+// des Seele-Pakets. Das Wetter wohnt seit dem Umbau als Zeile im Masthead -
+// die Karte ist Wandtablet-Opt-in und bleibt hier ausgeblendet, sonst zeigte
+// jede Demo und jeder Screenshot den Legacy-Pfad OHNE Masthead-Zeile (kein
+// Echo: sichtbare Karte schaltet die Zeile stumm). family ist die „Heute
+// dran"-Karte und stapelt Mitglieder-Zeilen -> 1x2 wie im Autor-Default.
 const dashboardWidgets = [
-  { id: 'weather',   visible: true,  size: '2x1' },
-  { id: 'family',    visible: true,  size: '1x1' },
+  { id: 'family',    visible: true,  size: '1x2' },
   { id: 'budget',    visible: true,  size: '1x1' },
   { id: 'birthdays', visible: true,  size: '1x1' },
   { id: 'rewards',   visible: true,  size: '1x1' },
@@ -201,6 +199,7 @@ const dashboardWidgets = [
   // Ausgeblendet, aber in der Liste: die Reihenfolge bleibt stabil, wenn ein
   // Haushalt sie im Anpassen-Modus wieder einblendet. tasks/calendar/shopping/
   // meals deckt das „Heute"-Cockpit oben bereits ab - doppelt gezeigt wäre Echo.
+  { id: 'weather',      visible: false, size: '2x1' },
   { id: 'tasks',        visible: false, size: '1x2' },
   { id: 'calendar',     visible: false, size: '1x2' },
   { id: 'shopping',     visible: false, size: '2x1' },

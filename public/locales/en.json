@@ -2428,10 +2428,12 @@
         "step2Title": "Navigation & Modules",
         "step2Body": "At the bottom you can directly access Dashboard and Calendar. The ··· button opens additional modules like Kitchen, Notes and Contacts.",
         "step3Title": "Get started quickly",
-        "step3Body": "Use the + FAB button to create new entries anywhere. Swipe list items left or right for quick actions.",
+        "step3Body": "The + button in the bottom corner creates new entries anywhere. Swipe list items left or right for quick actions.",
         "next": "Next",
         "done": "Get started",
-        "skip": "Skip"
+        "skip": "Skip",
+        "step2BodyDesktop": "The sidebar on the left takes you to every module - from calendar and tasks to kitchen, documents and settings.",
+        "step3BodyDesktop": "The + button in the bottom corner creates new entries anywhere."
     },
     "offline": {
         "banner": "Offline - reconnecting…",

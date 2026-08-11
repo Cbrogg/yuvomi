@@ -2428,10 +2428,12 @@
         "step2Title": "Navigatie & Modules",
         "step2Body": "Onderaan heb je directe toegang tot Dashboard en Kalender. De ··· knop opent extra modules zoals Keuken, Notities en Contacten.",
         "step3Title": "Snel aan de slag",
-        "step3Body": "Gebruik de + FAB-knop om overal nieuwe items aan te maken. Veeg lijstitems naar links of rechts voor snelle acties.",
+        "step3Body": "Met de +-knop rechtsonder maak je overal nieuwe items aan. Veeg lijstitems naar links of rechts voor snelle acties.",
         "next": "Volgende",
         "done": "Aan de slag",
-        "skip": "Overslaan"
+        "skip": "Overslaan",
+        "step2BodyDesktop": "De zijbalk links brengt je naar alle modules - van agenda en taken tot keuken, documenten en instellingen.",
+        "step3BodyDesktop": "Met de +-knop rechtsonder maak je overal nieuwe items aan."
     },
     "offline": {
         "banner": "Offline - opnieuw verbinden…",

@@ -2428,10 +2428,12 @@
         "step2Title": "Navigation & Module",
         "step2Body": "Unten erreichst du Dashboard und Kalender direkt. Mit dem ···-Button öffnest du weitere Module wie Küche, Notizen und Kontakte.",
         "step3Title": "Schnell loslegen",
-        "step3Body": "Mit dem + FAB-Button erstellst du überall neue Einträge. Wische Listeneinträge nach links oder rechts für Schnellaktionen.",
+        "step3Body": "Mit dem +-Knopf unten rechts erstellst du überall neue Einträge. Wische Listeneinträge nach links oder rechts für Schnellaktionen.",
         "next": "Weiter",
         "done": "Loslegen",
-        "skip": "Überspringen"
+        "skip": "Überspringen",
+        "step2BodyDesktop": "Links in der Seitenleiste erreichst du alle Module - von Kalender und Aufgaben bis Küche, Dokumente und Einstellungen.",
+        "step3BodyDesktop": "Mit dem +-Knopf unten rechts erstellst du überall neue Einträge."
     },
     "offline": {
         "banner": "Offline - Verbindung wird wiederhergestellt…",

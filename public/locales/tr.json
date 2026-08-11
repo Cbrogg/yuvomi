@@ -2428,10 +2428,12 @@
         "step2Title": "Gezinme ve Modüller",
         "step2Body": "Aşağıda Gösterge Paneli ve Takvim'e doğrudan erişebilirsiniz. ···-düğmesiyle Mutfak, Notlar ve Kişiler gibi ek modülleri açabilirsiniz.",
         "step3Title": "Hızlıca başlayın",
-        "step3Body": "+ düğmesiyle her yerde yeni girişler oluşturabilirsiniz. Hızlı işlemler için liste öğelerini sola veya sağa kaydırın.",
+        "step3Body": "Alt köşedeki + düğmesiyle her yerde yeni kayıt oluşturursun. Hızlı işlemler için liste öğelerini sola veya sağa kaydır.",
         "next": "İleri",
         "done": "Başla",
-        "skip": "Atla"
+        "skip": "Atla",
+        "step2BodyDesktop": "Soldaki kenar çubuğu seni tüm modüllere götürür - takvim ve görevlerden mutfağa, belgelere ve ayarlara.",
+        "step3BodyDesktop": "Alt köşedeki + düğmesiyle her yerde yeni kayıt oluşturursun."
     },
     "offline": {
         "banner": "Çevrimdışı - yeniden bağlanılıyor…",

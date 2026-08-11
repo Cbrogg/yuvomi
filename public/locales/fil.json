@@ -2428,10 +2428,12 @@
         "step2Title": "Nabigasyon at mga Modyul",
         "step2Body": "Sa ibaba, direkta mong maaabot ang Dashboard at Kalendaryo. Binubuksan ng ··· button ang mga karagdagang modyul tulad ng Kusina, Mga Tala at Mga Kontak.",
         "step3Title": "Magsimula agad",
-        "step3Body": "Gamitin ang + FAB button para gumawa ng bagong entry kahit saan. I-swipe pakaliwa o pakanan ang mga item sa listahan para sa mabilisang aksyon.",
+        "step3Body": "Ang + na button sa ibabang sulok ay gumagawa ng bagong entry kahit saan. I-swipe ang mga item sa listahan pakaliwa o pakanan para sa mabibilis na aksyon.",
         "next": "Susunod",
         "done": "Magsimula",
-        "skip": "Laktawan"
+        "skip": "Laktawan",
+        "step2BodyDesktop": "Ang sidebar sa kaliwa ang magdadala sa iyo sa bawat module - mula sa kalendaryo at mga gawain hanggang sa kusina, mga dokumento at mga setting.",
+        "step3BodyDesktop": "Ang + na button sa ibabang sulok ay gumagawa ng bagong entry kahit saan."
     },
     "offline": {
         "banner": "Offline - muling kumokonekta…",

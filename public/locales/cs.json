@@ -2301,10 +2301,12 @@
         "step2Title": "Navigace a moduly",
         "step2Body": "Dole se dostanete přímo na Přehled a Kalendář. Tlačítkem ··· otevřete další moduly jako Kuchyně, Poznámky a Kontakty.",
         "step3Title": "Rychlý start",
-        "step3Body": "Tlačítkem + FAB vytvoříte nové záznamy kdekoliv. Přejetím položek seznamu doleva nebo doprava provedete rychlé akce.",
+        "step3Body": "Tlačítkem + v dolním rohu vytvoříš nové záznamy kdekoli. Přejetím položky seznamu doleva nebo doprava vyvoláš rychlé akce.",
         "next": "Další",
         "done": "Začít",
-        "skip": "Přeskočit"
+        "skip": "Přeskočit",
+        "step2BodyDesktop": "Postranní panel vlevo tě zavede do všech modulů - od kalendáře a úkolů po kuchyni, dokumenty a nastavení.",
+        "step3BodyDesktop": "Tlačítkem + v dolním rohu vytvoříš nové záznamy kdekoli."
     },
     "userMultiSelect": {
         "nobody": "- Nikdo -",

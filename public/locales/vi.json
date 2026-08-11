@@ -2428,10 +2428,12 @@
         "step2Title": "Điều hướng & Các mô-đun",
         "step2Body": "Ở dưới cùng, bạn có thể truy cập trực tiếp Bảng điều khiển và Lịch. Nút ··· mở ra các mô-đun bổ sung như Nhà bếp, Ghi chú và Liên hệ.",
         "step3Title": "Bắt đầu nhanh chóng",
-        "step3Body": "Sử dụng nút FAB + để tạo các mục mới ở bất cứ đâu. Vuốt các mục trong danh sách sang trái hoặc phải để thao tác nhanh.",
+        "step3Body": "Nút + ở góc dưới tạo mục mới ở mọi nơi. Vuốt các mục trong danh sách sang trái hoặc phải để dùng thao tác nhanh.",
         "next": "Tiếp theo",
         "done": "Bắt đầu",
-        "skip": "Bỏ qua"
+        "skip": "Bỏ qua",
+        "step2BodyDesktop": "Thanh bên trái đưa bạn đến mọi phân hệ - từ lịch và công việc đến bếp, tài liệu và cài đặt.",
+        "step3BodyDesktop": "Nút + ở góc dưới tạo mục mới ở mọi nơi."
     },
     "offline": {
         "banner": "Ngoại tuyến - đang kết nối lại…",

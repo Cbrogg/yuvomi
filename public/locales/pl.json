@@ -2428,10 +2428,12 @@
         "step2Title": "Nawigacja i moduły",
         "step2Body": "Na dole masz bezpośredni dostęp do pulpitu i kalendarza. Przycisk ··· otwiera inne moduły, takie jak kuchnia, notatki i kontakty.",
         "step3Title": "Szybki start",
-        "step3Body": "Przyciskiem FAB + możesz wszędzie tworzyć nowe wpisy. Przesuń elementy listy w lewo lub prawo, aby uzyskać szybkie akcje.",
+        "step3Body": "Przycisk + w dolnym rogu tworzy nowe wpisy w każdym miejscu. Przesuń element listy w lewo lub w prawo, aby użyć szybkich akcji.",
         "next": "Dalej",
         "done": "Zaczynamy",
-        "skip": "Pomiń"
+        "skip": "Pomiń",
+        "step2BodyDesktop": "Pasek boczny po lewej prowadzi do wszystkich modułów - od kalendarza i zadań po kuchnię, dokumenty i ustawienia.",
+        "step3BodyDesktop": "Przycisk + w dolnym rogu tworzy nowe wpisy w każdym miejscu."
     },
     "offline": {
         "banner": "Offline - przywracanie połączenia…",

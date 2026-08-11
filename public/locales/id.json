@@ -2428,10 +2428,12 @@
         "step2Title": "Navigasi & Modul",
         "step2Body": "Di bawah, Anda dapat langsung mengakses Dasbor dan Kalender. Dengan tombol ···, Anda membuka modul lain seperti Dapur, Catatan, dan Kontak.",
         "step3Title": "Mulai dengan cepat",
-        "step3Body": "Dengan tombol + FAB, Anda membuat entri baru di mana saja. Geser item daftar ke kiri atau kanan untuk tindakan cepat.",
+        "step3Body": "Tombol + di sudut bawah membuat entri baru di mana saja. Geser item daftar ke kiri atau kanan untuk aksi cepat.",
         "next": "Lanjut",
         "done": "Mulai",
-        "skip": "Lewati"
+        "skip": "Lewati",
+        "step2BodyDesktop": "Bilah samping di kiri membawamu ke semua modul - dari kalender dan tugas hingga dapur, dokumen, dan pengaturan.",
+        "step3BodyDesktop": "Tombol + di sudut bawah membuat entri baru di mana saja."
     },
     "offline": {
         "banner": "Offline - memulihkan koneksi…",

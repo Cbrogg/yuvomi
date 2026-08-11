@@ -2428,10 +2428,12 @@
         "step2Title": "Navegação e módulos",
         "step2Body": "Na parte inferior acessa diretamente o Painel e o Calendário. Com o botão ··· abre módulos adicionais como Cozinha, Notas e Contactos.",
         "step3Title": "Comece rapidamente",
-        "step3Body": "Com o botão + cria novas entradas em qualquer lugar. Deslize itens da lista para a esquerda ou direita para ações rápidas.",
+        "step3Body": "Com o botão + no canto inferior crias novas entradas em qualquer lugar. Desliza os itens das listas para a esquerda ou direita para ações rápidas.",
         "next": "Próximo",
         "done": "Começar",
-        "skip": "Pular"
+        "skip": "Pular",
+        "step2BodyDesktop": "A barra lateral à esquerda leva-te a todos os módulos - do calendário e das tarefas à cozinha, aos documentos e às definições.",
+        "step3BodyDesktop": "Com o botão + no canto inferior crias novas entradas em qualquer lugar."
     },
     "offline": {
         "banner": "Offline - reconectando…",

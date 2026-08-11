@@ -2428,10 +2428,12 @@
         "step2Title": "Navegación y módulos",
         "step2Body": "En la parte inferior accedes directamente al Panel y el Calendario. Con el botón ··· abres más módulos como Cocina, Notas y Contactos.",
         "step3Title": "Empieza rápido",
-        "step3Body": "Con el botón + creas nuevas entradas en cualquier lugar. Desliza elementos de la lista a la izquierda o derecha para acciones rápidas.",
+        "step3Body": "Con el botón + de la esquina inferior creas nuevas entradas en cualquier parte. Desliza los elementos de las listas a izquierda o derecha para acciones rápidas.",
         "next": "Siguiente",
         "done": "Empezar",
-        "skip": "Omitir"
+        "skip": "Omitir",
+        "step2BodyDesktop": "La barra lateral izquierda te lleva a todos los módulos: del calendario y las tareas a la cocina, los documentos y los ajustes.",
+        "step3BodyDesktop": "Con el botón + de la esquina inferior creas nuevas entradas en cualquier parte."
     },
     "offline": {
         "banner": "Sin conexión - reconectando…",

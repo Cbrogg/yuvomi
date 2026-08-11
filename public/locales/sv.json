@@ -2428,10 +2428,12 @@
         "step2Title": "Navigering och moduler",
         "step2Body": "Nere på skärmen når du direkt Översikt och Kalender. Med ···-knappen öppnar du fler moduler som Kök, Anteckningar och Kontakter.",
         "step3Title": "Kom igång snabbt",
-        "step3Body": "Med +-knappen skapar du nya poster var som helst. Svep listobjekt åt vänster eller höger för snabbåtgärder.",
+        "step3Body": "Med +-knappen i nedre hörnet skapar du nya poster överallt. Svep listobjekt åt vänster eller höger för snabbåtgärder.",
         "next": "Nästa",
         "done": "Kom igång",
-        "skip": "Skippa"
+        "skip": "Skippa",
+        "step2BodyDesktop": "Sidofältet till vänster tar dig till alla moduler - från kalender och uppgifter till kök, dokument och inställningar.",
+        "step3BodyDesktop": "Med +-knappen i nedre hörnet skapar du nya poster överallt."
     },
     "offline": {
         "banner": "Offline - återansluter…",

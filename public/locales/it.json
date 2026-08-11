@@ -2428,10 +2428,12 @@
         "step2Title": "Navigazione e moduli",
         "step2Body": "In basso accedi direttamente alla Dashboard e al Calendario. Con il pulsante ··· apri altri moduli come Cucina, Note e Contatti.",
         "step3Title": "Inizia subito",
-        "step3Body": "Con il pulsante + crei nuove voci ovunque. Scorri gli elementi dell'elenco a sinistra o a destra per azioni rapide.",
+        "step3Body": "Con il pulsante + in basso crei nuove voci ovunque. Scorri gli elementi delle liste a sinistra o destra per le azioni rapide.",
         "next": "Avanti",
         "done": "Inizia",
-        "skip": "Salta"
+        "skip": "Salta",
+        "step2BodyDesktop": "La barra laterale a sinistra porta a tutti i moduli: dal calendario e le attività fino a cucina, documenti e impostazioni.",
+        "step3BodyDesktop": "Con il pulsante + in basso crei nuove voci ovunque."
     },
     "offline": {
         "banner": "Offline - riconnessione in corso…",
