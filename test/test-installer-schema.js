@@ -102,6 +102,16 @@ const INTENTIONALLY_NOT_IN_INSTALLER = {
   OPENWEATHER_UNITS: 'Legacy-Wetterprovider.',
   OPENWEATHER_LANG: 'Legacy-Wetterprovider.',
 
+  // In der App einzurichten, nicht bei der Installation: der Bildschirmschoner
+  // (#693) wird unter Einstellungen → Verwaltung → Immich verbunden, samt
+  // Verbindungstest und Vorschau. Ein API-Schlüssel im Wizard hieße, ihn vor
+  // der ersten Anmeldung zu erfragen - und Immich läuft bei den meisten noch
+  // gar nicht, wenn Yuvomi installiert wird. Die Env-Variablen bleiben als
+  // zweiter Weg für Setups, die alles deklarativ halten.
+  IMMICH_URL: 'In der App unter Verwaltung → Immich einzurichten; Env ist der deklarative Zweitweg.',
+  IMMICH_API_KEY: 'Geheimnis, das in der App gesetzt und dort auch getestet wird.',
+  IMMICH_SCREENSAVER_ALBUM_ID: 'Optionale Album-Einschränkung, in der App wählbar.',
+
   // Betriebs-Feinjustage, keine Installationsentscheidung.
   LOG_LEVEL: 'Betriebs-Feinjustage.',
   ENABLE_API_DOCS: 'Betriebs-Feinjustage.',
