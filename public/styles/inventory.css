@@ -21,6 +21,22 @@
   gap: var(--space-3);
   min-width: 0;
   padding-bottom: var(--space-8);
+  /* Dieselbe Content-Spalte wie der Kopf darueber (.page-toolbar traegt sie
+   * schon in sich): ohne dieses Padding begann die Liste an der rohen
+   * Traeger-Kante, 32px links vom sichtbaren Kopf-Inhalt (Critique
+   * 2026-08-11, gemessen per Playwright auf 1440px). */
+  padding-inline: var(--page-inline-pad);
+}
+
+/* .metric-grid (panel.css) traegt bewusst KEIN max-width - Budget (dessen
+ * Herkunft) hat direkt darunter keine schmal gekappte Liste und darf die
+ * volle Spalte fuellen. Hier steht darunter aber .list-group/.list-rows mit
+ * ihrem eigenen 720px-Lesemass (list-row.css) - ohne dieselbe Kappung lief
+ * die Kennzahlreihe 500px weiter nach rechts als die Gruppe darunter
+ * (gemessen 1440 vs. 940px bei 1440px Viewport). Scoped statt am geteilten
+ * Selektor, damit Budgets eigene volle Breite unangetastet bleibt. */
+.inventory-list .metric-grid {
+  max-width: var(--content-max-width-narrow);
 }
 
 /* Kopfzeile im Klickbereich: Name, Indikator-Icons, Statusbadge - exakt wie
