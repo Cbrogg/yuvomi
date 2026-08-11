@@ -584,9 +584,14 @@ Rueckkehr des Musters einlud.
 - **Touch-Targets:** `--target-base` 44px auf Zeigergeraeten, waechst via
   `@media (hover: none)` auf 48px. Das Kriterium ist die Zeigerfaehigkeit, nicht die Breite;
   die 44pt der iOS-HIG sind ein Minimum, kein Ziel.
-- **FAB-Geometrie:** 52px mobil, 48px ab Desktop; `--fab-safe-zone` verkuerzt den
-  Scrollport, sodass unter dem FAB nie Inhalt durchlaeuft. Der FAB lebt in der Shell-Layer
-  `#fab-layer`, nicht im Scrollport.
+- **FAB-Geometrie:** `--target-base` unter 1024px (44px am Zeiger, 48px am Finger), weil der
+  Knopf dort IN der Nav-Kapsel sitzt, und `--target-lg` (48px) ab 1024px, wo er wieder frei
+  ueber dem Inhalt schwebt. **Hier stand bis 2026-08-11 „52px mobil, 48px ab Desktop":** die
+  52px sind das Grundmass des frei schwebenden Knopfes in der Wurzel und werden von beiden
+  Groessenklassen ueberschrieben, greifen also in keinem Viewport mehr. `--fab-safe-zone`
+  verkuerzt den Scrollport, sodass unter dem FAB nie Inhalt durchlaeuft (Zusicherung aus
+  #634); unter 1024px ist sie 0, weil der Knopf dort ueber Chrome steht statt ueber dem
+  Scrollport. Der FAB lebt in der Shell-Layer `#fab-layer`, nicht im Scrollport.
 - **Icon-Stufen:** genau vier (12/16/20/24px, `--icon-sm..xl`); Lucide bleibt das Icon-Set,
   keine Glyphen-Fonts.
 - **Motion:** Dauern kanonisch 80-400ms (`--duration-2xs..2xl`), immer in ms. `--ease-out`
@@ -898,6 +903,27 @@ N Raender und damit N Objekte. Einzige Ausnahme: ein RASTER aus Objekten mit eig
 steht statt untereinander. Guard: `row lists sit in exactly one carrier` liest ALLE
 Stylesheets und haelt jede Haarlinien-Zeile frei von Karten-Merkmalen (Schatten, Radius,
 Surface-Fuellung).
+
+**Die Traegergrammatik steht zweimal, und sie ist nicht zweimal dieselbe (offener Befund,
+2026-08-11).** Geteilt liegt sie als `.row-carrier` (list-row.css) - genau die vier
+Deklarationen oben, samt der Ausnahme, dass ein Traeger, der nur einen Leerzustand enthaelt,
+seine Karte abgibt. Daneben steht `.list-rows`, der Traeger der gruppierten Listen (Einkauf,
+Vorrat, Rezepte, Aufgaben, Agenda); `tokens.css` nennt ihn „dieselbe Grammatik plus dem
+Lesemass der Kuechenlisten". Nachgemessen ist er das nicht: er traegt `--radius-md` (12px)
+statt `--radius-lg` und **gar keinen Schatten** - `border: 1px solid transparent` und sonst
+nichts. Der Radius ist an seiner Verwendungsstelle begruendet (shopping.css: die Gruppe
+klippt mit ihrem `overflow: hidden` die Wischflaeche), der fehlende Schatten nirgends. Die
+Fuellung ist dagegen keine Abweichung: `--color-surface-work` hat in beiden Themes denselben
+Wert wie `--color-surface` (#FFFFFF / #262422).
+
+**Warum das mehr ist als eine Ungenauigkeit:** diese Regel und der Karten-Abschnitt machen
+beide den SCHATTEN zum Trenner („randlos auf dem Grouped-Grund - die Trennung leistet der
+Schatten, nicht eine Kante"). Ohne ihn haengt die Kante des Traegers allein an der Luminanz:
+gemessen 1.11:1 (Weiss auf `--color-bg`) und 1.15:1 im Dark - dieselbe Groessenordnung, mit
+der die Traeger-Regel den Well vom Grouped-Grund verbannt hat. Der Guard kann es nicht sehen,
+weil er die ZEILE prueft (sie darf keine Karte sein), nie den Traeger. Was daraus folgt -
+`.list-rows` bekommt Schatten und 16px, oder die Regel nennt zwei Traegerformen samt
+Kriterium -, ist offen und gehoert an das gerenderte Material, nicht in diesen Absatz.
 
 **Die Wischsemantik-Regel.** Dieselbe Geste bedeutet in jeder Liste dasselbe. Der
 Zeilenanfang traegt die primaere positive Aktion, das Zeilenende das Destruktive oder
@@ -1304,8 +1330,8 @@ Titel ist ein Large Title in Label-Farbe wie jeder Seitentitel. Die Bildmarke se
 transluzente violette Kreise mit Sheen - ist als Marke gesetzt und unantastbar.
 
 ### FAB (Signature Component)
-Getoente Glas-Kapsel: Modul-Akzent mit 78 % Deckung
-(`color-mix(in srgb, var(--module-accent, var(--color-accent)) 78%, transparent)`) ueber
+Getoente Glas-Kapsel: der App-Akzent mit 78 % Deckung
+(`color-mix(in srgb, var(--color-accent) 78%, transparent)`) ueber
 `--blur-md` + `saturate(var(--lg-glass-saturate))`, Specular-Kanten (`--glass-inset-strong`
 plus Bottom-Inset) und `--glass-sheen` auf der oberen Kapselhaelfte als Materialbeweis -
 unter dem FAB laeuft per `--fab-safe-zone` nie Inhalt durch, der Sheen ist dort der einzige
@@ -1313,6 +1339,15 @@ Beweis, dass die Flaeche Glas ist. Die 78 % sind eine Untergrenze: darunter fael
 Plus-Glyph auf hellen Modul-Tints unter 3:1 (gemessen 78 % Tasks-Gruen auf Weiss = 3.4:1).
 Hover geht auf Vollton, der Fallback ist opak. Einblendung als Feder (420ms `--ease-out`
 plus Ring-Pulse), reduced-motion-sicher.
+
+**Er traegt die Stimme, nicht den Modulton - hier stand bis 2026-08-11
+`var(--module-accent, var(--color-accent))`.** Der Wert war ein Rest aus der Zeit vor der
+Eine-Stimme-Regel: `layout.css` (Basisregel und opaker Fallback) und `glass.css` (Glaspfad)
+lesen seit 2026-08-10 beide `--color-accent`, und die Frontmatter fuehrte ihn ebenfalls schon
+richtig - allein dieser Abschnitt beschrieb noch den alten Zustand. Der FAB ist nach dem
+Kriterium der Regel eindeutig: er tut in jedem Modul dasselbe. Die 3:1-Messung oben stammt
+noch aus der Modulton-Zeit und bleibt die Begruendung der Untergrenze; sie haelt fuer den
+einen Akzent erst recht, weil das Violett dunkler ist als das gemessene Tasks-Gruen.
 
 ### Monatsgrid-Event-Bars (Signature Component, Kalender)
 Flache Tint-Bars statt satter Farbfelder: Flaeche auf `--tint-surface` (Layer-Farbe auf
