@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.2] - 2026-08-11
+
+### Changed
+
+- Updated the production dependencies: `better-sqlite3-multiple-ciphers` to 13, plus `express-rate-limit`, `nodemailer` and `googleapis`. The database binding is now a Node-API build that ships its own prebuilt binaries, so the Docker image neither downloads nor compiles one. The development-only `puppeteer` moved along with them, and the `allowScripts` build-script pins were realigned to match. (#720, #721)
+- `package-lock.json` now carries a download URL and an integrity hash for every entry. 184 of 238 had neither, which left `npm ci` with nothing to verify what it had downloaded against. (#725)
+- Dependabot no longer proposes Node major versions for the Docker image. Those stay manual until a new line reaches LTS, so an install never moves from a supported Node to a short-lived one on its own. (#724)
+
 ## [2.2.1] - 2026-08-11
 
 ### Added
