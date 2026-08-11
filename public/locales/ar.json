@@ -402,6 +402,7 @@
         "itemQtyLabel": "الكمية",
         "categoryLabel": "الفئة",
         "addItemLabel": "إضافة عنصر",
+        "listActionsLabel": "إجراءات {{name}}",
         "renameListLabel": "إعادة تسمية القائمة",
         "deleteListLabel": "حذف القائمة",
         "swipeBack": "رجوع",

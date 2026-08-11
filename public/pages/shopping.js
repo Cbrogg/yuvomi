@@ -172,19 +172,48 @@ function renderTabs(container) {
   bar.replaceChildren();
   // Führender Listen-Marker: signalisiert „das hier sind Listen" und grenzt die
   // Leiste sichtbar von den Küchen-Modul-Tabs darüber ab (dekorativ, aria-hidden).
+  //
+  // Am hinteren Ende die Aktionen der GEWÄHLTEN Liste. Sie standen bis 2026-08-11
+  // in einem eigenen Kopf darunter, der den Namen der aktiven Liste ein zweites
+  // Mal zeigte - der aktive Chip trägt ihn schon (Keine-sichtbare-
+  // Titelwiederholung-Regel, DESIGN.md). Der Chip IST der Titel; was der Kopf
+  // sonst noch trug, ist genau dieses Menü.
+  //
+  // Der Trigger klebt am rechten Rand (sticky), während die Chips darunter
+  // durchscrollen - das Gegenstück zum Marker links. Sein Panel läuft über die
+  // native Popover-API im Top-Layer und wird deshalb vom `overflow-x: auto`
+  // dieser Leiste nicht geclippt; ein absolut positioniertes Eigenbau-Menü wäre
+  // hier abgeschnitten worden.
+  const actionsHtml = state.activeList ? `
+    <div class="list-tabs-bar__actions">
+      ${popoverMenuHtml({
+        id: 'list-actions-menu',
+        // Der Name muss die Liste nennen: der Trigger steht nicht mehr neben
+        // einer Überschrift, die den Bezug herstellt. „Mehr" allein ließe offen,
+        // worauf sich „Löschen" bezieht - und das löscht die Liste des Haushalts.
+        label: t('shopping.listActionsLabel', { name: state.activeList.name }),
+        items: [
+          { action: 'rename-list', label: t('shopping.renameListLabel'), icon: 'pencil', id: state.activeList.id },
+          { action: 'import-meals', label: t('shopping.importMeals'), icon: 'utensils' },
+          { action: 'manage-categories', label: t('shopping.manageCategories'), icon: 'tags' },
+          { action: 'delete-list', label: t('shopping.deleteListLabel'), icon: 'trash', id: state.activeList.id, danger: true },
+        ],
+      })}
+    </div>` : '';
+
   bar.insertAdjacentHTML('beforeend', `
     <i data-lucide="list" class="list-tabs-bar__marker" aria-hidden="true"></i>
     ${tabsHtml}
     <button class="list-tab__new" data-action="new-list" aria-label="${t('shopping.newListButton')}">
       <i data-lucide="plus" class="icon-md" aria-hidden="true"></i>
     </button>
+    ${actionsHtml}
   `);
   if (window.lucide) window.lucide.createIcons({ el: bar });
 }
 
 function renderListContent(container) {
   const content = container.querySelector('#list-content');
-  const head = container.querySelector('#list-head');
   if (!content) return;
   content.removeAttribute('aria-busy');
 
@@ -194,10 +223,6 @@ function renderListContent(container) {
   // „Neue Liste erstellen" ausgerechnet eine schreibende Handlung als einzigen
   // Ausweg angeboten (Critique P0, 2026-07-30).
   if (state.listsError) {
-    if (head) {
-      head.replaceChildren();
-      head.hidden = true;
-    }
     mountLoadError(content, {
       title: t('shopping.listsLoadError'),
       description: t('common.loadErrorDescription'),
@@ -209,12 +234,8 @@ function renderListContent(container) {
   }
 
   if (!state.activeList) {
-    // Ohne aktive Liste gibt es nichts zu benennen: der Kopf entfällt ganz,
-    // statt einen leeren Titel-Slot und drei toten Aktionen zu zeigen.
-    if (head) {
-      head.replaceChildren();
-      head.hidden = true;
-    }
+    // Ohne aktive Liste gibt es nichts zu benennen: renderTabs lässt die
+    // Aktionszone der Leiste dann weg, statt vier tote Menü-Einträge zu zeigen.
     // Geteilter Renderer (utils/empty-state.js), damit dieser Zustand dieselbe
     // Reihenfolge und Rolle trägt wie die drei Geschwister-Tabs.
     mountEmptyState(content, {
@@ -232,68 +253,6 @@ function renderListContent(container) {
       },
     });
     return;
-  }
-
-  if (head) {
-    head.hidden = false;
-    head.replaceChildren();
-    // Slot-Ordnung wie in den drei Geschwister-Tabs: Titel links, Aktionen
-    // rechts. Der Titel trägt .page-toolbar__title und damit dessen
-    // nowrap + ellipsis - vorher hatte .list-header__name `overflow: hidden`
-    // ohne `white-space`, wodurch „Weekly Shop" schon bei 1440px zweizeilig
-    // brach (Critique 2026-07-29).
-    head.insertAdjacentHTML('beforeend', `
-      <span class="page-toolbar__title list-header__name" data-action="rename-list"
-            data-id="${state.activeList.id}"
-            role="button" tabindex="0" aria-label="${t('shopping.renameListLabel')}">
-        ${esc(state.activeList.name)}
-        <i data-lucide="pencil" class="list-header__edit-icon" aria-hidden="true"></i>
-      </span>
-      <div class="page-toolbar__actions">
-        <!-- Der Kopf trägt NUR NOCH die drei dauerhaften Aktionen.
-             „In den Vorrat" und „Abgehakt löschen" standen hier und kosteten mobil
-             zwei zusätzliche Kopfzeilen: der Titel füllte die erste Zeile allein
-             (er wächst, und die Aktionsgruppe brach wegen ihrer
-             max-content-Breite um), darunter brachen die beiden Labels
-             (140px + 197px gegen 361px) noch einmal. Kopfhöhe 173px bei 393px,
-             229px bei 320px. Sie sitzen jetzt in der geteilten
-             .list-bulkbar über der Liste - derselben Leiste, in der der Vorrat
-             seine Sammelaktion trägt (Critique 2026-07-30, P1). -->
-        <!-- Die drei dauerhaften Aktionen zweimal im DOM: einmal als Leiste (ab
-             768px), einmal als Menü-Einträge (darunter). CSS entscheidet, welche
-             Fassung Platz hat; display:none nimmt die andere auch aus der
-             Tabfolge. Das ist im Repo das etablierte Muster für responsives
-             Chrome, und beide Fassungen tragen dieselben data-action-Werte -
-             der delegierte Handler unterscheidet sie gar nicht. -->
-        <div class="list-header__inline-actions">
-          <button class="btn btn--ghost list-header__import-btn" data-action="import-meals"
-                  aria-label="${t('shopping.importMeals')}" title="${t('shopping.importMeals')}">
-            <i data-lucide="utensils" class="icon-md" aria-hidden="true"></i>
-            <span>${t('shopping.importMeals')}</span>
-          </button>
-          <button class="btn btn--ghost btn--icon" data-action="manage-categories"
-                  aria-label="${t('shopping.manageCategories')}" title="${t('shopping.manageCategories')}">
-            <i data-lucide="tags" class="icon-md" aria-hidden="true"></i>
-          </button>
-          <button class="btn btn--ghost btn--icon" data-action="delete-list"
-                  data-id="${state.activeList.id}" aria-label="${t('shopping.deleteListLabel')}"
-                  title="${t('shopping.deleteListLabel')}">
-            <i data-lucide="trash" class="icon-md" aria-hidden="true"></i>
-          </button>
-        </div>
-        <div class="list-header__more">
-          ${popoverMenuHtml({
-            id: 'list-head-menu',
-            label: t('common.moreActions'),
-            items: [
-              { action: 'import-meals', label: t('shopping.importMeals'), icon: 'utensils' },
-              { action: 'manage-categories', label: t('shopping.manageCategories'), icon: 'tags' },
-              { action: 'delete-list', label: t('shopping.deleteListLabel'), icon: 'trash', id: state.activeList.id, danger: true },
-            ],
-          })}
-        </div>
-      </div>`);
-    if (window.lucide) window.lucide.createIcons({ el: head });
   }
 
   content.replaceChildren();
@@ -1581,12 +1540,12 @@ function wireTabBar(container) {
 }
 
 function wireListContentEvents(container) {
-  // Delegations-Wurzel ist der Modul-Root, nicht mehr #list-content: der Kopf
-  // (#list-head) ist seit dem Umstieg auf .page-toolbar ein Geschwister von
-  // #list-content, seine Aktionen (rename-list, import-meals,
-  // manage-categories, delete-list) liegen also außerhalb. .shopping-page ist
-  // der nächste gemeinsame Vorfahre und wird - genau wie #list-content vorher -
-  // pro render() genau einmal erzeugt, womit die Einmal-Bindung unten weiter gilt.
+  // Delegations-Wurzel ist der Modul-Root, nicht #list-content: die Aktionen der
+  // Liste (rename-list, import-meals, manage-categories, delete-list) stehen im
+  // Überlaufmenü der Chip-Leiste und liegen damit außerhalb des Inhalts.
+  // .shopping-page ist der nächste gemeinsame Vorfahre und wird - genau wie
+  // #list-content vorher - pro render() genau einmal erzeugt, womit die
+  // Einmal-Bindung unten weiter gilt.
   const root = container.querySelector('.shopping-page');
   if (!root) return;
 
@@ -1594,14 +1553,11 @@ function wireListContentEvents(container) {
   // die Kinder (replaceChildren), nicht das Element selbst - würde der Listener
   // bei jedem switchList/rename erneut gebunden, feuerte ein Toggle-Klick
   // mehrfach und höbe sich auf (Issue #398).
-  // Positionierung und Schließen des Kopf-Überlaufmenüs. Idempotent, hängt an
+  // Positionierung und Schließen der Überlaufmenüs. Idempotent, hängt an
   // derselben stabilen Wurzel wie die Klick-Delegation.
   installPopoverMenus(root);
 
-  if (root.dataset.eventsWired) {
-    wireRenameKeydown(root);
-    return;
-  }
+  if (root.dataset.eventsWired) return;
   root.dataset.eventsWired = 'true';
 
   root.addEventListener('click', async (e) => {
@@ -1764,20 +1720,13 @@ function wireListContentEvents(container) {
       });
     }
   });
-
-  wireRenameKeydown(root);
 }
 
-/**
- * Verdrahtet „Rename per Enter" auf dem Listen-Titel. Das Element wird bei jedem
- * renderListContent neu erzeugt, daher muss diese Bindung pro Render erfolgen —
- * im Gegensatz zur delegierten Klick-Bindung an der stabilen Wurzel (Issue #398).
- */
-function wireRenameKeydown(root) {
-  root.querySelector('[data-action="rename-list"]')?.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') e.currentTarget.click();
-  });
-}
+// Hier stand `wireRenameKeydown`: eine Bindung, die „Enter" auf dem Listen-Titel
+// in einen Klick übersetzte. Sie war nötig, weil der Titel ein `<span
+// role="button" tabindex="0">` war - ein nachgebauter Knopf, dem der Browser
+// keine Tastaturbedienung schenkt. Umbenennen ist jetzt ein echter `<button>` im
+// Überlaufmenü und braucht dafür keine Zeile JS.
 
 // --------------------------------------------------------
 // Kategorie-Verwaltung (kanonischer Ort, früher in Settings)
@@ -1886,16 +1835,17 @@ export async function render(container, { user }) {
   container.insertAdjacentHTML('beforeend', `
     <div class="shopping-page">
       <h1 class="sr-only">${t('nav.shopping')}</h1>
+      <!-- Die Listenwahl ist zugleich der Titel der Seite: der aktive Chip nennt
+           die Liste, sein Nachbar am hinteren Ende traegt ihre Aktionen. Hier
+           stand bis 2026-08-11 zusaetzlich ein page-toolbar-Kopf, der denselben
+           Namen ein zweites Mal zeigte (Keine-sichtbare-Titelwiederholung-Regel,
+           DESIGN.md) und mobil rund 64px kostete: /shopping lag bei 53 %
+           Contentflaeche, waehrend /tasks und /budget nach ihrer Kopf-Diaet bei
+           62-63 % standen.
+           KEINE BACKTICKS IN DIESEM KOMMENTAR: er steht INNERHALB des
+           Template-Literals, ein Backtick-Paar schliesst es und macht aus dem
+           Rest ein Tagged Template ("TypeError: toolbar is not a function"). -->
       <div class="list-tabs-bar" id="list-tabs-bar"></div>
-      <!-- Kanonischer Kopf als DIREKTES Kind des Modul-Roots. Er lag früher in
-           #list-content, das selbst --page-inline-pad trägt: als .page-toolbar
-           hätte er dessen Padding ein zweites Mal addiert - genau die
-           „genau einmal pro Ahnenkette"-Bedingung aus tokens.css, an der auch
-           der 16px-Versatz im Budget-Modul hing. Draußen fluchtet er mit der
-           Listen-Chip-Leiste darüber und trägt sein Chrome full-bleed. -->
-      <!-- --narrow: der Kopf endet beim Lesemaß des Körpers (.list-scroller),
-           nicht an der Content-Spalte. Siehe layout.css. -->
-      <div class="page-toolbar page-toolbar--in-group page-toolbar--narrow" id="list-head" hidden></div>
       <div id="list-content" style="flex:1;display:flex;flex-direction:column;overflow:hidden"></div>
       <button class="page-fab" id="fab-new-item" aria-label="${t('shopping.addItemLabel')}">
         <i data-lucide="plus" class="icon-xl" aria-hidden="true"></i>

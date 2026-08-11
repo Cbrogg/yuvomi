@@ -540,6 +540,23 @@ Der erste Lauf der Regel fand sofort, was beide uebersahen: das Budget zeigte ei
 „Budget" unter dem Titel „Budget". Aufgeloest wurde das ueber den TAB, nicht ueber den Titel
 („Uebersicht") - das Budget hat sieben Tabs, von denen einer zufaellig den Modulnamen trug.
 
+**Sie gilt auch fuer Laufzeitdaten, und dort war sie zwei Runden lang blind.** Der Einkauf
+zeigte den Namen der gewaehlten Liste zweimal: als aktiven Chip der Listenwahl und direkt
+darunter als Kopf mit Umbenennen-Stift und Ueberlaufmenue. Der Guard sah das aus drei
+Gruenden nicht - die Chip-Leiste traegt kein `role="tablist"`, der Titel war kein `h1-3`
+(ein `span.page-toolbar__title`), und der Name ist gar kein i18n-Key, sondern
+`state.activeList.name`. Ein statischer Test kann diesen WERT nicht kennen; er kann aber
+die STRUKTUR sehen: rendert eine Seite eine Auswahlleiste ueber eine Sammlung und zeigt sie
+dasselbe Feld des GEWAEHLTEN Eintrags noch einmal in einem Titel-Slot, steht derselbe Text
+zweimal auf der Seite - unabhaengig davon, welcher es zur Laufzeit ist. Das prueft seit
+2026-08-11 eine zweite Sonde in `test-typography.js`. **Der gewaehlte Eintrag IST der
+Titel**; was der Kopf sonst trug, gehoert neben ihn - im Einkauf an das hintere Ende der
+Chip-Zeile, wo ein Ueberlaufmenue Umbenennen, Import, Kategorien und Loeschen fuehrt. Der
+Umbau nahm mobil rund 64px (53 % auf 62 % Contentflaeche, gleichauf mit Aufgaben und
+Budget) und loeschte dabei zwei Sonderbehandlungen, die es nur wegen des Kopfes gab: die
+responsive Doppelfassung der Aktionen und eine `max-height`-Media-Query, die Listenwahl und
+Kopf im Querformat nebeneinander zwang.
+
 **Die Label-Farben-Regel.** Large Titles tragen immer `--color-text-primary`; kein
 Gradient-Text und kein Akzent-Titel (beides gehoerte zur abgeloesten Welt; die Tageszeit
 spricht allein ueber den Grusstext, die Marke allein ueber das Tile).

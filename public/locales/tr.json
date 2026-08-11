@@ -402,6 +402,7 @@
         "itemQtyLabel": "Miktar",
         "categoryLabel": "Kategori",
         "addItemLabel": "Ürün ekle",
+        "listActionsLabel": "{{name}} için işlemler",
         "renameListLabel": "Listeyi yeniden adlandır",
         "deleteListLabel": "Listeyi sil",
         "swipeBack": "Geri al",

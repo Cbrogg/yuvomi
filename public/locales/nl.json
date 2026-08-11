@@ -402,6 +402,7 @@
         "itemQtyLabel": "Hoeveelheid",
         "categoryLabel": "Categorie",
         "addItemLabel": "Item toevoegen",
+        "listActionsLabel": "Acties voor {{name}}",
         "renameListLabel": "Lijst hernoemen",
         "deleteListLabel": "Lijst verwijderen",
         "swipeBack": "Ongedaan maken",

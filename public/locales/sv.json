@@ -402,6 +402,7 @@
         "itemQtyLabel": "Kvantitet",
         "categoryLabel": "Kategori",
         "addItemLabel": "Lägg till objekt",
+        "listActionsLabel": "Åtgärder för {{name}}",
         "renameListLabel": "Byt namn på listan",
         "deleteListLabel": "Ta bort lista",
         "swipeBack": "Ångra",

@@ -402,6 +402,7 @@
         "itemQtyLabel": "Số lượng",
         "categoryLabel": "Danh mục",
         "addItemLabel": "Thêm mục",
+        "listActionsLabel": "Tác vụ cho {{name}}",
         "renameListLabel": "Đổi tên danh sách",
         "deleteListLabel": "Xóa danh sách",
         "swipeBack": "Hoàn tác",

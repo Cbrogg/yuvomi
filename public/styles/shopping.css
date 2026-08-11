@@ -141,115 +141,58 @@
   color: var(--color-accent);
 }
 
+/* Aktionen der GEWÄHLTEN Liste am hinteren Ende der Leiste.
+ *
+ * Gegenstück zum Marker links: der Trigger klebt am Rand, während die Chips
+ * darunter durchscrollen. Er braucht denselben opaken Grund wie der Marker -
+ * gemessen laufen am linken Scrollanschlag zwei Chips unter die Zone, und der
+ * Grund ist das Einzige, was sie verdeckt.
+ *
+ * DIE KANTE IST `--color-border`, NICHT `--color-border-subtle`: sie grenzt an
+ * Scrollgut, nicht an eine ruhige Kartenkante, und nimmt deshalb dieselbe Linie,
+ * die die Leiste selbst als Unterkante trägt. Eine dritte Stufe wäre hier kein
+ * Gewinn - alle drei Linien-Tokens liegen bewusst unter 3:1 (1.20 / 1.32 / 1.65
+ * auf --color-surface), die Kante erklärt die Überlappung, sie ruft sie nicht
+ * aus. Was den Chip wirklich abschneidet, ist der opake Grund.
+ *
+ * `right: 0` statt `inset-inline-end`: `position: sticky` löst logische
+ * Eigenschaften zwar korrekt auf, aber die Leiste scrollt physisch, und der
+ * Marker gegenüber steht aus demselben Grund auf `left: 0`. */
+.list-tabs-bar__actions {
+  position: sticky;
+  right: 0;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  margin-inline-start: auto;
+  padding-inline-start: var(--space-2);
+  border-inline-start: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+}
+
 /* --------------------------------------------------------
  * Liste-Header (Name + Aktionen)
- * -------------------------------------------------------- */
-/* Der Listen-Kopf ist der kanonische .page-toolbar in der Variante --in-group
- * (#list-head in shopping.js). Padding, Trennlinie, opaker Hintergrund und
- * Sticky-Rolle kommen von dort - inklusive der Warnung, dass hier kein
- * backdrop-filter hin darf (WebKit leert sonst den Scroll-Container, iOS 26+).
- * Die frühere .list-header-Regel entfällt damit vollständig. */
-/* Der Titel ist zugleich die Umbenennen-Affordanz: Flex nur, damit das
- * Stift-Icon neben dem Namen sitzt. nowrap, overflow und Ellipse kommen aus
- * .page-toolbar__title - vorher stand hier `overflow: hidden` OHNE
- * `white-space`, was gar nicht kürzt: „Weekly Shop" brach schon bei 1440px in
- * zwei Zeilen (Critique 2026-07-29). */
-.list-header__name {
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  color: var(--color-text-primary);
-  /* Der Titel ist ein `role="button"` (Umbenennen) und war nur 25px hoch
-   * gemessen - unter --target-md, der Desktop-Untergrenze des Projekts. Als
-   * einziger Weg zum Umbenennen einer Liste braucht er die reguläre
-   * Zielgröße (Critique 2026-07-29). */
-  min-height: var(--target-md);
-}
-
-@media (hover: none) {
-  .list-header__name {
-    min-height: var(--target-lg);
-  }
-}
-
-.list-header__edit-icon {
-  width: var(--space-4);
-  height: var(--space-4);
-  /* tertiary, nicht disabled (gemessen 1.36:1 auf --color-bg im Light).
-   * Der Stift steht zwar neben Text, aber der Text ist der LISTENNAME - er sagt
-   * nirgends, dass die Zeile bedienbar ist. Das Icon ist die einzige Affordanz
-   * fuers Umbenennen und traegt damit Information (WCAG 1.4.11), auch wenn es
-   * aria-hidden ist: das gilt fuer den Screenreader, nicht fuers Auge. */
-  color: var(--color-text-tertiary);
-  flex-shrink: 0;
-}
-
-/* Hier standen `.list-header__clear-btn`, `.list-header__clear-label`,
- * `.list-header__checked` und `.list-header__pantry-btn`: vier Regeln, die die
- * beiden Abschluss-Aktionen im Kopf am Leben hielten - Ellipse fürs Label,
- * Mindestbreite gegen das Zusammenquetschen, ein eigener Flex-Container, damit sie
- * zusammen umbrechen. Jede davon war die Antwort auf eine Platznot, die es im Kopf
- * gar nicht zu lösen gab: mobil brachen sie trotzdem in zwei zusätzliche Zeilen
- * (Kopfhöhe 173px bei 393px, 229px bei 320px).
+ * --------------------------------------------------------
  *
- * Die Aktionen sitzen jetzt in der geteilten .list-bulkbar über der Liste, mit
- * vollen Labels und einer Zeile, die sagt, worauf sie wirken (Critique
- * 2026-07-30, P1). */
-
-.list-header__import-btn {
-  gap: var(--space-2);
-}
-
-/* Die drei dauerhaften Kopf-Aktionen in zwei Fassungen: Leiste ab 768px,
- * Überlaufmenü darunter. Genau eine ist je Breite im Layout - `display: none`
- * nimmt die andere auch aus der Tabfolge, es gibt also keine doppelten Stops.
+ * ENTFALLEN am 2026-08-11. Hier stand der Kopf der gewählten Liste: der Name als
+ * `<span role="button">` mit Stift-Icon, daneben drei Aktionen in zwei
+ * responsiven Fassungen (Buttonleiste ab 768px, Überlaufmenü darunter), dazu
+ * eine Umbruchregel, zwei Zielgrößen-Untergrenzen und eine Lesemaß-Kappung.
  *
- * WARUM DER SCHNITT BEI 768px UND NICHT BEI `hover: none`: ein 700px breites
- * Desktop-Fenster hat eine Maus und trotzdem keinen Platz für drei Buttons neben
- * dem Titel. Maßgeblich ist hier die Breite, nicht die Zeigerfähigkeit - anders
- * als beim Quick-Add und beim Zeilen-Löschen weiter unten, wo es um Finger
- * gegen Cursor geht. */
-.list-header__inline-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 0;
-}
-
-.list-header__more {
-  display: none;
-}
-
-@media (max-width: 767px) {
-  .list-header__inline-actions {
-    display: none;
-  }
-
-  .list-header__more {
-    display: flex;
-    align-items: center;
-    flex-shrink: 0;
-  }
-}
-
-/* Untergrenze wie bei .list-header__clear-btn - siehe dort. */
-.list-header__pantry-btn {
-  font-size: var(--text-sm);
-  min-width: var(--target-lg);
-}
-
-/* Kopf-Inhalt auf dasselbe Lesemaß wie der Körper: `.page-toolbar--narrow`
- * (layout.css), gesetzt im Markup neben `--in-group`. Hier stand dieselbe
- * Absicht als `> * { max-width: ... }` - sie kappte die Slot-Breiten und ließ
- * die Aktionen trotzdem an der äußeren Kante stehen; die Begründung steht am
- * geteilten Selektor.
+ * Der Name stand damit ZWEIMAL auf der Seite - der aktive Chip in der Leiste
+ * darüber trägt ihn schon. Das ist der Fall der
+ * Keine-sichtbare-Titelwiederholung-Regel (DESIGN.md), und er kostete mobil rund
+ * 64px: /shopping lag bei 53 % Contentfläche gegen 62-63 % bei /tasks und
+ * /budget.
  *
- * Der Kopf darf umbrechen: Titel und die drei Listen-Aktionen brauchen
- * zusammen mehr als das Lesemaß, sobald der Listenname lang wird. */
-.shopping-page .page-toolbar--in-group {
-  flex-wrap: wrap;
-}
+ * Der Kommentar, der an dieser Stelle stand, hatte den Ausweg schon benannt:
+ * „Den Titel mobil ganz auszublenden wäre naheliegend [...], macht aber das
+ * UMBENENNEN unerreichbar: `rename-list` hängt ausschließlich an diesem Titel.
+ * Erst wenn die Aktion einen zweiten Weg hat (etwa im Überlaufmenü), ist das
+ * eine Option." Genau das ist jetzt der Fall: Umbenennen ist der erste Eintrag
+ * im Menü von `.list-tabs-bar__actions`, zusammen mit den drei übrigen
+ * Aktionen. Damit entfällt auch die responsive Doppelfassung - eine Darstellung
+ * auf allen Breiten, ein Ort. */
 
 /* --------------------------------------------------------
  * Übernahme-Dialog „Einkauf → Vorrat"
@@ -313,42 +256,10 @@
   gap: var(--space-3);
 }
 
-/* Mobiler Kopf: EINE Zeile, Titel plus Überlaufmenü.
- *
- * Was hier stand, war die dritte Ausbaustufe eines Umbruch-Managements: `#list-head
- * { flex-wrap: wrap }`, eine Sonderregel für den Titel, eine für die Aktionsgruppe,
- * ein `:empty`-Schutz gegen leere Zeilen, ein zweites `flex-wrap` innerhalb der
- * abgehakt-Gruppe und `flex-shrink: 0` gegen deren Ellipsen. Jede Stufe reagierte
- * darauf, dass fünf Bedienelemente nicht in 361px passen.
- *
- * Sie passen jetzt, weil es zwei sind: der Titel und ein Menü-Trigger. Die drei
- * dauerhaften Aktionen stehen mit Label im Menü, die zwei Abschluss-Aktionen in der
- * .list-bulkbar über der Liste. Gemessen 173px Kopfhöhe vorher (229px bei
- * 320px), erste Datenzeile bei y=439 von 852.
- *
- * DER UMBRUCH BLEIBT ALS RÜCKFALL: eine Locale mit langem Listennamen oder eine
- * größere Systemschrift darf umbrechen statt zu überlaufen. Er ist nur nicht mehr
- * der Regelfall, den vier Sonderregeln zähmen müssen. */
-@media (max-width: 767px) {
-  #list-head {
-    flex-wrap: wrap;
-    row-gap: var(--space-1);
-  }
-
-  /* Den Titel mobil ganz auszublenden wäre naheliegend - der aktive Chip darüber
-   * zeigt den Namen bereits -, macht aber das UMBENENNEN unerreichbar:
-   * `rename-list` hängt ausschließlich an diesem Titel. Erst wenn die Aktion einen
-   * zweiten Weg hat (etwa im Überlaufmenü), ist das eine Option. */
-  #list-head .page-toolbar__title {
-    flex: 1 1 auto;
-    min-width: 0;
-  }
-
-  #list-head .page-toolbar__actions {
-    justify-content: flex-end;
-    min-width: 0;
-  }
-}
+/* Der mobile Kopf und seine vierte Ausbaustufe eines Umbruch-Managements sind
+ * mit dem Kopf selbst entfallen (siehe „Liste-Header" weiter oben). Die Zeile,
+ * die den Listennamen trägt, ist jetzt die Chip-Leiste - sie scrollt horizontal
+ * und kennt deshalb gar kein Umbruchproblem. */
 
 /* --------------------------------------------------------
  * Quick-Add Eingabe
@@ -608,8 +519,8 @@
  * damit genauso wie der Vorrat - vorher galt sie erst ab 1024px und die beiden
  * Checklisten divergierten in genau diesem Bereich um bis zu 300px.
  * .item-category braucht keine eigene Kappung mehr: es liegt in der gekappten
- * .items-list. .list-header ist entfallen, der Kopf ist der full-bleed
- * .page-toolbar--in-group (#list-head). */
+ * .items-list. Einen Listenkopf gibt es seit 2026-08-11 gar nicht mehr - die
+ * Chip-Leiste trägt Name und Aktionen (siehe „Liste-Header" oben). */
 @media (min-width: 1024px) {
   /* Vollbreite-Toolbar mit durchgehendem Trenner; der Inhalt sitzt auf der
    * gemeinsamen Kante. */
@@ -848,68 +759,22 @@
  * <yuvomi-category-manager> (Styles global in category-manager.css). */
 
 /* --------------------------------------------------------
- * KOMPAKTE HÖHE: Listenwahl und Listenkopf teilen sich eine Zeile.
+ * KOMPAKTE HÖHE: entfallen am 2026-08-11, ersatzlos.
  *
- * Der Einkauf ist die dichteste Route der App: Küchen-Leiste (der Kopf des
- * Raums), Listenwahl, Listenkopf, dazu je nach Zustand die Sammelaktions-
- * Leiste. Gemessen auf 640x400 blieben davon 27px Scrollport übrig - keine
- * einzige Artikelzeile.
+ * Hier stand eine `@media (max-height: 499px)`-Query, die `.shopping-page` in
+ * ein zweispaltiges Grid umbaute, damit Listenwahl und Listenkopf sich EINE
+ * Zeile teilen: im Querformat blieben sonst 27px Scrollport übrig, keine
+ * einzige Artikelzeile. Sie brauchte dafür eigene Zeilen- und Spaltenzuweisungen
+ * für vier Selektoren, eine Trennlinien-Sonderregel und ein `min-height: 0`
+ * gegen den Grid-Kind-Effekt, den sie selbst erst erzeugte.
  *
- * Nach der Chrome-Regel (DESIGN.md) ist die Küchen-Leiste der Kopf und die
- * Listenwahl die eine erlaubte Bedienzeile; der Listenkopf ist damit die
- * Zeile zu viel. Er trägt aber den Listennamen, und der ist hier kein Text,
- * sondern das Ziel zum Umbenennen - ausblenden scheidet aus.
- *
- * Also stehen beide nebeneinander. Der Name ist dabei ohnehin eine Dublette:
- * die aktive Listen-Tab links zeigt denselben. Er darf deshalb als Erster
- * schrumpfen und ellipsieren, während die Tabs seitlich scrollen.
+ * Ihre eigene Begründung nannte die Wurzel: „Nach der Chrome-Regel (DESIGN.md)
+ * ist die Küchen-Leiste der Kopf und die Listenwahl die eine erlaubte
+ * Bedienzeile; der Listenkopf ist damit die Zeile zu viel. Er trägt aber den
+ * Listennamen [...] - ausblenden scheidet aus." Es scheidet nicht mehr aus: der
+ * Kopf ist weg, die Chip-Leiste trägt Name und Aktionen. Damit stehen im
+ * Querformat nur noch die zwei erlaubten Zeilen, und das Flex-Layout des Moduls
+ * genügt ohne Sonderfall. Ein Layoutwechsel per Breakpoint, der ein Problem
+ * umverteilt statt es aufzulösen, ist genau die Sorte Regel, die die nächste
+ * Änderung teuer macht.
  * -------------------------------------------------------- */
-@media (max-height: 499px) {
-  .shopping-page {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    /* ZWEI ZEILEN, UND DIE ZWEITE WÄCHST. Die erste Fassung stand auf
-     * `align-content: start` und liess damit jede Zeile nur so hoch werden wie
-     * ihr Inhalt - fatal, weil `#list-content` seine Hoehe per `flex: 1` aus
-     * dem Elternteil bezog (Inline-Style in shopping.js) und ein `flex`-Wert
-     * unter `display: grid` wirkungslos ist. Gemessen auf 640x400: die
-     * Artikelliste bekam `clientHeight: 0` bei `scrollHeight: 2177` und lag
-     * 42px hinter der Clip-Kante - schlechter als der Zustand, den diese
-     * Media-Query reparieren sollte.
-     *
-     * Der Vorrat blieb heil, weil dort der scrollende Container SELBST das
-     * Grid-Kind ist; im Einkauf sitzt `#list-content` dazwischen. */
-    grid-template-rows: auto 1fr;
-  }
-
-  /* Alles ausser den beiden Leisten behält die volle Breite - ohne diese
-   * Zeile rutschte die Artikelliste in die zweite Spalte. */
-  .shopping-page > * {
-    grid-column: 1 / -1;
-  }
-
-  /* Die Inhaltszeile nimmt den Rest - und `min-height: 0`, weil ein Grid-Kind
-   * sonst nicht unter seine Inhaltshoehe schrumpft und der innere Scroller
-   * damit nie einen Grund zum Scrollen bekaeme. */
-  .shopping-page > #list-content {
-    grid-row: 2;
-    min-height: 0;
-  }
-
-  .shopping-page > .list-tabs-bar {
-    grid-column: 1;
-    grid-row: 1;
-  }
-
-  .shopping-page > .page-toolbar--in-group {
-    grid-column: 2;
-    grid-row: 1;
-    /* Die Trennlinie der Listenwahl läuft über beide Spalten weiter; eine
-     * zweite darunter wäre eine Doppellinie in derselben Zeile. */
-    border-bottom: 1px solid var(--color-border);
-  }
-
-  .shopping-page > .page-toolbar--in-group > .list-header__name {
-    min-width: 0;
-  }
-}

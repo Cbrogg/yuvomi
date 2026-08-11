@@ -415,6 +415,7 @@
         "itemQtyLabel": "مقدار",
         "categoryLabel": "دسته",
         "addItemLabel": "افزودن قلم",
+        "listActionsLabel": "اقدامات {{name}}",
         "renameListLabel": "تغییر نام فهرست",
         "deleteListLabel": "حذف فهرست",
         "swipeBack": "بازگشت",
