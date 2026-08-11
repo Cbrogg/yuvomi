@@ -378,9 +378,32 @@
    * Bewusst eigene Tokens statt geborgter Modul-Akzente: Modulfarben tragen
    * eine Bedeutung ("das ist Einkauf"), die in einem Ausgaben-Donut falsch ist.
    * Sieben klar getrennte Farbtöne — mehr Segmente sind ohnehin nicht mehr
-   * unterscheidbar, die Views fassen den Rest zu „Sonstige" zusammen. */
+   * unterscheidbar, die Views fassen den Rest zu „Sonstige" zusammen.
+   *
+   * WO DIESE PALETTE LÄUFT, entscheidet, welche Deckung ein Verstoß ist: nur
+   * budget.js, budget-stats.js und subscriptions.js beziehen --chart-series-*,
+   * und alle drei liegen in der Familie money. Küche und Aufgaben haben keine
+   * Diagramme. Gemessen (CIEDE2000, 2026-08-11) deckten sich DREI Serien mit
+   * Familientönen: Serie 2 mit money (dE 0.0), Serie 3 mit kitchen (dE 0.0) und
+   * Serie 7 mit work (dE 1.9, unter der Wahrnehmungsschwelle 2.3). Bewegt wurde
+   * nur Serie 2 - sie ist die einzige, die ihr Spender-Chrome je trifft: die
+   * Serien sind zugleich die nutzerwählbaren Kontofarben (ACCOUNT_COLORS in
+   * budget.js), und ein Konto in „Türkis" war im Budget nicht vom Modulton des
+   * umgebenden Chrome zu unterscheiden.
+   *
+   * Serie 3 und 7 bleiben bewusst auf ihren Familienwerten: sichtbar wird die
+   * Deckung erst, wenn Küche oder Aufgaben ein Diagramm bekommen - DANN müssen
+   * sie weichen. Ihr Preis wäre sonst zwei Namensänderungen über 18 Locales
+   * (die Serien tragen Namen: colorOrange, colorGreen), denn der freie Farbraum
+   * liegt bei Oliv (~58 Grad) und Rot (~355 Grad), und Rot ist im Finanzkontext
+   * mit --color-danger vorbelastet. Serie 1 (Indigo) steht mit dE 7.5 zum
+   * Akzent-Violett am weitesten von allen dreien entfernt und heißt in der
+   * Farbwahl ohnehin „Violett" - dort ist die Nähe die Zusage, nicht der Fehler. */
   --_chart-series-1: #4F4DC9;   /* Indigo   */
-  --_chart-series-2: #0F766E;   /* Teal     */
+  /* Petrol statt Teal-700: dE 11.3 zu --_family-money, 11.5 zu --_family-time,
+   * 20.6 zur nächsten Serie (S4); 5.01:1 auf der Karte, im Band der Geschwister
+   * (4.92-6.49:1). Trägt weiter den Namen budget.colorTeal. */
+  --_chart-series-2: #297989;   /* Petrol   */
   --_chart-series-3: #C2410C;   /* Orange   */
   --_chart-series-4: #0663C7;   /* Blau     */
   --_chart-series-5: #A16207;   /* Ocker    */
@@ -1555,7 +1578,11 @@
     /* Datenreihen: aufgehellte Varianten, damit die Segmente auf dunkler
      * Kartenfläche ≥3:1 tragen (Grafik-Kontrast, WCAG 1.4.11). */
     --_chart-series-1: #7D7AFF;
-    --_chart-series-2: #2DD4BF;
+    /* Cyan statt Teal-400: der Dark-Wert deckte sich ebenso mit --_family-money
+     * (beide #2DD4BF). Getauscht wie der Light-Wert - dE 16.2 zu money, 12.5 zu
+     * time, 22.4 zur nächsten Serie, und mit 8.56:1 praktisch luminanzgleich
+     * zum abgelösten Wert (8.31:1). Begründung am Light-Block. */
+    --_chart-series-2: #22D3EE;
     --_chart-series-3: #FB923C;
     --_chart-series-4: #60A5FA;
     --_chart-series-5: #FCD34D;
@@ -1739,7 +1766,7 @@
 
     /* Datenreihen */
     --_chart-series-1: #7D7AFF;
-    --_chart-series-2: #2DD4BF;
+    --_chart-series-2: #22D3EE;   /* Cyan - siehe Dark-Block oben */
     --_chart-series-3: #FB923C;
     --_chart-series-4: #60A5FA;
     --_chart-series-5: #FCD34D;

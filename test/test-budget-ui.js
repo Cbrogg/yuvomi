@@ -272,6 +272,141 @@ test('die Datenreihen-Tokens existieren in beiden Themes', () => {
   assert.equal(defs.length, 3, 'Dark-Mode-Variante fehlt in einem der beiden Dark-Blöcke');
 });
 
+/**
+ * Keine Datenreihe darf sich mit dem Modulton der Seite decken, die sie zeigt.
+ *
+ * WARUM DER GUARD DARÜBER NICHT GRIFF: der Nachbar oben („borgt keine
+ * Modul-Akzente") prüft den NAMEN - dass kein `--module-*` in DONUT_COLORS
+ * steht. Genau das war erfüllt, während `--_chart-series-2` seit dem
+ * Familientoene-Umbau BUCHSTÄBLICH derselbe Hexwert war wie `--_family-money`
+ * (#0F766E light, #2DD4BF dark) - der Modulton des Budgets, in dem die Palette
+ * läuft. Ein Konto in „Türkis" war dort nicht vom Chrome zu unterscheiden. Der
+ * Guard war grün und die Regel verletzt, weil er die falsche Ebene maß.
+ * Gemessen wird deshalb der WERT, und zwar wahrnehmungsnah (CIEDE2000), nicht
+ * per Stringvergleich: die nächste Deckung wäre sonst schon mit einem um 1
+ * verschobenen Kanal wieder unsichtbar.
+ *
+ * WARUM ER NUR DIE CHART-NUTZENDEN MODULE PRÜFT: Serie 3 deckt sich mit
+ * --_family-kitchen und Serie 7 mit --_family-work (dE 1.9), beide bewusst
+ * stehengelassen - Küche und Aufgaben haben keine Diagramme, die Deckung ist
+ * dort folgenlos. Das ist die Ausnahme MIT Verfallsdatum an beiden Enden:
+ * bekommt eine Küchen- oder Aufgabenseite ein Diagramm, findet dieser Guard die
+ * Serie im selben Lauf, ohne dass jemand daran denken muss. Guard-Ebene 2
+ * (Struktur, aus deklarativer Quelle: router.js + tokens.css).
+ */
+test('keine Datenreihe deckt sich mit dem Modulton einer Seite, die Diagramme zeigt', () => {
+  // 1. Welche Seiten beziehen die Palette überhaupt? Aus dem Quelltext, nicht
+  //    aus einer Liste hier - eine Liste wäre wieder die Allowlist von oben.
+  const pagesDir = new URL('../public/pages/', import.meta.url);
+  const users = readdirSync(pagesDir)
+    .filter((f) => f.endsWith('.js'))
+    .filter((f) => read(`../public/pages/${f}`).includes('--chart-series-'));
+  assert.ok(
+    users.length >= 2,
+    `Nur ${users.length} Seite(n) beziehen --chart-series-. Hat sich die Schreibweise geändert? `
+    + 'Ein Guard über eine leere Menge sichert nichts zu.',
+  );
+
+  // 2. Modul je Seite aus der deklarativen Routentabelle.
+  const router = read('../public/router.js');
+  const moduleOf = new Map();
+  for (const m of router.matchAll(/page:\s*'\/pages\/([^']+)'[^}]*?module:\s*'([^']+)'/g)) {
+    moduleOf.set(m[1], m[2]);
+  }
+  const modules = [...new Set(users.map((f) => moduleOf.get(f)).filter(Boolean))];
+  assert.ok(
+    modules.length >= 1,
+    `Keine der Chart-Seiten (${users.join(', ')}) fand ein Modul in router.js - der Guard misst dann nichts.`,
+  );
+
+  // 3. Modulton auflösen: --module-<name> zeigt auf eine Familie, die Familie
+  //    trägt den Hexwert. Beide Ebenen kommen aus tokens.css.
+  const familyOf = new Map();
+  for (const m of tokensCss.matchAll(/--module-([\w-]+):\s*var\(--_family-([\w-]+)\)/g)) {
+    familyOf.set(m[1], m[2]);
+  }
+  const valuesOf = (token) => [...tokensCss.matchAll(new RegExp(`${token}:\\s*(#[\\da-fA-F]{6})`, 'g'))].map((x) => x[1]);
+
+  // 4. CIEDE2000 - der Abstand, den ein Auge sieht. Unter 2.3 (Just Noticeable
+  //    Difference) sind zwei Farben derselbe Ton, egal was die Hexwerte sagen.
+  const JND = 2.3;
+  const lab = (value) => {
+    const [r, g, b] = value.match(/[\da-f]{2}/gi)
+      .map((p) => parseInt(p, 16) / 255)
+      .map((c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+    const f = (t) => (t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116);
+    const x = f((0.4124 * r + 0.3576 * g + 0.1805 * b) / 0.95047);
+    const y = f(0.2126 * r + 0.7152 * g + 0.0722 * b);
+    const z = f((0.0193 * r + 0.1192 * g + 0.9505 * b) / 1.08883);
+    return [116 * y - 16, 500 * (x - y), 200 * (y - z)];
+  };
+  const deltaE = (one, two) => {
+    const [L1, a1, b1] = lab(one);
+    const [L2, a2, b2] = lab(two);
+    const cBar = (Math.hypot(a1, b1) + Math.hypot(a2, b2)) / 2;
+    const g = 0.5 * (1 - Math.sqrt(cBar ** 7 / (cBar ** 7 + 25 ** 7)));
+    const [A1, A2] = [a1 * (1 + g), a2 * (1 + g)];
+    const [C1, C2] = [Math.hypot(A1, b1), Math.hypot(A2, b2)];
+    const angle = (x, y) => (x === 0 && y === 0 ? 0 : ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360);
+    const [h1, h2] = [angle(A1, b1), angle(A2, b2)];
+    const dL = L2 - L1;
+    const dC = C2 - C1;
+    let dh = 0;
+    if (C1 * C2 !== 0) {
+      dh = h2 - h1;
+      if (dh > 180) dh -= 360;
+      else if (dh < -180) dh += 360;
+    }
+    const dH = 2 * Math.sqrt(C1 * C2) * Math.sin((dh * Math.PI) / 360);
+    const lBar = (L1 + L2) / 2;
+    const cBarP = (C1 + C2) / 2;
+    let hBar = h1 + h2;
+    if (C1 * C2 !== 0 && Math.abs(h1 - h2) > 180) hBar += hBar < 360 ? 360 : -360;
+    if (C1 * C2 !== 0) hBar /= 2;
+    const rad = (deg) => (deg * Math.PI) / 180;
+    const T = 1 - 0.17 * Math.cos(rad(hBar - 30)) + 0.24 * Math.cos(rad(2 * hBar))
+      + 0.32 * Math.cos(rad(3 * hBar + 6)) - 0.20 * Math.cos(rad(4 * hBar - 63));
+    const sL = 1 + (0.015 * (lBar - 50) ** 2) / Math.sqrt(20 + (lBar - 50) ** 2);
+    const sC = 1 + 0.045 * cBarP;
+    const sH = 1 + 0.015 * cBarP * T;
+    const rT = -Math.sin(rad(60 * Math.exp(-(((hBar - 275) / 25) ** 2))))
+      * 2 * Math.sqrt(cBarP ** 7 / (cBarP ** 7 + 25 ** 7));
+    return Math.sqrt((dL / sL) ** 2 + (dC / sC) ** 2 + (dH / sH) ** 2 + rT * (dC / sC) * (dH / sH));
+  };
+
+  // Selbsttest: die Formel muss zwei gleiche Farben auf 0 und zwei klar
+  // verschiedene weit über die Schwelle bringen. Ohne ihn wäre ein deltaE, das
+  // immer 0 liefert, ein grüner Guard ohne Zusicherung.
+  assert.equal(deltaE('#0F766E', '#0F766E'), 0, 'deltaE misst identische Farben nicht als 0');
+  assert.ok(deltaE('#0F766E', '#C2410C') > 20, 'deltaE trennt Teal und Orange nicht');
+
+  let checked = 0;
+  for (const mod of modules) {
+    const family = familyOf.get(mod);
+    assert.ok(family, `--module-${mod} löst in tokens.css auf keinen Familienton auf`);
+    const familyValues = valuesOf(`--_family-${family}`);
+    assert.ok(familyValues.length >= 2, `--_family-${family} fehlt ein Theme-Wert`);
+
+    for (const [themeIndex, theme] of [[0, 'light'], [1, 'dark']]) {
+      for (let i = 1; i <= 7; i++) {
+        const series = valuesOf(`--_chart-series-${i}`)[themeIndex];
+        assert.ok(series, `--_chart-series-${i} fehlt für Theme ${theme}`);
+        const distance = deltaE(series, familyValues[themeIndex]);
+        checked++;
+        assert.ok(
+          distance >= JND,
+          `${theme}: --chart-series-${i} (${series}) liegt ${distance.toFixed(1)} von `
+          + `--_family-${family} (${familyValues[themeIndex]}) - der Modulton von "${mod}", `
+          + `das die Palette selbst zeigt (${users.join(', ')}). Unter ${JND} sieht das Auge `
+          + 'denselben Ton: ein Segment behauptet dann die Zugehörigkeit zum umgebenden Chrome. '
+          + 'Serie verschieben, nicht die Schwelle.',
+        );
+      }
+    }
+  }
+  assert.ok(checked >= 14, `Nur ${checked} Paare gemessen - erwartet werden 7 Serien x 2 Themes je Modul.`);
+});
+
 test('die Trendkurve beschriftet Skala und Zeitraum', () => {
   assert.match(stats, /class="budget-stats__axis-max"/);
   assert.match(stats, /class="budget-stats__axis-x"/);

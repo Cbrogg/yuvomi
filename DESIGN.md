@@ -342,7 +342,17 @@ reduced-transparency und prefers-contrast auf 0).
 - **Chart-Serien** (`--chart-series-1..7`): eigene Datenreihen-Palette, bewusst KEINE
   geborgten Modul-Tints (Modulfarben tragen Bedeutung, die in einem Ausgaben-Donut falsch
   waere). Sieben Toene, im Dark aufgehellt auf >=3:1 Grafikkontrast; mehr Segmente werden
-  zu "Sonstige" zusammengefasst.
+  zu "Sonstige" zusammengefasst. **Geborgt heisst gleicher WERT, nicht gleicher Name.**
+  Der erste Guard pruefte, ob `--module-*` in der Palette steht - erfuellt, waehrend Serie 2
+  buchstaeblich `--_family-money` war (#0F766E light, #2DD4BF dark), der Modulton des
+  Budgets, in dem die Palette laeuft. Gemessen wird deshalb wahrnehmungsnah (CIEDE2000,
+  Schwelle 2.3 = Just Noticeable Difference) und nur gegen die Module, die Diagramme
+  wirklich zeigen: Serie 2 ist seit 2026-08-11 Petrol (#297989 / #22D3EE, dE 11.3 bzw.
+  16.2 zu money). Serie 3 (= kitchen) und Serie 7 (= work, dE 1.9) bleiben stehen, weil
+  Kueche und Aufgaben keine Diagramme haben - eine Ausnahme mit Verfallsdatum an beiden
+  Enden, denn der Guard leitet die geprueften Module aus `router.js` ab und findet sie in
+  dem Lauf, in dem dort ein Diagramm entsteht. Serie 1 (Indigo, dE 7.5 zum Akzent) bleibt
+  bewusst: sie heisst in der Kontofarben-Wahl "Violett", dort ist die Naehe die Zusage.
 - **Prioritaeten** (`--color-priority-low..urgent`): unveraendert aus dem Bestand, die
   Helligkeits-Trennung (High ~1,8x Urgent) ist farbfehlsicht-verifiziert. Die Badge-Fuellung
   ist immer eine 12-%-Toenung derselben Farbe.
