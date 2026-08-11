@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.5.0] - 2026-08-11
+
 ### Added
 
 - **Wall mode: the dashboard as a display for the hallway tablet.** Three pieces existed for that scene and served it only one at a time: the clock tile, the weather card as an opt-in, and the photo screensaver after five minutes of quiet. Together they were three checkboxes, not a state. Wall mode is the state, and it is the *awake* one to the screensaver's resting one: the same `/` route in a different gait, carrying the time in the 48/72px display steps that until now had no user at all, the day program, who is up today as faces with a count, and the weather with its forecast. Sidebar, tab bar and the plus button step aside; nothing on the surface is touchable, because the point is to read it from two metres while walking past. The way out is quietly present rather than hidden: a glyph in the corner that any touch raises to a labelled capsule for a few seconds, plus Escape. Between 22:00 and 06:00 it dims - the dark ground is forced even for a light theme (the stored preference is untouched and restored in the morning), and the only filled area on the page becomes a hairline, because the problem in a dark hallway is luminance, not colour mode. A load failure heals itself every 60 seconds instead of showing a retry button nobody at a wall presses, with the clock still running beside it to prove the device is alive. The switch is device-local like theme and language and sits in Settings → Appearance; the normal dashboard, saved layouts, Customize and the screensaver are untouched.

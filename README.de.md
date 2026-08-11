@@ -294,6 +294,15 @@ Siebzehn eigenständige Module teilen sich eine ruhige, konsistente Oberfläche.
 
 </details>
 
+**Wand-Modus.** Ein Dashboard auf dem Küchen- oder Flurtablet soll aus dem Raum heraus lesbar sein,
+nicht aus der Nähe bedient werden. Der Wand-Modus macht aus der Übersicht auf genau diesem Gerät
+eine ruhige Anzeige: die Uhrzeit in Display-Größe, das Tagesprogramm, wer heute dran ist als
+Gesichter, und das Wetter mit Vorhersage - keine Navigation, nichts zum Antippen, und ein Ausstieg,
+der leise in der Ecke wartet, bis jemand den Bildschirm berührt. Zwischen 22 und 6 Uhr dunkelt er ab
+und erzwingt den dunklen Grund, denn das Problem im dunklen Flur ist die Helligkeit, nicht die
+Farbe. Der Schalter liegt unter Einstellungen → Darstellung und gilt nur gerätelokal: am Wandtablet
+eingeschaltet, bleibt jedes Telefon im Haushalt unberührt.
+
 **Immich-Foto-Bildschirmschoner.** Nach fünf Minuten ohne Aktivität kann Yuvomi die statische
 App-Ansicht durch wechselnde Fotos aus einer selbst gehosteten Immich-Bibliothek oder einem
 ausgewählten Album ersetzen. Einrichtung und Vorschau liegen unter Einstellungen → Administration

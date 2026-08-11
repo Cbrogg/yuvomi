@@ -294,6 +294,15 @@ Seventeen independent modules share one calm, consistent interface. Turn on what
 
 </details>
 
+**Wall mode.** A dashboard on a kitchen or hallway tablet should be readable from across the room,
+not operated up close. Wall mode turns the overview on that one device into a quiet display: the
+time in display sizes, today's programme, who is up today as faces, and the weather with its
+forecast - no navigation, nothing to tap, and a way out that stays quietly in the corner until you
+touch the screen. Between 22:00 and 06:00 it dims itself and forces the dark ground, because the
+problem in a dark hallway is brightness, not colour. The switch lives under Settings → Appearance
+and is device-local, so turning it on at the wall tablet leaves every phone in the household
+untouched.
+
 **Immich photo screensaver.** After five minutes without activity, Yuvomi can replace the static app
 view with rotating photos from a self-hosted Immich library or selected album. Configure and preview
 it under Settings → Administration → Immich; credentials remain on the Yuvomi server. See the
