@@ -31,7 +31,13 @@
 }
 
 /* --------------------------------------------------------------------------
- * Seitentitel — feste 22px mobil, 28px Desktop
+ * Seitentitel — Large Title (34px), mobil wie Desktop
+ *
+ * Hier stand „feste 22px mobil, 28px Desktop". Das waren die Werte vor dem
+ * HIG-Rollout; beide Tokens tragen seither 2.125rem, und der Desktop-Token
+ * existiert nur noch, damit die Stufe benannt bleibt (tokens.css: „Large Title
+ * bleibt stabil"). Ein Kommentar, der zwei Groessen nennt, wo eine steht, laesst
+ * die naechste Suche im falschen Stylesheet anfangen.
  * ------------------------------------------------------------------------ */
 .u-page-title,
 .page__title {

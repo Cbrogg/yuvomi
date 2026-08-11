@@ -2805,17 +2805,19 @@ p.field-hint--warn[hidden] {
 }
 
 .page__title {
-  /* Feste Token-Stufen statt fluidem clamp (Produkt-Register: feste rem-Skala,
-   * keine literalen rem). Mobil --text-2xl (24px), Desktop --text-3xl (30px). */
+  /* HIER STEHT KEINE GROESSE, UND DER KOMMENTAR, DER HIER STAND, NANNTE ZWEI.
+   *
+   * Er sagte „Mobil --text-2xl (24px), Desktop --text-3xl (30px)" - drei Fehler
+   * in einem Satz: die Tokens messen 22 und 28px, die Regel setzt seit dem
+   * HIG-Rollout gar keine Schriftgroesse mehr, und der Seitentitel ist dort
+   * Large Title (34px, mobil wie Desktop). Der Schnitt gehoert der
+   * Seitentitel-Rolle in typography.css; hier bleibt der Umbruch. */
   text-wrap: balance;
 }
 
 @media (min-width: 1024px) {
   .page {
     padding: var(--space-8) var(--space-8);
-  }
-
-  .page__title {
   }
 }
 
