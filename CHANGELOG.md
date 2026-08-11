@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **An API token can act as a chosen family member.** Only an admin can create one, so until now every request a token made belonged to the admin - and a budget entry's owner is fixed to whoever creates it. A bank-import connector could therefore only ever file transactions under the administrator, never under the member they belong to. Creating a token now asks which member it acts as: that member supplies the identity, role, ownership and module permissions, while the administrator stays recorded as the creator for the audit trail. The subject can only narrow access, never widen it - module permissions are resolved for the member on every request, a non-admin subject cannot reach admin-only routes, and scopes remain an additional limit on top. Split-expense guests cannot be selected. Existing tokens keep behaving exactly as before. (#697)
 
+### Changed
+
+- **The dashboard cockpit now tells the day instead of summarizing modules.** "Heute wichtig" was three module aggregates (one task, one count, one meal); it is now a chronological day program: today's remaining appointments with their time, tasks due today ("by 17:00", overdue first), the next planned meal, and open shopping as a timeless closing row - each row carrying its module seal and, where someone is assigned, the member's avatar, plus the object id as an anchor for future deep links. An empty day finally answers instead of disappearing: "Free today" or "All done for today", with the next upcoming appointment as an outlook, and a complete program closes with "Nothing else today". The weather moved from a card into a quiet line under the greeting - the card stays available as a wall-tablet opt-in, and a visible weather card silences the masthead line. The family widget now shows per member what today holds (next appointment, open tasks counted server-side and visibility-filtered) instead of a member count that never changes. Saved layouts keep their exact view; only the author defaults changed.
+
 ## [2.3.0] - 2026-08-11
 
 ### Added

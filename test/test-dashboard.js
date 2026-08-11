@@ -193,6 +193,63 @@ test('Today-Highlights filtert Termine auf den heutigen Tag', async () => {
   assert(result.nextEvent.title === 'Termin Heute', 'Erwartet "Termin Heute" als nächsten Termin');
 });
 
+test('Tagesprogramm: Termin, Aufgabe und Mahlzeit mischen sich chronologisch', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  const todayStr = toLocalDateKey(new Date());
+
+  const result = __test.buildTodayProgram({
+    upcomingEvents: [{ id: 11, title: 'Zahnarzt', start_datetime: `${todayStr}T14:00:00` }],
+    urgentTasks: [{ id: 22, title: 'Zettel abgeben', due_date: todayStr, due_time: '09:30:00', status: 'open' }],
+    // Nur dinner geplant: selectTodayMeal fällt zu jeder Tageszeit auf dinner
+    // vor (deterministisch, kein withHour nötig).
+    todayMeals: [{ id: 33, meal_type: 'dinner', title: 'Pasta' }],
+  });
+
+  const kinds = result.rows.map((r) => r.kind);
+  nodeAssert.deepEqual(kinds, ['task', 'event', 'meal'], 'Aufgabe 09:30 → Termin 14:00 → Abendessen (nominal 18:30)');
+  nodeAssert.deepEqual(result.rows.map((r) => r.objectId), [22, 11, 33], 'jede Zeile trägt ihre Objekt-ID (Deep-Link-Anker, Paket 2)');
+  const sorted = [...result.rows.map((r) => r.sortKey)].sort();
+  nodeAssert.deepEqual(result.rows.map((r) => r.sortKey), sorted, 'Sortierschlüssel sind aufsteigend');
+  nodeAssert.equal(result.nextUpcoming, null, 'kein Termin über heute hinaus');
+});
+
+test('Tagesprogramm: Überfälliges zuerst, Ganztägiges vor zeitlosen Aufgaben', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  const todayStr = toLocalDateKey(new Date());
+  const yesterdayStr = addLocalDays(todayStr, -1);
+
+  const result = __test.buildTodayProgram({
+    upcomingEvents: [{ id: 1, title: 'Ferienbeginn', start_datetime: todayStr, all_day: 1 }],
+    urgentTasks: [
+      { id: 2, title: 'Ohne Uhrzeit', due_date: todayStr, status: 'open' },
+      { id: 3, title: 'Längst fällig', due_date: yesterdayStr, status: 'open' },
+    ],
+  });
+
+  nodeAssert.deepEqual(
+    result.rows.map((r) => r.title),
+    ['Längst fällig', 'Ferienbeginn', 'Ohne Uhrzeit'],
+    'Reihenfolge: überfällig (00:00) → ganztägig (00:01) → heute ohne Uhrzeit (00:02)',
+  );
+  nodeAssert.equal(result.rows[0].overdue, true, 'überfällige Zeile ist markiert');
+});
+
+test('Tagesprogramm: leerer Tag liefert Ausblick (nextUpcoming) und Erledigt-Zähler', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  const todayStr = toLocalDateKey(new Date());
+  const tomorrowStr = addLocalDays(todayStr, 1);
+
+  const result = __test.buildTodayProgram({
+    upcomingEvents: [{ id: 9, title: 'Elternabend', start_datetime: `${tomorrowStr}T19:00:00` }],
+    urgentTasks: [{ id: 4, title: 'Erst übermorgen', due_date: addLocalDays(todayStr, 2), status: 'open' }],
+    tasksDoneToday: 2,
+  });
+
+  nodeAssert.equal(result.rows.length, 0, 'keine Programmzeilen an einem leeren Tag');
+  nodeAssert.equal(result.nextUpcoming?.id, 9, 'der nächste kommende Termin ist der Ausblick');
+  nodeAssert.equal(result.tasksDoneToday, 2, 'der Erledigt-Zähler wird durchgereicht');
+});
+
 test('eventStartDate: ganztägige Termine (date-only) landen auf dem lokalen Kalendertag (Issue #466)', async () => {
   const { __test } = await import('../public/pages/dashboard.js');
   // Google speichert ganztägige Termine als reines Datum "2026-07-10". `new Date()`
@@ -734,6 +791,14 @@ test('Dashboard-Endpoint: dringende Aufgaben, anstehende Termine, Einkaufslisten
   routeDb.prepare('INSERT INTO shopping_items (list_id, name, is_checked) VALUES (?, ?, 0)').run(listId, 'Brot');
   routeDb.prepare('INSERT INTO shopping_items (list_id, name, is_checked) VALUES (?, ?, 1)').run(listId, 'Butter (erledigt)');
 
+  // Heute fällige, bereits erledigte Aufgabe → deckt tasksDoneToday („Alles
+  // erledigt"-Zustand des Tagesprogramms). Lokaler Datumsschlüssel, nicht UTC:
+  // der Server vergleicht mit todayLocalKey (exakte Gleichheit).
+  routeDb.prepare(`
+    INSERT INTO tasks (title, priority, status, due_date, visibility, created_by, assigned_to)
+    VALUES ('Widget Erledigt', 'medium', 'done', ?, 'all', ?, ?)
+  `).run(toLocalDateKey(new Date()), owner, owner);
+
   // Monats-Sparziel (Budgetplan) → deckt den savingsGoal-Zweig.
   routeDb.prepare("INSERT INTO budget_plans (category, amount) VALUES ('__savings__', 500)").run();
 
@@ -767,6 +832,14 @@ test('Dashboard-Endpoint: dringende Aufgaben, anstehende Termine, Einkaufslisten
     nodeAssert.ok(list.items.every((i) => i.is_checked === 0), 'kein erledigter Artikel in der Items-Liste');
 
     nodeAssert.equal(body.budget.savingsGoal, 500, 'Sparziel wird aus dem Budgetplan gelesen');
+
+    // „Heute dran"-Karte: die Pro-Mitglied-Last kommt serverseitig aggregiert,
+    // nicht aus dem 5er-Limit von urgentTasks.
+    const memberLoad = body.memberTodayTasks.find((m) => m.user_id === owner);
+    nodeAssert.ok(memberLoad, 'Pro-Mitglied-Zeile für den Owner vorhanden');
+    nodeAssert.equal(memberLoad.open_count, 1, 'genau die eine offene, heute fällige Aufgabe zählt (Abgelegtes zählt nicht)');
+
+    nodeAssert.equal(body.tasksDoneToday, 1, 'heute fällige erledigte Aufgabe wird gezählt');
   } finally {
     await new Promise((resolve) => server.close(resolve));
     routeDb.prepare("DELETE FROM budget_plans WHERE category = '__savings__'").run();

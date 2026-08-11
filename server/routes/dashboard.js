@@ -42,7 +42,9 @@ const router = express.Router();
  *   urgentTasks:    Task[],            // High/Urgent mit Fälligkeit ≤ 48h
  *   todayMeals:     Meal[],            // Mahlzeiten für heute
  *   pinnedNotes:    Note[],            // Angepinnte Notizen (max. 3)
- *   users:          User[]             // Alle User (für Avatar-Farben)
+ *   users:          User[],            // Alle User (für Avatar-Farben)
+ *   memberTodayTasks: {user_id, open_count}[], // Heute fällige/überfällige offene Aufgaben je Mitglied
+ *   tasksDoneToday: number             // Heute fällige, bereits erledigte Aufgaben
  * }
  */
 router.get('/', (req, res) => {
@@ -385,6 +387,39 @@ router.get('/', (req, res) => {
   } catch (err) {
     log.error('housekeeping error:', err.message);
     result.housekeeping = { configured: false, present: false, presentSince: null, workerName: null, visitsThisMonth: 0, unpaidAmount: 0, lastVisit: null };
+  }
+
+  // „Heute dran"-Karte: pro Mitglied die Zahl der heute fälligen oder über-
+  // fälligen offenen Aufgaben. Eigene Aggregation statt Zählung aus urgentTasks,
+  // dessen 5er-Limit die Zahlen je Mitglied verfälschen würde. Sichtbarkeit wie
+  // überall: der Betrachter zählt nur, was er sehen darf.
+  try {
+    result.memberTodayTasks = d.prepare(`
+      SELECT ta.user_id AS user_id, COUNT(*) AS open_count
+      FROM tasks t JOIN task_assignments ta ON ta.task_id = t.id
+      WHERE t.status != 'done' AND t.archived_at IS NULL
+        AND t.due_date IS NOT NULL AND t.due_date <= @today
+        AND ${visibilityWhere('t', 'task_assignments', 'task_id', '@me')}
+      GROUP BY ta.user_id
+    `).all({ today: todayLocalKey, me: userId });
+  } catch (err) {
+    log.error('memberTodayTasks error:', err.message);
+    result.memberTodayTasks = [];
+  }
+
+  // „Alles erledigt"-Zustand des Tagesprogramms: nur mit der Zahl heute fälliger,
+  // bereits erledigter Aufgaben lässt sich „alles geschafft" von „heute stand nie
+  // etwas an" unterscheiden - die offene Liste allein kann das nicht.
+  try {
+    result.tasksDoneToday = d.prepare(`
+      SELECT COUNT(*) AS n FROM tasks t
+      WHERE t.status = 'done' AND t.archived_at IS NULL
+        AND t.due_date = @today
+        AND ${visibilityWhere('t', 'task_assignments', 'task_id', '@me')}
+    `).get({ today: todayLocalKey, me: userId }).n;
+  } catch (err) {
+    log.error('tasksDoneToday error:', err.message);
+    result.tasksDoneToday = 0;
   }
 
   res.json(result);

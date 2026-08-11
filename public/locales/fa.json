@@ -224,7 +224,17 @@
         "housekeepingVisitsMonth": "{{count}} بازدید این ماه",
         "housekeepingUnpaid": "{{amount}} پرداخت‌نشده",
         "widgetError": "بارگذاری نشد",
-        "savingsGoal": "هدف پس‌انداز"
+        "savingsGoal": "هدف پس‌انداز",
+        "todayFree": "امروز آزاد",
+        "todayAllDone": "همه کارهای امروز انجام شد",
+        "todayNextUp": "بعدی: {{event}}",
+        "todayNothingElse": "امروز دیگر برنامه‌ای نیست",
+        "todayUntil": "تا {{time}}",
+        "todayMore": "+{{count}} مورد دیگر امروز",
+        "todayMore_one": "+{{count}} مورد دیگر امروز",
+        "memberOpenTasks": "{{count}} وظیفه",
+        "memberOpenTasks_one": "{{count}} وظیفه",
+        "manage": "مدیریت"
     },
     "tasks": {
         "manageCategories": "مدیریت دسته‌ها",

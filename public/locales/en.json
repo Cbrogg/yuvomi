@@ -212,7 +212,17 @@
         "housekeepingVisitsMonth": "{{count}} visits this month",
         "housekeepingUnpaid": "{{amount}} outstanding",
         "widgetError": "Couldn’t be loaded",
-        "savingsGoal": "Savings goal"
+        "savingsGoal": "Savings goal",
+        "todayFree": "Free today",
+        "todayAllDone": "All done for today",
+        "todayNextUp": "Up next: {{event}}",
+        "todayNothingElse": "Nothing else today",
+        "todayUntil": "by {{time}}",
+        "todayMore": "+{{count}} more today",
+        "todayMore_one": "+{{count}} more today",
+        "memberOpenTasks": "{{count}} tasks",
+        "memberOpenTasks_one": "{{count}} task",
+        "manage": "Manage"
     },
     "tasks": {
         "manageCategories": "Manage categories",

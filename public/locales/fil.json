@@ -224,7 +224,17 @@
         "housekeepingVisitsMonth": "{{count}} pagbisita ngayong buwan",
         "housekeepingUnpaid": "{{amount}} ang nakabinbin",
         "widgetError": "Hindi ma-load",
-        "savingsGoal": "Layunin sa pag-iipon"
+        "savingsGoal": "Layunin sa pag-iipon",
+        "todayFree": "Libre ngayon",
+        "todayAllDone": "Tapos na ang lahat para ngayon",
+        "todayNextUp": "Susunod: {{event}}",
+        "todayNothingElse": "Wala nang iba ngayon",
+        "todayUntil": "bago mag-{{time}}",
+        "todayMore": "+{{count}} pa ngayon",
+        "todayMore_one": "+{{count}} pa ngayon",
+        "memberOpenTasks": "{{count}} gawain",
+        "memberOpenTasks_one": "{{count}} gawain",
+        "manage": "Pamahalaan"
     },
     "tasks": {
         "manageCategories": "Pamahalaan ang mga kategorya",

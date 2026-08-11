@@ -212,7 +212,17 @@
         "housekeepingVisitsMonth": "{{count}} زيارة هذا الشهر",
         "housekeepingUnpaid": "{{amount}} مستحقة",
         "widgetError": "تعذّر التحميل",
-        "savingsGoal": "هدف الادخار"
+        "savingsGoal": "هدف الادخار",
+        "todayFree": "اليوم فارغ",
+        "todayAllDone": "أُنجز كل شيء لليوم",
+        "todayNextUp": "التالي: {{event}}",
+        "todayNothingElse": "لا شيء آخر اليوم",
+        "todayUntil": "حتى {{time}}",
+        "todayMore": "+{{count}} أخرى اليوم",
+        "todayMore_one": "+{{count}} أخرى اليوم",
+        "memberOpenTasks": "{{count}} مهام",
+        "memberOpenTasks_one": "{{count}} مهمة",
+        "manage": "إدارة"
     },
     "tasks": {
         "manageCategories": "إدارة الفئات",

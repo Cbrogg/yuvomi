@@ -212,7 +212,17 @@
         "housekeepingVisitsMonth": "今月 {{count}} 回訪問",
         "housekeepingUnpaid": "{{amount}} 未払い",
         "widgetError": "読み込めませんでした",
-        "savingsGoal": "貯蓄目標"
+        "savingsGoal": "貯蓄目標",
+        "todayFree": "今日は予定なし",
+        "todayAllDone": "今日の予定はすべて完了",
+        "todayNextUp": "次の予定: {{event}}",
+        "todayNothingElse": "今日はこの後予定はありません",
+        "todayUntil": "{{time}}まで",
+        "todayMore": "他{{count}}件",
+        "todayMore_one": "他{{count}}件",
+        "memberOpenTasks": "タスク{{count}}件",
+        "memberOpenTasks_one": "タスク{{count}}件",
+        "manage": "管理"
     },
     "tasks": {
         "manageCategories": "カテゴリーを管理",

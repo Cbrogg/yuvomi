@@ -212,7 +212,17 @@
         "housekeepingVisitsMonth": "{{count}} επισκέψεις αυτόν τον μήνα",
         "housekeepingUnpaid": "{{amount}} οφειλόμενα",
         "widgetError": "Δεν ήταν δυνατή η φόρτωση",
-        "savingsGoal": "Στόχος αποταμίευσης"
+        "savingsGoal": "Στόχος αποταμίευσης",
+        "todayFree": "Ελεύθερη μέρα",
+        "todayAllDone": "Όλα έτοιμα για σήμερα",
+        "todayNextUp": "Επόμενο: {{event}}",
+        "todayNothingElse": "Τίποτα άλλο για σήμερα",
+        "todayUntil": "έως {{time}}",
+        "todayMore": "+{{count}} ακόμη σήμερα",
+        "todayMore_one": "+{{count}} ακόμη σήμερα",
+        "memberOpenTasks": "{{count}} εργασίες",
+        "memberOpenTasks_one": "{{count}} εργασία",
+        "manage": "Διαχείριση"
     },
     "tasks": {
         "manageCategories": "Διαχείριση κατηγοριών",

@@ -212,7 +212,17 @@
         "housekeepingVisitsMonth": "{{count}} візитів цього місяця",
         "housekeepingUnpaid": "{{amount}} до сплати",
         "widgetError": "Не вдалося завантажити",
-        "savingsGoal": "Ціль заощаджень"
+        "savingsGoal": "Ціль заощаджень",
+        "todayFree": "Сьогодні вільно",
+        "todayAllDone": "Усе на сьогодні зроблено",
+        "todayNextUp": "Далі: {{event}}",
+        "todayNothingElse": "Більше на сьогодні нічого немає",
+        "todayUntil": "до {{time}}",
+        "todayMore": "+{{count}} ще сьогодні",
+        "todayMore_one": "+{{count}} ще сьогодні",
+        "memberOpenTasks": "{{count}} завдань",
+        "memberOpenTasks_one": "{{count}} завдання",
+        "manage": "Керувати"
     },
     "tasks": {
         "manageCategories": "Керування категоріями",

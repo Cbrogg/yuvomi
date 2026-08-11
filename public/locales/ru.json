@@ -212,7 +212,17 @@
         "housekeepingVisitsMonth": "{{count}} визитов в этом месяце",
         "housekeepingUnpaid": "{{amount}} к оплате",
         "widgetError": "Не удалось загрузить",
-        "savingsGoal": "Цель накоплений"
+        "savingsGoal": "Цель накоплений",
+        "todayFree": "Сегодня свободно",
+        "todayAllDone": "Всё на сегодня сделано",
+        "todayNextUp": "Далее: {{event}}",
+        "todayNothingElse": "Больше на сегодня ничего нет",
+        "todayUntil": "до {{time}}",
+        "todayMore": "+{{count}} ещё сегодня",
+        "todayMore_one": "+{{count}} ещё сегодня",
+        "memberOpenTasks": "{{count}} задач",
+        "memberOpenTasks_one": "{{count}} задача",
+        "manage": "Управлять"
     },
     "tasks": {
         "manageCategories": "Управление категориями",

@@ -212,7 +212,17 @@
         "housekeepingVisitsMonth": "{{count}} bezoeken deze maand",
         "housekeepingUnpaid": "{{amount}} openstaand",
         "widgetError": "Kon niet worden geladen",
-        "savingsGoal": "Spaardoel"
+        "savingsGoal": "Spaardoel",
+        "todayFree": "Vandaag vrij",
+        "todayAllDone": "Alles voor vandaag gedaan",
+        "todayNextUp": "Hierna: {{event}}",
+        "todayNothingElse": "Verder niets meer vandaag",
+        "todayUntil": "voor {{time}}",
+        "todayMore": "+{{count}} meer vandaag",
+        "todayMore_one": "+{{count}} meer vandaag",
+        "memberOpenTasks": "{{count}} taken",
+        "memberOpenTasks_one": "{{count}} taak",
+        "manage": "Beheren"
     },
     "tasks": {
         "manageCategories": "Categorieën beheren",

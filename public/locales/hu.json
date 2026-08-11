@@ -212,7 +212,17 @@
         "housekeepingVisitsMonth": "{{count}} látogatás e hónapban",
         "housekeepingUnpaid": "{{amount}} rendezendő",
         "widgetError": "Nem sikerült betölteni",
-        "savingsGoal": "Megtakarítási cél"
+        "savingsGoal": "Megtakarítási cél",
+        "todayFree": "Ma szabad",
+        "todayAllDone": "Mára minden kész",
+        "todayNextUp": "Következik: {{event}}",
+        "todayNothingElse": "Mára nincs több teendő",
+        "todayUntil": "{{time}}-ig",
+        "todayMore": "+{{count}} további ma",
+        "todayMore_one": "+{{count}} további ma",
+        "memberOpenTasks": "{{count}} feladat",
+        "memberOpenTasks_one": "{{count}} feladat",
+        "manage": "Kezelés"
     },
     "tasks": {
         "manageCategories": "Kategóriák kezelése",

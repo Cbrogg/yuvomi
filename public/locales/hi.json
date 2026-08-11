@@ -212,7 +212,17 @@
         "housekeepingVisitsMonth": "इस माह {{count}} विज़िट",
         "housekeepingUnpaid": "{{amount}} बकाया",
         "widgetError": "लोड नहीं हो सका",
-        "savingsGoal": "बचत लक्ष्य"
+        "savingsGoal": "बचत लक्ष्य",
+        "todayFree": "आज खाली",
+        "todayAllDone": "आज का सब काम पूरा",
+        "todayNextUp": "आगे: {{event}}",
+        "todayNothingElse": "आज और कुछ नहीं",
+        "todayUntil": "{{time}} तक",
+        "todayMore": "+{{count}} और आज",
+        "todayMore_one": "+{{count}} और आज",
+        "memberOpenTasks": "{{count}} कार्य",
+        "memberOpenTasks_one": "{{count}} कार्य",
+        "manage": "प्रबंधित करें"
     },
     "tasks": {
         "manageCategories": "श्रेणियाँ प्रबंधित करें",

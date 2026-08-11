@@ -249,8 +249,9 @@ function defaultWidgetSize(id) {
   // ganze Rasterzeile zu belegen (löst die Masonry-Imbalance an der Wurzel).
   // Inhaltsschwere Karten (gestapelte Blöcke) starten hoch statt 1×1, damit die
   // Zeile nicht per grid-auto ragged nachwächst (Critique P4). Budget stapelt
-  // Saldo + Sparen + Einnahme/Ausgabe + Top-Ausgabe → 1×2.
-  if (['tasks', 'calendar', 'rewards', 'budget'].includes(id)) return '1x2';
+  // Saldo + Sparen + Einnahme/Ausgabe + Top-Ausgabe → 1×2; family stapelt seit
+  // dem „Heute dran"-Umbau Mitglieder-Zeilen und braucht dieselbe Höhe.
+  if (['tasks', 'calendar', 'rewards', 'budget', 'family'].includes(id)) return '1x2';
   // Die Uhr startet breit statt quadratisch: Uhrzeit und darunter der ausgeschriebene
   // Wochentag brauchen Zeile, nicht Höhe - auf 1x1 bräche das Datum um (#651).
   if (['weather', 'shopping', 'health', 'cycle', 'meals', 'clock'].includes(id)) return '2x1';
@@ -271,7 +272,11 @@ const COCKPIT_COVERED_WIDGETS = new Set(['tasks', 'calendar', 'shopping', 'meals
 // `clock` kommt dazu: auf einem Gerät mit Statusleiste ist eine zweite Uhr
 // Doppelung. Ihren Zweck erfüllt sie am Wandtablet ohne Systemleiste (#651) -
 // das ist ein bewusster Aufbau, kein Standardfall.
-const DEFAULT_HIDDEN_WIDGETS = new Set([...COCKPIT_COVERED_WIDGETS, 'rewards', 'health', 'cycle', 'housekeeping', 'clock']);
+// `weather` ebenso (Seele-Paket): das Wetter spricht als Masthead-Zeile unterm
+// Gruß; die große Karte mit Vorhersage ist der Wandtablet-Opt-in im Tray.
+// Bestandslayouts behalten ihre gespeicherte Sichtbarkeit - dort entfällt
+// stattdessen die Masthead-Zeile (kein Echo).
+const DEFAULT_HIDDEN_WIDGETS = new Set([...COCKPIT_COVERED_WIDGETS, 'rewards', 'health', 'cycle', 'housekeeping', 'clock', 'weather']);
 
 function defaultWidgetVisible(id) {
   return !DEFAULT_HIDDEN_WIDGETS.has(id);
@@ -585,6 +590,9 @@ function formatPoints(value) {
  * Herkunft - gemessen, nicht vermutet.
  */
 function widgetHeader(icon, title, count, linkHref, linkLabel) {
+  // Ein eigenes Link-Label spricht auch im aria-Label mit eigener Stimme:
+  // „Alle: Familienmitglieder" für einen „Verwalten"-Link wäre eine Lüge.
+  const customLabel = linkLabel != null;
   linkLabel = linkLabel ?? t('dashboard.allLink');
   const badge = count != null
     ? `<span class="widget__badge">${count}</span>`
@@ -605,7 +613,7 @@ function widgetHeader(icon, title, count, linkHref, linkLabel) {
         ${badge}
       </h3>
       <a href="${linkHref}" data-route="${linkHref}" class="widget__link"
-         aria-label="${esc(t('dashboard.allLinkFor', { module: title }))}">
+         aria-label="${esc(customLabel ? `${linkLabel}: ${title}` : t('dashboard.allLinkFor', { module: title }))}">
         ${linkLabel}
       </a>
     </div>
@@ -687,6 +695,98 @@ function selectTodayMeal(meals) {
     if (found) return { meal: found, mealType: order[i] };
   }
   return { meal: null, mealType: targetType };
+}
+
+// Nominale Slot-Zeiten der Mahlzeiten: Mahlzeiten tragen keine Uhrzeit, brauchen
+// im chronologischen Tagesprogramm aber einen Platz. Die Werte ordnen nur ein,
+// sie behaupten keine Essenszeit - deshalb erscheinen sie nie als Label.
+const MEAL_SORT_TIME = { breakfast: '08:00', lunch: '12:30', snack: '15:30', dinner: '18:30' };
+
+/**
+ * Tagesprogramm (Seele-Paket): heutige Termine, fällige Aufgaben und die nächste
+ * Mahlzeit als EINE chronologische Erzählung statt drei Modul-Aggregaten.
+ * Sortiert wird über einen HH:MM-Schlüssel; Zeitloses ordnet sich bewusst ein:
+ * Überfälliges zuerst (00:00, es ist schon zu spät), dann Ganztägiges (00:01),
+ * dann heute Fälliges ohne Uhrzeit (00:02). upcomingEvents liefert nur „ab
+ * jetzt" - Vergangenes verschwindet also von selbst aus dem Programm.
+ */
+function buildTodayProgram(data, { includeTasks = true, includeCalendar = true, includeMeals = true } = {}) {
+  const highlights = buildTodayHighlights(data);
+  const todayKey = toLocalDateKey(new Date());
+  const events = Array.isArray(data?.upcomingEvents) ? data.upcomingEvents : [];
+  const rows = [];
+
+  if (includeCalendar) {
+    for (const event of events) {
+      if (eventOccurrenceDateKey(event) !== todayKey) continue;
+      const start = eventStartDate(event);
+      const timed = !event.all_day && start && String(event.start_datetime).length > 10;
+      rows.push({
+        kind: 'event',
+        objectId: event.id,
+        sortKey: timed ? `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}` : '00:01',
+        timeLabel: timed ? formatTime(start) : t('dashboard.allDay'),
+        title: event.title,
+        sub: t('dashboard.todayEvent'),
+        icon: 'calendar',
+        tone: 'event',
+        route: calendarEventRoute(event),
+        who: event.assigned_users?.[0] ?? null,
+      });
+    }
+  }
+
+  if (includeTasks) {
+    const tasks = Array.isArray(data?.urgentTasks) ? data.urgentTasks : Array.isArray(data?.tasks) ? data.tasks : [];
+    for (const task of tasks) {
+      if (!task.due_date || task.due_date > todayKey) continue;
+      const overdue = task.due_date < todayKey;
+      const due = !overdue && task.due_time ? new Date(`${task.due_date}T${task.due_time}`) : null;
+      const dueValid = due && !Number.isNaN(due.getTime());
+      rows.push({
+        kind: 'task',
+        objectId: task.id,
+        sortKey: overdue ? '00:00' : dueValid ? `${String(due.getHours()).padStart(2, '0')}:${String(due.getMinutes()).padStart(2, '0')}` : '00:02',
+        timeLabel: overdue ? t('dashboard.overdue') : dueValid ? t('dashboard.todayUntil', { time: formatTime(due) }) : '',
+        overdue,
+        title: task.title,
+        sub: t('dashboard.todayTask'),
+        icon: 'check-square',
+        tone: 'task',
+        route: '/tasks',
+        who: task.assigned_users?.[0] ?? null,
+      });
+    }
+  }
+
+  if (includeMeals && highlights.meal) {
+    rows.push({
+      kind: 'meal',
+      objectId: highlights.meal.id ?? null,
+      sortKey: MEAL_SORT_TIME[highlights.mealType] ?? MEAL_SORT_TIME.dinner,
+      timeLabel: '',
+      title: highlights.meal.title,
+      sub: MEAL_LABELS()[highlights.mealType] ?? t('dashboard.todayDinner'),
+      icon: MEAL_ICONS[highlights.mealType] ?? 'utensils',
+      tone: 'dinner',
+      route: '/meals',
+      who: null,
+    });
+  }
+
+  rows.sort((a, b) => (a.sortKey < b.sortKey ? -1 : a.sortKey > b.sortKey ? 1 : 0));
+
+  // Der nächste kommende Termin über heute hinaus - der beruhigende Ausblick
+  // der „Heute frei"-Zeile. upcomingEvents ist „ab jetzt" sortiert, der erste
+  // Eintrag eines späteren Tages ist also genau er.
+  const nextUpcoming = events.find((event) => eventOccurrenceDateKey(event) > todayKey) ?? null;
+
+  return {
+    rows,
+    nextUpcoming,
+    openShoppingCount: highlights.openShoppingCount,
+    tasksDoneToday: Number(data?.tasksDoneToday) || 0,
+  };
 }
 
 // --------------------------------------------------------
@@ -870,25 +970,55 @@ function renderPinnedNotes(notes) {
   </div>`;
 }
 
-function renderFamilyWidget(users) {
+function renderFamilyWidget(users, data) {
   // IM SOLO-HAUSHALT GIBT ES DIESES WIDGET NICHT - entschieden in
   // `isWidgetModuleEnabled`, damit es auch aus der „Anpassen"-Ablage faellt.
   // Es war das prominenteste Widget rechts oben und zeigte einer Solo-Nutzerin
   // eine grosse 1 mit „im Haushalt", ein Zaehler, dessen einziger Inhalt ist,
   // dass sie allein ist (Critique 2026-08-10, Persona Miriam).
-  const visible = users.slice(0, 6);
-  const avatars = visible.map((u) => `
-    <span class="family-widget-avatar" style="background:${esc(u.avatar_color || AVATAR_FALLBACK_COLOR)};color:${getReadableTextColor(u.avatar_color || AVATAR_FALLBACK_COLOR)}" title="${esc(u.display_name)}">
-      ${u.avatar_data ? `<img src="${esc(u.avatar_data)}" alt="${esc(u.display_name)}" loading="lazy">` : esc(initials(u.display_name))}
-    </span>
-  `).join('');
+  //
+  // „Heute dran" statt Stat-Zahl (Seele-Paket): die Karte beantwortet, was die
+  // Mitglieder HEUTE angeht - naechster eigener Termin plus offene Tageslast -
+  // statt einer Zahl, die sich nie aendert. Zaehlerquelle ist memberTodayTasks
+  // (serverseitig aggregiert, sichtbarkeitsgefiltert); aus dem 5er-Limit von
+  // urgentTasks zu zaehlen wuerde luegen, sobald mehr ansteht.
+  const openByUser = new Map(
+    (Array.isArray(data?.memberTodayTasks) ? data.memberTodayTasks : [])
+      .map((r) => [r.user_id, Number(r.open_count) || 0])
+  );
+  const events = Array.isArray(data?.upcomingEvents) ? data.upcomingEvents : [];
+  const todayKey = toLocalDateKey(new Date());
+
+  const rows = users.slice(0, 6).map((u) => {
+    const nextEvent = events.find((e) => eventOccurrenceDateKey(e) === todayKey
+      && (Array.isArray(e.assigned_users) ? e.assigned_users : []).some((a) => a.id === u.id));
+    const parts = [];
+    if (nextEvent) {
+      const start = eventStartDate(nextEvent);
+      const timed = !nextEvent.all_day && start && String(nextEvent.start_datetime).length > 10;
+      parts.push(timed ? `${esc(formatTime(start))} ${esc(nextEvent.title)}` : esc(nextEvent.title));
+    }
+    const open = openByUser.get(u.id) ?? 0;
+    if (open > 0) parts.push(esc(t('dashboard.memberOpenTasks', { count: open })));
+    const free = !parts.length;
+    return `
+      <div class="family-member">
+        <span class="family-widget-avatar" style="background:${esc(u.avatar_color || AVATAR_FALLBACK_COLOR)};color:${getReadableTextColor(u.avatar_color || AVATAR_FALLBACK_COLOR)}">
+          ${u.avatar_data ? `<img src="${esc(u.avatar_data)}" alt="" loading="lazy">` : esc(initials(u.display_name))}
+        </span>
+        <span class="family-member__body">
+          <span class="family-member__name">${esc(u.display_name)}</span>
+          <span class="family-member__status${free ? ' family-member__status--free' : ''}">${free ? esc(t('dashboard.todayFree')) : parts.join(' · ')}</span>
+        </span>
+      </div>`;
+  }).join('');
+  const moreCount = users.length - Math.min(users.length, 6);
 
   return `<div class="widget widget--family">
-    ${widgetHeader('users', t('dashboard.familyMembers'), users.length, '/settings')}
+    ${widgetHeader('users', t('dashboard.familyMembers'), null, '/settings', t('dashboard.manage'))}
     <div class="family-widget">
-      <div class="family-widget__count">${users.length}</div>
-      <div class="family-widget__meta">${t('dashboard.participantsAdded')}</div>
-      <div class="family-widget__avatars">${avatars}</div>
+      ${rows}
+      ${moreCount > 0 ? `<div class="family-member family-member--more">${esc(t('dashboard.shoppingMore', { count: moreCount }))}</div>` : ''}
     </div>
   </div>`;
 }
@@ -1207,72 +1337,137 @@ function renderHousekeepingWidget(hk, currency) {
   </div>`;
 }
 
-function renderTodayCard(icon, label, value, route, tone, count = null, who = null) {
-  const badge = Number.isFinite(count) && count > 0
-    ? `<span class="today-cockpit-card__count">${count}</span>`
+/* DAS UEBERLAPPUNGSZEICHEN (Block-2-Brief, utils/seal-pair.js): „Heute
+ * wichtig" ist die Mischstelle des Dashboards - hier stehen Aufgabe, Termin,
+ * Einkauf und Essen nebeneinander, und das Siegel sagt bereits, aus welchem
+ * Raum jede Zeile kommt. Traegt die Zeile ausserdem eine Person, sagt der
+ * ueberlappende Avatar, wen sie angeht.
+ *
+ * Es erscheint NUR dann - nicht am Einkauf, nicht am Essen, und im
+ * Solo-Haushalt an keiner Zeile (`whoMark` entscheidet das selbst). Ein
+ * Zeichen, das immer da ist, sagt nichts. */
+function renderTodayRow(row) {
+  const mark = whoMark(row.who);
+  // Trailing-Detail ist die ZEIT, kein Zähler mehr: die Programm-Zeile
+  // beantwortet „wann", und dieselbe Badge-Form für drei Bedeutungen
+  // (Anzahl/offen/Alter) war ein Critique-Befund (H6).
+  const time = row.timeLabel
+    ? `<span class="today-cockpit-card__time${row.overdue ? ' today-cockpit-card__time--overdue' : ''}">${esc(row.timeLabel)}</span>`
     : '';
-  /* DAS UEBERLAPPUNGSZEICHEN (Block-2-Brief, utils/seal-pair.js): „Heute
-   * wichtig" ist die Mischstelle des Dashboards - hier stehen Aufgabe, Termin,
-   * Einkauf und Essen nebeneinander, und das Siegel sagt bereits, aus welchem
-   * Raum jede Zeile kommt. Traegt die Zeile ausserdem eine Person, sagt der
-   * ueberlappende Avatar, wen sie angeht.
-   *
-   * Es erscheint NUR dann - nicht am Einkauf, nicht am Essen, und im
-   * Solo-Haushalt an keiner Zeile (`whoMark` entscheidet das selbst). Ein
-   * Zeichen, das immer da ist, sagt nichts. */
-  const mark = whoMark(who);
+  // Objekt-Anker für die Objekt-Deep-Links (Paket 2): die Zeile weiß bereits,
+  // WOVON sie spricht - nur das Ziel bleibt vorerst die Modul-Route.
+  const objectAttrs = row.objectId != null
+    ? ` data-object-kind="${esc(row.kind)}" data-object-id="${esc(String(row.objectId))}"`
+    : '';
   // Inset-Grouped-Zeile (Apple-Systemapp-Muster): das Markensiegel traegt
   // die Modulzugehoerigkeit (Herkunfts-Regel, Block 2), der Inhalt steht als
   // Titel in Textfarbe, das Modul-Label lebt als ruhiger Untertitel weiter
-  // (nie versal, nie ueber dem Titel), der Zaehler als trailing Badge.
+  // (nie versal, nie ueber dem Titel).
   return `
-    <button type="button" class="today-cockpit-card today-cockpit-card--${tone}" data-route="${route}">
-      <span class="${mark ? 'seal-pair' : ''}"><span class="module-seal today-cockpit-card__icon"><i data-lucide="${icon}" aria-hidden="true"></i></span>${mark}</span>
+    <button type="button" class="today-cockpit-card today-cockpit-card--${row.tone}" data-route="${row.route}"${objectAttrs}>
+      <span class="${mark ? 'seal-pair' : ''}"><span class="module-seal today-cockpit-card__icon"><i data-lucide="${row.icon}" aria-hidden="true"></i></span>${mark}</span>
       <span class="today-cockpit-card__body">
-        <strong class="today-cockpit-card__value">${esc(value)}</strong>
-        <span class="today-cockpit-card__sub">${esc(label)}</span>
+        <strong class="today-cockpit-card__value">${esc(row.title)}</strong>
+        <span class="today-cockpit-card__sub">${esc(row.sub)}</span>
       </span>
-      ${badge}
+      ${time}
     </button>
   `;
 }
 
-function renderTodayCockpit(data, cfg = []) {
-  const highlights = buildTodayHighlights(data);
-  const taskTitle = highlights.urgentTask?.title ?? t('dashboard.todayNoTasks');
-  const eventTitle = highlights.nextEvent?.title ?? t('dashboard.todayNoEvents');
-  const mealLabel = MEAL_LABELS()[highlights.mealType] ?? t('dashboard.todayDinner');
-  const mealIcon = MEAL_ICONS[highlights.mealType] ?? 'utensils';
-  const mealTitle = highlights.meal?.title ?? t('dashboard.todayNoDinner');
+// Zustands-Zeile des Tagesprogramms: „Heute frei" / „Alles für heute erledigt".
+// Gleiche Zeilen-Anatomie wie das Programm; mit Ausblick (nächster Termin) ist
+// sie ein Link dorthin, ohne bleibt sie ein ruhiges <div> ohne Interaktion.
+function renderTodayStateRow({ title, sub, icon, route }) {
+  const inner = `
+      <span class="module-seal today-cockpit-card__icon"><i data-lucide="${icon}" aria-hidden="true"></i></span>
+      <span class="today-cockpit-card__body">
+        <strong class="today-cockpit-card__value">${esc(title)}</strong>
+        ${sub ? `<span class="today-cockpit-card__sub">${esc(sub)}</span>` : ''}
+      </span>
+  `;
+  if (route) {
+    return `<button type="button" class="today-cockpit-card today-cockpit-card--state" data-route="${route}">${inner}</button>`;
+  }
+  return `<div class="today-cockpit-card today-cockpit-card--state">${inner}</div>`;
+}
 
-  // Kein Echo: ist das Modul-Widget einer Domäne sichtbar, entfällt seine
-  // Cockpit-Karte — jede Domäne hat genau eine Repräsentation (Cockpit ODER
+// Deckel des Tagesprogramms: mehr Zeilen wären keine Orientierung mehr,
+// sondern eine zweite Aufgabenliste. Der Überlauf spricht als stille Fußzeile.
+const PROGRAM_ROW_CAP = 6;
+
+function renderTodayCockpit(data, cfg = []) {
+  // Kein Echo: ist das Modul-Widget einer Domäne sichtbar, entfallen ihre
+  // Programm-Zeilen — jede Domäne hat genau eine Repräsentation (Cockpit ODER
   // Widget), statt dieselbe Aufgabe/Termin doppelt zu zeigen.
   const widgetShown = (id) => Array.isArray(cfg) && cfg.some((w) => w.id === id && w.visible);
+  const domainInCockpit = (module) => !window.yuvomi?.isModuleDisabled(module) && !widgetShown(module);
 
-  // Leere Karten ausblenden: eine Domäne ohne Inhalt (kein Termin, keine offene
-  // Aufgabe, kein geplantes Essen …) bekommt keine Cockpit-Karte, statt einen
-  // „Nichts geplant"-Platzhalter zu zeigen. Betraf zuvor „Heute Essen", weil
-  // dessen Widget standardmäßig ausgeblendet ist und die Karte so ohne Mahlzeit
-  // sichtbar blieb.
-  const hasContent = {
-    tasks:    Boolean(highlights.urgentTask),
-    calendar: Boolean(highlights.nextEvent),
-    shopping: highlights.openShoppingCount > 0,
-    meals:    Boolean(highlights.meal),
-  };
-  const showCard = (module) => !window.yuvomi?.isModuleDisabled(module) && !widgetShown(module) && hasContent[module];
+  const includeTasks = domainInCockpit('tasks');
+  const includeCalendar = domainInCockpit('calendar');
+  const includeMeals = domainInCockpit('meals');
+  const includeShopping = domainInCockpit('shopping');
 
-  const cards = [
-    showCard('tasks')    ? renderTodayCard('check-square', t('dashboard.todayTask'),     taskTitle, '/tasks', 'task', highlights.taskCount, highlights.urgentTask?.assigned_users?.[0]) : '',
-    showCard('calendar') ? renderTodayCard('calendar',     t('dashboard.todayEvent'),    eventTitle, calendarEventRoute(highlights.nextEvent), 'event', highlights.eventCount, highlights.nextEvent?.assigned_users?.[0]) : '',
-    showCard('shopping') ? renderTodayCard('shopping-cart', t('dashboard.todayShopping'), t('dashboard.todayShoppingCount', { count: highlights.openShoppingCount }), '/shopping', 'shopping') : '',
-    showCard('meals')    ? renderTodayCard(mealIcon,        mealLabel,   mealTitle, '/meals', 'dinner') : '',
-  ].filter(Boolean);
+  const program = buildTodayProgram(data, { includeTasks, includeCalendar, includeMeals });
+  const visibleRows = program.rows.slice(0, PROGRAM_ROW_CAP);
+  const overflow = program.rows.length - visibleRows.length;
+
+  const parts = visibleRows.map(renderTodayRow);
+  if (overflow > 0) {
+    parts.push(`<div class="today-cockpit__more">${esc(t('dashboard.todayMore', { count: overflow }))}</div>`);
+  }
+
+  // Ein leerer Tag spricht, statt zu verschwinden (Critique P2): „Alles
+  // erledigt", wenn heute Fälliges bereits geschafft ist, sonst „Heute frei" -
+  // mit dem nächsten kommenden Termin als beruhigendem Ausblick. Beides nur,
+  // wenn die tragende Domäne überhaupt im Cockpit spricht: neben einem
+  // sichtbaren Kalender-Widget wäre „Heute frei" eine fremde Behauptung.
+  if (!program.rows.length) {
+    const sayAllDone = includeTasks && program.tasksDoneToday > 0;
+    if (sayAllDone || includeCalendar) {
+      const next = includeCalendar ? program.nextUpcoming : null;
+      let sub = '';
+      if (next) {
+        const start = eventStartDate(next);
+        const when = next.all_day || String(next.start_datetime).length <= 10
+          ? relativeDateLabel(start)
+          : formatDateTime(next.start_datetime);
+        sub = t('dashboard.todayNextUp', { event: `${when} · ${next.title}` });
+      }
+      parts.unshift(renderTodayStateRow({
+        title: sayAllDone ? t('dashboard.todayAllDone') : t('dashboard.todayFree'),
+        sub,
+        icon: sayAllDone ? 'check-circle' : 'sparkles',
+        route: next ? calendarEventRoute(next) : null,
+      }));
+    }
+  }
+
+  // Einkauf bleibt die zeitlose Schlusszeile - nur wenn etwas offen ist.
+  if (includeShopping && program.openShoppingCount > 0) {
+    parts.push(renderTodayRow({
+      kind: 'shopping',
+      objectId: null,
+      timeLabel: '',
+      title: t('dashboard.todayShoppingCount', { count: program.openShoppingCount }),
+      sub: t('dashboard.todayShopping'),
+      icon: 'shopping-cart',
+      tone: 'shopping',
+      route: '/shopping',
+      who: null,
+    }));
+  }
+
+  // Abschluss-Zeile (Peak-End): das beruhigende „danach nichts mehr" - aber nur,
+  // wenn das Programm wirklich vollständig ist. Neben „+N weitere" wäre sie
+  // gelogen, und unter der Zustands-Zeile wäre sie eine Doppelung.
+  if (program.rows.length > 0 && overflow === 0) {
+    parts.push(`<div class="today-cockpit__coda">${esc(t('dashboard.todayNothingElse'))}</div>`);
+  }
 
   // Deckt der Nutzer alle vier Domänen über Widgets ab, wäre das Cockpit leer —
   // dann entfällt der ganze Abschnitt statt einer leeren Kopfzeile.
-  if (!cards.length) return '';
+  if (!parts.length) return '';
 
   return `
     <section class="today-cockpit" aria-labelledby="today-cockpit-title">
@@ -1280,14 +1475,14 @@ function renderTodayCockpit(data, cfg = []) {
         <h2 id="today-cockpit-title">${esc(t('dashboard.todayTitle'))}</h2>
       </div>
       <div class="today-cockpit__grid">
-        ${cards.join('')}
+        ${parts.join('')}
       </div>
     </section>
   `;
 }
 
 
-function renderDashboardOverview(user, editing = false) {
+function renderDashboardOverview(user, editing = false, weather = null) {
   const dateLabel = mastheadDateLabel();
 
   return `
@@ -1296,6 +1491,7 @@ function renderDashboardOverview(user, editing = false) {
         <div class="dashboard-overview__heading">
           <span class="dashboard-overview__date">${dateLabel}</span>
           <h2 class="dashboard-overview__title dashboard-overview__title--${greetingPeriod()}">${greeting(user.display_name)}</h2>
+          ${mastheadWeatherHtml(weather)}
         </div>
         <div class="dashboard-overview__tools">
           ${editing ? `
@@ -1415,7 +1611,7 @@ function renderDashboardLayout(cfg, data, weather, currency, { editing = false, 
     health: () => renderHealthWidget(data.health ?? {}),
     cycle: () => renderCycleWidget(data.cycle),
     housekeeping: () => renderHousekeepingWidget(data.housekeeping ?? {}, currency),
-    family: () => renderFamilyWidget(data.users ?? []),
+    family: () => renderFamilyWidget(data.users ?? [], data),
     meals: () => renderTodayMeals(data.todayMeals ?? [], visibleMealTypes),
     notes: () => renderPinnedNotes(data.pinnedNotes ?? []),
     shopping: () => renderShoppingLists(data.shoppingLists ?? []),
@@ -1587,26 +1783,50 @@ function renderShoppingLists(lists) {
 
 const WEATHER_ICON_BASE = '/api/v1/weather/icon/';
 
+// Geteilte Wetter-Bausteine für Karte UND Masthead-Zeile: Open-Meteo liefert
+// Lucide-Icon-Namen + wmo.*-i18n-Keys; OWM (Legacy) liefert OWM-Icon-Codes
+// (via /icon-Proxy) + bereits lokalisierten Beschreibungstext. OWM-Legacy kann
+// zudem 'standard' (Kelvin) liefern; Open-Meteo nur metric/imperial.
+function weatherUnitSymbol(units) {
+  return units === 'imperial' ? '°F' : units === 'standard' ? 'K' : '°C';
+}
+
+function weatherDescText(weather, desc) {
+  return weather?.provider === 'open-meteo' ? t(desc) : desc;
+}
+
+function weatherIconHtml(weather, icon, cls, size, desc) {
+  if (weather?.provider === 'open-meteo') {
+    return `<i data-lucide="${esc(icon)}" class="${cls}" aria-hidden="true"></i>`;
+  }
+  return `<img class="${cls}" src="${WEATHER_ICON_BASE}${esc(icon)}"
+           alt="${esc(desc)}" width="${size}" height="${size}" loading="lazy">`;
+}
+
+// Wetter als Masthead-Zeile (Seele-Paket): beiläufiger Kontext unterm Gruß
+// (Apple-Today-Muster) statt einer eigenen Karte - die Karte bleibt als Opt-in
+// für Wandtablets im Anpassen-Tray. Kein Echo: ist die Karte sichtbar, reicht
+// der Aufrufer kein weather herein und die Zeile entfällt.
+function mastheadWeatherHtml(weather) {
+  if (!weather?.current) return '';
+  const desc = weatherDescText(weather, weather.current.desc);
+  return `
+    <p class="dashboard-overview__weather">
+      ${weatherIconHtml(weather, weather.current.icon, 'dashboard-overview__weather-icon', 18, desc)}
+      <span>${esc(String(weather.current.temp))}${weatherUnitSymbol(weather.units)} · ${esc(desc)}</span>
+    </p>`;
+}
+
 function renderWeatherWidget(weather) {
   if (!weather) return '';
 
-  const { city, current, forecast, units, provider } = weather;
-  const isOm = provider === 'open-meteo';
+  const { city, current, forecast, units } = weather;
 
-  // OWM-Legacy kann 'standard' (Kelvin) liefern; Open-Meteo nur metric/imperial.
-  const unitSymbol = units === 'imperial' ? '°F' : units === 'standard' ? 'K' : '°C';
+  const unitSymbol = weatherUnitSymbol(units);
   const windUnit   = units === 'imperial' ? 'mph' : 'km/h';
 
-  // Open-Meteo liefert Lucide-Icon-Namen + wmo.*-i18n-Keys; OWM (Legacy) liefert
-  // OWM-Icon-Codes (via /icon-Proxy) + bereits lokalisierten Beschreibungstext.
-  const descText = (desc) => (isOm ? t(desc) : desc);
-  function iconHtml(icon, cls, size, desc) {
-    if (isOm) {
-      return `<i data-lucide="${esc(icon)}" class="${cls}" aria-hidden="true"></i>`;
-    }
-    return `<img class="${cls}" src="${WEATHER_ICON_BASE}${esc(icon)}"
-             alt="${esc(desc)}" width="${size}" height="${size}" loading="lazy">`;
-  }
+  const descText = (desc) => weatherDescText(weather, desc);
+  const iconHtml = (icon, cls, size, desc) => weatherIconHtml(weather, icon, cls, size, desc);
 
   const forecastHtml = forecast.map((d, i) => {
     const date = new Date(d.date + 'T12:00:00');
@@ -2239,9 +2459,12 @@ export async function render(container, { user }) {
     // großes leeres Rechteck zu zeigen (Critique R3 P1).
     const cockpitHtml = renderTodayCockpit(data, cfg);
     const mastheadSlim = cockpitHtml ? '' : ' dashboard-masthead--slim';
+    // Kein Wetter-Echo: die Masthead-Zeile spricht nur, wenn die Wetter-Karte
+    // nicht ohnehin im Raster sichtbar ist (Opt-in fürs Wandtablet).
+    const weatherCardShown = cfg.some((w) => w.id === 'weather' && w.visible);
     setHtml(shell, `
       <section class="dashboard-masthead dashboard-masthead--${greetingPeriod()}${mastheadSlim}">
-        ${renderDashboardOverview(user, isCustomizing)}
+        ${renderDashboardOverview(user, isCustomizing, weatherCardShown ? null : weather)}
         ${cockpitHtml}
       </section>
       ${renderDashboardLayout(cfg, data, weather, currency, { editing: isCustomizing, visibleMealTypes })}
@@ -2308,9 +2531,11 @@ export async function render(container, { user }) {
 
   startClockTicker(container, _fabController.signal);
 
-  // 30-Minuten Auto-Refresh für Wetter (inkl. optionaler Standort-Aktualisierung)
-  const refreshBtn = container.querySelector('#weather-refresh-btn');
-  if (refreshBtn) {
+  // 30-Minuten Auto-Refresh für Wetter (inkl. optionaler Standort-Aktualisierung).
+  // Anker ist der Datensatz, nicht der Karten-Button: seit dem Masthead-Umzug
+  // kann Wetter sichtbar sein (Zeile), ohne dass die Karte samt Refresh-Button
+  // im Raster steht - auch die Zeile darf nicht den ganzen Tag alt werden.
+  if (weather) {
     const doAutoRefresh = async () => {
       try {
         await maybeUpdateAutoLocation({
@@ -2336,7 +2561,7 @@ export async function render(container, { user }) {
   }
 }
 
-export const __test = { buildTodayHighlights, normalizeVisibleMealTypes, renderTodayMeals, calendarEventRoute, eventOccurrenceDateKey, eventStartDate };
+export const __test = { buildTodayHighlights, buildTodayProgram, normalizeVisibleMealTypes, renderTodayMeals, calendarEventRoute, eventOccurrenceDateKey, eventStartDate };
 
 function wireWeatherRefresh(container, onUpdated = null) {
   const refreshBtn = container.querySelector('#weather-refresh-btn');

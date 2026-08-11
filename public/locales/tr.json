@@ -212,7 +212,17 @@
         "housekeepingVisitsMonth": "Bu ay {{count}} ziyaret",
         "housekeepingUnpaid": "{{amount}} ödenmemiş",
         "widgetError": "Yüklenemedi",
-        "savingsGoal": "Tasarruf hedefi"
+        "savingsGoal": "Tasarruf hedefi",
+        "todayFree": "Bugün boş",
+        "todayAllDone": "Bugünlük her şey tamam",
+        "todayNextUp": "Sıradaki: {{event}}",
+        "todayNothingElse": "Bugün başka bir şey yok",
+        "todayUntil": "en geç {{time}}",
+        "todayMore": "+{{count}} tane daha bugün",
+        "todayMore_one": "+{{count}} tane daha bugün",
+        "memberOpenTasks": "{{count}} görev",
+        "memberOpenTasks_one": "{{count}} görev",
+        "manage": "Yönet"
     },
     "tasks": {
         "manageCategories": "Kategorileri yönet",

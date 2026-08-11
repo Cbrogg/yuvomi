@@ -212,7 +212,17 @@
         "housekeepingVisitsMonth": "本月 {{count}} 次到访",
         "housekeepingUnpaid": "{{amount}} 待付",
         "widgetError": "无法加载",
-        "savingsGoal": "储蓄目标"
+        "savingsGoal": "储蓄目标",
+        "todayFree": "今天无安排",
+        "todayAllDone": "今天的事都完成了",
+        "todayNextUp": "接下来：{{event}}",
+        "todayNothingElse": "今天没有其他安排了",
+        "todayUntil": "{{time}}前",
+        "todayMore": "另有{{count}}项",
+        "todayMore_one": "另有{{count}}项",
+        "memberOpenTasks": "{{count}}项任务",
+        "memberOpenTasks_one": "{{count}}项任务",
+        "manage": "管理"
     },
     "tasks": {
         "manageCategories": "管理类别",

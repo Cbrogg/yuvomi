@@ -212,7 +212,17 @@
         "housekeepingVisitsMonth": "{{count}} visitas este mes",
         "housekeepingUnpaid": "{{amount}} pendiente",
         "widgetError": "No se pudo cargar",
-        "savingsGoal": "Objetivo de ahorro"
+        "savingsGoal": "Objetivo de ahorro",
+        "todayFree": "Hoy libre",
+        "todayAllDone": "Todo listo por hoy",
+        "todayNextUp": "Próximo: {{event}}",
+        "todayNothingElse": "Nada más por hoy",
+        "todayUntil": "hasta las {{time}}",
+        "todayMore": "+{{count}} más hoy",
+        "todayMore_one": "+{{count}} más hoy",
+        "memberOpenTasks": "{{count}} tareas",
+        "memberOpenTasks_one": "{{count}} tarea",
+        "manage": "Gestionar"
     },
     "tasks": {
         "manageCategories": "Gestionar categorías",

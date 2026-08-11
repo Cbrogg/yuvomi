@@ -224,7 +224,17 @@
         "housekeepingVisitsMonth": "이번 달 {{count}}회 방문",
         "housekeepingUnpaid": "{{amount}} 미결제",
         "widgetError": "불러올 수 없습니다",
-        "savingsGoal": "저축 목표"
+        "savingsGoal": "저축 목표",
+        "todayFree": "오늘은 일정 없음",
+        "todayAllDone": "오늘 할 일 모두 완료",
+        "todayNextUp": "다음 일정: {{event}}",
+        "todayNothingElse": "오늘은 더 이상 일정이 없습니다",
+        "todayUntil": "{{time}}까지",
+        "todayMore": "외 {{count}}건",
+        "todayMore_one": "외 {{count}}건",
+        "memberOpenTasks": "할 일 {{count}}개",
+        "memberOpenTasks_one": "할 일 {{count}}개",
+        "manage": "관리"
     },
     "tasks": {
         "manageCategories": "카테고리 관리",

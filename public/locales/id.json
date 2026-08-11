@@ -224,7 +224,17 @@
         "housekeepingVisitsMonth": "{{count}} kunjungan bulan ini",
         "housekeepingUnpaid": "{{amount}} belum dibayar",
         "widgetError": "Tidak dapat dimuat",
-        "savingsGoal": "Target tabungan"
+        "savingsGoal": "Target tabungan",
+        "todayFree": "Hari ini kosong",
+        "todayAllDone": "Semua selesai untuk hari ini",
+        "todayNextUp": "Berikutnya: {{event}}",
+        "todayNothingElse": "Tidak ada lagi hari ini",
+        "todayUntil": "sebelum {{time}}",
+        "todayMore": "+{{count}} lagi hari ini",
+        "todayMore_one": "+{{count}} lagi hari ini",
+        "memberOpenTasks": "{{count}} tugas",
+        "memberOpenTasks_one": "{{count}} tugas",
+        "manage": "Kelola"
     },
     "tasks": {
         "manageCategories": "Kelola kategori",

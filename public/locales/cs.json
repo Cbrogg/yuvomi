@@ -212,7 +212,17 @@
         "housekeepingVisitsMonth": "{{count}} návštěv tento měsíc",
         "housekeepingUnpaid": "{{amount}} k úhradě",
         "widgetError": "Nepodařilo se načíst",
-        "savingsGoal": "Cíl úspor"
+        "savingsGoal": "Cíl úspor",
+        "todayFree": "Dnes volno",
+        "todayAllDone": "Vše pro dnešek hotovo",
+        "todayNextUp": "Další: {{event}}",
+        "todayNothingElse": "Dnes už nic dalšího",
+        "todayUntil": "do {{time}}",
+        "todayMore": "+{{count}} dalších dnes",
+        "todayMore_one": "+{{count}} další dnes",
+        "memberOpenTasks": "{{count}} úkolů",
+        "memberOpenTasks_one": "{{count}} úkol",
+        "manage": "Spravovat"
     },
     "tasks": {
         "manageCategories": "Spravovat kategorie",

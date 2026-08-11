@@ -212,7 +212,17 @@
         "housekeepingVisitsMonth": "{{count}} besök denna månad",
         "housekeepingUnpaid": "{{amount}} obetalt",
         "widgetError": "Kunde inte laddas",
-        "savingsGoal": "Sparmål"
+        "savingsGoal": "Sparmål",
+        "todayFree": "Ledigt idag",
+        "todayAllDone": "Allt klart för idag",
+        "todayNextUp": "Härnäst: {{event}}",
+        "todayNothingElse": "Inget mer idag",
+        "todayUntil": "senast {{time}}",
+        "todayMore": "+{{count}} till idag",
+        "todayMore_one": "+{{count}} till idag",
+        "memberOpenTasks": "{{count}} uppgifter",
+        "memberOpenTasks_one": "{{count}} uppgift",
+        "manage": "Hantera"
     },
     "tasks": {
         "manageCategories": "Hantera kategorier",
