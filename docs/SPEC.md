@@ -278,11 +278,11 @@ Reusable recipe cards that can be pre-filled into meal slots.
 | recipe_url | TEXT | nullable |
 | meal_types | TEXT | NOT NULL, default `breakfast,lunch,dinner,snack` — comma-separated suitability list; drives which planner slots a recipe fits and the week randomizer's candidate pool (v1.3.0) |
 | created_by | INTEGER | FK → Users (CASCADE delete) |
-| provider_account_id | INTEGER | nullable, FK → Recipe Provider Accounts (CASCADE delete); NULL = native recipe, set = mirrored (migration v118, renamed v132) |
-| provider_recipe_id | TEXT | nullable (the provider's own recipe ID; upsert key on repeated syncs, migration v118, renamed v132) |
-| provider_updated_at | TEXT | nullable (the provider's `updatedAt`; unchanged recipes are skipped, migration v118, renamed v132) |
-| provider_slug | TEXT | nullable, adapter-defined (Mealie: its recipe slug, for rebuilding `recipe_url` without a re-fetch; Tandoor: the relative image path, for the thumbnail proxy; migration v120, renamed v132) |
-| provider_has_image | INTEGER | 0/1, NOT NULL default 0 (migration v120, renamed v132) |
+| provider_account_id | INTEGER | nullable, FK → Recipe Provider Accounts (CASCADE delete); NULL = native recipe, set = mirrored (migration v118, renamed v134) |
+| provider_recipe_id | TEXT | nullable (the provider's own recipe ID; upsert key on repeated syncs, migration v118, renamed v134) |
+| provider_updated_at | TEXT | nullable (the provider's `updatedAt`; unchanged recipes are skipped, migration v118, renamed v134) |
+| provider_slug | TEXT | nullable, adapter-defined (Mealie: its recipe slug, for rebuilding `recipe_url` without a re-fetch; Tandoor: the relative image path, for the thumbnail proxy; migration v120, renamed v134) |
+| provider_has_image | INTEGER | 0/1, NOT NULL default 0 (migration v120, renamed v134) |
 
 UNIQUE partial index on `(provider_account_id, provider_recipe_id)` where `provider_account_id IS NOT NULL`.
 
@@ -294,7 +294,7 @@ UNIQUE partial index on `(provider_account_id, provider_recipe_id)` where `provi
 | quantity | TEXT | |
 | category | TEXT | NOT NULL (default 'Sonstiges') |
 
-### Recipe Provider Accounts (migration v118, v119, v132)
+### Recipe Provider Accounts (migration v118, v119, v134)
 Connections to a self-hosted recipe provider instance ([Mealie](https://mealie.io) or [Tandoor](https://tandoor.dev))
 for the Recipes module. Admin-managed in Settings → Kitchen. The mirror is **read-only**: the provider
 stays the source of truth for recipe content, so editing or deleting a mirrored recipe returns 403
@@ -302,7 +302,7 @@ server-side (not merely hidden in the UI) - "Duplicate" forks one into an editab
 
 | Column | Type | Constraint |
 |--------|------|-----------|
-| provider | TEXT | NOT NULL, default `'mealie'`, CHECK IN (`'mealie'`, `'tandoor'`) (migration v132) |
+| provider | TEXT | NOT NULL, default `'mealie'`, CHECK IN (`'mealie'`, `'tandoor'`) (migration v134) |
 | name | TEXT | NOT NULL (display name) |
 | base_url | TEXT | NOT NULL, UNIQUE — must be reachable **from the server** (often a Docker-internal Compose hostname) |
 | external_url | TEXT | nullable (migration v119) - public address used only to build "Open in Mealie/Tandoor" deep links; falls back to `base_url` when blank |
@@ -1819,6 +1819,10 @@ The three newer modules (Rewards, Health, Housekeeping) start **hidden** by defa
 **Widget sizes:** each widget has a configurable size using named presets (Tiny, Narrow, Tall, Standard, Large, Full) that map to `columns × rows` in the CSS grid. List widgets (tasks, calendar) default to the tall/narrow **Tall** (1×2) preset so a short list keeps useful height without occupying a full two-column row. Sizes are persisted in user preferences and survive page reloads.
 
 Skeleton loading instead of spinners (the skeleton mirrors the default-visible widgets at their correct grid-spanning sizes to prevent layout shift). Clicking any widget navigates to that module.
+
+**Immich photo screensaver (v2.3.0 · #693):** a dashboard left on a wall tablet burns itself into the panel, so after five minutes without input an overlay takes over the screen and rotates a photo every 20 seconds until the next touch, pointer, key or scroll. The dismissing gesture belongs to the overlay and does not reach the control underneath it. The caption (date, city, country) moves between the four corners so the protection introduces no fixed bright area of its own.
+
+The credentials never reach the browser: `GET /api/v1/screensaver/photos` returns only asset ids plus that caption metadata, and `GET /api/v1/screensaver/photos/:id` proxies Immich's `preview` thumbnail — deliberately not `fullsize`, which would additionally require `asset.download`. Both refuse an id that is not a UUID before building an outgoing request, and the proxy rejects a response that is not `image/*`. Configuration lives in `sync_config` (`immich_url`, `immich_api_key`, `immich_screensaver_album_id`) behind admin-only routes with a connection test and a preview; `IMMICH_URL`, `IMMICH_API_KEY` and `IMMICH_SCREENSAVER_ALBUM_ID` set the same values and win over the database, as everywhere else. Without a URL and key the feature reports itself disabled and the overlay never starts. Split-expense guests are refused by the household guard like every other module route.
 
 ### Tasks (`/tasks`)
 

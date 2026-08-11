@@ -7,11 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.0] - 2026-08-11
+
 ### Added
 
 - **An idle wall tablet can show photos from Immich instead of a fixed dashboard.** A dashboard that never changes burns itself into the panel. An administrator connects the server under Settings -> Administration -> Immich, where the API key stays on Yuvomi's side and never reaches the browser, optionally limits the source to a single album, tests the connection and previews the result. After five minutes without input, photos rotate every 20 seconds until the next touch, pointer, key or scroll; the caption changes corners so the protection does not introduce a bright fixed area of its own. `IMMICH_URL`, `IMMICH_API_KEY` and `IMMICH_SCREENSAVER_ALBUM_ID` set the same values and take precedence over the database. (#693)
 - **Income categories can carry subcategories too.** They were an expense-only concept, so "Salary" could not be broken down into monthly pay, overtime and bonus the way "Groceries" could be broken down. Both types now behave the same, and the subcategory field sits directly under the category in the entry form instead of below the fold under "Advanced". (#691)
-
 - **Tandoor as a second recipe source, next to Mealie.** Adding a recipe mirror under Settings -> Kitchen now starts with the question which server it is. Tandoor recipes land in the same list as Mealie and native ones, with their own source badge, and get the same read-only mirroring, thumbnail proxy and meal-plan integration. (#530)
 
 ### Changed
