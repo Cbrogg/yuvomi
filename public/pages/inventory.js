@@ -1496,12 +1496,12 @@ export async function render(container) {
   const page = document.createElement('div');
   page.className = 'inventory-page';
 
-  const title = document.createElement('h1');
-  title.className = 'sr-only';
-  title.textContent = t('nav.inventory');
-
+  // Sichtbarer Seitentitel statt sr-only: nur ein echtes .page-toolbar__title
+  // loest das Absender-Siegel der Shell aus (router.js#wireToolbar,
+  // headSealIcon), das jedes andere Modul schon automatisch zeigt - Icon +
+  // Name, direkt vor dem Titel, aus derselben Quelle wie der Sidebar-Eintrag.
   const toolbar = document.createElement('div');
-  toolbar.className = 'page-toolbar page-toolbar--narrow';
+  toolbar.className = 'page-toolbar page-toolbar--narrow page-toolbar--wrap';
   toolbar.insertAdjacentHTML('beforeend', `
     <div class="page-toolbar__actions">
       <button class="btn btn--ghost btn--icon" data-action="manage-locations"
@@ -1524,6 +1524,7 @@ export async function render(container) {
         className: 'inventory-search',
       })}
     </div>`);
+  toolbar.insertAdjacentHTML('afterbegin', `<h1 class="page-toolbar__title">${esc(t('nav.inventory'))}</h1>`);
 
   const filters = document.createElement('div');
   filters.className = 'inventory-filters';
@@ -1543,7 +1544,7 @@ export async function render(container) {
   fab.setAttribute('aria-label', t('inventory.addItem'));
   fab.insertAdjacentHTML('beforeend', '<i data-lucide="plus" aria-hidden="true"></i>');
 
-  page.append(title, toolbar, filters, list, fab);
+  page.append(toolbar, filters, list, fab);
   container.replaceChildren(page);
 
   if (window.lucide) window.lucide.createIcons({ el: container });
