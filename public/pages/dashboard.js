@@ -2076,6 +2076,22 @@ function wireLinks(container, rerender, { editing = false } = {}) {
   container.querySelectorAll('[data-route]').forEach((el) => {
     if (el.id === 'fab-main' || el.closest('#fab-actions')) return;
     if (editing && el.closest('.widget-wrapper--editing')) return;
+    // Objekt-Deep-Link (Paket 2): die Cockpit-Aufgabenzeile nennt EIN Objekt,
+    // also trifft der Klick auch dieses Objekt - Quick-Action-Modal (Erledigt/
+    // Bearbeiten) wie bei den Zeilen des Tasks-Widgets, statt den Nutzer in
+    // der Aufgabenliste erneut suchen zu lassen (Critique P3). Der Titel kommt
+    // aus dem DOM: line-clamp kürzt nur visuell, textContent bleibt voll.
+    // Essen-Zeile bewusst ohne Sonderweg: /meals öffnet die aktuelle Woche und
+    // scrollt den Heute-Slot selbst in den Blick (meals.js, day-header--today).
+    if (!editing && el.dataset.objectKind === 'task' && el.dataset.objectId) {
+      const title = el.querySelector('.today-cockpit-card__value')?.textContent?.trim() ?? '';
+      const show = () => openTaskQuickAction(el.dataset.objectId, title, rerender);
+      el.addEventListener('click', show);
+      el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); show(); }
+      });
+      return;
+    }
     const go = () => window.yuvomi.navigate(el.dataset.route);
     if (el.tagName === 'A') {
       el.addEventListener('click', (e) => {
@@ -2507,6 +2523,35 @@ export async function render(container, { user }) {
     initFab(_fabController.signal);
   }
 
+  // Stiller Daten-Refresh (Paket 2, Critique P4): Inhaltsdaten veralteten sonst
+  // in offenen Tabs - PRODUCT.md nennt Wandtablet und PWA-Dauernutzung als
+  // Kernszene, dort zeigte „Heute wichtig" abends noch den Morgenstand. EIN
+  // Pfad für beide Auslöser (Tab-Reaktivierung + 15-Min-Takt im sichtbaren
+  // Tab), bewusst ohne Skeleton (das gehört dem Erstaufbau) und still bei
+  // Fehlern, wie der Wetter-Timer. Während „Anpassen" wird nicht neu gebaut -
+  // ein Rebuild würde den Bearbeitungszustand wegwerfen.
+  let refreshInFlight = false;
+  async function refreshDashboardData() {
+    if (isCustomizing || loadFailed || refreshInFlight) return;
+    refreshInFlight = true;
+    try {
+      const fresh = await api.get('/dashboard');
+      if (Array.isArray(fresh?.upcomingEvents)) {
+        fresh.upcomingEvents = fresh.upcomingEvents.map(localizeBirthdayEvent);
+      }
+      // Der owner-only Zyklus-Slice reist mit: /dashboard liefert ihn nie,
+      // ein Refresh darf ihn nicht auf „nie geladen" zurückwerfen.
+      fresh.cycle = data.cycle;
+      data = fresh;
+      rebuildDashboard(widgetConfig);
+    } catch { /* Hintergrund-Refresh: bewusst still */ }
+    finally { refreshInFlight = false; }
+  }
+  const refreshTimerId = setInterval(() => {
+    if (!document.hidden) refreshDashboardData();
+  }, 15 * 60 * 1000);
+  _fabController.signal.addEventListener('abort', () => clearInterval(refreshTimerId));
+
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) return;
     const titleEl = container.querySelector('.dashboard-overview__title');
@@ -2527,6 +2572,8 @@ export async function render(container, { user }) {
     // Hintergrund-Tabs bekommen gedrosselte Timer: die Uhr könnte beim
     // Zurückkehren Minuten nachhängen und muss sofort nachziehen (#651).
     updateClockWidget(container);
+    // Inhalte ziehen nach, nicht nur Gruß/Datum/Uhr (Paket 2).
+    refreshDashboardData();
   }, { signal: _fabController.signal });
 
   startClockTicker(container, _fabController.signal);
@@ -2561,7 +2608,7 @@ export async function render(container, { user }) {
   }
 }
 
-export const __test = { buildTodayHighlights, buildTodayProgram, normalizeVisibleMealTypes, renderTodayMeals, calendarEventRoute, eventOccurrenceDateKey, eventStartDate };
+export const __test = { buildTodayHighlights, buildTodayProgram, renderTodayCockpit, normalizeVisibleMealTypes, renderTodayMeals, calendarEventRoute, eventOccurrenceDateKey, eventStartDate };
 
 function wireWeatherRefresh(container, onUpdated = null) {
   const refreshBtn = container.querySelector('#weather-refresh-btn');

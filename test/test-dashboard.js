@@ -234,6 +234,22 @@ test('Tagesprogramm: Überfälliges zuerst, Ganztägiges vor zeitlosen Aufgaben'
   nodeAssert.equal(result.rows[0].overdue, true, 'überfällige Zeile ist markiert');
 });
 
+test('Tagesprogramm: Aufgaben-Zeile trägt den Quick-Action-Anker (Paket 2)', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  const todayStr = toLocalDateKey(new Date());
+  const prevWindow = global.window;
+  global.window = { yuvomi: null };
+  try {
+    const html = __test.renderTodayCockpit({
+      urgentTasks: [{ id: 7, title: 'Zettel abgeben', due_date: todayStr, status: 'open' }],
+    }, []);
+    nodeAssert.match(html, /data-object-kind="task"/, 'Zeile deklariert ihre Objektart');
+    nodeAssert.match(html, /data-object-id="7"/, 'Zeile trägt die Aufgaben-ID für das Quick-Action-Modal');
+  } finally {
+    global.window = prevWindow;
+  }
+});
+
 test('Tagesprogramm: leerer Tag liefert Ausblick (nextUpcoming) und Erledigt-Zähler', async () => {
   const { __test } = await import('../public/pages/dashboard.js');
   const todayStr = toLocalDateKey(new Date());
