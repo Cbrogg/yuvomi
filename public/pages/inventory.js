@@ -457,6 +457,7 @@ function renderItemDetail(item) {
 function openItemDetail(item) {
   openDetailView({
     title: item.name,
+    accentColor: 'var(--module-inventory)',
     size: 'md',
     sections: renderItemDetail(item),
     actions: [{
