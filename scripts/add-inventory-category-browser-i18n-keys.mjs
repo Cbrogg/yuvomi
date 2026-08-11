@@ -12,20 +12,14 @@ const NEW_KEY_LINES = [
   '        "backToInventory": "Back to Inventory",',
 ];
 
-function insertAfterAnchor(lines, anchorPattern, newLines) {
-  const idx = lines.findIndex((line) => anchorPattern.test(line));
-  if (idx === -1) throw new Error(`Anchor not found: ${anchorPattern}`);
-  if (!lines[idx].trimEnd().endsWith(',')) {
-    lines[idx] = `${lines[idx]},`;
-  }
-  lines.splice(idx + 1, 0, ...newLines);
-}
-
 for (const locale of LOCALES) {
   const path = `public/locales/${locale}.json`;
   const lines = readFileSync(path, 'utf8').split('\n');
 
-  // Find the inventory section's photoLabel by looking for one that comes after warrantyMonthsValue
+  // Two-step anchor: photoLabel is not unique (birthdays.js also defines a photoLabel key),
+  // so we anchor first on the unique warrantyMonthsValue key (inventory-only), then find the
+  // photoLabel that follows it. This ensures we target the inventory section's photoLabel,
+  // not the one in the birthdays/people section.
   const warrantyIdx = lines.findIndex((line) => /^\s*"warrantyMonthsValue":/.test(line));
   if (warrantyIdx === -1) throw new Error('Anchor "warrantyMonthsValue" not found');
 
