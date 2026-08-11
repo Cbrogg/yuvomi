@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Inventory items can now track an arbitrary number of custom dates beyond the built-in warranty deadline — TÜV, service, insurance renewal, or anything else with a date — each with its own configurable reminder lead time. These join the same reminder system and the same ICS feed (renamed from "warranty deadlines" to "inventory deadlines" to reflect the broader scope) that Stage 4 introduced.
 - The Inventory list is now grouped by category with metric cards for item count, total value and items needing attention, mirroring the Shopping module's list pattern. Tapping an item opens a read-only detail view before editing, and the nav icon carries a badge for items with a soon-expiring or overdue warranty or tracked date.
 - Inventory items can now carry a single photo, and the list gained "All" / "Needs attention" filter chips alongside a colored accent stripe on the item detail view — closing the last confirmed gaps against the module's original design mockup.
+- The Inventory list is now a two-level browse: opening the module shows a category overview with item counts, and tapping a category shows its items grouped by storage location instead of by category — closing the module's two remaining design-mockup gaps.
 
 ## [2.7.1] - 2026-08-12
 
