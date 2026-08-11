@@ -4036,6 +4036,7 @@
         "filterGroupLabel": "Filtern",
         "photoLabel": "Foto",
         "backToInventory": "Zurück zum Inventar",
+        "searchInCategoryPlaceholder": "In {{category}} suchen",
         "removePhoto": "Foto entfernen",
         "trackedDatesLabel": "Verfolgte Fristen",
         "trackedDatesHint": "Beliebige weitere Termine verfolgen - TÜV, Service, Versicherung.",
