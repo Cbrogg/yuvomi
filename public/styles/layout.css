@@ -416,9 +416,12 @@ html:has(.search-overlay--visible) yuvomi-install-prompt {
   user-select: none;
 }
 
+/* Ruhezustand ist --color-surface-elevated, also gilt die Stufe ueber der
+ * erhoehten Flaeche - der Surface-Hover faellt hier im Dark mit der eigenen
+ * Farbe zusammen (gemessen 1:1, also gar kein Hover). */
 .more-sheet__search:hover {
   border-color: var(--color-border-strong, var(--color-border));
-  background-color: var(--color-surface-hover);
+  background-color: var(--color-surface-elevated-hover);
 }
 
 .more-sheet__search:active {
@@ -919,8 +922,9 @@ html:has(.search-overlay--visible) yuvomi-install-prompt {
 }
 
 @media (hover: hover) {
+  /* Wie .more-sheet__search: erhoehte Ruheflaeche, also die Stufe darueber. */
   .search-scope:hover {
-    background-color: var(--color-surface-hover);
+    background-color: var(--color-surface-elevated-hover);
     border-color: var(--color-border);
   }
 }

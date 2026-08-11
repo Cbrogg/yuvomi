@@ -163,6 +163,7 @@
         "upcomingBirthdays": "即将到来的生日",
         "noBirthdays": "还没有生日",
         "daysLeft": "{{count}} 天",
+        "daysLeft_one": "{{count}} 天",
         "budgetOverview": "预算概览",
         "monthlyIncome": "收入",
         "monthlyExpenses": "支出",
@@ -171,6 +172,7 @@
         "topExpense": "最大支出",
         "noBudgetData": "本月没有预算数据。",
         "customize": "自定义",
+        "updatedAt": "更新于 {{time}}",
         "customizeTitle": "自定义小组件",
         "customizeReset": "重置",
         "customizeSaved": "仪表板已保存",
@@ -1530,7 +1532,7 @@
             "housekeeping": "家务",
             "weather": "天气",
             "family": "家庭",
-            "dashboard": "仪表板",
+            "dashboard": "概览",
             "search": "搜索"
         },
         "ics": {

@@ -25,6 +25,9 @@ let _fabController = null;
 // ── Onboarding ──────────────────────────────────────────────────────────────
 
 const ONBOARDING_KEY = 'yuvomi-onboarded';
+// Der Dialog benennt sich ueber seinen Schritt-Titel; die id steht hier, weil
+// beide Seiten der Verknuepfung sie brauchen (Overlay und `renderStep()`).
+const ONBOARDING_TITLE_ID = 'onboarding-step-title';
 const APP_NAME_STORAGE_KEY = 'yuvomi-app-name';
 const CUSTOMIZE_HINT_KEY = 'yuvomi-dash-customize-hint';
 
@@ -85,6 +88,12 @@ function showOnboarding(appContainer, onDone) {
   overlay.className = 'onboarding-overlay';
   overlay.setAttribute('role', 'dialog');
   overlay.setAttribute('aria-modal', 'true');
+  // EIN DIALOG OHNE NAMEN ist fuer den Screenreader nur „Dialog". Der Name
+  // kommt aus dem Schritt-Titel, den `renderStep()` ohnehin baut; die id ist
+  // deshalb konstant und wandert mit dem Austausch des Karteninhalts mit
+  // (WCAG 4.1.2). `aria-modal` versteckt alles dahinter - was bleibt, muss
+  // sich also selbst benennen.
+  overlay.setAttribute('aria-labelledby', ONBOARDING_TITLE_ID);
 
   const onKeydown = (event) => {
     if (event.key === 'Escape') { finish(); return; }
@@ -123,6 +132,7 @@ function showOnboarding(appContainer, onDone) {
 
     const title = document.createElement('h2');
     title.className = 'onboarding-title';
+    title.id = ONBOARDING_TITLE_ID;
     title.textContent = step.title;
 
     const body = document.createElement('p');
@@ -256,11 +266,21 @@ function defaultWidgetSize(id) {
   // Zeile nicht per grid-auto ragged nachwächst (Critique P4). Budget stapelt
   // Saldo + Sparen + Einnahme/Ausgabe + Top-Ausgabe → 1×2; family stapelt seit
   // dem „Heute dran"-Umbau Mitglieder-Zeilen und braucht dieselbe Höhe.
-  if (['tasks', 'calendar', 'rewards', 'budget', 'family'].includes(id)) return '1x2';
+  //
+  // NOTIZEN UND GEBURTSTAGE GEHOEREN IN DIESELBE LISTE, und dass sie es nicht
+  // taten, hat man am Standard-Desktop gesehen: sichtbar sind ab Werk genau
+  // vier Widgets - Geburtstage (1x1), Budget (1x2), Familie (1x2), Notizen
+  // (2x1). Vier Spalten fassen die drei hohen nebeneinander, die breite
+  // Notizkachel passt daneben nicht mehr und faellt eine Zeile tiefer; was
+  // bleibt, ist das Loch rechts unten, das `dense` nicht schliessen kann,
+  // weil kein Widget mehr uebrig ist. Beide sind Listen wie die anderen und
+  // brauchen Hoehe, nicht Breite: mit 1x2 fuellen die vier Standard-Widgets
+  // die Zeile lueckenlos. Bestandslayouts bleiben unberuehrt - gespeichert
+  // wird die Groesse, nicht dieser Default.
+  if (['tasks', 'calendar', 'rewards', 'budget', 'family', 'notes', 'birthdays'].includes(id)) return '1x2';
   // Die Uhr startet breit statt quadratisch: Uhrzeit und darunter der ausgeschriebene
   // Wochentag brauchen Zeile, nicht Höhe - auf 1x1 bräche das Datum um (#651).
   if (['weather', 'shopping', 'health', 'cycle', 'meals', 'clock'].includes(id)) return '2x1';
-  if (id === 'notes') return '2x1';
   return '1x1';
 }
 
@@ -602,7 +622,15 @@ function widgetHeader(icon, title, count, linkHref, linkLabel, sealSlug = null) 
   // „Alle: Familienmitglieder" für einen „Verwalten"-Link wäre eine Lüge.
   const customLabel = linkLabel != null;
   linkLabel = linkLabel ?? t('dashboard.allLink');
-  const badge = count != null
+  // EINE NULL IST KEINE ZAHL, DIE MAN ZEIGT. Der Kopf eines leeren Widgets
+  // trug eine „0"-Badge neben seinem Titel, waehrend der Koerper darunter den
+  // Leerzustand schon in Worten sagt - zwei Stimmen fuer dieselbe Aussage, und
+  // die Badge ist die schlechtere. Die Regel steht HIER und nicht an den
+  // Aufrufstellen: `0` kommt sowohl fest aus den Leerzustaenden als auch
+  // gerechnet aus `totalOpen`/`badge`, und eine Allowlist deckt nur die
+  // Stellen ab, die man beim Schreiben gesehen hat.
+  const numericCount = Number(count);
+  const badge = count != null && Number.isFinite(numericCount) && numericCount > 0
     ? `<span class="widget__badge">${count}</span>`
     : '';
   // Herkunfts-Regel (Block 2): das Dashboard ist eine Mischstelle, also
@@ -620,7 +648,7 @@ function widgetHeader(icon, title, count, linkHref, linkLabel, sealSlug = null) 
         <span class="module-seal module-seal--sm"${seal} aria-hidden="true">
           <i data-lucide="${icon}"></i>
         </span>
-        ${title}
+        <span class="widget__title-text">${title}</span>
         ${badge}
       </h3>
       <a href="${linkHref}" data-route="${linkHref}" class="widget__link"
@@ -1408,20 +1436,35 @@ function renderTodayRow(row) {
   const objectAttrs = row.objectId != null
     ? ` data-object-kind="${esc(row.kind)}" data-object-id="${esc(String(row.objectId))}"`
     : '';
+  // DAS ELEMENT SAGT, WAS ES TUT (Re-Critique A5). Eine Zeile, die an einen Ort
+  // fuehrt, ist ein `<a href>` - dann oeffnen Cmd- und Mittelklick sie in einem
+  // neuen Tab, und „Link kopieren" gibt einen Link her, so wie es die
+  // Widget-Kopf-Links laengst tun. Die AUFGABEN-Zeile bleibt ein `<button>`:
+  // sie navigiert nicht, sie oeffnet das Quick-Action-Modal auf ihrem Objekt.
+  // Ein href waere dort ein Versprechen, das der Handler bricht - Cmd-Klick
+  // landete in der Aufgabenliste statt bei der Aufgabe.
+  //
+  // Die Bedingung ist dieselbe, die `wireLinks` liest (Objektart „task" plus
+  // Objekt-Id), und sie steht bewusst als eine Zeile hier: laufen Markup und
+  // Verdrahtung auseinander, bekommt eine Zeile einen href und trotzdem das
+  // Modal.
+  const opensModal = row.kind === 'task' && row.objectId != null;
   // Inset-Grouped-Zeile (Apple-Systemapp-Muster): das Markensiegel traegt
   // die Modulzugehoerigkeit (Herkunfts-Regel, Block 2), der Inhalt steht als
   // Titel in Textfarbe, das Modul-Label lebt als ruhiger Untertitel weiter
   // (nie versal, nie ueber dem Titel).
-  return `
-    <button type="button" class="today-cockpit-card today-cockpit-card--${row.tone}" data-route="${row.route}"${objectAttrs}>
+  const inner = `
       <span class="${mark ? 'seal-pair' : ''}"><span class="module-seal today-cockpit-card__icon"><i data-lucide="${row.icon}" aria-hidden="true"></i></span>${mark}</span>
       <span class="today-cockpit-card__body">
         <strong class="today-cockpit-card__value">${esc(row.title)}</strong>
         <span class="today-cockpit-card__sub">${esc(row.sub)}</span>
       </span>
       ${time}
-    </button>
   `;
+  const attrs = `class="today-cockpit-card today-cockpit-card--${row.tone}" data-route="${esc(row.route)}"${objectAttrs}`;
+  return opensModal
+    ? `<button type="button" ${attrs}>${inner}</button>`
+    : `<a href="${esc(row.route)}" ${attrs}>${inner}</a>`;
 }
 
 // Zustands-Zeile des Tagesprogramms: „Heute frei" / „Alles für heute erledigt".
@@ -1436,7 +1479,7 @@ function renderTodayStateRow({ title, sub, icon, route }) {
       </span>
   `;
   if (route) {
-    return `<button type="button" class="today-cockpit-card today-cockpit-card--state" data-route="${route}">${inner}</button>`;
+    return `<a href="${esc(route)}" class="today-cockpit-card today-cockpit-card--state" data-route="${esc(route)}">${inner}</a>`;
   }
   return `<div class="today-cockpit-card today-cockpit-card--state">${inner}</div>`;
 }
@@ -1565,8 +1608,23 @@ function renderTodayCockpit(data, cfg = []) {
 }
 
 
-function renderDashboardOverview(user, editing = false, weather = null) {
+/* WOHER MAN WEISS, DASS DIE FLAECHE LEBT (Critique R2, A8). Der stille Refresh
+ * (15-Min-Takt plus Tab-Reaktivierung) tut seine Arbeit unsichtbar - und genau
+ * das ist am Wandtablet das Problem: eine Flaeche, die sich nie erkennbar
+ * bewegt, ist von einer eingefrorenen nicht zu unterscheiden. Wer daran
+ * vorbeigeht, kann „heute nichts mehr" nicht glauben, ohne neu zu laden.
+ *
+ * Der Anker ist deshalb absichtlich klein und absolut: eine Uhrzeit, keine
+ * „vor 3 Minuten"-Angabe, die einen zweiten Timer braeuchte, nur um sich
+ * selbst zu widerlegen. Er steht in der Werkzeugspalte, nicht im Gruss-Stapel
+ * - der Masthead soll weiter mit Datum, Gruss und Wetter sprechen, nicht mit
+ * Betriebszustand. Im Bearbeiten-Modus entfaellt er: dort wird nicht
+ * aktualisiert, und die Werkzeugleiste braucht ihren Platz. */
+function renderDashboardOverview(user, editing = false, weather = null, updatedAt = null) {
   const dateLabel = mastheadDateLabel();
+  const updated = !editing && updatedAt
+    ? `<p class="dashboard-overview__updated">${esc(t('dashboard.updatedAt', { time: formatTime(updatedAt) }))}</p>`
+    : '';
 
   return `
     <section class="dashboard-overview">
@@ -1592,6 +1650,7 @@ function renderDashboardOverview(user, editing = false, weather = null) {
                   aria-pressed="${editing ? 'true' : 'false'}">
             <i data-lucide="${editing ? 'x' : 'settings-2'}" aria-hidden="true"></i>
           </button>
+          ${updated}
         </div>
       </div>
     </section>
@@ -1742,10 +1801,38 @@ function renderDashboardLayout(cfg, data, weather, currency, { editing = false, 
   return editing ? `${grid}${renderHiddenWidgetsTray(cfg)}` : grid;
 }
 
+/* DAS SKELETT VERSPRICHT DAS LAYOUT, DAS GLEICH KOMMT (Critique R1, A10).
+ * Es zeichnete das Standard-Raster, waehrend die eigene Anordnung erst mit
+ * `/preferences` eintrifft - wer sein Dashboard umgebaut hatte, sah beim Laden
+ * jedes Mal fremde Kacheln aufblitzen und dann umspringen. Ein Ladezustand,
+ * der etwas anderes zeigt als das Ergebnis, ist kein Platzhalter, sondern ein
+ * kurzer falscher Bildschirm.
+ *
+ * Der Cache ist bewusst duenn: nur Sichtbarkeit und Groesse, also genau das,
+ * was die Kachelform bestimmt. Er ist eine VORHERSAGE, keine Quelle - die
+ * Wahrheit bleibt die Serverantwort, und ein veralteter oder kaputter Eintrag
+ * faellt still auf den Standard zurueck. */
+const LAYOUT_HINT_KEY = 'yuvomi-dash-layout-hint';
+
+function rememberLayoutHint(cfg) {
+  try {
+    localStorage.setItem(LAYOUT_HINT_KEY, JSON.stringify(
+      cfg.filter((w) => w.visible).map((w) => w.size),
+    ));
+  } catch { /* z.B. voller oder gesperrter Speicher: der Hinweis ist entbehrlich */ }
+}
+
+function layoutHintSizes() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(LAYOUT_HINT_KEY) ?? 'null');
+    if (Array.isArray(stored) && stored.length && stored.every((s) => typeof s === 'string')) return stored;
+  } catch { /* unlesbar: Standard */ }
+  return DEFAULT_WIDGET_CONFIG.filter((w) => w.visible).map((w) => w.size);
+}
+
 function renderDashboardSkeleton() {
-  const tiles = DEFAULT_WIDGET_CONFIG
-    .filter((w) => w.visible)
-    .map((w) => `<div class="widget-wrapper ${widgetSizeClass(w.size)}">${skeletonWidget(3)}</div>`)
+  const tiles = layoutHintSizes()
+    .map((size) => `<div class="widget-wrapper ${widgetSizeClass(size)}">${skeletonWidget(3)}</div>`)
     .join('');
   return `
     <section class="dashboard-overview">
@@ -2111,6 +2198,18 @@ function initFab(signal) {
   });
 
   document.addEventListener('click', () => { if (open) toggleFab(false); }, { signal });
+
+  // ESCAPE SCHLIESST DEN DIAL, und der Fokus geht zurueck an den Knopf.
+  // Vorher schloss ihn nur ein Klick irgendwohin - wer ihn mit der Tastatur
+  // geoeffnet hatte, konnte ihn ohne Maus nicht mehr zumachen und stand in
+  // einer Liste von vier Zielen, die er nicht angesteuert hatte (WCAG 2.1.2).
+  // Der Fokus muss mitgehen: `tabIndex = -1` nimmt den Aktionen beim Schliessen
+  // die Fokussierbarkeit, ein Fokus darauf faellt sonst an den Body.
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || !open) return;
+    toggleFab(false);
+    fabMain.focus();
+  }, { signal });
 }
 
 // --------------------------------------------------------
@@ -2303,6 +2402,10 @@ export async function render(container, { user }) {
   let visibleMealTypes = MEAL_ORDER;
   let loadFailed   = false;
   let loadErrorStatus = null;
+  // Zeitpunkt des letzten geglueckten Datenstands - der Anker im Masthead (A8).
+  // Bleibt `null`, solange nichts geladen wurde: eine Uhrzeit ohne Daten
+  // dahinter waere die falscheste aller Angaben.
+  let lastLoadedAt = null;
   try {
     const [dashRes, weatherRes, prefsRes] = await Promise.all([
       api.get('/dashboard'),
@@ -2320,8 +2423,11 @@ export async function render(container, { user }) {
     weatherAutoLocate = Boolean(prefsRes.data?.weather_user?.auto_locate ?? prefsRes.data?.weather_auto_locate);
     widgetConfig = normalizeDashboardConfig(prefsRes.data?.dashboard_widgets ?? DEFAULT_WIDGET_CONFIG);
     savedWidgetConfig = widgetConfig.map((w) => ({ ...w }));
+    // Das Skelett des NAECHSTEN Aufrufs lernt hier seine Kachelform.
+    rememberLayoutHint(widgetConfig);
     currency     = prefsRes.data?.currency ?? 'EUR';
     visibleMealTypes = normalizeVisibleMealTypes(prefsRes.data?.visible_meal_types);
+    lastLoadedAt = new Date();
   } catch (err) {
     console.error('[Dashboard] Ladefehler:', err.message, 'Status:', err.status ?? 'network');
     loadFailed = true;
@@ -2363,6 +2469,7 @@ export async function render(container, { user }) {
     widgetConfig = nextConfig.map((w) => ({ ...w }));
     await api.put('/preferences', { dashboard_widgets: widgetConfig });
     savedWidgetConfig = widgetConfig.map((w) => ({ ...w }));
+    rememberLayoutHint(widgetConfig);
     isCustomizing = false;
     // Wird die Zyklus-Kachel gerade erst eingeblendet, ihren owner-only Slice
     // nachladen — sonst zeigte sie fälschlich den Empty-State bis zum Reload.
@@ -2376,6 +2483,7 @@ export async function render(container, { user }) {
             widgetConfig = previousConfig.map((w) => ({ ...w }));
             await api.put('/preferences', { dashboard_widgets: widgetConfig });
             savedWidgetConfig = widgetConfig.map((w) => ({ ...w }));
+            rememberLayoutHint(widgetConfig);
           } catch {
             window.yuvomi?.showToast(t('common.errorGeneric'), 'danger');
           }
@@ -2564,7 +2672,7 @@ export async function render(container, { user }) {
     const weatherCardShown = cfg.some((w) => w.id === 'weather' && w.visible);
     setHtml(shell, `
       <section class="dashboard-masthead dashboard-masthead--${greetingPeriod()}${mastheadSlim}">
-        ${renderDashboardOverview(user, isCustomizing, weatherCardShown ? null : weather)}
+        ${renderDashboardOverview(user, isCustomizing, weatherCardShown ? null : weather, lastLoadedAt)}
         ${cockpitHtml}
       </section>
       ${renderDashboardLayout(cfg, data, weather, currency, { editing: isCustomizing, visibleMealTypes })}
@@ -2627,6 +2735,7 @@ export async function render(container, { user }) {
       // ein Refresh darf ihn nicht auf „nie geladen" zurückwerfen.
       fresh.cycle = data.cycle;
       data = fresh;
+      lastLoadedAt = new Date();
       rebuildDashboard(widgetConfig);
     } catch { /* Hintergrund-Refresh: bewusst still */ }
     finally { refreshInFlight = false; }

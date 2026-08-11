@@ -94,7 +94,7 @@
         "kitchenGoLabel": "Mutfak, {{section}} bölümünü aç",
         "search": "Ara",
         "housekeeping": "Ev işleri",
-        "splitExpenses": "Böl",
+        "splitExpenses": "Paylaşım",
         "kitchenActiveLabel": "Mutfak, {{section}} aktif",
         "reminders": "Hatırlatıcılar",
         "sidebarCollapse": "Kenar çubuğunu daralt",
@@ -163,6 +163,7 @@
         "upcomingBirthdays": "Yaklaşan doğum günleri",
         "noBirthdays": "Henüz doğum günü yok",
         "daysLeft": "{{count}} gün",
+        "daysLeft_one": "{{count}} gün",
         "budgetOverview": "Bütçe özeti",
         "monthlyIncome": "Gelir",
         "monthlyExpenses": "Giderler",
@@ -171,6 +172,7 @@
         "topExpense": "En büyük gider",
         "noBudgetData": "Bu ay bütçe verisi yok.",
         "customize": "Özelleştir",
+        "updatedAt": "Güncellendi {{time}}",
         "customizeTitle": "Widget'ları özelleştir",
         "customizeReset": "Sıfırla",
         "customizeSaved": "Pano kaydedildi",
@@ -1530,7 +1532,7 @@
             "housekeeping": "Ev işleri",
             "weather": "Hava durumu",
             "family": "Aile",
-            "dashboard": "Panel",
+            "dashboard": "Genel Bakış",
             "search": "Ara"
         },
         "ics": {
@@ -2885,7 +2887,7 @@
         "birthDate": "Doğum tarihi",
         "guestSyncHint": "Bilgi girilirse misafir Aile Yönetimi, Kişiler ve Doğum Günleri listesine eklenir.",
         "createAndAddGuest": "Oluştur ve ekle",
-        "tabLabel": "Böl",
+        "tabLabel": "Paylaşım",
         "splitHint": {
             "equal": "Herkes eşit pay öder.",
             "percentage": "Seçilen her üye için yüzde girin. Toplam 100 olmalı.",

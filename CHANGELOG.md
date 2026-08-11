@@ -7,7 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [2.4.0] - 2026-08-11
+### Changed
+
+- **The dashboard's day program now says what it does.** A row that leads somewhere is a link, so Cmd-click and middle-click open it in a new tab and "copy link" yields one - the same thing the widget headers have done since the last round. The task row stays a button, because it does not navigate: it opens the quick-action dialog on its own object, and an href there would be a promise the handler breaks. The widget cards no longer lift on hover: the card was never the click target - its rows, its header link and its empty-state entry are, and each has its own hover. The card promised a destination that does not exist under the cursor.
+- **One module, one name.** The shopping module was called "Einkaufen" (a verb) in the navigation and "Einkauf" everywhere else; it is now the noun in both places, which is what the other sixteen modules already were. Split expenses lost its verb form too, in German and in eleven other languages that carried an infinitive or imperative. The API token dialog kept its own list of module names and had drifted independently: it called the start page "Dashboard" in seventeen of twenty-four languages while the navigation calls it "Overview", and the housekeeping module "Haushalt" instead of "Haushaltshilfe". A guard now compares both lists in every language and found three more on its first run - the English and Filipino notes module was called "Board", and Filipino search was a verb in one list and a noun in the other.
+- **The dashboard says when it last looked.** The silent refresh does its work invisibly, which on a wall tablet is exactly the problem: a surface that never visibly moves cannot be told apart from a frozen one, and "nothing else today" is not believable without a reload. A quiet "Stand 19:24" now sits under the customize button - an absolute time, not a "3 minutes ago" that would need a second timer just to contradict itself.
+- **The dark hover no longer shouts.** It stood two ramp steps above the surface while the light one stands one below white - measured on a cockpit row, 1.414:1 against 1.201:1, and the louder answer belonged to the theme where a brightness jump is more noticeable. It is now the next surface step in both themes. Correcting that one number exposed three places that had been living off the excess: elements already sitting on a raised surface used the same token and would have landed on their own color (measured 1:1 - no hover at all). They now use `--color-surface-elevated-hover`, a step that was never new, only never named, and a guard keeps the two apart.
+
+### Fixed
+
+- **A widget title no longer runs through its own header link.** In a narrow tile the title text was a bare node between the seal and the badge - an anonymous flex item no selector could reach - so it shrank its box and kept drawing straight across "Manage". It now truncates, and the header keeps a minimum gap: `space-between` distributes surplus, and where there is none it distributes nothing.
+- **An empty widget no longer wears a "0" badge.** The header counted zero next to its title while the body below already said the empty state in words - two voices for the same fact, and the badge was the worse one.
+- **Escape closes the dashboard's speed dial.** Only a click anywhere did; whoever opened it with the keyboard could not close it again without a mouse and stood in a list of four destinations they had not aimed for. The focus returns to the button. The first-run dialog also has an accessible name now - it was `role="dialog" aria-modal="true"` with nothing to announce but "dialog".
+- **The rewards footer chip meets the touch target.** It was 38px tall, under the device world's minimum, while being a real control that jumps into the rewards module.
+- **"1 Tage" is gone.** The birthday countdown had no singular variant in any of the 24 locales.
+- **The loading skeleton promises the layout that actually arrives.** It drew the default grid while the saved arrangement only turns up with `/preferences`, so anyone who had rearranged their dashboard watched foreign tiles flash and then jump on every load. The demo seed's own layout also left a hole in the bottom right corner: five tiles covering seven grid cells across four columns, with nothing left for `dense` to fill it with.
 
 ### Added
 

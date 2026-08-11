@@ -190,9 +190,19 @@ cfgSet.run('weather_units', 'metric');
 // jede Demo und jeder Screenshot den Legacy-Pfad OHNE Masthead-Zeile (kein
 // Echo: sichtbare Karte schaltet die Zeile stumm). family ist die „Heute
 // dran"-Karte und stapelt Mitglieder-Zeilen -> 1x2 wie im Autor-Default.
+//
+// DIE FUENF KACHELN MUESSEN AUFGEHEN, und sie taten es nicht: budget stand hier
+// auf 1x1, waehrend der Autor-Default es (wie jede stapelnde Karte) auf 1x2
+// fuehrt. Damit belegten die fuenf zusammen sieben Rasterzellen - bei den vier
+// Spalten, die der Desktop-Screenshot (1376px) aufmacht, eine volle Zeile plus
+// drei Viertel, und rechts unten blieb genau eine Zelle leer, die `dense` nicht
+// mehr schliessen konnte, weil kein Widget mehr uebrig war. Mit budget auf 1x2
+// sind es acht Zellen: zwei volle Zeilen, kein Loch. Gemessen am gerenderten
+// Raster, nicht am Reissbrett - die Kachelbreiten stehen im CSS, die
+// Spaltenzahl aber erst im Fenster.
 const dashboardWidgets = [
   { id: 'family',    visible: true,  size: '1x2' },
-  { id: 'budget',    visible: true,  size: '1x1' },
+  { id: 'budget',    visible: true,  size: '1x2' },
   { id: 'birthdays', visible: true,  size: '1x1' },
   { id: 'rewards',   visible: true,  size: '1x1' },
   { id: 'notes',     visible: true,  size: '2x1' },

@@ -163,6 +163,7 @@
         "upcomingBirthdays": "أعياد الميلاد القادمة",
         "noBirthdays": "لا توجد أعياد ميلاد بعد",
         "daysLeft": "{{count}} أيام",
+        "daysLeft_one": "{{count}} يوم",
         "budgetOverview": "نظرة عامة على الميزانية",
         "monthlyIncome": "الدخل",
         "monthlyExpenses": "المصروفات",
@@ -171,6 +172,7 @@
         "topExpense": "أكبر مصروف",
         "noBudgetData": "لا توجد بيانات ميزانية لهذا الشهر.",
         "customize": "تخصيص",
+        "updatedAt": "آخر تحديث {{time}}",
         "customizeTitle": "تخصيص الأدوات",
         "customizeReset": "إعادة تعيين",
         "customizeSaved": "تم حفظ لوحة التحكم",
@@ -1530,7 +1532,7 @@
             "housekeeping": "التدبير المنزلي",
             "weather": "الطقس",
             "family": "العائلة",
-            "dashboard": "لوحة المعلومات",
+            "dashboard": "لوحة التحكم",
             "search": "بحث"
         },
         "ics": {

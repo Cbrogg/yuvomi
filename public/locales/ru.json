@@ -94,7 +94,7 @@
         "kitchenGoLabel": "Кухня, открыть {{section}}",
         "search": "Поиск",
         "housekeeping": "Уборка",
-        "splitExpenses": "Разделить",
+        "splitExpenses": "Разделение",
         "kitchenActiveLabel": "Кухня, {{section}} активно",
         "reminders": "Напоминания",
         "sidebarCollapse": "Свернуть боковую панель",
@@ -163,6 +163,7 @@
         "upcomingBirthdays": "Ближайшие дни рождения",
         "noBirthdays": "Дней рождения пока нет",
         "daysLeft": "{{count}} дн.",
+        "daysLeft_one": "{{count}} день",
         "budgetOverview": "Обзор бюджета",
         "monthlyIncome": "Доходы",
         "monthlyExpenses": "Расходы",
@@ -171,6 +172,7 @@
         "topExpense": "Крупнейший расход",
         "noBudgetData": "Нет данных бюджета за этот месяц.",
         "customize": "Настроить",
+        "updatedAt": "Обновлено {{time}}",
         "customizeTitle": "Настроить виджеты",
         "customizeReset": "Сбросить",
         "customizeSaved": "Панель сохранена",
@@ -1530,7 +1532,7 @@
             "housekeeping": "Уборка",
             "weather": "Погода",
             "family": "Семья",
-            "dashboard": "Панель",
+            "dashboard": "Обзор",
             "search": "Поиск"
         },
         "ics": {
@@ -2885,7 +2887,7 @@
         "birthDate": "Дата рождения",
         "guestSyncHint": "Гость будет добавлен в Семью, Контакты и Дни рождения, если данные указаны.",
         "createAndAddGuest": "Создать и добавить",
-        "tabLabel": "Разделить",
+        "tabLabel": "Разделение",
         "splitHint": {
             "equal": "Все платят равную долю.",
             "percentage": "Введите процент для каждого выбранного участника. Сумма должна быть 100 %.",

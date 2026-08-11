@@ -94,7 +94,7 @@
         "kitchenGoLabel": "Keuken, {{section}} openen",
         "search": "Zoeken",
         "housekeeping": "Huishouden",
-        "splitExpenses": "Splitsen",
+        "splitExpenses": "Verdeling",
         "kitchenActiveLabel": "Keuken, {{section}} actief",
         "reminders": "Herinneringen",
         "sidebarCollapse": "Zijbalk inklappen",
@@ -163,6 +163,7 @@
         "upcomingBirthdays": "Aankomende verjaardagen",
         "noBirthdays": "Nog geen verjaardagen",
         "daysLeft": "{{count}} dagen",
+        "daysLeft_one": "{{count}} dag",
         "budgetOverview": "Budgetoverzicht",
         "monthlyIncome": "Inkomsten",
         "monthlyExpenses": "Uitgaven",
@@ -171,6 +172,7 @@
         "topExpense": "Grootste uitgave",
         "noBudgetData": "Geen budgetgegevens deze maand.",
         "customize": "Aanpassen",
+        "updatedAt": "Bijgewerkt {{time}}",
         "customizeTitle": "Widgets aanpassen",
         "customizeReset": "Herstellen",
         "customizeSaved": "Dashboard opgeslagen",
@@ -1536,7 +1538,7 @@
             "housekeeping": "Huishouden",
             "weather": "Weer",
             "family": "Familie",
-            "dashboard": "Dashboard",
+            "dashboard": "Overzicht",
             "search": "Zoeken"
         },
         "ics": {
@@ -2885,7 +2887,7 @@
         "birthDate": "Geboortedatum",
         "guestSyncHint": "Deze gast wordt toegevoegd aan Gezinsbeheer, Contacten en Verjaardagen indien opgegeven.",
         "createAndAddGuest": "Aanmaken en toevoegen",
-        "tabLabel": "Splitsen",
+        "tabLabel": "Verdeling",
         "splitHint": {
             "equal": "Iedereen betaalt hetzelfde aandeel.",
             "percentage": "Voer voor elk geselecteerd lid een percentage in. Totaal moet 100% zijn.",

@@ -163,6 +163,7 @@
         "upcomingBirthdays": "Sinh nhật sắp tới",
         "noBirthdays": "Chưa có sinh nhật nào",
         "daysLeft": "Còn {{count}} ngày",
+        "daysLeft_one": "Còn {{count}} ngày",
         "budgetOverview": "Tổng quan ngân sách",
         "monthlyIncome": "Thu nhập",
         "monthlyExpenses": "Chi phí",
@@ -171,6 +172,7 @@
         "topExpense": "Chi phí cao nhất",
         "noBudgetData": "Không có dữ liệu ngân sách trong tháng này.",
         "customize": "Tùy chỉnh",
+        "updatedAt": "Cập nhật {{time}}",
         "customizeTitle": "Tùy chỉnh tiện ích",
         "customizeReset": "Đặt lại",
         "customizeSaved": "Bảng điều khiển đã lưu",
@@ -1536,7 +1538,7 @@
             "housekeeping": "Dọn dẹp",
             "weather": "Thời tiết",
             "family": "Gia đình",
-            "dashboard": "Bảng điều khiển",
+            "dashboard": "Tổng quan",
             "search": "Tìm kiếm"
         },
         "ics": {

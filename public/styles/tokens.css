@@ -139,6 +139,18 @@
   --color-surface-elevated:  var(--_color-surface-elevated);
   --_color-surface-hover:    var(--_neutral-150);
   --color-surface-hover:     var(--_color-surface-hover);
+  /* HOVER FUER ERHOEHTE FLAECHEN, und warum es ihn braucht. `--color-surface-hover`
+   * ist der Schritt von `--color-surface` aus; ein Element, das im Ruhezustand
+   * schon `--color-surface-elevated` traegt (Suchfeld im Mehr-Blatt,
+   * Suchbereich-Chip, Wieder-einblenden-Chip des Dashboards), landete damit im
+   * Dark auf seiner EIGENEN Farbe - der Hover war dort unsichtbar, gemessen
+   * 1:1. Dass es vorher trotzdem ging, war Zufall: der alte Dark-Wert sprang
+   * zwei Rampenstufen und traf so gerade noch ueber die erhoehte Flaeche.
+   * Diese Stufe ist also nicht neu, sie war nur nie benannt. Im Light faellt
+   * sie mit `--color-surface-hover` zusammen, weil die helle Rampe dort dicht
+   * liegt - das ist kein Versehen, sondern die Rampe. */
+  --_color-surface-elevated-hover: var(--_neutral-150);
+  --color-surface-elevated-hover:  var(--_color-surface-elevated-hover);
   /* Surface-Rollen für Glass-Disziplin:
    * work = lesbare Arbeitsflächen, raised = subtile Erhöhung,
    * glass = rein dekorative/leichte Glass-Bereiche. */
@@ -1489,7 +1501,21 @@
     --_color-surface:          #262422;
     --_color-surface-3:        #322F2B;
     --_color-surface-elevated: #322F2B;
-    --_color-surface-hover:    #403C37;
+    /* EINE STUFE, NICHT ZWEI (Critique R1, A10). Der Hover stand auf
+     * --_neutral-250 und damit zwei Rampenstufen ueber der Flaeche
+     * (--_neutral-150), waehrend er im Light genau eine unter Weiss liegt.
+     * Gemessen an der Cockpit-Zeile: dark 1.414:1, light 1.201:1 - derselbe
+     * Zeiger, zwei verschieden laute Antworten, und die lautere gehoerte
+     * ausgerechnet dem Theme, in dem ein Helligkeitssprung mehr auffaellt.
+     * Mit --_neutral-200 sind es 1.18:1, also die luminanzgleiche
+     * Entsprechung. Dass der Wert damit auf --_color-surface-3 faellt, ist
+     * kein Zufall und kein Fehler: im Light tut er dasselbe (beide
+     * --_neutral-150). Der Hover ist in beiden Themes die naechste
+     * Flaechenstufe, nicht eine eigene Farbe. */
+    --_color-surface-hover:    #322F2B;
+    /* Die Stufe ueber der erhoehten Flaeche - im Dark der Wert, den
+     * --_color-surface-hover bis 2026-08-11 fuer ALLE Flaechen trug. */
+    --_color-surface-elevated-hover: #403C37;
     --_color-surface-work:     #262422;
     --_color-surface-raised:   #322F2B;
     --_color-surface-glass:    rgba(38, 36, 34, 0.66);
@@ -1697,7 +1723,21 @@
     --_color-surface:          #262422;
     --_color-surface-3:        #322F2B;
     --_color-surface-elevated: #322F2B;
-    --_color-surface-hover:    #403C37;
+    /* EINE STUFE, NICHT ZWEI (Critique R1, A10). Der Hover stand auf
+     * --_neutral-250 und damit zwei Rampenstufen ueber der Flaeche
+     * (--_neutral-150), waehrend er im Light genau eine unter Weiss liegt.
+     * Gemessen an der Cockpit-Zeile: dark 1.414:1, light 1.201:1 - derselbe
+     * Zeiger, zwei verschieden laute Antworten, und die lautere gehoerte
+     * ausgerechnet dem Theme, in dem ein Helligkeitssprung mehr auffaellt.
+     * Mit --_neutral-200 sind es 1.18:1, also die luminanzgleiche
+     * Entsprechung. Dass der Wert damit auf --_color-surface-3 faellt, ist
+     * kein Zufall und kein Fehler: im Light tut er dasselbe (beide
+     * --_neutral-150). Der Hover ist in beiden Themes die naechste
+     * Flaechenstufe, nicht eine eigene Farbe. */
+    --_color-surface-hover:    #322F2B;
+    /* Die Stufe ueber der erhoehten Flaeche - im Dark der Wert, den
+     * --_color-surface-hover bis 2026-08-11 fuer ALLE Flaechen trug. */
+    --_color-surface-elevated-hover: #403C37;
     --_color-surface-work:     #262422;
     --_color-surface-raised:   #322F2B;
     --_color-surface-glass:    rgba(38, 36, 34, 0.66);

@@ -94,7 +94,7 @@
         "kitchenGoLabel": "Cocina, abrir {{section}}",
         "search": "Buscar",
         "housekeeping": "Limpieza",
-        "splitExpenses": "Dividir",
+        "splitExpenses": "División",
         "kitchenActiveLabel": "Cocina, {{section}} activo",
         "reminders": "Recordatorios",
         "sidebarCollapse": "Contraer barra lateral",
@@ -163,6 +163,7 @@
         "upcomingBirthdays": "Próximos cumpleaños",
         "noBirthdays": "Aún no hay cumpleaños",
         "daysLeft": "{{count}} días",
+        "daysLeft_one": "{{count}} día",
         "budgetOverview": "Resumen del presupuesto",
         "monthlyIncome": "Ingresos",
         "monthlyExpenses": "Gastos",
@@ -171,6 +172,7 @@
         "topExpense": "Mayor gasto",
         "noBudgetData": "No hay datos de presupuesto este mes.",
         "customize": "Personalizar",
+        "updatedAt": "Actualizado {{time}}",
         "customizeTitle": "Personalizar widgets",
         "customizeReset": "Restablecer",
         "customizeSaved": "Panel guardado",
@@ -1530,7 +1532,7 @@
             "housekeeping": "Limpieza",
             "weather": "Tiempo",
             "family": "Familia",
-            "dashboard": "Panel",
+            "dashboard": "Inicio",
             "search": "Buscar"
         },
         "ics": {
@@ -2885,7 +2887,7 @@
         "birthDate": "Nacimiento",
         "guestSyncHint": "El invitado se añade a Familia, Contactos y Cumpleaños si se indica.",
         "createAndAddGuest": "Crear y añadir",
-        "tabLabel": "Dividir",
+        "tabLabel": "División",
         "splitHint": {
             "equal": "Todos pagan la misma parte.",
             "percentage": "Introduce el porcentaje de cada miembro seleccionado. El total debe ser 100 %.",

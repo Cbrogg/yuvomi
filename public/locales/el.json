@@ -163,6 +163,7 @@
         "upcomingBirthdays": "Επόμενα γενέθλια",
         "noBirthdays": "Δεν υπάρχουν γενέθλια ακόμα",
         "daysLeft": "{{count}} ημέρες",
+        "daysLeft_one": "{{count}} ημέρα",
         "budgetOverview": "Επισκόπηση προϋπολογισμού",
         "monthlyIncome": "Έσοδα",
         "monthlyExpenses": "Έξοδα",
@@ -171,6 +172,7 @@
         "topExpense": "Μεγαλύτερο έξοδο",
         "noBudgetData": "Δεν υπάρχουν δεδομένα προϋπολογισμού αυτόν τον μήνα.",
         "customize": "Προσαρμογή",
+        "updatedAt": "Ενημερώθηκε {{time}}",
         "customizeTitle": "Προσαρμογή widgets",
         "customizeReset": "Επαναφορά",
         "customizeSaved": "Πίνακας αποθηκεύτηκε",
@@ -1530,7 +1532,7 @@
             "housekeeping": "Νοικοκυριό",
             "weather": "Καιρός",
             "family": "Οικογένεια",
-            "dashboard": "Πίνακας",
+            "dashboard": "Επισκόπηση",
             "search": "Αναζήτηση"
         },
         "ics": {

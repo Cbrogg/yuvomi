@@ -94,7 +94,7 @@
         "kitchenGoLabel": "Dapur, buka {{section}}",
         "search": "Cari",
         "housekeeping": "Asisten Rumah Tangga",
-        "splitExpenses": "Bagi",
+        "splitExpenses": "Pembagian",
         "kitchenActiveLabel": "Dapur, {{section}} aktif",
         "reminders": "Pengingat",
         "sidebarCollapse": "Ciutkan bilah sisi",
@@ -175,6 +175,7 @@
         "upcomingBirthdays": "Ulang tahun mendatang",
         "noBirthdays": "Belum ada ulang tahun",
         "daysLeft": "{{count}} hari",
+        "daysLeft_one": "{{count}} hari",
         "budgetOverview": "Ringkasan anggaran",
         "monthlyIncome": "Pemasukan",
         "monthlyExpenses": "Pengeluaran",
@@ -183,6 +184,7 @@
         "topExpense": "Pengeluaran terbesar",
         "noBudgetData": "Tidak ada data anggaran bulan ini.",
         "customize": "Sesuaikan",
+        "updatedAt": "Diperbarui {{time}}",
         "customizeTitle": "Sesuaikan widget",
         "customizeReset": "Atur ulang",
         "customizeSaved": "Dasbor disimpan",
@@ -1566,7 +1568,7 @@
             "housekeeping": "Asisten Rumah Tangga",
             "weather": "Cuaca",
             "family": "Keluarga",
-            "dashboard": "Dasbor",
+            "dashboard": "Ringkasan",
             "search": "Cari"
         },
         "ics": {
@@ -2885,7 +2887,7 @@
         "birthDate": "Tanggal lahir",
         "guestSyncHint": "Tamu ditambahkan ke manajemen keluarga, kontak, dan ulang tahun jika diisi.",
         "createAndAddGuest": "Buat dan tambahkan",
-        "tabLabel": "Bagi",
+        "tabLabel": "Pembagian",
         "splitHint": {
             "equal": "Semua membayar bagian yang sama.",
             "percentage": "Masukkan persentase untuk setiap anggota yang dipilih. Totalnya harus 100 %.",

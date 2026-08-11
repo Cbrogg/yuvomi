@@ -175,6 +175,7 @@
         "upcomingBirthdays": "다가오는 생일",
         "noBirthdays": "아직 생일 없음",
         "daysLeft": "{{count}}일",
+        "daysLeft_one": "{{count}}일",
         "budgetOverview": "예산 개요",
         "monthlyIncome": "수입",
         "monthlyExpenses": "지출",
@@ -183,6 +184,7 @@
         "topExpense": "최대 지출",
         "noBudgetData": "이번 달 예산 데이터가 없습니다.",
         "customize": "맞춤 설정",
+        "updatedAt": "업데이트 {{time}}",
         "customizeTitle": "위젯 맞춤 설정",
         "customizeReset": "초기화",
         "customizeSaved": "대시보드가 저장되었습니다",
@@ -1566,7 +1568,7 @@
             "housekeeping": "가사 도우미",
             "weather": "날씨",
             "family": "가족",
-            "dashboard": "대시보드",
+            "dashboard": "개요",
             "search": "검색"
         },
         "ics": {

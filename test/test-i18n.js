@@ -122,3 +122,42 @@ test('alle Locale-Dateien enden mit einem Zeilenumbruch', () => {
   const wrong = LOCALES.filter(l => !readLocale(l).endsWith('\n'));
   assert.deepEqual(wrong, [], `ohne abschließenden Zeilenumbruch: ${wrong.join(', ')}`);
 });
+
+// EIN MODUL, EIN NAME - in jeder Sprache.
+//
+// Modulnamen leben an zwei Stellen: in `nav.*` (Sidebar, Tray, Kommandopalette,
+// Dokumenttitel, Dashboard-Widget-Kopf) und in
+// `settings.apiTokenScopeModules.*` (die Auswahlliste im Token-Dialog). Beide
+// Listen wurden getrennt gepflegt und waren getrennt gedriftet: der Token-
+// Dialog nannte die Startseite in 17 von 24 Sprachen „Dashboard", waehrend die
+// Navigation sie „Uebersicht" nennt, und die Haushaltshilfe hiess dort
+// „Haushalt". Kein Test konnte das sehen - beide Schluessel existierten, beide
+// waren uebersetzt, sie sagten nur Verschiedenes.
+//
+// Geprueft wird die SCHNITTMENGE, nicht eine Liste: `weather` und `family` sind
+// API-Scopes ohne eigene Route und haben deshalb keinen `nav`-Eintrag. Sie
+// fallen von selbst heraus, statt als benannte Ausnahme gepflegt zu werden -
+// und ein kuenftiger Scope, der eine Route bekommt, faellt automatisch unter
+// die Regel.
+test('Modulnamen sind in nav und in den API-Token-Scopes wortgleich', () => {
+  const drift = [];
+  let compared = 0;
+  for (const locale of LOCALES) {
+    const keys = flatten(JSON.parse(readLocale(locale)));
+    for (const [key, value] of keys) {
+      const match = key.match(/^settings\.apiTokenScopeModules\.(\w+)$/);
+      if (!match) continue;
+      const navKey = `nav.${match[1]}`;
+      if (!keys.has(navKey)) continue;
+      compared++;
+      if (keys.get(navKey) !== value) {
+        drift.push(`${locale}: ${key} = ${JSON.stringify(value)}, ${navKey} = ${JSON.stringify(keys.get(navKey))}`);
+      }
+    }
+  }
+  // Reichweiten-Nachweis: ohne ihn meldet ein Guard, dessen Selektor ins Leere
+  // greift, fehlerfrei „keine Drift" ueber null verglichene Paare.
+  assert.ok(compared >= 12 * LOCALES.length,
+    `zu wenige Paare verglichen (${compared}) - greift der Selektor noch?`);
+  assert.deepEqual(drift, [], `Modulname driftet:\n  ${drift.join('\n  ')}`);
+});

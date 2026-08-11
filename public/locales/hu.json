@@ -94,7 +94,7 @@
         "kitchenGoLabel": "Konyha, {{section}} megnyitása",
         "search": "Keresés",
         "housekeeping": "Háztartás",
-        "splitExpenses": "Költségek megosztása",
+        "splitExpenses": "Költségmegosztás",
         "kitchenActiveLabel": "Konyha, {{section}} aktív",
         "reminders": "Emlékeztetők",
         "sidebarCollapse": "Oldalsáv összecsukása",
@@ -163,6 +163,7 @@
         "upcomingBirthdays": "Közelgő születésnapok",
         "noBirthdays": "Még nincsenek születésnapok",
         "daysLeft": "{{count}} nap",
+        "daysLeft_one": "{{count}} nap",
         "budgetOverview": "Költségvetés áttekintése",
         "monthlyIncome": "Bevétel",
         "monthlyExpenses": "Kiadások",
@@ -171,6 +172,7 @@
         "topExpense": "Legnagyobb kiadás",
         "noBudgetData": "Nincs költségvetési adat ebben a hónapban.",
         "customize": "Testreszabás",
+        "updatedAt": "Frissítve {{time}}",
         "customizeTitle": "Widgetek testreszabása",
         "customizeReset": "Visszaállítás",
         "customizeSaved": "Áttekintő mentve",
@@ -1536,7 +1538,7 @@
             "housekeeping": "Háztartás",
             "weather": "Időjárás",
             "family": "Család",
-            "dashboard": "Irányítópult",
+            "dashboard": "Áttekintés",
             "search": "Keresés"
         },
         "ics": {

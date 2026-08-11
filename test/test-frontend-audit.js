@@ -10652,3 +10652,79 @@ test('kein geteiltes Bedienelement wird unter seinem eigenen Namen umgefaerbt', 
     + 'Wer eine andere Farbe braucht, braucht eine andere VARIANTE, keine zweite Regel.\n'
     + offenders.join('\n'));
 });
+
+/**
+ * Ein Hover gehoert zu SEINER Flaeche, nicht zur Grundflaeche.
+ *
+ * `--color-surface-hover` ist der Schritt von `--color-surface` aus. Ein
+ * Element, das im Ruhezustand schon `--color-surface-elevated` (oder -3 /
+ * -raised) traegt, landet damit im Dark auf seiner EIGENEN Farbe: beide loesen
+ * dort auf `#322F2B` auf, der Hover ist unsichtbar. Gemessen an
+ * `.more-sheet__search`: 1:1.
+ *
+ * DASS ES VORHER GING, WAR ZUFALL, und das ist der Grund fuer diesen Guard.
+ * Der alte Dark-Hover sprang zwei Rampenstufen (`#403C37`) und traf so gerade
+ * noch ueber die erhoehte Flaeche - waehrend er auf der Grundflaeche mit
+ * 1.414:1 gegen 1.201:1 im Light deutlich zu laut war. Die Korrektur der einen
+ * Zahl legte die drei Stellen frei, die vom Ueberschuss gelebt hatten. Ohne
+ * diesen Guard ist die naechste solche Stelle wieder eine, die niemand sieht,
+ * weil ein unsichtbarer Hover nichts kaputt macht - er tut nur nichts.
+ *
+ * Geprueft wird ueber `eachRule()` (nie ueber `includes()` auf zusammengehaengtem
+ * CSS - ein Kommentar zaehlt sonst als Regel) und mit einem Reichweiten-Nachweis:
+ * ohne ihn meldet ein Scanner, dessen Muster nicht mehr greift, fehlerfrei
+ * „keine Verstoesse" ueber null gelesene Regeln. Genau das ist beim Bau dieser
+ * Pruefung zweimal passiert - einmal las das CSSOM `background: var(…)` als
+ * leere Kurzform, einmal lieferte `document.styleSheets` gar nichts.
+ */
+test('ein Hover auf erhoehter Flaeche nimmt die Stufe ueber DIESER Flaeche', () => {
+  const ELEVATED_REST = /--color-surface-(?:3|elevated|raised)\b/;
+  const restBg = new Map();
+  const hoverOnSurface = new Map();
+  let rulesRead = 0;
+
+  const dirs = [
+    new URL('../public/styles/', import.meta.url),
+    new URL('../public/settings/styles/', import.meta.url),
+  ];
+  for (const dir of dirs) {
+    let files = [];
+    try { files = readdirSync(dir).filter((f) => f.endsWith('.css')); } catch { continue; }
+    for (const file of files) {
+      for (const { selector, body } of eachRule(readFileSync(new URL(file, dir), 'utf8'))) {
+        rulesRead++;
+        const bg = body.match(/background(?:-color)?\s*:([^;]*)/);
+        if (!bg) continue;
+        for (const raw of selector.split(',')) {
+          const s = raw.trim();
+          if (/:hover/.test(s)) {
+            if (/--color-surface-hover\b/.test(bg[1])) {
+              hoverOnSurface.set(`${file}::${s.replace(/:hover\b/g, '').trim()}`, s);
+            }
+          } else {
+            restBg.set(`${file}::${s}`, bg[1].trim());
+          }
+        }
+      }
+    }
+  }
+
+  assert.ok(rulesRead >= 2000,
+    `Reichweiten-Nachweis: nur ${rulesRead} Regeln gelesen - greift eachRule() hier noch?`);
+  assert.ok(hoverOnSurface.size >= 20,
+    `Reichweiten-Nachweis: nur ${hoverOnSurface.size} Hover-Regeln mit --color-surface-hover gefunden`);
+
+  const offenders = [];
+  for (const [key, selector] of hoverOnSurface) {
+    const rest = restBg.get(key);
+    if (rest === undefined || !ELEVATED_REST.test(rest)) continue;
+    offenders.push(`${key.split('::')[0]}: "${selector}" liegt im Ruhezustand auf ${rest}, `
+      + 'nimmt im Hover aber --color-surface-hover');
+  }
+
+  assert.deepEqual(offenders, [],
+    'Ein Element, dessen Ruheflaeche schon erhoeht ist, braucht '
+    + '--color-surface-elevated-hover. --color-surface-hover ist der Schritt von '
+    + '--color-surface aus und faellt im Dark mit der erhoehten Flaeche zusammen:\n'
+    + offenders.join('\n'));
+});

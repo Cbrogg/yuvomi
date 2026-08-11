@@ -233,6 +233,11 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  /* Ein gekürzter Titel endet sonst genau an der Kante des Links: gemessen 0px
+   * Abstand zwischen der Ellipse von „Familienmitglieder" und „Verwalten".
+   * `space-between` verteilt nur ÜBERSCHUSS - wo keiner ist, verteilt es
+   * nichts, und der Mindestabstand muss selbst dastehen. */
+  gap: var(--space-2);
   padding: var(--space-3) var(--space-4) var(--space-2);
   position: relative;
   z-index: 2;
@@ -363,16 +368,13 @@
   height: 15px;
 }
 
-/* Widget hover lift (desktop) */
-@media (min-width: 1024px) {
-  .widget {
-    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
-  }
-  .widget:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
-  }
-}
+/* KEIN HOVER-LIFT AUF DER KARTE (Critique R1, A10). Ein Widget hob sich beim
+ * Überfahren um 2px und nahm einen größeren Schatten - die Bewegung eines
+ * Bedienelements. Klickbar ist die Karte aber nie: das sind ihre Zeilen, ihr
+ * Kopf-Link und ihr Leerzustands-Einstieg, und die haben ihren eigenen Hover.
+ * Der Lift versprach also ein Ziel, das unter dem Zeiger nicht existiert, und
+ * überdeckte dabei die echten Ziele, die sich mitbewegten. Die Karte ist ein
+ * Behälter; sie reagiert nicht, ihr Inhalt tut es. */
 
 /* --------------------------------------------------------
  * Aufgaben-Widget
@@ -1439,8 +1441,10 @@ svg.weather-forecast__icon {
   transition: background var(--transition-fast), border-color var(--transition-fast);
 }
 
+/* Der Chip liegt im Ruhezustand auf --color-surface-elevated und braucht
+ * deshalb die Stufe ueber DIESER Flaeche, nicht die ueber --color-surface. */
 .widget-restore-chip:hover {
-  background: var(--color-surface-hover);
+  background: var(--color-surface-elevated-hover);
   border-color: var(--color-accent);
 }
 
@@ -1673,6 +1677,9 @@ svg.weather-forecast__icon {
   border: none;
   background: transparent;
   color: var(--color-text-primary);
+  /* Die navigierenden Zeilen sind `<a href>` (Re-Critique A5) - ohne diese
+   * Zeile traegt jede von ihnen den Browser-Unterstrich. */
+  text-decoration: none;
   text-align: left;
   cursor: pointer;
   touch-action: pan-y;
@@ -1685,16 +1692,23 @@ svg.weather-forecast__icon {
 }
 
 /* Hover/Focus nur auf interaktiven Zeilen: Zustands- und Fußzeilen sind <div>s
- * ohne Route und dürfen keine Interaktion versprechen. */
-button.today-cockpit-card:hover,
-button.today-cockpit-card:focus-visible {
+ * ohne Route und dürfen keine Interaktion versprechen.
+ *
+ * GEFRAGT WIRD DIE ROUTE, NICHT DAS TAG. Die Zeilen sind seit A5 zweierlei
+ * gebaut - `<a href>`, wo sie navigieren, `<button>`, wo sie das
+ * Quick-Action-Modal öffnen -, und eine Aufzählung von Tags hätte beim
+ * Umbau still die Hälfte der Zeilen verloren. `[data-route]` ist dieselbe
+ * Bedingung, an der auch `wireLinks` seine Handler aufhängt: eine Zeile ist
+ * interaktiv, wenn sie ein Ziel hat. */
+.today-cockpit-card[data-route]:hover,
+.today-cockpit-card[data-route]:focus-visible {
   background: var(--color-surface-hover);
 }
 
 /* Der Träger clippt per overflow:hidden (Radius-Schnitt der Zeilenliste) -
  * der Fokusring rückt deshalb nach innen (tokens.css: --focus-ring-offset-inset),
  * statt an drei Kanten beschnitten zu werden (Critique P5, WCAG 2.4.7). */
-button.today-cockpit-card:focus-visible {
+.today-cockpit-card[data-route]:focus-visible {
   outline-offset: var(--focus-ring-offset-inset);
 }
 
@@ -1919,9 +1933,27 @@ button.today-cockpit-card:focus-visible {
 .dashboard-overview__tools {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
+  /* Umbruch statt eigener Spalte: der Stand-Anker (A8) legt sich als eigene
+   * Zeile UNTER den Anpassen-Knopf, ohne dass die Bearbeiten-Werkzeugleiste
+   * daneben ihre Zeile verliert. */
+  flex-wrap: wrap;
   gap: var(--space-2);
   min-width: 0;
   flex: 0 0 auto;
+}
+
+/* „Stand 14:32" - der leiseste Text der Seite. Er beweist am Wandtablet, dass
+ * der stille Refresh laeuft, und darf dafuer nichts weiter tun: Footnote-Groesse,
+ * tertiaere Farbe, kein Icon, keine eigene Flaeche. Tabellenziffern, damit die
+ * Zeile beim Aktualisieren nicht in der Breite zuckt. */
+.dashboard-overview__updated {
+  flex: 0 0 100%;
+  margin: 0;
+  text-align: right;
+  color: var(--color-text-tertiary);
+  font-size: var(--type-caption);
+  font-variant-numeric: tabular-nums;
 }
 
 .dashboard-icon-btn {
@@ -2239,6 +2271,28 @@ button.today-cockpit-card:focus-visible {
 .dashboard .widget__title,
 .dashboard .widget__link {
   min-width: 0;
+}
+
+/* DER TITEL KÜRZT, STATT ÜBER DEN LINK ZU LAUFEN. `min-width: 0` erlaubt dem
+ * Titel zu schrumpfen - was er dann tut, stand nirgends: der Text war ein
+ * nackter Knoten zwischen Siegel und Badge, also ein anonymes Flex-Item, das
+ * kein Selektor erreicht. In einer schmalen Kachel (1x2, 258px) schrumpfte der
+ * Kasten und der Text lief einfach weiter, quer durch den „Verwalten"-Link -
+ * gemessen im Familien-Widget. Der Wrapper macht ihn adressierbar; die
+ * Kürzung selbst ist die übliche Ellipse.
+ *
+ * Und der Link gibt nicht nach: er ist die kurze, feste Seite der Zeile, der
+ * Titel die nachgiebige. Ohne `flex-shrink: 0` teilen sich beide den Mangel
+ * und beide werden unlesbar. */
+.dashboard .widget__title-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard .widget__link {
+  flex-shrink: 0;
 }
 
 .dashboard .widget__body,
@@ -2708,11 +2762,17 @@ button.today-cockpit-card:focus-visible {
   font-variant-numeric: tabular-nums;
 }
 
+/* Der Fuss-Chip ist ein Bedienelement (role="button", er springt in die
+ * Belohnungen) und war 38px hoch - unter der Zielgroesse der Geraetewelt.
+ * Die Breite trug die Zeile ohnehin; gefehlt hat nur die Hoehe, deshalb
+ * min-height statt eines groesseren Innenabstands: der Chip soll ein Chip
+ * bleiben und nicht zur Schaltflaeche werden. */
 .rewards-widget__footer {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   margin-top: var(--space-2);
+  min-height: var(--target-base);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-full);
   --module-accent: var(--module-rewards);

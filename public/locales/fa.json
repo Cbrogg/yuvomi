@@ -175,6 +175,7 @@
         "upcomingBirthdays": "تولدهای پیش‌رو",
         "noBirthdays": "هنوز تولدی نیست",
         "daysLeft": "{{count}} روز",
+        "daysLeft_one": "{{count}} روز",
         "budgetOverview": "نمای کلی بودجه",
         "monthlyIncome": "درآمد",
         "monthlyExpenses": "هزینه‌ها",
@@ -183,6 +184,7 @@
         "topExpense": "بزرگ‌ترین هزینه",
         "noBudgetData": "این ماه داده بودجه‌ای نیست.",
         "customize": "سفارشی‌سازی",
+        "updatedAt": "به‌روزرسانی {{time}}",
         "customizeTitle": "سفارشی‌سازی ابزارک‌ها",
         "customizeReset": "بازنشانی",
         "customizeSaved": "داشبورد ذخیره شد",
@@ -1566,7 +1568,7 @@
             "housekeeping": "خدمتکار خانه",
             "weather": "آب‌وهوا",
             "family": "خانواده",
-            "dashboard": "داشبورد",
+            "dashboard": "نمای کلی",
             "search": "جستجو"
         },
         "ics": {

@@ -163,6 +163,7 @@
         "upcomingBirthdays": "Найближчі дні народження",
         "noBirthdays": "Днів народження ще немає",
         "daysLeft": "{{count}} дн.",
+        "daysLeft_one": "{{count}} день",
         "budgetOverview": "Огляд бюджету",
         "monthlyIncome": "Доходи",
         "monthlyExpenses": "Витрати",
@@ -171,6 +172,7 @@
         "topExpense": "Найбільша витрата",
         "noBudgetData": "Немає бюджетних даних за цей місяць.",
         "customize": "Налаштувати",
+        "updatedAt": "Оновлено {{time}}",
         "customizeTitle": "Налаштувати віджети",
         "customizeReset": "Скинути",
         "customizeSaved": "Огляд збережено",
@@ -1530,7 +1532,7 @@
             "housekeeping": "Прибирання",
             "weather": "Погода",
             "family": "Родина",
-            "dashboard": "Панель",
+            "dashboard": "Огляд",
             "search": "Пошук"
         },
         "ics": {

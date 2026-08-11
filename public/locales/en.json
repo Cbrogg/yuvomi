@@ -71,7 +71,7 @@
         "calendar": "Calendar",
         "meals": "Meals",
         "shopping": "Shopping",
-        "notes": "Board",
+        "notes": "Notes",
         "contacts": "Contacts",
         "birthdays": "Birthdays",
         "budget": "Budget",
@@ -163,6 +163,7 @@
         "upcomingBirthdays": "Upcoming birthdays",
         "noBirthdays": "No birthdays yet",
         "daysLeft": "{{count}} days",
+        "daysLeft_one": "{{count}} day",
         "budgetOverview": "Budget overview",
         "monthlyIncome": "Income",
         "monthlyExpenses": "Expenses",
@@ -171,6 +172,7 @@
         "topExpense": "Top expense",
         "noBudgetData": "No budget data this month.",
         "customize": "Customize",
+        "updatedAt": "Updated {{time}}",
         "customizeTitle": "Customize widgets",
         "customizeReset": "Reset",
         "customizeSaved": "Dashboard saved",
@@ -1559,7 +1561,7 @@
             "housekeeping": "Housekeeping",
             "weather": "Weather",
             "family": "Family",
-            "dashboard": "Dashboard",
+            "dashboard": "Overview",
             "search": "Search"
         },
         "ics": {
