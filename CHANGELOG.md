@@ -12,9 +12,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **An idle wall tablet can show photos from Immich instead of a fixed dashboard.** A dashboard that never changes burns itself into the panel. An administrator connects the server under Settings -> Administration -> Immich, where the API key stays on Yuvomi's side and never reaches the browser, optionally limits the source to a single album, tests the connection and previews the result. After five minutes without input, photos rotate every 20 seconds until the next touch, pointer, key or scroll; the caption changes corners so the protection does not introduce a bright fixed area of its own. `IMMICH_URL`, `IMMICH_API_KEY` and `IMMICH_SCREENSAVER_ALBUM_ID` set the same values and take precedence over the database. (#693)
 - **Income categories can carry subcategories too.** They were an expense-only concept, so "Salary" could not be broken down into monthly pay, overtime and bonus the way "Groceries" could be broken down. Both types now behave the same, and the subcategory field sits directly under the category in the entry form instead of below the fold under "Advanced". (#691)
 
+- **Tandoor as a second recipe source, next to Mealie.** Adding a recipe mirror under Settings -> Kitchen now starts with the question which server it is. Tandoor recipes land in the same list as Mealie and native ones, with their own source badge, and get the same read-only mirroring, thumbnail proxy and meal-plan integration. (#530)
+
+### Changed
+
+- **The Mealie mirror from v1.73.0 is now provider-neutral.** `mealie_accounts` became `recipe_provider_accounts` with a `provider` column, and one shared adapter interface replaced the Mealie-only client, mirroring how document storage already handles Paperless and Papra. A third provider needs an adapter, not another copy of the sync, route and frontend logic. Existing Mealie accounts notice nothing: the migration renames tables and columns in place, no data moves. The API path `/api/v1/mealie` is now `/api/v1/recipe-providers`, which matters only for anything calling it directly with an API token. (#530)
+
 ### Fixed
 
+- A Tandoor sync stopped after the first page when Tandoor sat behind a reverse proxy that rewrites its own URLs in the paging links. (#530)
 - **Installing the app worked again behind an authenticating reverse proxy.** A `<link rel="manifest">` is fetched with credentials omitted by default, even same-origin, so Cloudflare Access, Authelia, Authentik or basic auth answered it with their login page instead of the manifest. Without a valid manifest the browser never offers installation: the button under Settings -> Personal -> This device stayed disabled and the install banner never appeared, while every other page behaved normally and hid the cause. The manifest link now carries `crossorigin="use-credentials"`. Installations without a proxy are unaffected. (#715)
+
+### Security
+
+- Recipe provider sync (Mealie and Tandoor) goes through the same SSRF-hardened HTTP client as calendar subscriptions and document storage. **This needs an action from anyone whose Mealie sits on a Docker-internal or LAN-only address**, which is the common case: that target is now refused, and the account shows "URL resolves to a private IP address" as its last sync error until `RECIPE_PROVIDER_ALLOW_PRIVATE_NETWORK=true` is set in the environment. Mirrored recipes already in the database are untouched while the sync is refused. (#530)
+- Tandoor's thumbnail proxy no longer follows an image URL to a host outside the configured account. Tandoor names the image host in its own API response, and the server attached the account's Bearer token to whatever it named - any household member viewing a mirrored recipe could have made the server send that token elsewhere. (#530)
 
 ## [2.2.3] - 2026-08-11
 
