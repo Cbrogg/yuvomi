@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.3] - 2026-08-11
+
+### Changed
+
+- **The shopping list no longer names the selected list twice.** Its name stood in the list picker as the active chip and again as a heading right below it, with a rename pencil and a menu. The chip is the title now; rename, "From meal plan", "Manage categories" and "Delete list" moved into a menu at the trailing end of the chip row, on every screen width. That gives the items about 64 px more room on a phone - the route now uses 64% of the screen for content where it used 53%, level with tasks and budget.
+- The second colour of the budget charts moves from teal to petrol. It was the exact tone the budget itself wears, so an account coloured "Teal" was indistinguishable from the module around it. Existing accounts and categories keep their choice and simply render in the new tone.
+
 ## [2.2.2] - 2026-08-11
 
 ### Changed
