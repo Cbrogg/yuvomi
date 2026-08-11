@@ -66,6 +66,79 @@
   display: none;
 }
 
+/* --------------------------------------------------------
+ * Gegenstands-Foto (Formular-Editor + Detailansicht) - abgeleitet von
+ * .birthday-avatar-editor (birthdays.css), aber mit Eckenradius statt Kreis:
+ * ein Gegenstand ist kein Portraet. Gleiche Masse/Interaktion, nur der
+ * Radius und der Platzhalter (Icon statt Initialen) unterscheiden sich.
+ * -------------------------------------------------------- */
+
+.inventory-photo-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.inventory-photo-editor {
+  width: 84px;
+  height: 84px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), var(--color-surface));
+  cursor: pointer;
+}
+
+.inventory-photo-preview__image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.inventory-photo-preview__fallback {
+  display: inline-flex;
+  color: color-mix(in srgb, var(--module-accent) var(--tint-ink), var(--color-text-primary));
+}
+
+.inventory-photo-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.inventory-photo-action {
+  width: var(--target-base);
+  height: var(--target-base);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.inventory-photo-action:hover {
+  background: var(--color-surface-hover);
+}
+
+.inventory-photo-action--danger {
+  color: var(--color-danger);
+}
+
+.inventory-detail-photo {
+  display: block;
+  width: 100%;
+  max-width: 240px;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+}
+
 /* Kopfzeile im Klickbereich: Name, Indikator-Icons, Statusbadge - exakt wie
  * .pantry-row__headline (gleiche Klasse waere hier falsch benannt, aber
  * identische Werte). */

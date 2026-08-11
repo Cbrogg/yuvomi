@@ -447,6 +447,21 @@ function trackedDateDetailEntries(item) {
  * (detailRowEl), also keine Fallunterscheidung hier noetig.
  * @returns {Array} Sections fuer openDetailView
  */
+/** Detail-Vorschau: eigenes DOM-Element statt Text/Link, gleiche Rolle wie
+ *  inventoryDetailListNode fuer die anderen komplexen Zeilen. Kein `node:` in
+ *  openDetailView's `sections` erzwingt ein Label/Value-Paar (detailBodyEl
+ *  schickt jeden Eintrag durch detailRowEl) - ein eigener Top-Level-Bild-Slot
+ *  existiert in der geteilten Komponente nicht, deshalb als erste Zeile statt
+ *  als Kopfbild. */
+function photoDetailNode(photoData) {
+  if (!photoData) return null;
+  const img = document.createElement('img');
+  img.className = 'inventory-detail-photo';
+  img.src = photoData;
+  img.alt = '';
+  return img;
+}
+
 function renderItemDetail(item) {
   const bookingEntries = (item.linked_entries || []).map((link) => ({
     text: `${link.title} · ${formatMoney(link.amount, _householdCurrency)}`,
@@ -458,6 +473,7 @@ function renderItemDetail(item) {
   }));
 
   return [
+    { icon: 'image', label: t('inventory.photoLabel'), node: photoDetailNode(item.photo_data) },
     { icon: item.category_icon, label: t('inventory.categoryLabel'), value: item.category_name },
     { icon: 'map-pin', label: t('inventory.locationLabel'), value: item.location_path || '' },
     { icon: 'building-2', label: t('inventory.brandLabel'), value: item.brand || '' },
@@ -851,6 +867,24 @@ function collectTrackedDates(panel) {
   }).filter((d) => d.label && d.date);
 }
 
+/** Gleiche Umsetzung wie public/pages/birthdays.js#readFileAsDataUrl. */
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(new Error('Failed to read image.'));
+    reader.readAsDataURL(file);
+  });
+}
+
+/** Vorschau im Formular-Editor: Bild oder ein neutrales Platzhalter-Icon -
+ *  anders als birthdays.js's Initialen, die fuer einen Gegenstand keinen
+ *  Sinn ergeben. */
+function photoPreviewHtml(photoData) {
+  if (photoData) return `<img class="inventory-photo-preview__image" src="${photoData}" alt="">`;
+  return `<span class="inventory-photo-preview__fallback"><i data-lucide="image" aria-hidden="true"></i></span>`;
+}
+
 /**
  * Baut Titel, Markup und Verdrahtung des Gegenstands-Formulars in einem
  * Stueck. Eigene Funktion, weil dasselbe Formular an zwei Stellen entsteht:
@@ -863,6 +897,7 @@ function collectTrackedDates(panel) {
 function buildItemForm({ mode, item = null }) {
   const isEdit = mode === 'edit';
   let pickedBooking = null; // nur im Anlegen-Fluss: {entry, role:'purchase'} vor dem Speichern
+  let photoData = isEdit && item.photo_data ? item.photo_data : null;
 
   const categoryOptions = state.categories
     .map((c) => `<option value="${esc(c.key)}">${esc(c.name)}</option>`).join('');
@@ -931,6 +966,25 @@ function buildItemForm({ mode, item = null }) {
         </button>
       </div>` : ''}
       ${advancedSection(`
+        <div class="form-group">
+          <span class="form-label">${esc(t('inventory.photoLabel'))}</span>
+          <div class="inventory-photo-wrap">
+            <button type="button" class="inventory-photo-editor" id="inv-photo-preview" aria-label="${esc(t('inventory.photoLabel'))}">
+              ${photoPreviewHtml(photoData)}
+            </button>
+            <input class="sr-only" id="inv-photo" type="file" accept="image/png,image/jpeg,image/webp,image/gif">
+            <div class="inventory-photo-actions">
+              <button type="button" class="inventory-photo-action" id="inv-photo-edit"
+                      aria-label="${esc(t('inventory.photoLabel'))}" title="${esc(t('inventory.photoLabel'))}">
+                <i data-lucide="pencil" aria-hidden="true"></i>
+              </button>
+              <button type="button" class="inventory-photo-action inventory-photo-action--danger" id="inv-remove-photo"
+                      aria-label="${esc(t('inventory.removePhoto'))}" title="${esc(t('inventory.removePhoto'))}">
+                <i data-lucide="trash-2" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+        </div>
         <div class="inventory-form-row">
           <div class="form-group">
             <label class="form-label" for="inv-brand">${esc(t('inventory.brandLabel'))}</label>
@@ -1013,6 +1067,31 @@ function buildItemForm({ mode, item = null }) {
 
     wireTrackedDateRows(panel);
 
+    const photoPreview = panel.querySelector('#inv-photo-preview');
+    const photoInput = panel.querySelector('#inv-photo');
+    const renderPhotoPreview = () => {
+      photoPreview.replaceChildren();
+      photoPreview.insertAdjacentHTML('beforeend', photoPreviewHtml(photoData));
+      if (window.lucide) window.lucide.createIcons({ el: photoPreview });
+    };
+    photoPreview.addEventListener('click', () => photoInput?.click());
+    panel.querySelector('#inv-photo-edit')?.addEventListener('click', () => photoInput?.click());
+    photoInput?.addEventListener('change', async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      try {
+        photoData = await readFileAsDataUrl(file);
+        renderPhotoPreview();
+      } catch (err) {
+        window.yuvomi?.showToast(err.message, 'danger');
+      }
+    });
+    panel.querySelector('#inv-remove-photo')?.addEventListener('click', () => {
+      photoData = null;
+      if (photoInput) photoInput.value = '';
+      renderPhotoPreview();
+    });
+
     wireBlurValidation(panel);
     const attachments = bindDocumentAttachField(panel, {
       category: () => panel.querySelector('#inv-attachment-category').value,
@@ -1081,7 +1160,7 @@ function buildItemForm({ mode, item = null }) {
       });
     }
 
-    panel.querySelector('#inv-save').addEventListener('click', () => saveItem(panel, mode, item, attachments, pickedBooking));
+    panel.querySelector('#inv-save').addEventListener('click', () => saveItem(panel, mode, item, attachments, pickedBooking, photoData));
     panel.querySelector('#inv-delete')?.addEventListener('click', async () => {
       await closeSharedModal({ force: true });
       await removeItem(item);
@@ -1104,7 +1183,7 @@ function openItemModal(mode, item = null) {
   openSharedModal({ title: form.title, size: 'md', content: form.content, onSave: form.wire });
 }
 
-async function saveItem(panel, mode, item, attachments, pickedBooking) {
+async function saveItem(panel, mode, item, attachments, pickedBooking, photoData) {
   const saveBtn = panel.querySelector('#inv-save');
   const nameInput = panel.querySelector('#inv-name');
   const name = nameInput.value.trim();
@@ -1130,6 +1209,7 @@ async function saveItem(panel, mode, item, attachments, pickedBooking) {
     condition: panel.querySelector('#inv-condition').value,
     notes: panel.querySelector('#inv-notes').value.trim() || null,
     tracked_dates: collectTrackedDates(panel),
+    photo_data: photoData,
   };
 
   saveBtn.disabled = true;
