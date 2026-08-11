@@ -9,7 +9,7 @@ import { canSeeWidget } from '/permissions.js';
 import { t, formatDate, formatTime, timeSuffix, getLocale, getNumberFormat } from '/i18n.js';
 import { getReadableTextColor, AVATAR_FALLBACK_COLOR } from '/utils/color.js';
 import { esc, fmtLocation, renderMarkdownLight } from '/utils/html.js';
-import { toLocalDateKey, parseLocalDateKey } from '/utils/date.js';
+import { toLocalDateKey, parseLocalDateKey, addLocalDays } from '/utils/date.js';
 import { predictCycle, PHASE } from '/utils/health-cycle.js';
 import { localizeBirthdayEvent } from '/utils/birthday-event.js';
 import { findPageFab } from '/utils/fab.js';
@@ -514,7 +514,10 @@ function formatDueDate(dateStr, timeStr) {
   }
 
   if (calDayDiff === 1) {
-    return { text: `${t('dashboard.dueTomorrow')} – ${formatTime(dueDate)}`, overdue: false };
+    // Nur eine ECHTE Uhrzeit anhängen: ohne due_time ist 23:59:59 die interne
+    // Sortier-Krücke - „Morgen fällig – 23:59" behauptete eine Deadline, die
+    // niemand gesetzt hat (Critique P1). Der Heute-Zweig darüber macht es vor.
+    return { text: timeStr ? `${t('dashboard.dueTomorrow')} – ${formatTime(dueDate)}` : t('dashboard.dueTomorrow'), overdue: false };
   }
 
   return { text: fullLabel, overdue: false };
@@ -594,7 +597,7 @@ function formatPoints(value) {
  * `--seal-accent` aus dem Fenster, und der Guard meldet ein Siegel ohne
  * Herkunft - gemessen, nicht vermutet.
  */
-function widgetHeader(icon, title, count, linkHref, linkLabel) {
+function widgetHeader(icon, title, count, linkHref, linkLabel, sealSlug = null) {
   // Ein eigenes Link-Label spricht auch im aria-Label mit eigener Stimme:
   // „Alle: Familienmitglieder" für einen „Verwalten"-Link wäre eine Lüge.
   const customLabel = linkLabel != null;
@@ -603,10 +606,13 @@ function widgetHeader(icon, title, count, linkHref, linkLabel) {
     ? `<span class="widget__badge">${count}</span>`
     : '';
   // Herkunfts-Regel (Block 2): das Dashboard ist eine Mischstelle, also
-  // traegt jeder Widget-Kopf das Markensiegel seines Moduls. Der Slug ist
-  // das erste Segment der Widget-Route; ein unbekannter Slug faellt im
-  // var()-Fallback auf den App-Akzent zurueck.
-  const slug = (linkHref || '').split('/')[1] || '';
+  // traegt jeder Widget-Kopf das Markensiegel seines Moduls. Der Slug kommt
+  // aus dem ersten Segment der Widget-Route; ein unbekannter Slug faellt im
+  // var()-Fallback auf den App-Akzent zurueck. Wo Aktions-Link und Herkunft
+  // auseinanderfallen (Familie: „Verwalten" fuehrt in die Einstellungen, die
+  // Karte gehoert aber den Menschen), benennt sealSlug die Herkunft explizit -
+  // sonst spraeche eine Karte zwei Modultoene (Critique P2).
+  const slug = sealSlug ?? ((linkHref || '').split('/')[1] || '');
   const seal = slug ? ` style="--seal-accent: var(--module-${slug}, var(--color-accent))"` : '';
   return `
     <div class="widget__header">
@@ -786,9 +792,18 @@ function buildTodayProgram(data, { includeTasks = true, includeCalendar = true, 
   // Eintrag eines späteren Tages ist also genau er.
   const nextUpcoming = events.find((event) => eventOccurrenceDateKey(event) > todayKey) ?? null;
 
+  // Und die nächste fällige Aufgabe über heute hinaus: die Beruhigung darf
+  // nicht um Mitternacht enden (Critique P3). urgentTasks ist nach Fälligkeit
+  // sortiert - der erste Eintrag eines späteren Tages ist die nächste Frist.
+  // Ohne sie verspräche die Fläche abends „nichts mehr", während der
+  // Schulausflug-Zettel morgen früh abgegeben werden muss.
+  const allTasks = Array.isArray(data?.urgentTasks) ? data.urgentTasks : Array.isArray(data?.tasks) ? data.tasks : [];
+  const nextDueTask = allTasks.find((task) => task.due_date && task.due_date > todayKey) ?? null;
+
   return {
     rows,
     nextUpcoming,
+    nextDueTask,
     openShoppingCount: highlights.openShoppingCount,
     tasksDoneToday: Number(data?.tasksDoneToday) || 0,
   };
@@ -1006,8 +1021,8 @@ function renderFamilyWidget(users, data) {
   const todayKey = toLocalDateKey(new Date());
 
   const rows = users.slice(0, 6).map((u) => {
-    const nextEvent = events.find((e) => eventOccurrenceDateKey(e) === todayKey
-      && (Array.isArray(e.assigned_users) ? e.assigned_users : []).some((a) => a.id === u.id));
+    const assignedTo = (e) => (Array.isArray(e.assigned_users) ? e.assigned_users : []).some((a) => a.id === u.id);
+    const nextEvent = events.find((e) => eventOccurrenceDateKey(e) === todayKey && assignedTo(e));
     const parts = [];
     if (nextEvent) {
       const start = eventStartDate(nextEvent);
@@ -1016,7 +1031,25 @@ function renderFamilyWidget(users, data) {
     }
     const open = openByUser.get(u.id) ?? 0;
     if (open > 0) parts.push(esc(t('dashboard.memberOpenTasks', { count: open })));
-    const free = !parts.length;
+
+    // An freien Tagen erzählt die Zeile „als Nächstes dran" statt viermal
+    // dasselbe „Heute frei" zu stapeln (Critique P5: die größte Karte des
+    // Boards mit einem Bit Information). Erst wer auch im Ausblick nichts
+    // hat, ist wirklich frei - und das darf dann leise dastehen.
+    let status;
+    let free = false;
+    if (parts.length) {
+      status = parts.join(' · ');
+    } else {
+      const upcoming = events.find((e) => eventOccurrenceDateKey(e) > todayKey && assignedTo(e));
+      if (upcoming) {
+        const start = eventStartDate(upcoming);
+        status = `${esc(relativeDateLabel(start))} · ${esc(upcoming.title)}`;
+      } else {
+        status = esc(t('dashboard.todayFree'));
+        free = true;
+      }
+    }
     return `
       <div class="family-member">
         <span class="family-widget-avatar" style="background:${esc(u.avatar_color || AVATAR_FALLBACK_COLOR)};color:${getReadableTextColor(u.avatar_color || AVATAR_FALLBACK_COLOR)}">
@@ -1024,14 +1057,14 @@ function renderFamilyWidget(users, data) {
         </span>
         <span class="family-member__body">
           <span class="family-member__name">${esc(u.display_name)}</span>
-          <span class="family-member__status${free ? ' family-member__status--free' : ''}">${free ? esc(t('dashboard.todayFree')) : parts.join(' · ')}</span>
+          <span class="family-member__status${free ? ' family-member__status--free' : ''}">${status}</span>
         </span>
       </div>`;
   }).join('');
   const moreCount = users.length - Math.min(users.length, 6);
 
   return `<div class="widget widget--family">
-    ${widgetHeader('users', t('dashboard.familyMembers'), null, '/settings', t('dashboard.manage'))}
+    ${widgetHeader('users', t('dashboard.familyMembers'), null, '/settings', t('dashboard.manage'), 'contacts')}
     <div class="family-widget">
       ${rows}
       ${moreCount > 0 ? `<div class="family-member family-member--more">${esc(t('dashboard.shoppingMore', { count: moreCount }))}</div>` : ''}
@@ -1433,28 +1466,55 @@ function renderTodayCockpit(data, cfg = []) {
     parts.push(`<div class="today-cockpit__more">${esc(t('dashboard.todayMore', { count: overflow }))}</div>`);
   }
 
+  // Ausblick über heute hinaus: das chronologisch Nächste aus Termin UND
+  // fälliger Aufgabe - die Beruhigung darf nicht um Mitternacht enden
+  // (Critique P3: „nichts mehr" bei morgen früh fälligem Zettel wäre eine
+  // falsche Entwarnung). Jede Quelle spricht nur, wenn ihre Domäne im
+  // Cockpit spricht.
+  const outlookEvent = includeCalendar ? program.nextUpcoming : null;
+  const outlookTask = includeTasks ? program.nextDueTask : null;
+  let outlook = null;
+  if (outlookEvent || outlookTask) {
+    const eventStart = outlookEvent ? eventStartDate(outlookEvent) : null;
+    const eventTimed = outlookEvent && !outlookEvent.all_day && eventStart && String(outlookEvent.start_datetime).length > 10;
+    const eventKey = outlookEvent
+      ? `${eventOccurrenceDateKey(outlookEvent)}T${eventTimed ? `${String(eventStart.getHours()).padStart(2, '0')}:${String(eventStart.getMinutes()).padStart(2, '0')}` : '00:00'}`
+      : null;
+    const taskKey = outlookTask
+      ? `${outlookTask.due_date}T${outlookTask.due_time ? String(outlookTask.due_time).slice(0, 5) : '23:59'}`
+      : null;
+    if (eventKey && (!taskKey || eventKey <= taskKey)) {
+      const when = eventTimed ? formatDateTime(outlookEvent.start_datetime) : relativeDateLabel(eventStart);
+      outlook = {
+        sub: t('dashboard.todayNextUp', { event: `${when} · ${outlookEvent.title}` }),
+        route: calendarEventRoute(outlookEvent),
+      };
+    } else {
+      const dueDay = parseLocalDateKey(outlookTask.due_date);
+      const dueTime = outlookTask.due_time ? new Date(`${outlookTask.due_date}T${outlookTask.due_time}`) : null;
+      const when = dueTime && !Number.isNaN(dueTime.getTime())
+        ? `${relativeDateLabel(dueDay)}, ${formatTime(dueTime)}`
+        : relativeDateLabel(dueDay);
+      outlook = {
+        sub: t('dashboard.todayNextUp', { event: `${when} · ${outlookTask.title}` }),
+        route: '/tasks',
+      };
+    }
+  }
+
   // Ein leerer Tag spricht, statt zu verschwinden (Critique P2): „Alles
   // erledigt", wenn heute Fälliges bereits geschafft ist, sonst „Heute frei" -
-  // mit dem nächsten kommenden Termin als beruhigendem Ausblick. Beides nur,
-  // wenn die tragende Domäne überhaupt im Cockpit spricht: neben einem
-  // sichtbaren Kalender-Widget wäre „Heute frei" eine fremde Behauptung.
+  // mit dem Ausblick als beruhigendem Untertitel. Beides nur, wenn die
+  // tragende Domäne überhaupt im Cockpit spricht: neben einem sichtbaren
+  // Kalender-Widget wäre „Heute frei" eine fremde Behauptung.
   if (!program.rows.length) {
     const sayAllDone = includeTasks && program.tasksDoneToday > 0;
     if (sayAllDone || includeCalendar) {
-      const next = includeCalendar ? program.nextUpcoming : null;
-      let sub = '';
-      if (next) {
-        const start = eventStartDate(next);
-        const when = next.all_day || String(next.start_datetime).length <= 10
-          ? relativeDateLabel(start)
-          : formatDateTime(next.start_datetime);
-        sub = t('dashboard.todayNextUp', { event: `${when} · ${next.title}` });
-      }
       parts.unshift(renderTodayStateRow({
         title: sayAllDone ? t('dashboard.todayAllDone') : t('dashboard.todayFree'),
-        sub,
+        sub: outlook?.sub ?? '',
         icon: sayAllDone ? 'check-circle' : 'sparkles',
-        route: next ? calendarEventRoute(next) : null,
+        route: outlook?.route ?? null,
       }));
     }
   }
@@ -1476,9 +1536,16 @@ function renderTodayCockpit(data, cfg = []) {
 
   // Abschluss-Zeile (Peak-End): das beruhigende „danach nichts mehr" - aber nur,
   // wenn das Programm wirklich vollständig ist. Neben „+N weitere" wäre sie
-  // gelogen, und unter der Zustands-Zeile wäre sie eine Doppelung.
+  // gelogen, und unter der Zustands-Zeile wäre sie eine Doppelung. Ist MORGEN
+  // eine Aufgabe fällig, sagt die Coda es dazu - sonst wäre „nichts mehr" um
+  // 21 Uhr eine falsche Entwarnung (Critique P3). Nur morgen, nicht später:
+  // eine Frist in drei Tagen ist keine Falle.
   if (program.rows.length > 0 && overflow === 0) {
-    parts.push(`<div class="today-cockpit__coda">${esc(t('dashboard.todayNothingElse'))}</div>`);
+    const tomorrowKey = addLocalDays(toLocalDateKey(new Date()), 1);
+    const tomorrowTask = includeTasks && program.nextDueTask?.due_date === tomorrowKey ? program.nextDueTask : null;
+    parts.push(`<div class="today-cockpit__coda">${esc(tomorrowTask
+      ? t('dashboard.todayNothingElseTomorrow', { title: tomorrowTask.title })
+      : t('dashboard.todayNothingElse'))}</div>`);
   }
 
   // Deckt der Nutzer alle vier Domänen über Widgets ab, wäre das Cockpit leer —
@@ -2625,7 +2692,7 @@ export async function render(container, { user }) {
   }
 }
 
-export const __test = { buildTodayHighlights, buildTodayProgram, renderTodayCockpit, renderPinnedNotes, normalizeVisibleMealTypes, renderTodayMeals, calendarEventRoute, eventOccurrenceDateKey, eventStartDate };
+export const __test = { buildTodayHighlights, buildTodayProgram, renderTodayCockpit, renderPinnedNotes, renderFamilyWidget, formatDueDate, normalizeVisibleMealTypes, renderTodayMeals, calendarEventRoute, eventOccurrenceDateKey, eventStartDate };
 
 function wireWeatherRefresh(container, onUpdated = null) {
   const refreshBtn = container.querySelector('#weather-refresh-btn');

@@ -222,7 +222,8 @@
         "todayMore_one": "+{{count}} more today",
         "memberOpenTasks": "{{count}} tasks",
         "memberOpenTasks_one": "{{count}} task",
-        "manage": "Manage"
+        "manage": "Manage",
+        "todayNothingElseTomorrow": "Nothing else today - tomorrow: {{title}}"
     },
     "tasks": {
         "manageCategories": "Manage categories",

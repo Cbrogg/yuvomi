@@ -222,7 +222,8 @@
         "todayMore_one": "+{{count}} ακόμη σήμερα",
         "memberOpenTasks": "{{count}} εργασίες",
         "memberOpenTasks_one": "{{count}} εργασία",
-        "manage": "Διαχείριση"
+        "manage": "Διαχείριση",
+        "todayNothingElseTomorrow": "Τίποτα άλλο για σήμερα - αύριο: {{title}}"
     },
     "tasks": {
         "manageCategories": "Διαχείριση κατηγοριών",

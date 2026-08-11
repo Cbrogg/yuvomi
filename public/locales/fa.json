@@ -234,7 +234,8 @@
         "todayMore_one": "+{{count}} مورد دیگر امروز",
         "memberOpenTasks": "{{count}} وظیفه",
         "memberOpenTasks_one": "{{count}} وظیفه",
-        "manage": "مدیریت"
+        "manage": "مدیریت",
+        "todayNothingElseTomorrow": "امروز دیگر برنامه‌ای نیست - فردا: {{title}}"
     },
     "tasks": {
         "manageCategories": "مدیریت دسته‌ها",

@@ -222,7 +222,8 @@
         "todayMore_one": "+{{count}} tane daha bugün",
         "memberOpenTasks": "{{count}} görev",
         "memberOpenTasks_one": "{{count}} görev",
-        "manage": "Yönet"
+        "manage": "Yönet",
+        "todayNothingElseTomorrow": "Bugün başka bir şey yok - yarın: {{title}}"
     },
     "tasks": {
         "manageCategories": "Kategorileri yönet",

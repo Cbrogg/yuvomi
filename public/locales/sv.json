@@ -222,7 +222,8 @@
         "todayMore_one": "+{{count}} till idag",
         "memberOpenTasks": "{{count}} uppgifter",
         "memberOpenTasks_one": "{{count}} uppgift",
-        "manage": "Hantera"
+        "manage": "Hantera",
+        "todayNothingElseTomorrow": "Inget mer idag - imorgon: {{title}}"
     },
     "tasks": {
         "manageCategories": "Hantera kategorier",

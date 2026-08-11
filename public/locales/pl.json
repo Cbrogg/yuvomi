@@ -234,7 +234,8 @@
         "todayMore_one": "+{{count}} więcej dzisiaj",
         "memberOpenTasks": "{{count}} zadań",
         "memberOpenTasks_one": "{{count}} zadanie",
-        "manage": "Zarządzaj"
+        "manage": "Zarządzaj",
+        "todayNothingElseTomorrow": "Nic więcej na dziś - jutro: {{title}}"
     },
     "tasks": {
         "manageCategories": "Zarządzaj kategoriami",

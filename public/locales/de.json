@@ -234,7 +234,8 @@
         "todayMore_one": "+{{count}} weiterer heute",
         "memberOpenTasks": "{{count}} Aufgaben",
         "memberOpenTasks_one": "{{count}} Aufgabe",
-        "manage": "Verwalten"
+        "manage": "Verwalten",
+        "todayNothingElseTomorrow": "Danach steht heute nichts mehr an - morgen: {{title}}"
     },
     "tasks": {
         "manageCategories": "Kategorien verwalten",

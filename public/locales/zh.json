@@ -222,7 +222,8 @@
         "todayMore_one": "另有{{count}}项",
         "memberOpenTasks": "{{count}}项任务",
         "memberOpenTasks_one": "{{count}}项任务",
-        "manage": "管理"
+        "manage": "管理",
+        "todayNothingElseTomorrow": "今天没有其他安排了。明天：{{title}}"
     },
     "tasks": {
         "manageCategories": "管理类别",

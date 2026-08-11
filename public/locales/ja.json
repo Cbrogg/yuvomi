@@ -222,7 +222,8 @@
         "todayMore_one": "他{{count}}件",
         "memberOpenTasks": "タスク{{count}}件",
         "memberOpenTasks_one": "タスク{{count}}件",
-        "manage": "管理"
+        "manage": "管理",
+        "todayNothingElseTomorrow": "今日はこの後予定はありません。明日: {{title}}"
     },
     "tasks": {
         "manageCategories": "カテゴリーを管理",

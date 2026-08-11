@@ -222,7 +222,8 @@
         "todayMore_one": "+{{count}} ещё сегодня",
         "memberOpenTasks": "{{count}} задач",
         "memberOpenTasks_one": "{{count}} задача",
-        "manage": "Управлять"
+        "manage": "Управлять",
+        "todayNothingElseTomorrow": "Больше на сегодня ничего нет - завтра: {{title}}"
     },
     "tasks": {
         "manageCategories": "Управление категориями",

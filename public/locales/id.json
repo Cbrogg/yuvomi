@@ -234,7 +234,8 @@
         "todayMore_one": "+{{count}} lagi hari ini",
         "memberOpenTasks": "{{count}} tugas",
         "memberOpenTasks_one": "{{count}} tugas",
-        "manage": "Kelola"
+        "manage": "Kelola",
+        "todayNothingElseTomorrow": "Tidak ada lagi hari ini - besok: {{title}}"
     },
     "tasks": {
         "manageCategories": "Kelola kategori",

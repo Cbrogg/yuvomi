@@ -173,28 +173,21 @@
  * stufenlos ab — die frühere feste 3-→4-Spalten-Stufe war die Quelle der starren
  * halbleeren Spalte. Breite Widgets kappen bei span 3 (siehe 1024px-Block). */
 
-/* Primäre Widgets: subtile Akzentlinie oben — auf Dashboard einheitlich gedämpft */
-.widget-size--1x2 > .widget,
-.widget-size--1x3 > .widget,
-.widget-size--1x4 > .widget,
-.widget-size--2x2 > .widget,
-.widget-size--2x3 > .widget,
-.widget-size--2x4 > .widget,
-.widget-size--3x2 > .widget,
-.widget-size--3x3 > .widget,
-.widget-size--3x4 > .widget,
-.widget-size--4x2 > .widget,
-.widget-size--4x3 > .widget,
-.widget-size--4x4 > .widget {
+/* Modul-Haarlinie oben auf JEDER Karte - auf Dashboard einheitlich gedämpft. */
+.widget-wrapper > .widget {
   /* DIE HAARLINIE TRAEGT DEN TON DES WIDGETS, NICHT DEN DER SEITE.
    *
    * Hier stand `--active-module-accent`: auf dem Dashboard loest das den
    * Akzent der UEBERSICHT auf, also bekamen alle Widgets dieselbe Linie -
    * ausgerechnet in dem Raster, in dem siebzehn Module nebeneinander stehen
-   * und die Linie das einzige durchgehende Farbsignal ist. Der Kommentar
-   * direkt darunter sagte schon das Richtige („Jedes Widget nutzt seine eigene
-   * Modulfarbe"), nur diese Zeile tat es nicht. --widget-accent setzt jede
-   * .widget--*-Klasse zwei Regeln weiter unten. */
+   * und die Linie das einzige durchgehende Farbsignal ist. --widget-accent
+   * setzt jede .widget--*-Klasse zwei Regeln weiter unten.
+   *
+   * Und sie gilt fuer ALLE Groessenklassen: vorher trugen nur row-span>=2-
+   * Karten die Linie - auf dem Default-Board hatte damit genau eine von
+   * fuenf Karten ein Farbsignal, was als Versehen las, nicht als System
+   * (Critique 2026-08-11). Ein durchgehendes Signal ist nur eines, wenn es
+   * durchgeht. */
   border-top: 2px solid color-mix(in srgb, var(--widget-accent, var(--color-accent)) var(--tint-hint), var(--color-border));
 }
 

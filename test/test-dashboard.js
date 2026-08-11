@@ -234,6 +234,52 @@ test('Tagesprogramm: Überfälliges zuerst, Ganztägiges vor zeitlosen Aufgaben'
   nodeAssert.equal(result.rows[0].overdue, true, 'überfällige Zeile ist markiert');
 });
 
+test('formatDueDate: „Morgen fällig" erfindet ohne due_time keine Uhrzeit', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  const tomorrowStr = addLocalDays(toLocalDateKey(new Date()), 1);
+  // Ohne due_time ist 23:59:59 nur die interne Sortier-Krücke - sie darf nie
+  // als „Morgen fällig – 23:59" im UI landen.
+  const noTime = __test.formatDueDate(tomorrowStr, null);
+  nodeAssert.ok(!/\d{1,2}:\d{2}/.test(noTime.text), `keine erfundene Uhrzeit, erhalten: ${noTime.text}`);
+  const withTime = __test.formatDueDate(tomorrowStr, '09:30:00');
+  nodeAssert.match(withTime.text, /09:30/, 'eine echte Uhrzeit bleibt sichtbar');
+});
+
+test('Tagesprogramm: Ausblick kennt die nächste fällige Aufgabe über heute hinaus', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  const todayStr = toLocalDateKey(new Date());
+  const tomorrowStr = addLocalDays(todayStr, 1);
+  const result = __test.buildTodayProgram({
+    urgentTasks: [{ id: 5, title: 'Zettel abgeben', due_date: tomorrowStr, status: 'open' }],
+  });
+  nodeAssert.equal(result.rows.length, 0, 'morgen Fälliges erzeugt keine Heute-Zeile');
+  nodeAssert.equal(result.nextDueTask?.id, 5, 'die nächste Frist steht als Ausblick bereit');
+});
+
+test('Cockpit-Coda nennt die morgen fällige Aufgabe statt falscher Entwarnung', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  const todayStr = toLocalDateKey(new Date());
+  const tomorrowStr = addLocalDays(todayStr, 1);
+  const prevWindow = global.window;
+  global.window = { yuvomi: null };
+  try {
+    // Programm hat eine Heute-Zeile UND morgen ist etwas fällig → Coda-Variante.
+    const withTomorrow = __test.renderTodayCockpit({
+      upcomingEvents: [{ id: 1, title: 'Heute Abend', start_datetime: `${todayStr}T20:00:00` }],
+      urgentTasks: [{ id: 5, title: 'Zettel abgeben', due_date: tomorrowStr, status: 'open' }],
+    }, []);
+    nodeAssert.match(withTomorrow, /todayNothingElseTomorrow/, 'Coda warnt vor der Morgen-Frist');
+    // Leerer Tag, nur die Morgen-Aufgabe → Zustandszeile trägt sie als Ausblick.
+    const stateRow = __test.renderTodayCockpit({
+      urgentTasks: [{ id: 5, title: 'Zettel abgeben', due_date: tomorrowStr, status: 'open' }],
+    }, []);
+    nodeAssert.match(stateRow, /todayFree/, 'leerer Tag zeigt die Zustandszeile');
+    nodeAssert.match(stateRow, /todayNextUp/, 'der Ausblick nennt die Morgen-Aufgabe');
+  } finally {
+    global.window = prevWindow;
+  }
+});
+
 test('Notiz-Widget: nur der Auszug landet im DOM, nie der Volltext (Paket 3)', async () => {
   const { __test } = await import('../public/pages/dashboard.js');
   // line-clamp kürzt rein visuell - Screenreader lasen die komplette Notiz vor.

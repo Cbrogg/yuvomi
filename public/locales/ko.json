@@ -234,7 +234,8 @@
         "todayMore_one": "외 {{count}}건",
         "memberOpenTasks": "할 일 {{count}}개",
         "memberOpenTasks_one": "할 일 {{count}}개",
-        "manage": "관리"
+        "manage": "관리",
+        "todayNothingElseTomorrow": "오늘은 더 이상 일정이 없습니다. 내일: {{title}}"
     },
     "tasks": {
         "manageCategories": "카테고리 관리",

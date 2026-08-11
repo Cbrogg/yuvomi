@@ -222,7 +222,8 @@
         "todayMore_one": "+{{count}} meer vandaag",
         "memberOpenTasks": "{{count}} taken",
         "memberOpenTasks_one": "{{count}} taak",
-        "manage": "Beheren"
+        "manage": "Beheren",
+        "todayNothingElseTomorrow": "Verder niets meer vandaag - morgen: {{title}}"
     },
     "tasks": {
         "manageCategories": "Categorieën beheren",

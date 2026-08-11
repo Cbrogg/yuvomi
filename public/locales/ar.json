@@ -222,7 +222,8 @@
         "todayMore_one": "+{{count}} أخرى اليوم",
         "memberOpenTasks": "{{count}} مهام",
         "memberOpenTasks_one": "{{count}} مهمة",
-        "manage": "إدارة"
+        "manage": "إدارة",
+        "todayNothingElseTomorrow": "لا شيء آخر اليوم - غدًا: {{title}}"
     },
     "tasks": {
         "manageCategories": "إدارة الفئات",

@@ -234,7 +234,8 @@
         "todayMore_one": "+{{count}} pa ngayon",
         "memberOpenTasks": "{{count}} gawain",
         "memberOpenTasks_one": "{{count}} gawain",
-        "manage": "Pamahalaan"
+        "manage": "Pamahalaan",
+        "todayNothingElseTomorrow": "Wala nang iba ngayon - bukas: {{title}}"
     },
     "tasks": {
         "manageCategories": "Pamahalaan ang mga kategorya",

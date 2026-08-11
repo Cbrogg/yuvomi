@@ -222,7 +222,8 @@
         "todayMore_one": "+{{count}} další dnes",
         "memberOpenTasks": "{{count}} úkolů",
         "memberOpenTasks_one": "{{count}} úkol",
-        "manage": "Spravovat"
+        "manage": "Spravovat",
+        "todayNothingElseTomorrow": "Dnes už nic dalšího - zítra: {{title}}"
     },
     "tasks": {
         "manageCategories": "Spravovat kategorie",

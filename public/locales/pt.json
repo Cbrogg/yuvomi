@@ -222,7 +222,8 @@
         "todayMore_one": "+{{count}} mais hoje",
         "memberOpenTasks": "{{count}} tarefas",
         "memberOpenTasks_one": "{{count}} tarefa",
-        "manage": "Gerir"
+        "manage": "Gerir",
+        "todayNothingElseTomorrow": "Mais nada por hoje - amanhã: {{title}}"
     },
     "tasks": {
         "manageCategories": "Gerir categorias",
