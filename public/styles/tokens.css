@@ -574,11 +574,17 @@
    * nie alleiniger Bedeutungsträger. Die Zeitmetapher (Morgen-Amber,
    * Mittag-Grün, Abend-Indigo) bleibt erhalten. */
 
-  /* Badge für aus Mealie gespiegelte Rezepte (source: 'mealie') */
+  /* Badge für gespiegelte Rezepte, je nach Herkunfts-Provider (source: 'mealie'/
+   * 'tandoor') - eigene Töne statt einer der vier Mahlzeit-Farben, damit
+   * "gespiegelt" nicht wie ein fünfter Mahlzeit-Typ aussieht. */
   --_source-mealie:        #0F766E;
   --source-mealie:         var(--_source-mealie);
   --_source-mealie-light:  #D9F5EE;
   --source-mealie-light:   var(--_source-mealie-light);
+  --_source-tandoor:        #1D4ED8;
+  --source-tandoor:         var(--_source-tandoor);
+  --_source-tandoor-light:  #DBEAFE;
+  --source-tandoor-light:   var(--_source-tandoor-light);
 
   /* --------------------------------------------------------
    * 6. Farben - Prioritäten
@@ -1628,6 +1634,8 @@
 
     --_source-mealie:        #2DD4BF;
     --_source-mealie-light:  #0F2E2A;
+    --_source-tandoor:        #60A5FA;
+    --_source-tandoor-light:  #172554;
 
     --_color-priority-low:       #C7C7CC;
     --_color-priority-medium:    #FBBF24;
@@ -1804,6 +1812,8 @@
 
     --_source-mealie:        #2DD4BF;
     --_source-mealie-light:  #0F2E2A;
+    --_source-tandoor:        #60A5FA;
+    --_source-tandoor-light:  #172554;
 
     /* Priority-Badge Hintergründe */
     --_color-priority-low:       #C7C7CC;
