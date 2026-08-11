@@ -15,9 +15,22 @@
   --module-accent: var(--module-inventory);
 }
 
+/* display:grid (nicht flex-column) aus demselben Grund wie .list-scroller
+ * (list-row.css, dessen Rolle diese Klasse fuer Inventar uebernimmt): jedes
+ * `.list-rows`-Kind (list-row.css) traegt `align-self: start`, das NUR in
+ * einem Grid-Elternteil ausschliesslich die Block-Achse (Hoehe) betrifft. In
+ * einer Flex-Spalte waere `align-self` stattdessen die Quer-Achse (Breite)
+ * und schrumpfte die Zeilenliste auf ihre Inhaltsbreite zusammen - genau das
+ * geschah hier, als renderCategoryList() (Kategorie-Browser-Startseite) als
+ * erstes `.list-rows` in diesem Modul OHNE umschliessende `.list-group`
+ * direkt hier eingehaengt wurde: gemessene Breite 2px, jede Zeile unsichtbar
+ * (per Playwright-Verifikation gefunden, Screenshot zeigte eine leere Seite
+ * unter den Kennzahlkarten). `align-content: start` ersetzt das vormalige
+ * `flex-direction: column` 1:1 fuers Stapeln von Bloecken (Kennzahlkarten,
+ * dann Kategorie-Zeilen ODER Gruppen, oder ein einzelner Leerzustand). */
 .inventory-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  align-content: start;
   gap: var(--space-3);
   min-width: 0;
   padding-bottom: var(--space-8);
@@ -64,6 +77,49 @@
  * übersteuern (gleiches Muster wie .pantry-filters[hidden] in list-row.css). */
 .inventory-filters[hidden] {
   display: none;
+}
+
+/* --------------------------------------------------------
+ * Zurueck-Link + Titel der Kategorie-Detailansicht - abgeleitet von
+ * .settings-leaf-back-link (settings.css), aber als Button statt Link (kein
+ * echter Routenwechsel, siehe Global Constraints) und ohne dessen
+ * responsive Ausblendung: Inventar hat keine parallele Desktop-Sidebar, die
+ * den Zurueck-Weg sonst schon anbietet.
+ * -------------------------------------------------------- */
+
+.inventory-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: fit-content;
+  min-height: var(--target-base);
+  margin-bottom: var(--space-2);
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+}
+
+.inventory-back-link:hover {
+  color: var(--color-accent);
+}
+
+.inventory-back-link__icon {
+  width: var(--space-4);
+  height: var(--space-4);
+  flex: 0 0 auto;
+}
+
+/* Groesse/Rolle kommt vom semantischen <h2> selbst (feste Rollenwerte,
+ * DESIGN.md Typografie) - hier nur Abstand/Farbe, gleiches Muster wie
+ * .settings-leaf-header__title. */
+.inventory-category-title {
+  margin: 0 0 var(--space-3);
+  color: var(--color-text-primary);
 }
 
 /* --------------------------------------------------------

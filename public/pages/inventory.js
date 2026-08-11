@@ -38,6 +38,8 @@ const state = {
   categories: [],
   query: '',
   filterAttention: false,
+  view: 'browse',        // 'browse' | 'category'
+  activeCategory: null,  // category key, when view === 'category'
 };
 
 async function loadLocations() {
@@ -152,17 +154,38 @@ function matchesAttentionFilter(item) {
   return !state.filterAttention || hasUpcomingDeadline(item);
 }
 
+function openCategory(key) {
+  state.view = 'category';
+  state.activeCategory = key;
+  state.query = '';
+  state.filterAttention = false;
+  _search?.clear();
+  renderList();
+}
+
+function backToBrowse() {
+  state.view = 'browse';
+  state.activeCategory = null;
+  state.query = '';
+  state.filterAttention = false;
+  _search?.clear();
+  renderList();
+}
+
 /**
  * Fuellt die Filter-Zeile neu - eigene Funktion statt Teil von renderList(),
  * weil die Zeile ausserhalb von #inventory-list liegt (gleiches Muster wie
  * public/pages/documents.js#renderCategoryChips fuer #documents-category).
- * Der Zaehler kommt immer aus der UNGEFILTERTEN Menge, wie die Kennzahlkarte.
+ * `items` ist der Massstab fuer den Zaehler - die UNGEFILTERTE Menge des
+ * aktuellen Geltungsbereichs (ganzes Inventar auf der Kategorie-Detailseite
+ * gibt es nicht mehr direkt - dort ist der Geltungsbereich immer eine
+ * Kategorie).
  */
-function updateFilterChips() {
+function updateFilterChips(items) {
   const host = _container?.querySelector('#inventory-filters');
   if (!host) return;
   host.hidden = false;
-  const needsAttention = countUpcomingDeadlines(state.items);
+  const needsAttention = countUpcomingDeadlines(items);
   host.replaceChildren();
   host.insertAdjacentHTML('beforeend', `
     <button type="button" class="filter-chip filter-chip--sm${!state.filterAttention ? ' filter-chip--active' : ''}"
@@ -319,9 +342,10 @@ function groupItemsByLocation(items) {
 }
 
 /** Geteilte Gruppen-Grammatik (styles/list-row.css), identisch zu
- *  public/pages/shopping.js#renderItems. */
-function renderGroupedItems(items) {
-  const groups = groupItemsByCategory(items);
+ *  public/pages/shopping.js#renderItems. Nimmt bereits gruppierte Daten
+ *  entgegen (groupItemsByCategory ODER groupItemsByLocation), rendert beide
+ *  gleich - die Gruppierungsstrategie ist Sache des Aufrufers. */
+function renderGroupedItems(groups) {
   return groups.map((g) => `
     <div class="list-group inventory-category" data-category="${esc(g.key)}">
       <div class="list-group__title">
@@ -364,6 +388,54 @@ function renderItemRow(item) {
     </div>`;
 }
 
+/**
+ * Landing-Zeile je Kategorie: Icon, Name, Item-Anzahl - dieselbe .list-row-
+ * Grammatik wie jede andere Zeile in diesem Modul. Kein Modul-"Siegel"
+ * (anders als das Dashboard-Cockpit): dies ist EIN Modul, keine
+ * modulübergreifende Mischstelle, also traegt die Zeile die Kategorie-Ikone
+ * direkt, wie .list-group__title es heute schon tut.
+ */
+function renderCategoryRow(category, itemCount) {
+  return `
+    <div class="list-row" data-category="${esc(category.key)}">
+      <button type="button" class="list-row__main list-row__main--interactive" data-action="open-category">
+        <span class="inventory-row__headline">
+          <i data-lucide="${esc(category.icon)}" class="icon-sm" aria-hidden="true"></i>
+          <span class="list-row__name">${esc(category.name)}</span>
+        </span>
+      </button>
+      <span class="list-group__count">${itemCount}</span>
+    </div>`;
+}
+
+/**
+ * Nur Kategorien mit mindestens einem Gegenstand werden zur Zeile - gleiches
+ * Verhalten wie groupItemsByCategory, das eine leere Kategorie heute schon
+ * nie als eigene Gruppe zeigt.
+ */
+function renderCategoryList() {
+  const counts = new Map();
+  for (const item of state.items) counts.set(item.category, (counts.get(item.category) || 0) + 1);
+  const categoriesByKey = new Map(state.categories.map((c) => [c.key, c]));
+  const orderedKeys = state.categories.map((c) => c.key).filter((k) => counts.has(k));
+  return `
+    <div class="list-rows">
+      ${orderedKeys.map((k) => renderCategoryRow(categoriesByKey.get(k), counts.get(k))).join('')}
+    </div>`;
+}
+
+/** Verdrahtet Klicks auf Gegenstands-Zeilen - geteilt zwischen der
+ *  Such-Trefferliste (Browse-Ansicht) und der Kategorie-Detailansicht. */
+function wireItemRows(list) {
+  list.querySelectorAll('[data-action="open-detail"]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const id = Number(button.closest('.list-row')?.dataset.id);
+      const item = state.items.find((i) => i.id === id);
+      if (item) openItemDetail(item);
+    });
+  });
+}
+
 function renderList() {
   const list = _container?.querySelector('#inventory-list');
   if (!list) return;
@@ -379,12 +451,81 @@ function renderList() {
     return;
   }
 
-  updateFilterChips();
+  if (state.view === 'category') {
+    renderCategoryDetail(list);
+  } else {
+    renderBrowse(list);
+  }
+}
+
+/**
+ * Landing-Ansicht: Kennzahlen + Kategorie-Liste. Bei aktiver Suche stattdessen
+ * eine flache, nach Kategorie gruppierte Trefferliste ueber ALLE
+ * Gegenstaende - gleiches Verhalten wie die fruehere Einzelseite, nur jetzt
+ * hinter der Suche statt permanent sichtbar.
+ */
+function renderBrowse(list) {
+  const filtersHost = _container?.querySelector('#inventory-filters');
+  if (filtersHost) filtersHost.hidden = true;
 
   list.replaceChildren();
   list.insertAdjacentHTML('beforeend', renderMetrics());
 
-  const filtered = state.items.filter((item) => matchesQuery(item) && matchesAttentionFilter(item));
+  if (!state.query) {
+    list.insertAdjacentHTML('beforeend', renderCategoryList());
+    list.querySelectorAll('[data-action="open-category"]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const key = button.closest('[data-category]')?.dataset.category;
+        if (key) openCategory(key);
+      });
+    });
+    if (window.lucide) window.lucide.createIcons({ el: list });
+    return;
+  }
+
+  const filtered = state.items.filter(matchesQuery);
+  if (!filtered.length) {
+    list.appendChild(emptyStateEl({
+      variant: 'no-results',
+      title: t('inventory.noResultsTitle'),
+      description: t('inventory.noResultsDescription'),
+      hint: `"${state.query}"`,
+      action: {
+        label: t('inventory.resetSearch'),
+        onClick: () => { state.query = ''; _search?.clear(); renderList(); },
+      },
+    }));
+    if (window.lucide) window.lucide.createIcons({ el: list });
+    return;
+  }
+
+  list.insertAdjacentHTML('beforeend', renderGroupedItems(groupItemsByCategory(filtered)));
+  wireItemRows(list);
+  if (window.lucide) window.lucide.createIcons({ el: list });
+}
+
+/**
+ * Kategorie-Detail: Zurueck-Link, Kategorie-Name, Filter-Chips (skaliert auf
+ * diese Kategorie), nach Ort gruppierte Gegenstaende dieser einen Kategorie.
+ * Eigene Such-Zeile lebt im Toolbar (unveraendert) - hier wird nur gefiltert,
+ * was schon in state.items steht, nicht neu geladen.
+ */
+function renderCategoryDetail(list) {
+  const category = state.categories.find((c) => c.key === state.activeCategory);
+  const categoryItems = state.items.filter((item) => item.category === state.activeCategory);
+
+  updateFilterChips(categoryItems);
+
+  list.replaceChildren();
+  list.insertAdjacentHTML('beforeend', `
+    <button type="button" class="inventory-back-link" id="inventory-back-link">
+      <i data-lucide="arrow-left" class="inventory-back-link__icon" aria-hidden="true"></i>
+      ${esc(t('inventory.backToInventory'))}
+    </button>
+    <h2 class="inventory-category-title">${esc(category ? category.name : state.activeCategory)}</h2>`);
+  list.querySelector('#inventory-back-link').addEventListener('click', backToBrowse);
+
+  const filtered = categoryItems.filter((item) => matchesQuery(item) && matchesAttentionFilter(item));
   if (!filtered.length) {
     const active = [];
     if (state.query) active.push(`"${state.query}"`);
@@ -408,16 +549,8 @@ function renderList() {
     return;
   }
 
-  list.insertAdjacentHTML('beforeend', renderGroupedItems(filtered));
-
-  list.querySelectorAll('[data-action="open-detail"]').forEach((button) => {
-    button.addEventListener('click', () => {
-      const id = Number(button.closest('.list-row')?.dataset.id);
-      const item = state.items.find((i) => i.id === id);
-      if (item) openItemDetail(item);
-    });
-  });
-
+  list.insertAdjacentHTML('beforeend', renderGroupedItems(groupItemsByLocation(filtered)));
+  wireItemRows(list);
   if (window.lucide) window.lucide.createIcons({ el: list });
 }
 
