@@ -107,7 +107,7 @@ function renderPage(container) {
           </div>
           <div class="form-group">
             <label class="form-label" for="api-token-subject">${t('settings.apiTokenSubjectLabel')}</label>
-            <select class="form-select" id="api-token-subject" required></select>
+            <select class="form-input" id="api-token-subject" required></select>
           </div>
           <div class="form-group">
             <label class="form-label" for="api-token-expires">${t('settings.apiTokenExpiresLabel')}</label>

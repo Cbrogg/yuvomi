@@ -73,7 +73,7 @@ function syncTargetFieldHtml(options, current) {
   return `
         <div class="form-group">
           <label class="form-label" for="calendar-default-target">${t('settings.calendarDefaultTargetLabel')}</label>
-          <select id="calendar-default-target" class="form-select">${html}</select>
+          <select id="calendar-default-target" class="form-input">${html}</select>
           <p class="form-hint">${t('settings.calendarDefaultTargetHint')}</p>
         </div>
   `;

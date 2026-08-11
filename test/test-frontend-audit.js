@@ -10833,3 +10833,54 @@ test('der Vorab-Wand-Modus in theme-init.js driftet nicht von utils/wall-mode.js
   assert.match(mod, /export function isWallRoute\(path\) \{\s*return path === '\/';/);
   assert.ok(init.includes("location.pathname !== '/'"), 'theme-init.js kennt dieselbe Route');
 });
+
+/**
+ * EIN FELD TRAEGT EINE KLASSE, DIE ES GIBT.
+ *
+ * `settings/admin-api.js` und `settings/personal-calendar.js` bauten ihr
+ * `<select>` mit `class="form-select"` - einem Namen, den kein Stylesheet je
+ * definiert hat. Die Felder daneben (`class="form-input"`) trugen das
+ * Feldmaterial, die Selects fielen auf die Browservorgabe zurueck und standen
+ * 23px hoch in einem Formular, dessen Kanon `--target-lg` sagt. Gefunden hat es
+ * Sonde 4 der Dokument-Guards („nimmt die Spacing-Ausnahme, obwohl sein Traeger
+ * Platz laesst") - also die Ebene, die 55 Minuten braucht und vor dem Release
+ * einmal laeuft. Eine erfundene Klasse ist aber statisch pruefbar.
+ *
+ * GEPRUEFT WIRD DIE BAUART, NICHT EINE LISTE VON NAMEN: jedes Bedienelement im
+ * Markup, dessen Klassenliste ein `form-*` enthaelt, muss diese Klasse in einem
+ * Stylesheet wiederfinden. Damit faellt jeder kuenftige `form-dropdown`,
+ * `form-textbox` oder `form-picker` beim ersten Lauf auf, ohne dass jemand ihn
+ * vorher aufzaehlt. Die Klassen kommen aus `eachRule()` (test/css-rules.js), nie
+ * aus einem eigenen Muster - das Repo-Regelmuster war dreimal blind.
+ */
+test('ein Formularfeld traegt nur form-Klassen, die ein Stylesheet kennt', () => {
+  const defined = new Set();
+  for (const file of readdirSync(new URL('../public/styles/', import.meta.url)).filter((f) => f.endsWith('.css'))) {
+    for (const { selector } of eachRule(read(`../public/styles/${file}`))) {
+      for (const cls of selector.match(/\.[A-Za-z_][\w-]*/g) ?? []) defined.add(cls.slice(1));
+    }
+  }
+  // Eine Pruefung, die nichts gelesen hat, darf nicht urteilen: ohne Klassen
+  // waere JEDE Fundstelle ein Verstoss, und der Guard meldete seinen eigenen
+  // Defekt als Befund der App.
+  assert.ok(defined.size >= 500, `Nur ${defined.size} Klassen aus den Stylesheets gelesen - liest eachRule() noch?`);
+
+  const offenders = [];
+  for (const path of walkFrontendFiles('../public/')) {
+    if (path.includes('/vendor/')) continue;
+    const src = read(path);
+    for (const [, tag, attrs] of src.matchAll(/<(select|input|textarea)\b([^>]*)>/g)) {
+      const cls = attrs.match(/class="([^"${}]*)"/)?.[1];
+      if (!cls) continue;
+      for (const name of cls.split(/\s+/).filter((c) => c.startsWith('form-'))) {
+        if (!defined.has(name)) offenders.push(`${path.replace('../', '')}: <${tag} class="${name}">`);
+      }
+    }
+  }
+
+  assert.deepEqual(offenders.sort(), [],
+    'Diese Felder tragen eine form-Klasse, die kein Stylesheet definiert - sie fallen '
+    + 'damit auf die Browservorgabe zurueck und reissen die Zielgroesse. Der Kanon '
+    + 'heisst `input` bzw. `form-input` (layout.css, Abschnitt Form-Elemente); '
+    + '`select.form-input` bringt dort auch das Chevron-Polster mit.');
+});
