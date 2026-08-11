@@ -85,7 +85,7 @@
   height: 84px;
   padding: 0;
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-full);
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -135,7 +135,11 @@
   display: block;
   width: 100%;
   max-width: 240px;
-  border-radius: var(--radius-md);
+  /* Ohne aspect-ratio waere die Box so hoch wie das Originalbild - bei einem
+   * nicht-quadratischen Foto machte --radius-full daraus ein Oval statt
+   * eines Kreises. */
+  aspect-ratio: 1 / 1;
+  border-radius: var(--radius-full);
   object-fit: cover;
 }
 
