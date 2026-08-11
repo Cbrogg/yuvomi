@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **"1 Tage" is gone.** The birthday countdown had no singular variant in any of the 24 locales.
 - **The loading skeleton promises the layout that actually arrives.** It drew the default grid while the saved arrangement only turns up with `/preferences`, so anyone who had rearranged their dashboard watched foreign tiles flash and then jump on every load. The demo seed's own layout also left a hole in the bottom right corner: five tiles covering seven grid cells across four columns, with nothing left for `dense` to fill it with.
 
+## [2.4.0] - 2026-08-11
+
 ### Added
 
 - **An API token can act as a chosen family member.** Only an admin can create one, so until now every request a token made belonged to the admin - and a budget entry's owner is fixed to whoever creates it. A bank-import connector could therefore only ever file transactions under the administrator, never under the member they belong to. Creating a token now asks which member it acts as: that member supplies the identity, role, ownership and module permissions, while the administrator stays recorded as the creator for the audit trail. The subject can only narrow access, never widen it - module permissions are resolved for the member on every request, a non-admin subject cannot reach admin-only routes, and scopes remain an additional limit on top. Split-expense guests cannot be selected. Existing tokens keep behaving exactly as before. (#697)
