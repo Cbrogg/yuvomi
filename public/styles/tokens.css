@@ -496,13 +496,6 @@
    * der App (Critique 2026-07-29). Die vier Einzel-Tokens bleiben bestehen:
    * Dashboard-Widgets und Nav-Icons referenzieren sie einzeln. */
   --module-kitchen:   var(--_family-kitchen);
-  /* Inventar teilt den Kuechen-Ton (Betreiber-Entscheidung 2026-08-12): kein
-   * eigenstaendiger Hex mehr seit der Familientoenen-Konsolidierung (Block 2,
-   * 2026-08-10) - die Familienregel verlangt, dass jedes --module-* aus einer
-   * der neun Familien bezieht. Inventar ist wie Vorrat ein Lagerort-Konzept
-   * (Orte, Kategorien) und schliesst sich der Kuechen-Familie an; die
-   * Unterscheidung traegt das Siegel-Icon, nicht der Ton. */
-  --module-inventory: var(--_family-kitchen);
   --module-notes:     var(--_family-records);
   --module-contacts:  var(--_family-people);
   --module-birthdays: var(--_family-people);
@@ -511,6 +504,15 @@
   --module-documents: var(--_family-records);
   --module-housekeeping: var(--_family-work);
   --module-health:    var(--_family-health);
+  /* War der "money"-Familie zugeteilt (Budget, Kostenteilung), solange
+   * router.js Inventar unter NAV_SECTION.finance fuehrte. Mit dem Umzug nach
+   * "Haushalt" (2026-08-11) passt "records" besser: Inventar ist wie
+   * Dokumente und Notizen in erster Linie ein Bestand langlebiger
+   * Haushaltsunterlagen (was besitzen wir, wo liegt es), Wertverfolgung und
+   * Budget-Verknuepfung sind zusaetzliche, nicht die tragende Eigenschaft.
+   * Unterscheidung ueber das Siegel-Icon, nicht ueber den Ton (wie jede
+   * andere Familie). */
+  --module-inventory: var(--_family-records);
   /* Zyklus-Phasenfarben — nur im Zyklus-Tab (/health/cycle). Getrennt vom Modul-
      Akzent und vom semantischen --color-danger der Lab-Flags. */
   --cycle-period:    #C81E5A;   /* Menstruation/Blutung — Rosé-Rot (~5.0:1 auf weiß) */

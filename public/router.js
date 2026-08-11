@@ -2651,6 +2651,7 @@ function navItems() {
     { path: '/pantry',    label: t('nav.pantry'),    icon: 'archive',       module: 'pantry',   section: NAV_SECTION.household, kitchenGroup: true },
     { path: '/housekeeping', label: t('nav.housekeeping'), icon: 'paintbrush', module: 'housekeeping', section: NAV_SECTION.household },
     { path: '/documents', label: t('nav.documents'), icon: 'folder-lock',      module: 'documents',   section: NAV_SECTION.household },
+    { path: '/inventory', label: t('nav.inventory'), icon: 'package',          module: 'inventory',   section: NAV_SECTION.household },
     { path: '/rewards',   label: t('nav.rewards'),   icon: 'award',            module: 'rewards',     section: NAV_SECTION.household },
     // Menschen
     { path: '/contacts',  label: t('nav.contacts'),  icon: 'book-user',        module: 'contacts',    section: NAV_SECTION.people },
@@ -2658,7 +2659,6 @@ function navItems() {
     { path: '/health',    label: t('nav.health'),    icon: 'heart-pulse',      module: 'health',      section: NAV_SECTION.people },
     // Finanzen
     { path: '/budget',    label: t('nav.budget'),    icon: 'wallet',           module: 'budget',      section: NAV_SECTION.finance },
-    { path: '/inventory', label: t('nav.inventory'), icon: 'package',          module: 'inventory',   section: NAV_SECTION.finance },
     // Settings ist am Ende gepinnt (siehe unten).
     { path: '/settings',  navHref: '/settings?view=domains', label: t('nav.settings'),  icon: 'settings',         module: 'settings',    section: NAV_SECTION.household },
   ];
