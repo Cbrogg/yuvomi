@@ -289,7 +289,7 @@ Seventeen independent modules share one calm, consistent interface. Turn on what
 - **Birthdays** - Birthday tracker with automatic calendar events, age display, custom reminders, and selective import from synced contacts.
 - **Family** - Member profiles with roles, photos, and contact details, synced to Contacts and Birthdays.
 - **Reminders** - Task and calendar reminders via in-app badges, opt-in Web Push (HTTPS), and household Gotify/ntfy channels.
-- **API Tokens** - Bearer / X-API-Key tokens with an OpenAPI 3.0 spec and a built-in MCP endpoint (`/mcp`) that lets AI agents like Claude Desktop drive the whole API in natural language. Optional per-module read/write scopes keep a token, for example one handed to an AI client, off sensitive areas.
+- **API Tokens** - Bearer / X-API-Key tokens with an OpenAPI 3.0 spec and a built-in MCP endpoint (`/mcp`) that lets AI agents like Claude Desktop drive the whole API in natural language. Optional per-module read/write scopes keep a token, for example one handed to an AI client, off sensitive areas. An admin also picks which family member a token acts as, so an importer files entries under the member they belong to instead of under the admin who set it up.
 - **Backup** - Manual and scheduled database backup/restore with pre-restore rollback. Optional WebDAV upload (Nextcloud, ownCloud, etc.).
 
 </details>

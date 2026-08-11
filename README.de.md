@@ -289,7 +289,7 @@ Siebzehn eigenständige Module teilen sich eine ruhige, konsistente Oberfläche.
 - **Geburtstage** - Geburtstags-Tracker mit automatischen Kalenderterminen, Altersanzeige, eigenen Erinnerungen und selektivem Import aus synchronisierten Kontakten.
 - **Familie** - Mitgliederprofile mit Rollen, Fotos und Kontaktdaten, synchronisiert mit Kontakten und Geburtstagen.
 - **Erinnerungen** - Erinnerungen zu Aufgaben und Terminen per In-App-Badge, Opt-in-Web-Push (HTTPS) und Haushalts-Kanälen über Gotify/ntfy.
-- **API-Tokens** - Bearer-/X-API-Key-Tokens mit OpenAPI-3.0-Spec und eingebautem MCP-Endpunkt (`/mcp`), über den KI-Agenten wie Claude Desktop die gesamte API in natürlicher Sprache steuern. Optionale Modul-Scopes (Lesen/Schreiben) halten ein Token - etwa eines für einen KI-Client - von sensiblen Bereichen fern.
+- **API-Tokens** - Bearer-/X-API-Key-Tokens mit OpenAPI-3.0-Spec und eingebautem MCP-Endpunkt (`/mcp`), über den KI-Agenten wie Claude Desktop die gesamte API in natürlicher Sprache steuern. Optionale Modul-Scopes (Lesen/Schreiben) halten ein Token - etwa eines für einen KI-Client - von sensiblen Bereichen fern. Ein Admin wählt außerdem, als welches Familienmitglied ein Token handelt, damit ein Importer Einträge dem Mitglied zuordnet, dem sie gehören, statt dem Admin, der ihn eingerichtet hat.
 - **Backup** - Manuelles und geplantes Datenbank-Backup/-Restore mit automatischem Rollback vor dem Zurückspielen. Optionales WebDAV-Upload-Ziel (Nextcloud, ownCloud usw.).
 
 </details>

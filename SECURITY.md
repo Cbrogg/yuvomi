@@ -59,6 +59,8 @@ Yuvomi uses a flat family authorization model:
 
 There is no per-user data isolation - all family members see and can edit all data. This is intentional: Yuvomi is a shared family planner, not a multi-tenant application.
 
+An API token authenticates as a family member rather than as a credential of its own. Only an admin can create one, and an admin picks which member it acts as; that member supplies the role, the ownership of anything the token writes, and the module permissions resolved on every request. The creating admin stays recorded separately for the audit trail and grants nothing. A subject can therefore only narrow what a token reaches, never widen it: a non-admin subject cannot use admin-only routes, and optional token scopes remain an allow-list on top of the subject's own permissions. Split-expense guests cannot be selected as a subject, and deleting either the creator or the subject removes the token.
+
 ## Supported Versions
 
 Only the latest version on `main` receives security updates. There are no LTS branches.
