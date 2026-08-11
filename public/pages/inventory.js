@@ -161,6 +161,7 @@ function openCategory(key) {
   state.filterAttention = false;
   _search?.clear();
   renderList();
+  scrollListToTop();
 }
 
 function backToBrowse() {
@@ -170,6 +171,15 @@ function backToBrowse() {
   state.filterAttention = false;
   _search?.clear();
   renderList();
+  scrollListToTop();
+}
+
+/** Gleicher Scroll-Container wie router.js bei echten Routenwechseln
+ *  (#main-content) - ein Ebenenwechsel hier fuehlt sich sonst wie eine neue
+ *  Seite an, springt aber nicht wie eine. */
+function scrollListToTop() {
+  const main = document.getElementById('main-content');
+  if (main) main.scrollTop = 0;
 }
 
 /**
@@ -333,10 +343,12 @@ function groupItemsByLocation(items) {
     }
     grouped.get(key).items.push(item);
   }
+  // Kein "unbekannt"-Zweig wie bei groupItemsByCategory noetig: jeder Key in
+  // `grouped` ist entweder eine echte Wurzel-ID (aus topLevelLocationLookup)
+  // oder UNLOCATED_KEY - ein dritter Fall existiert strukturell nicht.
   const orderedKeys = state.locations.map((r) => String(r.id));
   const known = orderedKeys.filter((k) => grouped.has(k));
-  const rest = [...grouped.keys()].filter((k) => !orderedKeys.includes(k) && k !== UNLOCATED_KEY);
-  const result = [...known, ...rest].map((k) => grouped.get(k));
+  const result = known.map((k) => grouped.get(k));
   if (grouped.has(UNLOCATED_KEY)) result.push(grouped.get(UNLOCATED_KEY));
   return result;
 }
@@ -347,7 +359,7 @@ function groupItemsByLocation(items) {
  *  gleich - die Gruppierungsstrategie ist Sache des Aufrufers. */
 function renderGroupedItems(groups) {
   return groups.map((g) => `
-    <div class="list-group inventory-category" data-category="${esc(g.key)}">
+    <div class="list-group" data-group-key="${esc(g.key)}">
       <div class="list-group__title">
         <i data-lucide="${esc(g.icon)}" class="icon-sm" aria-hidden="true"></i>
         ${esc(g.name)}
@@ -411,21 +423,55 @@ function renderCategoryRow(category, itemCount) {
 /**
  * Nur Kategorien mit mindestens einem Gegenstand werden zur Zeile - gleiches
  * Verhalten wie groupItemsByCategory, das eine leere Kategorie heute schon
- * nie als eigene Gruppe zeigt.
+ * nie als eigene Gruppe zeigt. Ein Item, dessen category-Key in keiner
+ * geladenen Kategorie mehr steckt (z.B. waehrend eine andere Session sie
+ * gerade geloescht hat), bekam bislang GAR KEINE Zeile - unerreichbar beim
+ * Browsen, obwohl dieselben Items in einer Suchtrefferliste (die
+ * groupItemsByCategory's eigenen "unbekannt"-Eimer nutzt) durchaus
+ * auftauchen. Gleicher Fallback wie dort: category_name/category_icon vom
+ * Item selbst, sonst der rohe Key/"package".
  */
 function renderCategoryList() {
   const counts = new Map();
-  for (const item of state.items) counts.set(item.category, (counts.get(item.category) || 0) + 1);
+  const unknownSample = new Map();
+  for (const item of state.items) {
+    counts.set(item.category, (counts.get(item.category) || 0) + 1);
+    if (!unknownSample.has(item.category)) unknownSample.set(item.category, item);
+  }
   const categoriesByKey = new Map(state.categories.map((c) => [c.key, c]));
-  const orderedKeys = state.categories.map((c) => c.key).filter((k) => counts.has(k));
+  const knownKeys = state.categories.map((c) => c.key).filter((k) => counts.has(k));
+  const unknownKeys = [...counts.keys()].filter((k) => !categoriesByKey.has(k));
+  const rows = [
+    ...knownKeys.map((k) => renderCategoryRow(categoriesByKey.get(k), counts.get(k))),
+    ...unknownKeys.map((k) => {
+      const sample = unknownSample.get(k);
+      const fallback = { key: k, name: sample.category_name || k, icon: sample.category_icon || 'package' };
+      return renderCategoryRow(fallback, counts.get(k));
+    }),
+  ];
   return `
     <div class="list-rows">
-      ${orderedKeys.map((k) => renderCategoryRow(categoriesByKey.get(k), counts.get(k))).join('')}
+      ${rows.join('')}
     </div>`;
 }
 
 /** Verdrahtet Klicks auf Gegenstands-Zeilen - geteilt zwischen der
  *  Such-Trefferliste (Browse-Ansicht) und der Kategorie-Detailansicht. */
+/**
+ * Suchfeld-Text passend zum Geltungsbereich - sonst signalisiert nichts,
+ * dass die Suche in der Kategorie-Detailansicht nur INNERHALB dieser
+ * Kategorie greift, obwohl sie sich global anfuehlt (gleiches Feld, gleiche
+ * Position wie auf der Startseite). Placeholder UND sr-only-Label, nicht nur
+ * der sichtbare Platzhaltertext - sonst haert eine Screenreader-Nutzerin den
+ * globalen Anspruch weiter.
+ */
+function updateSearchScope(text) {
+  if (!_search?.input) return;
+  _search.input.placeholder = text;
+  const label = _search.input.closest('.page-search')?.querySelector('.page-search__label');
+  if (label) label.textContent = text;
+}
+
 function wireItemRows(list) {
   list.querySelectorAll('[data-action="open-detail"]').forEach((button) => {
     button.addEventListener('click', () => {
@@ -471,6 +517,7 @@ function renderList() {
 function renderBrowse(list) {
   const filtersHost = _container?.querySelector('#inventory-filters');
   if (filtersHost) filtersHost.hidden = true;
+  updateSearchScope(t('inventory.searchPlaceholder'));
 
   list.replaceChildren();
   list.insertAdjacentHTML('beforeend', renderMetrics());
@@ -524,6 +571,7 @@ function renderCategoryDetail(list) {
   const categoryItems = state.items.filter((item) => item.category === state.activeCategory);
 
   updateFilterChips(categoryItems);
+  updateSearchScope(t('inventory.searchInCategoryPlaceholder', { category: category.name }));
 
   list.replaceChildren();
   list.insertAdjacentHTML('beforeend', `
