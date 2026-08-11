@@ -4035,6 +4035,7 @@
         "warrantyMonthsValue": "{{count}} Monate",
         "filterGroupLabel": "Filtern",
         "photoLabel": "Foto",
+        "backToInventory": "Zurück zum Inventar",
         "removePhoto": "Foto entfernen",
         "trackedDatesLabel": "Verfolgte Fristen",
         "trackedDatesHint": "Beliebige weitere Termine verfolgen - TÜV, Service, Versicherung.",

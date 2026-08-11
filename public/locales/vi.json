@@ -4035,6 +4035,7 @@
         "warrantyMonthsValue": "{{count}} months",
         "filterGroupLabel": "Filter items",
         "photoLabel": "Photo",
+        "backToInventory": "Back to Inventory",
         "removePhoto": "Remove photo",
         "trackedDatesLabel": "Tracked dates",
         "trackedDatesHint": "Track any other date - TÜV, service, insurance renewal.",
