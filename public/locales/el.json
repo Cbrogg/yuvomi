@@ -402,6 +402,7 @@
         "itemQtyLabel": "Ποσότητα",
         "categoryLabel": "Κατηγορία",
         "addItemLabel": "Προσθήκη είδους",
+        "listActionsLabel": "Ενέργειες για {{name}}",
         "renameListLabel": "Μετονομασία λίστας",
         "deleteListLabel": "Διαγραφή λίστας",
         "swipeBack": "Αναίρεση",

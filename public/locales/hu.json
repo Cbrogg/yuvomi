@@ -402,6 +402,7 @@
         "itemQtyLabel": "Mennyiség",
         "categoryLabel": "Kategória",
         "addItemLabel": "Elem hozzáadása",
+        "listActionsLabel": "Műveletek: {{name}}",
         "renameListLabel": "Lista átnevezése",
         "deleteListLabel": "Lista törlése",
         "swipeBack": "Visszavonás",

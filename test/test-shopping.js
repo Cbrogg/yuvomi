@@ -78,7 +78,14 @@ test('Shopping-Seite importiert den Category-Manager und öffnet ihn bei manage=
 
 test('Shopping-Seite bietet einen Essensplan-Import mit Datumsbereich an', () => {
   const source = readFileSync(new URL('../public/pages/shopping.js', import.meta.url), 'utf8');
-  assert(/data-action="import-meals"/.test(source), 'Shopping-Header muss eine Import-Aktion aus dem Essensplan anbieten');
+  // Die Aktion, nicht ihre Schreibweise: sie stand als `data-action`-Attribut
+  // im Listenkopf und ist seit dessen Wegfall (2026-08-11) ein Eintrag im
+  // Ueberlaufmenue der Chip-Leiste, wo popoverMenuHtml das Attribut erzeugt.
+  // Beide Fassungen erfuellen die Zusage „der Import ist von hier erreichbar".
+  assert(
+    /data-action="import-meals"|action:\s*'import-meals'/.test(source),
+    'Die Einkaufsseite muss eine Import-Aktion aus dem Essensplan anbieten',
+  );
   assert(/function openMealPlanImport/.test(source), 'Shopping-Seite muss einen Import-Dialog für den Essensplan besitzen');
   assert(/api\.post\(`\/shopping\/\$\{state\.activeListId\}\/import-meal-plan`/.test(source), 'Import-Dialog muss die Shopping-Range-Import-Route aufrufen');
   assert(/shopping\.importMealsEmpty/.test(source), 'Import-Dialog muss leere Bereiche mit einer Shopping-spezifischen Meldung behandeln');
@@ -376,9 +383,32 @@ test('Klick-Delegation wird pro #list-content nur einmal gebunden (Issue #398)',
   assert(clickIdx >= 0, 'wireListContentEvents muss die Klick-Delegation binden');
   assert(guardIdx < clickIdx, 'Der Einmal-Guard muss vor der Klick-Bindung greifen');
 
-  // Rename-per-Enter hängt an einem pro Render neu erzeugten Element und muss
-  // weiterhin bei jedem Aufruf verdrahtet werden.
-  assert(/function wireRenameKeydown/.test(source), 'wireRenameKeydown-Helper muss existieren');
+  // Umbenennen muss ohne Maus gehen. Hier stand `assert(/function
+  // wireRenameKeydown/)` - der Helfer uebersetzte „Enter" auf dem Listen-Titel in
+  // einen Klick, weil der Titel ein `<span role="button" tabindex="0">` war, also
+  // ein nachgebauter Knopf ohne Tastaturverhalten. Der Test pinnte damit die
+  // KRUECKE statt der Zusage und waere rot geworden, obwohl die Bedienbarkeit
+  // stieg: seit dem Wegfall des Listenkopfs (2026-08-11) ist Umbenennen ein
+  // Eintrag im Ueberlaufmenue und damit ein echter <button>, den der Browser
+  // selbst per Enter und Leertaste bedient.
+  //
+  // Geprueft wird deshalb das Gegenteil: dass rename-list NICHT wieder als
+  // nachgebauter Knopf auftaucht. Ein `role="button"` in der Naehe der Aktion
+  // hiesse, dass die JS-Kruecke zurueckmuesste.
+  assert(
+    /action:\s*'rename-list'|data-action="rename-list"/.test(source),
+    'Die Aktion „Liste umbenennen" muss es weiterhin geben',
+  );
+  const renameMarkup = source.match(/.{0,200}rename-list.{0,200}/gs) ?? [];
+  assert(renameMarkup.length > 0, 'rename-list nicht auffindbar - der Test misst dann nichts');
+  for (const snippet of renameMarkup) {
+    assert(
+      !/role="button"/.test(snippet),
+      'rename-list haengt wieder an einem nachgebauten Knopf (role="button"). '
+      + 'Ein echtes <button> bringt Enter und Leertaste vom Browser mit; ein Span '
+      + 'braucht dafuer wieder eigenes JS.',
+    );
+  }
 });
 
 // --------------------------------------------------------

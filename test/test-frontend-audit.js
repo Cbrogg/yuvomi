@@ -210,6 +210,53 @@ test('audited frontend files do not assign innerHTML', () => {
   }
 });
 
+/**
+ * Ein Backtick in einem HTML-Kommentar sprengt das Template-Literal, in dem er
+ * steht.
+ *
+ * GEMESSENER ANLASS (2026-08-11): ein erklaerender Kommentar im Markup der
+ * Einkaufsseite nannte eine CSS-Klasse in Backticks - so, wie es in JS-Kommentaren
+ * ueberall im Repo ueblich ist. Nur stand dieser INNERHALB von
+ * insertAdjacentHTML(`...`): das erste Backtick schloss das Literal, der Rest
+ * wurde ein Tagged Template, und die Seite starb mit "TypeError: toolbar is not
+ * a function". Sie renderte gar nichts mehr.
+ *
+ * WARUM ALS GUARD: die volle Suite war dabei gruen - 145 Suiten, kein einziger
+ * Fehlschlag. Kein Test laedt eine Seite wirklich, und ein Tagged Template ist
+ * syntaktisch voellig legal, also faellt auch kein Parser darueber. Der Defekt
+ * war nur im Browser sichtbar. Die Falle trifft jeden, der einen Kommentar ins
+ * Markup schreibt, und kostet jedes Mal eine ganze Seite.
+ */
+test('kein HTML-Kommentar im Markup enthält ein Backtick', () => {
+  const offenders = [];
+  let scanned = 0;
+
+  for (const file of walkJsFiles('../public/')) {
+    if (file.includes('/vendor/')) continue;
+    const source = read(file);
+    const comments = [...source.matchAll(/<!--[\s\S]*?-->/g)];
+    if (!comments.length) continue;
+    scanned += comments.length;
+    for (const [comment] of comments) {
+      if (!comment.includes('`')) continue;
+      offenders.push(`${file}: ${comment.replace(/\s+/g, ' ').slice(0, 120)}`);
+    }
+  }
+
+  assert.ok(
+    scanned >= 10,
+    `Nur ${scanned} HTML-Kommentare gefunden - der Scan ist blind geworden. `
+    + 'Werden Seiten noch über Template-Literale gerendert?',
+  );
+  assert.deepEqual(
+    offenders,
+    [],
+    'Ein Backtick in einem HTML-Kommentar schließt das umgebende Template-Literal '
+    + 'und macht aus dem Rest ein Tagged Template - die Seite rendert dann gar nicht '
+    + 'mehr. Klassennamen dort ohne Backticks schreiben.',
+  );
+});
+
 test('static frontend translation keys exist in every locale', () => {
   const keys = new Set();
 
@@ -3305,17 +3352,41 @@ test('der Einkaufs-Kopf trägt mobil keine unbeschrifteten Aktionen', () => {
   // waren mobil nackte Glyphen.
   assert.match(menu, /<span>\$\{esc\(item\.label\)\}<\/span>/,
     'jeder Menü-Eintrag muss ein sichtbares Textlabel tragen');
-  const items = page.slice(page.indexOf('id: \'list-head-menu\''), page.indexOf('</div>\n        </div>'));
-  for (const key of ['shopping.importMeals', 'shopping.manageCategories', 'shopping.deleteListLabel']) {
+  const menuStart = page.indexOf("id: 'list-actions-menu'");
+  assert.ok(menuStart > 0, 'das Überlaufmenü der Einkaufsliste ist nicht auffindbar - der Guard misst dann nichts');
+  const items = page.slice(menuStart, page.indexOf('})}', menuStart));
+  // Umbenennen kam 2026-08-11 dazu: es hing bis dahin als einzige Affordanz am
+  // Listen-Titel im Kopf, und der Kopf ist entfallen (Titelwiederholung).
+  for (const key of ['shopping.renameListLabel', 'shopping.importMeals', 'shopping.manageCategories', 'shopping.deleteListLabel']) {
     assert.ok(items.includes(`t('${key}')`), `das Überlaufmenü muss ${key} als Label führen`);
   }
   assert.match(items, /danger:\s*true/, '„Liste löschen" muss im Menü als destruktiv gekennzeichnet sein');
 
-  // Genau eine Fassung je Breite - sonst doppelte Tabstops.
-  assert.match(css, /\.list-header__more\s*\{\s*display:\s*none/,
-    'das Menü ist ab 768px ausgeblendet, dort trägt die Leiste die Aktionen');
-  assert.match(css, /@media \(max-width: 767px\)[\s\S]{0,400}\.list-header__inline-actions\s*\{\s*display:\s*none/,
-    'unter 768px muss die Inline-Leiste ausgeblendet sein');
+  // Der Trigger muss die Liste NENNEN. Er stand früher neben einer Überschrift,
+  // die den Bezug herstellte; in der Chip-Leiste steht er allein, und ein bloßes
+  // „Weitere Aktionen" ließe offen, worauf sich „Löschen" bezieht - das löscht
+  // die Liste des ganzen Haushalts.
+  assert.match(page, /label:\s*t\('shopping\.listActionsLabel',\s*\{\s*name:/,
+    'der Menü-Trigger muss die gewählte Liste im zugänglichen Namen nennen');
+
+  // EINE Fassung, nicht zwei. Hier standen zwei Assertions über
+  // `.list-header__more` und `.list-header__inline-actions`: die drei Aktionen
+  // lagen doppelt im DOM (Buttonleiste ab 768px, Menü darunter) und CSS blendete
+  // je eine aus. Seit dem Wegfall des Kopfes gibt es nur noch das Menü, auf
+  // allen Breiten - das Risiko doppelter Tabstops entsteht gar nicht erst.
+  // Geprüft wird deshalb, dass die Doppelfassung nicht zurückkommt.
+  const cssNoComments = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  assert.doesNotMatch(cssNoComments, /\.list-header__(more|inline-actions)\s*\{/,
+    'die responsive Doppelfassung der Listen-Aktionen ist entfallen - eine Darstellung auf allen Breiten');
+  assert.doesNotMatch(page, /list-header__(more|inline-actions)/,
+    'die responsive Doppelfassung der Listen-Aktionen ist entfallen - eine Darstellung auf allen Breiten');
+
+  // Der Trigger klebt am Rand, während die Chips durchscrollen: ohne opaken
+  // Grund liefe ein Chip sichtbar durch das Icon.
+  assert.match(cssNoComments, /\.list-tabs-bar__actions\s*\{[^}]*position:\s*sticky/,
+    'die Aktionszone muss am Rand der scrollenden Chip-Leiste stehenbleiben');
+  assert.match(cssNoComments, /\.list-tabs-bar__actions\s*\{[^}]*background-color:/,
+    'die sticky Aktionszone braucht einen opaken Grund, sonst scrollen Chips sichtbar darunter durch');
 
   // Das Icon-only-Import-Label darf nicht zurückkommen: es war der Grund, warum
   // drei unbeschriftete Glyphen nebeneinander standen.
@@ -3337,7 +3408,10 @@ test('der Einkaufs-Kopf trägt mobil keine unbeschrifteten Aktionen', () => {
   assert.match(css, /@media \(hover: hover\)[\s\S]{0,400}\.empty-state__cta\s*\{\s*display:\s*none/,
     'auf Zeigergeräten ist der Leerzustands-CTA eine dritte Tür in denselben Raum');
 
-  assertKeysExistInEveryLocale(['common.moreActions', 'shopping.checkedHint', 'shopping.checkedHint_one']);
+  // `common.moreActions` stand hier, solange der Einkauf ihn nutzte; sein
+  // Trigger führt jetzt shopping.listActionsLabel (er muss die Liste nennen).
+  // Den geteilten Key prüft weiterhin, wer ihn benutzt - aktuell recipes.js.
+  assertKeysExistInEveryLocale(['shopping.listActionsLabel', 'shopping.checkedHint', 'shopping.checkedHint_one']);
 });
 
 /**
@@ -6542,6 +6616,20 @@ test('wer seinen Körper aufs Lesemaß kappt, kappt auch seinen Kopf', () => {
     .filter((file) => narrowBody.test(read(file)));
   assert.ok(pages.length >= 3, 'keine Seite mit .list-scroller gefunden - Scan ist blind geworden');
 
+  // KOPFLOS IST KEIN VERSTOSS. Die Regel lautet „wenn ein Kopf da ist, hält er
+  // die Kante des Körpers" - eine Seite ohne Kopf hat nichts auszurichten. Der
+  // Einkauf ist seit 2026-08-11 genau dieser Fall: sein `.page-toolbar` zeigte
+  // den Namen der gewählten Liste ein zweites Mal (der aktive Chip trägt ihn
+  // schon) und ist ersatzlos entfallen; Name und Aktionen stehen jetzt in der
+  // Chip-Leiste.
+  //
+  // Was dabei NICHT passieren darf: dass der Guard leise verhungert. Verlören
+  // alle Seiten ihren Kopf, liefe die Schleife über nichts und wäre grün, ohne
+  // je etwas zugesichert zu haben - eine Assertion über eine leere Liste ist
+  // keine. Deshalb wird gezählt, was wirklich gemessen wurde.
+  let headsChecked = 0;
+  const headless = [];
+
   for (const file of pages) {
     const src = read(file);
     // Jeder Kopf dieser Seite, egal ob als Template-Literal oder über className.
@@ -6549,8 +6637,9 @@ test('wer seinen Körper aufs Lesemaß kappt, kappt auch seinen Kopf', () => {
       ...src.matchAll(/class="([^"]*\bpage-toolbar\b[^"]*)"/g),
       ...src.matchAll(/className\s*=\s*'([^']*\bpage-toolbar\b[^']*)'/g),
     ].map(([, classList]) => classList);
-    assert.ok(heads.length > 0, `${file}: kappt den Körper auf das Lesemaß, hat aber keinen kanonischen Kopf`);
+    if (!heads.length) { headless.push(file); continue; }
     for (const classList of heads) {
+      headsChecked++;
       assert.ok(
         /\bpage-toolbar--narrow\b/.test(classList),
         `${file}: "${classList}" - der Körper endet bei --content-max-width-narrow, `
@@ -6558,6 +6647,13 @@ test('wer seinen Körper aufs Lesemaß kappt, kappt auch seinen Kopf', () => {
       );
     }
   }
+
+  assert.ok(
+    headsChecked >= 2,
+    `Nur ${headsChecked} Kopf/Köpfe geprüft (kopflos: ${headless.join(', ') || 'keine'}). `
+    + 'Unter zwei misst dieser Guard nichts mehr - hat sich die Schreibweise von '
+    + '.page-toolbar geändert, oder haben die Küchen-Listen ihre Köpfe alle verloren?',
+  );
 
   // Und die Variante muss das auch tun: Marge am letzten Slot, gegen dasselbe
   // Token, das .list-scroller kappt.

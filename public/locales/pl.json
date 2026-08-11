@@ -415,6 +415,7 @@
         "itemQtyLabel": "Ilość",
         "categoryLabel": "Kategoria",
         "addItemLabel": "Dodaj artykuł",
+        "listActionsLabel": "Akcje dla {{name}}",
         "renameListLabel": "Zmień nazwę listy",
         "deleteListLabel": "Usuń listę",
         "swipeBack": "Wstecz",

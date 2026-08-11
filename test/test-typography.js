@@ -426,6 +426,92 @@ test('kein sichtbarer Titel wiederholt den Namen eines Tabs seiner eigenen Leist
   assert.deepEqual(failures, []);
 });
 
+test('kein sichtbarer Titel wiederholt den Namen des gewählten Eintrags einer Auswahlleiste', () => {
+  // DIE ZWEITE HÄLFTE DERSELBEN REGEL. Der Guard darüber vergleicht ÜBERSETZTE
+  // Labels - er findet „Übersicht" über „Übersicht". Der Einkauf verletzte
+  // dieselbe Regel mit LAUFZEITDATEN: die Listenwahl zeigte „Wocheneinkauf" als
+  // aktiven Chip, und der Kopf direkt darunter zeigte denselben Namen noch
+  // einmal. Aus DREI Gründen unsichtbar für den Nachbarn: die Chip-Leiste trägt
+  // kein `role="tablist"`, der Titel war kein <h1-3> (ein <span
+  // class="page-toolbar__title">), und der Name ist gar kein i18n-Key, sondern
+  // `state.activeList.name` - ein Wert, den kein statischer Test übersetzen
+  // kann. Gemessen kostete das mobil rund 64px: /shopping lag bei 53 %
+  // Contentfläche gegen 62-63 % bei /tasks und /budget.
+  //
+  // WAS STATT DES WERTES GEPRÜFT WIRD: die Struktur. Rendert eine Seite eine
+  // Auswahlleiste über eine Sammlung (gemappte Einträge mit einem Aktivzustand)
+  // UND zeigt sie dasselbe Feld des GEWÄHLTEN Eintrags noch einmal in einem
+  // Titel-Slot, dann steht derselbe Text zweimal auf der Seite - unabhängig
+  // davon, welchen Wert er zur Laufzeit hat. Guard-Ebene Signatur: weder
+  // Dateiname noch Helfername, weder `role` noch Elementtyp.
+  const readPublic = (path) => readFileSync(new URL(`../public${path}`, import.meta.url), 'utf8');
+  const pageFiles = readdirSync(new URL('../public/pages/', import.meta.url))
+    .filter((name) => name.endsWith('.js'));
+
+  // Ein Titel-Slot ist, was die Shell als Titel setzt (.page-toolbar__title,
+  // .panel-head__title) oder was als Überschrift ausgezeichnet ist. sr-only
+  // zählt nicht: unsichtbare Wiederholung ist ausdrücklich erlaubt.
+  const TITLE_SLOT = /<(?:h[1-3]|span|div|p)\b([^>]*\b(?:page-toolbar__title|panel-head__title|list-header__name)\b[^>]*|[^>]*)>\s*\$\{(?:esc\()?\s*([\w.?[\]]+)/g;
+  const HEADING = /<h[1-3]\b([^>]*)>\s*\$\{(?:esc\()?\s*([\w.?[\]]+)/g;
+
+  const failures = [];
+  let barsSeen = 0;
+
+  for (const name of pageFiles) {
+    const page = readPublic(`/pages/${name}`);
+
+    // 1. Auswahlleisten: eine Sammlung wird zu Einträgen gemappt, und einer
+    //    davon trägt einen Aktivzustand. Beides muss im selben map()-Ausdruck
+    //    stehen - eine Liste ohne Auswahlzustand ist keine Leiste, und ein
+    //    Aktivzustand ohne Sammlung ist ein einzelner Knopf.
+    const selected = new Map();   // Feldname -> Set der Sammlungen
+    for (const m of page.matchAll(/\b(?:state\.)?(\w+)\s*\.map\(\s*\(?\s*(\w+)/g)) {
+      const [, collection, item] = m;
+      const body = page.slice(m.index, m.index + 900);
+      // NUR ECHTE ZUSTANDSMARKER. Ein blosses `selected` stand hier zuerst und
+      // machte das `<option selected>` des Quick-Add zur „Auswahlleiste": der
+      // Befund im Einkauf war richtig, nannte aber `categories` als Quelle
+      // statt `lists`. Ein Guard, der aus dem falschen Grund recht hat, schickt
+      // den nächsten Leser in die falsche Datei.
+      if (!/--active\b|aria-selected|\bis-active\b|aria-current/.test(body)) continue;
+      // Welches Feld beschriftet den Eintrag?
+      for (const label of body.matchAll(new RegExp(`\\$\\{(?:esc\\()?\\s*${item}\\.(\\w+)`, 'g'))) {
+        if (!selected.has(label[1])) selected.set(label[1], new Set());
+        selected.get(label[1]).add(collection);
+      }
+    }
+    if (!selected.size) continue;
+    barsSeen += 1;
+
+    // 2. Titel-Slots, die ein Feld des GEWÄHLTEN Eintrags zeigen. „Gewählt"
+    //    erkennt man am Bezeichner: state.activeList, state.selectedAccount,
+    //    state.currentBoard - die Schreibweise, die dieses Repo durchgängig
+    //    verwendet.
+    for (const pattern of [TITLE_SLOT, HEADING]) {
+      pattern.lastIndex = 0;
+      for (const m of page.matchAll(pattern)) {
+        const [, attrs, expression] = m;
+        if (/\bsr-only\b/.test(attrs)) continue;
+        const field = expression.match(/\b(?:active|selected|current)\w*\??\.(\w+)$/i)?.[1];
+        if (!field || !selected.has(field)) continue;
+        const bars = [...selected.get(field)].join('`, `');
+        failures.push(
+          `${name}: sichtbarer Titel zeigt \`${expression}\` - dasselbe Feld beschriftet `
+          + `bereits den aktiven Eintrag der Auswahlleiste über \`${bars}\`. `
+          + 'Der gewählte Eintrag IST der Titel; was der Kopf sonst trägt, gehört neben ihn.',
+        );
+      }
+    }
+  }
+
+  assert.ok(
+    barsSeen >= 1,
+    `Keine Auswahlleiste mit Aktivzustand gefunden (${barsSeen}) - der Guard misst dann nichts. `
+    + 'Hat sich die Schreibweise der gemappten Leisten geändert?',
+  );
+  assert.deepEqual(failures, []);
+});
+
 test('lange Inhalts- und interaktive Texte verwenden mindestens die Sekundärrolle', () => {
   const dashboard = readFileSync(new URL('../public/styles/dashboard.css', import.meta.url), 'utf8');
   const notes = readFileSync(new URL('../public/styles/notes.css', import.meta.url), 'utf8');

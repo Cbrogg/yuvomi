@@ -402,6 +402,7 @@
         "itemQtyLabel": "Množství",
         "categoryLabel": "Kategorie",
         "addItemLabel": "Přidat položku",
+        "listActionsLabel": "Akce pro {{name}}",
         "renameListLabel": "Přejmenovat seznam",
         "deleteListLabel": "Smazat seznam",
         "swipeBack": "Zpět",

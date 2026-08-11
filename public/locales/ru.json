@@ -402,6 +402,7 @@
         "itemQtyLabel": "Количество",
         "categoryLabel": "Категория",
         "addItemLabel": "Добавить товар",
+        "listActionsLabel": "Действия для {{name}}",
         "renameListLabel": "Переименовать список",
         "deleteListLabel": "Удалить список",
         "swipeBack": "Отменить",

@@ -402,6 +402,7 @@
         "itemQtyLabel": "数量",
         "categoryLabel": "カテゴリー",
         "addItemLabel": "商品を追加",
+        "listActionsLabel": "{{name}}の操作",
         "renameListLabel": "リストの名前を変更",
         "deleteListLabel": "リストを削除",
         "swipeBack": "戻る",

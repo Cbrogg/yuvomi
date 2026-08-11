@@ -402,6 +402,7 @@
         "itemQtyLabel": "数量",
         "categoryLabel": "分类",
         "addItemLabel": "添加商品",
+        "listActionsLabel": "{{name}} 的操作",
         "renameListLabel": "重命名清单",
         "deleteListLabel": "删除清单",
         "swipeBack": "返回",

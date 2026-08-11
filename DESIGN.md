@@ -4,7 +4,6 @@ description: Familienplaner in Apples Handwerk und Yuvomis Handschrift - warme B
 colors:
   accent-violet: "#6C3AED"
   accent-violet-hover: "#5B2FD4"
-  accent-violet-active: "#4A26BB"
   accent-violet-dark: "#A78BFA"
   accent-light: "#F3EFFE"
   grouped-bg: "#F5F3ED"
@@ -343,7 +342,17 @@ reduced-transparency und prefers-contrast auf 0).
 - **Chart-Serien** (`--chart-series-1..7`): eigene Datenreihen-Palette, bewusst KEINE
   geborgten Modul-Tints (Modulfarben tragen Bedeutung, die in einem Ausgaben-Donut falsch
   waere). Sieben Toene, im Dark aufgehellt auf >=3:1 Grafikkontrast; mehr Segmente werden
-  zu "Sonstige" zusammengefasst.
+  zu "Sonstige" zusammengefasst. **Geborgt heisst gleicher WERT, nicht gleicher Name.**
+  Der erste Guard pruefte, ob `--module-*` in der Palette steht - erfuellt, waehrend Serie 2
+  buchstaeblich `--_family-money` war (#0F766E light, #2DD4BF dark), der Modulton des
+  Budgets, in dem die Palette laeuft. Gemessen wird deshalb wahrnehmungsnah (CIEDE2000,
+  Schwelle 2.3 = Just Noticeable Difference) und nur gegen die Module, die Diagramme
+  wirklich zeigen: Serie 2 ist seit 2026-08-11 Petrol (#297989 / #22D3EE, dE 11.3 bzw.
+  16.2 zu money). Serie 3 (= kitchen) und Serie 7 (= work, dE 1.9) bleiben stehen, weil
+  Kueche und Aufgaben keine Diagramme haben - eine Ausnahme mit Verfallsdatum an beiden
+  Enden, denn der Guard leitet die geprueften Module aus `router.js` ab und findet sie in
+  dem Lauf, in dem dort ein Diagramm entsteht. Serie 1 (Indigo, dE 7.5 zum Akzent) bleibt
+  bewusst: sie heisst in der Kontofarben-Wahl "Violett", dort ist die Naehe die Zusage.
 - **Prioritaeten** (`--color-priority-low..urgent`): unveraendert aus dem Bestand, die
   Helligkeits-Trennung (High ~1,8x Urgent) ist farbfehlsicht-verifiziert. Die Badge-Fuellung
   ist immer eine 12-%-Toenung derselben Farbe.
@@ -530,6 +539,23 @@ die Einstellungen, die zweite nahm die Gesundheit dazu - eine Allowlist mit zwei
 Der erste Lauf der Regel fand sofort, was beide uebersahen: das Budget zeigte einen Tab
 „Budget" unter dem Titel „Budget". Aufgeloest wurde das ueber den TAB, nicht ueber den Titel
 („Uebersicht") - das Budget hat sieben Tabs, von denen einer zufaellig den Modulnamen trug.
+
+**Sie gilt auch fuer Laufzeitdaten, und dort war sie zwei Runden lang blind.** Der Einkauf
+zeigte den Namen der gewaehlten Liste zweimal: als aktiven Chip der Listenwahl und direkt
+darunter als Kopf mit Umbenennen-Stift und Ueberlaufmenue. Der Guard sah das aus drei
+Gruenden nicht - die Chip-Leiste traegt kein `role="tablist"`, der Titel war kein `h1-3`
+(ein `span.page-toolbar__title`), und der Name ist gar kein i18n-Key, sondern
+`state.activeList.name`. Ein statischer Test kann diesen WERT nicht kennen; er kann aber
+die STRUKTUR sehen: rendert eine Seite eine Auswahlleiste ueber eine Sammlung und zeigt sie
+dasselbe Feld des GEWAEHLTEN Eintrags noch einmal in einem Titel-Slot, steht derselbe Text
+zweimal auf der Seite - unabhaengig davon, welcher es zur Laufzeit ist. Das prueft seit
+2026-08-11 eine zweite Sonde in `test-typography.js`. **Der gewaehlte Eintrag IST der
+Titel**; was der Kopf sonst trug, gehoert neben ihn - im Einkauf an das hintere Ende der
+Chip-Zeile, wo ein Ueberlaufmenue Umbenennen, Import, Kategorien und Loeschen fuehrt. Der
+Umbau nahm mobil rund 64px (53 % auf 62 % Contentflaeche, gleichauf mit Aufgaben und
+Budget) und loeschte dabei zwei Sonderbehandlungen, die es nur wegen des Kopfes gab: die
+responsive Doppelfassung der Aktionen und eine `max-height`-Media-Query, die Listenwahl und
+Kopf im Querformat nebeneinander zwang.
 
 **Die Label-Farben-Regel.** Large Titles tragen immer `--color-text-primary`; kein
 Gradient-Text und kein Akzent-Titel (beides gehoerte zur abgeloesten Welt; die Tageszeit
