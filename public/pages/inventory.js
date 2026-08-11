@@ -441,6 +441,10 @@ function renderList() {
   if (!list) return;
 
   if (!state.items.length) {
+    // Sonst wuerde ein spaeter neu angelegtes Item (in JEDER Kategorie) diese
+    // Detailansicht wiederbeleben, statt auf der Startseite zu landen.
+    state.view = 'browse';
+    state.activeCategory = null;
     const filtersHost = _container?.querySelector('#inventory-filters');
     if (filtersHost) filtersHost.hidden = true;
     list.replaceChildren(emptyStateEl({
@@ -512,6 +516,11 @@ function renderBrowse(list) {
  */
 function renderCategoryDetail(list) {
   const category = state.categories.find((c) => c.key === state.activeCategory);
+  // Die aktive Kategorie kann verschwunden sein, waehrend diese Ansicht offen
+  // war (ueber manage-categories geloescht - der Server haengt ihre Items auf
+  // 'other' um). Kein Geister-Detail fuer eine Kategorie, die es nicht mehr
+  // gibt: zurueck zur Startseite statt den rohen Key als Titel zu zeigen.
+  if (!category) { backToBrowse(); return; }
   const categoryItems = state.items.filter((item) => item.category === state.activeCategory);
 
   updateFilterChips(categoryItems);
