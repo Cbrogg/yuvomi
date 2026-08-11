@@ -276,6 +276,48 @@ function groupItemsByCategory(items) {
   return [...known, ...unknown].map((k) => grouped.get(k));
 }
 
+/**
+ * Nachschau von jeder Orts-ID (Wurzel UND Unterort) auf ihre TOP-LEVEL-Wurzel -
+ * Grundlage der flachen Orts-Gruppierung (ein Level, wie bei Kategorien). Ein
+ * Unterort zaehlt zu seiner Wurzel, nicht zu sich selbst (Design-Doc §2:
+ * "Keller", nicht "Keller · Regal 2").
+ */
+function topLevelLocationLookup() {
+  const map = new Map();
+  for (const root of state.locations) {
+    map.set(root.id, root);
+    for (const child of root.subcategories || []) {
+      map.set(child.id, root);
+    }
+  }
+  return map;
+}
+
+/**
+ * Gruppiert nach Top-Level-Ort, ortlose Gegenstaende in einer eigenen
+ * "Unlocated"-Gruppe am Ende - gleiche Form wie groupItemsByCategory, damit
+ * renderGroupedItems beide Gruppierungen unverändert rendern kann.
+ */
+function groupItemsByLocation(items) {
+  const lookup = topLevelLocationLookup();
+  const UNLOCATED_KEY = '__unlocated__';
+  const grouped = new Map();
+  for (const item of items) {
+    const root = item.location_id != null ? lookup.get(item.location_id) : null;
+    const key = root ? String(root.id) : UNLOCATED_KEY;
+    if (!grouped.has(key)) {
+      grouped.set(key, { key, name: root ? root.name : t('inventory.unlocated'), icon: 'map-pin', items: [] });
+    }
+    grouped.get(key).items.push(item);
+  }
+  const orderedKeys = state.locations.map((r) => String(r.id));
+  const known = orderedKeys.filter((k) => grouped.has(k));
+  const rest = [...grouped.keys()].filter((k) => !orderedKeys.includes(k) && k !== UNLOCATED_KEY);
+  const result = [...known, ...rest].map((k) => grouped.get(k));
+  if (grouped.has(UNLOCATED_KEY)) result.push(grouped.get(UNLOCATED_KEY));
+  return result;
+}
+
 /** Geteilte Gruppen-Grammatik (styles/list-row.css), identisch zu
  *  public/pages/shopping.js#renderItems. */
 function renderGroupedItems(items) {
