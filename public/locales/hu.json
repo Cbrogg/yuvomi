@@ -167,6 +167,8 @@
         "wallOffline": "Nincs kapcsolat",
         "wallOfflineHint": "A képernyő tovább próbálkozik.",
         "familyMembers": "Családtagok",
+        "familyDayCalm": "Mára nincs feladat kiosztva",
+        "familyDayTally": "Mai feladatok: {{open}} nyitott, {{done}} kész",
         "participantsAdded": "a háztartásban",
         "upcomingBirthdays": "Közelgő születésnapok",
         "noBirthdays": "Még nincsenek születésnapok",

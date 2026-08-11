@@ -167,6 +167,8 @@
         "wallOffline": "Немає зʼєднання",
         "wallOfflineHint": "Екран продовжує спроби.",
         "familyMembers": "Члени родини",
+        "familyDayCalm": "На сьогодні завдань не розподілено",
+        "familyDayTally": "Завдання на сьогодні: {{open}} відкрито, {{done}} виконано",
         "participantsAdded": "у сім'ї",
         "upcomingBirthdays": "Найближчі дні народження",
         "noBirthdays": "Днів народження ще немає",

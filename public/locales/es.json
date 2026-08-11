@@ -167,6 +167,8 @@
         "wallOffline": "Sin conexión",
         "wallOfflineHint": "La pantalla sigue intentándolo.",
         "familyMembers": "Miembros de la familia",
+        "familyDayCalm": "Hoy no hay tareas asignadas",
+        "familyDayTally": "Tareas de hoy: {{open}} pendientes, {{done}} completadas",
         "participantsAdded": "en el hogar",
         "upcomingBirthdays": "Próximos cumpleaños",
         "noBirthdays": "Aún no hay cumpleaños",

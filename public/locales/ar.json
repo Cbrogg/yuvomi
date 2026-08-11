@@ -167,6 +167,8 @@
         "wallOffline": "لا يوجد اتصال",
         "wallOfflineHint": "تواصل الشاشة المحاولة.",
         "familyMembers": "أفراد العائلة",
+        "familyDayCalm": "لا مهام موزعة اليوم",
+        "familyDayTally": "مهام اليوم: {{open}} مفتوحة، {{done}} مكتملة",
         "participantsAdded": "في الأسرة",
         "upcomingBirthdays": "أعياد الميلاد القادمة",
         "noBirthdays": "لا توجد أعياد ميلاد بعد",

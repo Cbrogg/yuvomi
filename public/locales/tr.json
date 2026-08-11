@@ -167,6 +167,8 @@
         "wallOffline": "Bağlantı yok",
         "wallOfflineHint": "Ekran denemeye devam ediyor.",
         "familyMembers": "Aile üyeleri",
+        "familyDayCalm": "Bugün için görev dağıtılmadı",
+        "familyDayTally": "Bugünkü görevler: {{open}} açık, {{done}} tamam",
         "participantsAdded": "hanede",
         "upcomingBirthdays": "Yaklaşan doğum günleri",
         "noBirthdays": "Henüz doğum günü yok",

@@ -167,6 +167,8 @@
         "wallOffline": "Bez připojení",
         "wallOfflineHint": "Obrazovka to zkouší dál.",
         "familyMembers": "Členové rodiny",
+        "familyDayCalm": "Na dnešek nejsou rozdělené žádné úkoly",
+        "familyDayTally": "Dnešní úkoly: {{open}} otevřených, {{done}} hotových",
         "participantsAdded": "v domácnosti",
         "upcomingBirthdays": "Nadcházející narozeniny",
         "noBirthdays": "Zatím žádné narozeniny",

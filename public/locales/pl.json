@@ -179,6 +179,8 @@
         "wallOffline": "Brak połączenia",
         "wallOfflineHint": "Ekran próbuje dalej.",
         "familyMembers": "Członkowie rodziny",
+        "familyDayCalm": "Na dziś nie przydzielono zadań",
+        "familyDayTally": "Zadania na dziś: {{open}} otwartych, {{done}} zrobionych",
         "participantsAdded": "w rodzinie",
         "upcomingBirthdays": "Nadchodzące urodziny",
         "noBirthdays": "Brak urodzin",

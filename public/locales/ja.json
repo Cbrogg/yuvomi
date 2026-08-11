@@ -167,6 +167,8 @@
         "wallOffline": "接続がありません",
         "wallOfflineHint": "画面は再試行を続けます。",
         "familyMembers": "家族メンバー",
+        "familyDayCalm": "今日は割り当てられたタスクがありません",
+        "familyDayTally": "今日のタスク: 未完了 {{open}}、完了 {{done}}",
         "participantsAdded": "家族のメンバー",
         "upcomingBirthdays": "今後の誕生日",
         "noBirthdays": "誕生日はまだありません",

@@ -167,6 +167,8 @@
         "wallOffline": "Không có kết nối",
         "wallOfflineHint": "Màn hình vẫn đang thử lại.",
         "familyMembers": "Thành viên gia đình",
+        "familyDayCalm": "Hôm nay không có việc nào được giao",
+        "familyDayTally": "Việc hôm nay: {{open}} còn lại, {{done}} đã xong",
         "participantsAdded": "trong gia đình",
         "upcomingBirthdays": "Sinh nhật sắp tới",
         "noBirthdays": "Chưa có sinh nhật nào",

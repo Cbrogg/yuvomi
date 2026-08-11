@@ -179,6 +179,8 @@
         "wallOffline": "연결 없음",
         "wallOfflineHint": "화면이 계속 다시 시도합니다.",
         "familyMembers": "가족 구성원",
+        "familyDayCalm": "오늘 배정된 할 일이 없어요",
+        "familyDayTally": "오늘 할 일: 미완료 {{open}}개, 완료 {{done}}개",
         "participantsAdded": "가족 구성원",
         "upcomingBirthdays": "다가오는 생일",
         "noBirthdays": "아직 생일 없음",

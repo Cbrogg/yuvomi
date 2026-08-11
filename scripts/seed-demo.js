@@ -203,13 +203,32 @@ cfgSet.run('weather_units', 'metric');
 const dashboardWidgets = [
   { id: 'family',    visible: true,  size: '1x2' },
   { id: 'budget',    visible: true,  size: '1x2' },
-  { id: 'birthdays', visible: true,  size: '1x1' },
+  // 1x2 wie der Autor-Default (defaultWidgetSize in public/pages/dashboard.js).
+  // Auf 1x1 war die Geburtstagskachel die KURZE Karte einer Rasterzeile - und
+  // damit bestimmte SIE die Zeilenhoehe, waehrend Familie und Budget daneben
+  // ueber zwei Zeilen spannten und je ~200px leer auslaufen mussten. Gemessen
+  // bei 1440px: 535px Kachelhoehe fuer 377px Inhalt. Mit drei gleich hohen
+  // 1x2-Karten deckt die Zeile sich mit ihrem Inhalt.
+  { id: 'birthdays', visible: true,  size: '1x2' },
+  // Das Wetter ist per Autor-Default AUS, weil es als Masthead-Zeile unter dem
+  // Gruss schon spricht (Seele-Paket, „kein Echo": ist die Karte da, entfaellt
+  // die Zeile). Die Demo zeigt trotzdem die Karte - sie ist der Wandtablet-Fall
+  // und traegt Ort und Vorhersage, die die Zeile nicht hat.
+  //
+  // SIE STEHT VOR DEN BEIDEN FLACHEN KARTEN, und das ist eine Anforderung an den
+  // SCREENSHOT, nicht ans Layout: der Bildausschnitt ist 1032 logische Pixel
+  // hoch, und als letztes Widget lag die Karte darunter - im Bild also gar
+  // nicht. Hier faellt sie in die dritte Rasterzeile und damit ins Bild.
+  //
+  // 2x1, weil breiter nicht geht: `normalizeDashboardConfig` bildet jede Groesse
+  // auf eines der vier kuratierten Presets ab (1x1, 1x2, 2x1, 2x2), ein `3x1`
+  // im Seed kaeme als `2x1` an.
+  { id: 'weather',   visible: true,  size: '2x1' },
   { id: 'rewards',   visible: true,  size: '1x1' },
   { id: 'notes',     visible: true,  size: '2x1' },
   // Ausgeblendet, aber in der Liste: die Reihenfolge bleibt stabil, wenn ein
   // Haushalt sie im Anpassen-Modus wieder einblendet. tasks/calendar/shopping/
   // meals deckt das „Heute"-Cockpit oben bereits ab - doppelt gezeigt wäre Echo.
-  { id: 'weather',      visible: false, size: '2x1' },
   { id: 'tasks',        visible: false, size: '1x2' },
   { id: 'calendar',     visible: false, size: '1x2' },
   { id: 'shopping',     visible: false, size: '2x1' },

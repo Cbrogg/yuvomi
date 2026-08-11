@@ -167,6 +167,8 @@
         "wallOffline": "Geen verbinding",
         "wallOfflineHint": "Het scherm blijft het proberen.",
         "familyMembers": "Gezinsleden",
+        "familyDayCalm": "Vandaag zijn er geen taken verdeeld",
+        "familyDayTally": "Taken vandaag: {{open}} open, {{done}} klaar",
         "participantsAdded": "in het huishouden",
         "upcomingBirthdays": "Aankomende verjaardagen",
         "noBirthdays": "Nog geen verjaardagen",

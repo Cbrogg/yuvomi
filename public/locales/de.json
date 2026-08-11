@@ -179,6 +179,8 @@
         "wallOffline": "Keine Verbindung",
         "wallOfflineHint": "Der Bildschirm versucht es weiter.",
         "familyMembers": "Familienmitglieder",
+        "familyDayCalm": "Heute sind keine Aufgaben verteilt",
+        "familyDayTally": "Aufgaben heute: {{open}} offen, {{done}} erledigt",
         "participantsAdded": "im Haushalt",
         "upcomingBirthdays": "Nächste Geburtstage",
         "noBirthdays": "Noch keine Geburtstage",

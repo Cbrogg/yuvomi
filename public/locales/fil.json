@@ -179,6 +179,8 @@
         "wallOffline": "Walang koneksyon",
         "wallOfflineHint": "Patuloy na sumusubok ang screen.",
         "familyMembers": "Mga miyembro ng pamilya",
+        "familyDayCalm": "Walang gawaing nakatalaga ngayon",
+        "familyDayTally": "Mga gawain ngayon: {{open}} bukás, {{done}} tapos",
         "participantsAdded": "sa sambahayan",
         "upcomingBirthdays": "Mga paparating na kaarawan",
         "noBirthdays": "Wala pang kaarawan",

@@ -103,7 +103,14 @@
      * Spalte, sondern atmet mit der Fensterbreite (3–6 Spalten). `dense` + die
      * Zeilen-Spans der hohen Widgets füllen Restlücken; verbleibender Weißraum
      * wandert ans ruhige Grid-Ende statt in die Mitte. */
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+    /* 280px, NICHT 240px: bei 240 legte ein 1440er-Fenster vier 270px-Spalten
+     * an, und in denen kuerzte die Ellipse reihenweise echte Inhalte weg -
+     * gemessen „Familienmitg…", „Tante Claire Bec…", „Leo John…". Eine Spalte,
+     * in der Namen nicht ganz stehen, ist keine Spalte, sondern eine Kachel mit
+     * Platznot; drei ruhige Spalten tragen dieselben fuenf Karten besser als
+     * vier gedraengte. Die auto-fill-Mechanik bleibt unangetastet: ab ~1700px
+     * kommt die vierte Spalte von selbst zurueck, dann mit Platz fuer Text. */
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
     grid-auto-rows: minmax(132px, auto);
     gap: var(--space-5);
     grid-auto-flow: row dense;
@@ -772,22 +779,34 @@
 /* --------------------------------------------------------
  * Notizen-Grid-Widget
  * -------------------------------------------------------- */
+/* DIE KACHELN RICHTEN SICH NACH IHRER KARTE, NICHT NACH DEM FENSTER.
+ *
+ * Die Spaltenzahl haengt an Viewport-Breakpoints: ab 1024px drei Spalten - auch
+ * dann, wenn die Notizkarte selbst nur EINE Rasterspalte breit ist. In der
+ * 1x2-Standardgroesse standen drei Notizen in je ~105px, und uebrig blieb
+ * „Urlaubs-…", „WLAN & …", „Emmas …": drei Ellipsen nebeneinander, kein Inhalt.
+ * Genau davor warnt die Token-Doktrin (§11c): was von der Breite eines
+ * Bausteins abhaengt, fragt seinen Container, nicht das Fenster. Der Container
+ * `dashboard-widget` ist am .widget-wrapper bereits deklariert.
+ *
+ * Die Schwellen sind Kartenbreiten, keine Geraeteklassen, und sie sind aus der
+ * Kachel zurueckgerechnet: eine Notizkachel braucht rund 200px, damit Titel UND
+ * zweizeilige Vorschau beide lesbar bleiben. Zwei davon plus Gap und Polster
+ * ergeben 420px, drei ergeben 620px. */
 .notes-grid-widget {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
 }
 
-/* Schmale Viewports: eine Spalte. Zwei ~130px-Minikarten trunkierten Titel
- * UND Inhalt gleichzeitig, es blieb nichts Lesbares übrig (Audit A1-16). */
-@media (max-width: 639px) {
+@container dashboard-widget (min-width: 420px) {
   .notes-grid-widget {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (min-width: 1024px) {
+@container dashboard-widget (min-width: 620px) {
   .notes-grid-widget {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -798,15 +817,22 @@
   padding: var(--space-3);
   cursor: pointer;
   touch-action: pan-y;
-  transition: opacity var(--transition-fast), transform var(--transition-fast);
-  /* Notiz-Identität über Hintergrund-Tönung statt Seitenstreifen (DESIGN.md-konform) */
-  background-color: color-mix(in srgb, var(--note-color, var(--color-accent)) var(--tint-surface), var(--color-surface-2));
+  transition: background-color var(--transition-fast);
+  /* HIER STEHT KEINE FLAECHE MEHR, UND ZWAR ABSICHTLICH.
+   *
+   * An dieser Stelle stand ein getoentes Rezept mit `--note-color`, das seit dem
+   * HIG-Rollout nie gegriffen hat: `glass.css` fuehrt `.dashboard .note-item`
+   * (zwei Klassen, also spezifischer) und setzte dort das neutrale Well. Wer die
+   * Notiz-Identitaet hier suchte, fand eine Regel, die das Gegenteil des
+   * Gerenderten behauptete - genau die Sorte Fund, die eine Fehlersuche in die
+   * falsche Datei schickt. Die Flaeche (getoentes Well) und ihr Hover wohnen in
+   * glass.css, Abschnitt 29; hier bleibt nur die Geometrie. */
 }
 
-.note-item:hover {
-  opacity: 0.8;
-  transform: translateY(-1px);
-}
+/* DER ZUSTAND DIMMT NICHT. Die Kachel nahm auf Hover `opacity: 0.8` - sie machte
+ * ihren eigenen Text schlechter lesbar, um zu zeigen, dass man sie anfassen
+ * kann, und hob sich dabei um einen Pixel wie ein Bedienelement. Die Flaeche
+ * steigt jetzt stattdessen eine Sprosse der Toenungsskala (glass.css §29). */
 
 .note-item__title {
   color: var(--color-text-primary);
@@ -1657,12 +1683,21 @@ svg.weather-forecast__icon {
  * EINE gruppierte Sektion auf opaker neutraler Flaeche statt vier pastell-
  * gefuellter Stat-Kacheln. Die Modulzugehoerigkeit traegt die getoente
  * Icon-Kachel pro Zeile; Zeilen trennen sich per Hairline, nie per Rahmen. */
+/* DAS TAGESPROGRAMM IST DIE BUEHNE, NICHT DIE SECHSTE KARTE.
+ *
+ * Es lag auf --radius-lg + --shadow-sm, also EINE Stufe UNTER den Widgets
+ * darunter (die tragen --shadow-md). Damit war der wichtigste Block der Seite
+ * der leiseste - „Was steht heute an?" wog optisch weniger als „Geburtstage".
+ * Radius und Elevation setzen den Rang jetzt richtig: --radius-xl ist die
+ * Kartenform der Glas-Welt (26px, tokens.css), --shadow-lg hebt das Blatt eine
+ * Stufe ueber das Raster. Kein Glas, kein backdrop-filter - die Regel „Glas ist
+ * Chrome" gilt, das Blatt ist Inhalt. */
 .today-cockpit__grid {
   display: grid;
   grid-template-columns: 1fr;
   background: var(--color-surface);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
   overflow: hidden;
 }
 
@@ -1673,7 +1708,10 @@ svg.weather-forecast__icon {
   align-items: center;
   gap: var(--space-3);
   min-height: var(--target-base);
-  padding: var(--space-2) var(--space-4);
+  /* Mehr Luft als eine Listenzeile (space-2 → space-3): das Blatt traegt drei
+   * bis sechs Zeilen, nicht dreissig - der gewonnene Raum kostet keinen Scroll
+   * und ist der Unterschied zwischen „Liste" und „Programm". */
+  padding: var(--space-3) var(--space-4);
   border: none;
   background: transparent;
   color: var(--color-text-primary);
@@ -1700,9 +1738,14 @@ svg.weather-forecast__icon {
  * Umbau still die Hälfte der Zeilen verloren. `[data-route]` ist dieselbe
  * Bedingung, an der auch `wireLinks` seine Handler aufhängt: eine Zeile ist
  * interaktiv, wenn sie ein Ziel hat. */
+/* DER ZUSTAND SPRICHT IM TON DER ZEILE, NICHT IN NEUTRALGRAU. Jede Zeile weiss
+ * ueber --today-card-accent bereits, aus welchem Raum sie kommt (das Siegel
+ * links zeigt es); ein neutraler Hover warf diese Auskunft im Moment der
+ * Beruehrung weg. --tint-state (12%) ist die Skalenstufe fuer genau das:
+ * „Zustand auf einer ungetoenten Flaeche". */
 .today-cockpit-card[data-route]:hover,
 .today-cockpit-card[data-route]:focus-visible {
-  background: var(--color-surface-hover);
+  background: color-mix(in srgb, var(--today-card-accent) var(--tint-state), var(--color-surface));
 }
 
 /* Der Träger clippt per overflow:hidden (Radius-Schnitt der Zeilenliste) -
@@ -1853,10 +1896,14 @@ svg.weather-forecast__icon {
   container: dashboard-overview / inline-size;
 }
 
+/* Oben buendig, nicht mittig: der Grusstapel ist drei bis vier Zeilen hoch, die
+ * Werkzeugspalte eine bis zwei - zentriert landete der Knopf auf halber
+ * Titelhoehe und der Stand-Anker daneben im Nichts. Buendig oben steht beides
+ * auf der Datumszeile. */
 .dashboard-overview__header {
   display: flex;
   flex-direction: row;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-3);
 }
@@ -1930,9 +1977,15 @@ svg.weather-forecast__icon {
   height: var(--space-4);
 }
 
+/* DIE WERKZEUGE HAENGEN OBEN, SIE SCHWEBEN NICHT IN DER MITTE. `align-items:
+ * center` zentrierte den Zweizeiler aus Knopf und Stand-Anker gegen einen
+ * Grusstapel, der drei Zeilen hoch ist (Datum, Large Title, Wetter) und mobil
+ * vier - der Anker landete auf halber Hoehe neben dem Titel, ohne Bezug zu
+ * irgendetwas. Oben buendig steht er ueber der Datumszeile, also dort, wo die
+ * Seite ihre Metaangaben ohnehin fuehrt. */
 .dashboard-overview__tools {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: flex-end;
   /* Umbruch statt eigener Spalte: der Stand-Anker (A8) legt sich als eigene
    * Zeile UNTER den Anpassen-Knopf, ohne dass die Bearbeiten-Werkzeugleiste
@@ -2259,13 +2312,41 @@ svg.weather-forecast__icon {
   min-width: 0;
 }
 
+/* DAS ABSENDERBAND: FARBE WIRD FLAECHE, NICHT NUR STRICH.
+ *
+ * Bis hierher trug jede Karte ihre Modulzugehoerigkeit als 2px-Haarlinie an der
+ * Oberkante - im Light gerade noch sichtbar, im Dark Mode praktisch nicht: das
+ * Board las dort als Wand gleich grauer Rechtecke, weil das einzige Farbsignal
+ * ein Strich von zwei Pixeln war. Der Kopf traegt die Toenung jetzt als Flaeche.
+ *
+ * DIE STUFE IST --tint-wash (8%), UND ZWAR ALS EINZIGE RICHTIGE. Die Skala in
+ * tokens.css definiert sie als „die Toenung untergreift FREMDEN Inhalt" - genau
+ * das tut ein Kopfband: darauf stehen Siegel, Titel, Badge und Link, und keines
+ * davon gehoert der Toenung. --tint-surface (16%) waere die Stufe eines Chips,
+ * der SELBST das getoente Objekt ist; auf einem ganzen Band traegt sie zu laut
+ * und nimmt dem Siegel daneben seine Ausweisrolle.
+ *
+ * Kein Akzentstreifen im Sinne des DESIGN.md-Banns: der gilt Zierstreifen an
+ * Toolbars, Tabs und Modulkoepfen. Hier ist die Toenung die Absenderangabe der
+ * Karte - dieselbe Aufgabe, die das Siegel im Kopf schon hat, nur als Grund. */
 .dashboard .widget__header {
   /* Kompakter Kopf (Critique P3): der 16px-Titel füllt die Zeile, statt in einer
    * über-hohen 54px-Leiste zu schwimmen. --target-base (44px) hält zugleich das
    * Touch-Minimum für die „Alle"-Verknüpfung. */
   min-height: var(--target-base);
   padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  background: color-mix(in srgb, var(--widget-accent, var(--color-accent)) var(--tint-wash), var(--color-surface));
+  /* Die Trennlinie erbt den Ton, damit Band und Kante EIN Element sind statt
+   * einer getoenten Flaeche mit neutralem Abschluss. */
+  border-bottom: 1px solid color-mix(in srgb, var(--widget-accent, var(--color-accent)) var(--tint-state), var(--color-border));
+}
+
+/* Das Siegel steht jetzt auf dem Band, nicht auf der Karte: ohne diesen Grund
+ * mischt seine Scheibe gegen --color-surface und liegt auf der Toenung bei
+ * 1,06:1 - dieselbe Falle, die DESIGN.md fuer den Modulkopf beschreibt
+ * („Der Traeger entscheidet, welches Gesicht es zeigt"). */
+.dashboard .widget__header .module-seal {
+  --seal-base: color-mix(in srgb, var(--widget-accent, var(--color-accent)) var(--tint-wash), var(--color-surface));
 }
 
 .dashboard .widget__title,
@@ -2299,6 +2380,40 @@ svg.weather-forecast__icon {
 .dashboard .notes-grid-widget,
 .dashboard .weather-widget__inner {
   padding: var(--space-3) var(--space-4) var(--space-4);
+}
+
+/* UEBERSCHUESSIGE HOEHE WIRD ATEM, NICHT LOCH.
+ *
+ * Die Zeilenhoehen des Rasters richten sich nach den 1x1-Kacheln; eine 1x2-Karte
+ * bekommt damit die Summe zweier Zeilen plus Gap - gemessen 489px, waehrend
+ * „Familie" 319px und „Budget" 294px Inhalt hatten. Der Rest sass als toter
+ * Block UNTER dem letzten Element, weil jeder Koerper oben klebte.
+ *
+ * Die Karte streckt ihren Koerper jetzt (flex:1) und verankert seine FUSSZEILE
+ * unten (margin-block-start:auto). Damit faellt der Ueberschuss zwischen Inhalt
+ * und Abschluss statt hinter den Abschluss: die Karte liest als bewusst
+ * gesetzter Rahmen mit Kopf, Inhalt und Fuss - und die Regel gilt fuer JEDE
+ * Karte mit Fusszeile, nicht nur fuer die zwei, die heute zu kurz sind. Die
+ * Streckung selbst (align-self:stretch am Wrapper) bleibt unangetastet; sie war
+ * die richtige Entscheidung, ihr fehlte nur die Unterfuetterung. */
+.dashboard .widget > .widget__body,
+.dashboard .widget > .family-widget,
+.dashboard .widget > .budget-widget {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard .widget > .notes-grid-widget {
+  flex: 1 1 auto;
+  align-content: start;
+}
+
+.dashboard .budget-widget__footer,
+.dashboard .rewards-widget__footer,
+.dashboard .family-widget__footer {
+  margin-block-start: auto;
 }
 
 .dashboard .widget__empty {
@@ -2444,7 +2559,27 @@ svg.weather-forecast__icon {
 .family-widget {
   display: flex;
   flex-direction: column;
-  padding: var(--space-2) var(--space-4);
+  padding: var(--space-2) var(--space-4) var(--space-4);
+}
+
+.family-widget__list {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Die Tagesbilanz des Haushalts schliesst die Karte ab - als hairline-getrennte
+ * Inset-Zeile, exakt wie der Fuss der Budgetkarte. Ein getoentes Well haette
+ * hier dieselbe Form gehabt wie „1 zu bestaetigen" in den Belohnungen, und das
+ * ist eine HANDLUNGSaufforderung; diese Zeile ist eine Auskunft. Dieselbe Form
+ * fuer zwei Bedeutungen ist genau der Befund, den das Board schon einmal hatte
+ * (H6, die Badge fuer drei Aussagen). */
+.family-widget__footer {
+  margin: var(--space-3) 0 0;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border-subtle);
+  color: var(--color-text-secondary);
+  font-size: var(--type-caption);
+  line-height: var(--line-height-tight);
 }
 
 .family-member {
@@ -2452,7 +2587,10 @@ svg.weather-forecast__icon {
   align-items: center;
   gap: var(--space-3);
   min-width: 0;
-  padding: var(--space-2) 0;
+  /* space-2h statt space-2: eine Handvoll Personen auf einer 1x2-Kachel duerfen
+   * atmen - die Enge stammte aus der Zeit, als die Karte noch um ihren Platz
+   * rang, und sie war der Grund, warum der Ueberschuss unten so gross wurde. */
+  padding: var(--space-2h) 0;
 }
 
 .family-member + .family-member {
@@ -2468,8 +2606,16 @@ svg.weather-forecast__icon {
 
 .family-member__name {
   color: var(--color-text-primary);
-  font-size: var(--text-sm);
+  /* Der Name ist der Titel seiner Zeile und traegt jetzt dieselbe Stufe wie
+   * jeder andere Zeilentitel des Boards (--type-card-title). 14px war die
+   * Ausnahme, nicht die Regel - in derselben Karte, in der ein Avatar 38px
+   * misst, las der Name daneben wie eine Bildunterschrift. */
+  font-size: var(--type-card-title);
   font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-snug);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .family-member__status {
@@ -2491,8 +2637,12 @@ svg.weather-forecast__icon {
 }
 
 .family-widget-avatar {
-  width: 34px;
-  height: 34px;
+  /* 38px: die Familienkarte ist die einzige, in der das Gesicht der Person das
+   * Erkennungsmerkmal der Zeile ist - nicht ein Modulton, nicht ein Icon. Sie
+   * darf dafuer groesser sein als ein Listen-Avatar, und die Karte hat die
+   * Hoehe dafuer laengst. */
+  width: 38px;
+  height: 38px;
   border-radius: var(--radius-full);
   display: inline-flex;
   align-items: center;
@@ -2522,11 +2672,20 @@ svg.weather-forecast__icon {
   padding: var(--space-4);
 }
 
+/* DER SALDO IST EIN ANZEIGEWERT, KEINE ZEILE MIT ZAHL RECHTS.
+ *
+ * Er stand als 22px-Betrag am rechten Ende einer Beschriftungszeile - dieselbe
+ * Anatomie wie „Sparquote 45 %" direkt darunter, also zwei gleich gebaute
+ * Zeilen, von denen eine die Hauptaussage der Karte sein sollte. Gestapelt
+ * (Label klein darueber, Betrag gross darunter) ist er das, was er ist: die
+ * Zahl, wegen der man auf die Karte schaut.
+ *
+ * 28px bleibt innerhalb des Kanons: die Ueberschriften-Obergrenze ist 34px, und
+ * die Display-Stufen 48/72 sind der Wandanzeige vorbehalten. */
 .budget-widget__headline {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-3);
+  flex-direction: column;
+  gap: var(--space-0h);
   padding-bottom: var(--space-3);
   border-bottom: 1px solid var(--color-border);
 }
@@ -2539,12 +2698,55 @@ svg.weather-forecast__icon {
 
 .budget-widget__balance {
   color: var(--color-text-primary);
-  /* Die wichtigste Zahl der Finanzkarte trägt Hero-Gewicht (24px statt 20px):
-   * selbstbewusst statt zaghaft (Critique P4). */
-  font-size: var(--text-2xl);
+  font-size: var(--text-3xl);
   font-weight: var(--font-weight-bold);
   line-height: var(--line-height-tight);
+  letter-spacing: var(--tracking-tight);
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+/* Die Monatsspur: zweiter Kanal der Sparquote. Die Bahn ist die Einnahme, der
+ * gefuellte Teil das Gesparte - die Prozentzahl unmittelbar darueber, einmal als
+ * Flaeche. Sie fuellt also GENAU auf den Wert, der danebensteht.
+ *
+ * DER FUELLTEIL IST DAS GESPARTE, NICHT DAS AUSGEGEBENE. Die erste Fassung
+ * fuellte umgekehrt und traf damit zwei Fehler auf einmal: sie zeigte 55 %, wo
+ * im Text 45 % stand, und sie tat es in der Gefahrfarbe - ein halbrot gefuellter
+ * Balken liest als Warnung, obwohl ein Haushalt, der 45 % spart, keine bekommen
+ * sollte. Die Spur nimmt deshalb dieselbe Rezeptur wie der Sparziel-Balken
+ * darueber (neutrale Bahn, Modulton als Fuellung), damit die Karte fuer beide
+ * Faelle EINE Sprache spricht. */
+.budget-widget__share {
+  height: var(--space-2);
+  margin-top: var(--space-2);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  background: var(--color-surface-2);
+}
+
+.budget-widget__share-saved {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--module-budget);
+  transform: scaleX(var(--share-scale, 0));
+  transform-origin: left center;
+  transition: transform var(--transition-slow);
+}
+
+/* EIN BALKEN WAECHST AUS DEM ZEILENANFANG, UND DER LIEGT IN `ar`/`fa` RECHTS.
+ * `transform-origin` kennt keine logischen Schluesselwoerter, also steht die
+ * Spiegelung hier ausgeschrieben - fuer die Monatsspur UND fuer den aelteren
+ * Sparziel-Balken, der denselben festverdrahteten Ursprung fuehrt und in den
+ * beiden RTL-Sprachen bisher aus der falschen Kante wuchs. */
+[dir="rtl"] .budget-widget__share-saved,
+[dir="rtl"] .budget-widget__goal-fill {
+  transform-origin: right center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .budget-widget__share-saved { transition: none; }
 }
 
 .budget-widget__balance--positive {
@@ -3120,14 +3322,17 @@ svg.weather-forecast__icon {
   }
 
   /* Die Inset-Grouped-Liste bleibt auch mobil einspaltig (Apple-Muster:
-   * Zeilen, kein Kachelraster); nur die Zeilen werden etwas kompakter. */
+   * Zeilen, kein Kachelraster).
+   *
+   * SIE WIRD HIER NICHT KLEINER. Bis hierher schrumpften mobil Polster UND
+   * Titelgroesse (17px → 15px) - ausgerechnet auf dem Geraet, das PRODUCT.md als
+   * die Hauptszene fuehrt („eine Hand am Telefon"), war das Tagesprogramm die
+   * kleinste Fassung seiner selbst, waehrend darunter fuenf Karten in voller
+   * Groesse standen. Nur der Seitenrand geht zurueck, weil der Bildschirm ihn
+   * braucht; die Zeile behaelt ihre Hoehe und ihre Stimme. */
   .today-cockpit-card {
-    padding: var(--space-2) var(--space-3);
-    gap: var(--space-2);
-  }
-
-  .today-cockpit-card__value {
-    font-size: var(--type-secondary);
+    padding: var(--space-3);
+    gap: var(--space-3);
   }
 }
 

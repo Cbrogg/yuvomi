@@ -4898,15 +4898,24 @@ test('dashboard „Heute wichtig" is one inset-grouped list, not a tile grid', (
   const iconBody = cssRuleBody(dashboard, '.today-cockpit-card__icon');
 
   // Die GRUPPE trägt Fläche, Rundung und Schatten - genau einmal.
+  //
+  // DIE RUNDUNG IST EINE ROLLE, KEIN WERT. Hier stand `--radius-lg` fest
+  // verdrahtet, und damit hielt der Guard eine Zahl statt seiner eigenen
+  // Aussage („die Gruppe ist der gerundete Behälter, nicht die Zeile"). Als das
+  // Tagesprogramm seinen Rang bekam - eine Stufe über den Widget-Karten, weil es
+  // der Hauptgegenstand der Seite ist -, schlug er auf einen Wechsel an, den er
+  // gar nicht bewacht. Gebunden bleibt: die Gruppe rundet über einen TOKEN, und
+  // die Zeile rundet gar nicht.
   assert.match(gridBody, /grid-template-columns:\s*1fr/, 'the group is a single column of rows, not a tile grid');
   assert.match(gridBody, /background:\s*var\(--color-surface\)/, 'the group carries one opaque surface');
-  assert.match(gridBody, /border-radius:\s*var\(--radius-lg\)/, 'the group is the rounded container, not each row');
+  assert.match(gridBody, /border-radius:\s*var\(--radius-[a-z0-9]+\)/, 'the group is the rounded container, and it rounds via a token');
   assert.match(gridBody, /overflow:\s*hidden/, 'rows must clip to the group radius');
   assert.doesNotMatch(gridBody, /repeat\(2,/, 'the 2×2 glance grid belongs to the superseded world');
 
   // Die ZEILE trägt keine eigene Karte.
   assert.match(cardBody, /background:\s*transparent/, 'rows sit on the group surface, not on their own');
   assert.match(cardBody, /border:\s*none/, 'rows are separated by hairlines, never framed');
+  assert.doesNotMatch(cardBody, /border-radius/, 'the row never rounds - only the group does');
   assert.match(cardBody, /min-height:\s*var\(--target-base\)/, 'row height stays tokenized against the touch target');
   assert.match(
     dashboard,

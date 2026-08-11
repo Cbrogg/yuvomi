@@ -167,6 +167,8 @@
         "wallOffline": "没有连接",
         "wallOfflineHint": "屏幕会继续重试。",
         "familyMembers": "家庭成员",
+        "familyDayCalm": "今天没有分配任务",
+        "familyDayTally": "今日任务：{{open}} 项待办，{{done}} 项完成",
         "participantsAdded": "家庭成员",
         "upcomingBirthdays": "即将到来的生日",
         "noBirthdays": "还没有生日",

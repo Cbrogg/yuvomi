@@ -179,6 +179,8 @@
         "wallOffline": "بدون اتصال",
         "wallOfflineHint": "صفحه به تلاش ادامه می‌دهد.",
         "familyMembers": "اعضای خانواده",
+        "familyDayCalm": "برای امروز کاری تقسیم نشده است",
+        "familyDayTally": "کارهای امروز: {{open}} باز، {{done}} انجام‌شده",
         "participantsAdded": "در خانواده",
         "upcomingBirthdays": "تولدهای پیش‌رو",
         "noBirthdays": "هنوز تولدی نیست",

@@ -930,7 +930,33 @@ function renderUpcomingEvents(events) {
   </div>`;
 }
 
-function renderUpcomingBirthdays(birthdays) {
+/**
+ * WIE VIELE ZEILEN EINE LISTENKACHEL ZEIGT, STEHT IN IHRER HOEHE.
+ *
+ * Bis hierher war jede Zeilenzahl eine Konstante irgendwo zwischen Server und
+ * Renderer - und damit dieselbe fuer eine Kachel, die eine Rasterzeile hoch ist,
+ * und fuer eine, die zwei belegt. Die hohe Fassung lief deshalb unten leer, und
+ * das war kein Layoutfehler, sondern fehlender Nachschub.
+ *
+ * Die Regel steht HIER und nicht an den Aufrufstellen, damit die naechste
+ * Listenkachel sie erbt statt eine eigene Zahl zu erfinden. Sie liest den
+ * Zeilen-Span der Groessenklasse (`<spalten>x<zeilen>`), nicht die Pixelhoehe:
+ * die kennt erst der Browser, und eine Zeilenzahl, die vom Messzeitpunkt
+ * abhaengt, springt beim Laden.
+ */
+const LIST_ROWS_SHORT = 3;
+const LIST_ROWS_TALL = 5;
+
+function listRowCap(size) {
+  return Number(String(size ?? '1x1').split('x')[1]) >= 2 ? LIST_ROWS_TALL : LIST_ROWS_SHORT;
+}
+
+function renderUpcomingBirthdays(allBirthdays, size) {
+  // Der Vorrat kommt fuer die groesste Fassung vom Server (routes/dashboard.js);
+  // was davon erscheint, entscheidet die Kachel. Die Badge zaehlt weiter die
+  // gezeigten Zeilen - sie sagt „so viele stehen hier", nicht „so viele hat der
+  // Haushalt", und das war schon vor dem Nachschub ihre Bedeutung.
+  const birthdays = allBirthdays.slice(0, listRowCap(size));
   if (!birthdays.length) {
     return `<div class="widget widget--birthdays">
       ${widgetHeader('cake', t('nav.birthdays'), 0, '/birthdays')}
@@ -1013,9 +1039,15 @@ function renderPinnedNotes(notes) {
     const cut = s.slice(0, 200);
     return `${cut.slice(0, Math.max(cut.lastIndexOf(' '), 120))}…`;
   };
+  // EINE LEERE FARBE IST KEINE FARBE, SIE IST EIN KAPUTTES REZEPT. Der Stil
+  // stand unbedingt da, also trugen farblose Notizen `--note-color:;` - ein
+  // gueltiger LEERER Wert, der `var(--note-color, …)` seinen Fallback nimmt und
+  // damit das ganze color-mix ungueltig macht. Uebrig blieb der nackte
+  // Traegergrund: drei graubeige Kaesten, die wie deaktiviert aussahen. Ohne die
+  // Deklaration greift der Fallback im Stylesheet (der Notizen-Ton).
   const items = notes.map((n) => `
     <div class="note-item" data-route="/notes" role="button" tabindex="0"
-         style="--note-color:${esc(n.color)};">
+         ${n.color ? `style="--note-color:${esc(n.color)};"` : ''}>
       ${n.title ? `<div class="note-item__title">${esc(n.title)}</div>` : ''}
       <div class="note-item__content">${renderMarkdownLight(excerpt(n.content))}</div>
     </div>
@@ -1092,11 +1124,35 @@ function renderFamilyWidget(users, data) {
   }).join('');
   const moreCount = users.length - Math.min(users.length, 6);
 
+  // DIE BILANZ DES HAUSHALTSTAGES ALS FUSSZEILE.
+  //
+  // Die Karte beantwortet zeilenweise „wer ist heute dran" - aber nicht, wie der
+  // Tag als Ganzes steht. Genau diese Summe fehlte, und genau dort sass in der
+  // 1x2-Kachel der tote Raum: der Koerper endete nach der letzten Person, und
+  // die restlichen ~170px trugen nichts. Die Fusszeile schliesst die Karte ab
+  // (unten verankert, siehe dashboard.css) und sagt dabei etwas, das keine
+  // einzelne Zeile sagen kann.
+  //
+  // Beide Zahlen sind serverseitig aggregiert und sichtbarkeitsgefiltert
+  // (memberTodayTasks, tasksDoneToday) - aus den fuenf gerenderten Zeilen zu
+  // summieren wuerde luegen, sobald der Haushalt groesser ist als das Limit.
+  // Die Platzhalter heissen bewusst NICHT `count`: „offen" und „erledigt" sind
+  // im Deutschen unveraenderliche Adjektive, es gibt also keine Singularform,
+  // die eine `_one`-Variante tragen koennte.
+  const openToday = [...openByUser.values()].reduce((sum, n) => sum + n, 0);
+  const doneToday = Number(data?.tasksDoneToday) || 0;
+  const footer = openToday + doneToday > 0
+    ? esc(t('dashboard.familyDayTally', { open: openToday, done: doneToday }))
+    : esc(t('dashboard.familyDayCalm'));
+
   return `<div class="widget widget--family">
     ${widgetHeader('users', t('dashboard.familyMembers'), null, '/settings', t('dashboard.manage'), 'contacts')}
     <div class="family-widget">
-      ${rows}
-      ${moreCount > 0 ? `<div class="family-member family-member--more">${esc(t('dashboard.shoppingMore', { count: moreCount }))}</div>` : ''}
+      <div class="family-widget__list">
+        ${rows}
+        ${moreCount > 0 ? `<div class="family-member family-member--more">${esc(t('dashboard.shoppingMore', { count: moreCount }))}</div>` : ''}
+      </div>
+      <p class="family-widget__footer">${footer}</p>
     </div>
   </div>`;
 }
@@ -1120,11 +1176,34 @@ function renderBudgetSavings(budget, balance, income, savingsRate) {
         </div>
       </div>`;
   }
+  // OHNE SPARZIEL BEKOMMT DIE SPARQUOTE IHREN ZWEITEN KANAL.
+  //
+  // Sie stand als nackte Prozentzahl da - die einzige Kennzahl der Karte, die
+  // eine Relation BEHAUPTET („45 % von was?"), ohne sie zu zeigen. Die Spur
+  // zeigt den Monat als Ganzes: die Einnahmen sind die volle Breite, der
+  // gefuellte Teil das Gesparte, der Rest das Ausgegebene. Damit tragen Zahl
+  // und Flaeche dieselbe Aussage - und die Karte hat unter ihrer Kennzahl
+  // endlich Substanz statt Luft.
+  //
+  // Die Spur ist `aria-hidden`: sie ist der ZWEITE Kanal fuer die Prozentzahl,
+  // die unmittelbar darueber im Text steht. Ein eigenes Label wuerde dieselbe
+  // Auskunft ein zweites Mal vorlesen. Ohne Einnahmen gibt es keinen Anteil,
+  // den man zeigen koennte - dann bleibt die Zeile allein.
+  //
+  // Gefuellt wird auf die SPARQUOTE, nicht auf den Ausgabenanteil: die Flaeche
+  // muss die Zahl zeigen, die neben ihr steht. Und sie wird bei 0 gekappt - eine
+  // negative Quote (mehr ausgegeben als eingenommen) hat keine Balkenlaenge; das
+  // sagt der rote Saldo darueber, nicht eine Spur, die rueckwaerts liefe.
+  const savedShare = income > 0 ? Math.max(0, Math.min(1, balance / income)) : 0;
   return `
     <div class="budget-widget__savings">
       <span>${t('dashboard.savingsRate')}</span>
       <strong>${income > 0 ? `${savingsRate}%` : '–'}</strong>
-    </div>`;
+    </div>
+    ${income > 0 ? `
+    <div class="budget-widget__share" aria-hidden="true">
+      <span class="budget-widget__share-saved" style="--share-scale:${savedShare.toFixed(3)}"></span>
+    </div>` : ''}`;
 }
 
 function renderBudgetWidget(budget, currency) {
@@ -1778,7 +1857,7 @@ function renderDashboardLayout(cfg, data, weather, currency, { editing = false, 
   const widgetById = {
     tasks: () => renderUrgentTasks(data.urgentTasks ?? []),
     calendar: () => renderUpcomingEvents(data.upcomingEvents ?? []),
-    birthdays: () => renderUpcomingBirthdays(data.birthdays ?? []),
+    birthdays: (size) => renderUpcomingBirthdays(data.birthdays ?? [], size),
     budget: () => renderBudgetWidget(data.budget ?? {}, currency),
     rewards: () => renderRewardsWidget(data.rewards ?? {}),
     health: () => renderHealthWidget(data.health ?? {}),
@@ -1801,7 +1880,11 @@ function renderDashboardLayout(cfg, data, weather, currency, { editing = false, 
       // statt dass ein Payload-Defekt das ganze Grid killt (Critique P2).
       let html;
       try {
-        html = widgetById[w.id]();
+        // Die Groessenklasse geht an den Renderer: eine Listenkachel entscheidet
+        // damit ihre Zeilenzahl (listRowCap). Renderer, die sie nicht brauchen,
+        // ignorieren das Argument - eine zweite Dispatch-Tabelle fuer „die mit
+        // Groesse" waere beim naechsten Widget wieder unvollstaendig.
+        html = widgetById[w.id](w.size);
       } catch (err) {
         console.error(`[dashboard] Widget "${w.id}" konnte nicht gerendert werden`, err);
         html = renderWidgetError(w.id);

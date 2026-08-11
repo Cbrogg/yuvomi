@@ -167,6 +167,8 @@
         "wallOffline": "कोई कनेक्शन नहीं",
         "wallOfflineHint": "स्क्रीन कोशिश करती रहती है।",
         "familyMembers": "परिवार के सदस्य",
+        "familyDayCalm": "आज कोई काम नहीं बाँटा गया है",
+        "familyDayTally": "आज के काम: {{open}} बाकी, {{done}} पूरे",
         "participantsAdded": "परिवार में",
         "upcomingBirthdays": "आने वाले जन्मदिन",
         "noBirthdays": "अभी कोई जन्मदिन नहीं",

@@ -167,6 +167,8 @@
         "wallOffline": "Ingen anslutning",
         "wallOfflineHint": "Skärmen fortsätter försöka.",
         "familyMembers": "Familjemedlemmar",
+        "familyDayCalm": "Inga uppgifter fördelade i dag",
+        "familyDayTally": "Uppgifter i dag: {{open}} öppna, {{done}} klara",
         "participantsAdded": "i hushållet",
         "upcomingBirthdays": "Kommande födelsedagar",
         "noBirthdays": "Inga födelsedagar ännu",

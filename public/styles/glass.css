@@ -661,15 +661,29 @@ html.navigating .app-content *::after {
  * Kartenfarbe": ein Kasten IN einem Kasten ist eine Vertiefung, kein
  * Aufgesetztes. `--color-fill-well` liegt in beiden Themes unter der
  * Kartenflaeche, braucht deshalb weder Kante noch Schatten und trennt ohne
- * einen einzigen zusaetzlichen Kanal. */
+ * einen einzigen zusaetzlichen Kanal.
+ *
+ * DAS WELL TRAEGT DIE FARBE DER NOTIZ. Die Vertiefung war neutral, und damit
+ * verlor jede angeheftete Notiz auf dem Dashboard genau das Merkmal, an dem man
+ * sie auf `/notes` wiedererkennt - drei gleich graue Kaesten, die wie
+ * deaktivierte Platzhalter lasen. Dass es ueberhaupt unbemerkt blieb, liegt an
+ * der Schichtung: `dashboard.css` fuehrt fuer `.note-item` ein getoentes Rezept,
+ * das diese spezifischere Regel seit dem HIG-Rollout ueberschreibt - es stand da
+ * als toter Code und behauptete das Gegenteil des Gerenderten.
+ *
+ * --tint-wash (8%) ist die Stufe, weil die Toenung FREMDEN Inhalt untergreift
+ * (Titel und Vorschautext der Notiz), und sie mischt gegen das Well, nicht gegen
+ * die Kartenflaeche - die Vertiefung bleibt eine Vertiefung. Ohne eigene Farbe
+ * faellt die Notiz auf den Notizen-Modulton zurueck: eine farblose Notiz ist
+ * keine violette, sie ist eine Notiz. */
 .dashboard .note-item {
-  background-color: var(--color-fill-well);
+  background-color: color-mix(in srgb, var(--note-color, var(--module-notes)) var(--tint-wash), var(--color-fill-well));
   border: none;
   box-shadow: none;
 }
 
 .dashboard .note-item:hover {
-  background-color: var(--color-surface-3);
+  background-color: color-mix(in srgb, var(--note-color, var(--module-notes)) var(--tint-state), var(--color-fill-well));
   box-shadow: none;
 }
 

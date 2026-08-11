@@ -167,6 +167,8 @@
         "wallOffline": "Χωρίς σύνδεση",
         "wallOfflineHint": "Η οθόνη συνεχίζει να προσπαθεί.",
         "familyMembers": "Μέλη οικογένειας",
+        "familyDayCalm": "Δεν έχουν ανατεθεί εργασίες για σήμερα",
+        "familyDayTally": "Εργασίες σήμερα: {{open}} σε εκκρεμότητα, {{done}} ολοκληρωμένες",
         "participantsAdded": "στο νοικοκυριό",
         "upcomingBirthdays": "Επόμενα γενέθλια",
         "noBirthdays": "Δεν υπάρχουν γενέθλια ακόμα",

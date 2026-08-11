@@ -179,6 +179,8 @@
         "wallOffline": "Tidak ada koneksi",
         "wallOfflineHint": "Layar terus mencoba.",
         "familyMembers": "Anggota keluarga",
+        "familyDayCalm": "Tidak ada tugas untuk hari ini",
+        "familyDayTally": "Tugas hari ini: {{open}} terbuka, {{done}} selesai",
         "participantsAdded": "dalam rumah tangga",
         "upcomingBirthdays": "Ulang tahun mendatang",
         "noBirthdays": "Belum ada ulang tahun",

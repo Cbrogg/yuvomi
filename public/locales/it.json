@@ -167,6 +167,8 @@
         "wallOffline": "Nessuna connessione",
         "wallOfflineHint": "Lo schermo continua a riprovare.",
         "familyMembers": "Membri della famiglia",
+        "familyDayCalm": "Nessuna attività assegnata per oggi",
+        "familyDayTally": "Attività di oggi: {{open}} da fare, {{done}} completate",
         "participantsAdded": "in famiglia",
         "upcomingBirthdays": "Prossimi compleanni",
         "noBirthdays": "Ancora nessun compleanno",

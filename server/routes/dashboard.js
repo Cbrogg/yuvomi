@@ -199,7 +199,13 @@ router.get('/', (req, res) => {
     result.birthdays = rows
       .map((row) => hydrateBirthday(row))
       .sort((a, b) => a.days_until - b.days_until || a.name.localeCompare(b.name))
-      .slice(0, 3);
+      // FUENF, WEIL DIE KACHEL ZWEI HOCH SEIN DARF. Der Schnitt stand auf drei
+      // und war damit die Obergrenze fuer JEDE Kachelgroesse: in der
+      // 1x2-Standardgroesse blieb darunter rund ein Drittel der Karte leer, weil
+      // der Server gar nicht mehr hergab. Wie viele Zeilen wirklich erscheinen,
+      // entscheidet die Kachel (`listRowCap` in public/pages/dashboard.js) - der
+      // Server liefert nur den Vorrat fuer die groesste Fassung.
+      .slice(0, 5);
     result.birthdayCount = rows.length;
   } catch (err) {
     log.error('birthdays error:', err.message);
