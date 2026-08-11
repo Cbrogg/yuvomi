@@ -4,7 +4,6 @@ description: Familienplaner in Apples Handwerk und Yuvomis Handschrift - warme B
 colors:
   accent-violet: "#6C3AED"
   accent-violet-hover: "#5B2FD4"
-  accent-violet-active: "#4A26BB"
   accent-violet-dark: "#A78BFA"
   accent-light: "#F3EFFE"
   grouped-bg: "#F5F3ED"
