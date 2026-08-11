@@ -81,7 +81,7 @@
     "test:inventory-warranty-status": "node --loader ./test/test-browser-loader.mjs --test test/test-inventory-warranty-status.js",
     "test:tracked-dates-migration": "node --test test/test-tracked-dates-migration.js",
     "test:item-dates-validation": "DB_PATH=:memory: node --test test/test-item-dates-validation.js",
-    "test:inventory-photo-migration": "DB_PATH=:memory: node --test test/test-inventory-photo-migration.js",
+    "test:inventory-photo-migration": "node --experimental-sqlite --test test/test-inventory-photo-migration.js",
     "test:inventory-tracked-dates": "node --experimental-sqlite --test test/test-inventory-tracked-dates.js",
     "test:ssrf": "node --test test/test-ssrf.js",
     "test:http": "node --test test/test-http.js",

@@ -5499,23 +5499,11 @@ let _originalDb = null;
 
 /**
  * ONLY FOR TESTING: Override the internal db instance
- * @param {import('better-sqlite3-multiple-ciphers').Database|string} testDbOrPath - Database instance or file path
+ * @param {import('better-sqlite3-multiple-ciphers').Database} testDb
  */
-function _setTestDatabase(testDbOrPath) {
+function _setTestDatabase(testDb) {
   if (!_originalDb) _originalDb = db;
-
-  if (typeof testDbOrPath === 'string') {
-    // It's a path - create a database and apply migrations
-    db = new Database(testDbOrPath);
-    db.pragma('journal_mode = WAL');
-    db.pragma('foreign_keys = ON');
-    db.pragma('synchronous = NORMAL');
-    db.pragma('temp_store = MEMORY');
-    // Apply all migrations
-    migrate();
-  } else {
-    db = testDbOrPath;
-  }
+  db = testDb;
 }
 
 /**
