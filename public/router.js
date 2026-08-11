@@ -21,6 +21,7 @@ import { activityType } from '/utils/health-activity.js';
 import { buildHelpRows } from '/utils/help.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
 import { isNewerVersion, displayVersion } from '/utils/version.js';
+import { syncWallMode } from '/utils/wall-mode.js';
 import {
   rememberScrollPosition,
   scrollPositionFor,
@@ -772,6 +773,14 @@ async function navigate(path, userOrPushState = true, pushState = true) {
         return;
       }
     }
+
+    // Der Wand-Modus ist ein Zustand DES DASHBOARDS, kein eigener Eintrag in
+    // dieser Tabelle - er muss die Route also von hier erfahren. Vor dem
+    // Modul-Akzent, weil er nachts das Theme auf dunkel zwingt und der Akzent
+    // als aufgeloeste Farbe im Inline-Style landet: umgekehrt truege die Shell
+    // den Hellmodus-Wert in eine dunkle Nacht (dieselbe Reihenfolge-Falle wie
+    // bei applyTheme).
+    syncWallMode(basePath);
 
     // Küchen-Routen lösen auf --module-kitchen auf, nicht auf ihr eigenes
     // --module-*: die Küche ist im Routing vier Module, in Navigation, Akzent

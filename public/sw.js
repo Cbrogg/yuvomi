@@ -139,6 +139,7 @@ const APP_SHELL = [
   '/utils/ux.js',
   '/utils/vcard.js',
   '/utils/version.js',
+  '/utils/wall-mode.js',
   '/offline.html',
   // offline.html laedt theme-init.js, damit die Huelle dieselbe Farbwelt
   // trifft wie die App (gespeicherter Wunsch schlaegt Systemeinstellung).

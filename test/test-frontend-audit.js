@@ -10728,3 +10728,99 @@ test('ein Hover auf erhoehter Flaeche nimmt die Stufe ueber DIESER Flaeche', () 
     + '--color-surface aus und faellt im Dark mit der erhoehten Flaeche zusammen:\n'
     + offenders.join('\n'));
 });
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Wand-Modus (Block D)
+ * ────────────────────────────────────────────────────────────────────────── */
+
+test('die Distanzskala der Wand haengt an der KNAPPEN Seite, nicht an der Hoehe', () => {
+  // GEMESSEN, NICHT GERATEN. Mit `vh` in der Mitte des clamp() wurden die
+  // Zeilen auf einem Tablet im HOCHFORMAT (768x1024) groesser - dort ist Hoehe
+  // reichlich - und schoben Datenstand und Ausstieg um 59px aus dem Bild. Eine
+  // Wand kann nicht scrollen. `vmin` bindet die Groesse an die knappe Seite und
+  // haelt beide Lagen im Schirm; `vw` bleibt erlaubt, wo die BREITE wirklich
+  // die Grenze ist (die Uhr ist eine einzelne lange Ziffernfolge).
+  //
+  // `dvh` ist ausdruecklich in Ordnung: `min-height: 100dvh` ist die
+  // Bildschirmhoehe selbst, keine Groessenskala.
+  const css = read('../public/styles/dashboard.css');
+  const offenders = [];
+  let wallRules = 0;
+  let declarationsRead = 0;
+
+  for (const { selector, body } of eachRule(css)) {
+    if (!/\bwall\b|--wall-|clock-widget--wall/.test(selector) && !/--wall-/.test(body)) continue;
+    wallRules += 1;
+    for (const declaration of body.split(';')) {
+      if (!declaration.trim()) continue;
+      declarationsRead += 1;
+      // Nur ECHTE vh-Einheiten: `dvh`/`svh`/`lvh` tragen ihren eigenen Praefix.
+      if (/(^|[^dsl\w.])\d+(\.\d+)?vh\b/.test(declaration)) {
+        offenders.push(`${selector} { ${declaration.trim()} }`);
+      }
+    }
+  }
+
+  assert.ok(wallRules >= 15,
+    `Reichweiten-Nachweis: nur ${wallRules} Wand-Regeln gelesen - greift der Selektor noch?`);
+  assert.ok(declarationsRead >= 60,
+    `Reichweiten-Nachweis: nur ${declarationsRead} Deklarationen gelesen`);
+  assert.deepEqual(offenders, [],
+    'Wand-Groessen nehmen vmin (oder vw, wo die Breite die Grenze ist):\n' + offenders.join('\n'));
+});
+
+test('der Wand-Modus laesst die Shell abtreten - und versteckt den FAB NICHT per CSS', () => {
+  const css = read('../public/styles/dashboard.css');
+  const hidden = new Set();
+  let wallModeRules = 0;
+
+  for (const { selector, body } of eachRule(css)) {
+    if (!/\[data-wall-mode\]/.test(selector)) continue;
+    wallModeRules += 1;
+    if (/display:\s*none/.test(body)) {
+      for (const part of selector.split(',')) hidden.add(part.trim().replace(/\[data-wall-mode\]\s*/, ''));
+    }
+  }
+
+  assert.ok(wallModeRules >= 3,
+    `Reichweiten-Nachweis: nur ${wallModeRules} [data-wall-mode]-Regeln gelesen`);
+  for (const chrome of ['.nav-sidebar', '.nav-bottom']) {
+    assert.ok(hidden.has(chrome),
+      `${chrome} muss im Wand-Modus abtreten - auf zwei Metern sind das siebzehn unleserliche Ziele`);
+  }
+
+  // Der FAB verschwindet im Wand-Modus, aber NICHT per CSS: eine Regel, die
+  // `.page-fab` auf display/opacity/pointer-events setzt, ist seit #634 die
+  // Mechanik, die den Knopf schon einmal unerreichbar gemacht hat. Die Seite
+  // rendert ihn dort gar nicht erst (public/pages/dashboard.js).
+  const viaCss = [...hidden].filter((s) => /page-fab/.test(s));
+  assert.deepEqual(viaCss, [], 'der FAB wird nicht gerendert, nicht weggeblendet');
+  assert.match(read('../public/pages/dashboard.js'), /wallMode \|\| loadFailed/,
+    'der Wand-Modus raeumt den FAB im JS ab, wie es der Fehlerzustand tut');
+});
+
+test('der Vorab-Wand-Modus in theme-init.js driftet nicht von utils/wall-mode.js', () => {
+  // theme-init.js laeuft als klassisches <script> im <head>, vor jedem Modul -
+  // es KANN nicht importieren und traegt die Werte deshalb als Literale. Die
+  // Quelle der Wahrheit bleibt utils/wall-mode.js; hier steht die Naht.
+  const init = read('../public/theme-init.js');
+  const mod = read('../public/utils/wall-mode.js');
+
+  const modKey = mod.match(/const WALL_KEY = '([^']+)'/)?.[1];
+  assert.equal(modKey, 'yuvomi-wall-mode', 'der Schluessel steht in wall-mode.js');
+  assert.ok(init.includes(`'${modKey}'`), `theme-init.js liest denselben Schluessel (${modKey})`);
+
+  const from = Number(mod.match(/export const WALL_NIGHT_FROM = (\d+)/)?.[1]);
+  const to = Number(mod.match(/export const WALL_NIGHT_TO = (\d+)/)?.[1]);
+  assert.equal(from, 22);
+  assert.equal(to, 6);
+
+  const initWindow = init.match(/hour >= (\d+) \|\| hour < (\d+)/);
+  assert.ok(initWindow, 'theme-init.js traegt ein Nachtfenster');
+  assert.equal(Number(initWindow[1]), from, 'dieselbe Nachtgrenze wie wall-mode.js');
+  assert.equal(Number(initWindow[2]), to, 'dieselbe Morgengrenze wie wall-mode.js');
+
+  // Und die Route: der Modus ist ein Zustand des Dashboards, kein zweiter Ort.
+  assert.match(mod, /export function isWallRoute\(path\) \{\s*return path === '\/';/);
+  assert.ok(init.includes("location.pathname !== '/'"), 'theme-init.js kennt dieselbe Route');
+});

@@ -3130,3 +3130,591 @@ svg.weather-forecast__icon {
     font-size: var(--type-secondary);
   }
 }
+
+/* --------------------------------------------------------
+ * Wand-Modus (Block D)
+ *
+ * DER WACHE ZUSTAND DES DASHBOARDS - keine zweite Seite, sondern dieselbe
+ * Fläche in anderer Gangart. Gelesen wird sie aus zwei Metern und ohne
+ * Berührung; alles hier folgt aus diesem einen Satz.
+ *
+ * ZWEI SKALEN, ZWEI GRÜNDE. Die Uhr wird von der BREITE begrenzt (sie ist eine
+ * einzelne lange Ziffernfolge), also steht bei ihr `vw`. Alles andere hängt an
+ * `vmin`, und das ist eine Messung, keine Vorliebe: mit `vh` wurden die Zeilen
+ * auf einem Tablet im HOCHFORMAT (768x1024) größer, weil dort Höhe reichlich
+ * ist - und liefen dann seitlich in die Enge und unten aus dem Bild. `vmin`
+ * bindet die Größe an die knappe Seite und hält beide Lagen im Schirm. An einer
+ * Wand kann niemand scrollen, das Bild muss passen.
+ *
+ * Die Enden sind in beiden Fällen Tokens: die 48/72px-Display-Stufen bekommen
+ * hier die Rolle, für die docs/SPEC.md sie ausdrücklich reserviert hat, und die
+ * sie heute nirgends sonst hat.
+ *
+ * DIE ANTI-REFERENZ ist die „Smart-Home-Dashboard"-Optik (Kacheln voller
+ * Messwerte, Ringe, Sensorwerte ohne Anlass). Deshalb gibt es hier genau EINEN
+ * gefüllten Träger - die Programmliste - und sonst Inhalt auf der Bühne.
+ * -------------------------------------------------------- */
+
+/* Die Shell tritt ab. Sidebar und Tab-Leiste sind Arm-Längen-Möbel; auf zwei
+ * Metern sind sie siebzehn unleserliche Ziele. Die Regeln stehen bewusst hier
+ * und nicht in layout.css: der Modus existiert nur auf der Dashboard-Route, und
+ * dashboard.css ist genau das Stylesheet, das nur dort geladen wird. */
+[data-wall-mode] .nav-sidebar,
+[data-wall-mode] .nav-bottom {
+  display: none;
+}
+
+[data-wall-mode] .app-content {
+  margin-left: 0;
+}
+
+/* Auch die Installations-Einladung tritt ab. Sie ist eine Aufforderung auf
+ * Arm-Länge und legt sich sonst über die ruhige Fläche - auf einer Anzeige, die
+ * niemand bedient, ist das die lauteste Karte im Bild. Sie erscheint auf jeder
+ * anderen Route weiter. */
+[data-wall-mode] yuvomi-install-prompt {
+  display: none;
+}
+
+.dashboard--wall {
+  padding: 0;
+  margin: 0;
+  max-width: none;
+}
+
+.dashboard--wall .dashboard-shell {
+  display: block;
+  gap: 0;
+}
+
+.wall {
+  /* Die Distanz-Skala der Fläche - einmal hier, nirgends als Einzelwert. */
+  --wall-clock:      clamp(var(--text-5xl), 9vw, var(--text-6xl));
+  --wall-clock-date: clamp(var(--text-xl), 2.6vw, var(--text-4xl));
+  --wall-section:    clamp(var(--text-base), 1.6vw, var(--text-xl));
+  --wall-row-title:  clamp(var(--text-xl), 4vmin, var(--text-4xl));
+  --wall-row-sub:    clamp(var(--text-sm), 2.2vmin, var(--text-2xl));
+  --wall-pad:        clamp(var(--space-4), 3vmin, var(--space-10));
+
+  display: flex;
+  flex-direction: column;
+  gap: clamp(var(--space-4), 3vmin, var(--space-8));
+  min-height: 100dvh;
+  padding: var(--wall-pad);
+  background: var(--color-bg);
+  /* Container statt Viewport-Breakpoint (Token-Doktrin §11c): die Fläche fragt
+   * ihren EIGENEN Platz, nicht den des Fensters.
+   *
+   * ER STEHT HIER UND NICHT AN `.wall__stage` SELBST, und das ist keine
+   * Geschmacksfrage: ein Element kann seinen eigenen Container nicht abfragen -
+   * `@container` sucht immer einen VORFAHREN. Mit der Deklaration an der Bühne
+   * blieb die Regel darunter wirkungslos und die Wand einspaltig, bei jeder
+   * Breite und ohne Fehlermeldung. */
+  container: wall / inline-size;
+}
+
+/* ── Der Anker: Uhrzeit und Datum ── */
+/* Die Uhr ist im Wand-Modus keine Kachel im Raster, sondern der Kopf der
+ * Fläche: kein Surface, kein Rahmen, linksbündig wie jeder Seitenkopf. Ihre
+ * IDs bleiben die des Widgets - der Minutentakt kennt nur einen Ort. */
+.clock-widget--wall {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: var(--space-1);
+  padding: 0;
+  text-align: left;
+}
+
+.clock-widget--wall .clock-widget__time {
+  font-size: var(--wall-clock);
+  font-weight: var(--font-weight-bold);
+}
+
+.clock-widget--wall .clock-widget__date {
+  font-size: var(--wall-clock-date);
+  color: var(--color-text-secondary);
+}
+
+/* ── Bühne: Programm links, „Wer" und Wetter rechts ── */
+.wall__stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(var(--space-4), 2.5vw, var(--space-10));
+  flex: 1;
+  min-height: 0;
+  align-content: start;
+}
+
+/* Ab dieser Breite trägt die Fläche zwei Spalten: Programm links (die Zeilen
+ * brauchen Lauflänge), „Wer" und Wetter rechts. Ein neuer Viewport-Breakpoint
+ * wäre ein fünfter neben den vier verbindlichen - deshalb Container. */
+@container wall (min-width: 768px) {
+  .wall__stage:not(.wall__stage--single) {
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  }
+}
+
+/* DER NEBENRAUM DREHT SICH MIT DER BÜHNE.
+ *
+ * Steht die Bühne zweispaltig, ist der Nebenraum die schmale Spalte rechts und
+ * stapelt „Wer" über „Wetter". Steht sie einspaltig (Hochformat), stapelten die
+ * beiden untereinander UNTER dem Programm - und schoben Datenstand und Ausstieg
+ * um 59px aus dem Bild (gemessen auf 768x1024). Dann stehen sie
+ * nebeneinander: dieselbe Information, die Höhe des größeren statt der Summe.
+ * Nur auf sehr schmalen Flächen bleibt gestapelt, dort ist eine halbe Spalte
+ * keine Spalte mehr. */
+.wall__aside {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(var(--space-4), 3vmin, var(--space-8));
+  min-width: 0;
+  align-content: start;
+}
+
+@container wall (min-width: 520px) {
+  .wall__aside {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container wall (min-width: 768px) {
+  .wall__aside {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.wall__section-title {
+  margin: 0 0 var(--space-3);
+  font-size: var(--wall-section);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-snug);
+  color: var(--color-text-secondary);
+}
+
+/* ── Das Tagesprogramm ── */
+/* Zeilenliste in EINEM Träger, getrennt per Haarlinie über den +-Kombinator -
+ * dieselbe Grammatik wie das Cockpit, nur in Distanzgröße. */
+.wall-program__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: var(--color-surface);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.wall-row {
+  --wall-row-accent: var(--module-accent);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: clamp(var(--space-3), 1.6vmin, var(--space-5));
+  padding: clamp(var(--space-2), 1.4vmin, var(--space-4)) clamp(var(--space-4), 2vw, var(--space-6));
+}
+
+.wall-row + .wall-row {
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.wall-row__seal {
+  --seal-accent: var(--wall-row-accent);
+  --seal-icon: var(--icon-xl);
+  width: var(--target-lg);
+  height: var(--target-lg);
+}
+
+.wall-row__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0h);
+  min-width: 0;
+}
+
+/* EINE ZEILE, NICHT ZWEI. Auf zwei Metern erkennt man einen Eintrag an seinem
+ * Anfang; ein Umbruch kostet dagegen die Höhe einer ganzen weiteren Zeile, und
+ * die Fläche hat genau sechs davon, bevor sie scrollen müsste - was sie an
+ * einer Wand nicht kann. */
+.wall-row__title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  overflow: hidden;
+  font-size: var(--wall-row-title);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-snug);
+  letter-spacing: var(--tracking-tight);
+  color: var(--color-text-primary);
+}
+
+/* Auf einer Fläche, die schmaler ist als jedes Wandtablet - jemand hat den
+ * Schalter auf dem Telefon erwischt -, ist eine Zeile zu wenig: dort stand
+ * „Rechnung Stadtwerke…". Die Höhenrechnung oben gilt für die Wand, und dort
+ * greift diese Regel nie. */
+@container wall (max-width: 519px) {
+  .wall-row__title {
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+}
+
+.wall-row__sub {
+  font-size: var(--wall-row-sub);
+  line-height: var(--line-height-tight);
+  color: var(--color-text-secondary);
+}
+
+.wall-row__time {
+  font-size: var(--wall-row-sub);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--color-text-secondary);
+}
+
+.wall-row__time--overdue {
+  color: var(--color-danger-ink);
+  font-weight: var(--font-weight-semibold);
+}
+
+.wall-row--task     { --wall-row-accent: var(--module-tasks); }
+.wall-row--event    { --wall-row-accent: var(--module-calendar); }
+.wall-row--shopping { --wall-row-accent: var(--module-shopping); }
+.wall-row--dinner   { --wall-row-accent: var(--module-meals); }
+
+/* Überlauf („+N weitere") und Coda („danach nichts mehr") sprechen als eine
+ * ruhige Fußzeile UNTER dem Träger - sie erzählen zu Ende, sie sind keine
+ * siebte Zeile. */
+.wall-program__foot {
+  margin: var(--space-3) 0 0;
+  font-size: var(--wall-row-sub);
+  color: var(--color-text-tertiary);
+}
+
+/* ── Wer heute dran ist ── */
+/* Gesichter, nicht Namenszeilen. Die Zahl am Rand sagt, wie viel von heute
+ * jemanden angeht; WAS es ist, steht links im Programm und wird hier bewusst
+ * nicht wiederholt. */
+.wall-who__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(4.5rem, 1fr));
+  gap: var(--space-4) var(--space-2);
+}
+
+.wall-who__member {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+  text-align: center;
+}
+
+.wall-who__mark {
+  position: relative;
+  display: inline-flex;
+}
+
+.wall-who__avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: clamp(var(--target-lg), 6vmin, var(--space-16));
+  aspect-ratio: 1;
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  font-size: var(--wall-row-sub);
+  font-weight: var(--font-weight-semibold);
+}
+
+.wall-who__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Der Zähler ist auf Distanz gebaut, nicht als Mikro-Badge: eine 13px-Marke
+ * an einem 56px-Gesicht wäre aus zwei Metern reine Dekoration. Er liegt auf
+ * Surface mit Kante, weil er auf der Bühne steht (1,18:1 ohne Kante). */
+.wall-who__count {
+  position: absolute;
+  inset-block-start: calc(var(--space-1) * -1);
+  inset-inline-end: calc(var(--space-2) * -1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--space-8);
+  padding: 0 var(--space-1);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font-size: var(--wall-row-sub);
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--line-height-base);
+}
+
+.wall-who__name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--wall-row-sub);
+  color: var(--color-text-secondary);
+}
+
+.wall-who__more,
+.wall-who__none {
+  margin: var(--space-2) 0 0;
+  font-size: var(--wall-row-sub);
+  color: var(--color-text-tertiary);
+}
+
+/* ── Wetter ── */
+.wall-weather__now {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.wall-weather__icon {
+  flex-shrink: 0;
+  width: clamp(var(--icon-xl), 5vmin, var(--space-16));
+  height: clamp(var(--icon-xl), 5vmin, var(--space-16));
+  color: var(--color-text-secondary);
+}
+
+.wall-weather__body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.wall-weather__temp {
+  font-size: var(--wall-row-title);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-snug);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--tracking-tight);
+  color: var(--color-text-primary);
+}
+
+.wall-weather__desc {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--wall-row-sub);
+  color: var(--color-text-secondary);
+}
+
+.wall-weather__forecast {
+  list-style: none;
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.wall-weather__day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.wall-weather__day-label {
+  font-size: var(--wall-row-sub);
+  color: var(--color-text-secondary);
+}
+
+.wall-weather__day-icon {
+  width: var(--icon-xl);
+  height: var(--icon-xl);
+  color: var(--color-text-secondary);
+}
+
+.wall-weather__day-temps {
+  display: flex;
+  gap: var(--space-1);
+  font-size: var(--wall-row-sub);
+  font-variant-numeric: tabular-nums;
+}
+
+.wall-weather__day-high {
+  color: var(--color-text-primary);
+}
+
+.wall-weather__day-low {
+  color: var(--color-text-tertiary);
+}
+
+/* ── Ladefehler ── */
+/* Er muss aus zwei Metern als Fehler zu erkennen sein und trägt deshalb keinen
+ * Retry-Knopf: den drückt an der Wand niemand. Die Fläche versucht es im Takt
+ * von WALL_HEAL_MS selbst weiter - der Satz darunter sagt das zu. */
+.wall__error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-10) var(--space-4);
+  text-align: center;
+}
+
+.wall__error-icon {
+  width: clamp(var(--icon-xl), 6vmin, var(--space-16));
+  height: clamp(var(--icon-xl), 6vmin, var(--space-16));
+  color: var(--color-text-tertiary);
+}
+
+.wall__error-title {
+  margin: 0;
+  font-size: var(--wall-row-title);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.wall__error-sub {
+  margin: 0;
+  font-size: var(--wall-row-sub);
+  color: var(--color-text-secondary);
+}
+
+.wall__loading {
+  min-height: 40vh;
+}
+
+/* ── Fuß: Datenstand und der leise Ausstieg ── */
+.wall__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+/* Woher man weiß, dass die Fläche lebt: eine absolute Uhrzeit, keine
+ * „vor 3 Minuten"-Angabe, die einen zweiten Timer bräuchte. */
+.wall__updated {
+  margin: 0;
+  min-height: 1em;
+  font-size: var(--type-caption);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-tertiary);
+}
+
+/* LEISE DA, HELL AUF BERÜHRUNG. Ein dauerhaft voller Knopf widerspräche der
+ * ruhigen Fläche, ein unsichtbarer wäre eine Falle. Im Ruhezustand steht
+ * deshalb nur das Zeichen da - in Sekundärfarbe, also weiterhin AA und
+ * weiterhin fokussierbar. Jede Berührung setzt `data-wall-awake` und hebt ihn
+ * für sechs Sekunden auf die volle Kapsel samt Beschriftung.
+ *
+ * Die Beschriftung wird ein- und ausgeblendet, nicht animiert: eine Breiten-
+ * Transition wäre eine Layout-Animation für einen Zustand, den ohnehin niemand
+ * beobachtet, der zwei Meter entfernt steht. Bewegt wird nur Farbe. */
+.wall__exit {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--target-lg);
+  padding: 0 var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: var(--type-secondary);
+  cursor: pointer;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.wall__exit svg {
+  width: var(--icon-lg);
+  height: var(--icon-lg);
+  flex-shrink: 0;
+}
+
+.wall__exit-label {
+  display: none;
+}
+
+.wall__exit:hover,
+.wall__exit:focus-visible,
+.wall[data-wall-awake] .wall__exit {
+  padding: 0 var(--space-4);
+  border-color: var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+}
+
+.wall__exit:hover .wall__exit-label,
+.wall__exit:focus-visible .wall__exit-label,
+.wall[data-wall-awake] .wall__exit-label {
+  display: inline;
+}
+
+.wall__exit:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+/* ── Nachtabsenkung (22:00 bis 06:00) ──
+ *
+ * Das Tablet hängt im Flur und leuchtet um drei. Das Problem ist die
+ * LEUCHTDICHTE, nicht der Farbmodus - ein dunkles Theme leuchtet immer noch.
+ * Die Absenkung macht deshalb zweierlei: der dunkle Grund wird erzwungen
+ * (`data-theme="dark"` an der Wurzel, ohne die Theme-Wahl zu überschreiben -
+ * utils/wall-mode.js), und die HELLE FLÄCHE VERSCHWINDET: der einzige gefüllte
+ * Träger der Seite wird zur Kante, die Tinte geht eine Stufe zurück. Beides
+ * bleibt AA - die Stufen sind gegen ihren echten Grund geeicht (tokens.css).
+ * Was NICHT passiert: nichts wird versteckt. Wer um 06:05 vorbeigeht, liest
+ * dieselbe Fläche wie um 18:00, nur leiser. */
+[data-wall-night] .wall-program__list {
+  background: transparent;
+  box-shadow: none;
+  border: 1px solid var(--color-border-subtle);
+}
+
+[data-wall-night] .wall-row__seal {
+  --seal-base: var(--color-bg);
+}
+
+[data-wall-night] .clock-widget--wall .clock-widget__time {
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-secondary);
+}
+
+[data-wall-night] .wall-row__title,
+[data-wall-night] .wall-weather__temp,
+[data-wall-night] .wall-weather__day-high {
+  color: var(--color-text-secondary);
+}
+
+[data-wall-night] .wall-row__sub,
+[data-wall-night] .wall-row__time,
+[data-wall-night] .clock-widget--wall .clock-widget__date,
+[data-wall-night] .wall-who__name,
+[data-wall-night] .wall-weather__desc,
+[data-wall-night] .wall-weather__day-label {
+  color: var(--color-text-tertiary);
+}
+
+/* HIER STAND `background: transparent` FÜR DEN ZÄHLER - eine Absenkung zu viel.
+ * Ohne seinen Grund lag die Ziffer direkt auf der gesättigten Avatarfarbe und
+ * war nachts nicht mehr zu lesen; die Kante blieb als Ring darüber stehen. Der
+ * Zähler behält seinen Surface-Grund: seine Fläche ist ein Kreis von 32px, die
+ * Absenkung holt ihr Licht aus dem Träger der Programmliste, nicht von hier. */
+
+@media (prefers-reduced-motion: reduce) {
+  .wall__exit {
+    transition: none;
+  }
+}

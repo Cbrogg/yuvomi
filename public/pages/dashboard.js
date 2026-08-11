@@ -17,6 +17,7 @@ import { openModal, closeModal, confirmModal } from '/components/modal.js';
 import { renderAvatarStack } from '/components/user-multi-select.js';
 import { isSoloHousehold } from '/utils/household.js';
 import { whoMark } from '/utils/seal-pair.js';
+import { exitWallMode, isWallActive, syncWallMode } from '/utils/wall-mode.js';
 
 // Hält den AbortController des aktuellen FAB-Listeners - wird bei jedem render() erneuert.
 let _fabController = null;
@@ -1488,7 +1489,21 @@ function renderTodayStateRow({ title, sub, icon, route }) {
 // sondern eine zweite Aufgabenliste. Der Überlauf spricht als stille Fußzeile.
 const PROGRAM_ROW_CAP = 6;
 
-function renderTodayCockpit(data, cfg = []) {
+/**
+ * DAS TAGESPROGRAMM ALS MODELL, EINMAL FUER ZWEI FLAECHEN.
+ *
+ * Es gibt zwei Darstellungen desselben Tages: das Cockpit im normalen
+ * Dashboard (Arm-Laenge, bedienbar) und die Wand (zwei Meter, reine Anzeige).
+ * Was auf beiden STEHT, ist dieselbe Frage - Deckel, Ausblick, Einkaufszeile,
+ * Coda. Zwei Renderer, die diese Regeln je eigenstaendig noch einmal
+ * formulieren, waeren die zweite Wahrheit, gegen die der Wand-Modus als
+ * Zustand statt als Route gebaut ist. Deshalb steht die Antwort hier und die
+ * Form dort.
+ *
+ * @returns {{rows: object[], overflow: number, state: object|null,
+ *            shopping: object|null, coda: string|null}}
+ */
+function buildTodayCockpitModel(data, cfg = [], { cap = PROGRAM_ROW_CAP } = {}) {
   // Kein Echo: ist das Modul-Widget einer Domäne sichtbar, entfallen ihre
   // Programm-Zeilen — jede Domäne hat genau eine Repräsentation (Cockpit ODER
   // Widget), statt dieselbe Aufgabe/Termin doppelt zu zeigen.
@@ -1501,13 +1516,8 @@ function renderTodayCockpit(data, cfg = []) {
   const includeShopping = domainInCockpit('shopping');
 
   const program = buildTodayProgram(data, { includeTasks, includeCalendar, includeMeals });
-  const visibleRows = program.rows.slice(0, PROGRAM_ROW_CAP);
+  const visibleRows = program.rows.slice(0, cap);
   const overflow = program.rows.length - visibleRows.length;
-
-  const parts = visibleRows.map(renderTodayRow);
-  if (overflow > 0) {
-    parts.push(`<div class="today-cockpit__more">${esc(t('dashboard.todayMore', { count: overflow }))}</div>`);
-  }
 
   // Ausblick über heute hinaus: das chronologisch Nächste aus Termin UND
   // fälliger Aufgabe - die Beruhigung darf nicht um Mitternacht enden
@@ -1550,32 +1560,33 @@ function renderTodayCockpit(data, cfg = []) {
   // mit dem Ausblick als beruhigendem Untertitel. Beides nur, wenn die
   // tragende Domäne überhaupt im Cockpit spricht: neben einem sichtbaren
   // Kalender-Widget wäre „Heute frei" eine fremde Behauptung.
+  let state = null;
   if (!program.rows.length) {
     const sayAllDone = includeTasks && program.tasksDoneToday > 0;
     if (sayAllDone || includeCalendar) {
-      parts.unshift(renderTodayStateRow({
+      state = {
         title: sayAllDone ? t('dashboard.todayAllDone') : t('dashboard.todayFree'),
         sub: outlook?.sub ?? '',
         icon: sayAllDone ? 'check-circle' : 'sparkles',
         route: outlook?.route ?? null,
-      }));
+      };
     }
   }
 
   // Einkauf bleibt die zeitlose Schlusszeile - nur wenn etwas offen ist.
-  if (includeShopping && program.openShoppingCount > 0) {
-    parts.push(renderTodayRow({
-      kind: 'shopping',
-      objectId: null,
-      timeLabel: '',
-      title: t('dashboard.todayShoppingCount', { count: program.openShoppingCount }),
-      sub: t('dashboard.todayShopping'),
-      icon: 'shopping-cart',
-      tone: 'shopping',
-      route: '/shopping',
-      who: null,
-    }));
-  }
+  const shopping = includeShopping && program.openShoppingCount > 0
+    ? {
+        kind: 'shopping',
+        objectId: null,
+        timeLabel: '',
+        title: t('dashboard.todayShoppingCount', { count: program.openShoppingCount }),
+        sub: t('dashboard.todayShopping'),
+        icon: 'shopping-cart',
+        tone: 'shopping',
+        route: '/shopping',
+        who: null,
+      }
+    : null;
 
   // Abschluss-Zeile (Peak-End): das beruhigende „danach nichts mehr" - aber nur,
   // wenn das Programm wirklich vollständig ist. Neben „+N weitere" wäre sie
@@ -1583,13 +1594,33 @@ function renderTodayCockpit(data, cfg = []) {
   // eine Aufgabe fällig, sagt die Coda es dazu - sonst wäre „nichts mehr" um
   // 21 Uhr eine falsche Entwarnung (Critique P3). Nur morgen, nicht später:
   // eine Frist in drei Tagen ist keine Falle.
+  let coda = null;
   if (program.rows.length > 0 && overflow === 0) {
     const tomorrowKey = addLocalDays(toLocalDateKey(new Date()), 1);
     const tomorrowTask = includeTasks && program.nextDueTask?.due_date === tomorrowKey ? program.nextDueTask : null;
-    parts.push(`<div class="today-cockpit__coda">${esc(tomorrowTask
+    coda = tomorrowTask
       ? t('dashboard.todayNothingElseTomorrow', { title: tomorrowTask.title })
-      : t('dashboard.todayNothingElse'))}</div>`);
+      : t('dashboard.todayNothingElse');
   }
+
+  // `allRows` ist NICHT dasselbe wie `rows`: der Deckel entscheidet, was zu
+  // SEHEN ist, nicht, was heute ansteht. „Wer heute dran ist" zaehlt ueber den
+  // ganzen Tag - sonst verschwaende jemand aus der Antwort, nur weil seine
+  // Zeilen hinter dem Deckel liegen.
+  return { rows: visibleRows, allRows: program.rows, overflow, state, shopping, coda };
+}
+
+function renderTodayCockpit(data, cfg = []) {
+  const model = buildTodayCockpitModel(data, cfg);
+
+  const parts = [];
+  if (model.state) parts.push(renderTodayStateRow(model.state));
+  parts.push(...model.rows.map(renderTodayRow));
+  if (model.overflow > 0) {
+    parts.push(`<div class="today-cockpit__more">${esc(t('dashboard.todayMore', { count: model.overflow }))}</div>`);
+  }
+  if (model.shopping) parts.push(renderTodayRow(model.shopping));
+  if (model.coda) parts.push(`<div class="today-cockpit__coda">${esc(model.coda)}</div>`);
 
   // Deckt der Nutzer alle vier Domänen über Widgets ab, wäre das Cockpit leer —
   // dann entfällt der ganze Abschnitt statt einer leeren Kopfzeile.
@@ -2055,10 +2086,17 @@ function clockWidgetParts(now = new Date()) {
   };
 }
 
-function renderClockWidget() {
+/**
+ * @param {{wall?: boolean}} [options] `wall` nimmt der Uhr die Kachel: im
+ *   Wand-Modus ist sie keine Kachel im Raster, sondern der Anker der Flaeche.
+ *   Ihre IDs bleiben dieselben - der Minutentakt (`updateClockWidget`) findet
+ *   sie so in beiden Zustaenden, statt ein zweites Mal geschrieben zu werden.
+ */
+function renderClockWidget({ wall = false } = {}) {
   const { time, date, machineTime } = clockWidgetParts();
+  const cls = wall ? 'clock-widget clock-widget--wall' : 'widget widget--clock clock-widget';
   return `
-    <div class="widget widget--clock clock-widget" id="clock-widget">
+    <div class="${cls}" id="clock-widget">
       <time class="clock-widget__time" id="clock-widget-time" datetime="${esc(machineTime)}">${esc(time)}</time>
       <p class="clock-widget__date" id="clock-widget-date">${esc(date)}</p>
     </div>`;
@@ -2084,11 +2122,12 @@ function updateClockWidget(container) {
   if (dateEl) dateEl.textContent = date;
 }
 
-function startClockTicker(container, signal) {
+function startClockTicker(container, signal, onTick = null) {
   let timerId = null;
 
   const tick = () => {
     updateClockWidget(container);
+    onTick?.();
     schedule();
   };
 
@@ -2100,6 +2139,307 @@ function startClockTicker(container, signal) {
 
   schedule();
   signal.addEventListener('abort', () => clearTimeout(timerId));
+}
+
+// --------------------------------------------------------
+// Wand-Modus (Block D)
+// --------------------------------------------------------
+
+/* DER WACHE ZUSTAND.
+ *
+ * Was hier gebaut wird, ist eine ANZEIGE, kein Werkzeug: ein Familienmitglied
+ * geht am Flurtablet vorbei und will in zwei bis drei Sekunden aus zwei Metern
+ * wissen, was heute noch ansteht - ohne das Geraet zu beruehren. Der Nachweis
+ * ist Lesbarkeit auf Distanz, nicht Funktionsumfang.
+ *
+ * DESHALB SIND DIE ZEILEN KEINE LINKS. Der Modus ist ein Read-Zustand: waeren
+ * die Zeilen beruehrbar, braeuchten sie Distanz-Zielgroessen weit ueber 44px
+ * und fuehrten in Ansichten, die auf Arm-Laenge gebaut sind. Wer wirklich etwas
+ * tun will, ist einen Tap vom normalen Dashboard entfernt. Der einzige
+ * Bedienpunkt der ganzen Flaeche ist der Ausstieg.
+ *
+ * DIE VIER DINGE, IN DIESER RANGFOLGE: Uhrzeit gross (der Anker, aus dem die
+ * 48/72px-Display-Stufen aus tokens.css endlich ihre Rolle bekommen - laut
+ * docs/SPEC.md existieren sie ausdruecklich nur dafuer), das Tagesprogramm, wer
+ * heute dran ist, das Wetter. Die Anti-Referenz ist die
+ * „Smart-Home-Dashboard"-Optik: Kacheln voller Messwerte, Ringdiagramme,
+ * Sensorwerte ohne Anlass - das waere das ueberlastete Feature-Dashboard aus
+ * PRODUCT.md, nur in gross. */
+
+/** Nach diesem Takt versucht die Wand einen Ladefehler von selbst zu heilen. */
+const WALL_HEAL_MS = 60_000;
+/** So lange bleibt der Ausstieg nach einer Beruehrung hell. */
+const WALL_AWAKE_MS = 6000;
+/** So viele Gesichter zeigt „Wer heute dran ist", der Rest spricht als Zahl. */
+const WALL_WHO_CAP = 6;
+
+/* DER DECKEL DER WAND IST KLEINER ALS DER DES COCKPITS - GEMESSEN, NICHT GERATEN.
+ *
+ * Das Cockpit zeigt sechs Zeilen auf Arm-Laenge. In Distanzgroesse ist eine
+ * Zeile rund 88px hoch; mit Uhr, Abschnittskopf, Fusszeile und der zeitlosen
+ * Einkaufszeile ergaben sechs davon 892px - auf dem kleinsten realistischen
+ * Wandtablet (1280x800) lief die Flaeche unten aus dem Bild, samt Ausstieg.
+ * Eine Wand kann nicht scrollen, also muss das Bild passen.
+ *
+ * Vier ist deshalb kein zweiter Deckel neben `PROGRAM_ROW_CAP`, sondern
+ * derselbe Mechanismus mit dem Wert, der auf DIESE Flaeche passt - und der
+ * Ueberlauf luegt nicht: „+N weitere heute" steht darunter und zaehlt aus
+ * demselben Modell. Wer aus zwei Metern mehr als vier Zeilen liest, liest
+ * ohnehin nicht mehr im Vorbeigehen, sondern arbeitet eine Liste ab - und
+ * dafuer gibt es das Dashboard. */
+const WALL_ROW_CAP = 4;
+
+/** Eine Programmzeile als reiner Text - kein href, kein data-route, kein Modal. */
+function renderWallRow(row) {
+  const time = row.timeLabel
+    ? `<span class="wall-row__time${row.overdue ? ' wall-row__time--overdue' : ''}">${esc(row.timeLabel)}</span>`
+    : '';
+  return `
+    <li class="wall-row wall-row--${esc(row.tone)}">
+      <span class="module-seal wall-row__seal"><i data-lucide="${esc(row.icon)}" aria-hidden="true"></i></span>
+      <span class="wall-row__body">
+        <span class="wall-row__title">${esc(row.title)}</span>
+        <span class="wall-row__sub">${esc(row.sub)}</span>
+      </span>
+      ${time}
+    </li>`;
+}
+
+/**
+ * Das Tagesprogramm in Distanzgroesse. Dieselben Zeilen, derselbe Deckel,
+ * dieselbe Coda wie im Cockpit - nur ohne Bedienung.
+ */
+function renderWallProgram(model) {
+  const parts = [];
+  if (model.state) {
+    // Ein leerer Tag muss auf Distanz sprechen: eine leere Flaeche liest sich
+    // aus zwei Metern wie ein Defekt, nicht wie Ruhe.
+    parts.push(`
+      <li class="wall-row wall-row--state">
+        <span class="module-seal wall-row__seal"><i data-lucide="${esc(model.state.icon)}" aria-hidden="true"></i></span>
+        <span class="wall-row__body">
+          <span class="wall-row__title">${esc(model.state.title)}</span>
+          ${model.state.sub ? `<span class="wall-row__sub">${esc(model.state.sub)}</span>` : ''}
+        </span>
+      </li>`);
+  }
+  parts.push(...model.rows.map(renderWallRow));
+  if (model.shopping) parts.push(renderWallRow(model.shopping));
+
+  const foot = model.overflow > 0
+    ? t('dashboard.todayMore', { count: model.overflow })
+    : model.coda;
+
+  return `
+    <section class="wall__program" aria-labelledby="wall-program-title">
+      <h2 class="wall__section-title" id="wall-program-title">${esc(t('dashboard.todayTitle'))}</h2>
+      <ol class="wall-program__list">${parts.join('')}</ol>
+      ${foot ? `<p class="wall-program__foot">${esc(foot)}</p>` : ''}
+    </section>`;
+}
+
+/**
+ * „Wer heute dran ist" - Gesichter statt Namenszeilen: aus zwei Metern erkennt
+ * man ein Gesicht schneller als eine Textzeile.
+ *
+ * DIE ZAHL IST DIE GANZE AUSKUNFT, und zwar bewusst. Die Zeile daneben stuende
+ * schon im Programm links; sie hier zu wiederholen waere ein Echo derselben
+ * Tatsache. Das Programm sagt WAS, dieser Abschnitt sagt WER und WIE VIEL.
+ *
+ * Im Solo-Haushalt entfaellt er still - dieselbe Regel wie beim
+ * Ueberlappungszeichen und beim Familien-Widget: was nur eine sinnvolle
+ * Belegung hat, wird nicht gezeigt.
+ *
+ * NUR DER VORNAME unter dem Gesicht: „Linda Johnson" passt in keine Spalte
+ * dieser Breite und stand als „Linda Jo…" da - ein abgeschnittener Name ist
+ * auf zwei Metern schlechter als gar keiner. Im eigenen Haushalt ist der
+ * Vorname ohnehin die Antwort.
+ */
+function renderWallWho(data, model) {
+  if (isSoloHousehold()) return '';
+  const users = Array.isArray(data?.users) ? data.users : [];
+  if (!users.length) return '';
+
+  const counts = new Map();
+  for (const row of model.allRows) {
+    const id = row.who?.id;
+    if (id == null) continue;
+    counts.set(id, (counts.get(id) ?? 0) + 1);
+  }
+
+  const onDuty = users
+    .filter((u) => counts.has(u.id))
+    .sort((a, b) => (counts.get(b.id) - counts.get(a.id)) || String(a.display_name).localeCompare(String(b.display_name)));
+
+  const shown = onDuty.slice(0, WALL_WHO_CAP);
+  const body = shown.length
+    ? `<ul class="wall-who__list">${shown.map((u) => {
+        const color = u.avatar_color || AVATAR_FALLBACK_COLOR;
+        const count = counts.get(u.id);
+        return `
+          <li class="wall-who__member">
+            <span class="wall-who__mark">
+              <span class="wall-who__avatar" style="background:${esc(color)};color:${getReadableTextColor(color)}">
+                ${u.avatar_data ? `<img src="${esc(u.avatar_data)}" alt="" loading="lazy">` : esc(initials(u.display_name))}
+              </span>
+              <span class="wall-who__count">
+                <span aria-hidden="true">${esc(String(count))}</span>
+                <span class="sr-only">${esc(t('dashboard.wallWhoCount', { count }))}</span>
+              </span>
+            </span>
+            <span class="wall-who__name">${esc(firstName(u.display_name))}</span>
+          </li>`;
+      }).join('')}</ul>${onDuty.length > shown.length
+        ? `<p class="wall-who__more">${esc(t('dashboard.shoppingMore', { count: onDuty.length - shown.length }))}</p>`
+        : ''}`
+    : `<p class="wall-who__none">${esc(t('dashboard.wallWhoNone'))}</p>`;
+
+  return `
+    <section class="wall__who" aria-labelledby="wall-who-title">
+      <h2 class="wall__section-title" id="wall-who-title">${esc(t('dashboard.wallWho'))}</h2>
+      ${body}
+    </section>`;
+}
+
+/**
+ * Wetter mit Vorhersage - dieselben Bausteine wie Karte und Masthead-Zeile,
+ * ohne den Aktualisieren-Knopf: den drueckt am Wandtablet niemand, und ein
+ * Bedienelement in einer reinen Anzeige waere ein falsches Versprechen.
+ */
+function renderWallWeather(weather) {
+  if (!weather?.current) return '';
+  const { city, current, forecast, units } = weather;
+  const desc = weatherDescText(weather, current.desc);
+  const days = (Array.isArray(forecast) ? forecast : []).slice(0, 4).map((d) => {
+    const date = new Date(`${d.date}T12:00:00`);
+    const label = new Intl.DateTimeFormat(getLocale(), { weekday: 'short' }).format(date);
+    return `
+      <li class="wall-weather__day">
+        <span class="wall-weather__day-label">${esc(label)}</span>
+        ${weatherIconHtml(weather, d.icon, 'wall-weather__day-icon', 32, weatherDescText(weather, d.desc))}
+        <span class="wall-weather__day-temps">
+          <span class="wall-weather__day-high">${esc(String(d.temp_max))}°</span>
+          <span class="wall-weather__day-low">${esc(String(d.temp_min))}°</span>
+        </span>
+      </li>`;
+  }).join('');
+
+  return `
+    <section class="wall__weather" aria-labelledby="wall-weather-title">
+      <h2 class="wall__section-title" id="wall-weather-title">${esc(t('dashboard.weather'))}</h2>
+      <div class="wall-weather__now">
+        ${weatherIconHtml(weather, current.icon, 'wall-weather__icon', 64, desc)}
+        <span class="wall-weather__body">
+          <span class="wall-weather__temp">${esc(String(current.temp))}${weatherUnitSymbol(units)}</span>
+          <span class="wall-weather__desc">${esc(desc)}${city ? ` · ${esc(city)}` : ''}</span>
+        </span>
+      </div>
+      ${days ? `<ol class="wall-weather__forecast">${days}</ol>` : ''}
+    </section>`;
+}
+
+/**
+ * Der Ladefehler in Wand-Fassung.
+ *
+ * Der bestehende Fehlerzustand ist auf Arm-Laenge gebaut und traegt einen
+ * Retry-Knopf - am Wandtablet drueckt den niemand. Hier steht deshalb ein Satz,
+ * den man aus zwei Metern als Fehler erkennt, plus die Zusage, dass die Flaeche
+ * es von selbst weiter versucht (der Takt dazu steht in `render`). Die Uhr
+ * bleibt daneben stehen: sie braucht kein Netz und ist der Beweis, dass das
+ * Geraet lebt und nur die Daten fehlen.
+ */
+function renderWallError() {
+  return `
+    <section class="wall__error" role="status">
+      <i data-lucide="cloud-off" class="wall__error-icon" aria-hidden="true"></i>
+      <p class="wall__error-title">${esc(t('dashboard.wallOffline'))}</p>
+      <p class="wall__error-sub">${esc(t('dashboard.wallOfflineHint'))}</p>
+    </section>`;
+}
+
+/**
+ * Die ganze Flaeche.
+ *
+ * DER AUSSTIEG IST LEISE DA, NICHT VERSTECKT. Ein sichtbarer Knopf
+ * widerspraeche der ruhigen Flaeche, ein unsichtbarer waere eine Falle - also
+ * steht er immer im DOM und ist immer per Tastatur erreichbar, traegt aber im
+ * Ruhezustand nur sein Zeichen. Jede Beruehrung hebt ihn fuer ein paar Sekunden
+ * auf die volle Kapsel samt Beschriftung (`data-wall-awake`, siehe
+ * `wireWallSurface`). Weil sonst nichts auf der Flaeche beruehrbar ist,
+ * kollidiert dieses Wecken mit nichts.
+ */
+function renderWallSurface(data, weather, { failed = false, loading = false, updatedAt = null } = {}) {
+  const model = failed || loading ? null : buildTodayCockpitModel(data, [], { cap: WALL_ROW_CAP });
+
+  let main;
+  if (failed) {
+    main = renderWallError();
+  } else if (loading) {
+    main = '<div class="wall__loading" aria-hidden="true"></div>';
+  } else {
+    const aside = `${renderWallWho(data, model)}${renderWallWeather(weather)}`;
+    main = `
+      ${renderWallProgram(model)}
+      ${aside ? `<div class="wall__aside">${aside}</div>` : ''}`;
+  }
+
+  const stamp = updatedAt
+    ? `<p class="wall__updated">${esc(t('dashboard.updatedAt', { time: formatTime(updatedAt) }))}</p>`
+    : '<p class="wall__updated"></p>';
+
+  return `
+    <div class="wall">
+      ${renderClockWidget({ wall: true })}
+      <div class="wall__stage${failed || loading ? ' wall__stage--single' : ''}">${main}</div>
+      <div class="wall__foot">
+        ${stamp}
+        <button type="button" class="wall__exit" id="wall-exit" aria-label="${esc(t('dashboard.wallExit'))}">
+          <i data-lucide="minimize-2" aria-hidden="true"></i>
+          <span class="wall__exit-label" aria-hidden="true">${esc(t('dashboard.wallExit'))}</span>
+        </button>
+      </div>
+    </div>`;
+}
+
+/**
+ * Verdrahtet die einzige Interaktion der Flaeche: den Ausstieg.
+ *
+ * Zwei Wege hinaus, und beide sind derselbe: der Knopf und die Escape-Taste.
+ * Das Wecken haengt an den Ereignissen, die auch der Screensaver hoert - es
+ * verbraucht sie aber nicht, sondern setzt nur ein Attribut.
+ */
+function wireWallSurface(container, rerender, signal) {
+  const wall = container.querySelector('.wall');
+  if (!wall) return;
+
+  let awakeTimer = null;
+  const wake = () => {
+    wall.setAttribute('data-wall-awake', '');
+    clearTimeout(awakeTimer);
+    awakeTimer = setTimeout(() => wall.removeAttribute('data-wall-awake'), WALL_AWAKE_MS);
+  };
+  for (const type of ['pointerdown', 'pointermove', 'keydown']) {
+    window.addEventListener(type, wake, { passive: true, signal });
+  }
+  signal.addEventListener('abort', () => clearTimeout(awakeTimer));
+
+  const leave = () => {
+    exitWallMode();
+    // Der Toast sagt, WO der Schalter sitzt - wer versehentlich aussteigt, soll
+    // nicht suchen muessen. Die beiden Namen kommen aus ihren eigenen
+    // Schluesseln statt aus dem Satz: sonst driftet die Wegbeschreibung, sobald
+    // das Blatt umbenannt wird.
+    window.yuvomi?.showToast(t('dashboard.wallExited', {
+      settings: t('nav.settings'),
+      page: t('settings.pageAppearance'),
+    }), 'success', 6000);
+    rerender();
+  };
+
+  container.querySelector('#wall-exit')?.addEventListener('click', leave, { signal });
+  window.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') leave();
+  }, { signal });
 }
 
 // --------------------------------------------------------
@@ -2382,14 +2722,20 @@ export async function render(container, { user }) {
   _fabController?.abort();
   _fabController = new AbortController();
 
+  // Der Wand-Modus ist ein Zustand DIESER Seite, kein zweiter Ort: die Route,
+  // die Daten, der stille Refresh und die Echo-Regel bleiben dieselben - nur
+  // Massstab, Dichte und Bedienbarkeit aendern sich. Ob er laeuft, hat der
+  // Router bereits an der Wurzel vermerkt (utils/wall-mode.js).
+  const wallMode = isWallActive();
+
   setHtml(container, `
-    <div class="dashboard">
+    <div class="dashboard${wallMode ? ' dashboard--wall' : ''}">
       <h1 class="sr-only">${t('dashboard.title')}</h1>
       <div class="dashboard-shell" id="dashboard-shell">
-        ${renderDashboardSkeleton()}
+        ${wallMode ? renderWallSurface(null, null, { loading: true }) : renderDashboardSkeleton()}
       </div>
     </div>
-    ${renderFab()}
+    ${wallMode ? '' : renderFab()}
   `);
 
   let data         = { upcomingEvents: [], urgentTasks: [], todayMeals: [], pinnedNotes: [], shoppingLists: [], birthdays: [], users: [], budget: {}, rewards: {}, health: {}, housekeeping: {} };
@@ -2650,6 +2996,12 @@ export async function render(container, { user }) {
   function rebuildDashboard(cfg) {
     const shell = container.querySelector('#dashboard-shell');
     if (!shell) return;
+    if (wallMode) {
+      setHtml(shell, renderWallSurface(data, weather, { failed: loadFailed, updatedAt: lastLoadedAt }));
+      if (window.lucide) window.lucide.createIcons({ el: shell });
+      wireWallSurface(container, rerender, _fabController.signal);
+      return;
+    }
     if (loadFailed) {
       setHtml(shell, `
         ${renderDashboardOverview(user, false)}
@@ -2703,16 +3055,33 @@ export async function render(container, { user }) {
 
   rebuildDashboard(widgetConfig);
 
-  if (loadFailed) {
+  if (wallMode || loadFailed) {
     // Kein FAB im Fehler-Zustand: seine Schnellaktionen würden in Module
     // navigieren, deren Daten gerade nicht geladen werden konnten — das würde
     // dem Fehler-Banner widersprechen. Retry stellt bei Erfolg alles her.
     // Dokumentweit, nicht im Container: die Gruppe kann zu diesem Zeitpunkt
     // schon in der Shell-Layer hängen (adoptPageFab, #634). Das Backdrop reist
     // als ihr Kind mit und braucht keine zweite Zeile.
+    //
+    // Und keiner im Wand-Modus: eine Anlege-Affordance in einer reinen Anzeige
+    // waere ein Versprechen, das die Flaeche nicht einloest. Er wird dort gar
+    // nicht erst gerendert; diese Zeile raeumt nur einen mit, den die Vorseite
+    // in der Shell-Layer zurueckgelassen haben koennte. Bewusst hier und nicht
+    // per CSS: eine Regel, die `.page-fab` auf `opacity: 0` oder
+    // `pointer-events: none` setzt, ist seit #634 verboten (Guard in
+    // test-frontend-audit.js).
     findPageFab('fab-main')?.closest('.page-fab-group')?.remove();
   } else {
     initFab(_fabController.signal);
+  }
+
+  // SELBSTHEILUNG STATT RETRY-KNOPF. Am Wandtablet drueckt niemand auf
+  // „erneut versuchen" - die Flaeche muss sich selbst wieder einfangen. Der
+  // Takt ist kuerzer als der stille Refresh: 15 Minuten Fehlerbild waeren an
+  // der Wand eine Viertelstunde Falschauskunft.
+  if (wallMode && loadFailed) {
+    const healTimerId = setTimeout(rerender, WALL_HEAL_MS);
+    _fabController.signal.addEventListener('abort', () => clearTimeout(healTimerId));
   }
 
   // Stiller Daten-Refresh (Paket 2, Critique P4): Inhaltsdaten veralteten sonst
@@ -2769,7 +3138,11 @@ export async function render(container, { user }) {
     refreshDashboardData();
   }, { signal: _fabController.signal });
 
-  startClockTicker(container, _fabController.signal);
+  // Der Minutentakt der Uhr traegt die Nachtabsenkung mit: um 22:00 und um
+  // 06:00 muss die Flaeche umschalten, wenn es so weit ist - nicht erst beim
+  // naechsten Laden. Ein zweiter Timer nur dafuer waere ein zweiter Takt fuer
+  // dieselbe Minute.
+  startClockTicker(container, _fabController.signal, wallMode ? () => syncWallMode(location.pathname) : null);
 
   // 30-Minuten Auto-Refresh für Wetter (inkl. optionaler Standort-Aktualisierung).
   // Anker ist der Datensatz, nicht der Karten-Button: seit dem Masthead-Umzug
@@ -2794,6 +3167,12 @@ export async function render(container, { user }) {
     if (weatherAutoLocate) doAutoRefresh();
   }
 
+  // Weder Onboarding noch Anpassen-Hinweis im Wand-Modus: beide sprechen auf
+  // Arm-Laenge ueber Bedienung, die es dort nicht gibt. Der Onboarding-Merker
+  // bleibt bewusst ungesetzt - wer die Wand wieder verlaesst, bekommt seine
+  // Einfuehrung dann, wenn sie ihm etwas nuetzt.
+  if (wallMode) return;
+
   if (!localStorage.getItem(ONBOARDING_KEY)) {
     setTimeout(() => showOnboarding(container, () => maybeHintCustomize(container)), 400);
   } else {
@@ -2801,7 +3180,7 @@ export async function render(container, { user }) {
   }
 }
 
-export const __test = { buildTodayHighlights, buildTodayProgram, renderTodayCockpit, renderPinnedNotes, renderFamilyWidget, formatDueDate, normalizeVisibleMealTypes, renderTodayMeals, calendarEventRoute, eventOccurrenceDateKey, eventStartDate };
+export const __test = { buildTodayHighlights, buildTodayProgram, buildTodayCockpitModel, renderTodayCockpit, renderPinnedNotes, renderFamilyWidget, formatDueDate, normalizeVisibleMealTypes, renderTodayMeals, calendarEventRoute, eventOccurrenceDateKey, eventStartDate, renderWallSurface, renderWallWho, PROGRAM_ROW_CAP, WALL_ROW_CAP };
 
 function wireWeatherRefresh(container, onUpdated = null) {
   const refreshBtn = container.querySelector('#weather-refresh-btn');

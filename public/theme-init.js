@@ -67,3 +67,30 @@
     }
   } catch (e) { /* ohne Metas bleibt es beim Systemverhalten */ }
 })();
+
+// DER WAND-MODUS GEHOERT ZUM ERSTZUSTAND, ALSO HIERHER.
+//
+// Er blendet Sidebar und Tab-Leiste aus und uebernimmt die ganze Flaeche. Ohne
+// diesen Block laedt ein Wandtablet sichtbar erst das normale Dashboard und
+// klappt die Navigation dann weg - genau das Flackern, gegen das der Theme-Block
+// darueber existiert, nur eine Etage groesser. Der Router haelt es danach beim
+// Routenwechsel nach (utils/wall-mode.js, syncWallMode), das hier ist der
+// Anfangszustand.
+//
+// Die Werte stehen als Literale da und nicht als Import: dieses Skript laeuft
+// als klassisches <script> im <head>, vor jedem Modul. Die eine Quelle bleibt
+// `utils/wall-mode.js`; dass die beiden nicht auseinanderlaufen, haelt ein Guard
+// in test-frontend-audit.js.
+(function () {
+  try {
+    if (localStorage.getItem('yuvomi-wall-mode') !== '1') return;
+    if (location.pathname !== '/') return;
+    document.documentElement.setAttribute('data-wall-mode', '');
+    var hour = new Date().getHours();
+    if (hour >= 22 || hour < 6) {
+      document.documentElement.setAttribute('data-wall-night', '');
+      // Nachts erzwungen dunkel - ohne `yuvomi-theme` anzufassen.
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  } catch (e) { /* Storage nicht verfuegbar → kein Wand-Modus in dieser Sitzung */ }
+})();

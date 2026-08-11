@@ -1330,6 +1330,177 @@ test('maybeUpdateAutoLocation skips when disabled', async () => {
 });
 
 // --------------------------------------------------------
+// Wand-Modus (Block D)
+// --------------------------------------------------------
+
+/** Programmzeilen für einen vollen Tag: N fällige Aufgaben mit Uhrzeit. */
+function wallTasks(count, { assignTo = null, from = 8 } = {}) {
+  const todayStr = toLocalDateKey(new Date());
+  return Array.from({ length: count }, (_, i) => ({
+    id: i + 1,
+    title: `Aufgabe ${i + 1}`,
+    due_date: todayStr,
+    due_time: `${String(from + i).padStart(2, '0')}:00`,
+    status: 'open',
+    assigned_users: assignTo?.(i) ? [assignTo(i)] : [],
+  }));
+}
+
+/** Der Wand-Modus rendert ohne DOM; `window.yuvomi` fragt er nur nach Modulen. */
+async function withWallWindow(fn) {
+  const prevWindow = global.window;
+  global.window = { yuvomi: null };
+  try {
+    return await fn();
+  } finally {
+    global.window = prevWindow;
+  }
+}
+
+test('Wand-Modus: die Programmzeilen sind reine Anzeige - kein Link, kein Button', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  await withWallWindow(() => {
+    const html = __test.renderWallSurface({ urgentTasks: wallTasks(3), users: [] }, null, {});
+    const list = html.slice(html.indexOf('wall-program__list'), html.indexOf('</ol>'));
+    // Reichweite zuerst: ein Selektor, der nichts findet, meldet sonst
+    // fehlerfrei „keine Verstöße".
+    const rows = list.match(/class="wall-row /g) ?? [];
+    nodeAssert.equal(rows.length, 3, 'drei Programmzeilen gelesen');
+    nodeAssert.ok(!/<a\b|href=|data-route=|<button/.test(list),
+      'eine Zeile im Wand-Modus navigiert nicht und öffnet kein Modal');
+    // Der EINE Bedienpunkt der Fläche liegt außerhalb der Liste.
+    nodeAssert.match(html, /id="wall-exit"/, 'der Ausstieg ist da');
+  });
+});
+
+test('Wand-Modus: der Ausstieg steht in JEDEM Zustand im DOM', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  await withWallWindow(() => {
+    const states = {
+      laden:  __test.renderWallSurface(null, null, { loading: true }),
+      fehler: __test.renderWallSurface(null, null, { failed: true }),
+      normal: __test.renderWallSurface({ urgentTasks: wallTasks(1), users: [] }, null, {}),
+      leer:   __test.renderWallSurface({ urgentTasks: [], upcomingEvents: [], users: [] }, null, {}),
+    };
+    const ohne = Object.entries(states).filter(([, html]) => !/id="wall-exit"/.test(html)).map(([k]) => k);
+    nodeAssert.equal(Object.keys(states).length, 4, 'vier Zustände geprüft');
+    nodeAssert.deepEqual(ohne, [], 'ein unsichtbarer Ausstieg wäre eine Falle');
+  });
+});
+
+test('Wand-Modus: der Fehlerzustand trägt keinen Retry-Knopf, aber die Uhr', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  await withWallWindow(() => {
+    const html = __test.renderWallSurface(null, null, { failed: true });
+    nodeAssert.match(html, /wall__error-title/, 'der Fehler spricht als eigener Zustand');
+    // Am Wandtablet drückt niemand „erneut versuchen" - geheilt wird von selbst.
+    nodeAssert.ok(!/dashboard-retry|widget-retry/.test(html), 'kein Retry-Knopf auf zwei Metern');
+    nodeAssert.match(html, /clock-widget--wall/, 'die Uhr bleibt: sie braucht kein Netz');
+  });
+});
+
+test('Wand-Modus: der Deckel greift, und der Überlauf sagt die Wahrheit', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  await withWallWindow(() => {
+    const data = { urgentTasks: wallTasks(9), users: [] };
+    const html = __test.renderWallSurface(data, null, {});
+    const rows = html.match(/class="wall-row /g) ?? [];
+    nodeAssert.ok(rows.length > 0, 'Reichweite: Zeilen wurden überhaupt gelesen');
+    nodeAssert.equal(rows.length, __test.WALL_ROW_CAP, 'der Wand-Deckel greift');
+    nodeAssert.ok(__test.WALL_ROW_CAP < __test.PROGRAM_ROW_CAP,
+      'die Wand zeigt weniger Zeilen als das Cockpit - sie muss ohne Scrollen passen');
+    nodeAssert.match(html, /wall-program__foot/, 'der Überlauf spricht als Fußzeile');
+
+    // Die Zahl zählt gegen ALLE Zeilen des Tages, nicht gegen die gezeigten.
+    // Am Modell geprüft und nicht am Text: `t()` ist in dieser Suite nicht
+    // initialisiert und gäbe den Schlüssel zurück - eine Zusicherung über den
+    // gerenderten Satz wäre eine über den Schlüsselnamen.
+    const model = __test.buildTodayCockpitModel(data, [], { cap: __test.WALL_ROW_CAP });
+    nodeAssert.equal(model.allRows.length, 9, 'das Modell kennt den ganzen Tag');
+    nodeAssert.equal(model.overflow, 9 - __test.WALL_ROW_CAP, 'der Überlauf nennt die echte Restzahl');
+  });
+});
+
+test('Wand-Modus: „Wer heute dran ist" zählt den ganzen Tag, nicht nur die sichtbaren Zeilen', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  await withWallWindow(() => {
+    // Mia hat GENAU EINE Aufgabe, und die liegt hinter dem Deckel. Zählte der
+    // Abschnitt nur die gezeigten Zeilen, verschwände sie aus der Antwort.
+    const spaet = { id: 42, display_name: 'Mia Muster', avatar_color: '#CE2A63' };
+    const tasks = wallTasks(8, { assignTo: (i) => (i === 7 ? spaet : null) });
+    const html = __test.renderWallSurface({ urgentTasks: tasks, users: [spaet] }, null, {});
+    nodeAssert.match(html, /wall-who__member/, 'Reichweite: der Abschnitt wurde gebaut');
+    nodeAssert.match(html, /Mia/, 'wer hinter dem Deckel steht, steht trotzdem in der Antwort');
+    nodeAssert.match(html, /wall-who__count/, 'die Zahl beantwortet „wie viel"');
+  });
+});
+
+test('Wand-Modus: „Wer heute dran ist" entfällt im Solo-Haushalt', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  const { setHouseholdSize, clearHouseholdSize } = await import('../public/utils/household.js');
+  const prevDocument = global.document;
+  global.document = { documentElement: { classList: { toggle() {}, add() {}, remove() {} } } };
+  try {
+    await withWallWindow(() => {
+      const alleine = { id: 1, display_name: 'Miriam Solo', avatar_color: '#6C3AED' };
+      const data = { urgentTasks: wallTasks(2, { assignTo: () => alleine }), users: [alleine] };
+
+      setHouseholdSize(2);
+      nodeAssert.match(__test.renderWallSurface(data, null, {}), /wall-who__member/,
+        'Reichweite: im Mehrpersonen-Haushalt steht der Abschnitt da');
+
+      setHouseholdSize(1);
+      nodeAssert.ok(!/wall__who/.test(__test.renderWallSurface(data, null, {})),
+        'was nur eine sinnvolle Belegung hat, wird nicht gezeigt');
+    });
+  } finally {
+    clearHouseholdSize();
+    global.document = prevDocument;
+  }
+});
+
+test('Wand-Modus: leerer Tag spricht, statt zu verschwinden', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  await withWallWindow(() => {
+    const html = __test.renderWallSurface({ urgentTasks: [], upcomingEvents: [], users: [] }, null, {});
+    // Eine leere Fläche liest sich aus zwei Metern wie ein Defekt.
+    nodeAssert.match(html, /wall-row--state/, 'der leere Tag bekommt seine eigene Zeile');
+  });
+});
+
+test('Wand-Modus und Cockpit erzählen denselben Tag (ein Modell, zwei Formen)', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  await withWallWindow(() => {
+    const data = { urgentTasks: wallTasks(3), users: [] };
+    const titles = (html) => (html.match(/Aufgabe \d+/g) ?? []);
+    const wand = titles(__test.renderWallSurface(data, null, {}));
+    const cockpit = titles(__test.renderTodayCockpit(data, []));
+    nodeAssert.equal(wand.length, 3, 'Reichweite: die Wand hat drei Zeilen gelesen');
+    nodeAssert.deepEqual(wand, cockpit.slice(0, wand.length),
+      'dieselben Zeilen in derselben Reihenfolge - keine zweite Wahrheit');
+  });
+});
+
+test('Wand-Modus: das Nachtfenster läuft über Mitternacht (22:00 bis 06:00)', async () => {
+  const { isWallNight, isWallRoute, WALL_NIGHT_FROM, WALL_NIGHT_TO } = await import('../public/utils/wall-mode.js');
+  const at = (h, m = 0) => new Date(2026, 7, 11, h, m);
+  const probe = [
+    [21, 59, false], [22, 0, true], [23, 30, true],
+    [0, 15, true], [3, 0, true], [5, 59, true], [6, 0, false], [12, 0, false],
+  ];
+  const falsch = probe.filter(([h, m, soll]) => isWallNight(at(h, m)) !== soll)
+    .map(([h, m]) => `${h}:${String(m).padStart(2, '0')}`);
+  nodeAssert.equal(probe.length, 8, 'acht Uhrzeiten geprüft');
+  nodeAssert.deepEqual(falsch, [], 'ODER statt UND - sonst reißt das Fenster um Mitternacht');
+  nodeAssert.equal(WALL_NIGHT_FROM, 22);
+  nodeAssert.equal(WALL_NIGHT_TO, 6);
+
+  // Der Modus ist ein Zustand DES DASHBOARDS, keine eigene Route.
+  nodeAssert.equal(isWallRoute('/'), true);
+  nodeAssert.deepEqual(['/tasks', '/settings', '/calendar'].filter(isWallRoute), []);
+});
+
+// --------------------------------------------------------
 // Ergebnis
 // --------------------------------------------------------
 await Promise.all(pendingTests);
