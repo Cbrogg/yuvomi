@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Installing the app worked again behind an authenticating reverse proxy.** A `<link rel="manifest">` is fetched with credentials omitted by default, even same-origin, so Cloudflare Access, Authelia, Authentik or basic auth answered it with their login page instead of the manifest. Without a valid manifest the browser never offers installation: the button under Settings -> Personal -> This device stayed disabled and the install banner never appeared, while every other page behaved normally and hid the cause. The manifest link now carries `crossorigin="use-credentials"`. Installations without a proxy are unaffected. (#715)
+
 ## [2.2.3] - 2026-08-11
 
 ### Changed
