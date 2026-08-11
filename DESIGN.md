@@ -11,6 +11,8 @@ colors:
   surface-dark: "#262422"
   surface-3: "#EDEAE3"
   fill-well: "#EDEAE3"
+  surface-elevated: "#FBFAF7"
+  surface-elevated-hover: "#EDEAE3"
   bg-dark: "#191816"
   label: "#1D1B17"
   text-secondary: "#63615B"
@@ -41,9 +43,19 @@ colors:
   family-records: "#42587E"
   family-neutral: "#677079"
 typography:
+  display:
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', 'Segoe UI', Roboto, Arial, sans-serif"
+    fontSize: "clamp(3rem, 9vw, 4.5rem)"
+    fontWeight: 700
   large-title:
     fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', 'Segoe UI', Roboto, Arial, sans-serif"
     fontSize: "2.125rem"
+    fontWeight: 700
+    lineHeight: 1.21
+    letterSpacing: "-0.015em"
+  title-1:
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', 'Segoe UI', Roboto, Arial, sans-serif"
+    fontSize: "1.75rem"
     fontWeight: 700
     lineHeight: 1.21
     letterSpacing: "-0.015em"
@@ -101,14 +113,16 @@ rounded:
   md: "12px"
   lg: "16px"
   xl: "26px"
-  2xl: "32px"
   full: "9999px"
   glass-card: "26px"
   glass-inner: "18px"
 spacing:
+  px: "1px"
   0h: "2px"
   1: "4px"
+  1h: "6px"
   2: "8px"
+  2h: "10px"
   3: "12px"
   4: "16px"
   5: "20px"
@@ -137,6 +151,14 @@ components:
     backgroundColor: "{colors.surface}"
     rounded: "{rounded.md}"
     padding: "16px"
+  widget-header:
+    backgroundColor: "color-mix(in srgb, var(--widget-accent, var(--color-accent)) var(--tint-wash), var(--color-surface))"
+    padding: "12px 16px"
+    height: "44px"
+  day-sheet:
+    backgroundColor: "{colors.surface}"
+    rounded: "{rounded.xl}"
+    padding: "12px 16px"
   row-carrier:
     backgroundColor: "{colors.surface}"
     rounded: "{rounded.lg}"
@@ -169,7 +191,14 @@ components:
      Fundament + Rest-Rollout Runde 1-3 und zwei Finish-Review-Durchlaeufen
      (feat/hig-redesign). Quelle der Wahrheit fuer JEDEN Wert: public/styles/tokens.css;
      die Kopf-Abgrenzung steht in public/styles/typography.css, die Buttonform in
-     der .btn-Basisregel in public/styles/layout.css. -->
+     der .btn-Basisregel in public/styles/layout.css.
+
+     Nachgefuehrt 2026-08-12 gegen den Stand v2.6.0 (Dashboard-Bogen v2.4.0-v2.6.0:
+     Tagesprogramm, Wand-Modus, Absenderband). Der Abgleich lief ueber jeden
+     Frontmatter-Wert und hat dabei drei Angaben korrigiert, die kein Token mehr
+     deckte: den erfundenen 32px-Radius, den Modulton am Primaerknopf und den
+     Modulton am Fokusring - die beiden letzten waren Reste aus der Zeit vor der
+     Eine-Stimme-Regel und standen hier laenger als im Code. -->
 
 ## Direction Contract
 
@@ -255,6 +284,14 @@ Finish-Reviews: die Zeilenlisten-Regel, EINE Buttonform, EIN Toenungsrezept, das
 Wetter-Widget als randlose Karte ohne Verlauf, Notizfarben nach der User-Farben-Regel und
 die Anmeldeseite als Teil der Welt.
 
+**Der Dashboard-Bogen (v2.4.0 bis v2.6.0) hat die Uebersicht von einem Raster zu einer
+Buehne gemacht** - und dabei drei Formen hinzugefuegt, die es vorher nicht gab: das
+TAGESPROGRAMM als das eine Blatt, das die Seite anfuehrt (Radius und Elevation setzen den
+Rang, nicht Material), das ABSENDERBAND, das die Modulzugehoerigkeit einer Karte aus einer
+2px-Haarlinie in eine getoente Kopfflaeche hebt, und den WAND-MODUS als den wachen Zustand
+derselben Route - dieselbe Flaeche in anderer Gangart, gelesen aus zwei Metern. Erst mit
+ihm bekommen die Display-Stufen 48/72px die Rolle, fuer die sie reserviert waren.
+
 **Runde 6 (2026-08-07) hat die Regeln vollstaendig gemacht, statt neue Flaechen zu
 gestalten** - und dabei den Satz gelernt, der ueber ihnen steht: **ein Guard ueber eine
 Namensliste deckt keine Regel ab, sondern N Dateien.** Deshalb nennt jede Regel hier ab
@@ -275,6 +312,8 @@ endgueltig loeschte.
   beides auf warmen Neutralen
 - Apple-Typo-Skala (Large Title 34 / Body 17 / Footnote 13), Kapsel-Controls, Inset-Grouped-Listen
 - Eine Kernform fuer Zeilenfolgen: genau ein Traeger, Zeilen als Haarlinien
+- Der FAB sitzt in der Nav-Kapsel und kostet keine Contentflaeche
+- Das Dashboard hat zwei Gangarten: Blatt und Raster am Geraet, Wand-Modus auf zwei Metern
 - Feder-Motion (Overshoot-Easing) fuer Glas-Elemente, dezente Dauern fuer alles andere
 - WCAG AA als Invariante in Light UND Dark, inkl. prefers-reduced-transparency- und prefers-contrast-Fallbacks
 
@@ -367,6 +406,15 @@ reduced-transparency und prefers-contrast auf 0).
 - **Surface** (`surface`, dark `surface-dark`): Karten, Zellen, Arbeitsflaechen
   (`--color-surface-work` fuer lesbare Arbeitsbereiche, `--color-surface-raised` fuer
   subtile Erhoehung).
+- **Der Hover ist die naechste Flaechenstufe, keine eigene Farbe** - und deshalb gibt es
+  ihn zweimal. `--color-surface-hover` ist der Schritt von `--color-surface` aus;
+  `--color-surface-elevated-hover` (seit 2026-08-11) der Schritt von der bereits erhoehten
+  Flaeche. Wer im Ruhezustand schon `--color-surface-elevated` traegt - Suchfeld im
+  Mehr-Blatt, Suchbereich-Chip, Wieder-einblenden-Chip des Dashboards -, landete ohne diese
+  Stufe im Dark auf seiner EIGENEN Farbe: der Hover war dort unsichtbar, gemessen 1:1. Dass
+  es vorher trotzdem ging, war Zufall - der alte Dark-Wert sprang zwei Rampenstufen und traf
+  so gerade noch darueber. Die Stufe ist nicht neu, sie war nur nie benannt; im Light faellt
+  sie mit ihrer Schwester zusammen, weil die helle Rampe dort dicht liegt.
 - **Inset-Well** (`fill-well` = `--color-surface-3`): die eine erlaubte Fuellung fuer eine
   Kachel INNERHALB einer Karte. Gemessen 1.20:1 light unter Weiss und 1.16:1 dark ueber
   `surface-dark`; Text darauf haelt AA in beiden Themes (Sonde 2 misst es am gerenderten
@@ -458,6 +506,17 @@ verdunkelt), Nutzerfarben als Text (dort gilt die User-Farben-Regel) und Animati
 `@keyframes`. Pruefebene: Signatur (`jede Toenung nimmt eine Stufe der Toenungsskala`,
 `test:frontend-audit`).
 
+**Die Waschung ist auch die Antwort auf „Farbe wird Flaeche, nicht Strich" (v2.6.0).** Zwei
+Stellen haben 2026-08-11 von einer Linie oder einer neutralen Flaeche auf `--tint-wash`
+gewechselt, und beide aus demselben Grund: die Toenung untergreift dort FREMDEN Inhalt. Der
+Widget-Kopf des Dashboards trug seine Modulzugehoerigkeit als 2px-Haarlinie an der Oberkante
+- im Light gerade noch sichtbar, im Dark praktisch nicht, sodass das Board dort als Wand
+gleich grauer Rechtecke las; er traegt sie jetzt als Kopfband (siehe „Das Absenderband").
+Und die angeheftete Notiz bekam ihre Notizfarbe zurueck, die das neutrale Well geschluckt
+hatte. `--tint-surface` waere in beiden Faellen falsch: das ist die Stufe eines Chips, der
+SELBST das getoente Objekt ist; auf einem ganzen Band traegt sie zu laut und nimmt dem
+Siegel daneben seine Ausweisrolle.
+
 ## Typography
 
 **Display/Body Font:** System-Stack (-apple-system, BlinkMacSystemFont, "SF Pro Text",
@@ -476,6 +535,11 @@ Subheadline 15, Footnote 13, Caption 2 11.
 - **Large Title** (bold, 34px, lh 1.21, Tracking -0.015em): Seitentitel, Dashboard-Gruss und
   seit Runde 3 auch der Anmelde-Titel; bleibt auf Desktop stabil 34px. Traegt IMMER
   Label-Farbe.
+- **Title 1** (bold, 28px, lh 1.21, Tracking -0.015em, `tabular-nums`): die KENNZAHL einer
+  Karte, nicht eine Ueberschrift - der Kontosaldo, die Temperatur, die Uhrzeit der
+  Uhr-Kachel. Sie steht gestapelt (kleines Label darueber, Zahl darunter), nie als Zahl am
+  rechten Ende einer Beschriftungszeile: so gebaut ist sie anatomisch dasselbe wie die
+  Nebenzeile darunter, und die Hauptaussage der Karte sieht aus wie ihre Fussnote.
 - **Title 2** (bold, 22px, Tracking -0.015em, `text-wrap: balance`): Modul-Kopf-Titel im
   Canonical Page Head - EINE Rolle fuer alle Module, Settings-Leaf und Split.
 - **Title 3** (semibold, 20px, lh 1.3): Bereichs-Ueberschrift in Satzschreibung.
@@ -493,9 +557,12 @@ Subheadline 15, Footnote 13, Caption 2 11.
 - **Navigations-Gruppierungslabel** (semibold, 12px, Satzschreibung): Sidebar-Sektionen,
   Settings-Domaenen, Aufgaben-Gruppen. Ganze Phrasen lesen in Versal + Tracking geschrien
   und laufen dem warmen Familien-Ton zuwider.
-- Inputs nie unter 16px (`--text-base`, iOS-Zoom-Schwelle). Display-Stufen 48/72px existieren
-  NUR fuer Anzeigewerte auf dem Wandtablet, nie fuer Ueberschriften; die
-  Ueberschriften-Skala endet bewusst bei 34px.
+- **Display** (bold, `clamp(48px, 9vw, 72px)`): die Wand-Uhr, und seit v2.5.0 der einzige
+  Ort, an dem die zwei Display-Stufen ueberhaupt stehen. Sie existieren NUR fuer
+  Anzeigewerte auf Distanz, nie fuer Ueberschriften; die Ueberschriften-Skala endet bewusst
+  bei 34px. Die Stufen sind die Enden eines `clamp`, kein fester Wert - was aus zwei Metern
+  lesbar sein muss, haengt an der Flaeche, nicht an einer Zahl.
+- Inputs nie unter 16px (`--text-base`, iOS-Zoom-Schwelle).
 
 ### Named Rules
 **Die Kopf-Abgrenzungs-Regel.** Zwei Kopfrollen, und was ein Kopf benennt entscheidet
@@ -576,8 +643,28 @@ Rueckkehr des Musters einlud.
   `--page-inline-pad` auf die zentrierte Spalte - genau EINMAL pro Ahnenkette, sonst
   addieren sich die Raender (Guard `page-inline-pad contract`).
 - **Breakpoints, verbindlich:** <=640 Mobile (eine Spalte, Bottom-Nav), 768 Tablet,
-  >=1024 Desktop (Sidebar, mehrspaltig), >=1440 Wide. Komponenten-interne Umbrueche
-  gehoeren in @container-Queries, nicht in neue Viewport-Breakpoints.
+  >=1024 Desktop (Sidebar, mehrspaltig), >=1440 Wide; dazu die zweite Achse <500px Hoehe
+  (kompakte Hoehe, siehe „Die Chrome-Regel"). Komponenten-interne Umbrueche gehoeren in
+  @container-Queries, nicht in neue Viewport-Breakpoints.
+- **Was von der Breite eines BAUSTEINS abhaengt, fragt seinen Container - und die Regel hat
+  zwei gemessene Anlassfaelle.** Das Notizen-Raster im Dashboard haengte seine Spaltenzahl
+  an Viewport-Breakpoints und stand ab 1024px dreispaltig, auch wenn die Notizkarte selbst
+  nur EINE Rasterspalte breit war: drei Notizen in je ~105px, uebrig blieben drei Ellipsen
+  nebeneinander. Seine Schwellen sind jetzt Kartenbreiten und aus der Kachel
+  zurueckgerechnet (eine Notizkachel braucht ~200px fuer Titel und zweizeilige Vorschau,
+  also 420px fuer zwei und 620px fuer drei). Die Wand-Buehne schaltet aus demselben Grund
+  auf zwei Spalten - ein fuenfter Viewport-Breakpoint neben den vier verbindlichen waere die
+  Alternative gewesen.
+  **Die Falle dabei:** `container` gehoert an den VORFAHREN, nie an das Element, das die
+  Query stellt - `@container` sucht immer aufwaerts. An der Buehne selbst deklariert, blieb
+  die Regel darunter wirkungslos und die Wand einspaltig, bei jeder Breite und ohne
+  Fehlermeldung.
+- **Dashboard-Raster:** `auto-fill` mit Mindestspalte 280px (`minmax(min(100%, 280px), 1fr)`)
+  und `dense`-Flow. Bei 240px legte ein 1440er-Fenster vier 270px-Spalten an, in denen die
+  Ellipse reihenweise echte Inhalte kappte („Familienmitg…", „Tante Claire Bec…"). Eine
+  Spalte, in der Namen nicht ganz stehen, ist keine Spalte; drei ruhige tragen dieselben
+  fuenf Karten besser als vier gedraengte, und ab ~1700px kommt die vierte von selbst
+  zurueck.
 - **Navigation:** mobil eine schwebende Glas-Tab-Bar-Kapsel (60px hoch plus 8px Luft und
   safe-area; die Bar-Zone selbst ist transparent, das Glas traegt die Kapsel). Ab 1024px
   Glas-Sidebar (56px kollabiert / 220px expandiert) mit gleitender Aktiv-Pille.
@@ -649,6 +736,19 @@ Glas gaebe. Der letzte Rest der alten Annahme - ein
 abschaltete, das keiner mehr trug, und sie dabei auf `--color-surface` umfaerbte - ist mit
 Runde 6 entfallen.
 
+**Die Rang-Regel (v2.6.0).** Welchen Rang ein Block auf seiner Seite hat, sagen RADIUS und
+ELEVATION - nie das Material. Wer wichtiger ist, bekommt die groessere Kartenform und eine
+Schattenstufe mehr, und er bleibt trotzdem opaker Inhalt; Glas waere hier der falsche Griff,
+weil es Chrome bedeutet und nicht Bedeutung.
+
+Der Anlass war das Tagesprogramm: es lag auf `--radius-lg` plus `--shadow-sm` und damit eine
+Stufe UNTER den Widgets darunter, die `--shadow-md` tragen. Der wichtigste Block der Seite
+war der leiseste - „Was steht heute an?" wog optisch weniger als „Geburtstage". Es traegt
+jetzt `--radius-xl` (26px, die Kartenform der Glas-Welt) und `--shadow-lg`, und der Abstand
+zum Raster ist damit eine Stufe in beide Richtungen. Dieselbe Rechnung ist auch der Grund,
+warum es mobil nicht mehr schrumpft: auf dem Geraet, das PRODUCT.md als Hauptszene fuehrt,
+war es die kleinste Fassung seiner selbst.
+
 **Die Fallback-Regel.** Jede Glas-Flaeche hat einen opaken Fallback. Nicht-Blur-Stile
 (background, border, shadow) stehen AUSSERHALB von `@supports` und wirken ueberall; nur der
 backdrop-filter steht drin (mit webkit-Zwilling fuer Safari < 18). prefers-reduced-
@@ -680,13 +780,18 @@ blind nach innen kopieren.
   glass.css primary/secondary auf `--radius-full` zog: welche Form ein Button bekam,
   entschied die Ladereihenfolge. Die Kapsel gewinnt, weil der Direction Contract
   "Kapsel-Controls" ausdruecklich nennt.
-- **Primary:** Modul-Akzent leicht abgedunkelt (88-%-Mix mit `--neutral-950`) mit
-  `--color-ink-on-vivid` (light weiss, dark dunkle Tinte) und shadow-sm plus
-  Specular-Inset. Die Farbe ist app-weit die Stimme (Eine-Stimme-Regel) - auf modullosen
-  Routen (Login, Setup) war sie das schon immer.
+- **Primary:** die STIMME leicht abgedunkelt (`color-mix(in srgb, var(--color-accent) 88%,
+  var(--neutral-950))`) mit `--color-ink-on-vivid` (light weiss, dark dunkle Tinte) und
+  shadow-sm plus Specular-Inset. **Hier stand bis 2026-08-12 „Modul-Akzent":** derselbe Rest
+  aus der Zeit vor der Eine-Stimme-Regel, den der FAB-Abschnitt einen Tag zuvor abgelegt
+  hat. `layout.css` liest `--color-accent`, seit die Regel gilt; der Primaerknopf tut in
+  jedem Modul dasselbe und ist damit nach ihrem Kriterium eindeutig. Auf modullosen Routen
+  (Login, Setup) war er ohnehin immer die Stimme.
 - **Hover:** vertieft auf 76-%-Mix, shadow-md, Transitions 150ms.
-- **Fokus (app-weit):** 2px-Ring in `--focus-ring-color`
-  (= `var(--active-module-accent, var(--color-accent))`), Offset 2px. Die zwei Zeilen werden
+- **Fokus (app-weit):** 2px-Ring in `--focus-ring-color` (= `var(--color-accent)`), Offset
+  2px. **Auch hier stand bis 2026-08-12 der Modulton** - und er war die groesste einzelne
+  Fundstelle im Chrome, weil jedes fokussierbare Element der App an diesem einen Token
+  haengt. Die zwei Zeilen werden
   ausgeschrieben, kein Shorthand-Token: ein Shorthand auf `:root` baeckt die Farbe ein und
   lokale Ueberschreibungen blieben wirkungslos. `--focus-ring-offset-inset` (-2px) ist nur
   fuer Elemente an einer geclippten Kante da.
@@ -886,6 +991,28 @@ Kontextselektor der Karte, nie in der Basisregel (Muster
 `.health-overview__card .health-metric-card`). LEERZUSTAENDE bekommen gar keine Flaeche:
 zentrierter Sekundaertext, kein Rahmen, kein Well - sonst muesste jeder Leerzustand seinen
 Traeger kennen.
+
+**Die Fusszeilen-Regel (v2.6.0). Ueberschuessige Hoehe wird Atem, nicht Loch.** Eine Karte
+mit Fusszeile streckt ihren Koerper (`flex: 1`) und verankert die Fusszeile unten
+(`margin-block-start: auto`), damit der Ueberschuss ZWISCHEN Inhalt und Abschluss faellt
+statt hinter den Abschluss.
+
+Der Anlass ist eine Eigenheit jedes Rasters: die Zeilenhoehen richten sich nach den
+1x1-Kacheln, eine 1x2-Karte bekommt also die Summe zweier Zeilen plus Gap. Gemessen waren
+das 489px Karte gegen 319px Inhalt bei „Familie" und 294px bei „Budget" - und weil jeder
+Koerper oben klebte, sass der Rest als toter Block unter dem letzten Element. Mit dem Anker
+liest die Karte als bewusst gesetzter Rahmen aus Kopf, Inhalt und Fuss. Die Regel gilt fuer
+JEDE Karte mit Fusszeile, nicht nur fuer die zwei, die heute zu kurz sind.
+
+Sie loest das Loch nicht allein: dazu gehoert, dass eine Listen-Kachel ihre Zeilenzahl aus
+ihrer HOEHE nimmt statt aus einer Konstante, die fuer eine und fuer zwei Rasterzeilen
+dieselbe war. Ueber das Standard-Board gemessen bleiben 3px Leerraum pro Karte.
+
+**Und eine Fusszeile ist eine Auskunft, kein Griff.** Die Tagesbilanz des Haushalts schliesst
+ihre Karte als hairline-getrennte Zeile ab, exakt wie der Fuss der Budgetkarte - ein
+getoentes Well haette dieselbe Form gehabt wie „1 zu bestaetigen" in den Belohnungen, und das
+ist eine HANDLUNGSaufforderung. Dieselbe Form fuer zwei Bedeutungen ist genau der Befund, den
+das Board schon einmal hatte.
 
 **Die Zeilenlisten-Regel.** Die Kasten-in-Kasten-Regel sagt, wie eine Zeile INNEN aussieht;
 diese sagt, worauf sie liegt. Eine Folge gleichartiger Zeilen liegt in GENAU EINEM Traeger:
@@ -1320,6 +1447,50 @@ Medikamente), serverseitig uebersetzt ueber die Datensprache des Haushalts, clie
 die Sprache des Nutzers. Die beiden Karten liegen beidseits der Schichtgrenze und sind an die
 `entity_type` gebunden, die der Server wirklich schreibt (Guard-Ebene Signatur).
 
+### Das Absenderband (Signature Component)
+Der Kopf einer Dashboard-Karte traegt die Modulzugehoerigkeit als getoente FLAECHE, nicht als
+Strich: `--tint-wash` des Familientons gegen `--color-surface`, und die Trennlinie darunter
+erbt denselben Ton (`--tint-state` gegen `--color-border`), damit Band und Kante EIN Element
+sind statt einer getoenten Flaeche mit neutralem Abschluss.
+
+**Der Anlass war ein Kanal, der nur im Light existierte** - und das Band ist die ANTWORT
+darauf, nicht sein Ersatz. Die 2px-Haarlinie an der Kartenoberkante bleibt bestehen
+(`--tint-hint` des Widget-Tons gegen `--color-border`, auf JEDER Karte und in jeder
+Groessenklasse); sie war nur allein zu wenig, weil ein Farbsignal von zwei Pixeln im Dark
+Mode praktisch verschwand und das Board dort als Wand gleich grauer Rechtecke las. Ersetzt hat
+das Band die neutrale Kopf-Unterkante, nicht die Linie: Karte, Band und Kante tragen jetzt
+denselben Ton in drei Staerken (`--tint-hint` / `--tint-wash` / `--tint-state`).
+
+**Den Ton setzt die Karte, nicht die Seite.** Jede `.widget--*`-Klasse legt `--widget-accent`
+auf ihren Modulton; der Fallback ist die Stimme. Ein `--active-module-accent` an dieser Stelle
+loeste auf dem Dashboard den Akzent der UEBERSICHT auf, also bekamen alle Widgets dieselbe
+Farbe - ausgerechnet in dem Raster, in dem siebzehn Module nebeneinanderstehen.
+
+**Das Siegel bekommt das Band als seinen eigenen Grund.** `--seal-base` wird im Kopf auf
+dieselbe Mischung gesetzt, auf der das Siegel steht; ohne das mischt seine Scheibe gegen
+`--color-surface` und liegt auf der Toenung bei 1,06:1 - dieselbe Falle, die der Modulkopf
+schon kennt („Der Traeger entscheidet, welches Gesicht es zeigt").
+
+**Es ist kein Akzentstreifen im Sinne des Banns.** Der gilt Zierstreifen an Toolbars, Tabs und
+Modulkoepfen - Schmuck, der nichts sagt. Hier ist die Toenung die ABSENDERANGABE der Karte,
+dieselbe Aufgabe, die das Siegel im Kopf ohnehin hat, nur als Grund statt als Zeichen.
+
+### Das Tagesprogramm (Signature Component)
+Das eine Blatt, das die Uebersicht anfuehrt: EIN Traeger auf `--color-surface` mit
+`--radius-xl` und `--shadow-lg`, Zeilen als Haarlinien, je Zeile ein Siegel fuer den Raum,
+aus dem der Eintrag kommt. Kein Glas und kein `backdrop-filter` - die Glas-ist-Chrome-Regel
+gilt, das Blatt ist Inhalt (Rang kommt aus Radius und Elevation, siehe „Die Rang-Regel").
+
+**Seine Zeilen atmen mehr als eine Listenzeile** (`--space-3` statt `--space-2` vertikal): das
+Blatt traegt drei bis sechs Zeilen, nicht dreissig - der gewonnene Raum kostet keinen Scroll
+und ist der Unterschied zwischen „Liste" und „Programm". Die Zeilenhoehe ist auf allen
+Geraeten dieselbe.
+
+**Der Zustand spricht im Ton der Zeile, nicht in Neutralgrau.** Jede Zeile weiss ueber
+`--today-card-accent` schon, aus welchem Raum sie kommt - das Siegel links zeigt es -, und ein
+neutraler Hover warf diese Auskunft im Moment der Beruehrung weg. `--tint-state` (12 %) ist
+die Skalenstufe fuer genau das: Zustand auf einer ungetoenten Flaeche.
+
 ### Anmeldeseite
 Die erste Seite der App ist Teil derselben Welt, keine Ausnahme. Die Buehne ist der reine
 Seitengrund ohne Verlauf (bis Runde 3 stand hier der letzte chromatische Verlauf der App).
@@ -1358,6 +1529,56 @@ das title-Attribut). "Heute" ist NUR ein gefuellter Akzent-Kreis auf der Ziffer;
 Nachbarmonatstage dimmen ueber Flaeche UND Ziffer (AA-fest), nie ueber blosse Opacity auf
 Text allein.
 
+### Der Wand-Modus (Signature Component)
+**Der WACHE Zustand des Dashboards - keine zweite Seite, sondern dieselbe Flaeche in anderer
+Gangart.** Gelesen wird sie aus zwei Metern und ohne Beruehrung; alles Weitere folgt aus
+diesem einen Satz. Der Screensaver bleibt der ruhende Zustand und legt sich nach seiner
+Leerlaufzeit unveraendert darueber.
+
+**Die Shell tritt ab.** Sidebar und Tab-Leiste sind Arm-Laengen-Moebel; auf zwei Metern sind
+sie siebzehn unleserliche Ziele. Auch die Installations-Einladung verschwindet - auf einer
+Anzeige, die niemand bedient, waere sie die lauteste Karte im Bild.
+
+**Eine Distanz-Skala, an einer Stelle** (`--wall-clock`, `--wall-row-title`, `--wall-row-sub`,
+`--wall-section`, `--wall-pad`), und sie hat ZWEI Bezugsgroessen aus zwei gemessenen Gruenden:
+die Uhr haengt an `vw`, weil sie eine einzelne lange Ziffernfolge ist und von der BREITE
+begrenzt wird; alles andere haengt an `vmin`. Mit `vh` wurden die Zeilen auf einem Tablet im
+Hochformat groesser, weil dort Hoehe reichlich ist - und liefen seitlich in die Enge und unten
+aus dem Bild. `vmin` bindet die Groesse an die knappe Seite und haelt beide Lagen im Schirm.
+**An einer Wand kann niemand scrollen, das Bild muss passen.** Die Enden der Skala sind
+Tokens: hier bekommen die Display-Stufen 48/72px ihre Rolle.
+
+**Genau EIN gefuellter Traeger** - die Programmliste - und sonst Inhalt auf der Buehne. Die
+Anti-Referenz ist die Smart-Home-Dashboard-Optik: Kacheln voller Messwerte, Ringe und Sensoren
+ohne Anlass. Die Uhr ist deshalb keine Kachel, sondern der Kopf der Flaeche: kein Surface, kein
+Rahmen, linksbuendig wie jeder Seitenkopf.
+
+**Eine Zeile, nicht zwei.** Auf zwei Metern erkennt man einen Eintrag an seinem Anfang; ein
+Umbruch kostet die Hoehe einer ganzen weiteren Zeile, und die Flaeche hat sechs davon, bevor
+sie scrollen muesste. Die Zaehler an den Gesichtern sind aus derselben Rechnung keine
+Mikro-Badges, sondern volle Marken mit Kante - eine 13px-Marke an einem 56px-Gesicht waere aus
+zwei Metern Dekoration.
+
+**Nachtabsenkung nach UHRZEIT, nicht nach Farbmodus.** Zwischen 22 und 6 Uhr traegt die Wurzel
+`data-wall-night` und der dunkle Grund wird erzwungen, auch bei hellem Theme: das Problem im
+Flur ist die Leuchtdichte, und ein dunkles Theme leuchtet immer noch. Erzwungen heisst nicht
+gespeichert - die Wahl des Nutzers bleibt unberuehrt und wird am Morgen zurueckgestellt.
+
+**Geraetelokal und manuell geschaltet** (`localStorage`, wie Theme und Locale). Das Wandtablet
+laeuft in der Praxis auf einem geteilten Konto; eine servergespeicherte Einstellung schaltete
+allen Familienmitgliedern das Handy-Dashboard um. Und keine Automatik nach Geraeteform: eine
+Fehlerkennung auf dem Laptop erzeugte einen Zustand, den niemand angefordert hat.
+
+**Der Ausstieg ist leise da und hell auf Beruehrung.** Ein dauerhaft voller Knopf
+widerspraeche der ruhigen Flaeche, ein unsichtbarer waere eine Falle: im Ruhezustand steht nur
+sein Zeichen in Sekundaerfarbe (weiterhin AA, weiterhin fokussierbar, volle Zielgroesse), jede
+Beruehrung setzt `data-wall-awake` und hebt ihn fuer sechs Sekunden auf die volle Kapsel samt
+Beschriftung. Bewegt wird dabei nur Farbe - eine Breiten-Transition waere eine
+Layout-Animation fuer einen Zustand, den aus zwei Metern niemand beobachtet.
+
+**Dass die Flaeche lebt, sagt eine absolute Uhrzeit**, kein „vor 3 Minuten": eine relative
+Angabe braeuchte einen zweiten Timer, nur damit sie sich selbst aktuell haelt.
+
 ## Do's and Don'ts
 
 ### Do:
@@ -1382,6 +1603,15 @@ Text allein.
   eine fremde Herkunft, im eigenen Modul steht es genau einmal als Absender im Kopf
   (Herkunfts-Regel). Und **Do** ihm seinen echten Grund mitgeben (`--seal-base`), statt die
   Toenung gegen eine angenommene Flaeche zu mischen.
+- **Do** den Rang eines Blocks ueber Radius und Elevation setzen, nie ueber Material
+  (Rang-Regel); der wichtigste Block einer Seite darf nicht der leiseste sein.
+- **Do** einer Karte mit Fusszeile den Koerper strecken und die Fusszeile verankern
+  (`flex: 1` plus `margin-block-start: auto`), damit Ueberschuss zwischen Inhalt und
+  Abschluss faellt statt dahinter.
+- **Do** eine Spaltenzahl, die von der Breite eines BAUSTEINS abhaengt, per `@container`
+  fragen - und den `container` am VORFAHREN deklarieren, nie am fragenden Element.
+- **Do** die Kennzahl einer Karte gestapelt setzen (kleines Label darueber, Zahl in Title 1
+  darunter, `tabular-nums`), nie als Zahl am rechten Ende einer Beschriftungszeile.
 
 ### Don't:
 - **Don't** einen zweiten Buttonradius einfuehren; die Kapsel steht in der `.btn`-Basisregel
@@ -1407,3 +1637,11 @@ Text allein.
 - **Don't** Siegel in die Listen eines Moduls streuen oder der Tab-Bar/Sidebar geben; im
   eigenen Raum ist die Herkunft selbstverstaendlich, und die Leiste beantwortet "wo bin ich",
   nicht "woher".
+- **Don't** eine Zugehoerigkeit ueber eine Haarlinie allein tragen lassen; was in einem Theme
+  ein Signal ist und im anderen keines, ist kein Kanal (Absenderband).
+- **Don't** einen Zustand ueber `opacity` auf dem eigenen Inhalt zeigen; eine Kachel, die
+  ihren Text schlechter lesbar macht, um Anfassbarkeit zu signalisieren, steigt stattdessen
+  eine Sprosse der Toenungsskala.
+- **Don't** einen Wert der Distanz-Skala als Einzelzahl hinschreiben; die Wand-Flaeche fuehrt
+  ihre Skala an einer Stelle, und was aus zwei Metern lesbar sein muss, haengt an `vmin` (die
+  Uhr an `vw`), nie an `vh`.
