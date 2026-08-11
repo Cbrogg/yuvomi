@@ -68,9 +68,12 @@
 
 /* --------------------------------------------------------
  * Gegenstands-Foto (Formular-Editor + Detailansicht) - abgeleitet von
- * .birthday-avatar-editor (birthdays.css), aber mit Eckenradius statt Kreis:
- * ein Gegenstand ist kein Portraet. Gleiche Masse/Interaktion, nur der
- * Radius und der Platzhalter (Icon statt Initialen) unterscheiden sich.
+ * .birthday-avatar-editor (birthdays.css), gleicher Kreis: ein
+ * rechteckiger Editor kollidierte mit der App-weiten Buttonform-Regel
+ * (test-frontend-audit.js "ein quadratischer Icon-Knopf ist ein Kreis",
+ * vier Ausnahme-Kategorien in tokens.css Abschnitt 9, keine davon deckt
+ * einen Foto-Behaelter). Gleiche Masse/Interaktion wie birthdays.css,
+ * nur der Platzhalter (Icon statt Initialen) unterscheidet sich.
  * -------------------------------------------------------- */
 
 .inventory-photo-wrap {

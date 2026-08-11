@@ -344,11 +344,23 @@ function renderList() {
 
   const filtered = state.items.filter((item) => matchesQuery(item) && matchesAttentionFilter(item));
   if (!filtered.length) {
+    const active = [];
+    if (state.query) active.push(`"${state.query}"`);
+    if (state.filterAttention) active.push(t('inventory.metricAttentionLabel'));
     list.appendChild(emptyStateEl({
       variant: 'no-results',
       title: t('inventory.noResultsTitle'),
       description: t('inventory.noResultsDescription'),
-      action: { label: t('inventory.resetSearch'), onClick: () => { state.query = ''; _search?.clear(); renderList(); } },
+      hint: active.length ? active.join(' · ') : undefined,
+      action: {
+        label: t('inventory.resetSearch'),
+        onClick: () => {
+          state.query = '';
+          state.filterAttention = false;
+          _search?.clear();
+          renderList();
+        },
+      },
     }));
     if (window.lucide) window.lucide.createIcons({ el: list });
     return;
@@ -442,11 +454,6 @@ function trackedDateDetailEntries(item) {
   });
 }
 
-/**
- * Lese-Zeilen fuer die Detailansicht. Zeilen ohne Inhalt fallen selbst weg
- * (detailRowEl), also keine Fallunterscheidung hier noetig.
- * @returns {Array} Sections fuer openDetailView
- */
 /** Detail-Vorschau: eigenes DOM-Element statt Text/Link, gleiche Rolle wie
  *  inventoryDetailListNode fuer die anderen komplexen Zeilen. Kein `node:` in
  *  openDetailView's `sections` erzwingt ein Label/Value-Paar (detailBodyEl
@@ -462,6 +469,11 @@ function photoDetailNode(photoData) {
   return img;
 }
 
+/**
+ * Lese-Zeilen fuer die Detailansicht. Zeilen ohne Inhalt fallen selbst weg
+ * (detailRowEl), also keine Fallunterscheidung hier noetig.
+ * @returns {Array} Sections fuer openDetailView
+ */
 function renderItemDetail(item) {
   const bookingEntries = (item.linked_entries || []).map((link) => ({
     text: `${link.title} · ${formatMoney(link.amount, _householdCurrency)}`,
@@ -881,7 +893,7 @@ function readFileAsDataUrl(file) {
  *  anders als birthdays.js's Initialen, die fuer einen Gegenstand keinen
  *  Sinn ergeben. */
 function photoPreviewHtml(photoData) {
-  if (photoData) return `<img class="inventory-photo-preview__image" src="${photoData}" alt="">`;
+  if (photoData) return `<img class="inventory-photo-preview__image" src="${esc(photoData)}" alt="">`;
   return `<span class="inventory-photo-preview__fallback"><i data-lucide="image" aria-hidden="true"></i></span>`;
 }
 
@@ -1039,7 +1051,7 @@ function buildItemForm({ mode, item = null }) {
           label: t('inventory.attachmentsLabel'),
           hint: t('inventory.attachmentsHint'),
         })}`,
-      { open: isEdit && (!!item.brand || !!item.model || !!item.serial_number || !!item.notes || (item.attachments?.length ?? 0) > 0) })}
+      { open: isEdit && (!!item.brand || !!item.model || !!item.serial_number || !!item.notes || !!item.photo_data || (item.attachments?.length ?? 0) > 0) })}
       <div class="modal-panel__footer modal-panel__footer--plain">
         ${isEdit ? `<button type="button" class="btn btn--danger-ghost" id="inv-delete">${esc(t('common.delete'))}</button>` : ''}
         <button type="button" class="btn btn--secondary" data-action="close-modal">${esc(t('common.cancel'))}</button>
@@ -1074,7 +1086,7 @@ function buildItemForm({ mode, item = null }) {
       photoPreview.insertAdjacentHTML('beforeend', photoPreviewHtml(photoData));
       if (window.lucide) window.lucide.createIcons({ el: photoPreview });
     };
-    photoPreview.addEventListener('click', () => photoInput?.click());
+    photoPreview?.addEventListener('click', () => photoInput?.click());
     panel.querySelector('#inv-photo-edit')?.addEventListener('click', () => photoInput?.click());
     photoInput?.addEventListener('change', async (e) => {
       const file = e.target.files?.[0];
