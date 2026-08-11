@@ -29,6 +29,8 @@ const router = express.Router();
 const CONDITIONS = ['new', 'good', 'fair', 'poor'];
 const STATUSES = ['active', 'sold', 'disposed', 'lost'];
 const CURRENCY_RE = /^[A-Z]{3}$/;
+const MAX_PHOTO_LENGTH = 6_990_507; // ~5 MB raw image in base64, same cap as birthdays.js
+const PHOTO_RE = /^data:image\/(png|jpeg|jpg|webp|gif);base64,[A-Za-z0-9+/=]+$/;
 const DOCS = { table: 'inventory_item_documents', ownerColumn: 'item_id' };
 
 const WARRANTY_REMINDER_OFFSET_DAYS = 30;
@@ -65,6 +67,17 @@ function syncReminder(item) {
 /** Gleiches Muster wie server/routes/subscriptions.js#budgetCurrency(). */
 function householdCurrency() {
   return db.get().prepare("SELECT value FROM sync_config WHERE key = 'currency'").get()?.value || 'EUR';
+}
+
+/** Gleiche Regel wie server/routes/birthdays.js#validatePhotoData - ein
+ *  einzelnes optionales Bild je Datensatz, gleiche Groessen-/Typgrenze. */
+function validatePhotoData(val) {
+  if (val === undefined) return { value: undefined, error: null };
+  if (val === null || val === '') return { value: null, error: null };
+  const s = String(val).trim();
+  if (s.length > MAX_PHOTO_LENGTH) return { value: null, error: 'Photo is too large.' };
+  if (!PHOTO_RE.test(s)) return { value: null, error: 'Photo must be a valid image data URL.' };
+  return { value: s, error: null };
 }
 
 function validCategoryKeys() {
@@ -236,6 +249,13 @@ function validateItemFields(body) {
   results.push(vNotes);
   values.notes = vNotes.value;
 
+  const vPhoto = validatePhotoData(body.photo_data);
+  results.push(vPhoto);
+  // `?? null`, nicht `vPhoto.value`: ein fehlendes Feld validiert als
+  // `{value: undefined}`, aber dies ist ein volles Replace (Global
+  // Constraints) - ein weggelassenes Foto wird NULL, nicht "unveraendert".
+  values.photo_data = vPhoto.value ?? null;
+
   return { values, errors: collectErrors(results) };
 }
 
@@ -322,13 +342,13 @@ router.post('/', (req, res) => {
         INSERT INTO inventory_items
           (name, brand, model, serial_number, category, location_id, purchase_date,
            purchase_price, current_value, currency, vendor, warranty_months, condition,
-           status, notes, created_by)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           status, notes, photo_data, created_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         values.name, values.brand, values.model, values.serial_number, values.category,
         values.location_id, values.purchase_date, values.purchase_price, values.current_value,
         values.currency, values.vendor, values.warranty_months, values.condition, values.status,
-        values.notes, userId,
+        values.notes, values.photo_data, userId,
       );
 
       syncReminder({
@@ -387,13 +407,13 @@ router.put('/:id', (req, res) => {
         UPDATE inventory_items
         SET name = ?, brand = ?, model = ?, serial_number = ?, category = ?, location_id = ?,
             purchase_date = ?, purchase_price = ?, current_value = ?, currency = ?, vendor = ?,
-            warranty_months = ?, condition = ?, status = ?, notes = ?
+            warranty_months = ?, condition = ?, status = ?, notes = ?, photo_data = ?
         WHERE id = ?
       `).run(
         values.name, values.brand, values.model, values.serial_number, values.category,
         values.location_id, values.purchase_date, values.purchase_price, values.current_value,
         values.currency, values.vendor, values.warranty_months, values.condition, values.status,
-        values.notes, item.id,
+        values.notes, values.photo_data, item.id,
       );
 
       syncReminder({

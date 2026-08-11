@@ -26,7 +26,10 @@ const USER = db.prepare(`
 `).run().lastInsertRowid;
 
 const app = express();
-app.use(express.json());
+// Gleiches Limit wie server/index.js: der Oversized-photo_data-Test muss den
+// Validator (400) erreichen, nicht schon an body-parsers Default-Limit (100kb)
+// mit 413 scheitern.
+app.use(express.json({ limit: '7mb' }));
 app.use((req, _res, next) => {
   req.authUserId = USER;
   req.session = { userId: USER };
@@ -143,4 +146,32 @@ test('GET /items: Volltextsuche ueber Name/Marke/Modell/Seriennummer', async () 
   assert.ok((await call('GET', '/items?q=Eureka')).body.data.some((i) => i.name === 'Kaffeemuehle'));
   assert.ok((await call('GET', '/items?q=ABC123')).body.data.some((i) => i.name === 'Kaffeemuehle'));
   assert.equal((await call('GET', '/items?q=NichtsPasstHier')).body.data.length, 0);
+});
+
+test('POST /items: gueltiges photo_data wird uebernommen und zurueckgegeben', async () => {
+  const validPhoto = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+  const r = await call('POST', '/items', { name: 'Item With Photo', photo_data: validPhoto });
+  assert.equal(r.status, 201);
+  assert.equal(r.body.data.photo_data, validPhoto);
+});
+
+test('POST /items: zu grosses photo_data -> 400', async () => {
+  const oversized = `data:image/png;base64,${'A'.repeat(7_000_000)}`;
+  const r = await call('POST', '/items', { name: 'Item With Oversized Photo', photo_data: oversized });
+  assert.equal(r.status, 400);
+});
+
+test('POST /items: photo_data ohne gueltigen Bild-MIME-Typ -> 400', async () => {
+  const r = await call('POST', '/items', { name: 'Item With Bad Photo', photo_data: 'data:text/plain;base64,aGVsbG8=' });
+  assert.equal(r.status, 400);
+});
+
+test('PUT /items/:id: photo_data ist volles Replace - weglassen loescht es', async () => {
+  const validPhoto = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEBAQEBAgGBgUGCQgKCgkICQkKDA8MCgsOCwkJDRENDg8QEBEQCgwSExIQEw8QEBD/2wBDAQMDAwQDBAgEBAgQCwkLEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBD/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAj/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k=';
+  const created = await call('POST', '/items', { name: 'Item To Update', photo_data: validPhoto });
+  const id = created.body.data.id;
+
+  const withoutPhoto = await call('PUT', `/items/${id}`, { name: 'Item To Update' });
+  assert.equal(withoutPhoto.status, 200);
+  assert.equal(withoutPhoto.body.data.photo_data, null);
 });
