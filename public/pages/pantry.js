@@ -626,21 +626,58 @@ function rowEl(item) {
   // Das MHD steht VOR dem Lagerort: die Zeile ellipsiert am Ende, und bei einem
   // langen Ortsnamen fiel sonst genau das Kerndatum weg - dieselbe Trunkierung,
   // gegen die die Kategorie hier schon gewichen ist (Critique, Riley-Fund).
-  const metaParts = [];
+  // DIE MENGE FÜHRT DIE META-ZEILE, sie steht nicht mehr zwischen den Knöpfen.
+  //
+  // Bis zum 12.08.2026 sass sie im Stepper und rückte unter 30rem Trägerbreite
+  // ÜBER die beiden Knöpfe (`flex-wrap` an .pantry-stepper). Das gab dem Namen
+  // die Breite, die er braucht, kostete aber rund 25px Höhe in JEDER Zeile:
+  // gemessen 89,4px bei 390x844, die höchste Zeile der App nach dem Budget.
+  //
+  // Der Umzug kostet KEINEN Pixel Breite. Der umgebrochene Stepper war bereits
+  // exakt so breit wie seine Knopfzeile (100px), und ohne den Wert ist er es
+  // weiterhin - die Bedienzone bleibt gleich breit, der Name behält seine
+  // 168px. Was wegfällt, ist nur die zweite Zeile.
+  //
+  // UND DER EINKAUF MACHT ES SEIT JEHER SO: `.list-row__meta` trägt dort
+  // `item.quantity`. Zwei Tabs derselben Küchenleiste schrieben dieselbe Angabe
+  // an zwei Orte.
+  //
+  // Sie steht VORN, obwohl das MHD dahinter dadurch seitlich wandert, wenn sich
+  // die Menge ändert: die Menge ist die Frage, die eine Vorratsliste
+  // beantwortet, und die Zeile ellipsiert am Ende. Hinten stünde sie genau
+  // dort, wo bei langem Ortsnamen gekappt wird.
+  const meta = document.createElement('span');
+  meta.className = 'list-row__meta';
+  const quantity = document.createElement('span');
+  quantity.className = 'pantry-row__quantity';
+  quantity.textContent = quantityText(item);
+  meta.appendChild(quantity);
+
+  /* MHD und Lagerort sind EIGENE Knoten, keine zusammengefügte Zeichenkette.
+   *
+   * Grund ist die Regel gleich daneben (pantry.css): auf einer schmalen Zeile
+   * MIT Warenkorb bleiben 168px statt 220px, und dort passt das MHD nicht mehr.
+   * Weggelassen wird es dann, nicht abgeschnitten - ein halbes Datum
+   * („MHD 23.12….") ist keine Angabe, sondern sieht aus wie ein Fehler. Damit
+   * CSS das entscheiden kann, muss es ein eigenes Element sein.
+   *
+   * Das Trennzeichen steht IM Knoten, sonst bliebe es beim Weglassen als
+   * einsames „·" zurück. */
   if (item.expires_on) {
-    metaParts.push(t('pantry.bestBefore', { date: formatDate(item.expires_on) }));
+    const expiry = document.createElement('span');
+    expiry.className = 'pantry-row__expiry';
+    expiry.textContent = ` · ${t('pantry.bestBefore', { date: formatDate(item.expires_on) })}`;
+    meta.appendChild(expiry);
   }
   // Im gefilterten (flachen) Modus trägt die Meta-Zeile den Lagerort, den sonst
   // die Gruppen-Überschrift zeigt.
   if (state.filter !== 'all') {
-    metaParts.push(item.location_name ? locationLabel(item.location_name) : t('pantry.unlocated'));
+    const place = document.createElement('span');
+    place.className = 'pantry-row__place';
+    place.textContent = ` · ${item.location_name ? locationLabel(item.location_name) : t('pantry.unlocated')}`;
+    meta.appendChild(place);
   }
-  if (metaParts.length) {
-    const meta = document.createElement('span');
-    meta.className = 'list-row__meta';
-    meta.textContent = metaParts.join(' · ');
-    main.appendChild(meta);
-  }
+  main.appendChild(meta);
 
   // Was der Button tut - nur für Screenreader, am Ende des Namens.
   const action = document.createElement('span');
@@ -695,12 +732,12 @@ function rowEl(item) {
   minus.setAttribute('aria-label', `${t('pantry.decrease')}: ${item.name}`);
   minus.insertAdjacentHTML('beforeend', '<i data-lucide="minus" class="icon-sm" aria-hidden="true"></i>');
 
-  const value = document.createElement('span');
-  value.className = 'pantry-stepper__value';
-  value.textContent = quantityText(item);
-  // BEWUSST keine eigene Live-Region je Zeile: bei 60 Artikeln wären das 60
-  // Live-Regionen, und Screenreader behandeln eine solche Wolke unzuverlässig.
-  // Die Ansage übernimmt die eine geteilte Region der Seite (#pantry-live).
+  // Der Wert steht in der Meta-Zeile (siehe dort). BEWUSST keine eigene
+  // Live-Region je Zeile: bei 60 Artikeln wären das 60 Live-Regionen, und
+  // Screenreader behandeln eine solche Wolke unzuverlässig. Die Ansage
+  // übernimmt die eine geteilte Region der Seite (#pantry-live) - sie ist auch
+  // der Grund, aus dem der Wert nicht neben den Knöpfen stehen MUSS, um die
+  // Änderung zu melden.
 
   const plus = document.createElement('button');
   plus.type = 'button';
@@ -710,7 +747,7 @@ function rowEl(item) {
   plus.insertAdjacentHTML('beforeend', '<i data-lucide="plus" class="icon-sm" aria-hidden="true"></i>');
 
   stepper.dataset.step = String(step);
-  stepper.append(minus, value, plus);
+  stepper.append(minus, plus);
   actions.appendChild(stepper);
 
   // Name zuerst, Bedienung danach: eine Vorratsliste wird nach Namen gescannt,
@@ -850,7 +887,7 @@ function announce(message) {
 
 /** Aktualisiert Menge, Badges und Leer-Zustand einer Zeile ohne Listen-Rebuild. */
 function refreshRowQuantity(row, item) {
-  const value = row.querySelector('.pantry-stepper__value');
+  const value = row.querySelector('.pantry-row__quantity');
   if (value) value.textContent = quantityText(item);
   announce(`${item.name}: ${quantityText(item)}`);
 

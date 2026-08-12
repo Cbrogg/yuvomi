@@ -2400,10 +2400,17 @@ test('die Küchen-Listen teilen eine Zeilen-Grammatik', () => {
   const pantryCss = read('../public/styles/pantry.css');
   const slot = pantryCss.match(/\.pantry-row__cart-slot\s*\{([^}]*)\}/)?.[1] ?? '';
   assert.match(slot, /width:\s*var\(--target-lg\)/,
-    'der Warenkorb-Slot muss die volle .row-action-Breite reservieren, sonst springt der Stepper je Zeile');
+    'wo ein Warenkorb liegt, muss der Slot die volle .row-action-Breite tragen');
   assert.match(slot, /flex-shrink:\s*0/, 'der Slot darf nicht schrumpfen');
-  assert.match(read('../public/pages/pantry.js'), /cartSlot\.className = 'pantry-row__cart-slot'/,
-    'pantry.js muss den Slot IMMER rendern, auch ohne Warenkorb');
+  /* HIER STAND „pantry.js muss den Slot IMMER rendern, auch ohne Warenkorb -
+   * sonst springt der Stepper je Zeile". Am gerenderten Dokument nachgemessen
+   * (390x844, 12 Zeilen, 5 mit Warenkorb): die linke Kante des Minus-Knopfs
+   * liegt mit und ohne leeren Slot bei x=261. Seit die Bedienung im DOM HINTER
+   * dem Namen steht (2026-07-29), klebt sie an der Zeilenkante und der Stepper
+   * ist ihr letztes Kind - er kann gar nicht springen. Der leere Slot kostete
+   * nur 52px Textspalte. Zugesichert wird deshalb sein Wegfall. */
+  assert.match(pantryCss, /\.pantry-row__cart-slot:empty\s*\{\s*display:\s*none/,
+    'ein Warenkorb-Slot ohne Warenkorb reserviert 52px Textspalte fuer nichts');
 
   // Umbrechen statt abschneiden. Ein gekürzter Artikelname ("Broc…") war bei
   // 320px der Verlust des einzigen Zwecks der Einkaufsliste.
@@ -3473,36 +3480,78 @@ test('die Küchen-Tabs teilen eine Sammelaktions-Leiste', () => {
 });
 
 /**
- * Die Vorratszeile entscheidet nach ihrer EIGENEN Breite, nicht nach der des
- * Fensters.
+ * Die Bedienzone der Vorratszeile ist so breit wie ihre KNOEPFE, nie wie ihr
+ * Inhalt.
  *
- * Gemessen bei 320px (Critique-Nachlauf 2026-07-30): der Stepper belegte 167px der
- * 262px Zeilenbreite, davon 71px allein das Mengenfeld (`min-width: 7ch`). Für den
- * Namen blieben 31px - „Olivenöl extra vergine" auf 8 Zeilen, Zeilenhöhen 89 bis
- * 369px. Danach: 106px Namensbreite, Zeilenhöhen 85 bis 155px.
+ * Anlass (Critique-Nachlauf 2026-07-30): der Stepper belegte bei 320px 167px der
+ * 262px Zeilenbreite, davon 71px allein das Mengenfeld (`min-width: 7ch`). Fuer
+ * den Namen blieben 31px - „Olivenoel extra vergine" auf 8 Zeilen, Zeilenhoehen
+ * 89 bis 369px.
+ *
+ * DIE ANTWORT DARAUF WAR BIS ZUM 12.08.2026 EIN UMBRUCH: unter 30rem
+ * Traegerbreite rueckte der Wert ueber die Knoepfe. Das rettete die Namensbreite
+ * und kostete rund 25px Hoehe in JEDER Zeile (gemessen 89,4px bei 390x844). Die
+ * Menge steht jetzt in der Metazeile, wo der Einkauf sie immer schon hat - die
+ * Bedienzone kann damit gar nicht mehr mit dem Text wachsen, und die
+ * Namensbreite haengt an keinem Breakpoint mehr.
+ *
+ * Geprueft wird deshalb die Zusage in ihrer neuen, staerkeren Form: in der
+ * Bedienzone steht KEIN Text. Der alte Mechanismus ist ausdruecklich
+ * ausgeschlossen - kaeme das Wertfeld zurueck, waere die Zusage still wieder
+ * gebrochen.
  */
-test('die Vorratszeile misst sich selbst, nicht das Fenster', () => {
+test('die Bedienzone der Vorratszeile traegt keinen Text', () => {
   const shared = read('../public/styles/list-row.css');
   const pantryCss = read('../public/styles/pantry.css');
+  const pantryJs = read('../public/pages/pantry.js');
 
+  // Der geteilte Container bleibt: die Aufgabenzeile haengt ihr Etikett daran.
   const rows = shared.match(/\.list-rows\s*\{([^}]*)\}/)?.[1] ?? '';
   assert.match(rows, /container-type:\s*inline-size/,
     '.list-rows muss abfragbarer Container sein - ein Container kann sich selbst nicht abfragen');
   assert.match(rows, /container-name:\s*list-rows/, 'der Container braucht einen Namen');
 
-  assert.match(pantryCss, /@container list-rows \(max-width: 30rem\)/,
-    'die Kompaktform muss an der ZEILENbreite hängen, nicht an einem Viewport-Breakpoint');
-  const compact = pantryCss.slice(pantryCss.indexOf('@container list-rows'));
-  assert.match(compact, /\.pantry-stepper\s*\{[\s\S]*?flex-wrap:\s*wrap/,
-    'der Stepper muss umbrechen dürfen');
-  assert.match(compact, /width:\s*calc\(var\(--pantry-step-btn\) \* 2 \+ var\(--space-1\)\)/,
-    'ohne feste Breite wickelt der Flex-Container nie um: seine max-content-Breite ist die Summe aller drei Kinder');
-  assert.match(compact, /\.pantry-stepper__value\s*\{[\s\S]*?order:\s*-1/,
-    'der Wert rückt über die Knöpfe - per order, damit die Vorlesereihenfolge Minus/Wert/Plus bleibt');
-  assert.match(compact, /min-width:\s*0/, 'die 7ch des Mengenfelds müssen in der Kompaktform fallen');
+  // Der Stepper hat genau zwei Kinder, und beide sind Knoepfe.
+  assert.match(pantryJs, /stepper\.append\(minus,\s*plus\)/,
+    'in den Stepper gehoeren nur die beiden Knoepfe - ein Wert dazwischen macht seine Breite vom Text abhaengig');
+  /* UEBER DEN REGELSCANNER, NICHT UEBER EIN REGEX AUF DER DATEI: die Begruendung
+   * fuer den Umzug steht als KOMMENTAR in pantry.css und nennt den alten
+   * Selektor beim Namen. Ein `doesNotMatch` auf dem Dateitext las diesen
+   * Kommentar als Regel und meldete den Verstoss, den er beschreibt. */
+  const pantryRules = [...eachRule(pantryCss)];
+  const valueRule = pantryRules.find((r) => /\.pantry-stepper__value/.test(r.selector));
+  assert.equal(valueRule, undefined,
+    'das Wertfeld ist in die Metazeile gezogen; kaeme es zurueck, waere die Zusage still gebrochen');
+  const wrapping = pantryRules.filter((r) => /\.pantry-stepper\b/.test(r.selector) && /flex-wrap:\s*wrap/.test(r.body));
+  assert.deepEqual(wrapping.map((r) => r.selector), [],
+    'der Stepper darf nicht mehr umbrechen - der Umbruch war der Hoehentreiber der Zeile');
 
-  // Eine Variable, zwei Zeigerklassen: die Kompaktbreite muss mit derselben Zahl
-  // rechnen wie die Knöpfe selbst.
+  // Und die Menge steht wirklich in der Metazeile, nicht nur nicht mehr im
+  // Stepper: ohne diese Zeile waere sie ersatzlos verschwunden und der Guard
+  // trotzdem gruen.
+  assert.match(pantryJs, /quantity\.className = 'pantry-row__quantity'/,
+    'die Menge braucht einen eigenen Knoten in der Metazeile - der Stepper aktualisiert ihn');
+  assert.match(pantryJs, /meta\.appendChild\(quantity\)/,
+    'die Menge haengt in der Metazeile');
+  assert.match(pantryJs, /row\.querySelector\('\.pantry-row__quantity'\)/,
+    'refreshRowQuantity muss den neuen Knoten treffen, sonst friert die Anzeige beim Steppen ein');
+
+  /* WEGLASSEN STATT ABSCHNEIDEN. Auf einer Zeile mit Warenkorb bleiben 168px
+   * statt 220px, und „1 Flasche · MHD 23.12.2027" braucht 182px - mit Ellipse
+   * stand da „MHD 23.12….". Das MHD braucht dafuer einen EIGENEN Knoten; als
+   * Teil einer zusammengefuegten Zeichenkette kann CSS es nicht weglassen. */
+  assert.match(pantryJs, /expiry\.className = 'pantry-row__expiry'/,
+    'das MHD braucht einen eigenen Knoten, sonst kann es nur abgeschnitten statt weggelassen werden');
+  assert.match(pantryJs, /expiry\.textContent = ` · \$\{t\('pantry\.bestBefore'/,
+    'das Trennzeichen gehoert IN den Knoten - sonst bleibt beim Weglassen ein einsames Mittelpunkt-Zeichen stehen');
+  assert.match(
+    pantryCss,
+    /@container list-rows \(max-width:[^)]+\)\s*\{\s*\.pantry-row:has\(\.pantry-row__cart\) \.pantry-row__expiry\s*\{\s*display:\s*none/,
+    'das MHD faellt auf der schmalen Zeile MIT Warenkorb weg - an der Traegerbreite, nicht am Viewport',
+  );
+
+  // Eine Variable, zwei Zeigerklassen: die Knopfgroesse wechselt mit der
+  // Zeigerfaehigkeit und wird nicht doppelt gepflegt.
   assert.match(pantryCss, /--pantry-step-btn:\s*var\(--target-md\)/, 'Zeiger: --target-md');
   assert.match(pantryCss, /@media \(hover: none\)\s*\{\s*\.pantry-stepper\s*\{\s*--pantry-step-btn:\s*var\(--target-base\)/,
     'Touch: --target-base, gesetzt an derselben Variable');
