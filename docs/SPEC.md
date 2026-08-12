@@ -64,6 +64,8 @@ One pending invitation per row. The `users` row is only created when the invitat
 | recurrence_origin_id | INTEGER | FK → Tasks, ON DELETE SET NULL (migration v122) — the completed instance whose completion created this one. Deliberately not `parent_task_id`, which means "subtask" |
 | points | INTEGER | NOT NULL DEFAULT 0 — reward points credited to assigned members on completion (Rewards module, migration v69) |
 | visibility | TEXT | NOT NULL DEFAULT `all` — `all` \| `assignees` \| `private`; who may see the task (migration v78) |
+| target_caldav_account_id | INTEGER | FK → CalDAV Accounts (for the first upload of a locally created task), nullable (migration v136, #695) |
+| target_caldav_list_url | TEXT | CalDAV reminder-list URL for that upload, nullable (migration v136, #695). Both columns are cleared once the task has been uploaded — from then on it is an ordinary mirror and carries `external_uid` instead |
 
 **Visibility (migration v78):** every task carries a `visibility` of `all` (all family members, the default and prior behaviour), `assignees` (creator + assigned members only), or `private` (creator only). Enforcement is **server-side on every read path** (list, detail, dashboard widgets, search, MCP) — there is **no admin bypass**, so a "private" task stays hidden even from a parent/admin (the intended use is preparing a surprise). Set via the visibility selector in the task modal; restricted tasks carry a lock/people icon in the list. The same field and rule apply to calendar events. **In a household of one the selector is not shown** (v2.0.2): it would have exactly one sensible answer. The field keeps its stored value and returns as soon as a second member joins — the rule changes what is asked, never what is stored. The same applies to "assigned to" and to the visibility of documents.
 
@@ -433,6 +435,11 @@ Three per-user preferences prefill the new-event dialog (stored in `sync_config`
 
 All three are configured in Settings → Personal → Event defaults and apply only when creating an event (never on edit); a date-based sync default assignee still takes precedence for imported events. Per-user rather than household-wide by design: which calendar a person feeds is a personal decision, and the inverse mapping already exists as `external_calendars.default_assignee_user_id` (which person imported events from a calendar are assigned to).
 
+### Task defaults for new tasks (per-user)
+- **`tasks_default_target`** (#695) — the CalDAV reminder list a new task starts out pointing at, in the same identifier format as `calendar_default_target` (`''` or `caldav:<accountId>|<listUrl>`; a `google:` value is rejected, because the VTODO sync runs over CalDAV only). The server validates the shape here and the *eligibility* in `POST/PUT /api/v1/tasks` — a list that was deselected in the meantime must not make the setting unsavable, but it must not silently park a task in a queue that will never drain either.
+
+Configured in Settings → **Personal** → Task defaults, deliberately not next to the reminder lists in Settings → Sync: which lists the household syncs at all is an admin decision, which of them *my* new tasks go to is mine, and the value is written per user. The field is replaced by a hint while no list is enabled for tasks.
+
 ### External Calendars
 Display metadata (name, color) for synced Google/CalDAV calendars. Populated automatically during sync.
 
@@ -665,8 +672,31 @@ response, and retried by the next sync run (at-least-once, given up after 5 atte
   visibility and subtasks are Yuvomi-internal and never trigger a push.
 - The inbound pass skips rows with a pending push (the stale server state must not overwrite them)
   and does not re-create a locally deleted row while its tombstone is open.
-- **Creating** is deliberately out of scope: unlike an event, a task carries no selectable target —
-  it belongs to the list it came from. Locally created tasks stay local.
+- **Creating: outbound since migration v136 (#695).** Until then this was out of scope, on the
+  grounds that a task carried no selectable target. That reason had expired: events have had a
+  per-person default target since v1.79.0 (#620), and the interface promised sync "in both
+  directions" the whole time. A task created in Yuvomi now names its destination in
+  `target_caldav_account_id` + `target_caldav_list_url`; the sync uploads it and turns it into an
+  ordinary mirror, after which it runs through the change and deletion paths above unchanged. Four
+  rules hold it together:
+  - Only lists the household enabled **for tasks** are offered (`caldav_reminder_selection`,
+    `target_module = 'tasks'`), checked in the route *and* again in the service. A list mapped to
+    Shopping would send a task out and bring it back as a shopping item.
+  - The upload is the **last** step of a sync run. The prune before it removes mirrors the server
+    does not list, and a task uploaded any earlier would be deleted seconds after it arrived.
+  - The UID is derived from the task id (`yuvomi-task-<id>@yuvomi.local`), not drawn at random: a
+    run that dies between the upload and the bookkeeping overwrites its own object next time
+    instead of leaving a duplicate.
+  - **Subtasks are excluded.** As standalone VTODOs they would stand beside their parent as equals,
+    and the relation that makes them subtasks would be lost — `RELATED-TO` exists in RFC 5545 but
+    the inbound does not read it, so the round trip would return them as loose tasks.
+
+  A failed upload is neither counted nor given up on: unlike a change it has no state that could go
+  stale, so it stays queued until it succeeds or the target list disappears (in which case the task
+  is released back to local rather than retried forever). Moving an *already uploaded* task between
+  lists remains out of scope — a task belongs to the list it came from.
+  `tasks_default_target` (per user, same `caldav:<accountId>|<listUrl>` identifier as
+  `calendar_default_target`) preselects the destination in the dialog.
 - **Lossy mappings are held from both ends.** Yuvomi has four priority levels and three statuses,
   RFC 5545 three priority bands and no "in progress". `urgent`/`high` share the top band and
   `in_progress` maps out as "not completed", so the inbound keeps the finer local value whenever the
@@ -1681,6 +1711,19 @@ under Settings → Family; every member can ask `GET /health/caregivers/me` who 
 | note | TEXT | |
 | created_at | TEXT | ISO 8601, default now |
 
+**Correcting an entry (#695 sibling, #701).** `POST /logs/{id}/take` and `/skip` were the only ways
+to change an entry, so a mistap was permanent — and not only on screen: the wrong time goes into
+`GET /export/meds-logs` as well, which is the file somebody prints for a doctor.
+`PATCH /api/v1/health/logs/{id}` (`{ status?, taken_at?, dose_qty?, note? }`) corrects it, and
+`status: 'pending'` takes a take or a skip back. The timestamp travels **with** the status: anything
+other than `taken` clears `taken_at`, because an entry that says not-taken while carrying a time it
+was taken at contradicts itself in the app and in the export.
+`DELETE /api/v1/health/logs/{id}` removes an entry **only when it has no `schedule_id`** (ad-hoc and
+PRN doses). A scheduled entry answers `409`: the scheduler recreates it on its next run because the
+dose is still planned for that time, so deleting it would look like a success and be a return on the
+instalment plan. Both are restricted to the owner of the medication — seeing a medication and
+rewriting its record are different rights.
+
 **`health_lab_reports`** — lab report header.
 
 | Column | Type | Constraint |
@@ -1880,6 +1923,8 @@ The surface carries four things, in this order: **the time**, large (this is whe
 - **Responsive toolbar (v1.36.0):** the toolbar follows the shared Documents/Contacts grammar — a wrapping module head (search, view switch, bulk select, categories) above a permanently visible filter row that carries the filter chips and the grouping choice. The earlier `<details>` overflow panel was removed: it hid the view and grouping controls behind a click without showing their state. Bulk actions remain hidden until at least one task is selected. Checkbox and row actions use the shared touch-target tokens.
 - **Operable controls (v1.36.0):** filter chips are `<button aria-pressed>` (the same markup Documents and Contacts already used for the shared `.filter-chip` class), the task title and the Kanban card title are buttons that open the task, and the subtask progress bar is a button with `aria-expanded`. All of these were previously `<div>`s reachable by pointer only — the subtask list (`display: none`) had no keyboard opener at all.
 - **Mobile swipe (sides swapped in this release):** swiping towards the row's **start** (right in LTR, left in RTL) marks the task done or reopens it; swiping towards its **end** opens the task. The panels are addressed as `leading`/`trailing` in `public/utils/swipe-row.js`, not as left/right, so the gesture mirrors correctly in RTL. Existing users are told once via `common.swipeSidesSwapped`.
+- **Sync target on a new task (#695):** the task dialog carries a "sync target" field, the same shape the event dialog has had since #620, listing only the reminder lists the household enabled *for tasks*. Prefilled from `tasks_default_target`. It is absent for subtasks (they carry no target of their own) and replaced by a sentence on a task that is already mirrored — moving a task between lists is deliberately not offered, so a dropdown there would promise something the sync does not do. `GET /api/v1/tasks/sync-targets` serves the options to every logged-in member, with no credentials or server URLs in the payload.
+- **The note is a note (#731):** the free-text field is six rows, not two, and the read view renders it as Markdown through the same `renderMarkdownLight()` the notes module and the dashboard use — so a checklist, a heading or a bold word looks the same wherever it appears. The editor stays plain text; the notes module's toolbar is not (yet) duplicated here.
 - Badge for overdue tasks
 
 ### Shopping Lists (`/shopping`)

@@ -1,4 +1,4 @@
-<!-- version: 2.6.1 -->
+<!-- version: 2.7.0 -->
 <!--
   Die `releaseNotes` fuer den Umbrel-App-Store, von Hand fuer JEDEN Release
   geschrieben. `umbrel-publish.yml` nimmt den Text unter diesem Kommentar
@@ -29,10 +29,10 @@
     - Leerzeile zwischen den Absaetzen: der Store rendert ein gefaltetes
       YAML-Blockskalar, dort ist die Leerzeile der Absatzumbruch.
 -->
-This update fixes the dashboard on larger screens. The widget grid now runs all the way to the bottom of the window instead of stopping short of it, so the last row of cards is no longer cut off with an empty strip beneath it, and the board takes noticeably less scrolling to get through.
+This update completes the two-way sync with CalDAV reminder lists. Until now a task that came from your server could be edited, completed or deleted and the change reached the server, but a task you created in Yuvomi stayed on this device and nothing said so. You can now pick a reminder list when creating a task, and it is uploaded like any other. Each member sets their own default list under Settings, Personal, Task defaults; a task without a list stays local exactly as before, so nothing changes unless you choose it.
 
-Widget headers are more compact, which leaves each card more room for what it actually shows. The buttons in them stay just as easy to hit.
+Recorded medication doses can be corrected. Until now marking a dose as taken or skipped was final, which also meant a mistake stayed in the CSV export you might hand to a doctor. You can now change the time of a dose, take an entry back, and delete an entry that was not part of a schedule. A scheduled dose is taken back rather than deleted, because the plan would simply create it again. The dose log also tells the three states apart properly now: a dose still waiting for its time is no longer listed as taken.
 
-In Arabic and Farsi, the quick-action menu now opens on the same side as the button it belongs to.
+The note field on a task is larger and understands Markdown, so a checklist or a heading in a task looks the same as it does in the Notes module.
 
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.6.1
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.7.0

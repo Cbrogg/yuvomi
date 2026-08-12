@@ -7,10 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.7.0] - 2026-08-12
+
 ### Added
 
 - **A task created in Yuvomi now reaches the CalDAV reminder list.** The sync was one-way for anything that started here: tasks arriving from a server could be edited, completed and deleted back, but a task typed into Yuvomi stayed local forever, and nothing said so. The reason was written down in the source - a task carries no selectable target, so there was no list to put it in - and it had stopped being true: the calendar has had a per-person default target since 1.79.0. Measured against the sentence the interface actually shows, "sync in both directions", this was not a missing feature but a wrong promise. The task dialog now carries the same target field the event dialog has, prefilled from a personal default under Settings → Personal → Task defaults, and the list offered is only what the household enabled *for tasks*: a list pointing at shopping would send a task out and bring it back as a shopping item. The upload runs immediately after saving and again on every sync, and it is the last step of a run on purpose, because the prune before it removes mirrors the server does not know - a task uploaded any earlier would be deleted seconds after it arrived. Its UID is derived from the task's own id rather than drawn at random, so a run that dies between the upload and the bookkeeping overwrites its own object next time instead of leaving a duplicate. Subtasks are excluded: as standalone VTODOs they would stand next to their parent as equals, and the relationship that makes them subtasks would be gone. Nothing changes for anyone who picks no target - that task stays local, exactly as every task did before.
 - **A dose can be corrected or taken back.** The medication log knew `take` and `skip` and nothing else, so a mistap was permanent - not just on screen: the wrong time goes into the CSV export as well, which is the file somebody prints and hands to a doctor. The log entry can now be edited (time and status) and an entry that was never planned can be deleted. A *scheduled* entry cannot: the scheduler would recreate it on its next run, so deleting it would look like a success and be a return on the instalment plan. It is undone instead, back to pending. The time travels with the status rather than beside it, so anything that is not "taken" clears the timestamp - an entry that says not-taken while carrying a time it was taken at contradicts itself, and it would contradict itself in the export too.
+
+### Fixed
+
+- **The dose log says "pending" when a dose is pending.** It knew two states and drew three: everything that was not skipped was labelled as taken, so every dose still waiting for the day claimed to have been swallowed. Nothing pointed at it while there was no way back out of a state - with a correction dialog next to it, that line would be the one contradicting the correction. Three states now, each with its own mark; skipped and pending step back equally far, and only the word beside them tells them apart.
 
 ### Changed
 
