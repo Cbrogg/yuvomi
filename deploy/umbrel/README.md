@@ -85,6 +85,25 @@ Aus `.claude/skills/umbrel-update-app/` in `getumbrel/umbrel-apps`:
 - `id` niemals ändern - das ist Identität und Datenpfad.
 - Vor dem PR `npm run lint:apps -- yuvomi --check-images` laufen lassen und den
   echten Update-Pfad testen, nicht nur eine Neuinstallation.
+- `releaseNotes` sind **knapp und für Endnutzer** geschrieben, mit Link auf die
+  vollen Notizen; interne Details, CI- und Docs-Änderungen gehören nicht hinein.
+- Der PR-Body nennt alte und neue Version, die Quelle, den Testumfang, die
+  geprüften Architekturen und etwaige Breaking Changes.
+
+### Die Release-Notizen werden geschrieben, nicht generiert
+
+`.github/umbrel-release-notes.md` im Hauptrepo enthält den Store-Text für den
+nächsten Release, samt Versionsmarke; `umbrel-publish.yml` nimmt ihn wörtlich und
+bricht ab, wenn die Marke nicht zur veröffentlichten Version passt.
+
+Bis v2.6.0 hat der Workflow stattdessen den GitHub-Release-Body umgeformt -
+Überschriften und Aufzählungszeichen weg, Rest als Prosa. Das war syntaktisch
+einwandfrei und inhaltlich falsch: unser CHANGELOG ist für Entwickler geschrieben
+(Messwerte, Tokennamen, Selektoren) und stand damit im Update-Dialog eines
+Haushalts. Umbrels Maintainer hat den Text vor dem Merge von v2.6.0 von Hand
+ersetzt und gebeten, künftig ihre `AGENTS.md` zu befolgen (Kommentar an PR #5980).
+Die Anleitung dafür steht im Kopf der Datei; **release-prep schreibt sie vor dem
+Tag**, nicht danach - der Workflow läuft beim Veröffentlichen des Releases.
 
 ## Lokal testen
 

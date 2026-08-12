@@ -14,6 +14,25 @@ name: Umbrel Catalog Publish
 # It edits the maintainers' upstream files IN PLACE (version, releaseNotes,
 # image digest) — it never overwrites them with our source, so any review tweaks
 # (port, gallery, category, …) are preserved across updates.
+#
+# ES FOLGT DEN REGELN DES KATALOG-REPOS, und die stehen dort, nicht hier:
+# getumbrel/umbrel-apps führt eine `AGENTS.md`, die auf
+# `.claude/skills/umbrel-update-app/` verweist. Deren Maintainer hat vor dem
+# Merge von v2.6.0 die `releaseNotes` von Hand umgeschrieben und darum gebeten,
+# diese Anleitung künftig zu befolgen (Kommentar an PR #5980). Drei Dinge daraus
+# sind hier eingebaut:
+#
+#   1. `releaseNotes` sind KNAPP und für Endnutzer geschrieben, plus Link auf
+#      die vollen Notizen. Sie kommen deshalb nicht mehr aus einer Umformung des
+#      Release-Bodys, sondern aus `.github/umbrel-release-notes.md` — dort steht
+#      auch, warum die Automatik daran gescheitert ist.
+#   2. Der PR-Body nennt alte und neue Version, die Quelle, was am Paket
+#      geändert wurde, wie geprüft wurde und für welche Architekturen — genau
+#      die Felder, die ihre „PR Readiness" verlangt. Dazu ausdrücklich, was
+#      NICHT geprüft wurde: der Update-Pfad durch umbrelOS läuft hier nicht.
+#   3. Ihr Linter (`node .tools/lint-apps.mjs <app> --check-images`) läuft vor
+#      dem Push. Sein Urteil ist verbindlich; nur seine Einrichtung (ein
+#      `npm install` in ihrem Repo) darf den Release nicht rot machen.
 
 on:
   release:
@@ -35,6 +54,9 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
+      - name: Check out (for the authored Umbrel release notes)
+        uses: actions/checkout@v5
+
       - name: Resolve version
         id: ver
         env:
@@ -67,6 +89,43 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Die Notizen VOR dem Warten auf das Image prüfen: eine fehlende oder
+      # veraltete Marke soll in Sekunden auffallen und nicht nach zwanzig
+      # Minuten Registry-Warteschlange.
+      - name: Verify the authored Umbrel release notes
+        id: notes
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          set -euo pipefail
+          F=".github/umbrel-release-notes.md"
+          if [ ! -f "$F" ]; then
+            echo "::error::$F fehlt. Der Umbrel-Store braucht knappe, für Endnutzer geschriebene releaseNotes (getumbrel/umbrel-apps AGENTS.md → .claude/skills/umbrel-update-app). Die Datei erklärt in ihrem Kopf, wie sie zu schreiben ist."
+            exit 1
+          fi
+          MARKED="$(grep -m1 -oE '^<!-- version: [0-9A-Za-z.+-]+ -->$' "$F" | grep -oE '[0-9][0-9A-Za-z.+-]*' || true)"
+          if [ "$MARKED" != "$VERSION" ]; then
+            echo "::error::$F ist auf '${MARKED:-<keine Marke>}' markiert, veröffentlicht wird '$VERSION'. Eine veraltete Store-Notiz ist schlimmer als keine: sie beschreibt Haushalten ein Update, das sie nicht bekommen. Notizen für v$VERSION schreiben und die Marke mitziehen."
+            exit 1
+          fi
+          # Den Text OHNE den Erklaerkopf ablegen, und zwar ausserhalb des
+          # Arbeitsverzeichnisses: der PR-Schritt arbeitet in `fork/` und käme
+          # sonst nicht mehr an die Datei.
+          OUT="$RUNNER_TEMP/umbrel-release-notes.txt"
+          python3 - "$F" "$OUT" <<'PY'
+          import re, sys
+          src, dst = sys.argv[1], sys.argv[2]
+          text = open(src, encoding="utf-8").read()
+          # Jeder HTML-Kommentar ist Anleitung fuer uns, nicht Text fuer den Store.
+          body = re.sub(r"<!--.*?-->", "", text, flags=re.S).strip()
+          if len(body) < 40:
+            sys.exit("::error::Die Release-Notizen sind nach dem Entfernen der Kommentare leer.")
+          open(dst, "w", encoding="utf-8").write(body + "\n")
+          print(f"{len(body)} Zeichen Store-Text.")
+          PY
+          echo "path=$OUT" >> "$GITHUB_OUTPUT"
+          echo "✓ Release-Notizen sind auf $VERSION markiert."
+
       - name: Resolve multi-arch image digest (wait for the image to publish)
         id: digest
         run: |
@@ -87,10 +146,31 @@ jobs:
           echo "::error::image $IMG not found after ~20 min — did Docker Publish run?"
           exit 1
 
+      # Ihr Update-Gate verlangt ausdrücklich „multi-arch manifest-list/index
+      # digest, and linux/amd64 plus linux/arm64 support". Der Schritt oben nimmt
+      # nur den Digest der Manifest-Liste - dass beide Plattformen darin stehen,
+      # war bisher eine Annahme. Der PR-Body behauptet es, also wird es gemessen.
+      - name: Verify the image covers amd64 and arm64
+        id: arch
+        run: |
+          set -euo pipefail
+          IMG="ghcr.io/${{ github.repository_owner }}/yuvomi:${{ steps.ver.outputs.version }}"
+          PLATFORMS="$(docker buildx imagetools inspect "$IMG" --raw \
+            | jq -r '[.manifests[]? | select(.platform.os != "unknown") | "\(.platform.os)/\(.platform.architecture)"] | unique | join(", ")')"
+          echo "Plattformen: ${PLATFORMS:-<keine>}"
+          for want in linux/amd64 linux/arm64; do
+            case "$PLATFORMS" in
+              *"$want"*) ;;
+              *) echo "::error::$IMG deckt $want nicht ab (gefunden: ${PLATFORMS:-keine}). Umbrel läuft auf beiden Architekturen."; exit 1 ;;
+            esac
+          done
+          echo "platforms=$PLATFORMS" >> "$GITHUB_OUTPUT"
+
       - name: Open / update PR on getumbrel/umbrel-apps
         env:
           GH_TOKEN: ${{ secrets.UMBREL_FORK_TOKEN }}
-          RELEASE_BODY: ${{ github.event.release.body }}
+          NOTES_FILE: ${{ steps.notes.outputs.path }}
+          PLATFORMS: ${{ steps.arch.outputs.platforms }}
           VERSION: ${{ steps.ver.outputs.version }}
           DIGEST: ${{ steps.digest.outputs.digest }}
           OWNER: ${{ github.repository_owner }}
@@ -132,18 +212,30 @@ jobs:
             exit 0
           fi
 
+          # Die alte Version festhalten, BEVOR sie überschrieben wird: ihre
+          # „PR Readiness" verlangt sie im PR-Body, und danach ist sie weg.
+          OLD_VERSION="$(grep -m1 -E '^version:' yuvomi/umbrel-app.yml | sed -E 's|^version: *"?([^"]*)"?.*|\1|')"
+          echo "Katalog steht auf: ${OLD_VERSION:-<unbekannt>}"
+
           # Edit the maintainers' files IN PLACE — never overwrite them with our
           # source, so their port / gallery / category / review tweaks are preserved.
           sed -i -E "s|^version: .*|version: \"$VERSION\"|" yuvomi/umbrel-app.yml
           sed -i -E "s|image: ghcr.io/$OWNER/yuvomi:[^@[:space:]]+@sha256:[0-9a-f]+|image: ghcr.io/$OWNER/yuvomi:$VERSION@$DIGEST|" yuvomi/docker-compose.yml
-          if [ -z "${RELEASE_BODY:-}" ]; then
-            RELEASE_BODY="$(gh release view "v$VERSION" --repo "$OWNER/yuvomi" --json body -q .body)"
-            export RELEASE_BODY
-          fi
-          # releaseNotes from the GitHub release body (JSON-encoded string is valid YAML)
-          python3 - <<'PY'
-          import json, os, re, sys
-          body = os.environ.get("RELEASE_BODY", "").strip()
+
+          # releaseNotes aus der von Hand geschriebenen Datei (JSON-kodierter
+          # String ist gültiges YAML).
+          #
+          # HIER STAND EINE UMFORMUNG DES RELEASE-BODYS: Überschriften weg,
+          # Aufzählungszeichen weg, Rest als Prosa. Sie war syntaktisch
+          # einwandfrei und inhaltlich falsch - unser CHANGELOG ist für
+          # Entwickler geschrieben und stand damit im Update-Dialog eines
+          # Haushalts. Umbrels Maintainer hat den Text vor dem Merge von v2.6.0
+          # von Hand ersetzt; die Regeln dafür stehen in ihrem
+          # `.claude/skills/umbrel-update-app/` und die Umsetzung im Kopf von
+          # `.github/umbrel-release-notes.md`.
+          python3 - "$NOTES_FILE" <<'PY'
+          import json, re, sys
+          notes = open(sys.argv[1], encoding="utf-8").read().strip()
 
           # The upstream value is a BLOCK scalar spanning many indented lines:
           #
@@ -156,20 +248,7 @@ jobs:
           # PR carried a broken manifest (seen on the v1.79.0 release). Consume the
           # whole block: up to the next line starting a top-level key, or EOF.
           p = "yuvomi/umbrel-app.yml"
-          t = open(p).read()
-
-          # Markdown belongs in a changelog, not in an app-store field: strip the
-          # "### Added" headings and bullet markers so the store shows prose.
-          lines = []
-          for line in body.splitlines():
-            line = line.strip()
-            if not line or line.startswith("#"):
-              if lines and lines[-1] != "":
-                lines.append("")
-              continue
-            lines.append(re.sub(r"^[-*]\s+", "", line))
-          notes = "\n".join(lines).strip()
-
+          t = open(p, encoding="utf-8").read()
           t, n = re.subn(
             r"^releaseNotes:.*?(?=^[A-Za-z]|\Z)",
             lambda _: "releaseNotes: " + json.dumps(notes) + "\n",
@@ -179,7 +258,7 @@ jobs:
           )
           if n != 1:
             sys.exit("::error::releaseNotes block not found in yuvomi/umbrel-app.yml")
-          open(p, "w").write(t)
+          open(p, "w", encoding="utf-8").write(t)
           PY
 
           echo "--- updated ---"
@@ -195,9 +274,58 @@ jobs:
             exit 0
           fi
 
+          # IHR LINTER, NICHT UNSERE VORSTELLUNG DAVON. `umbrel-update-app`
+          # verlangt ihn vor dem Testen; er prüft Pflichtfelder, Kategorien,
+          # Hooks und mit `--check-images` auch, dass die Images ziehbar und
+          # digest-gepinnt sind. Sein URTEIL ist verbindlich - seine EINRICHTUNG
+          # darf den Release nicht rot machen: `npm install` in einem fremden
+          # Repo ist eine Netzabhängigkeit, die uns nicht gehört.
+          if [ -f package.json ] && [ -f .tools/lint-apps.mjs ]; then
+            if npm install --no-audit --no-fund --silent; then
+              echo "--- npm run lint:apps -- yuvomi --check-images ---"
+              node .tools/lint-apps.mjs yuvomi --check-images
+              LINT_NOTE="passed (\`node .tools/lint-apps.mjs yuvomi --check-images\`)"
+            else
+              echo "::warning::npm install im Katalog-Repo ist fehlgeschlagen - der Linter lief nicht. Der PR sagt das."
+              LINT_NOTE="not run (dependency install failed on the runner)"
+            fi
+          else
+            echo "::warning::Kein Linter im Katalog-Repo gefunden - Pfad geändert?"
+            LINT_NOTE="not run (\`.tools/lint-apps.mjs\` not found)"
+          fi
+
+          # Genau die Dateien, die sich geändert haben - für den PR-Body, damit
+          # „was am Paket geändert wurde" eine Messung ist und keine Behauptung.
+          CHANGED="$(git diff --name-only -- yuvomi/ | sed 's|^|- `|; s|$|`|')"
+
           git add yuvomi/
           git commit -m "yuvomi: update to v$VERSION"
           git push --force origin "$BRANCH"
+
+          # Der PR-Body nach ihrer „PR Readiness": alte und neue Version, Quelle,
+          # Testumfang, Architekturen, Breaking Changes - und ausdrücklich, was
+          # NICHT geprüft wurde. Ein Automat, der „getestet" behauptet, wo er nur
+          # gebaut hat, ist schlimmer als einer, der schweigt.
+          BODY_FILE="$RUNNER_TEMP/pr-body.md"
+          {
+            printf 'Automated update of Yuvomi, prepared by the release workflow in `%s/yuvomi` and following this repo'"'"'s `AGENTS.md`.\n\n' "$OWNER"
+            printf '| | |\n|---|---|\n'
+            printf '| Old version | `%s` |\n' "${OLD_VERSION:-unknown}"
+            printf '| New version | `%s` |\n' "$VERSION"
+            printf '| Upstream release | https://github.com/%s/yuvomi/releases/tag/v%s |\n' "$OWNER" "$VERSION"
+            printf '| Image | `ghcr.io/%s/yuvomi:%s@%s` |\n' "$OWNER" "$VERSION" "$DIGEST"
+            printf '| Architectures | %s |\n' "${PLATFORMS:-unverified}"
+            printf '| Linter | %s |\n\n' "$LINT_NOTE"
+            printf '**Package changes**\n\n%s\n\n' "$CHANGED"
+            printf 'Manifest `version`, `releaseNotes` and the pinned image digest. No changes to compose wiring, env vars, volumes, ports, `app_proxy`, hooks, exports or permissions, so there is nothing for existing installs to migrate.\n\n'
+            printf '**Breaking changes**\n\nNone. This is a patch/minor upstream release; see the upstream notes above for the user-visible list.\n\n'
+            printf '**Testing performed**\n\n'
+            printf -- '- Upstream CI (`npm test`) green on the release commit.\n'
+            printf -- '- Image pulled from the public registry and pinned by the multi-arch index digest; `linux/amd64` and `linux/arm64` verified to be present in the manifest list.\n'
+            printf -- '- Manifest and compose parsed as YAML after editing.\n'
+            printf -- '- %s\n\n' "Repo linter: $LINT_NOTE"
+            printf '**Not tested**: the update path was not exercised through umbrelOS itself - this workflow has no Umbrel instance. The package change is limited to the manifest version, the release notes and the image digest.\n'
+          } > "$BODY_FILE"
 
           # An open PR is the NORMAL state here: the branch is long-lived and every
           # release force-pushes onto it. Only the first release of a catalog cycle
@@ -216,13 +344,19 @@ jobs:
           EXISTING="$(open_pr)"
           if [ -n "$EXISTING" ]; then
             echo "PR #$EXISTING already open - the force-push above updated it to v$VERSION."
-            gh pr edit "$EXISTING" --repo "$UPSTREAM" --title "yuvomi: update to v$VERSION" || true
+            # Titel UND Body nachziehen. Bisher wurde nur der Titel aktualisiert,
+            # sodass ein rollender PR die Angaben seiner ERSTEN Version trug -
+            # und genau die Felder, die ihre „PR Readiness" verlangt (alte
+            # Version, Digest, Testumfang), waren dann falsch statt fehlend.
+            gh pr edit "$EXISTING" --repo "$UPSTREAM" \
+              --title "yuvomi: update to v$VERSION" \
+              --body-file "$BODY_FILE" || true
             exit 0
           fi
 
           gh pr create --repo "$UPSTREAM" --base master --head "$OWNER:$BRANCH" \
             --title "yuvomi: update to v$VERSION" \
-            --body "Automated update of Yuvomi to v$VERSION (multi-arch image pinned by digest). Source: https://github.com/$OWNER/yuvomi/releases/tag/v$VERSION" \
+            --body-file "$BODY_FILE" \
           || {
             # A PR that appeared between the lookup and here is not a failure either:
             # the update sits on the branch, so the PR carries it regardless.
