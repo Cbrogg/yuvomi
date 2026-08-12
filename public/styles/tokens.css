@@ -1117,10 +1117,17 @@
    *
    * --fab-gap ist die gemeinsame Quelle: er bestimmt, wie weit der FAB über der
    * Scrollport-Unterkante schwebt, und daraus folgen BEIDE anderen Werte.
-   * --fab-safe-zone verkürzt den SCROLLPORT (Marge an .app-content, layout.css)
-   * statt Padding am Inhaltsende: der Streifen unter dem FAB gehört ihm allein,
-   * bei jedem Scrollstand. ENTFALLEN bleibt --fab-lane (Guard in
-   * test-frontend-audit.js).
+   * --fab-safe-zone ist der NACHLAUF am Inhaltsende (padding-block-end an
+   * .app-content, layout.css): am Scroll-Ende liegt damit leerer Raum unter dem
+   * Knopf statt einer Zeilenaktion, und der Scrollport bleibt fensterhoch.
+   *
+   * HIER STAND „verkürzt den SCROLLPORT (Marge) statt Padding am Inhaltsende:
+   * der Streifen gehört ihm allein, bei jedem Scrollstand" - und genau diese
+   * Strenge war der Fehler. Sie kostete 96px Sichtfläche über die volle Breite
+   * und schnitt das Dashboard-Raster mitten in einer Widget-Reihe ab. Nötig ist
+   * nicht „nie verdeckt", sondern „nie unerreichbar"; die Begründung samt
+   * Messung steht an der Regel in layout.css. ENTFALLEN bleibt --fab-lane
+   * (Guard in test-frontend-audit.js).
    *
    * AUF DEM TELEFON GIBT ES DIESE ZONE NICHT MEHR (2026-08-10).
    * Der FAB sass dort ueber der Bottom-Nav und hielt sich einen Streifen ueber

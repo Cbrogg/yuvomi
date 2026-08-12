@@ -176,18 +176,41 @@
  * `padding-bottom` am Listenende scrollt mit, wirkt also nur, wenn der Nutzer
  * schon unten ist.
  *
- * MARGE, NICHT PADDING - darin liegt der ganze Unterschied. Padding sitzt am
- * Ende des Inhalts und wandert beim Scrollen mit; eine Marge verkürzt den
- * Container selbst. Der Streifen darunter gehört dem FAB bei jedem
- * Scrollstand.
+ * PADDING, NICHT MARGE - und hier stand bis 2026-08-12 das Gegenteil, mit
+ * derselben Emphase. Die Marge verkürzte den Scrollport um 96px über die volle
+ * Breite. Der Preis dafür war nicht abstrakt: das Dashboard-Raster brach 96px
+ * über der Fensterkante mitten in einer Widget-Reihe ab, mit totem Band
+ * darunter - 12 % eines 900er-Fensters und 25 % zusätzlicher Scrollweg auf dem
+ * Standard-Board, gemessen. Ein Raster, dessen Zusage bündige, gleich hohe
+ * Karten sind, kann seine Unterkante nicht an eine unsichtbare Reserve
+ * abgeben.
+ *
+ * WAS DER WECHSEL WIRKLICH ÄNDERT, IST DIE INVARIANTE, und das ist die
+ * eigentliche Korrektur. Die Marge sicherte zu: „bei KEINEM Scrollstand liegt
+ * etwas Bedienbares unter dem Knopf". Nötig ist: „nichts ist UNERREICHBAR".
+ * Der gemessene Schaden lag beide Male am SCROLL-ENDE (`.pantry-stepper__btn`
+ * und `.contact-more-menu`, 2026-08-10 mobil; 8 Ziele mit verdecktem Zentrum
+ * am Desktop, 2026-08-12) - dort, wo sich nichts mehr wegscrollen lässt. Genau
+ * dort legt ein Padding 96px leeren Nachlauf unter die letzte Zeile. Mitten im
+ * Scrollen läuft Inhalt unter dem Knopf durch, und das ist kein Mangel, sondern
+ * was ein schwebender Knopf ist: er lässt sich in beide Richtungen
+ * freischieben.
+ *
+ * UND DIE GEFAHRENRICHTUNG STIMMT. Der FAB liegt oben, ein Fehlgriff landet
+ * also auf ihm und nicht auf der Zeilenaktion darunter - auf „Neu" statt auf
+ * „Löschen". Läge es umgekehrt, wäre die strenge Invariante ihren Preis wert.
  *
  * AN .app-content, NICHT AN DEN LISTEN. Die App hat zwei Scrollport-
  * Architekturen: in Küche und Budget ist der Modul-Root `overflow: hidden` und
  * eine innere Liste scrollt, in Belohnungen und anderswo scrollt .app-content
- * die ganze Seite. Eine Marge hier verkürzt in beiden Fällen das richtige
- * Element - im ersten Fall über den kürzeren Modul-Root, im zweiten direkt.
- * Sieben `padding-bottom: *-fab-clearance` in vier Dateien sind dadurch
- * entfallen, samt der drei auseinandergedrifteten Kopien des Tokens.
+ * die ganze Seite. Das Padding trifft beide richtig, aber auf zwei Wegen, und
+ * das ist geprüft statt angenommen: wo `.app-content` selbst scrollt (Dashboard,
+ * Aufgaben, Belohnungen …), reitet es als Nachlauf am Inhaltsende und der
+ * Scrollport bleibt fensterhoch. Wo der Modul-Root `height: 100%` trägt,
+ * verkürzt es dessen Bezugshöhe - dort verhält sich alles exakt wie mit der
+ * Marge, also ohne Regress. Sieben `padding-bottom: *-fab-clearance` in vier
+ * Dateien bleiben abgeschafft, samt der drei auseinandergedrifteten Kopien des
+ * Tokens.
  *
  * NUR MIT FAB: `:has()` fragt die Seite, statt eine Klasse zu verlangen, die
  * beim nächsten neuen Modul vergessen wird. `:not([hidden])`, weil eine Seite
@@ -196,7 +219,7 @@
  * Gefragt wird an der SHELL, nicht am Scrollport: der FAB hängt seit #634 in
  * `.fab-layer` neben `.app-content`, nicht mehr darin. */
 .app-shell:has(.fab-layer .page-fab:not([hidden])) .app-content {
-  margin-block-end: var(--fab-safe-zone);
+  padding-block-end: var(--fab-safe-zone);
 }
 
 /* #main-content wird nach jeder Navigation programmatisch fokussiert, damit

@@ -1353,8 +1353,12 @@ svg.weather-forecast__icon {
  * um beim Scrollen nicht die halbe rechte Seite abzufangen. */
 .fab-actions {
   position: absolute;
-  bottom: calc(100% + var(--space-3));
-  right: 0;
+  /* LOGISCHE Kanten, nicht `right`. Hier stand `right: 0`, waehrend der Knopf
+   * selbst seit PR #719 auf der logischen Achse sitzt: in `ar` und `fa` steht er
+   * am linken Kapselende, seine Aktionsliste haette sich aber weiter rechts
+   * ausgerichtet. Dieselbe Falle, nur eine Ebene tiefer. */
+  inset-block-end: calc(100% + var(--space-3));
+  inset-inline-end: 0;
   display: flex;
   flex-direction: column;
   align-items: flex-end;

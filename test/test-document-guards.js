@@ -3102,3 +3102,160 @@ describe('Sonde 17 - die Zustellnotiz des ResizeObservers ist kein Anwendungsfeh
       + 'Meldung filtert, macht sie unsichtbar.');
   });
 });
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Sonde 18: Am Scroll-Ende liegt nichts Bedienbares unter dem FAB
+ *
+ * Der FAB schwebt am Desktop frei in der unteren rechten Ecke. Die Zusicherung
+ * aus #634 hiess dafuer bis 2026-08-12 „bei KEINEM Scrollstand liegt etwas
+ * Bedienbares unter ihm" und wurde von einer `margin-block-end` getragen, die den
+ * Scrollport um 96px verkuerzte. Der Preis war sichtbar: das Dashboard-Raster
+ * brach 96px ueber der Fensterkante mitten in einer Widget-Reihe ab (gemessen
+ * 12 % eines 900er-Fensters, 25 % zusaetzlicher Scrollweg).
+ *
+ * DIE ZUSICHERUNG IST JETZT DIE RICHTIGE UND NICHT DIE STRENGERE: nichts ist
+ * UNERREICHBAR. Getragen wird sie von einem `padding-block-end` am Inhaltsende -
+ * dem Nachlauf. Beide gemessenen Schadensfaelle lagen am SCROLL-ENDE
+ * (`.pantry-stepper__btn` und `.contact-more-menu` mobil, 2026-08-10; acht Ziele
+ * mit verdecktem Zentrum am Desktop, 2026-08-12), also genau dort, wo sich nichts
+ * mehr wegscrollen laesst. Dort liegt jetzt leerer Nachlauf. Mitten im Scrollen
+ * laeuft Inhalt unter dem Knopf durch, und das ist Absicht: ein schwebender Knopf
+ * laesst sich in beide Richtungen freischieben, und ein Fehlgriff landet auf ihm
+ * (Anlegen) statt auf der Zeilenaktion darunter (Loeschen).
+ *
+ * SONDE 4 KANN DAS NICHT SEHEN, und deshalb steht diese hier: ein Ziel, dessen
+ * Zentrum verdeckt ist, ueberspringt Sonde 4 ausdruecklich („dort misst die Sonde
+ * nichts, statt etwas Falsches zu messen"). Genau dieser Fall ist hier der
+ * Befund.
+ *
+ * DER SCROLLER WIRD AN SEINEM OVERFLOW GESUCHT, NICHT AN SEINEM NAMEN. Eine
+ * Vorfassung dieser Messung nahm `[class$="-page"]` mit `scrollHeight >
+ * clientHeight`; bei 1280x900 traf das nichts, fiel auf `.app-content` zurueck
+ * und meldete trotzdem `contact-more-menu__trigger` mit 63 % „am Ende" - ein
+ * Zwischenstand, der wie ein Befund aussah. Der Scrollstand wird deshalb
+ * ZURUECKGELESEN, und wer nicht am Ende steht, wird nicht als Ende gezaehlt.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Ans Scroll-Ende fahren und messen, was dann unter dem FAB liegt.
+ *
+ * ZWEIMAL FAHREN, UND ZWAR AUS EINEM GEMESSENEN GRUND. Die Zeilenlisten bauen
+ * sich nach dem ersten Frame auf (dieselbe Eigenheit, die Sonde 7 kennt): ein
+ * `scrollTop = scrollHeight` direkt nach der Navigation landet mitten im Aufbau,
+ * die Liste waechst danach weiter, und die Messung sieht Zeilen im Flug. Die
+ * erste Fassung dieser Sonde meldete so `row-action` in Einkauf, Vorrat und
+ * Mahlzeiten - nachgemessen liegt dort am echten Ende nichts unter dem Knopf.
+ * Deshalb: settlen, fahren, settlen, nochmal fahren, und erst dann messen.
+ */
+async function fabAtScrollEnd(page) {
+  const toEnd = () => page.evaluate(() => {
+    const outer = document.querySelector('.app-content');
+    const inner = [...document.querySelectorAll('#main-content *')].find((el) => {
+      const s = getComputedStyle(el);
+      return (s.overflowY === 'auto' || s.overflowY === 'scroll') && el.scrollHeight > el.clientHeight + 4;
+    });
+    const scroller = inner || outer;
+    if (scroller) scroller.scrollTop = scroller.scrollHeight;
+  });
+  await new Promise((r) => setTimeout(r, 700));
+  await toEnd();
+  await new Promise((r) => setTimeout(r, 700));
+  await toEnd();
+  await new Promise((r) => setTimeout(r, 550));
+
+  return page.evaluate(() => {
+    const px = (n) => Math.round(n * 10) / 10;
+    const outer = document.querySelector('.app-content');
+    const inner = [...document.querySelectorAll('#main-content *')].find((el) => {
+      const s = getComputedStyle(el);
+      return (s.overflowY === 'auto' || s.overflowY === 'scroll') && el.scrollHeight > el.clientHeight + 4;
+    });
+    const scroller = inner || outer;
+    const fab = document.querySelector('.page-fab:not([hidden])');
+    const o = outer.getBoundingClientRect();
+    const res = {
+      scrollportUnten: px(o.bottom),
+      viewportHoehe: window.innerHeight,
+      amEnde: !scroller || scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop <= 2,
+      scrollbar: !!scroller && scroller.scrollHeight > scroller.clientHeight + 4,
+    };
+    if (!fab) return { ...res, keinFab: true };
+
+    const f = fab.getBoundingClientRect();
+    // Der Prefix gehoert an JEDES Glied - `#main-content ${liste}` bindet den
+    // Nachfahren-Kombinator sonst nur an das erste, und der Rest gilt
+    // dokumentweit (dann meldet die Sonde die Sidebar-Links als Inhalt).
+    const SEL = ['button', 'a[href]', '[role="button"]', 'input:not([type=hidden])',
+      'select', 'textarea', 'summary', '[tabindex]:not([tabindex="-1"])']
+      .map((s) => `#main-content ${s}`).join(', ');
+    res.unterFab = [];
+    for (const el of document.querySelectorAll(SEL)) {
+      if (el === fab || fab.contains(el) || el.contains(fab)) continue;
+      const cs = getComputedStyle(el);
+      if (cs.display === 'none' || cs.visibility === 'hidden' || cs.pointerEvents === 'none') continue;
+      const b = el.getBoundingClientRect();
+      if (b.width < 1 || b.height < 1) continue;
+      // WAS DER SCROLLPORT WEGSCHNEIDET, LIEGT NICHT UNTER DEM KNOPF - ES LIEGT
+      // NIRGENDS. `getBoundingClientRect` meldet die LAYOUT-Position; ein
+      // `overflow: auto` aendert sie nicht, sondern nur, was gemalt und
+      // getroffen wird. Die erste Fassung meldete darueber mobil drei Ziele
+      // (`row-action` 13 %, `pantry-stepper__btn` 10 %,
+      // `meal-slot__add-more-btn` 4 %) - alle drei lagen bei y 721-838, waehrend
+      // der Scrollport bei 735,9 endet, also im geklippten Bereich hinter der
+      // Nav-Zone. Dieselbe Falle 2, die Sonde 4 an ihren Kanten beschreibt.
+      if (b.bottom <= o.top || b.top >= o.bottom) continue;
+      const w = Math.min(b.right, f.right) - Math.max(b.left, f.left);
+      const h = Math.min(b.bottom, Math.min(f.bottom, o.bottom)) - Math.max(b.top, Math.max(f.top, o.top));
+      if (w <= 0 || h <= 0) continue;
+      res.unterFab.push({
+        sel: [...el.classList].slice(0, 2).join('.') || el.tagName.toLowerCase(),
+        anteil: Math.round((w * h) / (b.width * b.height) * 100),
+      });
+    }
+    return res;
+  });
+}
+
+describe('Sonde 18 - am Scroll-Ende liegt nichts Bedienbares unter dem FAB', () => {
+  for (const device of ['mobile', 'desktop']) {
+    test(`Geraet ${device}`, async () => {
+      const page = await openPage(harness, { device, theme: 'light', locale: 'de' });
+      const findings = [];
+      let seen = 0;
+
+      for (const name of sweep('Sonde 18')) {
+        await gotoRoute(page, ALL_ROUTES[name]);
+        const m = await fabAtScrollEnd(page);
+        // Drei Module fuehren ihre Primaeraktion ohne FAB - kein Befund.
+        if (m.keinFab) continue;
+        // Ein Zwischenstand zaehlt nicht als Ende (siehe Kopf).
+        if (!m.amEnde) continue;
+        seen += 1;
+
+        if (m.unterFab.length) {
+          findings.push(`${name}: am Scroll-Ende liegt ${m.unterFab.map((h) => `${h.sel} (${h.anteil} %)`).join(', ')} `
+            + 'unter dem FAB - dort laesst sich nichts mehr wegscrollen, das Ziel ist unerreichbar.');
+        }
+        // Der Nachlauf darf den Scrollport nicht verkuerzen: das war die Marge,
+        // und ihr Preis war die abgeschnittene Widget-Reihe. Mobil endet er
+        // ueber der Nav-Zone, dort gilt die Zusage nicht.
+        if (device === 'desktop' && m.scrollportUnten < m.viewportHoehe - 1) {
+          findings.push(`${name}: der Scrollport endet ${Math.round(m.viewportHoehe - m.scrollportUnten)}px `
+            + 'ueber der Fensterkante - die FAB-Reserve verkuerzt ihn wieder statt als Nachlauf zu reiten.');
+        }
+      }
+      await page.close();
+
+      // Eine Sonde, die nichts gemessen hat, darf nicht urteilen. Zwoelf ist der
+      // gepruefte Bestand: 15 Routen minus die drei ohne FAB (Belohnungen,
+      // Gesundheit, Haushaltshilfe).
+      assert.ok(seen >= 12,
+        `Nur ${seen} Zustaende am Scroll-Ende gemessen - erwartet sind mindestens 12. Entweder `
+        + 'fehlt Modulen ihr FAB, oder keine Seite kam an ihr Scroll-Ende.');
+
+      assert.deepEqual(findings, [],
+        'Der FAB am Scroll-Ende. Dort gehoert ihm der Nachlauf allein, und der Scrollport reicht '
+        + 'trotzdem bis an die Fensterkante.\n  ' + findings.join('\n  '));
+    });
+  }
+});

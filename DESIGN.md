@@ -675,10 +675,11 @@ Rueckkehr des Musters einlud.
   Knopf dort IN der Nav-Kapsel sitzt, und `--target-lg` (48px) ab 1024px, wo er wieder frei
   ueber dem Inhalt schwebt. **Hier stand bis 2026-08-11 „52px mobil, 48px ab Desktop":** die
   52px sind das Grundmass des frei schwebenden Knopfes in der Wurzel und werden von beiden
-  Groessenklassen ueberschrieben, greifen also in keinem Viewport mehr. `--fab-safe-zone`
-  verkuerzt den Scrollport, sodass unter dem FAB nie Inhalt durchlaeuft (Zusicherung aus
-  #634); unter 1024px ist sie 0, weil der Knopf dort ueber Chrome steht statt ueber dem
-  Scrollport. Der FAB lebt in der Shell-Layer `#fab-layer`, nicht im Scrollport.
+  Groessenklassen ueberschrieben, greifen also in keinem Viewport mehr. `--fab-safe-zone` ist
+  der NACHLAUF am Inhaltsende (`padding-block-end` an `.app-content`), sodass am Scroll-Ende
+  nichts Bedienbares unter dem Knopf liegt; unter 1024px ist sie 0, weil er dort in der
+  Nav-Kapsel sitzt. Der FAB lebt in der Shell-Layer `#fab-layer`, nicht im Scrollport. Siehe
+  „Die Nachlauf-Regel".
 - **Icon-Stufen:** genau vier (12/16/20/24px, `--icon-sm..xl`); Lucide bleibt das Icon-Set,
   keine Glyphen-Fonts.
 - **Motion:** Dauern kanonisch 80-400ms (`--duration-2xs..2xl`), immer in ms. `--ease-out`
@@ -1263,6 +1264,59 @@ des Knopfes. Der grosse Gewinn kommt ohnehin aus dem Kopf: auf /tasks 296px Chro
 231px Scrollport vorher, 137px ueber 263px nachher - von "keine einzige Aufgabe sichtbar" auf
 zwei.
 
+**Diesen Absatz hat die Nachlauf-Regel ueberholt** (siehe unten): die Zone muss gar nicht
+fallen, sie muss ihren MECHANISMUS wechseln. Was hier als „so weit, wie sie kann" formuliert
+ist, war ein Kompromiss zwischen Flaeche und Erreichbarkeit - und der war nur noetig, solange
+die Reserve den Scrollport verkuerzte.
+
+### Die Nachlauf-Regel (2026-08-12)
+
+**Die Reserve des FAB ist ein NACHLAUF am Inhaltsende, keine Verkuerzung des Scrollports.**
+`padding-block-end: var(--fab-safe-zone)` an `.app-content`, nicht `margin-block-end`. Der
+Scrollport reicht damit bis an die Fensterkante, und die 96px liegen als leerer Raum HINTER
+der letzten Zeile - erreichbar nur, wenn man ganz nach unten scrollt, und genau dort gebraucht.
+
+**Die eigentliche Korrektur ist die Invariante, nicht der Mechanismus.** Die Marge sicherte zu:
+„bei KEINEM Scrollstand liegt etwas Bedienbares unter dem Knopf". Notwendig ist: **nichts ist
+UNERREICHBAR.** Beide gemessenen Schadensfaelle lagen am SCROLL-ENDE - mobil
+`.pantry-stepper__btn` und `.contact-more-menu` (2026-08-10), am Desktop acht Ziele mit
+verdecktem Zentrum, darunter `contact-more-menu__trigger` mit 64 % und Budgets
+`row-action--danger` mit 45 % (2026-08-12). Am Scroll-Ende laesst sich nichts mehr wegschieben;
+mitten im Scrollen dagegen jederzeit, in beide Richtungen.
+
+**Der Anlass war das Dashboard-Raster.** Am Desktop kostete die Marge 96px ueber die volle
+Breite: gemessen 12 % eines 900er-Fensters und 25 % zusaetzlicher Scrollweg auf dem
+Standard-Board. Sichtbar wurde sie als Widget-Reihe, die 96px ueber der Fensterkante mitten in
+den Karten abbrach, mit totem Band darunter. Ein Raster, dessen Zusage buendige, gleich hohe
+Karten sind, kann seine Unterkante nicht an eine unsichtbare Reserve abgeben.
+
+**Dass der Knopf im Scrollen auf Inhalt liegt, ist kein Mangel, sondern was ein schwebender
+Knopf IST.** Und es ist sicher, weil die Gefahrenrichtung stimmt: er liegt oben, ein Fehlgriff
+landet also auf „Anlegen" und nicht auf „Loeschen" darunter. Laege es umgekehrt, waere die
+strenge Invariante ihren Preis wert.
+
+**Ein Nachlauf trifft beide Scrollport-Architekturen richtig, auf zwei Wegen** - geprueft, nicht
+angenommen. Wo `.app-content` selbst scrollt (Dashboard, Aufgaben, Belohnungen, Geburtstage,
+Dokumente …), reitet er am Inhaltsende und der Scrollport bleibt fensterhoch. Wo der Modul-Root
+`height: 100%` traegt (die acht mit innerem Scroller), verkuerzt er dessen Bezugshoehe - dort
+verhaelt sich alles exakt wie mit der Marge, also ohne Regress. Gemessen ueber 15 Routen: kein
+totes Band, und am Scroll-Ende nirgends ein Ziel unter dem Knopf.
+
+**Mobil aendert die Regel nichts, und das ist per Konstruktion so:** unter 1024px ist
+`--fab-safe-zone` 0, weil der Knopf in der Nav-Kapsel sitzt. Ein Nachlauf von 0 ist dasselbe
+wie eine Marge von 0.
+
+Pruefebene: **Dokument** (`Sonde 18 - am Scroll-Ende liegt nichts Bedienbares unter dem FAB`,
+test-document-guards.js, beide Geraetewelten) plus **Struktur** (`der FAB weicht der Zeile,
+statt eine Gasse zu reservieren`, test-frontend-audit.js), der die Marge ausdruecklich
+verbietet. Sonde 18 ist gegen ihren Anlassfall gegengeprueft: ohne Reserve meldet sie
+`contact-more-menu__trigger` (64 %) und `row-action--danger` (45 %). **Und sie hatte selbst
+zwei blinde Fassungen** - die erste suchte den Scroller an seinem Namen statt an seinem
+Overflow und meldete Zwischenstaende als Ende, die zweite zaehlte Ziele mit, die der Scrollport
+WEGSCHNEIDET (`getBoundingClientRect` meldet die Layout-Position, nicht die Sichtbarkeit; mobil
+waren das drei Kuechen-Ziele bei y 721-838 hinter einem Scrollport, der bei 735,9 endet).
+Dieselbe Falle 2, die Sonde 4 an ihren Kanten beschreibt.
+
 **Gemessen wird sie an der Sichtflaeche, nicht am Scrollport** - der Unterschied ist bei
 dieser Regel entscheidend und war zweimal die Quelle einer falschen Messung. Die App hat zwei
 Scrollport-Architekturen: in Kueche, Budget, Kalender, Notizen und Kontakten liegt der Kopf
@@ -1505,8 +1559,8 @@ Getoente Glas-Kapsel: der App-Akzent mit 78 % Deckung
 (`color-mix(in srgb, var(--color-accent) 78%, transparent)`) ueber
 `--blur-md` + `saturate(var(--lg-glass-saturate))`, Specular-Kanten (`--glass-inset-strong`
 plus Bottom-Inset) und `--glass-sheen` auf der oberen Kapselhaelfte als Materialbeweis -
-unter dem FAB laeuft per `--fab-safe-zone` nie Inhalt durch, der Sheen ist dort der einzige
-Beweis, dass die Flaeche Glas ist. Die 78 % sind eine Untergrenze: darunter faellt das
+am Scroll-Ende liegt per `--fab-safe-zone` leerer Nachlauf unter dem FAB, der Sheen ist dort
+der einzige Beweis, dass die Flaeche Glas ist. Die 78 % sind eine Untergrenze: darunter faellt das
 Plus-Glyph auf hellen Modul-Tints unter 3:1 (gemessen 78 % Tasks-Gruen auf Weiss = 3.4:1).
 Hover geht auf Vollton, der Fallback ist opak. Einblendung als Feder (420ms `--ease-out`
 plus Ring-Pulse), reduced-motion-sicher.

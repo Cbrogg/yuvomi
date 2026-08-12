@@ -2937,8 +2937,23 @@ test('der FAB weicht der Zeile, statt eine Gasse zu reservieren', () => {
     /\.nav-bottom__items\s*\{[^}]*padding-inline-end:\s*calc\(var\(--fab-size\)/,
     'die Nav-Kapsel muss ihr hinteres Ende aus --fab-size freihalten'
   );
-  assert.match(layout, /:has\([^)]*\.page-fab[^)]*\)[^{]*\.app-content\s*\{[^}]*margin-block-end:\s*var\(--fab-safe-zone\)/,
-    'der Scrollport muss über der FAB-Zone enden (Marge an .app-content)');
+  // PADDING, NICHT MARGE - seit 2026-08-12, und der Wechsel ist eine Korrektur
+  // der Invariante, nicht des Mechanismus. Die Marge verkuerzte den Scrollport um
+  // 96px ueber die volle Breite und sicherte damit „bei KEINEM Scrollstand liegt
+  // etwas Bedienbares unter dem Knopf" zu. Notwendig ist „nichts ist
+  // UNERREICHBAR", und der gemessene Schaden lag beide Male am SCROLL-ENDE. Dort
+  // legt der Nachlauf leeren Raum unter den Knopf; mitten im Scrollen laesst sich
+  // Inhalt unter ihm wegschieben. Der Preis der Strenge war das
+  // Dashboard-Raster, das 96px ueber der Fensterkante abbrach.
+  //
+  // Die Marge darf nicht zurueckkommen: sie ist das eine, was die Sichtflaeche
+  // kostet.
+  assert.match(layout, /:has\([^)]*\.page-fab[^)]*\)[^{]*\.app-content\s*\{[^}]*padding-block-end:\s*var\(--fab-safe-zone\)/,
+    'der FAB-Nachlauf gehoert als padding-block-end an .app-content - am Scroll-Ende '
+    + 'liegt damit leerer Raum unter dem Knopf, und der Scrollport bleibt fensterhoch');
+  assert.doesNotMatch(layout.replace(/\/\*[\s\S]*?\*\//g, ''), /margin-block-end:\s*var\(--fab-safe-zone\)/,
+    'die FAB-Zone darf den Scrollport nicht wieder verkuerzen (Marge statt Nachlauf): '
+    + 'das schnitt das Dashboard-Raster 96px ueber der Fensterkante ab');
 
   // Die drei auseinandergedrifteten Kopien bleiben abgeschafft. Sie rechneten
   // `--target-lg + --space-6 + --space-4` = 88px und zählten --nav-bottom-height
