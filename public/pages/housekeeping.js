@@ -297,16 +297,15 @@ function renderDashboard(content) {
 
   const recentVisits = (state.reports || []).slice(0, 5);
   const recentRows = recentVisits.map((visit) => `
-    <article class="housekeeping-staff-log-row">
-      <div>
-        <strong>${esc(formatDate(visit.check_in))}</strong>
-        <span>${esc(visit.worker_name || t('housekeeping.staff'))} · ${esc(money(visit.total_amount))} · ${esc(visit.paid_at ? t('housekeeping.paymentPaid') : t('housekeeping.paymentPending'))}</span>
+    <article class="list-row housekeeping-staff-log-row">
+      <div class="list-row__main">
+        <div class="list-row__name">${esc(formatDate(visit.check_in))}</div>
+        <div class="list-row__meta">${esc(visit.worker_name || t('housekeeping.staff'))} · ${esc(money(visit.total_amount))} · ${esc(visit.paid_at ? t('housekeeping.paymentPaid') : t('housekeeping.paymentPending'))}</div>
       </div>
-      <div class="housekeeping-staff-log-row__actions">
-        <button class="btn btn--secondary housekeeping-log-action" type="button" data-edit-visit="${esc(visit.id)}"
-                aria-label="${esc(t('housekeeping.editVisit'))}">
-          <i data-lucide="edit-2" aria-hidden="true"></i>
-          <span>${esc(t('housekeeping.editVisit'))}</span>
+      <div class="list-row__actions">
+        <button class="row-action" type="button" data-edit-visit="${esc(visit.id)}"
+                aria-label="${esc(t('housekeeping.editVisit'))}: ${esc(formatDate(visit.check_in))}">
+          <i data-lucide="edit-2" class="icon-md" aria-hidden="true"></i>
         </button>
       </div>
     </article>
@@ -765,25 +764,30 @@ function renderStaffVisitLog() {
   if (!worker) return '';
   const rows = state.staffVisits.map((visit) => {
     const paid = !!visit.paid_at;
+    /* Die Zeile des Personal-Protokolls ist DIESELBE wie die der Übersicht -
+     * die drei Aktionen sind der einzige Unterschied, und sie stehen in der
+     * geteilten Bedienzone. Der Zahlstatus geht dabei nicht verloren: er steht
+     * in der Metazeile, wo er die Zeile beschreibt, statt nur als Beschriftung
+     * eines Knopfs, der ausgegraut ist. */
+    const visitDate = formatDate(visit.check_in);
     return `
-      <article class="housekeeping-staff-log-row">
-        <div>
-          <strong>${esc(formatDate(visit.check_in))}</strong>
-          <span>${esc(money(visit.total_amount))} · ${esc(paid ? t('housekeeping.paymentPaid') : t('housekeeping.paymentPending'))}</span>
+      <article class="list-row housekeeping-staff-log-row">
+        <div class="list-row__main">
+          <div class="list-row__name">${esc(visitDate)}</div>
+          <div class="list-row__meta">${esc(money(visit.total_amount))} · ${esc(paid ? t('housekeeping.paymentPaid') : t('housekeeping.paymentPending'))}</div>
         </div>
-        <div class="housekeeping-staff-log-row__actions">
-          <button class="btn btn--secondary housekeeping-log-action" type="button" data-pay-visit="${visit.id}" ${paid ? 'disabled' : ''}
-                  aria-label="${esc(t('housekeeping.markPaid'))}">
-            <i data-lucide="badge-dollar-sign" aria-hidden="true"></i>
-            <span>${esc(paid ? t('housekeeping.paymentPaid') : t('housekeeping.markPaid'))}</span>
+        <div class="list-row__actions">
+          <button class="row-action" type="button" data-pay-visit="${visit.id}" ${paid ? 'disabled' : ''}
+                  aria-label="${esc(paid ? t('housekeeping.paymentPaid') : t('housekeeping.markPaid'))}: ${esc(visitDate)}">
+            <i data-lucide="badge-dollar-sign" class="icon-md" aria-hidden="true"></i>
           </button>
-          <button class="btn btn--secondary housekeeping-log-action" type="button" data-edit-visit="${visit.id}" aria-label="${esc(t('housekeeping.editVisit'))}">
-            <i data-lucide="edit-2" aria-hidden="true"></i>
-            <span>${esc(t('housekeeping.editVisit'))}</span>
+          <button class="row-action" type="button" data-edit-visit="${visit.id}"
+                  aria-label="${esc(t('housekeeping.editVisit'))}: ${esc(visitDate)}">
+            <i data-lucide="edit-2" class="icon-md" aria-hidden="true"></i>
           </button>
-          <button class="btn btn--danger-outline housekeeping-log-action" type="button" data-delete-visit="${visit.id}" aria-label="${esc(t('housekeeping.deleteVisit'))}">
-            <i data-lucide="trash-2" aria-hidden="true"></i>
-            <span>${esc(t('housekeeping.deleteVisit'))}</span>
+          <button class="row-action row-action--danger" type="button" data-delete-visit="${visit.id}"
+                  aria-label="${esc(t('housekeeping.deleteVisit'))}: ${esc(visitDate)}">
+            <i data-lucide="trash-2" class="icon-md" aria-hidden="true"></i>
           </button>
         </div>
       </article>

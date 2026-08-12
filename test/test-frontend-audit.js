@@ -6206,7 +6206,31 @@ test('audited profile, birthday, navigation, and budget controls meet mobile tou
     contacts,
     /@media \(max-width:\s*767px\)[\s\S]*\.contact-filter-chip\s*\{[\s\S]*min-height:\s*var\(--target-lg\)/,
   );
-  assert.match(housekeeping, /\.housekeeping-log-action\s*\{[\s\S]*min-height:\s*var\(--target-lg\)/);
+  /* Die Besuchszeilen der Haushaltshilfe trugen ihre Zielgroesse selbst
+   * (`.housekeeping-log-action { min-height: var(--target-lg) }`) und dazu ein
+   * hartkodiertes 17px-Icon. Sie nehmen jetzt `.row-action`, dessen 48px drei
+   * Zeilen weiter oben zugesichert sind - geprueft wird deshalb die UEBERNAHME,
+   * nicht noch einmal die Zahl.
+   *
+   * Beide Listen, denn es sind zwei: die letzten Besuche auf der Uebersicht und
+   * das Protokoll im Personal-Tab. Die erste umzustellen und die zweite zu
+   * vergessen war genau der Fehler, den dieser Guard verhindern soll. */
+  const housekeepingPage = read('../public/pages/housekeeping.js');
+  assert.doesNotMatch(housekeeping, /\.housekeeping-log-action/,
+    'die Besuchszeile darf keine eigene Aktions-Klasse mit eigener Zielgroesse wieder einfuehren');
+
+  /* JEDER Besuchsknopf, nicht IRGENDEINER. Der erste Entwurf suchte
+   * `class="row-action"[^>]*data-edit-visit=` und war damit blind: er wurde
+   * schon vom Knopf der zweiten Liste gruen gemacht, waehrend der erste noch
+   * der alte war - also genau in dem Zustand, in dem diese Aenderung eine
+   * Stunde lang war. Gezaehlt wird deshalb ueber alle Fundstellen. */
+  const visitButtons = [...housekeepingPage.matchAll(/<button\b([^>]*\bdata-(?:pay|edit|delete)-visit=[^>]*)>/g)]
+    .map((m) => m[1]);
+  assert.ok(visitButtons.length >= 4,
+    `erwartet: Besuchs-Knoepfe in beiden Listen, gefunden: ${visitButtons.length}`);
+  const eigenbau = visitButtons.filter((attrs) => !/class="row-action(?: row-action--danger)?"/.test(attrs));
+  assert.deepEqual(eigenbau, [],
+    'jeder Besuchs-Knopf traegt die geteilte .row-action-Grammatik, nicht nur der zuletzt angefasste');
 });
 
 test('remaining audited mobile controls use 48px touch targets', () => {
