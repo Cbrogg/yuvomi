@@ -669,10 +669,56 @@
   color: var(--color-text-secondary);
 }
 
-/* Tabellenziffern nur für die Menge: der geteilte Meta-Slot trägt in den
- * Geschwistertabs auch Text (MHD, Lagerort), dort wären sie falsch. */
+/* MENGE UND ETIKETTEN STEHEN IN EINER ZEILE, nicht übereinander.
+ *
+ * Die gespiegelten VTODO-Etiketten (#586) standen als `.list-row__tags` auf
+ * einer DRITTEN Zeile unter Name und Menge. Gemessen bei 390x844: eine Zeile
+ * mit Etiketten 90,9px gegen 64px ohne - das war die ganze Streuung des
+ * Einkaufs (27,9px), und sie hing nicht an der Länge der Artikelnamen, wie die
+ * Inventur vermuten liess. Die Namen der Demo-Daten passen alle („Bananen",
+ * „Vollmilch": 158 von 158px).
+ *
+ * Die Aufgabenzeile hat denselben Fall am selben Tag anders herum gelöst - dort
+ * standen die Etiketten schon in der Metazeile und liessen sie umbrechen. Beide
+ * tragen jetzt EINES davon und fassen den Rest als „+N" zusammen. */
 .shopping-item .list-row__meta {
+  display: flex;
+  align-items: center;
+  /* 4px, nicht 8: zwischen Text und einer Pille mit eigener Fläche liest sich
+   * der Abstand optisch als das Doppelte (dieselbe Messung wie an
+   * `.task-card__meta`). */
+  gap: var(--space-1);
+  flex-wrap: nowrap;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Tabellenziffern nur für die Menge: der geteilte Meta-Slot trägt in den
+ * Geschwistertabs auch Text (MHD, Lagerort), dort wären sie falsch - und seit
+ * die Etiketten daneben stehen, wären sie auch hier auf der ganzen Zeile
+ * falsch. */
+.shopping-item__quantity {
   font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* DAS ETIKETT IST EINE FRAGE DER BREITE, NICHT DES GERÄTS - dieselbe Regel und
+ * dieselbe Schwelle wie am Etikett der Aufgabenzeile, weil es dieselbe Spalte
+ * in derselben Grammatik ist.
+ *
+ * GEMESSEN bei 390px: die Textspalte hat 158px. Menge („250 g") und ein
+ * Etikett („Wocheneinkauf") sind zusammen breiter, und was dann kappt, ist das
+ * Etikett - eine Angabe, die aus einer fremden CalDAV-Liste gespiegelt ist und
+ * hier nichts steuert. Ab 420px Trägerbreite steht es. */
+.shopping-item .list-row__tag {
+  display: none;
+}
+
+@container list-rows (min-width: 420px) {
+  .shopping-item .list-row__tag {
+    display: inline-flex;
+  }
 }
 
 /* Die beiden Zeilenaktionen (Details, Löschen) nutzen seit dem Audit die

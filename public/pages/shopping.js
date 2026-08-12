@@ -391,8 +391,10 @@ function renderItemMeta(item) {
 }
 
 // Wie viele Tags eine Zeile zeigt, bevor sie zusammenfasst - wie auf den
-// Aufgabenkarten.
-const ITEM_TAGS_VISIBLE = 3;
+// Aufgabenkarten, die am 12.08.2026 aus demselben Grund von drei auf EINEN
+// gegangen sind: die Etiketten standen dort in einer Metazeile, die umbrach,
+// hier auf einer dritten Zeile. Beides macht aus einer 64px-Zeile eine mit 91.
+const ITEM_TAGS_VISIBLE = 1;
 
 /**
  * Gespiegelte VTODO-CATEGORIES eines Einkaufspostens (#586).
@@ -410,7 +412,11 @@ function renderItemTags(tags) {
     chips.push(`<span class="list-row__tag list-row__tag--more"
                       title="${esc(tags.slice(ITEM_TAGS_VISIBLE).join(', '))}">+${rest}</span>`);
   }
-  return `<div class="list-row__tags">${chips.join('')}</div>`;
+  // KEIN eigener Block mehr: die Etiketten stehen in der Metazeile neben der
+  // Menge, nicht als dritte Zeile darunter. Als Block kosteten sie 27px in
+  // jeder Zeile, die welche hat - gemessen 90,9px gegen 64px, und das war die
+  // ganze Streuung des Einkaufs.
+  return chips.join('');
 }
 
 function renderItem(item) {
@@ -434,8 +440,10 @@ function renderItem(item) {
         </button>
         <div class="list-row__main">
           <div class="list-row__name">${esc(item.name)}${renderItemMeta(item)}</div>
-          ${item.quantity ? `<div class="list-row__meta">${esc(item.quantity)}</div>` : ''}
-          ${renderItemTags(item.tags)}
+          ${item.quantity || item.tags?.length ? `<div class="list-row__meta">
+            ${item.quantity ? `<span class="shopping-item__quantity">${esc(item.quantity)}</span>` : ''}
+            ${renderItemTags(item.tags)}
+          </div>` : ''}
         </div>
         <!-- Geteilte .row-action-Grammatik aus layout.css (app-weit von sieben
              Modulen genutzt), gruppiert in der geteilten .list-row__actions -
@@ -992,16 +1000,31 @@ function refreshItemName(container, item) {
     if (window.lucide) window.lucide.createIcons({ el: nameEl });
   }
 
+  /* Die Metazeile trägt seit dem Zeilenschnitt ZWEI Dinge, Menge und Etiketten.
+   * `metaEl.textContent = …` hätte die Etiketten dabei mitgelöscht - deshalb
+   * greift die Menge ihren eigenen Knoten. Die Zeile selbst verschwindet nur,
+   * wenn beides fehlt. */
   const main = card.querySelector('.list-row__main');
-  const qtyEl = main?.querySelector('.list-row__meta');
-  if (item.quantity) {
-    if (qtyEl) {
-      qtyEl.textContent = item.quantity;
+  const metaEl = main?.querySelector('.list-row__meta');
+  const hasTags = !!item.tags?.length;
+  if (item.quantity || hasTags) {
+    if (!metaEl) {
+      main?.insertAdjacentHTML('beforeend', `<div class="list-row__meta">
+        ${item.quantity ? `<span class="shopping-item__quantity">${esc(item.quantity)}</span>` : ''}
+        ${renderItemTags(item.tags)}
+      </div>`);
     } else {
-      main?.insertAdjacentHTML('beforeend', `<div class="list-row__meta">${esc(item.quantity)}</div>`);
+      const qtyEl = metaEl.querySelector('.shopping-item__quantity');
+      if (item.quantity && qtyEl) {
+        qtyEl.textContent = item.quantity;
+      } else if (item.quantity) {
+        metaEl.insertAdjacentHTML('afterbegin', `<span class="shopping-item__quantity">${esc(item.quantity)}</span>`);
+      } else {
+        qtyEl?.remove();
+      }
     }
   } else {
-    qtyEl?.remove();
+    metaEl?.remove();
   }
 }
 
