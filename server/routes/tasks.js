@@ -976,9 +976,60 @@ function recurrenceFollowupOf(taskId) {
 }
 
 /**
+ * Prüft, ob Unteraufgaben einer Folgeinstanz durch den Benutzer verändert wurden
+ * (editiert, erledigt, hinzugefügt oder gelöscht).
+ */
+function isFollowupSubtasksTouched(followup) {
+  const originTaskId = followup.recurrence_origin_id;
+  const originSubtasks = originTaskId
+    ? db.get().prepare('SELECT * FROM tasks WHERE parent_task_id = ?').all(originTaskId)
+    : [];
+  const currentSubtasks = db.get()
+    .prepare('SELECT * FROM tasks WHERE parent_task_id = ?')
+    .all(followup.id);
+
+  if (currentSubtasks.length !== originSubtasks.length) return true;
+
+  const originDueDate = originTaskId
+    ? db.get().prepare('SELECT due_date FROM tasks WHERE id = ?').get(originTaskId)?.due_date
+    : null;
+
+  for (const sub of currentSubtasks) {
+    if (sub.status !== 'open' || !sub.recurrence_origin_id) return true;
+    const origin = originSubtasks.find((o) => o.id === sub.recurrence_origin_id);
+    if (!origin) return true;
+
+    if (
+      sub.title !== origin.title ||
+      (sub.description || '') !== (origin.description || '') ||
+      sub.category !== origin.category ||
+      sub.priority !== origin.priority ||
+      sub.assigned_to !== origin.assigned_to ||
+      sub.points !== origin.points ||
+      sub.visibility !== origin.visibility ||
+      sub.due_time !== origin.due_time
+    ) {
+      return true;
+    }
+
+    const subAnchorDate = originDueDate || origin.due_date;
+    const expectedStart = shiftedStartDate(origin.start_date, subAnchorDate, followup.due_date) ?? origin.start_date;
+    const expectedDue = origin.due_date
+      ? (shiftedStartDate(origin.due_date, subAnchorDate, followup.due_date) ?? followup.due_date)
+      : null;
+
+    if (sub.start_date !== expectedStart || sub.due_date !== expectedDue) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
  * Nimmt die Folgeinstanz zurück, wenn ein Abhaken rückgängig gemacht wird (#650).
  * Nur unangetastete Instanzen verschwinden: hat jemand sie selbst erledigt (und
- * damit die Serie weitergeschrieben) oder ihr Unteraufgaben gegeben, steckt dort
+ * damit die Serie weitergeschrieben) oder ihr Unteraufgaben gegeben/erledigt/bearbeitet, steckt dort
  * Arbeit, die ein Klick auf die Vorgängerin nicht wegwerfen darf.
  * Rückgabe: Anzahl vorgemerkter CalDAV-Löschungen.
  */
@@ -986,10 +1037,7 @@ function discardRecurrenceFollowup(taskId) {
   const followup = recurrenceFollowupOf(taskId);
   if (!followup || followup.status !== 'open') return 0;
 
-  const touched = db.get().prepare(
-    'SELECT 1 FROM tasks WHERE parent_task_id = ? LIMIT 1'
-  ).get(followup.id);
-  if (touched || recurrenceFollowupOf(followup.id)) return 0;
+  if (isFollowupSubtasksTouched(followup) || recurrenceFollowupOf(followup.id)) return 0;
 
   // Vor dem DELETE vormerken, wie in DELETE /:id: danach sind UID und Objekt-URL
   // weg. Lokal erzeugte Folgeinstanzen sind nicht gespiegelt, dann ist das ein No-op.
@@ -1055,6 +1103,12 @@ function spawnRecurrenceFollowup(task) {
   // beim ersten Abhaken - und zwar lautlos, weil die Folgeinstanz sonst
   // vollständig aussieht.
   const existingTags = loadTags(db.get(), task.id);
+  // Unteraufgaben gehören ebenfalls zur Aufgabenstruktur (#742).
+  // Beim Folgedurchlauf werden sie mit zurückgesetztem Status ('open') kopiert.
+  const existingSubtasks = db.get()
+    .prepare('SELECT * FROM tasks WHERE parent_task_id = ? ORDER BY id ASC')
+    .all(task.id);
+
   db.get().transaction(() => {
     const newTask = db.get().prepare(`
       INSERT INTO tasks (title, description, category, priority, status,
@@ -1074,6 +1128,30 @@ function spawnRecurrenceFollowup(task) {
     );
     setAssignments(db.get(), newTask.lastInsertRowid, existingAssignments);
     setTags(db.get(), newTask.lastInsertRowid, existingTags);
+
+    for (const sub of existingSubtasks) {
+      const subAssignments = db.get()
+        .prepare('SELECT user_id FROM task_assignments WHERE task_id = ?')
+        .all(sub.id).map((r) => r.user_id);
+      const subTags = loadTags(db.get(), sub.id);
+
+      const subAnchorDate = task.due_date || sub.due_date;
+
+      const newSub = db.get().prepare(`
+        INSERT INTO tasks (title, description, category, priority, status,
+          start_date, due_date, due_time, assigned_to, created_by, parent_task_id,
+          is_recurring, recurrence_rule, points, visibility, recurrence_origin_id)
+        VALUES (?, ?, ?, ?, 'open', ?, ?, ?, ?, ?, ?, 0, NULL, ?, ?, ?)
+      `).run(
+        sub.title, sub.description, sub.category, sub.priority,
+        shiftedStartDate(sub.start_date, subAnchorDate, nextDate) ?? sub.start_date,
+        sub.due_date ? (shiftedStartDate(sub.due_date, subAnchorDate, nextDate) ?? nextDate) : null,
+        sub.due_time, sub.assigned_to, sub.created_by, newTask.lastInsertRowid,
+        sub.points, sub.visibility, sub.id
+      );
+      setAssignments(db.get(), newSub.lastInsertRowid, subAssignments);
+      setTags(db.get(), newSub.lastInsertRowid, subTags);
+    }
   })();
 }
 
