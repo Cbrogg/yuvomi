@@ -254,9 +254,14 @@ function renderPage() {
       <div class="page-toolbar page-toolbar--wrap birthdays-toolbar">
         <h1 class="page-toolbar__title">${t('birthdays.title')}</h1>
         ${renderPageSearch({ id: 'birthdays-search', label: t('birthdays.searchPlaceholder'), placeholder: t('birthdays.searchPlaceholder'), value: state.query, clearLabel: t('common.searchClear'), className: 'birthdays-toolbar__search page-toolbar__center' })}
-        <button class="btn btn--secondary birthdays-toolbar__import" id="birthdays-import-btn" type="button" aria-label="${t('birthdays.importButton')}">
-          <i data-lucide="download" aria-hidden="true"></i><span>${t('birthdays.importButton')}</span>
-        </button>
+        <!-- Der Aktions-Slot des Modulkopfs. Der Import-Knopf stand direkt in der
+             Leiste; die Shell dockt hier auf dem Desktop den Primärknopf an
+             (dockFabIntoToolbar in router.js), und der braucht einen Ort. -->
+        <div class="page-toolbar__actions">
+          <button class="btn btn--secondary birthdays-toolbar__import" id="birthdays-import-btn" type="button" aria-label="${t('birthdays.importButton')}">
+            <i data-lucide="download" aria-hidden="true"></i><span>${t('birthdays.importButton')}</span>
+          </button>
+        </div>
       </div>
 
       <p class="birthdays-hint">${t('birthdays.calendarHint')}</p>

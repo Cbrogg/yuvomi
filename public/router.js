@@ -1852,12 +1852,66 @@ function adoptPageFab() {
   const layer = document.getElementById('fab-layer');
   if (!layer) return null;
   const fresh = document.querySelector('#main-content .page-fab');
+  if (fresh && dockFabIntoToolbar(fresh)) return null;
   // Umgezogen wird die GRUPPE, wenn es eine gibt: das Speed-Dial des Dashboards
   // ist ein FAB plus Aktionsliste plus Backdrop, und beide sind fixiert. Zöge
   // nur der Knopf um, bliebe die Mechanik im Scrollport zurück - der halbe
   // Umzug wäre schlimmer als keiner, weil er nach Erledigung aussieht.
   if (fresh) layer.replaceChildren(fresh.closest('.page-fab-group') ?? fresh);
   return layer.querySelector('.page-fab');
+}
+
+/**
+ * Auf dem Desktop wird aus dem schwebenden Knopf ein BESCHRIFTETER Knopf in der
+ * Werkzeugleiste. Gibt true zurück, wenn er dort gelandet ist.
+ *
+ * WARUM IN DER SHELL UND NICHT IN DREIZEHN SEITEN: der FAB zieht ohnehin durch
+ * genau diese eine Funktion um (#634), und `.page-toolbar__actions` ist der
+ * Aktions-Slot, den die Modulköpfe schon teilen. Ein Opt-in, das jedes Modul
+ * selbst setzen müsste, fehlt beim vierzehnten.
+ *
+ * Das Label steht bereits am Knopf - als `aria-label`, weil ein runder FAB
+ * keinen Platz für Text hat. Hier bekommt es einen sichtbaren Span dazu;
+ * doppelt vorgelesen wird nichts, weil `aria-label` den Inhalt für
+ * Hilfstechnik ohnehin überschreibt.
+ *
+ * DREI SACHEN DOCKEN NICHT AN, jede aus ihrem eigenen Grund:
+ *   - eine .page-fab-group (das Speed-Dial der Übersicht): sie ist ein Menü,
+ *     kein Knopf, und ihre Aktionsliste ist fixiert. Ein halber Umzug wäre
+ *     schlimmer als keiner.
+ *   - Module, die ihren eigenen .toolbar-new-btn mitbringen: sonst stünden
+ *     zwei Primärknöpfe nebeneinander.
+ *   - Module ohne Aktions-Slot im Kopf: dort bleibt der schwebende Knopf, bis
+ *     ihr Kopf einen bekommt. Lieber ein Modul mit dem alten Weg als eines
+ *     ohne Primäraktion.
+ */
+function dockFabIntoToolbar(fab) {
+  if (!isDesktopViewport()) return false;
+  if (fab.closest('.page-fab-group')) return false;
+  const main = document.getElementById('main-content');
+  if (main?.querySelector('.toolbar-new-btn')) return false;
+  const slot = main?.querySelector('.page-toolbar__actions');
+  if (!slot) return false;
+
+  // `.page-fab` BLEIBT am Element. Zwei Module rufen ihre Primäraktion über
+  // `document.querySelector('.page-fab').click()` auf (Rezepte, Einkauf); wer
+  // die Klasse hier abzöge, machte deren Tastenkürzel und Tab-FAB still tot.
+  // Die schwebende Geometrie hebt `.page-fab--docked` in layout.css auf.
+  fab.classList.add('btn', 'btn--primary', 'page-fab--docked');
+  const label = fab.getAttribute('aria-label');
+  if (label && !fab.querySelector('.toolbar-new-btn__label')) {
+    const span = document.createElement('span');
+    span.className = 'toolbar-new-btn__label';
+    span.textContent = label;
+    fab.appendChild(span);
+  }
+  slot.appendChild(fab);
+  return true;
+}
+
+/** Spiegelt die Sidebar-Grenze aus layout.css - siehe die Notiz bei updateNav(). */
+function isDesktopViewport() {
+  return window.matchMedia('(min-width: 1024px)').matches;
 }
 
 /**

@@ -2346,11 +2346,48 @@ html.fab-anim-done .page-fab {
   }
 }
 
-/* Toolbar-"Neu"-Buttons überall verstecken - FAB übernimmt.
+/* Toolbar-"Neu"-Buttons: auf dem Handy übernimmt der FAB, auf dem Desktop der
+ * Knopf in der Werkzeugleiste.
+ *
+ * DIE MECHANIK WAR GEBAUT UND ABGESCHALTET. Fünf Module (Aufgaben, Notizen,
+ * Kontakte, Budget, Kalender) tragen ihren Toolbar-Knopf seit jeher im Markup;
+ * hier stand nur `display: none` für alle. Auf einem Zeigergerät ist ein
+ * beschrifteter Knopf im Kopf der bessere Ort als ein schwebender Kreis über
+ * dem Inhalt - Platz ist da, und der Kreis verdeckt die letzte Zeile.
+ *
  * Gemeinsame Klasse statt ID-Liste (Audit 1.9): neue Module ergänzen nur die
  * Klasse an ihrem Toolbar-Button, statt diesen Selektor erweitern zu müssen. */
 .toolbar-new-btn {
   display: none !important;
+}
+
+@media (min-width: 1024px) {
+  /* `:not([hidden])` ist Pflicht: mehrere Module blenden ihren Kopf samt
+   * Aktionen aus (die Einkaufsliste ohne aktive Liste), und ein
+   * `display !important` schlüge das UA-`[hidden]`. */
+  .toolbar-new-btn:not([hidden]) {
+    display: inline-flex !important;
+  }
+
+  /* Wo ein beschrifteter Knopf steht, schwebt keiner mehr. `:has()` fragt das
+   * am Dokument, weil beide in verschiedenen Teilbäumen leben: der Knopf im
+   * Modulkopf, der FAB seit #634 in der Shell-Layer. */
+  body:has(.toolbar-new-btn:not([hidden])) #fab-layer .page-fab {
+    display: none;
+  }
+
+  /* Der angedockte FAB IST der Toolbar-Knopf (siehe dockFabIntoToolbar in
+   * router.js): dieselbe Node, dieselbe Verdrahtung, nur ohne die schwebende
+   * Geometrie. Die Kapsel und die Stimme kommen von `.btn--primary`. */
+  .page-fab--docked {
+    position: static;
+    width: auto;
+    height: auto;
+    min-height: var(--target-base);
+    padding-inline: var(--space-4);
+    gap: var(--space-1);
+    box-shadow: var(--shadow-sm);
+  }
 }
 
 /* [hidden] durchsetzen: Klassen wie `.page-fab`/`.btn` setzen `display: flex`
