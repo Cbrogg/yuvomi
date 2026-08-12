@@ -1870,10 +1870,21 @@ function adoptPageFab() {
  * Aktions-Slot, den die Modulköpfe schon teilen. Ein Opt-in, das jedes Modul
  * selbst setzen müsste, fehlt beim vierzehnten.
  *
- * Das Label steht bereits am Knopf - als `aria-label`, weil ein runder FAB
- * keinen Platz für Text hat. Hier bekommt es einen sichtbaren Span dazu;
- * doppelt vorgelesen wird nichts, weil `aria-label` den Inhalt für
- * Hilfstechnik ohnehin überschreibt.
+ * DER SICHTBARE TEXT IST NICHT DAS `aria-label`. Ein aria-label beschreibt
+ * eine Handlung („Geburtstag hinzufügen"), ein Toolbar-Knopf benennt seine
+ * Sache („Geburtstag") und lässt das Verb dem Plus-Zeichen. Als das Label hier
+ * noch aus `aria-label` kam, standen an derselben Stelle drei Schreibweisen
+ * nebeneinander - gemessen am 12.08.: „Neue Aufgabe" (150px, handgeschrieben),
+ * „Geburtstag hinzufügen" (216px, geerbt) und zweimal gar nichts. Der kurze
+ * Text steht deshalb als `data-dock-label` am Knopf, das ausführliche
+ * `aria-label` bleibt unangetastet. Doppelt vorgelesen wird nichts: `aria-label`
+ * überschreibt den Inhalt für Hilfstechnik ohnehin.
+ *
+ * Ohne `data-dock-label` dockt der Knopf STUMM NICHT AN, statt auf das
+ * aria-label zurückzufallen: ein Rückfall wäre genau der lange Satz, den diese
+ * Regel abgeschafft hat, und er fiele niemandem auf. So bleibt der schwebende
+ * Knopf stehen - sichtbar falsch statt unsichtbar uneinheitlich. Ein Guard in
+ * test-frontend-audit hält dazu, dass jeder `.page-fab` das Attribut trägt.
  *
  * DREI SACHEN DOCKEN NICHT AN, jede aus ihrem eigenen Grund:
  *   - eine .page-fab-group (das Speed-Dial der Übersicht): sie ist ein Menü,
@@ -1892,14 +1903,15 @@ function dockFabIntoToolbar(fab) {
   if (main?.querySelector('.toolbar-new-btn')) return false;
   const slot = main?.querySelector('.page-toolbar__actions');
   if (!slot) return false;
+  const label = fab.dataset.dockLabel;
+  if (!label) return false;
 
   // `.page-fab` BLEIBT am Element. Zwei Module rufen ihre Primäraktion über
   // `document.querySelector('.page-fab').click()` auf (Rezepte, Einkauf); wer
   // die Klasse hier abzöge, machte deren Tastenkürzel und Tab-FAB still tot.
   // Die schwebende Geometrie hebt `.page-fab--docked` in layout.css auf.
   fab.classList.add('btn', 'btn--primary', 'page-fab--docked');
-  const label = fab.getAttribute('aria-label');
-  if (label && !fab.querySelector('.toolbar-new-btn__label')) {
+  if (!fab.querySelector('.toolbar-new-btn__label')) {
     const span = document.createElement('span');
     span.className = 'toolbar-new-btn__label';
     span.textContent = label;

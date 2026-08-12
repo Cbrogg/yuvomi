@@ -3986,5 +3986,19 @@
         "error": "تعذر إنشاء الحساب. حاول مرة أخرى.",
         "displayNameTooLong": "يجب ألا يزيد الاسم المعروض عن 128 حرفًا.",
         "previewFailed": "تعذر التحقق من الدعوة الآن. أعد تحميل الصفحة بعد قليل."
+    },
+    "newLabel": {
+        "tasks": "مهمة",
+        "calendar": "حدث",
+        "notes": "ملاحظة",
+        "birthdays": "عيد ميلاد",
+        "budget": "إدخال",
+        "contacts": "جهة اتصال",
+        "documents": "مستند",
+        "meals": "وجبة",
+        "pantry": "عنصر",
+        "recipes": "وصفة",
+        "shopping": "عنصر",
+        "splitExpenses": "مصروف"
     }
 }

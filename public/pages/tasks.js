@@ -3100,8 +3100,9 @@ export async function render(container, { user }) {
                   aria-label="${t('tasks.manageTags')}" title="${t('tasks.manageTags')}">
             <i data-lucide="tags" class="icon-lg" aria-hidden="true"></i>
           </button>
-          <button class="btn btn--primary toolbar-new-btn" id="btn-new-task" style="gap:var(--space-1)">
-            <i data-lucide="plus" class="icon-lg" aria-hidden="true"></i> ${t('tasks.newTask')}
+          <button class="btn btn--primary toolbar-new-btn" id="btn-new-task" style="gap:var(--space-1)"
+                  aria-label="${t('tasks.newTask')}">
+            <i data-lucide="plus" class="icon-lg" aria-hidden="true"></i> <span class="toolbar-new-btn__label">${t('newLabel.tasks')}</span>
           </button>
         </div>
       </div>
@@ -3170,7 +3171,7 @@ export async function render(container, { user }) {
               <div class="skeleton skeleton-line skeleton-line--short" style="height:12px"></div>
             </div>`).join('')}
         </div>
-        <button class="page-fab" id="fab-new-task" aria-label="${t('tasks.newTask')}">
+        <button class="page-fab" id="fab-new-task" aria-label="${t('tasks.newTask')}" data-dock-label="${t('newLabel.tasks')}">
           <i data-lucide="plus" class="icon-xl" aria-hidden="true"></i>
         </button>
       </div>

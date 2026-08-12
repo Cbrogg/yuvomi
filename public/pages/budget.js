@@ -450,15 +450,16 @@ export async function render(container, { user }) {
               return `<button class="sub-tab${on ? ' sub-tab--active' : ''}" id="budget-tab-${id}" type="button" role="tab" data-tab-id="${id}" aria-controls="budget-body" aria-selected="${on ? 'true' : 'false'}" tabindex="${on ? '0' : '-1'}"><span class="sub-tab__label">${label}</span></button>`;
             }).join('')}
           </div>
-          <button class="btn btn--primary btn--icon toolbar-new-btn" id="budget-add" aria-label="${t('budget.addEntryLabel')}">
+          <button class="btn btn--primary toolbar-new-btn" id="budget-add" aria-label="${t('budget.addEntryLabel')}">
             <i data-lucide="plus" aria-hidden="true"></i>
+            <span class="toolbar-new-btn__label">${t('newLabel.budget')}</span>
           </button>
         </div>
       </div>
       <div id="budget-body" role="tabpanel" tabindex="0" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
         ${renderSkeletonList({ rows: 6, lines: 2 })}
       </div>
-      <button class="page-fab" id="fab-new-budget" aria-label="${t('budget.newEntryFabLabel')}">
+      <button class="page-fab" id="fab-new-budget" aria-label="${t('budget.newEntryFabLabel')}" data-dock-label="${t('newLabel.budget')}">
         <i data-lucide="plus" class="icon-xl" aria-hidden="true"></i>
       </button>
     </div>

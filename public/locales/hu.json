@@ -3986,5 +3986,19 @@
         "error": "A fiókot nem sikerült létrehozni. Próbáld újra.",
         "displayNameTooLong": "A megjelenő név legfeljebb 128 karakter lehet.",
         "previewFailed": "A meghívót most nem sikerült ellenőrizni. Töltsd újra az oldalt egy pillanat múlva."
+    },
+    "newLabel": {
+        "tasks": "Feladat",
+        "calendar": "Esemény",
+        "notes": "Jegyzet",
+        "birthdays": "Születésnap",
+        "budget": "Bejegyzés",
+        "contacts": "Kapcsolat",
+        "documents": "Dokumentum",
+        "meals": "Étel",
+        "pantry": "Elem",
+        "recipes": "Recept",
+        "shopping": "Elem",
+        "splitExpenses": "Kiadás"
     }
 }

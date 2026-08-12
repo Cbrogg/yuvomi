@@ -3986,5 +3986,19 @@
         "error": "Kontot kunde inte skapas. Försök igen.",
         "displayNameTooLong": "Visningsnamnet får vara högst 128 tecken långt.",
         "previewFailed": "Inbjudan kunde inte kontrolleras just nu. Ladda om sidan om en stund."
+    },
+    "newLabel": {
+        "tasks": "Uppgift",
+        "calendar": "Händelse",
+        "notes": "Anteckning",
+        "birthdays": "Födelsedag",
+        "budget": "Inlägg",
+        "contacts": "Kontakt",
+        "documents": "Dokument",
+        "meals": "Måltid",
+        "pantry": "Objekt",
+        "recipes": "Recept",
+        "shopping": "Objekt",
+        "splitExpenses": "Utgift"
     }
 }

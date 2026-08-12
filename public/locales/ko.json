@@ -3986,5 +3986,19 @@
         "error": "계정을 만들지 못했습니다. 다시 시도하세요.",
         "displayNameTooLong": "표시 이름은 최대 128자까지 가능합니다.",
         "previewFailed": "지금은 초대를 확인할 수 없습니다. 잠시 후 페이지를 새로 고쳐 주세요."
+    },
+    "newLabel": {
+        "tasks": "할 일",
+        "calendar": "일정",
+        "notes": "메모",
+        "birthdays": "생일",
+        "budget": "항목",
+        "contacts": "연락처",
+        "documents": "문서",
+        "meals": "식사",
+        "pantry": "항목",
+        "recipes": "레시피",
+        "shopping": "항목",
+        "splitExpenses": "지출"
     }
 }

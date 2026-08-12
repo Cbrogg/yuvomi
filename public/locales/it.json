@@ -3986,5 +3986,19 @@
         "error": "Non è stato possibile creare l'account. Riprova.",
         "displayNameTooLong": "Il nome visualizzato può contenere al massimo 128 caratteri.",
         "previewFailed": "Non è stato possibile verificare l'invito in questo momento. Ricarica la pagina tra un istante."
+    },
+    "newLabel": {
+        "tasks": "Compito",
+        "calendar": "Evento",
+        "notes": "Nota",
+        "birthdays": "Compleanno",
+        "budget": "Voce",
+        "contacts": "Contatto",
+        "documents": "Documento",
+        "meals": "Pasto",
+        "pantry": "Articolo",
+        "recipes": "Ricetta",
+        "shopping": "Articolo",
+        "splitExpenses": "Spesa"
     }
 }

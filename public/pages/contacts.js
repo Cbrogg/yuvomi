@@ -129,9 +129,9 @@ export async function render(container, { user }) {
             ${t('contacts.importButton')}
             <input type="file" id="contacts-import-input" accept=".vcf,text/vcard" style="display:none">
           </label>
-          <button class="btn btn--primary toolbar-new-btn" id="contacts-add-btn">
+          <button class="btn btn--primary toolbar-new-btn" id="contacts-add-btn" aria-label="${t('contacts.newContactLabel')}">
             <i data-lucide="plus" class="icon-md" aria-hidden="true"></i>
-            ${t('contacts.addButton')}
+            <span class="toolbar-new-btn__label">${t('newLabel.contacts')}</span>
           </button>
         </div>
       </div>
@@ -146,7 +146,7 @@ export async function render(container, { user }) {
       <div class="contacts-filters" id="contacts-filters" role="group" aria-label="${t('contacts.filterAll')}"></div>
       <div id="contacts-status" class="sr-only" role="status" aria-live="polite"></div>
       <div id="contacts-list" class="contacts-list" aria-busy="true">${renderSkeletonList({ rows: 6, lines: 2 })}</div>
-      <button class="page-fab" id="fab-new-contact" aria-label="${t('contacts.newContactLabel')}">
+      <button class="page-fab" id="fab-new-contact" aria-label="${t('contacts.newContactLabel')}" data-dock-label="${t('newLabel.contacts')}">
         <i data-lucide="plus" class="icon-xl" aria-hidden="true"></i>
       </button>
     </div>

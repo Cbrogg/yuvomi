@@ -3986,5 +3986,19 @@
         "error": "Nie udało się utworzyć konta. Spróbuj ponownie.",
         "displayNameTooLong": "Nazwa wyświetlana może mieć najwyżej 128 znaków.",
         "previewFailed": "Nie udało się teraz sprawdzić zaproszenia. Odśwież stronę za chwilę."
+    },
+    "newLabel": {
+        "tasks": "Zadanie",
+        "calendar": "Wydarzenie",
+        "notes": "Notatka",
+        "birthdays": "Urodziny",
+        "budget": "Wpis",
+        "contacts": "Kontakt",
+        "documents": "Dokument",
+        "meals": "Posiłek",
+        "pantry": "Artykuł",
+        "recipes": "Przepis",
+        "shopping": "Artykuł",
+        "splitExpenses": "Wydatek"
     }
 }

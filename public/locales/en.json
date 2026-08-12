@@ -3986,5 +3986,19 @@
         "error": "The account could not be created. Please try again.",
         "displayNameTooLong": "The display name may be at most 128 characters long.",
         "previewFailed": "The invitation could not be checked right now. Please reload the page in a moment."
+    },
+    "newLabel": {
+        "tasks": "Task",
+        "calendar": "Event",
+        "notes": "Note",
+        "birthdays": "Birthday",
+        "budget": "Entry",
+        "contacts": "Contact",
+        "documents": "Document",
+        "meals": "Meal",
+        "pantry": "Item",
+        "recipes": "Recipe",
+        "shopping": "Item",
+        "splitExpenses": "Expense"
     }
 }

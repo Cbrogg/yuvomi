@@ -3986,5 +3986,19 @@
         "error": "Não foi possível criar a conta. Tenta novamente.",
         "displayNameTooLong": "O nome apresentado pode ter no máximo 128 caracteres.",
         "previewFailed": "Não foi possível verificar o convite neste momento. Volta a carregar a página daqui a pouco."
+    },
+    "newLabel": {
+        "tasks": "Tarefa",
+        "calendar": "Evento",
+        "notes": "Nota",
+        "birthdays": "Aniversário",
+        "budget": "Entrada",
+        "contacts": "Contato",
+        "documents": "Documento",
+        "meals": "Refeição",
+        "pantry": "Item",
+        "recipes": "Receita",
+        "shopping": "Item",
+        "splitExpenses": "Despesa"
     }
 }

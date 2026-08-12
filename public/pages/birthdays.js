@@ -268,7 +268,7 @@ function renderPage() {
 
       <div class="birthdays-list" id="birthdays-list"></div>
 
-      <button class="page-fab" id="fab-new-birthday" aria-label="${t('birthdays.addButton')}">
+      <button class="page-fab" id="fab-new-birthday" aria-label="${t('birthdays.addButton')}" data-dock-label="${t('newLabel.birthdays')}">
         <i data-lucide="plus" class="icon-xl" aria-hidden="true"></i>
       </button>
     </div>

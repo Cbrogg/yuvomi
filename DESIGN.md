@@ -1686,10 +1686,17 @@ Angabe braeuchte einen zweiten Timer, nur damit sie sich selbst aktuell haelt.
   fragen - und den `container` am VORFAHREN deklarieren, nie am fragenden Element.
 - **Do** die Kennzahl einer Karte gestapelt setzen (kleines Label darueber, Zahl in Title 1
   darunter, `tabular-nums`), nie als Zahl am rechten Ende einer Beschriftungszeile.
+- **Do** den Primaerknopf eines Modulkopfs sein NOMEN zeigen lassen (`newLabel.*`:
+  „Termin", „Geburtstag"); das Verb traegt das Plus-Zeichen, der ganze Satz bleibt im
+  `aria-label`. Der kurze Text steht als `data-dock-label` am `.page-fab`, damit der
+  Router ihn beim Andocken findet (Register-Regel).
 
 ### Don't:
 - **Don't** einen zweiten Buttonradius einfuehren; die Kapsel steht in der `.btn`-Basisregel
   und gilt fuer alle Varianten inklusive Icon-Buttons.
+- **Don't** ein `aria-label` als sichtbaren Text weiterreichen; es beschreibt eine
+  Handlung („Geburtstag hinzufuegen") und wird als Knopfbeschriftung zum dritten
+  Register neben denen, die es schon gibt.
 - **Don't** Gradient-Text oder Akzent-Titel: Large Titles und Ueberschriften tragen immer
   Label-Farbe.
 - **Don't** chromatische Verlaeufe auf Inhalt legen; auch nicht auf der Anmeldebuehne und

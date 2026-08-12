@@ -254,7 +254,7 @@ export async function render(container, { user }) {
         </div>
         <aside class="recipe-sidebar" id="recipe-sidebar"></aside>
       </div>
-      <button class="page-fab" id="fab-new-meal" aria-label="${t('meals.addMealTitle')}">
+      <button class="page-fab" id="fab-new-meal" aria-label="${t('meals.addMealTitle')}" data-dock-label="${t('newLabel.meals')}">
         <i data-lucide="plus" class="icon-xl" aria-hidden="true"></i>
       </button>
     </div>

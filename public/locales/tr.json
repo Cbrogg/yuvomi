@@ -3986,5 +3986,19 @@
         "error": "Hesap oluşturulamadı. Lütfen tekrar dene.",
         "displayNameTooLong": "Görünen ad en fazla 128 karakter olabilir.",
         "previewFailed": "Davet şu anda denetlenemedi. Lütfen birazdan sayfayı yeniden yükle."
+    },
+    "newLabel": {
+        "tasks": "Görev",
+        "calendar": "Etkinlik",
+        "notes": "Not",
+        "birthdays": "Doğum günü",
+        "budget": "Kayıt",
+        "contacts": "Kişi",
+        "documents": "Belge",
+        "meals": "Yemek",
+        "pantry": "Ürün",
+        "recipes": "Tarif",
+        "shopping": "Ürün",
+        "splitExpenses": "Gider"
     }
 }

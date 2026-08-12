@@ -1847,7 +1847,7 @@ export async function render(container, { user }) {
            Rest ein Tagged Template ("TypeError: toolbar is not a function"). -->
       <div class="list-tabs-bar" id="list-tabs-bar"></div>
       <div id="list-content" style="flex:1;display:flex;flex-direction:column;overflow:hidden"></div>
-      <button class="page-fab" id="fab-new-item" aria-label="${t('shopping.addItemLabel')}">
+      <button class="page-fab" id="fab-new-item" aria-label="${t('shopping.addItemLabel')}" data-dock-label="${t('newLabel.shopping')}">
         <i data-lucide="plus" class="icon-xl" aria-hidden="true"></i>
       </button>
     </div>

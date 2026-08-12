@@ -3986,5 +3986,19 @@
         "error": "Không tạo được tài khoản. Vui lòng thử lại.",
         "displayNameTooLong": "Tên hiển thị dài tối đa 128 ký tự.",
         "previewFailed": "Hiện chưa kiểm tra được lời mời. Vui lòng tải lại trang sau giây lát."
+    },
+    "newLabel": {
+        "tasks": "Nhiệm vụ",
+        "calendar": "Sự kiện",
+        "notes": "Ghi chú",
+        "birthdays": "Sinh nhật",
+        "budget": "Mục nhập",
+        "contacts": "Liên hệ",
+        "documents": "Tài liệu",
+        "meals": "Bữa ăn",
+        "pantry": "Mục",
+        "recipes": "Công thức",
+        "shopping": "Mục",
+        "splitExpenses": "Chi phí"
     }
 }

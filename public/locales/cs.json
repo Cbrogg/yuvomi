@@ -3986,5 +3986,19 @@
         "error": "Účet se nepodařilo vytvořit. Zkus to prosím znovu.",
         "displayNameTooLong": "Zobrazované jméno může mít nejvýše 128 znaků.",
         "previewFailed": "Pozvánku se teď nepodařilo ověřit. Za chvíli stránku načti znovu."
+    },
+    "newLabel": {
+        "tasks": "Úkol",
+        "calendar": "Událost",
+        "notes": "Poznámka",
+        "birthdays": "Narozeniny",
+        "budget": "Záznam",
+        "contacts": "Kontakt",
+        "documents": "Dokument",
+        "meals": "Jídlo",
+        "pantry": "Položka",
+        "recipes": "Recept",
+        "shopping": "Položka",
+        "splitExpenses": "Výdaj"
     }
 }

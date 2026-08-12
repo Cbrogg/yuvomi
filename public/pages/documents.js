@@ -143,7 +143,7 @@ export async function render(container) {
         </aside>
         <div id="documents-list" class="${listClasses()}" aria-busy="true">${renderSkeletonList({ rows: 6, lines: 2 })}</div>
       </div>
-      <button class="page-fab" id="fab-new-document" aria-label="${t('documents.addButton')}">
+      <button class="page-fab" id="fab-new-document" aria-label="${t('documents.addButton')}" data-dock-label="${t('newLabel.documents')}">
         <i data-lucide="upload" class="icon-xl" aria-hidden="true"></i>
       </button>
     </div>

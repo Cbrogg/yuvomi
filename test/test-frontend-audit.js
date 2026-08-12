@@ -6862,6 +6862,109 @@ test('toolbar "new" buttons are hidden via a shared class, not an ID list (audit
   }
 });
 
+/**
+ * EIN REGISTER FUER DIE PRIMAERAKTION (12.08.2026).
+ *
+ * Nachdem Punkt 7b die Knoepfe am Zeigergeraet in den Modulkopf geholt hatte,
+ * standen an derselben Stelle DREI Schreibweisen fuer dieselbe Handlung -
+ * gemessen bei 1440px: die handgeschriebenen Knoepfe sagten „Neue Aufgabe"
+ * (150px), die angedockten FABs erbten ihr `aria-label` als Satz
+ * („Geburtstag hinzufuegen", 216px), und Kalender und Budget sagten gar nichts.
+ *
+ * Die Regel: der sichtbare Text ist das NOMEN der Sache aus `newLabel.*`, das
+ * Verb traegt das Plus-Zeichen; das ausfuehrliche `aria-label` bleibt am Knopf.
+ * Gemessen passt das Nomen bei 1024-1920px in jeden Kopf, auch in die beiden
+ * randvollen - die Saetze taten das nicht („Neuer Eintrag" brach den
+ * Budget-Kopf bei 1440 auf zwei Zeilen).
+ *
+ * Der Guard prueft die REGEL ueber alle Seiten, nicht eine Liste von Dateien:
+ * eine neue Seite mit einem FAB faellt hier auf, ohne dass jemand ihn
+ * eintraegt. Kommentare werden vorher entfernt - ein Guard, der Kommentare
+ * liest, findet die Beschreibung eines Fehlers als den Fehler.
+ */
+test('every primary "new" control names its noun from newLabel.* (one register)', () => {
+  const stripJs = (src) => src
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/^[ \t]*\/\/.*$/gm, '');
+
+  const deLocale = JSON.parse(read('../public/locales/de.json'));
+  const pages = walkJsFiles('../public/pages/').filter((p) => p.endsWith('.js'));
+
+  const fabs = [];
+  const toolbarButtons = [];
+  for (const path of pages) {
+    const src = stripJs(read(path));
+    for (const tag of src.match(/<button[^>]*class="[^"]*\bpage-fab\b[^"]*"[^>]*>/g) ?? []) {
+      fabs.push({ path, tag });
+    }
+    // Die zweite Schreibweise: per DOM-API gebaute FABs (Rezepte, Vorrat).
+    for (const block of src.match(/className\s*=\s*'page-fab'[\s\S]{0,400}/g) ?? []) {
+      fabs.push({ path, tag: block, built: true });
+    }
+    for (const tag of src.match(/<button[^>]*class="[^"]*\btoolbar-new-btn\b[^"]*"[^>]*>[\s\S]*?<\/button>/g) ?? []) {
+      toolbarButtons.push({ path, tag });
+    }
+  }
+
+  // Reichweite ZUERST festnageln: eine Zusicherung ueber eine leere Liste ist
+  // keine. Die Zahlen sind die am 12.08. gezaehlten Vorkommen.
+  assert.ok(fabs.length >= 12, `expected at least 12 .page-fab declarations, found ${fabs.length}`);
+  assert.ok(toolbarButtons.length >= 5, `expected at least 5 .toolbar-new-btn, found ${toolbarButtons.length}`);
+
+  const keyOf = (text) => text.match(/newLabel\.([A-Za-z]+)/)?.[1];
+
+  for (const { path, tag, built } of fabs) {
+    // Das Speed-Dial der Uebersicht ist ein Menue, kein Knopf: es dockt
+    // bewusst nicht an (siehe dockFabIntoToolbar) und braucht kein Nomen.
+    if (/id="fab-main"/.test(tag)) continue;
+    const attr = built ? /dataset\.dockLabel\s*=\s*t\('newLabel\.[A-Za-z]+'\)/ : /data-dock-label="\$\{t\('newLabel\.[A-Za-z]+'\)\}"/;
+    assert.match(tag, attr,
+      `${path}: jeder .page-fab braucht data-dock-label aus newLabel.* - ohne dockt er am Zeigergeraet still nicht an`);
+    const key = keyOf(tag);
+    assert.ok(deLocale.newLabel?.[key], `${path}: newLabel.${key} fehlt in de.json`);
+  }
+
+  for (const { path, tag } of toolbarButtons) {
+    assert.match(tag, /<span class="toolbar-new-btn__label">\$\{t\('newLabel\.[A-Za-z]+'\)\}<\/span>/,
+      `${path}: der sichtbare Text eines .toolbar-new-btn kommt aus newLabel.*, nicht aus einem aria-label-Satz`);
+    assert.match(tag, /aria-label="/, `${path}: das ausfuehrliche aria-label bleibt am Knopf`);
+    assert.doesNotMatch(tag, /\bbtn--icon\b/,
+      `${path}: ein beschrifteter Primaerknopf ist keine Icon-Kapsel mehr (Kalender und Budget waren die letzten zwei)`);
+    const key = keyOf(tag);
+    assert.ok(deLocale.newLabel?.[key], `${path}: newLabel.${key} fehlt in de.json`);
+  }
+
+  // Die geteilte FAB-Fabrik muss das Nomen DURCHREICHEN. Sie baut den Knopf
+  // fuer die drei Kontext-FABs (Gesundheit, Haushaltshilfe, Belohnungen) und
+  // ist der eine Ort, an dem ein kuenftiger FAB entsteht, ohne durch die
+  // Seiten-Pruefung oben zu laufen. Ohne diesen Parameter waere Andocken fuer
+  // jeden Fabrik-Knopf per Konstruktion ausgeschlossen - still.
+  // Geprueft wird die SIGNATUR, nicht der Rumpf: ein `dockLabel` irgendwo im
+  // Funktionskoerper stand auch noch da, nachdem der Parameter aus der
+  // Destrukturierung entfernt war - der erste Entwurf dieses Guards blieb
+  // deshalb gruen, obwohl der Aufrufer nichts mehr uebergeben konnte.
+  const fabFactory = stripJs(read('../public/utils/fab.js'));
+  for (const fn of ['pageFabHtml', 'createPageFab', 'setPageFabAction']) {
+    const signature = fabFactory.match(new RegExp(`export function ${fn}\\s*\\([^)]*\\)`));
+    assert.ok(signature, `${fn} not found in utils/fab.js`);
+    assert.match(signature[0], /dockLabel/, `utils/fab.js ${fn} muss dockLabel als Parameter annehmen`);
+  }
+  // Und ein Nomen, das zum vorigen Tab gehoerte, muss weichen statt zu bleiben.
+  assert.match(fabFactory, /else delete fab\.dataset\.dockLabel/,
+    'setPageFabAction muss ein leeres dockLabel als Entfernen behandeln, nicht als "unveraendert"');
+
+  // Und die Shell-Seite der Regel: der angedockte Knopf nimmt data-dock-label,
+  // nicht das aria-label - sonst kaeme der lange Satz zurueck.
+  const router = stripJs(read('../public/router.js'));
+  const dock = router.match(/function dockFabIntoToolbar[\s\S]*?\n}/);
+  assert.ok(dock, 'dockFabIntoToolbar not found');
+  assert.match(dock[0], /fab\.dataset\.dockLabel/, 'dockFabIntoToolbar muss data-dock-label lesen');
+  assert.doesNotMatch(dock[0], /getAttribute\('aria-label'\)/,
+    'dockFabIntoToolbar darf den sichtbaren Text nicht mehr aus aria-label nehmen');
+  assert.match(dock[0], /if\s*\(!label\)\s*return false/,
+    'ohne data-dock-label dockt der Knopf gar nicht an, statt auf den langen Satz zurueckzufallen');
+});
+
 test('login keeps username-style input hints, not email (audit 1.6 — login is by username)', () => {
   const src = read('../public/pages/login.js');
   const input = src.match(/<input[\s\S]*?id="username"[\s\S]*?\/>/);

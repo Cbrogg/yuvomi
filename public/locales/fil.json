@@ -3986,5 +3986,19 @@
         "error": "Hindi nagawa ang account. Pakisubukang muli.",
         "displayNameTooLong": "Dapat hindi hihigit sa 128 karakter ang pangalang ipapakita.",
         "previewFailed": "Hindi masuri ang imbitasyon sa ngayon. Pakireload ang pahina maya-maya."
+    },
+    "newLabel": {
+        "tasks": "Gawain",
+        "calendar": "Kaganapan",
+        "notes": "Tala",
+        "birthdays": "Kaarawan",
+        "budget": "Entry",
+        "contacts": "Kontak",
+        "documents": "Dokumento",
+        "meals": "Pagkain",
+        "pantry": "Item",
+        "recipes": "Resipe",
+        "shopping": "Item",
+        "splitExpenses": "Gastos"
     }
 }

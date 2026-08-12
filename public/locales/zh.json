@@ -3986,5 +3986,19 @@
         "error": "无法创建账户，请重试。",
         "displayNameTooLong": "显示名称最多 128 个字符。",
         "previewFailed": "目前无法检查该邀请，请稍后重新加载页面。"
+    },
+    "newLabel": {
+        "tasks": "任务",
+        "calendar": "日程",
+        "notes": "便签",
+        "birthdays": "生日",
+        "budget": "条目",
+        "contacts": "联系人",
+        "documents": "文档",
+        "meals": "餐食",
+        "pantry": "商品",
+        "recipes": "食谱",
+        "shopping": "商品",
+        "splitExpenses": "支出"
     }
 }

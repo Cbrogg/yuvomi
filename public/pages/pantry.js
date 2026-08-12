@@ -268,6 +268,7 @@ export async function render(container) {
   fab.type = 'button';
   fab.id = 'fab-new-pantry-item';
   fab.setAttribute('aria-label', t('pantry.addItem'));
+  fab.dataset.dockLabel = t('newLabel.pantry');
   fab.insertAdjacentHTML('beforeend', '<i data-lucide="plus" aria-hidden="true"></i>');
 
   page.append(title, live, toolbar, filters, bulk, list, fab);

@@ -3986,5 +3986,19 @@
         "error": "Le compte n'a pas pu être créé. Veuillez réessayer.",
         "displayNameTooLong": "Le nom affiché ne peut pas dépasser 128 caractères.",
         "previewFailed": "L'invitation n'a pas pu être vérifiée pour le moment. Rechargez la page dans un instant."
+    },
+    "newLabel": {
+        "tasks": "Tâche",
+        "calendar": "Événement",
+        "notes": "Note",
+        "birthdays": "Anniversaire",
+        "budget": "Entrée",
+        "contacts": "Contact",
+        "documents": "Document",
+        "meals": "Repas",
+        "pantry": "Article",
+        "recipes": "Recette",
+        "shopping": "Article",
+        "splitExpenses": "Dépense"
     }
 }

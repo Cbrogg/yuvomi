@@ -3986,5 +3986,19 @@
         "error": "アカウントを作成できませんでした。もう一度お試しください。",
         "displayNameTooLong": "表示名は128文字までです。",
         "previewFailed": "招待をいま確認できませんでした。しばらくしてからページを再読み込みしてください。"
+    },
+    "newLabel": {
+        "tasks": "タスク",
+        "calendar": "予定",
+        "notes": "メモ",
+        "birthdays": "誕生日",
+        "budget": "項目",
+        "contacts": "連絡先",
+        "documents": "書類",
+        "meals": "食事",
+        "pantry": "商品",
+        "recipes": "レシピ",
+        "shopping": "商品",
+        "splitExpenses": "支出"
     }
 }

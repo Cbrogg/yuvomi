@@ -3986,5 +3986,19 @@
         "error": "No se ha podido crear la cuenta. Inténtalo de nuevo.",
         "displayNameTooLong": "El nombre visible puede tener como máximo 128 caracteres.",
         "previewFailed": "No se ha podido comprobar la invitación en este momento. Vuelve a cargar la página en unos instantes."
+    },
+    "newLabel": {
+        "tasks": "Tarea",
+        "calendar": "Evento",
+        "notes": "Nota",
+        "birthdays": "Cumpleaños",
+        "budget": "Entrada",
+        "contacts": "Contacto",
+        "documents": "Documento",
+        "meals": "Comida",
+        "pantry": "Artículo",
+        "recipes": "Receta",
+        "shopping": "Artículo",
+        "splitExpenses": "Gasto"
     }
 }
