@@ -215,6 +215,59 @@
   z-index: 1;
 }
 
+/* ── Die Kennzahlkarte als SPRUNGZIEL ──
+ *
+ * Dieselbe Karte, eine zusaetzliche Rolle: sie fuehrt in ihr Modul. Neu ist
+ * deshalb nur der Kopf (Siegel plus Label) und das Anfass-Verhalten - Flaeche,
+ * Radius, Schatten, Wert- und Fussformat bleiben die der einen Kennzahlkarte
+ * des Hauses. Das Siegel steht hier zu Recht: das Dashboard ist eine
+ * Mischstelle, und die Kachel nennt damit ihren Absender wie jeder Widget-Kopf.
+ *
+ * Der Druckzustand steigt eine Sprosse der Toenungsskala statt den eigenen
+ * Inhalt per opacity abzudunkeln. */
+/* MITTIG, NICHT OBEN UND NICHT AUSEINANDERGEZOGEN. Die Kachel fuellt ihre
+ * Rasterzelle, und die ist auf dem Desktop rund 137px hoch bei ~70px Inhalt.
+ * Oben ausgerichtet blieb das Label allein am Kartenrand haengen; mit einem
+ * `margin-block-start:auto` am Wert klaffte dazwischen ein 60px-Loch. Zentriert
+ * liest sich derselbe Block auf beiden Groessen als eine Einheit, und zwei
+ * Kacheln nebeneinander zeigen ihre Werte weiter auf einer Linie, solange die
+ * Labels gleich viele Zeilen brauchen. */
+.metric-card--tile {
+  text-decoration: none;
+  color: var(--color-text-primary);
+  gap: var(--space-1);
+  justify-content: center;
+  transition: background-color var(--transition-fast), transform var(--duration-xs) var(--ease-out);
+}
+
+.metric-card--tile:hover {
+  background-color: var(--color-surface-elevated-hover);
+}
+
+.metric-card--tile:active {
+  transform: scale(0.98);
+}
+
+.metric-card__tile-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+/* Der Kopf traegt das Label bereits als eigene Zeile - der Zeilenumbruch darin
+ * bleibt erlaubt (lange Modulnamen), aber er darf die Karte nicht aufziehen. */
+.metric-card__tile-head .metric-card__label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .metric-card--tile:active {
+    transform: none;
+  }
+}
+
 /* Größe, Gewicht und Versalsatz kommen aus der geteilten Eyebrow-Klasse in
  * typography.css - hier stehen nur Farbe und Umbruchverhalten. */
 .metric-card__label {

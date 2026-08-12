@@ -117,6 +117,51 @@ router.get('/', (req, res) => {
     result.urgentTasks = [];
   }
 
+  // ZÄHLSTÄNDE FÜR DIE KENNZAHL-KACHELN.
+  //
+  // Sie lassen sich NICHT aus den Listen oben ableiten: `urgentTasks` schneidet
+  // bei 5 ab und `shoppingLists` bei drei Listen mit offenen Posten. Wer daraus
+  // zählte, zeigte auf der Kachel „5 offen", solange zwölf offen sind - eine
+  // Zahl, die genau bis zu ihrer Obergrenze stimmt, ist die gefährlichste Sorte.
+  // Sichtbarkeit wie überall: der Betrachter zählt nur, was er sehen darf.
+  try {
+    result.openTaskCount = d.prepare(`
+      SELECT COUNT(*) AS n FROM tasks t
+      WHERE t.status != 'done' AND t.archived_at IS NULL
+        AND ${visibilityWhere('t', 'task_assignments', 'task_id', '@me')}
+    `).get({ me: userId }).n;
+  } catch (err) {
+    log.error('openTaskCount error:', err.message);
+    result.openTaskCount = null;
+  }
+
+  // Überfällig ist die Zweitzeile der Aufgaben-Kachel: „7 offen" allein sagt
+  // nicht, ob etwas brennt.
+  try {
+    result.overdueTaskCount = d.prepare(`
+      SELECT COUNT(*) AS n FROM tasks t
+      WHERE t.status != 'done' AND t.archived_at IS NULL
+        AND t.due_date IS NOT NULL AND t.due_date < @today
+        AND ${visibilityWhere('t', 'task_assignments', 'task_id', '@me')}
+    `).get({ today: todayLocalKey, me: userId }).n;
+  } catch (err) {
+    log.error('overdueTaskCount error:', err.message);
+    result.overdueTaskCount = null;
+  }
+
+  try {
+    const row = d.prepare(`
+      SELECT COUNT(*) AS items, COUNT(DISTINCT si.list_id) AS lists
+      FROM shopping_items si WHERE si.is_checked = 0
+    `).get();
+    result.shoppingOpenCount = row.items;
+    result.shoppingOpenLists = row.lists;
+  } catch (err) {
+    log.error('shoppingOpenCount error:', err.message);
+    result.shoppingOpenCount = null;
+    result.shoppingOpenLists = 0;
+  }
+
   // Heutiges Essen (gefiltert nach haushaltweiten Mahlzeit-Typ-Einstellungen)
   try {
     const ALL_MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'];

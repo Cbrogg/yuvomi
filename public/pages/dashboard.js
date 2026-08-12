@@ -226,7 +226,15 @@ function maybeHintCustomize(container) {
 // Reihenfolge = Standard-Layout. Die primären Inhalte (tasks, calendar) führen,
 // damit sie beim Wieder-Einblenden oben stehen; das einzige passive Widget
 // (weather) steht bewusst am Ende, statt die sichtbare Grid-Spitze zu belegen.
-const WIDGET_IDS = ['tasks', 'calendar', 'meals', 'shopping', 'birthdays', 'budget', 'rewards', 'health', 'cycle', 'housekeeping', 'family', 'notes', 'weather', 'clock'];
+/* `metrics` steht ANS ENDE, nicht an den Anfang - obwohl die Kachelreihe oben
+ * am meisten taugt. Grund: normalizeDashboardConfig haengt eine neu bekannte Id
+ * an bestehende Layouts hinten an, und isUserOrderedConfig vergleicht die
+ * Reihenfolge gegen diese Liste. Stuende `metrics` vorn, waere fuer JEDEN
+ * Bestandshaushalt „gespeicherte Reihenfolge != Default" - und das Raster
+ * schaltete stillschweigend von der dichten Packung auf preserve-order um
+ * (genau der Regress aus Audit A1-03). Auf einem frischen Dashboard packt der
+ * dense-Fluss die 2x2-Kachel ohnehin nach oben, wo sie passt. */
+const WIDGET_IDS = ['tasks', 'calendar', 'meals', 'shopping', 'birthdays', 'budget', 'rewards', 'health', 'cycle', 'housekeeping', 'family', 'notes', 'weather', 'clock', 'metrics'];
 
 // Vier kuratierte Formen statt sechs: über vier Auswahlmöglichkeiten pro Widget
 // (× bis zu 12 Widgets) kippt der Anpassen-Modus in Mikro-Entscheidungs-Overhead
@@ -282,6 +290,10 @@ function defaultWidgetSize(id) {
   // Die Uhr startet breit statt quadratisch: Uhrzeit und darunter der ausgeschriebene
   // Wochentag brauchen Zeile, nicht Höhe - auf 1x1 bräche das Datum um (#651).
   if (['weather', 'shopping', 'health', 'cycle', 'meals', 'clock'].includes(id)) return '2x1';
+  // Die Kennzahlreihe IST ein 2x2-Raster - jede andere Groesse zerlegt sie in
+  // eine Spalte oder eine Zeile und nimmt ihr genau den Vergleich, fuer den sie
+  // gebaut ist.
+  if (id === 'metrics') return '2x2';
   return '1x1';
 }
 
@@ -407,12 +419,13 @@ function widgetLabel(id) {
     housekeeping: () => t('nav.housekeeping'),
     family:   () => t('dashboard.familyMembers'),
     clock:    () => t('dashboard.clock'),
+    metrics:  () => t('dashboard.metrics'),
   };
   return (map[id] ?? (() => id))();
 }
 
 function widgetIcon(id) {
-  const map = { tasks: 'check-square', calendar: 'calendar', birthdays: 'cake', budget: 'wallet', rewards: 'award', health: 'heart-pulse', cycle: 'calendar-heart', housekeeping: 'paintbrush', family: 'users', shopping: 'shopping-cart', meals: 'utensils', notes: 'pin', weather: 'cloud-sun', clock: 'clock' };
+  const map = { tasks: 'check-square', calendar: 'calendar', birthdays: 'cake', budget: 'wallet', rewards: 'award', health: 'heart-pulse', cycle: 'calendar-heart', housekeeping: 'paintbrush', family: 'users', shopping: 'shopping-cart', meals: 'utensils', notes: 'pin', weather: 'cloud-sun', clock: 'clock', metrics: 'layout-grid' };
   return map[id] ?? 'layout-dashboard';
 }
 
@@ -1251,6 +1264,155 @@ function renderBudgetWidget(budget, currency) {
 }
 
 // --------------------------------------------------------
+// Kennzahlen-Widget (2x2-Kacheln, je eine Kachel = ein Sprungziel)
+// --------------------------------------------------------
+
+/* WARUM DAS EIN WIDGET IST UND KEIN FESTER BLOCK.
+ *
+ * Der Handoff entwirft eine feste Folge: Gruss, „Heute", Kacheln, Familie,
+ * Wetter. `dashboard_widgets` speichert aber Auswahl UND Reihenfolge pro
+ * Haushalt - als fester Block waere entweder die Einstellung tot oder das
+ * Raster braeche, sobald jemand ein Modul abwaehlt. Als Widget-Typ ordnet die
+ * Kachelreihe sich ein, laesst sich verschieben, ausblenden und in der Groesse
+ * aendern wie jede andere Kachel, und der Server brauchte dafuer keine Zeile:
+ * normalizeWidgetConfig kennt Ids generisch und '2x2' steht laengst in
+ * VALID_WIDGET_SIZES.
+ *
+ * UND WARUM ES .metric-card IST UND KEIN NEUER BAUSTEIN.
+ * Der Entwurf beschreibt Surface, Radius 16, shadow-sm, Label 13/500 sekundaer,
+ * Wert 20/700 tabular, Sub 12px - das ist Zeile fuer Zeile die Kennzahlkarte,
+ * die seit v2.1.0 in panel.css steht und ueber einen Guard als die EINE Bauart
+ * des Hauses festgehalten ist. Neu ist hier nur die Rolle: die Karte ist ein
+ * Sprungziel und traegt deshalb ein Siegel im Kopf.
+ */
+
+/* Die Reihenfolge IST die Vorauswahl. Es gibt bewusst keine eigene Einstellung
+ * dafuer: das Widget-System kennt bislang nur zeigen/verbergen/Groesse/Reihe,
+ * und eine erste Pro-Widget-Option waere eine neue Schema-Achse, die danach
+ * jedes Widget mitschleppt. Faellt ein Modul aus (abgeschaltet, kein Zugriff,
+ * keine Daten), ruecken die hinteren Kandidaten nach - vier Kacheln bleiben
+ * vier Kacheln, statt eine Luecke ins 2x2-Raster zu reissen. */
+const METRIC_TILE_ORDER = ['tasks', 'shopping', 'budget', 'birthdays', 'meals', 'notes', 'rewards'];
+const METRIC_TILE_COUNT = 4;
+
+function metricTileFor(id, data, currency) {
+  const route = { tasks: '/tasks', shopping: '/shopping', budget: '/budget', birthdays: '/birthdays', meals: '/meals', notes: '/notes', rewards: '/rewards' }[id];
+  switch (id) {
+    case 'tasks': {
+      const open = data.openTaskCount;
+      if (open == null) return null;
+      const overdue = data.overdueTaskCount ?? 0;
+      return {
+        id, route, icon: 'check-square', label: t('nav.tasks'),
+        value: t('dashboard.metricOpen', { count: open }),
+        note: overdue > 0 ? t('dashboard.metricOverdue', { count: overdue }) : t('dashboard.metricNothingOverdue'),
+        noteTone: overdue > 0 ? 'danger' : null,
+      };
+    }
+    case 'shopping': {
+      const items = data.shoppingOpenCount;
+      if (items == null) return null;
+      const lists = data.shoppingOpenLists ?? 0;
+      return {
+        id, route, icon: 'shopping-cart', label: t('nav.shopping'),
+        value: t('dashboard.metricItems', { count: items }),
+        note: items === 0 ? t('dashboard.metricAllBought') : t('dashboard.metricOnLists', { count: lists }),
+      };
+    }
+    case 'budget': {
+      const budget = data.budget ?? {};
+      if (!(budget.entryCount > 0)) return null;
+      const balance = budget.balance || 0;
+      // DIE VORZEICHENREGEL IST NICHT NEU - sie ist die des Budget-Widgets,
+      // Zeichen fuer Zeichen. Ein Minus allein wird bei 20px auf dem Handy
+      // ueberlesen, deshalb traegt die Farbe den zweiten Kanal; und der
+      // Sonderfall aus #504 kommt mit: wer nur Ausgaben erfasst, hat einen
+      // rechnerisch negativen Saldo, der nichts ueber seine Lage sagt, und
+      // bekommt Label-Farbe statt Rot.
+      const neutral = (budget.income || 0) === 0 && balance < 0;
+      return {
+        id, route, icon: 'wallet', label: t('nav.budget'),
+        value: formatCurrency(balance, currency),
+        note: t('dashboard.monthlyBalance'),
+        tone: neutral ? 'balance-neutral' : balance >= 0 ? 'balance-positive' : 'balance-negative',
+      };
+    }
+    case 'birthdays': {
+      const next = (data.birthdays ?? [])[0];
+      if (!next) return null;
+      const days = next.days_until;
+      return {
+        id, route, icon: 'cake', label: t('nav.birthdays'),
+        value: days === 0 ? t('common.today') : days === 1 ? t('common.tomorrow') : t('dashboard.daysLeft', { count: days }),
+        note: next.name,
+      };
+    }
+    case 'meals': {
+      const meals = data.todayMeals ?? [];
+      if (!meals.length) return null;
+      return {
+        id, route, icon: 'utensils', label: t('nav.meals'),
+        value: t('dashboard.metricMeals', { count: meals.length }),
+        note: meals[0]?.title || t('dashboard.todayMeals'),
+      };
+    }
+    case 'notes': {
+      const notes = data.pinnedNotes ?? [];
+      if (!notes.length) return null;
+      return {
+        id, route, icon: 'pin', label: t('nav.notes'),
+        value: t('dashboard.metricPinned', { count: notes.length }),
+        note: notes[0]?.title || t('notes.titlePlaceholder'),
+      };
+    }
+    case 'rewards': {
+      const leader = (data.rewards?.standings ?? [])[0];
+      if (!leader) return null;
+      return {
+        id, route, icon: 'award', label: t('nav.rewards'),
+        value: t('dashboard.metricPoints', { count: leader.balance ?? 0 }),
+        note: leader.display_name,
+      };
+    }
+    default:
+      return null;
+  }
+}
+
+function renderMetricTile(tile) {
+  const noteClass = tile.noteTone === 'danger' ? ' metric-card__note--danger' : '';
+  const toneClass = tile.tone ? ` metric-card--${tile.tone}` : '';
+  return `
+    <a class="metric-card metric-card--tile${toneClass}" href="${tile.route}" data-route="${tile.route}">
+      <span class="metric-card__tile-head">
+        <!-- Der Ton gehoert AUF das Siegel, nicht auf die Karte darum: .module-seal
+             deklariert --seal-accent in seiner eigenen Regel, und eine Deklaration
+             am Element schlaegt jeden geerbten Wert. Von der Karte aus gesetzt
+             trugen alle vier Kacheln denselben violetten App-Akzent. -->
+        <span class="module-seal module-seal--sm" aria-hidden="true"
+              style="--seal-accent: var(--module-${tile.id}, var(--color-accent))"><i data-lucide="${tile.icon}"></i></span>
+        <span class="metric-card__label">${esc(tile.label)}</span>
+      </span>
+      <span class="metric-card__value">${esc(tile.value)}</span>
+      <span class="metric-card__note${noteClass}">${esc(tile.note)}</span>
+    </a>
+  `;
+}
+
+function renderMetricTiles(data, currency) {
+  const tiles = METRIC_TILE_ORDER
+    .filter((id) => isWidgetModuleEnabled(id))
+    .map((id) => metricTileFor(id, data, currency))
+    .filter(Boolean)
+    .slice(0, METRIC_TILE_COUNT);
+
+  // Weniger als zwei Kacheln sind keine Kachelreihe, sondern eine einsame
+  // Karte - dann traegt das Modul-Widget die Zahl besser.
+  if (tiles.length < 2) return '';
+  return `<div class="metric-tiles">${tiles.map(renderMetricTile).join('')}</div>`;
+}
+
+// --------------------------------------------------------
 // Belohnungen-Widget (Familien-Punktestand)
 // --------------------------------------------------------
 
@@ -1869,6 +2031,7 @@ function renderDashboardLayout(cfg, data, weather, currency, { editing = false, 
     shopping: () => renderShoppingLists(data.shoppingLists ?? []),
     weather: () => (weather ? renderWeatherWidget(weather) : ''),
     clock: () => renderClockWidget(),
+    metrics: () => renderMetricTiles(data, currency),
   };
 
   const tiles = cfg
