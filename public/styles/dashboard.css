@@ -255,6 +255,16 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  /* DIE TITELZEILE IST DAS MASS DES BANDES, und sie ist es an EINER Stelle.
+   * Vorher setzte `.dashboard .widget__header` dafuer `min-height:
+   * var(--target-base)` - eine Zielgroesse als Bandhoehe, und dazu eine, die
+   * die tatsaechliche Hoehe gar nicht bestimmte: die kam aus der 48px-Box des
+   * „Alle"-Links und ergab 73px (12 + 48 + 12 + 1). Mit 32px hier landen BEIDE
+   * Bauformen auf demselben Band: die Karte mit Link (Link 32px) und die
+   * Fehlerkachel ohne ihn (Siegel 24px, renderWidgetError). Am Kopf selbst
+   * waere es das nicht - dort zaehlt die Kante mit, und die eine Form kaeme auf
+   * 49px, die andere auf 48px. */
+  min-height: var(--target-sm);
 }
 
 /* Das Widget-Titel-Icon sitzt seit Block 2 in einem Markensiegel
@@ -269,12 +279,46 @@
   font-weight: var(--font-weight-medium);
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-0h);
   transition: opacity var(--transition-fast), color var(--transition-fast), background-color var(--transition-fast);
-  min-height: var(--target-base);
+  /* KOMPAKT AUSSEHEN, VOLL TREFFEN - das Rezept der Zielgroessen-Regel
+   * (tokens.css §11b), hier zum zweiten Mal angewandt.
+   *
+   * Hier stand `min-height: var(--target-base)`, also 48px am Finger, und damit
+   * bestimmte ein 15px-Textlink die Hoehe des ganzen Kopfbandes: gemessen 73px
+   * (12 Polster + 48 Box + 12 + 1 Kante) fuer einen 17px-Titel und ein
+   * 24px-Siegel. Der Kopfanteil einer Karte lag dadurch zwischen 18 % und
+   * 29,9 % (Belohnungen, 390x844).
+   *
+   * Die Regel verlangt das nicht. Ein FREISTEHENDES Ziel - und mehr als einen
+   * `.widget__link` gibt es je Kopf nicht - haelt die Zielgroesse „in
+   * MINDESTENS EINER Achse" und in der anderen WCAG 2.5.8 (24px). Die Achse ist
+   * jetzt die BREITE: `--target-sm` ist ausdruecklich die visuelle Groesse und
+   * kein Touch-Mass, `min-width: var(--target-lg)` hebt die kurzen Labels
+   * („Alle", 42,2px gemessen) auf die volle Zielbreite, und die 32px Hoehe
+   * liegen ueber den 24px der zweiten Achse.
+   *
+   * Die TREFFERflaeche bleibt trotzdem 48px hoch: das `::before` unten dehnt
+   * sie in das Kopfpolster, wo kein zweites Ziel liegt. Gemessen nach der
+   * Aenderung, getastet wie Sonde 4 es tut: Box 32px, Treffer 49px. */
+  min-height: var(--target-sm);
+  min-width: var(--target-lg);
+  position: relative;
   padding: 0 var(--space-2);
   border-radius: var(--radius-full);
   margin-right: calc(-1 * var(--space-2));
+}
+
+/* Die Trefferflaeche, die die Box nicht mehr traegt: 32px Box plus zwei Mal
+ * --space-2 ergeben die 48px des Fingers. NUR vertikal - horizontal bleibt die
+ * Flaeche in der Box, weil die Zeile daneben den Titel fuehrt und ein
+ * ueberlappendes Ziel dort dessen Kuerzung anfassen wuerde. Nach unten und oben
+ * liegt das 8px-Polster des Kopfes und sonst nichts. */
+.widget__link::before {
+  content: '';
+  position: absolute;
+  inset: calc(-1 * var(--space-2)) 0;
 }
 
 .widget__link:hover {
@@ -2330,11 +2374,21 @@ svg.weather-forecast__icon {
  * Toolbars, Tabs und Modulkoepfen. Hier ist die Toenung die Absenderangabe der
  * Karte - dieselbe Aufgabe, die das Siegel im Kopf schon hat, nur als Grund. */
 .dashboard .widget__header {
-  /* Kompakter Kopf (Critique P3): der 16px-Titel füllt die Zeile, statt in einer
-   * über-hohen 54px-Leiste zu schwimmen. --target-base (44px) hält zugleich das
-   * Touch-Minimum für die „Alle"-Verknüpfung. */
-  min-height: var(--target-base);
-  padding: var(--space-3) var(--space-4);
+  /* DAS BAND IST 49px HOCH, UND DIESE ZEILE SAGT NICHT MEHR, WIE HOCH ES IST.
+   *
+   * Hier stand `min-height: var(--target-base)` mit der Begruendung, der
+   * kompakte Kopf halte damit „zugleich das Touch-Minimum fuer die
+   * „Alle"-Verknuepfung". Beides war nachgemessen falsch: die 44/48px banden
+   * nie, weil die 48px-Box des Links plus 2x12px Polster schon 73px ergaben -
+   * mehr als die 54px-Leiste, gegen die der Kommentar argumentierte. Und das
+   * Touch-Minimum hielt nicht der Kopf, sondern der Link selbst.
+   *
+   * Die Hoehe kommt jetzt aus der Titelzeile (32px, siehe `.widget__title`), das
+   * Polster ist eine Stufe enger, und die Trefferflaeche des Links dehnt sich
+   * per ::before genau in dieses Polster. Ergebnis gemessen: 73px → 49px, bei
+   * unveraenderter 48px-Trefferhoehe. Der Titel bleibt dabei 17px - klobig war
+   * nicht die Schrift, klobig war die Zeile. */
+  padding: var(--space-2) var(--space-4);
   background: color-mix(in srgb, var(--widget-accent, var(--color-accent)) var(--tint-wash), var(--color-surface));
   /* Die Trennlinie erbt den Ton, damit Band und Kante EIN Element sind statt
    * einer getoenten Flaeche mit neutralem Abschluss. */
@@ -2349,8 +2403,15 @@ svg.weather-forecast__icon {
   --seal-base: color-mix(in srgb, var(--widget-accent, var(--color-accent)) var(--tint-wash), var(--color-surface));
 }
 
-.dashboard .widget__title,
-.dashboard .widget__link {
+/* `min-width: 0` GEHOERT DER NACHGIEBIGEN SEITE, UND DAS IST NUR DER TITEL.
+ *
+ * Der Link stand hier mit und hat die Regel gegen sich selbst gedreht: er traegt
+ * `flex-shrink: 0` (unten), gibt also gar nicht nach - `min-width: 0` war fuer
+ * ihn von Anfang an wirkungslos. Wirkung bekam es erst, als der Link seine
+ * Zielbreite BRAUCHTE: `min-width: var(--target-lg)` in der Basisregel verlor
+ * gegen dieses spezifischere `0`, und die kurzen „Alle"-Links blieben bei
+ * gemessenen 42,2px - unter der Zielgroesse, die die eine Achse tragen soll. */
+.dashboard .widget__title {
   min-width: 0;
 }
 
