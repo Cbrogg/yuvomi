@@ -64,8 +64,17 @@
  * weiter aus layout.css. Ohne Blur-Support bleibt der Vollton aus
  * layout.css stehen (identische Fallback-Logik wie oben).
  * ================================================================ */
+/* `:not(.page-fab--docked)` an JEDER der drei Regeln, und das ist keine
+ * Vorsicht, sondern die Bedingung dafuer, dass Sonde 12 gruen wird.
+ *
+ * Sie liest DEKLARIERTE Regeln, nicht berechnete Werte - ausdruecklich, weil
+ * eine Deklaration, die heute von `.app-content *` mit `!important` abgeraeumt
+ * wird, wirkt, sobald jene Regel faellt. Ein `backdrop-filter: none` am
+ * angedockten Knopf reicht ihr deshalb nicht: die Glas-Deklaration MATCHT den
+ * Knoten weiter, und der steht im `#main-content`. Erst wenn sie ihn gar nicht
+ * mehr trifft, ist die Glas-ist-Chrome-Regel eingehalten statt ueberschrieben. */
 @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
-  .page-fab {
+  .page-fab:not(.page-fab--docked) {
     background-color: color-mix(in srgb, var(--color-accent) 78%, transparent);
     /* blur-md statt blur-sm: die weiche Streuung des Untergrunds ist auf
      * Kapselgröße der einzige Materialbeweis, wenn kein Text darunter
@@ -86,7 +95,7 @@
   /* Kein pointer-events:none nötig: Pseudos hit-testen auf ihr Host-Element,
    * der Sheen kann dem FAB nichts verdecken - und der #634-Guard verbietet
    * die Deklaration in .page-fab-Regeln zu Recht pauschal. */
-  .page-fab::before {
+  .page-fab:not(.page-fab--docked)::before {
     content: '';
     position: absolute;
     inset: 0;
@@ -94,8 +103,32 @@
     background: linear-gradient(to bottom, var(--glass-sheen), transparent 55%);
   }
 
-  .page-fab:hover {
+  .page-fab:not(.page-fab--docked):hover {
     background-color: var(--color-accent);
+  }
+
+  /* ANGEDOCKT IST ER KEIN GLAS MEHR, und der Grund ist eine abgelaufene
+   * Messung direkt darüber: „Der Tint bleibt bei 78 %: darunter fällt das
+   * Plus-Glyph auf hellen Modul-Tints unter die 3:1-Grenze." 3:1 ist die
+   * Grafikschwelle - sie galt, solange der FAB ein Kreis mit einem Zeichen
+   * darin war.
+   *
+   * Seit Etappe 2 (dc23972f) wandert derselbe Knoten auf dem Zeigergerät in
+   * die Kopfleiste, und seit db49cd48 trägt er dort ein sichtbares WORT. Für
+   * Text gilt 4,5:1. Gemessen am gerenderten Dokument (Sonde 2, light/desktop):
+   * 78 % Violett auf Weiß ergibt #8A63ED, weiß darauf 4.13:1 - auf allen fünf
+   * andockenden Routen (Mahlzeiten, Rezepte, Vorrat, Geburtstage, Dokumente).
+   *
+   * Er ist dort auch kein Chrome mehr, sondern ein Knopf im Inhalt, und für
+   * den gilt die Primärknopf-Form aus DESIGN.md: deckende Fläche, kein Blur,
+   * kein Sheen. Dieselbe Regel, die Glas ohnehin auf die Shell beschränkt. */
+  .page-fab--docked {
+    background-color: color-mix(in srgb, var(--color-accent) 88%, #0E0D0B);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .page-fab--docked:hover {
+    background-color: color-mix(in srgb, var(--color-accent) 76%, #0E0D0B);
   }
 }
 
