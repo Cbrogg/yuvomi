@@ -1106,6 +1106,11 @@
     calc((100% - var(--content-max-width)) / 2)
   );
   --cal-hour-height: 56px;
+  /* Die Tagesansicht ist dichter: EINE Spalte über die volle Breite trägt Titel
+   * und Zeit nebeneinander, wo die Wochenansicht sie in ~46px schmalen Spalten
+   * stapeln muss. `.day-view` überschreibt damit --cal-hour-height für alles in
+   * seinem Träger; die Zahl steht deshalb genau hier und nirgends sonst. */
+  --cal-hour-height-day: 40px;
   /* Breite der Zeitspalte in Wochen-/Tagesansicht. Muss 12-Stunden-Labels
    * („12:00 PM") aufnehmen. Header-Gutter + Body-Zeitspalte teilen diesen
    * Wert, damit die Spalten fluchten. */

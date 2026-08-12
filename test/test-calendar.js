@@ -6,7 +6,9 @@
  */
 
 import { DatabaseSync } from 'node:sqlite';
+import { readFileSync } from 'node:fs';
 import { MIGRATIONS_SQL } from '../server/db-schema-test.js';
+import { eachRule } from './css-rules.js';
 const { __test: calendarHelpers } = await import('../public/pages/calendar.js');
 
 let passed = 0;
@@ -436,10 +438,19 @@ test('agendaSegmentKind: Ganztags-Event ist all-day', () => {
   assert(agendaSegmentKind(ev, '2026-06-14') === 'all-day', 'Ganztägig → all-day');
 });
 
-const { clickedTime, HOUR_HEIGHT } = calendarHelpers;
+const { clickedTime } = calendarHelpers;
 
-function colAt(top) {
-  return { getBoundingClientRect: () => ({ top }) };
+/* Die Stundenhöhe kommt nicht mehr aus einer Konstante in calendar.js, sondern
+ * wird an der Spalte gemessen (sie ist immer 24 Stunden hoch) - deshalb trägt
+ * die Attrappe hier jetzt eine Höhe. Das ist genau die Zusage, die der Test
+ * hält: Woche (56px) und die dichtere Tagesansicht (40px) müssen für denselben
+ * Klick-Anteil dieselbe Uhrzeit ergeben. Vorher war die Zahl 56 in Test und
+ * Quelle verdrahtet und ein zweites Raster wäre unbemerkt falsch gelandet. */
+const WEEK_HOUR = 56;
+const DAY_HOUR  = 40;
+
+function colAt(top, hourHeight = WEEK_HOUR) {
+  return { getBoundingClientRect: () => ({ top, height: hourHeight * 24 }) };
 }
 
 test('clickedTime: Klick auf Spaltenanfang ergibt 00:00', () => {
@@ -447,12 +458,12 @@ test('clickedTime: Klick auf Spaltenanfang ergibt 00:00', () => {
 });
 
 test('clickedTime: Klick wird auf 30 Minuten gerundet', () => {
-  const y = (14.5 / 24) * (HOUR_HEIGHT * 24);
+  const y = (14.5 / 24) * (WEEK_HOUR * 24);
   assert(clickedTime({ clientY: y }, colAt(0)) === '14:30', 'Klick bei 14:30 bleibt 14:30');
 });
 
 test('clickedTime: Minuten zwischen den Rastern runden zum nächsten 30-Minuten-Schritt', () => {
-  const y = (HOUR_HEIGHT * 10) + (HOUR_HEIGHT * 20 / 60);
+  const y = (WEEK_HOUR * 10) + (WEEK_HOUR * 20 / 60);
   assert(clickedTime({ clientY: y }, colAt(0)) === '10:30', '10:20 rundet auf 10:30');
 });
 
@@ -461,13 +472,88 @@ test('clickedTime: Klick oberhalb der Spalte wird auf 00:00 geklemmt', () => {
 });
 
 test('clickedTime: Klick am Tagesende wird auf 23:30 geklemmt', () => {
-  const y = HOUR_HEIGHT * 25;
+  const y = WEEK_HOUR * 25;
   assert(clickedTime({ clientY: y }, colAt(0)) === '23:30', 'yOffset über 24h → 23:30');
 });
 
 test('clickedTime: berücksichtigt die Scroll-Position der Spalte (rect.top)', () => {
-  const y = 200 + (HOUR_HEIGHT * 2);
+  const y = 200 + (WEEK_HOUR * 2);
   assert(clickedTime({ clientY: y }, colAt(200)) === '02:00', 'rect.top wird von clientY abgezogen');
+});
+
+test('clickedTime: liest die Stundenhöhe der Spalte, nicht eine feste Zahl', () => {
+  const y = DAY_HOUR * 14.5;
+  assert(clickedTime({ clientY: y }, colAt(0, DAY_HOUR)) === '14:30',
+    'dichteres Tagesraster (40px/Stunde) trifft dieselbe Uhrzeit');
+  assert(clickedTime({ clientY: WEEK_HOUR * 14.5 }, colAt(0, WEEK_HOUR)) === '14:30',
+    'und die Wochenansicht (56px/Stunde) ebenso');
+});
+
+test('clickedTime: eine Spalte ohne messbare Höhe legt nichts Falsches an', () => {
+  const noHeight = { getBoundingClientRect: () => ({ top: 0, height: 0 }) };
+  assert(clickedTime({ clientY: 400 }, noHeight) === '09:00',
+    'ohne Layout fällt der Klick auf eine ruhige Vormittagszeit zurück statt auf 00:00');
+});
+
+// --------------------------------------------------------
+// Tagesraster: die Ebenenregel der Now-Linie
+// --------------------------------------------------------
+
+/* DIE ZUSAGE: im Tagesraster liegt die Now-LINIE unter den Terminen und der
+ * PUNKT über allem. Genau daran scheiterte die Vorlage (Screenshot 05): die
+ * Linie lag mit z-index 2 über dem 09:00-Termin und machte dessen Text
+ * unlesbar. Die Regel ist eine reine Stapelaussage und bricht deshalb lautlos -
+ * ein einzelnes hochgezogenes z-index irgendwo in calendar.css genügt, und
+ * niemand sieht es, bis jemand mittags in seinen Kalender schaut.
+ *
+ * Geprüft wird über eachRule() (der EINE Regelscanner), nicht über ein eigenes
+ * Regex: das alte Muster war dreimal blind und jedes Mal war der Guard grün. */
+const calendarCss = readFileSync(new URL('../public/styles/calendar.css', import.meta.url), 'utf8');
+
+function zIndexOf(selector) {
+  for (const rule of eachRule(calendarCss)) {
+    if (!rule.selector.split(',').map((s) => s.trim()).includes(selector)) continue;
+    const match = rule.body.match(/(?:^|;)\s*z-index\s*:\s*(-?\d+)/);
+    if (match) return Number(match[1]);
+  }
+  return null;
+}
+
+test('Tagesraster: die Now-Linie liegt UNTER den Terminen, der Punkt darüber', () => {
+  const line  = zIndexOf('.day-view__now-line');
+  const dot   = zIndexOf('.day-view__now-dot');
+  const event = zIndexOf('.day-event');
+  assert(line !== null,  '.day-view__now-line hat kein z-index - die Ebenenregel steht nirgends');
+  assert(dot !== null,   '.day-view__now-dot hat kein z-index');
+  assert(event !== null, '.day-event hat kein z-index');
+  assert(line < event, `Now-Linie (${line}) muss unter dem Termin (${event}) liegen, sonst streicht sie seinen Titel durch`);
+  assert(dot > event,  `Now-Punkt (${dot}) muss über dem Termin (${event}) liegen, sonst ist „jetzt" verdeckt`);
+});
+
+test('Tagesraster: der Now-Punkt sitzt in der Stundenspalte, wo nie ein Termin steht', () => {
+  const rule = [...eachRule(calendarCss)].find((r) => r.selector.trim() === '.day-view__now-dot');
+  assert(rule, '.day-view__now-dot fehlt');
+  assert(/inset-inline-start|left/.test(rule.body) && /--cal-gutter-width/.test(rule.body),
+    'der Punkt muss seine Position aus --cal-gutter-width beziehen - sonst wandert er beim nächsten '
+    + 'Spaltenmass in die Terminspalte, und die halbe Ebenenregel ist wieder hin');
+});
+
+test('Tagesraster: die Dichte kommt aus EINEM Token, nicht aus einer zweiten Zahl', () => {
+  const dayView = [...eachRule(calendarCss)].find((r) => r.selector.trim() === '.day-view');
+  assert(dayView, '.day-view fehlt');
+  assert(/--cal-hour-height:\s*var\(--cal-hour-height-day\)/.test(dayView.body),
+    '.day-view muss --cal-hour-height auf die Tages-Sprosse umbiegen; sonst rechnet hourOffset() '
+    + 'gegen die Wochenhöhe und Termine, Stundenlinien und Now-Linie laufen auseinander');
+  // OHNE KOMMENTARE. Der Guard fand beim ersten Lauf seinen eigenen Anlass:
+  // der Kommentar über hourOffset() ZITIERT `HOUR_HEIGHT = 56`, um zu erklären,
+  // warum es die Konstante nicht mehr gibt. Ein Guard, der Prosa liest, meldet
+  // die Beschreibung eines Fehlers als den Fehler - dieselbe Falle, wegen der
+  // eachRule() die Kommentare strippt.
+  const src = readFileSync(new URL('../public/pages/calendar.js', import.meta.url), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/^\s*\/\/.*$/gm, '');
+  assert(!/\bHOUR_HEIGHT\s*=\s*\d/.test(src),
+    'calendar.js darf die Stundenhöhe nicht als Zahl führen - sie steht in tokens.css');
 });
 
 // --------------------------------------------------------

@@ -605,11 +605,43 @@
 /* --------------------------------------------------------
  * Tagesansicht
  * -------------------------------------------------------- */
+
+/* DER TAG IST EIN TRÄGER, keine randlose Fläche mehr. Surface, --radius-lg und
+ * --shadow-sm geben dem Raster den Rang, den jede andere Inhaltsfläche der App
+ * schon hat (Rang-Regel); die Ganztags-Zeile sitzt sichtbar darin statt darüber
+ * zu schweben.
+ *
+ * Der Träger führt zugleich die dichtere Stundensprosse: alles darin -
+ * Zeitspalte, Stundenlinien, Termine, Now-Linie - liest dieselbe
+ * --cal-hour-height, deshalb genügt EIN überschriebener Wert und kein zweiter
+ * Variablenname (siehe hourOffset() in public/pages/calendar.js). */
 .day-view {
+  --cal-hour-height: var(--cal-hour-height-day);
   flex: 1;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background-color: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+/* #cal-body ist mobil randbündig (das Monatsraster ist ein Vollbreiten-Canvas);
+ * eine Karte braucht dort ihren eigenen Rand. Ab 1024px stellt ihn
+ * --page-inline-pad am #cal-body, ein Margin hier addierte sich dazu. */
+@media (max-width: 1023px) {
+  .day-view {
+    margin-inline: var(--page-gutter);
+  }
+}
+
+/* Die Ganztags-Zeile gehört jetzt in den Träger und braucht deshalb einen
+ * Abschluss nach unten statt eines eigenen Kastens. Ihre Beschriftungsspalte
+ * fluchtet über --cal-gutter-width mit der Stundenspalte darunter - sie stand
+ * auf --space-12 (48px) gegen einen 64px-Gutter und war um 16px versetzt. */
+.day-view .allday-row {
+  border-bottom: 1px solid var(--color-border-subtle);
+  padding-block: var(--space-1);
 }
 
 /* Leerer Tag: dezenter Hinweis in der Stundenfläche, klick-transparent -
@@ -646,6 +678,146 @@
   flex: 1;
   border-left: 1px solid var(--color-border-subtle);
   position: relative;
+}
+
+/* ── Termin im Tagesraster: flacher Tint-Balken mit Farbspine ──
+ *
+ * Keine Kante: die Tönung IST das Element (--tint-surface, Objekt-Sprosse), die
+ * Zugehörigkeit trägt der Spine im Vollton. Eine Haarlinie in Layer-Farbe wäre
+ * genau der Kanal, den DESIGN.md als Absenderband ausschließt - ein 3px-Spine
+ * ist eine Fläche und liest in beiden Themes.
+ *
+ * DIE TINTE BLEIBT BEI 38 %, NICHT --tint-ink (70 %), WIE DER HANDOFF SAGT -
+ * und der Grund ist nicht der Dark Mode, sondern WESSEN Farbe das hier ist.
+ * --tint-ink ist auf die neun kuratierten Familientöne geeicht und hält für sie
+ * mühelos (5.6-8.0:1). --ev-color ist dagegen eine FREI GEWÄHLTE Nutzerfarbe:
+ * die Farbe eines Kalenders, einer Ebene, eines Termins. Über 332 gesampelte
+ * Nutzerfarben (Hue-Sweep plus die Demo-Palette) fallen bei 70 % **182 unter
+ * AA**, im schlimmsten Fall auf 2.01:1 - ein helles Gelb bei 70 % auf seiner
+ * eigenen 16-%-Tönung ist schlicht nicht lesbar. Bei 38 % reisst **keine
+ * einzige** (schlechtester Wert 4.96:1 hell, 6.00:1 dunkel).
+ *
+ * Genau das meint DESIGN.md mit „Don't User-/Layer-Farben als Textfarbe
+ * verwenden; nur die gemessenen 16-%/35-%-Mix-Rezepte". Das Paket konnte es
+ * nicht sehen: seine Referenz-Termine tragen eine Handvoll mitteldunkler
+ * Farben, keine, die ein Haushalt sich selbst aussucht. */
+.day-event {
+  --ev-color: var(--color-accent);
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1h);
+  padding: var(--space-0h) var(--space-2);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--ev-color) var(--tint-surface), var(--color-surface));
+  color: color-mix(in srgb, var(--ev-color) 38%, var(--color-text-primary));
+  overflow: hidden;
+  cursor: pointer;
+  z-index: 1;
+  transition: background-color var(--transition-fast);
+}
+
+/* Ein Zustand steigt genau eine Sprosse (Tönungsskala). */
+.day-event:hover {
+  background: color-mix(in srgb, var(--ev-color) var(--tint-raised), var(--color-surface));
+}
+
+.day-event__spine {
+  width: 3px;
+  align-self: stretch;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  background-color: var(--ev-color);
+}
+
+.day-event__text {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.day-event__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Die Ellipse gehoert an den TEXT, nicht an den Flex-Container: `overflow` und
+ * `text-overflow` auf .day-event__title schneiden den ueberlangen Titel zwar ab,
+ * setzen aber keine Auslassungspunkte - der Titel ist dort ein Flex-Item, kein
+ * Textfluss. „Elternsprechtag Grundschule" endete deshalb hart an der Kante,
+ * waehrend die Meta-Zeile darunter (ein einfacher Span) korrekt kuerzte. */
+.day-event__name {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Die zweite Zeile tritt über das GEWICHT zurück, nicht über Deckkraft: eine
+ * Opacity auf getönter Tinte verschiebt den gemessenen Kontrast wieder ins
+ * Ungewisse, und DESIGN.md führt Betonung ohnehin über Gewicht und Größe. */
+.day-event__meta {
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-tight);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Unter einer Stunde bleibt im 40px-Raster nur der Titel; renderDayEvent
+ * liefert die Meta-Zeile dann gar nicht erst (eine angeschnittene zweite Zeile
+ * ist schlechter als keine). */
+.day-event--tight {
+  padding-block: 0;
+}
+
+.day-event--tight .day-event__title {
+  font-size: var(--text-xs);
+}
+
+/* ── Now-Linie: Ebenenregel ──
+ *
+ * ZWEI ELEMENTE, EIN top. Im Mockup (Screenshot 05) lag die Linie mit z-index 2
+ * über dem 09:00-Termin und machte dessen Text unlesbar. Hier liegt die LINIE
+ * unter den Terminen (z-index 0) und der PUNKT über allem (z-index 3) - und der
+ * Punkt sitzt in der Stundenspalte, wo nie ein Termin steht. Damit ist „jetzt"
+ * immer auffindbar, ohne dass je ein Titel durchgestrichen wird; wo kein Termin
+ * liegt, läuft die Linie sichtbar durch, und die 4px/10px-Einzüge der Balken
+ * lassen sie auch daneben stehen.
+ *
+ * Beide sind Geschwister von .day-view__col, damit sie sich auf denselben
+ * Stapelkontext beziehen wie die Termine darin (.day-view__col ist
+ * position:relative OHNE z-index und öffnet deshalb keinen eigenen). */
+.day-view__now-line {
+  position: absolute;
+  left: var(--cal-gutter-width);
+  right: 0;
+  height: 2px;
+  background-color: var(--color-danger);
+  z-index: 0;
+  pointer-events: none;
+}
+
+.day-view__now-dot {
+  position: absolute;
+  left: calc(var(--cal-gutter-width) - 5px);
+  width: 10px;
+  height: 10px;
+  margin-top: -4px;
+  border-radius: var(--radius-full);
+  background-color: var(--color-danger);
+  z-index: 3;
+  pointer-events: none;
 }
 
 /* --------------------------------------------------------
