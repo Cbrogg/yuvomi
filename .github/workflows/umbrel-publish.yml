@@ -222,8 +222,19 @@ jobs:
           sed -i -E "s|^version: .*|version: \"$VERSION\"|" yuvomi/umbrel-app.yml
           sed -i -E "s|image: ghcr.io/$OWNER/yuvomi:[^@[:space:]]+@sha256:[0-9a-f]+|image: ghcr.io/$OWNER/yuvomi:$VERSION@$DIGEST|" yuvomi/docker-compose.yml
 
-          # releaseNotes aus der von Hand geschriebenen Datei (JSON-kodierter
-          # String ist gültiges YAML).
+          # releaseNotes aus der von Hand geschriebenen Datei, als GEFALTETES
+          # BLOCKSKALAR (`>-`) - so, wie der Rest ihrer Datei geschrieben ist.
+          #
+          # Ein JSON-kodierter Einzeiler wäre gültiges YAML und semantisch
+          # identisch; er stand nach dem v2.6.1-Lauf als 620-Zeichen-Zeile in
+          # ihrem Manifest, während `description` daneben umbrochen ist. Diese
+          # Datei wird von Menschen gelesen und im Review editiert, und ein
+          # Einzeiler macht jeden künftigen Diff unlesbar.
+          #
+          # In folded style faltet EIN Umbruch zu einem Leerzeichen und eine
+          # LEERZEILE wird ein Umbruch - ein Absatzumbruch braucht deshalb ZWEI
+          # Leerzeilen. Genau so steht es in der handgeschriebenen Fassung des
+          # Maintainers, und die Gleichheit wird unten bewiesen statt behauptet.
           #
           # HIER STAND EINE UMFORMUNG DES RELEASE-BODYS: Überschriften weg,
           # Aufzählungszeichen weg, Rest als Prosa. Sie war syntaktisch
@@ -234,8 +245,16 @@ jobs:
           # `.claude/skills/umbrel-update-app/` und die Umsetzung im Kopf von
           # `.github/umbrel-release-notes.md`.
           python3 - "$NOTES_FILE" <<'PY'
-          import json, re, sys
+          import re, sys, textwrap
           notes = open(sys.argv[1], encoding="utf-8").read().strip()
+
+          def folded(s, indent="  ", width=78):
+            out = []
+            for i, para in enumerate(s.split("\n\n")):
+              if i:
+                out += ["", ""]   # zwei Leerzeilen = EIN Absatzumbruch
+              out += [indent + l for l in textwrap.wrap(para.strip(), width=width)]
+            return "releaseNotes: >-\n" + "\n".join(out) + "\n"
 
           # The upstream value is a BLOCK scalar spanning many indented lines:
           #
@@ -251,7 +270,7 @@ jobs:
           t = open(p, encoding="utf-8").read()
           t, n = re.subn(
             r"^releaseNotes:.*?(?=^[A-Za-z]|\Z)",
-            lambda _: "releaseNotes: " + json.dumps(notes) + "\n",
+            lambda _: folded(notes),
             t,
             count=1,
             flags=re.M | re.S,
@@ -259,6 +278,21 @@ jobs:
           if n != 1:
             sys.exit("::error::releaseNotes block not found in yuvomi/umbrel-app.yml")
           open(p, "w", encoding="utf-8").write(t)
+
+          # BEWIESEN, NICHT BEHAUPTET. Ein Blockskalar ist lesbarer als ein
+          # JSON-Einzeiler und dafuer empfindlich gegen Einrueckung und
+          # Faltungsregeln - eine falsch umbrochene Zeile wuerde den Text still
+          # umformen statt die Datei zu brechen. Also zurueckparsen und auf
+          # ZEICHENGLEICHHEIT pruefen.
+          import yaml
+          back = yaml.safe_load(open(p, encoding="utf-8"))["releaseNotes"]
+          if back != notes:
+            sys.exit(
+              "::error::Das ausgegebene Blockskalar liest sich nicht als der geschriebene Text zurueck.\n"
+              f"  erwartet ({len(notes)} Zeichen): {notes[:120]!r}\n"
+              f"  gelesen  ({len(back)} Zeichen): {back[:120]!r}"
+            )
+          print(f"releaseNotes: {len(notes)} Zeichen, {len(notes.split(chr(10) * 2))} Absaetze, Round-Trip OK.")
           PY
 
           echo "--- updated ---"
