@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.7.1] - 2026-08-12
+
+### Changed
+
+- **The module guide covers modules that run a backend service of their own.** `MODULES.md` described browser-only modules well and said nothing about the case where a module needs stored state, scheduled work or a third-party credential - which is where the two expensive mistakes get made: opening the database directly, which works on the day it is written and dies on the next migration, and trusting a user id sent by the module's own page, which turns a page bug into an authorization bypass. The guide now states the storage boundary (`/api/v1`, never the database file), the identity rule (re-check the session server-side through `GET /api/v1/auth/me`, and cache that answer briefly, because `/api/` is rate-limited per IP and a service that does not forward the caller's address spends that budget for all of its users at once), and what a module's own CSRF pair and API token owe. It also says how a module survives an upgrade: nothing gates loading on a compatibility range, so a module that calls a renamed endpoint keeps loading and fails in front of the user. `/api/v1` and the public browser libraries are what a third-party module builds on, and breaking changes to those are called out here; direct database access, private helpers under `server/` and undocumented response fields are outside that line and can move in any release. Contributed by @JakeTheRabbit (#728, #729), from building a sidecar module platform against an unmodified Yuvomi image.
+
 ## [2.7.0] - 2026-08-12
 
 ### Added
