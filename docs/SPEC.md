@@ -1050,11 +1050,11 @@ Planned/estimated budget (Budget → Plan). A **steady monthly plan**: one amoun
 
 ### Reminders
 
-Per-user reminders attached to tasks, calendar events, or subscriptions.
+Per-user reminders attached to tasks, calendar events, subscriptions, or inventory items.
 
 | Column | Type | Constraint |
 |--------|------|-----------|
-| entity_type | TEXT | `task`, `event`, or `subscription`, NOT NULL |
+| entity_type | TEXT | `task`, `event`, `subscription`, `inventory_item`, or `inventory_tracked_date`, NOT NULL |
 | entity_id | INTEGER | Entity identifier, NOT NULL |
 | remind_at | TEXT | ISO 8601 datetime, NOT NULL |
 | dismissed | INTEGER | 0/1, default 0 |
@@ -1420,6 +1420,124 @@ Photo log for maintenance issues (migration v33).
 | created_by | INTEGER | FK → Users (CASCADE delete), NOT NULL |
 | created_at | TEXT | ISO 8601 |
 | updated_at | TEXT | ISO 8601 |
+
+### Inventory Locations (migration v136)
+Storage places for owned belongings. Two-level hierarchy via `parent_id` (top-level place →
+sub-location, e.g. "Garage" → "Werkzeugschrank"); a sub-location cannot itself have children, and
+the API rejects re-parenting, so a cycle through this self-reference is unreachable in practice.
+Renameable and sortable like Pantry Locations, but seeded empty rather than pre-populated.
+
+| Column | Type | Constraint |
+|--------|------|-----------|
+| name | TEXT | NOT NULL |
+| parent_id | INTEGER | FK → Inventory Locations (SET NULL) — top-level when NULL |
+| icon | TEXT | NOT NULL (default 'package') |
+| sort_order | INTEGER | NOT NULL (default 0) — reordering only applies within one level (top-level locations, or the children of one parent) |
+| created_at / updated_at | TEXT | ISO 8601 |
+
+Deleting a location is never blocked: its items become location-less and its sub-locations become
+parent-less, rather than being reassigned or blocking the delete — the same "deletion always
+succeeds, references dangle safely" pattern as Pantry Locations.
+
+### Inventory Categories (migration v136)
+DB-backed, customizable category list for inventory items, seeded with five defaults (Electronics,
+Vehicles, Household, Sports, Other) analogous to Task Categories. `other` is protected and cannot be
+deleted.
+
+| Column | Type | Constraint |
+|--------|------|-----------|
+| key | TEXT | NOT NULL, UNIQUE — stable slug, the actual foreign key `inventory_items.category` points at |
+| name | TEXT | NOT NULL |
+| icon | TEXT | NOT NULL (default 'package') |
+| sort_order | INTEGER | NOT NULL (default 0) |
+| created_at | TEXT | ISO 8601 |
+
+`inventory_items.category` is deliberately not a real foreign key: deleting a category reassigns
+its items to `other` in the route layer, which a DB constraint cannot express without a concrete
+fallback value (only `NULL`).
+
+### Inventory Items (migrations v136, v141)
+One row per owned belonging.
+
+| Column | Type | Constraint |
+|--------|------|-----------|
+| name | TEXT | NOT NULL |
+| brand / model / serial_number | TEXT | all nullable |
+| category | TEXT | NOT NULL (default 'other') — see [Inventory Categories](#inventory-categories-migration-v136) |
+| location_id | INTEGER | FK → Inventory Locations (SET NULL) |
+| purchase_date | TEXT | nullable, `YYYY-MM-DD` |
+| purchase_price | REAL | nullable, CHECK `>= 0` |
+| current_value | REAL | nullable, CHECK `>= 0` — manually maintained, no automatic depreciation formula (a deliberate design decision, not a gap) |
+| currency | TEXT | nullable |
+| vendor | TEXT | nullable |
+| warranty_months | INTEGER | nullable, CHECK `0–600` |
+| condition | TEXT | NOT NULL (default 'good'), CHECK `new`\|`good`\|`fair`\|`poor` |
+| status | TEXT | NOT NULL (default 'active'), CHECK `active`\|`sold`\|`disposed`\|`lost` |
+| notes | TEXT | nullable |
+| photo_data | TEXT | nullable (v141) — a single Base64 data URL, same storage pattern as `birthdays.photo_data`; server-validated MIME type and a ~5 MB cap (`server/routes/inventory/items.js`) |
+| created_by | INTEGER | FK → Users (**SET NULL**) — inventory is household property like the pantry; unlike `pantry_items` (which needed a follow-up migration, v109, to fix this) it starts SET NULL from the beginning |
+| created_at / updated_at | TEXT | ISO 8601 |
+
+`GET /api/v1/inventory/items` supports filtering by `category`, `location_id`, `status`, and a
+full-text search `q` across name, brand, model, and serial number. `PUT` is a full replace: an
+omitted field is not preserved, matching the semantics of `PUT /api/v1/inventory/items/:id` rather
+than a partial `PATCH`.
+
+### Inventory Item Documents (migration v137)
+Links an item to documents from the Documents module (receipts, warranty cards, manuals) — mirrors
+[Budget Entry Attachments](#budget-entries) 1:1: same column shape, same cascade reasoning. Deleting
+an item removes only the link, never the document itself.
+
+| Column | Type | Constraint |
+|--------|------|-----------|
+| item_id | INTEGER | FK → Inventory Items (CASCADE delete), NOT NULL |
+| document_id | INTEGER | FK → Family Documents (CASCADE delete), NOT NULL |
+| created_by | INTEGER | FK → Users (CASCADE delete), NOT NULL |
+| created_at | TEXT | ISO 8601 |
+| UNIQUE | | (item_id, document_id) |
+
+Document visibility is enforced exactly as in Budget: only documents the current user may see are
+listed, linkable, or returned, with no admin bypass, and a replace-set update on `PUT` leaves links
+to documents the caller cannot see intact.
+
+### Inventory Item Entries (migration v138)
+Links an item to Budget entries — a purchase, a refund, a repair, an accessory bought later.
+
+| Column | Type | Constraint |
+|--------|------|-----------|
+| item_id | INTEGER | FK → Inventory Items (CASCADE delete), NOT NULL |
+| entry_id | INTEGER | FK → Budget Entries (CASCADE delete), NOT NULL |
+| role | TEXT | NOT NULL (default 'purchase'), CHECK `purchase`\|`refund`\|`instalment`\|`maintenance`\|`accessory` |
+| amount_share | REAL | nullable, CHECK `>= 0` — reserved for a later stage that splits an entry's amount across several linked items; nothing writes it yet |
+| created_by | INTEGER | FK → Users (**SET NULL**, not CASCADE — a booking link is household property like the item itself, not a personal annotation the way a document attachment is) |
+| created_at | TEXT | ISO 8601 |
+| UNIQUE | | (item_id, entry_id, role) — the same pair can carry several roles (e.g. `purchase` and later `maintenance`) but not the same role twice |
+
+Visibility follows Budget's own rules exactly: in personal budget mode a private booking stays
+invisible to other members even when linked to a household-visible item, and linking a recurring
+series' materialized instance or an `is_pending` (expected) entry is rejected. Creating an item with
+`entry_id` prefills `purchase_price` from that booking's amount — but only for the **first** item
+linked to it, so a collective receipt split across several items does not silently copy its total
+onto each one.
+
+### Inventory Item Dates (migration v140)
+Custom, per-item tracked dates beyond the built-in warranty deadline — TÜV, service, insurance
+renewal, or anything else with a date and its own reminder lead time.
+
+| Column | Type | Constraint |
+|--------|------|-----------|
+| item_id | INTEGER | FK → Inventory Items (CASCADE delete), NOT NULL |
+| label | TEXT | NOT NULL |
+| date | TEXT | NOT NULL, `YYYY-MM-DD` |
+| reminder_offset_days | INTEGER | NOT NULL (default 30), CHECK `0–365` — an explicit `0` ("remind me on the day") is preserved, not coerced to the default |
+| created_by | INTEGER | FK → Users (SET NULL) |
+| created_at / updated_at | TEXT | ISO 8601 |
+
+Capped at 10 rows per item (`MAX_TRACKED_DATES_PER_ITEM`). `PUT /api/v1/inventory/items/:id` treats
+`tracked_dates` as a full replace-set like `attachment_document_ids`: omitting the field leaves
+existing rows untouched, an empty array clears all of them, and an invalid or over-the-cap payload
+rejects the whole write with no partial insert. Each row drives its own [reminder](#reminders),
+recreated whenever the item is saved.
 
 ### Expense Groups
 Split expense groups (migration v39).
@@ -2113,6 +2231,26 @@ Module for managing household staff workflows. Navigation uses violet accent the
 - **Document folder:** a "Hausreinigung" folder in Documents is auto-created on first worker creation; receipts can be linked to individual work sessions
 - **API:** `GET /api/v1/housekeeping/visits/:id` returns a single work session with worker name, task list, and linked document
 
+### Inventory (`/inventory`)
+
+Tracks owned belongings — what you have, where it is, what it's worth, and when something about
+it needs attention. Lives in the Household section of the sidebar alongside Documents and
+Housekeeping, sharing their `records` accent tone (moved there from Budget's `money` family once
+the module's own weight settled: it is primarily a record of long-lived household items, not a
+finance tool that happens to track objects).
+
+- **Two-level browse:** the landing page shows metric cards (item count, total value, items needing attention) plus a category overview; tapping a category shows its items grouped by storage location, with "All" / "Needs attention" filter chips scoped to that category. Tapping an item opens a read-only detail view — with a colored accent stripe — before editing.
+- **CRUD:** name, brand, model, serial number, category, storage location, purchase date and price, an independently-maintained current value estimate (no automatic depreciation formula — that was a deliberate design choice, not a missing feature), currency, vendor, warranty length, condition, status, notes, and an optional single photo (same storage pattern as a birthday photo: one Base64 data URL, no gallery).
+- **Storage locations** are a two-level hierarchy (e.g. "Garage" → "Werkzeugschrank"), renameable and sortable through the shared category-manager component, same as Pantry Locations. Deleting one never blocks — items and sub-locations become location-/parent-less instead of moving.
+- **Categories** are a manageable list (five seeded defaults: Electronics, Vehicles, Household, Sports, Other), same pattern as Task Categories; deleting one reassigns its items to the protected `other` category.
+- **Linked documents:** attach receipts, warranty cards, or manuals from the Documents module, reusing the same visibility-filtered linking mechanism Budget entries already use.
+- **Linked budget entries:** connect a purchase, a refund, a repair, or an accessory bought later, with a role per link (`purchase`/`refund`/`instalment`/`maintenance`/`accessory`). Creating an item directly from a booking (the Budget entry modal's "Add to inventory" hook) prefills the purchase price automatically — but only for the first item linked to that booking, so a collective receipt split across several items doesn't copy its total onto each one. Visibility follows Budget's own rules exactly, including in personal budget mode.
+- **Derived warranty deadline:** a proactive in-app reminder 30 days before the warranty ends, computed on the fly from the purchase date and warranty length rather than stored. Surfaced as a status badge (valid / expiring / expired) on the list and detail view.
+- **Custom tracked dates:** an item can carry up to 10 additional dates beyond the warranty — TÜV, service, insurance renewal, anything with a date — each with its own configurable reminder lead time (default 30 days, explicit `0` allowed). Replace-set semantics on save, like linked documents.
+- **Deadlines ICS feed:** a dedicated, admin-managed, subscribable read-only calendar feed (`webcal://`/`https://`) exporting both warranty end dates and custom tracked dates as VEVENTs, following the same admin-only token-rotation pattern as the calendar export feed (see Calendar). Text follows the household data language, not a fixed locale.
+- **Nav badge:** the sidebar icon carries a badge for items with a soon-expiring or overdue warranty or tracked date.
+- REST API: `GET/POST /api/v1/inventory/items` (filters: `category`, `location_id`, `status`; full-text search `q`), `GET/PUT/DELETE /api/v1/inventory/items/:id`, `POST/DELETE /api/v1/inventory/items/:id/entries[/:entryId]`, `GET /api/v1/inventory/entries/:entryId/items`, `GET/POST /api/v1/inventory/locations` (plus `/:id`, `/reorder`, and the `/subcategories` sub-tree for two-level locations), `GET/POST /api/v1/inventory/categories` (plus `/:key`, `/reorder`), `GET/POST/DELETE /api/v1/inventory/deadlines-feed` (admin-only).
+
 ### Health (`/health`)
 
 One page module with six deep-link routes (pattern like Settings, not like the Kitchen cluster), sharing a sub-tab bar: Overview (`/health`), Vitals (`/health/vitals`), Cycle (`/health/cycle`), Medications (`/health/meds`), Labs (`/health/labs`), Activity (`/health/activity`). Toggleable like any module; disabled → router redirects to the dashboard. Health data is sensitive — enable `DB_ENCRYPTION_KEY` (SQLCipher). **Not a medical device; no diagnostic claims.**
@@ -2311,9 +2449,10 @@ Personal birthday tracker with automatic calendar integration.
 
 ### Reminders (`/reminders`)
 
-Time-based reminders attached to tasks, calendar events, or subscriptions.
+Time-based reminders attached to tasks, calendar events, subscriptions, or inventory items.
 
 - **Tasks and subscriptions keep one reminder per entity** (upsert — creating a new one replaces the previous). **Calendar events carry up to five**, each an independent row delivered separately; the event dialog manages them as a row list (see [Reminders data model](#reminders))
+- **Inventory items** derive one reminder from their warranty end date (30 days before, if purchase date and warranty length are both set) and one **per custom tracked date** (see [Inventory Item Dates](#inventory-item-dates)), each with its own configurable lead time. Both are recomputed whenever the item is saved — deleting the underlying date or clearing the warranty fields removes the reminder too
 - Reminder time set via the shared `yuvomi-datepicker` in the task or event modal, usually as an offset from the due date/start
 - **Pending reminders:** polled on page load and at a fixed interval; displayed as an in-app notification badge/toast
 - **Birthday reminders** auto-synced from the Birthdays module (configurable offset per birthday, default 1 day before each occurrence)
