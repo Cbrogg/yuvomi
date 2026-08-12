@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.6.1] - 2026-08-12
+
+### Fixed
+
+- **The widget grid runs to the bottom of the window again.** On desktop the shell kept a 96px strip free below the scroll port so the floating action button could never cover anything - a margin that shortened the scrollable area across its full width. On a board of cards that is the one place it must not come from: the grid broke off 96px above the window edge, mid-card, with a dead band underneath, and the default board needed 25% more scrolling than it had content for. The room is now a trailing pad *inside* the scroll port, so the reserve sits behind the last row instead of in front of the window edge. The promise it protects is the one that was actually needed - nothing is unreachable, rather than nothing is ever covered: both measured failures were at the scroll end, where nothing can be pushed aside any more, and there the pad is what lies under the button. In between, content passes beneath it and can be scrolled clear in either direction, and a mis-tap lands on the button's own create action rather than on the row action below it. Phones are unaffected: the reserve is zero there, because the button sits inside the navigation capsule.
+- **A dashboard card's title row is a band, not a box.** It measured 73px for a 17px title and a 24px seal - up to 29.9% of the whole card on a phone - because the "All" link beside the title claimed a full 48px touch box inside a 12px-padded row. A free-standing target owes its size in one axis, so the link takes it in the width while its visible box shrinks and its touch area stays 48px by reaching into the header's own padding. The band is 49px now, the touch target is unchanged, and the title keeps its size: the row was bulky, not the type. The tinted sender band introduced in 2.6.0 reads as a band because of it, instead of as an empty coloured field.
+- **The speed dial's action list follows the writing direction.** It anchored to the physical right edge while the button itself has followed the logical axis since 2.6.0, so in Arabic and Farsi the button sat at one end of the capsule and its actions lined up against the other.
+
 ## [2.6.0] - 2026-08-12
 
 ### Changed
