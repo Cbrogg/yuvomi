@@ -1439,15 +1439,20 @@ Deleting a location is never blocked: its items become location-less and its sub
 parent-less, rather than being reassigned or blocking the delete — the same "deletion always
 succeeds, references dangle safely" pattern as Pantry Locations.
 
-### Inventory Categories (migration v136)
+### Inventory Categories (migrations v136, v142)
 DB-backed, customizable category list for inventory items, seeded with five defaults (Electronics,
 Vehicles, Household, Sports, Other) analogous to Task Categories. `other` is protected and cannot be
-deleted.
+deleted. The five seeded categories keep a stable slug `key` and are localized via `label_key`
+(migration v142, same pattern as [Task Categories](#task-categories-migration-v83)); user-added
+categories store their display `name` instead. Renaming a seeded category clears its `label_key`
+and makes it custom — the same "renaming leaves the key stable" behavior Task Categories has — so a
+typed name is never silently overwritten by the translation on the next language switch.
 
 | Column | Type | Constraint |
 |--------|------|-----------|
 | key | TEXT | NOT NULL, UNIQUE — stable slug, the actual foreign key `inventory_items.category` points at |
-| name | TEXT | NOT NULL |
+| name | TEXT | nullable — custom display name; NULL for seeded (localized) categories |
+| label_key | TEXT | nullable — i18n key for seeded categories; NULL for custom ones |
 | icon | TEXT | NOT NULL (default 'package') |
 | sort_order | INTEGER | NOT NULL (default 0) |
 | created_at | TEXT | ISO 8601 |
@@ -1455,6 +1460,14 @@ deleted.
 `inventory_items.category` is deliberately not a real foreign key: deleting a category reassigns
 its items to `other` in the route layer, which a DB constraint cannot express without a concrete
 fallback value (only `NULL`).
+
+**A known, accepted limit (same one Task Categories has):** name-uniqueness checks on create/rename
+compare `COALESCE(name, key)`, not the translated display text — a server route has no way to know
+the caller's UI language. Creating a category named "Electronics" therefore does not conflict with
+the seeded `electronics` category once it carries a `label_key`; it only conflicts with another
+*custom* category sharing that name (case-insensitively). Migration v142 required a full table
+rebuild rather than a plain `ADD COLUMN`, since `name` had been `NOT NULL` since v136 and needed to
+become nullable — unlike `task_categories`, which declared it nullable from the start.
 
 ### Inventory Items (migrations v136, v141)
 One row per owned belonging.

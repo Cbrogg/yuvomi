@@ -100,12 +100,13 @@ function locationPath(locationId) {
 function loadItem(id, userId) {
   const item = db.get().prepare('SELECT * FROM inventory_items WHERE id = ?').get(id);
   if (!item) return null;
-  const category = db.get().prepare('SELECT name, icon FROM inventory_categories WHERE key = ?').get(item.category);
+  const category = db.get().prepare('SELECT name, icon, label_key FROM inventory_categories WHERE key = ?').get(item.category);
   const linkedEntries = loadLinkedEntries(item.id, userId);
   return {
     ...item,
     category_name: category?.name ?? item.category,
     category_icon: category?.icon ?? 'package',
+    category_label_key: category?.label_key ?? null,
     location_path: locationPath(item.location_id),
     attachments: documentLinksFor(db.get(), { ...DOCS, ownerId: item.id, userId }),
     linked_entries: linkedEntries,
@@ -127,7 +128,7 @@ function loadItems({ category, locationId, status, q } = {}, userId) {
   }
   const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
   const rows = db.get().prepare(`
-    SELECT ii.*, ic.name AS category_name, ic.icon AS category_icon
+    SELECT ii.*, ic.name AS category_name, ic.icon AS category_icon, ic.label_key AS category_label_key
     FROM inventory_items ii
     LEFT JOIN inventory_categories ic ON ic.key = ii.category
     ${where}

@@ -22,7 +22,7 @@ const router = express.Router();
 const PROTECTED_KEY = 'other';
 
 function loadCategories() {
-  return db.get().prepare('SELECT * FROM inventory_categories ORDER BY sort_order ASC, name COLLATE NOCASE ASC').all();
+  return db.get().prepare('SELECT * FROM inventory_categories ORDER BY sort_order ASC, COALESCE(name, key) COLLATE NOCASE ASC').all();
 }
 
 // --------------------------------------------------------
@@ -45,7 +45,7 @@ router.post('/', (req, res) => {
     const vName = str(req.body.name, 'Name', { max: MAX_SHORT });
     if (vName.error) return res.status(400).json({ error: vName.error, code: 400 });
 
-    const conflict = db.get().prepare('SELECT id FROM inventory_categories WHERE name = ? COLLATE NOCASE').get(vName.value);
+    const conflict = db.get().prepare('SELECT id FROM inventory_categories WHERE COALESCE(name, key) = ? COLLATE NOCASE').get(vName.value);
     if (conflict) return res.status(409).json({ error: 'Category already exists.', code: 409 });
 
     const vIcon = str(req.body.icon, 'Icon', { max: MAX_SHORT, required: false });
@@ -79,11 +79,14 @@ router.put('/:key', (req, res) => {
     if (vIcon.error) return res.status(400).json({ error: vIcon.error, code: 400 });
 
     const conflict = db.get().prepare(`
-      SELECT id FROM inventory_categories WHERE name = ? COLLATE NOCASE AND key != ?
+      SELECT id FROM inventory_categories WHERE COALESCE(name, key) = ? COLLATE NOCASE AND key != ?
     `).get(vName.value, cat.key);
     if (conflict) return res.status(409).json({ error: 'Category already exists.', code: 409 });
 
-    db.get().prepare('UPDATE inventory_categories SET name = ?, icon = ? WHERE key = ?')
+    // Umbenennen macht eine Seed-Kategorie effektiv custom: label_key faellt weg,
+    // sonst ueberschriebe der naechste Sprachwechsel den getippten Namen wieder
+    // mit der Uebersetzung (gleiches Muster wie server/routes/tasks.js).
+    db.get().prepare('UPDATE inventory_categories SET name = ?, icon = ?, label_key = NULL WHERE key = ?')
       .run(vName.value, vIcon.value ?? cat.icon, cat.key);
 
     res.json({ data: db.get().prepare('SELECT * FROM inventory_categories WHERE key = ?').get(cat.key) });

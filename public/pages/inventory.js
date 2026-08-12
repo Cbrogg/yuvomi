@@ -114,6 +114,7 @@ async function openCategoryManager() {
       manager.configure({
         basePath: '/inventory/categories',
         groups: [{ key: '', labelKey: '', addLabelKey: 'inventory.addCategory' }],
+        labelResolver: categoryLabel,
         titleKey: 'inventory.manageCategories',
         hintKey: 'inventory.manageCategoriesHint',
         addPlaceholderKey: 'inventory.addCategory',
@@ -141,6 +142,19 @@ async function openCategoryManager() {
 
 function statusLabel(status) {
   return t(`inventory.status${status.charAt(0).toUpperCase()}${status.slice(1)}`);
+}
+
+// Label einer Kategorie aufloesen: Seed-Kategorien tragen label_key (i18n),
+// benutzerdefinierte tragen name - gleiches Muster wie tasks.js#catLabel.
+function categoryLabel(category) {
+  if (!category) return '';
+  return category.label_key ? t(category.label_key) : (category.name || category.key);
+}
+
+// Gleiche Aufloesung fuer die vom Server denormalisierten category_name/
+// category_label_key-Felder eines Items (JOIN in server/routes/inventory/items.js).
+function itemCategoryLabel(item) {
+  return item.category_label_key ? t(item.category_label_key) : (item.category_name || item.category);
 }
 
 function matchesQuery(item) {
@@ -300,7 +314,7 @@ function groupItemsByCategory(items) {
   const grouped = new Map();
   for (const item of items) {
     if (!grouped.has(item.category)) {
-      grouped.set(item.category, { key: item.category, name: item.category_name || item.category, icon: item.category_icon || 'package', items: [] });
+      grouped.set(item.category, { key: item.category, name: itemCategoryLabel(item), icon: item.category_icon || 'package', items: [] });
     }
     grouped.get(item.category).items.push(item);
   }
@@ -414,7 +428,7 @@ function renderCategoryRow(category, itemCount) {
       <button type="button" class="list-row__main list-row__main--interactive" data-action="open-category">
         <span class="inventory-row__headline">
           <i data-lucide="${esc(category.icon)}" class="icon-sm" aria-hidden="true"></i>
-          <span class="list-row__name">${esc(category.name)}</span>
+          <span class="list-row__name">${esc(categoryLabel(category))}</span>
         </span>
       </button>
       <span class="list-group__count">${itemCount}</span>
@@ -446,7 +460,7 @@ function renderCategoryList() {
     ...knownKeys.map((k) => renderCategoryRow(categoriesByKey.get(k), counts.get(k))),
     ...unknownKeys.map((k) => {
       const sample = unknownSample.get(k);
-      const fallback = { key: k, name: sample.category_name || k, icon: sample.category_icon || 'package' };
+      const fallback = { key: k, name: itemCategoryLabel(sample), icon: sample.category_icon || 'package' };
       return renderCategoryRow(fallback, counts.get(k));
     }),
   ];
@@ -583,7 +597,7 @@ function renderCategoryDetail(list) {
   const categoryItems = state.items.filter((item) => item.category === state.activeCategory);
 
   updateFilterChips(categoryItems);
-  updateSearchScope(t('inventory.searchInCategoryPlaceholder', { category: category.name }));
+  updateSearchScope(t('inventory.searchInCategoryPlaceholder', { category: categoryLabel(category) }));
 
   list.replaceChildren();
   list.insertAdjacentHTML('beforeend', `
@@ -591,7 +605,7 @@ function renderCategoryDetail(list) {
       <i data-lucide="arrow-left" class="inventory-back-link__icon" aria-hidden="true"></i>
       ${esc(t('inventory.backToInventory'))}
     </button>
-    <h2 class="inventory-category-title">${esc(category ? category.name : state.activeCategory)}</h2>`);
+    <h2 class="inventory-category-title">${esc(category ? categoryLabel(category) : state.activeCategory)}</h2>`);
   list.querySelector('#inventory-back-link').addEventListener('click', backToBrowse);
 
   const filtered = categoryItems.filter((item) => matchesQuery(item) && matchesAttentionFilter(item));
@@ -730,7 +744,7 @@ function renderItemDetail(item) {
 
   return [
     { icon: 'image', label: t('inventory.photoLabel'), node: photoDetailNode(item.photo_data) },
-    { icon: item.category_icon, label: t('inventory.categoryLabel'), value: item.category_name },
+    { icon: item.category_icon, label: t('inventory.categoryLabel'), value: itemCategoryLabel(item) },
     { icon: 'map-pin', label: t('inventory.locationLabel'), value: item.location_path || '' },
     { icon: 'building-2', label: t('inventory.brandLabel'), value: item.brand || '' },
     { icon: 'package', label: t('inventory.modelLabel'), value: item.model || '' },

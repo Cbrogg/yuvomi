@@ -1,7 +1,9 @@
 /**
- * Test: Inventar-Kategorien-Routen (Stufe 1)
+ * Test: Inventar-Kategorien-Routen (Stufe 1, plus label_key aus Migration 142)
  * Zweck: CRUD, NOCASE-Namenskonflikt, 'other' nicht loeschbar, Loeschen einer
- *        Kategorie haengt betroffene Gegenstaende auf 'other' um, Umsortieren.
+ *        Kategorie haengt betroffene Gegenstaende auf 'other' um, Umsortieren,
+ *        Lokalisierung der fuenf Seed-Kategorien (label_key, name = NULL,
+ *        gleiches Muster wie task_categories/server/routes/tasks.js).
  * Ausfuehren: node --experimental-sqlite --test test/test-inventory-categories-routes.js
  */
 
@@ -40,16 +42,34 @@ test('GET /categories: fuenf Seed-Kategorien in Sortierreihenfolge', async () =>
   assert.deepEqual(r.body.data.map((c) => c.key), ['electronics', 'vehicles', 'household', 'sports', 'other']);
 });
 
+test('GET /categories: Seed-Kategorien tragen label_key statt name (Migration 142)', async () => {
+  const r = await call('GET', '/categories');
+  const electronics = r.body.data.find((c) => c.key === 'electronics');
+  assert.equal(electronics.label_key, 'inventory.categoryElectronics');
+  assert.equal(electronics.name, null);
+});
+
 test('POST /categories: legt Kategorie mit generiertem Key an', async () => {
   const r = await call('POST', '/categories', { name: 'Werkzeug' });
   assert.equal(r.status, 201);
   assert.equal(r.body.data.key, 'werkzeug');
   assert.equal(r.body.data.sort_order, 5);
+  assert.equal(r.body.data.label_key, null); // custom Kategorien sind nie lokalisiert
 });
 
-test('POST /categories: doppelter Name (NOCASE) -> 409', async () => {
-  const r = await call('POST', '/categories', { name: 'elektronik' });
+test('POST /categories: doppelter Name (NOCASE) gegen eine Custom-Kategorie -> 409', async () => {
+  const r = await call('POST', '/categories', { name: 'werkzeug' });
   assert.equal(r.status, 409);
+});
+
+// Bekannte, dokumentierte Grenze (gleiches Muster wie server/routes/tasks.js):
+// der NOCASE-Konflikt vergleicht bei einer lokalisierten Seed-Kategorie gegen
+// ihren stabilen KEY, nicht gegen die uebersetzte Anzeige - eine Server-Route
+// kennt die Sprache des Aufrufers nicht. "Elektronik" (die deutsche
+// Uebersetzung) kollidiert deshalb NICHT mehr mit dem Key 'electronics'.
+test('POST /categories: die uebersetzte Anzeige einer Seed-Kategorie loest KEINEN Konflikt aus', async () => {
+  const r = await call('POST', '/categories', { name: 'Elektronik' });
+  assert.equal(r.status, 201);
 });
 
 test('POST /categories: Namenskollision haengt _2 an den Key', async () => {
@@ -62,12 +82,16 @@ test('POST /categories: Namenskollision haengt _2 an den Key', async () => {
   assert.equal(r.body.data.key, 'garten_deko_2');
 });
 
-test('PUT /categories/:key: benennt um und aendert Icon', async () => {
+test('PUT /categories/:key: benennt um, aendert Icon und macht eine Seed-Kategorie custom', async () => {
   const r = await call('PUT', '/categories/sports', { name: 'Sport & Fitness', icon: 'trophy' });
   assert.equal(r.status, 200);
   assert.equal(r.body.data.key, 'sports');
   assert.equal(r.body.data.name, 'Sport & Fitness');
   assert.equal(r.body.data.icon, 'trophy');
+  // 'sports' war eine Seed-Kategorie (label_key) - das Umbenennen macht sie
+  // custom, sonst ueberschriebe der naechste Sprachwechsel den getippten
+  // Namen wieder (gleiches Muster wie server/routes/tasks.js).
+  assert.equal(r.body.data.label_key, null);
 });
 
 test('PUT /categories/:key: nicht existent -> 404', async () => {
@@ -75,15 +99,23 @@ test('PUT /categories/:key: nicht existent -> 404', async () => {
   assert.equal(r.status, 404);
 });
 
-test('PUT /categories/:key: NOCASE-Namenskonflikt beim Umbenennen -> 409', async () => {
-  // 'household' auf einen Namen umbenennen, der (nur in Gross-/Kleinschreibung
-  // abweichend) bereits von 'vehicles' ("Fahrzeuge") belegt ist.
-  const r = await call('PUT', '/categories/household', { name: 'FAHRZEUGE' });
+test('PUT /categories/:key: NOCASE-Namenskonflikt gegen eine Custom-Kategorie beim Umbenennen -> 409', async () => {
+  const r = await call('PUT', '/categories/household', { name: 'garten deko' });
   assert.equal(r.status, 409);
 
   const check = await call('GET', '/categories');
   const household = check.body.data.find((c) => c.key === 'household');
-  assert.equal(household.name, 'Haushalt'); // unveraendert
+  assert.equal(household.label_key, 'inventory.categoryHousehold'); // unveraendert, weiterhin Seed-Kategorie
+});
+
+// Gleiche Grenze wie beim POST-Konflikt oben: 'vehicles' ist noch eine
+// Seed-Kategorie, der Vergleich laeuft also gegen ihren Key statt gegen die
+// uebersetzte Anzeige "Fahrzeuge".
+test('PUT /categories/:key: die uebersetzte Anzeige einer Seed-Kategorie loest beim Umbenennen KEINEN Konflikt aus', async () => {
+  const r = await call('PUT', '/categories/household', { name: 'FAHRZEUGE' });
+  assert.equal(r.status, 200);
+  assert.equal(r.body.data.name, 'FAHRZEUGE');
+  assert.equal(r.body.data.label_key, null);
 });
 
 test("DELETE /categories/other: geschuetzt, immer 400", async () => {

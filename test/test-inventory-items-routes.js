@@ -70,11 +70,15 @@ test('POST /items: unbekannte Kategorie -> 400 (abgelehnt, nicht normalisiert)',
   assert.equal(r.status, 400);
 });
 
-test('POST /items: gueltige Kategorie wird uebernommen und im Namen aufgeloest', async () => {
+test('POST /items: gueltige Kategorie wird uebernommen und aufgeloest (Seed-Kategorie -> label_key, Migration 142)', async () => {
   const r = await call('POST', '/items', { name: 'Router', category: 'electronics' });
   assert.equal(r.status, 201);
   assert.equal(r.body.data.category, 'electronics');
-  assert.equal(r.body.data.category_name, 'Elektronik');
+  // 'electronics' ist eine Seed-Kategorie (label_key statt name) - category_name
+  // faellt serverseitig bewusst auf den Key zurueck, die Uebersetzung passiert
+  // clientseitig ueber category_label_key (siehe public/pages/inventory.js#itemCategoryLabel).
+  assert.equal(r.body.data.category_name, 'electronics');
+  assert.equal(r.body.data.category_label_key, 'inventory.categoryElectronics');
 });
 
 test('POST /items: nicht existenter Ort -> 400', async () => {
