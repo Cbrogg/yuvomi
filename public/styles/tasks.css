@@ -258,6 +258,33 @@
   cursor: pointer;
 }
 
+/* Die Gruppierungswahl folgt dem Chip neben ihr in dieselbe Höhenklasse.
+ *
+ * Sie steht mit den Filter-Chips in EINER Zeile und ist deren Nachbar, nicht
+ * ihr Gegenstück: bliebe sie bei --target-lg, während der Chip auf das
+ * Zeiger-Mass fällt, setzte allein sie weiter die Höhe der ganzen Reihe - der
+ * Gewinn beim Chip wäre rechnerisch da und optisch keiner. Gemessen bei
+ * 640x400: Reihe 54px, davon 54px von der Wahl und 48px vom Chip.
+ *
+ * Die Rücknahme auf Touch steht wie beim Chip daneben; die Begründung dort
+ * gilt hier wörtlich (filter-chip.css, § kompakte Höhenklasse). */
+/* `height` UND `min-height`, weil die Breitenklasse (max-width: 640px) dem Knopf
+ * ein festes `height: var(--target-base)` gibt - ein reines `min-height` hätte
+ * dagegen lautlos verloren, und bei 640x400 greifen BEIDE Klassen. */
+@media (max-height: 499px) {
+  .group-toggle__btn {
+    height: var(--target-md);
+    min-height: var(--target-md);
+  }
+}
+
+@media (max-height: 499px) and (hover: none) {
+  .group-toggle__btn {
+    height: var(--target-base);
+    min-height: var(--target-base);
+  }
+}
+
 /* Das Icon steht neben dem Label, nicht statt seiner - solange Platz ist.
  * Es ist der Teil, der bleibt, wenn das Label faellt (siehe die 640er-Regel). */
 .group-toggle__icon {
@@ -317,22 +344,34 @@
   color: var(--color-ink-on-vivid);
 }
 
-/* Filter-Toggle-Button */
+/* Filter-Toggle-Button - FORM VOM CHIP, hier nur noch die Abweichung.
+ *
+ * Hier standen vierzehn Deklarationen, die `.filter-chip` (filter-chip.css)
+ * zeichengleich wiederholten: Anzeige, Ausrichtung, Gap, Polsterung, Radius,
+ * Schriftgrad und -schnitt, nowrap, Cursor, 1.5px-Kante, Fläche, Textfarbe,
+ * Übergang und Mindesthöhe. Der Knopf war damit der VIERTE Chip - genau die
+ * Divergenz, gegen die filter-chip.css angelegt wurde („Vorher definierten
+ * Tasks, Kontakte und Dokumente drei nahezu identische Chips nebeneinander").
+ * Er stand nur nicht in der Aufzählung, weil er anders heisst.
+ *
+ * ZWEI FOLGEN, DIE ES OHNE DIE KOPIE NICHT GEGEBEN HÄTTE:
+ *
+ * 1. Er trug weiter `transition: all`, das am Chip am 2026-07-30 als Defekt
+ *    ausgebaut wurde (`all` zieht Layout-Properties mit). Eine Kopie erbt
+ *    keine Korrekturen.
+ * 2. Seine `min-height: var(--target-lg)` war UNBEDINGT und setzte als
+ *    höchstes Kind die Höhe der ganzen Filterreihe - die Chips daneben
+ *    strecken sich (`#filter-bar` ist ein Flex-Container mit dem Default
+ *    `stretch`). Gemessen bei 640x400 mit Zeigergerät: die Chips lasen ihre
+ *    neue Höhenklasse korrekt als 40px und standen trotzdem bei 48px, weil
+ *    dieser Knopf die Zeile aufspannte. Wer nur den Chip misst, sieht den
+ *    Grund nicht.
+ *
+ * Was BLEIBT, ist die echte Abweichung: der Knopf schrumpft in der seitlich
+ * scrollenden Reihe nicht, und sein Aktiv-Zustand ist ein anderer als der des
+ * Chips (Kante und Tinte, KEINE getönte Fläche - „es sind Filter gesetzt" ist
+ * ein anderer Satz als „dieser Filter ist an"). */
 .filter-toggle-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-full);
-  font-size: var(--text-sm);
-  font-weight: var(--font-weight-medium);
-  white-space: nowrap;
-  cursor: pointer;
-  border: 1.5px solid var(--color-border);
-  background-color: var(--color-surface);
-  color: var(--color-text-secondary);
-  transition: all var(--transition-fast);
-  min-height: var(--target-lg);
   flex-shrink: 0;
 }
 
@@ -410,36 +449,28 @@
 /* --------------------------------------------------------
  * Gruppen-Überschriften
  * -------------------------------------------------------- */
+/* NUR NOCH DER ABSTAND ZUR NÄCHSTEN GRUPPE steht hier. Form, Lesemaß und die
+ * Stellung von Label und Zählstand kommen aus `.list-group` (list-row.css) -
+ * dieselbe Grammatik wie im Einkauf und im Vorrat.
+ *
+ * Was dabei ENTFALLEN ist und warum:
+ *
+ * - `.task-group__header` mit `justify-content: space-between`: die Zahl stand
+ *   an der rechten TRÄGERKANTE statt am Ende ihrer Überschrift. Auf 1280px
+ *   waren das 640px Abstand zum Gruppennamen. Genau diesen Befund hatte der
+ *   Einkauf am 2026-07-30 („las sich als unverbundener Wert"), und die geteilte
+ *   Regel trägt seine Antwort bereits (`.list-group__count`, margin-inline-start).
+ * - `.task-group__count` als Pille auf --color-surface-2: ein Zählstand ist
+ *   kein Zustand. Die Pille gab ihm das Gewicht eines Badges neben Chips, die
+ *   im selben Bild wirklich Zustände tragen.
+ * - `.task-group__title` in der Sentence-Case-Rolle: die Gruppenbeschriftung
+ *   ist app-weit Versalien (list-row.css, „zwei der drei Tabs hielten es so").
+ *   Aufgaben war der Ausreisser.
+ *
+ * Das Lesemaß liegt jetzt an `.list-group` und gilt für Kopf UND Träger aus
+ * einer Regel - vorher stand derselbe Wert zweimal da. */
 .task-group {
   margin-bottom: var(--space-6);
-}
-
-/* Der Träger der Zeilenliste ist die geteilte Gruppe aus list-row.css - mit
- * ihrem Lesemaß. Das ist EIN Wert app-weit (Guard „die Küchen-Listen teilen
- * eine Zeilen-Grammatik"), und die Aufgabenliste stand bisher als einzige
- * Zeilenliste ungekappt bei 996px. Der Gruppenkopf fluchtet deshalb mit dem
- * Träger, sonst stünde die Beschriftung breiter als das, was sie benennt. */
-.task-group__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--space-2);
-  padding: 0 var(--space-1);
-  max-width: var(--content-max-width-narrow);
-}
-
-.task-group__title {
-  /* Typografie via .nav-section-label-Schicht (Sentence-Case, Critique P2) */
-  color: var(--color-text-secondary);
-}
-
-.task-group__count {
-  font-size: var(--text-xs);
-  /* AA-lesbar auf --color-surface-2 (disabled/neutral-300 fiel durch — Critique) */
-  color: var(--color-text-secondary);
-  background-color: var(--color-surface-2);
-  padding: 2px var(--space-2);
-  border-radius: var(--radius-full);
 }
 
 /* --------------------------------------------------------
@@ -503,11 +534,17 @@
   color: var(--color-text-tertiary);
 }
 
+/* Die Polsterung steht als eigene Eigenschaft, weil die Trefferfläche des
+ * Titels sie mitrechnet (.task-card__title::before). Als zwei getrennte
+ * Literale liefen sie schon auseinander: das ::before rechnete mit --space-3,
+ * während die Karte hier --space-4 trug - auf dem Desktop endete die
+ * Trefferfläche damit 4px vor der Kartenkante. Ein Wert, zwei Leser. */
 .task-card__main {
+  --task-row-pad: var(--space-4);
   display: flex;
   align-items: flex-start;
   gap: var(--space-3);
-  padding: var(--space-4);
+  padding: var(--task-row-pad);
 }
 
 /* Gasse für den Wisch-Chevron (.swipe-row::after, layout.css): 8px Abstand vom
@@ -692,7 +729,7 @@
   padding: 0;
   text-align: start;
   color: var(--color-text-primary);
-  margin-bottom: var(--space-1);
+  margin-bottom: var(--space-0h);
   cursor: pointer;
   text-decoration: line-through;
   text-decoration-color: transparent;
@@ -712,14 +749,18 @@
  *
  * ::before statt Padding, weil der Text bleiben soll, wo er ist - dasselbe
  * Rezept wie bei `.weather-widget__refresh` („kompakt aussehen, voll treffen",
- * DESIGN.md). Die Fläche endet exakt an der Metazeile: `--space-1` unten ist
- * der Wert des `margin-bottom` darüber, keinen Pixel mehr, sonst nähme sie den
- * Tag-Filtern ihre eigenen Treffer weg. Ergebnis 38px statt 22,1px - nicht die
- * volle Zielgrösse, aber alles, was die Karte hergibt, und das ist die Regel. */
+ * DESIGN.md). Die Fläche endet exakt an der Metazeile: unten steht der Wert des
+ * `margin-bottom` darüber, keinen Pixel mehr, sonst nähme sie den Tag-Filtern
+ * ihre eigenen Treffer weg. Oben steht die Polsterung der Zeile.
+ *
+ * BEIDE SEITEN LESEN IHREN NACHBARN, statt ihn zu wiederholen: `--task-row-pad`
+ * kommt von .task-card__main und wird mobil kleiner, `--space-0h` ist derselbe
+ * Token wie im margin-bottom darüber. Vorher standen hier zwei Literale, und
+ * eines davon (--space-3 gegen --space-4 Polsterung) stimmte schon nicht. */
 .task-card__title::before {
   content: '';
   position: absolute;
-  inset-block: calc(-1 * var(--space-3)) calc(-1 * var(--space-1));
+  inset-block: calc(-1 * var(--task-row-pad, var(--space-3))) calc(-1 * var(--space-0h));
   inset-inline: 0;
 }
 
@@ -728,11 +769,87 @@
   text-decoration-color: var(--color-text-secondary);
 }
 
+/* EINE ZEILE, UND SIE BRICHT NICHT UM.
+ *
+ * Hier stand `flex-wrap: wrap` mit 12px Gap. Das war der Höhentreiber der
+ * Aufgabenliste, nicht die Polsterung: acht mögliche Elemente (Priorität, zwei
+ * Daten, Wiederholung, Anhang, Sichtbarkeit, Kategorie, bis zu vier Etiketten)
+ * ergaben je nach Aufgabe zwei bis drei Metazeilen, und benachbarte Zeilen
+ * waren damit verschieden hoch - das Auge findet in einer Liste ohne festen
+ * Takt keinen Rhythmus mehr.
+ *
+ * WAS ÜBERLÄUFT, IST ENTSCHIEDEN, NICHT ZUFÄLLIG: Priorität und Fälligkeit
+ * schrumpfen nicht (`flex-shrink: 0` unten), das Etikett schon - es trägt seine
+ * eigene Ellipse (`.list-row__tag`/`.task-tag`) und den „+N"-Marker daneben.
+ * Deshalb ist die Reihenfolge im Markup die Rangfolge: was hinten steht, gibt
+ * zuerst nach. Ein Abschnitt ohne Ellipse käme in dieser Zeile nicht vor.
+ *
+ * Warum nicht einfach weniger rendern: die Auswahl trifft schon renderTaskCard
+ * (zwei Daten, doppelte Kategorie, ein Etikett statt drei). Diese Regel hält
+ * den Takt auch dann, wenn eine Aufgabe alles gleichzeitig trägt. */
 .task-card__meta {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  flex-wrap: wrap;
+  /* 4px, nicht 8: die Elemente der Zeile sind Pillen mit eigener Polsterung und
+   * eigener Fläche - zwischen zwei Chips liest sich der Abstand optisch als das
+   * Doppelte. Gemessen war es die letzten 3px, die eine Zeile mit Priorität,
+   * Fälligkeit UND Wiederholungs-Glyphe (231px auf 228px) noch überlaufen
+   * liessen. */
+  gap: var(--space-1);
+  flex-wrap: nowrap;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.task-card__meta > .priority-badge,
+.task-card__meta > .due-date {
+  flex-shrink: 0;
+}
+
+/* DAS ETIKETT GIBT NACH, UND ZWAR MIT ELLIPSE.
+ *
+ * Ohne diese Regel klippte der `overflow: hidden` der Metazeile das Chip mitten
+ * im Wort ab: gemessen bei 390px stand „drin" statt „dringend" und bei einer
+ * langen Fälligkeit („Überfällig - 11.08.2026") blieb vom Etikett ein 1px
+ * breiter Splitter stehen. `.list-row__tag` trägt seine Ellipse seit jeher,
+ * `.task-tag` hatte sie nie - sie brauchte sie auch nie, solange die Zeile
+ * umbrach.
+ *
+ * `min-width` statt reinem `flex-shrink`: unter etwa vier Zeichen sagt ein
+ * Etikett nichts mehr, und dann ist der „+N"-Marker daneben die ehrlichere
+ * Auskunft. Der Marker selbst schrumpft nie - er ist zwei bis drei Zeichen breit
+ * und ist genau die Stelle, an der steht, dass etwas fehlt. */
+.task-card__meta > .task-tag {
+  flex: 0 1 auto;
+  min-width: 3.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  /* DAS ETIKETT IST EINE FRAGE DER BREITE, NICHT DES GERÄTS - deshalb der
+   * Container und nicht der Viewport: massgeblich ist, was die ZEILE hat.
+   *
+   * GEMESSEN, NICHT GESCHÄTZT (390px, de, Demo-Haushalt): der Textspalte
+   * bleiben 258px, „• Dringend" belegt 88px und „Heute fällig" mit Glyphe
+   * 110px - mit Abständen 214px. Für ein Etikett bleiben 44px, und darunter
+   * beginnt es zu klippen: gemessen stand „drin…" statt „dringend", und in der
+   * Nachbarzeile schnitt der Überlauf das FÄLLIGKEITSDATUM an („11.08.202|6").
+   * Ein angeschnittenes Datum ist schlimmer als ein fehlendes Etikett.
+   *
+   * Das englische Mockup traf die Grenze nicht: „Urgent" und „Aug 13" sind
+   * zusammen 60px kürzer als ihre deutschen Entsprechungen. Die Zeile hängt
+   * damit an der längsten Locale, nicht an der Referenz-Locale. */
+  display: none;
+}
+
+@container list-rows (min-width: 420px) {
+  .task-card__meta > .task-tag {
+    display: block;
+  }
+}
+
+.task-card__meta > .task-tag--more {
+  flex-shrink: 0;
+  min-width: 0;
 }
 
 .task-card__inline-action {
@@ -751,7 +868,12 @@
 @media (max-width: 640px) {
   .task-card__main {
     gap: var(--space-2);
-    padding: var(--space-3);
+    /* Der Takt der Liste entsteht aus Polsterung UND Metazeile. Die Metazeile
+     * bricht seit dem Schnitt nicht mehr um (siehe .task-card__meta), damit
+     * trägt die Polsterung die Höhe allein: 12px oben und unten ergaben 71px
+     * je Zeile, 8px ergeben 58px - bei unveränderter Zielgröße, weil die
+     * Trefferfläche des Titels an --task-row-pad hängt und mitwandert. */
+    --task-row-pad: var(--space-2);
   }
 
   /* HIG-Dichte (Reminders-Muster): auf Touch KEINE Inline-Action-Buttons -

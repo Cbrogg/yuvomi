@@ -211,7 +211,6 @@
 .nav-section-label,
 .settings-shell__navigation-heading,
 .settings-shell__navigation-toggle,
-.task-group__title,
 .kanban-col__title,
 .filter-panel__label {
   font-size: var(--text-xs);

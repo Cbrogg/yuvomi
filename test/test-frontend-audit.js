@@ -6215,7 +6215,16 @@ test('remaining audited mobile controls use 48px touch targets', () => {
   const budget = read('../public/styles/budget.css');
   const settings = read('../public/styles/settings.css');
 
-  assertRuleUsesToken(tasks, '.filter-toggle-btn', 'min-height', '--target-lg', '../public/styles/tasks.css');
+  // Der Filter-Toggle trägt seine 48px seit der Chip-Zusammenführung nicht mehr
+  // selbst: er war eine zeichengleiche Kopie von .filter-chip (vierzehn
+  // Deklarationen, inklusive des `transition: all`, das am Chip längst ausgebaut
+  // war) und ist jetzt einer. Geprüft wird deshalb die ZUSAGE an ihrem einen
+  // Ort - und die Kette dorthin, denn ohne die Klasse im Markup erreicht die
+  // Regel diesen Knopf nicht und der Guard bliebe grün, während das Ziel
+  // schrumpft.
+  assertRuleUsesToken(read('../public/styles/filter-chip.css'), '.filter-chip', 'min-height', '--target-lg', '../public/styles/filter-chip.css');
+  assert.match(read('../public/pages/tasks.js'), /toggleBtn\.className\s*=\s*`filter-chip filter-toggle-btn/);
+  assert.doesNotMatch(tasks, /\.filter-toggle-btn\s*\{[^}]*min-height/);
   // „Heute" (Kalender) holt seine 48px aus .btn - siehe die Begruendung beim
   // Budget-Zwilling im Guard darueber.
   assert.doesNotMatch(calendar, /\.cal-toolbar__today\s*\{[^}]*min-height/);
