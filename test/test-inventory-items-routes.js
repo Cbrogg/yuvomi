@@ -113,13 +113,12 @@ test('POST /items: ungueltige Waehrung -> 400, gueltige wird gross geschrieben u
 
 test('PUT /items/:id: volles Replace - weggelassene Felder werden NICHT beibehalten', async () => {
   const created = await call('POST', '/items', {
-    name: 'Espressomaschine', category: 'household', vendor: 'DeLonghi', current_value: 200,
+    name: 'Espressomaschine', category: 'household', vendor: 'DeLonghi',
   });
   const r = await call('PUT', `/items/${created.body.data.id}`, { name: 'Espressomaschine' });
   assert.equal(r.status, 200);
   assert.equal(r.body.data.category, 'other'); // nicht mehr 'household'
   assert.equal(r.body.data.vendor, null);
-  assert.equal(r.body.data.current_value, null);
 });
 
 test('DELETE /items/:id: 204, danach 404', async () => {

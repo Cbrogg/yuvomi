@@ -5061,9 +5061,6 @@ const MIGRATIONS = [
         location_id     INTEGER REFERENCES inventory_locations(id) ON DELETE SET NULL,
         purchase_date   TEXT,
         purchase_price  REAL    CHECK (purchase_price IS NULL OR purchase_price >= 0),
-        -- Manuell gepflegter Zeitwert, keine Abschreibungsformel (Brainstorming-
-        -- Entscheidung, siehe Design-Doc §4).
-        current_value   REAL    CHECK (current_value IS NULL OR current_value >= 0),
         currency        TEXT,
         vendor          TEXT,
         warranty_months INTEGER CHECK (warranty_months IS NULL OR (warranty_months >= 0 AND warranty_months <= 600)),

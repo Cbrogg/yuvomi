@@ -1,6 +1,6 @@
 /**
  * Modul: Inventar (Inventory)
- * Zweck: Besitz erfassen - Ort, Kategorie, Kaufpreis, Zeitwert, Fristen (Stufe 1:
+ * Zweck: Besitz erfassen - Ort, Kategorie, Kaufpreis, Fristen (Stufe 1:
  *        kein Verknuepfen mit Buchungen/Dokumenten/Abos, das kommt in spaeteren
  *        Stufen). Orte (zwei Ebenen) und Kategorien werden ueber dieselbe
  *        yuvomi-category-manager-Komponente verwaltet, die Budget fuer seine
@@ -228,13 +228,16 @@ function updateFilterChips(items) {
  * bezieht sich auf den ganzen Bestand, nicht auf einen aktiven Filter).
  */
 function computeMetrics(items) {
-  // Nur Items in der Haushaltswaehrung fliessen in die Summe ein - eine
-  // Fremdwaehrung ohne Umrechnung mitzusummieren waere schlicht falsch,
-  // nicht nur ungenau. Seltener Randfall (die meisten Haushalte fuehren
-  // Inventar in einer Waehrung), deshalb ausgeschlossen statt umgerechnet.
+  // Summe der Kaufpreise, nicht eines Zeitwerts - siehe Diskussion #696:
+  // eine manuell gepflegte Wertschaetzung veraltet unbemerkt, der Kaufpreis
+  // ist und bleibt ein Fakt. Nur Items in der Haushaltswaehrung fliessen ein
+  // - eine Fremdwaehrung ohne Umrechnung mitzusummieren waere schlicht
+  // falsch, nicht nur ungenau. Seltener Randfall (die meisten Haushalte
+  // fuehren Inventar in einer Waehrung), deshalb ausgeschlossen statt
+  // umgerechnet.
   const totalValue = items.reduce((sum, item) => (
-    item.current_value != null && item.currency === _householdCurrency
-      ? sum + item.current_value
+    item.purchase_price != null && item.currency === _householdCurrency
+      ? sum + item.purchase_price
       : sum
   ), 0);
   return {
@@ -392,7 +395,7 @@ function renderGroupedItems(groups) {
  * (--interactive) den Klickbereich, .list-row__name/.list-row__meta Name und
  * Ort - exakt wie pantry.js#rowEl, damit Inventar optisch nicht vom Vorrat
  * abweicht (Groesse, Abstand, Trennlinie sind app-weit EIN Wert, nicht
- * modulweise nachgebaut). Nur Statusbadge und Zeitwert sind Inventar-eigen
+ * modulweise nachgebaut). Nur Statusbadge und Kaufpreis sind Inventar-eigen
  * (Vorrat hat kein Aequivalent zu beidem).
  */
 function renderItemRow(item) {
@@ -411,7 +414,7 @@ function renderItemRow(item) {
         </span>
         ${item.location_path ? `<span class="list-row__meta">${esc(item.location_path)}</span>` : ''}
       </button>
-      <span class="inventory-row__value">${item.current_value != null ? esc(formatMoney(item.current_value, item.currency)) : ''}</span>
+      <span class="inventory-row__value">${item.purchase_price != null ? esc(formatMoney(item.purchase_price, item.currency)) : ''}</span>
     </div>`;
 }
 
@@ -751,7 +754,6 @@ function renderItemDetail(item) {
     { icon: 'hash', label: t('inventory.serialNumberLabel'), value: item.serial_number || '' },
     { icon: 'calendar', label: t('inventory.purchaseDateLabel'), value: item.purchase_date ? formatDate(item.purchase_date) : '' },
     { icon: 'banknote', label: t('inventory.purchasePriceLabel'), value: item.purchase_price != null ? formatMoney(item.purchase_price, item.currency) : '' },
-    { icon: 'trending-up', label: t('inventory.currentValueLabel'), value: item.current_value != null ? formatMoney(item.current_value, item.currency) : '' },
     { icon: 'store', label: t('inventory.vendorLabel'), value: item.vendor || '' },
     { icon: 'shield', label: t('inventory.warrantyMonthsLabel'), value: warrantyDetailValue(item) },
     { icon: 'gauge', label: t('inventory.conditionLabel'), value: t(`inventory.condition${item.condition.charAt(0).toUpperCase()}${item.condition.slice(1)}`) },
@@ -1216,16 +1218,9 @@ function buildItemForm({ mode, item = null }) {
         </button>
         <div data-picked-booking-chip hidden></div>
       </div>` : ''}
-      <div class="inventory-form-row">
-        <div class="form-group">
-          <label class="form-label" for="inv-current-value">${esc(t('inventory.currentValueLabel'))}</label>
-          <input id="inv-current-value" class="form-input" type="number" min="0" step="0.01" inputmode="decimal">
-          <p class="form-hint">${esc(t('inventory.currentValueHint'))}</p>
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="inv-status">${esc(t('inventory.statusLabel'))}</label>
-          <select id="inv-status" class="form-input">${statusOptions}</select>
-        </div>
+      <div class="form-group">
+        <label class="form-label" for="inv-status">${esc(t('inventory.statusLabel'))}</label>
+        <select id="inv-status" class="form-input">${statusOptions}</select>
       </div>
       ${isEdit ? `
       <div class="form-group">
@@ -1321,7 +1316,6 @@ function buildItemForm({ mode, item = null }) {
     panel.querySelector('#inv-category').value = isEdit ? item.category : 'other';
     panel.querySelector('#inv-location').value = isEdit && item.location_id ? String(item.location_id) : '';
     panel.querySelector('#inv-purchase-price').value = isEdit && item.purchase_price != null ? String(item.purchase_price) : '';
-    panel.querySelector('#inv-current-value').value = isEdit && item.current_value != null ? String(item.current_value) : '';
     panel.querySelector('#inv-status').value = isEdit ? item.status : 'active';
     panel.querySelector('#inv-brand').value = isEdit && item.brand ? item.brand : '';
     panel.querySelector('#inv-model').value = isEdit && item.model ? item.model : '';
@@ -1460,7 +1454,6 @@ async function saveItem(panel, mode, item, attachments, pickedBooking, photoData
   if (!name) { reportFieldError(nameInput, t('common.nameRequired')); return; }
 
   const priceRaw = panel.querySelector('#inv-purchase-price').value.trim();
-  const valueRaw = panel.querySelector('#inv-current-value').value.trim();
   const warrantyRaw = panel.querySelector('#inv-warranty').value.trim();
 
   const payload = {
@@ -1469,7 +1462,6 @@ async function saveItem(panel, mode, item, attachments, pickedBooking, photoData
     location_id: panel.querySelector('#inv-location').value || null,
     purchase_date: panel.querySelector('#inv-purchase-date').value || null,
     purchase_price: priceRaw === '' ? null : Number(priceRaw),
-    current_value: valueRaw === '' ? null : Number(valueRaw),
     status: panel.querySelector('#inv-status').value,
     brand: panel.querySelector('#inv-brand').value.trim() || null,
     model: panel.querySelector('#inv-model').value.trim() || null,

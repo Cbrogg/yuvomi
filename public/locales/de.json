@@ -3968,8 +3968,6 @@
         "unlocated": "Ohne Ort",
         "purchaseDateLabel": "Kaufdatum",
         "purchasePriceLabel": "Kaufpreis",
-        "currentValueLabel": "Zeitwert",
-        "currentValueHint": "Geschätzter aktueller Wert, manuell gepflegt.",
         "currencyLabel": "Währung",
         "vendorLabel": "Händler",
         "warrantyMonthsLabel": "Garantie (Monate)",

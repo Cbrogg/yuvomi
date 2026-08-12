@@ -7,7 +7,7 @@
  *        Vokabular, das Vorrat und Einkauf schon nutzen - Inventar soll
  *        optisch identisch aussehen (Groesse, Abstand, Trennlinie), nicht nur
  *        aehnlich. Hier bleibt nur, was Inventar von Vorrat unterscheidet:
- *        Statusbadge und Zeitwert, so wie pantry.css nur Badges und Stepper
+ *        Statusbadge und Kaufpreis, so wie pantry.css nur Badges und Stepper
  *        beitraegt.
  */
 
@@ -213,7 +213,7 @@
   min-width: 0;
 }
 
-/* Zeitwert, trailing außerhalb des Klickbereichs (wie der Stepper im Vorrat) -
+/* Kaufpreis, trailing außerhalb des Klickbereichs (wie der Stepper im Vorrat) -
  * reine Anzeige, kein eigenes Bedienelement, deshalb kein .list-row__actions. */
 .inventory-row__value {
   flex-shrink: 0;

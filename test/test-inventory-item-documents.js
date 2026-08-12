@@ -161,8 +161,8 @@ test('PUT /items/:id: ohne das Feld bleiben Belege unangetastet', async () => {
   const doc = insertDocument({ name: 'Bleibt' });
   const item = await createItem({ attachment_document_ids: [doc] });
 
-  const res = await call('PUT', `/items/${item.id}`, { body: { name: item.name, current_value: 42 } });
-  assert.equal(res.body.data.current_value, 42);
+  const res = await call('PUT', `/items/${item.id}`, { body: { name: item.name, purchase_price: 42 } });
+  assert.equal(res.body.data.purchase_price, 42);
   assert.deepEqual(res.body.data.attachments.map((a) => a.document_id), [doc]);
 });
 

@@ -206,15 +206,6 @@ function validateItemFields(body) {
     values.purchase_price = vPrice.value;
   }
 
-  if (body.current_value === null || body.current_value === '' || body.current_value === undefined) {
-    values.current_value = null;
-  } else {
-    const vValue = num(body.current_value, 'Zeitwert');
-    results.push(vValue);
-    if (vValue.value !== null && vValue.value < 0) results.push({ error: 'Zeitwert darf nicht negativ sein.' });
-    values.current_value = vValue.value;
-  }
-
   if (body.currency === null || body.currency === '' || body.currency === undefined) {
     values.currency = householdCurrency();
   } else {
@@ -342,12 +333,12 @@ router.post('/', (req, res) => {
       const inserted = db.get().prepare(`
         INSERT INTO inventory_items
           (name, brand, model, serial_number, category, location_id, purchase_date,
-           purchase_price, current_value, currency, vendor, warranty_months, condition,
+           purchase_price, currency, vendor, warranty_months, condition,
            status, notes, photo_data, created_by)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         values.name, values.brand, values.model, values.serial_number, values.category,
-        values.location_id, values.purchase_date, values.purchase_price, values.current_value,
+        values.location_id, values.purchase_date, values.purchase_price,
         values.currency, values.vendor, values.warranty_months, values.condition, values.status,
         values.notes, values.photo_data, userId,
       );
@@ -407,12 +398,12 @@ router.put('/:id', (req, res) => {
       db.get().prepare(`
         UPDATE inventory_items
         SET name = ?, brand = ?, model = ?, serial_number = ?, category = ?, location_id = ?,
-            purchase_date = ?, purchase_price = ?, current_value = ?, currency = ?, vendor = ?,
+            purchase_date = ?, purchase_price = ?, currency = ?, vendor = ?,
             warranty_months = ?, condition = ?, status = ?, notes = ?, photo_data = ?
         WHERE id = ?
       `).run(
         values.name, values.brand, values.model, values.serial_number, values.category,
-        values.location_id, values.purchase_date, values.purchase_price, values.current_value,
+        values.location_id, values.purchase_date, values.purchase_price,
         values.currency, values.vendor, values.warranty_months, values.condition, values.status,
         values.notes, values.photo_data, item.id,
       );

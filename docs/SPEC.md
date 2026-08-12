@@ -1480,7 +1480,6 @@ One row per owned belonging.
 | location_id | INTEGER | FK → Inventory Locations (SET NULL) |
 | purchase_date | TEXT | nullable, `YYYY-MM-DD` |
 | purchase_price | REAL | nullable, CHECK `>= 0` |
-| current_value | REAL | nullable, CHECK `>= 0` — manually maintained, no automatic depreciation formula (a deliberate design decision, not a gap) |
 | currency | TEXT | nullable |
 | vendor | TEXT | nullable |
 | warranty_months | INTEGER | nullable, CHECK `0–600` |
@@ -2252,8 +2251,8 @@ Housekeeping, sharing their `records` accent tone (moved there from Budget's `mo
 the module's own weight settled: it is primarily a record of long-lived household items, not a
 finance tool that happens to track objects).
 
-- **Two-level browse:** the landing page shows metric cards (item count, total value, items needing attention) plus a category overview; tapping a category shows its items grouped by storage location, with "All" / "Needs attention" filter chips scoped to that category. Tapping an item opens a read-only detail view — with a colored accent stripe — before editing.
-- **CRUD:** name, brand, model, serial number, category, storage location, purchase date and price, an independently-maintained current value estimate (no automatic depreciation formula — that was a deliberate design choice, not a missing feature), currency, vendor, warranty length, condition, status, notes, and an optional single photo (same storage pattern as a birthday photo: one Base64 data URL, no gallery).
+- **Two-level browse:** the landing page shows metric cards (item count, total purchase value, items needing attention) plus a category overview; tapping a category shows its items grouped by storage location, with "All" / "Needs attention" filter chips scoped to that category. Tapping an item opens a read-only detail view — with a colored accent stripe — before editing.
+- **CRUD:** name, brand, model, serial number, category, storage location, purchase date and price, currency, vendor, warranty length, condition, status, notes, and an optional single photo (same storage pattern as a birthday photo: one Base64 data URL, no gallery). Deliberately no current-value/resale-estimate field — a manually maintained number nobody updates is worse than none.
 - **Storage locations** are a two-level hierarchy (e.g. "Garage" → "Werkzeugschrank"), renameable and sortable through the shared category-manager component, same as Pantry Locations. Deleting one never blocks — items and sub-locations become location-/parent-less instead of moving.
 - **Categories** are a manageable list (five seeded defaults: Electronics, Vehicles, Household, Sports, Other), same pattern as Task Categories; deleting one reassigns its items to the protected `other` category.
 - **Linked documents:** attach receipts, warranty cards, or manuals from the Documents module, reusing the same visibility-filtered linking mechanism Budget entries already use.
