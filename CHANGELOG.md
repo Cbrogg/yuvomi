@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Creating an event from day view now defaults to the day you're looking at.** Clicking an empty slot in the day grid already opened the new-event form on that day, but the "+" button in the toolbar and the floating action button ignored it and always defaulted to today, so switching a few days ahead and reaching for either "+" silently created the event on the wrong day. Both now pass the day currently shown in day view through to the form; the other views are unaffected, since their reference date isn't a specific day the user picked.
+
 ## [2.10.0] - 2026-08-14
 
 ### Added

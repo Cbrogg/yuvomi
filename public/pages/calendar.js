@@ -1019,7 +1019,7 @@ export async function render(container, { user }) {
   renderView();
   bodyEl.removeAttribute('aria-busy');
 
-  findPageFab('fab-new-event')?.addEventListener('click', () => openEventModal({ mode: 'create' }));
+  findPageFab('fab-new-event')?.addEventListener('click', () => openEventModal({ mode: 'create', date: state.view === 'day' ? state.cursor : undefined }));
 
   if (initialEvent) {
     const targetDate = deepLinkTargetDate(initialEvent, dateParam);
@@ -1130,7 +1130,7 @@ function renderToolbar() {
   bar.querySelector('#cal-prev').addEventListener('click', () => navigate(-1));
   bar.querySelector('#cal-next').addEventListener('click', () => navigate(1));
   bar.querySelector('#cal-today').addEventListener('click', goToday);
-  bar.querySelector('#cal-add').addEventListener('click', () => openEventModal({ mode: 'create' }));
+  bar.querySelector('#cal-add').addEventListener('click', () => openEventModal({ mode: 'create', date: state.view === 'day' ? state.cursor : undefined }));
   bar.querySelector('#cal-search').addEventListener('click', openCalendarSearch);
 
   bar.querySelector('#cal-assigned-me')?.addEventListener('click', (e) => {
