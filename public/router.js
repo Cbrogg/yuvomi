@@ -1032,10 +1032,75 @@ function moreActionEl({ labelKey, icon, className = '', onClick, route, navHref 
   return el;
 }
 
+/* Zählstände der Modulkacheln im „Mehr"-Sheet.
+ *
+ * Sie kommen aus EINEM späteren /dashboard-Abruf beim ersten Öffnen des
+ * Sheets, nicht aus einem eigenen Endpunkt und nicht aus zehn Modul-Requests:
+ * die Nutzlast liegt fertig da, sie beantwortet die Sichtbarkeitsfrage je
+ * Modul bereits korrekt, und in den meisten Sitzungen ist sie ohnehin warm.
+ * Ohne Antwort bleiben die Kacheln einfach ohne Badge - das ist der Normalfall
+ * beim allerersten Öffnen und kein kaputter Zustand.
+ *
+ * WAS WARTET, NICHT WAS EXISTIERT. Deshalb steht hier weder die Zahl der
+ * Geburtstage noch die der Notizen: sie zählen Bestand. Ein Badge, das immer
+ * leuchtet, ist keine Nachricht mehr. */
+let _moduleCounts = {};
+let _moduleCountsAt = 0;
+const MODULE_COUNTS_TTL = 60_000;
+
+function moduleCountsFrom(data) {
+  const openDoses = Math.max(0, (data?.health?.dosesTotal ?? 0) - (data?.health?.dosesTaken ?? 0) - (data?.health?.dosesSkipped ?? 0));
+  const counts = {
+    tasks: data?.openTaskCount ?? 0,
+    shopping: data?.shoppingOpenCount ?? 0,
+    rewards: data?.rewards?.pending ?? 0,
+    health: openDoses,
+  };
+  // Die Küche ist im mobilen Menü EIN Ziel für vier Module; was dort wartet,
+  // ist der Einkaufszettel.
+  counts.kitchen = counts.shopping;
+  return counts;
+}
+
+async function refreshModuleCounts() {
+  if (Date.now() - _moduleCountsAt < MODULE_COUNTS_TTL) return false;
+  try {
+    const res = await api.get('/dashboard');
+    _moduleCounts = moduleCountsFrom(res);
+    _moduleCountsAt = Date.now();
+    return true;
+  } catch {
+    // Kein Netz, keine Sitzung, Serverfehler: das Sheet bleibt ohne Badges
+    // benutzbar. Ein Fehler an dieser Stelle darf die Navigation nicht stören.
+    return false;
+  }
+}
+
+/** Zieht die Badges am offenen Sheet nach, ohne es neu zu bauen. */
+function paintMoreSheetBadges(sheet) {
+  if (!sheet) return;
+  sheet.querySelectorAll('.more-item[data-nav-id]').forEach((item) => {
+    const count = _moduleCounts[item.dataset.navId] ?? 0;
+    const existing = item.querySelector('.more-item__badge');
+    if (count > 0) {
+      if (existing) existing.replaceWith(moreBadgeEl(count));
+      else item.appendChild(moreBadgeEl(count));
+    } else {
+      existing?.remove();
+    }
+  });
+}
+
 /**
- * Baut den dynamischen Body des „Mehr“-Sheets: Katalog-Hinweis, farbiges
- * App-Launcher-Grid (Module) und den monochromen System-Cluster
- * (Einstellungen · Hilfe · Änderungen) als 1×3-Reihe.
+ * Baut den dynamischen Body des „Mehr“-Sheets: das nach Bereichen gruppierte
+ * Modul-Raster und den monochromen System-Cluster (Einstellungen · Hilfe ·
+ * Änderungen · Abmelden) als kompakte Reihe.
+ *
+ * DIE GRUPPEN GIBT ES SCHON. Sie stehen als NAV_SECTION an jedem Nav-Item und
+ * beschriften bereits die Desktop-Sidebar (Planen · Haushalt · Menschen ·
+ * Finanzen). Das Sheet warf sie bisher weg und legte zehn Module in EIN
+ * ungegliedertes Raster - dieselbe Fläche, die auf dem Desktop sortiert ist,
+ * war mobil eine Wand. Hier wird nichts erfunden, nur nicht mehr eingeebnet.
  *
  * EINE Quelle der Wahrheit für renderAppShell() UND rebuildNavigation() —
  * beide Pfade müssen dieselbe Struktur erzeugen, sonst zerstört ein
@@ -1050,16 +1115,43 @@ function buildMoreSheetBody() {
   // hält das Sheet ruhig und kompakt.
 
   // Einstellungen ist ein System-Ziel, kein Inhalts-Modul — es wandert aus dem
-  // farbigen Grid in den System-Cluster, damit das Grid sauber aufgeht (2×4).
+  // farbigen Grid in den System-Cluster, damit das Grid sauber aufgeht.
   const secondary = secondaryMobileItems();
   const settingsItem = secondary.find((item) => item.module === 'settings');
 
-  const grid = document.createElement('div');
-  grid.className = 'more-sheet__grid';
-  secondary
-    .filter((item) => item.module !== 'settings')
-    .forEach((item) => grid.appendChild(moreItemEl(item)));
-  nodes.push(grid);
+  // Reihenfolge der Bereiche = die der Sidebar. Ein Bereich ohne Module
+  // erscheint gar nicht - ein leerer Kopf wäre eine Überschrift über nichts.
+  const modules = secondary.filter((item) => item.module !== 'settings');
+  const sections = [];
+  for (const item of modules) {
+    const key = item.section ?? NAV_SECTION.customModules;
+    let group = sections.find((s) => s.key === key);
+    if (!group) sections.push(group = { key, items: [] });
+    group.items.push(item);
+  }
+
+  for (const section of sections) {
+    const labelKey = NAV_SECTION_LABEL_KEYS[section.key];
+    const group = document.createElement('div');
+    group.className = 'more-sheet__group';
+
+    if (labelKey) {
+      const labelId = `more-group-${section.key}`;
+      const label = document.createElement('div');
+      label.className = 'more-sheet__group-label';
+      label.id = labelId;
+      label.textContent = t(labelKey);
+      group.appendChild(label);
+      group.setAttribute('role', 'group');
+      group.setAttribute('aria-labelledby', labelId);
+    }
+
+    const grid = document.createElement('div');
+    grid.className = 'more-sheet__grid';
+    section.items.forEach((item) => grid.appendChild(moreItemEl(item)));
+    group.appendChild(grid);
+    nodes.push(group);
+  }
 
   const divider = document.createElement('div');
   divider.className = 'more-sheet__divider';
@@ -2291,6 +2383,13 @@ function initMoreSheet(container, openSearch) {
     currentMoreBtn().setAttribute('aria-expanded', 'true');
     sheet.querySelector('#more-sheet-search, [data-route]')?.focus();
     if (window.lucide) window.lucide.createIcons({ el: sheet });
+    // Zählstände nachziehen, ohne das Öffnen zu verzögern: das Sheet steht
+    // sofort, die Badges kommen, sobald die Antwort da ist. Beim zweiten Öffnen
+    // innerhalb der TTL passiert gar nichts - das Sheet ist eine Navigation,
+    // kein Monitor.
+    refreshModuleCounts().then((fresh) => {
+      if (fresh && sheet.getAttribute('aria-hidden') !== 'true') paintMoreSheetBadges(sheet);
+    });
   }
 
   function closeSheet({ restoreFocus = true } = {}) {
@@ -3170,7 +3269,27 @@ function moreItemEl({ path, navHref, label, icon, module: mod, accent, navId }) 
   span.textContent = label;
   a.appendChild(well);
   a.appendChild(span);
+
+  // Der Zaehlstand kommt spaeter (siehe paintMoreSheetBadges) und nur, wenn es
+  // einen gibt. Die Kachel bleibt ohne ihn vollstaendig - ein Badge ist eine
+  // Zugabe, kein Bestandteil.
+  const count = _moduleCounts[navId ?? mod];
+  if (count > 0) a.appendChild(moreBadgeEl(count));
   return a;
+}
+
+/**
+ * Zaehlbadge einer Modulkachel: „was wartet", nie „was existiert".
+ * Die nackte Ziffer im Text traegt fuer sich keine Bedeutung - der Screenreader
+ * laese „Aufgaben 3". Das aria-label sagt, was die 3 ist; den Modulnamen hat
+ * die Vorlesekette aus dem Label daneben bereits.
+ */
+function moreBadgeEl(count) {
+  const badge = document.createElement('span');
+  badge.className = 'more-item__badge';
+  badge.textContent = count > 99 ? '99+' : String(count);
+  badge.setAttribute('aria-label', t('nav.moreBadge', { count }));
+  return badge;
 }
 
 function kitchenSectionLabel(path) {
