@@ -36,14 +36,28 @@
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   overflow: hidden;
+  /* Abfragbarer Container für die Zeilen darin - am TRÄGER, weil ein Container
+   * sich selbst nicht abfragen kann, und `inline-size`, damit die Höhe frei
+   * bleibt. Dieselbe Begründung wie bei `.list-rows` (list-row.css). */
+  container-type: inline-size;
+  container-name: birthdays-list;
 }
 
-.birthday-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
-}
+/* DIE GEBURTSTAGSZEILE IST EINE `.list-row` - hier steht nur die Abweichung.
+ *
+ * Sie stand bei 121,6px im Schnitt und schwankte um 24,6px, und beides kam aus
+ * DREI Textzeilen übereinander: der Name brach unter dem Countdown-Chip um
+ * (`overflow-wrap: anywhere` bei 250px Spalte, „Tante Claire Becker" = zwei
+ * Zeilen), darunter stand die Datumszeile, darunter die Notiz. Der Chip stand
+ * im Namensraum und nahm ihm 90px, obwohl er zur Metazeile gehört - genau die
+ * Rolle, die die Aufgabenzeile ihrem Prioritäts-Chip gibt.
+ *
+ * Name und Chip teilen sich jetzt nicht mehr eine Zeile: der Name bekommt die
+ * volle Spalte, der Chip führt die Metazeile an.
+ *
+ * Anzeige, Ausrichtung, Gap und Polsterung stehen deshalb nicht mehr hier: sie
+ * sind `.list-row` (list-row.css). Was bleibt, steht unten - die getönte
+ * Heute-Fläche, das Medium und die Metazeile mit dem Chip darin. */
 
 /* Trennlinie an den direkten Kindern des Traegers, NICHT an der Zeile selbst -
  * dasselbe Muster wie `.list-rows > * + *` im Einkauf, und aus demselben
@@ -66,24 +80,23 @@
   background: color-mix(in srgb, var(--module-accent) var(--tint-surface), var(--color-surface));
 }
 
-.birthday-item__body {
-  min-width: 0;
-  flex: 1;
-}
-
-.birthday-item__row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-}
-
+/* DER NAME WIRD GEKAPPT, NICHT UMGEBROCHEN - und das ist die Antwort, die das
+ * Personen-Vokabular der App schon gibt: `.contact-item__name` steht seit
+ * jeher auf `nowrap` plus Ellipse. Ein umbrechender Name macht die Zeile
+ * zweizeilig und nimmt der Liste ihren Takt; ein gekappter Personenname bleibt
+ * erkennbar („Tante Claire Beck…"), anders als ein gekappter Artikelname im
+ * Einkauf, wo `.list-row__name` aus genau diesem Grund umbricht.
+ *
+ * `unicode-bidi: plaintext` bleibt: ein arabischer Name in einer sonst
+ * lateinischen Liste muss seine eigene Leserichtung behalten. */
 .birthday-item__name {
   min-width: 0;
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   unicode-bidi: plaintext;
 }
 
@@ -94,19 +107,62 @@
   color: var(--module-accent);
 }
 
+/* EINE Metazeile, und sie bricht nicht um: Countdown-Chip, dann Datum und
+ * Alter, dann - wo Platz ist - die Notiz. `--space-1` und nicht `--space-2`,
+ * aus demselben Grund wie in der Aufgabenzeile: der Chip hat eigene Polsterung
+ * und eine eigene Fläche, zwischen ihm und dem Text liest sich der Abstand
+ * optisch als das Doppelte. */
 .birthday-item__meta {
-  margin-top: var(--space-0h);
-  color: var(--color-text-secondary);
-  font-size: var(--text-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-wrap: nowrap;
+  min-width: 0;
+  overflow: hidden;
   unicode-bidi: plaintext;
 }
 
+.birthday-item__meta > .birthday-chip {
+  flex-shrink: 0;
+}
+
+.birthday-item__when {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* DIE NOTIZ IST EINE FRAGE DER BREITE, NICHT DES GERÄTS - deshalb der Container
+ * am Träger und nicht der Viewport: massgeblich ist, was die ZEILE hat.
+ *
+ * GEMESSEN bei 390px, de, Demo-Haushalt: der Metazeile bleiben 262px, „in 31
+ * Tagen" belegt 90px und „12.09.2026 · wird 8" 150px - für die Notiz bleiben
+ * 22px, und darunter kappt sie das Datum vor sich mit. Ein angeschnittenes
+ * Datum ist schlimmer als eine Notiz, die erst weiter oben erscheint. Wer die
+ * Notiz sucht, öffnet den Eintrag; wer die Liste überfliegt, sucht das Datum.
+ *
+ * Die Notiz behält `overflow-wrap: anywhere` NICHT: sie steht jetzt in einer
+ * Zeile, die nicht umbricht, und wird dort gekappt statt gebrochen.
+ *
+ * WARUM 560px UND NICHT 400: die Schwelle muss in BEIDEN Gerätewelten halten.
+ * Am Finger sind die zwei Zeilenknöpfe weggeklappt (siehe die `hover: none`-
+ * Regel oben) und die Metazeile hätte schon ab rund 400px Trägerbreite Platz;
+ * am Zeiger stehen sie da und kosten 100px. Ein Container weiss nicht, welche
+ * Welt er bedient - 560px ist der Wert, ab dem die Notiz in beiden steht, ohne
+ * dem Datum vor ihr Platz zu nehmen (gemessen: 128px freie Breite am Zeiger,
+ * 240px am Finger). */
 .birthday-item__notes {
-  margin-top: var(--space-1);
-  color: var(--color-text-secondary);
-  font-size: var(--text-sm);
-  overflow-wrap: anywhere;
+  display: none;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   unicode-bidi: plaintext;
+}
+
+@container birthdays-list (min-width: 560px) {
+  .birthday-item__notes {
+    display: block;
+  }
 }
 
 .birthday-item__actions {
@@ -159,7 +215,11 @@
  * -------------------------------------------------------- */
 .birthday-chip {
   flex-shrink: 0;
-  padding: 0.25rem 0.6rem;
+  /* `0.25rem 0.6rem` stand hier als Rohwert - 0,6rem gibt es in keiner Stufe
+   * der Skala. Auf den Stufen ist der Chip zwei Pixel flacher und steht damit
+   * auf demselben Mass wie der Prioritäts-Chip der Aufgabenzeile, der dieselbe
+   * Rolle in derselben Metazeile spielt. Gemessen: Metazeile 25,6 -> 21,6px. */
+  padding: var(--space-0h) var(--space-2);
   border-radius: var(--radius-full);
   font-size: var(--text-xs);
   font-weight: var(--font-weight-semibold);
@@ -187,9 +247,13 @@
 /* --------------------------------------------------------
  * Avatare
  * -------------------------------------------------------- */
+/* 52px WAR EIN ROHWERT UND EIN DRITTES MASS. Kontakte, das Nachbarmodul
+ * derselben Familie, tragen ihr Zeilenbild seit jeher auf `--target-md`
+ * (`.contact-item__icon`) - hier standen 52 hartkodierte Pixel, die die Zeile
+ * allein schon auf 76px hoben, bevor der Text mitzählte. */
 .birthday-avatar {
-  width: 52px;
-  height: 52px;
+  width: var(--target-md);
+  height: var(--target-md);
   border-radius: var(--radius-full);
   object-fit: cover;
   flex-shrink: 0;
@@ -318,14 +382,12 @@
  * Responsive
  * -------------------------------------------------------- */
 @media (max-width: 640px) {
-  .birthday-item__row {
-    flex-wrap: wrap;
-  }
-
-  .birthday-item__name {
-    flex: 1 1 100%;
-  }
-
+  /* Hier stand der Umbruch der Namenszeile (`.birthday-item__row { flex-wrap:
+   * wrap }` plus `flex: 1 1 100%` am Namen). Er war die Antwort darauf, dass
+   * Name und Countdown-Chip sich eine Zeile teilten und auf dem Telefon nicht
+   * nebeneinander passten - und er war der Grund, aus dem die Zeile 121,6px
+   * hoch stand. Der Chip steht jetzt in der Metazeile, damit gibt es keine
+   * Konkurrenz mehr um die erste Zeile und nichts umzubrechen. */
   .birthday-modal__identity {
     flex-direction: column;
     align-items: stretch;

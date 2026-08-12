@@ -150,17 +150,17 @@ function birthdayItemHtml(birthday) {
         <i data-lucide="trash-2" class="icon-md"></i>
         <span>${t('common.delete')}</span>
       </div>
-    <article class="birthday-item ${isToday ? 'birthday-item--today' : ''}" data-id="${birthday.id}">
+    <article class="list-row birthday-item ${isToday ? 'birthday-item--today' : ''}" data-id="${birthday.id}">
       <div class="birthday-item__media">${photoAvatar(birthday)}</div>
-      <div class="birthday-item__body">
-        <div class="birthday-item__row">
-          <strong class="birthday-item__name">
-            ${esc(birthday.name)}${isToday ? CAKE_SVG : ''}
-          </strong>
+      <div class="list-row__main">
+        <strong class="list-row__name birthday-item__name">
+          ${esc(birthday.name)}${isToday ? CAKE_SVG : ''}
+        </strong>
+        <div class="list-row__meta birthday-item__meta">
           <span class="birthday-chip birthday-chip--${chip.mod}">${esc(chip.label)}</span>
+          <span class="birthday-item__when">${esc(ageMeta(birthday))}</span>
+          ${birthday.notes ? `<span class="birthday-item__notes">${esc(birthday.notes)}</span>` : ''}
         </div>
-        <div class="birthday-item__meta">${esc(ageMeta(birthday))}</div>
-        ${birthday.notes ? `<div class="birthday-item__notes">${esc(birthday.notes)}</div>` : ''}
       </div>
       <div class="row-actions birthday-item__actions">
         <button class="row-action" type="button" data-action="edit" data-id="${birthday.id}" aria-label="${t('common.edit')}">

@@ -4216,18 +4216,43 @@ test('polished rounded cards use subtle full borders instead of thick accent cap
   assert.doesNotMatch(housekeepingCard, /border-top:\s*3px/);
 });
 
-test('hardening keeps Birthday cards bounded with extreme localized content', () => {
+/**
+ * Die Zusage ist dieselbe geblieben, der Mechanismus nicht.
+ *
+ * Bis zum Zeilenschnitt hielt die Geburtstagszeile extreme Inhalte aus, indem
+ * sie UMBRACH: `overflow-wrap: anywhere` am Namen und an der Notiz, dazu eine
+ * 640px-Regel, die die Namenszeile umbrechen liess. Genau das machte die Zeile
+ * dreizeilig und 121,6px hoch. Sie kappt jetzt, wie `.contact-item__name` im
+ * Nachbarmodul derselben Familie es immer getan hat.
+ *
+ * Geprueft wird deshalb die ZUSAGE - kein Inhalt sprengt die Zeile - und nicht
+ * mehr das alte Mittel. Der alte Mechanismus ist zusaetzlich AUSGESCHLOSSEN:
+ * kaeme `overflow-wrap: anywhere` zurueck, waere die Kappung wirkungslos und
+ * die Zeile stuende wieder zweizeilig da, ohne dass eine Zusicherung bricht.
+ */
+test('hardening keeps Birthday rows on one line with extreme localized content', () => {
   const birthdays = read('../public/styles/birthdays.css');
 
-  assert.match(birthdays, /\.birthday-item__body\s*\{[\s\S]*min-width:\s*0/);
-  assert.match(birthdays, /\.birthday-item__name\s*\{[\s\S]*overflow-wrap:\s*anywhere/);
-  assert.match(birthdays, /\.birthday-item__name\s*\{[\s\S]*unicode-bidi:\s*plaintext/);
-  assert.match(birthdays, /\.birthday-item__notes\s*\{[\s\S]*overflow-wrap:\s*anywhere/);
-  assert.match(birthdays, /\.birthday-item__notes\s*\{[\s\S]*unicode-bidi:\s*plaintext/);
-  assert.match(
-    birthdays,
-    /@media \(max-width:\s*640px\)[\s\S]*\.birthday-item__row\s*\{[\s\S]*flex-wrap:\s*wrap/
-  );
+  for (const part of ['__name', '__meta', '__notes']) {
+    const body = cssRuleBody(birthdays, `.birthday-item${part}`);
+    assert.ok(body, `.birthday-item${part} muss eine Regel haben`);
+    assert.match(body, /overflow:\s*hidden/,
+      `.birthday-item${part} muss ueberlaufenden Inhalt kappen statt die Zeile zu dehnen`);
+    assert.doesNotMatch(body, /overflow-wrap:\s*anywhere/,
+      `.birthday-item${part} darf nicht wieder umbrechen - das war der Hoehentreiber`);
+  }
+  // Die Leserichtung bleibt pro Feld erhalten: ein arabischer Name in einer
+  // lateinischen Liste ist der Anlass, und der ist von der Kappung unberuehrt.
+  for (const part of ['__name', '__meta', '__notes']) {
+    assert.match(cssRuleBody(birthdays, `.birthday-item${part}`), /unicode-bidi:\s*plaintext/);
+  }
+  // Der Name darf nicht umbrechen, sonst ist die Zeile wieder zweizeilig.
+  assert.match(cssRuleBody(birthdays, '.birthday-item__name'), /white-space:\s*nowrap/);
+  // Und die Notiz haengt an der BREITE, nicht am Geraet.
+  assert.match(birthdays, /@container birthdays-list \(min-width:[^)]+\)\s*\{\s*\.birthday-item__notes/,
+    'die Notiz erscheint ueber einen Container-Query am Traeger, nicht ueber einen Viewport-Breakpoint');
+  assert.match(cssRuleBody(birthdays, '.birthdays-list'), /container-type:\s*inline-size/,
+    'ohne Container am Traeger fragt der Query ins Leere und die Notiz bliebe fuer immer aus');
 });
 
 test('hardening uses logical alignment for RTL-sensitive adapted controls', () => {
