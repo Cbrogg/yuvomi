@@ -281,10 +281,11 @@ function renderMetrics() {
         <div class="metric-card__label">${esc(t('inventory.metricValueLabel'))}</div>
         <div class="metric-card__amount">${esc(formatMoney(totalValue, _householdCurrency))}</div>
       </div>
-      <div class="metric-card">
+      <button type="button" class="metric-card metric-card--select${state.filterAttention ? ' is-active' : ''}"
+              data-action="toggle-attention-filter" aria-pressed="${state.filterAttention}">
         <div class="metric-card__label">${esc(t('inventory.metricAttentionLabel'))}</div>
         <div class="metric-card__amount">${needsAttention}</div>
-      </div>
+      </button>
     </div>`;
 }
 
@@ -521,8 +522,12 @@ function renderBrowse(list) {
 
   list.replaceChildren();
   list.insertAdjacentHTML('beforeend', renderMetrics());
+  list.querySelector('[data-action="toggle-attention-filter"]')?.addEventListener('click', () => {
+    state.filterAttention = !state.filterAttention;
+    renderList();
+  });
 
-  if (!state.query) {
+  if (!state.query && !state.filterAttention) {
     list.insertAdjacentHTML('beforeend', renderCategoryList());
     list.querySelectorAll('[data-action="open-category"]').forEach((button) => {
       button.addEventListener('click', () => {
@@ -534,18 +539,25 @@ function renderBrowse(list) {
     return;
   }
 
-  const filtered = state.items.filter(matchesQuery);
+  const filtered = state.items.filter((item) => matchesQuery(item) && matchesAttentionFilter(item));
   if (!filtered.length) {
-    list.appendChild(emptyStateEl({
-      variant: 'no-results',
-      title: t('inventory.noResultsTitle'),
-      description: t('inventory.noResultsDescription'),
-      hint: `"${state.query}"`,
-      action: {
-        label: t('inventory.resetSearch'),
-        onClick: () => { state.query = ''; _search?.clear(); renderList(); },
-      },
-    }));
+    const reset = () => { state.query = ''; state.filterAttention = false; _search?.clear(); renderList(); };
+    list.appendChild(emptyStateEl(
+      state.query
+        ? {
+            variant: 'no-results',
+            title: t('inventory.noResultsTitle'),
+            description: t('inventory.noResultsDescription'),
+            hint: `"${state.query}"`,
+            action: { label: t('inventory.resetSearch'), onClick: reset },
+          }
+        : {
+            variant: 'no-results',
+            title: t('inventory.attentionEmptyTitle'),
+            description: t('inventory.attentionEmptyDescription'),
+            action: { label: t('inventory.clearAttentionFilter'), onClick: reset },
+          },
+    ));
     if (window.lucide) window.lucide.createIcons({ el: list });
     return;
   }
