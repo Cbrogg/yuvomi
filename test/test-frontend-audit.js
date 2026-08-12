@@ -6965,6 +6965,30 @@ test('every primary "new" control names its noun from newLabel.* (one register)'
     'ohne data-dock-label dockt der Knopf gar nicht an, statt auf den langen Satz zurueckzufallen');
 });
 
+/**
+ * Der Einkauf ist das einzige Modul ohne Kopf und damit ohne Andock-Ziel. Sein
+ * FAB weicht am Zeigergeraet der Quick-Add-Zeile - und zwar unter DERSELBEN
+ * Bedingung, die die Zeile aufklappt, nicht unter einer zweiten Zahl.
+ */
+test('shopping hides its FAB exactly where the quick-add row opens', () => {
+  const css = read('../public/styles/shopping.css');
+  let found = false;
+  for (const rule of eachRule(css)) {
+    if (!/#fab-new-item/.test(rule.selector)) continue;
+    found = true;
+    assert.match(rule.at.join(' '), /\(hover:\s*hover\)/,
+      'der FAB weicht unter (hover: hover) - derselben Bedingung, die .quick-add aufklappt');
+    assert.match(rule.body, /display:\s*none/);
+  }
+  assert.ok(found, 'erwartet eine Regel, die #fab-new-item am Zeigergeraet ausblendet');
+
+  // Der Knoten bleibt: zwei Aufrufer druecken die Primaeraktion ueber
+  // `.page-fab`.click(), und ein JS-Klick feuert auch auf display:none.
+  const page = read('../public/pages/shopping.js');
+  assert.match(page, /class="page-fab" id="fab-new-item"/,
+    'der FAB wird versteckt, nicht entfernt - sonst stirbt der click()-Aufruf still');
+});
+
 test('login keeps username-style input hints, not email (audit 1.6 — login is by username)', () => {
   const src = read('../public/pages/login.js');
   const input = src.match(/<input[\s\S]*?id="username"[\s\S]*?\/>/);

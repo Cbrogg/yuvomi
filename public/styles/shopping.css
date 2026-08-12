@@ -312,6 +312,32 @@
   #items-list > .empty-state > .empty-state__cta {
     display: none;
   }
+
+  /* Und aus demselben Grund der FAB. Der Einkauf ist das einzige Modul, das
+   * seinen Primaerknopf am Zeigergeraet NICHT in den Kopf andockt - er hat seit
+   * dem 11.08. bewusst keinen (siehe die Notiz bei „Liste-Header"). Damit
+   * standen dort zwei Wege fuer dieselbe Handlung: das `+` der Eingabezeile und
+   * der schwebende Knopf 700px darunter.
+   *
+   * DIE BEDINGUNG IST DIESELBE, DIE DIE ZEILE OEFFNET, keine zweite Grenze:
+   * `hover: none` klappt die Zeile ein, `hover: hover` klappt sie auf - und
+   * genau dann ist der FAB der zweite Knopf. Eine Breite (etwa die 1024px der
+   * Dock-Grenze) waere eine unabhaengige Zahl, die irgendwann neben der Zeile
+   * steht statt mit ihr.
+   *
+   * Gemessen am 12.08. bei 1024-1920px: die Zeile sitzt bei y=113 AUSSERHALB
+   * des Scrollports und steht bei jedem Scrollstand im Blick (nach dem Scrollen
+   * ans Listenende unveraendert y=113). Ohne aktive Liste greifen der
+   * Leerzustands-Knopf und das `+` der Listenleiste - dieser FAB legt dort
+   * ohnehin eine LISTE an, nicht einen Artikel.
+   *
+   * `display: none` und NICHT entfernt: der Leerzustand von `#items-list` und
+   * der Tab-FAB rufen die Primaeraktion ueber `.page-fab`.click() auf
+   * (shopping.js), und ein JS-Klick feuert auch auf einem versteckten Knopf.
+   * Wer den Knoten hier abraeumte, machte beides still tot. */
+  #fab-layer #fab-new-item {
+    display: none;
+  }
 }
 
 .quick-add__form {

@@ -1697,6 +1697,9 @@ Angabe braeuchte einen zweiten Timer, nur damit sie sich selbst aktuell haelt.
 - **Don't** ein `aria-label` als sichtbaren Text weiterreichen; es beschreibt eine
   Handlung („Geburtstag hinzufuegen") und wird als Knopfbeschriftung zum dritten
   Register neben denen, die es schon gibt.
+- **Don't** einen zweiten Anlege-Weg neben einem sichtbaren stehen lassen; und wenn
+  einer weichen muss, dann unter DERSELBEN Bedingung, unter der der andere erscheint -
+  nie unter einer eigenen Zahl daneben.
 - **Don't** Gradient-Text oder Akzent-Titel: Large Titles und Ueberschriften tragen immer
   Label-Farbe.
 - **Don't** chromatische Verlaeufe auf Inhalt legen; auch nicht auf der Anmeldebuehne und
