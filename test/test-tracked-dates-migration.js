@@ -1,5 +1,5 @@
 /**
- * Test: reminders-Tabellen-Rebuild fuer inventory_tracked_date (Migration v140)
+ * Test: reminders-Tabellen-Rebuild fuer inventory_tracked_date (Migration v141)
  * Zweck: Gleiche Gefahr wie v137 (siehe test-reminders-entity-type-migration.js) -
  *        DROP TABLE reminders muss foreignKeysOff bleiben, sonst reisst der
  *        DROP notification_deliveries mit. Zusaetzlich: inventory_item_dates
@@ -18,9 +18,9 @@ process.env.SESSION_SECRET = process.env.SESSION_SECRET || 'test-secret';
 process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'yuvomi-trackeddatesmig-')), 'unused.db');
 const { MIGRATIONS } = await import('../server/db.js');
 
-const V140 = MIGRATIONS.find((m) => m.version === 140);
+const V141 = MIGRATIONS.find((m) => m.version === 141);
 
-function seedPreV140() {
+function seedPreV141() {
   const db = new Database(join(mkdtempSync(join(tmpdir(), 'yuvomi-trackeddatesmig-')), 'db.sqlite'));
   db.exec(`
     CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL);
@@ -75,14 +75,14 @@ function seedPreV140() {
   return db;
 }
 
-test('v140 ist als foreignKeysOff-Migration deklariert', () => {
-  assert.equal(V140.foreignKeysOff, true);
+test('v141 ist als foreignKeysOff-Migration deklariert', () => {
+  assert.equal(V141.foreignKeysOff, true);
 });
 
-test('v140 erhält bestehende Erinnerungen und Zustellprotokolle', () => {
-  const db = seedPreV140();
+test('v141 erhält bestehende Erinnerungen und Zustellprotokolle', () => {
+  const db = seedPreV141();
   db.pragma('foreign_keys = OFF');
-  db.exec(V140.up);
+  db.exec(V141.up);
   db.pragma('foreign_keys = ON');
 
   assert.equal(db.prepare('SELECT COUNT(*) AS c FROM reminders').get().c, 1);
@@ -91,10 +91,10 @@ test('v140 erhält bestehende Erinnerungen und Zustellprotokolle', () => {
   db.close();
 });
 
-test("v140 erlaubt entity_type 'inventory_tracked_date'", () => {
-  const db = seedPreV140();
+test("v141 erlaubt entity_type 'inventory_tracked_date'", () => {
+  const db = seedPreV141();
   db.pragma('foreign_keys = OFF');
-  db.exec(V140.up);
+  db.exec(V141.up);
   db.pragma('foreign_keys = ON');
 
   db.prepare("INSERT INTO reminders (entity_type, entity_id, remind_at, created_by) VALUES ('inventory_tracked_date', 1, '2026-10-01T09:00:00Z', 1)").run();
@@ -105,10 +105,10 @@ test("v140 erlaubt entity_type 'inventory_tracked_date'", () => {
   db.close();
 });
 
-test('v140 legt inventory_item_dates mit FK auf inventory_items und Updated-At-Trigger an', () => {
-  const db = seedPreV140();
+test('v141 legt inventory_item_dates mit FK auf inventory_items und Updated-At-Trigger an', () => {
+  const db = seedPreV141();
   db.pragma('foreign_keys = OFF');
-  db.exec(V140.up);
+  db.exec(V141.up);
   db.pragma('foreign_keys = ON');
 
   db.prepare("INSERT INTO inventory_item_dates (item_id, label, date) VALUES (1, 'TÜV', '2027-01-01')").run();
@@ -129,10 +129,10 @@ test('v140 legt inventory_item_dates mit FK auf inventory_items und Updated-At-T
 });
 
 test('Gegenbeweis: mit aktiver FK-Durchsetzung würde der DROP die Zustellprotokolle mitreißen', () => {
-  const db = seedPreV140();
+  const db = seedPreV141();
   db.pragma('foreign_keys = ON');
-  db.exec(V140.up);
+  db.exec(V141.up);
   assert.equal(db.prepare('SELECT COUNT(*) AS c FROM notification_deliveries').get().c, 0,
-    'belegt, warum foreignKeysOff an v140 nicht wegfallen darf');
+    'belegt, warum foreignKeysOff an v141 nicht wegfallen darf');
   db.close();
 });

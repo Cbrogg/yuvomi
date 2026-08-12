@@ -1,12 +1,12 @@
 /**
- * Test: Reminder-Tabellen-Rebuild für inventory_item-Entities (Migration v139, Stufe 4)
- * Zweck: SQLite kann einen Spalten-CHECK nicht per ALTER erweitern, daher baut v139
+ * Test: Reminder-Tabellen-Rebuild für inventory_item-Entities (Migration v140, Stufe 4)
+ * Zweck: SQLite kann einen Spalten-CHECK nicht per ALTER erweitern, daher baut v140
  *        reminders neu auf. Der riskante Punkt ist der `DROP TABLE reminders`: seit
  *        notification_deliveries.reminder_id ... ON DELETE CASCADE existiert, würde
  *        der DROP bei aktiver FK-Durchsetzung sämtliche Zustellprotokolle jeder
  *        bestehenden Installation mitlöschen. Diese Suite sichert, dass Reminder
  *        (inkl. pushed_at) und Zustellprotokolle den Rebuild überleben - plus den
- *        Gegenbeweis, warum `foreignKeysOff` an v139 Pflicht ist.
+ *        Gegenbeweis, warum `foreignKeysOff` an v140 Pflicht ist.
  * Ausführen: node --test test/test-reminders-entity-type-migration.js
  */
 
@@ -18,18 +18,18 @@ import { join } from 'node:path';
 import Database from 'better-sqlite3-multiple-ciphers';
 
 // DB_PATH vor dem Import auf eine Wegwerf-Datei setzen: db.js initialisiert beim
-// Modul-Load (und migriert dabei). Geprüft wird hier nur die exportierte v139-SQL
-// gegen eine eigens aufgebaute Vor-v139-DB.
+// Modul-Load (und migriert dabei). Geprüft wird hier nur die exportierte v140-SQL
+// gegen eine eigens aufgebaute Vor-v140-DB.
 process.env.SESSION_SECRET = process.env.SESSION_SECRET || 'test-secret';
 process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), 'yuvomi-remindermig-')), 'unused.db');
 const { MIGRATIONS } = await import('../server/db.js');
 
-const V139 = MIGRATIONS.find((m) => m.version === 139);
+const V140 = MIGRATIONS.find((m) => m.version === 140);
 
-// Stand von reminders direkt vor v139 (v8 + v54 pushed_at + v57 subscription-CHECK)
+// Stand von reminders direkt vor v140 (v8 + v54 pushed_at + v57 subscription-CHECK)
 // samt notification_deliveries (FK auf reminders, ON DELETE CASCADE) und je einer
 // Zeile pro Tabelle.
-function seedPreV139() {
+function seedPreV140() {
   const db = new Database(join(mkdtempSync(join(tmpdir(), 'yuvomi-remindermig-')), 'db.sqlite'));
   db.exec(`
     CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL);
@@ -84,15 +84,15 @@ function seedPreV139() {
   return db;
 }
 
-test('v139 ist als foreignKeysOff-Migration deklariert (sonst kaskadiert der DROP)', () => {
-  assert.equal(V139.foreignKeysOff, true);
+test('v140 ist als foreignKeysOff-Migration deklariert (sonst kaskadiert der DROP)', () => {
+  assert.equal(V140.foreignKeysOff, true);
 });
 
-test('v139 erhält Reminder inklusive pushed_at, Zustellprotokolle und Indizes', () => {
-  const db = seedPreV139();
+test('v140 erhält Reminder inklusive pushed_at, Zustellprotokolle und Indizes', () => {
+  const db = seedPreV140();
   // Der Migration-Runner schaltet die FK-Durchsetzung für diese Migration ab.
   db.pragma('foreign_keys = OFF');
-  db.exec(V139.up);
+  db.exec(V140.up);
   db.pragma('foreign_keys = ON');
 
   assert.deepEqual(
@@ -133,10 +133,10 @@ test('v139 erhält Reminder inklusive pushed_at, Zustellprotokolle und Indizes',
   db.close();
 });
 
-test("v139 erlaubt entity_type 'inventory_item' und weist Unbekanntes weiter ab", () => {
-  const db = seedPreV139();
+test("v140 erlaubt entity_type 'inventory_item' und weist Unbekanntes weiter ab", () => {
+  const db = seedPreV140();
   db.pragma('foreign_keys = OFF');
-  db.exec(V139.up);
+  db.exec(V140.up);
   db.pragma('foreign_keys = ON');
 
   db.prepare("INSERT INTO reminders (entity_type, entity_id, remind_at, created_by) VALUES ('inventory_item', 42, '2026-10-01T09:00:00Z', 1)").run();
@@ -152,10 +152,10 @@ test("v139 erlaubt entity_type 'inventory_item' und weist Unbekanntes weiter ab"
 });
 
 test('Gegenbeweis: mit aktiver FK-Durchsetzung würde der DROP die Zustellprotokolle mitreißen', () => {
-  const db = seedPreV139();
+  const db = seedPreV140();
   db.pragma('foreign_keys = ON');
-  db.exec(V139.up);
+  db.exec(V140.up);
   assert.equal(db.prepare('SELECT COUNT(*) AS c FROM notification_deliveries').get().c, 0,
-    'belegt, warum foreignKeysOff an v139 nicht wegfallen darf');
+    'belegt, warum foreignKeysOff an v140 nicht wegfallen darf');
   db.close();
 });

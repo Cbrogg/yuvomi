@@ -5088,7 +5088,7 @@ const MIGRATIONS = [
     `,
   },
   {
-    version: 137,
+    version: 138,
     description: 'Inventory: link items to documents from the Documents module (Stage 2)',
     up: `
       -- Spiegelt budget_entry_attachments 1:1 (server/db.js, Migration 112):
@@ -5111,11 +5111,11 @@ const MIGRATIONS = [
     `,
   },
   {
-    version: 138,
+    version: 139,
     description: 'Inventory: link items to budget entries with a role (Stage 3)',
     up: `
       -- created_by ist SET NULL, NICHT CASCADE wie bei inventory_item_documents
-      -- (Migration 137): eine Buchungsverknuepfung ist Haushaltseigentum wie
+      -- (Migration 138): eine Buchungsverknuepfung ist Haushaltseigentum wie
       -- der Gegenstand selbst (gleiche Begruendung wie inventory_items.created_by),
       -- keine persoenliche Handlungsnotiz wie ein Dokument-Anhang.
       --
@@ -5139,7 +5139,7 @@ const MIGRATIONS = [
     `,
   },
   {
-    version: 139,
+    version: 140,
     description: 'Allow inventory_item entities in the existing reminder center (Stage 4)',
     foreignKeysOff: true,
     up: `
@@ -5168,7 +5168,7 @@ const MIGRATIONS = [
     `,
   },
   {
-    version: 140,
+    version: 141,
     description: 'Inventory: custom tracked dates per item, widen reminders for inventory_tracked_date',
     foreignKeysOff: true,
     up: `
@@ -5215,7 +5215,7 @@ const MIGRATIONS = [
     `,
   },
   {
-    version: 141,
+    version: 142,
     description: 'Inventory: add optional photo per item',
     up: `
       -- Ein Foto je Gegenstand, kein Galerie-Bedarf (Mockup-Vergleich, Design-
@@ -5226,7 +5226,7 @@ const MIGRATIONS = [
     `,
   },
   {
-    version: 142,
+    version: 143,
     description: 'Inventory: localize the five seeded categories via label_key (matches Task Categories, migration 83)',
     up: `
       -- Gleiches Muster wie task_categories: label_key traegt den i18n-Key fuer
