@@ -1181,6 +1181,21 @@
   box-shadow: var(--shadow-sm);
 }
 
+/* Trennlinie am TRÄGER, nicht an der Zeile - dieselbe Form und derselbe Grund
+ * wie `.list-rows > * + *` (list-row.css): `> * + *` zieht keine Linie unter
+ * die letzte Zeile und bleibt gültig, wenn zwischen Träger und Zeile einmal ein
+ * Wrapper liegt.
+ *
+ * Der Träger heisst hier nicht `.list-rows`, und das ist Absicht: `.budget-list`
+ * ist der SCROLLER des Tabs (flex:1, min-height:0, overflow-y:auto) und trägt
+ * die Trägerform der Zeilenlisten-Regel in ihrer vollständigen Fassung
+ * (`--radius-lg` plus `--shadow-sm`, wie `.row-carrier`). `.list-rows` ist eine
+ * Gruppe INNERHALB eines Scrollers, dehnt sich per `align-self: start` auf
+ * Inhaltshöhe und hat weder Schatten noch diesen Radius. */
+.budget-list > * + * {
+  border-top: 1px solid var(--color-border-subtle);
+}
+
 .budget-list,
 .budget-loans__list,
 .budget-tab-panel--loans {
@@ -1209,25 +1224,32 @@
   background-clip: padding-box;
 }
 
+/* DIE BUCHUNGSZEILE IST EINE `.list-row` - hier steht nur noch die Abweichung.
+ *
+ * Sie war die sechste eigene Schreibweise derselben Sache: Anzeige,
+ * Ausrichtung, Gap, Cursor, Übergang, Hover, Fokusring und die Hairline über
+ * den `+`-Kombinator standen hier zeichengleich neben `.list-row`
+ * (list-row.css), das Einkauf, Vorrat und Rezepte längst tragen. Was die Kopie
+ * gekostet hat, ist messbar: `padding: var(--space-4)` gegen die 8px/12px der
+ * geteilten Zeile, also 16px Höhe und 8px Textspalte in JEDER Zeile - und die
+ * Textspalte war der Engpass, an dem die Metazeile umbrach.
+ *
+ * ZWEI ECHTE ABWEICHUNGEN BLEIBEN, und beide haben einen Grund:
+ *
+ * 1. Der TITEL bricht nicht um. `.list-row__name` erlaubt das
+ *    (`overflow-wrap: anywhere`), weil ein Artikelname im Einkauf vollständig
+ *    lesbar sein muss. Eine Buchungsliste wird dagegen an ihrem rechten Rand
+ *    gelesen - die Beträge müssen auf einer Rasterlinie stehen, und eine Zeile,
+ *    die wegen ihres Titels zweizeilig wird, verschiebt den Takt.
+ * 2. Der BETRAG steht rechts vom Text und links von der Bedienzone. Das ist
+ *    eine dritte Spalte, die keine andere Zeile der App hat.
+ *
+ * Der Punkt-Indikator bleibt ebenfalls, obwohl der Betrag dieselbe Farbe trägt:
+ * er ist die einzige Stelle, an der eine ERWARTETE Buchung (#637) sich vom
+ * Bestand unterscheidet, ohne dass der Betrag dafür seine Farbe verliert.
+ */
 .budget-entry {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-4);
   cursor: pointer;
-  transition: background-color var(--transition-fast);
-}
-
-.budget-entry + .budget-entry {
-  border-top: 1px solid var(--color-border-subtle);
-}
-
-.budget-entry:hover {
-  /* Datenzeile, also opak - dieselbe Regel, die .tasks-page .task-card:hover,
-   * .shopping-page .shopping-item:hover und .contacts-page .contact-item:hover
-   * in glass.css schon befolgen. Das Budget-Modul war davon bisher nicht
-   * erfasst (Critique 2026-07-30). */
-  background-color: var(--color-surface-raised);
 }
 
 .budget-entry:focus-visible {
@@ -1236,8 +1258,8 @@
 }
 
 .budget-entry__indicator {
-  width: 8px;
-  height: 8px;
+  width: var(--space-2);
+  height: var(--space-2);
   border-radius: var(--radius-full);
   flex-shrink: 0;
 }
@@ -1245,21 +1267,48 @@
 .budget-entry__indicator--income   { background-color: var(--color-success); }
 .budget-entry__indicator--expenses { background-color: var(--color-danger);  }
 
-.budget-entry__body {
-  flex: 1;
-  min-width: 0;
-}
-
+/* Siehe Abweichung 1 über `.budget-entry`. */
 .budget-entry__title {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+/* EINE Zeile, und sie bricht nicht um.
+ *
+ * Gemessen bei 390x844 mit dem Demo-Haushalt: 156px Textspalte, vier Angaben
+ * (Datum, Kategorie, Unterkategorie, Konto) und kein `nowrap` - die Metazeile
+ * lief über fünf bis acht visuelle Zeilen, die Buchungszeile stand zwischen
+ * 119 und 180px. Der Umbruch war der Höhentreiber, nicht die Polsterung.
+ *
+ * `.list-row__meta` trägt `overflow-wrap: break-word`, weil ein Artikelname
+ * dort umbrechen DARF. Hier nicht: was nicht passt, wird gekappt, und was
+ * zuerst gekappt wird, steht hinten. */
 .budget-entry__meta {
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* DAS KONTO IST EINE FRAGE DER BREITE, NICHT DES GERÄTS - deshalb der
+ * Container (`budget-page` an #budget-body) und nicht der Viewport.
+ *
+ * GEMESSEN bei 390px, de, Demo-Haushalt: der Textspalte bleiben 164px.
+ * „16.08. · Einkäufe und Kleidung" belegt davon schon mehr, als da ist; mit
+ * „ · Gemeinsames Girokonto" dahinter wird die KATEGORIE zur gekappten Angabe,
+ * und die ist die Achse, nach der das Balkendiagramm über der Liste den Monat
+ * aufteilt. Ab 480px Containerbreite stehen beide.
+ *
+ * Wer nach Konto sucht statt danach zu blicken, hat den Weg unabhängig davon:
+ * der Konto-Filter im Listenkopf setzt die ganze Liste auf ein Konto. */
+.budget-entry__account {
+  display: none;
+}
+
+@container budget-page (min-width: 480px) {
+  .budget-entry__account {
+    display: inline-flex;
+  }
 }
 
 .budget-entry__amount {
