@@ -1164,6 +1164,22 @@
   height: 20px;
 }
 
+/* EINE Metazeile, und sie bricht nicht um.
+ *
+ * Sie trug fünf Elemente - Uhrzeit, Ort, Kalendername, Sichtbarkeit,
+ * Personen - und auf dem Telefon ausdrücklich `flex-wrap: wrap` (die Regel
+ * stand in der 767er-Klasse weiter unten). Gemessen bei 390x844: 2 von 3
+ * Zeilen zweizeilig, Zeilenhöhen zwischen 60,7 und 85,7px.
+ *
+ * Der KALENDERNAME ist raus, und zwar nicht aus Platznot: die Farbspur an der
+ * linken Zeilenkante sagt dasselbe, und ein Termin hat im Kalender genau eine
+ * Kalenderzugehörigkeit. Dieselbe Frage zweimal zu beantworten war schon in
+ * der Aufgabenzeile der Grund, die Kategorie aus der Zeile zu nehmen. Als Wort
+ * steht er weiter in der Detailfläche (`calendarChipNode`).
+ *
+ * Was bleibt, hat eine Rangfolge: die Uhrzeit schrumpft nie, die Personen auch
+ * nicht (drei 20px-Avatare, feste Breite), der ORT gibt nach. Er ist die
+ * einzige Angabe der Zeile, von der ein Anfang schon nützt. */
 .agenda-event__meta {
   font-size: var(--text-sm);
   color: var(--color-text-secondary);
@@ -1171,6 +1187,25 @@
   align-items: center;
   gap: var(--space-2);
   margin-top: var(--space-0h);
+  flex-wrap: nowrap;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.agenda-event__meta > .calendar-meta-item--time,
+.agenda-event__meta > .agenda-event__assigned {
+  flex-shrink: 0;
+}
+
+.agenda-event__meta > .calendar-meta-item--place {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.agenda-event__meta > .calendar-meta-item--place > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .calendar-meta-item {
@@ -1207,8 +1242,10 @@
     white-space: normal;
   }
 
+  /* Hier stand `flex-wrap: wrap` - die Erlaubnis, aus der die zweizeilige
+   * Metazeile wurde. Der Abstand bleibt schmaler als auf dem Desktop, das
+   * Umbrechen nicht (Begründung an der Basisregel oben). */
   .agenda-event__meta {
-    flex-wrap: wrap;
     gap: var(--space-1) var(--space-2);
   }
 }

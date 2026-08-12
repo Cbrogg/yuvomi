@@ -2248,8 +2248,6 @@ function renderAgendaEvent(ev, dayStr) {
   }
 
   const displayBg     = resolveEventBackground(ev);
-  const displayColor  = resolveEventColor(ev);
-  const calLabelColor = ev.cal_color || ev.color || displayColor;
   const assignedUsers = ev.assigned_users ?? [];
   return `
     <div class="agenda-event" data-id="${ev.id}" role="button" tabindex="0"
@@ -2258,9 +2256,8 @@ function renderAgendaEvent(ev, dayStr) {
       <div class="agenda-event__body">
         <div class="agenda-event__title">${eventIconHtml(ev.icon)}<span>${esc(ev.title)}</span>${(ev.recurrence_rule || ev.is_recurring_instance) ? calendarRepeatIconHtml() : ''}</div>
         <div class="agenda-event__meta">
-          <span class="calendar-meta-item">${calendarMetaIconHtml('clock')}<span>${esc(timeStr)}</span></span>
-          ${ev.location ? `<span class="calendar-meta-item">${calendarMetaIconHtml('map-pin')}<span>${esc(fmtLocation(ev.location))}</span></span>` : ''}
-          ${ev.cal_name ? `<span class="event-cal-label" style="--cal-color:${esc(calLabelColor)}">${esc(ev.cal_name)}</span>` : ''}
+          <span class="calendar-meta-item calendar-meta-item--time">${calendarMetaIconHtml('clock')}<span>${esc(timeStr)}</span></span>
+          ${ev.location ? `<span class="calendar-meta-item calendar-meta-item--place">${calendarMetaIconHtml('map-pin')}<span>${esc(fmtLocation(ev.location))}</span></span>` : ''}
           ${eventVisibilityMeta(ev.visibility)}
           ${assignedUsers.length ? `<span class="agenda-event__assigned">${renderAvatarStack(assignedUsers, { size: 20, maxVisible: 3 })}</span>` : ''}
         </div>
@@ -2312,7 +2309,11 @@ function attachmentNode(ev) {
   return link;
 }
 
-/** Kalendername als farbiger Chip, wie in der Agenda-Ansicht. */
+/* Kalendername als farbiger Chip - in der DETAILFLÄCHE, seit die Agendazeile
+ * ihn abgegeben hat: dort sagte er dasselbe wie die Farbspur an ihrer linken
+ * Kante, und er tat es als drittes Element einer Metazeile, die deswegen
+ * umbrach. Hier ist er die einzige Stelle, an der der Kalendername ausdrücklich
+ * steht. */
 function calendarChipNode(ev) {
   if (!ev.cal_name) return null;
   const chip = document.createElement('span');
