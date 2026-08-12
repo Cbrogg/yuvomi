@@ -355,7 +355,9 @@ test('inventory warranty reminders carry item name and warranty end as body', as
   // Regression: ohne den inventory_item-Zweig im entity_title-CASE kam hier der
   // Fallback-Body 'Reminder' an, also eine Notification ohne jede Sachinfo.
   assert.equal(payloads[0].body, 'Waschmaschine - 2026-07-22');
-  assert.equal(payloads[0].title, 'Yuvomi');
+  // Title-Herkunfts-Regel (v2.6.0): der Titel nennt das Modul, nicht mehr
+  // pauschal den App-Namen (vgl. task/event/subscription oben).
+  assert.equal(payloads[0].title, 'Inventory');
 });
 
 test('inventory warranty reminders degrade to the bare item name without warranty data', async () => {
@@ -399,7 +401,9 @@ test('inventory tracked-date reminders carry item name, label and date as body',
   // Regression: ohne den inventory_tracked_date-Zweig im entity_title-CASE kaeme
   // hier der Fallback-Body 'Reminder' an, also eine Notification ohne jede Sachinfo.
   assert.equal(payloads[0].body, 'Auto · TÜV - 2027-03-01');
-  assert.equal(payloads[0].title, 'Yuvomi');
+  // Title-Herkunfts-Regel (v2.6.0): der Titel nennt das Modul, nicht mehr
+  // pauschal den App-Namen (vgl. task/event/subscription oben).
+  assert.equal(payloads[0].title, 'Inventory');
 });
 
 test('inventory tracked-date reminders degrade to the bare title without a date', async () => {
