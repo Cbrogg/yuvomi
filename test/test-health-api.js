@@ -274,6 +274,83 @@ test('Logs: Bob kann Alices Dosis nicht take → 404', async () => {
   assert.equal(res.status, 404);
 });
 
+// --------------------------------------------------------
+// Korrigieren und Zurücknehmen (#701)
+//
+// Vorher gab es nur take/skip, also zwei Einbahnstraßen: ein Fehlgriff blieb
+// stehen, und zwar nicht nur in der App - die falsche Uhrzeit steht genauso im
+// Export, den jemand einer Ärztin hinlegt.
+// --------------------------------------------------------
+
+test('Logs: PATCH korrigiert die Einnahmezeit', async () => {
+  asA();
+  await call('POST', `/logs/${logId}/take`, { taken_at: '2026-06-04T08:05' });
+  const res = await call('PATCH', `/logs/${logId}`, { taken_at: '2026-06-04T07:40' });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.data.status, 'taken', 'Ohne status-Feld bleibt der Stand, was er war');
+  assert.equal(res.body.data.taken_at, '2026-06-04T07:40');
+});
+
+test('Logs: PATCH auf pending nimmt das Abhaken zurück und räumt die Uhrzeit ab', async () => {
+  asA();
+  const res = await call('PATCH', `/logs/${logId}`, { status: 'pending' });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.data.status, 'pending');
+  assert.equal(res.body.data.taken_at, null,
+    'Ein „steht aus" mit Einnahmezeit wäre ein Eintrag, der sich selbst widerspricht');
+});
+
+test('Logs: PATCH auf taken ohne Uhrzeit setzt eine, statt eine leere Angabe zu speichern', async () => {
+  asA();
+  const res = await call('PATCH', `/logs/${logId}`, { status: 'taken' });
+  assert.equal(res.status, 200);
+  assert.ok(res.body.data.taken_at, 'genommen ohne Zeitpunkt ist keine Aufzeichnung');
+});
+
+test('Logs: PATCH mit unbekanntem Status → 400', async () => {
+  asA();
+  const res = await call('PATCH', `/logs/${logId}`, { status: 'vielleicht' });
+  assert.equal(res.status, 400);
+});
+
+test('Logs: Bob kann Alices Dosis weder korrigieren noch löschen → 404', async () => {
+  asB();
+  assert.equal((await call('PATCH', `/logs/${logId}`, { status: 'pending' })).status, 404);
+  assert.equal((await call('DELETE', `/logs/${logId}`)).status, 404);
+});
+
+test('Logs: ein Eintrag ohne Zeitplan lässt sich löschen', async () => {
+  asA();
+  const created = await call('POST', `/medications/${medId}/logs`, {
+    status: 'taken', taken_at: '2026-06-05T14:00',
+  });
+  const adHocId = created.body.data.id;
+  const res = await call('DELETE', `/logs/${adHocId}`);
+  assert.equal(res.status, 200);
+  assert.equal(db.prepare('SELECT COUNT(*) AS c FROM medication_logs WHERE id = ?').get(adHocId).c, 0);
+});
+
+test('Logs: ein geplanter Eintrag lässt sich nicht löschen, nur zurücknehmen', async () => {
+  // Der Scheduler legt ihn beim nächsten Lauf wieder an, weil die Dosis
+  // weiterhin für diesen Zeitpunkt geplant ist. Das Löschen sähe aus wie ein
+  // Erfolg und wäre eine Rückkehr auf Raten.
+  asA();
+  const sched = await call('POST', `/medications/${medId}/schedules`, { time_of_day: '08:00' });
+  const created = await call('POST', `/medications/${medId}/logs`, {
+    schedule_id: sched.body.data.id, scheduled_at: '2026-06-06T08:00', status: 'taken',
+    taken_at: '2026-06-06T08:03',
+  });
+  const plannedId = created.body.data.id;
+
+  const res = await call('DELETE', `/logs/${plannedId}`);
+  assert.equal(res.status, 409);
+  assert.equal(db.prepare('SELECT COUNT(*) AS c FROM medication_logs WHERE id = ?').get(plannedId).c, 1);
+
+  const undone = await call('PATCH', `/logs/${plannedId}`, { status: 'pending' });
+  assert.equal(undone.status, 200);
+  assert.equal(undone.body.data.status, 'pending');
+});
+
 test('Medications: DELETE kaskadiert Logs (kein Fremdzugriff mehr)', async () => {
   asA();
   const del = await call('DELETE', `/medications/${medId}`);

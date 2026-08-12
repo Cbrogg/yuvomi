@@ -397,7 +397,13 @@
         "detailFinish": "Selesaikan",
         "detailReopen": "Buka kembali",
         "subtasksLabel": "Subtugas",
-        "swipeView": "Lihat"
+        "swipeView": "Lihat",
+        "descriptionMarkdownHint": "Markdown didukung.",
+        "syncTargetLabel": "Target sinkronisasi",
+        "syncTargetLocal": "Simpan hanya secara lokal",
+        "syncTargetHint": "Pilih daftar pengingat untuk menulis tugas ini.",
+        "syncTargetMirrored": "Tugas ini sudah disinkronkan dengan daftar pengingat. Daftarnya tidak dapat diubah setelahnya.",
+        "syncTargetUnavailable": "Daftar yang dipilih sebelumnya (tidak lagi tersedia)"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} hidangan",
@@ -2225,7 +2231,16 @@
             "revokeConfirmDetail": "Tautan yang sudah Anda kirim atau salin langsung berhenti berfungsi. Orang yang diundang tidak dapat lagi membuat akun dengannya; Anda harus mengundangnya lagi."
         },
         "healthCaregiversLabel": "Boleh mencatat data kesehatan",
-        "healthCaregiversHint": "Orang-orang ini boleh mencatat tanda vital, obat, hasil lab, dan aktivitas untuk anggota ini, dan sekaligus melihat catatan pribadinya. Buku harian siklus tetap dikecualikan."
+        "healthCaregiversHint": "Orang-orang ini boleh mencatat tanda vital, obat, hasil lab, dan aktivitas untuk anggota ini, dan sekaligus melihat catatan pribadinya. Buku harian siklus tetap dikecualikan.",
+        "pageTaskDefaults": "Bawaan tugas",
+        "pageTaskDefaultsDescription": "Tentukan daftar pengingat bawaan untuk tugas barumu sendiri.",
+        "tasksDefaultsTitle": "Bawaan untuk tugas baru",
+        "tasksDefaultsDescription": "Pengaturan yang otomatis diterapkan pada tugas baru.",
+        "tasksDefaultTargetLabel": "Daftar pengingat bawaan",
+        "tasksDefaultTargetHint": "Tugas baru ditetapkan ke daftar ini. Kamu tetap bisa memilih target lain setiap kali membuatnya.",
+        "tasksDefaultTargetUnavailable": "Daftar yang dipilih sebelumnya (tidak lagi tersedia)",
+        "tasksDefaultTargetEmpty": "Belum ada daftar pengingat yang diaktifkan untuk tugas.",
+        "tasksDefaultsSaved": "Bawaan disimpan"
     },
     "login": {
         "tagline": "Selamat datang kembali di perencana keluarga Anda.",
@@ -3396,7 +3411,22 @@
                 "private": "Pribadi",
                 "family": "Keluarga"
             },
-            "allTitle": "Semua obat"
+            "allTitle": "Semua obat",
+            "log": {
+                "correct": "Perbaiki entri: {{medication}}, {{time}}",
+                "editTitle": "Perbaiki entri",
+                "statusLabel": "Status",
+                "statusPending": "Menunggu",
+                "dateLabel": "Tanggal",
+                "timeLabel": "Waktu",
+                "scheduledHint": "Dosis terjadwal dapat dibatalkan, tetapi tidak dapat dihapus.",
+                "adhocHint": "Entri ini bukan berasal dari jadwal dan dapat dihapus.",
+                "saved": "Entri disimpan",
+                "saveError": "Entri tidak dapat disimpan.",
+                "deleteConfirm": "Hapus entri ini?",
+                "deleted": "Entri dihapus",
+                "deleteConfirmDetail": "Entri juga hilang dari ekspor. Tindakan ini tidak dapat dibatalkan."
+            }
         },
         "labs": {
             "title": "Hasil lab",

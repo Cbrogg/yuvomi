@@ -385,7 +385,13 @@
         "detailFinish": "Tamamla",
         "detailReopen": "Yeniden aç",
         "subtasksLabel": "Alt görevler",
-        "swipeView": "Görüntüle"
+        "swipeView": "Görüntüle",
+        "descriptionMarkdownHint": "Markdown desteklenir.",
+        "syncTargetLabel": "Eşitleme hedefi",
+        "syncTargetLocal": "Yalnızca yerel olarak kaydet",
+        "syncTargetHint": "Bu görevin yazılacağı bir anımsatıcı listesi seç.",
+        "syncTargetMirrored": "Bu görev zaten bir anımsatıcı listesiyle eşitleniyor. Liste sonradan değiştirilemez.",
+        "syncTargetUnavailable": "Daha önce seçilen liste (artık kullanılamıyor)"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} öğünden",
@@ -2213,7 +2219,16 @@
             "revokeConfirmDetail": "Daha önce gönderdiğin ya da kopyaladığın bağlantı hemen çalışmaz olur. Davet edilen kişi onunla artık hesap oluşturamaz; yeniden davet etmen gerekir."
         },
         "healthCaregiversLabel": "Sağlık verisi girebilir",
-        "healthCaregiversHint": "Bu kişiler bu üye için yaşamsal değerler, ilaçlar, laboratuvar sonuçları ve aktiviteler girebilir ve bunu yaparken özel kayıtlarını da görür. Döngü günlüğü hariç kalır."
+        "healthCaregiversHint": "Bu kişiler bu üye için yaşamsal değerler, ilaçlar, laboratuvar sonuçları ve aktiviteler girebilir ve bunu yaparken özel kayıtlarını da görür. Döngü günlüğü hariç kalır.",
+        "pageTaskDefaults": "Görev varsayılanları",
+        "pageTaskDefaultsDescription": "Kendi yeni görevlerin için varsayılan anımsatıcı listesini belirle.",
+        "tasksDefaultsTitle": "Yeni görevler için varsayılanlar",
+        "tasksDefaultsDescription": "Yeni görevlere otomatik olarak uygulanan ayarlar.",
+        "tasksDefaultTargetLabel": "Varsayılan anımsatıcı listesi",
+        "tasksDefaultTargetHint": "Yeni görevler bu listeye atanır. Oluştururken her seferinde başka bir hedef seçebilirsin.",
+        "tasksDefaultTargetUnavailable": "Daha önce seçilen liste (artık kullanılamıyor)",
+        "tasksDefaultTargetEmpty": "Görevler için henüz bir anımsatıcı listesi etkinleştirilmedi.",
+        "tasksDefaultsSaved": "Varsayılanlar kaydedildi"
     },
     "login": {
         "tagline": "Aile planlayıcına tekrar hoş geldin.",
@@ -3396,7 +3411,22 @@
                 "private": "Özel",
                 "family": "Aile"
             },
-            "allTitle": "Tüm ilaçlar"
+            "allTitle": "Tüm ilaçlar",
+            "log": {
+                "correct": "Kaydı düzelt: {{medication}}, {{time}}",
+                "editTitle": "Kaydı düzelt",
+                "statusLabel": "Durum",
+                "statusPending": "Bekliyor",
+                "dateLabel": "Tarih",
+                "timeLabel": "Saat",
+                "scheduledHint": "Planlanan dozlar geri alınabilir, ancak silinemez.",
+                "adhocHint": "Bu kayıt bir plandan gelmiyor ve silinebilir.",
+                "saved": "Kayıt kaydedildi",
+                "saveError": "Kayıt kaydedilemedi.",
+                "deleteConfirm": "Bu kayıt silinsin mi?",
+                "deleted": "Kayıt silindi",
+                "deleteConfirmDetail": "Kayıt dışa aktarmadan da kaybolur. Bu işlem geri alınamaz."
+            }
         },
         "labs": {
             "title": "Laboratuvar",

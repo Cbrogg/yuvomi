@@ -226,6 +226,7 @@ const PAGE_MODULES = [
   '/settings/pages/personal-appearance.js',
   '/settings/pages/personal-device.js',
   '/settings/pages/personal-calendar.js',
+  '/settings/pages/personal-tasks.js',
   '/settings/pages/modules-navigation.js',
   '/settings/pages/modules-kitchen.js',
   '/settings/pages/modules-calendar.js',

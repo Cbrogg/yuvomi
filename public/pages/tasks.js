@@ -11,7 +11,7 @@ import { openDetailView, closeDetailView, visibilityRow, assignedRow } from '/co
 import { stagger, vibrate, scheduleUndoableDelete } from '/utils/ux.js';
 import { wireSwipeRows, maybeShowSwipeHint } from '/utils/swipe-row.js';
 import { t, getLocale, formatDate, formatTime, formatDateInput, parseDateInput, isDateInputValid, formatTimeInput, parseTimeInput } from '/i18n.js';
-import { esc } from '/utils/html.js';
+import { esc, renderMarkdownLight } from '/utils/html.js';
 import { refresh as refreshReminders } from '/reminders.js';
 import { renderUserMultiSelect, getSelectedUserIds, bindUserMultiSelect, renderAvatarStack } from '/components/user-multi-select.js';
 import { resolveReminderPreset, parseRemindAtAsUtc } from '/utils/reminder-offset.js';
@@ -231,6 +231,106 @@ function renderSwipeRow(task, innerHtml) {
       </div>
       ${innerHtml}
     </div>`;
+}
+
+// --------------------------------------------------------
+// Sync-Ziel einer neuen Aufgabe (#695)
+// --------------------------------------------------------
+
+/**
+ * Das Ziel-Feld des Aufgaben-Dialogs.
+ *
+ * Es fehlt in zwei Faellen, und beide sind Aussagen ueber die Aufgabe, nicht
+ * ueber die Oberflaeche:
+ *
+ * - Unteraufgaben tragen kein eigenes Ziel. Sie gehoeren zu ihrer Elternaufgabe,
+ *   und als eigenstaendiges VTODO stuenden sie auf dem Server gleichrangig
+ *   daneben.
+ * - Eine bereits hochgeladene Aufgabe kann ihre Liste nicht mehr wechseln: einen
+ *   Umzug zwischen Listen gibt es bewusst nicht. Statt eines toten Dropdowns
+ *   steht dort ein Satz, der sagt, dass sie abgeglichen wird - sonst sieht die
+ *   Maske aus, als haette man die Wahl vergessen.
+ */
+function syncTargetFieldHtml(task) {
+  if (task?.parent_task_id) return '';
+
+  if (task?.external_source === 'caldav') {
+    return `
+      <div class="form-group">
+        <span class="label">${t('tasks.syncTargetLabel')}</span>
+        <p class="form-hint">${t('tasks.syncTargetMirrored')}</p>
+      </div>
+`;
+  }
+
+  return `
+      <div class="form-group">
+        <label class="label" for="task-sync-target">${t('tasks.syncTargetLabel')}</label>
+        <select class="input" id="task-sync-target" name="sync_target">
+          <option value="">${t('tasks.syncTargetLocal')}</option>
+        </select>
+        <small class="form-hint">${t('tasks.syncTargetHint')}</small>
+      </div>
+`;
+}
+
+/**
+ * Fuellt das Ziel-Feld aus /tasks/sync-targets.
+ *
+ * Faellt der Aufruf aus, bleibt die einzige Option "nur lokal" stehen - das ist
+ * derselbe Zustand wie ohne eingerichtete Erinnerungsliste und verliert nichts:
+ * ein nicht gesetztes Ziel laesst die Aufgabe lokal, so wie bisher jede.
+ *
+ * Ein gespeichertes, aber nicht mehr angebotenes Ziel wird nachgetragen, damit
+ * die Maske nicht "nur lokal" behauptet, waehrend die Aufgabe auf eine Liste
+ * wartet. Der persoenliche Standard dagegen wird NICHT nachgetragen: er soll
+ * eine neue Aufgabe nicht auf eine Liste richten, die es nicht mehr gibt.
+ */
+async function wireSyncTarget(panel, task) {
+  const select = panel.querySelector('#task-sync-target');
+  if (!select) return;
+
+  let lists = [];
+  try {
+    const res = await api.get('/tasks/sync-targets');
+    lists = res.data?.caldav ?? [];
+  } catch (err) {
+    console.warn('[Tasks] Sync-Ziele nicht ladbar:', err.message);
+  }
+
+  const current = task?.target_caldav_account_id && task?.target_caldav_list_url
+    ? `caldav:${task.target_caldav_account_id}|${task.target_caldav_list_url}`
+    : '';
+
+  const byAccount = new Map();
+  for (const list of lists) {
+    if (!byAccount.has(list.accountName)) byAccount.set(list.accountName, []);
+    byAccount.get(list.accountName).push(list);
+  }
+
+  for (const [accountName, group] of byAccount) {
+    const optgroup = document.createElement('optgroup');
+    optgroup.label = accountName;
+    for (const list of group) {
+      const option = document.createElement('option');
+      option.value = `caldav:${list.accountId}|${list.listUrl}`;
+      option.textContent = list.listName || list.listUrl;
+      optgroup.appendChild(option);
+    }
+    select.appendChild(optgroup);
+  }
+
+  if (current && !Array.from(select.options).some((o) => o.value === current)) {
+    const option = document.createElement('option');
+    option.value = current;
+    option.textContent = t('tasks.syncTargetUnavailable');
+    select.appendChild(option);
+  }
+
+  const wanted = current || (task ? '' : state.defaultSyncTarget);
+  if (wanted && Array.from(select.options).some((o) => o.value === wanted)) {
+    select.value = wanted;
+  }
 }
 
 function renderTaskCard(task, opts = {}) {
@@ -677,14 +777,18 @@ function renderModalContent({ task = null, users = [], reminder = null } = {}) {
       </div>
 
       <!-- Notiz steht beim Titel, nicht hinter dem Aufklapper: sie ist sein
-           Gegenstueck, und eine Zusammenfassung kann Freitext nicht tragen. -->
+           Gegenstueck, und eine Zusammenfassung kann Freitext nicht tragen.
+           Genau deshalb sind zwei Zeilen zu wenig gewesen (#731): das Feld war
+           auf die Groesse einer Zusammenfassung gebaut, obwohl der Kommentar
+           darueber das Gegenteil begruendet. -->
       <div class="form-group">
         <label class="label" for="task-description">${t('tasks.descriptionLabel')}</label>
         <textarea class="input" id="task-description" name="description"
-                  rows="2" placeholder="${t('tasks.descriptionPlaceholder')}"
+                  rows="6" placeholder="${t('tasks.descriptionPlaceholder')}"
                  >${esc(task?.description)}</textarea>
+        <small class="form-hint">${t('tasks.descriptionMarkdownHint')}</small>
       </div>
-
+${syncTargetFieldHtml(task)}
       <div class="modal-grid modal-grid--2">
         <div class="form-group">
           <label class="label" for="task-due-date">${t('tasks.dueDateLabel')}</label>
@@ -798,6 +902,9 @@ let state = {
   viewMode:        'list',       // 'list' | 'kanban' (resolved at render time)
   showFuture:      false,
   subtasksExpandedByDefault: false,
+  // Persönliche Standard-Erinnerungsliste für neue Aufgaben (#695), leer = nur
+  // lokal. Wird beim Öffnen des Dialogs als Vorauswahl gesetzt.
+  defaultSyncTarget: '',
   expandedTasks:   new Set(),
   dragTaskId:      null,
   filterPanelOpen: false,
@@ -1087,6 +1194,10 @@ function wireTaskForm(panel, { task = null, container }) {
   // Verknüpfte Dokumente laden + Add/Remove binden (#503)
   wireDocumentSection(panel, task);
 
+  // Sync-Ziel nachladen (#695). Ohne await: die Liste kommt aus dem Netz, und
+  // bis sie da ist, steht "nur lokal" - das ist der richtige Zwischenzustand.
+  wireSyncTarget(panel, task);
+
   // Blur-Validierung für required-Felder aktivieren
   wireBlurValidation(panel);
 
@@ -1256,8 +1367,29 @@ function renderTaskDetail(task, reminders = [], container = null) {
     { icon: 'paperclip', label: t('tasks.documentsLabel'), node: documentListNode(task.documents) },
     { icon: 'bell', label: t('reminders.sectionTitle'), value: taskReminderSummary(reminders) },
     visibilityRow(task.visibility),
-    { icon: 'align-left', label: t('tasks.descriptionLabel'), value: task.description ?? '', multiline: true },
+    { icon: 'align-left', label: t('tasks.descriptionLabel'), node: descriptionNode(task.description), multiline: true },
   ];
+}
+
+/**
+ * Die Notiz als gerendertes Markdown (#731).
+ *
+ * `renderMarkdownLight` liegt seit Langem in utils/html.js und wird von den
+ * Notizen und vom Dashboard benutzt - die Aufgaben waren die einzige Stelle, die
+ * denselben Freitext als rohen String ausgab. Es ist also kein neuer Baustein,
+ * sondern ein nicht angeschlossener; entsprechend teilen sich beide auch die
+ * `note-md-*`-Klassen, damit eine Liste hier nicht anders aussieht als dort.
+ *
+ * Der Renderer maskiert selbst, deshalb ist insertAdjacentHTML hier zulaessig -
+ * dieselbe Zusicherung, auf der notes.js und dashboard.js bereits stehen.
+ */
+function descriptionNode(description) {
+  const text = (description ?? '').trim();
+  if (!text) return null;
+  const box = document.createElement('div');
+  box.className = 'task-detail__note';
+  box.insertAdjacentHTML('beforeend', renderMarkdownLight(text));
+  return box;
 }
 
 /**
@@ -1549,6 +1681,11 @@ async function handleFormSubmit(e, container) {
     recurrence_from_completion: rrule.recurrence_from_completion ? 1 : 0,
     points:          Math.max(0, Math.trunc(Number(form.points?.value)) || 0),
   };
+  // Das Feld fehlt bei Unteraufgaben und bei bereits gespiegelten Aufgaben - in
+  // beiden Fällen soll gar kein Ziel mitgeschickt werden, sonst nähme der Server
+  // das Fehlen als "auf lokal zurücksetzen" (#695).
+  const syncTargetField = form.querySelector('#task-sync-target');
+  if (syncTargetField) body.sync_target = syncTargetField.value;
   const dueTimeRaw = form.due_time?.value || '';
   const dueTime = parseTimeInput(dueTimeRaw);
   const resetSubmit = (msg) => {
@@ -3004,6 +3141,7 @@ export async function render(container, { user }) {
     state.allTags = metaData.tags ?? [];
     state.defaultPoints = Number(metaData.default_points) || 0;
     state.subtasksExpandedByDefault = preferencesData.data?.tasks_subtasks_expanded === true;
+    state.defaultSyncTarget = preferencesData.data?.tasks_default_target || '';
   } catch (err) {
     console.error('[Tasks] Ladefehler:', err.message);
     window.yuvomi.showToast(t('tasks.loadError'), 'danger');
@@ -3013,6 +3151,7 @@ export async function render(container, { user }) {
     state.allTags = [];
     state.defaultPoints = 0;
     state.subtasksExpandedByDefault = false;
+    state.defaultSyncTarget = '';
   }
 
   // UI verdrahten

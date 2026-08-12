@@ -15,6 +15,7 @@ import {
   flushOutbound, markTodoOutbound, queueTodoDeletion,
 } from '../services/caldav-todo-outbound.js';
 import { uniqueKey } from '../utils/category-slug.js';
+import { parseSyncTargetValue } from '../../public/utils/sync-target.js';
 import { serverTimeZone, utcToWall } from '../utils/timezone.js';
 import {
   allTags, applyTagChanges, loadTags, loadTagsFor, normalizeTags,
@@ -32,6 +33,39 @@ const log = createLogger('Tasks');
  */
 function pushToCalDAV(what) {
   flushOutbound().catch((err) => log.warn(`${what} vorgemerkt, Sofortversuch fehlgeschlagen:`, err.message));
+}
+
+/**
+ * Prüft ein gewünschtes Sync-Ziel gegen die tatsächlich freigegebenen Listen (#695).
+ *
+ * Geprüft wird gegen die Auswahltabelle und nicht nur gegen das Format: sonst
+ * ließe sich eine Aufgabe auf eine abgewählte oder gar dem Einkauf zugeordnete
+ * Liste richten, und sie bliebe für immer im Wartezustand, ohne dass irgendwo
+ * stünde warum.
+ *
+ * @returns {{ok: true, target: {accountId: number, listUrl: string}|null}
+ *          |{ok: false, error: string}} target === null heißt "nur lokal".
+ */
+function resolveTaskSyncTarget(value) {
+  const parsed = parseSyncTargetValue(value);
+  if (parsed === null) {
+    return { ok: false, error: 'sync_target: erwartet "caldav:<kontoId>|<url>" oder einen leeren Wert.' };
+  }
+  if (parsed.kind === 'local') return { ok: true, target: null };
+  if (parsed.kind !== 'caldav') {
+    // Aufgaben kennen kein Google-Ziel: der VTODO-Abgleich läuft ausschließlich
+    // über CalDAV, ein "google:"-Wert wäre also eine stille Nullaktion.
+    return { ok: false, error: 'sync_target: Aufgaben lassen sich nur mit einer CalDAV-Erinnerungsliste abgleichen.' };
+  }
+
+  const allowed = db.get().prepare(`
+    SELECT 1 FROM caldav_reminder_selection
+     WHERE account_id = ? AND list_url = ? AND enabled = 1 AND target_module = 'tasks'
+  `).get(parsed.accountId, parsed.calendarUrl);
+  if (!allowed) {
+    return { ok: false, error: 'sync_target: Diese Erinnerungsliste ist für Aufgaben nicht freigegeben.' };
+  }
+  return { ok: true, target: { accountId: parsed.accountId, listUrl: parsed.calendarUrl } };
 }
 
 const router = express.Router();
@@ -280,6 +314,37 @@ router.get('/categories', (_req, res) => {
   } catch (err) {
     log.error('GET /categories error:', err);
     res.status(500).json({ error: 'Internal server error.', code: 500 });
+  }
+});
+
+// --------------------------------------------------------
+// GET /api/v1/tasks/sync-targets (#695)
+// → { data: { caldav: [{ accountId, accountName, listUrl, listName }] } }
+//
+// Die Auswahlliste des "Sync-Ziel"-Feldes im Aufgaben-Dialog, nach dem Vorbild
+// von /calendar/sync-targets (#618): für ALLE angemeldeten Nutzer, und nur das,
+// was das Dropdown braucht. Keine Server-URLs, keine Zugangsdaten - die
+// Kontenverwaltung bleibt admin-only.
+//
+// Angeboten wird ausschließlich, was der Haushalt für Aufgaben freigegeben hat.
+// Eine Liste, die auf den Einkauf zeigt, gehört nicht in dieses Feld: eine
+// Aufgabe dorthin zu schieben hieße, sie als Einkaufsposten zurückzubekommen.
+// Muss wie /categories vor den /:id-Routen stehen, sonst matcht „sync-targets" als :id.
+// --------------------------------------------------------
+router.get('/sync-targets', (_req, res) => {
+  try {
+    const caldav = db.get().prepare(`
+      SELECT s.account_id AS accountId, a.name AS accountName,
+             s.list_url   AS listUrl,   s.list_name AS listName
+        FROM caldav_reminder_selection s
+        JOIN caldav_accounts a ON a.id = s.account_id
+       WHERE s.enabled = 1 AND s.target_module = 'tasks'
+       ORDER BY a.name, s.list_name
+    `).all();
+    res.json({ data: { caldav } });
+  } catch (err) {
+    log.error('GET /sync-targets error:', err);
+    res.status(500).json({ error: 'Failed to list sync targets.', code: 500 });
   }
 });
 
@@ -688,6 +753,18 @@ router.post('/', (req, res) => {
     const userIds  = parseAssignedTo(req.body.assigned_to);
     const firstUid = userIds[0] ?? null;
 
+    // Sync-Ziel (#695). Unteraufgaben bekommen keines: sie gehören zu ihrer
+    // Elternaufgabe, und als eigenständiges VTODO stünden sie gleichrangig
+    // daneben. Ein mitgeschicktes Ziel wird dort still verworfen statt
+    // abgewiesen - der Dialog bietet es gar nicht erst an, und ein 400 mitten im
+    // Anlegen einer Checkliste wäre für den Aufrufer nicht nachvollziehbar.
+    let syncTarget = null;
+    if (req.body.sync_target !== undefined && !parent_task_id) {
+      const resolved = resolveTaskSyncTarget(req.body.sync_target);
+      if (!resolved.ok) return res.status(400).json({ error: resolved.error, code: 400 });
+      syncTarget = resolved.target;
+    }
+
     // Tiefe begrenzen: Subtasks dürfen keine eigenen Subtasks haben (max. 2 Ebenen)
     if (parent_task_id) {
       const parent = db.get().prepare('SELECT parent_task_id FROM tasks WHERE id = ?')
@@ -711,6 +788,11 @@ router.post('/', (req, res) => {
       );
       setAssignments(db.get(), result.lastInsertRowid, userIds);
       if (req.body.tags !== undefined) setTags(db.get(), result.lastInsertRowid, req.body.tags);
+      if (syncTarget) {
+        db.get().prepare(
+          'UPDATE tasks SET target_caldav_account_id = ?, target_caldav_list_url = ? WHERE id = ?'
+        ).run(syncTarget.accountId, syncTarget.listUrl, result.lastInsertRowid);
+      }
       return result.lastInsertRowid;
     })();
 
@@ -724,6 +806,7 @@ router.post('/', (req, res) => {
     addAssignedUsers(task);
     attachTags([task]);
     res.status(201).json({ data: task });
+    if (syncTarget) pushToCalDAV('Neue Aufgabe');
   } catch (err) {
     log.error('POST / error:', err);
     res.status(500).json({ error: 'Internal server error.', code: 500 });
@@ -780,6 +863,19 @@ router.put('/:id', (req, res) => {
     // Tags wirklich geändert haben (#586).
     const tagsBefore = loadTags(db.get(), task.id);
 
+    // Sync-Ziel nachträglich setzen oder zurücknehmen (#695). Nur solange die
+    // Aufgabe noch lokal ist: ist sie erst hochgeladen, wäre das ein Umzug
+    // zwischen Listen, und den gibt es bewusst nicht. Das Feld wird dann still
+    // ignoriert statt abgewiesen - der Dialog zeigt es in diesem Zustand als
+    // festen Wert, ein 400 träfe also niemanden, der es geändert hätte.
+    let syncTarget;
+    const targetEditable = task.external_source !== 'caldav';
+    if (req.body.sync_target !== undefined && targetEditable && !task.parent_task_id) {
+      const resolved = resolveTaskSyncTarget(req.body.sync_target);
+      if (!resolved.ok) return res.status(400).json({ error: resolved.error, code: 400 });
+      syncTarget = resolved.target;
+    }
+
     // Wie in PATCH umfasst die Transaktion auch die Serien-Bewegung: eine
     // gespeicherte Aufgabe ohne die Folgeinstanz, die zu ihr gehört, wäre
     // derselbe stille Serienabbruch, den dieser Weg gerade erst verloren hat.
@@ -800,6 +896,11 @@ router.put('/:id', (req, res) => {
              points, visibility, req.params.id);
       setAssignments(db.get(), task.id, userIds);
       if (req.body.tags !== undefined) setTags(db.get(), task.id, req.body.tags);
+      if (syncTarget !== undefined) {
+        db.get().prepare(
+          'UPDATE tasks SET target_caldav_account_id = ?, target_caldav_list_url = ? WHERE id = ?'
+        ).run(syncTarget?.accountId ?? null, syncTarget?.listUrl ?? null, task.id);
+      }
       if (archiveRequested && !task.archived_at) setArchived(task.id, true);
       syncHousekeepingPaymentStatus(db.get(), req.params.id, status);
       // Punkte erst nach setAssignments: die Zuständigen werden daraus abgeleitet.
@@ -844,7 +945,7 @@ router.put('/:id', (req, res) => {
 
     res.json({ data: updated });
 
-    if (pending || undone) pushToCalDAV('Änderung');
+    if (pending || undone || syncTarget) pushToCalDAV('Änderung');
   } catch (err) {
     log.error('PUT /:id error:', err);
     res.status(500).json({ error: 'Internal server error.', code: 500 });

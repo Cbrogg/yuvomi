@@ -461,3 +461,135 @@ test('Ablegen storniert keine Punkte-Gutschrift', async () => {
   await call('PATCH', `/${id}/archive`, { as: admin, body: { archived: true } });
   assert.equal(earned(), 7, 'Ablegen ist keine Rücknahme des Erledigens');
 });
+
+// --------------------------------------------------------
+// Sync-Ziel einer neuen Aufgabe (#695)
+// --------------------------------------------------------
+
+function seedReminderList({ module = 'tasks', enabled = 1, url = 'https://dav.example/dav/u/reminders/' } = {}) {
+  // Ein eigenes Konto je Aufruf: (caldav_url, username) ist eindeutig.
+  const user = `u-${randomUUID().slice(0, 8)}`;
+  const accountId = db.prepare(`
+    INSERT INTO caldav_accounts (name, caldav_url, username, password)
+    VALUES ('Synology', 'https://dav.example/', ?, 'p')
+  `).run(user).lastInsertRowid;
+  db.prepare(`
+    INSERT INTO caldav_reminder_selection (account_id, list_url, list_name, target_module, enabled)
+    VALUES (?, ?, 'Inbox', ?, ?)
+  `).run(accountId, url, module, enabled);
+  return { accountId, url };
+}
+
+test('GET /sync-targets liefert nur die fuer Aufgaben freigegebenen Listen', async () => {
+  const admin = { id: ALICE, role: 'admin' };
+  const tasksList = seedReminderList();
+  seedReminderList({ module: 'shopping', url: 'https://dav.example/dav/u/einkauf/' });
+  seedReminderList({ enabled: 0, url: 'https://dav.example/dav/u/aus/' });
+
+  const r = await call('GET', '/sync-targets', { as: admin });
+  assert.equal(r.status, 200);
+  const urls = r.body.data.caldav.map((entry) => entry.listUrl);
+  assert.ok(urls.includes(tasksList.url));
+  assert.ok(!urls.includes('https://dav.example/dav/u/einkauf/'),
+    'Eine Einkaufsliste als Ziel brächte die Aufgabe als Einkaufsposten zurück');
+  assert.ok(!urls.includes('https://dav.example/dav/u/aus/'));
+  // Kein Feld, das mehr verrät als das Dropdown braucht.
+  for (const entry of r.body.data.caldav) {
+    assert.deepEqual(Object.keys(entry).sort(), ['accountId', 'accountName', 'listName', 'listUrl']);
+  }
+});
+
+test('POST mit Sync-Ziel merkt die Aufgabe fuer den Upload vor', async () => {
+  const admin = { id: ALICE, role: 'admin' };
+  const { accountId, url } = seedReminderList({ url: 'https://dav.example/dav/u/ziel-ok/' });
+
+  const r = await call('POST', '/', {
+    as: admin,
+    body: { title: 'Reifen wechseln', sync_target: `caldav:${accountId}|${url}` },
+  });
+  assert.equal(r.status, 201);
+
+  const row = db.prepare('SELECT * FROM tasks WHERE id = ?').get(r.body.data.id);
+  assert.equal(row.target_caldav_account_id, accountId);
+  assert.equal(row.target_caldav_list_url, url);
+  // Sie bleibt bis zum Upload lokal - erst der Sync macht sie zum Spiegel.
+  assert.equal(row.external_source, 'local');
+});
+
+test('POST ohne Sync-Ziel laesst die Aufgabe lokal, wie jede bisher', async () => {
+  const admin = { id: ALICE, role: 'admin' };
+  const r = await call('POST', '/', { as: admin, body: { title: 'Nur hier' } });
+  const row = db.prepare('SELECT * FROM tasks WHERE id = ?').get(r.body.data.id);
+  assert.equal(row.target_caldav_account_id, null);
+  assert.equal(row.target_caldav_list_url, null);
+});
+
+test('POST mit einer nicht freigegebenen Liste → 400 statt stiller Wartestellung', async () => {
+  const admin = { id: ALICE, role: 'admin' };
+  const { accountId } = seedReminderList({ enabled: 0, url: 'https://dav.example/dav/u/abgewaehlt/' });
+
+  const r = await call('POST', '/', {
+    as: admin,
+    body: { title: 'Ins Leere', sync_target: `caldav:${accountId}|https://dav.example/dav/u/abgewaehlt/` },
+  });
+  assert.equal(r.status, 400);
+});
+
+test('POST mit einem Google-Ziel → 400: Aufgaben gleichen nur ueber CalDAV ab', async () => {
+  const admin = { id: ALICE, role: 'admin' };
+  const r = await call('POST', '/', { as: admin, body: { title: 'Falsches Ziel', sync_target: 'google:primary' } });
+  assert.equal(r.status, 400);
+});
+
+test('POST mit kaputtem Ziel-Format → 400', async () => {
+  const admin = { id: ALICE, role: 'admin' };
+  const r = await call('POST', '/', { as: admin, body: { title: 'Kaputt', sync_target: 'caldav:' } });
+  assert.equal(r.status, 400);
+});
+
+test('Eine Unteraufgabe bekommt kein eigenes Ziel, auch wenn eines mitkommt', async () => {
+  // Als eigenstaendiges VTODO stuende sie gleichrangig neben ihrer Elternaufgabe.
+  // Das Feld wird deshalb still verworfen statt mit 400 mitten im Anlegen einer
+  // Checkliste abgewiesen.
+  const admin = { id: ALICE, role: 'admin' };
+  const { accountId, url } = seedReminderList({ url: 'https://dav.example/dav/u/sub/' });
+  const parent = await call('POST', '/', { as: admin, body: { title: 'Umzug' } });
+
+  const sub = await call('POST', '/', {
+    as: admin,
+    body: { title: 'Kartons', parent_task_id: parent.body.data.id, sync_target: `caldav:${accountId}|${url}` },
+  });
+  assert.equal(sub.status, 201);
+  const row = db.prepare('SELECT * FROM tasks WHERE id = ?').get(sub.body.data.id);
+  assert.equal(row.target_caldav_account_id, null);
+});
+
+test('PUT setzt ein Ziel nach und nimmt es mit leerem Wert zurueck', async () => {
+  const admin = { id: ALICE, role: 'admin' };
+  const { accountId, url } = seedReminderList({ url: 'https://dav.example/dav/u/nachtraeglich/' });
+  const created = await call('POST', '/', { as: admin, body: { title: 'Spaeter doch' } });
+  const id = created.body.data.id;
+
+  await call('PUT', `/${id}`, { as: admin, body: { title: 'Spaeter doch', sync_target: `caldav:${accountId}|${url}` } });
+  assert.equal(db.prepare('SELECT target_caldav_list_url AS u FROM tasks WHERE id = ?').get(id).u, url);
+
+  await call('PUT', `/${id}`, { as: admin, body: { title: 'Spaeter doch', sync_target: '' } });
+  assert.equal(db.prepare('SELECT target_caldav_list_url AS u FROM tasks WHERE id = ?').get(id).u, null);
+});
+
+test('Eine bereits hochgeladene Aufgabe wechselt ihre Liste nicht', async () => {
+  // Einen Umzug zwischen Listen gibt es bewusst nicht. Das Feld wird still
+  // ignoriert, weil der Dialog es in diesem Zustand gar nicht als Auswahl zeigt.
+  const admin = { id: ALICE, role: 'admin' };
+  const { accountId, url } = seedReminderList({ url: 'https://dav.example/dav/u/schon-oben/' });
+  const created = await call('POST', '/', { as: admin, body: { title: 'Laengst oben' } });
+  const id = created.body.data.id;
+  db.prepare(`
+    UPDATE tasks SET external_source = 'caldav', external_uid = 'x@y', external_account_id = ?
+     WHERE id = ?
+  `).run(accountId, id);
+
+  const r = await call('PUT', `/${id}`, { as: admin, body: { title: 'Laengst oben', sync_target: `caldav:${accountId}|${url}` } });
+  assert.equal(r.status, 200);
+  assert.equal(db.prepare('SELECT target_caldav_list_url AS u FROM tasks WHERE id = ?').get(id).u, null);
+});

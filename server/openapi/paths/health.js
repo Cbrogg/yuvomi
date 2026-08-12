@@ -30,6 +30,23 @@ export function healthPaths() {
       get: op({ summary: 'List a medication\'s dose log', tag: 'Health', params: [idParam()], description: 'Optional `from`/`to` filters on `scheduled_at`.' }),
       post: op({ summary: 'Add a dose-log entry', tag: 'Health', params: [idParam()], stateChanging: true, requestBody: jsonBody(null) }),
     },
+    '/api/v1/health/logs/{id}': {
+      patch: op({
+        summary: 'Correct a dose-log entry',
+        tag: 'Health',
+        params: [idParam()],
+        stateChanging: true,
+        requestBody: jsonBody(null),
+        description: 'Body: { status?, taken_at?, dose_qty?, note? } (#701). `status: "pending"` undoes a take or a skip. The timestamp travels with the status rather than beside it: anything other than `taken` clears `taken_at`, because a dose that was not taken cannot carry a time it was taken at - and that entry would end up in the CSV export too. Restricted to the owner of the medication.',
+      }),
+      delete: op({
+        summary: 'Delete a dose-log entry',
+        tag: 'Health',
+        params: [idParam()],
+        stateChanging: true,
+        description: 'Only for entries without a schedule, so ad-hoc and as-needed doses (#701). A scheduled entry answers `409`: the scheduler would recreate it on its next run, so deleting it would look like a success and be a return on the instalment plan. Undo it with `PATCH { status: "pending" }` instead.',
+      }),
+    },
     '/api/v1/health/logs/{id}/take': {
       post: op({ summary: 'Mark a dose as taken', tag: 'Health', params: [idParam()], stateChanging: true, requestBody: jsonBody(null) }),
     },

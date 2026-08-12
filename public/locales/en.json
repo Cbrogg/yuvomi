@@ -385,7 +385,13 @@
         "detailFinish": "Complete",
         "detailReopen": "Reopen",
         "subtasksLabel": "Subtasks",
-        "swipeView": "View"
+        "swipeView": "View",
+        "descriptionMarkdownHint": "Markdown is supported.",
+        "syncTargetLabel": "Sync target",
+        "syncTargetLocal": "Store locally only",
+        "syncTargetHint": "Choose a reminder list to write this task to.",
+        "syncTargetMirrored": "This task already syncs with a reminder list. The list cannot be changed afterwards.",
+        "syncTargetUnavailable": "Previously selected list (no longer available)"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} meals",
@@ -2213,7 +2219,16 @@
             "revokeConfirmDetail": "A link you already sent or copied stops working immediately. The invited person can no longer create an account with it; you would have to invite them again."
         },
         "healthCaregiversLabel": "May record health data",
-        "healthCaregiversHint": "These people may record vitals, medications, lab results and activities for this member, and see their private entries while doing so. The cycle diary stays excluded."
+        "healthCaregiversHint": "These people may record vitals, medications, lab results and activities for this member, and see their private entries while doing so. The cycle diary stays excluded.",
+        "pageTaskDefaults": "Task defaults",
+        "pageTaskDefaultsDescription": "Set the default reminder list for your own new tasks.",
+        "tasksDefaultsTitle": "Defaults for new tasks",
+        "tasksDefaultsDescription": "Presets automatically applied to new tasks.",
+        "tasksDefaultTargetLabel": "Default reminder list",
+        "tasksDefaultTargetHint": "New tasks are assigned to this list. You can still pick a different target each time you create one.",
+        "tasksDefaultTargetUnavailable": "Previously selected list (no longer available)",
+        "tasksDefaultTargetEmpty": "No reminder list has been enabled for tasks yet.",
+        "tasksDefaultsSaved": "Defaults saved"
     },
     "login": {
         "tagline": "Welcome back to your family planner.",
@@ -3396,7 +3411,22 @@
                 "private": "Private",
                 "family": "Family"
             },
-            "allTitle": "All medications"
+            "allTitle": "All medications",
+            "log": {
+                "correct": "Correct entry: {{medication}}, {{time}}",
+                "editTitle": "Correct entry",
+                "statusLabel": "Status",
+                "statusPending": "Pending",
+                "dateLabel": "Date",
+                "timeLabel": "Time",
+                "scheduledHint": "Scheduled doses can be undone, but not deleted.",
+                "adhocHint": "This entry does not come from a schedule and can be deleted.",
+                "saved": "Entry saved",
+                "saveError": "Could not save the entry.",
+                "deleteConfirm": "Delete this entry?",
+                "deleted": "Entry deleted",
+                "deleteConfirmDetail": "The entry also disappears from the export. This cannot be undone."
+            }
         },
         "labs": {
             "title": "Lab values",

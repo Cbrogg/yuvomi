@@ -1473,22 +1473,50 @@ function medLogHistoryMarkup() {
   const entries = [];
   for (const m of meds.list) {
     for (const l of (meds.logsByMed[m.id] || [])) {
-      entries.push({ med: m.name, at: l.taken_at || l.scheduled_at || l.created_at || '', status: l.status });
+      entries.push({
+        id: l.id, med: m.name, medId: m.id, scheduleId: l.schedule_id ?? null,
+        at: l.taken_at || l.scheduled_at || l.created_at || '', status: l.status,
+      });
     }
   }
   if (!entries.length) return '';
   entries.sort((a, b) => String(b.at).localeCompare(String(a.at)));
+
+  // Korrigieren darf nur, wer auch sonst für diese Person schreiben darf (#701).
+  // Ein Protokoll ist eine Aufzeichnung über den eigenen Körper; mitlesen und
+  // nachträglich ändern sind zwei verschiedene Rechte.
+  const own = canEditFor(meds.personId, meds.meId);
+
   const rows = entries.slice(0, 10).map((e) => {
-    const skipped = e.status === 'skipped';
+    // Uebersprungen und ausstehend sind beide "nicht genommen" und treten
+    // gleich weit zurueck; unterscheiden tut sie das Wort daneben.
+    const muted = e.status !== 'taken';
     const d = String(e.at);
     const timeLabel = d.length >= 16
       ? `${formatDate(d.slice(0, 10))} · ${formatTime(new Date(d))}`
       : formatDate(d.slice(0, 10));
-    return `<li class="health-medlog__row${skipped ? ' is-skipped' : ''}">
-        <i data-lucide="${skipped ? 'circle-slash' : 'check'}" aria-hidden="true"></i>
+    // Drei Staende, nicht zwei: das Protokoll kannte nur "uebersprungen" und
+    // "sonst genommen" und schrieb damit "Genommen" unter jede ausstehende
+    // Dosis. Solange es keinen Weg zurueck gab, fiel das kaum auf - seit es
+    // einen gibt (#701), waere es die Zeile, die der Korrektur widerspricht.
+    const statusLabel = {
+      skipped: t('health.meds.status.skipped'),
+      pending: t('health.meds.log.statusPending'),
+    }[e.status] ?? t('health.meds.status.taken');
+    const icon = { skipped: 'circle-slash', pending: 'circle-dashed' }[e.status] ?? 'check';
+    const body = `
+        <i data-lucide="${icon}" aria-hidden="true"></i>
         <span class="health-medlog__med">${esc(e.med)}</span>
         <span class="health-medlog__time">${esc(timeLabel)}</span>
-        <span class="health-medlog__status">${esc(skipped ? t('health.meds.status.skipped') : t('health.meds.status.taken'))}</span>
+        <span class="health-medlog__status">${esc(statusLabel)}</span>`;
+    if (!own) {
+      return `<li class="health-medlog__row${muted ? ' is-muted' : ''}">${body}</li>`;
+    }
+    return `<li class="health-medlog__row${muted ? ' is-muted' : ''}">
+        <button type="button" class="health-medlog__edit" data-medlog-edit="${esc(e.id)}"
+                aria-label="${esc(t('health.meds.log.correct', { medication: e.med, time: timeLabel }))}">
+          ${body}
+        </button>
       </li>`;
   }).join('');
   return `
@@ -1496,6 +1524,125 @@ function medLogHistoryMarkup() {
       <summary>${esc(t('health.meds.logTitle'))}</summary>
       <ul class="health-medlog__list">${rows}</ul>
     </details>`;
+}
+
+/** Ein Log-Eintrag aus dem geladenen Bestand, samt Medikamentenname. */
+function findMedLog(logId) {
+  for (const m of meds.list) {
+    const hit = (meds.logsByMed[m.id] || []).find((l) => l.id === logId);
+    if (hit) return { ...hit, medName: m.name };
+  }
+  return null;
+}
+
+/**
+ * Einen Dosis-Eintrag korrigieren oder zurücknehmen (#701).
+ *
+ * Vorher gab es nur take/skip, also zwei Einbahnstraßen: ein Fehlgriff blieb
+ * für immer stehen, und zwar nicht nur in der App, sondern auch im Export.
+ *
+ * Gelöscht werden kann nur, was nicht aus einem Zeitplan stammt. Ein geplanter
+ * Eintrag wird zurückgenommen ("steht aus") statt entfernt, weil der Scheduler
+ * ihn sonst beim nächsten Lauf wieder anlegt - das Löschen sähe aus wie ein
+ * Erfolg und wäre eine Rückkehr auf Raten. Der Server weist es entsprechend ab.
+ */
+function openMedLogModal(logId) {
+  const entry = findMedLog(logId);
+  if (!entry) return;
+
+  const when = entry.taken_at || entry.scheduled_at || entry.created_at || '';
+  const dateValue = String(when).slice(0, 10);
+  const timeValue = String(when).length >= 16 ? String(when).slice(11, 16) : '';
+  const isScheduled = Boolean(entry.schedule_id);
+
+  openModal({
+    title: t('health.meds.log.editTitle'),
+    size: 'sm',
+    content: `
+      <form id="medlog-form" class="form-stack">
+        <p class="form-hint">${esc(entry.medName)}</p>
+        <div class="form-field">
+          <label class="label" for="medlog-status">${esc(t('health.meds.log.statusLabel'))}</label>
+          <select class="input" id="medlog-status">
+            <option value="taken"${entry.status === 'taken' ? ' selected' : ''}>${esc(t('health.meds.status.taken'))}</option>
+            <option value="skipped"${entry.status === 'skipped' ? ' selected' : ''}>${esc(t('health.meds.status.skipped'))}</option>
+            <option value="pending"${entry.status === 'pending' ? ' selected' : ''}>${esc(t('health.meds.log.statusPending'))}</option>
+          </select>
+        </div>
+        <div class="modal-grid modal-grid--2" id="medlog-when">
+          <div class="form-field">
+            <label class="label" for="medlog-date">${esc(t('health.meds.log.dateLabel'))}</label>
+            <yuvomi-datepicker id="medlog-date" type="date" value="${esc(dateValue)}"></yuvomi-datepicker>
+          </div>
+          <div class="form-field">
+            <label class="label" for="medlog-time">${esc(t('health.meds.log.timeLabel'))}</label>
+            <yuvomi-datepicker id="medlog-time" type="time" value="${esc(timeValue)}"></yuvomi-datepicker>
+          </div>
+        </div>
+        <p class="form-hint">${esc(isScheduled ? t('health.meds.log.scheduledHint') : t('health.meds.log.adhocHint'))}</p>
+
+        <div class="modal-actions">
+          ${isScheduled ? '' : `<button type="button" class="btn btn--danger btn--ghost" data-action="medlog-delete">${esc(t('common.delete'))}</button>`}
+          <button type="button" class="btn btn--ghost" data-action="cancel">${esc(t('common.cancel'))}</button>
+          <button type="submit" class="btn btn--primary">${esc(t('common.save'))}</button>
+        </div>
+      </form>`,
+    onSave(panel) {
+      if (window.lucide) window.lucide.createIcons({ el: panel });
+
+      const statusField = panel.querySelector('#medlog-status');
+      const whenBox = panel.querySelector('#medlog-when');
+      // Ein Zeitpunkt gehört zu "genommen". Bei den anderen beiden Ständen wäre
+      // er ein Widerspruch in derselben Zeile, deshalb tritt er dort weg.
+      //
+      // `style.display` statt des hidden-Attributs: `.modal-grid` setzt
+      // `display: grid`, und eine Klassenregel schlägt das Attribut - das Feld
+      // wäre trotz `hidden` sichtbar geblieben.
+      const syncWhen = () => { whenBox.style.display = statusField.value === 'taken' ? '' : 'none'; };
+      statusField.addEventListener('change', syncWhen);
+      syncWhen();
+
+      panel.querySelector('[data-action="cancel"]')?.addEventListener('click', () => closeModal({ force: true }));
+      panel.querySelector('[data-action="medlog-delete"]')?.addEventListener('click', () => deleteMedLog(entry));
+
+      panel.querySelector('#medlog-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const submitBtn = panel.querySelector('[type="submit"]');
+        const status = statusField.value;
+        const body = { status };
+        if (status === 'taken') {
+          const date = panel.querySelector('#medlog-date')?.value || dateValue;
+          const time = panel.querySelector('#medlog-time')?.value || '00:00';
+          if (date) body.taken_at = `${date}T${time.length === 5 ? time : '00:00'}:00`;
+        }
+        submitBtn.disabled = true;
+        try {
+          await api.patch(`/health/logs/${entry.id}`, body);
+          closeModal({ force: true });
+          window.yuvomi?.showToast(t('health.meds.log.saved'), 'success');
+          await reloadMeds();
+        } catch (err) {
+          console.error('[Health] med log save error:', err);
+          submitBtn.disabled = false;
+          window.yuvomi?.showToast(err?.data?.error || t('health.meds.log.saveError'), 'danger');
+        }
+      });
+    },
+  });
+}
+
+async function deleteMedLog(entry) {
+  if (!(await confirmOverModal(t('health.meds.log.deleteConfirm'),
+    { danger: true, confirmLabel: t('common.delete'), detail: t('health.meds.log.deleteConfirmDetail') }))) return;
+  try {
+    await api.delete(`/health/logs/${entry.id}`);
+    closeModal({ force: true });
+    window.yuvomi?.showToast(t('health.meds.log.deleted'), 'success');
+    await reloadMeds();
+  } catch (err) {
+    console.error('[Health] med log delete error:', err);
+    window.yuvomi?.showToast(err?.data?.error || t('health.meds.log.saveError'), 'danger');
+  }
 }
 
 function medListMarkup() {
@@ -1557,6 +1704,10 @@ function wireMeds() {
       const med = meds.list.find((m) => m.id === id);
       if (med) openMedModal(med);
     }));
+
+  // Eine Zeile im Einnahmeprotokoll korrigieren (#701).
+  meds.root.querySelectorAll('[data-medlog-edit]').forEach((row) =>
+    row.addEventListener('click', () => openMedLogModal(Number(row.dataset.medlogEdit))));
 
   meds.root.querySelectorAll('[data-dose-take]').forEach((btn) =>
     btn.addEventListener('click', () => handleDose(btn, 'take')));

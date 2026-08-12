@@ -49,6 +49,13 @@ export function tasksPaths() {
       put: op({ summary: 'Rename task category', tag: 'Tasks', params: [stringPathParam('key', 'Category key')], stateChanging: true, requestBody: jsonBody(null) }),
       delete: op({ summary: 'Delete task category', tag: 'Tasks', params: [stringPathParam('key', 'Category key')], stateChanging: true }),
     },
+    '/api/v1/tasks/sync-targets': {
+      get: op({
+        summary: 'List selectable CalDAV reminder lists for the task editor',
+        tag: 'Tasks',
+        description: 'Available to every authenticated user (#695). Returns `{ data: { caldav: [{ accountId, accountName, listUrl, listName }] } }`, restricted to reminder lists the household has enabled **for tasks** - a list pointing at shopping is omitted, because a task sent there would come back as a shopping item. Carries no credentials or server URLs; account management stays admin-only. The identifier for `sync_target` on POST/PUT /tasks is `caldav:<accountId>|<listUrl>`.',
+      }),
+    },
     '/api/v1/tasks/tags': {
       get: op({ summary: 'List task tags', tag: 'Tasks', description: 'Every visible tag in use with its task count. Tags are free-form and have no registry: the list follows from the tasks themselves. Mirrored from VTODO CATEGORIES on CalDAV task lists, and distinct from the single category a task carries. Tags on tasks the caller cannot see are omitted, counts included.' }),
     },

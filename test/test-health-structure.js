@@ -63,6 +63,10 @@ const EXPECTED = [
   'DELETE /schedules/:id',
   'GET /medications/:id/logs',
   'POST /medications/:id/logs',
+  // Korrigieren und Zuruecknehmen (#701): take/skip waren zwei Einbahnstrassen,
+  // und die falsche Uhrzeit stand auch im Export.
+  'PATCH /logs/:id',
+  'DELETE /logs/:id',
   'POST /logs/:id/take',
   'POST /logs/:id/skip',
   // labs + results
@@ -101,10 +105,10 @@ const EXPECTED = [
   'PUT /caregivers/:subjectId',
 ];
 
-test('Orchestrator ergibt exakt die erwartete Routentabelle (45 Routen)', () => {
+test('Orchestrator ergibt exakt die erwartete Routentabelle (47 Routen)', () => {
   const actual = collectRoutes(healthRouter).sort();
   assert.deepEqual(actual, [...EXPECTED].sort());
-  assert.equal(actual.length, 45);
+  assert.equal(actual.length, 47);
 });
 
 test('die Cluster-Router zusammen ergeben genau die Orchestrator-Routen (keine verlorene/doppelte Route)', () => {

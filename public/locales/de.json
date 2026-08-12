@@ -397,7 +397,13 @@
         "detailFinish": "Erledigen",
         "detailReopen": "Wieder öffnen",
         "subtasksLabel": "Teilaufgaben",
-        "swipeView": "Ansehen"
+        "swipeView": "Ansehen",
+        "descriptionMarkdownHint": "Markdown wird unterstützt.",
+        "syncTargetLabel": "Sync-Ziel",
+        "syncTargetLocal": "Nur lokal speichern",
+        "syncTargetHint": "Wähle eine Erinnerungsliste, in die diese Aufgabe geschrieben wird.",
+        "syncTargetMirrored": "Diese Aufgabe wird bereits mit einer Erinnerungsliste abgeglichen. Die Liste lässt sich nachträglich nicht wechseln.",
+        "syncTargetUnavailable": "Zuletzt gewählte Liste (nicht mehr verfügbar)"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} Mahlzeiten",
@@ -2225,7 +2231,16 @@
             "revokeConfirmDetail": "Ein bereits verschickter oder kopierter Link hört sofort auf zu funktionieren. Die eingeladene Person kann damit kein Konto mehr anlegen; dafür musst du sie erneut einladen."
         },
         "healthCaregiversLabel": "Darf Gesundheitsdaten eintragen",
-        "healthCaregiversHint": "Diese Personen dürfen für dieses Mitglied Vitalwerte, Medikamente, Laborwerte und Aktivitäten eintragen und dabei auch dessen private Einträge sehen. Das Zyklus-Tagebuch bleibt ausgenommen."
+        "healthCaregiversHint": "Diese Personen dürfen für dieses Mitglied Vitalwerte, Medikamente, Laborwerte und Aktivitäten eintragen und dabei auch dessen private Einträge sehen. Das Zyklus-Tagebuch bleibt ausgenommen.",
+        "pageTaskDefaults": "Aufgaben-Vorgaben",
+        "pageTaskDefaultsDescription": "Standard-Erinnerungsliste für eigene neue Aufgaben festlegen.",
+        "tasksDefaultsTitle": "Standardwerte für neue Aufgaben",
+        "tasksDefaultsDescription": "Voreinstellungen, die neue Aufgaben automatisch übernehmen.",
+        "tasksDefaultTargetLabel": "Standard-Erinnerungsliste",
+        "tasksDefaultTargetHint": "Neue Aufgaben werden dieser Liste zugeordnet. Beim Anlegen kannst du jedes Mal ein anderes Ziel wählen.",
+        "tasksDefaultTargetUnavailable": "Zuletzt gewählte Liste (nicht mehr verfügbar)",
+        "tasksDefaultTargetEmpty": "Für Aufgaben ist noch keine Erinnerungsliste freigegeben.",
+        "tasksDefaultsSaved": "Standardwerte gespeichert"
     },
     "login": {
         "tagline": "Willkommen zurück bei deinem Familienplaner.",
@@ -3396,7 +3411,22 @@
                 "private": "Privat",
                 "family": "Familie"
             },
-            "allTitle": "Alle Medikamente"
+            "allTitle": "Alle Medikamente",
+            "log": {
+                "correct": "Eintrag korrigieren: {{medication}}, {{time}}",
+                "editTitle": "Eintrag korrigieren",
+                "statusLabel": "Status",
+                "statusPending": "Steht aus",
+                "dateLabel": "Datum",
+                "timeLabel": "Uhrzeit",
+                "scheduledHint": "Geplante Einnahmen lassen sich zurücknehmen, aber nicht löschen.",
+                "adhocHint": "Dieser Eintrag stammt aus keinem Plan und lässt sich löschen.",
+                "saved": "Eintrag gespeichert",
+                "saveError": "Eintrag konnte nicht gespeichert werden.",
+                "deleteConfirm": "Diesen Eintrag löschen?",
+                "deleted": "Eintrag gelöscht",
+                "deleteConfirmDetail": "Der Eintrag verschwindet damit auch aus dem Export. Rückgängig machen lässt sich das nicht."
+            }
         },
         "labs": {
             "title": "Laborwerte",

@@ -326,6 +326,10 @@ router.get('/', (req, res) => {
         rewards_require_approval: cfgGet('rewards_require_approval') !== '0',
         tasks_subtasks_expanded: cfgGet('tasks_subtasks_expanded') === '1',
         tasks_default_points: parseTaskDefaultPoints(cfgGet('tasks_default_points')),
+        // Standard-Erinnerungsliste fuer neue Aufgaben (per-user, #695) -
+        // dieselbe Form wie calendar_default_target, damit beide Dialoge ihr
+        // Ziel gleich benennen.
+        tasks_default_target: cfgUserGet('tasks_default_target', req.authUserId) || '',
         weather_provider: cfgGet('weather_provider') ?? null,
         weather_lat:      cfgGet('weather_lat')      ?? null,
         weather_lon:      cfgGet('weather_lon')      ?? null,
@@ -358,7 +362,7 @@ router.get('/', (req, res) => {
 
 router.put('/', (req, res) => {
   try {
-    const { visible_meal_types, currency, date_format, time_format, week_start, region, language, app_name, dashboard_widgets, disabled_modules, module_order, mobile_nav_order, housekeeping_payment_tasks, budget_mode, calendar_default_duration, calendar_default_reminders, calendar_default_assign_me, calendar_default_target, health_cycle_enabled, rewards_require_approval, tasks_subtasks_expanded, tasks_default_points, weather_provider, weather_lat, weather_lon, weather_city, weather_units, weather_auto_locate, weather_user, holiday_country, holiday_subdivision, holiday_group, holiday_show_public, holiday_show_school, holiday_public_color, holiday_school_color } = req.body;
+    const { visible_meal_types, currency, date_format, time_format, week_start, region, language, app_name, dashboard_widgets, disabled_modules, module_order, mobile_nav_order, housekeeping_payment_tasks, budget_mode, calendar_default_duration, calendar_default_reminders, calendar_default_assign_me, calendar_default_target, health_cycle_enabled, rewards_require_approval, tasks_subtasks_expanded, tasks_default_points, tasks_default_target, weather_provider, weather_lat, weather_lon, weather_city, weather_units, weather_auto_locate, weather_user, holiday_country, holiday_subdivision, holiday_group, holiday_show_public, holiday_show_school, holiday_public_color, holiday_school_color } = req.body;
 
     if (visible_meal_types !== undefined) {
       if (!Array.isArray(visible_meal_types)) {
@@ -545,6 +549,26 @@ router.put('/', (req, res) => {
         return res.status(400).json({ error: 'calendar_default_target: erwartet "google:<id>" oder "caldav:<kontoId>|<url>"', code: 400 });
       }
       cfgUserSet('calendar_default_target', req.authUserId, target);
+    }
+
+    // Standard-Erinnerungsliste für eigene neue Aufgaben (#695, per-user).
+    // Geprüft wird nur die Form; ob die Liste noch freigegeben ist, entscheidet
+    // die Aufgaben-Route beim Anlegen. Ein Ziel hier hart abzuweisen, weil eine
+    // Liste zwischenzeitlich abgewählt wurde, machte die Einstellung unspeicherbar,
+    // ohne dass der Grund an dieser Stelle sichtbar wäre.
+    if (tasks_default_target !== undefined) {
+      if (tasks_default_target !== null && typeof tasks_default_target !== 'string') {
+        return res.status(400).json({ error: 'tasks_default_target muss ein String sein', code: 400 });
+      }
+      const target = (tasks_default_target ?? '').trim();
+      if (target.length > MAX_CALENDAR_TARGET_LENGTH) {
+        return res.status(400).json({ error: `tasks_default_target: maximal ${MAX_CALENDAR_TARGET_LENGTH} Zeichen`, code: 400 });
+      }
+      const parsed = parseSyncTargetValue(target);
+      if (parsed === null || parsed.kind === 'google') {
+        return res.status(400).json({ error: 'tasks_default_target: erwartet "caldav:<kontoId>|<url>"', code: 400 });
+      }
+      cfgUserSet('tasks_default_target', req.authUserId, target);
     }
 
     // Haushaltweite Modul-Feature-Schalter — nur Admins.
@@ -809,6 +833,10 @@ router.put('/', (req, res) => {
         rewards_require_approval: cfgGet('rewards_require_approval') !== '0',
         tasks_subtasks_expanded: cfgGet('tasks_subtasks_expanded') === '1',
         tasks_default_points: parseTaskDefaultPoints(cfgGet('tasks_default_points')),
+        // Standard-Erinnerungsliste fuer neue Aufgaben (per-user, #695) -
+        // dieselbe Form wie calendar_default_target, damit beide Dialoge ihr
+        // Ziel gleich benennen.
+        tasks_default_target: cfgUserGet('tasks_default_target', req.authUserId) || '',
         weather_provider: cfgGet('weather_provider') ?? null,
         weather_lat:      cfgGet('weather_lat')      ?? null,
         weather_lon:      cfgGet('weather_lon')      ?? null,

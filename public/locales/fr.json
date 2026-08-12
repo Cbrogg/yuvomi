@@ -385,7 +385,13 @@
         "detailFinish": "Terminer",
         "detailReopen": "Rouvrir",
         "subtasksLabel": "Sous-tâches",
-        "swipeView": "Afficher"
+        "swipeView": "Afficher",
+        "descriptionMarkdownHint": "Le Markdown est pris en charge.",
+        "syncTargetLabel": "Cible de synchronisation",
+        "syncTargetLocal": "Enregistrer localement uniquement",
+        "syncTargetHint": "Choisissez une liste de rappels dans laquelle écrire cette tâche.",
+        "syncTargetMirrored": "Cette tâche est déjà synchronisée avec une liste de rappels. La liste ne peut plus être modifiée.",
+        "syncTargetUnavailable": "Liste sélectionnée précédemment (plus disponible)"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} repas",
@@ -2213,7 +2219,16 @@
             "revokeConfirmDetail": "Un lien déjà envoyé ou copié cesse aussitôt de fonctionner. La personne invitée ne peut plus créer de compte avec ce lien ; il faudrait l'inviter à nouveau."
         },
         "healthCaregiversLabel": "Peut saisir des données de santé",
-        "healthCaregiversHint": "Ces personnes peuvent saisir les constantes, médicaments, résultats de laboratoire et activités de ce membre, et voir ses entrées privées à cette occasion. Le journal du cycle reste exclu."
+        "healthCaregiversHint": "Ces personnes peuvent saisir les constantes, médicaments, résultats de laboratoire et activités de ce membre, et voir ses entrées privées à cette occasion. Le journal du cycle reste exclu.",
+        "pageTaskDefaults": "Valeurs par défaut des tâches",
+        "pageTaskDefaultsDescription": "Définir la liste de rappels par défaut pour vos nouvelles tâches.",
+        "tasksDefaultsTitle": "Valeurs par défaut des nouvelles tâches",
+        "tasksDefaultsDescription": "Préréglages appliqués automatiquement aux nouvelles tâches.",
+        "tasksDefaultTargetLabel": "Liste de rappels par défaut",
+        "tasksDefaultTargetHint": "Les nouvelles tâches sont affectées à cette liste. Vous pouvez choisir une autre cible à chaque création.",
+        "tasksDefaultTargetUnavailable": "Liste sélectionnée précédemment (plus disponible)",
+        "tasksDefaultTargetEmpty": "Aucune liste de rappels n'est encore activée pour les tâches.",
+        "tasksDefaultsSaved": "Valeurs par défaut enregistrées"
     },
     "login": {
         "tagline": "Bon retour sur votre planificateur familial.",
@@ -3396,7 +3411,22 @@
                 "private": "Privé",
                 "family": "Famille"
             },
-            "allTitle": "Tous les médicaments"
+            "allTitle": "Tous les médicaments",
+            "log": {
+                "correct": "Corriger l'entrée : {{medication}}, {{time}}",
+                "editTitle": "Corriger l'entrée",
+                "statusLabel": "Statut",
+                "statusPending": "En attente",
+                "dateLabel": "Date",
+                "timeLabel": "Heure",
+                "scheduledHint": "Les prises planifiées peuvent être annulées, mais pas supprimées.",
+                "adhocHint": "Cette entrée ne provient pas d'un plan et peut être supprimée.",
+                "saved": "Entrée enregistrée",
+                "saveError": "Impossible d'enregistrer l'entrée.",
+                "deleteConfirm": "Supprimer cette entrée ?",
+                "deleted": "Entrée supprimée",
+                "deleteConfirmDetail": "L'entrée disparaît aussi de l'export. Cette action est irréversible."
+            }
         },
         "labs": {
             "title": "Analyses",

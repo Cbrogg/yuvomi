@@ -385,7 +385,13 @@
         "detailFinish": "完了にする",
         "detailReopen": "再開",
         "subtasksLabel": "サブタスク",
-        "swipeView": "表示"
+        "swipeView": "表示",
+        "descriptionMarkdownHint": "Markdown に対応しています。",
+        "syncTargetLabel": "同期先",
+        "syncTargetLocal": "ローカルにのみ保存",
+        "syncTargetHint": "このタスクを書き込むリマインダーリストを選んでください。",
+        "syncTargetMirrored": "このタスクはすでにリマインダーリストと同期しています。後からリストを変更することはできません。",
+        "syncTargetUnavailable": "以前に選択したリスト（現在は利用できません）"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}}件の食事",
@@ -2213,7 +2219,16 @@
             "revokeConfirmDetail": "すでに送った、またはコピーしたリンクはただちに使えなくなります。招待した相手はそのリンクでアカウントを作成できなくなるため、あらためて招待する必要があります。"
         },
         "healthCaregiversLabel": "健康データを記録できる",
-        "healthCaregiversHint": "これらの人はこのメンバーのバイタル、薬、検査結果、アクティビティを記録でき、その際に非公開の記録も見えます。周期の記録は対象外です。"
+        "healthCaregiversHint": "これらの人はこのメンバーのバイタル、薬、検査結果、アクティビティを記録でき、その際に非公開の記録も見えます。周期の記録は対象外です。",
+        "pageTaskDefaults": "タスクの既定値",
+        "pageTaskDefaultsDescription": "自分の新しいタスクの既定のリマインダーリストを設定します。",
+        "tasksDefaultsTitle": "新しいタスクの既定値",
+        "tasksDefaultsDescription": "新しいタスクに自動的に適用される設定です。",
+        "tasksDefaultTargetLabel": "既定のリマインダーリスト",
+        "tasksDefaultTargetHint": "新しいタスクはこのリストに割り当てられます。作成のたびに別の同期先を選ぶこともできます。",
+        "tasksDefaultTargetUnavailable": "以前に選択したリスト（現在は利用できません）",
+        "tasksDefaultTargetEmpty": "タスク用のリマインダーリストはまだ有効になっていません。",
+        "tasksDefaultsSaved": "既定値を保存しました"
     },
     "login": {
         "tagline": "家族のプランナーへおかえりなさい。",
@@ -3396,7 +3411,22 @@
                 "private": "非公開",
                 "family": "家族"
             },
-            "allTitle": "すべての薬"
+            "allTitle": "すべての薬",
+            "log": {
+                "correct": "記録を修正: {{medication}}, {{time}}",
+                "editTitle": "記録を修正",
+                "statusLabel": "状態",
+                "statusPending": "未処理",
+                "dateLabel": "日付",
+                "timeLabel": "時刻",
+                "scheduledHint": "予定された服用は取り消せますが、削除はできません。",
+                "adhocHint": "この記録は予定によるものではないため、削除できます。",
+                "saved": "記録を保存しました",
+                "saveError": "記録を保存できませんでした。",
+                "deleteConfirm": "この記録を削除しますか？",
+                "deleted": "記録を削除しました",
+                "deleteConfirmDetail": "この記録はエクスポートからも消えます。元に戻すことはできません。"
+            }
         },
         "labs": {
             "title": "検査値",

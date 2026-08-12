@@ -385,7 +385,13 @@
         "detailFinish": "Completa",
         "detailReopen": "Riapri",
         "subtasksLabel": "Attività secondarie",
-        "swipeView": "Visualizza"
+        "swipeView": "Visualizza",
+        "descriptionMarkdownHint": "Il Markdown è supportato.",
+        "syncTargetLabel": "Destinazione di sincronizzazione",
+        "syncTargetLocal": "Salva solo in locale",
+        "syncTargetHint": "Scegli un elenco di promemoria in cui scrivere questa attività.",
+        "syncTargetMirrored": "Questa attività è già sincronizzata con un elenco di promemoria. L'elenco non può essere cambiato in seguito.",
+        "syncTargetUnavailable": "Elenco selezionato in precedenza (non più disponibile)"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} pasti",
@@ -2213,7 +2219,16 @@
             "revokeConfirmDetail": "Un link già inviato o copiato smette subito di funzionare. La persona invitata non potrà più creare un account; dovresti invitarla di nuovo."
         },
         "healthCaregiversLabel": "Può registrare dati sanitari",
-        "healthCaregiversHint": "Queste persone possono registrare parametri vitali, farmaci, esami di laboratorio e attività per questo membro, vedendone anche le voci private. Il diario del ciclo resta escluso."
+        "healthCaregiversHint": "Queste persone possono registrare parametri vitali, farmaci, esami di laboratorio e attività per questo membro, vedendone anche le voci private. Il diario del ciclo resta escluso.",
+        "pageTaskDefaults": "Valori predefiniti delle attività",
+        "pageTaskDefaultsDescription": "Imposta l'elenco di promemoria predefinito per le tue nuove attività.",
+        "tasksDefaultsTitle": "Valori predefiniti per le nuove attività",
+        "tasksDefaultsDescription": "Impostazioni applicate automaticamente alle nuove attività.",
+        "tasksDefaultTargetLabel": "Elenco di promemoria predefinito",
+        "tasksDefaultTargetHint": "Le nuove attività vengono assegnate a questo elenco. Puoi comunque scegliere un'altra destinazione ogni volta.",
+        "tasksDefaultTargetUnavailable": "Elenco selezionato in precedenza (non più disponibile)",
+        "tasksDefaultTargetEmpty": "Nessun elenco di promemoria è ancora abilitato per le attività.",
+        "tasksDefaultsSaved": "Valori predefiniti salvati"
     },
     "login": {
         "tagline": "Bentornato nel tuo pianificatore familiare.",
@@ -3396,7 +3411,22 @@
                 "private": "Privato",
                 "family": "Famiglia"
             },
-            "allTitle": "Tutti i farmaci"
+            "allTitle": "Tutti i farmaci",
+            "log": {
+                "correct": "Correggi voce: {{medication}}, {{time}}",
+                "editTitle": "Correggi voce",
+                "statusLabel": "Stato",
+                "statusPending": "In attesa",
+                "dateLabel": "Data",
+                "timeLabel": "Ora",
+                "scheduledHint": "Le assunzioni pianificate possono essere annullate, ma non eliminate.",
+                "adhocHint": "Questa voce non proviene da un piano e può essere eliminata.",
+                "saved": "Voce salvata",
+                "saveError": "Impossibile salvare la voce.",
+                "deleteConfirm": "Eliminare questa voce?",
+                "deleted": "Voce eliminata",
+                "deleteConfirmDetail": "La voce scompare anche dall'esportazione. L'operazione non può essere annullata."
+            }
         },
         "labs": {
             "title": "Esami",

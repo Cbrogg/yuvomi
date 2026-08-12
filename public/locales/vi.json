@@ -385,7 +385,13 @@
         "detailFinish": "Hoàn thành",
         "detailReopen": "Mở lại",
         "subtasksLabel": "Nhiệm vụ con",
-        "swipeView": "Xem"
+        "swipeView": "Xem",
+        "descriptionMarkdownHint": "Hỗ trợ Markdown.",
+        "syncTargetLabel": "Đích đồng bộ",
+        "syncTargetLocal": "Chỉ lưu cục bộ",
+        "syncTargetHint": "Chọn một danh sách nhắc nhở để ghi nhiệm vụ này vào.",
+        "syncTargetMirrored": "Nhiệm vụ này đã đồng bộ với một danh sách nhắc nhở. Không thể đổi danh sách sau đó.",
+        "syncTargetUnavailable": "Danh sách đã chọn trước đó (không còn khả dụng)"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} bữa ăn",
@@ -2213,7 +2219,16 @@
             "revokeConfirmDetail": "Liên kết bạn đã gửi hoặc sao chép sẽ ngừng hoạt động ngay. Người được mời không thể tạo tài khoản bằng liên kết đó nữa; bạn sẽ phải mời lại."
         },
         "healthCaregiversLabel": "Có thể ghi dữ liệu sức khỏe",
-        "healthCaregiversHint": "Những người này có thể ghi chỉ số sinh tồn, thuốc, kết quả xét nghiệm và hoạt động cho thành viên này, đồng thời thấy các mục riêng tư của họ. Nhật ký chu kỳ vẫn được loại trừ."
+        "healthCaregiversHint": "Những người này có thể ghi chỉ số sinh tồn, thuốc, kết quả xét nghiệm và hoạt động cho thành viên này, đồng thời thấy các mục riêng tư của họ. Nhật ký chu kỳ vẫn được loại trừ.",
+        "pageTaskDefaults": "Mặc định cho nhiệm vụ",
+        "pageTaskDefaultsDescription": "Đặt danh sách nhắc nhở mặc định cho các nhiệm vụ mới của bạn.",
+        "tasksDefaultsTitle": "Mặc định cho nhiệm vụ mới",
+        "tasksDefaultsDescription": "Các thiết lập tự động áp dụng cho nhiệm vụ mới.",
+        "tasksDefaultTargetLabel": "Danh sách nhắc nhở mặc định",
+        "tasksDefaultTargetHint": "Nhiệm vụ mới được gán vào danh sách này. Bạn vẫn có thể chọn đích khác mỗi lần tạo.",
+        "tasksDefaultTargetUnavailable": "Danh sách đã chọn trước đó (không còn khả dụng)",
+        "tasksDefaultTargetEmpty": "Chưa có danh sách nhắc nhở nào được bật cho nhiệm vụ.",
+        "tasksDefaultsSaved": "Đã lưu giá trị mặc định"
     },
     "login": {
         "tagline": "Chào mừng bạn trở lại trình lập kế hoạch gia đình.",
@@ -3396,7 +3411,22 @@
                 "private": "Riêng tư",
                 "family": "Gia đình"
             },
-            "allTitle": "Tất cả thuốc"
+            "allTitle": "Tất cả thuốc",
+            "log": {
+                "correct": "Sửa mục: {{medication}}, {{time}}",
+                "editTitle": "Sửa mục",
+                "statusLabel": "Trạng thái",
+                "statusPending": "Đang chờ",
+                "dateLabel": "Ngày",
+                "timeLabel": "Giờ",
+                "scheduledHint": "Liều theo lịch có thể hoàn tác, nhưng không thể xóa.",
+                "adhocHint": "Mục này không đến từ lịch và có thể xóa.",
+                "saved": "Đã lưu mục",
+                "saveError": "Không thể lưu mục.",
+                "deleteConfirm": "Xóa mục này?",
+                "deleted": "Đã xóa mục",
+                "deleteConfirmDetail": "Mục này cũng biến mất khỏi bản xuất. Không thể hoàn tác."
+            }
         },
         "labs": {
             "title": "Xét nghiệm",

@@ -385,7 +385,13 @@
         "detailFinish": "إكمال",
         "detailReopen": "إعادة الفتح",
         "subtasksLabel": "المهام الفرعية",
-        "swipeView": "عرض"
+        "swipeView": "عرض",
+        "descriptionMarkdownHint": "يتم دعم Markdown.",
+        "syncTargetLabel": "وجهة المزامنة",
+        "syncTargetLocal": "الحفظ محليًا فقط",
+        "syncTargetHint": "اختر قائمة تذكيرات لكتابة هذه المهمة فيها.",
+        "syncTargetMirrored": "تتم مزامنة هذه المهمة بالفعل مع قائمة تذكيرات. لا يمكن تغيير القائمة لاحقًا.",
+        "syncTargetUnavailable": "القائمة المختارة سابقًا (لم تعد متاحة)"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} وجبات",
@@ -2213,7 +2219,16 @@
             "revokeConfirmDetail": "الرابط الذي أرسلته أو نسخته يتوقف عن العمل فورًا. لن يتمكن الشخص المدعو من إنشاء حساب به بعد الآن، وسيلزم دعوته من جديد."
         },
         "healthCaregiversLabel": "يمكنه تسجيل البيانات الصحية",
-        "healthCaregiversHint": "يمكن لهؤلاء الأشخاص تسجيل العلامات الحيوية والأدوية ونتائج المختبر والأنشطة لهذا العضو، ورؤية إدخالاته الخاصة أثناء ذلك. تبقى يوميات الدورة مستثناة."
+        "healthCaregiversHint": "يمكن لهؤلاء الأشخاص تسجيل العلامات الحيوية والأدوية ونتائج المختبر والأنشطة لهذا العضو، ورؤية إدخالاته الخاصة أثناء ذلك. تبقى يوميات الدورة مستثناة.",
+        "pageTaskDefaults": "الإعدادات الافتراضية للمهام",
+        "pageTaskDefaultsDescription": "حدد قائمة التذكيرات الافتراضية لمهامك الجديدة.",
+        "tasksDefaultsTitle": "الإعدادات الافتراضية للمهام الجديدة",
+        "tasksDefaultsDescription": "إعدادات تُطبق تلقائيًا على المهام الجديدة.",
+        "tasksDefaultTargetLabel": "قائمة التذكيرات الافتراضية",
+        "tasksDefaultTargetHint": "تُسند المهام الجديدة إلى هذه القائمة. يمكنك اختيار وجهة أخرى في كل مرة تنشئ فيها مهمة.",
+        "tasksDefaultTargetUnavailable": "القائمة المختارة سابقًا (لم تعد متاحة)",
+        "tasksDefaultTargetEmpty": "لم يتم تفعيل أي قائمة تذكيرات للمهام بعد.",
+        "tasksDefaultsSaved": "تم حفظ الإعدادات الافتراضية"
     },
     "login": {
         "tagline": "مرحبًا بعودتك إلى منظّم عائلتك.",
@@ -3396,7 +3411,22 @@
                 "private": "خاص",
                 "family": "العائلة"
             },
-            "allTitle": "كل الأدوية"
+            "allTitle": "كل الأدوية",
+            "log": {
+                "correct": "تصحيح السجل: {{medication}}، {{time}}",
+                "editTitle": "تصحيح السجل",
+                "statusLabel": "الحالة",
+                "statusPending": "قيد الانتظار",
+                "dateLabel": "التاريخ",
+                "timeLabel": "الوقت",
+                "scheduledHint": "يمكن التراجع عن الجرعات المجدولة، لكن لا يمكن حذفها.",
+                "adhocHint": "هذا السجل ليس من خطة ويمكن حذفه.",
+                "saved": "تم حفظ السجل",
+                "saveError": "تعذر حفظ السجل.",
+                "deleteConfirm": "هل تريد حذف هذا السجل؟",
+                "deleted": "تم حذف السجل",
+                "deleteConfirmDetail": "سيختفي السجل أيضًا من التصدير. لا يمكن التراجع عن ذلك."
+            }
         },
         "labs": {
             "title": "التحاليل",

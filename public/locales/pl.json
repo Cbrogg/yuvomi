@@ -397,7 +397,13 @@
         "detailFinish": "Zakończ",
         "detailReopen": "Otwórz ponownie",
         "subtasksLabel": "Podzadania",
-        "swipeView": "Podgląd"
+        "swipeView": "Podgląd",
+        "descriptionMarkdownHint": "Markdown jest obsługiwany.",
+        "syncTargetLabel": "Cel synchronizacji",
+        "syncTargetLocal": "Zapisz tylko lokalnie",
+        "syncTargetHint": "Wybierz listę przypomnień, do której ma trafić to zadanie.",
+        "syncTargetMirrored": "To zadanie jest już synchronizowane z listą przypomnień. Listy nie można później zmienić.",
+        "syncTargetUnavailable": "Ostatnio wybrana lista (już niedostępna)"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} posiłki",
@@ -2225,7 +2231,16 @@
             "revokeConfirmDetail": "Wysłany lub skopiowany link natychmiast przestaje działać. Zaproszona osoba nie założy już z nim konta; trzeba by zaprosić ją ponownie."
         },
         "healthCaregiversLabel": "Może wprowadzać dane zdrowotne",
-        "healthCaregiversHint": "Te osoby mogą wprowadzać parametry życiowe, leki, wyniki badań i aktywności dla tego członka rodziny oraz widzieć przy tym jego prywatne wpisy. Dziennik cyklu pozostaje wyłączony."
+        "healthCaregiversHint": "Te osoby mogą wprowadzać parametry życiowe, leki, wyniki badań i aktywności dla tego członka rodziny oraz widzieć przy tym jego prywatne wpisy. Dziennik cyklu pozostaje wyłączony.",
+        "pageTaskDefaults": "Domyślne ustawienia zadań",
+        "pageTaskDefaultsDescription": "Ustaw domyślną listę przypomnień dla swoich nowych zadań.",
+        "tasksDefaultsTitle": "Ustawienia domyślne nowych zadań",
+        "tasksDefaultsDescription": "Ustawienia stosowane automatycznie do nowych zadań.",
+        "tasksDefaultTargetLabel": "Domyślna lista przypomnień",
+        "tasksDefaultTargetHint": "Nowe zadania trafiają na tę listę. Przy tworzeniu możesz za każdym razem wybrać inny cel.",
+        "tasksDefaultTargetUnavailable": "Ostatnio wybrana lista (już niedostępna)",
+        "tasksDefaultTargetEmpty": "Żadna lista przypomnień nie została jeszcze udostępniona dla zadań.",
+        "tasksDefaultsSaved": "Zapisano ustawienia domyślne"
     },
     "login": {
         "tagline": "Witaj ponownie w swoim planerze rodzinnym.",
@@ -3396,7 +3411,22 @@
                 "private": "Prywatne",
                 "family": "Rodzina"
             },
-            "allTitle": "Wszystkie leki"
+            "allTitle": "Wszystkie leki",
+            "log": {
+                "correct": "Popraw wpis: {{medication}}, {{time}}",
+                "editTitle": "Popraw wpis",
+                "statusLabel": "Status",
+                "statusPending": "Oczekuje",
+                "dateLabel": "Data",
+                "timeLabel": "Godzina",
+                "scheduledHint": "Zaplanowane dawki można cofnąć, ale nie usunąć.",
+                "adhocHint": "Ten wpis nie pochodzi z planu i można go usunąć.",
+                "saved": "Zapisano wpis",
+                "saveError": "Nie udało się zapisać wpisu.",
+                "deleteConfirm": "Usunąć ten wpis?",
+                "deleted": "Wpis usunięty",
+                "deleteConfirmDetail": "Wpis zniknie także z eksportu. Tej operacji nie można cofnąć."
+            }
         },
         "labs": {
             "title": "Wyniki badań",

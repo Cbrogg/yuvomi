@@ -1279,3 +1279,11 @@
   align-items: center;
   gap: var(--space-0h);
 }
+
+/* Notiz der Aufgabe in der Leseansicht (#731). Der Inhalt kommt durch denselben
+ * Renderer wie die Notizen, also gelten dort auch dieselben `note-md-*`-Regeln.
+ * Hier bleibt nur der letzte Blockabstand: er säße sonst als Leerzeile unter der
+ * Zeile, und die Notiz ist die letzte im Panel. */
+.task-detail__note > :last-child {
+  margin-bottom: 0;
+}

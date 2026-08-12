@@ -66,6 +66,20 @@ export const SETTINGS_LEAVES = freezeEntries([
     loader: () => import('/settings/pages/personal-calendar.js'),
   },
   {
+    // `tasks_default_target` schreibt per `cfgUserSet` pro Nutzer. Welche
+    // Erinnerungslisten der Haushalt abgleicht, entscheidet der Admin in
+    // `sync-reminders`; in welche davon MEINE neuen Aufgaben laufen, entscheide
+    // ich - und dieses Blatt darf deshalb nicht adminOnly sein (#695).
+    id: 'personal-tasks',
+    domainId: 'personal',
+    path: '/settings/personal/tasks',
+    labelKey: 'settings.pageTaskDefaults',
+    descriptionKey: 'settings.pageTaskDefaultsDescription',
+    icon: 'list-checks',
+    adminOnly: false,
+    loader: () => import('/settings/pages/personal-tasks.js'),
+  },
+  {
     id: 'personal-weather',
     domainId: 'personal',
     path: '/settings/personal/weather',

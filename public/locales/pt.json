@@ -385,7 +385,13 @@
         "detailFinish": "Concluir",
         "detailReopen": "Reabrir",
         "subtasksLabel": "Subtarefas",
-        "swipeView": "Ver"
+        "swipeView": "Ver",
+        "descriptionMarkdownHint": "Markdown é suportado.",
+        "syncTargetLabel": "Destino de sincronização",
+        "syncTargetLocal": "Guardar apenas localmente",
+        "syncTargetHint": "Escolhe uma lista de lembretes para escrever esta tarefa.",
+        "syncTargetMirrored": "Esta tarefa já sincroniza com uma lista de lembretes. A lista não pode ser alterada depois.",
+        "syncTargetUnavailable": "Lista selecionada anteriormente (já não disponível)"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} refeições",
@@ -2213,7 +2219,16 @@
             "revokeConfirmDetail": "Uma ligação já enviada ou copiada deixa de funcionar de imediato. A pessoa convidada já não consegue criar uma conta com ela; terias de a convidar novamente."
         },
         "healthCaregiversLabel": "Pode registar dados de saúde",
-        "healthCaregiversHint": "Estas pessoas podem registar sinais vitais, medicamentos, análises e atividades para este membro e ver as suas entradas privadas ao fazê-lo. O diário do ciclo permanece excluído."
+        "healthCaregiversHint": "Estas pessoas podem registar sinais vitais, medicamentos, análises e atividades para este membro e ver as suas entradas privadas ao fazê-lo. O diário do ciclo permanece excluído.",
+        "pageTaskDefaults": "Predefinições de tarefas",
+        "pageTaskDefaultsDescription": "Define a lista de lembretes predefinida para as tuas novas tarefas.",
+        "tasksDefaultsTitle": "Predefinições para novas tarefas",
+        "tasksDefaultsDescription": "Definições aplicadas automaticamente às novas tarefas.",
+        "tasksDefaultTargetLabel": "Lista de lembretes predefinida",
+        "tasksDefaultTargetHint": "As novas tarefas são atribuídas a esta lista. Podes escolher outro destino sempre que criares uma.",
+        "tasksDefaultTargetUnavailable": "Lista selecionada anteriormente (já não disponível)",
+        "tasksDefaultTargetEmpty": "Ainda não há nenhuma lista de lembretes ativada para tarefas.",
+        "tasksDefaultsSaved": "Predefinições guardadas"
     },
     "login": {
         "tagline": "Bem-vindo de volta ao teu planeador familiar.",
@@ -3396,7 +3411,22 @@
                 "private": "Privado",
                 "family": "Família"
             },
-            "allTitle": "Todos os medicamentos"
+            "allTitle": "Todos os medicamentos",
+            "log": {
+                "correct": "Corrigir registo: {{medication}}, {{time}}",
+                "editTitle": "Corrigir registo",
+                "statusLabel": "Estado",
+                "statusPending": "Pendente",
+                "dateLabel": "Data",
+                "timeLabel": "Hora",
+                "scheduledHint": "As tomas planeadas podem ser anuladas, mas não eliminadas.",
+                "adhocHint": "Este registo não vem de um plano e pode ser eliminado.",
+                "saved": "Registo guardado",
+                "saveError": "Não foi possível guardar o registo.",
+                "deleteConfirm": "Eliminar este registo?",
+                "deleted": "Registo eliminado",
+                "deleteConfirmDetail": "O registo também desaparece da exportação. Isto não pode ser anulado."
+            }
         },
         "labs": {
             "title": "Exames",

@@ -348,11 +348,7 @@ function updateLogStatus(req, res, newStatus) {
   const id = parseInt(req.params.id, 10);
   if (!id) return res.status(400).json({ error: 'Ungültige ID.', code: 400 });
 
-  const logRow = db.get().prepare(`
-    SELECT l.*, m.user_id AS owner_id FROM medication_logs l
-    JOIN medications m ON m.id = l.medication_id
-    WHERE l.id = ? AND m.user_id = ?
-  `).get(id, viewer);
+  const logRow = ownLogRow(id, viewer);
   if (!logRow) return res.status(404).json({ error: 'Dosis-Eintrag nicht gefunden.', code: 404 });
 
   const b = req.body || {};
@@ -367,6 +363,117 @@ function updateLogStatus(req, res, newStatus) {
 
   res.json({ data: db.get().prepare('SELECT * FROM medication_logs WHERE id = ?').get(id) });
 }
+
+/**
+ * Der Log-Eintrag samt Besitzer, oder null.
+ *
+ * Bewusst über `m.user_id = viewer` und nicht über die Sichtbarkeit: ein
+ * Dosis-Eintrag ist eine Aufzeichnung über den eigenen Körper. Wer ein
+ * Medikament sehen darf, darf deshalb noch lange nicht in seinem Protokoll
+ * korrigieren - dieselbe Grenze, die take/skip seit jeher ziehen.
+ */
+function ownLogRow(id, viewer) {
+  return db.get().prepare(`
+    SELECT l.*, m.user_id AS owner_id FROM medication_logs l
+    JOIN medications m ON m.id = l.medication_id
+    WHERE l.id = ? AND m.user_id = ?
+  `).get(id, viewer) ?? null;
+}
+
+// --------------------------------------------------------
+// PATCH /logs/:id (#701)
+// Body: { status?, taken_at?, dose_qty?, note? }
+//
+// Einen Fehlgriff korrigieren, statt mit ihm zu leben. Vorher gab es nur
+// take/skip, also zwei Einbahnstraßen: die falsche Uhrzeit blieb stehen, und
+// zwar nicht nur in der App - sie steht genauso im Export, den jemand
+// ausdruckt und einer Ärztin hinlegt.
+//
+// `status: 'pending'` ist das Zurücknehmen: der Eintrag steht wieder aus, als
+// wäre nichts angehakt worden.
+// --------------------------------------------------------
+router.patch('/logs/:id', (req, res) => {
+  try {
+    const viewer = viewerId(req);
+    const id = parseInt(req.params.id, 10);
+    if (!id) return res.status(400).json({ error: 'Ungültige ID.', code: 400 });
+
+    const logRow = ownLogRow(id, viewer);
+    if (!logRow) return res.status(404).json({ error: 'Dosis-Eintrag nicht gefunden.', code: 404 });
+
+    const b = req.body || {};
+    const status  = v.oneOf(b.status, LOG_STATUS, 'status');
+    const takenAt = v.datetime(b.taken_at, 'taken_at');
+    const dose    = v.num(b.dose_qty, 'dose_qty');
+    const note    = v.str(b.note, 'note', { max: v.MAX_TEXT, required: false });
+
+    const errors = v.collectErrors([status, takenAt, dose, note]);
+    if (errors.length) return badRequest(res, errors);
+
+    const nextStatus = status.value || logRow.status;
+
+    // Der Zeitpunkt gehört zum Status und wird mit ihm gesetzt, nicht daneben:
+    // ein „nicht genommen" mit Einnahmezeit wäre ein Eintrag, der sich selbst
+    // widerspricht, und genau so einer stünde nachher im Export.
+    let nextTakenAt;
+    if (nextStatus === 'taken') {
+      nextTakenAt = takenAt.value ?? logRow.taken_at ?? new Date().toISOString();
+    } else {
+      nextTakenAt = null;
+    }
+
+    db.get().prepare(`
+      UPDATE medication_logs
+         SET status = ?, taken_at = ?,
+             dose_qty = COALESCE(?, dose_qty),
+             note     = CASE WHEN ? THEN ? ELSE note END
+       WHERE id = ?
+    `).run(
+      nextStatus, nextTakenAt, dose.value ?? null,
+      b.note === undefined ? 0 : 1, note.value ?? null,
+      id,
+    );
+
+    res.json({ data: db.get().prepare('SELECT * FROM medication_logs WHERE id = ?').get(id) });
+  } catch (err) {
+    log.error('Error updating log:', err.message);
+    res.status(500).json({ error: 'Internal error.', code: 500 });
+  }
+});
+
+// --------------------------------------------------------
+// DELETE /logs/:id (#701)
+//
+// Nur für Einträge ohne Zeitplan, also für die von Hand oder als Bedarfsdosis
+// erfassten. Ein geplanter Eintrag lässt sich nicht löschen, und das ist keine
+// Bequemlichkeitsgrenze: der Scheduler legt ihn beim nächsten Lauf wieder an,
+// weil die Dosis ja weiterhin für diesen Zeitpunkt geplant ist. Das Löschen
+// sähe aus wie ein Erfolg und wäre eine Rückkehr auf Raten. Zurücknehmen heißt
+// dort `PATCH { status: 'pending' }`, und darauf verweist die Antwort auch.
+// --------------------------------------------------------
+router.delete('/logs/:id', (req, res) => {
+  try {
+    const viewer = viewerId(req);
+    const id = parseInt(req.params.id, 10);
+    if (!id) return res.status(400).json({ error: 'Ungültige ID.', code: 400 });
+
+    const logRow = ownLogRow(id, viewer);
+    if (!logRow) return res.status(404).json({ error: 'Dosis-Eintrag nicht gefunden.', code: 404 });
+
+    if (logRow.schedule_id) {
+      return res.status(409).json({
+        error: 'Ein geplanter Dosis-Eintrag lässt sich nicht löschen, nur zurücknehmen.',
+        code: 409,
+      });
+    }
+
+    db.get().prepare('DELETE FROM medication_logs WHERE id = ?').run(id);
+    res.json({ data: { id } });
+  } catch (err) {
+    log.error('Error deleting log:', err.message);
+    res.status(500).json({ error: 'Internal error.', code: 500 });
+  }
+});
 
 // POST /logs/:id/take
 router.post('/logs/:id/take', (req, res) => {

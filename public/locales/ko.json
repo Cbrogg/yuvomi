@@ -397,7 +397,13 @@
         "detailFinish": "완료 처리",
         "detailReopen": "다시 열기",
         "subtasksLabel": "하위 작업",
-        "swipeView": "보기"
+        "swipeView": "보기",
+        "descriptionMarkdownHint": "Markdown을 지원합니다.",
+        "syncTargetLabel": "동기화 대상",
+        "syncTargetLocal": "로컬에만 저장",
+        "syncTargetHint": "이 작업을 기록할 미리 알림 목록을 선택하세요.",
+        "syncTargetMirrored": "이 작업은 이미 미리 알림 목록과 동기화됩니다. 목록은 나중에 변경할 수 없습니다.",
+        "syncTargetUnavailable": "이전에 선택한 목록 (더 이상 사용할 수 없음)"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}}개 식사",
@@ -2225,7 +2231,16 @@
             "revokeConfirmDetail": "이미 보내거나 복사한 링크는 즉시 작동하지 않습니다. 초대받은 사람은 그 링크로 계정을 만들 수 없으므로 다시 초대해야 합니다."
         },
         "healthCaregiversLabel": "건강 데이터를 기록할 수 있음",
-        "healthCaregiversHint": "이 사람들은 이 구성원의 활력징후, 약, 검사 결과, 활동을 기록할 수 있으며 그 과정에서 비공개 기록도 볼 수 있습니다. 주기 일기는 제외됩니다."
+        "healthCaregiversHint": "이 사람들은 이 구성원의 활력징후, 약, 검사 결과, 활동을 기록할 수 있으며 그 과정에서 비공개 기록도 볼 수 있습니다. 주기 일기는 제외됩니다.",
+        "pageTaskDefaults": "작업 기본값",
+        "pageTaskDefaultsDescription": "내 새 작업의 기본 미리 알림 목록을 설정합니다.",
+        "tasksDefaultsTitle": "새 작업의 기본값",
+        "tasksDefaultsDescription": "새 작업에 자동으로 적용되는 설정입니다.",
+        "tasksDefaultTargetLabel": "기본 미리 알림 목록",
+        "tasksDefaultTargetHint": "새 작업은 이 목록에 할당됩니다. 만들 때마다 다른 대상을 선택할 수도 있습니다.",
+        "tasksDefaultTargetUnavailable": "이전에 선택한 목록 (더 이상 사용할 수 없음)",
+        "tasksDefaultTargetEmpty": "작업용으로 활성화된 미리 알림 목록이 아직 없습니다.",
+        "tasksDefaultsSaved": "기본값이 저장되었습니다"
     },
     "login": {
         "tagline": "가족 플래너에 다시 오신 것을 환영합니다.",
@@ -3396,7 +3411,22 @@
                 "private": "비공개",
                 "family": "가족"
             },
-            "allTitle": "모든 약"
+            "allTitle": "모든 약",
+            "log": {
+                "correct": "기록 수정: {{medication}}, {{time}}",
+                "editTitle": "기록 수정",
+                "statusLabel": "상태",
+                "statusPending": "대기 중",
+                "dateLabel": "날짜",
+                "timeLabel": "시간",
+                "scheduledHint": "예정된 복용은 되돌릴 수 있지만 삭제할 수는 없습니다.",
+                "adhocHint": "이 기록은 일정에서 온 것이 아니므로 삭제할 수 있습니다.",
+                "saved": "기록이 저장되었습니다",
+                "saveError": "기록을 저장할 수 없습니다.",
+                "deleteConfirm": "이 기록을 삭제할까요?",
+                "deleted": "기록이 삭제되었습니다",
+                "deleteConfirmDetail": "이 기록은 내보내기에서도 사라집니다. 되돌릴 수 없습니다."
+            }
         },
         "labs": {
             "title": "검사 결과",

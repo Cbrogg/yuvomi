@@ -385,7 +385,13 @@
         "detailFinish": "Completar",
         "detailReopen": "Reabrir",
         "subtasksLabel": "Subtareas",
-        "swipeView": "Ver"
+        "swipeView": "Ver",
+        "descriptionMarkdownHint": "Se admite Markdown.",
+        "syncTargetLabel": "Destino de sincronización",
+        "syncTargetLocal": "Guardar solo localmente",
+        "syncTargetHint": "Elige una lista de recordatorios en la que escribir esta tarea.",
+        "syncTargetMirrored": "Esta tarea ya se sincroniza con una lista de recordatorios. La lista no se puede cambiar después.",
+        "syncTargetUnavailable": "Lista seleccionada anteriormente (ya no disponible)"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} comidas",
@@ -2213,7 +2219,16 @@
             "revokeConfirmDetail": "Un enlace que ya hayas enviado o copiado deja de funcionar de inmediato. La persona invitada ya no podrá crear una cuenta con él; tendrías que invitarla de nuevo."
         },
         "healthCaregiversLabel": "Puede registrar datos de salud",
-        "healthCaregiversHint": "Estas personas pueden registrar constantes, medicamentos, resultados de laboratorio y actividades para este miembro, y ver sus entradas privadas al hacerlo. El diario del ciclo queda excluido."
+        "healthCaregiversHint": "Estas personas pueden registrar constantes, medicamentos, resultados de laboratorio y actividades para este miembro, y ver sus entradas privadas al hacerlo. El diario del ciclo queda excluido.",
+        "pageTaskDefaults": "Valores predeterminados de tareas",
+        "pageTaskDefaultsDescription": "Define la lista de recordatorios predeterminada para tus nuevas tareas.",
+        "tasksDefaultsTitle": "Valores predeterminados para nuevas tareas",
+        "tasksDefaultsDescription": "Ajustes que se aplican automáticamente a las tareas nuevas.",
+        "tasksDefaultTargetLabel": "Lista de recordatorios predeterminada",
+        "tasksDefaultTargetHint": "Las tareas nuevas se asignan a esta lista. Puedes elegir otro destino cada vez que crees una.",
+        "tasksDefaultTargetUnavailable": "Lista seleccionada anteriormente (ya no disponible)",
+        "tasksDefaultTargetEmpty": "Todavía no hay ninguna lista de recordatorios habilitada para tareas.",
+        "tasksDefaultsSaved": "Valores predeterminados guardados"
     },
     "login": {
         "tagline": "Bienvenido de nuevo a tu planificador familiar.",
@@ -3396,7 +3411,22 @@
                 "private": "Privado",
                 "family": "Familia"
             },
-            "allTitle": "Todos los medicamentos"
+            "allTitle": "Todos los medicamentos",
+            "log": {
+                "correct": "Corregir entrada: {{medication}}, {{time}}",
+                "editTitle": "Corregir entrada",
+                "statusLabel": "Estado",
+                "statusPending": "Pendiente",
+                "dateLabel": "Fecha",
+                "timeLabel": "Hora",
+                "scheduledHint": "Las tomas planificadas se pueden deshacer, pero no eliminar.",
+                "adhocHint": "Esta entrada no procede de un plan y se puede eliminar.",
+                "saved": "Entrada guardada",
+                "saveError": "No se pudo guardar la entrada.",
+                "deleteConfirm": "¿Eliminar esta entrada?",
+                "deleted": "Entrada eliminada",
+                "deleteConfirmDetail": "La entrada también desaparece de la exportación. Esta acción no se puede deshacer."
+            }
         },
         "labs": {
             "title": "Analíticas",

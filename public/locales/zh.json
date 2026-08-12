@@ -385,7 +385,13 @@
         "detailFinish": "标记完成",
         "detailReopen": "重新打开",
         "subtasksLabel": "子任务",
-        "swipeView": "查看"
+        "swipeView": "查看",
+        "descriptionMarkdownHint": "支持 Markdown。",
+        "syncTargetLabel": "同步目标",
+        "syncTargetLocal": "仅保存在本地",
+        "syncTargetHint": "选择一个提醒列表，用于写入此任务。",
+        "syncTargetMirrored": "此任务已与某个提醒列表同步，之后无法更换列表。",
+        "syncTargetUnavailable": "先前选择的列表（已不可用）"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} 餐",
@@ -2213,7 +2219,16 @@
             "revokeConfirmDetail": "已经发送或复制的链接会立即失效。受邀者无法再用它创建账户，你需要重新邀请一次。"
         },
         "healthCaregiversLabel": "可以记录健康数据",
-        "healthCaregiversHint": "这些人可以为该成员记录体征、用药、化验结果和活动，并在此过程中看到其私密记录。经期日记不在此列。"
+        "healthCaregiversHint": "这些人可以为该成员记录体征、用药、化验结果和活动，并在此过程中看到其私密记录。经期日记不在此列。",
+        "pageTaskDefaults": "任务默认值",
+        "pageTaskDefaultsDescription": "为自己的新任务设置默认提醒列表。",
+        "tasksDefaultsTitle": "新任务的默认值",
+        "tasksDefaultsDescription": "自动应用于新任务的设置。",
+        "tasksDefaultTargetLabel": "默认提醒列表",
+        "tasksDefaultTargetHint": "新任务将归入此列表。创建时你仍可每次选择其他目标。",
+        "tasksDefaultTargetUnavailable": "先前选择的列表（已不可用）",
+        "tasksDefaultTargetEmpty": "尚未为任务启用任何提醒列表。",
+        "tasksDefaultsSaved": "默认值已保存"
     },
     "login": {
         "tagline": "欢迎回到您的家庭计划工具。",
@@ -3396,7 +3411,22 @@
                 "private": "私密",
                 "family": "家庭"
             },
-            "allTitle": "所有药物"
+            "allTitle": "所有药物",
+            "log": {
+                "correct": "更正记录：{{medication}}，{{time}}",
+                "editTitle": "更正记录",
+                "statusLabel": "状态",
+                "statusPending": "待处理",
+                "dateLabel": "日期",
+                "timeLabel": "时间",
+                "scheduledHint": "已计划的服药可以撤回，但无法删除。",
+                "adhocHint": "此记录并非来自计划，可以删除。",
+                "saved": "记录已保存",
+                "saveError": "无法保存记录。",
+                "deleteConfirm": "要删除此记录吗？",
+                "deleted": "记录已删除",
+                "deleteConfirmDetail": "该记录也会从导出中消失，且无法撤销。"
+            }
         },
         "labs": {
             "title": "化验值",

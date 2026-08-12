@@ -385,7 +385,13 @@
         "detailFinish": "Voltooien",
         "detailReopen": "Heropenen",
         "subtasksLabel": "Subtaken",
-        "swipeView": "Bekijken"
+        "swipeView": "Bekijken",
+        "descriptionMarkdownHint": "Markdown wordt ondersteund.",
+        "syncTargetLabel": "Synchronisatiedoel",
+        "syncTargetLocal": "Alleen lokaal opslaan",
+        "syncTargetHint": "Kies een herinneringslijst om deze taak naartoe te schrijven.",
+        "syncTargetMirrored": "Deze taak wordt al gesynchroniseerd met een herinneringslijst. De lijst kan achteraf niet worden gewijzigd.",
+        "syncTargetUnavailable": "Eerder gekozen lijst (niet meer beschikbaar)"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} maaltijden",
@@ -2213,7 +2219,16 @@
             "revokeConfirmDetail": "Een link die je al hebt verstuurd of gekopieerd werkt meteen niet meer. De uitgenodigde persoon kan er geen account meer mee aanmaken; je zou opnieuw moeten uitnodigen."
         },
         "healthCaregiversLabel": "Mag gezondheidsgegevens invoeren",
-        "healthCaregiversHint": "Deze personen mogen vitale waarden, medicijnen, labuitslagen en activiteiten voor dit lid invoeren en zien daarbij ook diens privé-invoer. Het cyclusdagboek blijft uitgesloten."
+        "healthCaregiversHint": "Deze personen mogen vitale waarden, medicijnen, labuitslagen en activiteiten voor dit lid invoeren en zien daarbij ook diens privé-invoer. Het cyclusdagboek blijft uitgesloten.",
+        "pageTaskDefaults": "Standaardwaarden voor taken",
+        "pageTaskDefaultsDescription": "Stel de standaard herinneringslijst in voor je eigen nieuwe taken.",
+        "tasksDefaultsTitle": "Standaardwaarden voor nieuwe taken",
+        "tasksDefaultsDescription": "Instellingen die automatisch op nieuwe taken worden toegepast.",
+        "tasksDefaultTargetLabel": "Standaard herinneringslijst",
+        "tasksDefaultTargetHint": "Nieuwe taken worden aan deze lijst toegewezen. Je kunt bij het aanmaken elke keer een ander doel kiezen.",
+        "tasksDefaultTargetUnavailable": "Eerder gekozen lijst (niet meer beschikbaar)",
+        "tasksDefaultTargetEmpty": "Er is nog geen herinneringslijst vrijgegeven voor taken.",
+        "tasksDefaultsSaved": "Standaardwaarden opgeslagen"
     },
     "login": {
         "tagline": "Welkom terug bij je gezinsplanner.",
@@ -3396,7 +3411,22 @@
                 "private": "Privé",
                 "family": "Gezin"
             },
-            "allTitle": "Alle medicijnen"
+            "allTitle": "Alle medicijnen",
+            "log": {
+                "correct": "Vermelding corrigeren: {{medication}}, {{time}}",
+                "editTitle": "Vermelding corrigeren",
+                "statusLabel": "Status",
+                "statusPending": "Openstaand",
+                "dateLabel": "Datum",
+                "timeLabel": "Tijd",
+                "scheduledHint": "Geplande innames kunnen worden teruggedraaid, maar niet verwijderd.",
+                "adhocHint": "Deze vermelding komt niet uit een schema en kan worden verwijderd.",
+                "saved": "Vermelding opgeslagen",
+                "saveError": "Vermelding kon niet worden opgeslagen.",
+                "deleteConfirm": "Deze vermelding verwijderen?",
+                "deleted": "Vermelding verwijderd",
+                "deleteConfirmDetail": "De vermelding verdwijnt ook uit de export. Dit kan niet ongedaan worden gemaakt."
+            }
         },
         "labs": {
             "title": "Labwaarden",

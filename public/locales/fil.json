@@ -397,7 +397,13 @@
         "detailFinish": "Tapusin",
         "detailReopen": "Buksang muli",
         "subtasksLabel": "Mga Subtask",
-        "swipeView": "Tingnan"
+        "swipeView": "Tingnan",
+        "descriptionMarkdownHint": "Suportado ang Markdown.",
+        "syncTargetLabel": "Target ng sync",
+        "syncTargetLocal": "I-save lang nang lokal",
+        "syncTargetHint": "Pumili ng listahan ng paalala kung saan isusulat ang gawaing ito.",
+        "syncTargetMirrored": "Naka-sync na ang gawaing ito sa isang listahan ng paalala. Hindi na mapapalitan ang listahan.",
+        "syncTargetUnavailable": "Dating napiling listahan (hindi na available)"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} pagkain",
@@ -2225,7 +2231,16 @@
             "revokeConfirmDetail": "Agad na hihinto sa paggana ang link na naipadala o nakopya mo na. Hindi na makakagawa ng account ang inimbitahan gamit ito; kakailanganin mo siyang imbitahang muli."
         },
         "healthCaregiversLabel": "Puwedeng magtala ng datos ng kalusugan",
-        "healthCaregiversHint": "Puwedeng magtala ang mga taong ito ng vitals, gamot, resulta ng lab at aktibidad para sa miyembrong ito, at makikita rin nila ang mga pribadong tala nito. Hindi kasama ang talaarawan ng siklo."
+        "healthCaregiversHint": "Puwedeng magtala ang mga taong ito ng vitals, gamot, resulta ng lab at aktibidad para sa miyembrong ito, at makikita rin nila ang mga pribadong tala nito. Hindi kasama ang talaarawan ng siklo.",
+        "pageTaskDefaults": "Mga default sa gawain",
+        "pageTaskDefaultsDescription": "Itakda ang default na listahan ng paalala para sa sarili mong mga bagong gawain.",
+        "tasksDefaultsTitle": "Mga default para sa bagong gawain",
+        "tasksDefaultsDescription": "Mga setting na awtomatikong inilalapat sa mga bagong gawain.",
+        "tasksDefaultTargetLabel": "Default na listahan ng paalala",
+        "tasksDefaultTargetHint": "Ang mga bagong gawain ay napupunta sa listahang ito. Maaari ka pa ring pumili ng ibang target sa tuwing gagawa.",
+        "tasksDefaultTargetUnavailable": "Dating napiling listahan (hindi na available)",
+        "tasksDefaultTargetEmpty": "Wala pang listahan ng paalala na pinagana para sa mga gawain.",
+        "tasksDefaultsSaved": "Na-save ang mga default"
     },
     "login": {
         "tagline": "Maligayang pagbabalik sa iyong family planner.",
@@ -3396,7 +3411,22 @@
                 "private": "Pribado",
                 "family": "Pamilya"
             },
-            "allTitle": "Lahat ng Gamot"
+            "allTitle": "Lahat ng Gamot",
+            "log": {
+                "correct": "Itama ang tala: {{medication}}, {{time}}",
+                "editTitle": "Itama ang tala",
+                "statusLabel": "Katayuan",
+                "statusPending": "Nakabinbin",
+                "dateLabel": "Petsa",
+                "timeLabel": "Oras",
+                "scheduledHint": "Ang mga nakatakdang dosis ay maaaring bawiin, ngunit hindi mabubura.",
+                "adhocHint": "Ang talang ito ay hindi mula sa iskedyul at maaaring burahin.",
+                "saved": "Na-save ang tala",
+                "saveError": "Hindi ma-save ang tala.",
+                "deleteConfirm": "Burahin ang talang ito?",
+                "deleted": "Nabura ang tala",
+                "deleteConfirmDetail": "Mawawala rin ang tala sa export. Hindi ito maibabalik."
+            }
         },
         "labs": {
             "title": "Resulta ng lab",

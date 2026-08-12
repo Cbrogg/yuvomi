@@ -1978,6 +1978,31 @@ button.cycle-cal__day:not(:disabled):hover { background: var(--color-surface-2);
   font-size: var(--text-sm);
 }
 
+/* Die Zeile wird zum Knopf, sobald man fuer diese Person schreiben darf (#701).
+ * Sie traegt die Flex-Verteilung der Zeile selbst weiter, damit eine korrigierbare
+ * und eine nur lesbare Zeile exakt gleich aussehen - der Unterschied soll die
+ * Beruehrung sein, nicht das Layout. */
+.health-medlog__edit {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--target-md);
+  padding: 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.health-medlog__edit:hover,
+.health-medlog__edit:focus-visible {
+  color: var(--color-text-primary);
+}
+
 .health-medlog__row svg {
   width: 14px;
   height: 14px;
@@ -1985,7 +2010,7 @@ button.cycle-cal__day:not(:disabled):hover { background: var(--color-surface-2);
   flex-shrink: 0;
 }
 
-.health-medlog__row.is-skipped svg {
+.health-medlog__row.is-muted svg {
   color: var(--color-text-tertiary);
 }
 

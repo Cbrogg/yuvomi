@@ -385,7 +385,13 @@
         "detailFinish": "Slutför",
         "detailReopen": "Öppna igen",
         "subtasksLabel": "Deluppgifter",
-        "swipeView": "Visa"
+        "swipeView": "Visa",
+        "descriptionMarkdownHint": "Markdown stöds.",
+        "syncTargetLabel": "Synkroniseringsmål",
+        "syncTargetLocal": "Spara endast lokalt",
+        "syncTargetHint": "Välj en påminnelselista att skriva den här uppgiften till.",
+        "syncTargetMirrored": "Den här uppgiften synkroniseras redan med en påminnelselista. Listan kan inte ändras i efterhand.",
+        "syncTargetUnavailable": "Tidigare vald lista (inte längre tillgänglig)"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} måltider",
@@ -2213,7 +2219,16 @@
             "revokeConfirmDetail": "En länk du redan skickat eller kopierat slutar fungera direkt. Den inbjudna personen kan inte längre skapa ett konto med den; du måste bjuda in på nytt."
         },
         "healthCaregiversLabel": "Får registrera hälsodata",
-        "healthCaregiversHint": "Dessa personer får registrera vitalvärden, mediciner, provsvar och aktiviteter åt den här medlemmen och ser då även dennes privata poster. Cykeldagboken förblir undantagen."
+        "healthCaregiversHint": "Dessa personer får registrera vitalvärden, mediciner, provsvar och aktiviteter åt den här medlemmen och ser då även dennes privata poster. Cykeldagboken förblir undantagen.",
+        "pageTaskDefaults": "Standardvärden för uppgifter",
+        "pageTaskDefaultsDescription": "Ange standardpåminnelselista för dina egna nya uppgifter.",
+        "tasksDefaultsTitle": "Standardvärden för nya uppgifter",
+        "tasksDefaultsDescription": "Inställningar som nya uppgifter automatiskt använder.",
+        "tasksDefaultTargetLabel": "Standardpåminnelselista",
+        "tasksDefaultTargetHint": "Nya uppgifter läggs i den här listan. Du kan välja ett annat mål varje gång du skapar en.",
+        "tasksDefaultTargetUnavailable": "Tidigare vald lista (inte längre tillgänglig)",
+        "tasksDefaultTargetEmpty": "Ingen påminnelselista är ännu aktiverad för uppgifter.",
+        "tasksDefaultsSaved": "Standardvärden sparade"
     },
     "login": {
         "tagline": "Välkommen tillbaka till din familjeplanerare.",
@@ -3396,7 +3411,22 @@
                 "private": "Privat",
                 "family": "Familj"
             },
-            "allTitle": "Alla mediciner"
+            "allTitle": "Alla mediciner",
+            "log": {
+                "correct": "Rätta post: {{medication}}, {{time}}",
+                "editTitle": "Rätta post",
+                "statusLabel": "Status",
+                "statusPending": "Väntar",
+                "dateLabel": "Datum",
+                "timeLabel": "Tid",
+                "scheduledHint": "Planerade doser kan ångras, men inte tas bort.",
+                "adhocHint": "Den här posten kommer inte från ett schema och kan tas bort.",
+                "saved": "Posten sparad",
+                "saveError": "Posten kunde inte sparas.",
+                "deleteConfirm": "Ta bort den här posten?",
+                "deleted": "Posten borttagen",
+                "deleteConfirmDetail": "Posten försvinner även ur exporten. Detta går inte att ångra."
+            }
         },
         "labs": {
             "title": "Provsvar",

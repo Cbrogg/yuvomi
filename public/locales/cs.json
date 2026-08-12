@@ -385,7 +385,13 @@
         "detailFinish": "Dokončit",
         "detailReopen": "Znovu otevřít",
         "subtasksLabel": "Dílčí úkoly",
-        "swipeView": "Zobrazit"
+        "swipeView": "Zobrazit",
+        "descriptionMarkdownHint": "Markdown je podporován.",
+        "syncTargetLabel": "Cíl synchronizace",
+        "syncTargetLocal": "Uložit pouze lokálně",
+        "syncTargetHint": "Vyber seznam připomínek, do kterého se má tento úkol zapsat.",
+        "syncTargetMirrored": "Tento úkol se už synchronizuje se seznamem připomínek. Seznam už nelze změnit.",
+        "syncTargetUnavailable": "Naposledy zvolený seznam (již není dostupný)"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} jídla",
@@ -2213,7 +2219,16 @@
             "revokeConfirmDetail": "Už odeslaný nebo zkopírovaný odkaz okamžitě přestane fungovat. Pozvaná osoba si přes něj nevytvoří účet; musel bys ji pozvat znovu."
         },
         "healthCaregiversLabel": "Může zadávat zdravotní údaje",
-        "healthCaregiversHint": "Tyto osoby mohou za tohoto člena zadávat vitální hodnoty, léky, laboratorní výsledky a aktivity a přitom vidí i jeho soukromé záznamy. Deník cyklu zůstává vyňat."
+        "healthCaregiversHint": "Tyto osoby mohou za tohoto člena zadávat vitální hodnoty, léky, laboratorní výsledky a aktivity a přitom vidí i jeho soukromé záznamy. Deník cyklu zůstává vyňat.",
+        "pageTaskDefaults": "Výchozí nastavení úkolů",
+        "pageTaskDefaultsDescription": "Nastav výchozí seznam připomínek pro své nové úkoly.",
+        "tasksDefaultsTitle": "Výchozí hodnoty pro nové úkoly",
+        "tasksDefaultsDescription": "Nastavení, která se automaticky použijí na nové úkoly.",
+        "tasksDefaultTargetLabel": "Výchozí seznam připomínek",
+        "tasksDefaultTargetHint": "Nové úkoly se přiřazují do tohoto seznamu. Při vytváření můžeš pokaždé zvolit jiný cíl.",
+        "tasksDefaultTargetUnavailable": "Naposledy zvolený seznam (již není dostupný)",
+        "tasksDefaultTargetEmpty": "Pro úkoly zatím není povolen žádný seznam připomínek.",
+        "tasksDefaultsSaved": "Výchozí hodnoty uloženy"
     },
     "login": {
         "tagline": "Vítejte zpět ve svém rodinném plánovači.",
@@ -3396,7 +3411,22 @@
                 "private": "Soukromé",
                 "family": "Rodina"
             },
-            "allTitle": "Všechny léky"
+            "allTitle": "Všechny léky",
+            "log": {
+                "correct": "Opravit záznam: {{medication}}, {{time}}",
+                "editTitle": "Opravit záznam",
+                "statusLabel": "Stav",
+                "statusPending": "Čeká",
+                "dateLabel": "Datum",
+                "timeLabel": "Čas",
+                "scheduledHint": "Naplánované dávky lze vrátit zpět, ale ne smazat.",
+                "adhocHint": "Tento záznam nepochází z plánu a lze jej smazat.",
+                "saved": "Záznam uložen",
+                "saveError": "Záznam se nepodařilo uložit.",
+                "deleteConfirm": "Smazat tento záznam?",
+                "deleted": "Záznam smazán",
+                "deleteConfirmDetail": "Záznam zmizí i z exportu. Tuto akci nelze vrátit zpět."
+            }
         },
         "labs": {
             "title": "Laboratorní hodnoty",

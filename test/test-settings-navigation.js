@@ -110,9 +110,12 @@ test('die Blätter verteilen sich wie beschlossen auf die vier Domänen', () => 
   // vier geschrumpft, und was per-user schreibt, liegt bei `personal`.
   // Immich (#693) liegt bei `admin` wie das Wetter: eine serverweite
   // Dienstanbindung, deren Zugangsdaten der Browser nie sieht.
+  // Die Aufgaben-Vorgaben (#695) liegen bei `personal` und NICHT bei
+  // `sync-reminders`: welche Erinnerungslisten der Haushalt abgleicht, ist eine
+  // Admin-Entscheidung, in welche davon meine neuen Aufgaben laufen, ist meine.
   const perDomain = {};
   for (const leaf of SETTINGS_LEAVES) perDomain[leaf.domainId] = (perDomain[leaf.domainId] ?? 0) + 1;
-  assert.deepEqual(perDomain, { personal: 7, modules: 4, sync: 5, admin: 8 });
+  assert.deepEqual(perDomain, { personal: 8, modules: 4, sync: 5, admin: 8 });
   // Jedes Blatt hängt an einer existierenden Domäne.
   const domainIds = new Set(SETTINGS_DOMAINS.map((domain) => domain.id));
   for (const leaf of SETTINGS_LEAVES) {

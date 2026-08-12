@@ -385,7 +385,13 @@
         "detailFinish": "Befejezés",
         "detailReopen": "Újranyitás",
         "subtasksLabel": "Részfeladatok",
-        "swipeView": "Megtekintés"
+        "swipeView": "Megtekintés",
+        "descriptionMarkdownHint": "A Markdown támogatott.",
+        "syncTargetLabel": "Szinkronizálási cél",
+        "syncTargetLocal": "Csak helyben mentés",
+        "syncTargetHint": "Válassz emlékeztetőlistát, amelybe ez a feladat kerüljön.",
+        "syncTargetMirrored": "Ez a feladat már szinkronizálva van egy emlékeztetőlistával. A lista utólag nem módosítható.",
+        "syncTargetUnavailable": "Korábban választott lista (már nem érhető el)"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} étkezésből",
@@ -2213,7 +2219,16 @@
             "revokeConfirmDetail": "A már elküldött vagy kimásolt link azonnal működésképtelen lesz. A meghívott ezzel nem tud fiókot létrehozni; újra meg kellene hívnod."
         },
         "healthCaregiversLabel": "Rögzíthet egészségügyi adatokat",
-        "healthCaregiversHint": "Ezek a személyek rögzíthetnek életjeleket, gyógyszereket, laboreredményeket és tevékenységeket ehhez a taghoz, és eközben a privát bejegyzéseit is látják. A ciklusnapló kivétel marad."
+        "healthCaregiversHint": "Ezek a személyek rögzíthetnek életjeleket, gyógyszereket, laboreredményeket és tevékenységeket ehhez a taghoz, és eközben a privát bejegyzéseit is látják. A ciklusnapló kivétel marad.",
+        "pageTaskDefaults": "Feladat-alapértékek",
+        "pageTaskDefaultsDescription": "Állítsd be az alapértelmezett emlékeztetőlistát a saját új feladataidhoz.",
+        "tasksDefaultsTitle": "Alapértékek új feladatokhoz",
+        "tasksDefaultsDescription": "Beállítások, amelyeket az új feladatok automatikusan átvesznek.",
+        "tasksDefaultTargetLabel": "Alapértelmezett emlékeztetőlista",
+        "tasksDefaultTargetHint": "Az új feladatok ebbe a listába kerülnek. Létrehozáskor mindig választhatsz másik célt.",
+        "tasksDefaultTargetUnavailable": "Korábban választott lista (már nem érhető el)",
+        "tasksDefaultTargetEmpty": "Még nincs feladatokhoz engedélyezett emlékeztetőlista.",
+        "tasksDefaultsSaved": "Alapértékek mentve"
     },
     "login": {
         "tagline": "Üdv újra a családi tervezőben.",
@@ -3396,7 +3411,22 @@
                 "private": "Privát",
                 "family": "Család"
             },
-            "allTitle": "Összes gyógyszer"
+            "allTitle": "Összes gyógyszer",
+            "log": {
+                "correct": "Bejegyzés javítása: {{medication}}, {{time}}",
+                "editTitle": "Bejegyzés javítása",
+                "statusLabel": "Állapot",
+                "statusPending": "Függőben",
+                "dateLabel": "Dátum",
+                "timeLabel": "Időpont",
+                "scheduledHint": "A tervezett bevételek visszavonhatók, de nem törölhetők.",
+                "adhocHint": "Ez a bejegyzés nem tervből származik, ezért törölhető.",
+                "saved": "Bejegyzés mentve",
+                "saveError": "A bejegyzést nem sikerült menteni.",
+                "deleteConfirm": "Törlöd ezt a bejegyzést?",
+                "deleted": "Bejegyzés törölve",
+                "deleteConfirmDetail": "A bejegyzés az exportból is eltűnik. Ez nem vonható vissza."
+            }
         },
         "labs": {
             "title": "Laborértékek",
