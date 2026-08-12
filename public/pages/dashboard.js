@@ -378,11 +378,22 @@ function normalizeDashboardConfig(input) {
 // „Nutzerabsicht", sondern nur, weil der Default-Satz nicht sauber tesselliert (Critique P2).
 function isUserOrderedConfig(cfg) {
   if (!Array.isArray(cfg)) return false;
-  // Nur sichtbare, beidseitig bekannte Widgets vergleichen: nachträglich
-  // angehängte neue Widget-IDs (Config-Merge älterer Stände) oder reine
-  // Sichtbarkeits-Toggles sind KEINE Nutzer-Umsortierung. Der strikte
-  // Voll-Vergleich schaltete sonst dauerhaft auf preserve-order und der
-  // dense-Bento füllte nie wieder Lücken (Audit A1-03).
+  // Nur sichtbare, beidseitig bekannte Widgets vergleichen: eine Id, die im
+  // gespeicherten Layout steht und in WIDGET_IDS nicht mehr (abgeschaffte
+  // Widgets alter Stände), und reine Sichtbarkeits-Toggles sind KEINE
+  // Nutzer-Umsortierung. Der strikte Voll-Vergleich schaltete sonst dauerhaft
+  // auf preserve-order und der dense-Bento füllte nie wieder Lücken
+  // (Audit A1-03).
+  //
+  // WAS DIESER FILTER NICHT ABDECKT - der umgekehrte Fall: eine Id, die
+  // normalizeDashboardConfig gerade selbst ANGEHAENGT hat, weil sie in
+  // WIDGET_IDS neu ist. Die steht in `defaultIds` und wird mitverglichen. Sie
+  // faellt hier nur deshalb nicht auf, weil der Merge ans Ende haengt und die
+  // neuen Ids ans Ende von WIDGET_IDS geschrieben werden - beide Reihenfolgen
+  // stimmen dann ueberein. Diese Uebereinstimmung ist die eigentliche
+  // Zusicherung, nicht der Filter: wer eine neue Id VOR eine bestehende setzt,
+  // laesst jedes Bestandslayout als „umsortiert" lesen und holt sich A1-03
+  // zurueck. Siehe die Notiz an WIDGET_IDS.
   const defaultIds = DEFAULT_WIDGET_CONFIG.map((w) => w.id);
   const currentOrder = [...cfg]
     .filter((w) => w.visible !== false && defaultIds.includes(w.id))
