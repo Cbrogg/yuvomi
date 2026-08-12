@@ -948,19 +948,39 @@ offen im Stylesheet und waere im Dokument unsichtbar, weil beide Antworten die
 Zielgroessen-Regel halten (**Ebene 3**, `die Groesse des Icon-Knopfs gehoert der Shell`).
 
 ### Segmented Controls
-- **EINE Sprache shell-weit:** aktives Segment = Modul-Akzent gefuellt
-  (`var(--module-accent, var(--color-accent))`) mit `--color-ink-on-vivid`; inaktiv
+- **EINE Sprache shell-weit:** aktives Segment = erhabene Surface-Pille im Well
+  (`--seg-active-bg` + `--seg-active-shadow`), Modulton NUR als Tinte
+  (`color-mix(in srgb, <Akzent> var(--tint-ink), var(--color-text-primary))`); inaktiv
   Sekundaertext, Hover hebt nur die Textfarbe. Gilt identisch fuer Aufgaben-Gruppentoggle,
-  Kalender-Ansichtswahl, Budget-Tabs, Sub-Tabs, Kuechen-Tabs, Dokumenten-View-Toggle und die
-  Settings-Schalter. Innenradius konzentrisch (`calc(var(--radius-sm) - 2px)`). Kein
-  3px-Akzentstreifen mehr unter aktiven Tabs - die Fuellung ist das Signal.
+  Kalender-Ansichtswahl, Budget-Tabs, Sub-Tabs, Kuechen-Tabs, Dokumenten-View-Toggle,
+  Listen-Tabs, Gesundheits-Zeitraum und die Settings-Schalter. Der Traeger ist ein Well
+  (`--color-surface-3`), sonst ist die Pille kein Zustand (gemessen 1.20:1 hell / 1.16:1
+  dunkel gegen Surface, plus Schatten). Innenradius konzentrisch
+  (`calc(var(--radius-sm) - 2px)`). Kein 3px-Akzentstreifen unter aktiven Tabs.
+- **EINE BEHANDLUNG PRO KONTROLLTYP.** Der Modulton erscheint genau einmal als FLAECHE
+  (aktiver Filter-Chip, getoent) und einmal als TINTE (aktives Segment). Bis 2026-08-12
+  war das Segment deckend gefuellt; auf `/tasks` standen dadurch vier Gruen-Behandlungen
+  gleichzeitig im Bild (gefuellter Ansichtsumschalter, gefuelltes Gruppen-Segment,
+  getoenter Chip, Chip mit roher Akzent-Kante). Die alte Begruendung fuer die Fuellung
+  („Modul-Akzent als Text erreicht nur ~3.5:1") stammt aus der Zeit vor den Familientoenen
+  (v2.1.0) und ist abgelaufen: heute haelt selbst der rohe Ton 5.04:1 hell / 4.82:1 dunkel,
+  die `--tint-ink`-Mischung 7.37:1 / 6.61:1 ueber alle neun Familien. Gehalten von
+  `das aktive Segment ist ueberall dieselbe Pille` in `test/test-frontend-audit.js`,
+  in beiden Richtungen (Vollstaendigkeit der drei Zeilen UND kein Rueckfall auf gefuellt).
+- **Die Tinte ist kein Token, und das ist Absicht.** Ein Custom Property, das
+  `var(--module-accent)` enthaelt, wird dort aufgeloest, wo es DEKLARIERT ist. An `:root`
+  gibt es keinen Modulton - ein `--seg-active-ink` war in jedem Modul violett und riss den
+  Filter-Chip gleich mit. Die `color-mix`-Zeile steht deshalb an jeder Fundstelle
+  ausgeschrieben; zusammengehalten wird sie vom Guard, nicht von der Kaskade.
 
 ### Chips
 - **Form:** Kapsel (`--radius-full`), Kante wie ein Bedienelement. Kalender-Layer-Chips
   tragen die User-Farbe als Border mit ~60 % Deckung (>=3:1), nie als Textfarbe; nur der
   Mir-zugewiesen-Chip traegt sein Label in der Layer-Farbe (AA-verifiziert),
-  Feiertags-Chips bleiben Sekundaertext. Aktive Filter-Chips folgen der Segment-Sprache.
-  Scrollende Chip-Reihen bekommen die Fade-Mask (siehe Layout).
+  Feiertags-Chips bleiben Sekundaertext. Ein aktiver Filter-Chip traegt den Ton als
+  getoente FLAECHE (`--tint-state` Grund, `--tint-hint` Kante, `--tint-ink` Tinte) - das
+  ist die andere Haelfte der Regel „eine Behandlung pro Kontrolltyp" und ausdruecklich
+  NICHT die Segment-Pille. Scrollende Chip-Reihen bekommen die Fade-Mask (siehe Layout).
 
 ### Cards / Containers
 - **Corner Style:** 12px (`--radius-md`) fuer die Karte, 16px (`--radius-lg`) fuer den

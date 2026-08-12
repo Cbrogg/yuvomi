@@ -739,6 +739,44 @@
   --tint-shadow:  20%;
 
   /* --------------------------------------------------------
+   * 6c. Das aktive Segment - EIN Rezept, sieben Fundstellen
+   *
+   * Ein segmentierter Umschalter zeigt seinen aktiven Zustand als erhabene
+   * Surface-Pille im Well; den Modulton trägt er nur noch in der TINTE. Bis
+   * hierher war er eine deckend gefüllte Fläche im Modulton - die Sprache stand
+   * gleichlautend in sechs Stylesheets, und auf /aufgaben standen dadurch vier
+   * Grün-Behandlungen gleichzeitig im Bild: gefüllter Ansichtsumschalter,
+   * gefülltes Gruppen-Segment, getönter Filter-Chip und ein Chip mit grüner
+   * Kante. Der Ton erscheint jetzt genau einmal als FÜLLUNG (der Chip) und
+   * einmal als TINTE (das Segment) - eine Behandlung pro Kontrolltyp -, und
+   * Mehrfachfilter und exklusiver Umschalter bleiben unterscheidbar.
+   *
+   * DIE ALTE GEGENMESSUNG IST ABGELAUFEN. `sub-tabs.css` begründete die
+   * Füllung damit, dass der Modulton als Text auf Hell nur ~3.5:1 erreicht.
+   * Das galt vor den Familientönen (v2.1.0): heute hält selbst der rohe Ton
+   * 5.04:1 hell / 4.82:1 dunkel, und die Mischung hier 7.37:1 / 6.61:1 über
+   * alle neun Familien.
+   *
+   * WARUM DIE TINTE HIER NICHT STEHT, obwohl sie zum Rezept gehört: ein
+   * Custom Property, das `var(--module-accent)` enthält, wird an DER STELLE
+   * aufgelöst, an der es DEKLARIERT ist - hier also an `:root`, wo es keinen
+   * Modul-Akzent gibt. Nachkommen erben dann den bereits eingesetzten Wert.
+   * Ein `--seg-active-ink` an dieser Stelle war in jedem Modul violett; im
+   * selben Zug wurde der Filter-Chip mitgerissen, der seine Tönung vorher
+   * korrekt am Element auflöste. Gemessen, nicht vermutet.
+   *
+   * Die Tinte steht deshalb ausgeschrieben an jeder Fundstelle, IMMER so:
+   *   color: color-mix(in srgb, <Akzent> var(--tint-ink), var(--color-text-primary));
+   * mit <Akzent> = `var(--module-accent, var(--color-accent))`, in der
+   * Sub-Tab-Leiste `var(--active-module-accent, var(--color-accent))`. Dass
+   * alle Fundstellen dieselbe Zeile führen, hält der Guard „das aktive Segment
+   * ist überall dieselbe Pille" in test/test-frontend-audit.js - eine geteilte
+   * Regel ohne Guard ist eine wandernde Annahme.
+   * -------------------------------------------------------- */
+  --seg-active-bg:     var(--color-surface);
+  --seg-active-shadow: var(--shadow-xs);
+
+  /* --------------------------------------------------------
    * 7. Overlay / Backdrop
    * -------------------------------------------------------- */
   --_color-overlay:       rgba(0, 0, 0, 0.4);

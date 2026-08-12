@@ -237,7 +237,7 @@
 /* Gruppierungs-Toggle */
 .group-toggle {
   display: flex;
-  background-color: var(--color-surface-2);
+  background-color: var(--color-surface-3);
   border-radius: var(--radius-sm);
   padding: var(--space-0h);
   gap: var(--space-0h);
@@ -297,12 +297,13 @@
   color: var(--color-text-primary);
 }
 
-/* Aktiv: Modul-Akzent gefüllt - dieselbe Segment-Sprache wie
- * .cal-toolbar__view-btn--active und .budget-tab--active (eine Sprache
- * shell-weit, Finish-Review Fundament-Phase). */
+/* Aktiv = erhabene Surface-Pille im Well, Modulton nur in der Tinte - dieselbe
+ * Segment-Sprache wie .cal-toolbar__view-btn--active und .segmented__item
+ * (Rezept: tokens.css, Abschnitt 6c). */
 .group-toggle__btn--active {
-  background-color: var(--module-accent, var(--color-accent));
-  color: var(--color-ink-on-vivid);
+  background-color: var(--seg-active-bg);
+  box-shadow: var(--seg-active-shadow);
+  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-ink), var(--color-text-primary));
 }
 
 /* --------------------------------------------------------
@@ -381,9 +382,16 @@
   color: var(--color-text-primary);
 }
 
+/* Gesetzte Filter = derselbe Zustand wie ein aktiver Chip daneben, also
+ * dieselbe Behandlung: getönte Fläche, getönte Kante, --tint-ink-Tinte. Hier
+ * stand der ROHE Modulton als Kante UND als Text - die vierte Schreibweise
+ * desselben Tons in derselben Zeile, und die einzige ohne den gemessenen
+ * Ink-Mix. `--open` (Panel offen) bleibt davon unberührt: das ist ein anderer
+ * Zustand und trägt weiter nur eine neutrale Betonung. */
 .filter-toggle-btn--active {
-  border-color: var(--module-accent, var(--color-accent));
-  color: var(--module-accent, var(--color-accent));
+  background-color: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-state), transparent);
+  border-color: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-hint), transparent);
+  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-ink), var(--color-text-primary));
 }
 
 .filter-toggle-btn__count {

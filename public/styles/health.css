@@ -144,9 +144,11 @@
   cursor: pointer;
 }
 
+/* Aktiv = erhabene Surface-Pille, Ton in der Tinte (tokens.css, Abschnitt 6c). */
 .health-vitals__range.is-active {
-  background: var(--module-accent);
-  color: var(--color-ink-on-vivid);
+  background: var(--seg-active-bg);
+  box-shadow: var(--seg-active-shadow);
+  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-ink), var(--color-text-primary));
 }
 
 .health-vitals__add {

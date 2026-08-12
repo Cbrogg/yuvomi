@@ -10908,3 +10908,86 @@ test('ein Formularfeld traegt nur form-Klassen, die ein Stylesheet kennt', () =>
     + 'heisst `input` bzw. `form-input` (layout.css, Abschnitt Form-Elemente); '
     + '`select.form-input` bringt dort auch das Chevron-Polster mit.');
 });
+
+/* --------------------------------------------------------------------------
+ * DAS AKTIVE SEGMENT IST UEBERALL DIESELBE PILLE.
+ *
+ * Ein segmentierter Umschalter zeigt seinen aktiven Zustand als erhabene
+ * Surface-Pille und traegt den Modulton NUR in der Tinte. Das Rezept steht in
+ * tokens.css (Abschnitt 6c) und heisst an jeder Fundstelle gleich:
+ *
+ *   background(-color): var(--seg-active-bg);
+ *   box-shadow:         var(--seg-active-shadow);
+ *   color:              color-mix(in srgb, <Akzent> var(--tint-ink), var(--color-text-primary));
+ *
+ * WARUM DIE TINTE NICHT AUCH EIN TOKEN IST: ein Custom Property, das
+ * `var(--module-accent)` enthaelt, wird dort aufgeloest, wo es DEKLARIERT ist.
+ * An `:root` gibt es keinen Modulton, also war ein `--seg-active-ink` in jedem
+ * Modul violett - gemessen, nicht vermutet. Die Zeile steht deshalb
+ * ausgeschrieben, und dieser Guard haelt sie zusammen: eine geteilte Regel ohne
+ * Guard ist eine wandernde Annahme.
+ *
+ * ZWEI RICHTUNGEN, weil eine allein nicht reicht:
+ *   (1) Vollstaendigkeit - wer die Pille nimmt, nimmt alle drei Zeilen. Sonst
+ *       steht irgendwo eine Pille ohne Schatten oder mit grauer Tinte.
+ *   (2) Rueckfall - kein aktiver Umschalter darf wieder deckend im Modulton
+ *       fuellen. Das ist die Richtung, die den Anlassfall trifft: auf /aufgaben
+ *       standen vier Grün-Behandlungen gleichzeitig im Bild.
+ * -------------------------------------------------------------------------- */
+
+// Ein Selektor, der den AKTIVEN Zustand eines segmentierten Umschalters meint.
+// Signatur statt Namensliste: Zustandsmarke (--active / .is-active / --selected)
+// UND ein Bauteilname aus der Umschalter-Familie im selben Selektor.
+const SEGMENT_ACTIVE_RE = /(?:^|[\s,>])\.[a-z][\w-]*(?:tab|seg|toggle|view-btn|switch)[\w-]*(?:--active|--selected|\.is-active|\.is-selected)/i;
+
+test('das aktive Segment ist ueberall dieselbe Pille', () => {
+  const styleDir = new URL('../public/styles/', import.meta.url);
+  const incomplete = [];
+  const refilled = [];
+  let seen = 0;
+
+  for (const file of readdirSync(styleDir).filter((f) => f.endsWith('.css') && f !== 'tokens.css')) {
+    for (const { selector, body } of eachRule(read(`../public/styles/${file}`))) {
+      const usesPill = /background(-color)?\s*:\s*var\(--seg-active-bg\)/.test(body);
+      const isSegment = SEGMENT_ACTIVE_RE.test(selector);
+
+      if (usesPill) {
+        seen += 1;
+        const missing = [];
+        if (!/box-shadow\s*:\s*var\(--seg-active-shadow\)/.test(body)) missing.push('box-shadow: var(--seg-active-shadow)');
+        // AUSNAHME, MECHANISCH STATT NAMENTLICH: eine Pille mit
+        // `pointer-events: none` traegt keinen Text - sie ist eine reine
+        // Flaeche, wie der gleitende Daumen des Rechte-Umschalters, und ihre
+        // Tinte sitzt zwangslaeufig am Geschwister darueber. Am Element
+        // ablesbar, nicht an seinem Namen.
+        const carriesText = !/pointer-events\s*:\s*none/.test(body);
+        if (carriesText && !/color\s*:\s*color-mix\([^;]*var\(--tint-ink\)[^;]*var\(--color-text-primary\)/.test(body)) {
+          missing.push('color: color-mix(… var(--tint-ink), var(--color-text-primary))');
+        }
+        if (missing.length) incomplete.push(`${file}: ${selector.trim()} - es fehlt ${missing.join(' und ')}`);
+      }
+
+      // Der Rueckfall: deckend im Modulton gefuellt plus Vivid-Tinte. Genau die
+      // Kombination, die bis 2026-08-12 in sechs Stylesheets stand.
+      if (isSegment
+        && /background(-color)?\s*:\s*var\(--(?:active-)?module-accent/.test(body)
+        && /color\s*:\s*var\(--color-ink-on-vivid\)/.test(body)) {
+        refilled.push(`${file}: ${selector.trim()}`);
+      }
+    }
+  }
+
+  // Eine Zusicherung ueber eine leere Liste ist keine: findet der Scanner die
+  // Pille nirgends, ist der Guard blind und nicht die App sauber.
+  assert.ok(seen >= 6, `Nur ${seen} Pillen-Regeln gefunden - liest der Scanner die Segment-Zustaende noch?`);
+
+  assert.deepEqual(incomplete.sort(), [],
+    'Diese Segment-Zustaende nehmen die Pille nur halb. Alle drei Zeilen gehoeren '
+    + 'zusammen (tokens.css, Abschnitt 6c) - eine Pille ohne Schatten ist auf dem '
+    + 'Well nicht als Zustand zu erkennen (gemessen 1.20:1 hell, 1.16:1 dunkel).');
+
+  assert.deepEqual(refilled.sort(), [],
+    'Diese Umschalter fuellen ihren aktiven Zustand wieder deckend im Modulton. '
+    + 'Der Ton gehoert genau einmal als FLAECHE (dem Filter-Chip) und einmal als '
+    + 'TINTE (dem Segment) - eine Behandlung pro Kontrolltyp.');
+});

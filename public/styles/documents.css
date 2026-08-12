@@ -36,7 +36,7 @@
   padding: var(--space-0h);
   gap: var(--space-0h);
   border-radius: var(--radius-full);
-  background: var(--color-surface-work);
+  background: var(--color-surface-3);
 }
 
 .documents-view-toggle__btn {
@@ -54,13 +54,14 @@
   height: 17px;
 }
 
-/* Aktiv: Modul-Akzent gefüllt + --color-ink-on-vivid - die eine Segment-Sprache
- * der Shell (DESIGN.md „Segmented Controls"). Vorher: erhabene Glas-Kachel mit
- * Akzent-Glyph - Glas-Material auf einem Inhalts-Control und zugleich die
- * zweite Segment-Optik neben der Tab-Leiste desselben Moduls. */
+/* Aktiv = erhabene Surface-Pille im Well, Modulton nur in der Tinte (Rezept:
+ * tokens.css, Abschnitt 6c). Die Leiste selbst musste dafür ein Well werden -
+ * sie stand auf --color-surface-work, also auf Weiß, und eine weiße Pille auf
+ * weißem Grund ist kein Zustand. */
 .documents-view-toggle__btn--active {
-  color: var(--color-ink-on-vivid);
-  background: var(--module-accent, var(--color-accent));
+  background: var(--seg-active-bg);
+  box-shadow: var(--seg-active-shadow);
+  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-ink), var(--color-text-primary));
 }
 
 /* Eigene Filterzeile unter dem Kopf (wie Kontakte): Status- + Kategorie-Chips

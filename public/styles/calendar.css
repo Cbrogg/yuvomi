@@ -112,7 +112,7 @@
 .cal-toolbar__views {
   display: flex;
   gap: var(--space-0h);
-  background-color: var(--color-surface-2);
+  background-color: var(--color-surface-3);
   border-radius: var(--radius-sm);
   padding: var(--space-0h);
 }
@@ -140,12 +140,12 @@
   color: var(--color-text-primary);
 }
 
-/* Vereinheitlichter Active-State für segmentierte Umschalter: Modul-Akzent
- * gefüllt (wie .budget-tab--active), trägt die Modul-Identität. --color-ink-on-vivid
- * kippt im Dark Mode auf dunkle Tinte, passend zum dort hellen Modul-Akzent. */
+/* Aktiv = erhabene Surface-Pille im Well, Modulton nur in der Tinte. Das
+ * Rezept steht in tokens.css (Abschnitt 6c) und nirgends sonst. */
 .cal-toolbar__view-btn--active {
-  background-color: var(--module-accent, var(--color-accent));
-  color: var(--color-ink-on-vivid);
+  background-color: var(--seg-active-bg);
+  box-shadow: var(--seg-active-shadow);
+  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-ink), var(--color-text-primary));
 }
 
 /* Mobiles Umbrechen kommt jetzt aus .page-toolbar--wrap (layout.css): die

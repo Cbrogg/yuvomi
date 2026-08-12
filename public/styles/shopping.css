@@ -96,21 +96,24 @@
  * HIG-Rollout gefüllt ist; eine 14 %-Tönung darunter las sich als zweiter,
  * schwächerer Zustandsbegriff für dieselbe Handlung.
  *
- * Das frühere Ink-Label war mit der Tönung richtig (Modul-Akzent als TEXT auf
- * Hell erreicht nur ~3.5:1); auf der Vollfläche erbt --color-ink-on-vivid den
- * verifizierten Akzent-auf-Weiß-Wert (>=5:1). */
+ * Die ~3.5:1 aus dem Absatz darüber galten vor den Familientönen (v2.1.0):
+ * heute hält selbst der rohe Ton 5.04:1 hell und 4.82:1 dunkel, die
+ * --tint-ink-Mischung 7.37:1 / 6.61:1. Der Ton darf deshalb wieder Tinte sein,
+ * und der Zustand kommt aus der erhabenen Pille (tokens.css, Abschnitt 6c). */
 .list-tab--active {
-  background-color: var(--module-accent);
-  border-color: var(--module-accent);
-  color: var(--color-ink-on-vivid);
+  background-color: var(--seg-active-bg);
+  box-shadow: var(--seg-active-shadow);
+  border-color: transparent;
+  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-ink), var(--color-text-primary));
   font-weight: var(--font-weight-semibold);
 }
 
-/* Der Zähler kehrt sich auf der gefüllten Pille um - gleiche Rechnung wie
- * .sub-tab--active .sub-tab__badge. */
+/* Getönte Marke auf der Surface-Pille - gleiche Rechnung wie
+ * .sub-tab--active .sub-tab__badge. Die frühere Umkehr (weiß auf Vollton)
+ * wäre auf der hellen Pille eine weiße Marke auf Weiß. */
 .list-tab--active .list-tab__count {
-  background-color: var(--color-ink-on-vivid);
-  color: var(--module-accent);
+  background-color: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-state), transparent);
+  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-ink), var(--color-text-primary));
 }
 
 .list-tab__count {

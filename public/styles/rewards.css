@@ -334,10 +334,13 @@
   transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
 }
 .rw-chip:hover { border-color: var(--color-border-strong); }
+/* Ein Filter-Chip, kein Segment: er trägt den Ton als getönte Fläche, nicht
+ * deckend gefüllt (Rezept: tokens.css, Abschnitt 6c). Deckend war er die eine
+ * Stelle, an der ein Chip wie ein Segment aussah. */
 .rw-chip--active {
-  background: var(--module-accent);
-  border-color: var(--module-accent);
-  color: var(--color-ink-on-vivid);
+  background: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-state), transparent);
+  border-color: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-hint), transparent);
+  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-ink), var(--color-text-primary));
 }
 
 /* Verlaufsliste: EIN Träger (Zeilenlisten-Regel, tokens.css). Der Träger endet
