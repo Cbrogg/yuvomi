@@ -994,22 +994,21 @@
  * trägt. Er trug hier KEINE Semantik (kein Zustand, keine Kalenderfarbe),
  * deshalb braucht das Entkarten keinen Zweitkanal: die Kalenderfarbe hängt
  * seit jeher am Punkt (.agenda-event__color). */
+/* SIE TRAEGT `.list-row` (Critique 2026-08-13, P2). Hier standen sieben
+ * Deklarationen, die zeichengleich in list-row.css stehen - dieselbe
+ * Anzeigeart, dieselbe Polsterung, derselbe Uebergang, derselbe Hover, derselbe
+ * Fokusring. Gemessen war das Ergebnis identisch; der Unterschied war nur, dass
+ * die naechste Korrektur an der geteilten Zeile diese hier nicht erreicht
+ * haette. Genau die Form, in der `.filter-toggle-btn` dreimal unentdeckt neben
+ * `.filter-chip` stand.
+ *
+ * Was BLEIBT, ist die Abweichung und nur sie: die Zeile richtet ihre Kinder
+ * gestreckt aus, weil der Farbstreifen die volle Hoehe nimmt, und ihr Abstand
+ * ist kleiner, weil links kein Bedienelement steht, sondern ein 8px-Punkt. */
 .agenda-event {
-  display: flex;
   align-items: stretch;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
   cursor: pointer;
-  transition: background-color var(--transition-fast);
-}
-
-.agenda-event:hover {
-  background-color: var(--color-surface-hover);
-}
-
-.agenda-event:focus-visible {
-  outline: var(--focus-ring-width) solid var(--focus-ring-color);
-  outline-offset: var(--focus-ring-offset);
 }
 
 /* Kalenderfarbe als Dot statt vollhohem Seitenstreifen — konsistent mit den
@@ -1233,8 +1232,11 @@
     margin-bottom: var(--space-1);
   }
 
+  /* Nur die Polsterung, und die ist eine Abweichung: 8px rundum statt der 8/12
+   * der geteilten Zeile, weil links ein 8px-Punkt steht und kein Bedienelement.
+   * Die `min-height` stand hier ein zweites Mal mit demselben Wert - sie kommt
+   * von `.list-row` und ist entfallen, nicht vergessen. */
   .agenda-event {
-    min-height: var(--target-lg);
     padding: var(--space-2);
   }
 

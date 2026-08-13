@@ -2250,7 +2250,7 @@ function renderAgendaEvent(ev, dayStr) {
   const displayBg     = resolveEventBackground(ev);
   const assignedUsers = ev.assigned_users ?? [];
   return `
-    <div class="agenda-event" data-id="${ev.id}" role="button" tabindex="0"
+    <div class="list-row agenda-event" data-id="${ev.id}" role="button" tabindex="0"
          aria-label="${esc(ev.title)}, ${esc(timeStr)}${chipAssigneeLabel(ev) ? ', ' + esc(chipAssigneeLabel(ev)) : ''}">
       <div class="agenda-event__color" style="background:${esc(displayBg)};"></div>
       <div class="agenda-event__body">

@@ -547,11 +547,19 @@
  * Literale liefen sie schon auseinander: das ::before rechnete mit --space-3,
  * während die Karte hier --space-4 trug - auf dem Desktop endete die
  * Trefferfläche damit 4px vor der Kartenkante. Ein Wert, zwei Leser. */
+/* SIE TRAEGT `.list-row` (Critique 2026-08-13, P2). Anzeigeart, Abstand,
+ * Umbruchverbot, Mindesthoehe, Uebergang und Hover kommen von dort - sie
+ * standen hier und in der Regel darueber ein zweites Mal.
+ *
+ * Was BLEIBT, sind zwei begruendete Abweichungen:
+ *   - die Polsterung haengt an `--task-row-pad`, weil die Trefferflaeche des
+ *     Titels mit ihr rechnet (siehe .task-card__title::before) und weil sie
+ *     unter 640px kleiner wird;
+ *   - die Ausrichtung ist `flex-start`, weil ein zweizeiliger Titel seine
+ *     Statuskugel sonst auf halbe Hoehe zoege. */
 .task-card__main {
   --task-row-pad: var(--space-4);
-  display: flex;
   align-items: flex-start;
-  gap: var(--space-3);
   padding: var(--task-row-pad);
 }
 

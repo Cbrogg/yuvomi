@@ -3952,6 +3952,113 @@ test('die Rückfrage der Pille bricht um, statt zu kappen', () => {
 });
 
 /**
+ * EINE ZEILE DARF ABWEICHEN, ABER NICHT WIEDERHOLEN.
+ *
+ * Anlass (Critique 2026-08-13, P2): `.list-row` stand im gerenderten Dokument
+ * auf /shopping 26x, /pantry 21x, /budget 23x, /birthdays 8x, /housekeeping 5x
+ * und /recipes 6x - und auf /tasks, /calendar und /contacts null Mal. Die drei
+ * bauten die Grammatik nach: `.agenda-event` und `.contact-item` mit sieben
+ * bzw. fuenf zeichengleichen Deklarationen, `.contact-group__list` als
+ * Wert-fuer-Wert-Kopie von `.row-carrier`. Gemessen sah man davon nichts - die
+ * Zeilen standen richtig da. Was fehlte, war die Reichweite: die naechste
+ * Korrektur an der geteilten Zeile haette drei von neun Modulen nicht erreicht,
+ * und zwar lautlos. Genau die Form, in der `.filter-toggle-btn` dreimal
+ * unentdeckt neben `.filter-chip` stand.
+ *
+ * DER GUARD VERBIETET NICHT DIE ABWEICHUNG, SONDERN DIE DOPPELUNG. Die drei
+ * Zeilen haben begruendete Eigenheiten - die Agenda richtet gestreckt aus, weil
+ * ihr Farbstreifen die Hoehe nimmt; die Aufgabe polstert ueber `--task-row-pad`,
+ * weil die Trefferflaeche des Titels damit rechnet. Wer eine Eigenschaft mit
+ * einem ANDEREN Wert setzt, trifft eine Entscheidung. Wer sie mit DEMSELBEN
+ * Wert setzt, hat abgeschrieben.
+ *
+ * Und er haengt nicht an einer Liste von drei Klassen: geprueft wird, was im
+ * Markup neben `list-row` steht - eine vierte Zeile ist gedeckt, bevor es sie
+ * gibt.
+ */
+test('eine Zeile wiederholt die geteilte Grammatik nicht', () => {
+  const listRowCss = read('../public/styles/list-row.css');
+  const basis = [...eachRule(listRowCss)]
+    .find((r) => r.selector.trim() === '.list-row' && !r.at.length);
+  assert.ok(basis, '.list-row braucht eine Basisregel - ohne sie prueft der Guard nichts');
+
+  // Die Deklarationen der geteilten Zeile, normalisiert auf `eigenschaft:wert`.
+  const geteilt = new Map();
+  for (const decl of basis.body.split(';')) {
+    const [prop, ...rest] = decl.split(':');
+    if (!rest.length) continue;
+    const p = prop.trim().replace(/\/\*[\s\S]*?\*\//g, '').trim();
+    if (!p || p.startsWith('--')) continue;
+    geteilt.set(p, rest.join(':').trim().replace(/\s+/g, ' '));
+  }
+  assert.ok(geteilt.size >= 5,
+    `erwartet mindestens fuenf geteilte Deklarationen, gefunden ${geteilt.size}`);
+
+  // Was steht im Markup neben `list-row`? Genau das sind die Zeilen-Klassen.
+  const begleiter = new Set();
+  for (const file of readdirSync(new URL('../public/pages/', import.meta.url)).filter((f) => f.endsWith('.js'))) {
+    const src = read(`../public/pages/${file}`);
+    for (const m of src.matchAll(/class="([^"]*\blist-row\b[^"]*)"/g)) {
+      for (const cls of m[1].split(/\s+/)) {
+        // Template-Ausdruecke und die Basisklasse selbst sind keine Begleiter.
+        if (!cls || cls === 'list-row' || cls.includes('$') || cls.includes('{')) continue;
+        begleiter.add(cls);
+      }
+    }
+  }
+  assert.ok(begleiter.size >= 3,
+    'erwartet mindestens die drei nachgezogenen Zeilen als Begleitklassen - findet der Scan '
+    + 'keine, prueft er nichts');
+
+  const alleCss = readdirSync(new URL('../public/styles/', import.meta.url))
+    .filter((f) => f.endsWith('.css') && f !== 'list-row.css')
+    .map((f) => [f, read(`../public/styles/${f}`)]);
+
+  const verstoesse = [];
+  for (const [file, css] of alleCss) {
+    for (const rule of eachRule(css)) {
+      // Nur die Regel der Zeile selbst, keine Kinder, keine Zustaende: eine
+      // `.contact-item__meta` teilt den Namen, nicht die Rolle.
+      const sel = rule.selector.trim();
+      if (!begleiter.has(sel.replace(/^\./, ''))) continue;
+      for (const [prop, wert] of geteilt) {
+        const treffer = new RegExp(`(^|;)\\s*${prop}\\s*:\\s*${wert.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*(;|$)`);
+        if (treffer.test(rule.body)) verstoesse.push(`${file} ${sel} { ${prop}: ${wert} }`);
+      }
+    }
+  }
+  assert.deepEqual(verstoesse, [],
+    'diese Zeilen setzen eine Eigenschaft auf DENSELBEN Wert, den `.list-row` schon setzt - '
+    + 'das ist ein Nachbau, kein Unterschied. Abweichen ist erlaubt, wiederholen nicht');
+});
+
+/**
+ * Wer eine Zeilenliste baut, legt geteilte Zeilen hinein.
+ *
+ * Die Gegenrichtung zum Guard darueber: dort ging es um Zeilen, die die Klasse
+ * TRAGEN und trotzdem abschreiben. Hier um die, die sie gar nicht erst tragen -
+ * der Fall, mit dem /tasks, /calendar und /contacts durchkamen.
+ *
+ * NUR `.list-rows`, NICHT JEDER TRAEGER. Die erste Fassung prueft auch
+ * `.row-carrier` und `.row-divided` und wurde sofort rot - zu Recht gemeldet und
+ * falsch geurteilt: `budget-plans.js` legt `.budget-plan-row` in einen
+ * `.row-carrier`, und die ist `flex-direction: column`, also ein gestapelter
+ * Block mit Fortschrittsbalken, keine Zeile. Der Traeger ist die allgemeinere
+ * Grammatik („eine Folge gleichartiger Elemente, getrennt durch Haarlinien"),
+ * `.list-rows` die spezielle. Ein Guard, der beide gleichsetzt, verlangt eine
+ * Zeilenklasse fuer etwas, das keine Zeile ist.
+ */
+test('eine Seite mit Zeilenliste hat auch geteilte Zeilen', () => {
+  for (const file of readdirSync(new URL('../public/pages/', import.meta.url)).filter((f) => f.endsWith('.js'))) {
+    const src = read(`../public/pages/${file}`);
+    if (!/class="[^"]*\blist-rows\b/.test(src)) continue;
+    assert.match(src, /class="[^"]*\blist-row\b/,
+      `${file} baut eine Zeilenliste, aber keine geteilte Zeile - genau so standen Agenda, `
+      + 'Kontakte und Aufgaben mit ihrem eigenen Nachbau darin');
+  }
+});
+
+/**
  * Der Toast stand im Reduced-Transparency-Fallback des Filter-Chips.
  *
  * Beide verlieren dort ihr Glas, aber sie haben nicht denselben Grund darunter:

@@ -115,12 +115,9 @@
   margin-bottom: var(--space-4);
 }
 
-.contact-group__list {
-  background: var(--color-surface);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  overflow: hidden;
-}
+/* Der Traeger ist `.row-carrier` (list-row.css) - hier standen seine vier
+ * Deklarationen ein zweites Mal. Die Klasse steht am Element, diese Regel
+ * bleibt als Ankerpunkt fuer die Kategorie-Toene darunter. */
 
 /* Pro Kategorie ein abgeleiteter Farbton (--cat). KEIN neuer Modul-Akzent
  * (DESIGN §2), sondern dezente, aus bestehenden AA-verifizierten Tokens
@@ -163,18 +160,17 @@
  * von `.list-row`: die Polsterung muss BEIDE Spalten umschließen, sonst
  * bestimmt die höhere allein. Mit ihr an der Zeile: 64px, wie Einkauf,
  * Vorrat, Rezepte, Budget und die Hauswirtschaft. */
+/* SIE TRAEGT `.list-row` (Critique 2026-08-13, P2). Fuenf der sechs
+ * Deklarationen standen zeichengleich in list-row.css, und die sechste - die
+ * Haarlinie ueber den +-Kombinator - stand dort ebenfalls, nur am TRAEGER
+ * (`.row-carrier > * + *`). Der Traeger heisst hier `.contact-group__list` und
+ * war seinerseits ein Nachbau von `.row-carrier`, Wert fuer Wert: Flaeche,
+ * Radius, Schatten, overflow. Beide tragen die geteilten Klassen jetzt mit.
+ *
+ * Was BLEIBT: der kleinere Abstand. Links steht ein Avatar, kein Bedienelement,
+ * und die 12px der geteilten Zeile schoben den Namen sichtbar von ihm weg. */
 .contact-item {
-  display: flex;
-  align-items: center;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  transition: background-color var(--transition-fast);
-}
-
-/* Haarlinie über den +-Kombinator: border-bottom auf jeder Zeile zöge auch eine
- * unter die letzte und damit einen zweiten Rand in den Träger. */
-.contact-item + .contact-item {
-  border-top: 1px solid var(--color-border-subtle);
 }
 
 .contact-item:hover {
