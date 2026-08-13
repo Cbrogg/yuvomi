@@ -57,6 +57,20 @@
 }
 
 /* Der Button trägt die ganze Textspalte: Name, Zutatenzahl, Chevron. */
+/* NAME UND META STEHEN HIER NEBENEINANDER, NICHT ÜBEREINANDER - und das ist
+ * die eine benannte Ausnahme vom Stapel der geteilten Zeile (Critique
+ * 2026-08-13, dort zunächst als vergessener Umbau gelesen).
+ *
+ * Der Grund ist die Meta selbst: sie ist hier EINE Zahl („6 Zutaten"), kein
+ * mehrteiliger Satz aus Datum, Konto und Kategorie. Eine einzelne Zahl gehört
+ * rechtsbündig ans Zeilenende, wo das Chevron steht - das ist die Detailspalte
+ * der HIG-Tabellenzeile, und die Regeln darunter halten sie über Ziffernzahl
+ * und Singular/Plural hinweg bündig. Untereinander gesetzt kostete dieselbe
+ * Zahl eine zweite Textzeile pro Rezept und stünde linksbündig unter einem
+ * Titel, mit dem sie nichts zu tun hat.
+ *
+ * Wer diese Ausnahme kopiert, prüfe zuerst, ob seine Metazeile auch nur EINE
+ * Angabe trägt. Ab zwei gilt der Stapel. */
 .recipe-row__toggle {
   flex: 1 1 auto;
   min-width: 0;

@@ -1344,6 +1344,17 @@ html:has(.search-overlay--visible) yuvomi-install-prompt {
   -webkit-line-clamp: 2;
   line-clamp: 2;
   text-align: center;
+  /* MIT TRENNSTRICH, NICHT MITTEN IM WORT (Critique 2026-08-13). Der Umbruch
+   * hier ist richtig und war es immer; geprüft hat nur nie jemand, WIE er
+   * bricht. Bei 320px standen „Übersicht" und „Aufgaben" als „Übersich / t"
+   * und „Aufgabe / n" - `overflow-wrap: anywhere` bricht per Definition
+   * innerhalb eines Wortes, und bei `hyphens: manual` ohne jedes Zeichen.
+   *
+   * Es ist dieselbe Antwort, die die Zeilennamen in Etappe 7 bekommen haben,
+   * und der Anlass war derselbe: die Regel war nie über Zeilen, sie war über
+   * Deutsch. `hyphens: auto` macht aus dem Bruch eine Trennung („Über-sicht"),
+   * `anywhere` bleibt als Rückfall für fugenlose Langwörter darunter stehen. */
+  hyphens: auto;
   overflow-wrap: anywhere;
   line-height: 1.1;
 }

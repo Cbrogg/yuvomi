@@ -451,9 +451,15 @@
   width: var(--target-base);
   height: var(--target-base);
   border-radius: var(--radius-full);
-  /* Modul-Akzent wie FAB und Fokus-Ringe daneben (Audit F-05) — vorher stand
-   * der einzige violette App-Akzent-Button neben lauter Pink. */
-  background-color: var(--module-accent, var(--color-accent));
+  /* DIE EINE STIMME (Critique 2026-08-13). Hier stand der Modulton, begründet
+   * mit „wie FAB und Fokus-Ringe daneben (Audit F-05)" - und beide tragen ihn
+   * seit v2.2.0 nicht mehr, weil die Eine-Stimme-Regel ihn zurückgenommen hat.
+   * Die Ausnahme blieb stehen, ihr Anlass war drei Versionen weg. Genau die
+   * Form von Drift, gegen die HIG-Session 27 den Satz aufgeschrieben hat: eine
+   * Ausnahme braucht ein Verfallsdatum an BEIDEN Enden, dem Anlass und dem
+   * Verstoß. Der Guard sah sie nicht, weil er das Chrome aus Selektorformen
+   * ableitet und dieser Knopf keine davon trägt. */
+  background-color: var(--color-accent);
   color: var(--color-ink-on-vivid);
   display: flex;
   align-items: center;
@@ -465,7 +471,7 @@
   min-height: var(--target-lg);
 }
 
-.quick-add__btn:hover { background-color: color-mix(in srgb, var(--module-accent, var(--color-accent)) 85%, black); }
+.quick-add__btn:hover { background-color: var(--color-accent-hover); }
 
 /* Autocomplete-Dropdown */
 .autocomplete-dropdown {
