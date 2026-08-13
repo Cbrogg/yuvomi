@@ -592,6 +592,17 @@
    * Gefangen vom Guard „die Küchen-Listen teilen eine Zeilen-Grammatik", der
    * genau diese Kopplung prüft. */
   align-self: start;
+  /* Und `width: 100%` MUSS dazu, denn `align-self` bedeutet nicht überall
+   * dasselbe. In einem Grid liegt es auf der BLOCK-Achse und heißt „wachse auf
+   * deine Inhaltshöhe" - genau das, was die Zeile darüber will. In einer
+   * Flex-SPALTE liegt dieselbe Eigenschaft auf der INLINE-Achse und heißt
+   * „schrumpfe auf deine Inhaltsbreite"; zusammen mit dem `container-type`
+   * darunter (das den Inhalt für die Größenbestimmung ausblendet) wird daraus
+   * exakt null. Gemessen in der Dokumente-Listenansicht bei 390px: Träger 0px,
+   * Zeilen 24px breit und 474px hoch, 610px Seitenüberlauf - unsichtbar, weil
+   * `.app-content` ihn wegschneidet. Die Breite explizit zu setzen ist in
+   * beiden Kontexten richtig und in keinem eine Annahme. */
+  width: 100%;
   /* Abfragbarer Container, aus demselben Grund und mit demselben Namen wie bei
    * `.list-rows` (dort ausgeschrieben). Er fehlte hier: die Zeilen in Kontakten,
    * Budget, Geburtstagen und der Hauswirtschaft konnten sich als einzige nicht

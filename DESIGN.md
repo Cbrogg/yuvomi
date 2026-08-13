@@ -1064,6 +1064,29 @@ klippt mit ihrem `overflow: hidden` die Wischflaeche), der fehlende Schatten nir
 Fuellung ist dagegen keine Abweichung: `--color-surface-work` hat in beiden Themes denselben
 Wert wie `--color-surface` (#FFFFFF / #262422).
 
+**Das LESEMASS ist seit 2026-08-13 keine der Abweichungen mehr.** Es trug nur `.list-rows`,
+mit der ausgeschriebenen Begruendung, die Listen ausserhalb der Kueche seien breiter. Das war
+eine Beschreibung des Bestands: gemessen bei 1440px stand die Aufgabenliste auf 720px und die
+Kontaktliste auf 1156px, also sprang die Inhaltsspalte beim Modulwechsel um 436px. Beide
+Traeger kappen jetzt auf `--content-max-width-narrow`, und beide machen den Container
+`list-rows` auf. Welche der zwei Klassen eine Zeilenfolge traegt, ist damit eine Frage ihrer
+Verschachtelung (Gruppe im Scroller gegen alleinstehender Traeger), nicht ihrer Breite. Guard:
+`die Kuechen-Listen teilen eine Zeilen-Grammatik`, Abschnitt 4.
+
+**Was die Zeile hat und was daneben steht.** Die geteilte Zeile (`.list-row`) fuehrt seit dem
+Dichte-Paket vierzehn Module. Zwei benannte Stufen weichen begruendet ab - `--roomy` fuer eine
+Zeile, deren Titel-Trefferflaeche die Polsterung mitrechnet (Aufgaben), `--tight` fuer eine,
+die links ein BILD statt eines Bedienelements fuehrt (Kontakte). Mehr Stufen gibt es nicht:
+eine dritte Zahl in einem Modul-Stylesheet ist ein Nachbau, und ein Guard sagt das auch so
+(„Abweichen ist erlaubt, wiederholen nicht").
+
+**Drei Flaechen sind AUSDRUECKLICH keine Zeilenliste**, damit sie beim naechsten Durchgang
+nicht wieder als Rueckstand gelesen werden: die Notizen (Masonry-Raster, eigener Guard), die
+Aufteilung im Budget (Karten-IA mit eigener Rechenlogik) und die Mahlzeiten-Slots (Zellen
+eines Wochenrasters mit Drag-und-Drop und Ablagezustand, `style="${gridPos}"` - eine
+Rasterzelle ist keine Zeile, auch wenn sie eine Zeile hoch ist). Sie fallen unter die
+Raster-Ausnahme der Zeilenlisten-Regel oben.
+
 **Warum das mehr ist als eine Ungenauigkeit:** diese Regel und der Karten-Abschnitt machen
 beide den SCHATTEN zum Trenner („randlos auf dem Grouped-Grund - die Trennung leistet der
 Schatten, nicht eine Kante"). Ohne ihn haengt die Kante des Traegers allein an der Luminanz:

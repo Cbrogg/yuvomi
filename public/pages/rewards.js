@@ -267,7 +267,7 @@ function renderStandingRow(member) {
   const prev = state.prevBalances?.get(member.id);
   const startVal = typeof prev === 'number' ? prev : member.balance;
   return `
-    <li class="rw-standing">
+    <li class="list-row rw-standing">
       <button class="rw-standing__id" type="button" data-member="${member.id}"
               aria-label="${esc(`${member.display_name}, ${pointsLabel(member.balance)}. ${t('rewards.openDetails')}`)}">
         <span class="rw-standing__rank" aria-hidden="true">${member.rank}</span>
@@ -375,7 +375,7 @@ function renderOverview(el) {
           <h2 class="rw-section__title">${esc(t('rewards.standings'))}</h2>
           ${adminBar}
         </div>
-        <ul class="rw-standings">${list.map(renderStandingRow).join('')}</ul>
+        <ul class="row-carrier rw-standings">${list.map(renderStandingRow).join('')}</ul>
       </section>
     </div>`);
   wireOverview(el);

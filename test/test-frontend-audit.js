@@ -6983,10 +6983,16 @@ test('audited profile, birthday, navigation, and budget controls meet mobile tou
   // ueberschreiben.
   assert.match(layout, /\n\.btn\s*\{[\s\S]*min-height:\s*var\(--target-lg\)/);
   assert.doesNotMatch(budget, /\.budget-nav__today\s*\{[^}]*min-height/);
-  assert.match(
-    contacts,
-    /@media \(max-width:\s*767px\)[\s\S]*\.contact-filter-chip\s*\{[\s\S]*min-height:\s*var\(--target-lg\)/,
-  );
+  /* Der Kategorie-Chip der Kontakte holt seine 48px seit dem Umzug aus
+   * `.filter-chip` (filter-chip.css) - und zwar auf JEDER Breite, nicht nur
+   * unter 768px. Vorher war er ein Nachbau mit hartkodiertem `min-height: 30px`
+   * und stand am Desktop auf 31px, während jeder andere Filterchip der App 48px
+   * hoch war (Critique 2026-08-13). Geprüft wird deshalb die ÜBERNAHME der
+   * geteilten Klasse plus deren Zusage, nicht mehr die alte Schreibweise im
+   * Modul-Stylesheet - und dass das Modul die Zahl nicht wieder unterbietet. */
+  assert.match(read('../public/pages/contacts.js'), /class="filter-chip contact-filter-chip/);
+  assert.match(read('../public/styles/filter-chip.css'), /\.filter-chip\s*\{[\s\S]*min-height:\s*var\(--target-lg\)/);
+  assert.doesNotMatch(contacts, /\.contact-filter-chip\s*\{[^}]*min-height/);
   /* Die Besuchszeilen der Haushaltshilfe trugen ihre Zielgroesse selbst
    * (`.housekeeping-log-action { min-height: var(--target-lg) }`) und dazu ein
    * hartkodiertes 17px-Icon. Sie nehmen jetzt `.row-action`, dessen 48px drei

@@ -897,11 +897,11 @@ function renderGridCard(doc) {
 function renderListItem(doc) {
   const selected = state.selectMode && state.selected.has(doc.id);
   return `
-    <article class="document-row${selected ? ' is-selected' : ''}" data-id="${doc.id}">
+    <article class="list-row document-row${selected ? ' is-selected' : ''}" data-id="${doc.id}">
       ${state.selectMode ? renderSelectBox(doc) : `<div class="document-row__icon document-thumb">${renderDocIconSlot(doc)}</div>`}
-      <div class="document-row__body">
-        <h2 class="document-row__title">${esc(doc.name)}</h2>
-        <div class="document-row__meta">${renderMeta(doc, { showSize: false })}</div>
+      <div class="list-row__main document-row__body">
+        <h2 class="list-row__name document-row__title">${esc(doc.name)}</h2>
+        <div class="list-row__meta document-row__meta">${renderMeta(doc, { showSize: false })}</div>
       </div>
       <div class="document-row__stats">
         <span class="document-row__date">${formatDate(doc.updated_at)}</span>

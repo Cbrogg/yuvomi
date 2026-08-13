@@ -57,44 +57,21 @@
 
 .contacts-filters::-webkit-scrollbar { display: none; }
 
+/* ER TRÄGT `.filter-chip` (Critique 2026-08-13). Hier stand ein Nachbau, der
+ * zehn seiner vierzehn Deklarationen zeichengleich mit der geteilten Regel
+ * teilte - und in den übrigen vier war er nicht anders, sondern schlechter:
+ * `transition: all` hatte die geteilte Regel ausdrücklich abgeschafft (sie
+ * zieht implizit Layout-Eigenschaften mit), und `min-height: 30px` war ein
+ * hartkodierter Wert weit unter `--target-lg` - gemessen fiel der Chip am
+ * Desktop auf 31px, während jeder andere Filterchip der App 48px hoch ist.
+ * Der Aktivzustand war ohnehin Zeichen für Zeichen dieselbe Regel, nur mit
+ * `--c-accent` statt `--module-accent` - und `--c-accent` löst laut Kopf
+ * dieser Datei genau darauf auf.
+ *
+ * Was BLEIBT, ist der Seitenraum: der Aktivzustand ließ kurze Labels wie
+ * „Alle" bei `--space-3` fast kreisrund wirken (#569). */
 .contact-filter-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  /* Mehr Seitenraum: der gefüllte Aktiv-Zustand (--c-accent) ließ kurze Labels
-     wie „Alle" bei space-3 fast kreisrund und randeng wirken (#569). */
-  padding: var(--space-1) var(--space-4);
-  border-radius: var(--radius-full);
-  font-size: var(--text-sm);
-  font-weight: var(--font-weight-medium);
-  white-space: nowrap;
-  cursor: pointer;
-  border: 1.5px solid var(--color-border);
-  background: transparent;
-  color: var(--color-text-secondary);
-  transition: all var(--transition-fast);
-  min-height: 30px;
-}
-
-.contact-filter-chip:hover:not(.contact-filter-chip--active) {
-  border-color: var(--color-text-secondary);
-  color: var(--color-text-primary);
-}
-
-/* Geteilte Chip-Grammatik (filter-chip.css): 18 % Fläche, 50 % Kante, Tinte
- * nach der Akzent-auf-Tönung-Regel. Der frühere Vollton war AA-sicher, las sich
- * aber wie ein aktives SEGMENT - und seit der Segment-Sprache aus Runde 1 ist
- * die gefüllte Kapsel für Segmente reserviert. */
-.contact-filter-chip--active {
-  background-color: color-mix(in srgb, var(--c-accent) var(--tint-state), transparent);
-  border-color: color-mix(in srgb, var(--c-accent) var(--tint-hint), transparent);
-  color: color-mix(in srgb, var(--c-accent) var(--tint-ink), var(--color-text-primary));
-}
-
-@media (max-width: 767px) {
-  .contact-filter-chip {
-    min-height: var(--target-lg);
-  }
+  padding-inline: var(--space-4);
 }
 
 /* --------------------------------------------------------

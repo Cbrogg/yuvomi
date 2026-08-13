@@ -1424,9 +1424,9 @@ function dueRowMarkup(dose, med, log) {
   }
 
   return `
-    <li class="health-dose">
+    <li class="list-row health-dose">
       <span class="health-dose__time">${esc(dose.time)}</span>
-      <span class="health-dose__name">${esc(name)}${esc(doseText)}</span>
+      <span class="list-row__name health-dose__name">${esc(name)}${esc(doseText)}</span>
       ${actions}
     </li>`;
 }
@@ -3390,9 +3390,9 @@ function overviewDueRowMarkup(dose, med, log, own) {
   }
 
   return `
-    <li class="health-dose">
+    <li class="list-row health-dose">
       <span class="health-dose__time">${esc(dose.time)}</span>
-      <span class="health-dose__name">${esc(name)}${esc(doseText)}</span>
+      <span class="list-row__name health-dose__name">${esc(name)}${esc(doseText)}</span>
       ${actions}
     </li>`;
 }
@@ -3534,9 +3534,9 @@ function overviewUpcomingMarkup() {
     const med = overview.meds.find((m) => m.id === dose.medicationId);
     const doseText = dose.dose_qty != null ? ` · ${t('health.meds.doseQty', { count: fmtNum(dose.dose_qty) })}` : '';
     return `
-      <li class="health-overview-reminder">
+      <li class="list-row health-overview-reminder">
         <span class="health-dose__time">${esc(dose.time)}</span>
-        <span class="health-dose__name">${esc(med ? med.name : '')}${esc(doseText)}</span>
+        <span class="list-row__name health-dose__name">${esc(med ? med.name : '')}${esc(doseText)}</span>
       </li>`;
   }).join('');
   return `<ul class="health-overview__reminders-list">${rows}</ul>`;

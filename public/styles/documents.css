@@ -610,11 +610,24 @@
 .document-card__meta,
 .document-row__meta {
   display: flex;
-  flex-wrap: wrap;
   gap: var(--space-2);
-  margin-top: var(--space-3);
   color: var(--color-text-tertiary);
   font-size: var(--text-xs);
+}
+
+/* Die KARTE darf ihre Meta umbrechen und braucht den Abstand zum Titel: sie ist
+ * ein Objekt mit eigenem Medium, kein Zeilentakt. Die ZEILE bekommt beides von
+ * `.list-row__main` (2px Stapelabstand) und bleibt einzeilig - genau der
+ * Unterschied, der die Listenansicht von 265px je Eintrag auf den Beat der
+ * übrigen neun Module bringt. */
+.document-card__meta {
+  flex-wrap: wrap;
+  margin-top: var(--space-3);
+}
+
+.document-row__meta {
+  flex-wrap: nowrap;
+  overflow: hidden;
 }
 
 .document-card__meta span,
@@ -646,17 +659,21 @@
   border-top: 1px solid var(--color-border-subtle);
 }
 
-/* Vier Spalten: Icon, Titel/Meta, Datum+Größe, Aktionen. Die Stats-Spalte macht
- * aus der Liste eine echte Liste — vorher trug sie weniger Information als die
- * Rasterkarte (kein Datum) bei gleichzeitig viel totem Weißraum. */
-.document-row {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
-}
-
+/* SIE TRÄGT `.list-row` (Critique 2026-08-13, P0). Anzeigeart, Abstand,
+ * Polsterung, Mindesthöhe, Umbruchverbot, Übergang und Hover kommen von dort.
+ *
+ * Die Zeile war der teuerste Eigenbau, den das Dichte-Paket übersehen hat:
+ * gemessen 265px je Eintrag am Telefon und 284px am Desktop, also zwei
+ * Dokumente pro Bildschirm - auf einem Zweig, der „density" heißt. Die Höhe
+ * kam nicht aus der Polsterung, sondern aus zwei Regeln: die Metazeile trug
+ * `margin-top: var(--space-3)` plus `flex-wrap: wrap` und stapelte bis zu vier
+ * Chips untereinander.
+ *
+ * Vier Spalten bleiben (Icon, Titel/Meta, Datum+Größe, Aktionen) - die
+ * Stats-Spalte macht aus der Liste eine echte Liste, vorher trug sie weniger
+ * Information als die Rasterkarte. Sie stehen jetzt als Flex-Kinder der
+ * geteilten Zeile statt als eigenes Grid; die mittlere Spalte ist
+ * `.list-row__main` und wächst, die äußeren schrumpfen nicht. */
 .document-row__body {
   min-width: 0;
 }
@@ -671,6 +688,36 @@
   font-size: var(--text-xs);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+/* Was die Zeile am ENDE trägt, entscheidet ihre eigene Breite - nicht das
+ * Fenster. Der Container heißt `list-rows` und wird vom Träger aufgemacht
+ * (`.row-carrier`, list-row.css); dieselbe Achse, an der Einkauf, Vorrat und
+ * Aufgaben ihre Zweitangaben abgeben.
+ *
+ * Gemessen bei 390px vor dem Schnitt: Träger 358px, davon nahmen Icon,
+ * Datum/Größe und drei Knöpfe den Platz, sodass dem Namen gut 100px blieben -
+ * er brach zweizeilig und die Zeile stand bei 209px.
+ *
+ * Was weichen darf und warum: die Stats-Spalte ist eine ZWEITangabe (das Datum
+ * steht auch im Viewer), und von den drei Knöpfen ist „Ansehen" das, was ein
+ * Tipp auf die Zeile ohnehin tut. Das Menü bleibt, weil es die übrigen Wege
+ * enthält - EIN nachlaufendes Element, wie die geteilte Zeile es zusagt.
+ *
+ * STEHT HINTER den Basisregeln, nicht davor: `@container` erhöht die
+ * Spezifität nicht. Bei Gleichstand gewinnt die spätere Regel, und die
+ * Container-Regel weiter oben in der Datei war wirkungslos - gemessen blieb
+ * `display: flex` an der Stats-Spalte, obwohl der Träger mit 22,4rem klar
+ * unter der Grenze lag. */
+@container list-rows (max-width: 30rem) {
+  .document-row__stats {
+    display: none;
+  }
+
+  .document-row__actions [data-action="view"],
+  .document-row__actions a[download] {
+    display: none;
+  }
 }
 
 .documents-danger {
@@ -715,6 +762,19 @@
   .documents-browser-layout {
     display: flex;
     flex-direction: column;
+    /* MUSS mit: die Basisregel setzt `align-items: start` für ihr GRID (dort
+     * heißt es „kleb oben"). In dieser Flex-Spalte ist die Querachse aber die
+     * BREITE, und derselbe Wert heißt dann „schrumpf auf deine Inhaltsbreite".
+     * `.documents-list` trägt `min-width: 0` und wurde damit exakt 0px breit:
+     * gemessen bei 390px lag die Liste auf 0px, ihre Zeilen auf 24px, und der
+     * Inhalt lief als 610px Seitenüberlauf aus dem Dokument (Critique
+     * 2026-08-13). Sichtbar war davon nur eine unerklärlich hohe Zeile, weil
+     * `.app-content` den Überlauf wegschneidet.
+     *
+     * Das `width: 100%` am Ordner-Browser unten war der Einzelfall-Verband für
+     * dieselbe Ursache - es bleibt vorerst stehen, weil er dort auch das
+     * Aufheben der Sticky-Spalte begleitet. */
+    align-items: stretch;
   }
 
   .documents-folder-browser {
@@ -790,6 +850,16 @@
     flex-basis: auto;
     padding-inline-start: 0;
     border-inline-start: none;
+    /* KEIN eigener Scroller mehr, wo die ganze Zeile schon einer ist. Der
+     * Block oben sagt „eine Bedienzeile, die seitlich scrollt" - und
+     * `.documents-filters > * { flex-shrink: 0 }` zwei Absätze weiter oben
+     * lässt diesen Streifen auf seine Inhaltsbreite wachsen. Sein geerbtes
+     * `overflow-x: auto` kann damit nie greifen: gemessen bei 390px stand er
+     * auf 802px Breite bei 802px Scrollbreite, also ein Scroll-Kontext, in dem
+     * nichts zu scrollen war, verschachtelt in den, der die Arbeit tut (390px
+     * sichtbar, 1242px Inhalt). Zwei ineinander liegende Scroller sind genau
+     * das, was die Regel oben ausschliesst. */
+    overflow-x: visible;
   }
 
   /* HIER STAND EIN VERSCHACHTELTER `max-height: 499px`-BLOCK mit genau den
@@ -871,13 +941,19 @@
 /* --------------------------------------------------------
  * Document Card / Row – klickbar
  * -------------------------------------------------------- */
-.document-card,
-.document-row {
+.document-card {
   cursor: pointer;
   transition:
     background-color var(--transition-fast),
     box-shadow var(--transition-fast),
     transform var(--transition-fast);
+}
+
+/* Die Zeile nur noch mit dem Zeiger: ihren Übergang führt `.list-row`, und der
+ * ist auf `background-color` allein - Schatten und Transform hat sie mit dem
+ * Hover abgegeben. */
+.document-row {
+  cursor: pointer;
 }
 
 .document-card:hover {
@@ -886,10 +962,10 @@
   transform: translateY(-2px);
 }
 
-.document-row:hover {
-  background-color: var(--color-surface-hover);
-  box-shadow: var(--shadow-md);
-}
+/* Die ZEILE bekommt keinen Schatten mehr. Ein Hover-Schatten zieht ihr eine
+ * Karte an, und DESIGN.md schliesst das für eine Zeile in einer Liste
+ * ausdrücklich aus - der Träger ist die Karte, die Zeile liegt darin. Der
+ * Hintergrundwechsel kommt jetzt von `.list-row:hover`. */
 
 /* Buttons innerhalb von Karten/Zeilen: Cursor zurücksetzen */
 .document-card .btn,

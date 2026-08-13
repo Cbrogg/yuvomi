@@ -170,6 +170,7 @@ export async function render(container, { user }) {
       state.activeCategory = null;
       _container.querySelectorAll('.contact-filter-chip').forEach((chip) => {
         const on = chip.dataset.cat === '';
+        chip.classList.toggle('filter-chip--active', on);
         chip.classList.toggle('contact-filter-chip--active', on);
         chip.setAttribute('aria-pressed', on ? 'true' : 'false');
       });
@@ -243,6 +244,7 @@ export async function render(container, { user }) {
     if (!chip) return;
     _container.querySelectorAll('.contact-filter-chip').forEach((c) => {
       const on = c === chip;
+      c.classList.toggle('filter-chip--active', on);
       c.classList.toggle('contact-filter-chip--active', on);
       c.setAttribute('aria-pressed', on ? 'true' : 'false');
     });
@@ -321,10 +323,10 @@ function renderCategoryFilters() {
   const bar = _container?.querySelector('#contacts-filters');
   if (!bar) return;
   const active = state.activeCategory;
-  const allChip = `<button class="contact-filter-chip${active ? '' : ' contact-filter-chip--active'}" data-cat="" aria-pressed="${active ? 'false' : 'true'}">${esc(t('contacts.filterAll'))}</button>`;
+  const allChip = `<button class="filter-chip contact-filter-chip${active ? '' : ' filter-chip--active contact-filter-chip--active'}" data-cat="" aria-pressed="${active ? 'false' : 'true'}">${esc(t('contacts.filterAll'))}</button>`;
   const catChips = state.categories.map((c) => {
     const on = active === c.key;
-    return `<button class="contact-filter-chip${on ? ' contact-filter-chip--active' : ''}" data-cat="${esc(c.key)}" aria-pressed="${on ? 'true' : 'false'}">${categoryIcon(c.key)} ${esc(catLabel(c.key))}</button>`;
+    return `<button class="filter-chip contact-filter-chip${on ? ' filter-chip--active contact-filter-chip--active' : ''}" data-cat="${esc(c.key)}" aria-pressed="${on ? 'true' : 'false'}">${categoryIcon(c.key)} ${esc(catLabel(c.key))}</button>`;
   }).join('');
   bar.replaceChildren();
   bar.insertAdjacentHTML('beforeend', allChip + catChips);

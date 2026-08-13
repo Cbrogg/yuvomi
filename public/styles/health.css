@@ -316,16 +316,19 @@
 /* Leerzustände dieser Sektionen sind seit Block 2 die geteilte
  * .empty-state--compact (layout.css). */
 
+/* SIE TRÄGT `.list-row` (Critique 2026-08-13). Anzeigeart, Ausrichtung, Abstand,
+ * Mindesthöhe, Kantenlosigkeit und der Hover kamen hier ein zweites Mal - die
+ * Dosenliste war eine von sechs Zeilenlisten, die das Dichte-Paket nicht
+ * erreicht hat.
+ *
+ * Was bleibt: die waagerechte Polsterung auf 16px, weil die Liste in einer
+ * Medikamentenkarte mit derselben Polsterung steht und ihre Zeilen mit deren
+ * Inhalt fluchten müssen. Das `flex-wrap: wrap` ist ABGEGEBEN und nicht
+ * vergessen: die geteilte Zeile bricht nicht um, ihr Name schrumpft in seiner
+ * eigenen Spalte und trennt bei Bedarf - dieselbe Antwort wie in den neun
+ * Modulen davor. */
 .health-dose {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-1) var(--space-3);
-  /* Dichtere Zeile: geringeres vertikales Padding, damit mehr Dosen ohne Scrollen
-   * sichtbar sind (Kern-Interaktion des Tabs). */
-  padding: var(--space-2) var(--space-4);
-  border: none;
-  background: transparent;
+  padding-inline: var(--space-4);
 }
 
 .health-dose + .health-dose {
@@ -1197,13 +1200,12 @@ button.health-med-card:hover {
   gap: 0;
 }
 
+/* SIE TRÄGT `.list-row` (Critique 2026-08-13): Anzeigeart, Ausrichtung, Abstand
+ * und Kantenlosigkeit standen hier zeichengleich ein zweites Mal. Was bleibt,
+ * ist die waagerechte Nullpolsterung - diese Liste steht in einer Widget-Karte,
+ * die ihre eigene schon mitbringt. */
 .health-overview-reminder {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-2) 0;
-  background: transparent;
-  border: none;
+  padding-inline: 0;
 }
 
 .health-overview-reminder + .health-overview-reminder {
