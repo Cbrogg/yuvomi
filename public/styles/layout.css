@@ -1881,9 +1881,36 @@ html.fab-anim-done .page-fab {
   --page-measure: var(--content-max-width-narrow);
 }
 
-/* Die Bedienzeilen einer solchen Seite. Sie stehen zwischen Kopf und Koerper
- * und wirken auf den Koerper, also enden sie mit ihm. `justify-self`/`margin`
- * bleiben unberuehrt: gekappt wird die Breite, nicht die Ausrichtung. */
+/* Die Bedienzeilen und Inhaltsbloecke einer solchen Seite. Sie stehen zwischen
+ * Kopf und Koerper oder ueber ihm und wirken auf ihn, also enden sie mit ihm.
+ * `justify-self`/`margin` bleiben unberuehrt: gekappt wird die Breite, nicht
+ * die Ausrichtung.
+ *
+ * DIESE LISTE IST EINE LISTE UND BLEIBT EINE - ABER SIE DRIFTET NICHT MEHR
+ * STILL. Der Commit, der das Lesemass vom Traeger auf die Seite hob, hat es auf
+ * eine Namensliste gehoben, und was nicht darin stand, war full-bleed durch
+ * Auslassung statt durch Entscheidung: gemessen bei 1440px endete auf
+ * `/rewards` die Anfragenliste bei 1408 und der Traeger direkt darunter bei
+ * 972, auf `/contacts` der Gruppenkopf bei 1408 ueber seiner eigenen Liste bei
+ * 972, auf `/budget` der Diagrammabschnitt bei 1408 ueber der Buchungsliste bei
+ * 972 (Critique 2026-08-13). Vier Nachtraege unten schliessen die gemessenen
+ * Faelle: `/contacts`, `/rewards`, `/budget` und `/housekeeping` haben danach
+ * EINE Inhaltskante.
+ *
+ * WAS BEWUSST BREIT BLEIBT: das Kennzahlband (`.metric-card`) auf Budget und
+ * Hauswirtschaft ist ein Band ueber der Seite, kein Lesestoff, und die
+ * Gesundheitspanele fuehren ihr eigenes Raster.
+ *
+ * EIN WAECHTER FEHLT HIER WEITER, UND ZWAR WISSENTLICH. Der Versuch, die
+ * rechten Kanten am gerenderten Dokument zu messen, scheiterte an der
+ * Definition von "Block": die Sonde zaehlte `.swipe-reveal` und
+ * `.quick-add__input` mit, und auf `/shopping` kippte die Mehrheitskante
+ * dadurch auf die Zeileninterna - der echte Koerper wurde zum Ausreisser
+ * gemeldet. Ein Guard, den man mit Ausnahmen ruhigstellt, bis er nichts mehr
+ * bedeutet, ist schlimmer als keiner; dieses Repo hat den Fehler mehrfach
+ * gemacht. Was er braucht, ist ein Begriff von "Seitenblock", der Zeileninterna
+ * strukturell ausschliesst - das ist eigene Arbeit, kein Anhang an einen Fix.
+ * Bis dahin bleibt diese Liste eine Liste, die man von Hand pflegt. */
 .page-measure--narrow :is(
   .tasks-filters-row,
   .contacts-filters,
@@ -1892,7 +1919,17 @@ html.fab-anim-done .page-fab {
   /* Die Karten der Hauswirtschaft, deren Zeilen per Bleed an ihrer Kante
    * fluchten: die Liste selbst hat keine eigene Flaeche, die Karte hat sie,
    * also traegt die Karte das Mass. */
-  .housekeeping-card
+  .housekeeping-card,
+  /* Ein Gruppenkopf endet mit der Gruppe, die er benennt. */
+  .contact-group__header,
+  /* Der Traeger der offenen Anfragen, direkt ueber dem Traeger der
+   * Punktestaende - zwei gestapelte Bloecke auf einem Bildschirm. */
+  .rw-pending-panel,
+  /* Der Diagrammabschnitt steht ueber der Buchungsliste und ist selbst eine
+   * Zeilenfolge (Kategoriezeilen), also gilt dasselbe Mass. */
+  .budget-chart-section,
+  /* Die Mitarbeiterleiste ueber den Karten der Hauswirtschaft. */
+  .housekeeping-worker-strip
 ) {
   max-width: var(--page-measure, none);
 }
