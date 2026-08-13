@@ -2912,6 +2912,50 @@ test('die Küchen-Listen teilen eine Zeilen-Grammatik', () => {
     assert.equal(align, 'start',
       `${file}: .list-rows bekommt hier ein anderes align-self - genau der Rückfall, den die Regel darüber verhindert`);
   }
+
+  // 4. Die BEIDEN Träger tragen DASSELBE Lesemaß.
+  //
+  //    `.list-rows` trug es, `.row-carrier` nicht - mit der ausgeschriebenen
+  //    Begründung, die Listen ausserhalb der Küche seien nun einmal breiter.
+  //    Das war eine Beschreibung des Bestands: gemessen bei 1440px stand die
+  //    Aufgabenliste auf 720px und die Kontaktliste auf 1156px, also sprang die
+  //    Inhaltsspalte beim Modulwechsel um 436px (Critique 2026-08-13).
+  //    Welche der beiden Klassen eine Zeilenfolge trägt, ist eine Frage ihrer
+  //    Verschachtelung; ihre Breite ist es nicht.
+  for (const carrier of ['.list-rows', '.row-carrier']) {
+    const body = scopedRules(shared)
+      .filter(({ selectors }) => selectors.some((s) => s.trim() === carrier))
+      .map(({ body: part }) => part).join(';');
+    assert.equal(declaredValue(body, MAX_WIDTH), NARROW,
+      `${carrier} muss auf dasselbe Lesemaß kappen wie der andere Träger - zwei Zahlen sind ein sichtbarer Sprung beim Modulwechsel, keine zwei Grammatiken`);
+  }
+});
+
+/**
+ * Der Kopf fluchtet mit dem Körper, den er überschreibt - AUCH wenn der Körper
+ * die Ansicht wechselt.
+ *
+ * `.page-toolbar--narrow` zieht das Zeilenende des Kopfes auf das Lesemaß
+ * (layout.css). Steht der Modifier fest im Markup einer Seite, die zwischen
+ * einer gekappten und einer breiten Ansicht umschaltet, dann stimmt er in genau
+ * einer der beiden: gemessen auf /tasks bei 1440px endete der Kopf im Kanban
+ * bei x=972, das Board aber bei x=1408 - derselbe Versatz wie vorher, nur
+ * andersherum.
+ *
+ * Die Kopplung ist deshalb: wer den Modifier setzt UND einen Ansichtsumschalter
+ * hat, muss ihn beim Wechsel pflegen. Eine Regel, keine Allowlist - die nächste
+ * Seite mit zwei Ansichten fällt genauso hinein.
+ */
+test('ein Kopf mit --narrow pflegt ihn beim Ansichtswechsel', () => {
+  for (const page of walkJsFiles('../public/pages/')) {
+    const src = read(page);
+    if (!src.includes('page-toolbar--narrow')) continue;
+    // Ein Umschalter im Sinne dieser Regel wechselt den KÖRPER, nicht einen
+    // Filter: er trägt `data-view` und schreibt seinen Wert in den Zustand.
+    if (!/data-view/.test(src) || !/viewMode|state\.view\b/.test(src)) continue;
+    assert.match(src, /classList\.toggle\(\s*'page-toolbar--narrow'/,
+      `${page}: setzt --narrow und wechselt die Ansicht, pflegt den Modifier aber nicht mit - in einer der beiden Ansichten endet der Kopf dann neben seinem eigenen Körper`);
+  }
 });
 
 /**
@@ -4653,7 +4697,11 @@ test('Tasks toolbar keeps secondary controls visible instead of an overflow slid
   // umbrechender Kopf plus sichtbare Filterzeile.
   assert.doesNotMatch(tasksPage, /<details class="tasks-toolbar__secondary"/);
   assert.doesNotMatch(tasksCss, /tasks-toolbar__secondary/);
-  assert.match(tasksPage, /class="page-toolbar page-toolbar--wrap tasks-toolbar"/);
+  // Auf die ABSICHT prüfen, nicht auf die wörtliche Klassenkette: die stand
+  // hier als ein String und schlug fehl, sobald der Kopf einen weiteren
+  // Modifier bekam (`--narrow`, Critique 2026-08-13) - eine Zusicherung, die
+  // eine Reihenfolge festnagelt, prüft die Reihenfolge, nicht die Sache.
+  assert.match(tasksPage, /class="page-toolbar[^"]*\bpage-toolbar--wrap\b[^"]*\btasks-toolbar\b/);
 
   // Ansichtswechsel bleibt im Kopf, Gruppierung wandert in die Filterzeile.
   assert.match(tasksPage, /<div class="page-toolbar__actions">[\s\S]*id="view-toggle"[\s\S]*id="btn-bulk-select"/);
@@ -7303,14 +7351,40 @@ test('page-inline-pad contract holds across every stylesheet (#577)', () => {
 
   // Rail-Aliasse aus dem Markup lesen. glass.css traf `.tasks-toolbar`, nicht
   // `.page-toolbar` - ein Scan, der nur den Basisnamen kennt, ist dafür blind.
+  //
+  // WAS EIN KLASSENNAME IST, WIRD GEPRÜFT, NICHT ANGENOMMEN. Der Scan las bis
+  // zum nächsten `"` und nahm jedes Whitespace-Stück als Klasse. Eine
+  // Interpolation im Attribut (`class="... ${x ? 'a' : ''}"`) lieferte ihm
+  // damit `?`, `===` und `'list'` als Rail-Aliasse - und `.?` traf als Regex
+  // anschliessend jeden Selektor jeder Datei. Beide Zusicherungen dieses Tests
+  // schlugen daraufhin an Stellen fehl, die niemand angefasst hatte
+  // (auth.css `.auth-page`, und im Nachbartest jedes Glas-Element „über .?").
+  // Ein Scanner, der Müll aufnimmt, meldet Befunde am falschen Ort - teurer
+  // als einer, der gar nichts findet.
+  const CLASS_NAME = /^-?[A-Za-z_][\w-]*$/;
   const rails = new Set(['.page-toolbar', '.sub-tabs-bar']);
+  const addRails = (classList, file) => {
+    const parts = classList.split(/\s+/).filter(Boolean);
+    // Eine Interpolation ist kein unbekannter Klassenname, sondern ein
+    // Attribut, das dieser Scan nicht lesen kann. Das ist ein Fehler im
+    // Markup-Stil, nicht im Scan: die Klassenliste eines Rails gehört
+    // statisch ins Attribut, ihr Wechsel in ein `classList.toggle`.
+    assert.ok(!classList.includes('${'),
+      `${file}: die Klassenliste eines page-toolbar-Rails enthält eine Interpolation `
+      + `("${classList.slice(0, 60)}…") - dieser Scan liest sie statisch, und die `
+      + 'Bruchstücke landen sonst als Rail-Aliasse in jeder Zusicherung darunter');
+    parts.forEach((c) => {
+      assert.match(c, CLASS_NAME, `${file}: "${c}" ist kein Klassenname`);
+      rails.add(`.${c}`);
+    });
+  };
   for (const file of walkJsFiles('../public/pages/')) {
     const src = stripCssComments(read(file));
     for (const [, classList] of src.matchAll(/class="([^"]*\bpage-toolbar\b[^"]*)"/g)) {
-      classList.split(/\s+/).filter(Boolean).forEach((c) => rails.add(`.${c}`));
+      addRails(classList, file);
     }
     for (const [, classList] of src.matchAll(/className\s*=\s*'([^']*\bpage-toolbar\b[^']*)'/g)) {
-      classList.split(/\s+/).filter(Boolean).forEach((c) => rails.add(`.${c}`));
+      addRails(classList, file);
     }
   }
   for (const util of ['kitchen-tabs', 'health-tabs']) {

@@ -551,16 +551,14 @@
  * Umbruchverbot, Mindesthoehe, Uebergang und Hover kommen von dort - sie
  * standen hier und in der Regel darueber ein zweites Mal.
  *
- * Was BLEIBT, sind zwei begruendete Abweichungen:
- *   - die Polsterung haengt an `--task-row-pad`, weil die Trefferflaeche des
- *     Titels mit ihr rechnet (siehe .task-card__title::before) und weil sie
- *     unter 640px kleiner wird;
- *   - die Ausrichtung ist `flex-start`, weil ein zweizeiliger Titel seine
- *     Statuskugel sonst auf halbe Hoehe zoege. */
+ * Die groessere Polsterung ist seit dem Folgelauf keine eigene Zahl mehr,
+ * sondern die benannte Stufe `.list-row--roomy` (list-row.css) samt ihrer
+ * Variable `--list-row-pad`; hier steht nur noch, was diese Zeile allein
+ * betrifft: die Verkleinerung unter 640px (weiter unten) und die Ausrichtung
+ * `flex-start`, weil ein zweizeiliger Titel seine Statuskugel sonst auf halbe
+ * Hoehe zoege. */
 .task-card__main {
-  --task-row-pad: var(--space-4);
   align-items: flex-start;
-  padding: var(--task-row-pad);
 }
 
 /* Gasse für den Wisch-Chevron (.swipe-row::after, layout.css): 8px Abstand vom
@@ -784,14 +782,15 @@
  * `margin-bottom` darüber, keinen Pixel mehr, sonst nähme sie den Tag-Filtern
  * ihre eigenen Treffer weg. Oben steht die Polsterung der Zeile.
  *
- * BEIDE SEITEN LESEN IHREN NACHBARN, statt ihn zu wiederholen: `--task-row-pad`
- * kommt von .task-card__main und wird mobil kleiner, `--space-0h` ist derselbe
- * Token wie im margin-bottom darüber. Vorher standen hier zwei Literale, und
- * eines davon (--space-3 gegen --space-4 Polsterung) stimmte schon nicht. */
+ * BEIDE SEITEN LESEN IHREN NACHBARN, statt ihn zu wiederholen: `--list-row-pad`
+ * kommt aus `.list-row--roomy` (list-row.css) und wird mobil kleiner,
+ * `--space-0h` ist derselbe Token wie im margin-bottom darüber. Vorher standen
+ * hier zwei Literale, und eines davon (--space-3 gegen --space-4 Polsterung)
+ * stimmte schon nicht. */
 .task-card__title::before {
   content: '';
   position: absolute;
-  inset-block: calc(-1 * var(--task-row-pad, var(--space-3))) calc(-1 * var(--space-0h));
+  inset-block: calc(-1 * var(--list-row-pad, var(--space-3))) calc(-1 * var(--space-0h));
   inset-inline: 0;
 }
 
@@ -903,8 +902,8 @@
      * bricht seit dem Schnitt nicht mehr um (siehe .task-card__meta), damit
      * trägt die Polsterung die Höhe allein: 12px oben und unten ergaben 71px
      * je Zeile, 8px ergeben 58px - bei unveränderter Zielgröße, weil die
-     * Trefferfläche des Titels an --task-row-pad hängt und mitwandert. */
-    --task-row-pad: var(--space-2);
+     * Trefferfläche des Titels an --list-row-pad hängt und mitwandert. */
+    --list-row-pad: var(--space-2);
   }
 
   /* HIG-Dichte (Reminders-Muster): auf Touch KEINE Inline-Action-Buttons -

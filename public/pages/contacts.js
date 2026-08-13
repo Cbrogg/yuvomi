@@ -113,7 +113,7 @@ export async function render(container, { user }) {
   container.replaceChildren();
   container.insertAdjacentHTML('beforeend', `
     <div class="contacts-page">
-      <div class="page-toolbar page-toolbar--wrap contacts-toolbar">
+      <div class="page-toolbar page-toolbar--wrap page-toolbar--narrow contacts-toolbar">
         <h1 class="page-toolbar__title">${t('contacts.title')}</h1>
         ${renderPageSearch({ id: 'contacts-search', label: t('contacts.searchPlaceholder'), placeholder: t('contacts.searchPlaceholder'), value: state.searchQuery, clearLabel: t('common.searchClear'), className: 'contacts-toolbar__search page-toolbar__center' })}
         <div class="page-toolbar__actions">
@@ -585,7 +585,7 @@ function renderContactItem(c) {
   if (state.selectMode) {
     const selected = state.selected.has(c.id);
     return `
-      <div class="list-row contact-item contact-item--select${selected ? ' contact-item--selected' : ''}" data-id="${c.id}">
+      <div class="list-row list-row--tight contact-item contact-item--select${selected ? ' contact-item--selected' : ''}" data-id="${c.id}">
         <label class="contact-item__open list-row__main--interactive contact-item__select">
           <input type="checkbox" class="contact-item__checkbox" data-select="${c.id}"${selected ? ' checked' : ''}${c.family_user_id ? ' disabled' : ''} aria-label="${esc(c.name)}">
           ${contactAvatar(c)}
@@ -624,7 +624,7 @@ function renderContactItem(c) {
   ].join('');
 
   return `
-    <div class="list-row contact-item" data-id="${c.id}">
+    <div class="list-row list-row--tight contact-item" data-id="${c.id}">
       <button type="button" class="contact-item__open list-row__main--interactive" data-open="${c.id}">
         ${contactAvatar(c)}
         <span class="contact-item__body">

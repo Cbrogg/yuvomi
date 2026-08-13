@@ -251,7 +251,7 @@ function renderPage() {
   _container.replaceChildren();
   _container.insertAdjacentHTML('beforeend', `
     <div class="birthdays-page">
-      <div class="page-toolbar page-toolbar--wrap birthdays-toolbar">
+      <div class="page-toolbar page-toolbar--wrap page-toolbar--narrow birthdays-toolbar">
         <h1 class="page-toolbar__title">${t('birthdays.title')}</h1>
         ${renderPageSearch({ id: 'birthdays-search', label: t('birthdays.searchPlaceholder'), placeholder: t('birthdays.searchPlaceholder'), value: state.query, clearLabel: t('common.searchClear'), className: 'birthdays-toolbar__search page-toolbar__center' })}
         <!-- Der Aktions-Slot des Modulkopfs. Der Import-Knopf stand direkt in der

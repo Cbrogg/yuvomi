@@ -240,6 +240,33 @@
   background-color: var(--color-surface-hover);
 }
 
+/* --------------------------------------------------------
+ * Zwei bekannte Stufen statt N lokaler Entscheidungen
+ *
+ * Beide Abweichungen unten sind echt und waren einzeln begründet - sie standen
+ * nur als private Werte in zwei Modul-Stylesheets, und zusammen las sich die
+ * geteilte Zeile damit als Vorschlag statt als Regel (Critique 2026-08-13:
+ * „drei Polsterungen, jede mit eigener Begründung im eigenen Modul"). Als
+ * benannte Modifier sind es zwei Stufen, die man kennt und zählt; die nächste
+ * Abweichung muss sich dann an ihnen messen, statt eine dritte Zahl zu setzen.
+ * -------------------------------------------------------- */
+
+/* Die Polsterung als eigene GRÖSSE, nicht als Wert: die Trefferfläche des
+ * Titels rechnet mit ihr (`.task-card__title::before` liest dieselbe Variable),
+ * und sie wird unter 640px kleiner. Zwei Leser, ein Wert. */
+.list-row--roomy {
+  --list-row-pad: var(--space-4);
+  padding: var(--list-row-pad);
+}
+
+/* Führt die Zeile links ein BILD statt eines Bedienelements (Kontakt-Avatar),
+ * steht der Name näher daran: die 12px der Grundzeile sind der Abstand zu einer
+ * Checkbox oder einem Griff, und neben einem Avatar schoben sie den Namen
+ * sichtbar weg. */
+.list-row--tight {
+  gap: var(--space-2);
+}
+
 /* Textspalte: Name über Meta. `min-width: 0` ist die Bedingung dafür, dass
  * `text-overflow` in den Kindern überhaupt greifen kann - ohne sie wächst die
  * Spalte über die Zeile hinaus, statt zu schrumpfen. */
@@ -501,12 +528,19 @@
  * Der Träger einer Zeilenfolge, ohne Lesemaß
  * -------------------------------------------------------- */
 
-/* Dieselbe Grammatik wie `.list-rows`, aber OHNE dessen `max-width`: die
- * Zeilenlisten außerhalb der Küche sind breiter als das Lesemaß der Küche
- * (gemessen auf 1280px: Abos 955px, Haushaltshilfe 981px, Dokumente 725px).
- * Das Lesemaß ist app-weit EIN Wert (§2, Session 15) - deshalb wird es hier
- * nicht anders gesetzt, sondern gar nicht: es gehört zur Küchenliste, nicht
- * zur Trägergrammatik.
+/* Dieselbe Grammatik wie `.list-rows`, EINSCHLIESSLICH dessen Lesemaß.
+ *
+ * HIER STAND, das Lesemaß gehöre „zur Küchenliste, nicht zur Trägergrammatik",
+ * belegt mit den gemessenen Breiten der Listen außerhalb der Küche (Abos 955px,
+ * Haushaltshilfe 981px, Dokumente 725px auf 1280px). Das war eine Beschreibung
+ * des Bestands, kein Kriterium - und der Preis dafür stand nie daneben:
+ * gemessen auf 1440px trug `.list-rows` 720px und `.row-carrier` 1156px, also
+ * sprang die Inhaltsspalte beim Wechsel von den Aufgaben zu den Kontakten um
+ * 436px, bei gleichem Kopf und gleicher Zeile (Critique 2026-08-13).
+ *
+ * Das Lesemaß ist app-weit EIN Wert (§2, Session 15). Genau deshalb steht es
+ * jetzt hier: eine Zeilenliste ist eine Zeilenliste, und welche der beiden
+ * Klassen sie trägt, ist eine Frage ihrer Verschachtelung, nicht ihrer Breite.
  *
  * WARUM ÜBERHAUPT GETEILT: die Regel „eine Folge gleichartiger Zeilen liegt in
  * genau einem Träger" hat vier weitere Nutzer bekommen. Vier Kopien derselben
@@ -544,6 +578,29 @@
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   overflow: hidden;
+  /* Dasselbe Lesemaß wie `.list-rows`, aus dem Grund, der oben ausgeschrieben
+   * steht. Linksbündig, nicht zentriert: der Kopf über dem Träger steht an
+   * derselben Kante, und die angedockte Primäraktion der Toolbar fluchtet mit
+   * ihr (vorher stand „+ Aufgabe" 325px rechts neben seiner eigenen Liste). */
+  max-width: var(--content-max-width-narrow);
+  /* Kommt MIT dem Lesemaß, nicht davor: der Träger clippt (`overflow: hidden`,
+   * für die Eckenradien) und ist Grid-Item, sobald er in einem `.list-scroller`
+   * liegt. Ohne `align-self: start` dehnt ihn die Spur auf ihre volle Höhe und
+   * er schneidet den Überlauf still ab, bevor der Scroller ihn sieht - derselbe
+   * Fall, den `.list-rows` weiter oben ausgeschrieben hat (Rezepte mit 50
+   * Einträgen: scrollHeight 3249px, clientHeight 657px, kein Scrollbalken).
+   * Gefangen vom Guard „die Küchen-Listen teilen eine Zeilen-Grammatik", der
+   * genau diese Kopplung prüft. */
+  align-self: start;
+  /* Abfragbarer Container, aus demselben Grund und mit demselben Namen wie bei
+   * `.list-rows` (dort ausgeschrieben). Er fehlte hier: die Zeilen in Kontakten,
+   * Budget, Geburtstagen und der Hauswirtschaft konnten sich als einzige nicht
+   * nach ihrer eigenen Breite entscheiden - eine `@container list-rows`-Regel
+   * hätte dort stillschweigend nie gegriffen, weil kein Vorfahr den Container
+   * aufmacht. Kein Verhaltenswechsel heute (keine dieser Zeilen stellt bislang
+   * eine Frage), sondern das Schliessen der Lücke, bevor die erste es tut. */
+  container-type: inline-size;
+  container-name: list-rows;
 }
 
 /* Ein LEERZUSTAND bekommt gar keine Fläche (§2, Session 5). Trägt die Liste nur

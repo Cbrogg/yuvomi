@@ -1757,12 +1757,21 @@ html.fab-anim-done .page-fab {
 /* Opt-in: der Kopf-INHALT endet dort, wo der Körper endet - beim schmalen
  * Lesemaß (--content-max-width-narrow) statt an der Content-Spalte.
  *
- * Nutzer: die drei Küchen-Listen (Rezepte, Einkaufen, Vorrat). Ihr Körper ist
- * über .list-scroller auf 720px gekappt, ihr Kopf lief bis an die Content-Spalte:
+ * Nutzer: JEDER Kopf über einer Zeilenliste. Zuerst waren es die drei
+ * Küchen-Listen (Rezepte, Einkaufen, Vorrat), deren Körper über .list-scroller
+ * auf 720px gekappt ist, während ihr Kopf bis an die Content-Spalte lief:
  * gemessen bei 1280px Fensterbreite endete die Liste bei x=972, der
  * Lagerort-Knopf im Vorrat und die drei Listen-Aktionen im Einkauf aber bei
  * x=1248 - 276px über leerer Fläche. DESIGN.md macht die gemeinsame Fluchtlinie
  * zur Bedingung, und zwar für BEIDE Kanten.
+ *
+ * Seit `.row-carrier` dasselbe Lesemaß trägt wie `.list-rows` (list-row.css,
+ * Critique 2026-08-13), gilt derselbe Satz für Aufgaben, Kontakte, Budget,
+ * Geburtstage und die Hauswirtschaft - dort war der Versatz sogar größer:
+ * auf 1440px endete die Aufgabenliste bei x=972 und „+ Aufgabe" begann bei
+ * x=1297, also 325px daneben. NICHT gesetzt wird der Modifier bei Köpfen, die
+ * sich eine Fläche mit einer BREITEN Ansicht teilen (Kalender: Monatsgitter;
+ * Dokumente: Kachelansicht) - dort wäre die schmale Flucht die falsche.
  *
  * WARUM NICHT `> * { max-width: ... }`: genau so stand die Regel bisher, je
  * einmal in shopping.css und pantry.css. Sie griff nie. Gekappt wurde die

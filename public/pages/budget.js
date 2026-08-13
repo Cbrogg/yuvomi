@@ -408,7 +408,7 @@ export async function render(container, { user }) {
 
   setHtml(container, `
     <div class="budget-page">
-      <div class="page-toolbar page-toolbar--wrap budget-nav">
+      <div class="page-toolbar page-toolbar--wrap page-toolbar--narrow budget-nav">
         <h1 class="page-toolbar__title">${t('budget.title')}</h1>
         <!-- Der Kopf-Slot bleibt auf jedem Tab besetzt: entweder Stepper oder
              ein ruhiger Kontexttext. Eine Lücke machte jeden Tabwechsel zur

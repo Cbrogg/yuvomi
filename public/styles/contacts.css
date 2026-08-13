@@ -167,11 +167,11 @@
  * war seinerseits ein Nachbau von `.row-carrier`, Wert fuer Wert: Flaeche,
  * Radius, Schatten, overflow. Beide tragen die geteilten Klassen jetzt mit.
  *
- * Was BLEIBT: der kleinere Abstand. Links steht ein Avatar, kein Bedienelement,
- * und die 12px der geteilten Zeile schoben den Namen sichtbar von ihm weg. */
-.contact-item {
-  gap: var(--space-2);
-}
+ * Was BLEIBT: der kleinere Abstand - seit dem Folgelauf aber nicht mehr als
+ * eigener Wert hier, sondern als benannte Stufe `.list-row--tight`
+ * (list-row.css). Links steht ein Avatar, kein Bedienelement, und die 12px der
+ * geteilten Zeile schoben den Namen sichtbar von ihm weg; das ist eine Rolle,
+ * die auch die naechste Bildliste haben wird, keine Eigenheit der Kontakte. */
 
 .contact-item:hover {
   background-color: var(--color-surface-2);

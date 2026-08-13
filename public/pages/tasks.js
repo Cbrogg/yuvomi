@@ -391,7 +391,7 @@ function renderTaskCard(task, opts = {}) {
 
   return `
     <div class="task-card ${isDone ? 'task-card--done' : ''} ${archived ? 'task-card--archived' : ''}" data-task-id="${task.id}">
-      <div class="list-row task-card__main">
+      <div class="list-row list-row--roomy task-card__main">
         ${showCheckbox ? `
         <input type="checkbox" class="task-bulk-checkbox" data-task-id="${task.id}"
                ${isChecked ? 'checked' : ''} aria-label="${t('tasks.selectTask')}">
@@ -2794,6 +2794,21 @@ function wireFilterChips(container) {
 function wireViewToggle(container) {
   const toggle = container.querySelector('#view-toggle');
   if (!toggle) return;
+  // Der Kopf fluchtet mit dem Körper, den er überschreibt - und der wechselt
+  // hier die Breite. Die Liste ist aufs Lesemaß gekappt (720px), das
+  // Kanban-Board nimmt die volle Content-Spalte (gemessen 1156px bei 1440px
+  // Fensterbreite); ein fester Modifier im Markup stimmte in genau einer der
+  // beiden Ansichten (Critique 2026-08-13).
+  //
+  // Der Anfangswert steht hier und NICHT als Interpolation im class-Attribut:
+  // zwei Guards lesen die Rail-Aliasse per Regex aus `class="..."`, und ein
+  // `${...}` darin macht aus `?`, `===` und `'list'` je einen Klassennamen -
+  // `.?` als Rail traf danach jeden Selektor der App. Ein Markup-Attribut, das
+  // statisch gelesen wird, bleibt statisch geschrieben.
+  const toolbarEl = container.querySelector('.tasks-toolbar');
+  const syncToolbarWidth = () =>
+    toolbarEl?.classList.toggle('page-toolbar--narrow', state.viewMode === 'list');
+  syncToolbarWidth();
   toggle.querySelectorAll('[data-view]').forEach((btn) => {
     btn.addEventListener('click', () => {
       state.viewMode = btn.dataset.view;
@@ -2804,6 +2819,7 @@ function wireViewToggle(container) {
         b.classList.toggle('group-toggle__btn--active', on);
         b.setAttribute('aria-pressed', String(on));
       });
+      syncToolbarWidth();
       // Sichtbarkeit über [hidden] statt style.display: ein Zustand, den auch
       // assistive Technik als „nicht vorhanden" liest.
       const groupToggle = container.querySelector('#group-mode-toggle');
