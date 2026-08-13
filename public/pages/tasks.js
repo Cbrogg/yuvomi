@@ -415,7 +415,7 @@ function renderTaskCard(task, opts = {}) {
             ${task.document_count > 0 ? `<span class="due-date task-card__docs" aria-label="${t('tasks.documentsCount', { count: task.document_count })}"><i data-lucide="paperclip" class="icon-sm" aria-hidden="true"></i></span>` : ''}
             ${renderVisibilityBadge(task.visibility)}
             ${showCategory && task.category !== FALLBACK_CATEGORY ? `<span class="due-date task-card__category">${esc(catLabel(task.category))}</span>` : ''}
-            ${renderTagBadges(task.tags, ROW_TAG_BADGES_VISIBLE)}
+            ${renderTagBadges(task.tags, ROW_TAG_BADGES_VISIBLE, task.priority)}
           </div>
         </div>
 
@@ -661,8 +661,32 @@ const ROW_TAG_BADGES_VISIBLE = 1;
  * Den Klick fängt die Delegation in wireTagBadgeFilter ab, die ihn auch vom
  * Karten-Klick (Aufgabe öffnen) trennt.
  */
-function renderTagBadges(tags, limit = TAG_BADGES_VISIBLE) {
+/**
+ * @param {string} [priority]  Die Priorität der Aufgabe, deren Etiketten das
+ *   hier sind. Ein Etikett, das GENAU SO heisst wie sie, wird weggelassen.
+ *
+ * WARUM: gemessen stand auf /tasks der Prioritäts-Chip „• Dringend" direkt
+ * neben dem gespiegelten CalDAV-Etikett „dringend" - zwei Formen, dasselbe
+ * Wort, in einer Metazeile, die seit dem Zeilenschnitt einzeilig ist und jedes
+ * Element bezahlt. Beide kommen aus derselben Quelle: eine VTODO trägt ihre
+ * Dringlichkeit als PRIORITY und noch einmal als CATEGORIES.
+ *
+ * NUR DIE EIGENE PRIORITÄT, nicht jedes Prioritätswort: trägt eine Aufgabe mit
+ * Priorität „hoch" ein Etikett „dringend", ist das keine Doppelung, sondern ein
+ * Widerspruch - und den soll man sehen.
+ *
+ * Verglichen wird gegen das ANGEZEIGTE Label, nicht gegen den Schlüssel: das
+ * Etikett kommt aus einer fremden Liste und ist in der Sprache geschrieben, in
+ * der der Nutzer es dort angelegt hat.
+ */
+function renderTagBadges(tags, limit = TAG_BADGES_VISIBLE, priority = null) {
   if (!tags?.length) return '';
+  const eigenes = priority && priority !== 'none' ? PRIORITY_LABELS()[priority] : null;
+  if (eigenes) {
+    const norm = (s) => String(s).trim().toLocaleLowerCase();
+    tags = tags.filter((tag) => norm(tag) !== norm(eigenes));
+    if (!tags.length) return '';
+  }
   const shown = tags.slice(0, limit);
   const rest  = tags.length - shown.length;
   const chips = shown.map((tag) => `
@@ -1940,7 +1964,7 @@ function renderKanbanCard(task) {
       <div class="kanban-card__meta">
         ${renderPriorityBadge(task.priority)}
         ${due ? `<span class="due-date ${due.cls}"><i data-lucide="clock" class="icon-sm" aria-hidden="true"></i> ${due.label}</span>` : ''}
-        ${renderTagBadges(task.tags)}
+        ${renderTagBadges(task.tags, TAG_BADGES_VISIBLE, task.priority)}
       </div>
       <div class="kanban-card__footer">
         ${renderAvatarStack(task.assigned_users ?? [], { size: 22 }) || '<span></span>'}

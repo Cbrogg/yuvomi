@@ -3952,6 +3952,55 @@ test('die Rückfrage der Pille bricht um, statt zu kappen', () => {
 });
 
 /**
+ * Ein Etikett sagt nicht dasselbe wie der Chip daneben.
+ *
+ * Anlass (Critique 2026-08-13): auf /tasks stand „• Dringend" direkt neben dem
+ * gespiegelten CalDAV-Etikett „dringend" - zwei Formen, dasselbe Wort, in einer
+ * Metazeile, die seit dem Zeilenschnitt einzeilig ist und jedes Element
+ * bezahlt. Eine VTODO traegt ihre Dringlichkeit als PRIORITY und noch einmal
+ * als CATEGORIES.
+ *
+ * Geprueft wird die PAARUNG, nicht der Wortlaut: die Etiketten-Funktion muss die
+ * Prioritaet kennen und gegen deren Label filtern, und beide Aufrufstellen
+ * muessen sie mitgeben. Eine davon zu vergessen ist der stille Fall - die
+ * Zeile sieht dann genauso aus wie vorher.
+ */
+test('ein Etikett verschwindet, wenn es heisst wie die eigene Prioritaet', () => {
+  const src = read('../public/pages/tasks.js');
+
+  const fn = src.match(/function renderTagBadges\([^)]*\)\s*\{[\s\S]*?\n\}/);
+  assert.ok(fn, 'renderTagBadges nicht gefunden');
+  assert.match(fn[0], /priority\s*=\s*null/,
+    'die Etiketten-Funktion muss die Prioritaet kennen, sonst kann sie sie nicht vergleichen');
+  // DER RUMPF, NICHT DIE SIGNATUR. Eine erste Fassung prueft nur, dass die
+  // Bestandteile irgendwo im Rumpf vorkommen - und blieb gruen, als die
+  // Filterzeile entfernt wurde: `PRIORITY_LABELS()[priority]` und die
+  // Kleinschreibung standen weiter da, sie taten nur nichts mehr. Also wird der
+  // Name der Label-Variablen gelesen und verlangt, dass GENAU DER in einem
+  // Filter ueber die Etiketten vorkommt.
+  const labelVar = fn[0].match(/const\s+(\w+)\s*=[^;]*PRIORITY_LABELS\(\)\[priority\]/);
+  assert.ok(labelVar,
+    'verglichen wird gegen das ANGEZEIGTE Label, nicht gegen den Schluessel - das Etikett kommt '
+    + 'aus einer fremden Liste und ist in der Sprache geschrieben, in der es dort steht');
+  const filterMitLabel = new RegExp(`tags\\s*=\\s*tags\\.filter\\([\\s\\S]{0,160}?\\b${labelVar[1]}\\b`);
+  assert.match(fn[0], filterMitLabel,
+    `das Label (\`${labelVar[1]}\`) muss die Etiketten wirklich filtern - eine Variable, die nur `
+    + 'berechnet und nie benutzt wird, ist ein Guard ohne Gegenstand');
+  assert.match(fn[0], /toLocaleLowerCase|toLowerCase/,
+    'gross/klein darf den Vergleich nicht entscheiden - „Dringend" und „dringend" sind dasselbe Wort');
+
+  // BEIDE Aufrufstellen, sonst greift der Fix nur in einer Ansicht.
+  const aufrufe = [...src.matchAll(/renderTagBadges\(([^)]*)\)/g)]
+    .map((m) => m[1]).filter((args) => !args.includes('limit ='));
+  assert.ok(aufrufe.length >= 2, `erwartet mindestens zwei Aufrufstellen, gefunden ${aufrufe.length}`);
+  for (const args of aufrufe) {
+    assert.match(args, /task\.priority/,
+      `eine Aufrufstelle gibt die Prioritaet nicht mit (\`${args}\`) - dort steht das Etikett `
+      + 'weiter neben seinem Zwilling');
+  }
+});
+
+/**
  * EINE ZEILE DARF ABWEICHEN, ABER NICHT WIEDERHOLEN.
  *
  * Anlass (Critique 2026-08-13, P2): `.list-row` stand im gerenderten Dokument

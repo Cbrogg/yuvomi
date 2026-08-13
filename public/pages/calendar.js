@@ -2251,13 +2251,14 @@ function renderAgendaEvent(ev, dayStr) {
   const assignedUsers = ev.assigned_users ?? [];
   return `
     <div class="list-row agenda-event" data-id="${ev.id}" role="button" tabindex="0"
-         aria-label="${esc(ev.title)}, ${esc(timeStr)}${chipAssigneeLabel(ev) ? ', ' + esc(chipAssigneeLabel(ev)) : ''}">
+         aria-label="${esc(ev.title)}, ${esc(timeStr)}${ev.cal_name ? ', ' + esc(ev.cal_name) : ''}${chipAssigneeLabel(ev) ? ', ' + esc(chipAssigneeLabel(ev)) : ''}">
       <div class="agenda-event__color" style="background:${esc(displayBg)};"></div>
       <div class="agenda-event__body">
         <div class="agenda-event__title">${eventIconHtml(ev.icon)}<span>${esc(ev.title)}</span>${(ev.recurrence_rule || ev.is_recurring_instance) ? calendarRepeatIconHtml() : ''}</div>
         <div class="agenda-event__meta">
           <span class="calendar-meta-item calendar-meta-item--time">${calendarMetaIconHtml('clock')}<span>${esc(timeStr)}</span></span>
           ${ev.location ? `<span class="calendar-meta-item calendar-meta-item--place">${calendarMetaIconHtml('map-pin')}<span>${esc(fmtLocation(ev.location))}</span></span>` : ''}
+          ${ev.cal_name ? `<span class="calendar-meta-item calendar-meta-item--cal">${calendarMetaIconHtml('calendar-days')}<span>${esc(ev.cal_name)}</span></span>` : ''}
           ${eventVisibilityMeta(ev.visibility)}
           ${assignedUsers.length ? `<span class="agenda-event__assigned">${renderAvatarStack(assignedUsers, { size: 20, maxVisible: 3 })}</span>` : ''}
         </div>
