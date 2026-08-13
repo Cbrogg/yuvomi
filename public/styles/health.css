@@ -347,8 +347,32 @@
  * traegt den ganzen Satz weiter, seine Zielgroesse kommt unveraendert aus
  * `.btn`. `flex-wrap` zurueckzuholen waere der andere Weg und der falsche: er
  * braeche die geteilte Regel fuer alle vierzehn Module. */
+/* ZWEI STUFEN, WEIL EINE NICHT REICHTE - und das war nachrechenbar, nicht
+ * Geschmack. Gemessen bei 390px: Container 324px, die Zeile braucht 371
+ * (32 Polsterung + 46 Uhrzeit + 24 Luecken + 128 Namensboden + 157 Aktionen).
+ * Das Skip-Label allein fallen zu lassen holte 78px und liess 14 uebrig; bei
+ * 320px hat der Container nur 254px, und selbst mit dem Namen auf NULL fehlten
+ * noch 5. Der Take-Knopf traegt dort 101px allein.
+ *
+ * Also: erste Stufe nimmt dem Namen seinen Boden und dem Skip sein Wort,
+ * zweite Stufe auch dem Take. Beide behalten ihr `aria-label` und ihre
+ * Zielgroesse aus `.btn` - was faellt, ist der sichtbare Text, nie das Ziel.
+ * In einem Modul, das Medikamente fuehrt, ist eine unerreichbare Aktion der
+ * teuerste Fehler; ein Icon statt eines Wortes ist der billigste Preis dafuer. */
 @container list-rows (max-width: 26rem) {
   .health-dose__skip-label {
+    display: none;
+  }
+
+}
+
+/* 21rem = 336px, und die Zahl ist gerechnet, nicht gegriffen: mit beschriftetem
+ * Take braucht die Zeile 32 Polsterung + 46 Uhrzeit + 24 Luecken + 56 Namensboden
+ * + 177 Aktionen = 335px. Darunter faellt auch sein Wort. Der erste Anlauf stand
+ * auf 20rem (320px) - der Container misst auf einem 390px-Telefon aber 324px,
+ * also feuerte die Stufe genau dort nicht, wo sie gebraucht wurde. */
+@container list-rows (max-width: 21rem) {
+  .health-dose__take-label {
     display: none;
   }
 }
@@ -383,6 +407,24 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* DER 8REM-BODEN DARUEBER STAMMT AUS DER ZEIT VOR DER GETEILTEN ZEILE.
+ * Sein Kommentar sagt, er solle die Aktionsgruppe bei Enge in eine ZWEITE ZEILE
+ * druecken - `.list-row` setzt seit dem Beitritt `flex-wrap: nowrap`, also
+ * drueckt er sie stattdessen aus dem Bild. Diese zwei Stufen nehmen ihm den
+ * Boden genau dort, wo die Rechnung oben es verlangt.
+ *
+ * SIE STEHEN HIER UNTEN UND NICHT BEI IHREN GESCHWISTERN: eine Container-Query
+ * erhoeht die Spezifitaet nicht. Ueber der Basisregel notiert waren sie
+ * wirkungslos, und zwar lautlos - gemessen blieb `min-width` bei 320px auf
+ * 128px, waehrend die Label-Regeln derselben Query sichtbar griffen. */
+@container list-rows (max-width: 26rem) {
+  .health-dose__name { min-width: 3.5rem; }
+}
+
+@container list-rows (max-width: 21rem) {
+  .health-dose__name { min-width: 3rem; }
 }
 
 .health-dose__actions {

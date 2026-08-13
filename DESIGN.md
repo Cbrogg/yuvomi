@@ -133,13 +133,13 @@ spacing:
   16: "64px"
 components:
   button-primary:
-    backgroundColor: "color-mix(in srgb, var(--color-accent) 88%, #0E0D0B)"
+    backgroundColor: "color-mix(in srgb, var(--color-accent) 88%, var(--neutral-950))"
     textColor: "{colors.ink-on-vivid}"
     rounded: "{rounded.full}"
     padding: "8px 16px"
     height: "48px"
   button-primary-hover:
-    backgroundColor: "color-mix(in srgb, var(--color-accent) 76%, #0E0D0B)"
+    backgroundColor: "color-mix(in srgb, var(--color-accent) 76%, var(--neutral-950))"
   button-icon:
     rounded: "{rounded.full}"
     size: "44px"
