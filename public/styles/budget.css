@@ -501,6 +501,13 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
+  /* DAS LEERZEICHEN VOR DEM TRENNPUNKT, das `inline-flex` verschluckt.
+   * budget.js setzt den Knoten als `<span> · <i…>Sparkonto</span>`, und in
+   * einem Flex-Container wird der fuehrende Whitespace des ersten anonymen
+   * Items getilgt: gerendert stand „…Unterhaltung· Sparkonto". Der Fix gegen
+   * den haengenden Separator (das „·" gehoert IN den Knoten, sonst bleibt es
+   * beim Weglassen allein zurueck) hat den Wortabstand mitgenommen. */
+  margin-inline-start: var(--space-1);
 }
 
 /* Konto-Filter-Chip in der Transaktionsliste (Drilldown-Kontext) */
