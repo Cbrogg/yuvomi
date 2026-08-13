@@ -241,6 +241,13 @@ html:has(.contacts-page.is-selecting) .page-fab {
   display: none;
 }
 
+/* Und mit der Affordance geht ihr Nachlauf (Etappe 6, 2026-08-13). Dieselbe
+   Paarung wie in layout.css: die Nachlauf-Regel fragt `:not([hidden])` und
+   sieht ein `display: none` nicht. */
+html:has(.contacts-page.is-selecting) {
+  --fab-safe-zone: 0px;
+}
+
 /* Öffnen/Bearbeiten: echte, fokussierbare Schaltfläche (Tastatur/Screenreader).
  *
  * DER KNOPF-RESET UND DIE ZIELGRÖSSE STEHEN NICHT MEHR HIER, sondern kommen

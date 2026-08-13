@@ -2394,6 +2394,17 @@ html.fab-anim-done .page-fab {
     display: none;
   }
 
+  /* UND WER IHN VERSTECKT, NIMMT IHM SEINEN NACHLAUF (Etappe 6, 2026-08-13).
+   * Gemessen bei 1440x900: /tasks, /calendar, /contacts, /budget und /notes
+   * reservierten 96px am Scroll-Ende für einen Knopf mit 0x0 Fläche, /shopping
+   * 156 statt 60. Die Nachlauf-Regel oben fragt `.page-fab:not([hidden])` - das
+   * ist ein STELLVERTRETER für „hier schwebt ein Knopf über dem Scrollport",
+   * und er wird falsch, sobald CSS statt der Seite versteckt.
+   * `[hidden]` braucht diese Paarung nicht: das steht schon im Selektor. */
+  body:has(.toolbar-new-btn:not([hidden])) {
+    --fab-safe-zone: 0px;
+  }
+
   /* Der angedockte FAB IST der Toolbar-Knopf (siehe dockFabIntoToolbar in
    * router.js): dieselbe Node, dieselbe Verdrahtung, nur ohne die schwebende
    * Geometrie. Die Kapsel und die Stimme kommen von `.btn--primary`. */
@@ -5726,6 +5737,13 @@ textarea.input { resize: vertical; }
    verbindliche Sperre liegt am Server; dies ist die ehrliche UI-Entsprechung. */
 html[data-module-readonly] .page-fab {
   display: none !important;
+}
+
+/* Und ohne Knopf kein Nachlauf - dieselbe Paarung wie beim angedockten FAB
+   (Etappe 6). Ein „Nur lesen"-Modul reservierte sonst 96px für eine
+   Anlege-Affordance, die es gerade ausdrücklich nicht anbietet. */
+html[data-module-readonly] {
+  --fab-safe-zone: 0px;
 }
 
 .module-readonly-banner {

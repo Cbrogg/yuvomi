@@ -3017,6 +3017,65 @@ test('der FAB weicht der Zeile, statt eine Gasse zu reservieren', () => {
 });
 
 /**
+ * WER DEN FAB VERSTECKT, NIMMT IHM SEINEN NACHLAUF (Etappe 6, 2026-08-13).
+ *
+ * `--fab-safe-zone` haengt an `:has(.fab-layer .page-fab:not([hidden])) `. Das
+ * ist ein STELLVERTRETER fuer „hier schwebt ein Knopf ueber dem Scrollport",
+ * und er wird falsch, sobald CSS statt der Seite versteckt: der Knoten bleibt
+ * ohne `hidden` stehen, der Selektor trifft, und der Nachlauf reserviert Platz
+ * fuer eine Flaeche von 0x0. Gemessen bei 1440x900 auf sechs Routen (/tasks,
+ * /calendar, /shopping, /contacts, /budget, /notes): 96px, auf /shopping 156
+ * statt 60.
+ *
+ * DER GUARD PRUEFT DIE PAARUNG, NICHT DIE VIER STELLEN. Vier Regeln in drei
+ * Dateien verstecken heute einen FAB, aus vier verschiedenen Gruenden - eine
+ * Allowlist waere in dem Moment veraltet, in dem eine fuenfte dazukommt, und
+ * genau so ist dieser Befund entstanden. Verlangt wird deshalb: zu jeder Regel,
+ * die einen `.page-fab` per `display: none` versteckt, steht im selben
+ * Stylesheet eine Regel derselben Bedingung, die `--fab-safe-zone` nullt.
+ *
+ * AUSGENOMMEN ist `.page-fab[hidden]` - dort deckt das `:not([hidden])` der
+ * Nachlauf-Regel den Fall bereits ab. Das ist keine Ausnahme von der Regel,
+ * sondern ihre andere Haelfte. Die Bedingung muss am FAB SELBST haengen: eine
+ * erste Fassung schloss jeden Selektor aus, in dem `[hidden]` irgendwo vorkam,
+ * und uebersah damit ausgerechnet die Dock-Regel
+ * `body:has(.toolbar-new-btn:not([hidden])) …` - den Anlassfall.
+ */
+test('jede CSS-Ausblendung des FAB nullt seinen Nachlauf', () => {
+  const styleDir = new URL('../public/styles/', import.meta.url);
+  const versteckt = [];
+  const nullt = [];
+  const norm = (s) => s.replace(/\s+/g, ' ').trim();
+
+  for (const file of readdirSync(styleDir).filter((f) => f.endsWith('.css'))) {
+    for (const { selector, body } of eachRule(read(`../public/styles/${file}`))) {
+      const trifftFab = /\.page-fab\b|#fab-new-item\b/.test(selector);
+      const nurHidden = /\.page-fab\[hidden\]|#fab-new-item\[hidden\]/.test(selector);
+      if (trifftFab && /display:\s*none/.test(body) && !nurHidden) {
+        versteckt.push({ file, selector: norm(selector) });
+      }
+      if (/--fab-safe-zone:\s*0/.test(body)) nullt.push({ file, selector: norm(selector) });
+    }
+  }
+
+  // Reichweite zuerst: ein Guard ueber eine leere Liste ist keine Zusicherung.
+  assert.ok(versteckt.length >= 4,
+    `Reichweite: nur ${versteckt.length} Ausblende-Regeln gefunden - der Scanner greift nicht mehr`);
+
+  // Die Bedingung ist der Selektor OHNE sein FAB-Ziel. Statt ihn zu zerlegen
+  // (`:has()` haelt beliebige Klammern), wird die Verwandtschaft ueber die
+  // Teilzeichenkette gepruefet: `body:has(.toolbar-new-btn:not([hidden]))` steckt in
+  // `body:has(.toolbar-new-btn:not([hidden])) #fab-layer .page-fab`, und
+  // `#fab-layer #fab-new-item` steckt in `body:has(#fab-layer #fab-new-item)`.
+  const ohnePaar = versteckt.filter(({ file, selector }) => !nullt.some((z) =>
+    z.file === file && (selector.includes(z.selector) || z.selector.includes(selector))));
+
+  assert.deepEqual(ohnePaar.map((x) => `${x.file}: ${x.selector}`), [],
+    'diese Regeln verstecken den FAB, ohne --fab-safe-zone zu nullen - dort reserviert '
+    + 'der Nachlauf am Scroll-Ende Platz fuer einen Knopf ohne Flaeche');
+});
+
+/**
  * #634, dritte Runde: der FAB gehört nicht in den Scrollport.
  *
  * Nach Retract und Tastatur-Erkennung meldete derselbe Nutzer den Defekt ein
@@ -7159,15 +7218,22 @@ test('every primary "new" control names its noun from newLabel.* (one register)'
  */
 test('shopping hides its FAB exactly where the quick-add row opens', () => {
   const css = read('../public/styles/shopping.css');
-  let found = false;
-  for (const rule of eachRule(css)) {
-    if (!/#fab-new-item/.test(rule.selector)) continue;
-    found = true;
+  // JEDE Regel, die diesen Knopf ueberhaupt erwaehnt, steht unter derselben
+  // Bedingung - das ist die eigentliche Zusicherung, und sie gilt seit
+  // Etappe 6 fuer zwei Regeln: die Ausblendung und die Nullung ihres
+  // Nachlaufs. Eine Paarung, die unter verschiedenen Bedingungen stuende,
+  // waere genau der Widerspruch, den sie aufloest.
+  const regeln = [...eachRule(css)].filter((r) => /#fab-new-item/.test(r.selector));
+  for (const rule of regeln) {
     assert.match(rule.at.join(' '), /\(hover:\s*hover\)/,
       'der FAB weicht unter (hover: hover) - derselben Bedingung, die .quick-add aufklappt');
-    assert.match(rule.body, /display:\s*none/);
   }
-  assert.ok(found, 'erwartet eine Regel, die #fab-new-item am Zeigergeraet ausblendet');
+  const versteckt = regeln.filter((r) => /display:\s*none/.test(r.body));
+  assert.equal(versteckt.length, 1,
+    'erwartet genau eine Regel, die #fab-new-item am Zeigergeraet ausblendet');
+  assert.ok(regeln.some((r) => /--fab-safe-zone:\s*0/.test(r.body)),
+    'und daneben die, die ihm seinen Nachlauf nimmt - sonst reserviert der '
+    + 'Scrollport 96px fuer einen Knopf ohne Flaeche (Etappe 6)');
 
   // Der Knoten bleibt: zwei Aufrufer druecken die Primaeraktion ueber
   // `.page-fab`.click(), und ein JS-Klick feuert auch auf display:none.

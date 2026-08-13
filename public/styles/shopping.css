@@ -338,6 +338,19 @@
   #fab-layer #fab-new-item {
     display: none;
   }
+
+  /* UND DAMIT SEIN NACHLAUF (Etappe 6, 2026-08-13). Gemessen bei 1440x900 auf
+   * /shopping mit Pille: `padding-block-end` 156px, letzte Zeile endet bei
+   * y=742, die Pille beginnt bei 830 - 88px Freiraum fuer einen Knopf, der
+   * genau hier ausgeblendet ist. Die Regel dahinter fragt
+   * `.page-fab:not([hidden])`, und das ist ein Stellvertreter, den ein
+   * `display: none` unterlaeuft (siehe layout.css). Die Pillenzone bleibt: sie
+   * haengt an `.list-bulkbar`, nicht am FAB.
+   * Gefragt wird ueber `body:has()`, weil das Token an einem VORFAHREN von
+   * `.app-content` stehen muss - eine Deklaration am Knopf erreicht ihn nicht. */
+  body:has(#fab-layer #fab-new-item) {
+    --fab-safe-zone: 0px;
+  }
 }
 
 .quick-add__form {
