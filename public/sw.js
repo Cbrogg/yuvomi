@@ -93,6 +93,7 @@ const APP_SHELL = [
   '/components/photo-screensaver.js',
   '/components/user-multi-select.js',
   '/utils/birthday-event.js',
+  '/utils/bulk-pill.js',
   '/utils/category-labels.js',
   '/utils/color.js',
   '/utils/contact-name.js',
