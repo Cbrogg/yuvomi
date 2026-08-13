@@ -1501,6 +1501,131 @@ test('Wand-Modus: das Nachtfenster läuft über Mitternacht (22:00 bis 06:00)', 
 });
 
 // --------------------------------------------------------
+// Widget-Konfiguration (public/utils/dashboard-widgets.js)
+//
+// ANLASS: `normalizeDashboardConfig` und `isUserOrderedConfig` tragen zusammen
+// eine Zusicherung - ein Bestandslayout, dem eine inzwischen neu bekannte
+// Widget-Id fehlt, darf sich NICHT als Nutzer-Umsortierung lesen. Tut es das,
+// schaltet das Raster von der dichten Packung auf preserve-order und der
+// Weissraum aus Audit A1-03 ist zurueck, ohne dass jemand etwas umsortiert hat.
+// Sie war bis 2026-08-13 durch keinen Test gedeckt und hing an einer
+// Vereinbarung ueber die Reihenfolge von WIDGET_IDS.
+// --------------------------------------------------------
+
+const widgets = await import('../public/utils/dashboard-widgets.js');
+
+// Ein Bestandslayout, dem genau `missing` fehlt - sonst der unveraenderte
+// Default, so wie es ein Haushalt gespeichert hat, bevor es diese Id gab.
+function layoutOhne(missing) {
+  return widgets.DEFAULT_WIDGET_CONFIG
+    .filter((w) => w.id !== missing)
+    .map((w, i) => ({ ...w, order: i }));
+}
+
+test('Widget-Merge: eine fehlende Id landet an ihrer Default-Position, nicht hinten', () => {
+  const geprueft = widgets.WIDGET_IDS.length;
+  assert(geprueft === 15, `Reichweite: ${geprueft} Ids geprueft, nicht die erwarteten 15`);
+  const falsch = widgets.WIDGET_IDS.filter((id) => {
+    const merged = widgets.normalizeDashboardConfig(layoutOhne(id));
+    return merged.map((w) => w.id).join(',') !== widgets.WIDGET_IDS.join(',');
+  });
+  assert(falsch.length === 0,
+    `An die falsche Stelle einsortiert: ${falsch.join(', ')} - erwartet ist die Default-Position`);
+});
+
+test('Widget-Merge: ein Bestandslayout ohne eine Id ist KEINE Nutzer-Umsortierung (A1-03)', () => {
+  // Der eigentliche Punkt. Vor dem Merge-Fix ist das fuer jede Id rot, die
+  // nicht die LETZTE sichtbare in WIDGET_IDS ist - angehaengt steht sie hinter
+  // Widgets, vor denen sie im Default steht.
+  const falsch = widgets.WIDGET_IDS.filter((id) =>
+    widgets.isUserOrderedConfig(widgets.normalizeDashboardConfig(layoutOhne(id))));
+  assert(falsch.length === 0,
+    `Als umsortiert gelesen, obwohl nur eine Id fehlte: ${falsch.join(', ')} - das Raster faellt dort auf preserve-order`);
+});
+
+test('Widget-Merge: zwei fehlende Ids behalten ihre Reihenfolge zueinander', () => {
+  const zwei = widgets.DEFAULT_WIDGET_CONFIG
+    .filter((w) => !['meals', 'shopping'].includes(w.id))
+    .map((w, i) => ({ ...w, order: i }));
+  const merged = widgets.normalizeDashboardConfig(zwei).map((w) => w.id);
+  assert(merged.join(',') === widgets.WIDGET_IDS.join(','),
+    `Zwei benachbarte Neuzugaenge kamen durcheinander: ${merged.join(',')}`);
+  assert(!widgets.isUserOrderedConfig(merged.map((id, i) => ({ id, visible: true, order: i, size: '1x1' }))),
+    'zwei fehlende Ids lesen sich als Umsortierung');
+});
+
+test('Widget-Merge: eine fehlende Id am Anfang der Liste landet vorn, nicht hinten', () => {
+  // Der Fall ohne Vorgaenger - `tasks` ist WIDGET_IDS[0]. Die Rueckwaertssuche
+  // findet nichts und muss auf Position 0 fallen.
+  const merged = widgets.normalizeDashboardConfig(layoutOhne('tasks'));
+  assert(merged[0].id === 'tasks', `Erste Id landete auf Position ${merged.findIndex((w) => w.id === 'tasks')}`);
+});
+
+test('Widget-Merge: ein umsortiertes Layout laesst den Neuzugang seinem Vorgaenger folgen', () => {
+  // Der Anlassfall ist der Demo-Haushalt (gemessen 2026-08-13): `weather` steht
+  // dort ganz vorn, `clock` und `metrics` fehlen. Ein umsortiertes Layout hat
+  // keine Default-Position mehr, nur noch Nachbarn - der Neuzugang haengt sich
+  // an seinen Vorgaenger, nicht ans Ende. Das ist die Entscheidung, und sie
+  // steht hier, weil sie sonst niemandem auffaellt.
+  const demo = ['weather', 'family', 'budget', 'birthdays', 'rewards', 'notes',
+    'tasks', 'calendar', 'shopping', 'meals', 'housekeeping', 'health', 'cycle']
+    .map((id, i) => ({ id, order: i, visible: i < 6, size: '1x1' }));
+  const merged = widgets.normalizeDashboardConfig(demo);
+  const sichtbar = merged.filter((w) => w.visible).map((w) => w.id);
+  assert(sichtbar.join(',') === 'weather,metrics,family,budget,birthdays,rewards,notes',
+    `Neuzugang an unerwarteter Stelle: ${sichtbar.join(',')}`);
+  assert(widgets.isUserOrderedConfig(merged),
+    'ein echt umsortiertes Layout muss umsortiert bleiben - sonst packt dense es um');
+});
+
+test('isUserOrderedConfig erkennt eine ECHTE Umsortierung weiterhin', () => {
+  // Gegenprobe zur Zusicherung oben: sie darf nicht dadurch halten, dass die
+  // Funktion nie mehr `true` sagt. Zwei sichtbare Widgets tauschen.
+  const sichtbar = widgets.DEFAULT_WIDGET_CONFIG.filter((w) => w.visible).map((w) => w.id);
+  assert(sichtbar.length >= 2, `Reichweite: nur ${sichtbar.length} sichtbare Widgets im Default`);
+  const getauscht = widgets.DEFAULT_WIDGET_CONFIG.map((w) => ({ ...w }));
+  const a = getauscht.findIndex((w) => w.id === sichtbar[0]);
+  const b = getauscht.findIndex((w) => w.id === sichtbar[1]);
+  [getauscht[a].order, getauscht[b].order] = [getauscht[b].order, getauscht[a].order];
+  assert(widgets.isUserOrderedConfig(getauscht),
+    `Tausch von ${sichtbar[0]} und ${sichtbar[1]} wurde nicht als Umsortierung erkannt`);
+  assert(!widgets.isUserOrderedConfig(widgets.DEFAULT_WIDGET_CONFIG),
+    'der unveraenderte Default liest sich als Umsortierung');
+});
+
+test('isUserOrderedConfig: ein reiner Sichtbarkeits-Toggle ist keine Umsortierung', () => {
+  const versteckt = widgets.DEFAULT_WIDGET_CONFIG.map((w) => (w.id === 'notes' ? { ...w, visible: false } : w));
+  assert(!widgets.isUserOrderedConfig(versteckt), 'Ausblenden wurde als Umsortierung gelesen');
+  // Und eine abgeschaffte Id aus einem alten Stand ebenso wenig.
+  const alt = [{ id: 'ancient', visible: true, order: -1 }, ...widgets.DEFAULT_WIDGET_CONFIG];
+  assert(!widgets.isUserOrderedConfig(alt), 'eine unbekannte Alt-Id wurde als Umsortierung gelesen');
+});
+
+test('Widget-Merge: gespeicherte Reihenfolge gewinnt ueber die Array-Position', () => {
+  // `order` und Array-Position koennen auseinanderlaufen; eingefuegt wird an
+  // einer Position, also muss vorher sortiert sein.
+  const gemischt = widgets.DEFAULT_WIDGET_CONFIG
+    .filter((w) => w.id !== 'notes')
+    .map((w, i) => ({ ...w, order: i }))
+    .reverse();
+  const merged = widgets.normalizeDashboardConfig(gemischt).map((w) => w.id);
+  assert(merged.join(',') === widgets.WIDGET_IDS.join(','),
+    `Array-Position statt order gelesen: ${merged.join(',')}`);
+});
+
+test('Widget-Merge: Groesse und Sichtbarkeit eines Bestandseintrags bleiben unberuehrt', () => {
+  const gespeichert = widgets.DEFAULT_WIDGET_CONFIG
+    .filter((w) => w.id !== 'metrics')
+    .map((w) => ({ ...w, visible: w.id === 'tasks' ? true : w.visible, size: w.id === 'tasks' ? '2x2' : w.size }));
+  const merged = widgets.normalizeDashboardConfig(gespeichert);
+  const tasks = merged.find((w) => w.id === 'tasks');
+  assert(tasks.size === '2x2' && tasks.visible === true, 'gespeicherte Groesse/Sichtbarkeit ueberschrieben');
+  // Der Neuzugang erbt dagegen seinen Default - Opt-in-Module erscheinen nicht ungefragt.
+  const health = widgets.normalizeDashboardConfig(layoutOhne('health')).find((w) => w.id === 'health');
+  assert(health.visible === false, 'ein neu ergaenztes Opt-in-Widget kam sichtbar herein');
+});
+
+// --------------------------------------------------------
 // Ergebnis
 // --------------------------------------------------------
 await Promise.all(pendingTests);

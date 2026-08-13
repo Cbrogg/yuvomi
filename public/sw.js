@@ -98,6 +98,7 @@ const APP_SHELL = [
   '/utils/color.js',
   '/utils/contact-name.js',
   '/utils/contrast.js',
+  '/utils/dashboard-widgets.js',
   '/utils/date.js',
   '/utils/document-preview.js',
   '/utils/empty-state.js',

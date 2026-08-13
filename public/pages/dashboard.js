@@ -16,6 +16,10 @@ import { findPageFab } from '/utils/fab.js';
 import { openModal, closeModal, confirmModal } from '/components/modal.js';
 import { renderAvatarStack } from '/components/user-multi-select.js';
 import { isSoloHousehold } from '/utils/household.js';
+import {
+  WIDGET_IDS, WIDGET_SIZE_PRESETS, WIDGET_SIZE_OPTIONS, DEFAULT_WIDGET_CONFIG,
+  nearestPreset, normalizeDashboardConfig, isUserOrderedConfig, sameWidgetConfig,
+} from '/utils/dashboard-widgets.js';
 import { whoMark } from '/utils/seal-pair.js';
 import { exitWallMode, isWallActive, syncWallMode } from '/utils/wall-mode.js';
 
@@ -223,104 +227,10 @@ function maybeHintCustomize(container) {
 // Widget-Definitionen (Reihenfolge = Standard-Layout)
 // --------------------------------------------------------
 
-// Reihenfolge = Standard-Layout. Die primären Inhalte (tasks, calendar) führen,
-// damit sie beim Wieder-Einblenden oben stehen; das einzige passive Widget
-// (weather) steht bewusst am Ende, statt die sichtbare Grid-Spitze zu belegen.
-/* `metrics` steht ANS ENDE, nicht an den Anfang - obwohl die Kachelreihe oben
- * am meisten taugt. Grund: normalizeDashboardConfig haengt eine neu bekannte Id
- * an bestehende Layouts hinten an, und isUserOrderedConfig vergleicht die
- * Reihenfolge gegen diese Liste. Stuende `metrics` vorn, waere fuer JEDEN
- * Bestandshaushalt „gespeicherte Reihenfolge != Default" - und das Raster
- * schaltete stillschweigend von der dichten Packung auf preserve-order um
- * (genau der Regress aus Audit A1-03). Auf einem frischen Dashboard packt der
- * dense-Fluss die 2x2-Kachel ohnehin nach oben, wo sie passt. */
-const WIDGET_IDS = ['tasks', 'calendar', 'meals', 'shopping', 'birthdays', 'budget', 'rewards', 'health', 'cycle', 'housekeeping', 'family', 'notes', 'weather', 'clock', 'metrics'];
-
-// Vier kuratierte Formen statt sechs: über vier Auswahlmöglichkeiten pro Widget
-// (× bis zu 12 Widgets) kippt der Anpassen-Modus in Mikro-Entscheidungs-Overhead
-// für ein Familienpublikum (Critique P2, ≤4-Choices-Regel). Die früheren 3x2/4x2
-// bleiben als Legacy-Werte gültig (WIDGET_SIZE_OPTIONS) — bestehende Layouts werden
-// nicht zurückgesetzt, nur die Neu-Auswahl steuert auf diese vier zu.
-const WIDGET_SIZE_PRESETS = [
-  { value: '1x1', labelKey: 'dashboard.widgetSizeTiny'     },
-  { value: '2x1', labelKey: 'dashboard.widgetSizeNarrow'   },
-  { value: '1x2', labelKey: 'dashboard.widgetSizeTall'     },
-  { value: '2x2', labelKey: 'dashboard.widgetSizeStandard' },
-];
-
-// Alle bekannten Größen inkl. Legacy-Werte — für normalizeDashboardConfig-Validierung
-const WIDGET_SIZE_OPTIONS = [...new Set([
-  ...WIDGET_SIZE_PRESETS.map((p) => p.value),
-  '1x2', '1x3', '1x4', '2x3', '2x4', '3x1', '3x3', '3x4', '4x1', '4x3', '4x4',
-])];
-
-// Bildet einen beliebigen (auch Legacy-)Größenwert auf das nächstliegende der vier
-// kuratierten Presets ab: Breite/Höhe ≥2 → 2, sonst 1. So kann normalizeDashboardConfig
-// migrierte Layouts (z.B. 4x2 aus einer früheren Version) auf ein Preset zusammenziehen,
-// statt dem betroffenen Nutzer als einziger eine 5. Dropdown-Option zu zeigen (Critique P2).
-function nearestPreset(size) {
-  const values = WIDGET_SIZE_PRESETS.map((p) => p.value);
-  if (values.includes(size)) return size;
-  const [cols, rows] = String(size).split('x').map(Number);
-  if (!Number.isFinite(cols) || !Number.isFinite(rows)) return '1x1';
-  return `${cols >= 2 ? 2 : 1}x${rows >= 2 ? 2 : 1}`;
-}
-
-function defaultWidgetSize(id) {
-  // Listen-Widgets defaulten auf schmal-hoch (1×2) statt breit-hoch (2×2): eine
-  // „Heute"-Liste braucht Höhe, nicht Breite — 1×2 halbiert die Grundfläche und
-  // packt sich sauber neben andere Widgets, statt als 2-spaltige Kachel eine
-  // ganze Rasterzeile zu belegen (löst die Masonry-Imbalance an der Wurzel).
-  // Inhaltsschwere Karten (gestapelte Blöcke) starten hoch statt 1×1, damit die
-  // Zeile nicht per grid-auto ragged nachwächst (Critique P4). Budget stapelt
-  // Saldo + Sparen + Einnahme/Ausgabe + Top-Ausgabe → 1×2; family stapelt seit
-  // dem „Heute dran"-Umbau Mitglieder-Zeilen und braucht dieselbe Höhe.
-  //
-  // NOTIZEN UND GEBURTSTAGE GEHOEREN IN DIESELBE LISTE, und dass sie es nicht
-  // taten, hat man am Standard-Desktop gesehen: sichtbar sind ab Werk genau
-  // vier Widgets - Geburtstage (1x1), Budget (1x2), Familie (1x2), Notizen
-  // (2x1). Vier Spalten fassen die drei hohen nebeneinander, die breite
-  // Notizkachel passt daneben nicht mehr und faellt eine Zeile tiefer; was
-  // bleibt, ist das Loch rechts unten, das `dense` nicht schliessen kann,
-  // weil kein Widget mehr uebrig ist. Beide sind Listen wie die anderen und
-  // brauchen Hoehe, nicht Breite: mit 1x2 fuellen die vier Standard-Widgets
-  // die Zeile lueckenlos. Bestandslayouts bleiben unberuehrt - gespeichert
-  // wird die Groesse, nicht dieser Default.
-  if (['tasks', 'calendar', 'rewards', 'budget', 'family', 'notes', 'birthdays'].includes(id)) return '1x2';
-  // Die Uhr startet breit statt quadratisch: Uhrzeit und darunter der ausgeschriebene
-  // Wochentag brauchen Zeile, nicht Höhe - auf 1x1 bräche das Datum um (#651).
-  if (['weather', 'shopping', 'health', 'cycle', 'meals', 'clock'].includes(id)) return '2x1';
-  // Die Kennzahlreihe IST ein 2x2-Raster - jede andere Groesse zerlegt sie in
-  // eine Spalte oder eine Zeile und nimmt ihr genau den Vergleich, fuer den sie
-  // gebaut ist.
-  if (id === 'metrics') return '2x2';
-  return '1x1';
-}
-
-// Das „Heute"-Cockpit fasst diese vier Domänen bereits als Kurzüberblick zusammen.
-// Ihre Widgets starten deshalb ausgeblendet: kein Echo, keine Erststart-Überladung.
-// Über „Anpassen" jederzeit wieder einblendbar; Bestandskonfigurationen bleiben unberührt.
-const COCKPIT_COVERED_WIDGETS = new Set(['tasks', 'calendar', 'shopping', 'meals']);
-
-// Standardmäßig ausgeblendet: die vier vom Cockpit abgedeckten Domänen (kein Echo)
-// plus die drei neueren Module (rewards, health, housekeeping). Letztere sind
-// spezialisiert und nicht in jedem Haushalt aktiv — sie erscheinen als Opt-in im
-// „Anpassen"-Panel, statt frische Dashboards mit leeren Kacheln zu überladen
-// (PRODUCT.md: „Power wird auf Abruf enthüllt, nicht in einem Raster ausgebreitet").
-// `clock` kommt dazu: auf einem Gerät mit Statusleiste ist eine zweite Uhr
-// Doppelung. Ihren Zweck erfüllt sie am Wandtablet ohne Systemleiste (#651) -
-// das ist ein bewusster Aufbau, kein Standardfall.
-// `weather` ebenso (Seele-Paket): das Wetter spricht als Masthead-Zeile unterm
-// Gruß; die große Karte mit Vorhersage ist der Wandtablet-Opt-in im Tray.
-// Bestandslayouts behalten ihre gespeicherte Sichtbarkeit - dort entfällt
-// stattdessen die Masthead-Zeile (kein Echo).
-const DEFAULT_HIDDEN_WIDGETS = new Set([...COCKPIT_COVERED_WIDGETS, 'rewards', 'health', 'cycle', 'housekeeping', 'clock', 'weather']);
-
-function defaultWidgetVisible(id) {
-  return !DEFAULT_HIDDEN_WIDGETS.has(id);
-}
-
-const DEFAULT_WIDGET_CONFIG = WIDGET_IDS.map((id, i) => ({ id, visible: defaultWidgetVisible(id), order: i, size: defaultWidgetSize(id) }));
+// Der Standard-Satz und die reine Logik darauf liegen in
+// `/utils/dashboard-widgets.js` - sie tragen eine Zusicherung über die
+// Reihenfolge und mussten dafür ohne Shell testbar sein. Was hier bleibt,
+// hängt an Haushaltskontext und Modul-Schaltern.
 
 // Widget → Modul-Slug für die „Modul deaktiviert?"-Prüfung. Widgets ohne Eintrag
 // (family, weather) sind immer verfügbar. Modulweit, damit Grid-Filter und
@@ -342,71 +252,6 @@ function isWidgetModuleEnabled(id) {
   // beiden Listen, so wie ein abgeschaltetes Modul auch.
   if (id === 'family' && isSoloHousehold()) return false;
   return true;
-}
-
-function normalizeDashboardConfig(input) {
-  const valid = Array.isArray(input)
-    ? input
-      .filter((w) => w && typeof w === 'object' && WIDGET_IDS.includes(w.id))
-      .map((w, i) => ({
-        id: w.id,
-        visible: w.visible !== false,
-        order: Number.isFinite(Number(w.order)) ? Number(w.order) : i,
-        // Gültige (inkl. Legacy-)Größen auf das nächste Preset ziehen; Unbekanntes
-        // fällt auf den Domänen-Default. So sieht niemand eine 5. Größen-Option.
-        size: WIDGET_SIZE_OPTIONS.includes(w.size) ? nearestPreset(w.size) : defaultWidgetSize(w.id),
-      }))
-    : [];
-  const presentIds = new Set(valid.map((w) => w.id));
-  for (const id of WIDGET_IDS) {
-    if (!presentIds.has(id)) {
-      // Neu hinzugekommene Widget-IDs (bei bestehenden, gespeicherten Layouts) erben den
-      // Standard-Sichtbarkeitswert ihrer Domäne — Opt-in-Module (rewards/health/housekeeping)
-      // erscheinen also nicht ungefragt, sondern bleiben im „Anpassen"-Panel angeboten.
-      valid.push({ id, visible: defaultWidgetVisible(id), order: valid.length, size: defaultWidgetSize(id) });
-    }
-  }
-  return valid
-    .sort((a, b) => a.order - b.order)
-    .map((w, i) => ({ ...w, order: i }));
-}
-
-// Hat der Nutzer die Widget-Reihenfolge bewusst geändert (vs. dem Autor-Default)?
-// Nur dann darf das Grid auf `grid-auto-flow: row` umschalten, um die gesetzte
-// Ordnung zu bewahren. Beim unveränderten Default packt `dense` die Kacheln dicht
-// (kein toter Weißraum auf breitem Desktop) — die Löcher entstünden sonst nicht aus
-// „Nutzerabsicht", sondern nur, weil der Default-Satz nicht sauber tesselliert (Critique P2).
-function isUserOrderedConfig(cfg) {
-  if (!Array.isArray(cfg)) return false;
-  // Nur sichtbare, beidseitig bekannte Widgets vergleichen: eine Id, die im
-  // gespeicherten Layout steht und in WIDGET_IDS nicht mehr (abgeschaffte
-  // Widgets alter Stände), und reine Sichtbarkeits-Toggles sind KEINE
-  // Nutzer-Umsortierung. Der strikte Voll-Vergleich schaltete sonst dauerhaft
-  // auf preserve-order und der dense-Bento füllte nie wieder Lücken
-  // (Audit A1-03).
-  //
-  // WAS DIESER FILTER NICHT ABDECKT - der umgekehrte Fall: eine Id, die
-  // normalizeDashboardConfig gerade selbst ANGEHAENGT hat, weil sie in
-  // WIDGET_IDS neu ist. Die steht in `defaultIds` und wird mitverglichen. Sie
-  // faellt hier nur deshalb nicht auf, weil der Merge ans Ende haengt und die
-  // neuen Ids ans Ende von WIDGET_IDS geschrieben werden - beide Reihenfolgen
-  // stimmen dann ueberein. Diese Uebereinstimmung ist die eigentliche
-  // Zusicherung, nicht der Filter: wer eine neue Id VOR eine bestehende setzt,
-  // laesst jedes Bestandslayout als „umsortiert" lesen und holt sich A1-03
-  // zurueck. Siehe die Notiz an WIDGET_IDS.
-  const defaultIds = DEFAULT_WIDGET_CONFIG.map((w) => w.id);
-  const currentOrder = [...cfg]
-    .filter((w) => w.visible !== false && defaultIds.includes(w.id))
-    .sort((a, b) => a.order - b.order)
-    .map((w) => w.id);
-  const defaultOrder = defaultIds.filter((id) => currentOrder.includes(id));
-  return currentOrder.join(',') !== defaultOrder.join(',');
-}
-
-function sameWidgetConfig(a, b) {
-  if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
-  return a.every((w, i) => w.id === b[i].id && w.visible === b[i].visible
-    && w.size === b[i].size && w.order === b[i].order);
 }
 
 function setHtml(element, html) {
