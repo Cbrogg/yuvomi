@@ -168,7 +168,25 @@
  * --color-text-primary. Der Zettel bleibt unterscheidbar, die Lesbarkeit hängt
  * nicht mehr an der gewählten Farbe - auch nicht bei Alt-Daten ausserhalb der
  * Palette. Randlos wie jede Karte dieser Welt. */
+/* DIE SCHEIBE UNTER DEN KARTEN-AKTIONEN, ALS BENANNTE STUFE.
+ *
+ * Hier stand `--color-overlay-light` - der MODAL-SCRIM der App (tokens.css),
+ * und app-weit das einzige Bedienelement mit gefuellter Ruheflaeche; kein
+ * anderer Icon-Knopf unter 472 Knoepfen auf acht Routen tut das (Critique
+ * 2026-08-13). Er stand auf keiner Sprosse der Toenungsskala und komponierte
+ * mit einer frei gewaehlten Nutzerfarbe, sein Ergebnis war also nicht im
+ * Voraus gemessen - was die User-Farben-Regel ausdruecklich verlangt.
+ *
+ * Die Scheibe hat trotzdem eine Aufgabe: am Finger stehen die drei Knoepfe
+ * dauerhaft ueber dem Notiztext, und ohne Flaeche waere das Icon auf Schrift
+ * gelegt. Sie bleibt also - aber als benannte Stufe aus der TINTE der Karte
+ * statt als Scrim. Das ist zugleich der Richtungsfehler des Scrims behoben:
+ * 35 % Schwarz auf einer dunklen Karte machte die Scheibe DUNKLER als ihren
+ * Grund, `--color-text-primary` kippt mit dem Theme und liegt in beiden
+ * Themes auf der richtigen Seite. */
 .note-card {
+  --note-action-bg: color-mix(in srgb, var(--color-text-primary) var(--tint-state), transparent);
+  --note-action-bg-hover: color-mix(in srgb, var(--color-text-primary) var(--tint-surface), transparent);
   min-width: 0;
   border-radius: var(--radius-md);
   padding: var(--space-3);
@@ -199,7 +217,7 @@
   width: var(--target-base);
   height: var(--target-base);
   border-radius: var(--radius-full);
-  background: var(--color-overlay-light);
+  background: var(--note-action-bg);
   border: none;
   cursor: pointer;
   display: flex;
@@ -223,7 +241,7 @@
 .note-card--pinned .note-card__pin {
   opacity: 1;
   pointer-events: auto;
-  background: var(--color-overlay-light);
+  background: var(--note-action-bg);
 }
 
 .note-card:hover .note-card__pin {
@@ -235,7 +253,7 @@
 .note-card__pin:focus-visible {
   opacity: 1;
   pointer-events: auto;
-  background: var(--color-overlay);
+  background: var(--note-action-bg-hover);
 }
 
 .note-card__title {
@@ -325,7 +343,7 @@
   width: var(--target-base);
   height: var(--target-base);
   border-radius: var(--radius-full);
-  background: var(--color-overlay-light);
+  background: var(--note-action-bg);
   border: none;
   cursor: pointer;
   display: flex;
@@ -357,7 +375,7 @@
 }
 
 .note-card__open:hover {
-  background: var(--color-overlay);
+  background: var(--note-action-bg-hover);
 }
 
 .note-card__delete:hover {
