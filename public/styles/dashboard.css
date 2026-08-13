@@ -85,8 +85,19 @@
  * Fenster: dieselbe Kachel steht mobil ueber die volle Breite und auf dem
  * Desktop in einer 1/3-Spalte, und nur der Baustein weiss, wie breit er
  * gerade wirklich ist. */
+/* `flex: 0 0 auto` und NICHT `flex: 1` (Critique 2026-08-13, zweite Runde).
+ *
+ * Mit `flex: 1` erbte die Reihe die Hoehe ihres Wrappers, und der ist so hoch
+ * wie die hoechste Karte SEINER Rasterzeile. Gemessen bei 1440x900: die Reihe
+ * stand auf 753x361px und ihre zwei Kacheln auf je 372x361px - fuer rund 80px
+ * Inhalt, also 140px Leerflaeche ueber und unter jeder Zahl. Mobil fiel es nicht
+ * auf (105px), und genau deshalb ist es durch die erste Korrektur gekommen: die
+ * wurde an dem Viewport geprueft, an dem der Defekt nicht lebt.
+ *
+ * Die Reihe ist kein Fuellmaterial. Sie ist so hoch wie ihre Kacheln, und was
+ * daneben hoeher ist, bleibt hoeher. */
 .widget-wrapper > .metric-tiles {
-  flex: 1;
+  flex: 0 0 auto;
   min-height: 0;
 }
 
@@ -109,7 +120,11 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: var(--space-2h);
-  align-content: stretch;
+  /* `start` und nicht `stretch`: `stretch` verteilt ueberschuessige Hoehe auf
+   * die Zeilen des Rasters, und bei einer einzigen Zeile heisst das, sie nimmt
+   * alles. Zusammen mit dem `flex` darueber war das die zweite Haelfte der
+   * 361px-Kachel. Die Reihe waechst auf ihren Inhalt, mehr will sie nicht. */
+  align-content: start;
 }
 
 @media (min-width: 768px) {

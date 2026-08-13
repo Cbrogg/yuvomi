@@ -8,6 +8,7 @@ process.env.DB_PATH = ':memory:';
 process.env.SESSION_SECRET = process.env.SESSION_SECRET || 'test-secret';
 
 import { DatabaseSync } from 'node:sqlite';
+import { readFileSync } from 'node:fs';
 import { register } from 'node:module';
 import * as nodeAssert from 'node:assert/strict';
 import express from 'express';
@@ -1705,6 +1706,35 @@ test('Kennzahlreihe ist eine Zeile, kein Block', async () => {
   // „in der Hoehe, die ein Widget-Kopf kostet".
   assert(widgets.defaultWidgetSize('metrics') === '2x1',
     'die Reihe startet als Zeile - 2x2 war der Block, der 671px fuer 80px Inhalt nahm');
+});
+
+test('Kennzahlreihe bezieht ihre Hoehe aus ihrem Inhalt, nicht von aussen', () => {
+  // ZWEITER ANLAUF (Critique 2026-08-13). Nach dem ersten Fix stand die Reihe
+  // mobil bei 105px - und auf dem Desktop weiter bei 361px je Kachel, fuer 71px
+  // Inhalt. Die Zahl `2x1` oben war dabei die ganze Zeit gruen: sie prueft das
+  // Raster-Kaestchen, nicht die gerenderte Hoehe. Ein Zielwert, der an dem
+  // Viewport gruen ist, an dem der Defekt nicht lebt, ist keine Zusicherung.
+  //
+  // Statisch pruefbar ist die URSACHE, und die sind genau zwei Deklarationen,
+  // die Hoehe von aussen beziehen: `flex: 1` laesst die Reihe die Hoehe ihres
+  // Wrappers erben (und der ist so hoch wie die hoechste Karte SEINER
+  // Rasterzeile), `align-content: stretch` verteilt den Ueberschuss auf die
+  // einzige Rasterzeile. Beides zusammen war der Faktor 4,5.
+  const css = readFileSync(new URL('../public/styles/dashboard.css', import.meta.url), 'utf8');
+  const block = (selector) => {
+    const at = css.indexOf(`\n${selector} {`);
+    return at === -1 ? '' : css.slice(at, css.indexOf('\n}', at));
+  };
+
+  const wrapper = block('.widget-wrapper > .metric-tiles');
+  assert(wrapper, '.widget-wrapper > .metric-tiles muss es geben - sonst prueft dieser Guard nichts');
+  assert(!/flex:\s*1\b/.test(wrapper),
+    'die Kennzahlreihe darf ihre Hoehe nicht vom Wrapper erben (flex: 1) - gemessen wurden daraus 361px je Kachel fuer 71px Inhalt');
+
+  const tiles = block('.metric-tiles');
+  assert(tiles, '.metric-tiles muss es geben');
+  assert(!/align-content:\s*stretch/.test(tiles),
+    'align-content: stretch gibt der einzigen Rasterzeile allen Ueberschuss - die Reihe waechst auf ihren Inhalt, nicht auf ihren Platz');
 });
 
 // --------------------------------------------------------
