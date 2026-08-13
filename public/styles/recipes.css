@@ -208,6 +208,15 @@
   /* `order`, damit die Vorlesereihenfolge Name → Zutatenzahl → Chevron bleibt. */
   .recipe-row__toggle {
     flex-wrap: wrap;
+    /* DER SPALTENABSTAND DARF NICHT DER ZEILENABSTAND SEIN. Sobald die Query
+     * greift, stapelt dieser Flex-Container Name über Meta - dieselbe
+     * Beziehung, die .list-row__main (list-row.css) als Grid mit
+     * `gap: var(--space-0h)` führt. Hier erbte der Stapel den HORIZONTALEN
+     * Abstand zum Vorschaubild (--space-2) als Zeilenabstand und war damit
+     * 6px höher als jede andere Zeile der App: gemessen bei 390x844
+     * 23,5 (Name) + 8 + 20,6 (Meta) = 52,1 statt 46,1, Zeile 68,1 statt 64.
+     * Der Spaltenabstand bleibt, er hat einen eigenen Anlass (Bild ↔ Text). */
+    row-gap: var(--space-0h);
   }
 
   /* Eigene Zeile fürs Mealie-Badge, direkt unter dem Namen und über der
