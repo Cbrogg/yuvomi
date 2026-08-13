@@ -204,14 +204,18 @@
   padding-bottom: calc(var(--nav-bottom-height) + var(--space-8));
 }
 
+/* NUR NOCH POSITION, KEINE FLAECHE MEHR.
+ * Diese Klasse trug Surface, Radius, Schatten und `overflow: hidden` - also
+ * exakt `.row-carrier`, von Hand nachgebaut - und ihr Kopf lag MIT DRIN, was
+ * die Zeilenlisten-Regel verbietet: der Kopf steht auf dem Grund, der Traeger
+ * traegt nur die Zeilen (Critique 2026-08-13). Die Flaeche ist jetzt am
+ * `.row-carrier` an der Liste, hier bleibt die klebende Spalte. */
 .documents-folder-browser {
   position: sticky;
   top: var(--space-4);
-  border: 1px solid transparent;
-  border-radius: var(--radius-lg);
-  background-color: var(--color-surface);
-  box-shadow: var(--shadow-sm);
-  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
 }
 
 .documents-folder-browser__head {
@@ -219,14 +223,62 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
-  border-bottom: 1px solid var(--color-border-subtle);
+  padding-inline-start: var(--space-1);
 }
 
 .documents-folder-browser__title {
+  margin: 0;
   color: var(--color-text-secondary);
   font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Der Auslöser der aufklappbaren Auswahl - nur unterhalb Tablet sichtbar
+ * (Regel im @media-Block weiter unten). Er trägt den Ordner, in dem man steht. */
+.documents-folder-browser__toggle {
+  display: none;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+  min-width: 0;
+  min-height: var(--target-base);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
   font-weight: var(--font-weight-medium);
+  text-align: start;
+  transition: background-color var(--transition-fast);
+}
+
+.documents-folder-browser__toggle:hover {
+  background-color: var(--color-surface-hover);
+}
+
+.documents-folder-browser__toggle svg {
+  width: var(--icon-md);
+  height: var(--icon-md);
+  flex-shrink: 0;
+  color: var(--module-accent);
+}
+
+.documents-folder-browser__toggle-label {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.documents-folder-browser__chevron {
+  color: var(--color-text-tertiary);
+  transition: transform var(--transition-fast);
+}
+
+.documents-folder-browser__toggle[aria-expanded="true"] .documents-folder-browser__chevron {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .documents-folder-browser__chevron { transition: none; }
 }
 
 /* Freistehendes Ziel im Kopf der Ordnerliste - kein gleichartiges Ziel engt es
@@ -255,20 +307,23 @@
   height: 18px;
 }
 
+/* Flaeche, Radius, Schatten und Trennlinien kommen aus `.row-carrier`; hier
+ * bleibt nur der Listen-Reset. Gap und Polsterung sind weg: der Traeger trennt
+ * ueber den `+`-Kombinator, nicht ueber Luft zwischen Karten. */
 .documents-folder-browser__list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
+/* `.list-row` stellt display, Polsterung, Hoehe und Hover. Hier bleibt der
+ * Positionsanker fuer das Kebab-Menue. */
 .documents-folder-item {
   position: relative;
-  display: flex;
-  align-items: center;
-  border-radius: var(--radius-sm);
 }
 
+/* Die Spaltenaufteilung der Zeile ist eigen (Icon, Name, Zaehler in einem
+ * Ziel), Polsterung und Hoehe kommen aus `.list-row__main--interactive`. */
 .documents-folder-item__select {
   flex: 1;
   min-width: 0;
@@ -276,14 +331,13 @@
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--space-2);
-  min-height: var(--target-base);
-  padding: 0 var(--space-2);
-  border-radius: var(--radius-sm);
   color: var(--color-text-secondary);
-  text-align: left;
 }
 
-.documents-folder-item:hover,
+/* Hover ist geteiltes Verhalten und kommt aus `.list-row`; die Toenung
+ * markiert nur noch den AKTIVEN Ordner. Vorher trugen beide Zustaende
+ * dieselbe Flaeche, und der aktive Ordner war unter dem Zeiger nicht mehr
+ * vom ueberfahrenen zu unterscheiden. */
 .documents-folder-item--active {
   background: color-mix(in srgb, var(--module-accent) var(--tint-state), transparent);
 }
@@ -782,20 +836,48 @@
     width: 100%;
   }
 
-  .documents-folder-browser__list {
-    flex-direction: row;
-    overflow-x: auto;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
+  /* AUFKLAPPEN STATT WISCHEN.
+   *
+   * Hier stand `flex-direction: row; overflow-x: auto` mit `min-width: 160px`
+   * je Eintrag. Gemessen: clientWidth 356 gegen scrollWidth 1488 bei 390px -
+   * ZWEI von neun Ordnern sichtbar, bei 320px einer - und der Streifen lag
+   * direkt unter `.documents-filters`, das schon seitlich scrollt. Zwei
+   * verschiedene Dinge mit derselben Geste uebereinander, und der Ordnername
+   * hatte in der 160px-Kachel 53px, wovon "Versicherungen" 6 von 14 Zeichen
+   * zeigte (Critique 2026-08-13, P1).
+   *
+   * Zugeklappt ist die Auswahl EINE Zeile, die zugleich sagt, wo man steht -
+   * weniger Chrome als der Streifen. Aufgeklappt sind es neun ganze Zeilen in
+   * der geteilten Grammatik, die keinen Namen kappen. */
+  .documents-folder-browser__head {
+    padding-inline-start: 0;
   }
 
-  .documents-folder-browser__list::-webkit-scrollbar {
+  /* Die Ueberschrift bleibt fuer Screenreader und wandert aus dem Bild: der
+   * Auslöser darunter sagt dasselbe und nennt zusaetzlich den Ordner. Zwei
+   * sichtbare Zeilen fuer eine Auswahl waeren genau das Chrome, das dieser
+   * Umbau spart. */
+  .documents-folder-browser__title {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .documents-folder-browser__toggle {
+    display: flex;
+  }
+
+  .documents-folder-browser__list {
     display: none;
   }
 
-  /* Rand-Fade übernehmen die geteilten has-fade-*-Masken (filter-chip.css). */
-  .documents-folder-item {
-    min-width: 160px;
+  .documents-folder-browser--open .documents-folder-browser__list {
+    display: block;
   }
 }
 

@@ -10080,6 +10080,15 @@ test('die Groesse des Icon-Knopfs gehoert der Shell', () => {
  * (Kalender, Budget, Wochenplan) rendert den Chevron dagegen als blossen Inhalt
  * eines `.btn--icon` - dort IST der Chevron der Knopf, und die Regel meint ihn
  * nicht.
+ *
+ * DIE DRITTE ROLLE (2026-08-13): ein AUFKLAPP-Zeiger. Er sitzt im Knopf, der
+ * `aria-expanded` traegt, dreht sich mit dem Zustand und verspricht kein
+ * Anderswo, sondern Mehr-davon-hier. Der Ordner-Auslöser in den Dokumenten ist
+ * der erste Fall; er hat diese Zusicherung gerissen, weil sie ihn nicht kannte.
+ * Er traegt eine eigene Klasse aus demselben Grund wie die Zeilen-Affordanz
+ * (er muss gestylt werden), also trennt die Klasse hier nicht - `aria-expanded`
+ * am besitzenden Knopf tut es. Ein Chevron ohne diesen Zustand bleibt ein
+ * Navigationsversprechen und faellt weiter unter die Regel.
  */
 test('eine Zeile mit eigenen Aktionen verspricht keine Navigation', () => {
   const offenders = [];
@@ -10092,6 +10101,13 @@ test('eine Zeile mit eigenen Aktionen verspricht keine Navigation', () => {
       const chevron = literal.search(/class="[^"]*__chevron/);
       if (chevron === -1) continue;
       if (!/<button/.test(literal.slice(chevron))) continue;
+      // Der Knopf, IN dem der Chevron steht: das letzte <button vor ihm. Traegt
+      // er aria-expanded, ist der Chevron ein Aufklapp-Zeiger, kein Wegweiser.
+      const owner = literal.slice(0, chevron).lastIndexOf('<button');
+      if (owner !== -1) {
+        const ownerTag = literal.slice(owner, chevron);
+        if (/aria-expanded/.test(ownerTag) && !/<\/button>/.test(ownerTag)) continue;
+      }
       const name = literal.slice(chevron).match(/class="([^"]*__chevron[^"]*)"/)?.[1] ?? '?';
       offenders.push(`${file.replace(/^\.\.\//, '')}: ${name} steht in einer Zeile, die danach noch einen Knopf traegt`);
     }

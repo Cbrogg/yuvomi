@@ -188,8 +188,13 @@
 .contact-group__header,
 .day-header__name,
 .meal-slot__type-label,
-.week-gutter-label,
-.documents-folder-browser__title {
+.week-gutter-label {
+  /* `.documents-folder-browser__title` stand hier und war die falsche Antwort
+   * auf die Bedeutungsfrage, die der Kommentar oben stellt: "Ordner
+   * durchsuchen" NENNT, was folgt, statt es zu wiederholen - nach der
+   * Kopf-Abgrenzungs-Regel also eine Ueberschrift in Satzschreibung. Dazu war
+   * es eine Verbphrase, und die las in Versal mit Tracking als Anweisung
+   * (Critique 2026-08-13). Sie ist jetzt ein echtes <h2>. */
   font-size: var(--text-xs);
   font-weight: var(--font-weight-semibold);
   line-height: var(--line-height-tight);
