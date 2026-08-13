@@ -49,6 +49,10 @@ const WIDGET_LABEL_KEYS = {
   family: 'settings.permWidgetFamily',
   weather: 'settings.permWidgetWeather',
   clock: 'dashboard.clock',
+  // Wie die Uhr aus dem Wort des Widgets selbst, nicht aus einem eigenen
+  // settings.*-Schluessel: die Kennzahlreihe heisst im Anpassen-Panel schon
+  // „Kennzahlen", und zwei Woerter fuer dieselbe Kachel waeren zwei Namen.
+  metrics: 'dashboard.metrics',
 };
 
 // Icon je Zugriffsstufe (Icon-Segmente statt langer Textlabels). Tooltip/aria
