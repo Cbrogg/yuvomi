@@ -365,7 +365,7 @@
         "bulkMarkOpen": "Terbuka",
         "bulkArchive": "Arsipkan",
         "bulkDelete": "Hapus",
-        "bulkDeleteConfirm": "Hapus {{count}} tugas secara permanen?",
+        "bulkDeleteConfirm": "Hapus {{count}} kontak?",
         "bulkStatusChanged": "Status diubah.",
         "bulkArchived": "Tugas diarsipkan.",
         "bulkDeleted": "Tugas dihapus.",
@@ -984,8 +984,8 @@
         "selectButton": "Pilih",
         "selectAll": "Pilih semua",
         "selectCount": "{{count}} dipilih",
-        "bulkDeleteConfirm": "Delete {{count}} contacts?",
-        "bulkDeleteConfirm_one": "Delete {{count}} contact?",
+        "bulkDeleteConfirm": "Hapus {{count}} kontak?",
+        "bulkDeleteConfirm_one": "Hapus {{count}} kontak?",
         "bulkDeletedToast": "{{count}} kontak dihapus"
     },
     "budget": {
@@ -2651,7 +2651,7 @@
         "bulkArchivedToast": "{{count}} dokumen diarsipkan.",
         "bulkRestoredToast": "{{count}} dokumen dipulihkan.",
         "bulkDeletedToast": "{{count}} dokumen dihapus.",
-        "bulkDeleteConfirm": "Hapus {{count}} dokumen?",
+        "bulkDeleteConfirm": "Hapus {{count}} kontak?",
         "bulkDeleteConfirmDetail": "Berkas yang disimpan Yuvomi ikut dihapus dari penyimpanan, dan tidak ada tempat sampah. Hanya pada dokumen DMS tertaut berkasnya tetap di penyedia.",
         "bulkUploadedToast": "{{count}} dokumen diunggah.",
         "namePlaceholder": "Ambil dari nama berkas",

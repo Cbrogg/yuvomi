@@ -365,7 +365,7 @@
         "bulkMarkOpen": "Markahang bukas",
         "bulkArchive": "I-archive",
         "bulkDelete": "Tanggalin",
-        "bulkDeleteConfirm": "Permanenteng tanggalin ang {{count}} gawain?",
+        "bulkDeleteConfirm": "Burahin ang {{count}} kontak?",
         "bulkStatusChanged": "Nabago ang katayuan.",
         "bulkArchived": "Na-archive ang mga gawain.",
         "bulkDeleted": "Natanggal ang mga gawain.",
@@ -984,8 +984,8 @@
         "selectButton": "Pumili",
         "selectAll": "Piliin lahat",
         "selectCount": "{{count}} ang napili",
-        "bulkDeleteConfirm": "Delete {{count}} contacts?",
-        "bulkDeleteConfirm_one": "Delete {{count}} contact?",
+        "bulkDeleteConfirm": "Burahin ang {{count}} kontak?",
+        "bulkDeleteConfirm_one": "Burahin ang {{count}} kontak?",
         "bulkDeletedToast": "{{count}} kontak ang natanggal"
     },
     "budget": {
@@ -2651,7 +2651,7 @@
         "bulkArchivedToast": "Na-archive ang {{count}} dokumento.",
         "bulkRestoredToast": "Naibalik ang {{count}} dokumento.",
         "bulkDeletedToast": "Natanggal ang {{count}} dokumento.",
-        "bulkDeleteConfirm": "Tanggalin ang {{count}} dokumento?",
+        "bulkDeleteConfirm": "Burahin ang {{count}} kontak?",
         "bulkDeleteConfirmDetail": "Inaalis din sa imbakan ang mga file na iniimbak ng Yuvomi, at walang basurahan. Para lamang sa mga naka-link na dokumento ng DMS nananatili ang file sa provider.",
         "bulkUploadedToast": "Na-upload ang {{count}} dokumento.",
         "namePlaceholder": "Kunin mula sa pangalan ng file",

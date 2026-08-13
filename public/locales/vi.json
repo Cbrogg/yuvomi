@@ -330,7 +330,7 @@
         "bulkMarkOpen": "Đánh dấu đang mở",
         "bulkArchive": "Lưu trữ",
         "bulkDelete": "Xóa",
-        "bulkDeleteConfirm": "Xóa vĩnh viễn {{count}} nhiệm vụ?",
+        "bulkDeleteConfirm": "Xóa {{count}} liên hệ?",
         "bulkStatusChanged": "Trạng thái đã được thay đổi.",
         "bulkArchived": "Các nhiệm vụ đã được lưu trữ.",
         "bulkDeleted": "Các nhiệm vụ đã bị xóa.",
@@ -972,8 +972,8 @@
         "selectButton": "Chọn",
         "selectAll": "Chọn tất cả",
         "selectCount": "Đã chọn {{count}}",
-        "bulkDeleteConfirm": "Delete {{count}} contacts?",
-        "bulkDeleteConfirm_one": "Delete {{count}} contact?",
+        "bulkDeleteConfirm": "Xóa {{count}} liên hệ?",
+        "bulkDeleteConfirm_one": "Xóa {{count}} liên hệ?",
         "bulkDeletedToast": "Đã xóa {{count}} liên hệ"
     },
     "budget": {
@@ -2651,7 +2651,7 @@
         "bulkArchivedToast": "Đã lưu trữ {{count}} tài liệu.",
         "bulkRestoredToast": "Đã khôi phục {{count}} tài liệu.",
         "bulkDeletedToast": "Đã xóa {{count}} tài liệu.",
-        "bulkDeleteConfirm": "Xóa {{count}} tài liệu?",
+        "bulkDeleteConfirm": "Xóa {{count}} liên hệ?",
         "bulkDeleteConfirmDetail": "Tệp do Yuvomi lưu cũng bị xoá khỏi kho, và không có thùng rác. Chỉ với tài liệu DMS liên kết thì tệp vẫn nằm ở nhà cung cấp.",
         "bulkUploadedToast": "Đã tải lên {{count}} tài liệu.",
         "namePlaceholder": "Lấy từ tên tệp",
