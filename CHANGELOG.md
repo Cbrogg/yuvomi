@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **The dashboard can show a row of module tiles.** Everything outside the tab bar is reachable only through "More", so the modules a household uses weekly were two taps away with no sign of what was waiting in them. Four tiles carry a number and a jump target in the height a single widget header costs. It is a widget like every other one, not a fixed block at the top: it moves, hides and resizes in "Anpassen", and switching a module off does not leave a hole in the layout.
+- **The dashboard can show a row of module tiles.** Everything outside the tab bar is reachable only through "More", so the modules a household uses weekly were two taps away with no sign of what was waiting in them. Four tiles carry a number and a jump target in the height a single widget header costs. It is a widget like every other one, not a fixed block at the top: it moves, hides and resizes in "Anpassen", an admin can lock it for a household member like any other widget, and switching a module off does not leave a hole in the layout. Each tile checks its own module, so a member who cannot see the budget never sees a budget tile.
 
 ### Changed
 
