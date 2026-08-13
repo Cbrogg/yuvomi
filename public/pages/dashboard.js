@@ -18,6 +18,7 @@ import { renderAvatarStack } from '/components/user-multi-select.js';
 import { isSoloHousehold } from '/utils/household.js';
 import {
   WIDGET_IDS, WIDGET_SIZE_PRESETS, WIDGET_SIZE_OPTIONS, DEFAULT_WIDGET_CONFIG,
+  COCKPIT_COVERED_WIDGETS,
   nearestPreset, normalizeDashboardConfig, isUserOrderedConfig, sameWidgetConfig,
 } from '/utils/dashboard-widgets.js';
 import { whoMark } from '/utils/seal-pair.js';
@@ -1147,12 +1148,25 @@ function renderBudgetWidget(budget, currency) {
  * und eine erste Pro-Widget-Option waere eine neue Schema-Achse, die danach
  * jedes Widget mitschleppt. Faellt ein Modul aus (abgeschaltet, kein Zugriff,
  * keine Daten), ruecken die hinteren Kandidaten nach - vier Kacheln bleiben
- * vier Kacheln, statt eine Luecke ins 2x2-Raster zu reissen. */
-const METRIC_TILE_ORDER = ['tasks', 'shopping', 'budget', 'birthdays', 'meals', 'notes', 'rewards'];
+ * vier Kacheln, statt eine Luecke ins Raster zu reissen.
+ *
+ * DIE LISTE FUEHRTE MIT DENEN, DIE OHNEHIN DASTEHEN (Critique 2026-08-13, P1).
+ * Gemessen im Standard-Layout bei 1440x900 waren alle vier Kacheln Echos:
+ * „2.504 EUR Saldo" stand 800px neben dem Budget-Widget mit derselben Zahl,
+ * „17 Tage / Tante Claire Becker" direkt ueber dem Geburtstage-Widget mit
+ * demselben Namen, „23 Artikel" und „4 ueberfaellig" in den Cockpit-Zeilen.
+ * Der erklaerte Zweck der Reihe ist das Gegenteil: ein Sprungziel fuer die
+ * Module, von denen sonst NICHTS auf dem Schirm steht.
+ *
+ * Deshalb stehen die drei spezialisierten Module jetzt mit in der Liste. Sie
+ * sind es, die im Standard-Layout kein eigenes Widget zeigen
+ * (DEFAULT_HIDDEN_WIDGETS) - und genau deshalb gehoeren sie hierher. Wer sie
+ * nicht nutzt, hat keine Daten und bekommt keine Kachel. */
+const METRIC_TILE_ORDER = ['tasks', 'shopping', 'budget', 'birthdays', 'meals', 'notes', 'rewards', 'health', 'housekeeping'];
 const METRIC_TILE_COUNT = 4;
 
 function metricTileFor(id, data, currency) {
-  const route = { tasks: '/tasks', shopping: '/shopping', budget: '/budget', birthdays: '/birthdays', meals: '/meals', notes: '/notes', rewards: '/rewards' }[id];
+  const route = { tasks: '/tasks', shopping: '/shopping', budget: '/budget', birthdays: '/birthdays', meals: '/meals', notes: '/notes', rewards: '/rewards', health: '/health', housekeeping: '/housekeeping' }[id];
   switch (id) {
     case 'tasks': {
       const open = data.openTaskCount;
@@ -1230,6 +1244,43 @@ function metricTileFor(id, data, currency) {
         note: leader.display_name,
       };
     }
+    case 'health': {
+      const h = data.health ?? {};
+      // Ohne Medikamente hat die Kachel keine Kennzahl - und der Zyklus ist
+      // bewusst NICHT ihr Ersatz: er haengt an expliziten Grants (#584), und
+      // eine Kachel, die je nach Berechtigung etwas anderes zeigt, ist zwei
+      // Kacheln mit einem Namen.
+      if (!h.hasMeds || !(h.dosesTotal > 0)) return null;
+      const offen = h.dosesTotal - (h.dosesTaken ?? 0) - (h.dosesSkipped ?? 0);
+      return {
+        id, route, icon: 'heart-pulse', label: t('nav.health'),
+        value: t('dashboard.metricDoses', { count: Math.max(0, offen) }),
+        // Die Nachbestellung schlaegt die naechste Uhrzeit: eine leere Packung
+        // ist der Zustand, der eine Handlung braucht, eine faellige Dosis der,
+        // der von selbst kommt.
+        note: h.lowStockCount > 0
+          ? t('dashboard.healthRefill', { count: h.lowStockCount })
+          : offen <= 0 ? t('dashboard.healthAllTaken') : (h.nextDose?.name || t('dashboard.healthAllTaken')),
+        noteTone: h.lowStockCount > 0 ? 'danger' : null,
+      };
+    }
+    case 'housekeeping': {
+      const hk = data.housekeeping ?? {};
+      if (!hk.configured) return null;
+      return {
+        id, route, icon: 'sparkles', label: t('nav.housekeeping'),
+        value: t('dashboard.metricVisits', { count: hk.visitsThisMonth ?? 0 }),
+        // Drei Zustaende, ein Rang: wer gerade da ist, ist die Nachricht; sonst
+        // zaehlt offenes Geld; sonst der letzte Besuch.
+        note: hk.present
+          ? t('dashboard.housekeepingPresent')
+          : hk.unpaidAmount > 0
+            ? t('dashboard.housekeepingUnpaid', { amount: formatCurrency(hk.unpaidAmount, currency) })
+            : hk.lastVisit
+              ? t('dashboard.housekeepingLastVisit', { date: formatDate(hk.lastVisit) })
+              : t('dashboard.housekeepingNoVisits'),
+      };
+    }
     default:
       return null;
   }
@@ -1255,16 +1306,49 @@ function renderMetricTile(tile) {
   `;
 }
 
-function renderMetricTiles(data, currency) {
+/**
+ * Die Kachelreihe zeigt, was sonst NIRGENDS auf dem Schirm steht.
+ *
+ * @param {Set<string>} shown  die Modul-Ids, die in diesem Layout ein eigenes
+ *                             sichtbares Widget haben.
+ *
+ * DER FILTER IST DIE GANZE AUSSAGE (Critique 2026-08-13, P1). Ohne ihn fuehrte
+ * die Reihe mit `tasks` und `shopping` - beide in COCKPIT_COVERED_WIDGETS -,
+ * und daneben mit `budget` und `birthdays`, die im Standard-Layout ihr eigenes
+ * Widget haben. Gemessen waren alle vier Kacheln Echos von etwas, das im selben
+ * Viewport schon stand. PRODUCT.md fuehrt das „ueberlastete Feature-Dashboard"
+ * als Anti-Referenz, und eine Zahl zweimal auf einem Schirm ist deren reine
+ * Form.
+ *
+ * Zwei Quellen der Doppelung, zwei Bedingungen:
+ *   - das Cockpit fasst vier Domaenen schon zusammen (COCKPIT_COVERED_WIDGETS);
+ *   - ein sichtbares Widget sagt seine Zahl selbst, ausfuehrlicher als eine
+ *     Kachel es koennte.
+ *
+ * ES IST EIN FILTER, KEINE ZWEITE LISTE. Wer ein Widget ausblendet, bekommt
+ * dessen Kachel - und wer es wieder einblendet, verliert sie. Die Reihe folgt
+ * dem Layout, statt eine eigene Vorstellung davon zu pflegen.
+ */
+function selectMetricTiles(data, currency, shown = new Set()) {
   const tiles = METRIC_TILE_ORDER
     .filter((id) => isWidgetModuleEnabled(id))
+    .filter((id) => !COCKPIT_COVERED_WIDGETS.has(id))
+    .filter((id) => !shown.has(id))
     .map((id) => metricTileFor(id, data, currency))
     .filter(Boolean)
     .slice(0, METRIC_TILE_COUNT);
 
   // Weniger als zwei Kacheln sind keine Kachelreihe, sondern eine einsame
   // Karte - dann traegt das Modul-Widget die Zahl besser.
-  if (tiles.length < 2) return '';
+  return tiles.length < 2 ? [] : tiles;
+}
+
+/* Die AUSWAHL steht getrennt von der DARSTELLUNG, damit die Zusage pruefbar ist,
+ * ohne ein Dokument zu bauen: was die Reihe zeigt, ist die Aussage - dass sie es
+ * in einem <a> zeigt, ist ihre Form. */
+function renderMetricTiles(data, currency, shown = new Set()) {
+  const tiles = selectMetricTiles(data, currency, shown);
+  if (!tiles.length) return '';
   return `<div class="metric-tiles">${tiles.map(renderMetricTile).join('')}</div>`;
 }
 
@@ -1887,7 +1971,14 @@ function renderDashboardLayout(cfg, data, weather, currency, { editing = false, 
     shopping: () => renderShoppingLists(data.shoppingLists ?? []),
     weather: () => (weather ? renderWeatherWidget(weather) : ''),
     clock: () => renderClockWidget(),
-    metrics: () => renderMetricTiles(data, currency),
+    // Die Kachelreihe braucht als einziges Widget zu wissen, wer sonst noch
+    // dasteht - sie ist die einzige, die fremde Zahlen zeigt. Gerechnet aus
+    // DERSELBEN Bedingung, nach der die Kacheln gleich gefiltert werden, damit
+    // die beiden nicht auseinanderlaufen; `metrics` selbst ist ausgenommen, es
+    // waere sonst sein eigener Grund zu schweigen.
+    metrics: () => renderMetricTiles(data, currency, new Set(
+      cfg.filter((w) => w.visible && w.id !== 'metrics' && isWidgetModuleEnabled(w.id)).map((w) => w.id),
+    )),
   };
 
   const tiles = cfg
@@ -3282,7 +3373,7 @@ export async function render(container, { user }) {
   }
 }
 
-export const __test = { buildTodayHighlights, buildTodayProgram, buildTodayCockpitModel, renderTodayCockpit, renderPinnedNotes, renderFamilyWidget, formatDueDate, normalizeVisibleMealTypes, renderTodayMeals, calendarEventRoute, eventOccurrenceDateKey, eventStartDate, renderWallSurface, renderWallWho, PROGRAM_ROW_CAP, WALL_ROW_CAP };
+export const __test = { buildTodayHighlights, buildTodayProgram, buildTodayCockpitModel, renderTodayCockpit, renderPinnedNotes, renderFamilyWidget, formatDueDate, normalizeVisibleMealTypes, renderTodayMeals, calendarEventRoute, eventOccurrenceDateKey, eventStartDate, renderWallSurface, renderWallWho, selectMetricTiles, METRIC_TILE_ORDER, PROGRAM_ROW_CAP, WALL_ROW_CAP };
 
 function wireWeatherRefresh(container, onUpdated = null) {
   const refreshBtn = container.querySelector('#weather-refresh-btn');

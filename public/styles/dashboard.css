@@ -90,20 +90,26 @@
   min-height: 0;
 }
 
+/* DIE SPALTENZAHL FOLGT DER BREITE, NICHT EINER ZAHL (Critique 2026-08-13, P1).
+ *
+ * Hier standen zwei feste Spalten - richtig, solange die Reihe als 2x2-Block
+ * gedacht war. Als Zeile (der neue Default, siehe defaultWidgetSize) ergaben
+ * vier Kacheln damit weiter zwei Zeilen: gemessen 753x220px auf dem Desktop,
+ * wo vier Kacheln zu je 178px nebeneinander in eine Zeile von 105px passen.
+ *
+ * `auto-fit` fragt dieselbe Breite, die der Container-Block darunter abgefragt
+ * hat, nur ohne die Zahl dazwischen - und deckt dessen Fall mit ab: unter 260px
+ * Wrapper passen zwei Spalten a 160px nicht mehr, also bleibt eine. Der
+ * @container-Block dafuer ist damit entfallen, nicht vergessen.
+ *
+ * 160px ist die gemessene Untergrenze der Kachel: darunter bricht
+ * „Haushaltshilfe" ueber dem Siegel um und die Kachel wird hoeher als ihre
+ * Zahl. Auf dem Telefon stehen damit zwei Kacheln zu 178px, auf 753px vier. */
 .metric-tiles {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: var(--space-2h);
   align-content: stretch;
-}
-
-/* Unter dieser Breite bleiben von 2 Spalten je ~110px - „Geburtstage" bricht
- * dort dreizeilig um und die Kachel wird hoeher als ihre Zahl. Eine Spalte
- * liest sich dann besser als zwei zerquetschte. */
-@container dashboard-widget (max-width: 260px) {
-  .metric-tiles {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 
 @media (min-width: 768px) {

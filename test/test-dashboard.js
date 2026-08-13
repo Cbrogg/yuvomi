@@ -1626,6 +1626,88 @@ test('Widget-Merge: Groesse und Sichtbarkeit eines Bestandseintrags bleiben unbe
 });
 
 // --------------------------------------------------------
+// Kennzahlreihe: sie zeigt, was sonst NIRGENDS steht
+//
+// Anlass (Critique 2026-08-13, P1): im Standard-Layout waren alle vier Kacheln
+// Echos. „2.504 EUR Saldo" stand 800px neben dem Budget-Widget mit derselben
+// Zahl, „17 Tage / Tante Claire Becker" ueber dem Geburtstage-Widget mit
+// demselben Namen, „23 Artikel" und „4 ueberfaellig" in den Cockpit-Zeilen.
+// PRODUCT.md fuehrt das „ueberlastete Feature-Dashboard" als Anti-Referenz.
+//
+// GEPRUEFT WIRD DIE AUSWAHL, NICHT DAS MARKUP: was die Reihe zeigt, ist die
+// Zusage - dass sie es in einem <a> zeigt, ist ihre Form.
+// --------------------------------------------------------
+
+const METRIC_DATA = {
+  openTaskCount: 5, overdueTaskCount: 2,
+  shoppingOpenCount: 23, shoppingOpenLists: 2,
+  budget: { entryCount: 9, balance: 2504, income: 3000 },
+  birthdays: [{ name: 'Tante Claire', days_until: 17 }],
+  todayMeals: [{ title: 'Suppe' }],
+  pinnedNotes: [{ title: 'Urlaub' }],
+  rewards: { standings: [{ display_name: 'Leo', balance: 60 }] },
+  health: { hasMeds: true, dosesTotal: 3, dosesTaken: 1, dosesSkipped: 0, nextDose: { name: 'Vitamin D3' }, lowStockCount: 0 },
+  housekeeping: { configured: true, visitsThisMonth: 4, present: true },
+};
+
+test('Kennzahlreihe wiederholt nicht, was das Cockpit schon sagt', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  const ids = __test.selectMetricTiles(METRIC_DATA, 'EUR', new Set()).map((t) => t.id);
+  for (const covered of ['tasks', 'calendar', 'shopping', 'meals']) {
+    assert(!ids.includes(covered),
+      `„${covered}" wird vom Cockpit schon zusammengefasst und gehoert nicht zusaetzlich in die Reihe`);
+  }
+  assert(ids.length >= 2, 'ohne sichtbare Widgets muss die Reihe etwas zu zeigen haben');
+});
+
+test('Kennzahlreihe wiederholt nicht, was ein sichtbares Widget schon sagt', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  const ohne = __test.selectMetricTiles(METRIC_DATA, 'EUR', new Set()).map((t) => t.id);
+  assert(ohne.includes('budget'), 'ohne Budget-Widget gehoert die Budget-Kachel in die Reihe');
+
+  const mit = __test.selectMetricTiles(METRIC_DATA, 'EUR', new Set(['budget', 'birthdays'])).map((t) => t.id);
+  assert(!mit.includes('budget'), 'neben einem sichtbaren Budget-Widget ist die Budget-Kachel dessen Echo');
+  assert(!mit.includes('birthdays'), 'dasselbe gilt fuer die Geburtstage');
+
+  // ES IST EIN FILTER, KEINE ZWEITE LISTE: wer ein Widget ausblendet, bekommt
+  // dessen Kachel zurueck. Ohne diese Gegenrichtung waere ein Guard gruen, der
+  // die Reihe schlicht leert.
+  //
+  // NICHT UEBER DIE LAENGE - das war die erste Fassung und die falsche Frage:
+  // `slice(0, METRIC_TILE_COUNT)` deckelt beide Mengen auf vier, also sind sie
+  // gleich lang, obwohl sich ihr Inhalt unterscheidet. Die Zusage ist, dass der
+  // Filter AUSTAUSCHT statt zu leeren.
+  assert(mit.length === ohne.length,
+    'faellt ein Kandidat weg, rueckt der naechste nach - die Reihe wird nicht kuerzer');
+  assert(mit.some((id) => !ohne.includes(id)),
+    'und der Nachrueckende ist einer, der vorher nicht dran war');
+});
+
+test('Kennzahlreihe fuehrt mit den Modulen, die sonst kein Widget zeigen', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  // Die drei Opt-in-Module sind im Werks-Layout unsichtbar (DEFAULT_HIDDEN_WIDGETS)
+  // - genau deshalb sind sie die eigentlichen Kandidaten der Reihe.
+  for (const id of ['rewards', 'health', 'housekeeping']) {
+    assert(__test.METRIC_TILE_ORDER.includes(id),
+      `„${id}" zeigt im Standard-Layout kein Widget und gehoert damit in die Kandidaten`);
+  }
+  // Und ohne Daten gibt es keine Kachel - eine leere Zahl ist keine Kennzahl.
+  const leer = __test.selectMetricTiles(
+    { ...METRIC_DATA, health: { hasMeds: false }, housekeeping: { configured: false }, rewards: { standings: [] } },
+    'EUR', new Set(['budget', 'birthdays', 'notes']),
+  );
+  assert(leer.length === 0, 'ohne Daten und ohne Kandidaten bleibt die Reihe weg, statt leer dazustehen');
+});
+
+test('Kennzahlreihe ist eine Zeile, kein Block', async () => {
+  const widgets = await import('../public/utils/dashboard-widgets.js');
+  // 671px hoch fuer vier Zahlen war der Anlass; die Mitteilung zum Bau sagte
+  // „in der Hoehe, die ein Widget-Kopf kostet".
+  assert(widgets.defaultWidgetSize('metrics') === '2x1',
+    'die Reihe startet als Zeile - 2x2 war der Block, der 671px fuer 80px Inhalt nahm');
+});
+
+// --------------------------------------------------------
 // Ergebnis
 // --------------------------------------------------------
 await Promise.all(pendingTests);

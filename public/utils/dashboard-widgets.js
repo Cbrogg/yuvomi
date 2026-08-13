@@ -95,10 +95,20 @@ export function defaultWidgetSize(id) {
   // Die Uhr startet breit statt quadratisch: Uhrzeit und darunter der ausgeschriebene
   // Wochentag brauchen Zeile, nicht Höhe - auf 1x1 bräche das Datum um (#651).
   if (['weather', 'shopping', 'health', 'cycle', 'meals', 'clock'].includes(id)) return '2x1';
-  // Die Kennzahlreihe IST ein 2x2-Raster - jede andere Groesse zerlegt sie in
-  // eine Spalte oder eine Zeile und nimmt ihr genau den Vergleich, fuer den sie
-  // gebaut ist.
-  if (id === 'metrics') return '2x2';
+  // DIE KENNZAHLREIHE IST EINE ZEILE, KEIN BLOCK (Critique 2026-08-13, P1).
+  //
+  // Hier stand '2x2' mit der Begruendung, das Raster sei der Vergleich, fuer den
+  // die Reihe gebaut ist. Gerendert war das Ergebnis ein anderes: 753x671px bei
+  // 1440x900, vier Kacheln zu je 372x330px fuer einen Inhalt von rund 80px
+  // Hoehe. Die eigene Zusage der Mitteilung lautete „in der Hoehe, die ein
+  // Widget-Kopf kostet" - das sind 44px. Faktor 15.
+  //
+  // Vier Kacheln nebeneinander vergleichen sich genauso wie vier im Quadrat,
+  // und sie tun es in einer Zeile statt in einem Drittel des Schirms. Das
+  // 2x2-Raster bleibt waehlbar, es ist nur nicht mehr der Vorschlag.
+  // Bestandslayouts bleiben unberuehrt - gespeichert wird die Groesse, nicht
+  // dieser Default.
+  if (id === 'metrics') return '2x1';
   return '1x1';
 }
 
