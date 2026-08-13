@@ -7780,9 +7780,82 @@ test('budget bars animate with transforms instead of layout-driving widths', () 
   assert.doesNotMatch(budgetCss, /transition:\s*width/);
   assert.match(budgetCss, /\.budget-bar-row__fill\s*\{[\s\S]*transform:\s*scaleX\(var\(--bar-scale,\s*0\)\)[\s\S]*transition:\s*transform/);
   assert.match(budgetCss, /\.budget-loan-card__progress span\s*\{[\s\S]*transform:\s*scaleX\(var\(--bar-scale,\s*0\)\)/);
-  assert.match(budgetPage, /style="--bar-scale:\$\{pct\s*\/\s*100\}"/);
+  // Die Laenge kommt aus --bar-scale, nicht aus einer eingesetzten Breite.
+  // Frueher stand hier die woertliche Schreibweise `${pct / 100}` - ein Guard
+  // ueber einen Ausdruck statt ueber seine Absicht, der beim ersten Umbau des
+  // Ausdrucks feuerte, obwohl die Zusicherung unberuehrt war.
+  assert.match(budgetPage, /class="budget-bar-row__fill [^"]*" style="--bar-scale:\$\{/);
   assert.match(budgetPage, /style="--bar-scale:\$\{paidPct\s*\/\s*100\}"/);
   assert.doesNotMatch(budgetPage, /style="width:\$\{(?:pct|paidPct)\}%/);
+});
+
+/* Ein Balken TRAEGT einen Wert, er zeigt nicht nur, dass es ihn gibt.
+ *
+ * Der Anlass: `Math.max(6, Math.round(rawPct))` gab jeder Kategorie unter rund
+ * 6 % des Maximums denselben Balken - gemessen rendern -234,98 €, -157,50 €,
+ * -153,49 € und -25,00 € alle vier exakt 25,9px, obwohl zwischen erstem und
+ * letztem das 9,4-Fache liegt (Critique 2026-08-13). Der Boden war selbst
+ * einmal ein Audit-Fix gegen "wirkt leer" und hat ein Kosmetikproblem gegen
+ * eine Falschaussage getauscht.
+ *
+ * Der Guard prueft den SCHADEN, nicht den Fix: kein Prozentboden im Anteil,
+ * egal wie er geschrieben ist. Sichtbar bleiben darf der Zwerg - aber als
+ * LAENGE im CSS, wo er nichts an der Proportion aendert. Und er deckt BEIDE
+ * Dateien, die diese Zeile bauen: budget-stats.js trug denselben Boden und
+ * stand unter keinem Guard. */
+test('ein Kategoriebalken bleibt proportional - kein Prozentboden im Anteil', () => {
+  const budgetCss = read('../public/styles/budget.css');
+  const builders = ['../public/pages/budget.js', '../public/pages/budget-stats.js'];
+
+  for (const file of builders) {
+    const src = read(file);
+    assert.ok(
+      src.includes('budget-bar-row__fill'),
+      `${file} baut keine Kategoriezeile mehr - Guard-Korpus pruefen, nicht die Zusicherung streichen`,
+    );
+    const scaleExprs = [...src.matchAll(/--bar-scale:\$\{([^}]+)\}/g)].map((m) => m[1]);
+    assert.ok(scaleExprs.length > 0, `${file}: kein --bar-scale gefunden`);
+    for (const expr of scaleExprs) {
+      /* DER BODEN STEHT NICHT IN DER INTERPOLATION, SONDERN IN DER ZUWEISUNG.
+       * Die erste Fassung dieses Guards prueffte `${…}` selbst und war gegen
+       * den Anlassfall gruen: dort stand `${pct / 100}`, und `Math.max(6, …)`
+       * lag eine Zeile darueber an `const pct`. Genau die Blindheit, die dieses
+       * Repo fuenfmal in Folge produziert hat. Also der Variablen folgen. */
+      const ident = expr.match(/^([A-Za-z_$][\w$]*)/)?.[1];
+      assert.ok(ident, `${file}: "${expr}" ist kein Bezeichner - Guard anpassen, nicht umgehen`);
+      /* ALLE Zuweisungen des Bezeichners, nicht die erste. Die zweite Fassung
+       * dieses Guards nahm `src.match(…)` und fand in budget.js das `const pct`
+       * aus `chartSummary()`, das sauber ist - waehrend das mit dem Boden 18
+       * Zeilen tiefer in `renderCategoryBars()` stand. Sie war gruen und haette
+       * genau die Haelfte des Anlassfalls durchgelassen. */
+      const decls = [...src.matchAll(new RegExp(`\\bconst\\s+${ident}\\s*=\\s*([^;]+);`, 'g'))];
+      assert.ok(decls.length > 0, `${file}: keine Zuweisung fuer "${ident}" gefunden`);
+      for (const decl of decls) {
+        assert.doesNotMatch(
+          decl[1],
+          /Math\.max\(\s*[1-9]/,
+          `${file}: "const ${ident} = ${decl[1].trim()}" klemmt den Anteil nach oben von null weg. `
+          + 'Ein Mindestbalken ist eine Laenge (min-inline-size im CSS), kein Anteil - sonst '
+          + 'zeichnet er ungleiche Betraege gleich. Math.max(0, …) bleibt erlaubt.',
+        );
+      }
+    }
+  }
+
+  // Die Gegenprobe: der Mindestbalken existiert, steht im CSS und ist
+  // abschaltbar (eine Kategorie mit Saldo null bekommt keinen Stummel).
+  assert.match(
+    budgetCss,
+    /min-inline-size:\s*calc\(var\(--bar-visible,\s*0\)\s*\*\s*var\(--space-0h\)\)/,
+    'der sichtbare Mindestbalken muss als Laenge im CSS stehen',
+  );
+  for (const file of builders) {
+    assert.match(
+      read(file),
+      /--bar-visible:\$\{[^}]*!==\s*0[^}]*\}/,
+      `${file}: --bar-visible muss aus dem Saldo kommen, damit eine Nullkategorie keinen Stummel bekommt`,
+    );
+  }
 });
 
 test('dashboard and task progress bars animate with transforms instead of widths', () => {

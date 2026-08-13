@@ -451,7 +451,12 @@ html:has(.search-overlay--visible) yuvomi-install-prompt {
    * auf die man tippt, um es zu schliessen. dvh statt vh, weil die mobile
    * Adressleiste die Hoehe waehrend der Sitzung aendert. */
   max-block-size: calc(100dvh - var(--nav-bottom-height) - var(--space-8));
-  transform: translateY(100%);
+  /* Die Ausfahr-Distanz rechnet die Leiste MIT. `translateY(100%)` schob das
+   * Blatt frueher exakt aus dem Bild, weil seine Unterkante der Bildschirmrand
+   * war; seit sie ueber der Tab-Leiste liegt, blieben genau deren 76px oben
+   * sichtbar - ein Streifen fremdes Blatt unter jeder Seite. Gefunden hat das
+   * der Screenshot, nicht die Sonde: die Sonde mass das OFFENE Blatt. */
+  transform: translateY(calc(100% + var(--nav-bottom-height)));
   transition: transform var(--duration-lg) var(--ease-out);
 }
 

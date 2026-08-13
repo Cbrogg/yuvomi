@@ -887,12 +887,18 @@ function renderCategoryBars(byCategory) {
 
   return byCategory.map((c) => {
     const isExpense = c.total < 0;
-    // Nicht-null-Kategorien behalten einen sichtbaren Mindestbalken, statt bei
-    // winzigem Anteil (z. B. -25 € neben +5050 €) auf 0 zu runden und leer zu
-    // wirken (Audit P3). Mindestwert 6 statt 3: im gespiegelten Chart trägt
-    // jede Seite nur die halbe Trackbreite.
-    const rawPct    = (Math.abs(c.total) / maxAbs) * 100;
-    const pct       = c.total !== 0 ? Math.max(6, Math.round(rawPct)) : 0;
+    /* DER ANTEIL IST DER ANTEIL. Hier stand `Math.max(6, Math.round(rawPct))`.
+     * Der Boden war selbst einmal ein Audit-Fix (P3): eine winzige Kategorie
+     * sollte neben einer grossen nicht auf 0 runden und leer wirken. Er hat das
+     * Kosmetikproblem geloest und eine Falschaussage eingefuehrt - gemessen bei
+     * 1440px rendern -234,98 €, -157,50 €, -153,49 € und -25,00 € ALLE VIER
+     * exakt 25,9px, obwohl zwischen erstem und letztem das 9,4-Fache liegt
+     * (Critique 2026-08-13). Der einzige Zweck eines Balkens neben einer Zahl
+     * ist der Vergleich auf einen Blick, und in einem Geldmodul.
+     * Sichtbar bleibt der Zwerg trotzdem: der Mindestbalken ist jetzt eine
+     * LAENGE im CSS (`--bar-visible` schaltet ihn), kein Anteil - 2px stehen
+     * fuer "da ist etwas", ohne 25 € wie 235 € aussehen zu lassen. */
+    const scale     = Math.abs(c.total) / maxAbs;
     const cls       = isExpense ? 'budget-bar-row__fill--expenses' : 'budget-bar-row__fill--income';
 
     // --mirrored (Critique 2026-08-10, P0): Einnahmen und Ausgaben wuchsen von
@@ -902,7 +908,7 @@ function renderCategoryBars(byCategory) {
       <div class="budget-bar-row budget-bar-row--mirrored">
         <div class="budget-bar-row__label" title="${esc(categoryLabel(c.category))}">${esc(categoryLabel(c.category))}</div>
         <div class="budget-bar-row__track">
-          <div class="budget-bar-row__fill ${cls}" style="--bar-scale:${pct / 100}"></div>
+          <div class="budget-bar-row__fill ${cls}" style="--bar-scale:${scale.toFixed(4)};--bar-visible:${c.total !== 0 ? 1 : 0}"></div>
         </div>
         <div class="budget-bar-row__amount" style="color:${isExpense ? 'var(--color-danger)' : 'var(--color-success)'};">
           ${isExpense ? '' : '+'}${formatAmount(c.total)}
