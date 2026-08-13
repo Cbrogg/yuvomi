@@ -8,6 +8,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { SETTINGS_DOMAINS, SETTINGS_LEAVES } from '../public/settings/registry.js';
 import { eachRule } from './css-rules.js';
+import { withoutHtmlComments, withoutBlockComments } from './source-text.js';
 
 const read = (path) => readFileSync(new URL(path, import.meta.url), 'utf8').replace(/\r/g, '');
 
@@ -3718,7 +3719,12 @@ test('die Sammelaktions-Pille wohnt in der Shell und kostet die Liste keine Zeil
     assert.match(src, /setBulkPill\(/, `${page}.js muss die Pille über setBulkPill setzen`);
     assert.match(src, /clearBulkPill\(/,
       `${page}.js muss die Pille wegnehmen, sobald es keine Teilmenge mehr gibt`);
-    assert.doesNotMatch(src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/<!--[\s\S]*?-->/g, ''),
+    // Der Schnitt kommt aus `source-text.js` und laeuft dort bis zum Fixpunkt:
+    // die Kette `.replace().replace()` liess bei verschachtelten Klammern ein
+    // `<!--` stehen (CodeQL js/incomplete-multi-character-sanitization, high).
+    // `test-budget-ui.js` hatte die Schleife samt Begruendung schon, diese
+    // Datei die Kette ohne sie - dieselbe Kopie, andere Blindstelle.
+    assert.doesNotMatch(withoutHtmlComments(withoutBlockComments(src)),
       /class="[^"]*\blist-bulkbar\b/,
       `${page}.js darf die Leiste nicht wieder in den Seitenfluss schreiben`);
   }
