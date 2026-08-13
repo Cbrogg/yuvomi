@@ -1363,6 +1363,16 @@ function scheduleMonthFit(grid) {
 function renderView() {
   const body = _container.querySelector('#cal-body');
   if (!body) return;
+  /* Das Lesemass der Seite folgt der ANSICHT, denn hier wechselt der Koerper
+   * seine Natur: die Agenda ist eine Zeilenliste und will die Lesebahn, das
+   * Monatsgitter ist eine Flaeche und will die ganze Content-Spalte. Ein
+   * fester Modifier stimmte in genau einer der vier Ansichten - dieselbe
+   * Kopplung wie auf /tasks (Liste gegen Kanban), und derselbe Guard prueft
+   * sie (Critique 2026-08-13, zweite Runde). */
+  _container.querySelector('#calendar-page')
+    ?.classList.toggle('page-measure--narrow', state.view === 'agenda');
+  _container.querySelector('.cal-toolbar')
+    ?.classList.toggle('page-toolbar--narrow', state.view === 'agenda');
   // Monats-Resize-Observer lösen, bevor das alte #month-grid detached wird;
   // nur die Monatsansicht setzt ihn danach wieder auf.
   _monthGridResizeObserver?.disconnect();

@@ -1833,7 +1833,7 @@ async function openCategoryManager(container, { fromDeepLink = false } = {}) {
 export async function render(container, { user }) {
   container.replaceChildren();
   container.insertAdjacentHTML('beforeend', `
-    <div class="shopping-page">
+    <div class="shopping-page page-measure--narrow">
       <div class="list-tabs-bar" id="list-tabs-bar">
         <div class="skeleton skeleton-line skeleton-line--medium" style="height:36px;width:120px;border-radius:var(--radius-full)"></div>
         <div class="skeleton skeleton-line skeleton-line--short"  style="height:36px;width:80px; border-radius:var(--radius-full)"></div>
@@ -1873,7 +1873,7 @@ export async function render(container, { user }) {
 
   container.replaceChildren();
   container.insertAdjacentHTML('beforeend', `
-    <div class="shopping-page">
+    <div class="shopping-page page-measure--narrow">
       <h1 class="sr-only">${t('nav.shopping')}</h1>
       <!-- Die Listenwahl ist zugleich der Titel der Seite: der aktive Chip nennt
            die Liste, sein Nachbar am hinteren Ende traegt ihre Aktionen. Hier

@@ -2564,6 +2564,12 @@ test('die Küchen-Listen teilen eine Zeilen-Grammatik', () => {
     return axis === 'inline' ? (parts[1] ?? parts[0]) : parts[0];
   };
   const NARROW = 'var(--content-max-width-narrow)';
+  // Seit das Lesemass an der SEITE haengt (`--page-measure`, layout.css), steht
+  // an den Traegern die Variablenform mit der Konstante als Rueckfall. Sie ist
+  // dieselbe Zusicherung: faellt die Rolle weg, greift der Rueckfall, und die
+  // Kappung ist damit genauso unbedingt wie vorher.
+  const NARROW_VAR = `var(--page-measure, ${NARROW})`;
+  const istLesemass = (wert) => wert === NARROW || wert === NARROW_VAR;
   const ALIGN_SELF = ['align-self', 'place-self'];
   // Eine Kappung ist eine Kappung, egal wie buchstabiert: die logischen Formen
   // wirken im Schreibmodus dieser App auf dieselbe Achse. Dasselbe Paar prüft
@@ -2792,7 +2798,7 @@ test('die Küchen-Listen teilen eine Zeilen-Grammatik', () => {
       return !/:/.test(bare) && !/[\s>+~,]/.test(bare);
     };
     assert.ok(rules.some(({ body, conditional, selectors }) =>
-      !conditional && selectors.some(plain) && declaredValue(body, MAX_WIDTH) === NARROW),
+      !conditional && selectors.some(plain) && istLesemass(declaredValue(body, MAX_WIDTH))),
     `${cls} muss das Lesemaß UNBEDINGT tragen: eine Kappung hinter einem Breakpoint, an einem Zustand (:hover) oder unter einem Vorfahren (.foo ${cls}) greift nicht in jedem Kontext, in dem das Element gerendert wird`);
     for (const { file, body } of rules) {
       // Eine feste Breite schlägt die Kappung, ohne sie anzufassen: mit
@@ -2815,7 +2821,7 @@ test('die Küchen-Listen teilen eine Zeilen-Grammatik', () => {
 
       const width = declaredValue(body, MAX_WIDTH);
       if (width === null) continue;
-      assert.equal(width, NARROW,
+      assert.ok(istLesemass(width),
         `${file}: ${cls} bekommt hier eine zweite, abweichende Breite - das Lesemaß ist EIN Wert`);
     }
   }
@@ -2894,7 +2900,7 @@ test('die Küchen-Listen teilen eine Zeilen-Grammatik', () => {
         && (ownState === '' || ownState === state))
       .map(({ body: part }) => part).join(';');
     const selectors = [label];
-    if (declaredValue(body, MAX_WIDTH) !== NARROW) continue;
+    if (!istLesemass(declaredValue(body, MAX_WIDTH))) continue;
     // `clip` kappt wie `hidden`, nur ohne Scrollport - und die Block-Achse
     // lässt sich auch als Langform setzen. Der Grund für die Zusicherung ist
     // das Abschneiden, nicht die eine Schreibweise dafür.
@@ -2926,7 +2932,7 @@ test('die Küchen-Listen teilen eine Zeilen-Grammatik', () => {
     const body = scopedRules(shared)
       .filter(({ selectors }) => selectors.some((s) => s.trim() === carrier))
       .map(({ body: part }) => part).join(';');
-    assert.equal(declaredValue(body, MAX_WIDTH), NARROW,
+    assert.ok(istLesemass(declaredValue(body, MAX_WIDTH)),
       `${carrier} muss auf dasselbe Lesemaß kappen wie der andere Träger - zwei Zahlen sind ein sichtbarer Sprung beim Modulwechsel, keine zwei Grammatiken`);
   }
 });
@@ -2961,6 +2967,52 @@ test('die Küchen-Listen teilen eine Zeilen-Grammatik', () => {
  * `setBulkPill` aufruft, muss die Rolle `has-bulk-safe-zone` vergeben. Damit
  * waechst die Zusicherung mit dem naechsten Modul mit, statt es zu vergessen.
  */
+/**
+ * Das Lesemass ist eine Eigenschaft der SEITE, nicht des Traegers.
+ *
+ * Es hing an `.list-rows` und `.row-carrier`, also an der untersten Schicht,
+ * und galt damit fuer den Koerper und fuer nichts sonst. Gemessen bei 1440px
+ * lag die Filterreihe der Kontakte 489px, der Gruppierungsschalter der Aufgaben
+ * 434px und die Monatsnavigation des Budgets 436px rechts neben der Liste, auf
+ * die sie wirken - sieben von zehn Routen ohne gemeinsame rechte Kante
+ * (Critique 2026-08-13, zweite Runde). Der Fix davor hatte genau eine Schicht
+ * erreicht, die angedockte Primaeraktion.
+ *
+ * Geprueft wird die Kopplung an beiden Enden: die Rolle setzt die Variable, die
+ * Traeger lesen sie, und wer eine Zeilenliste UND einen eigenen Modul-Root hat,
+ * traegt die Rolle auch.
+ */
+test('das Lesemass haengt an der Seite, nicht am Traeger', () => {
+  const layout = read('../public/styles/layout.css');
+  const shared = read('../public/styles/list-row.css');
+
+  assert.match(layout, /\.page-measure--narrow\s*\{[\s\S]*?--page-measure:\s*var\(--content-max-width-narrow\)/,
+    'die Rolle muss die Variable setzen - sonst liest der Rest hier nichts');
+
+  // Die Traeger lesen die Variable, mit der alten Konstante als Rueckfall.
+  for (const carrier of ['.list-group', '.list-rows', '.row-carrier']) {
+    const at = shared.indexOf(`\n${carrier} {`);
+    assert.ok(at !== -1, `${carrier} muss es geben`);
+    const body = shared.slice(at, shared.indexOf('\n}', at));
+    assert.match(body, /max-width:\s*var\(--page-measure,\s*var\(--content-max-width-narrow\)\)/,
+      `${carrier} muss das Lesemass der SEITE lesen, mit der Konstante als Rueckfall`);
+  }
+
+  // Und jede Seite, die eine Zeilenliste zeigt, traegt die Rolle - oder hat
+  // einen ausgeschriebenen Grund, es nicht zu tun. Der Scan geht ueber die
+  // Seiten, die `.list-row` rendern; Dokumente ist die benannte Ausnahme
+  // (zweispaltig, Begruendung im Quelltext).
+  const ZWEISPALTIG = /ZWEISPALTIG/;
+  for (const page of walkJsFiles('../public/pages/')) {
+    const src = read(page);
+    if (!/class="[^"]*\blist-row\b/.test(src)) continue;
+    if (ZWEISPALTIG.test(src)) continue;
+    assert.match(src, /page-measure--narrow/,
+      `${page}: zeigt eine Zeilenliste, traegt das Lesemass der Seite aber nicht - `
+      + 'Kopf und Bedienzeilen enden dann neben ihrem eigenen Koerper');
+  }
+});
+
 test('wer eine Pille zeigt, markiert seinen Scrollport', () => {
   const layout = read('../public/styles/layout.css');
   assert.match(layout, /\.has-bulk-safe-zone\s*\{[\s\S]*?padding-block-end:\s*var\(--bulk-pill-safe-zone\)/,
@@ -5061,8 +5113,17 @@ test('hardening keeps Birthday rows on one line with extreme localized content',
   // Und die Notiz haengt an der BREITE, nicht am Geraet.
   assert.match(birthdays, /@container birthdays-list \(min-width:[^)]+\)\s*\{\s*\.birthday-item__notes/,
     'die Notiz erscheint ueber einen Container-Query am Traeger, nicht ueber einen Viewport-Breakpoint');
-  assert.match(cssRuleBody(birthdays, '.birthdays-list'), /container-type:\s*inline-size/,
+  // Der `container-type` kommt seit dem Umzug auf `.row-carrier` aus dem
+  // geteilten Traeger (list-row.css) - hier stand er ein zweites Mal und war
+  // Teil des Nachbaus, der dieser Liste das Lesemass gekostet hat. Geprueft
+  // wird deshalb die UEBERNAHME plus die Zusicherung an ihrem einen Ort, und
+  // dass der eigene Container-Name daneben ausdruecklich stehen bleibt.
+  assert.match(read('../public/pages/birthdays.js'), /class="row-carrier birthdays-list"/,
+    'die Liste traegt den geteilten Traeger, statt ihn nachzubauen');
+  assert.match(cssRuleBody(read('../public/styles/list-row.css'), '.row-carrier'), /container-type:\s*inline-size/,
     'ohne Container am Traeger fragt der Query ins Leere und die Notiz bliebe fuer immer aus');
+  assert.match(cssRuleBody(birthdays, '.birthdays-list'), /container-name:\s*birthdays-list list-rows/,
+    'beide Namen ausdruecklich - sonst gewinnt der spaeter geladene und der andere ist lautlos tot');
 });
 
 test('hardening uses logical alignment for RTL-sensitive adapted controls', () => {

@@ -331,6 +331,37 @@
   padding-inline: var(--space-4);
 }
 
+/* WAS DIE ZEILE AM ENDE TRAEGT, ENTSCHEIDET IHRE EIGENE BREITE
+ * (Critique 2026-08-13, zweite Runde).
+ *
+ * Der Beitritt zur geteilten Zeile hat hier eine umbrechende Zeile in eine
+ * ABGESCHNITTENE verwandelt: `.list-row` setzt `flex-wrap: nowrap`, und diese
+ * Zeile fuehrt Uhrzeit, Name, zwei Knoepfe und einen Status. Gemessen bei
+ * 390px: clientWidth 324 gegen scrollWidth 449, „Ueberspringen" lag bei
+ * left=360 in einem 390px-Viewport - zu 92 von 122px ausserhalb des Bildes,
+ * ohne Scrollweg dorthin, weil der Traeger clippt. In einem Modul, das
+ * Medikamente fuehrt, ist eine unerreichbare Aktion der teuerste Ort dafuer.
+ *
+ * Die Antwort ist die der anderen Module: die Zweitangabe weicht nach ihrer
+ * eigenen Breite. Das LABEL faellt weg, nicht der Knopf - sein `aria-label`
+ * traegt den ganzen Satz weiter, seine Zielgroesse kommt unveraendert aus
+ * `.btn`. `flex-wrap` zurueckzuholen waere der andere Weg und der falsche: er
+ * braeche die geteilte Regel fuer alle vierzehn Module. */
+@container list-rows (max-width: 26rem) {
+  .health-dose__skip-label {
+    display: none;
+  }
+}
+
+/* Ohne Container kein Query: die Dosenlisten liegen in Karten, nicht in einem
+ * `.row-carrier`, also macht die Liste ihn selbst auf - mit dem geteilten
+ * Namen, unter dem die Zeilenbausteine ihre Fragen stellen. */
+.health-meds__due-list,
+.health-overview__reminders-list {
+  container-type: inline-size;
+  container-name: list-rows;
+}
+
 .health-dose + .health-dose {
   border-top: 1px solid var(--color-border-subtle);
 }

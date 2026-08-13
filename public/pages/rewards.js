@@ -183,8 +183,8 @@ function updateRewardsFab() {
 function renderShell(container) {
   container.replaceChildren();
   container.insertAdjacentHTML('beforeend', `
-    <div class="rewards-page">
-      <header class="page-toolbar rewards-toolbar">
+    <div class="rewards-page page-measure--narrow">
+      <header class="page-toolbar page-toolbar--narrow rewards-toolbar">
         <h1 class="page-toolbar__title" id="rewards-title">${esc(t('rewards.title'))}</h1>
         <nav class="rewards-tabs" role="tablist" aria-label="${esc(t('rewards.title'))}">
           ${tabButton('overview', 'trophy', t('rewards.tabOverview'))}

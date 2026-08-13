@@ -69,6 +69,24 @@
   align-self: stretch;
 }
 
+/* AUSSER die Kennzahlreihe (Critique 2026-08-13, zweite Runde).
+ *
+ * Die Begruendung darueber gilt fuer WIDGETS: ein kurzes Widget, das oben
+ * klebt, franst die Unterkante seiner Rasterzeile aus. Die Kennzahlreihe ist
+ * kein Widget - sie hat keinen Kopf, kein Absenderband, keinen eigenen Ton und
+ * sie ist so hoch wie ihr Inhalt. Mit `stretch` beanspruchte ihre Zelle die
+ * Hoehe der hoechsten Karte derselben Rasterzeile: gemessen 753,3x360,5px fuer
+ * eine 105px hohe Reihe, also 255,5px leere Buehne mitten im Board, direkt
+ * neben der vollhohen Familienkarte.
+ *
+ * Der Fix davor hat die Reihe repariert und die ZELLE stehen lassen - die
+ * Leere ist damals nicht verschwunden, sondern aus der getoenten Kachel auf
+ * den Grund gewandert. Und der Guard, der ihn begleitete, prueft dieselbe
+ * Ebene wie der Fix: die Reihe, nicht die Zelle. */
+.widget-wrapper:has(> .metric-tiles) {
+  align-self: start;
+}
+
 .widget-wrapper > .widget {
   flex: 1;
   min-height: 0;

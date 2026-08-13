@@ -1762,6 +1762,59 @@ html.fab-anim-done .page-fab {
   }
 }
 
+/* --------------------------------------------------------
+ * DAS LESEMASS IST EINE EIGENSCHAFT DER SEITE, NICHT DES TRAEGERS
+ * (Critique 2026-08-13, zweite Runde)
+ *
+ * Es hing an `.list-rows` und `.row-carrier`, also an der untersten Schicht.
+ * Damit galt es fuer den Koerper und fuer nichts sonst: gemessen bei 1440px lag
+ * die Filterreihe der Kontakte 489px, der Gruppierungsschalter der Aufgaben
+ * 434px und die Monatsnavigation des Budgets 436px rechts neben der Liste, auf
+ * die sie wirken. Sieben von zehn Routen ohne gemeinsame rechte Kante zwischen
+ * Kopf und Koerper - und der Fix davor hatte genau eine Schicht erreicht, die
+ * angedockte Primaeraktion.
+ *
+ * WARUM EINE VARIABLE UND KEIN `max-width` AM ROOT: der Kopf ist absichtlich
+ * full-bleed. Hintergrund, Trennlinie und Sticky-Flaeche der `.page-toolbar`
+ * laufen bis zur Shell-Kante, nur die ZEILE darin wird kuerzer (siehe
+ * `.page-toolbar--narrow` unten). Ein `max-width` am Modul-Root haette diese
+ * Flaechen mitgekappt und aus dem Rail eine schwebende Karte gemacht.
+ *
+ * Die Rolle steht deshalb an EINER Stelle - dem Modul-Root - und jede Schicht,
+ * die mitfluchten muss, liest dieselbe Variable. Wer sie nicht liest, faellt auf
+ * `none` zurueck und ist damit ausdruecklich full-bleed, nicht versehentlich.
+ * -------------------------------------------------------- */
+.page-measure--narrow {
+  --page-measure: var(--content-max-width-narrow);
+}
+
+/* Die Bedienzeilen einer solchen Seite. Sie stehen zwischen Kopf und Koerper
+ * und wirken auf den Koerper, also enden sie mit ihm. `justify-self`/`margin`
+ * bleiben unberuehrt: gekappt wird die Breite, nicht die Ausrichtung. */
+.page-measure--narrow :is(
+  .tasks-filters-row,
+  .contacts-filters,
+  .rewards-tabs,
+  .list-tabs-bar,
+  /* Die Karten der Hauswirtschaft, deren Zeilen per Bleed an ihrer Kante
+   * fluchten: die Liste selbst hat keine eigene Flaeche, die Karte hat sie,
+   * also traegt die Karte das Mass. */
+  .housekeeping-card
+) {
+  max-width: var(--page-measure, none);
+}
+
+/* Der Monatsstepper des Budgets sitzt im `page-toolbar__center` und ist damit
+ * nicht `:last-child` - der `--narrow`-Modifier erreicht ihn nicht, und ein
+ * blosses `max-width` auch nicht: er ist schmaler als das Lesemass und steht
+ * ZENTRIERT in der vollen Kopfzeile, also weiter rechts als die Liste endet
+ * (gemessen 436px daneben, mit Kappung immer noch 113px). Er braucht dieselbe
+ * Marge wie das letzte Kind, damit sein Bezugsrahmen die Lesebahn wird statt
+ * der Rail. */
+.page-measure--narrow .page-toolbar .budget-nav__month {
+  margin-inline-end: max(0px, calc(100% - var(--page-measure, var(--content-max-width-narrow))));
+}
+
 /* Opt-in: der Kopf sitzt UNTER einer Tab-Gruppenleiste (.sub-tabs-bar).
  *
  * Historisch gab die Variante genau eine Eigenschaft ab: den 3px-Akzentstreifen,

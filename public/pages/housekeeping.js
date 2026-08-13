@@ -163,7 +163,7 @@ function updateHousekeepingFab() {
 function renderShell(container) {
   container.replaceChildren();
   container.insertAdjacentHTML('beforeend', `
-    <section class="housekeeping-page" aria-labelledby="housekeeping-title">
+    <section class="housekeeping-page page-measure--narrow" aria-labelledby="housekeeping-title">
       <header class="page-toolbar page-toolbar--narrow housekeeping-toolbar">
         <h1 class="page-toolbar__title" id="housekeeping-title">${esc(t('housekeeping.title'))}</h1>
         <nav class="housekeeping-tabs" role="tablist" aria-label="${esc(t('housekeeping.bottomNav'))}">
@@ -1209,7 +1209,7 @@ function openStaffModal(worker, content, options = {}) {
 export async function render(container) {
   container.replaceChildren();
   container.insertAdjacentHTML('beforeend', `
-    <section class="housekeeping-page housekeeping-page--loading" aria-busy="true">
+    <section class="housekeeping-page page-measure--narrow housekeeping-page--loading" aria-busy="true">
       ${renderSkeletonList({ rows: 6, lines: 2 })}
     </section>
   `);
@@ -1232,7 +1232,7 @@ export async function render(container) {
   } catch (err) {
     container.replaceChildren();
     container.insertAdjacentHTML('beforeend', `
-      <section class="housekeeping-page">
+      <section class="housekeeping-page page-measure--narrow">
         <div class="empty-state">
           <div class="empty-state__title">${esc(t('common.errorOccurred'))}</div>
           <div class="empty-state__description">${esc(err.message)}</div>

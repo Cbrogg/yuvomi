@@ -250,7 +250,7 @@ function wireBirthdaySwipe(host) {
 function renderPage() {
   _container.replaceChildren();
   _container.insertAdjacentHTML('beforeend', `
-    <div class="birthdays-page">
+    <div class="birthdays-page page-measure--narrow">
       <div class="page-toolbar page-toolbar--wrap page-toolbar--narrow birthdays-toolbar">
         <h1 class="page-toolbar__title">${t('birthdays.title')}</h1>
         ${renderPageSearch({ id: 'birthdays-search', label: t('birthdays.searchPlaceholder'), placeholder: t('birthdays.searchPlaceholder'), value: state.query, clearLabel: t('common.searchClear'), className: 'birthdays-toolbar__search page-toolbar__center' })}
@@ -266,7 +266,7 @@ function renderPage() {
 
       <p class="birthdays-hint">${t('birthdays.calendarHint')}</p>
 
-      <div class="birthdays-list" id="birthdays-list"></div>
+      <div class="row-carrier birthdays-list" id="birthdays-list"></div>
 
       <button class="page-fab" id="fab-new-birthday" aria-label="${t('birthdays.addButton')}" data-dock-label="${t('newLabel.birthdays')}">
         <i data-lucide="plus" class="icon-xl" aria-hidden="true"></i>

@@ -340,7 +340,7 @@ export async function render(container, ctx = {}) {
 
   container.replaceChildren();
   container.insertAdjacentHTML('beforeend', `
-    <div class="health-page">
+    <div class="health-page page-measure--narrow">
       <!-- Kanonischer Modulkopf: die Sub-Tab-Leiste wechselt eine SICHT
            innerhalb der Gesundheit (alle Health-Routen tragen module: 'health'),
            also steht der Modulname als Large Title ueber ihr - dasselbe Muster
@@ -1417,7 +1417,7 @@ function dueRowMarkup(dose, med, log) {
     actions = `
       <div class="health-dose__actions">
         <button type="button" class="btn btn--sm btn--primary" data-dose-take ${data}>${esc(t('health.meds.take'))}</button>
-        <button type="button" class="btn btn--sm btn--ghost" data-dose-skip ${data}>${esc(t('health.meds.skip'))}</button>
+        <button type="button" class="btn btn--sm btn--ghost health-dose__skip" data-dose-skip ${data} aria-label="${esc(t('health.meds.skip'))}"><i data-lucide="skip-forward" class="icon-sm" aria-hidden="true"></i><span class="health-dose__skip-label">${esc(t('health.meds.skip'))}</span></button>
       </div>`;
   } else {
     actions = `<span class="health-dose__status">${esc(t('health.meds.status.pending'))}</span>`;

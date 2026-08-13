@@ -113,7 +113,7 @@ export async function render(container, { user }) {
   _container = container;
   container.replaceChildren();
   container.insertAdjacentHTML('beforeend', `
-    <div class="contacts-page">
+    <div class="contacts-page page-measure--narrow">
       <div class="page-toolbar page-toolbar--wrap page-toolbar--narrow contacts-toolbar">
         <h1 class="page-toolbar__title">${t('contacts.title')}</h1>
         ${renderPageSearch({ id: 'contacts-search', label: t('contacts.searchPlaceholder'), placeholder: t('contacts.searchPlaceholder'), value: state.searchQuery, clearLabel: t('common.searchClear'), className: 'contacts-toolbar__search page-toolbar__center' })}

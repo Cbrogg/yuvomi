@@ -1735,6 +1735,19 @@ test('Kennzahlreihe bezieht ihre Hoehe aus ihrem Inhalt, nicht von aussen', () =
   assert(tiles, '.metric-tiles muss es geben');
   assert(!/align-content:\s*stretch/.test(tiles),
     'align-content: stretch gibt der einzigen Rasterzeile allen Ueberschuss - die Reihe waechst auf ihren Inhalt, nicht auf ihren Platz');
+
+  // UND DIE ZELLE, NICHT NUR DIE REIHE (Critique 2026-08-13, zweite Runde).
+  //
+  // Die zwei Zusicherungen darueber haben die Reihe repariert und die Zelle
+  // stehen lassen: `.widget-wrapper { align-self: stretch }` liess sie weiter
+  // die Hoehe der hoechsten Karte ihrer Rasterzeile beanspruchen, gemessen
+  // 753x360,5px fuer eine 105px hohe Reihe. Die Leere war nicht verschwunden,
+  // sie war aus der getoenten Kachel auf den Grund gewandert - und dieser
+  // Guard hat es nicht gesehen, weil er dieselbe Ebene prueft wie der Fix,
+  // den er begleitet. Das ist das Muster, das diese Runde dreimal gefunden
+  // hat: die Sonde steht dort, wo repariert wurde, nicht dort, wo es weh tat.
+  assert(/\.widget-wrapper:has\(>\s*\.metric-tiles\)\s*\{[^}]*align-self:\s*start/.test(css),
+    'die ZELLE der Kennzahlreihe muss auf ihren Inhalt schrumpfen - sonst steht die Reihe richtig und die Buehne darunter ist leer');
 });
 
 // --------------------------------------------------------

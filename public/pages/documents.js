@@ -292,6 +292,18 @@ function bindPageEvents() {
     else if (action === 'select-archive') archiveSelected();
     else if (action === 'select-delete') deleteSelected();
   });
+  /* DIESE SEITE BEKOMMT DAS LESEMASS NICHT, und das ist eine Entscheidung.
+   *
+   * Sie ist als einzige ZWEISPALTIG: der Ordner-Browser steht links, die
+   * Dokumentliste beginnt erst bei x=508. Gemessen sind Liste und Bedienzeile
+   * beide 720px breit - aber an verschiedenen Startpunkten, und eine
+   * Bedienzeile, die an der Content-Kante beginnt, kann mit einer Liste, die
+   * 256px weiter rechts beginnt, keine rechte Kante teilen. Die Regel „Kopf
+   * fluchtet mit Körper" setzt einspaltig voraus.
+   *
+   * Hier fluchtet der Kopf stattdessen mit der CONTENT-SPALTE, also mit dem
+   * Ordner-Browser plus Liste zusammen - das ist der Körper dieser Seite.
+   * (Critique 2026-08-13, zweite Runde.) */
   _container.querySelector('.documents-view-toggle')?.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-view]');
     if (!btn) return;

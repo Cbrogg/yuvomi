@@ -123,12 +123,18 @@
    * den gilt die Primärknopf-Form aus DESIGN.md: deckende Fläche, kein Blur,
    * kein Sheen. Dieselbe Regel, die Glas ohnehin auf die Shell beschränkt. */
   .page-fab--docked {
-    background-color: color-mix(in srgb, var(--color-accent) 88%, #0E0D0B);
+    /* `var(--neutral-950)` und NICHT das Literal `#0E0D0B` (Critique
+     * 2026-08-13, zweite Runde). Beide sind im hellen Theme derselbe Wert -
+     * aber das Token kippt im Dunkelmodus auf `#FBFAF7`, und genau das ist
+     * hier gewollt: der angedockte Knopf soll gegen den Grund seines Themes
+     * mischen, nicht immer gegen Schwarz. Als Literal war die
+     * Theme-Abhaengigkeit beim Kopieren verlorengegangen. */
+    background-color: color-mix(in srgb, var(--color-accent) 88%, var(--neutral-950));
     box-shadow: var(--shadow-sm);
   }
 
   .page-fab--docked:hover {
-    background-color: color-mix(in srgb, var(--color-accent) 76%, #0E0D0B);
+    background-color: color-mix(in srgb, var(--color-accent) 76%, var(--neutral-950));
   }
 }
 

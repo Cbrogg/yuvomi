@@ -1235,7 +1235,16 @@
    * die Zielgroesse der Geraetewelt, weil die Pille eine Bedienflaeche ist:
    * 44px am Zeiger, 48px am Finger, ohne zweite Schreibweise. */
   --bulk-pill-height: var(--target-base);
-  --bulk-pill-safe-zone: calc(var(--bulk-pill-height) + var(--space-4));
+  /* Der Nachlauf rechnet die Hoehe der Pille PLUS ihren Abstand zur Kante des
+   * Scrollports, nicht die Hoehe allein (Critique 2026-08-13, zweite Runde).
+   * Mit `--space-4` als Zuschlag ergaben sich 64px, gemessen noetig waren
+   * 74,1px: die Pille sitzt 26,1px ueber der Portkante, weil `.shell-bottom-
+   * stack` ueber der Nav haengt. In den Kontakten ging es mit 6,2px Rest
+   * gerade auf, im Einkauf fehlten 9,2px und die letzte Zeile blieb zu
+   * 3.276px2 verdeckt - derselbe Defekt, den die Zone verhindern soll, nur
+   * knapp genug, um in einem von zwei Modulen unsichtbar zu bleiben.
+   * `--space-8` deckt den gemessenen Abstand mit Reserve. */
+  --bulk-pill-safe-zone: calc(var(--bulk-pill-height) + var(--space-8));
   /* Innenkante der Nav-Kapsel, von der Viewport-Kante aus gemessen. EINE
    * Quelle fuer die Kapsel (margin-inline: auto + max-width) und fuer den
    * FAB, der an ihrem hinteren Ende sitzt - liefen die auseinander, stuende

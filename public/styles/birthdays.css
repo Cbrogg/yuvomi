@@ -30,17 +30,23 @@
  * (Zeilenlisten-Regel, tokens.css). Vorher trug jede Zeile ihre eigene Karte:
  * sechs Geburtstage waren sechs Objekte statt einer Liste.
  * -------------------------------------------------------- */
+/* SIE TRÄGT `.row-carrier` (Critique 2026-08-13, zweite Runde). Fläche, Radius,
+ * Schatten, `overflow` und `container-type` standen hier Wert für Wert ein
+ * zweites Mal - ein Nachbau, den die erste Runde nicht fand, weil sie nach dem
+ * KLASSENNAMEN gesucht hat und nicht nach der Signatur. Der Preis war sichtbar:
+ * weil die Klasse fehlte, bekam die Liste das neue Lesemaß nicht und stand bei
+ * 1440px auf 1156px, während die Kontaktliste daneben 720px trug. Der 436px-
+ * Sprung beim Modulwechsel, den die erste Runde als behoben gemeldet hat, war
+ * damit nur ein Modul weitergewandert. */
 .birthdays-list {
   margin-inline: var(--page-inline-pad);
-  background: var(--color-surface);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  overflow: hidden;
-  /* Abfragbarer Container für die Zeilen darin - am TRÄGER, weil ein Container
-   * sich selbst nicht abfragen kann, und `inline-size`, damit die Höhe frei
-   * bleibt. Dieselbe Begründung wie bei `.list-rows` (list-row.css). */
-  container-type: inline-size;
-  container-name: birthdays-list;
+  /* ZWEI Container-Namen, und beide sind nötig: `list-rows` kommt aus
+   * `.row-carrier` und ist der geteilte Name, unter dem die Zeilenbausteine
+   * ihre Fragen stellen; `birthdays-list` ist der eigene, unter dem die
+   * Countdown-Chips dieses Moduls ihre stellen. Ohne die ausdrückliche
+   * Nennung beider gewönne der später geladene Wert und der andere wäre
+   * lautlos tot. */
+  container-name: birthdays-list list-rows;
 }
 
 /* DIE GEBURTSTAGSZEILE IST EINE `.list-row` - hier steht nur die Abweichung.

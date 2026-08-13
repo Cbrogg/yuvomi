@@ -111,7 +111,7 @@
   /* Trägt jetzt selbst das Lesemaß (.list-scroller ist absichtlich unbegrenzt,
    * siehe dort) - linksbündig, nicht zentriert: der Listentitel im Kopf
    * darüber steht an derselben Kante. */
-  max-width: var(--content-max-width-narrow);
+  max-width: var(--page-measure, var(--content-max-width-narrow));
 }
 
 /* Label-Rolle, keine Titel-Rolle: die Überschrift ordnet, sie konkurriert nicht
@@ -162,7 +162,7 @@
    * liegt (Rezepte: .list-rows ist dort direktes Kind von .list-scroller).
    * Bei gruppierten Tabs kappt schon .list-group - dieselbe Zahl hier ist
    * dann redundant, aber unschädlich (verengt nichts weiter). */
-  max-width: var(--content-max-width-narrow);
+  max-width: var(--page-measure, var(--content-max-width-narrow));
   /* Ein Grid-Item von .list-scroller dehnt sich per Default (align-items:
    * stretch) auf die Höhe der verfügbaren Spur, statt auf seine Inhaltshöhe zu
    * wachsen - unschädlich, solange mehrere kurze Gruppen dieselbe Spur teilen
@@ -582,7 +582,7 @@
    * steht. Linksbündig, nicht zentriert: der Kopf über dem Träger steht an
    * derselben Kante, und die angedockte Primäraktion der Toolbar fluchtet mit
    * ihr (vorher stand „+ Aufgabe" 325px rechts neben seiner eigenen Liste). */
-  max-width: var(--content-max-width-narrow);
+  max-width: var(--page-measure, var(--content-max-width-narrow));
   /* Kommt MIT dem Lesemaß, nicht davor: der Träger clippt (`overflow: hidden`,
    * für die Eckenradien) und ist Grid-Item, sobald er in einem `.list-scroller`
    * liegt. Ohne `align-self: start` dehnt ihn die Spur auf ihre volle Höhe und
