@@ -747,6 +747,21 @@
   color: var(--color-text-primary);
   margin-bottom: var(--space-0h);
   cursor: pointer;
+  /* EINZEILIG MIT ELLIPSE, und das ist die Ausnahme von der Regel nebenan
+   * (list-row.css: „UMBRECHEN, NICHT ABSCHNEITEN"). Die Regel gilt dem
+   * ARTIKELNAMEN im Laden: dort ist der Name der einzige Zweck der Zeile und
+   * nirgends sonst zu haben. Ein Aufgabentitel steht vollstaendig in der
+   * Detailflaeche, die ein Tipp auf genau diesen Knopf oeffnet.
+   *
+   * Gemessen bei 390x844: von zwoelf Zeilen brachen zwei zweizeilig um
+   * („Tropfenden Wasserhahn reparieren", „Geburtstagsgeschenk fuer Mama") und
+   * standen mit 80,6px gegen 61,1px der uebrigen zehn - eine Streuung von
+   * 19,5px in einer Liste, die einen Takt haben soll. Die 228px Titelspalte
+   * fassen rund 28 Zeichen; was darueber liegt, endet jetzt in einer Ellipse
+   * statt in einer zweiten Zeile. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   text-decoration: line-through;
   text-decoration-color: transparent;
   transition:

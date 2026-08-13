@@ -614,11 +614,22 @@ function rowEl(item) {
   name.textContent = item.name;
   headline.appendChild(name);
 
-  for (const badge of [expiryBadge(item), stockBadge(item)].filter(Boolean)) {
-    const el = document.createElement('span');
-    el.className = `pantry-badge pantry-badge--${badge.tone}`;
-    el.textContent = badge.text;
-    headline.appendChild(el);
+  // DIE BADGES SIND EIN PAAR, ALSO EIN KNOTEN (Critique 2026-08-13).
+  // Ohne ihn entscheidet die Restbreite, WIE VIELE von ihnen umbrechen: gemessen
+  // stand „Vollmilch" mit „Läuft heute ab" in Zeile zwei und „Fast leer" in
+  // Zeile drei, also 109,5px gegen 86,3px derselben Liste mit zwei Badges
+  // nebeneinander. Was zusammen gelesen wird, bricht zusammen um.
+  const badges = [expiryBadge(item), stockBadge(item)].filter(Boolean);
+  if (badges.length) {
+    const wrap = document.createElement('span');
+    wrap.className = 'pantry-row__badges';
+    for (const badge of badges) {
+      const el = document.createElement('span');
+      el.className = `pantry-badge pantry-badge--${badge.tone}`;
+      el.textContent = badge.text;
+      wrap.appendChild(el);
+    }
+    headline.appendChild(wrap);
   }
   main.appendChild(headline);
 

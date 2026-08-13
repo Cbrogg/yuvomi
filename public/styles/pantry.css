@@ -189,6 +189,22 @@
   min-width: 0;
 }
 
+/* Die Statusmarken wandern gemeinsam. Ohne diesen Träger entschied die
+ * Restbreite, wie viele von ihnen umbrechen - gemessen bei 390x844 stand
+ * „Vollmilch" mit „Läuft heute ab" in Zeile zwei und „Fast leer" in Zeile
+ * drei, also 109,5px gegen 86,3px derselben Liste mit zwei Marken nebeneinander.
+ *
+ * `flex-shrink: 0` ist die Bedingung dafür: schrumpfte das Paar, bliebe es in
+ * der Namenszeile stehen und presste sich dort zusammen, statt geschlossen
+ * darunter zu rutschen. Ein eigener Umbruch steht ihm nicht zu - genau den
+ * nimmt der Träger ihm ab. */
+.pantry-row__badges {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  flex-shrink: 0;
+}
+
 /* Name und Metazeile kommen aus .list-row__name / .list-row__meta. Die
  * Regel „umbrechen statt abschneiden" ist dort verallgemeinert: sie galt zuerst
  * für das MHD im Vorrat, gilt jetzt genauso für den Artikelnamen im Einkauf, der
