@@ -2397,6 +2397,42 @@ test('die Küchen-Listen teilen eine Zeilen-Grammatik', () => {
   // festen Slot am Anfang der Bedienzone.
   assert.doesNotMatch(shared.replace(/\/\*[\s\S]*?\*\//g, ''), /\.list-row__end-action/,
     'an der Zeilenkante verankerte Aktionen liegen in der FAB-Ecke - fester Slot am Anfang der Bedienzone stattdessen');
+
+  /* WER MITTEN IM WORT BRICHT, SETZT EINEN TRENNSTRICH (Etappe 7, 2026-08-13).
+   *
+   * `overflow-wrap: anywhere` heisst genau das: brich INNERHALB eines Wortes,
+   * statt überzulaufen. Ohne `hyphens: auto` geschieht das ohne jedes Zeichen -
+   * gemessen bei 320x568 standen 11 von 26 Einkaufszeilen als „Kirschtoma /
+   * ten". Die Begründung der Regel („umbrechen, nicht abschneiden") stimmte
+   * die ganze Zeit; geprüft hat nie jemand, WIE sie umbricht.
+   *
+   * DIE ZUSICHERUNG IST DIE PAARUNG, KEIN KLASSENNAME: jede Regel dieser Datei,
+   * die einen Umbruch im Wort erlaubt, trägt in DERSELBEN Regel ihre
+   * Trennhilfe. Ein Guard auf `.list-row__name` allein wäre eine Allowlist von
+   * einem und liesse den nächsten geteilten Textknoten ungedeckt.
+   *
+   * `break-word` ist ausdrücklich NICHT gemeint und steht deshalb nicht in der
+   * Bedingung: es bricht ein Wort nur, wenn es allein auf keiner Zeile
+   * unterkommt, und `hyphens: auto` würde dort auch dann trennen, wenn ein
+   * Umbruch an einer Leerstelle möglich ist. Die Metazeile behält es. */
+  const bruchOhneStrich = [...eachRule(shared)]
+    .filter((r) => /overflow-wrap:\s*anywhere/.test(r.body) && !/hyphens:\s*auto/.test(r.body));
+  assert.deepEqual(bruchOhneStrich.map((r) => r.selector.trim()), [],
+    'in der geteilten Zeilengrammatik braucht jeder Umbruch im Wort seinen Trennstrich - '
+    + 'sonst steht dort bei 320px „Kirschtoma / ten"');
+
+  /* Und kein Modul nimmt die Entscheidung still zurück. Die Grammatik ist
+   * geteilt, ihre Stylesheets laden nach list-row.css, und eine Zeile
+   * `hyphens: manual` in einem der neun Module wäre bei gleicher Spezifität die
+   * spätere und damit die geltende - ohne dass hier etwas rot würde. */
+  for (const file of readdirSync(new URL('../public/styles/', import.meta.url)).filter((f) => f.endsWith('.css') && f !== 'list-row.css')) {
+    for (const rule of eachRule(read(`../public/styles/${file}`))) {
+      if (!/\.list-row__(?:name|meta)\b/.test(rule.selector)) continue;
+      assert.doesNotMatch(rule.body, /hyphens:/,
+        `${file} (${rule.selector.trim()}) darf die Trennung der geteilten Grammatik nicht überschreiben`);
+    }
+  }
+
   const pantryCss = read('../public/styles/pantry.css');
   const slot = pantryCss.match(/\.pantry-row__cart-slot\s*\{([^}]*)\}/)?.[1] ?? '';
   assert.match(slot, /width:\s*var\(--target-lg\)/,
@@ -3639,6 +3675,89 @@ test('die Sammelaktions-Pille wohnt in der Shell und kostet die Liste keine Zeil
   const emptyRule = [...eachRule(layout)].find((r) => /\.shell-bottom-stack\s*>\s*:empty/.test(r.selector));
   assert.ok(emptyRule && /display:\s*none/.test(emptyRule.body),
     'leere Zellen des Stapels müssen aus dem Fluss - sonst verschiebt ihre Lücke den Toast');
+});
+
+/**
+ * JEDE Pille, deren Subjekt wegfallen kann, gibt die Zahl an eine Kapsel weiter.
+ *
+ * Der Guard darüber prüfte den Einkauf beim Namen (`clearChecked`) - und das war
+ * richtig für die Kapsel, die ohne Objekt gefährlich ist. Als der Vorrat
+ * dieselbe Lücke bekam, deckte er sie nicht: seine Kapsel heisst „Alles auf die
+ * Einkaufsliste", ein Quantor ohne Bezugswort, und keine Zeichenkette des alten
+ * Guards kam darin vor. Zwei benannte Stellen wären eine Allowlist gewesen, und
+ * die dritte Pille käme wieder ungedeckt.
+ *
+ * DIE REGEL HÄNGT AN DER PILLE, NICHT AN DER SEITE: wer `setBulkPill` aufruft,
+ * baut eine Fläche, deren Subjekt unter 21rem verschwindet (layout.css) - also
+ * muss in dieser Datei mindestens eine Aktion ihre Zahl mitgeben. Gefunden wird
+ * das Aktions-Literal über sein `onClick`, per Klammerzählung statt per Regex:
+ * `[^{}]*` scheitert an der `t()`-Interpolation im aria-label, die selbst
+ * geschweifte Klammern trägt.
+ */
+test('jede Sammelaktions-Pille gibt ihre Zahl an eine Kapsel weiter', () => {
+  /** Die Aktions-Literale einer Quelle: von jedem `onClick:` zur umschliessenden Klammer. */
+  const actionLiterals = (src) => {
+    const out = [];
+    for (const m of src.matchAll(/\bonClick:/g)) {
+      let depth = 0;
+      let start = -1;
+      for (let i = m.index; i >= 0; i--) {
+        if (src[i] === '}') depth += 1;
+        else if (src[i] === '{') {
+          if (depth === 0) { start = i; break; }
+          depth -= 1;
+        }
+      }
+      if (start === -1) continue;
+      let end = -1;
+      depth = 0;
+      for (let i = start; i < src.length; i++) {
+        if (src[i] === '{') depth += 1;
+        else if (src[i] === '}') { depth -= 1; if (depth === 0) { end = i; break; } }
+      }
+      if (end !== -1) out.push(src.slice(start, end + 1));
+    }
+    return out;
+  };
+
+  const pages = readdirSync(new URL('../public/pages/', import.meta.url))
+    .filter((f) => f.endsWith('.js'))
+    .map((f) => [f, read(`../public/pages/${f}`)])
+    .filter(([, src]) => /from '\/utils\/bulk-pill\.js'/.test(src) && /setBulkPill\(/.test(src));
+
+  assert.ok(pages.length >= 2,
+    'erwartet mindestens Einkauf und Vorrat als Pillen-Aufrufer - findet der Scan keine, prüft er nichts');
+
+  for (const [name, src] of pages) {
+    const literals = actionLiterals(src);
+    assert.ok(literals.length, `${name}: keine Aktion mit onClick gefunden`);
+    // AUF EIGENER ZEILE, siehe den Guard darüber: `count:` steht auch in jeder
+    // t()-Interpolation mit Pluralform, und die steht in diesen Dateien ohnehin.
+    const mitZahl = literals.filter((lit) => /^\s*count:\s*[^,\s][^\n]*,\s*$/m.test(lit));
+    assert.ok(mitZahl.length >= 1,
+      `${name}: mindestens eine Kapsel muss ihre Zahl als eigene Eigenschaft mitgeben - `
+      + 'unter 21rem fällt das Subjekt der Pille weg, und was dann ohne Objekt dasteht, '
+      + 'ist entweder gefährlich („Löschen") oder mehrdeutig („Alles")');
+  }
+});
+
+/**
+ * Die Marke ist für das Auge, nicht für das Ohr.
+ *
+ * Sie steht NUR dort, wo das Subjekt weggefallen ist - und für einen
+ * Screenreader ist es nie weg: `aria-labelledby` zieht den per `display: none`
+ * versteckten Knoten weiterhin in den Namen der Gruppe. Ohne `aria-hidden`
+ * ginge die Zahl zusätzlich in den Namen jeder Kapsel ein, die keinen eigenen
+ * `aria-label` trägt. Der Vorrat ist genau dieser Fall: „Alles auf die
+ * Einkaufsliste 10" neben einer Gruppe, die schon „10 Artikel fast leer" heisst.
+ */
+test('die Zählmarke der Pille geht nicht in den Namen der Kapsel ein', () => {
+  const pill = read('../public/utils/bulk-pill.js');
+  const block = pill.match(/if \(action\.count != null\) \{[\s\S]*?\n {4}\}/);
+  assert.ok(block, 'der Zweig, der die Marke setzt, wurde nicht gefunden');
+  assert.match(block[0], /setAttribute\('aria-hidden', 'true'\)/,
+    'die Marke muss aus dem Namen der Kapsel heraus - die Zahl steht bereits im Namen der '
+    + 'Gruppe (aria-labelledby überlebt display:none) und, wo es eine gibt, im aria-label');
 });
 
 /**

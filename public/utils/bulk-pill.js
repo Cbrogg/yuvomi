@@ -96,10 +96,24 @@ export function setBulkPill({ label, actions = [] }) {
     // Zahl ist keine Sprache, also braucht sie auch keinen Locale-Key.
     // Der Name der Kapsel ändert sich dadurch nicht: `aria-label` schlägt den
     // Inhalt, die Zahl steht dort ohnehin schon.
+    //
+    // SIE IST FÜR DAS AUGE, NICHT FÜR DAS OHR (Etappe 7, 2026-08-13). Der Satz
+    // darüber galt für die Löschen-Kapsel, weil die einen `aria-label` trägt.
+    // Ohne einen solchen geht die Marke SEHR WOHL in den Namen ein, und der
+    // Vorrat ist genau dieser Fall: seine Kapsel hiesse dann „Alles auf die
+    // Einkaufsliste 10" - neben einer Gruppe, die schon „10 Artikel fast leer"
+    // heisst. Zweimal dieselbe Zahl in einer Ansage.
+    //
+    // Sie fehlt dabei niemandem: die Zahl steht IMMER im Namen der Gruppe -
+    // `label` ist per Vereinbarung die Zahl („was die Teilmenge IST - führt mit
+    // der Zahl"), und `aria-labelledby` überlebt das `display: none` bei 320px.
+    // Die Marke ist nicht der Träger der Aussage, sondern ihr Nachbau für das
+    // Auge, dem das Subjekt weggefallen ist.
     if (action.count != null) {
       const count = document.createElement('span');
       count.className = 'list-bulkbar__action-count';
       count.textContent = String(action.count);
+      count.setAttribute('aria-hidden', 'true');
       btn.appendChild(count);
     }
     btn.addEventListener('click', () => action.onClick(btn));

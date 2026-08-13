@@ -435,6 +435,22 @@ function renderFilters() {
  * Fläche nichts als eine Ellipse hinterlässt. Was die Pille beitragen muss,
  * ist der Umfang von „Alles": worauf der Knopf wirkt. Dieselbe Antwort gibt der
  * Einkauf mit „3 Artikel abgehakt".
+ *
+ * UND BEI 320px IST GENAU DIESER UMFANG WEG (Etappe 7, 2026-08-13). Dort fällt
+ * das Subjekt weg - gemessen verlangt „10 Artikel fast leer" 116,2px, frei
+ * bleiben neben der Kapsel 86,9 von 264px Innenbreite. Übrig steht dann „Alles
+ * auf die Einkaufsliste" allein auf einer dunklen Fläche: ein Quantor ohne
+ * Bezugswort, lesbar als „der ganze Vorrat" statt als die zehn Artikel des
+ * aktiven Filters.
+ *
+ * DIE GEFAHR IST EINE ANDERE ALS IM EINKAUF, DIE LÜCKE DIESELBE. Dort trägt die
+ * Löschen-Kapsel die Marke, weil ein fehlendes Objekt vor einer nicht
+ * rückfragenden Löschung teuer ist; hier ist die Aktion harmlos und trotzdem
+ * mehrdeutig - „In den Vorrat" wäre es nicht, „Alles" ist es. Gemessen misst
+ * die Kapsel mit Marke rund 194 von 264px, die Pille bleibt einzeilig.
+ *
+ * Die Zahl ist dieselbe, die das Subjekt nennt: `visibleItems()` ist der
+ * gefilterte UND gesuchte Satz, und `sendToShopping` bekommt genau ihn.
  */
 function renderBulkBar() {
   const items = visibleItems();
@@ -446,6 +462,7 @@ function renderBulkBar() {
     label: t('pantry.bulkPillLabel', { count: items.length }),
     actions: [{
       label: t('pantry.toShoppingAll'),
+      count: items.length,
       onClick: (btn) => sendToShopping(visibleItems(), btn),
     }],
   });
