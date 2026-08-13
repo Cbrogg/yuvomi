@@ -261,16 +261,31 @@ function redeemVerb() {
 // Punktestände als gleichwertige Zeilenliste (bewusst flach, keine Rangliste-
 // Hierarchie) — klar unterscheidbar vom Prämien-Kartengitter. Der Öffner ist ein
 // echter Button (Tastatur/Screenreader), die Einlöse-Aktion separat daneben.
+// Reicht der Saldo fuer IRGENDEINE aktive Praemie? Die Frage, die der
+// Einloese-Knopf in der Punktestandzeile beantworten muss - `affordabilityFor`
+// beantwortet sie fuer eine EINZELNE Praemie im Katalog.
+function canAffordAny(balance) {
+  return (state.catalog || []).some((c) => c.is_active !== 0 && c.cost <= balance);
+}
+
 function renderStandingRow(member) {
   const hint = nextRewardHint(member.balance);
   const canRedeem = isAdmin() || member.id === state.overview.me;
+  /* DIE DECKUNG WAR NIE GEPRUEFT. `canRedeem` oben ist ein IDENTITAETS-Gate
+   * (bin ich das, oder bin ich Elternteil), kein Kontostand. Emma sah mit 30
+   * Punkten einen aktiven "Einloesen"-Knopf, waehrend die billigste Praemie 40
+   * kostet - sie tippt und findet einen Katalog, in dem nichts geht, ohne einen
+   * Satz, der das erklaert (Critique 2026-08-13). Die Pruefung gab es 150
+   * Zeilen weiter im Katalog laengst; sie war hier nur nie angewandt.
+   * Den Grund sagt die Zeile selbst schon: "Noch 10 bis 'Eine Stunde zocken'"
+   * steht daneben und wandert in das aria-label des gesperrten Knopfes. */
+  const affordable = isAdmin() || canAffordAny(member.balance);
   const prev = state.prevBalances?.get(member.id);
   const startVal = typeof prev === 'number' ? prev : member.balance;
   return `
     <li class="list-row rw-standing">
       <button class="rw-standing__id" type="button" data-member="${member.id}"
               aria-label="${esc(`${member.display_name}, ${pointsLabel(member.balance)}. ${t('rewards.openDetails')}`)}">
-        <span class="rw-standing__rank" aria-hidden="true">${member.rank}</span>
         ${avatar(member, 40)}
         <span class="rw-standing__idtext">
           <span class="rw-standing__name">${esc(member.display_name)}</span>
@@ -294,7 +309,8 @@ function renderStandingRow(member) {
       </div>
       ${canRedeem ? `
         <div class="rw-standing__actions">
-          <button class="btn btn--secondary btn--sm rw-redeem-open" type="button" data-member="${member.id}">
+          <button class="btn btn--secondary btn--sm rw-redeem-open" type="button" data-member="${member.id}"
+                  ${affordable ? '' : `disabled aria-label="${esc(`${redeemVerb()}. ${hint?.label ?? ''}`)}"`}>
             <i data-lucide="gift" aria-hidden="true"></i>${esc(redeemVerb())}
           </button>
         </div>` : ''}
@@ -344,10 +360,16 @@ function renderPendingPanel() {
         `}
       </div>
     </li>`).join('');
+  /* DER KOPF STEHT AUF DEM GRUND, NICHT IM TRAEGER (Zeilenlisten-Regel), und
+   * die Dringlichkeit steht als ZAHL daneben statt als Farbfeld darunter.
+   * `.rw-pending-panel` war die vollflaechig getoente Karte der Seite: der
+   * lauteste Kanal der App fuer die Aussage "eine Anfrage wartet", und sie
+   * zwang den violetten Primaerknopf auf einen gruenen Grund. Der Zaehler ist
+   * dasselbe Vokabular, das die Zeilengruppen schon fuehren. */
   return `
-    <section class="rw-section rw-pending-panel">
-      <h2 class="rw-section__title"><i data-lucide="hourglass" aria-hidden="true"></i>${esc(heading)}</h2>
-      <ul class="rw-pending-list">${rows}</ul>
+    <section class="rw-section">
+      <h2 class="rw-section__title"><i data-lucide="hourglass" aria-hidden="true"></i>${esc(heading)}<span class="list-group__count">${state.redemptions.length}</span></h2>
+      <ul class="rw-pending-list rw-pending-panel">${rows}</ul>
     </section>`;
 }
 
