@@ -1804,10 +1804,24 @@ function renderAppShell(container) {
     lgBackdrop.appendChild(blob);
   }
 
-  const shellNodes = [skipLink, lgBackdrop, sidebar, main, fabLayer, bottomNav];
+  // `bottomStack` steht VOR der Nav und nicht am Ende der Shell (Critique
+  // 2026-08-13). Die Pille darin ist eine Bedienung für die Liste, die gerade
+  // darüber steht - in der Tabfolge lag sie aber hinter der Liste, hinter dem
+  // FAB, hinter der Nav und hinter dem unsichtbaren Suchfeld: gemessen Station
+  // 47 von 49 auf /contacts. Wer eine Zeile abhakt und die Aktion mit der
+  // Tastatur erreichen will, tabbte durch die ganze Seite. Jetzt ist es 27.
+  //
+  // NICHT weiter nach vorn, obwohl die Pille inhaltlich zur Liste gehört: die
+  // FAB-Schicht muss laut #634 unmittelbar zwischen Scrollport und Nav hängen,
+  // und ein Guard prüft genau diese Nachbarschaft. Zwischen FAB und Nav ist der
+  // erste Platz, der beide Zusagen hält.
+  //
+  // Sichtbar ändert das nichts: der Stapel ist `position: fixed` und trägt
+  // `--z-toast`, seine Lage kommt aus der Regel, nicht aus der Reihenfolge.
+  const shellNodes = [skipLink, lgBackdrop, sidebar, main, fabLayer, bottomStack, bottomNav];
   if (backdrop)   shellNodes.push(backdrop);
   if (moreSheet)  shellNodes.push(moreSheet);
-  shellNodes.push(searchOverlay, bottomStack, routeAnnouncer);
+  shellNodes.push(searchOverlay, routeAnnouncer);
   container.replaceChildren(...shellNodes);
   // Die Kapsel ist ein NEUER Knoten; der Beobachter des Tab-Indikators haengt
   // sonst am verworfenen (siehe observeNavCapsule weiter unten).

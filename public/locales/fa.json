@@ -984,6 +984,8 @@
         "selectButton": "انتخاب",
         "selectAll": "انتخاب همه",
         "selectCount": "{{count}} انتخاب‌شده",
+        "bulkDeleteConfirm": "Delete {{count}} contacts?",
+        "bulkDeleteConfirm_one": "Delete {{count}} contact?",
         "bulkDeletedToast": "{{count}} مخاطب حذف شد"
     },
     "budget": {

@@ -972,6 +972,8 @@
         "selectButton": "Seç",
         "selectAll": "Tümünü seç",
         "selectCount": "{{count}} seçildi",
+        "bulkDeleteConfirm": "{{count}} kişi silinsin mi?",
+        "bulkDeleteConfirm_one": "{{count}} kişi silinsin mi?",
         "bulkDeletedToast": "{{count}} kişi silindi"
     },
     "budget": {

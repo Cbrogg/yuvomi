@@ -2946,6 +2946,35 @@ test('die Küchen-Listen teilen eine Zeilen-Grammatik', () => {
  * hat, muss ihn beim Wechsel pflegen. Eine Regel, keine Allowlist - die nächste
  * Seite mit zwei Ansichten fällt genauso hinein.
  */
+/**
+ * Wer eine Sammelaktions-Pille zeigt, gibt seinem Scrollport den Nachlauf.
+ *
+ * Die Pille ist eine fixierte Shell-Flaeche ueber der Liste und verdeckt am
+ * Scroll-Ende sonst genau die Zeilen, auf die sie sich bezieht. Der Nachlauf
+ * dafuer stand an `.app-content` - und dort scrollt bei keinem der drei Module
+ * mit Pille etwas: Einkauf und Vorrat scrollen in `.list-scroller`, die
+ * Kontakte in `.contacts-list`. Gemessen blieben 16.334px² verdeckte
+ * Zeilenflaeche auf /contacts und 16.732px² auf /shopping, waehrend die Regel
+ * im Quelltext aussah, als taete sie ihre Sache (Critique 2026-08-13).
+ *
+ * Geprueft wird die KOPPLUNG, nicht eine Liste von Modulen: jede Seite, die
+ * `setBulkPill` aufruft, muss die Rolle `has-bulk-safe-zone` vergeben. Damit
+ * waechst die Zusicherung mit dem naechsten Modul mit, statt es zu vergessen.
+ */
+test('wer eine Pille zeigt, markiert seinen Scrollport', () => {
+  const layout = read('../public/styles/layout.css');
+  assert.match(layout, /\.has-bulk-safe-zone\s*\{[\s\S]*?padding-block-end:\s*var\(--bulk-pill-safe-zone\)/,
+    'die Rolle muss den Nachlauf auch wirklich setzen - sonst prueft der Rest hier eine Klasse ohne Wirkung');
+
+  for (const page of walkJsFiles('../public/pages/')) {
+    const src = read(page);
+    if (!/\bsetBulkPill\s*\(/.test(src)) continue;
+    assert.match(src, /has-bulk-safe-zone/,
+      `${page}: zeigt eine Sammelaktions-Pille, markiert aber seinen Scrollport nicht - `
+      + 'sie verdeckt dann am Listenende die Zeilen, auf die sie sich bezieht');
+  }
+});
+
 test('ein Kopf mit --narrow pflegt ihn beim Ansichtswechsel', () => {
   for (const page of walkJsFiles('../public/pages/')) {
     const src = read(page);
@@ -3179,8 +3208,15 @@ test('der Page-FAB hängt in der Shell, nicht im Scrollport', () => {
   const styleDir = new URL('../public/styles/', import.meta.url);
 
   // 1. Die Layer ist ein Geschwister von .app-content, kein Kind.
-  assert.match(router, /shellNodes\s*=\s*\[[^\]]*\bmain\b\s*,\s*fabLayer\s*,\s*bottomNav/,
-    'die FAB-Layer muss als Shell-Kind zwischen Scrollport und Bottom-Nav hängen (#634)');
+  //
+  // Auf die REIHENFOLGE geprüft, nicht auf die unmittelbare Nachbarschaft: die
+  // Zusicherung ist „hinter dem Scrollport, vor der Nav", und das war sie schon
+  // immer. Als wörtliches `main, fabLayer, bottomNav` schlug sie fehl, sobald
+  // ein weiteres Shell-Kind dazwischen einsortiert wurde (der Pillen-Stapel,
+  // Critique 2026-08-13) - eine Zusicherung, die eine Nachbarschaft festnagelt,
+  // prüft die Nachbarschaft, nicht die Sache.
+  assert.match(router, /shellNodes\s*=\s*\[[^\]]*\bmain\b\s*,[^\]]*\bfabLayer\b\s*,[^\]]*\bbottomNav\b/,
+    'die FAB-Layer muss als Shell-Kind hinter dem Scrollport und vor der Bottom-Nav hängen (#634)');
   assert.match(layout, /\.fab-layer\s*\{[^}]*position:\s*absolute/,
     '.fab-layer braucht einen eigenen Kasten an der Shell-Ecke (#634)');
 
@@ -3881,9 +3917,27 @@ test('eine destruktive Sammelaktion fragt zurück, bevor sie ausführt', () => {
   assert.ok(pages.length >= 2,
     'erwartet mindestens Einkauf und Vorrat als Pillen-Aufrufer - findet der Scan keine, prüft er nichts');
 
+  // NUR die Aktionen DER PILLE, nicht jedes Objekt mit `onClick` in der Datei.
+  // Der Scan las bisher alle Literale einer Pillen-Datei - bei Einkauf und
+  // Vorrat war das zufaellig deckungsgleich, weil dort sonst keine stehen. Mit
+  // den Kontakten kam die erste Datei dazu, die daneben eine Detail-Aktion
+  // fuehrt (`variant: 'danger-ghost'`, `icon`, `id`), und die wurde als
+  // Pillen-Kapsel ohne Rueckfrage gemeldet, obwohl sie in einem Blatt sitzt,
+  // das seine eigene Bestaetigung mitbringt.
+  //
+  // Erkannt wird die Pillen-Kapsel an ihrer FORM: die Pille kennt genau
+  // `label`, `ariaLabel`, `count`, `danger`, `confirm` und `onClick`
+  // (utils/bulk-pill.js). Ein Literal mit einem fremden Schluessel gehoert
+  // einer anderen Grammatik und wird hier nicht beurteilt.
+  const PILLEN_SCHLUESSEL = new Set(['label', 'ariaLabel', 'count', 'danger', 'confirm', 'onClick']);
+  const istPillenKapsel = (lit) => {
+    const keys = [...lit.matchAll(/^\s*([A-Za-z_$][\w$]*)\s*:/gm)].map((m) => m[1]);
+    return keys.length > 0 && keys.every((k) => PILLEN_SCHLUESSEL.has(k));
+  };
+
   let destruktiveGefunden = 0;
   for (const [name, src] of pages) {
-    for (const lit of actionLiterals(src)) {
+    for (const lit of actionLiterals(src).filter(istPillenKapsel)) {
       const markiert = /^\s*danger:\s*true,\s*$/m.test(lit);
       const fragt    = /^\s*confirm:\s*\{/m.test(lit);
       const verb     = DESTRUKTIV.test(lit);
@@ -7087,18 +7141,32 @@ test('contacts bulk selection is opt-in and hidden by default', () => {
   const contactsPage = read('../public/pages/contacts.js');
   const contactsCss = read('../public/styles/contacts.css');
 
-  // Toggle in der Toolbar + Auswahl-Leiste, die per hidden startet (Default clean)
+  // Toggle in der Toolbar; der Auswahlmodus startet aus.
   assert.match(contactsPage, /id="contacts-select-btn"/);
-  assert.match(contactsPage, /id="contacts-selectbar"[\s\S]*?hidden>/);
+  assert.match(contactsPage, /selectMode:\s*false/);
+
+  /* DIE AUSWAHL-LEISTE IST DIE GETEILTE PILLE (Critique 2026-08-13).
+   *
+   * Hier stand `id="contacts-selectbar"[\s\S]*?hidden>` plus die zwei
+   * CSS-Zusicherungen dazu. Sie hielten eine Leiste im Fluss der Seite fest,
+   * die im Auswahlmodus rund 120px Chrome ueber die Liste schob - genau der
+   * Defekt, wegen dessen die Pille gebaut wurde. Die Zusicherung war richtig
+   * und ihr Gegenstand falsch; geprueft wird jetzt dieselbe Sache am neuen
+   * Bauteil: es gibt keine eigene Leiste mehr, die Aktion kommt aus der Pille,
+   * und sie steht nur im Auswahlmodus. */
+  assert.doesNotMatch(contactsPage, /contacts-selectbar/,
+    'die eigene Auswahlleiste ist entfallen - die Sammelaktion ist die geteilte Pille');
+  assert.doesNotMatch(contactsCss, /\.contacts-selectbar/,
+    'und ihre Regeln stehen nicht mehr im Modul-Stylesheet');
+  assert.match(contactsPage, /from '\/utils\/bulk-pill\.js'/);
+  assert.match(contactsPage, /if \(!state\.selectMode\) \{ clearBulkPill\(\); return; \}/,
+    'ohne Auswahlmodus steht keine Pille');
+
   // Sammel-Löschen mit Undo-Toast
   assert.match(contactsPage, /async function deleteSelected/);
   assert.match(contactsPage, /bulkDeletedToast/);
   // Familien-Kontakte bleiben nicht wählbar (deaktivierte Checkbox)
   assert.match(contactsPage, /c\.family_user_id \? ' disabled' : ''/);
-  assert.match(contactsCss, /\.contacts-selectbar\s*\{/);
-  // display:flex würde das hidden-Attribut schlagen — der [hidden]-Guard hält die
-  // Leiste im Default-Zustand wirklich unsichtbar.
-  assert.match(contactsCss, /\.contacts-selectbar\[hidden\]\s*\{[\s\S]*display:\s*none/);
 });
 
 test('documents and navigation settings use progressive disclosure instead of stacked control cards', () => {

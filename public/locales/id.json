@@ -984,6 +984,8 @@
         "selectButton": "Pilih",
         "selectAll": "Pilih semua",
         "selectCount": "{{count}} dipilih",
+        "bulkDeleteConfirm": "Delete {{count}} contacts?",
+        "bulkDeleteConfirm_one": "Delete {{count}} contact?",
         "bulkDeletedToast": "{{count}} kontak dihapus"
     },
     "budget": {

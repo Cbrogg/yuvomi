@@ -984,6 +984,8 @@
         "selectButton": "Auswählen",
         "selectAll": "Alle auswählen",
         "selectCount": "{{count}} ausgewählt",
+        "bulkDeleteConfirm": "{{count}} Kontakte löschen?",
+        "bulkDeleteConfirm_one": "{{count}} Kontakt löschen?",
         "bulkDeletedToast": "{{count}} Kontakte gelöscht"
     },
     "budget": {

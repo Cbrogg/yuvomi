@@ -972,6 +972,8 @@
         "selectButton": "Vybrat",
         "selectAll": "Vybrat vše",
         "selectCount": "Vybráno: {{count}}",
+        "bulkDeleteConfirm": "Smazat {{count}} kontaktů?",
+        "bulkDeleteConfirm_one": "Smazat {{count}} kontakt?",
         "bulkDeletedToast": "Smazáno {{count}} kontaktů"
     },
     "budget": {

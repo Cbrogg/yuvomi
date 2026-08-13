@@ -972,6 +972,8 @@
         "selectButton": "Selecteren",
         "selectAll": "Alles selecteren",
         "selectCount": "{{count}} geselecteerd",
+        "bulkDeleteConfirm": "{{count}} contacten verwijderen?",
+        "bulkDeleteConfirm_one": "{{count}} contact verwijderen?",
         "bulkDeletedToast": "{{count}} contacten verwijderd"
     },
     "budget": {

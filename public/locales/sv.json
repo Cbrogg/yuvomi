@@ -972,6 +972,8 @@
         "selectButton": "Välj",
         "selectAll": "Markera alla",
         "selectCount": "{{count}} markerade",
+        "bulkDeleteConfirm": "Radera {{count}} kontakter?",
+        "bulkDeleteConfirm_one": "Radera {{count}} kontakt?",
         "bulkDeletedToast": "{{count}} kontakter raderade"
     },
     "budget": {

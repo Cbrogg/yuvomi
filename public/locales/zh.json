@@ -972,6 +972,8 @@
         "selectButton": "选择",
         "selectAll": "全选",
         "selectCount": "已选择 {{count}} 个",
+        "bulkDeleteConfirm": "删除 {{count}} 个联系人?",
+        "bulkDeleteConfirm_one": "删除 {{count}} 个联系人?",
         "bulkDeletedToast": "已删除 {{count}} 个联系人"
     },
     "budget": {

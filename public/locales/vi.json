@@ -972,6 +972,8 @@
         "selectButton": "Chọn",
         "selectAll": "Chọn tất cả",
         "selectCount": "Đã chọn {{count}}",
+        "bulkDeleteConfirm": "Delete {{count}} contacts?",
+        "bulkDeleteConfirm_one": "Delete {{count}} contact?",
         "bulkDeletedToast": "Đã xóa {{count}} liên hệ"
     },
     "budget": {

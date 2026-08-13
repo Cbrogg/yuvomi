@@ -240,6 +240,27 @@
   padding-block-end: var(--bulk-pill-safe-zone);
 }
 
+/* UND DER NACHLAUF MUSS AN DAS, WAS WIRKLICH SCROLLT (Critique 2026-08-13).
+ *
+ * Die zwei Regeln darüber setzen ihn an `.app-content` - und genau dort scrollt
+ * bei den drei Modulen mit Pille gar nichts. Einkauf und Vorrat scrollen in
+ * `.list-scroller`, die Kontakte in `.contacts-list`; `.app-content` ist bei
+ * ihnen ein `overflow: hidden`-Rahmen um eine Flex-Spalte. Der Nachlauf landete
+ * damit an einer Box, die keinen Scroll-Ende-Zustand hat, und die Pille verdeckt
+ * am Listenende weiter die Zeilen, auf die sie sich bezieht: gemessen 16.334px²
+ * auf /contacts, 16.732px² auf /shopping. Eine Regel, die nie feuert, ist im
+ * Quelltext nicht von einer zu unterscheiden, die ihre Sache tut.
+ *
+ * `.has-bulk-safe-zone` ist die ROLLE „ich bin der Scrollport einer Seite, die
+ * eine Sammelaktions-Pille zeigt". Sie steht bewusst nicht als Liste von
+ * Modul-Selektoren hier - eine Allowlist über N Dateien deckt keine Regel ab,
+ * und dieses Repo hat das schon dreimal bezahlt. Stattdessen trägt jeder
+ * Scrollport sie selbst, und ein Guard prüft die Gegenrichtung: wer
+ * `setBulkPill` aufruft, muss sie vergeben haben. */
+.app-shell:has(.list-bulkbar) .has-bulk-safe-zone {
+  padding-block-end: var(--bulk-pill-safe-zone);
+}
+
 /* #main-content wird nach jeder Navigation programmatisch fokussiert, damit
  * Tastatur-/Screenreader-Fokus in die neue Seite springt (Skip-Link-Muster).
  * Das ist ein Region-Fokus-Ziel, kein interaktives Element — es darf keinen

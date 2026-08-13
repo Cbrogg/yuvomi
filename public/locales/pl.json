@@ -984,6 +984,8 @@
         "selectButton": "Zaznacz",
         "selectAll": "Zaznacz wszystko",
         "selectCount": "Zaznaczono: {{count}}",
+        "bulkDeleteConfirm": "Usunąć {{count}} kontaktów?",
+        "bulkDeleteConfirm_one": "Usunąć {{count}} kontakt?",
         "bulkDeletedToast": "Usunięto {{count}} kontaktów"
     },
     "budget": {

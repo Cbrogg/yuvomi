@@ -972,6 +972,8 @@
         "selectButton": "تحديد",
         "selectAll": "تحديد الكل",
         "selectCount": "تم تحديد {{count}}",
+        "bulkDeleteConfirm": "حذف {{count}} جهة اتصال؟",
+        "bulkDeleteConfirm_one": "حذف جهة اتصال واحدة؟",
         "bulkDeletedToast": "تم حذف {{count}} جهة اتصال"
     },
     "budget": {

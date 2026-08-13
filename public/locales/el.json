@@ -972,6 +972,8 @@
         "selectButton": "Επιλογή",
         "selectAll": "Επιλογή όλων",
         "selectCount": "{{count}} επιλεγμένα",
+        "bulkDeleteConfirm": "Διαγραφή {{count}} επαφών;",
+        "bulkDeleteConfirm_one": "Διαγραφή {{count}} επαφής;",
         "bulkDeletedToast": "Διαγράφηκαν {{count}} επαφές"
     },
     "budget": {

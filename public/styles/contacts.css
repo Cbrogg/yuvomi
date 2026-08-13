@@ -156,35 +156,15 @@
 
 /* --------------------------------------------------------
  * Auswahl-Modus (opt-in Bulk)
+ *
+ * DIE LEISTE IST ENTFALLEN (Critique 2026-08-13). Hier standen `.contacts-
+ * selectbar` und ihre zwei Kinder: eine umbrechende Leiste im Fluss der Seite,
+ * die im Auswahlmodus rund 120px Chrome über die Liste schob. Die Sammelaktion
+ * ist jetzt die geteilte Pille in der unteren Shell-Zone (utils/bulk-pill.js) -
+ * derselbe Baustein, dieselbe Sprache und dieselbe Rückfrage wie in Einkauf und
+ * Vorrat. Was von der Auswahl hier bleibt, ist die ZEILE: ihre Checkbox, ihre
+ * Tönung und der Griff, der im Auswahlmodus weicht.
  * -------------------------------------------------------- */
-.contacts-selectbar {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2) var(--space-3);
-  flex-wrap: wrap;
-  padding-block: var(--space-2);
-  padding-inline: var(--page-inline-pad);
-  border-bottom: 1px solid var(--color-border);
-  background-color: var(--color-surface-2);
-  flex-shrink: 0;
-}
-
-/* Ohne diesen Guard schlägt display:flex das hidden-Attribut (reset.css erzwingt
- * [hidden] nicht) → die Leiste bliebe dauerhaft sichtbar. */
-.contacts-selectbar[hidden] {
-  display: none;
-}
-
-.contacts-selectbar__count {
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-primary);
-}
-
-.contacts-selectbar__actions {
-  display: flex;
-  gap: var(--space-2);
-  margin-left: auto;
-}
 
 .contact-item__select {
   cursor: pointer;

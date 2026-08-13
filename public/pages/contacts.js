@@ -12,6 +12,7 @@ import { t, formatDate } from '/i18n.js';
 import { esc } from '/utils/html.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
 import { renderPageSearch, wirePageSearch } from '/utils/page-search.js';
+import { setBulkPill, clearBulkPill } from '/utils/bulk-pill.js';
 import { parseVCards } from '/utils/vcard.js';
 import { composeDisplayName, contactSortKey, splitDisplayName } from '/utils/contact-name.js';
 import { getPhoneFormatter, createAsYouType, countryFromRegion } from '/utils/phone.js';
@@ -135,17 +136,9 @@ export async function render(container, { user }) {
           </button>
         </div>
       </div>
-      <div class="contacts-selectbar" id="contacts-selectbar" role="toolbar" aria-label="${t('contacts.selectButton')}" hidden>
-        <button class="btn btn--secondary" data-action="select-cancel">${t('common.cancel')}</button>
-        <span class="contacts-selectbar__count" id="contacts-select-count" aria-live="polite"></span>
-        <div class="contacts-selectbar__actions">
-          <button class="btn btn--secondary" data-action="select-all">${t('contacts.selectAll')}</button>
-          <button class="btn btn--danger" data-action="select-delete">${t('common.delete')}</button>
-        </div>
-      </div>
       <div class="contacts-filters" id="contacts-filters" role="group" aria-label="${t('contacts.filterAll')}"></div>
       <div id="contacts-status" class="sr-only" role="status" aria-live="polite"></div>
-      <div id="contacts-list" class="contacts-list" aria-busy="true">${renderSkeletonList({ rows: 6, lines: 2 })}</div>
+      <div id="contacts-list" class="contacts-list has-bulk-safe-zone" aria-busy="true">${renderSkeletonList({ rows: 6, lines: 2 })}</div>
       <button class="page-fab" id="fab-new-contact" aria-label="${t('contacts.newContactLabel')}" data-dock-label="${t('newLabel.contacts')}">
         <i data-lucide="plus" class="icon-xl" aria-hidden="true"></i>
       </button>
@@ -260,11 +253,6 @@ export async function render(container, { user }) {
   // Auswahl-Modus (opt-in): Toggle in der Toolbar + Aktionen in der Auswahl-Leiste.
   _container.querySelector('#contacts-select-btn').addEventListener('click', () => {
     if (state.selectMode) exitSelectMode(); else enterSelectMode();
-  });
-  _container.querySelector('#contacts-selectbar').addEventListener('click', (e) => {
-    if (e.target.closest('[data-action="select-cancel"]')) { exitSelectMode(); return; }
-    if (e.target.closest('[data-action="select-all"]'))    { toggleSelectAll(); return; }
-    if (e.target.closest('[data-action="select-delete"]')) { deleteSelected(); return; }
   });
 
   // vCard-Import: parsen, dann eine Auswahl-Vorstufe zeigen (nichts wird
@@ -1193,11 +1181,34 @@ function buildContactForm({ mode, contact = null }) {
 // Auswahl-Modus (opt-in Bulk)
 // --------------------------------------------------------
 
+/* DIE SAMMELAKTION IST DIE GETEILTE PILLE (Critique 2026-08-13).
+ *
+ * Hier stand eine eigene Auswahlleiste im Fluss der Seite: „Abbrechen" links,
+ * die Zahl in der Mitte, „Alle auswählen" und ein vollflächig rotes „Löschen"
+ * in einer ZWEITEN Zeile. Gemessen bei 390x844 schob sie rund 120px Chrome über
+ * die Liste - zusammen mit Kopf und Filterzeile standen im Auswahlmodus 334 von
+ * 844px als Kopf, bevor der erste Kontakt kam.
+ *
+ * Genau dieser Defekt ist der dokumentierte Anlass der Pille (list-row.css:
+ * „103 von 552px Listenfläche, ausgelöst von einem einzigen abgehakten
+ * Artikel"). Er stand hier unverändert, während seine Lösung eine Datei weiter
+ * lag: die Küche hatte sie bekommen, die Kontakte nicht.
+ *
+ * Was der Umzug MITBRINGT, statt es hier ein zweites Mal zu bauen: die
+ * Rückfrage vor dem Löschen, den Fokus, der danach auf einem lebenden Knopf
+ * landet, die Zahl als Marke, wenn die Pille für den ganzen Satz zu schmal
+ * wird, und Escape. Und er nimmt die zweite destruktive Sprache mit: rot
+ * gefüllt hier gegen rot umrandet auf dem Shell-Material dort.
+ *
+ * Der AUSSTIEG bleibt, wo er war - beim Umschalter im Kopf, der `aria-pressed`
+ * trägt, und auf Escape. Die Pille bekommt ihn nicht als dritte Kapsel: sie
+ * bleibt einzeilig, und ein Auswahlmodus, den man nur unten verlassen kann,
+ * hätte den Knopf oben zur Attrappe gemacht.
+ */
 function enterSelectMode() {
   state.selectMode = true;
   state.selected.clear();
   _container.querySelector('#contacts-select-btn')?.setAttribute('aria-pressed', 'true');
-  _container.querySelector('#contacts-selectbar').hidden = false;
   _container.querySelector('.contacts-page')?.classList.add('is-selecting');
   renderList();
   updateSelectUI();
@@ -1207,17 +1218,33 @@ function exitSelectMode() {
   state.selectMode = false;
   state.selected.clear();
   _container.querySelector('#contacts-select-btn')?.setAttribute('aria-pressed', 'false');
-  _container.querySelector('#contacts-selectbar').hidden = true;
   _container.querySelector('.contacts-page')?.classList.remove('is-selecting');
+  clearBulkPill();
   renderList();
 }
 
 function updateSelectUI() {
+  if (!state.selectMode) { clearBulkPill(); return; }
   const n = state.selected.size;
-  const countEl = _container.querySelector('#contacts-select-count');
-  if (countEl) countEl.textContent = t('contacts.selectCount', { count: n });
-  const delBtn = _container.querySelector('[data-action="select-delete"]');
-  if (delBtn) delBtn.disabled = n === 0;
+  const actions = [{ label: t('contacts.selectAll'), onClick: () => toggleSelectAll() }];
+  // Ohne Auswahl gibt es nichts zu löschen, und die Kapsel steht dann gar nicht
+  // da - dieselbe Sprache wie in der Küche, wo die ganze Pille erst mit dem
+  // ersten Haken erscheint. Ein abgeschalteter Knopf wäre die dritte Antwort
+  // auf „hier ist gerade nichts zu tun", neben Weglassen und Verschwinden.
+  if (n > 0) {
+    actions.push({
+      label: t('common.delete'),
+      ariaLabel: t('contacts.bulkDeleteConfirm', { count: n }),
+      // Die Zahl als Marke: sie wird sichtbar, wo das Subjekt links wegfällt.
+      // „Löschen" ohne genanntes Objekt über einer Kontaktliste ist der Satz,
+      // den man am wenigsten raten möchte.
+      count: n,
+      danger: true,
+      confirm: { question: t('contacts.bulkDeleteConfirm', { count: n }) },
+      onClick: () => deleteSelected(),
+    });
+  }
+  setBulkPill({ label: t('contacts.selectCount', { count: n }), actions });
 }
 
 // Nur nicht-verknüpfte Kontakte sind wählbar (Familien-Kontakte lassen sich

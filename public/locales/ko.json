@@ -984,6 +984,8 @@
         "selectButton": "선택",
         "selectAll": "모두 선택",
         "selectCount": "{{count}}개 선택됨",
+        "bulkDeleteConfirm": "연락처 {{count}}개를 삭제할까요?",
+        "bulkDeleteConfirm_one": "연락처 {{count}}개를 삭제할까요?",
         "bulkDeletedToast": "연락처 {{count}}개 삭제됨"
     },
     "budget": {

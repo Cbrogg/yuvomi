@@ -972,6 +972,8 @@
         "selectButton": "Выбрать",
         "selectAll": "Выбрать все",
         "selectCount": "Выбрано: {{count}}",
+        "bulkDeleteConfirm": "Удалить {{count}} контактов?",
+        "bulkDeleteConfirm_one": "Удалить {{count}} контакт?",
         "bulkDeletedToast": "Удалено контактов: {{count}}"
     },
     "budget": {

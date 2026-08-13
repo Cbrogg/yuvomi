@@ -972,6 +972,8 @@
         "selectButton": "चुनें",
         "selectAll": "सभी चुनें",
         "selectCount": "{{count}} चयनित",
+        "bulkDeleteConfirm": "{{count}} संपर्क हटाएँ?",
+        "bulkDeleteConfirm_one": "{{count}} संपर्क हटाएँ?",
         "bulkDeletedToast": "{{count}} संपर्क हटाए गए"
     },
     "budget": {

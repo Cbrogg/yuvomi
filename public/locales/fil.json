@@ -984,6 +984,8 @@
         "selectButton": "Pumili",
         "selectAll": "Piliin lahat",
         "selectCount": "{{count}} ang napili",
+        "bulkDeleteConfirm": "Delete {{count}} contacts?",
+        "bulkDeleteConfirm_one": "Delete {{count}} contact?",
         "bulkDeletedToast": "{{count}} kontak ang natanggal"
     },
     "budget": {

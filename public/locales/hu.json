@@ -972,6 +972,8 @@
         "selectButton": "Kijelölés",
         "selectAll": "Összes kijelölése",
         "selectCount": "{{count}} kijelölve",
+        "bulkDeleteConfirm": "Töröl {{count}} névjegyet?",
+        "bulkDeleteConfirm_one": "Töröl {{count}} névjegyet?",
         "bulkDeletedToast": "{{count}} névjegy törölve"
     },
     "budget": {
