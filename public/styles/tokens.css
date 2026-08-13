@@ -386,6 +386,35 @@
   --_toast-danger-text:  var(--color-text-on-accent);
   --toast-danger-text:   var(--_toast-danger-text);
 
+  /* DIE GEFAHR AUF SHELL-MATERIAL - und sie läuft der Themenlage ENTGEGEN.
+   *
+   * Der Toast und die Sammelaktions-Pille stehen auf --neutral-800 mit
+   * --neutral-50 als Schrift, und dieses Paar dreht sich mit dem Thema: im
+   * hellen Modus ist --neutral-800 dunkelbraun (#2D2A25), im dunklen ist es
+   * hell (#E7E2DA). Ein `var(--color-danger)` als Tinte wäre deshalb genau
+   * falschherum - gerechnet #D70015 auf #2D2A25 = 2,69:1.
+   *
+   * UND DER GRUND IST NICHT --neutral-800, SONDERN DAS, WAS DARAUS WIRD.
+   * glass.css mischt die Fläche mit 90 % Deckung (`color-mix(… 90%,
+   * transparent)` plus backdrop-filter), also scheint ein Zehntel der Seite
+   * durch: komponiert steht dort #413E39 hell und #D2CEC6 dunkel. Gegen den
+   * puren Token gerechnet hielt #FF6961 mit 5,13:1 - gegen den echten Grund
+   * sind es 3,78:1. Genau diese Differenz ist der Grund, aus dem die
+   * Pro-Hintergrund-Regel den ECHTEN Hintergrund meint und nicht den
+   * deklarierten.
+   *
+   * Gerechnet gegen beide Fassungen, weil beide vorkommen (ohne
+   * backdrop-filter-Unterstützung bleibt der opake Token stehen):
+   *   hell   #FF8A80 auf #413E39 = 4,67:1  |  auf #2D2A25 = 6,35:1
+   *   dunkel #9B000F auf #D2CEC6 = 5,58:1  |  auf #E7E2DA = 6,79:1
+   *
+   * WARUM NICHT ÜBER --color-danger-ink: das ist die Tinte auf der eigenen
+   * hellen Füllung (--color-danger-light) und dreht in dieselbe Richtung wie
+   * der Rest. Zwei Tokens, die im hellen Modus verwandt aussehen, sind hier
+   * kein Duplikat, sondern zwei Aussagen, die im dunklen auseinanderlaufen. */
+  --_shell-danger-ink:   #FF9A91;
+  --shell-danger-ink:    var(--_shell-danger-ink);
+
   /* Datenreihen-Palette für Diagramme (Donut, Kategorie-Segmente).
    * Bewusst eigene Tokens statt geborgter Modul-Akzente: Modulfarben tragen
    * eine Bedeutung ("das ist Einkauf"), die in einem Ausgaben-Donut falsch ist.
@@ -1665,6 +1694,12 @@
     --_toast-warning-text: #2B1A00;   /* auf #FF9F0A */
     --_toast-danger-text:  #330606;   /* auf #FF6961 */
 
+    /* Gegendrehung: --neutral-800 ist hier HELL (#E7E2DA), also braucht die
+     * Gefahr darauf das tiefe Rot statt des vividen. Gegen den komponierten
+     * Glasgrund #D2CEC6: 5,58:1. --color-danger-hover (#B80012) hielt dort nur
+     * 4,39:1 und ist deshalb NICHT der Wert. */
+    --_shell-danger-ink:   #9B000F;
+
     /* Dunkle Tinte auf den vividen Hell-Füllungen des Dark Mode (FAB, Badges, aktive Chips) */
     --_color-ink-on-vivid: #0A0A0C;
 
@@ -1869,6 +1904,9 @@
     --_toast-success-text: #04200D;
     --_toast-warning-text: #2B1A00;
     --_toast-danger-text:  #330606;
+
+    /* Gegendrehung, siehe den Zwilling im prefers-color-scheme-Block. */
+    --_shell-danger-ink:   #9B000F;
 
     /* Dunkle Tinte auf den vividen Hell-Füllungen des Dark Mode (FAB, Badges, aktive Chips) */
     --_color-ink-on-vivid: #0A0A0C;

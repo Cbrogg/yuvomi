@@ -4701,6 +4701,29 @@ textarea::placeholder {
   font-variant-numeric: tabular-nums;
 }
 
+/* DIE GEFAHR HAT EINE TINTE, NICHT EINE FORM (Critique 2026-08-13, P0).
+ *
+ * „Löschen" und „In den Vorrat" standen als zwei zeichengleiche Kapseln
+ * nebeneinander, 40px auseinander, und 8px darunter stand das „Verwerfen" des
+ * Toasts in derselben Schreibweise. Drei Knöpfe, drei sehr verschiedene Folgen,
+ * ein Aussehen.
+ *
+ * Die Kapsel bleibt die Kapsel - sie ist das Vokabular dieser Fläche, und eine
+ * zweite Form wäre ein zweites Vokabular für dieselbe Rolle. Was wechselt, ist
+ * die Tinte, und mit `currentColor` an der Kante wechselt die Kante mit.
+ *
+ * --shell-danger-ink und nicht --color-danger: der Grund unter dieser Kapsel
+ * dreht sich mit dem Thema (--neutral-800 ist hell im Dunkelmodus), die
+ * semantischen Farben drehen in dieselbe Richtung. Begründung und Messwerte am
+ * Token in tokens.css.
+ *
+ * SIE IST DER ZWEITE KANAL, NICHT DER ERSTE. Der erste ist das Wort auf der
+ * Kapsel, der dritte die Rückfrage dahinter - Farbe allein trägt hier keine
+ * Aussage, die sonst fehlte (WCAG 1.4.1). */
+.list-bulkbar__action--danger {
+  color: var(--shell-danger-ink);
+}
+
 /* Nur der Toast: seine Rücknahme sitzt am Zeilenende, und sie ist die Fußnote
  * einer Meldung, die von selbst geht. Die Pille steht dauerhaft - ihre
  * Aktionen sind das, wofür sie da ist, und treten nicht zurück. */
@@ -4788,6 +4811,50 @@ textarea::placeholder {
   pointer-events: auto;
 }
 
+/* --------------------------------------------------------
+ * Bestätigungszustand: die Pille FRAGT
+ *
+ * DIE RANGFOLGE DREHT SICH HIER UM. Im Ruhezustand gibt das Subjekt nach und
+ * die Aktionen schrumpfen nie - es benennt nur, worauf sie wirken, und dieselbe
+ * Aussage steht in der Liste darüber. Die Frage steht nirgendwo sonst: eine
+ * gekappte Frage verlangt eine Antwort, die sie nicht mehr benennt.
+ *
+ * ALSO BRICHT SIE UM, WENN ES SEIN MUSS - UND NUR DANN. Keine
+ * Container-Schwelle: die 21rem des Subjekts sind an DESSEN Bedarf gemessen,
+ * und die Frage braucht mehr. Gemessen bei 390px, wo Deutsch mit 115 von 149px
+ * bequem passt: Niederländisch verlangt „9 artikelen verwijderen?" neben
+ * „Annuleren" und „Verwijderen" und reisst mit 153 von 149px. Eine Zahl, die
+ * für Deutsch stimmt und für Niederländisch nicht, ist keine Schwelle, sondern
+ * eine Annahme - `flex-shrink: 0` plus `flex-wrap` fragt stattdessen den
+ * echten Bedarf, in jeder der 24 Sprachen.
+ * -------------------------------------------------------- */
+.list-bulkbar--confirming {
+  flex-wrap: wrap;
+}
+
+/* Nicht schrumpfen und nicht kappen - das ist der ganze Unterschied zum
+ * Ruhezustand. `overflow: visible` hebt die Ellipse auf, die das Subjekt
+ * mitbringt; ohne sie stünde die Frage weiter abgeschnitten da, nur eben in
+ * einer Zeile, die Platz hätte. */
+.list-bulkbar--confirming .list-bulkbar__subject {
+  flex: 1 0 auto;
+  overflow: visible;
+}
+
+/* Die Wahl ist ein Paar. Der Knoten hält Abbrechen und Bestätigen zusammen,
+ * damit beim Umbruch nicht eine Kapsel oben stehen bleibt (gemessen: Frage
+ * plus „Annuleren" in Zeile eins, „Verwijderen" allein darunter). Er schrumpft
+ * nicht, er wandert als Ganzes. */
+.list-bulkbar__choices {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  /* Bleibt die Wahl neben der Frage, sitzt sie am Ende der Zeile; rutscht sie
+   * darunter, steht sie am Ende ihrer eigenen. Eine Schreibweise für beides. */
+  margin-inline-start: auto;
+}
+
 /* Das einzige Element der Pille, das nachgibt. `min-width: 0` ist die
  * Bedingung dafür, dass die Kürzung überhaupt greift - ohne sie wächst der
  * Text über die Pille hinaus, statt nachzugeben. */
@@ -4821,7 +4888,12 @@ textarea::placeholder {
  * bleibt als Schranke für eine Übersetzung, die auch darüber zu lang ist - sie
  * ist die Notbremse, nicht der Plan. */
 @container bulk-pill (max-width: 21rem) {
-  .list-bulkbar__subject {
+  /* AUSSER SIE IST DIE FRAGE (Critique 2026-08-13). Der Absatz oben gilt für
+   * das Subjekt: es benennt, worauf die Kapseln wirken, und dieselbe Aussage
+   * steht in der Liste darüber. Die Rückfrage steht nirgendwo sonst - fiele
+   * sie weg, stünden „Abbrechen" und „Löschen" ohne die Frage da, die sie
+   * beantworten, und das wäre schlimmer als der Zustand ohne Rückfrage. */
+  .list-bulkbar:not(.list-bulkbar--confirming) .list-bulkbar__subject {
     display: none;
   }
 
@@ -4843,8 +4915,9 @@ textarea::placeholder {
   /* Ohne das Label gibt es kein wachsendes Element mehr, und die Kapseln
    * standen als schmale Gruppe an der linken Kante einer 288px breiten Fläche.
    * Die Pille behält ihre Breite (sie ist die des Toasts darunter, eine
-   * schmalere wäre eine zweite Zone) - also rückt ihr Inhalt in die Mitte. */
-  .list-bulkbar {
+   * schmalere wäre eine zweite Zone) - also rückt ihr Inhalt in die Mitte.
+   * Im Bestätigungszustand steht die Frage und wächst, also gilt das nicht. */
+  .list-bulkbar:not(.list-bulkbar--confirming) {
     justify-content: center;
   }
 }

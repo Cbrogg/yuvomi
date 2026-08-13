@@ -1363,9 +1363,8 @@ function updateCheckedActions(container) {
     });
   }
   // Nur das Verb, nicht „Abgehakt löschen": das Label links nennt den Bezug,
-  // und der ganze Satz steht im aria-label. Die Aktion ist rückholbar
-  // (scheduleUndoableDelete); das Löschen der GANZEN Liste sitzt woanders
-  // (Überlaufmenü) und hat einen Bestätigungsdialog.
+  // und der ganze Satz steht im aria-label. Das Löschen der GANZEN Liste sitzt
+  // woanders (Überlaufmenü) und hat einen eigenen Bestätigungsdialog.
   actions.push({
     label: t('common.delete'),
     ariaLabel: t('shopping.clearChecked', { count: checkedCount }),
@@ -1374,6 +1373,13 @@ function updateCheckedActions(container) {
     // ein „Löschen" ohne genanntes Objekt über einer Liste mit 23 Artikeln
     // gelesen werden kann wie „die Liste löschen".
     count: checkedCount,
+    // DIE RÜCKFRAGE, UND ZWAR TROTZ DES UNDO (Critique 2026-08-13, P0). Die
+    // Rücknahme war hier als Begründung geführt, sie zu lassen - sie hält
+    // fünf Sekunden, sieht aus wie die Kapsel, die gerade danebenlag, und
+    // steht 8px darunter. Das ist der Rettungsweg für einen Irrtum, den man
+    // BEMERKT; die Frage ist der für den, den man nicht bemerkt.
+    danger: true,
+    confirm: { question: t('shopping.clearCheckedConfirm', { count: checkedCount }) },
     onClick: () => clearCheckedUndoable(container),
   });
 

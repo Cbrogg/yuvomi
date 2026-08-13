@@ -3753,11 +3753,202 @@ test('jede Sammelaktions-Pille gibt ihre Zahl an eine Kapsel weiter', () => {
  */
 test('die Zählmarke der Pille geht nicht in den Namen der Kapsel ein', () => {
   const pill = read('../public/utils/bulk-pill.js');
-  const block = pill.match(/if \(action\.count != null\) \{[\s\S]*?\n {4}\}/);
-  assert.ok(block, 'der Zweig, der die Marke setzt, wurde nicht gefunden');
-  assert.match(block[0], /setAttribute\('aria-hidden', 'true'\)/,
+
+  // ÜBER DIE KLASSE, NICHT ÜBER DIE EINRÜCKUNG. Die erste Fassung suchte
+  // `if (action.count != null) {` samt seiner vier Spalten Einzug und starb an
+  // dem Tag, an dem der Zweig aus der Schleife in eine Kapsel-Fabrik zog - der
+  // Zweig war unverändert da, der Guard fand ihn nicht mehr. Ein Guard, der
+  // eine Position prüft statt einer Sache, meldet einen Umzug als Defekt.
+  const at = pill.indexOf('list-bulkbar__action-count');
+  assert.notEqual(at, -1, 'die Marke der Kapsel wird nirgends gesetzt');
+
+  // Der umschliessende Block, per Klammerzählung rückwärts und vorwärts.
+  let depth = 0;
+  let start = -1;
+  for (let i = at; i >= 0; i--) {
+    if (pill[i] === '}') depth += 1;
+    else if (pill[i] === '{') { if (depth === 0) { start = i; break; } depth -= 1; }
+  }
+  assert.notEqual(start, -1, 'kein umschliessender Block um die Marke gefunden');
+  let end = -1;
+  depth = 0;
+  for (let i = start; i < pill.length; i++) {
+    if (pill[i] === '{') depth += 1;
+    else if (pill[i] === '}') { depth -= 1; if (depth === 0) { end = i; break; } }
+  }
+  const block = pill.slice(start, end + 1);
+
+  assert.match(block, /setAttribute\('aria-hidden', 'true'\)/,
     'die Marke muss aus dem Namen der Kapsel heraus - die Zahl steht bereits im Namen der '
     + 'Gruppe (aria-labelledby überlebt display:none) und, wo es eine gibt, im aria-label');
+});
+
+/**
+ * WER LÖSCHT, FRAGT - und die Frage kappt nicht.
+ *
+ * Anlass (Critique 2026-08-13, P0): die Löschen-Kapsel nahm die abgehakten
+ * Artikel ohne Zwischenstufe, und sie sah dabei aus wie die harmlose Kapsel
+ * daneben („In den Vorrat") und wie das „Verwerfen" des Toasts 8px darunter -
+ * dieselbe Form, dieselbe Grösse, dieselbe Tinte. Die Rücknahme war als Grund
+ * geführt, es dabei zu lassen; sie ist der Weg für einen Irrtum, den man
+ * BEMERKT.
+ *
+ * DIE ZUSICHERUNG IST EINE PAARUNG, KEINE LISTE VON ZWEI SEITEN. Geprüft wird
+ * jede Datei, die `setBulkPill` aufruft, und in ihr jedes Aktions-Literal:
+ *   - was sich als gefährlich MARKIERT (`danger`), muss fragen (`confirm`);
+ *   - was ein destruktives VERB trägt, muss beides tragen.
+ * Die zweite Richtung ist die wichtigere: sie fängt die Aktion, die gefährlich
+ * IST und sich nicht markiert. Sie hängt am i18n-Vokabular, nicht an
+ * Dateinamen - eine dritte Pille mit einem `common.delete` ist damit gedeckt,
+ * bevor es sie gibt.
+ */
+test('eine destruktive Sammelaktion fragt zurück, bevor sie ausführt', () => {
+  /** Die Aktions-Literale einer Quelle: von jedem `onClick:` zur umschliessenden Klammer. */
+  const actionLiterals = (src) => {
+    const out = [];
+    for (const m of src.matchAll(/\bonClick:/g)) {
+      let depth = 0;
+      let start = -1;
+      for (let i = m.index; i >= 0; i--) {
+        if (src[i] === '}') depth += 1;
+        else if (src[i] === '{') { if (depth === 0) { start = i; break; } depth -= 1; }
+      }
+      if (start === -1) continue;
+      let end = -1;
+      depth = 0;
+      for (let i = start; i < src.length; i++) {
+        if (src[i] === '{') depth += 1;
+        else if (src[i] === '}') { depth -= 1; if (depth === 0) { end = i; break; } }
+      }
+      if (end !== -1) out.push(src.slice(start, end + 1));
+    }
+    return out;
+  };
+
+  // Das Vokabular der Zerstörung, an den i18n-Keys statt an deutschen Wörtern:
+  // die Oberfläche spricht 24 Sprachen, der Quelltext genau eine.
+  const DESTRUKTIV = /\bt\(\s*['"][^'"]*\.(delete|remove|clear|destroy)[^'"]*['"]|\bt\(\s*['"]common\.delete['"]/i;
+
+  const pages = readdirSync(new URL('../public/pages/', import.meta.url))
+    .filter((f) => f.endsWith('.js'))
+    .map((f) => [f, read(`../public/pages/${f}`)])
+    .filter(([, src]) => /from '\/utils\/bulk-pill\.js'/.test(src) && /setBulkPill\(/.test(src));
+
+  assert.ok(pages.length >= 2,
+    'erwartet mindestens Einkauf und Vorrat als Pillen-Aufrufer - findet der Scan keine, prüft er nichts');
+
+  let destruktiveGefunden = 0;
+  for (const [name, src] of pages) {
+    for (const lit of actionLiterals(src)) {
+      const markiert = /^\s*danger:\s*true,\s*$/m.test(lit);
+      const fragt    = /^\s*confirm:\s*\{/m.test(lit);
+      const verb     = DESTRUKTIV.test(lit);
+
+      if (markiert) {
+        assert.ok(fragt, `${name}: eine als gefährlich markierte Kapsel muss zurückfragen - `
+          + 'die Tinte allein unterscheidet sie vom Nachbarn, nicht von einem Fehltipp');
+      }
+      if (verb) {
+        destruktiveGefunden += 1;
+        assert.ok(markiert && fragt,
+          `${name}: eine Kapsel mit destruktivem Verb braucht BEIDES - die Tinte, damit sie `
+          + 'sich von der harmlosen Kapsel daneben unterscheidet, und die Rückfrage, damit '
+          + 'ein Fehltipp folgenlos bleibt');
+      }
+    }
+  }
+  // Eine Zusicherung über eine leere Menge ist keine. Findet der Scan gar keine
+  // destruktive Aktion mehr, hat sich das Vokabular geändert - nicht die Regel.
+  assert.ok(destruktiveGefunden >= 1,
+    'keine destruktive Sammelaktion gefunden - entweder ist der Einkauf umgebaut oder das '
+    + 'Muster DESTRUKTIV trifft die Keys nicht mehr');
+
+  // UND DIE FRAGE MUSS EINEN DOPPELTIPP ÜBERLEBEN.
+  //
+  // Gemessen: die Bestätigungs-Kapsel liegt bei 390 und 414px auf EXAKT der
+  // Stelle der auslösenden (dx=0, dy=0) - beide heissen „Löschen", sind gleich
+  // breit und stehen am rechten Ende der Pille. Ohne Frist wäre die Rückfrage
+  // für den hektischen Doppeltipp wirkungslos, also für genau den Fall, für den
+  // sie gebaut ist. Der Ort liess sich nicht verlässlich verschieben (bei 360px
+  // ergab die Zählmarke zufällig 76px Versatz, bei den anderen Breiten keinen).
+  const pill = read('../public/utils/bulk-pill.js');
+  assert.match(pill, /confirmBtn\.disabled = true;\s*\n\s*setTimeout\(\(\) => \{ confirmBtn\.disabled = false; \}, CONFIRM_GRACE_MS\);/,
+    'die Bestätigung muss nach dem Aufmachen der Frage kurz gesperrt sein - sie liegt auf '
+    + 'der Kapsel, die sie ausgelöst hat');
+  const grace = pill.match(/const CONFIRM_GRACE_MS = (\d+);/);
+  assert.ok(grace, 'die Schutzfrist braucht einen benannten Wert, keine Zahl im Aufruf');
+  const ms = Number(grace[1]);
+  assert.ok(ms >= 250 && ms <= 500,
+    `die Frist liegt zwischen einem Doppeltipp und einer gelesenen Antwort (250-500ms), ist aber ${ms}ms`);
+
+  // Der Rückweg ist frei. Eine gesperrte Abbrechen-Kapsel wäre eine Falle mit
+  // Wartezeit, kein Schutz.
+  assert.doesNotMatch(pill, /cancel\.disabled = true/,
+    'wer abbricht, darf das sofort - nur die Bestätigung wartet');
+});
+
+/**
+ * DIE FRAGE BRICHT UM, SIE KAPPT NICHT - und zwar ohne eine Zahl über Sprachen.
+ *
+ * Der Ruhezustand der Pille kürzt sein Subjekt (es benennt nur, worauf die
+ * Kapseln wirken, und dasselbe steht in der Liste darüber). Die Frage steht
+ * nirgendwo sonst: „9 Artikel lösch…" verlangt eine Antwort, die sie nicht mehr
+ * nennt.
+ *
+ * KEINE CONTAINER-SCHWELLE FÜR DIE FRAGE. Die 21rem des Subjekts sind an dessen
+ * Bedarf gemessen. Gemessen bei 390px: Deutsch passt mit 115 von 149px, aber
+ * Niederländisch verlangt „9 artikelen verwijderen?" neben „Annuleren" und
+ * „Verwijderen" und reisst mit 153 von 149px. Eine Schwelle, die für eine
+ * Sprache stimmt, ist eine Annahme über 23 andere - die drei Deklarationen
+ * unten fragen stattdessen den echten Bedarf. Gemessen über 5 Locales x 4
+ * Breiten x 2 Themen: 0 gekappte Fälle.
+ *
+ * Die drei sind EINE Zusicherung: ohne `flex-wrap` bleibt die Frage in der
+ * Zeile und kappt, ohne `flex-shrink: 0` schrumpft sie, statt umzubrechen, und
+ * ohne `overflow: visible` erbt sie die Ellipse des Ruhezustands und kappt
+ * lautlos in einer Zeile, die Platz hätte.
+ */
+test('die Rückfrage der Pille bricht um, statt zu kappen', () => {
+  const layout = read('../public/styles/layout.css');
+  const rules  = [...eachRule(layout)];
+
+  const wrap = rules.find((r) => r.selector.trim() === '.list-bulkbar--confirming' && !r.at.length);
+  assert.ok(wrap && /flex-wrap:\s*wrap/.test(wrap.body),
+    'der Bestätigungszustand muss umbrechen dürfen - sonst kappt die Frage bei der ersten '
+    + 'Sprache, die länger ist als Deutsch');
+
+  const frage = rules.find((r) => /\.list-bulkbar--confirming\s+\.list-bulkbar__subject/.test(r.selector)
+    && !r.at.length);
+  assert.ok(frage, 'die Frage braucht eine eigene Regel gegen die Kürzung des Ruhezustands');
+  assert.match(frage.body, /flex:\s*1\s+0\s+auto/,
+    'die Frage darf nicht schrumpfen - sie soll die Kapseln in die nächste Zeile schieben');
+  assert.match(frage.body, /overflow:\s*visible/,
+    'ohne das erbt die Frage die Ellipse des Subjekts und kappt in einer Zeile, die Platz hätte');
+
+  // Die Wahl ist ein Paar. Ohne diesen Knoten entscheidet die Restbreite, WELCHE
+  // Kapsel umbricht - gemessen stand die Frage mit „Annuleren" in Zeile eins und
+  // „Verwijderen" allein darunter.
+  const choices = rules.find((r) => r.selector.trim() === '.list-bulkbar__choices' && !r.at.length);
+  assert.ok(choices, 'Abbrechen und Bestätigen brauchen einen gemeinsamen Träger');
+  assert.match(choices.body, /flex-shrink:\s*0/,
+    'das Paar wandert als Ganzes, es schrumpft nicht');
+  assert.match(read('../public/utils/bulk-pill.js'), /class(?:Name)?\s*=\s*'list-bulkbar__choices'/,
+    'die Fabrik muss das Paar auch bauen - eine CSS-Regel ohne Knoten ist keine Zusicherung');
+
+  // UND KEINE SCHWELLE DANEBEN. Stünde der Bestätigungszustand zusätzlich in
+  // einem @container-Block, wäre die Locale-Annahme wieder da, nur leiser.
+  //
+  // `:not()` ZUERST WEG, sonst prüft der Guard eine Zeichenkette statt einer
+  // Sache: `.list-bulkbar:not(.list-bulkbar--confirming)` trägt den Namen und
+  // meint das Gegenteil. Die Regel, die dort legitim steht (der Ruhezustand
+  // zentriert bei 320px), machte den Guard beim ersten Lauf rot.
+  const ohneNot = (sel) => sel.replace(/:not\([^)]*\)/g, '');
+  for (const rule of rules) {
+    if (!/\.list-bulkbar--confirming/.test(ohneNot(rule.selector))) continue;
+    assert.equal(rule.at.filter((a) => /bulk-pill/.test(a)).length, 0,
+      'der Bestätigungszustand darf an keiner Container-Schwelle hängen - sein Bedarf hängt '
+      + 'an der Sprache, nicht an einer Zahl');
+  }
 });
 
 /**
