@@ -4679,6 +4679,28 @@ textarea::placeholder {
   transition: opacity var(--transition-fast), transform var(--duration-2xs) ease;
 }
 
+/* DIE MARKE AN DER KAPSEL steht standardmäßig nicht da: solange das Subjekt
+ * links die Zahl trägt, wäre sie deren Echo. Sie tritt erst ein, wo das Subjekt
+ * wegfällt (siehe die Container-Regel bei .list-bulkbar__subject).
+ *
+ * Sie NIMMT die Rezeptur der Zähler-Marke, sie TEILT ihre Regel nicht: die
+ * Marke der Listen-Tabs sitzt auf heller Fläche mit dunkler Schrift, diese auf
+ * dem dunklen Shell-Material mit heller. Genau die Verwechslung, die den Toast
+ * im Reduced-Transparency-Fallback des Filter-Chips auf 1,08:1 gebracht hat -
+ * zwei Selektoren in einer Regel behaupten denselben Grund darunter.
+ * `currentColor 15%` rechnet hier deshalb gegen die Schrift der Kapsel, und die
+ * dreht sich mit dem Thema: --neutral-800 ist dunkel im hellen Modus und hell
+ * im dunklen, --neutral-50 umgekehrt. Am gerenderten Pixel gemessen (320px,
+ * die einzige Breite, auf der die Marke steht): 10,04:1 hell, 12,54:1 dunkel. */
+.list-bulkbar__action-count {
+  display: none;
+  margin-inline-start: var(--space-1);
+  padding: var(--space-px) var(--space-1);
+  border-radius: var(--radius-full);
+  background-color: color-mix(in srgb, currentColor 15%, transparent);
+  font-variant-numeric: tabular-nums;
+}
+
 /* Nur der Toast: seine Rücknahme sitzt am Zeilenende, und sie ist die Fußnote
  * einer Meldung, die von selbst geht. Die Pille steht dauerhaft - ihre
  * Aktionen sind das, wofür sie da ist, und treten nicht zurück. */
@@ -4801,6 +4823,21 @@ textarea::placeholder {
 @container bulk-pill (max-width: 21rem) {
   .list-bulkbar__subject {
     display: none;
+  }
+
+  /* UND DIE ZAHL WECHSELT DIE SEITE (Etappe 6, 2026-08-13). Der Absatz darüber
+   * sagte, die Zahl sei nicht verloren - sie stehe im aria-label und in der
+   * Liste darüber. Für einen Screenreader stimmte das. Für das Auge blieben
+   * „In den Vorrat" und „Löschen" ohne genanntes Objekt, über einer Liste mit
+   * 23 Artikeln und ohne Rückfrage vor dem Löschen: „Löschen" konnte dort
+   * gelesen werden wie „die Liste löschen". Ein Zustand, den nur der Undo
+   * wieder aufhebt.
+   *
+   * Sie geht an die Kapsel, nicht zurück in die Zeile: die Zeile passt hier
+   * nicht (gemessen 138 von 87px), die Marke schon - „Löschen" plus Marke misst
+   * rund 191 von 264px Innenbreite, die Pille bleibt einzeilig. */
+  .list-bulkbar__action-count {
+    display: inline;
   }
 
   /* Ohne das Label gibt es kein wachsendes Element mehr, und die Kapseln

@@ -1369,6 +1369,11 @@ function updateCheckedActions(container) {
   actions.push({
     label: t('common.delete'),
     ariaLabel: t('shopping.clearChecked', { count: checkedCount }),
+    // Die Zahl als Marke - sie wird sichtbar, wo das Subjekt links wegfällt
+    // (unter 21rem Pillenbreite). Von den beiden Kapseln trägt sie diese, weil
+    // ein „Löschen" ohne genanntes Objekt über einer Liste mit 23 Artikeln
+    // gelesen werden kann wie „die Liste löschen".
+    count: checkedCount,
     onClick: () => clearCheckedUndoable(container),
   });
 

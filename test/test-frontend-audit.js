@@ -3555,6 +3555,51 @@ test('die Sammelaktions-Pille wohnt in der Shell und kostet die Liste keine Zeil
       `${page}.js darf die Leiste nicht wieder in den Seitenfluss schreiben`);
   }
 
+  // --- 1b. WO DAS SUBJEKT WEGFÄLLT, TRÄGT DIE AKTION DIE ZAHL --------------
+  //
+  // Anlass (Etappe 6, 2026-08-13, am Gerät gesehen): unter 21rem Pillenbreite
+  // fällt `.list-bulkbar__subject` weg, und übrig blieben zwei Kapseln ohne
+  // genanntes Objekt - über einer Liste mit 23 Artikeln, bei „Löschen" ohne
+  // Rückfrage. Für einen Screenreader stimmte die alte Begründung („die Zahl
+  // steht im aria-label"), für das Auge nicht.
+  //
+  // DIE ZUSICHERUNG IST EINE PAARUNG, KEIN KLASSENNAME: dieselbe Container-
+  // Bedingung, die das Subjekt wegnimmt, muss die Marke einsetzen. Zwei
+  // getrennte Grenzen wären genau die zweite Zahl daneben, die die Pille sich
+  // schon einmal verboten hat.
+  // Nicht über `bulkbarRules`: dessen `\b` nach `.list-bulkbar` trifft den
+  // Unterstrich nicht, die BEM-Kinder fallen dort heraus.
+  const subjektWeg = [...eachRule(layout)].filter((r) => /\.list-bulkbar__subject\b/.test(r.selector)
+    && /display:\s*none/.test(r.body) && r.at.some((a) => /bulk-pill/.test(a)));
+  assert.equal(subjektWeg.length, 1,
+    'erwartet genau eine Container-Regel, die das Subjekt der Pille wegnimmt');
+  const markeDa = [...eachRule(layout)].find((r) => /__action-count\b/.test(r.selector)
+    && /display:\s*(inline|flex|inline-flex|inline-block)/.test(r.body));
+  assert.ok(markeDa, 'ohne Subjekt muss die Zahl an der Aktion sichtbar werden');
+  assert.deepEqual(markeDa.at, subjektWeg[0].at,
+    'die Marke tritt unter GENAU der Bedingung ein, unter der das Subjekt geht - '
+    + 'sonst stünde die Zahl irgendwo zweimal oder nirgends');
+
+  // Und sie steht nur dort. Ausserhalb der Bedingung wäre sie das Echo der
+  // Zahl, die das Subjekt zwei Zentimeter weiter links schon trägt.
+  const markeBasis = [...eachRule(layout)].find((r) => r.selector.trim() === '.list-bulkbar__action-count' && !r.at.length);
+  assert.ok(markeBasis && /display:\s*none/.test(markeBasis.body),
+    'die Marke ist standardmässig weg - neben dem Subjekt wäre sie dessen Echo');
+
+  // Die Seite muss sie an der Aktion setzen, bei der ein fehlendes Objekt teuer
+  // ist. Geprüft an der Sache, nicht am Wort: die Kapsel mit dem `aria-label`
+  // der Sammellöschung trägt sie.
+  const shoppingSrc = read('../public/pages/shopping.js');
+  const loeschAktion = shoppingSrc.match(/actions\.push\(\{[\s\S]*?clearChecked[\s\S]*?\n {2}\}\);/);
+  assert.ok(loeschAktion, 'die Löschen-Aktion der Einkaufs-Pille nicht gefunden');
+  // AUF EINER EIGENEN ZEILE, und das ist keine Formfrage. Eine erste Fassung
+  // suchte `count:\s*checkedCount` irgendwo im Block - und fand es in der
+  // t()-Interpolation des aria-labels (`{ count: checkedCount }`), die
+  // ohnehin dasteht. Der Guard blieb bei entfernter Eigenschaft grün.
+  assert.match(loeschAktion[0], /^\s*count:\s*checkedCount,\s*$/m,
+    'die Löschen-Kapsel muss ihre Zahl als eigene Eigenschaft mitgeben - ohne Subjekt '
+    + 'liest sich ein blosses „Löschen" über einer vollen Liste wie „die Liste löschen"');
+
   // --- 2. EINZEILIG per Konstruktion ---------------------------------------
   const pillBase = bulkbarRules.find((r) => r.selector.trim() === '.list-bulkbar' && !r.at.length);
   assert.ok(pillBase, '.list-bulkbar braucht eine Basisregel ohne At-Block');

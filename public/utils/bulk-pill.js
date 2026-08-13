@@ -44,7 +44,10 @@ export function bulkPillLayer() {
  *
  * @param {object} spec
  * @param {string} spec.label   Was die Teilmenge IST - führt mit der Zahl.
- * @param {Array<{label: string, ariaLabel?: string, onClick: (btn: HTMLButtonElement) => void}>} spec.actions
+ * @param {Array<{label: string, ariaLabel?: string, count?: number, onClick: (btn: HTMLButtonElement) => void}>} spec.actions
+ *   `count` setzt eine Marke an die Kapsel, sichtbar erst dort, wo das Subjekt
+ *   wegfällt (siehe unten). Gedacht für die Aktion, bei der ein fehlendes
+ *   Objekt teuer ist.
  */
 export function setBulkPill({ label, actions = [] }) {
   const layer = bulkPillLayer();
@@ -81,6 +84,24 @@ export function setBulkPill({ label, actions = [] }) {
     btn.className = 'list-bulkbar__action';
     btn.textContent = action.label;
     if (action.ariaLabel) btn.setAttribute('aria-label', action.ariaLabel);
+    // DIE ZAHL HOLT DAS SUBJEKT EIN, WENN ES WEGFÄLLT (Etappe 6, 2026-08-13).
+    // Bei 320px steht die Pille ohne ihre Zeile da, und übrig blieben zwei
+    // Kapseln ohne genanntes Objekt - über einer Liste mit 23 Artikeln und bei
+    // „Löschen" ohne Rückfrage. Gemessen: „Löschen" plus Marke bleibt bei rund
+    // 191 von 264px Innenbreite einzeilig.
+    //
+    // Als MARKE, nicht als „(3)": „Beschriftung plus Anzahl daneben" ist ein
+    // Muster, das die Listen-Tabs schon sprechen. Eine eigene Klammer-
+    // Schreibweise wäre ein zweites Vokabular für dieselbe Aussage - und eine
+    // Zahl ist keine Sprache, also braucht sie auch keinen Locale-Key.
+    // Der Name der Kapsel ändert sich dadurch nicht: `aria-label` schlägt den
+    // Inhalt, die Zahl steht dort ohnehin schon.
+    if (action.count != null) {
+      const count = document.createElement('span');
+      count.className = 'list-bulkbar__action-count';
+      count.textContent = String(action.count);
+      btn.appendChild(count);
+    }
     btn.addEventListener('click', () => action.onClick(btn));
     bar.appendChild(btn);
   }
