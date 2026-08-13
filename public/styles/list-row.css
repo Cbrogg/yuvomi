@@ -83,57 +83,23 @@
 }
 
 /* --------------------------------------------------------
- * Sammelaktions-Leiste
+ * Sammelaktions-Leiste - UMGEZOGEN, NICHT ENTFALLEN
  *
- * „Diese Liste hat eine Teilmenge, und für die gibt es eine Aktion." Der Vorrat
- * hatte das als `.pantry-bulkbar` („Alles auf die Einkaufsliste", sobald der
- * Fast-leer-Filter aktiv ist) - der Critique nannte sie ausdrücklich als
- * funktionierend, weil sie die Aktion MIT erklärender Zeile trägt.
+ * „Diese Liste hat eine Teilmenge, und für die gibt es eine Aktion." Der
+ * Baustein heißt weiter `.list-bulkbar`, wohnt seit Etappe 5 aber in der
+ * unteren Shell-Zone: Regel in layout.css bei `.toast`, Material in glass.css,
+ * gesetzt über utils/bulk-pill.js. Dieselbe Bewegung, die der FAB mit #634
+ * gemacht hat - der Knoten gehört inhaltlich zur Seite, aber nicht in ihren
+ * Fluss.
  *
- * Der Einkauf hatte für dasselbe („In den Vorrat", „Abgehakt löschen", sobald
- * etwas abgehakt ist) keine Leiste, sondern zwei Buttons im Kopf. Das kostete
- * mobil zwei zusätzliche Kopfzeilen: gemessen 173px Kopfhöhe bei 393px und 229px
- * bei 320px, weil der Titel die Zeile allein füllte und beide Labels
- * (140px + 197px) darunter noch einmal umbrachen. Erste Datenzeile bei y=439 von
- * 852 (Critique 2026-07-30, P1).
- *
- * SIE STEHT ÜBER DEM SCROLLER, NICHT DARIN. Im Vorrat lag sie als erstes Kind in
- * #pantry-list und scrollte weg; die Aktion, die eine Teilmenge der ganzen Liste
- * betrifft, muss aber erreichbar bleiben, während man die Liste durchgeht. Kein
- * `position: sticky`: außerhalb des Scrollports genügt die normale Reihenfolge.
- *
- * KEIN `padding-inline`: wie bei .list-scroller liefert der jeweilige Container die
- * Content-Spalte, und sie darf pro Ahnenkette genau einmal gesetzt werden.
+ * WAS HIER STAND UND WARUM ES NICHT MEHR REICHT: die Leiste war eine getönte
+ * Fläche mit Rahmen ÜBER dem Scroller, und beide Anläufe davor hatten je einen
+ * eigenen Defekt geheilt (im Vorrat scrollte sie weg, im Einkauf ersetzte sie
+ * zwei Kopfzeilen). Ihr eigener Preis stand nie in der Rechnung: gemessen
+ * 358x103px bei y=113 auf /shopping, also 103 von 552px Listenfläche, ausgelöst
+ * von einem einzigen abgehakten Artikel. Was eine Teilmenge betrifft, darf
+ * nicht die ganze Liste verkürzen.
  * -------------------------------------------------------- */
-
-.list-bulkbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2) var(--space-3);
-  flex-shrink: 0;
-  padding: var(--space-3);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-md);
-  background-color: color-mix(in srgb, var(--module-accent) var(--tint-wash), var(--color-surface));
-  /* Dasselbe Lesemaß wie die Liste darunter: die Leiste gehört zu ihr. */
-  max-width: var(--content-max-width-narrow);
-}
-
-/* Die erklärende Zeile. Sie sagt, WORAUF die Aktionen wirken - das ist der Teil,
- * den der Einkauf nicht hatte: dort standen „In den Vorrat" und „Abgehakt
- * löschen (3)" im Kopf, ohne dass irgendwo stand, was die Teilmenge ist. */
-.list-bulkbar__label {
-  flex: 1 1 12rem;
-  min-width: 0;
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-}
-
-.list-bulkbar__action {
-  flex-shrink: 0;
-  gap: var(--space-1);
-}
 
 /* --------------------------------------------------------
  * Gruppe: sie trägt die Fläche, nicht die Zeile

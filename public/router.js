@@ -12,6 +12,7 @@ import { esc } from '/utils/html.js';
 import { emptyHintEl } from '/utils/empty-state.js';
 import { wireScrollFade, wireCollapsingHeader } from '/utils/ux.js';
 import { TOAST_SURFACES, toastSurface } from '/utils/toast-surface.js';
+import { BULK_PILL_LAYER, clearBulkPill } from '/utils/bulk-pill.js';
 import { init as initReminders, stop as stopReminders } from '/reminders.js';
 import { initPush, stopPush } from '/push.js';
 import { numberLocaleFor } from '/settings/region-presets.js';
@@ -1285,6 +1286,11 @@ async function renderPage(route, previousPath = null, scrollTarget = 0) {
     // Hier und nicht eine Zeile höher: der Scroll-Reset gehört unmittelbar an
     // den Inhaltstausch (Guard in test-mobile-scroll-layout.js).
     clearPageFab();
+    // Dieselbe Begründung, dieselbe Schicht: die Sammelaktions-Pille gehört zur
+    // Teilmenge EINER Liste und darf nicht über der nächsten Seite stehen
+    // bleiben. Sie hat kein Gegenstück zu adoptPageFab() - wer sie braucht,
+    // setzt sie beim Rendern.
+    clearBulkPill();
     style.cleanup();
 
     // Teardown abgeschlossen: ein evtl. gemerktes Soft-Update-Ziel ist jetzt
@@ -1755,6 +1761,23 @@ function renderAppShell(container) {
   toastContainerAssertive.id = TOAST_SURFACES.assertive;
   toastContainerAssertive.setAttribute('aria-live', 'assertive');
 
+  // Wohnort der Sammelaktions-Pille (utils/bulk-pill.js). Sie steht ZUERST im
+  // Stapel und damit über den Toasts: die Spalte ist unten verankert, also
+  // bleibt der Toast an seinem Platz und die Pille weicht ihm nach oben aus.
+  // Der mit der Frist bewegt sich nicht.
+  const bulkPillLayerEl = document.createElement('div');
+  bulkPillLayerEl.className = 'bulk-pill-layer';
+  bulkPillLayerEl.id = BULK_PILL_LAYER;
+
+  // DIE UNTERE SHELL-ZONE IST EIN STAPEL, KEIN ÜBEREINANDER. Beide
+  // Toast-Container standen bis hierher einzeln auf demselben `bottom` und
+  // hätten sich gegenseitig verdeckt, sobald eine höfliche und eine bestimmte
+  // Meldung zusammentrafen; die Pille wäre die dritte auf derselben Stelle
+  // gewesen. Als Kinder einer Spalte stapeln sie sich stattdessen.
+  const bottomStack = document.createElement('div');
+  bottomStack.className = 'shell-bottom-stack';
+  bottomStack.append(bulkPillLayerEl, toastContainerPolite, toastContainerAssertive);
+
   const routeAnnouncer = document.createElement('div');
   routeAnnouncer.id = 'route-announcer';
   routeAnnouncer.className = 'sr-only';
@@ -1784,7 +1807,7 @@ function renderAppShell(container) {
   const shellNodes = [skipLink, lgBackdrop, sidebar, main, fabLayer, bottomNav];
   if (backdrop)   shellNodes.push(backdrop);
   if (moreSheet)  shellNodes.push(moreSheet);
-  shellNodes.push(searchOverlay, toastContainerPolite, toastContainerAssertive, routeAnnouncer);
+  shellNodes.push(searchOverlay, bottomStack, routeAnnouncer);
   container.replaceChildren(...shellNodes);
   // Die Kapsel ist ein NEUER Knoten; der Beobachter des Tab-Indikators haengt
   // sonst am verworfenen (siehe observeNavCapsule weiter unten).

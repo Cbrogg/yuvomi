@@ -222,6 +222,24 @@
   padding-block-end: var(--fab-safe-zone);
 }
 
+/* UND DIE PILLE BRAUCHT DENSELBEN NACHLAUF. Sie ist seit Etappe 5 eine fixierte
+ * Shell-Fläche über der Liste (siehe .list-bulkbar) und verdeckt am Scroll-Ende
+ * sonst genau die Zeilen, auf die sie sich bezieht - derselbe Defekt, den
+ * Sonde 18 für den FAB misst. Am Finger fällt --fab-safe-zone auf 0 (der FAB
+ * sitzt dort in der Nav-Kapsel), dort ist die Pillenzone der ganze Nachlauf.
+ *
+ * ZWEI REGELN STATT EINER SUMME: `:has()` trägt die Spezifität seines
+ * Arguments, eine Regel mit nur `:has(.list-bulkbar)` stünde UNTER der
+ * FAB-Regel darüber und bliebe wirkungslos, sobald ein FAB da ist. Und genau
+ * das ist der Normalfall - beide Seiten mit Pille haben einen. */
+.app-shell:has(.fab-layer .page-fab:not([hidden])):has(.list-bulkbar) .app-content {
+  padding-block-end: calc(var(--fab-safe-zone) + var(--bulk-pill-safe-zone));
+}
+
+.app-shell:not(:has(.fab-layer .page-fab:not([hidden]))):has(.list-bulkbar) .app-content {
+  padding-block-end: var(--bulk-pill-safe-zone);
+}
+
 /* #main-content wird nach jeder Navigation programmatisch fokussiert, damit
  * Tastatur-/Screenreader-Fokus in die neue Seite springt (Skip-Link-Muster).
  * Das ist ein Region-Fokus-Ziel, kein interaktives Element — es darf keinen
@@ -2406,16 +2424,16 @@ html.fab-anim-done .page-fab {
  * „zu" zeigte - dieselbe Falle, drittes Mal. Ein Prüfskript, das nur die
  * DOM-Property `hidden` liest, sieht sie NICHT; es braucht das berechnete
  * `display`. */
-/* Und `.list-bulkbar`: die Sammelaktions-Leiste des Einkaufs trägt
- * `display: flex` und ist nur bei abgehakten Artikeln gefüllt - ohne diese Zeile
- * blieb bei null Treffern ein leerer, gerahmter und getönter Streifen über der
- * Liste stehen. Vierte Fundstelle derselben Falle. */
+/* `.list-bulkbar` stand hier als vierte Fundstelle derselben Falle, solange sie
+ * ein dauerhafter, leerer Knoten im Seitenfluss war. Seit Etappe 5 wird sie
+ * ANGELEGT und ENTFERNT (utils/bulk-pill.js) und trägt nie `hidden` - und ein
+ * Eintrag für einen Zustand, den niemand setzt, ist keine Absicherung, sondern
+ * eine Behauptung über den Bestand. */
 .page-fab[hidden],
 .btn[hidden],
 .form-group[hidden],
 .page-toolbar[hidden],
 .recipe-detail[hidden],
-.list-bulkbar[hidden],
 p.field-hint--warn[hidden] {
   display: none !important;
 }
@@ -4554,9 +4572,23 @@ textarea::placeholder {
  * jedem Medienzustand. */
 
 /* --------------------------------------------------------
- * Toast-Benachrichtigungen
+ * Die untere Shell-Zone
+ *
+ * EIN STAPEL, KEIN ÜBEREINANDER. Die Geometrie stand bis Etappe 5 an
+ * `.toast-container` - also zweimal, an zwei Knoten mit demselben `bottom`.
+ * Solange nur je einer von beiden gefüllt war, fiel das nicht auf; eine
+ * höfliche und eine bestimmte Meldung zugleich lagen aufeinander. Mit der
+ * Sammelaktions-Pille (`.bulk-pill-layer`) wäre eine dritte Fläche auf
+ * denselben Punkt gekommen, und die steht DAUERHAFT.
+ *
+ * Als Spalte rechnet Flexbox das Ausweichen selbst, und daraus folgt die
+ * Reihenfolge: die Spalte ist unten verankert, wer zuerst im DOM steht, steht
+ * oben. Die Pille steht zuerst - der Toast bleibt damit, wo Toasts immer
+ * stehen, und die Pille weicht ihm nach oben aus. DER MIT DER FRIST BEWEGT
+ * SICH NICHT: die Rücknahme des Toasts läuft nach fünf Sekunden ab, die
+ * Aktionen der Pille warten, solange die Teilmenge steht.
  * -------------------------------------------------------- */
-.toast-container {
+.shell-bottom-stack {
   position: fixed;
   bottom: calc(var(--nav-bottom-height) + var(--safe-area-inset-bottom) + var(--space-4));
   left: 50%;
@@ -4569,14 +4601,29 @@ textarea::placeholder {
   width: min(calc(100% - var(--space-8)), 380px);
 }
 
+/* Eine leere Zelle zieht trotzdem ihre Lücke: `gap` gilt zwischen ALLEN
+ * Kindern, auch zwischen zwei Knoten der Höhe null. Ohne diese Regel stünde
+ * ein einzelner Toast um zwei Lücken (16px) zu hoch, weil Pillen-Schicht und
+ * bestimmter Container leer daneben liegen. */
+.shell-bottom-stack > :empty {
+  display: none;
+}
+
+.toast-container,
+.bulk-pill-layer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
 @media (min-width: 768px) and (max-width: 1023px) {
-  .toast-container {
+  .shell-bottom-stack {
     bottom: var(--space-8);
   }
 }
 
 @media (min-width: 1024px) {
-  .toast-container {
+  .shell-bottom-stack {
     bottom: var(--space-6);
     left: calc(var(--sidebar-width) + (100% - var(--sidebar-width)) / 2);
   }
@@ -4602,8 +4649,11 @@ textarea::placeholder {
   height: 16px;
 }
 
-.toast__undo {
-  margin-left: auto;
+/* DIE BESCHRIFTETE AKTION AUF SHELL-MATERIAL - eine Schreibweise, zwei Träger.
+ * Der Toast hatte sie als einziger; die Sammelaktions-Pille steht auf demselben
+ * Material im selben Stapel und hätte sich sonst eine zweite gebaut. */
+.toast__undo,
+.list-bulkbar__action {
   flex-shrink: 0;
   padding: var(--space-1) var(--space-2);
   background: transparent;
@@ -4614,21 +4664,48 @@ textarea::placeholder {
   font-weight: var(--font-weight-semibold);
   cursor: pointer;
   white-space: nowrap;
-  opacity: 0.85;
-}
-
-.toast__undo {
   -webkit-tap-highlight-color: transparent;
   transition: opacity var(--transition-fast), transform var(--duration-2xs) ease;
+}
+
+/* Nur der Toast: seine Rücknahme sitzt am Zeilenende, und sie ist die Fußnote
+ * einer Meldung, die von selbst geht. Die Pille steht dauerhaft - ihre
+ * Aktionen sind das, wofür sie da ist, und treten nicht zurück. */
+.toast__undo {
+  margin-left: auto;
+  opacity: 0.85;
 }
 
 .toast__undo:hover {
   opacity: 1;
 }
 
-.toast__undo:active {
+.toast__undo:active,
+.list-bulkbar__action:active {
   transform: scale(0.94);
   opacity: 1;
+}
+
+.toast__undo:focus-visible,
+.list-bulkbar__action:focus-visible {
+  outline: var(--focus-ring-width) solid currentColor;
+  outline-offset: var(--focus-ring-offset);
+  opacity: 1;
+}
+
+/* GESPERRT WÄHREND DER ÜBERGABE, und das kam mit dem Verzicht auf `.btn` als
+ * Lücke mit: `sendToShopping` setzt `btn.disabled = true`, damit ein zweiter
+ * Tipp nicht einen zweiten Transfer samt eigenem Undo-Toast auslöst - auf der
+ * Button-Basis war das sichtbar, auf dem Shell-Material stand der Knopf
+ * unverändert da und sah anfassbar aus. Der Toast braucht es nicht: seine
+ * Rücknahme entfernt sich selbst mit dem Klick. */
+.list-bulkbar__action:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.list-bulkbar__action:disabled:active {
+  transform: none;
 }
 
 .toast--success { background-color: var(--color-success); color: var(--toast-success-text); }
@@ -4638,6 +4715,90 @@ textarea::placeholder {
 @keyframes toast-in {
   from { opacity: 0; transform: translateY(6px) scale(0.98); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* --------------------------------------------------------
+ * Sammelaktions-Pille
+ *
+ * „Diese Liste hat eine Teilmenge, und für die gibt es eine Aktion."
+ *
+ * SIE WAR EIN BLOCK IM INHALT und ist jetzt eine Fläche der Shell. Gemessen bei
+ * 390x844 auf /shopping: 358x103px bei y=113, der Scroller begann dadurch erst
+ * bei y=216 statt 113 - 103 von 552px Listenfläche, ausgelöst von einem
+ * einzigen abgehakten Artikel. Die 103px waren `flex-wrap`: die erklärende
+ * Zeile allein auf Zeile eins, beide Knöpfe auf Zeile zwei.
+ *
+ * EINZEILIG IST DIE BEDINGUNG, NICHT DIE HOFFNUNG. Deshalb keine `.btn`-Knöpfe
+ * mit Icon, sondern die Kapseln, die auf diesem Material schon stehen
+ * (`.toast__undo`, siehe oben), und deshalb kein `flex-wrap`. Der Rang bei
+ * Enge: die Aktionen schrumpfen NIE, das Label gibt nach - es führt mit der
+ * Zahl, und die überlebt die Kürzung. Dieselbe Rangfolge, die die Agenda-Zeile
+ * ihrer Metazeile gegeben hat.
+ *
+ * Material und Geometrie kommen vom Toast, bis auf eine Sache: dieser Knoten
+ * trägt KEINE Einblend-Animation. Ein Toast kommt an, eine Pille steht da; ein
+ * Federn bei jedem Häkchen wäre Bewegung ohne Anlass.
+ * -------------------------------------------------------- */
+.list-bulkbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  /* Die Zusicherung hinter --bulk-pill-safe-zone (tokens.css): der Nachlauf am
+   * Scroll-Ende rechnet mit diesem Wert, also muss die Pille ihn halten. */
+  min-height: var(--bulk-pill-height);
+  box-sizing: border-box;
+  background-color: var(--neutral-800);
+  color: var(--neutral-50);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg);
+  pointer-events: auto;
+}
+
+/* Das einzige Element der Pille, das nachgibt. `min-width: 0` ist die
+ * Bedingung dafür, dass die Kürzung überhaupt greift - ohne sie wächst der
+ * Text über die Pille hinaus, statt nachzugeben. */
+.list-bulkbar__subject {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--text-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Die Schicht ist der Container, nicht die Pille selbst: gefragt wird nach der
+ * Breite, die zur Verfügung STEHT, und ein Element kann sich nicht selbst
+ * fragen, wie breit es sein dürfte. */
+.bulk-pill-layer {
+  container-type: inline-size;
+  container-name: bulk-pill;
+}
+
+/* SIE FÄLLT WEG, SIE WIRD NICHT GEKÜRZT. Gemessen bei 320px: die Pille hat
+ * 264px Innenbreite, die beiden Kapseln nehmen 169 davon, für das Label bleiben
+ * 87 - „3 Artikel abgehakt." braucht 138 und stand dort als „3 Artike…". Das
+ * ist genau der Fall, den der Vorrat für sein MHD schon entschieden hat: eine
+ * Ellipse macht aus einer Aussage etwas, das wie ein Fehler aussieht. Die Zahl
+ * ist damit nicht verloren - sie steht im aria-label der Löschen-Kapsel und in
+ * der Liste darüber, deren Häkchen man gerade gesetzt hat.
+ *
+ * 21rem ist die Grenze, unter der es in KEINER Sprache mehr aufgeht (bei 390px
+ * ist die Pille 358px breit und deutsch passt mit 19px Luft). Die Kürzung oben
+ * bleibt als Schranke für eine Übersetzung, die auch darüber zu lang ist - sie
+ * ist die Notbremse, nicht der Plan. */
+@container bulk-pill (max-width: 21rem) {
+  .list-bulkbar__subject {
+    display: none;
+  }
+
+  /* Ohne das Label gibt es kein wachsendes Element mehr, und die Kapseln
+   * standen als schmale Gruppe an der linken Kante einer 288px breiten Fläche.
+   * Die Pille behält ihre Breite (sie ist die des Toasts darunter, eine
+   * schmalere wäre eine zweite Zone) - also rückt ihr Inhalt in die Mitte. */
+  .list-bulkbar {
+    justify-content: center;
+  }
 }
 
 .toast--out {

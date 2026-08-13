@@ -93,22 +93,11 @@
 }
 
 /* Die Sammelaktions-Leiste („Alles auf die Einkaufsliste", sobald der
- * Fast-leer-Filter aktiv ist) ist jetzt der geteilte .list-bulkbar-Baustein
- * (styles/list-row.css). Der Einkauf trug dieselbe Sache als zwei Buttons im
- * Kopf und zahlte dafür zwei Kopfzeilen - eine Leiste, zwei Tabs.
- *
- * Hier bleibt nur der Träger der Content-Spalte: die Leiste hängt nicht mehr IM
- * Scroller (#pantry-list), sondern darüber, und braucht damit dieselbe Kante wie
- * die Filter-Chips und die Liste. */
-.pantry-bulkbar-slot {
-  padding-inline: var(--page-inline-pad);
-  padding-top: var(--space-3);
-  flex-shrink: 0;
-}
-
-.pantry-bulkbar-slot:empty {
-  display: none;
-}
+ * Fast-leer-Filter aktiv ist) braucht in dieser Seite keinen Träger mehr: sie
+ * ist seit Etappe 5 die Pille der unteren Shell-Zone (.list-bulkbar in
+ * layout.css, gesetzt über utils/bulk-pill.js). Hier stand zuletzt ein
+ * `.pantry-bulkbar-slot`, der ihr die Content-Spalte gab - der letzte Rest
+ * eines Wohnorts im Inhalt. */
 
 /* Scroller, Lesemaß, FAB-Auslauf, Gruppen-Abstand: .list-scroller
  * (styles/list-row.css), im Markup neben .pantry-list.

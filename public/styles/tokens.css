@@ -1196,6 +1196,17 @@
    * Das Kriterium ist die Leiste, nicht die Breite und nicht die Hoehe: nur
    * mit ihr sitzt der Knopf ueber Chrome statt ueber Inhalt. */
   --fab-safe-zone: calc(var(--fab-gap) + var(--fab-size) + var(--space-4));
+  /* Der Nachlauf unter der Sammelaktions-Pille, nach demselben Rezept: eigene
+   * Hoehe plus der Abstand, mit dem sie ueber dem Chrome steht.
+   *
+   * Die Hoehe ist NICHT aus Schriftgroesse und Polsterung nachgerechnet -
+   * genau so driftet ein Token von dem weg, was es beschreibt, sobald jemand
+   * eine Zeilenhoehe aendert. `.list-bulkbar` traegt sie als `min-height`,
+   * damit der Wert die Wahrheit ERZWINGT statt sie zu behaupten. Und es ist
+   * die Zielgroesse der Geraetewelt, weil die Pille eine Bedienflaeche ist:
+   * 44px am Zeiger, 48px am Finger, ohne zweite Schreibweise. */
+  --bulk-pill-height: var(--target-base);
+  --bulk-pill-safe-zone: calc(var(--bulk-pill-height) + var(--space-4));
   /* Innenkante der Nav-Kapsel, von der Viewport-Kante aus gemessen. EINE
    * Quelle fuer die Kapsel (margin-inline: auto + max-width) und fuer den
    * FAB, der an ihrem hinteren Ende sitzt - liefen die auseinander, stuende

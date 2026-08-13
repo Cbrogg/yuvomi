@@ -346,13 +346,20 @@ textarea.form-input {
 /* ================================================================
  * 9. Toasts — Glass + Capsule
  * ================================================================ */
-.toast {
+.toast,
+.list-bulkbar {
   border-radius: var(--radius-glass-card);
   box-shadow: var(--glass-shadow-md);
 }
 
+/* Die Sammelaktions-Pille steht im selben Stapel wie der Toast und trägt
+ * deshalb dasselbe Material - das war die Entscheidung vom 2026-08-12: es gibt
+ * diese Schicht schon, und sie hat genau EIN Material. Der Modulton fällt damit
+ * weg, und das ist der Punkt, der den Konflikt mit „Glas gehört der Shell"
+ * auflöst: in der Shell-Schicht gilt Shell-Material, nicht Modul-Tinte. */
 @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
-  .toast:not(.toast--success):not(.toast--danger):not(.toast--warning) {
+  .toast:not(.toast--success):not(.toast--danger):not(.toast--warning),
+  .list-bulkbar {
     background-color: color-mix(in srgb, var(--neutral-800) 90%, transparent);
     backdrop-filter: var(--blur-sm);
     -webkit-backdrop-filter: var(--blur-sm);
@@ -431,10 +438,26 @@ textarea.form-input {
  * 16. Accessibility — Phase 2
  * ================================================================ */
 @media (prefers-reduced-transparency: reduce) {
-  .filter-chip--active,
-  .toast:not(.toast--success):not(.toast--danger):not(.toast--warning) {
+  .filter-chip--active {
     background-color: var(--color-accent-light);
     border-color: var(--color-accent);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  /* DER TOAST STAND IN DER REGEL DES CHIPS UND HAT IHN NICHT ÜBERLEBT. Beide
+   * verlieren hier ihr Glas, aber sie haben nicht denselben Grund darunter:
+   * der Chip ist ein helles Element mit dunkler Schrift, der Toast ist die
+   * dunkle Fläche der Shell und trägt `color: var(--neutral-50)`. Auf
+   * --color-accent-light (#F3EFFE) stand damit Weiss auf Fast-Weiss: gemessen
+   * im gerenderten Dokument mit emulierter Medienabfrage 1.08:1, jetzt 13.69:1.
+   * Der Fallback, der die Lesbarkeit sichern sollte, hat sie abgeschafft.
+   * Sein opaker Grund ist der, den layout.css ohnehin deklariert;
+   * hier muss nur das Glas weg. Die Pille teilt Material und damit auch das. */
+  .toast:not(.toast--success):not(.toast--danger):not(.toast--warning),
+  .list-bulkbar {
+    background-color: var(--neutral-800);
+    border-color: var(--glass-border-overlay);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
   }

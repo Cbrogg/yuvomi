@@ -114,7 +114,11 @@ test('hidden greift bei geteilten Bedienelementen trotz display-Klasse', () => {
   // aber ausdrücklich zum Wachsen gedacht (bei `.list-bulkbar` war sie 141
   // Zeichen lang und der Guard rot, obwohl die Struktur korrekt war).
   const sameBlock = (selector) => new RegExp(`${selector}[^{}]*\\{\\s*display:\\s*none\\s*!important`);
-  for (const selector of ['\\.page-fab\\[hidden\\]', '\\.btn\\[hidden\\]', '\\.form-group\\[hidden\\]', '\\.list-bulkbar\\[hidden\\]']) {
+  // `.list-bulkbar` stand hier, solange sie ein dauerhafter, leerer Knoten im
+  // Seitenfluss war. Seit Etappe 5 wird sie angelegt und entfernt
+  // (utils/bulk-pill.js) und trägt nie `hidden` - ein Eintrag für einen
+  // Zustand, den niemand setzt, prüft nichts.
+  for (const selector of ['\\.page-fab\\[hidden\\]', '\\.btn\\[hidden\\]', '\\.form-group\\[hidden\\]']) {
     assert.match(layoutCss, sameBlock(selector), `${selector} steht nicht im Durchsetzungsblock`);
   }
 });

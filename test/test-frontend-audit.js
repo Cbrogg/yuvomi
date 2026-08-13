@@ -3433,50 +3433,139 @@ test('der Einkaufs-Kopf trägt mobil keine unbeschrifteten Aktionen', () => {
   // `common.moreActions` stand hier, solange der Einkauf ihn nutzte; sein
   // Trigger führt jetzt shopping.listActionsLabel (er muss die Liste nennen).
   // Den geteilten Key prüft weiterhin, wer ihn benutzt - aktuell recipes.js.
-  assertKeysExistInEveryLocale(['shopping.listActionsLabel', 'shopping.checkedHint', 'shopping.checkedHint_one']);
+  assertKeysExistInEveryLocale([
+    'shopping.listActionsLabel', 'shopping.checkedHint', 'shopping.checkedHint_one',
+    // Der Vorrat trägt seit Etappe 5 dieselbe Rolle in der Pille: was „Alles"
+    // umfasst. Sein früherer Satz („Diese Artikel sind aufgebraucht oder unter
+    // dem Mindestbestand.") sagte, was der aktive Filterchip daneben schon
+    // sagt, und ließ auf einer einzeiligen Fläche nur eine Ellipse übrig.
+    'pantry.bulkPillLabel', 'pantry.bulkPillLabel_one',
+  ]);
 });
 
 /**
- * Eine Sammelaktions-Leiste, zwei Tabs.
+ * Eine Sammelaktions-Leiste, zwei Tabs - und sie kostet die Liste nichts mehr.
  *
- * Der Vorrat hatte `.pantry-bulkbar` („Alles auf die Einkaufsliste" plus eine Zeile,
- * die sagt, worauf sie wirkt) - der Critique nannte sie als das, was funktioniert.
- * Der Einkauf hatte für dieselbe Sache zwei Buttons im Kopf, ohne erklärende Zeile,
- * und zahlte dafür zwei Kopfzeilen. Jetzt ist es derselbe Baustein.
+ * Der Vorrat hatte `.pantry-bulkbar`, der Einkauf zwei Buttons im Kopf; seit der
+ * Küchen-Zusammenführung war es EIN Baustein über dem Scroller. Sein eigener
+ * Preis stand nie in der Rechnung: gemessen 358x103px bei y=113 auf /shopping,
+ * also 103 von 552px Listenfläche, ausgelöst von einem einzigen abgehakten
+ * Artikel. Seit Etappe 5 ist die Leiste eine Pille in der unteren Shell-Zone.
+ *
+ * DREI ZUSAGEN, und jede hat ihren eigenen Anlass:
+ *   1. EINE Schreibweise - der Baustein wohnt in der Shell, kein Modul baut ihn nach.
+ *   2. EINZEILIG - ohne das war sie der Block von vorher in dunkel.
+ *   3. Sie verdeckt am Scroll-Ende nichts - derselbe Defekt, den Sonde 18 für
+ *      den FAB misst, und der FAB löst ihn seit #634 über einen Nachlauf.
  */
-test('die Küchen-Tabs teilen eine Sammelaktions-Leiste', () => {
-  const shared = read('../public/styles/list-row.css');
-  const layout = read('../public/styles/layout.css');
-  const pantryCss = read('../public/styles/pantry.css');
+test('die Sammelaktions-Pille wohnt in der Shell und kostet die Liste keine Zeile', () => {
+  const layout    = read('../public/styles/layout.css');
+  const listRow   = read('../public/styles/list-row.css');
+  const tokens    = read('../public/styles/tokens.css');
+  const router    = read('../public/router.js');
 
-  assert.match(shared, /^\.list-bulkbar \{/m,
-    '.list-bulkbar gehört in die geteilte Grammatik, nicht in ein Modul-CSS');
-  assert.doesNotMatch(pantryCss.replace(/\/\*[\s\S]*?\*\//g, ''), /^\.pantry-bulkbar\s*\{/m,
-    'der Vorrat darf keine private Kopie der Leiste behalten');
+  // --- 1. EINE Schreibweise -------------------------------------------------
+  const bulkbarRules = [...eachRule(layout)].filter((r) => /^\.list-bulkbar\b/.test(r.selector.trim()));
+  assert.ok(bulkbarRules.length,
+    '.list-bulkbar gehört in die Shell-Schicht (layout.css), wo auch der Toast steht');
+
+  // Über eachRule, nicht über die Datei: die Begründung des Umzugs nennt den
+  // alten Wohnort beim Namen, und ein `doesNotMatch` über den Quelltext läse
+  // den Kommentar als Regel (diese Falle hat in Etappe 4 einen Guard rot
+  // gemacht, der recht hatte).
+  for (const [file, css] of [
+    ['list-row.css', listRow],
+    ['pantry.css',   read('../public/styles/pantry.css')],
+    ['shopping.css', read('../public/styles/shopping.css')],
+  ]) {
+    for (const rule of eachRule(css)) {
+      assert.doesNotMatch(rule.selector, /\.list-bulkbar|\.pantry-bulkbar/,
+        `${file} darf die Sammelaktions-Leiste nicht nachbauen - sie steht in layout.css`);
+    }
+  }
 
   for (const page of ['shopping', 'pantry']) {
     const src = read(`../public/pages/${page}.js`);
-    assert.ok(src.includes('list-bulkbar'), `${page}.js muss die geteilte Leiste verwenden`);
-    assert.ok(src.includes('list-bulkbar__label'),
-      `${page}.js muss die erklärende Zeile führen - sie ist der Teil, der im Einkauf fehlte`);
+    assert.match(src, /from '\/utils\/bulk-pill\.js'/,
+      `${page}.js muss die geteilte Shell-Oberfläche verwenden, nicht selbst rendern`);
+    assert.match(src, /setBulkPill\(/, `${page}.js muss die Pille über setBulkPill setzen`);
+    assert.match(src, /clearBulkPill\(/,
+      `${page}.js muss die Pille wegnehmen, sobald es keine Teilmenge mehr gibt`);
+    assert.doesNotMatch(src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/<!--[\s\S]*?-->/g, ''),
+      /class="[^"]*\blist-bulkbar\b/,
+      `${page}.js darf die Leiste nicht wieder in den Seitenfluss schreiben`);
   }
 
-  // Die Leiste hat Fläche, Rahmen und Polsterung: leer wäre sie ein sichtbarer
-  // Streifen. `display: flex` schlägt das UA-`[hidden]`, also braucht sie die
-  // Durchsetzung - vierte Fundstelle derselben Falle in diesem Repo.
-  assert.match(layout, /\.list-bulkbar\[hidden\][^{}]*\{\s*display:\s*none\s*!important/,
-    '.list-bulkbar setzt display und muss deshalb in der [hidden]-Durchsetzungsliste stehen');
-  assert.match(read('../public/pages/shopping.js'), /wrap\.hidden = !checkedCount/,
-    'ohne abgehakte Artikel muss die Leiste verschwinden, nicht leer stehen');
+  // --- 2. EINZEILIG per Konstruktion ---------------------------------------
+  const pillBase = bulkbarRules.find((r) => r.selector.trim() === '.list-bulkbar' && !r.at.length);
+  assert.ok(pillBase, '.list-bulkbar braucht eine Basisregel ohne At-Block');
+  assert.doesNotMatch(pillBase.body, /flex-wrap:\s*wrap/,
+    'ein Umbruch macht aus der Pille wieder den 103px-Block, den sie ersetzt');
+  assert.match(pillBase.body, /min-height:\s*var\(--bulk-pill-height\)/,
+    'die Pille muss die Höhe halten, mit der --bulk-pill-safe-zone rechnet');
+  assert.match(tokens, /--bulk-pill-safe-zone:\s*calc\([^;]*--bulk-pill-height[^;]*\)/,
+    'der Nachlauf leitet sich aus der Pillenhöhe ab und darf nicht davon wegdriften');
 
-  // Sie steht ÜBER dem Scroller, nicht darin: im Vorrat scrollte sie weg, obwohl
-  // sie die ganze gefilterte Liste betrifft.
-  const pantry = read('../public/pages/pantry.js');
-  assert.match(pantry, /pantry-bulkbar-slot/, 'der Vorrat braucht einen Slot außerhalb des Scrollers');
-  assert.match(pantry, /page\.append\(title, live, toolbar, filters, bulk, list, fab\)/,
-    'der Slot muss zwischen Filterleiste und Liste stehen');
-  assert.doesNotMatch(pantry, /list\.appendChild\(bulkBarEl\(\)\)/,
-    'die Leiste darf nicht wieder als Kind der scrollenden Liste hängen');
+  // --- 3. Nachlauf am Scroll-Ende ------------------------------------------
+  const safeZone = [...eachRule(layout)].filter((r) =>
+    /:has\([^)]*\.list-bulkbar[^)]*\)/.test(r.selector) && /\.app-content/.test(r.selector));
+  assert.ok(safeZone.length >= 2,
+    'der Nachlauf braucht BEIDE Fälle: mit FAB (Summe) und ohne (allein) - `:has()` trägt die '
+    + 'Spezifität seines Arguments, eine Regel allein stünde unter der FAB-Regel');
+  for (const rule of safeZone) {
+    assert.match(rule.body, /padding-block-end:[^;]*--bulk-pill-safe-zone/,
+      'jede Pillen-Regel am Scrollport muss den Nachlauf setzen');
+  }
+
+  // --- Der Stapel: Reihenfolge IST die Zusage ------------------------------
+  // Die Spalte ist unten verankert, also steht oben, wer zuerst im DOM steht.
+  // Stünde die Pille hinten, wanderte der TOAST - und der ist der mit der
+  // Fünf-Sekunden-Frist. Gegengeprüft: mit `order: 9` auf der Pillen-Schicht
+  // sprang der Toast von y=698 auf y=642.
+  const stackAppend = router.match(/bottomStack\.append\(([^)]*)\)/);
+  assert.ok(stackAppend, 'die Shell muss einen .shell-bottom-stack füllen');
+  const order = stackAppend[1].split(',').map((s) => s.trim());
+  assert.equal(order[0], 'bulkPillLayerEl',
+    'die Pille steht ZUERST im Stapel, damit sie dem Toast ausweicht und nicht umgekehrt');
+  assert.ok(order.length === 3 && order.every((n) => /toastContainer|bulkPillLayer/.test(n)),
+    'in den Stapel gehören genau die Pillen-Schicht und die beiden Toast-Container');
+
+  // Eine leere Zelle zieht trotzdem ihre `gap`-Lücke. Gegengeprüft: ohne diese
+  // Regel stand ein einzelner Toast 8px zu hoch.
+  const emptyRule = [...eachRule(layout)].find((r) => /\.shell-bottom-stack\s*>\s*:empty/.test(r.selector));
+  assert.ok(emptyRule && /display:\s*none/.test(emptyRule.body),
+    'leere Zellen des Stapels müssen aus dem Fluss - sonst verschiebt ihre Lücke den Toast');
+});
+
+/**
+ * Der Toast stand im Reduced-Transparency-Fallback des Filter-Chips.
+ *
+ * Beide verlieren dort ihr Glas, aber sie haben nicht denselben Grund darunter:
+ * der Chip ist hell mit dunkler Schrift, der Toast ist die dunkle Fläche der
+ * Shell und trägt `color: var(--neutral-50)`. Auf `--color-accent-light`
+ * (#F3EFFE) stand damit Weiss auf Fast-Weiss - GEMESSEN 1.08:1 gegen 13.69:1
+ * jetzt, mit emulierter Medienabfrage im gerenderten Dokument. Ein Fallback,
+ * der die Lesbarkeit sichern soll und sie abschafft.
+ *
+ * Über eachRule, weil die Begründung des Fixes den alten Wert beim Namen nennt.
+ */
+test('das Shell-Material behält im Reduced-Transparency-Fallback seinen dunklen Grund', () => {
+  const glass = read('../public/styles/glass.css');
+  let seen = 0;
+
+  for (const rule of eachRule(glass)) {
+    if (!rule.at.some((a) => /prefers-reduced-transparency/.test(a))) continue;
+    if (!/\.toast\b|\.list-bulkbar\b/.test(rule.selector)) continue;
+    seen += 1;
+    const bg = rule.body.match(/background-color:\s*([^;]+)/)?.[1]?.trim();
+    assert.ok(bg, `${rule.selector} muss im Fallback einen opaken Grund setzen`);
+    assert.match(bg, /--neutral-800/,
+      `${rule.selector} braucht seinen EIGENEN dunklen Grund - der helle Akzent gehört dem Chip, `
+      + 'und die Schrift auf diesem Material ist --neutral-50');
+  }
+
+  assert.ok(seen >= 1,
+    'Toast und Pille tragen Glas und brauchen deshalb einen Reduced-Transparency-Fallback');
 });
 
 /**
@@ -8256,7 +8345,7 @@ test('ein Dialog ueber einem offenen Modal nutzt confirmOverModal', () => {
  *
  * Grenzen der Regel: Element-Fabriken sind ausgenommen - sie befuellen ein
  * losgeloestes Element und geben es zurueck, materialisieren laesst sich das
- * erst am eingehaengten Baum (pantry.js: `rowEl`, `cartEl`, `bulkBarEl`).
+ * erst am eingehaengten Baum (pantry.js: `rowEl`, `cartEl`).
  * Funktionen mit genau einem Aufrufer ebenso: dort ist die Zustaendigkeit
  * eindeutig und nachlesbar (calendar.js: `renderAgendaView`). Beides faellt auf,
  * sobald ein zweiter Aufrufer dazukommt.

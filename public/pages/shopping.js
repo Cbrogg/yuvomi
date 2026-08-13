@@ -17,6 +17,7 @@ import { mountEmptyState, mountLoadError } from '/utils/empty-state.js';
 import { popoverMenuHtml, installPopoverMenus } from '/utils/popover-menu.js';
 import '/components/category-manager.js';
 import { findPageFab } from '/utils/fab.js';
+import { setBulkPill, clearBulkPill } from '/utils/bulk-pill.js';
 import { makeSortable } from '/utils/sortable.js';
 
 // --------------------------------------------------------
@@ -276,12 +277,14 @@ function renderListContent(container) {
       </form>
     </div>
 
-    <!-- Sammelaktions-Leiste, ÜBER dem Scroller und als GESCHWISTER der Liste.
-         Nicht darin: updateCheckedActions() läuft beim Abhaken einzelner Artikel,
-         ohne die Liste neu zu bauen (Issue #276, Scroll-Position), und mountItems()
-         leert #items-list komplett. Als Kind der Liste würde eines das andere
-         überschreiben. -->
-    <div class="list-bulkbar" id="list-header-checked" hidden></div>
+    <!-- Die Sammelaktions-Leiste stand hier als statischer Block über der
+         Liste. Seit Etappe 5 ist sie eine Pille in der unteren Shell-Zone
+         (utils/bulk-pill.js) - der Grund steht dort und an .list-bulkbar in
+         layout.css: 103px Listenfläche für einen einzigen abgehakten Artikel.
+         Die alte Begründung („Geschwister der Liste, nicht Kind: mountItems()
+         leert #items-list") ist damit erledigt statt umgezogen - was gar nicht
+         mehr in dieser Seite hängt, kann von ihrem Rendern nicht getroffen
+         werden. -->
 
     <!-- Artikel-Liste; Inhalt via mountItems(), damit der Leerzustand über den
          geteilten Renderer läuft statt als HTML-String hier drin. -->
@@ -1346,35 +1349,78 @@ async function openPantryTransfer(container) {
  * `display: flex` das UA-`[hidden]` sonst schlägt.
  */
 function updateCheckedActions(container) {
-  const wrap = container.querySelector('#list-header-checked');
-  if (!wrap) return;
-
   const checkedCount = state.items.filter((i) => i.is_checked).length;
-  wrap.replaceChildren();
-  wrap.hidden = !checkedCount;
-  if (!checkedCount) return;
+  if (!checkedCount) {
+    clearBulkPill();
+    return;
+  }
 
-  const pantryEnabled = !window.yuvomi?.isModuleDisabled?.('pantry');
-  wrap.insertAdjacentHTML('beforeend', `
-    <span class="list-bulkbar__label">${esc(t('shopping.checkedHint', { count: checkedCount }))}</span>
-    ${pantryEnabled ? `
-      <button class="btn btn--secondary list-bulkbar__action" data-action="to-pantry">
-        <i data-lucide="archive" class="icon-sm" aria-hidden="true"></i>
-        <span>${esc(t('shopping.toPantry'))}</span>
-      </button>` : ''}
-    <!-- Nur das Verb, nicht „Abgehakt löschen": die Zeile darüber nennt den Bezug
-         („3 Artikel abgehakt."), und bei 320px sind 262px Innenbreite gemessen -
-         mit 134px für „In den Vorrat" und 169px für das lange Label brach die
-         Leiste in eine dritte Zeile (159px hoch). Mit dem Verb allein sind es
-         253px und die Leiste bleibt auf allen Breiten zweizeilig. Die Aktion ist
-         zudem rückholbar (scheduleUndoableDelete), das Löschen der ganzen Liste
-         sitzt woanders (Überlaufmenü) und hat einen Bestätigungsdialog. -->
-    <button class="btn btn--ghost list-bulkbar__action" data-action="clear-checked"
-            aria-label="${esc(t('shopping.clearChecked', { count: checkedCount }))}">
-      <i data-lucide="trash-2" class="icon-sm" aria-hidden="true"></i>
-      <span>${esc(t('common.delete'))}</span>
-    </button>`);
-  if (window.lucide) window.lucide.createIcons({ el: wrap });
+  const actions = [];
+  if (!window.yuvomi?.isModuleDisabled?.('pantry')) {
+    actions.push({
+      label: t('shopping.toPantry'),
+      onClick: () => openPantryTransfer(container),
+    });
+  }
+  // Nur das Verb, nicht „Abgehakt löschen": das Label links nennt den Bezug,
+  // und der ganze Satz steht im aria-label. Die Aktion ist rückholbar
+  // (scheduleUndoableDelete); das Löschen der GANZEN Liste sitzt woanders
+  // (Überlaufmenü) und hat einen Bestätigungsdialog.
+  actions.push({
+    label: t('common.delete'),
+    ariaLabel: t('shopping.clearChecked', { count: checkedCount }),
+    onClick: () => clearCheckedUndoable(container),
+  });
+
+  // KEINE Icons mehr. Sie kosteten je 12px Breite plus Abstand auf einer
+  // Fläche, die einzeilig bleiben muss, und benannten nichts, was das Wort
+  // daneben nicht schon sagt - „In den Vorrat" mit Archiv-Kiste, „Löschen" mit
+  // Papierkorb. Auf dem Shell-Material trägt die Kapsel den Rang, nicht das
+  // Zeichen darin (dieselbe Form wie .toast__undo).
+  setBulkPill({
+    label: t('shopping.checkedHint', { count: checkedCount }),
+    actions,
+  });
+}
+
+/**
+ * Abgehakte löschen, mit Undo-Fenster. Stand bis Etappe 5 als Zweig im
+ * delegierten Klick-Handler von `container`; die Pille lebt seitdem in der
+ * Shell und ist von dort aus nicht mehr erreichbar - sie ruft direkt.
+ */
+function clearCheckedUndoable(container) {
+  const checked = state.items.filter((i) => i.is_checked);
+  const count   = checked.length;
+  if (!count) return;
+
+  const snapshot = checked.map((i) => ({ ...i }));
+  // DIESELBE REGEL WIE BEIM EINZELNEN ARTIKEL, hier mit schwererem Preis:
+  // `commit` schlug die Liste bisher ERST beim Ausfuehren nach. Ein
+  // Listenwechsel im Undo-Fenster schickte das DELETE damit an die gerade
+  // geoeffnete Liste und raeumte deren abgehakte Artikel ab - waehrend der
+  // Snapshot zur alten gehoerte und sie also nicht zurueckholen konnte.
+  const listId = state.activeListId;
+
+  // Optimistisch entfernen
+  state.items = state.items.filter((i) => !i.is_checked);
+  updateItemsList(container);
+  updateListCounter(listId, -count, -count);
+  renderTabs(container);
+
+  scheduleUndoableDelete({
+    message: t('shopping.itemsRemovedToast', { count }),
+    commit: ({ keepalive }) => api.delete(`/shopping/${listId}/items/checked`, { keepalive }),
+    restore: (err) => {
+      if (state.activeListId === listId) {
+        snapshot.forEach((item) => state.items.push(item));
+        state.items.sort((a, b) => a.id - b.id);
+        updateItemsList(container);
+      }
+      updateListCounter(listId, count, count);
+      renderTabs(container);
+      if (err) window.yuvomi.showToast(err.data?.error ?? t('common.errorGeneric'), 'danger');
+    },
+  });
 }
 
 function updateListCounter(listId, totalDelta, checkedDelta) {
@@ -1613,42 +1659,6 @@ function wireListContentEvents(container) {
       deleteItemUndoable(Number(target.dataset.id), container);
     }
 
-    // ---- Abgehakte löschen (mit Undo, 5s Fenster) ----
-    if (action === 'clear-checked') {
-      const checked = state.items.filter((i) => i.is_checked);
-      const count   = checked.length;
-      if (!count) return;
-
-      const snapshot = checked.map((i) => ({ ...i }));
-      // DIESELBE REGEL WIE BEIM EINZELNEN ARTIKEL, hier mit schwererem Preis:
-      // `commit` schlug die Liste bisher ERST beim Ausfuehren nach. Ein
-      // Listenwechsel im Undo-Fenster schickte das DELETE damit an die gerade
-      // geoeffnete Liste und raeumte deren abgehakte Artikel ab - waehrend der
-      // Snapshot zur alten gehoerte und sie also nicht zurueckholen konnte.
-      const listId = state.activeListId;
-
-      // Optimistisch entfernen
-      state.items = state.items.filter((i) => !i.is_checked);
-      updateItemsList(container);
-      updateListCounter(listId, -count, -count);
-      renderTabs(container);
-
-      scheduleUndoableDelete({
-        message: t('shopping.itemsRemovedToast', { count }),
-        commit: ({ keepalive }) => api.delete(`/shopping/${listId}/items/checked`, { keepalive }),
-        restore: (err) => {
-          if (state.activeListId === listId) {
-            snapshot.forEach((item) => state.items.push(item));
-            state.items.sort((a, b) => a.id - b.id);
-            updateItemsList(container);
-          }
-          updateListCounter(listId, count, count);
-          renderTabs(container);
-          if (err) window.yuvomi.showToast(err.data?.error ?? t('common.errorGeneric'), 'danger');
-        },
-      });
-    }
-
     // ---- Kategorien verwalten ----
     if (action === 'manage-categories') {
       openCategoryManager(container);
@@ -1656,10 +1666,6 @@ function wireListContentEvents(container) {
 
     if (action === 'import-meals') {
       openMealPlanImport(container);
-    }
-
-    if (action === 'to-pantry') {
-      await openPantryTransfer(container);
     }
 
     // ---- Liste umbenennen ----

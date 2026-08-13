@@ -28,6 +28,7 @@ import { scheduleUndoableDelete, vibrate, wireScrollFade } from '/utils/ux.js';
 import { toLocalDateKey } from '/utils/date.js';
 import { DEFAULT_CATEGORY_NAME, categoryLabel } from '/utils/shopping-categories.js';
 import { locationLabel } from '/utils/pantry-locations.js';
+import { setBulkPill, clearBulkPill } from '/utils/bulk-pill.js';
 import { PANTRY_UNITS, normalizePantryQuantity, pantryUnitStep } from '/utils/pantry-units.js';
 import {
   PANTRY_FILTERS,
@@ -248,14 +249,10 @@ export async function render(container) {
   filters.className = 'pantry-filters';
   filters.id = 'pantry-filters';
 
-  // Slot für die Sammelaktions-Leiste, ÜBER dem Scroller. Sie lag vorher als
-  // erstes Kind in #pantry-list und scrollte damit weg - die Aktion betrifft aber
-  // die ganze gefilterte Liste und muss erreichbar bleiben, während man sie
-  // durchgeht. Der Slot trägt die Content-Spalte (siehe .pantry-bulkbar-slot) und
-  // verschwindet leer, damit er keine Zeile beansprucht.
-  const bulk = document.createElement('div');
-  bulk.className = 'pantry-bulkbar-slot';
-  bulk.id = 'pantry-bulkbar-slot';
+  // Hier stand der Slot für die Sammelaktions-Leiste. Sie ist seit Etappe 5
+  // eine Pille in der unteren Shell-Zone (utils/bulk-pill.js) und braucht in
+  // dieser Seite gar keinen Platz mehr - weder im Scroller, wo sie bis
+  // 2026-07-30 wegscrollte, noch darüber, wo sie eine Zeile kostete.
 
   const list = document.createElement('div');
   list.className = 'list-scroller pantry-list';
@@ -271,7 +268,7 @@ export async function render(container) {
   fab.dataset.dockLabel = t('newLabel.pantry');
   fab.insertAdjacentHTML('beforeend', '<i data-lucide="plus" aria-hidden="true"></i>');
 
-  page.append(title, live, toolbar, filters, bulk, list, fab);
+  page.append(title, live, toolbar, filters, list, fab);
   container.replaceChildren(page);
   renderKitchenTabsBar(container, '/pantry');
 
@@ -426,43 +423,32 @@ function renderFilters() {
 }
 
 /**
- * Sammelaktion des „Fast leer"-Filters. Bewusst eine eigene Zeile über der
- * Liste statt als letztes Element der Chip-Leiste: dort lag sie hinter dem
- * horizontalen Scroll und war faktisch unsichtbar.
+ * Sammelaktion des „Fast leer"-Filters, seit Etappe 5 als Pille in der unteren
+ * Shell-Zone (utils/bulk-pill.js) statt als Block über der Liste. Sie lag davor
+ * schon zweimal falsch: zuerst als letztes Element der Chip-Leiste (hinter dem
+ * horizontalen Scroll, faktisch unsichtbar), dann als eigene Zeile darüber, die
+ * dem Einkauf gemessene 103px Listenfläche kostete.
  *
- * Geteilte Grammatik `.list-bulkbar` (styles/list-row.css) - der Einkauf
- * trägt seine Abschluss-Aktionen jetzt in derselben Leiste.
- */
-function bulkBarEl() {
-  const bar = document.createElement('div');
-  bar.className = 'list-bulkbar';
-
-  const label = document.createElement('span');
-  label.className = 'list-bulkbar__label';
-  label.textContent = t('pantry.bulkHint');
-
-  const bulk = document.createElement('button');
-  bulk.type = 'button';
-  bulk.className = 'btn btn--secondary list-bulkbar__action';
-  bulk.insertAdjacentHTML('beforeend', '<i data-lucide="shopping-cart" class="icon-sm" aria-hidden="true"></i>');
-  bulk.append(document.createTextNode(t('pantry.toShoppingAll')));
-  bulk.addEventListener('click', () => sendToShopping(visibleItems(), bulk));
-
-  bar.append(label, bulk);
-  return bar;
-}
-
-/**
- * Füllt den Slot über dem Scroller. Getrennt von renderList(), weil der Slot ein
- * Geschwister der Liste ist - er darf nicht mit ihr geleert werden.
+ * DAS LABEL IST DIE ZAHL, NICHT DIE ERKLÄRUNG. Es stand hier „Diese Artikel
+ * sind aufgebraucht oder unter dem Mindestbestand." - ein Satz, den der aktive
+ * Filterchip („Fast leer") daneben schon sagt, und der auf einer einzeiligen
+ * Fläche nichts als eine Ellipse hinterlässt. Was die Pille beitragen muss,
+ * ist der Umfang von „Alles": worauf der Knopf wirkt. Dieselbe Antwort gibt der
+ * Einkauf mit „3 Artikel abgehakt".
  */
 function renderBulkBar() {
-  const slot = _container?.querySelector('#pantry-bulkbar-slot');
-  if (!slot) return;
-  slot.replaceChildren();
-  if (state.filter !== 'low' || !state.items.length || !visibleItems().length) return;
-  slot.appendChild(bulkBarEl());
-  if (window.lucide) window.lucide.createIcons({ el: slot });
+  const items = visibleItems();
+  if (state.filter !== 'low' || !state.items.length || !items.length) {
+    clearBulkPill();
+    return;
+  }
+  setBulkPill({
+    label: t('pantry.bulkPillLabel', { count: items.length }),
+    actions: [{
+      label: t('pantry.toShoppingAll'),
+      onClick: (btn) => sendToShopping(visibleItems(), btn),
+    }],
+  });
 }
 
 function renderList() {
