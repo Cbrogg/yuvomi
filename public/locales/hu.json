@@ -398,6 +398,7 @@
         "documentRemove": "Kapcsolat eltávolítása",
         "documentsEmpty": "Még nincs csatolt dokumentum.",
         "documentsCount": "{{count}} dokumentum",
+        "documentsCount_one": "{{count}} dokumentum",
         "assignedToMe": "Hozzám rendelve",
         "noResultsTitle": "Nincs találat",
         "searchPlaceholder": "Feladatok keresése…",

@@ -398,6 +398,7 @@
         "documentRemove": "लिंक हटाएँ",
         "documentsEmpty": "अभी तक कोई दस्तावेज़ लिंक नहीं है।",
         "documentsCount": "{{count}} दस्तावेज़",
+        "documentsCount_one": "{{count}} दस्तावेज़",
         "assignedToMe": "मुझे सौंपे गए",
         "noResultsTitle": "कोई परिणाम नहीं",
         "searchPlaceholder": "कार्य खोजें…",

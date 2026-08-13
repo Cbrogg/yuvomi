@@ -398,6 +398,7 @@
         "documentRemove": "Odebrat propojení",
         "documentsEmpty": "Zatím nejsou propojeny žádné dokumenty.",
         "documentsCount": "Dokumenty: {{count}}",
+        "documentsCount_one": "Dokumenty: {{count}}",
         "assignedToMe": "Přiřazeno mně",
         "noResultsTitle": "Žádné výsledky",
         "searchPlaceholder": "Hledat úkoly…",

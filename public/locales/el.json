@@ -398,6 +398,7 @@
         "documentRemove": "Κατάργηση σύνδεσης",
         "documentsEmpty": "Δεν έχουν συνδεθεί έγγραφα ακόμη.",
         "documentsCount": "{{count}} έγγραφα",
+        "documentsCount_one": "{{count}} έγγραφα",
         "assignedToMe": "Ανατεθειμένα σε μένα",
         "noResultsTitle": "Δεν βρέθηκαν αποτελέσματα",
         "searchPlaceholder": "Αναζήτηση εργασιών…",

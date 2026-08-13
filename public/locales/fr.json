@@ -398,6 +398,7 @@
         "documentRemove": "Retirer le lien",
         "documentsEmpty": "Aucun document associé pour l’instant.",
         "documentsCount": "{{count}} documents",
+        "documentsCount_one": "{{count}} documents",
         "assignedToMe": "Attribués à moi",
         "noResultsTitle": "Aucun résultat",
         "searchPlaceholder": "Rechercher des tâches…",

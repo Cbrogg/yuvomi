@@ -338,7 +338,13 @@
  * markiert nur noch den AKTIVEN Ordner. Vorher trugen beide Zustaende
  * dieselbe Flaeche, und der aktive Ordner war unter dem Zeiger nicht mehr
  * vom ueberfahrenen zu unterscheiden. */
-.documents-folder-item--active {
+/* MIT `.list-row` DAVOR, sonst verliert der Zustand gegen den Hover: diese
+ * Regel hatte (0,1,0), `.list-row:hover` in list-row.css hat (0,2,0) - der
+ * aktive Ordner fiel unter dem Zeiger auf die Hover-Flaeche zurueck und war vom
+ * bloss ueberfahrenen nicht mehr zu unterscheiden, also genau der Zustand, den
+ * der Kommentar darueber als behoben beschrieb (PR-Review #754). */
+.list-row.documents-folder-item--active,
+.list-row.documents-folder-item--active:hover {
   background: color-mix(in srgb, var(--module-accent) var(--tint-state), transparent);
 }
 

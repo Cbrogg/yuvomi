@@ -135,11 +135,20 @@ export async function render(container) {
         <aside class="documents-folder-browser" aria-labelledby="documents-folder-browser-title">
           <div class="documents-folder-browser__head">
             <h2 class="documents-folder-browser__title" id="documents-folder-browser-title">${t('documents.folderBrowserTitle')}</h2>
+            ${/* KEIN `aria-label` hier. Es trug "Ordner durchsuchen", waehrend der
+                Knopf sichtbar den AKTUELLEN Ordner zeigt: der sichtbare Text stand
+                damit nicht im zugaenglichen Namen (WCAG 2.5.3 - Sprachsteuerung
+                kann den Knopf nicht ansprechen), und der gewaehlte Ordner, unter
+                1024px die einzige Zustandsangabe der Auswahl, wurde nie angesagt.
+                Den Bereich benennt bereits das <h2> ueber `aria-labelledby` am
+                <aside>; das Label doppelte es und verdeckte den Namen
+                (PR-Review #754). Die Beschriftung startet mit dem Standardordner,
+                damit der Knopf nie namenlos ist - `renderFolderBrowser` schreibt
+                sie danach bei jedem Rendern fort. */ ''}
             <button class="documents-folder-browser__toggle" id="documents-folder-toggle" type="button"
-                    aria-expanded="false" aria-controls="documents-folder-browser"
-                    aria-label="${t('documents.folderBrowserTitle')}">
+                    aria-expanded="false" aria-controls="documents-folder-browser">
               <i data-lucide="folders" aria-hidden="true"></i>
-              <span class="documents-folder-browser__toggle-label"></span>
+              <span class="documents-folder-browser__toggle-label">${esc(t('documents.allFolders'))}</span>
               <i data-lucide="chevron-down" aria-hidden="true" class="documents-folder-browser__chevron"></i>
             </button>
             <button class="documents-folder-browser__add" id="documents-folder-add" type="button" aria-label="${t('documents.addFolderButton')}" title="${t('documents.addFolderButton')}">

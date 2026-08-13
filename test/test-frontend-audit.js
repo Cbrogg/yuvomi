@@ -7836,14 +7836,29 @@ test('ein Kategoriebalken bleibt proportional - kein Prozentboden im Anteil', ()
        * genau die Haelfte des Anlassfalls durchgelassen. */
       const decls = [...src.matchAll(new RegExp(`\\bconst\\s+${ident}\\s*=\\s*([^;]+);`, 'g'))];
       assert.ok(decls.length > 0, `${file}: keine Zuweisung fuer "${ident}" gefunden`);
+      /* DER BODEN WIRD GERECHNET, NICHT GELESEN.
+       *
+       * Die erste Fassung prueffte `/Math\.max\(\s*[1-9]/` - eine Regel ueber
+       * die SCHREIBWEISE der alten Einheit. Derselbe Commit hat den Anteil aber
+       * von Prozent (0..100) auf einen Bruch (0..1) umgestellt: ein
+       * wiedereingefuehrter Boden hiesse jetzt `Math.max(0.06, …)`, faengt mit
+       * einer Null an und waere durchgelaufen. Der Guard war blind fuer genau
+       * die Einheit, die sein eigener Commit eingefuehrt hat - zum dritten Mal
+       * dieselbe Blindstelle an einem Tag (PR-Review #754).
+       *
+       * Also: jedes numerische erste Argument von `Math.max` in dieser
+       * Zuweisung muss NULL sein. Das ist einheitenfrei und laesst
+       * `Math.max(0, …)` durch, das gegen negativ klemmt und nichts behauptet. */
       for (const decl of decls) {
-        assert.doesNotMatch(
-          decl[1],
-          /Math\.max\(\s*[1-9]/,
-          `${file}: "const ${ident} = ${decl[1].trim()}" klemmt den Anteil nach oben von null weg. `
-          + 'Ein Mindestbalken ist eine Laenge (min-inline-size im CSS), kein Anteil - sonst '
-          + 'zeichnet er ungleiche Betraege gleich. Math.max(0, …) bleibt erlaubt.',
-        );
+        for (const m of decl[1].matchAll(/Math\.max\(\s*(-?\d+(?:\.\d+)?)/g)) {
+          assert.equal(
+            Number(m[1]), 0,
+            `${file}: "const ${ident} = ${decl[1].trim()}" klemmt den Anteil bei ${m[1]} `
+            + 'nach oben von null weg. Ein Mindestbalken ist eine Laenge (min-inline-size im '
+            + 'CSS), kein Anteil - sonst zeichnet er ungleiche Betraege gleich. '
+            + 'Math.max(0, …) bleibt erlaubt.',
+          );
+        }
       }
     }
   }

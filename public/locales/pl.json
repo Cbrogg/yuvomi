@@ -410,6 +410,7 @@
         "documentRemove": "Usuń powiązanie",
         "documentsEmpty": "Brak powiązanych dokumentów.",
         "documentsCount": "Dokumenty: {{count}}",
+        "documentsCount_one": "Dokumenty: {{count}}",
         "assignedToMe": "Przypisane do mnie",
         "noResultsTitle": "Brak wyników",
         "searchPlaceholder": "Szukaj zadań…",

@@ -398,6 +398,7 @@
         "documentRemove": "Ta bort länk",
         "documentsEmpty": "Inga dokument länkade ännu.",
         "documentsCount": "{{count}} dokument",
+        "documentsCount_one": "{{count}} dokument",
         "assignedToMe": "Tilldelade mig",
         "noResultsTitle": "Inga resultat",
         "searchPlaceholder": "Sök uppgifter…",

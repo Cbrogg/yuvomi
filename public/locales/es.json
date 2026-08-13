@@ -398,6 +398,7 @@
         "documentRemove": "Quitar vínculo",
         "documentsEmpty": "Aún no hay documentos vinculados.",
         "documentsCount": "{{count}} documentos",
+        "documentsCount_one": "{{count}} documentos",
         "assignedToMe": "Asignado a mí",
         "noResultsTitle": "Sin resultados",
         "searchPlaceholder": "Buscar tareas…",

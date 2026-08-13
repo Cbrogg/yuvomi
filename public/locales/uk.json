@@ -398,6 +398,7 @@
         "documentRemove": "Видалити зв’язок",
         "documentsEmpty": "Ще немає пов’язаних документів.",
         "documentsCount": "Документів: {{count}}",
+        "documentsCount_one": "Документів: {{count}}",
         "assignedToMe": "Призначені мені",
         "noResultsTitle": "Результатів немає",
         "searchPlaceholder": "Пошук завдань…",

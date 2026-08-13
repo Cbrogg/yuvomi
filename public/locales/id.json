@@ -410,6 +410,7 @@
         "documentRemove": "Hapus tautan",
         "documentsEmpty": "Belum ada dokumen yang ditautkan.",
         "documentsCount": "{{count}} dokumen",
+        "documentsCount_one": "{{count}} dokumen",
         "assignedToMe": "Ditugaskan ke saya",
         "noResultsTitle": "Tidak ada kecocokan",
         "searchPlaceholder": "Cari tugas…",

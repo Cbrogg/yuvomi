@@ -398,6 +398,7 @@
         "documentRemove": "إزالة الرابط",
         "documentsEmpty": "لا توجد مستندات مرتبطة بعد.",
         "documentsCount": "{{count}} مستندات",
+        "documentsCount_one": "{{count}} مستندات",
         "assignedToMe": "المُسندة إليّ",
         "noResultsTitle": "لا توجد نتائج",
         "searchPlaceholder": "البحث في المهام…",

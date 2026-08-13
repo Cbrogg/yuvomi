@@ -410,6 +410,7 @@
         "documentRemove": "حذف پیوند",
         "documentsEmpty": "هنوز سندی پیوند داده نشده است.",
         "documentsCount": "{{count}} سند",
+        "documentsCount_one": "{{count}} سند",
         "assignedToMe": "واگذارشده به من",
         "noResultsTitle": "بدون نتیجه",
         "searchPlaceholder": "جستجوی وظایف…",

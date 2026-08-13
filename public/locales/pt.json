@@ -398,6 +398,7 @@
         "documentRemove": "Remover associação",
         "documentsEmpty": "Ainda não há documentos associados.",
         "documentsCount": "{{count}} documentos",
+        "documentsCount_one": "{{count}} documentos",
         "assignedToMe": "Atribuídos a mim",
         "noResultsTitle": "Nenhum resultado",
         "searchPlaceholder": "Pesquisar tarefas…",

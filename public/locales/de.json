@@ -410,6 +410,7 @@
         "documentRemove": "Verknüpfung entfernen",
         "documentsEmpty": "Noch keine Dokumente verknüpft.",
         "documentsCount": "{{count}} Dokumente",
+        "documentsCount_one": "1 Dokument",
         "assignedToMe": "Mir zugewiesen",
         "noResultsTitle": "Keine Treffer",
         "searchPlaceholder": "Aufgaben durchsuchen…",

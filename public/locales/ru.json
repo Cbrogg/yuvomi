@@ -398,6 +398,7 @@
         "documentRemove": "Удалить связь",
         "documentsEmpty": "Пока нет связанных документов.",
         "documentsCount": "Документов: {{count}}",
+        "documentsCount_one": "Документов: {{count}}",
         "assignedToMe": "Назначенные мне",
         "noResultsTitle": "Нет результатов",
         "searchPlaceholder": "Поиск задач…",

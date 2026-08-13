@@ -398,6 +398,7 @@
         "documentRemove": "Koppeling verwijderen",
         "documentsEmpty": "Nog geen documenten gekoppeld.",
         "documentsCount": "{{count}} documenten",
+        "documentsCount_one": "{{count}} documenten",
         "assignedToMe": "Aan mij toegewezen",
         "noResultsTitle": "Geen resultaten",
         "searchPlaceholder": "Taken zoeken…",

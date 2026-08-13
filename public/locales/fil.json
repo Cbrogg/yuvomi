@@ -410,6 +410,7 @@
         "documentRemove": "Alisin ang link",
         "documentsEmpty": "Wala pang naka-link na dokumento.",
         "documentsCount": "{{count}} dokumento",
+        "documentsCount_one": "{{count}} dokumento",
         "assignedToMe": "Naatasan sa akin",
         "noResultsTitle": "Walang resulta",
         "searchPlaceholder": "Maghanap ng gawain…",

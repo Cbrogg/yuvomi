@@ -411,8 +411,14 @@ function renderTaskCard(task, opts = {}) {
             ${renderPriorityBadge(task.priority)}
             ${task.due_date ? '' : renderStartDateBadge(task.start_date)}
             ${renderDueDate(task.due_date, task.due_time, isDone || archived)}
-            ${task.is_recurring ? `<span class="due-date" aria-label="${t('tasks.recurring')}"><i data-lucide="repeat" class="icon-sm" aria-hidden="true"></i></span>` : ''}
-            ${task.document_count > 0 ? `<span class="due-date task-card__docs" aria-label="${t('tasks.documentsCount', { count: task.document_count })}"><i data-lucide="paperclip" class="icon-sm" aria-hidden="true"></i></span>` : ''}
+            ${/* `role="img"`, sonst wertet keine Hilfstechnik das `aria-label` aus:
+                an einem generischen <span> ohne Rolle ist es wirkungslos. Solange
+                die Ziffer noch danebenstand, las der Screenreader wenigstens sie -
+                seit der Dichte-Runde traegt das Label die Anzahl allein. Dieselbe
+                Marke im Budget (budget.js, `.budget-recur-mark`) macht es richtig;
+                hier standen zwei Kopien ohne Rolle (PR-Review #754). */ ''}
+            ${task.is_recurring ? `<span class="due-date" role="img" aria-label="${esc(t('tasks.recurring'))}"><i data-lucide="repeat" class="icon-sm" aria-hidden="true"></i></span>` : ''}
+            ${task.document_count > 0 ? `<span class="due-date task-card__docs" role="img" aria-label="${esc(t('tasks.documentsCount', { count: task.document_count }))}"><i data-lucide="paperclip" class="icon-sm" aria-hidden="true"></i></span>` : ''}
             ${renderVisibilityBadge(task.visibility)}
             ${showCategory && task.category !== FALLBACK_CATEGORY ? `<span class="due-date task-card__category">${esc(catLabel(task.category))}</span>` : ''}
             ${renderTagBadges(task.tags, ROW_TAG_BADGES_VISIBLE, task.priority)}

@@ -398,6 +398,7 @@
         "documentRemove": "Bağlantıyı kaldır",
         "documentsEmpty": "Henüz bağlı belge yok.",
         "documentsCount": "{{count}} belge",
+        "documentsCount_one": "{{count}} belge",
         "assignedToMe": "Bana atananlar",
         "noResultsTitle": "Sonuç yok",
         "searchPlaceholder": "Görevlerde ara…",

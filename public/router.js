@@ -1381,11 +1381,7 @@ async function renderPage(route, previousPath = null, scrollTarget = 0) {
     if (pageFab) {
       // Shortcut-Discoverability (Audit P3): der 'n'-Chord öffnet den FAB — als
       // Tooltip-Titel + aria-keyshortcuts sichtbar bzw. vorlesbar machen.
-      pageFab.setAttribute('aria-keyshortcuts', 'n');
-      const fabLabel = pageFab.getAttribute('aria-label');
-      if (fabLabel && !/\(n\)$/.test(pageFab.getAttribute('title') || '')) {
-        pageFab.setAttribute('title', `${fabLabel} (n)`);
-      }
+      markFabShortcut(pageFab);
 
       const fabKey = FAB_SEEN_KEY(route.module);
       let fabCount = parseInt(localStorage.getItem(fabKey) ?? '0', 10);
@@ -1554,6 +1550,10 @@ function renderAppShell(container) {
   // Liste überläuft — der Scrollbalken ist bewusst versteckt, ohne Anriss waren
   // Einträge unterhalb der Falte (Budget/Gesundheit/Einstellungen) unsichtbar.
   wireScrollFade(sidebarItems, { axis: 'y' });
+
+  // Einmal je Shell: das Andocken des FABs nimmt einen Wechsel der
+  // 1024px-Grenze auch ohne Navigation zur Kenntnis (Rotation).
+  wireFabDockingBoundary();
 
   // Zarte Hover-Vorschau — bewegt das separate `__hover`-Element (NICHT die
   // Aktiv-Pille) für Maus (hover) UND Tastatur (focus). Auf dem aktiven Item
@@ -1988,12 +1988,75 @@ function dockFabIntoToolbar(fab) {
     fab.appendChild(span);
   }
   slot.appendChild(fab);
+  /* DAS TASTENKUERZEL WIRD HIER MITGESETZT, nicht nur beim schwebenden Knopf.
+   * `adoptPageFab()` gibt beim Andocken `null` zurueck, damit die
+   * Einstiegsanimation des schwebenden FABs nicht mitlaeuft - der Aufrufer
+   * ueberspringt damit aber auch `aria-keyshortcuts` und den Titel mit "(n)".
+   * Die Auffindbarkeit fiel also ausgerechnet am ZEIGERGERAET weg, wo ein
+   * Tastenkuerzel ueberhaupt erst zaehlt (PR-Review #754). Der Chord selbst hat
+   * immer funktioniert, die Klasse `.page-fab` bleibt ja am Element. */
+  markFabShortcut(fab);
   return true;
+}
+
+/** Macht den 'n'-Chord am FAB sichtbar bzw. vorlesbar - schwebend wie angedockt. */
+function markFabShortcut(fab) {
+  fab.setAttribute('aria-keyshortcuts', 'n');
+  const fabLabel = fab.getAttribute('aria-label');
+  if (fabLabel && !/\(n\)$/.test(fab.getAttribute('title') || '')) {
+    fab.setAttribute('title', `${fabLabel} (n)`);
+  }
 }
 
 /** Spiegelt die Sidebar-Grenze aus layout.css - siehe die Notiz bei updateNav(). */
 function isDesktopViewport() {
   return window.matchMedia('(min-width: 1024px)').matches;
+}
+
+/**
+ * Nimmt das Andocken zurueck: aus dem Werkzeugleisten-Knopf wird wieder der
+ * schwebende FAB in seiner Shell-Ebene.
+ */
+function undockFabFromToolbar(fab) {
+  const layer = document.getElementById('fab-layer');
+  if (!layer) return false;
+  fab.classList.remove('btn', 'btn--primary', 'page-fab--docked');
+  fab.querySelector('.toolbar-new-btn__label')?.remove();
+  layer.replaceChildren(fab.closest('.page-fab-group') ?? fab);
+  return true;
+}
+
+/**
+ * DIE ENTSCHEIDUNG UEBERLEBT DIE GRENZE, AUCH OHNE NAVIGATION.
+ *
+ * `dockFabIntoToolbar()` fragt `isDesktopViewport()` genau einmal je
+ * Seitenaufbau. Wer die 1024px-Grenze ohne Routenwechsel ueberquert - ein iPad,
+ * das aus der Landschaft ins Hochformat kippt: 1024 -> 768 -, behielt den Knoten
+ * in `.page-toolbar__actions`, verlor aber seine Geometrie: `.page-fab--docked`
+ * steht ausschliesslich in `@media (min-width: 1024px)`, der Knopf fiel also auf
+ * `.page-fab` zurueck (quadratisch, `--fab-size`) und trug den
+ * `.toolbar-new-btn__label`-Span darin weiter, fuer den es unterhalb 1024px
+ * keine einzige Regel gibt (PR-Review #754).
+ *
+ * Der Listener haengt EINMAL an der Shell und ruft dieselben zwei Funktionen,
+ * die auch der Seitenaufbau ruft - keine zweite Fassung derselben Entscheidung.
+ */
+function wireFabDockingBoundary() {
+  const query = window.matchMedia?.('(min-width: 1024px)');
+  if (!query?.addEventListener) return;
+  query.addEventListener('change', () => {
+    const docked = document.querySelector('#main-content .page-fab--docked');
+    if (docked && !isDesktopViewport()) {
+      undockFabFromToolbar(docked);
+      return;
+    }
+    if (!docked && isDesktopViewport()) {
+      const floating = document.querySelector('#fab-layer .page-fab');
+      // Der schwebende Knopf haengt in der Shell-Ebene, `dockFabIntoToolbar`
+      // sucht ihn aber unter `#main-content` - hier also direkt anbieten.
+      if (floating) dockFabIntoToolbar(floating);
+    }
+  });
 }
 
 /**
@@ -2551,11 +2614,26 @@ function initMoreSheet(container, openSearch) {
     }
   });
 
+  /* WISCHEN SCHLIESST NUR VOM ANFANG DER LISTE AUS.
+   *
+   * Vorher schloss jede Abwaertsbewegung ueber 60px das Blatt, egal wo sie
+   * begann. Seit `.more-sheet__body` scrollt (die Obergrenze gegen den
+   * Blattueberstand bei 320px), IST diese Geste auch das Zurueckscrollen in den
+   * Gruppen: wer unten steht und nach oben zurueckwischt, bewegt den Finger
+   * abwaerts und schloss damit das Blatt (PR-Review #754).
+   *
+   * Der Stand wird beim BEGINN der Geste gemerkt, nicht am Ende: bis dahin hat
+   * der Scroller laengst reagiert und stuende auch nach einem echten
+   * Zieh-zum-Schliessen auf 0. */
   let _touchStartY = 0;
+  let _touchStartAtTop = true;
   sheet.addEventListener('touchstart', (e) => {
     _touchStartY = e.touches[0].clientY;
+    const body = sheet.querySelector('.more-sheet__body');
+    _touchStartAtTop = !body || body.scrollTop <= 0;
   }, { passive: true });
   sheet.addEventListener('touchend', (e) => {
+    if (!_touchStartAtTop) return;
     if (e.changedTouches[0].clientY - _touchStartY > 60) closeSheet();
   }, { passive: true });
 

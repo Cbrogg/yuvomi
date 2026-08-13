@@ -398,6 +398,7 @@
         "documentRemove": "移除关联",
         "documentsEmpty": "尚未关联任何文档。",
         "documentsCount": "{{count}} 个文档",
+        "documentsCount_one": "{{count}} 个文档",
         "assignedToMe": "分配给我",
         "noResultsTitle": "无结果",
         "searchPlaceholder": "搜索任务…",

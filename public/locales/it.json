@@ -398,6 +398,7 @@
         "documentRemove": "Rimuovi collegamento",
         "documentsEmpty": "Nessun documento collegato.",
         "documentsCount": "{{count}} documenti",
+        "documentsCount_one": "{{count}} documenti",
         "assignedToMe": "Assegnati a me",
         "noResultsTitle": "Nessun risultato",
         "searchPlaceholder": "Cerca attività…",

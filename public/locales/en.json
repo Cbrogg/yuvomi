@@ -398,6 +398,7 @@
         "documentRemove": "Remove link",
         "documentsEmpty": "No documents linked yet.",
         "documentsCount": "{{count}} documents",
+        "documentsCount_one": "1 document",
         "assignedToMe": "Assigned to me",
         "noResultsTitle": "No results",
         "searchPlaceholder": "Search tasks…",
