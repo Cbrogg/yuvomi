@@ -154,11 +154,20 @@
   flex-shrink: 0;
 }
 
+/* DIE POLSTERUNG GEHÖRT DER ZEILE, NICHT DEM KNOPF DARIN. Sie stand bis
+ * Etappe 5 in `.contact-item__open` (16px, mobil 12px) und die Zeile selbst
+ * hatte oben und unten gar keine - dadurch bekam die Textspalte 24px
+ * Innenabstand und die 48px-Bedienzone daneben null. Gemessen bei 390x844:
+ * 43,7px Text plus 24 = 67,7px, während jede geschnittene Liste der App auf
+ * 48 + 2x8 = 64 steht. Das ist kein Zufallsunterschied, sondern die Rechnung
+ * von `.list-row`: die Polsterung muss BEIDE Spalten umschließen, sonst
+ * bestimmt die höhere allein. Mit ihr an der Zeile: 64px, wie Einkauf,
+ * Vorrat, Rezepte, Budget und die Hauswirtschaft. */
 .contact-item {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding-right: var(--space-4);
+  padding: var(--space-2) var(--space-3);
   transition: background-color var(--transition-fast);
 }
 
@@ -233,21 +242,23 @@ html:has(.contacts-page.is-selecting) .page-fab {
 }
 
 /* Öffnen/Bearbeiten: echte, fokussierbare Schaltfläche (Tastatur/Screenreader).
- * Padding wandert hierher, damit die gesamte linke Zeilenfläche klickbar ist. */
+ *
+ * DER KNOPF-RESET UND DIE ZIELGRÖSSE STEHEN NICHT MEHR HIER, sondern kommen
+ * aus `.list-row__main--interactive` (list-row.css) - der Baustein für genau
+ * diesen Fall: „die Textspalte IST die primäre Zeilenaktion". Der Vorrat trägt
+ * ihn seit der Küchen-Zusammenführung, die Kontakte hatten dieselben sieben
+ * Deklarationen zeichengleich daneben stehen.
+ *
+ * WAS DER UMZUG DER POLSTERUNG KOSTET, und es ist derselbe Preis, den der
+ * Vorrat schon zahlt: die 8px oben und unten gehören jetzt der Zeile und sind
+ * nicht mehr Teil der Klickfläche. Der Knopf hält seine Zielgröße stattdessen
+ * über `min-height` - 40px am Zeiger, 48px am Finger. */
 .contact-item__open {
   flex: 1;
   min-width: 0;
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-4);
-  padding-right: var(--space-2);
-  background: none;
-  border: none;
-  font: inherit;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
 }
 
 .contact-item__open:focus-visible {
@@ -524,18 +535,16 @@ html:has(.contacts-page.is-selecting) .page-fab {
 @media (max-width: 767px) {
   .contact-item__open {
     gap: var(--space-2);
-    padding: var(--space-3);
-    padding-right: var(--space-2);
   }
 
-  .contact-item {
-    padding-right: var(--space-3);
-  }
-
-  .contact-item__icon {
-    width: 36px;
-    height: 36px;
-  }
+  /* HIER STANDEN 36 HARTKODIERTE PIXEL, und sie haben eine fremde Begründung
+   * falsch gemacht: `birthdays.css` beruft sich darauf, dass „Kontakte, das
+   * Nachbarmodul derselben Familie, ihr Zeilenbild seit jeher auf
+   * `--target-md` tragen" - am Telefon, wo diese Regel griff, waren es 36 statt
+   * 40. Die beiden Zeilen derselben Familie standen also genau dort
+   * auseinander, wo die Begründung sie zusammen sah. Der Wert ist ersatzlos
+   * weg: --target-md kostet die Zeile nichts, ihre Höhe kommt aus Text und
+   * Bedienzone, nicht aus dem 40px-Bild. */
 }
 
 /* ================================================================

@@ -586,7 +586,7 @@ function renderContactItem(c) {
     const selected = state.selected.has(c.id);
     return `
       <div class="contact-item contact-item--select${selected ? ' contact-item--selected' : ''}" data-id="${c.id}">
-        <label class="contact-item__open contact-item__select">
+        <label class="contact-item__open list-row__main--interactive contact-item__select">
           <input type="checkbox" class="contact-item__checkbox" data-select="${c.id}"${selected ? ' checked' : ''}${c.family_user_id ? ' disabled' : ''} aria-label="${esc(c.name)}">
           ${contactAvatar(c)}
           <span class="contact-item__body">
@@ -625,7 +625,7 @@ function renderContactItem(c) {
 
   return `
     <div class="contact-item" data-id="${c.id}">
-      <button type="button" class="contact-item__open" data-open="${c.id}">
+      <button type="button" class="contact-item__open list-row__main--interactive" data-open="${c.id}">
         ${contactAvatar(c)}
         <span class="contact-item__body">
           <span class="contact-item__name">${esc(c.name)}</span>
