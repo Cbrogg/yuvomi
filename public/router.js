@@ -1094,8 +1094,11 @@ function paintMoreSheetBadges(sheet) {
 
 /**
  * Baut den dynamischen Body des „Mehr“-Sheets: das nach Bereichen gruppierte
- * Modul-Raster und den monochromen System-Cluster (Einstellungen · Hilfe ·
- * Änderungen · Abmelden) als kompakte Reihe.
+ * Modul-Raster, den monochromen System-Cluster (Einstellungen · Hilfe ·
+ * Änderungen) als kompakte Reihe und darunter Abmelden in eigener voller Zeile.
+ *
+ * Gibt EINEN Knoten in einem Array zurück (`.more-sheet__body`, der Scroller);
+ * beide Aufrufer spreizen das Ergebnis und bleiben davon unberührt.
  *
  * DIE GRUPPEN GIBT ES SCHON. Sie stehen als NAV_SECTION an jedem Nav-Item und
  * beschriften bereits die Desktop-Sidebar (Planen · Haushalt · Menschen ·
@@ -1109,6 +1112,18 @@ function paintMoreSheetBadges(sheet) {
  * Handle + Suchleiste bleiben davon unberührt (sie tragen Event-Wiring).
  */
 function buildMoreSheetBody() {
+  /* EIN scrollender Körper zwischen Griff und Suche und dem Blattrand.
+   *
+   * Das Blatt ist `position: fixed; bottom: 0` und hatte weder Obergrenze noch
+   * Scroller: es wuchs nach OBEN aus dem Schirm. Gemessen bei 320x568 lag seine
+   * Oberkante bei -142,6px, das Suchfeld komplett ausserhalb (-105,6 bis -67,0)
+   * - fokussierbar per Tab, aber nicht ins Bild zu holen (Critique
+   * 2026-08-13, P0). Der Deckel gehoert ans Blatt, das Scrollen an den Koerper:
+   * so bleiben Griff und Suche stehen, wo die Hand sie sucht, und nur die
+   * Gruppen wandern. Ein Sticky-Kopf haette dieselbe Wirkung, aber zwei
+   * Hintergruende mehr zu verwalten. */
+  const body = document.createElement('div');
+  body.className = 'more-sheet__body';
   const nodes = [];
 
   // Der Katalog-Hinweis („Alle Module … in den Einstellungen") lebt jetzt in
@@ -1188,10 +1203,27 @@ function buildMoreSheetBody() {
       showChangelogModal();
     },
   }));
-  system.appendChild(moreActionEl({
+  // Die Spaltenzahl folgt der Besetzung: ohne Einstellungen (Modul abgeschaltet)
+  // sind es zwei Ziele, und zwei Ziele in drei Spalten lassen eine Lücke, die
+  // wie ein fehlendes Element aussieht.
+  system.style.setProperty('--more-system-cols', String(system.children.length || 1));
+  nodes.push(system);
+
+  /* Abmelden bekommt seine eigene volle Zeile, wie in der Sidebar.
+   *
+   * IN DER SYSTEMREIHE LAG ES UNTER DEM DAUMEN, DER DAS BLATT GEOEFFNET HAT.
+   * Gemessen bei 390x844: der Mehr-Knopf steht bei x 266,6-329,0 / y 776,9-835,0,
+   * und `elementFromPoint` lieferte am MITTELPUNKT desselben Knopfs nach dem
+   * Oeffnen `.more-item--logout` (Ueberlappung 32x51px). Der Bestaetigungsdialog
+   * fing den zweiten Tap ab - aber die Stelle, an der man "Mehr" tippt, darf
+   * nicht die Stelle sein, an der die Sitzung endet (Critique 2026-08-13, P0).
+   * Die Entscheidung war an anderer Stelle laengst getroffen: die Sidebar setzt
+   * Abmelden als terminale Aktion in eine eigene, volle Zeile mit Haarlinie
+   * (sidebarActionEl weiter unten). Das Blatt fuehrt jetzt dieselbe Form. */
+  const logout = moreActionEl({
     labelKey: 'settings.logout',
     icon: 'log-out',
-    className: 'more-item--logout',
+    className: 'more-action--logout more-item--logout',
     onClick: () => {
       if (window._closeMoreSheet) window._closeMoreSheet({ restoreFocus: false });
       // #more-btn synchron fokussieren, BEVOR das Modal öffnet: openModal
@@ -1200,10 +1232,11 @@ function buildMoreSheetBody() {
       document.getElementById('more-btn')?.focus();
       confirmAndLogout();
     },
-  }));
-  nodes.push(system);
+  });
+  nodes.push(logout);
 
-  return nodes;
+  body.append(...nodes);
+  return [body];
 }
 
 /**

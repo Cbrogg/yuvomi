@@ -414,19 +414,60 @@ html:has(.search-overlay--visible) yuvomi-install-prompt {
 /* ── More-Sheet ── */
 .more-sheet {
   position: fixed;
-  bottom: 0;
+  /* DAS BLATT HOERT UEBER DER LEISTE AUF, DIE ES SONST VERDECKT.
+   *
+   * Vorher lag es auf `bottom: 0` und damit UEBER der Tab-Leiste. Gemessen bei
+   * 390x844: `elementFromPoint` lieferte am Mittelpunkt des Mehr-Knopfs
+   * (x 266,6-329,0 / y 776,9-835,0) nach dem Oeffnen `.more-item--logout` -
+   * derselbe Pixel oeffnete das Blatt und beendete danach die Sitzung
+   * (Critique 2026-08-13, P0). Der Bestaetigungsdialog fing es ab; die Stelle
+   * blieb trotzdem falsch.
+   *
+   * EINE UNTERKANTE UEBER DER LEISTE MACHT DEN FEHLER UNMOEGLICH statt ihn
+   * abzupolstern: in dem Streifen liegt jetzt entweder der Mehr-Knopf selbst
+   * (tippt man ihn erneut, schliesst das Blatt) oder der Backdrop (der
+   * schliesst es auch). Derselbe Pixel oeffnet und schliesst - und kein
+   * Bedienelement des Blattes steht mehr dort, wo ein Ziel der Leiste war.
+   * Das ist zugleich das native Muster: der More-Tab legt sich nicht auf seine
+   * eigene Leiste. Ein Sicherheitsabstand als padding-bottom haette dieselben
+   * 76px gekostet und den Fehler nur eine Zeile weiter geschoben. */
+  bottom: var(--nav-bottom-height);
   left: 0;
   right: 0;
   background-color: var(--color-surface);
   border-top: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-  padding: var(--space-4) var(--space-4) calc(var(--space-4) + var(--safe-area-inset-bottom));
+  padding: var(--space-4);
   z-index: calc(var(--z-nav) + 2);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  /* EIN BLATT, DAS AM UNTEREN RAND KLEBT, WAECHST NACH OBEN AUS DEM SCHIRM.
+   * Ohne diese Grenze mass es bei 320x568 eine Oberkante von -142,6px, und das
+   * Suchfeld lag komplett ausserhalb - per Tab erreichbar, per Auge nicht, und
+   * ohne jeden Scrollweg dorthin (Critique 2026-08-13, P0). Die --space-8 sind
+   * kein Rand, sondern der Beweis, dass es ein Blatt ist: der Streifen Seite
+   * darueber sagt, dass hinter dem Blatt noch etwas liegt, und ist die Flaeche,
+   * auf die man tippt, um es zu schliessen. dvh statt vh, weil die mobile
+   * Adressleiste die Hoehe waehrend der Sitzung aendert. */
+  max-block-size: calc(100dvh - var(--nav-bottom-height) - var(--space-8));
   transform: translateY(100%);
   transition: transform var(--duration-lg) var(--ease-out);
+}
+
+/* Der Deckel gehoert dem Blatt, das Scrollen dem Koerper: Griff und Suche
+ * bleiben stehen, wo die Hand sie sucht, und nur die Gruppen wandern.
+ * `min-block-size: 0` ist Pflicht - ein Flex-Kind schrumpft sonst nicht unter
+ * seinen Inhalt, und die Grenze oben bliebe wirkungslos. */
+.more-sheet__body {
+  flex: 1 1 auto;
+  min-block-size: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* Der Sichtbarkeitsbeweis am Rand: die zwei Pixel Luft verhindern, dass der
+   * Fokusring der obersten Kachel am Scrollport abgeschnitten wird. */
+  padding-block: var(--space-0h);
+  margin-block: calc(-1 * var(--space-0h));
 }
 
 /* App-Launcher-Raster, nach Bereichen gruppiert.
@@ -444,7 +485,10 @@ html:has(.search-overlay--visible) yuvomi-install-prompt {
  * App und tritt hinter das Siegel zurück. */
 .more-sheet__grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  /* minmax(0, 1fr), nicht 1fr: `1fr` ist minmax(AUTO, 1fr) und laesst die
+   * laengste Kachel ihre Spalte breiter ziehen - bei 320px massen die drei
+   * Spalten 93,8 / 89,1 / 89,1px statt dreimal gleich. */
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-2);
 }
 
@@ -454,12 +498,17 @@ html:has(.search-overlay--visible) yuvomi-install-prompt {
   margin-block-start: var(--space-4);
 }
 
+/* Satzschreibung, nicht Versalien. Es sind WORTWOERTLICH dieselben vier Woerter,
+ * die die Sidebar als `.nav-section-label` fuehrt (Planen · Haushalt · Menschen ·
+ * Finanzen), und DESIGN.md weist der Rolle "Navigations-Gruppierungslabel"
+ * Satzschreibung zu - mit der Begruendung, dass ganze Phrasen in Versal plus
+ * Tracking geschrien lesen. Die Sidebar folgte der Regel, dieses Blatt nicht:
+ * die zwei Flaechen, die dieselbe Navigation zeigen, waren an ihrer Typografie
+ * nicht als dieselbe Sache erkennbar (Critique 2026-08-13). */
 .more-sheet__group-label {
   font-size: var(--text-xs);
   font-weight: var(--font-weight-semibold);
   line-height: var(--line-height-tight);
-  letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
   color: var(--color-text-tertiary);
   margin-block-end: var(--space-2);
   padding-inline: var(--space-1);
@@ -472,6 +521,9 @@ html:has(.search-overlay--visible) yuvomi-install-prompt {
 /* ── More-Sheet Drag-Handle ── */
 .more-sheet__handle {
   grid-column: 1 / -1;
+  /* flex-shrink: 0, weil das Blatt seit der Obergrenze ein schrumpfender
+   * Flex-Container ist: bei 320px war der Griff auf 2,3px zusammengedrueckt. */
+  flex-shrink: 0;
   width: 36px;
   height: 4px;
   border-radius: var(--radius-full);
@@ -482,6 +534,7 @@ html:has(.search-overlay--visible) yuvomi-install-prompt {
 /* ── More-Sheet Suchleiste ── */
 .more-sheet__search {
   grid-column: 1 / -1;
+  flex-shrink: 0;
   appearance: none;
   display: flex;
   align-items: center;
@@ -683,8 +736,14 @@ html:has(.search-overlay--visible) yuvomi-install-prompt {
   transform: scale(0.96);
 }
 
-.more-item:hover {
-  background-color: var(--color-surface-elevated-hover);
+/* Nur an einem echten Zeiger. Ohne die Abfrage blieb die zuletzt angetippte
+ * Kachel nach dem Tap auf --color-surface-hover stehen und behauptete "du bist
+ * hier", waehrend aria-current auf einer anderen lag - zwei widersprechende
+ * Ortsangaben, eine davon ein Rest (Critique 2026-08-13). */
+@media (hover: hover) {
+  .more-item:hover {
+    background-color: var(--color-surface-elevated-hover);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -778,12 +837,41 @@ html:has(.search-overlay--visible) yuvomi-install-prompt {
   margin: 0;
 }
 
-/* ── System-Cluster: kompakte Reihe (Einstellungen | Hilfe | Änderungen |
- * Abmelden) — Icon-über-Label, monochrom. ── */
+/* ── System-Cluster: kompakte Reihe (Einstellungen | Hilfe | Änderungen) —
+ * Icon-über-Label, monochrom. Abmelden steht darunter in eigener Zeile. ──
+ * Die Spaltenzahl kommt aus der Besetzung (router.js setzt --more-system-cols),
+ * weil Einstellungen ein abschaltbares Modul ist und zwei Ziele in drei Spalten
+ * eine Luecke lassen, die wie ein fehlendes Element aussieht. */
 .more-sheet__system {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(var(--more-system-cols, 3), minmax(0, 1fr));
   gap: var(--space-2);
+}
+
+/* ── Abmelden: terminale Aktion in eigener, voller Zeile ──
+ * Wortgleich die Behandlung der Sidebar (`.nav-item--logout`, weiter unten):
+ * volle Breite, Haarlinie darueber, monochrom - Danger-Rot erscheint erst im
+ * Confirm. Der Grund steht in router.js: in der vierspaltigen Systemreihe lag
+ * es unter genau dem Punkt, an dem der Daumen "Mehr" getippt hat. Zeilenform
+ * statt Icon-ueber-Label, damit es sich von den drei Zielen darueber
+ * unterscheidet und nicht als vierte Kachel gelesen wird. */
+.more-action--logout {
+  /* Ein <button> ist auch mit display:flex shrink-to-fit; ohne diese Zeile
+   * blieb die "volle Zeile" 82,9px breit (gemessen). */
+  inline-size: 100%;
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: var(--space-2h);
+  padding-inline: var(--space-3);
+  margin-block-start: var(--space-1);
+  padding-block-start: var(--space-3);
+  border-top: 1px solid var(--color-border-subtle);
+  border-radius: 0;
+  text-align: start;
+}
+
+.more-action--logout .more-action__label {
+  font-size: var(--text-sm);
 }
 
 /* System-Item: Icon-über-Label, monochrom — leichter als die farbigen
