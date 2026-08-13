@@ -287,11 +287,39 @@
  * genau in der Situation, für die die Liste gebaut ist, im Laden (Critique
  * 2026-07-30, P0). Eine zweite Zeile kostet Höhe, eine Ellipse kostet die
  * Aussage. Gilt für Name und Meta gleich: ein gekürztes MHD ist wertlos. */
+/* MIT TRENNSTRICH, NICHT MITTEN IM WORT (Etappe 7, 2026-08-13). Die Begründung
+ * oben stimmt weiter - geprüft hat nie jemand, WIE sie umbricht.
+ * `overflow-wrap: anywhere` bricht per Definition innerhalb eines Wortes, und
+ * bei `hyphens: manual` (dem Voreingestellten) ohne jedes Zeichen: gemessen bei
+ * 320x568 im Einkauf standen 11 von 26 Zeilen als „Kirschtoma / ten",
+ * „Räucher / lachs", „Vollkorn / brot" - jedes gewöhnliche deutsche Kompositum.
+ * Bei 360px ist es genau eine Zeile („Griechischer Joghurt", und die bricht an
+ * ihrer Leerstelle, also richtig), bei 390px keine.
+ *
+ * `hyphens: auto` macht aus dem Bruch eine Trennung, und es ist sprachrichtig,
+ * weil `document.documentElement.lang` dem Locale folgt (i18n.js).
+ *
+ * ES KOSTET EINE ZEILE, EINMAL, UND DAS IST DER PREIS. A/B in derselben Seite
+ * gemessen (320/360/390px, acht Routen): bei 360 und 390 ändert sich nichts,
+ * bei 320 ändert sich GENAU EINE Zeile im ganzen Einkauf - „Griechischer
+ * Joghurt" 85,6 -> 109,1px, bei unveränderter Namensspalte von 88px. Ohne
+ * Trennung stand dort „Griechische / r Joghurt", mit Trennung „Griechi- /
+ * scher / Joghurt": eine Zeile mehr für einen Namen, der sich lesen lässt. In
+ * Vorrat, Rezepten, Budget, Geburtstagen und Haushaltshilfe ist die Differenz
+ * null. Die anderen zehn Einkaufszeilen bekommen ihren Trennstrich zum
+ * Nulltarif - sie waren schon zweizeilig.
+ *
+ * NUR HIER, NICHT AN DER METAZEILE: die trägt `overflow-wrap: break-word`, und
+ * das bricht ein Wort nur, wenn es allein auf einer Zeile nicht unterkommt.
+ * `hyphens: auto` würde dort auch dann trennen, wenn ein Umbruch an einer
+ * Leerstelle möglich ist - eine Änderung an vielen Zeilen ohne einen Befund
+ * dahinter. Die Asymmetrie ist Absicht, nicht ein vergessener Ort. */
 .list-row__name {
   font-weight: var(--font-weight-medium);
   color: var(--color-text-primary);
   min-width: 0;
   overflow-wrap: anywhere;
+  hyphens: auto;
   /* `flex: 1 1 auto` für den Fall, dass der Name in einem FLEX-Elternteil steht.
    *
    * In .list-row__main (Grid) ist die Zeile wirkungslos. In den Rezepten ist der
