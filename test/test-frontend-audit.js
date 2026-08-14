@@ -12251,3 +12251,32 @@ test('die Lesemass-Liste kappt kein selbstpolsterndes Element (#758)', () => {
     + 'Bei box-sizing: border-box frisst das Polster die Kappung auf. Die Kappung gehoert dorthin, wo auch das '
     + 'Polster steht, und muss es einrechnen (siehe .list-tabs-bar in shopping.css).');
 });
+
+test('ein Teilschritt lässt sich korrigieren und entfernen, nicht nur abhaken (#748)', () => {
+  // Ein Teilschritt IST eine Aufgabe mit parent_task_id, PUT und DELETE gab es
+  // also längst - die Zeile bot nur das Häkchen an. Einen Tippfehler zu
+  // korrigieren hieß: abhaken und neu tippen (#748).
+  const tasksPage = read('../public/pages/tasks.js');
+
+  const row = /class="subtask-item [\s\S]*?<\/div>`\)\.join\(''\)/.exec(tasksPage);
+  assert.ok(row, 'die Teilschritt-Zeile ist nicht mehr auffindbar');
+  for (const action of ['toggle-subtask', 'rename-subtask', 'delete-subtask']) {
+    assert.match(row[0], new RegExp(`data-action="${action}"`),
+      `die Teilschritt-Zeile bietet "${action}" nicht an`);
+  }
+
+  // Beide Aktionen sind auch verdrahtet - ein Knopf ohne Handler ist schlimmer
+  // als keiner.
+  assert.match(tasksPage, /action === 'rename-subtask'[\s\S]{0,120}handleRenameSubtask/);
+  assert.match(tasksPage, /action === 'delete-subtask'[\s\S]{0,120}handleDeleteSubtask/);
+
+  // Löschen ist der einzige Weg ohne Rückweg und fragt deshalb zurück.
+  assert.match(tasksPage, /handleDeleteSubtask[\s\S]{0,400}confirmModal/);
+
+  // Und die Zielgröße stimmt mit der Aufgabenzeile darüber überein, statt eine
+  // zweite Größe für dieselbe Rolle einzuführen.
+  const css = read('../public/styles/tasks.css');
+  const block = /\.subtask-item__action \{([\s\S]*?)\}/.exec(css);
+  assert.ok(block, '.subtask-item__action fehlt');
+  assert.match(block[1], /min-height:\s*var\(--target-base\)/);
+});
