@@ -130,11 +130,40 @@ router.patch('/google/calendars', requireAdmin, async (req, res) => {
 });
 
 /**
+ * Der Anzeigename eines noch nicht synchronisierten Kalenders aus der
+ * Auswahlliste seines Providers - die Vorbedingung dafür, seine
+ * external_calendars-Zeile vorab anzulegen (siehe PATCH unten). Gleichzeitig die
+ * Schranke: Nur ein Kalender, den der verbundene Account tatsächlich anbietet,
+ * kann hier eine Zeile bekommen. Apple hat keine eigene Auswahlliste, dort
+ * entsteht die Zeile weiterhin ausschließlich beim Sync.
+ */
+function knownCalendarName(source, externalId) {
+  if (source === 'caldav') {
+    return db.get().prepare(
+      'SELECT calendar_name AS name FROM caldav_calendar_selection WHERE calendar_url = ? LIMIT 1'
+    ).get(externalId)?.name ?? null;
+  }
+  if (source === 'google') {
+    return db.get().prepare(
+      'SELECT name FROM google_calendar_selection WHERE calendar_id = ?'
+    ).get(externalId)?.name ?? null;
+  }
+  return null;
+}
+
+/**
  * PATCH /api/v1/calendar/external-calendars
- * Admin only. Setzt die Standard-Zuweisung eines synchronisierten Kalenders (#459).
+ * Admin only. Setzt die Standard-Zuweisung eines Kalenders (#459).
  * Provider-übergreifend (Google/Apple/CalDAV) über die geteilte external_calendars-Tabelle,
- * adressiert per (source, external_id). Die Zeile entsteht beim ersten Sync — der Picker
- * erscheint im UI nur für aktivierte Kalender.
+ * adressiert per (source, external_id).
+ *
+ * Die Zeile entsteht nötigenfalls hier, nicht erst beim ersten Sync: Vorher war
+ * die Standard-Zuweisung genau so lange nicht setzbar, wie sie etwas bewirkt
+ * hätte. Wer einen Kalender aktivierte, bekam den ersten Schwung Termine ohne
+ * Zuweisung herein und durfte sie von Hand nachtragen (#730). Der Sync
+ * aktualisiert beim Anlegen nur Name und Farbe (ON CONFLICT DO UPDATE), die
+ * Zuweisung bleibt also stehen.
+ *
  * Body: { source: 'google'|'apple'|'caldav', external_id: string, default_assignee_user_id: number|null }
  * Response: { data: { source, external_id, default_assignee_user_id } }
  */
@@ -161,7 +190,16 @@ router.patch('/external-calendars', requireAdmin, (req, res) => {
     ).run(assignee, source, external_id);
 
     if (result.changes === 0) {
-      return res.status(404).json({ error: 'Kalender noch nicht synchronisiert.', code: 404 });
+      const name = knownCalendarName(source, external_id);
+      if (!name) {
+        return res.status(404).json({ error: 'Kalender noch nicht synchronisiert.', code: 404 });
+      }
+      // Farbe bleibt offen: Sie gehört dem Provider, und der nächste Sync trägt
+      // sie zusammen mit dem endgültigen Namen nach.
+      db.get().prepare(`
+        INSERT INTO external_calendars (source, external_id, name, color, default_assignee_user_id)
+        VALUES (?, ?, ?, NULL, ?)
+      `).run(source, external_id, name, assignee);
     }
     res.json({ data: { source, external_id, default_assignee_user_id: assignee } });
   } catch (err) {

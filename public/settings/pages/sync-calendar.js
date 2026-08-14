@@ -98,6 +98,14 @@ function renderPage(container, user) {
               <input class="form-input form-input--color" type="color" id="ics-color" value="#6366f1" />
             </div>
             <div class="form-group">
+              <label class="form-label" for="ics-assignee">${t('settings.sync.defaultAssignee')}</label>
+              <select class="form-input" id="ics-assignee">
+                <option value="">${t('settings.sync.defaultAssigneeNone')}</option>
+                <option value="" disabled data-loading>${t('common.loading')}</option>
+              </select>
+              <p class="form-hint">${t('settings.sync.defaultAssigneeHint')}</p>
+            </div>
+            <div class="form-group">
               ${toggleRowHtml({
                 label: t('settings.ics.form.shared'),
                 attrs: { id: 'ics-shared' },
@@ -263,15 +271,17 @@ function buildCalendarList(account, calendars) {
     name.textContent = cal.calendarName || cal.calendarUrl;
 
     label.append(checkbox, color, name);
-    // Standard-Zuweisung nur für aktivierte UND bereits synchronisierte Kalender —
-    // erst dann existiert die external_calendars-Zeile, die der PATCH aktualisiert.
-    if (cal.enabled && cal.synced) {
-      label.appendChild(buildCalendarAssigneeSelect({
-        source: 'caldav',
-        externalId: cal.calendarUrl,
-        currentId: cal.default_assignee_user_id,
-      }));
-    }
+    // VOR DEM HAKEN, NICHT NACH DEM SYNC: Das Feld stand früher erst da, wenn
+    // der Kalender aktiv UND einmal synchronisiert war - also frühestens, als
+    // der erste Schwung Termine bereits ohne Zuweisung hereingekommen war, bei
+    // Serien Dutzende (#730). Jetzt lässt es sich vorher setzen; der PATCH legt
+    // die external_calendars-Zeile nötigenfalls selbst an, und der spätere Sync
+    // aktualisiert daran nur Name und Farbe.
+    label.appendChild(buildCalendarAssigneeSelect({
+      source: 'caldav',
+      externalId: cal.calendarUrl,
+      currentId: cal.default_assignee_user_id,
+    }));
     list.appendChild(label);
 
     checkbox.addEventListener('change', async () => {
@@ -749,9 +759,29 @@ function bindIcsEvents(container, subs, user) {
   const submitBtn = container.querySelector('#ics-submit-btn');
   const errorEl = container.querySelector('#ics-add-error');
 
+  // Die Zuweisungsliste erst beim Aufklappen holen und nur einmal: Das Formular
+  // steht dauerhaft im DOM, ein Nachladen bei jedem Öffnen wäre derselbe Abruf
+  // ohne neues Ergebnis.
+  const assigneeSel = container.querySelector('#ics-assignee');
+  let assigneesLoaded = false;
+  const fillAssignees = () => {
+    if (assigneesLoaded || !assigneeSel) return;
+    assigneesLoaded = true;
+    loadFamilyUsers().then((users) => {
+      assigneeSel.querySelector('option[data-loading]')?.remove();
+      for (const u of users) {
+        const opt = document.createElement('option');
+        opt.value = String(u.id);
+        opt.textContent = u.display_name;
+        assigneeSel.appendChild(opt);
+      }
+    }).catch(() => { assigneesLoaded = false; });
+  };
+
   addBtn?.addEventListener('click', () => {
     formWrapper.hidden = false;
     addBtn.hidden = true;
+    fillAssignees();
     container.querySelector('#ics-url')?.focus();
   });
 
@@ -769,10 +799,14 @@ function bindIcsEvents(container, subs, user) {
     const name = container.querySelector('#ics-name').value.trim();
     const color = container.querySelector('#ics-color').value;
     const shared = container.querySelector('#ics-shared').checked ? 1 : 0;
+    const assigneeVal = assigneeSel?.value || '';
+    const default_assignee_user_id = assigneeVal ? Number(assigneeVal) : null;
 
     submitBtn.disabled = true;
     try {
-      const res = await api.post('/calendar/subscriptions', { url, name, color, shared });
+      const res = await api.post('/calendar/subscriptions', {
+        url, name, color, shared, default_assignee_user_id,
+      });
       subs.push(res.data);
       renderIcsList(container, subs, user);
       addForm.reset();
@@ -984,15 +1018,14 @@ function buildGoogleCalendarPicker() {
         name.textContent = cal.summary || cal.id;
 
         item.append(checkbox, dot, name);
-        // Standard-Zuweisung nur für aktivierte UND bereits synchronisierte Kalender —
-        // erst dann existiert die external_calendars-Zeile, die der PATCH aktualisiert.
-        if (cal.enabled && cal.synced) {
-          item.appendChild(buildCalendarAssigneeSelect({
-            source: 'google',
-            externalId: cal.id,
-            currentId: cal.default_assignee_user_id,
-          }));
-        }
+        // Wie bei CalDAV vor dem Haken setzbar (#730) - hier zählt es doppelt:
+        // Das Aktivieren startet den Sync unmittelbar (PATCH /google/calendars),
+        // eine Zuweisung danach käme für die erste Ladung immer zu spät.
+        item.appendChild(buildCalendarAssigneeSelect({
+          source: 'google',
+          externalId: cal.id,
+          currentId: cal.default_assignee_user_id,
+        }));
         list.appendChild(item);
 
         checkbox.addEventListener('change', async () => {
