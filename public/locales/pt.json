@@ -1789,6 +1789,18 @@
         "caldavUrlHint": "O URL base do seu servidor CalDAV",
         "caldavUsernameLabel": "Nome de usuário",
         "calendarDisabled": "Calendário desativado",
+        "syncCleanup": {
+            "question": "Excluir {{count}} compromissos sincronizados?",
+            "question_one": "Excluir {{count}} compromisso sincronizado?",
+            "detail": "O calendário está agora desmarcado. Você pode manter os compromissos que ele já trouxe ou removê-los. No provedor nada muda, e reativá-lo os traz de volta.",
+            "keep": "Manter",
+            "delete": "Excluir",
+            "removed": "{{count}} compromissos removidos.",
+            "removed_one": "{{count}} compromisso removido.",
+            "accountQuestion": "Desconectar a conta e excluir {{count}} compromissos?",
+            "accountQuestion_one": "Desconectar a conta e excluir {{count}} compromisso?",
+            "accountDetail": "Sem excluir, os compromissos importados ficam sem calendário próprio."
+        },
         "calendarEnabled": "Calendário ativado",
         "calendarsRefreshed": "Calendários atualizados",
         "caldavRemindersToggle": "Mostrar/ocultar listas de lembretes",

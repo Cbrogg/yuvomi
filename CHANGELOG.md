@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Unticking a synced calendar asks what should happen to the appointments it already brought in.** Until now they simply stayed, and the only way to get rid of them was to delete each one by hand - which is what the reporter, who treats his CalDAV server as the single source of truth, was left doing (#732). The question names the number, so it is not a guess whether three or three hundred are affected, and it offers *Keep* and *Delete* rather than *Cancel* and *OK*, because both are real choices. Keeping is the default: unticking is often a slip, and it is the only one of the two that can be taken back. The same question now appears when a CalDAV account is disconnected, which used to be the one path that left appointments visible but stripped of the calendar they came from. Deleting is strictly local - it never propagates to the provider, so the calendar stays untouched for everyone else in the household, and switching the calendar back on fetches the appointments again. Appointments you edited yourself are included: "delete all appointments from this calendar" means all of them, and a silent exception would leave rows behind whose origin nobody could tell. Your own local appointments are never touched, not even the ones that use this calendar as their upload target.
+
 ## [2.9.0] - 2026-08-14
 
 ### Added

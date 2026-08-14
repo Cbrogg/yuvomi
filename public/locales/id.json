@@ -1775,6 +1775,18 @@
         "caldavConnectionFailed": "Koneksi ke server CalDAV gagal",
         "calendarEnabled": "Kalender diaktifkan",
         "calendarDisabled": "Kalender dinonaktifkan",
+        "syncCleanup": {
+            "question": "Hapus {{count}} janji temu tersinkron?",
+            "question_one": "Hapus {{count}} janji temu tersinkron?",
+            "detail": "Kalender kini tidak dicentang. Anda dapat menyimpan janji temu yang sudah dibawanya, atau menghapusnya. Tidak ada yang berubah di penyedia, dan mengaktifkannya lagi akan mengambilnya kembali.",
+            "keep": "Simpan",
+            "delete": "Hapus",
+            "removed": "{{count}} janji temu dihapus.",
+            "removed_one": "{{count}} janji temu dihapus.",
+            "accountQuestion": "Putuskan akun dan hapus {{count}} janji temu?",
+            "accountQuestion_one": "Putuskan akun dan hapus {{count}} janji temu?",
+            "accountDetail": "Tanpa dihapus, janji temu yang diimpor tetap ada tanpa kalender sendiri."
+        },
         "calendarsRefreshed": "Kalender diperbarui",
         "caldavRemindersToggle": "Tampilkan/sembunyikan daftar pengingat",
         "caldavRemindersHint": "Daftar pengingat dari server CalDAV mana pun (iCloud, Nextcloud, Radicale) disinkronkan dua arah dengan Tugas atau Belanja.",

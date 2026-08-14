@@ -1763,6 +1763,18 @@
         "caldavConnectionFailed": "Připojení k CalDAV serveru selhalo",
         "calendarEnabled": "Kalendář aktivován",
         "calendarDisabled": "Kalendář deaktivován",
+        "syncCleanup": {
+            "question": "Smazat {{count}} synchronizovaných událostí?",
+            "question_one": "Smazat {{count}} synchronizovanou událost?",
+            "detail": "Kalendář je nyní odznačen. Události, které již přenesl, můžete ponechat, nebo odstranit. U poskytovatele se nic nezmění a opětovné zapnutí je načte znovu.",
+            "keep": "Ponechat",
+            "delete": "Smazat",
+            "removed": "Odstraněno {{count}} událostí.",
+            "removed_one": "Odstraněna {{count}} událost.",
+            "accountQuestion": "Odpojit účet a smazat {{count}} událostí?",
+            "accountQuestion_one": "Odpojit účet a smazat {{count}} událost?",
+            "accountDetail": "Bez smazání zůstanou přenesené události bez vlastního kalendáře."
+        },
         "calendarsRefreshed": "Kalendáře aktualizovány",
         "caldavRemindersToggle": "Zobrazit/skrýt seznamy připomínek",
         "caldavRemindersHint": "Seznamy připomínek z libovolného serveru CalDAV (iCloud, Nextcloud, Radicale) se synchronizují s Úkoly nebo Nákupem v obou směrech.",

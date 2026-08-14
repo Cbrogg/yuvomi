@@ -1789,6 +1789,18 @@
         "caldavUrlHint": "La URL base de tu servidor CalDAV",
         "caldavUsernameLabel": "Nombre de usuario",
         "calendarDisabled": "Calendario desactivado",
+        "syncCleanup": {
+            "question": "¿Eliminar {{count}} citas sincronizadas?",
+            "question_one": "¿Eliminar {{count}} cita sincronizada?",
+            "detail": "El calendario ya está desmarcado. Puedes conservar las citas que ya trajo o eliminarlas. En el proveedor no cambia nada y volver a activarlo las recupera.",
+            "keep": "Conservar",
+            "delete": "Eliminar",
+            "removed": "{{count}} citas eliminadas.",
+            "removed_one": "{{count}} cita eliminada.",
+            "accountQuestion": "¿Desconectar la cuenta y eliminar {{count}} citas?",
+            "accountQuestion_one": "¿Desconectar la cuenta y eliminar {{count}} cita?",
+            "accountDetail": "Sin eliminarlas, las citas importadas se quedan sin calendario propio."
+        },
         "calendarEnabled": "Calendario activado",
         "calendarsRefreshed": "Calendarios actualizados",
         "caldavRemindersToggle": "Mostrar/ocultar listas de recordatorios",

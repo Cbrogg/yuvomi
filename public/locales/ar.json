@@ -1789,6 +1789,18 @@
         "caldavUrlHint": "العنوان الأساسي لخادم CalDAV",
         "caldavUsernameLabel": "اسم المستخدم",
         "calendarDisabled": "تم تعطيل التقويم",
+        "syncCleanup": {
+            "question": "حذف {{count}} موعد متزامن؟",
+            "question_one": "حذف {{count}} موعد متزامن؟",
+            "detail": "تم إلغاء تحديد التقويم. يمكنك الاحتفاظ بالمواعيد التي تم استيرادها أو إزالتها. لن يتغير شيء لدى المزود، وإعادة التفعيل تستعيدها.",
+            "keep": "الاحتفاظ",
+            "delete": "حذف",
+            "removed": "تمت إزالة {{count}} موعد.",
+            "removed_one": "تمت إزالة {{count}} موعد.",
+            "accountQuestion": "فصل الحساب وحذف {{count}} موعد؟",
+            "accountQuestion_one": "فصل الحساب وحذف {{count}} موعد؟",
+            "accountDetail": "من دون الحذف تبقى المواعيد المستوردة بلا تقويم خاص بها."
+        },
         "calendarEnabled": "تم تفعيل التقويم",
         "calendarsRefreshed": "تم تحديث التقويمات",
         "caldavRemindersToggle": "إظهار/إخفاء قوائم التذكيرات",

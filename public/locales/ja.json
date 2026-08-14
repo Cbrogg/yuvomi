@@ -1789,6 +1789,18 @@
         "caldavUrlHint": "CalDAV サーバーのベース URL",
         "caldavUsernameLabel": "ユーザー名",
         "calendarDisabled": "カレンダーを無効にしました",
+        "syncCleanup": {
+            "question": "同期された予定 {{count}} 件を削除しますか？",
+            "question_one": "同期された予定 {{count}} 件を削除しますか？",
+            "detail": "カレンダーの選択を解除しました。すでに取り込まれた予定は残すことも削除することもできます。提供元では何も変わらず、再び有効にすると取り込み直します。",
+            "keep": "残す",
+            "delete": "削除",
+            "removed": "予定 {{count}} 件を削除しました。",
+            "removed_one": "予定 {{count}} 件を削除しました。",
+            "accountQuestion": "アカウントを解除して予定 {{count}} 件を削除しますか？",
+            "accountQuestion_one": "アカウントを解除して予定 {{count}} 件を削除しますか？",
+            "accountDetail": "削除しない場合、取り込まれた予定はカレンダーの所属がないまま残ります。"
+        },
         "calendarEnabled": "カレンダーを有効にしました",
         "calendarsRefreshed": "カレンダーを更新しました",
         "caldavRemindersToggle": "リマインダーリストの表示/非表示",

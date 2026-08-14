@@ -1789,6 +1789,18 @@
         "caldavUrlHint": "L'URL di base del tuo server CalDAV",
         "caldavUsernameLabel": "Nome utente",
         "calendarDisabled": "Calendario disabilitato",
+        "syncCleanup": {
+            "question": "Eliminare {{count}} appuntamenti sincronizzati?",
+            "question_one": "Eliminare {{count}} appuntamento sincronizzato?",
+            "detail": "Il calendario ora è deselezionato. Puoi conservare gli appuntamenti che ha già importato oppure rimuoverli. Presso il fornitore non cambia nulla e riattivandolo tornano.",
+            "keep": "Conserva",
+            "delete": "Elimina",
+            "removed": "{{count}} appuntamenti rimossi.",
+            "removed_one": "{{count}} appuntamento rimosso.",
+            "accountQuestion": "Disconnettere l'account ed eliminare {{count}} appuntamenti?",
+            "accountQuestion_one": "Disconnettere l'account ed eliminare {{count}} appuntamento?",
+            "accountDetail": "Senza eliminarli, gli appuntamenti importati restano senza un calendario proprio."
+        },
         "calendarEnabled": "Calendario abilitato",
         "calendarsRefreshed": "Calendari aggiornati",
         "caldavRemindersToggle": "Mostra/nascondi elenchi promemoria",

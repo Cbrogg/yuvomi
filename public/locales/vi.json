@@ -1723,6 +1723,18 @@
         "caldavConnectionFailed": "Kết nối đến máy chủ CalDAV thất bại",
         "calendarEnabled": "Đã bật lịch",
         "calendarDisabled": "Đã tắt lịch",
+        "syncCleanup": {
+            "question": "Xoá {{count}} lịch hẹn đã đồng bộ?",
+            "question_one": "Xoá {{count}} lịch hẹn đã đồng bộ?",
+            "detail": "Lịch hiện đã bỏ chọn. Bạn có thể giữ các lịch hẹn đã được đưa về hoặc xoá chúng. Bên nhà cung cấp không thay đổi gì, và bật lại sẽ lấy chúng về.",
+            "keep": "Giữ lại",
+            "delete": "Xoá",
+            "removed": "Đã xoá {{count}} lịch hẹn.",
+            "removed_one": "Đã xoá {{count}} lịch hẹn.",
+            "accountQuestion": "Ngắt kết nối tài khoản và xoá {{count}} lịch hẹn?",
+            "accountQuestion_one": "Ngắt kết nối tài khoản và xoá {{count}} lịch hẹn?",
+            "accountDetail": "Nếu không xoá, các lịch hẹn đã nhập sẽ ở lại mà không thuộc lịch nào."
+        },
         "calendarsRefreshed": "Đã làm mới lịch",
         "caldavRemindersToggle": "Hiển thị/ẩn danh sách nhắc nhở",
         "caldavRemindersHint": "Danh sách nhắc nhở từ bất kỳ máy chủ CalDAV nào (iCloud, Nextcloud, Radicale) được đồng bộ hai chiều với Nhiệm vụ hoặc Mua sắm.",

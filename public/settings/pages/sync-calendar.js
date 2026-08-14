@@ -286,14 +286,43 @@ function buildCalendarList(account, calendars) {
 
     checkbox.addEventListener('change', async () => {
       const enabled = checkbox.checked;
+
+      // DIE FRAGE KOMMT NACH DEM ABWÄHLEN, NICHT DAVOR: Der Haken wirkt in
+      // dieser Oberfläche sofort, wie jede andere Einstellung auch. Vorgeschaltet
+      // hieße die Frage "willst du wirklich abwählen?" und stellte das Abwählen
+      // in Zweifel, um das es gar nicht geht - gefragt ist nur, was mit den
+      // bereits übernommenen Terminen geschehen soll (#732).
+      //
+      // Behalten ist der Weg von Escape und vom Nebenknopf, also die Vorgabe.
+      // Ein versehentliches Abwählen ist der häufigere Fall - der Melder nennt
+      // ihn selbst -, und Behalten ist der einzige der beiden Ausgänge, der sich
+      // rückgängig machen lässt.
+      let deleteEvents = false;
+      if (!enabled && cal.eventCount > 0) {
+        deleteEvents = await confirmModal(
+          t('settings.syncCleanup.question', { count: cal.eventCount }),
+          {
+            danger: true,
+            confirmLabel: t('settings.syncCleanup.delete'),
+            cancelLabel: t('settings.syncCleanup.keep'),
+            detail: t('settings.syncCleanup.detail'),
+          },
+        );
+      }
+
       await withBusy(checkbox, async () => {
         try {
-          await api.patch(`/calendar/caldav/accounts/${account.id}/calendars`, {
+          const res = await api.patch(`/calendar/caldav/accounts/${account.id}/calendars`, {
             calendarUrl: cal.calendarUrl,
             enabled,
+            deleteEvents,
           });
+          const removed = res.data?.removed ?? 0;
+          if (removed) cal.eventCount = 0;
           showToast(
-            enabled ? t('settings.calendarEnabled') : t('settings.calendarDisabled'),
+            removed
+              ? t('settings.syncCleanup.removed', { count: removed })
+              : (enabled ? t('settings.calendarEnabled') : t('settings.calendarDisabled')),
             'success',
           );
         } catch (err) {
@@ -391,9 +420,35 @@ function renderCalDAVAccount(container, account, calendars, refresh, user) {
         },
       );
       if (!confirmed) return;
+
+      // Zweite Frage nur, wenn es etwas zu entscheiden gibt: Ohne sie war das
+      // Trennen der einzige Weg, bei dem Termine sichtbar stehen bleiben und
+      // dabei ihre Kalenderzuordnung verlieren - Waisen ohne erkennbare
+      // Herkunft (#732). Die Vorgabe ist auch hier Behalten.
+      let deleteEvents = false;
+      if (account.eventCount > 0) {
+        deleteEvents = await confirmModal(
+          t('settings.syncCleanup.accountQuestion', { count: account.eventCount }),
+          {
+            danger: true,
+            confirmLabel: t('settings.syncCleanup.delete'),
+            cancelLabel: t('settings.syncCleanup.keep'),
+            detail: t('settings.syncCleanup.accountDetail'),
+          },
+        );
+      }
+
       try {
-        await api.delete(`/calendar/caldav/accounts/${account.id}`);
-        showToast(t('settings.caldavAccountDeleted'), 'success');
+        const res = await api.delete(
+          `/calendar/caldav/accounts/${account.id}?deleteEvents=${deleteEvents ? 'true' : 'false'}`
+        );
+        const removed = res.data?.removed ?? 0;
+        showToast(
+          removed
+            ? t('settings.syncCleanup.removed', { count: removed })
+            : t('settings.caldavAccountDeleted'),
+          'success',
+        );
         await refresh();
       } catch (err) {
         showToast(err.message || t('common.errorGeneric'), 'danger');

@@ -1775,6 +1775,18 @@
         "caldavConnectionFailed": "CalDAV 서버 연결에 실패했습니다",
         "calendarEnabled": "캘린더 활성화됨",
         "calendarDisabled": "캘린더 비활성화됨",
+        "syncCleanup": {
+            "question": "동기화된 일정 {{count}}개를 삭제할까요?",
+            "question_one": "동기화된 일정 {{count}}개를 삭제할까요?",
+            "detail": "캘린더 선택이 해제되었습니다. 이미 가져온 일정은 남기거나 삭제할 수 있습니다. 제공자 쪽은 그대로이며 다시 켜면 일정을 다시 가져옵니다.",
+            "keep": "남기기",
+            "delete": "삭제",
+            "removed": "일정 {{count}}개를 삭제했습니다.",
+            "removed_one": "일정 {{count}}개를 삭제했습니다.",
+            "accountQuestion": "계정 연결을 끊고 일정 {{count}}개를 삭제할까요?",
+            "accountQuestion_one": "계정 연결을 끊고 일정 {{count}}개를 삭제할까요?",
+            "accountDetail": "삭제하지 않으면 가져온 일정이 소속 캘린더 없이 남습니다."
+        },
         "calendarsRefreshed": "캘린더가 새로고침되었습니다",
         "caldavRemindersToggle": "미리 알림 목록 표시/숨기기",
         "caldavRemindersHint": "모든 CalDAV 서버(iCloud, Nextcloud, Radicale)의 미리 알림 목록은 할 일 또는 장보기와 양방향으로 동기화됩니다.",

@@ -1746,6 +1746,18 @@
         "caldavConnectionFailed": "Kapcsolódás a CalDAV szerverhez sikertelen",
         "calendarEnabled": "Naptár engedélyezve",
         "calendarDisabled": "Naptár letiltva",
+        "syncCleanup": {
+            "question": "Töröl {{count}} szinkronizált időpontot?",
+            "question_one": "Töröl {{count}} szinkronizált időpontot?",
+            "detail": "A naptár már nincs kijelölve. A már behozott időpontokat megtarthatja vagy eltávolíthatja. A szolgáltatónál semmi nem változik, és az ismételt bekapcsolás visszahozza őket.",
+            "keep": "Megtartás",
+            "delete": "Törlés",
+            "removed": "{{count}} időpont eltávolítva.",
+            "removed_one": "{{count}} időpont eltávolítva.",
+            "accountQuestion": "Leválasztja a fiókot és töröl {{count}} időpontot?",
+            "accountQuestion_one": "Leválasztja a fiókot és töröl {{count}} időpontot?",
+            "accountDetail": "Törlés nélkül a behozott időpontok saját naptár nélkül maradnak."
+        },
         "calendarsRefreshed": "Naptárak frissítve",
         "caldavRemindersToggle": "Emlékeztető listák mutatása/elrejtése",
         "caldavRemindersHint": "Bármely CalDAV-kiszolgáló emlékeztető listái (iCloud, Nextcloud, Radicale) mindkét irányban szinkronizálódnak a Feladatok vagy Bevásárló listákkal.",

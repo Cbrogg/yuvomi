@@ -1746,6 +1746,18 @@
         "caldavConnectionFailed": "Verbinding met CalDAV-server mislukt",
         "calendarEnabled": "Kalender ingeschakeld",
         "calendarDisabled": "Kalender uitgeschakeld",
+        "syncCleanup": {
+            "question": "{{count}} gesynchroniseerde afspraken verwijderen?",
+            "question_one": "{{count}} gesynchroniseerde afspraak verwijderen?",
+            "detail": "De agenda is nu uitgevinkt. De afspraken die al zijn opgehaald kun je bewaren of verwijderen. Bij de aanbieder verandert er niets, en opnieuw inschakelen haalt ze terug.",
+            "keep": "Bewaren",
+            "delete": "Verwijderen",
+            "removed": "{{count}} afspraken verwijderd.",
+            "removed_one": "{{count}} afspraak verwijderd.",
+            "accountQuestion": "Account loskoppelen en {{count}} afspraken verwijderen?",
+            "accountQuestion_one": "Account loskoppelen en {{count}} afspraak verwijderen?",
+            "accountDetail": "Zonder verwijderen blijven de opgehaalde afspraken achter zonder eigen agenda."
+        },
         "calendarsRefreshed": "Kalenders vernieuwd",
         "caldavRemindersToggle": "Herinneringslijsten tonen/verbergen",
         "caldavRemindersHint": "Herinneringslijsten van elke CalDAV-server (iCloud, Nextcloud, Radicale) worden in beide richtingen gesynchroniseerd met Taken of Boodschappen.",

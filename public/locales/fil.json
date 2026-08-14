@@ -1798,6 +1798,18 @@
         "caldavConnectionFailed": "Nabigo ang koneksyon sa CalDAV server",
         "calendarEnabled": "Naka-enable ang kalendaryo",
         "calendarDisabled": "Naka-disable ang kalendaryo",
+        "syncCleanup": {
+            "question": "Burahin ang {{count}} na naka-sync na appointment?",
+            "question_one": "Burahin ang {{count}} na naka-sync na appointment?",
+            "detail": "Hindi na naka-tsek ang kalendaryo. Puwede mong itago ang mga appointment na naidala na nito, o alisin ang mga ito. Walang nagbabago sa provider, at ibabalik ang mga ito kapag binuksan mong muli.",
+            "keep": "Itago",
+            "delete": "Burahin",
+            "removed": "{{count}} na appointment ang inalis.",
+            "removed_one": "{{count}} na appointment ang inalis.",
+            "accountQuestion": "Idiskonekta ang account at burahin ang {{count}} na appointment?",
+            "accountQuestion_one": "Idiskonekta ang account at burahin ang {{count}} na appointment?",
+            "accountDetail": "Kung hindi buburahin, mananatili ang mga na-import na appointment nang walang sariling kalendaryo."
+        },
         "calendarsRefreshed": "Na-refresh ang mga kalendaryo",
         "caldavRemindersToggle": "Ipakita/itago ang mga listahan ng paalala",
         "caldavRemindersHint": "Nagsi-sync sa dalawang direksyon ang mga listahan ng paalala mula sa alinmang CalDAV server (iCloud, Nextcloud, Radicale) sa Mga Gawain o Pamimili.",

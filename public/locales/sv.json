@@ -1789,6 +1789,18 @@
         "caldavUrlHint": "Basadressen till din CalDAV-server",
         "caldavUsernameLabel": "Användarnamn",
         "calendarDisabled": "Kalender inaktiverad",
+        "syncCleanup": {
+            "question": "Ta bort {{count}} synkade möten?",
+            "question_one": "Ta bort {{count}} synkat möte?",
+            "detail": "Kalendern är nu avmarkerad. Mötena den redan hämtat kan du behålla eller ta bort. Hos leverantören ändras ingenting, och slår du på den igen hämtas de tillbaka.",
+            "keep": "Behåll",
+            "delete": "Ta bort",
+            "removed": "{{count}} möten borttagna.",
+            "removed_one": "{{count}} möte borttaget.",
+            "accountQuestion": "Koppla från kontot och ta bort {{count}} möten?",
+            "accountQuestion_one": "Koppla från kontot och ta bort {{count}} möte?",
+            "accountDetail": "Utan borttagning blir de hämtade mötena kvar utan egen kalender."
+        },
         "calendarEnabled": "Kalender aktiverad",
         "calendarsRefreshed": "Kalendrar uppdaterade",
         "caldavRemindersToggle": "Visa/dölj påminnelselistor",

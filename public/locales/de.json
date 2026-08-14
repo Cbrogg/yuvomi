@@ -1798,6 +1798,18 @@
         "caldavConnectionFailed": "Verbindung zum CalDAV-Server fehlgeschlagen",
         "calendarEnabled": "Kalender aktiviert",
         "calendarDisabled": "Kalender deaktiviert",
+        "syncCleanup": {
+            "question": "{{count}} synchronisierte Termine löschen?",
+            "question_one": "{{count}} synchronisierten Termin löschen?",
+            "detail": "Der Kalender ist jetzt abgewählt. Seine bereits übernommenen Termine kannst du behalten oder entfernen. Beim Anbieter ändert sich nichts, und ein erneutes Aktivieren holt sie zurück.",
+            "keep": "Behalten",
+            "delete": "Löschen",
+            "removed": "{{count}} Termine entfernt.",
+            "removed_one": "{{count}} Termin entfernt.",
+            "accountQuestion": "Konto trennen und {{count}} Termine löschen?",
+            "accountQuestion_one": "Konto trennen und {{count}} Termin löschen?",
+            "accountDetail": "Ohne das Löschen bleiben die übernommenen Termine ohne Kalenderzuordnung stehen."
+        },
         "calendarsRefreshed": "Kalender aktualisiert",
         "caldavRemindersToggle": "Erinnerungslisten anzeigen/ausblenden",
         "caldavRemindersHint": "Erinnerungslisten jedes CalDAV-Servers (iCloud, Nextcloud, Radicale) werden mit Aufgaben oder Einkauf abgeglichen - Änderungen gehen in beide Richtungen.",

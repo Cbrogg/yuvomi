@@ -10,7 +10,7 @@ const log = createLogger('CalDAV');
 import * as db from '../db.js';
 import { decodeHtmlEntities } from '../utils/html-entities.js';
 import { assignDefaultToEvent } from './sync-assignment.js';
-import { pruneDeletedEvents } from './calendar-prune.js';
+import { pruneDeletedEvents, countMirroredEvents, deleteMirroredEvents } from './calendar-prune.js';
 import * as outbound from './calendar-outbound.js';
 import { processPendingDeletions, processPendingUpdates, flushAccount } from './caldav-outbound.js';
 import { detachAccountRows } from './caldav-todo-outbound.js';
@@ -222,6 +222,9 @@ function listAccounts() {
     username: acc.username,
     createdAt: acc.created_at,
     lastSync: acc.last_sync,
+    // Für die Rückfrage vor dem Löschen des Kontos (#732) - dieselbe Zahl, die
+    // der Nutzer danach vermissen würde.
+    eventCount: countAccountEvents(acc.id),
   }));
 }
 
@@ -294,7 +297,16 @@ async function updateAccount(accountId, { name, caldavUrl, username, password, c
   return { success: true };
 }
 
-function deleteAccount(accountId) {
+/**
+ * `deleteEvents` nimmt die gespiegelten Termine mit (#732). Ohne die Option war
+ * das Loeschen eines Kontos der einzige Weg, bei dem Termine sichtbar liegen
+ * blieben, aber ihre Kalenderzuordnung verloren (`calendar_ref_id ON DELETE SET
+ * NULL`) - Waisen, denen niemand mehr ansieht, woher sie kamen.
+ *
+ * Die URLs muessen VOR dem Loeschen des Kontos gelesen werden: die Auswahlzeilen
+ * haengen per CASCADE am Konto und sind danach fort.
+ */
+function deleteAccount(accountId, { deleteEvents = false } = {}) {
   const account = getAccountById(accountId);
   if (!account) {
     throw new Error(`Account ${accountId} not found.`);
@@ -309,19 +321,24 @@ function deleteAccount(accountId) {
   // lokal nicht mehr löschen, während die entfernte Kopie ohne Konto ohnehin
   // unerreichbar ist. Also entkoppeln, bevor das Konto verschwindet - beides in
   // einem Zug, damit keine Hälfte allein stehen bleibt.
-  const detached = db.get().transaction(() => {
+  const calendarUrls = accountCalendarUrls(accountId);
+
+  const { detached, removed } = db.get().transaction(() => {
+    // Ohne deleteEvents bleiben die Termine sichtbar stehen, verlieren aber ihre
+    // Kalenderzuordnung - das war bis #732 der einzige Ausgang und ist jetzt der
+    // ausdruecklich gewaehlte.
+    const cleared = deleteEvents ? deleteMirroredEvents(db.get(), calendarUrls) : 0;
     const rows = detachAccountRows(accountId);
     db.get().prepare('DELETE FROM caldav_accounts WHERE id = ?').run(accountId);
-    return rows;
+    return { detached: rows, removed: cleared };
   })();
-
-  // Events with calendar_ref_id to deleted account remain (orphaned but visible)
 
   log.info(
     `Deleted CalDAV account ${accountId} ("${account.name}"), detached ${detached} mirrored row(s).`
+    + (removed ? `, ${removed} mirrored event(s) removed` : '')
   );
 
-  return { success: true };
+  return { success: true, removed };
 }
 
 // --------------------------------------------------------
@@ -356,6 +373,10 @@ async function getCalendars(accountId, { refresh = false, createClient } = {}) {
       enabled: cal.enabled === 1,
       default_assignee_user_id: assigneeMap.get(cal.calendar_url) ?? null,
       synced: assigneeMap.has(cal.calendar_url),
+      // Die Zahl reist mit der Liste, damit die Rückfrage beim Abwählen sie
+      // sofort nennen kann (#732). Ein eigener Endpunkt dafür wäre ein zweiter
+      // Roundtrip genau in dem Moment, in dem der Nutzer auf eine Antwort wartet.
+      eventCount: countMirroredEvents(db.get(), [cal.calendar_url]),
     }));
   }
 
@@ -401,7 +422,13 @@ async function getCalendars(accountId, { refresh = false, createClient } = {}) {
   return result;
 }
 
-function updateCalendarSelection(accountId, calendarUrl, enabled) {
+/**
+ * `deleteEvents` räumt beim ABWÄHLEN zusätzlich die bereits gespiegelten Termine
+ * weg (#732). Nur beim Abwählen: beim Einschalten gibt es nichts aufzuräumen,
+ * und ein Flag, das in beide Richtungen etwas täte, wäre eine Falle für jeden
+ * künftigen Aufrufer.
+ */
+function updateCalendarSelection(accountId, calendarUrl, enabled, { deleteEvents = false } = {}) {
   const account = getAccountById(accountId);
   if (!account) {
     throw new Error(`Account ${accountId} not found.`);
@@ -419,9 +446,26 @@ function updateCalendarSelection(accountId, calendarUrl, enabled) {
     throw new Error(`Calendar not found for account ${accountId}.`);
   }
 
-  log.info(`Calendar selection updated: account ${accountId}, calendar ${calendarUrl}, enabled=${enabled}`);
+  const removed = (!enabled && deleteEvents)
+    ? deleteMirroredEvents(db.get(), [calendarUrl])
+    : 0;
 
-  return { success: true };
+  log.info(`Calendar selection updated: account ${accountId}, calendar ${calendarUrl}, enabled=${enabled}`
+    + (removed ? `, ${removed} mirrored event(s) removed` : ''));
+
+  return { success: true, removed };
+}
+
+/** Die Kalender-URLs eines Kontos - Grundlage für Zählen und Aufräumen (#732). */
+function accountCalendarUrls(accountId) {
+  return db.get().prepare(
+    'SELECT calendar_url FROM caldav_calendar_selection WHERE account_id = ?'
+  ).all(accountId).map((r) => r.calendar_url);
+}
+
+/** Wie viele gespiegelte Termine hängen an diesem Konto? Für die Rückfrage. */
+function countAccountEvents(accountId) {
+  return countMirroredEvents(db.get(), accountCalendarUrls(accountId));
 }
 
 // --------------------------------------------------------
@@ -904,6 +948,7 @@ export {
   deleteAccount,
   getCalendars,
   updateCalendarSelection,
+  countAccountEvents,
   sync,
   flushOutbound,
   getStatus

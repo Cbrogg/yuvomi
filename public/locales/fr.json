@@ -1789,6 +1789,18 @@
         "caldavUrlHint": "L'URL de base de votre serveur CalDAV",
         "caldavUsernameLabel": "Nom d’utilisateur",
         "calendarDisabled": "Calendrier désactivé",
+        "syncCleanup": {
+            "question": "Supprimer {{count}} rendez-vous synchronisés ?",
+            "question_one": "Supprimer {{count}} rendez-vous synchronisé ?",
+            "detail": "Le calendrier est désormais décoché. Vous pouvez conserver les rendez-vous déjà importés ou les supprimer. Rien ne change chez le fournisseur, et le réactiver les récupère.",
+            "keep": "Conserver",
+            "delete": "Supprimer",
+            "removed": "{{count}} rendez-vous supprimés.",
+            "removed_one": "{{count}} rendez-vous supprimé.",
+            "accountQuestion": "Déconnecter le compte et supprimer {{count}} rendez-vous ?",
+            "accountQuestion_one": "Déconnecter le compte et supprimer {{count}} rendez-vous ?",
+            "accountDetail": "Sans suppression, les rendez-vous importés restent sans calendrier propre."
+        },
         "calendarEnabled": "Calendrier activé",
         "calendarsRefreshed": "Calendriers actualisés",
         "caldavRemindersToggle": "Afficher/masquer les listes de rappels",

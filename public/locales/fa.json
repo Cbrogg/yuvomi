@@ -1775,6 +1775,18 @@
         "caldavConnectionFailed": "اتصال به سرور CalDAV ناموفق بود",
         "calendarEnabled": "تقویم فعال شد",
         "calendarDisabled": "تقویم غیرفعال شد",
+        "syncCleanup": {
+            "question": "حذف {{count}} قرار همگام‌شده؟",
+            "question_one": "حذف {{count}} قرار همگام‌شده؟",
+            "detail": "تقویم اکنون از انتخاب خارج شده است. می‌توانید قرارهایی را که آورده نگه دارید یا حذف کنید. نزد ارائه‌دهنده چیزی تغییر نمی‌کند و فعال‌سازی دوباره آن‌ها را برمی‌گرداند.",
+            "keep": "نگه داشتن",
+            "delete": "حذف",
+            "removed": "{{count}} قرار حذف شد.",
+            "removed_one": "{{count}} قرار حذف شد.",
+            "accountQuestion": "قطع حساب و حذف {{count}} قرار؟",
+            "accountQuestion_one": "قطع حساب و حذف {{count}} قرار؟",
+            "accountDetail": "بدون حذف، قرارهای واردشده بدون تقویم خودشان باقی می‌مانند."
+        },
         "calendarsRefreshed": "تقویم‌ها به‌روزرسانی شدند",
         "caldavRemindersToggle": "نمایش/پنهان‌سازی فهرست‌های یادآور",
         "caldavRemindersHint": "فهرست‌های یادآور از هر سرور CalDAV (iCloud، Nextcloud، Radicale) در هر دو جهت با کارها یا خرید همگام‌سازی می‌شوند.",

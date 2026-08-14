@@ -1172,7 +1172,11 @@ test('sync-calendar leaf loads CalDAV, ICS, Google, and Apple with independent s
   // CalDAV calendar account management + status before forms.
   assert.match(source, /api\.get\('\/calendar\/caldav\/accounts'\)/);
   assert.match(source, /api\.post\('\/calendar\/caldav\/accounts'/);
-  assert.match(source, /api\.delete\(`\/calendar\/caldav\/accounts\/\$\{[^}]+\}`\)/);
+  // Ohne schliessendes Backtick: geprueft ist, dass die Seite diesen Endpunkt
+  // loeschend anspricht, nicht die exakte Zeichenfolge. Seit #732 haengt ein
+  // `?deleteEvents=` daran, und ein Guard, der daran zerbricht, prueft die
+  // Schreibweise statt der Absicht.
+  assert.match(source, /api\.delete\(\s*`\/calendar\/caldav\/accounts\/\$\{[^}]+\}/);
   assert.match(source, /\/calendar\/caldav\/accounts\/\$\{[^}]+\}\/calendars/);
   assert.match(source, /api\.post\('\/calendar\/caldav\/sync'\)/);
   assert.match(source, /createStatusSummary\(/);

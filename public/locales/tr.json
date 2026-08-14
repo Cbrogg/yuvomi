@@ -1789,6 +1789,18 @@
         "caldavUrlHint": "CalDAV sunucunuzun temel adresi",
         "caldavUsernameLabel": "Kullanıcı adı",
         "calendarDisabled": "Takvim devre dışı bırakıldı",
+        "syncCleanup": {
+            "question": "{{count}} eşitlenmiş randevu silinsin mi?",
+            "question_one": "{{count}} eşitlenmiş randevu silinsin mi?",
+            "detail": "Takvimin işareti kaldırıldı. Daha önce getirdiği randevuları saklayabilir veya kaldırabilirsiniz. Sağlayıcıda hiçbir şey değişmez, yeniden açtığınızda geri gelirler.",
+            "keep": "Sakla",
+            "delete": "Sil",
+            "removed": "{{count}} randevu kaldırıldı.",
+            "removed_one": "{{count}} randevu kaldırıldı.",
+            "accountQuestion": "Hesabın bağlantısı kesilip {{count}} randevu silinsin mi?",
+            "accountQuestion_one": "Hesabın bağlantısı kesilip {{count}} randevu silinsin mi?",
+            "accountDetail": "Silinmezse içe aktarılan randevular kendi takvimi olmadan kalır."
+        },
         "calendarEnabled": "Takvim etkinleştirildi",
         "calendarsRefreshed": "Takvimler güncellendi",
         "caldavRemindersToggle": "Hatırlatıcı listelerini göster/gizle",

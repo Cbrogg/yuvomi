@@ -1789,6 +1789,18 @@
         "caldavUrlHint": "CalDAV 服务器的基础地址",
         "caldavUsernameLabel": "用户名",
         "calendarDisabled": "已停用日历",
+        "syncCleanup": {
+            "question": "删除 {{count}} 个已同步的日程？",
+            "question_one": "删除 {{count}} 个已同步的日程？",
+            "detail": "该日历已取消勾选。已经取回的日程可以保留，也可以删除。提供方不会有任何变化，重新启用会再次取回。",
+            "keep": "保留",
+            "delete": "删除",
+            "removed": "已删除 {{count}} 个日程。",
+            "removed_one": "已删除 {{count}} 个日程。",
+            "accountQuestion": "断开账户并删除 {{count}} 个日程？",
+            "accountQuestion_one": "断开账户并删除 {{count}} 个日程？",
+            "accountDetail": "不删除的话，导入的日程会留下且不属于任何日历。"
+        },
         "calendarEnabled": "已启用日历",
         "calendarsRefreshed": "已刷新日历",
         "caldavRemindersToggle": "显示/隐藏提醒列表",

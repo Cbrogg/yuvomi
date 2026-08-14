@@ -1775,6 +1775,18 @@
         "caldavConnectionFailed": "Połączenie z serwerem CalDAV nie powiodło się",
         "calendarEnabled": "Kalendarz włączony",
         "calendarDisabled": "Kalendarz wyłączony",
+        "syncCleanup": {
+            "question": "Usunąć {{count}} zsynchronizowanych terminów?",
+            "question_one": "Usunąć {{count}} zsynchronizowany termin?",
+            "detail": "Kalendarz jest teraz odznaczony. Terminy, które już pobrał, możesz zachować albo usunąć. U dostawcy nic się nie zmienia, a ponowne włączenie pobierze je z powrotem.",
+            "keep": "Zachowaj",
+            "delete": "Usuń",
+            "removed": "Usunięto {{count}} terminów.",
+            "removed_one": "Usunięto {{count}} termin.",
+            "accountQuestion": "Odłączyć konto i usunąć {{count}} terminów?",
+            "accountQuestion_one": "Odłączyć konto i usunąć {{count}} termin?",
+            "accountDetail": "Bez usunięcia pobrane terminy zostaną bez własnego kalendarza."
+        },
         "calendarsRefreshed": "Kalendarze odświeżone",
         "caldavRemindersToggle": "Pokaż/ukryj listy przypomnień",
         "caldavRemindersHint": "Listy przypomnień z dowolnego serwera CalDAV (iCloud, Nextcloud, Radicale) są synchronizowane dwukierunkowo z Zadaniami lub Zakupami.",
