@@ -7,7 +7,7 @@ import { describe, it, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
-import { toICSDatetime, sync } from '../server/services/caldav-sync.js';
+import { toICSDatetime, sync, getCalendars, updateAccount } from '../server/services/caldav-sync.js';
 import { pruneDeletedEvents } from '../server/services/calendar-prune.js';
 import { _setTestDatabase, _resetTestDatabase } from '../server/db.js';
 
@@ -1083,6 +1083,101 @@ describe('CalDAV: eine Aufgabenliste bleibt kein Terminziel (#617)', () => {
 
       await sync({ createClient: silent });
       assert.deepStrictEqual(enabledUrls(d), [TODO_URL, EVENT_URL].sort());
+    } finally {
+      _resetTestDatabase();
+      d.close();
+    }
+  });
+});
+
+// --------------------------------------------------------
+// #732: „Kalender aktualisieren" holt die Liste, es setzt die Auswahl nicht
+// zurück. Vorher lief hier ein DELETE mit anschließendem INSERT auf enabled=1,
+// und jeder bewusst abgewählte Kalender kam ungefragt in den Sync zurück -
+// mitsamt seinen Terminen beim nächsten Lauf.
+// --------------------------------------------------------
+describe('CalDAV: die Kalenderauswahl überlebt das Aktualisieren (#732)', () => {
+  const KEEP_URL = 'https://dav.example/privat/';
+  const DROP_URL = 'https://dav.example/arbeit/';
+  const NEW_URL  = 'https://dav.example/neu/';
+
+  function buildDb() {
+    const d = new DatabaseSync(':memory:');
+    d.exec(`
+      CREATE TABLE caldav_accounts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT, caldav_url TEXT, username TEXT, password TEXT, last_sync TEXT
+      );
+      CREATE TABLE caldav_calendar_selection (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        account_id INTEGER, calendar_url TEXT, calendar_name TEXT,
+        calendar_color TEXT, enabled INTEGER NOT NULL DEFAULT 1
+      );
+      CREATE TABLE external_calendars (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        source TEXT NOT NULL, external_id TEXT NOT NULL, name TEXT, color TEXT,
+        default_assignee_user_id INTEGER,
+        UNIQUE(source, external_id)
+      );
+
+      INSERT INTO caldav_accounts (name, caldav_url, username, password)
+        VALUES ('Mailbox', 'https://dav.example/', 'u', 'p');
+      INSERT INTO caldav_calendar_selection
+        (account_id, calendar_url, calendar_name, calendar_color, enabled)
+        VALUES (1, '${KEEP_URL}', 'Privat', '#4A90E2', 1),
+               (1, '${DROP_URL}', 'Arbeit', '#4A90E2', 0);
+    `);
+    return d;
+  }
+
+  // Der Server meldet einen Kalender mehr als beim letzten Mal - so unterscheidet
+  // der Test „Vorgabe für Neue" von „Rücksetzer für Bekannte".
+  const client = async () => ({
+    fetchCalendars: async () => [
+      { url: KEEP_URL, displayName: 'Privat', components: ['VEVENT'] },
+      { url: DROP_URL, displayName: 'Arbeit', components: ['VEVENT'] },
+      { url: NEW_URL,  displayName: 'Neu',    components: ['VEVENT'] },
+    ],
+  });
+
+  const selection = (d) => Object.fromEntries(
+    d.prepare('SELECT calendar_url, enabled FROM caldav_calendar_selection ORDER BY calendar_url')
+      .all().map((r) => [r.calendar_url, r.enabled])
+  );
+
+  it('lässt einen abgewählten Kalender abgewählt und aktiviert nur neue', async () => {
+    const d = buildDb();
+    _setTestDatabase(d);
+    try {
+      const result = await getCalendars(1, { refresh: true, createClient: client });
+
+      assert.deepStrictEqual(selection(d), {
+        [KEEP_URL]: 1,
+        [DROP_URL]: 0,   // der Kern des Fehlers: stand nach dem Refresh auf 1
+        [NEW_URL]:  1,   // unbekannt = Vorgabe „an", wie beim Anlegen des Kontos
+      });
+
+      // Auch die Rückgabe an die Oberfläche muss den echten Stand tragen - sonst
+      // steht dort ein Haken, den die Datenbank nicht kennt.
+      assert.deepStrictEqual(
+        Object.fromEntries(result.map((c) => [c.calendarUrl, c.enabled])),
+        { [KEEP_URL]: true, [DROP_URL]: false, [NEW_URL]: true }
+      );
+    } finally {
+      _resetTestDatabase();
+      d.close();
+    }
+  });
+
+  it('hält die Abwahl auch beim Wechsel der Zugangsdaten (zweiter Fundort)', async () => {
+    // Derselbe Rücksetzer stand ein zweites Mal in updateAccount: neue
+    // Zugangsdaten heißen neue Kalenderliste, nicht neue Auswahl.
+    const d = buildDb();
+    _setTestDatabase(d);
+    try {
+      await updateAccount(1, { password: 'neues-passwort', createClient: client });
+      assert.equal(selection(d)[DROP_URL], 0, 'ein Passwortwechsel darf keinen Kalender einschalten');
+      assert.equal(selection(d)[NEW_URL], 1);
     } finally {
       _resetTestDatabase();
       d.close();

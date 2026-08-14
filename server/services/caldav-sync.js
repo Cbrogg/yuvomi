@@ -121,15 +121,25 @@ function eventCalendars(calendars) {
   return (calendars || []).filter(cal => supportsComponent(cal, 'VEVENT'));
 }
 
-async function testConnection(caldavUrl, username, password) {
+/**
+ * `createClient` wie bei sync(): injizierbare Factory für Tests, Vorgabe ist der
+ * echte tsdav-Client. Ohne sie ließe sich der Auffrischungspfad der
+ * Kalenderliste nur über die Schreibweise prüfen, nicht über sein Verhalten -
+ * und genau dort saß der Fehler, der die Abwahl überschrieb (#732).
+ */
+async function testConnection(caldavUrl, username, password, { createClient } = {}) {
   try {
-    const { createDAVClient } = await import('tsdav');
-    const client = await createDAVClient({
-      serverUrl:          caldavUrl,
-      credentials:        { username, password },
-      authMethod:         'Basic',
-      defaultAccountType: 'caldav',
-    });
+    const client = createClient
+      ? await createClient({ caldav_url: caldavUrl, username, password })
+      : await (async () => {
+        const { createDAVClient } = await import('tsdav');
+        return createDAVClient({
+          serverUrl:          caldavUrl,
+          credentials:        { username, password },
+          authMethod:         'Basic',
+          defaultAccountType: 'caldav',
+        });
+      })();
 
     const calendars = await client.fetchCalendars();
     if (!calendars.length) {
@@ -215,7 +225,7 @@ function listAccounts() {
   }));
 }
 
-async function updateAccount(accountId, { name, caldavUrl, username, password }) {
+async function updateAccount(accountId, { name, caldavUrl, username, password, createClient }) {
   const account = getAccountById(accountId);
   if (!account) {
     throw new Error(`Account ${accountId} not found.`);
@@ -232,10 +242,18 @@ async function updateAccount(accountId, { name, caldavUrl, username, password })
     const testUser = username || account.username;
     const testPwd = password || account.password;
 
-    const { calendars } = await testConnection(testUrl, testUser, testPwd);
+    const { calendars } = await testConnection(testUrl, testUser, testPwd, { createClient });
 
     // If credentials changed, refresh calendar list
     if (calendars) {
+      // Wie in getCalendars({ refresh: true }): neue Zugangsdaten heißen neue
+      // Kalenderliste, nicht neue Auswahl. Ein geändertes Passwort darf einen
+      // abgewählten Kalender nicht wieder in den Sync holen (#732).
+      const previous = new Map(
+        db.get().prepare('SELECT calendar_url, enabled FROM caldav_calendar_selection WHERE account_id = ?')
+          .all(accountId).map((row) => [row.calendar_url, row.enabled === 1])
+      );
+
       // Delete old selections
       db.get().prepare('DELETE FROM caldav_calendar_selection WHERE account_id = ?').run(accountId);
 
@@ -246,8 +264,8 @@ async function updateAccount(accountId, { name, caldavUrl, username, password })
 
         db.get().prepare(`
           INSERT INTO caldav_calendar_selection (account_id, calendar_url, calendar_name, calendar_color, enabled)
-          VALUES (?, ?, ?, ?, 1)
-        `).run(accountId, cal.url, calName, calColor);
+          VALUES (?, ?, ?, ?, ?)
+        `).run(accountId, cal.url, calName, calColor, (previous.get(cal.url) ?? true) ? 1 : 0);
       }
     }
   }
@@ -310,7 +328,7 @@ function deleteAccount(accountId) {
 // Calendar Selection
 // --------------------------------------------------------
 
-async function getCalendars(accountId, { refresh = false } = {}) {
+async function getCalendars(accountId, { refresh = false, createClient } = {}) {
   const account = getAccountById(accountId);
   if (!account) {
     throw new Error(`Account ${accountId} not found.`);
@@ -342,26 +360,39 @@ async function getCalendars(accountId, { refresh = false } = {}) {
   }
 
   // Refresh from server
-  const { calendars } = await testConnection(account.caldav_url, account.username, account.password);
+  const { calendars } = await testConnection(
+    account.caldav_url, account.username, account.password, { createClient }
+  );
 
-  // Update DB
+  // DIE ABWAHL ÜBERLEBT DIE AKTUALISIERUNG: „Kalender aktualisieren" holt die
+  // Liste vom Server, es ist keine Zurücksetzung. Vorher lief hier ein DELETE
+  // mit anschließendem INSERT auf enabled=1, und jeder bewusst abgewählte
+  // Kalender kam ungefragt zurück in den Sync - beim nächsten Lauf mitsamt
+  // seinen Terminen (#732). Deshalb den Stand je calendar_url vorher sichern
+  // und nur für NEUE Kalender die Vorgabe „an" setzen.
+  const previous = new Map(
+    db.get().prepare('SELECT calendar_url, enabled FROM caldav_calendar_selection WHERE account_id = ?')
+      .all(accountId).map((row) => [row.calendar_url, row.enabled === 1])
+  );
+
   db.get().prepare('DELETE FROM caldav_calendar_selection WHERE account_id = ?').run(accountId);
 
   const result = [];
   for (const cal of eventCalendars(calendars)) {
     const calColor = normalizeCalColor(cal.calendarColor) || '#4A90E2';
     const calName = cal.displayName || 'Unnamed Calendar';
+    const enabled = previous.get(cal.url) ?? true;
 
     db.get().prepare(`
       INSERT INTO caldav_calendar_selection (account_id, calendar_url, calendar_name, calendar_color, enabled)
-      VALUES (?, ?, ?, ?, 1)
-    `).run(accountId, cal.url, calName, calColor);
+      VALUES (?, ?, ?, ?, ?)
+    `).run(accountId, cal.url, calName, calColor, enabled ? 1 : 0);
 
     result.push({
       calendarUrl: cal.url,
       calendarName: calName,
       calendarColor: calColor,
-      enabled: true,
+      enabled,
     });
   }
 
