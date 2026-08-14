@@ -1911,11 +1911,20 @@ html.fab-anim-done .page-fab {
  * gemacht. Was er braucht, ist ein Begriff von "Seitenblock", der Zeileninterna
  * strukturell ausschliesst - das ist eigene Arbeit, kein Anhang an einen Fix.
  * Bis dahin bleibt diese Liste eine Liste, die man von Hand pflegt. */
+/* NICHT in dieser Liste: `.list-tabs-bar` (shopping.css) und
+ * `.contacts-filters` (contacts.css). Beide polstern sich selbst mit
+ * `--page-inline-pad`, und bei `box-sizing: border-box` zieht dieses Polster
+ * von der Kappung ab statt zu ihr zu addieren: gemessen bei 1907px blieben von
+ * 720px genau 313px fuer die Chips uebrig, waehrend der Koerper darunter die
+ * vollen 720px fuehrte - die Reiter brachen also mitten im Namen ab (#758).
+ * Ihre Kappung steht deshalb in ihrer eigenen Datei und rechnet das Polster
+ * ein. Wer hier ein Element eintraegt, das anderswo horizontal polstert, macht
+ * es genauso. Guard: `die Lesemass-Liste kappt kein selbstpolsterndes Element`
+ * in test/test-frontend-audit.js - er liest beide Seiten aus dem Stylesheet und
+ * findet die Ueberschneidung von allein. */
 .page-measure--narrow :is(
   .tasks-filters-row,
-  .contacts-filters,
   .rewards-tabs,
-  .list-tabs-bar,
   /* Die Karten der Hauswirtschaft, deren Zeilen per Bleed an ihrer Kante
    * fluchten: die Liste selbst hat keine eigene Flaeche, die Karte hat sie,
    * also traegt die Karte das Mass. */

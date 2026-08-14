@@ -570,10 +570,28 @@
  * .items-list. Einen Listenkopf gibt es seit 2026-08-11 gar nicht mehr - die
  * Chip-Leiste trägt Name und Aktionen (siehe „Liste-Header" oben). */
 @media (min-width: 1024px) {
-  /* Vollbreite-Toolbar mit durchgehendem Trenner; der Inhalt sitzt auf der
-   * gemeinsamen Kante. */
+  /* Die Leiste beginnt an der Rail-Kante und endet an der Lesekante, wie jeder
+   * andere Block der Seite („Blocks on one page end at one right edge", v2.8.0).
+   *
+   * DIE KAPPUNG RECHNET DAS EIGENE POLSTER EIN, und das ist der ganze Punkt:
+   * `box-sizing` ist `border-box`, also zieht `padding-inline` von einer
+   * max-width ab, statt sie zu verlaengern. Mit dem generischen Lesemass aus
+   * layout.css (720px) und 2x203.5px Polster blieben bei 1907px genau 313px
+   * fuer die Chips - ein Haushalt mit sieben Listen sah sie mitten im Namen
+   * abbrechen (#758). Das rechte Polster faellt weg, damit die sichtbare
+   * Flaeche samt Trenner dort endet, wo `.quick-add` und die Zeilentraeger
+   * enden, und nicht 203px spaeter.
+   *
+   * Unterhalb 1024px gilt die Regel bewusst nicht: dort polstert die Basisregel
+   * symmetrisch, die Kappung greift ohnehin nicht, und der Chip-Streifen
+   * braucht seinen rechten Auslauf zum Scrollen. */
   .shopping-page .list-tabs-bar {
     padding-inline: var(--page-inline-pad);
+  }
+
+  .page-measure--narrow .list-tabs-bar {
+    max-width: calc(var(--page-measure) + var(--page-inline-pad));
+    padding-inline-end: 0;
   }
 }
 

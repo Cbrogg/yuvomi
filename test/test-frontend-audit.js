@@ -12201,3 +12201,49 @@ test('das aktive Segment ist ueberall dieselbe Pille', () => {
     + 'Der Ton gehoert genau einmal als FLAECHE (dem Filter-Chip) und einmal als '
     + 'TINTE (dem Segment) - eine Behandlung pro Kontrolltyp.');
 });
+
+// --------------------------------------------------------------------------
+// #758: Die Lesemass-Liste in layout.css setzt `max-width` bei `border-box`.
+// Polstert dasselbe Element anderswo horizontal, ZIEHT dieses Polster von der
+// Kappung ab, statt sie zu verlaengern - die sichtbare Flaeche schrumpft dann um
+// die doppelte Polsterbreite. Gemessen an `.list-tabs-bar` bei 1907px: von
+// 720px blieben 313px fuer die Chips, waehrend der Koerper darunter die vollen
+// 720px fuehrte, und die Listenreiter brachen mitten im Namen ab.
+//
+// ALS REGEL, NICHT ALS LISTE: Der Guard liest beide Seiten aus dem Stylesheet
+// (die :is()-Liste und jede Regel, die `--page-inline-pad` als Inline-Polster
+// setzt) und meldet jede Ueberschneidung. Eine kuenftige Eintragung in die
+// Lesemass-Liste faellt damit auf, ohne dass jemand diesen Test anfasst.
+// --------------------------------------------------------------------------
+test('die Lesemass-Liste kappt kein selbstpolsterndes Element (#758)', () => {
+  const layoutCss = read('../public/styles/layout.css');
+
+  // Die Selektoren der Kappungsliste - aus der Quelle gelesen, nicht gedoppelt.
+  const listBlock = layoutCss.match(/\.page-measure--narrow :is\(([\s\S]*?)\)\s*\{/);
+  assert.ok(listBlock, 'die Lesemass-Liste muss auffindbar bleiben (Selektor umbenannt?)');
+  const capped = listBlock[1]
+    .replace(/\/\*[\s\S]*?\*\//g, '')          // Kommentare tragen Beispiel-Selektoren
+    .split(',')
+    .map((s) => s.trim())
+    .filter((s) => s.startsWith('.'));
+  assert.ok(capped.length >= 5, `die Liste sollte mehrere Selektoren fuehren, gefunden: ${capped.length}`);
+
+  // Jede Regel, die ein Element horizontal mit dem Seitenpolster versieht.
+  const selfPadding = new Set();
+  for (const file of readdirSync(new URL('../public/styles/', import.meta.url)).filter((f) => f.endsWith('.css'))) {
+    for (const rule of eachRule(read(`../public/styles/${file}`))) {
+      if (!/padding-inline\s*:\s*var\(--page-inline-pad|padding(-inline)?-(left|right|start|end)\s*:\s*var\(--page-inline-pad/.test(rule.body)) continue;
+      for (const sel of rule.selector.split(',')) {
+        const cls = sel.trim().match(/\.[a-z0-9-]+(?=[^a-z0-9-]|$)/gi);
+        if (cls) selfPadding.add(cls[cls.length - 1]);   // das ANGESPROCHENE Element, nicht sein Vorfahre
+      }
+    }
+  }
+  assert.ok(selfPadding.size > 0, 'ohne Fundstellen prueft der Guard eine leere Menge und sagt nichts aus');
+
+  const clash = capped.filter((sel) => selfPadding.has(sel));
+  assert.deepEqual(clash, [],
+    `diese Selektoren stehen in der Lesemass-Liste UND polstern sich selbst mit --page-inline-pad: ${clash.join(', ')}. `
+    + 'Bei box-sizing: border-box frisst das Polster die Kappung auf. Die Kappung gehoert dorthin, wo auch das '
+    + 'Polster steht, und muss es einrechnen (siehe .list-tabs-bar in shopping.css).');
+});

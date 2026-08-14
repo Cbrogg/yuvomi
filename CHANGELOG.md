@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **The filter strip of a list gets the whole reading column back, instead of a third of it.** On shopping and contacts the strip caps itself at the reading measure while also carrying the page's own side padding, and with `border-box` that padding is subtracted from the cap rather than added to it. Measured at 1907px, 720px of reading column left 313px for the chips, while the body directly below carried the full 720px: a household with seven shopping lists saw its list tabs break off mid-name (#758). Both strips now compute the cap where the padding lives and count it in, and they end on the same right edge as the rows beneath them rather than 200px short of it. Contacts had the identical defect and nobody had reported it; a guard that reads both sides out of the stylesheets found it in its first run, and will find the next one.
+
 ## [2.8.2] - 2026-08-14
 
 ### Changed

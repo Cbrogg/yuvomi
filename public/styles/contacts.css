@@ -57,6 +57,22 @@
 
 .contacts-filters::-webkit-scrollbar { display: none; }
 
+/* Dieselbe Rechnung wie bei `.list-tabs-bar` im Einkauf (#758): Die Leiste
+ * polstert sich mit `--page-inline-pad`, und bei `box-sizing: border-box` zieht
+ * dieses Polster von einer Kappung ab, statt sie zu verlaengern. Mit dem
+ * generischen Lesemass blieben bei 1907px von 720px genau 313px fuer die
+ * Kategorie-Chips uebrig - gemessen abgeschnitten, nur nie gemeldet. Die
+ * Kappung steht deshalb hier, wo auch das Polster steht, und rechnet es ein;
+ * das rechte Polster faellt weg, damit die Flaeche an der Lesekante endet.
+ * Unterhalb 1024px greift sie nicht: dort polstert die Basisregel symmetrisch
+ * und der Chip-Streifen braucht seinen Auslauf zum Scrollen. */
+@media (min-width: 1024px) {
+  .page-measure--narrow .contacts-filters {
+    max-width: calc(var(--page-measure) + var(--page-inline-pad));
+    padding-inline-end: 0;
+  }
+}
+
 /* ER TRÄGT `.filter-chip` (Critique 2026-08-13). Hier stand ein Nachbau, der
  * zehn seiner vierzehn Deklarationen zeichengleich mit der geteilten Regel
  * teilte - und in den übrigen vier war er nicht anders, sondern schlechter:
