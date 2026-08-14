@@ -80,6 +80,20 @@ export const SETTINGS_LEAVES = freezeEntries([
     loader: () => import('/settings/pages/personal-tasks.js'),
   },
   {
+    // Der Zyklus-Tab hat zwei Schalter: ob der Haushalt ihn führt, entscheidet
+    // der Admin in `modules-options`; ob ich ihn sehen will, entscheide ich -
+    // nicht jede Person im Haushalt hat einen Zyklus (#760). Deshalb personal
+    // und nicht adminOnly.
+    id: 'personal-health',
+    domainId: 'personal',
+    path: '/settings/personal/health',
+    labelKey: 'settings.pageHealthPersonal',
+    descriptionKey: 'settings.pageHealthPersonalDescription',
+    icon: 'heart-pulse',
+    adminOnly: false,
+    loader: () => import('/settings/pages/personal-health.js'),
+  },
+  {
     id: 'personal-weather',
     domainId: 'personal',
     path: '/settings/personal/weather',

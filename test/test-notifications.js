@@ -6,6 +6,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
+import { readFileSync } from 'node:fs';
 import express from 'express';
 import { MIGRATIONS } from '../server/db.js';
 
@@ -147,6 +148,7 @@ test('channel store validates providers, URLs, and required secrets', async () =
   assert.throws(() => store.createChannel({ provider: 'ntfy', name: 'Bad', config: { baseUrl: 'https://ntfy.test' }, secrets: {} }), /topic/i);
   assert.throws(() => store.createChannel({ provider: 'ntfy', name: 'Bad', config: { baseUrl: 'https://ntfy.test', topic: 'family', authType: 'token' }, secrets: {} }), /token/i);
   assert.throws(() => store.createChannel({ provider: 'gotify', name: 'Bad', config: { baseUrl: 'file:///tmp/x' }, secrets: { appToken: 'x' } }), /scheme/i);
+  assert.throws(() => store.createChannel({ provider: 'webhook', name: 'Bad', config: { baseUrl: 'javascript:alert(1)' } }), /scheme/i);
   assert.throws(() => store.createChannel({ provider: 'smtp', name: 'Bad', config: {}, secrets: {} }), /provider/i);
 });
 
@@ -214,6 +216,177 @@ test('ntfy provider maps reminder payload with bearer auth', async () => {
   assert.equal(calls[0].options.headers.Click, '/reminders');
   assert.equal(calls[0].options.headers.Authorization, 'Bearer token-value');
   assert.equal(calls[0].options.body, 'Müll rausbringen');
+});
+
+test('webhook provider posts a JSON notification with optional bearer auth', async () => {
+  const { webhookProvider } = await import('../server/services/notification-providers/webhook.js');
+  const calls = [];
+  await webhookProvider.send({
+    channel: {
+      config: { baseUrl: 'https://hooks.example.test/yuvomi' },
+      secrets: { token: 'hook-secret' },
+    },
+    payload: { title: 'Yuvomi', body: 'Task', url: '/reminders', tag: 'reminder-1', priority: 'default' },
+    fetchImpl: async (url, options) => {
+      calls.push({ url, options });
+      return { ok: true, status: 204 };
+    },
+  });
+  assert.equal(calls[0].url, 'https://hooks.example.test/yuvomi');
+  assert.equal(calls[0].options.method, 'POST');
+  assert.equal(calls[0].options.headers.authorization, 'Bearer hook-secret');
+  assert.equal(calls[0].options.headers['content-type'], 'application/json');
+  const body = JSON.parse(calls[0].options.body);
+  assert.equal(body.event, 'notification');
+  assert.equal(body.notification.body, 'Task');
+  assert.match(body.sentAt, /^\d{4}-\d{2}-\d{2}T/);
+});
+
+test('webhook payload template shapes the body for services with their own schema (#692)', async () => {
+  const { webhookProvider } = await import('../server/services/notification-providers/webhook.js');
+  const calls = [];
+  await webhookProvider.send({
+    channel: {
+      config: {
+        baseUrl: 'https://discord.test/api/webhooks/1/abc',
+        payloadTemplate: '{"content": "{{title}} - {{body}}", "url": "{{url}}"}',
+      },
+      secrets: {},
+    },
+    payload: { title: 'Yuvomi', body: 'Müll rausbringen', url: '/tasks', tag: 'reminder-1' },
+    fetchImpl: async (url, options) => { calls.push({ url, options }); return { ok: true, status: 204 }; },
+  });
+
+  // Discord verlangt `content`; der Standardbody kaeme als 400 zurueck.
+  assert.deepEqual(JSON.parse(calls[0].options.body), {
+    content: 'Yuvomi - Müll rausbringen',
+    url: '/tasks',
+  });
+});
+
+test('webhook template escapes values instead of breaking the JSON around them (#692)', async () => {
+  // Der eigentliche Grund fuer JSON.stringify beim Einsetzen: ein Titel mit
+  // Anfuehrungszeichen oder Zeilenumbruch zerrisse eine naive Ersetzung, und zwar
+  // erst bei der Zustellung - der Empfaenger sieht nur ein 400.
+  const { webhookProvider } = await import('../server/services/notification-providers/webhook.js');
+  const calls = [];
+  await webhookProvider.send({
+    channel: {
+      config: { baseUrl: 'https://hooks.test/x', payloadTemplate: '{"content": "{{title}}: {{body}}"}' },
+      secrets: {},
+    },
+    payload: { title: 'Er sagte "hallo"', body: 'Zeile 1\nZeile 2 \\ Ende', url: null, tag: null },
+    fetchImpl: async (url, options) => { calls.push({ url, options }); return { ok: true, status: 204 }; },
+  });
+
+  assert.deepEqual(JSON.parse(calls[0].options.body), {
+    content: 'Er sagte "hallo": Zeile 1\nZeile 2 \\ Ende',
+  });
+});
+
+test('webhook without a template keeps sending the Yuvomi-shaped body (#692)', async () => {
+  const { webhookProvider } = await import('../server/services/notification-providers/webhook.js');
+  const calls = [];
+  await webhookProvider.send({
+    channel: { config: { baseUrl: 'https://hooks.test/x', payloadTemplate: '' }, secrets: {} },
+    payload: { title: 'Yuvomi', body: 'Task' },
+    fetchImpl: async (url, options) => { calls.push({ url, options }); return { ok: true, status: 204 }; },
+  });
+
+  const body = JSON.parse(calls[0].options.body);
+  assert.equal(body.event, 'notification');
+  assert.equal(body.notification.body, 'Task');
+});
+
+test('channel store rejects a template that would only fail on delivery (#692)', async () => {
+  const { createNotificationChannelStore } = await import('../server/services/notification-channels.js');
+  const db = makeDb();
+  // `db`, nicht `database`: der Store destrukturiert { db }. Mit dem falschen
+  // Schluessel faellt er still auf die globale Verbindung zurueck und der Test
+  // prueft eine andere Datenbank als die, die er sich gerade gebaut hat.
+  const store = createNotificationChannelStore({ db });
+  const base = { provider: 'webhook', name: 'Hook', config: { baseUrl: 'https://hooks.test/x' } };
+
+  // Kein JSON: faellt im Formular auf, nicht nachts um drei.
+  assert.throws(
+    () => store.createChannel({ ...base, config: { ...base.config, payloadTemplate: '{"content": {{title}}' } }),
+    /valid JSON/i,
+  );
+  // Platzhalter, den niemand fuellen kann - sonst stuende er woertlich im Body.
+  assert.throws(
+    () => store.createChannel({ ...base, config: { ...base.config, payloadTemplate: '{"content": "{{titel}}"}' } }),
+    /\{\{titel\}\}/,
+  );
+  // Ein Wert mit Anfuehrungszeichen darf die Pruefung nicht durchrutschen lassen:
+  // die Probewerte tragen genau diese Zeichen.
+  const ok = store.createChannel({ ...base, config: { ...base.config, payloadTemplate: '{"content": "{{title}}"}' } });
+  assert.equal(ok.config.payloadTemplate, '{"content": "{{title}}"}');
+  // Leer bleibt erlaubt und bedeutet Standardbody.
+  const plain = store.createChannel({ ...base, name: 'Plain', config: { baseUrl: 'https://hooks.test/y' } });
+  assert.equal(plain.config.payloadTemplate, '');
+});
+
+test('ein Platzhalter mit Sonderzeichen wird gemeldet, nicht durchgewinkt (#692)', async () => {
+  // Die Pruefung sagt zu, Unbekanntes abzulehnen. Mit einem gemeinsamen \w+ galt
+  // diese Zusage nur fuer Wortzeichen: {{task-title}} war fuer Erkennung UND
+  // Ersetzung unsichtbar und ging woertlich an den Empfaenger.
+  const { unknownTemplatePlaceholders } = await import('../server/services/notification-providers/webhook.js');
+  assert.deepEqual(unknownTemplatePlaceholders('{"text":"{{task-title}}"}'), ['task-title']);
+  assert.deepEqual(unknownTemplatePlaceholders('{"text":"{{ title }}"}'), [' title ']);
+  assert.deepEqual(unknownTemplatePlaceholders('{"text":"{{item.name}}"}'), ['item.name']);
+  assert.deepEqual(unknownTemplatePlaceholders('{"text":"{{title}} {{body}}"}'), []);
+
+  const { createNotificationChannelStore } = await import('../server/services/notification-channels.js');
+  const store = createNotificationChannelStore({ db: makeDb() });
+  assert.throws(
+    () => store.createChannel({
+      provider: 'webhook', name: 'Hook',
+      config: { baseUrl: 'https://hooks.test/x', payloadTemplate: '{"text":"{{task-title}}"}' },
+    }),
+    /\{\{task-title\}\}/,
+  );
+});
+
+test('ein Webhook behaelt den Schraegstrich am Ende seines Endpunkts (#692)', async () => {
+  // Bei Gotify/ntfy ist die URL eine Basis, an die der Provider seinen Pfad
+  // haengt - da ist der Slash Rauschen. Beim Webhook IST sie der Endpunkt, und
+  // ein Empfaenger darf /hooks/x/ von /hooks/x unterscheiden.
+  const { createNotificationChannelStore } = await import('../server/services/notification-channels.js');
+  const store = createNotificationChannelStore({ db: makeDb() });
+
+  const hook = store.createChannel({
+    provider: 'webhook', name: 'Hook', config: { baseUrl: 'https://hooks.test/services/T/B/' },
+  });
+  assert.equal(hook.config.baseUrl, 'https://hooks.test/services/T/B/');
+
+  const gotify = store.createChannel({
+    provider: 'gotify', name: 'G', config: { baseUrl: 'https://gotify.test/' }, secrets: { appToken: 'x' },
+  });
+  assert.equal(gotify.config.baseUrl, 'https://gotify.test', 'die Basis behaelt ihr bisheriges Verhalten');
+});
+
+test('die OpenAPI-Provider-Liste kennt jeden angebotenen Kanal (#692)', async () => {
+  // Der Provider stand in NOTIFICATION_PROVIDERS, aber nicht im Schema: ein
+  // generierter Client haette provider:"webhook" abgelehnt, bevor er ihn sendet.
+  // Als Regel formuliert, nicht als Liste - der naechste Provider faellt sonst
+  // in dieselbe Luecke.
+  const { NOTIFICATION_PROVIDERS } = await import('../server/services/notification-channels.js');
+  const source = readFileSync(new URL('../server/openapi/schemas.js', import.meta.url), 'utf8');
+  // Nur die beiden Notification-Schemata: `provider` gibt es auch im DMS-Schema,
+  // und das kennt paperless/papra, nicht gotify.
+  const enums = ['NotificationChannel', 'NotificationChannelInput'].map((name) => {
+    const at = source.indexOf(`        ${name}: {`);
+    assert.ok(at !== -1, `Schema ${name} muss es geben`);
+    const block = source.slice(at, at + 2000);
+    const m = /provider: \{ type: 'string', enum: \[([^\]]+)\] \}/.exec(block);
+    assert.ok(m, `${name} muss ein provider-Enum tragen`);
+    return m[1].split(',').map((s) => s.trim().replace(/'/g, ''));
+  });
+  for (const values of enums) {
+    for (const { id } of NOTIFICATION_PROVIDERS) {
+      assert.ok(values.includes(id), `OpenAPI-Enum kennt "${id}" nicht: ${values.join(', ')}`);
+    }
+  }
 });
 
 test('providers throw sanitized HTTP errors', async () => {
@@ -523,6 +696,7 @@ test('admin notification routes manage channels and test sends', async () => {
   const routeProviders = {
     gotify: { id: 'gotify', send: async ({ payload }) => { sent.push(payload); return { ok: true, status: 200 }; } },
     ntfy: { id: 'ntfy', send: async () => ({ ok: true, status: 200 }) },
+    webhook: { id: 'webhook', send: async () => ({ ok: true, status: 204 }) },
   };
   const router = buildRouter({
     database: db,
@@ -546,7 +720,7 @@ test('admin notification routes manage channels and test sends', async () => {
 
   const providers = await call(makeApp(), 'GET', '/notifications/providers');
   assert.equal(providers.status, 200);
-  assert.deepEqual(providers.json.data.map((p) => p.id), ['gotify', 'ntfy']);
+  assert.deepEqual(providers.json.data.map((p) => p.id), ['gotify', 'ntfy', 'webhook']);
 
   const created = await call(makeApp(), 'POST', '/notifications/channels', {
     provider: 'gotify',

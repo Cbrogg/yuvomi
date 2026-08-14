@@ -42,15 +42,18 @@ import { HEALTH_ROUTES, renderHealthTabsBar } from '/utils/health-tabs.js';
 
 let _container = null;
 
-// Haushaltweiter Opt-in für den Zyklus-Tab (Settings → Module → Gesundheit).
-// Default an, damit Bestandshaushalte ihr Verhalten behalten; wird in render()
-// aus /preferences aufgefrischt.
+// Sichtbarkeit des Zyklus-Tabs. Zwei Schalter greifen ineinander: der Haushalt
+// erlaubt ihn (Settings → Module → Gesundheit, Admin), und jede Person kann ihn
+// für sich abwählen (Settings → Persönlich → Gesundheit, #760). `_effective` ist
+// die bereits verrechnete Sicht - der Client verrechnet sie NICHT selbst nach,
+// damit die Regel an genau einer Stelle steht. Default an, damit Bestandskonten
+// ihr Verhalten behalten; wird in render() aus /preferences aufgefrischt.
 let cycleEnabled = true;
 
 async function loadHealthPrefs() {
   try {
     const res = await api.get('/preferences');
-    cycleEnabled = res?.data?.health_cycle_enabled !== false;
+    cycleEnabled = res?.data?.health_cycle_effective !== false;
   } catch {
     cycleEnabled = true;
   }

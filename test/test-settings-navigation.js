@@ -113,9 +113,12 @@ test('die Blätter verteilen sich wie beschlossen auf die vier Domänen', () => 
   // Die Aufgaben-Vorgaben (#695) liegen bei `personal` und NICHT bei
   // `sync-reminders`: welche Erinnerungslisten der Haushalt abgleicht, ist eine
   // Admin-Entscheidung, in welche davon meine neuen Aufgaben laufen, ist meine.
+  // Nach demselben Schnitt liegt das Zyklus-Opt-out (#760) bei `personal`: ob der
+  // Haushalt den Zyklus führt, steht im adminOnly-`modules-options`, ob ich ihn
+  // sehen will, entscheide ich.
   const perDomain = {};
   for (const leaf of SETTINGS_LEAVES) perDomain[leaf.domainId] = (perDomain[leaf.domainId] ?? 0) + 1;
-  assert.deepEqual(perDomain, { personal: 8, modules: 4, sync: 5, admin: 8 });
+  assert.deepEqual(perDomain, { personal: 9, modules: 4, sync: 5, admin: 8 });
   // Jedes Blatt hängt an einer existierenden Domäne.
   const domainIds = new Set(SETTINGS_DOMAINS.map((domain) => domain.id));
   for (const leaf of SETTINGS_LEAVES) {
@@ -282,6 +285,18 @@ test('Mitglieder erreichen ihre eigenen Termin-Vorgaben', () => {
   assert.equal(findSettingsLeaf('/settings/personal/calendar', member)?.id, 'personal-calendar');
   // Das haushaltweite Kalenderblatt bleibt adminOnly.
   assert.equal(findSettingsLeaf('/settings/modules/calendar', member), null);
+});
+
+test('Mitglieder erreichen ihr eigenes Zyklus-Opt-out (#760)', () => {
+  // health_cycle_enabled_user schreibt per cfgUserSet pro Nutzer. Läge der
+  // Schalter im adminOnly-`modules-options`, könnte ihn genau die Mehrheit nicht
+  // bedienen, für die er gedacht ist - derselbe Schnitt wie bei personal-calendar.
+  const leaf = SETTINGS_LEAVES.find((entry) => entry.id === 'personal-health');
+  assert.equal(leaf.domainId, 'personal');
+  assert.equal(leaf.adminOnly, false);
+  assert.equal(findSettingsLeaf('/settings/personal/health', member)?.id, 'personal-health');
+  // Der haushaltweite Schalter bleibt daneben adminOnly.
+  assert.equal(findSettingsLeaf('/settings/modules/options', member), null);
 });
 
 test('drei Ein-Schalter-Blätter teilen sich jetzt eines', () => {
