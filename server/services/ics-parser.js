@@ -5,7 +5,7 @@
  * Abhängigkeiten: server/services/recurrence.js
  */
 
-import { nextOccurrence, matchesRRuleByday } from './recurrence.js';
+import { nextOccurrence, matchesRRuleByday, rruleLine } from './recurrence.js';
 import { resolveIcalColor } from '../utils/ical-color.js';
 import { localToUTC, utcToWall } from '../utils/timezone.js';
 
@@ -126,7 +126,7 @@ function parseICS(ics) {
     const summary     = unescapeICSText(get('SUMMARY') || '(kein Titel)');
     const description = unescapeICSText(get('DESCRIPTION')) || null;
     const location    = unescapeICSText(get('LOCATION'))    || null;
-    const rrule       = get('RRULE')       ? `RRULE:${get('RRULE')}` : null;
+    const rrule       = get('RRULE')       ? rruleLine(get('RRULE')) : null;
     // RFC 7986: COLOR trägt einen CSS3-Namen (oder Hex) für die Event-Eigenfarbe.
     const color       = resolveIcalColor(get('COLOR'));
     const parseDTLine = (prop) => {

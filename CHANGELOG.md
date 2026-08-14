@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [2.11.0] - 2026-08-14
+### Fixed
+
+- **The calendar feed no longer writes a doubled `RRULE:` prefix on imported series.** An appointment read in over an ICS subscription or CalDAV stores its recurrence as the full property line, prefix included; the feed put another one in front of it, so subscribers received `RRULE:RRULE:FREQ=...`. Apple Calendar tolerates it, stricter parsers do not: Home Assistant rejected the whole event with "Failed to parse calendar EVENT component: Field required", which is why a feed that worked in one app failed in another (#761, reported and diagnosed by @TanguyBaudrin, who found the doubled prefix with an ICS validator after my first guess turned out to be wrong). The rule that resolves the two spellings now lives in one place instead of six: five modules already got it right and one did not, and nothing counted the copies. Existing subscriptions repair themselves on the next refresh.
 
 ### Added
 

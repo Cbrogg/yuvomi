@@ -16,6 +16,7 @@ import { processPendingDeletions, processPendingUpdates, flushAccount } from './
 import { detachAccountRows } from './caldav-todo-outbound.js';
 import { toICSDatetime, escapeICSText } from '../utils/ics-format.js';
 import { createCalDAVClient, supportsComponent } from '../utils/caldav-client.js';
+import { rruleLine } from './recurrence.js';
 
 // Reused functions from apple-calendar.js
 import {
@@ -59,10 +60,7 @@ function buildCalDAVICS(event) {
   if (event.description)     lines.push(`DESCRIPTION:${escapeICSText(event.description)}`);
   if (event.location)        lines.push(`LOCATION:${escapeICSText(event.location)}`);
   if (event.recurrence_rule) {
-    const rule = event.recurrence_rule.startsWith('RRULE:')
-      ? event.recurrence_rule
-      : `RRULE:${event.recurrence_rule}`;
-    lines.push(rule);
+    lines.push(rruleLine(event.recurrence_rule));
   }
 
   lines.push('END:VEVENT', 'END:VCALENDAR');
