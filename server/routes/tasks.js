@@ -284,8 +284,20 @@ function validateTags(value) {
   return { error: 'tags must be an array or a comma-separated string.' };
 }
 
-/** Eingabe-Validierung für Task-Felder (zentralisiert über validate.js). */
-function validateTaskInput(body, isCreate = true) {
+/**
+ * Eingabe-Validierung für Task-Felder (zentralisiert über validate.js).
+ *
+ * `currentRule` ist die gespeicherte Wiederholungsregel beim Aktualisieren. Kommt
+ * sie unverändert zurück, entfällt ihre Prüfung: Sie steht bereits so in der
+ * Datenbank, und der Validator kennt nur das Vokabular dieser Oberfläche. Eine
+ * per CalDAV eingelesene Aufgabe (#617) trägt regelmäßig mehr - Präfix, WKST,
+ * BYMONTHDAY - und ohne die Ausnahme scheiterte jede Änderung an einem anderen
+ * Feld an einer Regel, die niemand angefasst hat (#756, Kalender-Gegenstück).
+ */
+function validateTaskInput(body, isCreate = true, currentRule = undefined) {
+  const ruleUnchanged = !isCreate
+    && body.recurrence_rule !== undefined
+    && body.recurrence_rule === currentRule;
   return v.collectErrors([
     v.str(body.title,       'title',       { required: isCreate }),
     v.str(body.description, 'description', { required: false, max: v.MAX_TEXT }),
@@ -295,7 +307,7 @@ function validateTaskInput(body, isCreate = true) {
     v.date(body.start_date, 'start_date'),
     v.date(body.due_date,   'due_date'),
     v.time(body.due_time,   'due_time'),
-    v.rrule(body.recurrence_rule, 'recurrence_rule'),
+    ruleUnchanged ? {} : v.rrule(body.recurrence_rule, 'recurrence_rule'),
     v.num(body.points,      'points'),
     validateTags(body.tags),
   ]);
@@ -826,7 +838,7 @@ router.put('/:id', (req, res) => {
     const task = db.get().prepare('SELECT * FROM tasks WHERE id = ?').get(req.params.id);
     if (!task) return res.status(404).json({ error: 'Task not found.', code: 404 });
 
-    const errors = validateTaskInput(req.body, false);
+    const errors = validateTaskInput(req.body, false, task.recurrence_rule);
     if (errors.length) return res.status(400).json({ error: errors.join(' '), code: 400 });
 
     const {

@@ -176,7 +176,13 @@ function buildICS(event) {
 
   if (event.description) lines.push(`DESCRIPTION:${escapeICS(event.description)}`);
   if (event.location)    lines.push(`LOCATION:${escapeICS(event.location)}`);
-  if (event.recurrence_rule) lines.push(event.recurrence_rule); // z.B. RRULE:FREQ=WEEKLY;BYDAY=MO
+  // Beide Schreibweisen kommen vor: eingelesene Serien tragen die volle
+  // ICS-Zeile, lokal angelegte nur den Regelkörper (#756). Roh übernommen ergab
+  // letzteres eine Zeile ohne Property-Namen - ein VEVENT, das kein Server als
+  // Serie liest. patchICSEvent normalisiert an seiner Stelle genauso.
+  if (event.recurrence_rule) {
+    lines.push(`RRULE:${String(event.recurrence_rule).replace(/^RRULE:/i, '')}`);
+  }
 
   lines.push('END:VEVENT', 'END:VCALENDAR');
   return lines.join('\r\n');
