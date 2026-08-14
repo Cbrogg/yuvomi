@@ -1,4 +1,4 @@
-<!-- version: 2.9.0 -->
+<!-- version: 2.10.0 -->
 <!--
   Die `releaseNotes` fuer den Umbrel-App-Store, von Hand fuer JEDEN Release
   geschrieben. `umbrel-publish.yml` nimmt den Text unter diesem Kommentar
@@ -29,12 +29,12 @@
     - Leerzeile zwischen den Absaetzen: der Store rendert ein gefaltetes
       YAML-Blockskalar, dort ist die Leerzeile der Absatzumbruch.
 -->
-This update only concerns households that store document files in a mounted folder rather than in the database. If you have not switched that on, nothing changes for you.
+This update is about the calendars you sync from another server, such as Nextcloud, iCloud or mailbox.org.
 
-Until now, if the folder Yuvomi was told to use had not actually been mounted, uploads appeared to work and the files were quietly written inside the container instead. They were then lost the next time the app was updated, while Yuvomi went on listing them. Yuvomi now checks that folder when it starts and writes a clear warning to the log if it is missing or cannot be written to, naming the path it looked for. It is only a warning: the app starts either way.
+When you untick a calendar you no longer want, Yuvomi now asks what should happen to the appointments it already brought in. It names how many there are, and offers to keep or delete them. Keeping is preselected, since unticking is easily done by accident and only keeping can be undone. Deleting only ever affects your copy: the calendar at your provider stays untouched, and everyone else who uses it keeps their appointments. The same question appears when you disconnect an account entirely.
 
-If you use this option, it is worth glancing at the log once after this update. A silent start means the folder is where it should be.
+Connecting a new account has also changed. Previously every calendar it found started syncing right away, which for most accounts meant work, birthday and holiday calendars arriving unasked. Calendars now start switched off and you choose the ones you want. Calendars you already sync are unaffected.
 
 There is nothing to do after this update, and your data and settings are unchanged.
 
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.9.0
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.10.0
