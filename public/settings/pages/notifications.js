@@ -34,7 +34,10 @@ function channelDefaults(provider = 'gotify') {
       provider: 'webhook',
       name: '',
       enabled: false,
-      config: { baseUrl: '' },
+      // Leere Vorlage = Yuvomi-Standardbody. Empfaenger mit eigenem Pflichtschema
+      // (Discord, Slack) tragen hier ihre Form ein, statt einen Adapter je Dienst
+      // zu brauchen (#692).
+      config: { baseUrl: '', payloadTemplate: '' },
       secretSet: false,
     };
   }
@@ -160,6 +163,11 @@ function renderChannelList(container, channels, providers = DEFAULT_PROVIDERS) {
             <label class="form-label" for="notification-webhook-token-${suffix}">${t('settings.notificationChannelWebhookToken')}</label>
             <input class="form-input" id="notification-webhook-token-${suffix}" name="webhookToken" type="password" autocomplete="new-password" placeholder="${channel.secretSet ? esc(t('settings.notificationChannelSecretKeep')) : ''}">
           </div>
+          <div class="form-field">
+            <label class="form-label" for="notification-webhook-template-${suffix}">${t('settings.notificationChannelWebhookTemplate')}</label>
+            <textarea class="form-input" id="notification-webhook-template-${suffix}" name="webhookTemplate" rows="3" spellcheck="false" placeholder="${esc(t('settings.notificationChannelWebhookTemplatePlaceholder'))}">${esc(channel.config.payloadTemplate ?? '')}</textarea>
+            <p class="form-hint">${t('settings.notificationChannelWebhookTemplateHint')}</p>
+          </div>
         </div>
         <div class="notification-provider-fields notification-provider-fields--ntfy${isNtfy ? '' : ' settings-card--hidden'}">
           <div class="form-field">
@@ -227,6 +235,7 @@ function readChannelForm(form) {
       if (form.elements.ntfyPassword.value) body.secrets.password = form.elements.ntfyPassword.value;
     }
   } else if (provider === 'webhook') {
+    body.config.payloadTemplate = form.elements.webhookTemplate.value.trim();
     if (form.elements.webhookToken.value) body.secrets.token = form.elements.webhookToken.value;
   } else {
     body.config.priority = Number(form.elements.gotifyPriority.value || 5);

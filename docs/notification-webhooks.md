@@ -14,7 +14,9 @@ Only administrators can manage household notification channels.
 4. Enter the complete HTTP or HTTPS endpoint URL.
 5. Optionally enter a Bearer token. Yuvomi stores it as a write-only secret and
    sends it as `Authorization: Bearer <token>`.
-6. Save the channel, enable it, and use **Send test** to verify the endpoint.
+6. Optionally enter a **payload template** if the receiver expects a body of its
+   own shape. Leaving it empty sends the default body described below.
+7. Save the channel, enable it, and use **Send test** to verify the endpoint.
 
 The receiver must return a successful HTTP status (`2xx`). Failed deliveries
 are retried by the notification scheduler with the same backoff and attempt
@@ -42,6 +44,39 @@ Yuvomi sends an HTTP `POST` with `Content-Type: application/json`:
 `sentAt` is generated for each delivery attempt. The notification `tag`
 identifies the reminder and can be used by receivers for their own
 deduplication. The `url` is relative to the Yuvomi application.
+
+## Payload template
+
+The default body works for receivers that accept arbitrary JSON, such as Home
+Assistant or n8n. Services with a schema of their own reject it: a Discord
+webhook requires `content` or `embeds` and answers anything else with
+`400 Cannot send an empty message`.
+
+Rather than shipping an adapter per service, the channel takes a template and
+the same generic provider covers all of them. Enter the body the receiver
+expects and use `{{title}}`, `{{body}}`, `{{url}}` and `{{tag}}` where the
+reminder's values belong:
+
+```json
+{"content": "{{title}} - {{body}}"}
+```
+
+```json
+{"text": "{{title}}: {{body}}", "unfurl_links": false}
+```
+
+Notes:
+
+- Values are JSON-escaped before they are inserted, so a reminder title
+  containing a quote, a backslash or a line break cannot break the surrounding
+  JSON.
+- A placeholder with no value (for example `{{url}}` on a reminder that carries
+  none) becomes an empty string.
+- The template is checked when you save it: it must produce valid JSON, may use
+  only the four placeholders above, and is limited to 4096 characters. A
+  template that would only fail at delivery time is rejected in the form.
+- Leave the field empty to keep the default body. Existing webhook channels are
+  unaffected.
 
 ## Security notes
 

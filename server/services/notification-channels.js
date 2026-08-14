@@ -4,6 +4,11 @@
  * Abhaengigkeiten: server/db.js
  */
 import * as dbModule from '../db.js';
+import {
+  WEBHOOK_TEMPLATE_PLACEHOLDERS,
+  renderPayloadTemplate,
+  unknownTemplatePlaceholders,
+} from './notification-providers/webhook.js';
 
 export const NOTIFICATION_PROVIDERS = [
   { id: 'gotify', name: 'Gotify' },
@@ -107,8 +112,41 @@ function validateNtfy({ config, secrets, requireSecrets }) {
   }
 }
 
+const MAX_WEBHOOK_TEMPLATE_LENGTH = 4096;
+
+// Probewerte mit genau den Zeichen, an denen eine naive Ersetzung zerbricht:
+// Anfuehrungszeichen, Backslash, Zeilenumbruch. Waeren sie harmlos, ginge die
+// Gegenprobe unten durch und der Fehler kaeme erst bei der ersten Zustellung.
+const WEBHOOK_TEMPLATE_SAMPLE = Object.freeze({
+  title: 'Yuvomi "Test"',
+  body: 'Zeile 1\nZeile 2 \\ Ende',
+  url: '/tasks',
+  tag: 'reminder-1',
+});
+
 function normalizeWebhookConfig(input = {}) {
-  return { baseUrl: normalizeBaseUrl(input.baseUrl) };
+  const payloadTemplate = String(input.payloadTemplate ?? '').trim();
+  if (payloadTemplate) {
+    if (payloadTemplate.length > MAX_WEBHOOK_TEMPLATE_LENGTH) {
+      throw new Error(`Webhook payload template must be at most ${MAX_WEBHOOK_TEMPLATE_LENGTH} characters.`);
+    }
+    const unknown = unknownTemplatePlaceholders(payloadTemplate);
+    if (unknown.length) {
+      throw new Error(
+        `Unknown webhook placeholder(s): ${unknown.map((k) => `{{${k}}}`).join(', ')}. `
+        + `Available: ${WEBHOOK_TEMPLATE_PLACEHOLDERS.map((k) => `{{${k}}}`).join(', ')}.`,
+      );
+    }
+    // Gegenprobe beim Speichern statt beim Senden: eine Vorlage, die erst in der
+    // Nacht am fehlenden Komma scheitert, kostet die Benachrichtigung UND die
+    // Diagnose. Der Fehler gehoert an das Formular, in dem sie entstanden ist.
+    try {
+      JSON.parse(renderPayloadTemplate(payloadTemplate, WEBHOOK_TEMPLATE_SAMPLE));
+    } catch {
+      throw new Error('Webhook payload template must produce valid JSON.');
+    }
+  }
+  return { baseUrl: normalizeBaseUrl(input.baseUrl), payloadTemplate };
 }
 
 function normalizeWebhookSecrets(input = {}) {

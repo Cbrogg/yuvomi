@@ -228,6 +228,87 @@ test('webhook provider posts a JSON notification with optional bearer auth', asy
   assert.match(body.sentAt, /^\d{4}-\d{2}-\d{2}T/);
 });
 
+test('webhook payload template shapes the body for services with their own schema (#692)', async () => {
+  const { webhookProvider } = await import('../server/services/notification-providers/webhook.js');
+  const calls = [];
+  await webhookProvider.send({
+    channel: {
+      config: {
+        baseUrl: 'https://discord.test/api/webhooks/1/abc',
+        payloadTemplate: '{"content": "{{title}} - {{body}}", "url": "{{url}}"}',
+      },
+      secrets: {},
+    },
+    payload: { title: 'Yuvomi', body: 'Müll rausbringen', url: '/tasks', tag: 'reminder-1' },
+    fetchImpl: async (url, options) => { calls.push({ url, options }); return { ok: true, status: 204 }; },
+  });
+
+  // Discord verlangt `content`; der Standardbody kaeme als 400 zurueck.
+  assert.deepEqual(JSON.parse(calls[0].options.body), {
+    content: 'Yuvomi - Müll rausbringen',
+    url: '/tasks',
+  });
+});
+
+test('webhook template escapes values instead of breaking the JSON around them (#692)', async () => {
+  // Der eigentliche Grund fuer JSON.stringify beim Einsetzen: ein Titel mit
+  // Anfuehrungszeichen oder Zeilenumbruch zerrisse eine naive Ersetzung, und zwar
+  // erst bei der Zustellung - der Empfaenger sieht nur ein 400.
+  const { webhookProvider } = await import('../server/services/notification-providers/webhook.js');
+  const calls = [];
+  await webhookProvider.send({
+    channel: {
+      config: { baseUrl: 'https://hooks.test/x', payloadTemplate: '{"content": "{{title}}: {{body}}"}' },
+      secrets: {},
+    },
+    payload: { title: 'Er sagte "hallo"', body: 'Zeile 1\nZeile 2 \\ Ende', url: null, tag: null },
+    fetchImpl: async (url, options) => { calls.push({ url, options }); return { ok: true, status: 204 }; },
+  });
+
+  assert.deepEqual(JSON.parse(calls[0].options.body), {
+    content: 'Er sagte "hallo": Zeile 1\nZeile 2 \\ Ende',
+  });
+});
+
+test('webhook without a template keeps sending the Yuvomi-shaped body (#692)', async () => {
+  const { webhookProvider } = await import('../server/services/notification-providers/webhook.js');
+  const calls = [];
+  await webhookProvider.send({
+    channel: { config: { baseUrl: 'https://hooks.test/x', payloadTemplate: '' }, secrets: {} },
+    payload: { title: 'Yuvomi', body: 'Task' },
+    fetchImpl: async (url, options) => { calls.push({ url, options }); return { ok: true, status: 204 }; },
+  });
+
+  const body = JSON.parse(calls[0].options.body);
+  assert.equal(body.event, 'notification');
+  assert.equal(body.notification.body, 'Task');
+});
+
+test('channel store rejects a template that would only fail on delivery (#692)', async () => {
+  const { createNotificationChannelStore } = await import('../server/services/notification-channels.js');
+  const db = makeDb();
+  const store = createNotificationChannelStore({ database: db });
+  const base = { provider: 'webhook', name: 'Hook', config: { baseUrl: 'https://hooks.test/x' } };
+
+  // Kein JSON: faellt im Formular auf, nicht nachts um drei.
+  assert.throws(
+    () => store.createChannel({ ...base, config: { ...base.config, payloadTemplate: '{"content": {{title}}' } }),
+    /valid JSON/i,
+  );
+  // Platzhalter, den niemand fuellen kann - sonst stuende er woertlich im Body.
+  assert.throws(
+    () => store.createChannel({ ...base, config: { ...base.config, payloadTemplate: '{"content": "{{titel}}"}' } }),
+    /\{\{titel\}\}/,
+  );
+  // Ein Wert mit Anfuehrungszeichen darf die Pruefung nicht durchrutschen lassen:
+  // die Probewerte tragen genau diese Zeichen.
+  const ok = store.createChannel({ ...base, config: { ...base.config, payloadTemplate: '{"content": "{{title}}"}' } });
+  assert.equal(ok.config.payloadTemplate, '{"content": "{{title}}"}');
+  // Leer bleibt erlaubt und bedeutet Standardbody.
+  const plain = store.createChannel({ ...base, name: 'Plain', config: { baseUrl: 'https://hooks.test/y' } });
+  assert.equal(plain.config.payloadTemplate, '');
+});
+
 test('providers throw sanitized HTTP errors', async () => {
   const { gotifyProvider } = await import('../server/services/notification-providers/gotify.js');
   await assert.rejects(() => gotifyProvider.send({
