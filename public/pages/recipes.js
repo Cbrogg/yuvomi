@@ -223,6 +223,7 @@ export async function render(container) {
   fab.type = 'button';
   fab.id = 'fab-new-recipe';
   fab.setAttribute('aria-label', t('recipes.addRecipe'));
+  fab.dataset.dockLabel = t('newLabel.recipes');
   const fabIcon = document.createElement('i');
   fabIcon.dataset.lucide = 'plus';
   fabIcon.setAttribute('aria-hidden', 'true');

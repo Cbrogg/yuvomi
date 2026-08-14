@@ -96,21 +96,24 @@
  * HIG-Rollout gefüllt ist; eine 14 %-Tönung darunter las sich als zweiter,
  * schwächerer Zustandsbegriff für dieselbe Handlung.
  *
- * Das frühere Ink-Label war mit der Tönung richtig (Modul-Akzent als TEXT auf
- * Hell erreicht nur ~3.5:1); auf der Vollfläche erbt --color-ink-on-vivid den
- * verifizierten Akzent-auf-Weiß-Wert (>=5:1). */
+ * Die ~3.5:1 aus dem Absatz darüber galten vor den Familientönen (v2.1.0):
+ * heute hält selbst der rohe Ton 5.04:1 hell und 4.82:1 dunkel, die
+ * --tint-ink-Mischung 7.37:1 / 6.61:1. Der Ton darf deshalb wieder Tinte sein,
+ * und der Zustand kommt aus der erhabenen Pille (tokens.css, Abschnitt 6c). */
 .list-tab--active {
-  background-color: var(--module-accent);
-  border-color: var(--module-accent);
-  color: var(--color-ink-on-vivid);
+  background-color: var(--seg-active-bg);
+  box-shadow: var(--seg-active-shadow);
+  border-color: transparent;
+  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-ink), var(--color-text-primary));
   font-weight: var(--font-weight-semibold);
 }
 
-/* Der Zähler kehrt sich auf der gefüllten Pille um - gleiche Rechnung wie
- * .sub-tab--active .sub-tab__badge. */
+/* Getönte Marke auf der Surface-Pille - gleiche Rechnung wie
+ * .sub-tab--active .sub-tab__badge. Die frühere Umkehr (weiß auf Vollton)
+ * wäre auf der hellen Pille eine weiße Marke auf Weiß. */
 .list-tab--active .list-tab__count {
-  background-color: var(--color-ink-on-vivid);
-  color: var(--module-accent);
+  background-color: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-state), transparent);
+  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-ink), var(--color-text-primary));
 }
 
 .list-tab__count {
@@ -309,6 +312,45 @@
   #items-list > .empty-state > .empty-state__cta {
     display: none;
   }
+
+  /* Und aus demselben Grund der FAB. Der Einkauf ist das einzige Modul, das
+   * seinen Primaerknopf am Zeigergeraet NICHT in den Kopf andockt - er hat seit
+   * dem 11.08. bewusst keinen (siehe die Notiz bei „Liste-Header"). Damit
+   * standen dort zwei Wege fuer dieselbe Handlung: das `+` der Eingabezeile und
+   * der schwebende Knopf 700px darunter.
+   *
+   * DIE BEDINGUNG IST DIESELBE, DIE DIE ZEILE OEFFNET, keine zweite Grenze:
+   * `hover: none` klappt die Zeile ein, `hover: hover` klappt sie auf - und
+   * genau dann ist der FAB der zweite Knopf. Eine Breite (etwa die 1024px der
+   * Dock-Grenze) waere eine unabhaengige Zahl, die irgendwann neben der Zeile
+   * steht statt mit ihr.
+   *
+   * Gemessen am 12.08. bei 1024-1920px: die Zeile sitzt bei y=113 AUSSERHALB
+   * des Scrollports und steht bei jedem Scrollstand im Blick (nach dem Scrollen
+   * ans Listenende unveraendert y=113). Ohne aktive Liste greifen der
+   * Leerzustands-Knopf und das `+` der Listenleiste - dieser FAB legt dort
+   * ohnehin eine LISTE an, nicht einen Artikel.
+   *
+   * `display: none` und NICHT entfernt: der Leerzustand von `#items-list` und
+   * der Tab-FAB rufen die Primaeraktion ueber `.page-fab`.click() auf
+   * (shopping.js), und ein JS-Klick feuert auch auf einem versteckten Knopf.
+   * Wer den Knoten hier abraeumte, machte beides still tot. */
+  #fab-layer #fab-new-item {
+    display: none;
+  }
+
+  /* UND DAMIT SEIN NACHLAUF (Etappe 6, 2026-08-13). Gemessen bei 1440x900 auf
+   * /shopping mit Pille: `padding-block-end` 156px, letzte Zeile endet bei
+   * y=742, die Pille beginnt bei 830 - 88px Freiraum fuer einen Knopf, der
+   * genau hier ausgeblendet ist. Die Regel dahinter fragt
+   * `.page-fab:not([hidden])`, und das ist ein Stellvertreter, den ein
+   * `display: none` unterlaeuft (siehe layout.css). Die Pillenzone bleibt: sie
+   * haengt an `.list-bulkbar`, nicht am FAB.
+   * Gefragt wird ueber `body:has()`, weil das Token an einem VORFAHREN von
+   * `.app-content` stehen muss - eine Deklaration am Knopf erreicht ihn nicht. */
+  body:has(#fab-layer #fab-new-item) {
+    --fab-safe-zone: 0px;
+  }
 }
 
 .quick-add__form {
@@ -409,9 +451,15 @@
   width: var(--target-base);
   height: var(--target-base);
   border-radius: var(--radius-full);
-  /* Modul-Akzent wie FAB und Fokus-Ringe daneben (Audit F-05) — vorher stand
-   * der einzige violette App-Akzent-Button neben lauter Pink. */
-  background-color: var(--module-accent, var(--color-accent));
+  /* DIE EINE STIMME (Critique 2026-08-13). Hier stand der Modulton, begründet
+   * mit „wie FAB und Fokus-Ringe daneben (Audit F-05)" - und beide tragen ihn
+   * seit v2.2.0 nicht mehr, weil die Eine-Stimme-Regel ihn zurückgenommen hat.
+   * Die Ausnahme blieb stehen, ihr Anlass war drei Versionen weg. Genau die
+   * Form von Drift, gegen die HIG-Session 27 den Satz aufgeschrieben hat: eine
+   * Ausnahme braucht ein Verfallsdatum an BEIDEN Enden, dem Anlass und dem
+   * Verstoß. Der Guard sah sie nicht, weil er das Chrome aus Selektorformen
+   * ableitet und dieser Knopf keine davon trägt. */
+  background-color: var(--color-accent);
   color: var(--color-ink-on-vivid);
   display: flex;
   align-items: center;
@@ -423,7 +471,7 @@
   min-height: var(--target-lg);
 }
 
-.quick-add__btn:hover { background-color: color-mix(in srgb, var(--module-accent, var(--color-accent)) 85%, black); }
+.quick-add__btn:hover { background-color: var(--color-accent-hover); }
 
 /* Autocomplete-Dropdown */
 .autocomplete-dropdown {
@@ -640,10 +688,56 @@
   color: var(--color-text-secondary);
 }
 
-/* Tabellenziffern nur für die Menge: der geteilte Meta-Slot trägt in den
- * Geschwistertabs auch Text (MHD, Lagerort), dort wären sie falsch. */
+/* MENGE UND ETIKETTEN STEHEN IN EINER ZEILE, nicht übereinander.
+ *
+ * Die gespiegelten VTODO-Etiketten (#586) standen als `.list-row__tags` auf
+ * einer DRITTEN Zeile unter Name und Menge. Gemessen bei 390x844: eine Zeile
+ * mit Etiketten 90,9px gegen 64px ohne - das war die ganze Streuung des
+ * Einkaufs (27,9px), und sie hing nicht an der Länge der Artikelnamen, wie die
+ * Inventur vermuten liess. Die Namen der Demo-Daten passen alle („Bananen",
+ * „Vollmilch": 158 von 158px).
+ *
+ * Die Aufgabenzeile hat denselben Fall am selben Tag anders herum gelöst - dort
+ * standen die Etiketten schon in der Metazeile und liessen sie umbrechen. Beide
+ * tragen jetzt EINES davon und fassen den Rest als „+N" zusammen. */
 .shopping-item .list-row__meta {
+  display: flex;
+  align-items: center;
+  /* 4px, nicht 8: zwischen Text und einer Pille mit eigener Fläche liest sich
+   * der Abstand optisch als das Doppelte (dieselbe Messung wie an
+   * `.task-card__meta`). */
+  gap: var(--space-1);
+  flex-wrap: nowrap;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Tabellenziffern nur für die Menge: der geteilte Meta-Slot trägt in den
+ * Geschwistertabs auch Text (MHD, Lagerort), dort wären sie falsch - und seit
+ * die Etiketten daneben stehen, wären sie auch hier auf der ganzen Zeile
+ * falsch. */
+.shopping-item__quantity {
   font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* DAS ETIKETT IST EINE FRAGE DER BREITE, NICHT DES GERÄTS - dieselbe Regel und
+ * dieselbe Schwelle wie am Etikett der Aufgabenzeile, weil es dieselbe Spalte
+ * in derselben Grammatik ist.
+ *
+ * GEMESSEN bei 390px: die Textspalte hat 158px. Menge („250 g") und ein
+ * Etikett („Wocheneinkauf") sind zusammen breiter, und was dann kappt, ist das
+ * Etikett - eine Angabe, die aus einer fremden CalDAV-Liste gespiegelt ist und
+ * hier nichts steuert. Ab 420px Trägerbreite steht es. */
+.shopping-item .list-row__tag {
+  display: none;
+}
+
+@container list-rows (min-width: 420px) {
+  .shopping-item .list-row__tag {
+    display: inline-flex;
+  }
 }
 
 /* Die beiden Zeilenaktionen (Details, Löschen) nutzen seit dem Audit die

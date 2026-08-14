@@ -3147,14 +3147,36 @@ describe('Sonde 17 - die Zustellnotiz des ResizeObservers ist kein Anwendungsfeh
  * Mahlzeiten - nachgemessen liegt dort am echten Ende nichts unter dem Knopf.
  * Deshalb: settlen, fahren, settlen, nochmal fahren, und erst dann messen.
  */
+/**
+ * Der Scrollport der Seite - EINMAL bestimmt, für Fahren UND Klippen.
+ *
+ * DER GRÖSSTE, NICHT DER ERSTE. Die Vorfassung nahm das erste Element mit
+ * `overflow-y: auto` und Überlauf. In den vier Küchen-Tabs ist das die
+ * horizontal scrollende Tab-Leiste: `.sub-tabs-bar`, 56px hoch. Gemessen auf
+ * /shopping bei 390x844 hiess der Scrollport damit „y 0 bis 56" - 83 von 87
+ * Kandidaten fielen als „weggeschnitten" heraus, und die Sonde war auf allen
+ * vier Kuechenrouten blind, ohne es zu melden. Der Inhaltsscroller ist der mit
+ * der groessten sichtbaren Hoehe.
+ */
+async function installScrollportFinder(page) {
+  await page.evaluate(() => {
+    window.__yuvomiScrollport = () => {
+      const outer = document.querySelector('.app-content');
+      const kandidaten = [...document.querySelectorAll('#main-content *')].filter((el) => {
+        const s = getComputedStyle(el);
+        return (s.overflowY === 'auto' || s.overflowY === 'scroll')
+          && el.scrollHeight > el.clientHeight + 4;
+      });
+      kandidaten.sort((a, b) => b.clientHeight - a.clientHeight);
+      return kandidaten[0] || outer;
+    };
+  });
+}
+
 async function fabAtScrollEnd(page) {
+  await installScrollportFinder(page);
   const toEnd = () => page.evaluate(() => {
-    const outer = document.querySelector('.app-content');
-    const inner = [...document.querySelectorAll('#main-content *')].find((el) => {
-      const s = getComputedStyle(el);
-      return (s.overflowY === 'auto' || s.overflowY === 'scroll') && el.scrollHeight > el.clientHeight + 4;
-    });
-    const scroller = inner || outer;
+    const scroller = window.__yuvomiScrollport();
     if (scroller) scroller.scrollTop = scroller.scrollHeight;
   });
   await new Promise((r) => setTimeout(r, 700));
@@ -3166,13 +3188,23 @@ async function fabAtScrollEnd(page) {
   return page.evaluate(() => {
     const px = (n) => Math.round(n * 10) / 10;
     const outer = document.querySelector('.app-content');
-    const inner = [...document.querySelectorAll('#main-content *')].find((el) => {
-      const s = getComputedStyle(el);
-      return (s.overflowY === 'auto' || s.overflowY === 'scroll') && el.scrollHeight > el.clientHeight + 4;
-    });
-    const scroller = inner || outer;
+    const scroller = window.__yuvomiScrollport();
+    const inner = scroller === outer ? null : scroller;
     const fab = document.querySelector('.page-fab:not([hidden])');
     const o = outer.getBoundingClientRect();
+    /* GEKLIPPT WIRD AM SCROLLPORT, DER WIRKLICH SCROLLT.
+     *
+     * Hier stand `o` - die Kante von `.app-content` - auch dort, wo eine innere
+     * Liste den Scrollport bildet. Zum FAHREN nimmt die Sonde `inner` seit jeher,
+     * zum KLIPPEN nahm sie `outer`, und dazwischen liegt genau der Bereich, in
+     * dem eine weggescrollte Zeile noch eine Layout-Position hat.
+     *
+     * Gemessen auf /pantry bei 1440x900 am Scroll-Ende: der innere Scroller
+     * beginnt bei y=185, die gemeldeten `pantry-stepper__btn` lagen bei y=74-114
+     * - also 71px ueber seiner Oberkante, weggescrollt und unsichtbar, aber
+     * innerhalb von `.app-content` (y=0). Es ist dieselbe Falle 2, die der
+     * Kommentar unten beschreibt, eine Ebene tiefer. */
+    const clip = (inner || outer).getBoundingClientRect();
     const res = {
       scrollportUnten: px(o.bottom),
       viewportHoehe: window.innerHeight,
@@ -3182,6 +3214,31 @@ async function fabAtScrollEnd(page) {
     if (!fab) return { ...res, keinFab: true };
 
     const f = fab.getBoundingClientRect();
+
+    /* NUR EIN SCHWEBENDER KNOPF KANN ETWAS VERDECKEN, und auf dem Zeigergeraet
+     * schwebt seit Etappe 2 (dc23972f) keiner mehr.
+     *
+     * Zwei Zustaende, beide harmlos, beide gemessen bei 1440x900:
+     *
+     *  ANGEDOCKT - fuenf Routen (Vorrat, Mahlzeiten, Rezepte, Geburtstage,
+     *  Dokumente) verschieben den Knoten in die Kopfleiste. Er liegt dort IM
+     *  FLUSS und verdeckt per Definition nichts. Genau ihn hat die Sonde
+     *  bisher als „FAB" vermessen - der /pantry-Befund, mit dem diese Etappe
+     *  begonnen hat, war die Ueberlappung weggescrollter Listenzeilen mit
+     *  einem Toolbar-Knopf.
+     *
+     *  EINGEKLAPPT - die uebrigen sieben behalten den Knoten in `.fab-layer`,
+     *  aber ohne Geometrie: gemessen 0x0 auf /tasks, /budget, /shopping,
+     *  /contacts, /notes. Ein Rechteck ohne Flaeche schneidet nichts.
+     *
+     * Gefragt wird nach BEIDEM, denn keins allein reicht: die Shell-Ebene
+     * erkennt das Andocken (`position` taugt nicht - der Dashboard-FAB ist
+     * `static` und schwebt trotzdem, weil `.fab-layer` um ihn herum fixiert
+     * ist), die Groesse erkennt das Einklappen. */
+    const schwebend = !!fab.closest('.fab-layer') && f.width > 0 && f.height > 0;
+    if (!schwebend) {
+      return { ...res, keinFab: true, angedockt: !fab.closest('.fab-layer'), eingeklappt: f.width < 1 || f.height < 1 };
+    }
     // Der Prefix gehoert an JEDES Glied - `#main-content ${liste}` bindet den
     // Nachfahren-Kombinator sonst nur an das erste, und der Rest gilt
     // dokumentweit (dann meldet die Sonde die Sidebar-Links als Inhalt).
@@ -3203,9 +3260,9 @@ async function fabAtScrollEnd(page) {
       // `meal-slot__add-more-btn` 4 %) - alle drei lagen bei y 721-838, waehrend
       // der Scrollport bei 735,9 endet, also im geklippten Bereich hinter der
       // Nav-Zone. Dieselbe Falle 2, die Sonde 4 an ihren Kanten beschreibt.
-      if (b.bottom <= o.top || b.top >= o.bottom) continue;
+      if (b.bottom <= clip.top || b.top >= clip.bottom) continue;
       const w = Math.min(b.right, f.right) - Math.max(b.left, f.left);
-      const h = Math.min(b.bottom, Math.min(f.bottom, o.bottom)) - Math.max(b.top, Math.max(f.top, o.top));
+      const h = Math.min(b.bottom, Math.min(f.bottom, clip.bottom)) - Math.max(b.top, Math.max(f.top, clip.top));
       if (w <= 0 || h <= 0) continue;
       res.unterFab.push({
         sel: [...el.classList].slice(0, 2).join('.') || el.tagName.toLowerCase(),
@@ -3222,12 +3279,34 @@ describe('Sonde 18 - am Scroll-Ende liegt nichts Bedienbares unter dem FAB', () 
       const page = await openPage(harness, { device, theme: 'light', locale: 'de' });
       const findings = [];
       let seen = 0;
+      let angedockt = 0;
+      let eingeklappt = 0;
+      let ohneFab = 0;
 
       for (const name of sweep('Sonde 18')) {
         await gotoRoute(page, ALL_ROUTES[name]);
         const m = await fabAtScrollEnd(page);
+        if (m.angedockt) angedockt += 1;
+        if (m.eingeklappt) eingeklappt += 1;
+
+        /* Der Nachlauf darf den Scrollport nicht verkuerzen: das war die Marge,
+         * und ihr Preis war die abgeschnittene Widget-Reihe.
+         *
+         * STEHT VOR DER FAB-FRAGE, nicht dahinter. Sie haengt nicht am FAB,
+         * sondern an `.app-content`, und seit auf dem Zeiger kein FAB mehr
+         * schwebt, waere sie hinter dem `continue` auf genau dem Geraet nie
+         * mehr gelaufen, fuer das sie geschrieben wurde. Mobil endet der
+         * Scrollport ueber der Nav-Zone, dort gilt die Zusage nicht. */
+        if (device === 'desktop' && m.scrollportUnten < m.viewportHoehe - 1) {
+          findings.push(`${name}: der Scrollport endet ${Math.round(m.viewportHoehe - m.scrollportUnten)}px `
+            + 'ueber der Fensterkante - die FAB-Reserve verkuerzt ihn wieder statt als Nachlauf zu reiten.');
+        }
+
         // Drei Module fuehren ihre Primaeraktion ohne FAB - kein Befund.
-        if (m.keinFab) continue;
+        if (m.keinFab) {
+          if (!m.angedockt && !m.eingeklappt) ohneFab += 1;
+          continue;
+        }
         // Ein Zwischenstand zaehlt nicht als Ende (siehe Kopf).
         if (!m.amEnde) continue;
         seen += 1;
@@ -3236,26 +3315,60 @@ describe('Sonde 18 - am Scroll-Ende liegt nichts Bedienbares unter dem FAB', () 
           findings.push(`${name}: am Scroll-Ende liegt ${m.unterFab.map((h) => `${h.sel} (${h.anteil} %)`).join(', ')} `
             + 'unter dem FAB - dort laesst sich nichts mehr wegscrollen, das Ziel ist unerreichbar.');
         }
-        // Der Nachlauf darf den Scrollport nicht verkuerzen: das war die Marge,
-        // und ihr Preis war die abgeschnittene Widget-Reihe. Mobil endet er
-        // ueber der Nav-Zone, dort gilt die Zusage nicht.
-        if (device === 'desktop' && m.scrollportUnten < m.viewportHoehe - 1) {
-          findings.push(`${name}: der Scrollport endet ${Math.round(m.viewportHoehe - m.scrollportUnten)}px `
-            + 'ueber der Fensterkante - die FAB-Reserve verkuerzt ihn wieder statt als Nachlauf zu reiten.');
-        }
       }
       await page.close();
 
-      // Eine Sonde, die nichts gemessen hat, darf nicht urteilen. Zwoelf ist der
-      // gepruefte Bestand: 15 Routen minus die drei ohne FAB (Belohnungen,
-      // Gesundheit, Haushaltshilfe).
-      assert.ok(seen >= 12,
-        `Nur ${seen} Zustaende am Scroll-Ende gemessen - erwartet sind mindestens 12. Entweder `
-        + 'fehlt Modulen ihr FAB, oder keine Seite kam an ihr Scroll-Ende.');
+      /* AM ZEIGER SCHWEBT SEIT ETAPPE 2 FAST KEIN FAB MEHR, und damit hat die
+       * Frage dieser Sonde dort kaum noch einen Gegenstand. Sie prueft deshalb
+       * zuerst die AUFTEILUNG - wer andockt, wer einklappt, wer keinen hat -
+       * und misst die Ueberlappung nur noch fuer den einen, der wirklich
+       * schwebt.
+       *
+       * WARUM DAS KEIN NACHGEBEN IST: die alte Fassung hat auf dem Zeiger nicht
+       * etwa nichts gefunden, sie hat FALSCH gefunden. Sie mass die
+       * Ueberlappung weggescrollter Listenzeilen mit einem Knopf in der
+       * Kopfleiste und meldete `/pantry` rot - der Befund, mit dem diese Etappe
+       * begonnen hat. Gegengeprueft: mit `--fab-safe-zone: 0` blieb sie gruen,
+       * und selbst ein 300px nach oben verschobener FAB machte sie nicht rot.
+       * Eine Sonde, die den Anlassfall nicht mehr rot sieht, misst nichts.
+       *
+       * AM FINGER MISST SIE WEITER, und dort trifft sie: derselbe verschobene
+       * FAB liefert auf /budget fuenf und auf /contacts einen Treffer. Der
+       * Knopf sitzt seit v2.2.0 in der Nav-Kapsel, ueber Chrome statt ueber
+       * Inhalt - dass am Scroll-Ende trotzdem nichts Bedienbares unter ihm
+       * liegt, ist genau die Zusage, die zu pruefen bleibt. */
+      if (device === 'desktop') {
+        /* GENAU EINER SCHWEBT DORT NOCH, und das ist eine Entscheidung, keine
+         * Luecke: das Speed-Dial des Dashboards dockt bewusst nicht an, weil es
+         * ein MENUE ist und ein halber Umzug schlechter waere als keiner
+         * (dc23972f). Fuer ihn gilt die Frage dieser Sonde weiter, und er ist
+         * der einzige Fall, in dem sie auf dem Zeiger ueberhaupt etwas misst. */
+        assert.equal(seen, 1,
+          `Auf dem Zeigergeraet schwebt genau ein FAB ueber dem Inhalt (das Dashboard-Speed-Dial), `
+          + `gemessen wurden ${seen}. Entweder dockt ein Modul nicht mehr an, oder die Einklapp-Regel greift nicht.`);
+        // Die Aufteilung wird MITGEPRUEFT, nicht nur abgezogen: sonst verschwiege
+        // die Sonde still, dass ein Modul seinen FAB ganz verloren hat.
+        /* NUR die beiden Zahlen, die dieser Sonde gehoeren. `ohneFab` waere die
+         * dritte, aber der Sweep faehrt ausser den 15 Modulrouten auch jedes
+         * Einstellungs-Blatt an - gemessen 29 statt 3, und diese Zahl haengt an
+         * der Zahl der Einstellungsseiten, nicht am FAB. Ein Modul, das seinen
+         * FAB verliert, faellt trotzdem auf: es fehlt dann in einem der beiden
+         * Toepfe hier. */
+        assert.deepEqual({ angedockt, eingeklappt }, { angedockt: 5, eingeklappt: 6 },
+          'Erwartet auf dem Zeiger: 5 FABs in der Kopfleiste (Vorrat, Mahlzeiten, Rezepte, '
+          + 'Geburtstage, Dokumente) und 6 eingeklappte (dort traegt der Modulkopf seinen eigenen '
+          + `Knopf). Gezaehlt wurden ${angedockt} und ${eingeklappt}, dazu ${ohneFab} Seiten ohne FAB. `
+          + 'Aendert sich das, aendert sich die Reichweite dieser Sonde.');
+      } else {
+        // 15 Routen minus die drei ohne FAB.
+        assert.ok(seen >= 12,
+          `Nur ${seen} Zustaende am Scroll-Ende gemessen - erwartet sind mindestens 12. Entweder `
+          + 'fehlt Modulen ihr FAB, oder keine Seite kam an ihr Scroll-Ende.');
+        assert.equal(angedockt, 0, 'am Finger dockt kein FAB an - der Platz dafuer ist die Nav-Kapsel');
+      }
 
       assert.deepEqual(findings, [],
-        'Der FAB am Scroll-Ende. Dort gehoert ihm der Nachlauf allein, und der Scrollport reicht '
-        + 'trotzdem bis an die Fensterkante.\n  ' + findings.join('\n  '));
+        'Der FAB am Scroll-Ende. Dort gehoert ihm der Nachlauf allein.\n  ' + findings.join('\n  '));
     });
   }
 });

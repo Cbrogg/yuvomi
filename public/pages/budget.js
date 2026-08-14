@@ -10,7 +10,7 @@ import { openModal as openSharedModal, closeModal, confirmOverModal, advancedSec
 import { renderDocumentAttachField, bindDocumentAttachField } from '/components/document-attach.js';
 import { stagger, vibrate, scheduleUndoableDelete } from '/utils/ux.js';
 import { wireTablist } from '/utils/tablist.js';
-import { t, formatDate, getLocale, getNumberFormat } from '/i18n.js';
+import { t, formatDate, formatDayMonth, getLocale, getNumberFormat } from '/i18n.js';
 import { esc } from '/utils/html.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
 import { render as renderSplitExpenses } from '/pages/split-expenses.js';
@@ -407,8 +407,8 @@ export async function render(container, { user }) {
   state.expensesOnly = localStorage.getItem(EXPENSES_ONLY_KEY) === '1';
 
   setHtml(container, `
-    <div class="budget-page">
-      <div class="page-toolbar page-toolbar--wrap budget-nav">
+    <div class="budget-page page-measure--narrow">
+      <div class="page-toolbar page-toolbar--wrap page-toolbar--narrow budget-nav">
         <h1 class="page-toolbar__title">${t('budget.title')}</h1>
         <!-- Der Kopf-Slot bleibt auf jedem Tab besetzt: entweder Stepper oder
              ein ruhiger Kontexttext. Eine Lücke machte jeden Tabwechsel zur
@@ -450,15 +450,16 @@ export async function render(container, { user }) {
               return `<button class="sub-tab${on ? ' sub-tab--active' : ''}" id="budget-tab-${id}" type="button" role="tab" data-tab-id="${id}" aria-controls="budget-body" aria-selected="${on ? 'true' : 'false'}" tabindex="${on ? '0' : '-1'}"><span class="sub-tab__label">${label}</span></button>`;
             }).join('')}
           </div>
-          <button class="btn btn--primary btn--icon toolbar-new-btn" id="budget-add" aria-label="${t('budget.addEntryLabel')}">
+          <button class="btn btn--primary toolbar-new-btn" id="budget-add" aria-label="${t('budget.addEntryLabel')}">
             <i data-lucide="plus" aria-hidden="true"></i>
+            <span class="toolbar-new-btn__label">${t('newLabel.budget')}</span>
           </button>
         </div>
       </div>
       <div id="budget-body" role="tabpanel" tabindex="0" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
         ${renderSkeletonList({ rows: 6, lines: 2 })}
       </div>
-      <button class="page-fab" id="fab-new-budget" aria-label="${t('budget.newEntryFabLabel')}">
+      <button class="page-fab" id="fab-new-budget" aria-label="${t('budget.newEntryFabLabel')}" data-dock-label="${t('newLabel.budget')}">
         <i data-lucide="plus" class="icon-xl" aria-hidden="true"></i>
       </button>
     </div>
@@ -858,6 +859,22 @@ function updateTabs() {
     if (caps.add) {
       addBtn.setAttribute('aria-label', addLabel);
       addBtn.setAttribute('title', addLabel);
+      /* DAS SICHTBARE WORT GILT NUR FUER DEN EINTRAG.
+       *
+       * Der Kopfknopf trug fest `newLabel.budget` ("Eintrag"), waehrend diese
+       * Funktion seine Aktion je Tab umstellt: auf "Konten" stand sichtbar
+       * "Eintrag" und im `aria-label` "Konto hinzufuegen". Das ist zweimal
+       * falsch - es fuehrt den Zeigernutzer in die Irre, und der sichtbare Text
+       * steht nicht im zugaenglichen Namen (WCAG 2.5.3, Sprachsteuerung kann
+       * den Knopf nicht ansprechen; Codex-Review zu PR #754).
+       *
+       * Das Wort faellt dort weg, statt ein falsches zu behalten: `newLabel`
+       * fuehrt Nomen je MODUL, nicht je Untertab, und die vier fehlenden
+       * ("Budget", "Konto", "Abo", "Darlehen") waeren vier neue Schluessel in
+       * 24 Sprachen - eine eigene Runde, keine Zeile in einem Fix. Ohne Text
+       * benennt das `aria-label` den Knopf allein, und das tut es korrekt. */
+      const labelSpan = addBtn.querySelector('.toolbar-new-btn__label');
+      if (labelSpan) labelSpan.hidden = caps.add !== 'budget.newEntryFabLabel';
     }
   }
   const fab = findPageFab('fab-new-budget');
@@ -886,12 +903,18 @@ function renderCategoryBars(byCategory) {
 
   return byCategory.map((c) => {
     const isExpense = c.total < 0;
-    // Nicht-null-Kategorien behalten einen sichtbaren Mindestbalken, statt bei
-    // winzigem Anteil (z. B. -25 € neben +5050 €) auf 0 zu runden und leer zu
-    // wirken (Audit P3). Mindestwert 6 statt 3: im gespiegelten Chart trägt
-    // jede Seite nur die halbe Trackbreite.
-    const rawPct    = (Math.abs(c.total) / maxAbs) * 100;
-    const pct       = c.total !== 0 ? Math.max(6, Math.round(rawPct)) : 0;
+    /* DER ANTEIL IST DER ANTEIL. Hier stand `Math.max(6, Math.round(rawPct))`.
+     * Der Boden war selbst einmal ein Audit-Fix (P3): eine winzige Kategorie
+     * sollte neben einer grossen nicht auf 0 runden und leer wirken. Er hat das
+     * Kosmetikproblem geloest und eine Falschaussage eingefuehrt - gemessen bei
+     * 1440px rendern -234,98 €, -157,50 €, -153,49 € und -25,00 € ALLE VIER
+     * exakt 25,9px, obwohl zwischen erstem und letztem das 9,4-Fache liegt
+     * (Critique 2026-08-13). Der einzige Zweck eines Balkens neben einer Zahl
+     * ist der Vergleich auf einen Blick, und in einem Geldmodul.
+     * Sichtbar bleibt der Zwerg trotzdem: der Mindestbalken ist jetzt eine
+     * LAENGE im CSS (`--bar-visible` schaltet ihn), kein Anteil - 2px stehen
+     * fuer "da ist etwas", ohne 25 € wie 235 € aussehen zu lassen. */
+    const scale     = Math.abs(c.total) / maxAbs;
     const cls       = isExpense ? 'budget-bar-row__fill--expenses' : 'budget-bar-row__fill--income';
 
     // --mirrored (Critique 2026-08-10, P0): Einnahmen und Ausgaben wuchsen von
@@ -901,7 +924,7 @@ function renderCategoryBars(byCategory) {
       <div class="budget-bar-row budget-bar-row--mirrored">
         <div class="budget-bar-row__label" title="${esc(categoryLabel(c.category))}">${esc(categoryLabel(c.category))}</div>
         <div class="budget-bar-row__track">
-          <div class="budget-bar-row__fill ${cls}" style="--bar-scale:${pct / 100}"></div>
+          <div class="budget-bar-row__fill ${cls}" style="--bar-scale:${scale.toFixed(4)};--bar-visible:${c.total !== 0 ? 1 : 0}"></div>
         </div>
         <div class="budget-bar-row__amount" style="color:${isExpense ? 'var(--color-danger)' : 'var(--color-success)'};">
           ${isExpense ? '' : '+'}${formatAmount(c.total)}
@@ -936,16 +959,40 @@ function renderEntries() {
     // das Vorzeichen kommt aus dem Zahlformat (signDisplay), nicht aus einem
     // vorangestellten '+' - sonst steht es in RTL-Locales auf der falschen Seite.
     const amountText = amountByRole(e.amount, 'flow').text;
-    const date      = formatEntryDate(e.date);
+    /* DER MONAT STEHT ÜBER DER LISTE, NICHT IN JEDER ZEILE.
+     *
+     * Die Liste ist per Konstruktion EIN Monat - `loadMonth(state.month)` holt
+     * sie, der Monatsschritter im Kopf benennt ihn, und der CSV-Link daneben
+     * trägt denselben Monat als Parameter. „19.08.2026" wiederholte ihn 23 Mal
+     * und das Jahr dazu; „19.08." sagt in der Zeile dasselbe.
+     *
+     * Über `formatDayMonth` und nicht per slice - Reihenfolge und Trennzeichen
+     * hängen an der Datumsformat-Präferenz (dmy, mdy, ymd), ein abgeschnittener
+     * String hätte sie in drei von sieben Formaten verdreht. Dieselbe Funktion,
+     * aus demselben Grund, wie in der Aufgabenzeile.
+     *
+     * `formatEntryDate` bleibt, wie es ist: die Darlehensraten weiter unten
+     * stehen in KEINER Monatsansicht, dort trägt die Zeile das volle Datum. */
+    const date      = formatDayMonth(e.date);
     const recurTag  = e.is_recurring
       ? ` <span class="budget-recur-mark" role="img" aria-label="${t('budget.recurringLabel')}"><i data-lucide="repeat" class="icon-sm" aria-hidden="true"></i></span>${e.recurrence_virtual ? ' ' + t('budget.virtualBudgetBadge') : ''}`
       : (e.recurrence_parent_id ? ` <span class="budget-recur-mark" role="img" aria-label="${t('budget.recurringInstanceLabel')}"><i data-lucide="corner-down-left" class="icon-sm" aria-hidden="true"></i></span>` : '');
-    const categoryMeta = !e.subcategory
-      ? categoryLabel(e.category)
-      : `${categoryLabel(e.category)} · ${subcategoryLabel(e.subcategory)}`;
+    /* DIE UNTERKATEGORIE STEHT IN DER DETAILFLÄCHE.
+     *
+     * Sie war das vierte Element einer Zeile, die bei 390px 156px Textspalte
+     * hat - gemessen brach die Metazeile damit in JEDER der 14 geprüften
+     * Zeilen um, fünf bis acht Mal („Wohnen / Zuhause · Strom / Wasser / Gas ·
+     * Gemeinsames Girokonto" allein sind 123px Höhe). Die Kategorie ist die
+     * Achse, nach der das Balkendiagramm über der Liste den Monat aufteilt;
+     * die Unterkategorie verfeinert sie und wird beim Öffnen der Buchung
+     * gezeigt und geändert. */
+    const categoryMeta = categoryLabel(e.category);
     const acctName = accountName(e.account_id);
+    /* Das Trennzeichen gehört IN den Span, nicht davor: das Konto fällt unter
+     * 480px Containerbreite weg (budget.css), und ein Separator davor bliebe
+     * als „·" am Zeilenende stehen. */
     const acctMeta = acctName
-      ? ` · <span class="budget-entry__account"><i data-lucide="wallet" class="icon-sm" aria-hidden="true"></i>${esc(acctName)}</span>`
+      ? `<span class="budget-entry__account"> · <i data-lucide="wallet" class="icon-sm" aria-hidden="true"></i>${esc(acctName)}</span>`
       : '';
     // Im personal-Modus geteilte Einträge klar als Haushalts-Topf kennzeichnen (#476/#505).
     const sharedBadge = (state.budgetMode === 'personal' && e.visibility === 'shared')
@@ -977,18 +1024,20 @@ function renderEntries() {
     // Lösch-Button darin verschachtelt ist. Das aria-label hält den
     // Lösch-Button-Namen aus dem Zeilen-Namen heraus.
     return `
-      <div class="budget-entry${pending ? ' budget-entry--pending' : ''}" data-id="${e.id}" role="button" tabindex="0"
+      <div class="list-row budget-entry${pending ? ' budget-entry--pending' : ''}" data-id="${e.id}" role="button" tabindex="0"
            aria-label="${esc(t('budget.editEntry'))}: ${esc(e.title)}, ${amountText}">
         <div class="budget-entry__indicator ${indClass}"></div>
-        <div class="budget-entry__body">
-          <div class="budget-entry__title">${esc(e.title)}${sharedBadge}${pendingBadge}</div>
-          <div class="budget-entry__meta">${date} · ${esc(categoryMeta)}${acctMeta}${recurTag}${receiptMark}</div>
+        <div class="list-row__main">
+          <div class="list-row__name budget-entry__title">${esc(e.title)}${sharedBadge}${pendingBadge}</div>
+          <div class="list-row__meta budget-entry__meta">${date} · ${esc(categoryMeta)}${acctMeta}${recurTag}${receiptMark}</div>
         </div>
         <div class="budget-entry__amount ${amtClass}">${amountText}</div>
-        ${confirmBtn}
-        <button class="row-action row-action--danger" data-action="delete" data-id="${e.id}" aria-label="${t('budget.deleteLabel')}">
-          <i data-lucide="trash-2" class="icon-md" aria-hidden="true"></i>
-        </button>
+        <div class="list-row__actions">
+          ${confirmBtn}
+          <button class="row-action row-action--danger" data-action="delete" data-id="${e.id}" aria-label="${t('budget.deleteLabel')}">
+            <i data-lucide="trash-2" class="icon-md" aria-hidden="true"></i>
+          </button>
+        </div>
       </div>
     `;
   }).join('');
@@ -1448,14 +1497,14 @@ function renderLoanPaymentEntry(loan, payment) {
   ).text;
 
   return `
-    <div class="budget-entry budget-entry--loan" data-loan-payment-id="${payment.id}" data-loan-id="${loan.id}" ${entry ? `data-entry-id="${entry.id}"` : ''}>
+    <div class="list-row budget-entry budget-entry--loan" data-loan-payment-id="${payment.id}" data-loan-id="${loan.id}" ${entry ? `data-entry-id="${entry.id}"` : ''}>
       <div class="budget-entry__indicator budget-entry__indicator--${flow}"></div>
-      <div class="budget-entry__body">
-        <div class="budget-entry__title">${esc(payment.entry_title || t('budget.loanPaymentTitle', { borrower: loan.borrower }))}</div>
-        <div class="budget-entry__meta">${meta}</div>
+      <div class="list-row__main">
+        <div class="list-row__name budget-entry__title">${esc(payment.entry_title || t('budget.loanPaymentTitle', { borrower: loan.borrower }))}</div>
+        <div class="list-row__meta budget-entry__meta">${meta}</div>
       </div>
       <div class="budget-entry__amount budget-entry__amount--${flow}">${amountText}</div>
-      <div class="row-actions">
+      <div class="list-row__actions">
         ${entry ? `
         <button class="row-action" data-action="loan-payment-edit" data-loan-id="${loan.id}" data-payment-id="${payment.id}" data-entry-id="${entry.id}" aria-label="${t('common.edit')}">
           <i data-lucide="pencil" class="icon-md" aria-hidden="true"></i>

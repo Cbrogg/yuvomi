@@ -57,44 +57,21 @@
 
 .contacts-filters::-webkit-scrollbar { display: none; }
 
+/* ER TRÄGT `.filter-chip` (Critique 2026-08-13). Hier stand ein Nachbau, der
+ * zehn seiner vierzehn Deklarationen zeichengleich mit der geteilten Regel
+ * teilte - und in den übrigen vier war er nicht anders, sondern schlechter:
+ * `transition: all` hatte die geteilte Regel ausdrücklich abgeschafft (sie
+ * zieht implizit Layout-Eigenschaften mit), und `min-height: 30px` war ein
+ * hartkodierter Wert weit unter `--target-lg` - gemessen fiel der Chip am
+ * Desktop auf 31px, während jeder andere Filterchip der App 48px hoch ist.
+ * Der Aktivzustand war ohnehin Zeichen für Zeichen dieselbe Regel, nur mit
+ * `--c-accent` statt `--module-accent` - und `--c-accent` löst laut Kopf
+ * dieser Datei genau darauf auf.
+ *
+ * Was BLEIBT, ist der Seitenraum: der Aktivzustand ließ kurze Labels wie
+ * „Alle" bei `--space-3` fast kreisrund wirken (#569). */
 .contact-filter-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  /* Mehr Seitenraum: der gefüllte Aktiv-Zustand (--c-accent) ließ kurze Labels
-     wie „Alle" bei space-3 fast kreisrund und randeng wirken (#569). */
-  padding: var(--space-1) var(--space-4);
-  border-radius: var(--radius-full);
-  font-size: var(--text-sm);
-  font-weight: var(--font-weight-medium);
-  white-space: nowrap;
-  cursor: pointer;
-  border: 1.5px solid var(--color-border);
-  background: transparent;
-  color: var(--color-text-secondary);
-  transition: all var(--transition-fast);
-  min-height: 30px;
-}
-
-.contact-filter-chip:hover:not(.contact-filter-chip--active) {
-  border-color: var(--color-text-secondary);
-  color: var(--color-text-primary);
-}
-
-/* Geteilte Chip-Grammatik (filter-chip.css): 18 % Fläche, 50 % Kante, Tinte
- * nach der Akzent-auf-Tönung-Regel. Der frühere Vollton war AA-sicher, las sich
- * aber wie ein aktives SEGMENT - und seit der Segment-Sprache aus Runde 1 ist
- * die gefüllte Kapsel für Segmente reserviert. */
-.contact-filter-chip--active {
-  background-color: color-mix(in srgb, var(--c-accent) var(--tint-state), transparent);
-  border-color: color-mix(in srgb, var(--c-accent) var(--tint-hint), transparent);
-  color: color-mix(in srgb, var(--c-accent) var(--tint-ink), var(--color-text-primary));
-}
-
-@media (max-width: 767px) {
-  .contact-filter-chip {
-    min-height: var(--target-lg);
-  }
+  padding-inline: var(--space-4);
 }
 
 /* --------------------------------------------------------
@@ -115,12 +92,9 @@
   margin-bottom: var(--space-4);
 }
 
-.contact-group__list {
-  background: var(--color-surface);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  overflow: hidden;
-}
+/* Der Traeger ist `.row-carrier` (list-row.css) - hier standen seine vier
+ * Deklarationen ein zweites Mal. Die Klasse steht am Element, diese Regel
+ * bleibt als Ankerpunkt fuer die Kategorie-Toene darunter. */
 
 /* Pro Kategorie ein abgeleiteter Farbton (--cat). KEIN neuer Modul-Akzent
  * (DESIGN §2), sondern dezente, aus bestehenden AA-verifizierten Tokens
@@ -154,19 +128,27 @@
   flex-shrink: 0;
 }
 
-.contact-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding-right: var(--space-4);
-  transition: background-color var(--transition-fast);
-}
-
-/* Haarlinie über den +-Kombinator: border-bottom auf jeder Zeile zöge auch eine
- * unter die letzte und damit einen zweiten Rand in den Träger. */
-.contact-item + .contact-item {
-  border-top: 1px solid var(--color-border-subtle);
-}
+/* DIE POLSTERUNG GEHÖRT DER ZEILE, NICHT DEM KNOPF DARIN. Sie stand bis
+ * Etappe 5 in `.contact-item__open` (16px, mobil 12px) und die Zeile selbst
+ * hatte oben und unten gar keine - dadurch bekam die Textspalte 24px
+ * Innenabstand und die 48px-Bedienzone daneben null. Gemessen bei 390x844:
+ * 43,7px Text plus 24 = 67,7px, während jede geschnittene Liste der App auf
+ * 48 + 2x8 = 64 steht. Das ist kein Zufallsunterschied, sondern die Rechnung
+ * von `.list-row`: die Polsterung muss BEIDE Spalten umschließen, sonst
+ * bestimmt die höhere allein. Mit ihr an der Zeile: 64px, wie Einkauf,
+ * Vorrat, Rezepte, Budget und die Hauswirtschaft. */
+/* SIE TRAEGT `.list-row` (Critique 2026-08-13, P2). Fuenf der sechs
+ * Deklarationen standen zeichengleich in list-row.css, und die sechste - die
+ * Haarlinie ueber den +-Kombinator - stand dort ebenfalls, nur am TRAEGER
+ * (`.row-carrier > * + *`). Der Traeger heisst hier `.contact-group__list` und
+ * war seinerseits ein Nachbau von `.row-carrier`, Wert fuer Wert: Flaeche,
+ * Radius, Schatten, overflow. Beide tragen die geteilten Klassen jetzt mit.
+ *
+ * Was BLEIBT: der kleinere Abstand - seit dem Folgelauf aber nicht mehr als
+ * eigener Wert hier, sondern als benannte Stufe `.list-row--tight`
+ * (list-row.css). Links steht ein Avatar, kein Bedienelement, und die 12px der
+ * geteilten Zeile schoben den Namen sichtbar von ihm weg; das ist eine Rolle,
+ * die auch die naechste Bildliste haben wird, keine Eigenheit der Kontakte. */
 
 .contact-item:hover {
   background-color: var(--color-surface-2);
@@ -174,35 +156,15 @@
 
 /* --------------------------------------------------------
  * Auswahl-Modus (opt-in Bulk)
+ *
+ * DIE LEISTE IST ENTFALLEN (Critique 2026-08-13). Hier standen `.contacts-
+ * selectbar` und ihre zwei Kinder: eine umbrechende Leiste im Fluss der Seite,
+ * die im Auswahlmodus rund 120px Chrome über die Liste schob. Die Sammelaktion
+ * ist jetzt die geteilte Pille in der unteren Shell-Zone (utils/bulk-pill.js) -
+ * derselbe Baustein, dieselbe Sprache und dieselbe Rückfrage wie in Einkauf und
+ * Vorrat. Was von der Auswahl hier bleibt, ist die ZEILE: ihre Checkbox, ihre
+ * Tönung und der Griff, der im Auswahlmodus weicht.
  * -------------------------------------------------------- */
-.contacts-selectbar {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2) var(--space-3);
-  flex-wrap: wrap;
-  padding-block: var(--space-2);
-  padding-inline: var(--page-inline-pad);
-  border-bottom: 1px solid var(--color-border);
-  background-color: var(--color-surface-2);
-  flex-shrink: 0;
-}
-
-/* Ohne diesen Guard schlägt display:flex das hidden-Attribut (reset.css erzwingt
- * [hidden] nicht) → die Leiste bliebe dauerhaft sichtbar. */
-.contacts-selectbar[hidden] {
-  display: none;
-}
-
-.contacts-selectbar__count {
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-primary);
-}
-
-.contacts-selectbar__actions {
-  display: flex;
-  gap: var(--space-2);
-  margin-left: auto;
-}
 
 .contact-item__select {
   cursor: pointer;
@@ -232,22 +194,31 @@ html:has(.contacts-page.is-selecting) .page-fab {
   display: none;
 }
 
+/* Und mit der Affordance geht ihr Nachlauf (Etappe 6, 2026-08-13). Dieselbe
+   Paarung wie in layout.css: die Nachlauf-Regel fragt `:not([hidden])` und
+   sieht ein `display: none` nicht. */
+html:has(.contacts-page.is-selecting) {
+  --fab-safe-zone: 0px;
+}
+
 /* Öffnen/Bearbeiten: echte, fokussierbare Schaltfläche (Tastatur/Screenreader).
- * Padding wandert hierher, damit die gesamte linke Zeilenfläche klickbar ist. */
+ *
+ * DER KNOPF-RESET UND DIE ZIELGRÖSSE STEHEN NICHT MEHR HIER, sondern kommen
+ * aus `.list-row__main--interactive` (list-row.css) - der Baustein für genau
+ * diesen Fall: „die Textspalte IST die primäre Zeilenaktion". Der Vorrat trägt
+ * ihn seit der Küchen-Zusammenführung, die Kontakte hatten dieselben sieben
+ * Deklarationen zeichengleich daneben stehen.
+ *
+ * WAS DER UMZUG DER POLSTERUNG KOSTET, und es ist derselbe Preis, den der
+ * Vorrat schon zahlt: die 8px oben und unten gehören jetzt der Zeile und sind
+ * nicht mehr Teil der Klickfläche. Der Knopf hält seine Zielgröße stattdessen
+ * über `min-height` - 40px am Zeiger, 48px am Finger. */
 .contact-item__open {
   flex: 1;
   min-width: 0;
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-4);
-  padding-right: var(--space-2);
-  background: none;
-  border: none;
-  font: inherit;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
 }
 
 .contact-item__open:focus-visible {
@@ -524,18 +495,16 @@ html:has(.contacts-page.is-selecting) .page-fab {
 @media (max-width: 767px) {
   .contact-item__open {
     gap: var(--space-2);
-    padding: var(--space-3);
-    padding-right: var(--space-2);
   }
 
-  .contact-item {
-    padding-right: var(--space-3);
-  }
-
-  .contact-item__icon {
-    width: 36px;
-    height: 36px;
-  }
+  /* HIER STANDEN 36 HARTKODIERTE PIXEL, und sie haben eine fremde Begründung
+   * falsch gemacht: `birthdays.css` beruft sich darauf, dass „Kontakte, das
+   * Nachbarmodul derselben Familie, ihr Zeilenbild seit jeher auf
+   * `--target-md` tragen" - am Telefon, wo diese Regel griff, waren es 36 statt
+   * 40. Die beiden Zeilen derselben Familie standen also genau dort
+   * auseinander, wo die Begründung sie zusammen sah. Der Wert ist ersatzlos
+   * weg: --target-md kostet die Zeile nichts, ihre Höhe kommt aus Text und
+   * Bedienzone, nicht aus dem 40px-Bild. */
 }
 
 /* ================================================================

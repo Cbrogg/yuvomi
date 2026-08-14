@@ -144,9 +144,11 @@
   cursor: pointer;
 }
 
+/* Aktiv = erhabene Surface-Pille, Ton in der Tinte (tokens.css, Abschnitt 6c). */
 .health-vitals__range.is-active {
-  background: var(--module-accent);
-  color: var(--color-ink-on-vivid);
+  background: var(--seg-active-bg);
+  box-shadow: var(--seg-active-shadow);
+  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-ink), var(--color-text-primary));
 }
 
 .health-vitals__add {
@@ -314,16 +316,74 @@
 /* Leerzustände dieser Sektionen sind seit Block 2 die geteilte
  * .empty-state--compact (layout.css). */
 
+/* SIE TRÄGT `.list-row` (Critique 2026-08-13). Anzeigeart, Ausrichtung, Abstand,
+ * Mindesthöhe, Kantenlosigkeit und der Hover kamen hier ein zweites Mal - die
+ * Dosenliste war eine von sechs Zeilenlisten, die das Dichte-Paket nicht
+ * erreicht hat.
+ *
+ * Was bleibt: die waagerechte Polsterung auf 16px, weil die Liste in einer
+ * Medikamentenkarte mit derselben Polsterung steht und ihre Zeilen mit deren
+ * Inhalt fluchten müssen. Das `flex-wrap: wrap` ist ABGEGEBEN und nicht
+ * vergessen: die geteilte Zeile bricht nicht um, ihr Name schrumpft in seiner
+ * eigenen Spalte und trennt bei Bedarf - dieselbe Antwort wie in den neun
+ * Modulen davor. */
 .health-dose {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-1) var(--space-3);
-  /* Dichtere Zeile: geringeres vertikales Padding, damit mehr Dosen ohne Scrollen
-   * sichtbar sind (Kern-Interaktion des Tabs). */
-  padding: var(--space-2) var(--space-4);
-  border: none;
-  background: transparent;
+  padding-inline: var(--space-4);
+}
+
+/* WAS DIE ZEILE AM ENDE TRAEGT, ENTSCHEIDET IHRE EIGENE BREITE
+ * (Critique 2026-08-13, zweite Runde).
+ *
+ * Der Beitritt zur geteilten Zeile hat hier eine umbrechende Zeile in eine
+ * ABGESCHNITTENE verwandelt: `.list-row` setzt `flex-wrap: nowrap`, und diese
+ * Zeile fuehrt Uhrzeit, Name, zwei Knoepfe und einen Status. Gemessen bei
+ * 390px: clientWidth 324 gegen scrollWidth 449, „Ueberspringen" lag bei
+ * left=360 in einem 390px-Viewport - zu 92 von 122px ausserhalb des Bildes,
+ * ohne Scrollweg dorthin, weil der Traeger clippt. In einem Modul, das
+ * Medikamente fuehrt, ist eine unerreichbare Aktion der teuerste Ort dafuer.
+ *
+ * Die Antwort ist die der anderen Module: die Zweitangabe weicht nach ihrer
+ * eigenen Breite. Das LABEL faellt weg, nicht der Knopf - sein `aria-label`
+ * traegt den ganzen Satz weiter, seine Zielgroesse kommt unveraendert aus
+ * `.btn`. `flex-wrap` zurueckzuholen waere der andere Weg und der falsche: er
+ * braeche die geteilte Regel fuer alle vierzehn Module. */
+/* ZWEI STUFEN, WEIL EINE NICHT REICHTE - und das war nachrechenbar, nicht
+ * Geschmack. Gemessen bei 390px: Container 324px, die Zeile braucht 371
+ * (32 Polsterung + 46 Uhrzeit + 24 Luecken + 128 Namensboden + 157 Aktionen).
+ * Das Skip-Label allein fallen zu lassen holte 78px und liess 14 uebrig; bei
+ * 320px hat der Container nur 254px, und selbst mit dem Namen auf NULL fehlten
+ * noch 5. Der Take-Knopf traegt dort 101px allein.
+ *
+ * Also: erste Stufe nimmt dem Namen seinen Boden und dem Skip sein Wort,
+ * zweite Stufe auch dem Take. Beide behalten ihr `aria-label` und ihre
+ * Zielgroesse aus `.btn` - was faellt, ist der sichtbare Text, nie das Ziel.
+ * In einem Modul, das Medikamente fuehrt, ist eine unerreichbare Aktion der
+ * teuerste Fehler; ein Icon statt eines Wortes ist der billigste Preis dafuer. */
+@container list-rows (max-width: 26rem) {
+  .health-dose__skip-label {
+    display: none;
+  }
+
+}
+
+/* 21rem = 336px, und die Zahl ist gerechnet, nicht gegriffen: mit beschriftetem
+ * Take braucht die Zeile 32 Polsterung + 46 Uhrzeit + 24 Luecken + 56 Namensboden
+ * + 177 Aktionen = 335px. Darunter faellt auch sein Wort. Der erste Anlauf stand
+ * auf 20rem (320px) - der Container misst auf einem 390px-Telefon aber 324px,
+ * also feuerte die Stufe genau dort nicht, wo sie gebraucht wurde. */
+@container list-rows (max-width: 21rem) {
+  .health-dose__take-label {
+    display: none;
+  }
+}
+
+/* Ohne Container kein Query: die Dosenlisten liegen in Karten, nicht in einem
+ * `.row-carrier`, also macht die Liste ihn selbst auf - mit dem geteilten
+ * Namen, unter dem die Zeilenbausteine ihre Fragen stellen. */
+.health-meds__due-list,
+.health-overview__reminders-list {
+  container-type: inline-size;
+  container-name: list-rows;
 }
 
 .health-dose + .health-dose {
@@ -347,6 +407,24 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* DER 8REM-BODEN DARUEBER STAMMT AUS DER ZEIT VOR DER GETEILTEN ZEILE.
+ * Sein Kommentar sagt, er solle die Aktionsgruppe bei Enge in eine ZWEITE ZEILE
+ * druecken - `.list-row` setzt seit dem Beitritt `flex-wrap: nowrap`, also
+ * drueckt er sie stattdessen aus dem Bild. Diese zwei Stufen nehmen ihm den
+ * Boden genau dort, wo die Rechnung oben es verlangt.
+ *
+ * SIE STEHEN HIER UNTEN UND NICHT BEI IHREN GESCHWISTERN: eine Container-Query
+ * erhoeht die Spezifitaet nicht. Ueber der Basisregel notiert waren sie
+ * wirkungslos, und zwar lautlos - gemessen blieb `min-width` bei 320px auf
+ * 128px, waehrend die Label-Regeln derselben Query sichtbar griffen. */
+@container list-rows (max-width: 26rem) {
+  .health-dose__name { min-width: 3.5rem; }
+}
+
+@container list-rows (max-width: 21rem) {
+  .health-dose__name { min-width: 3rem; }
 }
 
 .health-dose__actions {
@@ -1195,13 +1273,12 @@ button.health-med-card:hover {
   gap: 0;
 }
 
+/* SIE TRÄGT `.list-row` (Critique 2026-08-13): Anzeigeart, Ausrichtung, Abstand
+ * und Kantenlosigkeit standen hier zeichengleich ein zweites Mal. Was bleibt,
+ * ist die waagerechte Nullpolsterung - diese Liste steht in einer Widget-Karte,
+ * die ihre eigene schon mitbringt. */
 .health-overview-reminder {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-2) 0;
-  background: transparent;
-  border: none;
+  padding-inline: 0;
 }
 
 .health-overview-reminder + .health-overview-reminder {

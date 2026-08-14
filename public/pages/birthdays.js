@@ -150,17 +150,17 @@ function birthdayItemHtml(birthday) {
         <i data-lucide="trash-2" class="icon-md"></i>
         <span>${t('common.delete')}</span>
       </div>
-    <article class="birthday-item ${isToday ? 'birthday-item--today' : ''}" data-id="${birthday.id}">
+    <article class="list-row birthday-item ${isToday ? 'birthday-item--today' : ''}" data-id="${birthday.id}">
       <div class="birthday-item__media">${photoAvatar(birthday)}</div>
-      <div class="birthday-item__body">
-        <div class="birthday-item__row">
-          <strong class="birthday-item__name">
-            ${esc(birthday.name)}${isToday ? CAKE_SVG : ''}
-          </strong>
+      <div class="list-row__main">
+        <strong class="list-row__name birthday-item__name">
+          ${esc(birthday.name)}${isToday ? CAKE_SVG : ''}
+        </strong>
+        <div class="list-row__meta birthday-item__meta">
           <span class="birthday-chip birthday-chip--${chip.mod}">${esc(chip.label)}</span>
+          <span class="birthday-item__when">${esc(ageMeta(birthday))}</span>
+          ${birthday.notes ? `<span class="birthday-item__notes">${esc(birthday.notes)}</span>` : ''}
         </div>
-        <div class="birthday-item__meta">${esc(ageMeta(birthday))}</div>
-        ${birthday.notes ? `<div class="birthday-item__notes">${esc(birthday.notes)}</div>` : ''}
       </div>
       <div class="row-actions birthday-item__actions">
         <button class="row-action" type="button" data-action="edit" data-id="${birthday.id}" aria-label="${t('common.edit')}">
@@ -250,20 +250,25 @@ function wireBirthdaySwipe(host) {
 function renderPage() {
   _container.replaceChildren();
   _container.insertAdjacentHTML('beforeend', `
-    <div class="birthdays-page">
-      <div class="page-toolbar page-toolbar--wrap birthdays-toolbar">
+    <div class="birthdays-page page-measure--narrow">
+      <div class="page-toolbar page-toolbar--wrap page-toolbar--narrow birthdays-toolbar">
         <h1 class="page-toolbar__title">${t('birthdays.title')}</h1>
         ${renderPageSearch({ id: 'birthdays-search', label: t('birthdays.searchPlaceholder'), placeholder: t('birthdays.searchPlaceholder'), value: state.query, clearLabel: t('common.searchClear'), className: 'birthdays-toolbar__search page-toolbar__center' })}
-        <button class="btn btn--secondary birthdays-toolbar__import" id="birthdays-import-btn" type="button" aria-label="${t('birthdays.importButton')}">
-          <i data-lucide="download" aria-hidden="true"></i><span>${t('birthdays.importButton')}</span>
-        </button>
+        <!-- Der Aktions-Slot des Modulkopfs. Der Import-Knopf stand direkt in der
+             Leiste; die Shell dockt hier auf dem Desktop den Primärknopf an
+             (dockFabIntoToolbar in router.js), und der braucht einen Ort. -->
+        <div class="page-toolbar__actions">
+          <button class="btn btn--secondary birthdays-toolbar__import" id="birthdays-import-btn" type="button" aria-label="${t('birthdays.importButton')}">
+            <i data-lucide="download" aria-hidden="true"></i><span>${t('birthdays.importButton')}</span>
+          </button>
+        </div>
       </div>
 
       <p class="birthdays-hint">${t('birthdays.calendarHint')}</p>
 
-      <div class="birthdays-list" id="birthdays-list"></div>
+      <div class="row-carrier birthdays-list" id="birthdays-list"></div>
 
-      <button class="page-fab" id="fab-new-birthday" aria-label="${t('birthdays.addButton')}">
+      <button class="page-fab" id="fab-new-birthday" aria-label="${t('birthdays.addButton')}" data-dock-label="${t('newLabel.birthdays')}">
         <i data-lucide="plus" class="icon-xl" aria-hidden="true"></i>
       </button>
     </div>

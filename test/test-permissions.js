@@ -27,6 +27,7 @@ import {
   PERMISSION_MODULES,
   PERMISSION_WIDGETS,
 } from '../server/permissions.js';
+import { WIDGET_IDS } from '../public/utils/dashboard-widgets.js';
 
 function freshDb() {
   const db = new DatabaseSync(':memory:');
@@ -203,10 +204,18 @@ function idsFromSource(relativePath, pattern) {
 }
 
 test('jedes Dashboard-Widget ist sperrbar und in der Rechte-UI benannt', () => {
-  const dashboardIds = idsFromSource('../public/pages/dashboard.js', /const WIDGET_IDS = \[([^\]]+)\]/)
-    .split(',')
-    .map((part) => part.trim().replace(/^'|'$/g, ''))
-    .filter(Boolean);
+  /* AUS DEM MODUL, NICHT AUS SEINEM QUELLTEXT (Etappe 7, 2026-08-13). Diese
+   * Zeile las `WIDGET_IDS` per Regex aus `public/pages/dashboard.js`, und
+   * `af2cac51` hat die Liste nach `utils/dashboard-widgets.js` gezogen: seitdem
+   * fand das Muster nichts und die Suite war rot - auf ganzer Strecke, in einem
+   * `npm test`, das niemand fuhr. Der Commit dort zaehlt sechs gruene Suiten
+   * auf, und diese ist keine davon. Dieselbe Form wie beim Precache-Fund einen
+   * Commit vorher: ein Umzug bricht eine Zusicherung zwei Dateien weiter.
+   *
+   * Der Import kann das nicht wieder passieren lassen - er schlaegt laut fehl,
+   * wo ein Regex still leer zurueckkommt. Das Modul ist dafuer gebaut: es
+   * haengt an nichts und laeuft in node (siehe seinen Kopf). */
+  const dashboardIds = [...WIDGET_IDS];
 
   const labelKeys = idsFromSource(
     '../public/settings/pages/admin-permissions.js',
@@ -221,11 +230,11 @@ test('jedes Dashboard-Widget ist sperrbar und in der Rechte-UI benannt', () => {
   assert.deepEqual(
     [...dashboardIds].sort(),
     [...permissionIds].sort(),
-    'WIDGET_IDS (dashboard.js) und PERMISSION_WIDGETS (server/permissions.js) sind auseinandergelaufen',
+    'WIDGET_IDS (utils/dashboard-widgets.js) und PERMISSION_WIDGETS (server/permissions.js) sind auseinandergelaufen',
   );
   assert.deepEqual(
     [...dashboardIds].sort(),
     [...labelKeys].sort(),
-    'WIDGET_IDS (dashboard.js) und WIDGET_LABEL_KEYS (admin-permissions.js) sind auseinandergelaufen',
+    'WIDGET_IDS (utils/dashboard-widgets.js) und WIDGET_LABEL_KEYS (admin-permissions.js) sind auseinandergelaufen',
   );
 });

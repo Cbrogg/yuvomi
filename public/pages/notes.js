@@ -61,16 +61,16 @@ export async function render(container, { user }) {
       <div class="page-toolbar notes-toolbar">
         <h1 class="page-toolbar__title">${t('notes.title')}</h1>
         ${renderPageSearch({ id: 'notes-search', label: t('notes.searchPlaceholder'), placeholder: t('notes.searchPlaceholder'), value: state.filterQuery, clearLabel: t('common.searchClear'), className: 'notes-toolbar__search' })}
-        <button class="btn btn--primary toolbar-new-btn" id="notes-add-btn">
+        <button class="btn btn--primary toolbar-new-btn" id="notes-add-btn" aria-label="${t('notes.addNoteLabel')}">
           <i data-lucide="plus" class="icon-md" aria-hidden="true"></i>
-          ${t('notes.addNoteLabel')}
+          <span class="toolbar-new-btn__label">${t('newLabel.notes')}</span>
         </button>
       </div>
       <div class="notes-filters" id="notes-filters" role="group" aria-label="${t('notes.filterCreatorLabel')}" hidden></div>
       <div class="notes-scroll">
         <div id="notes-grid" class="notes-grid" aria-busy="true">${renderSkeletonList({ rows: 5, lines: 3 })}</div>
       </div>
-      <button class="page-fab" id="fab-new-note" aria-label="${t('notes.addNoteLabel')}">
+      <button class="page-fab" id="fab-new-note" aria-label="${t('notes.addNoteLabel')}" data-dock-label="${t('newLabel.notes')}">
         <i data-lucide="plus" class="icon-xl" aria-hidden="true"></i>
       </button>
     </div>

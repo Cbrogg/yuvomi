@@ -108,7 +108,7 @@ export async function render(container, { user } = {}) {
         </aside>
         <main class="split-main" id="split-main" aria-busy="true">${renderSkeletonList({ rows: 5, lines: 2 })}</main>
       </div>
-      <button class="page-fab" id="split-fab" aria-label="${t('splitExpenses.addExpense')}">
+      <button class="page-fab" id="split-fab" aria-label="${t('splitExpenses.addExpense')}" data-dock-label="${t('newLabel.splitExpenses')}">
         <i data-lucide="plus" class="icon-xl" aria-hidden="true"></i>
       </button>
     </div>

@@ -133,13 +133,13 @@ spacing:
   16: "64px"
 components:
   button-primary:
-    backgroundColor: "color-mix(in srgb, var(--color-accent) 88%, #0E0D0B)"
+    backgroundColor: "color-mix(in srgb, var(--color-accent) 88%, var(--neutral-950))"
     textColor: "{colors.ink-on-vivid}"
     rounded: "{rounded.full}"
     padding: "8px 16px"
     height: "48px"
   button-primary-hover:
-    backgroundColor: "color-mix(in srgb, var(--color-accent) 76%, #0E0D0B)"
+    backgroundColor: "color-mix(in srgb, var(--color-accent) 76%, var(--neutral-950))"
   button-icon:
     rounded: "{rounded.full}"
     size: "44px"
@@ -948,19 +948,39 @@ offen im Stylesheet und waere im Dokument unsichtbar, weil beide Antworten die
 Zielgroessen-Regel halten (**Ebene 3**, `die Groesse des Icon-Knopfs gehoert der Shell`).
 
 ### Segmented Controls
-- **EINE Sprache shell-weit:** aktives Segment = Modul-Akzent gefuellt
-  (`var(--module-accent, var(--color-accent))`) mit `--color-ink-on-vivid`; inaktiv
+- **EINE Sprache shell-weit:** aktives Segment = erhabene Surface-Pille im Well
+  (`--seg-active-bg` + `--seg-active-shadow`), Modulton NUR als Tinte
+  (`color-mix(in srgb, <Akzent> var(--tint-ink), var(--color-text-primary))`); inaktiv
   Sekundaertext, Hover hebt nur die Textfarbe. Gilt identisch fuer Aufgaben-Gruppentoggle,
-  Kalender-Ansichtswahl, Budget-Tabs, Sub-Tabs, Kuechen-Tabs, Dokumenten-View-Toggle und die
-  Settings-Schalter. Innenradius konzentrisch (`calc(var(--radius-sm) - 2px)`). Kein
-  3px-Akzentstreifen mehr unter aktiven Tabs - die Fuellung ist das Signal.
+  Kalender-Ansichtswahl, Budget-Tabs, Sub-Tabs, Kuechen-Tabs, Dokumenten-View-Toggle,
+  Listen-Tabs, Gesundheits-Zeitraum und die Settings-Schalter. Der Traeger ist ein Well
+  (`--color-surface-3`), sonst ist die Pille kein Zustand (gemessen 1.20:1 hell / 1.16:1
+  dunkel gegen Surface, plus Schatten). Innenradius konzentrisch
+  (`calc(var(--radius-sm) - 2px)`). Kein 3px-Akzentstreifen unter aktiven Tabs.
+- **EINE BEHANDLUNG PRO KONTROLLTYP.** Der Modulton erscheint genau einmal als FLAECHE
+  (aktiver Filter-Chip, getoent) und einmal als TINTE (aktives Segment). Bis 2026-08-12
+  war das Segment deckend gefuellt; auf `/tasks` standen dadurch vier Gruen-Behandlungen
+  gleichzeitig im Bild (gefuellter Ansichtsumschalter, gefuelltes Gruppen-Segment,
+  getoenter Chip, Chip mit roher Akzent-Kante). Die alte Begruendung fuer die Fuellung
+  („Modul-Akzent als Text erreicht nur ~3.5:1") stammt aus der Zeit vor den Familientoenen
+  (v2.1.0) und ist abgelaufen: heute haelt selbst der rohe Ton 5.04:1 hell / 4.82:1 dunkel,
+  die `--tint-ink`-Mischung 7.37:1 / 6.61:1 ueber alle neun Familien. Gehalten von
+  `das aktive Segment ist ueberall dieselbe Pille` in `test/test-frontend-audit.js`,
+  in beiden Richtungen (Vollstaendigkeit der drei Zeilen UND kein Rueckfall auf gefuellt).
+- **Die Tinte ist kein Token, und das ist Absicht.** Ein Custom Property, das
+  `var(--module-accent)` enthaelt, wird dort aufgeloest, wo es DEKLARIERT ist. An `:root`
+  gibt es keinen Modulton - ein `--seg-active-ink` war in jedem Modul violett und riss den
+  Filter-Chip gleich mit. Die `color-mix`-Zeile steht deshalb an jeder Fundstelle
+  ausgeschrieben; zusammengehalten wird sie vom Guard, nicht von der Kaskade.
 
 ### Chips
 - **Form:** Kapsel (`--radius-full`), Kante wie ein Bedienelement. Kalender-Layer-Chips
   tragen die User-Farbe als Border mit ~60 % Deckung (>=3:1), nie als Textfarbe; nur der
   Mir-zugewiesen-Chip traegt sein Label in der Layer-Farbe (AA-verifiziert),
-  Feiertags-Chips bleiben Sekundaertext. Aktive Filter-Chips folgen der Segment-Sprache.
-  Scrollende Chip-Reihen bekommen die Fade-Mask (siehe Layout).
+  Feiertags-Chips bleiben Sekundaertext. Ein aktiver Filter-Chip traegt den Ton als
+  getoente FLAECHE (`--tint-state` Grund, `--tint-hint` Kante, `--tint-ink` Tinte) - das
+  ist die andere Haelfte der Regel „eine Behandlung pro Kontrolltyp" und ausdruecklich
+  NICHT die Segment-Pille. Scrollende Chip-Reihen bekommen die Fade-Mask (siehe Layout).
 
 ### Cards / Containers
 - **Corner Style:** 12px (`--radius-md`) fuer die Karte, 16px (`--radius-lg`) fuer den
@@ -1043,6 +1063,29 @@ nichts. Der Radius ist an seiner Verwendungsstelle begruendet (shopping.css: die
 klippt mit ihrem `overflow: hidden` die Wischflaeche), der fehlende Schatten nirgends. Die
 Fuellung ist dagegen keine Abweichung: `--color-surface-work` hat in beiden Themes denselben
 Wert wie `--color-surface` (#FFFFFF / #262422).
+
+**Das LESEMASS ist seit 2026-08-13 keine der Abweichungen mehr.** Es trug nur `.list-rows`,
+mit der ausgeschriebenen Begruendung, die Listen ausserhalb der Kueche seien breiter. Das war
+eine Beschreibung des Bestands: gemessen bei 1440px stand die Aufgabenliste auf 720px und die
+Kontaktliste auf 1156px, also sprang die Inhaltsspalte beim Modulwechsel um 436px. Beide
+Traeger kappen jetzt auf `--content-max-width-narrow`, und beide machen den Container
+`list-rows` auf. Welche der zwei Klassen eine Zeilenfolge traegt, ist damit eine Frage ihrer
+Verschachtelung (Gruppe im Scroller gegen alleinstehender Traeger), nicht ihrer Breite. Guard:
+`die Kuechen-Listen teilen eine Zeilen-Grammatik`, Abschnitt 4.
+
+**Was die Zeile hat und was daneben steht.** Die geteilte Zeile (`.list-row`) fuehrt seit dem
+Dichte-Paket vierzehn Module. Zwei benannte Stufen weichen begruendet ab - `--roomy` fuer eine
+Zeile, deren Titel-Trefferflaeche die Polsterung mitrechnet (Aufgaben), `--tight` fuer eine,
+die links ein BILD statt eines Bedienelements fuehrt (Kontakte). Mehr Stufen gibt es nicht:
+eine dritte Zahl in einem Modul-Stylesheet ist ein Nachbau, und ein Guard sagt das auch so
+(„Abweichen ist erlaubt, wiederholen nicht").
+
+**Drei Flaechen sind AUSDRUECKLICH keine Zeilenliste**, damit sie beim naechsten Durchgang
+nicht wieder als Rueckstand gelesen werden: die Notizen (Masonry-Raster, eigener Guard), die
+Aufteilung im Budget (Karten-IA mit eigener Rechenlogik) und die Mahlzeiten-Slots (Zellen
+eines Wochenrasters mit Drag-und-Drop und Ablagezustand, `style="${gridPos}"` - eine
+Rasterzelle ist keine Zeile, auch wenn sie eine Zeile hoch ist). Sie fallen unter die
+Raster-Ausnahme der Zeilenlisten-Regel oben.
 
 **Warum das mehr ist als eine Ungenauigkeit:** diese Regel und der Karten-Abschnitt machen
 beide den SCHATTEN zum Trenner („randlos auf dem Grouped-Grund - die Trennung leistet der
@@ -1666,10 +1709,20 @@ Angabe braeuchte einen zweiten Timer, nur damit sie sich selbst aktuell haelt.
   fragen - und den `container` am VORFAHREN deklarieren, nie am fragenden Element.
 - **Do** die Kennzahl einer Karte gestapelt setzen (kleines Label darueber, Zahl in Title 1
   darunter, `tabular-nums`), nie als Zahl am rechten Ende einer Beschriftungszeile.
+- **Do** den Primaerknopf eines Modulkopfs sein NOMEN zeigen lassen (`newLabel.*`:
+  „Termin", „Geburtstag"); das Verb traegt das Plus-Zeichen, der ganze Satz bleibt im
+  `aria-label`. Der kurze Text steht als `data-dock-label` am `.page-fab`, damit der
+  Router ihn beim Andocken findet (Register-Regel).
 
 ### Don't:
 - **Don't** einen zweiten Buttonradius einfuehren; die Kapsel steht in der `.btn`-Basisregel
   und gilt fuer alle Varianten inklusive Icon-Buttons.
+- **Don't** ein `aria-label` als sichtbaren Text weiterreichen; es beschreibt eine
+  Handlung („Geburtstag hinzufuegen") und wird als Knopfbeschriftung zum dritten
+  Register neben denen, die es schon gibt.
+- **Don't** einen zweiten Anlege-Weg neben einem sichtbaren stehen lassen; und wenn
+  einer weichen muss, dann unter DERSELBEN Bedingung, unter der der andere erscheint -
+  nie unter einer eigenen Zahl daneben.
 - **Don't** Gradient-Text oder Akzent-Titel: Large Titles und Ueberschriften tragen immer
   Label-Farbe.
 - **Don't** chromatische Verlaeufe auf Inhalt legen; auch nicht auf der Anmeldebuehne und

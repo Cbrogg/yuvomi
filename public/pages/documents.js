@@ -132,18 +132,34 @@ export async function render(container) {
         </div>
       </div>
       <div class="documents-browser-layout">
-        <aside class="documents-folder-browser" aria-label="${t('documents.folderBrowserTitle')}">
+        <aside class="documents-folder-browser" aria-labelledby="documents-folder-browser-title">
           <div class="documents-folder-browser__head">
-            <span class="documents-folder-browser__title">${t('documents.folderBrowserTitle')}</span>
+            <h2 class="documents-folder-browser__title" id="documents-folder-browser-title">${t('documents.folderBrowserTitle')}</h2>
+            ${/* KEIN `aria-label` hier. Es trug "Ordner durchsuchen", waehrend der
+                Knopf sichtbar den AKTUELLEN Ordner zeigt: der sichtbare Text stand
+                damit nicht im zugaenglichen Namen (WCAG 2.5.3 - Sprachsteuerung
+                kann den Knopf nicht ansprechen), und der gewaehlte Ordner, unter
+                1024px die einzige Zustandsangabe der Auswahl, wurde nie angesagt.
+                Den Bereich benennt bereits das <h2> ueber `aria-labelledby` am
+                <aside>; das Label doppelte es und verdeckte den Namen
+                (PR-Review #754). Die Beschriftung startet mit dem Standardordner,
+                damit der Knopf nie namenlos ist - `renderFolderBrowser` schreibt
+                sie danach bei jedem Rendern fort. */ ''}
+            <button class="documents-folder-browser__toggle" id="documents-folder-toggle" type="button"
+                    aria-expanded="false" aria-controls="documents-folder-browser">
+              <i data-lucide="folders" aria-hidden="true"></i>
+              <span class="documents-folder-browser__toggle-label">${esc(t('documents.allFolders'))}</span>
+              <i data-lucide="chevron-down" aria-hidden="true" class="documents-folder-browser__chevron"></i>
+            </button>
             <button class="documents-folder-browser__add" id="documents-folder-add" type="button" aria-label="${t('documents.addFolderButton')}" title="${t('documents.addFolderButton')}">
               <i data-lucide="folder-plus" aria-hidden="true"></i>
             </button>
           </div>
-          <div class="documents-folder-browser__list" id="documents-folder-browser"></div>
+          <ul class="documents-folder-browser__list row-carrier" id="documents-folder-browser"></ul>
         </aside>
         <div id="documents-list" class="${listClasses()}" aria-busy="true">${renderSkeletonList({ rows: 6, lines: 2 })}</div>
       </div>
-      <button class="page-fab" id="fab-new-document" aria-label="${t('documents.addButton')}">
+      <button class="page-fab" id="fab-new-document" aria-label="${t('documents.addButton')}" data-dock-label="${t('newLabel.documents')}">
         <i data-lucide="upload" class="icon-xl" aria-hidden="true"></i>
       </button>
     </div>
@@ -292,6 +308,18 @@ function bindPageEvents() {
     else if (action === 'select-archive') archiveSelected();
     else if (action === 'select-delete') deleteSelected();
   });
+  /* DIESE SEITE BEKOMMT DAS LESEMASS NICHT, und das ist eine Entscheidung.
+   *
+   * Sie ist als einzige ZWEISPALTIG: der Ordner-Browser steht links, die
+   * Dokumentliste beginnt erst bei x=508. Gemessen sind Liste und Bedienzeile
+   * beide 720px breit - aber an verschiedenen Startpunkten, und eine
+   * Bedienzeile, die an der Content-Kante beginnt, kann mit einer Liste, die
+   * 256px weiter rechts beginnt, keine rechte Kante teilen. Die Regel „Kopf
+   * fluchtet mit Körper" setzt einspaltig voraus.
+   *
+   * Hier fluchtet der Kopf stattdessen mit der CONTENT-SPALTE, also mit dem
+   * Ordner-Browser plus Liste zusammen - das ist der Körper dieser Seite.
+   * (Critique 2026-08-13, zweite Runde.) */
   _container.querySelector('.documents-view-toggle')?.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-view]');
     if (!btn) return;
@@ -306,8 +334,30 @@ function bindPageEvents() {
   });
   _container.querySelector('#documents-list')?.addEventListener('click', handleDocumentAction);
   const folderBrowser = _container.querySelector('#documents-folder-browser');
-  // Horizontale Chip-Leiste (≤1023px): Rand-Fade signalisiert weitere Ordner.
-  wireScrollFade(folderBrowser);
+  /* AUFKLAPPEN STATT WISCHEN (≤1023px).
+   *
+   * Hier stand `wireScrollFade(folderBrowser)`, weil die Liste unterhalb Tablet
+   * eine seitlich scrollende Chip-Leiste war. Gemessen bei 390px: clientWidth
+   * 356 gegen scrollWidth 1488 - zwei von neun Ordnern sichtbar, bei 320px
+   * einer - und das direkt unter der Filterreihe, die schon seitlich scrollt.
+   * Zwei verschiedene Dinge mit derselben Geste uebereinander (Critique
+   * 2026-08-13, P1).
+   *
+   * Statt eines Popovers (der Vorschlag der Critique) klappt die Auswahl an
+   * Ort und Stelle auf: dieselbe Information, dieselben neun Zeilen, aber ohne
+   * den Kontextwechsel eines Overlays fuer eine Handlung, die man beim
+   * Durchsehen mehrmals macht. Zugeklappt kostet sie EINE Zeile, die zugleich
+   * sagt, in welchem Ordner man steht - weniger Chrome als der Streifen vorher.
+   * Am Desktop gibt es keinen Auslöser und die Liste steht immer offen. */
+  const folderToggle = _container.querySelector('#documents-folder-toggle');
+  const folderAside = _container.querySelector('.documents-folder-browser');
+  const setFolderListOpen = (open) => {
+    folderAside?.classList.toggle('documents-folder-browser--open', open);
+    folderToggle?.setAttribute('aria-expanded', String(open));
+  };
+  folderToggle?.addEventListener('click', () => {
+    setFolderListOpen(folderToggle.getAttribute('aria-expanded') !== 'true');
+  });
   folderBrowser?.addEventListener('click', (e) => {
     const menuBtn = e.target.closest('[data-folder-menu]');
     if (menuBtn) {
@@ -318,6 +368,9 @@ function bindPageEvents() {
     const btn = e.target.closest('[data-folder-select]');
     if (!btn) return;
     state.folderId = btn.dataset.folderSelect;
+    // Die Wahl beantwortet die Frage, die das Aufklappen gestellt hat: zu.
+    // Am Desktop ist der Auslöser ausgeblendet und die Klasse wirkungslos.
+    setFolderListOpen(false);
     applyFilters();
     renderAll();
   });
@@ -553,13 +606,19 @@ function renderFolderBrowser() {
     ...state.folders.map((folder) => ({ id: String(folder.id), name: folder.name, icon: 'folder', managed: true })),
   ];
   browser.replaceChildren();
+  /* Die geteilte Zeilen-Grammatik statt einer nachgebauten: `.documents-folder-item`
+   * mass 44px min-height, 8px gap, 10px Radius und kappte den Namen mit Ellipse,
+   * waehrend `.list-row` 48 / 12 / 0 und `overflow-wrap: anywhere` fuehrt -
+   * `/documents` war die einzige Route der App mit NULL `.list-row`-Elementen
+   * (Critique 2026-08-13). Der Traeger ist jetzt `.row-carrier`, der die Flaeche
+   * und die Trennlinien per `+`-Kombinator stellt, statt sie hier nachzubauen. */
   browser.insertAdjacentHTML('beforeend', items.map((item) => {
     const active = String(state.folderId) === item.id;
     return `
-    <div class="documents-folder-item ${active ? 'documents-folder-item--active' : ''} ${item.managed ? 'documents-folder-item--managed' : ''}">
-      <button class="documents-folder-item__select" type="button" data-folder-select="${esc(item.id)}" aria-current="${active ? 'true' : 'false'}">
+    <li class="list-row documents-folder-item ${active ? 'documents-folder-item--active' : ''} ${item.managed ? 'documents-folder-item--managed' : ''}">
+      <button class="documents-folder-item__select list-row__main--interactive" type="button" data-folder-select="${esc(item.id)}" aria-current="${active ? 'true' : 'false'}">
         <span class="documents-folder-item__icon"><i data-lucide="${esc(item.icon)}" aria-hidden="true"></i></span>
-        <span class="documents-folder-item__name">${esc(item.name)}</span>
+        <span class="list-row__name documents-folder-item__name">${esc(item.name)}</span>
         <span class="documents-folder-item__count">${counts.get(item.id) || 0}</span>
       </button>
       ${item.managed ? `
@@ -567,9 +626,16 @@ function renderFolderBrowser() {
               aria-haspopup="menu" aria-expanded="false">
         <i data-lucide="more-vertical" aria-hidden="true"></i>
       </button>` : ''}
-    </div>`;
+    </li>`;
   }).join(''));
   if (window.lucide) lucide.createIcons({ el: browser });
+
+  // Der Auslöser trägt den Ordner, in dem man steht - unterhalb Tablet ist er
+  // die einzige sichtbare Zeile der Auswahl.
+  const toggleLabel = _container?.querySelector('.documents-folder-browser__toggle-label');
+  if (toggleLabel) {
+    toggleLabel.textContent = items.find((i) => String(state.folderId) === i.id)?.name ?? items[0].name;
+  }
 }
 
 // Rand-Fade horizontal scrollender Leisten: geteilte has-fade-*-Konvention via
@@ -897,11 +963,11 @@ function renderGridCard(doc) {
 function renderListItem(doc) {
   const selected = state.selectMode && state.selected.has(doc.id);
   return `
-    <article class="document-row${selected ? ' is-selected' : ''}" data-id="${doc.id}">
+    <article class="list-row document-row${selected ? ' is-selected' : ''}" data-id="${doc.id}">
       ${state.selectMode ? renderSelectBox(doc) : `<div class="document-row__icon document-thumb">${renderDocIconSlot(doc)}</div>`}
-      <div class="document-row__body">
-        <h2 class="document-row__title">${esc(doc.name)}</h2>
-        <div class="document-row__meta">${renderMeta(doc, { showSize: false })}</div>
+      <div class="list-row__main document-row__body">
+        <h2 class="list-row__name document-row__title">${esc(doc.name)}</h2>
+        <div class="list-row__meta document-row__meta">${renderMeta(doc, { showSize: false })}</div>
       </div>
       <div class="document-row__stats">
         <span class="document-row__date">${formatDate(doc.updated_at)}</span>

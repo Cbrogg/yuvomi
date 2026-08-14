@@ -340,7 +340,7 @@ export async function render(container, ctx = {}) {
 
   container.replaceChildren();
   container.insertAdjacentHTML('beforeend', `
-    <div class="health-page">
+    <div class="health-page page-measure--narrow">
       <!-- Kanonischer Modulkopf: die Sub-Tab-Leiste wechselt eine SICHT
            innerhalb der Gesundheit (alle Health-Routen tragen module: 'health'),
            also steht der Modulname als Large Title ueber ihr - dasselbe Muster
@@ -1416,17 +1416,17 @@ function dueRowMarkup(dose, med, log) {
     const data = `data-med-id="${esc(dose.medicationId)}" data-schedule-id="${esc(dose.scheduleId ?? '')}" data-scheduled-at="${esc(dose.scheduledAt)}" data-log-id="${esc(log?.id ?? '')}" data-dose="${esc(dose.dose_qty ?? '')}"`;
     actions = `
       <div class="health-dose__actions">
-        <button type="button" class="btn btn--sm btn--primary" data-dose-take ${data}>${esc(t('health.meds.take'))}</button>
-        <button type="button" class="btn btn--sm btn--ghost" data-dose-skip ${data}>${esc(t('health.meds.skip'))}</button>
+        <button type="button" class="btn btn--sm btn--primary health-dose__take" data-dose-take ${data} aria-label="${esc(t('health.meds.take'))}"><i data-lucide="check" class="icon-sm" aria-hidden="true"></i><span class="health-dose__take-label">${esc(t('health.meds.take'))}</span></button>
+        <button type="button" class="btn btn--sm btn--ghost health-dose__skip" data-dose-skip ${data} aria-label="${esc(t('health.meds.skip'))}"><i data-lucide="skip-forward" class="icon-sm" aria-hidden="true"></i><span class="health-dose__skip-label">${esc(t('health.meds.skip'))}</span></button>
       </div>`;
   } else {
     actions = `<span class="health-dose__status">${esc(t('health.meds.status.pending'))}</span>`;
   }
 
   return `
-    <li class="health-dose">
+    <li class="list-row health-dose">
       <span class="health-dose__time">${esc(dose.time)}</span>
-      <span class="health-dose__name">${esc(name)}${esc(doseText)}</span>
+      <span class="list-row__name health-dose__name">${esc(name)}${esc(doseText)}</span>
       ${actions}
     </li>`;
 }
@@ -3380,19 +3380,29 @@ function overviewDueRowMarkup(dose, med, log, own) {
     actions = `<span class="health-dose__status health-dose__status--skipped"><i data-lucide="x" aria-hidden="true"></i>${esc(t('health.meds.status.skipped'))}</span>`;
   } else if (own) {
     const data = `data-med-id="${esc(dose.medicationId)}" data-schedule-id="${esc(dose.scheduleId ?? '')}" data-scheduled-at="${esc(dose.scheduledAt)}" data-log-id="${esc(log?.id ?? '')}" data-dose="${esc(dose.dose_qty ?? '')}"`;
+    /* DIESELBE FORM WIE IN `dueRowMarkup` - hier fehlte sie, und der Fix von
+     * dort erreichte diese Zeile deshalb nicht. Der Knopf trug weder
+     * `health-dose__skip` noch den Label-Span, also hatte die Container-Query
+     * `@container list-rows (max-width: 26rem)` nichts zu verbergen: gemessen
+     * bei 390px lag "Ueberspringen" bei left=360 und damit zu 92 von 122px
+     * ausserhalb des Bildes, geclippt und ohne Scrollweg dorthin (Critique
+     * 2026-08-13, offen geblieben). Zwei Renderer fuer dieselbe Zeile, und die
+     * Korrektur landete in einem - dasselbe Muster, das dieser Branch schon
+     * dreimal produziert hat.
+     * Das `aria-label` traegt den ganzen Satz weiter, wenn der Text faellt. */
     actions = `
       <div class="health-dose__actions">
-        <button type="button" class="btn btn--sm btn--primary" data-ov-dose-take ${data}>${esc(t('health.meds.take'))}</button>
-        <button type="button" class="btn btn--sm btn--ghost" data-ov-dose-skip ${data}>${esc(t('health.meds.skip'))}</button>
+        <button type="button" class="btn btn--sm btn--primary health-dose__take" data-ov-dose-take ${data} aria-label="${esc(t('health.meds.take'))}"><i data-lucide="check" class="icon-sm" aria-hidden="true"></i><span class="health-dose__take-label">${esc(t('health.meds.take'))}</span></button>
+        <button type="button" class="btn btn--sm btn--ghost health-dose__skip" data-ov-dose-skip ${data} aria-label="${esc(t('health.meds.skip'))}"><i data-lucide="skip-forward" class="icon-sm" aria-hidden="true"></i><span class="health-dose__skip-label">${esc(t('health.meds.skip'))}</span></button>
       </div>`;
   } else {
     actions = `<span class="health-dose__status">${esc(t('health.meds.status.pending'))}</span>`;
   }
 
   return `
-    <li class="health-dose">
+    <li class="list-row health-dose">
       <span class="health-dose__time">${esc(dose.time)}</span>
-      <span class="health-dose__name">${esc(name)}${esc(doseText)}</span>
+      <span class="list-row__name health-dose__name">${esc(name)}${esc(doseText)}</span>
       ${actions}
     </li>`;
 }
@@ -3534,9 +3544,9 @@ function overviewUpcomingMarkup() {
     const med = overview.meds.find((m) => m.id === dose.medicationId);
     const doseText = dose.dose_qty != null ? ` · ${t('health.meds.doseQty', { count: fmtNum(dose.dose_qty) })}` : '';
     return `
-      <li class="health-overview-reminder">
+      <li class="list-row health-overview-reminder">
         <span class="health-dose__time">${esc(dose.time)}</span>
-        <span class="health-dose__name">${esc(med ? med.name : '')}${esc(doseText)}</span>
+        <span class="list-row__name health-dose__name">${esc(med ? med.name : '')}${esc(doseText)}</span>
       </li>`;
   }).join('');
   return `<ul class="health-overview__reminders-list">${rows}</ul>`;

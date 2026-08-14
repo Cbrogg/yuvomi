@@ -36,7 +36,7 @@
   padding: var(--space-0h);
   gap: var(--space-0h);
   border-radius: var(--radius-full);
-  background: var(--color-surface-work);
+  background: var(--color-surface-3);
 }
 
 .documents-view-toggle__btn {
@@ -54,13 +54,14 @@
   height: 17px;
 }
 
-/* Aktiv: Modul-Akzent gefüllt + --color-ink-on-vivid - die eine Segment-Sprache
- * der Shell (DESIGN.md „Segmented Controls"). Vorher: erhabene Glas-Kachel mit
- * Akzent-Glyph - Glas-Material auf einem Inhalts-Control und zugleich die
- * zweite Segment-Optik neben der Tab-Leiste desselben Moduls. */
+/* Aktiv = erhabene Surface-Pille im Well, Modulton nur in der Tinte (Rezept:
+ * tokens.css, Abschnitt 6c). Die Leiste selbst musste dafür ein Well werden -
+ * sie stand auf --color-surface-work, also auf Weiß, und eine weiße Pille auf
+ * weißem Grund ist kein Zustand. */
 .documents-view-toggle__btn--active {
-  color: var(--color-ink-on-vivid);
-  background: var(--module-accent, var(--color-accent));
+  background: var(--seg-active-bg);
+  box-shadow: var(--seg-active-shadow);
+  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-ink), var(--color-text-primary));
 }
 
 /* Eigene Filterzeile unter dem Kopf (wie Kontakte): Status- + Kategorie-Chips
@@ -203,14 +204,18 @@
   padding-bottom: calc(var(--nav-bottom-height) + var(--space-8));
 }
 
+/* NUR NOCH POSITION, KEINE FLAECHE MEHR.
+ * Diese Klasse trug Surface, Radius, Schatten und `overflow: hidden` - also
+ * exakt `.row-carrier`, von Hand nachgebaut - und ihr Kopf lag MIT DRIN, was
+ * die Zeilenlisten-Regel verbietet: der Kopf steht auf dem Grund, der Traeger
+ * traegt nur die Zeilen (Critique 2026-08-13). Die Flaeche ist jetzt am
+ * `.row-carrier` an der Liste, hier bleibt die klebende Spalte. */
 .documents-folder-browser {
   position: sticky;
   top: var(--space-4);
-  border: 1px solid transparent;
-  border-radius: var(--radius-lg);
-  background-color: var(--color-surface);
-  box-shadow: var(--shadow-sm);
-  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
 }
 
 .documents-folder-browser__head {
@@ -218,14 +223,62 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
-  border-bottom: 1px solid var(--color-border-subtle);
+  padding-inline-start: var(--space-1);
 }
 
 .documents-folder-browser__title {
+  margin: 0;
   color: var(--color-text-secondary);
   font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Der Auslöser der aufklappbaren Auswahl - nur unterhalb Tablet sichtbar
+ * (Regel im @media-Block weiter unten). Er trägt den Ordner, in dem man steht. */
+.documents-folder-browser__toggle {
+  display: none;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+  min-width: 0;
+  min-height: var(--target-base);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
   font-weight: var(--font-weight-medium);
+  text-align: start;
+  transition: background-color var(--transition-fast);
+}
+
+.documents-folder-browser__toggle:hover {
+  background-color: var(--color-surface-hover);
+}
+
+.documents-folder-browser__toggle svg {
+  width: var(--icon-md);
+  height: var(--icon-md);
+  flex-shrink: 0;
+  color: var(--module-accent);
+}
+
+.documents-folder-browser__toggle-label {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.documents-folder-browser__chevron {
+  color: var(--color-text-tertiary);
+  transition: transform var(--transition-fast);
+}
+
+.documents-folder-browser__toggle[aria-expanded="true"] .documents-folder-browser__chevron {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .documents-folder-browser__chevron { transition: none; }
 }
 
 /* Freistehendes Ziel im Kopf der Ordnerliste - kein gleichartiges Ziel engt es
@@ -254,20 +307,23 @@
   height: 18px;
 }
 
+/* Flaeche, Radius, Schatten und Trennlinien kommen aus `.row-carrier`; hier
+ * bleibt nur der Listen-Reset. Gap und Polsterung sind weg: der Traeger trennt
+ * ueber den `+`-Kombinator, nicht ueber Luft zwischen Karten. */
 .documents-folder-browser__list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
+/* `.list-row` stellt display, Polsterung, Hoehe und Hover. Hier bleibt der
+ * Positionsanker fuer das Kebab-Menue. */
 .documents-folder-item {
   position: relative;
-  display: flex;
-  align-items: center;
-  border-radius: var(--radius-sm);
 }
 
+/* Die Spaltenaufteilung der Zeile ist eigen (Icon, Name, Zaehler in einem
+ * Ziel), Polsterung und Hoehe kommen aus `.list-row__main--interactive`. */
 .documents-folder-item__select {
   flex: 1;
   min-width: 0;
@@ -275,15 +331,20 @@
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--space-2);
-  min-height: var(--target-base);
-  padding: 0 var(--space-2);
-  border-radius: var(--radius-sm);
   color: var(--color-text-secondary);
-  text-align: left;
 }
 
-.documents-folder-item:hover,
-.documents-folder-item--active {
+/* Hover ist geteiltes Verhalten und kommt aus `.list-row`; die Toenung
+ * markiert nur noch den AKTIVEN Ordner. Vorher trugen beide Zustaende
+ * dieselbe Flaeche, und der aktive Ordner war unter dem Zeiger nicht mehr
+ * vom ueberfahrenen zu unterscheiden. */
+/* MIT `.list-row` DAVOR, sonst verliert der Zustand gegen den Hover: diese
+ * Regel hatte (0,1,0), `.list-row:hover` in list-row.css hat (0,2,0) - der
+ * aktive Ordner fiel unter dem Zeiger auf die Hover-Flaeche zurueck und war vom
+ * bloss ueberfahrenen nicht mehr zu unterscheiden, also genau der Zustand, den
+ * der Kommentar darueber als behoben beschrieb (PR-Review #754). */
+.list-row.documents-folder-item--active,
+.list-row.documents-folder-item--active:hover {
   background: color-mix(in srgb, var(--module-accent) var(--tint-state), transparent);
 }
 
@@ -609,11 +670,24 @@
 .document-card__meta,
 .document-row__meta {
   display: flex;
-  flex-wrap: wrap;
   gap: var(--space-2);
-  margin-top: var(--space-3);
   color: var(--color-text-tertiary);
   font-size: var(--text-xs);
+}
+
+/* Die KARTE darf ihre Meta umbrechen und braucht den Abstand zum Titel: sie ist
+ * ein Objekt mit eigenem Medium, kein Zeilentakt. Die ZEILE bekommt beides von
+ * `.list-row__main` (2px Stapelabstand) und bleibt einzeilig - genau der
+ * Unterschied, der die Listenansicht von 265px je Eintrag auf den Beat der
+ * übrigen neun Module bringt. */
+.document-card__meta {
+  flex-wrap: wrap;
+  margin-top: var(--space-3);
+}
+
+.document-row__meta {
+  flex-wrap: nowrap;
+  overflow: hidden;
 }
 
 .document-card__meta span,
@@ -645,17 +719,21 @@
   border-top: 1px solid var(--color-border-subtle);
 }
 
-/* Vier Spalten: Icon, Titel/Meta, Datum+Größe, Aktionen. Die Stats-Spalte macht
- * aus der Liste eine echte Liste — vorher trug sie weniger Information als die
- * Rasterkarte (kein Datum) bei gleichzeitig viel totem Weißraum. */
-.document-row {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
-}
-
+/* SIE TRÄGT `.list-row` (Critique 2026-08-13, P0). Anzeigeart, Abstand,
+ * Polsterung, Mindesthöhe, Umbruchverbot, Übergang und Hover kommen von dort.
+ *
+ * Die Zeile war der teuerste Eigenbau, den das Dichte-Paket übersehen hat:
+ * gemessen 265px je Eintrag am Telefon und 284px am Desktop, also zwei
+ * Dokumente pro Bildschirm - auf einem Zweig, der „density" heißt. Die Höhe
+ * kam nicht aus der Polsterung, sondern aus zwei Regeln: die Metazeile trug
+ * `margin-top: var(--space-3)` plus `flex-wrap: wrap` und stapelte bis zu vier
+ * Chips untereinander.
+ *
+ * Vier Spalten bleiben (Icon, Titel/Meta, Datum+Größe, Aktionen) - die
+ * Stats-Spalte macht aus der Liste eine echte Liste, vorher trug sie weniger
+ * Information als die Rasterkarte. Sie stehen jetzt als Flex-Kinder der
+ * geteilten Zeile statt als eigenes Grid; die mittlere Spalte ist
+ * `.list-row__main` und wächst, die äußeren schrumpfen nicht. */
 .document-row__body {
   min-width: 0;
 }
@@ -670,6 +748,45 @@
   font-size: var(--text-xs);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+/* Was die Zeile am ENDE trägt, entscheidet ihre eigene Breite - nicht das
+ * Fenster. Der Container heißt `list-rows` und wird vom Träger aufgemacht
+ * (`.row-carrier`, list-row.css); dieselbe Achse, an der Einkauf, Vorrat und
+ * Aufgaben ihre Zweitangaben abgeben.
+ *
+ * Gemessen bei 390px vor dem Schnitt: Träger 358px, davon nahmen Icon,
+ * Datum/Größe und drei Knöpfe den Platz, sodass dem Namen gut 100px blieben -
+ * er brach zweizeilig und die Zeile stand bei 209px.
+ *
+ * Was weichen darf und warum: die Stats-Spalte ist eine ZWEITangabe (das Datum
+ * steht auch im Viewer), und von den drei Knöpfen ist „Ansehen" das, was ein
+ * Tipp auf die Zeile ohnehin tut. Das Menü bleibt, weil es die übrigen Wege
+ * enthält - EIN nachlaufendes Element, wie die geteilte Zeile es zusagt.
+ *
+ * STEHT HINTER den Basisregeln, nicht davor: `@container` erhöht die
+ * Spezifität nicht. Bei Gleichstand gewinnt die spätere Regel, und die
+ * Container-Regel weiter oben in der Datei war wirkungslos - gemessen blieb
+ * `display: flex` an der Stats-Spalte, obwohl der Träger mit 22,4rem klar
+ * unter der Grenze lag. */
+@container list-rows (max-width: 30rem) {
+  .document-row__stats {
+    display: none;
+  }
+
+  /* DER WEG INS DOKUMENT BLEIBT. Hier stand `[data-action="view"]` mit in der
+   * Liste, und damit hatte eine Zeile unterhalb 30rem genau ein bedienbares
+   * Element: das Kebab-Menue - das Bearbeiten, Verschieben und Archivieren
+   * anbietet, aber weder Ansehen noch Herunterladen. Die Zeile selbst ist ein
+   * <article> ohne Klick-Handler und ohne tabindex. Gemessen bei 390px in der
+   * Listenansicht war das Dokument damit fuer NIEMANDEN zu oeffnen, nicht nur
+   * fuer die Tastatur (Codex-Review zu PR #754, dort als Tastaturfall gemeldet).
+   * Die Dichte holt sich die Breite aus den Statistiken und dem
+   * Herunterladen-Link - das Herunterladen bietet der Betrachter selbst noch
+   * einmal an, das Ansehen bietet sonst nichts. */
+  .document-row__actions a[download] {
+    display: none;
+  }
 }
 
 .documents-danger {
@@ -714,6 +831,19 @@
   .documents-browser-layout {
     display: flex;
     flex-direction: column;
+    /* MUSS mit: die Basisregel setzt `align-items: start` für ihr GRID (dort
+     * heißt es „kleb oben"). In dieser Flex-Spalte ist die Querachse aber die
+     * BREITE, und derselbe Wert heißt dann „schrumpf auf deine Inhaltsbreite".
+     * `.documents-list` trägt `min-width: 0` und wurde damit exakt 0px breit:
+     * gemessen bei 390px lag die Liste auf 0px, ihre Zeilen auf 24px, und der
+     * Inhalt lief als 610px Seitenüberlauf aus dem Dokument (Critique
+     * 2026-08-13). Sichtbar war davon nur eine unerklärlich hohe Zeile, weil
+     * `.app-content` den Überlauf wegschneidet.
+     *
+     * Das `width: 100%` am Ordner-Browser unten war der Einzelfall-Verband für
+     * dieselbe Ursache - es bleibt vorerst stehen, weil er dort auch das
+     * Aufheben der Sticky-Spalte begleitet. */
+    align-items: stretch;
   }
 
   .documents-folder-browser {
@@ -721,20 +851,48 @@
     width: 100%;
   }
 
-  .documents-folder-browser__list {
-    flex-direction: row;
-    overflow-x: auto;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
+  /* AUFKLAPPEN STATT WISCHEN.
+   *
+   * Hier stand `flex-direction: row; overflow-x: auto` mit `min-width: 160px`
+   * je Eintrag. Gemessen: clientWidth 356 gegen scrollWidth 1488 bei 390px -
+   * ZWEI von neun Ordnern sichtbar, bei 320px einer - und der Streifen lag
+   * direkt unter `.documents-filters`, das schon seitlich scrollt. Zwei
+   * verschiedene Dinge mit derselben Geste uebereinander, und der Ordnername
+   * hatte in der 160px-Kachel 53px, wovon "Versicherungen" 6 von 14 Zeichen
+   * zeigte (Critique 2026-08-13, P1).
+   *
+   * Zugeklappt ist die Auswahl EINE Zeile, die zugleich sagt, wo man steht -
+   * weniger Chrome als der Streifen. Aufgeklappt sind es neun ganze Zeilen in
+   * der geteilten Grammatik, die keinen Namen kappen. */
+  .documents-folder-browser__head {
+    padding-inline-start: 0;
   }
 
-  .documents-folder-browser__list::-webkit-scrollbar {
+  /* Die Ueberschrift bleibt fuer Screenreader und wandert aus dem Bild: der
+   * Auslöser darunter sagt dasselbe und nennt zusaetzlich den Ordner. Zwei
+   * sichtbare Zeilen fuer eine Auswahl waeren genau das Chrome, das dieser
+   * Umbau spart. */
+  .documents-folder-browser__title {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .documents-folder-browser__toggle {
+    display: flex;
+  }
+
+  .documents-folder-browser__list {
     display: none;
   }
 
-  /* Rand-Fade übernehmen die geteilten has-fade-*-Masken (filter-chip.css). */
-  .documents-folder-item {
-    min-width: 160px;
+  .documents-folder-browser--open .documents-folder-browser__list {
+    display: block;
   }
 }
 
@@ -789,6 +947,16 @@
     flex-basis: auto;
     padding-inline-start: 0;
     border-inline-start: none;
+    /* KEIN eigener Scroller mehr, wo die ganze Zeile schon einer ist. Der
+     * Block oben sagt „eine Bedienzeile, die seitlich scrollt" - und
+     * `.documents-filters > * { flex-shrink: 0 }` zwei Absätze weiter oben
+     * lässt diesen Streifen auf seine Inhaltsbreite wachsen. Sein geerbtes
+     * `overflow-x: auto` kann damit nie greifen: gemessen bei 390px stand er
+     * auf 802px Breite bei 802px Scrollbreite, also ein Scroll-Kontext, in dem
+     * nichts zu scrollen war, verschachtelt in den, der die Arbeit tut (390px
+     * sichtbar, 1242px Inhalt). Zwei ineinander liegende Scroller sind genau
+     * das, was die Regel oben ausschliesst. */
+    overflow-x: visible;
   }
 
   /* HIER STAND EIN VERSCHACHTELTER `max-height: 499px`-BLOCK mit genau den
@@ -870,13 +1038,19 @@
 /* --------------------------------------------------------
  * Document Card / Row – klickbar
  * -------------------------------------------------------- */
-.document-card,
-.document-row {
+.document-card {
   cursor: pointer;
   transition:
     background-color var(--transition-fast),
     box-shadow var(--transition-fast),
     transform var(--transition-fast);
+}
+
+/* Die Zeile nur noch mit dem Zeiger: ihren Übergang führt `.list-row`, und der
+ * ist auf `background-color` allein - Schatten und Transform hat sie mit dem
+ * Hover abgegeben. */
+.document-row {
+  cursor: pointer;
 }
 
 .document-card:hover {
@@ -885,10 +1059,10 @@
   transform: translateY(-2px);
 }
 
-.document-row:hover {
-  background-color: var(--color-surface-hover);
-  box-shadow: var(--shadow-md);
-}
+/* Die ZEILE bekommt keinen Schatten mehr. Ein Hover-Schatten zieht ihr eine
+ * Karte an, und DESIGN.md schliesst das für eine Zeile in einer Liste
+ * ausdrücklich aus - der Träger ist die Karte, die Zeile liegt darin. Der
+ * Hintergrundwechsel kommt jetzt von `.list-row:hover`. */
 
 /* Buttons innerhalb von Karten/Zeilen: Cursor zurücksetzen */
 .document-card .btn,

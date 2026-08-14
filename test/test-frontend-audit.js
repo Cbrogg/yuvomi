@@ -8,6 +8,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { SETTINGS_DOMAINS, SETTINGS_LEAVES } from '../public/settings/registry.js';
 import { eachRule } from './css-rules.js';
+import { withoutHtmlComments, withoutBlockComments } from './source-text.js';
 
 const read = (path) => readFileSync(new URL(path, import.meta.url), 'utf8').replace(/\r/g, '');
 
@@ -2397,13 +2398,56 @@ test('die Küchen-Listen teilen eine Zeilen-Grammatik', () => {
   // festen Slot am Anfang der Bedienzone.
   assert.doesNotMatch(shared.replace(/\/\*[\s\S]*?\*\//g, ''), /\.list-row__end-action/,
     'an der Zeilenkante verankerte Aktionen liegen in der FAB-Ecke - fester Slot am Anfang der Bedienzone stattdessen');
+
+  /* WER MITTEN IM WORT BRICHT, SETZT EINEN TRENNSTRICH (Etappe 7, 2026-08-13).
+   *
+   * `overflow-wrap: anywhere` heisst genau das: brich INNERHALB eines Wortes,
+   * statt überzulaufen. Ohne `hyphens: auto` geschieht das ohne jedes Zeichen -
+   * gemessen bei 320x568 standen 11 von 26 Einkaufszeilen als „Kirschtoma /
+   * ten". Die Begründung der Regel („umbrechen, nicht abschneiden") stimmte
+   * die ganze Zeit; geprüft hat nie jemand, WIE sie umbricht.
+   *
+   * DIE ZUSICHERUNG IST DIE PAARUNG, KEIN KLASSENNAME: jede Regel dieser Datei,
+   * die einen Umbruch im Wort erlaubt, trägt in DERSELBEN Regel ihre
+   * Trennhilfe. Ein Guard auf `.list-row__name` allein wäre eine Allowlist von
+   * einem und liesse den nächsten geteilten Textknoten ungedeckt.
+   *
+   * `break-word` ist ausdrücklich NICHT gemeint und steht deshalb nicht in der
+   * Bedingung: es bricht ein Wort nur, wenn es allein auf keiner Zeile
+   * unterkommt, und `hyphens: auto` würde dort auch dann trennen, wenn ein
+   * Umbruch an einer Leerstelle möglich ist. Die Metazeile behält es. */
+  const bruchOhneStrich = [...eachRule(shared)]
+    .filter((r) => /overflow-wrap:\s*anywhere/.test(r.body) && !/hyphens:\s*auto/.test(r.body));
+  assert.deepEqual(bruchOhneStrich.map((r) => r.selector.trim()), [],
+    'in der geteilten Zeilengrammatik braucht jeder Umbruch im Wort seinen Trennstrich - '
+    + 'sonst steht dort bei 320px „Kirschtoma / ten"');
+
+  /* Und kein Modul nimmt die Entscheidung still zurück. Die Grammatik ist
+   * geteilt, ihre Stylesheets laden nach list-row.css, und eine Zeile
+   * `hyphens: manual` in einem der neun Module wäre bei gleicher Spezifität die
+   * spätere und damit die geltende - ohne dass hier etwas rot würde. */
+  for (const file of readdirSync(new URL('../public/styles/', import.meta.url)).filter((f) => f.endsWith('.css') && f !== 'list-row.css')) {
+    for (const rule of eachRule(read(`../public/styles/${file}`))) {
+      if (!/\.list-row__(?:name|meta)\b/.test(rule.selector)) continue;
+      assert.doesNotMatch(rule.body, /hyphens:/,
+        `${file} (${rule.selector.trim()}) darf die Trennung der geteilten Grammatik nicht überschreiben`);
+    }
+  }
+
   const pantryCss = read('../public/styles/pantry.css');
   const slot = pantryCss.match(/\.pantry-row__cart-slot\s*\{([^}]*)\}/)?.[1] ?? '';
   assert.match(slot, /width:\s*var\(--target-lg\)/,
-    'der Warenkorb-Slot muss die volle .row-action-Breite reservieren, sonst springt der Stepper je Zeile');
+    'wo ein Warenkorb liegt, muss der Slot die volle .row-action-Breite tragen');
   assert.match(slot, /flex-shrink:\s*0/, 'der Slot darf nicht schrumpfen');
-  assert.match(read('../public/pages/pantry.js'), /cartSlot\.className = 'pantry-row__cart-slot'/,
-    'pantry.js muss den Slot IMMER rendern, auch ohne Warenkorb');
+  /* HIER STAND „pantry.js muss den Slot IMMER rendern, auch ohne Warenkorb -
+   * sonst springt der Stepper je Zeile". Am gerenderten Dokument nachgemessen
+   * (390x844, 12 Zeilen, 5 mit Warenkorb): die linke Kante des Minus-Knopfs
+   * liegt mit und ohne leeren Slot bei x=261. Seit die Bedienung im DOM HINTER
+   * dem Namen steht (2026-07-29), klebt sie an der Zeilenkante und der Stepper
+   * ist ihr letztes Kind - er kann gar nicht springen. Der leere Slot kostete
+   * nur 52px Textspalte. Zugesichert wird deshalb sein Wegfall. */
+  assert.match(pantryCss, /\.pantry-row__cart-slot:empty\s*\{\s*display:\s*none/,
+    'ein Warenkorb-Slot ohne Warenkorb reserviert 52px Textspalte fuer nichts');
 
   // Umbrechen statt abschneiden. Ein gekürzter Artikelname ("Broc…") war bei
   // 320px der Verlust des einzigen Zwecks der Einkaufsliste.
@@ -2521,6 +2565,12 @@ test('die Küchen-Listen teilen eine Zeilen-Grammatik', () => {
     return axis === 'inline' ? (parts[1] ?? parts[0]) : parts[0];
   };
   const NARROW = 'var(--content-max-width-narrow)';
+  // Seit das Lesemass an der SEITE haengt (`--page-measure`, layout.css), steht
+  // an den Traegern die Variablenform mit der Konstante als Rueckfall. Sie ist
+  // dieselbe Zusicherung: faellt die Rolle weg, greift der Rueckfall, und die
+  // Kappung ist damit genauso unbedingt wie vorher.
+  const NARROW_VAR = `var(--page-measure, ${NARROW})`;
+  const istLesemass = (wert) => wert === NARROW || wert === NARROW_VAR;
   const ALIGN_SELF = ['align-self', 'place-self'];
   // Eine Kappung ist eine Kappung, egal wie buchstabiert: die logischen Formen
   // wirken im Schreibmodus dieser App auf dieselbe Achse. Dasselbe Paar prüft
@@ -2749,7 +2799,7 @@ test('die Küchen-Listen teilen eine Zeilen-Grammatik', () => {
       return !/:/.test(bare) && !/[\s>+~,]/.test(bare);
     };
     assert.ok(rules.some(({ body, conditional, selectors }) =>
-      !conditional && selectors.some(plain) && declaredValue(body, MAX_WIDTH) === NARROW),
+      !conditional && selectors.some(plain) && istLesemass(declaredValue(body, MAX_WIDTH))),
     `${cls} muss das Lesemaß UNBEDINGT tragen: eine Kappung hinter einem Breakpoint, an einem Zustand (:hover) oder unter einem Vorfahren (.foo ${cls}) greift nicht in jedem Kontext, in dem das Element gerendert wird`);
     for (const { file, body } of rules) {
       // Eine feste Breite schlägt die Kappung, ohne sie anzufassen: mit
@@ -2772,7 +2822,7 @@ test('die Küchen-Listen teilen eine Zeilen-Grammatik', () => {
 
       const width = declaredValue(body, MAX_WIDTH);
       if (width === null) continue;
-      assert.equal(width, NARROW,
+      assert.ok(istLesemass(width),
         `${file}: ${cls} bekommt hier eine zweite, abweichende Breite - das Lesemaß ist EIN Wert`);
     }
   }
@@ -2851,7 +2901,7 @@ test('die Küchen-Listen teilen eine Zeilen-Grammatik', () => {
         && (ownState === '' || ownState === state))
       .map(({ body: part }) => part).join(';');
     const selectors = [label];
-    if (declaredValue(body, MAX_WIDTH) !== NARROW) continue;
+    if (!istLesemass(declaredValue(body, MAX_WIDTH))) continue;
     // `clip` kappt wie `hidden`, nur ohne Scrollport - und die Block-Achse
     // lässt sich auch als Langform setzen. Der Grund für die Zusicherung ist
     // das Abschneiden, nicht die eine Schreibweise dafür.
@@ -2868,6 +2918,125 @@ test('die Küchen-Listen teilen eine Zeilen-Grammatik', () => {
     if (align === null) continue;
     assert.equal(align, 'start',
       `${file}: .list-rows bekommt hier ein anderes align-self - genau der Rückfall, den die Regel darüber verhindert`);
+  }
+
+  // 4. Die BEIDEN Träger tragen DASSELBE Lesemaß.
+  //
+  //    `.list-rows` trug es, `.row-carrier` nicht - mit der ausgeschriebenen
+  //    Begründung, die Listen ausserhalb der Küche seien nun einmal breiter.
+  //    Das war eine Beschreibung des Bestands: gemessen bei 1440px stand die
+  //    Aufgabenliste auf 720px und die Kontaktliste auf 1156px, also sprang die
+  //    Inhaltsspalte beim Modulwechsel um 436px (Critique 2026-08-13).
+  //    Welche der beiden Klassen eine Zeilenfolge trägt, ist eine Frage ihrer
+  //    Verschachtelung; ihre Breite ist es nicht.
+  for (const carrier of ['.list-rows', '.row-carrier']) {
+    const body = scopedRules(shared)
+      .filter(({ selectors }) => selectors.some((s) => s.trim() === carrier))
+      .map(({ body: part }) => part).join(';');
+    assert.ok(istLesemass(declaredValue(body, MAX_WIDTH)),
+      `${carrier} muss auf dasselbe Lesemaß kappen wie der andere Träger - zwei Zahlen sind ein sichtbarer Sprung beim Modulwechsel, keine zwei Grammatiken`);
+  }
+});
+
+/**
+ * Der Kopf fluchtet mit dem Körper, den er überschreibt - AUCH wenn der Körper
+ * die Ansicht wechselt.
+ *
+ * `.page-toolbar--narrow` zieht das Zeilenende des Kopfes auf das Lesemaß
+ * (layout.css). Steht der Modifier fest im Markup einer Seite, die zwischen
+ * einer gekappten und einer breiten Ansicht umschaltet, dann stimmt er in genau
+ * einer der beiden: gemessen auf /tasks bei 1440px endete der Kopf im Kanban
+ * bei x=972, das Board aber bei x=1408 - derselbe Versatz wie vorher, nur
+ * andersherum.
+ *
+ * Die Kopplung ist deshalb: wer den Modifier setzt UND einen Ansichtsumschalter
+ * hat, muss ihn beim Wechsel pflegen. Eine Regel, keine Allowlist - die nächste
+ * Seite mit zwei Ansichten fällt genauso hinein.
+ */
+/**
+ * Wer eine Sammelaktions-Pille zeigt, gibt seinem Scrollport den Nachlauf.
+ *
+ * Die Pille ist eine fixierte Shell-Flaeche ueber der Liste und verdeckt am
+ * Scroll-Ende sonst genau die Zeilen, auf die sie sich bezieht. Der Nachlauf
+ * dafuer stand an `.app-content` - und dort scrollt bei keinem der drei Module
+ * mit Pille etwas: Einkauf und Vorrat scrollen in `.list-scroller`, die
+ * Kontakte in `.contacts-list`. Gemessen blieben 16.334px² verdeckte
+ * Zeilenflaeche auf /contacts und 16.732px² auf /shopping, waehrend die Regel
+ * im Quelltext aussah, als taete sie ihre Sache (Critique 2026-08-13).
+ *
+ * Geprueft wird die KOPPLUNG, nicht eine Liste von Modulen: jede Seite, die
+ * `setBulkPill` aufruft, muss die Rolle `has-bulk-safe-zone` vergeben. Damit
+ * waechst die Zusicherung mit dem naechsten Modul mit, statt es zu vergessen.
+ */
+/**
+ * Das Lesemass ist eine Eigenschaft der SEITE, nicht des Traegers.
+ *
+ * Es hing an `.list-rows` und `.row-carrier`, also an der untersten Schicht,
+ * und galt damit fuer den Koerper und fuer nichts sonst. Gemessen bei 1440px
+ * lag die Filterreihe der Kontakte 489px, der Gruppierungsschalter der Aufgaben
+ * 434px und die Monatsnavigation des Budgets 436px rechts neben der Liste, auf
+ * die sie wirken - sieben von zehn Routen ohne gemeinsame rechte Kante
+ * (Critique 2026-08-13, zweite Runde). Der Fix davor hatte genau eine Schicht
+ * erreicht, die angedockte Primaeraktion.
+ *
+ * Geprueft wird die Kopplung an beiden Enden: die Rolle setzt die Variable, die
+ * Traeger lesen sie, und wer eine Zeilenliste UND einen eigenen Modul-Root hat,
+ * traegt die Rolle auch.
+ */
+test('das Lesemass haengt an der Seite, nicht am Traeger', () => {
+  const layout = read('../public/styles/layout.css');
+  const shared = read('../public/styles/list-row.css');
+
+  assert.match(layout, /\.page-measure--narrow\s*\{[\s\S]*?--page-measure:\s*var\(--content-max-width-narrow\)/,
+    'die Rolle muss die Variable setzen - sonst liest der Rest hier nichts');
+
+  // Die Traeger lesen die Variable, mit der alten Konstante als Rueckfall.
+  for (const carrier of ['.list-group', '.list-rows', '.row-carrier']) {
+    const at = shared.indexOf(`\n${carrier} {`);
+    assert.ok(at !== -1, `${carrier} muss es geben`);
+    const body = shared.slice(at, shared.indexOf('\n}', at));
+    assert.match(body, /max-width:\s*var\(--page-measure,\s*var\(--content-max-width-narrow\)\)/,
+      `${carrier} muss das Lesemass der SEITE lesen, mit der Konstante als Rueckfall`);
+  }
+
+  // Und jede Seite, die eine Zeilenliste zeigt, traegt die Rolle - oder hat
+  // einen ausgeschriebenen Grund, es nicht zu tun. Der Scan geht ueber die
+  // Seiten, die `.list-row` rendern; Dokumente ist die benannte Ausnahme
+  // (zweispaltig, Begruendung im Quelltext).
+  const ZWEISPALTIG = /ZWEISPALTIG/;
+  for (const page of walkJsFiles('../public/pages/')) {
+    const src = read(page);
+    if (!/class="[^"]*\blist-row\b/.test(src)) continue;
+    if (ZWEISPALTIG.test(src)) continue;
+    assert.match(src, /page-measure--narrow/,
+      `${page}: zeigt eine Zeilenliste, traegt das Lesemass der Seite aber nicht - `
+      + 'Kopf und Bedienzeilen enden dann neben ihrem eigenen Koerper');
+  }
+});
+
+test('wer eine Pille zeigt, markiert seinen Scrollport', () => {
+  const layout = read('../public/styles/layout.css');
+  assert.match(layout, /\.has-bulk-safe-zone\s*\{[\s\S]*?padding-block-end:\s*var\(--bulk-pill-safe-zone\)/,
+    'die Rolle muss den Nachlauf auch wirklich setzen - sonst prueft der Rest hier eine Klasse ohne Wirkung');
+
+  for (const page of walkJsFiles('../public/pages/')) {
+    const src = read(page);
+    if (!/\bsetBulkPill\s*\(/.test(src)) continue;
+    assert.match(src, /has-bulk-safe-zone/,
+      `${page}: zeigt eine Sammelaktions-Pille, markiert aber seinen Scrollport nicht - `
+      + 'sie verdeckt dann am Listenende die Zeilen, auf die sie sich bezieht');
+  }
+});
+
+test('ein Kopf mit --narrow pflegt ihn beim Ansichtswechsel', () => {
+  for (const page of walkJsFiles('../public/pages/')) {
+    const src = read(page);
+    if (!src.includes('page-toolbar--narrow')) continue;
+    // Ein Umschalter im Sinne dieser Regel wechselt den KÖRPER, nicht einen
+    // Filter: er trägt `data-view` und schreibt seinen Wert in den Zustand.
+    if (!/data-view/.test(src) || !/viewMode|state\.view\b/.test(src)) continue;
+    assert.match(src, /classList\.toggle\(\s*'page-toolbar--narrow'/,
+      `${page}: setzt --narrow und wechselt die Ansicht, pflegt den Modifier aber nicht mit - in einer der beiden Ansichten endet der Kopf dann neben seinem eigenen Körper`);
   }
 });
 
@@ -3010,6 +3179,65 @@ test('der FAB weicht der Zeile, statt eine Gasse zu reservieren', () => {
 });
 
 /**
+ * WER DEN FAB VERSTECKT, NIMMT IHM SEINEN NACHLAUF (Etappe 6, 2026-08-13).
+ *
+ * `--fab-safe-zone` haengt an `:has(.fab-layer .page-fab:not([hidden])) `. Das
+ * ist ein STELLVERTRETER fuer „hier schwebt ein Knopf ueber dem Scrollport",
+ * und er wird falsch, sobald CSS statt der Seite versteckt: der Knoten bleibt
+ * ohne `hidden` stehen, der Selektor trifft, und der Nachlauf reserviert Platz
+ * fuer eine Flaeche von 0x0. Gemessen bei 1440x900 auf sechs Routen (/tasks,
+ * /calendar, /shopping, /contacts, /budget, /notes): 96px, auf /shopping 156
+ * statt 60.
+ *
+ * DER GUARD PRUEFT DIE PAARUNG, NICHT DIE VIER STELLEN. Vier Regeln in drei
+ * Dateien verstecken heute einen FAB, aus vier verschiedenen Gruenden - eine
+ * Allowlist waere in dem Moment veraltet, in dem eine fuenfte dazukommt, und
+ * genau so ist dieser Befund entstanden. Verlangt wird deshalb: zu jeder Regel,
+ * die einen `.page-fab` per `display: none` versteckt, steht im selben
+ * Stylesheet eine Regel derselben Bedingung, die `--fab-safe-zone` nullt.
+ *
+ * AUSGENOMMEN ist `.page-fab[hidden]` - dort deckt das `:not([hidden])` der
+ * Nachlauf-Regel den Fall bereits ab. Das ist keine Ausnahme von der Regel,
+ * sondern ihre andere Haelfte. Die Bedingung muss am FAB SELBST haengen: eine
+ * erste Fassung schloss jeden Selektor aus, in dem `[hidden]` irgendwo vorkam,
+ * und uebersah damit ausgerechnet die Dock-Regel
+ * `body:has(.toolbar-new-btn:not([hidden])) …` - den Anlassfall.
+ */
+test('jede CSS-Ausblendung des FAB nullt seinen Nachlauf', () => {
+  const styleDir = new URL('../public/styles/', import.meta.url);
+  const versteckt = [];
+  const nullt = [];
+  const norm = (s) => s.replace(/\s+/g, ' ').trim();
+
+  for (const file of readdirSync(styleDir).filter((f) => f.endsWith('.css'))) {
+    for (const { selector, body } of eachRule(read(`../public/styles/${file}`))) {
+      const trifftFab = /\.page-fab\b|#fab-new-item\b/.test(selector);
+      const nurHidden = /\.page-fab\[hidden\]|#fab-new-item\[hidden\]/.test(selector);
+      if (trifftFab && /display:\s*none/.test(body) && !nurHidden) {
+        versteckt.push({ file, selector: norm(selector) });
+      }
+      if (/--fab-safe-zone:\s*0/.test(body)) nullt.push({ file, selector: norm(selector) });
+    }
+  }
+
+  // Reichweite zuerst: ein Guard ueber eine leere Liste ist keine Zusicherung.
+  assert.ok(versteckt.length >= 4,
+    `Reichweite: nur ${versteckt.length} Ausblende-Regeln gefunden - der Scanner greift nicht mehr`);
+
+  // Die Bedingung ist der Selektor OHNE sein FAB-Ziel. Statt ihn zu zerlegen
+  // (`:has()` haelt beliebige Klammern), wird die Verwandtschaft ueber die
+  // Teilzeichenkette gepruefet: `body:has(.toolbar-new-btn:not([hidden]))` steckt in
+  // `body:has(.toolbar-new-btn:not([hidden])) #fab-layer .page-fab`, und
+  // `#fab-layer #fab-new-item` steckt in `body:has(#fab-layer #fab-new-item)`.
+  const ohnePaar = versteckt.filter(({ file, selector }) => !nullt.some((z) =>
+    z.file === file && (selector.includes(z.selector) || z.selector.includes(selector))));
+
+  assert.deepEqual(ohnePaar.map((x) => `${x.file}: ${x.selector}`), [],
+    'diese Regeln verstecken den FAB, ohne --fab-safe-zone zu nullen - dort reserviert '
+    + 'der Nachlauf am Scroll-Ende Platz fuer einen Knopf ohne Flaeche');
+});
+
+/**
  * #634, dritte Runde: der FAB gehört nicht in den Scrollport.
  *
  * Nach Retract und Tastatur-Erkennung meldete derselbe Nutzer den Defekt ein
@@ -3033,8 +3261,15 @@ test('der Page-FAB hängt in der Shell, nicht im Scrollport', () => {
   const styleDir = new URL('../public/styles/', import.meta.url);
 
   // 1. Die Layer ist ein Geschwister von .app-content, kein Kind.
-  assert.match(router, /shellNodes\s*=\s*\[[^\]]*\bmain\b\s*,\s*fabLayer\s*,\s*bottomNav/,
-    'die FAB-Layer muss als Shell-Kind zwischen Scrollport und Bottom-Nav hängen (#634)');
+  //
+  // Auf die REIHENFOLGE geprüft, nicht auf die unmittelbare Nachbarschaft: die
+  // Zusicherung ist „hinter dem Scrollport, vor der Nav", und das war sie schon
+  // immer. Als wörtliches `main, fabLayer, bottomNav` schlug sie fehl, sobald
+  // ein weiteres Shell-Kind dazwischen einsortiert wurde (der Pillen-Stapel,
+  // Critique 2026-08-13) - eine Zusicherung, die eine Nachbarschaft festnagelt,
+  // prüft die Nachbarschaft, nicht die Sache.
+  assert.match(router, /shellNodes\s*=\s*\[[^\]]*\bmain\b\s*,[^\]]*\bfabLayer\b\s*,[^\]]*\bbottomNav\b/,
+    'die FAB-Layer muss als Shell-Kind hinter dem Scrollport und vor der Bottom-Nav hängen (#634)');
   assert.match(layout, /\.fab-layer\s*\{[^}]*position:\s*absolute/,
     '.fab-layer braucht einen eigenen Kasten an der Shell-Ecke (#634)');
 
@@ -3426,83 +3661,712 @@ test('der Einkaufs-Kopf trägt mobil keine unbeschrifteten Aktionen', () => {
   // `common.moreActions` stand hier, solange der Einkauf ihn nutzte; sein
   // Trigger führt jetzt shopping.listActionsLabel (er muss die Liste nennen).
   // Den geteilten Key prüft weiterhin, wer ihn benutzt - aktuell recipes.js.
-  assertKeysExistInEveryLocale(['shopping.listActionsLabel', 'shopping.checkedHint', 'shopping.checkedHint_one']);
+  assertKeysExistInEveryLocale([
+    'shopping.listActionsLabel', 'shopping.checkedHint', 'shopping.checkedHint_one',
+    // Der Vorrat trägt seit Etappe 5 dieselbe Rolle in der Pille: was „Alles"
+    // umfasst. Sein früherer Satz („Diese Artikel sind aufgebraucht oder unter
+    // dem Mindestbestand.") sagte, was der aktive Filterchip daneben schon
+    // sagt, und ließ auf einer einzeiligen Fläche nur eine Ellipse übrig.
+    'pantry.bulkPillLabel', 'pantry.bulkPillLabel_one',
+  ]);
 });
 
 /**
- * Eine Sammelaktions-Leiste, zwei Tabs.
+ * Eine Sammelaktions-Leiste, zwei Tabs - und sie kostet die Liste nichts mehr.
  *
- * Der Vorrat hatte `.pantry-bulkbar` („Alles auf die Einkaufsliste" plus eine Zeile,
- * die sagt, worauf sie wirkt) - der Critique nannte sie als das, was funktioniert.
- * Der Einkauf hatte für dieselbe Sache zwei Buttons im Kopf, ohne erklärende Zeile,
- * und zahlte dafür zwei Kopfzeilen. Jetzt ist es derselbe Baustein.
+ * Der Vorrat hatte `.pantry-bulkbar`, der Einkauf zwei Buttons im Kopf; seit der
+ * Küchen-Zusammenführung war es EIN Baustein über dem Scroller. Sein eigener
+ * Preis stand nie in der Rechnung: gemessen 358x103px bei y=113 auf /shopping,
+ * also 103 von 552px Listenfläche, ausgelöst von einem einzigen abgehakten
+ * Artikel. Seit Etappe 5 ist die Leiste eine Pille in der unteren Shell-Zone.
+ *
+ * DREI ZUSAGEN, und jede hat ihren eigenen Anlass:
+ *   1. EINE Schreibweise - der Baustein wohnt in der Shell, kein Modul baut ihn nach.
+ *   2. EINZEILIG - ohne das war sie der Block von vorher in dunkel.
+ *   3. Sie verdeckt am Scroll-Ende nichts - derselbe Defekt, den Sonde 18 für
+ *      den FAB misst, und der FAB löst ihn seit #634 über einen Nachlauf.
  */
-test('die Küchen-Tabs teilen eine Sammelaktions-Leiste', () => {
-  const shared = read('../public/styles/list-row.css');
-  const layout = read('../public/styles/layout.css');
-  const pantryCss = read('../public/styles/pantry.css');
+test('die Sammelaktions-Pille wohnt in der Shell und kostet die Liste keine Zeile', () => {
+  const layout    = read('../public/styles/layout.css');
+  const listRow   = read('../public/styles/list-row.css');
+  const tokens    = read('../public/styles/tokens.css');
+  const router    = read('../public/router.js');
 
-  assert.match(shared, /^\.list-bulkbar \{/m,
-    '.list-bulkbar gehört in die geteilte Grammatik, nicht in ein Modul-CSS');
-  assert.doesNotMatch(pantryCss.replace(/\/\*[\s\S]*?\*\//g, ''), /^\.pantry-bulkbar\s*\{/m,
-    'der Vorrat darf keine private Kopie der Leiste behalten');
+  // --- 1. EINE Schreibweise -------------------------------------------------
+  const bulkbarRules = [...eachRule(layout)].filter((r) => /^\.list-bulkbar\b/.test(r.selector.trim()));
+  assert.ok(bulkbarRules.length,
+    '.list-bulkbar gehört in die Shell-Schicht (layout.css), wo auch der Toast steht');
+
+  // Über eachRule, nicht über die Datei: die Begründung des Umzugs nennt den
+  // alten Wohnort beim Namen, und ein `doesNotMatch` über den Quelltext läse
+  // den Kommentar als Regel (diese Falle hat in Etappe 4 einen Guard rot
+  // gemacht, der recht hatte).
+  for (const [file, css] of [
+    ['list-row.css', listRow],
+    ['pantry.css',   read('../public/styles/pantry.css')],
+    ['shopping.css', read('../public/styles/shopping.css')],
+  ]) {
+    for (const rule of eachRule(css)) {
+      assert.doesNotMatch(rule.selector, /\.list-bulkbar|\.pantry-bulkbar/,
+        `${file} darf die Sammelaktions-Leiste nicht nachbauen - sie steht in layout.css`);
+    }
+  }
 
   for (const page of ['shopping', 'pantry']) {
     const src = read(`../public/pages/${page}.js`);
-    assert.ok(src.includes('list-bulkbar'), `${page}.js muss die geteilte Leiste verwenden`);
-    assert.ok(src.includes('list-bulkbar__label'),
-      `${page}.js muss die erklärende Zeile führen - sie ist der Teil, der im Einkauf fehlte`);
+    assert.match(src, /from '\/utils\/bulk-pill\.js'/,
+      `${page}.js muss die geteilte Shell-Oberfläche verwenden, nicht selbst rendern`);
+    assert.match(src, /setBulkPill\(/, `${page}.js muss die Pille über setBulkPill setzen`);
+    assert.match(src, /clearBulkPill\(/,
+      `${page}.js muss die Pille wegnehmen, sobald es keine Teilmenge mehr gibt`);
+    // Der Schnitt kommt aus `source-text.js` und laeuft dort bis zum Fixpunkt:
+    // die Kette `.replace().replace()` liess bei verschachtelten Klammern ein
+    // `<!--` stehen (CodeQL js/incomplete-multi-character-sanitization, high).
+    // `test-budget-ui.js` hatte die Schleife samt Begruendung schon, diese
+    // Datei die Kette ohne sie - dieselbe Kopie, andere Blindstelle.
+    assert.doesNotMatch(withoutHtmlComments(withoutBlockComments(src)),
+      /class="[^"]*\blist-bulkbar\b/,
+      `${page}.js darf die Leiste nicht wieder in den Seitenfluss schreiben`);
   }
 
-  // Die Leiste hat Fläche, Rahmen und Polsterung: leer wäre sie ein sichtbarer
-  // Streifen. `display: flex` schlägt das UA-`[hidden]`, also braucht sie die
-  // Durchsetzung - vierte Fundstelle derselben Falle in diesem Repo.
-  assert.match(layout, /\.list-bulkbar\[hidden\][^{}]*\{\s*display:\s*none\s*!important/,
-    '.list-bulkbar setzt display und muss deshalb in der [hidden]-Durchsetzungsliste stehen');
-  assert.match(read('../public/pages/shopping.js'), /wrap\.hidden = !checkedCount/,
-    'ohne abgehakte Artikel muss die Leiste verschwinden, nicht leer stehen');
+  // --- 1b. WO DAS SUBJEKT WEGFÄLLT, TRÄGT DIE AKTION DIE ZAHL --------------
+  //
+  // Anlass (Etappe 6, 2026-08-13, am Gerät gesehen): unter 21rem Pillenbreite
+  // fällt `.list-bulkbar__subject` weg, und übrig blieben zwei Kapseln ohne
+  // genanntes Objekt - über einer Liste mit 23 Artikeln, bei „Löschen" ohne
+  // Rückfrage. Für einen Screenreader stimmte die alte Begründung („die Zahl
+  // steht im aria-label"), für das Auge nicht.
+  //
+  // DIE ZUSICHERUNG IST EINE PAARUNG, KEIN KLASSENNAME: dieselbe Container-
+  // Bedingung, die das Subjekt wegnimmt, muss die Marke einsetzen. Zwei
+  // getrennte Grenzen wären genau die zweite Zahl daneben, die die Pille sich
+  // schon einmal verboten hat.
+  // Nicht über `bulkbarRules`: dessen `\b` nach `.list-bulkbar` trifft den
+  // Unterstrich nicht, die BEM-Kinder fallen dort heraus.
+  const subjektWeg = [...eachRule(layout)].filter((r) => /\.list-bulkbar__subject\b/.test(r.selector)
+    && /display:\s*none/.test(r.body) && r.at.some((a) => /bulk-pill/.test(a)));
+  assert.equal(subjektWeg.length, 1,
+    'erwartet genau eine Container-Regel, die das Subjekt der Pille wegnimmt');
+  const markeDa = [...eachRule(layout)].find((r) => /__action-count\b/.test(r.selector)
+    && /display:\s*(inline|flex|inline-flex|inline-block)/.test(r.body));
+  assert.ok(markeDa, 'ohne Subjekt muss die Zahl an der Aktion sichtbar werden');
+  assert.deepEqual(markeDa.at, subjektWeg[0].at,
+    'die Marke tritt unter GENAU der Bedingung ein, unter der das Subjekt geht - '
+    + 'sonst stünde die Zahl irgendwo zweimal oder nirgends');
 
-  // Sie steht ÜBER dem Scroller, nicht darin: im Vorrat scrollte sie weg, obwohl
-  // sie die ganze gefilterte Liste betrifft.
-  const pantry = read('../public/pages/pantry.js');
-  assert.match(pantry, /pantry-bulkbar-slot/, 'der Vorrat braucht einen Slot außerhalb des Scrollers');
-  assert.match(pantry, /page\.append\(title, live, toolbar, filters, bulk, list, fab\)/,
-    'der Slot muss zwischen Filterleiste und Liste stehen');
-  assert.doesNotMatch(pantry, /list\.appendChild\(bulkBarEl\(\)\)/,
-    'die Leiste darf nicht wieder als Kind der scrollenden Liste hängen');
+  // Und sie steht nur dort. Ausserhalb der Bedingung wäre sie das Echo der
+  // Zahl, die das Subjekt zwei Zentimeter weiter links schon trägt.
+  const markeBasis = [...eachRule(layout)].find((r) => r.selector.trim() === '.list-bulkbar__action-count' && !r.at.length);
+  assert.ok(markeBasis && /display:\s*none/.test(markeBasis.body),
+    'die Marke ist standardmässig weg - neben dem Subjekt wäre sie dessen Echo');
+
+  // Die Seite muss sie an der Aktion setzen, bei der ein fehlendes Objekt teuer
+  // ist. Geprüft an der Sache, nicht am Wort: die Kapsel mit dem `aria-label`
+  // der Sammellöschung trägt sie.
+  const shoppingSrc = read('../public/pages/shopping.js');
+  const loeschAktion = shoppingSrc.match(/actions\.push\(\{[\s\S]*?clearChecked[\s\S]*?\n {2}\}\);/);
+  assert.ok(loeschAktion, 'die Löschen-Aktion der Einkaufs-Pille nicht gefunden');
+  // AUF EINER EIGENEN ZEILE, und das ist keine Formfrage. Eine erste Fassung
+  // suchte `count:\s*checkedCount` irgendwo im Block - und fand es in der
+  // t()-Interpolation des aria-labels (`{ count: checkedCount }`), die
+  // ohnehin dasteht. Der Guard blieb bei entfernter Eigenschaft grün.
+  assert.match(loeschAktion[0], /^\s*count:\s*checkedCount,\s*$/m,
+    'die Löschen-Kapsel muss ihre Zahl als eigene Eigenschaft mitgeben - ohne Subjekt '
+    + 'liest sich ein blosses „Löschen" über einer vollen Liste wie „die Liste löschen"');
+
+  // --- 2. EINZEILIG per Konstruktion ---------------------------------------
+  const pillBase = bulkbarRules.find((r) => r.selector.trim() === '.list-bulkbar' && !r.at.length);
+  assert.ok(pillBase, '.list-bulkbar braucht eine Basisregel ohne At-Block');
+  assert.doesNotMatch(pillBase.body, /flex-wrap:\s*wrap/,
+    'ein Umbruch macht aus der Pille wieder den 103px-Block, den sie ersetzt');
+  assert.match(pillBase.body, /min-height:\s*var\(--bulk-pill-height\)/,
+    'die Pille muss die Höhe halten, mit der --bulk-pill-safe-zone rechnet');
+  assert.match(tokens, /--bulk-pill-safe-zone:\s*calc\([^;]*--bulk-pill-height[^;]*\)/,
+    'der Nachlauf leitet sich aus der Pillenhöhe ab und darf nicht davon wegdriften');
+
+  // --- 3. Nachlauf am Scroll-Ende ------------------------------------------
+  const safeZone = [...eachRule(layout)].filter((r) =>
+    /:has\([^)]*\.list-bulkbar[^)]*\)/.test(r.selector) && /\.app-content/.test(r.selector));
+  assert.ok(safeZone.length >= 2,
+    'der Nachlauf braucht BEIDE Fälle: mit FAB (Summe) und ohne (allein) - `:has()` trägt die '
+    + 'Spezifität seines Arguments, eine Regel allein stünde unter der FAB-Regel');
+  for (const rule of safeZone) {
+    assert.match(rule.body, /padding-block-end:[^;]*--bulk-pill-safe-zone/,
+      'jede Pillen-Regel am Scrollport muss den Nachlauf setzen');
+  }
+
+  // --- Der Stapel: Reihenfolge IST die Zusage ------------------------------
+  // Die Spalte ist unten verankert, also steht oben, wer zuerst im DOM steht.
+  // Stünde die Pille hinten, wanderte der TOAST - und der ist der mit der
+  // Fünf-Sekunden-Frist. Gegengeprüft: mit `order: 9` auf der Pillen-Schicht
+  // sprang der Toast von y=698 auf y=642.
+  const stackAppend = router.match(/bottomStack\.append\(([^)]*)\)/);
+  assert.ok(stackAppend, 'die Shell muss einen .shell-bottom-stack füllen');
+  const order = stackAppend[1].split(',').map((s) => s.trim());
+  assert.equal(order[0], 'bulkPillLayerEl',
+    'die Pille steht ZUERST im Stapel, damit sie dem Toast ausweicht und nicht umgekehrt');
+  assert.ok(order.length === 3 && order.every((n) => /toastContainer|bulkPillLayer/.test(n)),
+    'in den Stapel gehören genau die Pillen-Schicht und die beiden Toast-Container');
+
+  // Eine leere Zelle zieht trotzdem ihre `gap`-Lücke. Gegengeprüft: ohne diese
+  // Regel stand ein einzelner Toast 8px zu hoch.
+  const emptyRule = [...eachRule(layout)].find((r) => /\.shell-bottom-stack\s*>\s*:empty/.test(r.selector));
+  assert.ok(emptyRule && /display:\s*none/.test(emptyRule.body),
+    'leere Zellen des Stapels müssen aus dem Fluss - sonst verschiebt ihre Lücke den Toast');
 });
 
 /**
- * Die Vorratszeile entscheidet nach ihrer EIGENEN Breite, nicht nach der des
- * Fensters.
+ * JEDE Pille, deren Subjekt wegfallen kann, gibt die Zahl an eine Kapsel weiter.
  *
- * Gemessen bei 320px (Critique-Nachlauf 2026-07-30): der Stepper belegte 167px der
- * 262px Zeilenbreite, davon 71px allein das Mengenfeld (`min-width: 7ch`). Für den
- * Namen blieben 31px - „Olivenöl extra vergine" auf 8 Zeilen, Zeilenhöhen 89 bis
- * 369px. Danach: 106px Namensbreite, Zeilenhöhen 85 bis 155px.
+ * Der Guard darüber prüfte den Einkauf beim Namen (`clearChecked`) - und das war
+ * richtig für die Kapsel, die ohne Objekt gefährlich ist. Als der Vorrat
+ * dieselbe Lücke bekam, deckte er sie nicht: seine Kapsel heisst „Alles auf die
+ * Einkaufsliste", ein Quantor ohne Bezugswort, und keine Zeichenkette des alten
+ * Guards kam darin vor. Zwei benannte Stellen wären eine Allowlist gewesen, und
+ * die dritte Pille käme wieder ungedeckt.
+ *
+ * DIE REGEL HÄNGT AN DER PILLE, NICHT AN DER SEITE: wer `setBulkPill` aufruft,
+ * baut eine Fläche, deren Subjekt unter 21rem verschwindet (layout.css) - also
+ * muss in dieser Datei mindestens eine Aktion ihre Zahl mitgeben. Gefunden wird
+ * das Aktions-Literal über sein `onClick`, per Klammerzählung statt per Regex:
+ * `[^{}]*` scheitert an der `t()`-Interpolation im aria-label, die selbst
+ * geschweifte Klammern trägt.
  */
-test('die Vorratszeile misst sich selbst, nicht das Fenster', () => {
+test('jede Sammelaktions-Pille gibt ihre Zahl an eine Kapsel weiter', () => {
+  /** Die Aktions-Literale einer Quelle: von jedem `onClick:` zur umschliessenden Klammer. */
+  const actionLiterals = (src) => {
+    const out = [];
+    for (const m of src.matchAll(/\bonClick:/g)) {
+      let depth = 0;
+      let start = -1;
+      for (let i = m.index; i >= 0; i--) {
+        if (src[i] === '}') depth += 1;
+        else if (src[i] === '{') {
+          if (depth === 0) { start = i; break; }
+          depth -= 1;
+        }
+      }
+      if (start === -1) continue;
+      let end = -1;
+      depth = 0;
+      for (let i = start; i < src.length; i++) {
+        if (src[i] === '{') depth += 1;
+        else if (src[i] === '}') { depth -= 1; if (depth === 0) { end = i; break; } }
+      }
+      if (end !== -1) out.push(src.slice(start, end + 1));
+    }
+    return out;
+  };
+
+  const pages = readdirSync(new URL('../public/pages/', import.meta.url))
+    .filter((f) => f.endsWith('.js'))
+    .map((f) => [f, read(`../public/pages/${f}`)])
+    .filter(([, src]) => /from '\/utils\/bulk-pill\.js'/.test(src) && /setBulkPill\(/.test(src));
+
+  assert.ok(pages.length >= 2,
+    'erwartet mindestens Einkauf und Vorrat als Pillen-Aufrufer - findet der Scan keine, prüft er nichts');
+
+  for (const [name, src] of pages) {
+    const literals = actionLiterals(src);
+    assert.ok(literals.length, `${name}: keine Aktion mit onClick gefunden`);
+    // AUF EIGENER ZEILE, siehe den Guard darüber: `count:` steht auch in jeder
+    // t()-Interpolation mit Pluralform, und die steht in diesen Dateien ohnehin.
+    const mitZahl = literals.filter((lit) => /^\s*count:\s*[^,\s][^\n]*,\s*$/m.test(lit));
+    assert.ok(mitZahl.length >= 1,
+      `${name}: mindestens eine Kapsel muss ihre Zahl als eigene Eigenschaft mitgeben - `
+      + 'unter 21rem fällt das Subjekt der Pille weg, und was dann ohne Objekt dasteht, '
+      + 'ist entweder gefährlich („Löschen") oder mehrdeutig („Alles")');
+  }
+});
+
+/**
+ * Die Marke ist für das Auge, nicht für das Ohr.
+ *
+ * Sie steht NUR dort, wo das Subjekt weggefallen ist - und für einen
+ * Screenreader ist es nie weg: `aria-labelledby` zieht den per `display: none`
+ * versteckten Knoten weiterhin in den Namen der Gruppe. Ohne `aria-hidden`
+ * ginge die Zahl zusätzlich in den Namen jeder Kapsel ein, die keinen eigenen
+ * `aria-label` trägt. Der Vorrat ist genau dieser Fall: „Alles auf die
+ * Einkaufsliste 10" neben einer Gruppe, die schon „10 Artikel fast leer" heisst.
+ */
+test('die Zählmarke der Pille geht nicht in den Namen der Kapsel ein', () => {
+  const pill = read('../public/utils/bulk-pill.js');
+
+  // ÜBER DIE KLASSE, NICHT ÜBER DIE EINRÜCKUNG. Die erste Fassung suchte
+  // `if (action.count != null) {` samt seiner vier Spalten Einzug und starb an
+  // dem Tag, an dem der Zweig aus der Schleife in eine Kapsel-Fabrik zog - der
+  // Zweig war unverändert da, der Guard fand ihn nicht mehr. Ein Guard, der
+  // eine Position prüft statt einer Sache, meldet einen Umzug als Defekt.
+  const at = pill.indexOf('list-bulkbar__action-count');
+  assert.notEqual(at, -1, 'die Marke der Kapsel wird nirgends gesetzt');
+
+  // Der umschliessende Block, per Klammerzählung rückwärts und vorwärts.
+  let depth = 0;
+  let start = -1;
+  for (let i = at; i >= 0; i--) {
+    if (pill[i] === '}') depth += 1;
+    else if (pill[i] === '{') { if (depth === 0) { start = i; break; } depth -= 1; }
+  }
+  assert.notEqual(start, -1, 'kein umschliessender Block um die Marke gefunden');
+  let end = -1;
+  depth = 0;
+  for (let i = start; i < pill.length; i++) {
+    if (pill[i] === '{') depth += 1;
+    else if (pill[i] === '}') { depth -= 1; if (depth === 0) { end = i; break; } }
+  }
+  const block = pill.slice(start, end + 1);
+
+  assert.match(block, /setAttribute\('aria-hidden', 'true'\)/,
+    'die Marke muss aus dem Namen der Kapsel heraus - die Zahl steht bereits im Namen der '
+    + 'Gruppe (aria-labelledby überlebt display:none) und, wo es eine gibt, im aria-label');
+});
+
+/**
+ * WER LÖSCHT, FRAGT - und die Frage kappt nicht.
+ *
+ * Anlass (Critique 2026-08-13, P0): die Löschen-Kapsel nahm die abgehakten
+ * Artikel ohne Zwischenstufe, und sie sah dabei aus wie die harmlose Kapsel
+ * daneben („In den Vorrat") und wie das „Verwerfen" des Toasts 8px darunter -
+ * dieselbe Form, dieselbe Grösse, dieselbe Tinte. Die Rücknahme war als Grund
+ * geführt, es dabei zu lassen; sie ist der Weg für einen Irrtum, den man
+ * BEMERKT.
+ *
+ * DIE ZUSICHERUNG IST EINE PAARUNG, KEINE LISTE VON ZWEI SEITEN. Geprüft wird
+ * jede Datei, die `setBulkPill` aufruft, und in ihr jedes Aktions-Literal:
+ *   - was sich als gefährlich MARKIERT (`danger`), muss fragen (`confirm`);
+ *   - was ein destruktives VERB trägt, muss beides tragen.
+ * Die zweite Richtung ist die wichtigere: sie fängt die Aktion, die gefährlich
+ * IST und sich nicht markiert. Sie hängt am i18n-Vokabular, nicht an
+ * Dateinamen - eine dritte Pille mit einem `common.delete` ist damit gedeckt,
+ * bevor es sie gibt.
+ */
+test('eine destruktive Sammelaktion fragt zurück, bevor sie ausführt', () => {
+  /** Die Aktions-Literale einer Quelle: von jedem `onClick:` zur umschliessenden Klammer. */
+  const actionLiterals = (src) => {
+    const out = [];
+    for (const m of src.matchAll(/\bonClick:/g)) {
+      let depth = 0;
+      let start = -1;
+      for (let i = m.index; i >= 0; i--) {
+        if (src[i] === '}') depth += 1;
+        else if (src[i] === '{') { if (depth === 0) { start = i; break; } depth -= 1; }
+      }
+      if (start === -1) continue;
+      let end = -1;
+      depth = 0;
+      for (let i = start; i < src.length; i++) {
+        if (src[i] === '{') depth += 1;
+        else if (src[i] === '}') { depth -= 1; if (depth === 0) { end = i; break; } }
+      }
+      if (end !== -1) out.push(src.slice(start, end + 1));
+    }
+    return out;
+  };
+
+  // Das Vokabular der Zerstörung, an den i18n-Keys statt an deutschen Wörtern:
+  // die Oberfläche spricht 24 Sprachen, der Quelltext genau eine.
+  const DESTRUKTIV = /\bt\(\s*['"][^'"]*\.(delete|remove|clear|destroy)[^'"]*['"]|\bt\(\s*['"]common\.delete['"]/i;
+
+  const pages = readdirSync(new URL('../public/pages/', import.meta.url))
+    .filter((f) => f.endsWith('.js'))
+    .map((f) => [f, read(`../public/pages/${f}`)])
+    .filter(([, src]) => /from '\/utils\/bulk-pill\.js'/.test(src) && /setBulkPill\(/.test(src));
+
+  assert.ok(pages.length >= 2,
+    'erwartet mindestens Einkauf und Vorrat als Pillen-Aufrufer - findet der Scan keine, prüft er nichts');
+
+  // NUR die Aktionen DER PILLE, nicht jedes Objekt mit `onClick` in der Datei.
+  // Der Scan las bisher alle Literale einer Pillen-Datei - bei Einkauf und
+  // Vorrat war das zufaellig deckungsgleich, weil dort sonst keine stehen. Mit
+  // den Kontakten kam die erste Datei dazu, die daneben eine Detail-Aktion
+  // fuehrt (`variant: 'danger-ghost'`, `icon`, `id`), und die wurde als
+  // Pillen-Kapsel ohne Rueckfrage gemeldet, obwohl sie in einem Blatt sitzt,
+  // das seine eigene Bestaetigung mitbringt.
+  //
+  // Erkannt wird die Pillen-Kapsel an ihrer FORM: die Pille kennt genau
+  // `label`, `ariaLabel`, `count`, `danger`, `confirm` und `onClick`
+  // (utils/bulk-pill.js). Ein Literal mit einem fremden Schluessel gehoert
+  // einer anderen Grammatik und wird hier nicht beurteilt.
+  const PILLEN_SCHLUESSEL = new Set(['label', 'ariaLabel', 'count', 'danger', 'confirm', 'onClick']);
+  const istPillenKapsel = (lit) => {
+    const keys = [...lit.matchAll(/^\s*([A-Za-z_$][\w$]*)\s*:/gm)].map((m) => m[1]);
+    return keys.length > 0 && keys.every((k) => PILLEN_SCHLUESSEL.has(k));
+  };
+
+  let destruktiveGefunden = 0;
+  for (const [name, src] of pages) {
+    for (const lit of actionLiterals(src).filter(istPillenKapsel)) {
+      const markiert = /^\s*danger:\s*true,\s*$/m.test(lit);
+      const fragt    = /^\s*confirm:\s*\{/m.test(lit);
+      const verb     = DESTRUKTIV.test(lit);
+
+      if (markiert) {
+        assert.ok(fragt, `${name}: eine als gefährlich markierte Kapsel muss zurückfragen - `
+          + 'die Tinte allein unterscheidet sie vom Nachbarn, nicht von einem Fehltipp');
+      }
+      if (verb) {
+        destruktiveGefunden += 1;
+        assert.ok(markiert && fragt,
+          `${name}: eine Kapsel mit destruktivem Verb braucht BEIDES - die Tinte, damit sie `
+          + 'sich von der harmlosen Kapsel daneben unterscheidet, und die Rückfrage, damit '
+          + 'ein Fehltipp folgenlos bleibt');
+      }
+    }
+  }
+  // Eine Zusicherung über eine leere Menge ist keine. Findet der Scan gar keine
+  // destruktive Aktion mehr, hat sich das Vokabular geändert - nicht die Regel.
+  assert.ok(destruktiveGefunden >= 1,
+    'keine destruktive Sammelaktion gefunden - entweder ist der Einkauf umgebaut oder das '
+    + 'Muster DESTRUKTIV trifft die Keys nicht mehr');
+
+  // UND DIE FRAGE MUSS EINEN DOPPELTIPP ÜBERLEBEN.
+  //
+  // Gemessen: die Bestätigungs-Kapsel liegt bei 390 und 414px auf EXAKT der
+  // Stelle der auslösenden (dx=0, dy=0) - beide heissen „Löschen", sind gleich
+  // breit und stehen am rechten Ende der Pille. Ohne Frist wäre die Rückfrage
+  // für den hektischen Doppeltipp wirkungslos, also für genau den Fall, für den
+  // sie gebaut ist. Der Ort liess sich nicht verlässlich verschieben (bei 360px
+  // ergab die Zählmarke zufällig 76px Versatz, bei den anderen Breiten keinen).
+  const pill = read('../public/utils/bulk-pill.js');
+  assert.match(pill, /confirmBtn\.disabled = true;\s*\n\s*setTimeout\(\(\) => \{ confirmBtn\.disabled = false; \}, CONFIRM_GRACE_MS\);/,
+    'die Bestätigung muss nach dem Aufmachen der Frage kurz gesperrt sein - sie liegt auf '
+    + 'der Kapsel, die sie ausgelöst hat');
+  const grace = pill.match(/const CONFIRM_GRACE_MS = (\d+);/);
+  assert.ok(grace, 'die Schutzfrist braucht einen benannten Wert, keine Zahl im Aufruf');
+  const ms = Number(grace[1]);
+  assert.ok(ms >= 250 && ms <= 500,
+    `die Frist liegt zwischen einem Doppeltipp und einer gelesenen Antwort (250-500ms), ist aber ${ms}ms`);
+
+  // Der Rückweg ist frei. Eine gesperrte Abbrechen-Kapsel wäre eine Falle mit
+  // Wartezeit, kein Schutz.
+  assert.doesNotMatch(pill, /cancel\.disabled = true/,
+    'wer abbricht, darf das sofort - nur die Bestätigung wartet');
+});
+
+/**
+ * DIE FRAGE BRICHT UM, SIE KAPPT NICHT - und zwar ohne eine Zahl über Sprachen.
+ *
+ * Der Ruhezustand der Pille kürzt sein Subjekt (es benennt nur, worauf die
+ * Kapseln wirken, und dasselbe steht in der Liste darüber). Die Frage steht
+ * nirgendwo sonst: „9 Artikel lösch…" verlangt eine Antwort, die sie nicht mehr
+ * nennt.
+ *
+ * KEINE CONTAINER-SCHWELLE FÜR DIE FRAGE. Die 21rem des Subjekts sind an dessen
+ * Bedarf gemessen. Gemessen bei 390px: Deutsch passt mit 115 von 149px, aber
+ * Niederländisch verlangt „9 artikelen verwijderen?" neben „Annuleren" und
+ * „Verwijderen" und reisst mit 153 von 149px. Eine Schwelle, die für eine
+ * Sprache stimmt, ist eine Annahme über 23 andere - die drei Deklarationen
+ * unten fragen stattdessen den echten Bedarf. Gemessen über 5 Locales x 4
+ * Breiten x 2 Themen: 0 gekappte Fälle.
+ *
+ * Die drei sind EINE Zusicherung: ohne `flex-wrap` bleibt die Frage in der
+ * Zeile und kappt, ohne `flex-shrink: 0` schrumpft sie, statt umzubrechen, und
+ * ohne `overflow: visible` erbt sie die Ellipse des Ruhezustands und kappt
+ * lautlos in einer Zeile, die Platz hätte.
+ */
+test('die Rückfrage der Pille bricht um, statt zu kappen', () => {
+  const layout = read('../public/styles/layout.css');
+  const rules  = [...eachRule(layout)];
+
+  const wrap = rules.find((r) => r.selector.trim() === '.list-bulkbar--confirming' && !r.at.length);
+  assert.ok(wrap && /flex-wrap:\s*wrap/.test(wrap.body),
+    'der Bestätigungszustand muss umbrechen dürfen - sonst kappt die Frage bei der ersten '
+    + 'Sprache, die länger ist als Deutsch');
+
+  const frage = rules.find((r) => /\.list-bulkbar--confirming\s+\.list-bulkbar__subject/.test(r.selector)
+    && !r.at.length);
+  assert.ok(frage, 'die Frage braucht eine eigene Regel gegen die Kürzung des Ruhezustands');
+  assert.match(frage.body, /flex:\s*1\s+0\s+auto/,
+    'die Frage darf nicht schrumpfen - sie soll die Kapseln in die nächste Zeile schieben');
+  assert.match(frage.body, /overflow:\s*visible/,
+    'ohne das erbt die Frage die Ellipse des Subjekts und kappt in einer Zeile, die Platz hätte');
+
+  // Die Wahl ist ein Paar. Ohne diesen Knoten entscheidet die Restbreite, WELCHE
+  // Kapsel umbricht - gemessen stand die Frage mit „Annuleren" in Zeile eins und
+  // „Verwijderen" allein darunter.
+  const choices = rules.find((r) => r.selector.trim() === '.list-bulkbar__choices' && !r.at.length);
+  assert.ok(choices, 'Abbrechen und Bestätigen brauchen einen gemeinsamen Träger');
+  assert.match(choices.body, /flex-shrink:\s*0/,
+    'das Paar wandert als Ganzes, es schrumpft nicht');
+  assert.match(read('../public/utils/bulk-pill.js'), /class(?:Name)?\s*=\s*'list-bulkbar__choices'/,
+    'die Fabrik muss das Paar auch bauen - eine CSS-Regel ohne Knoten ist keine Zusicherung');
+
+  // UND KEINE SCHWELLE DANEBEN. Stünde der Bestätigungszustand zusätzlich in
+  // einem @container-Block, wäre die Locale-Annahme wieder da, nur leiser.
+  //
+  // `:not()` ZUERST WEG, sonst prüft der Guard eine Zeichenkette statt einer
+  // Sache: `.list-bulkbar:not(.list-bulkbar--confirming)` trägt den Namen und
+  // meint das Gegenteil. Die Regel, die dort legitim steht (der Ruhezustand
+  // zentriert bei 320px), machte den Guard beim ersten Lauf rot.
+  const ohneNot = (sel) => sel.replace(/:not\([^)]*\)/g, '');
+  for (const rule of rules) {
+    if (!/\.list-bulkbar--confirming/.test(ohneNot(rule.selector))) continue;
+    assert.equal(rule.at.filter((a) => /bulk-pill/.test(a)).length, 0,
+      'der Bestätigungszustand darf an keiner Container-Schwelle hängen - sein Bedarf hängt '
+      + 'an der Sprache, nicht an einer Zahl');
+  }
+});
+
+/**
+ * Ein Etikett sagt nicht dasselbe wie der Chip daneben.
+ *
+ * Anlass (Critique 2026-08-13): auf /tasks stand „• Dringend" direkt neben dem
+ * gespiegelten CalDAV-Etikett „dringend" - zwei Formen, dasselbe Wort, in einer
+ * Metazeile, die seit dem Zeilenschnitt einzeilig ist und jedes Element
+ * bezahlt. Eine VTODO traegt ihre Dringlichkeit als PRIORITY und noch einmal
+ * als CATEGORIES.
+ *
+ * Geprueft wird die PAARUNG, nicht der Wortlaut: die Etiketten-Funktion muss die
+ * Prioritaet kennen und gegen deren Label filtern, und beide Aufrufstellen
+ * muessen sie mitgeben. Eine davon zu vergessen ist der stille Fall - die
+ * Zeile sieht dann genauso aus wie vorher.
+ */
+test('ein Etikett verschwindet, wenn es heisst wie die eigene Prioritaet', () => {
+  const src = read('../public/pages/tasks.js');
+
+  const fn = src.match(/function renderTagBadges\([^)]*\)\s*\{[\s\S]*?\n\}/);
+  assert.ok(fn, 'renderTagBadges nicht gefunden');
+  assert.match(fn[0], /priority\s*=\s*null/,
+    'die Etiketten-Funktion muss die Prioritaet kennen, sonst kann sie sie nicht vergleichen');
+  // DER RUMPF, NICHT DIE SIGNATUR. Eine erste Fassung prueft nur, dass die
+  // Bestandteile irgendwo im Rumpf vorkommen - und blieb gruen, als die
+  // Filterzeile entfernt wurde: `PRIORITY_LABELS()[priority]` und die
+  // Kleinschreibung standen weiter da, sie taten nur nichts mehr. Also wird der
+  // Name der Label-Variablen gelesen und verlangt, dass GENAU DER in einem
+  // Filter ueber die Etiketten vorkommt.
+  const labelVar = fn[0].match(/const\s+(\w+)\s*=[^;]*PRIORITY_LABELS\(\)\[priority\]/);
+  assert.ok(labelVar,
+    'verglichen wird gegen das ANGEZEIGTE Label, nicht gegen den Schluessel - das Etikett kommt '
+    + 'aus einer fremden Liste und ist in der Sprache geschrieben, in der es dort steht');
+  const filterMitLabel = new RegExp(`tags\\s*=\\s*tags\\.filter\\([\\s\\S]{0,160}?\\b${labelVar[1]}\\b`);
+  assert.match(fn[0], filterMitLabel,
+    `das Label (\`${labelVar[1]}\`) muss die Etiketten wirklich filtern - eine Variable, die nur `
+    + 'berechnet und nie benutzt wird, ist ein Guard ohne Gegenstand');
+  assert.match(fn[0], /toLocaleLowerCase|toLowerCase/,
+    'gross/klein darf den Vergleich nicht entscheiden - „Dringend" und „dringend" sind dasselbe Wort');
+
+  // BEIDE Aufrufstellen, sonst greift der Fix nur in einer Ansicht.
+  const aufrufe = [...src.matchAll(/renderTagBadges\(([^)]*)\)/g)]
+    .map((m) => m[1]).filter((args) => !args.includes('limit ='));
+  assert.ok(aufrufe.length >= 2, `erwartet mindestens zwei Aufrufstellen, gefunden ${aufrufe.length}`);
+  for (const args of aufrufe) {
+    assert.match(args, /task\.priority/,
+      `eine Aufrufstelle gibt die Prioritaet nicht mit (\`${args}\`) - dort steht das Etikett `
+      + 'weiter neben seinem Zwilling');
+  }
+});
+
+/**
+ * EINE ZEILE DARF ABWEICHEN, ABER NICHT WIEDERHOLEN.
+ *
+ * Anlass (Critique 2026-08-13, P2): `.list-row` stand im gerenderten Dokument
+ * auf /shopping 26x, /pantry 21x, /budget 23x, /birthdays 8x, /housekeeping 5x
+ * und /recipes 6x - und auf /tasks, /calendar und /contacts null Mal. Die drei
+ * bauten die Grammatik nach: `.agenda-event` und `.contact-item` mit sieben
+ * bzw. fuenf zeichengleichen Deklarationen, `.contact-group__list` als
+ * Wert-fuer-Wert-Kopie von `.row-carrier`. Gemessen sah man davon nichts - die
+ * Zeilen standen richtig da. Was fehlte, war die Reichweite: die naechste
+ * Korrektur an der geteilten Zeile haette drei von neun Modulen nicht erreicht,
+ * und zwar lautlos. Genau die Form, in der `.filter-toggle-btn` dreimal
+ * unentdeckt neben `.filter-chip` stand.
+ *
+ * DER GUARD VERBIETET NICHT DIE ABWEICHUNG, SONDERN DIE DOPPELUNG. Die drei
+ * Zeilen haben begruendete Eigenheiten - die Agenda richtet gestreckt aus, weil
+ * ihr Farbstreifen die Hoehe nimmt; die Aufgabe polstert ueber `--task-row-pad`,
+ * weil die Trefferflaeche des Titels damit rechnet. Wer eine Eigenschaft mit
+ * einem ANDEREN Wert setzt, trifft eine Entscheidung. Wer sie mit DEMSELBEN
+ * Wert setzt, hat abgeschrieben.
+ *
+ * Und er haengt nicht an einer Liste von drei Klassen: geprueft wird, was im
+ * Markup neben `list-row` steht - eine vierte Zeile ist gedeckt, bevor es sie
+ * gibt.
+ */
+test('eine Zeile wiederholt die geteilte Grammatik nicht', () => {
+  const listRowCss = read('../public/styles/list-row.css');
+  const basis = [...eachRule(listRowCss)]
+    .find((r) => r.selector.trim() === '.list-row' && !r.at.length);
+  assert.ok(basis, '.list-row braucht eine Basisregel - ohne sie prueft der Guard nichts');
+
+  // Die Deklarationen der geteilten Zeile, normalisiert auf `eigenschaft:wert`.
+  const geteilt = new Map();
+  for (const decl of basis.body.split(';')) {
+    const [prop, ...rest] = decl.split(':');
+    if (!rest.length) continue;
+    const p = prop.trim().replace(/\/\*[\s\S]*?\*\//g, '').trim();
+    if (!p || p.startsWith('--')) continue;
+    geteilt.set(p, rest.join(':').trim().replace(/\s+/g, ' '));
+  }
+  assert.ok(geteilt.size >= 5,
+    `erwartet mindestens fuenf geteilte Deklarationen, gefunden ${geteilt.size}`);
+
+  // Was steht im Markup neben `list-row`? Genau das sind die Zeilen-Klassen.
+  const begleiter = new Set();
+  for (const file of readdirSync(new URL('../public/pages/', import.meta.url)).filter((f) => f.endsWith('.js'))) {
+    const src = read(`../public/pages/${file}`);
+    for (const m of src.matchAll(/class="([^"]*\blist-row\b[^"]*)"/g)) {
+      for (const cls of m[1].split(/\s+/)) {
+        // Template-Ausdruecke und die Basisklasse selbst sind keine Begleiter.
+        if (!cls || cls === 'list-row' || cls.includes('$') || cls.includes('{')) continue;
+        begleiter.add(cls);
+      }
+    }
+  }
+  assert.ok(begleiter.size >= 3,
+    'erwartet mindestens die drei nachgezogenen Zeilen als Begleitklassen - findet der Scan '
+    + 'keine, prueft er nichts');
+
+  const alleCss = readdirSync(new URL('../public/styles/', import.meta.url))
+    .filter((f) => f.endsWith('.css') && f !== 'list-row.css')
+    .map((f) => [f, read(`../public/styles/${f}`)]);
+
+  const verstoesse = [];
+  for (const [file, css] of alleCss) {
+    for (const rule of eachRule(css)) {
+      // Nur die Regel der Zeile selbst, keine Kinder, keine Zustaende: eine
+      // `.contact-item__meta` teilt den Namen, nicht die Rolle.
+      const sel = rule.selector.trim();
+      if (!begleiter.has(sel.replace(/^\./, ''))) continue;
+      for (const [prop, wert] of geteilt) {
+        const treffer = new RegExp(`(^|;)\\s*${prop}\\s*:\\s*${wert.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*(;|$)`);
+        if (treffer.test(rule.body)) verstoesse.push(`${file} ${sel} { ${prop}: ${wert} }`);
+      }
+    }
+  }
+  assert.deepEqual(verstoesse, [],
+    'diese Zeilen setzen eine Eigenschaft auf DENSELBEN Wert, den `.list-row` schon setzt - '
+    + 'das ist ein Nachbau, kein Unterschied. Abweichen ist erlaubt, wiederholen nicht');
+});
+
+/**
+ * Wer eine Zeilenliste baut, legt geteilte Zeilen hinein.
+ *
+ * Die Gegenrichtung zum Guard darueber: dort ging es um Zeilen, die die Klasse
+ * TRAGEN und trotzdem abschreiben. Hier um die, die sie gar nicht erst tragen -
+ * der Fall, mit dem /tasks, /calendar und /contacts durchkamen.
+ *
+ * NUR `.list-rows`, NICHT JEDER TRAEGER. Die erste Fassung prueft auch
+ * `.row-carrier` und `.row-divided` und wurde sofort rot - zu Recht gemeldet und
+ * falsch geurteilt: `budget-plans.js` legt `.budget-plan-row` in einen
+ * `.row-carrier`, und die ist `flex-direction: column`, also ein gestapelter
+ * Block mit Fortschrittsbalken, keine Zeile. Der Traeger ist die allgemeinere
+ * Grammatik („eine Folge gleichartiger Elemente, getrennt durch Haarlinien"),
+ * `.list-rows` die spezielle. Ein Guard, der beide gleichsetzt, verlangt eine
+ * Zeilenklasse fuer etwas, das keine Zeile ist.
+ */
+test('eine Seite mit Zeilenliste hat auch geteilte Zeilen', () => {
+  for (const file of readdirSync(new URL('../public/pages/', import.meta.url)).filter((f) => f.endsWith('.js'))) {
+    const src = read(`../public/pages/${file}`);
+    if (!/class="[^"]*\blist-rows\b/.test(src)) continue;
+    assert.match(src, /class="[^"]*\blist-row\b/,
+      `${file} baut eine Zeilenliste, aber keine geteilte Zeile - genau so standen Agenda, `
+      + 'Kontakte und Aufgaben mit ihrem eigenen Nachbau darin');
+  }
+});
+
+/**
+ * Der Toast stand im Reduced-Transparency-Fallback des Filter-Chips.
+ *
+ * Beide verlieren dort ihr Glas, aber sie haben nicht denselben Grund darunter:
+ * der Chip ist hell mit dunkler Schrift, der Toast ist die dunkle Fläche der
+ * Shell und trägt `color: var(--neutral-50)`. Auf `--color-accent-light`
+ * (#F3EFFE) stand damit Weiss auf Fast-Weiss - GEMESSEN 1.08:1 gegen 13.69:1
+ * jetzt, mit emulierter Medienabfrage im gerenderten Dokument. Ein Fallback,
+ * der die Lesbarkeit sichern soll und sie abschafft.
+ *
+ * Über eachRule, weil die Begründung des Fixes den alten Wert beim Namen nennt.
+ */
+test('das Shell-Material behält im Reduced-Transparency-Fallback seinen dunklen Grund', () => {
+  const glass = read('../public/styles/glass.css');
+  let seen = 0;
+
+  for (const rule of eachRule(glass)) {
+    if (!rule.at.some((a) => /prefers-reduced-transparency/.test(a))) continue;
+    if (!/\.toast\b|\.list-bulkbar\b/.test(rule.selector)) continue;
+    seen += 1;
+    const bg = rule.body.match(/background-color:\s*([^;]+)/)?.[1]?.trim();
+    assert.ok(bg, `${rule.selector} muss im Fallback einen opaken Grund setzen`);
+    assert.match(bg, /--neutral-800/,
+      `${rule.selector} braucht seinen EIGENEN dunklen Grund - der helle Akzent gehört dem Chip, `
+      + 'und die Schrift auf diesem Material ist --neutral-50');
+  }
+
+  assert.ok(seen >= 1,
+    'Toast und Pille tragen Glas und brauchen deshalb einen Reduced-Transparency-Fallback');
+});
+
+/**
+ * Die Bedienzone der Vorratszeile ist so breit wie ihre KNOEPFE, nie wie ihr
+ * Inhalt.
+ *
+ * Anlass (Critique-Nachlauf 2026-07-30): der Stepper belegte bei 320px 167px der
+ * 262px Zeilenbreite, davon 71px allein das Mengenfeld (`min-width: 7ch`). Fuer
+ * den Namen blieben 31px - „Olivenoel extra vergine" auf 8 Zeilen, Zeilenhoehen
+ * 89 bis 369px.
+ *
+ * DIE ANTWORT DARAUF WAR BIS ZUM 12.08.2026 EIN UMBRUCH: unter 30rem
+ * Traegerbreite rueckte der Wert ueber die Knoepfe. Das rettete die Namensbreite
+ * und kostete rund 25px Hoehe in JEDER Zeile (gemessen 89,4px bei 390x844). Die
+ * Menge steht jetzt in der Metazeile, wo der Einkauf sie immer schon hat - die
+ * Bedienzone kann damit gar nicht mehr mit dem Text wachsen, und die
+ * Namensbreite haengt an keinem Breakpoint mehr.
+ *
+ * Geprueft wird deshalb die Zusage in ihrer neuen, staerkeren Form: in der
+ * Bedienzone steht KEIN Text. Der alte Mechanismus ist ausdruecklich
+ * ausgeschlossen - kaeme das Wertfeld zurueck, waere die Zusage still wieder
+ * gebrochen.
+ */
+test('die Bedienzone der Vorratszeile traegt keinen Text', () => {
   const shared = read('../public/styles/list-row.css');
   const pantryCss = read('../public/styles/pantry.css');
+  const pantryJs = read('../public/pages/pantry.js');
 
+  // Der geteilte Container bleibt: die Aufgabenzeile haengt ihr Etikett daran.
   const rows = shared.match(/\.list-rows\s*\{([^}]*)\}/)?.[1] ?? '';
   assert.match(rows, /container-type:\s*inline-size/,
     '.list-rows muss abfragbarer Container sein - ein Container kann sich selbst nicht abfragen');
   assert.match(rows, /container-name:\s*list-rows/, 'der Container braucht einen Namen');
 
-  assert.match(pantryCss, /@container list-rows \(max-width: 30rem\)/,
-    'die Kompaktform muss an der ZEILENbreite hängen, nicht an einem Viewport-Breakpoint');
-  const compact = pantryCss.slice(pantryCss.indexOf('@container list-rows'));
-  assert.match(compact, /\.pantry-stepper\s*\{[\s\S]*?flex-wrap:\s*wrap/,
-    'der Stepper muss umbrechen dürfen');
-  assert.match(compact, /width:\s*calc\(var\(--pantry-step-btn\) \* 2 \+ var\(--space-1\)\)/,
-    'ohne feste Breite wickelt der Flex-Container nie um: seine max-content-Breite ist die Summe aller drei Kinder');
-  assert.match(compact, /\.pantry-stepper__value\s*\{[\s\S]*?order:\s*-1/,
-    'der Wert rückt über die Knöpfe - per order, damit die Vorlesereihenfolge Minus/Wert/Plus bleibt');
-  assert.match(compact, /min-width:\s*0/, 'die 7ch des Mengenfelds müssen in der Kompaktform fallen');
+  // Der Stepper hat genau zwei Kinder, und beide sind Knoepfe.
+  assert.match(pantryJs, /stepper\.append\(minus,\s*plus\)/,
+    'in den Stepper gehoeren nur die beiden Knoepfe - ein Wert dazwischen macht seine Breite vom Text abhaengig');
+  /* UEBER DEN REGELSCANNER, NICHT UEBER EIN REGEX AUF DER DATEI: die Begruendung
+   * fuer den Umzug steht als KOMMENTAR in pantry.css und nennt den alten
+   * Selektor beim Namen. Ein `doesNotMatch` auf dem Dateitext las diesen
+   * Kommentar als Regel und meldete den Verstoss, den er beschreibt. */
+  const pantryRules = [...eachRule(pantryCss)];
+  const valueRule = pantryRules.find((r) => /\.pantry-stepper__value/.test(r.selector));
+  assert.equal(valueRule, undefined,
+    'das Wertfeld ist in die Metazeile gezogen; kaeme es zurueck, waere die Zusage still gebrochen');
+  const wrapping = pantryRules.filter((r) => /\.pantry-stepper\b/.test(r.selector) && /flex-wrap:\s*wrap/.test(r.body));
+  assert.deepEqual(wrapping.map((r) => r.selector), [],
+    'der Stepper darf nicht mehr umbrechen - der Umbruch war der Hoehentreiber der Zeile');
 
-  // Eine Variable, zwei Zeigerklassen: die Kompaktbreite muss mit derselben Zahl
-  // rechnen wie die Knöpfe selbst.
+  // Und die Menge steht wirklich in der Metazeile, nicht nur nicht mehr im
+  // Stepper: ohne diese Zeile waere sie ersatzlos verschwunden und der Guard
+  // trotzdem gruen.
+  assert.match(pantryJs, /quantity\.className = 'pantry-row__quantity'/,
+    'die Menge braucht einen eigenen Knoten in der Metazeile - der Stepper aktualisiert ihn');
+  assert.match(pantryJs, /meta\.appendChild\(quantity\)/,
+    'die Menge haengt in der Metazeile');
+  assert.match(pantryJs, /row\.querySelector\('\.pantry-row__quantity'\)/,
+    'refreshRowQuantity muss den neuen Knoten treffen, sonst friert die Anzeige beim Steppen ein');
+
+  /* WEGLASSEN STATT ABSCHNEIDEN. Auf einer Zeile mit Warenkorb bleiben 168px
+   * statt 220px, und „1 Flasche · MHD 23.12.2027" braucht 182px - mit Ellipse
+   * stand da „MHD 23.12….". Das MHD braucht dafuer einen EIGENEN Knoten; als
+   * Teil einer zusammengefuegten Zeichenkette kann CSS es nicht weglassen. */
+  assert.match(pantryJs, /expiry\.className = 'pantry-row__expiry'/,
+    'das MHD braucht einen eigenen Knoten, sonst kann es nur abgeschnitten statt weggelassen werden');
+  assert.match(pantryJs, /expiry\.textContent = ` · \$\{t\('pantry\.bestBefore'/,
+    'das Trennzeichen gehoert IN den Knoten - sonst bleibt beim Weglassen ein einsames Mittelpunkt-Zeichen stehen');
+  assert.match(
+    pantryCss,
+    /@container list-rows \(max-width:[^)]+\)\s*\{\s*\.pantry-row:has\(\.pantry-row__cart\) \.pantry-row__expiry\s*\{\s*display:\s*none/,
+    'das MHD faellt auf der schmalen Zeile MIT Warenkorb weg - an der Traegerbreite, nicht am Viewport',
+  );
+
+  // Eine Variable, zwei Zeigerklassen: die Knopfgroesse wechselt mit der
+  // Zeigerfaehigkeit und wird nicht doppelt gepflegt.
   assert.match(pantryCss, /--pantry-step-btn:\s*var\(--target-md\)/, 'Zeiger: --target-md');
   assert.match(pantryCss, /@media \(hover: none\)\s*\{\s*\.pantry-stepper\s*\{\s*--pantry-step-btn:\s*var\(--target-base\)/,
     'Touch: --target-base, gesetzt an derselben Variable');
@@ -3945,7 +4809,11 @@ test('Tasks toolbar keeps secondary controls visible instead of an overflow slid
   // umbrechender Kopf plus sichtbare Filterzeile.
   assert.doesNotMatch(tasksPage, /<details class="tasks-toolbar__secondary"/);
   assert.doesNotMatch(tasksCss, /tasks-toolbar__secondary/);
-  assert.match(tasksPage, /class="page-toolbar page-toolbar--wrap tasks-toolbar"/);
+  // Auf die ABSICHT prüfen, nicht auf die wörtliche Klassenkette: die stand
+  // hier als ein String und schlug fehl, sobald der Kopf einen weiteren
+  // Modifier bekam (`--narrow`, Critique 2026-08-13) - eine Zusicherung, die
+  // eine Reihenfolge festnagelt, prüft die Reihenfolge, nicht die Sache.
+  assert.match(tasksPage, /class="page-toolbar[^"]*\bpage-toolbar--wrap\b[^"]*\btasks-toolbar\b/);
 
   // Ansichtswechsel bleibt im Kopf, Gruppierung wandert in die Filterzeile.
   assert.match(tasksPage, /<div class="page-toolbar__actions">[\s\S]*id="view-toggle"[\s\S]*id="btn-bulk-select"/);
@@ -4216,18 +5084,52 @@ test('polished rounded cards use subtle full borders instead of thick accent cap
   assert.doesNotMatch(housekeepingCard, /border-top:\s*3px/);
 });
 
-test('hardening keeps Birthday cards bounded with extreme localized content', () => {
+/**
+ * Die Zusage ist dieselbe geblieben, der Mechanismus nicht.
+ *
+ * Bis zum Zeilenschnitt hielt die Geburtstagszeile extreme Inhalte aus, indem
+ * sie UMBRACH: `overflow-wrap: anywhere` am Namen und an der Notiz, dazu eine
+ * 640px-Regel, die die Namenszeile umbrechen liess. Genau das machte die Zeile
+ * dreizeilig und 121,6px hoch. Sie kappt jetzt, wie `.contact-item__name` im
+ * Nachbarmodul derselben Familie es immer getan hat.
+ *
+ * Geprueft wird deshalb die ZUSAGE - kein Inhalt sprengt die Zeile - und nicht
+ * mehr das alte Mittel. Der alte Mechanismus ist zusaetzlich AUSGESCHLOSSEN:
+ * kaeme `overflow-wrap: anywhere` zurueck, waere die Kappung wirkungslos und
+ * die Zeile stuende wieder zweizeilig da, ohne dass eine Zusicherung bricht.
+ */
+test('hardening keeps Birthday rows on one line with extreme localized content', () => {
   const birthdays = read('../public/styles/birthdays.css');
 
-  assert.match(birthdays, /\.birthday-item__body\s*\{[\s\S]*min-width:\s*0/);
-  assert.match(birthdays, /\.birthday-item__name\s*\{[\s\S]*overflow-wrap:\s*anywhere/);
-  assert.match(birthdays, /\.birthday-item__name\s*\{[\s\S]*unicode-bidi:\s*plaintext/);
-  assert.match(birthdays, /\.birthday-item__notes\s*\{[\s\S]*overflow-wrap:\s*anywhere/);
-  assert.match(birthdays, /\.birthday-item__notes\s*\{[\s\S]*unicode-bidi:\s*plaintext/);
-  assert.match(
-    birthdays,
-    /@media \(max-width:\s*640px\)[\s\S]*\.birthday-item__row\s*\{[\s\S]*flex-wrap:\s*wrap/
-  );
+  for (const part of ['__name', '__meta', '__notes']) {
+    const body = cssRuleBody(birthdays, `.birthday-item${part}`);
+    assert.ok(body, `.birthday-item${part} muss eine Regel haben`);
+    assert.match(body, /overflow:\s*hidden/,
+      `.birthday-item${part} muss ueberlaufenden Inhalt kappen statt die Zeile zu dehnen`);
+    assert.doesNotMatch(body, /overflow-wrap:\s*anywhere/,
+      `.birthday-item${part} darf nicht wieder umbrechen - das war der Hoehentreiber`);
+  }
+  // Die Leserichtung bleibt pro Feld erhalten: ein arabischer Name in einer
+  // lateinischen Liste ist der Anlass, und der ist von der Kappung unberuehrt.
+  for (const part of ['__name', '__meta', '__notes']) {
+    assert.match(cssRuleBody(birthdays, `.birthday-item${part}`), /unicode-bidi:\s*plaintext/);
+  }
+  // Der Name darf nicht umbrechen, sonst ist die Zeile wieder zweizeilig.
+  assert.match(cssRuleBody(birthdays, '.birthday-item__name'), /white-space:\s*nowrap/);
+  // Und die Notiz haengt an der BREITE, nicht am Geraet.
+  assert.match(birthdays, /@container birthdays-list \(min-width:[^)]+\)\s*\{\s*\.birthday-item__notes/,
+    'die Notiz erscheint ueber einen Container-Query am Traeger, nicht ueber einen Viewport-Breakpoint');
+  // Der `container-type` kommt seit dem Umzug auf `.row-carrier` aus dem
+  // geteilten Traeger (list-row.css) - hier stand er ein zweites Mal und war
+  // Teil des Nachbaus, der dieser Liste das Lesemass gekostet hat. Geprueft
+  // wird deshalb die UEBERNAHME plus die Zusicherung an ihrem einen Ort, und
+  // dass der eigene Container-Name daneben ausdruecklich stehen bleibt.
+  assert.match(read('../public/pages/birthdays.js'), /class="row-carrier birthdays-list"/,
+    'die Liste traegt den geteilten Traeger, statt ihn nachzubauen');
+  assert.match(cssRuleBody(read('../public/styles/list-row.css'), '.row-carrier'), /container-type:\s*inline-size/,
+    'ohne Container am Traeger fragt der Query ins Leere und die Notiz bliebe fuer immer aus');
+  assert.match(cssRuleBody(birthdays, '.birthdays-list'), /container-name:\s*birthdays-list list-rows/,
+    'beide Namen ausdruecklich - sonst gewinnt der spaeter geladene und der andere ist lautlos tot');
 });
 
 test('hardening uses logical alignment for RTL-sensitive adapted controls', () => {
@@ -6202,11 +7104,41 @@ test('audited profile, birthday, navigation, and budget controls meet mobile tou
   // ueberschreiben.
   assert.match(layout, /\n\.btn\s*\{[\s\S]*min-height:\s*var\(--target-lg\)/);
   assert.doesNotMatch(budget, /\.budget-nav__today\s*\{[^}]*min-height/);
-  assert.match(
-    contacts,
-    /@media \(max-width:\s*767px\)[\s\S]*\.contact-filter-chip\s*\{[\s\S]*min-height:\s*var\(--target-lg\)/,
-  );
-  assert.match(housekeeping, /\.housekeeping-log-action\s*\{[\s\S]*min-height:\s*var\(--target-lg\)/);
+  /* Der Kategorie-Chip der Kontakte holt seine 48px seit dem Umzug aus
+   * `.filter-chip` (filter-chip.css) - und zwar auf JEDER Breite, nicht nur
+   * unter 768px. Vorher war er ein Nachbau mit hartkodiertem `min-height: 30px`
+   * und stand am Desktop auf 31px, während jeder andere Filterchip der App 48px
+   * hoch war (Critique 2026-08-13). Geprüft wird deshalb die ÜBERNAHME der
+   * geteilten Klasse plus deren Zusage, nicht mehr die alte Schreibweise im
+   * Modul-Stylesheet - und dass das Modul die Zahl nicht wieder unterbietet. */
+  assert.match(read('../public/pages/contacts.js'), /class="filter-chip contact-filter-chip/);
+  assert.match(read('../public/styles/filter-chip.css'), /\.filter-chip\s*\{[\s\S]*min-height:\s*var\(--target-lg\)/);
+  assert.doesNotMatch(contacts, /\.contact-filter-chip\s*\{[^}]*min-height/);
+  /* Die Besuchszeilen der Haushaltshilfe trugen ihre Zielgroesse selbst
+   * (`.housekeeping-log-action { min-height: var(--target-lg) }`) und dazu ein
+   * hartkodiertes 17px-Icon. Sie nehmen jetzt `.row-action`, dessen 48px drei
+   * Zeilen weiter oben zugesichert sind - geprueft wird deshalb die UEBERNAHME,
+   * nicht noch einmal die Zahl.
+   *
+   * Beide Listen, denn es sind zwei: die letzten Besuche auf der Uebersicht und
+   * das Protokoll im Personal-Tab. Die erste umzustellen und die zweite zu
+   * vergessen war genau der Fehler, den dieser Guard verhindern soll. */
+  const housekeepingPage = read('../public/pages/housekeeping.js');
+  assert.doesNotMatch(housekeeping, /\.housekeeping-log-action/,
+    'die Besuchszeile darf keine eigene Aktions-Klasse mit eigener Zielgroesse wieder einfuehren');
+
+  /* JEDER Besuchsknopf, nicht IRGENDEINER. Der erste Entwurf suchte
+   * `class="row-action"[^>]*data-edit-visit=` und war damit blind: er wurde
+   * schon vom Knopf der zweiten Liste gruen gemacht, waehrend der erste noch
+   * der alte war - also genau in dem Zustand, in dem diese Aenderung eine
+   * Stunde lang war. Gezaehlt wird deshalb ueber alle Fundstellen. */
+  const visitButtons = [...housekeepingPage.matchAll(/<button\b([^>]*\bdata-(?:pay|edit|delete)-visit=[^>]*)>/g)]
+    .map((m) => m[1]);
+  assert.ok(visitButtons.length >= 4,
+    `erwartet: Besuchs-Knoepfe in beiden Listen, gefunden: ${visitButtons.length}`);
+  const eigenbau = visitButtons.filter((attrs) => !/class="row-action(?: row-action--danger)?"/.test(attrs));
+  assert.deepEqual(eigenbau, [],
+    'jeder Besuchs-Knopf traegt die geteilte .row-action-Grammatik, nicht nur der zuletzt angefasste');
 });
 
 test('remaining audited mobile controls use 48px touch targets', () => {
@@ -6215,7 +7147,16 @@ test('remaining audited mobile controls use 48px touch targets', () => {
   const budget = read('../public/styles/budget.css');
   const settings = read('../public/styles/settings.css');
 
-  assertRuleUsesToken(tasks, '.filter-toggle-btn', 'min-height', '--target-lg', '../public/styles/tasks.css');
+  // Der Filter-Toggle trägt seine 48px seit der Chip-Zusammenführung nicht mehr
+  // selbst: er war eine zeichengleiche Kopie von .filter-chip (vierzehn
+  // Deklarationen, inklusive des `transition: all`, das am Chip längst ausgebaut
+  // war) und ist jetzt einer. Geprüft wird deshalb die ZUSAGE an ihrem einen
+  // Ort - und die Kette dorthin, denn ohne die Klasse im Markup erreicht die
+  // Regel diesen Knopf nicht und der Guard bliebe grün, während das Ziel
+  // schrumpft.
+  assertRuleUsesToken(read('../public/styles/filter-chip.css'), '.filter-chip', 'min-height', '--target-lg', '../public/styles/filter-chip.css');
+  assert.match(read('../public/pages/tasks.js'), /toggleBtn\.className\s*=\s*`filter-chip filter-toggle-btn/);
+  assert.doesNotMatch(tasks, /\.filter-toggle-btn\s*\{[^}]*min-height/);
   // „Heute" (Kalender) holt seine 48px aus .btn - siehe die Begruendung beim
   // Budget-Zwilling im Guard darueber.
   assert.doesNotMatch(calendar, /\.cal-toolbar__today\s*\{[^}]*min-height/);
@@ -6267,18 +7208,32 @@ test('contacts bulk selection is opt-in and hidden by default', () => {
   const contactsPage = read('../public/pages/contacts.js');
   const contactsCss = read('../public/styles/contacts.css');
 
-  // Toggle in der Toolbar + Auswahl-Leiste, die per hidden startet (Default clean)
+  // Toggle in der Toolbar; der Auswahlmodus startet aus.
   assert.match(contactsPage, /id="contacts-select-btn"/);
-  assert.match(contactsPage, /id="contacts-selectbar"[\s\S]*?hidden>/);
+  assert.match(contactsPage, /selectMode:\s*false/);
+
+  /* DIE AUSWAHL-LEISTE IST DIE GETEILTE PILLE (Critique 2026-08-13).
+   *
+   * Hier stand `id="contacts-selectbar"[\s\S]*?hidden>` plus die zwei
+   * CSS-Zusicherungen dazu. Sie hielten eine Leiste im Fluss der Seite fest,
+   * die im Auswahlmodus rund 120px Chrome ueber die Liste schob - genau der
+   * Defekt, wegen dessen die Pille gebaut wurde. Die Zusicherung war richtig
+   * und ihr Gegenstand falsch; geprueft wird jetzt dieselbe Sache am neuen
+   * Bauteil: es gibt keine eigene Leiste mehr, die Aktion kommt aus der Pille,
+   * und sie steht nur im Auswahlmodus. */
+  assert.doesNotMatch(contactsPage, /contacts-selectbar/,
+    'die eigene Auswahlleiste ist entfallen - die Sammelaktion ist die geteilte Pille');
+  assert.doesNotMatch(contactsCss, /\.contacts-selectbar/,
+    'und ihre Regeln stehen nicht mehr im Modul-Stylesheet');
+  assert.match(contactsPage, /from '\/utils\/bulk-pill\.js'/);
+  assert.match(contactsPage, /if \(!state\.selectMode\) \{ clearBulkPill\(\); return; \}/,
+    'ohne Auswahlmodus steht keine Pille');
+
   // Sammel-Löschen mit Undo-Toast
   assert.match(contactsPage, /async function deleteSelected/);
   assert.match(contactsPage, /bulkDeletedToast/);
   // Familien-Kontakte bleiben nicht wählbar (deaktivierte Checkbox)
   assert.match(contactsPage, /c\.family_user_id \? ' disabled' : ''/);
-  assert.match(contactsCss, /\.contacts-selectbar\s*\{/);
-  // display:flex würde das hidden-Attribut schlagen — der [hidden]-Guard hält die
-  // Leiste im Default-Zustand wirklich unsichtbar.
-  assert.match(contactsCss, /\.contacts-selectbar\[hidden\]\s*\{[\s\S]*display:\s*none/);
 });
 
 test('documents and navigation settings use progressive disclosure instead of stacked control cards', () => {
@@ -6537,14 +7492,40 @@ test('page-inline-pad contract holds across every stylesheet (#577)', () => {
 
   // Rail-Aliasse aus dem Markup lesen. glass.css traf `.tasks-toolbar`, nicht
   // `.page-toolbar` - ein Scan, der nur den Basisnamen kennt, ist dafür blind.
+  //
+  // WAS EIN KLASSENNAME IST, WIRD GEPRÜFT, NICHT ANGENOMMEN. Der Scan las bis
+  // zum nächsten `"` und nahm jedes Whitespace-Stück als Klasse. Eine
+  // Interpolation im Attribut (`class="... ${x ? 'a' : ''}"`) lieferte ihm
+  // damit `?`, `===` und `'list'` als Rail-Aliasse - und `.?` traf als Regex
+  // anschliessend jeden Selektor jeder Datei. Beide Zusicherungen dieses Tests
+  // schlugen daraufhin an Stellen fehl, die niemand angefasst hatte
+  // (auth.css `.auth-page`, und im Nachbartest jedes Glas-Element „über .?").
+  // Ein Scanner, der Müll aufnimmt, meldet Befunde am falschen Ort - teurer
+  // als einer, der gar nichts findet.
+  const CLASS_NAME = /^-?[A-Za-z_][\w-]*$/;
   const rails = new Set(['.page-toolbar', '.sub-tabs-bar']);
+  const addRails = (classList, file) => {
+    const parts = classList.split(/\s+/).filter(Boolean);
+    // Eine Interpolation ist kein unbekannter Klassenname, sondern ein
+    // Attribut, das dieser Scan nicht lesen kann. Das ist ein Fehler im
+    // Markup-Stil, nicht im Scan: die Klassenliste eines Rails gehört
+    // statisch ins Attribut, ihr Wechsel in ein `classList.toggle`.
+    assert.ok(!classList.includes('${'),
+      `${file}: die Klassenliste eines page-toolbar-Rails enthält eine Interpolation `
+      + `("${classList.slice(0, 60)}…") - dieser Scan liest sie statisch, und die `
+      + 'Bruchstücke landen sonst als Rail-Aliasse in jeder Zusicherung darunter');
+    parts.forEach((c) => {
+      assert.match(c, CLASS_NAME, `${file}: "${c}" ist kein Klassenname`);
+      rails.add(`.${c}`);
+    });
+  };
   for (const file of walkJsFiles('../public/pages/')) {
     const src = stripCssComments(read(file));
     for (const [, classList] of src.matchAll(/class="([^"]*\bpage-toolbar\b[^"]*)"/g)) {
-      classList.split(/\s+/).filter(Boolean).forEach((c) => rails.add(`.${c}`));
+      addRails(classList, file);
     }
     for (const [, classList] of src.matchAll(/className\s*=\s*'([^']*\bpage-toolbar\b[^']*)'/g)) {
-      classList.split(/\s+/).filter(Boolean).forEach((c) => rails.add(`.${c}`));
+      addRails(classList, file);
     }
   }
   for (const util of ['kitchen-tabs', 'health-tabs']) {
@@ -6805,9 +7786,97 @@ test('budget bars animate with transforms instead of layout-driving widths', () 
   assert.doesNotMatch(budgetCss, /transition:\s*width/);
   assert.match(budgetCss, /\.budget-bar-row__fill\s*\{[\s\S]*transform:\s*scaleX\(var\(--bar-scale,\s*0\)\)[\s\S]*transition:\s*transform/);
   assert.match(budgetCss, /\.budget-loan-card__progress span\s*\{[\s\S]*transform:\s*scaleX\(var\(--bar-scale,\s*0\)\)/);
-  assert.match(budgetPage, /style="--bar-scale:\$\{pct\s*\/\s*100\}"/);
+  // Die Laenge kommt aus --bar-scale, nicht aus einer eingesetzten Breite.
+  // Frueher stand hier die woertliche Schreibweise `${pct / 100}` - ein Guard
+  // ueber einen Ausdruck statt ueber seine Absicht, der beim ersten Umbau des
+  // Ausdrucks feuerte, obwohl die Zusicherung unberuehrt war.
+  assert.match(budgetPage, /class="budget-bar-row__fill [^"]*" style="--bar-scale:\$\{/);
   assert.match(budgetPage, /style="--bar-scale:\$\{paidPct\s*\/\s*100\}"/);
   assert.doesNotMatch(budgetPage, /style="width:\$\{(?:pct|paidPct)\}%/);
+});
+
+/* Ein Balken TRAEGT einen Wert, er zeigt nicht nur, dass es ihn gibt.
+ *
+ * Der Anlass: `Math.max(6, Math.round(rawPct))` gab jeder Kategorie unter rund
+ * 6 % des Maximums denselben Balken - gemessen rendern -234,98 €, -157,50 €,
+ * -153,49 € und -25,00 € alle vier exakt 25,9px, obwohl zwischen erstem und
+ * letztem das 9,4-Fache liegt (Critique 2026-08-13). Der Boden war selbst
+ * einmal ein Audit-Fix gegen "wirkt leer" und hat ein Kosmetikproblem gegen
+ * eine Falschaussage getauscht.
+ *
+ * Der Guard prueft den SCHADEN, nicht den Fix: kein Prozentboden im Anteil,
+ * egal wie er geschrieben ist. Sichtbar bleiben darf der Zwerg - aber als
+ * LAENGE im CSS, wo er nichts an der Proportion aendert. Und er deckt BEIDE
+ * Dateien, die diese Zeile bauen: budget-stats.js trug denselben Boden und
+ * stand unter keinem Guard. */
+test('ein Kategoriebalken bleibt proportional - kein Prozentboden im Anteil', () => {
+  const budgetCss = read('../public/styles/budget.css');
+  const builders = ['../public/pages/budget.js', '../public/pages/budget-stats.js'];
+
+  for (const file of builders) {
+    const src = read(file);
+    assert.ok(
+      src.includes('budget-bar-row__fill'),
+      `${file} baut keine Kategoriezeile mehr - Guard-Korpus pruefen, nicht die Zusicherung streichen`,
+    );
+    const scaleExprs = [...src.matchAll(/--bar-scale:\$\{([^}]+)\}/g)].map((m) => m[1]);
+    assert.ok(scaleExprs.length > 0, `${file}: kein --bar-scale gefunden`);
+    for (const expr of scaleExprs) {
+      /* DER BODEN STEHT NICHT IN DER INTERPOLATION, SONDERN IN DER ZUWEISUNG.
+       * Die erste Fassung dieses Guards prueffte `${…}` selbst und war gegen
+       * den Anlassfall gruen: dort stand `${pct / 100}`, und `Math.max(6, …)`
+       * lag eine Zeile darueber an `const pct`. Genau die Blindheit, die dieses
+       * Repo fuenfmal in Folge produziert hat. Also der Variablen folgen. */
+      const ident = expr.match(/^([A-Za-z_$][\w$]*)/)?.[1];
+      assert.ok(ident, `${file}: "${expr}" ist kein Bezeichner - Guard anpassen, nicht umgehen`);
+      /* ALLE Zuweisungen des Bezeichners, nicht die erste. Die zweite Fassung
+       * dieses Guards nahm `src.match(…)` und fand in budget.js das `const pct`
+       * aus `chartSummary()`, das sauber ist - waehrend das mit dem Boden 18
+       * Zeilen tiefer in `renderCategoryBars()` stand. Sie war gruen und haette
+       * genau die Haelfte des Anlassfalls durchgelassen. */
+      const decls = [...src.matchAll(new RegExp(`\\bconst\\s+${ident}\\s*=\\s*([^;]+);`, 'g'))];
+      assert.ok(decls.length > 0, `${file}: keine Zuweisung fuer "${ident}" gefunden`);
+      /* DER BODEN WIRD GERECHNET, NICHT GELESEN.
+       *
+       * Die erste Fassung prueffte `/Math\.max\(\s*[1-9]/` - eine Regel ueber
+       * die SCHREIBWEISE der alten Einheit. Derselbe Commit hat den Anteil aber
+       * von Prozent (0..100) auf einen Bruch (0..1) umgestellt: ein
+       * wiedereingefuehrter Boden hiesse jetzt `Math.max(0.06, …)`, faengt mit
+       * einer Null an und waere durchgelaufen. Der Guard war blind fuer genau
+       * die Einheit, die sein eigener Commit eingefuehrt hat - zum dritten Mal
+       * dieselbe Blindstelle an einem Tag (PR-Review #754).
+       *
+       * Also: jedes numerische erste Argument von `Math.max` in dieser
+       * Zuweisung muss NULL sein. Das ist einheitenfrei und laesst
+       * `Math.max(0, …)` durch, das gegen negativ klemmt und nichts behauptet. */
+      for (const decl of decls) {
+        for (const m of decl[1].matchAll(/Math\.max\(\s*(-?\d+(?:\.\d+)?)/g)) {
+          assert.equal(
+            Number(m[1]), 0,
+            `${file}: "const ${ident} = ${decl[1].trim()}" klemmt den Anteil bei ${m[1]} `
+            + 'nach oben von null weg. Ein Mindestbalken ist eine Laenge (min-inline-size im '
+            + 'CSS), kein Anteil - sonst zeichnet er ungleiche Betraege gleich. '
+            + 'Math.max(0, …) bleibt erlaubt.',
+          );
+        }
+      }
+    }
+  }
+
+  // Die Gegenprobe: der Mindestbalken existiert, steht im CSS und ist
+  // abschaltbar (eine Kategorie mit Saldo null bekommt keinen Stummel).
+  assert.match(
+    budgetCss,
+    /min-inline-size:\s*calc\(var\(--bar-visible,\s*0\)\s*\*\s*var\(--space-0h\)\)/,
+    'der sichtbare Mindestbalken muss als Laenge im CSS stehen',
+  );
+  for (const file of builders) {
+    assert.match(
+      read(file),
+      /--bar-visible:\$\{[^}]*!==\s*0[^}]*\}/,
+      `${file}: --bar-visible muss aus dem Saldo kommen, damit eine Nullkategorie keinen Stummel bekommt`,
+    );
+  }
 });
 
 test('dashboard and task progress bars animate with transforms instead of widths', () => {
@@ -6851,6 +7920,140 @@ test('toolbar "new" buttons are hidden via a shared class, not an ID list (audit
     assert.ok(btn, `${file} must keep #${id}`);
     assert.match(btn[0], /toolbar-new-btn/, `${file} #${id} must carry the .toolbar-new-btn class`);
   }
+});
+
+/**
+ * EIN REGISTER FUER DIE PRIMAERAKTION (12.08.2026).
+ *
+ * Nachdem Punkt 7b die Knoepfe am Zeigergeraet in den Modulkopf geholt hatte,
+ * standen an derselben Stelle DREI Schreibweisen fuer dieselbe Handlung -
+ * gemessen bei 1440px: die handgeschriebenen Knoepfe sagten „Neue Aufgabe"
+ * (150px), die angedockten FABs erbten ihr `aria-label` als Satz
+ * („Geburtstag hinzufuegen", 216px), und Kalender und Budget sagten gar nichts.
+ *
+ * Die Regel: der sichtbare Text ist das NOMEN der Sache aus `newLabel.*`, das
+ * Verb traegt das Plus-Zeichen; das ausfuehrliche `aria-label` bleibt am Knopf.
+ * Gemessen passt das Nomen bei 1024-1920px in jeden Kopf, auch in die beiden
+ * randvollen - die Saetze taten das nicht („Neuer Eintrag" brach den
+ * Budget-Kopf bei 1440 auf zwei Zeilen).
+ *
+ * Der Guard prueft die REGEL ueber alle Seiten, nicht eine Liste von Dateien:
+ * eine neue Seite mit einem FAB faellt hier auf, ohne dass jemand ihn
+ * eintraegt. Kommentare werden vorher entfernt - ein Guard, der Kommentare
+ * liest, findet die Beschreibung eines Fehlers als den Fehler.
+ */
+test('every primary "new" control names its noun from newLabel.* (one register)', () => {
+  const stripJs = (src) => src
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/^[ \t]*\/\/.*$/gm, '');
+
+  const deLocale = JSON.parse(read('../public/locales/de.json'));
+  const pages = walkJsFiles('../public/pages/').filter((p) => p.endsWith('.js'));
+
+  const fabs = [];
+  const toolbarButtons = [];
+  for (const path of pages) {
+    const src = stripJs(read(path));
+    for (const tag of src.match(/<button[^>]*class="[^"]*\bpage-fab\b[^"]*"[^>]*>/g) ?? []) {
+      fabs.push({ path, tag });
+    }
+    // Die zweite Schreibweise: per DOM-API gebaute FABs (Rezepte, Vorrat).
+    for (const block of src.match(/className\s*=\s*'page-fab'[\s\S]{0,400}/g) ?? []) {
+      fabs.push({ path, tag: block, built: true });
+    }
+    for (const tag of src.match(/<button[^>]*class="[^"]*\btoolbar-new-btn\b[^"]*"[^>]*>[\s\S]*?<\/button>/g) ?? []) {
+      toolbarButtons.push({ path, tag });
+    }
+  }
+
+  // Reichweite ZUERST festnageln: eine Zusicherung ueber eine leere Liste ist
+  // keine. Die Zahlen sind die am 12.08. gezaehlten Vorkommen.
+  assert.ok(fabs.length >= 12, `expected at least 12 .page-fab declarations, found ${fabs.length}`);
+  assert.ok(toolbarButtons.length >= 5, `expected at least 5 .toolbar-new-btn, found ${toolbarButtons.length}`);
+
+  const keyOf = (text) => text.match(/newLabel\.([A-Za-z]+)/)?.[1];
+
+  for (const { path, tag, built } of fabs) {
+    // Das Speed-Dial der Uebersicht ist ein Menue, kein Knopf: es dockt
+    // bewusst nicht an (siehe dockFabIntoToolbar) und braucht kein Nomen.
+    if (/id="fab-main"/.test(tag)) continue;
+    const attr = built ? /dataset\.dockLabel\s*=\s*t\('newLabel\.[A-Za-z]+'\)/ : /data-dock-label="\$\{t\('newLabel\.[A-Za-z]+'\)\}"/;
+    assert.match(tag, attr,
+      `${path}: jeder .page-fab braucht data-dock-label aus newLabel.* - ohne dockt er am Zeigergeraet still nicht an`);
+    const key = keyOf(tag);
+    assert.ok(deLocale.newLabel?.[key], `${path}: newLabel.${key} fehlt in de.json`);
+  }
+
+  for (const { path, tag } of toolbarButtons) {
+    assert.match(tag, /<span class="toolbar-new-btn__label">\$\{t\('newLabel\.[A-Za-z]+'\)\}<\/span>/,
+      `${path}: der sichtbare Text eines .toolbar-new-btn kommt aus newLabel.*, nicht aus einem aria-label-Satz`);
+    assert.match(tag, /aria-label="/, `${path}: das ausfuehrliche aria-label bleibt am Knopf`);
+    assert.doesNotMatch(tag, /\bbtn--icon\b/,
+      `${path}: ein beschrifteter Primaerknopf ist keine Icon-Kapsel mehr (Kalender und Budget waren die letzten zwei)`);
+    const key = keyOf(tag);
+    assert.ok(deLocale.newLabel?.[key], `${path}: newLabel.${key} fehlt in de.json`);
+  }
+
+  // Die geteilte FAB-Fabrik muss das Nomen DURCHREICHEN. Sie baut den Knopf
+  // fuer die drei Kontext-FABs (Gesundheit, Haushaltshilfe, Belohnungen) und
+  // ist der eine Ort, an dem ein kuenftiger FAB entsteht, ohne durch die
+  // Seiten-Pruefung oben zu laufen. Ohne diesen Parameter waere Andocken fuer
+  // jeden Fabrik-Knopf per Konstruktion ausgeschlossen - still.
+  // Geprueft wird die SIGNATUR, nicht der Rumpf: ein `dockLabel` irgendwo im
+  // Funktionskoerper stand auch noch da, nachdem der Parameter aus der
+  // Destrukturierung entfernt war - der erste Entwurf dieses Guards blieb
+  // deshalb gruen, obwohl der Aufrufer nichts mehr uebergeben konnte.
+  const fabFactory = stripJs(read('../public/utils/fab.js'));
+  for (const fn of ['pageFabHtml', 'createPageFab', 'setPageFabAction']) {
+    const signature = fabFactory.match(new RegExp(`export function ${fn}\\s*\\([^)]*\\)`));
+    assert.ok(signature, `${fn} not found in utils/fab.js`);
+    assert.match(signature[0], /dockLabel/, `utils/fab.js ${fn} muss dockLabel als Parameter annehmen`);
+  }
+  // Und ein Nomen, das zum vorigen Tab gehoerte, muss weichen statt zu bleiben.
+  assert.match(fabFactory, /else delete fab\.dataset\.dockLabel/,
+    'setPageFabAction muss ein leeres dockLabel als Entfernen behandeln, nicht als "unveraendert"');
+
+  // Und die Shell-Seite der Regel: der angedockte Knopf nimmt data-dock-label,
+  // nicht das aria-label - sonst kaeme der lange Satz zurueck.
+  const router = stripJs(read('../public/router.js'));
+  const dock = router.match(/function dockFabIntoToolbar[\s\S]*?\n}/);
+  assert.ok(dock, 'dockFabIntoToolbar not found');
+  assert.match(dock[0], /fab\.dataset\.dockLabel/, 'dockFabIntoToolbar muss data-dock-label lesen');
+  assert.doesNotMatch(dock[0], /getAttribute\('aria-label'\)/,
+    'dockFabIntoToolbar darf den sichtbaren Text nicht mehr aus aria-label nehmen');
+  assert.match(dock[0], /if\s*\(!label\)\s*return false/,
+    'ohne data-dock-label dockt der Knopf gar nicht an, statt auf den langen Satz zurueckzufallen');
+});
+
+/**
+ * Der Einkauf ist das einzige Modul ohne Kopf und damit ohne Andock-Ziel. Sein
+ * FAB weicht am Zeigergeraet der Quick-Add-Zeile - und zwar unter DERSELBEN
+ * Bedingung, die die Zeile aufklappt, nicht unter einer zweiten Zahl.
+ */
+test('shopping hides its FAB exactly where the quick-add row opens', () => {
+  const css = read('../public/styles/shopping.css');
+  // JEDE Regel, die diesen Knopf ueberhaupt erwaehnt, steht unter derselben
+  // Bedingung - das ist die eigentliche Zusicherung, und sie gilt seit
+  // Etappe 6 fuer zwei Regeln: die Ausblendung und die Nullung ihres
+  // Nachlaufs. Eine Paarung, die unter verschiedenen Bedingungen stuende,
+  // waere genau der Widerspruch, den sie aufloest.
+  const regeln = [...eachRule(css)].filter((r) => /#fab-new-item/.test(r.selector));
+  for (const rule of regeln) {
+    assert.match(rule.at.join(' '), /\(hover:\s*hover\)/,
+      'der FAB weicht unter (hover: hover) - derselben Bedingung, die .quick-add aufklappt');
+  }
+  const versteckt = regeln.filter((r) => /display:\s*none/.test(r.body));
+  assert.equal(versteckt.length, 1,
+    'erwartet genau eine Regel, die #fab-new-item am Zeigergeraet ausblendet');
+  assert.ok(regeln.some((r) => /--fab-safe-zone:\s*0/.test(r.body)),
+    'und daneben die, die ihm seinen Nachlauf nimmt - sonst reserviert der '
+    + 'Scrollport 96px fuer einen Knopf ohne Flaeche (Etappe 6)');
+
+  // Der Knoten bleibt: zwei Aufrufer druecken die Primaeraktion ueber
+  // `.page-fab`.click(), und ein JS-Klick feuert auch auf display:none.
+  const page = read('../public/pages/shopping.js');
+  assert.match(page, /class="page-fab" id="fab-new-item"/,
+    'der FAB wird versteckt, nicht entfernt - sonst stirbt der click()-Aufruf still');
 });
 
 test('login keeps username-style input hints, not email (audit 1.6 — login is by username)', () => {
@@ -8022,7 +9225,7 @@ test('ein Dialog ueber einem offenen Modal nutzt confirmOverModal', () => {
  *
  * Grenzen der Regel: Element-Fabriken sind ausgenommen - sie befuellen ein
  * losgeloestes Element und geben es zurueck, materialisieren laesst sich das
- * erst am eingehaengten Baum (pantry.js: `rowEl`, `cartEl`, `bulkBarEl`).
+ * erst am eingehaengten Baum (pantry.js: `rowEl`, `cartEl`).
  * Funktionen mit genau einem Aufrufer ebenso: dort ist die Zustaendigkeit
  * eindeutig und nachlesbar (calendar.js: `renderAgendaView`). Beides faellt auf,
  * sobald ein zweiter Aufrufer dazukommt.
@@ -8898,6 +10101,15 @@ test('die Groesse des Icon-Knopfs gehoert der Shell', () => {
  * (Kalender, Budget, Wochenplan) rendert den Chevron dagegen als blossen Inhalt
  * eines `.btn--icon` - dort IST der Chevron der Knopf, und die Regel meint ihn
  * nicht.
+ *
+ * DIE DRITTE ROLLE (2026-08-13): ein AUFKLAPP-Zeiger. Er sitzt im Knopf, der
+ * `aria-expanded` traegt, dreht sich mit dem Zustand und verspricht kein
+ * Anderswo, sondern Mehr-davon-hier. Der Ordner-Auslöser in den Dokumenten ist
+ * der erste Fall; er hat diese Zusicherung gerissen, weil sie ihn nicht kannte.
+ * Er traegt eine eigene Klasse aus demselben Grund wie die Zeilen-Affordanz
+ * (er muss gestylt werden), also trennt die Klasse hier nicht - `aria-expanded`
+ * am besitzenden Knopf tut es. Ein Chevron ohne diesen Zustand bleibt ein
+ * Navigationsversprechen und faellt weiter unter die Regel.
  */
 test('eine Zeile mit eigenen Aktionen verspricht keine Navigation', () => {
   const offenders = [];
@@ -8910,6 +10122,13 @@ test('eine Zeile mit eigenen Aktionen verspricht keine Navigation', () => {
       const chevron = literal.search(/class="[^"]*__chevron/);
       if (chevron === -1) continue;
       if (!/<button/.test(literal.slice(chevron))) continue;
+      // Der Knopf, IN dem der Chevron steht: das letzte <button vor ihm. Traegt
+      // er aria-expanded, ist der Chevron ein Aufklapp-Zeiger, kein Wegweiser.
+      const owner = literal.slice(0, chevron).lastIndexOf('<button');
+      if (owner !== -1) {
+        const ownerTag = literal.slice(owner, chevron);
+        if (/aria-expanded/.test(ownerTag) && !/<\/button>/.test(ownerTag)) continue;
+      }
       const name = literal.slice(chevron).match(/class="([^"]*__chevron[^"]*)"/)?.[1] ?? '?';
       offenders.push(`${file.replace(/^\.\.\//, '')}: ${name} steht in einer Zeile, die danach noch einen Knopf traegt`);
     }
@@ -10898,4 +12117,87 @@ test('ein Formularfeld traegt nur form-Klassen, die ein Stylesheet kennt', () =>
     + 'damit auf die Browservorgabe zurueck und reissen die Zielgroesse. Der Kanon '
     + 'heisst `input` bzw. `form-input` (layout.css, Abschnitt Form-Elemente); '
     + '`select.form-input` bringt dort auch das Chevron-Polster mit.');
+});
+
+/* --------------------------------------------------------------------------
+ * DAS AKTIVE SEGMENT IST UEBERALL DIESELBE PILLE.
+ *
+ * Ein segmentierter Umschalter zeigt seinen aktiven Zustand als erhabene
+ * Surface-Pille und traegt den Modulton NUR in der Tinte. Das Rezept steht in
+ * tokens.css (Abschnitt 6c) und heisst an jeder Fundstelle gleich:
+ *
+ *   background(-color): var(--seg-active-bg);
+ *   box-shadow:         var(--seg-active-shadow);
+ *   color:              color-mix(in srgb, <Akzent> var(--tint-ink), var(--color-text-primary));
+ *
+ * WARUM DIE TINTE NICHT AUCH EIN TOKEN IST: ein Custom Property, das
+ * `var(--module-accent)` enthaelt, wird dort aufgeloest, wo es DEKLARIERT ist.
+ * An `:root` gibt es keinen Modulton, also war ein `--seg-active-ink` in jedem
+ * Modul violett - gemessen, nicht vermutet. Die Zeile steht deshalb
+ * ausgeschrieben, und dieser Guard haelt sie zusammen: eine geteilte Regel ohne
+ * Guard ist eine wandernde Annahme.
+ *
+ * ZWEI RICHTUNGEN, weil eine allein nicht reicht:
+ *   (1) Vollstaendigkeit - wer die Pille nimmt, nimmt alle drei Zeilen. Sonst
+ *       steht irgendwo eine Pille ohne Schatten oder mit grauer Tinte.
+ *   (2) Rueckfall - kein aktiver Umschalter darf wieder deckend im Modulton
+ *       fuellen. Das ist die Richtung, die den Anlassfall trifft: auf /aufgaben
+ *       standen vier Grün-Behandlungen gleichzeitig im Bild.
+ * -------------------------------------------------------------------------- */
+
+// Ein Selektor, der den AKTIVEN Zustand eines segmentierten Umschalters meint.
+// Signatur statt Namensliste: Zustandsmarke (--active / .is-active / --selected)
+// UND ein Bauteilname aus der Umschalter-Familie im selben Selektor.
+const SEGMENT_ACTIVE_RE = /(?:^|[\s,>])\.[a-z][\w-]*(?:tab|seg|toggle|view-btn|switch)[\w-]*(?:--active|--selected|\.is-active|\.is-selected)/i;
+
+test('das aktive Segment ist ueberall dieselbe Pille', () => {
+  const styleDir = new URL('../public/styles/', import.meta.url);
+  const incomplete = [];
+  const refilled = [];
+  let seen = 0;
+
+  for (const file of readdirSync(styleDir).filter((f) => f.endsWith('.css') && f !== 'tokens.css')) {
+    for (const { selector, body } of eachRule(read(`../public/styles/${file}`))) {
+      const usesPill = /background(-color)?\s*:\s*var\(--seg-active-bg\)/.test(body);
+      const isSegment = SEGMENT_ACTIVE_RE.test(selector);
+
+      if (usesPill) {
+        seen += 1;
+        const missing = [];
+        if (!/box-shadow\s*:\s*var\(--seg-active-shadow\)/.test(body)) missing.push('box-shadow: var(--seg-active-shadow)');
+        // AUSNAHME, MECHANISCH STATT NAMENTLICH: eine Pille mit
+        // `pointer-events: none` traegt keinen Text - sie ist eine reine
+        // Flaeche, wie der gleitende Daumen des Rechte-Umschalters, und ihre
+        // Tinte sitzt zwangslaeufig am Geschwister darueber. Am Element
+        // ablesbar, nicht an seinem Namen.
+        const carriesText = !/pointer-events\s*:\s*none/.test(body);
+        if (carriesText && !/color\s*:\s*color-mix\([^;]*var\(--tint-ink\)[^;]*var\(--color-text-primary\)/.test(body)) {
+          missing.push('color: color-mix(… var(--tint-ink), var(--color-text-primary))');
+        }
+        if (missing.length) incomplete.push(`${file}: ${selector.trim()} - es fehlt ${missing.join(' und ')}`);
+      }
+
+      // Der Rueckfall: deckend im Modulton gefuellt plus Vivid-Tinte. Genau die
+      // Kombination, die bis 2026-08-12 in sechs Stylesheets stand.
+      if (isSegment
+        && /background(-color)?\s*:\s*var\(--(?:active-)?module-accent/.test(body)
+        && /color\s*:\s*var\(--color-ink-on-vivid\)/.test(body)) {
+        refilled.push(`${file}: ${selector.trim()}`);
+      }
+    }
+  }
+
+  // Eine Zusicherung ueber eine leere Liste ist keine: findet der Scanner die
+  // Pille nirgends, ist der Guard blind und nicht die App sauber.
+  assert.ok(seen >= 6, `Nur ${seen} Pillen-Regeln gefunden - liest der Scanner die Segment-Zustaende noch?`);
+
+  assert.deepEqual(incomplete.sort(), [],
+    'Diese Segment-Zustaende nehmen die Pille nur halb. Alle drei Zeilen gehoeren '
+    + 'zusammen (tokens.css, Abschnitt 6c) - eine Pille ohne Schatten ist auf dem '
+    + 'Well nicht als Zustand zu erkennen (gemessen 1.20:1 hell, 1.16:1 dunkel).');
+
+  assert.deepEqual(refilled.sort(), [],
+    'Diese Umschalter fuellen ihren aktiven Zustand wieder deckend im Modulton. '
+    + 'Der Ton gehoert genau einmal als FLAECHE (dem Filter-Chip) und einmal als '
+    + 'TINTE (dem Segment) - eine Behandlung pro Kontrolltyp.');
 });

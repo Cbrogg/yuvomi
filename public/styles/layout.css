@@ -222,6 +222,45 @@
   padding-block-end: var(--fab-safe-zone);
 }
 
+/* UND DIE PILLE BRAUCHT DENSELBEN NACHLAUF. Sie ist seit Etappe 5 eine fixierte
+ * Shell-Fläche über der Liste (siehe .list-bulkbar) und verdeckt am Scroll-Ende
+ * sonst genau die Zeilen, auf die sie sich bezieht - derselbe Defekt, den
+ * Sonde 18 für den FAB misst. Am Finger fällt --fab-safe-zone auf 0 (der FAB
+ * sitzt dort in der Nav-Kapsel), dort ist die Pillenzone der ganze Nachlauf.
+ *
+ * ZWEI REGELN STATT EINER SUMME: `:has()` trägt die Spezifität seines
+ * Arguments, eine Regel mit nur `:has(.list-bulkbar)` stünde UNTER der
+ * FAB-Regel darüber und bliebe wirkungslos, sobald ein FAB da ist. Und genau
+ * das ist der Normalfall - beide Seiten mit Pille haben einen. */
+.app-shell:has(.fab-layer .page-fab:not([hidden])):has(.list-bulkbar) .app-content {
+  padding-block-end: calc(var(--fab-safe-zone) + var(--bulk-pill-safe-zone));
+}
+
+.app-shell:not(:has(.fab-layer .page-fab:not([hidden]))):has(.list-bulkbar) .app-content {
+  padding-block-end: var(--bulk-pill-safe-zone);
+}
+
+/* UND DER NACHLAUF MUSS AN DAS, WAS WIRKLICH SCROLLT (Critique 2026-08-13).
+ *
+ * Die zwei Regeln darüber setzen ihn an `.app-content` - und genau dort scrollt
+ * bei den drei Modulen mit Pille gar nichts. Einkauf und Vorrat scrollen in
+ * `.list-scroller`, die Kontakte in `.contacts-list`; `.app-content` ist bei
+ * ihnen ein `overflow: hidden`-Rahmen um eine Flex-Spalte. Der Nachlauf landete
+ * damit an einer Box, die keinen Scroll-Ende-Zustand hat, und die Pille verdeckt
+ * am Listenende weiter die Zeilen, auf die sie sich bezieht: gemessen 16.334px²
+ * auf /contacts, 16.732px² auf /shopping. Eine Regel, die nie feuert, ist im
+ * Quelltext nicht von einer zu unterscheiden, die ihre Sache tut.
+ *
+ * `.has-bulk-safe-zone` ist die ROLLE „ich bin der Scrollport einer Seite, die
+ * eine Sammelaktions-Pille zeigt". Sie steht bewusst nicht als Liste von
+ * Modul-Selektoren hier - eine Allowlist über N Dateien deckt keine Regel ab,
+ * und dieses Repo hat das schon dreimal bezahlt. Stattdessen trägt jeder
+ * Scrollport sie selbst, und ein Guard prüft die Gegenrichtung: wer
+ * `setBulkPill` aufruft, muss sie vergeben haben. */
+.app-shell:has(.list-bulkbar) .has-bulk-safe-zone {
+  padding-block-end: var(--bulk-pill-safe-zone);
+}
+
 /* #main-content wird nach jeder Navigation programmatisch fokussiert, damit
  * Tastatur-/Screenreader-Fokus in die neue Seite springt (Skip-Link-Muster).
  * Das ist ein Region-Fokus-Ziel, kein interaktives Element — es darf keinen
@@ -375,32 +414,109 @@ html:has(.search-overlay--visible) yuvomi-install-prompt {
 /* ── More-Sheet ── */
 .more-sheet {
   position: fixed;
-  bottom: 0;
+  /* DAS BLATT HOERT UEBER DER LEISTE AUF, DIE ES SONST VERDECKT.
+   *
+   * Vorher lag es auf `bottom: 0` und damit UEBER der Tab-Leiste. Gemessen bei
+   * 390x844: `elementFromPoint` lieferte am Mittelpunkt des Mehr-Knopfs
+   * (x 266,6-329,0 / y 776,9-835,0) nach dem Oeffnen `.more-item--logout` -
+   * derselbe Pixel oeffnete das Blatt und beendete danach die Sitzung
+   * (Critique 2026-08-13, P0). Der Bestaetigungsdialog fing es ab; die Stelle
+   * blieb trotzdem falsch.
+   *
+   * EINE UNTERKANTE UEBER DER LEISTE MACHT DEN FEHLER UNMOEGLICH statt ihn
+   * abzupolstern: in dem Streifen liegt jetzt entweder der Mehr-Knopf selbst
+   * (tippt man ihn erneut, schliesst das Blatt) oder der Backdrop (der
+   * schliesst es auch). Derselbe Pixel oeffnet und schliesst - und kein
+   * Bedienelement des Blattes steht mehr dort, wo ein Ziel der Leiste war.
+   * Das ist zugleich das native Muster: der More-Tab legt sich nicht auf seine
+   * eigene Leiste. Ein Sicherheitsabstand als padding-bottom haette dieselben
+   * 76px gekostet und den Fehler nur eine Zeile weiter geschoben. */
+  bottom: var(--nav-bottom-height);
   left: 0;
   right: 0;
   background-color: var(--color-surface);
   border-top: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-  padding: var(--space-4) var(--space-4) calc(var(--space-4) + var(--safe-area-inset-bottom));
+  padding: var(--space-4);
   z-index: calc(var(--z-nav) + 2);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  transform: translateY(100%);
+  /* EIN BLATT, DAS AM UNTEREN RAND KLEBT, WAECHST NACH OBEN AUS DEM SCHIRM.
+   * Ohne diese Grenze mass es bei 320x568 eine Oberkante von -142,6px, und das
+   * Suchfeld lag komplett ausserhalb - per Tab erreichbar, per Auge nicht, und
+   * ohne jeden Scrollweg dorthin (Critique 2026-08-13, P0). Die --space-8 sind
+   * kein Rand, sondern der Beweis, dass es ein Blatt ist: der Streifen Seite
+   * darueber sagt, dass hinter dem Blatt noch etwas liegt, und ist die Flaeche,
+   * auf die man tippt, um es zu schliessen. dvh statt vh, weil die mobile
+   * Adressleiste die Hoehe waehrend der Sitzung aendert. */
+  max-block-size: calc(100dvh - var(--nav-bottom-height) - var(--space-8));
+  /* Die Ausfahr-Distanz rechnet die Leiste MIT. `translateY(100%)` schob das
+   * Blatt frueher exakt aus dem Bild, weil seine Unterkante der Bildschirmrand
+   * war; seit sie ueber der Tab-Leiste liegt, blieben genau deren 76px oben
+   * sichtbar - ein Streifen fremdes Blatt unter jeder Seite. Gefunden hat das
+   * der Screenshot, nicht die Sonde: die Sonde mass das OFFENE Blatt. */
+  transform: translateY(calc(100% + var(--nav-bottom-height)));
   transition: transform var(--duration-lg) var(--ease-out);
 }
 
-/* App-Launcher-Raster: farbige Modul-Icons als Helden, kein Kasten drumherum.
+/* Der Deckel gehoert dem Blatt, das Scrollen dem Koerper: Griff und Suche
+ * bleiben stehen, wo die Hand sie sucht, und nur die Gruppen wandern.
+ * `min-block-size: 0` ist Pflicht - ein Flex-Kind schrumpft sonst nicht unter
+ * seinen Inhalt, und die Grenze oben bliebe wirkungslos. */
+.more-sheet__body {
+  flex: 1 1 auto;
+  min-block-size: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* Der Sichtbarkeitsbeweis am Rand: die zwei Pixel Luft verhindern, dass der
+   * Fokusring der obersten Kachel am Scrollport abgeschnitten wird. */
+  padding-block: var(--space-0h);
+  margin-block: calc(-1 * var(--space-0h));
+}
+
+/* App-Launcher-Raster, nach Bereichen gruppiert.
  * 3 Spalten: bei 4 Spalten war die Zelle (~80px auf 375px-Viewports) schmaler
  * als „Haushaltshilfe" — jede Silbentrennung („Haushaltshil-fe") oder Ellipse
  * zerhackt dort den Modulnamen (Critique P1). Mit 3 Spalten (~109px) passt
- * jeder deutsche Modulname ungebrochen auf eine Zeile. */
+ * jeder deutsche Modulname ungebrochen auf eine Zeile.
+ *
+ * HIER STAND „kein Kasten drumherum". Die Kachel hat den Kasten jetzt, und
+ * zwar aus drei Gründen, die es damals nicht gab: sie macht die ganze Zelle
+ * zum Ziel statt nur Icon plus Text (die Großeltern-Seite der Zielgruppe), sie
+ * gibt dem Zählbadge eine Ecke, und in einem gruppierten Raster trennt sie die
+ * Bereiche mit. Der ursprüngliche Grund - das farbige Siegel soll der Held
+ * sein - bleibt gewahrt: --shadow-xs auf Surface ist die leiseste Fläche der
+ * App und tritt hinter das Siegel zurück. */
 .more-sheet__grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  column-gap: var(--space-2);
-  row-gap: var(--space-3);
-  margin-block: var(--space-1);
+  /* minmax(0, 1fr), nicht 1fr: `1fr` ist minmax(AUTO, 1fr) und laesst die
+   * laengste Kachel ihre Spalte breiter ziehen - bei 320px massen die drei
+   * Spalten 93,8 / 89,1 / 89,1px statt dreimal gleich. */
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+/* Ein Bereich ist die Überschrift PLUS sein Raster. Der Abstand über der
+ * Überschrift ist größer als der darunter - sie gehört zu dem, was folgt. */
+.more-sheet__group + .more-sheet__group {
+  margin-block-start: var(--space-4);
+}
+
+/* Satzschreibung, nicht Versalien. Es sind WORTWOERTLICH dieselben vier Woerter,
+ * die die Sidebar als `.nav-section-label` fuehrt (Planen · Haushalt · Menschen ·
+ * Finanzen), und DESIGN.md weist der Rolle "Navigations-Gruppierungslabel"
+ * Satzschreibung zu - mit der Begruendung, dass ganze Phrasen in Versal plus
+ * Tracking geschrien lesen. Die Sidebar folgte der Regel, dieses Blatt nicht:
+ * die zwei Flaechen, die dieselbe Navigation zeigen, waren an ihrer Typografie
+ * nicht als dieselbe Sache erkennbar (Critique 2026-08-13). */
+.more-sheet__group-label {
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  color: var(--color-text-tertiary);
+  margin-block-end: var(--space-2);
+  padding-inline: var(--space-1);
 }
 
 .more-sheet[aria-hidden="false"] {
@@ -410,6 +526,9 @@ html:has(.search-overlay--visible) yuvomi-install-prompt {
 /* ── More-Sheet Drag-Handle ── */
 .more-sheet__handle {
   grid-column: 1 / -1;
+  /* flex-shrink: 0, weil das Blatt seit der Obergrenze ein schrumpfender
+   * Flex-Container ist: bei 320px war der Griff auf 2,3px zusammengedrueckt. */
+  flex-shrink: 0;
   width: 36px;
   height: 4px;
   border-radius: var(--radius-full);
@@ -420,6 +539,7 @@ html:has(.search-overlay--visible) yuvomi-install-prompt {
 /* ── More-Sheet Suchleiste ── */
 .more-sheet__search {
   grid-column: 1 / -1;
+  flex-shrink: 0;
   appearance: none;
   display: flex;
   align-items: center;
@@ -595,25 +715,64 @@ html:has(.search-overlay--visible) yuvomi-install-prompt {
   }
 }
 
-/* ── More-Item: App-Icon (farbiges Icon = Held, kein Kasten) ── */
+/* ── More-Item: Modulkachel (Siegel = Held, Fläche = Ziel) ── */
 .more-item {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--space-2);
-  padding: 0;
-  background: none;
+  padding: var(--space-3) var(--space-1h) var(--space-2h);
+  background-color: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
   color: var(--color-text-secondary);
   text-decoration: none;
   border: none;
   cursor: pointer;
   font-family: inherit;
-  transition: color var(--transition-fast);
+  transition: color var(--transition-fast), background-color var(--transition-fast), transform var(--duration-xs) var(--ease-out);
   -webkit-tap-highlight-color: transparent;
 }
 
-.more-item:active .more-item__icon-well {
-  transform: scale(0.92);
+/* Gedrückt wird jetzt die KACHEL, nicht mehr nur das Siegel darin: das Ziel ist
+ * die ganze Fläche, also muss sie auch die Rückmeldung geben. */
+.more-item:active {
+  transform: scale(0.96);
+}
+
+/* Nur an einem echten Zeiger. Ohne die Abfrage blieb die zuletzt angetippte
+ * Kachel nach dem Tap auf --color-surface-hover stehen und behauptete "du bist
+ * hier", waehrend aria-current auf einer anderen lag - zwei widersprechende
+ * Ortsangaben, eine davon ein Rest (Critique 2026-08-13). */
+@media (hover: hover) {
+  .more-item:hover {
+    background-color: var(--color-surface-elevated-hover);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .more-item:active {
+    transform: none;
+  }
+}
+
+/* Zählbadge: was in diesem Modul wartet. Grund --tint-state, Tinte --tint-ink,
+ * beide aus dem Modulton der Kachel - dieselbe Leiter wie überall. */
+.more-item__badge {
+  position: absolute;
+  inset-block-start: var(--space-1h);
+  inset-inline-end: var(--space-1h);
+  min-width: 18px;
+  padding-inline: var(--space-1);
+  border-radius: var(--radius-full);
+  font-size: var(--text-2xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: 18px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  background-color: color-mix(in srgb, var(--item-module-accent, var(--color-accent)) var(--tint-state), var(--color-surface));
+  color: color-mix(in srgb, var(--item-module-accent, var(--color-accent)) var(--tint-ink), var(--color-text-primary));
 }
 
 .more-item[aria-current="page"] {
@@ -683,12 +842,41 @@ html:has(.search-overlay--visible) yuvomi-install-prompt {
   margin: 0;
 }
 
-/* ── System-Cluster: kompakte Reihe (Einstellungen | Hilfe | Änderungen |
- * Abmelden) — Icon-über-Label, monochrom. ── */
+/* ── System-Cluster: kompakte Reihe (Einstellungen | Hilfe | Änderungen) —
+ * Icon-über-Label, monochrom. Abmelden steht darunter in eigener Zeile. ──
+ * Die Spaltenzahl kommt aus der Besetzung (router.js setzt --more-system-cols),
+ * weil Einstellungen ein abschaltbares Modul ist und zwei Ziele in drei Spalten
+ * eine Luecke lassen, die wie ein fehlendes Element aussieht. */
 .more-sheet__system {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(var(--more-system-cols, 3), minmax(0, 1fr));
   gap: var(--space-2);
+}
+
+/* ── Abmelden: terminale Aktion in eigener, voller Zeile ──
+ * Wortgleich die Behandlung der Sidebar (`.nav-item--logout`, weiter unten):
+ * volle Breite, Haarlinie darueber, monochrom - Danger-Rot erscheint erst im
+ * Confirm. Der Grund steht in router.js: in der vierspaltigen Systemreihe lag
+ * es unter genau dem Punkt, an dem der Daumen "Mehr" getippt hat. Zeilenform
+ * statt Icon-ueber-Label, damit es sich von den drei Zielen darueber
+ * unterscheidet und nicht als vierte Kachel gelesen wird. */
+.more-action--logout {
+  /* Ein <button> ist auch mit display:flex shrink-to-fit; ohne diese Zeile
+   * blieb die "volle Zeile" 82,9px breit (gemessen). */
+  inline-size: 100%;
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: var(--space-2h);
+  padding-inline: var(--space-3);
+  margin-block-start: var(--space-1);
+  padding-block-start: var(--space-3);
+  border-top: 1px solid var(--color-border-subtle);
+  border-radius: 0;
+  text-align: start;
+}
+
+.more-action--logout .more-action__label {
+  font-size: var(--text-sm);
 }
 
 /* System-Item: Icon-über-Label, monochrom — leichter als die farbigen
@@ -1249,6 +1437,17 @@ html:has(.search-overlay--visible) yuvomi-install-prompt {
   -webkit-line-clamp: 2;
   line-clamp: 2;
   text-align: center;
+  /* MIT TRENNSTRICH, NICHT MITTEN IM WORT (Critique 2026-08-13). Der Umbruch
+   * hier ist richtig und war es immer; geprüft hat nur nie jemand, WIE er
+   * bricht. Bei 320px standen „Übersicht" und „Aufgaben" als „Übersich / t"
+   * und „Aufgabe / n" - `overflow-wrap: anywhere` bricht per Definition
+   * innerhalb eines Wortes, und bei `hyphens: manual` ohne jedes Zeichen.
+   *
+   * Es ist dieselbe Antwort, die die Zeilennamen in Etappe 7 bekommen haben,
+   * und der Anlass war derselbe: die Regel war nie über Zeilen, sie war über
+   * Deutsch. `hyphens: auto` macht aus dem Bruch eine Trennung („Über-sicht"),
+   * `anywhere` bleibt als Rückfall für fugenlose Langwörter darunter stehen. */
+  hyphens: auto;
   overflow-wrap: anywhere;
   line-height: 1.1;
 }
@@ -1656,6 +1855,96 @@ html.fab-anim-done .page-fab {
   }
 }
 
+/* --------------------------------------------------------
+ * DAS LESEMASS IST EINE EIGENSCHAFT DER SEITE, NICHT DES TRAEGERS
+ * (Critique 2026-08-13, zweite Runde)
+ *
+ * Es hing an `.list-rows` und `.row-carrier`, also an der untersten Schicht.
+ * Damit galt es fuer den Koerper und fuer nichts sonst: gemessen bei 1440px lag
+ * die Filterreihe der Kontakte 489px, der Gruppierungsschalter der Aufgaben
+ * 434px und die Monatsnavigation des Budgets 436px rechts neben der Liste, auf
+ * die sie wirken. Sieben von zehn Routen ohne gemeinsame rechte Kante zwischen
+ * Kopf und Koerper - und der Fix davor hatte genau eine Schicht erreicht, die
+ * angedockte Primaeraktion.
+ *
+ * WARUM EINE VARIABLE UND KEIN `max-width` AM ROOT: der Kopf ist absichtlich
+ * full-bleed. Hintergrund, Trennlinie und Sticky-Flaeche der `.page-toolbar`
+ * laufen bis zur Shell-Kante, nur die ZEILE darin wird kuerzer (siehe
+ * `.page-toolbar--narrow` unten). Ein `max-width` am Modul-Root haette diese
+ * Flaechen mitgekappt und aus dem Rail eine schwebende Karte gemacht.
+ *
+ * Die Rolle steht deshalb an EINER Stelle - dem Modul-Root - und jede Schicht,
+ * die mitfluchten muss, liest dieselbe Variable. Wer sie nicht liest, faellt auf
+ * `none` zurueck und ist damit ausdruecklich full-bleed, nicht versehentlich.
+ * -------------------------------------------------------- */
+.page-measure--narrow {
+  --page-measure: var(--content-max-width-narrow);
+}
+
+/* Die Bedienzeilen und Inhaltsbloecke einer solchen Seite. Sie stehen zwischen
+ * Kopf und Koerper oder ueber ihm und wirken auf ihn, also enden sie mit ihm.
+ * `justify-self`/`margin` bleiben unberuehrt: gekappt wird die Breite, nicht
+ * die Ausrichtung.
+ *
+ * DIESE LISTE IST EINE LISTE UND BLEIBT EINE - ABER SIE DRIFTET NICHT MEHR
+ * STILL. Der Commit, der das Lesemass vom Traeger auf die Seite hob, hat es auf
+ * eine Namensliste gehoben, und was nicht darin stand, war full-bleed durch
+ * Auslassung statt durch Entscheidung: gemessen bei 1440px endete auf
+ * `/rewards` die Anfragenliste bei 1408 und der Traeger direkt darunter bei
+ * 972, auf `/contacts` der Gruppenkopf bei 1408 ueber seiner eigenen Liste bei
+ * 972, auf `/budget` der Diagrammabschnitt bei 1408 ueber der Buchungsliste bei
+ * 972 (Critique 2026-08-13). Vier Nachtraege unten schliessen die gemessenen
+ * Faelle: `/contacts`, `/rewards`, `/budget` und `/housekeeping` haben danach
+ * EINE Inhaltskante.
+ *
+ * WAS BEWUSST BREIT BLEIBT: das Kennzahlband (`.metric-card`) auf Budget und
+ * Hauswirtschaft ist ein Band ueber der Seite, kein Lesestoff, und die
+ * Gesundheitspanele fuehren ihr eigenes Raster.
+ *
+ * EIN WAECHTER FEHLT HIER WEITER, UND ZWAR WISSENTLICH. Der Versuch, die
+ * rechten Kanten am gerenderten Dokument zu messen, scheiterte an der
+ * Definition von "Block": die Sonde zaehlte `.swipe-reveal` und
+ * `.quick-add__input` mit, und auf `/shopping` kippte die Mehrheitskante
+ * dadurch auf die Zeileninterna - der echte Koerper wurde zum Ausreisser
+ * gemeldet. Ein Guard, den man mit Ausnahmen ruhigstellt, bis er nichts mehr
+ * bedeutet, ist schlimmer als keiner; dieses Repo hat den Fehler mehrfach
+ * gemacht. Was er braucht, ist ein Begriff von "Seitenblock", der Zeileninterna
+ * strukturell ausschliesst - das ist eigene Arbeit, kein Anhang an einen Fix.
+ * Bis dahin bleibt diese Liste eine Liste, die man von Hand pflegt. */
+.page-measure--narrow :is(
+  .tasks-filters-row,
+  .contacts-filters,
+  .rewards-tabs,
+  .list-tabs-bar,
+  /* Die Karten der Hauswirtschaft, deren Zeilen per Bleed an ihrer Kante
+   * fluchten: die Liste selbst hat keine eigene Flaeche, die Karte hat sie,
+   * also traegt die Karte das Mass. */
+  .housekeeping-card,
+  /* Ein Gruppenkopf endet mit der Gruppe, die er benennt. */
+  .contact-group__header,
+  /* Der Traeger der offenen Anfragen, direkt ueber dem Traeger der
+   * Punktestaende - zwei gestapelte Bloecke auf einem Bildschirm. */
+  .rw-pending-panel,
+  /* Der Diagrammabschnitt steht ueber der Buchungsliste und ist selbst eine
+   * Zeilenfolge (Kategoriezeilen), also gilt dasselbe Mass. */
+  .budget-chart-section,
+  /* Die Mitarbeiterleiste ueber den Karten der Hauswirtschaft. */
+  .housekeeping-worker-strip
+) {
+  max-width: var(--page-measure, none);
+}
+
+/* Der Monatsstepper des Budgets sitzt im `page-toolbar__center` und ist damit
+ * nicht `:last-child` - der `--narrow`-Modifier erreicht ihn nicht, und ein
+ * blosses `max-width` auch nicht: er ist schmaler als das Lesemass und steht
+ * ZENTRIERT in der vollen Kopfzeile, also weiter rechts als die Liste endet
+ * (gemessen 436px daneben, mit Kappung immer noch 113px). Er braucht dieselbe
+ * Marge wie das letzte Kind, damit sein Bezugsrahmen die Lesebahn wird statt
+ * der Rail. */
+.page-measure--narrow .page-toolbar .budget-nav__month {
+  margin-inline-end: max(0px, calc(100% - var(--page-measure, var(--content-max-width-narrow))));
+}
+
 /* Opt-in: der Kopf sitzt UNTER einer Tab-Gruppenleiste (.sub-tabs-bar).
  *
  * Historisch gab die Variante genau eine Eigenschaft ab: den 3px-Akzentstreifen,
@@ -1683,12 +1972,21 @@ html.fab-anim-done .page-fab {
 /* Opt-in: der Kopf-INHALT endet dort, wo der Körper endet - beim schmalen
  * Lesemaß (--content-max-width-narrow) statt an der Content-Spalte.
  *
- * Nutzer: die drei Küchen-Listen (Rezepte, Einkaufen, Vorrat). Ihr Körper ist
- * über .list-scroller auf 720px gekappt, ihr Kopf lief bis an die Content-Spalte:
+ * Nutzer: JEDER Kopf über einer Zeilenliste. Zuerst waren es die drei
+ * Küchen-Listen (Rezepte, Einkaufen, Vorrat), deren Körper über .list-scroller
+ * auf 720px gekappt ist, während ihr Kopf bis an die Content-Spalte lief:
  * gemessen bei 1280px Fensterbreite endete die Liste bei x=972, der
  * Lagerort-Knopf im Vorrat und die drei Listen-Aktionen im Einkauf aber bei
  * x=1248 - 276px über leerer Fläche. DESIGN.md macht die gemeinsame Fluchtlinie
  * zur Bedingung, und zwar für BEIDE Kanten.
+ *
+ * Seit `.row-carrier` dasselbe Lesemaß trägt wie `.list-rows` (list-row.css,
+ * Critique 2026-08-13), gilt derselbe Satz für Aufgaben, Kontakte, Budget,
+ * Geburtstage und die Hauswirtschaft - dort war der Versatz sogar größer:
+ * auf 1440px endete die Aufgabenliste bei x=972 und „+ Aufgabe" begann bei
+ * x=1297, also 325px daneben. NICHT gesetzt wird der Modifier bei Köpfen, die
+ * sich eine Fläche mit einer BREITEN Ansicht teilen (Kalender: Monatsgitter;
+ * Dokumente: Kachelansicht) - dort wäre die schmale Flucht die falsche.
  *
  * WARUM NICHT `> * { max-width: ... }`: genau so stand die Regel bisher, je
  * einmal in shopping.css und pantry.css. Sie griff nie. Gekappt wurde die
@@ -2290,11 +2588,59 @@ html.fab-anim-done .page-fab {
   }
 }
 
-/* Toolbar-"Neu"-Buttons überall verstecken - FAB übernimmt.
+/* Toolbar-"Neu"-Buttons: auf dem Handy übernimmt der FAB, auf dem Desktop der
+ * Knopf in der Werkzeugleiste.
+ *
+ * DIE MECHANIK WAR GEBAUT UND ABGESCHALTET. Fünf Module (Aufgaben, Notizen,
+ * Kontakte, Budget, Kalender) tragen ihren Toolbar-Knopf seit jeher im Markup;
+ * hier stand nur `display: none` für alle. Auf einem Zeigergerät ist ein
+ * beschrifteter Knopf im Kopf der bessere Ort als ein schwebender Kreis über
+ * dem Inhalt - Platz ist da, und der Kreis verdeckt die letzte Zeile.
+ *
  * Gemeinsame Klasse statt ID-Liste (Audit 1.9): neue Module ergänzen nur die
  * Klasse an ihrem Toolbar-Button, statt diesen Selektor erweitern zu müssen. */
 .toolbar-new-btn {
   display: none !important;
+}
+
+@media (min-width: 1024px) {
+  /* `:not([hidden])` ist Pflicht: mehrere Module blenden ihren Kopf samt
+   * Aktionen aus (die Einkaufsliste ohne aktive Liste), und ein
+   * `display !important` schlüge das UA-`[hidden]`. */
+  .toolbar-new-btn:not([hidden]) {
+    display: inline-flex !important;
+  }
+
+  /* Wo ein beschrifteter Knopf steht, schwebt keiner mehr. `:has()` fragt das
+   * am Dokument, weil beide in verschiedenen Teilbäumen leben: der Knopf im
+   * Modulkopf, der FAB seit #634 in der Shell-Layer. */
+  body:has(.toolbar-new-btn:not([hidden])) #fab-layer .page-fab {
+    display: none;
+  }
+
+  /* UND WER IHN VERSTECKT, NIMMT IHM SEINEN NACHLAUF (Etappe 6, 2026-08-13).
+   * Gemessen bei 1440x900: /tasks, /calendar, /contacts, /budget und /notes
+   * reservierten 96px am Scroll-Ende für einen Knopf mit 0x0 Fläche, /shopping
+   * 156 statt 60. Die Nachlauf-Regel oben fragt `.page-fab:not([hidden])` - das
+   * ist ein STELLVERTRETER für „hier schwebt ein Knopf über dem Scrollport",
+   * und er wird falsch, sobald CSS statt der Seite versteckt.
+   * `[hidden]` braucht diese Paarung nicht: das steht schon im Selektor. */
+  body:has(.toolbar-new-btn:not([hidden])) {
+    --fab-safe-zone: 0px;
+  }
+
+  /* Der angedockte FAB IST der Toolbar-Knopf (siehe dockFabIntoToolbar in
+   * router.js): dieselbe Node, dieselbe Verdrahtung, nur ohne die schwebende
+   * Geometrie. Die Kapsel und die Stimme kommen von `.btn--primary`. */
+  .page-fab--docked {
+    position: static;
+    width: auto;
+    height: auto;
+    min-height: var(--target-base);
+    padding-inline: var(--space-4);
+    gap: var(--space-1);
+    box-shadow: var(--shadow-sm);
+  }
 }
 
 /* [hidden] durchsetzen: Klassen wie `.page-fab`/`.btn` setzen `display: flex`
@@ -2313,16 +2659,16 @@ html.fab-anim-done .page-fab {
  * „zu" zeigte - dieselbe Falle, drittes Mal. Ein Prüfskript, das nur die
  * DOM-Property `hidden` liest, sieht sie NICHT; es braucht das berechnete
  * `display`. */
-/* Und `.list-bulkbar`: die Sammelaktions-Leiste des Einkaufs trägt
- * `display: flex` und ist nur bei abgehakten Artikeln gefüllt - ohne diese Zeile
- * blieb bei null Treffern ein leerer, gerahmter und getönter Streifen über der
- * Liste stehen. Vierte Fundstelle derselben Falle. */
+/* `.list-bulkbar` stand hier als vierte Fundstelle derselben Falle, solange sie
+ * ein dauerhafter, leerer Knoten im Seitenfluss war. Seit Etappe 5 wird sie
+ * ANGELEGT und ENTFERNT (utils/bulk-pill.js) und trägt nie `hidden` - und ein
+ * Eintrag für einen Zustand, den niemand setzt, ist keine Absicherung, sondern
+ * eine Behauptung über den Bestand. */
 .page-fab[hidden],
 .btn[hidden],
 .form-group[hidden],
 .page-toolbar[hidden],
 .recipe-detail[hidden],
-.list-bulkbar[hidden],
 p.field-hint--warn[hidden] {
   display: none !important;
 }
@@ -4461,9 +4807,23 @@ textarea::placeholder {
  * jedem Medienzustand. */
 
 /* --------------------------------------------------------
- * Toast-Benachrichtigungen
+ * Die untere Shell-Zone
+ *
+ * EIN STAPEL, KEIN ÜBEREINANDER. Die Geometrie stand bis Etappe 5 an
+ * `.toast-container` - also zweimal, an zwei Knoten mit demselben `bottom`.
+ * Solange nur je einer von beiden gefüllt war, fiel das nicht auf; eine
+ * höfliche und eine bestimmte Meldung zugleich lagen aufeinander. Mit der
+ * Sammelaktions-Pille (`.bulk-pill-layer`) wäre eine dritte Fläche auf
+ * denselben Punkt gekommen, und die steht DAUERHAFT.
+ *
+ * Als Spalte rechnet Flexbox das Ausweichen selbst, und daraus folgt die
+ * Reihenfolge: die Spalte ist unten verankert, wer zuerst im DOM steht, steht
+ * oben. Die Pille steht zuerst - der Toast bleibt damit, wo Toasts immer
+ * stehen, und die Pille weicht ihm nach oben aus. DER MIT DER FRIST BEWEGT
+ * SICH NICHT: die Rücknahme des Toasts läuft nach fünf Sekunden ab, die
+ * Aktionen der Pille warten, solange die Teilmenge steht.
  * -------------------------------------------------------- */
-.toast-container {
+.shell-bottom-stack {
   position: fixed;
   bottom: calc(var(--nav-bottom-height) + var(--safe-area-inset-bottom) + var(--space-4));
   left: 50%;
@@ -4476,14 +4836,43 @@ textarea::placeholder {
   width: min(calc(100% - var(--space-8)), 380px);
 }
 
+/* Eine leere Zelle zieht trotzdem ihre Lücke: `gap` gilt zwischen ALLEN
+ * Kindern, auch zwischen zwei Knoten der Höhe null. Ohne diese Regel stünde
+ * ein einzelner Toast um zwei Lücken (16px) zu hoch, weil Pillen-Schicht und
+ * bestimmter Container leer daneben liegen. */
+.shell-bottom-stack > :empty {
+  display: none;
+}
+
+.toast-container,
+.bulk-pill-layer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* ZWISCHEN 768 UND 1023px STEHT DIE TAB-LEISTE NOCH.
+ *
+ * Hier ersetzte `bottom: var(--space-8)` den Abstand der Basisregel, der die
+ * Leistenhöhe einrechnet - der Stapel rutschte damit über sie. Der Stapel
+ * selbst ist harmlos (`pointer-events: none`), der Erinnerungs-Toast darin ist
+ * es nicht: er nimmt Klicks an, um sich verwerfen zu lassen. Gemessen bei
+ * 900x900 und 768x900 lag er über den Nav-Zielen, und `elementFromPoint`
+ * lieferte an DREI von fünf (Kalender, Aufgaben, Küche) den Toast statt des
+ * Ziels. Für die dreißig Sekunden seiner Standzeit war die halbe
+ * Primärnavigation eines Tablets tot (Codex-Review zu PR #754 - dort der Pille
+ * zugeschrieben, gemessen ist es der Toast).
+ *
+ * Die Sidebar löst die Leiste erst ab 1024px ab; bis dahin gilt derselbe
+ * Abstand wie auf dem Telefon, nur ohne dessen FAB-Nachlauf. */
 @media (min-width: 768px) and (max-width: 1023px) {
-  .toast-container {
-    bottom: var(--space-8);
+  .shell-bottom-stack {
+    bottom: calc(var(--nav-bottom-height) + var(--safe-area-inset-bottom) + var(--space-4));
   }
 }
 
 @media (min-width: 1024px) {
-  .toast-container {
+  .shell-bottom-stack {
     bottom: var(--space-6);
     left: calc(var(--sidebar-width) + (100% - var(--sidebar-width)) / 2);
   }
@@ -4509,8 +4898,11 @@ textarea::placeholder {
   height: 16px;
 }
 
-.toast__undo {
-  margin-left: auto;
+/* DIE BESCHRIFTETE AKTION AUF SHELL-MATERIAL - eine Schreibweise, zwei Träger.
+ * Der Toast hatte sie als einziger; die Sammelaktions-Pille steht auf demselben
+ * Material im selben Stapel und hätte sich sonst eine zweite gebaut. */
+.toast__undo,
+.list-bulkbar__action {
   flex-shrink: 0;
   padding: var(--space-1) var(--space-2);
   background: transparent;
@@ -4521,21 +4913,93 @@ textarea::placeholder {
   font-weight: var(--font-weight-semibold);
   cursor: pointer;
   white-space: nowrap;
-  opacity: 0.85;
-}
-
-.toast__undo {
   -webkit-tap-highlight-color: transparent;
   transition: opacity var(--transition-fast), transform var(--duration-2xs) ease;
+}
+
+/* DIE MARKE AN DER KAPSEL steht standardmäßig nicht da: solange das Subjekt
+ * links die Zahl trägt, wäre sie deren Echo. Sie tritt erst ein, wo das Subjekt
+ * wegfällt (siehe die Container-Regel bei .list-bulkbar__subject).
+ *
+ * Sie NIMMT die Rezeptur der Zähler-Marke, sie TEILT ihre Regel nicht: die
+ * Marke der Listen-Tabs sitzt auf heller Fläche mit dunkler Schrift, diese auf
+ * dem dunklen Shell-Material mit heller. Genau die Verwechslung, die den Toast
+ * im Reduced-Transparency-Fallback des Filter-Chips auf 1,08:1 gebracht hat -
+ * zwei Selektoren in einer Regel behaupten denselben Grund darunter.
+ * `currentColor 15%` rechnet hier deshalb gegen die Schrift der Kapsel, und die
+ * dreht sich mit dem Thema: --neutral-800 ist dunkel im hellen Modus und hell
+ * im dunklen, --neutral-50 umgekehrt. Am gerenderten Pixel gemessen (320px,
+ * die einzige Breite, auf der die Marke steht): 10,04:1 hell, 12,54:1 dunkel. */
+.list-bulkbar__action-count {
+  display: none;
+  margin-inline-start: var(--space-1);
+  padding: var(--space-px) var(--space-1);
+  border-radius: var(--radius-full);
+  background-color: color-mix(in srgb, currentColor 15%, transparent);
+  font-variant-numeric: tabular-nums;
+}
+
+/* DIE GEFAHR HAT EINE TINTE, NICHT EINE FORM (Critique 2026-08-13, P0).
+ *
+ * „Löschen" und „In den Vorrat" standen als zwei zeichengleiche Kapseln
+ * nebeneinander, 40px auseinander, und 8px darunter stand das „Verwerfen" des
+ * Toasts in derselben Schreibweise. Drei Knöpfe, drei sehr verschiedene Folgen,
+ * ein Aussehen.
+ *
+ * Die Kapsel bleibt die Kapsel - sie ist das Vokabular dieser Fläche, und eine
+ * zweite Form wäre ein zweites Vokabular für dieselbe Rolle. Was wechselt, ist
+ * die Tinte, und mit `currentColor` an der Kante wechselt die Kante mit.
+ *
+ * --shell-danger-ink und nicht --color-danger: der Grund unter dieser Kapsel
+ * dreht sich mit dem Thema (--neutral-800 ist hell im Dunkelmodus), die
+ * semantischen Farben drehen in dieselbe Richtung. Begründung und Messwerte am
+ * Token in tokens.css.
+ *
+ * SIE IST DER ZWEITE KANAL, NICHT DER ERSTE. Der erste ist das Wort auf der
+ * Kapsel, der dritte die Rückfrage dahinter - Farbe allein trägt hier keine
+ * Aussage, die sonst fehlte (WCAG 1.4.1). */
+.list-bulkbar__action--danger {
+  color: var(--shell-danger-ink);
+}
+
+/* Nur der Toast: seine Rücknahme sitzt am Zeilenende, und sie ist die Fußnote
+ * einer Meldung, die von selbst geht. Die Pille steht dauerhaft - ihre
+ * Aktionen sind das, wofür sie da ist, und treten nicht zurück. */
+.toast__undo {
+  margin-left: auto;
+  opacity: 0.85;
 }
 
 .toast__undo:hover {
   opacity: 1;
 }
 
-.toast__undo:active {
+.toast__undo:active,
+.list-bulkbar__action:active {
   transform: scale(0.94);
   opacity: 1;
+}
+
+.toast__undo:focus-visible,
+.list-bulkbar__action:focus-visible {
+  outline: var(--focus-ring-width) solid currentColor;
+  outline-offset: var(--focus-ring-offset);
+  opacity: 1;
+}
+
+/* GESPERRT WÄHREND DER ÜBERGABE, und das kam mit dem Verzicht auf `.btn` als
+ * Lücke mit: `sendToShopping` setzt `btn.disabled = true`, damit ein zweiter
+ * Tipp nicht einen zweiten Transfer samt eigenem Undo-Toast auslöst - auf der
+ * Button-Basis war das sichtbar, auf dem Shell-Material stand der Knopf
+ * unverändert da und sah anfassbar aus. Der Toast braucht es nicht: seine
+ * Rücknahme entfernt sich selbst mit dem Klick. */
+.list-bulkbar__action:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.list-bulkbar__action:disabled:active {
+  transform: none;
 }
 
 .toast--success { background-color: var(--color-success); color: var(--toast-success-text); }
@@ -4545,6 +5009,155 @@ textarea::placeholder {
 @keyframes toast-in {
   from { opacity: 0; transform: translateY(6px) scale(0.98); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* --------------------------------------------------------
+ * Sammelaktions-Pille
+ *
+ * „Diese Liste hat eine Teilmenge, und für die gibt es eine Aktion."
+ *
+ * SIE WAR EIN BLOCK IM INHALT und ist jetzt eine Fläche der Shell. Gemessen bei
+ * 390x844 auf /shopping: 358x103px bei y=113, der Scroller begann dadurch erst
+ * bei y=216 statt 113 - 103 von 552px Listenfläche, ausgelöst von einem
+ * einzigen abgehakten Artikel. Die 103px waren `flex-wrap`: die erklärende
+ * Zeile allein auf Zeile eins, beide Knöpfe auf Zeile zwei.
+ *
+ * EINZEILIG IST DIE BEDINGUNG, NICHT DIE HOFFNUNG. Deshalb keine `.btn`-Knöpfe
+ * mit Icon, sondern die Kapseln, die auf diesem Material schon stehen
+ * (`.toast__undo`, siehe oben), und deshalb kein `flex-wrap`. Der Rang bei
+ * Enge: die Aktionen schrumpfen NIE, das Label gibt nach - es führt mit der
+ * Zahl, und die überlebt die Kürzung. Dieselbe Rangfolge, die die Agenda-Zeile
+ * ihrer Metazeile gegeben hat.
+ *
+ * Material und Geometrie kommen vom Toast, bis auf eine Sache: dieser Knoten
+ * trägt KEINE Einblend-Animation. Ein Toast kommt an, eine Pille steht da; ein
+ * Federn bei jedem Häkchen wäre Bewegung ohne Anlass.
+ * -------------------------------------------------------- */
+.list-bulkbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  /* Die Zusicherung hinter --bulk-pill-safe-zone (tokens.css): der Nachlauf am
+   * Scroll-Ende rechnet mit diesem Wert, also muss die Pille ihn halten. */
+  min-height: var(--bulk-pill-height);
+  box-sizing: border-box;
+  background-color: var(--neutral-800);
+  color: var(--neutral-50);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg);
+  pointer-events: auto;
+}
+
+/* --------------------------------------------------------
+ * Bestätigungszustand: die Pille FRAGT
+ *
+ * DIE RANGFOLGE DREHT SICH HIER UM. Im Ruhezustand gibt das Subjekt nach und
+ * die Aktionen schrumpfen nie - es benennt nur, worauf sie wirken, und dieselbe
+ * Aussage steht in der Liste darüber. Die Frage steht nirgendwo sonst: eine
+ * gekappte Frage verlangt eine Antwort, die sie nicht mehr benennt.
+ *
+ * ALSO BRICHT SIE UM, WENN ES SEIN MUSS - UND NUR DANN. Keine
+ * Container-Schwelle: die 21rem des Subjekts sind an DESSEN Bedarf gemessen,
+ * und die Frage braucht mehr. Gemessen bei 390px, wo Deutsch mit 115 von 149px
+ * bequem passt: Niederländisch verlangt „9 artikelen verwijderen?" neben
+ * „Annuleren" und „Verwijderen" und reisst mit 153 von 149px. Eine Zahl, die
+ * für Deutsch stimmt und für Niederländisch nicht, ist keine Schwelle, sondern
+ * eine Annahme - `flex-shrink: 0` plus `flex-wrap` fragt stattdessen den
+ * echten Bedarf, in jeder der 24 Sprachen.
+ * -------------------------------------------------------- */
+.list-bulkbar--confirming {
+  flex-wrap: wrap;
+}
+
+/* Nicht schrumpfen und nicht kappen - das ist der ganze Unterschied zum
+ * Ruhezustand. `overflow: visible` hebt die Ellipse auf, die das Subjekt
+ * mitbringt; ohne sie stünde die Frage weiter abgeschnitten da, nur eben in
+ * einer Zeile, die Platz hätte. */
+.list-bulkbar--confirming .list-bulkbar__subject {
+  flex: 1 0 auto;
+  overflow: visible;
+}
+
+/* Die Wahl ist ein Paar. Der Knoten hält Abbrechen und Bestätigen zusammen,
+ * damit beim Umbruch nicht eine Kapsel oben stehen bleibt (gemessen: Frage
+ * plus „Annuleren" in Zeile eins, „Verwijderen" allein darunter). Er schrumpft
+ * nicht, er wandert als Ganzes. */
+.list-bulkbar__choices {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  /* Bleibt die Wahl neben der Frage, sitzt sie am Ende der Zeile; rutscht sie
+   * darunter, steht sie am Ende ihrer eigenen. Eine Schreibweise für beides. */
+  margin-inline-start: auto;
+}
+
+/* Das einzige Element der Pille, das nachgibt. `min-width: 0` ist die
+ * Bedingung dafür, dass die Kürzung überhaupt greift - ohne sie wächst der
+ * Text über die Pille hinaus, statt nachzugeben. */
+.list-bulkbar__subject {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--text-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Die Schicht ist der Container, nicht die Pille selbst: gefragt wird nach der
+ * Breite, die zur Verfügung STEHT, und ein Element kann sich nicht selbst
+ * fragen, wie breit es sein dürfte. */
+.bulk-pill-layer {
+  container-type: inline-size;
+  container-name: bulk-pill;
+}
+
+/* SIE FÄLLT WEG, SIE WIRD NICHT GEKÜRZT. Gemessen bei 320px: die Pille hat
+ * 264px Innenbreite, die beiden Kapseln nehmen 169 davon, für das Label bleiben
+ * 87 - „3 Artikel abgehakt." braucht 138 und stand dort als „3 Artike…". Das
+ * ist genau der Fall, den der Vorrat für sein MHD schon entschieden hat: eine
+ * Ellipse macht aus einer Aussage etwas, das wie ein Fehler aussieht. Die Zahl
+ * ist damit nicht verloren - sie steht im aria-label der Löschen-Kapsel und in
+ * der Liste darüber, deren Häkchen man gerade gesetzt hat.
+ *
+ * 21rem ist die Grenze, unter der es in KEINER Sprache mehr aufgeht (bei 390px
+ * ist die Pille 358px breit und deutsch passt mit 19px Luft). Die Kürzung oben
+ * bleibt als Schranke für eine Übersetzung, die auch darüber zu lang ist - sie
+ * ist die Notbremse, nicht der Plan. */
+@container bulk-pill (max-width: 21rem) {
+  /* AUSSER SIE IST DIE FRAGE (Critique 2026-08-13). Der Absatz oben gilt für
+   * das Subjekt: es benennt, worauf die Kapseln wirken, und dieselbe Aussage
+   * steht in der Liste darüber. Die Rückfrage steht nirgendwo sonst - fiele
+   * sie weg, stünden „Abbrechen" und „Löschen" ohne die Frage da, die sie
+   * beantworten, und das wäre schlimmer als der Zustand ohne Rückfrage. */
+  .list-bulkbar:not(.list-bulkbar--confirming) .list-bulkbar__subject {
+    display: none;
+  }
+
+  /* UND DIE ZAHL WECHSELT DIE SEITE (Etappe 6, 2026-08-13). Der Absatz darüber
+   * sagte, die Zahl sei nicht verloren - sie stehe im aria-label und in der
+   * Liste darüber. Für einen Screenreader stimmte das. Für das Auge blieben
+   * „In den Vorrat" und „Löschen" ohne genanntes Objekt, über einer Liste mit
+   * 23 Artikeln und ohne Rückfrage vor dem Löschen: „Löschen" konnte dort
+   * gelesen werden wie „die Liste löschen". Ein Zustand, den nur der Undo
+   * wieder aufhebt.
+   *
+   * Sie geht an die Kapsel, nicht zurück in die Zeile: die Zeile passt hier
+   * nicht (gemessen 138 von 87px), die Marke schon - „Löschen" plus Marke misst
+   * rund 191 von 264px Innenbreite, die Pille bleibt einzeilig. */
+  .list-bulkbar__action-count {
+    display: inline;
+  }
+
+  /* Ohne das Label gibt es kein wachsendes Element mehr, und die Kapseln
+   * standen als schmale Gruppe an der linken Kante einer 288px breiten Fläche.
+   * Die Pille behält ihre Breite (sie ist die des Toasts darunter, eine
+   * schmalere wäre eine zweite Zone) - also rückt ihr Inhalt in die Mitte.
+   * Im Bestätigungszustand steht die Frage und wächst, also gilt das nicht. */
+  .list-bulkbar:not(.list-bulkbar--confirming) {
+    justify-content: center;
+  }
 }
 
 .toast--out {
@@ -5075,6 +5688,11 @@ textarea::placeholder {
   .nav-bottom,
   .fab,
   .toast-container,
+  /* Der ganze Stapel, nicht nur die Toasts darin: seit die Sammelpille dort
+   * wohnt, druckte eine laufende Auswahl (Kontakte im Auswahlmodus, abgehakte
+   * Artikel, knapper Vorrat) ihre dunkle Kapsel mit aufs Blatt, am Fuss jeder
+   * Seite (Codex-Review zu PR #754). Chrome gehoert nicht auf Papier. */
+  .shell-bottom-stack,
   .modal-overlay,
   .modal-backdrop {
     display: none !important;
@@ -5470,8 +6088,23 @@ textarea.input { resize: vertical; }
 /* Read-only-Modul-Modus (#467): Bei „Nur lesen"-Rechten die Anlege-Affordance
    ausblenden und einen erklärenden Hinweis oben in der Seite zeigen. Die
    verbindliche Sperre liegt am Server; dies ist die ehrliche UI-Entsprechung. */
-html[data-module-readonly] .page-fab {
+/* BEIDE ANLEGE-WEGE, nicht nur der schwebende. Der angedockte FAB behaelt
+ * `.page-fab` und war damit immer erfasst - der HANDGESCHRIEBENE Kopfknopf der
+ * fuenf Module, die ihre Primaeraktion selbst mitbringen (Aufgaben, Kalender,
+ * Kontakte, Budget, Notizen), war es nie. Ein Nur-lesen-Nutzer sah dort einen
+ * aktiven Knopf, dessen Formular am Server im 403 endet. Die Regel stand seit
+ * #467 auf einem Weg, und dieser Branch hat den zweiten von einem Modul auf
+ * fuenf verbreitert (Codex-Review zu PR #754). */
+html[data-module-readonly] .page-fab,
+html[data-module-readonly] .toolbar-new-btn {
   display: none !important;
+}
+
+/* Und ohne Knopf kein Nachlauf - dieselbe Paarung wie beim angedockten FAB
+   (Etappe 6). Ein „Nur lesen"-Modul reservierte sonst 96px für eine
+   Anlege-Affordance, die es gerade ausdrücklich nicht anbietet. */
+html[data-module-readonly] {
+  --fab-safe-zone: 0px;
 }
 
 .module-readonly-banner {
