@@ -1135,7 +1135,10 @@ supports the placeholders `{{title}}`, `{{body}}`, `{{url}}` and `{{tag}}`; valu
 on substitution, so a reminder title carrying a quote, backslash or line break cannot break the
 surrounding JSON. The template is validated on save rather than on delivery (valid JSON, known
 placeholders only, max 4096 characters), because a template that first fails at 3 a.m. costs both the
-notification and the diagnosis.
+notification and the diagnosis. Validation matches anything placeholder-*shaped* (`{{…}}`), not just
+the well-formed names, so a typo like `{{task-title}}` is rejected instead of being delivered
+verbatim. Unlike Gotify and ntfy, whose `baseUrl` is a base the provider appends its own path to, a
+webhook URL is the complete endpoint and keeps a trailing slash if one was entered.
 
 ### Notification Deliveries
 

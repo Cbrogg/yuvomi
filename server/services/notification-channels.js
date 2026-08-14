@@ -34,7 +34,12 @@ function toJson(value) {
   return JSON.stringify(value && typeof value === 'object' ? value : {});
 }
 
-function normalizeBaseUrl(value) {
+// `keepPath`: Gotify und ntfy bekommen eine BASIS, an die der Provider seinen
+// eigenen Pfad haengt - da ist ein abschliessender Slash Rauschen und wird
+// entfernt. Beim Webhook ist der Wert der vollstaendige Endpunkt, auf den
+// gepostet wird; ein Empfaenger, der `/hooks/x/` von `/hooks/x` unterscheidet,
+// bekaeme sonst still eine andere Adresse als die eingetragene.
+function normalizeBaseUrl(value, { keepPath = false } = {}) {
   const raw = String(value ?? '').trim();
   if (!raw) throw new Error('A base URL is required.');
   let url;
@@ -46,6 +51,7 @@ function normalizeBaseUrl(value) {
   if (!['http:', 'https:'].includes(url.protocol)) {
     throw new Error('Notification channel URL scheme must be http or https.');
   }
+  if (keepPath) return url.toString();
   url.pathname = url.pathname.replace(/\/+$/, '');
   return url.toString().replace(/\/+$/, '');
 }
@@ -146,7 +152,7 @@ function normalizeWebhookConfig(input = {}) {
       throw new Error('Webhook payload template must produce valid JSON.');
     }
   }
-  return { baseUrl: normalizeBaseUrl(input.baseUrl), payloadTemplate };
+  return { baseUrl: normalizeBaseUrl(input.baseUrl, { keepPath: true }), payloadTemplate };
 }
 
 function normalizeWebhookSecrets(input = {}) {

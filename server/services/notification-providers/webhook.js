@@ -11,7 +11,13 @@
 
 export const WEBHOOK_TEMPLATE_PLACEHOLDERS = Object.freeze(['title', 'body', 'url', 'tag']);
 
+// ZWEI Muster, absichtlich verschieden weit: ersetzt wird nur, was wir fuellen
+// koennen, geprueft wird ALLES, was wie ein Platzhalter aussieht. Mit einem
+// gemeinsamen `\w+` war `{{task-title}}` fuer beide unsichtbar - die Pruefung
+// meldete nichts und die Zustellung schickte den Token woertlich mit, obwohl
+// beim Speichern zugesagt wird, Unbekanntes abzulehnen.
 const PLACEHOLDER_PATTERN = /\{\{(\w+)\}\}/g;
+const PLACEHOLDER_SHAPED_PATTERN = /\{\{([^{}]*)\}\}/g;
 
 /**
  * Setzt die Platzhalter einer Vorlage JSON-sicher ein.
@@ -30,10 +36,16 @@ export function renderPayloadTemplate(template, payload = {}) {
   });
 }
 
-/** Platzhalter, die die Vorlage benutzt, aber niemand fuellen kann. */
+/**
+ * Platzhalter, die die Vorlage benutzt, aber niemand fuellen kann.
+ *
+ * Prueft gegen das WEITE Muster: ein Tippfehler mit Bindestrich, Punkt oder
+ * Leerzeichen (`{{task-title}}`, `{{ title }}`) ist genau der Fall, den der
+ * Nutzer gemeldet bekommen muss - er wuerde sonst unersetzt im Body landen.
+ */
 export function unknownTemplatePlaceholders(template) {
   const unknown = new Set();
-  for (const [, key] of String(template).matchAll(PLACEHOLDER_PATTERN)) {
+  for (const [, key] of String(template).matchAll(PLACEHOLDER_SHAPED_PATTERN)) {
     if (!WEBHOOK_TEMPLATE_PLACEHOLDERS.includes(key)) unknown.add(key);
   }
   return [...unknown];

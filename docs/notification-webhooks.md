@@ -74,7 +74,10 @@ Notes:
   none) becomes an empty string.
 - The template is checked when you save it: it must produce valid JSON, may use
   only the four placeholders above, and is limited to 4096 characters. A
-  template that would only fail at delivery time is rejected in the form.
+  template that would only fail at delivery time is rejected in the form. The
+  check looks at anything shaped like a placeholder, so a typo such as
+  `{{task-title}}` is caught rather than delivered as literal text.
+- The endpoint URL is used exactly as entered, including a trailing slash.
 - Leave the field empty to keep the default body. Existing webhook channels are
   unaffected.
 

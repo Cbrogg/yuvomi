@@ -6,6 +6,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
+import { readFileSync } from 'node:fs';
 import express from 'express';
 import { MIGRATIONS } from '../server/db.js';
 
@@ -287,7 +288,10 @@ test('webhook without a template keeps sending the Yuvomi-shaped body (#692)', a
 test('channel store rejects a template that would only fail on delivery (#692)', async () => {
   const { createNotificationChannelStore } = await import('../server/services/notification-channels.js');
   const db = makeDb();
-  const store = createNotificationChannelStore({ database: db });
+  // `db`, nicht `database`: der Store destrukturiert { db }. Mit dem falschen
+  // Schluessel faellt er still auf die globale Verbindung zurueck und der Test
+  // prueft eine andere Datenbank als die, die er sich gerade gebaut hat.
+  const store = createNotificationChannelStore({ db });
   const base = { provider: 'webhook', name: 'Hook', config: { baseUrl: 'https://hooks.test/x' } };
 
   // Kein JSON: faellt im Formular auf, nicht nachts um drei.
@@ -307,6 +311,69 @@ test('channel store rejects a template that would only fail on delivery (#692)',
   // Leer bleibt erlaubt und bedeutet Standardbody.
   const plain = store.createChannel({ ...base, name: 'Plain', config: { baseUrl: 'https://hooks.test/y' } });
   assert.equal(plain.config.payloadTemplate, '');
+});
+
+test('ein Platzhalter mit Sonderzeichen wird gemeldet, nicht durchgewinkt (#692)', async () => {
+  // Die Pruefung sagt zu, Unbekanntes abzulehnen. Mit einem gemeinsamen \w+ galt
+  // diese Zusage nur fuer Wortzeichen: {{task-title}} war fuer Erkennung UND
+  // Ersetzung unsichtbar und ging woertlich an den Empfaenger.
+  const { unknownTemplatePlaceholders } = await import('../server/services/notification-providers/webhook.js');
+  assert.deepEqual(unknownTemplatePlaceholders('{"text":"{{task-title}}"}'), ['task-title']);
+  assert.deepEqual(unknownTemplatePlaceholders('{"text":"{{ title }}"}'), [' title ']);
+  assert.deepEqual(unknownTemplatePlaceholders('{"text":"{{item.name}}"}'), ['item.name']);
+  assert.deepEqual(unknownTemplatePlaceholders('{"text":"{{title}} {{body}}"}'), []);
+
+  const { createNotificationChannelStore } = await import('../server/services/notification-channels.js');
+  const store = createNotificationChannelStore({ db: makeDb() });
+  assert.throws(
+    () => store.createChannel({
+      provider: 'webhook', name: 'Hook',
+      config: { baseUrl: 'https://hooks.test/x', payloadTemplate: '{"text":"{{task-title}}"}' },
+    }),
+    /\{\{task-title\}\}/,
+  );
+});
+
+test('ein Webhook behaelt den Schraegstrich am Ende seines Endpunkts (#692)', async () => {
+  // Bei Gotify/ntfy ist die URL eine Basis, an die der Provider seinen Pfad
+  // haengt - da ist der Slash Rauschen. Beim Webhook IST sie der Endpunkt, und
+  // ein Empfaenger darf /hooks/x/ von /hooks/x unterscheiden.
+  const { createNotificationChannelStore } = await import('../server/services/notification-channels.js');
+  const store = createNotificationChannelStore({ db: makeDb() });
+
+  const hook = store.createChannel({
+    provider: 'webhook', name: 'Hook', config: { baseUrl: 'https://hooks.test/services/T/B/' },
+  });
+  assert.equal(hook.config.baseUrl, 'https://hooks.test/services/T/B/');
+
+  const gotify = store.createChannel({
+    provider: 'gotify', name: 'G', config: { baseUrl: 'https://gotify.test/' }, secrets: { appToken: 'x' },
+  });
+  assert.equal(gotify.config.baseUrl, 'https://gotify.test', 'die Basis behaelt ihr bisheriges Verhalten');
+});
+
+test('die OpenAPI-Provider-Liste kennt jeden angebotenen Kanal (#692)', async () => {
+  // Der Provider stand in NOTIFICATION_PROVIDERS, aber nicht im Schema: ein
+  // generierter Client haette provider:"webhook" abgelehnt, bevor er ihn sendet.
+  // Als Regel formuliert, nicht als Liste - der naechste Provider faellt sonst
+  // in dieselbe Luecke.
+  const { NOTIFICATION_PROVIDERS } = await import('../server/services/notification-channels.js');
+  const source = readFileSync(new URL('../server/openapi/schemas.js', import.meta.url), 'utf8');
+  // Nur die beiden Notification-Schemata: `provider` gibt es auch im DMS-Schema,
+  // und das kennt paperless/papra, nicht gotify.
+  const enums = ['NotificationChannel', 'NotificationChannelInput'].map((name) => {
+    const at = source.indexOf(`        ${name}: {`);
+    assert.ok(at !== -1, `Schema ${name} muss es geben`);
+    const block = source.slice(at, at + 2000);
+    const m = /provider: \{ type: 'string', enum: \[([^\]]+)\] \}/.exec(block);
+    assert.ok(m, `${name} muss ein provider-Enum tragen`);
+    return m[1].split(',').map((s) => s.trim().replace(/'/g, ''));
+  });
+  for (const values of enums) {
+    for (const { id } of NOTIFICATION_PROVIDERS) {
+      assert.ok(values.includes(id), `OpenAPI-Enum kennt "${id}" nicht: ${values.join(', ')}`);
+    }
+  }
 });
 
 test('providers throw sanitized HTTP errors', async () => {
