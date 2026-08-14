@@ -1229,9 +1229,15 @@ function metricTileFor(id, data, currency) {
     case 'notes': {
       const notes = data.pinnedNotes ?? [];
       if (!notes.length) return null;
+      /* `pinnedNotes` ist die VORSCHAU (gepinnt zuerst, dann aktuellste, drei
+       * Stueck), nicht die Menge der gepinnten - `notes.length` las deshalb bei
+       * null Pins "3 angepinnt" und bei fuenf ebenfalls "3". Die Zahl kommt aus
+       * `pinnedNotesCount`, die Vorschau bleibt die Vorschau. */
+      const pinned = data.pinnedNotesCount ?? notes.filter((n) => n.pinned).length;
+      if (!pinned) return null;
       return {
         id, route, icon: 'pin', label: t('nav.notes'),
-        value: t('dashboard.metricPinned', { count: notes.length }),
+        value: t('dashboard.metricPinned', { count: pinned }),
         note: notes[0]?.title || t('notes.titlePlaceholder'),
       };
     }

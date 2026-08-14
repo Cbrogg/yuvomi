@@ -1057,7 +1057,13 @@ function moduleCountsFrom(data) {
   const counts = {
     tasks: data?.openTaskCount ?? 0,
     shopping: data?.shoppingOpenCount ?? 0,
-    rewards: data?.rewards?.pending ?? 0,
+    /* NUR FUER ELTERN. `rewards.pending` zaehlt serverseitig JEDE offene Anfrage
+     * des Haushalts, waehrend die Belohnungsseite einem Nicht-Admin nur die
+     * EIGENEN zeigt: hat ein Geschwister eine offene Anfrage und man selbst
+     * keine, warb das Badge mit Arbeit, hinter der nichts stand (Codex-Review
+     * zu PR #754). Eine mitgliedseigene Zahl gaebe es nur mit einem neuen Feld
+     * in der Nutzlast; bis dahin ist keine Zahl richtiger als eine falsche. */
+    rewards: isAdmin() ? (data?.rewards?.pending ?? 0) : 0,
     health: openDoses,
   };
   /* Die Küche ist im mobilen Menü EIN Ziel für vier Module; was dort wartet,
@@ -3181,6 +3187,12 @@ function applySidebarCollapsed(collapsed) {
 
 function setDisabledModules(modules) {
   _disabledModules = new Set(Array.isArray(modules) ? modules : []);
+  /* Die Zaehlstaende haengen an der Modulliste, nicht nur an der Sitzung: die
+   * Kuechenkachel fasst vier Module zusammen, und ob ihr Einkaufszaehler gilt,
+   * entscheidet `navItems()`. Schaltet eine Adminin den Einkauf ab, waere die
+   * gecachte Zahl bis zu 60s lang noch die alte (Codex-Review zu PR #754,
+   * Folgebefund des Cache-Fixes). */
+  resetModuleCounts();
   rebuildNavigation();
 }
 

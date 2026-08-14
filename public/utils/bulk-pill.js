@@ -224,7 +224,33 @@ function paint(spec, pending) {
     }
   }
 
+  /* DER FOKUS UEBERLEBT DAS NEUZEICHNEN.
+   *
+   * `paint()` baut die Pille jedes Mal neu, und `replaceChildren` wirft den
+   * fokussierten Knopf mit weg - der Fokus faellt auf <body>. Sichtbar wurde
+   * das an "Alle auswaehlen" in den Kontakten: der Knopf loest `renderList()`
+   * plus `updateSelectUI()` aus, zeichnet also seine eigene Pille neu, und die
+   * Tastatur stand danach wieder am Seitenanfang - ausgerechnet vor dem
+   * Loeschen-Knopf, den die Auswahl gerade erst freigeschaltet hat. Die feste
+   * Leiste davor hatte ihre Knoepfe nie abgehaengt (Codex-Review zu PR #754).
+   *
+   * Gemerkt wird die POSITION unter den Aktionen, nicht das Element: der neue
+   * Knopf an derselben Stelle ist derselbe Knopf. Faellt die Aktion weg (die
+   * Auswahl ist leer, es gibt nichts mehr zu loeschen), bekommt der letzte
+   * verbliebene den Fokus - nur nicht der Body. Und nur, wenn der Fokus vorher
+   * WIRKLICH in der Pille stand; sonst reisst das Neuzeichnen ihn aus einem
+   * Eingabefeld irgendwo anders auf der Seite. */
+  const alt = layer.querySelector('.list-bulkbar');
+  const fokusIndex = alt && alt.contains(document.activeElement)
+    ? [...alt.querySelectorAll('button')].indexOf(document.activeElement)
+    : -1;
+
   layer.replaceChildren(bar);
+
+  if (fokusIndex >= 0) {
+    const knoepfe = [...bar.querySelectorAll('button')];
+    (knoepfe[fokusIndex] ?? knoepfe[knoepfe.length - 1])?.focus();
+  }
   return bar;
 }
 

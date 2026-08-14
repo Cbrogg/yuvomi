@@ -196,9 +196,17 @@ router.get('/', (req, res) => {
       ORDER BY n.pinned DESC, n.updated_at DESC
       LIMIT 3
     `).all();
+    /* `pinnedNotes` HEISST SO, IST ES ABER NICHT: die Liste sortiert Gepinntes
+     * nach vorn und schneidet bei drei ab - sie filtert nicht. Fuer die Vorschau
+     * ist das richtig (sie zeigt, was oben liegt), als ZAHL war es zweimal
+     * falsch: ein Haushalt ohne einen einzigen Pin las "3 angepinnt", einer mit
+     * fuenf Pins ebenfalls "3" (Codex-Review zu PR #754). Die Kennzahlkachel
+     * braucht deshalb eine eigene, echte Zahl. */
+    result.pinnedNotesCount = d.prepare('SELECT COUNT(*) AS n FROM notes WHERE pinned = 1').get().n;
   } catch (err) {
     log.error('pinnedNotes error:', err.message);
     result.pinnedNotes = [];
+    result.pinnedNotesCount = 0;
   }
 
   // Einkaufslisten mit offenen Artikeln (max. 3 Listen, je bis zu 6 offene Items)

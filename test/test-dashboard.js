@@ -1645,7 +1645,12 @@ const METRIC_DATA = {
   budget: { entryCount: 9, balance: 2504, income: 3000 },
   birthdays: [{ name: 'Tante Claire', days_until: 17 }],
   todayMeals: [{ title: 'Suppe' }],
-  pinnedNotes: [{ title: 'Urlaub' }],
+  // `pinnedNotes` ist die VORSCHAU (gepinnt zuerst, dann aktuellste, drei
+  // Stueck) - die Zahl der gepinnten steht daneben, weil die Liste nicht
+  // filtert. Die Vorlage fuehrt beides, sonst prueft sie eine Nutzlast, die es
+  // so nicht gibt (Codex-Review zu PR #754).
+  pinnedNotes: [{ title: 'Urlaub', pinned: 1 }],
+  pinnedNotesCount: 1,
   rewards: { standings: [{ display_name: 'Leo', balance: 60 }] },
   health: { hasMeds: true, dosesTotal: 3, dosesTaken: 1, dosesSkipped: 0, nextDose: { name: 'Vitamin D3' }, lowStockCount: 0 },
   housekeeping: { configured: true, visitsThisMonth: 4, present: true },
