@@ -1057,10 +1057,36 @@ function moduleCountsFrom(data) {
     rewards: data?.rewards?.pending ?? 0,
     health: openDoses,
   };
-  // Die Küche ist im mobilen Menü EIN Ziel für vier Module; was dort wartet,
-  // ist der Einkaufszettel.
-  counts.kitchen = counts.shopping;
+  /* Die Küche ist im mobilen Menü EIN Ziel für vier Module; was dort wartet,
+   * ist der Einkaufszettel.
+   *
+   * NUR WENN DER EINKAUF DIESEM MITGLIED AUCH OFFENSTEHT. Die Kachel ist die
+   * einzige, die einen FREMDEN Modulzähler tragen kann - die anderen erscheinen
+   * gar nicht erst, wenn ihr Modul fehlt, diese hier bleibt stehen, solange
+   * eines der vier da ist. Der Server zählt `shoppingOpenCount` ungefiltert über
+   * den ganzen Haushalt (`routes/dashboard.js`), also warb die Kachel mit
+   * Arbeit in einem Modul, das sich nicht öffnen lässt, und führte beim Antippen
+   * nach Mahlzeiten (Codex-Review zu PR #754). `navItems()` ist bereits nach
+   * Zugang gefiltert und damit die richtige Quelle für die Frage. */
+  const einkaufOffen = navItems().some((item) => item.module === 'shopping');
+  counts.kitchen = einkaufOffen ? counts.shopping : 0;
   return counts;
+}
+
+/**
+ * Die Zaehlstaende gehoeren der SITZUNG, nicht dem Geraet.
+ *
+ * `_moduleCounts` und sein Zeitstempel sind Modulzustand und ueberlebten einen
+ * Kontowechsel: meldet sich innerhalb der 60s-TTL ein anderes Familienmitglied
+ * an, baut die neue Shell ihre Badges aus den Zahlen des vorigen - offene
+ * Aufgaben, Einkauf, Belohnungen, Dosen -, und das Oeffnen des Mehr-Blattes
+ * ueberspringt den Abruf, bis die alte TTL ablaeuft (Codex-Review zu PR #754).
+ * Dieselbe Ueberlegung, aus der `auth:expired` schon den API-Cache und die
+ * Scrollstaende vergisst.
+ */
+function resetModuleCounts() {
+  _moduleCounts = {};
+  _moduleCountsAt = 0;
 }
 
 async function refreshModuleCounts() {
@@ -3876,6 +3902,8 @@ window.addEventListener('auth:expired', () => {
   // Gemerkte Scrollstände gehören zur Sitzung: der nächste Nutzer am selben
   // Gerät soll nicht auf den Positionen des vorigen landen.
   forgetScrollPositions();
+  // Und die Zählstände der Modulkacheln aus demselben Grund.
+  resetModuleCounts();
   stopThirdPartyModulePolling();
   stopReminders();
   stopPush();
@@ -4201,6 +4229,7 @@ window.yuvomi = {
     currentUser = null;
     _navBuiltForUserId = null;
     forgetScrollPositions();
+    resetModuleCounts();
     stopThirdPartyModulePolling();
     stopReminders();
     stopPush();

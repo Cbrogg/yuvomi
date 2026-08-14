@@ -774,7 +774,16 @@
     display: none;
   }
 
-  .document-row__actions [data-action="view"],
+  /* DER WEG INS DOKUMENT BLEIBT. Hier stand `[data-action="view"]` mit in der
+   * Liste, und damit hatte eine Zeile unterhalb 30rem genau ein bedienbares
+   * Element: das Kebab-Menue - das Bearbeiten, Verschieben und Archivieren
+   * anbietet, aber weder Ansehen noch Herunterladen. Die Zeile selbst ist ein
+   * <article> ohne Klick-Handler und ohne tabindex. Gemessen bei 390px in der
+   * Listenansicht war das Dokument damit fuer NIEMANDEN zu oeffnen, nicht nur
+   * fuer die Tastatur (Codex-Review zu PR #754, dort als Tastaturfall gemeldet).
+   * Die Dichte holt sich die Breite aus den Statistiken und dem
+   * Herunterladen-Link - das Herunterladen bietet der Betrachter selbst noch
+   * einmal an, das Ansehen bietet sonst nichts. */
   .document-row__actions a[download] {
     display: none;
   }

@@ -6069,7 +6069,15 @@ textarea.input { resize: vertical; }
 /* Read-only-Modul-Modus (#467): Bei „Nur lesen"-Rechten die Anlege-Affordance
    ausblenden und einen erklärenden Hinweis oben in der Seite zeigen. Die
    verbindliche Sperre liegt am Server; dies ist die ehrliche UI-Entsprechung. */
-html[data-module-readonly] .page-fab {
+/* BEIDE ANLEGE-WEGE, nicht nur der schwebende. Der angedockte FAB behaelt
+ * `.page-fab` und war damit immer erfasst - der HANDGESCHRIEBENE Kopfknopf der
+ * fuenf Module, die ihre Primaeraktion selbst mitbringen (Aufgaben, Kalender,
+ * Kontakte, Budget, Notizen), war es nie. Ein Nur-lesen-Nutzer sah dort einen
+ * aktiven Knopf, dessen Formular am Server im 403 endet. Die Regel stand seit
+ * #467 auf einem Weg, und dieser Branch hat den zweiten von einem Modul auf
+ * fuenf verbreitert (Codex-Review zu PR #754). */
+html[data-module-readonly] .page-fab,
+html[data-module-readonly] .toolbar-new-btn {
   display: none !important;
 }
 
