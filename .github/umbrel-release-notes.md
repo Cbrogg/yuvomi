@@ -1,4 +1,4 @@
-<!-- version: 2.8.4 -->
+<!-- version: 2.9.0 -->
 <!--
   Die `releaseNotes` fuer den Umbrel-App-Store, von Hand fuer JEDEN Release
   geschrieben. `umbrel-publish.yml` nimmt den Text unter diesem Kommentar
@@ -29,12 +29,12 @@
     - Leerzeile zwischen den Absaetzen: der Store rendert ein gefaltetes
       YAML-Blockskalar, dort ist die Leerzeile der Absatzumbruch.
 -->
-Recurring tasks keep their subtasks.
+This update only concerns households that store document files in a mounted folder rather than in the database. If you have not switched that on, nothing changes for you.
 
-If you use a repeating task as a checklist, its steps disappeared after the first run: completing the task created the next occurrence, but without the subtasks underneath it, so you had to type them again every time. The steps are now copied to each new occurrence and start unticked, keeping their assignees, tags and their timing relative to the parent task.
+Until now, if the folder Yuvomi was told to use had not actually been mounted, uploads appeared to work and the files were quietly written inside the container instead. They were then lost the next time the app was updated, while Yuvomi went on listing them. Yuvomi now checks that folder when it starts and writes a clear warning to the log if it is missing or cannot be written to, naming the path it looked for. It is only a warning: the app starts either way.
 
-Undoing a completion still removes the occurrence it created, but only while nobody has worked on it. If you have ticked off or edited any of its steps, it stays, along with what you entered.
+If you use this option, it is worth glancing at the log once after this update. A silent start means the folder is where it should be.
 
-There is nothing to do after this update, and your data and settings are unchanged. Existing recurring tasks pick this up the next time you complete them.
+There is nothing to do after this update, and your data and settings are unchanged.
 
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.8.4
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.9.0
