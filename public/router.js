@@ -12,6 +12,7 @@ import { esc } from '/utils/html.js';
 import { emptyHintEl } from '/utils/empty-state.js';
 import { wireScrollFade, wireCollapsingHeader } from '/utils/ux.js';
 import { TOAST_SURFACES, toastSurface } from '/utils/toast-surface.js';
+import { BULK_PILL_LAYER, clearBulkPill } from '/utils/bulk-pill.js';
 import { init as initReminders, stop as stopReminders } from '/reminders.js';
 import { initPush, stopPush } from '/push.js';
 import { numberLocaleFor } from '/settings/region-presets.js';
@@ -1033,10 +1034,126 @@ function moreActionEl({ labelKey, icon, className = '', onClick, route, navHref 
   return el;
 }
 
+/* Zählstände der Modulkacheln im „Mehr"-Sheet.
+ *
+ * Sie kommen aus EINEM späteren /dashboard-Abruf beim ersten Öffnen des
+ * Sheets, nicht aus einem eigenen Endpunkt und nicht aus zehn Modul-Requests:
+ * die Nutzlast liegt fertig da, sie beantwortet die Sichtbarkeitsfrage je
+ * Modul bereits korrekt, und in den meisten Sitzungen ist sie ohnehin warm.
+ * Ohne Antwort bleiben die Kacheln einfach ohne Badge - das ist der Normalfall
+ * beim allerersten Öffnen und kein kaputter Zustand.
+ *
+ * WAS WARTET, NICHT WAS EXISTIERT. Deshalb steht hier weder die Zahl der
+ * Geburtstage noch die der Notizen: sie zählen Bestand. Ein Badge, das immer
+ * leuchtet, ist keine Nachricht mehr. */
+let _moduleCounts = {};
+let _moduleCountsAt = 0;
+// Generation der Sitzung: steigt bei jedem Zuruecksetzen, damit eine noch
+// laufende Abfrage ihr Ergebnis nicht in die neue Sitzung traegt.
+let _moduleCountsGen = 0;
+const MODULE_COUNTS_TTL = 60_000;
+
+function moduleCountsFrom(data) {
+  const openDoses = Math.max(0, (data?.health?.dosesTotal ?? 0) - (data?.health?.dosesTaken ?? 0) - (data?.health?.dosesSkipped ?? 0));
+  const counts = {
+    tasks: data?.openTaskCount ?? 0,
+    shopping: data?.shoppingOpenCount ?? 0,
+    /* NUR FUER ELTERN. `rewards.pending` zaehlt serverseitig JEDE offene Anfrage
+     * des Haushalts, waehrend die Belohnungsseite einem Nicht-Admin nur die
+     * EIGENEN zeigt: hat ein Geschwister eine offene Anfrage und man selbst
+     * keine, warb das Badge mit Arbeit, hinter der nichts stand (Codex-Review
+     * zu PR #754). Eine mitgliedseigene Zahl gaebe es nur mit einem neuen Feld
+     * in der Nutzlast; bis dahin ist keine Zahl richtiger als eine falsche. */
+    rewards: isAdmin() ? (data?.rewards?.pending ?? 0) : 0,
+    health: openDoses,
+  };
+  /* Die Küche ist im mobilen Menü EIN Ziel für vier Module; was dort wartet,
+   * ist der Einkaufszettel.
+   *
+   * NUR WENN DER EINKAUF DIESEM MITGLIED AUCH OFFENSTEHT. Die Kachel ist die
+   * einzige, die einen FREMDEN Modulzähler tragen kann - die anderen erscheinen
+   * gar nicht erst, wenn ihr Modul fehlt, diese hier bleibt stehen, solange
+   * eines der vier da ist. Der Server zählt `shoppingOpenCount` ungefiltert über
+   * den ganzen Haushalt (`routes/dashboard.js`), also warb die Kachel mit
+   * Arbeit in einem Modul, das sich nicht öffnen lässt, und führte beim Antippen
+   * nach Mahlzeiten (Codex-Review zu PR #754). `navItems()` ist bereits nach
+   * Zugang gefiltert und damit die richtige Quelle für die Frage. */
+  const einkaufOffen = navItems().some((item) => item.module === 'shopping');
+  counts.kitchen = einkaufOffen ? counts.shopping : 0;
+  return counts;
+}
+
 /**
- * Baut den dynamischen Body des „Mehr“-Sheets: Katalog-Hinweis, farbiges
- * App-Launcher-Grid (Module) und den monochromen System-Cluster
- * (Einstellungen · Hilfe · Änderungen) als 1×3-Reihe.
+ * Die Zaehlstaende gehoeren der SITZUNG, nicht dem Geraet.
+ *
+ * `_moduleCounts` und sein Zeitstempel sind Modulzustand und ueberlebten einen
+ * Kontowechsel: meldet sich innerhalb der 60s-TTL ein anderes Familienmitglied
+ * an, baut die neue Shell ihre Badges aus den Zahlen des vorigen - offene
+ * Aufgaben, Einkauf, Belohnungen, Dosen -, und das Oeffnen des Mehr-Blattes
+ * ueberspringt den Abruf, bis die alte TTL ablaeuft (Codex-Review zu PR #754).
+ * Dieselbe Ueberlegung, aus der `auth:expired` schon den API-Cache und die
+ * Scrollstaende vergisst.
+ */
+function resetModuleCounts() {
+  _moduleCounts = {};
+  _moduleCountsAt = 0;
+  // Und der Generationszähler steigt: eine Antwort, die noch unterwegs ist,
+  // gehört der alten Sitzung und darf den Speicher nicht wieder füllen.
+  _moduleCountsGen += 1;
+}
+
+async function refreshModuleCounts() {
+  if (Date.now() - _moduleCountsAt < MODULE_COUNTS_TTL) return false;
+  /* EINE LAUFENDE ANFRAGE UEBERLEBT DAS ZURUECKSETZEN SONST.
+   * Wer das Mehr-Blatt oeffnet und sich abmeldet, waehrend `/dashboard` noch
+   * unterwegs ist, bekam die Antwort der ALTEN Sitzung nach `clearSession()`
+   * in den Speicher gelegt - die naechste Anmeldung innerhalb der TTL baute
+   * ihre Badges daraus und uebersprang den Abruf (Codex-Review zu PR #754,
+   * zweite Runde: der Befund entstand erst durch den Reset-Fix davor).
+   * Der Zaehler ist billiger als ein AbortController: die Anfrage darf
+   * zuende laufen, ihr Ergebnis wird nur nicht mehr angenommen. */
+  const gen = _moduleCountsGen;
+  try {
+    const res = await api.get('/dashboard');
+    if (gen !== _moduleCountsGen) return false;
+    _moduleCounts = moduleCountsFrom(res);
+    _moduleCountsAt = Date.now();
+    return true;
+  } catch {
+    // Kein Netz, keine Sitzung, Serverfehler: das Sheet bleibt ohne Badges
+    // benutzbar. Ein Fehler an dieser Stelle darf die Navigation nicht stören.
+    return false;
+  }
+}
+
+/** Zieht die Badges am offenen Sheet nach, ohne es neu zu bauen. */
+function paintMoreSheetBadges(sheet) {
+  if (!sheet) return;
+  sheet.querySelectorAll('.more-item[data-nav-id]').forEach((item) => {
+    const count = _moduleCounts[item.dataset.navId] ?? 0;
+    const existing = item.querySelector('.more-item__badge');
+    if (count > 0) {
+      if (existing) existing.replaceWith(moreBadgeEl(count));
+      else item.appendChild(moreBadgeEl(count));
+    } else {
+      existing?.remove();
+    }
+  });
+}
+
+/**
+ * Baut den dynamischen Body des „Mehr“-Sheets: das nach Bereichen gruppierte
+ * Modul-Raster, den monochromen System-Cluster (Einstellungen · Hilfe ·
+ * Änderungen) als kompakte Reihe und darunter Abmelden in eigener voller Zeile.
+ *
+ * Gibt EINEN Knoten in einem Array zurück (`.more-sheet__body`, der Scroller);
+ * beide Aufrufer spreizen das Ergebnis und bleiben davon unberührt.
+ *
+ * DIE GRUPPEN GIBT ES SCHON. Sie stehen als NAV_SECTION an jedem Nav-Item und
+ * beschriften bereits die Desktop-Sidebar (Planen · Haushalt · Menschen ·
+ * Finanzen). Das Sheet warf sie bisher weg und legte zehn Module in EIN
+ * ungegliedertes Raster - dieselbe Fläche, die auf dem Desktop sortiert ist,
+ * war mobil eine Wand. Hier wird nichts erfunden, nur nicht mehr eingeebnet.
  *
  * EINE Quelle der Wahrheit für renderAppShell() UND rebuildNavigation() —
  * beide Pfade müssen dieselbe Struktur erzeugen, sonst zerstört ein
@@ -1044,6 +1161,18 @@ function moreActionEl({ labelKey, icon, className = '', onClick, route, navHref 
  * Handle + Suchleiste bleiben davon unberührt (sie tragen Event-Wiring).
  */
 function buildMoreSheetBody() {
+  /* EIN scrollender Körper zwischen Griff und Suche und dem Blattrand.
+   *
+   * Das Blatt ist `position: fixed; bottom: 0` und hatte weder Obergrenze noch
+   * Scroller: es wuchs nach OBEN aus dem Schirm. Gemessen bei 320x568 lag seine
+   * Oberkante bei -142,6px, das Suchfeld komplett ausserhalb (-105,6 bis -67,0)
+   * - fokussierbar per Tab, aber nicht ins Bild zu holen (Critique
+   * 2026-08-13, P0). Der Deckel gehoert ans Blatt, das Scrollen an den Koerper:
+   * so bleiben Griff und Suche stehen, wo die Hand sie sucht, und nur die
+   * Gruppen wandern. Ein Sticky-Kopf haette dieselbe Wirkung, aber zwei
+   * Hintergruende mehr zu verwalten. */
+  const body = document.createElement('div');
+  body.className = 'more-sheet__body';
   const nodes = [];
 
   // Der Katalog-Hinweis („Alle Module … in den Einstellungen") lebt jetzt in
@@ -1051,16 +1180,43 @@ function buildMoreSheetBody() {
   // hält das Sheet ruhig und kompakt.
 
   // Einstellungen ist ein System-Ziel, kein Inhalts-Modul — es wandert aus dem
-  // farbigen Grid in den System-Cluster, damit das Grid sauber aufgeht (2×4).
+  // farbigen Grid in den System-Cluster, damit das Grid sauber aufgeht.
   const secondary = secondaryMobileItems();
   const settingsItem = secondary.find((item) => item.module === 'settings');
 
-  const grid = document.createElement('div');
-  grid.className = 'more-sheet__grid';
-  secondary
-    .filter((item) => item.module !== 'settings')
-    .forEach((item) => grid.appendChild(moreItemEl(item)));
-  nodes.push(grid);
+  // Reihenfolge der Bereiche = die der Sidebar. Ein Bereich ohne Module
+  // erscheint gar nicht - ein leerer Kopf wäre eine Überschrift über nichts.
+  const modules = secondary.filter((item) => item.module !== 'settings');
+  const sections = [];
+  for (const item of modules) {
+    const key = item.section ?? NAV_SECTION.customModules;
+    let group = sections.find((s) => s.key === key);
+    if (!group) sections.push(group = { key, items: [] });
+    group.items.push(item);
+  }
+
+  for (const section of sections) {
+    const labelKey = NAV_SECTION_LABEL_KEYS[section.key];
+    const group = document.createElement('div');
+    group.className = 'more-sheet__group';
+
+    if (labelKey) {
+      const labelId = `more-group-${section.key}`;
+      const label = document.createElement('div');
+      label.className = 'more-sheet__group-label';
+      label.id = labelId;
+      label.textContent = t(labelKey);
+      group.appendChild(label);
+      group.setAttribute('role', 'group');
+      group.setAttribute('aria-labelledby', labelId);
+    }
+
+    const grid = document.createElement('div');
+    grid.className = 'more-sheet__grid';
+    section.items.forEach((item) => grid.appendChild(moreItemEl(item)));
+    group.appendChild(grid);
+    nodes.push(group);
+  }
 
   const divider = document.createElement('div');
   divider.className = 'more-sheet__divider';
@@ -1096,10 +1252,27 @@ function buildMoreSheetBody() {
       showChangelogModal();
     },
   }));
-  system.appendChild(moreActionEl({
+  // Die Spaltenzahl folgt der Besetzung: ohne Einstellungen (Modul abgeschaltet)
+  // sind es zwei Ziele, und zwei Ziele in drei Spalten lassen eine Lücke, die
+  // wie ein fehlendes Element aussieht.
+  system.style.setProperty('--more-system-cols', String(system.children.length || 1));
+  nodes.push(system);
+
+  /* Abmelden bekommt seine eigene volle Zeile, wie in der Sidebar.
+   *
+   * IN DER SYSTEMREIHE LAG ES UNTER DEM DAUMEN, DER DAS BLATT GEOEFFNET HAT.
+   * Gemessen bei 390x844: der Mehr-Knopf steht bei x 266,6-329,0 / y 776,9-835,0,
+   * und `elementFromPoint` lieferte am MITTELPUNKT desselben Knopfs nach dem
+   * Oeffnen `.more-item--logout` (Ueberlappung 32x51px). Der Bestaetigungsdialog
+   * fing den zweiten Tap ab - aber die Stelle, an der man "Mehr" tippt, darf
+   * nicht die Stelle sein, an der die Sitzung endet (Critique 2026-08-13, P0).
+   * Die Entscheidung war an anderer Stelle laengst getroffen: die Sidebar setzt
+   * Abmelden als terminale Aktion in eine eigene, volle Zeile mit Haarlinie
+   * (sidebarActionEl weiter unten). Das Blatt fuehrt jetzt dieselbe Form. */
+  const logout = moreActionEl({
     labelKey: 'settings.logout',
     icon: 'log-out',
-    className: 'more-item--logout',
+    className: 'more-action--logout more-item--logout',
     onClick: () => {
       if (window._closeMoreSheet) window._closeMoreSheet({ restoreFocus: false });
       // #more-btn synchron fokussieren, BEVOR das Modal öffnet: openModal
@@ -1108,10 +1281,11 @@ function buildMoreSheetBody() {
       document.getElementById('more-btn')?.focus();
       confirmAndLogout();
     },
-  }));
-  nodes.push(system);
+  });
+  nodes.push(logout);
 
-  return nodes;
+  body.append(...nodes);
+  return [body];
 }
 
 /**
@@ -1194,6 +1368,11 @@ async function renderPage(route, previousPath = null, scrollTarget = 0) {
     // Hier und nicht eine Zeile höher: der Scroll-Reset gehört unmittelbar an
     // den Inhaltstausch (Guard in test-mobile-scroll-layout.js).
     clearPageFab();
+    // Dieselbe Begründung, dieselbe Schicht: die Sammelaktions-Pille gehört zur
+    // Teilmenge EINER Liste und darf nicht über der nächsten Seite stehen
+    // bleiben. Sie hat kein Gegenstück zu adoptPageFab() - wer sie braucht,
+    // setzt sie beim Rendern.
+    clearBulkPill();
     style.cleanup();
 
     // Teardown abgeschlossen: ein evtl. gemerktes Soft-Update-Ziel ist jetzt
@@ -1251,11 +1430,7 @@ async function renderPage(route, previousPath = null, scrollTarget = 0) {
     if (pageFab) {
       // Shortcut-Discoverability (Audit P3): der 'n'-Chord öffnet den FAB — als
       // Tooltip-Titel + aria-keyshortcuts sichtbar bzw. vorlesbar machen.
-      pageFab.setAttribute('aria-keyshortcuts', 'n');
-      const fabLabel = pageFab.getAttribute('aria-label');
-      if (fabLabel && !/\(n\)$/.test(pageFab.getAttribute('title') || '')) {
-        pageFab.setAttribute('title', `${fabLabel} (n)`);
-      }
+      markFabShortcut(pageFab);
 
       const fabKey = FAB_SEEN_KEY(route.module);
       let fabCount = parseInt(localStorage.getItem(fabKey) ?? '0', 10);
@@ -1424,6 +1599,10 @@ function renderAppShell(container) {
   // Liste überläuft — der Scrollbalken ist bewusst versteckt, ohne Anriss waren
   // Einträge unterhalb der Falte (Budget/Gesundheit/Einstellungen) unsichtbar.
   wireScrollFade(sidebarItems, { axis: 'y' });
+
+  // Einmal je Shell: das Andocken des FABs nimmt einen Wechsel der
+  // 1024px-Grenze auch ohne Navigation zur Kenntnis (Rotation).
+  wireFabDockingBoundary();
 
   // Zarte Hover-Vorschau — bewegt das separate `__hover`-Element (NICHT die
   // Aktiv-Pille) für Maus (hover) UND Tastatur (focus). Auf dem aktiven Item
@@ -1664,6 +1843,23 @@ function renderAppShell(container) {
   toastContainerAssertive.id = TOAST_SURFACES.assertive;
   toastContainerAssertive.setAttribute('aria-live', 'assertive');
 
+  // Wohnort der Sammelaktions-Pille (utils/bulk-pill.js). Sie steht ZUERST im
+  // Stapel und damit über den Toasts: die Spalte ist unten verankert, also
+  // bleibt der Toast an seinem Platz und die Pille weicht ihm nach oben aus.
+  // Der mit der Frist bewegt sich nicht.
+  const bulkPillLayerEl = document.createElement('div');
+  bulkPillLayerEl.className = 'bulk-pill-layer';
+  bulkPillLayerEl.id = BULK_PILL_LAYER;
+
+  // DIE UNTERE SHELL-ZONE IST EIN STAPEL, KEIN ÜBEREINANDER. Beide
+  // Toast-Container standen bis hierher einzeln auf demselben `bottom` und
+  // hätten sich gegenseitig verdeckt, sobald eine höfliche und eine bestimmte
+  // Meldung zusammentrafen; die Pille wäre die dritte auf derselben Stelle
+  // gewesen. Als Kinder einer Spalte stapeln sie sich stattdessen.
+  const bottomStack = document.createElement('div');
+  bottomStack.className = 'shell-bottom-stack';
+  bottomStack.append(bulkPillLayerEl, toastContainerPolite, toastContainerAssertive);
+
   const routeAnnouncer = document.createElement('div');
   routeAnnouncer.id = 'route-announcer';
   routeAnnouncer.className = 'sr-only';
@@ -1690,10 +1886,24 @@ function renderAppShell(container) {
     lgBackdrop.appendChild(blob);
   }
 
-  const shellNodes = [skipLink, lgBackdrop, sidebar, main, fabLayer, bottomNav];
+  // `bottomStack` steht VOR der Nav und nicht am Ende der Shell (Critique
+  // 2026-08-13). Die Pille darin ist eine Bedienung für die Liste, die gerade
+  // darüber steht - in der Tabfolge lag sie aber hinter der Liste, hinter dem
+  // FAB, hinter der Nav und hinter dem unsichtbaren Suchfeld: gemessen Station
+  // 47 von 49 auf /contacts. Wer eine Zeile abhakt und die Aktion mit der
+  // Tastatur erreichen will, tabbte durch die ganze Seite. Jetzt ist es 27.
+  //
+  // NICHT weiter nach vorn, obwohl die Pille inhaltlich zur Liste gehört: die
+  // FAB-Schicht muss laut #634 unmittelbar zwischen Scrollport und Nav hängen,
+  // und ein Guard prüft genau diese Nachbarschaft. Zwischen FAB und Nav ist der
+  // erste Platz, der beide Zusagen hält.
+  //
+  // Sichtbar ändert das nichts: der Stapel ist `position: fixed` und trägt
+  // `--z-toast`, seine Lage kommt aus der Regel, nicht aus der Reihenfolge.
+  const shellNodes = [skipLink, lgBackdrop, sidebar, main, fabLayer, bottomStack, bottomNav];
   if (backdrop)   shellNodes.push(backdrop);
   if (moreSheet)  shellNodes.push(moreSheet);
-  shellNodes.push(searchOverlay, toastContainerPolite, toastContainerAssertive, routeAnnouncer);
+  shellNodes.push(searchOverlay, routeAnnouncer);
   container.replaceChildren(...shellNodes);
   // Die Kapsel ist ein NEUER Knoten; der Beobachter des Tab-Indikators haengt
   // sonst am verworfenen (siehe observeNavCapsule weiter unten).
@@ -1761,12 +1971,141 @@ function adoptPageFab() {
   const layer = document.getElementById('fab-layer');
   if (!layer) return null;
   const fresh = document.querySelector('#main-content .page-fab');
+  if (fresh && dockFabIntoToolbar(fresh)) return null;
   // Umgezogen wird die GRUPPE, wenn es eine gibt: das Speed-Dial des Dashboards
   // ist ein FAB plus Aktionsliste plus Backdrop, und beide sind fixiert. Zöge
   // nur der Knopf um, bliebe die Mechanik im Scrollport zurück - der halbe
   // Umzug wäre schlimmer als keiner, weil er nach Erledigung aussieht.
   if (fresh) layer.replaceChildren(fresh.closest('.page-fab-group') ?? fresh);
   return layer.querySelector('.page-fab');
+}
+
+/**
+ * Auf dem Desktop wird aus dem schwebenden Knopf ein BESCHRIFTETER Knopf in der
+ * Werkzeugleiste. Gibt true zurück, wenn er dort gelandet ist.
+ *
+ * WARUM IN DER SHELL UND NICHT IN DREIZEHN SEITEN: der FAB zieht ohnehin durch
+ * genau diese eine Funktion um (#634), und `.page-toolbar__actions` ist der
+ * Aktions-Slot, den die Modulköpfe schon teilen. Ein Opt-in, das jedes Modul
+ * selbst setzen müsste, fehlt beim vierzehnten.
+ *
+ * DER SICHTBARE TEXT IST NICHT DAS `aria-label`. Ein aria-label beschreibt
+ * eine Handlung („Geburtstag hinzufügen"), ein Toolbar-Knopf benennt seine
+ * Sache („Geburtstag") und lässt das Verb dem Plus-Zeichen. Als das Label hier
+ * noch aus `aria-label` kam, standen an derselben Stelle drei Schreibweisen
+ * nebeneinander - gemessen am 12.08.: „Neue Aufgabe" (150px, handgeschrieben),
+ * „Geburtstag hinzufügen" (216px, geerbt) und zweimal gar nichts. Der kurze
+ * Text steht deshalb als `data-dock-label` am Knopf, das ausführliche
+ * `aria-label` bleibt unangetastet. Doppelt vorgelesen wird nichts: `aria-label`
+ * überschreibt den Inhalt für Hilfstechnik ohnehin.
+ *
+ * Ohne `data-dock-label` dockt der Knopf STUMM NICHT AN, statt auf das
+ * aria-label zurückzufallen: ein Rückfall wäre genau der lange Satz, den diese
+ * Regel abgeschafft hat, und er fiele niemandem auf. So bleibt der schwebende
+ * Knopf stehen - sichtbar falsch statt unsichtbar uneinheitlich. Ein Guard in
+ * test-frontend-audit hält dazu, dass jeder `.page-fab` das Attribut trägt.
+ *
+ * DREI SACHEN DOCKEN NICHT AN, jede aus ihrem eigenen Grund:
+ *   - eine .page-fab-group (das Speed-Dial der Übersicht): sie ist ein Menü,
+ *     kein Knopf, und ihre Aktionsliste ist fixiert. Ein halber Umzug wäre
+ *     schlimmer als keiner.
+ *   - Module, die ihren eigenen .toolbar-new-btn mitbringen: sonst stünden
+ *     zwei Primärknöpfe nebeneinander.
+ *   - Module ohne Aktions-Slot im Kopf: dort bleibt der schwebende Knopf, bis
+ *     ihr Kopf einen bekommt. Lieber ein Modul mit dem alten Weg als eines
+ *     ohne Primäraktion.
+ */
+function dockFabIntoToolbar(fab) {
+  if (!isDesktopViewport()) return false;
+  if (fab.closest('.page-fab-group')) return false;
+  const main = document.getElementById('main-content');
+  if (main?.querySelector('.toolbar-new-btn')) return false;
+  const slot = main?.querySelector('.page-toolbar__actions');
+  if (!slot) return false;
+  const label = fab.dataset.dockLabel;
+  if (!label) return false;
+
+  // `.page-fab` BLEIBT am Element. Zwei Module rufen ihre Primäraktion über
+  // `document.querySelector('.page-fab').click()` auf (Rezepte, Einkauf); wer
+  // die Klasse hier abzöge, machte deren Tastenkürzel und Tab-FAB still tot.
+  // Die schwebende Geometrie hebt `.page-fab--docked` in layout.css auf.
+  fab.classList.add('btn', 'btn--primary', 'page-fab--docked');
+  if (!fab.querySelector('.toolbar-new-btn__label')) {
+    const span = document.createElement('span');
+    span.className = 'toolbar-new-btn__label';
+    span.textContent = label;
+    fab.appendChild(span);
+  }
+  slot.appendChild(fab);
+  /* DAS TASTENKUERZEL WIRD HIER MITGESETZT, nicht nur beim schwebenden Knopf.
+   * `adoptPageFab()` gibt beim Andocken `null` zurueck, damit die
+   * Einstiegsanimation des schwebenden FABs nicht mitlaeuft - der Aufrufer
+   * ueberspringt damit aber auch `aria-keyshortcuts` und den Titel mit "(n)".
+   * Die Auffindbarkeit fiel also ausgerechnet am ZEIGERGERAET weg, wo ein
+   * Tastenkuerzel ueberhaupt erst zaehlt (PR-Review #754). Der Chord selbst hat
+   * immer funktioniert, die Klasse `.page-fab` bleibt ja am Element. */
+  markFabShortcut(fab);
+  return true;
+}
+
+/** Macht den 'n'-Chord am FAB sichtbar bzw. vorlesbar - schwebend wie angedockt. */
+function markFabShortcut(fab) {
+  fab.setAttribute('aria-keyshortcuts', 'n');
+  const fabLabel = fab.getAttribute('aria-label');
+  if (fabLabel && !/\(n\)$/.test(fab.getAttribute('title') || '')) {
+    fab.setAttribute('title', `${fabLabel} (n)`);
+  }
+}
+
+/** Spiegelt die Sidebar-Grenze aus layout.css - siehe die Notiz bei updateNav(). */
+function isDesktopViewport() {
+  return window.matchMedia('(min-width: 1024px)').matches;
+}
+
+/**
+ * Nimmt das Andocken zurueck: aus dem Werkzeugleisten-Knopf wird wieder der
+ * schwebende FAB in seiner Shell-Ebene.
+ */
+function undockFabFromToolbar(fab) {
+  const layer = document.getElementById('fab-layer');
+  if (!layer) return false;
+  fab.classList.remove('btn', 'btn--primary', 'page-fab--docked');
+  fab.querySelector('.toolbar-new-btn__label')?.remove();
+  layer.replaceChildren(fab.closest('.page-fab-group') ?? fab);
+  return true;
+}
+
+/**
+ * DIE ENTSCHEIDUNG UEBERLEBT DIE GRENZE, AUCH OHNE NAVIGATION.
+ *
+ * `dockFabIntoToolbar()` fragt `isDesktopViewport()` genau einmal je
+ * Seitenaufbau. Wer die 1024px-Grenze ohne Routenwechsel ueberquert - ein iPad,
+ * das aus der Landschaft ins Hochformat kippt: 1024 -> 768 -, behielt den Knoten
+ * in `.page-toolbar__actions`, verlor aber seine Geometrie: `.page-fab--docked`
+ * steht ausschliesslich in `@media (min-width: 1024px)`, der Knopf fiel also auf
+ * `.page-fab` zurueck (quadratisch, `--fab-size`) und trug den
+ * `.toolbar-new-btn__label`-Span darin weiter, fuer den es unterhalb 1024px
+ * keine einzige Regel gibt (PR-Review #754).
+ *
+ * Der Listener haengt EINMAL an der Shell und ruft dieselben zwei Funktionen,
+ * die auch der Seitenaufbau ruft - keine zweite Fassung derselben Entscheidung.
+ */
+function wireFabDockingBoundary() {
+  const query = window.matchMedia?.('(min-width: 1024px)');
+  if (!query?.addEventListener) return;
+  query.addEventListener('change', () => {
+    const docked = document.querySelector('#main-content .page-fab--docked');
+    if (docked && !isDesktopViewport()) {
+      undockFabFromToolbar(docked);
+      return;
+    }
+    if (!docked && isDesktopViewport()) {
+      const floating = document.querySelector('#fab-layer .page-fab');
+      // Der schwebende Knopf haengt in der Shell-Ebene, `dockFabIntoToolbar`
+      // sucht ihn aber unter `#main-content` - hier also direkt anbieten.
+      if (floating) dockFabIntoToolbar(floating);
+    }
+  });
 }
 
 /**
@@ -2293,6 +2632,13 @@ function initMoreSheet(container, openSearch) {
     currentMoreBtn().setAttribute('aria-expanded', 'true');
     sheet.querySelector('#more-sheet-search, [data-route]')?.focus();
     if (window.lucide) window.lucide.createIcons({ el: sheet });
+    // Zählstände nachziehen, ohne das Öffnen zu verzögern: das Sheet steht
+    // sofort, die Badges kommen, sobald die Antwort da ist. Beim zweiten Öffnen
+    // innerhalb der TTL passiert gar nichts - das Sheet ist eine Navigation,
+    // kein Monitor.
+    refreshModuleCounts().then((fresh) => {
+      if (fresh && sheet.getAttribute('aria-hidden') !== 'true') paintMoreSheetBadges(sheet);
+    });
   }
 
   function closeSheet({ restoreFocus = true } = {}) {
@@ -2318,11 +2664,26 @@ function initMoreSheet(container, openSearch) {
     }
   });
 
+  /* WISCHEN SCHLIESST NUR VOM ANFANG DER LISTE AUS.
+   *
+   * Vorher schloss jede Abwaertsbewegung ueber 60px das Blatt, egal wo sie
+   * begann. Seit `.more-sheet__body` scrollt (die Obergrenze gegen den
+   * Blattueberstand bei 320px), IST diese Geste auch das Zurueckscrollen in den
+   * Gruppen: wer unten steht und nach oben zurueckwischt, bewegt den Finger
+   * abwaerts und schloss damit das Blatt (PR-Review #754).
+   *
+   * Der Stand wird beim BEGINN der Geste gemerkt, nicht am Ende: bis dahin hat
+   * der Scroller laengst reagiert und stuende auch nach einem echten
+   * Zieh-zum-Schliessen auf 0. */
   let _touchStartY = 0;
+  let _touchStartAtTop = true;
   sheet.addEventListener('touchstart', (e) => {
     _touchStartY = e.touches[0].clientY;
+    const body = sheet.querySelector('.more-sheet__body');
+    _touchStartAtTop = !body || body.scrollTop <= 0;
   }, { passive: true });
   sheet.addEventListener('touchend', (e) => {
+    if (!_touchStartAtTop) return;
     if (e.changedTouches[0].clientY - _touchStartY > 60) closeSheet();
   }, { passive: true });
 
@@ -2829,6 +3190,12 @@ function applySidebarCollapsed(collapsed) {
 
 function setDisabledModules(modules) {
   _disabledModules = new Set(Array.isArray(modules) ? modules : []);
+  /* Die Zaehlstaende haengen an der Modulliste, nicht nur an der Sitzung: die
+   * Kuechenkachel fasst vier Module zusammen, und ob ihr Einkaufszaehler gilt,
+   * entscheidet `navItems()`. Schaltet eine Adminin den Einkauf ab, waere die
+   * gecachte Zahl bis zu 60s lang noch die alte (Codex-Review zu PR #754,
+   * Folgebefund des Cache-Fixes). */
+  resetModuleCounts();
   rebuildNavigation();
 }
 
@@ -3173,7 +3540,27 @@ function moreItemEl({ path, navHref, label, icon, module: mod, accent, navId }) 
   span.textContent = label;
   a.appendChild(well);
   a.appendChild(span);
+
+  // Der Zaehlstand kommt spaeter (siehe paintMoreSheetBadges) und nur, wenn es
+  // einen gibt. Die Kachel bleibt ohne ihn vollstaendig - ein Badge ist eine
+  // Zugabe, kein Bestandteil.
+  const count = _moduleCounts[navId ?? mod];
+  if (count > 0) a.appendChild(moreBadgeEl(count));
   return a;
+}
+
+/**
+ * Zaehlbadge einer Modulkachel: „was wartet", nie „was existiert".
+ * Die nackte Ziffer im Text traegt fuer sich keine Bedeutung - der Screenreader
+ * laese „Aufgaben 3". Das aria-label sagt, was die 3 ist; den Modulnamen hat
+ * die Vorlesekette aus dem Label daneben bereits.
+ */
+function moreBadgeEl(count) {
+  const badge = document.createElement('span');
+  badge.className = 'more-item__badge';
+  badge.textContent = count > 99 ? '99+' : String(count);
+  badge.setAttribute('aria-label', t('nav.moreBadge', { count }));
+  return badge;
 }
 
 function kitchenSectionLabel(path) {
@@ -3546,6 +3933,8 @@ window.addEventListener('auth:expired', () => {
   // Gemerkte Scrollstände gehören zur Sitzung: der nächste Nutzer am selben
   // Gerät soll nicht auf den Positionen des vorigen landen.
   forgetScrollPositions();
+  // Und die Zählstände der Modulkacheln aus demselben Grund.
+  resetModuleCounts();
   stopThirdPartyModulePolling();
   stopReminders();
   stopPush();
@@ -3871,6 +4260,7 @@ window.yuvomi = {
     currentUser = null;
     _navBuiltForUserId = null;
     forgetScrollPositions();
+    resetModuleCounts();
     stopThirdPartyModulePolling();
     stopReminders();
     stopPush();

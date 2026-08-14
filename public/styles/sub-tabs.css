@@ -126,8 +126,9 @@
  * Modul-Tints sind gegen Weiß auf >=5:1 vertieft, weiße Tinte darauf erbt
  * denselben Wert. */
 .sub-tab--active {
-  background-color: var(--active-module-accent, var(--color-accent));
-  color: var(--color-ink-on-vivid);
+  background-color: var(--seg-active-bg);
+  box-shadow: var(--seg-active-shadow);
+  color: color-mix(in srgb, var(--active-module-accent, var(--color-accent)) var(--tint-ink), var(--color-text-primary));
   font-weight: var(--font-weight-semibold);
 }
 
@@ -199,9 +200,12 @@
  * einzige Ort, an dem der Fill-Umbau die alte Badge-Rechnung gekippt hätte.
  * Umgekehrt erbt die Ziffer exakt den verifizierten Akzent-auf-Weiß-Wert
  * (>=5:1 über alle 17 Tints). */
+/* Der Zähler kehrte sich auf der GEFÜLLTEN Pille um. Die Pille ist jetzt eine
+ * Surface-Pille - ein weißer Zähler darauf wäre unsichtbar. Er nimmt deshalb
+ * dieselbe getönte Marke wie überall sonst (tokens.css, Abschnitt 6c). */
 .sub-tab--active .sub-tab__badge {
-  background-color: var(--color-ink-on-vivid);
-  color: var(--active-module-accent, var(--color-accent));
+  background-color: color-mix(in srgb, var(--active-module-accent, var(--color-accent)) var(--tint-state), transparent);
+  color: color-mix(in srgb, var(--active-module-accent, var(--color-accent)) var(--tint-ink), var(--color-text-primary));
 }
 
 /* Der Vorrats-Warnzähler bleibt sein eigenes Signal - auch auf dem aktiven Tab. */

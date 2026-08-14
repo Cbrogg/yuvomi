@@ -136,7 +136,7 @@ router.put('/:id', (req, res) => {
     const id = parseInt(req.params.id, 10);
     if (!id) return res.status(400).json({ error: 'Ungueltige Rezept-ID', code: 400 });
 
-    const existing = db.get().prepare('SELECT id, created_by, provider_account_id FROM recipes WHERE id = ?').get(id);
+    const existing = db.get().prepare('SELECT id, created_by, provider_account_id, meal_types FROM recipes WHERE id = ?').get(id);
     if (!existing) return res.status(404).json({ error: 'Recipe not found', code: 404 });
     // Mirror-Rezepte sind read-only: der Quell-Provider bleibt Quelle der
     // Wahrheit für ihren Inhalt. Der Check steht vor der created_by-Prüfung,
@@ -150,7 +150,13 @@ router.put('/:id', (req, res) => {
     const vTitle = str(req.body.title, 'Titel', { max: MAX_TITLE });
     const vNotes = str(req.body.notes, 'Notizen', { max: MAX_TEXT, required: false });
     const vRecipeUrl = str(req.body.recipe_url, 'Rezept-URL', { max: MAX_TEXT, required: false });
-    const mealTypes = normalizeRecipeMealTypes(req.body.meal_types);
+    // Fehlt das Feld, bleibt die gespeicherte Auswahl stehen - ein Teil-Update
+    // darf sie nicht mitnehmen. Ohne den Rückgriff schriebe jeder Aufruf ohne
+    // meal_types wieder alle vier Mahlzeiten hin und machte eine bewusst leere
+    // Auswahl (#750) beim nächsten Speichern zunichte.
+    const mealTypes = normalizeRecipeMealTypes(
+      req.body.meal_types === undefined ? existing.meal_types : req.body.meal_types
+    );
     const errors = collectErrors([vTitle, vNotes, vRecipeUrl]);
     if (errors.length) return res.status(400).json({ error: errors.join(' '), code: 400 });
 

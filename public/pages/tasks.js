@@ -10,7 +10,7 @@ import { openModal as openSharedModal, closeModal, wireBlurValidation, validateA
 import { openDetailView, closeDetailView, visibilityRow, assignedRow } from '/components/detail-view.js';
 import { stagger, vibrate, scheduleUndoableDelete } from '/utils/ux.js';
 import { wireSwipeRows, maybeShowSwipeHint } from '/utils/swipe-row.js';
-import { t, getLocale, formatDate, formatTime, formatDateInput, parseDateInput, isDateInputValid, formatTimeInput, parseTimeInput } from '/i18n.js';
+import { t, getLocale, formatDate, formatDayMonth, formatTime, formatDateInput, parseDateInput, isDateInputValid, formatTimeInput, parseTimeInput } from '/i18n.js';
 import { esc, renderMarkdownLight } from '/utils/html.js';
 import { refresh as refreshReminders } from '/reminders.js';
 import { renderUserMultiSelect, getSelectedUserIds, bindUserMultiSelect, renderAvatarStack } from '/components/user-multi-select.js';
@@ -130,7 +130,22 @@ function formatDueDate(dateStr, timeStr, isDone = false) {
   const calDayDiff = Math.round((dueDay - today) / (1000 * 60 * 60 * 24));
 
   const timeLabel = timeStr ? ` – ${formatTime(dueDate)}` : '';
-  const fullLabel = timeStr ? `${formatDate(dueDate)}, ${formatTime(dueDate)}` : formatDate(dueDate);
+
+  /* DAS JAHR STEHT NUR DA, WO ES ETWAS UNTERSCHEIDET.
+   *
+   * Gemessen bei 390px: die Metazeile hat 228px, und „Überfällig – 11.08.2026"
+   * allein belegte 154px davon - mit dem Prioritäts-Chip davor lief die Zeile
+   * über und schnitt sich selbst an („11.08.202|6"). Das Jahr war dabei die
+   * einzige Angabe, die nichts beitrug: eine Aufgabe, die dieses Jahr fällig
+   * ist, sagt mit „11.08." dasselbe in 35px weniger.
+   *
+   * Über `formatDayMonth` und nicht per slice: die Reihenfolge und das
+   * Trennzeichen hängen an der Datumsformat-Präferenz (dmy, mdy, ymd), und ein
+   * abgeschnittener String hätte sie in drei von sieben Formaten verdreht. */
+  const dateLabel = dueDay.getFullYear() === today.getFullYear()
+    ? formatDayMonth(dueDate)
+    : formatDate(dueDate);
+  const fullLabel = timeStr ? `${dateLabel}, ${formatTime(dueDate)}` : dateLabel;
 
   // Erledigte/archivierte Aufgaben können nicht überfällig sein - neutrales Datum.
   if (isDone) {
@@ -333,8 +348,28 @@ async function wireSyncTarget(panel, task) {
   }
 }
 
+/**
+ * EINE Metazeile, und sie bricht nicht um.
+ *
+ * Die Zeile trug bis zu acht Elemente mit `flex-wrap: wrap` und wurde damit je
+ * nach Aufgabe zwei- bis dreizeilig - der eigentliche Höhentreiber der Liste,
+ * nicht die Polsterung. Drei Regeln nehmen das zurück, ohne Information zu
+ * verstecken, die es nur hier gibt:
+ *
+ * 1. ZWEI DATEN SIND EINS ZU VIEL. Das Startdatum erscheint nur, wenn es keine
+ *    Fälligkeit gibt. Steht beides an, ist die Fälligkeit die Frage, die die
+ *    Liste beantwortet; der Beginn steht in der Detailfläche.
+ * 2. DIE KATEGORIE STEHT NICHT ZWEIMAL. Beim Gruppieren nach Kategorie ist der
+ *    Gruppenkopf darüber schon die Antwort - das Etikett wiederholte ihn in
+ *    jeder Zeile der Gruppe.
+ * 3. EIN TAG STATT DREI, der Rest als „+N". Der Marker existiert bereits
+ *    (.task-tag--more) und sagt, dass etwas fehlt - das tut ein Abschnitt nicht.
+ *
+ * Anhänge werden zur reinen Glyphe: die Zahl daneben war die einzige Stelle der
+ * Zeile, an der eine Anzahl OHNE ihren Gegenstand stand.
+ */
 function renderTaskCard(task, opts = {}) {
-  const { expandedSubtasks = false, showCheckbox = false, isChecked = false } = opts;
+  const { expandedSubtasks = false, showCheckbox = false, isChecked = false, showCategory = true } = opts;
   const isDone = task.status === 'done';
   const archived = isArchived(task);
   const progress = task.subtask_total > 0
@@ -356,7 +391,7 @@ function renderTaskCard(task, opts = {}) {
 
   return `
     <div class="task-card ${isDone ? 'task-card--done' : ''} ${archived ? 'task-card--archived' : ''}" data-task-id="${task.id}">
-      <div class="task-card__main">
+      <div class="list-row list-row--roomy task-card__main">
         ${showCheckbox ? `
         <input type="checkbox" class="task-bulk-checkbox" data-task-id="${task.id}"
                ${isChecked ? 'checked' : ''} aria-label="${t('tasks.selectTask')}">
@@ -368,19 +403,25 @@ function renderTaskCard(task, opts = {}) {
         </button>
 
         <div class="task-card__body">
-          <button type="button" class="task-card__title u-card-title" data-action="open-task" data-id="${task.id}">
+          <button type="button" class="task-card__title u-card-title u-compact" data-action="open-task" data-id="${task.id}">
             ${esc(task.title)}
           </button>
           <div class="task-card__meta">
             ${archived ? `<span class="due-date task-card__archived"><i data-lucide="archive" class="icon-sm" aria-hidden="true"></i>${t('tasks.statusArchived')}</span>` : ''}
             ${renderPriorityBadge(task.priority)}
-            ${renderStartDateBadge(task.start_date)}
+            ${task.due_date ? '' : renderStartDateBadge(task.start_date)}
             ${renderDueDate(task.due_date, task.due_time, isDone || archived)}
-            ${task.is_recurring ? `<span class="due-date" aria-label="${t('tasks.recurring')}"><i data-lucide="repeat" class="icon-sm" aria-hidden="true"></i></span>` : ''}
-            ${task.document_count > 0 ? `<span class="due-date task-card__docs" aria-label="${t('tasks.documentsCount', { count: task.document_count })}"><i data-lucide="paperclip" class="icon-sm" aria-hidden="true"></i>${task.document_count}</span>` : ''}
+            ${/* `role="img"`, sonst wertet keine Hilfstechnik das `aria-label` aus:
+                an einem generischen <span> ohne Rolle ist es wirkungslos. Solange
+                die Ziffer noch danebenstand, las der Screenreader wenigstens sie -
+                seit der Dichte-Runde traegt das Label die Anzahl allein. Dieselbe
+                Marke im Budget (budget.js, `.budget-recur-mark`) macht es richtig;
+                hier standen zwei Kopien ohne Rolle (PR-Review #754). */ ''}
+            ${task.is_recurring ? `<span class="due-date" role="img" aria-label="${esc(t('tasks.recurring'))}"><i data-lucide="repeat" class="icon-sm" aria-hidden="true"></i></span>` : ''}
+            ${task.document_count > 0 ? `<span class="due-date task-card__docs" role="img" aria-label="${esc(t('tasks.documentsCount', { count: task.document_count }))}"><i data-lucide="paperclip" class="icon-sm" aria-hidden="true"></i></span>` : ''}
             ${renderVisibilityBadge(task.visibility)}
-            ${task.category !== FALLBACK_CATEGORY ? `<span class="due-date task-card__category">${esc(catLabel(task.category))}</span>` : ''}
-            ${renderTagBadges(task.tags)}
+            ${showCategory && task.category !== FALLBACK_CATEGORY ? `<span class="due-date task-card__category">${esc(catLabel(task.category))}</span>` : ''}
+            ${renderTagBadges(task.tags, ROW_TAG_BADGES_VISIBLE, task.priority)}
           </div>
         </div>
 
@@ -473,20 +514,29 @@ function renderTaskGroups(tasks, groupMode) {
   return groups.map(([name, groupTasks]) => {
     const sorted = [...groupTasks].sort((a, b) => sortTasks(a, b, now));
     return `
-    <div class="task-group">
-      <div class="task-group__header">
-        <!-- Gruppenkopf als echte Ueberschrift (Critique 2026-08-10): /tasks
-             hatte genau EIN h-Element im ganzen Dokument, und wer per H-Taste
-             navigiert, kam damit auf den Seitentitel und nicht weiter. Der
-             Seitentitel ist h1, die Gruppe darunter also h2. -->
-        <h2 class="task-group__title">${esc(groupMode === 'category' ? catLabel(name) : name)}</h2>
-        <span class="task-group__count">${groupTasks.length}</span>
-      </div>
+    <div class="task-group list-group">
+      <!-- Gruppenkopf als echte Ueberschrift (Critique 2026-08-10): /tasks
+           hatte genau EIN h-Element im ganzen Dokument, und wer per H-Taste
+           navigiert, kam damit auf den Seitentitel und nicht weiter. Der
+           Seitentitel ist h1, die Gruppe darunter also h2.
+
+           Die FORM kommt seit der Zusammenfuehrung aus der geteilten
+           Gruppen-Grammatik (styles/list-row.css), wie im Einkauf und im
+           Vorrat: Label und Zaehlstand stehen NEBENEINANDER. Vorher trug der
+           Kopf ein eigenes space-between und schob die Zahl an die rechte
+           Traegerkante - auf 1280px stand sie damit 640px vom Gruppennamen
+           entfernt und las sich als unverbundener Wert. Genau diesen Befund
+           hatte der Einkauf am 2026-07-30 schon einmal. -->
+      <h2 class="list-group__title">
+        ${esc(groupMode === 'category' ? catLabel(name) : name)}
+        <span class="list-group__count">${groupTasks.length}</span>
+      </h2>
       <div class="list-rows">
         ${sorted.map((t) => renderSwipeRow(t, renderTaskCard(t, {
           showCheckbox: state.bulkSelectMode,
           isChecked: state.selectedTaskIds.has(t.id),
           expandedSubtasks: state.subtasksExpandedByDefault,
+          showCategory: groupMode !== 'category',
         }))).join('')}
       </div>
     </div>`;
@@ -604,6 +654,11 @@ function wireTagEditor(panel) {
 // Avatar-Stack: eine Karte, die 32 Etiketten ausrollt, ist keine Karte mehr.
 const TAG_BADGES_VISIBLE = 3;
 
+/* In der LISTENZEILE steht genau ein Etikett, im Kanban bleiben es drei: dort
+ * ist die Karte die ganze Darstellung der Aufgabe und hat die Höhe dafür, hier
+ * teilt sich das Etikett die Zeile mit Priorität, Fälligkeit und Avatar. */
+const ROW_TAG_BADGES_VISIBLE = 1;
+
 /**
  * Tag-Chips einer Aufgabe für Karten und Kanban.
  *
@@ -612,9 +667,33 @@ const TAG_BADGES_VISIBLE = 3;
  * Den Klick fängt die Delegation in wireTagBadgeFilter ab, die ihn auch vom
  * Karten-Klick (Aufgabe öffnen) trennt.
  */
-function renderTagBadges(tags) {
+/**
+ * @param {string} [priority]  Die Priorität der Aufgabe, deren Etiketten das
+ *   hier sind. Ein Etikett, das GENAU SO heisst wie sie, wird weggelassen.
+ *
+ * WARUM: gemessen stand auf /tasks der Prioritäts-Chip „• Dringend" direkt
+ * neben dem gespiegelten CalDAV-Etikett „dringend" - zwei Formen, dasselbe
+ * Wort, in einer Metazeile, die seit dem Zeilenschnitt einzeilig ist und jedes
+ * Element bezahlt. Beide kommen aus derselben Quelle: eine VTODO trägt ihre
+ * Dringlichkeit als PRIORITY und noch einmal als CATEGORIES.
+ *
+ * NUR DIE EIGENE PRIORITÄT, nicht jedes Prioritätswort: trägt eine Aufgabe mit
+ * Priorität „hoch" ein Etikett „dringend", ist das keine Doppelung, sondern ein
+ * Widerspruch - und den soll man sehen.
+ *
+ * Verglichen wird gegen das ANGEZEIGTE Label, nicht gegen den Schlüssel: das
+ * Etikett kommt aus einer fremden Liste und ist in der Sprache geschrieben, in
+ * der der Nutzer es dort angelegt hat.
+ */
+function renderTagBadges(tags, limit = TAG_BADGES_VISIBLE, priority = null) {
   if (!tags?.length) return '';
-  const shown = tags.slice(0, TAG_BADGES_VISIBLE);
+  const eigenes = priority && priority !== 'none' ? PRIORITY_LABELS()[priority] : null;
+  if (eigenes) {
+    const norm = (s) => String(s).trim().toLocaleLowerCase();
+    tags = tags.filter((tag) => norm(tag) !== norm(eigenes));
+    if (!tags.length) return '';
+  }
+  const shown = tags.slice(0, limit);
   const rest  = tags.length - shown.length;
   const chips = shown.map((tag) => `
     <button type="button" class="task-tag task-tag--filter" data-tag-filter="${esc(tag)}"
@@ -623,7 +702,7 @@ function renderTagBadges(tags) {
   // also gäbe es auch nichts, worauf ein Klick filtern könnte.
   if (rest > 0) {
     chips.push(`<span class="task-tag task-tag--more"
-                      title="${esc(tags.slice(TAG_BADGES_VISIBLE).join(', '))}">+${rest}</span>`);
+                      title="${esc(tags.slice(limit).join(', '))}">+${rest}</span>`);
   }
   return chips.join('');
 }
@@ -1891,7 +1970,7 @@ function renderKanbanCard(task) {
       <div class="kanban-card__meta">
         ${renderPriorityBadge(task.priority)}
         ${due ? `<span class="due-date ${due.cls}"><i data-lucide="clock" class="icon-sm" aria-hidden="true"></i> ${due.label}</span>` : ''}
-        ${renderTagBadges(task.tags)}
+        ${renderTagBadges(task.tags, TAG_BADGES_VISIBLE, task.priority)}
       </div>
       <div class="kanban-card__footer">
         ${renderAvatarStack(task.assigned_users ?? [], { size: 22 }) || '<span></span>'}
@@ -2326,7 +2405,11 @@ function renderFilters(container) {
 
   const toggleBtn = document.createElement('button');
   toggleBtn.id = 'filter-toggle-btn';
-  toggleBtn.className = `filter-toggle-btn${state.filterPanelOpen ? ' filter-toggle-btn--open' : ''}${activeCount > 0 ? ' filter-toggle-btn--active' : ''}`;
+  // `filter-chip` trägt die Form, `filter-toggle-btn` nur noch die Abweichung:
+  // der Knopf stand mit einer eigenen, zeichengleichen Kopie derselben vierzehn
+  // Deklarationen daneben (siehe tasks.css) und war damit der vierte Chip, den
+  // die geteilte Datei eigentlich abgelöst hat.
+  toggleBtn.className = `filter-chip filter-toggle-btn${state.filterPanelOpen ? ' filter-toggle-btn--open' : ''}${activeCount > 0 ? ' filter-toggle-btn--active' : ''}`;
   toggleBtn.setAttribute('aria-expanded', String(state.filterPanelOpen));
   toggleBtn.setAttribute('aria-controls', 'filter-panel');
 
@@ -2717,6 +2800,21 @@ function wireFilterChips(container) {
 function wireViewToggle(container) {
   const toggle = container.querySelector('#view-toggle');
   if (!toggle) return;
+  // Der Kopf fluchtet mit dem Körper, den er überschreibt - und der wechselt
+  // hier die Breite. Die Liste ist aufs Lesemaß gekappt (720px), das
+  // Kanban-Board nimmt die volle Content-Spalte (gemessen 1156px bei 1440px
+  // Fensterbreite); ein fester Modifier im Markup stimmte in genau einer der
+  // beiden Ansichten (Critique 2026-08-13).
+  //
+  // Der Anfangswert steht hier und NICHT als Interpolation im class-Attribut:
+  // zwei Guards lesen die Rail-Aliasse per Regex aus `class="..."`, und ein
+  // `${...}` darin macht aus `?`, `===` und `'list'` je einen Klassennamen -
+  // `.?` als Rail traf danach jeden Selektor der App. Ein Markup-Attribut, das
+  // statisch gelesen wird, bleibt statisch geschrieben.
+  const toolbarEl = container.querySelector('.tasks-toolbar');
+  const syncToolbarWidth = () =>
+    toolbarEl?.classList.toggle('page-toolbar--narrow', state.viewMode === 'list');
+  syncToolbarWidth();
   toggle.querySelectorAll('[data-view]').forEach((btn) => {
     btn.addEventListener('click', () => {
       state.viewMode = btn.dataset.view;
@@ -2727,6 +2825,7 @@ function wireViewToggle(container) {
         b.classList.toggle('group-toggle__btn--active', on);
         b.setAttribute('aria-pressed', String(on));
       });
+      syncToolbarWidth();
       // Sichtbarkeit über [hidden] statt style.display: ein Zustand, den auch
       // assistive Technik als „nicht vorhanden" liest.
       const groupToggle = container.querySelector('#group-mode-toggle');
@@ -3010,7 +3109,7 @@ export async function render(container, { user }) {
   // Initiales Skeleton (all values are from i18n keys or hardcoded constants, no user data)
   container.replaceChildren();
   container.insertAdjacentHTML('beforeend', `
-    <div class="tasks-page">
+    <div class="tasks-page page-measure--narrow">
       <div class="page-toolbar page-toolbar--wrap tasks-toolbar">
         <h1 class="page-toolbar__title">${t('tasks.title')}</h1>
         ${renderPageSearch({
@@ -3047,8 +3146,9 @@ export async function render(container, { user }) {
                   aria-label="${t('tasks.manageTags')}" title="${t('tasks.manageTags')}">
             <i data-lucide="tags" class="icon-lg" aria-hidden="true"></i>
           </button>
-          <button class="btn btn--primary toolbar-new-btn" id="btn-new-task" style="gap:var(--space-1)">
-            <i data-lucide="plus" class="icon-lg" aria-hidden="true"></i> ${t('tasks.newTask')}
+          <button class="btn btn--primary toolbar-new-btn" id="btn-new-task" style="gap:var(--space-1)"
+                  aria-label="${t('tasks.newTask')}">
+            <i data-lucide="plus" class="icon-lg" aria-hidden="true"></i> <span class="toolbar-new-btn__label">${t('newLabel.tasks')}</span>
           </button>
         </div>
       </div>
@@ -3117,7 +3217,7 @@ export async function render(container, { user }) {
               <div class="skeleton skeleton-line skeleton-line--short" style="height:12px"></div>
             </div>`).join('')}
         </div>
-        <button class="page-fab" id="fab-new-task" aria-label="${t('tasks.newTask')}">
+        <button class="page-fab" id="fab-new-task" aria-label="${t('tasks.newTask')}" data-dock-label="${t('newLabel.tasks')}">
           <i data-lucide="plus" class="icon-xl" aria-hidden="true"></i>
         </button>
       </div>

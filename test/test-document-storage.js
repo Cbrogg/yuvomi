@@ -3012,3 +3012,72 @@ test('calendar attachment ACLs protect recorded Drive content and follow event u
   assert.equal(await sharedPreview.text(), 'private replacement');
   assert.equal(mediaReads.length, 5);
 });
+
+// --------------------------------------------------------------------------
+// #751: Der Mount-Check beim Start. Der Schaden an dieser Stelle ist das
+// GELINGEN: zeigt DOCUMENT_STORAGE_LOCAL_PATH auf einen ungemounteten Pfad,
+// legt der Schreibpfad ihn per mkdir(recursive) in der Overlay-Schicht an, der
+// Upload klappt, und die Datei ist nach dem naechsten Update weg, waehrend die
+// Datenbank sie weiter fuehrt. Deshalb prueft der Check die EXISTENZ.
+// --------------------------------------------------------------------------
+
+function collectingLogger() {
+  const messages = [];
+  return { messages, warn: (m) => messages.push(m) };
+}
+
+test('mount check: schweigt, solange die lokale Ablage nicht eingeschaltet ist (#751)', async () => {
+  for (const key of LOCAL_ENV_KEYS) delete process.env[key];
+  const log = collectingLogger();
+  assert.equal(await storage.checkLocalStorageMount(log), 'disabled');
+  assert.deepEqual(log.messages, [], 'ohne Opt-in gibt es nichts zu warnen');
+});
+
+test('mount check: meldet einen fehlenden Ordner als fehlenden Mount (#751)', async () => {
+  // Der Melderfall: Mount auf /cosmos-storage/documents, Pfad auf /documents.
+  const missing = nodePath.join(tmpdir(), `yuvomi-nomount-${randomUUID()}`);
+  process.env.DOCUMENT_STORAGE_LOCAL_ENABLED = '1';
+  process.env.DOCUMENT_STORAGE_LOCAL_PATH = missing;
+  try {
+    const log = collectingLogger();
+    assert.equal(await storage.checkLocalStorageMount(log), 'missing');
+    assert.equal(log.messages.length, 1);
+    // Die Warnung muss die Folge benennen, nicht nur den Zustand - sonst liest
+    // sie sich wie eine Marginalie und wird ueberblaettert.
+    assert.match(log.messages[0], /lost on the next update/);
+    assert.match(log.messages[0], /DOCUMENT_STORAGE_LOCAL_DIR/, 'beide Enden des Mounts benennen');
+    assert.ok(log.messages[0].includes(missing), 'der gepruefte Pfad gehoert in die Meldung');
+  } finally {
+    for (const key of LOCAL_ENV_KEYS) delete process.env[key];
+  }
+});
+
+test('mount check: schweigt bei einem vorhandenen, beschreibbaren Ordner (#751)', async () => {
+  const dir = mkdtempSync(nodePath.join(tmpdir(), 'yuvomi-mounted-'));
+  process.env.DOCUMENT_STORAGE_LOCAL_ENABLED = '1';
+  process.env.DOCUMENT_STORAGE_LOCAL_PATH = dir;
+  try {
+    const log = collectingLogger();
+    assert.equal(await storage.checkLocalStorageMount(log), 'ok');
+    assert.deepEqual(log.messages, [], 'eine korrekte Einrichtung darf nicht warnen');
+  } finally {
+    for (const key of LOCAL_ENV_KEYS) delete process.env[key];
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('mount check: meldet eine Datei am Ziel statt eines Ordners (#751)', async () => {
+  const dir = mkdtempSync(nodePath.join(tmpdir(), 'yuvomi-notdir-'));
+  const file = nodePath.join(dir, 'documents');
+  writeFileSync(file, 'kein Ordner');
+  process.env.DOCUMENT_STORAGE_LOCAL_ENABLED = '1';
+  process.env.DOCUMENT_STORAGE_LOCAL_PATH = file;
+  try {
+    const log = collectingLogger();
+    assert.equal(await storage.checkLocalStorageMount(log), 'not-writable');
+    assert.match(log.messages[0], /not a directory/);
+  } finally {
+    for (const key of LOCAL_ENV_KEYS) delete process.env[key];
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

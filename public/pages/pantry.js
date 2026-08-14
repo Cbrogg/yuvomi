@@ -28,6 +28,7 @@ import { scheduleUndoableDelete, vibrate, wireScrollFade } from '/utils/ux.js';
 import { toLocalDateKey } from '/utils/date.js';
 import { DEFAULT_CATEGORY_NAME, categoryLabel } from '/utils/shopping-categories.js';
 import { locationLabel } from '/utils/pantry-locations.js';
+import { setBulkPill, clearBulkPill } from '/utils/bulk-pill.js';
 import { PANTRY_UNITS, normalizePantryQuantity, pantryUnitStep } from '/utils/pantry-units.js';
 import {
   PANTRY_FILTERS,
@@ -248,17 +249,13 @@ export async function render(container) {
   filters.className = 'pantry-filters';
   filters.id = 'pantry-filters';
 
-  // Slot für die Sammelaktions-Leiste, ÜBER dem Scroller. Sie lag vorher als
-  // erstes Kind in #pantry-list und scrollte damit weg - die Aktion betrifft aber
-  // die ganze gefilterte Liste und muss erreichbar bleiben, während man sie
-  // durchgeht. Der Slot trägt die Content-Spalte (siehe .pantry-bulkbar-slot) und
-  // verschwindet leer, damit er keine Zeile beansprucht.
-  const bulk = document.createElement('div');
-  bulk.className = 'pantry-bulkbar-slot';
-  bulk.id = 'pantry-bulkbar-slot';
+  // Hier stand der Slot für die Sammelaktions-Leiste. Sie ist seit Etappe 5
+  // eine Pille in der unteren Shell-Zone (utils/bulk-pill.js) und braucht in
+  // dieser Seite gar keinen Platz mehr - weder im Scroller, wo sie bis
+  // 2026-07-30 wegscrollte, noch darüber, wo sie eine Zeile kostete.
 
   const list = document.createElement('div');
-  list.className = 'list-scroller pantry-list';
+  list.className = 'list-scroller pantry-list has-bulk-safe-zone';
   list.id = 'pantry-list';
   list.setAttribute('aria-busy', 'true');
   list.insertAdjacentHTML('beforeend', renderSkeletonList({ rows: 6, lines: 2 }));
@@ -268,9 +265,10 @@ export async function render(container) {
   fab.type = 'button';
   fab.id = 'fab-new-pantry-item';
   fab.setAttribute('aria-label', t('pantry.addItem'));
+  fab.dataset.dockLabel = t('newLabel.pantry');
   fab.insertAdjacentHTML('beforeend', '<i data-lucide="plus" aria-hidden="true"></i>');
 
-  page.append(title, live, toolbar, filters, bulk, list, fab);
+  page.append(title, live, toolbar, filters, list, fab);
   container.replaceChildren(page);
   renderKitchenTabsBar(container, '/pantry');
 
@@ -425,43 +423,49 @@ function renderFilters() {
 }
 
 /**
- * Sammelaktion des „Fast leer"-Filters. Bewusst eine eigene Zeile über der
- * Liste statt als letztes Element der Chip-Leiste: dort lag sie hinter dem
- * horizontalen Scroll und war faktisch unsichtbar.
+ * Sammelaktion des „Fast leer"-Filters, seit Etappe 5 als Pille in der unteren
+ * Shell-Zone (utils/bulk-pill.js) statt als Block über der Liste. Sie lag davor
+ * schon zweimal falsch: zuerst als letztes Element der Chip-Leiste (hinter dem
+ * horizontalen Scroll, faktisch unsichtbar), dann als eigene Zeile darüber, die
+ * dem Einkauf gemessene 103px Listenfläche kostete.
  *
- * Geteilte Grammatik `.list-bulkbar` (styles/list-row.css) - der Einkauf
- * trägt seine Abschluss-Aktionen jetzt in derselben Leiste.
- */
-function bulkBarEl() {
-  const bar = document.createElement('div');
-  bar.className = 'list-bulkbar';
-
-  const label = document.createElement('span');
-  label.className = 'list-bulkbar__label';
-  label.textContent = t('pantry.bulkHint');
-
-  const bulk = document.createElement('button');
-  bulk.type = 'button';
-  bulk.className = 'btn btn--secondary list-bulkbar__action';
-  bulk.insertAdjacentHTML('beforeend', '<i data-lucide="shopping-cart" class="icon-sm" aria-hidden="true"></i>');
-  bulk.append(document.createTextNode(t('pantry.toShoppingAll')));
-  bulk.addEventListener('click', () => sendToShopping(visibleItems(), bulk));
-
-  bar.append(label, bulk);
-  return bar;
-}
-
-/**
- * Füllt den Slot über dem Scroller. Getrennt von renderList(), weil der Slot ein
- * Geschwister der Liste ist - er darf nicht mit ihr geleert werden.
+ * DAS LABEL IST DIE ZAHL, NICHT DIE ERKLÄRUNG. Es stand hier „Diese Artikel
+ * sind aufgebraucht oder unter dem Mindestbestand." - ein Satz, den der aktive
+ * Filterchip („Fast leer") daneben schon sagt, und der auf einer einzeiligen
+ * Fläche nichts als eine Ellipse hinterlässt. Was die Pille beitragen muss,
+ * ist der Umfang von „Alles": worauf der Knopf wirkt. Dieselbe Antwort gibt der
+ * Einkauf mit „3 Artikel abgehakt".
+ *
+ * UND BEI 320px IST GENAU DIESER UMFANG WEG (Etappe 7, 2026-08-13). Dort fällt
+ * das Subjekt weg - gemessen verlangt „10 Artikel fast leer" 116,2px, frei
+ * bleiben neben der Kapsel 86,9 von 264px Innenbreite. Übrig steht dann „Alles
+ * auf die Einkaufsliste" allein auf einer dunklen Fläche: ein Quantor ohne
+ * Bezugswort, lesbar als „der ganze Vorrat" statt als die zehn Artikel des
+ * aktiven Filters.
+ *
+ * DIE GEFAHR IST EINE ANDERE ALS IM EINKAUF, DIE LÜCKE DIESELBE. Dort trägt die
+ * Löschen-Kapsel die Marke, weil ein fehlendes Objekt vor einer nicht
+ * rückfragenden Löschung teuer ist; hier ist die Aktion harmlos und trotzdem
+ * mehrdeutig - „In den Vorrat" wäre es nicht, „Alles" ist es. Gemessen misst
+ * die Kapsel mit Marke rund 194 von 264px, die Pille bleibt einzeilig.
+ *
+ * Die Zahl ist dieselbe, die das Subjekt nennt: `visibleItems()` ist der
+ * gefilterte UND gesuchte Satz, und `sendToShopping` bekommt genau ihn.
  */
 function renderBulkBar() {
-  const slot = _container?.querySelector('#pantry-bulkbar-slot');
-  if (!slot) return;
-  slot.replaceChildren();
-  if (state.filter !== 'low' || !state.items.length || !visibleItems().length) return;
-  slot.appendChild(bulkBarEl());
-  if (window.lucide) window.lucide.createIcons({ el: slot });
+  const items = visibleItems();
+  if (state.filter !== 'low' || !state.items.length || !items.length) {
+    clearBulkPill();
+    return;
+  }
+  setBulkPill({
+    label: t('pantry.bulkPillLabel', { count: items.length }),
+    actions: [{
+      label: t('pantry.toShoppingAll'),
+      count: items.length,
+      onClick: (btn) => sendToShopping(visibleItems(), btn),
+    }],
+  });
 }
 
 function renderList() {
@@ -610,11 +614,22 @@ function rowEl(item) {
   name.textContent = item.name;
   headline.appendChild(name);
 
-  for (const badge of [expiryBadge(item), stockBadge(item)].filter(Boolean)) {
-    const el = document.createElement('span');
-    el.className = `pantry-badge pantry-badge--${badge.tone}`;
-    el.textContent = badge.text;
-    headline.appendChild(el);
+  // DIE BADGES SIND EIN PAAR, ALSO EIN KNOTEN (Critique 2026-08-13).
+  // Ohne ihn entscheidet die Restbreite, WIE VIELE von ihnen umbrechen: gemessen
+  // stand „Vollmilch" mit „Läuft heute ab" in Zeile zwei und „Fast leer" in
+  // Zeile drei, also 109,5px gegen 86,3px derselben Liste mit zwei Badges
+  // nebeneinander. Was zusammen gelesen wird, bricht zusammen um.
+  const badges = [expiryBadge(item), stockBadge(item)].filter(Boolean);
+  if (badges.length) {
+    const wrap = document.createElement('span');
+    wrap.className = 'pantry-row__badges';
+    for (const badge of badges) {
+      const el = document.createElement('span');
+      el.className = `pantry-badge pantry-badge--${badge.tone}`;
+      el.textContent = badge.text;
+      wrap.appendChild(el);
+    }
+    headline.appendChild(wrap);
   }
   main.appendChild(headline);
 
@@ -625,21 +640,58 @@ function rowEl(item) {
   // Das MHD steht VOR dem Lagerort: die Zeile ellipsiert am Ende, und bei einem
   // langen Ortsnamen fiel sonst genau das Kerndatum weg - dieselbe Trunkierung,
   // gegen die die Kategorie hier schon gewichen ist (Critique, Riley-Fund).
-  const metaParts = [];
+  // DIE MENGE FÜHRT DIE META-ZEILE, sie steht nicht mehr zwischen den Knöpfen.
+  //
+  // Bis zum 12.08.2026 sass sie im Stepper und rückte unter 30rem Trägerbreite
+  // ÜBER die beiden Knöpfe (`flex-wrap` an .pantry-stepper). Das gab dem Namen
+  // die Breite, die er braucht, kostete aber rund 25px Höhe in JEDER Zeile:
+  // gemessen 89,4px bei 390x844, die höchste Zeile der App nach dem Budget.
+  //
+  // Der Umzug kostet KEINEN Pixel Breite. Der umgebrochene Stepper war bereits
+  // exakt so breit wie seine Knopfzeile (100px), und ohne den Wert ist er es
+  // weiterhin - die Bedienzone bleibt gleich breit, der Name behält seine
+  // 168px. Was wegfällt, ist nur die zweite Zeile.
+  //
+  // UND DER EINKAUF MACHT ES SEIT JEHER SO: `.list-row__meta` trägt dort
+  // `item.quantity`. Zwei Tabs derselben Küchenleiste schrieben dieselbe Angabe
+  // an zwei Orte.
+  //
+  // Sie steht VORN, obwohl das MHD dahinter dadurch seitlich wandert, wenn sich
+  // die Menge ändert: die Menge ist die Frage, die eine Vorratsliste
+  // beantwortet, und die Zeile ellipsiert am Ende. Hinten stünde sie genau
+  // dort, wo bei langem Ortsnamen gekappt wird.
+  const meta = document.createElement('span');
+  meta.className = 'list-row__meta';
+  const quantity = document.createElement('span');
+  quantity.className = 'pantry-row__quantity';
+  quantity.textContent = quantityText(item);
+  meta.appendChild(quantity);
+
+  /* MHD und Lagerort sind EIGENE Knoten, keine zusammengefügte Zeichenkette.
+   *
+   * Grund ist die Regel gleich daneben (pantry.css): auf einer schmalen Zeile
+   * MIT Warenkorb bleiben 168px statt 220px, und dort passt das MHD nicht mehr.
+   * Weggelassen wird es dann, nicht abgeschnitten - ein halbes Datum
+   * („MHD 23.12….") ist keine Angabe, sondern sieht aus wie ein Fehler. Damit
+   * CSS das entscheiden kann, muss es ein eigenes Element sein.
+   *
+   * Das Trennzeichen steht IM Knoten, sonst bliebe es beim Weglassen als
+   * einsames „·" zurück. */
   if (item.expires_on) {
-    metaParts.push(t('pantry.bestBefore', { date: formatDate(item.expires_on) }));
+    const expiry = document.createElement('span');
+    expiry.className = 'pantry-row__expiry';
+    expiry.textContent = ` · ${t('pantry.bestBefore', { date: formatDate(item.expires_on) })}`;
+    meta.appendChild(expiry);
   }
   // Im gefilterten (flachen) Modus trägt die Meta-Zeile den Lagerort, den sonst
   // die Gruppen-Überschrift zeigt.
   if (state.filter !== 'all') {
-    metaParts.push(item.location_name ? locationLabel(item.location_name) : t('pantry.unlocated'));
+    const place = document.createElement('span');
+    place.className = 'pantry-row__place';
+    place.textContent = ` · ${item.location_name ? locationLabel(item.location_name) : t('pantry.unlocated')}`;
+    meta.appendChild(place);
   }
-  if (metaParts.length) {
-    const meta = document.createElement('span');
-    meta.className = 'list-row__meta';
-    meta.textContent = metaParts.join(' · ');
-    main.appendChild(meta);
-  }
+  main.appendChild(meta);
 
   // Was der Button tut - nur für Screenreader, am Ende des Namens.
   const action = document.createElement('span');
@@ -694,12 +746,12 @@ function rowEl(item) {
   minus.setAttribute('aria-label', `${t('pantry.decrease')}: ${item.name}`);
   minus.insertAdjacentHTML('beforeend', '<i data-lucide="minus" class="icon-sm" aria-hidden="true"></i>');
 
-  const value = document.createElement('span');
-  value.className = 'pantry-stepper__value';
-  value.textContent = quantityText(item);
-  // BEWUSST keine eigene Live-Region je Zeile: bei 60 Artikeln wären das 60
-  // Live-Regionen, und Screenreader behandeln eine solche Wolke unzuverlässig.
-  // Die Ansage übernimmt die eine geteilte Region der Seite (#pantry-live).
+  // Der Wert steht in der Meta-Zeile (siehe dort). BEWUSST keine eigene
+  // Live-Region je Zeile: bei 60 Artikeln wären das 60 Live-Regionen, und
+  // Screenreader behandeln eine solche Wolke unzuverlässig. Die Ansage
+  // übernimmt die eine geteilte Region der Seite (#pantry-live) - sie ist auch
+  // der Grund, aus dem der Wert nicht neben den Knöpfen stehen MUSS, um die
+  // Änderung zu melden.
 
   const plus = document.createElement('button');
   plus.type = 'button';
@@ -709,7 +761,7 @@ function rowEl(item) {
   plus.insertAdjacentHTML('beforeend', '<i data-lucide="plus" class="icon-sm" aria-hidden="true"></i>');
 
   stepper.dataset.step = String(step);
-  stepper.append(minus, value, plus);
+  stepper.append(minus, plus);
   actions.appendChild(stepper);
 
   // Name zuerst, Bedienung danach: eine Vorratsliste wird nach Namen gescannt,
@@ -849,7 +901,7 @@ function announce(message) {
 
 /** Aktualisiert Menge, Badges und Leer-Zustand einer Zeile ohne Listen-Rebuild. */
 function refreshRowQuantity(row, item) {
-  const value = row.querySelector('.pantry-stepper__value');
+  const value = row.querySelector('.pantry-row__quantity');
   if (value) value.textContent = quantityText(item);
   announce(`${item.name}: ${quantityText(item)}`);
 

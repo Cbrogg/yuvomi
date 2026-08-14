@@ -223,6 +223,7 @@ export async function render(container) {
   fab.type = 'button';
   fab.id = 'fab-new-recipe';
   fab.setAttribute('aria-label', t('recipes.addRecipe'));
+  fab.dataset.dockLabel = t('newLabel.recipes');
   const fabIcon = document.createElement('i');
   fabIcon.dataset.lucide = 'plus';
   fabIcon.setAttribute('aria-hidden', 'true');
@@ -625,6 +626,18 @@ function renderRecipeList() {
             return badge;
           }));
         detail.appendChild(badges);
+      } else if (!mealTypes.length) {
+        // Keine Mahlzeit ist eine Aussage und braucht ein Wort: Das Rezept fällt
+        // aus Menüplan und Zufallsauswahl heraus (#750). Ohne Hinweis wäre der
+        // Zustand von „gilt für alle" nur daran zu unterscheiden, dass hier
+        // nichts steht - und genau diese Stille war der gemeldete Fehler.
+        const none = document.createElement('div');
+        none.className = 'recipe-card__meal-types';
+        const badge = document.createElement('span');
+        badge.className = 'meal-type-badge meal-type-badge--none';
+        badge.textContent = t('recipes.mealTypeNone');
+        none.appendChild(badge);
+        detail.appendChild(none);
       }
 
       // VOLLSTÄNDIGE Zutatenliste, nicht die ersten vier: das Kürzen war nur
@@ -872,7 +885,12 @@ async function saveRecipe(panel, mode, recipe) {
  * bearbeiten, wie bei jeder anderen Mahlzeit.
  */
 async function planRecipe(recipe, btn) {
-  const types = normalizeRecipeMealTypes(recipe.meal_types);
+  const declared = normalizeRecipeMealTypes(recipe.meal_types);
+  // Erklärt das Rezept keine Mahlzeit, stehen hier trotzdem alle zur Wahl: Der
+  // leere Zustand hält es aus der Zufallsauswahl heraus (#750), nicht aus dem
+  // Menüplan. Ohne diesen Rückgriff bliebe das Auswahlfeld leer und der Dialog
+  // hätte nichts anzubieten, was der Nutzer bestätigen könnte.
+  const types = declared.length ? declared : RECIPE_MEAL_TYPE_KEYS.slice();
   // Vorauswahl: erklärt das Rezept genau einen Typ, ist die Sache klar. Erklärt
   // es mehrere - was der Default ist, wenn niemand etwas gesetzt hat -, dann
   // stand bisher „Frühstück" da, weil es in der Liste zuerst kommt: der Dialog

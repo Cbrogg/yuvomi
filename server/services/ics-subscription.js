@@ -392,12 +392,15 @@ async function importToLocal(userId, { ics, url, color } = {}) {
   return { imported, skipped, total };
 }
 
-async function create(userId, { name, url, color, shared }) {
+async function create(userId, { name, url, color, shared, default_assignee_user_id = null }) {
   const normalizedUrl = normalizeUrl(url);
   await checkSSRF(normalizedUrl);
+  // Die Zuweisung steht VOR dem ersten syncOne() in der Zeile - danach gesetzt
+  // hätte sie die eben eingelesenen Termine nicht mehr erreicht (#730).
   const subId = db.get().prepare(
-    `INSERT INTO ics_subscriptions (name,url,color,shared,created_by) VALUES (?,?,?,?,?)`
-  ).run(name, normalizedUrl, color, shared ? 1 : 0, userId).lastInsertRowid;
+    `INSERT INTO ics_subscriptions (name,url,color,shared,created_by,default_assignee_user_id)
+     VALUES (?,?,?,?,?,?)`
+  ).run(name, normalizedUrl, color, shared ? 1 : 0, userId, default_assignee_user_id).lastInsertRowid;
   const newSub = db.get().prepare('SELECT * FROM ics_subscriptions WHERE id = ?').get(subId);
   let syncError = null;
   try { await syncOne(newSub); } catch (err) { syncError = err.message; }

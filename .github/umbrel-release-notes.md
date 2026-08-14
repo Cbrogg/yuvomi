@@ -1,4 +1,4 @@
-<!-- version: 2.7.1 -->
+<!-- version: 2.10.1 -->
 <!--
   Die `releaseNotes` fuer den Umbrel-App-Store, von Hand fuer JEDEN Release
   geschrieben. `umbrel-publish.yml` nimmt den Text unter diesem Kommentar
@@ -29,6 +29,10 @@
     - Leerzeile zwischen den Absaetzen: der Store rendert ein gefaltetes
       YAML-Blockskalar, dort ist die Leerzeile der Absatzumbruch.
 -->
-There is nothing new to see in this update and nothing to do after it. It only adds documentation for people who write their own Yuvomi modules, describing how such a module talks to Yuvomi safely and keeps working across updates. The app itself, your data and your settings are unchanged.
+A small fix to creating appointments in the calendar.
 
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.7.1
+When you page away from today and then add an appointment with the "+" button, it now starts on the day you are looking at instead of on today. Previously the date always fell back to today, so moving a few days ahead in the day view and reaching for "+" created the appointment behind you, and adding one while looking at next month filed it under the current one. Clicking directly into the calendar already worked correctly and is unchanged. The date is only a starting value, so you can still set any date you like in the form.
+
+There is nothing to do after this update, and your data and settings are unchanged.
+
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.10.1

@@ -69,9 +69,80 @@
   align-self: stretch;
 }
 
+/* AUSSER die Kennzahlreihe (Critique 2026-08-13, zweite Runde).
+ *
+ * Die Begruendung darueber gilt fuer WIDGETS: ein kurzes Widget, das oben
+ * klebt, franst die Unterkante seiner Rasterzeile aus. Die Kennzahlreihe ist
+ * kein Widget - sie hat keinen Kopf, kein Absenderband, keinen eigenen Ton und
+ * sie ist so hoch wie ihr Inhalt. Mit `stretch` beanspruchte ihre Zelle die
+ * Hoehe der hoechsten Karte derselben Rasterzeile: gemessen 753,3x360,5px fuer
+ * eine 105px hohe Reihe, also 255,5px leere Buehne mitten im Board, direkt
+ * neben der vollhohen Familienkarte.
+ *
+ * Der Fix davor hat die Reihe repariert und die ZELLE stehen lassen - die
+ * Leere ist damals nicht verschwunden, sondern aus der getoenten Kachel auf
+ * den Grund gewandert. Und der Guard, der ihn begleitete, prueft dieselbe
+ * Ebene wie der Fix: die Reihe, nicht die Zelle. */
+.widget-wrapper:has(> .metric-tiles) {
+  align-self: start;
+}
+
 .widget-wrapper > .widget {
   flex: 1;
   min-height: 0;
+}
+
+/* ── Kennzahlreihe: vier Sprungziele in der Hoehe einer Widget-Kopfzeile ──
+ *
+ * KEIN .widget DRUMHERUM. Die vier Kacheln sind selbst Karten; eine fuenfte
+ * Flaeche darunter waeren verschachtelte Karten - der Traeger ist hier das
+ * Raster, nicht eine Kachel. Deshalb erbt .metric-tiles die flex-Rolle, die
+ * sonst .widget im Wrapper haelt.
+ *
+ * Die Spaltenzahl fragt den WRAPPER (@container dashboard-widget), nicht das
+ * Fenster: dieselbe Kachel steht mobil ueber die volle Breite und auf dem
+ * Desktop in einer 1/3-Spalte, und nur der Baustein weiss, wie breit er
+ * gerade wirklich ist. */
+/* `flex: 0 0 auto` und NICHT `flex: 1` (Critique 2026-08-13, zweite Runde).
+ *
+ * Mit `flex: 1` erbte die Reihe die Hoehe ihres Wrappers, und der ist so hoch
+ * wie die hoechste Karte SEINER Rasterzeile. Gemessen bei 1440x900: die Reihe
+ * stand auf 753x361px und ihre zwei Kacheln auf je 372x361px - fuer rund 80px
+ * Inhalt, also 140px Leerflaeche ueber und unter jeder Zahl. Mobil fiel es nicht
+ * auf (105px), und genau deshalb ist es durch die erste Korrektur gekommen: die
+ * wurde an dem Viewport geprueft, an dem der Defekt nicht lebt.
+ *
+ * Die Reihe ist kein Fuellmaterial. Sie ist so hoch wie ihre Kacheln, und was
+ * daneben hoeher ist, bleibt hoeher. */
+.widget-wrapper > .metric-tiles {
+  flex: 0 0 auto;
+  min-height: 0;
+}
+
+/* DIE SPALTENZAHL FOLGT DER BREITE, NICHT EINER ZAHL (Critique 2026-08-13, P1).
+ *
+ * Hier standen zwei feste Spalten - richtig, solange die Reihe als 2x2-Block
+ * gedacht war. Als Zeile (der neue Default, siehe defaultWidgetSize) ergaben
+ * vier Kacheln damit weiter zwei Zeilen: gemessen 753x220px auf dem Desktop,
+ * wo vier Kacheln zu je 178px nebeneinander in eine Zeile von 105px passen.
+ *
+ * `auto-fit` fragt dieselbe Breite, die der Container-Block darunter abgefragt
+ * hat, nur ohne die Zahl dazwischen - und deckt dessen Fall mit ab: unter 260px
+ * Wrapper passen zwei Spalten a 160px nicht mehr, also bleibt eine. Der
+ * @container-Block dafuer ist damit entfallen, nicht vergessen.
+ *
+ * 160px ist die gemessene Untergrenze der Kachel: darunter bricht
+ * „Haushaltshilfe" ueber dem Siegel um und die Kachel wird hoeher als ihre
+ * Zahl. Auf dem Telefon stehen damit zwei Kacheln zu 178px, auf 753px vier. */
+.metric-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-2h);
+  /* `start` und nicht `stretch`: `stretch` verteilt ueberschuessige Hoehe auf
+   * die Zeilen des Rasters, und bei einer einzigen Zeile heisst das, sie nimmt
+   * alles. Zusammen mit dem `flex` darueber war das die zweite Haelfte der
+   * 361px-Kachel. Die Reihe waechst auf ihren Inhalt, mehr will sie nicht. */
+  align-content: start;
 }
 
 @media (min-width: 768px) {

@@ -128,49 +128,11 @@ const STUBS = {
     export const onPwaInstallStateChanged = () => () => {};
     export const promptPwaInstall = async () => ({ outcome: 'unavailable' });
   `,
-  '/utils/date.js': `
-    const pad = (n) => String(n).padStart(2, '0');
-    export const toLocalDateKey = (date) => {
-      const d = date instanceof Date ? date : new Date(String(date) + 'T00:00:00');
-      return \`\${d.getFullYear()}-\${pad(d.getMonth() + 1)}-\${pad(d.getDate())}\`;
-    };
-    export const parseLocalDateKey = (dateKey) => {
-      const [y, m, dd] = String(dateKey).split('-').map(Number);
-      return new Date(y, (m || 1) - 1, dd || 1);
-    };
-    export const addLocalDays = (dateStr, days) => {
-      const d = new Date(String(dateStr) + 'T00:00:00');
-      d.setDate(d.getDate() + days);
-      return toLocalDateKey(d);
-    };
-    export const startOfLocalWeekKey = (dateStr, firstDay = 1) => {
-      const d = new Date(String(dateStr) + 'T00:00:00');
-      const day = d.getDay();
-      const diff = (day < firstDay ? day + 7 : day) - firstDay;
-      d.setDate(d.getDate() - diff);
-      return toLocalDateKey(d);
-    };
-    export const shiftEndDateKey = (oldStartKey, newStartKey, endKey) => {
-      const from = new Date(String(oldStartKey) + 'T00:00:00');
-      const to = new Date(String(newStartKey) + 'T00:00:00');
-      const deltaDays = Math.round((to.getTime() - from.getTime()) / 86400000);
-      return addLocalDays(endKey, deltaDays);
-    };
-    export const isEndBeforeStart = (startDatetime, endDatetime) => {
-      if (!endDatetime) return false;
-      const [startDay, startTime] = String(startDatetime).split('T');
-      const [endDay, endTime] = String(endDatetime).split('T');
-      if (endDay !== startDay) return endDay < startDay;
-      if (startTime && endTime) return endTime < startTime;
-      return false;
-    };
-    export const WEEK_START_INDEX = { monday: 1, sunday: 0, saturday: 6 };
-    export const weekStartIndex = (value) => WEEK_START_INDEX[value] ?? 1;
-    export const weekdayOrder = (weekStart = 1) => {
-      const start = typeof weekStart === 'number' ? weekStart : weekStartIndex(weekStart);
-      return Array.from({ length: 7 }, (_, i) => (start + i) % 7);
-    };
-  `,
+  // /utils/date.js steht bewusst NICHT hier: die Datei hat keine DOM- oder
+  // i18n-Abhängigkeit und wird vom Pfad-Fallback unten direkt geladen. Der
+  // Nachbau, der hier stand, war schon auseinandergelaufen (er kannte den
+  // Default-Parameter von toLocalDateKey() nicht) - ein Stub für ein Modul,
+  // das im Node-Kontext ohnehin läuft, kann nur driften.
 };
 
 export async function resolve(specifier, context, nextResolve) {

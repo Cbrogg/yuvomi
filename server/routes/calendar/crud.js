@@ -207,7 +207,18 @@ router.put('/:id', async (req, res) => {
     if (req.body.end_datetime   !== undefined) checks.push(datetime(req.body.end_datetime, 'Enddatum'));
     if (req.body.color          !== undefined) checks.push(color(req.body.color, 'Farbe'));
     if (req.body.location       !== undefined) checks.push(str(req.body.location, 'Ort', { max: MAX_TITLE, required: false }));
-    if (req.body.recurrence_rule !== undefined) checks.push(rrule(req.body.recurrence_rule, 'Wiederholung'));
+    // Der unveränderte Bestandswert kommt ohne Prüfung durch: Die Regel steht
+    // bereits so in der Datenbank, und der Validator kennt nur das Vokabular der
+    // eigenen Oberfläche (FREQ/INTERVAL/BYDAY/UNTIL/COUNT, ohne „RRULE:"-Präfix).
+    // Eine aus CalDAV eingelesene Serie trägt regelmäßig mehr als das - Präfix,
+    // WKST, BYMONTHDAY. Ohne diese Ausnahme scheiterte jede Änderung an einem
+    // anderen Feld (Zuweisung, Titel) an der Wiederholung, die der Nutzer gar
+    // nicht angefasst hat (#756). Geändert wird weiterhin nur, was der Validator
+    // zulässt.
+    if (req.body.recurrence_rule !== undefined
+        && req.body.recurrence_rule !== event.recurrence_rule) {
+      checks.push(rrule(req.body.recurrence_rule, 'Wiederholung'));
+    }
     // CalDAV-Ziel nur prüfen, wenn der Client es mitschickt; sonst bestehenden Wert behalten.
     const caldavProvided = req.body.target_caldav_account_id !== undefined
       || req.body.target_caldav_calendar_url !== undefined;

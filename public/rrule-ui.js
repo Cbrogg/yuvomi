@@ -26,6 +26,16 @@ const WEEKDAYS = () => [
 
 /**
  * Parsed einen RRULE-String in ein Objekt für die UI.
+ *
+ * Nimmt die Regel mit und ohne „RRULE:"-Präfix. Beide Schreibweisen stehen
+ * nebeneinander in der Datenbank: lokal angelegte Serien speichern den nackten
+ * Regelkörper, aus CalDAV/ICS eingelesene die vollständige ICS-Zeile
+ * (`ics-parser.js`). Ohne das Abstreifen hieß das erste Segment `RRULE:FREQ`,
+ * kein einziger Schlüssel traf, und eine synchronisierte Serie kam als
+ * „keine Wiederholung" ins Formular - Speichern schrieb diese Leere fest und
+ * der Sync trug den Verlust zurück in den Fremdkalender (#756). Der Server
+ * macht dasselbe seit jeher (`server/services/recurrence.js`).
+ *
  * @param {string|null} rule - z.B. "FREQ=WEEKLY;BYDAY=MO,TH;INTERVAL=2;COUNT=10"
  * @returns {{ freq: string, interval: number, byday: string[], until: string, count: number|null }}
  */
@@ -33,7 +43,7 @@ export function parseRRule(rule) {
   const result = { freq: '', interval: 1, byday: [], until: '', count: null };
   if (!rule) return result;
 
-  for (const segment of rule.split(';')) {
+  for (const segment of String(rule).replace(/^RRULE:/i, '').split(';')) {
     const eq = segment.indexOf('=');
     if (eq === -1) continue;
     const key = segment.slice(0, eq).toUpperCase();
@@ -116,8 +126,18 @@ export function renderRRuleFields(prefix, existingRule, opts = {}) {
     ...(allowCount ? [{ value: 'count', label: t('rrule.endAfter') }] : []),
   ].map(o => `<option value="${o.value}" ${endType === o.value ? 'selected' : ''}>${o.label}</option>`).join('');
 
+  // Die Ausgangsregel im Wortlaut, für den Unverändert-Fall in getRRuleValues.
+  // `esc` ist hier nicht nötig und wäre falsch: der Wert durchläuft den
+  // Validator des Servers, und ein RRULE-Zeichenvorrat kennt keine Anführungs-
+  // zeichen. Trotzdem attributsicher quoten - der Wert kommt aus einem
+  // Fremdkalender, nicht aus dieser Oberfläche.
+  const sourceRule = existingRule
+    ? `<input type="hidden" id="${prefix}-rrule-source" value="${String(existingRule).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)}">`
+    : '';
+
   return `
     <div class="rrule-fields" id="${prefix}-rrule-fields">
+      ${sourceRule}
       <div class="form-group">
         <label class="label form-label" for="${prefix}-rrule-freq">${t('rrule.labelRepeat')}</label>
         <select class="input form-input" id="${prefix}-rrule-freq">
@@ -330,7 +350,21 @@ export function getRRuleValues(root, prefix) {
     byday.push(btn.dataset.day);
   });
 
-  const rule = buildRRule({ freq, interval, byday, until, count });
+  const built = buildRRule({ freq, interval, byday, until, count });
+
+  // WER NICHTS ÄNDERT, ÄNDERT NICHTS: Dieses Formular kennt nur einen Ausschnitt
+  // von RFC 5545 (FREQ, INTERVAL, BYDAY, UNTIL, COUNT). Eine aus einem
+  // Fremdkalender eingelesene Serie trägt oft mehr - WKST, BYMONTHDAY, BYSETPOS.
+  // Aus den Feldern neu gebaut ginge dieser Rest beim Speichern verloren, obwohl
+  // der Nutzer nur die Zuweisung geändert hat: aus „jeder dritte Donnerstag"
+  // würde stillschweigend „jeden Monat" (#756). Deshalb der Vergleich gegen die
+  // Ausgangsregel durch dieselbe Übersetzung: Stimmt der Formularstand mit dem
+  // überein, was das Original in diese Oberfläche übersetzt, hat niemand an der
+  // Wiederholung gedreht - dann geht die Regel im Wortlaut zurück.
+  // Eine bewusst geleerte Wiederholung (built === null) fällt nicht darunter.
+  const source = root.querySelector(`#${prefix}-rrule-source`)?.value || '';
+  const rule = (built && source && buildRRule(parseRRule(source)) === built) ? source : built;
+
   // Ohne Regel ist der Anker bedeutungslos: sonst bliebe der Schalter an einer
   // Aufgabe hängen, die gar nicht mehr wiederkehrt, und käme beim nächsten
   // Einschalten der Wiederholung ungefragt zurück.

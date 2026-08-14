@@ -98,6 +98,14 @@ function renderPage(container, user) {
               <input class="form-input form-input--color" type="color" id="ics-color" value="#6366f1" />
             </div>
             <div class="form-group">
+              <label class="form-label" for="ics-assignee">${t('settings.sync.defaultAssignee')}</label>
+              <select class="form-input" id="ics-assignee">
+                <option value="">${t('settings.sync.defaultAssigneeNone')}</option>
+                <option value="" disabled data-loading>${t('common.loading')}</option>
+              </select>
+              <p class="form-hint">${t('settings.sync.defaultAssigneeHint')}</p>
+            </div>
+            <div class="form-group">
               ${toggleRowHtml({
                 label: t('settings.ics.form.shared'),
                 attrs: { id: 'ics-shared' },
@@ -271,27 +279,58 @@ function buildCalendarList(account, calendars) {
     name.textContent = cal.calendarName || cal.calendarUrl;
 
     label.append(checkbox, color, name);
-    // Standard-Zuweisung nur für aktivierte UND bereits synchronisierte Kalender —
-    // erst dann existiert die external_calendars-Zeile, die der PATCH aktualisiert.
-    if (cal.enabled && cal.synced) {
-      label.appendChild(buildCalendarAssigneeSelect({
-        source: 'caldav',
-        externalId: cal.calendarUrl,
-        currentId: cal.default_assignee_user_id,
-      }));
-    }
+    // VOR DEM HAKEN, NICHT NACH DEM SYNC: Das Feld stand früher erst da, wenn
+    // der Kalender aktiv UND einmal synchronisiert war - also frühestens, als
+    // der erste Schwung Termine bereits ohne Zuweisung hereingekommen war, bei
+    // Serien Dutzende (#730). Jetzt lässt es sich vorher setzen; der PATCH legt
+    // die external_calendars-Zeile nötigenfalls selbst an, und der spätere Sync
+    // aktualisiert daran nur Name und Farbe.
+    label.appendChild(buildCalendarAssigneeSelect({
+      source: 'caldav',
+      externalId: cal.calendarUrl,
+      currentId: cal.default_assignee_user_id,
+    }));
     list.appendChild(label);
 
     checkbox.addEventListener('change', async () => {
       const enabled = checkbox.checked;
+
+      // DIE FRAGE KOMMT NACH DEM ABWÄHLEN, NICHT DAVOR: Der Haken wirkt in
+      // dieser Oberfläche sofort, wie jede andere Einstellung auch. Vorgeschaltet
+      // hieße die Frage "willst du wirklich abwählen?" und stellte das Abwählen
+      // in Zweifel, um das es gar nicht geht - gefragt ist nur, was mit den
+      // bereits übernommenen Terminen geschehen soll (#732).
+      //
+      // Behalten ist der Weg von Escape und vom Nebenknopf, also die Vorgabe.
+      // Ein versehentliches Abwählen ist der häufigere Fall - der Melder nennt
+      // ihn selbst -, und Behalten ist der einzige der beiden Ausgänge, der sich
+      // rückgängig machen lässt.
+      let deleteEvents = false;
+      if (!enabled && cal.eventCount > 0) {
+        deleteEvents = await confirmModal(
+          t('settings.syncCleanup.question', { count: cal.eventCount }),
+          {
+            danger: true,
+            confirmLabel: t('settings.syncCleanup.delete'),
+            cancelLabel: t('settings.syncCleanup.keep'),
+            detail: t('settings.syncCleanup.detail'),
+          },
+        );
+      }
+
       await withBusy(checkbox, async () => {
         try {
-          await api.patch(`/calendar/caldav/accounts/${account.id}/calendars`, {
+          const res = await api.patch(`/calendar/caldav/accounts/${account.id}/calendars`, {
             calendarUrl: cal.calendarUrl,
             enabled,
+            deleteEvents,
           });
+          const removed = res.data?.removed ?? 0;
+          if (removed) cal.eventCount = 0;
           showToast(
-            enabled ? t('settings.calendarEnabled') : t('settings.calendarDisabled'),
+            removed
+              ? t('settings.syncCleanup.removed', { count: removed })
+              : (enabled ? t('settings.calendarEnabled') : t('settings.calendarDisabled')),
             'success',
           );
         } catch (err) {
@@ -300,6 +339,18 @@ function buildCalendarList(account, calendars) {
         }
       });
     });
+  }
+
+  // Seit dem Opt-in (#732) bringt ein frisch verbundenes Konto seine Kalender
+  // abgewählt mit - ohne ein Wort dazu sähe das aus, als sei die Verbindung
+  // gescheitert. Der Hinweis steht nur, solange wirklich keiner aktiv ist, und
+  // verschwindet mit dem ersten Haken.
+  const none = enabledCalendarCount(calendars) === 0 && calendars.length > 0;
+  if (none) {
+    const hint = document.createElement('p');
+    hint.className = 'form-hint';
+    hint.textContent = t('settings.calendarsNoneEnabledHint');
+    list.insertBefore(hint, list.firstChild);
   }
 
   // Gleiche Aufklapp-Grammatik wie Kontakt-Sync und die Settings-Navigation:
@@ -312,7 +363,9 @@ function buildCalendarList(account, calendars) {
       total: calendars.length,
       count: calendars.length,
     }),
-    expanded: false,
+    // Steht keiner an, ist die Auswahl der nächste Schritt und nicht eine
+    // Nebensache hinter einem Chevron.
+    expanded: none,
     content: list,
   });
 }
@@ -389,9 +442,35 @@ function renderCalDAVAccount(container, account, calendars, refresh, user) {
         },
       );
       if (!confirmed) return;
+
+      // Zweite Frage nur, wenn es etwas zu entscheiden gibt: Ohne sie war das
+      // Trennen der einzige Weg, bei dem Termine sichtbar stehen bleiben und
+      // dabei ihre Kalenderzuordnung verlieren - Waisen ohne erkennbare
+      // Herkunft (#732). Die Vorgabe ist auch hier Behalten.
+      let deleteEvents = false;
+      if (account.eventCount > 0) {
+        deleteEvents = await confirmModal(
+          t('settings.syncCleanup.accountQuestion', { count: account.eventCount }),
+          {
+            danger: true,
+            confirmLabel: t('settings.syncCleanup.delete'),
+            cancelLabel: t('settings.syncCleanup.keep'),
+            detail: t('settings.syncCleanup.accountDetail'),
+          },
+        );
+      }
+
       try {
-        await api.delete(`/calendar/caldav/accounts/${account.id}`);
-        showToast(t('settings.caldavAccountDeleted'), 'success');
+        const res = await api.delete(
+          `/calendar/caldav/accounts/${account.id}?deleteEvents=${deleteEvents ? 'true' : 'false'}`
+        );
+        const removed = res.data?.removed ?? 0;
+        showToast(
+          removed
+            ? t('settings.syncCleanup.removed', { count: removed })
+            : t('settings.caldavAccountDeleted'),
+          'success',
+        );
         await refresh();
       } catch (err) {
         showToast(err.message || t('common.errorGeneric'), 'danger');
@@ -553,7 +632,10 @@ function renderIcsList(container, subs, user) {
   ul.className = 'settings-members';
   for (const sub of subs) {
     const li = document.createElement('li');
-    li.className = 'settings-member';
+    // Dieselbe Zeilen-Grammatik wie die Kalenderauswahl darueber (#732): gleiche
+    // Aufgabe, gleiche Zeile. Die Regel steht in settings.css, hier wird sie nur
+    // angefordert.
+    li.className = 'settings-member settings-member--sync-row';
 
     const dot = document.createElement('span');
     dot.className = 'settings-avatar settings-avatar--sm';
@@ -757,9 +839,29 @@ function bindIcsEvents(container, subs, user) {
   const submitBtn = container.querySelector('#ics-submit-btn');
   const errorEl = container.querySelector('#ics-add-error');
 
+  // Die Zuweisungsliste erst beim Aufklappen holen und nur einmal: Das Formular
+  // steht dauerhaft im DOM, ein Nachladen bei jedem Öffnen wäre derselbe Abruf
+  // ohne neues Ergebnis.
+  const assigneeSel = container.querySelector('#ics-assignee');
+  let assigneesLoaded = false;
+  const fillAssignees = () => {
+    if (assigneesLoaded || !assigneeSel) return;
+    assigneesLoaded = true;
+    loadFamilyUsers().then((users) => {
+      assigneeSel.querySelector('option[data-loading]')?.remove();
+      for (const u of users) {
+        const opt = document.createElement('option');
+        opt.value = String(u.id);
+        opt.textContent = u.display_name;
+        assigneeSel.appendChild(opt);
+      }
+    }).catch(() => { assigneesLoaded = false; });
+  };
+
   addBtn?.addEventListener('click', () => {
     formWrapper.hidden = false;
     addBtn.hidden = true;
+    fillAssignees();
     container.querySelector('#ics-url')?.focus();
   });
 
@@ -777,10 +879,14 @@ function bindIcsEvents(container, subs, user) {
     const name = container.querySelector('#ics-name').value.trim();
     const color = container.querySelector('#ics-color').value;
     const shared = container.querySelector('#ics-shared').checked ? 1 : 0;
+    const assigneeVal = assigneeSel?.value || '';
+    const default_assignee_user_id = assigneeVal ? Number(assigneeVal) : null;
 
     submitBtn.disabled = true;
     try {
-      const res = await api.post('/calendar/subscriptions', { url, name, color, shared });
+      const res = await api.post('/calendar/subscriptions', {
+        url, name, color, shared, default_assignee_user_id,
+      });
       subs.push(res.data);
       renderIcsList(container, subs, user);
       addForm.reset();
@@ -992,15 +1098,14 @@ function buildGoogleCalendarPicker() {
         name.textContent = cal.summary || cal.id;
 
         item.append(checkbox, dot, name);
-        // Standard-Zuweisung nur für aktivierte UND bereits synchronisierte Kalender —
-        // erst dann existiert die external_calendars-Zeile, die der PATCH aktualisiert.
-        if (cal.enabled && cal.synced) {
-          item.appendChild(buildCalendarAssigneeSelect({
-            source: 'google',
-            externalId: cal.id,
-            currentId: cal.default_assignee_user_id,
-          }));
-        }
+        // Wie bei CalDAV vor dem Haken setzbar (#730) - hier zählt es doppelt:
+        // Das Aktivieren startet den Sync unmittelbar (PATCH /google/calendars),
+        // eine Zuweisung danach käme für die erste Ladung immer zu spät.
+        item.appendChild(buildCalendarAssigneeSelect({
+          source: 'google',
+          externalId: cal.id,
+          currentId: cal.default_assignee_user_id,
+        }));
         list.appendChild(item);
 
         checkbox.addEventListener('change', async () => {

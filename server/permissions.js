@@ -72,6 +72,14 @@ export const PERMISSION_WIDGETS = Object.freeze([
   { id: 'family',       module: null },
   { id: 'weather',      module: null },
   { id: 'clock',        module: null },
+  // `module: null` wie Familie, Wetter und Uhr, und hier aus einem eigenen
+  // Grund: die Kennzahlreihe gehoert keinem Modul, sie zeigt vier davon. Eine
+  // Zuordnung zu einem einzelnen waere falsch, und sie wird auch nicht
+  // gebraucht - jede EINZELNE Kachel prueft ihr Modul schon selbst
+  // (`renderMetricTiles` filtert ueber `isWidgetModuleEnabled`), ein gesperrtes
+  // Budget hat also nie eine Budget-Kachel. Was hier fehlte, ist die Sperre auf
+  // die REIHE als solche.
+  { id: 'metrics',      module: null },
 ]);
 
 export const MODULE_ACCESS_LEVELS = Object.freeze(['none', 'read', 'write']);

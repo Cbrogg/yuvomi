@@ -6,7 +6,9 @@
  */
 
 import { DatabaseSync } from 'node:sqlite';
+import { readFileSync } from 'node:fs';
 import { MIGRATIONS_SQL } from '../server/db-schema-test.js';
+import { eachRule } from './css-rules.js';
 const { __test: calendarHelpers } = await import('../public/pages/calendar.js');
 
 let passed = 0;
@@ -436,10 +438,19 @@ test('agendaSegmentKind: Ganztags-Event ist all-day', () => {
   assert(agendaSegmentKind(ev, '2026-06-14') === 'all-day', 'Ganztägig → all-day');
 });
 
-const { clickedTime, HOUR_HEIGHT } = calendarHelpers;
+const { clickedTime } = calendarHelpers;
 
-function colAt(top) {
-  return { getBoundingClientRect: () => ({ top }) };
+/* Die Stundenhöhe kommt nicht mehr aus einer Konstante in calendar.js, sondern
+ * wird an der Spalte gemessen (sie ist immer 24 Stunden hoch) - deshalb trägt
+ * die Attrappe hier jetzt eine Höhe. Das ist genau die Zusage, die der Test
+ * hält: Woche (56px) und die dichtere Tagesansicht (40px) müssen für denselben
+ * Klick-Anteil dieselbe Uhrzeit ergeben. Vorher war die Zahl 56 in Test und
+ * Quelle verdrahtet und ein zweites Raster wäre unbemerkt falsch gelandet. */
+const WEEK_HOUR = 56;
+const DAY_HOUR  = 40;
+
+function colAt(top, hourHeight = WEEK_HOUR) {
+  return { getBoundingClientRect: () => ({ top, height: hourHeight * 24 }) };
 }
 
 test('clickedTime: Klick auf Spaltenanfang ergibt 00:00', () => {
@@ -447,12 +458,12 @@ test('clickedTime: Klick auf Spaltenanfang ergibt 00:00', () => {
 });
 
 test('clickedTime: Klick wird auf 30 Minuten gerundet', () => {
-  const y = (14.5 / 24) * (HOUR_HEIGHT * 24);
+  const y = (14.5 / 24) * (WEEK_HOUR * 24);
   assert(clickedTime({ clientY: y }, colAt(0)) === '14:30', 'Klick bei 14:30 bleibt 14:30');
 });
 
 test('clickedTime: Minuten zwischen den Rastern runden zum nächsten 30-Minuten-Schritt', () => {
-  const y = (HOUR_HEIGHT * 10) + (HOUR_HEIGHT * 20 / 60);
+  const y = (WEEK_HOUR * 10) + (WEEK_HOUR * 20 / 60);
   assert(clickedTime({ clientY: y }, colAt(0)) === '10:30', '10:20 rundet auf 10:30');
 });
 
@@ -461,13 +472,163 @@ test('clickedTime: Klick oberhalb der Spalte wird auf 00:00 geklemmt', () => {
 });
 
 test('clickedTime: Klick am Tagesende wird auf 23:30 geklemmt', () => {
-  const y = HOUR_HEIGHT * 25;
+  const y = WEEK_HOUR * 25;
   assert(clickedTime({ clientY: y }, colAt(0)) === '23:30', 'yOffset über 24h → 23:30');
 });
 
 test('clickedTime: berücksichtigt die Scroll-Position der Spalte (rect.top)', () => {
-  const y = 200 + (HOUR_HEIGHT * 2);
+  const y = 200 + (WEEK_HOUR * 2);
   assert(clickedTime({ clientY: y }, colAt(200)) === '02:00', 'rect.top wird von clientY abgezogen');
+});
+
+test('clickedTime: liest die Stundenhöhe der Spalte, nicht eine feste Zahl', () => {
+  const y = DAY_HOUR * 14.5;
+  assert(clickedTime({ clientY: y }, colAt(0, DAY_HOUR)) === '14:30',
+    'dichteres Tagesraster (40px/Stunde) trifft dieselbe Uhrzeit');
+  assert(clickedTime({ clientY: WEEK_HOUR * 14.5 }, colAt(0, WEEK_HOUR)) === '14:30',
+    'und die Wochenansicht (56px/Stunde) ebenso');
+});
+
+test('clickedTime: eine Spalte ohne messbare Höhe legt nichts Falsches an', () => {
+  const noHeight = { getBoundingClientRect: () => ({ top: 0, height: 0 }) };
+  assert(clickedTime({ clientY: 400 }, noHeight) === '09:00',
+    'ohne Layout fällt der Klick auf eine ruhige Vormittagszeit zurück statt auf 00:00');
+});
+
+// --------------------------------------------------------
+// Tagesraster: die Ebenenregel der Now-Linie
+// --------------------------------------------------------
+
+/* DIE ZUSAGE: im Tagesraster liegt die Now-LINIE unter den Terminen und der
+ * PUNKT über allem. Genau daran scheiterte die Vorlage (Screenshot 05): die
+ * Linie lag mit z-index 2 über dem 09:00-Termin und machte dessen Text
+ * unlesbar. Die Regel ist eine reine Stapelaussage und bricht deshalb lautlos -
+ * ein einzelnes hochgezogenes z-index irgendwo in calendar.css genügt, und
+ * niemand sieht es, bis jemand mittags in seinen Kalender schaut.
+ *
+ * Geprüft wird über eachRule() (der EINE Regelscanner), nicht über ein eigenes
+ * Regex: das alte Muster war dreimal blind und jedes Mal war der Guard grün. */
+const calendarCss = readFileSync(new URL('../public/styles/calendar.css', import.meta.url), 'utf8');
+
+function zIndexOf(selector) {
+  for (const rule of eachRule(calendarCss)) {
+    if (!rule.selector.split(',').map((s) => s.trim()).includes(selector)) continue;
+    const match = rule.body.match(/(?:^|;)\s*z-index\s*:\s*(-?\d+)/);
+    if (match) return Number(match[1]);
+  }
+  return null;
+}
+
+test('Tagesraster: die Now-Linie liegt UNTER den Terminen, der Punkt darüber', () => {
+  const line  = zIndexOf('.day-view__now-line');
+  const dot   = zIndexOf('.day-view__now-dot');
+  const event = zIndexOf('.day-event');
+  assert(line !== null,  '.day-view__now-line hat kein z-index - die Ebenenregel steht nirgends');
+  assert(dot !== null,   '.day-view__now-dot hat kein z-index');
+  assert(event !== null, '.day-event hat kein z-index');
+  assert(line < event, `Now-Linie (${line}) muss unter dem Termin (${event}) liegen, sonst streicht sie seinen Titel durch`);
+  assert(dot > event,  `Now-Punkt (${dot}) muss über dem Termin (${event}) liegen, sonst ist „jetzt" verdeckt`);
+});
+
+test('Tagesraster: der Now-Punkt sitzt in der Stundenspalte, wo nie ein Termin steht', () => {
+  const rule = [...eachRule(calendarCss)].find((r) => r.selector.trim() === '.day-view__now-dot');
+  assert(rule, '.day-view__now-dot fehlt');
+  assert(/inset-inline-start|left/.test(rule.body) && /--cal-gutter-width/.test(rule.body),
+    'der Punkt muss seine Position aus --cal-gutter-width beziehen - sonst wandert er beim nächsten '
+    + 'Spaltenmass in die Terminspalte, und die halbe Ebenenregel ist wieder hin');
+});
+
+test('Tagesraster: die Dichte kommt aus EINEM Token, nicht aus einer zweiten Zahl', () => {
+  const dayView = [...eachRule(calendarCss)].find((r) => r.selector.trim() === '.day-view');
+  assert(dayView, '.day-view fehlt');
+  assert(/--cal-hour-height:\s*var\(--cal-hour-height-day\)/.test(dayView.body),
+    '.day-view muss --cal-hour-height auf die Tages-Sprosse umbiegen; sonst rechnet hourOffset() '
+    + 'gegen die Wochenhöhe und Termine, Stundenlinien und Now-Linie laufen auseinander');
+  // OHNE KOMMENTARE. Der Guard fand beim ersten Lauf seinen eigenen Anlass:
+  // der Kommentar über hourOffset() ZITIERT `HOUR_HEIGHT = 56`, um zu erklären,
+  // warum es die Konstante nicht mehr gibt. Ein Guard, der Prosa liest, meldet
+  // die Beschreibung eines Fehlers als den Fehler - dieselbe Falle, wegen der
+  // eachRule() die Kommentare strippt.
+  const src = readFileSync(new URL('../public/pages/calendar.js', import.meta.url), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/^\s*\/\/.*$/gm, '');
+  assert(!/\bHOUR_HEIGHT\s*=\s*\d/.test(src),
+    'calendar.js darf die Stundenhöhe nicht als Zahl führen - sie steht in tokens.css');
+});
+
+/* ---------------------------------------------------------------------------
+ * Vorbelegtes Datum eines neuen Termins ohne angeklickten Tag (#737)
+ *
+ * Anlassfall: In der Tagesansicht drei Tage vorblättern, „+" drücken - der
+ * Termin lag auf heute, nicht auf dem Tag auf dem Schirm. Dieselbe Überraschung
+ * gab es in Woche, Monat und Agenda, nur weiter entfernt.
+ *
+ * Regel: Heute gewinnt, solange die Ansicht heute zeigt; sonst der erste Tag des
+ * sichtbaren Zeitraums. Die Fälle „heute sichtbar" stehen mit im Test, sonst
+ * bewiese er nur die halbe Regel und ein `return from` käme grün durch.
+ * ------------------------------------------------------------------------- */
+const newEventDate = calendarHelpers.newEventDefaultDate;
+const TODAY = '2026-08-14';                                   // Freitag
+
+test('Tagesansicht: das „+" nimmt den angezeigten Tag, nicht heute', () => {
+  assert(newEventDate('day', '2026-09-20', TODAY) === '2026-09-20',
+    'ein vorgeblätterter Tag muss der Vorschlag sein');
+  assert(newEventDate('day', TODAY, TODAY) === TODAY,
+    'auf heute stehend bleibt es heute');
+});
+
+test('Monatsansicht: der erste des angezeigten Monats, aber heute wenn heute drin liegt', () => {
+  assert(newEventDate('month', '2026-09-20', TODAY) === '2026-09-01',
+    'im September muss der 1. September herauskommen');
+  assert(newEventDate('month', '2026-08-30', TODAY) === TODAY,
+    'im laufenden Monat bleibt heute der Vorschlag - der Nutzer sieht ihn ja');
+  assert(newEventDate('month', '2026-02-20', TODAY) === '2026-02-01',
+    'auch rückwärts der Monatserste, nicht das Rasterende');
+});
+
+test('Monatsansicht: der Vorschlag ist der Monatserste, nicht der Rasteranfang', () => {
+  // getRangeForView() liefert für den Monat das 42-Tage-Raster und beginnt im
+  // Vormonat. Wer diesen Vorschlag daraus ableitet, legt Termine aus der
+  // September-Ansicht heraus im August an. September 2026 beginnt an einem
+  // Dienstag, das Raster also am 31.08.
+  assert(newEventDate('month', '2026-09-20', TODAY) !== '2026-08-31',
+    'der Rasteranfang des Vormonats darf nie der Vorschlag sein');
+});
+
+test('Wochenansicht: der Wochenstart des angezeigten Zeitraums, im gewählten Wochenstart', () => {
+  assert(newEventDate('week', '2026-09-16', TODAY, 1) === '2026-09-14',
+    'Wochenstart Montag: Mittwoch 16.09. gehört zur Woche ab Montag 14.09.');
+  assert(newEventDate('week', '2026-09-16', TODAY, 0) === '2026-09-13',
+    'Wochenstart Sonntag: dieselbe Woche beginnt am 13.09.');
+  assert(newEventDate('week', '2026-08-12', TODAY, 1) === TODAY,
+    'liegt heute in der angezeigten Woche, gewinnt heute');
+});
+
+test('Agenda: der Listenanfang, sobald heute außerhalb der 30 Tage liegt', () => {
+  assert(newEventDate('agenda', '2026-10-01', TODAY) === '2026-10-01',
+    'vorgeblätterte Agenda schlägt ihren eigenen Anfang vor');
+  assert(newEventDate('agenda', '2026-08-01', TODAY) === TODAY,
+    'heute liegt im 30-Tage-Fenster ab 01.08. und gewinnt');
+});
+
+test('ohne Cursor bleibt es bei heute', () => {
+  assert(newEventDate('month', null, TODAY) === TODAY, 'null-Cursor fällt auf heute zurück');
+  assert(newEventDate('day', '', TODAY) === TODAY, 'leerer Cursor fällt auf heute zurück');
+});
+
+test('jedes „+" ohne angeklickten Tag reicht ein Datum durch (nur die Suche nicht)', () => {
+  const src = readFileSync(new URL('../public/pages/calendar.js', import.meta.url), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/^\s*\/\/.*$/gm, '');
+  // Regel über ALLE create-Aufrufe, nicht über eine Liste bekannter Zeilen: sonst
+  // deckt der Guard N Fundstellen ab statt der Regel, und ein neuer Knopf fiele
+  // still durch.
+  const creates = src.match(/openEventModal\(\{\s*mode:\s*'create'[^)]*\)/g) || [];
+  assert(creates.length >= 5, `zu wenige create-Aufrufe gefunden (${creates.length}) - Regex greift nicht mehr`);
+  const withoutDate = creates.filter((call) => !/\bdate:/.test(call));
+  assert(withoutDate.length === 1,
+    `genau ein „+" darf ohne Datum öffnen (der Leerzustand der Suche, dort steht kein Zeitraum `
+    + `auf dem Schirm), gefunden: ${withoutDate.length} - ${withoutDate.join(' | ')}`);
 });
 
 // --------------------------------------------------------

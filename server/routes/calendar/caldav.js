@@ -59,7 +59,10 @@ router.put('/caldav/accounts/:id', requireAdmin, async (req, res) => {
 router.delete('/caldav/accounts/:id', requireAdmin, (req, res) => {
   try {
     const accountId = parseInt(req.params.id, 10);
-    const result = caldavSync.deleteAccount(accountId);
+    // Query statt Body: DELETE-Requests tragen in dieser App keinen Body, und
+    // der Client soll die Wahl ausdruecklich mitschicken (#732).
+    const deleteEvents = req.query.deleteEvents === 'true';
+    const result = caldavSync.deleteAccount(accountId, { deleteEvents });
     res.json({ data: result });
   } catch (err) {
     log.error('CalDAV account deletion failed:', err);
@@ -85,13 +88,18 @@ router.get('/caldav/accounts/:id/calendars', requireAdmin, async (req, res) => {
 router.patch('/caldav/accounts/:id/calendars', requireAdmin, (req, res) => {
   try {
     const accountId = parseInt(req.params.id, 10);
-    const { calendarUrl, enabled } = req.body;
+    const { calendarUrl, enabled, deleteEvents } = req.body;
 
     if (!calendarUrl || enabled === undefined) {
       return res.status(400).json({ error: 'Missing calendarUrl or enabled field.', code: 400 });
     }
+    if (deleteEvents !== undefined && typeof deleteEvents !== 'boolean') {
+      return res.status(400).json({ error: 'deleteEvents must be a boolean.', code: 400 });
+    }
 
-    const result = caldavSync.updateCalendarSelection(accountId, calendarUrl, enabled);
+    const result = caldavSync.updateCalendarSelection(accountId, calendarUrl, enabled, {
+      deleteEvents: deleteEvents === true,
+    });
     res.json({ data: result });
   } catch (err) {
     log.error('CalDAV calendar selection update failed:', err);

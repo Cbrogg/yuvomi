@@ -47,6 +47,7 @@ import budgetRouter from './routes/budget.js';
 import subscriptionsRouter from './routes/subscriptions.js';
 import documentsRouter from './routes/documents.js';
 import googleDriveStorageRouter from './routes/document-storage-google-drive.js';
+import { checkLocalStorageMount } from './services/document-storage.js';
 import dmsRouter from './routes/dms.js';
 import recipeProvidersRouter from './routes/recipe-providers.js';
 import splitExpensesRouter from './routes/split-expenses.js';
@@ -548,6 +549,11 @@ app.listen(PORT, () => {
     setInterval(runSync, SYNC_INTERVAL_MS);
     logSync.info(`Auto-sync active every ${SYNC_INTERVAL_MS / 60_000} minutes.`);
   }, 10_000);
+
+  // Ein fehlender Mount fuer die lokale Dokumentablage faellt sonst erst auf,
+  // wenn die Dateien nach einem Update verschwunden sind (#751).
+  checkLocalStorageMount(createLogger('DocumentStorage'))
+    .catch((err) => log.error('Document storage check failed:', err.message));
 
   // Backup-Scheduler starten
   startBackupScheduler();

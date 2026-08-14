@@ -70,6 +70,39 @@
   }
 }
 
+/* --------------------------------------------------------
+ * KOMPAKTE HÖHENKLASSE: der Chip fällt auf das Zeiger-Maß.
+ *
+ * Die Basisregel oben setzt --target-lg (48px) UNBEDINGT - das Fingermaß, auch
+ * auf einem Zeigergerät. Auf einem Telefon ist das richtig. Auf einem
+ * 1280x800-Laptop bei 200 % Browserzoom (also 640x400, WCAG 1.4.4) ist es der
+ * teuerste Posten der Seite: gemessen auf /tasks belegen Kopf und Filterreihe
+ * dort zusammen 171,6px von 400px - 43 % des Fensters, bevor die erste Aufgabe
+ * kommt, und die Filterreihe (78px) ist darin GRÖSSER als der Kopf (63px).
+ *
+ * Dieselbe Abwägung, die layout.css für den Modulkopf trifft (§ „kompakte
+ * Höhenklasse"): wo die Höhe fehlt und die Breite reicht, gibt die Höhe nach.
+ *
+ * DER TOUCH-FALL BLEIBT UNBERÜHRT, und das ist die Bedingung, unter der die
+ * Regel überhaupt zulässig ist: `(hover: none)` holt --target-base zurück, und
+ * das ist auf Touch selbst --target-lg (tokens.css § 11). Ein Telefon im
+ * Querformat verliert damit keinen einzigen Pixel Zielgrösse - es sieht diese
+ * Regel, nimmt sie aber in der Zeile darunter zurück. Genau die Arbeitsteilung
+ * trägt schon `.filter-chip--sm`; hier steht sie nur zusätzlich an der
+ * Höhenachse.
+ * -------------------------------------------------------- */
+@media (max-height: 499px) {
+  .filter-chip {
+    min-height: var(--target-md);
+  }
+}
+
+@media (max-height: 499px) and (hover: none) {
+  .filter-chip {
+    min-height: var(--target-base);
+  }
+}
+
 /* Trefferzahl im Chip: macht vor dem Klick sichtbar, ob sich der Filter lohnt. */
 .filter-chip__count {
   min-width: 1.25em;

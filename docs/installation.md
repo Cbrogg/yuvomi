@@ -234,9 +234,9 @@ docker compose up -d
 Docker pulls `ghcr.io/ulsklyc/yuvomi:latest` automatically. No build step, no Node.js installation needed.
 
 > **Pinning a version.** Every release is also published under immutable tags:
-> `2.7.1` (exact version), `2.7` (latest patch of that minor), plus a moving `main`
+> `2.10.1` (exact version), `2.10` (latest patch of that minor), plus a moving `main`
 > tag for the current development state. To pin production to a known-good release,
-> set `image: ghcr.io/ulsklyc/yuvomi:2.7.1` in your compose file and bump it
+> set `image: ghcr.io/ulsklyc/yuvomi:2.10.1` in your compose file and bump it
 > deliberately; `latest` always points at the newest release.
 
 Continue with [Step 4 — Verify](#4-verify-the-container-is-running).
@@ -282,7 +282,7 @@ docker compose logs -f
 You should see output like:
 
 ```
-yuvomi  | [Yuvomi] Server running on port 3000 | Version 2.7.1
+yuvomi  | [Yuvomi] Server running on port 3000 | Version 2.10.1
 yuvomi  | [Yuvomi] Environment: production
 yuvomi  | [Sync] Auto-sync active every 15 minutes.
 ```
@@ -600,6 +600,12 @@ environment:
 > Ensure the mounted folder is writable by the container (adjust ownership/permissions as needed).
 > Files live on the host volume, so include that folder in your host-level backups — database
 > backups hold only document metadata, not these binaries.
+
+> **`_DIR` and `_PATH` are the two ends of one mount and must match.** If `DOCUMENT_STORAGE_LOCAL_PATH`
+> points at a path nobody mounted, uploads still succeed: the folder is created inside the container
+> layer and the files are gone on the next `pull && up -d`, while the database keeps referencing them.
+> Since v2.9.0 the server checks this at startup and warns when the folder is missing or not writable,
+> naming the path it looked for. A silent start means the mount is where the app expects it.
 
 ### WebDAV Document Storage (Optional)
 

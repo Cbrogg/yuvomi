@@ -64,8 +64,17 @@
  * weiter aus layout.css. Ohne Blur-Support bleibt der Vollton aus
  * layout.css stehen (identische Fallback-Logik wie oben).
  * ================================================================ */
+/* `:not(.page-fab--docked)` an JEDER der drei Regeln, und das ist keine
+ * Vorsicht, sondern die Bedingung dafuer, dass Sonde 12 gruen wird.
+ *
+ * Sie liest DEKLARIERTE Regeln, nicht berechnete Werte - ausdruecklich, weil
+ * eine Deklaration, die heute von `.app-content *` mit `!important` abgeraeumt
+ * wird, wirkt, sobald jene Regel faellt. Ein `backdrop-filter: none` am
+ * angedockten Knopf reicht ihr deshalb nicht: die Glas-Deklaration MATCHT den
+ * Knoten weiter, und der steht im `#main-content`. Erst wenn sie ihn gar nicht
+ * mehr trifft, ist die Glas-ist-Chrome-Regel eingehalten statt ueberschrieben. */
 @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
-  .page-fab {
+  .page-fab:not(.page-fab--docked) {
     background-color: color-mix(in srgb, var(--color-accent) 78%, transparent);
     /* blur-md statt blur-sm: die weiche Streuung des Untergrunds ist auf
      * Kapselgröße der einzige Materialbeweis, wenn kein Text darunter
@@ -86,7 +95,7 @@
   /* Kein pointer-events:none nötig: Pseudos hit-testen auf ihr Host-Element,
    * der Sheen kann dem FAB nichts verdecken - und der #634-Guard verbietet
    * die Deklaration in .page-fab-Regeln zu Recht pauschal. */
-  .page-fab::before {
+  .page-fab:not(.page-fab--docked)::before {
     content: '';
     position: absolute;
     inset: 0;
@@ -94,8 +103,38 @@
     background: linear-gradient(to bottom, var(--glass-sheen), transparent 55%);
   }
 
-  .page-fab:hover {
+  .page-fab:not(.page-fab--docked):hover {
     background-color: var(--color-accent);
+  }
+
+  /* ANGEDOCKT IST ER KEIN GLAS MEHR, und der Grund ist eine abgelaufene
+   * Messung direkt darüber: „Der Tint bleibt bei 78 %: darunter fällt das
+   * Plus-Glyph auf hellen Modul-Tints unter die 3:1-Grenze." 3:1 ist die
+   * Grafikschwelle - sie galt, solange der FAB ein Kreis mit einem Zeichen
+   * darin war.
+   *
+   * Seit Etappe 2 (dc23972f) wandert derselbe Knoten auf dem Zeigergerät in
+   * die Kopfleiste, und seit db49cd48 trägt er dort ein sichtbares WORT. Für
+   * Text gilt 4,5:1. Gemessen am gerenderten Dokument (Sonde 2, light/desktop):
+   * 78 % Violett auf Weiß ergibt #8A63ED, weiß darauf 4.13:1 - auf allen fünf
+   * andockenden Routen (Mahlzeiten, Rezepte, Vorrat, Geburtstage, Dokumente).
+   *
+   * Er ist dort auch kein Chrome mehr, sondern ein Knopf im Inhalt, und für
+   * den gilt die Primärknopf-Form aus DESIGN.md: deckende Fläche, kein Blur,
+   * kein Sheen. Dieselbe Regel, die Glas ohnehin auf die Shell beschränkt. */
+  .page-fab--docked {
+    /* `var(--neutral-950)` und NICHT das Literal `#0E0D0B` (Critique
+     * 2026-08-13, zweite Runde). Beide sind im hellen Theme derselbe Wert -
+     * aber das Token kippt im Dunkelmodus auf `#FBFAF7`, und genau das ist
+     * hier gewollt: der angedockte Knopf soll gegen den Grund seines Themes
+     * mischen, nicht immer gegen Schwarz. Als Literal war die
+     * Theme-Abhaengigkeit beim Kopieren verlorengegangen. */
+    background-color: color-mix(in srgb, var(--color-accent) 88%, var(--neutral-950));
+    box-shadow: var(--shadow-sm);
+  }
+
+  .page-fab--docked:hover {
+    background-color: color-mix(in srgb, var(--color-accent) 76%, var(--neutral-950));
   }
 }
 
@@ -313,13 +352,20 @@ textarea.form-input {
 /* ================================================================
  * 9. Toasts — Glass + Capsule
  * ================================================================ */
-.toast {
+.toast,
+.list-bulkbar {
   border-radius: var(--radius-glass-card);
   box-shadow: var(--glass-shadow-md);
 }
 
+/* Die Sammelaktions-Pille steht im selben Stapel wie der Toast und trägt
+ * deshalb dasselbe Material - das war die Entscheidung vom 2026-08-12: es gibt
+ * diese Schicht schon, und sie hat genau EIN Material. Der Modulton fällt damit
+ * weg, und das ist der Punkt, der den Konflikt mit „Glas gehört der Shell"
+ * auflöst: in der Shell-Schicht gilt Shell-Material, nicht Modul-Tinte. */
 @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
-  .toast:not(.toast--success):not(.toast--danger):not(.toast--warning) {
+  .toast:not(.toast--success):not(.toast--danger):not(.toast--warning),
+  .list-bulkbar {
     background-color: color-mix(in srgb, var(--neutral-800) 90%, transparent);
     backdrop-filter: var(--blur-sm);
     -webkit-backdrop-filter: var(--blur-sm);
@@ -398,10 +444,26 @@ textarea.form-input {
  * 16. Accessibility — Phase 2
  * ================================================================ */
 @media (prefers-reduced-transparency: reduce) {
-  .filter-chip--active,
-  .toast:not(.toast--success):not(.toast--danger):not(.toast--warning) {
+  .filter-chip--active {
     background-color: var(--color-accent-light);
     border-color: var(--color-accent);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  /* DER TOAST STAND IN DER REGEL DES CHIPS UND HAT IHN NICHT ÜBERLEBT. Beide
+   * verlieren hier ihr Glas, aber sie haben nicht denselben Grund darunter:
+   * der Chip ist ein helles Element mit dunkler Schrift, der Toast ist die
+   * dunkle Fläche der Shell und trägt `color: var(--neutral-50)`. Auf
+   * --color-accent-light (#F3EFFE) stand damit Weiss auf Fast-Weiss: gemessen
+   * im gerenderten Dokument mit emulierter Medienabfrage 1.08:1, jetzt 13.69:1.
+   * Der Fallback, der die Lesbarkeit sichern sollte, hat sie abgeschafft.
+   * Sein opaker Grund ist der, den layout.css ohnehin deklariert;
+   * hier muss nur das Glas weg. Die Pille teilt Material und damit auch das. */
+  .toast:not(.toast--success):not(.toast--danger):not(.toast--warning),
+  .list-bulkbar {
+    background-color: var(--neutral-800);
+    border-color: var(--glass-border-overlay);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
   }

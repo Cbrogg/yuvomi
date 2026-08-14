@@ -68,3 +68,76 @@ export function pruneDeletedEvents(database, {
 
   return stale.length;
 }
+
+// --------------------------------------------------------
+// Aufräumen auf Wunsch des Nutzers (#732).
+//
+// Etwas anderes als der Prune darüber, obwohl beide Termine löschen: dort
+// entscheidet der Server ("der Kalender liefert diesen Termin nicht mehr"), hier
+// der Mensch ("ich will diesen Kalender in Yuvomi nicht mehr sehen"). Deshalb
+// kein Leer-Guard und kein UID-Abgleich - die Auswahl ist die Ansage.
+//
+// LOKAL, NICHT NACH AUSSEN: Gelöscht wird mit einem direkten DELETE, ohne
+// `queueEventDeletion`. Der Fremdkalender bleibt unberührt, und das ist der
+// Zweck: Wer einen Kalender abwählt, räumt seine Kopie weg und nicht das
+// Original beim Anbieter. Ein Tombstone hier würde beim nächsten Lauf die
+// Termine in iCloud/Nextcloud löschen - aus einem Aufräumen würde ein
+// Datenverlust bei allen anderen Clients derselben Familie.
+// --------------------------------------------------------
+
+/** Die external_calendars-Zeilen eines Kalenders bzw. aller Kalender einer Auswahl. */
+function calendarRefIds(database, externalIds) {
+  if (!externalIds.length) return [];
+  const marks = externalIds.map(() => '?').join(',');
+  return database.prepare(
+    `SELECT id FROM external_calendars WHERE source IN ('caldav','apple') AND external_id IN (${marks})`
+  ).all(...externalIds).map((r) => r.id);
+}
+
+/**
+ * Wie viele lokal gespiegelte Termine hängen an diesen Kalendern?
+ *
+ * Die Zahl steht in der Rückfrage, bevor gelöscht wird - eine Frage ohne Zahl
+ * ("Termine löschen?") lässt den Nutzer raten, ob es drei oder dreihundert sind.
+ *
+ * @param {object} database
+ * @param {string[]} externalIds  calendar_url je Kalender (external_calendars.external_id)
+ * @returns {number}
+ */
+export function countMirroredEvents(database, externalIds) {
+  const refIds = calendarRefIds(database, externalIds);
+  if (!refIds.length) return 0;
+  const marks = refIds.map(() => '?').join(',');
+  return database.prepare(
+    `SELECT COUNT(*) AS n FROM calendar_events
+     WHERE calendar_ref_id IN (${marks}) AND external_source IN ('caldav','apple')`
+  ).get(...refIds).n;
+}
+
+/**
+ * Entfernt die lokal gespiegelten Termine dieser Kalender.
+ *
+ * Der Scope ist derselbe wie beim Prune: `calendar_ref_id` + gespiegelte Quelle.
+ * Lokale Termine bleiben unangetastet, auch wenn sie diesen Kalender als
+ * Hochladeziel tragen - sie sind noch nirgends gespiegelt, es gäbe nichts
+ * aufzuräumen.
+ *
+ * Lokal BEARBEITETE Termine (`user_modified`) gehen bewusst mit: Wer "alle
+ * Termine dieses Kalenders löschen" wählt, meint alle. Eine stille Ausnahme
+ * liesse einzelne Zeilen zurück, deren Herkunft danach niemand mehr erkennt,
+ * und die Rückfrage hätte eine Zahl genannt, die nicht stimmt.
+ *
+ * @returns {number} Anzahl gelöschter Termine
+ */
+export function deleteMirroredEvents(database, externalIds) {
+  const refIds = calendarRefIds(database, externalIds);
+  if (!refIds.length) return 0;
+  const marks = refIds.map(() => '?').join(',');
+  const result = database.prepare(
+    `DELETE FROM calendar_events
+     WHERE calendar_ref_id IN (${marks}) AND external_source IN ('caldav','apple')`
+  ).run(...refIds);
+  const removed = Number(result.changes) || 0;
+  if (removed) log.info(`Removed ${removed} mirrored event(s) on user request.`);
+  return removed;
+}

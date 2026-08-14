@@ -9,6 +9,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
+import { withoutHtmlComments } from './source-text.js';
 
 const read = (path) => readFileSync(new URL(path, import.meta.url), 'utf8').replace(/\r/g, '');
 
@@ -114,7 +115,11 @@ test('hidden greift bei geteilten Bedienelementen trotz display-Klasse', () => {
   // aber ausdrücklich zum Wachsen gedacht (bei `.list-bulkbar` war sie 141
   // Zeichen lang und der Guard rot, obwohl die Struktur korrekt war).
   const sameBlock = (selector) => new RegExp(`${selector}[^{}]*\\{\\s*display:\\s*none\\s*!important`);
-  for (const selector of ['\\.page-fab\\[hidden\\]', '\\.btn\\[hidden\\]', '\\.form-group\\[hidden\\]', '\\.list-bulkbar\\[hidden\\]']) {
+  // `.list-bulkbar` stand hier, solange sie ein dauerhafter, leerer Knoten im
+  // Seitenfluss war. Seit Etappe 5 wird sie angelegt und entfernt
+  // (utils/bulk-pill.js) und trägt nie `hidden` - ein Eintrag für einen
+  // Zustand, den niemand setzt, prüft nichts.
+  for (const selector of ['\\.page-fab\\[hidden\\]', '\\.btn\\[hidden\\]', '\\.form-group\\[hidden\\]']) {
     assert.match(layoutCss, sameBlock(selector), `${selector} steht nicht im Durchsetzungsblock`);
   }
 });
@@ -124,7 +129,19 @@ test('hidden greift bei geteilten Bedienelementen trotz display-Klasse', () => {
 // --------------------------------------------------------
 
 test('neue Einträge landen im angezeigten Monat, nicht im heutigen', () => {
-  assert.match(budget, /const defaultDate = state\.month === todayMonth \? today : `\$\{state\.month\}-01`/);
+  // GEPRÜFT WIRD DIE HERKUNFT, NICHT DIE SCHREIBWEISE. Die Vorgängerfassung
+  // verlangte die Zeile buchstabengetreu
+  // (`state.month === todayMonth ? today : ...`) und schlug deshalb an, als die
+  // Regel unverändert nach utils/date.js zog - ein Guard, der ein Refactoring
+  // ohne Verhaltensänderung als Verstoß meldet, hat die falsche Ebene.
+  // Verlangt wird jetzt: der Standardwert stammt aus der hausweiten Regel,
+  // angewandt auf den angezeigten Monat.
+  assert.match(budget, /defaultDateInPeriod/,
+    'das Standarddatum kommt nicht mehr aus defaultDateInPeriod() (utils/date.js)');
+  assert.match(budget, /monthPeriodKeys\(state\.month\)/,
+    'der Zeitraum ist nicht mehr der angezeigte Monat');
+  assert.match(budget, /const defaultDate = defaultDateInPeriod\(/,
+    'defaultDate wird nicht mehr aus der Regel abgeleitet');
   // Das Datumsfeld muss den abgeleiteten Wert nutzen, nicht mehr `today`.
   assert.match(budget, /id="bm-date"\s*\n?\s*value="\$\{isEdit \? entry\.date : defaultDate\}"/);
   assert.doesNotMatch(budget, /id="bm-date"[\s\S]{0,80}entry\.date : today\}/);
@@ -506,22 +523,11 @@ const AUDITED_STYLESHEETS = [
   ['split-expenses.css', splitCss],
 ];
 
-// Einmaliges Ersetzen genuegt nicht: ein Rest wie `<!<!-- x -->->` setzt sich
-// nach dem Schnitt zu einem neuen Kommentar-Delimiter zusammen. Darum bis zum
-// Fixpunkt laufen (CodeQL js/incomplete-multi-character-sanitization).
-// Die Schleife muss den Aufruf direkt umschliessen: CodeQL erkennt den Fixpunkt
-// nur, wenn das Ergebnis des `replace` zu seinem eigenen Receiver zurueckfliesst.
-// In einer `.replace().replace()`-Kette gilt das nur fuer das letzte Glied - der
-// Schnitt gehoert deshalb hierher und nicht zurueck in die Kette unten.
-const withoutHtmlComments = (src) => {
-  let out = src;
-  let previous;
-  do {
-    previous = out;
-    out = out.replace(/<!--[\s\S]*?-->/g, '');
-  } while (out !== previous);
-  return out;
-};
+// Der Schnitt stand hier als lokale Funktion und in test-frontend-audit.js als
+// `.replace().replace()`-Kette OHNE Fixpunkt - zwei Fassungen desselben
+// Gedankens, von denen genau eine richtig war. Er hat jetzt ein Zuhause; die
+// Begruendung (warum ein einzelner Durchlauf ein `<!--` stehen laesst und
+// warum die Schleife den Aufruf direkt umschliessen muss) steht dort.
 
 // Guards, die auf Markup- oder Selektor-Muster prüfen, müssen an Kommentaren
 // vorbeisehen: sonst schlägt jede Erklärung an, die das verbotene Muster nennt -

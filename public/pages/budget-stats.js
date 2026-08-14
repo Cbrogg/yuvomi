@@ -175,9 +175,11 @@ function renderCatBars() {
   const plans = view.data.range === 'month' ? (view.data.plans || {}) : {};
   const rows = cats.map((c) => {
     const isExp = c.total < 0;
-    // Mindestwert 6 wie im Monats-Chart: gleiche Bauart, gleiche Regel - und im
-    // gespiegelten Chart trägt jede Seite nur die halbe Trackbreite.
-    const pct = Math.max(6, Math.round((Math.abs(c.total) / maxAbs) * 100));
+    // Der Anteil ist der Anteil, wie im Monats-Chart: gleiche Bauart, gleiche
+    // Regel. Der frühere 6-%-Boden zeichnete vier Kategorien mit dem
+    // 9,4-Fachen Abstand gleich lang; der Mindestbalken steht jetzt als Länge
+    // im CSS (--bar-visible). Begründung ausführlich in budget.js.
+    const scale = Math.abs(c.total) / maxAbs;
     const target = isExp ? plans[c.category] : undefined;
     const targetPos = target != null ? Math.min(1, target / maxAbs) : null;
     const targetMarker = targetPos != null
@@ -192,7 +194,7 @@ function renderCatBars() {
         <div class="budget-bar-row__label" title="${catLabel}">${catLabel}</div>
         <div class="budget-bar-row__track">
           <div class="budget-bar-row__fill ${isExp ? 'budget-bar-row__fill--expenses' : 'budget-bar-row__fill--income'}"
-               style="--bar-scale:${pct / 100}"></div>
+               style="--bar-scale:${scale.toFixed(4)};--bar-visible:${c.total !== 0 ? 1 : 0}"></div>
           ${targetMarker}
         </div>
         <div class="budget-bar-row__amount" style="color:${isExp ? 'var(--color-danger)' : 'var(--color-success)'};">

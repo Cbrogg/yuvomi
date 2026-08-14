@@ -40,9 +40,24 @@ router.post('/subscriptions', async (req, res) => {
     catch { return res.status(400).json({ error: allowPrivate ? 'url: Nur http://, https:// und webcal:// sind erlaubt.' : 'url: Nur https:// und webcal:// sind erlaubt.', code: 400 }); }
     if (!colorVal || !ICS_COLOR_RE.test(colorVal))
       return res.status(400).json({ error: 'color: Pflichtfeld, muss #RRGGBB sein.', code: 400 });
+    // Die Standard-Zuweisung schon beim Anlegen: create() synchronisiert
+    // unmittelbar, und bisher ließ sie sich erst danach im Bearbeiten-Dialog
+    // setzen - die erste, oft größte Ladung Termine kam also grundsätzlich ohne
+    // Zuweisung herein (#730). Optional, damit bestehende Aufrufer unverändert
+    // durchgehen.
+    const rawAssignee = req.body.default_assignee_user_id;
+    let defaultAssignee = null;
+    if (rawAssignee !== undefined && rawAssignee !== null && rawAssignee !== '') {
+      defaultAssignee = Number(rawAssignee);
+      if (!Number.isInteger(defaultAssignee))
+        return res.status(400).json({ error: 'default_assignee_user_id muss eine Zahl oder null sein.', code: 400 });
+      if (!db.get().prepare('SELECT 1 FROM users WHERE id = ?').get(defaultAssignee))
+        return res.status(400).json({ error: 'Unbekannte Nutzer-ID.', code: 400 });
+    }
 
     const { sub, syncError } = await icsSubscription.create(getUserId(req), {
       name: name.trim(), url, color: colorVal, shared: shared ? 1 : 0,
+      default_assignee_user_id: defaultAssignee,
     });
     res.status(201).json({ data: sub, syncError: syncError || null });
   } catch (err) {
