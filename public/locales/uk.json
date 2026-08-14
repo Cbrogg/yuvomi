@@ -2388,6 +2388,7 @@
         "sectionTitlePlural": "Нагадування"
     },
     "recipes": {
+        "mealTypeNone": "Без прийому їжі",
         "toShoppingSuccess_few": "До {{list}} додано {{count}} інгредієнти.",
         "planSuccess": "«{{name}}» заплановано на {{date}}.",
         "planTitle": "Запланувати «{{name}}»",

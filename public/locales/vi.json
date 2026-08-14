@@ -2432,6 +2432,7 @@
         "importSelected": "Đã chọn {{count}} liên hệ"
     },
     "recipes": {
+        "mealTypeNone": "Không có bữa ăn",
         "toShoppingSuccess_few": "Đã thêm {{count}} nguyên liệu vào {{list}}.",
         "planSuccess": "Đã lên kế hoạch {{name}} cho {{date}}.",
         "planTitle": "Lên kế hoạch {{name}}",

@@ -2354,6 +2354,7 @@
         "summaryFromCompletion": "完了日から"
     },
     "recipes": {
+        "mealTypeNone": "食事なし",
         "toShoppingSuccess_few": "{{list}} に {{count}} 件の材料を追加しました。",
         "planSuccess": "{{name}} を {{date}} に計画しました。",
         "planTitle": "{{name}} を計画",

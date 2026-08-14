@@ -2444,6 +2444,7 @@
         "importSelected": "Wybrano kontakty: {{count}}"
     },
     "recipes": {
+        "mealTypeNone": "Brak posiłku",
         "toShoppingSuccess_few": "Dodano {{count}} składniki do {{list}}.",
         "planSuccess": "{{name}} zaplanowano na {{date}}.",
         "planTitle": "Zaplanuj {{name}}",

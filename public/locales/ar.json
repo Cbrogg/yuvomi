@@ -2354,6 +2354,7 @@
         "summaryFromCompletion": "من تاريخ الإنجاز"
     },
     "recipes": {
+        "mealTypeNone": "بدون وجبة",
         "toShoppingSuccess_few": "تمت إضافة {{count}} مكونات إلى {{list}}.",
         "planSuccess": "تم تخطيط {{name}} ليوم {{date}}.",
         "planTitle": "تخطيط {{name}}",

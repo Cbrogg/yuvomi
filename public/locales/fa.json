@@ -2444,6 +2444,7 @@
         "importSelected": "{{count}} مخاطب انتخاب شد"
     },
     "recipes": {
+        "mealTypeNone": "بدون وعده",
         "toShoppingSuccess_few": "{{count}} ماده به {{list}} اضافه شد.",
         "planSuccess": "{{name}} برای {{date}} برنامه‌ریزی شد.",
         "planTitle": "برنامه‌ریزی {{name}}",

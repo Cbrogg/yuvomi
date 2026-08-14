@@ -2432,6 +2432,7 @@
         "importSelected": "{{count}} névjegy kiválasztva"
     },
     "recipes": {
+        "mealTypeNone": "Nincs étkezés",
         "toShoppingSuccess_few": "{{count}} hozzávaló hozzáadva a következőhöz: {{list}}.",
         "planSuccess": "{{name}} betervezve {{date}}-ra.",
         "planTitle": "{{name}} betervezése",

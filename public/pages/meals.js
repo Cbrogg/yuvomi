@@ -15,7 +15,7 @@ import { renderKitchenTabsBar } from '/utils/kitchen-tabs.js';
 import { resolveShoppingTarget, announceTransfer, mountMissingShoppingList } from '/utils/kitchen-transfer.js';
 import { ingredientRowHTML } from '/utils/ingredient-row.js';
 import { addLocalDays, startOfLocalWeekKey, toLocalDateKey } from '/utils/date.js';
-import { normalizeRecipeMealTypes, recipeSupportsMealType } from '/utils/recipe-meal-types.js';
+import { normalizeRecipeMealTypes, recipeSupportsMealType, recipeAllowsMealType } from '/utils/recipe-meal-types.js';
 import { mountEmptyState, mountLoadError, emptyStateEl } from '/utils/empty-state.js';
 import { mealPayloadFromRecipe } from '/utils/recipe-to-meal.js';
 import { findPageFab } from '/utils/fab.js';
@@ -546,9 +546,11 @@ function renderRecipeSidebar() {
       card.appendChild(sourceBadgeEl);
     }
 
-    // Mahlzeiten-Chips nur bei echter Teilmenge: ein Rezept, das zu allen (oder
-    // keinem) Typ passt, trägt mit "überall"-Chips null Information und ist dann
-    // das lauteste Element der Karte (Audit P2, Muster wie recipes.js showBadges).
+    // Mahlzeiten-Chips nur bei echter Teilmenge: ein Rezept, das zu allen Typen
+    // passt, trägt mit "überall"-Chips null Information und ist dann das
+    // lauteste Element der Karte (Audit P2, Muster wie recipes.js showBadges).
+    // Der leere Fall ist seit #750 die Gegenprobe und keine Teilmenge mehr: Er
+    // sagt „nur von Hand", denn der Zufallsvorschlag übergeht dieses Rezept.
     const recipeTypes = normalizeRecipeMealTypes(recipe.meal_types);
     const allTypeOptions = recipeMealTypeOptions();
     if (recipeTypes.length && recipeTypes.length < allTypeOptions.length) {
@@ -562,6 +564,14 @@ function renderRecipeSidebar() {
           badge.textContent = option.label;
           types.appendChild(badge);
         });
+      card.appendChild(types);
+    } else if (!recipeTypes.length) {
+      const types = document.createElement('div');
+      types.className = 'recipe-sidebar__card-types';
+      const badge = document.createElement('span');
+      badge.className = 'meal-type-badge meal-type-badge--none';
+      badge.textContent = t('recipes.mealTypeNone');
+      types.appendChild(badge);
       card.appendChild(types);
     }
 
@@ -746,7 +756,9 @@ function wireGrid(grid) {
     const slot = e.target.closest('.meal-slot');
     if (!slot) return;
     const recipe = state.recipes.find((entry) => entry.id === _dragRecipeId);
-    if (!recipe || !recipeSupportsMealType(recipe, slot.dataset.type)) return;
+    // Ziehen ist eine Entscheidung des Nutzers, nicht der Automatik: ein Rezept
+    // ohne erklärte Mahlzeit bleibt hier ablegbar (#750, recipeAllowsMealType).
+    if (!recipe || !recipeAllowsMealType(recipe, slot.dataset.type)) return;
     e.preventDefault();
     clearRecipeDropTargets();
     slot.classList.add('meal-slot--drop-target');
@@ -760,7 +772,7 @@ function wireGrid(grid) {
     clearRecipeDropTargets();
     if (!slot) return;
     const recipe = state.recipes.find((entry) => entry.id === recipeId);
-    if (!recipe || !recipeSupportsMealType(recipe, slot.dataset.type)) return;
+    if (!recipe || !recipeAllowsMealType(recipe, slot.dataset.type)) return;
     e.preventDefault();
     const slotMeals = state.meals.filter((meal) => meal.date === slot.dataset.date && meal.meal_type === slot.dataset.type);
     if (slotMeals.length) {

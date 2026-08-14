@@ -2444,6 +2444,7 @@
         "importSelected": "{{count}} Kontakte ausgewählt"
     },
     "recipes": {
+        "mealTypeNone": "Keine Mahlzeit",
         "toShoppingSuccess_few": "{{count}} Zutaten auf {{list}} übernommen.",
         "planSuccess": "{{name}} für {{date}} eingeplant.",
         "planTitle": "{{name}} einplanen",

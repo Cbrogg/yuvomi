@@ -2354,6 +2354,7 @@
         "summaryFromCompletion": "dal completamento"
     },
     "recipes": {
+        "mealTypeNone": "Nessun pasto",
         "toShoppingSuccess_few": "{{count}} ingredienti aggiunti a {{list}}.",
         "planSuccess": "{{name}} pianificato per il {{date}}.",
         "planTitle": "Pianifica {{name}}",

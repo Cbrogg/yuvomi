@@ -2354,6 +2354,7 @@
         "summaryFromCompletion": "от выполнения"
     },
     "recipes": {
+        "mealTypeNone": "Без приёма пищи",
         "toShoppingSuccess_few": "В {{list}} добавлено {{count}} ингредиента.",
         "planSuccess": "«{{name}}» запланировано на {{date}}.",
         "planTitle": "Запланировать «{{name}}»",

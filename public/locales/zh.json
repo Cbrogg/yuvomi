@@ -2354,6 +2354,7 @@
         "summaryFromCompletion": "从完成日起"
     },
     "recipes": {
+        "mealTypeNone": "无餐次",
         "toShoppingSuccess_few": "已向 {{list}} 添加 {{count}} 个食材。",
         "planSuccess": "已把「{{name}}」安排在 {{date}}。",
         "planTitle": "安排「{{name}}」",

@@ -2354,6 +2354,7 @@
         "summaryFromCompletion": "tamamlanmadan itibaren"
     },
     "recipes": {
+        "mealTypeNone": "Öğün yok",
         "toShoppingSuccess_few": "{{list}} listesine {{count}} malzeme eklendi.",
         "planSuccess": "{{name}}, {{date}} için planlandı.",
         "planTitle": "{{name}} planla",

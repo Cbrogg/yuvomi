@@ -2354,6 +2354,7 @@
         "summaryFromCompletion": "från slutförandet"
     },
     "recipes": {
+        "mealTypeNone": "Ingen måltid",
         "toShoppingSuccess_few": "{{count}} ingredienser tillagda i {{list}}.",
         "planSuccess": "{{name}} planerad till {{date}}.",
         "planTitle": "Planera {{name}}",

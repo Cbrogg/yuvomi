@@ -2444,6 +2444,7 @@
         "importSelected": "{{count}} kontak dipilih"
     },
     "recipes": {
+        "mealTypeNone": "Tanpa waktu makan",
         "toShoppingSuccess_few": "{{count}} bahan ditambahkan ke {{list}}.",
         "planSuccess": "{{name}} direncanakan untuk {{date}}.",
         "planTitle": "Rencanakan {{name}}",

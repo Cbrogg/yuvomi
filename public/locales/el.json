@@ -2354,6 +2354,7 @@
         "summaryFromCompletion": "από την ολοκλήρωση"
     },
     "recipes": {
+        "mealTypeNone": "Χωρίς γεύμα",
         "toShoppingSuccess_few": "{{count}} υλικά προστέθηκαν στη λίστα {{list}}.",
         "planSuccess": "{{name}} προγραμματίστηκε για {{date}}.",
         "planTitle": "Προγραμματισμός {{name}}",

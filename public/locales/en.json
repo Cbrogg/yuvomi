@@ -2432,6 +2432,7 @@
         "importSelected": "{{count}} contacts selected"
     },
     "recipes": {
+        "mealTypeNone": "No meal",
         "toShoppingSuccess_few": "{{count}} ingredients added to {{list}}.",
         "planSuccess": "{{name}} planned for {{date}}.",
         "planTitle": "Plan {{name}}",

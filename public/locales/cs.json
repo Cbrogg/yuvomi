@@ -2934,6 +2934,7 @@
         "summaryFromCompletion": "od splnění"
     },
     "recipes": {
+        "mealTypeNone": "Žádné jídlo",
         "toShoppingSuccess_few": "{{count}} ingredience přidány do {{list}}.",
         "planSuccess": "{{name}} naplánováno na {{date}}.",
         "planTitle": "Naplánovat {{name}}",

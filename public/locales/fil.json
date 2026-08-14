@@ -2444,6 +2444,7 @@
         "importSelected": "{{count}} kontak ang napili"
     },
     "recipes": {
+        "mealTypeNone": "Walang pagkain",
         "toShoppingSuccess_few": "{{count}} sangkap ang naidagdag sa {{list}}.",
         "planSuccess": "Nakaplano ang {{name}} para sa {{date}}.",
         "planTitle": "Planuhin ang {{name}}",

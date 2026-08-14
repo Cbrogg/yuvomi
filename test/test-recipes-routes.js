@@ -98,6 +98,7 @@ test('POST /: meal_types werden dedupliziert und Ungültiges verworfen', async (
   assert.equal(row.meal_types, 'lunch,dinner');
 });
 
+
 test('POST /: Zutaten-Regeln - leerer Name übersprungen, quantity leer→null, category-Default, Slicing', async () => {
   const longName = 'N'.repeat(250);
   const longQty = 'Q'.repeat(150);
@@ -511,3 +512,50 @@ function registerMirrorTests(provider) {
 
 registerMirrorTests('mealie');
 registerMirrorTests('tandoor');
+
+// --------------------------------------------------------------------------
+// #750: Eine leere Auswahl ist eine Antwort, keine Lücke. Vorher machte die
+// Normalisierung daraus stillschweigend alle vier Mahlzeiten - sichtbar erst,
+// wenn der Nutzer das Rezept wieder zum Bearbeiten öffnete.
+// --------------------------------------------------------------------------
+
+test('POST /: eine leere meal_types-Liste bleibt leer (#750)', async () => {
+  const r = await call('POST', '/', { title: 'Grundbrühe', meal_types: [] });
+  assert.equal(r.status, 201);
+  assert.deepEqual(r.body.data.meal_types, [], 'die Abwahl darf nicht in alle vier umschlagen');
+  const row = db.prepare('SELECT meal_types FROM recipes WHERE id = ?').get(r.body.data.id);
+  assert.equal(row.meal_types, '', 'in der Spalte steht der leere Wert, nicht die volle Liste');
+});
+
+test('PUT /:id: die leere Auswahl übersteht das erneute Öffnen (#750)', async () => {
+  // Der gemeldete Ablauf: anlegen, alle Haken entfernen, speichern, wieder
+  // öffnen. Genau hier standen vorher wieder alle vier Haken.
+  const created = await call('POST', '/', { title: 'Fond', meal_types: ['dinner'] });
+  const id = created.body.data.id;
+
+  const cleared = await call('PUT', `/${id}`, { title: 'Fond', meal_types: [] });
+  assert.equal(cleared.status, 200);
+  assert.deepEqual(cleared.body.data.meal_types, []);
+
+  // Das Formular befüllt sich aus der Liste (ein GET /:id gibt es nicht), also
+  // muss der leere Stand genau dort ankommen - das war die Stelle, an der
+  // vorher wieder alle vier Haken standen.
+  const list = await call('GET', '/');
+  const reopened = list.body.data.find((x) => x.id === id);
+  assert.deepEqual(reopened.meal_types, []);
+});
+
+test('PUT /:id: ein Teil-Update ohne meal_types lässt die Auswahl stehen (#750)', async () => {
+  // Sonst nähme jeder Aufruf, der das Feld nicht mitschickt, die bewusst leere
+  // Auswahl wieder mit - die Nachbar-Falle des eigentlichen Fehlers.
+  const created = await call('POST', '/', { title: 'Sud', meal_types: [] });
+  const id = created.body.data.id;
+
+  const renamed = await call('PUT', `/${id}`, { title: 'Sud, verfeinert' });
+  assert.equal(renamed.status, 200);
+  assert.deepEqual(renamed.body.data.meal_types, []);
+
+  const kept = db.prepare('SELECT title, meal_types FROM recipes WHERE id = ?').get(id);
+  assert.equal(kept.title, 'Sud, verfeinert');
+  assert.equal(kept.meal_types, '');
+});

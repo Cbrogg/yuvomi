@@ -2354,6 +2354,7 @@
         "summaryFromCompletion": "पूरा होने से"
     },
     "recipes": {
+        "mealTypeNone": "कोई भोजन नहीं",
         "toShoppingSuccess_few": "{{list}} में {{count}} सामग्री जोड़े गए।",
         "planSuccess": "{{name}} {{date}} के लिए तय किया गया.",
         "planTitle": "{{name}} तय करें",

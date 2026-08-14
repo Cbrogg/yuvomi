@@ -4342,6 +4342,11 @@ textarea::placeholder {
 .meal-type-badge--dinner    { background: var(--meal-dinner-light);   color: var(--meal-dinner-ink); }
 .meal-type-badge--snack     { background: var(--meal-snack-light);    color: var(--meal-snack-ink); }
 
+/* „Keine Mahlzeit" (#750) trägt bewusst keine Familienfarbe: Es benennt die
+   Abwesenheit einer Zuordnung und darf sich nicht wie eine fünfte Mahlzeit
+   lesen. Neutrale Fläche, ruhige Schrift, gleiche Form. */
+.meal-type-badge--none      { background: var(--color-surface-2);     color: var(--color-text-secondary); }
+
 /* --------------------------------------------------------
  * Toggle-Switch
  * Custom iOS-style toggle, ersetzt native Checkboxen.
