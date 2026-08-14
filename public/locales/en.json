@@ -4149,6 +4149,7 @@
         "budget": "Entry",
         "contacts": "Contact",
         "documents": "Document",
+        "inventory": "Item",
         "meals": "Meal",
         "pantry": "Item",
         "recipes": "Recipe",

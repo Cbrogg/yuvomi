@@ -1512,7 +1512,11 @@ export async function render(container) {
   _container = container;
 
   const page = document.createElement('div');
-  page.className = 'inventory-page';
+  // page-measure--narrow: die Seite setzt das Lesemass, die Zeilentraeger lesen
+  // es (Guard in test-frontend-audit.js). Ohne die Rolle enden Kopf und
+  // Bedienzeilen neben ihrem eigenen Koerper. Die Regel kam mit v2.8.0, also
+  // nach der Basis, auf der dieser Zweig gebaut wurde.
+  page.className = 'inventory-page page-measure--narrow';
 
   // Sichtbarer Seitentitel statt sr-only: nur ein echtes .page-toolbar__title
   // loest das Absender-Siegel der Shell aus (router.js#wireToolbar,
@@ -1560,6 +1564,12 @@ export async function render(container) {
   fab.className = 'page-fab';
   fab.type = 'button';
   fab.setAttribute('aria-label', t('inventory.addItem'));
+  // Am Zeigergeraet dockt der FAB als beschrifteter Knopf in den Modulkopf; ohne
+  // dockLabel bleibt er dort still leer (Guard in test-frontend-audit.js). Das
+  // Substantiv kommt aus dem gemeinsamen newLabel-Register, damit alle Module
+  // ihre primaere Aktion gleich benennen. Regel aus v2.8.0, also nach der Basis
+  // dieses Zweigs.
+  fab.dataset.dockLabel = t('newLabel.inventory');
   fab.insertAdjacentHTML('beforeend', '<i data-lucide="plus" aria-hidden="true"></i>');
 
   page.append(toolbar, filters, list, fab);
