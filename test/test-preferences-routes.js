@@ -256,6 +256,65 @@ test('PUT health_cycle_enabled: Mitglied -> 403, Admin non-boolean 400, false pe
   assert.equal((await put({ health_cycle_enabled: 'no' }, { role: 'admin' })).status, 400);
   assert.equal((await put({ health_cycle_enabled: false }, { role: 'admin' })).body.data.health_cycle_enabled, false);
 });
+// --------------------------------------------------------
+// Zyklus: haushaltweiter Schalter + persoenliches Opt-out (#760)
+// --------------------------------------------------------
+test('PUT health_cycle_enabled_user: Mitglied darf fuer sich abschalten, kein Admin-Gate (#760)', async () => {
+  // Das Gegenstueck zum Test darueber: derselbe Tab, aber die eigene Sicht -
+  // und die darf ein Mitglied ohne Adminrechte aendern.
+  assert.equal((await put({ health_cycle_enabled_user: 'no' }, { role: 'member' })).status, 400);
+  const res = await put({ health_cycle_enabled_user: false }, { role: 'member', userId: 7 });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.data.health_cycle_enabled_user, false);
+  assert.equal(res.body.data.health_cycle_effective, false);
+  cfgDelete('health_cycle_enabled:user:7');
+});
+
+test('health_cycle_effective verundet Haushalt und Person, das Opt-out weitet nie (#760)', async () => {
+  cfgDelete('health_cycle_enabled');
+  cfgDelete('health_cycle_enabled:user:7');
+
+  // Beide an (Default): der Tab erscheint.
+  let data = (await get({ role: 'member', userId: 7 })).body.data;
+  assert.deepEqual(
+    [data.health_cycle_enabled, data.health_cycle_enabled_user, data.health_cycle_effective],
+    [true, true, true],
+  );
+
+  // Nur persoenlich aus: der Haushalt bleibt an, meine Sicht nicht.
+  await put({ health_cycle_enabled_user: false }, { role: 'member', userId: 7 });
+  data = (await get({ role: 'member', userId: 7 })).body.data;
+  assert.deepEqual(
+    [data.health_cycle_enabled, data.health_cycle_enabled_user, data.health_cycle_effective],
+    [true, false, false],
+  );
+
+  // Haushalt aus, persoenlich WIEDER an: das Opt-out kann den Admin-Schalter
+  // nicht ueberstimmen - sonst holte sich jeder einen abgeschalteten Tab zurueck.
+  cfgSet('health_cycle_enabled', '0');
+  await put({ health_cycle_enabled_user: true }, { role: 'member', userId: 7 });
+  data = (await get({ role: 'member', userId: 7 })).body.data;
+  assert.deepEqual(
+    [data.health_cycle_enabled, data.health_cycle_enabled_user, data.health_cycle_effective],
+    [false, true, false],
+  );
+
+  cfgDelete('health_cycle_enabled');
+  cfgDelete('health_cycle_enabled:user:7');
+});
+
+test('das Zyklus-Opt-out gilt pro Person, nicht fuer den Haushalt (#760)', async () => {
+  cfgDelete('health_cycle_enabled');
+  await put({ health_cycle_enabled_user: false }, { role: 'member', userId: 7 });
+
+  assert.equal((await get({ role: 'member', userId: 7 })).body.data.health_cycle_effective, false);
+  assert.equal((await get({ role: 'member', userId: 8 })).body.data.health_cycle_effective, true);
+  // Und der haushaltweite Schalter bleibt davon unberuehrt.
+  assert.equal((await get({ role: 'admin' })).body.data.health_cycle_enabled, true);
+
+  cfgDelete('health_cycle_enabled:user:7');
+});
+
 test('PUT rewards_require_approval: Mitglied -> 403, Admin non-boolean 400, false persist', async () => {
   assert.equal((await put({ rewards_require_approval: false }, { role: 'member' })).status, 403);
   assert.equal((await put({ rewards_require_approval: 'no' }, { role: 'admin' })).status, 400);
