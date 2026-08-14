@@ -148,7 +148,7 @@ export async function render(container) {
             <button class="documents-folder-browser__toggle" id="documents-folder-toggle" type="button"
                     aria-expanded="false" aria-controls="documents-folder-browser">
               <i data-lucide="folders" aria-hidden="true"></i>
-              <span class="documents-folder-browser__toggle-label">${esc(t('documents.allFolders'))}</span>
+              <span class="documents-folder-browser__toggle-label">${esc(t('documents.allDocuments'))}</span>
               <i data-lucide="chevron-down" aria-hidden="true" class="documents-folder-browser__chevron"></i>
             </button>
             <button class="documents-folder-browser__add" id="documents-folder-add" type="button" aria-label="${t('documents.addFolderButton')}" title="${t('documents.addFolderButton')}">
@@ -601,7 +601,7 @@ function renderFolderBrowser() {
   if (!browser) return;
   const counts = folderCounts();
   const items = [
-    { id: '', name: t('documents.allFolders'), icon: 'folders', managed: false },
+    { id: '', name: t('documents.allDocuments'), icon: 'folders', managed: false },
     { id: '__none', name: t('documents.noFolder'), icon: 'folder-x', managed: false },
     ...state.folders.map((folder) => ({ id: String(folder.id), name: folder.name, icon: 'folder', managed: true })),
   ];
