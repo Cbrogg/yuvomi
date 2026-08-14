@@ -3,7 +3,7 @@ import { getLocale } from '/i18n.js';
 // Haushaltweite Währungsauswahl. Muss exakt mit VALID_CURRENCIES in
 // server/routes/preferences.js übereinstimmen (per Test abgesichert).
 export const SUPPORTED_CURRENCIES = [
-  'AED', 'ARS', 'AUD', 'BBD', 'BOB', 'BRL', 'BSD', 'BZD', 'CAD', 'CHF', 'CLP',
+  'AED', 'ARS', 'AUD', 'BBD', 'BOB', 'BRL', 'BSD', 'BYN', 'BZD', 'CAD', 'CHF', 'CLP',
   'CNY', 'COP', 'CRC', 'CUP', 'CZK', 'DKK', 'DOP', 'EUR', 'GBP', 'GTQ', 'GYD',
   'HNL', 'HTG', 'HUF', 'IDR', 'INR', 'IRR', 'JMD', 'JPY', 'KRW', 'KZT', 'MXN',
   'MYR', 'NIO', 'NOK', 'NZD', 'PAB', 'PEN', 'PHP', 'PLN', 'PYG', 'RUB', 'SAR',

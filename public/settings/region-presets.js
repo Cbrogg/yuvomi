@@ -71,6 +71,7 @@ export const REGION_PRESETS = {
   'cs-CZ': { currency: 'CZK', date_format: 'dmy', time_format: '24h' },
   'uk-UA': { currency: 'UAH', date_format: 'dmy', time_format: '24h' },
   'ru-RU': { currency: 'RUB', date_format: 'dmy', time_format: '24h' },
+  'be-BY': { currency: 'BYN', date_format: 'dmy', time_format: '24h' },
   'tr-TR': { currency: 'TRY', date_format: 'dmy', time_format: '24h' },
   'zh-CN': { currency: 'CNY', date_format: 'ymd', time_format: '24h' },
   'ja-JP': { currency: 'JPY', date_format: 'ymd', time_format: '24h' },
