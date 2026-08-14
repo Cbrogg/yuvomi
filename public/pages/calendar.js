@@ -715,6 +715,37 @@ function getAgendaRange(dateStr) {
   return { from: dateStr, to: addDays(dateStr, 30) };
 }
 
+/**
+ * Vorbelegtes Datum für einen neuen Termin, bei dem niemand einen Tag angeklickt
+ * hat: Toolbar-„+", FAB, Leerzustand der Agenda (#737). Heute gewinnt, solange
+ * die Ansicht heute überhaupt zeigt - sonst der erste Tag des Zeitraums, den der
+ * Nutzer gerade ansieht. Vorher war es immer heute, also legte ein „+" drei
+ * Monate weiter vorne den Termin außerhalb des sichtbaren Zeitraums an.
+ *
+ * Bewusst nicht getRangeForView(): dessen Monatsspanne ist das 42-Tage-Raster
+ * und begänne im Vormonat - der 1. ist hier die richtige Antwort, nicht der 25.
+ */
+function newEventDefaultDate(view, cursor, today, weekStart = 1) {
+  if (!cursor) return today;
+  let from = cursor;
+  let to   = cursor;                                    // day: der Cursor ist der Tag
+  if (view === 'month') {
+    from = `${cursor.slice(0, 7)}-01`;
+    to   = addDays(addMonths(from, 1), -1);
+  } else if (view === 'week') {
+    from = startOfWeekOf(cursor, weekStart);
+    to   = addDays(from, 6);
+  } else if (view === 'agenda') {
+    to   = addDays(cursor, 30);
+  }
+  return (today >= from && today <= to) ? today : from;
+}
+
+/** newEventDefaultDate() für den aktuellen State - der Normalfall an den Aufrufstellen. */
+function newEventDate() {
+  return newEventDefaultDate(state.view, state.cursor, state.today, state.weekStart);
+}
+
 // Per-Render-Pass Day-Buckets. Vermeidet, dass jede der 42 Monats-Zellen die
 // komplette state.events/state.tasks-Liste neu filtert und pro Event ein neues
 // Date parst (O(Zellen × Events) → O(Events + Zellen)).
@@ -1019,7 +1050,7 @@ export async function render(container, { user }) {
   renderView();
   bodyEl.removeAttribute('aria-busy');
 
-  findPageFab('fab-new-event')?.addEventListener('click', () => openEventModal({ mode: 'create' }));
+  findPageFab('fab-new-event')?.addEventListener('click', () => openEventModal({ mode: 'create', date: newEventDate() }));
 
   if (initialEvent) {
     const targetDate = deepLinkTargetDate(initialEvent, dateParam);
@@ -1130,7 +1161,7 @@ function renderToolbar() {
   bar.querySelector('#cal-prev').addEventListener('click', () => navigate(-1));
   bar.querySelector('#cal-next').addEventListener('click', () => navigate(1));
   bar.querySelector('#cal-today').addEventListener('click', goToday);
-  bar.querySelector('#cal-add').addEventListener('click', () => openEventModal({ mode: 'create' }));
+  bar.querySelector('#cal-add').addEventListener('click', () => openEventModal({ mode: 'create', date: newEventDate() }));
   bar.querySelector('#cal-search').addEventListener('click', openCalendarSearch);
 
   bar.querySelector('#cal-assigned-me')?.addEventListener('click', (e) => {
@@ -1962,7 +1993,7 @@ function renderAgendaView(container) {
 
   container.querySelector('#agenda-view').addEventListener('click', (e) => {
     if (e.target.closest('#agenda-empty-cta')) {
-      openEventModal({ mode: 'create' });
+      openEventModal({ mode: 'create', date: newEventDate() });
       return;
     }
     const taskChip = e.target.closest('.cal-task-chip');
@@ -2128,6 +2159,8 @@ function renderCalendarSearchState(kind) {
         <p class="cal-search-status__text">${esc(t('calendar.searchEmpty', { query: searchQuery }))}</p>
         <button class="btn btn--secondary" id="cal-search-empty-cta">${esc(t('calendar.newEvent'))}</button>
       </div>`);
+    // Bewusst ohne newEventDate(): die Trefferliste ersetzt die Ansicht, es steht
+    // gerade kein Zeitraum auf dem Schirm, auf den ein Vorschlag sich beziehen könnte.
     body.querySelector('#cal-search-empty-cta')?.addEventListener('click', () => openEventModal({ mode: 'create' }));
     setSearchLive(t('calendar.searchEmpty', { query: searchQuery }));
   } else if (kind === 'error') {
@@ -2224,6 +2257,7 @@ async function openFoundEvent(ev) {
 export const __test = {
   normalizeCalendarView,
   defaultCalendarViewFromState,
+  newEventDefaultDate,
   filterTasksForCalendar,
   tasksOnDay,
   isMultiDayEvent,

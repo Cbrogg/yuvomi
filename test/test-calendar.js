@@ -556,6 +556,81 @@ test('Tagesraster: die Dichte kommt aus EINEM Token, nicht aus einer zweiten Zah
     'calendar.js darf die Stundenhöhe nicht als Zahl führen - sie steht in tokens.css');
 });
 
+/* ---------------------------------------------------------------------------
+ * Vorbelegtes Datum eines neuen Termins ohne angeklickten Tag (#737)
+ *
+ * Anlassfall: In der Tagesansicht drei Tage vorblättern, „+" drücken - der
+ * Termin lag auf heute, nicht auf dem Tag auf dem Schirm. Dieselbe Überraschung
+ * gab es in Woche, Monat und Agenda, nur weiter entfernt.
+ *
+ * Regel: Heute gewinnt, solange die Ansicht heute zeigt; sonst der erste Tag des
+ * sichtbaren Zeitraums. Die Fälle „heute sichtbar" stehen mit im Test, sonst
+ * bewiese er nur die halbe Regel und ein `return from` käme grün durch.
+ * ------------------------------------------------------------------------- */
+const newEventDate = calendarHelpers.newEventDefaultDate;
+const TODAY = '2026-08-14';                                   // Freitag
+
+test('Tagesansicht: das „+" nimmt den angezeigten Tag, nicht heute', () => {
+  assert(newEventDate('day', '2026-09-20', TODAY) === '2026-09-20',
+    'ein vorgeblätterter Tag muss der Vorschlag sein');
+  assert(newEventDate('day', TODAY, TODAY) === TODAY,
+    'auf heute stehend bleibt es heute');
+});
+
+test('Monatsansicht: der erste des angezeigten Monats, aber heute wenn heute drin liegt', () => {
+  assert(newEventDate('month', '2026-09-20', TODAY) === '2026-09-01',
+    'im September muss der 1. September herauskommen');
+  assert(newEventDate('month', '2026-08-30', TODAY) === TODAY,
+    'im laufenden Monat bleibt heute der Vorschlag - der Nutzer sieht ihn ja');
+  assert(newEventDate('month', '2026-02-20', TODAY) === '2026-02-01',
+    'auch rückwärts der Monatserste, nicht das Rasterende');
+});
+
+test('Monatsansicht: der Vorschlag ist der Monatserste, nicht der Rasteranfang', () => {
+  // getRangeForView() liefert für den Monat das 42-Tage-Raster und beginnt im
+  // Vormonat. Wer diesen Vorschlag daraus ableitet, legt Termine aus der
+  // September-Ansicht heraus im August an. September 2026 beginnt an einem
+  // Dienstag, das Raster also am 31.08.
+  assert(newEventDate('month', '2026-09-20', TODAY) !== '2026-08-31',
+    'der Rasteranfang des Vormonats darf nie der Vorschlag sein');
+});
+
+test('Wochenansicht: der Wochenstart des angezeigten Zeitraums, im gewählten Wochenstart', () => {
+  assert(newEventDate('week', '2026-09-16', TODAY, 1) === '2026-09-14',
+    'Wochenstart Montag: Mittwoch 16.09. gehört zur Woche ab Montag 14.09.');
+  assert(newEventDate('week', '2026-09-16', TODAY, 0) === '2026-09-13',
+    'Wochenstart Sonntag: dieselbe Woche beginnt am 13.09.');
+  assert(newEventDate('week', '2026-08-12', TODAY, 1) === TODAY,
+    'liegt heute in der angezeigten Woche, gewinnt heute');
+});
+
+test('Agenda: der Listenanfang, sobald heute außerhalb der 30 Tage liegt', () => {
+  assert(newEventDate('agenda', '2026-10-01', TODAY) === '2026-10-01',
+    'vorgeblätterte Agenda schlägt ihren eigenen Anfang vor');
+  assert(newEventDate('agenda', '2026-08-01', TODAY) === TODAY,
+    'heute liegt im 30-Tage-Fenster ab 01.08. und gewinnt');
+});
+
+test('ohne Cursor bleibt es bei heute', () => {
+  assert(newEventDate('month', null, TODAY) === TODAY, 'null-Cursor fällt auf heute zurück');
+  assert(newEventDate('day', '', TODAY) === TODAY, 'leerer Cursor fällt auf heute zurück');
+});
+
+test('jedes „+" ohne angeklickten Tag reicht ein Datum durch (nur die Suche nicht)', () => {
+  const src = readFileSync(new URL('../public/pages/calendar.js', import.meta.url), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/^\s*\/\/.*$/gm, '');
+  // Regel über ALLE create-Aufrufe, nicht über eine Liste bekannter Zeilen: sonst
+  // deckt der Guard N Fundstellen ab statt der Regel, und ein neuer Knopf fiele
+  // still durch.
+  const creates = src.match(/openEventModal\(\{\s*mode:\s*'create'[^)]*\)/g) || [];
+  assert(creates.length >= 5, `zu wenige create-Aufrufe gefunden (${creates.length}) - Regex greift nicht mehr`);
+  const withoutDate = creates.filter((call) => !/\bdate:/.test(call));
+  assert(withoutDate.length === 1,
+    `genau ein „+" darf ohne Datum öffnen (der Leerzustand der Suche, dort steht kein Zeitraum `
+    + `auf dem Schirm), gefunden: ${withoutDate.length} - ${withoutDate.join(' | ')}`);
+});
+
 // --------------------------------------------------------
 // Ergebnis
 // --------------------------------------------------------
