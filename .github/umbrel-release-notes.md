@@ -1,4 +1,4 @@
-<!-- version: 2.10.0 -->
+<!-- version: 2.10.1 -->
 <!--
   Die `releaseNotes` fuer den Umbrel-App-Store, von Hand fuer JEDEN Release
   geschrieben. `umbrel-publish.yml` nimmt den Text unter diesem Kommentar
@@ -29,12 +29,10 @@
     - Leerzeile zwischen den Absaetzen: der Store rendert ein gefaltetes
       YAML-Blockskalar, dort ist die Leerzeile der Absatzumbruch.
 -->
-This update is about the calendars you sync from another server, such as Nextcloud, iCloud or mailbox.org.
+A small fix to creating appointments in the calendar.
 
-When you untick a calendar you no longer want, Yuvomi now asks what should happen to the appointments it already brought in. It names how many there are, and offers to keep or delete them. Keeping is preselected, since unticking is easily done by accident and only keeping can be undone. Deleting only ever affects your copy: the calendar at your provider stays untouched, and everyone else who uses it keeps their appointments. The same question appears when you disconnect an account entirely.
-
-Connecting a new account has also changed. Previously every calendar it found started syncing right away, which for most accounts meant work, birthday and holiday calendars arriving unasked. Calendars now start switched off and you choose the ones you want. Calendars you already sync are unaffected.
+When you page away from today and then add an appointment with the "+" button, it now starts on the day you are looking at instead of on today. Previously the date always fell back to today, so moving a few days ahead in the day view and reaching for "+" created the appointment behind you, and adding one while looking at next month filed it under the current one. Clicking directly into the calendar already worked correctly and is unchanged. The date is only a starting value, so you can still set any date you like in the form.
 
 There is nothing to do after this update, and your data and settings are unchanged.
 
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.10.0
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.10.1

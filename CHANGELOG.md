@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.10.1] - 2026-08-14
+
 ### Fixed
 
 - **A new appointment starts on the day you are looking at, not on today.** Clicking an empty slot already opened the form on the day that was clicked, but the "+" in the toolbar and the floating action button had no day to go on and always fell back to today. In day view that is the reported case: page forward three days, reach for "+", and the appointment is created behind you (#737, reported and diagnosed by @LycidasFfm). The other three views had the same defect, only further away - in month view "+" put the appointment in August while September was on the screen. All four now propose the first day of the period on display, with one exception that keeps the old behaviour where it was right: as long as today is inside that period, today stays the proposal, because the user can see it. The empty state of the search is deliberately left on today, since a result list is not a period. The proposal is a starting value in an open form, not a decision - the date field is right there and editable.
