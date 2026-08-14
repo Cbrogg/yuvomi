@@ -1047,6 +1047,9 @@ function moreActionEl({ labelKey, icon, className = '', onClick, route, navHref 
  * leuchtet, ist keine Nachricht mehr. */
 let _moduleCounts = {};
 let _moduleCountsAt = 0;
+// Generation der Sitzung: steigt bei jedem Zuruecksetzen, damit eine noch
+// laufende Abfrage ihr Ergebnis nicht in die neue Sitzung traegt.
+let _moduleCountsGen = 0;
 const MODULE_COUNTS_TTL = 60_000;
 
 function moduleCountsFrom(data) {
@@ -1087,12 +1090,25 @@ function moduleCountsFrom(data) {
 function resetModuleCounts() {
   _moduleCounts = {};
   _moduleCountsAt = 0;
+  // Und der Generationszähler steigt: eine Antwort, die noch unterwegs ist,
+  // gehört der alten Sitzung und darf den Speicher nicht wieder füllen.
+  _moduleCountsGen += 1;
 }
 
 async function refreshModuleCounts() {
   if (Date.now() - _moduleCountsAt < MODULE_COUNTS_TTL) return false;
+  /* EINE LAUFENDE ANFRAGE UEBERLEBT DAS ZURUECKSETZEN SONST.
+   * Wer das Mehr-Blatt oeffnet und sich abmeldet, waehrend `/dashboard` noch
+   * unterwegs ist, bekam die Antwort der ALTEN Sitzung nach `clearSession()`
+   * in den Speicher gelegt - die naechste Anmeldung innerhalb der TTL baute
+   * ihre Badges daraus und uebersprang den Abruf (Codex-Review zu PR #754,
+   * zweite Runde: der Befund entstand erst durch den Reset-Fix davor).
+   * Der Zaehler ist billiger als ein AbortController: die Anfrage darf
+   * zuende laufen, ihr Ergebnis wird nur nicht mehr angenommen. */
+  const gen = _moduleCountsGen;
   try {
     const res = await api.get('/dashboard');
+    if (gen !== _moduleCountsGen) return false;
     _moduleCounts = moduleCountsFrom(res);
     _moduleCountsAt = Date.now();
     return true;

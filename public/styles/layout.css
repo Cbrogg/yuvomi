@@ -4851,9 +4851,23 @@ textarea::placeholder {
   gap: var(--space-2);
 }
 
+/* ZWISCHEN 768 UND 1023px STEHT DIE TAB-LEISTE NOCH.
+ *
+ * Hier ersetzte `bottom: var(--space-8)` den Abstand der Basisregel, der die
+ * Leistenhöhe einrechnet - der Stapel rutschte damit über sie. Der Stapel
+ * selbst ist harmlos (`pointer-events: none`), der Erinnerungs-Toast darin ist
+ * es nicht: er nimmt Klicks an, um sich verwerfen zu lassen. Gemessen bei
+ * 900x900 und 768x900 lag er über den Nav-Zielen, und `elementFromPoint`
+ * lieferte an DREI von fünf (Kalender, Aufgaben, Küche) den Toast statt des
+ * Ziels. Für die dreißig Sekunden seiner Standzeit war die halbe
+ * Primärnavigation eines Tablets tot (Codex-Review zu PR #754 - dort der Pille
+ * zugeschrieben, gemessen ist es der Toast).
+ *
+ * Die Sidebar löst die Leiste erst ab 1024px ab; bis dahin gilt derselbe
+ * Abstand wie auf dem Telefon, nur ohne dessen FAB-Nachlauf. */
 @media (min-width: 768px) and (max-width: 1023px) {
   .shell-bottom-stack {
-    bottom: var(--space-8);
+    bottom: calc(var(--nav-bottom-height) + var(--safe-area-inset-bottom) + var(--space-4));
   }
 }
 
@@ -5674,6 +5688,11 @@ textarea::placeholder {
   .nav-bottom,
   .fab,
   .toast-container,
+  /* Der ganze Stapel, nicht nur die Toasts darin: seit die Sammelpille dort
+   * wohnt, druckte eine laufende Auswahl (Kontakte im Auswahlmodus, abgehakte
+   * Artikel, knapper Vorrat) ihre dunkle Kapsel mit aufs Blatt, am Fuss jeder
+   * Seite (Codex-Review zu PR #754). Chrome gehoert nicht auf Papier. */
+  .shell-bottom-stack,
   .modal-overlay,
   .modal-backdrop {
     display: none !important;

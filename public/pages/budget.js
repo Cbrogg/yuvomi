@@ -859,6 +859,22 @@ function updateTabs() {
     if (caps.add) {
       addBtn.setAttribute('aria-label', addLabel);
       addBtn.setAttribute('title', addLabel);
+      /* DAS SICHTBARE WORT GILT NUR FUER DEN EINTRAG.
+       *
+       * Der Kopfknopf trug fest `newLabel.budget` ("Eintrag"), waehrend diese
+       * Funktion seine Aktion je Tab umstellt: auf "Konten" stand sichtbar
+       * "Eintrag" und im `aria-label` "Konto hinzufuegen". Das ist zweimal
+       * falsch - es fuehrt den Zeigernutzer in die Irre, und der sichtbare Text
+       * steht nicht im zugaenglichen Namen (WCAG 2.5.3, Sprachsteuerung kann
+       * den Knopf nicht ansprechen; Codex-Review zu PR #754).
+       *
+       * Das Wort faellt dort weg, statt ein falsches zu behalten: `newLabel`
+       * fuehrt Nomen je MODUL, nicht je Untertab, und die vier fehlenden
+       * ("Budget", "Konto", "Abo", "Darlehen") waeren vier neue Schluessel in
+       * 24 Sprachen - eine eigene Runde, keine Zeile in einem Fix. Ohne Text
+       * benennt das `aria-label` den Knopf allein, und das tut es korrekt. */
+      const labelSpan = addBtn.querySelector('.toolbar-new-btn__label');
+      if (labelSpan) labelSpan.hidden = caps.add !== 'budget.newEntryFabLabel';
     }
   }
   const fab = findPageFab('fab-new-budget');
