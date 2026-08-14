@@ -2622,7 +2622,7 @@
         "emptySecondary": "Lägg till mapp",
         "linkFromDms": "Länka från DMS",
         "dmsSearchPlaceholder": "Sök i DMS …",
-        "dmsAsnHint": "Tips: ange ett tal eller ”asn:123” för att hitta exakt ett dokument via dess arkivserienummer (ASN).",
+        "dmsAsnHint": "Tips: ”asn:123” hittar exakt det dokument som har det arkivserienumret (ASN). Enbart ett tal söker även i titlar och innehåll.",
         "dmsNoResults": "Inga träffar i DMS.",
         "dmsLinkBtn": "Länka",
         "dmsLinked": "Från DMS",

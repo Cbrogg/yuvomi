@@ -2635,7 +2635,7 @@
         "emptySecondary": "Thêm thư mục",
         "linkFromDms": "Liên kết từ DMS",
         "dmsSearchPlaceholder": "Tìm kiếm trong DMS …",
-        "dmsAsnHint": "Mẹo: nhập một số hoặc «asn:123» để tìm chính xác một tài liệu theo số sê-ri lưu trữ (ASN).",
+        "dmsAsnHint": "Mẹo: «asn:123» tìm đúng tài liệu có số sê-ri lưu trữ (ASN) đó. Một con số đơn thuần còn tìm cả trong tiêu đề và nội dung.",
         "dmsNoResults": "Không có kết quả trong DMS.",
         "dmsLinkBtn": "Liên kết",
         "dmsLinked": "Từ DMS",

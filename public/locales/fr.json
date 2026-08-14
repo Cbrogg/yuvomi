@@ -2622,7 +2622,7 @@
         "emptySecondary": "Ajouter un dossier",
         "linkFromDms": "Lier depuis le DMS",
         "dmsSearchPlaceholder": "Rechercher dans le DMS …",
-        "dmsAsnHint": "Astuce : saisissez un nombre ou « asn:123 » pour trouver précisément un document par son numéro de série d’archive (ASN).",
+        "dmsAsnHint": "Astuce : « asn:123 » trouve précisément le document portant ce numéro de série d’archive (ASN). Un nombre seul recherche aussi dans les titres et le contenu.",
         "dmsNoResults": "Aucun résultat dans le DMS.",
         "dmsLinkBtn": "Lier",
         "dmsLinked": "Depuis DMS",

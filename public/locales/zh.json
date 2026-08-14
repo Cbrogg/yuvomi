@@ -2622,7 +2622,7 @@
         "emptySecondary": "添加文件夹",
         "linkFromDms": "从 DMS 链接",
         "dmsSearchPlaceholder": "在 DMS 中搜索 …",
-        "dmsAsnHint": "提示：输入数字或「asn:123」，即可通过归档序列号（ASN）精确找到一份文档。",
+        "dmsAsnHint": "提示：「asn:123」精确找到具有该归档序列号（ASN）的文档。仅输入数字还会搜索标题和内容。",
         "dmsNoResults": "DMS 中无匹配项。",
         "dmsLinkBtn": "链接",
         "dmsLinked": "来自 DMS",

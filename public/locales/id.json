@@ -2635,7 +2635,7 @@
         "emptySecondary": "Tambah folder",
         "linkFromDms": "Tautkan dari DMS",
         "dmsSearchPlaceholder": "Cari di DMS …",
-        "dmsAsnHint": "Tip: masukkan angka atau «asn:123» untuk menemukan tepat satu dokumen berdasarkan nomor seri arsip (ASN).",
+        "dmsAsnHint": "Tip: «asn:123» menemukan tepat dokumen dengan nomor seri arsip (ASN) tersebut. Angka biasa juga mencari judul dan isi.",
         "dmsNoResults": "Tidak ada hasil di DMS.",
         "dmsLinkBtn": "Tautkan",
         "dmsLinked": "Dari DMS",

@@ -2622,7 +2622,7 @@
         "emptySecondary": "Adicionar pasta",
         "linkFromDms": "Vincular a partir do DMS",
         "dmsSearchPlaceholder": "Pesquisar no DMS …",
-        "dmsAsnHint": "Dica: digite um número ou «asn:123» para encontrar exatamente um documento pelo número de série de arquivo (ASN).",
+        "dmsAsnHint": "Dica: «asn:123» encontra exatamente o documento com esse número de série de arquivo (ASN). Um número isolado também pesquisa títulos e conteúdo.",
         "dmsNoResults": "Sem correspondências no DMS.",
         "dmsLinkBtn": "Vincular",
         "dmsLinked": "Do DMS",

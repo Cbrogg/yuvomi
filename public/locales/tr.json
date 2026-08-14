@@ -2622,7 +2622,7 @@
         "emptySecondary": "Klasör ekle",
         "linkFromDms": "DMS'den bağla",
         "dmsSearchPlaceholder": "DMS'de ara …",
-        "dmsAsnHint": "İpucu: arşiv seri numarasına (ASN) göre tam olarak bir belge bulmak için bir sayı veya «asn:123» girin.",
+        "dmsAsnHint": "İpucu: «asn:123» tam olarak bu arşiv seri numarasına (ASN) sahip belgeyi bulur. Yalnızca sayı girildiğinde başlıklarda ve içerikte de aranır.",
         "dmsNoResults": "DMS'de eşleşme bulunamadı.",
         "dmsLinkBtn": "Bağla",
         "dmsLinked": "DMS'den",

@@ -2622,7 +2622,7 @@
         "emptySecondary": "Añadir carpeta",
         "linkFromDms": "Vincular desde DMS",
         "dmsSearchPlaceholder": "Buscar en el DMS …",
-        "dmsAsnHint": "Consejo: escribe un número o «asn:123» para encontrar exactamente un documento por su número de serie de archivo (ASN).",
+        "dmsAsnHint": "Consejo: «asn:123» encuentra exactamente el documento con ese número de serie de archivo (ASN). Un número suelto busca además en títulos y contenido.",
         "dmsNoResults": "Sin coincidencias en el DMS.",
         "dmsLinkBtn": "Vincular",
         "dmsLinked": "Desde DMS",

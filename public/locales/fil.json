@@ -2635,7 +2635,7 @@
         "emptySecondary": "Magdagdag ng folder",
         "linkFromDms": "Mag-link mula sa DMS",
         "dmsSearchPlaceholder": "Maghanap sa DMS …",
-        "dmsAsnHint": "Tip: maglagay ng numero o \"asn:123\" para tumugma sa eksaktong isang dokumento ayon sa archive serial number (ASN) nito.",
+        "dmsAsnHint": "Tip: ang \"asn:123\" ay tumutugma sa mismong dokumentong may ganoong archive serial number (ASN). Ang numero lamang ay naghahanap din sa mga pamagat at nilalaman.",
         "dmsNoResults": "Walang tugma sa DMS.",
         "dmsLinkBtn": "I-link",
         "dmsLinked": "Mula sa DMS",
