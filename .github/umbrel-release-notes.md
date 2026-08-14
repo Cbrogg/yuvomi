@@ -1,4 +1,4 @@
-<!-- version: 2.8.0 -->
+<!-- version: 2.8.1 -->
 <!--
   Die `releaseNotes` fuer den Umbrel-App-Store, von Hand fuer JEDEN Release
   geschrieben. `umbrel-publish.yml` nimmt den Text unter diesem Kommentar
@@ -29,14 +29,16 @@
     - Leerzeile zwischen den Absaetzen: der Store rendert ein gefaltetes
       YAML-Blockskalar, dort ist die Leerzeile der Absatzumbruch.
 -->
-This update is mostly about the lists you read every day. Tasks, shopping, the pantry, contacts, birthdays and the household log now share one row layout, so a list looks the same wherever you are and fits more on a screen. When you tick several items at once, the actions for them appear as a small bar above the navigation instead of a block that pushes the list down. On a computer, the button that creates something now sits in the page header with its name on it, rather than floating over the last row of the list.
+This update fixes five things that got in the way, and two of them could cost data.
 
-The overview can show a row of small module tiles, each with a number and a shortcut, for the parts of Yuvomi that are otherwise only reachable through "More". It behaves like every other widget: you can move it, resize it or hide it, and it only shows what is not already somewhere else on the screen.
+If you sync a calendar over CalDAV, a repeating appointment kept its repetition only as long as you did not touch it. Editing anything about it - even just the person it is assigned to - dropped the repetition, and that loss was carried back into the calendar it came from. Repeating appointments from a synced calendar are now read correctly and left alone unless you change the repetition yourself.
 
-Several things that were hard or impossible to reach on a phone now work. The folder list in Documents unfolds in place instead of scrolling sideways, and a document can be opened at any window size. The "More" sheet fits on small screens and no longer covers the navigation bar. A medication dose keeps both of its buttons on screen, so it can still be skipped on a narrow phone. On a tablet, a reminder no longer sits on top of the navigation and swallows taps meant for it.
+Two things in the calendar settings happened at the wrong moment. Refreshing the calendar list of an account switched every calendar back on, including the ones you had deliberately unticked, which brought their appointments back with them; the same happened when you changed the account password. And the person that newly imported appointments are assigned to could only be chosen after the first sync had already run, so the first and usually largest batch arrived without one. Both now behave the way you would expect: your selection survives a refresh, and the default person can be set before anything is fetched, including while creating a subscription.
 
-Some corrections are worth naming. In Persian, Filipino, Indonesian and Vietnamese, the confirmation for deleting several tasks or documents asked about contacts instead; it now names the right thing. Budget category bars are proportional again, so a small amount no longer looks like a large one, and long category names are no longer cut off on a phone. Household members with read-only access no longer see create buttons that could never have worked.
+In the kitchen, a recipe with no meal ticked quietly became a recipe for all four. That made it impossible to keep something like a stock or a base sauce out of the weekly random pick. An empty selection is now kept and shown as such; you can still plan such a recipe by hand at any time.
+
+Finally, "Cancel" works again when you open an entry and switch to editing it. It did nothing before, in tasks, shopping, the pantry, the household log and recipes.
 
 There is nothing to do after this update, and your data and settings are unchanged.
 
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.8.0
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.8.1
