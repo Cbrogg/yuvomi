@@ -1792,6 +1792,7 @@
         "caldavAccountDeleted": "CalDAV-Konto entfernt",
         "calendarsEnabledOfTotal_one": "{{enabled}} von {{total}} Kalender aktiv",
         "calendarsEnabledOfTotal": "{{enabled}} von {{total}} Kalendern aktiv",
+        "calendarsNoneEnabledHint": "Noch ist kein Kalender aktiv. Wähle aus, welche in diesen Haushalt kommen sollen.",
         "caldavRefreshCalendars": "Kalender aktualisieren",
         "caldavSyncSuccess": "CalDAV-Synchronisation erfolgreich",
         "caldavSyncFailed": "CalDAV-Synchronisation fehlgeschlagen",

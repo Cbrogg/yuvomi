@@ -1757,6 +1757,7 @@
         "caldavAddAccount": "Προσθήκη λογαριασμού CalDAV",
         "calendarsEnabledOfTotal_one": "{{enabled}} από {{total}} ημερολόγιο ενεργό",
         "calendarsEnabledOfTotal": "{{enabled}} από {{total}} ημερολόγια ενεργά",
+        "calendarsNoneEnabledHint": "Κανένα ημερολόγιο δεν είναι ακόμη ενεργό. Επιλέξτε ποια θέλετε να έρθουν σε αυτό το νοικοκυριό.",
         "caldavConnectionFailed": "Η σύνδεση με τον διακομιστή CalDAV απέτυχε",
         "caldavDescription": "Σύνδεσε πολλούς λογαριασμούς CalDAV (iCloud, Nextcloud, Radicale, Baikal κ.ά.) και επίλεξε ποια ημερολόγια συγχρονίζονται.",
         "caldavEmptyState": "Δεν έχει συνδεθεί ακόμη λογαριασμός CalDAV. Πρόσθεσε τον πρώτο σου για να ξεκινήσεις.",

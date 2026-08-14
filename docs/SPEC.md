@@ -516,7 +516,7 @@ from it untouched.
 | calendar_url | TEXT | CalDAV calendar URL from provider, NOT NULL |
 | calendar_name | TEXT | Display name from provider, NOT NULL |
 | calendar_color | TEXT | HEX color code from provider, nullable |
-| enabled | INTEGER | 0/1 (default 1), controls sync for this calendar. Refreshing the calendar list (and changing the account's credentials) rebuilds these rows but **keeps the stored state per `calendar_url`** — the default only applies to a calendar the server newly reports. Until v2.8.1 both paths wrote everything back as enabled, so a deliberately unticked calendar returned to the sync unasked, along with its events on the next run (#732) |
+| enabled | INTEGER | 0/1, controls sync for this calendar. **Opt-in since v2.9.1:** connecting an account stores every calendar it finds as unticked, and so does a calendar the server newly reports on a refresh — before that, an account with work, birthday and holiday calendars pushed all of them into the household on connect, and each one had to be emptied by hand afterwards. Refreshing the list (and changing the account's credentials) rebuilds these rows but **keeps the stored state per `calendar_url`**; until v2.8.1 both paths wrote everything back as enabled, so a deliberately unticked calendar returned to the sync unasked, along with its events on the next run (#732) |
 | created_at | TEXT | ISO 8601 |
 | UNIQUE | | (account_id, calendar_url) |
 

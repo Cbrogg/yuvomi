@@ -1757,6 +1757,7 @@
         "caldavAddAccount": "添加 CalDAV 账户",
         "calendarsEnabledOfTotal_one": "{{total}} 个日历中已启用 {{enabled}} 个",
         "calendarsEnabledOfTotal": "{{total}} 个日历中已启用 {{enabled}} 个",
+        "calendarsNoneEnabledHint": "还没有启用任何日历。请选择要引入这个家庭的日历。",
         "caldavConnectionFailed": "连接 CalDAV 服务器失败",
         "caldavDescription": "连接多个 CalDAV 账户（iCloud、Nextcloud、Radicale、Baikal 等），并选择要同步的日历。",
         "caldavEmptyState": "尚未连接 CalDAV 账户。添加第一个账户即可开始。",

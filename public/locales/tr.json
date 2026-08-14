@@ -1757,6 +1757,7 @@
         "caldavAddAccount": "CalDAV hesabı ekle",
         "calendarsEnabledOfTotal_one": "{{total}} takvimden {{enabled}} etkin",
         "calendarsEnabledOfTotal": "{{total}} takvimden {{enabled}} etkin",
+        "calendarsNoneEnabledHint": "Henüz etkin takvim yok. Bu haneye hangilerinin geleceğini seçin.",
         "caldavConnectionFailed": "CalDAV sunucusuna bağlanılamadı",
         "caldavDescription": "Birden fazla CalDAV hesabı (iCloud, Nextcloud, Radicale, Baikal vb.) bağlayın ve hangi takvimlerin eşitleneceğini seçin.",
         "caldavEmptyState": "Henüz bağlı CalDAV hesabı yok. Başlamak için ilk hesabınızı ekleyin.",

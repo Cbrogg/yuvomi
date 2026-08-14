@@ -157,14 +157,15 @@ async function testConnection(caldavUrl, username, password, { createClient } = 
 // Account Management
 // --------------------------------------------------------
 
-async function addAccount(name, caldavUrl, username, password) {
+async function addAccount(name, caldavUrl, username, password, { createClient } = {}) {
   // Validate inputs
   if (!name || !caldavUrl || !username || !password) {
     throw new Error('All fields required: name, caldavUrl, username, password');
   }
 
-  // Test connection first
-  const { calendars } = await testConnection(caldavUrl, username, password);
+  // Test connection first (createClient injizierbar wie bei getCalendars/
+  // updateAccount - ohne sie ginge dieser Pfad im Test ans echte Netz).
+  const { calendars } = await testConnection(caldavUrl, username, password, { createClient });
 
   // Check for duplicate
   const existing = db.get().prepare(
@@ -188,7 +189,12 @@ async function addAccount(name, caldavUrl, username, password) {
 
   const accountId = result.lastInsertRowid;
 
-  // Insert calendar selections (all enabled by default)
+  // OPT-IN, NICHT OPT-OUT (#732): Ein neues Konto bringt seine Kalender
+  // abgewaehlt mit. Vorher lief nach dem Verbinden sofort jeder gefundene
+  // Kalender in den Haushalt - bei einem Konto mit Arbeits-, Geburtstags- und
+  // Feiertagskalendern also drei Kalender, die niemand bestellt hat, und deren
+  // Termine man einzeln wieder loswerden musste. Wer verbindet, waehlt danach
+  // aus; das ist ein Klick mehr und eine Ueberraschung weniger.
   const calendarData = [];
   for (const cal of eventCalendars(calendars)) {
     const calColor = normalizeCalColor(cal.calendarColor) || '#4A90E2';
@@ -196,10 +202,10 @@ async function addAccount(name, caldavUrl, username, password) {
 
     db.get().prepare(`
       INSERT INTO caldav_calendar_selection (account_id, calendar_url, calendar_name, calendar_color, enabled)
-      VALUES (?, ?, ?, ?, 1)
+      VALUES (?, ?, ?, ?, 0)
     `).run(accountId, cal.url, calName, calColor);
 
-    calendarData.push({ url: cal.url, name: calName, color: calColor, enabled: true });
+    calendarData.push({ url: cal.url, name: calName, color: calColor, enabled: false });
   }
 
   log.info(`Added CalDAV account "${name}" with ${calendarData.length} calendars.`);
@@ -268,7 +274,7 @@ async function updateAccount(accountId, { name, caldavUrl, username, password, c
         db.get().prepare(`
           INSERT INTO caldav_calendar_selection (account_id, calendar_url, calendar_name, calendar_color, enabled)
           VALUES (?, ?, ?, ?, ?)
-        `).run(accountId, cal.url, calName, calColor, (previous.get(cal.url) ?? true) ? 1 : 0);
+        `).run(accountId, cal.url, calName, calColor, (previous.get(cal.url) ?? false) ? 1 : 0);
       }
     }
   }
@@ -402,7 +408,9 @@ async function getCalendars(accountId, { refresh = false, createClient } = {}) {
   for (const cal of eventCalendars(calendars)) {
     const calColor = normalizeCalColor(cal.calendarColor) || '#4A90E2';
     const calName = cal.displayName || 'Unnamed Calendar';
-    const enabled = previous.get(cal.url) ?? true;
+    // Bekannter Kalender behaelt seinen Stand, ein neu gemeldeter kommt
+    // abgewaehlt - dieselbe Opt-in-Regel wie beim Anlegen des Kontos (#732).
+    const enabled = previous.get(cal.url) ?? false;
 
     db.get().prepare(`
       INSERT INTO caldav_calendar_selection (account_id, calendar_url, calendar_name, calendar_color, enabled)

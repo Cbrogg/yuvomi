@@ -1757,6 +1757,7 @@
         "caldavAddAccount": "Додайте обліковий запис CalDAV",
         "calendarsEnabledOfTotal_one": "Активних календарів: {{enabled}} з {{total}}",
         "calendarsEnabledOfTotal": "Активних календарів: {{enabled}} з {{total}}",
+        "calendarsNoneEnabledHint": "Поки не активний жоден календар. Виберіть, які додати до цього дому.",
         "caldavConnectionFailed": "Помилка підключення до сервера CalDAV",
         "caldavDescription": "Підключіть кілька облікових записів CalDAV (iCloud, Nextcloud, Radicale, Baikal тощо) і виберіть, які календарі синхронізувати.",
         "caldavEmptyState": "Ще немає підключених облікових записів CalDAV. Щоб почати, додайте свій перший обліковий запис.",

@@ -1757,6 +1757,7 @@
         "caldavAddAccount": "Ajouter un compte CalDAV",
         "calendarsEnabledOfTotal_one": "{{enabled}} calendrier actif sur {{total}}",
         "calendarsEnabledOfTotal": "{{enabled}} calendriers actifs sur {{total}}",
+        "calendarsNoneEnabledHint": "Aucun agenda n'est encore actif. Choisissez ceux qui doivent arriver dans ce foyer.",
         "caldavConnectionFailed": "Échec de la connexion au serveur CalDAV",
         "caldavDescription": "Connectez plusieurs comptes CalDAV (iCloud, Nextcloud, Radicale, Baikal, etc.) et choisissez les agendas à synchroniser.",
         "caldavEmptyState": "Aucun compte CalDAV connecté pour l'instant. Ajoutez le premier pour commencer.",

@@ -1757,6 +1757,7 @@
         "caldavAccountDeleted": "CalDAV účet odebrán",
         "calendarsEnabledOfTotal_one": "Aktivní kalendáře: {{enabled}} z {{total}}",
         "calendarsEnabledOfTotal": "Aktivní kalendáře: {{enabled}} z {{total}}",
+        "calendarsNoneEnabledHint": "Zatím není aktivní žádný kalendář. Vyberte, které chcete do této domácnosti přenést.",
         "caldavRefreshCalendars": "Aktualizovat kalendáře",
         "caldavSyncSuccess": "Synchronizace CalDAV úspěšná",
         "caldavSyncFailed": "Synchronizace CalDAV selhala",

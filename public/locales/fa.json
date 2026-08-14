@@ -1769,6 +1769,7 @@
         "caldavAccountDeleted": "حساب CalDAV حذف شد",
         "calendarsEnabledOfTotal_one": "{{enabled}} از {{total}} تقویم فعال",
         "calendarsEnabledOfTotal": "{{enabled}} از {{total}} تقویم فعال",
+        "calendarsNoneEnabledHint": "هنوز هیچ تقویمی فعال نیست. انتخاب کنید کدام‌ها به این خانه بیایند.",
         "caldavRefreshCalendars": "به‌روزرسانی تقویم‌ها",
         "caldavSyncSuccess": "همگام‌سازی CalDAV موفق بود",
         "caldavSyncFailed": "همگام‌سازی CalDAV ناموفق بود",

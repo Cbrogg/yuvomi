@@ -1717,6 +1717,7 @@
         "caldavAccountDeleted": "Tài khoản CalDAV đã bị xóa",
         "calendarsEnabledOfTotal_one": "{{enabled}} trên {{total}} lịch đang bật",
         "calendarsEnabledOfTotal": "{{enabled}} trên {{total}} lịch đang bật",
+        "calendarsNoneEnabledHint": "Chưa có lịch nào được bật. Hãy chọn những lịch cần đưa vào gia đình này.",
         "caldavRefreshCalendars": "Làm mới lịch",
         "caldavSyncSuccess": "Đồng bộ CalDAV thành công",
         "caldavSyncFailed": "Đồng bộ CalDAV thất bại",

@@ -1757,6 +1757,7 @@
         "caldavAddAccount": "إضافة حساب CalDAV",
         "calendarsEnabledOfTotal_one": "{{enabled}} من {{total}} تقويم مفعّل",
         "calendarsEnabledOfTotal": "{{enabled}} من {{total}} من التقاويم مفعلة",
+        "calendarsNoneEnabledHint": "لم يُفعَّل أي تقويم بعد. اختر ما تريد إحضاره إلى هذا المنزل.",
         "caldavConnectionFailed": "فشل الاتصال بخادم CalDAV",
         "caldavDescription": "اربط عدة حسابات CalDAV (iCloud وNextcloud وRadicale وBaikal وغيرها) واختر التقويمات التي تتم مزامنتها.",
         "caldavEmptyState": "لا توجد حسابات CalDAV متصلة بعد. أضف حسابك الأول للبدء.",

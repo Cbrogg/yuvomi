@@ -1757,6 +1757,7 @@
         "caldavAddAccount": "CalDAV アカウントを追加",
         "calendarsEnabledOfTotal_one": "カレンダー {{total}} 件中 {{enabled}} 件が有効",
         "calendarsEnabledOfTotal": "カレンダー {{total}} 件中 {{enabled}} 件が有効",
+        "calendarsNoneEnabledHint": "まだ有効なカレンダーはありません。この家庭に取り込むものを選んでください。",
         "caldavConnectionFailed": "CalDAV サーバーへの接続に失敗しました",
         "caldavDescription": "複数の CalDAV アカウント (iCloud、Nextcloud、Radicale、Baikal など) を接続し、同期するカレンダーを選択します。",
         "caldavEmptyState": "CalDAV アカウントはまだ接続されていません。最初のアカウントを追加して始めましょう。",

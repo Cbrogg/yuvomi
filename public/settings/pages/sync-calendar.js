@@ -333,6 +333,18 @@ function buildCalendarList(account, calendars) {
     });
   }
 
+  // Seit dem Opt-in (#732) bringt ein frisch verbundenes Konto seine Kalender
+  // abgewählt mit - ohne ein Wort dazu sähe das aus, als sei die Verbindung
+  // gescheitert. Der Hinweis steht nur, solange wirklich keiner aktiv ist, und
+  // verschwindet mit dem ersten Haken.
+  const none = enabledCalendarCount(calendars) === 0 && calendars.length > 0;
+  if (none) {
+    const hint = document.createElement('p');
+    hint.className = 'form-hint';
+    hint.textContent = t('settings.calendarsNoneEnabledHint');
+    list.insertBefore(hint, list.firstChild);
+  }
+
   // Gleiche Aufklapp-Grammatik wie Kontakt-Sync und die Settings-Navigation:
   // geteilte Komponente mit Chevron und ARIA statt rohem <details>.
   // Eine Zahl statt zweier: „1 von 3 Kalendern" - gleiche Grammatik wie Kontakt-Sync.
@@ -343,7 +355,9 @@ function buildCalendarList(account, calendars) {
       total: calendars.length,
       count: calendars.length,
     }),
-    expanded: false,
+    // Steht keiner an, ist die Auswahl der nächste Schritt und nicht eine
+    // Nebensache hinter einem Chevron.
+    expanded: none,
     content: list,
   });
 }
@@ -610,7 +624,10 @@ function renderIcsList(container, subs, user) {
   ul.className = 'settings-members';
   for (const sub of subs) {
     const li = document.createElement('li');
-    li.className = 'settings-member';
+    // Dieselbe Zeilen-Grammatik wie die Kalenderauswahl darueber (#732): gleiche
+    // Aufgabe, gleiche Zeile. Die Regel steht in settings.css, hier wird sie nur
+    // angefordert.
+    li.className = 'settings-member settings-member--sync-row';
 
     const dot = document.createElement('span');
     dot.className = 'settings-avatar settings-avatar--sm';

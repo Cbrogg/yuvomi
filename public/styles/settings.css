@@ -1978,16 +1978,31 @@
   margin-top: var(--space-3);
 }
 
+/* EINE Zeilen-Grammatik fuer die Sync-Auswahl, nicht zwei (#732). Die
+   ICS-Abos standen als nackte `.settings-member` daneben: ohne Zeilenflaeche,
+   ohne Mindesthoehe, mit anderem Innenabstand - dieselbe Aufgabe (was kommt in
+   diesen Haushalt?) in zwei Handschriften, was der Melder als Erstes auffiel.
+   Die Regel steht hier einmal; `--sync-row` holt sie sich, statt sie
+   nachzubauen. Sie traegt nur die Geometrie: `.settings-member` wird auch von
+   Familie und API-Tokens genutzt, und die duerfen davon nichts abbekommen. */
 .caldav-calendar-item,
-.caldav-reminder-item {
+.caldav-reminder-item,
+.settings-member--sync-row {
   display: flex;
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
-  cursor: pointer;
   transition: background-color var(--transition-fast);
   min-height: var(--target-lg);
+}
+
+/* Der Zeiger gehoert nur den Zeilen, die als Ganzes schalten. Eine ICS-Zeile
+   tut das nicht - dort handeln die Knoepfe, und ein Zeigefinger ueber der
+   ganzen Zeile verspraeche einen Klick, den es nicht gibt. */
+.caldav-calendar-item,
+.caldav-reminder-item {
+  cursor: pointer;
 }
 
 .caldav-calendar-item:hover,

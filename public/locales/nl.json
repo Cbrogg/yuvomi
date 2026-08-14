@@ -1740,6 +1740,7 @@
         "caldavAccountDeleted": "CalDAV-account verwijderd",
         "calendarsEnabledOfTotal_one": "{{enabled}} van {{total}} agenda actief",
         "calendarsEnabledOfTotal": "{{enabled}} van {{total}} agenda’s actief",
+        "calendarsNoneEnabledHint": "Er is nog geen agenda actief. Kies welke er in dit huishouden moeten komen.",
         "caldavRefreshCalendars": "Kalenders vernieuwen",
         "caldavSyncSuccess": "CalDAV-synchronisatie geslaagd",
         "caldavSyncFailed": "CalDAV-synchronisatie mislukt",

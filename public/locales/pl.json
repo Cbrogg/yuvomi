@@ -1769,6 +1769,7 @@
         "caldavAccountDeleted": "Konto CalDAV usunięte",
         "calendarsEnabledOfTotal_one": "Aktywne kalendarze: {{enabled}} z {{total}}",
         "calendarsEnabledOfTotal": "Aktywne kalendarze: {{enabled}} z {{total}}",
+        "calendarsNoneEnabledHint": "Żaden kalendarz nie jest jeszcze aktywny. Wybierz te, które mają trafić do tego gospodarstwa.",
         "caldavRefreshCalendars": "Odśwież kalendarze",
         "caldavSyncSuccess": "Synchronizacja CalDAV pomyślna",
         "caldavSyncFailed": "Synchronizacja CalDAV nie powiodła się",

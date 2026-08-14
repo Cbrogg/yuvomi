@@ -1757,6 +1757,7 @@
         "caldavAddAccount": "CalDAV खाता जोड़ें",
         "calendarsEnabledOfTotal_one": "{{total}} में से {{enabled}} कैलेंडर सक्रिय",
         "calendarsEnabledOfTotal": "{{total}} में से {{enabled}} कैलेंडर सक्रिय",
+        "calendarsNoneEnabledHint": "अभी कोई कैलेंडर सक्रिय नहीं है। चुनें कि कौन-से इस घर में आने चाहिए।",
         "caldavConnectionFailed": "CalDAV सर्वर से कनेक्शन विफल",
         "caldavDescription": "कई CalDAV खाते (iCloud, Nextcloud, Radicale, Baikal आदि) जोड़ें और चुनें कि कौन से कैलेंडर सिंक हों।",
         "caldavEmptyState": "अभी तक कोई CalDAV खाता नहीं जुड़ा। शुरू करने के लिए पहला खाता जोड़ें।",

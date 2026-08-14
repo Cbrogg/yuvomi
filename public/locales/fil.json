@@ -1792,6 +1792,7 @@
         "caldavAccountDeleted": "Naalis ang CalDAV account",
         "calendarsEnabledOfTotal_one": "{{enabled}} sa {{total}} kalendaryo ang aktibo",
         "calendarsEnabledOfTotal": "{{enabled}} sa {{total}} kalendaryo ang aktibo",
+        "calendarsNoneEnabledHint": "Wala pang aktibong kalendaryo. Piliin kung alin ang dapat pumasok sa sambahayang ito.",
         "caldavRefreshCalendars": "I-refresh ang mga kalendaryo",
         "caldavSyncSuccess": "Matagumpay ang pag-sync sa CalDAV",
         "caldavSyncFailed": "Nabigo ang pag-sync sa CalDAV",

@@ -1757,6 +1757,7 @@
         "caldavAddAccount": "Lägg till CalDAV-konto",
         "calendarsEnabledOfTotal_one": "{{enabled}} av {{total}} kalender aktiv",
         "calendarsEnabledOfTotal": "{{enabled}} av {{total}} kalendrar aktiva",
+        "calendarsNoneEnabledHint": "Ingen kalender är aktiv än. Välj vilka som ska in i det här hushållet.",
         "caldavConnectionFailed": "Anslutning till CalDAV-server misslyckades",
         "caldavDescription": "Anslut flera CalDAV-konton (iCloud, Nextcloud, Radicale, Baikal, etc.) och välj vilka kalendrar som ska synkroniseras.",
         "caldavEmptyState": "Inga CalDAV-konton är anslutna än. Lägg till ditt första konto för att komma igång.",

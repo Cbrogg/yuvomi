@@ -1769,6 +1769,7 @@
         "caldavAccountDeleted": "CalDAV 계정이 제거되었습니다",
         "calendarsEnabledOfTotal_one": "캘린더 {{total}}개 중 {{enabled}}개 사용 중",
         "calendarsEnabledOfTotal": "캘린더 {{total}}개 중 {{enabled}}개 사용 중",
+        "calendarsNoneEnabledHint": "아직 활성화된 캘린더가 없습니다. 이 가정에 가져올 캘린더를 고르세요.",
         "caldavRefreshCalendars": "캘린더 새로고침",
         "caldavSyncSuccess": "CalDAV 동기화 성공",
         "caldavSyncFailed": "CalDAV 동기화 실패",

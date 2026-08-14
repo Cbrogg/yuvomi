@@ -1769,6 +1769,7 @@
         "caldavAccountDeleted": "Akun CalDAV dihapus",
         "calendarsEnabledOfTotal_one": "{{enabled}} dari {{total}} kalender aktif",
         "calendarsEnabledOfTotal": "{{enabled}} dari {{total}} kalender aktif",
+        "calendarsNoneEnabledHint": "Belum ada kalender yang aktif. Pilih mana yang ingin dibawa ke rumah tangga ini.",
         "caldavRefreshCalendars": "Perbarui kalender",
         "caldavSyncSuccess": "Sinkronisasi CalDAV berhasil",
         "caldavSyncFailed": "Sinkronisasi CalDAV gagal",

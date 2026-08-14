@@ -1740,6 +1740,7 @@
         "caldavAccountDeleted": "CalDAV fiók sikeresen törölve",
         "calendarsEnabledOfTotal_one": "{{total}} naptárból {{enabled}} aktív",
         "calendarsEnabledOfTotal": "{{total}} naptárból {{enabled}} aktív",
+        "calendarsNoneEnabledHint": "Még egyetlen naptár sem aktív. Válassza ki, melyek kerüljenek be ebbe a háztartásba.",
         "caldavRefreshCalendars": "Naptárak frissítése",
         "caldavSyncSuccess": "CalDAV szinkronizáció sikeres",
         "caldavSyncFailed": "CalDAV szinkronizáció sikertelen",

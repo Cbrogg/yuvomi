@@ -1763,6 +1763,7 @@
         "caldavAccountDeleted": "CalDAV account removed",
         "calendarsEnabledOfTotal_one": "{{enabled}} of {{total}} calendar active",
         "calendarsEnabledOfTotal": "{{enabled}} of {{total}} calendars active",
+        "calendarsNoneEnabledHint": "No calendar is active yet. Pick the ones that should come into this household.",
         "caldavRefreshCalendars": "Refresh calendars",
         "caldavSyncSuccess": "CalDAV sync successful",
         "caldavSyncFailed": "CalDAV sync failed",
