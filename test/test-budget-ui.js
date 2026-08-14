@@ -129,7 +129,19 @@ test('hidden greift bei geteilten Bedienelementen trotz display-Klasse', () => {
 // --------------------------------------------------------
 
 test('neue Einträge landen im angezeigten Monat, nicht im heutigen', () => {
-  assert.match(budget, /const defaultDate = state\.month === todayMonth \? today : `\$\{state\.month\}-01`/);
+  // GEPRÜFT WIRD DIE HERKUNFT, NICHT DIE SCHREIBWEISE. Die Vorgängerfassung
+  // verlangte die Zeile buchstabengetreu
+  // (`state.month === todayMonth ? today : ...`) und schlug deshalb an, als die
+  // Regel unverändert nach utils/date.js zog - ein Guard, der ein Refactoring
+  // ohne Verhaltensänderung als Verstoß meldet, hat die falsche Ebene.
+  // Verlangt wird jetzt: der Standardwert stammt aus der hausweiten Regel,
+  // angewandt auf den angezeigten Monat.
+  assert.match(budget, /defaultDateInPeriod/,
+    'das Standarddatum kommt nicht mehr aus defaultDateInPeriod() (utils/date.js)');
+  assert.match(budget, /monthPeriodKeys\(state\.month\)/,
+    'der Zeitraum ist nicht mehr der angezeigte Monat');
+  assert.match(budget, /const defaultDate = defaultDateInPeriod\(/,
+    'defaultDate wird nicht mehr aus der Regel abgeleitet');
   // Das Datumsfeld muss den abgeleiteten Wert nutzen, nicht mehr `today`.
   assert.match(budget, /id="bm-date"\s*\n?\s*value="\$\{isEdit \? entry\.date : defaultDate\}"/);
   assert.doesNotMatch(budget, /id="bm-date"[\s\S]{0,80}entry\.date : today\}/);

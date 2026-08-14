@@ -11,7 +11,8 @@ import { openDetailView, visibilityRow, assignedRow } from '/components/detail-v
 import { stagger, wireScrollFade, scheduleUndoableDelete } from '/utils/ux.js';
 import { t, formatDate as formatPreferredDate, formatDayMonth, formatTime, timeSuffix, formatDateInput, parseDateInput, isDateInputValid, formatTimeInput, parseTimeInput } from '/i18n.js';
 import { esc, fmtLocation } from '/utils/html.js';
-import { shiftEndDateKey, isEndBeforeStart, weekStartIndex, weekdayOrder } from '/utils/date.js';
+import { shiftEndDateKey, isEndBeforeStart, weekStartIndex, weekdayOrder,
+         monthPeriodKeys, startOfLocalWeekKey, addLocalDays, defaultDateInPeriod } from '/utils/date.js';
 import { truncateRuleBefore, shiftSeriesStart, shiftEndForStart } from '/utils/recurrence-scope.js';
 import { getReadableTextColor } from '/utils/color.js';
 import { refresh as refreshReminders } from '/reminders.js';
@@ -716,29 +717,29 @@ function getAgendaRange(dateStr) {
 }
 
 /**
+ * Der Zeitraum, den eine Ansicht gerade zeigt - als Zeitraum für einen neuen
+ * Termin, nicht als Ladespanne. Deshalb nicht getRangeForView(): dessen
+ * Monatsspanne ist das 42-Tage-Raster und begänne im Vormonat.
+ */
+function visibleDayRange(view, cursor, weekStart = 1) {
+  if (view === 'month')  return monthPeriodKeys(cursor);
+  if (view === 'week')   {
+    const from = startOfLocalWeekKey(cursor, weekStart);
+    return { from, to: addLocalDays(from, 6) };
+  }
+  if (view === 'agenda') return { from: cursor, to: addLocalDays(cursor, 30) };
+  return { from: cursor, to: cursor };                  // day: der Cursor ist der Tag
+}
+
+/**
  * Vorbelegtes Datum für einen neuen Termin, bei dem niemand einen Tag angeklickt
- * hat: Toolbar-„+", FAB, Leerzustand der Agenda (#737). Heute gewinnt, solange
- * die Ansicht heute überhaupt zeigt - sonst der erste Tag des Zeitraums, den der
- * Nutzer gerade ansieht. Vorher war es immer heute, also legte ein „+" drei
- * Monate weiter vorne den Termin außerhalb des sichtbaren Zeitraums an.
- *
- * Bewusst nicht getRangeForView(): dessen Monatsspanne ist das 42-Tage-Raster
- * und begänne im Vormonat - der 1. ist hier die richtige Antwort, nicht der 25.
+ * hat: Toolbar-„+", FAB, Leerzustand der Agenda (#737). Die Entscheidung selbst
+ * trifft defaultDateInPeriod() - sie gilt hausweit und nicht nur hier.
  */
 function newEventDefaultDate(view, cursor, today, weekStart = 1) {
   if (!cursor) return today;
-  let from = cursor;
-  let to   = cursor;                                    // day: der Cursor ist der Tag
-  if (view === 'month') {
-    from = `${cursor.slice(0, 7)}-01`;
-    to   = addDays(addMonths(from, 1), -1);
-  } else if (view === 'week') {
-    from = startOfWeekOf(cursor, weekStart);
-    to   = addDays(from, 6);
-  } else if (view === 'agenda') {
-    to   = addDays(cursor, 30);
-  }
-  return (today >= from && today <= to) ? today : from;
+  const { from, to } = visibleDayRange(view, cursor, weekStart);
+  return defaultDateInPeriod(from, to, today);
 }
 
 /** newEventDefaultDate() für den aktuellen State - der Normalfall an den Aufrufstellen. */

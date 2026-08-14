@@ -31,6 +31,41 @@ export function startOfLocalWeekKey(dateKey, weekStartsOn = 1) {
 }
 
 /**
+ * Erster und letzter Tag des Kalendermonats, in dem `dateKey` liegt.
+ * Nimmt 'YYYY-MM' wie 'YYYY-MM-DD'. Bewusst der Monat und nicht das
+ * Anzeigeraster eines Monatskalenders: dessen sechs Wochen beginnen im
+ * Vormonat, und als Zeitraum für einen neuen Eintrag gelesen ergäbe das
+ * für September den 31. August.
+ */
+export function monthPeriodKeys(dateKey) {
+  const from = `${String(dateKey).slice(0, 7)}-01`;
+  const date = parseLocalDateKey(from);
+  date.setMonth(date.getMonth() + 1);
+  date.setDate(0);                       // Tag 0 des Folgemonats = letzter des eigenen
+  return { from, to: toLocalDateKey(date) };
+}
+
+/**
+ * Vorbelegtes Datum für einen neuen Eintrag in dem Zeitraum, den der Nutzer
+ * gerade ansieht: heute, solange der Zeitraum heute enthält, sonst dessen
+ * erster Tag.
+ *
+ * Die Regel gibt es im Haus seit v1.37.0 (Budget: ein Eintrag, angelegt beim
+ * Blättern im März, gehört nicht stillschweigend in den Juli) und seit v2.10.1
+ * im Kalender über alle vier Ansichten (#737). Sie steht hier, weil sie zweimal
+ * getrennt geschrieben stand und das zweite Modul sie erst nach einem Bugreport
+ * bekam - der nächste Zeitraum-Rahmen soll sie erben statt sie neu zu erfinden.
+ *
+ * Der Aufrufer bestimmt den Zeitraum; was „sichtbar" heißt, weiß nur er. Ohne
+ * Zeitraum (kein `from`) bleibt es bei heute, und ein Zeitraum ohne Ende gilt
+ * als der eine Tag `from`.
+ */
+export function defaultDateInPeriod(from, to, today = toLocalDateKey()) {
+  if (!from) return today;
+  return (today >= from && today <= (to || from)) ? today : from;
+}
+
+/**
  * Wochenstart-Präferenz (haushaltweit) → JS-getDay()-Index (0=So … 6=Sa).
  * Unbekannte Werte fallen auf Montag (1) zurück, den bisherigen Fixwert.
  */

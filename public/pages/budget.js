@@ -17,7 +17,8 @@ import { render as renderSplitExpenses } from '/pages/split-expenses.js';
 import { openSubscriptionModal, render as renderSubscriptions } from '/pages/subscriptions.js';
 import { renderStats } from '/pages/budget-stats.js';
 import { renderPlans } from '/pages/budget-plans.js';
-import { toLocalDateKey, parseLocalDateKey, addLocalDays } from '/utils/date.js';
+import { toLocalDateKey, parseLocalDateKey, addLocalDays,
+         monthPeriodKeys, defaultDateInPeriod } from '/utils/date.js';
 import { formatMoney, formatSignedAmount, amountPlaceholder, amountStep, amountMin, applyAmountFormat, amountIsSavable, smallestUnitLabel } from '/utils/money.js';
 import { budgetCategoryLabel } from '/utils/category-labels.js';
 import { trendMarkup } from '/utils/metric-card.js';
@@ -1844,11 +1845,13 @@ function openCategoryManager() {
 function openBudgetModal({ mode, entry = null, initialType = '' }) {
   const isEdit = mode === 'edit';
   const today  = toLocalDateKey(new Date());
-  const todayMonth = today.slice(0, 7);
   // Ein neuer Eintrag gehört in den Monat, den der Nutzer gerade ansieht. Sonst
   // legt „+" beim Blättern in den März stillschweigend einen Juli-Eintrag an,
   // der sofort aus der Liste verschwindet. Im laufenden Monat bleibt es heute.
-  const defaultDate = state.month === todayMonth ? today : `${state.month}-01`;
+  // Dieselbe Regel trägt der Kalender über seine vier Ansichten; sie steht
+  // deshalb in utils/date.js und nicht zweimal hier und dort.
+  const { from, to } = monthPeriodKeys(state.month);
+  const defaultDate = defaultDateInPeriod(from, to, today);
 
   const isExpense  = isEdit ? entry.amount < 0 : true;
   // Bei virtuellen Serien hält amount nur den Monatsanteil; im Formular den eingegebenen Periodenbetrag zeigen.

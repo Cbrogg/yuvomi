@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`defaultDateInPeriod()` and `monthPeriodKeys()` in the public date helpers (`/utils/date.js`).** They answer the question every module with a time frame has to answer for a new entry: which date does the form start on? The rule is today as long as the displayed period contains today, otherwise the first day of that period, and `monthPeriodKeys()` supplies the case that recurs everywhere - the calendar month, never the six-week grid a month view draws, which begins in the previous month. Budget has followed this rule since v1.37.0 and the calendar since v2.10.1, each with its own copy; that is why the calendar went without it until a bug report (#737). **Nothing changes for anyone using Yuvomi** - both modules propose exactly the same dates as before. The entry is here because `/utils/` is part of the surface third-party modules build on (see MODULES.md), so a module with a period frame can now inherit the rule instead of rewriting it.
+
 ## [2.10.1] - 2026-08-14
 
 ### Fixed
