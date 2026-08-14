@@ -81,6 +81,39 @@ test('der Wechsel ins Formular löst die drei Fallen in fester Reihenfolge', asy
   assert.match(form, /focusFirstField\(/, 'Falle 3: der Fokus muss bewusst gesetzt werden');
 });
 
+test('„Abbrechen" wirkt auch in einem nachträglich gebauten Formular (#738)', async () => {
+  const src = await modalJs();
+  const open = src.slice(src.indexOf('export function openModal'), src.indexOf('export async function closeModal'));
+
+  // Der Anlassfall: Das Bearbeiten-Formular entsteht erst beim Klick auf
+  // „Bearbeiten" (switchToForm → edit.mount, siehe Test oben). Wer die
+  // Abbrechen-Knöpfe beim Öffnen des Modals einzeln verdrahtet, erreicht dieses
+  // Formular nie - sein „Abbrechen" tat sichtbar nichts.
+  assert.doesNotMatch(
+    open,
+    /querySelectorAll\(\s*'\[data-action="close-modal"\]'\s*\)[\s\S]{0,120}addEventListener/,
+    'einmaliges Verdrahten je Knoten erreicht kein später gebautes Formular'
+  );
+  assert.match(
+    open,
+    /addEventListener\('click',[\s\S]{0,200}closest\('\[data-action="close-modal"\]'\)/,
+    'die Abbrechen-Knöpfe müssen delegiert am Overlay hängen'
+  );
+});
+
+test('die Module mit Leseansicht nutzen genau diese Abbrechen-API (#738)', async () => {
+  // Die zweite Hälfte des Nachweises: Der delegierte Listener oben hilft nur,
+  // wenn die nachgeladenen Formulare wirklich data-action="close-modal" tragen.
+  // Ohne diese Kopplung liefe der Guard über eine leere Menge.
+  for (const [name, src] of [
+    ['tasks.js', await tasksJs()],
+    ['recipes.js', await read('public/pages/recipes.js')],
+    ['shopping.js', await read('public/pages/shopping.js')],
+  ]) {
+    assert.match(src, /data-action="close-modal"/, `${name} baut sein Abbrechen über die geteilte API`);
+  }
+});
+
 test('die Dirty-Basis wird nur beim ersten Mount gezogen', async () => {
   const src = await detailJs();
   const form = src.slice(src.indexOf('function switchToForm'), src.indexOf('function switchToDetail'));

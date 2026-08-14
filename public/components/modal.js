@@ -607,8 +607,16 @@ export function openModal({
 
   // Close-Buttons: Header-X und jedes Footer-„Abbrechen" mit data-action="close-modal"
   // (kanonische Abbrechen-API der Modal-Fußzeilen, laeuft durch den Dirty-Guard).
-  activeOverlay.querySelectorAll('[data-action="close-modal"]')
-    .forEach((el) => el.addEventListener('click', () => closeModal()));
+  //
+  // DELEGIERT, NICHT JE KNOTEN GEBUNDEN: Ein querySelectorAll erreicht nur, was
+  // beim Öffnen schon im DOM steht. Der Bearbeiten-Pfad der Detailansicht baut
+  // sein Formular aber erst beim Klick auf „Bearbeiten" (detail-view.js,
+  // switchToForm → edit.mount), und dessen „Abbrechen" bekam deshalb nie einen
+  // Listener - der Klick tat sichtbar nichts (#738). Betroffen war jedes Modul
+  // mit Leseansicht: Aufgaben, Einkauf, Vorrat, Haushalt, Rezepte.
+  activeOverlay.addEventListener('click', (e) => {
+    if (e.target instanceof Element && e.target.closest('[data-action="close-modal"]')) closeModal();
+  });
 
   // Escape (nur einmal binden)
   document.removeEventListener('keydown', onEscape);
