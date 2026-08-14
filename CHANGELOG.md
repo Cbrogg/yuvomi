@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Yuvomi says at startup when the document folder is not where it expects it.** With local document storage enabled, a `DOCUMENT_STORAGE_LOCAL_PATH` that nobody mounted used to fail in the worst possible way, which is not at all: the upload path creates missing folders, so the write succeeded into the container layer, the file was gone on the next `pull && up -d`, and the database went on referencing it. Nothing in the logs, nothing in the interface, just missing documents later. The server now checks the folder once at startup and warns if it is absent or unwritable, naming the path it looked for and both ends of the mount. It is a warning rather than an abort: document storage is optional and an otherwise healthy instance should not refuse to boot over it. The backup directory has had this check for a while; the document folder is where the failure is quieter (#751).
+
 ## [2.8.4] - 2026-08-14
 
 ### Fixed

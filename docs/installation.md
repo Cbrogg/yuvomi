@@ -601,6 +601,12 @@ environment:
 > Files live on the host volume, so include that folder in your host-level backups — database
 > backups hold only document metadata, not these binaries.
 
+> **`_DIR` and `_PATH` are the two ends of one mount and must match.** If `DOCUMENT_STORAGE_LOCAL_PATH`
+> points at a path nobody mounted, uploads still succeed: the folder is created inside the container
+> layer and the files are gone on the next `pull && up -d`, while the database keeps referencing them.
+> Since v2.8.5 the server checks this at startup and warns when the folder is missing or not writable,
+> naming the path it looked for. A silent start means the mount is where the app expects it.
+
 ### WebDAV Document Storage (Optional)
 
 Admins can configure **Settings → Sync → Document storage** as the global destination for all
