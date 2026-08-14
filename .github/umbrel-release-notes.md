@@ -1,4 +1,4 @@
-<!-- version: 2.7.1 -->
+<!-- version: 2.8.0 -->
 <!--
   Die `releaseNotes` fuer den Umbrel-App-Store, von Hand fuer JEDEN Release
   geschrieben. `umbrel-publish.yml` nimmt den Text unter diesem Kommentar
@@ -29,6 +29,14 @@
     - Leerzeile zwischen den Absaetzen: der Store rendert ein gefaltetes
       YAML-Blockskalar, dort ist die Leerzeile der Absatzumbruch.
 -->
-There is nothing new to see in this update and nothing to do after it. It only adds documentation for people who write their own Yuvomi modules, describing how such a module talks to Yuvomi safely and keeps working across updates. The app itself, your data and your settings are unchanged.
+This update is mostly about the lists you read every day. Tasks, shopping, the pantry, contacts, birthdays and the household log now share one row layout, so a list looks the same wherever you are and fits more on a screen. When you tick several items at once, the actions for them appear as a small bar above the navigation instead of a block that pushes the list down. On a computer, the button that creates something now sits in the page header with its name on it, rather than floating over the last row of the list.
 
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.7.1
+The overview can show a row of small module tiles, each with a number and a shortcut, for the parts of Yuvomi that are otherwise only reachable through "More". It behaves like every other widget: you can move it, resize it or hide it, and it only shows what is not already somewhere else on the screen.
+
+Several things that were hard or impossible to reach on a phone now work. The folder list in Documents unfolds in place instead of scrolling sideways, and a document can be opened at any window size. The "More" sheet fits on small screens and no longer covers the navigation bar. A medication dose keeps both of its buttons on screen, so it can still be skipped on a narrow phone. On a tablet, a reminder no longer sits on top of the navigation and swallows taps meant for it.
+
+Some corrections are worth naming. In Persian, Filipino, Indonesian and Vietnamese, the confirmation for deleting several tasks or documents asked about contacts instead; it now names the right thing. Budget category bars are proportional again, so a small amount no longer looks like a large one, and long category names are no longer cut off on a phone. Household members with read-only access no longer see create buttons that could never have worked.
+
+There is nothing to do after this update, and your data and settings are unchanged.
+
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.8.0
