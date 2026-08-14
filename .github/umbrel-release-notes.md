@@ -1,4 +1,4 @@
-<!-- version: 2.8.2 -->
+<!-- version: 2.8.3 -->
 <!--
   Die `releaseNotes` fuer den Umbrel-App-Store, von Hand fuer JEDEN Release
   geschrieben. `umbrel-publish.yml` nimmt den Text unter diesem Kommentar
@@ -29,10 +29,12 @@
     - Leerzeile zwischen den Absaetzen: der Store rendert ein gefaltetes
       YAML-Blockskalar, dort ist die Leerzeile der Absatzumbruch.
 -->
-A small update with one change, in Documents.
+One fix, on wide screens.
 
-The folder list had a first row called "All folders" with a document count beside it, which read as if it were counting folders. It now says "All documents", because that is what selecting it does: it clears the folder filter and shows everything. Your folders themselves are listed below it, as they were, and clicking one still narrows the list to that folder.
+In the shopping list and in contacts, the strip of filter chips above the list was cut off at roughly a third of its proper width, so on a large monitor the tabs for your shopping lists broke off in the middle of a name. If you keep several lists, the ones further along were effectively out of reach. The strip now uses the full width of the list beneath it and ends on the same edge, and it still scrolls sideways when you have more lists than fit.
+
+Nothing changes on a phone or tablet, where the strip was already correct.
 
 There is nothing to do after this update, and your data and settings are unchanged.
 
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.8.2
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.8.3
