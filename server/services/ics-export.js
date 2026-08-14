@@ -7,6 +7,7 @@
 
 import { randomBytes } from 'node:crypto';
 import { utcToWall } from '../utils/timezone.js';
+import { rruleLine } from './recurrence.js';
 
 function escapeICSText(s) {
   if (s == null) return '';
@@ -232,7 +233,10 @@ function buildVEvent(ev, dtstamp, showAssignees = false) {
   lines.push(`SUMMARY:${escapeICSText(summary)}`);
   if (ev.description) lines.push(`DESCRIPTION:${escapeICSText(ev.description)}`);
   if (ev.location) lines.push(`LOCATION:${escapeICSText(ev.location)}`);
-  if (ev.recurrence_rule) lines.push(`RRULE:${ev.recurrence_rule}`);
+  // rruleLine statt Handarbeit: eine eingelesene Serie bringt ihr `RRULE:` schon
+  // mit, ein blindes Praefix erzeugte `RRULE:RRULE:FREQ=...` und liess strikte
+  // Abonnenten das ganze Event verwerfen (#761).
+  if (ev.recurrence_rule) lines.push(rruleLine(ev.recurrence_rule));
   // Einzeln ausgenommene Vorkommen (EXDATE, #489). Zeit-Teil = Master-Startzeit,
   // damit die EXDATE-Instanz exakt auf ein RRULE-Vorkommen trifft.
   if (ev.recurrence_rule && Array.isArray(ev.exception_dates) && ev.exception_dates.length) {
