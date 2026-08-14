@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.8.4] - 2026-08-14
+
 ### Fixed
 
 - **Preserve subtasks when spawning recurring task occurrences.** Completing a recurring parent task with subtasks now copies its subtask structure with reset status (`open`) to the next occurrence, preserving checklists and multi-step workflows across occurrences (#742, #744). Undoing completion discards pristine spawned follow-up tasks while preserving any follow-up tasks whose subtasks were completed or edited.

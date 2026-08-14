@@ -1,4 +1,4 @@
-<!-- version: 2.8.3 -->
+<!-- version: 2.8.4 -->
 <!--
   Die `releaseNotes` fuer den Umbrel-App-Store, von Hand fuer JEDEN Release
   geschrieben. `umbrel-publish.yml` nimmt den Text unter diesem Kommentar
@@ -29,12 +29,12 @@
     - Leerzeile zwischen den Absaetzen: der Store rendert ein gefaltetes
       YAML-Blockskalar, dort ist die Leerzeile der Absatzumbruch.
 -->
-One fix, on wide screens.
+Recurring tasks keep their subtasks.
 
-In the shopping list and in contacts, the strip of filter chips above the list was cut off at roughly a third of its proper width, so on a large monitor the tabs for your shopping lists broke off in the middle of a name. If you keep several lists, the ones further along were effectively out of reach. The strip now uses the full width of the list beneath it and ends on the same edge, and it still scrolls sideways when you have more lists than fit.
+If you use a repeating task as a checklist, its steps disappeared after the first run: completing the task created the next occurrence, but without the subtasks underneath it, so you had to type them again every time. The steps are now copied to each new occurrence and start unticked, keeping their assignees, tags and their timing relative to the parent task.
 
-Nothing changes on a phone or tablet, where the strip was already correct.
+Undoing a completion still removes the occurrence it created, but only while nobody has worked on it. If you have ticked off or edited any of its steps, it stays, along with what you entered.
 
-There is nothing to do after this update, and your data and settings are unchanged.
+There is nothing to do after this update, and your data and settings are unchanged. Existing recurring tasks pick this up the next time you complete them.
 
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.8.3
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.8.4
