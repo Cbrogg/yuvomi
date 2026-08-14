@@ -1763,7 +1763,12 @@ rewriting its record are different rights.
 **Menstrual cycle (migration 71).** Three tables back the Cycle tab; predictions are computed
 client-side (calendar method), the server only stores. The Cycle tab is a household opt-in
 (`health_cycle_enabled` preference, default on, Settings → Modules → Module options); when disabled the tab
-is hidden and its route redirects to the Health overview.
+is hidden and its route redirects to the Health overview. On top of that, every member can hide the
+tab for themselves (`health_cycle_enabled_user`, default on, Settings → Personal → Health) - not
+everyone in a household has a cycle. The two combine with AND into the read-only
+`health_cycle_effective`, which is what the client renders: the personal switch can only narrow the
+household setting, never widen it, and the household switch stays admin-only while the personal one
+is writable by anyone for themselves.
 
 **`cycle_periods`** — one row per menstrual period episode.
 

@@ -179,6 +179,23 @@ function cfgUserSet(key, userId, value) {
   cfgSet(userCfgKey(key, userId), value);
 }
 
+// Drei Sichten auf den Zyklus-Tab (#760), nach demselben Muster wie `language`:
+// was der Haushalt erlaubt, was ich für mich gewählt habe, und was am Ende gilt.
+//
+// Der Admin-Schalter ist der Haushalts-Default; das persönliche Opt-out kann ihn
+// nur enger machen, nie weiter. Deshalb UND statt Override: wer den Zyklus
+// haushaltweit abschaltet, blendet ihn für alle aus, und niemand holt ihn sich
+// einzeln zurück. Fehlender Wert = an, damit Bestandskonten ihr Verhalten behalten.
+function healthCycleViews(userId) {
+  const household = cfgGet('health_cycle_enabled') !== '0';
+  const personal = cfgUserGet('health_cycle_enabled', userId) !== '0';
+  return {
+    health_cycle_enabled: household,
+    health_cycle_enabled_user: personal,
+    health_cycle_effective: household && personal,
+  };
+}
+
 // Per-User-Wetter-Override lesen (null je Feld = erbt Haushalt).
 function weatherUserOverride(userId) {
   const autoRaw = cfgUserGet('weather_auto_locate', userId);
@@ -322,7 +339,7 @@ router.get('/', (req, res) => {
         calendar_default_target: cfgUserGet('calendar_default_target', req.authUserId) || '',
         // Modul-Feature-Schalter (haushaltweit). Default an: fehlender Wert =>
         // Feature aktiv, damit Bestandshaushalte ihr Verhalten behalten.
-        health_cycle_enabled: cfgGet('health_cycle_enabled') !== '0',
+        ...healthCycleViews(req.authUserId),
         rewards_require_approval: cfgGet('rewards_require_approval') !== '0',
         tasks_subtasks_expanded: cfgGet('tasks_subtasks_expanded') === '1',
         tasks_default_points: parseTaskDefaultPoints(cfgGet('tasks_default_points')),
@@ -362,7 +379,7 @@ router.get('/', (req, res) => {
 
 router.put('/', (req, res) => {
   try {
-    const { visible_meal_types, currency, date_format, time_format, week_start, region, language, app_name, dashboard_widgets, disabled_modules, module_order, mobile_nav_order, housekeeping_payment_tasks, budget_mode, calendar_default_duration, calendar_default_reminders, calendar_default_assign_me, calendar_default_target, health_cycle_enabled, rewards_require_approval, tasks_subtasks_expanded, tasks_default_points, tasks_default_target, weather_provider, weather_lat, weather_lon, weather_city, weather_units, weather_auto_locate, weather_user, holiday_country, holiday_subdivision, holiday_group, holiday_show_public, holiday_show_school, holiday_public_color, holiday_school_color } = req.body;
+    const { visible_meal_types, currency, date_format, time_format, week_start, region, language, app_name, dashboard_widgets, disabled_modules, module_order, mobile_nav_order, housekeeping_payment_tasks, budget_mode, calendar_default_duration, calendar_default_reminders, calendar_default_assign_me, calendar_default_target, health_cycle_enabled, health_cycle_enabled_user, rewards_require_approval, tasks_subtasks_expanded, tasks_default_points, tasks_default_target, weather_provider, weather_lat, weather_lon, weather_city, weather_units, weather_auto_locate, weather_user, holiday_country, holiday_subdivision, holiday_group, holiday_show_public, holiday_show_school, holiday_public_color, holiday_school_color } = req.body;
 
     if (visible_meal_types !== undefined) {
       if (!Array.isArray(visible_meal_types)) {
@@ -580,6 +597,17 @@ router.put('/', (req, res) => {
         return res.status(400).json({ error: 'health_cycle_enabled must be a boolean', code: 400 });
       }
       cfgSet('health_cycle_enabled', health_cycle_enabled ? '1' : '0');
+    }
+
+    // Persönliches Opt-out (#760) - bewusst OHNE Admin-Gate: es betrifft nur die
+    // eigene Ansicht, und derselbe Fehler (per-user-Wert hinter adminOnly) kostete
+    // schon einmal fünf von sechs Familienmitgliedern ihre Einstellung
+    // (Critique 2026-07-27, siehe calendar_default_reminders).
+    if (health_cycle_enabled_user !== undefined) {
+      if (typeof health_cycle_enabled_user !== 'boolean') {
+        return res.status(400).json({ error: 'health_cycle_enabled_user must be a boolean', code: 400 });
+      }
+      cfgUserSet('health_cycle_enabled', req.authUserId, health_cycle_enabled_user ? '1' : '0');
     }
 
     if (rewards_require_approval !== undefined) {
@@ -829,7 +857,7 @@ router.put('/', (req, res) => {
         calendar_default_reminders: parseDefaultReminders(cfgUserGet('calendar_default_reminders', req.authUserId)),
         calendar_default_assign_me: cfgUserGet('calendar_default_assign_me', req.authUserId) === '1',
         calendar_default_target: cfgUserGet('calendar_default_target', req.authUserId) || '',
-        health_cycle_enabled: cfgGet('health_cycle_enabled') !== '0',
+        ...healthCycleViews(req.authUserId),
         rewards_require_approval: cfgGet('rewards_require_approval') !== '0',
         tasks_subtasks_expanded: cfgGet('tasks_subtasks_expanded') === '1',
         tasks_default_points: parseTaskDefaultPoints(cfgGet('tasks_default_points')),
