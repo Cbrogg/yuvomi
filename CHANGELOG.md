@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.8.2] - 2026-08-14
+
 ### Changed
 
 - **The first row of the folder browser in Documents says "All documents", because that is what it selects.** It read "All folders" while carrying a document count next to it, so "All folders · 6" sat directly above "Appartement · 6" - the same number twice, with only one folder in the list. The row is the neutral state of a filter, not an overview of folders, and a reporter took it for the latter and concluded his folder was not listed at all, when it was the clickable row right below (#757). The section heading above it dropped "Browse" for the same reason: folders here are flat, with no nesting to browse into, so the word promised a hierarchy the module does not have.

@@ -1,4 +1,4 @@
-<!-- version: 2.8.1 -->
+<!-- version: 2.8.2 -->
 <!--
   Die `releaseNotes` fuer den Umbrel-App-Store, von Hand fuer JEDEN Release
   geschrieben. `umbrel-publish.yml` nimmt den Text unter diesem Kommentar
@@ -29,16 +29,10 @@
     - Leerzeile zwischen den Absaetzen: der Store rendert ein gefaltetes
       YAML-Blockskalar, dort ist die Leerzeile der Absatzumbruch.
 -->
-This update fixes five things that got in the way, and two of them could cost data.
+A small update with one change, in Documents.
 
-If you sync a calendar over CalDAV, a repeating appointment kept its repetition only as long as you did not touch it. Editing anything about it - even just the person it is assigned to - dropped the repetition, and that loss was carried back into the calendar it came from. Repeating appointments from a synced calendar are now read correctly and left alone unless you change the repetition yourself.
-
-Two things in the calendar settings happened at the wrong moment. Refreshing the calendar list of an account switched every calendar back on, including the ones you had deliberately unticked, which brought their appointments back with them; the same happened when you changed the account password. And the person that newly imported appointments are assigned to could only be chosen after the first sync had already run, so the first and usually largest batch arrived without one. Both now behave the way you would expect: your selection survives a refresh, and the default person can be set before anything is fetched, including while creating a subscription.
-
-In the kitchen, a recipe with no meal ticked quietly became a recipe for all four. That made it impossible to keep something like a stock or a base sauce out of the weekly random pick. An empty selection is now kept and shown as such; you can still plan such a recipe by hand at any time.
-
-Finally, "Cancel" works again when you open an entry and switch to editing it. It did nothing before, in tasks, shopping, the pantry, the household log and recipes.
+The folder list had a first row called "All folders" with a document count beside it, which read as if it were counting folders. It now says "All documents", because that is what selecting it does: it clears the folder filter and shows everything. Your folders themselves are listed below it, as they were, and clicking one still narrows the list to that folder.
 
 There is nothing to do after this update, and your data and settings are unchanged.
 
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.8.1
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.8.2
