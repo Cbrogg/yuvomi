@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.11.0] - 2026-08-14
+
 ### Added
 
 - **Reminders can go to any HTTP endpoint as a generic webhook channel** (#692 by @ContatoLucasSonntag, for #660). It sits next to Gotify and ntfy, with the same delivery tracking, retry and deduplication, and an optional write-only Bearer token. Because a fixed body would have limited it to receivers that take arbitrary JSON - Home Assistant and n8n do, Discord does not, it requires `content` or `embeds` and answers anything else with a 400 - the channel also takes an optional **payload template**: paste the shape the service expects and put `{{title}}`, `{{body}}`, `{{url}}` and `{{tag}}` where the reminder's values belong. One generic provider then covers Discord, Slack and the rest, instead of Yuvomi growing an adapter per service. Values are JSON-escaped on the way in, so a reminder title with a quote or a line break cannot break the surrounding JSON, and a template that would only fail at delivery time is rejected while you are still in the form. Leaving the field empty keeps the default body. See the [notification webhook guide](docs/notification-webhooks.md).

@@ -1,4 +1,4 @@
-<!-- version: 2.10.1 -->
+<!-- version: 2.11.0 -->
 <!--
   Die `releaseNotes` fuer den Umbrel-App-Store, von Hand fuer JEDEN Release
   geschrieben. `umbrel-publish.yml` nimmt den Text unter diesem Kommentar
@@ -29,10 +29,16 @@
     - Leerzeile zwischen den Absaetzen: der Store rendert ein gefaltetes
       YAML-Blockskalar, dort ist die Leerzeile der Absatzumbruch.
 -->
-A small fix to creating appointments in the calendar.
+Reminders can now go to any web address you choose, and the cycle tab can be hidden per person.
 
-When you page away from today and then add an appointment with the "+" button, it now starts on the day you are looking at instead of on today. Previously the date always fell back to today, so moving a few days ahead in the day view and reaching for "+" created the appointment behind you, and adding one while looking at next month filed it under the current one. Clicking directly into the calendar already worked correctly and is unchanged. The date is only a starting value, so you can still set any date you like in the form.
+Alongside Gotify and ntfy, a household can add a webhook channel that sends reminders to any HTTP address, secured with an optional token. If the receiving service expects its own message format, as Discord and Slack do, you can enter that format once and Yuvomi fills in the reminder title, text, link and tag. Leaving it empty keeps the standard message, which suits Home Assistant and n8n.
+
+In Health, the cycle tab used to be one switch for the whole household. Every member can now hide it just for themselves under Settings, Personal, Health, since not everyone in a household has a cycle. The household switch still decides whether it is available at all, and nothing changes unless someone turns it off.
+
+Searching a connected Paperless document server for a plain number now finds documents that merely contain it. A number was previously treated only as an archive serial number, so a document called "1728 Pest receipt" could not be found by searching for 1728. Searching for asn:1728 still looks up that serial number exactly.
+
+The Belarusian ruble is available as a currency.
 
 There is nothing to do after this update, and your data and settings are unchanged.
 
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.10.1
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.11.0
