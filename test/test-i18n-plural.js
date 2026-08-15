@@ -107,6 +107,19 @@ test('Standard-Punkte (#578): zählende Strings nutzen die Singularform', async 
   assert.equal(t('settings.rewardsDefaultPointsRebased', { count: 2 }), '2 tasks updated.');
 });
 
+test('Garantie-Restlaufzeit (Inventar, Stufe 4): zählender String nutzt die Singularform', async () => {
+  // Review-Fund: der String wurde mit `days` interpoliert. t() wählt die
+  // Pluralvariante ausschließlich über einen numerischen `count` - daher stand
+  // dort "in 1 Tagen".
+  await setLocale('de');
+  assert.equal(t('inventory.warrantyStatusExpiringSoon', { count: 1 }), 'Garantie läuft in 1 Tag ab');
+  assert.equal(t('inventory.warrantyStatusExpiringSoon', { count: 12 }), 'Garantie läuft in 12 Tagen ab');
+
+  await setLocale('en');
+  assert.equal(t('inventory.warrantyStatusExpiringSoon', { count: 1 }), 'Warranty ends in 1 day');
+  assert.equal(t('inventory.warrantyStatusExpiringSoon', { count: 30 }), 'Warranty ends in 30 days');
+});
+
 test('Schlüssel ohne Pluralvarianten funktionieren unverändert', async () => {
   await setLocale('de');
   assert.equal(t('common.save'), localeFile('de').common.save);

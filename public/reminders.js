@@ -157,9 +157,11 @@ function createBellSvg() {
  * Glocken-Zeichen, bis er hier eingetragen ist.
  */
 const REMINDER_ORIGINS = {
-  task:         { accent: 'var(--module-tasks)',    icon: 'check-square', labelKey: 'nav.tasks' },
-  event:        { accent: 'var(--module-calendar)', icon: 'calendar',     labelKey: 'nav.calendar' },
-  subscription: { accent: 'var(--module-budget)',   icon: 'wallet',       labelKey: 'subscriptions.tabLabel' },
+  task:                   { accent: 'var(--module-tasks)',     icon: 'check-square', labelKey: 'nav.tasks' },
+  event:                  { accent: 'var(--module-calendar)',  icon: 'calendar',     labelKey: 'nav.calendar' },
+  subscription:           { accent: 'var(--module-budget)',    icon: 'wallet',       labelKey: 'subscriptions.tabLabel' },
+  inventory_item:         { accent: 'var(--module-inventory)', icon: 'package',      labelKey: 'nav.inventory' },
+  inventory_tracked_date: { accent: 'var(--module-inventory)', icon: 'package',      labelKey: 'nav.inventory' },
 };
 
 function createOriginSeal(entityType) {

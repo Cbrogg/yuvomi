@@ -39,9 +39,22 @@ function makeDb({ withNotificationTables = true } = {}) {
       currency TEXT,
       next_payment_date TEXT
     );
+    CREATE TABLE inventory_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      purchase_date TEXT,
+      warranty_months INTEGER
+    );
+    CREATE TABLE inventory_item_dates (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      item_id INTEGER NOT NULL REFERENCES inventory_items(id) ON DELETE CASCADE,
+      label TEXT NOT NULL,
+      date TEXT NOT NULL,
+      reminder_offset_days INTEGER NOT NULL DEFAULT 30
+    );
     CREATE TABLE reminders (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      entity_type TEXT NOT NULL CHECK(entity_type IN ('task','event','subscription')),
+      entity_type TEXT NOT NULL CHECK(entity_type IN ('task','event','subscription','inventory_item','inventory_tracked_date')),
       entity_id INTEGER NOT NULL,
       remind_at TEXT NOT NULL,
       dismissed INTEGER NOT NULL DEFAULT 0,
@@ -493,6 +506,100 @@ test('subscription reminders degrade to the bare name when amount or date are mi
   await processDueNotifications({ database: db, channelStore: store, pushService, providers, now: new Date() });
   assert.equal(payloads.length, 1);
   assert.equal(payloads[0].body, 'Netflix');
+});
+
+test('inventory warranty reminders carry item name and warranty end as body', async () => {
+  const { createNotificationChannelStore } = await import('../server/services/notification-channels.js');
+  const { processDueNotifications } = await import('../server/services/notifications.js');
+  const db = makeDb();
+  const store = createNotificationChannelStore({ db });
+  store.createChannel({ provider: 'ntfy', name: 'ntfy', enabled: true, config: { baseUrl: 'https://ntfy.test', topic: 'family' }, secrets: {} });
+  db.prepare("INSERT INTO inventory_items (id, name, purchase_date, warranty_months) VALUES (1, 'Waschmaschine', '2024-07-22', 24)").run();
+  db.prepare("INSERT INTO reminders (id, entity_type, entity_id, remind_at, created_by) VALUES (1, 'inventory_item', 1, ?, 1)")
+    .run('2026-06-19T09:59:00.000Z');
+  const payloads = [];
+  const providers = {
+    ntfy: { id: 'ntfy', send: async ({ payload }) => { payloads.push(payload); return { ok: true, status: 200 }; } },
+  };
+  const pushService = { sendPushToUser: async () => 0 };
+
+  await processDueNotifications({ database: db, channelStore: store, pushService, providers, now: new Date() });
+  assert.equal(payloads.length, 1);
+  // Regression: ohne den inventory_item-Zweig im entity_title-CASE kam hier der
+  // Fallback-Body 'Reminder' an, also eine Notification ohne jede Sachinfo.
+  assert.equal(payloads[0].body, 'Waschmaschine - 2026-07-22');
+  // Title-Herkunfts-Regel (v2.6.0): der Titel nennt das Modul, nicht mehr
+  // pauschal den App-Namen (vgl. task/event/subscription oben).
+  assert.equal(payloads[0].title, 'Inventory');
+});
+
+test('inventory warranty reminders degrade to the bare item name without warranty data', async () => {
+  const { createNotificationChannelStore } = await import('../server/services/notification-channels.js');
+  const { processDueNotifications } = await import('../server/services/notifications.js');
+  const db = makeDb();
+  const store = createNotificationChannelStore({ db });
+  store.createChannel({ provider: 'ntfy', name: 'ntfy', enabled: true, config: { baseUrl: 'https://ntfy.test', topic: 'family' }, secrets: {} });
+  db.prepare("INSERT INTO inventory_items (id, name) VALUES (1, 'Waschmaschine')").run();
+  db.prepare("INSERT INTO reminders (id, entity_type, entity_id, remind_at, created_by) VALUES (1, 'inventory_item', 1, ?, 1)")
+    .run('2026-06-19T09:59:00.000Z');
+  const payloads = [];
+  const providers = {
+    ntfy: { id: 'ntfy', send: async ({ payload }) => { payloads.push(payload); return { ok: true, status: 200 }; } },
+  };
+  const pushService = { sendPushToUser: async () => 0 };
+
+  await processDueNotifications({ database: db, channelStore: store, pushService, providers, now: new Date() });
+  assert.equal(payloads.length, 1);
+  assert.equal(payloads[0].body, 'Waschmaschine');
+});
+
+test('inventory tracked-date reminders carry item name, label and date as body', async () => {
+  const { createNotificationChannelStore } = await import('../server/services/notification-channels.js');
+  const { processDueNotifications } = await import('../server/services/notifications.js');
+  const db = makeDb();
+  const store = createNotificationChannelStore({ db });
+  store.createChannel({ provider: 'ntfy', name: 'ntfy', enabled: true, config: { baseUrl: 'https://ntfy.test', topic: 'family' }, secrets: {} });
+  db.prepare("INSERT INTO inventory_items (id, name) VALUES (1, 'Auto')").run();
+  db.prepare("INSERT INTO inventory_item_dates (id, item_id, label, date, reminder_offset_days) VALUES (1, 1, 'TÜV', '2027-03-01', 30)").run();
+  db.prepare("INSERT INTO reminders (id, entity_type, entity_id, remind_at, created_by) VALUES (1, 'inventory_tracked_date', 1, ?, 1)")
+    .run('2026-06-19T09:59:00.000Z');
+  const payloads = [];
+  const providers = {
+    ntfy: { id: 'ntfy', send: async ({ payload }) => { payloads.push(payload); return { ok: true, status: 200 }; } },
+  };
+  const pushService = { sendPushToUser: async () => 0 };
+
+  await processDueNotifications({ database: db, channelStore: store, pushService, providers, now: new Date() });
+  assert.equal(payloads.length, 1);
+  // Regression: ohne den inventory_tracked_date-Zweig im entity_title-CASE kaeme
+  // hier der Fallback-Body 'Reminder' an, also eine Notification ohne jede Sachinfo.
+  assert.equal(payloads[0].body, 'Auto · TÜV - 2027-03-01');
+  // Title-Herkunfts-Regel (v2.6.0): der Titel nennt das Modul, nicht mehr
+  // pauschal den App-Namen (vgl. task/event/subscription oben).
+  assert.equal(payloads[0].title, 'Inventory');
+});
+
+test('inventory tracked-date reminders degrade to the bare title without a date', async () => {
+  const { createNotificationChannelStore } = await import('../server/services/notification-channels.js');
+  const { processDueNotifications } = await import('../server/services/notifications.js');
+  const db = makeDb();
+  const store = createNotificationChannelStore({ db });
+  store.createChannel({ provider: 'ntfy', name: 'ntfy', enabled: true, config: { baseUrl: 'https://ntfy.test', topic: 'family' }, secrets: {} });
+  db.prepare("INSERT INTO inventory_items (id, name) VALUES (1, 'Auto')").run();
+  db.prepare("INSERT INTO inventory_item_dates (id, item_id, label, date, reminder_offset_days) VALUES (1, 1, 'TÜV', '2027-03-01', 30)").run();
+  // Reminder zeigt auf eine geloeschte Fristen-Zeile: entity_title bleibt leer,
+  // damit greift der generische Fallback statt eines halbfertigen Bodys.
+  db.prepare("INSERT INTO reminders (id, entity_type, entity_id, remind_at, created_by) VALUES (1, 'inventory_tracked_date', 99, ?, 1)")
+    .run('2026-06-19T09:59:00.000Z');
+  const payloads = [];
+  const providers = {
+    ntfy: { id: 'ntfy', send: async ({ payload }) => { payloads.push(payload); return { ok: true, status: 200 }; } },
+  };
+  const pushService = { sendPushToUser: async () => 0 };
+
+  await processDueNotifications({ database: db, channelStore: store, pushService, providers, now: new Date() });
+  assert.equal(payloads.length, 1);
+  assert.equal(payloads[0].body, 'Reminder');
 });
 
 test('task reminders keep their bare title as body (#581)', async () => {

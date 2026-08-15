@@ -19,6 +19,7 @@ import * as googleCalendar from './services/google-calendar.js';
 import * as appleCalendar from './services/apple-calendar.js';
 import * as icsSubscription from './services/ics-subscription.js';
 import * as icsExport from './services/ics-export.js';
+import * as inventoryDeadlinesIcs from './services/inventory-deadlines-ics.js';
 import * as caldavReminders from './services/caldav-reminders-sync.js';
 import * as caldavSync from './services/caldav-sync.js';
 import * as carddavSync from './services/cardav-sync.js';
@@ -35,6 +36,7 @@ import shoppingRouter from './routes/shopping.js';
 import mealsRouter from './routes/meals.js';
 import recipesRouter from './routes/recipes.js';
 import pantryRouter from './routes/pantry.js';
+import inventoryRouter from './routes/inventory/index.js';
 import kitchenRouter from './routes/kitchen.js';
 import calendarRouter from './routes/calendar.js';
 import notesRouter from './routes/notes.js';
@@ -349,6 +351,25 @@ app.get('/feed/calendar/:token.ics', feedLimiter, (req, res) => {
   }
 });
 
+// Eigenständiger Feed für Inventar-Garantiefristen (Stufe 4) - getrennt vom
+// Haushaltskalender-Feed oben, siehe server/services/inventory-deadlines-ics.js.
+app.get('/feed/inventory-deadlines/:token.ics', feedLimiter, (req, res) => {
+  try {
+    // Auflösen statt nur prüfen, wie beim Kalender-Feed oben: das Token gehört
+    // einem Nutzer, damit es einzeln zurückziehbar ist. In den Feed-Inhalt geht
+    // die Id nicht ein - Inventar ist Haushaltseigentum ohne Sichtbarkeitsachse.
+    const userId = inventoryDeadlinesIcs.findUserIdByFeedToken(db.get(), req.params.token);
+    if (!userId) return res.status(404).type('text/plain').send('Not found');
+    const ics = inventoryDeadlinesIcs.buildInventoryDeadlinesFeed(db.get());
+    res.set('Cache-Control', 'private, no-store');
+    res.set('Content-Disposition', 'inline; filename="yuvomi-inventory-deadlines.ics"');
+    res.type('text/calendar; charset=utf-8').send(ics);
+  } catch (err) {
+    log.error('', err);
+    res.status(500).type('text/plain').send('Internal error');
+  }
+});
+
 // MCP-Endpoint (Streamable HTTP, stateless): Auth über bestehende Bearer-API-Tokens.
 // Eigener Namespace außerhalb von /api/v1 → kein CSRF, kein Guest-Guard.
 app.use('/mcp', apiLimiter, requireAuth, mcpRouter);
@@ -411,6 +432,7 @@ app.use('/api/v1/meals', mealsRouter);
 app.use('/api/v1/recipes', recipesRouter);
 app.use('/api/v1/recipe-providers', recipeProvidersRouter);
 app.use('/api/v1/pantry', pantryRouter);
+app.use('/api/v1/inventory', inventoryRouter);
 // Kreislauf-Zustand der vier Küchen-Tabs in einer Abfrage (utils/kitchen-tabs.js).
 app.use('/api/v1/kitchen', kitchenRouter);
 app.use('/api/v1/calendar', calendarRouter);
