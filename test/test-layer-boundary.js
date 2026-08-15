@@ -139,3 +139,44 @@ test('server/ importiert aus public/ nur geteilte isomorphe Utils (Allowlist)', 
       violations.join('\n'),
   );
 });
+
+// ── Keine Quelldatei ist fuer Textwerkzeuge unsichtbar ───────────────────────
+//
+// Ein rohes NUL-Byte im Quelltext laeuft zur Laufzeit einwandfrei - JavaScript
+// erlaubt das Zeichen im String, und beide Fundstellen benutzten es bewusst als
+// Trennzeichen in einem Map-Schluessel. Fuer Unix-Werkzeuge macht es die Datei
+// aber zur BINAERDATEI: `file` meldet "data", und `grep` schweigt ohne `-a`,
+// statt "keine Treffer" auch nur zu behaupten.
+//
+// Gefunden wurde das, weil eine Suche nach `sync` in server/services/holidays.js
+// leer zurueckkam - bei einer Datei mit 33 Treffern. Der falsche Schluss daraus
+// ("der Service liest diese Konfiguration nicht") war schon gezogen. Jeder
+// Guard dieses Repos, der ueber Textsuche arbeitet, haette dieselbe Luecke
+// gehabt, ohne je rot zu werden.
+//
+// Die Escape-Sequenz `\x00` erzeugt exakt dasselbe Zeichen; geprueft wird
+// deshalb die SCHREIBWEISE, nicht die Absicht.
+
+test('keine Quelldatei enthaelt ein rohes NUL-Byte', () => {
+  const roots = ['server', 'public', 'tools', 'test'];
+  const files = [];
+  const walk = (dir) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue;
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (/\.(js|mjs|json|css|html)$/.test(entry.name)) files.push(full);
+    }
+  };
+  for (const r of roots) walk(path.join(ROOT, r));
+
+  assert.ok(files.length >= 200, `nur ${files.length} Quelldateien gefunden - die Suche greift nicht mehr`);
+
+  const binary = files
+    .filter((f) => readFileSync(f).includes(0x00))
+    .map((f) => path.relative(ROOT, f));
+  assert.deepEqual(binary, [],
+    'Diese Dateien enthalten ein rohes NUL-Byte und gelten damit als Binaerdateien - '
+    + 'grep und Konsorten ueberspringen sie stumm. Schreib das Zeichen als \\x00:\n  '
+    + binary.join('\n  '));
+});

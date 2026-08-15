@@ -325,7 +325,7 @@ async function sync(force = false) {
 function mergeOverlappingByName(rows) {
   const byKey = new Map();
   for (const r of rows) {
-    const key = `${r.type} ${r.name}`;
+    const key = `${r.type}\x00${r.name}`;
     if (!byKey.has(key)) byKey.set(key, []);
     byKey.get(key).push(r);
   }
