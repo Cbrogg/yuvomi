@@ -164,6 +164,36 @@ test('PUT dashboard_widgets: ungültige Struktur, doppelte IDs oder zu viele Ein
   }));
   assert.equal((await put({ dashboard_widgets: tooMany })).status, 400);
 });
+// --------------------------------------------------------
+// dashboard_today_glance (#740)
+// --------------------------------------------------------
+test('dashboard_today_glance ist standardmäßig an - der Bestand kennt den Schlüssel nicht', async () => {
+  const res = await get();
+  assert.equal(res.body.data.dashboard_today_glance, true);
+});
+test('PUT dashboard_today_glance: alles ausser Boolean -> 400', async () => {
+  // '0'/'1' waeren die DB-Schreibweise, nicht die der API - wer sie schickt,
+  // meint etwas anderes als er bekaeme.
+  assert.equal((await put({ dashboard_today_glance: '0' })).status, 400);
+  assert.equal((await put({ dashboard_today_glance: 0 })).status, 400);
+  assert.equal((await put({ dashboard_today_glance: null })).status, 400);
+});
+test('dashboard_today_glance haelt beide Richtungen ueber den GET', async () => {
+  assert.equal((await put({ dashboard_today_glance: false })).status, 200);
+  assert.equal((await get()).body.data.dashboard_today_glance, false);
+  assert.equal((await put({ dashboard_today_glance: true })).status, 200);
+  assert.equal((await get()).body.data.dashboard_today_glance, true);
+});
+test('dashboard_today_glance braucht keine Adminrechte - wie die Widgets daneben', async () => {
+  // Die Uebersicht ist eine gemeinsame Seite; wer ihre Kacheln umstellen darf,
+  // darf auch ihr Kopfband abstellen. Waere das eine Admin-Entscheidung, muesste
+  // es dashboard_widgets auch sein.
+  const res = await put({ dashboard_today_glance: false }, { role: 'member', userId: 2 });
+  assert.equal(res.status, 200);
+  assert.equal((await get({ role: 'member', userId: 2 })).body.data.dashboard_today_glance, false);
+  await put({ dashboard_today_glance: true });
+});
+
 test('PUT dashboard_widgets: Teilmenge bleibt beim GET eine Teilmenge', async () => {
   const requested = [{ id: 'notes', visible: false, order: 0, size: '2x1' }];
   const saved = await put({ dashboard_widgets: requested });

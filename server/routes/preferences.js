@@ -327,6 +327,7 @@ router.get('/', (req, res) => {
         language_auto: resolveHouseholdLocale(db.get(), { ignoreExplicit: true }),
         app_name: appName,
         dashboard_widgets: dashboardWidgets,
+        dashboard_today_glance: cfgGet('dashboard_today_glance') !== '0',
         disabled_modules: disabledModules,
         module_order: moduleOrder,
         mobile_nav_order: mobileNavOrder,
@@ -379,7 +380,7 @@ router.get('/', (req, res) => {
 
 router.put('/', (req, res) => {
   try {
-    const { visible_meal_types, currency, date_format, time_format, week_start, region, language, app_name, dashboard_widgets, disabled_modules, module_order, mobile_nav_order, housekeeping_payment_tasks, budget_mode, calendar_default_duration, calendar_default_reminders, calendar_default_assign_me, calendar_default_target, health_cycle_enabled, health_cycle_enabled_user, rewards_require_approval, tasks_subtasks_expanded, tasks_default_points, tasks_default_target, weather_provider, weather_lat, weather_lon, weather_city, weather_units, weather_auto_locate, weather_user, holiday_country, holiday_subdivision, holiday_group, holiday_show_public, holiday_show_school, holiday_public_color, holiday_school_color } = req.body;
+    const { visible_meal_types, currency, date_format, time_format, week_start, region, language, app_name, dashboard_widgets, dashboard_today_glance, disabled_modules, module_order, mobile_nav_order, housekeeping_payment_tasks, budget_mode, calendar_default_duration, calendar_default_reminders, calendar_default_assign_me, calendar_default_target, health_cycle_enabled, health_cycle_enabled_user, rewards_require_approval, tasks_subtasks_expanded, tasks_default_points, tasks_default_target, weather_provider, weather_lat, weather_lon, weather_city, weather_units, weather_auto_locate, weather_user, holiday_country, holiday_subdivision, holiday_group, holiday_show_public, holiday_show_school, holiday_public_color, holiday_school_color } = req.body;
 
     if (visible_meal_types !== undefined) {
       if (!Array.isArray(visible_meal_types)) {
@@ -480,6 +481,13 @@ router.put('/', (req, res) => {
         return res.status(400).json({ error: 'dashboard_widgets enthält ungültige Einträge', code: 400 });
       }
       cfgSet('dashboard_widgets', JSON.stringify(normalized));
+    }
+
+    if (dashboard_today_glance !== undefined) {
+      if (typeof dashboard_today_glance !== 'boolean') {
+        return res.status(400).json({ error: 'dashboard_today_glance muss ein Boolean sein', code: 400 });
+      }
+      cfgSet('dashboard_today_glance', dashboard_today_glance ? '1' : '0');
     }
 
     if (disabled_modules !== undefined) {
