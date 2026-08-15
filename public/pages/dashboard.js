@@ -1797,7 +1797,7 @@ function buildTodayCockpitModel(data, cfg = [], { cap = PROGRAM_ROW_CAP } = {}) 
   return { rows: visibleRows, allRows: program.rows, overflow, state, shopping, coda };
 }
 
-function renderTodayCockpit(data, cfg = []) {
+function renderTodayCockpit(data, cfg = [], editing = false) {
   const model = buildTodayCockpitModel(data, cfg);
 
   const parts = [];
@@ -1810,13 +1810,25 @@ function renderTodayCockpit(data, cfg = []) {
   if (model.coda) parts.push(`<div class="today-cockpit__coda">${esc(model.coda)}</div>`);
 
   // Deckt der Nutzer alle vier Domänen über Widgets ab, wäre das Cockpit leer —
-  // dann entfällt der ganze Abschnitt statt einer leeren Kopfzeile.
-  if (!parts.length) return '';
+  // dann entfällt der ganze Abschnitt statt einer leeren Kopfzeile. Im
+  // Bearbeiten-Modus bleibt er stehen, auch ohne Inhalt: sonst wäre der
+  // Schalter, mit dem man ihn abstellt, nur sichtbar solange er etwas zu sagen
+  // hat (#740).
+  if (!parts.length && !editing) return '';
+
+  // Derselbe Ausblenden-Knopf wie an jeder Kachel, damit das Kopfband im
+  // Bearbeiten-Modus keine Sonderbedienung braucht.
+  const hideBtn = editing ? `
+    <button type="button" class="widget-edit-controls__hide" data-glance-hide
+            aria-label="${t('dashboard.customizeHide', { widget: t('dashboard.todayTitle') })}">
+      <i data-lucide="eye-off" aria-hidden="true"></i>
+    </button>` : '';
 
   return `
     <section class="today-cockpit" aria-labelledby="today-cockpit-title">
       <div class="today-cockpit__header">
         <h2 id="today-cockpit-title">${esc(t('dashboard.todayTitle'))}</h2>
+        ${hideBtn}
       </div>
       <div class="today-cockpit__grid">
         ${parts.join('')}
@@ -1943,10 +1955,19 @@ function renderWidgetCustomizeControls(w, index = 0, total = 1) {
 // Edit-Modus ausgeblendetes Widget landet als Chip hier und lässt sich mit einem
 // Klick zurückholen — so ist der Inline-Editor allein vollständig (Zeigen +
 // Verstecken + Größe + Reihenfolge) und das frühere zweite Editor-Modal entfällt.
-function renderHiddenWidgetsTray(cfg) {
+function renderHiddenWidgetsTray(cfg, glanceHidden = false) {
   const hidden = cfg.filter((w) => !w.visible && WIDGET_IDS.includes(w.id) && isWidgetModuleEnabled(w.id));
-  if (!hidden.length) return '';
-  const chips = hidden.map((w) => `
+  if (!hidden.length && !glanceHidden) return '';
+  // Das Kopfband steht mit in dieser Leiste, obwohl es keine Rasterkachel ist:
+  // ausgeblendet waere es sonst nur ueber „Zuruecksetzen" zurueckzuholen.
+  const glanceChip = glanceHidden ? `
+    <button type="button" class="widget-restore-chip" data-glance-show
+            aria-label="${t('dashboard.customizeShow', { widget: t('dashboard.todayTitle') })}">
+      <i data-lucide="sun" class="widget-restore-chip__icon" aria-hidden="true"></i>
+      <span class="widget-restore-chip__label">${t('dashboard.todayTitle')}</span>
+      <i data-lucide="plus" class="widget-restore-chip__add" aria-hidden="true"></i>
+    </button>` : '';
+  const chips = glanceChip + hidden.map((w) => `
     <button type="button" class="widget-restore-chip" data-widget-show="${esc(w.id)}"
             aria-label="${t('dashboard.customizeShow', { widget: widgetLabel(w.id) })}">
       <i data-lucide="${widgetIcon(w.id)}" class="widget-restore-chip__icon" aria-hidden="true"></i>
@@ -1961,7 +1982,7 @@ function renderHiddenWidgetsTray(cfg) {
   `;
 }
 
-function renderDashboardLayout(cfg, data, weather, currency, { editing = false, visibleMealTypes = MEAL_ORDER } = {}) {
+function renderDashboardLayout(cfg, data, weather, currency, { editing = false, visibleMealTypes = MEAL_ORDER, glanceHidden = false } = {}) {
   const widgetById = {
     tasks: () => renderUrgentTasks(data.urgentTasks ?? []),
     calendar: () => renderUpcomingEvents(data.upcomingEvents ?? []),
@@ -2028,7 +2049,7 @@ function renderDashboardLayout(cfg, data, weather, currency, { editing = false, 
   const grid = `<div class="dashboard__grid ${editing ? 'dashboard__grid--editing' : ''}${preserveOrder}" id="dashboard-widget-grid">${gridInner}</div>`;
   // Im Bearbeiten-Modus folgt die Wieder-Einblenden-Leiste dem Grid, damit
   // ausgeblendete Widgets nicht in einer Sackgasse verschwinden.
-  return editing ? `${grid}${renderHiddenWidgetsTray(cfg)}` : grid;
+  return editing ? `${grid}${renderHiddenWidgetsTray(cfg, glanceHidden)}` : grid;
 }
 
 /* DAS SKELETT VERSPRICHT DAS LAYOUT, DAS GLEICH KOMMT (Critique R1, A10).
@@ -2942,6 +2963,13 @@ export async function render(container, { user }) {
   let weatherAutoLocate = false;
   let widgetConfig = DEFAULT_WIDGET_CONFIG;
   let savedWidgetConfig = DEFAULT_WIDGET_CONFIG;
+  // Das Kopfband „Heute auf einen Blick" ist kein Rasterkachel, folgt aber
+  // derselben Anpassen-Grammatik wie die Widgets: ausblenden am Block, zurueck
+  // ueber die Chip-Leiste, und es faehrt in denselben Speicher-, Abbruch- und
+  // Ruecknahme-Zyklus mit (#740). Haushaltweit wie `dashboard_widgets`, weil
+  // die Uebersicht eine gemeinsame Seite ist.
+  let glanceVisible = true;
+  let savedGlanceVisible = true;
   let isCustomizing = false;
   let currency     = 'EUR';
   let visibleMealTypes = MEAL_ORDER;
@@ -2968,6 +2996,8 @@ export async function render(container, { user }) {
     weatherAutoLocate = Boolean(prefsRes.data?.weather_user?.auto_locate ?? prefsRes.data?.weather_auto_locate);
     widgetConfig = normalizeDashboardConfig(prefsRes.data?.dashboard_widgets ?? DEFAULT_WIDGET_CONFIG);
     savedWidgetConfig = widgetConfig.map((w) => ({ ...w }));
+    glanceVisible = prefsRes.data?.dashboard_today_glance !== false;
+    savedGlanceVisible = glanceVisible;
     // Das Skelett des NAECHSTEN Aufrufs lernt hier seine Kachelform.
     rememberLayoutHint(widgetConfig);
     currency     = prefsRes.data?.currency ?? 'EUR';
@@ -3012,8 +3042,10 @@ export async function render(container, { user }) {
   async function persistWidgetConfig(nextConfig) {
     const previousConfig = savedWidgetConfig.map((w) => ({ ...w }));
     widgetConfig = nextConfig.map((w) => ({ ...w }));
-    await api.put('/preferences', { dashboard_widgets: widgetConfig });
+    const previousGlance = savedGlanceVisible;
+    await api.put('/preferences', { dashboard_widgets: widgetConfig, dashboard_today_glance: glanceVisible });
     savedWidgetConfig = widgetConfig.map((w) => ({ ...w }));
+    savedGlanceVisible = glanceVisible;
     rememberLayoutHint(widgetConfig);
     isCustomizing = false;
     // Wird die Zyklus-Kachel gerade erst eingeblendet, ihren owner-only Slice
@@ -3021,13 +3053,15 @@ export async function render(container, { user }) {
     if (widgetConfig.some((w) => w.id === 'cycle' && w.visible)) await ensureCycleSlice();
     rebuildDashboard(widgetConfig);
 
-    const changed = !sameWidgetConfig(previousConfig, widgetConfig);
+    const changed = !sameWidgetConfig(previousConfig, widgetConfig) || previousGlance !== glanceVisible;
     const onUndo = changed
       ? async () => {
           try {
             widgetConfig = previousConfig.map((w) => ({ ...w }));
-            await api.put('/preferences', { dashboard_widgets: widgetConfig });
+            glanceVisible = previousGlance;
+            await api.put('/preferences', { dashboard_widgets: widgetConfig, dashboard_today_glance: glanceVisible });
             savedWidgetConfig = widgetConfig.map((w) => ({ ...w }));
+            savedGlanceVisible = glanceVisible;
             rememberLayoutHint(widgetConfig);
           } catch {
             window.yuvomi?.showToast(t('common.errorGeneric'), 'danger');
@@ -3049,6 +3083,7 @@ export async function render(container, { user }) {
 
   function cancelDashboardConfig() {
     widgetConfig = savedWidgetConfig.map((w) => ({ ...w }));
+    glanceVisible = savedGlanceVisible;
     isCustomizing = false;
     rebuildDashboard(widgetConfig);
   }
@@ -3059,6 +3094,7 @@ export async function render(container, { user }) {
     });
     if (!confirmed) return;
     widgetConfig = DEFAULT_WIDGET_CONFIG.map((w) => ({ ...w }));
+    glanceVisible = true;
     rebuildDashboard(widgetConfig);
   }
 
@@ -3148,6 +3184,17 @@ export async function render(container, { user }) {
       });
     });
 
+    // Kopfband: beide Knoepfe sitzen ausserhalb des Grids (der eine im Masthead,
+    // der andere in der Tray-Leiste), deshalb container-weit gesucht.
+    container.querySelector('[data-glance-hide]')?.addEventListener('click', () => {
+      glanceVisible = false;
+      rebuildDashboard(widgetConfig);
+    });
+    container.querySelector('[data-glance-show]')?.addEventListener('click', () => {
+      glanceVisible = true;
+      rebuildDashboard(widgetConfig);
+    });
+
     // Reorder ohne HTML5-DnD (das feuert nicht per Finger und ist nicht per
     // Tastatur bedienbar). Ein Pfad für drei Auslöser: Touch-Up/Down-Buttons,
     // Desktop-Grip-Pfeiltasten und (indirekt) das Modal — alle über den Nachbarn
@@ -3216,7 +3263,7 @@ export async function render(container, { user }) {
     // Fehlt das Cockpit (alle Domänen als Widgets sichtbar → kein Glance-Inhalt),
     // kollabiert das Band per --slim auf eine schlanke Gruß-Leiste statt ein
     // großes leeres Rechteck zu zeigen (Critique R3 P1).
-    const cockpitHtml = renderTodayCockpit(data, cfg);
+    const cockpitHtml = (glanceVisible || isCustomizing) ? renderTodayCockpit(data, cfg, isCustomizing) : '';
     const mastheadSlim = cockpitHtml ? '' : ' dashboard-masthead--slim';
     // Kein Wetter-Echo: die Masthead-Zeile spricht nur, wenn die Wetter-Karte
     // nicht ohnehin im Raster sichtbar ist (Opt-in fürs Wandtablet).
@@ -3226,7 +3273,7 @@ export async function render(container, { user }) {
         ${renderDashboardOverview(user, isCustomizing, weatherCardShown ? null : weather, lastLoadedAt)}
         ${cockpitHtml}
       </section>
-      ${renderDashboardLayout(cfg, data, weather, currency, { editing: isCustomizing, visibleMealTypes })}
+      ${renderDashboardLayout(cfg, data, weather, currency, { editing: isCustomizing, visibleMealTypes, glanceHidden: !glanceVisible })}
     `);
     wireLinks(container, rerender, { editing: isCustomizing });
     // Retry einer isolierten Widget-Fehlerkachel: da /dashboard aggregiert lädt,

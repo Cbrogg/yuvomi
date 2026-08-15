@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **"Heute auf einen Blick" lässt sich abschalten.** Das Kopfband der Übersicht fasst zusammen, was in Aufgaben, Kalender, Mahlzeiten und Einkauf ansteht - nützlich, wenn diese Bereiche nicht ohnehin als Kacheln daliegen, und sonst eine Wiederholung. Bisher verschwand es nur indirekt, nämlich wenn man alle vier Bereiche als Widgets einblendete (#740, gemeldet von @tyboxer87). Jetzt trägt es im Anpassen-Modus denselben Ausblenden-Knopf wie jede Kachel und kommt über dieselbe Chip-Leiste zurück; Speichern, Abbrechen, Rückgängig und Zurücksetzen nehmen es mit, statt es neben dem Zyklus stehen zu lassen. Wie die Kachelanordnung gilt die Entscheidung für den Haushalt, weil die Übersicht eine gemeinsame Seite ist. Im Anpassen-Modus bleibt das Band sichtbar, auch abgeschaltet und auch ohne Inhalt - sonst wäre der Schalter, der es zurückholt, nur da, solange man ihn nicht braucht. Standardmäßig bleibt alles wie bisher.
+
 ## [2.13.1] - 2026-08-15
 
 ### Fixed

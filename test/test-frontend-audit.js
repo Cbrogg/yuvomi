@@ -1166,6 +1166,43 @@ test('synchronization-by-data-type leaves exist and export async render function
   }
 });
 
+test('das Kopfband faehrt im selben Anpassen-Zyklus wie die Kacheln (#740)', () => {
+  const source = read('../public/pages/dashboard.js');
+
+  // Der eigentliche Fehler waere nicht ein fehlender Schalter, sondern einer,
+  // der neben dem Zyklus steht: Abbrechen holt die Kacheln zurueck und laesst
+  // das Kopfband verschwunden, oder Rueckgaengig kennt es nicht. Geprueft wird
+  // deshalb die KOPPLUNG, nicht die Existenz des Knopfes.
+  // JEDER dieser PUTs, nicht irgendeiner: es gibt zwei (Speichern und
+  // Ruecknahme), und ein Guard, dem einer genuegt, ist blind fuer den anderen.
+  const widgetPuts = [...source.matchAll(/api\.put\('\/preferences',\s*\{[^}]*dashboard_widgets[^}]*\}/g)]
+    .map((m) => m[0]);
+  assert.ok(widgetPuts.length >= 2,
+    `Nur ${widgetPuts.length} dashboard_widgets-PUTs gefunden - das Muster greift nicht mehr`);
+  const withoutGlance = widgetPuts.filter((call) => !call.includes('dashboard_today_glance'));
+  assert.deepEqual(withoutGlance, [],
+    'Kacheln und Kopfband muessen in EINEM PUT gehen - sonst schreibt ein Fehlschlag die Haelfte:\n  '
+    + withoutGlance.join('\n  '));
+  assert.match(source, /function cancelDashboardConfig\(\)[\s\S]{0,200}?glanceVisible = savedGlanceVisible/,
+    'Abbrechen stellt das Kopfband nicht zurueck');
+  assert.match(source, /function resetDashboardConfig[\s\S]{0,600}?glanceVisible = true/,
+    'Zuruecksetzen stellt das Kopfband nicht auf den Standard');
+  assert.match(source, /glanceVisible = previousGlance/,
+    'Rueckgaengig nimmt das Kopfband nicht mit zurueck');
+  assert.match(source, /previousGlance !== glanceVisible/,
+    'wurde NUR das Kopfband umgeschaltet, muss der Toast trotzdem Rueckgaengig anbieten');
+
+  // Im Bearbeiten-Modus bleibt das Kopfband stehen, auch ausgeblendet und auch
+  // ohne Inhalt - sonst waere der Schalter, der es zurueckholt, nur sichtbar
+  // solange es ohnehin da ist.
+  assert.match(source, /\(glanceVisible \|\| isCustomizing\)/,
+    'ausgeblendet verschwindet das Kopfband auch im Bearbeiten-Modus');
+  assert.match(source, /!parts\.length && !editing/,
+    'ohne Inhalt faellt das Kopfband auch im Bearbeiten-Modus weg');
+  assert.match(source, /data-glance-show/,
+    'ausgeblendet fehlt der Weg zurueck ueber die Chip-Leiste');
+});
+
 test('sync-calendar leaf loads CalDAV, Google, and Apple with independent status', () => {
   const source = read('../public/settings/pages/sync-calendar.js');
 
