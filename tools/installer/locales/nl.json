@@ -77,7 +77,7 @@
   "advanced": {
     "tag": "Geavanceerd · optioneel",
     "title": "Geavanceerde instellingen",
-    "subtitle": "Opslag, back-ups, eenmalige aanmelding en integraties. Het meeste is optioneel - bekijk op een NAS wel de datamap.",
+    "subtitle": "Eenmalige aanmelding, toegang tot je thuisnetwerk en een paar fijnafstellingen. Alles optioneel.",
     "proxyLabel": "Hoe wordt Yuvomi aangeboden?",
     "proxyBehindHttps": "Achter een reverse proxy met HTTPS (Caddy, nginx, Traefik)",
     "proxyDirect": "Directe toegang via localhost / HTTP",
@@ -106,7 +106,7 @@
     "documentLocalEnable": "Nieuwe documenten in een lokale map opslaan",
     "documentLocalPathLabel": "Mappad",
     "documentLocalPathHint": "Pad in de container. Laat leeg voor /documents.",
-    "sectionIntegrations": "Integraties en back-ups",
+    "sectionIntegrations": "Eenmalige aanmelding",
     "errSchedule": "Ongeldige cron-planning (vijf door spaties gescheiden velden verwacht, bijv. 0 2 * * *).",
     "errKeep": "Te bewaren back-ups moet een positief getal zijn.",
     "webdavBackup": "Externe back-ups (WebDAV)",
@@ -285,5 +285,11 @@
     "fromHint": "Het \"van\"-adres dat ontvangers zien. Veel providers vereisen dat het overeenkomt met je gebruikersnaam.",
     "fromNameLabel": "Afzendernaam",
     "errIncomplete": "SMTP-server en afzenderadres zijn verplicht."
+  },
+  "storage": {
+    "title": "Opslag en back-ups",
+    "subtitle": "Waar je gegevens op de server staan en waar kopieën ervan heen gaan. Alles optioneel - de standaarden werken.",
+    "sectionBackups": "Back-ups",
+    "sectionDocuments": "Documentopslag"
   }
 }

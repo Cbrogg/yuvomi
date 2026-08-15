@@ -77,7 +77,7 @@
   "advanced": {
     "tag": "Pokročilé · volitelné",
     "title": "Pokročilá nastavení",
-    "subtitle": "Úložiště, zálohy, jednotné přihlášení a integrace. Většina je volitelná - na NAS si ale zkontroluj složku dat.",
+    "subtitle": "Jednotné přihlášení, přístup do domácí sítě a pár jemných nastavení. Vše volitelné.",
     "proxyLabel": "Jak je Yuvomi zpřístupněn?",
     "proxyBehindHttps": "Za reverzní proxy s HTTPS (Caddy, nginx, Traefik)",
     "proxyDirect": "Přímý přístup přes localhost / HTTP",
@@ -106,7 +106,7 @@
     "documentLocalEnable": "Ukládat nové dokumenty do místní složky",
     "documentLocalPathLabel": "Cesta ke složce",
     "documentLocalPathHint": "Cesta uvnitř kontejneru. Ponechte prázdné pro /documents.",
-    "sectionIntegrations": "Integrace a zálohy",
+    "sectionIntegrations": "Jednotné přihlášení",
     "errSchedule": "Neplatný cron plán (očekává se pět polí oddělených mezerami, např. 0 2 * * *).",
     "errKeep": "Počet zachovaných záloh musí být kladné číslo.",
     "webdavBackup": "Externí zálohy (WebDAV)",
@@ -285,5 +285,11 @@
     "fromHint": "Adresa „Od\", kterou uvidí příjemci. Mnoho poskytovatelů vyžaduje, aby odpovídala uživatelskému jménu.",
     "fromNameLabel": "Jméno odesílatele",
     "errIncomplete": "SMTP server a adresa odesílatele jsou povinné."
+  },
+  "storage": {
+    "title": "Úložiště a zálohy",
+    "subtitle": "Kde na serveru leží tvá data a kam se ukládají jejich kopie. Vše je volitelné - výchozí nastavení funguje.",
+    "sectionBackups": "Zálohy",
+    "sectionDocuments": "Úložiště dokumentů"
   }
 }

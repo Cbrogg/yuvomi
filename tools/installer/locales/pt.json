@@ -169,7 +169,7 @@
   "advanced": {
     "tag": "Avançado · opcional",
     "title": "Configurações avançadas",
-    "subtitle": "Armazenamento, backups, login único e integrações. A maior parte é opcional - mas confira a pasta de dados se você usa um NAS.",
+    "subtitle": "Login único, acesso à sua rede doméstica e alguns ajustes finos. Tudo opcional.",
     "proxyLabel": "Como o Yuvomi é exposto?",
     "proxyBehindHttps": "Atrás de um proxy reverso com HTTPS (Caddy, nginx, Traefik)",
     "proxyDirect": "Acesso direto por localhost / HTTP",
@@ -198,7 +198,7 @@
     "documentLocalEnable": "Armazenar novos documentos numa pasta local",
     "documentLocalPathLabel": "Caminho da pasta",
     "documentLocalPathHint": "Caminho dentro do contentor. Deixe vazio para usar /documents.",
-    "sectionIntegrations": "Integrações e backups",
+    "sectionIntegrations": "Login único",
     "errSchedule": "Agendamento cron inválido (esperados cinco campos separados por espaços, p. ex. 0 2 * * *).",
     "errKeep": "Os backups a manter têm de ser um número positivo.",
     "webdavBackup": "Backups externos (WebDAV)",
@@ -285,5 +285,11 @@
     "fromHint": "O endereço «De» que os destinatários verão. Muitos fornecedores exigem que corresponda ao nome de utilizador.",
     "fromNameLabel": "Nome do remetente",
     "errIncomplete": "O servidor SMTP e o endereço do remetente são obrigatórios."
+  },
+  "storage": {
+    "title": "Armazenamento e backups",
+    "subtitle": "Onde seus dados ficam no servidor e para onde vão as cópias deles. Tudo opcional - os padrões funcionam.",
+    "sectionBackups": "Backups",
+    "sectionDocuments": "Armazenamento de documentos"
   }
 }

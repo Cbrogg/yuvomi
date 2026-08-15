@@ -169,7 +169,7 @@
   "advanced": {
     "tag": "Speciális · opcionális",
     "title": "Speciális beállítások",
-    "subtitle": "Tárolás, biztonsági mentések, egyszeri bejelentkezés és integrációk. A legtöbb opcionális - NAS esetén viszont nézd meg az adatmappát.",
+    "subtitle": "Egyszeri bejelentkezés, hozzáférés az otthoni hálózathoz és néhány finombeállítás. Minden opcionális.",
     "proxyLabel": "Hogyan van kitéve a Yuvomi?",
     "proxyBehindHttps": "Reverse proxy mögött HTTPS-sel (Caddy, nginx, Traefik)",
     "proxyDirect": "Közvetlen hozzáférés localhost / HTTP-n keresztül",
@@ -198,7 +198,7 @@
     "documentLocalEnable": "Új dokumentumok mentése helyi mappába",
     "documentLocalPathLabel": "Mappa elérési útja",
     "documentLocalPathHint": "Elérési út a konténerben. Hagyja üresen a /documents használatához.",
-    "sectionIntegrations": "Integrációk és biztonsági mentések",
+    "sectionIntegrations": "Egyszeri bejelentkezés",
     "errSchedule": "Érvénytelen cron-ütemezés (öt, szóközzel elválasztott mező szükséges, pl. 0 2 * * *).",
     "errKeep": "A megőrzendő mentések számának pozitív számnak kell lennie.",
     "webdavBackup": "Külső biztonsági mentések (WebDAV)",
@@ -285,5 +285,11 @@
     "fromHint": "A „Feladó\" cím, amelyet a címzettek látnak. Sok szolgáltató megköveteli, hogy egyezzen a felhasználónévvel.",
     "fromNameLabel": "Feladó neve",
     "errIncomplete": "Az SMTP-kiszolgáló és a feladó címe kötelező."
+  },
+  "storage": {
+    "title": "Tárolás és mentések",
+    "subtitle": "Hol élnek az adataid a kiszolgálón, és hová kerülnek a másolataik. Minden opcionális - az alapértelmezések működnek.",
+    "sectionBackups": "Biztonsági mentések",
+    "sectionDocuments": "Dokumentumtárolás"
   }
 }

@@ -169,7 +169,7 @@
   "advanced": {
     "tag": "Gelişmiş · isteğe bağlı",
     "title": "Gelişmiş Ayarlar",
-    "subtitle": "Depolama, yedekler, çoklu oturum açma ve entegrasyonlar. Çoğu isteğe bağlı - ama NAS kullanıyorsan veri klasörüne bak.",
+    "subtitle": "Çoklu oturum açma, ev ağına erişim ve birkaç ince ayar. Hepsi isteğe bağlı.",
     "proxyLabel": "Yuvomi nasıl yayınlanıyor?",
     "proxyBehindHttps": "HTTPS'li bir ters proxy arkasında (Caddy, nginx, Traefik)",
     "proxyDirect": "localhost / HTTP üzerinden doğrudan erişim",
@@ -198,7 +198,7 @@
     "documentLocalEnable": "Yeni belgeleri yerel bir klasörde sakla",
     "documentLocalPathLabel": "Klasör yolu",
     "documentLocalPathHint": "Konteyner içindeki yol. /documents için boş bırakın.",
-    "sectionIntegrations": "Entegrasyonlar ve yedeklemeler",
+    "sectionIntegrations": "Çoklu oturum açma",
     "errSchedule": "Geçersiz cron zamanlaması (boşlukla ayrılmış beş alan beklenir, örn. 0 2 * * *).",
     "errKeep": "Saklanacak yedek sayısı pozitif bir sayı olmalıdır.",
     "webdavBackup": "Harici yedeklemeler (WebDAV)",
@@ -285,5 +285,11 @@
     "fromHint": "Alıcıların göreceği «Kimden» adresi. Birçok sağlayıcı bunun kullanıcı adıyla eşleşmesini gerektirir.",
     "fromNameLabel": "Gönderen adı",
     "errIncomplete": "SMTP sunucusu ve gönderen adresi gereklidir."
+  },
+  "storage": {
+    "title": "Depolama ve yedekler",
+    "subtitle": "Verilerinin sunucuda nerede durduğu ve kopyalarının nereye gittiği. Hepsi isteğe bağlı - varsayılanlar çalışır.",
+    "sectionBackups": "Yedekler",
+    "sectionDocuments": "Belge depolama"
   }
 }

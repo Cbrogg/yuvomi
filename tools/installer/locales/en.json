@@ -169,7 +169,7 @@
   "advanced": {
     "tag": "Advanced · optional",
     "title": "Advanced Settings",
-    "subtitle": "Storage, backups, single sign-on and integrations. Most of it is optional - but check the data folder if you run on a NAS.",
+    "subtitle": "Single sign-on, access to your home network, and a few fine adjustments. All optional.",
     "proxyLabel": "How is Yuvomi exposed?",
     "proxyBehindHttps": "Behind a reverse proxy with HTTPS (Caddy, nginx, Traefik)",
     "proxyDirect": "Direct access over localhost / HTTP",
@@ -198,7 +198,7 @@
     "documentLocalEnable": "Store new documents in a local folder",
     "documentLocalPathLabel": "Folder path",
     "documentLocalPathHint": "Path inside the container. Leave empty to use /documents.",
-    "sectionIntegrations": "Integrations & backups",
+    "sectionIntegrations": "Single sign-on",
     "errSchedule": "Invalid cron schedule (expected five space-separated fields, e.g. 0 2 * * *).",
     "errKeep": "Backups to keep must be a positive number.",
     "webdavBackup": "Off-site Backups (WebDAV)",
@@ -285,5 +285,11 @@
     "fromHint": "The \"from\" address recipients will see. Many providers require it to match your username.",
     "fromNameLabel": "Sender name",
     "errIncomplete": "SMTP server and sender address are required."
+  },
+  "storage": {
+    "title": "Storage & backups",
+    "subtitle": "Where your data lives on the server, and where copies of it go. All optional - the defaults work.",
+    "sectionBackups": "Backups",
+    "sectionDocuments": "Document storage"
   }
 }

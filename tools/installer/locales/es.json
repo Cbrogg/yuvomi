@@ -169,7 +169,7 @@
   "advanced": {
     "tag": "Avanzado · opcional",
     "title": "Ajustes avanzados",
-    "subtitle": "Almacenamiento, copias de seguridad, inicio de sesión único e integraciones. Casi todo es opcional, pero revisa la carpeta de datos si usas un NAS.",
+    "subtitle": "Inicio de sesión único, acceso a tu red doméstica y algunos ajustes finos. Todo opcional.",
     "proxyLabel": "¿Cómo se expone Yuvomi?",
     "proxyBehindHttps": "Detrás de un proxy inverso con HTTPS (Caddy, nginx, Traefik)",
     "proxyDirect": "Acceso directo por localhost / HTTP",
@@ -198,7 +198,7 @@
     "documentLocalEnable": "Guardar nuevos documentos en una carpeta local",
     "documentLocalPathLabel": "Ruta de la carpeta",
     "documentLocalPathHint": "Ruta dentro del contenedor. Déjalo vacío para usar /documents.",
-    "sectionIntegrations": "Integraciones y copias de seguridad",
+    "sectionIntegrations": "Inicio de sesión único",
     "errSchedule": "Programación cron no válida (se esperan cinco campos separados por espacios, p. ej. 0 2 * * *).",
     "errKeep": "Las copias a conservar deben ser un número positivo.",
     "webdavBackup": "Copias externas (WebDAV)",
@@ -285,5 +285,11 @@
     "fromHint": "La dirección «De» que verán los destinatarios. Muchos proveedores exigen que coincida con el usuario.",
     "fromNameLabel": "Nombre del remitente",
     "errIncomplete": "El servidor SMTP y la dirección del remitente son obligatorios."
+  },
+  "storage": {
+    "title": "Almacenamiento y copias",
+    "subtitle": "Dónde viven tus datos en el servidor y adónde van sus copias. Todo opcional: los valores por defecto funcionan.",
+    "sectionBackups": "Copias de seguridad",
+    "sectionDocuments": "Almacenamiento de documentos"
   }
 }

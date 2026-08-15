@@ -77,7 +77,7 @@
   "advanced": {
     "tag": "Erweitert · optional",
     "title": "Erweiterte Einstellungen",
-    "subtitle": "Speicher, Backups, Single Sign-On und Integrationen. Das meiste ist optional - schau dir auf einem NAS aber den Datenordner an.",
+    "subtitle": "Single Sign-On, Zugriff ins Heimnetz und ein paar Feineinstellungen. Alles optional.",
     "proxyLabel": "Wie wird Yuvomi bereitgestellt?",
     "proxyBehindHttps": "Hinter einem Reverse-Proxy mit HTTPS (Caddy, nginx, Traefik)",
     "proxyDirect": "Direkter Zugriff über localhost / HTTP",
@@ -106,7 +106,7 @@
     "documentLocalEnable": "Neue Dokumente in einem lokalen Ordner speichern",
     "documentLocalPathLabel": "Ordnerpfad",
     "documentLocalPathHint": "Pfad im Container. Leer lassen für /documents.",
-    "sectionIntegrations": "Integrationen & Backups",
+    "sectionIntegrations": "Single Sign-On",
     "errSchedule": "Ungültiger Cron-Zeitplan (fünf durch Leerzeichen getrennte Felder erwartet, z. B. 0 2 * * *).",
     "errKeep": "Aufzubewahrende Backups muss eine positive Zahl sein.",
     "webdavBackup": "Externe Backups (WebDAV)",
@@ -285,5 +285,11 @@
     "fromHint": "Die „Von\"-Adresse, die Empfänger sehen. Viele Anbieter verlangen, dass sie mit dem Benutzernamen übereinstimmt.",
     "fromNameLabel": "Absendername",
     "errIncomplete": "SMTP-Server und Absenderadresse sind erforderlich."
+  },
+  "storage": {
+    "title": "Speicher & Sicherungen",
+    "subtitle": "Wo deine Daten auf dem Server liegen und wohin ihre Kopien gehen. Alles optional - die Voreinstellungen funktionieren.",
+    "sectionBackups": "Sicherungen",
+    "sectionDocuments": "Dokumentspeicher"
   }
 }

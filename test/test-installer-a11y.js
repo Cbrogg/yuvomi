@@ -565,3 +565,70 @@ test('der Inline-Fallback stimmt Wert fuer Wert mit tokens.css ueberein', () => 
   assert.deepEqual(drift, [],
     `Fallback-Tokens weichen von tokens.css ab (der Fallback greift nur, wenn tokens.css fehlt - dort waere die Abweichung dann sichtbar): ${drift.join(' | ')}`);
 });
+
+/* Kein Schritt sammelt wieder alles ein.
+ *
+ * Der Erweitert-Schritt trug 18 Entscheidungspunkte auf einem Bildschirm, der
+ * zweitgroesste 12 (Critique 2026-08-15). Er ist entlang einer Frage geteilt
+ * worden - wo liegen Daten (Speicher) gegen womit verbindet sich Yuvomi
+ * (Erweitert).
+ *
+ * Gezaehlt werden ENTSCHEIDUNGSPUNKTE, nicht Eingabefelder: ein Akkordeon-Kopf
+ * ist eine eigene Frage ("brauche ich das?"), sein Inhalt zaehlt erst, wenn er
+ * offen ist. Die erste Fassung zaehlte nur sichtbare inputs und war gegen den
+ * Vorzustand gruen, weil die Felder ja in zugeklappten Akkordeons lagen - die
+ * Last steckte aber gerade in den Koepfen.
+ *
+ * Die zugeklappten Inhalte werden per KLAMMERZAEHLUNG ausgeschnitten, nicht per
+ * Regex: ein non-greedy Muster endete am ersten passenden Doppel-</div> und
+ * liess damit Felder aus der Mitte eines Akkordeons durchrutschen - der Guard
+ * meldete 6 Felder auf einem Schritt, der genau eines hat. */
+test('kein Wizard-Schritt sammelt wieder alle Entscheidungen auf einem Bildschirm', () => {
+  const steps = [...html.matchAll(/<div class="step" id="step-([a-z-]+)">/g)].map(m => m[1]);
+  assert.ok(steps.length >= 10, `nur ${steps.length} Schritte gefunden - der Scanner greift nicht`);
+
+  /** Bereiche aller toggle-body-Blocks (Start/Ende) per div-Klammerzaehlung. */
+  const hiddenRanges = (seg) => {
+    const out = [];
+    let at = 0;
+    while ((at = seg.indexOf('<div class="toggle-body"', at)) !== -1) {
+      let depth = 0, close = -1;
+      for (let k = at; k < seg.length; k++) {
+        if (seg.startsWith('<div', k)) depth++;
+        else if (seg.startsWith('</div>', k)) {
+          depth--;
+          if (depth === 0) { close = k; break; }
+        }
+      }
+      if (close === -1) break;
+      out.push([at, close]);
+      at = close;
+    }
+    return out;
+  };
+
+  const LIMIT = 10;
+  const oversized = [];
+
+  for (const name of steps) {
+    const from = html.indexOf(`<div class="step" id="step-${name}">`);
+    const nextStep = html.indexOf('<div class="step" id="step-', from + 10);
+    const seg = html.slice(from, nextStep === -1 ? html.indexOf('</main>') : nextStep);
+
+    const hidden = hiddenRanges(seg);
+    const isHidden = (i) => hidden.some(([a, b]) => i > a && i < b);
+
+    const heads = (seg.match(/data-toggle="/g) || []).length;
+    let fields = 0;
+    for (const m of seg.matchAll(/<(?:input|select|textarea)\b/g)) {
+      if (!isHidden(m.index)) fields++;
+    }
+
+    const points = heads + fields;
+    if (points > LIMIT) oversized.push(`step-${name}: ${points} (${heads} Akkordeons + ${fields} Felder)`);
+  }
+
+  assert.deepEqual(oversized, [],
+    `Diese Schritte stellen beim Betreten mehr als ${LIMIT} Entscheidungen auf einmal: ${oversized.join(', ')}. `
+    + 'Entweder hinter Akkordeons legen oder entlang einer Frage in zwei Schritte teilen.');
+});

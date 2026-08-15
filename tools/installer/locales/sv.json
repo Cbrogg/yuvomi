@@ -169,7 +169,7 @@
   "advanced": {
     "tag": "Avancerat · valfritt",
     "title": "Avancerade inställningar",
-    "subtitle": "Lagring, säkerhetskopior, enkel inloggning och integrationer. Det mesta är valfritt - men titta på datamappen om du kör på en NAS.",
+    "subtitle": "Enkel inloggning, åtkomst till ditt hemnätverk och några finjusteringar. Allt är valfritt.",
     "proxyLabel": "Hur exponeras Yuvomi?",
     "proxyBehindHttps": "Bakom en omvänd proxy med HTTPS (Caddy, nginx, Traefik)",
     "proxyDirect": "Direkt åtkomst via localhost / HTTP",
@@ -198,7 +198,7 @@
     "documentLocalEnable": "Spara nya dokument i en lokal mapp",
     "documentLocalPathLabel": "Mappsökväg",
     "documentLocalPathHint": "Sökväg i containern. Lämna tomt för /documents.",
-    "sectionIntegrations": "Integrationer och säkerhetskopior",
+    "sectionIntegrations": "Enkel inloggning",
     "errSchedule": "Ogiltigt cron-schema (fem mellanslagsseparerade fält förväntas, t.ex. 0 2 * * *).",
     "errKeep": "Antal säkerhetskopior att behålla måste vara ett positivt tal.",
     "webdavBackup": "Externa säkerhetskopior (WebDAV)",
@@ -285,5 +285,11 @@
     "fromHint": "Den \"från\"-adress som mottagarna ser. Många leverantörer kräver att den matchar användarnamnet.",
     "fromNameLabel": "Avsändarnamn",
     "errIncomplete": "SMTP-server och avsändaradress krävs."
+  },
+  "storage": {
+    "title": "Lagring och säkerhetskopior",
+    "subtitle": "Var dina data ligger på servern och vart kopiorna tar vägen. Allt är valfritt - standardvärdena fungerar.",
+    "sectionBackups": "Säkerhetskopior",
+    "sectionDocuments": "Dokumentlagring"
   }
 }

@@ -169,7 +169,7 @@
   "advanced": {
     "tag": "Zaawansowane · opcjonalne",
     "title": "Ustawienia zaawansowane",
-    "subtitle": "Pamięć, kopie zapasowe, logowanie jednokrotne i integracje. Większość jest opcjonalna - na NAS sprawdź jednak folder danych.",
+    "subtitle": "Logowanie jednokrotne, dostęp do sieci domowej i kilka drobnych ustawień. Wszystko opcjonalne.",
     "proxyLabel": "Jak udostępniany jest Yuvomi?",
     "proxyBehindHttps": "Za reverse proxy z HTTPS (Caddy, nginx, Traefik)",
     "proxyDirect": "Bezpośredni dostęp przez localhost / HTTP",
@@ -198,7 +198,7 @@
     "documentLocalEnable": "Zapisuj nowe dokumenty w folderze lokalnym",
     "documentLocalPathLabel": "Ścieżka folderu",
     "documentLocalPathHint": "Ścieżka w kontenerze. Pozostaw puste, aby użyć /documents.",
-    "sectionIntegrations": "Integracje i kopie zapasowe",
+    "sectionIntegrations": "Logowanie jednokrotne",
     "errSchedule": "Nieprawidłowy harmonogram cron (oczekiwano pięciu pól oddzielonych spacjami, np. 0 2 * * *).",
     "errKeep": "Liczba kopii do zachowania musi być liczbą dodatnią.",
     "webdavBackup": "Kopie zewnętrzne (WebDAV)",
@@ -285,5 +285,11 @@
     "fromHint": "Adres „Od\", który zobaczą odbiorcy. Wielu dostawców wymaga zgodności z nazwą użytkownika.",
     "fromNameLabel": "Nazwa nadawcy",
     "errIncomplete": "Serwer SMTP i adres nadawcy są wymagane."
+  },
+  "storage": {
+    "title": "Pamięć i kopie zapasowe",
+    "subtitle": "Gdzie na serwerze leżą twoje dane i dokąd trafiają ich kopie. Wszystko opcjonalne - domyślne ustawienia działają.",
+    "sectionBackups": "Kopie zapasowe",
+    "sectionDocuments": "Przechowywanie dokumentów"
   }
 }

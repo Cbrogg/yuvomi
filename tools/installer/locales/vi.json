@@ -169,7 +169,7 @@
   "advanced": {
     "tag": "Nâng cao · tùy chọn",
     "title": "Cài đặt nâng cao",
-    "subtitle": "Lưu trữ, sao lưu, đăng nhập một lần và tích hợp. Phần lớn là tùy chọn - nhưng hãy xem thư mục dữ liệu nếu bạn chạy trên NAS.",
+    "subtitle": "Đăng nhập một lần, truy cập mạng gia đình, và vài tinh chỉnh. Tất cả đều tùy chọn.",
     "proxyLabel": "Yuvomi được hiển thị như thế nào?",
     "proxyBehindHttps": "Sau reverse proxy với HTTPS (Caddy, nginx, Traefik)",
     "proxyDirect": "Truy cập trực tiếp qua localhost / HTTP",
@@ -198,7 +198,7 @@
     "documentLocalEnable": "Lưu tài liệu mới vào thư mục cục bộ",
     "documentLocalPathLabel": "Đường dẫn thư mục",
     "documentLocalPathHint": "Đường dẫn trong container. Để trống để dùng /documents.",
-    "sectionIntegrations": "Tích hợp và sao lưu",
+    "sectionIntegrations": "Đăng nhập một lần",
     "errSchedule": "Lịch cron không hợp lệ (cần năm trường phân tách bằng dấu cách, ví dụ 0 2 * * *).",
     "errKeep": "Số bản sao lưu cần giữ phải là một số dương.",
     "webdavBackup": "Sao lưu bên ngoài (WebDAV)",
@@ -285,5 +285,11 @@
     "fromHint": "Địa chỉ \"Từ\" mà người nhận sẽ thấy. Nhiều nhà cung cấp yêu cầu nó khớp với tên người dùng.",
     "fromNameLabel": "Tên người gửi",
     "errIncomplete": "Máy chủ SMTP và địa chỉ người gửi là bắt buộc."
+  },
+  "storage": {
+    "title": "Lưu trữ và sao lưu",
+    "subtitle": "Dữ liệu của bạn nằm ở đâu trên máy chủ, và bản sao của nó đi về đâu. Tất cả đều tùy chọn - giá trị mặc định vẫn chạy tốt.",
+    "sectionBackups": "Sao lưu",
+    "sectionDocuments": "Lưu trữ tài liệu"
   }
 }

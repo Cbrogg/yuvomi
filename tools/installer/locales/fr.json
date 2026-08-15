@@ -169,7 +169,7 @@
   "advanced": {
     "tag": "Avancé · facultatif",
     "title": "Paramètres avancés",
-    "subtitle": "Stockage, sauvegardes, authentification unique et intégrations. La plupart est facultatif, mais vérifie le dossier de données si tu utilises un NAS.",
+    "subtitle": "Authentification unique, accès à ton réseau domestique et quelques réglages fins. Tout est facultatif.",
     "proxyLabel": "Comment Yuvomi est-il exposé ?",
     "proxyBehindHttps": "Derrière un proxy inverse avec HTTPS (Caddy, nginx, Traefik)",
     "proxyDirect": "Accès direct via localhost / HTTP",
@@ -198,7 +198,7 @@
     "documentLocalEnable": "Stocker les nouveaux documents dans un dossier local",
     "documentLocalPathLabel": "Chemin du dossier",
     "documentLocalPathHint": "Chemin dans le conteneur. Laissez vide pour /documents.",
-    "sectionIntegrations": "Intégrations et sauvegardes",
+    "sectionIntegrations": "Authentification unique",
     "errSchedule": "Planification cron invalide (cinq champs séparés par des espaces attendus, p. ex. 0 2 * * *).",
     "errKeep": "Le nombre de sauvegardes à conserver doit être un nombre positif.",
     "webdavBackup": "Sauvegardes externes (WebDAV)",
@@ -285,5 +285,11 @@
     "fromHint": "L’adresse « De » que verront les destinataires. De nombreux fournisseurs exigent qu’elle corresponde à l’identifiant.",
     "fromNameLabel": "Nom de l’expéditeur",
     "errIncomplete": "Le serveur SMTP et l’adresse de l’expéditeur sont requis."
+  },
+  "storage": {
+    "title": "Stockage et sauvegardes",
+    "subtitle": "Où vivent tes données sur le serveur et où vont leurs copies. Tout est facultatif : les valeurs par défaut fonctionnent.",
+    "sectionBackups": "Sauvegardes",
+    "sectionDocuments": "Stockage de documents"
   }
 }

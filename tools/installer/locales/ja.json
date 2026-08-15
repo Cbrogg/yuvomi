@@ -169,7 +169,7 @@
   "advanced": {
     "tag": "詳細設定 · 任意",
     "title": "詳細設定",
-    "subtitle": "ストレージ、バックアップ、シングルサインオン、各種連携。ほとんどは任意ですが、NAS で動かすならデータフォルダーは確認してください。",
+    "subtitle": "シングルサインオン、自宅ネットワークへのアクセス、細かな調整。すべて任意です。",
     "proxyLabel": "Yuvomi はどのように公開されますか？",
     "proxyBehindHttps": "HTTPS 付きのリバースプロキシの背後（Caddy、nginx、Traefik）",
     "proxyDirect": "localhost / HTTP による直接アクセス",
@@ -198,7 +198,7 @@
     "documentLocalEnable": "新しいドキュメントをローカルフォルダーに保存する",
     "documentLocalPathLabel": "フォルダーのパス",
     "documentLocalPathHint": "コンテナ内のパス。空欄の場合は /documents を使用します。",
-    "sectionIntegrations": "連携とバックアップ",
+    "sectionIntegrations": "シングルサインオン",
     "errSchedule": "無効な cron スケジュールです（スペース区切りの5フィールドが必要、例：0 2 * * *）。",
     "errKeep": "保持するバックアップ数は正の数である必要があります。",
     "webdavBackup": "外部バックアップ（WebDAV）",
@@ -285,5 +285,11 @@
     "fromHint": "受信者に表示される「差出人」アドレスです。多くのプロバイダーではユーザー名と一致させる必要があります。",
     "fromNameLabel": "差出人名",
     "errIncomplete": "SMTP サーバーと差出人アドレスは必須です。"
+  },
+  "storage": {
+    "title": "保存先とバックアップ",
+    "subtitle": "サーバー上でデータがどこに置かれ、その控えがどこへ行くか。すべて任意で、初期値のままで動きます。",
+    "sectionBackups": "バックアップ",
+    "sectionDocuments": "ドキュメントの保存先"
   }
 }

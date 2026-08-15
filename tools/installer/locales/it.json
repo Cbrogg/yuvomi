@@ -169,7 +169,7 @@
   "advanced": {
     "tag": "Avanzate · opzionale",
     "title": "Impostazioni avanzate",
-    "subtitle": "Archiviazione, backup, single sign-on e integrazioni. Quasi tutto è facoltativo, ma controlla la cartella dati se usi un NAS.",
+    "subtitle": "Single sign-on, accesso alla tua rete domestica e qualche regolazione fine. Tutto facoltativo.",
     "proxyLabel": "Come viene esposto Yuvomi?",
     "proxyBehindHttps": "Dietro un reverse proxy con HTTPS (Caddy, nginx, Traefik)",
     "proxyDirect": "Accesso diretto tramite localhost / HTTP",
@@ -198,7 +198,7 @@
     "documentLocalEnable": "Salva i nuovi documenti in una cartella locale",
     "documentLocalPathLabel": "Percorso della cartella",
     "documentLocalPathHint": "Percorso all'interno del contenitore. Lascia vuoto per /documents.",
-    "sectionIntegrations": "Integrazioni e backup",
+    "sectionIntegrations": "Single sign-on",
     "errSchedule": "Pianificazione cron non valida (attesi cinque campi separati da spazi, es. 0 2 * * *).",
     "errKeep": "I backup da conservare devono essere un numero positivo.",
     "webdavBackup": "Backup esterni (WebDAV)",
@@ -285,5 +285,11 @@
     "fromHint": "L’indirizzo «Da» che vedranno i destinatari. Molti provider richiedono che coincida con il nome utente.",
     "fromNameLabel": "Nome mittente",
     "errIncomplete": "Il server SMTP e l’indirizzo mittente sono obbligatori."
+  },
+  "storage": {
+    "title": "Archiviazione e backup",
+    "subtitle": "Dove vivono i tuoi dati sul server e dove finiscono le loro copie. Tutto facoltativo: i valori predefiniti funzionano.",
+    "sectionBackups": "Backup",
+    "sectionDocuments": "Archiviazione documenti"
   }
 }

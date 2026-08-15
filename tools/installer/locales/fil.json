@@ -77,7 +77,7 @@
   "advanced": {
     "tag": "Advanced · opsyonal",
     "title": "Mga Advanced na Setting",
-    "subtitle": "Storage, backup, single sign-on at mga integration. Karamihan ay opsyonal - pero tingnan ang data folder kung NAS ang ginagamit mo.",
+    "subtitle": "Single sign-on, access sa home network mo, at ilang pinong setting. Opsyonal lahat.",
     "proxyLabel": "Paano naaabot ang Yuvomi?",
     "proxyBehindHttps": "Sa likod ng reverse proxy na may HTTPS (Caddy, nginx, Traefik)",
     "proxyDirect": "Direktang access sa localhost / HTTP",
@@ -106,7 +106,7 @@
     "documentLocalEnable": "Iimbak sa lokal na folder ang mga bagong dokumento",
     "documentLocalPathLabel": "Path ng folder",
     "documentLocalPathHint": "Path sa loob ng container. Iwanang blangko para gamitin ang /documents.",
-    "sectionIntegrations": "Mga integrasyon at backup",
+    "sectionIntegrations": "Single sign-on",
     "errSchedule": "Hindi wastong iskedyul ng cron (inaasahan ang limang field na pinaghihiwalay ng espasyo, hal. 0 2 * * *).",
     "errKeep": "Dapat positibong numero ang mga backup na itatago.",
     "webdavBackup": "Mga Backup sa Labas (WebDAV)",
@@ -285,5 +285,11 @@
     "fromHint": "Ang \"from\" address na makikita ng mga tatanggap. Maraming provider ang naghihinging tumugma ito sa iyong username.",
     "fromNameLabel": "Pangalan ng nagpadala",
     "errIncomplete": "Kailangan ang SMTP server at address ng nagpadala."
+  },
+  "storage": {
+    "title": "Storage at backup",
+    "subtitle": "Kung saan nakatira ang data mo sa server, at saan napupunta ang mga kopya nito. Opsyonal lahat - gumagana ang mga default.",
+    "sectionBackups": "Mga backup",
+    "sectionDocuments": "Storage ng dokumento"
   }
 }
