@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
+import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
@@ -202,6 +203,70 @@ test('docker-compose.yml leitet SESSION_SECURE aus der .env ab (Default false)',
     'compose nutzt nicht ${SESSION_SECURE:-false} (env_file darf nicht hart überstimmt werden)');
   assert.doesNotMatch(src, /^\s*-\s*SESSION_SECURE=false\s*$/m,
     'hartkodiertes SESSION_SECURE=false darf nicht mehr im environment-Block stehen');
+});
+
+// ── env_file bleibt in der Kurzform (Compose-Kompatibilität, Issue #765) ──────
+//
+// Die Langform (`- path: .env` / `required: false`) gibt es erst ab Compose
+// v2.24. Ältere Engines - Synology DSM, QNAP, Distro-Pakete - lehnen das
+// Manifest mit "services.<name>.env_file.0 must be a string" ab, also noch
+// bevor irgendetwas startet. Die Regel gilt für jedes Compose-Manifest im
+// Repo, nicht für eine Liste bekannter Dateien: eine neue Datei mit derselben
+// Falle wäre sonst unbewacht.
+
+function composeManifests(dir, out = []) {
+  const SKIP = new Set(['node_modules', '.git', '.claude', '.agents', 'coverage', 'data', 'backups']);
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (entry.name.startsWith('.') && entry.name !== '.github') continue;
+    if (SKIP.has(entry.name)) continue;
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) { composeManifests(full, out); continue; }
+    if (!/\.ya?ml$/.test(entry.name)) continue;
+    const src = readFileSync(full, 'utf8');
+    if (/^services:/m.test(src)) out.push({ path: relative(REPO_ROOT, full), src });
+  }
+  return out;
+}
+
+// Sammelt die Eintragszeilen jedes env_file-Blocks (ohne Kommentare/Leerzeilen).
+function envFileEntries(src) {
+  const lines = src.split('\n');
+  const entries = [];
+  for (let i = 0; i < lines.length; i++) {
+    const head = /^(\s*)env_file:\s*(\S.*)?$/.exec(lines[i]);
+    if (!head) continue;
+    const indent = head[1].length;
+    if (head[2]) { entries.push({ line: i + 1, text: head[2].trim() }); continue; }
+    for (let j = i + 1; j < lines.length; j++) {
+      const line = lines[j];
+      if (!line.trim() || /^\s*#/.test(line)) continue;
+      const lead = line.length - line.trimStart().length;
+      if (lead <= indent) break;
+      entries.push({ line: j + 1, text: line.trim() });
+    }
+  }
+  return entries;
+}
+
+test('kein Compose-Manifest nutzt die env_file-Langform (Compose <2.24 lehnt sie ab)', () => {
+  const manifests = composeManifests(REPO_ROOT);
+  assert.ok(manifests.length >= 2,
+    `zu wenige Compose-Manifeste gefunden (${manifests.length}) - die Suche greift nicht mehr`);
+
+  const withEnvFile = manifests.filter(m => envFileEntries(m.src).length > 0);
+  assert.ok(withEnvFile.length >= 1,
+    'kein einziger env_file-Block gefunden - der Guard prüft eine leere Liste');
+
+  for (const { path, src } of withEnvFile) {
+    for (const { line, text } of envFileEntries(src)) {
+      // Ein Eintrag muss ein reiner String sein: "- .env". Alles mit einem
+      // Schlüssel darin ("- path: .env", "required: false") ist die Langform.
+      // Geprüft wird der Schlüssel, nicht der Listenstrich: `env_file: .env`
+      // ohne Liste ist gültige Kurzform und darf nicht anschlagen.
+      assert.doesNotMatch(text, /^-?\s*\w[\w-]*:/,
+        `${path}:${line} nutzt die env_file-Langform (${text}) - siehe Issue #765`);
+    }
+  }
 });
 
 test('install.html setzt im Reverse-Proxy-Pfad SESSION_SECURE=true', () => {
