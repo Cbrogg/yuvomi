@@ -1,4 +1,4 @@
-<!-- version: 2.12.0 -->
+<!-- version: 2.13.0 -->
 <!--
   Die `releaseNotes` fuer den Umbrel-App-Store, von Hand fuer JEDEN Release
   geschrieben. `umbrel-publish.yml` nimmt den Text unter diesem Kommentar
@@ -29,14 +29,14 @@
     - Leerzeile zwischen den Absaetzen: der Store rendert ein gefaltetes
       YAML-Blockskalar, dort ist die Leerzeile der Absatzumbruch.
 -->
-A privacy fix in Tasks, plus subtasks you can correct.
+A new Inventory module, and feed subscriptions everyone can manage.
 
-A subtask marked private no longer appears to other members of the household. Under a shared parent task, private subtasks were listed with their title and counted towards the progress bar, even though the detail view had always kept them hidden. Related: a task nobody is allowed to see can no longer be edited or deleted by them either. Tasks visible to everyone, which is the default, are unaffected.
+Inventory keeps track of what your household owns: brand, model, serial number, where it is stored, what it cost, how long the warranty runs, and an optional photo. You can attach receipts and manuals from Documents, link a purchase or a repair from Budget, and it reminds you 30 days before a warranty expires. Custom dates per item - a service, an inspection, an insurance renewal - join the same reminders.
 
-Subtasks can now be renamed and removed. Correcting a typo previously meant ticking the subtask off and typing it out again; each row now has a rename and a delete button. Deleting asks first, because ticking off can be undone and deleting cannot.
+Inventory arrives switched off and each household turns it on. Not every family tracks belongings, and a module nobody wants should not take up a permanent place in the navigation. Switch it on under Settings, Navigation; if you leave it alone, nothing changes for you.
 
-Calendar feeds work again in stricter apps. An appointment brought in from a subscribed or CalDAV calendar was written into your Yuvomi feed with a malformed recurrence rule. Apple Calendar accepted it, Home Assistant and similar tools rejected the whole appointment. Subscriptions correct themselves the next time they refresh, with nothing to do on your side.
+Everyone can now manage their own calendar feed subscription. Subscribing your phone to the family calendar used to be reachable by an administrator only, although the link itself has always been personal - in a household of five, four people had no way to set one up or withdraw it. Both feeds now sit under Settings, Personal, Feed subscriptions. Existing links keep working and nobody has to subscribe again.
 
-There is nothing to do after this update, and your data and settings are unchanged.
+There is nothing else to do after this update, and your data and settings are unchanged.
 
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.12.0
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.13.0

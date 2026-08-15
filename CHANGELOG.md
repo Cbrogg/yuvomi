@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.13.0] - 2026-08-15
+
 ### Added
 
 - New Inventory module (Stage 1 of a larger design aimed at upstream contribution): track owned belongings with hierarchical storage locations, a manageable category list, purchase price, warranty length, condition and status. Deliberately no current-value/resale-estimate field - see discussion #696: a manually maintained number nobody updates is worse than none. Budget/document/subscription linking, derived deadlines and calendar integration follow in later stages.

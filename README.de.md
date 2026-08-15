@@ -59,7 +59,7 @@
 <div align="center">
   <table>
     <tr>
-      <td align="center"><b>17</b><br><sub>Module</sub></td>
+      <td align="center"><b>18</b><br><sub>Module</sub></td>
       <td align="center"><sub>·</sub></td>
       <td align="center"><b>24</b><br><sub>Sprachen</sub></td>
       <td align="center"><sub>·</sub></td>
