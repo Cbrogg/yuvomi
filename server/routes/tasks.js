@@ -251,6 +251,30 @@ function syncHousekeepingPaymentStatus(d, taskId, status) {
 }
 
 /** Alle Subtasks einer Aufgabe laden (eine Ebene tief). */
+/**
+ * Darf `me` diese Aufgabe ueberhaupt sehen? Genau die Bedingung, die jede
+ * Leseabfrage schon anlegt - hier fuer die schreibenden Routen, die sie nie
+ * hatten: PUT und DELETE luden die Zeile per id und arbeiteten darauf, ohne zu
+ * fragen. Wer eine fremde ID kannte, konnte eine private Aufgabe eines anderen
+ * aendern oder loeschen. Aufgefallen ueber die Unteraufgaben (#748-Review), wo
+ * die Liste fremde Titel mitlieferte und die IDs damit frei Haus kamen.
+ *
+ * Bewusst dieselbe Regel wie beim Lesen und keine engere: wer eine Aufgabe sieht,
+ * darf sie im Haushalt auch bearbeiten - das ist die bestehende Zusage des
+ * Moduls. Neu ist nur, dass Unsichtbares auch unantastbar ist.
+ */
+function mayAccessTask(task, me) {
+  if (!task) return false;
+  if (task.visibility === 'all') return true;
+  if (task.created_by === me) return true;
+  if (task.visibility === 'assignees') {
+    return !!db.get().prepare(
+      'SELECT 1 FROM task_assignments WHERE task_id = ? AND user_id = ?'
+    ).get(task.id, me);
+  }
+  return false;
+}
+
 function loadSubtasks(taskId, me) {
   // Eine Unteraufgabe trägt eine eigene Sichtbarkeit (POST nimmt das Feld
   // entgegen). Sie hing hier noch nie an der Regel: unter einer geteilten
@@ -596,10 +620,20 @@ router.get('/', (req, res) => {
         u.avatar_color AS assigned_color,
         u.avatar_data AS assigned_avatar,
         ${ASSIGNED_USERS_SQL},
-        (SELECT COUNT(*) FROM tasks s WHERE s.parent_task_id = t.id)                           AS subtask_total,
-        (SELECT COUNT(*) FROM tasks s WHERE s.parent_task_id = t.id AND s.status = 'done')     AS subtask_done,
+        -- Unteraufgaben tragen eine EIGENE Sichtbarkeit, und diese Liste hing nie
+        -- an ihr: unter einer geteilten Elternaufgabe lief eine private
+        -- Unteraufgabe samt Titel mit, und Zähler wie Fortschrittsbalken zählten
+        -- sie mit. loadSubtasks() (Detailansicht) filtert seit jeher richtig -
+        -- dieselbe Regel fehlte hier. Ohne den Filter zeigt die Zeile fremde
+        -- private Titel und bietet Aktionen darauf an.
+        (SELECT COUNT(*) FROM tasks s WHERE s.parent_task_id = t.id
+           AND ${visibilityWhere('s', 'task_assignments', 'task_id')})                         AS subtask_total,
+        (SELECT COUNT(*) FROM tasks s WHERE s.parent_task_id = t.id AND s.status = 'done'
+           AND ${visibilityWhere('s', 'task_assignments', 'task_id')})                         AS subtask_done,
         (SELECT json_group_array(json_object('id', s.id, 'title', s.title, 'status', s.status))
-           FROM (SELECT id, title, status FROM tasks WHERE parent_task_id = t.id ORDER BY created_at ASC) s) AS subtasks
+           FROM (SELECT s.id, s.title, s.status FROM tasks s WHERE s.parent_task_id = t.id
+                   AND ${visibilityWhere('s', 'task_assignments', 'task_id')}
+                 ORDER BY s.created_at ASC) s) AS subtasks
       FROM tasks t
       LEFT JOIN users u ON t.assigned_to = u.id
       WHERE t.parent_task_id IS NULL
@@ -681,6 +715,13 @@ router.get('/', (req, res) => {
     const me = req.authUserId || req.session.userId;
     sql += ` AND ${visibilityWhere('t', 'task_assignments', 'task_id')}`;
     params.push(me, me);
+
+    // Die drei Unteraufgaben-Subqueries oben tragen dieselbe Bedingung und damit
+    // je zwei Platzhalter. Sie stehen in der SELECT-Klausel, also VOR jedem
+    // anderen Platzhalter dieser Anfrage - deshalb unshift und nicht push. Die
+    // SELECT-Klausel bindet sonst nichts; wer dort einen Platzhalter ergänzt,
+    // muss diese Reihenfolge mitziehen.
+    params.unshift(me, me, me, me, me, me);
 
     sql += `
       ORDER BY
@@ -837,6 +878,10 @@ router.put('/:id', (req, res) => {
   try {
     const task = db.get().prepare('SELECT * FROM tasks WHERE id = ?').get(req.params.id);
     if (!task) return res.status(404).json({ error: 'Task not found.', code: 404 });
+    // 404 statt 403: ob es die Aufgabe gibt, ist selbst schon eine Auskunft.
+    if (!mayAccessTask(task, req.authUserId || req.session.userId)) {
+      return res.status(404).json({ error: 'Task not found.', code: 404 });
+    }
 
     const errors = validateTaskInput(req.body, false, task.recurrence_rule);
     if (errors.length) return res.status(400).json({ error: errors.join(' '), code: 400 });
@@ -1255,6 +1300,13 @@ router.delete('/:id', (req, res) => {
     // per CASCADE mitgelöschten Unteraufgaben gehören dazu - eine gespiegelte
     // Aufgabe kann lokal welche bekommen haben, und die stammen dann selbst aus
     // keiner Liste, aber der Fall kostet nichts.
+    const victim = db.get().prepare('SELECT * FROM tasks WHERE id = ?').get(req.params.id);
+    if (!victim) return res.status(404).json({ error: 'Task not found.', code: 404 });
+    // 404 statt 403: ob es die Aufgabe gibt, ist selbst schon eine Auskunft.
+    if (!mayAccessTask(victim, req.authUserId || req.session.userId)) {
+      return res.status(404).json({ error: 'Task not found.', code: 404 });
+    }
+
     const doomed = db.get().prepare(
       `SELECT * FROM tasks WHERE (id = ? OR parent_task_id = ?) AND external_source = 'caldav'`
     ).all(req.params.id, req.params.id);
