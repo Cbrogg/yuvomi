@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.12.0] - 2026-08-15
+
 ### Added
 
 - **A subtask can be renamed or removed, not just ticked off.** Correcting a typo used to mean marking the subtask done and typing the whole thing again, because the row offered a checkbox and nothing else (#748, reported by @rebeckaengstrom1). Each row now carries a rename and a delete action at the same size and in the same restrained tone as the actions on the task row above it, and deliberately not on hover only: a touch device has no hover, and fixing a typo is exactly where a phone is the likely device. Deleting asks first and says what it costs, since ticking off can be taken back and this cannot. Nothing changed on the server, which could always do both: a subtask is an ordinary task that happens to have a parent.
