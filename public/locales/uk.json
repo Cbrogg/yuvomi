@@ -2017,6 +2017,8 @@
         "pageNavigationDescription": "Налаштуйте порядок модулів і мобільну навігацію.",
         "pageFeeds": "Feed subscriptions",
         "pageFeedsDescription": "Subscribe to the household calendar and inventory deadlines in your own calendar app.",
+        "pageCalendarSubscriptions": "Calendar subscriptions",
+        "pageCalendarSubscriptionsDescription": "Subscribe to ICS/webcal calendars and import events once from a file or URL.",
         "pageKitchen": "Кухня",
         "pageKitchenDescription": "Виберіть, які прийоми їжі видно в плані харчування.",
         "pageModuleOptions": "Параметри модулів",

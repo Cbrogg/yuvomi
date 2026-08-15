@@ -2017,6 +2017,8 @@
         "pageNavigationDescription": "设置模块顺序和移动端导航。",
         "pageFeeds": "Feed subscriptions",
         "pageFeedsDescription": "Subscribe to the household calendar and inventory deadlines in your own calendar app.",
+        "pageCalendarSubscriptions": "Calendar subscriptions",
+        "pageCalendarSubscriptionsDescription": "Subscribe to ICS/webcal calendars and import events once from a file or URL.",
         "pageKitchen": "厨房",
         "pageKitchenDescription": "选择在膳食计划中显示哪些餐食。",
         "pageModuleOptions": "模块选项",

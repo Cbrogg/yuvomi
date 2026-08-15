@@ -2052,6 +2052,8 @@
         "pageNavigationDescription": "Itakda ang pagkakasunod-sunod ng modyul at ang nabigasyon sa mobile.",
         "pageFeeds": "Feed subscriptions",
         "pageFeedsDescription": "Subscribe to the household calendar and inventory deadlines in your own calendar app.",
+        "pageCalendarSubscriptions": "Calendar subscriptions",
+        "pageCalendarSubscriptionsDescription": "Subscribe to ICS/webcal calendars and import events once from a file or URL.",
         "pageKitchen": "Kusina",
         "pageKitchenDescription": "Piliin kung aling mga pagkain ang nakikita sa tagaplano ng pagkain.",
         "pageModuleOptions": "Mga opsyon ng modyul",
