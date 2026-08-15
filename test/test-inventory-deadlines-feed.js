@@ -3,7 +3,9 @@
  * Zweck: (1) Reine ICS-Erzeugung aus server/services/inventory-deadlines-ics.js -
  *        nur Gegenstände mit vollständigen Garantiedaten, ein VEVENT je
  *        Gegenstand, RFC-5545-Escaping über den bestehenden ics-export.js-Helfer.
- *        (2) Token-Lebenszyklus (get/regenerate/clear) gegen sync_config.
+ *        (2) Token-Lebenszyklus (get/regenerate/clear) gegen die per-Nutzer-
+ *        Spalte users.inventory_deadlines_feed_token (Migration 144), inklusive
+ *        der Isolation, für die es sie gibt: ein Rückzug trifft ein Abo.
  *        (3) Der Verwaltungs-Router (/inventory/deadlines-feed) end-to-end.
  * Ausführen: node --experimental-sqlite --test test/test-inventory-deadlines-feed.js
  */
@@ -106,42 +108,94 @@ test('buildInventoryDeadlinesFeed erzeugt für einen Gegenstand ohne Garantie nu
 });
 
 // --------------------------------------------------------
-// Token-Lebenszyklus (sync_config)
+// Migration 144: Token-Spalte auf users
+// --------------------------------------------------------
+
+function insertUser(username, role = 'member') {
+  return db.prepare(`
+    INSERT INTO users (username, display_name, password_hash, role)
+    VALUES (?, ?, 'x', ?)
+  `).run(username, username, role).lastInsertRowid;
+}
+
+const alice = insertUser('alice', 'admin');
+const bob = insertUser('bob', 'member');
+
+test('Migration 144 legt die Token-Spalte samt partiellem UNIQUE-Index an', () => {
+  const cols = db.prepare('PRAGMA table_info(users)').all().map((c) => c.name);
+  assert.ok(cols.includes('inventory_deadlines_feed_token'));
+
+  // Zwei Nutzer ohne Token muessen koexistieren duerfen - deshalb ist der
+  // UNIQUE-Index partiell (WHERE ... IS NOT NULL), genau wie bei Migration 61.
+  assert.equal(deadlinesIcs.getFeedToken(db, alice), null);
+  assert.equal(deadlinesIcs.getFeedToken(db, bob), null);
+
+  const token = deadlinesIcs.regenerateFeedToken(db, alice);
+  assert.throws(
+    () => db.prepare('UPDATE users SET inventory_deadlines_feed_token = ? WHERE id = ?').run(token, bob),
+    /UNIQUE/i,
+    'dasselbe Token darf nicht zweimal vergeben werden',
+  );
+  deadlinesIcs.clearFeedToken(db, alice);
+});
+
+// --------------------------------------------------------
+// Token-Lebenszyklus (pro Nutzer)
 // --------------------------------------------------------
 
 test('Token-Lebenszyklus: null ohne Token, regenerate erzeugt, clear entfernt', () => {
-  assert.equal(deadlinesIcs.getFeedToken(db), null);
+  assert.equal(deadlinesIcs.getFeedToken(db, alice), null);
 
-  const token = deadlinesIcs.regenerateFeedToken(db);
+  const token = deadlinesIcs.regenerateFeedToken(db, alice);
   assert.ok(token && token.length > 20);
-  assert.equal(deadlinesIcs.getFeedToken(db), token);
-  assert.ok(deadlinesIcs.isValidFeedToken(db, token));
-  assert.ok(!deadlinesIcs.isValidFeedToken(db, 'wrong-token'));
+  assert.equal(deadlinesIcs.getFeedToken(db, alice), token);
+  assert.equal(deadlinesIcs.findUserIdByFeedToken(db, token), alice);
+  assert.equal(deadlinesIcs.findUserIdByFeedToken(db, 'wrong-token'), null);
+  assert.equal(deadlinesIcs.findUserIdByFeedToken(db, null), null);
 
-  const token2 = deadlinesIcs.regenerateFeedToken(db);
+  const token2 = deadlinesIcs.regenerateFeedToken(db, alice);
   assert.notEqual(token2, token);
-  assert.ok(!deadlinesIcs.isValidFeedToken(db, token), 'alter Token muss ungültig werden');
+  assert.equal(deadlinesIcs.findUserIdByFeedToken(db, token), null, 'alter Token muss ungültig werden');
 
-  deadlinesIcs.clearFeedToken(db);
-  assert.equal(deadlinesIcs.getFeedToken(db), null);
-  assert.ok(!deadlinesIcs.isValidFeedToken(db, token2));
+  deadlinesIcs.clearFeedToken(db, alice);
+  assert.equal(deadlinesIcs.getFeedToken(db, alice), null);
+  assert.equal(deadlinesIcs.findUserIdByFeedToken(db, token2), null);
+});
+
+test('Ein Rückzug trifft genau ein Abo, nicht alle', () => {
+  // Der ganze Grund für das personengebundene Token (statt sync_config): Alice
+  // abschalten darf Bobs Abo nicht mitreißen - und umgekehrt.
+  const aliceToken = deadlinesIcs.regenerateFeedToken(db, alice);
+  const bobToken = deadlinesIcs.regenerateFeedToken(db, bob);
+  assert.notEqual(aliceToken, bobToken);
+
+  deadlinesIcs.clearFeedToken(db, alice);
+  assert.equal(deadlinesIcs.findUserIdByFeedToken(db, aliceToken), null);
+  assert.equal(deadlinesIcs.findUserIdByFeedToken(db, bobToken), bob, 'Bobs Abo muss weiterlaufen');
+
+  // Rotation ist genauso isoliert.
+  const bobToken2 = deadlinesIcs.regenerateFeedToken(db, bob);
+  assert.equal(deadlinesIcs.getFeedToken(db, alice), null);
+  assert.equal(deadlinesIcs.findUserIdByFeedToken(db, bobToken2), bob);
+
+  deadlinesIcs.clearFeedToken(db, bob);
 });
 
 // --------------------------------------------------------
 // Verwaltungs-Router
 // --------------------------------------------------------
 
-let actorRole = 'admin';
+let actorId = alice;
 const app = express();
 app.use(express.json());
-app.use((req, _res, next) => { req.authRole = actorRole; next(); });
+app.use((req, _res, next) => { req.authUserId = actorId; next(); });
 app.use('/inventory/deadlines-feed', deadlinesFeedRouter);
 const server = app.listen(0);
 const baseUrl = await new Promise((r) => server.on('listening', () => r(`http://127.0.0.1:${server.address().port}`)));
 test.after(() => server.close());
 
-async function call(method, path, { as = 'admin' } = {}) {
-  actorRole = as;
+async function call(method, path, { as = alice } = {}) {
+  actorId = as;
   const res = await fetch(`${baseUrl}${path}`, { method });
   let json = null;
   try { json = await res.json(); } catch { /* leer */ }
@@ -149,7 +203,7 @@ async function call(method, path, { as = 'admin' } = {}) {
 }
 
 test('GET /deadlines-feed liefert null ohne aktiven Feed', async () => {
-  deadlinesIcs.clearFeedToken(db);
+  deadlinesIcs.clearFeedToken(db, alice);
   const r = await call('GET', '/inventory/deadlines-feed');
   assert.equal(r.status, 200);
   assert.equal(r.body.data, null);
@@ -175,21 +229,27 @@ test('DELETE /deadlines-feed deaktiviert den Feed', async () => {
   assert.equal(get.body.data, null);
 });
 
-test('Nicht-Admins duerfen den Feed weder lesen noch rotieren noch abschalten', async () => {
-  // Das Token ist ein haushaltweites Artefakt, seine Oberflaeche ist admin-only
-  // registriert - die rohe API muss dieselbe Grenze ziehen.
-  await call('POST', '/inventory/deadlines-feed/regenerate');
-  for (const [method, path] of [
-    ['GET', '/inventory/deadlines-feed'],
-    ['POST', '/inventory/deadlines-feed/regenerate'],
-    ['DELETE', '/inventory/deadlines-feed'],
-  ]) {
-    const r = await call(method, path, { as: 'member' });
-    assert.equal(r.status, 403, `${method} ${path} sollte 403 liefern`);
-  }
-  // Der Feed muss die abgewiesenen Zugriffe unveraendert ueberstehen.
-  const get = await call('GET', '/inventory/deadlines-feed');
-  assert.ok(get.body.data.token);
+test('Jeder Angemeldete verwaltet sein eigenes Token - auch Nicht-Admins', async () => {
+  // Kein Admin-Gate mehr (wie server/routes/calendar/feed.js): das Token haengt
+  // an der eigenen users-Zeile. Bob ist member und muss trotzdem abonnieren
+  // koennen - sonst waere "pro Nutzer zurueckziehbar" nur die halbe Miete.
+  const bobRes = await call('POST', '/inventory/deadlines-feed/regenerate', { as: bob });
+  assert.equal(bobRes.status, 200);
+  assert.ok(bobRes.body.data.token);
+
+  const aliceRes = await call('POST', '/inventory/deadlines-feed/regenerate', { as: alice });
+  assert.notEqual(aliceRes.body.data.token, bobRes.body.data.token);
+
+  // Niemand sieht das Token des anderen.
+  const bobGet = await call('GET', '/inventory/deadlines-feed', { as: bob });
+  assert.equal(bobGet.body.data.token, bobRes.body.data.token);
+
+  // Und niemand schaltet das Abo des anderen ab.
+  await call('DELETE', '/inventory/deadlines-feed', { as: alice });
+  const bobStill = await call('GET', '/inventory/deadlines-feed', { as: bob });
+  assert.equal(bobStill.body.data.token, bobRes.body.data.token, 'Bobs Abo muss Alices DELETE ueberleben');
+
+  await call('DELETE', '/inventory/deadlines-feed', { as: bob });
 });
 
 test('Feed-Texte folgen der Haushaltssprache statt fest deutsch zu sein', () => {

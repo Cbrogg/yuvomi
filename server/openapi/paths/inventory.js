@@ -80,11 +80,11 @@ export function inventoryPaths() {
       }),
     },
     '/api/v1/inventory/deadlines-feed': {
-      get: op({ summary: 'Get inventory deadlines ICS feed status', tag: 'Inventory', admin: true }),
-      delete: op({ summary: 'Disable inventory deadlines ICS feed', tag: 'Inventory', stateChanging: true, admin: true }),
+      get: op({ summary: 'Get own inventory deadlines ICS feed status', tag: 'Inventory' }),
+      delete: op({ summary: 'Disable own inventory deadlines ICS feed', tag: 'Inventory', stateChanging: true }),
     },
     '/api/v1/inventory/deadlines-feed/regenerate': {
-      post: op({ summary: 'Regenerate inventory deadlines ICS feed token', tag: 'Inventory', stateChanging: true, admin: true }),
+      post: op({ summary: 'Regenerate own inventory deadlines ICS feed token', tag: 'Inventory', stateChanging: true }),
     },
   };
 }

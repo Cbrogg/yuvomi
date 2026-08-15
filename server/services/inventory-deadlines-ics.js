@@ -10,9 +10,13 @@
  *        selbst ist auf calendar_events zugeschnitten (Wiederholungen, TZID) und
  *        für einen einmaligen Termin unnötig.
  *
- * Token liegt in sync_config statt auf einer users-Zeile: Inventar-Gegenstände
- * haben keinen Eigentümer, der Feed ist ein einzelnes Haushalts-Artefakt (analog
- * zu budget_mode/currency).
+ * Token liegt pro Nutzer auf der users-Zeile, gleiches Muster wie
+ * calendar_feed_token (Migration 61, server/services/ics-export.js). Der
+ * *Inhalt* des Feeds ist weiterhin haushaltweit - Inventar-Gegenstände haben
+ * keinen Eigentümer und keine Sichtbarkeitsspalte -, das Token ist es nicht:
+ * ein haushaltweites Token lässt sich nicht einzeln zurückziehen, wer einmal
+ * abonniert hat, behielte Zugriff, bis er allen genommen wird. Pro Nutzer
+ * kostet ein Rückzug genau ein Token.
  */
 
 import { randomBytes } from 'node:crypto';
@@ -22,7 +26,6 @@ import { escapeICSText, foldLine } from './ics-export.js';
 import { warrantyEndDate } from './inventory-deadlines.js';
 
 const log = createLogger('InventoryDeadlinesICS');
-const TOKEN_KEY = 'inventory_deadlines_feed_token';
 
 function pad(n) { return String(n).padStart(2, '0'); }
 
@@ -120,28 +123,38 @@ function buildInventoryDeadlinesFeed(conn, now = new Date()) {
   return out.join('\r\n') + '\r\n';
 }
 
-function getFeedToken(conn) {
-  return conn.prepare('SELECT value FROM sync_config WHERE key = ?').get(TOKEN_KEY)?.value ?? null;
+function getFeedToken(conn, userId) {
+  const row = conn.prepare(
+    `SELECT inventory_deadlines_feed_token AS t FROM users WHERE id = ?`
+  ).get(userId);
+  return row?.t ?? null;
 }
 
-function regenerateFeedToken(conn) {
+function regenerateFeedToken(conn, userId) {
   const token = randomBytes(32).toString('base64url');
-  conn.prepare(`
-    INSERT INTO sync_config (key, value) VALUES (?, ?)
-    ON CONFLICT(key) DO UPDATE SET value = excluded.value
-  `).run(TOKEN_KEY, token);
+  conn.prepare(`UPDATE users SET inventory_deadlines_feed_token = ? WHERE id = ?`)
+    .run(token, userId);
   return token;
 }
 
-function clearFeedToken(conn) {
-  conn.prepare('DELETE FROM sync_config WHERE key = ?').run(TOKEN_KEY);
+function clearFeedToken(conn, userId) {
+  conn.prepare(`UPDATE users SET inventory_deadlines_feed_token = NULL WHERE id = ?`)
+    .run(userId);
 }
 
-function isValidFeedToken(conn, token) {
-  if (!token) return false;
-  return getFeedToken(conn) === token;
+// Löst das Token auf seinen Besitzer auf statt nur "gültig/ungültig" zu sagen -
+// so trifft ein Rückzug genau ein Abo. Der aufgelöste Nutzer geht bewusst
+// *nicht* in buildInventoryDeadlinesFeed: der Feed-Inhalt ist haushaltweit
+// (siehe Modulkopf), nur der Zugang ist personengebunden.
+function findUserIdByFeedToken(conn, token) {
+  if (!token) return null;
+  const row = conn.prepare(
+    `SELECT id FROM users WHERE inventory_deadlines_feed_token = ?`
+  ).get(token);
+  return row?.id ?? null;
 }
 
 export {
-  buildInventoryDeadlinesFeed, getFeedToken, regenerateFeedToken, clearFeedToken, isValidFeedToken,
+  buildInventoryDeadlinesFeed,
+  getFeedToken, regenerateFeedToken, clearFeedToken, findUserIdByFeedToken,
 };
