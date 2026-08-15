@@ -234,7 +234,7 @@
     /* Steps */
     .step { display: flex; gap: 18px; margin-bottom: 24px; }
     .step-num { flex-shrink: 0; width: 38px; height: 38px; border-radius: var(--r-md); display: grid; place-items: center;
-      font-weight: 700; font-size: 1.02rem; color: var(--accent); background: var(--accent-soft); font-variant-numeric: tabular-nums; }
+      font-weight: 700; font-size: 1.02rem; color: var(--accent-on-soft); background: var(--accent-soft); font-variant-numeric: tabular-nums; }
     .step-content { flex: 1; min-width: 0; padding-top: 4px; }
     .step-title { font-size: 1.08rem; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 6px; }
     .step-desc { font-size: 0.94rem; color: var(--text-2); line-height: 1.6; margin-bottom: 12px; }
@@ -679,7 +679,7 @@ curl -O https://raw.githubusercontent.com/ulsklyc/yuvomi/main/.env.example</div>
           <div class="step-num">3</div>
           <div class="step-content">
             <h3 class="step-title" data-t="step_px3_title">Follow the Docker steps</h3>
-            <p class="step-desc" data-t="step_px3_desc">From here nothing is Proxmox-specific: the <a href="#docker" data-tab="docker">Docker image</a> path applies unchanged. Afterwards Yuvomi answers on the container's IP at port 3000 - <code>pct exec 110 -- hostname -I</code> on the host prints it.</p>
+            <p class="step-desc" data-t="step_px3_desc">From here nothing is Proxmox-specific: the <a href="#tab-docker">Docker image</a> path applies unchanged. Afterwards Yuvomi answers on the container's IP at port 3000 - <code>pct exec 110 -- hostname -I</code> on the host prints it.</p>
           </div>
         </div>
       </div>
@@ -971,7 +971,7 @@ docker compose logs | grep "Server running"</div></div><p data-t="trouble_nginx_
         step_px1_title:'Create an unprivileged LXC', step_px1_desc:'Run this on the Proxmox host shell. <code>nesting=1</code> is what lets Docker run inside an unprivileged container; without it the daemon will not start. Adjust the ID, storage and bridge to match your setup.',
         step_px1_alt:'Prefer a full VM? That works too and needs no nesting flag: install Debian as usual and continue from step 2.',
         step_px2_title:'Install Docker inside the container', step_px2_desc:"From Debian's own repositories, so there is no install script piped into a shell.",
-        step_px3_title:'Follow the Docker steps', step_px3_desc:'From here nothing is Proxmox-specific: the <a href="#docker" data-tab="docker">Docker image</a> path applies unchanged. Afterwards Yuvomi answers on the container\'s IP at port 3000 - <code>pct exec 110 -- hostname -I</code> on the host prints it.',
+        step_px3_title:'Follow the Docker steps', step_px3_desc:'From here nothing is Proxmox-specific: the <a href="#tab-docker">Docker image</a> path applies unchanged. Afterwards Yuvomi answers on the container\'s IP at port 3000 - <code>pct exec 110 -- hostname -I</code> on the host prints it.',
         opt_docker_info:'No Git, no build step - just two files and a single command. Requires only Docker or Podman (Podman: use podman-compose.yml).',
         step_a1_title:'Download the configuration files', step_a1_desc:'Run these two commands. They download the Docker configuration and the template for your settings.',
         step_a2_title:'Create your configuration', step_a2_desc:'Copy the template, then open <code>.env</code> in a text editor. <code>SESSION_SECRET</code> is required; <code>DB_ENCRYPTION_KEY</code> is optional but permanent.',
@@ -1057,7 +1057,7 @@ docker compose logs | grep "Server running"</div></div><p data-t="trouble_nginx_
         step_px1_title:'Unprivilegierten LXC anlegen', step_px1_desc:'Das läuft auf der Proxmox-Host-Shell. <code>nesting=1</code> ist das, was Docker in einem unprivilegierten Container überhaupt starten lässt; ohne das Flag kommt der Daemon nicht hoch. ID, Storage und Bridge an euer Setup anpassen.',
         step_px1_alt:'Lieber eine ganze VM? Geht auch und braucht kein Nesting-Flag: Debian wie gewohnt installieren und ab Schritt 2 weitermachen.',
         step_px2_title:'Docker im Container installieren', step_px2_desc:'Aus Debians eigenen Paketquellen, damit kein Installationsskript in eine Shell gepipet wird.',
-        step_px3_title:'Den Docker-Schritten folgen', step_px3_desc:'Ab hier ist nichts mehr Proxmox-spezifisch: Der Weg über das <a href="#docker" data-tab="docker">Docker-Image</a> gilt unverändert. Danach antwortet Yuvomi auf der IP des Containers an Port 3000 - <code>pct exec 110 -- hostname -I</code> auf dem Host gibt sie aus.',
+        step_px3_title:'Den Docker-Schritten folgen', step_px3_desc:'Ab hier ist nichts mehr Proxmox-spezifisch: Der Weg über das <a href="#tab-docker">Docker-Image</a> gilt unverändert. Danach antwortet Yuvomi auf der IP des Containers an Port 3000 - <code>pct exec 110 -- hostname -I</code> auf dem Host gibt sie aus.',
         opt_docker_info:'Kein Git, kein Build-Schritt - nur zwei Dateien und ein einziger Befehl. Nur Docker oder Podman erforderlich (Podman: podman-compose.yml verwenden).',
         step_a1_title:'Konfigurationsdateien herunterladen', step_a1_desc:'Führt diese zwei Befehle aus. Sie laden die Docker-Konfiguration und die Vorlage für eure Einstellungen herunter.',
         step_a2_title:'Konfiguration erstellen', step_a2_desc:'Kopiert die Vorlage, öffnet dann <code>.env</code> in einem Texteditor. <code>SESSION_SECRET</code> ist Pflicht; <code>DB_ENCRYPTION_KEY</code> ist optional, aber endgültig.',

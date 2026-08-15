@@ -60,6 +60,14 @@
      element; 70% is `--tint-ink`, the readable step of the same hue.
      Measured: 7.06:1 light, 6.13:1 dark. */
   --accent-soft: color-mix(in srgb, var(--accent) 16%, var(--surface));
+  /* Ziffer auf --accent-soft. Im Light traegt das --accent selbst (4.65:1), im
+     Dark nicht: --accent #A78BFA auf dem dortigen --accent-soft #3b3445 misst
+     4.38:1 bei noetigen 4.5:1, und 16.8px/700 ist keine "large text"-Ausnahme
+     (dafuer braeuchte es >=18.66px bold). Drei unabhaengige Messverfahren kamen
+     auf denselben Wert (Critique 2026-08-16). Der Dark-Wert ist bewusst das
+     schon vorhandene --accent-hover (5.67:1) statt eines neuen Violettwerts.
+     ACHTUNG: beide Dark-Pfade pflegen, sonst driftet es wie seinerzeit --m-split. */
+  --accent-on-soft: var(--accent);
   --accent-deep: color-mix(in srgb, var(--accent) 70%, var(--text-1));
   --accent-glow: color-mix(in srgb, var(--accent) 16%, transparent);
 
@@ -154,6 +162,7 @@
 
   --accent: #A78BFA;         /* --color-accent (dark) */
   --accent-hover: #BCA6FC;   /* --color-accent-hover (dark) */
+  --accent-on-soft: #BCA6FC; /* siehe :root - beide Dark-Pfade */
   --accent-ink: #191816;     /* --color-ink-on-vivid (dark) */
   /* A touch stronger than light, as before - a glow has less to work with on a
      dark ground. --accent-soft and --accent-deep need no entry: they are
@@ -212,6 +221,7 @@
 
     --accent: #A78BFA;
     --accent-hover: #BCA6FC;
+    --accent-on-soft: #BCA6FC;
     --accent-ink: #191816;
     --accent-glow: color-mix(in srgb, var(--accent) 22%, transparent);
 
