@@ -1,4 +1,4 @@
-<!-- version: 2.11.0 -->
+<!-- version: 2.12.0 -->
 <!--
   Die `releaseNotes` fuer den Umbrel-App-Store, von Hand fuer JEDEN Release
   geschrieben. `umbrel-publish.yml` nimmt den Text unter diesem Kommentar
@@ -29,16 +29,14 @@
     - Leerzeile zwischen den Absaetzen: der Store rendert ein gefaltetes
       YAML-Blockskalar, dort ist die Leerzeile der Absatzumbruch.
 -->
-Reminders can now go to any web address you choose, and the cycle tab can be hidden per person.
+A privacy fix in Tasks, plus subtasks you can correct.
 
-Alongside Gotify and ntfy, a household can add a webhook channel that sends reminders to any HTTP address, secured with an optional token. If the receiving service expects its own message format, as Discord and Slack do, you can enter that format once and Yuvomi fills in the reminder title, text, link and tag. Leaving it empty keeps the standard message, which suits Home Assistant and n8n.
+A subtask marked private no longer appears to other members of the household. Under a shared parent task, private subtasks were listed with their title and counted towards the progress bar, even though the detail view had always kept them hidden. Related: a task nobody is allowed to see can no longer be edited or deleted by them either. Tasks visible to everyone, which is the default, are unaffected.
 
-In Health, the cycle tab used to be one switch for the whole household. Every member can now hide it just for themselves under Settings, Personal, Health, since not everyone in a household has a cycle. The household switch still decides whether it is available at all, and nothing changes unless someone turns it off.
+Subtasks can now be renamed and removed. Correcting a typo previously meant ticking the subtask off and typing it out again; each row now has a rename and a delete button. Deleting asks first, because ticking off can be undone and deleting cannot.
 
-Searching a connected Paperless document server for a plain number now finds documents that merely contain it. A number was previously treated only as an archive serial number, so a document called "1728 Pest receipt" could not be found by searching for 1728. Searching for asn:1728 still looks up that serial number exactly.
-
-The Belarusian ruble is available as a currency.
+Calendar feeds work again in stricter apps. An appointment brought in from a subscribed or CalDAV calendar was written into your Yuvomi feed with a malformed recurrence rule. Apple Calendar accepted it, Home Assistant and similar tools rejected the whole appointment. Subscriptions correct themselves the next time they refresh, with nothing to do on your side.
 
 There is nothing to do after this update, and your data and settings are unchanged.
 
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.11.0
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.12.0
