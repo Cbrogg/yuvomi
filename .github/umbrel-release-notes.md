@@ -1,4 +1,4 @@
-<!-- version: 2.13.0 -->
+<!-- version: 2.13.1 -->
 <!--
   Die `releaseNotes` fuer den Umbrel-App-Store, von Hand fuer JEDEN Release
   geschrieben. `umbrel-publish.yml` nimmt den Text unter diesem Kommentar
@@ -29,14 +29,12 @@
     - Leerzeile zwischen den Absaetzen: der Store rendert ein gefaltetes
       YAML-Blockskalar, dort ist die Leerzeile der Absatzumbruch.
 -->
-A new Inventory module, and feed subscriptions everyone can manage.
+Calendar subscriptions everyone can manage, and six settings pages that work offline again.
 
-Inventory keeps track of what your household owns: brand, model, serial number, where it is stored, what it cost, how long the warranty runs, and an optional photo. You can attach receipts and manuals from Documents, link a purchase or a repair from Budget, and it reminds you 30 days before a warranty expires. Custom dates per item - a service, an inspection, an insurance renewal - join the same reminders.
+Subscribing to an ICS or webcal calendar, and the one-time calendar import, used to be reachable by an administrator only. The server never required that - it has always let each person manage their own subscription and refused access to other people's - so in a household of five, four members were entitled to add a subscription and had no page to do it on. Both now sit under Settings, Personal, Calendar subscriptions. Connecting a CalDAV, Google or Apple account stays with the administrator, because those hold the household's credentials. Existing subscriptions keep syncing and nothing needs redoing.
 
-Inventory arrives switched off and each household turns it on. Not every family tracks belongings, and a module nobody wants should not take up a permanent place in the navigation. Switch it on under Settings, Navigation; if you leave it alone, nothing changes for you.
+Six settings pages open offline again. Email, Permissions, Health, Weather and the two newest pages were missing from the offline cache, so opening them without a connection failed while everything else worked.
 
-Everyone can now manage their own calendar feed subscription. Subscribing your phone to the family calendar used to be reachable by an administrator only, although the link itself has always been personal - in a household of five, four people had no way to set one up or withdraw it. Both feeds now sit under Settings, Personal, Feed subscriptions. Existing links keep working and nobody has to subscribe again.
+There is nothing to do after this update, and your data and settings are unchanged.
 
-There is nothing else to do after this update, and your data and settings are unchanged.
-
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.13.0
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.13.1
