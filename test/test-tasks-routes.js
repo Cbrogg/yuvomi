@@ -593,3 +593,56 @@ test('Eine bereits hochgeladene Aufgabe wechselt ihre Liste nicht', async () => 
   assert.equal(r.status, 200);
   assert.equal(db.prepare('SELECT target_caldav_list_url AS u FROM tasks WHERE id = ?').get(id).u, null);
 });
+
+test('eine private Unteraufgabe bleibt in der Liste fremd und unantastbar (#748-Review)', async () => {
+  const alice = { id: ALICE, role: 'admin' };
+  const bob   = { id: BOB, role: 'member' };
+
+  // Geteilte Elternaufgabe, darunter eine PRIVATE Unteraufgabe von Alice.
+  const parent = await call('POST', '/', {
+    as: alice, body: { title: 'Umzug', category: CATEGORY, visibility: 'all' },
+  });
+  assert.equal(parent.status, 201);
+  const sub = await call('POST', '/', {
+    as: alice,
+    body: { title: 'Geheim: Kaution zurueckfordern', category: CATEGORY, parent_task_id: parent.body.data.id, visibility: 'private' },
+  });
+  assert.equal(sub.status, 201);
+  const subId = sub.body.data.id;
+
+  // 1) Die LISTE gab den Titel samt ID heraus, obwohl die Detailansicht ihn
+  //    korrekt zurueckhielt - und zaehlte ihn im Fortschritt mit.
+  const list = await call('GET', '/', { as: bob });
+  assert.equal(list.status, 200);
+  const seen = list.body.data.find((t) => t.id === parent.body.data.id);
+  assert.ok(seen, 'die geteilte Elternaufgabe muss Bob erreichen');
+  assert.deepEqual(seen.subtasks, [], 'fremde private Unteraufgabe in der Liste');
+  assert.equal(seen.subtask_total, 0, 'fremde private Unteraufgabe im Zaehler');
+  assert.equal(seen.subtask_done, 0);
+
+  // 2) Und selbst mit der ID in der Hand kommt Bob nicht heran.
+  assert.equal((await call('PUT', `/${subId}`, { as: bob, body: { title: 'entfuehrt' } })).status, 404);
+  assert.equal((await call('DELETE', `/${subId}`, { as: bob })).status, 404);
+
+  // 3) Fuer Alice ist alles unveraendert da.
+  const own = await call('GET', '/', { as: alice });
+  const mine = own.body.data.find((t) => t.id === parent.body.data.id);
+  assert.equal(mine.subtask_total, 1);
+  assert.deepEqual(mine.subtasks.map((s) => s.id), [subId]);
+  assert.equal((await call('PUT', `/${subId}`, { as: alice, body: { title: 'Kaution zurueckfordern' } })).status, 200);
+});
+
+test('auch eine gewoehnliche fremde Aufgabe ist nicht loeschbar (#748-Review)', async () => {
+  // Der Befund haengt nicht an Unteraufgaben: PUT und DELETE luden die Zeile per
+  // id und arbeiteten darauf, ohne die Sichtbarkeit zu fragen.
+  const priv = await call('POST', '/', {
+    as: { id: ALICE, role: 'admin' },
+    body: { title: 'Privat', category: CATEGORY, visibility: 'private' },
+  });
+  const id = priv.body.data.id;
+  assert.equal((await call('PUT', `/${id}`, { as: { id: BOB, role: 'member' }, body: { title: 'x' } })).status, 404);
+  assert.equal((await call('DELETE', `/${id}`, { as: { id: BOB, role: 'member' } })).status, 404);
+  // Sie steht danach unveraendert da.
+  const still = await call('GET', `/${id}`, { as: { id: ALICE, role: 'admin' } });
+  assert.equal(still.body.data.title, 'Privat');
+});
