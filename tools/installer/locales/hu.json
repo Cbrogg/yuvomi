@@ -238,7 +238,9 @@
     "baseUrlHint": "Az a cím, amelyen a családod megnyitja a Yuvomit - nem a konténer gazdagépe és portja. Jelszó-visszaállítási és meghívó linkekhez használatos.",
     "syncIntervalLabel": "Naptár-szinkronizálás gyakorisága (perc)",
     "syncIntervalHint": "Milyen gyakran szinkronizálja a Yuvomi a naptárakat és névjegyeket. Növeld, ha a szolgáltatód korlátozza.",
-    "errSyncInterval": "Adj meg egy pozitív egész számot percben."
+    "errSyncInterval": "Adj meg egy pozitív egész számot percben.",
+    "sectionPrivateNetwork": "Hozzáférés az otthoni hálózatodhoz",
+    "privateNetworkHint": "A Yuvomi alapértelmezés szerint elutasítja a saját hálózatod címeire irányuló kapcsolatokat, ami megvédi attól, hogy a kiszolgálót belső szolgáltatások elérésére vegyék rá. Engedélyezd, amit valóban futtatsz otthon."
   },
   "welcome": {
     "title": "Üdvözöl a Yuvomi",
@@ -250,7 +252,8 @@
     "advancedTitle": "Speciális telepítés",
     "advancedDesc": "Teljes irányítás: reverse proxy, naptárszinkron, e-mail, egyszeri bejelentkezés és biztonsági mentések.",
     "advancedTime": "Minden lehetőség, lépésről lépésre",
-    "existingLocked": "Meglévő telepítést találtunk. Használd a haladó beállítást, hogy a jelenlegi beállításaid megmaradjanak."
+    "existingLocked": "Meglévő telepítést találtunk. Használd a haladó beállítást, hogy a jelenlegi beállításaid megmaradjanak.",
+    "containerRunning": "A Yuvomi éppen fut. A mentés újraindítja a konténert, így az rövid ideig nem lesz elérhető."
   },
   "simple": {
     "title": "Minden kész",

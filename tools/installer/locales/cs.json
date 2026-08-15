@@ -146,7 +146,9 @@
     "baseUrlHint": "Adresa, na které tvoje rodina otevírá Yuvomi - ne hostitel a port kontejneru. Používá se pro odkazy na obnovu hesla a pozvánky.",
     "syncIntervalLabel": "Interval synchronizace kalendáře (minuty)",
     "syncIntervalHint": "Jak často Yuvomi synchronizuje kalendáře a kontakty. Zvyš, pokud tě poskytovatel omezuje.",
-    "errSyncInterval": "Zadej celé kladné číslo minut."
+    "errSyncInterval": "Zadej celé kladné číslo minut.",
+    "sectionPrivateNetwork": "Přístup do domácí sítě",
+    "privateNetworkHint": "Yuvomi ve výchozím nastavení odmítá spojení na adresy ve tvé síti, což chrání před tím, aby byl server přiměn k oslovení interních služeb. Povol to, co doma opravdu provozuješ."
   },
   "review": {
     "title": "Přehled",
@@ -250,7 +252,8 @@
     "advancedTitle": "Pokročilé nastavení",
     "advancedDesc": "Plná kontrola: reverzní proxy, synchronizace kalendáře, e-mail, jednotné přihlášení a zálohy.",
     "advancedTime": "Každá volba, krok za krokem",
-    "existingLocked": "Byla nalezena existující instalace. Použij pokročilé nastavení, aby se zachovalo tvé současné nastavení."
+    "existingLocked": "Byla nalezena existující instalace. Použij pokročilé nastavení, aby se zachovalo tvé současné nastavení.",
+    "containerRunning": "Yuvomi právě běží. Uložení restartuje kontejner, takže bude na chvíli nedostupný."
   },
   "simple": {
     "title": "Připraveno",

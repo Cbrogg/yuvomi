@@ -238,7 +238,9 @@
     "baseUrlHint": "Địa chỉ mà gia đình bạn mở Yuvomi - không phải host và cổng của container. Dùng cho liên kết đặt lại mật khẩu và lời mời.",
     "syncIntervalLabel": "Khoảng thời gian đồng bộ lịch (phút)",
     "syncIntervalHint": "Yuvomi đồng bộ lịch và danh bạ bao lâu một lần. Tăng lên nếu nhà cung cấp giới hạn tần suất.",
-    "errSyncInterval": "Hãy nhập một số nguyên dương tính bằng phút."
+    "errSyncInterval": "Hãy nhập một số nguyên dương tính bằng phút.",
+    "sectionPrivateNetwork": "Truy cập mạng gia đình",
+    "privateNetworkHint": "Theo mặc định, Yuvomi từ chối kết nối tới các địa chỉ trong mạng của bạn, giúp tránh việc máy chủ bị lừa truy cập dịch vụ nội bộ. Hãy bật những gì bạn thực sự chạy tại nhà."
   },
   "welcome": {
     "title": "Chào mừng đến với Yuvomi",
@@ -250,7 +252,8 @@
     "advancedTitle": "Thiết lập nâng cao",
     "advancedDesc": "Toàn quyền kiểm soát: reverse proxy, đồng bộ lịch, email, đăng nhập một lần và sao lưu.",
     "advancedTime": "Mọi tùy chọn, từng bước",
-    "existingLocked": "Đã phát hiện một bản cài đặt hiện có. Hãy dùng thiết lập nâng cao để giữ nguyên các cài đặt hiện tại của bạn."
+    "existingLocked": "Đã phát hiện một bản cài đặt hiện có. Hãy dùng thiết lập nâng cao để giữ nguyên các cài đặt hiện tại của bạn.",
+    "containerRunning": "Yuvomi đang chạy. Việc lưu sẽ khởi động lại container, nên nó sẽ tạm thời không khả dụng."
   },
   "simple": {
     "title": "Sẵn sàng",

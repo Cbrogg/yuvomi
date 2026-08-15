@@ -238,7 +238,9 @@
     "baseUrlHint": "家人打开 Yuvomi 时使用的地址，而不是容器的主机和端口。用于密码重置和邀请链接。",
     "syncIntervalLabel": "日历同步间隔（分钟）",
     "syncIntervalHint": "Yuvomi 同步日历和联系人的频率。如果服务商限制请求频率，请调高该值。",
-    "errSyncInterval": "请输入以分钟为单位的正整数。"
+    "errSyncInterval": "请输入以分钟为单位的正整数。",
+    "sectionPrivateNetwork": "访问你的家庭网络",
+    "privateNetworkHint": "Yuvomi 默认拒绝连接到你自己网络上的地址，这可以防止服务器被诱导访问内部服务。请只启用你在家中确实运行的服务。"
   },
   "welcome": {
     "title": "欢迎使用 Yuvomi",
@@ -250,7 +252,8 @@
     "advancedTitle": "高级设置",
     "advancedDesc": "完全掌控：反向代理、日历同步、电子邮件、单点登录和备份。",
     "advancedTime": "每个选项，逐步进行",
-    "existingLocked": "检测到已有安装。请使用高级设置，以保留你当前的配置。"
+    "existingLocked": "检测到已有安装。请使用高级设置，以保留你当前的配置。",
+    "containerRunning": "Yuvomi 正在运行。保存会重启容器，因此它会短暂无法访问。"
   },
   "simple": {
     "title": "一切就绪",

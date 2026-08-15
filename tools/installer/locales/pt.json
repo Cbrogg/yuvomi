@@ -238,7 +238,9 @@
     "baseUrlHint": "O endereço em que sua família abre o Yuvomi - não o host e a porta do contêiner. Usado para links de redefinição de senha e convites.",
     "syncIntervalLabel": "Intervalo de sincronização do calendário (minutos)",
     "syncIntervalHint": "Com que frequência o Yuvomi sincroniza calendários e contatos. Aumente se o seu provedor limitar a taxa.",
-    "errSyncInterval": "Informe um número inteiro positivo de minutos."
+    "errSyncInterval": "Informe um número inteiro positivo de minutos.",
+    "sectionPrivateNetwork": "Acesso à sua rede doméstica",
+    "privateNetworkHint": "Por padrão, o Yuvomi recusa conexões para endereços na sua própria rede, o que protege contra um servidor ser induzido a alcançar serviços internos. Ative o que você realmente executa em casa."
   },
   "welcome": {
     "title": "Boas-vindas ao Yuvomi",
@@ -250,7 +252,8 @@
     "advancedTitle": "Configuração avançada",
     "advancedDesc": "Controlo total: proxy inverso, sincronização de calendário, e-mail, início de sessão único e backups.",
     "advancedTime": "Todas as opções, passo a passo",
-    "existingLocked": "Foi detectada uma instalação existente. Use a configuração avançada para manter suas configurações atuais."
+    "existingLocked": "Foi detectada uma instalação existente. Use a configuração avançada para manter suas configurações atuais.",
+    "containerRunning": "O Yuvomi está em execução. Salvar reiniciará o contêiner, que ficará brevemente indisponível."
   },
   "simple": {
     "title": "Tudo pronto",

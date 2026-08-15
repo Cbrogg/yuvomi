@@ -146,7 +146,9 @@
     "baseUrlHint": "Het adres waarop je gezin Yuvomi opent - niet de host en poort van de container. Wordt gebruikt voor links om wachtwoorden te herstellen en voor uitnodigingen.",
     "syncIntervalLabel": "Synchronisatie-interval agenda (minuten)",
     "syncIntervalHint": "Hoe vaak Yuvomi agenda's en contacten synchroniseert. Verhoog dit als je provider je afremt.",
-    "errSyncInterval": "Voer een positief geheel aantal minuten in."
+    "errSyncInterval": "Voer een positief geheel aantal minuten in.",
+    "sectionPrivateNetwork": "Toegang tot je thuisnetwerk",
+    "privateNetworkHint": "Yuvomi weigert standaard verbindingen naar adressen in je eigen netwerk, wat beschermt tegen een server die verleid wordt interne diensten te benaderen. Sta toe wat je thuis echt draait."
   },
   "review": {
     "title": "Controleren",
@@ -250,7 +252,8 @@
     "advancedTitle": "Geavanceerde installatie",
     "advancedDesc": "Volledige controle: reverse proxy, agenda-synchronisatie, e-mail, single sign-on en back-ups.",
     "advancedTime": "Elke optie, stap voor stap",
-    "existingLocked": "Er is een bestaande installatie gevonden. Gebruik de geavanceerde installatie zodat je huidige instellingen behouden blijven."
+    "existingLocked": "Er is een bestaande installatie gevonden. Gebruik de geavanceerde installatie zodat je huidige instellingen behouden blijven.",
+    "containerRunning": "Yuvomi draait op dit moment. Bij opslaan wordt de container herstart en is hij even niet bereikbaar."
   },
   "simple": {
     "title": "Klaar voor gebruik",

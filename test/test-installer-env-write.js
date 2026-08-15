@@ -931,3 +931,37 @@ test('kein ENABLED-Schalter schreibt ein hartes false', () => {
   assert.deepEqual(offenders, [],
     `Diese Schalter schreiben ein hartes 'false' und ueberschreiben damit bestehende Werte: ${offenders.join(' | ')}`);
 });
+
+test('jedes Feld des Preflights wird im Wizard auch gelesen', () => {
+  // containerRunning wurde bei JEDEM Preflight per docker-inspect-Spawn ermittelt,
+  // von einem Test als Boolean zugesichert und in tools/installer/README.md als
+  // Funktion angekuendigt - und von keiner Zeile in install.html gelesen
+  // (Critique 2026-08-15). Ein Guard, der einen Wert zusichert, den niemand
+  // konsumiert, faerbt einen toten Pfad gruen.
+  //
+  // Die erste Fassung dieser Pruefung war selbst blind: sie suchte die Feldnamen
+  // zeilenweise, die Antwort ist aber ein EINZEILIGES Objektliteral - die Liste
+  // blieb leer und die Assertion darueber gruen. Deshalb steht die Mindestzahl
+  // hier als eigene Zusicherung: ein Guard, der nichts gefunden hat, darf nicht
+  // urteilen.
+  const server = readFileSync(new URL('../tools/installer/install-server.js', import.meta.url), 'utf8');
+  const html = readFileSync(new URL('../tools/installer/install.html', import.meta.url), 'utf8');
+
+  const seg = server.slice(server.indexOf('/api/preflight'));
+  const answer = seg.match(/json\(res,\s*200,\s*\{([^}]*)\}\)/);
+  assert.ok(answer, 'Die Preflight-Antwort wurde nicht gefunden');
+
+  const fields = answer[1]
+    .split(',')
+    .map(part => part.split(':')[0].trim())
+    .filter(Boolean);
+
+  assert.ok(fields.length >= 3,
+    `Nur ${fields.length} Preflight-Felder erkannt (${fields.join(', ')}) - der Scanner greift nicht mehr, `
+    + 'und eine Zusicherung ueber eine fast leere Liste ist keine');
+
+  const unused = fields.filter(f => !html.includes(f));
+  assert.deepEqual(unused, [],
+    `Der Preflight liefert Felder, die der Wizard nie liest: ${unused.join(', ')}. `
+    + 'Entweder auswerten oder Feld, Spawn, Zusicherung und README-Satz gemeinsam entfernen.');
+});

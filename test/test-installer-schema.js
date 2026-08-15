@@ -88,8 +88,16 @@ const INTENTIONALLY_NOT_IN_INSTALLER = {
   NODE_ENV: 'Vom Image gesetzt (production).',
   PORT: 'Container-interner Port, überall fest 3000. Der Host-Port ist OIKOS_HTTP_PORT.',
   DB_PATH: 'Vom Descriptor auf /data/yuvomi.db gesetzt.',
-  BACKUP_DIR: 'Vom Image auf /backups gesetzt; hat wegen der Doppelrolle Host-Pfad gegen Container-Env einen eigenen Guard (#579).',
-  MODULES_DIR: 'Compose-Host-Pfad für Dritt-Modul-Drop-ins (MODULES.md). Der Default ./modules ist für jede vom Wizard erzeugte Installation richtig; wer Module nutzt, ändert bewusst die Compose-Ebene.',
+  BACKUP_DIR:
+    'Die App liest diesen Namen selbst (backup-scheduler.js) und meint damit das Ziel IM '
+    + 'Container. Ein Host-Pfad in der .env wird dort zu /app/backups, ausserhalb des Mounts - '
+    + 'das war #579. Anders als DATA_DIR, das die App nie liest und deshalb im Wizard stehen '
+    + 'darf. Der Host-Ordner der Sicherungen wird ueber den Mount gesetzt, nicht hierueber.',
+  MODULES_DIR:
+    'Dieselbe Regel wie bei BACKUP_DIR: die App liest den Namen selbst (services/modules.js) '
+    + 'und meint das Verzeichnis IM Container. Hier ist es sogar schaerfer, weil kein Descriptor '
+    + 'die Variable unter environment pinnt - ein Host-Pfad aus der .env erreicht den Container '
+    + 'also ungebremst. Wer Module ablegt, setzt den Mount in der Compose-Datei.',
   OIKOS_HTTP_BIND: 'Bindungsadresse für rootless Podman hinter Proxy. Ein falscher Wert macht die App unerreichbar, und der Default ist für jede vom Wizard erzeugte Installation richtig.',
 
   // Werden zur Laufzeit erzeugt und in der Datenbank abgelegt.

@@ -564,6 +564,15 @@
         <div class="info-banner" id="welcome-existing" style="display:none" role="note" data-i18n="welcome.existingLocked">
           An existing installation was detected. Continue with the advanced setup so your current settings are kept.
         </div>
+        <!-- Der Preflight ermittelt per docker inspect, ob der Container gerade
+             LAEUFT - das ist ein anderer Fall als eine blosse .env: hier wird
+             gleich eine benutzte Installation neu gestartet, mit kurzer
+             Ausfallzeit fuer den Haushalt. Der Wert wurde bisher berechnet, per
+             Test als Boolean zugesichert und in der README angekuendigt, aber von
+             keiner Zeile gelesen. -->
+        <div class="info-banner" id="welcome-running" style="display:none" role="note" data-i18n="welcome.containerRunning">
+          Yuvomi is currently running. Saving will restart the container, so it will be briefly unavailable.
+        </div>
         <div class="mode-grid">
           <button type="button" class="mode-card is-primary" id="mode-simple">
             <div class="mode-card__top">
@@ -1098,11 +1107,7 @@
               <input type="text" id="adv-document-webdav-path" placeholder="yuvomi-documents">
               <div class="hint" data-i18n="advanced.documentWebdavPathHint">Remote folder for document files. Leave empty to use yuvomi-documents.</div>
             </div>
-            <div class="field">
-              <label><input type="checkbox" id="adv-document-webdav-private"> <span data-i18n="advanced.documentWebdavPrivateNetwork">Allow a WebDAV target on your home network</span></label>
-              <div class="hint" data-i18n="advanced.documentWebdavPrivateNetworkHint">Needed for a Nextcloud on your own network. Lifts the SSRF protection for this target.</div>
-            </div>
-          </div>
+                      </div>
         </div>
 
         <div class="toggle-card">
@@ -1140,6 +1145,24 @@
           </div>
         </div>
 
+        <!-- Die drei Freigaben stehen zusammen, weil sie DIESELBE Frage beantworten:
+             darf Yuvomi Ziele im eigenen Netz erreichen? Sie hingen vorher an drei
+             Orten - zwei lose unter "Weitere Optionen", eine im WebDAV-Akkordeon -,
+             weil sie technisch an verschiedenen Feldern haengen. Die Pruefseite fasst
+             sie laengst zu einer Zeile zusammen und begruendet das dort auch; was sie
+             als eine Auskunft zeigt, wird hier als eine Frage gestellt. -->
+        <div class="group-label" data-i18n="advanced.sectionPrivateNetwork">Access to your home network</div>
+        <p class="hint" style="margin-bottom:12px" data-i18n="advanced.privateNetworkHint">Yuvomi refuses connections to addresses on your own network by default, which protects against a server being tricked into reaching internal services. Enable what you actually run at home.</p>
+        <div class="field">
+          <label><input type="checkbox" id="adv-ics-private"> <span data-i18n="advanced.icsPrivateNetwork">Allow calendar subscriptions from your home network</span></label>
+        </div>
+        <div class="field">
+          <label><input type="checkbox" id="adv-recipe-provider-private"> <span data-i18n="advanced.recipeProviderPrivateNetwork">Allow recipe provider mirrors on your home network</span></label>
+        </div>
+        <div class="field">
+          <label><input type="checkbox" id="adv-document-webdav-private"> <span data-i18n="advanced.documentWebdavPrivateNetwork">Allow a WebDAV target on your home network</span></label>
+        </div>
+
         <div class="group-label" data-i18n="advanced.sectionMore">More options</div>
         <div class="field">
           <label for="adv-data-dir" data-i18n="advanced.dataDirLabel">Host data folder</label>
@@ -1153,14 +1176,6 @@
           <label for="adv-sync-interval" data-i18n="advanced.syncIntervalLabel">Calendar sync interval (minutes)</label>
           <input type="number" id="adv-sync-interval" min="5" max="1440" step="5" placeholder="15">
           <div class="hint" data-i18n="advanced.syncIntervalHint">How often Yuvomi syncs calendars and contacts. Raise it if your provider rate-limits you.</div>
-        </div>
-        <div class="field">
-          <label><input type="checkbox" id="adv-ics-private"> <span data-i18n="advanced.icsPrivateNetwork">Allow calendar subscriptions from your home network</span></label>
-          <div class="hint" data-i18n="advanced.icsPrivateNetworkHint">Needed for ICS feeds from devices on your own network. Lifts the SSRF protection for calendar subscriptions.</div>
-        </div>
-        <div class="field">
-          <label><input type="checkbox" id="adv-recipe-provider-private"> <span data-i18n="advanced.recipeProviderPrivateNetwork">Allow recipe provider mirrors on your home network</span></label>
-          <div class="hint" data-i18n="advanced.recipeProviderPrivateNetworkHint">Needed for a Mealie or Tandoor instance on your own network. Lifts the SSRF protection for recipe provider mirrors.</div>
         </div>
         <div class="field">
           <label for="adv-fixer" data-i18n="advanced.fixerLabel">Fixer API key (live currency rates)</label>
@@ -1741,6 +1756,10 @@ const preflightDone = (async () => {
     const d = await r.json();
     // Beide Pfade warnen, nicht nur der erweiterte: der Einfach-Pfad läuft an
     // step-config vorbei und zeigte die Warnung deshalb nie an.
+    // Unabhaengig von envExists: ein laufender Container ist die schaerfere
+    // Auskunft, denn der Speichern-Schritt startet ihn neu.
+    if (d.containerRunning) $('welcome-running').style.display = 'block';
+
     if (d.envExists) {
       $('cfg-existing').style.display = 'block';
       $('simple-existing').style.display = 'block';

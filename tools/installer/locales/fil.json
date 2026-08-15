@@ -146,7 +146,9 @@
     "baseUrlHint": "Ang address na binubuksan ng pamilya mo para sa Yuvomi - hindi ang host at port ng container. Ginagamit para sa mga link ng pag-reset ng password at imbitasyon.",
     "syncIntervalLabel": "Agwat ng pag-sync ng kalendaryo (minuto)",
     "syncIntervalHint": "Gaano kadalas nagsi-sync ang Yuvomi ng mga kalendaryo at contact. Taasan kung nililimitahan ka ng provider mo.",
-    "errSyncInterval": "Maglagay ng positibong buong bilang ng minuto."
+    "errSyncInterval": "Maglagay ng positibong buong bilang ng minuto.",
+    "sectionPrivateNetwork": "Access sa home network mo",
+    "privateNetworkHint": "Bilang default ay tinatanggihan ng Yuvomi ang koneksyon sa mga address sa sarili mong network, na nagpoprotekta laban sa panlilinlang sa server para maabot ang mga internal na serbisyo. I-enable ang talagang pinapatakbo mo sa bahay."
   },
   "review": {
     "title": "Suriin",
@@ -250,7 +252,8 @@
     "advancedTitle": "Advanced na setup",
     "advancedDesc": "Buong kontrol: reverse proxy, pag-sync ng kalendaryo, email, single sign-on at mga backup.",
     "advancedTime": "Bawat opsyon, hakbang-hakbang",
-    "existingLocked": "May natukoy na kasalukuyang installation. Gamitin ang advanced na setup para manatili ang kasalukuyan mong mga setting."
+    "existingLocked": "May natukoy na kasalukuyang installation. Gamitin ang advanced na setup para manatili ang kasalukuyan mong mga setting.",
+    "containerRunning": "Kasalukuyang tumatakbo ang Yuvomi. Ire-restart ng pag-save ang container, kaya sandaling hindi ito magagamit."
   },
   "simple": {
     "title": "Handa nang umandar",

@@ -238,7 +238,9 @@
     "baseUrlHint": "Ailenin Yuvomi'yi açtığı adres - kapsayıcının konağı ve bağlantı noktası değil. Parola sıfırlama ve davet bağlantıları için kullanılır.",
     "syncIntervalLabel": "Takvim eşitleme aralığı (dakika)",
     "syncIntervalHint": "Yuvomi'nin takvimleri ve kişileri ne sıklıkla eşitleyeceği. Sağlayıcın hız sınırı uyguluyorsa artır.",
-    "errSyncInterval": "Dakika olarak pozitif bir tam sayı gir."
+    "errSyncInterval": "Dakika olarak pozitif bir tam sayı gir.",
+    "sectionPrivateNetwork": "Ev ağına erişim",
+    "privateNetworkHint": "Yuvomi varsayılan olarak kendi ağındaki adreslere bağlantıları reddeder; bu, sunucunun iç servislere ulaşmaya kandırılmasına karşı korur. Evde gerçekten çalıştırdıklarını etkinleştir."
   },
   "welcome": {
     "title": "Yuvomi’ye hoş geldiniz",
@@ -250,7 +252,8 @@
     "advancedTitle": "Gelişmiş kurulum",
     "advancedDesc": "Tam kontrol: ters proxy, takvim senkronizasyonu, e-posta, tek oturum açma ve yedeklemeler.",
     "advancedTime": "Her seçenek, adım adım",
-    "existingLocked": "Mevcut bir kurulum bulundu. Şu anki ayarlarının korunması için gelişmiş kurulumu kullan."
+    "existingLocked": "Mevcut bir kurulum bulundu. Şu anki ayarlarının korunması için gelişmiş kurulumu kullan.",
+    "containerRunning": "Yuvomi şu anda çalışıyor. Kaydetmek kapsayıcıyı yeniden başlatır, bu yüzden kısa süre erişilemez olur."
   },
   "simple": {
     "title": "Hazır",

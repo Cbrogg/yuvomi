@@ -238,7 +238,9 @@
     "baseUrlHint": "Adres, pod którym twoja rodzina otwiera Yuvomi - nie host i port kontenera. Używany do linków resetowania hasła i zaproszeń.",
     "syncIntervalLabel": "Odstęp synchronizacji kalendarza (minuty)",
     "syncIntervalHint": "Jak często Yuvomi synchronizuje kalendarze i kontakty. Zwiększ, jeśli dostawca ogranicza liczbę żądań.",
-    "errSyncInterval": "Podaj dodatnią liczbę całkowitą minut."
+    "errSyncInterval": "Podaj dodatnią liczbę całkowitą minut.",
+    "sectionPrivateNetwork": "Dostęp do sieci domowej",
+    "privateNetworkHint": "Yuvomi domyślnie odrzuca połączenia z adresami w twojej sieci, co chroni przed nakłonieniem serwera do sięgnięcia po usługi wewnętrzne. Włącz to, co naprawdę masz w domu."
   },
   "welcome": {
     "title": "Witamy w Yuvomi",
@@ -250,7 +252,8 @@
     "advancedTitle": "Konfiguracja zaawansowana",
     "advancedDesc": "Pełna kontrola: reverse proxy, synchronizacja kalendarza, e-mail, logowanie jednokrotne i kopie zapasowe.",
     "advancedTime": "Każda opcja, krok po kroku",
-    "existingLocked": "Wykryto istniejącą instalację. Skorzystaj z konfiguracji zaawansowanej, aby zachować obecne ustawienia."
+    "existingLocked": "Wykryto istniejącą instalację. Skorzystaj z konfiguracji zaawansowanej, aby zachować obecne ustawienia.",
+    "containerRunning": "Yuvomi jest obecnie uruchomione. Zapisanie zrestartuje kontener, więc przez chwilę będzie niedostępny."
   },
   "simple": {
     "title": "Gotowe",

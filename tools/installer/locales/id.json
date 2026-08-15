@@ -146,7 +146,9 @@
     "baseUrlHint": "Alamat yang dipakai keluargamu untuk membuka Yuvomi - bukan host dan port kontainer. Dipakai untuk tautan atur ulang kata sandi dan undangan.",
     "syncIntervalLabel": "Interval sinkronisasi kalender (menit)",
     "syncIntervalHint": "Seberapa sering Yuvomi menyinkronkan kalender dan kontak. Naikkan jika penyedia membatasi laju.",
-    "errSyncInterval": "Masukkan bilangan bulat positif dalam menit."
+    "errSyncInterval": "Masukkan bilangan bulat positif dalam menit.",
+    "sectionPrivateNetwork": "Akses ke jaringan rumahmu",
+    "privateNetworkHint": "Secara bawaan Yuvomi menolak koneksi ke alamat di jaringanmu sendiri, yang melindungi dari server yang diperdaya untuk menjangkau layanan internal. Aktifkan yang benar-benar kamu jalankan di rumah."
   },
   "review": {
     "title": "Tinjauan",
@@ -250,7 +252,8 @@
     "advancedTitle": "Penyiapan lanjutan",
     "advancedDesc": "Kontrol penuh: reverse proxy, sinkronisasi kalender, email, single sign-on, dan pencadangan.",
     "advancedTime": "Setiap opsi, langkah demi langkah",
-    "existingLocked": "Instalasi yang sudah ada terdeteksi. Gunakan pengaturan lanjutan agar pengaturanmu saat ini tetap tersimpan."
+    "existingLocked": "Instalasi yang sudah ada terdeteksi. Gunakan pengaturan lanjutan agar pengaturanmu saat ini tetap tersimpan.",
+    "containerRunning": "Yuvomi sedang berjalan. Menyimpan akan memulai ulang kontainer, jadi akan sebentar tidak tersedia."
   },
   "simple": {
     "title": "Siap digunakan",

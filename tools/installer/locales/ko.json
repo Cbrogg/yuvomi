@@ -146,7 +146,9 @@
     "baseUrlHint": "가족이 Yuvomi를 여는 주소입니다. 컨테이너의 호스트와 포트가 아닙니다. 비밀번호 재설정 및 초대 링크에 사용됩니다.",
     "syncIntervalLabel": "캘린더 동기화 간격(분)",
     "syncIntervalHint": "Yuvomi가 캘린더와 연락처를 동기화하는 주기입니다. 공급자가 요청을 제한하면 값을 늘리세요.",
-    "errSyncInterval": "분 단위 양의 정수를 입력하세요."
+    "errSyncInterval": "분 단위 양의 정수를 입력하세요.",
+    "sectionPrivateNetwork": "홈 네트워크 접근",
+    "privateNetworkHint": "Yuvomi는 기본적으로 자체 네트워크의 주소로의 연결을 거부합니다. 이는 서버가 내부 서비스에 접근하도록 유도되는 것을 막습니다. 집에서 실제로 운영하는 것만 허용하세요."
   },
   "review": {
     "title": "검토",
@@ -250,7 +252,8 @@
     "advancedTitle": "고급 설정",
     "advancedDesc": "완전한 제어: 리버스 프록시, 캘린더 동기화, 이메일, 싱글 사인온, 백업.",
     "advancedTime": "모든 옵션을 단계별로",
-    "existingLocked": "기존 설치가 감지되었습니다. 현재 설정을 유지하려면 고급 설정을 사용하세요."
+    "existingLocked": "기존 설치가 감지되었습니다. 현재 설정을 유지하려면 고급 설정을 사용하세요.",
+    "containerRunning": "Yuvomi가 실행 중입니다. 저장하면 컨테이너가 다시 시작되어 잠시 사용할 수 없습니다."
   },
   "simple": {
     "title": "준비 완료",

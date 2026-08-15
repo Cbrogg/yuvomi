@@ -38,12 +38,25 @@ export const ENV_SCHEMA = [
   // neben die Compose-Datei). Ohne Eintrag im Installer musste er von Hand in
   // die .env - und ein zweiter Lauf hätte ihn wieder gelöscht.
   { key: 'DATA_DIR',                    type: 'default', label: 'Host Data Folder',         default: './data', required: false, group: 'system', writeToEnv: true },
-  // BACKUP_DIR und MODULES_DIR fehlen hier bewusst, jeweils mit eigenem Grund
-  // in INTENTIONALLY_NOT_IN_INSTALLER (test/test-installer-schema.js):
-  // BACKUP_DIR traegt zwei Rollen unter einem Namen (Host-Mount in der
-  // Compose-Substitution, Container-Ziel im Image) - ein Wert in der .env war
-  // genau der Fehler aus #579. MODULES_DIR ist ein Nischenfall, dessen Default
-  // fuer jede vom Wizard erzeugte Installation stimmt.
+  // BACKUP_DIR und MODULES_DIR fehlen hier bewusst, und der Grund ist EINE Regel,
+  // nicht zwei Einzelfaelle: DATA_DIR steht im Wizard, weil die App den Namen NIE
+  // liest - er existiert ausschliesslich als Compose-Substitution fuer die
+  // Mount-Quelle. BACKUP_DIR und MODULES_DIR liest die App dagegen selbst
+  // (server/services/backup-scheduler.js, server/services/modules.js), und dort
+  // bedeutet der Name etwas anderes: das Ziel IM Container. Ein Host-Pfad wie
+  // './backups' in der .env wird dort zu /app/backups, ausserhalb des gemounteten
+  // Volumes und fuer den node-User nicht anlegbar - das war #579.
+  //
+  // Die Compose-Descriptoren fangen das ab, indem sie BACKUP_DIR unter
+  // "environment:" auf /backups pinnen (environment schlaegt env_file), und ein
+  // Guard erzwingt das in jedem Ziel. Darauf ruht die Ausnahme aber NICHT: die
+  // .env.example warnt ausdruecklich davor, die Datei einem blanken
+  // "docker run --env-file" zu geben, und dort gibt es kein Override. MODULES_DIR
+  // pinnt ohnehin kein Descriptor.
+  //
+  // Wer die Sicherungen auf ein NAS-Array legen will, aendert deshalb den MOUNT
+  // in der Compose-Datei, nicht diese Variable - so steht es in
+  // docs/installation.md. Ein Wizard-Feld waere der bequemere und der falsche Weg.
   // Absolute Origin für Passwort-Reset-Links & Push. Vom Installer aus Schema/Host/Port
   // abgeleitet, nie aus dem Request-Host-Header (Reset-Poisoning-Schutz).
   { key: 'BASE_URL',                    type: 'default', label: 'Base URL',                 default: '',     group: 'system',  writeToEnv: true },

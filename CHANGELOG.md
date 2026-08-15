@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **The installer groups the three home-network permissions instead of scattering them.** Yuvomi refuses connections to addresses on your own network by default; three switches lift that for calendar subscriptions, recipe mirrors and a WebDAV target. They sat in three different places because they technically hang off three different fields - two loose under "More options", one inside the WebDAV accordion - even though they answer the same question. The review screen has always shown them as a single line and says why; they are now asked as a single group, with one explanation of what the protection does.
+- **The installer reports a running container, not just an existing configuration file.** The preflight already determined this with a container inspection on every run, a test asserted the field was a boolean, and the README announced it - but no line in the wizard ever read it. It matters on a re-run: saving restarts the container, so the household is briefly cut off. A guard now checks the other direction too, that every field the preflight returns is actually consumed.
+
+### Fixed
+
+- **The documentation now explains where backups go on a NAS, and why there is no field for it.** `DATA_DIR` is in the setup wizard because the application never reads that name - it exists purely as a Compose substitution for the mount source. `BACKUP_DIR` and `MODULES_DIR` are read by the application itself, where they mean the directory *inside* the container, so a host path like `./backups` in your `.env` resolves to `/app/backups`, outside the mounted volume. To put backups on an array you change the mount source, which is now documented with an example.
+
 ## [2.14.3] - 2026-08-15
 
 ### Fixed

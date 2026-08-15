@@ -567,7 +567,23 @@ security, and troubleshooting.
 | `DB_PATH` | Path to the SQLite database file inside the container | `/data/yuvomi.db` | No |
 | `DB_ENCRYPTION_KEY` | SQLCipher AES-256 key for encryption at rest. Leave it empty and the database stays unencrypted. Once set there is no way back: it cannot be recovered and cannot be changed on an existing database. | - | No, but strongly recommended |
 | `DATA_DIR` | Host directory mounted at `/data` inside the container (set in `.env` or `docker-compose.yml`). | `./data` | No |
-| `MODULES_DIR` | Host directory mounted at `/app/modules` inside the container - the drop-in folder for [third-party modules](../MODULES.md). Compose-only, like `DATA_DIR`. | `./modules` | No |
+| `MODULES_DIR` | Host directory mounted at `/app/modules` inside the container - the drop-in folder for [third-party modules](../MODULES.md). | `./modules` | No |
+
+> **Where the backups go.** There is no `BACKUP_DIR` in the setup wizard, and that is deliberate.
+> Unlike `DATA_DIR`, which exists only as a Compose substitution for the mount source, `BACKUP_DIR`
+> and `MODULES_DIR` are also read by the application itself - and there they mean the directory
+> *inside* the container. A host path such as `./backups` in your `.env` therefore resolves to
+> `/app/backups` in the container, outside the mounted volume and not writable, which is why every
+> deployment descriptor pins it to `/backups`. To keep the backups on a NAS array, change the
+> **mount source**, not the variable:
+>
+> ```yaml
+> volumes:
+>   - /mnt/user/appdata/yuvomi/data:/data
+>   - /mnt/array/yuvomi-backups:/backups   # host side is yours to choose
+> ```
+>
+> The same applies to the module drop-in folder at `/app/modules`.
 | `BACKUP_DIR` | In `.env`/`docker-compose.yml`: the **host** directory mounted at `/backups`. Inside the container the app reads the same name as the **container** path it writes to — the compose files pin it to `/backups`, and the image defaults to `/backups` as well. Only override it inside the container if you mount your backup volume somewhere else. | `./backups` (host) / `/backups` (container) | No |
 
 Generate a secure `DB_ENCRYPTION_KEY`:
