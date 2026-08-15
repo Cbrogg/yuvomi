@@ -175,6 +175,7 @@ function init({ plaintextBackup = true } = {}) {
   // Beide Prüfungen laufen VOR dem Öffnen: fehlt der Cipher-Support, darf gar
   // nicht erst eine unverschlüsselte Datei entstehen.
   if (DB_KEY) {
+    assertKeyIsNotPlaceholder();
     assertCipherSupport();
     encryptPlaintextDatabase({ backup: plaintextBackup });
   }
@@ -209,6 +210,43 @@ function init({ plaintextBackup = true } = {}) {
 
   log.info(`Connected: ${DB_PATH} | Schema v${currentVersion()}`);
   return db;
+}
+
+/**
+ * Ein Platzhalter aus `.env.example` ist kein Schlüssel.
+ *
+ * `.env.example` liefert `DB_ENCRYPTION_KEY=REPLACE_WITH_A_STRONG_ENCRYPTION_KEY`
+ * (nicht etwa eine leere Zeile). Wer die Quick-Start-Zeilen am Stück kopiert und
+ * das Bearbeiten von `.env` überspringt, verschlüsselt seine Datenbank damit
+ * gegen eine Konstante, die im Repository und auf der Landingpage abgedruckt
+ * steht - also gegen nichts. Der Fehler ist zusätzlich unumkehrbar, weil ein
+ * späterer echter Schlüssel die Datei nicht mehr öffnet.
+ *
+ * Der Guard bricht NUR ab, solange die Datenbank noch nicht existiert. Genau
+ * dann ist der Fehler vermeidbar. Bestandsinstallationen, die diesen Weg schon
+ * gegangen sind, laufen weiter: ein Startfehler würde ihnen eine funktionierende
+ * Instanz nehmen, statt einen Fehler zu verhindern, der dort längst passiert
+ * ist. Sie bekommen die Warnung samt konkretem Ausweg bei jedem Start.
+ */
+function assertKeyIsNotPlaceholder() {
+  if (!DB_KEY.startsWith('REPLACE_WITH_')) return;
+
+  if (!existsSync(DB_PATH)) {
+    throw new Error(
+      '[DB] DB_ENCRYPTION_KEY is still the placeholder from .env.example ' +
+      `(${DB_KEY}). That value is published in this repository, so it protects ` +
+      'nothing. Generate a real one with `openssl rand -hex 32` and put it in ' +
+      '.env, or clear the line entirely to run without encryption.'
+    );
+  }
+
+  log.warn(
+    'DB_ENCRYPTION_KEY is the placeholder from .env.example, so this database is ' +
+    'encrypted with a publicly known value and is not protected. To rotate: stop ' +
+    `the app, copy ${DB_PATH} somewhere safe, then open the database with the old ` +
+    'key and run `PRAGMA rekey` with a value from `openssl rand -hex 32` before ' +
+    'putting that same value into .env.'
+  );
 }
 
 function applyEncryptionKey(database) {

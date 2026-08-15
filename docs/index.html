@@ -430,8 +430,15 @@
     /* Copy button, mirrored from install.html - the landing page asked people to
        select four shell lines by hand while the install page had twelve of these. */
     .code-wrap { position: relative; }
-    .code-wrap .code-block { padding-right: 62px; }
-    .copy-btn { position: absolute; top: 12px; right: 12px; display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+    /* The button gets its own band at the top of the plate instead of a
+       padding-right gutter. `padding-right` only protects the first screenful:
+       the button is absolutely positioned, so any line longer than the plate
+       scrolls straight underneath it. Measured on the German page, where the
+       label reads "Kopieren" at 94px against a 62px gutter, that hid 17% of the
+       readable width at 390px and 23% at 320px, on every block. A reserved row
+       costs 32px of height and cannot be scrolled under. */
+    .code-wrap:has(> .copy-btn) .code-block { padding-top: 54px; }
+    .copy-btn { position: absolute; top: 10px; right: 10px; display: inline-flex; align-items: center; justify-content: center; gap: 5px;
       background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.14); color: var(--code-text); cursor: pointer;
       padding: 7px 11px; min-height: 44px; border-radius: var(--r-sm); font-family: var(--ff); font-size: 0.75rem; font-weight: 600; transition: all .15s; }
     .copy-btn:hover { background: rgba(255,255,255,0.18); color: #fff; }
@@ -464,6 +471,10 @@
     .quick-warn svg { width: 17px; height: 17px; flex-shrink: 0; margin-top: 2px; color: var(--warn-ink); }
     .quick-warn b { font-weight: 700; }
     .quick-warn code { font-family: var(--ff-mono); font-size: 0.92em; overflow-wrap: anywhere; }
+    /* The start command lives in its own block BELOW the warning, so the .env edit
+       cannot be skipped by pasting one long chain. Same gap the warning takes from
+       the block above it, so the three parts read as one sequence. */
+    .quick-warn + .code-wrap { margin-top: 14px; }
     /* The one sentence that answers the fear this audience actually has was a
        0.92rem caption in 92% white, under the CTA buttons, at 94% scroll depth.
        It gets a section of its own, in body copy size, before the install block
@@ -1188,12 +1199,18 @@ curl -O https://raw.githubusercontent.com/ulsklyc/yuvomi/main/docker-compose.yml
 curl -O https://raw.githubusercontent.com/ulsklyc/yuvomi/main/.env.example
 cp .env.example .env
 <span class="c" data-t="qs_c2"># run twice: one value for SESSION_SECRET, one for DB_ENCRYPTION_KEY</span>
-openssl rand -hex 32
-<span class="h">docker compose up -d</span></div><button class="copy-btn" type="button" data-copy="curl -O https://raw.githubusercontent.com/ulsklyc/yuvomi/main/docker-compose.yml&#10;curl -O https://raw.githubusercontent.com/ulsklyc/yuvomi/main/.env.example&#10;cp .env.example .env&#10;openssl rand -hex 32&#10;docker compose up -d"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span data-t="copy">Copy</span></button></div>
+openssl rand -hex 32</div><button class="copy-btn" type="button" data-copy="curl -O https://raw.githubusercontent.com/ulsklyc/yuvomi/main/docker-compose.yml&#10;curl -O https://raw.githubusercontent.com/ulsklyc/yuvomi/main/.env.example&#10;cp .env.example .env&#10;openssl rand -hex 32"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span data-t="copy">Copy</span></button></div>
+      <!-- The .env edit sits BETWEEN the two copy blocks on purpose. It used to be a
+           warning under one block that ended in `docker compose up -d`, so pasting the
+           whole thing started the container while .env still held the two
+           REPLACE_WITH_ placeholders from .env.example - which encrypts the database
+           with a constant that is published in this very file. A human step cannot be
+           a footnote to a copyable chain that has already run past it. -->
       <p class="quick-warn">
         <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        <span data-t="quick_warn"><b>Write the second value down.</b> <code>DB_ENCRYPTION_KEY</code> is optional - leave it empty and the database stays unencrypted - but once it is set there is no way back. Lose it and the data can never be opened again, not by you and not by us.</span>
+        <span data-t="quick_warn"><b>Now open <code>.env</code> and replace both <code>REPLACE_WITH_…</code> placeholders</b> with the two values you just generated. Leave <code>DB_ENCRYPTION_KEY</code> on its placeholder and your database is encrypted with a key that is printed on this page. Once a database is encrypted, a lost or changed key never opens it again, not by you and not by us, so write the value down. To run without encryption, clear the line instead of filling it.</span>
       </p>
+      <div class="code-wrap"><div class="code-block"><span class="h">docker compose up -d</span></div><button class="copy-btn" type="button" data-copy="docker compose up -d"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span data-t="copy">Copy</span></button></div>
       <p class="quick-note" data-t="quick_note">Then open <code>http://localhost:3000</code>. The first visit walks you through creating your admin account. Prefer a guided setup? The <a href="install.html">step-by-step installer</a> handles HTTPS, SSO and backups for you.</p>
     </div>
   </div>
@@ -1337,7 +1354,7 @@ openssl rand -hex 32
       prob_3_t:'Your data, everywhere', prob_3_d:"Your calendar on Google's servers, your notes on Dropbox. Who actually owns your family's data?",
       prob_cta:"There's a calmer way. <span>Self-hosted, and yours.</span>", why_title:'Built for families, <em>not for profit.</em>',
       why_desc:'It all runs on hardware you own, keeps working without any subscription, and never sends your data off your home network.',
-      p_priv_t:'Privacy first', p_priv_d:'Optional AES-256 database encryption via SQLCipher (enabled in the recommended Docker setup). Zero telemetry. Your data never leaves your server.',
+      p_priv_t:'Privacy first', p_priv_d:'Optional AES-256 database encryption via SQLCipher - you set the key while installing, or leave it off. Zero telemetry. Your data never leaves your server.',
       p_self_t:'Fully self-hosted', p_self_d:'Runs on a Raspberry Pi, a NAS, or any server. Docker or Podman makes setup a one-liner.',
       p_open_t:'Open source', p_open_d:'MIT licensed. Inspect, modify, extend, contribute. Built in the open for families who value transparency.',
       p_foot_t:'Small, and looked after', p_foot_d:'256 MB RAM and a ~500 MB image, on a single SQLite file you can copy. 180 test suites run against every change.', feat_title:'Everything your household needs',
@@ -1375,7 +1392,7 @@ openssl rand -hex 32
       plat_umbrel:'Available in the Umbrel App Store; everything stays on your Umbrel.',
       plat_unraid:'A Community Apps template: add it straight from the Unraid Apps tab.',
       plat_oneclick:'1-click', plat_start:'Start here', plat_guide:'Guide', to_top:'Back to top',
-      quick_warn:'<b>Write the second value down.</b> <code>DB_ENCRYPTION_KEY</code> is optional - leave it empty and the database stays unencrypted - but once it is set there is no way back. Lose it and the data can never be opened again, not by you and not by us.',
+      quick_warn:'<b>Now open <code>.env</code> and replace both <code>REPLACE_WITH_…</code> placeholders</b> with the two values you just generated. Leave <code>DB_ENCRYPTION_KEY</code> on its placeholder and your database is encrypted with a key that is printed on this page. Once a database is encrypted, a lost or changed key never opens it again, not by you and not by us, so write the value down. To run without encryption, clear the line instead of filling it.',
       quick_note:'Then open <code>http://localhost:3000</code>. The first visit walks you through creating your admin account. Prefer a guided setup? The <a href="install.html">step-by-step installer</a> handles HTTPS, SSO and backups for you.', setup_title:'Up and running in minutes',
       setup_1_t:'Pick your path', setup_1_d:'Two files and a handful of commands for Docker or Podman, a guided browser wizard if you would rather be walked through it, or one click from your NAS app store.',
       setup_2_t:'Set up your account', setup_2_d:'Create an admin account and choose your preferences. Takes about two minutes.',
@@ -1452,7 +1469,7 @@ openssl rand -hex 32
       prob_3_t:'Eure Daten, überall', prob_3_d:'Euer Kalender auf Googles Servern, eure Notizen auf Dropbox. Wem gehören eure Familiendaten wirklich?',
       prob_cta:'Es geht auch ruhiger. <span>Selbstgehostet, und es gehört euch.</span>', why_title:'Für Familien gebaut, <em>nicht für Profit.</em>',
       why_desc:'Alles läuft auf Hardware, die euch gehört, funktioniert ganz ohne Abo und schickt eure Daten nie aus eurem Heimnetz.',
-      p_priv_t:'Datenschutz zuerst', p_priv_d:'Optionale AES-256-Datenbankverschlüsselung via SQLCipher (im empfohlenen Docker-Setup aktiviert). Keine Telemetrie. Eure Daten verlassen nie euren Server.',
+      p_priv_t:'Datenschutz zuerst', p_priv_d:'Optionale AES-256-Datenbankverschlüsselung via SQLCipher - den Schlüssel setzt ihr beim Installieren, oder ihr lasst sie aus. Keine Telemetrie. Eure Daten verlassen nie euren Server.',
       p_self_t:'Vollständig selbstgehostet', p_self_d:'Läuft auf einem Raspberry Pi, NAS oder jedem Server. Docker oder Podman macht das Setup zum Einzeiler.',
       p_open_t:'Open Source', p_open_d:'MIT-lizenziert. Einsehen, anpassen, erweitern, beitragen. Offen gebaut für Familien, die Transparenz schätzen.',
       p_foot_t:'Klein, und gepflegt', p_foot_d:'256 MB RAM und ein rund 500 MB großes Image, auf einer einzigen SQLite-Datei, die ihr kopieren könnt. 180 Testsuiten laufen gegen jede Änderung.', feat_title:'Alles, was euer Haushalt braucht',
@@ -1490,7 +1507,7 @@ openssl rand -hex 32
       plat_umbrel:'Im Umbrel App Store verfügbar; alles bleibt auf eurem Umbrel.',
       plat_unraid:'Ein Community-Apps-Template: direkt über den Unraid-Apps-Tab hinzufügen.',
       plat_oneclick:'1 Klick', plat_start:'Fangt hier an', plat_guide:'Anleitung', to_top:'Nach oben',
-      quick_warn:'<b>Schreibt den zweiten Wert auf.</b> <code>DB_ENCRYPTION_KEY</code> ist optional - lasst ihr ihn leer, bleibt die Datenbank unverschlüsselt -, aber sobald er gesetzt ist, gibt es keinen Weg zurück. Ist er weg, lässt sich die Datenbank nie wieder öffnen, weder von euch noch von uns.',
+      quick_warn:'<b>Öffnet jetzt <code>.env</code> und ersetzt beide <code>REPLACE_WITH_…</code>-Platzhalter</b> durch die zwei eben erzeugten Werte. Bleibt <code>DB_ENCRYPTION_KEY</code> auf seinem Platzhalter, wird eure Datenbank mit einem Schlüssel verschlüsselt, der auf dieser Seite abgedruckt ist. Sobald eine Datenbank verschlüsselt ist, öffnet ein verlorener oder geänderter Schlüssel sie nie wieder, weder für euch noch für uns - schreibt den Wert also auf. Wer ohne Verschlüsselung fahren will, leert die Zeile, statt sie zu füllen.',
       quick_note:'Dann <code>http://localhost:3000</code> öffnen. Beim ersten Aufruf legt ihr euer Admin-Konto an. Lieber geführt? Der <a href="install.html">schrittweise Installer</a> kümmert sich um HTTPS, SSO und Backups.', setup_title:'In Minuten einsatzbereit',
       setup_1_t:'Weg wählen', setup_1_d:'Zwei Dateien und eine Handvoll Befehle für Docker oder Podman, ein geführter Browser-Assistent, wenn ihr lieber an die Hand genommen werdet, oder ein Klick aus dem App-Store eures NAS.',
       setup_2_t:'Konto einrichten', setup_2_d:'Admin-Konto erstellen und Einstellungen wählen. Dauert etwa zwei Minuten.',
