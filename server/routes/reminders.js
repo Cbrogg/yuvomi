@@ -13,7 +13,7 @@ import { syncAllBirthdayReminders } from '../services/birthdays.js';
 const log    = createLogger('Reminders');
 const router = express.Router();
 
-const VALID_ENTITY_TYPES = ['task', 'event', 'subscription'];
+const VALID_ENTITY_TYPES = ['task', 'event', 'subscription', 'inventory_item', 'inventory_tracked_date'];
 
 // Obergrenze für mehrere Erinnerungen je Entität (z. B. Kalender-Termin, #436).
 const MAX_REMINDERS_PER_ENTITY = 5;
@@ -37,6 +37,12 @@ router.get('/pending', (req, res) => {
           WHEN 'task'  THEN (SELECT title FROM tasks           WHERE id = r.entity_id)
           WHEN 'event' THEN (SELECT title FROM calendar_events WHERE id = r.entity_id)
           WHEN 'subscription' THEN (SELECT name FROM budget_subscriptions WHERE id = r.entity_id)
+          WHEN 'inventory_item' THEN (SELECT name FROM inventory_items WHERE id = r.entity_id)
+          WHEN 'inventory_tracked_date' THEN (
+            SELECT ii.name || ' · ' || d.label
+            FROM inventory_item_dates d JOIN inventory_items ii ON ii.id = d.item_id
+            WHERE d.id = r.entity_id
+          )
         END AS entity_title
       FROM reminders r
       WHERE r.created_by  = ?
@@ -128,7 +134,7 @@ router.post('/', (req, res) => {
     ]);
 
     if (!entity_type || !VALID_ENTITY_TYPES.includes(entity_type)) {
-      errors.push('entity_type must be task, event, or subscription.');
+      errors.push('entity_type must be task, event, subscription, inventory_item, or inventory_tracked_date.');
     }
 
     if (errors.length) {

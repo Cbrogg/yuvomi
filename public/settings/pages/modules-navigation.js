@@ -26,6 +26,7 @@ const BUILT_IN_MODULES = Object.freeze([
   { id: 'birthdays', labelKey: 'nav.birthdays', icon: 'cake' },
   { id: 'budget', labelKey: 'nav.budget', icon: 'wallet' },
   { id: 'documents', labelKey: 'nav.documents', icon: 'folder-lock' },
+  { id: 'inventory', labelKey: 'nav.inventory', icon: 'package' },
   { id: 'housekeeping', labelKey: 'nav.housekeeping', icon: 'paintbrush' },
   { id: 'rewards', labelKey: 'nav.rewards', icon: 'award' },
   { id: 'health', labelKey: 'nav.health', icon: 'heart-pulse' },

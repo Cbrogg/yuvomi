@@ -533,6 +533,15 @@
   --module-documents: var(--_family-records);
   --module-housekeeping: var(--_family-work);
   --module-health:    var(--_family-health);
+  /* War der "money"-Familie zugeteilt (Budget, Kostenteilung), solange
+   * router.js Inventar unter NAV_SECTION.finance fuehrte. Mit dem Umzug nach
+   * "Haushalt" (2026-08-11) passt "records" besser: Inventar ist wie
+   * Dokumente und Notizen in erster Linie ein Bestand langlebiger
+   * Haushaltsunterlagen (was besitzen wir, wo liegt es), Wertverfolgung und
+   * Budget-Verknuepfung sind zusaetzliche, nicht die tragende Eigenschaft.
+   * Unterscheidung ueber das Siegel-Icon, nicht ueber den Ton (wie jede
+   * andere Familie). */
+  --module-inventory: var(--_family-records);
   /* Zyklus-Phasenfarben — nur im Zyklus-Tab (/health/cycle). Getrennt vom Modul-
      Akzent und vom semantischen --color-danger der Lab-Flags. */
   --cycle-period:    #C81E5A;   /* Menstruation/Blutung — Rosé-Rot (~5.0:1 auf weiß) */

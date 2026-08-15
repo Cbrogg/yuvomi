@@ -28,6 +28,7 @@ const MODULE_ACCENT = {
   shopping: 'var(--module-shopping)',
   pantry: 'var(--module-pantry)',
   budget: 'var(--module-budget)',
+  inventory: 'var(--module-inventory)',
   documents: 'var(--module-documents)',
   housekeeping: 'var(--module-housekeeping)',
   rewards: 'var(--module-rewards)',

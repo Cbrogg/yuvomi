@@ -5005,6 +5005,323 @@ const MIGRATIONS = [
         WHERE target_caldav_account_id IS NOT NULL;
     `,
   },
+  {
+    version: 137,
+    description: 'Inventory: locations, categories, items (Stage 1 of the full design)',
+    up: `
+      -- Zwei-Ebenen-Hierarchie ueber parent_id. Kein Umhaengen zwischen Eltern in der
+      -- API (siehe Plan), daher ist ein Zyklus ueber diese Spalte nicht erreichbar -
+      -- die Spalte existiert trotzdem als echte Selbstreferenz, falls eine spaetere
+      -- Stufe das Umhaengen doch braucht.
+      CREATE TABLE IF NOT EXISTS inventory_locations (
+        id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        name       TEXT    NOT NULL,
+        parent_id  INTEGER REFERENCES inventory_locations(id) ON DELETE SET NULL,
+        icon       TEXT    NOT NULL DEFAULT 'package',
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+        updated_at TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_inventory_locations_parent ON inventory_locations(parent_id);
+
+      CREATE TRIGGER IF NOT EXISTS trg_inventory_locations_updated_at
+        AFTER UPDATE ON inventory_locations FOR EACH ROW
+        BEGIN UPDATE inventory_locations SET updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id = OLD.id; END;
+
+      -- 'key' ist der stabile Fremdschluessel fuer inventory_items.category (siehe
+      -- dort) - unabhaengig vom (umbenennbaren) Anzeigenamen.
+      CREATE TABLE IF NOT EXISTS inventory_categories (
+        id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        key        TEXT    NOT NULL UNIQUE,
+        name       TEXT    NOT NULL,
+        icon       TEXT    NOT NULL DEFAULT 'package',
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+      );
+
+      INSERT INTO inventory_categories (key, name, icon, sort_order) VALUES
+        ('electronics', 'Elektronik', 'cpu',      0),
+        ('vehicles',    'Fahrzeuge',  'car',      1),
+        ('household',   'Haushalt',   'home',     2),
+        ('sports',      'Sport',      'dumbbell', 3),
+        ('other',       'Sonstiges',  'package',  4);
+
+      CREATE TABLE IF NOT EXISTS inventory_items (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        name            TEXT    NOT NULL,
+        brand           TEXT,
+        model           TEXT,
+        serial_number   TEXT,
+        -- Kein echter FK auf inventory_categories.key - siehe Plan (Global
+        -- Constraints): Loeschen einer Kategorie haengt Gegenstaende per Route auf
+        -- 'other' um, das kann eine DB-Constraint nicht mit einem konkreten
+        -- Rueckfallwert (nur mit NULL).
+        category        TEXT    NOT NULL DEFAULT 'other',
+        location_id     INTEGER REFERENCES inventory_locations(id) ON DELETE SET NULL,
+        purchase_date   TEXT,
+        purchase_price  REAL    CHECK (purchase_price IS NULL OR purchase_price >= 0),
+        currency        TEXT,
+        vendor          TEXT,
+        warranty_months INTEGER CHECK (warranty_months IS NULL OR (warranty_months >= 0 AND warranty_months <= 600)),
+        condition       TEXT    NOT NULL DEFAULT 'good' CHECK (condition IN ('new','good','fair','poor')),
+        status          TEXT    NOT NULL DEFAULT 'active' CHECK (status IN ('active','sold','disposed','lost')),
+        notes           TEXT,
+        -- SET NULL von Anfang an, nicht CASCADE: Inventar ist Haushaltseigentum wie
+        -- der Vorrat. pantry_items brauchte dafuer eine Nachfolgemigration (v109) -
+        -- hier wird der gleiche Fehler nicht wiederholt.
+        created_by      INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        created_at      TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+        updated_at      TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_inventory_items_location ON inventory_items(location_id);
+      CREATE INDEX IF NOT EXISTS idx_inventory_items_category ON inventory_items(category);
+      CREATE INDEX IF NOT EXISTS idx_inventory_items_status   ON inventory_items(status);
+
+      CREATE TRIGGER IF NOT EXISTS trg_inventory_items_updated_at
+        AFTER UPDATE ON inventory_items FOR EACH ROW
+        BEGIN UPDATE inventory_items SET updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id = OLD.id; END;
+    `,
+  },
+  {
+    version: 138,
+    description: 'Inventory: link items to documents from the Documents module (Stage 2)',
+    up: `
+      -- Spiegelt budget_entry_attachments 1:1 (server/db.js, Migration 112):
+      -- gleiche Spaltenform, gleiche CASCADE-Begruendung. Das Dokument selbst
+      -- bleibt beim Loeschen des Gegenstands im Dokumente-Modul erhalten -
+      -- CASCADE steht nur auf der Verknuepfungszeile, nicht auf family_documents.
+      CREATE TABLE IF NOT EXISTS inventory_item_documents (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        item_id     INTEGER NOT NULL REFERENCES inventory_items(id) ON DELETE CASCADE,
+        document_id INTEGER NOT NULL REFERENCES family_documents(id) ON DELETE CASCADE,
+        created_by  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at  TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+        UNIQUE(item_id, document_id)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_inventory_item_documents_item
+        ON inventory_item_documents(item_id);
+      CREATE INDEX IF NOT EXISTS idx_inventory_item_documents_document
+        ON inventory_item_documents(document_id);
+    `,
+  },
+  {
+    version: 139,
+    description: 'Inventory: link items to budget entries with a role (Stage 3)',
+    up: `
+      -- created_by ist SET NULL, NICHT CASCADE wie bei inventory_item_documents
+      -- (Migration 138): eine Buchungsverknuepfung ist Haushaltseigentum wie
+      -- der Gegenstand selbst (gleiche Begruendung wie inventory_items.created_by),
+      -- keine persoenliche Handlungsnotiz wie ein Dokument-Anhang.
+      --
+      -- amount_share existiert schon jetzt (nichts in Stufe 3 schreibt je einen
+      -- Wert hinein), damit Stufe 5 kein ALTER TABLE mehr braucht - "volles
+      -- Schema jetzt, gestufte Umsetzung" (Design-Doc §1).
+      CREATE TABLE IF NOT EXISTS inventory_item_entries (
+        id           INTEGER PRIMARY KEY AUTOINCREMENT,
+        item_id      INTEGER NOT NULL REFERENCES inventory_items(id) ON DELETE CASCADE,
+        entry_id     INTEGER NOT NULL REFERENCES budget_entries(id) ON DELETE CASCADE,
+        role         TEXT    NOT NULL DEFAULT 'purchase'
+                     CHECK (role IN ('purchase','refund','instalment','maintenance','accessory')),
+        amount_share REAL    CHECK (amount_share IS NULL OR amount_share >= 0),
+        created_by   INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        created_at   TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+        UNIQUE(item_id, entry_id, role)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_inventory_item_entries_item ON inventory_item_entries(item_id);
+      CREATE INDEX IF NOT EXISTS idx_inventory_item_entries_entry ON inventory_item_entries(entry_id);
+    `,
+  },
+  {
+    version: 140,
+    description: 'Allow inventory_item entities in the existing reminder center (Stage 4)',
+    foreignKeysOff: true,
+    up: `
+      -- SQLite kann einen Spalten-CHECK nicht per ALTER erweitern, daher Tabelle
+      -- neu erstellen (Muster wie v98/v101). foreignKeysOff ist Pflicht: mit
+      -- aktiver FK-Durchsetzung wuerde DROP TABLE reminders die gekoppelten
+      -- Zustellprotokolle (notification_deliveries.reminder_id ... ON DELETE
+      -- CASCADE) auf jeder bestehenden Installation mitloeschen.
+      CREATE TABLE reminders_new (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        entity_type TEXT    NOT NULL CHECK(entity_type IN ('task', 'event', 'subscription', 'inventory_item')),
+        entity_id   INTEGER NOT NULL,
+        remind_at   TEXT    NOT NULL,
+        dismissed   INTEGER NOT NULL DEFAULT 0,
+        created_by  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at  TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+        pushed_at   TEXT
+      );
+      INSERT INTO reminders_new (id, entity_type, entity_id, remind_at, dismissed, created_by, created_at, pushed_at)
+        SELECT id, entity_type, entity_id, remind_at, dismissed, created_by, created_at, pushed_at FROM reminders;
+      DROP TABLE reminders;
+      ALTER TABLE reminders_new RENAME TO reminders;
+      CREATE INDEX idx_reminders_entity ON reminders(entity_type, entity_id);
+      CREATE INDEX idx_reminders_remind ON reminders(remind_at);
+      CREATE INDEX idx_reminders_user ON reminders(created_by);
+    `,
+  },
+  {
+    version: 141,
+    description: 'Inventory: custom tracked dates per item, widen reminders for inventory_tracked_date',
+    foreignKeysOff: true,
+    up: `
+      -- Neue Tabelle fuer frei definierbare Fristen je Gegenstand (TÜV, Service, ...).
+      CREATE TABLE IF NOT EXISTS inventory_item_dates (
+        id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+        item_id              INTEGER NOT NULL REFERENCES inventory_items(id) ON DELETE CASCADE,
+        label                TEXT    NOT NULL,
+        date                 TEXT    NOT NULL,
+        reminder_offset_days INTEGER NOT NULL DEFAULT 30 CHECK (reminder_offset_days BETWEEN 0 AND 365),
+        created_by           INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        created_at           TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+        updated_at           TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_inventory_item_dates_item ON inventory_item_dates(item_id);
+
+      CREATE TRIGGER IF NOT EXISTS trg_inventory_item_dates_updated_at
+        AFTER UPDATE ON inventory_item_dates FOR EACH ROW
+        BEGIN UPDATE inventory_item_dates SET updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id = OLD.id; END;
+
+      -- reminders.entity_type erneut erweitern (Muster wie v137): SQLite kann
+      -- einen Spalten-CHECK nicht per ALTER erweitern, daher Tabelle neu
+      -- erstellen. foreignKeysOff bleibt Pflicht - gleicher Grund wie v137
+      -- (notification_deliveries.reminder_id ... ON DELETE CASCADE wuerde sonst
+      -- beim DROP TABLE mitgeloescht).
+      CREATE TABLE reminders_new (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        entity_type TEXT    NOT NULL CHECK(entity_type IN ('task', 'event', 'subscription', 'inventory_item', 'inventory_tracked_date')),
+        entity_id   INTEGER NOT NULL,
+        remind_at   TEXT    NOT NULL,
+        dismissed   INTEGER NOT NULL DEFAULT 0,
+        created_by  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at  TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+        pushed_at   TEXT
+      );
+      INSERT INTO reminders_new (id, entity_type, entity_id, remind_at, dismissed, created_by, created_at, pushed_at)
+        SELECT id, entity_type, entity_id, remind_at, dismissed, created_by, created_at, pushed_at FROM reminders;
+      DROP TABLE reminders;
+      ALTER TABLE reminders_new RENAME TO reminders;
+      CREATE INDEX idx_reminders_entity ON reminders(entity_type, entity_id);
+      CREATE INDEX idx_reminders_remind ON reminders(remind_at);
+      CREATE INDEX idx_reminders_user ON reminders(created_by);
+    `,
+  },
+  {
+    version: 142,
+    description: 'Inventory: add optional photo per item',
+    up: `
+      -- Ein Foto je Gegenstand, kein Galerie-Bedarf (Mockup-Vergleich, Design-
+      -- Doc §2) - gleiches Speichermuster wie birthdays.photo_data: Data-URL,
+      -- serverseitig validiert (server/routes/inventory/items.js), keine
+      -- eigene Tabelle noetig fuer ein einzelnes optionales Feld.
+      ALTER TABLE inventory_items ADD COLUMN photo_data TEXT;
+    `,
+  },
+  {
+    version: 143,
+    description: 'Inventory: localize the five seeded categories via label_key (matches Task Categories, migration 83)',
+    up: `
+      -- Gleiches Muster wie task_categories: label_key traegt den i18n-Key fuer
+      -- Seed-Kategorien (name = NULL -> lokalisiert), Custom-Kategorien tragen
+      -- weiterhin name (label_key = NULL). name war seit Migration 136 NOT NULL
+      -- (anders als bei task_categories) - Tabellen-Neubau statt einem simplen
+      -- ADD COLUMN, sonst schlaegt die folgende UPDATE...SET name = NULL fehl.
+      -- Kein FK verweist auf inventory_categories (inventory_items.category ist
+      -- bewusst kein echter FK, siehe Migration 136), foreignKeysOff also nicht noetig.
+      CREATE TABLE inventory_categories_new (
+        id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        key        TEXT    NOT NULL UNIQUE,
+        name       TEXT,
+        label_key  TEXT,
+        icon       TEXT    NOT NULL DEFAULT 'package',
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+      );
+      INSERT INTO inventory_categories_new (id, key, name, icon, sort_order, created_at)
+        SELECT id, key, name, icon, sort_order, created_at FROM inventory_categories;
+      DROP TABLE inventory_categories;
+      ALTER TABLE inventory_categories_new RENAME TO inventory_categories;
+
+      -- Nur unveraendert gebliebene Seed-Zeilen umstellen: WHERE name = '<Seed-Wert>'
+      -- laesst eine bereits umbenannte Kategorie (jetzt effektiv custom) in Ruhe,
+      -- statt ihr die Benutzer-Umbenennung beim naechsten Sprachwechsel zu ueberschreiben.
+      UPDATE inventory_categories SET label_key = 'inventory.categoryElectronics', name = NULL
+        WHERE key = 'electronics' AND name = 'Elektronik';
+      UPDATE inventory_categories SET label_key = 'inventory.categoryVehicles', name = NULL
+        WHERE key = 'vehicles' AND name = 'Fahrzeuge';
+      UPDATE inventory_categories SET label_key = 'inventory.categoryHousehold', name = NULL
+        WHERE key = 'household' AND name = 'Haushalt';
+      UPDATE inventory_categories SET label_key = 'inventory.categorySports', name = NULL
+        WHERE key = 'sports' AND name = 'Sport';
+      UPDATE inventory_categories SET label_key = 'inventory.categoryOther', name = NULL
+        WHERE key = 'other' AND name = 'Sonstiges';
+    `,
+  },
+  {
+    version: 144,
+    description: 'add per-user read-only inventory deadlines feed token',
+    up: `
+      -- Gleiches Muster wie Migration 61 (calendar_feed_token): das Token haengt
+      -- an der users-Zeile, nicht haushaltweit in sync_config. Der Feed-Inhalt
+      -- bleibt haushaltweit - Gegenstaende haben keinen Eigentuemer -, aber ein
+      -- haushaltweites Token laesst sich nicht einzeln zurueckziehen: wer einmal
+      -- abonniert hat, behaelt Zugriff, bis er allen genommen wird.
+      ALTER TABLE users ADD COLUMN inventory_deadlines_feed_token TEXT;
+
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_users_inventory_deadlines_feed_token
+        ON users(inventory_deadlines_feed_token)
+        WHERE inventory_deadlines_feed_token IS NOT NULL;
+
+      -- Das alte haushaltweite Token faellt weg. Genau das ist der Rueckzug, den
+      -- es vorher nicht gab: eine bestehende Abo-URL wird ungueltig, statt als
+      -- verwaiste Zeile weiterzugelten.
+      DELETE FROM sync_config WHERE key = 'inventory_deadlines_feed_token';
+    `,
+  },
+  {
+    version: 145,
+    description: 'ship the Inventory module disabled by default (households opt in)',
+    up(db) {
+      // Erstes Modul, das abgeschaltet ausgeliefert wird. Grund ist nicht die
+      // Qualitaet, sondern die Reichweite: jedes Modul ist ein dauerhafter
+      // Eintrag in der Navigation *jedes* Haushalts, auch derer, die nie ein
+      // Fahrrad erfassen werden (Diskussion #696). Wer es will, schaltet es
+      // einmal ein; wer nicht, sieht es nie. Sollte sich zeigen, dass die
+      // Haelfte es nutzt, ist der Default eine Zeile weit zurueckdrehbar.
+      //
+      // Kein separater Seed-Pfad noetig: migrate() faehrt auf einer frischen
+      // Datenbank die komplette MIGRATIONS-Liste, dieser Eintrag deckt also
+      // Neuinstallation und Bestandshaushalt gleichermassen ab.
+      const row = db.prepare("SELECT value FROM sync_config WHERE key = 'disabled_modules'").get();
+
+      // Defensiv genau wie parseDisabledModules (server/routes/preferences.js):
+      // fehlend, kein Array oder kaputtes JSON zaehlen als "nichts abgeschaltet".
+      let disabled = [];
+      if (row?.value) {
+        try {
+          const parsed = JSON.parse(row.value);
+          if (Array.isArray(parsed)) disabled = parsed.filter((m) => typeof m === 'string');
+        } catch { /* kaputter Wert wird ersetzt, nicht respektiert */ }
+      }
+
+      // Mergen statt ersetzen: ein Haushalt kann bereits Module abgeschaltet
+      // haben, die ihm ein blindes INSERT OR REPLACE stillschweigend
+      // wieder einschalten wuerde.
+      if (disabled.includes('inventory')) return;
+      disabled.push('inventory');
+
+      db.prepare(`
+        INSERT INTO sync_config (key, value) VALUES ('disabled_modules', ?)
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value,
+                                       updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+      `).run(JSON.stringify(disabled));
+    },
+  },
 ];
 
 /**

@@ -102,7 +102,10 @@ export function renderDocumentAttachField({
  *
  * @param {HTMLElement} panel - Container, in dem das Feld steckt
  * @param {object} options
- * @param {string} [options.category] - Dokument-Kategorie für neue Uploads
+ * @param {string|Function} [options.category] - Dokument-Kategorie für neue
+ *        Uploads. Ein fester String (Standard) oder eine Funktion, die bei
+ *        jedem commit() frisch ausgewertet wird - für Aufrufer mit einem
+ *        Kategorie-Auswahlfeld im Formular (z. B. Inventar).
  * @param {string} [options.folderName] - Zielordner für neue Uploads
  * @param {string} [options.visibility] - Sichtbarkeit neuer Uploads
  * @param {Function} [options.documentName] - (file) => Anzeigename des Uploads
@@ -223,7 +226,7 @@ export function bindDocumentAttachField(panel, {
         const res = await api.post('/documents', {
           name: documentName ? documentName(item.file) : item.file.name,
           description: '',
-          category,
+          category: typeof category === 'function' ? category() : category,
           visibility,
           status: 'active',
           allowed_member_ids: [],

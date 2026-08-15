@@ -29,6 +29,12 @@ coverage/
 # Local Docker volume
 data/
 
+# Personal local Docker overrides (container name/port remaps for parallel worktrees)
+docker-compose.override.yml
+
+# Local design references (mockups, spec drafts) - not for contributors
+mockups/
+
 # IDE
 .vscode/
 .idea/

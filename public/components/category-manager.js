@@ -571,8 +571,8 @@ class CategoryManagerElement extends HTMLElement {
   async _delete(key) {
     const cat = this._cats.find((c) => this._keyOf(c) === key);
     if (!cat) return;
-    const { confirmModal } = await import('/components/modal.js');
-    const confirmed = await confirmModal(
+    const { confirmOverModal } = await import('/components/modal.js');
+    const confirmed = await confirmOverModal(
       t('category.deleteConfirm', { name: this._labelResolver(cat) }),
       { danger: true, confirmLabel: t('common.delete'), detail: t(this._deleteDetailKey) }
     );
@@ -674,8 +674,8 @@ class CategoryManagerElement extends HTMLElement {
   async _subDelete(parent, subKey) {
     const found = this._findSub(parent, subKey);
     if (!found) return;
-    const { confirmModal } = await import('/components/modal.js');
-    const confirmed = await confirmModal(
+    const { confirmOverModal } = await import('/components/modal.js');
+    const confirmed = await confirmOverModal(
       t('category.deleteSubConfirm', { name: this._labelResolver(found.sub) }),
       { danger: true, confirmLabel: t('common.delete'), detail: t(this._subDeleteDetailKey) }
     );
