@@ -26,13 +26,15 @@ colors:
   warning: "#A85D00"
   danger: "#D70015"
   info: "#0663C7"
-  # Familientoene (Block 2, 2026-08-10): die 17 Modul-Einzeltoene sind neun
-  # Familien; jedes --module-* bezieht aus seiner Familie. Quelle der Wahrheit
-  # und Modul-Zuordnung: public/styles/tokens.css, Abschnitt 4.
+  # Familientoene (Block 2, 2026-08-10): die Modul-Einzeltoene sind neun
+  # Familien; jedes --module-* bezieht aus seiner Familie. Hier steht bewusst
+  # keine Zahl - sie ist schon einmal gedriftet (CLAUDE.md, „Kanonische
+  # Quellen"). Quelle der Wahrheit und Modul-Zuordnung:
+  # public/styles/tokens.css, Abschnitt 4.
   # overview: dashboard - time: calendar, reminders - work: tasks,
   # housekeeping, rewards - kitchen: meals, recipes, shopping, pantry -
   # money: budget, split-expenses - people: contacts, birthdays -
-  # health: health - records: documents, notes - neutral: settings
+  # health: health - records: documents, notes, inventory - neutral: settings
   family-overview: "#6C3AED"
   family-time: "#00668F"
   family-work: "#157F3D"
@@ -143,18 +145,22 @@ components:
   button-icon:
     rounded: "{rounded.full}"
     size: "44px"
+  # Erhabene Surface-Pille, Modulton NUR in der Tinte (seit 2026-08-12; die
+  # gefuellte Fassung ist zurueckgenommen, Rezept in tokens.css Abschnitt 6c).
+  # rounded.full gilt fuer die Shell-Pille (.sub-tab); rounded.sm nur fuer das
+  # konzentrisch eingesetzte .segmented__item im radius-md-Traeger.
   segment-active:
-    backgroundColor: "var(--module-accent, #6C3AED)"
-    textColor: "{colors.ink-on-vivid}"
-    rounded: "{rounded.sm}"
+    backgroundColor: "var(--seg-active-bg)"
+    textColor: "color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-ink), var(--color-text-primary))"
+    rounded: "{rounded.full}"
   card:
     backgroundColor: "{colors.surface}"
     rounded: "{rounded.md}"
     padding: "16px"
   widget-header:
     backgroundColor: "color-mix(in srgb, var(--widget-accent, var(--color-accent)) var(--tint-wash), var(--color-surface))"
-    padding: "12px 16px"
-    height: "44px"
+    padding: "8px 16px"
+    height: "49px (Titelzeile 32px + 2x8px Polster + 1px Kante; keine min-height)"
   day-sheet:
     backgroundColor: "{colors.surface}"
     rounded: "{rounded.xl}"
@@ -198,7 +204,30 @@ components:
      Frontmatter-Wert und hat dabei drei Angaben korrigiert, die kein Token mehr
      deckte: den erfundenen 32px-Radius, den Modulton am Primaerknopf und den
      Modulton am Fokusring - die beiden letzten waren Reste aus der Zeit vor der
-     Eine-Stimme-Regel und standen hier laenger als im Code. -->
+     Eine-Stimme-Regel und standen hier laenger als im Code.
+
+     Nachgefuehrt 2026-08-15 gegen tokens.css und die Komponenten (109 Commits
+     auf public seit dem letzten Edit). Der FLIESSTEXT war durchweg gedeckt, das
+     FRONTMATTER an drei Stellen nicht: `segment-active` beschrieb noch die
+     gefuellte Pille, obwohl der Body die Ruecknahme vom 12.08. schon fuehrt;
+     `widget-header` trug Polster und Hoehe aus der Zeit vor der v2.6.0-Kur
+     (12/44 statt 8/49); die Familienzuordnung kannte `inventory` nicht (PR #741,
+     records-Familie). Die Modulzahl steht hier seither gar nicht mehr - sie war
+     schon vor dem Merge nicht die Laenge ihrer eigenen Liste. Derselbe Lauf hat
+     drei ueberlebte Kommentare im Code korrigiert (.btn--primary in layout.css,
+     .sub-tab--active in sub-tabs.css, --color-text-secondary in tokens.css); in
+     allen dreien war DESIGN.md aktueller als die Quelle.
+
+     Der Sidecar-Nachzug am selben Tag hat eine Luecke aufgedeckt, die vorher
+     niemandem auffiel, weil `.impeccable/design.json` sie zugedeckt hatte: der
+     Sidecar fuehrte zur Eine-Stimme-Regel ein Do und ein Don't, die HIER nie
+     standen (`git log -S` findet sie in keiner Fassung) - die zentrale Regel der
+     App hatte in dieser Liste keinen einzigen Eintrag. Beide stehen jetzt in
+     Do's and Don'ts, und der Sidecar leitet sie von dort ab statt sie zu
+     erfinden. Im selben Zug sind die beiden verbliebenen „17" gefallen: der
+     Modulzahl fehlte Inventar, und die Key Characteristics sagten „17
+     AA-verifizierte Modul-Tints", waehrend die Overview zwoelf Zeilen darueber
+     neun Familientoene fuehrt. -->
 
 ## Direction Contract
 
@@ -268,7 +297,7 @@ Gebaute stimmt mit der belegten Linie ueberein; die kollabierende Large-Title-Le
 von ihr sogar ausdruecklich bestaetigt. **Das war eine Korrektur der Referenzzeile, keine
 Design-Revision.**
 
-Jedes der 17 Module ist ein vertrauter Raum mit eigenem Tint (Apple-Systemapp-Muster:
+Jedes Modul ist ein vertrauter Raum mit eigenem Tint (Apple-Systemapp-Muster:
 jede App ihre Farbe - hier aber im INHALT, siehe die Eine-Stimme-Regel), zusammengehalten
 von warmen Neutralen, dem System-Font-Stack
 und der Apple-Typo-Skala. WCAG AA ist Invariante, nicht Ambition: Apple-Rohwerte, die AA
@@ -308,7 +337,7 @@ endgueltig loeschte.
 **Key Characteristics:**
 - Plattform-Kanon statt Eigenwelt: Apple HIG, Liquid Glass, System-Font-Stack
 - Glas nur als Chrome; Inhalte immer opak (Lesbarkeit vor Transparenz)
-- Eine Stimme (Bildmarken-Violett) im Chrome, 17 AA-verifizierte Modul-Tints im Inhalt,
+- Eine Stimme (Bildmarken-Violett) im Chrome, neun AA-verifizierte Familientoene im Inhalt,
   beides auf warmen Neutralen
 - Apple-Typo-Skala (Large Title 34 / Body 17 / Footnote 13), Kapsel-Controls, Inset-Grouped-Listen
 - Eine Kernform fuer Zeilenfolgen: genau ein Traeger, Zeilen als Haarlinien
@@ -1685,6 +1714,11 @@ Angabe braeuchte einen zweiten Timer, nur damit sie sich selbst aktuell haelt.
   bleibt stabil und wird nie doppelt geaendert.
 - **Do** jede neue Farb-Flaechen-Paarung gegen ihren REALEN Hintergrund auf AA messen
   (Pro-Hintergrund-Regel), in Light und Dark.
+- **Do** die Stimme fuer alles nehmen, was in jedem Modul dasselbe tut (Shell, FAB,
+  Primaer- und Sekundaerknopf, Umschalter, Fokusring, Suche, Overlays), und den Modulton
+  nur fuer das, was sagt, WO man ist (Siegel im Kopf, Leisten und Segmente im Modul, Chips,
+  Zeilen-Hover, Widget). Das Kriterium ist die Frage, die das Element beantwortet - „was tut
+  das hier" oder „wo bin ich" (Eine-Stimme-Regel).
 - **Do** eine Folge gleichartiger Zeilen in GENAU EINEN Traeger legen und ueber den
   `+`-Kombinator trennen (Zeilenlisten-Regel).
 - **Do** in einer Karte zwischen ZEILE (Haarlinie) und KACHEL (Inset-Well) waehlen; nur
@@ -1723,6 +1757,10 @@ Angabe braeuchte einen zweiten Timer, nur damit sie sich selbst aktuell haelt.
 - **Don't** einen zweiten Anlege-Weg neben einem sichtbaren stehen lassen; und wenn
   einer weichen muss, dann unter DERSELBEN Bedingung, unter der der andere erscheint -
   nie unter einer eigenen Zahl daneben.
+- **Don't** der Shell oder einem geteilten Bedienelement den Modulton geben - auch nicht
+  unter einem eigenen Klassennamen. Der Struktur-Guard liest SELEKTOR-Formen; wer
+  `.btn--secondary` unter eigenem Namen umfaerbt, steht in keiner davon. Genau dafuer gibt
+  es den zweiten Guard ueber die Klassen-Kopplung im Markup.
 - **Don't** Gradient-Text oder Akzent-Titel: Large Titles und Ueberschriften tragen immer
   Label-Farbe.
 - **Don't** chromatische Verlaeufe auf Inhalt legen; auch nicht auf der Anmeldebuehne und

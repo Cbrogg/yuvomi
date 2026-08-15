@@ -115,16 +115,21 @@
   transition-duration: 0.06s;
 }
 
-/* Aktiv: Modul-Akzent GEFÜLLT + --color-ink-on-vivid - die eine
- * Segment-Sprache der Shell (dieselbe wie .group-toggle__btn--active in
- * tasks.css und .cal-toolbar__view-btn--active im Kalender, DESIGN.md
- * „Segmented Controls").
+/* Aktiv = erhabene Surface-Pille, Modulton nur in der Tinte - die eine
+ * Segment-Sprache der Shell (Rezept: tokens.css, Abschnitt 6c; Muster
+ * .group-toggle__btn--active in tasks.css, .cal-toolbar__view-btn--active im
+ * Kalender, .segmented__item.is-active in panel.css).
  *
- * Vorher: 14 %-Tönung mit Ink-Label. Die Begründung dafür war, dass
- * Modul-Akzent als TEXT auf Hell nur ~3.5:1 erreicht - das gilt weiter und
- * ist genau der Grund, warum der Akzent hier zur FLÄCHE wird: alle
- * Modul-Tints sind gegen Weiß auf >=5:1 vertieft, weiße Tinte darauf erbt
- * denselben Wert. */
+ * Hier stand bis 2026-08-12 die GEFÜLLTE Fassung samt ihrer Begründung
+ * („Modul-Akzent als TEXT erreicht auf Hell nur ~3.5:1"). Die Messung ist mit
+ * den Familientönen (v2.1.0) abgelaufen: der rohe Ton hält 5.04:1 hell /
+ * 4.82:1 dunkel, die --tint-ink-Mischung 7.37:1 / 6.61:1 über alle neun
+ * Familien. Die vier Schwester-Fundstellen haben den Wechsel damals im
+ * Kommentar nachgezogen, diese nicht.
+ *
+ * Diese Leiste liest `--active-module-accent` statt `--module-accent`: sie
+ * sitzt in der Shell, nicht auf dem Page-Root, und kennt den Modulton nur
+ * über das, was der Router aufs Dokument setzt. */
 .sub-tab--active {
   background-color: var(--seg-active-bg);
   box-shadow: var(--seg-active-shadow);

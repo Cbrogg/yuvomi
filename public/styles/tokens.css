@@ -108,7 +108,7 @@
   --color-border-subtle:  var(--neutral-150);
   --color-border-strong:  var(--neutral-300);  /* kräftigere Trennlinie (Hover, betonte Rahmen) */
   --color-text-primary:   var(--neutral-900);
-  --color-text-secondary: var(--neutral-600);  /* WCAG AA: 5.75:1 auf weiß, 5.2:1 auf --color-bg */
+  --color-text-secondary: var(--neutral-600);  /* WCAG AA: 6.19:1 auf weiß, 5.58:1 auf --color-bg - dieselben Werte wie an --_neutral-600 oben; hier standen die der alten kühlen Rampe (5.75 / 5.2) */
   --_color-text-tertiary: #68686F;
   --color-text-tertiary:  var(--_color-text-tertiary);  /* WCAG AA: ≥4.6:1 auf --color-bg, ≥5.2:1 auf weiß */
   --color-text-quaternary: var(--neutral-500);  /* nur dekorativ (z.B. Kbd-Hint), nie für Fließtext */

@@ -3950,10 +3950,16 @@ p.field-hint--warn[hidden] {
   outline-offset: var(--focus-ring-offset);
 }
 
-/* Akzentregel „Modul-Akzent führt": Primäraktionen tragen den Akzent des aktiven
- * Moduls (wie FAB und Fokusringe); Violett bleibt Shell-Flächen und modul-losen
- * Routen (Login/Setup) vorbehalten. Die 88%/76%-Abdunklung reproduziert die
- * „Action"-Abstufung des bisherigen --color-btn-primary generisch je Akzent. */
+/* EINE STIMME: der Primärknopf trägt app-weit Violett, nicht den Modulton.
+ * `--color-accent` IST die Stimme; der Modulton läuft über
+ * `--active-module-accent`, das der Router aufs Dokument setzt, und erreicht
+ * diese Regel nicht.
+ *
+ * Hier stand bis v2.2.0 die umgekehrte Ansage („Modul-Akzent führt, wie FAB und
+ * Fokusringe; Violett bleibt Shell-Flächen vorbehalten"). Die Eine-Stimme-Regel
+ * hat sie abgelöst - der Kommentar hat sie überlebt, die Deklaration darunter
+ * nicht. Die 88%/76%-Abdunklung bleibt: sie reproduziert die
+ * „Action"-Abstufung des bisherigen --color-btn-primary. */
 .btn--primary {
   background-color: color-mix(in srgb, var(--color-accent) 88%, var(--neutral-950));
   color: var(--color-ink-on-vivid);
