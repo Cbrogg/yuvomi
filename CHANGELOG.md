@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.14.3] - 2026-08-15
+
 ### Fixed
 
 - **Running the web installer a second time no longer downgrades a working installation.** The simple path writes fixed values for host, port, `SESSION_SECURE` and `TRUST_PROXY`, and the re-run protection cannot catch them: it preserves whatever the client does *not* send, and these are sent. An instance set up behind a reverse proxy therefore lost its secure-only cookies, its proxy trust and its `BASE_URL` the moment someone picked "simple setup" again to change one small thing - with a blue banner that read like reassurance ("your current .env will be backed up") rather than a warning. When an existing `.env` is detected the simple path is now disabled, the recommendation moves to the advanced path, and a note says why. Three further values that were written on every run regardless of what the wizard showed are gone: `SYNC_INTERVAL_MINUTES` no longer resets a hand-tuned interval to 15, and `DOCUMENT_STORAGE_LOCAL_ENABLED`, `DOCUMENT_STORAGE_WEBDAV_ENABLED` and `WEBDAV_BACKUP_ENABLED` no longer write a literal `false` that silently switched off off-site backups and document storage while leaving their URL, username and password in place.
