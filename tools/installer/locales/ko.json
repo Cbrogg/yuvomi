@@ -10,7 +10,8 @@
     "toggleVisibility": "값 표시 또는 숨기기",
     "copy": "복사",
     "copied": "복사됨 ✓",
-    "language": "언어"
+    "language": "언어",
+    "copyRedirect": "리디렉션 URI 복사"
   },
   "config": {
     "title": "기본 구성",
@@ -22,7 +23,11 @@
     "tzLabel": "시간대",
     "errHost": "잘못된 호스트 이름입니다. 문자, 숫자, 하이픈, 마침표만 사용하세요.",
     "errPort": "잘못된 포트입니다. 1에서 65535 사이의 숫자여야 합니다.",
-    "prereqMissing": "누락된 사전 요구 사항: {{list}}. 설치한 후 페이지를 새로고침하세요."
+    "prereqMissing": "누락된 필수 구성 요소: {{list}}. {{link}}에서 설치 방법을 확인하세요.",
+    "prereqLinkDocker": "Docker 안내서",
+    "prereqLinkCompose": "podman-compose 안내서",
+    "prereqRecheck": "다시 확인",
+    "errSecureOverHttp": "공개 주소가 http://로 시작하는데 이 선택은 보안 쿠키를 강제합니다. 그러면 아무도 로그인할 수 없습니다. \"직접 접근\"을 선택하거나 https:// 주소를 사용하세요."
   },
   "secrets": {
     "title": "보안 키",
@@ -72,11 +77,11 @@
   "advanced": {
     "tag": "고급 · 선택 사항",
     "title": "고급 설정",
-    "subtitle": "리버스 프록시, 싱글 사인온, 자동 백업. 모두 선택 사항 — 건너뛰어도 문제없습니다.",
+    "subtitle": "저장소, 백업, 통합 인증, 연동. 대부분 선택 사항이지만 NAS에서 실행한다면 데이터 폴더는 확인하세요.",
     "proxyLabel": "Yuvomi가 어떻게 제공됩니까?",
     "proxyBehindHttps": "HTTPS를 사용하는 리버스 프록시 뒤 (Caddy, nginx, Traefik)",
     "proxyDirect": "localhost / HTTP를 통한 직접 접속",
-    "proxyHint": "직접 접속은 순수 Secure 쿠키를 비활성화하여 HTTPS 없이도 로그인이 작동하게 합니다.",
+    "proxyHint": "http://로 Yuvomi를 연다면 \"직접 접근\"을 선택하세요. 그렇지 않으면 로그인할 수 없습니다. HTTPS 리버스 프록시 뒤에서는 첫 번째 옵션을 선택하세요.",
     "oidc": "싱글 사인온 (OIDC)",
     "oidcHint": "SSO를 활성화하려면 네 필드를 모두 채우거나 비워 두세요.",
     "oidcIssuerLabel": "발급자 URL",
@@ -101,7 +106,6 @@
     "documentLocalEnable": "새 문서를 로컬 폴더에 저장",
     "documentLocalPathLabel": "폴더 경로",
     "documentLocalPathHint": "컨테이너 내부 경로. 비워 두면 /documents를 사용합니다.",
-    "sectionNetwork": "네트워크",
     "sectionIntegrations": "통합 및 백업",
     "errSchedule": "잘못된 cron 일정입니다(공백으로 구분된 다섯 개 필드 필요, 예: 0 2 * * *).",
     "errKeep": "보관할 백업 수는 양수여야 합니다.",
@@ -137,7 +141,12 @@
     "recipeProviderPrivateNetwork": "가정 네트워크의 레시피 공급자 미러 허용",
     "recipeProviderPrivateNetworkHint": "자체 네트워크의 Mealie 또는 Tandoor 인스턴스에 필요합니다. 레시피 공급자 미러에 대한 SSRF 보호를 해제합니다.",
     "oidcTrustEmail": "verified 클레임 없이 이메일 신뢰",
-    "oidcTrustEmailHint": "제공자가 email_verified를 보내지 않고 이를 신뢰하는 경우에만 사용하세요."
+    "oidcTrustEmailHint": "제공자가 email_verified를 보내지 않고 이를 신뢰하는 경우에만 사용하세요.",
+    "baseUrlLabel": "공개 주소",
+    "baseUrlHint": "가족이 Yuvomi를 여는 주소입니다. 컨테이너의 호스트와 포트가 아닙니다. 비밀번호 재설정 및 초대 링크에 사용됩니다.",
+    "syncIntervalLabel": "캘린더 동기화 간격(분)",
+    "syncIntervalHint": "Yuvomi가 캘린더와 연락처를 동기화하는 주기입니다. 공급자가 요청을 제한하면 값을 늘리세요.",
+    "errSyncInterval": "분 단위 양의 정수를 입력하세요."
   },
   "review": {
     "title": "검토",
@@ -166,7 +175,17 @@
     "webdavBackup": "외부 백업",
     "on": "켜짐",
     "off": "꺼짐",
-    "documentGoogleDrive": "Google Drive 문서"
+    "documentGoogleDrive": "Google Drive 문서",
+    "sessionSecret": "세션 키",
+    "dbKey": "데이터베이스 키",
+    "keyGenerated": "새로 생성됨",
+    "keyPreserved": "기존 키 유지",
+    "dataDir": "데이터 폴더",
+    "privateNetwork": "사설 네트워크 접근",
+    "privateNetworkIcs": "캘린더 구독",
+    "privateNetworkRecipes": "레시피",
+    "privateNetworkWebdav": "WebDAV 문서",
+    "baseUrl": "공개 주소"
   },
   "docker": {
     "title": "Yuvomi 시작 중",
@@ -209,7 +228,17 @@
     "open": "Yuvomi 열기 →",
     "backupReminder": "지금 .env 파일을 백업하는 것을 잊지 마세요 — 키가 들어 있습니다.",
     "download": ".env 파일 다운로드",
-    "savedTo": "{{path}}에 저장됨"
+    "savedTo": "{{path}}에 저장됨",
+    "downloadFailed": "파일을 불러오지 못했습니다 - 설치 프로그램이 이미 종료되었을 수 있습니다. 키는 서버의 .env 파일에 있습니다.",
+    "serverStops": "설치 프로그램은 몇 분 후에 종료됩니다. 이 탭을 닫기 전에 파일을 내려받으세요.",
+    "nextTitle": "다음 단계",
+    "nextInvite": "가족 초대하기",
+    "nextInviteDesc": "초대 링크를 만들어 각자 비밀번호를 직접 정하게 하세요.",
+    "nextModules": "모듈 고르기",
+    "nextModulesDesc": "실제로 쓰는 것만 켜고 나머지는 숨기세요.",
+    "nextInstall": "휴대폰에 설치하기",
+    "nextInstallDesc": "휴대폰에서 Yuvomi를 열고 홈 화면에 추가하세요. 오프라인에서도 작동합니다.",
+    "subtitleExisting": "Yuvomi가 실행 중입니다. 이 설치에는 이미 관리자 계정이 있습니다. 기존 자격 증명으로 로그인하세요."
   },
   "welcome": {
     "title": "Yuvomi에 오신 것을 환영합니다",
@@ -220,7 +249,8 @@
     "simpleTime": "약 2분",
     "advancedTitle": "고급 설정",
     "advancedDesc": "완전한 제어: 리버스 프록시, 캘린더 동기화, 이메일, 싱글 사인온, 백업.",
-    "advancedTime": "모든 옵션을 단계별로"
+    "advancedTime": "모든 옵션을 단계별로",
+    "existingLocked": "기존 설치가 감지되었습니다. 현재 설정을 유지하려면 고급 설정을 사용하세요."
   },
   "simple": {
     "title": "준비 완료",

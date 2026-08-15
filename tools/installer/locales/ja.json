@@ -10,7 +10,8 @@
     "toggleVisibility": "値を表示または非表示にする",
     "copy": "コピー",
     "copied": "コピーしました ✓",
-    "language": "言語"
+    "language": "言語",
+    "copyRedirect": "リダイレクト URI をコピー"
   },
   "config": {
     "title": "基本設定",
@@ -22,7 +23,11 @@
     "tzLabel": "タイムゾーン",
     "errHost": "ホスト名が無効です。英字、数字、ハイフン、ピリオドのみを使用してください。",
     "errPort": "ポートが無効です。1 から 65535 までの数値である必要があります。",
-    "prereqMissing": "前提条件が不足しています: {{list}}。インストールしてからページを再読み込みしてください。"
+    "prereqMissing": "不足している前提条件: {{list}}。{{link}} にインストール方法があります。",
+    "prereqLinkDocker": "Docker のガイド",
+    "prereqLinkCompose": "podman-compose のガイド",
+    "prereqRecheck": "再確認する",
+    "errSecureOverHttp": "公開アドレスが http:// で始まっていますが、この選択はセキュア Cookie を強制します。その組み合わせではログインできません。「直接アクセス」を選ぶか、https:// のアドレスを使ってください。"
   },
   "secrets": {
     "title": "セキュリティキー",
@@ -96,7 +101,17 @@
     "webdavBackup": "外部バックアップ",
     "on": "有効",
     "off": "無効",
-    "documentGoogleDrive": "Google Drive 文書"
+    "documentGoogleDrive": "Google Drive 文書",
+    "sessionSecret": "セッションキー",
+    "dbKey": "データベースキー",
+    "keyGenerated": "新規に生成",
+    "keyPreserved": "既存のキーを保持",
+    "dataDir": "データフォルダー",
+    "privateNetwork": "ローカルネットワークへのアクセス",
+    "privateNetworkIcs": "カレンダー購読",
+    "privateNetworkRecipes": "レシピ",
+    "privateNetworkWebdav": "WebDAV ドキュメント",
+    "baseUrl": "公開アドレス"
   },
   "docker": {
     "title": "Yuvomi を起動しています",
@@ -139,16 +154,26 @@
     "open": "Yuvomi を開く →",
     "backupReminder": "今すぐ .env ファイルをバックアップするのを忘れずに — キーが含まれています。",
     "download": ".env ファイルをダウンロード",
-    "savedTo": "{{path}} に保存しました"
+    "savedTo": "{{path}} に保存しました",
+    "downloadFailed": "ファイルを読み込めませんでした - インストーラーはすでに終了している可能性があります。キーはサーバー上の .env ファイルにあります。",
+    "serverStops": "インストーラーは数分後に終了します。このタブを閉じる前にファイルをダウンロードしてください。",
+    "nextTitle": "次にすること",
+    "nextInvite": "家族を招待する",
+    "nextInviteDesc": "招待リンクを作れば、各自が自分でパスワードを決められます。",
+    "nextModules": "モジュールを選ぶ",
+    "nextModulesDesc": "家庭で実際に使うものだけを有効にし、残りは隠せます。",
+    "nextInstall": "スマートフォンに追加する",
+    "nextInstallDesc": "スマートフォンで Yuvomi を開き、ホーム画面に追加してください。オフラインでも動きます。",
+    "subtitleExisting": "Yuvomi は稼働中です。このインストールにはすでに管理者アカウントがあります。既存の認証情報でログインしてください。"
   },
   "advanced": {
     "tag": "詳細設定 · 任意",
     "title": "詳細設定",
-    "subtitle": "リバースプロキシ、シングルサインオン、自動バックアップ。すべて任意です — スキップしても問題ありません。",
+    "subtitle": "ストレージ、バックアップ、シングルサインオン、各種連携。ほとんどは任意ですが、NAS で動かすならデータフォルダーは確認してください。",
     "proxyLabel": "Yuvomi はどのように公開されますか？",
     "proxyBehindHttps": "HTTPS 付きのリバースプロキシの背後（Caddy、nginx、Traefik）",
     "proxyDirect": "localhost / HTTP による直接アクセス",
-    "proxyHint": "直接アクセスでは secure 限定の Cookie を無効にし、HTTPS なしでもログインできるようにします。",
+    "proxyHint": "http:// で Yuvomi を開く場合は「直接アクセス」を選んでください。そうしないとログインできません。HTTPS のリバースプロキシの背後では最初の選択肢を選びます。",
     "oidc": "シングルサインオン (OIDC)",
     "oidcHint": "SSO を有効にするには 4 つすべての項目を入力するか、すべて空のままにしてください。",
     "oidcIssuerLabel": "発行者 URL",
@@ -173,7 +198,6 @@
     "documentLocalEnable": "新しいドキュメントをローカルフォルダーに保存する",
     "documentLocalPathLabel": "フォルダーのパス",
     "documentLocalPathHint": "コンテナ内のパス。空欄の場合は /documents を使用します。",
-    "sectionNetwork": "ネットワーク",
     "sectionIntegrations": "連携とバックアップ",
     "errSchedule": "無効な cron スケジュールです（スペース区切りの5フィールドが必要、例：0 2 * * *）。",
     "errKeep": "保持するバックアップ数は正の数である必要があります。",
@@ -209,7 +233,12 @@
     "recipeProviderPrivateNetwork": "家庭内ネットワークのレシピプロバイダーミラーを許可する",
     "recipeProviderPrivateNetworkHint": "自宅ネットワークの Mealie または Tandoor インスタンスに必要です。レシピプロバイダーミラーの SSRF 保護を解除します。",
     "oidcTrustEmail": "verified クレームなしでメールアドレスを信頼する",
-    "oidcTrustEmailHint": "プロバイダーが email_verified を送らず、かつ信頼できる場合のみ有効にしてください。"
+    "oidcTrustEmailHint": "プロバイダーが email_verified を送らず、かつ信頼できる場合のみ有効にしてください。",
+    "baseUrlLabel": "公開アドレス",
+    "baseUrlHint": "家族が Yuvomi を開くアドレスです。コンテナのホストとポートではありません。パスワード再設定と招待のリンクに使われます。",
+    "syncIntervalLabel": "カレンダー同期の間隔（分）",
+    "syncIntervalHint": "Yuvomi がカレンダーと連絡先を同期する頻度です。プロバイダーに制限されている場合は大きくしてください。",
+    "errSyncInterval": "分を正の整数で入力してください。"
   },
   "welcome": {
     "title": "Yuvomi へようこそ",
@@ -220,7 +249,8 @@
     "simpleTime": "約2分",
     "advancedTitle": "詳細セットアップ",
     "advancedDesc": "完全な制御：リバースプロキシ、カレンダー同期、メール、シングルサインオン、バックアップ。",
-    "advancedTime": "すべての項目を順番に"
+    "advancedTime": "すべての項目を順番に",
+    "existingLocked": "既存のインストールが見つかりました。現在の設定を保持するため、詳細セットアップに進んでください。"
   },
   "simple": {
     "title": "準備完了",

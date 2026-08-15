@@ -10,7 +10,8 @@
     "toggleVisibility": "Hiện hoặc ẩn giá trị",
     "copy": "Sao chép",
     "copied": "Đã sao chép ✓",
-    "language": "Ngôn ngữ"
+    "language": "Ngôn ngữ",
+    "copyRedirect": "Sao chép URI chuyển hướng"
   },
   "config": {
     "title": "Cấu hình cơ bản",
@@ -22,7 +23,11 @@
     "tzLabel": "Múi giờ",
     "errHost": "Tên máy chủ không hợp lệ. Chỉ dùng chữ cái, số, dấu gạch ngang và dấu chấm.",
     "errPort": "Cổng không hợp lệ. Phải là số từ 1 đến 65535.",
-    "prereqMissing": "Thiếu điều kiện tiên quyết: {{list}}. Vui lòng cài đặt chúng và tải lại trang này."
+    "prereqMissing": "Thiếu thành phần bắt buộc: {{list}}. {{link}} hướng dẫn cách cài đặt.",
+    "prereqLinkDocker": "Hướng dẫn Docker",
+    "prereqLinkCompose": "Hướng dẫn podman-compose",
+    "prereqRecheck": "Kiểm tra lại",
+    "errSecureOverHttp": "Địa chỉ công khai bắt đầu bằng http://, nhưng lựa chọn này bắt buộc cookie bảo mật - khi đó không ai đăng nhập được. Hãy chọn \"Truy cập trực tiếp\" hoặc dùng địa chỉ https://."
   },
   "secrets": {
     "title": "Khóa bảo mật",
@@ -96,7 +101,17 @@
     "webdavBackup": "Sao lưu bên ngoài",
     "on": "bật",
     "off": "tắt",
-    "documentGoogleDrive": "Tài liệu Google Drive"
+    "documentGoogleDrive": "Tài liệu Google Drive",
+    "sessionSecret": "Khóa phiên",
+    "dbKey": "Khóa cơ sở dữ liệu",
+    "keyGenerated": "Vừa tạo mới",
+    "keyPreserved": "Giữ nguyên khóa hiện có",
+    "dataDir": "Thư mục dữ liệu",
+    "privateNetwork": "Truy cập mạng nội bộ",
+    "privateNetworkIcs": "Đăng ký lịch",
+    "privateNetworkRecipes": "Công thức",
+    "privateNetworkWebdav": "Tài liệu WebDAV",
+    "baseUrl": "Địa chỉ công khai"
   },
   "docker": {
     "title": "Đang khởi động Yuvomi",
@@ -139,16 +154,26 @@
     "open": "Mở Yuvomi →",
     "backupReminder": "Nhớ sao lưu tệp .env của bạn ngay bây giờ — nó chứa các khóa của bạn.",
     "download": "Tải xuống tệp .env",
-    "savedTo": "Đã lưu vào {{path}}"
+    "savedTo": "Đã lưu vào {{path}}",
+    "downloadFailed": "Không tải được tệp - trình cài đặt nhiều khả năng đã dừng. Các khóa của bạn nằm trong tệp .env trên máy chủ.",
+    "serverStops": "Trình cài đặt sẽ dừng sau vài phút. Hãy tải tệp về trước khi bạn đóng thẻ này.",
+    "nextTitle": "Tiếp theo",
+    "nextInvite": "Mời gia đình bạn",
+    "nextInviteDesc": "Tạo liên kết mời để mỗi người tự chọn mật khẩu riêng.",
+    "nextModules": "Chọn mô-đun",
+    "nextModulesDesc": "Bật những gì gia đình bạn thực sự dùng và ẩn phần còn lại.",
+    "nextInstall": "Cài lên điện thoại",
+    "nextInstallDesc": "Mở Yuvomi trên điện thoại và thêm vào màn hình chính - vẫn dùng được khi ngoại tuyến.",
+    "subtitleExisting": "Yuvomi đang chạy. Bản cài đặt này đã có tài khoản quản trị - hãy đăng nhập bằng thông tin hiện có của bạn."
   },
   "advanced": {
     "tag": "Nâng cao · tùy chọn",
     "title": "Cài đặt nâng cao",
-    "subtitle": "Reverse proxy, đăng nhập một lần và sao lưu tự động. Tất cả đều tùy chọn — bỏ qua là an toàn.",
+    "subtitle": "Lưu trữ, sao lưu, đăng nhập một lần và tích hợp. Phần lớn là tùy chọn - nhưng hãy xem thư mục dữ liệu nếu bạn chạy trên NAS.",
     "proxyLabel": "Yuvomi được hiển thị như thế nào?",
     "proxyBehindHttps": "Sau reverse proxy với HTTPS (Caddy, nginx, Traefik)",
     "proxyDirect": "Truy cập trực tiếp qua localhost / HTTP",
-    "proxyHint": "Truy cập trực tiếp tắt cookie chỉ dành cho HTTPS để đăng nhập hoạt động mà không cần HTTPS.",
+    "proxyHint": "Chọn \"Truy cập trực tiếp\" nếu bạn mở Yuvomi qua http:// - nếu không bạn sẽ không đăng nhập được. Phía sau reverse proxy có HTTPS, hãy chọn tùy chọn đầu tiên.",
     "oidc": "Đăng nhập một lần (OIDC)",
     "oidcHint": "Điền cả bốn trường để bật SSO, hoặc để trống.",
     "oidcIssuerLabel": "URL Issuer",
@@ -173,7 +198,6 @@
     "documentLocalEnable": "Lưu tài liệu mới vào thư mục cục bộ",
     "documentLocalPathLabel": "Đường dẫn thư mục",
     "documentLocalPathHint": "Đường dẫn trong container. Để trống để dùng /documents.",
-    "sectionNetwork": "Mạng",
     "sectionIntegrations": "Tích hợp và sao lưu",
     "errSchedule": "Lịch cron không hợp lệ (cần năm trường phân tách bằng dấu cách, ví dụ 0 2 * * *).",
     "errKeep": "Số bản sao lưu cần giữ phải là một số dương.",
@@ -209,7 +233,12 @@
     "recipeProviderPrivateNetwork": "Cho phép gương nhà cung cấp công thức trong mạng nội bộ",
     "recipeProviderPrivateNetworkHint": "Cần cho phiên bản Mealie hoặc Tandoor trong mạng của bạn. Gỡ bảo vệ SSRF cho gương nhà cung cấp công thức.",
     "oidcTrustEmail": "Tin cậy email khi không có claim verified",
-    "oidcTrustEmailHint": "Chỉ bật nếu nhà cung cấp không gửi email_verified và bạn tin tưởng họ."
+    "oidcTrustEmailHint": "Chỉ bật nếu nhà cung cấp không gửi email_verified và bạn tin tưởng họ.",
+    "baseUrlLabel": "Địa chỉ công khai",
+    "baseUrlHint": "Địa chỉ mà gia đình bạn mở Yuvomi - không phải host và cổng của container. Dùng cho liên kết đặt lại mật khẩu và lời mời.",
+    "syncIntervalLabel": "Khoảng thời gian đồng bộ lịch (phút)",
+    "syncIntervalHint": "Yuvomi đồng bộ lịch và danh bạ bao lâu một lần. Tăng lên nếu nhà cung cấp giới hạn tần suất.",
+    "errSyncInterval": "Hãy nhập một số nguyên dương tính bằng phút."
   },
   "welcome": {
     "title": "Chào mừng đến với Yuvomi",
@@ -220,7 +249,8 @@
     "simpleTime": "Khoảng 2 phút",
     "advancedTitle": "Thiết lập nâng cao",
     "advancedDesc": "Toàn quyền kiểm soát: reverse proxy, đồng bộ lịch, email, đăng nhập một lần và sao lưu.",
-    "advancedTime": "Mọi tùy chọn, từng bước"
+    "advancedTime": "Mọi tùy chọn, từng bước",
+    "existingLocked": "Đã phát hiện một bản cài đặt hiện có. Hãy dùng thiết lập nâng cao để giữ nguyên các cài đặt hiện tại của bạn."
   },
   "simple": {
     "title": "Sẵn sàng",

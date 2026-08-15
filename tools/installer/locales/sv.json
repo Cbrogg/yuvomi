@@ -10,7 +10,8 @@
     "toggleVisibility": "Visa eller dölj värdet",
     "copy": "Kopiera",
     "copied": "Kopierat ✓",
-    "language": "Språk"
+    "language": "Språk",
+    "copyRedirect": "Kopiera omdirigerings-URI"
   },
   "config": {
     "title": "Grundkonfiguration",
@@ -22,7 +23,11 @@
     "tzLabel": "Tidszon",
     "errHost": "Ogiltigt värdnamn. Använd endast bokstäver, siffror, bindestreck och punkter.",
     "errPort": "Ogiltig port. Måste vara ett tal mellan 1 och 65535.",
-    "prereqMissing": "Saknade förutsättningar: {{list}}. Installera dem och ladda om sidan."
+    "prereqMissing": "Saknade förutsättningar: {{list}}. {{link}} visar hur du installerar dem.",
+    "prereqLinkDocker": "Docker-guiden",
+    "prereqLinkCompose": "podman-compose-guiden",
+    "prereqRecheck": "Kontrollera igen",
+    "errSecureOverHttp": "Den publika adressen börjar med http://, men det här valet kräver säkra kakor - då kan ingen logga in. Välj \"Direktåtkomst\" eller använd en https://-adress."
   },
   "secrets": {
     "title": "Säkerhetsnycklar",
@@ -96,7 +101,17 @@
     "webdavBackup": "Externa säkerhetskopior",
     "on": "aktiverad",
     "off": "inaktiverad",
-    "documentGoogleDrive": "Google Drive-dokument"
+    "documentGoogleDrive": "Google Drive-dokument",
+    "sessionSecret": "Sessionsnyckel",
+    "dbKey": "Databasnyckel",
+    "keyGenerated": "Nyskapad",
+    "keyPreserved": "Befintlig nyckel behålls",
+    "dataDir": "Datamapp",
+    "privateNetwork": "Åtkomst till egna nätverket",
+    "privateNetworkIcs": "Kalenderprenumerationer",
+    "privateNetworkRecipes": "Recept",
+    "privateNetworkWebdav": "WebDAV-dokument",
+    "baseUrl": "Publik adress"
   },
   "docker": {
     "title": "Startar Yuvomi",
@@ -139,16 +154,26 @@
     "open": "Öppna Yuvomi →",
     "backupReminder": "Kom ihåg att säkerhetskopiera din .env-fil nu — den innehåller dina nycklar.",
     "download": "Ladda ner .env-filen",
-    "savedTo": "Sparad i {{path}}"
+    "savedTo": "Sparad i {{path}}",
+    "downloadFailed": "Filen kunde inte hämtas - installationsprogrammet har troligen redan avslutats. Dina nycklar finns i .env-filen på din server.",
+    "serverStops": "Installationsprogrammet avslutas om några minuter. Ladda ner filen innan du stänger den här fliken.",
+    "nextTitle": "Härnäst",
+    "nextInvite": "Bjud in familjen",
+    "nextInviteDesc": "Skapa inbjudningslänkar så att alla väljer sitt eget lösenord.",
+    "nextModules": "Välj dina moduler",
+    "nextModulesDesc": "Slå på det hushållet faktiskt använder och göm resten.",
+    "nextInstall": "Installera på telefonerna",
+    "nextInstallDesc": "Öppna Yuvomi i telefonen och lägg till den på hemskärmen - den fungerar offline.",
+    "subtitleExisting": "Yuvomi körs. Den här installationen har redan ett administratörskonto - logga in med dina befintliga uppgifter."
   },
   "advanced": {
     "tag": "Avancerat · valfritt",
     "title": "Avancerade inställningar",
-    "subtitle": "Omvänd proxy, enkel inloggning och automatiska säkerhetskopior. Allt valfritt — det är säkert att hoppa över.",
+    "subtitle": "Lagring, säkerhetskopior, enkel inloggning och integrationer. Det mesta är valfritt - men titta på datamappen om du kör på en NAS.",
     "proxyLabel": "Hur exponeras Yuvomi?",
     "proxyBehindHttps": "Bakom en omvänd proxy med HTTPS (Caddy, nginx, Traefik)",
     "proxyDirect": "Direkt åtkomst via localhost / HTTP",
-    "proxyHint": "Direkt åtkomst inaktiverar cookies som endast är säkra så att inloggning fungerar utan HTTPS.",
+    "proxyHint": "Välj \"Direktåtkomst\" om du öppnar Yuvomi via http:// - annars kan du inte logga in. Bakom en omvänd proxy med HTTPS väljer du det första alternativet.",
     "oidc": "Enkel inloggning (OIDC)",
     "oidcHint": "Fyll i alla fyra fält för att aktivera SSO, eller lämna dem tomma.",
     "oidcIssuerLabel": "Issuer-URL",
@@ -173,7 +198,6 @@
     "documentLocalEnable": "Spara nya dokument i en lokal mapp",
     "documentLocalPathLabel": "Mappsökväg",
     "documentLocalPathHint": "Sökväg i containern. Lämna tomt för /documents.",
-    "sectionNetwork": "Nätverk",
     "sectionIntegrations": "Integrationer och säkerhetskopior",
     "errSchedule": "Ogiltigt cron-schema (fem mellanslagsseparerade fält förväntas, t.ex. 0 2 * * *).",
     "errKeep": "Antal säkerhetskopior att behålla måste vara ett positivt tal.",
@@ -209,7 +233,12 @@
     "recipeProviderPrivateNetwork": "Tillåt receptförmedlare på ditt hemnätverk",
     "recipeProviderPrivateNetworkHint": "Krävs för en Mealie- eller Tandoor-instans i ditt eget nätverk. Upphäver SSRF-skyddet för receptförmedlare.",
     "oidcTrustEmail": "Lita på e-post utan verified-claim",
-    "oidcTrustEmailHint": "Aktivera bara om din leverantör inte skickar email_verified och du litar på den."
+    "oidcTrustEmailHint": "Aktivera bara om din leverantör inte skickar email_verified och du litar på den.",
+    "baseUrlLabel": "Publik adress",
+    "baseUrlHint": "Adressen där din familj öppnar Yuvomi - inte containerns värd och port. Används för länkar till lösenordsåterställning och inbjudningar.",
+    "syncIntervalLabel": "Synkroniseringsintervall för kalender (minuter)",
+    "syncIntervalHint": "Hur ofta Yuvomi synkroniserar kalendrar och kontakter. Höj det om din leverantör begränsar antalet anrop.",
+    "errSyncInterval": "Ange ett positivt heltal antal minuter."
   },
   "welcome": {
     "title": "Välkommen till Yuvomi",
@@ -220,7 +249,8 @@
     "simpleTime": "Ungefär 2 minuter",
     "advancedTitle": "Avancerad installation",
     "advancedDesc": "Full kontroll: omvänd proxy, kalendersynk, e-post, enkel inloggning och säkerhetskopior.",
-    "advancedTime": "Varje alternativ, steg för steg"
+    "advancedTime": "Varje alternativ, steg för steg",
+    "existingLocked": "En befintlig installation hittades. Använd den avancerade installationen så att dina nuvarande inställningar behålls."
   },
   "simple": {
     "title": "Klart att köra",

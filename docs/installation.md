@@ -177,7 +177,7 @@ node tools/installer/install-server.js
 
 #### 3. Open the Wizard
 
-Open your browser and navigate to **http://localhost:8090**. The wizard detects your browser language (24 languages supported), verifies that a container engine is available (Docker with Compose v2, or Podman with `podman compose` / `podman-compose`), and reports any existing `.env` file or running container before you start. It then guides you through:
+Open your browser and navigate to **http://localhost:8090**. The wizard detects your browser language (24 languages supported), verifies that a container engine is available (Docker with Compose v2, or Podman with `podman compose` / `podman-compose`), and reports an existing `.env` file before you start. When it finds one, the **simple setup is disabled** and you continue with the advanced setup: the simple path writes fixed values for host, port, `SESSION_SECURE` and `TRUST_PROXY`, which would silently downgrade an installation that already runs behind a reverse proxy. The wizard then guides you through:
 
 - Basics — timezone (`TZ`) and HTTP host port (`OIKOS_HTTP_PORT`)
 - Security key generation (`SESSION_SECRET`, `DB_ENCRYPTION_KEY`) — on a re-run, keys already present in your `.env` are kept rather than regenerated, so running the wizard again on a live installation cannot lock you out of your encrypted database
@@ -187,9 +187,9 @@ Open your browser and navigate to **http://localhost:8090**. The wizard detects 
 - Starting the container (via Docker or Podman, whichever was detected)
 - Creating your admin account
 
-The final screen lets you **download a copy of your `.env`** — keep it safe, as it holds the encryption keys that cannot be recovered if lost. Keys carried over from an earlier run appear there as a comment instead of a value, because the browser never receives them; those keys are still in the `.env` on disk and in its backup copy.
+The final screen lets you **download a copy of your `.env`** — keep it safe, as it holds the encryption keys that cannot be recovered if lost. The file is fetched from the server rather than rebuilt in the browser, so it contains the real values, including keys carried over from an earlier run that the browser itself never receives. If the download fails (most likely because the installer has already shut down), the screen says so instead of reporting success, and points you at the `.env` on disk.
 
-The installer server shuts down automatically after setup completes (or after 30 minutes of inactivity).
+Download the file before you close the tab: the installer server shuts down **5 minutes after your admin account is created**, and after 30 minutes of inactivity otherwise.
 
 ---
 

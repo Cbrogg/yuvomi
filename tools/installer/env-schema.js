@@ -38,6 +38,12 @@ export const ENV_SCHEMA = [
   // neben die Compose-Datei). Ohne Eintrag im Installer musste er von Hand in
   // die .env - und ein zweiter Lauf hätte ihn wieder gelöscht.
   { key: 'DATA_DIR',                    type: 'default', label: 'Host Data Folder',         default: './data', required: false, group: 'system', writeToEnv: true },
+  // BACKUP_DIR und MODULES_DIR fehlen hier bewusst, jeweils mit eigenem Grund
+  // in INTENTIONALLY_NOT_IN_INSTALLER (test/test-installer-schema.js):
+  // BACKUP_DIR traegt zwei Rollen unter einem Namen (Host-Mount in der
+  // Compose-Substitution, Container-Ziel im Image) - ein Wert in der .env war
+  // genau der Fehler aus #579. MODULES_DIR ist ein Nischenfall, dessen Default
+  // fuer jede vom Wizard erzeugte Installation stimmt.
   // Absolute Origin für Passwort-Reset-Links & Push. Vom Installer aus Schema/Host/Port
   // abgeleitet, nie aus dem Request-Host-Header (Reset-Poisoning-Schutz).
   { key: 'BASE_URL',                    type: 'default', label: 'Base URL',                 default: '',     group: 'system',  writeToEnv: true },

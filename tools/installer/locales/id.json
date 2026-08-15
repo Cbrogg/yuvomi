@@ -10,7 +10,8 @@
     "toggleVisibility": "Tampilkan atau sembunyikan nilai",
     "copy": "Salin",
     "copied": "Disalin ✓",
-    "language": "Bahasa"
+    "language": "Bahasa",
+    "copyRedirect": "Salin URI pengalihan"
   },
   "config": {
     "title": "Konfigurasi dasar",
@@ -22,7 +23,11 @@
     "tzLabel": "Zona waktu",
     "errHost": "Nama host tidak valid. Gunakan hanya huruf, angka, tanda hubung, dan titik.",
     "errPort": "Port tidak valid. Harus berupa angka antara 1 dan 65535.",
-    "prereqMissing": "Prasyarat yang hilang: {{list}}. Harap instal dan muat ulang halaman."
+    "prereqMissing": "Prasyarat yang kurang: {{list}}. {{link}} menunjukkan cara memasangnya.",
+    "prereqLinkDocker": "Panduan Docker",
+    "prereqLinkCompose": "Panduan podman-compose",
+    "prereqRecheck": "Periksa lagi",
+    "errSecureOverHttp": "Alamat publik dimulai dengan http://, tetapi pilihan ini mewajibkan cookie aman - tidak ada yang bisa masuk. Pilih \"Akses langsung\" atau gunakan alamat https://."
   },
   "secrets": {
     "title": "Kunci keamanan",
@@ -72,11 +77,11 @@
   "advanced": {
     "tag": "Lanjutan · opsional",
     "title": "Pengaturan lanjutan",
-    "subtitle": "Reverse proxy, single sign-on, dan cadangan otomatis. Semua opsional — melewatinya tidak berisiko.",
+    "subtitle": "Penyimpanan, cadangan, single sign-on, dan integrasi. Sebagian besar opsional - tetapi periksa folder data jika kamu memakai NAS.",
     "proxyLabel": "Bagaimana Yuvomi disediakan?",
     "proxyBehindHttps": "Di belakang reverse proxy dengan HTTPS (Caddy, nginx, Traefik)",
     "proxyDirect": "Akses langsung melalui localhost / HTTP",
-    "proxyHint": "Akses langsung menonaktifkan cookie Secure murni, sehingga login berfungsi tanpa HTTPS.",
+    "proxyHint": "Pilih \"Akses langsung\" jika kamu membuka Yuvomi lewat http:// - kalau tidak, kamu tidak bisa masuk. Di belakang reverse proxy dengan HTTPS, pilih opsi pertama.",
     "oidc": "Single sign-on (OIDC)",
     "oidcHint": "Isi keempat bidang untuk mengaktifkan SSO, atau biarkan kosong.",
     "oidcIssuerLabel": "URL Issuer",
@@ -101,7 +106,6 @@
     "documentLocalEnable": "Simpan dokumen baru di folder lokal",
     "documentLocalPathLabel": "Jalur folder",
     "documentLocalPathHint": "Jalur di dalam kontainer. Biarkan kosong untuk /documents.",
-    "sectionNetwork": "Jaringan",
     "sectionIntegrations": "Integrasi dan pencadangan",
     "errSchedule": "Jadwal cron tidak valid (diharapkan lima bidang dipisah spasi, mis. 0 2 * * *).",
     "errKeep": "Jumlah cadangan yang disimpan harus berupa angka positif.",
@@ -137,7 +141,12 @@
     "recipeProviderPrivateNetwork": "Izinkan salinan penyedia resep di jaringan rumah",
     "recipeProviderPrivateNetworkHint": "Diperlukan untuk contoh Mealie atau Tandoor di jaringan Anda. Melepas perlindungan SSRF untuk salinan penyedia resep.",
     "oidcTrustEmail": "Percayai email tanpa klaim verified",
-    "oidcTrustEmailHint": "Aktifkan hanya jika penyedia Anda tidak mengirim email_verified dan Anda memercayainya."
+    "oidcTrustEmailHint": "Aktifkan hanya jika penyedia Anda tidak mengirim email_verified dan Anda memercayainya.",
+    "baseUrlLabel": "Alamat publik",
+    "baseUrlHint": "Alamat yang dipakai keluargamu untuk membuka Yuvomi - bukan host dan port kontainer. Dipakai untuk tautan atur ulang kata sandi dan undangan.",
+    "syncIntervalLabel": "Interval sinkronisasi kalender (menit)",
+    "syncIntervalHint": "Seberapa sering Yuvomi menyinkronkan kalender dan kontak. Naikkan jika penyedia membatasi laju.",
+    "errSyncInterval": "Masukkan bilangan bulat positif dalam menit."
   },
   "review": {
     "title": "Tinjauan",
@@ -166,7 +175,17 @@
     "webdavBackup": "Cadangan eksternal",
     "on": "aktif",
     "off": "nonaktif",
-    "documentGoogleDrive": "Dokumen Google Drive"
+    "documentGoogleDrive": "Dokumen Google Drive",
+    "sessionSecret": "Kunci sesi",
+    "dbKey": "Kunci basis data",
+    "keyGenerated": "Baru dibuat",
+    "keyPreserved": "Kunci yang ada dipertahankan",
+    "dataDir": "Folder data",
+    "privateNetwork": "Akses ke jaringan lokal",
+    "privateNetworkIcs": "Langganan kalender",
+    "privateNetworkRecipes": "Resep",
+    "privateNetworkWebdav": "Dokumen WebDAV",
+    "baseUrl": "Alamat publik"
   },
   "docker": {
     "title": "Yuvomi sedang dimulai",
@@ -209,7 +228,17 @@
     "open": "Buka Yuvomi →",
     "backupReminder": "Ingat untuk mencadangkan berkas .env Anda sekarang — berkas itu berisi kunci Anda.",
     "download": "Unduh berkas .env",
-    "savedTo": "Disimpan di {{path}}"
+    "savedTo": "Disimpan di {{path}}",
+    "downloadFailed": "File tidak dapat dimuat - installer kemungkinan sudah berhenti. Kuncimu ada di file .env pada servermu.",
+    "serverStops": "Installer akan berhenti dalam beberapa menit. Unduh file sebelum kamu menutup tab ini.",
+    "nextTitle": "Berikutnya",
+    "nextInvite": "Undang keluargamu",
+    "nextInviteDesc": "Buat tautan undangan agar setiap orang memilih kata sandinya sendiri.",
+    "nextModules": "Pilih modulmu",
+    "nextModulesDesc": "Aktifkan yang benar-benar dipakai rumah tanggamu dan sembunyikan sisanya.",
+    "nextInstall": "Pasang di ponsel",
+    "nextInstallDesc": "Buka Yuvomi di ponsel dan tambahkan ke layar utama - bisa dipakai offline.",
+    "subtitleExisting": "Yuvomi sedang berjalan. Instalasi ini sudah punya akun administrator - masuk dengan kredensialmu yang ada."
   },
   "welcome": {
     "title": "Selamat datang di Yuvomi",
@@ -220,7 +249,8 @@
     "simpleTime": "Sekitar 2 menit",
     "advancedTitle": "Penyiapan lanjutan",
     "advancedDesc": "Kontrol penuh: reverse proxy, sinkronisasi kalender, email, single sign-on, dan pencadangan.",
-    "advancedTime": "Setiap opsi, langkah demi langkah"
+    "advancedTime": "Setiap opsi, langkah demi langkah",
+    "existingLocked": "Instalasi yang sudah ada terdeteksi. Gunakan pengaturan lanjutan agar pengaturanmu saat ini tetap tersimpan."
   },
   "simple": {
     "title": "Siap digunakan",
