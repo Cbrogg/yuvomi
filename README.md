@@ -106,7 +106,7 @@ Most families glue their life together from a dozen paid apps, each with its own
 | a grocery-list app | **Shopping** - shared, aisle-organized lists |
 | a pantry &amp; expiry tracker | **Pantry** - stock, storage location, best-before dates |
 | a document manager | **Documents** - tagged, searchable family files |
-| a home-inventory app | **Inventory** - owned belongings, value, warranty, linked receipts |
+| a home-inventory app | **Inventory** - owned belongings, purchase price, warranty, linked receipts |
 | a notes app &amp; contacts sync | **Notes &amp; Contacts** - Markdown notes, CardDAV sync |
 
 <br>
@@ -248,7 +248,7 @@ Most families glue their life together from a dozen paid apps, each with its own
 
 ## Modules
 
-Seventeen independent modules share one calm, consistent interface. Turn on what your household needs; the rest stays out of the way.
+Eighteen independent modules share one calm, consistent interface. Turn on what your household needs; the rest stays out of the way.
 
 | | Module | In one line |
 |:---:|---|---|
@@ -259,6 +259,7 @@ Seventeen independent modules share one calm, consistent interface. Turn on what
 | ![pantry](https://raw.githubusercontent.com/ulsklyc/yuvomi/main/docs/icons/pantry.png) | **Pantry** | What is actually in the house: amount, storage location and best-before date, with expiry and low-stock filters and a two-way handover with the shopping list. |
 | ![calendar](https://raw.githubusercontent.com/ulsklyc/yuvomi/main/docs/icons/calendar.png) | **Calendar** | Two-way sync with Google and CalDAV, ICS subscriptions, recurring events, holiday overlays and shared visibility. |
 | ![documents](https://raw.githubusercontent.com/ulsklyc/yuvomi/main/docs/icons/documents.png) | **Documents** | Upload, tag, preview and organize family files, with optional WebDAV or Google Drive storage. |
+| ![inventory](https://raw.githubusercontent.com/ulsklyc/yuvomi/main/docs/icons/inventory.png) | **Inventory** | What you own: brand, model, serial number, storage location, purchase price, warranty and condition, with linked receipts and bookings and reminders before a deadline runs out. |
 | ![budget](https://raw.githubusercontent.com/ulsklyc/yuvomi/main/docs/icons/budget.png) | **Budget** | Income, expenses, accounts, loans, subscriptions and per-category planning, with a personal mode. |
 | ![housekeeping](https://raw.githubusercontent.com/ulsklyc/yuvomi/main/docs/icons/housekeeping.png) | **Housekeeping** | Manage household staff: schedules, check-in/out, daily or hourly billing, chores and supply requests. |
 | ![rewards](https://raw.githubusercontent.com/ulsklyc/yuvomi/main/docs/icons/rewards.png) | **Rewards** | Points on tasks credit assigned members, with a configurable default value for new tasks, a parent-approved catalog and an auditable ledger. |

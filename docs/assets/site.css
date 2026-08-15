@@ -81,6 +81,9 @@
   --m-birthdays: #CE2A63;
   --m-budget: #0F766E;
   --m-documents: #42587E;
+  /* Inventory shares the app's records family with Documents on purpose - there
+     the two are told apart by their seal, not by their tone. */
+  --m-inventory: #42587E;
   --m-housekeeping: #7C3AED;
   --m-health: #9E1E88;
   --m-rewards: #BA4468;
@@ -167,6 +170,7 @@
   --m-birthdays: #FB7185;
   --m-budget: #2DD4BF;
   --m-documents: #7E9BCC;
+  --m-inventory: #7E9BCC;
   --m-housekeeping: #C4B5FD;
   --m-health: #DB60CB;
   --m-rewards: #E68CA6;
@@ -221,6 +225,7 @@
     --m-birthdays: #FB7185;
     --m-budget: #2DD4BF;
     --m-documents: #7E9BCC;
+    --m-inventory: #7E9BCC;
     --m-housekeeping: #C4B5FD;
     --m-health: #DB60CB;
     --m-rewards: #E68CA6;
