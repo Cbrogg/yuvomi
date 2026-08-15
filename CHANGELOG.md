@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **A guard now holds the rule that a per-user setting must not sit behind an admin-only page.** Five times a setting that writes per user, on a route that deliberately carries no admin check, was reachable only from a leaf marked admin-only - and for everyone else that page does not resolve at all, so there was not even an error to see. Four of those were found by reading, the fifth only by measuring the rule against the server. That measurement is now a test, in two probes because one layer cannot carry the rule: the first resolves the router mount chain and maps every writing call of an admin-only page onto its actual handler; the second covers `PUT /preferences`, where it is not the route that decides but the key, and only keys that are never written household-wide count - weather and the cycle switch know both paths and are context-dependent, which is why the first version reported the household weather page as a violation. Cross-checked against all five historical cases at once: every one of them is reported, each by the probe that can see it. Nothing changes for users; this is a fence, not a feature.
+
 ## [2.14.0] - 2026-08-15
 
 ### Added
