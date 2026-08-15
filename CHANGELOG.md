@@ -7,13 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
-
-- **Two source files no longer count as binary, which made them invisible to every text tool.** `server/services/holidays.js` and `server/services/cardav-sync.js` each carried a raw NUL byte, deliberately used as a separator inside a map key. That runs perfectly - JavaScript allows the character in a string - but it makes `file` report "data" and `grep` return nothing at all rather than "no matches", unless you happen to pass `-a`. It surfaced when a search for `sync` in the holidays service came back empty on a file with 33 occurrences, and the wrong conclusion had already been drawn from it. The character is now written as the escape `\x00`, which produces exactly the same string, and a guard keeps any source file from going binary again - every text-based check in this repository would have had the same blind spot without ever turning red.
+## [2.14.1] - 2026-08-15
 
 ### Fixed
 
 - **A guard now holds the rule that a per-user setting must not sit behind an admin-only page.** Five times a setting that writes per user, on a route that deliberately carries no admin check, was reachable only from a leaf marked admin-only - and for everyone else that page does not resolve at all, so there was not even an error to see. Four of those were found by reading, the fifth only by measuring the rule against the server. That measurement is now a test, in two probes because one layer cannot carry the rule: the first resolves the router mount chain and maps every writing call of an admin-only page onto its actual handler; the second covers `PUT /preferences`, where it is not the route that decides but the key, and only keys that are never written household-wide count - weather and the cycle switch know both paths and are context-dependent, which is why the first version reported the household weather page as a violation. Cross-checked against all five historical cases at once: every one of them is reported, each by the probe that can see it. Nothing changes for users; this is a fence, not a feature.
+- **Two source files no longer count as binary, which made them invisible to every text tool.** `server/services/holidays.js` and `server/services/cardav-sync.js` each carried a raw NUL byte, deliberately used as a separator inside a map key. That runs perfectly - JavaScript allows the character in a string - but it makes `file` report "data" and `grep` return nothing at all rather than "no matches", unless you happen to pass `-a`. It surfaced when a search for `sync` in the holidays service came back empty on a file with 33 occurrences, and the wrong conclusion had already been drawn from it. The character is now written as the escape `\x00`, which produces exactly the same string, and a guard keeps any source file from going binary again - every text-based check in this repository would have had the same blind spot without ever turning red.
 
 ## [2.14.0] - 2026-08-15
 
