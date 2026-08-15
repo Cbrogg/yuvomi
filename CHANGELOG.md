@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- **A private subtask no longer shows up under a shared parent, and no task can be changed or deleted by someone who cannot see it.** Two gaps that had been there for a while and that only became visible while reviewing something else. The task **list** returned every subtask of a shared parent with its title, regardless of that subtask's own visibility, and counted it in the progress bar - the detail view had been filtering correctly for a long time, the list simply never got the same rule. Separately, `PUT` and `DELETE /api/v1/tasks/:id` loaded the row by id and acted on it without asking whether the caller was allowed to see it, so anyone who knew or guessed an id could edit or delete another member's private task. Both now apply the same visibility rule the rest of the module uses, and answer 404 rather than 403, since the existence of a task is itself information. Nothing changes for tasks marked visible to everyone, which is the default.
+
 ### Fixed
 
 - **The calendar feed no longer writes a doubled `RRULE:` prefix on imported series.** An appointment read in over an ICS subscription or CalDAV stores its recurrence as the full property line, prefix included; the feed put another one in front of it, so subscribers received `RRULE:RRULE:FREQ=...`. Apple Calendar tolerates it, stricter parsers do not: Home Assistant rejected the whole event with "Failed to parse calendar EVENT component: Field required", which is why a feed that worked in one app failed in another (#761, reported and diagnosed by @TanguyBaudrin, who found the doubled prefix with an ICS validator after my first guess turned out to be wrong). The rule that resolves the two spellings now lives in one place instead of six: five modules already got it right and one did not, and nothing counted the copies. Existing subscriptions repair themselves on the next refresh.
