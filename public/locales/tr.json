@@ -2017,6 +2017,8 @@
         "pageNavigationDescription": "Modüllerin sırasını ve mobil gezinmeyi ayarlayın.",
         "pageFeeds": "Feed subscriptions",
         "pageFeedsDescription": "Subscribe to the household calendar and inventory deadlines in your own calendar app.",
+        "pageCalendarSubscriptions": "Calendar subscriptions",
+        "pageCalendarSubscriptionsDescription": "Subscribe to ICS/webcal calendars and import events once from a file or URL.",
         "pageKitchen": "Mutfak",
         "pageKitchenDescription": "Yemek planında hangi öğünlerin görüneceğini seçin.",
         "pageModuleOptions": "Modül seçenekleri",

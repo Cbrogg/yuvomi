@@ -2017,6 +2017,8 @@
         "pageNavigationDescription": "A modulok sorrendjének és a mobil navigációnak a beállítása.",
         "pageFeeds": "Feed subscriptions",
         "pageFeedsDescription": "Subscribe to the household calendar and inventory deadlines in your own calendar app.",
+        "pageCalendarSubscriptions": "Calendar subscriptions",
+        "pageCalendarSubscriptionsDescription": "Subscribe to ICS/webcal calendars and import events once from a file or URL.",
         "pageKitchen": "Konyha",
         "pageKitchenDescription": "Válassza ki, mely étkezések láthatók az étrendben.",
         "pageModuleOptions": "Modulbeállítások",

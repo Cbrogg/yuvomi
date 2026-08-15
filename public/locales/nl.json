@@ -2017,6 +2017,8 @@
         "pageNavigationDescription": "De volgorde van de modules en de mobiele navigatie instellen.",
         "pageFeeds": "Feed subscriptions",
         "pageFeedsDescription": "Subscribe to the household calendar and inventory deadlines in your own calendar app.",
+        "pageCalendarSubscriptions": "Calendar subscriptions",
+        "pageCalendarSubscriptionsDescription": "Subscribe to ICS/webcal calendars and import events once from a file or URL.",
         "pageKitchen": "Keuken",
         "pageKitchenDescription": "Kies welke maaltijden zichtbaar zijn in het maaltijdplan.",
         "pageModuleOptions": "Module-opties",

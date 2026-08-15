@@ -2017,6 +2017,8 @@
         "pageNavigationDescription": "モジュールの並び順とモバイルナビゲーションを設定します。",
         "pageFeeds": "Feed subscriptions",
         "pageFeedsDescription": "Subscribe to the household calendar and inventory deadlines in your own calendar app.",
+        "pageCalendarSubscriptions": "Calendar subscriptions",
+        "pageCalendarSubscriptionsDescription": "Subscribe to ICS/webcal calendars and import events once from a file or URL.",
         "pageKitchen": "キッチン",
         "pageKitchenDescription": "献立プランに表示する食事を選択します。",
         "pageModuleOptions": "モジュールのオプション",

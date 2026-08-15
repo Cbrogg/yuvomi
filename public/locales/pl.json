@@ -2029,6 +2029,8 @@
         "pageNavigationDescription": "Ustaw kolejność modułów i nawigację mobilną.",
         "pageFeeds": "Feed subscriptions",
         "pageFeedsDescription": "Subscribe to the household calendar and inventory deadlines in your own calendar app.",
+        "pageCalendarSubscriptions": "Calendar subscriptions",
+        "pageCalendarSubscriptionsDescription": "Subscribe to ICS/webcal calendars and import events once from a file or URL.",
         "pageKitchen": "Kuchnia",
         "pageKitchenDescription": "Wybierz, które posiłki są widoczne w planie posiłków.",
         "pageModuleOptions": "Opcje modułów",

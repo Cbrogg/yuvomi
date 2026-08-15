@@ -2017,6 +2017,8 @@
         "pageNavigationDescription": "Đặt thứ tự mô-đun và điều hướng trên di động.",
         "pageFeeds": "Feed subscriptions",
         "pageFeedsDescription": "Subscribe to the household calendar and inventory deadlines in your own calendar app.",
+        "pageCalendarSubscriptions": "Calendar subscriptions",
+        "pageCalendarSubscriptionsDescription": "Subscribe to ICS/webcal calendars and import events once from a file or URL.",
         "pageKitchen": "Nhà bếp",
         "pageKitchenDescription": "Chọn những bữa ăn hiển thị trong kế hoạch bữa ăn.",
         "pageModuleOptions": "Tùy chọn mô-đun",

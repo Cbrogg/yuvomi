@@ -2017,6 +2017,8 @@
         "pageNavigationDescription": "Ορίστε τη σειρά των ενοτήτων και την πλοήγηση σε κινητά.",
         "pageFeeds": "Feed subscriptions",
         "pageFeedsDescription": "Subscribe to the household calendar and inventory deadlines in your own calendar app.",
+        "pageCalendarSubscriptions": "Calendar subscriptions",
+        "pageCalendarSubscriptionsDescription": "Subscribe to ICS/webcal calendars and import events once from a file or URL.",
         "pageKitchen": "Κουζίνα",
         "pageKitchenDescription": "Επιλέξτε ποια γεύματα εμφανίζονται στο πρόγραμμα γευμάτων.",
         "pageModuleOptions": "Επιλογές ενοτήτων",

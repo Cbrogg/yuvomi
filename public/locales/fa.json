@@ -2029,6 +2029,8 @@
         "pageNavigationDescription": "ترتیب ماژول‌ها و ناوبری موبایل را تعیین کنید.",
         "pageFeeds": "Feed subscriptions",
         "pageFeedsDescription": "Subscribe to the household calendar and inventory deadlines in your own calendar app.",
+        "pageCalendarSubscriptions": "Calendar subscriptions",
+        "pageCalendarSubscriptionsDescription": "Subscribe to ICS/webcal calendars and import events once from a file or URL.",
         "pageKitchen": "آشپزخانه",
         "pageKitchenDescription": "انتخاب کنید کدام وعده‌ها در برنامه غذایی نمایش داده شوند.",
         "pageModuleOptions": "گزینه‌های ماژول‌ها",

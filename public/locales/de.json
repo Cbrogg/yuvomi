@@ -2052,6 +2052,8 @@
         "pageNavigationDescription": "Reihenfolge der Module und die mobile Navigation festlegen.",
         "pageFeeds": "Feed-Abos",
         "pageFeedsDescription": "Haushaltskalender und Inventar-Fristen im eigenen Kalenderprogramm abonnieren.",
+        "pageCalendarSubscriptions": "Kalender-Abos",
+        "pageCalendarSubscriptionsDescription": "ICS-/Webcal-Kalender abonnieren und einmalig Termine aus einer Datei oder URL importieren.",
         "pageKitchen": "Küche",
         "pageKitchenDescription": "Sichtbare Mahlzeiten im Essensplan auswählen.",
         "pageModuleOptions": "Modul-Optionen",

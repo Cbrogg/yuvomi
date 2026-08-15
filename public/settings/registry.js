@@ -134,6 +134,25 @@ export const SETTINGS_LEAVES = freezeEntries([
     loader: () => import('/settings/pages/personal-feeds.js'),
   },
   {
+    // Die Gegenrichtung zu `personal-feeds`: was in den Kalender HEREIN kommt,
+    // ohne dass ein Haushaltskonto daran haengt. Der Server ist hier
+    // eigentuemerbasiert und war es immer - `GET /calendar/subscriptions`
+    // liefert `shared = 1 OR created_by = ich`, und PATCH/DELETE/sync
+    // antworten 403 fuer fremde Abos, wobei `isAdmin` ein ZUSATZrecht ist.
+    // Jedes Mitglied durfte sein eigenes Abo also laengst verwalten und kam
+    // nur nicht an die Oberflaeche, weil `sync-calendar` adminOnly ist.
+    // CalDAV und Google/Apple bleiben dort: die haengen an Zugangsdaten des
+    // Haushalts und ihre Routen tragen `requireAdmin`.
+    id: 'personal-calendar-subscriptions',
+    domainId: 'personal',
+    path: '/settings/personal/calendar-subscriptions',
+    labelKey: 'settings.pageCalendarSubscriptions',
+    descriptionKey: 'settings.pageCalendarSubscriptionsDescription',
+    icon: 'calendar-plus',
+    adminOnly: false,
+    loader: () => import('/settings/pages/personal-calendar-subscriptions.js'),
+  },
+  {
     id: 'modules-kitchen',
     domainId: 'modules',
     path: '/settings/modules/kitchen',

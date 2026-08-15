@@ -2017,6 +2017,8 @@
         "pageNavigationDescription": "Define el orden de los módulos y la navegación móvil.",
         "pageFeeds": "Feed subscriptions",
         "pageFeedsDescription": "Subscribe to the household calendar and inventory deadlines in your own calendar app.",
+        "pageCalendarSubscriptions": "Calendar subscriptions",
+        "pageCalendarSubscriptionsDescription": "Subscribe to ICS/webcal calendars and import events once from a file or URL.",
         "pageKitchen": "Cocina",
         "pageKitchenDescription": "Elige qué comidas se ven en el plan de comidas.",
         "pageModuleOptions": "Opciones de módulos",

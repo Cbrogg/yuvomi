@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Everyone can manage their own calendar subscriptions, not just the admin.** The server has always treated ICS subscriptions as owner-based: the list returns the household's shared ones plus your own, and editing, syncing or deleting someone else's answers 403, with admin rights as an addition rather than a precondition. But the only page holding them was Settings → Sync → Calendar, which is admin-only, so four members of a five-person household could not add the subscription they were entitled to add - and got no error saying why, because the page did not resolve for them at all. Both the subscriptions and the one-time calendar import now live under **Settings → Personal → Calendar subscriptions**. What stays behind the admin gate is what genuinely belongs to the household: CalDAV accounts and the Google/Apple connections, whose routes really do carry an admin check. This is the fifth case of a per-user setting stranded on an admin-only leaf, and the second found by measuring the rule against the server rather than reading pages: every writing endpoint that works per user was checked for an admin gate, and the ones without now have a reachable home. Nothing changes for existing subscriptions.
+- **Six settings pages work offline again, four of which had quietly stopped.** The service worker precaches the settings pages so they open without a connection, but that list is maintained by hand and had drifted: Email, Permissions, Health and Weather were missing, and opening any of them offline simply failed - silently, because online they always worked. Found while adding the new page, since the module-graph guard that has covered this since v1.63.0 follows imports, and a settings page is loaded through a dynamic `import()` that appears in no static import tree. A second guard now holds the rule the first one cannot see: every leaf listed in the settings registry has to be precached, measured against the registry rather than the directory, so a page that is merely dead does not count as missing.
+
 ## [2.13.0] - 2026-08-15
 
 ### Added

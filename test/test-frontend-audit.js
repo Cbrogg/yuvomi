@@ -1166,7 +1166,7 @@ test('synchronization-by-data-type leaves exist and export async render function
   }
 });
 
-test('sync-calendar leaf loads CalDAV, ICS, Google, and Apple with independent status', () => {
+test('sync-calendar leaf loads CalDAV, Google, and Apple with independent status', () => {
   const source = read('../public/settings/pages/sync-calendar.js');
 
   // CalDAV calendar account management + status before forms.
@@ -1197,12 +1197,6 @@ test('sync-calendar leaf loads CalDAV, ICS, Google, and Apple with independent s
   assert.match(source, /createDisclosure\(\{[\s\S]*?caldav-calendars-/);
   assert.doesNotMatch(source, /createElement\('details'\)/);
   assert.match(source, /disconnectAccountConfirmTitle', \{ name: account\.name \}/);
-
-  // Webcal / ICS subscriptions.
-  assert.match(source, /api\.get\('\/calendar\/subscriptions'\)/);
-  assert.match(source, /api\.post\('\/calendar\/subscriptions'/);
-  assert.match(source, /api\.patch\(`\/calendar\/subscriptions\/\$\{[^}]+\}`/);
-  assert.match(source, /api\.delete\(`\/calendar\/subscriptions\/\$\{[^}]+\}`\)/);
 
   // Independent fetches so one failure does not hide the others.
   assert.match(source, /Promise\.allSettled/);
@@ -1237,6 +1231,37 @@ test('sync-calendar leaf loads CalDAV, ICS, Google, and Apple with independent s
   assert.match(source, /sync_ok/);
   assert.match(source, /sync_error/);
   assert.match(source, /history\.replaceState/);
+});
+
+test('die Kalender-Abos liegen im persoenlichen Blatt, nicht hinter dem Admin-Gate', () => {
+  const source = read('../public/settings/pages/personal-calendar-subscriptions.js');
+  const registry = read('../public/settings/registry.js');
+
+  // Die vier Endpunkte, die der Server eigentuemerbasiert schuetzt: lesen liefert
+  // `shared = 1 OR created_by = ich`, schreiben antwortet 403 fuer fremde Abos.
+  assert.match(source, /api\.get\('\/calendar\/subscriptions'\)/);
+  assert.match(source, /api\.post\('\/calendar\/subscriptions'/);
+  assert.match(source, /api\.patch\(`\/calendar\/subscriptions\/\$\{[^}]+\}`/);
+  assert.match(source, /api\.delete\(`\/calendar\/subscriptions\/\$\{[^}]+\}`\)/);
+  // Der einmalige Import gehoert dazu: auch er traegt kein Admin-Gate.
+  assert.match(source, /api\.post\('\/calendar\/import'/);
+
+  // Die eigentliche Zusicherung: das Blatt ist fuer jedes Mitglied erreichbar.
+  // Ein per-Nutzer-Blatt hinter adminOnly ist der Fehler, den dieses Repo
+  // viermal gemacht hat (calendar-defaults, task-defaults #695, navigation,
+  // feeds) - deshalb steht er hier als Regel und nicht als Kommentar.
+  const leaf = registry.match(/\{[^{}]*id: 'personal-calendar-subscriptions'[\s\S]*?\n  \}/);
+  assert.ok(leaf, 'personal-calendar-subscriptions fehlt in der Registry');
+  assert.match(leaf[0], /adminOnly: false/,
+    'das Blatt der Kalender-Abos darf nicht adminOnly sein - der Server gatet sie nicht');
+  assert.match(leaf[0], /domainId: 'personal'/);
+
+  // Und die Gegenrichtung: was an Zugangsdaten des Haushalts haengt, bleibt
+  // drueben. Taucht hier ein CalDAV- oder OAuth-Endpunkt auf, ist die Trennung
+  // aufgeweicht, die dieses Blatt begruendet.
+  assert.doesNotMatch(source, /\/calendar\/caldav\//);
+  assert.doesNotMatch(source, /\/calendar\/google\//);
+  assert.doesNotMatch(source, /\/calendar\/apple\//);
 });
 
 test('sync-contacts leaf owns CardDAV account management', () => {
