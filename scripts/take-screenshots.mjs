@@ -97,6 +97,16 @@ const MODULES = [
   { path: '/budget',       name: 'budget-loans',         tab: '#budget-tab-loans' },
   { path: '/budget',       name: 'split-expenses',       tab: '#budget-tab-split-expenses' },
   { path: '/documents',    name: 'documents'      },
+  // Achtzehntes Modul (#741). Standardmaessig aus, der Demo-Seed schaltet es ein -
+  // ohne diesen Eintrag beworb die Landingpage ein Modul, das sie nirgends zeigt.
+  //
+  // Zwei Aufnahmen, weil die Einstiegsansicht die Kategorien EINGEKLAPPT zeigt:
+  // sie traegt die drei Kennzahlen (Posten, Gesamtwert, Handlungsbedarf), aber
+  // keinen einzigen Gegenstand. Was das Modul kann - Marke, Modell, Garantie,
+  // Ort - steht erst eine Ebene tiefer, und genau das muss ein Beleg zeigen.
+  { path: '/inventory',    name: 'inventory'      },
+  { path: '/inventory',    name: 'inventory-items',
+    tab: '[data-category="electronics"] [data-action="open-category"]' },
   { path: '/housekeeping', name: 'housekeeping'          },
   { path: '/housekeeping', name: 'housekeeping-tasks',   tab: '.housekeeping-tabs [data-tab-id="tasks"]' },
   { path: '/housekeeping', name: 'housekeeping-reports', tab: '.housekeeping-tabs [data-tab-id="reports"]' },
