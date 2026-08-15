@@ -181,6 +181,30 @@ test('Ein Rückzug trifft genau ein Abo, nicht alle', () => {
   deadlinesIcs.clearFeedToken(db, bob);
 });
 
+test('Kalender- und Inventar-Token sind getrennte Instanzen desselben Musters', async () => {
+  // Gemeinsam ist das Muster, nicht der Token-Raum: eigene Spalte, eigener
+  // Index, eigene Funktionen. Ein Kalender-Token darf den Inventar-Feed nicht
+  // oeffnen und umgekehrt - sonst waere aus "zwei Modelle fuer einen Begriff"
+  // ein gemeinsamer Schluessel fuer zwei Feeds geworden.
+  const icsExport = await import('../server/services/ics-export.js');
+
+  const calendarToken = icsExport.regenerateFeedToken(db, alice);
+  const inventoryToken = deadlinesIcs.regenerateFeedToken(db, alice);
+  assert.notEqual(calendarToken, inventoryToken);
+
+  assert.equal(deadlinesIcs.findUserIdByFeedToken(db, calendarToken), null,
+    'Kalender-Token darf den Inventar-Feed nicht oeffnen');
+  assert.equal(icsExport.findUserIdByFeedToken(db, inventoryToken), null,
+    'Inventar-Token darf den Kalender-Feed nicht oeffnen');
+
+  // Und ein Rueckzug auf der einen Seite laesst die andere in Ruhe.
+  deadlinesIcs.clearFeedToken(db, alice);
+  assert.equal(icsExport.findUserIdByFeedToken(db, calendarToken), alice,
+    'Inventar-Abo abschalten darf das Kalender-Abo nicht mitnehmen');
+
+  icsExport.clearFeedToken(db, alice);
+});
+
 // --------------------------------------------------------
 // Verwaltungs-Router
 // --------------------------------------------------------
