@@ -1,4 +1,4 @@
-<!-- version: 2.13.1 -->
+<!-- version: 2.14.0 -->
 <!--
   Die `releaseNotes` fuer den Umbrel-App-Store, von Hand fuer JEDEN Release
   geschrieben. `umbrel-publish.yml` nimmt den Text unter diesem Kommentar
@@ -29,12 +29,12 @@
     - Leerzeile zwischen den Absaetzen: der Store rendert ein gefaltetes
       YAML-Blockskalar, dort ist die Leerzeile der Absatzumbruch.
 -->
-Calendar subscriptions everyone can manage, and six settings pages that work offline again.
+"Today at a glance" can be switched off.
 
-Subscribing to an ICS or webcal calendar, and the one-time calendar import, used to be reachable by an administrator only. The server never required that - it has always let each person manage their own subscription and refused access to other people's - so in a household of five, four members were entitled to add a subscription and had no page to do it on. Both now sit under Settings, Personal, Calendar subscriptions. Connecting a CalDAV, Google or Apple account stays with the administrator, because those hold the household's credentials. Existing subscriptions keep syncing and nothing needs redoing.
+The band at the top of the overview summarises what is due in tasks, calendar, meals and shopping. That is useful when those areas are not already on the board as tiles, and a repetition when they are. Until now it only went away indirectly, by adding all four as widgets, which is not something anyone guesses.
 
-Six settings pages open offline again. Email, Permissions, Health, Weather and the two newest pages were missing from the offline cache, so opening them without a connection failed while everything else worked.
+It now has the same hide button as every tile: switch to Customise on the overview, hide the band, and save. It comes back the same way, through the row of chips below the tiles. The choice applies to the household, like the arrangement of the tiles themselves.
 
 There is nothing to do after this update, and your data and settings are unchanged.
 
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.13.1
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.14.0
