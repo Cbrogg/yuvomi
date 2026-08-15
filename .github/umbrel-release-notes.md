@@ -1,4 +1,4 @@
-<!-- version: 2.14.3 -->
+<!-- version: 2.14.4 -->
 <!--
   Die `releaseNotes` fuer den Umbrel-App-Store, von Hand fuer JEDEN Release
   geschrieben. `umbrel-publish.yml` nimmt den Text unter diesem Kommentar
@@ -35,8 +35,8 @@
   aendert sich also nichts. Das steht auch so im Text - eine Notiz, die
   Relevanz behauptet, wo keine ist, kostet den Leser Zeit und Vertrauen.
 -->
-This release only changes the setup assistant used for manual Docker installations. Nothing about the app itself changes on Umbrel, and there is nothing to do after updating.
+Like the previous update, this one only touches the setup assistant used for manual Docker installations. Nothing about the app itself changes on Umbrel, and there is nothing to do after updating.
 
-For anyone who also runs Yuvomi outside Umbrel: the assistant no longer overwrites parts of an existing configuration when it is run a second time, its default answer for how the app is reached no longer produces an installation you cannot sign in to, and the address used for password-reset and invitation links is now asked for rather than guessed. It also finishes by pointing at the next steps: inviting your family and choosing which modules to use.
+For anyone who also runs Yuvomi outside Umbrel: the assistant's longest screen has been split in two, so storage and backups are now asked separately from what Yuvomi connects to, and the three permissions for reaching services on your home network are asked together instead of in three different places. It also tells you when a container is already running, because saving restarts it.
 
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.14.3
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.14.4

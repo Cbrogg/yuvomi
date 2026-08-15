@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.14.4] - 2026-08-15
+
 ### Changed
 
 - **The advanced step is split in two, along a question rather than a number.** It carried 18 decision points on one screen while the second-largest step had 12: six accordions to judge before seeing a single field, plus six loose fields underneath. It is now "Storage & backups" - where your data lives on the server and where copies of it go - followed by "Advanced", which covers what Yuvomi connects to. Both are down to six and seven points. Both are also numbered now: the advanced step used to be excluded from the step counter as an "optional collection step", which made the largest screen of the run the only one without a progress indication; there is no collection step left to justify that.
