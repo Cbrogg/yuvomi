@@ -1142,18 +1142,32 @@ function paintMoreSheetBadges(sheet) {
 }
 
 /**
- * Baut den dynamischen Body des „Mehr“-Sheets: das nach Bereichen gruppierte
- * Modul-Raster, den monochromen System-Cluster (Einstellungen · Hilfe ·
- * Änderungen) als kompakte Reihe und darunter Abmelden in eigener voller Zeile.
+ * Baut den dynamischen Body des „Mehr“-Sheets: EIN vierspaltiges Modul-Raster
+ * und darunter, im selben Raster, die monochrome System-Reihe (Einstellungen ·
+ * Hilfe · Änderungen · Abmelden).
  *
  * Gibt EINEN Knoten in einem Array zurück (`.more-sheet__body`, der Scroller);
  * beide Aufrufer spreizen das Ergebnis und bleiben davon unberührt.
  *
- * DIE GRUPPEN GIBT ES SCHON. Sie stehen als NAV_SECTION an jedem Nav-Item und
- * beschriften bereits die Desktop-Sidebar (Planen · Haushalt · Menschen ·
- * Finanzen). Das Sheet warf sie bisher weg und legte zehn Module in EIN
- * ungegliedertes Raster - dieselbe Fläche, die auf dem Desktop sortiert ist,
- * war mobil eine Wand. Hier wird nichts erfunden, nur nicht mehr eingeebnet.
+ * EIN RASTER, KEINE ÜBERSCHRIFTEN. Die Bereichsköpfe (Planen · Haushalt ·
+ * Menschen · Finanzen) sind hier ersatzlos weg, und die Reihenfolge verliert
+ * dabei nichts: `secondaryMobileItems()` liefert bereits nach Sektion sortiert
+ * (sortNavigationItems), die Gruppen standen also nur noch als Beschriftung
+ * über einer Ordnung, die das Raster ohnehin hat. Was sie dafür kosteten, war
+ * Höhe: vier Köpfe plus vier Gruppenabstände sind auf einem 390er-Schirm rund
+ * 150px - mehr als eine ganze Kachelreihe, für eine Auskunft, die man an den
+ * Nachbarn ablesen kann. Das Blatt ist ein Sprungbrett, kein Verzeichnis; es
+ * soll so wenig Bild nehmen wie möglich.
+ *
+ * VIER SPALTEN, UND DIE SYSTEM-REIHE IST DIE LETZTE DAVON. Abmelden stand
+ * zuletzt als eigene volle Zeile darunter, weil es in der DREIspaltigen
+ * Systemreihe unter genau dem Pixel lag, an dem der Daumen „Mehr" getippt
+ * hatte. Diese Ursache ist strukturell erledigt: das Blatt endet seit
+ * derselben Runde ÜBER der Tab-Leiste (`bottom: --nav-bottom-height`), der Ort
+ * des Mehr-Knopfs gehört wieder ihm allein. Damit ist die eigene Zeile nur
+ * noch Höhe ohne Auftrag, und die vier System-Ziele füllen die Reihe exakt.
+ * Monochrom bleiben sie trotzdem - das ist der Unterschied zu den farbig
+ * besiegelten Modulen darüber, und der trägt die Trennung jetzt allein.
  *
  * EINE Quelle der Wahrheit für renderAppShell() UND rebuildNavigation() —
  * beide Pfade müssen dieselbe Struktur erzeugen, sonst zerstört ein
@@ -1184,46 +1198,21 @@ function buildMoreSheetBody() {
   const secondary = secondaryMobileItems();
   const settingsItem = secondary.find((item) => item.module === 'settings');
 
-  // Reihenfolge der Bereiche = die der Sidebar. Ein Bereich ohne Module
-  // erscheint gar nicht - ein leerer Kopf wäre eine Überschrift über nichts.
+  // Ein flaches Raster in der Reihenfolge der Sidebar. Die Sortierung nach
+  // Sektion steckt schon in secondaryMobileItems(); hier wird sie nur nicht
+  // mehr mit Überschriften nachgezeichnet.
   const modules = secondary.filter((item) => item.module !== 'settings');
-  const sections = [];
-  for (const item of modules) {
-    const key = item.section ?? NAV_SECTION.customModules;
-    let group = sections.find((s) => s.key === key);
-    if (!group) sections.push(group = { key, items: [] });
-    group.items.push(item);
-  }
-
-  for (const section of sections) {
-    const labelKey = NAV_SECTION_LABEL_KEYS[section.key];
-    const group = document.createElement('div');
-    group.className = 'more-sheet__group';
-
-    if (labelKey) {
-      const labelId = `more-group-${section.key}`;
-      const label = document.createElement('div');
-      label.className = 'more-sheet__group-label';
-      label.id = labelId;
-      label.textContent = t(labelKey);
-      group.appendChild(label);
-      group.setAttribute('role', 'group');
-      group.setAttribute('aria-labelledby', labelId);
-    }
-
-    const grid = document.createElement('div');
-    grid.className = 'more-sheet__grid';
-    section.items.forEach((item) => grid.appendChild(moreItemEl(item)));
-    group.appendChild(grid);
-    nodes.push(group);
-  }
+  const grid = document.createElement('div');
+  grid.className = 'more-sheet__grid';
+  modules.forEach((item) => grid.appendChild(moreItemEl(item)));
+  nodes.push(grid);
 
   const divider = document.createElement('div');
   divider.className = 'more-sheet__divider';
   divider.setAttribute('aria-hidden', 'true');
   nodes.push(divider);
 
-  // System-Cluster als kompakte 1×3-Reihe (Icon-über-Label, monochrom).
+  // System-Reihe im selben Vierer-Raster (Icon-über-Label, monochrom).
   const system = document.createElement('div');
   system.className = 'more-sheet__system';
   if (settingsItem) {
@@ -1252,27 +1241,25 @@ function buildMoreSheetBody() {
       showChangelogModal();
     },
   }));
-  // Die Spaltenzahl folgt der Besetzung: ohne Einstellungen (Modul abgeschaltet)
-  // sind es zwei Ziele, und zwei Ziele in drei Spalten lassen eine Lücke, die
-  // wie ein fehlendes Element aussieht.
-  system.style.setProperty('--more-system-cols', String(system.children.length || 1));
-  nodes.push(system);
-
-  /* Abmelden bekommt seine eigene volle Zeile, wie in der Sidebar.
+  /* Abmelden ist das vierte Ziel der Reihe, nicht mehr eine Zeile darunter.
    *
-   * IN DER SYSTEMREIHE LAG ES UNTER DEM DAUMEN, DER DAS BLATT GEOEFFNET HAT.
-   * Gemessen bei 390x844: der Mehr-Knopf steht bei x 266,6-329,0 / y 776,9-835,0,
-   * und `elementFromPoint` lieferte am MITTELPUNKT desselben Knopfs nach dem
-   * Oeffnen `.more-item--logout` (Ueberlappung 32x51px). Der Bestaetigungsdialog
-   * fing den zweiten Tap ab - aber die Stelle, an der man "Mehr" tippt, darf
-   * nicht die Stelle sein, an der die Sitzung endet (Critique 2026-08-13, P0).
-   * Die Entscheidung war an anderer Stelle laengst getroffen: die Sidebar setzt
-   * Abmelden als terminale Aktion in eine eigene, volle Zeile mit Haarlinie
-   * (sidebarActionEl weiter unten). Das Blatt fuehrt jetzt dieselbe Form. */
-  const logout = moreActionEl({
+   * DER ANLASS FUER DIE EIGENE ZEILE IST WEG, NICHT NUR ALT. Gemessen bei
+   * 390x844 lag der Mehr-Knopf bei x 266,6-329,0 / y 776,9-835,0, und
+   * `elementFromPoint` lieferte an seinem MITTELPUNKT nach dem Oeffnen
+   * `.more-item--logout` - derselbe Pixel oeffnete das Blatt und beendete die
+   * Sitzung (Critique 2026-08-13, P0). Behoben hat das die Unterkante des
+   * Blattes: seit `bottom: --nav-bottom-height` (layout.css) liegt ueber der
+   * Leiste ueberhaupt kein Bedienelement des Blattes mehr. Die eigene Zeile war
+   * die zweite Naht ueber derselben Wunde und kostet 60px Hoehe fuer eine
+   * Ueberlappung, die es geometrisch nicht mehr geben kann.
+   *
+   * Es bleibt das LETZTE Ziel der Reihe, und das ist kein Zufall: es ist die
+   * terminale Aktion, sie steht am Ende der Leserichtung, und der
+   * Bestaetigungsdialog bleibt davor. */
+  system.appendChild(moreActionEl({
     labelKey: 'settings.logout',
     icon: 'log-out',
-    className: 'more-action--logout more-item--logout',
+    className: 'more-item--logout',
     onClick: () => {
       if (window._closeMoreSheet) window._closeMoreSheet({ restoreFocus: false });
       // #more-btn synchron fokussieren, BEVOR das Modal öffnet: openModal
@@ -1281,8 +1268,13 @@ function buildMoreSheetBody() {
       document.getElementById('more-btn')?.focus();
       confirmAndLogout();
     },
-  });
-  nodes.push(logout);
+  }));
+
+  // Die Spaltenzahl folgt der Besetzung: ohne Einstellungen (Modul abgeschaltet)
+  // sind es drei Ziele, und drei Ziele in vier Spalten lassen eine Lücke, die
+  // wie ein fehlendes Element aussieht.
+  system.style.setProperty('--more-system-cols', String(system.children.length || 1));
+  nodes.push(system);
 
   body.append(...nodes);
   return [body];

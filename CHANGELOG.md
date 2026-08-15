@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.14.2] - 2026-08-15
+
+### Changed
+
+- **The mobile "More" sheet now takes up less than half the screen instead of almost all of it.** It opened as a tall surface covering 87% of a 390x844 phone: the modules sat in three columns, split across four section headings that repeated the grouping the desktop sidebar already shows, and Sign out had a full-width row of its own below the system cluster. The modules now sit in one flat four-column grid with no headings - the order is unchanged, because the navigation items already arrive sorted by section, so those headings were labelling an order the grid has anyway - and Settings, Help, Changelog and Sign out share the fourth row of that same grid, still monochrome so they stay distinguishable from the coloured module tiles. Measured with the same eight modules, the sheet went from 735px (87.1%) to 354px (41.9%) at 390x844, and from 704px to 354px at 375x812, where it no longer scrolls at all; even with every module enabled it stays at 64.5%. Sign out gave up its separate row because the reason for that row is gone: it once sat under the exact pixel that opens the sheet, which has been impossible since the sheet's bottom edge moved above the tab bar. It remains the last target of the row and keeps its confirmation dialog. The permanently visible bottom bar is unchanged.
+- **Module names in the "More" sheet are hyphenated properly instead of broken mid-syllable.** The narrower four-column cell no longer fits every German compound on one line, so the labels follow the recipe the tab bar has used since v2.2.0: Caption 2, at most two lines, real hyphenation in the document language. Hyphenation alone was not enough - at 375px "Haushaltshilfe" missed a single line by 1.2px, and the browser then takes the last permitted break point, which produced "Haushaltshil-fe", exactly the look the previous three-column layout existed to avoid. A minimum of four characters on each side of the hyphen turns that into "Haushalts-hilfe"; at 320px the same rule yields "Beloh-nungen", "Geburts-tage" and "Einstel-lungen". Every tile reserves both lines, so the grid rows stay flush at every width instead of changing height depending on whether a long name happens to sit in that row.
+
 ## [2.14.1] - 2026-08-15
 
 ### Fixed
