@@ -2015,6 +2015,8 @@
         "pageCalendarDefaultsDescription": "Ορίστε προεπιλεγμένες υπενθυμίσεις και ανάθεση για τα δικά σας νέα συμβάντα.",
         "pageNavigation": "Πλοήγηση",
         "pageNavigationDescription": "Ορίστε τη σειρά των ενοτήτων και την πλοήγηση σε κινητά.",
+        "pageFeeds": "Feed subscriptions",
+        "pageFeedsDescription": "Subscribe to the household calendar and inventory deadlines in your own calendar app.",
         "pageKitchen": "Κουζίνα",
         "pageKitchenDescription": "Επιλέξτε ποια γεύματα εμφανίζονται στο πρόγραμμα γευμάτων.",
         "pageModuleOptions": "Επιλογές ενοτήτων",

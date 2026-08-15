@@ -2015,6 +2015,8 @@
         "pageCalendarDefaultsDescription": "Nastavte výchozí připomenutí a přiřazení pro vlastní nové události.",
         "pageNavigation": "Navigace",
         "pageNavigationDescription": "Nastavte pořadí modulů a mobilní navigaci.",
+        "pageFeeds": "Feed subscriptions",
+        "pageFeedsDescription": "Subscribe to the household calendar and inventory deadlines in your own calendar app.",
         "pageKitchen": "Kuchyně",
         "pageKitchenDescription": "Vyberte, která jídla se zobrazí v jídelníčku.",
         "pageModuleOptions": "Volby modulů",

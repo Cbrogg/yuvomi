@@ -2015,6 +2015,8 @@
         "pageCalendarDefaultsDescription": "自分の新しい予定のリマインダーと担当の既定値を設定します。",
         "pageNavigation": "ナビゲーション",
         "pageNavigationDescription": "モジュールの並び順とモバイルナビゲーションを設定します。",
+        "pageFeeds": "Feed subscriptions",
+        "pageFeedsDescription": "Subscribe to the household calendar and inventory deadlines in your own calendar app.",
         "pageKitchen": "キッチン",
         "pageKitchenDescription": "献立プランに表示する食事を選択します。",
         "pageModuleOptions": "モジュールのオプション",

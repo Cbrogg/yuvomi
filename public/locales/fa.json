@@ -2027,6 +2027,8 @@
         "pageCalendarDefaultsDescription": "یادآوری‌ها و واگذاری پیش‌فرض رویدادهای جدید خودتان را تعیین کنید.",
         "pageNavigation": "ناوبری",
         "pageNavigationDescription": "ترتیب ماژول‌ها و ناوبری موبایل را تعیین کنید.",
+        "pageFeeds": "Feed subscriptions",
+        "pageFeedsDescription": "Subscribe to the household calendar and inventory deadlines in your own calendar app.",
         "pageKitchen": "آشپزخانه",
         "pageKitchenDescription": "انتخاب کنید کدام وعده‌ها در برنامه غذایی نمایش داده شوند.",
         "pageModuleOptions": "گزینه‌های ماژول‌ها",

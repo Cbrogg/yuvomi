@@ -2015,6 +2015,8 @@
         "pageCalendarDefaultsDescription": "设置自己新建日程的默认提醒和负责人。",
         "pageNavigation": "导航",
         "pageNavigationDescription": "设置模块顺序和移动端导航。",
+        "pageFeeds": "Feed subscriptions",
+        "pageFeedsDescription": "Subscribe to the household calendar and inventory deadlines in your own calendar app.",
         "pageKitchen": "厨房",
         "pageKitchenDescription": "选择在膳食计划中显示哪些餐食。",
         "pageModuleOptions": "模块选项",

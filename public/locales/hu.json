@@ -2015,6 +2015,8 @@
         "pageCalendarDefaultsDescription": "Állítsa be a saját új eseményei alapértelmezett emlékeztetőit és hozzárendelését.",
         "pageNavigation": "Navigáció",
         "pageNavigationDescription": "A modulok sorrendjének és a mobil navigációnak a beállítása.",
+        "pageFeeds": "Feed subscriptions",
+        "pageFeedsDescription": "Subscribe to the household calendar and inventory deadlines in your own calendar app.",
         "pageKitchen": "Konyha",
         "pageKitchenDescription": "Válassza ki, mely étkezések láthatók az étrendben.",
         "pageModuleOptions": "Modulbeállítások",

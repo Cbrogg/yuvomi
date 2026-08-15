@@ -118,6 +118,22 @@ export const SETTINGS_LEAVES = freezeEntries([
     loader: () => import('/settings/pages/modules-navigation.js'),
   },
   {
+    // Beide Feed-Tokens haengen an der eigenen users-Zeile (calendar_feed_token,
+    // Migration 61; inventory_deadlines_feed_token, Migration 144), und beide
+    // Routen tragen serverseitig bewusst keinen Admin-Check. Die Abschnitte
+    // lagen trotzdem auf dem adminOnly-`sync-calendar`, also konnte in einem
+    // fuenfkoepfigen Haushalt genau eine Person ihr eigenes Abo einrichten oder
+    // zurueckziehen. Was in den Kalender HINEIN kommt, bleibt dort Haushaltssache.
+    id: 'personal-feeds',
+    domainId: 'personal',
+    path: '/settings/personal/feeds',
+    labelKey: 'settings.pageFeeds',
+    descriptionKey: 'settings.pageFeedsDescription',
+    icon: 'rss',
+    adminOnly: false,
+    loader: () => import('/settings/pages/personal-feeds.js'),
+  },
+  {
     id: 'modules-kitchen',
     domainId: 'modules',
     path: '/settings/modules/kitchen',

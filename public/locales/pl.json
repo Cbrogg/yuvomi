@@ -2027,6 +2027,8 @@
         "pageCalendarDefaultsDescription": "Ustaw domyślne przypomnienia i przypisanie własnych nowych wydarzeń.",
         "pageNavigation": "Nawigacja",
         "pageNavigationDescription": "Ustaw kolejność modułów i nawigację mobilną.",
+        "pageFeeds": "Feed subscriptions",
+        "pageFeedsDescription": "Subscribe to the household calendar and inventory deadlines in your own calendar app.",
         "pageKitchen": "Kuchnia",
         "pageKitchenDescription": "Wybierz, które posiłki są widoczne w planie posiłków.",
         "pageModuleOptions": "Opcje modułów",
