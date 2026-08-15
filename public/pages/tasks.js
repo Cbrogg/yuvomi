@@ -6,7 +6,7 @@
 
 import { api } from '/api.js';
 import { renderRRuleFields, bindRRuleEvents, getRRuleValues, recurrenceRow } from '/rrule-ui.js';
-import { openModal as openSharedModal, closeModal, wireBlurValidation, validateAll, btnSuccess, btnError, btnLoading, promptModal, advancedSection } from '/components/modal.js';
+import { openModal as openSharedModal, closeModal, wireBlurValidation, validateAll, btnSuccess, btnError, btnLoading, promptModal, confirmModal, advancedSection } from '/components/modal.js';
 import { openDetailView, closeDetailView, visibilityRow, assignedRow } from '/components/detail-view.js';
 import { stagger, vibrate, scheduleUndoableDelete } from '/utils/ux.js';
 import { wireSwipeRows, maybeShowSwipeHint } from '/utils/swipe-row.js';
@@ -386,6 +386,18 @@ function renderTaskCard(task, opts = {}) {
             ${s.status === 'done' ? '<i data-lucide="check" class="subtask-item__checkbox-icon" aria-hidden="true"></i>' : ''}
           </button>
           <span class="subtask-item__title">${esc(s.title)}</span>
+          <div class="subtask-item__actions">
+            <button class="btn btn--ghost btn--icon btn--icon-sm subtask-item__action"
+                    data-action="rename-subtask" data-id="${s.id}" data-title="${esc(s.title)}"
+                    aria-label="${t('tasks.subtaskRename', { title: esc(s.title) })}">
+              <i data-lucide="pencil" aria-hidden="true"></i>
+            </button>
+            <button class="btn btn--ghost btn--icon btn--icon-sm subtask-item__action"
+                    data-action="delete-subtask" data-id="${s.id}" data-title="${esc(s.title)}"
+                    aria-label="${t('tasks.subtaskDelete', { title: esc(s.title) })}">
+              <i data-lucide="trash-2" aria-hidden="true"></i>
+            </button>
+          </div>
         </div>`).join('')
     : '';
 
@@ -1878,6 +1890,39 @@ async function handleAddSubtask(parentId, container) {
   }
 }
 
+// Ein Teilschritt ist eine gewöhnliche Aufgabe mit parent_task_id, also tragen
+// Umbenennen und Löschen die vorhandenen Task-Routen (#748). Bis dahin war der
+// einzige Weg zu einem Tippfehler: abhaken und neu tippen.
+async function handleRenameSubtask(id, currentTitle, container) {
+  const title = await promptModal(t('tasks.subtaskRenamePrompt'), currentTitle);
+  // Abbruch (null) und "unverändert" gehen beide ohne Request weiter; ein
+  // leergeräumtes Feld ist kein gültiger Titel und wird wie Abbruch behandelt.
+  if (!title || title.trim() === currentTitle) return;
+  try {
+    await api.put(`/tasks/${id}`, { title: title.trim() });
+    await loadTasks(container);
+  } catch (err) {
+    window.yuvomi.showToast(err.message, 'danger');
+  }
+}
+
+async function handleDeleteSubtask(id, title, container) {
+  // Rückfrage, weil Löschen der einzige Weg ohne Rückweg ist - abhaken lässt
+  // sich zurücknehmen, das hier nicht.
+  const ok = await confirmModal(t('tasks.subtaskDeleteConfirm', { title }), {
+    confirmLabel: t('common.delete'),
+    danger: true,
+    detail: t('tasks.subtaskDeleteDetail'),
+  });
+  if (!ok) return;
+  try {
+    await api.delete(`/tasks/${id}`);
+    await loadTasks(container);
+  } catch (err) {
+    window.yuvomi.showToast(err.message, 'danger');
+  }
+}
+
 // --------------------------------------------------------
 // Kanban-Ansicht
 // --------------------------------------------------------
@@ -3074,6 +3119,14 @@ function wireTaskList(container) {
 
     if (action === 'add-subtask') {
       await handleAddSubtask(target.dataset.parent, container);
+    }
+
+    if (action === 'rename-subtask') {
+      await handleRenameSubtask(id, target.dataset.title, container);
+    }
+
+    if (action === 'delete-subtask') {
+      await handleDeleteSubtask(id, target.dataset.title, container);
     }
   });
 }
