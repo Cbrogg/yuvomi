@@ -2027,6 +2027,8 @@
         "pageCalendarDefaultsDescription": "Tetapkan pengingat dan penugasan default untuk acara baru Anda sendiri.",
         "pageNavigation": "Navigasi",
         "pageNavigationDescription": "Atur urutan modul dan navigasi seluler.",
+        "pageFeeds": "Feed subscriptions",
+        "pageFeedsDescription": "Subscribe to the household calendar and inventory deadlines in your own calendar app.",
         "pageKitchen": "Dapur",
         "pageKitchenDescription": "Pilih makanan mana yang tampil di rencana makan.",
         "pageModuleOptions": "Opsi modul",

@@ -2015,6 +2015,8 @@
         "pageCalendarDefaultsDescription": "Defina lembretes e atribuição padrão dos seus próprios eventos novos.",
         "pageNavigation": "Navegação",
         "pageNavigationDescription": "Defina a ordem dos módulos e a navegação móvel.",
+        "pageFeeds": "Feed subscriptions",
+        "pageFeedsDescription": "Subscribe to the household calendar and inventory deadlines in your own calendar app.",
         "pageKitchen": "Cozinha",
         "pageKitchenDescription": "Escolha quais refeições ficam visíveis no plano de refeições.",
         "pageModuleOptions": "Opções de módulos",

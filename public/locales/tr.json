@@ -2015,6 +2015,8 @@
         "pageCalendarDefaultsDescription": "Kendi yeni etkinlikleriniz için varsayılan hatırlatıcıları ve atamayı belirleyin.",
         "pageNavigation": "Gezinme",
         "pageNavigationDescription": "Modüllerin sırasını ve mobil gezinmeyi ayarlayın.",
+        "pageFeeds": "Feed subscriptions",
+        "pageFeedsDescription": "Subscribe to the household calendar and inventory deadlines in your own calendar app.",
         "pageKitchen": "Mutfak",
         "pageKitchenDescription": "Yemek planında hangi öğünlerin görüneceğini seçin.",
         "pageModuleOptions": "Modül seçenekleri",

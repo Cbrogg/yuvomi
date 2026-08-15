@@ -2015,6 +2015,8 @@
         "pageCalendarDefaultsDescription": "अपने नए ईवेंट के लिए डिफ़ॉल्ट अनुस्मारक और असाइनमेंट तय करें।",
         "pageNavigation": "नेविगेशन",
         "pageNavigationDescription": "मॉड्यूल का क्रम और मोबाइल नेविगेशन सेट करें।",
+        "pageFeeds": "Feed subscriptions",
+        "pageFeedsDescription": "Subscribe to the household calendar and inventory deadlines in your own calendar app.",
         "pageKitchen": "रसोई",
         "pageKitchenDescription": "चुनें कि भोजन योजना में कौन-से भोजन दिखें।",
         "pageModuleOptions": "मॉड्यूल विकल्प",

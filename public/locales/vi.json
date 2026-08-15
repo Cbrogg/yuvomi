@@ -2015,6 +2015,8 @@
         "pageCalendarDefaultsDescription": "Đặt lời nhắc và phân công mặc định cho sự kiện mới của riêng bạn.",
         "pageNavigation": "Điều hướng",
         "pageNavigationDescription": "Đặt thứ tự mô-đun và điều hướng trên di động.",
+        "pageFeeds": "Feed subscriptions",
+        "pageFeedsDescription": "Subscribe to the household calendar and inventory deadlines in your own calendar app.",
         "pageKitchen": "Nhà bếp",
         "pageKitchenDescription": "Chọn những bữa ăn hiển thị trong kế hoạch bữa ăn.",
         "pageModuleOptions": "Tùy chọn mô-đun",

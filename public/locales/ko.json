@@ -2027,6 +2027,8 @@
         "pageCalendarDefaultsDescription": "내 새 일정의 기본 알림과 담당자를 설정합니다.",
         "pageNavigation": "탐색",
         "pageNavigationDescription": "모듈 순서와 모바일 내비게이션을 설정합니다.",
+        "pageFeeds": "Feed subscriptions",
+        "pageFeedsDescription": "Subscribe to the household calendar and inventory deadlines in your own calendar app.",
         "pageKitchen": "주방",
         "pageKitchenDescription": "식단 계획에 표시할 식사를 선택합니다.",
         "pageModuleOptions": "모듈 옵션",

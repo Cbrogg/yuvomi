@@ -2038,6 +2038,8 @@
         "pageCalendarDefaultsDescription": "Set default reminders and assignment for your own new events.",
         "pageNavigation": "Navigation",
         "pageNavigationDescription": "Set the module order and the mobile navigation.",
+        "pageFeeds": "Feed subscriptions",
+        "pageFeedsDescription": "Subscribe to the household calendar and inventory deadlines in your own calendar app.",
         "pageKitchen": "Kitchen",
         "pageKitchenDescription": "Choose which meals are visible in the meal planner.",
         "pageModuleOptions": "Module options",

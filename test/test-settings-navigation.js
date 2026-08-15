@@ -116,9 +116,13 @@ test('die Blätter verteilen sich wie beschlossen auf die vier Domänen', () => 
   // Nach demselben Schnitt liegt das Zyklus-Opt-out (#760) bei `personal`: ob der
   // Haushalt den Zyklus führt, steht im adminOnly-`modules-options`, ob ich ihn
   // sehen will, entscheide ich.
+  // Und ebenso `personal-feeds`: beide Feed-Tokens hängen an der eigenen
+  // users-Zeile und beide Routen tragen keinen Admin-Check, das Blatt lag
+  // trotzdem im adminOnly-`sync-calendar`. Was in den Kalender hineinkommt
+  // (CalDAV, ICS-Abos, Import) bleibt dort.
   const perDomain = {};
   for (const leaf of SETTINGS_LEAVES) perDomain[leaf.domainId] = (perDomain[leaf.domainId] ?? 0) + 1;
-  assert.deepEqual(perDomain, { personal: 9, modules: 4, sync: 5, admin: 8 });
+  assert.deepEqual(perDomain, { personal: 10, modules: 4, sync: 5, admin: 8 });
   // Jedes Blatt hängt an einer existierenden Domäne.
   const domainIds = new Set(SETTINGS_DOMAINS.map((domain) => domain.id));
   for (const leaf of SETTINGS_LEAVES) {

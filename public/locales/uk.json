@@ -2015,6 +2015,8 @@
         "pageCalendarDefaultsDescription": "Задайте типові нагадування та призначення для власних нових подій.",
         "pageNavigation": "Навігація",
         "pageNavigationDescription": "Налаштуйте порядок модулів і мобільну навігацію.",
+        "pageFeeds": "Feed subscriptions",
+        "pageFeedsDescription": "Subscribe to the household calendar and inventory deadlines in your own calendar app.",
         "pageKitchen": "Кухня",
         "pageKitchenDescription": "Виберіть, які прийоми їжі видно в плані харчування.",
         "pageModuleOptions": "Параметри модулів",

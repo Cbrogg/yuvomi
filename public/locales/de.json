@@ -2050,6 +2050,8 @@
         "pageCalendarDefaultsDescription": "Standard-Erinnerungen und Zuweisung für eigene neue Termine festlegen.",
         "pageNavigation": "Navigation",
         "pageNavigationDescription": "Reihenfolge der Module und die mobile Navigation festlegen.",
+        "pageFeeds": "Feed-Abos",
+        "pageFeedsDescription": "Haushaltskalender und Inventar-Fristen im eigenen Kalenderprogramm abonnieren.",
         "pageKitchen": "Küche",
         "pageKitchenDescription": "Sichtbare Mahlzeiten im Essensplan auswählen.",
         "pageModuleOptions": "Modul-Optionen",

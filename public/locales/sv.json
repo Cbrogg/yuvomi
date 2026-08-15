@@ -2015,6 +2015,8 @@
         "pageCalendarDefaultsDescription": "Ange standardpåminnelser och tilldelning för dina egna nya händelser.",
         "pageNavigation": "Navigering",
         "pageNavigationDescription": "Ange modulernas ordning och den mobila navigeringen.",
+        "pageFeeds": "Feed subscriptions",
+        "pageFeedsDescription": "Subscribe to the household calendar and inventory deadlines in your own calendar app.",
         "pageKitchen": "Kök",
         "pageKitchenDescription": "Välj vilka måltider som visas i måltidsplanen.",
         "pageModuleOptions": "Modulalternativ",

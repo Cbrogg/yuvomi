@@ -2050,6 +2050,8 @@
         "pageCalendarDefaultsDescription": "Magtakda ng mga default na paalala at atas para sa sarili mong mga bagong kaganapan.",
         "pageNavigation": "Nabigasyon",
         "pageNavigationDescription": "Itakda ang pagkakasunod-sunod ng modyul at ang nabigasyon sa mobile.",
+        "pageFeeds": "Feed subscriptions",
+        "pageFeedsDescription": "Subscribe to the household calendar and inventory deadlines in your own calendar app.",
         "pageKitchen": "Kusina",
         "pageKitchenDescription": "Piliin kung aling mga pagkain ang nakikita sa tagaplano ng pagkain.",
         "pageModuleOptions": "Mga opsyon ng modyul",
