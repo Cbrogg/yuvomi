@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`docker-compose.yml` starts on Synology, QNAP and other older Docker builds again.** Since v2.2.1 the file passed its `.env` in the Compose long form (`- path: .env` / `required: false`), which exists only from Compose v2.24 onwards. Anything older refuses the whole manifest with `services.yuvomi.env_file.0 must be a string` - not at startup, but while reading the file, so nothing runs and the message points at a line the user did not write (#765, reported by @Zaldans on DSM 7.3.2 with Docker 24.0.2). The entry is back to the short form `- .env`, which every Compose version understands and which `podman-compose.yml` has kept all along. Nothing is lost by it: the long form was there for Git/GitOps stacks that clone the repository without a `.env` (#698), and that path has had its own file since, `docs/docker-compose.portainer.yml`, which lists every variable explicitly because Portainer hands its variables to Compose for substitution rather than as an env file. Keeping the long form only moved the failure one step later for those stacks - without a `.env` there is no `SESSION_SECRET`, and the container exits on startup - while breaking every NAS whose engine predates it. A guard now holds the short form across all Compose manifests in the repository rather than a list of known files.
+
 ## [2.12.0] - 2026-08-15
 
 ### Added

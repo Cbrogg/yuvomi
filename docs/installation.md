@@ -408,7 +408,7 @@ docs/docker-compose.portainer.yml
 
 Add the same environment variables as above. Auto-update then follows `main` on its own.
 
-> **Do not point a Git stack at the repository's `docker-compose.yml`.** That file is written for a local clone with a generated `.env` beside it, so it passes most of its configuration through `env_file` — and Portainer clones the repository without one. The missing file no longer aborts the pull (issue #698), but the container then starts without `SESSION_SECRET` and exits.
+> **Do not point a Git stack at the repository's `docker-compose.yml`.** That file is written for a local clone with a generated `.env` beside it, so it passes most of its configuration through `env_file` — and Portainer clones the repository without one. The deploy then fails on the missing file, and even if it did not, the container would start without `SESSION_SECRET` and exit (issues #698, #765).
 
 ---
 

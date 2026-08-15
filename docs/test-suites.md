@@ -196,7 +196,7 @@ npm run test:installer-env-write
 npm run test:installer-static
 npm run test:installer-i18n
 npm run test:installer-cli-i18n
-npm run test:installer-prereq
+npm run test:installer-prereq  # Voraussetzungs-Check + Startprotokoll des Web-Installers, dazu die Compose-Manifeste selbst: SESSION_SECURE wird aus der .env abgeleitet statt hart überstimmt, und seit #765 nutzt kein Manifest die `env_file`-Langform (`- path:` / `required:`). Die gibt es erst ab Compose v2.24; Synology DSM und QNAP liefern älter und lehnen das Manifest mit „env_file.0 must be a string" ab, also noch bevor irgendetwas startet - ein Fehler, den keine Laufzeit je zu sehen bekommt. Der Guard sucht die Manifeste (`services:` im Inhalt) statt sie aufzuzählen, prüft den SCHLÜSSEL statt des Listenstrichs (`env_file: .env` ohne Liste ist gültige Kurzform) und zählt beides mit: unter zwei gefundenen Manifesten oder ohne einen einzigen `env_file`-Block urteilt er nicht, sonst wäre er nach einer Umbenennung grün über einer leeren Liste
 npm run test:installer-a11y
 ```
 
