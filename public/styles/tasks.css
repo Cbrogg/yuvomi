@@ -1069,6 +1069,31 @@
   color: var(--color-text-secondary);
 }
 
+/* Umbenennen und Löschen eines Teilschritts (#748). Dieselbe Zielgröße und
+ * derselbe zurückgenommene Ton wie die Inline-Aktionen der Aufgabenzeile
+ * darüber - der Teilschritt ist eine Zeile derselben Liste, keine eigene
+ * Gattung. Bewusst NICHT hover-only: auf dem Touchgerät gibt es kein Hover,
+ * und dort ist das Korrigieren eines Tippfehlers der häufigere Fall. */
+.subtask-item__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}
+
+.subtask-item__action {
+  width: var(--target-base);
+  height: var(--target-base);
+  min-width: var(--target-base);
+  min-height: var(--target-base);
+  color: var(--color-text-tertiary);
+}
+
+.subtask-item__action:hover,
+.subtask-item__action:focus-visible {
+  color: var(--color-text-primary);
+}
+
 .subtask-item__add {
   width: 100%;
   padding: var(--space-2);
