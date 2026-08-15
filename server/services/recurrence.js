@@ -186,6 +186,31 @@ function matchesRRuleByday(dateStr, rrule) {
   return parsed.byday.includes(day.getUTCDay());
 }
 
+/**
+ * Wiederholungsregeln liegen in `calendar_events.recurrence_rule` in ZWEI
+ * Schreibweisen: lokal angelegte Termine speichern den nackten Wert
+ * (`FREQ=WEEKLY;...`), aus ICS oder CalDAV eingelesene Serien den vollen
+ * Property-String mitsamt `RRULE:`-Praefix (ics-parser.js). Beides ist
+ * gewachsen und wird nicht vereinheitlicht - eine zweite Schreibweise in der
+ * Datenbank zu erzwingen waere teurer als eine Migration.
+ *
+ * Deshalb muss JEDER Ausgabepfad die Doppeldeutigkeit aufloesen, und genau das
+ * ist die Stelle, an der es schiefging: fuenf Module bauten die Zeile je selbst,
+ * vier lagen richtig, der ICS-Feed setzte das Praefix blind davor und schickte
+ * `RRULE:RRULE:FREQ=...` (#761). Apple schluckt das, strikte Parser wie der von
+ * Home Assistant lehnen das Event ab.
+ */
+
+/** Der nackte Regelwert, ohne `RRULE:` - fuer APIs, die nur den Wert wollen. */
+export function rruleValue(rule) {
+  return String(rule ?? '').replace(/^RRULE:/i, '');
+}
+
+/** Die vollstaendige ICS-Zeile mit GENAU einem `RRULE:`-Praefix. */
+export function rruleLine(rule) {
+  return `RRULE:${rruleValue(rule)}`;
+}
+
 export {
   parseRRule, nextOccurrence, nextOccurrenceAfter, nextDueAfterCompletion, matchesRRuleByday,
 };

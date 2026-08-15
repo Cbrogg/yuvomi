@@ -22,6 +22,7 @@ import { unfoldLines, parseICS, formatICSDate, tzLocalToUTC, applyDuration, norm
 import { decodeHtmlEntities } from '../utils/html-entities.js';
 import * as outbound from './calendar-outbound.js';
 import { processPendingDeletions, processPendingUpdates, flushAccount } from './caldav-outbound.js';
+import { rruleLine } from './recurrence.js';
 
 const APPLE_COLOR = '#FC3C44';
 
@@ -181,7 +182,7 @@ function buildICS(event) {
   // letzteres eine Zeile ohne Property-Namen - ein VEVENT, das kein Server als
   // Serie liest. patchICSEvent normalisiert an seiner Stelle genauso.
   if (event.recurrence_rule) {
-    lines.push(`RRULE:${String(event.recurrence_rule).replace(/^RRULE:/i, '')}`);
+    lines.push(rruleLine(event.recurrence_rule));
   }
 
   lines.push('END:VEVENT', 'END:VCALENDAR');

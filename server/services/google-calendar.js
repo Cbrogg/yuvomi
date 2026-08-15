@@ -24,6 +24,7 @@ import { nearestColorId } from '../utils/ical-color.js';
 // Fallback-Zone für den Outbound-Sync, wenn Google für den Zielkalender keine liefert.
 import { serverTimeZone } from '../utils/timezone.js';
 import { assignDefaultToEvent } from './sync-assignment.js';
+import { rruleValue } from './recurrence.js';
 
 const GOOGLE_COLOR = '#4285F4';
 
@@ -1057,10 +1058,7 @@ function localEventToGoogle(event, colorMap = {}, timeZone = serverTimeZone()) {
   }
 
   if (event.recurrence_rule) {
-    const body = event.recurrence_rule.startsWith('RRULE:')
-      ? event.recurrence_rule.slice('RRULE:'.length)
-      : event.recurrence_rule;
-    gEvent.recurrence = [`RRULE:${normalizeRecurrenceUntil(body, allDay)}`];
+    gEvent.recurrence = [`RRULE:${normalizeRecurrenceUntil(rruleValue(event.recurrence_rule), allDay)}`];
   }
 
   return gEvent;

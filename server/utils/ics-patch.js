@@ -9,6 +9,8 @@
 // getauscht, jede andere Zeile bleibt Zeichen für Zeichen stehen.
 // --------------------------------------------------------
 
+import { rruleLine } from '../services/recurrence.js';
+
 // Properties, die Yuvomi verwaltet und daher ersetzen darf - je Komponente.
 const MANAGED_VEVENT = new Set(['SUMMARY', 'DESCRIPTION', 'LOCATION', 'DTSTART', 'DTEND', 'RRULE']);
 // VTODO (#617): STATUS, COMPLETED und PERCENT-COMPLETE gehören zusammen - Clients
@@ -89,8 +91,7 @@ function buildLines(name, value) {
     return [`${name}:${items.map(escapeText).join(',')}`];
   }
   if (name === 'RRULE') {
-    const rule = String(value).replace(/^RRULE:/i, '');
-    return [`RRULE:${rule}`];
+    return [rruleLine(value)];
   }
   return [`${name}:${escapeText(value)}`];
 }

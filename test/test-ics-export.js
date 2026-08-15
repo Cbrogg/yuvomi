@@ -1,4 +1,5 @@
 import { DatabaseSync } from 'node:sqlite';
+import { readdirSync, readFileSync } from 'node:fs';
 import { MIGRATIONS_SQL } from '../server/db-schema-test.js';
 
 let passed = 0, failed = 0;
@@ -136,6 +137,27 @@ test('buildFeed: RRULE wird mit Präfix übernommen', () => {
   d2.prepare(`INSERT INTO calendar_events (title,start_datetime,all_day,external_source,recurrence_rule,created_by) VALUES ('Müll','2026-01-05T07:00:00Z',0,'local','FREQ=WEEKLY;BYDAY=MO',?)`).run(u1);
   const ics = buildFeed(d2, u1, NOW);
   assert(ics.includes('RRULE:FREQ=WEEKLY;BYDAY=MO'), 'RRULE fehlt: ' + ics);
+});
+
+test('buildFeed: eine eingelesene Serie bekommt kein zweites RRULE-Präfix (#761)', () => {
+  // Lokal angelegte Termine speichern den nackten Regelkörper, aus ICS/CalDAV
+  // eingelesene den vollen Property-String MIT Präfix (ics-parser.js). Der Feed
+  // setzte eins davor, ohne zu schauen: `RRULE:RRULE:FREQ=...`. Apple schluckte
+  // das, Home Assistant verwarf das ganze Event.
+  //
+  // Gezählt statt per includes() geprüft: der Test darüber wäre auch mit dem
+  // Fehler grün gewesen, weil `RRULE:FREQ=WEEKLY;BYDAY=MO` ein Teilstring von
+  // `RRULE:RRULE:FREQ=WEEKLY;BYDAY=MO` ist.
+  d2.prepare(`INSERT INTO calendar_events (title,start_datetime,all_day,external_source,recurrence_rule,created_by) VALUES ('Aus Nextcloud','2026-01-06T07:00:00Z',0,'local','RRULE:FREQ=DAILY;INTERVAL=2',?)`).run(u1);
+  const ics = buildFeed(d2, u1, NOW);
+
+  const line = ics.split('\r\n').find((l) => l.includes('FREQ=DAILY;INTERVAL=2'));
+  assert(line, 'die Regel fehlt ganz: ' + ics);
+  assert(line === 'RRULE:FREQ=DAILY;INTERVAL=2', 'Zeile lautet: ' + line);
+
+  // Und keine einzige Zeile im ganzen Feed trägt ein doppeltes Präfix.
+  const doubled = ics.split('\r\n').filter((l) => /^RRULE:RRULE:/i.test(l));
+  assert(doubled.length === 0, 'doppeltes RRULE-Präfix im Feed: ' + doubled.join(' | '));
 });
 
 test('buildFeed: EXDATE für ausgenommene Instanz einer Zeit-Serie (#489)', () => {
@@ -335,6 +357,40 @@ test('buildFeed: EINZELtermin mit tzid bleibt UTC (nur Serien nutzen den TZID-Pf
   assert(ics.includes('DTSTART:20260625T052500Z'), 'Einzeltermin sollte UTC bleiben: ' + ics);
   assert(!/SchuleTZ[^\r]*\r\nDTSTART:20260625/.test(ics), 'kein TZID-Pfad für Einzeltermin');
   d2.prepare(`DELETE FROM calendar_events WHERE id = ?`).run(id);
+});
+
+test('kein Modul baut die RRULE-Zeile an der Normalisierung vorbei (#761)', () => {
+  // WARUM ALS REGEL UND NICHT ALS DATEILISTE: die Regel "genau ein RRULE:-Präfix"
+  // lag in fünf Modulen als fünf Kopien. Vier waren richtig, das fünfte nicht -
+  // und weil niemand die Kopien zählte, fiel es erst einem Abonnenten auf.
+  // Geprüft wird deshalb jede Datei unter server/, auch die, die es noch nicht
+  // gibt: wer `RRULE:` unmittelbar aus einem Ausdruck zusammensetzt, muss dabei
+  // durch rruleValue()/rruleLine() gegangen sein.
+  //
+  // Nicht getroffen wird literaler Regeltext (`RRULE:FREQ=YEARLY;BYMONTH=${…}`),
+  // wie ihn der VTIMEZONE-Block baut - dort steht hinter dem Doppelpunkt eine
+  // Konstante, kein fremder Regelkörper.
+  const root = new URL('../server/', import.meta.url);
+  const offenders = [];
+
+  const walk = (dir) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const child = new URL(entry.name + (entry.isDirectory() ? '/' : ''), dir);
+      if (entry.isDirectory()) { walk(child); continue; }
+      if (!entry.name.endsWith('.js')) continue;
+      if (entry.name === 'recurrence.js') continue; // dort WOHNT die Regel
+
+      const src = readFileSync(child, 'utf8');
+      src.split('\n').forEach((line, i) => {
+        if (!/`RRULE:\$\{/.test(line)) return;
+        if (/rrule(Value|Line)\(/.test(line)) return;
+        offenders.push(`${entry.name}:${i + 1}: ${line.trim()}`);
+      });
+    }
+  };
+  walk(root);
+
+  assert(offenders.length === 0, 'RRULE-Zeile ohne Normalisierung:\n  ' + offenders.join('\n  '));
 });
 
 console.log(`\n${passed} passed, ${failed} failed\n`);
