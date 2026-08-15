@@ -32,7 +32,9 @@ dedicated `podman-compose.yml` (SELinux `:Z` labels).
 ## What it does
 
 1. Detects the container engine (Docker or Podman), checks its prerequisites, and
-   reports an existing `.env` file before you start. When it finds one, the **simple
+   reports an existing `.env` file **and a running `yuvomi` container** before you
+   start - a running container matters because saving restarts it, so the household
+   is briefly cut off. When it finds an existing `.env`, the **simple
    path is disabled** and you continue with the advanced setup: the simple path writes
    fixed values for host, port, `SESSION_SECURE` and `TRUST_PROXY`, which would
    silently downgrade an installation that already runs behind a reverse proxy
@@ -53,9 +55,14 @@ dedicated `podman-compose.yml` (SELinux `:Z` labels).
      - **Calendar** — Google Calendar and Apple CalDAV
      - **Email** — SMTP for the "forgot password" flow (`EMAIL_SMTP_*`,
        `EMAIL_FROM_*`); enables password-reset emails
-     - **Advanced** — Single Sign-On (OIDC), automatic backups, off-site WebDAV backups
-       (`WEBDAV_BACKUP_*`), local-folder, WebDAV, or Google Drive document storage, live
-       currency rates (`FIXER_API_KEY`), and the Web-Push contact (`VAPID_SUBJECT`)
+     - **Storage & backups** — the host data folder (`DATA_DIR`), automatic backups,
+       off-site WebDAV backups (`WEBDAV_BACKUP_*`), and local-folder, WebDAV or
+       Google Drive document storage. Everything that decides *where data lives*
+     - **Advanced** — Single Sign-On (OIDC), the three home-network permissions
+       (calendar subscriptions, recipe mirrors, WebDAV target - they lift the SSRF
+       protection and are asked as one group), the calendar sync interval, live
+       currency rates (`FIXER_API_KEY`) and the Web-Push contact (`VAPID_SUBJECT`).
+       Everything that decides *what Yuvomi connects to*
    - The advanced path asks for `BASE_URL` (pre-filled from host, port and the
      exposure choice); the simple path derives it. Every redirect URI the wizard
      shows - Google Calendar, Google Drive, OIDC - is built from that one value, so
