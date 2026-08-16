@@ -394,6 +394,12 @@
       line-height: 1.65; color: var(--text-2); }
     .mod-scope { max-width: 68ch; margin: 44px auto 0; padding-top: 30px; border-top: 1px solid var(--border);
       font-size: 0.98rem; line-height: 1.7; color: var(--text-2); text-align: center; }
+    /* Vierzehn Karten gehen in keiner brauchbaren Spaltenzahl auf (14 teilt sich
+       nur durch 1, 2, 7 und 14), die letzte Reihe bleibt also angebrochen: 5+5+4
+       bei 1440px, 4+4+4+2 bei 1152px. Das per `grid-column: span` zu fuellen
+       haengt an einer Spaltenzahl, die `auto-fill` je nach Breite anders waehlt -
+       es braeche bei drei Spalten. Eine angebrochene Schlusszeile in einem
+       Kartenraster ist gewoehnlich; die fragile Regel dagegen nicht. */
     .mod-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(255px, 1fr)); gap: 16px; margin-top: 26px; }
     .mod-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 26px; box-shadow: var(--shadow-sm);
       transition: transform .25s var(--ease-out), box-shadow .25s, border-color .25s; position: relative; overflow: hidden; }
@@ -409,7 +415,10 @@
 
     /* ===== Platform / Install anywhere ===== */
     .platforms { padding: 100px 0; }
-    .plat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px; margin-top: 48px; }
+        /* 190px liessen bei 1.152px nur fuenf Karten in die Reihe, die sechste stand
+       allein darunter. 168px bringen alle sechs unter, auch bei 1.152px:
+       6x168 + 5x16 = 1.088. */
+    .plat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(168px, 1fr)); gap: 16px; margin-top: 48px; }
     .plat-card {
       position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 14px;
       background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 24px;
@@ -440,7 +449,11 @@
     .plat-go svg { width: 15px; height: 15px; transition: transform .2s var(--ease-out); }
     .plat-card:hover .plat-go svg { transform: translateX(4px); }
 
-    .quick-docker { margin-top: 44px; max-width: 760px; }
+    /* Die 760px-Deckelung liess in einer 1.152px-Spalte 440px totes Gutter
+       rechts vom wichtigsten Block der Seite stehen, waehrend das Plattformraster
+       darueber die volle Breite nutzte. Drei Laeufe lang gemeldet. Die Trust-Bar
+       darin geht damit von 3+2 auf 5 Spalten, also eine Zeile. */
+    .quick-docker { margin-top: 44px; }
     .code-block { background: var(--code-bg); color: var(--code-text); border-radius: var(--r-lg); padding: 22px 26px;
       font-family: var(--ff-mono); font-size: 0.84rem; line-height: 1.9; overflow-x: auto; box-shadow: var(--shadow-lg); border: 1px solid rgba(255,255,255,0.06);
       white-space: pre; tab-size: 2; }
@@ -475,11 +488,15 @@
     /* Above the command, not below it. It sat underneath, so the eye reached the
        copy button and `docker compose up -d` first and the answer to "what does
        this do to my machine" arrived after the decision was already made. */
-    .trust-bar { list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    .trust-bar { list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(196px, 1fr));
       gap: 10px 24px; margin-bottom: 20px; padding-bottom: 18px; border-bottom: 1px solid var(--border); }
     .trust-bar li { font-size: 0.86rem; color: var(--text-2); line-height: 1.5; display: flex; gap: 8px; }
     .trust-bar b { color: var(--text-1); font-weight: 600; flex-shrink: 0; }
-    .trust-bar code { font-family: var(--ff-mono); font-size: 0.94em; color: var(--text-1); overflow-wrap: anywhere; }
+        /* `anywhere` brach den Image-Tag mitten im Namen ("ghcr.io/ulsklyc/yuvo" /
+       "mi:latest") - drei Laeufe lang gemeldet. `break-word` bricht erst, wenn
+       ein Wort wirklich nicht passt, und das <wbr> im Markup gibt ihm vorher
+       eine sinnvolle Stelle: hinter dem letzten Schraegstrich. */
+    .trust-bar code { font-family: var(--ff-mono); font-size: 0.94em; color: var(--text-1); overflow-wrap: break-word; }
     /* The one irreversible thing on this page. The block above generates two
        secrets and starts the container; nothing on this page used to say that
        one of the two can never be regenerated, while install.html says it twice. */
@@ -1201,7 +1218,7 @@
 
     <div class="quick-docker reveal">
       <ul class="trust-bar">
-        <li><b data-t="tb_image_k">Image</b> <span><code>ghcr.io/ulsklyc/yuvomi:latest</code>, <span data-t="tb_image_v">about 500 MB</span></span></li>
+        <li><b data-t="tb_image_k">Image</b> <span><code>ghcr.io/ulsklyc/<wbr>yuvomi:latest</code>, <span data-t="tb_image_v">about 500 MB</span></span></li>
         <li><b data-t="tb_needs_k">Needs</b> <span data-t="tb_needs_v">256 MB RAM and one port, 3000 by default.</span></li>
         <li><b data-t="tb_writes_k">Writes</b> <span data-t="tb_writes_v">Four volumes you own: data, backups, modules, documents.</span></li>
         <li><b data-t="tb_out_k">Outbound</b> <span data-t="tb_out_v">Nothing until you configure it. Weather, calendar sync and WebDAV backup are all off until you fill in credentials.</span></li>
