@@ -1,4 +1,4 @@
-<!-- version: 2.14.5 -->
+<!-- version: 2.15.0 -->
 <!--
   Die `releaseNotes` fuer den Umbrel-App-Store, von Hand fuer JEDEN Release
   geschrieben. `umbrel-publish.yml` nimmt den Text unter diesem Kommentar
@@ -29,17 +29,17 @@
     - Leerzeile zwischen den Absaetzen: der Store rendert ein gefaltetes
       YAML-Blockskalar, dort ist die Leerzeile der Absatzumbruch.
 
-  HINWEIS ZU DIESER VERSION: zwei gemeldete Fehler in der App selbst, also
-  diesmal wirklich relevant fuer den Store. Der Schluessel-Hinweis betrifft
-  Umbrel ausdruecklich NICHT - `deploy/umbrel/docker-compose.yml` setzt
-  `DB_ENCRYPTION_KEY=${APP_SEED}`, der Platzhalter aus `.env.example` kann hier
-  also gar nicht ankommen. Er steht trotzdem drin, weil viele Haushalte Yuvomi
-  zusaetzlich woanders betreiben - aber mit der Entwarnung in derselben Zeile.
-  Die Doku- und Website-Arbeit dieses Releases bleibt draussen (deren Skill:
-  "Omit ... docs-only").
+  HINWEIS ZU DIESER VERSION: eine sichtbare Aenderung in der App (der Ordner,
+  in dem die Belege der Gemeinsamen Ausgaben liegen, heisst jetzt wie das Modul)
+  und die dazugehoerige Migration, die einen bestehenden Ordner mitnimmt - genau
+  der Absatz, den deren Skill als wichtigsten benennt, wenn es einen gibt. Die
+  Korrektur der Aussage zu ausgehenden Verbindungen steht drin, weil sie eine
+  Datenschutzzusage praezisiert und nicht bloss Doku umraeumt; das Verhalten
+  selbst ist unveraendert. Der ganze README- und Website-Umbau bleibt draussen
+  (deren Skill: "Omit ... docs-only").
 -->
-Two fixes you can see in the app. In Inventory, opening the form for a new item showed five blank entries where the categories should be: the categories that ship with Yuvomi lost their labels when they were made translatable. In Calendar, the weekend shading in the month view was tied to the last two columns of the grid rather than to the days themselves, so it sat on Friday and Saturday for anyone whose week starts on Sunday. Both are back to what you would expect, and there is nothing to do after updating.
+The module for shared costs now goes by one name throughout. It answered to several at once: one wording as the page heading, another on the folder your receipts are filed into, and a third in a place the app never showed you. The heading is the name everywhere now, in all twenty-four languages. If you have filed receipts before, the folder holding them is renamed for you while updating and everything inside stays where it is; there is nothing to do.
 
-One security note for anyone who also runs Yuvomi outside Umbrel, by hand with Docker: a fresh installation now refuses to start when the database encryption key is still the placeholder from the example file, because that value is printed in our repository and protects nothing. Your Umbrel installation is not affected - it has always been given its own key.
+One clarification about what leaves your server, in case you read the old wording as a promise. Yuvomi asks GitHub once for its list of releases, on first load and every six hours after, so it can tell you a newer version exists. That is the only request it makes on its own, and it has always made it. Everything else - weather, calendar sync, cloud backup - still stays off until you enter credentials.
 
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.14.5
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.15.0

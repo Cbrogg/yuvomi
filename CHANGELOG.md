@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.15.0] - 2026-08-16
+
+### Changed
+
+- **One name for the shared expenses module, in every language.** It answered to several at once: in German "Gemeinsame Ausgaben" as the page heading, "Geteilte Ausgaben" as the receipt folder in Documents, and a third wording in a navigation key that no part of the app ever displayed. Ten of the twenty-four languages carried three spellings or more, and the guard that already watches module names could not see any of it, because it compares the navigation against the API token dialog and the folder belongs to neither. The heading is now the name everywhere it has room, the receipt folder included; an existing folder is renamed on upgrade, so receipts filed so far stay where they are. The tab inside Budget keeps its short label, because it sits seventh in a row of tabs and a full name there would push the row wider than the screen.
+- **The README is a landing page again instead of a second manual.** It had grown to just under five hundred lines in each language, which is eighteen screens on a phone before the first install command, and more than half of that text sat folded away behind expanders - including the one thing no collection of separate apps can offer, namely what the modules hand each other. The screenshot gallery, the module-by-module detail and the FAQ now live where a reader who wants them already goes: the project page and the spec. What moved in is the handover between modules, what a household actually needs to know before installing (image size, memory, ports, volumes, and what leaves the server), and a closing invitation to ask a question. Loading it costs 65 kilobytes instead of 4.85 megabytes.
+- **Installing by copy and paste no longer starts the container before you have set your secrets.** The instructions were a single block whose third line asked, in a comment, for the environment file to be edited, and whose fourth line already started everything. Generating the two secrets and starting the container are separate steps now, with the warning between them that an encrypted database never opens again once its key is lost. The command that generates a key appears at all, for the first time.
+
+### Fixed
+
+- **The claim that nothing leaves your server until you configure it was not true.** The app asks GitHub once for the list of releases, on first load and every six hours after, to tell you that a newer version exists; nothing turns that off. The README and the project page now name that one request instead of promising none. Everything else - weather, calendar sync, cloud backup - does stay off until you enter credentials, as stated.
+- **"Copying one file is the whole export" now says when it holds.** With documents kept in a folder, on WebDAV or in Google Drive, the database carries their metadata and not the files, which the same README warns about two screens further down. Both statements agreed with each other but not with the reader.
+- **The manual Podman path works again.** The shortened instructions downloaded the Docker compose file and then called Docker, on a host that by definition has neither. The Podman file and its command are back, with the SELinux labels named as the reason they matter on RHEL, Fedora and CentOS Stream.
+
 ## [2.14.5] - 2026-08-16
 
 ### Added
