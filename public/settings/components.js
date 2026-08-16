@@ -263,3 +263,45 @@ export function createRetryState({ message, onRetry }) {
   state.appendChild(button);
   return state;
 }
+
+/**
+ * Aufklappbares Feld einer Modulzeile verdrahten (Kueche).
+ *
+ * Stand kurz in beiden Modul-Blaettern wortgleich (Audit 2026-08-16). Es ist
+ * kein Blatt-Detail, sondern das Verhalten einer geteilten Komponente: derselbe
+ * Ausloeser, dasselbe Panel, dieselbe `aria-expanded`-Kopplung.
+ *
+ * `aria-controls` gehoert dazu und fehlte in beiden Fassungen: der Ausloeser
+ * sagte "ich bin aufgeklappt", nannte aber nicht, WAS. Die Id wird hier
+ * vergeben, damit kein Blatt sie selbst erfinden muss.
+ */
+export function bindDisclosure(container, { triggerSelector, panelSelector, id }) {
+  const trigger = container.querySelector(triggerSelector);
+  const panel = container.querySelector(panelSelector);
+  if (!trigger || !panel) return;
+
+  if (id && !panel.id) {
+    panel.id = id;
+    trigger.setAttribute('aria-controls', id);
+  }
+
+  trigger.addEventListener('click', () => {
+    const expanded = trigger.getAttribute('aria-expanded') === 'true';
+    trigger.setAttribute('aria-expanded', String(!expanded));
+    panel.hidden = expanded;
+  });
+}
+
+/**
+ * Statuswort einer Drittanbieter-Modulzeile.
+ *
+ * Liegt hier und nicht in einem der zwei Modul-Blaetter: beide zeigen dieselbe
+ * Zeile, nur mit verschiedenen Bedienelementen. Ein Blatt, das vom anderen
+ * importiert, zoege beim Oeffnen das falsche Modul mit.
+ */
+export function thirdPartyStatusLabel(module) {
+  if (module.status === 'error') return t('settings.thirdPartyModulesStatusError');
+  return module.enabled
+    ? t('settings.thirdPartyModulesStatusEnabled')
+    : t('settings.thirdPartyModulesStatusDisabled');
+}

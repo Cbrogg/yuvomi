@@ -2190,6 +2190,16 @@ svg.weather-forecast__icon {
   flex-wrap: wrap;
 }
 
+/* Die Reichweite steht ueber den Knoepfen, nicht neben ihnen: sie beantwortet
+   eine Frage, die vor dem Speichern entsteht, und darf die Knopfreihe nicht
+   schmaler machen (#585, Critique 2026-08-16). */
+.dashboard-customize-scope {
+  margin: 0 0 var(--space-2) 0;
+  text-align: right;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+
 /* Kein min-height-Override hier: der Basis-.btn ist bereits 48px (mobil) / 40px
  * (Desktop). Der frühere Override auf --target-md (40px) schrumpfte die Toolbar-
  * Buttons auch mobil unter das 44px-iOS-Minimum (Assessment B). */

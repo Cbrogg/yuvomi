@@ -111,7 +111,7 @@ Scheduled jobs have no session. Issue an API token under Settings -> Admin -> AP
 
 Yuvomi scans `modules/` and validates each `module.json`. Invalid modules are shown as errored in Settings and are not loaded. Disabled modules are not served to the browser and do not appear in navigation. If a module page fails while rendering, Yuvomi shows an error for that page without changing core application code.
 
-Admins can enable, disable, and order modules in Settings -> Personal -> Navigation. Ordering is per user and open to every member; the enable/disable switches are admin-only. Copying a new folder into `modules/` makes it appear there automatically.
+Admins enable and disable modules in Settings -> Modules -> Active modules. Ordering is a separate, personal matter and lives in Settings -> Personal -> Navigation, where every member also decides which modules they want in their own navigation - hiding one there removes it from that member's sidebar and mobile favourites without taking it from the household. Copying a new folder into `modules/` makes it appear in both places automatically.
 
 ## Compatibility Across Yuvomi Releases
 

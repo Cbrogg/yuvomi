@@ -7,6 +7,7 @@
 import { api, auth } from '/api.js';
 import { canAccessNavModule, navModuleAccess } from '/permissions.js';
 import { clearApiCache } from '/sw-register.js';
+import { forgetLayoutHint } from '/utils/dashboard-layout-hint.js';
 import { initI18n, getLocale, t, formatDate, formatTime } from '/i18n.js';
 import { esc } from '/utils/html.js';
 import { emptyHintEl } from '/utils/empty-state.js';
@@ -393,6 +394,13 @@ let _renderedModule = null;
 let _renderedModuleName = null;
 let _preferencesLoaded = false;
 let _disabledModules = new Set();
+// Persoenlich ausgeblendete Module (#673). Bewusst eine ZWEITE Menge neben
+// `_disabledModules` und nicht mit ihr vereinigt: die haushaltweite Abschaltung
+// wirkt auch im Routen-Guard weiter unten, diese hier NUR in der Navigation.
+// Ein ausgeblendetes Modul bleibt erreichbar - ueber einen Deep-Link aus einer
+// Benachrichtigung, ein Dashboard-Widget oder die Suche. Wer entziehen will,
+// nimmt die Rechte (#467); wer aufraeumen will, blendet aus.
+let _hiddenModules = new Set();
 let _thirdPartyModules = [];
 let _moduleOrder = [];
 let _mobileNavOrder = [];
@@ -855,6 +863,9 @@ async function syncPreferencesOnce() {
     }
     if (Array.isArray(res?.data?.disabled_modules)) {
       _disabledModules = new Set(res.data.disabled_modules);
+    }
+    if (Array.isArray(res?.data?.hidden_modules)) {
+      _hiddenModules = new Set(res.data.hidden_modules);
     }
     if (Array.isArray(res?.data?.module_order)) {
       _moduleOrder = res.data.module_order;
@@ -1442,7 +1453,7 @@ async function renderPage(route, previousPath = null, scrollTarget = 0) {
     // Route-Announcer: Screenreader über Seitenwechsel informieren (gezielt, nicht gesamter Inhalt)
     const announcer = document.getElementById('route-announcer');
     if (announcer) {
-      const pageLabel = navItems().find((n) => n.path === route.path)?.label ?? route.path;
+      const pageLabel = navCatalog().find((n) => n.path === route.path)?.label ?? route.path;
       announcer.textContent = '';
       setTimeout(() => { announcer.textContent = pageLabel; }, 50);
     }
@@ -2152,7 +2163,7 @@ const _toolbarHandles = new WeakMap();
  */
 function headSealIcon(mod) {
   if (!mod) return null;
-  const name = navItems().find((item) => item.module === mod)?.icon;
+  const name = navCatalog().find((item) => item.module === mod)?.icon;
   const factory = name ? NAV_ICONS[name] : null;
   return factory ? () => factory() : null;
 }
@@ -2984,7 +2995,7 @@ function applyModuleReadonly(moduleName, pageWrapper) {
   window.lucide?.createIcons({ el: banner });
 }
 
-function navItems() {
+function navItems({ catalog = false } = {}) {
   if (currentUser?.access_scope === 'split_guest') {
     return [
       { path: '/budget', label: t('splitExpenses.tabLabel'), icon: 'receipt-text', module: 'budget' },
@@ -3029,15 +3040,34 @@ function navItems() {
     }))
     .sort((a, b) => a.order - b.order || a.label.localeCompare(b.label));
   const settings = baseItems.find((item) => item.module === 'settings');
+  /* DER KATALOG IST NICHT DIE NAVIGATION.
+   *
+   * `navItems()` ist eine Liste von Zielen, die jemand ANKLICKEN kann - also
+   * gefiltert. Zwei Stellen lasen daraus aber Metadaten: der Routen-Ansager
+   * holt sich das Label und `headSealIcon()` das Symbol. Solange nur
+   * abgeschaltete oder gesperrte Module fehlten, fiel das nicht auf; die
+   * gehoeren wirklich nirgends hin. Seit #673 kann ein Modul aber sichtbar
+   * ERREICHBAR und trotzdem aus der Navigation genommen sein - genau der Fall,
+   * fuer den die Trennung gebaut ist. Wer ihn per Deep-Link oeffnete, bekam
+   * "/calendar" angesagt statt "Kalender" und einen Kopf ohne Siegel
+   * (Codex-Review zu PR #790). */
+  const all = [...baseItems, ...thirdPartyItems];
+  if (catalog) return all;
   const sortable = [
     ...baseItems.filter((item) =>
       item.module !== 'settings'
       && !_disabledModules.has(item.module)
+      && !_hiddenModules.has(item.module)
       && canAccessNavModule(item.module)),
     ...thirdPartyItems,
   ];
   const ordered = sortNavigationItems(sortable, _moduleOrder);
   return settings ? [...ordered, settings] : ordered;
+}
+
+/** Alle Module mit ihren Metadaten - ungefiltert. Fuer Label und Symbol. */
+function navCatalog() {
+  return navItems({ catalog: true });
 }
 
 function currentKitchenDestination() {
@@ -3178,6 +3208,15 @@ function applySidebarCollapsed(collapsed) {
   if (!collapsed) {
     document.documentElement.classList.remove('sidebar-collapse-pointer-lock');
   }
+}
+
+function setHiddenModules(modules) {
+  _hiddenModules = new Set(Array.isArray(modules) ? modules : []);
+  // Zaehlstaende und Neuaufbau aus demselben Grund wie beim Haushalts-Schalter
+  // darunter: die Kuechenkachel fasst vier Module zusammen, und ob ihr
+  // Einkaufszaehler gilt, entscheidet `navItems()`.
+  resetModuleCounts();
+  rebuildNavigation();
 }
 
 function setDisabledModules(modules) {
@@ -3916,12 +3955,34 @@ window.addEventListener('popstate', (e) => {
   navigate(e.state?.path || location.pathname, false);
 });
 
-// Session abgelaufen
-window.addEventListener('auth:expired', () => {
+/* ES GIBT ZWEI ABGAENGE, UND SIE TEILEN SICH KEINEN CODE.
+ *
+ * Der bewusste Logout laeuft ueber `clearSession()`, der Sitzungsablauf ueber
+ * `auth:expired` - beide raeumen auf, jeder fuer sich, und was nur in einem der
+ * beiden steht, faellt auf dem anderen Weg durch. Genau das passierte mit den
+ * per-user-Praeferenzen: `syncPreferencesOnce()` laedt einmal und kehrt danach
+ * sofort zurueck, und An- wie Abmelden sind SPA-Navigationen. Wer also nicht
+ * auf "Abmelden" drueckt, sondern dessen Sitzung ablaeuft, vererbte seine
+ * ausgeblendeten Module dem naechsten Mitglied am selben Geraet - Ziele fehlten
+ * in dessen Seitenleiste, waehrend das Einstellungsblatt sie als sichtbar
+ * auswies, weil es frisch vom Server liest.
+ *
+ * `_disabledModules` bleibt bewusst STEHEN: der Wert ist haushaltweit, fuer
+ * jedes Mitglied derselbe, und der Modul-Guard laeuft VOR dem Auth-Guard, der
+ * die Praeferenzen nachlaedt. Ihn zu leeren gewaenne nichts und oeffnete ein
+ * Fenster, in dem eine abgeschaltete Route wieder erreichbar waere. */
+function forgetSessionState() {
   currentUser = null;
+  _preferencesLoaded = false;
+  _hiddenModules = new Set();
+  _moduleOrder = [];
+  _mobileNavOrder = [];
   // Offline-API-Cache leeren: Session-Ende → keine gecachten Daten zurücklassen,
   // die der nächste Nutzer am selben Gerät offline sehen könnte.
   clearApiCache();
+  // Der Layout-Hinweis des Dashboards gehoert derselben Sitzung: ohne ihn sagt
+  // das Skelett am geteilten Tablett das Raster des Vorgaengers voraus.
+  forgetLayoutHint();
   // Gemerkte Scrollstände gehören zur Sitzung: der nächste Nutzer am selben
   // Gerät soll nicht auf den Positionen des vorigen landen.
   forgetScrollPositions();
@@ -3930,6 +3991,11 @@ window.addEventListener('auth:expired', () => {
   stopThirdPartyModulePolling();
   stopReminders();
   stopPush();
+}
+
+// Session abgelaufen
+window.addEventListener('auth:expired', () => {
+  forgetSessionState();
   if (isNavigating) {
     // navigate('/login') kann nicht sofort aufgerufen werden - wird im finally-Block
     // der laufenden Navigation nachgeholt.
@@ -4209,6 +4275,7 @@ window.yuvomi = {
   friendlyError,
   setThemeColor,
   setDisabledModules,
+  setHiddenModules,
   setModuleOrder,
   setMobileNavOrder,
   refreshThirdPartyModules,
@@ -4249,13 +4316,8 @@ window.yuvomi = {
   // hängenbleibt und kurz das Dashboard zeigt (#478). Der Server-Logout läuft
   // separat über auth.logout().
   clearSession: () => {
-    currentUser = null;
+    forgetSessionState();
     _navBuiltForUserId = null;
-    forgetScrollPositions();
-    resetModuleCounts();
-    stopThirdPartyModulePolling();
-    stopReminders();
-    stopPush();
   },
 };
 
