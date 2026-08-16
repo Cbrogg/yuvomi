@@ -2059,7 +2059,7 @@ The credentials never reach the browser: `GET /api/v1/screensaver/photos` return
 
 It is **device-local and switched on by hand** (`localStorage` key `yuvomi-wall-mode`, like theme and locale). A server-stored setting would flip the phone dashboard for everyone in a household that shares one account, and auto-detection by device shape would create a state on a laptop that nobody asked for. The switch lives in **Settings → Appearance**, next to the two other device-local settings, not in Customize (which writes the household-wide widget configuration).
 
-The surface carries four things, in this order: **the time**, large (this is where the 48/72px display steps get the role Typography reserves for them, `clamp(--text-5xl, 9vw, --text-6xl)`); the **day program**; **who's up today**; and the **weather** with its forecast. Sidebar, tab bar, FAB and the install prompt all step aside — at two metres they are seventeen unreadable targets and an invitation nobody accepts.
+The surface carries four things, in this order: **the time**, large (this is where the 48/72px display steps get the role Typography reserves for them, `clamp(--text-5xl, 9vw, --text-6xl)`); the **day program**; **who's up today**; and the **weather** with its forecast. Sidebar, tab bar, FAB and the install prompt all step aside — at two metres they are a row of unreadable targets and an invitation nobody accepts.
 
 - **Read state, not operate.** The program rows are text: no link, no button, no quick-action dialog. Touchable rows would need distance-sized hit targets and lead into views built for arm's length; anyone who actually wants to act is one tap from the dashboard. This also makes the single touch point of the surface unambiguous.
 - **The way out is quietly present, never hidden.** A control in the bottom-right corner sits in the DOM at all times, is reachable by keyboard, and shows only its glyph in secondary ink at rest; any pointer or key activity raises it to a full labelled capsule for six seconds (`data-wall-awake`). `Escape` leaves as well. A visible button would contradict the calm surface; an invisible one would be a trap.
@@ -2615,7 +2615,7 @@ colour beside a violet icon.
 
 **The one-voice rule (v2.2.0).** Whatever does the same thing in every module carries the voice:
 the tab bar and sidebar, the FAB, buttons, switches, the focus ring, the datepicker, shell
-overlays. **Seventeen module tints** (`--module-*`) carry what says *where you are*: the module
+overlays. **The module tints** (`--module-*`, one per module plus the shared kitchen, overview and settings tones) carry what says *where you are*: the module
 seal, the module's own bars and segments, its chips and section marks, its row hovers, its widget,
 its icon in the sidebar legend. The router sets `--active-module-accent` on `<html>` and components
 in the content read `var(--module-accent, var(--color-accent))`; the shell never does. Before this,
@@ -2636,7 +2636,7 @@ palette only ever runs there. Series 2 is petrol since; the guard now measures p
 (CIEDE2000, threshold 2.3 = just-noticeable difference) and only against modules that actually
 render charts, deriving them from `router.js`. Series 3 and 7 still carry the kitchen and tasks
 tones and deliberately stay: neither module has a chart, so nobody sees the overlap, and the series
-double as named account colours whose names would have to move across 18 locales. That exemption
+double as named account colours whose names would have to move across every locale. That exemption
 expires by itself — the run in which a kitchen or tasks page gains a chart is the run that fails.
 Priorities encode rank by colour alone on the dashboard and the mobile calendar, so
 "high" stays separable from "urgent" by lightness as well as hue.
