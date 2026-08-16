@@ -1453,7 +1453,7 @@ async function renderPage(route, previousPath = null, scrollTarget = 0) {
     // Route-Announcer: Screenreader über Seitenwechsel informieren (gezielt, nicht gesamter Inhalt)
     const announcer = document.getElementById('route-announcer');
     if (announcer) {
-      const pageLabel = navItems().find((n) => n.path === route.path)?.label ?? route.path;
+      const pageLabel = navCatalog().find((n) => n.path === route.path)?.label ?? route.path;
       announcer.textContent = '';
       setTimeout(() => { announcer.textContent = pageLabel; }, 50);
     }
@@ -2163,7 +2163,7 @@ const _toolbarHandles = new WeakMap();
  */
 function headSealIcon(mod) {
   if (!mod) return null;
-  const name = navItems().find((item) => item.module === mod)?.icon;
+  const name = navCatalog().find((item) => item.module === mod)?.icon;
   const factory = name ? NAV_ICONS[name] : null;
   return factory ? () => factory() : null;
 }
@@ -2995,7 +2995,7 @@ function applyModuleReadonly(moduleName, pageWrapper) {
   window.lucide?.createIcons({ el: banner });
 }
 
-function navItems() {
+function navItems({ catalog = false } = {}) {
   if (currentUser?.access_scope === 'split_guest') {
     return [
       { path: '/budget', label: t('splitExpenses.tabLabel'), icon: 'receipt-text', module: 'budget' },
@@ -3040,6 +3040,19 @@ function navItems() {
     }))
     .sort((a, b) => a.order - b.order || a.label.localeCompare(b.label));
   const settings = baseItems.find((item) => item.module === 'settings');
+  /* DER KATALOG IST NICHT DIE NAVIGATION.
+   *
+   * `navItems()` ist eine Liste von Zielen, die jemand ANKLICKEN kann - also
+   * gefiltert. Zwei Stellen lasen daraus aber Metadaten: der Routen-Ansager
+   * holt sich das Label und `headSealIcon()` das Symbol. Solange nur
+   * abgeschaltete oder gesperrte Module fehlten, fiel das nicht auf; die
+   * gehoeren wirklich nirgends hin. Seit #673 kann ein Modul aber sichtbar
+   * ERREICHBAR und trotzdem aus der Navigation genommen sein - genau der Fall,
+   * fuer den die Trennung gebaut ist. Wer ihn per Deep-Link oeffnete, bekam
+   * "/calendar" angesagt statt "Kalender" und einen Kopf ohne Siegel
+   * (Codex-Review zu PR #790). */
+  const all = [...baseItems, ...thirdPartyItems];
+  if (catalog) return all;
   const sortable = [
     ...baseItems.filter((item) =>
       item.module !== 'settings'
@@ -3050,6 +3063,11 @@ function navItems() {
   ];
   const ordered = sortNavigationItems(sortable, _moduleOrder);
   return settings ? [...ordered, settings] : ordered;
+}
+
+/** Alle Module mit ihren Metadaten - ungefiltert. Fuer Label und Symbol. */
+function navCatalog() {
+  return navItems({ catalog: true });
 }
 
 function currentKitchenDestination() {

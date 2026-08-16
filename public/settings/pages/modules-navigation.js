@@ -2,7 +2,7 @@ import { api } from '/api.js';
 import { t } from '/i18n.js';
 import { esc } from '/utils/html.js';
 import { getPreferences, savePreferences } from '/settings/preferences-cache.js';
-import { bindDisclosure, thirdPartyStatusLabel } from '/settings/components.js';
+import { bindDisclosure, createRetryState, thirdPartyStatusLabel } from '/settings/components.js';
 import {
   BUILT_IN_MODULES,
   DEFAULT_MODULE_ACCENT,
@@ -456,14 +456,23 @@ export function buildMobileNavigationPayload(order) {
   };
 }
 
-async function saveNavigationState(list, unrenderedOrderIds = []) {
+async function saveNavigationState(list, unrenderedOrderIds = [], mobileOrder = null) {
   const payload = {
     ...buildOrderPayload(collectVisibleGlobalOrder(list), unrenderedOrderIds),
     hidden_modules: collectHiddenModuleIds(list.querySelectorAll('[data-module-hide]')),
+    // Die drei Mobil-Plaetze fahren mit, wenn ein Ausblenden sie verschoben hat.
+    // Ohne das behauptete der Toast eine Verschiebung, die der Server nicht
+    // kennt: die Regel dieses Blatts ist "was die Leiste zeigt, ist was
+    // gespeichert wird", und sie galt fuer den Ausblende-Pfad nicht
+    // (Codex-Review zu PR #790).
+    ...(mobileOrder ? { mobile_nav_order: mobileOrder } : {}),
   };
   const response = await savePreferences(payload);
   window.yuvomi?.setHiddenModules?.(response?.data?.hidden_modules ?? payload.hidden_modules);
   window.yuvomi?.setModuleOrder?.(response?.data?.module_order ?? payload.module_order);
+  if (mobileOrder) {
+    window.yuvomi?.setMobileNavOrder?.(response?.data?.mobile_nav_order ?? payload.mobile_nav_order);
+  }
 }
 
 function bindModuleListEvents(container, user, rows, unrenderedOrderIds = []) {
@@ -607,17 +616,22 @@ function bindModuleListEvents(container, user, rows, unrenderedOrderIds = []) {
     busy = true;
     btn.setAttribute('aria-busy', 'true');
 
+    // Erst die Plaetze neu aufloesen, dann speichern: was gleich in der Leiste
+    // steht, ist der Wert, der mitgeschrieben werden muss.
+    refreshMobileSlots(container, rows, user);
+    const nextMobile = readMobileSlotValues(container);
+    const mobileChanged = nextMobile.join('|') !== previousMobile.join('|');
+
     try {
       if (saving) { queued = true; } else {
         saving = true;
         try {
-          await saveNavigationState(list, unrenderedOrderIds);
+          await saveNavigationState(list, unrenderedOrderIds, mobileChanged ? nextMobile : null);
         } finally {
           saving = false;
         }
         if (queued) { queued = false; await flush('settings.modulesOrderSaved'); }
       }
-      refreshMobileSlots(container, rows, user);
       window.yuvomi?.showToast(hideToastMessage(container, previousMobile), 'success');
     } catch (error) {
       window.yuvomi?.showToast(error.message ?? t('common.errorGeneric'), 'danger');
@@ -802,11 +816,32 @@ export async function render(container, { user }) {
     isAdmin ? api.get('/modules?admin=1') : Promise.resolve({ data: [] }),
   ]);
 
+  /* OHNE PRAEFERENZEN WIRD HIER NICHT GERENDERT (Codex-Review zu PR #790).
+   *
+   * Vorher fuhr dieses Blatt bei einem gescheiterten `GET /preferences` mit
+   * `{}` fort: jeder Ausblenden-Knopf stand auf "nicht gedrueckt", die
+   * Reihenfolge kam aus den Voreinstellungen. Erholte sich die Verbindung, bevor
+   * jemand klickte, schrieb der erste Klick genau diesen erfundenen Zustand als
+   * Wahrheit zurueck - und loeschte damit die uebrigen Ausblendungen und die
+   * gespeicherte Reihenfolge. Ein Blatt, das seinen Ausgangszustand nicht kennt,
+   * darf ihn nicht speichern; es bietet einen zweiten Versuch an.
+   *
+   * Die Drittanbieter-Liste ist der andere Fall und bleibt tolerant: fehlt sie,
+   * fehlen ein paar Zeilen, aber nichts wird falsch geschrieben - ihre Ids
+   * ueberleben ueber `unrenderedOrderIds`. */
+  if (preferencesResult.status !== 'fulfilled' || !preferencesResult.value) {
+    container.replaceChildren();
+    container.appendChild(createRetryState({
+      message: preferencesResult.reason?.message ?? t('common.errorGeneric'),
+      onRetry: () => render(container, { user }),
+    }));
+    return;
+  }
   // getPreferences() liefert bereits das entpackte Preferences-Objekt (kein
   // `{ data }`-Envelope wie api.get). Ein zusätzliches `?.data` machte
   // `preferences` dauerhaft leer: disabled_modules war nie gesetzt, jeder
   // Re-Render nach einem Toggle hakte die Checkbox wieder an (#615).
-  const preferences = preferencesResult.status === 'fulfilled' ? (preferencesResult.value ?? {}) : {};
+  const preferences = preferencesResult.value;
   const thirdPartyModules = modulesResult.status === 'fulfilled' ? (modulesResult.value?.data ?? []) : [];
 
   const rows = buildRows(preferences, thirdPartyModules);
