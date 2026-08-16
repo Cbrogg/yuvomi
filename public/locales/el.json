@@ -399,11 +399,6 @@
         "pointsSummary": "{{count}} πόντοι",
         "pointsSummary_one": "{{count}} πόντος",
         "documentsLabel": "Έγγραφα",
-        "documentsHint": "Συνδέστε έγγραφα από τη μονάδα Έγγραφα με αυτή την εργασία.",
-        "documentAdd": "Σύνδεση εγγράφου",
-        "documentAddPlaceholder": "Επιλέξτε ένα έγγραφο…",
-        "documentRemove": "Κατάργηση σύνδεσης",
-        "documentsEmpty": "Δεν έχουν συνδεθεί έγγραφα ακόμη.",
         "documentsCount": "{{count}} έγγραφα",
         "documentsCount_one": "{{count}} έγγραφα",
         "assignedToMe": "Ανατεθειμένα σε μένα",
@@ -3475,7 +3470,11 @@
                 "note": "Σημείωση",
                 "visibility": "Ορατότητα",
                 "active": "Ενεργό",
-                "prn": "Όταν χρειάζεται (PRN)"
+                "prn": "Όταν χρειάζεται (PRN)",
+                "minInterval": "Ελάχιστο διάστημα (ώρες)",
+                "minIntervalHint": "Από αυτό και την τελευταία λήψη προκύπτει η αντίστροφη μέτρηση.",
+                "prnDose": "Δόση ανά λήψη",
+                "prnDoseHint": "Αφαιρείται από το απόθεμα σε κάθε δόση κατ' ανάγκη."
             },
             "schedule": {
                 "title": "Πρόγραμμα λήψης",
@@ -3517,6 +3516,20 @@
                 "deleteConfirm": "Διαγραφή αυτής της καταχώρισης;",
                 "deleted": "Η καταχώριση διαγράφηκε",
                 "deleteConfirmDetail": "Η καταχώριση εξαφανίζεται και από την εξαγωγή. Αυτό δεν αναιρείται."
+            },
+            "prn": {
+                "title": "Κατ' ανάγκη",
+                "take": "Λήψη τώρα",
+                "takeFor": "Λήψη {{medication}} τώρα",
+                "nextAt": "Το νωρίτερο στις {{time}}",
+                "remainingHm": "απομένουν {{hours}} ώ {{minutes}} λ",
+                "remainingM": "απομένουν {{minutes}} λ",
+                "ready": "Δυνατή τώρα",
+                "lastTaken": "τελευταία στις {{time}}",
+                "never": "Δεν έχει ληφθεί ακόμη",
+                "earlyConfirm": "Καταγραφή δόσης πριν συμπληρωθεί το ελάχιστο διάστημα;",
+                "earlyDetail": "Η επόμενη δόση προβλέπεται μόλις από τις {{time}} ({{remaining}}).",
+                "earlyConfirmAction": "Καταγραφή ούτως ή άλλως"
             }
         },
         "labs": {

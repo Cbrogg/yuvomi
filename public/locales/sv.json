@@ -399,11 +399,6 @@
         "pointsSummary": "{{count}} poäng",
         "pointsSummary_one": "{{count}} poäng",
         "documentsLabel": "Dokument",
-        "documentsHint": "Länka dokument från modulen Dokument till den här uppgiften.",
-        "documentAdd": "Länka dokument",
-        "documentAddPlaceholder": "Välj ett dokument…",
-        "documentRemove": "Ta bort länk",
-        "documentsEmpty": "Inga dokument länkade ännu.",
         "documentsCount": "{{count}} dokument",
         "documentsCount_one": "{{count}} dokument",
         "assignedToMe": "Tilldelade mig",
@@ -3475,7 +3470,11 @@
                 "note": "Anteckning",
                 "visibility": "Synlighet",
                 "active": "Aktiva",
-                "prn": "Vid behov (PRN)"
+                "prn": "Vid behov (PRN)",
+                "minInterval": "Minsta intervall (timmar)",
+                "minIntervalHint": "Nedräkningen kommer härifrån och från senaste dosen.",
+                "prnDose": "Dos per intag",
+                "prnDoseHint": "Dras från lagret vid varje vid-behov-dos."
             },
             "schedule": {
                 "title": "Intagsschema",
@@ -3517,6 +3516,20 @@
                 "deleteConfirm": "Ta bort den här posten?",
                 "deleted": "Posten borttagen",
                 "deleteConfirmDetail": "Posten försvinner även ur exporten. Detta går inte att ångra."
+            },
+            "prn": {
+                "title": "Vid behov",
+                "take": "Ta nu",
+                "takeFor": "Ta {{medication}} nu",
+                "nextAt": "Tidigast {{time}}",
+                "remainingHm": "{{hours}} tim {{minutes}} min kvar",
+                "remainingM": "{{minutes}} min kvar",
+                "ready": "Möjlig nu",
+                "lastTaken": "senast {{time}}",
+                "never": "Inte tagen än",
+                "earlyConfirm": "Registrera dosen innan minsta intervall har gått?",
+                "earlyDetail": "Nästa dos är inte planerad förrän {{time}} ({{remaining}}).",
+                "earlyConfirmAction": "Registrera ändå"
             }
         },
         "labs": {

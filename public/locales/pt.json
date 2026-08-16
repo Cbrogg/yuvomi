@@ -399,11 +399,6 @@
         "pointsSummary": "{{count}} pontos",
         "pointsSummary_one": "{{count}} ponto",
         "documentsLabel": "Documentos",
-        "documentsHint": "Associe documentos do módulo Documentos a esta tarefa.",
-        "documentAdd": "Associar documento",
-        "documentAddPlaceholder": "Selecione um documento…",
-        "documentRemove": "Remover associação",
-        "documentsEmpty": "Ainda não há documentos associados.",
         "documentsCount": "{{count}} documentos",
         "documentsCount_one": "{{count}} documentos",
         "assignedToMe": "Atribuídos a mim",
@@ -3475,7 +3470,11 @@
                 "note": "Nota",
                 "visibility": "Visibilidade",
                 "active": "Ativo",
-                "prn": "Se necessário (PRN)"
+                "prn": "Se necessário (PRN)",
+                "minInterval": "Intervalo mínimo (horas)",
+                "minIntervalHint": "A contagem decrescente vem daqui e da última tomada.",
+                "prnDose": "Dose por tomada",
+                "prnDoseHint": "É descontada do estoque a cada dose conforme necessário."
             },
             "schedule": {
                 "title": "Plano de tomas",
@@ -3517,6 +3516,20 @@
                 "deleteConfirm": "Eliminar este registo?",
                 "deleted": "Registo eliminado",
                 "deleteConfirmDetail": "O registo também desaparece da exportação. Isto não pode ser anulado."
+            },
+            "prn": {
+                "title": "Conforme necessário",
+                "take": "Tomar agora",
+                "takeFor": "Tomar {{medication}} agora",
+                "nextAt": "No mínimo às {{time}}",
+                "remainingHm": "faltam {{hours}} h {{minutes}} min",
+                "remainingM": "faltam {{minutes}} min",
+                "ready": "Possível agora",
+                "lastTaken": "última às {{time}}",
+                "never": "Ainda não tomada",
+                "earlyConfirm": "Registrar a dose antes de terminar o intervalo mínimo?",
+                "earlyDetail": "A próxima dose só está prevista a partir das {{time}} ({{remaining}}).",
+                "earlyConfirmAction": "Registrar mesmo assim"
             }
         },
         "labs": {

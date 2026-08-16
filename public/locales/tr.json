@@ -399,11 +399,6 @@
         "pointsSummary": "{{count}} puan",
         "pointsSummary_one": "{{count}} puan",
         "documentsLabel": "Belgeler",
-        "documentsHint": "Belgeler modülündeki belgeleri bu göreve bağlayın.",
-        "documentAdd": "Belge bağla",
-        "documentAddPlaceholder": "Bir belge seçin…",
-        "documentRemove": "Bağlantıyı kaldır",
-        "documentsEmpty": "Henüz bağlı belge yok.",
         "documentsCount": "{{count}} belge",
         "documentsCount_one": "{{count}} belge",
         "assignedToMe": "Bana atananlar",
@@ -3475,7 +3470,11 @@
                 "note": "Not",
                 "visibility": "Görünürlük",
                 "active": "Aktif",
-                "prn": "Gerektiğinde (PRN)"
+                "prn": "Gerektiğinde (PRN)",
+                "minInterval": "En kısa aralık (saat)",
+                "minIntervalHint": "Geri sayım buradan ve son alımdan çıkar.",
+                "prnDose": "Alım başına doz",
+                "prnDoseHint": "Her gerektiğinde dozda stoktan düşülür."
             },
             "schedule": {
                 "title": "Kullanım planı",
@@ -3517,6 +3516,20 @@
                 "deleteConfirm": "Bu kayıt silinsin mi?",
                 "deleted": "Kayıt silindi",
                 "deleteConfirmDetail": "Kayıt dışa aktarmadan da kaybolur. Bu işlem geri alınamaz."
+            },
+            "prn": {
+                "title": "Gerektiğinde",
+                "take": "Şimdi al",
+                "takeFor": "{{medication}} şimdi alınsın",
+                "nextAt": "En erken {{time}}",
+                "remainingHm": "{{hours}} sa {{minutes}} dk kaldı",
+                "remainingM": "{{minutes}} dk kaldı",
+                "ready": "Şimdi mümkün",
+                "lastTaken": "son {{time}}",
+                "never": "Henüz alınmadı",
+                "earlyConfirm": "Doz, en kısa aralık dolmadan kaydedilsin mi?",
+                "earlyDetail": "Sonraki doz ancak {{time}} itibarıyla öngörülüyor ({{remaining}}).",
+                "earlyConfirmAction": "Yine de kaydet"
             }
         },
         "labs": {

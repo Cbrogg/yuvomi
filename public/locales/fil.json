@@ -411,11 +411,6 @@
         "pointsSummary": "{{count}} puntos",
         "pointsSummary_one": "{{count}} puntos",
         "documentsLabel": "Mga Dokumento",
-        "documentsHint": "Mag-link ng mga dokumento mula sa modyul na Mga Dokumento papunta sa gawaing ito.",
-        "documentAdd": "Mag-link ng dokumento",
-        "documentAddPlaceholder": "Pumili ng dokumento…",
-        "documentRemove": "Alisin ang link",
-        "documentsEmpty": "Wala pang naka-link na dokumento.",
         "documentsCount": "{{count}} dokumento",
         "documentsCount_one": "{{count}} dokumento",
         "assignedToMe": "Naatasan sa akin",
@@ -3475,7 +3470,11 @@
                 "note": "Tala",
                 "visibility": "Pagiging nakikita",
                 "active": "Aktibo",
-                "prn": "Kung kinakailangan (PRN)"
+                "prn": "Kung kinakailangan (PRN)",
+                "minInterval": "Pinakamaikling agwat (oras)",
+                "minIntervalHint": "Dito at sa huling inom nagmumula ang countdown.",
+                "prnDose": "Dosis kada inom",
+                "prnDoseHint": "Ibinabawas sa stock sa bawat dosis kapag kailangan."
             },
             "schedule": {
                 "title": "Iskedyul",
@@ -3517,6 +3516,20 @@
                 "deleteConfirm": "Burahin ang talang ito?",
                 "deleted": "Nabura ang tala",
                 "deleteConfirmDetail": "Mawawala rin ang tala sa export. Hindi ito maibabalik."
+            },
+            "prn": {
+                "title": "Kapag kailangan",
+                "take": "Inumin ngayon",
+                "takeFor": "Inumin ang {{medication}} ngayon",
+                "nextAt": "Pinakamaaga sa {{time}}",
+                "remainingHm": "{{hours}} oras {{minutes}} min pa",
+                "remainingM": "{{minutes}} min pa",
+                "ready": "Puwede na ngayon",
+                "lastTaken": "huling {{time}}",
+                "never": "Hindi pa naiinom",
+                "earlyConfirm": "Itala ang dosis bago matapos ang pinakamaikling agwat?",
+                "earlyDetail": "Ang susunod na dosis ay sa {{time}} pa ({{remaining}}).",
+                "earlyConfirmAction": "Itala pa rin"
             }
         },
         "labs": {

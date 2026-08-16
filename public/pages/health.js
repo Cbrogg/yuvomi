@@ -17,7 +17,7 @@ import { esc } from '/utils/html.js';
 import { wireScrollFade, scheduleUndoableDelete } from '/utils/ux.js';
 import { toLocalDateKey, parseLocalDateKey, addLocalDays } from '/utils/date.js';
 import { trendMarkup } from '/utils/metric-card.js';
-import { openModal, closeModal, confirmOverModal, reportFieldError } from '/components/modal.js';
+import { openModal, closeModal, confirmModal, confirmOverModal, reportFieldError } from '/components/modal.js';
 import { createPageFab, setPageFabAction } from '/utils/fab.js';
 import {
   computeVitalSeries, VITAL_METRICS, vitalMetric,
@@ -26,6 +26,7 @@ import {
 import {
   computeDueDoses, computeAdherence, refillState,
   daysMaskToIndices, indicesToDaysMask, WEEKDAY_COUNT,
+  prnDoseState, splitRemaining, toLocalStamp, parseLogInstant,
 } from '/utils/health-meds.js';
 import {
   deriveFlag, summarizeReport, analyteNames, analyteTrend, LAB_FLAGS,
@@ -1378,6 +1379,9 @@ function renderMedsShell() {
       <h3 class="health-meds__section-title u-toolbar-title">${esc(t('health.meds.dueToday.title'))}</h3>
     </div>
     <div class="health-meds__due">${dueTodayMarkup()}</div>
+    ${prnMeds('meds').length ? `
+    <h3 class="health-meds__section-title u-toolbar-title">${esc(t('health.meds.prn.title'))}</h3>
+    <div class="health-meds__prn">${prnListMarkup('meds')}</div>` : ''}
     <div class="health-meds__adherence-wrap">${adherenceMarkup()}${medLogHistoryMarkup()}</div>
     <!-- „Alle Medikamente", nicht „Medikamente": der Abschnitt stand unter dem
          gleichnamigen Tab und trug denselben Namen wie das Panel, benannte sich
@@ -1432,6 +1436,222 @@ function dueRowMarkup(dose, med, log) {
       <span class="list-row__name health-dose__name">${esc(name)}${esc(doseText)}</span>
       ${actions}
     </li>`;
+}
+
+// --------------------------------------------------------
+// Bedarfsmedikation (#700)
+//
+// „Bei Bedarf" gab es seit jeher als Feld, als Abzeichen und als Spalte - nur
+// keinen Knopf: beide Buchungspfade hingen an `data-schedule-id`, und ein
+// Bedarfsmedikament hat definitionsgemaess keinen Zeitplan. Yuvomi versprach
+// hier etwas, das es nicht einloeste.
+//
+// Der Abschnitt steht bewusst EINMAL da und wird von beiden Tabs benutzt
+// (Medikamente und Uebersicht). Die Datei fuehrt fuer die geplante Dosis zwei
+// getrennte Renderer - `dueRowMarkup` und `overviewDueRowMarkup` -, und genau
+// dort ist eine Korrektur schon einmal nur in einem der beiden gelandet.
+// --------------------------------------------------------
+
+/** Der Datenzugang eines Tabs, damit ein Renderer beiden dient. */
+function prnScope(scope) {
+  return scope === 'overview'
+    ? { list: overview.meds, logs: overview.logsByMed, own: canEditFor(overview.personId, overview.meId), reload: reloadOverview }
+    : { list: meds.list,     logs: meds.logsByMed,     own: canEditFor(meds.personId, meds.meId),         reload: reloadMeds };
+}
+
+/** Die aktiven Bedarfsmedikamente eines Tabs. */
+function prnMeds(scope) {
+  return prnScope(scope).list.filter((m) => m.prn && m.active);
+}
+
+/** Zeitpunkt lesbar: die Uhrzeit allein nur, wenn sie noch heute liegt. */
+function prnWhenLabel(at) {
+  const sameDay = toLocalDateKey(at) === toLocalDateKey(new Date());
+  return sameDay ? formatTime(at) : `${formatDate(at)} ${formatTime(at)}`;
+}
+
+/** Restdauer als „5 Std. 20 Min." bzw. „20 Min.". */
+function prnRemainingLabel(ms) {
+  const { hours, minutes } = splitRemaining(ms);
+  return hours > 0
+    ? t('health.meds.prn.remainingHm', { hours, minutes })
+    : t('health.meds.prn.remainingM', { minutes });
+}
+
+/**
+ * Der Stand als zwei Angaben - die handlungsleitende zuerst.
+ *
+ * Vorn steht immer die absolute Uhrzeit, weil sie auch in drei Stunden noch
+ * stimmt; „noch 5 Std. 20 Min." ist nur in dem Moment richtig, in dem man
+ * hinsieht. Die Zweitangabe faellt bei Enge weg (health.css) - dieselbe
+ * Antwort, die die geplante Dosis daneben schon gibt, und der volle Satz
+ * bleibt am `title`/`aria-label` haengen.
+ *
+ * @returns {{ lead:string, detail:string, full:string }}
+ */
+function prnStatusParts(state) {
+  if (!state.allowed && state.nextAllowedAt) {
+    const lead = t('health.meds.prn.nextAt', { time: prnWhenLabel(state.nextAllowedAt) });
+    const detail = prnRemainingLabel(state.remainingMs);
+    return { lead, detail, full: `${lead} · ${detail}` };
+  }
+  if (!state.lastTakenAt) {
+    const lead = t('health.meds.prn.never');
+    return { lead, detail: '', full: lead };
+  }
+  const lead = t('health.meds.prn.ready');
+  const detail = t('health.meds.prn.lastTaken', { time: prnWhenLabel(state.lastTakenAt) });
+  return { lead, detail, full: `${lead} · ${detail}` };
+}
+
+/** Die Statuszeile als Markup - eine Quelle fuer Erstaufbau und Minutentakt. */
+function prnStatusMarkup(state) {
+  const parts = prnStatusParts(state);
+  // Der Countdown wird aus `data-prn-next` neu geschrieben, nicht aus einem
+  // laufenden Zaehler - deshalb ueberlebt er Reload und Geraetewechsel.
+  return `
+    <span class="health-prn__status" data-prn-countdown title="${esc(parts.full)}"
+          data-prn-next="${esc(state.nextAllowedAt ? state.nextAllowedAt.toISOString() : '')}">
+      <span class="health-prn__lead">${esc(parts.lead)}</span>
+      ${parts.detail ? `<span class="health-prn__detail">${esc(parts.detail)}</span>` : ''}
+    </span>`;
+}
+
+function prnRowMarkup(med, scope, own) {
+  const s = prnScope(scope);
+  const state = prnDoseState(med, s.logs[med.id] || []);
+  const doseText = med.prn_dose_qty != null
+    ? t('health.meds.doseQty', { count: fmtNum(med.prn_dose_qty) })
+    : med.dosage_text || '';
+
+  const action = own
+    ? `<button type="button" class="btn btn--sm ${state.allowed ? 'btn--primary' : 'btn--ghost'} health-prn__take"
+               data-prn-take data-prn-scope="${esc(scope)}" data-med-id="${esc(med.id)}"
+               aria-label="${esc(t('health.meds.prn.takeFor', { medication: med.name }))}">
+         <i data-lucide="pill" class="icon-sm" aria-hidden="true"></i>
+         <span class="health-prn__take-label">${esc(t('health.meds.prn.take'))}</span>
+       </button>`
+    : '';
+
+  return `
+    <li class="list-row health-dose health-prn${state.allowed ? '' : ' is-waiting'}">
+      <span class="list-row__name health-dose__name">${esc(med.name)}${doseText ? ` · ${esc(doseText)}` : ''}</span>
+      ${prnStatusMarkup(state)}
+      ${action}
+    </li>`;
+}
+
+/** Die Liste selbst - ohne Ueberschrift, die setzt der jeweilige Tab. */
+function prnListMarkup(scope) {
+  const list = prnMeds(scope);
+  if (!list.length) return '';
+  const own = prnScope(scope).own;
+  return `<ul class="health-meds__due-list">${list.map((m) => prnRowMarkup(m, scope, own)).join('')}</ul>`;
+}
+
+/**
+ * Schreibt die Countdown-Zeilen neu, ohne die Seite anzufassen.
+ *
+ * Einmal pro Minute reicht: die Anzeige rundet ohnehin auf volle Minuten auf.
+ * Laeuft der Abstand waehrenddessen ab, holt der naechste Durchlauf den ganzen
+ * Abschnitt frisch, damit der Knopf seine Rolle wechselt.
+ */
+function refreshPrnCountdowns() {
+  const now = Date.now();
+  let expired = false;
+  for (const el of document.querySelectorAll('[data-prn-countdown]')) {
+    const next = parseLogInstant(el.dataset.prnNext);
+    if (!next) continue;
+    const remaining = next.getTime() - now;
+    if (remaining <= 0) { expired = true; continue; }
+    const lead = t('health.meds.prn.nextAt', { time: prnWhenLabel(next) });
+    const detail = prnRemainingLabel(remaining);
+    el.title = `${lead} · ${detail}`;
+    el.querySelector('.health-prn__lead').textContent = lead;
+    const detailEl = el.querySelector('.health-prn__detail');
+    if (detailEl) detailEl.textContent = detail;
+  }
+  return expired;
+}
+
+let prnTicker = null;
+
+/** Startet den Minutentakt, sobald ein Countdown auf der Seite steht. */
+function ensurePrnTicker() {
+  if (prnTicker) return;
+  prnTicker = window.setInterval(() => {
+    if (!document.querySelector('[data-prn-countdown]')) { stopPrnTicker(); return; }
+    if (!refreshPrnCountdowns()) return;
+    // Abgelaufen: der Abschnitt muss neu, sonst bliebe der Knopf im
+    // Warte-Zustand stehen, obwohl die Dosis erlaubt ist. Beide Tabs sind
+    // gleichzeitig im DOM (nur eines sichtbar) - deshalb kein `else if`, sonst
+    // bliebe das jeweils andere auf dem alten Stand stehen.
+    if (meds.root?.isConnected) renderMedsShell();
+    if (overview.root?.isConnected) renderOverviewShell();
+  }, 60_000);
+}
+
+function stopPrnTicker() {
+  if (!prnTicker) return;
+  window.clearInterval(prnTicker);
+  prnTicker = null;
+}
+
+/** Eine Bedarfsdosis buchen. */
+async function handlePrnDose(btn) {
+  const scope = btn.dataset.prnScope;
+  const s = prnScope(scope);
+  const medId = Number(btn.dataset.medId);
+  const med = s.list.find((m) => m.id === medId);
+  if (!med) return;
+
+  const state = prnDoseState(med, s.logs[medId] || []);
+  // Nicht gesperrt, nur gefragt: der Mindestabstand ist eine Empfehlung vom
+  // Beipackzettel, kein Schloss - und wer eine Dosis wirklich frueher nimmt,
+  // soll sie eintragen koennen, statt sie zu verschweigen. Der Dialog nennt
+  // den Zeitpunkt, um den es geht.
+  if (!state.allowed && state.nextAllowedAt) {
+    const ok = await confirmModal(t('health.meds.prn.earlyConfirm'), {
+      detail: t('health.meds.prn.earlyDetail', {
+        time: prnWhenLabel(state.nextAllowedAt),
+        remaining: prnRemainingLabel(state.remainingMs),
+      }),
+      confirmLabel: t('health.meds.prn.earlyConfirmAction'),
+    });
+    if (!ok) return;
+  }
+
+  btn.disabled = true;
+  try {
+    const dose = med.prn_dose_qty != null ? Number(med.prn_dose_qty) : null;
+    await api.post(`/health/medications/${medId}/logs`, {
+      status: 'taken',
+      // Wanduhrzeit, keine ISO-Zone: die Route kuerzt den Wert auf Minuten und
+      // wuerfe die Zone weg - die Einnahme stuende dann mit der UTC-Zahl im
+      // Protokoll und der Countdown rechnete daneben.
+      taken_at: toLocalStamp(),
+      ...(dose != null && Number.isFinite(dose) ? { dose_qty: dose } : {}),
+    });
+
+    if (dose != null && Number.isFinite(dose) && med.stock_qty != null) {
+      const next = Math.max(0, Number(med.stock_qty) - dose);
+      await api.patch(`/health/medications/${medId}`, { stock_qty: next });
+    }
+
+    window.yuvomi?.showToast(t('health.meds.doseSaved'), 'success');
+    await s.reload();
+  } catch (err) {
+    console.error('[Health] prn dose error:', err);
+    btn.disabled = false;
+    window.yuvomi?.showToast(err?.data?.error || t('health.meds.doseError'), 'danger');
+  }
+}
+
+/** Bindet die Bedarfsknoepfe eines Wurzelelements. */
+function wirePrn(root) {
+  root.querySelectorAll('[data-prn-take]').forEach((btn) =>
+    btn.addEventListener('click', () => handlePrnDose(btn)));
+  if (root.querySelector('[data-prn-countdown]')) ensurePrnTicker();
 }
 
 function adherenceMarkup() {
@@ -1716,6 +1936,8 @@ function wireMeds() {
     btn.addEventListener('click', () => handleDose(btn, 'take')));
   meds.root.querySelectorAll('[data-dose-skip]').forEach((btn) =>
     btn.addEventListener('click', () => handleDose(btn, 'skip')));
+
+  wirePrn(meds.root);
 }
 
 async function switchMedsPerson() {
@@ -1829,6 +2051,23 @@ function openMedModal(med) {
             <span>${esc(t('health.meds.field.prn'))}</span>
           </label>
         </div>
+        <!-- Nur fuer Bedarfsmedikamente sichtbar (#700): ein Mindestabstand an
+             einem Medikament mit Zeitplan waere eine zweite, widersprechende
+             Auskunft darueber, wann die naechste Dosis ansteht. -->
+        <div class="modal-grid modal-grid--2" id="med-prn-fields">
+          <div class="form-field">
+            <label class="label" for="med-interval">${esc(t('health.meds.field.minInterval'))}</label>
+            <input class="input" id="med-interval" type="number" inputmode="decimal" step="any" min="0" max="672"
+                   value="${esc(val(med?.min_interval_hours))}">
+            <p class="form-hint">${esc(t('health.meds.field.minIntervalHint'))}</p>
+          </div>
+          <div class="form-field">
+            <label class="label" for="med-prn-dose">${esc(t('health.meds.field.prnDose'))}</label>
+            <input class="input" id="med-prn-dose" type="number" inputmode="decimal" step="any" min="0"
+                   value="${esc(val(med?.prn_dose_qty))}">
+            <p class="form-hint">${esc(t('health.meds.field.prnDoseHint'))}</p>
+          </div>
+        </div>
         <div class="form-field">
           <label class="label" for="med-visibility">${esc(t('health.meds.field.visibility'))}</label>
           <select class="input" id="med-visibility">
@@ -1855,6 +2094,15 @@ function openMedModal(med) {
     onSave(panel) {
       renderSchedEditor(panel, med);
       if (window.lucide) window.lucide.createIcons({ el: panel });
+
+      // Die Bedarfsfelder folgen dem Haken - `style.display` und nicht `hidden`,
+      // weil `.modal-grid` `display: grid` setzt und die Klassenregel das
+      // Attribut schlaegt (dieselbe Falle wie im Protokoll-Modal).
+      const prnBox = panel.querySelector('#med-prn-fields');
+      const prnFlag = panel.querySelector('#med-prn');
+      const syncPrn = () => { prnBox.style.display = prnFlag.checked ? '' : 'none'; };
+      prnFlag.addEventListener('change', syncPrn);
+      syncPrn();
 
       panel.querySelector('[data-action="cancel"]')?.addEventListener('click', () => closeModal({ force: true }));
       panel.querySelector('[data-action="med-delete"]')?.addEventListener('click', () => deleteMed(med));
@@ -1893,6 +2141,7 @@ function collectMedBody(panel) {
     return raw !== '' && raw != null ? Number(raw) : null;
   };
   const str = (sel) => panel.querySelector(sel)?.value?.trim() || undefined;
+  const isPrn = Boolean(panel.querySelector('#med-prn')?.checked);
 
   return {
     name,
@@ -1904,7 +2153,13 @@ function collectMedBody(panel) {
     note: str('#med-note'),
     visibility: panel.querySelector('#med-visibility')?.value || 'private',
     active: panel.querySelector('#med-active')?.checked ? 1 : 0,
-    prn: panel.querySelector('#med-prn')?.checked ? 1 : 0,
+    prn: isPrn ? 1 : 0,
+    // Faellt der Haken, raeumen die beiden Felder mit ab - sie stehen dann zwar
+    // noch ausgefuellt hinter `display: none`, beschreiben aber nichts mehr.
+    // Ein Medikament mit Zeitplan traege sonst weiter einen Mindestabstand,
+    // den keine Ansicht mehr zeigt und kein Formular mehr aendert.
+    min_interval_hours: isPrn ? num('#med-interval') : null,
+    prn_dose_qty: isPrn ? num('#med-prn-dose') : null,
   };
 }
 
@@ -3332,6 +3587,7 @@ function renderOverviewShell() {
     ${readOnlyBannerMarkup(overview.members, overview.personId, canEditFor(overview.personId, overview.meId), overview.meId)}
     <div class="health-overview__grid">
       ${overviewCard('calendar-check', 'health.overview.dueToday.title', overviewDueMarkup())}
+      ${prnMeds('overview').length ? overviewCard('pill', 'health.meds.prn.title', prnListMarkup('overview')) : ''}
       ${overviewCard('trending-up', 'health.overview.adherence.title', overviewAdherenceMarkup())}
       ${overviewCard('activity', 'health.overview.vitals.title', overviewVitalsMarkup())}
       ${canEditFor(overview.personId, overview.meId) ? overviewCard('plus-circle', 'health.overview.quick.title', quickCaptureMarkup()) : ''}
@@ -3634,6 +3890,8 @@ function wireOverview() {
     btn.addEventListener('click', () => handleOverviewDose(btn, 'take')));
   overview.root.querySelectorAll('[data-ov-dose-skip]').forEach((btn) =>
     btn.addEventListener('click', () => handleOverviewDose(btn, 'skip')));
+
+  wirePrn(overview.root);
 
   overview.root.querySelectorAll('[data-vital-nav]').forEach((card) =>
     card.addEventListener('click', () => {

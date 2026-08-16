@@ -448,6 +448,63 @@
 .health-dose__status--taken { color: var(--color-success); }
 .health-dose__status--skipped { color: var(--color-text-secondary); }
 
+/* Bedarfsmedikation (#700). Dieselbe Zeile wie die geplante Dosis, nur ohne
+ * Uhrzeitspalte - eine Bedarfsdosis hat keinen Zeitpunkt, an dem sie ansteht,
+ * sondern einen, ab dem sie erlaubt ist. Der steht deshalb rechts beim Knopf
+ * und nicht links als Anker. */
+.health-prn__status {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  flex: 0 1 auto;
+  min-width: 0;
+  margin-inline-start: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Die Erstangabe ist die handlungsleitende und darf nicht schrumpfen; die
+ * Zweitangabe ist die Lesehilfe und tritt bei Enge ab (siehe unten). */
+.health-prn__lead {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.health-prn__detail {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Wartet der Mindestabstand noch, tritt die Zeile nicht zurueck - sie sagt
+ * etwas, das man wissen muss. Sie wird nur ruhiger als der freigegebene Stand. */
+.health-prn.is-waiting .health-prn__lead {
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-medium, 500);
+}
+
+.health-prn__take {
+  flex: 0 0 auto;
+  margin-inline-start: var(--space-2);
+}
+
+/* DIESELBEN ZWEI STUFEN WIE BEI DER GEPLANTEN DOSIS - und aus demselben Grund:
+ * `.list-row` setzt `flex-wrap: nowrap`, die Zeile fuehrt Name, zwei Angaben
+ * und einen Knopf. Zuerst faellt die Restdauer (die Uhrzeit daneben sagt
+ * dasselbe und altert nicht), dann das Wort auf dem Knopf. Der volle Satz
+ * bleibt am `title` der Statuszeile, die Zielgroesse des Knopfes unveraendert
+ * aus `.btn`, sein `aria-label` nennt weiterhin das Medikament. */
+@container list-rows (max-width: 26rem) {
+  .health-prn__detail { display: none; }
+}
+
+@container list-rows (max-width: 21rem) {
+  .health-prn__take-label { display: none; }
+}
+
 /* Die Adhärenz-Karte ist seit Block 2 die geteilte Kennzahlkarte
  * (.metric-card, panel.css): Meta-Zeile, Wert, __progress als Balken. */
 

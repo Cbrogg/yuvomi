@@ -399,11 +399,6 @@
         "pointsSummary": "{{count}} points",
         "pointsSummary_one": "{{count}} point",
         "documentsLabel": "Documents",
-        "documentsHint": "Associez des documents du module Documents à cette tâche.",
-        "documentAdd": "Associer un document",
-        "documentAddPlaceholder": "Sélectionner un document…",
-        "documentRemove": "Retirer le lien",
-        "documentsEmpty": "Aucun document associé pour l’instant.",
         "documentsCount": "{{count}} documents",
         "documentsCount_one": "{{count}} documents",
         "assignedToMe": "Attribués à moi",
@@ -3475,7 +3470,11 @@
                 "note": "Note",
                 "visibility": "Visibilité",
                 "active": "Actif",
-                "prn": "Au besoin (PRN)"
+                "prn": "Au besoin (PRN)",
+                "minInterval": "Intervalle minimal (heures)",
+                "minIntervalHint": "Le compte à rebours en découle, avec la dernière prise.",
+                "prnDose": "Dose par prise",
+                "prnDoseHint": "Déduite du stock à chaque prise au besoin."
             },
             "schedule": {
                 "title": "Plan de prise",
@@ -3517,6 +3516,20 @@
                 "deleteConfirm": "Supprimer cette entrée ?",
                 "deleted": "Entrée supprimée",
                 "deleteConfirmDetail": "L'entrée disparaît aussi de l'export. Cette action est irréversible."
+            },
+            "prn": {
+                "title": "Au besoin",
+                "take": "Prendre maintenant",
+                "takeFor": "Prendre {{medication}} maintenant",
+                "nextAt": "Au plus tôt à {{time}}",
+                "remainingHm": "encore {{hours}} h {{minutes}} min",
+                "remainingM": "encore {{minutes}} min",
+                "ready": "Possible maintenant",
+                "lastTaken": "dernière à {{time}}",
+                "never": "Pas encore prise",
+                "earlyConfirm": "Enregistrer la dose avant la fin de l'intervalle minimal ?",
+                "earlyDetail": "La prochaine dose n'est prévue qu'à partir de {{time}} ({{remaining}}).",
+                "earlyConfirmAction": "Enregistrer quand même"
             }
         },
         "labs": {

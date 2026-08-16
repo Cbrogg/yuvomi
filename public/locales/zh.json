@@ -399,11 +399,6 @@
         "pointsSummary": "{{count}} 积分",
         "pointsSummary_one": "{{count}} 积分",
         "documentsLabel": "文档",
-        "documentsHint": "将文档模块中的文档关联到此任务。",
-        "documentAdd": "关联文档",
-        "documentAddPlaceholder": "选择文档…",
-        "documentRemove": "移除关联",
-        "documentsEmpty": "尚未关联任何文档。",
         "documentsCount": "{{count}} 个文档",
         "documentsCount_one": "{{count}} 个文档",
         "assignedToMe": "分配给我",
@@ -3475,7 +3470,11 @@
                 "note": "备注",
                 "visibility": "可见性",
                 "active": "启用",
-                "prn": "按需（PRN）"
+                "prn": "按需（PRN）",
+                "minInterval": "最短间隔（小时）",
+                "minIntervalHint": "倒计时由该间隔和上次服用推算得出。",
+                "prnDose": "每次剂量",
+                "prnDoseHint": "每次按需服用都会从库存中扣除。"
             },
             "schedule": {
                 "title": "服药计划",
@@ -3517,6 +3516,20 @@
                 "deleteConfirm": "要删除此记录吗？",
                 "deleted": "记录已删除",
                 "deleteConfirmDetail": "该记录也会从导出中消失，且无法撤销。"
+            },
+            "prn": {
+                "title": "按需",
+                "take": "立即服用",
+                "takeFor": "立即服用 {{medication}}",
+                "nextAt": "最早 {{time}}",
+                "remainingHm": "还有 {{hours}} 小时 {{minutes}} 分钟",
+                "remainingM": "还有 {{minutes}} 分钟",
+                "ready": "现在可以服用",
+                "lastTaken": "上次 {{time}}",
+                "never": "尚未服用",
+                "earlyConfirm": "在最短间隔结束前记录这次服用吗？",
+                "earlyDetail": "下一次服用要到 {{time}} 之后（{{remaining}}）。",
+                "earlyConfirmAction": "仍然记录"
             }
         },
         "labs": {

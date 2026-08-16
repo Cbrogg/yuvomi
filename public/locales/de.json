@@ -411,11 +411,6 @@
         "pointsSummary": "{{count}} Punkte",
         "pointsSummary_one": "{{count}} Punkt",
         "documentsLabel": "Dokumente",
-        "documentsHint": "Verknüpfe Dokumente aus dem Dokumente-Modul mit dieser Aufgabe.",
-        "documentAdd": "Dokument verknüpfen",
-        "documentAddPlaceholder": "Dokument auswählen…",
-        "documentRemove": "Verknüpfung entfernen",
-        "documentsEmpty": "Noch keine Dokumente verknüpft.",
         "documentsCount": "{{count}} Dokumente",
         "documentsCount_one": "1 Dokument",
         "assignedToMe": "Mir zugewiesen",
@@ -3475,7 +3470,11 @@
                 "note": "Notiz",
                 "visibility": "Sichtbarkeit",
                 "active": "Aktiv",
-                "prn": "Bei Bedarf (PRN)"
+                "prn": "Bei Bedarf (PRN)",
+                "minInterval": "Mindestabstand (Stunden)",
+                "minIntervalHint": "Daraus und aus der letzten Einnahme entsteht der Countdown.",
+                "prnDose": "Dosis je Einnahme",
+                "prnDoseHint": "Wird bei jeder Bedarfsdosis vom Bestand abgezogen."
             },
             "schedule": {
                 "title": "Einnahmeplan",
@@ -3517,6 +3516,20 @@
                 "deleteConfirm": "Diesen Eintrag löschen?",
                 "deleted": "Eintrag gelöscht",
                 "deleteConfirmDetail": "Der Eintrag verschwindet damit auch aus dem Export. Rückgängig machen lässt sich das nicht."
+            },
+            "prn": {
+                "title": "Bei Bedarf",
+                "take": "Jetzt nehmen",
+                "takeFor": "{{medication}} jetzt nehmen",
+                "nextAt": "Frühestens {{time}}",
+                "remainingHm": "noch {{hours}} Std. {{minutes}} Min.",
+                "remainingM": "noch {{minutes}} Min.",
+                "ready": "Jetzt möglich",
+                "lastTaken": "zuletzt {{time}}",
+                "never": "Noch nicht genommen",
+                "earlyConfirm": "Dosis vor Ablauf des Mindestabstands eintragen?",
+                "earlyDetail": "Die nächste Dosis ist erst ab {{time}} vorgesehen ({{remaining}}).",
+                "earlyConfirmAction": "Trotzdem eintragen"
             }
         },
         "labs": {

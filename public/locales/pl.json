@@ -411,11 +411,6 @@
         "pointsSummary": "{{count}} pkt",
         "pointsSummary_one": "{{count}} pkt",
         "documentsLabel": "Dokumenty",
-        "documentsHint": "Powiąż dokumenty z modułu Dokumenty z tym zadaniem.",
-        "documentAdd": "Powiąż dokument",
-        "documentAddPlaceholder": "Wybierz dokument…",
-        "documentRemove": "Usuń powiązanie",
-        "documentsEmpty": "Brak powiązanych dokumentów.",
         "documentsCount": "Dokumenty: {{count}}",
         "documentsCount_one": "Dokumenty: {{count}}",
         "assignedToMe": "Przypisane do mnie",
@@ -3475,7 +3470,11 @@
                 "note": "Notatka",
                 "visibility": "Widoczność",
                 "active": "Aktywny",
-                "prn": "W razie potrzeby (PRN)"
+                "prn": "W razie potrzeby (PRN)",
+                "minInterval": "Minimalny odstęp (godziny)",
+                "minIntervalHint": "Z tego i ostatniego przyjęcia powstaje odliczanie.",
+                "prnDose": "Dawka na jedno przyjęcie",
+                "prnDoseHint": "Odejmowana od zapasu przy każdej dawce doraźnej."
             },
             "schedule": {
                 "title": "Plan przyjmowania",
@@ -3517,6 +3516,20 @@
                 "deleteConfirm": "Usunąć ten wpis?",
                 "deleted": "Wpis usunięty",
                 "deleteConfirmDetail": "Wpis zniknie także z eksportu. Tej operacji nie można cofnąć."
+            },
+            "prn": {
+                "title": "W razie potrzeby",
+                "take": "Przyjmij teraz",
+                "takeFor": "Przyjmij {{medication}} teraz",
+                "nextAt": "Najwcześniej o {{time}}",
+                "remainingHm": "jeszcze {{hours}} godz. {{minutes}} min",
+                "remainingM": "jeszcze {{minutes}} min",
+                "ready": "Możliwe teraz",
+                "lastTaken": "ostatnio o {{time}}",
+                "never": "Jeszcze nieprzyjęty",
+                "earlyConfirm": "Zapisać dawkę przed upływem minimalnego odstępu?",
+                "earlyDetail": "Następna dawka przewidziana jest dopiero od {{time}} ({{remaining}}).",
+                "earlyConfirmAction": "Zapisz mimo to"
             }
         },
         "labs": {

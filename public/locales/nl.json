@@ -399,11 +399,6 @@
         "pointsSummary": "{{count}} punten",
         "pointsSummary_one": "{{count}} punt",
         "documentsLabel": "Documenten",
-        "documentsHint": "Koppel documenten uit de module Documenten aan deze taak.",
-        "documentAdd": "Document koppelen",
-        "documentAddPlaceholder": "Selecteer een document…",
-        "documentRemove": "Koppeling verwijderen",
-        "documentsEmpty": "Nog geen documenten gekoppeld.",
         "documentsCount": "{{count}} documenten",
         "documentsCount_one": "{{count}} documenten",
         "assignedToMe": "Aan mij toegewezen",
@@ -3475,7 +3470,11 @@
                 "note": "Notitie",
                 "visibility": "Zichtbaarheid",
                 "active": "Actief",
-                "prn": "Indien nodig (PRN)"
+                "prn": "Indien nodig (PRN)",
+                "minInterval": "Minimale tussentijd (uren)",
+                "minIntervalHint": "Hieruit en uit de laatste inname volgt de aftelling.",
+                "prnDose": "Dosis per inname",
+                "prnDoseHint": "Wordt bij elke zo-nodig-dosis van de voorraad afgetrokken."
             },
             "schedule": {
                 "title": "Innameschema",
@@ -3517,6 +3516,20 @@
                 "deleteConfirm": "Deze vermelding verwijderen?",
                 "deleted": "Vermelding verwijderd",
                 "deleteConfirmDetail": "De vermelding verdwijnt ook uit de export. Dit kan niet ongedaan worden gemaakt."
+            },
+            "prn": {
+                "title": "Zo nodig",
+                "take": "Nu innemen",
+                "takeFor": "{{medication}} nu innemen",
+                "nextAt": "Op zijn vroegst om {{time}}",
+                "remainingHm": "nog {{hours}} u {{minutes}} min",
+                "remainingM": "nog {{minutes}} min",
+                "ready": "Nu mogelijk",
+                "lastTaken": "laatst om {{time}}",
+                "never": "Nog niet ingenomen",
+                "earlyConfirm": "Dosis vastleggen voordat de minimale tussentijd voorbij is?",
+                "earlyDetail": "De volgende dosis is pas vanaf {{time}} voorzien ({{remaining}}).",
+                "earlyConfirmAction": "Toch vastleggen"
             }
         },
         "labs": {

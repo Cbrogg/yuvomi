@@ -399,11 +399,6 @@
         "pointsSummary": "{{count}} points",
         "pointsSummary_one": "{{count}} point",
         "documentsLabel": "Documents",
-        "documentsHint": "Link documents from the Documents module to this task.",
-        "documentAdd": "Link document",
-        "documentAddPlaceholder": "Select a document…",
-        "documentRemove": "Remove link",
-        "documentsEmpty": "No documents linked yet.",
         "documentsCount": "{{count}} documents",
         "documentsCount_one": "1 document",
         "assignedToMe": "Assigned to me",
@@ -3475,7 +3470,11 @@
                 "note": "Note",
                 "visibility": "Visibility",
                 "active": "Active",
-                "prn": "As needed (PRN)"
+                "prn": "As needed (PRN)",
+                "minInterval": "Minimum interval (hours)",
+                "minIntervalHint": "The countdown comes from this and the last dose taken.",
+                "prnDose": "Dose per intake",
+                "prnDoseHint": "Deducted from stock with every as-needed dose."
             },
             "schedule": {
                 "title": "Schedule",
@@ -3517,6 +3516,20 @@
                 "deleteConfirm": "Delete this entry?",
                 "deleted": "Entry deleted",
                 "deleteConfirmDetail": "The entry also disappears from the export. This cannot be undone."
+            },
+            "prn": {
+                "title": "As needed",
+                "take": "Take now",
+                "takeFor": "Take {{medication}} now",
+                "nextAt": "Earliest {{time}}",
+                "remainingHm": "{{hours}} hr {{minutes}} min left",
+                "remainingM": "{{minutes}} min left",
+                "ready": "Available now",
+                "lastTaken": "last {{time}}",
+                "never": "Not taken yet",
+                "earlyConfirm": "Log this dose before the minimum interval has passed?",
+                "earlyDetail": "The next dose is not due until {{time}} ({{remaining}}).",
+                "earlyConfirmAction": "Log anyway"
             }
         },
         "labs": {

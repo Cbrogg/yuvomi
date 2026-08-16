@@ -411,11 +411,6 @@
         "pointsSummary": "{{count}} poin",
         "pointsSummary_one": "{{count}} poin",
         "documentsLabel": "Dokumen",
-        "documentsHint": "Tautkan dokumen dari modul Dokumen ke tugas ini.",
-        "documentAdd": "Tautkan dokumen",
-        "documentAddPlaceholder": "Pilih dokumen…",
-        "documentRemove": "Hapus tautan",
-        "documentsEmpty": "Belum ada dokumen yang ditautkan.",
         "documentsCount": "{{count}} dokumen",
         "documentsCount_one": "{{count}} dokumen",
         "assignedToMe": "Ditugaskan ke saya",
@@ -3475,7 +3470,11 @@
                 "note": "Catatan",
                 "visibility": "Visibilitas",
                 "active": "Aktif",
-                "prn": "Jika perlu (PRN)"
+                "prn": "Jika perlu (PRN)",
+                "minInterval": "Jeda minimum (jam)",
+                "minIntervalHint": "Hitung mundur berasal dari jeda ini dan dosis terakhir.",
+                "prnDose": "Dosis per konsumsi",
+                "prnDoseHint": "Dikurangi dari stok pada setiap dosis sesuai kebutuhan."
             },
             "schedule": {
                 "title": "Jadwal minum",
@@ -3517,6 +3516,20 @@
                 "deleteConfirm": "Hapus entri ini?",
                 "deleted": "Entri dihapus",
                 "deleteConfirmDetail": "Entri juga hilang dari ekspor. Tindakan ini tidak dapat dibatalkan."
+            },
+            "prn": {
+                "title": "Sesuai kebutuhan",
+                "take": "Minum sekarang",
+                "takeFor": "Minum {{medication}} sekarang",
+                "nextAt": "Paling cepat {{time}}",
+                "remainingHm": "sisa {{hours}} j {{minutes}} mnt",
+                "remainingM": "sisa {{minutes}} mnt",
+                "ready": "Bisa sekarang",
+                "lastTaken": "terakhir {{time}}",
+                "never": "Belum diminum",
+                "earlyConfirm": "Catat dosis sebelum jeda minimum terlewati?",
+                "earlyDetail": "Dosis berikutnya baru dijadwalkan mulai {{time}} ({{remaining}}).",
+                "earlyConfirmAction": "Tetap catat"
             }
         },
         "labs": {

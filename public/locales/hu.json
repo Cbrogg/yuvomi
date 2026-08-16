@@ -399,11 +399,6 @@
         "pointsSummary": "{{count}} pont",
         "pointsSummary_one": "{{count}} pont",
         "documentsLabel": "Dokumentumok",
-        "documentsHint": "Kapcsolj dokumentumokat a Dokumentumok modulból ehhez a feladathoz.",
-        "documentAdd": "Dokumentum csatolása",
-        "documentAddPlaceholder": "Válassz dokumentumot…",
-        "documentRemove": "Kapcsolat eltávolítása",
-        "documentsEmpty": "Még nincs csatolt dokumentum.",
         "documentsCount": "{{count}} dokumentum",
         "documentsCount_one": "{{count}} dokumentum",
         "assignedToMe": "Hozzám rendelve",
@@ -3475,7 +3470,11 @@
                 "note": "Megjegyzés",
                 "visibility": "Láthatóság",
                 "active": "Aktív",
-                "prn": "Szükség szerint (PRN)"
+                "prn": "Szükség szerint (PRN)",
+                "minInterval": "Minimális időköz (óra)",
+                "minIntervalHint": "Ebből és az utolsó bevételből adódik a visszaszámlálás.",
+                "prnDose": "Adag alkalmanként",
+                "prnDoseHint": "Minden szükség szerinti adagnál levonjuk a készletből."
             },
             "schedule": {
                 "title": "Szedési terv",
@@ -3517,6 +3516,20 @@
                 "deleteConfirm": "Törlöd ezt a bejegyzést?",
                 "deleted": "Bejegyzés törölve",
                 "deleteConfirmDetail": "A bejegyzés az exportból is eltűnik. Ez nem vonható vissza."
+            },
+            "prn": {
+                "title": "Szükség szerint",
+                "take": "Bevétel most",
+                "takeFor": "{{medication}} bevétele most",
+                "nextAt": "Legkorábban {{time}}",
+                "remainingHm": "még {{hours}} ó {{minutes}} p",
+                "remainingM": "még {{minutes}} p",
+                "ready": "Most lehetséges",
+                "lastTaken": "utoljára {{time}}",
+                "never": "Még nem volt bevéve",
+                "earlyConfirm": "Rögzíted az adagot a minimális időköz letelte előtt?",
+                "earlyDetail": "A következő adag csak {{time}} után esedékes ({{remaining}}).",
+                "earlyConfirmAction": "Rögzítés mégis"
             }
         },
         "labs": {

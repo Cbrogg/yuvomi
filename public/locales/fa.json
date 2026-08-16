@@ -411,11 +411,6 @@
         "pointsSummary": "{{count}} امتیاز",
         "pointsSummary_one": "{{count}} امتیاز",
         "documentsLabel": "اسناد",
-        "documentsHint": "اسناد ماژول اسناد را به این وظیفه پیوند دهید.",
-        "documentAdd": "پیوند سند",
-        "documentAddPlaceholder": "یک سند انتخاب کنید…",
-        "documentRemove": "حذف پیوند",
-        "documentsEmpty": "هنوز سندی پیوند داده نشده است.",
         "documentsCount": "{{count}} سند",
         "documentsCount_one": "{{count}} سند",
         "assignedToMe": "واگذارشده به من",
@@ -3475,7 +3470,11 @@
                 "note": "یادداشت",
                 "visibility": "نمایانی",
                 "active": "فعال",
-                "prn": "در صورت نیاز (PRN)"
+                "prn": "در صورت نیاز (PRN)",
+                "minInterval": "کمترین فاصله (ساعت)",
+                "minIntervalHint": "شمارش معکوس از این مقدار و آخرین مصرف به دست می‌آید.",
+                "prnDose": "مقدار هر بار مصرف",
+                "prnDoseHint": "در هر دوز در صورت نیاز از موجودی کم می‌شود."
             },
             "schedule": {
                 "title": "برنامه مصرف",
@@ -3517,6 +3516,20 @@
                 "deleteConfirm": "این رکورد حذف شود؟",
                 "deleted": "رکورد حذف شد",
                 "deleteConfirmDetail": "این رکورد از خروجی هم حذف می‌شود. این کار برگشت‌پذیر نیست."
+            },
+            "prn": {
+                "title": "در صورت نیاز",
+                "take": "اکنون مصرف کن",
+                "takeFor": "اکنون {{medication}} را مصرف کن",
+                "nextAt": "زودترین زمان {{time}}",
+                "remainingHm": "{{hours}} ساعت و {{minutes}} دقیقه مانده",
+                "remainingM": "{{minutes}} دقیقه مانده",
+                "ready": "اکنون ممکن است",
+                "lastTaken": "آخرین بار {{time}}",
+                "never": "هنوز مصرف نشده",
+                "earlyConfirm": "دوز پیش از پایان کمترین فاصله ثبت شود؟",
+                "earlyDetail": "دوز بعدی تنها از {{time}} پیش‌بینی شده است ({{remaining}}).",
+                "earlyConfirmAction": "با این حال ثبت کن"
             }
         },
         "labs": {
