@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **The Unraid store listing names the modules it had been missing.** Both the app template and the repository profile described Yuvomi with a module list that stopped before Health, Rewards and Inventory, and still called shared expenses by its old name. Anyone reading the listing before installing now sees what the app actually ships.
+
 ## [2.15.0] - 2026-08-16
 
 ### Changed
