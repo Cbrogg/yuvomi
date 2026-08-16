@@ -7,6 +7,7 @@
 import { api, auth } from '/api.js';
 import { canAccessNavModule, navModuleAccess } from '/permissions.js';
 import { clearApiCache } from '/sw-register.js';
+import { forgetLayoutHint } from '/utils/dashboard-layout-hint.js';
 import { initI18n, getLocale, t, formatDate, formatTime } from '/i18n.js';
 import { esc } from '/utils/html.js';
 import { emptyHintEl } from '/utils/empty-state.js';
@@ -3936,12 +3937,34 @@ window.addEventListener('popstate', (e) => {
   navigate(e.state?.path || location.pathname, false);
 });
 
-// Session abgelaufen
-window.addEventListener('auth:expired', () => {
+/* ES GIBT ZWEI ABGAENGE, UND SIE TEILEN SICH KEINEN CODE.
+ *
+ * Der bewusste Logout laeuft ueber `clearSession()`, der Sitzungsablauf ueber
+ * `auth:expired` - beide raeumen auf, jeder fuer sich, und was nur in einem der
+ * beiden steht, faellt auf dem anderen Weg durch. Genau das passierte mit den
+ * per-user-Praeferenzen: `syncPreferencesOnce()` laedt einmal und kehrt danach
+ * sofort zurueck, und An- wie Abmelden sind SPA-Navigationen. Wer also nicht
+ * auf "Abmelden" drueckt, sondern dessen Sitzung ablaeuft, vererbte seine
+ * ausgeblendeten Module dem naechsten Mitglied am selben Geraet - Ziele fehlten
+ * in dessen Seitenleiste, waehrend das Einstellungsblatt sie als sichtbar
+ * auswies, weil es frisch vom Server liest.
+ *
+ * `_disabledModules` bleibt bewusst STEHEN: der Wert ist haushaltweit, fuer
+ * jedes Mitglied derselbe, und der Modul-Guard laeuft VOR dem Auth-Guard, der
+ * die Praeferenzen nachlaedt. Ihn zu leeren gewaenne nichts und oeffnete ein
+ * Fenster, in dem eine abgeschaltete Route wieder erreichbar waere. */
+function forgetSessionState() {
   currentUser = null;
+  _preferencesLoaded = false;
+  _hiddenModules = new Set();
+  _moduleOrder = [];
+  _mobileNavOrder = [];
   // Offline-API-Cache leeren: Session-Ende → keine gecachten Daten zurücklassen,
   // die der nächste Nutzer am selben Gerät offline sehen könnte.
   clearApiCache();
+  // Der Layout-Hinweis des Dashboards gehoert derselben Sitzung: ohne ihn sagt
+  // das Skelett am geteilten Tablett das Raster des Vorgaengers voraus.
+  forgetLayoutHint();
   // Gemerkte Scrollstände gehören zur Sitzung: der nächste Nutzer am selben
   // Gerät soll nicht auf den Positionen des vorigen landen.
   forgetScrollPositions();
@@ -3950,6 +3973,11 @@ window.addEventListener('auth:expired', () => {
   stopThirdPartyModulePolling();
   stopReminders();
   stopPush();
+}
+
+// Session abgelaufen
+window.addEventListener('auth:expired', () => {
+  forgetSessionState();
   if (isNavigating) {
     // navigate('/login') kann nicht sofort aufgerufen werden - wird im finally-Block
     // der laufenden Navigation nachgeholt.
@@ -4270,32 +4298,8 @@ window.yuvomi = {
   // hängenbleibt und kurz das Dashboard zeigt (#478). Der Server-Logout läuft
   // separat über auth.logout().
   clearSession: () => {
-    currentUser = null;
+    forgetSessionState();
     _navBuiltForUserId = null;
-    /* DIE PER-USER-PRAEFERENZEN GEHOEREN ZUR SITZUNG, NICHT ZUM TAB.
-     *
-     * `syncPreferencesOnce()` laedt genau einmal und kehrt danach sofort zurueck;
-     * Ab- und Anmelden sind aber SPA-Navigationen, kein Neuladen. Ohne diesen
-     * Block behielt das naechste Mitglied am selben Geraet die Reihenfolge, die
-     * Mobil-Plaetze und - seit #673 - die AUSBLENDUNGEN des vorigen: Module
-     * fehlten in seiner Seitenleiste, waehrend das Navigationsblatt sie als
-     * sichtbar auswies, weil es frisch vom Server liest.
-     *
-     * Reihenfolge und Mobil-Plaetze hatten diese Form schon vorher; sichtbar
-     * wurde sie erst, als eine davon Ziele ENTFERNT statt sie umzusortieren.
-     * Der Layout-Hinweis des Dashboards faellt aus demselben Grund im Logout
-     * (`auth.logout()` in api.js) - das hier ist dieselbe Zusicherung eine
-     * Ebene hoeher. */
-    _preferencesLoaded = false;
-    _hiddenModules = new Set();
-    _disabledModules = new Set();
-    _moduleOrder = [];
-    _mobileNavOrder = [];
-    forgetScrollPositions();
-    resetModuleCounts();
-    stopThirdPartyModulePolling();
-    stopReminders();
-    stopPush();
   },
 };
 

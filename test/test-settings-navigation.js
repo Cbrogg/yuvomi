@@ -50,6 +50,7 @@ import {
 import {
   buildMobileNavigationPayload,
   buildOrderPayload,
+  kitchenGroupHidden,
 } from '../public/settings/pages/modules-navigation.js';
 import {
   buildActiveModulesPayload,
@@ -1074,6 +1075,50 @@ test('buildMobileNavigationPayload normalizes aliases, duplicates, and slot coun
     buildMobileNavigationPayload(['recipes', 'tasks', 'meals', 'calendar', 'budget']),
     { mobile_nav_order: ['kitchen', 'tasks', 'calendar'] },
   );
+});
+
+test('die Kueche gilt als ausgeblendet, wenn kein SICHTBARES Kind mehr uebrig ist', () => {
+  const child = (id, over) => ({ id, enabled: true, hidden: false, ...over });
+
+  assert.equal(kitchenGroupHidden([child('meals'), child('recipes')]), false);
+  assert.equal(kitchenGroupHidden([child('meals', { hidden: true }), child('recipes')]), false,
+    'ein einzeln verstecktes Kind versteckt noch nicht die Gruppe');
+  assert.equal(kitchenGroupHidden([child('meals', { hidden: true }), child('recipes', { hidden: true })]), true);
+
+  // Ein haushaltweit abgeschaltetes Kind zaehlt nicht mit: es ist nicht
+  // versteckt, es gibt es nicht. Sonst haette der Gruppenknopf einen Zustand
+  // behauptet, den niemand gesetzt hat.
+  assert.equal(kitchenGroupHidden([child('meals', { hidden: true }), child('recipes', { enabled: false })]), true);
+  assert.equal(kitchenGroupHidden([child('meals'), child('recipes', { enabled: false })]), false);
+
+  // Alle vier abgeschaltet: die Gruppe ist dann nicht "von mir versteckt",
+  // sondern gar nicht da - der Knopf ist ohnehin gesperrt.
+  assert.equal(kitchenGroupHidden([child('meals', { enabled: false }), child('recipes', { enabled: false })]), false);
+  assert.equal(kitchenGroupHidden([]), false);
+});
+
+test('der Sitzungs-Teardown vergisst jeden per-Nutzer-Zustand, den die Navigation liest', async () => {
+  // Zwei Abgaenge, kein geteilter Code: der bewusste Logout und der
+  // Sitzungsablauf raeumten getrennt auf, und was nur in einem stand, vererbte
+  // sich am geteilten Geraet an das naechste Mitglied. Geprueft wird die REGEL:
+  // jeder per-Nutzer-Zustand, den `navItems()` liest, muss in der einen
+  // Aufraeumfunktion vorkommen, und beide Wege muessen sie rufen.
+  const source = await readFile(new URL('../public/router.js', import.meta.url), 'utf8');
+
+  const teardown = source.slice(source.indexOf('function forgetSessionState()'));
+  const body = teardown.slice(0, teardown.indexOf('\n}'));
+  for (const state of ['_preferencesLoaded', '_hiddenModules', '_moduleOrder', '_mobileNavOrder', 'currentUser']) {
+    assert.match(body, new RegExp(`${state}\\s*=`), `forgetSessionState() vergisst ${state} nicht`);
+  }
+  // `_disabledModules` gehoert ausdruecklich NICHT dazu: haushaltweit, fuer
+  // jeden gleich, und der Modul-Guard laeuft vor dem Nachladen.
+  assert.equal(/_disabledModules\s*=/.test(body), false,
+    '_disabledModules ist haushaltweit - es zurueckzusetzen oeffnet die Route, die der Haushalt abgeschaltet hat');
+
+  assert.match(source, /auth:expired[\s\S]{0,200}forgetSessionState\(\)/,
+    'der Sitzungsablauf raeumt nicht auf');
+  assert.match(source, /clearSession: \(\) => \{\s*forgetSessionState\(\)/,
+    'der bewusste Logout raeumt nicht ueber dieselbe Funktion auf');
 });
 
 test('der Haushalts-Schalter nimmt sich zurueck, wenn das Speichern scheitert', async () => {

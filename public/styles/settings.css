@@ -2380,6 +2380,13 @@
   border-radius: var(--radius-sm);
 }
 
+/* Ist die ganze Kueche versteckt, toent die Zeile bereits - das Kind darf seine
+   Toenung dann nicht obendraufsetzen, sonst liest eine vollstaendig versteckte
+   Kueche zwei Sprossen dunkler als jede andere versteckte Zeile. */
+.settings-module-row--hidden .settings-module-kitchen__child-row--hidden {
+  background: transparent;
+}
+
 /* Unterhalb der Lesebreite bricht die Kindzeile um, statt ihren Knopf zu
    quetschen: gemessen schrumpfte er bei 200% Wurzelschrift auf 38px Breite und
    riss damit sein Beruehrungsziel. Ein Container-Query, kein Viewport-Breakpoint

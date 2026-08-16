@@ -71,7 +71,7 @@ function buildRows(preferences, thirdPartyModules) {
     // Seitenleiste. Ihr Ausblenden-Knopf steht deshalb fuer die Gruppe: er gilt
     // als gedrueckt, wenn kein aktives Kind mehr sichtbar ist, und die einzelnen
     // Kinder bleiben im aufgeklappten Feld getrennt schaltbar.
-    hidden: kitchenChildren.every((child) => child.hidden || !child.enabled),
+    hidden: kitchenGroupHidden(kitchenChildren),
     locked: false,
     sortable: true,
   };
@@ -398,19 +398,25 @@ function collectVisibleGlobalOrder(list) {
 /**
  * Die persönlich ausgeblendeten Module aus dem gerenderten Blatt lesen (#673).
  *
- * Der Gruppenknopf der Küche trägt `kitchen`, ein Slug, den der Server nicht
- * kennt - er wird hier auf seine vier Kinder aufgelöst, so wie `expandModuleOrder`
- * es für die Reihenfolge tut. Gedrückt ist er ohnehin nur, wenn alle vier
- * ausgeblendet sind, insofern ist das keine zusätzliche Regel, sondern dieselbe.
+ * Der Gruppenknopf der Küche wird ÜBERSPRUNGEN, obwohl er `kitchen` trägt. Er
+ * hier auf seine vier Kinder aufzulösen sah nach derselben Regel aus wie
+ * `expandModuleOrder` bei der Reihenfolge, schrieb aber Kinder mit, die niemand
+ * gewählt hatte: die Gruppe gilt als versteckt, sobald jedes Kind versteckt
+ * ODER haushaltweit abgeschaltet ist - ein abgeschaltetes Kind landete damit in
+ * `hidden_modules` und wäre nach dem Wiedereinschalten für dieses Mitglied
+ * versteckt gewesen, über einen Knopf, den es gar nicht drücken konnte
+ * (Gegenprüfung zur Review von #790).
+ *
+ * Nötig ist die Auflösung ohnehin nicht: die vier Kind-Knöpfe stehen immer im
+ * DOM - das Feld ist nur `hidden` - und der Gruppenklick legt sie selbst um.
  */
-export function collectHiddenModuleIds(buttons) {
+function collectHiddenModuleIds(buttons) {
   const ids = new Set();
   for (const btn of buttons) {
     if (btn.getAttribute('aria-pressed') !== 'true') continue;
     const id = btn.dataset.moduleHide;
-    if (!id) continue;
-    if (id === 'kitchen') KITCHEN_CHILD_IDS.forEach((child) => ids.add(child));
-    else ids.add(id);
+    if (!id || id === 'kitchen') continue;
+    ids.add(id);
   }
   return [...ids];
 }
@@ -452,30 +458,51 @@ async function saveNavigationState(list) {
   window.yuvomi?.setModuleOrder?.(response?.data?.module_order ?? payload.module_order);
 }
 
-function bindModuleListEvents(container, user, rows, storedMobileOrder) {
+function bindModuleListEvents(container, user, rows) {
   const list = container.querySelector('#module-toggles');
   if (!list) return;
   let dragged = null;
   let dragStartOrder = '';
-  let savingOrder = false;
+
+  /* EINE SPERRE FUER BEIDE SCHREIBWEGE, UND SIE VERSCHLUCKT NICHTS.
+   *
+   * Sortieren und Ausblenden schicken denselben Payload aus demselben DOM
+   * (`module_order` UND `hidden_modules`), also darf nicht beides gleichzeitig
+   * laufen. Zwei getrennte Flags hatten das Problem nur halbiert: eine
+   * Ausblendung konnte waehrend eines Sortier-Saves starten, und ein Klick auf
+   * einen Pfeil waehrend einer Ausblendung fiel STILL heraus - die Zeile war im
+   * DOM schon verschoben, gespeichert wurde nichts, und niemand erfuhr davon
+   * (Gegenpruefung zur Review von #790).
+   *
+   * Statt zu verwerfen wird jetzt gemerkt: wer waehrend eines laufenden Saves
+   * etwas aendert, bekommt seinen Save danach. */
+  let saving = false;
+  let queued = false;
   let busy = false;
 
-  const saveIfChanged = async (previousOrder) => {
-    const currentOrder = collectVisibleGlobalOrder(list).join('|');
-    // `busy` mitgeprueft: beide Schreibpfade schicken `module_order` UND
-    // `hidden_modules` aus demselben DOM. Zwei gleichzeitige PUTs konvergieren
-    // zwar, aber eine Sperre fuer zwei Wege ist eine zu wenig.
-    if (currentOrder === previousOrder || savingOrder || busy) return;
-    savingOrder = true;
+  const flush = async (toastKey) => {
+    if (saving) { queued = true; return; }
+    saving = true;
     try {
       await saveNavigationState(list);
-      window.yuvomi?.showToast(t('settings.modulesOrderSaved'), 'success');
+      window.yuvomi?.showToast(t(toastKey), 'success');
     } catch (error) {
       window.yuvomi?.showToast(error.message ?? t('common.errorGeneric'), 'danger');
       await render(container, { user });
+      return;
     } finally {
-      savingOrder = false;
+      saving = false;
     }
+    if (queued) {
+      queued = false;
+      await flush(toastKey);
+    }
+  };
+
+  const saveIfChanged = async (previousOrder) => {
+    const currentOrder = collectVisibleGlobalOrder(list).join('|');
+    if (currentOrder === previousOrder) return;
+    await flush('settings.modulesOrderSaved');
   };
 
   list.addEventListener('dragstart', (event) => {
@@ -573,16 +600,23 @@ function bindModuleListEvents(container, user, rows, storedMobileOrder) {
     btn.setAttribute('aria-busy', 'true');
 
     try {
-      await saveNavigationState(list);
-      busy = false;
-      btn.removeAttribute('aria-busy');
-      refreshMobileSlots(container, rows, user, storedMobileOrder);
+      if (saving) { queued = true; } else {
+        saving = true;
+        try {
+          await saveNavigationState(list);
+        } finally {
+          saving = false;
+        }
+        if (queued) { queued = false; await flush('settings.modulesOrderSaved'); }
+      }
+      refreshMobileSlots(container, rows, user);
       window.yuvomi?.showToast(hideToastMessage(container, previousMobile), 'success');
     } catch (error) {
-      busy = false;
-      btn.removeAttribute('aria-busy');
       window.yuvomi?.showToast(error.message ?? t('common.errorGeneric'), 'danger');
       await render(container, { user });
+    } finally {
+      busy = false;
+      btn.removeAttribute('aria-busy');
     }
   });
 }
@@ -595,9 +629,17 @@ function bindModuleListEvents(container, user, rows, storedMobileOrder) {
  * sobald ein gewähltes Ziel nicht mehr zur Verfügung steht, und das ist auch
  * richtig so: eine leere Position wäre schlechter. Falsch war das Schweigen.
  *
- * Die eigene Wahl geht dabei nicht verloren - `mobile_nav_order` bleibt
- * unangetastet und kommt beim Wieder-Einblenden zurück. Genau das kann der Toast
- * sagen, statt es die Nutzerin am Telefon entdecken zu lassen.
+ * WAS DIE LEISTE ZEIGT, IST WAS GESPEICHERT WIRD - und das ist eine Entscheidung,
+ * keine Nachlässigkeit. Hier stand vorübergehend die Zusage, die eigene Wahl
+ * überlebe das Ausblenden und kehre beim Wieder-Einblenden zurück. Sie liess
+ * sich nicht halten: `resolveMobileNavOrder` VERDICHTET (module-order.js), also
+ * fallen Anzeige-Platz und gespeicherter Platz auseinander, sobald ein Ziel
+ * fehlt - und der Versuch, die übrigen Plätze aus dem gespeicherten Stand zu
+ * ergänzen, warf beim nächsten Wechsel ein anderes, unberührtes Ziel heraus
+ * (Gegenprüfung zur Review von PR #790). Drei Plätze können nicht beides:
+ * einen versteckten Favoriten bewahren UND die sichtbare Anordnung speichern.
+ * Für einen Haushalt ist die zweite Regel die verständlichere - man sieht, was
+ * gilt. Der Toast nennt deshalb den Platz, der sich verschoben hat.
  */
 function readMobileSlotValues(container) {
   return [...container.querySelectorAll('[data-mobile-nav-slot]')].map((select) => select.value);
@@ -621,23 +663,20 @@ function hideToastMessage(container, previousMobile) {
 /**
  * Die drei Auswahlfelder neu aufbauen, ohne das übrige Blatt anzufassen.
  *
- * Aufgelöst wird gegen die GESPEICHERTE Wahl, nicht gegen die gerade
- * angezeigte. Der Unterschied ist der ganze Punkt: wer den Kalender ausblendet,
- * sieht auf Platz 1 den Ersatz - las diese Funktion ihn aus dem Auswahlfeld
- * zurück, wäre die eigene Wahl beim Wieder-Einblenden verloren, und der nächste
- * Wechsel an irgendeinem Platz hätte den Ersatz über sie geschrieben. Der
- * Server hält sie unangetastet; hier zu vergessen, was er hält, hätte genau die
- * Zusage gebrochen, die der Block über dem Toast gibt.
+ * Aufgelöst wird gegen das, was gerade in den Feldern steht: die Anzeige ist
+ * die Wahrheit (siehe den Block über `hideToastMessage`). Ein ausgeblendetes
+ * Ziel fällt heraus, der Rest rückt nach, und der Toast sagt, welcher Platz
+ * sich dadurch geändert hat.
  */
-function refreshMobileSlots(container, rows, user, storedOrder) {
+function refreshMobileSlots(container, rows, user) {
   const wrap = container.querySelector('.settings-mobile-nav-slots');
   if (!wrap) return;
   const candidates = mobileCandidateRows(rows);
-  const order = resolveMobileNavOrder(storedOrder, candidates.map((row) => row.orderId));
+  const order = resolveMobileNavOrder(readMobileSlotValues(container), candidates.map((row) => row.orderId));
   wrap.replaceChildren();
   wrap.insertAdjacentHTML('beforeend',
     [0, 1, 2].map((index) => mobileSlotHtml(candidates, order, index)).join(''));
-  bindMobileNavigationEvents(container, user, storedOrder);
+  bindMobileNavigationEvents(container, user);
 }
 
 /** Den Zustand auch im Datenmodell nachziehen - die Mobil-Kandidaten lesen ihn. */
@@ -650,7 +689,7 @@ function markRowHidden(rows, id, hidden) {
     }
     if (Array.isArray(row.children) && row.children.some((child) => child.id === id)) {
       row.children.forEach((child) => { if (child.id === id) child.hidden = hidden; });
-      row.hidden = row.children.every((child) => child.hidden || !child.enabled);
+      row.hidden = kitchenGroupHidden(row.children);
     }
   }
 }
@@ -699,30 +738,39 @@ function applyHiddenState(btn, hidden) {
  * bis zur Review trotzdem weiter "nicht gedrueckt", und der naechste Klick
  * darauf las sich als "ausblenden", obwohl er einblendet.
  */
+/**
+ * Gilt die Kueche als ausgeblendet? Die eine Regel, an zwei Stellen gelesen.
+ *
+ * Exportiert und rein, damit sie eine Zusicherung tragen kann: `buildRows` und
+ * `syncKitchenGroupState` stimmten nur ueberein, solange beide dieselbe Zeile
+ * von Hand wiederholten - und die Gegenpruefung zur Review von #790 hat genau
+ * an dieser Doppelung zwei Fehler gefunden.
+ */
+export function kitchenGroupHidden(children = []) {
+  const relevant = children.filter((child) => child.enabled);
+  if (!relevant.length) return false;
+  return relevant.every((child) => child.hidden);
+}
+
 function syncKitchenGroupState(list, rows) {
   const groupBtn = list.querySelector('[data-module-hide="kitchen"]');
   const kitchen = rows?.find((row) => row.id === 'kitchen');
   if (!groupBtn || !kitchen) return;
-  const hidden = kitchen.children.every((child) => child.hidden || !child.enabled);
+  const hidden = kitchenGroupHidden(kitchen.children);
   if (groupBtn.getAttribute('aria-pressed') === String(hidden)) return;
   applyHiddenState(groupBtn, hidden);
 }
 
-function bindMobileNavigationEvents(container, user, storedOrder = []) {
+function bindMobileNavigationEvents(container, user) {
   const selects = [...container.querySelectorAll('[data-mobile-nav-slot]')];
   if (!selects.length) return;
 
-  selects.forEach((changedSelect, changedIndex) => {
+  selects.forEach((changedSelect) => {
     changedSelect.addEventListener('change', async () => {
-      /* Nur der GEAENDERTE Platz kommt aus dem Auswahlfeld, die uebrigen aus
-       * der gespeicherten Wahl. Sonst schriebe ein Wechsel an Platz 3 den
-       * Ersatzwert fest, den Platz 1 gerade nur zeigt, weil das eigentlich dort
-       * gewaehlte Modul ausgeblendet ist - und die eigene Wahl waere weg, ohne
-       * dass jemand sie angefasst haette. */
-      const values = selects.map((select, index) => (
-        index === changedIndex ? select.value : (storedOrder[index] ?? select.value)
-      ));
-      const payload = buildMobileNavigationPayload(values);
+      // Alle drei Plaetze so, wie sie dastehen. Die Anzeige ist die Wahrheit -
+      // ein Wert aus dem gespeicherten Stand daneben zu mischen, verschob beim
+      // Verdichten ein unberuehrtes Ziel (Gegenpruefung zur Review von #790).
+      const payload = buildMobileNavigationPayload(selects.map((select) => select.value));
       selects.forEach((select) => { select.disabled = true; });
 
       try {
@@ -755,12 +803,9 @@ export async function render(container, { user }) {
 
   const rows = buildRows(preferences, thirdPartyModules);
   const availableMobileIds = mobileCandidateRows(rows).map((row) => row.orderId);
-  // Die GESPEICHERTE Wahl, nicht die angezeigte: sie ueberlebt das Ausblenden
-  // eines Ziels und kommt beim Wieder-Einblenden zurueck (siehe refreshMobileSlots).
-  const storedMobileOrder = Array.isArray(preferences.mobile_nav_order) ? preferences.mobile_nav_order : [];
-  const mobileOrder = resolveMobileNavOrder(storedMobileOrder, availableMobileIds);
+  const mobileOrder = resolveMobileNavOrder(preferences.mobile_nav_order, availableMobileIds);
   renderPage(container, rows, mobileOrder);
   bindDisclosure(container, { triggerSelector: '[data-kitchen-expand]', panelSelector: '[data-kitchen-children]', id: 'kitchen-children-navigation' });
-  bindModuleListEvents(container, user, rows, storedMobileOrder);
-  bindMobileNavigationEvents(container, user, storedMobileOrder);
+  bindModuleListEvents(container, user, rows);
+  bindMobileNavigationEvents(container, user);
 }
