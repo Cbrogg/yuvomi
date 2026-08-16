@@ -96,7 +96,6 @@
         "kitchenGoLabel": "厨房，打开 {{section}}",
         "search": "搜索",
         "housekeeping": "家务",
-        "splitExpenses": "分摊",
         "kitchenActiveLabel": "厨房，{{section}} 已激活",
         "reminders": "提醒",
         "sidebarCollapse": "收起侧边栏",
@@ -2703,7 +2702,7 @@
         "dmsSearchError": "当前无法连接 DMS。",
         "storageGoogleDrive": "Google Drive",
         "budgetFolder": "凭证",
-        "splitExpensesFolder": "共同支出",
+        "splitExpensesFolder": "共享支出",
         "inventoryFolder": "Inventory"
     },
     "shortcuts": {

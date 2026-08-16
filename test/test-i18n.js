@@ -161,3 +161,28 @@ test('Modulnamen sind in nav und in den API-Token-Scopes wortgleich', () => {
     `zu wenige Paare verglichen (${compared}) - greift der Selektor noch?`);
   assert.deepEqual(drift, [], `Modulname driftet:\n  ${drift.join('\n  ')}`);
 });
+
+// Dritte Stelle desselben Namens: der Ordner, in dem die Belege der
+// Gemeinsamen Ausgaben landen. Er hiess in ELF von vierundzwanzig Sprachen
+// anders als das Modul - "Geteilte Ausgaben" gegen "Gemeinsame Ausgaben",
+// "Sdílené výdaje" gegen "Společné výdaje" - und keine der beiden Listen oben
+// sah ihn, weil er unter `documents.*` liegt statt unter `nav.*`.
+//
+// Er steht hier und nicht bei der Migration, die ihn einmalig umbenannt hat
+// (v146): die Migration ist ein historischer Fakt und laeuft genau einmal, die
+// REGEL gilt fuer jede kuenftige Uebersetzung. Ein Uebersetzer, der den Ordner
+// beim naechsten Sprachdurchgang anders nennt, laesst `ensureFolder`
+// (server/routes/documents.js) sonst still einen zweiten Ordner anlegen.
+test('der Beleg-Ordner der Gemeinsamen Ausgaben heisst wie das Modul', () => {
+  const drift = [];
+  for (const locale of LOCALES) {
+    const keys = flatten(JSON.parse(readLocale(locale)));
+    const title = keys.get('splitExpenses.title');
+    const folder = keys.get('documents.splitExpensesFolder');
+    assert.ok(title, `${locale}: splitExpenses.title fehlt`);
+    assert.ok(folder, `${locale}: documents.splitExpensesFolder fehlt`);
+    if (title !== folder) drift.push(`${locale}: Modul ${JSON.stringify(title)}, Ordner ${JSON.stringify(folder)}`);
+  }
+  assert.deepEqual(drift, [],
+    `Der Beleg-Ordner traegt einen anderen Namen als das Modul:\n  ${drift.join('\n  ')}`);
+});

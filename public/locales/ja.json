@@ -96,7 +96,6 @@
         "kitchenGoLabel": "キッチン、{{section}} を開く",
         "search": "検索",
         "housekeeping": "家事",
-        "splitExpenses": "分割",
         "kitchenActiveLabel": "キッチン、{{section}} がアクティブ",
         "reminders": "リマインダー",
         "sidebarCollapse": "サイドバーを閉じる",
@@ -2703,7 +2702,7 @@
         "dmsSearchError": "現在 DMS に接続できません。",
         "storageGoogleDrive": "Google Drive",
         "budgetFolder": "領収書",
-        "splitExpensesFolder": "共同の支出",
+        "splitExpensesFolder": "共有費用",
         "inventoryFolder": "Inventory"
     },
     "shortcuts": {

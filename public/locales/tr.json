@@ -96,7 +96,6 @@
         "kitchenGoLabel": "Mutfak, {{section}} bölümünü aç",
         "search": "Ara",
         "housekeeping": "Ev işleri",
-        "splitExpenses": "Paylaşım",
         "kitchenActiveLabel": "Mutfak, {{section}} aktif",
         "reminders": "Hatırlatıcılar",
         "sidebarCollapse": "Kenar çubuğunu daralt",
@@ -2703,7 +2702,7 @@
         "dmsSearchError": "DMS şu anda erişilebilir değil.",
         "storageGoogleDrive": "Google Drive",
         "budgetFolder": "Fişler",
-        "splitExpensesFolder": "Paylaşılan harcamalar",
+        "splitExpensesFolder": "Paylaşılan giderler",
         "inventoryFolder": "Inventory"
     },
     "shortcuts": {

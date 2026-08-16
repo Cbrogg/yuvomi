@@ -96,7 +96,6 @@
         "kitchenGoLabel": "Kitchen, open {{section}}",
         "search": "Search",
         "housekeeping": "Housekeeping",
-        "splitExpenses": "Split",
         "kitchenActiveLabel": "Kitchen, {{section}} active",
         "reminders": "Reminders",
         "sidebarCollapse": "Collapse sidebar",

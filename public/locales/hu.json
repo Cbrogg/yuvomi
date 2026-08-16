@@ -96,7 +96,6 @@
         "kitchenGoLabel": "Konyha, {{section}} megnyitása",
         "search": "Keresés",
         "housekeeping": "Háztartás",
-        "splitExpenses": "Költségmegosztás",
         "kitchenActiveLabel": "Konyha, {{section}} aktív",
         "reminders": "Emlékeztetők",
         "sidebarCollapse": "Oldalsáv összecsukása",
@@ -2717,7 +2716,7 @@
         "dmsSearchError": "A DMS jelenleg nem érhető el.",
         "storageGoogleDrive": "Google Drive",
         "budgetFolder": "Bizonylatok",
-        "splitExpensesFolder": "Közös kiadások",
+        "splitExpensesFolder": "Megosztott költségek",
         "inventoryFolder": "Inventory"
     },
     "housekeeping": {

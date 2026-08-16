@@ -96,7 +96,6 @@
         "kitchenGoLabel": "Küche, {{section}} öffnen",
         "search": "Suche",
         "housekeeping": "Haushaltshilfe",
-        "splitExpenses": "Aufteilung",
         "kitchenActiveLabel": "Küche, {{section}} aktiv",
         "reminders": "Erinnerungen",
         "sidebarCollapse": "Sidebar einklappen",
@@ -2717,7 +2716,7 @@
         "dmsSearchError": "Das DMS ist gerade nicht erreichbar.",
         "storageGoogleDrive": "Google Drive",
         "budgetFolder": "Belege",
-        "splitExpensesFolder": "Geteilte Ausgaben",
+        "splitExpensesFolder": "Gemeinsame Ausgaben",
         "inventoryFolder": "Inventar"
     },
     "userMultiSelect": {

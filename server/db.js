@@ -5360,6 +5360,67 @@ const MIGRATIONS = [
       `).run(JSON.stringify(disabled));
     },
   },
+  {
+    version: 146,
+    description: 'rename the shared-expenses receipt folder to the canonical module name',
+    up(db) {
+      // EIN MODUL, EIN NAME - nachgezogen fuer den Ordner, in dem die Belege
+      // liegen. Das Modul heisst `splitExpenses.title` ("Gemeinsame Ausgaben"),
+      // der Zielordner hiess `documents.splitExpensesFolder` und war in elf von
+      // vierundzwanzig Sprachen ein anderes Wort. Der Locale-Wert ist mit
+      // diesem Release auf den Modulnamen gezogen - ohne diese Migration
+      // entstuende bei jedem Bestandshaushalt beim naechsten Beleg ein ZWEITER
+      // Ordner, weil `ensureFolder` (server/routes/documents.js) den Ordner
+      // ueber seinen NAMEN sucht und sonst anlegt. Die alten Belege blieben im
+      // alten.
+      //
+      // Die Paare stehen hier ausgeschrieben und werden NICHT aus den
+      // Locale-Dateien gelesen: eine Migration ist ein historischer Fakt und
+      // muss in fuenf Jahren dasselbe tun wie heute. Ein Blick in die dann
+      // aktuellen Uebersetzungen wuerde in einem spaeteren Rename still etwas
+      // anderes umbenennen als hier gemeint war.
+      const RENAMES = [
+        ['النفقات المشتركة', 'المصاريف المشتركة'],   // ar
+        ['Sdílené výdaje', 'Společné výdaje'],       // cs
+        ['Geteilte Ausgaben', 'Gemeinsame Ausgaben'], // de
+        ['Κοινές δαπάνες', 'Κοινά έξοδα'],           // el
+        ['Közös kiadások', 'Megosztott költségek'],  // hu
+        ['Pengeluaran bersama', 'Pengeluaran Bersama'], // id
+        ['共同の支出', '共有費用'],                    // ja
+        ['Despesas partilhadas', 'Despesas compartilhadas'], // pt
+        ['Paylaşılan harcamalar', 'Paylaşılan giderler'],    // tr
+        ['Chi tiêu chung', 'Chi phí chung'],         // vi
+        ['共同支出', '共享支出'],                      // zh
+      ];
+
+      // Der Ordner traegt die Sprache, in der er entstanden ist, und ein
+      // Haushalt kann die Sprache gewechselt haben - deshalb wird jede der elf
+      // Zeilen geprueft statt nur die des aktuellen Locales. Getroffen wird
+      // hoechstens eine.
+      const find = db.prepare('SELECT id, name FROM family_document_folders WHERE name = ? COLLATE NOCASE');
+      const rename = db.prepare('UPDATE family_document_folders SET name = ? WHERE id = ?');
+
+      for (const [from, to] of RENAMES) {
+        const source = find.get(from);
+        if (!source) continue;
+
+        // Zielname schon vergeben? Dann NICHT umbenennen. Zwei Ordner mit
+        // demselben Namen waeren schlimmer als ein Ordner mit dem alten:
+        // `ensureFolder` nimmt den ersten Treffer, und welcher das ist, haengt
+        // an der Zeilenreihenfolge.
+        //
+        // Die eigene Zeile muss dabei ausgeschlossen werden. Bei `id` ist der
+        // Unterschied zwischen altem und neuem Namen NUR die Grossschreibung,
+        // und `COLLATE NOCASE` findet dort den Quellordner als seinen eigenen
+        // Konflikt - ohne diese Zeile bliebe genau der Fall ungefixt, der am
+        // harmlosesten aussieht.
+        const clash = find.get(to);
+        if (clash && clash.id !== source.id) continue;
+
+        rename.run(to, source.id);
+      }
+    },
+  },
 ];
 
 /**
