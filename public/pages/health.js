@@ -1688,19 +1688,23 @@ async function handlePrnDose(btn) {
   }
 
   window.yuvomi?.showToast(t('health.meds.doseSaved'), 'success');
-  await reloadPrnScopes();
+  await reloadMedViews();
 }
 
 /**
- * Nach einer Bedarfsbuchung BEIDE Tabs auffrischen.
+ * BEIDE Ansichten auffrischen, die Medikamentendaten zeigen.
  *
  * Uebersicht und Medikamente sind gleichzeitig gemountet, und die weiche
  * Tab-Navigation baut ein bereits geladenes Panel nicht neu auf. Nur den
- * angeklickten neu zu laden hiesse: der andere zeigt weiter „jetzt moeglich"
- * und bietet die Dosis ohne Rueckfrage an, obwohl der Abstand gerade begonnen
- * hat - und das ist die Ansicht, die davor warnen soll.
+ * angefassten neu zu laden hiesse: der andere rechnet mit dem Stand von vorhin.
+ * Das faellt ueberall an, wo sich etwas an Medikamenten, Plaenen oder Dosen
+ * aendert - eine gebuchte Dosis verschiebt drueben den Countdown, ein
+ * abgeschalteter Bedarfshaken laesst drueben einen Knopf stehen, den es nicht
+ * mehr geben duerfte, und der bucht dann eine Dosis, vor der niemand mehr warnt.
+ * Geladen wird nur, was auch gemountet ist; wer die Uebersicht nie geoeffnet
+ * hat, zahlt nichts dafuer.
  */
-async function reloadPrnScopes() {
+async function reloadMedViews() {
   const jobs = [];
   if (meds.root?.isConnected && meds.loaded) jobs.push(reloadMeds());
   if (overview.root?.isConnected && overview.loaded) jobs.push(reloadOverview());
@@ -1903,7 +1907,7 @@ function openMedLogModal(logId) {
           await api.patch(`/health/logs/${entry.id}`, body);
           closeModal({ force: true });
           window.yuvomi?.showToast(t('health.meds.log.saved'), 'success');
-          await reloadMeds();
+          await reloadMedViews();
         } catch (err) {
           console.error('[Health] med log save error:', err);
           submitBtn.disabled = false;
@@ -1921,7 +1925,7 @@ async function deleteMedLog(entry) {
     await api.delete(`/health/logs/${entry.id}`);
     closeModal({ force: true });
     window.yuvomi?.showToast(t('health.meds.log.deleted'), 'success');
-    await reloadMeds();
+    await reloadMedViews();
   } catch (err) {
     console.error('[Health] med log delete error:', err);
     window.yuvomi?.showToast(err?.data?.error || t('health.meds.log.saveError'), 'danger');
@@ -2058,7 +2062,7 @@ async function handleDose(btn, action) {
     window.yuvomi?.showToast(t('health.meds.doseSaved'), 'success');
     // Beide Tabs, nicht nur dieser: ein Medikament kann Plan UND Bedarf haben,
     // und dann verschiebt auch die geplante Dosis den Countdown drueben.
-    await reloadPrnScopes();
+    await reloadMedViews();
   } catch (err) {
     console.error('[Health] dose error:', err);
     btn.disabled = false;
@@ -2190,7 +2194,7 @@ function openMedModal(med) {
           else await api.post('/health/medications', { ...body, ...ownerField(meds.personId, meds.meId) });
           closeModal({ force: true });
           window.yuvomi?.showToast(t('health.meds.saved'), 'success');
-          await reloadMeds();
+          await reloadMedViews();
         } catch (err) {
           console.error('[Health] med save error:', err);
           submitBtn.disabled = false;
@@ -2239,7 +2243,7 @@ async function deleteMed(med) {
   try {
     await api.delete(`/health/medications/${med.id}`);
     window.yuvomi?.showToast(t('health.meds.deleted'), 'success');
-    await reloadMeds();
+    await reloadMedViews();
   } catch (err) {
     console.error('[Health] med delete error:', err);
     window.yuvomi?.showToast(err?.data?.error || t('health.meds.deleteError'), 'danger');
@@ -3778,7 +3782,7 @@ async function handleOverviewDose(btn, action) {
     }
 
     window.yuvomi?.showToast(t('health.meds.doseSaved'), 'success');
-    await reloadPrnScopes();
+    await reloadMedViews();
   } catch (err) {
     console.error('[Health] overview dose error:', err);
     btn.disabled = false;
