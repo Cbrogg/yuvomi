@@ -427,7 +427,8 @@
         "commentDelete": "コメントを削除",
         "commentEditedAt": "{{date}} {{time}} · 編集済み",
         "commentUnknownAuthor": "不明",
-        "commentDeletedToast": "コメントを削除しました。"
+        "commentDeletedToast": "コメントを削除しました。",
+        "documentsLinkFailed": "タスクは保存しましたが、書類を関連付けできませんでした。"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}}件の食事",
@@ -3541,7 +3542,8 @@
                 "earlyConfirm": "最短間隔が過ぎる前に記録しますか？",
                 "earlyDetail": "次の服用は {{time}} 以降の予定です（{{remaining}}）。",
                 "earlyConfirmAction": "それでも記録"
-            }
+            },
+            "stockUpdateFailed": "服用は記録しましたが、在庫を更新できませんでした。"
         },
         "labs": {
             "title": "検査値",

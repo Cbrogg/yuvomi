@@ -427,7 +427,8 @@
         "commentDelete": "Διαγραφή σχολίου",
         "commentEditedAt": "{{date}} {{time}} · επεξεργάστηκε",
         "commentUnknownAuthor": "Άγνωστος",
-        "commentDeletedToast": "Το σχόλιο διαγράφηκε."
+        "commentDeletedToast": "Το σχόλιο διαγράφηκε.",
+        "documentsLinkFailed": "Η εργασία αποθηκεύτηκε, αλλά τα έγγραφα δεν συνδέθηκαν."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} γεύματα",
@@ -3541,7 +3542,8 @@
                 "earlyConfirm": "Καταγραφή δόσης πριν συμπληρωθεί το ελάχιστο διάστημα;",
                 "earlyDetail": "Η επόμενη δόση προβλέπεται μόλις από τις {{time}} ({{remaining}}).",
                 "earlyConfirmAction": "Καταγραφή ούτως ή άλλως"
-            }
+            },
+            "stockUpdateFailed": "Η δόση καταγράφηκε, αλλά το απόθεμα δεν ενημερώθηκε."
         },
         "labs": {
             "title": "Εργαστηριακά",

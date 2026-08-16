@@ -1190,6 +1190,22 @@ function openTaskModal({ task = null, users = [], reminder = null } = {}, contai
  * Orten entsteht: als eigenes Modal (neue Aufgabe) und als zweites Pane der
  * Detailansicht, das erst beim Wechsel gemountet wird.
  */
+/**
+ * Die Dokument-Sichtbarkeit, die zur Sichtbarkeit der Aufgabe passt.
+ *
+ * Die beiden Vokabulare sind nicht dasselbe: eine Aufgabe kennt
+ * `all|assignees|private`, ein Dokument `family|restricted|private`. Uebersetzt
+ * wird auf die jeweils engere Entsprechung - eine offene Aufgabe teilt ihren
+ * Anhang mit dem Haushalt, eine private behaelt ihn, und „nur Beteiligte" wird
+ * zur ausdruecklichen Freigabeliste.
+ */
+function taskDocumentVisibility(panel) {
+  const value = panel.querySelector('#task-visibility')?.value || 'all';
+  if (value === 'private') return 'private';
+  if (value === 'assignees') return 'restricted';
+  return 'family';
+}
+
 function wireTaskForm(panel, { task = null, container }) {
   panel.querySelector('.modal-panel__body')?.classList.add('modal-panel__body--tasks-fit');
   // RRULE-Events binden
@@ -1207,6 +1223,14 @@ function wireTaskForm(panel, { task = null, container }) {
   taskDocuments = bindDocumentAttachField(panel, {
     category: 'other',
     folderName: t('documents.tasksFolder'),
+    // Die Datei erbt die Sichtbarkeit ihrer Aufgabe. Ohne das laege der Beleg
+    // einer PRIVATEN Aufgabe als familiensichtbares Dokument im Dokumente-Modul:
+    // die Aufgabe waere verborgen, der Zettel darin fuer alle lesbar. Bei
+    // „nur Beteiligte" traegt das Dokument dieselbe Liste - `restricted` mit den
+    // zugewiesenen Personen. Ausgewertet wird erst beim Hochladen, weil das
+    // Sichtbarkeitsfeld bis dahin noch umgestellt werden kann.
+    visibility: () => taskDocumentVisibility(panel),
+    allowedMemberIds: () => getSelectedUserIds(panel, 'task_assigned').map(Number),
   });
 
   // Sync-Ziel nachladen (#695). Ohne await: die Liste kommt aus dem Netz, und
@@ -2186,10 +2210,20 @@ async function handleFormSubmit(e, container) {
       }
 
       // Dokument-Verknüpfungen als Replace-Set übernehmen (#503).
+      //
+      // Der Fehler wird nicht mehr verschluckt: seit hier hochgeladen werden
+      // kann (#733), liegt bei einem Fehlschlag eine frische Datei unverknüpft
+      // im Dokumente-Modul, während die Aufgabe sich als gespeichert meldet -
+      // der Nutzer glaubt, der Zettel hänge dran. Die Aufgabe IST gespeichert,
+      // deshalb bleibt das kein Abbruch, sondern eine Meldung, die den einen
+      // Teil benennt, der nicht geklappt hat.
       if (documentIds) {
         try {
           await api.put(`/tasks/${savedTaskId}/documents`, { document_ids: documentIds });
-        } catch { /* Verknüpfen fehlgeschlagen - nicht blockierend für den Task-Save */ }
+        } catch (err) {
+          console.error('[Tasks] document link error:', err);
+          window.yuvomi.showToast(t('tasks.documentsLinkFailed'), 'danger');
+        }
       }
     }
 

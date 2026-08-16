@@ -107,7 +107,12 @@ export function renderDocumentAttachField({
  *        jedem commit() frisch ausgewertet wird - für Aufrufer mit einem
  *        Kategorie-Auswahlfeld im Formular (z. B. Inventar).
  * @param {string} [options.folderName] - Zielordner für neue Uploads
- * @param {string} [options.visibility] - Sichtbarkeit neuer Uploads
+ * @param {string|Function} [options.visibility] - Sichtbarkeit neuer Uploads.
+ *        Fester String oder eine Funktion, die bei jedem commit() frisch
+ *        ausgewertet wird - fuer Formulare, in denen die Sichtbarkeit des
+ *        Datensatzes selbst noch umgestellt werden kann.
+ * @param {Function} [options.allowedMemberIds] - () => number[], nur fuer
+ *        `restricted` ausgewertet: wer das Dokument sehen darf.
  * @param {Function} [options.documentName] - (file) => Anzeigename des Uploads
  * @param {number} [options.maxFileSize]
  * @returns {{ commit: Function, documentIds: Function, isDirty: Function }|null}
@@ -116,6 +121,7 @@ export function bindDocumentAttachField(panel, {
   category = 'other',
   folderName = '',
   visibility = 'family',
+  allowedMemberIds = null,
   documentName = null,
   maxFileSize = MAX_FILE_SIZE,
 } = {}) {
@@ -252,13 +258,17 @@ export function bindDocumentAttachField(panel, {
     async commit() {
       for (const item of items) {
         if (item.kind !== 'file') continue;
+        // Sichtbarkeit erst beim Hochladen aufloesen: in einem Formular, das
+        // sie selbst fuehrt (Aufgaben), kann sie zwischen Dateiwahl und
+        // Speichern noch umgestellt worden sein.
+        const vis = typeof visibility === 'function' ? visibility() : visibility;
         const res = await api.post('/documents', {
           name: documentName ? documentName(item.file) : item.file.name,
           description: '',
           category: typeof category === 'function' ? category() : category,
-          visibility,
+          visibility: vis,
           status: 'active',
-          allowed_member_ids: [],
+          allowed_member_ids: vis === 'restricted' && allowedMemberIds ? allowedMemberIds() : [],
           original_name: item.file.name,
           content_data: await readFileAsDataUrl(item.file),
           ...(folderName ? { folder_name: folderName } : {}),

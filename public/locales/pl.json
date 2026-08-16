@@ -439,7 +439,8 @@
         "commentDelete": "Usuń komentarz",
         "commentEditedAt": "{{date}} {{time}} · edytowano",
         "commentUnknownAuthor": "Nieznany",
-        "commentDeletedToast": "Komentarz usunięty."
+        "commentDeletedToast": "Komentarz usunięty.",
+        "documentsLinkFailed": "Zadanie zapisano, ale nie udało się powiązać dokumentów."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} posiłki",
@@ -3541,7 +3542,8 @@
                 "earlyConfirm": "Zapisać dawkę przed upływem minimalnego odstępu?",
                 "earlyDetail": "Następna dawka przewidziana jest dopiero od {{time}} ({{remaining}}).",
                 "earlyConfirmAction": "Zapisz mimo to"
-            }
+            },
+            "stockUpdateFailed": "Dawkę zapisano, ale nie udało się zaktualizować zapasu."
         },
         "labs": {
             "title": "Wyniki badań",

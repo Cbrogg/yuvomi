@@ -427,7 +427,8 @@
         "commentDelete": "टिप्पणी हटाएँ",
         "commentEditedAt": "{{date}} {{time}} · संपादित",
         "commentUnknownAuthor": "अज्ञात",
-        "commentDeletedToast": "टिप्पणी हटा दी गई."
+        "commentDeletedToast": "टिप्पणी हटा दी गई.",
+        "documentsLinkFailed": "कार्य सहेजा गया, लेकिन दस्तावेज़ नहीं जोड़े जा सके."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} भोजन",
@@ -3541,7 +3542,8 @@
                 "earlyConfirm": "न्यूनतम अंतराल पूरा होने से पहले खुराक दर्ज करें?",
                 "earlyDetail": "अगली खुराक {{time}} से ही तय है ({{remaining}}).",
                 "earlyConfirmAction": "फिर भी दर्ज करें"
-            }
+            },
+            "stockUpdateFailed": "खुराक दर्ज हो गई, लेकिन स्टॉक अपडेट नहीं हो सका."
         },
         "labs": {
             "title": "लैब मान",

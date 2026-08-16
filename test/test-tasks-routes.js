@@ -768,3 +768,26 @@ test('Kommentare: erwähnt wird gegen dieselbe Personenliste wie im Browser', as
   assert.deepEqual(mentionedUserIds(text, alleNutzer), [WORKER], 'Vorbedingung: der Name träfe ohne Ausschluss');
   assert.deepEqual(mentionedUserIds(text, wieDerServer), [], 'Haushaltskraft wird nicht benachrichtigt');
 });
+
+test('Kommentare: eine beim Bearbeiten dazugekommene Erwähnung wird gemeldet', async () => {
+  // Wer beim Korrigieren jemanden dazuholt, meint ihn genauso wie beim
+  // Schreiben - vorher lief die Benachrichtigung nur im POST-Pfad.
+  const task = await call('POST', '/', { as: { id: ALICE, role: 'admin' }, body: { title: 'Erwähnung nachtragen' } });
+  const created = await call('POST', `/${task.body.data.id}/comments`, {
+    as: { id: ALICE, role: 'admin' }, body: { comment: 'Wer macht das?' },
+  });
+  const patched = await call('PATCH', `/${task.body.data.id}/comments/${created.body.data.id}`, {
+    as: { id: ALICE, role: 'admin' }, body: { comment: '@bob machst du das?' },
+  });
+  assert.equal(patched.status, 200);
+  assert.equal(patched.body.data.comment, '@bob machst du das?');
+
+  // Die Route liest die Empfänger aus dem Text und nur die NEUEN: eine zweite
+  // Korrektur an derselben Erwähnung darf nicht noch einmal melden.
+  const { mentionedUserIds } = await import('../public/utils/mentions.js');
+  const users = db.prepare('SELECT id, display_name FROM users').all();
+  const vorher = mentionedUserIds('Wer macht das?', users);
+  const nachher = mentionedUserIds('@bob machst du das?', users);
+  assert.deepEqual(nachher.filter((id) => !vorher.includes(id)), [BOB]);
+  assert.deepEqual(nachher.filter((id) => !nachher.includes(id)), []);
+});

@@ -439,7 +439,8 @@
         "commentDelete": "Kommentar löschen",
         "commentEditedAt": "{{date}} {{time}} · bearbeitet",
         "commentUnknownAuthor": "Unbekannt",
-        "commentDeletedToast": "Kommentar gelöscht."
+        "commentDeletedToast": "Kommentar gelöscht.",
+        "documentsLinkFailed": "Die Aufgabe ist gespeichert, die Dokumente konnten aber nicht verknüpft werden."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} Mahlzeiten",
@@ -3541,7 +3542,8 @@
                 "earlyConfirm": "Dosis vor Ablauf des Mindestabstands eintragen?",
                 "earlyDetail": "Die nächste Dosis ist erst ab {{time}} vorgesehen ({{remaining}}).",
                 "earlyConfirmAction": "Trotzdem eintragen"
-            }
+            },
+            "stockUpdateFailed": "Die Dosis ist eingetragen, der Bestand konnte aber nicht angepasst werden."
         },
         "labs": {
             "title": "Laborwerte",

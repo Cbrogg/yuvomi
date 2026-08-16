@@ -427,7 +427,8 @@
         "commentDelete": "حذف التعليق",
         "commentEditedAt": "{{date}} {{time}} · مُعدّل",
         "commentUnknownAuthor": "غير معروف",
-        "commentDeletedToast": "تم حذف التعليق."
+        "commentDeletedToast": "تم حذف التعليق.",
+        "documentsLinkFailed": "تم حفظ المهمة، لكن تعذّر ربط المستندات."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} وجبات",
@@ -3541,7 +3542,8 @@
                 "earlyConfirm": "هل تُسجَّل الجرعة قبل انقضاء الفاصل الأدنى؟",
                 "earlyDetail": "الجرعة التالية مقررة ابتداءً من {{time}} فقط ({{remaining}}).",
                 "earlyConfirmAction": "سجّل على أي حال"
-            }
+            },
+            "stockUpdateFailed": "تم تسجيل الجرعة، لكن تعذّر تحديث المخزون."
         },
         "labs": {
             "title": "التحاليل",

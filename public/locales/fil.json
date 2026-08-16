@@ -439,7 +439,8 @@
         "commentDelete": "Burahin ang komento",
         "commentEditedAt": "{{date}} {{time}} · in-edit",
         "commentUnknownAuthor": "Hindi kilala",
-        "commentDeletedToast": "Nabura ang komento."
+        "commentDeletedToast": "Nabura ang komento.",
+        "documentsLinkFailed": "Na-save ang gawain, pero hindi na-link ang mga dokumento."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} pagkain",
@@ -3541,7 +3542,8 @@
                 "earlyConfirm": "Itala ang dosis bago matapos ang pinakamaikling agwat?",
                 "earlyDetail": "Ang susunod na dosis ay sa {{time}} pa ({{remaining}}).",
                 "earlyConfirmAction": "Itala pa rin"
-            }
+            },
+            "stockUpdateFailed": "Naitala ang dosis, pero hindi na-update ang stock."
         },
         "labs": {
             "title": "Resulta ng lab",

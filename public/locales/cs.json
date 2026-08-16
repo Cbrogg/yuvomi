@@ -427,7 +427,8 @@
         "commentDelete": "Smazat komentář",
         "commentEditedAt": "{{date}} {{time}} · upraveno",
         "commentUnknownAuthor": "Neznámý",
-        "commentDeletedToast": "Komentář smazán."
+        "commentDeletedToast": "Komentář smazán.",
+        "documentsLinkFailed": "Úkol byl uložen, dokumenty se ale nepodařilo připojit."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} jídla",
@@ -3541,7 +3542,8 @@
                 "earlyConfirm": "Zapsat dávku před uplynutím minimálního odstupu?",
                 "earlyDetail": "Další dávka je na řadě až od {{time}} ({{remaining}}).",
                 "earlyConfirmAction": "Přesto zapsat"
-            }
+            },
+            "stockUpdateFailed": "Dávka je zapsána, zásobu se ale nepodařilo upravit."
         },
         "labs": {
             "title": "Laboratorní hodnoty",

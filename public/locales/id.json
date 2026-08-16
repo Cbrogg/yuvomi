@@ -439,7 +439,8 @@
         "commentDelete": "Hapus komentar",
         "commentEditedAt": "{{date}} {{time}} · diubah",
         "commentUnknownAuthor": "Tidak diketahui",
-        "commentDeletedToast": "Komentar dihapus."
+        "commentDeletedToast": "Komentar dihapus.",
+        "documentsLinkFailed": "Tugas tersimpan, tetapi dokumen tidak dapat ditautkan."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} hidangan",
@@ -3541,7 +3542,8 @@
                 "earlyConfirm": "Catat dosis sebelum jeda minimum terlewati?",
                 "earlyDetail": "Dosis berikutnya baru dijadwalkan mulai {{time}} ({{remaining}}).",
                 "earlyConfirmAction": "Tetap catat"
-            }
+            },
+            "stockUpdateFailed": "Dosis tercatat, tetapi stok tidak dapat diperbarui."
         },
         "labs": {
             "title": "Hasil lab",

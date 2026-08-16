@@ -439,7 +439,8 @@
         "commentDelete": "حذف دیدگاه",
         "commentEditedAt": "{{date}} {{time}} · ویرایش‌شده",
         "commentUnknownAuthor": "ناشناس",
-        "commentDeletedToast": "دیدگاه حذف شد."
+        "commentDeletedToast": "دیدگاه حذف شد.",
+        "documentsLinkFailed": "کار ذخیره شد، اما پیوند دادن سندها ممکن نشد."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} وعده",
@@ -3541,7 +3542,8 @@
                 "earlyConfirm": "دوز پیش از پایان کمترین فاصله ثبت شود؟",
                 "earlyDetail": "دوز بعدی تنها از {{time}} پیش‌بینی شده است ({{remaining}}).",
                 "earlyConfirmAction": "با این حال ثبت کن"
-            }
+            },
+            "stockUpdateFailed": "دوز ثبت شد، اما به‌روزرسانی موجودی ممکن نشد."
         },
         "labs": {
             "title": "آزمایش‌ها",

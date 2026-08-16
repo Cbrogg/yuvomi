@@ -427,7 +427,8 @@
         "commentDelete": "Eliminar comentario",
         "commentEditedAt": "{{date}} {{time}} · editado",
         "commentUnknownAuthor": "Desconocido",
-        "commentDeletedToast": "Comentario eliminado."
+        "commentDeletedToast": "Comentario eliminado.",
+        "documentsLinkFailed": "La tarea se guardó, pero no se pudieron vincular los documentos."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} comidas",
@@ -3541,7 +3542,8 @@
                 "earlyConfirm": "¿Registrar la dosis antes de que pase el intervalo mínimo?",
                 "earlyDetail": "La próxima dosis no está prevista hasta las {{time}} ({{remaining}}).",
                 "earlyConfirmAction": "Registrar igualmente"
-            }
+            },
+            "stockUpdateFailed": "La dosis quedó registrada, pero no se pudo actualizar el stock."
         },
         "labs": {
             "title": "Analíticas",

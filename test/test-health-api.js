@@ -1216,3 +1216,17 @@ test('PRN: 0 als Mindestabstand nennt seine Grenze richtig', async () => {
   assert.equal(res.status, 400);
   assert.match(JSON.stringify(res.body), /greater than 0 and at most 672/);
 });
+
+test('PRN: eine negative Bedarfsdosis wird abgewiesen', async () => {
+  // `v.num` nimmt negative Zahlen an (das Budget rechnet damit), und der
+  // Bestandsabzug rechnet `stock_qty - dose`: -2 würde den Bestand bei jeder
+  // Einnahme ERHÖHEN. Das Formularfeld sperrt das, ein API-Token nicht.
+  asA();
+  const res = await call('POST', '/medications', { name: 'Minusdosis', prn: true, prn_dose_qty: -2 });
+  assert.equal(res.status, 400);
+
+  const ok = await call('POST', '/medications', { name: 'Plusdosis', prn: true, prn_dose_qty: 2 });
+  assert.equal(ok.status, 201);
+  const patched = await call('PATCH', `/medications/${ok.body.data.id}`, { prn_dose_qty: -1 });
+  assert.equal(patched.status, 400);
+});

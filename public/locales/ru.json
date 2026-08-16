@@ -427,7 +427,8 @@
         "commentDelete": "Удалить комментарий",
         "commentEditedAt": "{{date}} {{time}} · изменено",
         "commentUnknownAuthor": "Неизвестно",
-        "commentDeletedToast": "Комментарий удалён."
+        "commentDeletedToast": "Комментарий удалён.",
+        "documentsLinkFailed": "Задача сохранена, но документы не удалось привязать."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} приёма пищи",
@@ -3541,7 +3542,8 @@
                 "earlyConfirm": "Записать дозу до истечения минимального интервала?",
                 "earlyDetail": "Следующая доза предусмотрена только с {{time}} ({{remaining}}).",
                 "earlyConfirmAction": "Всё равно записать"
-            }
+            },
+            "stockUpdateFailed": "Доза записана, но запас не удалось обновить."
         },
         "labs": {
             "title": "Анализы",

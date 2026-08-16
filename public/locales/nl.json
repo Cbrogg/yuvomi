@@ -427,7 +427,8 @@
         "commentDelete": "Opmerking verwijderen",
         "commentEditedAt": "{{date}} {{time}} · bewerkt",
         "commentUnknownAuthor": "Onbekend",
-        "commentDeletedToast": "Opmerking verwijderd."
+        "commentDeletedToast": "Opmerking verwijderd.",
+        "documentsLinkFailed": "De taak is opgeslagen, maar de documenten konden niet worden gekoppeld."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} maaltijden",
@@ -3541,7 +3542,8 @@
                 "earlyConfirm": "Dosis vastleggen voordat de minimale tussentijd voorbij is?",
                 "earlyDetail": "De volgende dosis is pas vanaf {{time}} voorzien ({{remaining}}).",
                 "earlyConfirmAction": "Toch vastleggen"
-            }
+            },
+            "stockUpdateFailed": "De dosis is vastgelegd, maar de voorraad kon niet worden bijgewerkt."
         },
         "labs": {
             "title": "Labwaarden",

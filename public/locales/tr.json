@@ -427,7 +427,8 @@
         "commentDelete": "Yorumu sil",
         "commentEditedAt": "{{date}} {{time}} · düzenlendi",
         "commentUnknownAuthor": "Bilinmiyor",
-        "commentDeletedToast": "Yorum silindi."
+        "commentDeletedToast": "Yorum silindi.",
+        "documentsLinkFailed": "Görev kaydedildi, ancak belgeler bağlanamadı."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} öğünden",
@@ -3541,7 +3542,8 @@
                 "earlyConfirm": "Doz, en kısa aralık dolmadan kaydedilsin mi?",
                 "earlyDetail": "Sonraki doz ancak {{time}} itibarıyla öngörülüyor ({{remaining}}).",
                 "earlyConfirmAction": "Yine de kaydet"
-            }
+            },
+            "stockUpdateFailed": "Doz kaydedildi, ancak stok güncellenemedi."
         },
         "labs": {
             "title": "Laboratuvar",

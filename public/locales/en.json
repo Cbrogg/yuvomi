@@ -427,7 +427,8 @@
         "commentDelete": "Delete comment",
         "commentEditedAt": "{{date}} {{time}} · edited",
         "commentUnknownAuthor": "Unknown",
-        "commentDeletedToast": "Comment deleted."
+        "commentDeletedToast": "Comment deleted.",
+        "documentsLinkFailed": "The task was saved, but the documents could not be linked."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} meals",
@@ -3541,7 +3542,8 @@
                 "earlyConfirm": "Log this dose before the minimum interval has passed?",
                 "earlyDetail": "The next dose is not due until {{time}} ({{remaining}}).",
                 "earlyConfirmAction": "Log anyway"
-            }
+            },
+            "stockUpdateFailed": "The dose was logged, but the stock could not be updated."
         },
         "labs": {
             "title": "Lab values",

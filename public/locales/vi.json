@@ -427,7 +427,8 @@
         "commentDelete": "Xóa bình luận",
         "commentEditedAt": "{{date}} {{time}} · đã sửa",
         "commentUnknownAuthor": "Không rõ",
-        "commentDeletedToast": "Đã xóa bình luận."
+        "commentDeletedToast": "Đã xóa bình luận.",
+        "documentsLinkFailed": "Đã lưu công việc, nhưng không thể liên kết tài liệu."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} bữa ăn",
@@ -3541,7 +3542,8 @@
                 "earlyConfirm": "Ghi nhận liều trước khi hết khoảng cách tối thiểu?",
                 "earlyDetail": "Liều tiếp theo chỉ được tính từ {{time}} ({{remaining}}).",
                 "earlyConfirmAction": "Vẫn ghi nhận"
-            }
+            },
+            "stockUpdateFailed": "Đã ghi nhận liều, nhưng không cập nhật được tồn kho."
         },
         "labs": {
             "title": "Xét nghiệm",

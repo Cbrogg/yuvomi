@@ -1447,7 +1447,7 @@ function loadTaskComments(taskId) {
  * kein Weg, jemandem den Titel einer privaten Aufgabe zuzustellen. Sich selbst
  * zu erwähnen löst nichts aus.
  */
-function notifyMentions(task, comment, authorId) {
+function notifyMentions(task, comment, authorId, previousComment = '') {
   // DIESELBE Personenliste, die `meta/options` an den Browser gibt: dort sind
   // Haushaltshilfen ausgenommen, und der Client hebt deshalb nur diese Namen
   // hervor. Ohne den Ausschluss haette der Server jemanden benachrichtigt, den
@@ -1457,7 +1457,12 @@ function notifyMentions(task, comment, authorId) {
     SELECT id, display_name FROM users u
     WHERE NOT EXISTS (SELECT 1 FROM housekeeping_workers hw WHERE hw.user_id = u.id)
   `).all();
-  const ids = mentionedUserIds(comment, users).filter((id) => id !== authorId);
+  // Beim Nachbessern zaehlen nur die NEU dazugekommenen Namen: wer schon in der
+  // ersten Fassung stand, ist benachrichtigt und bekaeme sonst bei jedem Tippfehler
+  // dieselbe Meldung noch einmal.
+  const schon = previousComment ? mentionedUserIds(previousComment, users) : [];
+  const ids = mentionedUserIds(comment, users)
+    .filter((id) => id !== authorId && !schon.includes(id));
   if (!ids.length) return;
 
   const author = users.find((u) => u.id === authorId)?.display_name || '';
@@ -1475,8 +1480,11 @@ function notifyMentions(task, comment, authorId) {
 /** Ein Kommentar samt Aufgabe, wenn die Person ihn ändern bzw. entfernen darf. */
 function commentForWrite(req, { allowAdmin = false } = {}) {
   const me = req.authUserId || req.session.userId;
-  const task = findVisibleTask(req.params.id, me);
-  if (!task) return { error: 404 };
+  const found = findVisibleTask(req.params.id, me);
+  if (!found) return { error: 404 };
+  // Mit Titel, weil eine Erwaehnung beim Nachbessern dieselbe Meldung schickt
+  // wie beim Schreiben - und die nennt die Aufgabe.
+  const task = db.get().prepare('SELECT id, title FROM tasks WHERE id = ?').get(found.id);
 
   const row = db.get().prepare('SELECT * FROM task_comments WHERE id = ? AND task_id = ?')
     .get(req.params.commentId, task.id);
@@ -1557,6 +1565,10 @@ router.patch('/:id/comments/:commentId', (req, res) => {
       FROM task_comments c LEFT JOIN users u ON u.id = c.user_id WHERE c.id = ?
     `).get(found.row.id);
     res.json({ data: row });
+    // Wer beim Korrigieren jemanden dazuholt, meint ihn genauso wie beim
+    // Schreiben - ohne diesen Aufruf staende der Name farbig da und niemand
+    // erfuehre davon.
+    notifyMentions(found.task, row.comment, found.me, found.row.comment);
   } catch (err) {
     log.error('PATCH /:id/comments/:commentId error:', err);
     res.status(500).json({ error: 'Internal server error.', code: 500 });

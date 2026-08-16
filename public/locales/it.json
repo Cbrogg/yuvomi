@@ -427,7 +427,8 @@
         "commentDelete": "Elimina commento",
         "commentEditedAt": "{{date}} {{time}} · modificato",
         "commentUnknownAuthor": "Sconosciuto",
-        "commentDeletedToast": "Commento eliminato."
+        "commentDeletedToast": "Commento eliminato.",
+        "documentsLinkFailed": "L'attività è stata salvata, ma i documenti non sono stati collegati."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} pasti",
@@ -3541,7 +3542,8 @@
                 "earlyConfirm": "Registrare la dose prima della fine dell'intervallo minimo?",
                 "earlyDetail": "La dose successiva è prevista solo dalle {{time}} ({{remaining}}).",
                 "earlyConfirmAction": "Registra comunque"
-            }
+            },
+            "stockUpdateFailed": "La dose è registrata, ma la scorta non è stata aggiornata."
         },
         "labs": {
             "title": "Esami",

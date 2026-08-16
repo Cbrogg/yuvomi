@@ -427,7 +427,8 @@
         "commentDelete": "Ta bort kommentar",
         "commentEditedAt": "{{date}} {{time}} · redigerad",
         "commentUnknownAuthor": "Okänd",
-        "commentDeletedToast": "Kommentaren togs bort."
+        "commentDeletedToast": "Kommentaren togs bort.",
+        "documentsLinkFailed": "Uppgiften sparades, men dokumenten kunde inte kopplas."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} måltider",
@@ -3541,7 +3542,8 @@
                 "earlyConfirm": "Registrera dosen innan minsta intervall har gått?",
                 "earlyDetail": "Nästa dos är inte planerad förrän {{time}} ({{remaining}}).",
                 "earlyConfirmAction": "Registrera ändå"
-            }
+            },
+            "stockUpdateFailed": "Dosen registrerades, men lagret kunde inte uppdateras."
         },
         "labs": {
             "title": "Provsvar",

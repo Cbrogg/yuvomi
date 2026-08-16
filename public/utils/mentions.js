@@ -8,6 +8,14 @@
  * gemeinten Personen mitschickt: dann wären Anzeige und Benachrichtigung zwei
  * Wahrheiten, die auseinanderlaufen können, sobald jemand den Namen von Hand
  * tippt statt ihn aus der Vorschlagsliste zu wählen. Der Text ist die Quelle.
+ *
+ * GRENZE, die daraus folgt: Anzeigenamen sind nicht eindeutig. Führt ein
+ * Haushalt zwei Mitglieder mit demselben Namen, meint `@Name` beide gleich gut,
+ * und getroffen wird das erste passende Konto - hervorgehoben wie benachrichtigt
+ * dasselbe. Das aufzulösen hieße, die Kennung in den Text zu schreiben
+ * (`@[Name](12)`), also den Kommentar zu einem Format zu machen, das man beim
+ * Zitieren und beim Bearbeiten mitschleppt. Solange zwei gleiche Namen im selben
+ * Haushalt der seltene Fall sind, ist die Verwechslung der kleinere Preis.
  */
 
 // Vor dem @ darf kein Wortzeichen stehen - sonst würde in "info@example.org"

@@ -427,7 +427,8 @@
         "commentDelete": "Hozzászólás törlése",
         "commentEditedAt": "{{date}} {{time}} · szerkesztve",
         "commentUnknownAuthor": "Ismeretlen",
-        "commentDeletedToast": "Hozzászólás törölve."
+        "commentDeletedToast": "Hozzászólás törölve.",
+        "documentsLinkFailed": "A feladat mentve, de a dokumentumokat nem sikerült csatolni."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} étkezésből",
@@ -3541,7 +3542,8 @@
                 "earlyConfirm": "Rögzíted az adagot a minimális időköz letelte előtt?",
                 "earlyDetail": "A következő adag csak {{time}} után esedékes ({{remaining}}).",
                 "earlyConfirmAction": "Rögzítés mégis"
-            }
+            },
+            "stockUpdateFailed": "Az adag rögzítve, de a készletet nem sikerült frissíteni."
         },
         "labs": {
             "title": "Laborértékek",

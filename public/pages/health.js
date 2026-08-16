@@ -1656,8 +1656,8 @@ async function handlePrnDose(btn) {
   }
 
   btn.disabled = true;
+  const dose = med.prn_dose_qty != null ? Number(med.prn_dose_qty) : null;
   try {
-    const dose = med.prn_dose_qty != null ? Number(med.prn_dose_qty) : null;
     await api.post(`/health/medications/${medId}/logs`, {
       status: 'taken',
       // Wanduhrzeit, keine ISO-Zone: die Route kuerzt den Wert auf Minuten und
@@ -1666,19 +1666,45 @@ async function handlePrnDose(btn) {
       taken_at: toLocalStamp(),
       ...(dose != null && Number.isFinite(dose) ? { dose_qty: dose } : {}),
     });
-
-    if (dose != null && Number.isFinite(dose) && med.stock_qty != null) {
-      const next = Math.max(0, Number(med.stock_qty) - dose);
-      await api.patch(`/health/medications/${medId}`, { stock_qty: next });
-    }
-
-    window.yuvomi?.showToast(t('health.meds.doseSaved'), 'success');
-    await s.reload();
   } catch (err) {
     console.error('[Health] prn dose error:', err);
     btn.disabled = false;
     window.yuvomi?.showToast(err?.data?.error || t('health.meds.doseError'), 'danger');
+    return;
   }
+
+  // AB HIER IST DIE DOSIS GEBUCHT. Der Bestandsabzug ist ein zweiter Aufruf,
+  // und wenn er scheitert, darf das nicht als „Buchung fehlgeschlagen" dastehen:
+  // wer es dann noch einmal versucht, hat die Dosis zweimal im Protokoll. Der
+  // Bestand ist eine Nebenbuchhaltung, die Dosis die Aussage ueber den Koerper.
+  if (dose != null && Number.isFinite(dose) && med.stock_qty != null) {
+    try {
+      const next = Math.max(0, Number(med.stock_qty) - dose);
+      await api.patch(`/health/medications/${medId}`, { stock_qty: next });
+    } catch (err) {
+      console.error('[Health] prn stock error:', err);
+      window.yuvomi?.showToast(t('health.meds.stockUpdateFailed'), 'danger');
+    }
+  }
+
+  window.yuvomi?.showToast(t('health.meds.doseSaved'), 'success');
+  await reloadPrnScopes();
+}
+
+/**
+ * Nach einer Bedarfsbuchung BEIDE Tabs auffrischen.
+ *
+ * Uebersicht und Medikamente sind gleichzeitig gemountet, und die weiche
+ * Tab-Navigation baut ein bereits geladenes Panel nicht neu auf. Nur den
+ * angeklickten neu zu laden hiesse: der andere zeigt weiter „jetzt moeglich"
+ * und bietet die Dosis ohne Rueckfrage an, obwohl der Abstand gerade begonnen
+ * hat - und das ist die Ansicht, die davor warnen soll.
+ */
+async function reloadPrnScopes() {
+  const jobs = [];
+  if (meds.root?.isConnected && meds.loaded) jobs.push(reloadMeds());
+  if (overview.root?.isConnected && overview.loaded) jobs.push(reloadOverview());
+  await Promise.all(jobs);
 }
 
 /** Bindet die Bedarfsknoepfe eines Wurzelelements. */

@@ -22,6 +22,21 @@ const router = express.Router();
 // erst im Formular (#700).
 const MAX_INTERVAL_HOURS = 24 * 28;
 
+/**
+ * Bedarfsdosis: leer erlaubt, sonst nicht negativ.
+ *
+ * `v.num` nimmt negative Zahlen ausdruecklich an (Budget rechnet damit), und der
+ * Bestandsabzug rechnet `stock_qty - dose`: eine Dosis von -2 wuerde den Bestand
+ * bei jeder Einnahme ERHOEHEN. Das Formularfeld sperrt das ohnehin, ein
+ * API-Token oder MCP-Client nicht.
+ */
+function prnDose(raw) {
+  const r = v.num(raw, 'prn_dose_qty');
+  if (r.error || r.value === null) return r;
+  if (r.value < 0) return { value: null, error: 'prn_dose_qty must not be negative.' };
+  return r;
+}
+
 /** Mindestabstand in Stunden: leer erlaubt, sonst > 0 und hoechstens 28 Tage. */
 function prnInterval(raw) {
   const r = v.num(raw, 'min_interval_hours');
@@ -86,9 +101,9 @@ router.post('/medications', (req, res) => {
     const note       = v.str(b.note, 'note', { max: v.MAX_TEXT, required: false });
     const visibility = v.oneOf(b.visibility, VISIBILITIES, 'visibility');
     const interval   = prnInterval(b.min_interval_hours);
-    const prnDose    = v.num(b.prn_dose_qty, 'prn_dose_qty');
+    const prnDoseQty = prnDose(b.prn_dose_qty);
 
-    const errors = v.collectErrors([name, dosageText, form, stockQty, stockUnit, refill, note, visibility, interval, prnDose]);
+    const errors = v.collectErrors([name, dosageText, form, stockQty, stockUnit, refill, note, visibility, interval, prnDoseQty]);
     if (errors.length) return badRequest(res, errors);
 
     const active = toBit(b.active); // undefined → default 1
@@ -106,7 +121,7 @@ router.post('/medications', (req, res) => {
     `).run(owner.ownerId, name.value, dosageText.value, form.value,
            active === undefined ? 1 : active, prn === undefined ? 0 : prn,
            stockQty.value, stockUnit.value, refill.value, note.value, visibility.value || 'private',
-           interval.value, prnDose.value);
+           interval.value, prnDoseQty.value);
 
     const row = db.get().prepare('SELECT * FROM medications WHERE id = ?').get(result.lastInsertRowid);
     res.status(201).json({ data: row });
@@ -141,7 +156,7 @@ router.patch('/medications/:id', (req, res) => {
     if (b.active !== undefined) { const bit = toBit(b.active); if (bit === undefined) checks.push({ error: 'active must be a boolean.' }); else fields.active = bit; }
     if (b.prn !== undefined)    { const bit = toBit(b.prn);    if (bit === undefined) checks.push({ error: 'prn must be a boolean.' });    else fields.prn = bit; }
     if (b.min_interval_hours !== undefined) { const r = prnInterval(b.min_interval_hours); checks.push(r); if (!r.error) fields.min_interval_hours = r.value; }
-    if (b.prn_dose_qty !== undefined)       { const r = v.num(b.prn_dose_qty, 'prn_dose_qty'); checks.push(r); if (!r.error) fields.prn_dose_qty = r.value; }
+    if (b.prn_dose_qty !== undefined)       { const r = prnDose(b.prn_dose_qty); checks.push(r); if (!r.error) fields.prn_dose_qty = r.value; }
 
     const errors = v.collectErrors(checks);
     if (errors.length) return badRequest(res, errors);
