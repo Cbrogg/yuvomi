@@ -156,7 +156,9 @@ test('Server-Allowlist: health ist ein toggelbares Modul', () => {
 });
 
 test('Settings-Toggle: health in BUILT_IN_MODULES', () => {
-  const src = read('public/settings/pages/modules-navigation.js');
+  // Die Liste wohnt seit dem Umzug des Haushalts-Schalters (Critique 2026-08-16)
+  // im geteilten module-order.js - zwei Blaetter lesen sie.
+  const src = read('public/settings/module-order.js');
   assert.match(src, /\{ id: 'health', labelKey: 'nav\.health', icon: 'heart-pulse' \}/);
 });
 

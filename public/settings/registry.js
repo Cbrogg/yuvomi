@@ -153,6 +153,21 @@ export const SETTINGS_LEAVES = freezeEntries([
     loader: () => import('/settings/pages/personal-calendar-subscriptions.js'),
   },
   {
+    // Der haushaltweite Modul-Schalter, gezogen aus `modules-navigation`
+    // (Critique 2026-08-16). Dort stand er inline hinter `isAdmin` neben dem
+    // persoenlichen Ausblenden-Knopf aus #673: zwei unbeschriftete
+    // Bedienelemente, zwoelf Pixel auseinander, das eine fuer mich, das andere
+    // fuer sechs Personen ohne Rueckfrage. Ein Blatt, eine Reichweite.
+    id: 'modules-active',
+    domainId: 'modules',
+    path: '/settings/modules/active',
+    labelKey: 'settings.pageActiveModules',
+    descriptionKey: 'settings.pageActiveModulesDescription',
+    icon: 'toggle-right',
+    adminOnly: true,
+    loader: () => import('/settings/pages/modules-active.js'),
+  },
+  {
     id: 'modules-kitchen',
     domainId: 'modules',
     path: '/settings/modules/kitchen',

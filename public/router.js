@@ -393,6 +393,13 @@ let _renderedModule = null;
 let _renderedModuleName = null;
 let _preferencesLoaded = false;
 let _disabledModules = new Set();
+// Persoenlich ausgeblendete Module (#673). Bewusst eine ZWEITE Menge neben
+// `_disabledModules` und nicht mit ihr vereinigt: die haushaltweite Abschaltung
+// wirkt auch im Routen-Guard weiter unten, diese hier NUR in der Navigation.
+// Ein ausgeblendetes Modul bleibt erreichbar - ueber einen Deep-Link aus einer
+// Benachrichtigung, ein Dashboard-Widget oder die Suche. Wer entziehen will,
+// nimmt die Rechte (#467); wer aufraeumen will, blendet aus.
+let _hiddenModules = new Set();
 let _thirdPartyModules = [];
 let _moduleOrder = [];
 let _mobileNavOrder = [];
@@ -855,6 +862,9 @@ async function syncPreferencesOnce() {
     }
     if (Array.isArray(res?.data?.disabled_modules)) {
       _disabledModules = new Set(res.data.disabled_modules);
+    }
+    if (Array.isArray(res?.data?.hidden_modules)) {
+      _hiddenModules = new Set(res.data.hidden_modules);
     }
     if (Array.isArray(res?.data?.module_order)) {
       _moduleOrder = res.data.module_order;
@@ -3033,6 +3043,7 @@ function navItems() {
     ...baseItems.filter((item) =>
       item.module !== 'settings'
       && !_disabledModules.has(item.module)
+      && !_hiddenModules.has(item.module)
       && canAccessNavModule(item.module)),
     ...thirdPartyItems,
   ];
@@ -3178,6 +3189,15 @@ function applySidebarCollapsed(collapsed) {
   if (!collapsed) {
     document.documentElement.classList.remove('sidebar-collapse-pointer-lock');
   }
+}
+
+function setHiddenModules(modules) {
+  _hiddenModules = new Set(Array.isArray(modules) ? modules : []);
+  // Zaehlstaende und Neuaufbau aus demselben Grund wie beim Haushalts-Schalter
+  // darunter: die Kuechenkachel fasst vier Module zusammen, und ob ihr
+  // Einkaufszaehler gilt, entscheidet `navItems()`.
+  resetModuleCounts();
+  rebuildNavigation();
 }
 
 function setDisabledModules(modules) {
@@ -4209,6 +4229,7 @@ window.yuvomi = {
   friendlyError,
   setThemeColor,
   setDisabledModules,
+  setHiddenModules,
   setModuleOrder,
   setMobileNavOrder,
   refreshThirdPartyModules,

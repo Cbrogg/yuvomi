@@ -77,9 +77,12 @@ test('admin-permissions.js MODULE_ACCENT deckt jedes Permissions-Modul ab', () =
 // Küchen-Gruppe: drei Listen müssen sich gemeinsam bewegen
 // --------------------------------------------------------------------------
 test('die drei Kitchen-Child-Listen tragen dieselben IDs', () => {
-  const navSource = read('../public/settings/pages/modules-navigation.js');
-  const labels = objectKeys(navSource, 'KITCHEN_CHILD_LABEL_KEYS');
-  const icons = objectKeys(navSource, 'KITCHEN_CHILD_ICONS');
+  // Seit dem Umzug des Haushalts-Schalters (Critique 2026-08-16) lesen ZWEI
+  // Blaetter dieselben Kuechen-Kinder; die Listen wohnen deshalb im geteilten
+  // module-order.js statt in einem der beiden.
+  const source = read('../public/settings/module-order.js');
+  const labels = objectKeys(source, 'KITCHEN_CHILD_LABEL_KEYS');
+  const icons = objectKeys(source, 'KITCHEN_CHILD_ICONS');
 
   // Fehlt eine ID in den Labels, rendert der Nav-Editor `t(undefined)`.
   assert.deepEqual(labels, [...KITCHEN_CHILD_IDS], 'KITCHEN_CHILD_LABEL_KEYS weicht ab');

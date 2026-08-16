@@ -1,4 +1,45 @@
 export const KITCHEN_CHILD_IDS = Object.freeze(['meals', 'recipes', 'shopping', 'pantry']);
+
+// Eingebaute Module in kanonischer Domaenen-Reihenfolge. Uebersicht und
+// Einstellungen sind gesperrt: nicht sortierbar, nicht abschaltbar, nicht
+// ausblendbar - wer sie wegnimmt, versteckt sich den Weg zurueck.
+//
+// Sie liegen HIER und nicht in einem der beiden Blaetter, seit der
+// Haushalts-Schalter aus der Navigation nach `modules-active` gezogen ist
+// (#673): zwei Blaetter zeigen dieselbe Modulliste mit verschiedenen
+// Bedienelementen, und eine zweite Liste waere die naechste, die driftet.
+// Nur `labelKey`, kein `t()` - diese Datei bleibt ohne DOM und ohne i18n
+// importierbar, weil Tests sie direkt laden.
+export const BUILT_IN_MODULES = Object.freeze([
+  { id: 'dashboard', labelKey: 'nav.dashboard', icon: 'layout-dashboard', locked: true },
+  { id: 'calendar', labelKey: 'nav.calendar', icon: 'calendar' },
+  { id: 'tasks', labelKey: 'nav.tasks', icon: 'check-square' },
+  { id: 'notes', labelKey: 'nav.notes', icon: 'sticky-note' },
+  { id: 'contacts', labelKey: 'nav.contacts', icon: 'book-user' },
+  { id: 'birthdays', labelKey: 'nav.birthdays', icon: 'cake' },
+  { id: 'budget', labelKey: 'nav.budget', icon: 'wallet' },
+  { id: 'documents', labelKey: 'nav.documents', icon: 'folder-lock' },
+  { id: 'inventory', labelKey: 'nav.inventory', icon: 'package' },
+  { id: 'housekeeping', labelKey: 'nav.housekeeping', icon: 'paintbrush' },
+  { id: 'rewards', labelKey: 'nav.rewards', icon: 'award' },
+  { id: 'health', labelKey: 'nav.health', icon: 'heart-pulse' },
+  { id: 'settings', labelKey: 'nav.settings', icon: 'settings', locked: true },
+]);
+
+export const KITCHEN_CHILD_LABEL_KEYS = Object.freeze({
+  meals: 'nav.meals',
+  recipes: 'nav.recipes',
+  shopping: 'nav.shopping',
+  pantry: 'nav.pantry',
+});
+
+export const KITCHEN_CHILD_ICONS = Object.freeze({
+  meals: 'utensils',
+  recipes: 'book-text',
+  shopping: 'shopping-cart',
+  pantry: 'archive',
+});
+
 export const DEFAULT_MOBILE_NAV_ORDER = Object.freeze(['calendar', 'tasks', 'kitchen']);
 export const NAV_SECTION = Object.freeze({
   overview: 0,
@@ -8,6 +49,32 @@ export const NAV_SECTION = Object.freeze({
   finance: 4,
   customModules: 5,
 });
+
+// Die Navigationsgruppen in Anzeigereihenfolge, samt ihren Beschriftungen.
+// Auch das lesen BEIDE Modul-Blaetter (Audit 2026-08-16): sie standen kurz
+// doppelt da, und eine neue Gruppe haette in zwei Dateien nachgetragen werden
+// muessen - dieselbe Drift, gegen die es fuer die Kuechen-Kinder schon einen
+// Guard gibt.
+export const NAV_SECTION_LABEL_KEYS = Object.freeze({
+  [NAV_SECTION.overview]: 'nav.sectionOverview',
+  [NAV_SECTION.plan]: 'nav.sectionPlan',
+  [NAV_SECTION.household]: 'nav.sectionHousehold',
+  [NAV_SECTION.people]: 'nav.sectionPeople',
+  [NAV_SECTION.finance]: 'nav.sectionFinance',
+  [NAV_SECTION.customModules]: 'nav.sectionCustomModules',
+});
+
+export const NAV_SECTIONS = Object.freeze([
+  NAV_SECTION.overview,
+  NAV_SECTION.plan,
+  NAV_SECTION.household,
+  NAV_SECTION.people,
+  NAV_SECTION.finance,
+  NAV_SECTION.customModules,
+]);
+
+// Akzent einer Drittanbieter-Zeile, wenn das Modul keinen eigenen mitbringt.
+export const DEFAULT_MODULE_ACCENT = 'var(--color-accent)';
 
 const KITCHEN_CHILD_ID_SET = new Set(KITCHEN_CHILD_IDS);
 const PLAN_MODULE_IDS = new Set(['calendar', 'tasks', 'notes']);

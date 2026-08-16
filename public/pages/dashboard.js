@@ -23,6 +23,7 @@ import {
 } from '/utils/dashboard-widgets.js';
 import { whoMark } from '/utils/seal-pair.js';
 import { exitWallMode, isWallActive, syncWallMode } from '/utils/wall-mode.js';
+import { rememberLayoutHint, layoutHintSizes } from '/utils/dashboard-layout-hint.js';
 
 // Hält den AbortController des aktuellen FAB-Listeners - wird bei jedem render() erneuert.
 let _fabController = null;
@@ -1127,8 +1128,8 @@ function renderBudgetWidget(budget, currency) {
 /* WARUM DAS EIN WIDGET IST UND KEIN FESTER BLOCK.
  *
  * Der Handoff entwirft eine feste Folge: Gruss, „Heute", Kacheln, Familie,
- * Wetter. `dashboard_widgets` speichert aber Auswahl UND Reihenfolge pro
- * Haushalt - als fester Block waere entweder die Einstellung tot oder das
+ * Wetter. `dashboard_widgets` speichert aber Auswahl UND Reihenfolge, seit #585
+ * je Person - als fester Block waere entweder die Einstellung tot oder das
  * Raster braeche, sobald jemand ein Modul abwaehlt. Als Widget-Typ ordnet die
  * Kachelreihe sich ein, laesst sich verschieben, ausblenden und in der Groesse
  * aendern wie jede andere Kachel, und der Server brauchte dafuer keine Zeile:
@@ -1866,6 +1867,12 @@ function renderDashboardOverview(user, editing = false, weather = null, updatedA
         </div>
         <div class="dashboard-overview__tools">
           ${editing ? `
+          <!-- Die Beruhigung stand nur im Toast NACH dem Speichern, die
+               Unsicherheit sitzt aber DAVOR: während man eine Kachel wegzieht
+               und nicht weiß, ob man sie gerade den Kindern wegnimmt (Critique
+               2026-08-16). Ein Satz im Anpassen-Modus beantwortet sie im
+               richtigen Moment. -->
+          <p class="dashboard-customize-scope">${t('dashboard.customizeScopeHint')}</p>
           <div class="dashboard-customize-toolbar" role="toolbar" aria-label="${t('dashboard.customizeTitle')}">
             <button class="btn btn--ghost" id="dashboard-customize-reset">
               <i data-lucide="rotate-ccw" class="icon-sm" aria-hidden="true"></i>
@@ -2062,27 +2069,13 @@ function renderDashboardLayout(cfg, data, weather, currency, { editing = false, 
  * Der Cache ist bewusst duenn: nur Sichtbarkeit und Groesse, also genau das,
  * was die Kachelform bestimmt. Er ist eine VORHERSAGE, keine Quelle - die
  * Wahrheit bleibt die Serverantwort, und ein veralteter oder kaputter Eintrag
- * faellt still auf den Standard zurueck. */
-const LAYOUT_HINT_KEY = 'yuvomi-dash-layout-hint';
-
-function rememberLayoutHint(cfg) {
-  try {
-    localStorage.setItem(LAYOUT_HINT_KEY, JSON.stringify(
-      cfg.filter((w) => w.visible).map((w) => w.size),
-    ));
-  } catch { /* z.B. voller oder gesperrter Speicher: der Hinweis ist entbehrlich */ }
-}
-
-function layoutHintSizes() {
-  try {
-    const stored = JSON.parse(localStorage.getItem(LAYOUT_HINT_KEY) ?? 'null');
-    if (Array.isArray(stored) && stored.length && stored.every((s) => typeof s === 'string')) return stored;
-  } catch { /* unlesbar: Standard */ }
-  return DEFAULT_WIDGET_CONFIG.filter((w) => w.visible).map((w) => w.size);
-}
+ * faellt still auf den Standard zurueck.
+ *
+ * Er liegt in utils/dashboard-layout-hint.js, weil er seit #585 auch beim
+ * Abmelden verworfen werden muss - die Begruendung steht dort. */
 
 function renderDashboardSkeleton() {
-  const tiles = layoutHintSizes()
+  const tiles = layoutHintSizes(DEFAULT_WIDGET_CONFIG.filter((w) => w.visible).map((w) => w.size))
     .map((size) => `<div class="widget-wrapper ${widgetSizeClass(size)}">${skeletonWidget(3)}</div>`)
     .join('');
   return `
@@ -2966,8 +2959,10 @@ export async function render(container, { user }) {
   // Das Kopfband „Heute auf einen Blick" ist kein Rasterkachel, folgt aber
   // derselben Anpassen-Grammatik wie die Widgets: ausblenden am Block, zurueck
   // ueber die Chip-Leiste, und es faehrt in denselben Speicher-, Abbruch- und
-  // Ruecknahme-Zyklus mit (#740). Haushaltweit wie `dashboard_widgets`, weil
-  // die Uebersicht eine gemeinsame Seite ist.
+  // Ruecknahme-Zyklus mit (#740). Persoenlich wie `dashboard_widgets` (#585):
+  // beide liegen im selben PUT, und ein haushaltweites Kopfband neben einer
+  // persoenlichen Anordnung hiesse, dass ein Ausblenden je nach Element mal
+  // mich und mal alle traefe.
   let glanceVisible = true;
   let savedGlanceVisible = true;
   let isCustomizing = false;
@@ -3088,9 +3083,16 @@ export async function render(container, { user }) {
     rebuildDashboard(widgetConfig);
   }
 
+  /* „ZURÜCKSETZEN" HATTE SEIT #585 ZWEI PLAUSIBLE BEDEUTUNGEN und lieferte eine
+   * dritte (Critique 2026-08-16). Solange die Anordnung dem Haushalt gehörte,
+   * war „auf Standard" eindeutig. Seit sie der Person gehört, kann der Satz auch
+   * „zurück zu dem, was die Familie hatte" oder „zurück zu meinem letzten Stand"
+   * heißen - und keine der beiden trifft zu. Der Folgentext sagt jetzt, was
+   * wirklich passiert, statt es die Nutzerin herausfinden zu lassen. */
   async function resetDashboardConfig() {
     const confirmed = await confirmModal(t('dashboard.customizeResetConfirm'), {
       confirmLabel: t('dashboard.customizeReset'),
+      detail: t('dashboard.customizeResetDetail'),
     });
     if (!confirmed) return;
     widgetConfig = DEFAULT_WIDGET_CONFIG.map((w) => ({ ...w }));

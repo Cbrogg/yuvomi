@@ -2,10 +2,16 @@ import { api } from '/api.js';
 import { t } from '/i18n.js';
 import { esc } from '/utils/html.js';
 import { getPreferences, savePreferences } from '/settings/preferences-cache.js';
-import { toggleRowHtml } from '/settings/components.js';
+import { bindDisclosure, thirdPartyStatusLabel } from '/settings/components.js';
 import {
+  BUILT_IN_MODULES,
+  DEFAULT_MODULE_ACCENT,
+  KITCHEN_CHILD_ICONS,
   KITCHEN_CHILD_IDS,
+  KITCHEN_CHILD_LABEL_KEYS,
   NAV_SECTION,
+  NAV_SECTIONS,
+  NAV_SECTION_LABEL_KEYS,
   expandModuleOrder,
   moduleSection,
   normalizeModuleOrder,
@@ -14,71 +20,21 @@ import {
   sortNavigationItems,
 } from '/settings/module-order.js';
 
-// Eingebaute Module in kanonischer Domänen-Reihenfolge. Dashboard und Settings
-// sind gesperrte Rows (nicht sortierbar, nicht deaktivierbar). Die Kitchen-
-// Kinder werden zu einer expandierbaren Kitchen-Row zusammengefasst.
-const BUILT_IN_MODULES = Object.freeze([
-  { id: 'dashboard', labelKey: 'nav.dashboard', icon: 'layout-dashboard', locked: true },
-  { id: 'calendar', labelKey: 'nav.calendar', icon: 'calendar' },
-  { id: 'tasks', labelKey: 'nav.tasks', icon: 'check-square' },
-  { id: 'notes', labelKey: 'nav.notes', icon: 'sticky-note' },
-  { id: 'contacts', labelKey: 'nav.contacts', icon: 'book-user' },
-  { id: 'birthdays', labelKey: 'nav.birthdays', icon: 'cake' },
-  { id: 'budget', labelKey: 'nav.budget', icon: 'wallet' },
-  { id: 'documents', labelKey: 'nav.documents', icon: 'folder-lock' },
-  { id: 'inventory', labelKey: 'nav.inventory', icon: 'package' },
-  { id: 'housekeeping', labelKey: 'nav.housekeeping', icon: 'paintbrush' },
-  { id: 'rewards', labelKey: 'nav.rewards', icon: 'award' },
-  { id: 'health', labelKey: 'nav.health', icon: 'heart-pulse' },
-  { id: 'settings', labelKey: 'nav.settings', icon: 'settings', locked: true },
-]);
-
-const KITCHEN_CHILD_LABEL_KEYS = Object.freeze({
-  meals: 'nav.meals',
-  recipes: 'nav.recipes',
-  shopping: 'nav.shopping',
-  pantry: 'nav.pantry',
-});
-const KITCHEN_CHILD_ICONS = Object.freeze({
-  meals: 'utensils',
-  recipes: 'book-text',
-  shopping: 'shopping-cart',
-  pantry: 'archive',
-});
-
-const DEFAULT_MODULE_ACCENT = 'var(--color-accent)';
-const NAV_SECTION_LABEL_KEYS = Object.freeze({
-  [NAV_SECTION.overview]: 'nav.sectionOverview',
-  [NAV_SECTION.plan]: 'nav.sectionPlan',
-  [NAV_SECTION.household]: 'nav.sectionHousehold',
-  [NAV_SECTION.people]: 'nav.sectionPeople',
-  [NAV_SECTION.finance]: 'nav.sectionFinance',
-  [NAV_SECTION.customModules]: 'nav.sectionCustomModules',
-});
-const NAV_SECTIONS = Object.freeze([
-  NAV_SECTION.overview,
-  NAV_SECTION.plan,
-  NAV_SECTION.household,
-  NAV_SECTION.people,
-  NAV_SECTION.finance,
-  NAV_SECTION.customModules,
-]);
-
-function thirdPartyStatusLabel(module) {
-  if (module.status === 'error') return t('settings.thirdPartyModulesStatusError');
-  return module.enabled ? t('settings.thirdPartyModulesStatusEnabled') : t('settings.thirdPartyModulesStatusDisabled');
-}
-
 // Baut die geordnete Liste der Navigations-Rows: gesperrte, gewöhnliche, Kitchen
 // (als ein expandierbarer Eintrag) und Drittanbieter-Module — sortiert nach der
 // normalisierten Modul-Reihenfolge der Preferences.
 function buildRows(preferences, thirdPartyModules) {
   const disabled = new Set(Array.isArray(preferences.disabled_modules) ? preferences.disabled_modules : []);
+  // Zwei Mengen, zwei Fragen (#673): `disabled` = gibt es im Haushalt nicht,
+  // `hidden` = will ich nicht in meiner Navigation sehen. Siehe parseHiddenModules
+  // in server/routes/preferences.js.
+  const hidden = new Set(Array.isArray(preferences.hidden_modules) ? preferences.hidden_modules : []);
   const kitchenChildren = KITCHEN_CHILD_IDS.map((id) => ({
     id,
     label: t(KITCHEN_CHILD_LABEL_KEYS[id]),
     icon: KITCHEN_CHILD_ICONS[id],
     enabled: !disabled.has(id),
+    hidden: hidden.has(id),
   }));
 
   const rows = [];
@@ -94,6 +50,7 @@ function buildRows(preferences, thirdPartyModules) {
       label: t(module.labelKey),
       icon: module.icon,
       enabled: module.locked || !disabled.has(module.id),
+      hidden: hidden.has(module.id),
       locked: module.locked === true,
       sortable: module.locked !== true,
     });
@@ -110,6 +67,11 @@ function buildRows(preferences, thirdPartyModules) {
     children: kitchenChildren,
     enabledChildren: kitchenEnabledChildren,
     enabled: kitchenEnabledChildren > 0,
+    // Die Kueche ist EIN Eintrag in der mobilen Navigation, aber vier in der
+    // Seitenleiste. Ihr Ausblenden-Knopf steht deshalb fuer die Gruppe: er gilt
+    // als gedrueckt, wenn kein aktives Kind mehr sichtbar ist, und die einzelnen
+    // Kinder bleiben im aufgeklappten Feld getrennt schaltbar.
+    hidden: kitchenChildren.every((child) => child.hidden || !child.enabled),
     locked: false,
     sortable: true,
   };
@@ -171,16 +133,77 @@ function rowControlsHtml(row) {
   `;
 }
 
-// Toggle-Label ist sr-only: der sichtbare Status-Chip derselben Zeile sagt
-// bereits "Aktiviert"; ein zweites sichtbares "Aktiviert" am Toggle war
-// Doppel-Copy (Audit A2-25b). Gilt ebenso für die Kitchen-Zeile.
-function builtInRowHtml(row, isAdmin) {
-  const statusLabel = row.enabled ? t('settings.thirdPartyModulesStatusEnabled') : t('settings.thirdPartyModulesStatusDisabled');
-  const statusClass = row.enabled ? 'settings-module-status--enabled' : 'settings-module-status--disabled';
+/* EIN BLATT, EINE REICHWEITE (#673, nachgeschärft nach der Critique vom 2026-08-16).
+ *
+ * Dieses Blatt gehört seit dem Umzug des Haushalts-Schalters nach
+ * `modules-active` ganz der Person, die es öffnet: Reihenfolge, mobile Plätze
+ * und dieser Knopf wirken ausschliesslich für sie. Deshalb steht hier nur noch
+ * EIN Bedienelement je Zeile, und der Knopf muss keinen Nachbarn mehr von sich
+ * abgrenzen.
+ *
+ * DREI DINGE, DIE DIE CRITIQUE GEMESSEN HAT UND DIE HIER JETZT ANDERS STEHEN:
+ *
+ * 1. Das Symbol ist FEST `eye-off`. Vorher wechselte es zwischen `eye` und
+ *    `eye-off` und drehte damit das Register der ganzen App um: `eye` heisst in
+ *    Yuvomi überall "zeig mir das" (Dokumentenvorschau, Gesundheit, Backup), es
+ *    ist eine HANDLUNG. Als Zustandsanzeige auf einem Knopf, dessen Beschriftung
+ *    eine Handlung ansagt, war es rückwärts lesbar.
+ * 2. Der zugängliche Name ist STABIL und nennt sein Modul. Vorher trug der Knopf
+ *    gleichzeitig `aria-pressed="true"` und "Für mich einblenden" - eine Ansage,
+ *    die sich selbst widerspricht ("einblenden, gedrückt"). Ein Umschaltknopf
+ *    trägt seinen Zustand in `aria-pressed`, nie zusätzlich im Namen. Und sechzehn
+ *    wortgleiche "Für mich ausblenden" machten die Rotorliste unbrauchbar.
+ * 3. Ein deaktivierter Knopf nennt seinen Grund über `aria-describedby` auf den
+ *    Status-Chip derselben Zeile, statt nur "nicht verfügbar" zu sagen.
+ *
+ * Drittanbieter-Module tragen ihn nicht: `hidden_modules` prüft serverseitig
+ * gegen dieselbe Allowlist wie der Haushalts-Schalter, und die kennt nur die
+ * eingebauten Slugs; ein Knopf, dessen Wert der Server verwirft, wäre eine
+ * Zusage, die niemand einhält.
+ */
+function hideToggleHtml(row) {
+  const label = row.groupLabelKey
+    ? t(row.groupLabelKey)
+    : t('settings.modulesHideForMe', { module: row.label });
+  const describedBy = row.enabled ? '' : ` aria-describedby="module-status-${esc(row.id)}"`;
+  return `
+    <button type="button" class="settings-module-hide" data-module-hide="${esc(row.id)}"
+            aria-pressed="${row.hidden ? 'true' : 'false'}" ${row.enabled ? '' : 'disabled'}
+            aria-label="${esc(label)}" title="${esc(label)}"${describedBy}>
+      <i data-lucide="eye-off" aria-hidden="true"></i>
+    </button>
+  `;
+}
+
+/* EIN STATUSKANAL JE ZEILE (Critique 2026-08-16, P0).
+ *
+ * Vorher trug eine ausgeblendete Zeile ZWEI Statusworte nebeneinander -
+ * "Aktiviert · Für mich ausgeblendet" -, und das betonte davon war das falsche:
+ * "Aktiviert" ist eine gefüllte grüne Pille, "Für mich ausgeblendet" war grauer
+ * Text. Als Endzustand des Ablaufs sagte die Zeile gleichzeitig "an" und "weg".
+ *
+ * Seit der Haushalts-Schalter drüben auf `modules-active` steht, ist "Aktiviert"
+ * hier ohnehin keine Nachricht mehr: was hier steht, ist aktiv, sonst stünde es
+ * nicht in der Navigation. Ein Chip erscheint deshalb nur noch, wenn er etwas
+ * erklärt - meine Ausblendung, oder das Fehlen im Haushalt, das den Knopf
+ * sperrt und über `aria-describedby` auch angesagt wird.
+ */
+function statusChipHtml(row) {
+  if (!row.enabled) {
+    return `<span class="settings-module-status settings-module-status--disabled" id="module-status-${esc(row.id)}">${esc(t('settings.thirdPartyModulesStatusDisabled'))}</span>`;
+  }
+  if (row.hidden) {
+    return `<span class="settings-module-status settings-module-status--hidden">${esc(t('settings.modulesHiddenForMe'))}</span>`;
+  }
+  return '';
+}
+
+function builtInRowHtml(row) {
   const stateClass = row.enabled ? 'settings-module-row--enabled' : 'settings-module-row--disabled';
   const lockedClass = row.locked ? ' settings-module-row--locked' : '';
+  const hiddenClass = row.hidden && row.enabled ? ' settings-module-row--hidden' : '';
   return `
-    <div class="settings-module-row settings-module-row--sortable ${stateClass}${lockedClass}${row.sortable ? '' : ' settings-module-row--fixed'}" data-module-row-id="${esc(row.orderId)}"${row.sortable ? ` draggable="true" data-module-order-id="${esc(row.orderId)}"` : ''}>
+    <div class="settings-module-row settings-module-row--sortable ${stateClass}${lockedClass}${hiddenClass}${row.sortable ? '' : ' settings-module-row--fixed'}" data-module-row-id="${esc(row.orderId)}"${row.sortable ? ` draggable="true" data-module-order-id="${esc(row.orderId)}"` : ''}>
       ${rowControlsHtml(row)}
       <div class="settings-module-row__icon">
         <i data-lucide="${esc(row.icon)}" aria-hidden="true"></i>
@@ -189,26 +212,34 @@ function builtInRowHtml(row, isAdmin) {
         <div class="settings-module-row__title">
           <strong>${esc(row.label)}</strong>
           ${row.locked ? `<span class="settings-module-origin">${esc(t('settings.modulesBuiltInBadge'))}</span>` : ''}
-          <span class="settings-module-status ${statusClass}">${esc(statusLabel)}</span>
+          ${statusChipHtml(row)}
         </div>
       </div>
-      ${isAdmin ? toggleRowHtml({
-        label: t('settings.thirdPartyModulesEnableLabel'),
-        checked: row.enabled,
-        disabled: row.locked,
-        className: 'settings-module-row__toggle',
-        labelVisible: false,
-        attrs: { 'data-built-in-module-toggle': row.id },
-      }) : ''}
+      ${row.locked ? '' : hideToggleHtml(row)}
     </div>
   `;
 }
 
-function kitchenRowHtml(row, isAdmin) {
-  const statusLabel = row.enabled ? t('settings.thirdPartyModulesStatusEnabled') : t('settings.thirdPartyModulesStatusDisabled');
+/* DIE KÜCHE IST EIN EINTRAG UND VIER STATIONEN (Critique 2026-08-16, P2).
+ *
+ * Drei gemessene Befunde stehen hier jetzt anders: der Gruppen-Knopf stand am
+ * Desktop 42px rechts der Augenspalte aller anderen Zeilen (die Küchenzeile
+ * füllt die letzte Rasterspalte nicht, `auto` kollabierte dort auf 0), er trug
+ * denselben Namen wie die Einzelknöpfe, obwohl er vier Module auf einmal
+ * betrifft, und in den Kindzeilen lag er auf der ANDEREN Seite als in der
+ * Elternzeile - dieselben zwei Entscheidungen tauschten innerhalb einer
+ * aufgeklappten Karte die Seite.
+ *
+ * Die Kinder liegen deshalb jetzt in derselben Ordnung wie ihre Elternzeile
+ * (Symbol und Beschriftung links, Ausblenden rechts), der Gruppen-Knopf hat
+ * seinen eigenen Namen, und die Spalte wird im Stylesheet erzwungen statt
+ * dem Raster überlassen.
+ */
+function kitchenRowHtml(row) {
   const stateClass = row.enabled ? 'settings-module-row--enabled' : 'settings-module-row--disabled';
+  const hiddenClass = row.hidden && row.enabled ? ' settings-module-row--hidden' : '';
   return `
-    <div class="settings-module-row settings-module-row--sortable settings-module-row--kitchen ${stateClass}" data-module-row-id="${esc(row.orderId)}" draggable="true" data-module-order-id="${esc(row.orderId)}">
+    <div class="settings-module-row settings-module-row--sortable settings-module-row--kitchen ${stateClass}${hiddenClass}" data-module-row-id="${esc(row.orderId)}" draggable="true" data-module-order-id="${esc(row.orderId)}">
       ${rowControlsHtml(row)}
       <div class="settings-module-row__icon">
         <i data-lucide="${esc(row.icon)}" aria-hidden="true"></i>
@@ -216,26 +247,24 @@ function kitchenRowHtml(row, isAdmin) {
       <div class="settings-module-row__body">
         <div class="settings-module-row__title">
           <strong>${esc(row.label)}</strong>
-          <span class="settings-module-status ${row.enabled ? 'settings-module-status--enabled' : 'settings-module-status--disabled'}">${esc(statusLabel)}</span>
+          ${statusChipHtml(row)}
         </div>
         <button type="button" class="settings-disclosure__trigger settings-module-kitchen__trigger" aria-expanded="false" data-kitchen-expand>
           <i data-lucide="chevron-down" class="settings-disclosure__icon" aria-hidden="true"></i>
           <span>${t('settings.kitchenActiveCount', { count: row.enabledChildren })}</span>
         </button>
         <div class="settings-disclosure__panel settings-module-kitchen__children" data-kitchen-children hidden>
-          ${row.children.map((child) => (isAdmin ? toggleRowHtml({
-            label: child.label,
-            checked: child.enabled,
-            className: 'settings-module-kitchen__child',
-            icon: child.icon,
-            attrs: { 'data-kitchen-child-toggle': child.id },
-          }) : `
-            <div class="settings-module-kitchen__child settings-module-kitchen__child--readonly">
-              <i data-lucide="${esc(child.icon)}" aria-hidden="true"></i>
-              <span>${esc(child.label)}</span>
-            </div>`)).join('')}
+          ${row.children.map((child) => `
+            <div class="settings-module-kitchen__child-row">
+              <div class="settings-module-kitchen__child">
+                <i data-lucide="${esc(child.icon)}" aria-hidden="true"></i>
+                <span>${esc(child.label)}</span>
+              </div>
+              ${hideToggleHtml(child)}
+            </div>`).join('')}
         </div>
       </div>
+      ${hideToggleHtml({ ...row, id: 'kitchen', groupLabelKey: 'settings.modulesHideKitchenForMe' })}
     </div>
   `;
 }
@@ -260,29 +289,24 @@ function thirdPartyRowHtml(row) {
         </div>
         ${row.error ? `<p class="form-error">${esc(row.error)}</p>` : ''}
       </div>
-      ${toggleRowHtml({
-        label: t('settings.thirdPartyModulesEnableLabel'),
-        checked: row.enabled,
-        disabled: row.toggleDisabled,
-        className: 'settings-module-row__toggle',
-        labelVisible: false,
-        attrs: { 'data-third-party-module-toggle': row.id },
-      })}
     </div>
   `;
 }
 
-function rowHtml(row, isAdmin) {
-  if (row.type === 'kitchen') return kitchenRowHtml(row, isAdmin);
+function rowHtml(row) {
+  if (row.type === 'kitchen') return kitchenRowHtml(row);
   // Drittanbieter-Zeilen erreichen Mitglieder nie: /modules?admin=1 wird für sie
   // gar nicht abgefragt, thirdPartyModules bleibt leer.
   if (row.type === 'third-party') return thirdPartyRowHtml(row);
-  return builtInRowHtml(row, isAdmin);
+  return builtInRowHtml(row);
 }
 
 function mobileCandidateRows(rows) {
   return rows.filter((row) => (
     row.enabled
+    // Wer ein Modul aus seiner Navigation nimmt, will es auch nicht als
+    // Mobil-Favorit angeboten bekommen (#673).
+    && !row.hidden
     && !row.locked
     && row.sortable
     && !row.menuHidden
@@ -309,7 +333,7 @@ function mobileSlotHtml(rows, selectedIds, index) {
   `;
 }
 
-function desktopGroupHtml(section, rows, isAdmin) {
+function desktopGroupHtml(section, rows) {
   const sectionRows = rows.filter((row) => row.section === section);
   if (!sectionRows.length) return '';
 
@@ -317,16 +341,16 @@ function desktopGroupHtml(section, rows, isAdmin) {
     <section class="settings-navigation-group" data-module-section="${section}">
       <h3 class="settings-navigation-group__title">${esc(t(NAV_SECTION_LABEL_KEYS[section]))}</h3>
       <div class="row-carrier settings-modules-list settings-modules-list--sortable" data-module-list>
-        ${sectionRows.map((row) => rowHtml(row, isAdmin)).join('')}
+        ${sectionRows.map((row) => rowHtml(row)).join('')}
       </div>
     </section>
   `;
 }
 
-function renderPage(container, rows, mobileOrder, isAdmin) {
+function renderPage(container, rows, mobileOrder) {
   container.replaceChildren();
   const desktopGroups = rows.length
-    ? `<div class="settings-navigation-groups" id="module-toggles">${NAV_SECTIONS.map((section) => desktopGroupHtml(section, rows, isAdmin)).join('')}</div>`
+    ? `<div class="settings-navigation-groups" id="module-toggles">${NAV_SECTIONS.map((section) => desktopGroupHtml(section, rows)).join('')}</div>`
     : `
       <div class="empty-state empty-state--compact">
         <div class="empty-state__title">${t('settings.thirdPartyModulesEmptyTitle')}</div>
@@ -348,7 +372,7 @@ function renderPage(container, rows, mobileOrder, isAdmin) {
         <h2 class="settings-navigation-panel__title">${t('settings.desktopNavigationTitle')}</h2>
         <p class="form-hint">${t('settings.desktopNavigationHint')}</p>
         <p class="form-hint">${t('settings.modulesDragHint')}</p>
-        ${isAdmin ? '' : `<p class="form-hint">${t('settings.modulesEnableAdminOnly')}</p>`}
+        <p class="form-hint">${t('settings.modulesHiddenScopeHint')}</p>
         ${desktopGroups}
       </section>
     </section>
@@ -365,42 +389,36 @@ function collectVisibleGlobalOrder(list) {
     .filter(Boolean);
 }
 
-function collectOrdinaryDisabledIds(list) {
-  return [...list.querySelectorAll('[data-built-in-module-toggle]')]
-    .filter((input) => !input.checked)
-    .map((input) => input.dataset.builtInModuleToggle);
-}
-
-function collectEnabledKitchenChildren(list) {
-  return new Set(
-    [...list.querySelectorAll('[data-kitchen-child-toggle]')]
-      .filter((input) => input.checked)
-      .map((input) => input.dataset.kitchenChildToggle),
-  );
-}
-
-// Reine, testbare Berechnung der Save-Payload: gewöhnliche disabled IDs plus die
-// nicht aktivierten Kitchen-Kinder ergeben `disabled_modules`; die sichtbare
-// Order (inkl. dem einen Kitchen-Eintrag) wird via expandModuleOrder zurück auf
-// die kanonischen Kitchen-Kinder erweitert.
-export function buildNavigationPayload(ordinaryDisabledIds, enabledKitchenChildren, visibleGlobalOrder) {
-  return {
-    disabled_modules: [
-      ...ordinaryDisabledIds,
-      ...KITCHEN_CHILD_IDS.filter((id) => !enabledKitchenChildren.has(id)),
-    ],
-    module_order: expandModuleOrder(visibleGlobalOrder),
-  };
+/**
+ * Die persönlich ausgeblendeten Module aus dem gerenderten Blatt lesen (#673).
+ *
+ * Der Gruppenknopf der Küche trägt `kitchen`, ein Slug, den der Server nicht
+ * kennt - er wird hier auf seine vier Kinder aufgelöst, so wie `expandModuleOrder`
+ * es für die Reihenfolge tut. Gedrückt ist er ohnehin nur, wenn alle vier
+ * ausgeblendet sind, insofern ist das keine zusätzliche Regel, sondern dieselbe.
+ */
+export function collectHiddenModuleIds(buttons) {
+  const ids = new Set();
+  for (const btn of buttons) {
+    if (btn.getAttribute('aria-pressed') !== 'true') continue;
+    const id = btn.dataset.moduleHide;
+    if (!id) continue;
+    if (id === 'kitchen') KITCHEN_CHILD_IDS.forEach((child) => ids.add(child));
+    else ids.add(id);
+  }
+  return [...ids];
 }
 
 /**
- * Save-Payload für Nicht-Admins: nur die persönliche Reihenfolge.
+ * Save-Payload dieses Blatts: ausschliesslich Persönliches.
  *
- * `disabled_modules` ist haushaltweit und serverseitig auf Admins beschränkt
- * (server/routes/preferences.js, 403). Würde ein Mitglied den gemeinsamen
- * Payload senden, scheiterte der **ganze** Request und seine Reihenfolge
- * speicherte nie. Für Admins bleibt buildNavigationPayload zuständig, damit
- * Order und Aktivierung wie bisher gemeinsam und konsistent geschrieben werden.
+ * Bis zur Critique vom 2026-08-16 gab es hier zwei Payloads - eine für
+ * Mitglieder (nur Reihenfolge) und eine für Admins (Reihenfolge PLUS
+ * `disabled_modules`), weil der haushaltweite Schalter auf demselben Blatt
+ * stand. Beides ist weg: der Schalter wohnt auf `modules-active`, und damit
+ * schickt dieses Blatt für JEDE Rolle denselben Satz Schlüssel. Eine Payload,
+ * die nicht mehr wissen muss, wer sie absendet, kann auch nicht mehr die
+ * falsche sein.
  *
  * Verwaiste IDs sind unkritisch: normalizeModuleOrder filtert nicht gegen die
  * aktivierten Module, aber buildRows sortiert nur - eine ID ohne passende Zeile
@@ -418,65 +436,31 @@ export function buildMobileNavigationPayload(order) {
   };
 }
 
-// Reine, testbare Toggle-Persistenz: deaktiviert den Input während des Saves,
-// stellt bei Fehlschlag den vorherigen Zustand wieder her und re-rendert nur bei
-// erfolgreichem Save (ein fehlschlagender Re-Render darf NICHT den Restore-Pfad
-// auslösen).
-export async function persistModuleToggle(input, enabled, save, rerender) {
-  input.disabled = true;
-  try {
-    await save();
-  } catch (error) {
-    input.checked = !enabled;
-    input.disabled = false;
-    throw error;
-  }
-  await rerender();
-}
-
-async function saveNavigationState(list, isAdmin) {
-  const payload = isAdmin
-    ? buildNavigationPayload(
-      collectOrdinaryDisabledIds(list),
-      collectEnabledKitchenChildren(list),
-      collectVisibleGlobalOrder(list),
-    )
-    : buildOrderPayload(collectVisibleGlobalOrder(list));
+async function saveNavigationState(list) {
+  const payload = {
+    ...buildOrderPayload(collectVisibleGlobalOrder(list)),
+    hidden_modules: collectHiddenModuleIds(list.querySelectorAll('[data-module-hide]')),
+  };
   const response = await savePreferences(payload);
-  const savedOrder = response?.data?.module_order ?? payload.module_order;
-  if (isAdmin) {
-    const savedDisabled = response?.data?.disabled_modules ?? payload.disabled_modules;
-    window.yuvomi?.setDisabledModules?.(savedDisabled);
-  }
-  window.yuvomi?.setModuleOrder?.(savedOrder);
+  window.yuvomi?.setHiddenModules?.(response?.data?.hidden_modules ?? payload.hidden_modules);
+  window.yuvomi?.setModuleOrder?.(response?.data?.module_order ?? payload.module_order);
 }
 
-function bindKitchenDisclosure(container) {
-  const trigger = container.querySelector('[data-kitchen-expand]');
-  const panel = container.querySelector('[data-kitchen-children]');
-  if (!trigger || !panel) return;
-  trigger.addEventListener('click', () => {
-    const expanded = trigger.getAttribute('aria-expanded') === 'true';
-    trigger.setAttribute('aria-expanded', String(!expanded));
-    panel.hidden = expanded;
-  });
-}
-
-function bindModuleListEvents(container, user) {
+function bindModuleListEvents(container, user, rows) {
   const list = container.querySelector('#module-toggles');
   if (!list) return;
-  const isAdmin = user?.role === 'admin';
   let dragged = null;
   let dragStartOrder = '';
   let savingOrder = false;
+  let busy = false;
 
   const saveIfChanged = async (previousOrder) => {
     const currentOrder = collectVisibleGlobalOrder(list).join('|');
     if (currentOrder === previousOrder || savingOrder) return;
     savingOrder = true;
     try {
-      await saveNavigationState(list, isAdmin);
-      window.yuvomi?.showToast(t('settings.modulesSaved'), 'success');
+      await saveNavigationState(list);
+      window.yuvomi?.showToast(t('settings.modulesOrderSaved'), 'success');
     } catch (error) {
       window.yuvomi?.showToast(error.message ?? t('common.errorGeneric'), 'danger');
       await render(container, { user });
@@ -538,30 +522,131 @@ function bindModuleListEvents(container, user) {
     await saveIfChanged(previousOrder);
   });
 
-  list.addEventListener('change', async (event) => {
-    const input = event.target.closest(
-      '[data-built-in-module-toggle], [data-third-party-module-toggle], [data-kitchen-child-toggle]',
-    );
-    if (!input) return;
-    const enabled = input.checked;
+  /* AUSBLENDEN OHNE DEN FOKUS ZU VERLIEREN (Critique 2026-08-16, P1).
+   *
+   * Vorher rief dieser Pfad im Erfolgs- UND im Fehlerfall `render()` und baute
+   * damit das ganze Blatt neu. Gemessen war der Tastaturfokus danach auf
+   * `document.body`: wer drei Module ausblenden will, tabbt sich dreimal durch
+   * bis zu 53 Bedienelemente zurück - bei einer Funktion, die man typischerweise
+   * mehrfach hintereinander benutzt.
+   *
+   * Der Zustand wird deshalb in der Zeile getauscht statt neu gebaut. Der
+   * Vollrender bleibt genau dort, wo er hingehört: im Fehlerfall, wo der
+   * Serverstand die Wahrheit ist und der Fokus das kleinere Problem.
+   */
+  list.addEventListener('click', async (event) => {
+    const btn = event.target.closest('[data-module-hide]');
+    if (!btn || btn.disabled || busy) return;
+    const wasHidden = btn.getAttribute('aria-pressed') === 'true';
+    const previousMobile = readMobileSlotValues(container);
+
+    applyHiddenState(btn, !wasHidden);
+    markRowHidden(rows, btn.dataset.moduleHide, !wasHidden);
+    // Der Gruppenknopf der Kueche zieht seine vier Kinder mit, sonst laese
+    // collectHiddenModuleIds gleich darauf einen Zustand, den niemand gesetzt hat.
+    if (btn.dataset.moduleHide === 'kitchen') {
+      for (const child of list.querySelectorAll('[data-module-hide]')) {
+        if (child !== btn && KITCHEN_CHILD_IDS.includes(child.dataset.moduleHide) && !child.disabled) {
+          applyHiddenState(child, !wasHidden);
+        }
+      }
+    }
+    // NICHT `disabled` waehrend des Speicherns: ein deaktivierter Knopf gibt den
+    // Fokus ab, und genau den sollte dieser Pfad behalten (gemessen: sonst
+    // landet er trotz In-place-Update auf `body`). Entprellt wird ueber eine
+    // Sperre im Closure; `aria-busy` sagt der Hilfstechnik, dass gerade
+    // geschrieben wird.
+    busy = true;
+    btn.setAttribute('aria-busy', 'true');
+
     try {
-      await persistModuleToggle(
-        input,
-        enabled,
-        async () => {
-          if (input.dataset.thirdPartyModuleToggle) {
-            await api.patch(`/modules/${encodeURIComponent(input.dataset.thirdPartyModuleToggle)}`, { enabled });
-            await window.yuvomi?.refreshThirdPartyModules?.();
-          }
-          await saveNavigationState(list, isAdmin);
-          window.yuvomi?.showToast(t('settings.thirdPartyModulesSaved'), 'success');
-        },
-        () => render(container, { user }),
-      );
+      await saveNavigationState(list);
+      busy = false;
+      btn.removeAttribute('aria-busy');
+      refreshMobileSlots(container, rows, user);
+      window.yuvomi?.showToast(hideToastMessage(container, previousMobile), 'success');
     } catch (error) {
+      busy = false;
+      btn.removeAttribute('aria-busy');
       window.yuvomi?.showToast(error.message ?? t('common.errorGeneric'), 'danger');
+      await render(container, { user });
     }
   });
+}
+
+/* EIN AUFRÄUM-KLICK, DER DIE UNTERE LEISTE UMSCHREIBT, SAGT ES (Critique 2026-08-16, P1).
+ *
+ * Gemessen: wer den Kalender ausblendet, dessen drei Mobil-Plätze springen von
+ * [Kalender, Aufgaben, Küche] auf [Aufgaben, Küche, Notizen] - Notizen hat
+ * niemand gewählt. `resolveMobileNavOrder` füllt aus den Voreinstellungen nach,
+ * sobald ein gewähltes Ziel nicht mehr zur Verfügung steht, und das ist auch
+ * richtig so: eine leere Position wäre schlechter. Falsch war das Schweigen.
+ *
+ * Die eigene Wahl geht dabei nicht verloren - `mobile_nav_order` bleibt
+ * unangetastet und kommt beim Wieder-Einblenden zurück. Genau das kann der Toast
+ * sagen, statt es die Nutzerin am Telefon entdecken zu lassen.
+ */
+function readMobileSlotValues(container) {
+  return [...container.querySelectorAll('[data-mobile-nav-slot]')].map((select) => select.value);
+}
+
+function slotLabel(container, index) {
+  const select = container.querySelectorAll('[data-mobile-nav-slot]')[index];
+  return select?.selectedOptions?.[0]?.textContent?.trim() ?? '';
+}
+
+function hideToastMessage(container, previousMobile) {
+  const current = readMobileSlotValues(container);
+  const changed = current.findIndex((value, index) => value !== previousMobile[index]);
+  if (changed === -1) return t('settings.modulesSaved');
+  return t('settings.modulesHiddenSavedSlot', {
+    position: changed + 1,
+    module: slotLabel(container, changed),
+  });
+}
+
+/** Die drei Auswahlfelder neu aufbauen, ohne das übrige Blatt anzufassen. */
+function refreshMobileSlots(container, rows, user) {
+  const wrap = container.querySelector('.settings-mobile-nav-slots');
+  if (!wrap) return;
+  const previous = readMobileSlotValues(container);
+  const candidates = mobileCandidateRows(rows);
+  const order = resolveMobileNavOrder(previous, candidates.map((row) => row.orderId));
+  wrap.replaceChildren();
+  wrap.insertAdjacentHTML('beforeend',
+    [0, 1, 2].map((index) => mobileSlotHtml(candidates, order, index)).join(''));
+  bindMobileNavigationEvents(container, user);
+}
+
+/** Den Zustand auch im Datenmodell nachziehen - die Mobil-Kandidaten lesen ihn. */
+function markRowHidden(rows, id, hidden) {
+  if (!Array.isArray(rows) || !id) return;
+  for (const row of rows) {
+    if (row.id === id) row.hidden = hidden;
+    if (id === 'kitchen' && Array.isArray(row.children)) {
+      row.children.forEach((child) => { if (child.enabled) child.hidden = hidden; });
+    }
+    if (Array.isArray(row.children) && row.children.some((child) => child.id === id)) {
+      row.children.forEach((child) => { if (child.id === id) child.hidden = hidden; });
+      row.hidden = row.children.every((child) => child.hidden || !child.enabled);
+    }
+  }
+}
+
+/** Zustand einer Zeile umlegen, ohne das Blatt neu zu bauen. */
+function applyHiddenState(btn, hidden) {
+  btn.setAttribute('aria-pressed', String(hidden));
+  const row = btn.closest('.settings-module-row');
+  if (!row) return;
+  row.classList.toggle('settings-module-row--hidden', hidden && !row.classList.contains('settings-module-row--disabled'));
+  const title = row.querySelector('.settings-module-row__title');
+  const chip = title?.querySelector('.settings-module-status--hidden');
+  if (hidden && title && !chip && !row.classList.contains('settings-module-row--disabled')) {
+    title.insertAdjacentHTML('beforeend',
+      `<span class="settings-module-status settings-module-status--hidden">${esc(t('settings.modulesHiddenForMe'))}</span>`);
+  } else if (!hidden && chip) {
+    chip.remove();
+  }
 }
 
 function bindMobileNavigationEvents(container, user) {
@@ -604,8 +689,8 @@ export async function render(container, { user }) {
   const rows = buildRows(preferences, thirdPartyModules);
   const availableMobileIds = mobileCandidateRows(rows).map((row) => row.orderId);
   const mobileOrder = resolveMobileNavOrder(preferences.mobile_nav_order, availableMobileIds);
-  renderPage(container, rows, mobileOrder, isAdmin);
-  bindKitchenDisclosure(container);
-  bindModuleListEvents(container, user);
+  renderPage(container, rows, mobileOrder);
+  bindDisclosure(container, { triggerSelector: '[data-kitchen-expand]', panelSelector: '[data-kitchen-children]', id: 'kitchen-children-navigation' });
+  bindModuleListEvents(container, user, rows);
   bindMobileNavigationEvents(container, user);
 }
