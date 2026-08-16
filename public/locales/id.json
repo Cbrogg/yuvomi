@@ -1901,7 +1901,6 @@
         "thirdPartyModulesEmptyTitle": "Tidak ada modul ditemukan",
         "thirdPartyModulesEmptyHint": "Salin folder modul ke modules/ dan perbarui halaman ini.",
         "thirdPartyModulesFolder": "Folder: modules/{{id}}",
-        "thirdPartyModulesEnableLabel": "Diaktifkan",
         "thirdPartyModulesStatusEnabled": "Diaktifkan",
         "thirdPartyModulesStatusDisabled": "Dinonaktifkan",
         "thirdPartyModulesStatusError": "Kesalahan",

@@ -2369,6 +2369,17 @@
   min-width: 0;
 }
 
+/* Ein einzeln ausgeblendetes Kind toent SEINE Zeile - nicht die der Gruppe.
+   Bis zur Review lief der Zustand ueber `closest('.settings-module-row')` und
+   landete damit auf der Kuechenzeile: ein verstecktes Rezepte-Modul toente die
+   ganze Kueche und haengte ihr den Chip an, obwohl die Gruppe sichtbar blieb.
+   Dieselbe Sprosse der Toenungsskala wie bei einer ganzen Zeile, eine Ebene
+   tiefer angewandt. */
+.settings-module-kitchen__child-row--hidden {
+  background: color-mix(in srgb, var(--color-accent) var(--tint-wash), transparent);
+  border-radius: var(--radius-sm);
+}
+
 /* Unterhalb der Lesebreite bricht die Kindzeile um, statt ihren Knopf zu
    quetschen: gemessen schrumpfte er bei 200% Wurzelschrift auf 38px Breite und
    riss damit sein Beruehrungsziel. Ein Container-Query, kein Viewport-Breakpoint
@@ -2561,17 +2572,15 @@
     padding-inline: var(--space-2);
   }
 
-  /* EINE KLASSE, DIE ZWEI DINGE BEDEUTETE (Audit 2026-08-16, P0).
-     Hier stand `--fixed`, und die Regel meinte damit "gesperrte Zeile": ihr
-     Schalter ist ohnehin wirkungslos, also nimmt das Telefon ihn weg. `--fixed`
-     heisst aber woertlich nur "drei Rasterspalten statt fuenf" - und als das
-     neue Blatt `modules-active` genau das brauchte, verschwanden dort ALLE elf
-     Schalter unter 640px. Gemessen: 0x0, `display: none`, auf dem einzigen
-     Blatt, das Module abschalten kann, und auf dem Geraet, das dieser Haushalt
-     am haeufigsten benutzt. Die Regel nennt jetzt, was sie meint. */
-  .settings-module-row--locked .settings-module-row__toggle {
-    display: none;
-  }
+  /* HIER STAND EINE REGEL, DIE NIEMANDEN MEHR TRIFFT (Audit 2026-08-16, P0).
+     Sie versteckte auf dem Telefon den Schalter gesperrter Zeilen - der ist
+     wirkungslos, also kostete er nur Platz. Sie hing an `--fixed`, und das
+     heisst woertlich "drei Rasterspalten": als das neue Blatt `modules-active`
+     genau das brauchte, verschwanden dort ALLE elf Schalter unter 640px.
+     Auf `--locked` umgehaengt traf sie nichts mehr - gesperrte Zeilen stehen
+     nur auf dem Navigationsblatt, und das rendert seit dem Split gar keine
+     Schalter. Eine Regel ohne Traeger ist keine Zusicherung, sondern eine
+     Notiz; deshalb steht hier die Notiz und nicht die Regel. */
 
   /* Der "Aktiviert"-Chip verschwindet hier, weil der Schalter daneben dasselbe
      sagt. `--disabled` bleibt seit 2026-08-16 STEHEN: auf dem Navigationsblatt

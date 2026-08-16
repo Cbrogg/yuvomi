@@ -1889,7 +1889,6 @@
         "thirdPartyModulesEmptyTitle": "कोई मॉड्यूल नहीं मिला",
         "thirdPartyModulesEmptyHint": "किसी मॉड्यूल फ़ोल्डर को modules/ में कॉपी करें और यह पेज रीफ़्रेश करें।",
         "thirdPartyModulesFolder": "फ़ोल्डर: modules/{{id}}",
-        "thirdPartyModulesEnableLabel": "Enabled",
         "thirdPartyModulesStatusEnabled": "Enabled",
         "thirdPartyModulesStatusDisabled": "Disabled",
         "thirdPartyModulesStatusError": "Error",

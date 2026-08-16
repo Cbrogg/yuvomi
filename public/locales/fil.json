@@ -1924,7 +1924,6 @@
         "thirdPartyModulesEmptyTitle": "Walang natagpuang modyul",
         "thirdPartyModulesEmptyHint": "Kopyahin ang folder ng modyul sa modules/ at i-refresh ang pahinang ito.",
         "thirdPartyModulesFolder": "Folder: modules/{{id}}",
-        "thirdPartyModulesEnableLabel": "Naka-enable",
         "thirdPartyModulesStatusEnabled": "Naka-enable",
         "thirdPartyModulesStatusDisabled": "Naka-disable",
         "thirdPartyModulesStatusError": "Error",

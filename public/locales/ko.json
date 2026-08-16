@@ -1901,7 +1901,6 @@
         "thirdPartyModulesEmptyTitle": "모듈을 찾을 수 없음",
         "thirdPartyModulesEmptyHint": "모듈 폴더를 modules/에 복사하고 이 페이지를 새로고침하세요.",
         "thirdPartyModulesFolder": "폴더: modules/{{id}}",
-        "thirdPartyModulesEnableLabel": "활성화됨",
         "thirdPartyModulesStatusEnabled": "활성화됨",
         "thirdPartyModulesStatusDisabled": "비활성화됨",
         "thirdPartyModulesStatusError": "오류",

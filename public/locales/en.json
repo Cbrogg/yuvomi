@@ -1912,7 +1912,6 @@
         "thirdPartyModulesEmptyTitle": "No modules found",
         "thirdPartyModulesEmptyHint": "Copy a module folder into modules/ and refresh this page.",
         "thirdPartyModulesFolder": "Folder: modules/{{id}}",
-        "thirdPartyModulesEnableLabel": "Enabled",
         "thirdPartyModulesStatusEnabled": "Enabled",
         "thirdPartyModulesStatusDisabled": "Disabled",
         "thirdPartyModulesStatusError": "Error",

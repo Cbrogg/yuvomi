@@ -1901,7 +1901,6 @@
         "thirdPartyModulesEmptyTitle": "ماژولی یافت نشد",
         "thirdPartyModulesEmptyHint": "یک پوشه ماژول را در modules/ کپی کرده و این صفحه را به‌روزرسانی کنید.",
         "thirdPartyModulesFolder": "پوشه: modules/{{id}}",
-        "thirdPartyModulesEnableLabel": "فعال",
         "thirdPartyModulesStatusEnabled": "فعال",
         "thirdPartyModulesStatusDisabled": "غیرفعال",
         "thirdPartyModulesStatusError": "خطا",

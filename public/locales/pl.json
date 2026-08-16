@@ -1901,7 +1901,6 @@
         "thirdPartyModulesEmptyTitle": "Nie znaleziono modułów",
         "thirdPartyModulesEmptyHint": "Skopiuj folder modułu do modules/ i odśwież tę stronę.",
         "thirdPartyModulesFolder": "Folder: modules/{{id}}",
-        "thirdPartyModulesEnableLabel": "Enabled",
         "thirdPartyModulesStatusEnabled": "Enabled",
         "thirdPartyModulesStatusDisabled": "Disabled",
         "thirdPartyModulesStatusError": "Error",

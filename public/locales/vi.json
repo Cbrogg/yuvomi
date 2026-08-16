@@ -1866,7 +1866,6 @@
         "thirdPartyModulesEmptyTitle": "Không tìm thấy mô-đun nào",
         "thirdPartyModulesEmptyHint": "Sao chép thư mục mô-đun vào modules/ và làm mới trang này.",
         "thirdPartyModulesFolder": "Thư mục: modules/{{id}}",
-        "thirdPartyModulesEnableLabel": "Đã bật",
         "thirdPartyModulesStatusEnabled": "Đã bật",
         "thirdPartyModulesStatusDisabled": "Đã tắt",
         "thirdPartyModulesStatusError": "Lỗi",

@@ -1889,7 +1889,6 @@
         "thirdPartyModulesEmptyTitle": "モジュールが見つかりません",
         "thirdPartyModulesEmptyHint": "モジュールのフォルダーを modules/ にコピーして、このページを再読み込みしてください。",
         "thirdPartyModulesFolder": "フォルダー: modules/{{id}}",
-        "thirdPartyModulesEnableLabel": "Enabled",
         "thirdPartyModulesStatusEnabled": "Enabled",
         "thirdPartyModulesStatusDisabled": "Disabled",
         "thirdPartyModulesStatusError": "Error",

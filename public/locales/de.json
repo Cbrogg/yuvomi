@@ -1924,7 +1924,6 @@
         "thirdPartyModulesEmptyTitle": "Keine Module gefunden",
         "thirdPartyModulesEmptyHint": "Kopiere einen Modulordner nach modules/ und aktualisiere diese Seite.",
         "thirdPartyModulesFolder": "Ordner: modules/{{id}}",
-        "thirdPartyModulesEnableLabel": "Aktiviert",
         "thirdPartyModulesStatusEnabled": "Aktiviert",
         "thirdPartyModulesStatusDisabled": "Deaktiviert",
         "thirdPartyModulesStatusError": "Fehler",

@@ -53,6 +53,7 @@ import {
 } from '../public/settings/pages/modules-navigation.js';
 import {
   buildActiveModulesPayload,
+  persistHouseholdToggle,
 } from '../public/settings/pages/modules-active.js';
 
 const member = { role: 'member' };
@@ -1073,6 +1074,48 @@ test('buildMobileNavigationPayload normalizes aliases, duplicates, and slot coun
     buildMobileNavigationPayload(['recipes', 'tasks', 'meals', 'calendar', 'budget']),
     { mobile_nav_order: ['kitchen', 'tasks', 'calendar'] },
   );
+});
+
+test('der Haushalts-Schalter nimmt sich zurueck, wenn das Speichern scheitert', async () => {
+  // Die drei Faelle zogen mit dem Schalter von der Navigation auf das neue
+  // Blatt und gingen beim Umzug verloren - der Fehlerpfad des einzigen Blatts,
+  // das ein Modul fuer ALLE abschaltet, stand danach ungeprueft da.
+  const input = { checked: true, disabled: true };
+  let rerendered = false;
+
+  await assert.rejects(
+    persistHouseholdToggle(input, true, async () => { throw new Error('save failed'); }, async () => {
+      rerendered = true;
+    }),
+    /save failed/,
+  );
+
+  assert.equal(input.checked, false, 'der Schalter blieb auf dem nicht gespeicherten Zustand stehen');
+  assert.equal(input.disabled, false);
+  assert.equal(rerendered, false, 'ein gescheitertes Speichern darf nicht neu rendern');
+});
+
+test('der Haushalts-Schalter rendert erst nach erfolgreichem Speichern neu', async () => {
+  const input = { checked: false, disabled: true };
+  const calls = [];
+
+  await persistHouseholdToggle(input, false, async () => { calls.push('save'); }, async () => { calls.push('render'); });
+
+  assert.deepEqual(calls, ['save', 'render']);
+  assert.equal(input.checked, false);
+});
+
+test('ein gescheiterter Re-Render nimmt den gespeicherten Schalter NICHT zurueck', async () => {
+  const input = { checked: true, disabled: true };
+
+  await assert.rejects(
+    persistHouseholdToggle(input, true, async () => {}, async () => { throw new Error('render failed'); }),
+    /render failed/,
+  );
+
+  // Gespeichert ist gespeichert: den Schalter hier zurueckzudrehen wuerde einen
+  // Zustand zeigen, den der Server nicht mehr hat.
+  assert.equal(input.checked, true);
 });
 
 test('all locales contain the settings IA translation foundation', async () => {

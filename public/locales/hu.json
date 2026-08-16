@@ -1889,7 +1889,6 @@
         "thirdPartyModulesEmptyTitle": "Nem található modul",
         "thirdPartyModulesEmptyHint": "Másolja a modul mappát a modules/ mappába, majd frissítse az oldalt.",
         "thirdPartyModulesFolder": "Mappa: modules/{{id}}",
-        "thirdPartyModulesEnableLabel": "Engedélyezve",
         "thirdPartyModulesStatusEnabled": "Engedélyezve",
         "thirdPartyModulesStatusDisabled": "Letiltva",
         "thirdPartyModulesStatusError": "Hiba",

@@ -1889,7 +1889,6 @@
         "thirdPartyModulesEmptyTitle": "Nessun modulo trovato",
         "thirdPartyModulesEmptyHint": "Copia la cartella di un modulo dentro modules/ e aggiorna questa pagina.",
         "thirdPartyModulesFolder": "Cartella: modules/{{id}}",
-        "thirdPartyModulesEnableLabel": "Abilitato",
         "thirdPartyModulesStatusEnabled": "Abilitato",
         "thirdPartyModulesStatusDisabled": "Disabilitato",
         "thirdPartyModulesStatusError": "Errore",

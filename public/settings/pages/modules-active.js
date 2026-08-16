@@ -189,6 +189,30 @@ export function buildActiveModulesPayload(disabledIds) {
   return { disabled_modules: [...new Set(disabledIds)] };
 }
 
+/**
+ * Schalter-Persistenz mit Ruecknahme: sperrt den Input waehrend des Speicherns,
+ * stellt bei Fehlschlag den vorherigen Zustand wieder her und rendert NUR nach
+ * erfolgreichem Speichern neu.
+ *
+ * Die Trennung der beiden Fehlerfaelle ist der Punkt: ein fehlgeschlagener
+ * Re-Render darf den Schalter NICHT zuruecksetzen, denn gespeichert ist da
+ * bereits. Diese Funktion zog mit dem Haushalts-Schalter von der Navigation
+ * hierher und verlor beim Umzug ihre drei Tests - der Fehlerpfad des einzigen
+ * Blatts, das ein Modul fuer alle abschaltet, stand danach ungeprueft da
+ * (Review zu PR #790).
+ */
+export async function persistHouseholdToggle(input, enabled, save, rerender) {
+  input.disabled = true;
+  try {
+    await save();
+  } catch (error) {
+    input.checked = !enabled;
+    input.disabled = false;
+    throw error;
+  }
+  await rerender();
+}
+
 async function saveActiveModules(list) {
   const payload = buildActiveModulesPayload(collectDisabledModuleIds(list));
   const response = await savePreferences(payload);
@@ -206,18 +230,16 @@ function bindEvents(container, user) {
     );
     if (!input) return;
     const enabled = input.checked;
-    input.disabled = true;
     try {
-      if (input.dataset.thirdPartyModuleToggle) {
-        await api.patch(`/modules/${encodeURIComponent(input.dataset.thirdPartyModuleToggle)}`, { enabled });
-        await window.yuvomi?.refreshThirdPartyModules?.();
-      }
-      await saveActiveModules(list);
-      window.yuvomi?.showToast(t('settings.thirdPartyModulesSaved'), 'success');
-      await render(container, { user });
+      await persistHouseholdToggle(input, enabled, async () => {
+        if (input.dataset.thirdPartyModuleToggle) {
+          await api.patch(`/modules/${encodeURIComponent(input.dataset.thirdPartyModuleToggle)}`, { enabled });
+          await window.yuvomi?.refreshThirdPartyModules?.();
+        }
+        await saveActiveModules(list);
+        window.yuvomi?.showToast(t('settings.thirdPartyModulesSaved'), 'success');
+      }, () => render(container, { user }));
     } catch (error) {
-      input.checked = !enabled;
-      input.disabled = false;
       window.yuvomi?.showToast(error.message ?? t('common.errorGeneric'), 'danger');
     }
   });

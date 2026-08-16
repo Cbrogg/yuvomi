@@ -161,11 +161,17 @@ function rowControlsHtml(row) {
  * eingebauten Slugs; ein Knopf, dessen Wert der Server verwirft, wäre eine
  * Zusage, die niemand einhält.
  */
-function hideToggleHtml(row) {
+function hideToggleHtml(row, { hasStatusChip = true } = {}) {
   const label = row.groupLabelKey
     ? t(row.groupLabelKey)
     : t('settings.modulesHideForMe', { module: row.label });
-  const describedBy = row.enabled ? '' : ` aria-describedby="module-status-${esc(row.id)}"`;
+  // Nur verweisen, wo es auch etwas zu lesen gibt: die Kuechen-Kinder tragen
+  // keinen Status-Chip, ein `aria-describedby` auf eine Id, die es nicht gibt,
+  // sagt der Hilfstechnik NICHTS - genau der Zustand, den dieser Verweis
+  // beheben sollte (Review zu PR #790).
+  const describedBy = (!row.enabled && hasStatusChip)
+    ? ` aria-describedby="module-status-${esc(row.id)}"`
+    : '';
   return `
     <button type="button" class="settings-module-hide" data-module-hide="${esc(row.id)}"
             aria-pressed="${row.hidden ? 'true' : 'false'}" ${row.enabled ? '' : 'disabled'}
@@ -255,12 +261,12 @@ function kitchenRowHtml(row) {
         </button>
         <div class="settings-disclosure__panel settings-module-kitchen__children" data-kitchen-children hidden>
           ${row.children.map((child) => `
-            <div class="settings-module-kitchen__child-row">
+            <div class="settings-module-kitchen__child-row${child.hidden && child.enabled ? ' settings-module-kitchen__child-row--hidden' : ''}">
               <div class="settings-module-kitchen__child">
                 <i data-lucide="${esc(child.icon)}" aria-hidden="true"></i>
                 <span>${esc(child.label)}</span>
               </div>
-              ${hideToggleHtml(child)}
+              ${hideToggleHtml(child, { hasStatusChip: false })}
             </div>`).join('')}
         </div>
       </div>
@@ -446,7 +452,7 @@ async function saveNavigationState(list) {
   window.yuvomi?.setModuleOrder?.(response?.data?.module_order ?? payload.module_order);
 }
 
-function bindModuleListEvents(container, user, rows) {
+function bindModuleListEvents(container, user, rows, storedMobileOrder) {
   const list = container.querySelector('#module-toggles');
   if (!list) return;
   let dragged = null;
@@ -456,7 +462,10 @@ function bindModuleListEvents(container, user, rows) {
 
   const saveIfChanged = async (previousOrder) => {
     const currentOrder = collectVisibleGlobalOrder(list).join('|');
-    if (currentOrder === previousOrder || savingOrder) return;
+    // `busy` mitgeprueft: beide Schreibpfade schicken `module_order` UND
+    // `hidden_modules` aus demselben DOM. Zwei gleichzeitige PUTs konvergieren
+    // zwar, aber eine Sperre fuer zwei Wege ist eine zu wenig.
+    if (currentOrder === previousOrder || savingOrder || busy) return;
     savingOrder = true;
     try {
       await saveNavigationState(list);
@@ -550,6 +559,10 @@ function bindModuleListEvents(container, user, rows) {
           applyHiddenState(child, !wasHidden);
         }
       }
+    } else if (KITCHEN_CHILD_IDS.includes(btn.dataset.moduleHide)) {
+      // Umgekehrte Richtung: vier einzeln ausgeblendete Kinder SIND die
+      // ausgeblendete Gruppe, und der Gruppenknopf muss das sagen.
+      syncKitchenGroupState(list, rows);
     }
     // NICHT `disabled` waehrend des Speicherns: ein deaktivierter Knopf gibt den
     // Fokus ab, und genau den sollte dieser Pfad behalten (gemessen: sonst
@@ -563,7 +576,7 @@ function bindModuleListEvents(container, user, rows) {
       await saveNavigationState(list);
       busy = false;
       btn.removeAttribute('aria-busy');
-      refreshMobileSlots(container, rows, user);
+      refreshMobileSlots(container, rows, user, storedMobileOrder);
       window.yuvomi?.showToast(hideToastMessage(container, previousMobile), 'success');
     } catch (error) {
       busy = false;
@@ -605,17 +618,26 @@ function hideToastMessage(container, previousMobile) {
   });
 }
 
-/** Die drei Auswahlfelder neu aufbauen, ohne das übrige Blatt anzufassen. */
-function refreshMobileSlots(container, rows, user) {
+/**
+ * Die drei Auswahlfelder neu aufbauen, ohne das übrige Blatt anzufassen.
+ *
+ * Aufgelöst wird gegen die GESPEICHERTE Wahl, nicht gegen die gerade
+ * angezeigte. Der Unterschied ist der ganze Punkt: wer den Kalender ausblendet,
+ * sieht auf Platz 1 den Ersatz - las diese Funktion ihn aus dem Auswahlfeld
+ * zurück, wäre die eigene Wahl beim Wieder-Einblenden verloren, und der nächste
+ * Wechsel an irgendeinem Platz hätte den Ersatz über sie geschrieben. Der
+ * Server hält sie unangetastet; hier zu vergessen, was er hält, hätte genau die
+ * Zusage gebrochen, die der Block über dem Toast gibt.
+ */
+function refreshMobileSlots(container, rows, user, storedOrder) {
   const wrap = container.querySelector('.settings-mobile-nav-slots');
   if (!wrap) return;
-  const previous = readMobileSlotValues(container);
   const candidates = mobileCandidateRows(rows);
-  const order = resolveMobileNavOrder(previous, candidates.map((row) => row.orderId));
+  const order = resolveMobileNavOrder(storedOrder, candidates.map((row) => row.orderId));
   wrap.replaceChildren();
   wrap.insertAdjacentHTML('beforeend',
     [0, 1, 2].map((index) => mobileSlotHtml(candidates, order, index)).join(''));
-  bindMobileNavigationEvents(container, user);
+  bindMobileNavigationEvents(container, user, storedOrder);
 }
 
 /** Den Zustand auch im Datenmodell nachziehen - die Mobil-Kandidaten lesen ihn. */
@@ -633,15 +655,34 @@ function markRowHidden(rows, id, hidden) {
   }
 }
 
-/** Zustand einer Zeile umlegen, ohne das Blatt neu zu bauen. */
+/* ZUSTAND UMLEGEN, OHNE DAS BLATT NEU ZU BAUEN.
+ *
+ * `closest('.settings-module-row')` war hier falsch, und zwar genau fuer die
+ * vier Kuechen-Kinder: ihre Knoepfe liegen IM aufgeklappten Feld der
+ * Elternzeile, also traf `closest` die Kueche. Ein einzeln ausgeblendetes
+ * Rezepte-Modul toente damit die ganze Kuechenzeile und haengte ihr den Chip an
+ * - waehrend das Datenmodell korrekt sagte, die Gruppe sei noch sichtbar. Der
+ * gespeicherte Wert stimmte; die Zeile behauptete etwas ueber sich, das nicht
+ * galt (Review zu PR #790).
+ *
+ * Ein Kind traegt seine eigene Zeile (`.settings-module-kitchen__child-row`),
+ * und die Gruppe rechnet ihren Zustand aus ihren Kindern - nicht aus dem Klick.
+ */
 function applyHiddenState(btn, hidden) {
   btn.setAttribute('aria-pressed', String(hidden));
+  const childRow = btn.closest('.settings-module-kitchen__child-row');
+  if (childRow) {
+    childRow.classList.toggle('settings-module-kitchen__child-row--hidden', hidden);
+    return;
+  }
+
   const row = btn.closest('.settings-module-row');
   if (!row) return;
-  row.classList.toggle('settings-module-row--hidden', hidden && !row.classList.contains('settings-module-row--disabled'));
+  const disabled = row.classList.contains('settings-module-row--disabled');
+  row.classList.toggle('settings-module-row--hidden', hidden && !disabled);
   const title = row.querySelector('.settings-module-row__title');
   const chip = title?.querySelector('.settings-module-status--hidden');
-  if (hidden && title && !chip && !row.classList.contains('settings-module-row--disabled')) {
+  if (hidden && title && !chip && !disabled) {
     title.insertAdjacentHTML('beforeend',
       `<span class="settings-module-status settings-module-status--hidden">${esc(t('settings.modulesHiddenForMe'))}</span>`);
   } else if (!hidden && chip) {
@@ -649,13 +690,39 @@ function applyHiddenState(btn, hidden) {
   }
 }
 
-function bindMobileNavigationEvents(container, user) {
+/**
+ * Die Kuechenzeile aus ihren vier Kindern nachziehen.
+ *
+ * Die Gruppe ist kein eigener Zustand, sondern eine Aussage ueber die Kinder:
+ * sie gilt als ausgeblendet, wenn kein sichtbares Kind mehr uebrig ist. Wer
+ * alle vier einzeln ausblendet, hat die Gruppe ausgeblendet - der Knopf sagte
+ * bis zur Review trotzdem weiter "nicht gedrueckt", und der naechste Klick
+ * darauf las sich als "ausblenden", obwohl er einblendet.
+ */
+function syncKitchenGroupState(list, rows) {
+  const groupBtn = list.querySelector('[data-module-hide="kitchen"]');
+  const kitchen = rows?.find((row) => row.id === 'kitchen');
+  if (!groupBtn || !kitchen) return;
+  const hidden = kitchen.children.every((child) => child.hidden || !child.enabled);
+  if (groupBtn.getAttribute('aria-pressed') === String(hidden)) return;
+  applyHiddenState(groupBtn, hidden);
+}
+
+function bindMobileNavigationEvents(container, user, storedOrder = []) {
   const selects = [...container.querySelectorAll('[data-mobile-nav-slot]')];
   if (!selects.length) return;
 
-  selects.forEach((changedSelect) => {
+  selects.forEach((changedSelect, changedIndex) => {
     changedSelect.addEventListener('change', async () => {
-      const payload = buildMobileNavigationPayload(selects.map((select) => select.value));
+      /* Nur der GEAENDERTE Platz kommt aus dem Auswahlfeld, die uebrigen aus
+       * der gespeicherten Wahl. Sonst schriebe ein Wechsel an Platz 3 den
+       * Ersatzwert fest, den Platz 1 gerade nur zeigt, weil das eigentlich dort
+       * gewaehlte Modul ausgeblendet ist - und die eigene Wahl waere weg, ohne
+       * dass jemand sie angefasst haette. */
+      const values = selects.map((select, index) => (
+        index === changedIndex ? select.value : (storedOrder[index] ?? select.value)
+      ));
+      const payload = buildMobileNavigationPayload(values);
       selects.forEach((select) => { select.disabled = true; });
 
       try {
@@ -688,9 +755,12 @@ export async function render(container, { user }) {
 
   const rows = buildRows(preferences, thirdPartyModules);
   const availableMobileIds = mobileCandidateRows(rows).map((row) => row.orderId);
-  const mobileOrder = resolveMobileNavOrder(preferences.mobile_nav_order, availableMobileIds);
+  // Die GESPEICHERTE Wahl, nicht die angezeigte: sie ueberlebt das Ausblenden
+  // eines Ziels und kommt beim Wieder-Einblenden zurueck (siehe refreshMobileSlots).
+  const storedMobileOrder = Array.isArray(preferences.mobile_nav_order) ? preferences.mobile_nav_order : [];
+  const mobileOrder = resolveMobileNavOrder(storedMobileOrder, availableMobileIds);
   renderPage(container, rows, mobileOrder);
   bindDisclosure(container, { triggerSelector: '[data-kitchen-expand]', panelSelector: '[data-kitchen-children]', id: 'kitchen-children-navigation' });
-  bindModuleListEvents(container, user, rows);
-  bindMobileNavigationEvents(container, user);
+  bindModuleListEvents(container, user, rows, storedMobileOrder);
+  bindMobileNavigationEvents(container, user, storedMobileOrder);
 }

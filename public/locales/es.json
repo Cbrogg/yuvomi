@@ -1889,7 +1889,6 @@
         "thirdPartyModulesEmptyTitle": "No se encontraron módulos",
         "thirdPartyModulesEmptyHint": "Copia una carpeta de módulo en modules/ y actualiza esta página.",
         "thirdPartyModulesFolder": "Carpeta: modules/{{id}}",
-        "thirdPartyModulesEnableLabel": "Enabled",
         "thirdPartyModulesStatusEnabled": "Enabled",
         "thirdPartyModulesStatusDisabled": "Disabled",
         "thirdPartyModulesStatusError": "Error",

@@ -1889,7 +1889,6 @@
         "thirdPartyModulesEmptyTitle": "Geen modules gevonden",
         "thirdPartyModulesEmptyHint": "Kopieer een modulemap naar modules/ en vernieuw deze pagina.",
         "thirdPartyModulesFolder": "Map: modules/{{id}}",
-        "thirdPartyModulesEnableLabel": "Ingeschakeld",
         "thirdPartyModulesStatusEnabled": "Ingeschakeld",
         "thirdPartyModulesStatusDisabled": "Uitgeschakeld",
         "thirdPartyModulesStatusError": "Fout",

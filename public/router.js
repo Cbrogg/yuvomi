@@ -4272,6 +4272,25 @@ window.yuvomi = {
   clearSession: () => {
     currentUser = null;
     _navBuiltForUserId = null;
+    /* DIE PER-USER-PRAEFERENZEN GEHOEREN ZUR SITZUNG, NICHT ZUM TAB.
+     *
+     * `syncPreferencesOnce()` laedt genau einmal und kehrt danach sofort zurueck;
+     * Ab- und Anmelden sind aber SPA-Navigationen, kein Neuladen. Ohne diesen
+     * Block behielt das naechste Mitglied am selben Geraet die Reihenfolge, die
+     * Mobil-Plaetze und - seit #673 - die AUSBLENDUNGEN des vorigen: Module
+     * fehlten in seiner Seitenleiste, waehrend das Navigationsblatt sie als
+     * sichtbar auswies, weil es frisch vom Server liest.
+     *
+     * Reihenfolge und Mobil-Plaetze hatten diese Form schon vorher; sichtbar
+     * wurde sie erst, als eine davon Ziele ENTFERNT statt sie umzusortieren.
+     * Der Layout-Hinweis des Dashboards faellt aus demselben Grund im Logout
+     * (`auth.logout()` in api.js) - das hier ist dieselbe Zusicherung eine
+     * Ebene hoeher. */
+    _preferencesLoaded = false;
+    _hiddenModules = new Set();
+    _disabledModules = new Set();
+    _moduleOrder = [];
+    _mobileNavOrder = [];
     forgetScrollPositions();
     resetModuleCounts();
     stopThirdPartyModulePolling();

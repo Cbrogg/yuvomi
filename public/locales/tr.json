@@ -1889,7 +1889,6 @@
         "thirdPartyModulesEmptyTitle": "Modül bulunamadı",
         "thirdPartyModulesEmptyHint": "Bir modül klasörünü modules/ içine kopyalayın ve bu sayfayı yenileyin.",
         "thirdPartyModulesFolder": "Klasör: modules/{{id}}",
-        "thirdPartyModulesEnableLabel": "Enabled",
         "thirdPartyModulesStatusEnabled": "Enabled",
         "thirdPartyModulesStatusDisabled": "Disabled",
         "thirdPartyModulesStatusError": "Error",

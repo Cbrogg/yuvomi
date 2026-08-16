@@ -1889,7 +1889,6 @@
         "thirdPartyModulesEmptyTitle": "Aucun module trouvé",
         "thirdPartyModulesEmptyHint": "Copiez un dossier de module dans modules/ et actualisez cette page.",
         "thirdPartyModulesFolder": "Dossier : modules/{{id}}",
-        "thirdPartyModulesEnableLabel": "Enabled",
         "thirdPartyModulesStatusEnabled": "Enabled",
         "thirdPartyModulesStatusDisabled": "Disabled",
         "thirdPartyModulesStatusError": "Error",

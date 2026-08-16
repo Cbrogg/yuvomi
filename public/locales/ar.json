@@ -1889,7 +1889,6 @@
         "thirdPartyModulesEmptyTitle": "لم يتم العثور على وحدات",
         "thirdPartyModulesEmptyHint": "انسخ مجلد وحدة إلى ‎modules/‎ ثم حدّث هذه الصفحة.",
         "thirdPartyModulesFolder": "المجلد: modules/{{id}}",
-        "thirdPartyModulesEnableLabel": "Enabled",
         "thirdPartyModulesStatusEnabled": "Enabled",
         "thirdPartyModulesStatusDisabled": "Disabled",
         "thirdPartyModulesStatusError": "Error",
