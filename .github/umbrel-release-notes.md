@@ -1,4 +1,4 @@
-<!-- version: 2.14.4 -->
+<!-- version: 2.14.5 -->
 <!--
   Die `releaseNotes` fuer den Umbrel-App-Store, von Hand fuer JEDEN Release
   geschrieben. `umbrel-publish.yml` nimmt den Text unter diesem Kommentar
@@ -29,14 +29,17 @@
     - Leerzeile zwischen den Absaetzen: der Store rendert ein gefaltetes
       YAML-Blockskalar, dort ist die Leerzeile der Absatzumbruch.
 
-  HINWEIS ZU DIESER VERSION: sie aendert ausschliesslich den
-  Einrichtungsassistenten fuer manuelle Docker-Installationen. Ueber den
-  Umbrel-Store installiert man ohne diesen Assistenten, an der laufenden App
-  aendert sich also nichts. Das steht auch so im Text - eine Notiz, die
-  Relevanz behauptet, wo keine ist, kostet den Leser Zeit und Vertrauen.
+  HINWEIS ZU DIESER VERSION: zwei gemeldete Fehler in der App selbst, also
+  diesmal wirklich relevant fuer den Store. Der Schluessel-Hinweis betrifft
+  Umbrel ausdruecklich NICHT - `deploy/umbrel/docker-compose.yml` setzt
+  `DB_ENCRYPTION_KEY=${APP_SEED}`, der Platzhalter aus `.env.example` kann hier
+  also gar nicht ankommen. Er steht trotzdem drin, weil viele Haushalte Yuvomi
+  zusaetzlich woanders betreiben - aber mit der Entwarnung in derselben Zeile.
+  Die Doku- und Website-Arbeit dieses Releases bleibt draussen (deren Skill:
+  "Omit ... docs-only").
 -->
-Like the previous update, this one only touches the setup assistant used for manual Docker installations. Nothing about the app itself changes on Umbrel, and there is nothing to do after updating.
+Two fixes you can see in the app. In Inventory, opening the form for a new item showed five blank entries where the categories should be: the categories that ship with Yuvomi lost their labels when they were made translatable. In Calendar, the weekend shading in the month view was tied to the last two columns of the grid rather than to the days themselves, so it sat on Friday and Saturday for anyone whose week starts on Sunday. Both are back to what you would expect, and there is nothing to do after updating.
 
-For anyone who also runs Yuvomi outside Umbrel: the assistant's longest screen has been split in two, so storage and backups are now asked separately from what Yuvomi connects to, and the three permissions for reaching services on your home network are asked together instead of in three different places. It also tells you when a container is already running, because saving restarts it.
+One security note for anyone who also runs Yuvomi outside Umbrel, by hand with Docker: a fresh installation now refuses to start when the database encryption key is still the placeholder from the example file, because that value is printed in our repository and protects nothing. Your Umbrel installation is not affected - it has always been given its own key.
 
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.14.4
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.14.5

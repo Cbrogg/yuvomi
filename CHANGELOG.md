@@ -7,10 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.14.5] - 2026-08-16
+
+### Added
+
+- **The privacy notice is available in English.** The project page defaults to English and puts "0 trackers" forward as its strongest claim, while the only evidence for it existed in German. `privacy.html` translates all fourteen sections and both pages link each other with `hreflang` set; the German version remains the binding one, stated at the top. The links follow the page language, so the English page no longer sends its own proof to a German legal text.
+- **The project page has a progress line and a jump menu**, and the legal pages (imprint, privacy) got the same theme switch as the rest of the site.
+
+### Changed
+
+- **The project page is down from eleven sections to eight**, with the positioning pulled out as a section of its own and the feature rows merged with the module grid instead of standing as two headings for one subject. The screenshots were retaken against 2.14.4 and now show Inventory as the eighteenth module.
+- **The German privacy notice corrects one factual claim.** Section 6 stated that fonts are served exclusively from our own server as self-hosted WOFF2 files. Measured, the pages load no web font at all: they use system fonts, and the WOFF2 files under `docs/fonts/` only feed the screenshot and social-image pipeline.
+
 ### Fixed
 
 - **The category picker in the Inventory item form was blank.** The five categories that ship with the module stopped carrying their name in the database when they became translatable (2.14.0): the name column is empty for them and the label comes from a translation key, exactly as it already worked for task and contact categories. The picker still read the raw name, so it offered five unlabelled options - the list itself was there, only its labels were missing. Every other place in the module already resolved the label correctly; the picker was the one that did not. Reported in #783.
 - **Weekend shading in the month grid ignored the chosen first day of the week.** The tint was attached to the last two columns of the grid, which is Saturday and Sunday only as long as the week starts on Monday. With Sunday as the first day it shaded Friday and Saturday, with Saturday it shaded Thursday and Friday. It now follows the actual weekday of each cell, so the shading stays on the weekend whichever day the week starts on. Reported in #780.
+
+### Security
+
+- **A fresh installation no longer starts with the placeholder encryption key.** `.env.example` ships `DB_ENCRYPTION_KEY=REPLACE_WITH_A_STRONG_ENCRYPTION_KEY`, not an empty line. Copying the quick-start block in one go and skipping the edit therefore encrypted the database against a constant that is printed in this repository and on the project page, and the warning underneath said the opposite ("leave it empty and the database stays unencrypted"). Yuvomi now refuses to start in that state as long as no database exists yet, naming both ways out. An installation that already runs on the placeholder keeps starting and gets a warning with the rotation steps instead, because an abort would take a working instance away without undoing anything. The quick start on the project page is split so a single paste cannot skip the step in between.
 
 ## [2.14.4] - 2026-08-15
 
