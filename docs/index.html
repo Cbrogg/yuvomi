@@ -277,8 +277,9 @@
        to B" row, so they must not fold differently. Three columns at 390px would
        leave 110px for the left label. */
     @media (max-width: 700px) {
-      .swap-row { grid-template-columns: 1fr; gap: 6px; padding: 15px 4px; }
-      .swap-arrow { transform: rotate(90deg); margin-left: 2px; }
+      .swap-row { grid-template-columns: 1fr; gap: 5px; padding: 13px 4px; }
+      .swap-from, .swap-to { font-size: 0.94rem; }
+      .swap-arrow { transform: rotate(90deg); margin-left: 2px; width: 15px; height: 15px; }
     }
 
     /* ===== Feature showcase (alternating) ===== */
@@ -363,6 +364,17 @@
       border-radius: var(--r-phone);
       border: 4px solid var(--surface); box-shadow: var(--shadow-lg); display: block; }
     .mod-shot figcaption { margin-top: 12px; text-align: center; font-size: 0.82rem; font-weight: 600; color: var(--text-3); }
+    /* 176px breite Telefone brechen bei 390px auf drei Reihen um und kosten dort
+       1.539px - mehr als das Karussell, das diese Reihe ersetzt hat. Bei 104px
+       passen drei nebeneinander, es bleiben zwei Reihen. Auf Daumennagelgroesse
+       ist das der Beleg, dass es das Modul gibt, und mehr soll es hier nicht sein.
+       Steht bewusst HINTER der Basisregel: gleiche Spezifitaet, es entscheidet
+       die Quellreihenfolge. */
+    @media (max-width: 700px) {
+      .mod-shots { gap: 20px 14px; margin-top: 40px; }
+      .mod-shot { width: 104px; }
+      .mod-shot figcaption { margin-top: 8px; font-size: 0.74rem; }
+    }
     .mod-scope { max-width: 68ch; margin: 44px auto 0; padding-top: 30px; border-top: 1px solid var(--border);
       font-size: 0.98rem; line-height: 1.7; color: var(--text-2); text-align: center; }
     .mod-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(255px, 1fr)); gap: 16px; margin-top: 48px; }
