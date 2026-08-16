@@ -1677,6 +1677,12 @@ async function handlePrnDose(btn) {
   // und wenn er scheitert, darf das nicht als „Buchung fehlgeschlagen" dastehen:
   // wer es dann noch einmal versucht, hat die Dosis zweimal im Protokoll. Der
   // Bestand ist eine Nebenbuchhaltung, die Dosis die Aussage ueber den Koerper.
+  //
+  // Der Abzug wird beim Zuruecknehmen NICHT gutgeschrieben - so haelt es die
+  // geplante Dosis seit jeher (#701 korrigiert den Eintrag, nicht den Bestand).
+  // Das ist eine bekannte Grenze und keine Eigenheit der Bedarfsdosis; sie
+  // aufzuheben hiesse, jede Korrektur serverseitig gegenzubuchen, und das gehoert
+  // in einen eigenen Schritt statt in diesen.
   if (dose != null && Number.isFinite(dose) && med.stock_qty != null) {
     try {
       const next = Math.max(0, Number(med.stock_qty) - dose);
@@ -1769,10 +1775,16 @@ function medLogHistoryMarkup() {
   if (!entries.length) return '';
   entries.sort((a, b) => String(b.at).localeCompare(String(a.at)));
 
-  // Korrigieren darf nur, wer auch sonst für diese Person schreiben darf (#701).
-  // Ein Protokoll ist eine Aufzeichnung über den eigenen Körper; mitlesen und
-  // nachträglich ändern sind zwei verschiedene Rechte.
-  const own = canEditFor(meds.personId, meds.meId);
+  // Korrigieren darf nur, wer IN SEINEM EIGENEN Protokoll ist (#701).
+  //
+  // Nicht `canEditFor`: der Server laesst eine Korrektur ausdruecklich nur den
+  // Eigentuemer machen (`ownLogRow` in server/routes/health/medications.js -
+  // ein Dosis-Eintrag ist eine Aufzeichnung ueber den eigenen Koerper, mitlesen
+  // und nachtraeglich aendern sind zwei verschiedene Rechte). Wer fuer eine
+  // betreute Person eintraegt, darf also buchen, aber nicht nachbessern - und
+  // bekam die Stifte trotzdem angeboten, mit einem 404 dahinter. Ein Knopf, der
+  // nichts tut, ist genau der Fehler, wegen dem #700 ueberhaupt aufkam.
+  const own = meds.personId === meds.meId;
 
   const rows = entries.slice(0, 10).map((e) => {
     // Uebersprungen und ausstehend sind beide "nicht genommen" und treten
