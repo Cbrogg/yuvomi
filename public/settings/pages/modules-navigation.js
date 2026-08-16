@@ -436,9 +436,17 @@ function collectHiddenModuleIds(buttons) {
  * aktivierten Module, aber buildRows sortiert nur - eine ID ohne passende Zeile
  * bleibt wirkungslos.
  */
-export function buildOrderPayload(visibleGlobalOrder) {
+export function buildOrderPayload(visibleGlobalOrder, unrenderedIds = []) {
+  const visible = expandModuleOrder(visibleGlobalOrder);
+  // Was das Blatt nie gezeigt hat, darf es auch nicht loeschen: ein Mitglied
+  // bekommt `/modules?admin=1` nicht, also stehen Drittanbieter-Module gar
+  // nicht in seiner Liste. Ohne diesen Anhang wuerfe schon das Ausblenden
+  // EINES eingebauten Moduls die gespeicherte Reihenfolge seiner eigenen
+  // Zusatzmodule weg - still, denn sichtbar war sie hier nie (Codex-Review zu
+  // PR #790).
+  const missing = unrenderedIds.filter((id) => !visible.includes(id));
   return {
-    module_order: expandModuleOrder(visibleGlobalOrder),
+    module_order: [...visible, ...missing],
   };
 }
 
@@ -448,9 +456,9 @@ export function buildMobileNavigationPayload(order) {
   };
 }
 
-async function saveNavigationState(list) {
+async function saveNavigationState(list, unrenderedOrderIds = []) {
   const payload = {
-    ...buildOrderPayload(collectVisibleGlobalOrder(list)),
+    ...buildOrderPayload(collectVisibleGlobalOrder(list), unrenderedOrderIds),
     hidden_modules: collectHiddenModuleIds(list.querySelectorAll('[data-module-hide]')),
   };
   const response = await savePreferences(payload);
@@ -458,7 +466,7 @@ async function saveNavigationState(list) {
   window.yuvomi?.setModuleOrder?.(response?.data?.module_order ?? payload.module_order);
 }
 
-function bindModuleListEvents(container, user, rows) {
+function bindModuleListEvents(container, user, rows, unrenderedOrderIds = []) {
   const list = container.querySelector('#module-toggles');
   if (!list) return;
   let dragged = null;
@@ -484,7 +492,7 @@ function bindModuleListEvents(container, user, rows) {
     if (saving) { queued = true; return; }
     saving = true;
     try {
-      await saveNavigationState(list);
+      await saveNavigationState(list, unrenderedOrderIds);
       window.yuvomi?.showToast(t(toastKey), 'success');
     } catch (error) {
       window.yuvomi?.showToast(error.message ?? t('common.errorGeneric'), 'danger');
@@ -603,7 +611,7 @@ function bindModuleListEvents(container, user, rows) {
       if (saving) { queued = true; } else {
         saving = true;
         try {
-          await saveNavigationState(list);
+          await saveNavigationState(list, unrenderedOrderIds);
         } finally {
           saving = false;
         }
@@ -802,10 +810,17 @@ export async function render(container, { user }) {
   const thirdPartyModules = modulesResult.status === 'fulfilled' ? (modulesResult.value?.data ?? []) : [];
 
   const rows = buildRows(preferences, thirdPartyModules);
+  /* Was in der gespeicherten Reihenfolge steht, hier aber keine Zeile hat.
+   * Fuer ein Mitglied sind das seine Drittanbieter-Module: `/modules?admin=1`
+   * beantwortet ihm der Server nicht, also kennt dieses Blatt sie nicht - und
+   * duerfte sie deshalb erst recht nicht aus seiner Reihenfolge streichen. */
+  const renderedOrderIds = new Set(expandModuleOrder(rows.map((row) => row.orderId)));
+  const unrenderedOrderIds = (Array.isArray(preferences.module_order) ? preferences.module_order : [])
+    .filter((id) => !renderedOrderIds.has(id));
   const availableMobileIds = mobileCandidateRows(rows).map((row) => row.orderId);
   const mobileOrder = resolveMobileNavOrder(preferences.mobile_nav_order, availableMobileIds);
   renderPage(container, rows, mobileOrder);
   bindDisclosure(container, { triggerSelector: '[data-kitchen-expand]', panelSelector: '[data-kitchen-children]', id: 'kitchen-children-navigation' });
-  bindModuleListEvents(container, user, rows);
+  bindModuleListEvents(container, user, rows, unrenderedOrderIds);
   bindMobileNavigationEvents(container, user);
 }

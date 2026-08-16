@@ -223,7 +223,13 @@ test('das persoenliche Blatt traegt keinen haushaltweiten Schalter mehr', async 
     'das Blatt liest den Haushaltsstand nicht mehr - dann kann es den gesperrten Knopf nicht begruenden');
   // Und der Save-Pfad muss die Rolle NICHT mehr kennen: eine Payload, die nicht
   // weiss, wer sie absendet, kann auch nicht die falsche sein.
-  assert.match(personal, /async function saveNavigationState\(list\)/);
+  // Die Regel ist "der Save-Pfad kennt die Rolle nicht", nicht "die Signatur
+  // hat genau ein Argument": sie nahm spaeter die im Blatt nie gerenderten
+  // Order-Ids dazu, und daran war dieser Guard rot, ohne dass sich die
+  // Zusicherung geaendert haette.
+  assert.match(personal, /async function saveNavigationState\(list[,)]/);
+  assert.equal(/saveNavigationState\([^)]*isAdmin/.test(personal), false,
+    'der Save-Pfad kennt wieder die Rolle - dann kann er wieder die falsche Payload schicken');
 
   // Gegenprobe auf der anderen Seite: das adminOnly-Blatt schreibt keine
   // per-user-Schluessel.
@@ -1044,6 +1050,26 @@ test('die Reihenfolge expandiert die Kuechen-Sammelzeile auf ihre vier Kinder', 
   );
   assert.deepEqual(buildOrderPayload([]).module_order, []);
   assert.deepEqual(buildOrderPayload(['kitchen']).module_order, ['meals', 'recipes', 'shopping', 'pantry']);
+});
+
+test('die Reihenfolge behaelt, was das Blatt nie gezeigt hat', () => {
+  // Ein Mitglied bekommt `/modules?admin=1` nicht, also stehen seine
+  // Drittanbieter-Module in keiner Zeile dieses Blatts. Sie deshalb aus seiner
+  // gespeicherten Reihenfolge zu streichen, waere ein stiller Verlust bei einer
+  // Handlung, die damit nichts zu tun hat (Codex-Review zu PR #790).
+  const payload = buildOrderPayload(['calendar', 'kitchen'], ['third-party-akahu', 'third-party-solar']);
+  assert.deepEqual(payload.module_order, [
+    'calendar', 'meals', 'recipes', 'shopping', 'pantry',
+    'third-party-akahu', 'third-party-solar',
+  ]);
+
+  // Was sichtbar war, gewinnt: eine Id, die das Blatt gerendert hat, kommt
+  // nicht doppelt zurueck, auch wenn sie faelschlich mitgegeben wird.
+  assert.deepEqual(
+    buildOrderPayload(['calendar'], ['calendar', 'third-party-akahu']).module_order,
+    ['calendar', 'third-party-akahu'],
+  );
+  assert.deepEqual(buildOrderPayload(['calendar']).module_order, ['calendar']);
 });
 
 test('die zwei Blaetter schreiben zwei disjunkte Schluesselmengen', () => {
