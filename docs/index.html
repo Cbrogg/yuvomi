@@ -88,6 +88,32 @@
     .nav-logo { display: flex; align-items: center; gap: 11px; font-weight: 700; font-size: 1.2rem; letter-spacing: -0.02em; color: var(--text-1);
       flex-shrink: 0; min-height: 44px; margin-right: 12px; }
     .nav-logo svg { width: 34px; height: 34px; filter: drop-shadow(0 3px 8px var(--accent-glow)); }
+    /* Fortschrittslinie unter der Topbar: der billigste ehrliche Weg, "wo bin
+       ich" auf einer Seite von 15 Bildschirmen zu beantworten. Sie sitzt IN der
+       Leiste, verbraucht also keine eigene Hoehe. */
+    .nav-progress { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: transparent; }
+    .nav-progress span { display: block; height: 100%; width: 0%; background: var(--accent); transition: width .1s linear; }
+    @media (prefers-reduced-motion: reduce) { .nav-progress span { transition: none; } }
+
+    /* Sprungmenue. <details> statt eigenem Widget: das Oeffnen, Schliessen und
+       die Escape-Taste kommen vom Browser, und ohne JS bleibt es bedienbar. */
+    .nav-jump { position: relative; margin-left: auto; margin-right: 14px; }
+    .nav-jump summary { display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 0 12px;
+      border-radius: var(--r-sm); border: 1px solid var(--border); background: var(--surface);
+      color: var(--text-2); font-size: 0.84rem; font-weight: 600; cursor: pointer; list-style: none; }
+    .nav-jump summary::-webkit-details-marker { display: none; }
+    .nav-jump summary:hover { border-color: var(--border-strong); color: var(--text-1); }
+    .nav-jump summary svg { width: 15px; height: 15px; }
+    .nav-jump ul { position: absolute; top: calc(100% + 8px); left: 0; z-index: 60; min-width: 232px;
+      list-style: none; margin: 0; padding: 7px; border-radius: var(--r-md);
+      background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-lg); }
+    .nav-jump a { display: block; padding: 9px 12px; border-radius: var(--r-sm); min-height: 44px;
+      display: flex; align-items: center; color: var(--text-2); font-size: 0.88rem; font-weight: 500; text-decoration: none; }
+    .nav-jump a:hover, .nav-jump a:focus-visible { background: var(--bg-alt); color: var(--text-1); }
+    /* Unter 700px traegt die Leiste schon Logo, Sprache, Theme und GitHub. Das
+       Menue faellt dort weg - die Sticky-Pille am Daumen ist der mobile Weg zum
+       Ziel, und eine sechste Schaltflaeche in einer 390px-Leiste ist keine. */
+    @media (max-width: 700px) { .nav-jump { display: none; } }
     .nav-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
     /* The star count made the GitHub pill wrap to two lines and it then set the
        height of the whole bar; below 400px the wordmark yields to the icon so the
@@ -715,11 +741,28 @@
      content outside every region. -->
 <header class="site-bar">
 <nav class="topbar" data-t-aria="nav_main" aria-label="Main">
+  <div class="nav-progress" aria-hidden="true"><span id="navBar"></span></div>
   <div class="wrap">
     <a href="#top" class="nav-logo" aria-label="Yuvomi">
       <svg viewBox="0 0 160 160" fill="none" aria-hidden="true"><defs><linearGradient id="g" x1="0" y1="0" x2="160" y2="160" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#8b5cf6"/><stop offset="100%" stop-color="#6c3aed"/></linearGradient></defs><rect width="160" height="160" rx="36" fill="url(#g)"/><g fill="white" fill-opacity="0.82"><circle cx="64" cy="72" r="27"/><circle cx="100" cy="78" r="25"/><circle cx="80" cy="106" r="24"/></g></svg>
       Yuvomi
     </a>
+    <!-- Vier Laeufe lang gemeldet: 15,2 Bildschirme Desktop und 25,2 mobil ohne
+         jede Positionsanzeige und ohne Weg, das Dokument zu ueberfliegen. Die
+         Linie darueber beantwortet "wo bin ich", dieses Menue "was kommt noch".
+         Als <details> und nicht als Dauerleiste: eine Persuade-Flaeche darf
+         ihren ersten Bildschirm nicht an eine Inhaltsangabe verlieren. -->
+    <details class="nav-jump" id="navJump">
+      <summary aria-label="Springen zu" data-t-aria="jump_aria"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="11" y2="18"/></svg><span data-t="jump_label">Jump to</span></summary>
+      <ul>
+        <li><a href="#screens" data-t="jump_screens">See it first</a></li>
+        <li><a href="#swap" data-t="jump_swap">What it replaces</a></li>
+        <li><a href="#handoff" data-t="jump_handoff">How it fits together</a></li>
+        <li><a href="#modules" data-t="jump_modules">All the modules</a></li>
+        <li><a href="#longevity" data-t="jump_longevity">Before you commit</a></li>
+        <li><a href="#install" data-t="jump_install">Install it</a></li>
+      </ul>
+    </details>
     <div class="nav-right">
       <button class="nav-btn" id="langBtn" type="button" aria-label="Switch language"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10A15.3 15.3 0 0 1 12 2z"/></svg><span id="langLbl">DE</span></button>
       <button class="nav-btn" id="themeBtn" type="button" aria-label="Toggle theme" aria-pressed="false"><svg aria-hidden="true" id="sunIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg><svg aria-hidden="true" id="moonIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
@@ -862,7 +905,7 @@
      Deliberately NO module accent per row: the accent system already means
      something in .handoff and decorating a second list with it turns a
      vocabulary back into a palette. -->
-<section class="swap">
+<section class="swap" id="swap">
   <div class="wrap">
     <div class="sec-head lead reveal">
       <span class="eyebrow" data-t="swap_eyebrow">What it replaces</span>
@@ -885,7 +928,7 @@
   </div>
 </section>
 
-<section class="handoff">
+<section class="handoff" id="handoff">
   <div class="wrap">
     <div class="sec-head lead reveal">
       <span class="eyebrow" data-t="ho_eyebrow">Why one app</span>
@@ -958,7 +1001,7 @@
 </section>
 
 <!-- FEATURE SHOWCASE -->
-<section class="showcase">
+<section class="showcase" id="modules">
   <div class="wrap">
     <div class="sec-head center reveal">
       <h2 class="sec-title" data-t="feat_title">Everything your household needs</h2>
@@ -1138,7 +1181,7 @@
 
 
 <!-- LONGEVITY -->
-<section class="longevity">
+<section class="longevity" id="longevity">
   <div class="wrap">
     <div class="sec-head lead reveal">
       <span class="eyebrow" data-t="long_eyebrow">Before you commit</span>
@@ -1319,6 +1362,9 @@ openssl rand -hex 32</div><button class="copy-btn" type="button" data-copy="curl
       alt_m_rewards:'The rewards ledger on a phone',
       alt_m_documents:'Family documents on a phone',
       alt_m_recipes:'The recipe list on a phone',
+      jump_label:'Jump to', jump_aria:'Jump to a section',
+      jump_screens:'See it first', jump_swap:'What it replaces', jump_handoff:'How it fits together',
+      jump_modules:'All the modules', jump_longevity:'Before you commit', jump_install:'Install it',
       swap_rel:'is replaced by',
       swap_eyebrow:'What it replaces', swap_title:'One home <em>instead of many subscriptions</em>',
       swap_desc:'Ten apps a household pays for separately, and the one place that does all of it on a server you own. Nothing here is a plan or a roadmap: every line is built and shipping today.',
@@ -1423,6 +1469,9 @@ openssl rand -hex 32</div><button class="copy-btn" type="button" data-copy="curl
       alt_m_rewards:'Das Belohnungs-Konto auf dem Handy',
       alt_m_documents:'Familiendokumente auf dem Handy',
       alt_m_recipes:'Die Rezeptliste auf dem Handy',
+      jump_label:'Springen zu', jump_aria:'Zu einem Abschnitt springen',
+      jump_screens:'Erst sehen', jump_swap:'Was es ersetzt', jump_handoff:'Wie es zusammenspielt',
+      jump_modules:'Alle Module', jump_longevity:'Bevor ihr euch festlegt', jump_install:'Installieren',
       swap_rel:'wird ersetzt durch',
       swap_eyebrow:'Was es ersetzt', swap_title:'Ein Zuhause <em>statt vieler Abos</em>',
       swap_desc:'Zehn Apps, die ein Haushalt einzeln bezahlt, und der eine Ort, der das alles auf einem Server erledigt, der euch gehört. Nichts davon ist angekündigt oder geplant: jede Zeile ist gebaut und ausgeliefert.',
@@ -1742,6 +1791,25 @@ openssl rand -hex 32</div><button class="copy-btn" type="button" data-copy="curl
         } else { onFail(); }
       });
     });
+  })();
+  /* Fortschritt = gescrollte Strecke von der scrollbaren Gesamtstrecke. Auf
+     `scroll` passiv, damit es das Scrollen nicht bremst. */
+  (function(){
+    var bar = document.getElementById('navBar'); if (!bar) return;
+    function sync(){
+      var max = document.documentElement.scrollHeight - innerHeight;
+      bar.style.width = (max > 0 ? Math.min(100, (scrollY / max) * 100) : 0) + '%';
+    }
+    addEventListener('scroll', sync, { passive: true });
+    addEventListener('resize', sync);
+    sync();
+  })();
+  /* Das Menue schliesst sich beim Klick auf einen Eintrag und beim Klick nach
+     aussen. Escape kann <details> von sich aus. */
+  (function(){
+    var d = document.getElementById('navJump'); if (!d) return;
+    d.addEventListener('click', function(e){ if (e.target.closest('a')) d.removeAttribute('open'); });
+    document.addEventListener('click', function(e){ if (!d.contains(e.target)) d.removeAttribute('open'); });
   })();
   addEventListener('resize', syncCodeScroll);
   (function(){
