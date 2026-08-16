@@ -2038,7 +2038,11 @@ async function handleDose(btn, action) {
       if (scheduledAt) body.scheduled_at = scheduledAt;
       if (scheduleId) body.schedule_id = scheduleId;
       if (dose != null && Number.isFinite(dose)) body.dose_qty = dose;
-      if (action === 'take') body.taken_at = new Date().toISOString();
+      // Wanduhrzeit wie bei der Bedarfsdosis: `v.datetime` kuerzt den Wert auf
+      // Minuten und wirft die Zone weg, aus 22:41 MESZ wuerde 20:41. Sichtbar
+      // war das im Protokoll; seit ein Medikament Plan UND Bedarf haben kann,
+      // rechnet auch der Countdown daraus - und zwar zwei Stunden daneben.
+      if (action === 'take') body.taken_at = toLocalStamp();
       await api.post(`/health/medications/${medId}/logs`, body);
     }
 
@@ -2052,7 +2056,9 @@ async function handleDose(btn, action) {
     }
 
     window.yuvomi?.showToast(t('health.meds.doseSaved'), 'success');
-    await reloadMeds();
+    // Beide Tabs, nicht nur dieser: ein Medikament kann Plan UND Bedarf haben,
+    // und dann verschiebt auch die geplante Dosis den Countdown drueben.
+    await reloadPrnScopes();
   } catch (err) {
     console.error('[Health] dose error:', err);
     btn.disabled = false;
@@ -3755,7 +3761,11 @@ async function handleOverviewDose(btn, action) {
       if (scheduledAt) body.scheduled_at = scheduledAt;
       if (scheduleId) body.schedule_id = scheduleId;
       if (dose != null && Number.isFinite(dose)) body.dose_qty = dose;
-      if (action === 'take') body.taken_at = new Date().toISOString();
+      // Wanduhrzeit wie bei der Bedarfsdosis: `v.datetime` kuerzt den Wert auf
+      // Minuten und wirft die Zone weg, aus 22:41 MESZ wuerde 20:41. Sichtbar
+      // war das im Protokoll; seit ein Medikament Plan UND Bedarf haben kann,
+      // rechnet auch der Countdown daraus - und zwar zwei Stunden daneben.
+      if (action === 'take') body.taken_at = toLocalStamp();
       await api.post(`/health/medications/${medId}/logs`, body);
     }
 
@@ -3768,7 +3778,7 @@ async function handleOverviewDose(btn, action) {
     }
 
     window.yuvomi?.showToast(t('health.meds.doseSaved'), 'success');
-    await reloadOverview();
+    await reloadPrnScopes();
   } catch (err) {
     console.error('[Health] overview dose error:', err);
     btn.disabled = false;
