@@ -74,8 +74,23 @@ const decode = (s) => s
  * (CodeQL js/bad-tag-filter, PR #782.)
  */
 const COMMENT_END = /--!?>/g;
+const COMMENT = /<!--[\s\S]*?--!?>/g;
+
+/**
+ * In einem Durchgang zu entfernen reicht nicht: `<!<!-- x -->-- y -->` setzt
+ * beim Herausschneiden des inneren Kommentars ein neues `<!--` zusammen, das der
+ * erste Lauf nie gesehen hat. Es wird deshalb wiederholt, bis sich nichts mehr
+ * aendert. (CodeQL js/incomplete-multi-character-sanitization, PR #782.)
+ */
+function stripComments(html) {
+  let prev;
+  let out = html;
+  do { prev = out; out = out.replace(COMMENT, ''); } while (out !== prev);
+  return out;
+}
+
 function commentDamage(html) {
-  const stripped = html.replace(/<!--[\s\S]*?--!?>/g, '');
+  const stripped = stripComments(html);
   const strayClose = [...stripped.matchAll(COMMENT_END)].map((m) => ({
     line: stripped.slice(0, m.index).split('\n').length,
     context: stripped.slice(Math.max(0, m.index - 60), m.index + 3).replace(/\s+/g, ' ').trim(),
