@@ -9,7 +9,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-const { splitMentions, mentionedUserIds } = await import('../public/utils/mentions.js');
+const { splitMentions, mentionedUserIds, applyMention } = await import('../public/utils/mentions.js');
 
 const USERS = [
   { id: 1, display_name: 'Anna' },
@@ -78,4 +78,34 @@ test('ein Klammeraffe ohne Namen bleibt Text', () => {
 test('eine Erwähnung am Zeilenanfang zählt, mitten im Wort nicht', () => {
   assert.deepEqual(mentionedUserIds('Erledigt.\n@Ben übernimmt', USERS), [3]);
   assert.deepEqual(mentionedUserIds('Kaffee4@Ben', USERS), []);
+});
+
+// --------------------------------------------------------
+// applyMention - was beim Auswaehlen ersetzt wird
+// --------------------------------------------------------
+
+test('applyMention: ersetzt den angefangenen Namen, auch mit Cursor mittendrin', () => {
+  assert.deepEqual(applyMention('@Ale', 2, 'Alex Johnson'), { text: '@Alex Johnson ', caret: 14 });
+  assert.deepEqual(applyMention('@Ale', 4, 'Alex Johnson'), { text: '@Alex Johnson ', caret: 14 });
+  assert.deepEqual(applyMention('@A', 2, 'Anna Maria'), { text: '@Anna Maria ', caret: 12 });
+});
+
+test('applyMention: ein mehrteiliger Name wird ganz ersetzt, nicht halb', () => {
+  // Der Schnitt am ersten Zwischenraum kennt „Anna Maria" nicht und haette
+  // „@Anna Maria  Maria" hinterlassen - halb ersetzt, halb stehen geblieben.
+  assert.equal(applyMention('@Anna Maria', 4, 'Anna Maria').text, '@Anna Maria ');
+  assert.equal(applyMention('@Anna Maria und Ben', 4, 'Anna Maria').text, '@Anna Maria und Ben');
+});
+
+test('applyMention: Satzzeichen bleiben stehen und es entsteht kein Doppelraum', () => {
+  assert.equal(applyMention('Hallo @Ale, kannst du', 9, 'Alex Johnson').text,
+    'Hallo @Alex Johnson, kannst du');
+  assert.equal(applyMention('@Ale und Ben', 4, 'Alex Johnson').text, '@Alex Johnson und Ben');
+});
+
+test('applyMention: ohne angefangene Erwaehnung links vom Cursor passiert nichts', () => {
+  assert.equal(applyMention('kein Klammeraffe hier', 8, 'Anna'), null);
+  // Mitten in einer Mailadresse ist kein Erwaehnungsanfang.
+  assert.equal(applyMention('info@example.org', 12, 'Anna'), null);
+  assert.equal(applyMention('@Ale', 2, ''), null);
 });

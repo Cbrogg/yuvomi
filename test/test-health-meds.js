@@ -307,14 +307,19 @@ test('scheduledLogs: eine Bedarfsdosis zaehlt nicht als eingehaltener Plan', () 
     { id: 1, status: 'taken', schedule_id: 7, scheduled_at: '2026-08-16T08:00' },
     { id: 2, status: 'taken', schedule_id: null, taken_at: '2026-08-16T12:40' }, // bei Bedarf
     { id: 3, status: 'skipped', schedule_id: 7, scheduled_at: '2026-08-16T20:00' },
+    // Der Plan dahinter wurde geloescht: `schedule_id` ist per ON DELETE SET NULL
+    // weg, der geplante Zeitpunkt steht noch. Die Dosis WAR geplant und muss in
+    // der Rechnung bleiben - sonst faellt die Adhaerenz vergangener Wochen in
+    // sich zusammen, weil jemand einen alten Einnahmeplan aufgeraeumt hat.
+    { id: 4, status: 'taken', schedule_id: null, scheduled_at: '2026-08-15T08:00' },
   ];
-  assert.deepEqual(scheduledLogs(logs).map((l) => l.id), [1, 3]);
+  assert.deepEqual(scheduledLogs(logs).map((l) => l.id), [1, 3, 4]);
 
   // Der Fall aus dem Review: drei von sieben geplanten genommen, dazu acht
   // Bedarfsdosen. Ungefiltert stünde da „100 %, 11 von 11".
   const viele = [
-    ...Array.from({ length: 3 }, (_, i) => ({ status: 'taken', schedule_id: i + 1 })),
-    ...Array.from({ length: 8 }, () => ({ status: 'taken', schedule_id: null })),
+    ...Array.from({ length: 3 }, (_, i) => ({ status: 'taken', schedule_id: i + 1, scheduled_at: `2026-08-1${i}T08:00` })),
+    ...Array.from({ length: 8 }, () => ({ status: 'taken', schedule_id: null, scheduled_at: null })),
   ];
   assert.equal(computeAdherence(viele, 7).rate, 1);
   assert.equal(computeAdherence(scheduledLogs(viele), 7).rate, 3 / 7);

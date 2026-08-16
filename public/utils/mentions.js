@@ -99,3 +99,50 @@ export function mentionedUserIds(text, users) {
   }
   return ids;
 }
+
+/**
+ * Setzt eine ausgewaehlte Erwaehnung in einen Text ein.
+ *
+ * Der Gegenlauf zu splitMentions: nicht lesen, sondern schreiben - und zwar an
+ * die Stelle, an der gerade getippt wird. Bewusst hier und nicht in der
+ * Eingabe-Verdrahtung, weil die Regeln, was dabei ERSETZT wird, dieselbe Frage
+ * beantworten wie das Erkennen und genauso leicht danebengreifen:
+ *
+ *   - Was rechts vom Cursor noch zum angefangenen Namen gehoert, wird
+ *     mitersetzt. Sonst wird aus „@Ale" (Cursor nach „@A") ein
+ *     „@Alex Johnson le".
+ *   - Steht der Name schon vollstaendig da, gilt seine ganze Laenge, auch mit
+ *     Leerzeichen darin - sonst wird aus „@Anna Maria" ein
+ *     „@Anna Maria  Maria".
+ *   - Der Schnitt endet am ersten Nicht-Wortzeichen, nicht am ersten
+ *     Zwischenraum: „@Ale, kannst du" behaelt sein Komma.
+ *   - Das Leerzeichen hinter dem Namen kommt nur, wenn dort keines und kein
+ *     Satzzeichen schon steht.
+ *
+ * @param {string} text        - der ganze Eingabetext
+ * @param {number} caret       - Cursorposition darin
+ * @param {string} displayName - der gewaehlte Anzeigename (ohne @)
+ * @returns {{ text:string, caret:number }|null} null, wenn links vom Cursor
+ *          gar keine angefangene Erwaehnung steht.
+ */
+export function applyMention(text, caret, displayName) {
+  const value = String(text ?? '');
+  const name = String(displayName ?? '');
+  if (!name) return null;
+
+  const upto = value.slice(0, caret);
+  const at = upto.lastIndexOf('@');
+  if (at === -1) return null;
+  if (at > 0 && BOUNDARY.test(upto[at - 1])) return null;
+
+  const before = value.slice(0, at);
+  const afterAt = value.slice(at + 1);
+  const stehtGanzDa = afterAt.slice(0, name.length).toLowerCase() === name.toLowerCase();
+  const rest = value.slice(caret);
+  const consumed = stehtGanzDa
+    ? name.length
+    : (caret - (at + 1)) + rest.search(/[^\p{L}\p{N}_]|$/u);
+  const after = value.slice(at + 1 + consumed);
+  const inserted = `@${name}${after === '' || BOUNDARY.test(after[0]) ? ' ' : ''}`;
+  return { text: `${before}${inserted}${after}`, caret: before.length + inserted.length };
+}

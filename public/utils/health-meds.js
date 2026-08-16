@@ -100,7 +100,7 @@ export function computeDueDoses(schedules, range = {}) {
 }
 
 /**
- * Nur die Dosen, die zu einem Zeitplan gehoeren.
+ * Nur die Dosen, die zu einem Zeitpunkt geplant WAREN.
  *
  * Die Basis jeder Adhaerenz-Rechnung: `planned` zaehlt Eintraege aus den
  * Einnahmeplaenen, und eine Bedarfsdosis gehoert zu keinem. Sichtbar wurde das
@@ -108,11 +108,18 @@ export function computeDueDoses(schedules, range = {}) {
  * heraus, seit dem Fix kommen sie mit. Drei von sieben geplanten Dosen plus acht
  * Kopfschmerztabletten haetten sonst „100 %, 11 von 11" ergeben.
  *
+ * Unterschieden wird an `scheduled_at` und NICHT an `schedule_id`: die
+ * Plan-Referenz traegt `ON DELETE SET NULL` (Migration 65). Wer einen alten
+ * Einnahmeplan loescht, setzt sie damit auf allen historischen Zeilen zurueck -
+ * ueber `schedule_id` gerechnet wuerde die Vergangenheit dadurch zu lauter
+ * Bedarfsdosen, und Adhaerenz wie Serie fielen rueckwirkend in sich zusammen,
+ * ohne dass jemand eine Dosis anders genommen haette. Der Zeitpunkt bleibt.
+ *
  * @param {Array<Object>} logs
  * @returns {Array<Object>}
  */
 export function scheduledLogs(logs) {
-  return (Array.isArray(logs) ? logs : []).filter((l) => l && l.schedule_id != null);
+  return (Array.isArray(logs) ? logs : []).filter((l) => l && l.scheduled_at);
 }
 
 /**

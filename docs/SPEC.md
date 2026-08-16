@@ -1900,7 +1900,7 @@ under Settings → Family; every member can ask `GET /health/caregivers/me` who 
 
 **Taking an as-needed dose (#700).** "As needed" existed as a column, a form field and a badge since
 v65 — but there was no button anywhere: both booking paths hang off `data-schedule-id`, and a PRN
-medication has no schedule by definition. The Meds tab and the Overview now share **one** "As needed"
+medication is by definition not one of a schedule's entries. The Meds tab and the Overview now share **one** "As needed"
 section listing every active PRN medication with a *Take now* button that posts a log without a
 schedule (`POST /medications/:id/logs`, `{ status: 'taken', taken_at }`); `prn_dose_qty` is deducted
 from stock like a scheduled dose. `min_interval_hours` plus the last taken dose produce the readout
@@ -1909,6 +1909,16 @@ the absolute one still holds three hours later. It is derived from the stored ti
 timer in one tab, so it survives a reload and a second device. Taking a dose early is not blocked but
 asked about: the minimum gap comes from a package insert, and a dose actually taken early should be
 recordable rather than hidden.
+
+`prn` and a schedule are **not** mutually exclusive, and deliberately so: a fixed base dose plus an
+extra one when the pain comes back is a common prescription, so such a medication appears in both
+"Due today" and "As needed" and can be logged from either. The minimum interval counts both, because
+it is a statement about the body and not about which list the button sat in - the countdown runs from
+the last dose actually *taken*, scheduled or not. Adherence is the other way round: it measures a
+plan being kept, so it counts only entries that carry a `scheduled_at`. That column, not
+`schedule_id`, is what makes an entry a planned one - the schedule reference is cleared by
+`ON DELETE SET NULL` when an old schedule is removed, and reading the past through it would turn
+every historical dose into an as-needed one and collapse last month's adherence retroactively.
 
 The same discussion exposed a filter bug: `GET /medications/:id/logs` and `GET /export/meds-logs`
 compared `scheduled_at` against the range, which is NULL for an as-needed dose — so it fell out of

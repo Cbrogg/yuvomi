@@ -23,6 +23,7 @@
 import { api } from '/api.js';
 import { t, formatDate } from '/i18n.js';
 import { esc } from '/utils/html.js';
+import { isPreviewable } from '/utils/document-preview.js';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
@@ -64,7 +65,7 @@ export function renderDocumentAttachField({
   // Aufrufer muss die Liste nicht ein zweites Mal an bind() reichen.
   const initial = attachments
     .filter((a) => a?.document_id)
-    .map((a) => ({ id: a.document_id, name: a.name || a.original_name || '' }));
+    .map((a) => ({ id: a.document_id, name: a.name || a.original_name || '', mime: a.mime_type || '' }));
 
   return `
     <div class="form-group ${FIELD_CLASS}" data-doc-attach
@@ -142,16 +143,21 @@ export function bindDocumentAttachField(panel, {
   // Reihenfolge des Hinzufügens entspricht:
   //   { kind: 'document', id, name }  - existiert bereits serverseitig
   //   { kind: 'file', file, name }    - wird erst bei commit() hochgeladen
-  const items = initialIds.map((entry) => ({ kind: 'document', id: entry.id, name: entry.name }));
+  const items = initialIds.map((entry) => ({ kind: 'document', id: entry.id, name: entry.name, mime: entry.mime || '' }));
 
   const renderChips = () => {
     chipsEl.replaceChildren();
     for (const [index, item] of items.entries()) {
       // Bereits abgelegte Dokumente sind anklickbar - ein Beleg, den man nicht
       // ansehen kann, ist kein Beleg. Wartende Uploads haben noch keine URL.
+      // Vorschaubar -> /preview, sonst /download. Der feste /preview-Link war
+      // fuer eine DOCX oder XLSX ein 415: die Datei war angehaengt, aber nicht
+      // mehr zu oeffnen. Welche Typen der Browser inline zeigt, steht einmal in
+      // utils/document-preview.js.
+      const href = `/api/v1/documents/${item.id}/${isPreviewable(item.mime) ? 'preview' : 'download'}`;
       const nameHtml = item.kind === 'file'
         ? `<span class="doc-attach__chip-name">${esc(item.name)}</span>`
-        : `<a class="doc-attach__chip-name" href="/api/v1/documents/${item.id}/preview"
+        : `<a class="doc-attach__chip-name" href="${href}"
               target="_blank" rel="noopener noreferrer"
               title="${esc(t('documentAttach.openAction', { name: item.name }))}">${esc(item.name)}</a>`;
       chipsEl.insertAdjacentHTML('beforeend', `
@@ -234,7 +240,7 @@ export function bindDocumentAttachField(panel, {
     const alreadyLinked = new Set(items.filter((i) => i.kind === 'document').map((i) => i.id));
     const picked = await openDocumentPicker(panel, { excludeIds: alreadyLinked, single: maxItems === 1 });
     for (const doc of picked) {
-      if (!addItem({ kind: 'document', id: doc.id, name: doc.name })) break;
+      if (!addItem({ kind: 'document', id: doc.id, name: doc.name, mime: doc.mime_type || '' })) break;
     }
     if (picked.length) renderChips();
   });
@@ -276,6 +282,7 @@ export function bindDocumentAttachField(panel, {
         item.kind = 'document';
         item.id = res.data?.id;
         item.name = res.data?.name || item.name;
+        item.mime = res.data?.mime_type || item.file?.type || '';
         delete item.file;
       }
       return items.filter((i) => i.id).map((i) => i.id);

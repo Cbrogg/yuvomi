@@ -18,7 +18,7 @@ import { resolveReminderPreset, parseRemindAtAsUtc } from '/utils/reminder-offse
 import { renderPageSearch, wirePageSearch } from '/utils/page-search.js';
 import { isPreviewable } from '/utils/document-preview.js';
 import { renderDocumentAttachField, bindDocumentAttachField } from '/components/document-attach.js';
-import { splitMentions } from '/utils/mentions.js';
+import { splitMentions, applyMention } from '/utils/mentions.js';
 import '/components/category-manager.js';
 import '/components/tag-manager.js';
 import { findPageFab } from '/utils/fab.js';
@@ -956,7 +956,7 @@ ${syncTargetFieldHtml(task)}
       ${renderReminderSection(task, reminder)}
 
       ${renderDocumentAttachField({
-        attachments: (task?.documents ?? []).map((doc) => ({ document_id: doc.id, name: doc.name })),
+        attachments: (task?.documents ?? []).map((doc) => ({ document_id: doc.id, name: doc.name, mime_type: doc.mime_type })),
         label: t('tasks.documentsLabel'),
       })}
 
@@ -1229,6 +1229,12 @@ function wireTaskForm(panel, { task = null, container }) {
     // „nur Beteiligte" traegt das Dokument dieselbe Liste - `restricted` mit den
     // zugewiesenen Personen. Ausgewertet wird erst beim Hochladen, weil das
     // Sichtbarkeitsfeld bis dahin noch umgestellt werden kann.
+    //
+    // Eine MOMENTAUFNAHME, kein Dauerabgleich: wechselt die Aufgabe spaeter ihre
+    // Sichtbarkeit oder ihre Zuweisungen, bleibt die Freigabe des Dokuments
+    // stehen. Sie nachzuziehen hiesse, in Dokumente hineinzuschreiben, wo die
+    // Datei danach lebt und wo sie jemand bewusst anders freigegeben haben kann
+    // - eine Aufgabenzuweisung darf keine fremde Freigabe ueberschreiben.
     visibility: () => taskDocumentVisibility(panel),
     allowedMemberIds: () => getSelectedUserIds(panel, 'task_assigned').map(Number),
   });
@@ -1622,19 +1628,10 @@ function wireMentionSuggest(field) {
     // letzten Tastendruck zu verlassen: liegt der Cursor inzwischen woanders,
     // gibt es nichts zu ersetzen, und ein blindes Einfuegen zerschnitte den
     // Text an einer Stelle, die niemand gemeint hat.
-    const query = currentQuery();
-    if (!query) { close(); return; }
-    const before = field.value.slice(0, query.at);
-    // Der Rest des angefangenen Wortes RECHTS vom Cursor gehoert mit zur
-    // Erwaehnung und wird ersetzt, nicht stehen gelassen: wer mitten in „@Ale"
-    // auswaehlt, meint den Namen und nicht „@Alex Johnson le". Geschnitten wird
-    // nur bis zum naechsten Zwischenraum, damit ein Wort dahinter bleibt.
-    const rest = field.value.slice(field.selectionStart);
-    const after = rest.slice(rest.search(/\s|$/));
-    const inserted = `@${user.display_name} `;
-    field.value = `${before}${inserted}${after}`;
-    const caret = before.length + inserted.length;
-    field.setSelectionRange(caret, caret);
+    const next = applyMention(field.value, field.selectionStart, user.display_name);
+    if (!next) { close(); return; }
+    field.value = next.text;
+    field.setSelectionRange(next.caret, next.caret);
     close();
     field.focus();
   };
