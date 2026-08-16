@@ -12,7 +12,8 @@ import { stagger, wireScrollFade, scheduleUndoableDelete } from '/utils/ux.js';
 import { t, formatDate as formatPreferredDate, formatDayMonth, formatTime, timeSuffix, formatDateInput, parseDateInput, isDateInputValid, formatTimeInput, parseTimeInput } from '/i18n.js';
 import { esc, fmtLocation } from '/utils/html.js';
 import { shiftEndDateKey, isEndBeforeStart, weekStartIndex, weekdayOrder,
-         monthPeriodKeys, startOfLocalWeekKey, addLocalDays, defaultDateInPeriod } from '/utils/date.js';
+         monthPeriodKeys, startOfLocalWeekKey, addLocalDays, defaultDateInPeriod,
+         isWeekendKey } from '/utils/date.js';
 import { truncateRuleBefore, shiftSeriesStart, shiftEndForStart } from '/utils/recurrence-scope.js';
 import { getReadableTextColor } from '/utils/color.js';
 import { refresh as refreshReminders } from '/reminders.js';
@@ -1509,16 +1510,27 @@ function renderMonthView(container) {
   _monthGridResizeObserver.observe(grid);
 }
 
+/**
+ * Klassen einer Monatszelle - eigene Funktion, weil hier der Wochentag über den
+ * Tag selbst entschieden wird und nicht über seine Spalte im Raster. Die
+ * Wochenend-Tönung hing früher an `:nth-child(7n)`/`7n-1` im CSS, was nur bei
+ * Wochenstart Montag Sa/So traf: bei Sonntag-Start färbte sie Fr/Sa (#780).
+ */
+function monthDayClasses(date, inMonth, todayKey = state.today) {
+  return [
+    'month-day',
+    !inMonth            ? 'month-day--outside' : '',
+    date === todayKey   ? 'month-day--today'   : '',
+    isWeekendKey(date)  ? 'month-day--weekend' : '',
+  ].filter(Boolean).join(' ');
+}
+
 function renderMonthDay(date, inMonth) {
   const evs      = eventsOnDay(date);
   const dayTasks = tasksOnDay(date);
   const dayHols  = holidaysOnDay(date);
   const isToday  = date === state.today;
-  const classes  = [
-    'month-day',
-    !inMonth ? 'month-day--outside' : '',
-    isToday  ? 'month-day--today' : '',
-  ].filter(Boolean).join(' ');
+  const classes  = monthDayClasses(date, inMonth);
 
   // Alle Chips (Feiertagsband, Termine, Aufgaben) bis zu einem großzügigen Puffer
   // ins DOM rendern; welche sichtbar bleiben, entscheidet fitMonthDayCells aus der
@@ -2271,6 +2283,7 @@ export const __test = {
   attachmentUrls,
   clickedTime,
   hourOffset,
+  monthDayClasses,
 };
 
 function renderAgendaEvent(ev, dayStr) {
