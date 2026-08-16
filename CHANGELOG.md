@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.16.0] - 2026-08-16
+
 ### Added
 
 - **Every member arranges their own overview** (#585). Which tiles the board shows, in what order and at what size, was stored once for the whole household: whoever took the cycle tile off their board took it off everyone's, and whoever pulled tasks to the top moved them for the children too. A family has different needs on the same page, which is what the request said. The arrangement and the "Today at a glance" band now belong to the member who set them, stored the same way the navigation order and the calendar defaults already were. Nothing changes on upgrade: as long as nobody rearranges anything, everyone keeps seeing the household's saved board, and the first personal change only affects that one person. While you are rearranging, the customize bar says that this is your board alone; "Reset" says what it resets, which the word alone no longer does now that the arrangement is personal. On a shared wall tablet the loading skeleton no longer predicts the previous member's grid after a change of user.

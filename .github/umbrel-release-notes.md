@@ -1,4 +1,4 @@
-<!-- version: 2.15.0 -->
+<!-- version: 2.16.0 -->
 <!--
   Die `releaseNotes` fuer den Umbrel-App-Store, von Hand fuer JEDEN Release
   geschrieben. `umbrel-publish.yml` nimmt den Text unter diesem Kommentar
@@ -29,17 +29,17 @@
     - Leerzeile zwischen den Absaetzen: der Store rendert ein gefaltetes
       YAML-Blockskalar, dort ist die Leerzeile der Absatzumbruch.
 
-  HINWEIS ZU DIESER VERSION: eine sichtbare Aenderung in der App (der Ordner,
-  in dem die Belege der Gemeinsamen Ausgaben liegen, heisst jetzt wie das Modul)
-  und die dazugehoerige Migration, die einen bestehenden Ordner mitnimmt - genau
-  der Absatz, den deren Skill als wichtigsten benennt, wenn es einen gibt. Die
-  Korrektur der Aussage zu ausgehenden Verbindungen steht drin, weil sie eine
-  Datenschutzzusage praezisiert und nicht bloss Doku umraeumt; das Verhalten
-  selbst ist unveraendert. Der ganze README- und Website-Umbau bleibt draussen
-  (deren Skill: "Omit ... docs-only").
+  HINWEIS ZU DIESER VERSION: zwei Faehigkeiten, die jedes Haushaltsmitglied
+  einzeln betreffen - die eigene Uebersicht und die eigene Navigation. Keine
+  Migration, kein Handlungsbedarf, also gibt es keinen Pflicht-Absatz. Der
+  dritte Absatz nennt den neuen Ort des Modul-Schalters, weil eine Adminin ihn
+  sonst sucht. Draussen bleibt, was nur Entwickler angeht: der Blatt-Split als
+  solcher, die Kontrastwerte, die Guards, die drei Review-Runden.
 -->
-The module for shared costs now goes by one name throughout. It answered to several at once: one wording as the page heading, another on the folder your receipts are filed into, and a third in a place the app never showed you. The heading is the name everywhere now, in all twenty-four languages. If you have filed receipts before, the folder holding them is renamed for you while updating and everything inside stays where it is; there is nothing to do.
+Everyone in the household now arranges their own overview. Which cards the start page shows, in what order and at what size used to be one setting for the whole household - taking the cycle card off your board took it off everyone's. From now on it is yours alone. Nothing changes when you update: everyone keeps seeing the board the household had, and the first change you make affects only you.
 
-One clarification about what leaves your server, in case you read the old wording as a promise. Yuvomi asks GitHub once for its list of releases, on first load and every six hours after, so it can tell you a newer version exists. That is the only request it makes on its own, and it has always made it. Everything else - weather, calendar sync, cloud backup - still stays off until you enter credentials.
+The same goes for the navigation. Under Settings, Personal, Navigation each row now has an eye button that removes that module from your own sidebar and your three phone favourites. It does not take the module away from anyone else, and it does not lock it: links and the search still open it. Modules you have hidden are exactly where they were, you just do not see them any more.
 
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.15.0
+For admins, switching a module on or off for the whole household has moved to its own page, Settings, Modules, Active modules. It used to sit right beside the personal button, twelve pixels apart, and the two look nothing alike now because they do very different things.
+
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.16.0
