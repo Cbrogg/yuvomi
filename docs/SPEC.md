@@ -2554,9 +2554,9 @@ modules/
 | `menu.label` | | Navigation label (falls back to `name`). |
 | `menu.order` | | Integer sort order in the navigation list. |
 
-**Admin controls (Settings → Personal → Navigation, admin-only section):**
-- Admins can enable/disable individual third-party modules without restarting the server.
-- Admins can drag-to-reorder navigation entries inside their Overview, Plan, Home, or Custom modules group; entries cannot cross group boundaries.
+**Where a third-party module is controlled:**
+- **Settings → Modules → Active modules** (admin-only): enable/disable an individual third-party module without restarting the server.
+- **Settings → Personal → Navigation** (every member): drag-to-reorder navigation entries inside the Overview, Plan, Home or Custom modules group - entries cannot cross group boundaries - and hide built-in modules from one's own navigation. Third-party modules carry no hide button: `hidden_modules` validates against the same allowlist as the household switch, which knows only the built-in slugs.
 - Disabled modules are not served to the browser and do not appear in navigation.
 - Enabled module pages are registered automatically in the SPA router at startup.
 
