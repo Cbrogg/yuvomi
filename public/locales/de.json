@@ -429,7 +429,17 @@
         "syncTargetLocal": "Nur lokal speichern",
         "syncTargetHint": "Wähle eine Erinnerungsliste, in die diese Aufgabe geschrieben wird.",
         "syncTargetMirrored": "Diese Aufgabe wird bereits mit einer Erinnerungsliste abgeglichen. Die Liste lässt sich nachträglich nicht wechseln.",
-        "syncTargetUnavailable": "Zuletzt gewählte Liste (nicht mehr verfügbar)"
+        "syncTargetUnavailable": "Zuletzt gewählte Liste (nicht mehr verfügbar)",
+        "commentsLabel": "Kommentare",
+        "commentsEmpty": "Noch keine Kommentare.",
+        "commentsLoadError": "Kommentare konnten nicht geladen werden.",
+        "commentPlaceholder": "Kommentar schreiben, @ erwähnt jemanden",
+        "commentSubmit": "Kommentieren",
+        "commentEdit": "Kommentar bearbeiten",
+        "commentDelete": "Kommentar löschen",
+        "commentEditedAt": "{{date}} {{time}} · bearbeitet",
+        "commentUnknownAuthor": "Unbekannt",
+        "commentDeletedToast": "Kommentar gelöscht."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} Mahlzeiten",
@@ -2723,7 +2733,8 @@
         "storageGoogleDrive": "Google Drive",
         "budgetFolder": "Belege",
         "splitExpensesFolder": "Gemeinsame Ausgaben",
-        "inventoryFolder": "Inventar"
+        "inventoryFolder": "Inventar",
+        "tasksFolder": "Aufgaben"
     },
     "userMultiSelect": {
         "nobody": "- Niemand -",

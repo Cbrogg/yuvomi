@@ -417,7 +417,17 @@
         "syncTargetLocal": "Зберігати лише локально",
         "syncTargetHint": "Вибери список нагадувань, до якого буде записано це завдання.",
         "syncTargetMirrored": "Це завдання вже синхронізується зі списком нагадувань. Список неможливо змінити згодом.",
-        "syncTargetUnavailable": "Раніше вибраний список (більше недоступний)"
+        "syncTargetUnavailable": "Раніше вибраний список (більше недоступний)",
+        "commentsLabel": "Коментарі",
+        "commentsEmpty": "Коментарів поки немає.",
+        "commentsLoadError": "Не вдалося завантажити коментарі.",
+        "commentPlaceholder": "Напишіть коментар, @ згадує когось",
+        "commentSubmit": "Коментувати",
+        "commentEdit": "Редагувати коментар",
+        "commentDelete": "Видалити коментар",
+        "commentEditedAt": "{{date}} {{time}} · відредаговано",
+        "commentUnknownAuthor": "Невідомо",
+        "commentDeletedToast": "Коментар видалено."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} прийоми їжі",
@@ -2709,7 +2719,8 @@
         "storageGoogleDrive": "Google Drive",
         "budgetFolder": "Чеки",
         "splitExpensesFolder": "Спільні витрати",
-        "inventoryFolder": "Inventory"
+        "inventoryFolder": "Inventory",
+        "tasksFolder": "Завдання"
     },
     "shortcuts": {
         "goKitchen": "Кухня",

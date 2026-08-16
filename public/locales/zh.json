@@ -417,7 +417,17 @@
         "syncTargetLocal": "仅保存在本地",
         "syncTargetHint": "选择一个提醒列表，用于写入此任务。",
         "syncTargetMirrored": "此任务已与某个提醒列表同步，之后无法更换列表。",
-        "syncTargetUnavailable": "先前选择的列表（已不可用）"
+        "syncTargetUnavailable": "先前选择的列表（已不可用）",
+        "commentsLabel": "评论",
+        "commentsEmpty": "还没有评论。",
+        "commentsLoadError": "无法加载评论。",
+        "commentPlaceholder": "写下评论，用 @ 提到某人",
+        "commentSubmit": "发表评论",
+        "commentEdit": "编辑评论",
+        "commentDelete": "删除评论",
+        "commentEditedAt": "{{date}} {{time}} · 已编辑",
+        "commentUnknownAuthor": "未知",
+        "commentDeletedToast": "评论已删除。"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} 餐",
@@ -2709,7 +2719,8 @@
         "storageGoogleDrive": "Google Drive",
         "budgetFolder": "凭证",
         "splitExpensesFolder": "共享支出",
-        "inventoryFolder": "Inventory"
+        "inventoryFolder": "Inventory",
+        "tasksFolder": "任务"
     },
     "shortcuts": {
         "goKitchen": "厨房",

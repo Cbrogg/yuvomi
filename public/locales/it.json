@@ -417,7 +417,17 @@
         "syncTargetLocal": "Salva solo in locale",
         "syncTargetHint": "Scegli un elenco di promemoria in cui scrivere questa attività.",
         "syncTargetMirrored": "Questa attività è già sincronizzata con un elenco di promemoria. L'elenco non può essere cambiato in seguito.",
-        "syncTargetUnavailable": "Elenco selezionato in precedenza (non più disponibile)"
+        "syncTargetUnavailable": "Elenco selezionato in precedenza (non più disponibile)",
+        "commentsLabel": "Commenti",
+        "commentsEmpty": "Ancora nessun commento.",
+        "commentsLoadError": "Impossibile caricare i commenti.",
+        "commentPlaceholder": "Scrivi un commento, @ menziona qualcuno",
+        "commentSubmit": "Commenta",
+        "commentEdit": "Modifica commento",
+        "commentDelete": "Elimina commento",
+        "commentEditedAt": "{{date}} {{time}} · modificato",
+        "commentUnknownAuthor": "Sconosciuto",
+        "commentDeletedToast": "Commento eliminato."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} pasti",
@@ -2709,7 +2719,8 @@
         "storageGoogleDrive": "Google Drive",
         "budgetFolder": "Ricevute",
         "splitExpensesFolder": "Spese condivise",
-        "inventoryFolder": "Inventory"
+        "inventoryFolder": "Inventory",
+        "tasksFolder": "Attività"
     },
     "shortcuts": {
         "goKitchen": "Cucina",

@@ -417,7 +417,17 @@
         "syncTargetLocal": "Enregistrer localement uniquement",
         "syncTargetHint": "Choisissez une liste de rappels dans laquelle écrire cette tâche.",
         "syncTargetMirrored": "Cette tâche est déjà synchronisée avec une liste de rappels. La liste ne peut plus être modifiée.",
-        "syncTargetUnavailable": "Liste sélectionnée précédemment (plus disponible)"
+        "syncTargetUnavailable": "Liste sélectionnée précédemment (plus disponible)",
+        "commentsLabel": "Commentaires",
+        "commentsEmpty": "Aucun commentaire pour l'instant.",
+        "commentsLoadError": "Impossible de charger les commentaires.",
+        "commentPlaceholder": "Écrire un commentaire, @ mentionne quelqu'un",
+        "commentSubmit": "Commenter",
+        "commentEdit": "Modifier le commentaire",
+        "commentDelete": "Supprimer le commentaire",
+        "commentEditedAt": "{{date}} {{time}} · modifié",
+        "commentUnknownAuthor": "Inconnu",
+        "commentDeletedToast": "Commentaire supprimé."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} repas",
@@ -2709,7 +2719,8 @@
         "storageGoogleDrive": "Google Drive",
         "budgetFolder": "Justificatifs",
         "splitExpensesFolder": "Dépenses partagées",
-        "inventoryFolder": "Inventory"
+        "inventoryFolder": "Inventory",
+        "tasksFolder": "Tâches"
     },
     "shortcuts": {
         "goKitchen": "Cuisine",

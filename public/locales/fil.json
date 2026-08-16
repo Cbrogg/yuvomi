@@ -429,7 +429,17 @@
         "syncTargetLocal": "I-save lang nang lokal",
         "syncTargetHint": "Pumili ng listahan ng paalala kung saan isusulat ang gawaing ito.",
         "syncTargetMirrored": "Naka-sync na ang gawaing ito sa isang listahan ng paalala. Hindi na mapapalitan ang listahan.",
-        "syncTargetUnavailable": "Dating napiling listahan (hindi na available)"
+        "syncTargetUnavailable": "Dating napiling listahan (hindi na available)",
+        "commentsLabel": "Mga komento",
+        "commentsEmpty": "Wala pang komento.",
+        "commentsLoadError": "Hindi na-load ang mga komento.",
+        "commentPlaceholder": "Sumulat ng komento, ang @ ay bumabanggit ng tao",
+        "commentSubmit": "Magkomento",
+        "commentEdit": "I-edit ang komento",
+        "commentDelete": "Burahin ang komento",
+        "commentEditedAt": "{{date}} {{time}} · in-edit",
+        "commentUnknownAuthor": "Hindi kilala",
+        "commentDeletedToast": "Nabura ang komento."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} pagkain",
@@ -2723,7 +2733,8 @@
         "storageGoogleDrive": "Google Drive",
         "budgetFolder": "Mga Resibo",
         "splitExpensesFolder": "Mga hinating gastos",
-        "inventoryFolder": "Inventory"
+        "inventoryFolder": "Inventory",
+        "tasksFolder": "Mga gawain"
     },
     "userMultiSelect": {
         "nobody": "- Wala -",

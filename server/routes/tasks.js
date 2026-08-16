@@ -16,6 +16,8 @@ import {
 } from '../services/caldav-todo-outbound.js';
 import { uniqueKey } from '../utils/category-slug.js';
 import { parseSyncTargetValue } from '../../public/utils/sync-target.js';
+import { mentionedUserIds } from '../../public/utils/mentions.js';
+import { pushService } from '../services/push.js';
 import { serverTimeZone, utcToWall } from '../utils/timezone.js';
 import {
   allTags, applyTagChanges, loadTags, loadTagsFor, normalizeTags,
@@ -762,6 +764,13 @@ router.get('/:id', (req, res) => {
     addAssignedUsers(task);
     task.subtasks = loadSubtasks(task.id, me);
     attachDocumentCounts([task], me);
+    // Die verknüpften Dokumente beim Namen, nicht nur gezählt (#733). Die
+    // Detailansicht zeigte hier seit jeher eine Zeile „Dokumente" an, las dafür
+    // aber ein Feld, das die API nie gefüllt hat - die Zeile war deshalb immer
+    // leer, egal wie viele Dokumente an der Aufgabe hingen. Die Liste kommt aus
+    // derselben Funktion wie GET /:id/documents, also mit derselben
+    // Sichtbarkeitsprüfung.
+    task.documents = loadTaskDocuments(task.id, me);
     attachTags([task]);
     res.json({ data: task });
   } catch (err) {
@@ -1402,6 +1411,163 @@ router.put('/:id/documents', (req, res) => {
     res.json({ data: loadTaskDocuments(task.id, me) });
   } catch (err) {
     log.error('PUT /:id/documents error:', err);
+    res.status(500).json({ error: 'Internal server error.', code: 500 });
+  }
+});
+
+// --------------------------------------------------------
+// Kommentare an Aufgaben (#734)
+//
+// Über eine Aufgabe wird geredet - bisher woanders, weshalb die Absprache dazu
+// nirgends neben der Sache stand, um die es ging. Wer die Aufgabe sieht, darf
+// mitreden; ändern und entfernen darf nur, wer geschrieben hat (Admins dürfen
+// entfernen, weil sonst niemand einen Beitrag moderieren könnte).
+//
+// Erwähnungen (@Name) werden aus dem TEXT gelesen und nicht aus einem zweiten
+// Feld: sonst wären das Hervorgehobene und das Benachrichtigte zwei Wahrheiten,
+// die auseinanderlaufen, sobald jemand den Namen tippt statt ihn zu wählen.
+// --------------------------------------------------------
+
+/** Kommentare einer Aufgabe, ältester zuerst - eine Unterhaltung liest sich vorwärts. */
+function loadTaskComments(taskId) {
+  return db.get().prepare(`
+    SELECT c.id, c.task_id, c.user_id, c.comment, c.created_at, c.updated_at,
+           u.display_name AS author_name, u.avatar_color AS author_color
+    FROM task_comments c
+    LEFT JOIN users u ON u.id = c.user_id
+    WHERE c.task_id = ?
+    ORDER BY c.id ASC
+  `).all(taskId);
+}
+
+/**
+ * Erwähnte Personen benachrichtigen - nach der Antwort, ohne sie aufzuhalten.
+ *
+ * Benachrichtigt wird nur, wer die Aufgabe auch sehen darf: eine Erwähnung ist
+ * kein Weg, jemandem den Titel einer privaten Aufgabe zuzustellen. Sich selbst
+ * zu erwähnen löst nichts aus.
+ */
+function notifyMentions(task, comment, authorId) {
+  const users = db.get().prepare('SELECT id, display_name FROM users').all();
+  const ids = mentionedUserIds(comment, users).filter((id) => id !== authorId);
+  if (!ids.length) return;
+
+  const author = users.find((u) => u.id === authorId)?.display_name || '';
+  for (const id of ids) {
+    if (!findVisibleTask(task.id, id)) continue;
+    pushService.sendPushToUser(id, {
+      title: task.title,
+      body: `${author}: ${comment}`.slice(0, 300),
+      url: `/tasks?open=${task.id}`,
+      tag: `task-comment-${task.id}`,
+    }).catch((err) => log.warn('Erwähnungs-Push fehlgeschlagen:', err?.message || err));
+  }
+}
+
+/** Ein Kommentar samt Aufgabe, wenn die Person ihn ändern bzw. entfernen darf. */
+function commentForWrite(req, { allowAdmin = false } = {}) {
+  const me = req.authUserId || req.session.userId;
+  const task = findVisibleTask(req.params.id, me);
+  if (!task) return { error: 404 };
+
+  const row = db.get().prepare('SELECT * FROM task_comments WHERE id = ? AND task_id = ?')
+    .get(req.params.commentId, task.id);
+  if (!row) return { error: 404 };
+
+  const mayWrite = row.user_id === me || (allowAdmin && req.authRole === 'admin');
+  if (!mayWrite) return { error: 403 };
+  return { task, row, me };
+}
+
+// GET /api/v1/tasks/:id/comments → { data: Comment[] }
+router.get('/:id/comments', (req, res) => {
+  try {
+    const me = req.authUserId || req.session.userId;
+    const task = findVisibleTask(req.params.id, me);
+    if (!task) return res.status(404).json({ error: 'Task not found.', code: 404 });
+    res.json({ data: loadTaskComments(task.id) });
+  } catch (err) {
+    log.error('GET /:id/comments error:', err);
+    res.status(500).json({ error: 'Internal server error.', code: 500 });
+  }
+});
+
+// POST /api/v1/tasks/:id/comments  Body: { comment }
+router.post('/:id/comments', (req, res) => {
+  try {
+    const me = req.authUserId || req.session.userId;
+    const task = db.get().prepare(`
+      SELECT t.id, t.title FROM tasks t
+      WHERE t.id = ? AND ${visibilityWhere('t', 'task_assignments', 'task_id')}
+    `).get(req.params.id, me, me);
+    if (!task) return res.status(404).json({ error: 'Task not found.', code: 404 });
+
+    // `v.str` trimmt und weist einen Kommentar aus lauter Leerzeichen ab.
+    const comment = v.str(req.body.comment, 'comment', { max: v.MAX_TEXT, required: true });
+    if (comment.error) return res.status(400).json({ error: comment.error, code: 400 });
+
+    const result = db.get().prepare(
+      'INSERT INTO task_comments (task_id, user_id, comment) VALUES (?, ?, ?)'
+    ).run(task.id, me, comment.value);
+
+    const row = db.get().prepare(`
+      SELECT c.id, c.task_id, c.user_id, c.comment, c.created_at, c.updated_at,
+             u.display_name AS author_name, u.avatar_color AS author_color
+      FROM task_comments c LEFT JOIN users u ON u.id = c.user_id WHERE c.id = ?
+    `).get(result.lastInsertRowid);
+
+    res.status(201).json({ data: row });
+    notifyMentions(task, row.comment, me);
+  } catch (err) {
+    log.error('POST /:id/comments error:', err);
+    res.status(500).json({ error: 'Internal server error.', code: 500 });
+  }
+});
+
+// PATCH /api/v1/tasks/:id/comments/:commentId  Body: { comment }
+router.patch('/:id/comments/:commentId', (req, res) => {
+  try {
+    const found = commentForWrite(req);
+    if (found.error) {
+      return res.status(found.error).json({
+        error: found.error === 403 ? 'Not authorized.' : 'Comment not found.', code: found.error,
+      });
+    }
+
+    const comment = v.str(req.body.comment, 'comment', { max: v.MAX_TEXT, required: true });
+    if (comment.error) return res.status(400).json({ error: comment.error, code: 400 });
+
+    db.get().prepare(`
+      UPDATE task_comments
+         SET comment = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+       WHERE id = ?
+    `).run(comment.value, found.row.id);
+
+    const row = db.get().prepare(`
+      SELECT c.id, c.task_id, c.user_id, c.comment, c.created_at, c.updated_at,
+             u.display_name AS author_name, u.avatar_color AS author_color
+      FROM task_comments c LEFT JOIN users u ON u.id = c.user_id WHERE c.id = ?
+    `).get(found.row.id);
+    res.json({ data: row });
+  } catch (err) {
+    log.error('PATCH /:id/comments/:commentId error:', err);
+    res.status(500).json({ error: 'Internal server error.', code: 500 });
+  }
+});
+
+// DELETE /api/v1/tasks/:id/comments/:commentId
+router.delete('/:id/comments/:commentId', (req, res) => {
+  try {
+    const found = commentForWrite(req, { allowAdmin: true });
+    if (found.error) {
+      return res.status(found.error).json({
+        error: found.error === 403 ? 'Not authorized.' : 'Comment not found.', code: found.error,
+      });
+    }
+    db.get().prepare('DELETE FROM task_comments WHERE id = ?').run(found.row.id);
+    res.json({ data: { id: found.row.id } });
+  } catch (err) {
+    log.error('DELETE /:id/comments/:commentId error:', err);
     res.status(500).json({ error: 'Internal server error.', code: 500 });
   }
 });

@@ -417,7 +417,17 @@
         "syncTargetLocal": "Αποθήκευση μόνο τοπικά",
         "syncTargetHint": "Επίλεξε μια λίστα υπενθυμίσεων στην οποία θα γραφτεί αυτή η εργασία.",
         "syncTargetMirrored": "Αυτή η εργασία συγχρονίζεται ήδη με μια λίστα υπενθυμίσεων. Η λίστα δεν μπορεί να αλλάξει εκ των υστέρων.",
-        "syncTargetUnavailable": "Λίστα που επιλέχθηκε παλαιότερα (δεν είναι πλέον διαθέσιμη)"
+        "syncTargetUnavailable": "Λίστα που επιλέχθηκε παλαιότερα (δεν είναι πλέον διαθέσιμη)",
+        "commentsLabel": "Σχόλια",
+        "commentsEmpty": "Δεν υπάρχουν ακόμη σχόλια.",
+        "commentsLoadError": "Τα σχόλια δεν φορτώθηκαν.",
+        "commentPlaceholder": "Γράψτε ένα σχόλιο, το @ αναφέρει κάποιον",
+        "commentSubmit": "Σχολιασμός",
+        "commentEdit": "Επεξεργασία σχολίου",
+        "commentDelete": "Διαγραφή σχολίου",
+        "commentEditedAt": "{{date}} {{time}} · επεξεργάστηκε",
+        "commentUnknownAuthor": "Άγνωστος",
+        "commentDeletedToast": "Το σχόλιο διαγράφηκε."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} γεύματα",
@@ -2709,7 +2719,8 @@
         "storageGoogleDrive": "Google Drive",
         "budgetFolder": "Αποδείξεις",
         "splitExpensesFolder": "Κοινά έξοδα",
-        "inventoryFolder": "Inventory"
+        "inventoryFolder": "Inventory",
+        "tasksFolder": "Εργασίες"
     },
     "shortcuts": {
         "goKitchen": "Κουζίνα",

@@ -417,7 +417,17 @@
         "syncTargetLocal": "الحفظ محليًا فقط",
         "syncTargetHint": "اختر قائمة تذكيرات لكتابة هذه المهمة فيها.",
         "syncTargetMirrored": "تتم مزامنة هذه المهمة بالفعل مع قائمة تذكيرات. لا يمكن تغيير القائمة لاحقًا.",
-        "syncTargetUnavailable": "القائمة المختارة سابقًا (لم تعد متاحة)"
+        "syncTargetUnavailable": "القائمة المختارة سابقًا (لم تعد متاحة)",
+        "commentsLabel": "التعليقات",
+        "commentsEmpty": "لا توجد تعليقات بعد.",
+        "commentsLoadError": "تعذّر تحميل التعليقات.",
+        "commentPlaceholder": "اكتب تعليقًا، و@ يذكر شخصًا",
+        "commentSubmit": "علّق",
+        "commentEdit": "تعديل التعليق",
+        "commentDelete": "حذف التعليق",
+        "commentEditedAt": "{{date}} {{time}} · مُعدّل",
+        "commentUnknownAuthor": "غير معروف",
+        "commentDeletedToast": "تم حذف التعليق."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} وجبات",
@@ -2709,7 +2719,8 @@
         "storageGoogleDrive": "Google Drive",
         "budgetFolder": "الإيصالات",
         "splitExpensesFolder": "المصاريف المشتركة",
-        "inventoryFolder": "Inventory"
+        "inventoryFolder": "Inventory",
+        "tasksFolder": "المهام"
     },
     "shortcuts": {
         "goKitchen": "المطبخ",

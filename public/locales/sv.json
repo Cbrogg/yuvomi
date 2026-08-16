@@ -417,7 +417,17 @@
         "syncTargetLocal": "Spara endast lokalt",
         "syncTargetHint": "Välj en påminnelselista att skriva den här uppgiften till.",
         "syncTargetMirrored": "Den här uppgiften synkroniseras redan med en påminnelselista. Listan kan inte ändras i efterhand.",
-        "syncTargetUnavailable": "Tidigare vald lista (inte längre tillgänglig)"
+        "syncTargetUnavailable": "Tidigare vald lista (inte längre tillgänglig)",
+        "commentsLabel": "Kommentarer",
+        "commentsEmpty": "Inga kommentarer än.",
+        "commentsLoadError": "Kommentarerna kunde inte laddas.",
+        "commentPlaceholder": "Skriv en kommentar, @ nämner någon",
+        "commentSubmit": "Kommentera",
+        "commentEdit": "Redigera kommentar",
+        "commentDelete": "Ta bort kommentar",
+        "commentEditedAt": "{{date}} {{time}} · redigerad",
+        "commentUnknownAuthor": "Okänd",
+        "commentDeletedToast": "Kommentaren togs bort."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} måltider",
@@ -2709,7 +2719,8 @@
         "storageGoogleDrive": "Google Drive",
         "budgetFolder": "Kvitton",
         "splitExpensesFolder": "Delade utgifter",
-        "inventoryFolder": "Inventory"
+        "inventoryFolder": "Inventory",
+        "tasksFolder": "Uppgifter"
     },
     "shortcuts": {
         "goKitchen": "Kök",

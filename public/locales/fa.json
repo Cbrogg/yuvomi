@@ -429,7 +429,17 @@
         "syncTargetLocal": "فقط ذخیره محلی",
         "syncTargetHint": "یک فهرست یادآوری انتخاب کن تا این وظیفه در آن نوشته شود.",
         "syncTargetMirrored": "این وظیفه از پیش با یک فهرست یادآوری همگام می‌شود. فهرست را بعداً نمی‌توان تغییر داد.",
-        "syncTargetUnavailable": "فهرست انتخاب‌شده پیشین (دیگر در دسترس نیست)"
+        "syncTargetUnavailable": "فهرست انتخاب‌شده پیشین (دیگر در دسترس نیست)",
+        "commentsLabel": "دیدگاه‌ها",
+        "commentsEmpty": "هنوز دیدگاهی نیست.",
+        "commentsLoadError": "دیدگاه‌ها بارگذاری نشد.",
+        "commentPlaceholder": "دیدگاهی بنویسید، @ کسی را نام می‌برد",
+        "commentSubmit": "ثبت دیدگاه",
+        "commentEdit": "ویرایش دیدگاه",
+        "commentDelete": "حذف دیدگاه",
+        "commentEditedAt": "{{date}} {{time}} · ویرایش‌شده",
+        "commentUnknownAuthor": "ناشناس",
+        "commentDeletedToast": "دیدگاه حذف شد."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} وعده",
@@ -2723,7 +2733,8 @@
         "storageGoogleDrive": "Google Drive",
         "budgetFolder": "رسیدها",
         "splitExpensesFolder": "هزینه‌های مشترک",
-        "inventoryFolder": "Inventory"
+        "inventoryFolder": "Inventory",
+        "tasksFolder": "کارها"
     },
     "userMultiSelect": {
         "nobody": "- هیچ‌کس -",

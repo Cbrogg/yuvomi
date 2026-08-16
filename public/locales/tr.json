@@ -417,7 +417,17 @@
         "syncTargetLocal": "Yalnızca yerel olarak kaydet",
         "syncTargetHint": "Bu görevin yazılacağı bir anımsatıcı listesi seç.",
         "syncTargetMirrored": "Bu görev zaten bir anımsatıcı listesiyle eşitleniyor. Liste sonradan değiştirilemez.",
-        "syncTargetUnavailable": "Daha önce seçilen liste (artık kullanılamıyor)"
+        "syncTargetUnavailable": "Daha önce seçilen liste (artık kullanılamıyor)",
+        "commentsLabel": "Yorumlar",
+        "commentsEmpty": "Henüz yorum yok.",
+        "commentsLoadError": "Yorumlar yüklenemedi.",
+        "commentPlaceholder": "Yorum yazın, @ birini etiketler",
+        "commentSubmit": "Yorum yap",
+        "commentEdit": "Yorumu düzenle",
+        "commentDelete": "Yorumu sil",
+        "commentEditedAt": "{{date}} {{time}} · düzenlendi",
+        "commentUnknownAuthor": "Bilinmiyor",
+        "commentDeletedToast": "Yorum silindi."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} öğünden",
@@ -2709,7 +2719,8 @@
         "storageGoogleDrive": "Google Drive",
         "budgetFolder": "Fişler",
         "splitExpensesFolder": "Paylaşılan giderler",
-        "inventoryFolder": "Inventory"
+        "inventoryFolder": "Inventory",
+        "tasksFolder": "Görevler"
     },
     "shortcuts": {
         "goKitchen": "Mutfak",

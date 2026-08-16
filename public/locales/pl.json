@@ -429,7 +429,17 @@
         "syncTargetLocal": "Zapisz tylko lokalnie",
         "syncTargetHint": "Wybierz listę przypomnień, do której ma trafić to zadanie.",
         "syncTargetMirrored": "To zadanie jest już synchronizowane z listą przypomnień. Listy nie można później zmienić.",
-        "syncTargetUnavailable": "Ostatnio wybrana lista (już niedostępna)"
+        "syncTargetUnavailable": "Ostatnio wybrana lista (już niedostępna)",
+        "commentsLabel": "Komentarze",
+        "commentsEmpty": "Jeszcze brak komentarzy.",
+        "commentsLoadError": "Nie udało się wczytać komentarzy.",
+        "commentPlaceholder": "Napisz komentarz, @ oznacza kogoś",
+        "commentSubmit": "Skomentuj",
+        "commentEdit": "Edytuj komentarz",
+        "commentDelete": "Usuń komentarz",
+        "commentEditedAt": "{{date}} {{time}} · edytowano",
+        "commentUnknownAuthor": "Nieznany",
+        "commentDeletedToast": "Komentarz usunięty."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} posiłki",
@@ -2723,7 +2733,8 @@
         "storageGoogleDrive": "Google Drive",
         "budgetFolder": "Dowody",
         "splitExpensesFolder": "Wspólne wydatki",
-        "inventoryFolder": "Inventory"
+        "inventoryFolder": "Inventory",
+        "tasksFolder": "Zadania"
     },
     "userMultiSelect": {
         "nobody": "– Nikt –",

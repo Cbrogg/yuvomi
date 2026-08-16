@@ -182,17 +182,46 @@ export function bindDocumentAttachField(panel, {
 
   field.querySelector('[data-doc-attach-upload]').addEventListener('click', () => fileInput.click());
 
-  fileInput.addEventListener('change', () => {
-    for (const file of fileInput.files || []) {
+  /** Dateien aufnehmen - aus dem Dateidialog wie aus einem Drop. */
+  const acceptFiles = (files) => {
+    for (const file of files || []) {
       if (file.size > maxFileSize) {
         window.yuvomi?.showToast(t('documents.fileTooLarge'), 'danger');
         continue;
       }
       if (!addItem({ kind: 'file', file, name: file.name })) break;
     }
+    renderChips();
+  };
+
+  fileInput.addEventListener('change', () => {
+    acceptFiles(fileInput.files);
     // Zurücksetzen, sonst löst dieselbe Datei beim zweiten Mal kein change aus.
     fileInput.value = '';
-    renderChips();
+  });
+
+  // Fallenlassen statt suchen (#733). Der Browser öffnet eine hierher gezogene
+  // Datei sonst im Tab und verwirft dabei das ausgefüllte Formular darunter -
+  // deshalb hängt der Abbruch am Feld und nicht am Fenster: Dateien, die
+  // woanders landen, gehen weiterhin ihren eigenen Weg.
+  const setDragging = (on) => field.classList.toggle('doc-attach--dragging', on);
+  field.addEventListener('dragover', (event) => {
+    if (!event.dataTransfer?.types?.includes('Files')) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'copy';
+    setDragging(true);
+  });
+  field.addEventListener('dragleave', (event) => {
+    // Nur, wenn der Zeiger das Feld wirklich verlässt - beim Wechsel zwischen
+    // Kindelementen feuert dragleave sonst und das Feld flackert.
+    if (field.contains(event.relatedTarget)) return;
+    setDragging(false);
+  });
+  field.addEventListener('drop', (event) => {
+    if (!event.dataTransfer?.files?.length) return;
+    event.preventDefault();
+    setDragging(false);
+    acceptFiles(event.dataTransfer.files);
   });
 
   field.querySelector('[data-doc-attach-pick]').addEventListener('click', async () => {

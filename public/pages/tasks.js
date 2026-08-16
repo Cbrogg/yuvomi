@@ -17,6 +17,8 @@ import { renderUserMultiSelect, getSelectedUserIds, bindUserMultiSelect, renderA
 import { resolveReminderPreset, parseRemindAtAsUtc } from '/utils/reminder-offset.js';
 import { renderPageSearch, wirePageSearch } from '/utils/page-search.js';
 import { isPreviewable } from '/utils/document-preview.js';
+import { renderDocumentAttachField, bindDocumentAttachField } from '/components/document-attach.js';
+import { splitMentions } from '/utils/mentions.js';
 import '/components/category-manager.js';
 import '/components/tag-manager.js';
 import { findPageFab } from '/utils/fab.js';
@@ -72,12 +74,18 @@ const PRIORITY_LABELS = () => Object.fromEntries(PRIORITIES().map((p) => [p.valu
 const STATUS_LABELS   = () => Object.fromEntries(FILTER_STATUSES().map((s) => [s.value, s.label]));
 
 // --------------------------------------------------------
-// Verknüpfte Dokumente (#503)
-// Working-Set des aktuell offenen Modals: index = id → Dokument-Metadaten,
-// selected = geordnete Liste der verknüpften Dokument-IDs. Wird beim Öffnen
-// des Modals in wireDocumentSection() neu aufgebaut und beim Speichern
-// (handleFormSubmit) per PUT /tasks/:id/documents als Replace-Set übernommen.
-let modalDocuments = { index: new Map(), selected: [] };
+// Verknüpfte Dokumente (#503, #733)
+//
+// Das Feld ist seit #733 die geteilte Komponente aus components/document-attach.js
+// - dieselbe, die Budget, Gemeinsame Ausgaben und Inventar benutzen. Vorher
+// führten die Aufgaben als einziges Modul eine eigene Auswahlliste, und die
+// konnte nur verknüpfen, was schon abgelegt war: eine Datei AN der Aufgabe
+// hochzuladen ging nirgends, obwohl der Baustein dafür seit #583 im Haus liegt.
+//
+// `taskDocuments` ist der Controller des offenen Formulars. commit() lädt
+// wartende Dateien hoch und liefert die vollständige ID-Liste, die
+// handleFormSubmit als Replace-Set an PUT /tasks/:id/documents gibt.
+let taskDocuments = null;
 
 function docMime(doc) {
   return String(doc.mime_type || '').split(';')[0].trim().toLowerCase();
@@ -947,17 +955,10 @@ ${syncTargetFieldHtml(task)}
 
       ${renderReminderSection(task, reminder)}
 
-      <div class="form-group task-documents" id="task-documents-section" style="margin-top:var(--space-4)">
-        <label class="label">${t('tasks.documentsLabel')}</label>
-        <p class="task-field-hint">${t('tasks.documentsHint')}</p>
-        <div class="task-documents__list" id="task-documents-list" role="list"></div>
-        <div class="task-documents__add">
-          <label class="sr-only" for="task-document-add">${t('tasks.documentAdd')}</label>
-          <select class="input" id="task-document-add">
-            <option value="">${t('tasks.documentAddPlaceholder')}</option>
-          </select>
-        </div>
-      </div>
+      ${renderDocumentAttachField({
+        attachments: (task?.documents ?? []).map((doc) => ({ document_id: doc.id, name: doc.name })),
+        label: t('tasks.documentsLabel'),
+      })}
 
       <div id="task-form-error" class="form-error" hidden></div>
 
@@ -984,6 +985,7 @@ let state = {
   allTags:         [],       // [{ tag, count }] für Filterleiste und Vorschläge (#586)
   defaultPoints:   0,        // Haushalt-Standard für neue Aufgaben (#578), 0 = aus
   currentUserId:   null,
+  isAdmin:         false,    // darf fremde Kommentare entfernen (#734)
   // `tags` ist eine Liste, keine Auswahl: mehrere Tags engen UND-verknüpft ein,
   // wie jeder andere Filter in dieser Leiste auch (#586).
   // Status, Priorität und Person halten mehrere Werte (#671); innerhalb einer
@@ -1168,89 +1170,6 @@ function wireVisibilityWarning(panel, selectSel, msName, warnSel) {
   update();
 }
 
-// Chip für ein verknüpftes Dokument: Name öffnet Vorschau/Download, X entfernt.
-function renderTaskDocChip(doc) {
-  return `
-    <span class="task-doc-chip" role="listitem" data-doc-id="${doc.id}">
-      <i data-lucide="${docIcon(doc)}" class="task-doc-chip__icon icon-sm" aria-hidden="true"></i>
-      <a class="task-doc-chip__name" href="${docHref(doc)}" target="_blank" rel="noopener"
-         title="${esc(doc.name)}">${esc(doc.name)}</a>
-      <button type="button" class="task-doc-chip__remove" data-action="unlink-doc"
-              data-doc-id="${doc.id}" aria-label="${t('tasks.documentRemove')}">
-        <i data-lucide="x" class="icon-sm" aria-hidden="true"></i>
-      </button>
-    </span>`;
-}
-
-// Dokument-Sektion befüllen: verfügbare + bereits verknüpfte Dokumente laden,
-// das Working-Set (modalDocuments) aufbauen und Add/Remove-Interaktion binden.
-async function wireDocumentSection(panel, task) {
-  const section = panel.querySelector('#task-documents-section');
-  if (!section) return;
-  const listEl = panel.querySelector('#task-documents-list');
-  const addSel = panel.querySelector('#task-document-add');
-  modalDocuments = { index: new Map(), selected: [] };
-
-  const render = () => {
-    const chips = modalDocuments.selected
-      .map((id) => modalDocuments.index.get(id))
-      .filter(Boolean)
-      .map(renderTaskDocChip)
-      .join('');
-    listEl.replaceChildren();
-    listEl.insertAdjacentHTML('beforeend',
-      chips || `<p class="task-documents__empty">${t('tasks.documentsEmpty')}</p>`);
-
-    const available = [...modalDocuments.index.values()]
-      .filter((d) => d.selectable && !modalDocuments.selected.includes(d.id))
-      .sort((a, b) => a.name.localeCompare(b.name));
-    addSel.replaceChildren();
-    const placeholder = document.createElement('option');
-    placeholder.value = '';
-    placeholder.textContent = t('tasks.documentAddPlaceholder');
-    addSel.appendChild(placeholder);
-    for (const d of available) {
-      const opt = document.createElement('option');
-      opt.value = String(d.id);
-      opt.textContent = d.name;
-      addSel.appendChild(opt);
-    }
-    addSel.disabled = available.length === 0;
-    window.lucide?.createIcons({ el: listEl });
-  };
-
-  try {
-    const [availRes, linkedRes] = await Promise.all([
-      api.get('/documents'),
-      task?.id ? api.get(`/tasks/${task.id}/documents`) : Promise.resolve({ data: [] }),
-    ]);
-    for (const d of (availRes.data ?? [])) {
-      modalDocuments.index.set(d.id, { id: d.id, name: d.name, mime_type: d.mime_type, selectable: true });
-    }
-    for (const d of (linkedRes.data ?? [])) {
-      const existing = modalDocuments.index.get(d.id);
-      if (existing) { existing.name = d.name; existing.mime_type = d.mime_type; }
-      else modalDocuments.index.set(d.id, { id: d.id, name: d.name, mime_type: d.mime_type, selectable: false });
-      if (!modalDocuments.selected.includes(d.id)) modalDocuments.selected.push(d.id);
-    }
-  } catch { /* Dokumente-Modul nicht erreichbar - Sektion bleibt leer/inaktiv */ }
-
-  render();
-
-  addSel.addEventListener('change', () => {
-    const id = Number(addSel.value);
-    if (id && !modalDocuments.selected.includes(id)) modalDocuments.selected.push(id);
-    addSel.value = '';
-    render();
-  });
-  listEl.addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-action="unlink-doc"]');
-    if (!btn) return;
-    const id = Number(btn.dataset.docId);
-    modalDocuments.selected = modalDocuments.selected.filter((x) => x !== id);
-    render();
-  });
-}
 
 function openTaskModal({ task = null, users = [], reminder = null } = {}, container) {
   const isEdit = !!task;
@@ -1282,8 +1201,13 @@ function wireTaskForm(panel, { task = null, container }) {
   renderTagChips(panel);
   wireTagEditor(panel);
 
-  // Verknüpfte Dokumente laden + Add/Remove binden (#503)
-  wireDocumentSection(panel, task);
+  // Verknüpfte Dokumente: hochladen oder ein abgelegtes wählen (#503, #733).
+  // Die Vorbelegung steckt bereits im Markup (task.documents aus GET /tasks/:id),
+  // hier wird nur noch verdrahtet.
+  taskDocuments = bindDocumentAttachField(panel, {
+    category: 'other',
+    folderName: t('documents.tasksFolder'),
+  });
 
   // Sync-Ziel nachladen (#695). Ohne await: die Liste kommt aus dem Netz, und
   // bis sie da ist, steht "nur lokal" - das ist der richtige Zwischenzustand.
@@ -1417,12 +1341,387 @@ function subtaskListNode(task, container) {
   return wrap;
 }
 
-/** Verknüpfte Dokumente beim Namen nennen, nicht nur zählen. */
+/**
+ * Verknüpfte Dokumente in der Leseansicht (#733).
+ *
+ * Zwei Korrekturen an einer Stelle: Die alte Fassung las `doc.title` und
+ * `doc.filename` - beides Felder, die ein Dokument nie hatte (es heißt `name`
+ * bzw. `original_name`), und sie bekam ohnehin nie eine Liste, weil die API das
+ * Feld gar nicht füllte. Die Zeile war also doppelt leer.
+ *
+ * Bilder stehen als Vorschau statt als Wort: an einer Aufgabe hängt meist ein
+ * abfotografierter Zettel, und ein Dateiname beantwortet die Frage nicht, wegen
+ * der man das Foto angehängt hat. Alles andere bleibt ein Chip mit Link.
+ */
 function documentListNode(docs) {
-  return chipListNode(
-    Array.isArray(docs) ? docs : [],
-    (doc) => doc.title || doc.filename || String(doc.id),
-  );
+  const list = Array.isArray(docs) ? docs : [];
+  if (!list.length) return null;
+
+  const images = list.filter((doc) => docMime(doc).startsWith('image/'));
+  const rest = list.filter((doc) => !docMime(doc).startsWith('image/'));
+
+  const wrap = document.createElement('div');
+  wrap.className = 'task-detail__docs';
+
+  if (images.length) {
+    const grid = document.createElement('div');
+    grid.className = 'task-detail__doc-previews';
+    for (const doc of images) {
+      const link = document.createElement('a');
+      link.className = 'task-detail__doc-preview';
+      link.href = docHref(doc);
+      link.target = '_blank';
+      link.rel = 'noopener';
+      link.title = doc.name || '';
+      const img = document.createElement('img');
+      img.src = `/api/v1/documents/${doc.id}/preview`;
+      img.alt = doc.name || '';
+      img.loading = 'lazy';
+      link.appendChild(img);
+      grid.appendChild(link);
+    }
+    wrap.appendChild(grid);
+  }
+
+  for (const doc of rest) {
+    const chip = document.createElement('a');
+    chip.className = 'task-doc-chip';
+    chip.href = docHref(doc);
+    chip.target = '_blank';
+    chip.rel = 'noopener';
+    const icon = document.createElement('i');
+    icon.dataset.lucide = docIcon(doc);
+    icon.className = 'task-doc-chip__icon icon-sm';
+    icon.setAttribute('aria-hidden', 'true');
+    const label = document.createElement('span');
+    label.className = 'task-doc-chip__name';
+    label.textContent = doc.name || doc.original_name || String(doc.id);
+    chip.append(icon, label);
+    wrap.appendChild(chip);
+  }
+
+  if (window.lucide) window.lucide.createIcons({ el: wrap });
+  return wrap;
+}
+
+// --------------------------------------------------------
+// Kommentare an einer Aufgabe (#734)
+//
+// „Damit die Absprache dort steht, wo die Sache steht." Der Abschnitt lädt
+// selbst nach: die Detailansicht öffnet sofort, die Unterhaltung kommt in dem
+// Moment dazu, in dem sie da ist - das ist billiger als ein Ladebalken vor der
+// ganzen Ansicht.
+// --------------------------------------------------------
+
+/** Kommentartext als DOM, Erwähnungen hervorgehoben. Kein innerHTML nötig. */
+function commentTextNode(text) {
+  const box = document.createElement('div');
+  box.className = 'task-comment__text';
+  for (const segment of splitMentions(text, state.users)) {
+    if (segment.type !== 'mention') {
+      box.appendChild(document.createTextNode(segment.text));
+      continue;
+    }
+    const chip = document.createElement('span');
+    // Die eigene Erwähnung sticht heraus: „mich hat jemand gemeint" ist die
+    // Information, wegen der man den Kommentar überhaupt liest.
+    chip.className = segment.user.id === state.currentUserId
+      ? 'task-comment__mention task-comment__mention--me'
+      : 'task-comment__mention';
+    chip.textContent = segment.text;
+    box.appendChild(chip);
+  }
+  return box;
+}
+
+/** Eine Zeile der Unterhaltung. */
+function commentRowNode(comment, { onChanged }) {
+  const row = document.createElement('article');
+  row.className = 'task-comment';
+
+  const head = document.createElement('div');
+  head.className = 'task-comment__head';
+
+  const author = document.createElement('span');
+  author.className = 'task-comment__author';
+  author.textContent = comment.author_name || t('tasks.commentUnknownAuthor');
+
+  const when = document.createElement('span');
+  when.className = 'task-comment__when';
+  const at = new Date(comment.updated_at || comment.created_at);
+  when.textContent = comment.updated_at
+    ? t('tasks.commentEditedAt', { date: formatDate(at), time: formatTime(at) })
+    : `${formatDate(at)} ${formatTime(at)}`;
+
+  head.append(author, when);
+
+  const mine = comment.user_id === state.currentUserId;
+  if (mine || state.isAdmin) {
+    const actions = document.createElement('div');
+    actions.className = 'task-comment__actions';
+
+    // Ändern darf nur der Autor - ein Admin moderiert, er schreibt nicht um.
+    if (mine) {
+      const edit = document.createElement('button');
+      edit.type = 'button';
+      edit.className = 'task-comment__action';
+      edit.setAttribute('aria-label', t('tasks.commentEdit'));
+      edit.title = t('tasks.commentEdit');
+      const editIcon = document.createElement('i');
+      editIcon.dataset.lucide = 'pencil';
+      editIcon.className = 'icon-sm';
+      editIcon.setAttribute('aria-hidden', 'true');
+      edit.appendChild(editIcon);
+      edit.addEventListener('click', () => startCommentEdit(row, comment, { onChanged }));
+      actions.appendChild(edit);
+    }
+
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'task-comment__action task-comment__action--danger';
+    del.setAttribute('aria-label', t('tasks.commentDelete'));
+    del.title = t('tasks.commentDelete');
+    const delIcon = document.createElement('i');
+    delIcon.dataset.lucide = 'trash-2';
+    delIcon.className = 'icon-sm';
+    delIcon.setAttribute('aria-hidden', 'true');
+    del.appendChild(delIcon);
+    // Kein Bestätigungsdialog, sondern der Rückgängig-Toast, den diese Seite
+    // schon fürs Löschen einer Aufgabe benutzt. Zwei Gründe: Eine Rückfrage
+    // wäre hier ein Modal über einem Modal - `confirmModal` verdrängt die
+    // Detailansicht, `confirmOverModal` schließt sie beim Bestätigen (beides
+    // gemessen, man stand danach wieder in der Liste). Und ein Kommentar ist
+    // kein Datensatz mit Anhängseln: Zurücknehmen ist die ehrlichere Antwort
+    // als Vorher-Fragen.
+    del.addEventListener('click', () => {
+      row.hidden = true;
+      scheduleUndoableDelete({
+        message: t('tasks.commentDeletedToast'),
+        commit: async ({ keepalive }) => {
+          await api.delete(`/tasks/${comment.task_id}/comments/${comment.id}`, { keepalive });
+          if (keepalive) return; // Seite verschwindet - kein Nachladen mehr
+          await onChanged();
+        },
+        restore: (err) => {
+          row.hidden = false;
+          if (err) window.yuvomi.showToast(err.message ?? t('common.errorGeneric'), 'danger');
+        },
+      });
+    });
+    actions.appendChild(del);
+    head.appendChild(actions);
+  }
+
+  row.append(head, commentTextNode(comment.comment));
+  return row;
+}
+
+/** Eine Zeile gegen ein Eingabefeld tauschen, ohne die Liste neu zu laden. */
+function startCommentEdit(row, comment, { onChanged }) {
+  const form = document.createElement('form');
+  form.className = 'task-comment__edit';
+
+  const field = document.createElement('textarea');
+  field.className = 'input task-comment__input';
+  field.rows = 3;
+  field.maxLength = 5000;
+  field.value = comment.comment;
+
+  const actions = document.createElement('div');
+  actions.className = 'task-comment__edit-actions';
+  const cancel = document.createElement('button');
+  cancel.type = 'button';
+  cancel.className = 'btn btn--ghost btn--sm';
+  cancel.textContent = t('common.cancel');
+  const save = document.createElement('button');
+  save.type = 'submit';
+  save.className = 'btn btn--primary btn--sm';
+  save.textContent = t('common.save');
+  actions.append(cancel, save);
+
+  cancel.addEventListener('click', () => row.replaceWith(commentRowNode(comment, { onChanged })));
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const value = field.value.trim();
+    if (!value) return;
+    save.disabled = true;
+    try {
+      await api.patch(`/tasks/${comment.task_id}/comments/${comment.id}`, { comment: value });
+      await onChanged();
+    } catch (err) {
+      save.disabled = false;
+      window.yuvomi.showToast(err.message ?? t('common.errorGeneric'), 'danger');
+    }
+  });
+
+  form.append(field, actions);
+  row.replaceChildren(form);
+  wireMentionSuggest(field);
+  field.focus();
+}
+
+/**
+ * Vorschläge beim Tippen eines @.
+ *
+ * Komfort, keine Bedingung: wer den Namen ausschreibt, wird genauso erwähnt -
+ * gelesen wird am Ende der Text, nicht die Auswahl (utils/mentions.js).
+ */
+function wireMentionSuggest(field) {
+  let box = null;
+  let matches = [];
+  let active = 0;
+
+  const close = () => { box?.remove(); box = null; matches = []; };
+
+  /** Das angefangene @-Wort links vom Cursor, oder null. */
+  const currentQuery = () => {
+    const upto = field.value.slice(0, field.selectionStart);
+    const at = upto.lastIndexOf('@');
+    if (at === -1) return null;
+    if (at > 0 && /[\p{L}\p{N}_]/u.test(upto[at - 1])) return null;
+    const typed = upto.slice(at + 1);
+    // Ein Zeilenumbruch beendet die Suche; ein Leerzeichen darf drin bleiben,
+    // weil Anzeigenamen zwei Wörter haben können.
+    if (/[\n\r]/.test(typed) || typed.length > 40) return null;
+    return { at, typed };
+  };
+
+  const apply = (user) => {
+    const query = currentQuery();
+    if (!query) return;
+    const before = field.value.slice(0, query.at);
+    const after = field.value.slice(field.selectionStart);
+    const inserted = `@${user.display_name} `;
+    field.value = `${before}${inserted}${after}`;
+    const caret = before.length + inserted.length;
+    field.setSelectionRange(caret, caret);
+    close();
+    field.focus();
+  };
+
+  const render = () => {
+    if (!box) {
+      box = document.createElement('div');
+      box.className = 'task-comment__suggest';
+      box.setAttribute('role', 'listbox');
+      field.parentElement.appendChild(box);
+    }
+    box.replaceChildren();
+    matches.forEach((user, index) => {
+      const option = document.createElement('button');
+      option.type = 'button';
+      option.className = index === active
+        ? 'task-comment__suggest-item is-active'
+        : 'task-comment__suggest-item';
+      option.setAttribute('role', 'option');
+      option.setAttribute('aria-selected', String(index === active));
+      option.textContent = user.display_name;
+      // mousedown statt click: ein Klick käme erst nach dem blur, und das
+      // schließt die Liste, bevor der Treffer übernommen wäre.
+      option.addEventListener('mousedown', (e) => { e.preventDefault(); apply(user); });
+      box.appendChild(option);
+    });
+  };
+
+  field.addEventListener('input', () => {
+    const query = currentQuery();
+    if (!query) { close(); return; }
+    const needle = query.typed.toLowerCase();
+    matches = state.users
+      .filter((u) => u.display_name && u.display_name.toLowerCase().startsWith(needle))
+      .slice(0, 6);
+    active = 0;
+    if (!matches.length) { close(); return; }
+    render();
+  });
+
+  field.addEventListener('keydown', (e) => {
+    if (!box || !matches.length) return;
+    if (e.key === 'ArrowDown')      { e.preventDefault(); active = (active + 1) % matches.length; render(); }
+    else if (e.key === 'ArrowUp')   { e.preventDefault(); active = (active - 1 + matches.length) % matches.length; render(); }
+    else if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); apply(matches[active]); }
+    else if (e.key === 'Escape')    { e.stopPropagation(); close(); }
+  });
+
+  field.addEventListener('blur', () => setTimeout(close, 0));
+}
+
+/** Der ganze Abschnitt: Liste, Eingabe, Nachladen. */
+function commentsNode(task) {
+  const wrap = document.createElement('div');
+  wrap.className = 'task-comments';
+
+  const list = document.createElement('div');
+  list.className = 'task-comments__list';
+  const status = document.createElement('p');
+  status.className = 'task-comments__status';
+  status.textContent = t('common.loading');
+  list.appendChild(status);
+
+  const form = document.createElement('form');
+  form.className = 'task-comments__form';
+  const field = document.createElement('textarea');
+  field.className = 'input task-comment__input';
+  field.rows = 2;
+  field.maxLength = 5000;
+  field.placeholder = t('tasks.commentPlaceholder');
+  field.setAttribute('aria-label', t('tasks.commentsLabel'));
+  const submit = document.createElement('button');
+  submit.type = 'submit';
+  // Bewusst nicht `--primary`: der auffälligste Knopf im Panel gehört der
+  // Fußzeile („Starten", „Ablegen"). Ein leuchtendes „Kommentieren" mitten im
+  // Blatt zöge die Aufmerksamkeit auf die Nebensache.
+  submit.className = 'btn btn--secondary btn--sm task-comments__submit';
+  submit.textContent = t('tasks.commentSubmit');
+  const fieldBox = document.createElement('div');
+  // Eigener Träger: die Vorschlagsliste hängt relativ darin, nicht am Formular.
+  fieldBox.className = 'task-comments__field';
+  fieldBox.appendChild(field);
+  form.append(fieldBox, submit);
+
+  const load = async () => {
+    try {
+      const res = await api.get(`/tasks/${task.id}/comments`);
+      const comments = res.data ?? [];
+      list.replaceChildren();
+      if (!comments.length) {
+        const empty = document.createElement('p');
+        empty.className = 'task-comments__status';
+        empty.textContent = t('tasks.commentsEmpty');
+        list.appendChild(empty);
+      } else {
+        for (const comment of comments) list.appendChild(commentRowNode(comment, { onChanged: load }));
+      }
+      if (window.lucide) window.lucide.createIcons({ el: list });
+    } catch {
+      list.replaceChildren();
+      const failed = document.createElement('p');
+      failed.className = 'task-comments__status';
+      failed.textContent = t('tasks.commentsLoadError');
+      list.appendChild(failed);
+    }
+  };
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const value = field.value.trim();
+    if (!value) return;
+    submit.disabled = true;
+    try {
+      await api.post(`/tasks/${task.id}/comments`, { comment: value });
+      field.value = '';
+      await load();
+    } catch (err) {
+      window.yuvomi.showToast(err.message ?? t('common.errorGeneric'), 'danger');
+    } finally {
+      submit.disabled = false;
+    }
+  });
+
+  wireMentionSuggest(field);
+  wrap.append(list, form);
+  load();
+  return wrap;
 }
 
 /** Erinnerung im Klartext, aus dem gespeicherten Zeitpunkt. */
@@ -1459,6 +1758,9 @@ function renderTaskDetail(task, reminders = [], container = null) {
     { icon: 'bell', label: t('reminders.sectionTitle'), value: taskReminderSummary(reminders) },
     visibilityRow(task.visibility),
     { icon: 'align-left', label: t('tasks.descriptionLabel'), node: descriptionNode(task.description), multiline: true },
+    // Ganz unten und immer sichtbar: die Unterhaltung ist der einzige Abschnitt,
+    // der auch dann etwas anbietet, wenn er leer ist - nämlich das Eingabefeld.
+    { icon: 'message-square', label: t('tasks.commentsLabel'), node: commentsNode(task), multiline: true },
   ];
 }
 
@@ -1816,6 +2118,21 @@ async function handleFormSubmit(e, container) {
     remindAt = new Date(dueDateTime.getTime() - offsetMs).toISOString().slice(0, 19);
   }
 
+  // Wartende Uploads VOR dem Speichern der Aufgabe (#733): scheitert der
+  // Upload, soll die Aufgabe nicht mit dem Gefühl gespeichert sein, der Beleg
+  // hänge dran. Dasselbe Vorgehen wie bei den Belegen im Budget.
+  // null heißt „kein Feld im Formular" und ist NICHT dasselbe wie „keine
+  // Dokumente": ein PUT mit leerer Liste löscht als Replace-Set alles, was an
+  // der Aufgabe hängt.
+  let documentIds = null;
+  try {
+    documentIds = taskDocuments ? await taskDocuments.commit() : null;
+  } catch (err) {
+    resetSubmit(err.message || t('common.errorGeneric'));
+    btnError(submitBtn);
+    return;
+  }
+
   try {
     let savedTaskId = taskId;
     if (taskId) {
@@ -1840,9 +2157,11 @@ async function handleFormSubmit(e, container) {
       }
 
       // Dokument-Verknüpfungen als Replace-Set übernehmen (#503).
-      try {
-        await api.put(`/tasks/${savedTaskId}/documents`, { document_ids: modalDocuments.selected });
-      } catch { /* Verknüpfen fehlgeschlagen - nicht blockierend für den Task-Save */ }
+      if (documentIds) {
+        try {
+          await api.put(`/tasks/${savedTaskId}/documents`, { document_ids: documentIds });
+        } catch { /* Verknüpfen fehlgeschlagen - nicht blockierend für den Task-Save */ }
+      }
     }
 
     btnSuccess(submitBtn, originalLabel);
@@ -3137,6 +3456,9 @@ function wireTaskList(container) {
 
 export async function render(container, { user }) {
   state.currentUserId = user?.id ?? null;
+  // Die Rolle entscheidet nur darüber, ob ein fremder Kommentar entfernt werden
+  // darf (#734) - der Server prüft dieselbe Bedingung noch einmal.
+  state.isAdmin = user?.role === 'admin';
 
   // „Mir zugewiesen" pro Gerät wiederherstellen (setzt assigned_to auf die eigene ID)
   try {

@@ -429,7 +429,17 @@
         "syncTargetLocal": "Simpan hanya secara lokal",
         "syncTargetHint": "Pilih daftar pengingat untuk menulis tugas ini.",
         "syncTargetMirrored": "Tugas ini sudah disinkronkan dengan daftar pengingat. Daftarnya tidak dapat diubah setelahnya.",
-        "syncTargetUnavailable": "Daftar yang dipilih sebelumnya (tidak lagi tersedia)"
+        "syncTargetUnavailable": "Daftar yang dipilih sebelumnya (tidak lagi tersedia)",
+        "commentsLabel": "Komentar",
+        "commentsEmpty": "Belum ada komentar.",
+        "commentsLoadError": "Komentar gagal dimuat.",
+        "commentPlaceholder": "Tulis komentar, @ menyebut seseorang",
+        "commentSubmit": "Komentari",
+        "commentEdit": "Ubah komentar",
+        "commentDelete": "Hapus komentar",
+        "commentEditedAt": "{{date}} {{time}} · diubah",
+        "commentUnknownAuthor": "Tidak diketahui",
+        "commentDeletedToast": "Komentar dihapus."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} hidangan",
@@ -2723,7 +2733,8 @@
         "storageGoogleDrive": "Google Drive",
         "budgetFolder": "Bukti",
         "splitExpensesFolder": "Pengeluaran Bersama",
-        "inventoryFolder": "Inventory"
+        "inventoryFolder": "Inventory",
+        "tasksFolder": "Tugas"
     },
     "userMultiSelect": {
         "nobody": "- Tidak ada -",
