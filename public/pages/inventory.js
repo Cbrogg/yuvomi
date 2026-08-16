@@ -157,6 +157,15 @@ function itemCategoryLabel(item) {
   return item.category_label_key ? t(item.category_label_key) : (item.category_name || item.category);
 }
 
+// Kategorie-Auswahl des Gegenstands-Formulars. Eigene Funktion, damit der Guard
+// sie mit einer Seed-Kategorie (name = NULL) fuettern kann: genau die stand
+// zuvor unbeschriftet in der Liste, weil hier c.name statt categoryLabel() las
+// (#783).
+function categoryOptionsHtml(categories) {
+  return categories
+    .map((c) => `<option value="${esc(c.key)}">${esc(categoryLabel(c))}</option>`).join('');
+}
+
 function matchesQuery(item) {
   if (!state.query) return true;
   const q = state.query.toLowerCase();
@@ -1171,8 +1180,7 @@ function buildItemForm({ mode, item = null }) {
   let pickedBooking = null; // nur im Anlegen-Fluss: {entry, role:'purchase'} vor dem Speichern
   let photoData = isEdit && item.photo_data ? item.photo_data : null;
 
-  const categoryOptions = state.categories
-    .map((c) => `<option value="${esc(c.key)}">${esc(c.name)}</option>`).join('');
+  const categoryOptions = categoryOptionsHtml(state.categories);
   const locationOptions = [`<option value="">${esc(t('inventory.unlocated'))}</option>`];
   for (const root of state.locations) {
     locationOptions.push(`<option value="${root.id}">${esc(root.name)}</option>`);
@@ -1611,3 +1619,9 @@ export async function render(container) {
     list.replaceChildren();
   }
 }
+
+export const __test = {
+  categoryLabel,
+  itemCategoryLabel,
+  categoryOptionsHtml,
+};

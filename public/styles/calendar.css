@@ -253,10 +253,11 @@
 /* Wochenende dezent zur Orientierung getönt (Richtung Modul-Akzent). Nur Tage
  * außerhalb des Monats sind ausgenommen (eigene, gedimmte Fläche). "Heute"
  * braucht keine Ausnahme mehr: die Markierung trägt seit dem Kanon-Umbau
- * allein die Ziffer, die Zelle hat keine eigene Fläche. Mo-basiertes
- * 7-Spalten-Raster: 7n = Sonntag, 7n-1 = Samstag. */
-.month-day:nth-child(7n):not(.month-day--outside),
-.month-day:nth-child(7n-1):not(.month-day--outside) {
+ * allein die Ziffer, die Zelle hat keine eigene Fläche. Welche Zelle Wochenende
+ * ist, entscheidet die Klasse aus renderMonthDay und nicht die Spaltenposition:
+ * `:nth-child(7n)`/`7n-1` traf nur bei Wochenstart Montag Sa/So, bei Sonntag-
+ * oder Samstag-Start färbte es Fr/Sa bzw. Do/Fr (#780). */
+.month-day--weekend:not(.month-day--outside) {
   background-color: color-mix(in srgb, var(--module-accent) var(--tint-wash), var(--color-surface-work));
 }
 

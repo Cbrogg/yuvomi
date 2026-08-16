@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **The category picker in the Inventory item form was blank.** The five categories that ship with the module stopped carrying their name in the database when they became translatable (2.14.0): the name column is empty for them and the label comes from a translation key, exactly as it already worked for task and contact categories. The picker still read the raw name, so it offered five unlabelled options - the list itself was there, only its labels were missing. Every other place in the module already resolved the label correctly; the picker was the one that did not. Reported in #783.
+- **Weekend shading in the month grid ignored the chosen first day of the week.** The tint was attached to the last two columns of the grid, which is Saturday and Sunday only as long as the week starts on Monday. With Sunday as the first day it shaded Friday and Saturday, with Saturday it shaded Thursday and Friday. It now follows the actual weekday of each cell, so the shading stays on the weekend whichever day the week starts on. Reported in #780.
+
 ## [2.14.4] - 2026-08-15
 
 ### Changed
