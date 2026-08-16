@@ -2365,6 +2365,13 @@ gone. The data model, including why the balance is always derived from the ledge
   `PATCH`/`DELETE /api/v1/rewards/catalog/:id` (admin), `GET /api/v1/rewards/ledger`,
   `GET/POST /api/v1/rewards/redemptions`, `PATCH /api/v1/rewards/redemptions/:id` (approve / reject /
   cancel), `POST /api/v1/rewards/bonus` (admin).
+- **`PATCH catalog/:id` field vocabulary:** an absent field means "leave this alone", a field sent as
+  `null` means "clear this". The two readings cannot be collapsed into one, because the edit form
+  always sends every field and the empty ones as `null`: read as "leave alone", an icon could never
+  be removed again; read as "clear", a partial update would wipe what it never touched. Treating the
+  `null` as a value instead of as a case of its own is what once wrote the literal text `null` into
+  `icon` and `description` (#789); migration 147 clears the rows that got it, in the catalog and in
+  the redemption snapshot both.
 
 ### First-run setup (`/setup`) (v0.58.0)
 

@@ -1,4 +1,4 @@
-<!-- version: 2.16.0 -->
+<!-- version: 2.16.1 -->
 <!--
   Die `releaseNotes` fuer den Umbrel-App-Store, von Hand fuer JEDEN Release
   geschrieben. `umbrel-publish.yml` nimmt den Text unter diesem Kommentar
@@ -29,17 +29,15 @@
     - Leerzeile zwischen den Absaetzen: der Store rendert ein gefaltetes
       YAML-Blockskalar, dort ist die Leerzeile der Absatzumbruch.
 
-  HINWEIS ZU DIESER VERSION: zwei Faehigkeiten, die jedes Haushaltsmitglied
-  einzeln betreffen - die eigene Uebersicht und die eigene Navigation. Keine
-  Migration, kein Handlungsbedarf, also gibt es keinen Pflicht-Absatz. Der
-  dritte Absatz nennt den neuen Ort des Modul-Schalters, weil eine Adminin ihn
-  sonst sucht. Draussen bleibt, was nur Entwickler angeht: der Blatt-Split als
-  solcher, die Kontrastwerte, die Guards, die drei Review-Runden.
+  HINWEIS ZU DIESER VERSION: ein einzelner gemeldeter Fehler im Belohnungs-
+  Modul. Es gibt eine Migration (147), aber sie raeumt nur auf und verlangt
+  vom Haushalt nichts - deshalb kein Pflicht-Absatz, sondern ein Halbsatz im
+  zweiten Absatz, damit niemand die schon verdorbenen Praemien von Hand
+  nachbessert. Draussen bleibt, was nur Entwickler angeht: null gegen
+  undefined, die Nummer der Migration, die Testnamen.
 -->
-Everyone in the household now arranges their own overview. Which cards the start page shows, in what order and at what size used to be one setting for the whole household - taking the cycle card off your board took it off everyone's. From now on it is yours alone. Nothing changes when you update: everyone keeps seeing the board the household had, and the first change you make affects only you.
+Editing a reward no longer replaces its icon with the word "null". Any reward you had created without an icon lost it the first time you changed anything else about it - the price, the name - and showed a stray piece of text in its place. Clearing the description of a reward did the same to the description.
 
-The same goes for the navigation. Under Settings, Personal, Navigation each row now has an eye button that removes that module from your own sidebar and your three phone favourites. It does not take the module away from anyone else, and it does not lock it: links and the search still open it. Modules you have hidden are exactly where they were, you just do not see them any more.
+Rewards that already carry that text are cleaned up while the app starts, including the copy kept in the redemption history, so there is nothing for you to correct by hand.
 
-For admins, switching a module on or off for the whole household has moved to its own page, Settings, Modules, Active modules. It used to sit right beside the personal button, twelve pixels apart, and the two look nothing alike now because they do very different things.
-
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.16.0
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.16.1

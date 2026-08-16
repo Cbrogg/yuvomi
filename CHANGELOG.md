@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.16.1] - 2026-08-16
+
 ### Fixed
 
 - **A reward without an icon no longer shows the word "null" after you edit it** (#789). The edit form always sends every field, sending the empty ones as nothing at all, and the route could not tell "leave this alone" apart from "clear this" - so it stored the text "null" as the icon. Changing the price of a reward was enough to trigger it, and clearing a description had the same effect. Rewards that already carry the stray text are cleaned up on upgrade, including the copy of the icon kept in the redemption history; a description that merely contains the word is left alone.
