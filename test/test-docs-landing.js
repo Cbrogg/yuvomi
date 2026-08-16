@@ -1,6 +1,6 @@
 /**
  * Modul: Doku-Seiten (GitHub Pages) - Struktur- und Drift-Guard
- * Zweck: Die vier Seiten unter `docs/` sind eigenständige Dateien ohne Build-Schritt
+ * Zweck: Die fünf Seiten unter `docs/` sind eigenständige Dateien ohne Build-Schritt
  *        und ohne Framework. Was sie behaupten, steht handgepflegt an mehreren
  *        Stellen gleichzeitig - und genau daran ist es wiederholt auseinander
  *        gelaufen. Diese Suite hält die fünf Kopplungen, die schon gerissen sind:
@@ -43,7 +43,7 @@ import { dirname, resolve } from 'node:path';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const DOCS = resolve(ROOT, 'docs');
 const SHOTS = resolve(DOCS, 'screenshots');
-const PAGES = ['index.html', 'install.html', 'datenschutz.html', 'impressum.html'];
+const PAGES = ['index.html', 'install.html', 'datenschutz.html', 'impressum.html', 'privacy.html'];
 
 const read = (p) => readFileSync(resolve(DOCS, p), 'utf8');
 const decode = (s) => s.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&nbsp;| /g, ' ');

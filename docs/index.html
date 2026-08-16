@@ -844,7 +844,7 @@
     <span class="sep">·</span>
     <!-- "0 trackers" is the strongest claim on the page for a privacy product and
          stays on phones, where it used to be the one that got dropped. -->
-    <a class="proof-link" href="datenschutz.html"><b>0</b> <span data-t="proof_telemetry">trackers</span></a>
+    <a class="proof-link" href="privacy.html" data-href-en="privacy.html" data-href-de="datenschutz.html"><b>0</b> <span data-t="proof_telemetry">trackers</span></a>
     <span class="sep">·</span>
     <span data-t="proof_mit">MIT licensed</span>
     <span class="sep ver">·</span>
@@ -1330,7 +1330,7 @@ openssl rand -hex 32</div><button class="copy-btn" type="button" data-copy="curl
         <div class="foot-col">
           <h3 data-t="foot_legal">Legal</h3>
           <a href="impressum.html" data-t="foot_impressum">Impressum (DE)</a>
-          <a href="datenschutz.html" data-t="foot_privacy">Datenschutz (DE)</a>
+          <a href="privacy.html" data-href-en="privacy.html" data-href-de="datenschutz.html" data-t="foot_privacy">Privacy</a>
         </div>
       </nav>
     </div>
@@ -1452,7 +1452,7 @@ openssl rand -hex 32</div><button class="copy-btn" type="button" data-copy="curl
       footer_heart:'Built with care for families who value privacy and simplicity.',
       foot_product:'Product', foot_screens:'Screenshots', foot_install:'Install', foot_docs:'Docs & spec',
       foot_project:'Project', foot_contrib:'Contributing', foot_changelog:'Changelog',
-      foot_legal:'Legal', foot_impressum:'Impressum (DE)', foot_privacy:'Datenschutz (DE)',
+      foot_legal:'Legal', foot_impressum:'Imprint (DE)', foot_privacy:'Privacy',
       foot_madewith:'Self-hosted · Privacy-first · Open source'
     },
     de: {
@@ -1698,6 +1698,13 @@ openssl rand -hex 32</div><button class="copy-btn" type="button" data-copy="curl
   }
   function applyLang(){
     document.documentElement.lang = lang;
+    /* Die Datenschutzerklaerung gibt es in zwei Fassungen. Der Link muss der
+       Sprache folgen, sonst schickt die englische Seite ihren einzigen Beleg
+       fuer "0 trackers" auf einen deutschen Rechtstext - vier Laeufe lang der
+       Fall, weil es die englische Fassung nicht gab. */
+    document.querySelectorAll('[data-href-' + lang + ']').forEach(function(a){
+      a.setAttribute('href', a.getAttribute('data-href-' + lang));
+    });
     var s = T[lang];
     document.querySelectorAll('[data-t]').forEach(function(el){ var k = el.getAttribute('data-t'); if (s[k] !== undefined) setRich(el, s[k]); });
     document.getElementById('langLbl').textContent = lang === 'en' ? 'DE' : 'EN';

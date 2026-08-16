@@ -943,7 +943,7 @@ docker compose logs | grep "Server running"</div></div><p data-t="trouble_nginx_
         <a href="https://github.com/ulsklyc/yuvomi/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a>
         <a href="https://github.com/ulsklyc/yuvomi/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener" data-t="footer_contrib">Contributing</a>
         <a href="impressum.html" data-t="footer_impressum">Impressum (DE)</a>
-        <a href="datenschutz.html" data-t="footer_privacy">Datenschutz (DE)</a>
+        <a href="privacy.html" data-href-en="privacy.html" data-href-de="datenschutz.html" data-t="footer_privacy">Privacy</a>
       </nav>
       <p class="footer-meta"><span id="gh-stars-install" data-gh-stars>★ 1.2k · </span><b>v2.14.4</b> · <span id="install-released" data-released="2026-08-15">15 August 2026</span></p>
     </div>
@@ -1037,7 +1037,7 @@ docker compose logs | grep "Server running"</div></div><p data-t="trouble_nginx_
         trouble_db_warning:'<code>docker compose down -v</code> deletes all data. Only use this on a fresh install with no data.',
         trouble_nginx_title:'Nginx shows 502 Bad Gateway', trouble_nginx_desc:"Nginx can't reach the container. Check it's running and the port matches:",
         trouble_nginx_port:'Ensure the <code>proxy_pass</code> port in your Nginx config matches the host port in <code>docker-compose.yml</code> (default: 3000).',
-        footer_home:'Home', footer_heart:'Built with care for families who value privacy and simplicity.', footer_contrib:'Contributing', footer_impressum:'Impressum (DE)', footer_privacy:'Datenschutz (DE)',
+        footer_home:'Home', footer_heart:'Built with care for families who value privacy and simplicity.', footer_contrib:'Contributing', footer_impressum:'Imprint (DE)', footer_privacy:'Privacy',
         to_top:'Back to top',
         skip_link:'Skip to content', backLabel:'Overview', copy:'Copy', copied:'Copied!', copyfail:'Copy failed'
       },
@@ -1220,6 +1220,9 @@ docker compose logs | grep "Server running"</div></div><p data-t="trouble_nginx_
     addEventListener('resize', syncCodeScroll);
     function applyLang(){
       document.documentElement.lang = lang;
+      document.querySelectorAll('[data-href-' + lang + ']').forEach(function(a){
+        a.setAttribute('href', a.getAttribute('data-href-' + lang));
+      });
       var s = i18n[lang];
       document.querySelectorAll('[data-t]').forEach(function(el){ var k = el.getAttribute('data-t'); if (s[k] !== undefined) setRich(el, s[k]); });
       /* Accessible names on the landmarks and the tablist, which used to carry
