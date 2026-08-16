@@ -39,6 +39,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
+import { dictBlock, decodeEntities } from './docs-dict.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const DOCS = resolve(ROOT, 'docs');
@@ -47,16 +48,12 @@ const PAGES = ['index.html', 'install.html', 'datenschutz.html', 'impressum.html
 
 const read = (p) => readFileSync(resolve(DOCS, p), 'utf8');
 /**
- * Entities aufloesen. `&amp;` MUSS zuletzt kommen: stuende es vorn, wuerde
- * `&amp;lt;` erst zu `&lt;` und dann zu `<` - also doppelt aufgeloest, und die
- * README-Gegenprobe vergliche gegen einen Text, den niemand geschrieben hat.
- * (CodeQL js/double-escaping, PR #782.)
+ * Entities aufloesen und Woerterbuch-Bloecke schneiden - beides aus
+ * `docs-dict.js`, weil `test-readme-consistency.js` dieselben Bloecke liest.
+ * Zwei Kopien desselben Extraktors haben in diesem Repo schon zweimal zwei
+ * verschiedene Blindstellen behalten (siehe den Kopf von `css-rules.js`).
  */
-const decode = (s) => s
-  .replace(/&lt;/g, '<')
-  .replace(/&gt;/g, '>')
-  .replace(/&nbsp;|\u00a0/g, ' ')
-  .replace(/&amp;/g, '&');
+const decode = decodeEntities;
 
 // ── (1) Kein Kommentar rendert als Text ──────────────────────────────────────
 
@@ -237,12 +234,6 @@ test('jede referenzierte Aufnahme hat beide WebP-Ableitungen in allen Sprachordn
 });
 
 // ── (5) Woerterbuecher vollstaendig und deckungsgleich ───────────────────────
-
-/** Der Rumpf eines Wörterbuch-Blocks (`en: { … }` / `de: { … }`). */
-function dictBlock(html, lang) {
-  const m = html.match(new RegExp(`\\n\\s*${lang}: \\{\\n([\\s\\S]*?)\\n\\s*\\}`));
-  return m ? m[1] : '';
-}
 
 /**
  * Schlüssel eines Blocks.

@@ -96,7 +96,6 @@
         "kitchenGoLabel": "Kuchyně, otevřít {{section}}",
         "search": "Hledat",
         "housekeeping": "Domácí práce",
-        "splitExpenses": "Rozdělení",
         "kitchenActiveLabel": "Kuchyně, aktivní sekce {{section}}",
         "reminders": "Připomínky",
         "sidebarCollapse": "Sbalit postranní panel",
@@ -2865,7 +2864,7 @@
         "dmsSearchError": "DMS je momentálně nedostupný.",
         "storageGoogleDrive": "Google Drive",
         "budgetFolder": "Doklady",
-        "splitExpensesFolder": "Sdílené výdaje",
+        "splitExpensesFolder": "Společné výdaje",
         "inventoryFolder": "Inventory"
     },
     "reminders": {

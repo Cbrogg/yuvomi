@@ -96,7 +96,6 @@
         "kitchenGoLabel": "Cozinha, abrir {{section}}",
         "search": "Pesquisar",
         "housekeeping": "Faxina",
-        "splitExpenses": "Divisão",
         "kitchenActiveLabel": "Cozinha, {{section}} ativo",
         "reminders": "Lembretes",
         "sidebarCollapse": "Recolher barra lateral",
@@ -2703,7 +2702,7 @@
         "dmsSearchError": "O DMS está indisponível de momento.",
         "storageGoogleDrive": "Google Drive",
         "budgetFolder": "Comprovativos",
-        "splitExpensesFolder": "Despesas partilhadas",
+        "splitExpensesFolder": "Despesas compartilhadas",
         "inventoryFolder": "Inventory"
     },
     "shortcuts": {

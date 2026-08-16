@@ -96,7 +96,6 @@
         "kitchenGoLabel": "المطبخ، فتح {{section}}",
         "search": "بحث",
         "housekeeping": "التدبير المنزلي",
-        "splitExpenses": "تقسيم",
         "kitchenActiveLabel": "المطبخ، {{section}} نشط",
         "reminders": "التذكيرات",
         "sidebarCollapse": "طيّ الشريط الجانبي",
@@ -2703,7 +2702,7 @@
         "dmsSearchError": "نظام إدارة المستندات غير متاح حاليًا.",
         "storageGoogleDrive": "Google Drive",
         "budgetFolder": "الإيصالات",
-        "splitExpensesFolder": "النفقات المشتركة",
+        "splitExpensesFolder": "المصاريف المشتركة",
         "inventoryFolder": "Inventory"
     },
     "shortcuts": {

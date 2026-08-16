@@ -96,7 +96,6 @@
         "kitchenGoLabel": "Nhà bếp, mở {{section}}",
         "search": "Tìm kiếm",
         "housekeeping": "Dọn dẹp",
-        "splitExpenses": "Chia sẻ chi phí",
         "kitchenActiveLabel": "Nhà bếp, {{section}} đang hoạt động",
         "reminders": "Nhắc nhở",
         "sidebarCollapse": "Thu gọn thanh bên",
@@ -2717,7 +2716,7 @@
         "dmsSearchError": "Hiện không kết nối được tới DMS.",
         "storageGoogleDrive": "Google Drive",
         "budgetFolder": "Chứng từ",
-        "splitExpensesFolder": "Chi tiêu chung",
+        "splitExpensesFolder": "Chi phí chung",
         "inventoryFolder": "Inventory"
     },
     "housekeeping": {

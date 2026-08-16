@@ -96,7 +96,6 @@
         "kitchenGoLabel": "Κουζίνα, άνοιγμα {{section}}",
         "search": "Αναζήτηση",
         "housekeeping": "Νοικοκυριό",
-        "splitExpenses": "Μοίρασμα",
         "kitchenActiveLabel": "Κουζίνα, {{section}} ενεργό",
         "reminders": "Υπενθυμίσεις",
         "sidebarCollapse": "Σύμπτυξη πλευρικής στήλης",
@@ -2703,7 +2702,7 @@
         "dmsSearchError": "Το DMS δεν είναι προσβάσιμο αυτήν τη στιγμή.",
         "storageGoogleDrive": "Google Drive",
         "budgetFolder": "Αποδείξεις",
-        "splitExpensesFolder": "Κοινές δαπάνες",
+        "splitExpensesFolder": "Κοινά έξοδα",
         "inventoryFolder": "Inventory"
     },
     "shortcuts": {

@@ -96,7 +96,6 @@
         "kitchenGoLabel": "Dapur, buka {{section}}",
         "search": "Cari",
         "housekeeping": "Asisten Rumah Tangga",
-        "splitExpenses": "Pembagian",
         "kitchenActiveLabel": "Dapur, {{section}} aktif",
         "reminders": "Pengingat",
         "sidebarCollapse": "Ciutkan bilah sisi",
@@ -2717,7 +2716,7 @@
         "dmsSearchError": "DMS sedang tidak dapat dijangkau.",
         "storageGoogleDrive": "Google Drive",
         "budgetFolder": "Bukti",
-        "splitExpensesFolder": "Pengeluaran bersama",
+        "splitExpensesFolder": "Pengeluaran Bersama",
         "inventoryFolder": "Inventory"
     },
     "userMultiSelect": {
