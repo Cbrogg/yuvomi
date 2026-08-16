@@ -103,6 +103,13 @@
   --m-health: #9E1E88;
   --m-rewards: #BA4468;
   --m-split: #1975A5;
+  /* Infrastruktur, kein Modul. Backup und API-Tokens trugen hier die Toene von
+     Aufgaben und Gemeinsamen Ausgaben - eine Farbe, die in der App eine
+     Zugehoerigkeit BEDEUTET, auf einer Karte, die keine hat. Der Neutralton ist
+     der der App (--_family-neutral) und sagt zusaetzlich: das hier schaltet ihr
+     nicht an und aus. Gemessen als Grafik (3:1 verlangt): 5.04:1 auf --surface,
+     4.82:1 auf --bg. */
+  --m-infra: #677079;
 
   /* The code plate keeps ONE palette in both themes - it is a terminal, and a
      terminal does not turn white. It now borrows the app's dark neutrals so it
@@ -191,6 +198,7 @@
   --m-health: #DB60CB;
   --m-rewards: #E68CA6;
   --m-split: #2FB6E8;
+  --m-infra: #A2ACB6;
 
   /* The code plate is deliberately NOT mirrored: it is the one surface that
      keeps its own palette in both themes. */
@@ -247,6 +255,7 @@
     --m-health: #DB60CB;
     --m-rewards: #E68CA6;
     --m-split: #2FB6E8;
+    --m-infra: #A2ACB6;
 
     --shadow-sm: 0 1px 3px rgba(0,0,0,0.30);
     --shadow-md: 0 4px 12px rgba(0,0,0,0.38);

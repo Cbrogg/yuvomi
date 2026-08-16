@@ -7,7 +7,8 @@
 
   <p>
     Tasks, calendar, budget, groceries, meals, health and more - for a family, a couple,
-    or just you. Eighteen modules on a server you own, and nothing leaves it until you say so.
+    or just you. Eighteen modules on a server you own, and the only thing that leaves it
+    is a version check.
   </p>
 
   <p>
@@ -169,8 +170,9 @@ covers engine setup, HTTPS, backups and troubleshooting step by step.
 ## Before you commit
 
 **What if this project stops?** Nothing changes on your machine. It is MIT-licensed and
-self-hosted, nothing phones home, and there is no server of ours anywhere in the path. The
-container you already pulled keeps running exactly as it does today, with or without us.
+self-hosted, there is no server of ours anywhere in the path, and the only thing that leaves your
+machine is a version check against the GitHub releases API. The container you already pulled keeps
+running exactly as it does today, with or without us.
 
 **What if you want your data somewhere else?** Copying one file is the whole export, as long as
 documents live in the database. Everything else is in that single SQLite file on your own disk. Scheduled backups write a restorable archive on top

@@ -98,7 +98,7 @@
     /* Sprungmenue. <details> statt eigenem Widget: das Oeffnen, Schliessen und
        die Escape-Taste kommen vom Browser, und ohne JS bleibt es bedienbar. */
     .nav-jump { position: relative; margin-left: auto; margin-right: 14px; }
-    .nav-jump summary { display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 0 12px;
+    .nav-jump summary { display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding: 0 12px;
       border-radius: var(--r-sm); border: 1px solid var(--border); background: var(--surface);
       color: var(--text-2); font-size: 0.84rem; font-weight: 600; cursor: pointer; list-style: none; }
     .nav-jump summary::-webkit-details-marker { display: none; }
@@ -113,7 +113,22 @@
     /* Unter 700px traegt die Leiste schon Logo, Sprache, Theme und GitHub. Das
        Menue faellt dort weg - die Sticky-Pille am Daumen ist der mobile Weg zum
        Ziel, und eine sechste Schaltflaeche in einer 390px-Leiste ist keine. */
-    @media (max-width: 700px) { .nav-jump { display: none; } }
+    /* Auf dem Telefon bleibt das Sprungmenue, verliert aber sein Label: die
+       Seite ist dort 23,9 Bildschirme lang, und die Fortschrittslinie beantwortet
+       "wo bin ich", nicht "was kommt noch". Vier Laeufe lang war es hier ganz
+       ausgeblendet - also fehlte es genau auf der Fassung, die es am noetigsten
+       hat. Platz ist da, weil `.nav-install` unter 700px ohnehin der Pille
+       weicht. Der barrierefreie Name steht am `summary` (data-t-aria). */
+    @media (max-width: 700px) {
+      .nav-jump { margin-right: 8px; }
+      /* Ohne Label faellt das `summary` auf die Breite seines Icons zusammen -
+         gemessen 37x40, also unter der Zielgroesse. Die Hoehe steht hier
+         ausdruecklich neben der Breite, weil `min-height: 40px` der Basisregel
+         sonst gewinnt. */
+      .nav-jump summary { padding: 0; gap: 0; min-width: 44px; min-height: 44px; justify-content: center; }
+      .nav-jump summary span { display: none; }
+      .nav-jump ul { left: auto; right: 0; }
+    }
     .nav-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
     /* The star count made the GitHub pill wrap to two lines and it then set the
        height of the whole bar; below 400px the wordmark yields to the icon so the
@@ -693,6 +708,21 @@
          so a right-aligned to-top would sit on top of it. It goes above instead,
          with enough clearance that the two boxes do not touch. */
       .to-top { bottom: calc(94px + env(safe-area-inset-bottom, 0px)); }
+      /* Die alte Fassung hat geprueft, dass sich die beiden PILLEN nicht
+         beruehren - und nicht, ob sie den INHALT beruehren. Sie taten es: bei
+         4.200px lagen drei `.swap-row`-Zeilen darunter, also ausgerechnet die
+         Sektion mit dem staerksten Argument. `body { padding-bottom }` haelt nur
+         den Footer frei, nicht die 23 Bildschirme davor. Beim Abwaertslesen
+         raeumen beide das Feld, beim Zurueckscrollen sind sie sofort wieder da. */
+      .to-top { transition: transform .2s ease, opacity .2s ease, visibility .2s ease; }
+      html.nav-down .to-top { transform: translateY(150%); opacity: 0; visibility: hidden; }
+      /* Die Pille muss `html.js .mobile-cta.show` (0,3,1) schlagen, sonst bleibt
+         sie sichtbar - genau das war der erste Versuch, und die Messung hat es
+         gezeigt: nav-down stand, die Deckkraft blieb 1. */
+      html.js.nav-down .mobile-cta.show {
+        transform: translateX(-50%) translateY(150%); opacity: 0;
+        visibility: hidden; pointer-events: none;
+      }
     }
     @media (prefers-reduced-motion: reduce) {
       /* Animations were already fully covered; transitions were not, so the
@@ -753,7 +783,7 @@
          Als <details> und nicht als Dauerleiste: eine Persuade-Flaeche darf
          ihren ersten Bildschirm nicht an eine Inhaltsangabe verlieren. -->
     <details class="nav-jump" id="navJump">
-      <summary aria-label="Springen zu" data-t-aria="jump_aria"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="11" y2="18"/></svg><span data-t="jump_label">Jump to</span></summary>
+      <summary aria-label="Jump to a section" data-t-aria="jump_aria"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="11" y2="18"/></svg><span data-t="jump_label">Jump to</span></summary>
       <ul>
         <li><a href="#screens" data-t="jump_screens">See it first</a></li>
         <li><a href="#swap" data-t="jump_swap">What it replaces</a></li>
@@ -789,7 +819,7 @@
   <div class="wrap">
     <div class="hero-content">
       <div class="hero-badge"><span class="dot"></span><span data-t="hero_badge">Open source · free · no subscriptions</span></div>
-      <h1><span data-t="hero_h1_pre">Your family. Your data.</span> <em data-t="hero_h1_em">Your home.</em></h1>
+      <h1><span data-t="hero_h1_pre">One home</span> <em data-t="hero_h1_em">instead of many subscriptions.</em></h1>
       <!-- Single sign-on, scheduled backups and the API/MCP endpoint were hoisted
            here when they were tertiary cards at the bottom of the module grid.
            They are proper cards now (m_backup, m_api), so hoisting them only
@@ -797,16 +827,19 @@
            reached "MCP endpoint" in the first paragraph a family reads. The
            sentence closes on the claim this audience actually came for instead;
            the homelab criteria are one scroll away, in the grid that owns them. -->
-      <p class="hero-sub" data-t="hero_sub">One private home for everything that keeps a household running - a family, a couple, or just you. Eighteen modules on a server you own, and nothing leaves it until you say so.</p>
+      <p class="hero-sub" data-t="hero_sub">The self-hosted family planner: tasks, calendar, budget and shopping on a server you own. For a family, a couple, or just you.</p>
       <div class="hero-actions">
         <a href="install.html" class="btn btn-primary"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span data-t="hero_install">Install Yuvomi</span></a>
         <a href="#screens" class="btn btn-secondary"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg><span data-t="hero_demo">See it in action</span></a>
       </div>
+      <!-- Drei Chips, nicht fuenf. "MIT-Lizenz" und "24 Sprachen" standen hier
+           UND in der Proof-Leiste eine Zeile tiefer; zusammen ergaben Hero-Tags
+           und Proof-Leiste elf Metadaten-Chips im ersten Bildschirm, von denen
+           keiner sagte, was das Produkt tut. Was hier bleibt, sagt die
+           Proof-Leiste nicht. -->
       <div class="hero-tags">
-        <span class="tag" data-t="tag_mit">MIT License</span>
         <span class="tag">Docker · Podman</span>
         <span class="tag">PWA</span>
-        <span class="tag" data-t="tag_langs">24 languages</span>
         <span class="tag" data-t="tag_nocloud">No cloud required</span>
       </div>
     </div>
@@ -909,7 +942,7 @@
   <div class="wrap">
     <div class="sec-head lead reveal">
       <span class="eyebrow" data-t="swap_eyebrow">What it replaces</span>
-      <h2 class="sec-title" data-t="swap_title">One home <em>instead of many subscriptions</em></h2>
+      <h2 class="sec-title" data-t="swap_title">Ten apps, <em>one place.</em></h2>
       <p class="sec-desc" data-t="swap_desc">Ten apps a household pays for separately, and the one place that does all of it on a server you own. Nothing here is a plan or a roadmap: every line is built and shipping today.</p>
     </div>
     <ul class="swap-list reveal">
@@ -1037,7 +1070,7 @@
           <li><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span data-t="f_health_l1">Cycle ring with period &amp; fertile-window predictions</span></li>
           <li><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span data-t="f_health_l2">Medication reminders with refill alerts</span></li>
           <li><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span data-t="f_health_l3">Per-entry visibility: private or shared</span></li>
-          <li><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span data-t="f_health_l4">Parents can record a child's fever and medication</span></li>
+          <li><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span data-t="f_health_l4">Parents can record a child’s fever and medication</span></li>
         </ul>
       </div>
       <div class="feat-visual">
@@ -1105,7 +1138,7 @@
         <div class="mod-ico"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 0-7 7c0 2.4 1.2 4.5 3 5.7V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.3c1.8-1.2 3-3.3 3-5.7a7 7 0 0 0-7-7z"/><line x1="9" y1="22" x2="15" y2="22"/></svg></div>
         <h3 data-t="m_recipes_t">Recipes</h3><p data-t="m_recipes_d">Create, duplicate and scale reusable recipes, then pre-fill meal slots or send the ingredients to a shopping list. A self-hosted Mealie or Tandoor instance can be mirrored read-only.</p>
       </div>
-      <div class="mod-card reveal" style="--m: var(--m-recipes)">
+      <div class="mod-card reveal" style="--m: var(--m-pantry)">
         <div class="mod-ico"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14a1 1 0 0 1 1 1v3H4V4a1 1 0 0 1 1-1z"/><path d="M4 7h16v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><line x1="10" y1="12" x2="14" y2="12"/></svg></div>
         <h3 data-t="m_pantry_t">Pantry</h3><p data-t="m_pantry_d">What is actually in the house: amount, storage location and best-before date, with expiry and low-stock filters, and a two-way handover with the shopping list.</p>
       </div>
@@ -1133,11 +1166,11 @@
         <div class="mod-ico"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
         <h3 data-t="m_rem_t">Reminders</h3><p data-t="m_rem_d">Reminders on tasks and calendar events with an in-app badge, plus opt-in push notifications that reach you even when the app is closed.</p>
       </div>
-      <div class="mod-card reveal d1" style="--m: var(--m-split)">
+      <div class="mod-card reveal d1" style="--m: var(--m-infra)">
         <div class="mod-ico"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></div>
         <h3 data-t="m_api_t">API tokens</h3><p data-t="m_api_d">Bearer and X-API-Key tokens against a documented OpenAPI 3.0 spec, plus an MCP endpoint at <code>/mcp</code> that lets a client like Claude Desktop drive the API in plain language.</p>
       </div>
-      <div class="mod-card reveal d2" style="--m: var(--m-tasks)">
+      <div class="mod-card reveal d2" style="--m: var(--m-infra)">
         <div class="mod-ico"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg></div>
         <h3 data-t="m_backup_t">Backup</h3><p data-t="m_backup_d">Scheduled backups with pre-restore rollback, optional WebDAV cloud upload (Nextcloud, ownCloud, Hetzner, etc.).</p>
       </div>
@@ -1195,7 +1228,7 @@
     <dl class="long-list">
       <div class="long-item reveal">
         <dt data-t="long_q1">What if this project stops?</dt>
-        <dd data-t="long_a1"><b>Nothing changes on your machine.</b> It is MIT-licensed and self-hosted, nothing phones home, and there is no server of ours anywhere in the path. The container you already pulled keeps running exactly as it does today, with or without us.</dd>
+        <dd data-t="long_a1"><b>Nothing changes on your machine.</b> It is MIT-licensed and self-hosted, there is no server of ours anywhere in the path, and the only thing that leaves your machine is a version check against the GitHub releases API. The container you already pulled keeps running exactly as it does today, with or without us.</dd>
       </div>
       <div class="long-item reveal">
         <dt data-t="long_q2">What if I want my data somewhere else?</dt>
@@ -1264,8 +1297,8 @@
         <li><b data-t="tb_image_k">Image</b> <span><code>ghcr.io/ulsklyc/<wbr>yuvomi:latest</code>, <span data-t="tb_image_v">about 500 MB</span></span></li>
         <li><b data-t="tb_needs_k">Needs</b> <span data-t="tb_needs_v">256 MB RAM and one port, 3000 by default.</span></li>
         <li><b data-t="tb_writes_k">Writes</b> <span data-t="tb_writes_v">Four volumes you own: data, backups, modules, documents.</span></li>
-        <li><b data-t="tb_out_k">Outbound</b> <span data-t="tb_out_v">Nothing until you configure it. Weather, calendar sync and WebDAV backup are all off until you fill in credentials.</span></li>
-        <li><b data-t="tb_data_k">Your data</b> <span><span data-t="tb_data_v">One SQLite file at</span> <code>/data/yuvomi.db</code>. <span data-t="tb_data_v2">Copying it is the whole export.</span></span></li>
+        <li><b data-t="tb_out_k">Outbound</b> <span data-t="tb_out_v">One update check against the GitHub releases API, nothing else. Weather, calendar sync and WebDAV backup are all off until you fill in credentials.</span></li>
+        <li><b data-t="tb_data_k">Your data</b> <span><span data-t="tb_data_v">One SQLite file at</span> <code>/data/yuvomi.db</code>. <span data-t="tb_data_v2">Copying it is the whole export, unless documents live outside the database.</span></span></li>
       </ul>
       <div class="code-wrap"><div class="code-block"><span class="c" data-t="qs_c1"># Pre-built image - Docker</span>
 curl -O https://raw.githubusercontent.com/ulsklyc/yuvomi/main/docker-compose.yml
@@ -1329,7 +1362,7 @@ openssl rand -hex 32</div><button class="copy-btn" type="button" data-copy="curl
         </div>
         <div class="foot-col">
           <h3 data-t="foot_legal">Legal</h3>
-          <a href="impressum.html" data-t="foot_impressum">Impressum (DE)</a>
+          <a href="impressum.html" data-t="foot_impressum">Imprint (DE)</a>
           <a href="privacy.html" data-href-en="privacy.html" data-href-de="datenschutz.html" data-t="foot_privacy">Privacy</a>
         </div>
       </nav>
@@ -1351,12 +1384,11 @@ openssl rand -hex 32</div><button class="copy-btn" type="button" data-copy="curl
     en: {
       ho_4_a:'The last jar goes out of the pantry', ho_4_b:'It is already on the shopping list',
       ho_4_d:'Pantry keeps amounts and best-before dates. What runs low or runs out moves to the shared list with one tap, and buying it puts it back in stock. Household of five or household of one, the loop is the same.',
-      long_q1:'What if this project stops?', long_a1:'<b>Nothing changes on your machine.</b> It is MIT-licensed and self-hosted, nothing phones home, and there is no server of ours anywhere in the path. The container you already pulled keeps running exactly as it does today, with or without us.',
+      long_q1:'What if this project stops?', long_a1:'<b>Nothing changes on your machine.</b> It is MIT-licensed and self-hosted, there is no server of ours anywhere in the path, and the only thing that leaves your machine is a version check against the GitHub releases API. The container you already pulled keeps running exactly as it does today, with or without us.',
       long_q2:'What if I want my data somewhere else?', long_a2:'<b>Copying one file is the whole export.</b> Everything lives in a single SQLite file on your own disk. Scheduled backups write a restorable archive on top of that, and the documented API plus the MCP endpoint pull anything out in whatever shape you need.',
       long_q3:'What if I lose the encryption key?', long_a3:'<b>Then the database is gone, and we cannot help you.</b> That is the honest answer: SQLCipher has no recovery path and no back door, which is the entire point of it. Store the key the way you store the ones that matter. Encryption is optional; if you would rather not carry that risk, leave it off and the file stays readable.',
       long_title:'The three questions worth asking first',
       alt_c_cal:'Calendar',
-      tag_mit:'MIT License', tag_langs:'24 languages',
       alt_m_inventory:'The inventory module on a phone',
       alt_m_shopping:'A shared shopping list on a phone',
       alt_m_rewards:'The rewards ledger on a phone',
@@ -1366,7 +1398,7 @@ openssl rand -hex 32</div><button class="copy-btn" type="button" data-copy="curl
       jump_screens:'See it first', jump_swap:'What it replaces', jump_handoff:'How it fits together',
       jump_modules:'All the modules', jump_longevity:'Before you commit', jump_install:'Install it',
       swap_rel:'is replaced by',
-      swap_eyebrow:'What it replaces', swap_title:'One home <em>instead of many subscriptions</em>',
+      swap_eyebrow:'What it replaces', swap_title:'Ten apps, <em>one place.</em>',
       swap_desc:'Ten apps a household pays for separately, and the one place that does all of it on a server you own. Nothing here is a plan or a roadmap: every line is built and shipping today.',
       swap_1_a:'a to-do & task app',            swap_1_b:'<b>Tasks</b> - Kanban, deadlines, recurring, multi-assignment',
       swap_2_a:'a shared calendar subscription',    swap_2_b:'<b>Calendar</b> - sync, subscriptions, per-event visibility',
@@ -1404,8 +1436,8 @@ openssl rand -hex 32</div><button class="copy-btn" type="button" data-copy="curl
       copy:'Copy', copied:'Copied!', copyfail:'Copy failed',
       nav_gh:'GitHub', nav_install:'Install',
       hero_badge:'Open source · free · no subscriptions',
-      hero_h1_pre:'Your family. Your data.', hero_h1_em:'Your home.',
-      hero_sub:'One private home for everything that keeps a household running - a family, a couple, or just you. Eighteen modules on a server you own, and nothing leaves it until you say so.',
+      hero_h1_pre:'One home', hero_h1_em:'instead of many subscriptions.',
+      hero_sub:'The self-hosted family planner: tasks, calendar, budget and shopping on a server you own. For a family, a couple, or just you.',
       long_eyebrow:'Before you commit', tb_image_k:'Image', tb_image_v:'about 500 MB',
       tb_needs_k:'Needs', tb_needs_v:'256 MB RAM and one port, 3000 by default.',
       tb_writes_k:'Writes', tb_writes_v:'Four volumes you own: data, backups, modules, documents.',
@@ -1426,7 +1458,7 @@ openssl rand -hex 32</div><button class="copy-btn" type="button" data-copy="curl
       f_budget_l1:'55 currencies, recurring entries, weekly/monthly/yearly statistics, monthly budgets & savings goals', f_budget_l3:'Subscription tracker with renewals, budgets & alerts', f_budget_l4:'Shared costs for household, trips and events, with automatic debt simplification',
       f_health_k:'Health', f_health_t:'Health that stays in the family.', f_health_d:'Vitals, medications, lab results, activity and cycles, tracked per member, private by default, and never leaving your server.',
       f_health_l1:'Cycle ring with period & fertile-window predictions', f_health_l2:'Medication reminders with refill alerts', f_health_l3:'Per-entry visibility: private or shared', f_health_l4:'Parents can record a child\u2019s fever and medication',
-      more_title:'The rest of the set', more_desc:'The other fourteen, each one independent. Turn on what fits your household; the rest stays out of the way.',
+      more_desc:'The other fourteen, each one independent. Turn on what fits your household; the rest stays out of the way.',
       m_docs_t:'Documents', m_docs_d:'Family files with previews, folders, visibility controls and bulk actions. Storage on a local folder, WebDAV or Google Drive; Paperless-ngx and Papra optional.',
       m_notes_t:'Notes & Contacts', m_notes_d:'Colored Markdown sticky notes for recipes, memos and quick reminders, plus a shared contact directory with CardDAV sync and vCard import/export.',
       m_cal_t:'Calendar', m_cal_d:'Two-way sync with Google and CalDAV, public ICS subscriptions, recurring events, holiday overlays and per-event visibility.',
@@ -1458,22 +1490,21 @@ openssl rand -hex 32</div><button class="copy-btn" type="button" data-copy="curl
     de: {
       ho_4_a:'Das letzte Glas geht aus dem Vorrat', ho_4_b:'Es steht schon auf der Einkaufsliste',
       ho_4_d:'Der Vorrat kennt Mengen und Mindesthaltbarkeit. Was knapp wird oder ausgeht, wandert mit einem Tipp auf die geteilte Liste, und der Einkauf bucht es zurück in den Bestand. Haushalt zu fünft oder Haushalt zu einem, die Schleife ist dieselbe.',
-      long_q1:'Was, wenn dieses Projekt aufhört?', long_a1:'<b>Auf eurer Maschine ändert sich nichts.</b> Es ist MIT-lizenziert und selbstgehostet, nichts funkt nach Hause, und es steht nirgends ein Server von uns dazwischen. Der Container, den ihr längst geladen habt, läuft genau so weiter wie heute, mit uns oder ohne uns.',
+      long_q1:'Was, wenn dieses Projekt aufhört?', long_a1:'<b>Auf eurer Maschine ändert sich nichts.</b> Es ist MIT-lizenziert und selbstgehostet, es steht nirgends ein Server von uns dazwischen, und das Einzige, was eure Maschine verlässt, ist eine Versionsprüfung gegen die GitHub-Releases-API. Der Container, den ihr längst geladen habt, läuft genau so weiter wie heute, mit uns oder ohne uns.',
       long_q2:'Was, wenn ich meine Daten woanders hin will?', long_a2:'<b>Eine Datei kopieren ist der ganze Export.</b> Alles liegt in einer einzigen SQLite-Datei auf eurer eigenen Platte. Geplante Backups schreiben darüber hinaus ein wiederherstellbares Archiv, und die dokumentierte API samt MCP-Endpunkt holt alles in der Form heraus, die ihr braucht.',
       long_q3:'Was, wenn ich den Verschlüsselungsschlüssel verliere?', long_a3:'<b>Dann ist die Datenbank weg, und wir können euch nicht helfen.</b> Das ist die ehrliche Antwort: SQLCipher hat keinen Wiederherstellungsweg und keine Hintertür, und genau das ist der Sinn der Sache. Verwahrt den Schlüssel wie die, auf die es ankommt. Die Verschlüsselung ist optional; wer dieses Risiko nicht tragen will, lässt sie aus, dann bleibt die Datei lesbar.',
       long_title:'Die drei Fragen, die man vorher stellen sollte',
       alt_c_cal:'Kalender',
-      tag_mit:'MIT-Lizenz', tag_langs:'24 Sprachen',
       alt_m_inventory:'Das Inventar-Modul auf dem Handy',
       alt_m_shopping:'Eine geteilte Einkaufsliste auf dem Handy',
       alt_m_rewards:'Das Belohnungs-Konto auf dem Handy',
       alt_m_documents:'Familiendokumente auf dem Handy',
       alt_m_recipes:'Die Rezeptliste auf dem Handy',
-      jump_label:'Springen zu', jump_aria:'Zu einem Abschnitt springen',
+      jump_label:'Springen zu', jump_aria:'Springen zu einem Abschnitt',
       jump_screens:'Erst sehen', jump_swap:'Was es ersetzt', jump_handoff:'Wie es zusammenspielt',
       jump_modules:'Alle Module', jump_longevity:'Bevor ihr euch festlegt', jump_install:'Installieren',
       swap_rel:'wird ersetzt durch',
-      swap_eyebrow:'Was es ersetzt', swap_title:'Ein Zuhause <em>statt vieler Abos</em>',
+      swap_eyebrow:'Was es ersetzt', swap_title:'Zehn Apps, <em>ein Ort.</em>',
       swap_desc:'Zehn Apps, die ein Haushalt einzeln bezahlt, und der eine Ort, der das alles auf einem Server erledigt, der euch gehört. Nichts davon ist angekündigt oder geplant: jede Zeile ist gebaut und ausgeliefert.',
       swap_1_a:'eine To-do- und Aufgaben-App',      swap_1_b:'<b>Aufgaben</b> - Kanban, Fristen, Wiederholungen, Mehrfachzuweisung',
       swap_2_a:'ein geteiltes Kalender-Abo',        swap_2_b:'<b>Kalender</b> - Sync, Abos, Sichtbarkeit pro Termin',
@@ -1511,8 +1542,8 @@ openssl rand -hex 32</div><button class="copy-btn" type="button" data-copy="curl
       copy:'Kopieren', copied:'Kopiert!', copyfail:'Nicht kopiert',
       nav_gh:'GitHub', nav_install:'Installieren',
       hero_badge:'Open Source · kostenlos · keine Abos',
-      hero_h1_pre:'Eure Familie. Eure Daten.', hero_h1_em:'Euer Zuhause.',
-      hero_sub:'Ein privater Ort für alles, was einen Haushalt zusammenhält - ob Familie, Paar oder ihr ganz allein. Achtzehn Module auf einem Server, der euch gehört, und nichts verlässt ihn, bevor ihr es sagt.',
+      hero_h1_pre:'Ein Zuhause', hero_h1_em:'statt vieler Abos.',
+      hero_sub:'Der selbstgehostete Familienplaner: Aufgaben, Kalender, Budget und Einkauf auf einem Server, der euch gehört. Für eine Familie, ein Paar oder euch allein.',
       long_eyebrow:'Bevor ihr euch festlegt', tb_image_k:'Image', tb_image_v:'rund 500 MB',
       tb_needs_k:'Braucht', tb_needs_v:'256 MB RAM und einen Port, standardmäßig 3000.',
       tb_writes_k:'Legt an', tb_writes_v:'Vier Volumes, die euch gehören: Daten, Backups, Module, Dokumente.',
@@ -1533,7 +1564,7 @@ openssl rand -hex 32</div><button class="copy-btn" type="button" data-copy="curl
       f_budget_l1:'55 Währungen, wiederkehrende Einträge, Wochen-/Monats-/Jahresstatistik, Monatsbudgets & Sparziele', f_budget_l3:'Abo-Tracker mit Verlängerungen, Budgets & Erinnerungen', f_budget_l4:'Geteilte Kosten für Haushalt, Reisen und Events, mit automatischer Schuldenvereinfachung',
       f_health_k:'Gesundheit', f_health_t:'Gesundheit, die in der Familie bleibt.', f_health_d:'Vitalwerte, Medikamente, Laborwerte, Aktivität und Zyklen, pro Mitglied erfasst, standardmäßig privat und ohne euren Server zu verlassen.',
       f_health_l1:'Zyklus-Ring mit Perioden- & fruchtbare-Tage-Prognose', f_health_l2:'Medikamenten-Erinnerungen mit Nachfüll-Warnung', f_health_l3:'Sichtbarkeit pro Eintrag: privat oder geteilt', f_health_l4:'Eltern tragen Fieber und Medikamente ihres Kindes ein',
-      more_title:'Der Rest der Ausstattung', more_desc:'Die übrigen vierzehn, jedes eigenständig. Schaltet ein, was zu eurem Haushalt passt; der Rest bleibt aus dem Weg.',
+      more_desc:'Die übrigen vierzehn, jedes eigenständig. Schaltet ein, was zu eurem Haushalt passt; der Rest bleibt aus dem Weg.',
       m_docs_t:'Dokumente', m_docs_d:'Familiendateien mit Vorschau, Ordnern, Sichtbarkeitsregeln und Stapelaktionen. Ablage lokal, per WebDAV oder Google Drive; Paperless-ngx und Papra optional.',
       m_notes_t:'Notizen & Kontakte', m_notes_d:'Farbige Markdown-Haftnotizen für Rezepte, Memos und schnelle Erinnerungen, dazu ein geteiltes Kontaktverzeichnis mit CardDAV-Sync und vCard-Import/-Export.',
       m_cal_t:'Kalender', m_cal_d:'Sync in beide Richtungen mit Google und CalDAV, öffentliche ICS-Abos, wiederkehrende Termine, Feiertags-Overlays und Sichtbarkeit pro Termin.',
@@ -1820,8 +1851,19 @@ openssl rand -hex 32</div><button class="copy-btn" type="button" data-copy="curl
   })();
   addEventListener('resize', syncCodeScroll);
   (function(){
-    var b = document.getElementById('toTop'); if (!b) return;
-    function sync(){ b.classList.toggle('show', scrollY > 800); }
+    var b = document.getElementById('toTop');
+    // Richtung, nicht Position: die beiden fixierten Pillen weichen beim
+    // Abwaertslesen und kommen beim Zurueckscrollen sofort wieder. Die Schwelle
+    // haelt das Wippen am Seitenanfang und beim Gummiband-Scrollen heraus.
+    var last = scrollY, root = document.documentElement;
+    function sync(){
+      var y = scrollY;
+      if (b) b.classList.toggle('show', y > 800);
+      if (Math.abs(y - last) > 8) {
+        root.classList.toggle('nav-down', y > last && y > 400);
+        last = y;
+      }
+    }
     addEventListener('scroll', sync, { passive: true }); sync();
   })();
   // GitHub star count is injected at build time into [data-gh-stars] elements

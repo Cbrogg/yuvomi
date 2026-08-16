@@ -7,8 +7,8 @@
 
   <p>
     Aufgaben, Kalender, Budget, Einkauf, Mahlzeiten, Gesundheit und mehr - für eine Familie,
-    ein Paar oder nur dich. Achtzehn Module auf einem Server, der dir gehört, und nichts verlässt ihn,
-    bis du es sagst.
+    ein Paar oder nur dich. Achtzehn Module auf einem Server, der dir gehört, und das Einzige,
+    was ihn verlässt, ist eine Versionsprüfung.
   </p>
 
   <p>
@@ -172,8 +172,9 @@ Backups und Fehlersuche.
 ## Bevor du dich festlegst
 
 **Was, wenn dieses Projekt aufhört?** Auf deiner Maschine ändert sich nichts. Yuvomi ist
-MIT-lizenziert und selbstgehostet, nichts funkt nach Hause, und auf dem Weg steht kein Server von
-uns. Der Container, den du schon geholt hast, läuft weiter wie heute, mit uns oder ohne uns.
+MIT-lizenziert und selbstgehostet, auf dem Weg steht kein Server von uns, und das Einzige, was deine
+Maschine verlässt, ist eine Versionsprüfung gegen die GitHub-Releases-API. Der Container, den du
+schon geholt hast, läuft weiter wie heute, mit uns oder ohne uns.
 
 **Was, wenn du deine Daten woanders haben willst?** Eine Datei zu kopieren ist der ganze Export,
 solange die Dokumente in der Datenbank liegen. Alles Übrige steht in dieser einen SQLite-Datei auf

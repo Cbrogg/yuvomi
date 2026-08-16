@@ -39,7 +39,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
-import { dictBlock, decodeEntities } from './docs-dict.js';
+import { dictBlock, dictValue, decodeEntities, stripTags, unescapeJs } from './docs-dict.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const DOCS = resolve(ROOT, 'docs');
@@ -256,6 +256,165 @@ function usedKeys(html) {
   }
   return keys;
 }
+
+/* ---------------------------------------------------------------------------
+ * (7) Die beiden Rechtsseiten sind ein Zwillingspaar.
+ *
+ * `privacy.html` ist die englische Fassung von `datenschutz.html` und als Kopie
+ * entstanden. Eine Kopie erbt das CSS zuverlaessig und das MARKUP nicht: die
+ * englische Seite kam mit den `.toc`-Klassen-losen Zwillingen ihrer eigenen
+ * Regeln auf die Welt, wodurch der gesamte Inhaltsverzeichnis-Block in
+ * `privacy.html:224-234` tot war - Kartenflaeche, Rahmen, Zweispalten-Raster und
+ * `min-height: 44px` auf 13 Links, die daraufhin 18px hoch waren. Die
+ * BEGRUENDUNG des Fixes war mitkopiert und stand als Kommentar ueber totem CSS.
+ *
+ * Geprueft wird auf der Ebene STRUKTUR, nicht Text: gleiche Klassenmenge im
+ * Rumpf und gleiche Kopf-Folge. Beides ist sprachunabhaengig und faengt genau
+ * die Kopier-Luecke, die der Anlass war - ein Textvergleich koennte das
+ * grundsaetzlich nicht, weil die Seiten verschiedene Sprachen sprechen sollen.
+ * ------------------------------------------------------------------------- */
+
+const TWINS = ['datenschutz.html', 'privacy.html'];
+
+/** Alle im Rumpf verwendeten CSS-Klassen (der Kopf traegt die Regeln, nicht die Nutzung). */
+function markupClasses(html) {
+  const body = html.split(/<\/head>/)[1] || html;
+  return new Set([...body.matchAll(/class="([^"]+)"/g)].flatMap((m) => m[1].trim().split(/\s+/)));
+}
+
+/** Die Kopf-Folge in Dokumentreihenfolge, z.B. ['h1','h2','h2','h3']. */
+function headingShape(html) {
+  const body = html.split(/<\/head>/)[1] || html;
+  return [...body.matchAll(/<(h[1-6])\b/g)].map((m) => m[1]);
+}
+
+test('die beiden Rechtsseiten benutzen dieselben Klassen', () => {
+  const [de, en] = TWINS.map((p) => markupClasses(read(p)));
+  assert.ok(de.size > 10, `nur ${de.size} Klassen gefunden - Regex veraltet?`);
+
+  const onlyDe = [...de].filter((c) => !en.has(c)).sort();
+  const onlyEn = [...en].filter((c) => !de.has(c)).sort();
+  assert.deepEqual([onlyDe, onlyEn], [[], []],
+    `Klassen nur auf einer der beiden Rechtsseiten - die Regeln der anderen laufen ins Leere.\n`
+    + `  nur datenschutz.html: ${onlyDe.join(', ') || '-'}\n  nur privacy.html: ${onlyEn.join(', ') || '-'}`);
+});
+
+test('die beiden Rechtsseiten haben dieselbe Abschnittsstruktur', () => {
+  const [de, en] = TWINS.map((p) => headingShape(read(p)));
+  assert.ok(de.length > 5, `nur ${de.length} Ueberschriften gefunden - Regex veraltet?`);
+  assert.deepEqual(en, de,
+    `Kopf-Folge der Rechtsseiten unterschiedlich - eine Fassung fuehrt einen Abschnitt, den die andere nicht hat.\n`
+    + `  datenschutz.html: ${de.join(' ')}\n  privacy.html    : ${en.join(' ')}`);
+});
+
+test('der Zwillings-Guard erkennt den Schaden, gegen den er gebaut ist', () => {
+  // Der Anlassfall: dieselbe Struktur, aber die Klassen fehlen auf einer Seite.
+  const withClasses = '</head><nav class="toc"><p class="toc-title">x</p><ol class="toc-list"></ol></nav>';
+  const without = '</head><nav><h2>x</h2><ol></ol></nav>';
+  const a = markupClasses(withClasses);
+  const b = markupClasses(without);
+  assert.notDeepEqual([...a].sort(), [...b].sort(),
+    'der Klassen-Guard sieht die fehlenden toc-Klassen nicht');
+  assert.notDeepEqual(headingShape(without), headingShape(withClasses),
+    'der Struktur-Guard sieht den zusaetzlichen Kopf nicht');
+});
+
+/* ---------------------------------------------------------------------------
+ * (6) Der Markup-Fallback sagt dasselbe wie der englische Woerterbucheintrag.
+ *
+ * Der Text im Markup ist NICHT nur Platzhalter: er ist das, was ein Besucher
+ * ohne JavaScript zu sehen bekommt - also ausgerechnet der Teil des Publikums,
+ * das eine selbstgehostete, telemetriefreie App sucht. Kopplung (5) prueft, dass
+ * jeder Schluessel EXISTIERT; dass sein Fallback noch dasselbe SAGT, prueft sie
+ * nicht.
+ *
+ * Der Anlass war kein Schoenheitsfehler. v2.15.0 hat drei falsche Zusagen in den
+ * Woerterbuechern korrigiert und das Markup stehen lassen; danach sagte die Seite
+ * mit JavaScript "One update check against the GitHub releases API" und ohne
+ * JavaScript "Nothing until you configure it." Zwei Antworten auf dieselbe Frage,
+ * und die falsche stand fuer den misstrauischsten Leser.
+ *
+ * Verglichen wird der TEXT, nicht das Markup: der Fallback darf sein `<b>` anders
+ * setzen als der Woerterbuchwert. Was er nicht darf, ist etwas anderes behaupten.
+ * ------------------------------------------------------------------------- */
+
+/** Alle `<tag data-t="key">…</tag>`-Paare einer Seite, als [key, Innentext]. */
+function fallbackNodes(html) {
+  const body = html.split(/\n\s*(?:var |const )?(?:DICT|T)\s*=/)[0];
+  return [...body.matchAll(/<(\w+)[^>]*\sdata-t="([\w-]+)"[^>]*>([\s\S]*?)<\/\1>/g)]
+    .map((m) => [m[2], stripTags(m[3])]);
+}
+
+/** Der englische Woerterbuchwert als reiner Text, Escapes und Markup aufgeloest. */
+function englishText(block, key) {
+  const raw = dictValue(block, key);
+  return raw === null ? null : stripTags(unescapeJs(raw));
+}
+
+for (const page of ['index.html', 'install.html']) {
+  test(`${page}: der Markup-Fallback sagt dasselbe wie das englische Woerterbuch`, () => {
+    const html = read(page);
+    const en = dictBlock(html, 'en');
+    assert.ok(en, 'en-Woerterbuch nicht gefunden');
+
+    const nodes = fallbackNodes(html);
+    assert.ok(nodes.length > 20, `nur ${nodes.length} data-t-Knoten gefunden - Regex veraltet?`);
+
+    const drift = [];
+    for (const [key, markup] of nodes) {
+      const dict = englishText(en, key);
+      if (dict === null || markup === dict) continue;
+      drift.push(`${key}\n    Markup: ${markup}\n    T.en  : ${dict}`);
+    }
+    assert.deepEqual(drift, [],
+      `Markup-Fallback und en-Woerterbuch sagen Verschiedenes (ohne JS steht der Markup-Text da):\n  ${drift.join('\n  ')}`);
+  });
+}
+
+test('der Fallback-Guard erkennt den Schaden, gegen den er gebaut ist', () => {
+  // Der Anlassfall im Original-Wortlaut, gegen ein Woerterbuch, das die
+  // korrigierte Fassung fuehrt. Ohne diese Gegenprobe waere ein Guard, dessen
+  // Regex ins Leere greift, gruen und blind.
+  const damaged = [
+    '<p data-t="tb_out_v">Nothing until you configure it.</p>',
+    'const T = {',
+    "  en: {",
+    "tb_out_v:'One update check against the GitHub releases API, nothing else.',",
+    '  },',
+    '  de: {',
+    "tb_out_v:'Eine Update-Abfrage an die GitHub-Releases-API, sonst nichts.',",
+    '  }',
+    '};',
+  ].join('\n');
+
+  const en = dictBlock(damaged, 'en');
+  assert.ok(en, 'Testvorlage: en-Block muss auffindbar sein');
+  const [[key, markup]] = fallbackNodes(damaged);
+  assert.equal(key, 'tb_out_v');
+  assert.notEqual(markup, englishText(en, key),
+    'der Guard sieht den Drift nicht, gegen den er geschrieben wurde');
+});
+
+test('der Fallback-Guard vergleicht Text, nicht Markup', () => {
+  // Gegenrichtung: unterschiedliche Auszeichnung bei gleichem Text ist KEIN
+  // Befund. Ohne diese Zusicherung waere die erste Fassung, die ein <b> im
+  // Woerterbuch anders setzt als im Markup, ein Fehlalarm - und der naechste
+  // Reflex waere, den Guard abzuschwaechen statt ihn zu praezisieren.
+  const same = [
+    '<dd data-t="long_a1"><b>Nothing changes.</b> It is MIT-licensed.</dd>',
+    'const T = {',
+    '  en: {',
+    "long_a1:'<b>Nothing changes.</b> It is MIT-licensed.',",
+    '  },',
+    '  de: {',
+    "long_a1:'<b>Nichts aendert sich.</b> Es ist MIT-lizenziert.',",
+    '  }',
+    '};',
+  ].join('\n');
+
+  const [[key, markup]] = fallbackNodes(same);
+  assert.equal(markup, englishText(dictBlock(same, 'en'), key));
+});
 
 for (const page of ['index.html', 'install.html']) {
   test(`${page}: jeder benutzte Schluessel steht in beiden Woerterbuechern`, () => {

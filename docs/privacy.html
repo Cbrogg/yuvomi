@@ -68,7 +68,7 @@
     .lang-link:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
     .top-actions { display: flex; align-items: center; gap: 14px; }
     .theme-btn {
-      display: grid; place-items: center; width: 40px; height: 40px; flex-shrink: 0;
+      display: grid; place-items: center; width: 44px; height: 44px; flex-shrink: 0;
       border-radius: var(--r-sm); border: 1px solid var(--border); background: var(--bg);
       color: var(--text-2); cursor: pointer; transition: border-color .15s, color .15s;
     }
@@ -337,9 +337,9 @@
       <a href="datenschutz.html">deutschsprachige Fassung</a>. Bei Abweichungen gilt der deutsche Text.
     </p>
 
-    <nav aria-label="Table of contents">
-      <h2 id="toc">Contents</h2>
-      <ol>
+    <nav class="toc" aria-label="Table of contents">
+      <p class="toc-title">Contents</p>
+      <ol class="toc-list">
         <li><a href="#s1">Controller within the meaning of the GDPR</a></li>
         <li><a href="#s2">Data protection officer</a></li>
         <li><a href="#s3">General information on data processing</a></li>
@@ -468,7 +468,7 @@
       data" / "Cookies and other site data", or via the developer tools
       (Application → Local Storage → yuvomi.cloud).
     </p>
-    <p>
+    <p class="small">
       <strong>Note:</strong> earlier versions of this website used the keys <code>oikos-theme</code>
       and <code>oikos-lang</code>. These are still read until you switch language or colour scheme
       again.
@@ -528,6 +528,15 @@
       <li><strong>Right to withdraw consent</strong> at any time with effect for the future (Art. 7(3) GDPR)</li>
     </ul>
     <p>To exercise these rights, an informal message to the contact address above is sufficient.</p>
+
+    <h3>Right to object under Art. 21 GDPR</h3>
+    <p>
+      You have the right to object at any time, on grounds relating to your particular situation,
+      to the processing of personal data concerning you which is carried out on the basis of
+      Art. 6(1)(f) GDPR. We will then no longer process the personal data unless we can demonstrate
+      compelling legitimate grounds for the processing which override your interests, rights and
+      freedoms, or the processing serves to assert, exercise or defend legal claims.
+    </p>
 
     <h2 id="s11">11. Right to lodge a complaint with a supervisory authority</h2>
     <p>

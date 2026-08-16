@@ -10,6 +10,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **The Unraid store listing names the modules it had been missing.** Both the app template and the repository profile described Yuvomi with a module list that stopped before Health, Rewards and Inventory, and still called shared expenses by its old name. Anyone reading the listing before installing now sees what the app actually ships.
+- **The website leads with what Yuvomi is, not with what it does not do.** The homepage headline now carries the positioning - one home instead of many subscriptions - and the sub-line names the category and the modules; the two chips that already appeared in the proof bar one line below are gone.
+
+### Fixed
+
+- **The website and both READMEs no longer claim that nothing leaves your server.** Yuvomi checks for a new release against the GitHub releases API every six hours, and there is no setting that turns it off. Five places said "nothing phones home" or "nothing leaves it until you say so"; all of them now name the version check as the one outbound call. Three further statements only appeared with JavaScript switched on - visitors without it were shown the older, incorrect wording.
+- **The English privacy policy renders its table of contents again.** The page was created as a copy of the German one and inherited the stylesheet but not the markup classes, which left its 14 contents links at 18px instead of the intended 44px touch target, without the surrounding card. It also gained the separate "right to object" section the German version has.
+- **The install page showed a different GitHub star count than the homepage.** The number is written into both pages by a build-time script; a manual edit had updated only one of them.
+- **Three module cards on the homepage carried another module's colour.** Pantry showed the recipe colour, while Backup and API tokens - which are not modules you switch on and off - borrowed the colours of Tasks and Shared expenses. The two now share a neutral tone.
+- **The two floating buttons on phones no longer cover the text while you read.** Both step aside when you scroll down and return when you scroll back up. The jump menu, previously hidden below 700px, is available on phones again.
 
 ## [2.15.0] - 2026-08-16
 

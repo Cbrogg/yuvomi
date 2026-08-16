@@ -35,6 +35,19 @@ export function dictValue(block, key) {
   return m ? m[1] : null;
 }
 
+/**
+ * Die Escapes eines JS-String-Literals aufloesen: `\'`, `\\` und `\uXXXX`.
+ *
+ * Noetig, weil `dictValue` den ROHEN Literalrumpf zurueckgibt. Wer ihn ohne
+ * diesen Schritt gegen gerenderten Text vergleicht, misst `child\u2019s` gegen
+ * `child’s` und meldet eine Abweichung, die es nicht gibt.
+ */
+export function unescapeJs(s) {
+  return s
+    .replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
+    .replace(/\\(['"\\])/g, '$1');
+}
+
 /** Alle Schluessel eines Blocks, die auf ein gegebenes Muster passen. */
 export function dictKeysMatching(block, pattern) {
   return [...block.matchAll(/(?:^|[{,]\s*)\s*([a-z][a-z0-9_]*)\s*:\s*['"]/gm)]
