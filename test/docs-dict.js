@@ -55,7 +55,20 @@ export function decodeEntities(s) {
     .replace(/&amp;/g, '&');
 }
 
-/** Markup aus einem Woerterbuchwert schneiden, damit der reine Text uebrig bleibt. */
+/**
+ * Markup aus einem Woerterbuchwert schneiden, damit der reine Text uebrig bleibt.
+ *
+ * Als Fixpunkt und nicht als ein Durchlauf: `<scr<b>ipt>` setzt beim
+ * Herausschneiden des inneren Tags ein neues `<script>` zusammen, das der erste
+ * Lauf nie gesehen hat. Hier wird eine Repo-Datei gelesen und das Ergebnis nur
+ * verglichen, nie als HTML geschrieben - aber ein SCHNITT, der unvollstaendig
+ * ist, laesst den Guard ueber einen Text urteilen, den es so nicht gibt.
+ * Dasselbe Muster und derselbe Grund wie in `test/source-text.js`.
+ * (CodeQL js/incomplete-multi-character-sanitization, PR #788.)
+ */
 export function stripTags(s) {
-  return decodeEntities(s.replace(/<[^>]+>/g, '')).replace(/\s+/g, ' ').trim();
+  let out = s;
+  let prev;
+  do { prev = out; out = out.replace(/<[^>]+>/g, ''); } while (out !== prev);
+  return decodeEntities(out).replace(/\s+/g, ' ').trim();
 }

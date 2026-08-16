@@ -5397,25 +5397,32 @@ const MIGRATIONS = [
       // Haushalt kann die Sprache gewechselt haben - deshalb wird jede der elf
       // Zeilen geprueft statt nur die des aktuellen Locales. Getroffen wird
       // hoechstens eine.
-      const find = db.prepare('SELECT id, name FROM family_document_folders WHERE name = ? COLLATE NOCASE');
+      // Der Quellordner wird EXAKT gesucht, der Konflikt dagegen mit
+      // `COLLATE NOCASE` - und dort mit `id <> ?`, statt einen beliebigen
+      // Treffer hinterher gegen die eigene id zu halten.
+      //
+      // Der Unterschied ist der Startabbruch: `name` traegt ein `UNIQUE`
+      // (Migration 60). Bei `id` unterscheiden sich alt und neu NUR in der
+      // Grossschreibung, ein Haushalt kann also beide Ordner besitzen -
+      // "Pengeluaran bersama" und "Pengeluaran Bersama" nebeneinander, vom
+      // case-sensitiven UNIQUE ausdruecklich erlaubt. Ein NOCASE-Blick auf
+      // den Zielnamen liefert dann dieselbe erste Zeile wie der Blick auf den
+      // Quellnamen, ein Vergleich `clash.id !== source.id` haelte das faelsch-
+      // licherweise fuer konfliktfrei, und das folgende UPDATE liefe in die
+      // UNIQUE-Verletzung. Migration v146 braeche ab, und mit ihr der Start.
+      const findExact = db.prepare('SELECT id FROM family_document_folders WHERE name = ?');
+      const findClash = db.prepare('SELECT id FROM family_document_folders WHERE name = ? COLLATE NOCASE AND id <> ?');
       const rename = db.prepare('UPDATE family_document_folders SET name = ? WHERE id = ?');
 
       for (const [from, to] of RENAMES) {
-        const source = find.get(from);
+        const source = findExact.get(from);
         if (!source) continue;
 
         // Zielname schon vergeben? Dann NICHT umbenennen. Zwei Ordner mit
         // demselben Namen waeren schlimmer als ein Ordner mit dem alten:
         // `ensureFolder` nimmt den ersten Treffer, und welcher das ist, haengt
         // an der Zeilenreihenfolge.
-        //
-        // Die eigene Zeile muss dabei ausgeschlossen werden. Bei `id` ist der
-        // Unterschied zwischen altem und neuem Namen NUR die Grossschreibung,
-        // und `COLLATE NOCASE` findet dort den Quellordner als seinen eigenen
-        // Konflikt - ohne diese Zeile bliebe genau der Fall ungefixt, der am
-        // harmlosesten aussieht.
-        const clash = find.get(to);
-        if (clash && clash.id !== source.id) continue;
+        if (findClash.get(to, source.id)) continue;
 
         rename.run(to, source.id);
       }

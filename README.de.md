@@ -106,8 +106,8 @@ Fotos laufen, wenn der Bildschirm still steht. Jedes Modul im Detail steht in de
 - **Image** - `ghcr.io/ulsklyc/`<wbr>`yuvomi:latest`, rund 500 MB.
 - **Braucht** - 256 MB RAM und einen Port, standardmäßig 3000.
 - **Schreibt** - vier Volumes, die dir gehören: Daten, Backups, Module, Dokumente.
-- **Nach außen** - nichts, bis du es einrichtest. Wetter, Kalender-Sync und Cloud-Backup bleiben aus, bis du Zugangsdaten einträgst.
-- **Deine Daten** - eine SQLite-Datei unter `/data/yuvomi.db`. Sie zu kopieren ist der ganze Export.
+- **Nach außen** - eine Update-Abfrage an die GitHub-Releases-API, sonst nichts. Wetter, Kalender-Sync und Cloud-Backup bleiben aus, bis du Zugangsdaten einträgst.
+- **Deine Daten** - eine SQLite-Datei unter `/data/yuvomi.db`. Sie zu kopieren ist der ganze Export, solange der Dokumentenspeicher nicht auf einem Ordner, WebDAV oder Drive liegt; diese Dateien brauchen dann eine eigene Sicherung.
 
 ### Docker oder Podman
 
@@ -128,7 +128,10 @@ docker compose up -d
 ```
 
 Öffne `http://localhost:3000`. Der erste Besuch führt dich durch das Anlegen des Admin-Kontos.
-Podman erkennen beide Installationswege selbst und nutzen `podman-compose.yml` mit SELinux-Labels.
+
+Unter Podman nimmst du oben `podman-compose.yml` statt `docker-compose.yml` und startest mit
+`podman compose -f podman-compose.yml up -d`; darin stecken die SELinux-`:Z`-Labels, die RHEL,
+Fedora und CentOS Stream brauchen. Beide Installationswege erkennen Podman von selbst.
 
 ### Geführte Einrichtung
 
@@ -172,8 +175,9 @@ Backups und Fehlersuche.
 MIT-lizenziert und selbstgehostet, nichts funkt nach Hause, und auf dem Weg steht kein Server von
 uns. Der Container, den du schon geholt hast, läuft weiter wie heute, mit uns oder ohne uns.
 
-**Was, wenn du deine Daten woanders haben willst?** Eine Datei zu kopieren ist der ganze Export.
-Alles liegt in einer einzigen SQLite-Datei auf deiner eigenen Platte. Geplante Backups schreiben
+**Was, wenn du deine Daten woanders haben willst?** Eine Datei zu kopieren ist der ganze Export,
+solange die Dokumente in der Datenbank liegen. Alles Übrige steht in dieser einen SQLite-Datei auf
+deiner eigenen Platte. Geplante Backups schreiben
 zusätzlich ein wiederherstellbares Archiv, und die dokumentierte API holt alles in der Form heraus,
 die du brauchst.
 

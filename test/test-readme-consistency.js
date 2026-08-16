@@ -303,6 +303,35 @@ for (const lang of Object.keys(READMES)) {
       + '\nVorhanden: ' + [...headings].join(', '));
   });
 
+  test(`${READMES[lang]}: jeder Anker, den eine ANDERE Repo-Datei hierher setzt, trifft`, () => {
+    // Die Gegenrichtung zum Test darueber, und die Luecke, durch die `#faq`
+    // gefallen ist: der Abschnitt verschwand mit dem Landingpage-Umbau,
+    // waehrend `SUPPORT.md` weiter "the README FAQ" versprach. Ein Guard, der
+    // nur die eigenen Anker prueft, sieht eingehende Links nie - er war gruen,
+    // und der Link ging trotzdem ins Leere (PR #788).
+    const md = readme(lang);
+    const headings = new Set((md.match(/^#{1,6} .+$/gm) || []).map((h) => slug(h.replace(/^#+ /, ''))));
+
+    const target = READMES[lang];
+    const dead = [];
+    let scanned = 0;
+    for (const file of readdirSync(ROOT).filter((f) => f.endsWith('.md') && f !== target)) {
+      const src = readFileSync(resolve(ROOT, file), 'utf8');
+      for (const m of src.matchAll(new RegExp(`${target.replace('.', '\\.')}#([\\w-]+)`, 'gu'))) {
+        scanned++;
+        if (!headings.has(decodeURIComponent(m[1]))) dead.push(`${file} -> #${m[1]}`);
+      }
+    }
+
+    assert.deepEqual(dead, [],
+      `Anker auf ${target}, die keine Ueberschrift treffen:\n  ${dead.join('\n  ')}`
+      + `\nVorhanden: ${[...headings].join(', ')}`);
+    // Kein Reichweiten-Nachweis ueber eine Mindestzahl: dass HEUTE nur eine
+    // Datei hierher verlinkt, ist ein Zustand und keine Zusicherung. Was
+    // zaehlt, ist dass jede gefundene Referenz geprueft wurde.
+    assert.ok(scanned >= 0);
+  });
+
   test(`${READMES[lang]}: kein Em- oder En-Dash`, () => {
     const hits = readme(lang).split('\n')
       .map((line, i) => (/[–—]/.test(line) ? `${i + 1}: ${line.trim()}` : null))

@@ -104,8 +104,8 @@ drop-in module is covered in the [module guide](MODULES.md).
 - **Image** - `ghcr.io/ulsklyc/`<wbr>`yuvomi:latest`, about 500 MB.
 - **Needs** - 256 MB RAM and one port, 3000 by default.
 - **Writes** - four volumes you own: data, backups, modules, documents.
-- **Outbound** - nothing until you configure it. Weather, calendar sync and cloud backup stay off until you fill in credentials.
-- **Your data** - one SQLite file at `/data/yuvomi.db`. Copying it is the whole export.
+- **Outbound** - one update check against the GitHub releases API, nothing else. Weather, calendar sync and cloud backup stay off until you fill in credentials.
+- **Your data** - one SQLite file at `/data/yuvomi.db`. Copying it is the whole export, unless you moved document storage to a folder, WebDAV or Drive; those files then need their own backup.
 
 ### Docker or Podman
 
@@ -126,7 +126,10 @@ docker compose up -d
 ```
 
 Open `http://localhost:3000`. The first visit walks you through creating your admin account.
-Podman is auto-detected by both installers and uses `podman-compose.yml` with SELinux labels.
+
+On Podman, take `podman-compose.yml` instead of `docker-compose.yml` above and start it with
+`podman compose -f podman-compose.yml up -d`; it carries the SELinux `:Z` volume labels that
+RHEL, Fedora and CentOS Stream need. Both installers detect Podman on their own.
 
 ### Guided setup
 
@@ -169,8 +172,8 @@ covers engine setup, HTTPS, backups and troubleshooting step by step.
 self-hosted, nothing phones home, and there is no server of ours anywhere in the path. The
 container you already pulled keeps running exactly as it does today, with or without us.
 
-**What if you want your data somewhere else?** Copying one file is the whole export. Everything
-lives in a single SQLite file on your own disk. Scheduled backups write a restorable archive on top
+**What if you want your data somewhere else?** Copying one file is the whole export, as long as
+documents live in the database. Everything else is in that single SQLite file on your own disk. Scheduled backups write a restorable archive on top
 of that, and the documented API pulls anything out in whatever shape you need.
 
 **What does it cost?** Nothing. Yuvomi is free and MIT-licensed. You provide the server; there is

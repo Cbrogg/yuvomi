@@ -15,9 +15,24 @@
  *        (3) Der Fall, in dem sich alt und neu NUR in der Grossschreibung
  *            unterscheiden (id: "Pengeluaran bersama" -> "Pengeluaran
  *            Bersama"), wird trotzdem umbenannt. `COLLATE NOCASE` findet dort
- *            den Quellordner als seinen eigenen Konflikt; ohne den
- *            id-Vergleich in der Migration bliebe ausgerechnet der
- *            harmloseste Fall ungefixt.
+ *            den Quellordner als seinen eigenen Konflikt.
+ *        (4) DERSELBE Haushalt mit BEIDEN Schreibweisen nebeneinander bringt
+ *            den Start nicht um. `family_document_folders.name` traegt ein
+ *            case-sensitives `UNIQUE`, beide Ordner duerfen also existieren.
+ *
+ *            EHRLICHKEIT ZU DIESER ZUSICHERUNG: sie ist gegen die erste
+ *            Fassung der Migration GRUEN, ist also keine Mutationsprobe.
+ *            Nachgemessen: der Index-Scan liefert bei diesem Paar immer
+ *            "Pengeluaran Bersama" zuerst (BINARY-Kollation, `B` < `b`), ein
+ *            Konfliktcheck ueber den ersten NOCASE-Treffer sah dort also die
+ *            ZIELzeile, und das folgende UPDATE war ein No-op auf denselben
+ *            Wert - kein Abbruch, aber auch keine Umbenennung, und beides aus
+ *            dem falschen Grund. Der Review zu PR #788 las daraus einen
+ *            Startabbruch; der ist bei dieser Kollationsreihenfolge nicht
+ *            erreichbar. Die Migration sucht die Quelle trotzdem EXAKT und
+ *            den Konflikt mit `id <> ?`, damit das Ergebnis nicht an der
+ *            Reihenfolge eines Query-Plans haengt. Diese Zusicherung haelt
+ *            den Zustand fest, den beide Fassungen erzeugen sollen.
  * Ausführen: node --experimental-sqlite --test test/test-split-folder-rename-migration.js
  */
 
@@ -32,13 +47,20 @@ import { DatabaseSync } from 'node:sqlite';
 const dbmod = await import('../server/db.js');
 const migration146 = dbmod.MIGRATIONS.find((m) => m.version === 146);
 
-/** Nur die eine Tabelle, die die Migration anfasst. */
+/**
+ * Nur die eine Tabelle, die die Migration anfasst - aber MIT ihrem `UNIQUE`.
+ *
+ * Das Constraint ist kein Detail, sondern der Unterschied zwischen einem
+ * falschen Ordnernamen und einem Server, der nicht mehr startet. Die erste
+ * Fassung dieser Suite liess es weg und war deshalb gruen, waehrend die
+ * Migration in einem echten Haushalt abgebrochen waere (PR #788).
+ */
 function folders(rows = []) {
   const conn = new DatabaseSync(':memory:');
   conn.exec(`
     CREATE TABLE family_document_folders (
       id         INTEGER PRIMARY KEY AUTOINCREMENT,
-      name       TEXT NOT NULL,
+      name       TEXT NOT NULL UNIQUE,
       created_by INTEGER
     );
   `);
@@ -80,6 +102,22 @@ test('der Fall, der sich nur in der Grossschreibung unterscheidet, wird trotzdem
   assert.deepEqual(names(conn).map((f) => f.name), ['Pengeluaran Bersama'],
     'COLLATE NOCASE findet hier den Quellordner als seinen eigenen Konflikt - '
     + 'die Migration muss die eigene id ausschliessen');
+});
+
+test('beide Schreibweisen nebeneinander bringen die Migration nicht um', () => {
+  // Das case-sensitive UNIQUE erlaubt beide Zeilen, `ensureFolder` kann sie
+  // ueber zwei App-Versionen hinweg angelegt haben. Ein Konfliktcheck, der
+  // einen beliebigen NOCASE-Treffer gegen die eigene id haelt, bekommt hier
+  // den QUELLordner zurueck, haelt das fuer konfliktfrei und laeuft ins
+  // UNIQUE - die Migration wirft, die Transaktion rollt zurueck, der Server
+  // startet nicht mehr.
+  const conn = folders(['Pengeluaran bersama', 'Pengeluaran Bersama']);
+
+  assert.doesNotThrow(() => migration146.up(conn),
+    'Migration v146 darf an einem Haushalt mit beiden Schreibweisen nicht abbrechen');
+
+  assert.deepEqual(names(conn).map((f) => f.name), ['Pengeluaran bersama', 'Pengeluaran Bersama'],
+    'bei belegtem Zielnamen bleibt alles stehen - ensureFolder trifft dann den kanonischen');
 });
 
 test('eine Datenbank ohne passenden Ordner bleibt unveraendert', () => {
