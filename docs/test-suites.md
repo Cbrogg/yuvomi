@@ -23,7 +23,8 @@ npm run test:task-categories    # Aufgaben-Kategorien (#494/#357): Migration (Se
 npm run test:visibility         # Sichtbarkeit (#474): all|assignees|private Durchsetzung (Tasks+Termine), kein Admin-Bypass, normalizeVisibility
 npm run test:sync-default-assignee   # Standard-Zuweisung pro Sync-Ziel (#459): assignDefaultToEvent (neu-only, idempotent, No-op bei verwaister Person)
 npm run test:rewards            # Belohnungen: Punkte-Vergabe/Storno/Idempotenz, Katalog, Einlösen mit Freigabe, Bonus, Ledger
-npm run test:rewards-routes     # Belohnungs-Routen: requireAdmin-Gates, Redemption-Autorisierung (Nicht-Admin nur für sich/Admin stellvertretend), Eltern-Freigabe pending vs. autoFulfill, 409-Idempotenz, Punkte-Reservierung/Rückbuchung
+npm run test:rewards-routes     # Belohnungs-Routen: requireAdmin-Gates, Redemption-Autorisierung (Nicht-Admin nur für sich/Admin stellvertretend), Eltern-Freigabe pending vs. autoFulfill, 409-Idempotenz, Punkte-Reservierung/Rückbuchung; dazu die drei PATCH-Fälle aus #789 - fehlendes Feld erhält, gesendetes null leert, und keiner von beiden schreibt den Text "null"
+npm run test:reward-icon-null-migration   # Prämien-Icons als Text "null" (#789, Migration v147): Katalog-Icon/-Beschreibung und der Snapshot im Einlöse-Verlauf werden geräumt, Freitext der "null" nur enthält bleibt stehen
 npm run test:health-overview    # Gesundheit: Übersichts-Tab
 npm run test:health-vitals      # Gesundheit: Vitalwerte-Tab - Zeitraum-Bucketing/Aggregation plus das Anzeigeformat je Metrik (Paar/Dauer/Skala), Schlaf-Umrechnung Stunden↔Dezimalstunden und die Stufen-Klemmung der Stimmungsskala; der Längen-Guard über VITAL_TYPES macht jede neue Metrik sichtbar, statt sie einsickern zu lassen (#683: Größe + Kopfumfang, roh und ohne geklemmte Achse)
 npm run test:health-meds        # Gesundheit: Medikamente-Tab
