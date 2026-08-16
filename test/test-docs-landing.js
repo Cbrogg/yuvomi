@@ -57,10 +57,16 @@ const decode = (s) => s.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&g
  * echten Schaden AUSGEGLICHEN. Der abgetrennte Rest hatte ein `-->` und der
  * unterminierte Kopf ein `<!--`, die Bilanz stimmte also, während beide Hälften
  * kaputt waren. Ein Guard, der Paare zählt, wäre hier grün gewesen.
+ *
+ * `--!>` schliesst einen Kommentar genauso wie `-->` (HTML-Parser, "comment end
+ * bang state"). Ohne diese Variante haette der Guard einen so geschlossenen
+ * Kommentar fuer unterminiert gehalten und Fehlalarm geschlagen.
+ * (CodeQL js/bad-tag-filter, PR #782.)
  */
+const COMMENT_END = /--!?>/g;
 function commentDamage(html) {
-  const stripped = html.replace(/<!--[\s\S]*?-->/g, '');
-  const strayClose = [...stripped.matchAll(/-->/g)].map((m) => ({
+  const stripped = html.replace(/<!--[\s\S]*?--!?>/g, '');
+  const strayClose = [...stripped.matchAll(COMMENT_END)].map((m) => ({
     line: stripped.slice(0, m.index).split('\n').length,
     context: stripped.slice(Math.max(0, m.index - 60), m.index + 3).replace(/\s+/g, ' ').trim(),
   }));
@@ -94,7 +100,7 @@ test('der Kommentar-Guard erkennt den Schaden, gegen den er gebaut ist', () => {
     '<section class="longevity">',
   ].join('\n');
 
-  assert.equal((broken.match(/<!--/g) || []).length, (broken.match(/-->/g) || []).length,
+  assert.equal((broken.match(/<!--/g) || []).length, (broken.match(/--!?>/g) || []).length,
     'Vorbedingung: die Paar-Bilanz ist ausgeglichen, ein zaehlender Guard waere hier gruen');
 
   const { strayClose, unterminated } = commentDamage(broken);
