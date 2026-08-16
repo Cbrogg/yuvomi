@@ -1631,6 +1631,19 @@ function stopPrnTicker() {
   prnTicker = null;
 }
 
+// Welche Medikamente gerade gebucht werden. Denselben Knopf gibt es ZWEIMAL -
+// einmal je Tab, beide gleichzeitig gemountet -, und `btn.disabled` sperrt nur
+// den angeklickten: wer waehrend der laufenden Anfrage den Tab wechselt, findet
+// drueben einen scharfen Zwilling und bucht dieselbe Dosis ein zweites Mal.
+const prnInFlight = new Set();
+
+/** Beide Knoepfe eines Medikaments sperren oder freigeben. */
+function setPrnBusy(medId, busy) {
+  if (busy) prnInFlight.add(medId); else prnInFlight.delete(medId);
+  document.querySelectorAll(`[data-prn-take][data-med-id="${medId}"]`)
+    .forEach((el) => { el.disabled = busy; });
+}
+
 /** Eine Bedarfsdosis buchen. */
 async function handlePrnDose(btn) {
   const scope = btn.dataset.prnScope;
@@ -1638,6 +1651,7 @@ async function handlePrnDose(btn) {
   const medId = Number(btn.dataset.medId);
   const med = s.list.find((m) => m.id === medId);
   if (!med) return;
+  if (prnInFlight.has(medId)) return;
 
   const state = prnDoseState(med, s.logs[medId] || []);
   // Nicht gesperrt, nur gefragt: der Mindestabstand ist eine Empfehlung vom
@@ -1655,7 +1669,7 @@ async function handlePrnDose(btn) {
     if (!ok) return;
   }
 
-  btn.disabled = true;
+  setPrnBusy(medId, true);
   const dose = med.prn_dose_qty != null ? Number(med.prn_dose_qty) : null;
   try {
     await api.post(`/health/medications/${medId}/logs`, {
@@ -1668,7 +1682,7 @@ async function handlePrnDose(btn) {
     });
   } catch (err) {
     console.error('[Health] prn dose error:', err);
-    btn.disabled = false;
+    setPrnBusy(medId, false);
     window.yuvomi?.showToast(err?.data?.error || t('health.meds.doseError'), 'danger');
     return;
   }
@@ -1694,7 +1708,10 @@ async function handlePrnDose(btn) {
   }
 
   window.yuvomi?.showToast(t('health.meds.doseSaved'), 'success');
+  // Erst nach dem Neuzeichnen freigeben: die frischen Zeilen bringen ihren
+  // eigenen Zustand mit, und bis dahin darf kein Zwilling scharf sein.
   await reloadMedViews();
+  prnInFlight.delete(medId);
 }
 
 /**
@@ -1719,8 +1736,12 @@ async function reloadMedViews() {
 
 /** Bindet die Bedarfsknoepfe eines Wurzelelements. */
 function wirePrn(root) {
-  root.querySelectorAll('[data-prn-take]').forEach((btn) =>
-    btn.addEventListener('click', () => handlePrnDose(btn)));
+  root.querySelectorAll('[data-prn-take]').forEach((btn) => {
+    // Ein Neuaufbau waehrend einer laufenden Buchung darf den Knopf nicht
+    // wieder scharf machen - er entsteht ja frisch und wuesste sonst nichts.
+    if (prnInFlight.has(Number(btn.dataset.medId))) btn.disabled = true;
+    btn.addEventListener('click', () => handlePrnDose(btn));
+  });
   if (root.querySelector('[data-prn-countdown]')) ensurePrnTicker();
 }
 
