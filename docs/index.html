@@ -319,10 +319,19 @@
       .ho-note { margin-left: 0; }
     }
 
-    .showcase { padding: 100px 0 60px; }
-    .feat-row { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center; margin-bottom: 96px; }
+    /* Eine Sektion fuer beide Stufen. Der `--bg-alt`-Streifen sass frueher an
+       der zweiten Sektion und trennte die vier ausfuehrlichen Module von den
+       vierzehn Karten, obwohl beide dasselbe sagen. */
+    .showcase { padding: 96px 0; background: var(--bg-alt); border-block: 1px solid var(--border); }
+    /* 2x2 statt vier Zeilen ueber die volle Breite. Die Zeilen waren je 405px
+       hoch, weil ein Hochkant-Handy die Hoehe trieb; im Raster teilen sich zwei
+       Karten eine Reihe und die Hoehe faellt auf das Mass des Textes daneben.
+       Gemessen 1.908px -> rund 640px. */
+    .feat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; margin-top: 48px; }
+    .feat-row { display: grid; grid-template-columns: minmax(0, 1fr) 200px; gap: 24px; align-items: center;
+      padding: 26px; border-radius: var(--r-lg); background: var(--surface);
+      border: 1px solid var(--border); box-shadow: var(--shadow-sm); }
     .feat-row:last-child { margin-bottom: 0; }
-    .feat-row.reverse .feat-visual { order: -1; }
     /* The kicker keeps its module accent - that is the one place on this page
        where the app's colour vocabulary is semantically correct. But at 12.5px
        bold the raw tokens missed AA on the lightest two (--m-shopping 4.40:1,
@@ -333,10 +342,10 @@
     .feat-kicker .k-ico { width: 26px; height: 26px; border-radius: var(--r-sm); display: grid; place-items: center;
       color: var(--m); background: color-mix(in srgb, var(--m) 13%, transparent); }
     .feat-kicker .k-ico svg { width: 15px; height: 15px; }
-    .feat-info h3 { font-size: clamp(1.5rem, 2.6vw, 2rem); font-weight: 700; letter-spacing: -0.03em; line-height: 1.12; margin-bottom: 14px; text-wrap: balance; }
-    .feat-info p { color: var(--text-2); font-size: 1.02rem; line-height: 1.65; max-width: 46ch; }
+    .feat-info h3 { font-size: clamp(1.15rem, 1.7vw, 1.4rem); font-weight: 700; letter-spacing: -0.03em; line-height: 1.12; margin-bottom: 14px; text-wrap: balance; }
+    .feat-info p { color: var(--text-2); font-size: 0.95rem; line-height: 1.6; }
     .feat-list { list-style: none; margin-top: 20px; display: flex; flex-direction: column; gap: 10px; }
-    .feat-list li { display: flex; align-items: flex-start; gap: 10px; font-size: 0.94rem; color: var(--text-2); }
+    .feat-list li { display: flex; align-items: flex-start; gap: 9px; font-size: 0.88rem; color: var(--text-2); }
     .feat-list svg { width: 18px; height: 18px; color: var(--m); flex-shrink: 0; margin-top: 2px; }
     .feat-visual { position: relative; }
     /* Die Feature-Spalte ist bei 1440px 544px breit. Eine Desktopaufnahme aus einer
@@ -355,13 +364,12 @@
       background: radial-gradient(60% 60% at 50% 40%, color-mix(in srgb, var(--m) 18%, transparent), transparent 75%);
       filter: blur(26px);
     }
-    .feat-phone { display: block; margin: 0 auto; width: min(300px, 62%); aspect-ratio: 1320 / 1780;
+    .feat-phone { display: block; width: 100%; aspect-ratio: 1320 / 1780;
       object-fit: cover; object-position: top center;
-      border-radius: var(--r-phone) !important; border: 5px solid var(--surface);
-      box-shadow: var(--shadow-xl); position: relative; z-index: 2; }
+      border-radius: var(--r-phone) !important; border: 4px solid var(--surface);
+      box-shadow: var(--shadow-lg); position: relative; z-index: 2; }
 
     /* ===== Feature grid ===== */
-    .modules { padding: 96px 0; background: var(--bg-alt); border-block: 1px solid var(--border); }
     /* Handyaufnahmen der Module, die sonst nur Prosa waeren. Feste Breite statt
        fr-Spalten: die Reihe soll umbrechen statt die Bilder zu stauchen, und ein
        Telefon unter ~150px zeigt nichts mehr. */
@@ -382,9 +390,11 @@
       .mod-shot { width: 104px; }
       .mod-shot figcaption { margin-top: 8px; font-size: 0.74rem; }
     }
+    .mod-lead { max-width: 62ch; margin: 72px auto 0; text-align: center; font-size: 1.02rem;
+      line-height: 1.65; color: var(--text-2); }
     .mod-scope { max-width: 68ch; margin: 44px auto 0; padding-top: 30px; border-top: 1px solid var(--border);
       font-size: 0.98rem; line-height: 1.7; color: var(--text-2); text-align: center; }
-    .mod-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(255px, 1fr)); gap: 16px; margin-top: 48px; }
+    .mod-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(255px, 1fr)); gap: 16px; margin-top: 26px; }
     .mod-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 26px; box-shadow: var(--shadow-sm);
       transition: transform .25s var(--ease-out), box-shadow .25s, border-color .25s; position: relative; overflow: hidden; }
     .mod-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--m); opacity: 0; transition: opacity .25s; }
@@ -596,7 +606,15 @@
          own overflow:hidden shaves it - 6px off at 375px. It tucks in instead. */
     }
     @media (max-width: 860px) {
-      .feat-row { grid-template-columns: 1fr; gap: 40px; margin-bottom: 72px; }
+      .feat-grid { grid-template-columns: 1fr; gap: 18px; }
+      /* Unter 860px hat die Karte rund 310px Inhaltsbreite. Neben einem Telefon
+         blieben dem Text 162px, also zwei Woerter pro Zeile - unlesbar. Das
+         Telefon faellt hier weg statt zu schrumpfen: die Galerie schaltet ab
+         860px selbst auf Handyaufnahmen um und die Modulreihe zeigt fuenf
+         weitere, ein mobiler Besucher sieht also weiter sieben Aufnahmen. Ein
+         Bild, das den Text daneben zerstoert, belegt nichts. */
+      .feat-row { grid-template-columns: 1fr; gap: 0; padding: 22px 20px; }
+      .feat-row .feat-visual { display: none; }
       .feat-row.reverse .feat-visual { order: 0; }
       .gal-list { gap: 44px; }
       .gal-cap { gap: 10px; margin-bottom: 12px; }
@@ -925,11 +943,12 @@
 <!-- FEATURE SHOWCASE -->
 <section class="showcase">
   <div class="wrap">
-    <div class="sec-head center reveal" style="margin-bottom: 72px">
+    <div class="sec-head center reveal">
       <h2 class="sec-title" data-t="feat_title">Everything your household needs</h2>
       <p class="sec-desc" data-t="feat_desc">A complete set of tools for families, designed to work together, not scattered across eighteen separate tabs.</p>
     </div>
 
+    <div class="feat-grid">
     <div class="feat-row reveal" style="--m: var(--m-tasks)">
       <div class="feat-info">
         <span class="feat-kicker"><span class="k-ico"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span><span data-t="f_tasks_k">Tasks</span></span>
@@ -949,7 +968,7 @@
     <!-- Health sits at position 2, not 6. "Never leaves your server" is the
          strongest privacy claim on the page and the one category no cloud
          planner can honestly offer. -->
-    <div class="feat-row reverse reveal" style="--m: var(--m-health)">
+    <div class="feat-row reveal" style="--m: var(--m-health)">
       <div class="feat-info">
         <span class="feat-kicker"><span class="k-ico"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/><path d="M3.22 12H9.5l.7-1.5L12.5 16l2-8 1.5 4h4.8"/></svg></span><span data-t="f_health_k">Health</span></span>
         <h3 data-t="f_health_t">Health that stays in the family.</h3>
@@ -985,7 +1004,7 @@
       </div>
     </div>
 
-    <div class="feat-row reverse reveal" style="--m: var(--m-budget)">
+    <div class="feat-row reveal" style="--m: var(--m-budget)">
       <div class="feat-info">
         <span class="feat-kicker"><span class="k-ico"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span><span data-t="f_budget_k">Budget</span></span>
         <h3 data-t="f_budget_t">No surprise at the end of the month.</h3>
@@ -1004,15 +1023,15 @@
       </div>
     </div>
   </div>
-</section>
-
-<!-- MODULE GRID -->
-<section class="modules">
-  <div class="wrap">
-    <div class="sec-head center reveal">
-      <h2 class="sec-title" data-t="more_title">The rest of the set</h2>
-      <p class="sec-desc" data-t="more_desc">The other fourteen, each one independent. Turn on what fits your household; the rest stays out of the way.</p>
     </div>
+
+    <!-- Die vierzehn uebrigen standen bis zur Re-Kritik in einer EIGENEN Sektion
+         mit eigenem Kopf. Zwei Sektionen mit zwei Ueberschriften fuer eine
+         Aussage - hier ist die Modulliste - kosteten zusammen 4.419px, ein
+         Drittel der Seite, und waren der Grund, warum der Umbau von elf auf acht
+         Sektionen unterm Strich nur rund 300px gespart hat. Jetzt eine Sektion,
+         ein Kopf, zwei Stufen: vier ausfuehrlich, vierzehn als Karte. -->
+    <p class="mod-lead reveal" data-t="more_desc">The other fourteen, each one independent. Turn on what fits your household; the rest stays out of the way.</p>
     <div class="mod-grid">
       <div class="mod-card reveal" style="--m: var(--m-calendar)">
         <div class="mod-ico"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
