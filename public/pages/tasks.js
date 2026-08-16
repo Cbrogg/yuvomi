@@ -1539,7 +1539,14 @@ function startCommentEdit(row, comment, { onChanged }) {
   save.textContent = t('common.save');
   actions.append(cancel, save);
 
-  cancel.addEventListener('click', () => row.replaceWith(commentRowNode(comment, { onChanged })));
+  cancel.addEventListener('click', () => {
+    // Die zurueckgeholte Zeile bringt ihre Icons als `data-lucide` mit, nicht
+    // als fertiges SVG - ohne diesen Aufruf stuenden Bearbeiten und Loeschen
+    // als leere Kaesten da, und zwar bis zum naechsten Nachladen.
+    const restored = commentRowNode(comment, { onChanged });
+    row.replaceWith(restored);
+    if (window.lucide) window.lucide.createIcons({ el: restored });
+  });
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const value = field.value.trim();
@@ -1587,10 +1594,19 @@ function wireMentionSuggest(field) {
   };
 
   const apply = (user) => {
+    // Die Frage wird hier NOCH EINMAL gestellt, statt sich auf den Stand vom
+    // letzten Tastendruck zu verlassen: liegt der Cursor inzwischen woanders,
+    // gibt es nichts zu ersetzen, und ein blindes Einfuegen zerschnitte den
+    // Text an einer Stelle, die niemand gemeint hat.
     const query = currentQuery();
-    if (!query) return;
+    if (!query) { close(); return; }
     const before = field.value.slice(0, query.at);
-    const after = field.value.slice(field.selectionStart);
+    // Der Rest des angefangenen Wortes RECHTS vom Cursor gehoert mit zur
+    // Erwaehnung und wird ersetzt, nicht stehen gelassen: wer mitten in „@Ale"
+    // auswaehlt, meint den Namen und nicht „@Alex Johnson le". Geschnitten wird
+    // nur bis zum naechsten Zwischenraum, damit ein Wort dahinter bleibt.
+    const rest = field.value.slice(field.selectionStart);
+    const after = rest.slice(rest.search(/\s|$/));
     const inserted = `@${user.display_name} `;
     field.value = `${before}${inserted}${after}`;
     const caret = before.length + inserted.length;
@@ -1623,7 +1639,8 @@ function wireMentionSuggest(field) {
     });
   };
 
-  field.addEventListener('input', () => {
+  /** Vorschlaege zur aktuellen Cursorposition neu bestimmen. */
+  const sync = () => {
     const query = currentQuery();
     if (!query) { close(); return; }
     const needle = query.typed.toLowerCase();
@@ -1633,7 +1650,19 @@ function wireMentionSuggest(field) {
     active = 0;
     if (!matches.length) { close(); return; }
     render();
+  };
+
+  field.addEventListener('input', sync);
+
+  // Der Cursor wandert auch ohne Eingabe - mit Pfeiltasten, per Klick, per
+  // Auswahl. Ohne diese beiden Zeilen bliebe die Liste offen, waehrend sie sich
+  // laengst auf ein anderes Wort bezieht: Enter fuegte den Namen dann an der
+  // NEUEN Position ein (aus „@Ann" mit Cursor hinter dem zweiten Zeichen wurde
+  // „@Anna nn"), und am Textanfang verschluckte sie stumm den Zeilenumbruch.
+  field.addEventListener('keyup', (e) => {
+    if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(e.key)) sync();
   });
+  field.addEventListener('click', sync);
 
   field.addEventListener('keydown', (e) => {
     if (!box || !matches.length) return;

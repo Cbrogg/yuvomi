@@ -1448,7 +1448,15 @@ function loadTaskComments(taskId) {
  * zu erwähnen löst nichts aus.
  */
 function notifyMentions(task, comment, authorId) {
-  const users = db.get().prepare('SELECT id, display_name FROM users').all();
+  // DIESELBE Personenliste, die `meta/options` an den Browser gibt: dort sind
+  // Haushaltshilfen ausgenommen, und der Client hebt deshalb nur diese Namen
+  // hervor. Ohne den Ausschluss haette der Server jemanden benachrichtigt, den
+  // die Ansicht gar nicht als erwaehnt markiert - mit dem Titel der Aufgabe und
+  // dem Kommentartext in der Meldung.
+  const users = db.get().prepare(`
+    SELECT id, display_name FROM users u
+    WHERE NOT EXISTS (SELECT 1 FROM housekeeping_workers hw WHERE hw.user_id = u.id)
+  `).all();
   const ids = mentionedUserIds(comment, users).filter((id) => id !== authorId);
   if (!ids.length) return;
 

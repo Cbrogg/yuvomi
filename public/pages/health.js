@@ -26,7 +26,7 @@ import {
 import {
   computeDueDoses, computeAdherence, refillState,
   daysMaskToIndices, indicesToDaysMask, WEEKDAY_COUNT,
-  prnDoseState, splitRemaining, toLocalStamp, parseLogInstant,
+  prnDoseState, splitRemaining, toLocalStamp, parseLogInstant, scheduledLogs,
 } from '/utils/health-meds.js';
 import {
   deriveFlag, summarizeReport, analyteNames, analyteTrend, LAB_FLAGS,
@@ -1318,8 +1318,8 @@ async function loadMeds() {
   meds.logsByMed = {};
 
   const today = toLocalDateKey(new Date());
-  const from = addLocalDays(today, -(meds.adherenceDays - 1));
   await Promise.all(meds.list.map(async (m) => {
+    const from = addLocalDays(today, -(medLogWindowDays(m, meds.adherenceDays) - 1));
     const [sRes, lRes] = await Promise.all([
       api.get(`/health/medications/${m.id}/schedules`),
       api.get(`/health/medications/${m.id}/logs?from=${from}T00:00&to=${today}T23:59`),
@@ -1329,14 +1329,40 @@ async function loadMeds() {
   }));
 }
 
+/**
+ * Wie weit zurueck die Dosis-Eintraege eines Medikaments gelesen werden muessen.
+ *
+ * Grundlage ist das Adhaerenz-Fenster. Ein Bedarfsmedikament braucht mehr, wenn
+ * sein Mindestabstand darueber hinausreicht (erlaubt sind bis zu 28 Tage): der
+ * Countdown rechnet aus der LETZTEN Einnahme, und was ausserhalb des Fensters
+ * liegt, kommt gar nicht erst an. Der Meds-Tab schriebe dann „Noch nicht
+ * genommen", waehrend die Uebersicht mit ihrem groesseren Fenster gleichzeitig
+ * den richtigen Zeitpunkt zeigt - und die Zeile, die vor einer zu fruehen Dosis
+ * warnen soll, waere die eine, die schweigt.
+ */
+function medLogWindowDays(med, baseDays) {
+  const hours = Number(med?.min_interval_hours);
+  if (!med?.prn || !Number.isFinite(hours) || hours <= 0) return baseDays;
+  return Math.max(baseDays, Math.ceil(hours / 24) + 1);
+}
+
 function allSchedules() {
   return meds.list.flatMap((m) => meds.schedulesByMed[m.id] || []);
 }
 
+/**
+ * Die Dosen, gegen die sich die Adhaerenz messen laesst - also die GEPLANTEN.
+ *
+ * `planned` zaehlt Eintraege aus den Einnahmeplaenen; eine Bedarfsdosis gehoert
+ * zu keinem und darf deshalb nicht im Zaehler stehen. Sichtbar wurde das erst
+ * mit #700: vorher fielen Bedarfsdosen schon am Zeitraumfilter der Route heraus,
+ * seit dem Fix kommen sie mit - und drei von sieben geplanten Dosen plus acht
+ * Kopfschmerztabletten haetten „100 %, 11 von 11" ergeben.
+ */
 function allLogsInRange(from, to) {
   const out = [];
   for (const m of meds.list) {
-    for (const l of (meds.logsByMed[m.id] || [])) {
+    for (const l of scheduledLogs(meds.logsByMed[m.id])) {
       const key = String(l.scheduled_at || l.taken_at || l.created_at || '').slice(0, 10);
       if (key >= from && key <= to) out.push(l);
     }
@@ -1509,9 +1535,17 @@ function prnStatusMarkup(state) {
   const parts = prnStatusParts(state);
   // Der Countdown wird aus `data-prn-next` neu geschrieben, nicht aus einem
   // laufenden Zaehler - deshalb ueberlebt er Reload und Geraetewechsel.
+  //
+  // Der Zeitpunkt steht NUR am wartenden Stand. `nextAllowedAt` existiert auch,
+  // wenn er laengst verstrichen ist, und der Minutentakt liest jedes gesetzte
+  // Attribut: eine abgelaufene Zeile haette ihn bei jedem Tick als „gerade
+  // abgelaufen" gemeldet und damit im Minutenrhythmus beide Tabs neu gebaut -
+  // ein offenes Einnahmeprotokoll klappt dabei zu, Scrollstand und Fokus gehen
+  // verloren.
+  const countdown = state.allowed ? '' : state.nextAllowedAt.toISOString();
   return `
     <span class="health-prn__status" data-prn-countdown title="${esc(parts.full)}"
-          data-prn-next="${esc(state.nextAllowedAt ? state.nextAllowedAt.toISOString() : '')}">
+          data-prn-next="${esc(countdown)}">
       <span class="health-prn__lead">${esc(parts.lead)}</span>
       ${parts.detail ? `<span class="health-prn__detail">${esc(parts.detail)}</span>` : ''}
     </span>`;
@@ -2057,7 +2091,10 @@ function openMedModal(med) {
         <div class="modal-grid modal-grid--2" id="med-prn-fields">
           <div class="form-field">
             <label class="label" for="med-interval">${esc(t('health.meds.field.minInterval'))}</label>
-            <input class="input" id="med-interval" type="number" inputmode="decimal" step="any" min="0" max="672"
+            <!-- Die Untergrenze haelt die der Route ein: 0 ist kein Abstand,
+                 sondern ein Countdown, der immer abgelaufen ist. Leer bleiben
+                 darf das Feld weiterhin - das ist „kein Abstand hinterlegt". -->
+            <input class="input" id="med-interval" type="number" inputmode="decimal" step="any" min="0.5" max="672"
                    value="${esc(val(med?.min_interval_hours))}">
             <p class="form-hint">${esc(t('health.meds.field.minIntervalHint'))}</p>
           </div>
@@ -3513,8 +3550,8 @@ async function loadOverview() {
   overview.logsByMed = {};
 
   const today = toLocalDateKey(new Date());
-  const from = addLocalDays(today, -(OVERVIEW_ADHERENCE_DAYS - 1));
   await Promise.all(overview.meds.map(async (m) => {
+    const from = addLocalDays(today, -(medLogWindowDays(m, OVERVIEW_ADHERENCE_DAYS) - 1));
     const [sRes, lRes] = await Promise.all([
       api.get(`/health/medications/${m.id}/schedules`),
       api.get(`/health/medications/${m.id}/logs?from=${from}T00:00&to=${today}T23:59`),
@@ -3530,6 +3567,16 @@ function overviewAllSchedules() {
 
 function overviewAllLogs() {
   return overview.meds.flatMap((m) => overview.logsByMed[m.id] || []);
+}
+
+/**
+ * Nur die geplanten Dosen - dieselbe Grenze wie `allLogsInRange` im Meds-Tab.
+ * Adhaerenz misst die Einhaltung eines Plans, und eine Bedarfsdosis hat keinen;
+ * seit sie nicht mehr am Zeitraumfilter haengenbleibt (#700), muss sie hier
+ * ausdruecklich draussen bleiben. Auch der Streak rechnet nur mit ihnen.
+ */
+function overviewScheduledLogs() {
+  return scheduledLogs(overviewAllLogs());
 }
 
 function overviewFindLog(dose) {
@@ -3710,12 +3757,12 @@ function overviewAdherenceMarkup() {
   const from = addLocalDays(today, -(OVERVIEW_ADHERENCE_DAYS - 1));
   const schedules = overviewAllSchedules();
   const planned = computeDueDoses(schedules, { from, to: today }).length;
-  const logs = overviewAllLogs().filter((l) => {
+  const logs = overviewScheduledLogs().filter((l) => {
     const k = String(l.scheduled_at || l.taken_at || l.created_at || '').slice(0, 10);
     return k >= from && k <= today;
   });
   const a = computeAdherence(logs, planned);
-  const streak = computeAdherenceStreak(schedules, overviewAllLogs(), { today });
+  const streak = computeAdherenceStreak(schedules, overviewScheduledLogs(), { today });
 
   if (a.rate === null) {
     return `<div class="metric-card__note">${esc(t('health.overview.adherence.noData'))}</div>`;

@@ -747,3 +747,24 @@ test('Kommentare: eine gelöschte Aufgabe nimmt ihre Unterhaltung mit', async ()
   await call('DELETE', `/${id}`, { as: { id: ALICE, role: 'admin' } });
   assert.equal(db.prepare('SELECT COUNT(*) AS c FROM task_comments WHERE task_id = ?').get(id).c, 0);
 });
+
+test('Kommentare: erwähnt wird gegen dieselbe Personenliste wie im Browser', async () => {
+  // Der Server las für die Benachrichtigung ALLE Nutzer, der Browser hebt gegen
+  // `meta/options` hervor - und dort sind Haushaltskräfte ausgenommen. Ein Name,
+  // den die Ansicht nicht markiert, darf auch keine Push-Meldung mit dem Titel
+  // der Aufgabe und dem Kommentartext auslösen.
+  const options = await call('GET', '/meta/options', { as: { id: ALICE, role: 'admin' } });
+  const sichtbar = options.body.users.map((u) => u.id);
+  assert.ok(!sichtbar.includes(WORKER), 'Vorbedingung: die Haushaltskraft steht nicht in meta/options');
+
+  const { mentionedUserIds } = await import('../public/utils/mentions.js');
+  const alleNutzer = db.prepare('SELECT id, display_name FROM users').all();
+  const wieDerServer = db.prepare(`
+    SELECT id, display_name FROM users u
+    WHERE NOT EXISTS (SELECT 1 FROM housekeeping_workers hw WHERE hw.user_id = u.id)
+  `).all();
+
+  const text = '@worker kannst du das übernehmen?';
+  assert.deepEqual(mentionedUserIds(text, alleNutzer), [WORKER], 'Vorbedingung: der Name träfe ohne Ausschluss');
+  assert.deepEqual(mentionedUserIds(text, wieDerServer), [], 'Haushaltskraft wird nicht benachrichtigt');
+});

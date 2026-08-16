@@ -27,7 +27,7 @@ function prnInterval(raw) {
   const r = v.num(raw, 'min_interval_hours');
   if (r.error || r.value === null) return r;
   if (r.value <= 0 || r.value > MAX_INTERVAL_HOURS) {
-    return { value: null, error: `min_interval_hours must be between 0 and ${MAX_INTERVAL_HOURS}.` };
+    return { value: null, error: `min_interval_hours must be greater than 0 and at most ${MAX_INTERVAL_HOURS}.` };
   }
   return r;
 }

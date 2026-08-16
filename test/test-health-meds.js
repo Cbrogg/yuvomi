@@ -20,6 +20,7 @@ const {
   toLocalStamp,
   prnDoseState,
   splitRemaining,
+  scheduledLogs,
 } = await import('../public/utils/health-meds.js');
 
 // --------------------------------------------------------
@@ -299,4 +300,24 @@ test('splitRemaining: auf die volle Minute AUFgerundet', () => {
   assert.deepEqual(splitRemaining(30_000), { hours: 0, minutes: 1 });
   assert.deepEqual(splitRemaining(0), { hours: 0, minutes: 0 });
   assert.deepEqual(splitRemaining(-5000), { hours: 0, minutes: 0 });
+});
+
+test('scheduledLogs: eine Bedarfsdosis zaehlt nicht als eingehaltener Plan', () => {
+  const logs = [
+    { id: 1, status: 'taken', schedule_id: 7, scheduled_at: '2026-08-16T08:00' },
+    { id: 2, status: 'taken', schedule_id: null, taken_at: '2026-08-16T12:40' }, // bei Bedarf
+    { id: 3, status: 'skipped', schedule_id: 7, scheduled_at: '2026-08-16T20:00' },
+  ];
+  assert.deepEqual(scheduledLogs(logs).map((l) => l.id), [1, 3]);
+
+  // Der Fall aus dem Review: drei von sieben geplanten genommen, dazu acht
+  // Bedarfsdosen. Ungefiltert stünde da „100 %, 11 von 11".
+  const viele = [
+    ...Array.from({ length: 3 }, (_, i) => ({ status: 'taken', schedule_id: i + 1 })),
+    ...Array.from({ length: 8 }, () => ({ status: 'taken', schedule_id: null })),
+  ];
+  assert.equal(computeAdherence(viele, 7).rate, 1);
+  assert.equal(computeAdherence(scheduledLogs(viele), 7).rate, 3 / 7);
+
+  assert.deepEqual(scheduledLogs(null), []);
 });

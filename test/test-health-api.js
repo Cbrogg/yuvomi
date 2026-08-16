@@ -1207,3 +1207,12 @@ test('Betreuung: niemand wird sein eigener Betreuer, Unbekannte werden abgelehnt
 });
 
 test.after(() => { server.close(); });
+
+test('PRN: 0 als Mindestabstand nennt seine Grenze richtig', async () => {
+  // Die Meldung sagte „between 0 and 672", wies die 0 aber ab - und das
+  // Formularfeld liess sie zu. Wer 0 eintippt, soll lesen, was gilt.
+  asA();
+  const res = await call('POST', '/medications', { name: 'Grenzfall', prn: true, min_interval_hours: 0 });
+  assert.equal(res.status, 400);
+  assert.match(JSON.stringify(res.body), /greater than 0 and at most 672/);
+});

@@ -100,6 +100,22 @@ export function computeDueDoses(schedules, range = {}) {
 }
 
 /**
+ * Nur die Dosen, die zu einem Zeitplan gehoeren.
+ *
+ * Die Basis jeder Adhaerenz-Rechnung: `planned` zaehlt Eintraege aus den
+ * Einnahmeplaenen, und eine Bedarfsdosis gehoert zu keinem. Sichtbar wurde das
+ * erst mit #700 - vorher fielen Bedarfsdosen schon am Zeitraumfilter der Route
+ * heraus, seit dem Fix kommen sie mit. Drei von sieben geplanten Dosen plus acht
+ * Kopfschmerztabletten haetten sonst „100 %, 11 von 11" ergeben.
+ *
+ * @param {Array<Object>} logs
+ * @returns {Array<Object>}
+ */
+export function scheduledLogs(logs) {
+  return (Array.isArray(logs) ? logs : []).filter((l) => l && l.schedule_id != null);
+}
+
+/**
  * Adherence-Quote: genommene Dosen / geplante Dosen im Zeitraum.
  *
  * @param {Array<Object>} logs - Dosis-Log-Zeilen mit `status`
