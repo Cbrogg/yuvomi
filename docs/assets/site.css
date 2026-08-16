@@ -82,6 +82,13 @@
   --m-tasks: #157F3D;
   --m-calendar: #00668F;
   --m-meals: #C2410C;
+  /* Vorrat zieht in der App aus derselben Familie wie Mahlzeiten
+     (tokens.css: --module-pantry und --module-meals sind beide
+     --_family-kitchen). Als Referenz statt als Hexwert notiert: so folgt es den
+     beiden Dark-Bloecken von selbst und kann nicht wie --m-split auseinander
+     laufen. Fehlte, seit die vierte Handoff-Zeile es benutzt - das leere Token
+     liess ausgerechnet die Solo-Zeile ohne Farbe. */
+  --m-pantry: var(--m-meals);
   --m-recipes: #0C7C5B;
   --m-shopping: #CF236F;
   --m-notes: #9D6007;

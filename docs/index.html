@@ -73,7 +73,6 @@
 
 
     .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
-    .wrap-narrow { max-width: 880px; margin: 0 auto; padding: 0 24px; }
 
     /* ===== NAV =====
        Class-scoped, not `nav {}`: the footer link block is a <nav> too now, and
@@ -127,8 +126,6 @@
     .btn-secondary { background: var(--surface); color: var(--text-1); border-color: var(--border); box-shadow: var(--shadow-sm); }
     .btn-secondary:hover { border-color: var(--border-strong); transform: translateY(-2px); box-shadow: var(--shadow-md); }
     .btn-secondary:active { transform: translateY(0) scale(0.98); }
-    .btn-ghost { background: none; color: var(--text-2); }
-    .btn-ghost:hover { color: var(--text-1); }
 
     /* ===== Section primitives ===== */
     section { position: relative; }
@@ -147,13 +144,17 @@
     .sec-title em { font-style: italic; font-weight: 600; color: var(--accent); }
     .sec-desc { font-size: 1.075rem; color: var(--text-2); line-height: 1.65; max-width: 56ch; }
     .sec-head.center .sec-desc { margin-left: auto; margin-right: auto; }
-    /* Three heads sit flush left under an eyebrow - see it (gallery), it fits
-       together (handoffs), it outlives us (longevity). Those are the page's
-       chapter marks; the centred heads between them belong to the chapter above.
-       The distinction only reads if the chapters are visibly louder, so all
-       three take a step up together. Eleven headlines at one size is a list,
-       not a hierarchy - and picking one of the three to enlarge just moved the
-       question to which one deserved it. */
+    /* Four heads sit flush left under an eyebrow - see it (gallery), this is
+       what it replaces (swap), it fits together (handoffs), it outlives us
+       (longevity). Those are the page's chapter marks; the centred heads
+       between them belong to the chapter above. The distinction only reads if
+       the chapters are visibly louder, so all four take a step up together.
+       Eleven headlines at one size is a list, not a hierarchy - and picking one
+       to enlarge just moved the question to which one deserved it.
+
+       Es waren drei, bis .swap dazukam. Vier von acht Sektionen sind damit
+       Kapitelmarken, und weiter darf das nicht wachsen: ab der Haelfte ist die
+       Unterscheidung wieder eine Liste. */
     .sec-head.lead { max-width: 780px; }
     .sec-head.lead .sec-title { font-size: clamp(2.3rem, 5.2vw, 3.9rem); }
 
@@ -232,7 +233,7 @@
        one gets the full content column (>= 900px at every desktop width), the
        caption does the selling, and the first readable screen lands inside the
        first 1500px instead of at 71% scroll depth. */
-    .gallery { padding: 88px 0 24px; }
+    .gallery { padding: 88px 0; }
     .gal-list { display: flex; flex-direction: column; gap: 56px; margin-top: 44px; }
     .gal-item { position: relative; }
     .gal-cap { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; }
@@ -264,11 +265,17 @@
        list turns that vocabulary back into decoration. */
     .swap { padding: 96px 0; }
     .swap-list { margin-top: 44px; border-top: 1px solid var(--border); }
-    .swap-row { display: grid; grid-template-columns: 1fr auto 1.25fr; align-items: center; gap: 20px;
+    .swap-row { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1.25fr); align-items: center; gap: 20px;
       padding: 17px 4px; border-bottom: 1px solid var(--border); }
-    .swap-from { font-size: 1rem; color: var(--text-3); }
+    /* Rechtsbuendig, damit der Pfeil an dem steht, worauf er zeigt. Linksbuendig
+       standen zwischen Label und Pfeil gemessen 223 bis 360px Leerraum, und der
+       Pfeil las sich als Zubehoer der rechten Spalte statt als Verbindung. */
+    .swap-from { font-size: 1rem; color: var(--text-3); text-align: right; }
     .swap-arrow { width: 17px; height: 17px; color: var(--text-3); opacity: 0.5; flex-shrink: 0; }
     .swap-to { font-size: 1rem; color: var(--text-2); line-height: 1.5; }
+    /* Der Pfeil ist aria-hidden, die Beziehung stand also nur im Bild. */
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
     .swap-to b { color: var(--text-1); font-weight: 700; }
     .swap-close { text-align: center; margin-top: 44px; font-size: clamp(1.3rem, 3vw, 1.7rem); font-weight: 600;
       letter-spacing: -0.02em; font-style: italic; color: var(--text-1); }
@@ -477,11 +484,22 @@
        cannot be skipped by pasting one long chain. Same gap the warning takes from
        the block above it, so the three parts read as one sequence. */
     .quick-warn + .code-wrap { margin-top: 14px; }
+    /* Fielen beim Entfernen der Setup-Sektion mit weg, das <p> blieb stehen: der
+       Satz rutschte damit auf 16px/--text-1 ohne Abstand und las sich als
+       Fortsetzung der Codeplatte, waehrend die <code>-Chips daneben ihre
+       Toenung behielten. Dieselbe Auszeichnung, zwei Erscheinungsbilder. */
+    .quick-note { font-size: 0.9rem; color: var(--text-2); margin-top: 16px; line-height: 1.6; }
+    .quick-note code { font-family: var(--ff-mono); font-size: 0.82rem; background: var(--accent-soft); color: var(--accent-deep); padding: 2px 7px; border-radius: var(--r-xs); }
     /* The one sentence that answers the fear this audience actually has was a
        0.92rem caption in 92% white, under the CTA buttons, at 94% scroll depth.
-       It gets a section of its own, in body copy size, before the install block
-       rather than after it - the reader decides here, not below. */
-    .longevity { padding: 30px 0 8px; }
+       It gets a chapter of its own before the install block rather than after
+       it - the reader decides here, not below.
+
+       Seit dem Umbau sind es drei Fragen mit drei Antworten in Karten, nicht
+       mehr ein Absatz in Fliesstextgroesse. Das Padding stand noch auf
+       `30px 0 8px` aus der Absatz-Fassung und gab der Sektion, die die Seite
+       selbst als Entscheidungspunkt fuehrt, acht Pixel Luft nach unten. */
+    .longevity { padding: 96px 0; }
     .long-list { margin-top: 44px; display: grid; gap: 20px; }
     .long-item { padding: 26px 28px; border-radius: var(--r-lg); background: var(--surface);
       border: 1px solid var(--border); box-shadow: var(--shadow-sm); }
@@ -504,7 +522,10 @@
          identity, and an h2 that at 43.2px was the SMALLEST on the page above
          1080px. The fill carries the accent now (a tint, which DESIGN.md
          sanctions for "accent highlight zones"), the frame only outlines it, and
-         the headline outranks the section heads it is supposed to close. */
+         the headline outranks the centred section heads it is supposed to close
+         (51.2px gegen 48px). Gegen die vier Kapitelmarken bleibt sie bewusst
+         darunter (62.4px): die schliessen Kapitel, der CTA schliesst die Seite,
+         und zwei Groessen fuer zwei Rollen sind eine Hierarchie. */
     .cta-box { position: relative; overflow: hidden; text-align: center; border-radius: var(--r-2xl); padding: 68px 40px;
       background: color-mix(in srgb, var(--accent) 10%, var(--surface));
       border: 1px solid color-mix(in srgb, var(--accent) 80%, var(--border));
@@ -624,7 +645,7 @@
       }
       .reveal { opacity: 1; transform: none; }
       .hero-frame { transition: none; }
-      .plat-card:hover, .opt-card:hover { transform: none; }
+      .plat-card:hover { transform: none; }
     }
 
     /* Print. Without this the page printed the reveal state it happened to be
@@ -717,9 +738,15 @@
              scanner starts the English light PNG before applyShots() can pick the
              right theme and locale, and that first download is thrown away. The
              inline script below runs while the parser is still here, so exactly
-             one file is ever fetched. noscript keeps it visible without JS. -->
-        <img class="sc" data-light="screenshots/dashboard-light-web.png" data-dark="screenshots/dashboard-dark-web.png" alt="Yuvomi dashboard showing today's tasks, calendar, meals and shopping at a glance" data-alt-t="alt_hero" width="900" height="675" loading="eager" decoding="async" id="heroShot">
-        <script>document.getElementById('heroShot')&&(function(i){try{var t=localStorage.getItem('yuvomi-theme')||localStorage.getItem('oikos-theme'),d=t==='dark'||(!t&&matchMedia('(prefers-color-scheme:dark)').matches),l=localStorage.getItem('yuvomi-lang')||localStorage.getItem('oikos-lang')||((navigator.language||'en').toLowerCase().indexOf('de')===0?'de':'en'),b=i.dataset[d?'dark':'light'],p=l!=='en'?b.replace('screenshots/','screenshots/'+l+'/'):b;i.onerror=function(){i.onerror=null;i.srcset='';i.src=b;};i.srcset=p.replace(/\.png$/,'@1x.webp')+' 1x, '+p.replace(/\.png$/,'.webp')+' 2x';i.src=p.replace(/\.png$/,'.webp');}catch(e){i.src=i.dataset.light;}})(document.getElementById('heroShot'));</script>
+             one file is ever fetched. noscript keeps it visible without JS.
+
+             Die Breitenpruefung steht mit im Inline-Skript, nicht nur in
+             applyShots(): der Hero hat seit der Re-Kritik Mobilvarianten, und
+             ohne sie hier haette das Skript erst die 2752px-Desktopaufnahme
+             geholt und applyShots sie danach ersetzt - also genau der doppelte
+             Download, den dieser Kommentar zu verhindern verspricht. -->
+        <img class="sc" data-light="screenshots/dashboard-light-web.png" data-dark="screenshots/dashboard-dark-web.png" data-light-m="screenshots/dashboard-light-mobile.png" data-dark-m="screenshots/dashboard-dark-mobile.png" alt="Yuvomi dashboard showing today's tasks, calendar, meals and shopping at a glance" data-alt-t="alt_hero" width="900" height="675" loading="eager" decoding="async" id="heroShot">
+        <script>document.getElementById('heroShot')&&(function(i){try{var t=localStorage.getItem('yuvomi-theme')||localStorage.getItem('oikos-theme'),d=t==='dark'||(!t&&matchMedia('(prefers-color-scheme:dark)').matches),l=localStorage.getItem('yuvomi-lang')||localStorage.getItem('oikos-lang')||((navigator.language||'en').toLowerCase().indexOf('de')===0?'de':'en'),m=matchMedia('(max-width:860px)').matches,k=d?'dark':'light',b=i.dataset[m&&i.dataset[k+'M']?k+'M':k],p=l!=='en'?b.replace('screenshots/','screenshots/'+l+'/'):b;i.onerror=function(){i.onerror=null;i.srcset='';i.src=b;};i.srcset=p.replace(/\.png$/,'@1x.webp')+' 1x, '+p.replace(/\.png$/,'.webp')+' 2x';i.src=p.replace(/\.png$/,'.webp');}catch(e){i.src=i.dataset.light;}})(document.getElementById('heroShot'));</script>
         <noscript><img class="sc" src="screenshots/dashboard-light-web.png" alt="Yuvomi dashboard showing today's tasks, calendar, meals and shopping at a glance" width="900" height="675"></noscript>
       </div>
       <div class="hero-float">
@@ -805,25 +832,24 @@
     <div class="sec-head lead reveal">
       <span class="eyebrow" data-t="swap_eyebrow">What it replaces</span>
       <h2 class="sec-title" data-t="swap_title">One home <em>instead of many subscriptions</em></h2>
-      <p class="sec-desc" data-t="swap_desc">Ten apps a household pays for separately, and the one place that does all of it on a server you own. Nothing here is a plan or a roadmap: every line is a module that ships today.</p>
+      <p class="sec-desc" data-t="swap_desc">Ten apps a household pays for separately, and the one place that does all of it on a server you own. Nothing here is a plan or a roadmap: every line is built and shipping today.</p>
     </div>
     <ul class="swap-list reveal">
-      <li class="swap-row"><span class="swap-from" data-t="swap_1_a">a to-do &amp; task app</span><svg class="swap-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg><span class="swap-to" data-t="swap_1_b"><b>Tasks</b> - Kanban, deadlines, recurring, multi-assignment</span></li>
-      <li class="swap-row"><span class="swap-from" data-t="swap_2_a">a shared calendar subscription</span><svg class="swap-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg><span class="swap-to" data-t="swap_2_b"><b>Calendar</b> - sync, subscriptions, per-event visibility</span></li>
-      <li class="swap-row"><span class="swap-from" data-t="swap_3_a">a cost-splitting app</span><svg class="swap-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg><span class="swap-to" data-t="swap_3_b"><b>Split expenses</b> - shared costs with debt simplification</span></li>
-      <li class="swap-row"><span class="swap-from" data-t="swap_4_a">a budgeting app</span><svg class="swap-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg><span class="swap-to" data-t="swap_4_b"><b>Budget</b> - income, expenses, accounts, savings goals</span></li>
-      <li class="swap-row"><span class="swap-from" data-t="swap_5_a">a meal planner &amp; recipe app</span><svg class="swap-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg><span class="swap-to" data-t="swap_5_b"><b>Meals &amp; Recipes</b> - weekly planner with shopping export</span></li>
-      <li class="swap-row"><span class="swap-from" data-t="swap_6_a">a grocery-list app</span><svg class="swap-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg><span class="swap-to" data-t="swap_6_b"><b>Shopping</b> - shared, aisle-organized lists</span></li>
-      <li class="swap-row"><span class="swap-from" data-t="swap_7_a">a pantry &amp; expiry tracker</span><svg class="swap-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg><span class="swap-to" data-t="swap_7_b"><b>Pantry</b> - stock, storage location, best-before dates</span></li>
-      <li class="swap-row"><span class="swap-from" data-t="swap_8_a">a document manager</span><svg class="swap-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg><span class="swap-to" data-t="swap_8_b"><b>Documents</b> - tagged, searchable family files</span></li>
-      <li class="swap-row"><span class="swap-from" data-t="swap_9_a">a home-inventory app</span><svg class="swap-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg><span class="swap-to" data-t="swap_9_b"><b>Inventory</b> - owned belongings, purchase price, warranty, linked receipts</span></li>
-      <li class="swap-row"><span class="swap-from" data-t="swap_10_a">a notes app &amp; contacts sync</span><svg class="swap-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg><span class="swap-to" data-t="swap_10_b"><b>Notes &amp; Contacts</b> - Markdown notes, CardDAV sync</span></li>
+      <li class="swap-row"><span class="swap-from" data-t="swap_1_a">a to-do &amp; task app</span><span class="sr-only" data-t="swap_rel">is replaced by</span><svg class="swap-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg><span class="swap-to" data-t="swap_1_b"><b>Tasks</b> - Kanban, deadlines, recurring, multi-assignment</span></li>
+      <li class="swap-row"><span class="swap-from" data-t="swap_2_a">a shared calendar subscription</span><span class="sr-only" data-t="swap_rel">is replaced by</span><svg class="swap-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg><span class="swap-to" data-t="swap_2_b"><b>Calendar</b> - sync, subscriptions, per-event visibility</span></li>
+      <li class="swap-row"><span class="swap-from" data-t="swap_3_a">a cost-splitting app</span><span class="sr-only" data-t="swap_rel">is replaced by</span><svg class="swap-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg><span class="swap-to" data-t="swap_3_b"><b>Split expenses</b> - shared costs with debt simplification</span></li>
+      <li class="swap-row"><span class="swap-from" data-t="swap_4_a">a budgeting app</span><span class="sr-only" data-t="swap_rel">is replaced by</span><svg class="swap-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg><span class="swap-to" data-t="swap_4_b"><b>Budget</b> - income, expenses, accounts, savings goals</span></li>
+      <li class="swap-row"><span class="swap-from" data-t="swap_5_a">a meal planner &amp; recipe app</span><span class="sr-only" data-t="swap_rel">is replaced by</span><svg class="swap-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg><span class="swap-to" data-t="swap_5_b"><b>Meals &amp; Recipes</b> - weekly planner with shopping export</span></li>
+      <li class="swap-row"><span class="swap-from" data-t="swap_6_a">a grocery-list app</span><span class="sr-only" data-t="swap_rel">is replaced by</span><svg class="swap-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg><span class="swap-to" data-t="swap_6_b"><b>Shopping</b> - shared, aisle-organized lists</span></li>
+      <li class="swap-row"><span class="swap-from" data-t="swap_7_a">a pantry &amp; expiry tracker</span><span class="sr-only" data-t="swap_rel">is replaced by</span><svg class="swap-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg><span class="swap-to" data-t="swap_7_b"><b>Pantry</b> - stock, storage location, best-before dates</span></li>
+      <li class="swap-row"><span class="swap-from" data-t="swap_8_a">a document manager</span><span class="sr-only" data-t="swap_rel">is replaced by</span><svg class="swap-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg><span class="swap-to" data-t="swap_8_b"><b>Documents</b> - tagged, searchable family files</span></li>
+      <li class="swap-row"><span class="swap-from" data-t="swap_9_a">a home-inventory app</span><span class="sr-only" data-t="swap_rel">is replaced by</span><svg class="swap-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg><span class="swap-to" data-t="swap_9_b"><b>Inventory</b> - owned belongings, purchase price, warranty, linked receipts</span></li>
+      <li class="swap-row"><span class="swap-from" data-t="swap_10_a">a notes app &amp; contacts sync</span><span class="sr-only" data-t="swap_rel">is replaced by</span><svg class="swap-arrow" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg><span class="swap-to" data-t="swap_10_b"><b>Notes &amp; Contacts</b> - Markdown notes, CardDAV sync</span></li>
     </ul>
     <p class="swap-close reveal" data-t="swap_close">There's a calmer way. <span>Self-hosted, and yours.</span></p>
   </div>
 </section>
 
-     with modules the reader has just been introduced to. -->
 <section class="handoff">
   <div class="wrap">
     <div class="sec-head lead reveal">
@@ -1058,22 +1084,20 @@
          das zeigte unter der Ueberschrift "die ihr noch nicht gesehen habt"
          drei Unteransichten des Budget-Moduls, das oben schon eine eigene
          Zeile hatte. Kein Drag, kein Autoplay, kein JS - eine Reihe, die
-         umbricht. Beschriftung und alt teilen sich den Modulnamen-Key. -->
+         umbricht. Beschriftung und alt sagen bewusst VERSCHIEDENES: sie teilten
+         sich den Modulnamen-Key, und ein Screenreader las den Namen damit
+         zweimal hintereinander. -->
     <div class="mod-shots">
-      <figure class="mod-shot reveal"><img class="sc" data-light="screenshots/inventory-light-mobile.png" data-dark="screenshots/inventory-dark-mobile.png" src="screenshots/inventory-light-mobile.png" alt="Inventory" data-alt-t="m_inv_t" loading="lazy" decoding="async" width="440" height="956"><figcaption data-t="m_inv_t">Inventory</figcaption></figure>
-      <figure class="mod-shot reveal"><img class="sc" data-light="screenshots/shopping-light-mobile.png" data-dark="screenshots/shopping-dark-mobile.png" src="screenshots/shopping-light-mobile.png" alt="Shopping" data-alt-t="m_shop_t" loading="lazy" decoding="async" width="440" height="956"><figcaption data-t="m_shop_t">Shopping</figcaption></figure>
-      <figure class="mod-shot reveal"><img class="sc" data-light="screenshots/rewards-light-mobile.png" data-dark="screenshots/rewards-dark-mobile.png" src="screenshots/rewards-light-mobile.png" alt="Rewards" data-alt-t="m_rewards_t" loading="lazy" decoding="async" width="440" height="956"><figcaption data-t="m_rewards_t">Rewards</figcaption></figure>
-      <figure class="mod-shot reveal"><img class="sc" data-light="screenshots/documents-light-mobile.png" data-dark="screenshots/documents-dark-mobile.png" src="screenshots/documents-light-mobile.png" alt="Documents" data-alt-t="m_docs_t" loading="lazy" decoding="async" width="440" height="956"><figcaption data-t="m_docs_t">Documents</figcaption></figure>
-      <figure class="mod-shot reveal"><img class="sc" data-light="screenshots/recipes-light-mobile.png" data-dark="screenshots/recipes-dark-mobile.png" src="screenshots/recipes-light-mobile.png" alt="Recipes" data-alt-t="m_recipes_t" loading="lazy" decoding="async" width="440" height="956"><figcaption data-t="m_recipes_t">Recipes</figcaption></figure>
+      <figure class="mod-shot reveal"><img class="sc" data-light="screenshots/inventory-light-mobile.png" data-dark="screenshots/inventory-dark-mobile.png" src="screenshots/inventory-light-mobile.png" alt="The inventory module on a phone" data-alt-t="alt_m_inventory" loading="lazy" decoding="async" width="440" height="956"><figcaption data-t="m_inv_t">Inventory</figcaption></figure>
+      <figure class="mod-shot reveal"><img class="sc" data-light="screenshots/shopping-light-mobile.png" data-dark="screenshots/shopping-dark-mobile.png" src="screenshots/shopping-light-mobile.png" alt="A shared shopping list on a phone" data-alt-t="alt_m_shopping" loading="lazy" decoding="async" width="440" height="956"><figcaption data-t="m_shop_t">Shopping</figcaption></figure>
+      <figure class="mod-shot reveal"><img class="sc" data-light="screenshots/rewards-light-mobile.png" data-dark="screenshots/rewards-dark-mobile.png" src="screenshots/rewards-light-mobile.png" alt="The rewards ledger on a phone" data-alt-t="alt_m_rewards" loading="lazy" decoding="async" width="440" height="956"><figcaption data-t="m_rewards_t">Rewards</figcaption></figure>
+      <figure class="mod-shot reveal"><img class="sc" data-light="screenshots/documents-light-mobile.png" data-dark="screenshots/documents-dark-mobile.png" src="screenshots/documents-light-mobile.png" alt="Family documents on a phone" data-alt-t="alt_m_documents" loading="lazy" decoding="async" width="440" height="956"><figcaption data-t="m_docs_t">Documents</figcaption></figure>
+      <figure class="mod-shot reveal"><img class="sc" data-light="screenshots/recipes-light-mobile.png" data-dark="screenshots/recipes-dark-mobile.png" src="screenshots/recipes-light-mobile.png" alt="The recipe list on a phone" data-alt-t="alt_m_recipes" loading="lazy" decoding="async" width="440" height="956"><figcaption data-t="m_recipes_t">Recipes</figcaption></figure>
     </div>
     <p class="mod-scope reveal" data-t="more_scope">Not a photo library, a password manager or a media server: Yuvomi replaces the apps a household runs on, not your whole server. What you already run can stay. Calendars and contacts sync both ways over CalDAV and CardDAV, documents can live on WebDAV or Google Drive, an idle wall tablet can show photos from your own Immich, and API tokens plus the MCP endpoint let the rest of your setup talk to it.</p>
   </div>
 </section>
 
-<!-- HANDOFFS - the payoff for the feature list above. Each row is one piece of
-     data crossing from the module that produces it to the module that needs it,
-     and the two module accents are the app's real colour vocabulary used for the
-     one thing they actually mean. Sits after the showcase on purpose: it argues
 
 
 
@@ -1254,8 +1278,14 @@ openssl rand -hex 32</div><button class="copy-btn" type="button" data-copy="curl
       long_title:'The three questions worth asking first',
       alt_c_cal:'Calendar',
       tag_mit:'MIT License', tag_langs:'24 languages',
+      alt_m_inventory:'The inventory module on a phone',
+      alt_m_shopping:'A shared shopping list on a phone',
+      alt_m_rewards:'The rewards ledger on a phone',
+      alt_m_documents:'Family documents on a phone',
+      alt_m_recipes:'The recipe list on a phone',
+      swap_rel:'is replaced by',
       swap_eyebrow:'What it replaces', swap_title:'One home <em>instead of many subscriptions</em>',
-      swap_desc:'Ten apps a household pays for separately, and the one place that does all of it on a server you own. Nothing here is a plan or a roadmap: every line is a module that ships today.',
+      swap_desc:'Ten apps a household pays for separately, and the one place that does all of it on a server you own. Nothing here is a plan or a roadmap: every line is built and shipping today.',
       swap_1_a:'a to-do & task app',            swap_1_b:'<b>Tasks</b> - Kanban, deadlines, recurring, multi-assignment',
       swap_2_a:'a shared calendar subscription',    swap_2_b:'<b>Calendar</b> - sync, subscriptions, per-event visibility',
       swap_3_a:'a cost-splitting app',              swap_3_b:'<b>Split expenses</b> - shared costs with debt simplification',
@@ -1352,8 +1382,14 @@ openssl rand -hex 32</div><button class="copy-btn" type="button" data-copy="curl
       long_title:'Die drei Fragen, die man vorher stellen sollte',
       alt_c_cal:'Kalender',
       tag_mit:'MIT-Lizenz', tag_langs:'24 Sprachen',
+      alt_m_inventory:'Das Inventar-Modul auf dem Handy',
+      alt_m_shopping:'Eine geteilte Einkaufsliste auf dem Handy',
+      alt_m_rewards:'Das Belohnungs-Konto auf dem Handy',
+      alt_m_documents:'Familiendokumente auf dem Handy',
+      alt_m_recipes:'Die Rezeptliste auf dem Handy',
+      swap_rel:'wird ersetzt durch',
       swap_eyebrow:'Was es ersetzt', swap_title:'Ein Zuhause <em>statt vieler Abos</em>',
-      swap_desc:'Zehn Apps, die ein Haushalt einzeln bezahlt, und der eine Ort, der das alles auf einem Server erledigt, der euch gehört. Nichts davon ist Plan oder Roadmap: jede Zeile ist ein Modul, das heute ausgeliefert wird.',
+      swap_desc:'Zehn Apps, die ein Haushalt einzeln bezahlt, und der eine Ort, der das alles auf einem Server erledigt, der euch gehört. Nichts davon ist angekündigt oder geplant: jede Zeile ist gebaut und ausgeliefert.',
       swap_1_a:'eine To-do- und Aufgaben-App',      swap_1_b:'<b>Aufgaben</b> - Kanban, Fristen, Wiederholungen, Mehrfachzuweisung',
       swap_2_a:'ein geteiltes Kalender-Abo',        swap_2_b:'<b>Kalender</b> - Sync, Abos, Sichtbarkeit pro Termin',
       swap_3_a:'eine App fürs Kostenteilen',        swap_3_b:'<b>Geteilte Kosten</b> - gemeinsame Ausgaben mit Schuldenvereinfachung',

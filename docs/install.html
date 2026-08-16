@@ -366,6 +366,15 @@
     /* Troubleshooting */
     .trouble-list { margin-top: 32px; display: flex; flex-direction: column; gap: 10px; }
     details { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden; }
+    /* `overflow: hidden` haelt den Inhalt in den 12px-Radien - und schnitt dabei
+       den Fokusring des <summary> weg. Die Summary sitzt 1px innerhalb des
+       details (der Rahmen), der Ring liegt bei `outline-offset: 3px` also 2px
+       AUSSERHALB der Klammer und wurde vollstaendig geklippt: tastaturbedient
+       war nicht zu sehen, welches der fuenf Akkordeons den Fokus hat.
+       Gemessen 0 geaenderte Pixel gegen 3.561 ohne die Klammer.
+       Die Ausnahme gilt nur, solange der Fokus sichtbar ist; im Ruhezustand
+       klippt es weiter wie zuvor. WCAG 2.4.7 und 2.4.11. */
+    details:has(> summary:focus-visible) { overflow: visible; }
     details[open] { box-shadow: var(--shadow-sm); }
     summary { cursor: pointer; padding: 16px 20px; font-weight: 600; font-size: 0.95rem; list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
     summary::-webkit-details-marker { display: none; }
