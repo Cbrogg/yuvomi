@@ -46,7 +46,17 @@ const SHOTS = resolve(DOCS, 'screenshots');
 const PAGES = ['index.html', 'install.html', 'datenschutz.html', 'impressum.html', 'privacy.html'];
 
 const read = (p) => readFileSync(resolve(DOCS, p), 'utf8');
-const decode = (s) => s.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&nbsp;| /g, ' ');
+/**
+ * Entities aufloesen. `&amp;` MUSS zuletzt kommen: stuende es vorn, wuerde
+ * `&amp;lt;` erst zu `&lt;` und dann zu `<` - also doppelt aufgeloest, und die
+ * README-Gegenprobe vergliche gegen einen Text, den niemand geschrieben hat.
+ * (CodeQL js/double-escaping, PR #782.)
+ */
+const decode = (s) => s
+  .replace(/&lt;/g, '<')
+  .replace(/&gt;/g, '>')
+  .replace(/&nbsp;|\u00a0/g, ' ')
+  .replace(/&amp;/g, '&');
 
 // ── (1) Kein Kommentar rendert als Text ──────────────────────────────────────
 
