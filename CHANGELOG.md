@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **The category picker in the Inventory item form was blank.** The five categories that ship with the module stopped carrying their name in the database when they became translatable (2.14.0): the name column is empty for them and the label comes from a translation key, exactly as it already worked for task and contact categories. The picker still read the raw name, so it offered five unlabelled options - the list itself was there, only its labels were missing. Every other place in the module already resolved the label correctly; the picker was the one that did not. Reported in #783.
+
 ## [2.14.4] - 2026-08-15
 
 ### Changed
