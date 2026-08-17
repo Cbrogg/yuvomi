@@ -2165,10 +2165,13 @@ function openMedModal(med) {
         <div class="modal-grid modal-grid--2" id="med-prn-fields">
           <div class="form-field">
             <label class="label" for="med-interval">${esc(t('health.meds.field.minInterval'))}</label>
-            <!-- Die Untergrenze haelt die der Route ein: 0 ist kein Abstand,
-                 sondern ein Countdown, der immer abgelaufen ist. Leer bleiben
-                 darf das Feld weiterhin - das ist „kein Abstand hinterlegt". -->
-            <input class="input" id="med-interval" type="number" inputmode="decimal" step="any" min="0.5" max="672"
+            <!-- Die Grenzen sind die der Route: groesser als 0 (ein Abstand von
+                 0 waere ein Countdown, der immer abgelaufen ist) und hoechstens
+                 28 Tage. Nicht enger, sonst liesse sich ein ueber die API
+                 gesetzter Viertelstundenabstand hier nicht mehr speichern -
+                 auch dann nicht, wenn nur der Name geaendert wird. Leer bleiben
+                 darf das Feld weiterhin: das ist „kein Abstand hinterlegt". -->
+            <input class="input" id="med-interval" type="number" inputmode="decimal" step="any" min="0.01" max="672"
                    value="${esc(val(med?.min_interval_hours))}">
             <p class="form-hint">${esc(t('health.meds.field.minIntervalHint'))}</p>
           </div>

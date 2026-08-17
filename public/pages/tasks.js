@@ -23,6 +23,7 @@ import '/components/category-manager.js';
 import '/components/tag-manager.js';
 import { findPageFab } from '/utils/fab.js';
 import { isSoloHousehold } from '/utils/household.js';
+import { isNavModuleReadOnly } from '/permissions.js';
 
 // --------------------------------------------------------
 // Konstanten
@@ -1495,7 +1496,7 @@ function commentRowNode(comment, { onChanged }) {
   head.append(author, when);
 
   const mine = comment.user_id === state.currentUserId;
-  if (mine || state.isAdmin) {
+  if ((mine || state.isAdmin) && !isNavModuleReadOnly('tasks')) {
     const actions = document.createElement('div');
     actions.className = 'task-comment__actions';
 
@@ -1716,6 +1717,16 @@ function commentsNode(task) {
   status.className = 'task-comments__status';
   status.textContent = t('common.loading');
   list.appendChild(status);
+
+  // Wer die Aufgaben nur LESEN darf, bekommt die Unterhaltung zu sehen und kein
+  // Eingabefeld: die API weist seinen POST mit 403 ab, und ein Formular, das
+  // zum Schreiben einlaedt und dann nicht abschickt, ist dieselbe leere Zusage
+  // wie der fehlende Knopf, der #700 ausgeloest hat.
+  if (isNavModuleReadOnly('tasks')) {
+    wrap.append(list);
+    load();
+    return wrap;
+  }
 
   const form = document.createElement('form');
   form.className = 'task-comments__form';
