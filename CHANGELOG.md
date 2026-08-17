@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.18.1] - 2026-08-17
+
 ### Fixed
 
 - **A module you are not allowed to see no longer turns up in search** (#467). Search reached across every module and asked only who owned a row — which for appointments, contacts and shopping items is nobody in particular, since those belong to the household. A member whose Contacts access was set to "No access" still found the phone numbers by typing a name, and the same held for appointments, shopping items, tasks, notes and the health entries. Each kind of result is now tied to the module it comes from and is skipped when that module is blocked. Blocking one module does not affect the others, and "Read only" still finds everything. The kitchen tab bar had the smaller version of the same problem: it showed a badge counting open shopping items to a member who cannot open that list.

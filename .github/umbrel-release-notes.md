@@ -1,4 +1,4 @@
-<!-- version: 2.18.0 -->
+<!-- version: 2.18.1 -->
 <!--
   Die `releaseNotes` fuer den Umbrel-App-Store, von Hand fuer JEDEN Release
   geschrieben. `umbrel-publish.yml` nimmt den Text unter diesem Kommentar
@@ -29,16 +29,19 @@
     - Leerzeile zwischen den Absaetzen: der Store rendert ein gefaltetes
       YAML-Blockskalar, dort ist die Leerzeile der Absatzumbruch.
 
-  HINWEIS ZU DIESER VERSION: eine einzige gewuenschte Funktion (#647), also
-  zwei Absaetze - was sie tut, und wie man sie einschaltet. Migration 150 legt
-  nur eine Spalte an zwei Tabellen an und verlangt vom Haushalt nichts, also
-  kein Pflicht-Absatz. Draussen bleibt alles, was nur Entwickler angeht: die
-  Nummer der Migration, die Suite, der serverseitige Filter, die Farbregeln.
-  Der Satz zum abgeschalteten Modul steht NICHT drin - er beschreibt einen
-  Fehler, den in dieser Version noch niemand haben konnte.
+  HINWEIS ZU DIESER VERSION: reine Fehlerbehebungen, und der erste ist ein
+  Datenschutz-Fall - der gehoert nach vorn und in klare Worte, weil er
+  betrifft, wer in den Einstellungen Rechte vergeben hat. Beschrieben wird,
+  WAS ein Mitglied bekam (Termintitel, Beschreibungen, Zahlen), nicht wo im
+  Code es lag: die Endpunktnamen, der Guard und die Tabellen gehen einen
+  Haushalt nichts an. Migration 151 raeumt beim Update Dubletten weg und
+  verlangt niemandem etwas ab, also kein Pflicht-Absatz - der halbe Satz "beim
+  Update aufgeraeumt" reicht, weil er erklaert, warum die Suche danach anders
+  aussieht. Draussen bleibt der Diagnose-Schalter im Review-Workflow: reine
+  Bauarbeit.
 -->
-Anything with a date can now count down to it. Mark a calendar event or a task with "count down on the overview" and a new Key dates tile shows them together, sorted by how near they are - the holiday and the driving licence in one list, each row leading back to where it came from. The wording stays coarse while the date is far off and turns exact once it is near, so "about 3 years" becomes plain days from a month out. Colour tells you how soon rather than where the entry came from, and a date that has just passed stays for another week instead of disappearing on the morning the consequence begins.
+If you have set per-role or per-member module access, this update closes a gap worth knowing about. A member locked out of a module could still receive its content through the overview and the global search: appointment titles with their descriptions and locations, task and budget figures, notes, shopping items, birthdays and health entries. None of it was visible on screen, because the app hides those tiles and search results - but it was in the data your browser received, and anything that reaches the browser can be read there. The overview and the search now leave a locked module out entirely, before anything is looked up. Read-only access is unchanged: it still shows everything, it only takes away editing.
 
-The tile only appears once something is marked, so nothing changes for a household that does not use it. On a task the mark needs a due date and survives the reset of a repeating task, which is the point for anything that comes round again on a duration - a licence every few years, a filter a set number of days after the last change. On an event the mark stays on your server: it is not sent to Google or CalDAV and a sync run does not overwrite it.
+Search also finds your shopping items again. Every item was recorded twice the moment it was created, and search shows at most five results per kind, so a search that should have listed five items listed two or three - and looked complete while doing it. The duplicates only ever affected freshly added items that nobody had touched since, which is exactly what people search for. They are cleaned up while the app updates; you do not need to do anything.
 
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.18.0
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.18.1
