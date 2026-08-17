@@ -248,12 +248,30 @@ jobs:
           import re, sys, textwrap
           notes = open(sys.argv[1], encoding="utf-8").read().strip()
 
+          # KEIN UMBRUCH INNERHALB EINES WORTES, und das ist keine Kosmetik,
+          # sondern der Unterschied zwischen dem geschriebenen und dem
+          # gelesenen Text. In folded style wird JEDER Zeilenumbruch zu einem
+          # Leerzeichen - auch einer, den `textwrap` mitten in ein Wort gesetzt
+          # hat. Mit den Voreinstellungen bricht es an Bindestrichen
+          # (`break_on_hyphens`) und in ueberlangen Woertern
+          # (`break_long_words`), und aus „increase-contrast" wurde beim
+          # Zurueckparsen „increase- contrast": ein Zeichen mehr, ein Wort
+          # kaputt. Gefunden hat es der Round-Trip-Guard unten, im v2.21.0-Lauf,
+          # nachdem der erste Bindestrich-Begriff zufaellig auf einer
+          # Zeilengrenze landete - die Faltung ist bis dahin nie aufgefallen,
+          # weil kein Text sie ausgeloest hatte. Ein zu langes Wort (eine URL)
+          # ragt jetzt lieber ueber die Spaltenbreite hinaus, als sich zerlegen
+          # zu lassen; YAML stoert das nicht, den Leser auch nicht.
           def folded(s, indent="  ", width=78):
             out = []
             for i, para in enumerate(s.split("\n\n")):
               if i:
                 out += ["", ""]   # zwei Leerzeilen = EIN Absatzumbruch
-              out += [indent + l for l in textwrap.wrap(para.strip(), width=width)]
+              wrapped = textwrap.wrap(
+                para.strip(), width=width,
+                break_on_hyphens=False, break_long_words=False,
+              )
+              out += [indent + l for l in wrapped]
             return "releaseNotes: >-\n" + "\n".join(out) + "\n"
 
           # The upstream value is a BLOCK scalar spanning many indented lines:
