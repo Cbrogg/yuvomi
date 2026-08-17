@@ -456,6 +456,8 @@ The wording is coarse while the date is far off and exact once it is near (`publ
 
 The widget is not offered at all while nothing is flagged, in the same way the Family widget is absent in a single-person household. It is deliberately **not** in the agenda view: the agenda answers "what is happening in the coming days", and a countdown that resolves in 2027 would be noise at the bottom of every view.
 
+**A disabled module drops out server-side**, before the sort, the cut to five and `countdownTotal` — unlike every other tile, whose module filter can safely sit in the browser because the tile itself belongs to that module and disappears with it. This one belongs to two, and its mere availability is derived from the filtered set: with the calendar disabled and the five nearest countdowns being events, a browser-side-only filter discarded all five and took the tile out of the grid *and* the Customize tray, while the flagged task behind them had never been sent. The browser filter stays as a second instance, for a module toggled without a reload.
+
 **Visibility (migration v78):** the same `all` / `assignees` / `private` model and server-side, no-admin-bypass enforcement described under [Tasks](#tasks) applies to calendar events, on every read path (list, detail, upcoming, search, MCP). It is an **in-app** control — the ICS calendar export feed is deliberately not filtered by it. Set via the visibility selector in the event dialog.
 
 ### Event Assignments

@@ -268,6 +268,14 @@ function setCountdownAvailability(items) {
 // Kalender abgeschaltet hat, soll dessen Einträge auch hier nicht sehen. Die
 // Kachel als Ganzes gehört keinem Modul (siehe PERMISSION_WIDGETS), ihre
 // einzelnen Zeilen schon - dieselbe Aufteilung wie bei der Kennzahlreihe.
+//
+// SEIT DEM REVIEW ZU PR #793 IST DAS DIE ZWEITE INSTANZ, NICHT DIE ERSTE:
+// aussortiert wird schon in services/countdowns.js, vor Schnitt und Gesamtzahl.
+// Hier zu filtern allein war der Fehler - der Server schickte fünf Termine
+// eines abgeschalteten Kalenders, diese Zeile warf alle fünf weg, und die
+// Kachel verschwand mitsamt der Aufgabe, die dahinter gestanden hätte.
+// Stehen bleibt der Filter für den Fall, dass ein Modul umgeschaltet wird,
+// ohne dass das Dashboard neu lädt.
 function visibleCountdowns(items) {
   return (Array.isArray(items) ? items : []).filter((c) => {
     const mod = c.source === 'task' ? 'tasks' : 'calendar';

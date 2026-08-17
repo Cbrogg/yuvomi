@@ -92,6 +92,13 @@ function seedTask({
 function reset() {
   get().prepare('DELETE FROM calendar_events').run();
   get().prepare('DELETE FROM tasks').run();
+  get().prepare("DELETE FROM sync_config WHERE key = 'disabled_modules'").run();
+}
+
+/** Schaltet Module haushaltweit ab - wie die Admin-Seite es schreibt. */
+function disableModules(...names) {
+  get().prepare("INSERT OR REPLACE INTO sync_config (key, value) VALUES ('disabled_modules', ?)")
+    .run(JSON.stringify(names));
 }
 
 // --------------------------------------------------------
@@ -264,6 +271,49 @@ test('die Gesamtzahl zaehlt ueber den Schnitt hinaus', () => {
   const res = getCountdowns(get(), { userId: ALICE, todayKey: '2026-08-17' });
   assert.equal(res.items.length, 5, 'die Liste bleibt der Vorrat fuer die groesste Kachel');
   assert.equal(res.total, 8, 'die Gesamtzahl kennt auch, was nicht mitgeliefert wurde');
+});
+
+/* Die drei folgenden Zusicherungen kommen aus dem Review zu PR #793. Der Filter
+ * für abgeschaltete Module sass allein im Browser und griff erst NACH dem
+ * Schnitt auf fünf - das konnte die ganze Kachel kosten. */
+test('ein abgeschaltetes Modul verdraengt die andere Quelle nicht aus dem Schnitt', () => {
+  // Der gemeldete Fall, Zahl fuer Zahl: Kalender abgeschaltet, die fuenf
+  // naechsten Countdowns sind Termine, dahinter steht eine markierte Aufgabe.
+  // Vorher schickte der Server die fuenf Termine, der Browser warf sie weg, und
+  // die Kachel verschwand aus Raster UND Anpassen-Ablage - wegen Eintraegen,
+  // die der Haushalt gar nicht sehen darf.
+  reset();
+  for (let i = 1; i <= 5; i++) seedEvent({ title: `Termin ${i}`, start: `2026-08-2${i}` });
+  seedTask({ title: 'Führerschein', due: '2029-04-01' });
+  disableModules('calendar');
+  const res = getCountdowns(get(), { userId: ALICE, todayKey: '2026-08-17' });
+  assert.deepEqual(res.items.map((c) => c.title), ['Führerschein'],
+    'die Aufgabe hinter den fuenf Terminen muss ankommen');
+  assert.equal(res.total, 1, 'die Gesamtzahl zaehlt nur, was gezeigt werden darf');
+});
+
+test('sind beide Module abgeschaltet, gibt es keinen Countdown', () => {
+  reset();
+  seedEvent({ title: 'Urlaub', start: '2026-09-01' });
+  seedTask({ title: 'Luftfilter', due: '2026-09-02' });
+  disableModules('calendar', 'tasks');
+  const res = getCountdowns(get(), { userId: ALICE, todayKey: '2026-08-17' });
+  assert.deepEqual(res.items, []);
+  assert.equal(res.total, 0);
+});
+
+test('ein unlesbarer Wert schaltet nichts ab, statt alles auszublenden', () => {
+  // Die einzige sichere Auslegung: die andere Richtung liesse ein kaputtes JSON
+  // stumm die halbe Kachel schlucken.
+  reset();
+  seedEvent({ title: 'Urlaub', start: '2026-09-01' });
+  seedTask({ title: 'Luftfilter', due: '2026-09-02' });
+  for (const broken of ['{kaputt', '"kalender"', 'null']) {
+    get().prepare("INSERT OR REPLACE INTO sync_config (key, value) VALUES ('disabled_modules', ?)")
+      .run(broken);
+    assert.equal(getCountdowns(get(), { userId: ALICE, todayKey: '2026-08-17' }).total, 2,
+      `unlesbarer Wert ${broken} darf nichts ausblenden`);
+  }
 });
 
 test('eine Serie zeigt auf ihr nächstes Vorkommen, nicht auf den Start in der Vergangenheit', () => {

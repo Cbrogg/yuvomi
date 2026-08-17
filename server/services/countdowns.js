@@ -152,6 +152,25 @@ export function nextEventDate(event, todayKey, exceptions = null, { graceDays = 
 }
 
 /**
+ * Ist dieses Modul haushaltweit abgeschaltet?
+ *
+ * Gelesen wie der Budget-Modus nebenan (`resolveBudgetMode`) - direkt aus
+ * `sync_config`, defensiv gegen fehlenden, kaputten oder nicht-Array-Wert:
+ * „nichts abgeschaltet" ist die einzige sichere Auslegung eines unlesbaren
+ * Werts, denn die andere Richtung würde ein Modul stumm ausblenden.
+ */
+function disabledModules(d) {
+  const row = d.prepare("SELECT value FROM sync_config WHERE key = 'disabled_modules'").get();
+  if (!row?.value) return new Set();
+  try {
+    const parsed = JSON.parse(row.value);
+    return new Set(Array.isArray(parsed) ? parsed.filter((m) => typeof m === 'string') : []);
+  } catch {
+    return new Set();
+  }
+}
+
+/**
  * Alle für `userId` sichtbaren Countdowns, nach Nähe sortiert.
  *
  * @param {object} d            Offene DB-Verbindung
@@ -159,12 +178,35 @@ export function nextEventDate(event, todayKey, exceptions = null, { graceDays = 
  * @param {number} opts.userId  Betrachter (Sichtbarkeitsfilter)
  * @param {string} opts.todayKey YYYY-MM-DD in der LOKALEN Zeit des Servers
  * @param {number} [opts.limit]
- * @returns {Array<{source: 'event'|'task', id: number, title: string,
+ * @returns {{items: Array<{source: 'event'|'task', id: number, title: string,
  *                  date: string, days_until: number, icon: string|null,
- *                  color: string|null, recurring: boolean}>}
+ *                  color: string|null, recurring: boolean}>, total: number}}
  */
 export function getCountdowns(d, { userId = null, todayKey, limit = DEFAULT_LIMIT } = {}) {
-  const items = [...eventCountdowns(d, userId, todayKey), ...taskCountdowns(d, userId, todayKey)];
+  /* EIN ABGESCHALTETES MODUL LIEFERT HIER GAR NICHTS MEHR (Review zu PR #793).
+   *
+   * Bis hierher fragte der Server beide Quellen ab, deckelte auf fünf und
+   * überliess das Aussortieren dem Browser. Das ging bei jeder anderen Kachel
+   * gut, weil dort die KACHEL einem Modul gehört und mit ihm verschwindet -
+   * diese gehört zweien, und ihre blosse Existenz hängt an der gefilterten
+   * Menge (`countdownAvailable` in pages/dashboard.js).
+   *
+   * Der Fall: Kalender abgeschaltet, die fünf nächsten Countdowns sind Termine,
+   * eine markierte Aufgabe steht dahinter. Der Server schickte die fünf
+   * Termine, der Browser warf alle fünf weg, und die Kachel verschwand samt
+   * ihrem Eintrag in der Anpassen-Ablage - wegen Einträgen, die der Haushalt
+   * gar nicht sehen darf. Die Aufgabe war nie unterwegs.
+   *
+   * Deshalb hier und nicht dort: Filter, Sortierung, Schnitt und Gesamtzahl
+   * müssen dieselbe Menge meinen. Ein nachgelagerter Filter macht aus `total`
+   * wieder die Sorte Zahl, die nur bis zu ihrer Obergrenze stimmt. Der
+   * Browser-Filter bleibt trotzdem stehen: er fängt das Umschalten eines
+   * Moduls ohne neuen Ladevorgang ab. */
+  const disabled = disabledModules(d);
+  const items = [
+    ...(disabled.has('calendar') ? [] : eventCountdowns(d, userId, todayKey)),
+    ...(disabled.has('tasks') ? [] : taskCountdowns(d, userId, todayKey)),
+  ];
 
   const sorted = items
     // Nächstes zuerst - überfällige also ganz oben, weil ihre Tageszahl negativ
