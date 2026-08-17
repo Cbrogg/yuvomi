@@ -206,7 +206,7 @@ export function wireScrollFade(el, { axis = 'x' } = {}) {
  *
  * @param {HTMLElement} toolbar - eine `.page-toolbar`
  * @param {{ sealIcon?: () => SVGElement|null }} [opts] - `sealIcon` liefert das
- *   Icon des Absender-Siegels (Fabrik aus NAV_ICONS). Ohne die Angabe bleibt
+ *   Icon des Absender-Siegels (Fabrik über moduleIconEl). Ohne die Angabe bleibt
  *   der Kopf siegellos.
  * @returns {{ update: () => void, destroy: () => void }|null}
  */

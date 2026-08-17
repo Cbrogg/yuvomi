@@ -5374,9 +5374,11 @@ test('phase 4 keeps More bottom-nav identity stable while exposing active sectio
   assert.doesNotMatch(routerSource, /moreBtnLabel\.textContent\s*=\s*moreLabel/);
 
   // More nutzt den eindeutigen Overflow-Glyph, nicht das mehrdeutige 3×3-Raster.
+  // Der Aufbau laeuft seit 2026-08-17 ueber `moduleIconEl` statt ueber einen
+  // eigenen NAV_ICONS-Zugriff je Bau-Stelle; geprueft wird weiter der NAME.
   const navIcons = read('../public/nav-icons.js');
-  assert.match(navIcons, /'more-horizontal':\s*\(\)\s*=>/);
-  assert.match(routerSource, /const iconFactory = NAV_ICONS\['more-horizontal'\]/);
+  assert.match(navIcons, /'more-horizontal':\s*\[/);
+  assert.match(routerSource, /moduleIconEl\('more-horizontal',\s*'nav-item__icon'\)/);
   assert.doesNotMatch(routerSource, /grid-2x2/);
 });
 
@@ -5913,12 +5915,34 @@ test('dashboard „Heute wichtig" is one inset-grouped list, not a tile grid', (
   assert.match(iconBody, /--seal-accent:\s*var\(--today-card-accent\)/, 'the icon well forwards its tone accent to the seal');
   const layout = read('../public/styles/layout.css');
   const sealBody = cssRuleBody(layout, '\n.module-seal');
-  assert.match(sealBody, /background:[\s\S]*color-mix\(in srgb,\s*var\(--seal-accent\)\s*var\(--tint-surface\),\s*var\(--seal-base\)\)/, 'the seal carries the module tint recipe');
-  // Und der GRUND der Mischung ist ein Parameter, kein festverdrahtetes
-  // --color-surface: die Pro-Hintergrund-Regel gilt für Tönungen genauso wie
-  // für Text. Der Kopf steht auf --color-bg, der Toast auf seinem dunklen
-  // Grund - dieselben 16 % ergeben dort ohne Parameter 1,06:1.
-  assert.match(sealBody, /--seal-base:\s*var\(--color-surface\)/, 'the seal defaults its ground to the surface it usually sits on');
+  // DAS SIEGEL HAT EIN GESICHT, UND ES IST DER VOLLTON (2026-08-17).
+  //
+  // Hier stand das Toenungsrezept (16 % gegen einen parametrischen Grund
+  // --seal-base) - der Guard hielt fest, was dark-chroma.mjs am selben Tag
+  // widerlegt hat: eine Beimischung hellt im Dark fast nur auf, statt Farbe zu
+  // tragen. Im Light war es noch schaerfer: Notizen, Dokumente und Inventar
+  // teilen die Familie „records", und ihr Scheibengrund war bei 16 % bitweise
+  // derselbe. Der Ton IST jetzt die Flaeche, die Tinte ist --color-ink-on-vivid.
+  assert.match(sealBody, /background:[\s\S]*var\(--seal-accent\);/, 'the seal carries its module tone as the disc itself');
+  assert.match(sealBody, /color:\s*var\(--color-ink-on-vivid\)/, 'the glyph is the measured ink on a vivid ground');
+  // Und die Toenung kommt nicht durch die Hintertuer zurueck: --seal-base war
+  // der Parameter, den NUR sie brauchte. Steht er wieder da, steht auch wieder
+  // eine Mischung dahinter.
+  //
+  // UEBER `eachRule`, NICHT UEBER DIE QUELLE: die Begruendung des Rueckbaus
+  // nennt den Namen mehrfach im Kommentar, und ein Guard, der die Datei als
+  // Text liest, findet seine eigene Erklaerung und faellt darueber. Es ist
+  // dieselbe Falle, die test/css-rules.js oben beschreibt.
+  const sealGrounds = [];
+  for (const file of readdirSync(new URL('../public/styles/', import.meta.url)).filter((f) => f.endsWith('.css'))) {
+    for (const { selector, body } of eachRule(read(`../public/styles/${file}`))) {
+      if (/--seal-base\s*:/.test(body)) sealGrounds.push(`${file}: ${selector}`);
+      if (selector.includes('.module-seal--vivid')) sealGrounds.push(`${file}: ${selector}`);
+    }
+  }
+  assert.deepEqual(sealGrounds, [],
+    'Das Siegel hat ein Gesicht: kein --seal-base (den brauchte nur die Toenung) und '
+    + 'kein --vivid (das waehlte zwischen zweien aus).\n' + sealGrounds.join('\n'));
   const dashboardJs = read('../public/pages/dashboard.js');
   assert.match(dashboardJs, /class="module-seal today-cockpit-card__icon"/, 'the cockpit icon well takes its form from the seal');
 
@@ -11944,8 +11968,8 @@ test('die Sidebar zeigt die Modultoene als Legende', () => {
   // Die Kehrseite der Regel oben: wenn die Stimme das Chrome traegt, muss der
   // Modulton EINEN sichtbaren Ort behalten, sonst verschwindet die
   // Modul-Identitaet ganz. Ohne diesen Guard waere die Legende der erste
-  // Kandidat fuer ein stilles Aufraeumen - sie ist die einzige Stelle, an der
-  // --item-module-accent noch Flaeche traegt.
+  // Kandidat fuer ein stilles Aufraeumen - sie ist die Stelle, an der
+  // --item-module-accent Flaeche traegt.
   const layout = read('../public/styles/layout.css');
   // Der Selektor wird GANZ verglichen, nicht per includes(): `.nav-item__icon`
   // ist ein Praefix von `.nav-item__icon-well`, und der erste Treffer war
@@ -11962,6 +11986,123 @@ test('die Sidebar zeigt die Modultoene als Legende', () => {
     selector.trim() === '.nav-sidebar .nav-item[aria-current="page"] .nav-item__icon');
   assert.ok(activeIcon, 'dem aktiven Sidebar-Eintrag fehlt die Icon-Regel');
   assert.match(activeIcon.body, /color:\s*var\(--color-accent\)/);
+});
+
+test('ein Modul fuehrt EIN Zeichen, und die Zuordnung steht an einer Stelle', () => {
+  // DER FEHLER WAR NICHT DIE STECKNADEL, SONDERN DIE DRITTE TABELLE.
+  //
+  // Welches Zeichen ein Modul fuehrt, stand bis 2026-08-17 in `navItems()`
+  // (Router), in `widgetIcon()` (Dashboard) und noch einmal in der
+  // Kennzahl-Kachelreihe. Drei Tabellen fuer eine Zuordnung laufen auseinander,
+  // und das hatten sie: Notizen war in der Leiste ein Zettel und im Widget-Kopf
+  // eine Stecknadel, Haushaltshilfe hier ein Pinsel und dort Funkeln. Ein Guard
+  // auf diese beiden Namen haette die Symptome festgehalten; gesucht ist die
+  // Bauart.
+  const navIcons = read('../public/nav-icons.js');
+  assert.match(navIcons, /export const MODULE_ICON = \{/, 'die eine Zuordnung Modul → Zeichen fehlt');
+  // Die Schluessel aus der Quelle, nicht aus einer Abschrift im Test - sonst
+  // haette der Guard genau die Dublette, die er verbietet.
+  const moduleIconBlock = navIcons.slice(navIcons.indexOf('export const MODULE_ICON = {'));
+  const MODULE_ICON_KEYS = Object.fromEntries(
+    [...moduleIconBlock.slice(0, moduleIconBlock.indexOf('\n};')).matchAll(/^\s+'?([\w-]+)'?:\s+'/gm)]
+      .map((m) => [m[1], true]),
+  );
+  assert.ok(Object.keys(MODULE_ICON_KEYS).length >= 20,
+    `Nur ${Object.keys(MODULE_ICON_KEYS).length} Eintraege in MODULE_ICON gelesen - das Muster greift nicht mehr.`);
+
+  // (a) Kein Siegel baut sich sein Zeichen selbst aus Lucide: `module-seal` und
+  //     `data-lucide` duerfen nicht in derselben Bau-Stelle stehen. Das ist der
+  //     Weg, auf dem die zweite Hand zurueckkaeme - sichtbar als anderer
+  //     Glyph fuer dasselbe Modul.
+  const WINDOW = 3;
+  const offenders = [];
+  let sealSites = 0;
+  for (const rel of walkJsFiles('../public/')) {
+    const src = read(rel);
+    if (!src.includes('module-seal')) continue;
+    const lines = src.split('\n');
+    lines.forEach((line, i) => {
+      if (!/module-seal/.test(line)) return;
+      if (/^\s*(\/\/|\*|\/\*)/.test(line)) return;
+      if (!/className|class=|classList/.test(line)) return;
+      sealSites += 1;
+      const near = lines.slice(i, i + WINDOW + 1).join('\n');
+      if (/data-lucide|dataset\.lucide/.test(near)) {
+        offenders.push(`${rel.replace(/^\.\.\//, '')}:${i + 1} baut ein Siegel mit einem rohen Lucide-Zeichen`);
+      }
+    });
+  }
+  assert.deepEqual(offenders, [],
+    'Ein Siegel holt sein Zeichen ueber moduleIconEl/moduleIconHTML (nav-icons.js) - '
+    + 'so bekommt dasselbe Modul ueberall denselben Glyph in derselben Hand.\n'
+    + offenders.join('\n'));
+  // Reichweiten-Nachweis NACH der Messung (die leere Liste ist sonst keine
+  // Zusicherung): der Scanner muss die Bau-Stellen ueberhaupt gesehen haben.
+  assert.ok(sealSites >= 6, `Nur ${sealSites} Siegel-Bau-Stellen gefunden - die Signatur greift nicht mehr.`);
+
+  // (b) Und keine der Abschriften kommt zurueck. Es waren FUENF: navItems()
+  //     (Router), widgetIcon() und jede widgetHeader()-Aufrufstelle
+  //     (Dashboard), BUILT_IN_MODULES und KITCHEN_CHILD_ICONS
+  //     (settings/module-order.js). Jede einzelne ist hier benannt, weil jede
+  //     einzeln zurueckkommen kann.
+  const dashboard = read('../public/pages/dashboard.js');
+  assert.match(dashboard, /function widgetIcon\(id\)\s*\{\s*\n\s*return MODULE_ICON\[id\]/,
+    'widgetIcon leitet aus MODULE_ICON ab, statt eine eigene Karte zu fuehren');
+  assert.doesNotMatch(dashboard, /const map = \{ tasks:/,
+    'die zweite Modul→Zeichen-Tabelle ist wieder da');
+  // Die Widget-Koepfe bekommen ihre WIDGET-ID, nicht einen Icon-Namen - sonst
+  // steht die Zuordnung wieder an jeder Aufrufstelle. Geprueft ueber die
+  // Signatur der Aufrufe: ein Icon-Name enthaelt einen Bindestrich oder heisst
+  // wie ein Lucide-Glyph, eine Id ist ein Modulschluessel.
+  const headerArgs = [...dashboard.matchAll(/widgetHeader\('([^']+)'/g)].map((m) => m[1]);
+  assert.ok(headerArgs.length >= 10, `Nur ${headerArgs.length} widgetHeader-Aufrufe gefunden - die Signatur greift nicht mehr.`);
+  const fremdeArgs = headerArgs.filter((id) => !(id in MODULE_ICON_KEYS));
+  assert.deepEqual(fremdeArgs, [],
+    'widgetHeader nimmt die Widget-Id (ein Schluessel von MODULE_ICON), nicht einen Icon-Namen.\n'
+    + fremdeArgs.join('\n'));
+
+  const moduleOrder = read('../public/settings/module-order.js');
+  assert.doesNotMatch(moduleOrder, /icon:/,
+    'BUILT_IN_MODULES/KITCHEN_CHILD_ICONS fuehren wieder eigene Zeichen - das war die vierte Abschrift');
+  for (const leaf of ['modules-active', 'modules-navigation']) {
+    assert.match(read(`../public/settings/pages/${leaf}.js`), /MODULE_ICON/,
+      `${leaf} holt die Modulzeichen aus MODULE_ICON`);
+  }
+});
+
+test('die Tab-Bar zeigt dieselbe Legende wie die Sidebar', () => {
+  // UND SIE IST DIE MOBILE FASSUNG DERSELBEN REGEL, kein zweites Feature.
+  //
+  // Die Legende hing bis 2026-08-17 an einem Breakpoint: ueber 1024px trug
+  // jedes Nav-Zeichen seinen Modulton, darunter waren alle grau - dieselbe
+  // Komponente sprach je nach Fenstergroesse eine andere Sprache, und auf
+  // Telefonen (der Hauptbuehne, PRODUCT.md) war gar kein Modulton in der
+  // Navigation zu sehen. Der Betreiber hat genau das gemeldet.
+  //
+  // Der Guard steht getrennt von dem der Sidebar, weil die beiden Faelle
+  // getrennt kaputtgehen koennen - ein Aufraeumen an der Bottom-Nav laesst die
+  // Sidebar gruen und umgekehrt. Zwei Zusicherungen, zwei Namen.
+  const layout = read('../public/styles/layout.css');
+  const wellRule = [...eachRule(layout)].find(({ selector }) =>
+    selector.trim() === '.nav-bottom .nav-item__icon-well');
+  assert.ok(wellRule, '.nav-bottom .nav-item__icon-well fehlt - die mobile Legende hat keinen Traeger');
+  assert.match(wellRule.body, /color:\s*var\(--item-module-accent,\s*var\(--color-text-tertiary\)\)/,
+    'das Tab-Zeichen traegt den Ton SEINES Moduls; wer keines hat („Mehr"), bleibt tertiaer');
+  // Aktiv gewinnt die Stimme, genau wie in der Sidebar - und zwar ueber die
+  // gemeinsame Regel fuer beide Leisten.
+  const activeWell = [...eachRule(layout)].find(({ selector }) =>
+    selector.includes('.nav-item[aria-current="page"] .nav-item__icon-well'));
+  assert.ok(activeWell, 'dem aktiven Tab fehlt die Icon-Well-Regel');
+  assert.match(activeWell.body, /color:\s*var\(--color-accent\)/);
+  // Und die Leiste selbst bleibt Shell: der Ton sitzt auf dem ZEICHEN, nicht
+  // auf der Kapsel, dem Indikator oder dem Label (Eine-Stimme-Regel). Das
+  // Label ist zugleich der Kontrast-Grund - Text braucht 4.5:1, und sieben der
+  // neun Familientoene reissen das gegen die Kapsel.
+  const labelRule = [...eachRule(layout)].find(({ selector }) =>
+    selector.trim() === '.nav-bottom .nav-item__label');
+  assert.ok(labelRule, '.nav-bottom .nav-item__label fehlt');
+  assert.doesNotMatch(labelRule.body, /--item-module-accent/,
+    'das Tab-Label bleibt Text in Textfarbe - der Modulton gehoert dem Zeichen');
 });
 
 test('kein geteiltes Bedienelement wird unter seinem eigenen Namen umgefaerbt', () => {

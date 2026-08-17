@@ -1,7 +1,7 @@
 import { t } from '/i18n.js';
 import { api } from '/api.js';
 import { renderSubTabs, setSubTabBadge, scrollActiveSubTabIntoView } from '/utils/sub-tabs.js';
-import { NAV_ICONS } from '/nav-icons.js';
+import { MODULE_ICON, moduleIconEl } from '/nav-icons.js';
 import { toLocalDateKey } from '/utils/date.js';
 
 // Reihenfolge = Küchen-Kreislauf: planen → kochen → einkaufen → lagern.
@@ -165,7 +165,7 @@ export function renderKitchenTabsBar(container, activeRoute) {
     // vier Köpfe (Rezepte, Vorrat) tragen gar keinen Seitentitel, hätten also
     // einen Absender ohne Brief. Das Besteck ist dasselbe Zeichen, das die
     // Bottom-Nav für „Küche" führt (kitchenNavButtonEl in router.js).
-    sealIcon: () => NAV_ICONS.utensils(),
+    sealIcon: () => moduleIconEl(MODULE_ICON.kitchen),
     insertPosition: 'afterbegin',
     onChange: (route) => window.yuvomi?.navigate(route),
   });

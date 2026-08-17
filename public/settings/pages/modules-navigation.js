@@ -6,7 +6,6 @@ import { bindDisclosure, createRetryState, thirdPartyStatusLabel } from '/settin
 import {
   BUILT_IN_MODULES,
   DEFAULT_MODULE_ACCENT,
-  KITCHEN_CHILD_ICONS,
   KITCHEN_CHILD_IDS,
   KITCHEN_CHILD_LABEL_KEYS,
   NAV_SECTION,
@@ -19,6 +18,7 @@ import {
   resolveMobileNavOrder,
   sortNavigationItems,
 } from '/settings/module-order.js';
+import { MODULE_ICON, moduleIconHTML } from '/nav-icons.js';
 
 // Baut die geordnete Liste der Navigations-Rows: gesperrte, gewöhnliche, Kitchen
 // (als ein expandierbarer Eintrag) und Drittanbieter-Module — sortiert nach der
@@ -32,7 +32,7 @@ function buildRows(preferences, thirdPartyModules) {
   const kitchenChildren = KITCHEN_CHILD_IDS.map((id) => ({
     id,
     label: t(KITCHEN_CHILD_LABEL_KEYS[id]),
-    icon: KITCHEN_CHILD_ICONS[id],
+    icon: MODULE_ICON[id],
     enabled: !disabled.has(id),
     hidden: hidden.has(id),
   }));
@@ -48,7 +48,7 @@ function buildRows(preferences, thirdPartyModules) {
       orderId: module.id,
       section: moduleSection(module.id),
       label: t(module.labelKey),
-      icon: module.icon,
+      icon: MODULE_ICON[module.id],
       enabled: module.locked || !disabled.has(module.id),
       hidden: hidden.has(module.id),
       locked: module.locked === true,
@@ -63,7 +63,7 @@ function buildRows(preferences, thirdPartyModules) {
     orderId: 'kitchen',
     section: NAV_SECTION.household,
     label: t('nav.kitchen'),
-    icon: 'utensils',
+    icon: MODULE_ICON.kitchen,
     children: kitchenChildren,
     enabledChildren: kitchenEnabledChildren,
     enabled: kitchenEnabledChildren > 0,
@@ -212,7 +212,7 @@ function builtInRowHtml(row) {
     <div class="settings-module-row settings-module-row--sortable ${stateClass}${lockedClass}${hiddenClass}${row.sortable ? '' : ' settings-module-row--fixed'}" data-module-row-id="${esc(row.orderId)}"${row.sortable ? ` draggable="true" data-module-order-id="${esc(row.orderId)}"` : ''}>
       ${rowControlsHtml(row)}
       <div class="settings-module-row__icon">
-        <i data-lucide="${esc(row.icon)}" aria-hidden="true"></i>
+        ${moduleIconHTML(row.icon)}
       </div>
       <div class="settings-module-row__body">
         <div class="settings-module-row__title">
@@ -248,7 +248,7 @@ function kitchenRowHtml(row) {
     <div class="settings-module-row settings-module-row--sortable settings-module-row--kitchen ${stateClass}${hiddenClass}" data-module-row-id="${esc(row.orderId)}" draggable="true" data-module-order-id="${esc(row.orderId)}">
       ${rowControlsHtml(row)}
       <div class="settings-module-row__icon">
-        <i data-lucide="${esc(row.icon)}" aria-hidden="true"></i>
+        ${moduleIconHTML(row.icon)}
       </div>
       <div class="settings-module-row__body">
         <div class="settings-module-row__title">
@@ -263,7 +263,7 @@ function kitchenRowHtml(row) {
           ${row.children.map((child) => `
             <div class="settings-module-kitchen__child-row${child.hidden && child.enabled ? ' settings-module-kitchen__child-row--hidden' : ''}">
               <div class="settings-module-kitchen__child">
-                <i data-lucide="${esc(child.icon)}" aria-hidden="true"></i>
+                ${moduleIconHTML(child.icon)}
                 <span>${esc(child.label)}</span>
               </div>
               ${hideToggleHtml(child, { hasStatusChip: false })}
@@ -285,7 +285,7 @@ function thirdPartyRowHtml(row) {
     <div class="settings-module-row settings-module-row--sortable ${stateClass}${errorClass}${row.sortable ? '' : ' settings-module-row--fixed'}" data-module-row-id="${esc(row.orderId)}"${row.sortable ? ` draggable="true" data-module-order-id="${esc(row.orderId)}"` : ''}>
       ${rowControlsHtml(row)}
       <div class="settings-module-row__icon" style="--module-row-accent:${esc(row.accent) || DEFAULT_MODULE_ACCENT}">
-        <i data-lucide="${esc(row.icon)}" aria-hidden="true"></i>
+        ${moduleIconHTML(row.icon)}
       </div>
       <div class="settings-module-row__body">
         <div class="settings-module-row__title">

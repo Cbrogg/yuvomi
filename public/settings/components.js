@@ -1,4 +1,5 @@
 import { t } from '/i18n.js';
+import { moduleIconHTML } from '/nav-icons.js';
 import { esc } from '/utils/html.js';
 
 let settingRowIdCounter = 0;
@@ -70,8 +71,9 @@ export function toggleRowHtml({
   checked = false,
   disabled = false,
   className = '',
-  // Icon vor dem Text (Lucide-Name); der Platzhalter braucht wie überall ein
-  // `lucide.createIcons()` nach dem Einfügen.
+  // Icon vor dem Text. Der Name geht durch `moduleIconHTML`: ist es ein
+  // Modulzeichen, kommt es aus Yuvomis Satz, sonst als Lucide-Platzhalter
+  // (der wie überall ein `lucide.createIcons()` nach dem Einfügen braucht).
   icon = null,
   // Zeilen, deren Kontext den Schalter schon benennt (Modul-Listen), tragen ihr
   // Label nur für Screenreader.
@@ -79,7 +81,7 @@ export function toggleRowHtml({
   attrs = {},
 }) {
   const rowClass = ['toggle-row', className].filter(Boolean).join(' ');
-  const iconHtml = icon ? `<i data-lucide="${esc(icon)}" aria-hidden="true"></i>` : '';
+  const iconHtml = icon ? moduleIconHTML(icon) : '';
   const labelClass = labelVisible ? '' : ' class="sr-only"';
   return `<label class="${rowClass}">`
     + `<input type="checkbox"${attrsHtml({ ...attrs, checked, disabled })}>`

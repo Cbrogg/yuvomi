@@ -23,6 +23,7 @@ import {
   nearestPreset, normalizeDashboardConfig, isUserOrderedConfig, sameWidgetConfig,
 } from '/utils/dashboard-widgets.js';
 import { whoMark } from '/utils/seal-pair.js';
+import { MODULE_ICON, moduleIconHTML } from '/nav-icons.js';
 import { exitWallMode, isWallActive, syncWallMode } from '/utils/wall-mode.js';
 import { rememberLayoutHint, layoutHintSizes } from '/utils/dashboard-layout-hint.js';
 
@@ -328,9 +329,14 @@ function widgetLabel(id) {
   return (map[id] ?? (() => id))();
 }
 
+/* HIER STAND DIE ZWEITE TABELLE MODUL -> ZEICHEN, und sie war von der ersten
+ * abgewichen: Notizen fuehrte hier `pin`, in der Navigation `sticky-note`. Wer
+ * das Widget und die Leiste nebeneinander sah, sah zwei Zeichen fuer ein Modul.
+ * Die Zuordnung steht jetzt einmal in MODULE_ICON (nav-icons.js) - inklusive
+ * der vier Dashboard-eigenen Karten (Wetter, Uhr, Kennzahlen, Countdown), die
+ * keine Module sind, aber dieselbe Absender-Rolle im Kopf tragen. */
 function widgetIcon(id) {
-  const map = { tasks: 'check-square', calendar: 'calendar', birthdays: 'cake', budget: 'wallet', rewards: 'award', health: 'heart-pulse', cycle: 'calendar-heart', housekeeping: 'paintbrush', family: 'users', shopping: 'shopping-cart', meals: 'utensils', notes: 'pin', weather: 'cloud-sun', clock: 'clock', metrics: 'layout-grid', countdown: 'hourglass' };
-  return map[id] ?? 'layout-dashboard';
+  return MODULE_ICON[id] ?? MODULE_ICON.dashboard;
 }
 
 const BUDGET_CATEGORY_LABEL_KEYS = {
@@ -535,7 +541,14 @@ function formatPoints(value) {
  * `--seal-accent` aus dem Fenster, und der Guard meldet ein Siegel ohne
  * Herkunft - gemessen, nicht vermutet.
  */
-function widgetHeader(icon, title, count, linkHref, linkLabel, sealSlug = null) {
+/* DIE ID, NICHT DAS ZEICHEN (2026-08-17). Hier stand ein Icon-NAME je
+ * Aufrufstelle - die dritte Abschrift der Zuordnung Modul → Zeichen, und die
+ * hartnaeckigste: sie ueberlebte sogar die Zusammenlegung von `widgetIcon()`,
+ * weil kein Kopf ihn je fragte. Notizen trug hier weiter `pin`, waehrend die
+ * Leiste daneben `sticky-note` zeichnete. Wer die Id uebergibt, kann diese
+ * Abweichung gar nicht mehr schreiben. */
+function widgetHeader(widgetId, title, count, linkHref, linkLabel, sealSlug = null) {
+  const icon = widgetIcon(widgetId);
   // Ein eigenes Link-Label spricht auch im aria-Label mit eigener Stimme:
   // „Alle: Familienmitglieder" für einen „Verwalten"-Link wäre eine Lüge.
   const customLabel = linkLabel != null;
@@ -579,14 +592,14 @@ function widgetHeader(icon, title, count, linkHref, linkLabel, sealSlug = null) 
   const slug = sealSlug ?? ((linkHref || '').split('/')[1] || '');
   const seal = slug ? ` style="--seal-accent: var(--module-${slug}, var(--color-accent))"` : '';
   // Vollton statt Toenung (Widget-Kopf-Kur 2026-08-17): das Siegel ist seit
-  // dem Rueckbau des Absenderbands der EINZIGE Farbtraeger des Kopfes und
-  // zeigt deshalb sein vivid-Gesicht (Ton = Flaeche, Tinte = ink-on-vivid,
-  // gemessen 5,1-9,8:1 in beiden Themes an der Toast-Herkunft).
+  // dem Rueckbau des Absenderbands der EINZIGE Farbtraeger des Kopfes. Die
+  // Klasse `--vivid` steht hier nicht mehr, weil es die Toenung nicht mehr
+  // gibt: der Vollton ist seither das eine Gesicht des Siegels (layout.css).
   return `
     <div class="widget__header">
       <h3 class="widget__title">
-        <span class="module-seal module-seal--sm module-seal--vivid"${seal} aria-hidden="true">
-          <i data-lucide="${icon}"></i>
+        <span class="module-seal module-seal--sm"${seal} aria-hidden="true">
+          ${moduleIconHTML(icon)}
         </span>
         <span class="widget__title-text">${title}</span>
         ${badge}
@@ -797,7 +810,7 @@ function skeletonWidget(lines = 3) {
 function renderUrgentTasks(tasks) {
   if (!tasks.length) {
     return `<div class="widget widget--tasks">
-      ${widgetHeader('check-square', t('nav.tasks'), 0, '/tasks')}
+      ${widgetHeader('tasks', t('nav.tasks'), 0, '/tasks')}
       <div class="widget__empty">
         <i data-lucide="check-circle" class="empty-state__icon" style="color:var(--color-success)" aria-hidden="true"></i>
         <div>${t('dashboard.allDone')}</div>
@@ -821,7 +834,7 @@ function renderUrgentTasks(tasks) {
   }).join('');
 
   return `<div class="widget widget--tasks">
-    ${widgetHeader('check-square', t('nav.tasks'), tasks.length, '/tasks')}
+    ${widgetHeader('tasks', t('nav.tasks'), tasks.length, '/tasks')}
     <div class="widget__body">${items}</div>
   </div>`;
 }
@@ -895,7 +908,7 @@ function renderUpcomingBirthdays(allBirthdays, size) {
   const birthdays = allBirthdays.slice(0, listRowCap(size));
   if (!birthdays.length) {
     return `<div class="widget widget--birthdays">
-      ${widgetHeader('cake', t('nav.birthdays'), 0, '/birthdays')}
+      ${widgetHeader('birthdays', t('nav.birthdays'), 0, '/birthdays')}
       <div class="widget__empty">
         <i data-lucide="cake" class="empty-state__icon" aria-hidden="true"></i>
         <div>${t('dashboard.noBirthdays')}</div>
@@ -933,7 +946,7 @@ function renderUpcomingBirthdays(allBirthdays, size) {
   }).join('');
 
   return `<div class="widget widget--birthdays">
-    ${widgetHeader('cake', t('nav.birthdays'), birthdays.length, '/birthdays')}
+    ${widgetHeader('birthdays', t('nav.birthdays'), birthdays.length, '/birthdays')}
     <div class="widget__body">${items}</div>
   </div>`;
 }
@@ -1027,7 +1040,7 @@ function renderCountdowns(allItems, size, total = null) {
     : '';
 
   return `<div class="widget widget--countdown">
-    ${widgetHeader('hourglass', t('dashboard.countdownTitle'), gesamt, null, null, 'dashboard')}
+    ${widgetHeader('countdown', t('dashboard.countdownTitle'), gesamt, null, null, 'dashboard')}
     <div class="widget__body">${rows}${more}</div>
   </div>`;
 }
@@ -1049,7 +1062,7 @@ function renderTodayMeals(meals, visibleMealTypes = MEAL_ORDER) {
   }).join('');
 
   return `<div class="widget widget--meals">
-    ${widgetHeader('utensils', t('dashboard.todayMeals'), null, '/meals', t('dashboard.weekLink'))}
+    ${widgetHeader('meals', t('dashboard.todayMeals'), null, '/meals', t('dashboard.weekLink'))}
     <div class="meals-widget">
       <div class="meal-slots">${slots}</div>
     </div>
@@ -1059,7 +1072,7 @@ function renderTodayMeals(meals, visibleMealTypes = MEAL_ORDER) {
 function renderPinnedNotes(notes) {
   if (!notes.length) {
     return `<div class="widget widget--notes">
-      ${widgetHeader('pin', t('nav.notes'), 0, '/notes')}
+      ${widgetHeader('notes', t('nav.notes'), 0, '/notes')}
       <div class="widget__empty">
         <i data-lucide="sticky-note" class="empty-state__icon" aria-hidden="true"></i>
         <div>${t('dashboard.noPinnedNotes')}</div>
@@ -1096,7 +1109,7 @@ function renderPinnedNotes(notes) {
   // die frühere .widget--wide war in keinem CSS definiert und damit tot — entfernt,
   // damit Notizen wie jedes andere Widget genau ein Größen-Vokabular trägt (Critique P2).
   return `<div class="widget widget--notes">
-    ${widgetHeader('pin', t('nav.notes'), notes.length, '/notes')}
+    ${widgetHeader('notes', t('nav.notes'), notes.length, '/notes')}
     <div class="notes-grid-widget">${items}</div>
   </div>`;
 }
@@ -1185,7 +1198,7 @@ function renderFamilyWidget(users, data) {
     : esc(t('dashboard.familyDayCalm'));
 
   return `<div class="widget widget--family">
-    ${widgetHeader('users', t('dashboard.familyMembers'), null, '/settings', t('dashboard.manage'), 'contacts')}
+    ${widgetHeader('family', t('dashboard.familyMembers'), null, '/settings', t('dashboard.manage'), 'contacts')}
     <div class="family-widget">
       <div class="family-widget__list">
         ${rows}
@@ -1255,7 +1268,7 @@ function renderBudgetWidget(budget, currency) {
 
   if (!hasData) {
     return `<div class="widget widget--budget">
-      ${widgetHeader('wallet', t('dashboard.budgetOverview'), null, '/budget')}
+      ${widgetHeader('budget', t('dashboard.budgetOverview'), null, '/budget')}
       <div class="widget__empty">
         <i data-lucide="wallet" class="empty-state__icon" aria-hidden="true"></i>
         <div>${t('dashboard.noBudgetData')}</div>
@@ -1265,7 +1278,7 @@ function renderBudgetWidget(budget, currency) {
   }
 
   return `<div class="widget widget--budget">
-    ${widgetHeader('wallet', t('dashboard.budgetOverview'), null, '/budget')}
+    ${widgetHeader('budget', t('dashboard.budgetOverview'), null, '/budget')}
     <div class="budget-widget">
       <div class="budget-widget__headline">
         <span>${t('dashboard.monthlyBalance')}</span>
@@ -1342,7 +1355,7 @@ function metricTileFor(id, data, currency) {
       if (open == null) return null;
       const overdue = data.overdueTaskCount ?? 0;
       return {
-        id, route, icon: 'check-square', label: t('nav.tasks'),
+        id, route, icon: widgetIcon('tasks'), label: t('nav.tasks'),
         value: t('dashboard.metricOpen', { count: open }),
         note: overdue > 0 ? t('dashboard.metricOverdue', { count: overdue }) : t('dashboard.metricNothingOverdue'),
         noteTone: overdue > 0 ? 'danger' : null,
@@ -1353,7 +1366,7 @@ function metricTileFor(id, data, currency) {
       if (items == null) return null;
       const lists = data.shoppingOpenLists ?? 0;
       return {
-        id, route, icon: 'shopping-cart', label: t('nav.shopping'),
+        id, route, icon: widgetIcon('shopping'), label: t('nav.shopping'),
         value: t('dashboard.metricItems', { count: items }),
         note: items === 0 ? t('dashboard.metricAllBought') : t('dashboard.metricOnLists', { count: lists }),
       };
@@ -1370,7 +1383,7 @@ function metricTileFor(id, data, currency) {
       // bekommt Label-Farbe statt Rot.
       const neutral = (budget.income || 0) === 0 && balance < 0;
       return {
-        id, route, icon: 'wallet', label: t('nav.budget'),
+        id, route, icon: widgetIcon('budget'), label: t('nav.budget'),
         value: formatCurrency(balance, currency),
         note: t('dashboard.monthlyBalance'),
         tone: neutral ? 'balance-neutral' : balance >= 0 ? 'balance-positive' : 'balance-negative',
@@ -1381,7 +1394,7 @@ function metricTileFor(id, data, currency) {
       if (!next) return null;
       const days = next.days_until;
       return {
-        id, route, icon: 'cake', label: t('nav.birthdays'),
+        id, route, icon: widgetIcon('birthdays'), label: t('nav.birthdays'),
         value: days === 0 ? t('common.today') : days === 1 ? t('common.tomorrow') : t('dashboard.daysLeft', { count: days }),
         note: next.name,
       };
@@ -1390,7 +1403,7 @@ function metricTileFor(id, data, currency) {
       const meals = data.todayMeals ?? [];
       if (!meals.length) return null;
       return {
-        id, route, icon: 'utensils', label: t('nav.meals'),
+        id, route, icon: widgetIcon('meals'), label: t('nav.meals'),
         value: t('dashboard.metricMeals', { count: meals.length }),
         note: meals[0]?.title || t('dashboard.todayMeals'),
       };
@@ -1405,7 +1418,7 @@ function metricTileFor(id, data, currency) {
       const pinned = data.pinnedNotesCount ?? notes.filter((n) => n.pinned).length;
       if (!pinned) return null;
       return {
-        id, route, icon: 'pin', label: t('nav.notes'),
+        id, route, icon: widgetIcon('notes'), label: t('nav.notes'),
         value: t('dashboard.metricPinned', { count: pinned }),
         note: notes[0]?.title || t('notes.titlePlaceholder'),
       };
@@ -1414,7 +1427,7 @@ function metricTileFor(id, data, currency) {
       const leader = (data.rewards?.standings ?? [])[0];
       if (!leader) return null;
       return {
-        id, route, icon: 'award', label: t('nav.rewards'),
+        id, route, icon: widgetIcon('rewards'), label: t('nav.rewards'),
         value: t('dashboard.metricPoints', { count: leader.balance ?? 0 }),
         note: leader.display_name,
       };
@@ -1428,7 +1441,7 @@ function metricTileFor(id, data, currency) {
       if (!h.hasMeds || !(h.dosesTotal > 0)) return null;
       const offen = h.dosesTotal - (h.dosesTaken ?? 0) - (h.dosesSkipped ?? 0);
       return {
-        id, route, icon: 'heart-pulse', label: t('nav.health'),
+        id, route, icon: widgetIcon('health'), label: t('nav.health'),
         value: t('dashboard.metricDoses', { count: Math.max(0, offen) }),
         // Die Nachbestellung schlaegt die naechste Uhrzeit: eine leere Packung
         // ist der Zustand, der eine Handlung braucht, eine faellige Dosis der,
@@ -1443,7 +1456,7 @@ function metricTileFor(id, data, currency) {
       const hk = data.housekeeping ?? {};
       if (!hk.configured) return null;
       return {
-        id, route, icon: 'sparkles', label: t('nav.housekeeping'),
+        id, route, icon: widgetIcon('housekeeping'), label: t('nav.housekeeping'),
         value: t('dashboard.metricVisits', { count: hk.visitsThisMonth ?? 0 }),
         // Drei Zustaende, ein Rang: wer gerade da ist, ist die Nachricht; sonst
         // zaehlt offenes Geld; sonst der letzte Besuch.
@@ -1471,11 +1484,12 @@ function renderMetricTile(tile) {
              deklariert --seal-accent in seiner eigenen Regel, und eine Deklaration
              am Element schlaegt jeden geerbten Wert. Von der Karte aus gesetzt
              trugen alle vier Kacheln denselben violetten App-Akzent.
-             Vivid wie die Widget-Koepfe (Kur 2026-08-17): die Kachelreihe ist
-             dieselbe Absender-Rolle auf derselben Board-Ebene - zwei
-             Siegel-Gesichter auf einem Board waeren zwei Wahrheiten. -->
-        <span class="module-seal module-seal--sm module-seal--vivid" aria-hidden="true"
-              style="--seal-accent: var(--module-${tile.id}, var(--color-accent))"><i data-lucide="${tile.icon}"></i></span>
+             Zwei Siegel-Gesichter auf einem Board waeren zwei Wahrheiten -
+             der Satz galt erst fuer dieses Board und seit 2026-08-17 fuer die
+             ganze App: es gibt nur noch das Vollton-Gesicht, also braucht es
+             auch keine Klasse mehr, die es auswaehlt. -->
+        <span class="module-seal module-seal--sm" aria-hidden="true"
+              style="--seal-accent: var(--module-${tile.id}, var(--color-accent))">${moduleIconHTML(tile.icon)}</span>
         <span class="metric-card__label">${esc(tile.label)}</span>
       </span>
       <span class="metric-card__value">${esc(tile.value)}</span>
@@ -1538,7 +1552,7 @@ function renderRewardsWidget(rewards) {
   const standings = Array.isArray(rewards?.standings) ? rewards.standings : [];
   if (!standings.length) {
     return `<div class="widget widget--rewards">
-      ${widgetHeader('award', t('nav.rewards'), 0, '/rewards')}
+      ${widgetHeader('rewards', t('nav.rewards'), 0, '/rewards')}
       <div class="widget__empty">
         <i data-lucide="award" class="empty-state__icon" aria-hidden="true"></i>
         <div>${t('dashboard.noRewards')}</div>
@@ -1572,7 +1586,7 @@ function renderRewardsWidget(rewards) {
 
   const badge = Number(rewards?.participantCount) || standings.length;
   return `<div class="widget widget--rewards">
-    ${widgetHeader('award', t('nav.rewards'), badge, '/rewards')}
+    ${widgetHeader('rewards', t('nav.rewards'), badge, '/rewards')}
     <div class="widget__body">
       <div class="rewards-widget">${rows}</div>
       ${footer}
@@ -1587,7 +1601,7 @@ function renderRewardsWidget(rewards) {
 function renderHealthWidget(health) {
   if (!health?.hasMeds) {
     return `<div class="widget widget--health">
-      ${widgetHeader('heart-pulse', t('nav.health'), null, '/health')}
+      ${widgetHeader('health', t('nav.health'), null, '/health')}
       <div class="widget__empty">
         <i data-lucide="heart-pulse" class="empty-state__icon" aria-hidden="true"></i>
         <div>${t('dashboard.healthNoMeds')}</div>
@@ -1633,7 +1647,7 @@ function renderHealthWidget(health) {
   }
 
   return `<div class="widget widget--health">
-    ${widgetHeader('heart-pulse', t('nav.health'), null, '/health')}
+    ${widgetHeader('health', t('nav.health'), null, '/health')}
     <div class="widget__body">
       <div class="health-widget">${main}${lowChip}</div>
     </div>
@@ -1679,7 +1693,7 @@ function renderCycleWidget(cycle) {
   // Ohne Historie: Onboarding-Empty statt Fehlerkachel — führt in den Zyklus-Flow.
   if (!prediction.hasData) {
     return `<div class="widget widget--cycle">
-      ${widgetHeader('calendar-heart', t('health.cycle.title'), null, '/health/cycle')}
+      ${widgetHeader('cycle', t('health.cycle.title'), null, '/health/cycle')}
       <div class="widget__empty">
         <i data-lucide="calendar-heart" class="empty-state__icon" aria-hidden="true"></i>
         <div>${t('health.cycle.emptyTitle')}</div>
@@ -1709,7 +1723,7 @@ function renderCycleWidget(cycle) {
     </svg>`;
 
   return `<div class="widget widget--cycle">
-    ${widgetHeader('calendar-heart', t('health.cycle.title'), null, '/health/cycle')}
+    ${widgetHeader('cycle', t('health.cycle.title'), null, '/health/cycle')}
     <div class="widget__body">
       <div class="cycle-widget" data-phase="${esc(prediction.phase)}">
         ${ring}
@@ -1733,7 +1747,7 @@ function renderCycleWidget(cycle) {
 function renderHousekeepingWidget(hk, currency) {
   if (!hk?.configured) {
     return `<div class="widget widget--housekeeping">
-      ${widgetHeader('paintbrush', t('nav.housekeeping'), null, '/housekeeping')}
+      ${widgetHeader('housekeeping', t('nav.housekeeping'), null, '/housekeeping')}
       <div class="widget__empty">
         <i data-lucide="paintbrush" class="empty-state__icon" aria-hidden="true"></i>
         <div>${t('dashboard.housekeepingNone')}</div>
@@ -1767,7 +1781,7 @@ function renderHousekeepingWidget(hk, currency) {
     : '';
 
   return `<div class="widget widget--housekeeping">
-    ${widgetHeader('paintbrush', t('nav.housekeeping'), null, '/housekeeping')}
+    ${widgetHeader('housekeeping', t('nav.housekeeping'), null, '/housekeeping')}
     <div class="widget__body">
       <div class="housekeeping-widget">${statusBlock}${unpaidChip}</div>
     </div>
@@ -1814,7 +1828,7 @@ function renderTodayRow(row) {
   // Titel in Textfarbe, das Modul-Label lebt als ruhiger Untertitel weiter
   // (nie versal, nie ueber dem Titel).
   const inner = `
-      <span class="${mark ? 'seal-pair' : ''}"><span class="module-seal today-cockpit-card__icon"><i data-lucide="${row.icon}" aria-hidden="true"></i></span>${mark}</span>
+      <span class="${mark ? 'seal-pair' : ''}"><span class="module-seal today-cockpit-card__icon">${moduleIconHTML(row.icon)}</span>${mark}</span>
       <span class="today-cockpit-card__body">
         <strong class="today-cockpit-card__value">${esc(row.title)}</strong>
         <span class="today-cockpit-card__sub">${esc(row.sub)}</span>
@@ -1832,7 +1846,7 @@ function renderTodayRow(row) {
 // sie ein Link dorthin, ohne bleibt sie ein ruhiges <div> ohne Interaktion.
 function renderTodayStateRow({ title, sub, icon, route }) {
   const inner = `
-      <span class="module-seal today-cockpit-card__icon"><i data-lucide="${icon}" aria-hidden="true"></i></span>
+      <span class="module-seal today-cockpit-card__icon">${moduleIconHTML(icon)}</span>
       <span class="today-cockpit-card__body">
         <strong class="today-cockpit-card__value">${esc(title)}</strong>
         ${sub ? `<span class="today-cockpit-card__sub">${esc(sub)}</span>` : ''}
@@ -2314,7 +2328,7 @@ function renderWidgetError(id) {
 function renderShoppingLists(lists) {
   if (!lists.length) {
     return `<div class="widget widget--shopping">
-      ${widgetHeader('shopping-cart', t('nav.shopping'), 0, '/shopping')}
+      ${widgetHeader('shopping', t('nav.shopping'), 0, '/shopping')}
       <div class="widget__empty">
         <i data-lucide="shopping-cart" class="empty-state__icon" aria-hidden="true"></i>
         <div>${t('dashboard.noShoppingLists')}</div>
@@ -2358,7 +2372,7 @@ function renderShoppingLists(lists) {
   }).join('');
 
   return `<div class="widget widget--shopping">
-    ${widgetHeader('shopping-cart', t('nav.shopping'), totalOpen, '/shopping')}
+    ${widgetHeader('shopping', t('nav.shopping'), totalOpen, '/shopping')}
     <div class="widget__body">${listsHtml}</div>
   </div>`;
 }
@@ -2581,7 +2595,7 @@ function renderWallRow(row) {
     : '';
   return `
     <li class="wall-row wall-row--${esc(row.tone)}">
-      <span class="module-seal wall-row__seal"><i data-lucide="${esc(row.icon)}" aria-hidden="true"></i></span>
+      <span class="module-seal wall-row__seal">${moduleIconHTML(row.icon)}</span>
       <span class="wall-row__body">
         <span class="wall-row__title">${esc(row.title)}</span>
         <span class="wall-row__sub">${esc(row.sub)}</span>
@@ -2601,7 +2615,7 @@ function renderWallProgram(model) {
     // aus zwei Metern wie ein Defekt, nicht wie Ruhe.
     parts.push(`
       <li class="wall-row wall-row--state">
-        <span class="module-seal wall-row__seal"><i data-lucide="${esc(model.state.icon)}" aria-hidden="true"></i></span>
+        <span class="module-seal wall-row__seal">${moduleIconHTML(model.state.icon)}</span>
         <span class="wall-row__body">
           <span class="wall-row__title">${esc(model.state.title)}</span>
           ${model.state.sub ? `<span class="wall-row__sub">${esc(model.state.sub)}</span>` : ''}

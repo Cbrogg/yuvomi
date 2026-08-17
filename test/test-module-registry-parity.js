@@ -82,11 +82,19 @@ test('die drei Kitchen-Child-Listen tragen dieselben IDs', () => {
   // module-order.js statt in einem der beiden.
   const source = read('../public/settings/module-order.js');
   const labels = objectKeys(source, 'KITCHEN_CHILD_LABEL_KEYS');
-  const icons = objectKeys(source, 'KITCHEN_CHILD_ICONS');
 
   // Fehlt eine ID in den Labels, rendert der Nav-Editor `t(undefined)`.
   assert.deepEqual(labels, [...KITCHEN_CHILD_IDS], 'KITCHEN_CHILD_LABEL_KEYS weicht ab');
-  assert.deepEqual(icons, [...KITCHEN_CHILD_IDS], 'KITCHEN_CHILD_ICONS weicht ab');
+
+  // DIE DRITTE LISTE IST UMGEZOGEN, NICHT ENTFALLEN. Hier stand
+  // `KITCHEN_CHILD_ICONS` aus derselben Datei; seit 2026-08-17 steht jedes
+  // Modulzeichen in `MODULE_ICON` (nav-icons.js), weil dieselbe Zuordnung
+  // vorher an fuenf Stellen stand und auseinandergelaufen war. Die Zusicherung
+  // bleibt Wort fuer Wort dieselbe - fehlt eine ID, rendert die Zeile ein
+  // `data-lucide="undefined"` und damit gar nichts.
+  const icons = objectKeys(read('../public/nav-icons.js'), 'MODULE_ICON');
+  const fehlend = KITCHEN_CHILD_IDS.filter((id) => !icons.includes(id));
+  assert.deepEqual(fehlend, [], 'Kitchen-Kind ohne Zeichen in MODULE_ICON');
 });
 
 test('server KITCHEN_NAV_IDS enthält jedes Kitchen-Kind des Clients', () => {

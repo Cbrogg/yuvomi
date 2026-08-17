@@ -1,4 +1,4 @@
-<!-- version: 2.19.0 -->
+<!-- version: 2.20.0 -->
 <!--
   Die `releaseNotes` fuer den Umbrel-App-Store, von Hand fuer JEDEN Release
   geschrieben. `umbrel-publish.yml` nimmt den Text unter diesem Kommentar
@@ -29,19 +29,21 @@
     - Leerzeile zwischen den Absaetzen: der Store rendert ein gefaltetes
       YAML-Blockskalar, dort ist die Leerzeile der Absatzumbruch.
 
-  HINWEIS ZU DIESER VERSION: eine visuelle Runde ohne Migration und ohne
-  neue Pflicht-Einstellung, also kein Handlungs-Absatz. Beschrieben wird,
-  was ein Haushalt SIEHT (dunkles Design mit Tiefe, ruhigere Uebersicht,
-  kraeftigere Termine, Familienfarben bei Geburtstagen) - keine Tokennamen,
-  keine Messwerte, keine Selektoren; die stehen im CHANGELOG. Dazu die eine
-  Fehlerbehebung, die Menschen mit Screenreader betrifft, in klaren Worten.
-  Draussen bleiben die Detektor-/Guard-Interna der Design-Kampagne: reine
-  Bauarbeit.
+  HINWEIS ZU DIESER VERSION: wieder eine visuelle Runde ohne Migration und
+  ohne neue Pflicht-Einstellung, also kein Handlungs-Absatz. Beschrieben
+  wird, was ein Haushalt SIEHT: die Modulfarben sind ueberall dieselben, das
+  Menue auf dem Telefon zeigt sie zum ersten Mal, und jedes Modul fuehrt ein
+  Zeichen statt zweier. Draussen bleiben die Messwerte (Kontrastzahlen), die
+  Namen der Zeichen, die Zahl der Codestellen und alles, was die Farbe
+  begruendet - das steht im CHANGELOG. Die Installer-Korrektur ist nicht
+  erwaehnt: sie betrifft die Ersteinrichtung, nicht ein bestehendes
+  Haushalts-Update, und ihr Anlassfall ist nur sichtbar, wenn ein Stylesheet
+  gar nicht laedt.
 -->
-This update is about how the app looks and reads, most of all in the dark theme. Cards now stand out from the background with real depth instead of sinking into a murky gray, the interface glass matches the app's warm tone, and colors are used more deliberately throughout: the overview drops the colored band behind every tile title and marks each tile with a single round module seal instead, which makes the board calmer in the light theme and clearly more readable in the dark one.
+The module colors are now the same everywhere. Each of Yuvomi's areas - calendar, tasks, kitchen, budget and the rest - has its own color, and until now it appeared at full strength on the overview but washed out and pale everywhere else, so the same area could look like it belonged to a different app depending on where you saw it. Every one of those round marks now carries its color at full strength.
 
-The calendar's week view draws appointments with a strong edge in their calendar color, so a full week is easier to scan at a glance. Birthdays of household members on the overview now appear in that member's own profile color, matching the family tile next to them, and the age badge says "turns 11" instead of showing a bare number.
+On phones, the navigation bar at the bottom shows those colors for the first time. On a computer the sidebar has been showing them for a while, which is what made the difference noticeable: the same app, two different languages, depending on the window. The bar now works the way the sidebar does - each icon in its area's color, and the one you are currently in taking the app's violet.
 
-One fix for households using a screen reader: the buttons on a meal card in the weekly plan (delete, shopping list, recipe) were folded into the card itself and are now announced as separate controls again. Mouse and touch behavior is unchanged, and this update requires nothing from you.
+Each area also has exactly one icon again. Which symbol stood for which area had been written down in several places over time and they had grown apart, so Notes was a sticky note in the menu and a pushpin on the overview. There is one list now, and a few icons that had been borrowed from elsewhere were drawn in the app's own hand.
 
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.19.0
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.20.0

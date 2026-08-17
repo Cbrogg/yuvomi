@@ -6,7 +6,6 @@ import { bindDisclosure, thirdPartyStatusLabel, toggleRowHtml } from '/settings/
 import {
   BUILT_IN_MODULES,
   DEFAULT_MODULE_ACCENT,
-  KITCHEN_CHILD_ICONS,
   KITCHEN_CHILD_IDS,
   KITCHEN_CHILD_LABEL_KEYS,
   NAV_SECTION,
@@ -14,6 +13,7 @@ import {
   NAV_SECTION_LABEL_KEYS,
   moduleSection,
 } from '/settings/module-order.js';
+import { MODULE_ICON, moduleIconHTML } from '/nav-icons.js';
 
 /**
  * Blatt: Einstellungen -> Module -> Aktive Module (adminOnly)
@@ -48,7 +48,7 @@ function buildRows(preferences, thirdPartyModules) {
       id: module.id,
       section: moduleSection(module.id),
       label: t(module.labelKey),
-      icon: module.icon,
+      icon: MODULE_ICON[module.id],
       enabled: !disabled.has(module.id),
     });
   }
@@ -56,7 +56,7 @@ function buildRows(preferences, thirdPartyModules) {
   const children = KITCHEN_CHILD_IDS.map((id) => ({
     id,
     label: t(KITCHEN_CHILD_LABEL_KEYS[id]),
-    icon: KITCHEN_CHILD_ICONS[id],
+    icon: MODULE_ICON[id],
     enabled: !disabled.has(id),
   }));
   const enabledChildren = children.filter((child) => child.enabled).length;
@@ -65,7 +65,7 @@ function buildRows(preferences, thirdPartyModules) {
     id: 'kitchen',
     section: NAV_SECTION.household,
     label: t('nav.kitchen'),
-    icon: 'utensils',
+    icon: MODULE_ICON.kitchen,
     children,
     enabledChildren,
     enabled: enabledChildren > 0,
@@ -131,7 +131,7 @@ function rowHtml(row) {
   return `
     <div class="settings-module-row settings-module-row--fixed ${stateClass}${row.hasError ? ' settings-module-row--error' : ''}" data-module-row-id="${esc(row.id)}">
       <div class="settings-module-row__icon"${accentStyle}>
-        <i data-lucide="${esc(row.icon)}" aria-hidden="true"></i>
+        ${moduleIconHTML(row.icon)}
       </div>
       <div class="settings-module-row__body">
         <div class="settings-module-row__title">

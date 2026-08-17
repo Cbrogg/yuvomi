@@ -598,31 +598,41 @@ html:has(.search-overlay--visible) yuvomi-install-prompt {
   flex: 1;
 }
 
-/* ── Das Markensiegel (Block 2, 2026-08-10) ──
+/* ── Das Markensiegel (Block 2, 2026-08-10; ein Gesicht seit 2026-08-17) ──
  * Yuvomis Ausweisform, abgeleitet aus der Bildmarke (drei transluzente
- * Kreise mit Sheen): ein kreisrunder, getoenter Chip, der die Herkunft
- * eines Objekts benennt - Flaeche als --tint-surface des Familientons,
- * Icon im vollen Ton, Sheen-Lichtkante als Gradient aus --glass-sheen.
+ * Kreise mit Sheen): eine kreisrunde Vollton-Scheibe, die die Herkunft eines
+ * Objekts benennt - Flaeche im Familienton, Tinte --color-ink-on-vivid,
+ * Sheen-Lichtkante als Gradient aus --glass-sheen.
  * KEIN Glas (kein backdrop-filter): der Sheen-Stop kippt in
  * prefers-reduced-transparency und prefers-contrast mit dem Token auf
- * transparent, der Fallback ist die flache Toenung.
+ * transparent, der Fallback ist die flache Vollton-Scheibe.
  * Einsatzgesetz (Herkunfts-Regel, .impeccable/block2-brief.md): Siegel
  * stehen an Mischstellen (Suche, Heute wichtig, Widget-Koepfe, Mehr) und
  * im eigenen Modul genau einmal im Kopf - nie als Dauer-Dekor in den
  * Listen eines einzelnen Moduls.
  * Farbe pro Instanz ueber --seal-accent (moduleAccentVar bzw.
- * var(--module-*)); ohne Angabe erbt das Siegel den aktiven Modul-Akzent. */
+ * var(--module-*)); ohne Angabe erbt das Siegel den aktiven Modul-Akzent.
+ *
+ * HIER STAND EINE 16-%-TOENUNG AUF EINEM PARAMETRISCHEN GRUND (--seal-base),
+ * UND SIE IST ERSATZLOS ENTFALLEN - mit ihr das --vivid-Gesicht, das es
+ * daneben gab. Der Rueckbau ist die Verallgemeinerung der Widget-Kopf-Kur vom
+ * selben Tag: dark-chroma.mjs hat gemessen, dass eine Beimischung im Dark fast
+ * nur AUFHELLT (Buntheit 4-8 von 24-73 des Volltons), also gerade nicht das
+ * traegt, wofuer das Siegel da ist. Im Light ist der Befund noch schaerfer und
+ * er stand im Mehr-Blatt: Notizen, Dokumente und Inventar teilen sich die
+ * Familie „records", und bei 16 % war ihr Scheibengrund BITWEISE derselbe
+ * (#E1E4EA) - die Toenung loeschte genau den Unterschied, den sie zeigen soll.
+ * Der Kommentar der Kachelreihe hatte den Satz schon: zwei Siegel-Gesichter
+ * auf einem Board waeren zwei Wahrheiten. Es gibt jetzt eines.
+ *
+ * GEMESSEN UEBER ALLE NEUN FAMILIENTOENE, Glyph gegen Scheibe, und zwar an der
+ * UNGUENSTIGSTEN Stelle: unter dem Sheen, wo 16 % Weiss den Ton aufhellen und
+ * eine helle Tinte am wenigsten traegt. Light 3,65-5,18:1, Dark 7,42-12,24:1 -
+ * ueberall ueber der 3:1-Grafikschwelle. Ohne den Sheen liegt der Light-Bereich
+ * bei 5,04-7,17:1; die Spanne dazwischen ist der Preis des Materials, und er
+ * ist bezahlt. */
 .module-seal {
   --seal-accent: var(--module-accent, var(--color-accent));
-  /* DER GRUND, AUF DEM DAS SIEGEL LIEGT, IST EIN PARAMETER - nicht
-   * `--color-surface` festverdrahtet. Die Pro-Hintergrund-Regel gilt fuer die
-   * Toenung genauso wie fuer Text: dieselbe 16-%-Mischung, die auf Weiss eine
-   * sichtbare Scheibe ergibt, liegt auf dem Grouped-Grund bei 1,06:1 und
-   * verschwindet - derselbe Befund, aus dem die Traeger-Regel den Well auf
-   * Surface-3 gestellt hat. Wer das Siegel auf einen anderen Grund setzt
-   * (Modulkopf: --color-bg, Toast: der dunkle Toast-Grund), setzt --seal-base
-   * mit; die Mischung folgt dann seinem echten Hintergrund. */
-  --seal-base: var(--color-surface);
   --seal-icon: var(--icon-md);
   display: inline-flex;
   align-items: center;
@@ -633,13 +643,40 @@ html:has(.search-overlay--visible) yuvomi-install-prompt {
   border-radius: var(--radius-full);
   background:
     linear-gradient(to bottom, var(--glass-sheen), transparent 55%),
-    color-mix(in srgb, var(--seal-accent) var(--tint-surface), var(--seal-base));
-  color: var(--seal-accent);
+    var(--seal-accent);
+  color: var(--color-ink-on-vivid);
 }
 
 .module-seal svg {
   width: var(--seal-icon);
   height: var(--seal-icon);
+}
+
+/* ── EINE HAND FÜR ALLE MODULZEICHEN ──
+ * Wo ein Modul sich zu erkennen gibt - Siegel, Leiste, Sidebar, Mehr-Blatt,
+ * Modul-Liste in den Einstellungen -, zeichnet dieselbe Strichstärke,
+ * unabhängig davon, ob das Zeichen aus Yuvomis eigenem Satz (nav-icons.js, 1.6
+ * auf viewBox 24) oder aus Lucide (2 auf viewBox 24) kommt. Ohne
+ * `non-scaling-stroke` skaliert der Strich mit der Zeichengröße, und dieselbe
+ * Zahl bedeutete dann in jeder Größe etwas anderes: genau daran hing die
+ * bisherige Übereinstimmung (siehe --icon-stroke). CSS schlägt das
+ * `stroke-width`-Attribut, das beide Bibliotheken setzen - deshalb reicht diese
+ * eine Regel für beide Hände.
+ *
+ * DER SELEKTOR IST EINE MARKE AM ZEICHEN, KEINE LISTE VON ORTEN. Er war eine
+ * Liste (`.module-seal svg, .nav-item__icon, .more-item__icon`), und eine Liste
+ * hätte mit jedem neuen Ort eine Zeile gebraucht - die Modul-Liste der
+ * Einstellungen war der erste, der sie schon nicht mehr hatte. `moduleIconEl`
+ * und `moduleIconHTML` hängen `.module-glyph` an JEDES Zeichen, das sie
+ * ausgeben, den Lucide-Rückfall eingeschlossen (`lucide.createIcons()`
+ * übernimmt die Klassen des Platzhalters auf das erzeugte <svg>). Die beiden
+ * Nav-Selektoren bleiben daneben stehen: die Sidebar-Suche baut ihr Zeichen als
+ * rohen Lucide-Platzhalter, gehört aber in dieselbe Leiste. */
+.module-glyph,
+.nav-item__icon,
+.more-item__icon {
+  stroke-width: var(--icon-stroke);
+  vector-effect: non-scaling-stroke;
 }
 
 /* Kleine Rolle: Inline-Siegel in Koepfen und Sektionszeilen. */
@@ -648,26 +685,15 @@ html:has(.search-overlay--visible) yuvomi-install-prompt {
   height: var(--space-6);
 }
 
-/* ── Das Siegel auf einer UMGEKEHRTEN Flaeche ──
- * DER TRAEGER ENTSCHEIDET, WELCHES GESICHT DAS SIEGEL ZEIGT - derselbe Satz wie
- * beim Well (Traeger-Regel) und aus demselben Grund, naemlich einer Messung.
- * Die Toenung ist auf Flaechen der Seiten-Polaritaet geeicht und traegt dort
- * 1,19-1,33:1. Der Toast ist die eine Flaeche der App, die in BEIDEN Themes die
- * Umkehrung der Seite ist (--neutral-800 ist hell im Dark-Theme und dunkel im
- * Light-Theme); dort liegt dieselbe Toenung bei 1,03-1,10:1 und ist keine
- * Scheibe mehr, sondern ein Hauch. Auf einer umgekehrten Flaeche zeigt das
- * Siegel deshalb sein VOLLTON-Gesicht - genau die Sprache, die die App fuer
- * jede vivide Flaeche schon fuehrt (Primaerknopf, FAB, aktives Segment,
- * Marken-Tile): der Ton ist die Flaeche, die Tinte ist --color-ink-on-vivid.
- * Gemessen ueber die drei Herkuenfte des Erinnerungs-Toasts: Glyph auf Scheibe
- * 5,1-9,8:1 in beiden Themes.
+/* HIER STAND `.module-seal--vivid`. Die Variante hat die Regel gewonnen, statt
+ * neben ihr zu bestehen: sie war fuer die eine umgekehrte Flaeche der App
+ * gedacht (der Toast, in beiden Themes die Umkehrung der Seite), hat dann den
+ * Widget-Kopf und die Kennzahl-Kacheln bekommen und am Ende gab es zwei
+ * Gesichter fuer eine Rolle. Der Vollton steht jetzt in der Basisregel, die
+ * Variante ist gestrichen - inklusive `--seal-base`, dem Parameter, den nur
+ * die Toenung brauchte. Was bleibt, ist ihre Messung: Glyph auf Scheibe
+ * 5,1-9,8:1 in beiden Themes ueber alle neun Familientoene.
  * Der Sheen bleibt, er ist der Materialbeweis - dasselbe Licht wie auf dem FAB. */
-.module-seal--vivid {
-  background:
-    linear-gradient(to bottom, var(--glass-sheen), transparent 55%),
-    var(--seal-accent);
-  color: var(--color-ink-on-vivid);
-}
 
 /* ── Kopfrolle: das Siegel als ABSENDER des Moduls ──
  * Die zweite der beiden Groessenrollen des Briefs (Listenzeile, Modulkopf).
@@ -685,8 +711,11 @@ html:has(.search-overlay--visible) yuvomi-install-prompt {
  * alle Module teilen, und ein Opt-in, das jedes Modul selbst setzen muesste,
  * fehlt beim naechsten.
  *
- * SEIN GRUND IST DER SEITENGRUND: der Kopf steht auf --color-bg (opak, kein
- * Glas). Ohne --seal-base laege die Scheibe auf ihm bei 1,06:1.
+ * HIER STAND SEIN EIGENER GRUND (--seal-base: --color-bg), weil die Toenung
+ * auf dem Seitengrund sonst bei 1,06:1 lag. Mit dem Vollton hat das Siegel
+ * ueberhaupt keinen Grund mehr, gegen den es mischt - der Ton IST die Flaeche,
+ * und die Pro-Hintergrund-Frage stellt sich fuer die Scheibe nicht mehr,
+ * sondern nur noch fuer die Tinte darauf (--color-ink-on-vivid, gemessen).
  *
  * DAS SIEGEL NIMMT DEN RANG SEINES TITELS AN. Die beiden Schnitte des
  * Canonical Page Head (Large Title 34 / Inline 22, typography.css) haben hier
@@ -698,12 +727,10 @@ html:has(.search-overlay--visible) yuvomi-install-prompt {
   /* Der Rang kommt von der Leiste, in der das Siegel steht. Der Fallback ist
    * der Inline-Rang und gilt fuer den zweiten Traeger dieser Rolle: die
    * Kuechen-Leiste, die nach der Leisten-Regel selbst die Kopf-Navigation ist
-   * und deshalb ihren Absender fuehrt (sub-tabs.css). Sie steht auf demselben
-   * Seitengrund wie der Modulkopf, also gilt --seal-base fuer beide. */
+   * und deshalb ihren Absender fuehrt (sub-tabs.css). */
   width: var(--seal-head-size, var(--space-6));
   height: var(--seal-head-size, var(--space-6));
   --seal-icon: var(--seal-head-icon, var(--icon-md));
-  --seal-base: var(--color-bg);
   transition:
     width var(--duration-sm) var(--ease-out),
     height var(--duration-sm) var(--ease-out);
@@ -1188,15 +1215,13 @@ html:has(.search-overlay--visible) yuvomi-install-prompt {
 /* Scope-Kacheln sind eine Mischstelle: das Siegel traegt den Familienton
  * des Zielmoduls (--seal-accent setzt der Aufbau in router.js).
  *
- * --seal-base MITSETZEN, weil die Kachel NICHT auf --color-surface steht,
- * sondern auf --color-surface-elevated. Genau dafuer ist der Parameter da, und
- * ohne ihn mischt das Siegel gegen den falschen Grund: gemessen im Dark ueber
- * alle neun Familien 1,02-1,15:1 gegen den echten Untergrund (health 1,02),
- * also unter dem 1,19-1,33er Band, das die Vollton-Regel als Schwelle nennt.
- * Die Scheibe war dort keine Scheibe mehr, sondern ein Hauch. Light war
- * unauffaellig (1,21 vs 1,27) - deshalb faellt so etwas nur beim Messen auf. */
+ * HIER STAND `--seal-base: var(--color-surface-elevated)`, und der Grund war
+ * eine Messung: die Kachel steht nicht auf --color-surface, und ohne den
+ * Parameter mischte die 16-%-Toenung gegen den falschen Grund (im Dark
+ * 1,02-1,15:1 gegen den echten Untergrund, health 1,02). Mit dem Vollton
+ * mischt das Siegel gar nicht mehr - die Zeile ist mit ihrer Ursache
+ * entfallen, nicht vergessen worden. */
 .search-scope__seal {
-  --seal-base: var(--color-surface-elevated);
   flex-shrink: 0;
 }
 
@@ -1369,10 +1394,38 @@ html:has(.search-overlay--visible) yuvomi-install-prompt {
   height: var(--target-md);
   border-radius: var(--radius-full);
   /* Inaktiv: nacktes Icon, keine gefüllte Well-Kachel (auch im No-Glass-
-   * Fallback). Leichter, ruhiger Ton — die aktive Pille trägt den Zustand. */
+   * Fallback). Die aktive Pille trägt den Zustand. */
   background: transparent;
   box-shadow: none;
-  color: var(--color-text-tertiary);
+  /* UND DAS ZEICHEN TRAEGT SEINEN MODULTON - dieselbe Legende wie in der
+   * Sidebar, und aus demselben Grund (2026-08-17, Betreiber-Befund „die Icons
+   * im mobilen Navigationsmenue unterscheiden sich farblich deutlich von denen
+   * in der Webansicht").
+   *
+   * Die Legende war bis dahin eine DESKTOP-Regel, obwohl sie nie eine sein
+   * wollte: die Sidebar hat sie bekommen, weil dort alle Module nebeneinander
+   * stehen, und die Tab-Bar ist genau dieselbe Komponente in der anderen Form -
+   * eine App, in der die Navigation je nach Fenstergroesse eine andere Sprache
+   * spricht, hat zwei Wahrheiten. Auf Telefonen war ausserdem GAR KEIN Modulton
+   * sichtbar, und das Telefon ist die Hauptbuehne (PRODUCT.md).
+   *
+   * Es ist kein Siegel: die Herkunfts-Regel verbietet der Leiste zu Recht die
+   * Scheibe - die Leiste beantwortet „wo bin ich", nicht „woher". Sie bekommt
+   * den Ton auf dem nackten Zeichen, wie die Sidebar, und aus demselben
+   * Kontrast-Grund: ein Zeichen ist Grafik (3:1 nach 1.4.11), ein Label waere
+   * Text und muesste 4.5:1 halten - was sieben der neun Familientoene reissen.
+   *
+   * GEMESSEN GEGEN DIE KAPSEL, NICHT GEGEN DIE SEITE: die Leiste ist Glas
+   * (rgba .86 plus backdrop-filter), der echte Grund des Zeichens also die
+   * Mischung aus Kapsel und Seite - im Light #F9F9FA, im Dark #2B2825. Ueber
+   * alle neun Familientoene: Light 4,79-6,81:1, Dark 4,57-8,41:1. Beide Bereiche
+   * liegen nicht nur ueber der 3:1-Grafikschwelle, sondern ueber der
+   * 4.5:1-Textschwelle - der Ton ist hier also nicht die Grenze.
+   *
+   * Die Eine-Stimme-Regel bleibt heil: Kapsel, gleitender Indikator, Label,
+   * Fokusring und FAB tragen weiter --color-accent. Gewechselt hat das
+   * ZEICHEN, das schon immer sagte, wohin es fuehrt. */
+  color: var(--item-module-accent, var(--color-text-tertiary));
   transition:
     background-color var(--transition-fast),
     color var(--transition-fast),
@@ -6221,13 +6274,23 @@ p.field-hint--warn svg {
  * lesbar bleiben.
  *
  * DER RING IST KEINE ZIERDE, sondern die Trennung: ohne ihn laufen zwei
- * getoente Flaechen ineinander, und bei aehnlichem Ton (ein violetter Avatar
- * auf dem Kalender-Siegel) verschwindet die Kante. Er nimmt --seal-base, also
- * denselben Parameter, mit dem das Siegel schon seinen echten Untergrund
- * kennt - auf dem Toast ist das der Toast-Grund, im Modulkopf --color-bg.
+ * gesaettigte Flaechen ineinander, und bei aehnlichem Ton (ein violetter
+ * Avatar auf dem Kalender-Siegel) verschwindet die Kante. Seit dem Vollton ist
+ * er noetiger als vorher, nicht weniger.
+ *
+ * SEIN NAME SAGT JETZT, WAS ER IST. Er stand auf --seal-base, dem Parameter,
+ * mit dem das Siegel seinen Mischgrund kannte - und der ist mit der Toenung
+ * entfallen. Der Ring braucht aber weiter einen: er wird in die Flaeche
+ * geschnitten, auf der das PAAR steht, nicht auf der das Siegel mischt. Zwei
+ * verschiedene Fragen, die sich einen Namen geteilt haben; --seal-pair-ground
+ * beantwortet nur noch die zweite.
  *
  * Wer wann eines bekommt, steht in utils/seal-pair.js. */
 .seal-pair {
+  /* Der Grund, in den der Ring geschnitten wird - die Flaeche, auf der das PAAR
+   * steht. Voreinstellung ist die Kartenflaeche; wer es woanders hinsetzt,
+   * ueberschreibt hier und nicht am Ring. */
+  --seal-pair-ground: var(--color-surface);
   display: inline-flex;
   align-items: center;
   flex-shrink: 0;
@@ -6245,7 +6308,7 @@ p.field-hint--warn svg {
   height: var(--space-5);
   margin-inline-start: calc(-1 * var(--space-2));
   border-radius: var(--radius-full);
-  box-shadow: 0 0 0 2px var(--seal-base, var(--color-surface));
+  box-shadow: 0 0 0 2px var(--seal-pair-ground);
   font-size: var(--text-2xs);
   font-weight: var(--font-weight-semibold);
   line-height: 1;

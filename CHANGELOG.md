@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.20.0] - 2026-08-17
+
+### Changed
+
+- **A module looks the same wherever it names itself.** The round module mark had two faces: a saturated disc on the overview widget heads, and a pale tinted one everywhere else - the day programme, the search results, the wall rows, the module head, and the launcher grid in the mobile "More" sheet. The pale face is gone. It is the same measurement that retired the tinted band behind the widget titles in the last release, now with its light-mode half: Notes, Documents and Inventory share one colour family, and at the tint's strength their discs came out as exactly the same shade of grey-blue - the wash erased the very difference it was there to show, and a colour that cannot be told apart is not a colour. Every mark now carries its module colour at full strength, which is what the mobile menu was reported for: its icons no longer look like they belong to a different app than the ones in the sidebar and on the overview.
+- **The mobile tab bar shows the module colours, the way the desktop sidebar always has.** The sidebar is where all modules stand side by side, so it is where the colours are legible as a legend - that has been the rule since the interface settled on a single accent for its frame. The rule was quietly a desktop rule: above a certain window width every navigation icon carried its module's colour, below it they were all grey. The same component spoke a different language depending on the window, and on phones - where this app is mostly used - no module colour appeared in the navigation at all. The tab bar now follows the same rule: each icon in its module's colour, and the active tab taking the app's own violet back, exactly as the sidebar does. Nothing else in the bar changes colour; the capsule, the sliding indicator, the labels and the create button stay as they were. Measured against the bar's glass in both themes, every colour clears the contrast requirement for text, not just the one for icons.
+- **One module, one icon.** Which glyph stands for a module was written down in five different places, and they had drifted apart: Notes was a sticky note in the navigation and a pushpin on the overview, Housekeeping a paintbrush in one place and sparkles in the other. There is now a single list, and the widget heads ask for a widget by name instead of naming a glyph, so the two cannot disagree again. Along the way the app's own icon set gained the seven drawings it was missing - pantry, family, cycle, weather, clock, key figures and countdown - and every module glyph is drawn at the same stroke weight regardless of size, which until now happened to be true only because of the sizes it was used at.
+
+### Fixed
+
+- **The installer's built-in colour fallback shows the current dark theme again.** The setup wizard carries a copy of the app's colours inline, so it stays legible if the stylesheet cannot be served; three of those values still described the theme from before the last release's dark-mode work.
+
 ## [2.19.0] - 2026-08-17
 
 ### Changed

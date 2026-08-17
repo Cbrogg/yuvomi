@@ -245,8 +245,9 @@ components:
 
      Etappe 2 am selben Tag: das Absenderband ist zurueckgebaut (Band,
      getoente Trennlinie UND 2px-Oberkante), der Absender jeder Dashboard-
-     Karte ist das Vollton-Siegel (module-seal--vivid), auch in der
-     Kachelreihe. Anlass und Messlatte stehen an der Signature Component
+     Karte ist das Vollton-Siegel, auch in der Kachelreihe. Etappe 3 hat den
+     Vollton anschliessend zum EINEN Siegelgesicht gemacht und die Klasse
+     `--vivid` damit gestrichen. Anlass und Messlatte stehen an der Signature Component
      „Der Widget-Kopf"; der ignore.md-Eintrag border-accent-on-rounded ist
      mit der 2px-Linie gegangen.
 
@@ -428,12 +429,25 @@ reduced-transparency und prefers-contrast auf 0).
   (`--color-ink-on-vivid`).
 - **Die Modul-Identitaet lebt in den Elementen, nicht in der Flaeche.** Die PWA-theme-color
   ist app-weit der Seitengrund (#F5F3ED / #191816, also `--color-bg`), nicht der Modul-Tint.
-- **Die Sidebar ist die Legende der Modultoene.** Seit die Stimme das Chrome traegt, war die
-  Frage offen, wo die neun Familien noch SICHTBAR werden, ohne den Rahmen wieder
-  umzufaerben. Antwort: dort, wo alle Module nebeneinander stehen - jedes Zeichen in seinem
-  Ton, einmal statt in jedem Zimmer (Apples Settings-Muster). Der Ton sitzt auf dem ICON,
-  nie auf Label oder Flaeche: ein Icon ist Grafik (3:1), ein Label waere Text und muesste
-  4.5:1 gegen die Sidebar-Flaeche halten - was sieben der neun Familientoene reissen wuerden.
+- **Die NAVIGATION ist die Legende der Modultoene** - Sidebar und Tab-Bar, nicht die eine
+  ohne die andere. Seit die Stimme das Chrome traegt, war die Frage offen, wo die neun
+  Familien noch SICHTBAR werden, ohne den Rahmen wieder umzufaerben. Antwort: dort, wo alle
+  Module nebeneinander stehen - jedes Zeichen in seinem Ton, einmal statt in jedem Zimmer
+  (Apples Settings-Muster). Der Ton sitzt auf dem ICON, nie auf Label oder Flaeche: ein Icon
+  ist Grafik (3:1), ein Label waere Text und muesste 4.5:1 halten - was sieben der neun
+  Familientoene reissen wuerden.
+  **Die Regel hing bis 2026-08-17 an einem Breakpoint**, und das war ein Fehler, keine
+  Entscheidung: ueber 1024px trug jedes Nav-Zeichen seinen Ton, darunter waren alle grau.
+  Dieselbe Komponente sprach je nach Fenstergroesse eine andere Sprache, und ausgerechnet auf
+  Telefonen - der Hauptbuehne (PRODUCT.md) - war in der Navigation gar kein Modulton zu
+  sehen. Gemessen gegen die Glaskapsel (der echte Grund ist die Mischung aus Kapsel und
+  Seite, #F9F9FA / #2B2825): Light 4,79-6,81:1, Dark 4,57-8,41:1 - beides ueber der
+  Textschwelle, der Ton ist hier also nicht die Grenze. Aktiv gewinnt in BEIDEN Leisten die
+  Stimme zurueck: eine Zeile, die als Ganzes violett ist, deren Zeichen aber allein seine
+  Familienfarbe behielte, liest sich als „nicht mitgemeint".
+  **Pruefebene: Regel** (`die Sidebar zeigt die Modultoene als Legende` +
+  `die Tab-Bar zeigt dieselbe Legende wie die Sidebar`, `test:frontend-audit`) - zwei Guards,
+  weil die beiden Faelle getrennt kaputtgehen koennen.
 
 ### Tertiary
 - **Semantik im Apple-Vokabular, AA-vertieft**: Success (Apple Green, 5.1:1), Warning
@@ -767,6 +781,23 @@ Fundstellen). Ein 9px-Text sagt weniger als ein sauberer Punkt.
   „Die Nachlauf-Regel".
 - **Icon-Stufen:** genau vier (12/16/20/24px, `--icon-sm..xl`); Lucide bleibt das Icon-Set,
   keine Glyphen-Fonts.
+- **Ein Modul fuehrt EIN Zeichen, in EINER Hand** (2026-08-17). Wo ein Modul sich zu erkennen
+  gibt - Leiste, Sidebar, „Mehr"-Blatt, Widget-Kopf, Kennzahl-Kachel, „Heute wichtig", Suche,
+  Wand -, zeichnet Yuvomis eigener monoliniger Satz (`public/nav-icons.js`); was er nicht
+  kennt, faellt auf Lucide zurueck. Aktions- und Zustandszeichen (Chevron, Plus, Uhrzeit-Slot
+  einer Mahlzeit) bleiben Lucide - sie beantworten nicht „welches Modul".
+  **Der Fehler war nicht ein falscher Glyph, sondern die dritte Tabelle:** die Zuordnung
+  Modul → Zeichen stand in `navItems()`, in `widgetIcon()` und noch einmal an jeder
+  `widgetHeader()`-Aufrufstelle. Sie sind auseinandergelaufen - Notizen war in der Leiste ein
+  Zettel (`sticky-note`) und im Widget-Kopf eine Stecknadel (`pin`), Haushaltshilfe ein Pinsel
+  und auf der Kachel Funkeln (`sparkles`). Jetzt gibt es `MODULE_ICON`, und die Koepfe
+  bekommen ihre WIDGET-ID statt eines Icon-Namens: die Abweichung ist nicht mehr schreibbar.
+- **Die Strichstaerke ist die Handschrift, nicht ein Zufall** (`--icon-stroke`, 1.35 gerenderte
+  px plus `vector-effect: non-scaling-stroke` auf Siegel- und Nav-Zeichen). Der eigene Satz
+  zeichnet mit 1.6 auf viewBox 24, Lucide mit 2; bei 20px bzw. 16px ergab beides zufaellig
+  1,333px - die Uebereinstimmung hing an den GROESSEN, nicht an einer Regel, und fiel, sobald
+  ein eigenes Zeichen bei 16px stand. CSS schlaegt das `stroke-width`-Attribut, deshalb gilt
+  der Wert fuer beide Haende.
 - **Motion:** Dauern kanonisch 80-400ms (`--duration-2xs..2xl`), immer in ms. `--ease-out`
   cubic-bezier(0.16,1,0.3,1) fuer Einblendungen; Feder mit Overshoot `--ease-glass`
   cubic-bezier(0.34,1.56,0.64,1) fuer Glas-Elemente; die Sidebar-Pille bekommt die sanftere
@@ -1342,9 +1373,11 @@ nichts.
 
 **Die Ueberlappung IST das Zeichen, nicht die Nachbarschaft.** Zwei Kreise nebeneinander
 waeren zwei Angaben; erst der Schnitt macht daraus eine. Der Versatz betraegt ein Drittel des
-Avatars, und der Ring darum nimmt `--seal-base` - denselben Parameter, mit dem das Siegel
-schon seinen echten Untergrund kennt. Ohne ihn laufen zwei getoente Flaechen ineinander,
-sobald die Toene sich aehneln.
+Avatars, und der Ring darum nimmt `--seal-pair-ground` (Voreinstellung `--color-surface`) -
+die Flaeche, auf der das PAAR steht. Er hiess `--seal-base` und teilte sich den Namen mit dem
+Mischgrund des Siegels; das waren immer zwei Fragen, und mit dem Vollton ist nur noch die
+zweite uebrig. Ohne den Ring laufen zwei gesaettigte Flaechen ineinander, sobald die Toene
+sich aehneln - seit dem Vollton noetiger als vorher, nicht weniger.
 
 **Gebaut ist es an der Mischstelle „Heute wichtig"**, wo es das „von wem" der Aufgabe und des
 Termins traegt; Einkauf und Essen bekommen keines, weil sie keine Person haben. Gehalten von
@@ -1576,11 +1609,11 @@ eine Stelle, an der die Marke etwas kann, was keine Systemapp braucht: **Yuvomi 
 einzige Ort, an dem siebzehn Apps in einem Raum leben, und das Siegel weist jedes Ding als
 "aus Raum X" aus.**
 
-**Material:** ein kreisrunder, getoenter Chip mit gefuelltem Modul-Icon und der Sheen-
-Lichtkante der Bildmarke (drei transluzente Kreise) - Flaeche auf `--tint-surface` des
-Familientons, Icon im vollen Ton, Sheen als Gradient aus `--glass-sheen`. **KEIN
-backdrop-filter**: die Glas-ist-Chrome-Regel bleibt unberuehrt, und der Sheen-Stop kippt unter
-`prefers-reduced-transparency` und `prefers-contrast` mit seinem Token auf die flache Toenung.
+**Material:** eine kreisrunde VOLLTON-Scheibe mit Modul-Icon und der Sheen-Lichtkante der
+Bildmarke (drei transluzente Kreise) - Flaeche im Familienton, Tinte `--color-ink-on-vivid`,
+Sheen als Gradient aus `--glass-sheen`. **KEIN backdrop-filter**: die Glas-ist-Chrome-Regel
+bleibt unberuehrt, und der Sheen-Stop kippt unter `prefers-reduced-transparency` und
+`prefers-contrast` mit seinem Token auf die flache Scheibe.
 
 **Die Herkunfts-Regel (das Einsatzgesetz).** Ein Siegel zeigt die Herkunft eines Objekts, und
 Herkunft zeigt man nur, wo sie nicht selbstverstaendlich ist. Daraus folgen genau zwei Faelle:
@@ -1602,7 +1635,9 @@ verlangt von jeder eine der beiden Rollen; die Kopfrolle darf nur die Shell baue
 
 **Die Navigation traegt KEINES, und das ist dieselbe Regel, nicht ihre Ausnahme.** In der
 Tab-Bar und der Sidebar steht das Label unter dem Icon - die Herkunft ist dort
-selbstverstaendlich, ein Siegel waere Dekor. Die Leiste ist ausserdem der einzige Ort, der
+selbstverstaendlich, ein Siegel waere Dekor. Was sie traegt, ist der Ton auf dem nackten
+Zeichen (Legende, siehe „Colors") - das ist kein halbes Siegel, sondern der andere Kanal:
+keine Scheibe, keine Flaeche, nur die Farbe des Zeichens. Die Leiste ist ausserdem der einzige Ort, der
 nicht "woher" beantwortet, sondern "wo bin ich"; getoente Scheiben auf allen Eintraegen nehmen
 der aktiven Pille ihre Alleinstellung, und Suche, Hilfe und Abmelden bekaemen Scheiben ohne
 Modul. Das Mehr-Sheet traegt Siegel, weil es ein VERZEICHNIS von Raeumen ist - der
@@ -1612,17 +1647,28 @@ Unterschied bleibt nur lesbar, solange die Leiste keine traegt. (Entscheidung vo
 **Zwei Groessenrollen:** Listenzeile `--sm` (24px, Icon 16px) und Modulkopf (32/24px je nach
 Rang seines Titels, siehe Modulkopf).
 
-**Der Traeger entscheidet, welches Gesicht es zeigt** - derselbe Satz wie beim Well, und aus
-demselben Grund, naemlich einer Messung. Die Toenung ist auf Flaechen der Seiten-Polaritaet
-geeicht und traegt dort 1,19-1,33:1; ihr Grund ist deshalb ein Parameter (`--seal-base`, per
-Voreinstellung `--color-surface`), damit sie auf dem Kopfgrund gegen `--color-bg` mischt statt
-gegen Weiss - mit dem alten, festverdrahteten Rezept laege die Scheibe dort bei 1,06:1 und
-verschwaende, genau wie ein Well auf dem Grouped-Grund. Auf einer UMGEKEHRTEN Flaeche zeigt
-das Siegel sein Vollton-Gesicht (`--vivid`): der Toast ist die eine Flaeche der App, die in
-beiden Themes die Umkehrung der Seite ist (`--neutral-800` ist hell im Dark-Theme und dunkel
-im Light), dort liegt jede Toenung bei 1,03-1,10:1. Der Vollton mit `--color-ink-on-vivid` ist
+**Das Siegel hat EIN Gesicht, und es ist der Vollton** (2026-08-17). Hier standen zwei: eine
+16-%-Toenung fuer den Regelfall und `--vivid` fuer die eine umgekehrte Flaeche (den Toast),
+dazu ein Parameter `--seal-base` fuer den Grund, gegen den die Toenung mischt. Der Vollton hat
+die Regel gewonnen, statt neben ihr zu bestehen - erst der Widget-Kopf, dann die Kachelreihe,
+und beide mit derselben Begruendung.
+
+**Was die Toenung erledigt hat, ist eine Messung, und zwar zweimal dieselbe.** Im Dark zerlegt
+`dark-chroma.mjs` die Beimischung in Helligkeits- und Buntheitsanteil: sie hellt fast nur auf
+(Buntheit 4-8 von 24-73 des Volltons) - eine Waschung KANN im Dark keine Farbe tragen. Im Light
+war der Befund schaerfer und stand sichtbar im „Mehr"-Blatt: Notizen, Dokumente und Inventar
+teilen die Familie `records`, und ihr Scheibengrund war bei 16 % **bitweise derselbe**
+(#E1E4EA). Die Toenung loeschte genau den Unterschied, den sie zeigen soll. Der Vollton ist
 dieselbe Sprache, die die App fuer jede vivide Flaeche schon fuehrt (Primaerknopf, FAB,
-aktives Segment, Marken-Tile); gemessen 5,1-9,8:1 fuer den Glyph in beiden Themes.
+aktives Segment, Marken-Tile).
+
+**Gemessen ueber alle neun Familientoene, Glyph gegen Scheibe, an der unguenstigsten Stelle**
+(unter dem Sheen, wo 16 % Weiss den Ton aufhellen): Light 3,65-5,18:1, Dark 7,42-12,24:1 -
+ueberall ueber der 3:1-Grafikschwelle. Ohne Sheen liegt Light bei 5,04-7,17:1.
+**Pruefebene: Regel** (`dashboard „Heute wichtig" is one inset-grouped list`,
+`test:frontend-audit`) - der Guard verbietet die Rueckkehr von `--seal-base` UND von
+`--vivid`, und er liest ueber `eachRule`, damit ihn die Begruendung in den Kommentaren nicht
+selbst ausloest.
 
 **Das Ueberlappungszeichen** (Avatar ueberlappt Siegel, "wer ∩ was") ist das Familien-Zeichen
 aus der Drei-Kreise-Marke. Es erscheint nur, wenn es mehr als einen moeglichen Beteiligten

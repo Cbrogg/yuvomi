@@ -1112,6 +1112,19 @@
   --icon-lg: 20px;   /* Betonte Aktionen, Toolbar */
   --icon-xl: 24px;   /* FAB, Empty-State, Dialog-Kopf */
 
+  /* Die STRICHSTÄRKE der Modulzeichen, in gerenderten Pixeln (das Zeichen
+   * trägt dazu `vector-effect: non-scaling-stroke`, sonst skalierte der Strich
+   * mit der Größe mit).
+   *
+   * SIE IST DIE HANDSCHRIFT, und sie war bisher ein Zufall: Yuvomis eigener
+   * Satz zeichnet mit 1.6 auf viewBox 24, Lucide mit 2 - bei 20px bzw. 16px
+   * ergaben beide gerenderte 1,333px, und genau deshalb ist nie aufgefallen,
+   * dass die Übereinstimmung an den GRÖSSEN hing und nicht an einer Regel.
+   * Sobald ein Zeichen des eigenen Satzes bei 16px stand (Widget-Kopf), fiel
+   * es auf 1,07px und wurde neben seinen Nachbarn dünn. Der Wert hält den
+   * gemessenen Bestand fest, jetzt als Zusicherung statt als Koinzidenz. */
+  --icon-stroke: 1.35;
+
   /* --------------------------------------------------------
    * 11c. Breakpoints — verbindlicher Kontrakt
    *

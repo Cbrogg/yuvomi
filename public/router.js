@@ -31,7 +31,7 @@ import {
 } from '/utils/scroll-restore.js';
 import { openModal, confirmModal } from '/components/modal.js';
 import '/components/datepicker.js';
-import { NAV_ICONS } from '/nav-icons.js';
+import { NAV_ICONS, MODULE_ICON, moduleIconEl } from '/nav-icons.js';
 import { RENAMED_SETTINGS_SOURCE_PATHS, SETTINGS_LEAVES } from '/settings/registry.js';
 import {
   NAV_SECTION,
@@ -2151,21 +2151,22 @@ const _toolbarHandles = new WeakMap();
 /**
  * Icon-Fabrik für das Absender-Siegel eines Modulkopfes.
  *
- * ABGELEITET, NICHT ZWEITGESCHRIEBEN: welches Zeichen ein Modul führt, steht
- * bereits in `navItems()` - ein zweiter Katalog Modul→Icon wäre die Sorte
- * Dublette, die beim achtzehnten Modul auseinanderläuft. Die Farbe braucht gar
- * keine Angabe: das Modul-Stylesheet setzt `--module-accent` auf seinem Root,
- * der Kopf liegt darin, das Siegel erbt.
+ * ABGELEITET, NICHT ZWEITGESCHRIEBEN: welches Zeichen ein Modul führt, steht in
+ * `MODULE_ICON` (nav-icons.js) - ein zweiter Katalog Modul→Icon wäre die Sorte
+ * Dublette, die beim achtzehnten Modul auseinanderläuft. Genau das war er auch:
+ * bis 2026-08-17 las diese Stelle aus `navItems()`, das Dashboard aus seinem
+ * eigenen `widgetIcon()`, und Notizen trug deshalb im Kopf einen Zettel und im
+ * Widget eine Stecknadel. Die Farbe braucht gar keine Angabe: das
+ * Modul-Stylesheet setzt `--module-accent` auf seinem Root, der Kopf liegt
+ * darin, das Siegel erbt.
  *
  * DRITTANBIETER-MODULE BEKOMMEN KEINES, und das ist kein Loch: das Siegel ist
  * Yuvomis eigene Ausweisform. Ein fremdes Modul ist kein Raum dieser Familie,
- * und sein Icon liegt ausserhalb von NAV_ICONS.
+ * und sein Icon steht in keiner Zeile von MODULE_ICON.
  */
 function headSealIcon(mod) {
-  if (!mod) return null;
-  const name = navCatalog().find((item) => item.module === mod)?.icon;
-  const factory = name ? NAV_ICONS[name] : null;
-  return factory ? () => factory() : null;
+  const name = mod ? MODULE_ICON[mod] : null;
+  return name ? () => moduleIconEl(name) : null;
 }
 
 function wireToolbar(el) {
@@ -2718,12 +2719,12 @@ function initMoreSheet(container, openSearch) {
 // im Leerzustand als Direktsprung-Kacheln (labelKey/icon gespiegelt aus der
 // Haupt-Navigation, damit Suche und Nav dieselbe Sprache sprechen).
 const SEARCH_SCOPES = [
-  { labelKey: 'nav.tasks',    icon: 'check-square',  route: '/tasks'    },
-  { labelKey: 'nav.calendar', icon: 'calendar',      route: '/calendar' },
-  { labelKey: 'nav.notes',    icon: 'sticky-note',   route: '/notes'    },
-  { labelKey: 'nav.contacts', icon: 'book-user',     route: '/contacts' },
-  { labelKey: 'nav.shopping', icon: 'shopping-cart', route: '/shopping' },
-  { labelKey: 'nav.health',   icon: 'heart-pulse',   route: '/health'   },
+  { labelKey: 'nav.tasks',    route: '/tasks'    },
+  { labelKey: 'nav.calendar', route: '/calendar' },
+  { labelKey: 'nav.notes',    route: '/notes'    },
+  { labelKey: 'nav.contacts', route: '/contacts' },
+  { labelKey: 'nav.shopping', route: '/shopping' },
+  { labelKey: 'nav.health',   route: '/health'   },
 ];
 
 function initSearch(container) {
@@ -2772,9 +2773,7 @@ function initSearch(container) {
       seal.className = 'module-seal module-seal--sm search-scope__seal';
       seal.setAttribute('aria-hidden', 'true');
       seal.style.setProperty('--seal-accent', moduleAccentVar(scope.route.slice(1)));
-      const icon = document.createElement('i');
-      icon.dataset.lucide = scope.icon;
-      seal.appendChild(icon);
+      seal.appendChild(moduleIconEl(MODULE_ICON[scope.route.slice(1)]));
       const label = document.createElement('span');
       label.textContent = t(scope.labelKey);
       btn.append(seal, label);
@@ -2911,20 +2910,18 @@ function renderSearchResults(container, data, onClose) {
   // der Sektion ist die Herkunft damit selbstverstaendlich, die Zeilen
   // bleiben siegelfrei. Die Zeilen selbst liegen in GENAU EINEM Traeger
   // (Zeilenlisten-Regel) statt als Karte pro Treffer.
-  function makeSection(labelKey, seal, items, routeFn, labelFn, metaFn) {
+  function makeSection(labelKey, sealModule, items, routeFn, labelFn, metaFn) {
     if (!items.length) return;
     const section = document.createElement('div');
     section.className = 'search-section';
     const heading = document.createElement('h3');
     heading.className = 'search-section__heading';
-    if (seal) {
+    if (sealModule) {
       const sealEl = document.createElement('span');
       sealEl.className = 'module-seal module-seal--sm';
       sealEl.setAttribute('aria-hidden', 'true');
-      sealEl.style.setProperty('--seal-accent', moduleAccentVar(seal.module));
-      const icon = document.createElement('i');
-      icon.dataset.lucide = seal.icon;
-      sealEl.appendChild(icon);
+      sealEl.style.setProperty('--seal-accent', moduleAccentVar(sealModule));
+      sealEl.appendChild(moduleIconEl(MODULE_ICON[sealModule]));
       heading.appendChild(sealEl);
     }
     heading.appendChild(document.createTextNode(t(labelKey)));
@@ -2957,16 +2954,16 @@ function renderSearchResults(container, data, onClose) {
     container.appendChild(section);
   }
 
-  makeSection('nav.tasks',    { module: 'tasks',    icon: 'check-square' },  tasks,    (i) => `/tasks?open=${i.id}`, null,
+  makeSection('nav.tasks',    'tasks',    tasks,    (i) => `/tasks?open=${i.id}`, null,
     (i) => (i.due_date ? formatDate(i.due_date) : ''));
-  makeSection('nav.calendar', { module: 'calendar', icon: 'calendar' },      events,   (i) => `/calendar?open=${i.id}`, null,
+  makeSection('nav.calendar', 'calendar', events,   (i) => `/calendar?open=${i.id}`, null,
     (i) => (i.start_datetime ? `${formatDate(i.start_datetime)}${i.all_day ? '' : ` · ${formatTime(i.start_datetime)}`}` : ''));
-  makeSection('nav.notes',    { module: 'notes',    icon: 'sticky-note' },   notes,    (i) => `/notes?open=${i.id}`);
-  makeSection('nav.contacts', { module: 'contacts', icon: 'book-user' },     contacts, (i) => `/contacts?open=${i.id}`);
-  makeSection('nav.shopping', { module: 'shopping', icon: 'shopping-cart' }, items,    (i) => `/shopping?list=${i.list_id}&highlight=${i.id}`);
-  makeSection('health.tabs.meds',     { module: 'health', icon: 'heart-pulse' }, meds,       () => '/health/meds', null,
+  makeSection('nav.notes',    'notes',    notes,    (i) => `/notes?open=${i.id}`);
+  makeSection('nav.contacts', 'contacts', contacts, (i) => `/contacts?open=${i.id}`);
+  makeSection('nav.shopping', 'shopping', items,    (i) => `/shopping?list=${i.list_id}&highlight=${i.id}`);
+  makeSection('health.tabs.meds',     'health', meds,       () => '/health/meds', null,
     (i) => i.dosage_text || '');
-  makeSection('health.tabs.activity', { module: 'health', icon: 'heart-pulse' }, activities, () => '/health/activity', activityLabel,
+  makeSection('health.tabs.activity', 'health', activities, () => '/health/activity', activityLabel,
     (i) => (i.performed_at ? formatDate(i.performed_at) : ''));
 
   // Die Siegel-Icons kommen als data-lucide-Platzhalter; der Treffer-Pfad
@@ -2998,34 +2995,43 @@ function applyModuleReadonly(moduleName, pageWrapper) {
 function navItems({ catalog = false } = {}) {
   if (currentUser?.access_scope === 'split_guest') {
     return [
-      { path: '/budget', label: t('splitExpenses.tabLabel'), icon: 'receipt-text', module: 'budget' },
+      { path: '/budget', label: t('splitExpenses.tabLabel'), icon: MODULE_ICON['split-expenses'], module: 'budget' },
     ];
   }
+  /* DAS ZEICHEN STEHT NICHT HIER, SONDERN IN MODULE_ICON (nav-icons.js).
+   *
+   * Es stand hier, und daneben ein zweites Mal im Dashboard (`widgetIcon`) und
+   * ein drittes Mal in der Kachelreihe - drei Tabellen fuer eine Zuordnung, und
+   * sie sind auseinandergelaufen: Notizen fuehrte in der Leiste einen Zettel
+   * und im Widget-Kopf eine Stecknadel, Haushaltshilfe hier einen Pinsel und
+   * auf der Kachel Funkeln. Die Liste unten sagt jetzt, WAS es gibt und wo es
+   * steht; WIE es aussieht, sagt eine Stelle. */
+  const withIcon = (item) => ({ ...item, icon: MODULE_ICON[item.module] });
   const baseItems = [
     // Overview
-    { path: '/',          label: t('nav.dashboard'), icon: 'layout-dashboard', module: 'dashboard', section: NAV_SECTION.overview },
+    { path: '/',          label: t('nav.dashboard'), module: 'dashboard', section: NAV_SECTION.overview },
     // Plan
-    { path: '/calendar',  label: t('nav.calendar'),  icon: 'calendar',         module: 'calendar',  section: NAV_SECTION.plan },
-    { path: '/tasks',     label: t('nav.tasks'),     icon: 'check-square',     module: 'tasks',     section: NAV_SECTION.plan },
-    { path: '/notes',     label: t('nav.notes'),     icon: 'sticky-note',      module: 'notes',     section: NAV_SECTION.plan },
+    { path: '/calendar',  label: t('nav.calendar'),  module: 'calendar',  section: NAV_SECTION.plan },
+    { path: '/tasks',     label: t('nav.tasks'),     module: 'tasks',     section: NAV_SECTION.plan },
+    { path: '/notes',     label: t('nav.notes'),     module: 'notes',     section: NAV_SECTION.plan },
     // Haushalt — Kitchen-Gruppe zuerst, dann die übrigen Haushalts-Module
-    { path: '/meals',     label: t('nav.meals'),     icon: 'utensils',      module: 'meals',    section: NAV_SECTION.household, kitchenGroup: true },
-    { path: '/recipes',   label: t('nav.recipes'),   icon: 'book-text',     module: 'recipes',  section: NAV_SECTION.household, kitchenGroup: true },
-    { path: '/shopping',  label: t('nav.shopping'),  icon: 'shopping-cart', module: 'shopping', section: NAV_SECTION.household, kitchenGroup: true },
-    { path: '/pantry',    label: t('nav.pantry'),    icon: 'archive',       module: 'pantry',   section: NAV_SECTION.household, kitchenGroup: true },
-    { path: '/housekeeping', label: t('nav.housekeeping'), icon: 'paintbrush', module: 'housekeeping', section: NAV_SECTION.household },
-    { path: '/documents', label: t('nav.documents'), icon: 'folder-lock',      module: 'documents',   section: NAV_SECTION.household },
-    { path: '/inventory', label: t('nav.inventory'), icon: 'package',          module: 'inventory',   section: NAV_SECTION.household },
-    { path: '/rewards',   label: t('nav.rewards'),   icon: 'award',            module: 'rewards',     section: NAV_SECTION.household },
+    { path: '/meals',     label: t('nav.meals'),     module: 'meals',    section: NAV_SECTION.household, kitchenGroup: true },
+    { path: '/recipes',   label: t('nav.recipes'),   module: 'recipes',  section: NAV_SECTION.household, kitchenGroup: true },
+    { path: '/shopping',  label: t('nav.shopping'),  module: 'shopping', section: NAV_SECTION.household, kitchenGroup: true },
+    { path: '/pantry',    label: t('nav.pantry'),    module: 'pantry',   section: NAV_SECTION.household, kitchenGroup: true },
+    { path: '/housekeeping', label: t('nav.housekeeping'), module: 'housekeeping', section: NAV_SECTION.household },
+    { path: '/documents', label: t('nav.documents'), module: 'documents',   section: NAV_SECTION.household },
+    { path: '/inventory', label: t('nav.inventory'), module: 'inventory',   section: NAV_SECTION.household },
+    { path: '/rewards',   label: t('nav.rewards'),   module: 'rewards',     section: NAV_SECTION.household },
     // Menschen
-    { path: '/contacts',  label: t('nav.contacts'),  icon: 'book-user',        module: 'contacts',    section: NAV_SECTION.people },
-    { path: '/birthdays', label: t('nav.birthdays'), icon: 'cake',             module: 'birthdays',   section: NAV_SECTION.people },
-    { path: '/health',    label: t('nav.health'),    icon: 'heart-pulse',      module: 'health',      section: NAV_SECTION.people },
+    { path: '/contacts',  label: t('nav.contacts'),  module: 'contacts',    section: NAV_SECTION.people },
+    { path: '/birthdays', label: t('nav.birthdays'), module: 'birthdays',   section: NAV_SECTION.people },
+    { path: '/health',    label: t('nav.health'),    module: 'health',      section: NAV_SECTION.people },
     // Finanzen
-    { path: '/budget',    label: t('nav.budget'),    icon: 'wallet',           module: 'budget',      section: NAV_SECTION.finance },
+    { path: '/budget',    label: t('nav.budget'),    module: 'budget',      section: NAV_SECTION.finance },
     // Settings ist am Ende gepinnt (siehe unten).
-    { path: '/settings',  navHref: '/settings?view=domains', label: t('nav.settings'),  icon: 'settings',         module: 'settings',    section: NAV_SECTION.household },
-  ];
+    { path: '/settings',  navHref: '/settings?view=domains', label: t('nav.settings'),  module: 'settings',    section: NAV_SECTION.household },
+  ].map(withIcon);
   const thirdPartyItems = _thirdPartyModules
     .filter((module) => module.enabled && module.status === 'enabled' && module.menu?.show && module.route?.path)
     .map((module) => ({
@@ -3088,7 +3094,7 @@ function mobileNavigationCandidates() {
           candidates.push({
             ...kitchen,
             label: t('nav.kitchen'),
-            icon: 'utensils',
+            icon: MODULE_ICON.kitchen,
             navId: 'kitchen',
           });
         }
@@ -3301,18 +3307,7 @@ function navItemEl({ path, navHref, label, icon, module: mod, accent, navId }) {
   iconWrap.className = 'nav-item__icon-wrap';
   const well = document.createElement('div');
   well.className = 'nav-item__icon-well';
-  const iconFactory = NAV_ICONS[icon];
-  if (iconFactory) {
-    const svg = iconFactory();
-    svg.classList.add('nav-item__icon');
-    well.appendChild(svg);
-  } else {
-    const i = document.createElement('i');
-    i.dataset.lucide = icon;
-    i.className = 'nav-item__icon';
-    i.setAttribute('aria-hidden', 'true');
-    well.appendChild(i);
-  }
+  well.appendChild(moduleIconEl(icon, 'nav-item__icon'));
   iconWrap.appendChild(well);
   const span = document.createElement('span');
   span.className = 'nav-item__label';
@@ -3339,18 +3334,7 @@ function kitchenNavButtonEl() {
   iconWrap.className = 'nav-item__icon-wrap';
   const well = document.createElement('div');
   well.className = 'nav-item__icon-well';
-  const iconFactory = NAV_ICONS.utensils;
-  if (iconFactory) {
-    const svg = iconFactory();
-    svg.classList.add('nav-item__icon');
-    well.appendChild(svg);
-  } else {
-    const icon = document.createElement('i');
-    icon.dataset.lucide = 'utensils';
-    icon.className = 'nav-item__icon';
-    icon.setAttribute('aria-hidden', 'true');
-    well.appendChild(icon);
-  }
+  well.appendChild(moduleIconEl(MODULE_ICON.kitchen, 'nav-item__icon'));
   iconWrap.appendChild(well);
 
   const label = document.createElement('span');
@@ -3369,7 +3353,12 @@ function moreNavButtonEl() {
   moreBtn.className = 'nav-item nav-item--more';
   moreBtn.id = 'more-btn';
   moreBtn.type = 'button';
-  moreBtn.style.setProperty('--item-module-accent', 'var(--color-accent)');
+  // KEIN --item-module-accent: „Mehr" ist kein Modul, sondern ein Ueberlauf.
+  // Hier stand `var(--color-accent)`, gesetzt fuer den Fokusring, den die
+  // Eine-Stimme-Regel seither aus der Leiste genommen hat - eine Zeile, die
+  // ihren Grund ueberlebt hat. Seit die Zeichen der Leiste ihren Modulton
+  // tragen (2026-08-17) waere sie sichtbar falsch: der Ueberlauf saehe aus wie
+  // der aktive Tab. Ohne Angabe bleibt er tertiaer, wie die Regel es vorsieht.
   moreBtn.setAttribute('aria-label', t('nav.more'));
   moreBtn.setAttribute('title', t('nav.more'));
   // Öffnet das „Mehr"-Sheet (role=dialog): aria-haspopup kündigt das Popup an,
@@ -3382,18 +3371,7 @@ function moreNavButtonEl() {
   iconWrap.className = 'nav-item__icon-wrap';
   const well = document.createElement('div');
   well.className = 'nav-item__icon-well';
-  const iconFactory = NAV_ICONS['more-horizontal'];
-  if (iconFactory) {
-    const svg = iconFactory();
-    svg.classList.add('nav-item__icon');
-    well.appendChild(svg);
-  } else {
-    const icon = document.createElement('i');
-    icon.dataset.lucide = 'more-horizontal';
-    icon.className = 'nav-item__icon';
-    icon.setAttribute('aria-hidden', 'true');
-    well.appendChild(icon);
-  }
+  well.appendChild(moduleIconEl('more-horizontal', 'nav-item__icon'));
   iconWrap.appendChild(well);
 
   const label = document.createElement('span');
@@ -3530,7 +3508,7 @@ function sidebarKitchenEl() {
   const item = {
     path: getLastKitchenRoute(),
     label: t('nav.kitchen'),
-    icon: 'utensils',
+    icon: MODULE_ICON.kitchen,
     module: navItems().find((n) => n.path === getLastKitchenRoute())?.module || 'meals',
     navId: 'kitchen',
   };
@@ -3554,18 +3532,7 @@ function moreItemEl({ path, navHref, label, icon, module: mod, accent, navId }) 
   // Markensiegel (Block 2): das Well nimmt Form und Material vom Baustein,
   // die Grid-Groesse und die Akzent-Weiterleitung stehen in layout.css.
   well.className = 'module-seal more-item__icon-well';
-  const iconFactory = NAV_ICONS[icon];
-  if (iconFactory) {
-    const svg = iconFactory();
-    svg.classList.add('more-item__icon');
-    well.appendChild(svg);
-  } else {
-    const i = document.createElement('i');
-    i.dataset.lucide = icon;
-    i.className = 'more-item__icon';
-    i.setAttribute('aria-hidden', 'true');
-    well.appendChild(i);
-  }
+  well.appendChild(moduleIconEl(icon, 'more-item__icon'));
   const span = document.createElement('span');
   span.className = 'more-item__label';
   span.textContent = label;

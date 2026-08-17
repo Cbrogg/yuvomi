@@ -4152,9 +4152,11 @@ svg.weather-forecast__icon {
   border: 1px solid var(--color-border-subtle);
 }
 
-[data-wall-night] .wall-row__seal {
-  --seal-base: var(--color-bg);
-}
+/* HIER STAND `--seal-base: var(--color-bg)` fuer das Wand-Siegel: die
+ * Nachtflaeche gibt ihren Traeger auf, also musste die Toenung gegen den
+ * Seitengrund mischen statt gegen die Liste. Mit dem Vollton-Siegel gibt es
+ * keine Mischung mehr - die Scheibe traegt ihre Farbe selbst und ist nachts so
+ * lesbar wie tags. */
 
 [data-wall-night] .clock-widget--wall .clock-widget__time {
   font-weight: var(--font-weight-regular);
