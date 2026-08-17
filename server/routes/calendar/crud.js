@@ -70,7 +70,7 @@ router.get('/:id', (req, res) => {
 // Neuen Termin anlegen.
 // Body: { title, description?, start_datetime, end_datetime?,
 //         all_day?, location?, color?, icon?, assigned_to?,
-//         recurrence_rule? }
+//         recurrence_rule?, countdown? }
 // Response: { data: Event }
 // --------------------------------------------------------
 router.post('/', async (req, res) => {
@@ -130,8 +130,9 @@ router.post('/', async (req, res) => {
           (title, description, start_datetime, end_datetime, all_day,
            location, color, icon, assigned_to, created_by, recurrence_rule,
            attachment_name, attachment_mime, attachment_size, attachment_data, attachment_document_id,
-           target_caldav_account_id, target_caldav_calendar_url, target_google_calendar_id, visibility)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           target_caldav_account_id, target_caldav_calendar_url, target_google_calendar_id, visibility,
+           countdown)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         vTitle.value, vDesc.value,
         vStart.value, vEnd.value,
@@ -146,7 +147,8 @@ router.post('/', async (req, res) => {
         vCaldav.value.accountId,
         vCaldav.value.calendarUrl,
         vGoogle.value,
-        normalizeVisibility(req.body.visibility)
+        normalizeVisibility(req.body.visibility),
+        req.body.countdown ? 1 : 0
       );
       setEventAssignments(db.get(), result.lastInsertRowid, userIds);
       return result.lastInsertRowid;
@@ -332,6 +334,12 @@ router.put('/:id', async (req, res) => {
             target_caldav_calendar_url = ?,
             target_google_calendar_id  = ?,
             visibility      = ?,
+            -- Anzeigeeinstellung, kein gespiegeltes Feld (#647): sie steht nicht
+            -- in MIRRORED_FIELDS und löst deshalb keinen Push aus. Wie bei den
+            -- Nachbarfeldern gilt „nicht mitgeschickt" als „nicht angefasst" -
+            -- das PUT eines Clients, der das Feld nicht kennt (Modul, ältere
+            -- App), darf eine gesetzte Markierung nicht stillschweigend löschen.
+            countdown       = ?,
             user_modified   = ?
         WHERE id = ?
       `).run(
@@ -356,6 +364,7 @@ router.put('/:id', async (req, res) => {
         req.body.visibility !== undefined
           ? normalizeVisibility(req.body.visibility, event.visibility)
           : event.visibility,
+        req.body.countdown !== undefined ? (req.body.countdown ? 1 : 0) : event.countdown,
         userModified,
         id
       );

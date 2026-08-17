@@ -804,6 +804,7 @@ router.post('/', (req, res) => {
       is_recurring    = 0,
       recurrence_rule = null,
       recurrence_from_completion = 0,
+      countdown       = 0,
     } = req.body;
     // Ohne expliziten Wert greift der Haushalt-Standard (#578) — aber nur für
     // Hauptaufgaben: Subtasks sind Checklisten-Punkte der Elternaufgabe und
@@ -842,12 +843,13 @@ router.post('/', (req, res) => {
         INSERT INTO tasks
           (title, description, category, priority, start_date, due_date, due_time,
            assigned_to, created_by, parent_task_id, is_recurring, recurrence_rule,
-           recurrence_from_completion, points, visibility)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           recurrence_from_completion, points, visibility, countdown)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         title.trim(), description, category, priority,
         start_date, due_date, due_time, firstUid, req.authUserId || req.session.userId, parent_task_id,
-        is_recurring ? 1 : 0, recurrence_rule, recurrence_from_completion ? 1 : 0, points, visibility
+        is_recurring ? 1 : 0, recurrence_rule, recurrence_from_completion ? 1 : 0, points, visibility,
+        countdown ? 1 : 0
       );
       setAssignments(db.get(), result.lastInsertRowid, userIds);
       if (req.body.tags !== undefined) setTags(db.get(), result.lastInsertRowid, req.body.tags);
@@ -907,6 +909,10 @@ router.put('/:id', (req, res) => {
       is_recurring    = task.is_recurring,
       recurrence_rule = task.recurrence_rule,
       recurrence_from_completion = task.recurrence_from_completion,
+      // Nicht mitgeschickt heisst „nicht angefasst" (#647): ein PATCH aus einer
+      // Liste oder ein Modul, das das Feld nicht kennt, darf eine gesetzte
+      // Markierung nicht stillschweigend löschen.
+      countdown       = task.countdown,
     } = req.body;
     const points = req.body.points !== undefined ? clampPoints(req.body.points) : task.points;
     const visibility = req.body.visibility !== undefined
@@ -955,12 +961,12 @@ router.put('/:id', (req, res) => {
           title = ?, description = ?, category = ?, priority = ?,
           status = ?, start_date = ?, due_date = ?, due_time = ?, assigned_to = ?,
           is_recurring = ?, recurrence_rule = ?, recurrence_from_completion = ?,
-          points = ?, visibility = ?
+          points = ?, visibility = ?, countdown = ?
         WHERE id = ?
       `).run(title.trim(), description, category, priority,
              status, start_date, due_date, due_time, firstUid,
              is_recurring ? 1 : 0, recurrence_rule, recurrence_from_completion ? 1 : 0,
-             points, visibility, req.params.id);
+             points, visibility, countdown ? 1 : 0, req.params.id);
       setAssignments(db.get(), task.id, userIds);
       if (req.body.tags !== undefined) setTags(db.get(), task.id, req.body.tags);
       if (syncTarget !== undefined) {
@@ -1168,8 +1174,8 @@ function spawnRecurrenceFollowup(task) {
     const newTask = db.get().prepare(`
       INSERT INTO tasks (title, description, category, priority, status,
         start_date, due_date, due_time, assigned_to, created_by, is_recurring, recurrence_rule,
-        points, visibility, recurrence_from_completion, recurrence_origin_id)
-      VALUES (?, ?, ?, ?, 'open', ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?)
+        points, visibility, recurrence_from_completion, countdown, recurrence_origin_id)
+      VALUES (?, ?, ?, ?, 'open', ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?)
     `).run(
       task.title, task.description, task.category, task.priority,
       shiftedStartDate(task.start_date, task.due_date, nextDate),
@@ -1179,6 +1185,12 @@ function spawnRecurrenceFollowup(task) {
       // Fälligkeitsrechnung zurück - lautlos, weil die Folgeinstanz sonst
       // vollständig aussieht (wie bei den Tags oben).
       task.recurrence_from_completion ? 1 : 0,
+      // Und aus demselben Grund die Countdown-Markierung (#647). Sie ist bei
+      // dieser Sorte Aufgabe sogar der Anlass: „immer wieder N Jahre" (Führer-
+      // schein) oder „N Tage ab Reinigung" (Luftfilter) ist eine Serie, die ab
+      // Erledigung rechnet - der Countdown, der genau davon lebt, dürfte beim
+      // ersten Zurücksetzen nicht verschwinden.
+      task.countdown ? 1 : 0,
       task.id
     );
     setAssignments(db.get(), newTask.lastInsertRowid, existingAssignments);

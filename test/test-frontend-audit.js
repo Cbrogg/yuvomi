@@ -11000,7 +11000,11 @@ test('kein Inline-Style in public/ schreibt einen Design-Wert als Literal', () =
  * Einladung, sie beim naechsten Mal falsch zu belegen.
  */
 const TINT_SOURCE = /--(module-[\w-]+|meal-[\w-]+|cycle-[\w-]+|layer-color|note-color|holi-color|ev-color|c-accent|active-module-accent|item-module-accent|color-accent|color-warning|color-danger|color-success|today-card-accent|widget-accent|subscription-color|rw-[\w-]+)/;
-const TINT_USER_COLOUR = /--(layer-color|note-color|holi-color|ev-color|subscription-color|c-accent)/;
+/* `countdown-accent` (#647) steht hier, weil die Kachel als EINZIGE Variable
+ * beides fuehrt: bei einer Aufgabenzeile den kuratierten Modulton, bei einer
+ * Terminzeile die vom Nutzer gewaehlte Farbe des Termins. Wer beide Faelle in
+ * einer Deklaration bedient, faellt unter die strengere Regel. */
+const TINT_USER_COLOUR = /--(layer-color|note-color|holi-color|ev-color|subscription-color|c-accent|countdown-accent)/;
 /** Ab hier ist die Farbe die Flaeche und wird verdunkelt, statt beigemischt. */
 const TINT_OPAQUE_FLOOR = 45;
 
@@ -11033,6 +11037,62 @@ test('jede Toenung nimmt eine Stufe der Toenungsskala', () => {
     + 'Waehle die Stufe nach der ROLLE: wash (untergreift fremden Inhalt), state\n'
     + '(Zustand), surface (die Toenung IST das Element), raised (Zustand darauf),\n'
     + `hint (Andeutung), ink (Text), shadow.\n${offenders.join('\n')}`,
+  );
+});
+
+/**
+ * REGEL: eine NUTZERFARBE als Textfarbe traegt ein gemessenes Rezept, nie eine
+ * Stufe der Toenungsskala.
+ *
+ * DIE LUECKE, DIE DIESE SONDE SCHLIESST, IST DIE HAELFTE DES GUARDS DARUEBER,
+ * DIE NIE URTEILT. Er springt bei `pct === undefined` heraus - eine benannte
+ * Stufe ist per Definition erlaubt, das ist ja seine ganze Aussage. Damit war
+ * ausgerechnet der Fall unsichtbar, den DESIGN.md ausdruecklich verbietet: die
+ * Ink-Stufe auf einer frei gewaehlten Farbe. Der Kommentar ueber TINT_SOURCE
+ * nennt „Nutzerfarben als Text" als eines von drei Dingen, die keine Toenung
+ * sind - er verweist damit auf eine Regel, die kein Test hielt.
+ *
+ * Aufgefallen ist es an `.countdown-item__days` (#647), das `--tint-ink` auf
+ * die Farbe des Termins legte, abgeschaut bei den Geburtstagen, die einen
+ * KURATIERTEN Modulton fuehren. Der Guard darueber war dabei gruen - und zwar
+ * doppelt: die Stufe war benannt (also ausgenommen) und `--countdown-accent`
+ * stand in keiner Signatur. Erst die Korrektur auf das gemessene 35-%-Rezept
+ * hat ihn rot gefaerbt, weil eine ROHE Zahl ihn ueberhaupt erst urteilen laesst.
+ * Ein Guard, den nur die richtige Antwort weckt, ist keiner.
+ *
+ * Warum nicht in die Schleife darueber: die beantwortet „welche Stufe", diese
+ * „ueberhaupt eine Stufe". Zwei Fragen an dieselbe Deklaration, und die zweite
+ * verlangt genau die Zeilen, die die erste durchwinkt.
+ */
+test('eine Nutzerfarbe als Textfarbe nimmt ein gemessenes Rezept, keine Toenungsstufe', () => {
+  const offenders = [];
+  let seen = 0;
+  for (const file of readdirSync(new URL('../public/styles/', import.meta.url)).filter((n) => n.endsWith('.css'))) {
+    if (file === 'tokens.css') continue;
+    for (const rule of eachRule(read(`../public/styles/${file}`))) {
+      // Beide Schreibweisen einsammeln - die rohe Zahl zaehlt fuer die
+      // Reichweite, die Stufe ist der Befund.
+      for (const mix of rule.body.matchAll(/([a-z-]+)\s*:[^;]*?color-mix\(\s*in srgb\s*,\s*([^;{}]+?)\s+(?:(\d+)%|var\((--tint-[a-z]+)\))\s*,/g)) {
+        const [, prop, source, pct, step] = mix;
+        if (prop !== 'color' || !TINT_USER_COLOUR.test(source)) continue;
+        seen += 1;
+        if (pct !== undefined) continue;                       // gemessenes Rezept - erlaubt
+        offenders.push(`${file}: ${rule.selector} -> color: ${step} auf ${source.trim()}`);
+      }
+    }
+  }
+  // Reichweiten-Nachweis NACH der Messung: ohne ihn haelt die Zusicherung auch
+  // dann, wenn TINT_USER_COLOUR ins Leere greift. Der Bestand fuehrt fuenf
+  // solche Deklarationen (vier im Kalender, eine auf dem Dashboard).
+  assert.ok(seen >= 4, `Nur ${seen} Nutzerfarben-Textfarben gesehen - die Signatur greift nicht mehr.`);
+  assert.deepEqual(
+    offenders,
+    [],
+    'Eine Toenungsstufe als Textfarbe auf einer frei waehlbaren Nutzerfarbe (DESIGN.md,\n'
+    + 'Grenze der Akzent-auf-Toenung-Regel). Die Stufen sind an KURATIERTEN Modultoenen\n'
+    + 'gemessen und brechen an den Enden der Helligkeitsachse - weiss auf light 1.92:1.\n'
+    + 'Nimm das gemessene Rezept (35 % wie im Kalender) oder ein Token\n'
+    + `(--color-text-primary).\n${offenders.join('\n')}`,
   );
 });
 

@@ -1101,6 +1101,23 @@
   min-width: 0;
 }
 
+/* HINWEISZEILE IM TERMIN-DIALOG (#647, Critique 2026-08-17).
+ *
+ * Dieselben drei Werte wie `.task-field-hint` in tasks.css - derselbe Satz in
+ * derselben Rolle darf nicht zweimal verschieden aussehen. Sie steht HIER und
+ * nicht als `.form-hint`, weil die Regel dafuer in settings.css liegt und der
+ * Router pro Seite genau ein Page-CSS laedt: auf /calendar ist sie nicht
+ * geladen, und der Hinweis fiel auf den geerbten Koerpertext zurueck (16px,
+ * volle Primaertinte). Er war damit lauter als sein eigener Schalter.
+ *
+ * Der eigentliche Fehler sitzt eine Ebene hoeher - `.form-hint` gehoert nicht
+ * in ein Page-CSS, wenn elf Module sie benutzen. Das ist ein eigener Umzug. */
+.cal-field-hint {
+  margin-top: var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+}
+
 .event-icon-picker__trigger {
   width: 52px;
   height: 44px;

@@ -9,6 +9,7 @@ import express from 'express';
 import * as db from '../db.js';
 import { hydrateBirthday } from '../services/birthdays.js';
 import { getUpcomingEvents } from '../services/calendar-events.js';
+import { getCountdowns } from '../services/countdowns.js';
 import { visibilityWhere } from '../services/visibility.js';
 import { resolveBudgetMode } from '../services/budget-visibility.js';
 
@@ -44,7 +45,8 @@ const router = express.Router();
  *   pinnedNotes:    Note[],            // Angepinnte Notizen (max. 3)
  *   users:          User[],            // Alle User (für Avatar-Farben)
  *   memberTodayTasks: {user_id, open_count}[], // Heute fällige/überfällige offene Aufgaben je Mitglied
- *   tasksDoneToday: number             // Heute fällige, bereits erledigte Aufgaben
+ *   tasksDoneToday: number,            // Heute fällige, bereits erledigte Aufgaben
+ *   countdowns:     Countdown[]        // Als Countdown markierte Termine + Aufgaben (#647)
  * }
  */
 router.get('/', (req, res) => {
@@ -264,6 +266,22 @@ router.get('/', (req, res) => {
     log.error('birthdays error:', err.message);
     result.birthdays = [];
     result.birthdayCount = 0;
+  }
+
+  // Countdowns (#647): Termine und Aufgaben, die jemand als Countdown markiert
+  // hat, in EINER nach Nähe sortierten Liste. `todayLocalKey` und nicht der
+  // UTC-Tag: „noch 1 Tag" gegenüber „heute" entscheidet sich am Kalendertag des
+  // Betrachters, und westlich von UTC ist der ein anderer.
+  try {
+    const countdowns = getCountdowns(d, { userId, todayKey: todayLocalKey });
+    result.countdowns = countdowns.items;
+    // Wie `birthdayCount` neben `birthdays`: die Liste ist der Vorrat für die
+    // größte Kachelfassung, die Zahl ist die Wahrheit über den Bestand.
+    result.countdownTotal = countdowns.total;
+  } catch (err) {
+    log.error('countdowns error:', err.message);
+    result.countdowns = [];
+    result.countdownTotal = 0;
   }
 
   try {

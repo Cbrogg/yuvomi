@@ -1525,7 +1525,7 @@ function layoutOhne(missing) {
 
 test('Widget-Merge: eine fehlende Id landet an ihrer Default-Position, nicht hinten', () => {
   const geprueft = widgets.WIDGET_IDS.length;
-  assert(geprueft === 15, `Reichweite: ${geprueft} Ids geprueft, nicht die erwarteten 15`);
+  assert(geprueft === 16, `Reichweite: ${geprueft} Ids geprueft, nicht die erwarteten 16`);
   const falsch = widgets.WIDGET_IDS.filter((id) => {
     const merged = widgets.normalizeDashboardConfig(layoutOhne(id));
     return merged.map((w) => w.id).join(',') !== widgets.WIDGET_IDS.join(',');
@@ -1573,7 +1573,10 @@ test('Widget-Merge: ein umsortiertes Layout laesst den Neuzugang seinem Vorgaeng
     .map((id, i) => ({ id, order: i, visible: i < 6, size: '1x1' }));
   const merged = widgets.normalizeDashboardConfig(demo);
   const sichtbar = merged.filter((w) => w.visible).map((w) => w.id);
-  assert(sichtbar.join(',') === 'weather,metrics,family,budget,birthdays,rewards,notes',
+  // `countdown` ist der zweite Neuzugang in diesem Layout (#647) und belegt
+  // dieselbe Zusicherung ein zweites Mal: sein Vorgaenger in WIDGET_IDS ist
+  // `birthdays`, und dorthin gehoert er - nicht ans Ende.
+  assert(sichtbar.join(',') === 'weather,metrics,family,budget,birthdays,countdown,rewards,notes',
     `Neuzugang an unerwarteter Stelle: ${sichtbar.join(',')}`);
   assert(widgets.isUserOrderedConfig(merged),
     'ein echt umsortiertes Layout muss umsortiert bleiben - sonst packt dense es um');

@@ -937,6 +937,29 @@ ${syncTargetFieldHtml(task)}
         <p class="task-field-hint field-hint--warn" id="task-visibility-warning" role="status" hidden><i data-lucide="alert-triangle" aria-hidden="true"></i><span>${t('common.visibility.assigneesNobodyHint')}</span></p>
       </div>
 
+      <!-- #647: die Haelfte, die @jamespurnama1 beschrieben hat. Fuehrerschein
+           und Luftfilter sind keine Termine, und ihre Ruecksetzung haengt an
+           einer DAUER, nicht an einem Datum - das ist genau eine wiederkehrende
+           Aufgabe „ab Erledigung" (#658), die es hier schon gibt. Der Schalter
+           haengt deshalb an der Aufgabe und nicht an einem dritten Objekt.
+           Im Hauptbereich aus demselben Grund wie im Kalender: hinter dem
+           Aufklapper faende ihn niemand, der nicht danach sucht. -->
+      <div class="form-group" style="margin-top:var(--space-4)">
+        <label class="toggle" style="margin:0">
+          <input type="checkbox" id="task-countdown" name="countdown" aria-describedby="task-countdown-hint"
+                 ${task?.countdown ? 'checked' : ''}>
+          <span class="toggle__track"></span>
+          <span>${t('tasks.countdownToggle')}</span>
+        </label>
+        <p class="task-field-hint" id="task-countdown-hint">${t('tasks.countdownHint')}</p>
+        <!-- DER SCHALTER SPERRT SICH SELBST, statt sich auf die Zeile darueber
+             zu verlassen. Ein Hinweis ist keine Fehlervermeidung: ohne
+             Faelligkeit war der Schalter voll bedienbar, speicherte, meldete
+             „Aufgabe erstellt." - und der Countdown erschien nie. Wer sich
+             darauf verlaesst, erfaehrt es, wenn die Frist vorbei ist. -->
+        <p class="task-field-hint field-hint--warn" id="task-countdown-warning" role="status" hidden><i data-lucide="alert-triangle" aria-hidden="true"></i><span>${t('tasks.countdownNeedsDue')}</span></p>
+      </div>
+
       ${advancedSection(advancedFieldsHtml, { label: advancedLabel })}
 
       ${isEdit ? `
@@ -1171,6 +1194,39 @@ function wireVisibilityWarning(panel, selectSel, msName, warnSel) {
   update();
 }
 
+/**
+ * Der Countdown-Schalter haengt an der Faelligkeit (#647).
+ *
+ * GESPERRT UND NICHT NUR BESCHRIFTET. Die Hilfszeile sagte „Braucht ein
+ * Faelligkeitsdatum" und der Schalter liess sich trotzdem setzen: gespeichert
+ * wurde `countdown: 1` bei `due_date: null`, der Toast meldete Erfolg, und der
+ * Eintrag erschien nie auf der Uebersicht. Ein Hinweis erklaert einen Fehler,
+ * er verhindert ihn nicht.
+ *
+ * Der Haken wird beim Sperren MITGENOMMEN, nicht stehengelassen: ein
+ * abgehakter, grauer Schalter behauptet einen Zustand, den der Server nicht
+ * kennt. Wer die Faelligkeit wieder setzt, findet ihn aus - das ist ehrlicher
+ * als ein Haken, der zurueckkommt, ohne dass jemand ihn gesetzt hat.
+ *
+ * `yuvomi-datepicker` meldet seine Aenderung als `change` am eigenen Element;
+ * `input` kommt aus dem inneren Feld beim Tippen. Beide anhoeren, sonst haengt
+ * der Schalter je nach Bedienweg (Kalenderblatt vs. Tastatur) hinterher.
+ */
+function wireCountdownGate(panel) {
+  const toggle = panel.querySelector('#task-countdown');
+  const due    = panel.querySelector('#task-due-date');
+  const warn   = panel.querySelector('#task-countdown-warning');
+  if (!toggle || !due) return;
+  const update = () => {
+    const hasDue = !!parseDateInput(due.value || '');
+    if (!hasDue && toggle.checked) toggle.checked = false;
+    toggle.disabled = !hasDue;
+    if (warn) warn.hidden = hasDue;
+  };
+  due.addEventListener('change', update);
+  due.addEventListener('input', update);
+  update();
+}
 
 function openTaskModal({ task = null, users = [], reminder = null } = {}, container) {
   const isEdit = !!task;
@@ -1213,6 +1269,7 @@ function wireTaskForm(panel, { task = null, container }) {
   bindRRuleEvents(document, 'task');
   bindUserMultiSelect(panel, 'task_assigned');
   wireVisibilityWarning(panel, '#task-visibility', 'task_assigned', '#task-visibility-warning');
+  wireCountdownGate(panel);
 
   // Tag-Editor (#586)
   renderTagChips(panel);
@@ -1827,6 +1884,16 @@ function renderTaskDetail(task, reminders = [], container = null) {
     { icon: 'paperclip', label: t('tasks.documentsLabel'), node: documentListNode(task.documents) },
     { icon: 'bell', label: t('reminders.sectionTitle'), value: taskReminderSummary(reminders) },
     visibilityRow(task.visibility),
+    // Nur wenn markiert (#647) - eine Zeile „Countdown: nein" an jeder Aufgabe
+    // erklärte ein Feld, statt eine Frage zu beantworten.
+    //
+    // UND NUR MIT FÄLLIGKEIT, weil die Zeile sonst etwas Unwahres sagt. Sie hing
+    // allein an `task.countdown` und behauptete „Zählt auf der Übersicht
+    // herunter" auch dann, wenn es nichts gab, worauf gezählt werden konnte -
+    // eine Falschaussage in der Leseansicht wiegt schwerer als der fehlende
+    // Riegel im Formular, weil sie den Irrtum bestätigt statt ihn zu verhindern.
+    // Der Riegel steht jetzt trotzdem auch dort (`wireCountdownGate`).
+    { icon: 'hourglass', label: t('dashboard.countdownTitle'), value: task.countdown && task.due_date ? t('tasks.countdownDetail') : '' },
     { icon: 'align-left', label: t('tasks.descriptionLabel'), node: descriptionNode(task.description), multiline: true },
     // Ganz unten und immer sichtbar: die Unterhaltung ist der einzige Abschnitt,
     // der auch dann etwas anbietet, wenn er leer ist - nämlich das Eingabefeld.
@@ -2142,6 +2209,7 @@ async function handleFormSubmit(e, container) {
     is_recurring:    rrule.is_recurring ? 1 : 0,
     recurrence_rule: rrule.recurrence_rule,
     recurrence_from_completion: rrule.recurrence_from_completion ? 1 : 0,
+    countdown:       form.querySelector('#task-countdown')?.checked ? 1 : 0,
     points:          Math.max(0, Math.trunc(Number(form.points?.value)) || 0),
   };
   // Das Feld fehlt bei Unteraufgaben und bei bereits gespiegelten Aufgaben - in
