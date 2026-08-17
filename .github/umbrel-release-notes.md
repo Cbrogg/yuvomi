@@ -1,4 +1,4 @@
-<!-- version: 2.17.0 -->
+<!-- version: 2.18.0 -->
 <!--
   Die `releaseNotes` fuer den Umbrel-App-Store, von Hand fuer JEDEN Release
   geschrieben. `umbrel-publish.yml` nimmt den Text unter diesem Kommentar
@@ -29,18 +29,16 @@
     - Leerzeile zwischen den Absaetzen: der Store rendert ein gefaltetes
       YAML-Blockskalar, dort ist die Leerzeile der Absatzumbruch.
 
-  HINWEIS ZU DIESER VERSION: drei gewuenschte Funktionen aus den Discussions
-  (#700, #733, #734), ein Absatz je Thema. Die Migrationen (148, 149) legen nur
-  Spalten und eine Tabelle an und verlangen vom Haushalt nichts - also kein
-  Pflicht-Absatz. Der Absatz zur Uhrzeit gehoert dennoch hinein: er beschreibt
-  eine Korrektur an bereits erfassten Daten, die jemand sonst fuer einen neuen
-  Fehler haelt. Draussen bleibt, was nur Entwickler angeht: der geteilte
-  Baustein, die Nummern der Migrationen, die Suiten.
+  HINWEIS ZU DIESER VERSION: eine einzige gewuenschte Funktion (#647), also
+  zwei Absaetze - was sie tut, und wie man sie einschaltet. Migration 150 legt
+  nur eine Spalte an zwei Tabellen an und verlangt vom Haushalt nichts, also
+  kein Pflicht-Absatz. Draussen bleibt alles, was nur Entwickler angeht: die
+  Nummer der Migration, die Suite, der serverseitige Filter, die Farbregeln.
+  Der Satz zum abgeschalteten Modul steht NICHT drin - er beschreibt einen
+  Fehler, den in dieser Version noch niemand haben konnte.
 -->
-Medication marked "as needed" can finally be taken. Until now the setting existed but nothing in the app let you record such a dose, because every button belonged to a schedule. The Medications tab and the Health overview now share an "As needed" section: one tap records the dose and deducts it from your stock. Give a medication a minimum interval and it also tells you the earliest time for the next one, counted from the dose you actually took, so it reads the same after a reload and on a second device. Taking one earlier is still possible; the app only asks first.
+Anything with a date can now count down to it. Mark a calendar event or a task with "count down on the overview" and a new Key dates tile shows them together, sorted by how near they are - the holiday and the driving licence in one list, each row leading back to where it came from. The wording stays coarse while the date is far off and turns exact once it is near, so "about 3 years" becomes plain days from a month out. Colour tells you how soon rather than where the entry came from, and a date that has just passed stays for another week instead of disappearing on the morning the consequence begins.
 
-Two older problems with the medication log are fixed along the way. A dose recorded without a schedule used to disappear from its own day - missing from the intake history, from the adherence figure and from the CSV export you print for a doctor. And the time of a recorded dose is your clock's time again: doses taken outside UTC were stored shifted by your time zone, so an evening dose could appear hours earlier. New entries are correct from this version on.
+The tile only appears once something is marked, so nothing changes for a household that does not use it. On a task the mark needs a due date and survives the reset of a repeating task, which is the point for anything that comes round again on a duration - a licence every few years, a filter a set number of days after the last change. On an event the mark stays on your server: it is not sent to Google or CalDAV and a sync run does not overwrite it.
 
-Tasks can now hold documents and a conversation. Attach a file to a task by uploading it, dropping it onto the field, or picking something already in Documents; it is filed in a "Tasks" folder and stays linked, and photos show as previews inside the task. Attachments inherit the visibility of their task, so what hangs off a private task stays private. Every task also has comments, where you can mention a family member with @name - they get a notification, but only if they may see that task.
-
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.17.0
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.18.0
