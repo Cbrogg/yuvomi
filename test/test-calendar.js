@@ -438,6 +438,71 @@ test('agendaSegmentKind: Ganztags-Event ist all-day', () => {
   assert(agendaSegmentKind(ev, '2026-06-14') === 'all-day', 'Ganztägig → all-day');
 });
 
+// --------------------------------------------------------
+// Ende um Mitternacht (#804)
+//
+// Ein Zeit-Event, das exakt um Mitternacht endet, belegt den Folgetag nicht.
+// Vor dem Fix galt das Ende als inklusiv: das Event landete im Tages-Bucket des
+// Folgetags UND wurde als mehrtägig eingestuft, wodurch es über isAllDayLike()
+// fälschlich als Ganztags-Balken über beide Tage lief.
+//
+// Die Ganztags-Fälle sind die Gegenprobe: sie speichern ihr Ende ebenfalls als
+// T00:00, meinen es aber INKLUSIV - dort darf die Regel nicht greifen.
+// --------------------------------------------------------
+const { eventEndDate } = calendarHelpers;
+
+test('eventEndDate: Zeit-Event bis Mitternacht endet am Vortag', () => {
+  const ev = { start_datetime: '2026-06-19T21:00', end_datetime: '2026-06-20T00:00', all_day: 0 };
+  assert(eventEndDate(ev) === '2026-06-19', 'Fr 21:00–24:00 endet am Freitag');
+});
+
+test('eventEndDate: Zeit-Event mit Restminute belegt den Folgetag', () => {
+  const ev = { start_datetime: '2026-06-19T21:00', end_datetime: '2026-06-20T00:01', all_day: 0 };
+  assert(eventEndDate(ev) === '2026-06-20', 'Ende nach Mitternacht → Folgetag zählt');
+});
+
+test('eventEndDate: mehrtägiges Zeit-Event bis Mitternacht verliert nur den Schlusstag', () => {
+  const ev = { start_datetime: '2026-06-14T09:00', end_datetime: '2026-06-19T00:00', all_day: 0 };
+  assert(eventEndDate(ev) === '2026-06-18', 'Endet am 18., nicht am 19.');
+});
+
+test('eventEndDate: Ganztags-Event behält seinen Schlusstag', () => {
+  // Regressionsschutz: Ganztags-Events speichern das Ende als T00:00 und meinen
+  // es inklusiv - eine Reise 07.–09.09. darf am 09. nicht verschwinden.
+  const ev = { start_datetime: '2026-09-07T00:00', end_datetime: '2026-09-09T00:00', all_day: 1 };
+  assert(eventEndDate(ev) === '2026-09-09', 'Ganztags-Ende bleibt inklusiv');
+});
+
+test('eventEndDate: datums-only Ende bleibt unangetastet', () => {
+  const ev = { start_datetime: '2026-06-14', end_datetime: '2026-06-16', all_day: 1 };
+  assert(eventEndDate(ev) === '2026-06-16', 'Ohne Zeitanteil greift die Regel nicht');
+});
+
+test('eventEndDate: ohne Enddatum gilt der Starttag', () => {
+  const ev = { start_datetime: '2026-06-14T09:00', end_datetime: null, all_day: 0 };
+  assert(eventEndDate(ev) === '2026-06-14', 'Kein Ende → Starttag');
+});
+
+test('eventEndDate: Ende vor dem Start fällt auf den Starttag zurück', () => {
+  const ev = { start_datetime: '2026-06-14T09:00', end_datetime: '2026-06-13T00:00', all_day: 0 };
+  assert(eventEndDate(ev) === '2026-06-14', 'Verdrehtes Ende erzeugt keinen Rückwärtsbereich');
+});
+
+test('isMultiDayEvent: Zeit-Event bis Mitternacht ist nicht mehrtägig (#804)', () => {
+  const ev = { start_datetime: '2026-06-19T21:00', end_datetime: '2026-06-20T00:00', all_day: 0 };
+  assert(isMultiDayEvent(ev) === false, 'Fr 21:00–24:00 ist ein Eintagestermin');
+});
+
+test('isAllDayLike: Zeit-Event bis Mitternacht bleibt im Zeitraster (#804)', () => {
+  const ev = { start_datetime: '2026-06-19T21:00', end_datetime: '2026-06-20T00:00', all_day: 0 };
+  assert(isAllDayLike(ev) === false, 'Darf nicht in die Ganztags-Zeile rutschen');
+});
+
+test('agendaSegmentKind: Zeit-Event bis Mitternacht ist single (#804)', () => {
+  const ev = { start_datetime: '2026-06-19T21:00', end_datetime: '2026-06-20T00:00', all_day: 0 };
+  assert(agendaSegmentKind(ev, '2026-06-19') === 'single', 'Ein Segment am Freitag');
+});
+
 const { clickedTime } = calendarHelpers;
 
 /* Die Stundenhöhe kommt nicht mehr aus einer Konstante in calendar.js, sondern

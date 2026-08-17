@@ -772,7 +772,7 @@ function buildDayIndex() {
   const hi = state.rangeTo   || '';
   for (const e of state.events) {
     const start = localDate(e.start_datetime);
-    const end   = e.end_datetime ? localDate(e.end_datetime) : start;
+    const end   = eventEndDate(e);
     // Auf das geladene Fenster klammern, damit mehrtägige/fehlerhafte Events
     // keinen unbegrenzten Bereich erzeugen.
     let from = lo && start < lo ? lo : start;
@@ -812,16 +812,38 @@ function eventsOnDay(dateStr) {
     ? (_dayIndex.events.get(dateStr) ?? [])
     : state.events.filter((e) => {
         const start = localDate(e.start_datetime);
-        const end   = e.end_datetime ? localDate(e.end_datetime) : start;
+        const end   = eventEndDate(e);
         return start <= dateStr && end >= dateStr;
       });
   return state.assignedToMe ? list.filter(belongsToMe) : list;
 }
 
+/**
+ * Letzter Kalendertag, auf dem ein Event erscheint.
+ *
+ * Ein Zeit-Event, das exakt um Mitternacht endet, belegt den Folgetag nicht:
+ * 21:00-24:00 ist ein Freitagstermin, kein Freitag-und-Samstag-Termin (#804).
+ * Ohne diese Korrektur galt das Ende als inklusiv, das Event landete im
+ * Tages-Bucket des Folgetags und wurde zusaetzlich als mehrtaegig eingestuft -
+ * dadurch rutschte es ueber isAllDayLike() faelschlich in die Ganztags-Zeile.
+ *
+ * Ganztags-Events sind bewusst ausgenommen: sie speichern ihr Ende als
+ * T00:00 und meinen es INKLUSIV (eine Reise 07.-09.09. endet auf
+ * '2026-09-09T00:00'). Die Regel gilt daher nur fuer Zeit-Events.
+ */
+function eventEndDate(ev) {
+  const start = localDate(ev.start_datetime);
+  if (!ev.end_datetime) return start;
+  const end = localDate(ev.end_datetime);
+  if (end <= start) return start;
+  if (ev.all_day || !ev.end_datetime.includes('T')) return end;
+  return localTime(ev.end_datetime) === '00:00' ? addDays(end, -1) : end;
+}
+
 /** True, wenn Start- und Enddatum auf verschiedene Kalendertage fallen. */
 function isMultiDayEvent(ev) {
   if (!ev || !ev.start_datetime || !ev.end_datetime) return false;
-  return localDate(ev.start_datetime) !== localDate(ev.end_datetime);
+  return localDate(ev.start_datetime) !== eventEndDate(ev);
 }
 
 /**
@@ -844,7 +866,7 @@ function agendaSegmentKind(ev, dayStr) {
   if (ev.all_day || !ev.start_datetime.includes('T')) return 'all-day';
   if (!isMultiDayEvent(ev)) return 'single';
   const startDay = localDate(ev.start_datetime);
-  const endDay   = localDate(ev.end_datetime);
+  const endDay   = eventEndDate(ev);
   if (dayStr === startDay) return 'start';
   if (dayStr === endDay)   return 'end';
   return 'middle';
@@ -2273,6 +2295,7 @@ export const __test = {
   newEventDefaultDate,
   filterTasksForCalendar,
   tasksOnDay,
+  eventEndDate,
   isMultiDayEvent,
   isAllDayLike,
   agendaSegmentKind,
