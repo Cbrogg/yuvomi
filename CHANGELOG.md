@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.19.0] - 2026-08-17
+
+### Changed
+
+- **The dark theme has depth again.** Cards rise from the stage instead of sinking into it: every surface steps up one shade while the stage keeps its OLED-friendly value, elevated surfaces carry a hairline of light that black shadows cannot provide on a near-black ground, and the glass of the tab bar and the sheets is mixed from the app's own warm surface instead of a cool system gray. The quiet third text color (placeholders, footnotes) was the last cold leftover of the replaced palette and is now warm in both themes - in the dark it had also been the one text role that would have slipped below its contrast promise on the risen surfaces.
+- **The overview widget head is a title row, not a colored band.** The tinted band behind every widget title - three stacked color statements, counting its tinted divider and the 2px module line on the card's top edge - is gone. A widget now states its module with exactly one element: the round seal next to the title, filled with the module color at full strength, on the widgets and on the small stat tiles alike. The measured reason, recorded in the design notes: a tinted wash cannot carry color on a dark ground, it only lightens - color statements belong to small full-tone elements.
+- **Calendar event blocks lead with their color at full strength.** In the week and all-day rows an event was a pale tinted box with a faint outline; it now carries a 3px edge in its calendar color, the way timeline blocks are drawn in the calendar apps this design measures itself against. Two small companions from the same review: avatar initials in the calendar grids no longer render below readability (from a 20px disc the initials are at least 11px, smaller discs show the member's color alone, the name stays in the tooltip), and task chips in the agenda no longer sit flush against their tinted edge.
+- **Family birthdays show the family member's own color.** The birthday tile tinted every avatar in the module color, so the same person glowed in their profile color on one tile and sat gray on the next. Birthdays linked to a household member now use that member's avatar color; contacts without a link keep the neutral tint on purpose, since they have no identity color in the household. The age badge spells out "turns 37" instead of leaving a bare number next to "in 13 days" - the wording existed but was hidden in a tooltip.
+
 ### Fixed
 
 - **The actions on a meal card are reachable with a screen reader again**. Every card in the weekly plan was itself one large button, and the delete, shopping list and recipe buttons sat inside it. Interactive content inside a button is invalid markup, and assistive technology folds those inner controls into the name of the outer button instead of offering them as controls of their own. The card is now a plain container: opening a meal belongs to its title, and the three actions stand beside it as siblings rather than children. Clicking, keyboard operation and dragging a meal to another slot are unchanged.
