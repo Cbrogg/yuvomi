@@ -909,16 +909,25 @@ function renderUpcomingBirthdays(allBirthdays, size) {
       : b.days_until === 1
         ? t('common.tomorrow')
         : t('dashboard.daysLeft', { count: b.days_until });
+    // Familien-Geburtstage tragen die Identitaetsfarbe des Mitglieds - dieselbe
+    // Farbsprache wie die Familien-Kachel daneben; vorher trug hier jede Zeile
+    // die Modul-Toenung, und dieselbe Person war in einer Kachel leuchtend und
+    // in der naechsten grau (Etappe 4, Critique 2026-08-17). Kontakte OHNE
+    // Verknuepfung behalten die Toenung: sie haben keine Identitaetsfarbe, und
+    // eine erfundene (Hash) spraeche die Farbsprache der Familie fuer Fremde.
+    const avatarStyle = b.family_user_color
+      ? ` style="background-color:${esc(b.family_user_color)};color:${getReadableTextColor(b.family_user_color)}"`
+      : '';
     return `
       <div class="birthday-widget-item" data-route="/birthdays" role="button" tabindex="0">
-        <div class="birthday-widget-item__avatar">
+        <div class="birthday-widget-item__avatar"${avatarStyle}>
           ${b.photo_data ? `<img src="${esc(b.photo_data)}" alt="" loading="lazy">` : `<span>${esc(initials(b.name))}</span>`}
         </div>
         <div class="birthday-widget-item__body">
           <div class="birthday-widget-item__name">${esc(b.name)}</div>
           <div class="birthday-widget-item__meta">${formatDate(b.next_birthday)} · ${daysLabel}</div>
         </div>
-        ${b.next_age != null ? `<div class="birthday-widget-item__age" title="${esc(t('birthdays.turnsAge', { age: b.next_age }))}" aria-label="${esc(t('birthdays.turnsAge', { age: b.next_age }))}">${esc(String(b.next_age))}</div>` : ''}
+        ${b.next_age != null ? `<div class="birthday-widget-item__age">${esc(t('birthdays.turnsAge', { age: b.next_age }))}</div>` : ''}
       </div>
     `;
   }).join('');

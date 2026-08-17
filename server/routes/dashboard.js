@@ -331,7 +331,16 @@ router.get('/', (req, res) => {
   }
 
   if (allows('calendar')) try {
-    const rows = d.prepare('SELECT * FROM birthdays ORDER BY name COLLATE NOCASE ASC').all();
+    // family_user_color: die Identitaetsfarbe des verknuepften Mitglieds. Das
+    // Widget zeigt Familien-Geburtstage damit in derselben Farbsprache wie die
+    // Familien-Kachel; Kontakte ohne Verknuepfung bleiben NULL und behalten im
+    // Frontend die neutrale Modul-Toenung (Etappe 4, Critique 2026-08-17).
+    const rows = d.prepare(`
+      SELECT b.*, u.avatar_color AS family_user_color
+        FROM birthdays b
+        LEFT JOIN users u ON u.id = b.family_user_id
+       ORDER BY b.name COLLATE NOCASE ASC
+    `).all();
     result.birthdays = rows
       .map((row) => hydrateBirthday(row))
       .sort((a, b) => a.days_until - b.days_until || a.name.localeCompare(b.name))

@@ -2663,7 +2663,11 @@ svg.weather-forecast__icon {
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-full);
   /* Trailing Badge statt eingefasster Mini-Box: getoent wie der Avatar,
-   * Textfarbe zur Ink-Seite gemischt (AA, Konvention siehe tokens.css). */
+   * Textfarbe zur Ink-Seite gemischt (AA, Konvention siehe tokens.css).
+   * Seit Etappe 4 (2026-08-17) steht im Badge der ganze Satz („wird 37",
+   * birthdays.turnsAge) statt der nackten Zahl: „37" neben „13 Tage" verlangte
+   * Kopfrechnen, und das Label stand unsichtbar schon im title-Attribut. */
+  white-space: nowrap;
   background: color-mix(in srgb, var(--module-birthdays) var(--tint-surface), var(--color-surface));
   color: color-mix(in srgb, var(--module-birthdays) var(--tint-ink), var(--color-text-primary));
   font-size: var(--text-sm);
