@@ -251,23 +251,14 @@
  * stufenlos ab — die frühere feste 3-→4-Spalten-Stufe war die Quelle der starren
  * halbleeren Spalte. Breite Widgets kappen bei span 3 (siehe 1024px-Block). */
 
-/* Modul-Haarlinie oben auf JEDER Karte - auf Dashboard einheitlich gedämpft. */
-.widget-wrapper > .widget {
-  /* DIE HAARLINIE TRAEGT DEN TON DES WIDGETS, NICHT DEN DER SEITE.
-   *
-   * Hier stand `--active-module-accent`: auf dem Dashboard loest das den
-   * Akzent der UEBERSICHT auf, also bekamen alle Widgets dieselbe Linie -
-   * ausgerechnet in dem Raster, in dem siebzehn Module nebeneinander stehen
-   * und die Linie das einzige durchgehende Farbsignal ist. --widget-accent
-   * setzt jede .widget--*-Klasse zwei Regeln weiter unten.
-   *
-   * Und sie gilt fuer ALLE Groessenklassen: vorher trugen nur row-span>=2-
-   * Karten die Linie - auf dem Default-Board hatte damit genau eine von
-   * fuenf Karten ein Farbsignal, was als Versehen las, nicht als System
-   * (Critique 2026-08-11). Ein durchgehendes Signal ist nur eines, wenn es
-   * durchgeht. */
-  border-top: 2px solid color-mix(in srgb, var(--widget-accent, var(--color-accent)) var(--tint-hint), var(--color-border));
-}
+/* HIER STAND DIE 2px-MODUL-HAARLINIE AN DER OBERKANTE JEDER KARTE - entfallen
+ * mit der Widget-Kopf-Kur (2026-08-17, Etappe 2 der Modernisierung). Sie war
+ * die dritte von drei gestapelten Farbaussagen im Kopfbereich (Linie + Band +
+ * getoente Trennlinie) und zugleich die schwaechste: eine 50-%-Toenung auf
+ * zwei Pixeln traegt im Dark fast keine Buntheit (dark-chroma.mjs). Der
+ * Absender der Karte ist jetzt GENAU EINES: das Vollton-Siegel im Kopf
+ * (module-seal--vivid, siehe den Kopf-Abschnitt unten). Der zugehoerige
+ * ignore.md-Eintrag `border-accent-on-rounded` ist mit dieser Regel gegangen. */
 
 /* --------------------------------------------------------
  * Widget-Modul-Akzentfarben
@@ -332,15 +323,15 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  /* DIE TITELZEILE IST DAS MASS DES BANDES, und sie ist es an EINER Stelle.
+  /* DIE TITELZEILE IST DAS MASS DES KOPFES, und sie ist es an EINER Stelle.
    * Vorher setzte `.dashboard .widget__header` dafuer `min-height:
-   * var(--target-base)` - eine Zielgroesse als Bandhoehe, und dazu eine, die
+   * var(--target-base)` - eine Zielgroesse als Kopfhoehe, und dazu eine, die
    * die tatsaechliche Hoehe gar nicht bestimmte: die kam aus der 48px-Box des
    * „Alle"-Links und ergab 73px (12 + 48 + 12 + 1). Mit 32px hier landen BEIDE
-   * Bauformen auf demselben Band: die Karte mit Link (Link 32px) und die
-   * Fehlerkachel ohne ihn (Siegel 24px, renderWidgetError). Am Kopf selbst
-   * waere es das nicht - dort zaehlt die Kante mit, und die eine Form kaeme auf
-   * 49px, die andere auf 48px. */
+   * Bauformen auf derselben Kopfhoehe: die Karte mit Link (Link 32px) und die
+   * Fehlerkachel ohne ihn (Siegel 24px, renderWidgetError). Das Band, das
+   * diese Zeile frueher mass, ist 2026-08-17 zurueckgebaut (siehe den
+   * Kopf-Abschnitt unten); das Mass selbst gilt unveraendert. */
   min-height: var(--target-sm);
 }
 
@@ -2447,52 +2438,25 @@ svg.weather-forecast__icon {
   min-width: 0;
 }
 
-/* DAS ABSENDERBAND: FARBE WIRD FLAECHE, NICHT NUR STRICH.
+/* HIER STAND DAS ABSENDERBAND (v2.6.0 bis 2026-08-17): ein vollbreites
+ * 8-%-Wash-Band mit getoenter Trennlinie als Kopfzone jeder Karte. Es ist mit
+ * der Widget-Kopf-Kur (Etappe 2 der Modernisierung, Critique 2026-08-17)
+ * ZURUECKGEBAUT, und zwar an seiner eigenen Messlatte: es sollte die im Dark
+ * unsichtbare 2px-Haarlinie ersetzen, aber eine Waschung KANN im Dark keine
+ * Farbe tragen - dark-chroma.mjs zerlegt die 8-%-Mischung in Helligkeits- und
+ * Buntheitsanteil, und sie hellt fast nur auf (Buntheit 4-8 von 24-73 des
+ * Volltons; records verliert sogar Buntheit). Das Band war damit im Light ein
+ * Pastellstreifen und im Dark ein Braunschleier - der Betreiber-Befund
+ * „klobige eingefaerbte Zeile" traf beide.
  *
- * Bis hierher trug jede Karte ihre Modulzugehoerigkeit als 2px-Haarlinie an der
- * Oberkante - im Light gerade noch sichtbar, im Dark Mode praktisch nicht: das
- * Board las dort als Wand gleich grauer Rechtecke, weil das einzige Farbsignal
- * ein Strich von zwei Pixeln war. Der Kopf traegt die Toenung jetzt als Flaeche.
- *
- * DIE STUFE IST --tint-wash (8%), UND ZWAR ALS EINZIGE RICHTIGE. Die Skala in
- * tokens.css definiert sie als „die Toenung untergreift FREMDEN Inhalt" - genau
- * das tut ein Kopfband: darauf stehen Siegel, Titel, Badge und Link, und keines
- * davon gehoert der Toenung. --tint-surface (16%) waere die Stufe eines Chips,
- * der SELBST das getoente Objekt ist; auf einem ganzen Band traegt sie zu laut
- * und nimmt dem Siegel daneben seine Ausweisrolle.
- *
- * Kein Akzentstreifen im Sinne des DESIGN.md-Banns: der gilt Zierstreifen an
- * Toolbars, Tabs und Modulkoepfen. Hier ist die Toenung die Absenderangabe der
- * Karte - dieselbe Aufgabe, die das Siegel im Kopf schon hat, nur als Grund. */
-.dashboard .widget__header {
-  /* DAS BAND IST 49px HOCH, UND DIESE ZEILE SAGT NICHT MEHR, WIE HOCH ES IST.
-   *
-   * Hier stand `min-height: var(--target-base)` mit der Begruendung, der
-   * kompakte Kopf halte damit „zugleich das Touch-Minimum fuer die
-   * „Alle"-Verknuepfung". Beides war nachgemessen falsch: die 44/48px banden
-   * nie, weil die 48px-Box des Links plus 2x12px Polster schon 73px ergaben -
-   * mehr als die 54px-Leiste, gegen die der Kommentar argumentierte. Und das
-   * Touch-Minimum hielt nicht der Kopf, sondern der Link selbst.
-   *
-   * Die Hoehe kommt jetzt aus der Titelzeile (32px, siehe `.widget__title`), das
-   * Polster ist eine Stufe enger, und die Trefferflaeche des Links dehnt sich
-   * per ::before genau in dieses Polster. Ergebnis gemessen: 73px → 49px, bei
-   * unveraenderter 48px-Trefferhoehe. Der Titel bleibt dabei 17px - klobig war
-   * nicht die Schrift, klobig war die Zeile. */
-  padding: var(--space-2) var(--space-4);
-  background: color-mix(in srgb, var(--widget-accent, var(--color-accent)) var(--tint-wash), var(--color-surface));
-  /* Die Trennlinie erbt den Ton, damit Band und Kante EIN Element sind statt
-   * einer getoenten Flaeche mit neutralem Abschluss. */
-  border-bottom: 1px solid color-mix(in srgb, var(--widget-accent, var(--color-accent)) var(--tint-state), var(--color-border));
-}
-
-/* Das Siegel steht jetzt auf dem Band, nicht auf der Karte: ohne diesen Grund
- * mischt seine Scheibe gegen --color-surface und liegt auf der Toenung bei
- * 1,06:1 - dieselbe Falle, die DESIGN.md fuer den Modulkopf beschreibt
- * („Der Traeger entscheidet, welches Gesicht es zeigt"). */
-.dashboard .widget__header .module-seal {
-  --seal-base: color-mix(in srgb, var(--widget-accent, var(--color-accent)) var(--tint-wash), var(--color-surface));
-}
+ * DER ABSENDER IST JETZT DAS VOLLTON-SIEGEL (module-seal--vivid, dashboard.js):
+ * Titelzeile direkt auf der Kartenflaeche, davor die eine voll gesaettigte
+ * Scheibe im Modulton - Apples Settings-Idiom, und zugleich die Antwort der
+ * Chroma-Messung: echte Farbe kommt aus Volltonelementen, nicht aus
+ * Beimischung. Der Kopf braucht damit weder eigene Regel noch eigenen Grund;
+ * Polster und Hoehe kommen aus der .widget__header-Basisregel, und das Siegel
+ * mischt sein Gesicht nicht mehr gegen einen Band-Grund (--seal-base entfiel
+ * hier ersatzlos - vivid kennt gar keine Mischung). */
 
 /* `min-width: 0` GEHOERT DER NACHGIEBIGEN SEITE, UND DAS IST NUR DER TITEL.
  *

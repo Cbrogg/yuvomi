@@ -158,9 +158,9 @@ components:
     rounded: "{rounded.md}"
     padding: "16px"
   widget-header:
-    backgroundColor: "color-mix(in srgb, var(--widget-accent, var(--color-accent)) var(--tint-wash), var(--color-surface))"
-    padding: "8px 16px"
-    height: "49px (Titelzeile 32px + 2x8px Polster + 1px Kante; keine min-height)"
+    backgroundColor: "{colors.surface} (bandlos seit 2026-08-17; Absender ist das Vollton-Siegel)"
+    padding: "12px 16px 8px (die .widget__header-Basisregel; keine Dashboard-Sonderregel mehr)"
+    height: "52px (Titelzeile 32px + 12/8px Polster; keine Kante, keine min-height)"
   day-sheet:
     backgroundColor: "{colors.surface}"
     rounded: "{rounded.xl}"
@@ -241,7 +241,14 @@ components:
      #A9A39A statt Hue-291-Resten der abgeloesten Apple-Rampe). Messlauf:
      .impeccable/redesign-tools/dark-ramp-final.mjs; alle Werte gegen
      test:frontend-audit (296), test:document-guards (31) und test:typography
-     (15) verifiziert. -->
+     (15) verifiziert.
+
+     Etappe 2 am selben Tag: das Absenderband ist zurueckgebaut (Band,
+     getoente Trennlinie UND 2px-Oberkante), der Absender jeder Dashboard-
+     Karte ist das Vollton-Siegel (module-seal--vivid), auch in der
+     Kachelreihe. Anlass und Messlatte stehen an der Signature Component
+     „Der Widget-Kopf"; der ignore.md-Eintrag border-accent-on-rounded ist
+     mit der 2px-Linie gegangen. -->
 
 ## Direction Contract
 
@@ -331,7 +338,9 @@ die Anmeldeseite als Teil der Welt.
 Buehne gemacht** - und dabei drei Formen hinzugefuegt, die es vorher nicht gab: das
 TAGESPROGRAMM als das eine Blatt, das die Seite anfuehrt (Radius und Elevation setzen den
 Rang, nicht Material), das ABSENDERBAND, das die Modulzugehoerigkeit einer Karte aus einer
-2px-Haarlinie in eine getoente Kopfflaeche hebt, und den WAND-MODUS als den wachen Zustand
+2px-Haarlinie in eine getoente Kopfflaeche hebt (2026-08-17 vom VOLLTON-SIEGEL abgeloest -
+die Waschung konnte im Dark keine Farbe tragen, siehe die Signature Component
+„Der Widget-Kopf"), und den WAND-MODUS als den wachen Zustand
 derselben Route - dieselbe Flaeche in anderer Gangart, gelesen aus zwei Metern. Erst mit
 ihm bekommen die Display-Stufen 48/72px die Rolle, fuer die sie reserviert waren.
 
@@ -549,16 +558,18 @@ verdunkelt), Nutzerfarben als Text (dort gilt die User-Farben-Regel) und Animati
 `@keyframes`. Pruefebene: Signatur (`jede Toenung nimmt eine Stufe der Toenungsskala`,
 `test:frontend-audit`).
 
-**Die Waschung ist auch die Antwort auf „Farbe wird Flaeche, nicht Strich" (v2.6.0).** Zwei
-Stellen haben 2026-08-11 von einer Linie oder einer neutralen Flaeche auf `--tint-wash`
-gewechselt, und beide aus demselben Grund: die Toenung untergreift dort FREMDEN Inhalt. Der
-Widget-Kopf des Dashboards trug seine Modulzugehoerigkeit als 2px-Haarlinie an der Oberkante
-- im Light gerade noch sichtbar, im Dark praktisch nicht, sodass das Board dort als Wand
-gleich grauer Rechtecke las; er traegt sie jetzt als Kopfband (siehe „Das Absenderband").
-Und die angeheftete Notiz bekam ihre Notizfarbe zurueck, die das neutrale Well geschluckt
-hatte. `--tint-surface` waere in beiden Faellen falsch: das ist die Stufe eines Chips, der
-SELBST das getoente Objekt ist; auf einem ganzen Band traegt sie zu laut und nimmt dem
-Siegel daneben seine Ausweisrolle.
+**Die Waschung untergreift fremden Inhalt - aber sie kann im Dark keine FARBE tragen
+(Grenze nachgetragen 2026-08-17).** Zwei Stellen haben 2026-08-11 von einer Linie oder
+einer neutralen Flaeche auf `--tint-wash` gewechselt („Farbe wird Flaeche, nicht Strich",
+v2.6.0): der Widget-Kopf des Dashboards und die angeheftete Notiz, die ihre Notizfarbe
+zurueckbekam. Die Notiz traegt sie weiter - dort ist die Waschung ein ZUSTAND auf heller
+Flaeche und tut, was die Skala verspricht. Der Widget-Kopf dagegen wollte mit der Waschung
+FARBE sagen, und genau das kann sie im Dark nicht: die CIEDE2000/LCh-Zerlegung
+(dark-chroma.mjs) zeigt, dass die 8-%-Mischung dort fast nur AUFHELLT (Buntheit 4-8 gegen
+24-73 des Volltons). Das Absenderband ist deshalb 2026-08-17 dem Vollton-Siegel gewichen
+(siehe „Der Widget-Kopf"). Die Rollen-Grenze der Skala bleibt unveraendert:
+`--tint-surface` ist die Stufe eines Chips, der SELBST das getoente Objekt ist, und
+Farbaussagen gehoeren in Volltonelemente, nicht in Beimischung.
 
 ## Typography
 
@@ -1591,33 +1602,39 @@ Medikamente), serverseitig uebersetzt ueber die Datensprache des Haushalts, clie
 die Sprache des Nutzers. Die beiden Karten liegen beidseits der Schichtgrenze und sind an die
 `entity_type` gebunden, die der Server wirklich schreibt (Guard-Ebene Signatur).
 
-### Das Absenderband (Signature Component)
-Der Kopf einer Dashboard-Karte traegt die Modulzugehoerigkeit als getoente FLAECHE, nicht als
-Strich: `--tint-wash` des Familientons gegen `--color-surface`, und die Trennlinie darunter
-erbt denselben Ton (`--tint-state` gegen `--color-border`), damit Band und Kante EIN Element
-sind statt einer getoenten Flaeche mit neutralem Abschluss.
+### Der Widget-Kopf: das Vollton-Siegel als Absender (Signature Component)
+Seit 2026-08-17 (Widget-Kopf-Kur, Etappe 2 der Modernisierung) ist der Kopf einer
+Dashboard-Karte eine TITELZEILE DIREKT AUF DER KARTENFLAECHE: davor das Markensiegel im
+vivid-Gesicht (`module-seal--vivid`, Ton = Flaeche, Tinte = `--color-ink-on-vivid`), Titel in
+Text-Primary, Zaehler als getoenter Badge, „Alle" als neutraler Textlink mit Ton erst im
+Hover. Kein Band, keine getoente Trennlinie, keine 2px-Oberkante: der Absender einer Karte
+ist GENAU EIN Element, und es traegt den Modulton zu 100 %. Die Kachelreihe
+(`metric-card--tile`) fuehrt dasselbe vivid-Siegel - zwei Siegel-Gesichter auf einem Board
+waeren zwei Wahrheiten.
 
-**Der Anlass war ein Kanal, der nur im Light existierte** - und das Band ist die ANTWORT
-darauf, nicht sein Ersatz. Die 2px-Haarlinie an der Kartenoberkante bleibt bestehen
-(`--tint-hint` des Widget-Tons gegen `--color-border`, auf JEDER Karte und in jeder
-Groessenklasse); sie war nur allein zu wenig, weil ein Farbsignal von zwei Pixeln im Dark
-Mode praktisch verschwand und das Board dort als Wand gleich grauer Rechtecke las. Ersetzt hat
-das Band die neutrale Kopf-Unterkante, nicht die Linie: Karte, Band und Kante tragen jetzt
-denselben Ton in drei Staerken (`--tint-hint` / `--tint-wash` / `--tint-state`).
+**Hier stand von v2.6.0 bis 2026-08-17 das ABSENDERBAND** - ein vollbreites
+`--tint-wash`-Band mit getoenter Trennlinie plus der 2px-Haarlinie an der Oberkante, drei
+Farbaussagen in ~51px. Es ist an seiner eigenen Messlatte zurueckgebaut: es sollte den im
+Dark unsichtbaren Haarlinien-Kanal ersetzen, aber eine WASCHUNG kann im Dark keine Farbe
+tragen. Die Chroma-Zerlegung (CIEDE2000/LCh, `.impeccable/redesign-tools/dark-chroma.mjs`)
+zeigt: die 8-%-Mischung hellt fast nur auf (Buntheit 4-8 gegen 24-73 des Volltons; records
+VERLIERT auf der warmen Kohle sogar Buntheit). Das Band war damit im Light ein
+Pastellstreifen und im Dark ein Braunschleier - „klobige eingefaerbte Zeile" (Betreiber,
+Critique 2026-08-17) traf beide. Die Lehre ist allgemeiner als das Band: **wer im Dark Farbe
+sagen will, sagt sie im Vollton eines kleinen Elements, nicht in der Beimischung einer
+grossen Flaeche.**
 
 **Den Ton setzt die Karte, nicht die Seite.** Jede `.widget--*`-Klasse legt `--widget-accent`
-auf ihren Modulton; der Fallback ist die Stimme. Ein `--active-module-accent` an dieser Stelle
-loeste auf dem Dashboard den Akzent der UEBERSICHT auf, also bekamen alle Widgets dieselbe
-Farbe - ausgerechnet in dem Raster, in dem siebzehn Module nebeneinanderstehen.
+auf ihren Modulton (fuer Badge, Link-Hover und Fehlerkante); das Siegel selbst bekommt
+`--seal-accent` aus dem Slug seiner Route. Der Fallback ist die Stimme. Ein
+`--active-module-accent` an dieser Stelle loeste auf dem Dashboard den Akzent der UEBERSICHT
+auf, also bekaemen alle Widgets dieselbe Farbe - ausgerechnet in dem Raster, in dem siebzehn
+Module nebeneinanderstehen.
 
-**Das Siegel bekommt das Band als seinen eigenen Grund.** `--seal-base` wird im Kopf auf
-dieselbe Mischung gesetzt, auf der das Siegel steht; ohne das mischt seine Scheibe gegen
-`--color-surface` und liegt auf der Toenung bei 1,06:1 - dieselbe Falle, die der Modulkopf
-schon kennt („Der Traeger entscheidet, welches Gesicht es zeigt").
-
-**Es ist kein Akzentstreifen im Sinne des Banns.** Der gilt Zierstreifen an Toolbars, Tabs und
-Modulkoepfen - Schmuck, der nichts sagt. Hier ist die Toenung die ABSENDERANGABE der Karte,
-dieselbe Aufgabe, die das Siegel im Kopf ohnehin hat, nur als Grund statt als Zeichen.
+**`--seal-base` braucht der Kopf nicht mehr.** Die Mischgrund-Falle („Der Traeger
+entscheidet, welches Gesicht es zeigt") gehoerte zum getoenten Gesicht auf dem Band-Grund;
+das vivid-Gesicht kennt keine Mischung, sein Ton IST die Flaeche (AA an der Toast-Herkunft
+gemessen: Glyph auf Scheibe 5,1-9,8:1 in beiden Themes).
 
 ### Das Tagesprogramm (Signature Component)
 Das eine Blatt, das die Uebersicht anfuehrt: EIN Traeger auf `--color-surface` mit
@@ -1801,7 +1818,9 @@ Angabe braeuchte einen zweiten Timer, nur damit sie sich selbst aktuell haelt.
   eigenen Raum ist die Herkunft selbstverstaendlich, und die Leiste beantwortet "wo bin ich",
   nicht "woher".
 - **Don't** eine Zugehoerigkeit ueber eine Haarlinie allein tragen lassen; was in einem Theme
-  ein Signal ist und im anderen keines, ist kein Kanal (Absenderband).
+  ein Signal ist und im anderen keines, ist kein Kanal. Und **Don't** sie ueber eine
+  Waschung tragen lassen: eine Beimischung hellt im Dark fast nur auf. Der Kanal fuer
+  Zugehoerigkeit ist das Vollton-Siegel (Widget-Kopf, 2026-08-17; davor Absenderband).
 - **Don't** einen Zustand ueber `opacity` auf dem eigenen Inhalt zeigen; eine Kachel, die
   ihren Text schlechter lesbar macht, um Anfassbarkeit zu signalisieren, steigt stattdessen
   eine Sprosse der Toenungsskala.

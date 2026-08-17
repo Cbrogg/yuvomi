@@ -578,10 +578,14 @@ function widgetHeader(icon, title, count, linkHref, linkLabel, sealSlug = null) 
   // hat sie beim ersten Anlauf genau daraus herausgeschoben.
   const slug = sealSlug ?? ((linkHref || '').split('/')[1] || '');
   const seal = slug ? ` style="--seal-accent: var(--module-${slug}, var(--color-accent))"` : '';
+  // Vollton statt Toenung (Widget-Kopf-Kur 2026-08-17): das Siegel ist seit
+  // dem Rueckbau des Absenderbands der EINZIGE Farbtraeger des Kopfes und
+  // zeigt deshalb sein vivid-Gesicht (Ton = Flaeche, Tinte = ink-on-vivid,
+  // gemessen 5,1-9,8:1 in beiden Themes an der Toast-Herkunft).
   return `
     <div class="widget__header">
       <h3 class="widget__title">
-        <span class="module-seal module-seal--sm"${seal} aria-hidden="true">
+        <span class="module-seal module-seal--sm module-seal--vivid"${seal} aria-hidden="true">
           <i data-lucide="${icon}"></i>
         </span>
         <span class="widget__title-text">${title}</span>
@@ -1457,8 +1461,11 @@ function renderMetricTile(tile) {
         <!-- Der Ton gehoert AUF das Siegel, nicht auf die Karte darum: .module-seal
              deklariert --seal-accent in seiner eigenen Regel, und eine Deklaration
              am Element schlaegt jeden geerbten Wert. Von der Karte aus gesetzt
-             trugen alle vier Kacheln denselben violetten App-Akzent. -->
-        <span class="module-seal module-seal--sm" aria-hidden="true"
+             trugen alle vier Kacheln denselben violetten App-Akzent.
+             Vivid wie die Widget-Koepfe (Kur 2026-08-17): die Kachelreihe ist
+             dieselbe Absender-Rolle auf derselben Board-Ebene - zwei
+             Siegel-Gesichter auf einem Board waeren zwei Wahrheiten. -->
+        <span class="module-seal module-seal--sm module-seal--vivid" aria-hidden="true"
               style="--seal-accent: var(--module-${tile.id}, var(--color-accent))"><i data-lucide="${tile.icon}"></i></span>
         <span class="metric-card__label">${esc(tile.label)}</span>
       </span>
