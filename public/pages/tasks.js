@@ -1718,6 +1718,29 @@ function commentsNode(task) {
   status.textContent = t('common.loading');
   list.appendChild(status);
 
+  const load = async () => {
+    try {
+      const res = await api.get(`/tasks/${task.id}/comments`);
+      const comments = res.data ?? [];
+      list.replaceChildren();
+      if (!comments.length) {
+        const empty = document.createElement('p');
+        empty.className = 'task-comments__status';
+        empty.textContent = t('tasks.commentsEmpty');
+        list.appendChild(empty);
+      } else {
+        for (const comment of comments) list.appendChild(commentRowNode(comment, { onChanged: load }));
+      }
+      if (window.lucide) window.lucide.createIcons({ el: list });
+    } catch {
+      list.replaceChildren();
+      const failed = document.createElement('p');
+      failed.className = 'task-comments__status';
+      failed.textContent = t('tasks.commentsLoadError');
+      list.appendChild(failed);
+    }
+  };
+
   // Wer die Aufgaben nur LESEN darf, bekommt die Unterhaltung zu sehen und kein
   // Eingabefeld: die API weist seinen POST mit 403 ab, und ein Formular, das
   // zum Schreiben einlaedt und dann nicht abschickt, ist dieselbe leere Zusage
@@ -1748,29 +1771,6 @@ function commentsNode(task) {
   fieldBox.className = 'task-comments__field';
   fieldBox.appendChild(field);
   form.append(fieldBox, submit);
-
-  const load = async () => {
-    try {
-      const res = await api.get(`/tasks/${task.id}/comments`);
-      const comments = res.data ?? [];
-      list.replaceChildren();
-      if (!comments.length) {
-        const empty = document.createElement('p');
-        empty.className = 'task-comments__status';
-        empty.textContent = t('tasks.commentsEmpty');
-        list.appendChild(empty);
-      } else {
-        for (const comment of comments) list.appendChild(commentRowNode(comment, { onChanged: load }));
-      }
-      if (window.lucide) window.lucide.createIcons({ el: list });
-    } catch {
-      list.replaceChildren();
-      const failed = document.createElement('p');
-      failed.className = 'task-comments__status';
-      failed.textContent = t('tasks.commentsLoadError');
-      list.appendChild(failed);
-    }
-  };
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
