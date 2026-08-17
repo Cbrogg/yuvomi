@@ -2426,6 +2426,10 @@ function renderEventDetail(ev, reminders = []) {
       value: reminderSummary(ev, reminders),
     },
     visibilityRow(ev.visibility),
+    // Nur wenn markiert (#647): eine Zeile „Countdown: nein" an jedem Termin
+    // wäre ein Feld, das die Leseansicht erklärt statt sie zu beantworten. Die
+    // Detailansicht lässt leere Werte ohnehin weg.
+    { icon: 'hourglass', label: t('dashboard.countdownTitle'), value: ev.countdown ? t('calendar.countdownDetail') : '' },
     {
       icon: 'align-left',
       label: t('calendar.descriptionLabel'),
@@ -3325,6 +3329,29 @@ function buildEventModalContent({ mode, event, date, reminder = null, time = nul
       <p class="form-hint field-hint--warn" id="modal-visibility-warning" role="status" hidden><i data-lucide="alert-triangle" aria-hidden="true"></i><span>${t('common.visibility.assigneesNobodyHint')}</span></p>
     </div>` : ''}
 
+    <!-- #647: der Schalter, den @Kyrodan beschrieben hat - „einen Termin als
+         Countdown markieren" statt eines zweiten Systems daneben. Er steht im
+         Hauptbereich und nicht hinter „Weitere Einstellungen", weil er der
+         einzige Weg zu diesem Feature ist: hinter dem Aufklapper gaebe es die
+         Kachel fuer niemanden, der nicht danach sucht. -->
+    <div class="form-group">
+      <label class="toggle">
+        <input type="checkbox" id="modal-countdown" aria-describedby="modal-countdown-hint"
+               ${isEdit && event.countdown ? 'checked' : ''}>
+        <span class="toggle__track"></span>
+        <span>${t('calendar.countdownToggle')}</span>
+      </label>
+      <!-- cal-field-hint UND NICHT form-hint: die Regel fuer form-hint steht in
+           settings.css, und der Router laedt genau ein Page-CSS pro Seite - auf
+           /calendar ist sie schlicht nicht geladen. Der Hinweis rendert dort in
+           16px voller Primaertinte und war damit lauter als der Schalter, zu dem
+           er gehoert (gemessen 4 Zeilen / 94px).
+           Die uebrigen fuenf form-hint dieses Dialogs haben dasselbe Problem und
+           app-weit noch 34 weitere in elf Modulen - das ist ein eigener Umzug
+           und keine Beifang-Aenderung dieses Features. -->
+      <p class="cal-field-hint" id="modal-countdown-hint">${t('calendar.countdownHint')}</p>
+    </div>
+
     ${advancedSection(advancedFieldsHtml, { open: advancedFieldsOpen })}
 
     ${renderRRuleFields('event', isEdit ? event.recurrence_rule : null, { allowCount: true })}
@@ -3457,6 +3484,7 @@ async function saveEvent(overlay, mode, event, existingReminder = null, attachme
       all_day: allday ? 1 : 0,
       location, color, icon, assigned_to,
       visibility: overlay.querySelector('#modal-visibility')?.value || 'all',
+      countdown: overlay.querySelector('#modal-countdown')?.checked ? 1 : 0,
       recurrence_rule: rrule.recurrence_rule,
       target_google_calendar_id,
       target_caldav_account_id,
