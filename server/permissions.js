@@ -173,6 +173,35 @@ export function buildSessionModuleAccess(resolved) {
 }
 
 /**
+ * Die Module, die einem Betrachter GANZ entzogen sind — als Set.
+ *
+ * Eingabe ist `req.sessionModuleAccess`, also genau das, was die Middleware in
+ * server/index.js schon aufgelöst hat: null (Admin oder unbeschränkt) oder eine
+ * Karte der abweichenden Module. Kein zweiter DB-Zugriff, keine zweite
+ * Auflösung — eine zweite Wahrheit über Rechte wäre die teuerste Sorte Fehler.
+ *
+ * NUR 'none' ZÄHLT, NICHT 'read'. Wer nur lesen darf, darf lesen; ein Filter,
+ * der ihm die Daten wegnimmt, hätte aus der Leseberechtigung eine Sperre
+ * gemacht.
+ *
+ * Gedacht für aggregierende Endpunkte, die die Pfad-Middleware nicht abdeckt:
+ * /dashboard trägt Inhalte aus einem Dutzend Modulen, sein eigener Pfad löst
+ * aber auf das Scope-Modul `dashboard` auf, das gar kein Permissions-Modul ist.
+ * Der Guard lässt die Anfrage deshalb immer durch, und das Aussortieren muss in
+ * der Route passieren.
+ *
+ * @param {Record<string,'none'|'read'>|null|undefined} sessionModuleAccess
+ * @returns {Set<string>}
+ */
+export function deniedModules(sessionModuleAccess) {
+  const out = new Set();
+  for (const [key, level] of Object.entries(sessionModuleAccess || {})) {
+    if (level === 'none') out.add(key);
+  }
+  return out;
+}
+
+/**
  * Nur-Lese-Payload für Clients (/auth/me, /login): die aufgelösten Maps plus
  * Admin-Flag. Der Client blendet damit Nav-Einträge, Settings-Ziele und
  * Dashboard-Widgets aus — die verbindliche Durchsetzung bleibt serverseitig.
