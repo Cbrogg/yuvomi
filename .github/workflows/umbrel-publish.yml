@@ -55,7 +55,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out (for the authored Umbrel release notes)
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Resolve version
         id: ver
