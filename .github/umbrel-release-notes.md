@@ -1,4 +1,4 @@
-<!-- version: 2.16.1 -->
+<!-- version: 2.17.0 -->
 <!--
   Die `releaseNotes` fuer den Umbrel-App-Store, von Hand fuer JEDEN Release
   geschrieben. `umbrel-publish.yml` nimmt den Text unter diesem Kommentar
@@ -29,15 +29,18 @@
     - Leerzeile zwischen den Absaetzen: der Store rendert ein gefaltetes
       YAML-Blockskalar, dort ist die Leerzeile der Absatzumbruch.
 
-  HINWEIS ZU DIESER VERSION: ein einzelner gemeldeter Fehler im Belohnungs-
-  Modul. Es gibt eine Migration (147), aber sie raeumt nur auf und verlangt
-  vom Haushalt nichts - deshalb kein Pflicht-Absatz, sondern ein Halbsatz im
-  zweiten Absatz, damit niemand die schon verdorbenen Praemien von Hand
-  nachbessert. Draussen bleibt, was nur Entwickler angeht: null gegen
-  undefined, die Nummer der Migration, die Testnamen.
+  HINWEIS ZU DIESER VERSION: drei gewuenschte Funktionen aus den Discussions
+  (#700, #733, #734), ein Absatz je Thema. Die Migrationen (148, 149) legen nur
+  Spalten und eine Tabelle an und verlangen vom Haushalt nichts - also kein
+  Pflicht-Absatz. Der Absatz zur Uhrzeit gehoert dennoch hinein: er beschreibt
+  eine Korrektur an bereits erfassten Daten, die jemand sonst fuer einen neuen
+  Fehler haelt. Draussen bleibt, was nur Entwickler angeht: der geteilte
+  Baustein, die Nummern der Migrationen, die Suiten.
 -->
-Editing a reward no longer replaces its icon with the word "null". Any reward you had created without an icon lost it the first time you changed anything else about it - the price, the name - and showed a stray piece of text in its place. Clearing the description of a reward did the same to the description.
+Medication marked "as needed" can finally be taken. Until now the setting existed but nothing in the app let you record such a dose, because every button belonged to a schedule. The Medications tab and the Health overview now share an "As needed" section: one tap records the dose and deducts it from your stock. Give a medication a minimum interval and it also tells you the earliest time for the next one, counted from the dose you actually took, so it reads the same after a reload and on a second device. Taking one earlier is still possible; the app only asks first.
 
-Rewards that already carry that text are cleaned up while the app starts, including the copy kept in the redemption history, so there is nothing for you to correct by hand.
+Two older problems with the medication log are fixed along the way. A dose recorded without a schedule used to disappear from its own day - missing from the intake history, from the adherence figure and from the CSV export you print for a doctor. And the time of a recorded dose is your clock's time again: doses taken outside UTC were stored shifted by your time zone, so an evening dose could appear hours earlier. New entries are correct from this version on.
 
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.16.1
+Tasks can now hold documents and a conversation. Attach a file to a task by uploading it, dropping it onto the field, or picking something already in Documents; it is filed in a "Tasks" folder and stays linked, and photos show as previews inside the task. Attachments inherit the visibility of their task, so what hangs off a private task stays private. Every task also has comments, where you can mention a family member with @name - they get a notification, but only if they may see that task.
+
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.17.0
