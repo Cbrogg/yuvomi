@@ -1708,10 +1708,15 @@ async function handlePrnDose(btn) {
   }
 
   window.yuvomi?.showToast(t('health.meds.doseSaved'), 'success');
-  // Erst nach dem Neuzeichnen freigeben: die frischen Zeilen bringen ihren
-  // eigenen Zustand mit, und bis dahin darf kein Zwilling scharf sein.
+  // Erst nach dem Neuzeichnen freigeben: bis dahin darf kein Zwilling scharf
+  // sein. Freigegeben wird ueber `setPrnBusy` und nicht ueber das Set allein -
+  // die Knoepfe von eben sind beim Neuzeichnen verschwunden, und die neuen sind
+  // gerade erst durch `wirePrn` gesperrt worden, weil die Buchung da noch lief.
+  // Ein blosses `delete` haette den Eintrag geraeumt und den Knopf gesperrt
+  // gelassen: bei einem Medikament ohne Mindestabstand bis zum naechsten
+  // Seitenaufbau.
   await reloadMedViews();
-  prnInFlight.delete(medId);
+  setPrnBusy(medId, false);
 }
 
 /**
