@@ -8,7 +8,7 @@ colors:
   accent-light: "#F3EFFE"
   grouped-bg: "#F5F3ED"
   surface: "#FFFFFF"
-  surface-dark: "#262422"
+  surface-dark: "#2B2825"
   surface-3: "#EDEAE3"
   fill-well: "#EDEAE3"
   surface-elevated: "#FBFAF7"
@@ -16,7 +16,7 @@ colors:
   bg-dark: "#191816"
   label: "#1D1B17"
   text-secondary: "#63615B"
-  text-tertiary: "#68686F"
+  text-tertiary: "#6B675F"
   text-quaternary: "#8C8880"
   border: "#E4E0D7"
   border-subtle: "#EDEAE3"
@@ -227,7 +227,21 @@ components:
      erfinden. Im selben Zug sind die beiden verbliebenen „17" gefallen: der
      Modulzahl fehlte Inventar, und die Key Characteristics sagten „17
      AA-verifizierte Modul-Tints", waehrend die Overview zwoelf Zeilen darueber
-     neun Familientoene fuehrt. -->
+     neun Familientoene fuehrt.
+
+     Nachgefuehrt 2026-08-17 mit der Dark-Kur (Etappe 1 der Modernisierung,
+     Critique vom selben Tag): die Dark-FLAECHEN sind gestiegen, die Buehne
+     nicht (Surface #262422 -> #2B2825, Well/Elevated #322F2B -> #37332E,
+     Hover #403C37 -> #443E37; Anlass: Buehne->Karte lag bei 1.15:1 und die
+     Schwarz-Schatten sind auf der Kohle wirkungslos - das Board las als Wand
+     gleich dunkler Rechtecke). Die opaken Dark-Schatten tragen jetzt den
+     1px-Weiss-Ring der Glas-Schatten in leiser Dosierung, das Dark-Glas ist
+     von iOS-Neutralgrau auf die warme Fassung der eigenen Surface gewechselt,
+     und die Tertiaerrolle steht in BEIDEN Themes erstmals warm (#6B675F /
+     #A9A39A statt Hue-291-Resten der abgeloesten Apple-Rampe). Messlauf:
+     .impeccable/redesign-tools/dark-ramp-final.mjs; alle Werte gegen
+     test:frontend-audit (296), test:document-guards (31) und test:typography
+     (15) verifiziert. -->
 
 ## Direction Contract
 
@@ -257,7 +271,7 @@ woertliche Anwendung auf die Haut war es.
 **OWN-WORLD:** Liquid-Glass-Designphilosophie (Lesbarkeit vor Transparenz:
 diffuses, sattes Glas, Inhalte opak). SF-Pro-System-Stack, Apple-Typo-Skala
 (Body 17, Large Title 34, Footnote 13). WARME Neutrale (#F5F3ED grouped /
-#191816 dunkel mit #262422-Flaechen). Eine Stimme: das Violett der Bildmarke
+#191816 dunkel mit #2B2825-Flaechen). Eine Stimme: das Violett der Bildmarke
 #6C3AED. Neun Familientoene als Orientierungsvokabular, im INHALT. Glas nur als
 Chrome (Tab-Bar, Sidebar, Sheets), Inhalte opak. Kapsel-Controls,
 Inset-Grouped-Listen, Feder-Motion.
@@ -726,7 +740,11 @@ Rueckkehr des Musters einlud.
 Hybrid aus zurueckhaltenden iOS-Schatten fuer opake Inhalte und Glas-Material fuer
 Chrome. Tiefe entsteht primaer ueber Material (Blur + Transluzenz + Specular-Kanten), nicht
 ueber dramatische Schatten. Dark Mode verstaerkt die Schatten deutlich (Glas braucht dort
-mehr Trennung vom dunklen Grund).
+mehr Trennung vom dunklen Grund) - und seit der Dark-Kur (2026-08-17) tragen auch die
+opaken Stufen sm/md/lg/xl dort den 1px-Weiss-Ring der Glas-Schatten (0.05-0.06): ein
+rgba(0,0,0)-Wurf auf der Kohle-Buehne ist gemessen unsichtbar, der Ring ist die Trennung,
+die der Schatten im Dark nicht leisten kann. Im Light bleibt der Ring den Glas-Schatten
+vorbehalten; xs bleibt in beiden Themes ohne Ring.
 
 ### Shadow Vocabulary
 - **shadow-xs** (`0 1px 2px rgba(0,0,0,0.08)`): kleinste Abhebung.
@@ -1091,7 +1109,7 @@ statt `--radius-lg` und **gar keinen Schatten** - `border: 1px solid transparent
 nichts. Der Radius ist an seiner Verwendungsstelle begruendet (shopping.css: die Gruppe
 klippt mit ihrem `overflow: hidden` die Wischflaeche), der fehlende Schatten nirgends. Die
 Fuellung ist dagegen keine Abweichung: `--color-surface-work` hat in beiden Themes denselben
-Wert wie `--color-surface` (#FFFFFF / #262422).
+Wert wie `--color-surface` (#FFFFFF / #2B2825).
 
 **Das LESEMASS ist seit 2026-08-13 keine der Abweichungen mehr.** Es trug nur `.list-rows`,
 mit der ausgeschriebenen Begruendung, die Listen ausserhalb der Kueche seien breiter. Das war
