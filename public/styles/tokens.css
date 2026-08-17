@@ -643,6 +643,75 @@
   --source-tandoor-light:   var(--_source-tandoor-light);
 
   /* --------------------------------------------------------
+   * 5b. Farben - Wetterlagen
+   *
+   * WOFÜR: das Wetter ist der einzige Inhalt der App, den niemand im Haushalt
+   * eingegeben hat - er kommt von draußen und ändert sich von selbst. Bis
+   * hierher trug seine Glyphe `--module-dashboard`, also das Violett der
+   * Übersicht: die Karte sagte damit, WO sie steht, aber nichts darüber, WAS
+   * sie zeigt. Sechs Lagen bekommen deshalb einen eigenen Ton.
+   *
+   * SIE SIND KEINE ZEHNTE FAMILIE. Die Familientöne (Abschnitt 4) beantworten
+   * „welches Modul", und dieses Vokabular gehört den Modulen allein - deshalb
+   * teilt keine Lage hier den WERT einer Familie. Die Wetterlage beantwortet
+   * eine andere Frage, und sie erscheint ausschließlich in Wetter-Flächen:
+   * Karte, Masthead-Zeile, Wand-Modus. Die Bauart ist dieselbe wie bei den
+   * Mahlzeit-Typen darüber - eine parallele Domänenfamilie mit eigenen
+   * `--_`-Privaten, damit der Dark-Block sie erreicht.
+   *
+   * FARBE IST HIER NIE DER ALLEINIGE TRÄGER: neben jedem Ton steht die Glyphe
+   * der Lage und der ausgeschriebene Beschreibungstext (`wmo.*`). Wer die
+   * Töne nicht unterscheiden kann, verliert nichts.
+   *
+   * ALLE ZWÖLF WERTE SIND GEMESSEN, Ziel 4,5:1 (nicht 3:1) - der Ton trägt in
+   * der Verlaufszeile auch die Höchsttemperatur, und das ist Kleintext. Light
+   * gegen #FFFFFF / #FBFAF7 / #F5F3ED, Dark gegen #2B2825 / #37332E / #191816;
+   * der jeweils schlechteste Grund steht daneben. Kleinster Abstand im Paar
+   * cloud/snow (dE 18,5) - Schiefer ist entsättigt, Petrol nicht.
+   * -------------------------------------------------------- */
+  --_weather-clear:  #B45309;   /* Bernstein  - Sonne, klarer Tag; 4,53:1 */
+  --weather-clear:   var(--_weather-clear);
+  --_weather-night:  #4C4FBF;   /* Indigo     - klare Nacht, Mond;  5,96:1 */
+  --weather-night:   var(--_weather-night);
+  --_weather-cloud:  #4F6478;   /* Schiefer   - bewölkt, Nebel;     5,52:1 */
+  --weather-cloud:   var(--_weather-cloud);
+  --_weather-rain:   #0A5C9E;   /* Azur       - Regen, Niesel;      6,23:1 */
+  --weather-rain:    var(--_weather-rain);
+  --_weather-snow:   #00768C;   /* Petrol     - Schnee, Graupel;    4,77:1 */
+  --weather-snow:    var(--_weather-snow);
+  --_weather-storm:  #8B2FC9;   /* Purpur     - Gewitter;           5,65:1 */
+  --weather-storm:   var(--_weather-storm);
+
+  /* Die Temperaturbänder der Verlaufszeile: FÜNF Stufen, keine Interpolation.
+   * Eine stufenlose Rampe hätte ihren Mischwert als Zahl am Element gebraucht
+   * (`calc(var(--x) * 100%)`), und genau diese Bauart sieht der Tönungs-Guard
+   * (6b) nicht - sie wäre die achtunddreißigste Prozentstufe gewesen, nur
+   * unsichtbar. Fünf benannte Bänder lesen sich außerdem wie eine Wetterkarte
+   * statt wie ein Farbverlauf, und der Balken bleibt neben der ausgeschriebenen
+   * Zahl eine Zweitkodierung. Schwellen und Einheitenumrechnung: dashboard.js,
+   * `weatherTempBand()`. */
+  --_weather-band-icy:  #0E7490;   /* unter 0 °C   */
+  --weather-band-icy:   var(--_weather-band-icy);
+  --_weather-band-cold: #0663C7;   /* 0 bis 9 °C   */
+  --weather-band-cold:  var(--_weather-band-cold);
+  --_weather-band-mild: #0F766E;   /* 10 bis 19 °C */
+  --weather-band-mild:  var(--_weather-band-mild);
+  --_weather-band-warm: #9F5700;   /* 20 bis 27 °C */
+  --weather-band-warm:  var(--_weather-band-warm);
+  --_weather-band-hot:  #C2410C;   /* ab 28 °C     */
+  --weather-band-hot:   var(--_weather-band-hot);
+
+  /* Der Lichthauch hinter der Glyphe - und der Grund, warum er ein TOKEN ist
+   * und keine Zahl in dashboard.css: er ist dieselbe Gattung wie die
+   * Backdrop-Blobs hinter dem Glas (Abschnitt 14b, `--lg-blob-opacity`), also
+   * eine weiche Atmosphäre HINTER dem Inhalt, kein chromatischer Verlauf AUF
+   * ihm. Weil er dieselbe Gattung ist, hat er dieselben Ausschalter: in
+   * prefers-reduced-transparency und prefers-contrast steht er wie sein
+   * Vorbild auf 0. Ein Wert in der Komponente hätte diese Kopplung nicht
+   * mitgebracht. */
+  --weather-glow-opacity: 1;
+
+  /* --------------------------------------------------------
    * 6. Farben - Prioritäten
    *    Unverändert aus dem Bestand: die Helligkeits-Trennung
    *    (High ~1,8x Urgent) ist farbfehlsicht-verifiziert.
@@ -1820,6 +1889,21 @@
     --_source-tandoor:        #60A5FA;
     --_source-tandoor-light:  #172554;
 
+    /* Wetterlagen (5b) - dieselben sechs Rollen, auf der Kohle-Buehne
+     * aufgehellt. Gemessen gegen #2B2825 / #37332E / #191816, schlechtester
+     * Grund: 7,51 / 6,29 / 6,35 / 6,60 / 7,75 / 6,38:1. */
+    --_weather-clear:  #FBBF24;
+    --_weather-night:  #A5B4FC;
+    --_weather-cloud:  #A8BBCC;
+    --_weather-rain:   #7FC4F0;
+    --_weather-snow:   #5EDDE8;
+    --_weather-storm:  #D8A6F5;
+    --_weather-band-icy:  #67E8F9;
+    --_weather-band-cold: #7FB8FF;
+    --_weather-band-mild: #5EEAD4;
+    --_weather-band-warm: #FBBF24;
+    --_weather-band-hot:  #FB923C;
+
     --_color-priority-low:       #C7C7CC;
     --_color-priority-medium:    #FBBF24;
     --_color-priority-high:      #FB923C;
@@ -2030,6 +2114,19 @@
     --_source-tandoor:        #60A5FA;
     --_source-tandoor-light:  #172554;
 
+    /* Wetterlagen (5b) - Zwilling des prefers-color-scheme-Blocks. */
+    --_weather-clear:  #FBBF24;
+    --_weather-night:  #A5B4FC;
+    --_weather-cloud:  #A8BBCC;
+    --_weather-rain:   #7FC4F0;
+    --_weather-snow:   #5EDDE8;
+    --_weather-storm:  #D8A6F5;
+    --_weather-band-icy:  #67E8F9;
+    --_weather-band-cold: #7FB8FF;
+    --_weather-band-mild: #5EEAD4;
+    --_weather-band-warm: #FBBF24;
+    --_weather-band-hot:  #FB923C;
+
     /* Priority-Badge Hintergründe */
     --_color-priority-low:       #C7C7CC;
     --_color-priority-medium:    #FBBF24;
@@ -2094,6 +2191,7 @@
     --blur-lg:  blur(0px);
     --opacity-glass-elevated: 1;
     --lg-blob-opacity: 0;     /* Backdrop-Blobs aus */
+    --weather-glow-opacity: 0; /* Wetter-Lichthauch aus - gleiche Gattung (5b) */
     /* Specular aus - beide Schreibweisen. --lg-specular ist die Stärke des
      * einen freien Highlights, --glass-inset-strength der Faktor der
      * abgestuften Inset-Tokens; sie sind dasselbe Konzept und fallen zusammen. */
@@ -2136,6 +2234,7 @@
      * Ohne Eintrag gilt der regulaere Modul-Tint, und der haelt seine Zusage. */
 
     --lg-blob-opacity: 0;     /* Backdrop-Blobs aus */
+    --weather-glow-opacity: 0; /* Wetter-Lichthauch aus - gleiche Gattung (5b) */
     /* Specular aus - beide Schreibweisen, siehe der Schwesterblock oben. */
     --lg-specular: 0;
     --glass-inset-strength: 0;

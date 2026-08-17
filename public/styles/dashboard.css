@@ -998,6 +998,27 @@
  * Die Inhalte reagieren auf die tatsaechliche Widget-Breite statt auf den
  * Viewport, damit Tiny/Narrow/Standard/Large eigene sinnvolle Dichten haben.
  * -------------------------------------------------------- */
+/* ── Die Wetterlage als Ton ─────────────────────────────────────────────
+ * Sechs Lagen, EIN Auflösungspunkt. Die Regeln stehen bewusst auf dem nackten
+ * Attribut und nicht auf `.weather-widget[data-weather-tone]`: dasselbe
+ * Attribut sitzt an drei Flächen (Karte, Masthead-Zeile, Wand-Sektion), und
+ * eine Klassenbindung hätte die Zuordnung dreimal geschrieben. Was den Ton
+ * BENUTZT, steht je Fläche weiter unten - was er IST, steht hier einmal.
+ * Werte und Messung: tokens.css, Abschnitt 5b.
+ * -------------------------------------------------------------------- */
+[data-weather-tone="clear"] { --weather-tone: var(--weather-clear); }
+[data-weather-tone="night"] { --weather-tone: var(--weather-night); }
+[data-weather-tone="cloud"] { --weather-tone: var(--weather-cloud); }
+[data-weather-tone="rain"]  { --weather-tone: var(--weather-rain); }
+[data-weather-tone="snow"]  { --weather-tone: var(--weather-snow); }
+[data-weather-tone="storm"] { --weather-tone: var(--weather-storm); }
+
+[data-weather-band="icy"]  { --weather-band: var(--weather-band-icy); }
+[data-weather-band="cold"] { --weather-band: var(--weather-band-cold); }
+[data-weather-band="mild"] { --weather-band: var(--weather-band-mild); }
+[data-weather-band="warm"] { --weather-band: var(--weather-band-warm); }
+[data-weather-band="hot"]  { --weather-band: var(--weather-band-hot); }
+
 .weather-widget {
   position: relative;
   color: var(--color-text-primary);
@@ -1005,6 +1026,86 @@
   --weather-temp-size: var(--text-3xl);
   --weather-icon-size: 56px;
   --weather-forecast-icon-size: 24px;
+}
+
+/* DER LICHTHAUCH - und warum er kein Rückfall in den Verlauf ist, den Runde 3
+ * entfernt hat. Der alte Verlauf WAR die Karte: eine deckende Fläche von Kante
+ * zu Kante, im globalen Akzent, unter dem jeder Text stand. Das hier ist die
+ * Gattung der Backdrop-Blobs hinter dem Glas - ein weiches, kreisrundes Feld
+ * HINTER der Glyphe, das aus der Glyphe zu kommen scheint und lange vor dem
+ * Text ausläuft. Es teilt deshalb die Ausschalter der Blobs
+ * (--weather-glow-opacity, in prefers-reduced-transparency und
+ * prefers-contrast auf 0) und trägt den Ton der LAGE, nicht den der App.
+ *
+ * Zwei Stufen, zwei Rollen: der Kern tönt als Objekt (--tint-surface), das
+ * auslaufende Feld untergreift fremden Inhalt (--tint-wash).
+ *
+ * ER HÄNGT AN DER GLYPHE SELBST, und der erste Anlauf hing daneben. Er saß an
+ * `__main` und rechnete sich von dessen Inline-Ende zur Glyphe zurück - was
+ * bis 860px Containerbreite stimmte und darüber nicht mehr: dort bekommt
+ * `__main` eine feste Basis (`min(36%, 300px)`), die Glyphe hört bei 201px auf
+ * und der Kasten erst bei 333px. Gemessen lag das Licht 108px rechts neben
+ * seiner Sonne. Die Glyphe trägt ihr Licht deshalb selbst - eine Hülle um sie,
+ * und die Zentrierung ist eine Zeile statt einer Rechnung.
+ *
+ * Die Hülle muss existieren, weil ein SVG- oder <img>-Element keine
+ * Pseudo-Elemente hat. Sie trägt auch die Marge für den Aktualisieren-Knopf,
+ * die vorher an der Glyphe stand: das Licht ragt über beide Kanten hinaus und
+ * darf den Abstand nicht mitverschieben.
+ *
+ * `isolation: isolate` ist die Bedingung für `z-index: -1`. Ohne sie fiele das
+ * Licht aus dem Widget heraus und läge hinter der Kartenfläche, also
+ * unsichtbar; mit ihr bleibt es im eigenen Stapel und genau unter der
+ * Glyphe. */
+.weather-widget__glyph {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-shrink: 0;
+  /* Freiraum für den absolut positionierten Refresh-Button in der Ecke
+   * (top/right --space-2, 28px breit): ohne die Marge schoben sich die
+   * Sonnenstrahlen der Glyphe unter den Button (Finish-Verdict
+   * Fundament-Phase, Neubefund a - mobil sichtbar, gilt aber in jeder
+   * Widget-Breite, weil beide rechtsbündig ankern). */
+  margin-inline-end: var(--space-6);
+}
+
+.weather-widget__glyph::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  width: calc(var(--weather-icon-size) * 2.2);
+  aspect-ratio: 1;
+  border-radius: var(--radius-full);
+  background: radial-gradient(closest-side,
+    color-mix(in srgb, var(--weather-tone, var(--module-accent)) var(--tint-surface), transparent) 0%,
+    color-mix(in srgb, var(--weather-tone, var(--module-accent)) var(--tint-wash), transparent) 48%,
+    transparent 100%);
+  opacity: var(--weather-glow-opacity);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+/* Das Atmen nimmt die Token-Deckung als OBERGRENZE mit in die Keyframes.
+ * Stünde dort ein fester Wert, gewänne die Animation gegen die
+ * `--weather-glow-opacity: 0`-Schalter der Accessibility-Blöcke - der
+ * Lichthauch bliebe genau dort stehen, wo er verschwinden soll. Die
+ * Zentrierung steht in JEDEM Schritt mit drin: `transform` ist eine
+ * Eigenschaft, und ein Keyframe ohne sie schöbe das Licht um seine halbe
+ * Höhe nach unten. */
+@keyframes weather-glow-breathe {
+  0%, 100% { transform: translate(-50%, -50%) scale(1);    opacity: calc(var(--weather-glow-opacity) * 0.68); }
+  50%      { transform: translate(-50%, -50%) scale(1.09); opacity: var(--weather-glow-opacity); }
+}
+
+@keyframes weather-glow-flash {
+  0%, 84%, 100% { transform: translate(-50%, -50%); opacity: calc(var(--weather-glow-opacity) * 0.55); }
+  86%           { transform: translate(-50%, -50%); opacity: var(--weather-glow-opacity); }
+  88%           { transform: translate(-50%, -50%); opacity: calc(var(--weather-glow-opacity) * 0.45); }
+  91%           { transform: translate(-50%, -50%); opacity: var(--weather-glow-opacity); }
+  95%           { transform: translate(-50%, -50%); opacity: calc(var(--weather-glow-opacity) * 0.55); }
 }
 
 .weather-widget__refresh {
@@ -1119,14 +1220,118 @@
   width: var(--weather-icon-size);
   height: var(--weather-icon-size);
   flex-shrink: 0;
-  /* Der einzige Farbträger des Widgets, seit die Vollfläche entfallen ist. */
-  color: var(--module-accent, var(--color-accent));
-  /* Freiraum für den absolut positionierten Refresh-Button in der Ecke
-   * (top/right --space-2, 28px breit): ohne die Marge schoben sich die
-   * Sonnenstrahlen der Glyphe unter den Button (Finish-Verdict
-   * Fundament-Phase, Neubefund a - mobil sichtbar, gilt aber in jeder
-   * Widget-Breite, weil beide rechtsbündig ankern). */
-  margin-inline-end: var(--space-6);
+  /* DIE GLYPHE TRÄGT DIE LAGE, NICHT DEN RAUM. Hier stand
+   * `var(--module-accent)`, also das Violett der Übersicht: die Glyphe sagte
+   * damit, in welchem Modul sie hängt - eine Auskunft, die auf einer
+   * Dashboard-Karte niemand braucht, weil sie schon aus der Seite folgt. Der
+   * Fallback bleibt der Modulton: fällt die Lage aus (unbekanntes Icon eines
+   * künftigen Providers), steht die alte Farbe da statt gar keine. */
+  color: var(--weather-tone, var(--module-accent, var(--color-accent)));
+}
+
+/* ── Die Gangart der Glyphe ─────────────────────────────────────────────
+ * EINE Idee in drei Materialien: die Karte zeigt die Bewegung des Wetters,
+ * das sie meldet. Sie ist die einzige Kachel des Dashboards, deren Inhalt
+ * sich von selbst ändert, und deshalb die einzige, die von selbst atmet.
+ *
+ * ALLES LÄUFT ÜBER transform UND opacity, und keine Regel mit `infinite`
+ * trägt einen `filter` - das ist die gemessene Lehre aus #716 (Bewegung und
+ * Filter auf demselben Element rastern pro Frame neu, 20 statt 60 fps).
+ * Gehalten vom Guard „kein endlos animiertes Element traegt in derselben
+ * Regel einen filter".
+ *
+ * DIE ZIELE SIND KINDKNOTEN DER LUCIDE-SVGS. Deren Reihenfolge ist stabil,
+ * aber nicht zugesichert (v0.469.0: bei `cloud-*` die Wolke zuerst, der
+ * Niederschlag danach; bei `sun` die Scheibe als <circle>, die acht Strahlen
+ * als <path>). Trifft eine Regel nach einem Lucide-Update ins Leere, steht die
+ * Glyphe still - der schlechteste Ausgang ist kein Defekt. Der OWM-Legacy-
+ * Zweig liefert ein <img> und hat keine Kindknoten: dort greift von den vieren
+ * nur `drift`, das am ganzen Element hängt. Auch das ist Absicht.
+ *
+ * DER AUSSCHALTER IST EINE BEDINGUNG, KEINE GEGENREGEL - und das ist hier
+ * kein Stilfrage, sondern ein gemessener Fehler. Der erste Anlauf folgte der
+ * Hausform (`@media (prefers-reduced-motion: reduce) { ... animation: none }`)
+ * und hat den Regen nicht angehalten: die Tropfenregel trägt einen
+ * `:not(:first-child)`-Zusatz und damit eine Klasse mehr Spezifität als die
+ * Gegenregel. Die Sonne stand still, der Regen fiel weiter, und beide standen
+ * im selben Block. Ein Spezifitäts-Wettrüsten wäre die zweite Falle gewesen:
+ * jede neue Gangart müsste ihre eigene Gegenzeile bekommen, und die vergisst
+ * man genau einmal. HIER STEHT DIE BEWEGUNG DESHALB NUR DANN IM STYLESHEET,
+ * WENN SIE ERWÜNSCHT IST. Es gibt nichts zu überschreiben, eine fünfte
+ * Gangart ist von selbst abgedeckt, und was BLEIBT, bleibt: Ton, Lichthauch
+ * und Spannenbalken sind Farbe und Form, keine Bewegung - sie stehen
+ * außerhalb dieses Blocks. Gehalten vom Guard „jede Bewegung des
+ * Wetter-Widgets steht unter einer Bewegungs-Bedingung".
+ * -------------------------------------------------------------------- */
+@media (prefers-reduced-motion: no-preference) {
+  /* Der Lichthauch atmet. Die Deckung des Tokens ist die OBERGRENZE in den
+   * Keyframes: stünde dort ein fester Wert, gewänne die Animation gegen die
+   * `--weather-glow-opacity: 0`-Schalter der Accessibility-Blöcke. Die
+   * Zentrierung steht in JEDEM Schritt mit drin - `transform` ist eine
+   * Eigenschaft, und ein Keyframe ohne sie schöbe das Licht um seine halbe
+   * Höhe nach unten. */
+  .weather-widget__glyph::before {
+    animation: weather-glow-breathe 16s ease-in-out infinite;
+  }
+
+  /* Das Gewitter bewegt nicht die Glyphe, sondern das Licht: ein Doppelschlag,
+   * dann fünf Sekunden Ruhe. Ein zuckender Blitz IM Zeichen läse bei 24px wie
+   * ein Darstellungsfehler. */
+  [data-weather-motion="flash"] .weather-widget__glyph::before {
+    animation: weather-glow-flash 6s ease-out infinite;
+  }
+
+  /* Die Sonne dreht ihre Strahlen um die stehende Scheibe. Eine volle
+   * Umdrehung in 72 s: aus dem Augenwinkel Ruhe, beim Hinsehen Leben. */
+  [data-weather-motion="rays"] svg.weather-widget__icon > path,
+  [data-weather-motion="rays"] svg.wall-weather__icon > path {
+    transform-box: view-box;
+    transform-origin: 50% 50%;
+    animation: weather-rays 72s linear infinite;
+  }
+
+  /* Die Wolke zieht. Am ganzen Element, weil bei `cloud-sun` und `cloud-moon`
+   * die Wolke selbst ein <path> ist - eine Regel auf den Kindknoten hätte
+   * Wolke und Gestirn gegeneinander verschoben. */
+  [data-weather-motion="drift"] .weather-widget__icon,
+  [data-weather-motion="drift"] .wall-weather__icon {
+    animation: weather-drift 11s ease-in-out infinite;
+  }
+
+  /* Tropfen und Flocken fallen - versetzt, sonst fällt der Regen im
+   * Gleichschritt und liest als ein Objekt statt als Niederschlag. Die
+   * negativen Verzögerungen setzen den Versatz OHNE Anlaufphase: mit positiven
+   * Werten stünde beim ersten Rendern eine Sekunde lang gar kein Tropfen im
+   * Bild. */
+  [data-weather-motion="fall"] svg.weather-widget__icon > path:not(:first-child),
+  [data-weather-motion="fall"] svg.wall-weather__icon > path:not(:first-child) {
+    animation: weather-fall 2.2s ease-in infinite;
+  }
+
+  [data-weather-motion="fall"] svg.weather-widget__icon > path:nth-child(3),
+  [data-weather-motion="fall"] svg.wall-weather__icon > path:nth-child(3) { animation-delay: -0.7s; }
+  [data-weather-motion="fall"] svg.weather-widget__icon > path:nth-child(4),
+  [data-weather-motion="fall"] svg.wall-weather__icon > path:nth-child(4) { animation-delay: -1.4s; }
+  [data-weather-motion="fall"] svg.weather-widget__icon > path:nth-child(5),
+  [data-weather-motion="fall"] svg.wall-weather__icon > path:nth-child(5) { animation-delay: -0.35s; }
+  [data-weather-motion="fall"] svg.weather-widget__icon > path:nth-child(6),
+  [data-weather-motion="fall"] svg.wall-weather__icon > path:nth-child(6) { animation-delay: -1.75s; }
+}
+
+@keyframes weather-rays {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes weather-drift {
+  0%, 100% { transform: translateX(-2px); }
+  50%      { transform: translateX(2px); }
+}
+
+@keyframes weather-fall {
+  0%   { transform: translateY(-1.4px); opacity: 0; }
+  22%  { opacity: 1; }
+  70%  { opacity: 1; }
+  100% { transform: translateY(2.6px);  opacity: 0; }
 }
 
 .weather-forecast {
@@ -1162,9 +1367,53 @@
   white-space: nowrap;
 }
 
+/* „Heute" statt „Mo": die erste Spalte ist die einzige, die man ohne Rechnen
+ * versteht, und sie ist die meistgelesene. Der Rang liegt in der Tinte, nicht
+ * in einer weiteren Schriftgröße - die Spalten müssen auf einer Grundlinie
+ * bleiben. */
+.weather-forecast__label--today {
+  color: var(--color-text-primary);
+}
+
 .weather-forecast__icon {
   width: var(--weather-forecast-icon-size);
   height: var(--weather-forecast-icon-size);
+  /* EINE Glyphe der Karte trägt Farbe, und das ist die aktuelle. Fünf getönte
+   * Vorhersage-Zeichen daneben hätten aus der Zeile einen Farbstreifen
+   * gemacht, und die Auskunft der Zeile ist die Temperatur, nicht die Lage -
+   * die trägt hier der Balken. */
+  color: var(--color-text-secondary);
+}
+
+/* ── Die Spanne der Woche ───────────────────────────────────────────────
+ * Bis hierher standen unter jedem Wochentag zwei nackte Zahlen, und zwischen
+ * den fünf Spalten bestand keine Beziehung: welcher Tag der wärmste ist, war
+ * eine Rechenaufgabe. Der Balken macht daraus eine Form - LAGE sagt, wo der
+ * Tag in der Woche liegt, LÄNGE, wie weit er schwankt, FARBE, wie warm es
+ * wird. Fünf benannte Bänder statt einer stufenlosen Rampe (Begründung in
+ * tokens.css 5b); die Zahlen darüber bleiben stehen, der Balken ist nie der
+ * alleinige Träger.
+ * -------------------------------------------------------------------- */
+.weather-forecast__span {
+  position: relative;
+  width: 100%;
+  height: var(--space-1);
+  margin-top: var(--space-1);
+  border-radius: var(--radius-full);
+  background: var(--color-fill-well);
+}
+
+.weather-forecast__span::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  /* --span-from/--span-to sind Datenwerte (0..1), keine Designwerte: sie
+   * kommen aus der Vorhersage und stehen deshalb am Element - dieselbe
+   * Bauart wie --bar-scale im Budget. */
+  inset-inline-start: calc(var(--span-from, 0) * 100%);
+  inset-inline-end: calc((1 - var(--span-to, 1)) * 100%);
+  border-radius: inherit;
+  background: var(--weather-band, var(--weather-tone, var(--color-accent)));
 }
 
 /* Open-Meteo rendert Wetter-Icons als Lucide-<svg> (Klassen werden vom
@@ -1241,7 +1490,7 @@ svg.weather-forecast__icon {
 /* Tiny weather keeps the current conditions readable instead of forcing
  * forecast rows into a 1x1 tile. */
 .widget-size--1x1 > .weather-widget .weather-widget__meta,
-.widget-size--1x1 > .weather-widget .weather-widget__icon,
+.widget-size--1x1 > .weather-widget .weather-widget__glyph,
 .widget-size--1x1 > .weather-widget .weather-forecast {
   display: none;
 }
@@ -2091,6 +2340,12 @@ svg.weather-forecast__icon {
    * statt font-size, weil auch der OWM-<img>-Zweig dieselbe Kante braucht. */
   width: var(--space-4);
   height: var(--space-4);
+  /* Derselbe Wetterton wie auf der Karte - die beiden Anzeigen schliessen sich
+   * gegenseitig aus (ist die Karte sichtbar, entfaellt die Zeile), aber wer
+   * zwischen den Zustaenden wechselt, darf nicht zwei Farben fuer dasselbe
+   * Wetter sehen. Kein Licht und keine Bewegung: die Zeile ist beilaeufiger
+   * Kontext unterm Gruss und bleibt es. */
+  color: var(--weather-tone, currentColor);
 }
 
 /* DIE WERKZEUGE HAENGEN OBEN, SIE SCHWEBEN NICHT IN DER MITTE. `align-items:
@@ -3956,7 +4211,12 @@ svg.weather-forecast__icon {
   flex-shrink: 0;
   width: clamp(var(--icon-xl), 5vmin, var(--space-16));
   height: clamp(var(--icon-xl), 5vmin, var(--space-16));
-  color: var(--color-text-secondary);
+  /* AUS ZWEI METERN IST FARBE DIE SCHNELLERE AUSKUNFT ALS FORM: eine Wolke von
+   * einer Sonne zu unterscheiden kostet auf die Entfernung einen Moment, der
+   * Ton nicht. Anders als auf der Karte tragen hier deshalb AUCH die vier
+   * Vorhersagetage ihren eigenen Ton - die Wand hat vier Spalten statt fuenf,
+   * viel Luft und keinen Spannenbalken, der die Auskunft sonst uebernaehme. */
+  color: var(--weather-tone, var(--color-text-secondary));
 }
 
 .wall-weather__body {
@@ -4007,7 +4267,7 @@ svg.weather-forecast__icon {
 .wall-weather__day-icon {
   width: var(--icon-xl);
   height: var(--icon-xl);
-  color: var(--color-text-secondary);
+  color: var(--weather-tone, var(--color-text-secondary));
 }
 
 .wall-weather__day-temps {
@@ -4176,6 +4436,22 @@ svg.weather-forecast__icon {
 [data-wall-night] .wall-weather__desc,
 [data-wall-night] .wall-weather__day-label {
   color: var(--color-text-tertiary);
+}
+
+/* NACHTS GIBT DIE WAND IHRE FARBE AB, und der Wetterton macht da keine
+ * Ausnahme. Der Nachtmodus senkt jede Stimme dieser Flaeche um eine Stufe,
+ * damit ein Wandtablet im dunklen Flur nicht leuchtet - ein bernsteinfarbenes
+ * Sonnenzeichen waere dann der hellste Punkt im Raum. Die Bewegung geht mit:
+ * was niemand ansieht, muss auch nicht ziehen. */
+[data-wall-night] .wall-weather__icon,
+[data-wall-night] .wall-weather__day-icon {
+  color: var(--color-text-tertiary);
+}
+
+[data-wall-night] .wall-weather__icon,
+[data-wall-night] svg.wall-weather__icon > path,
+[data-wall-night] svg.wall-weather__icon > path:not(:first-child) {
+  animation: none;
 }
 
 /* HIER STAND `background: transparent` FÜR DEN ZÄHLER - eine Absenkung zu viel.

@@ -2403,6 +2403,124 @@ function weatherIconHtml(weather, icon, cls, size, desc) {
            alt="${esc(desc)}" width="${size}" height="${size}" loading="lazy">`;
 }
 
+/**
+ * Die Wetterlage als Ton (tokens.css 5b) - sechs Werte, aus dem Icon-Namen
+ * abgeleitet und NICHT aus dem Beschreibungstext: der ist lokalisiert und in
+ * der OWM-Fassung sogar frei formuliert, das Icon dagegen ist beim selben
+ * Provider immer derselbe Schlüssel.
+ *
+ * BEIDE PROVIDER LAUFEN DURCH DIESELBE FUNKTION, weil sie zwei Schreibweisen
+ * für dieselbe Sache liefern: Open-Meteo Lucide-Namen (`cloud-rain`), OWM
+ * Legacy dreistellige Codes mit Tag/Nacht-Suffix (`10d`). Zwei Funktionen
+ * hätten sich beim nächsten neuen Zustand getrennt.
+ *
+ * Ein unbekannter Schlüssel liefert bewusst `null`: das Widget fällt dann auf
+ * seinen bisherigen Modulton zurück, statt eine falsche Lage zu behaupten.
+ */
+function weatherToneKey(icon) {
+  const key = String(icon || '');
+  if (/^\d{2}[dn]$/.test(key)) {
+    const code = key.slice(0, 2);
+    const night = key.endsWith('n');
+    if (code === '01') return night ? 'night' : 'clear';
+    if (code === '02') return night ? 'night' : 'clear';
+    if (code === '09' || code === '10') return 'rain';
+    if (code === '11') return 'storm';
+    if (code === '13') return 'snow';
+    return 'cloud';                      // 03, 04, 50 (Nebel/Dunst)
+  }
+  if (key === 'sun') return 'clear';
+  if (key === 'cloud-sun') return 'clear';
+  if (key === 'moon' || key === 'cloud-moon') return 'night';
+  if (key === 'cloud-lightning') return 'storm';
+  if (key === 'cloud-snow') return 'snow';
+  if (key === 'cloud-rain' || key === 'cloud-drizzle') return 'rain';
+  if (key === 'cloud') return 'cloud';
+  return null;
+}
+
+function weatherToneAttr(icon) {
+  const tone = weatherToneKey(icon);
+  return tone ? ` data-weather-tone="${tone}"` : '';
+}
+
+/**
+ * Die Gangart der Glyphe - vier Bewegungen, und jede sagt, was sie zeigt:
+ * `rays` dreht die Sonnenstrahlen um ihre Scheibe, `drift` lässt die Wolke
+ * ziehen, `fall` schickt Tropfen und Flocken nach unten, `flash` lässt den
+ * Blitz aufleuchten. Klare Nacht bekommt keine - ein Mond zieht nicht.
+ *
+ * WARUM DAS NICHT AM TON HÄNGT: `sun` und `cloud-sun` tragen denselben Ton
+ * (Bernstein), bewegen sich aber gegensätzlich. Bei `sun` sind alle `<path>`
+ * die Strahlen und dürfen rotieren; bei `cloud-sun` ist die Wolke selbst ein
+ * `<path>` und würde mitdrehen. Ein gemeinsames Attribut hätte die beiden
+ * genau einmal verwechselt, und zwar sichtbar.
+ *
+ * Die Bewegung sitzt in Kindknoten der Lucide-SVGs (Strahlen, Tropfen, Blitz),
+ * die dort eine feste Reihenfolge haben (v0.469.0: Wolke zuerst, Niederschlag
+ * danach). Ändert Lucide seinen Aufbau, greift die Regel nicht mehr und die
+ * Glyphe steht still - der schlechtestmögliche Ausgang ist kein Defekt.
+ */
+function weatherMotionAttr(icon) {
+  const key = String(icon || '');
+  const owm = /^(\d{2})([dn])$/.exec(key);
+  const code = owm?.[1];
+  // HIER STAND `key.endsWith('n')` FÜR BEIDE ZWEIGE, und „sun" endet auf n:
+  // die Sonne hat ihre Strahlen nie gedreht. Das Tag/Nacht-Suffix ist eine
+  // Eigenheit der OWM-Codes und wird deshalb auch nur dort gelesen - aus dem
+  // Lucide-Namen kommt es nie.
+  if (key === 'sun') return ' data-weather-motion="rays"';
+  if (key === 'moon') return '';
+  if (code === '01') return owm[2] === 'n' ? '' : ' data-weather-motion="rays"';
+  if (key === 'cloud-rain' || key === 'cloud-drizzle' || key === 'cloud-snow'
+      || code === '09' || code === '10' || code === '13') {
+    return ' data-weather-motion="fall"';
+  }
+  if (key === 'cloud-lightning' || code === '11') return ' data-weather-motion="flash"';
+  if (key === 'cloud' || key === 'cloud-sun' || key === 'cloud-moon'
+      || code === '02' || code === '03' || code === '04' || code === '50') {
+    return ' data-weather-motion="drift"';
+  }
+  return '';
+}
+
+/**
+ * Fünf Temperaturbänder für die Verlaufszeile (tokens.css 5b).
+ *
+ * DIE SCHWELLEN STEHEN IN DER JEWEILIGEN EINHEIT, nicht als Umrechnung einer
+ * Celsius-Zahl: „unter null" ist im Fahrenheit-Haushalt 32 °F und nicht
+ * 31,999. Die drei Leitern sind dieselben Grenzen, dreimal ausgeschrieben -
+ * eine Umrechnung im Code hätte an den Rundungsstellen andere Bänder ergeben
+ * als die Zahl daneben.
+ */
+const WEATHER_BANDS = ['icy', 'cold', 'mild', 'warm', 'hot'];
+const WEATHER_BAND_EDGES = {
+  metric:   [0, 10, 20, 28],
+  imperial: [32, 50, 68, 82],
+  standard: [273, 283, 293, 301],
+};
+
+/**
+ * `Number(null)` ist 0 und `Number('')` auch - beides sind gueltige
+ * Temperaturen, und ein fehlender Wert waere damit stillschweigend zu
+ * „0 Grad, also kalt" geworden. Ein Test hat genau das gefunden. Die 0 selbst
+ * muss durch: sie ist der haeufigste Winterwert.
+ */
+function weatherNumber(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
+function weatherTempBand(temp, units) {
+  const value = weatherNumber(temp);
+  if (value === null) return null;
+  const edges = WEATHER_BAND_EDGES[units] || WEATHER_BAND_EDGES.metric;
+  let i = 0;
+  while (i < edges.length && value >= edges[i]) i += 1;
+  return WEATHER_BANDS[i];
+}
+
 // Wetter als Masthead-Zeile (Seele-Paket): beiläufiger Kontext unterm Gruß
 // (Apple-Today-Muster) statt einer eigenen Karte - die Karte bleibt als Opt-in
 // für Wandtablets im Anpassen-Tray. Kein Echo: ist die Karte sichtbar, reicht
@@ -2411,10 +2529,46 @@ function mastheadWeatherHtml(weather) {
   if (!weather?.current) return '';
   const desc = weatherDescText(weather, weather.current.desc);
   return `
-    <p class="dashboard-overview__weather">
+    <p class="dashboard-overview__weather"${weatherToneAttr(weather.current.icon)}>
       ${weatherIconHtml(weather, weather.current.icon, 'dashboard-overview__weather-icon', 18, desc)}
       <span>${esc(String(weather.current.temp))}${weatherUnitSymbol(weather.units)} · ${esc(desc)}</span>
     </p>`;
+}
+
+/**
+ * Die Tagesspanne der Verlaufszeile, normiert auf die Spanne der GANZEN
+ * Vorhersage. Erst dadurch sagt der Balken etwas: eine Zeile aus fünf gleich
+ * langen Balken wäre Dekoration, eine Zeile, in der der Mittwoch nach oben
+ * rutscht, ist eine Auskunft.
+ *
+ * Zwei Randfälle, beide gemessen und nicht gedacht: eine flache Woche (alle
+ * Tage gleich) ergäbe 0/0 und damit einen unsichtbaren Balken, ein einzelner
+ * warmer Tag einen Strich von einem Pixel. Deshalb die Mindestlänge - der
+ * Balken bleibt auch dann ein Balken, wenn die Woche nichts zu erzählen hat.
+ */
+const WEATHER_SPAN_MIN = 0.14;
+
+function weatherSpanModel(forecast) {
+  const days = Array.isArray(forecast) ? forecast : [];
+  const values = days.flatMap((d) => [weatherNumber(d.temp_min), weatherNumber(d.temp_max)])
+    .filter((v) => v !== null);
+  if (values.length < 2) return null;
+  const lo = Math.min(...values);
+  const hi = Math.max(...values);
+  const span = hi - lo;
+  return (d) => {
+    const min = weatherNumber(d.temp_min);
+    const max = weatherNumber(d.temp_max);
+    if (min === null || max === null) return null;
+    let from = span > 0 ? (min - lo) / span : 0;
+    let to   = span > 0 ? (max - lo) / span : 1;
+    if (to - from < WEATHER_SPAN_MIN) {
+      const mid = (from + to) / 2;
+      from = Math.max(0, Math.min(1 - WEATHER_SPAN_MIN, mid - WEATHER_SPAN_MIN / 2));
+      to = from + WEATHER_SPAN_MIN;
+    }
+    return { from, to };
+  };
 }
 
 function renderWeatherWidget(weather) {
@@ -2428,23 +2582,36 @@ function renderWeatherWidget(weather) {
   const descText = (desc) => weatherDescText(weather, desc);
   const iconHtml = (icon, cls, size, desc) => weatherIconHtml(weather, icon, cls, size, desc);
 
+  const spanOf = weatherSpanModel(forecast);
+
   const forecastHtml = forecast.map((d, i) => {
     const date = new Date(d.date + 'T12:00:00');
-    const label = new Intl.DateTimeFormat(getLocale(), { weekday: 'short' }).format(date);
+    const label = i === 0
+      ? t('common.today')
+      : new Intl.DateTimeFormat(getLocale(), { weekday: 'short' }).format(date);
     const extraCls = i >= 3 ? ' weather-forecast__day--extended' : '';
+    // Der Balken trägt das Band der HÖCHSTtemperatur: sie ist die Zahl, nach
+    // der ein Tag eingeschätzt wird ("wird es warm?"), und sie steht daneben.
+    const band = weatherTempBand(d.temp_max, units);
+    const span = spanOf?.(d);
+    const spanHtml = span
+      ? `<div class="weather-forecast__span"${band ? ` data-weather-band="${band}"` : ''}
+              style="--span-from:${span.from.toFixed(4)};--span-to:${span.to.toFixed(4)}" aria-hidden="true"></div>`
+      : '';
     return `
       <div class="weather-forecast__day${extraCls}">
-        <div class="weather-forecast__label">${label}</div>
+        <div class="weather-forecast__label${i === 0 ? ' weather-forecast__label--today' : ''}">${esc(label)}</div>
         ${iconHtml(d.icon, 'weather-forecast__icon', 32, descText(d.desc))}
         <div class="weather-forecast__temps">
           <span class="weather-forecast__high">${d.temp_max}°</span>
           <span class="weather-forecast__low">${d.temp_min}°</span>
         </div>
+        ${spanHtml}
       </div>`;
   }).join('');
 
   return `
-    <div class="widget widget--weather weather-widget" id="weather-widget">
+    <div class="widget widget--weather weather-widget" id="weather-widget"${weatherToneAttr(current.icon)}${weatherMotionAttr(current.icon)}>
       <h3 class="sr-only">${esc(t('dashboard.weather'))}</h3>
       <button class="weather-widget__refresh" id="weather-refresh-btn" aria-label="${t('dashboard.weatherRefresh')}" title="${t('dashboard.weatherRefreshTitle')}">
         <i data-lucide="refresh-cw" class="icon-md" aria-hidden="true"></i>
@@ -2459,7 +2626,7 @@ function renderWeatherWidget(weather) {
               ${t('dashboard.weatherFeelsLike', { temp: current.feels_like, humidity: current.humidity, wind: current.wind_speed, windUnit })}
             </div>
           </div>
-          ${iconHtml(current.icon, 'weather-widget__icon', 80, descText(current.desc))}
+          <span class="weather-widget__glyph">${iconHtml(current.icon, 'weather-widget__icon', 80, descText(current.desc))}</span>
         </div>
         ${forecast.length ? `<div class="weather-forecast">${forecastHtml}</div>` : ''}
       </div>
@@ -2709,11 +2876,13 @@ function renderWallWeather(weather) {
   if (!weather?.current) return '';
   const { city, current, forecast, units } = weather;
   const desc = weatherDescText(weather, current.desc);
-  const days = (Array.isArray(forecast) ? forecast : []).slice(0, 4).map((d) => {
+  const days = (Array.isArray(forecast) ? forecast : []).slice(0, 4).map((d, i) => {
     const date = new Date(`${d.date}T12:00:00`);
-    const label = new Intl.DateTimeFormat(getLocale(), { weekday: 'short' }).format(date);
+    const label = i === 0
+      ? t('common.today')
+      : new Intl.DateTimeFormat(getLocale(), { weekday: 'short' }).format(date);
     return `
-      <li class="wall-weather__day">
+      <li class="wall-weather__day"${weatherToneAttr(d.icon)}>
         <span class="wall-weather__day-label">${esc(label)}</span>
         ${weatherIconHtml(weather, d.icon, 'wall-weather__day-icon', 32, weatherDescText(weather, d.desc))}
         <span class="wall-weather__day-temps">
@@ -2724,7 +2893,7 @@ function renderWallWeather(weather) {
   }).join('');
 
   return `
-    <section class="wall__weather" aria-labelledby="wall-weather-title">
+    <section class="wall__weather" aria-labelledby="wall-weather-title"${weatherToneAttr(current.icon)}${weatherMotionAttr(current.icon)}>
       <h2 class="wall__section-title" id="wall-weather-title">${esc(t('dashboard.weather'))}</h2>
       <div class="wall-weather__now">
         ${weatherIconHtml(weather, current.icon, 'wall-weather__icon', 64, desc)}
@@ -3621,7 +3790,7 @@ export async function render(container, { user }) {
   }
 }
 
-export const __test = { buildTodayHighlights, buildTodayProgram, buildTodayCockpitModel, renderTodayCockpit, renderPinnedNotes, renderFamilyWidget, formatDueDate, normalizeVisibleMealTypes, renderTodayMeals, calendarEventRoute, eventOccurrenceDateKey, eventStartDate, renderWallSurface, renderWallWho, selectMetricTiles, METRIC_TILE_ORDER, PROGRAM_ROW_CAP, WALL_ROW_CAP };
+export const __test = { buildTodayHighlights, buildTodayProgram, buildTodayCockpitModel, renderTodayCockpit, renderPinnedNotes, renderFamilyWidget, formatDueDate, normalizeVisibleMealTypes, renderTodayMeals, calendarEventRoute, eventOccurrenceDateKey, eventStartDate, renderWallSurface, renderWallWho, selectMetricTiles, METRIC_TILE_ORDER, PROGRAM_ROW_CAP, WALL_ROW_CAP, weatherToneKey, weatherMotionAttr, weatherTempBand, weatherSpanModel };
 
 function wireWeatherRefresh(container, onUpdated = null) {
   const refreshBtn = container.querySelector('#weather-refresh-btn');

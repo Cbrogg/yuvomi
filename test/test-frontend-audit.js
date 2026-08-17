@@ -567,6 +567,123 @@ test('kein endlos animiertes Element traegt in derselben Regel einen filter', ()
 });
 
 /**
+ * Das Wetter-Vokabular haelt an vier Enden zusammen.
+ *
+ * DIE LAGEN UND BAENDER STEHEN NICHT ALS LISTE HIER, sondern werden aus
+ * dashboard.js gelesen - `weatherToneKey()` erzeugt sie, also ist sie die
+ * Quelle. Eine Liste im Test waere die zweite Wahrheit, und genau die ist in
+ * diesem Repo schon dreimal auseinandergelaufen (Modulzahl, Waehrungen,
+ * Familientoene). Kommt eine siebte Lage dazu, faellt dieser Guard von selbst
+ * um, statt sie durchzulassen.
+ *
+ * VIER ENDEN, WEIL EIN TON AN VIER STELLEN GLEICHZEITIG STEHEN MUSS:
+ *   1. der Light-Wert in `:root`,
+ *   2. der Dark-Wert - in BEIDEN Dark-Bloecken. Das ist die eigentliche
+ *      Drift-Gefahr: tokens.css fuehrt @media(prefers-color-scheme) UND
+ *      [data-theme="dark"], und wer nur einen bedient, baut einen Fehler, den
+ *      genau die Haelfte der Nutzer sieht.
+ *   3. die Aufloesungsregel in dashboard.css, die `[data-weather-tone="x"]`
+ *      auf das Token abbildet - ohne sie steht das Attribut im DOM und faerbt
+ *      nichts,
+ *   4. und fuer jede Gangart eine Animation samt reduced-motion-Ausschalter.
+ *
+ * Guard-Ebene: Struktur (aus der JS-Abbildung abgeleitet) + Wert.
+ */
+test('jede Wetterlage traegt ihren Ton in beiden Themes und loest ihn auch auf', () => {
+  const page = read('../public/pages/dashboard.js');
+  const tokens = read('../public/styles/tokens.css');
+  const css = read('../public/styles/dashboard.css');
+
+  const toneFn = page.match(/function weatherToneKey\([\s\S]*?\n}/);
+  assert.ok(toneFn, 'weatherToneKey() nicht gefunden - die Quelle der Lagen ist weg.');
+  const tones = [...new Set([...toneFn[0].matchAll(/return '([a-z]+)'/g)].map((m) => m[1]))];
+  assert.ok(tones.length >= 6, `Nur ${tones.length} Wetterlagen gelesen - die Signatur greift nicht mehr.`);
+
+  const bandsDecl = page.match(/const WEATHER_BANDS = \[([^\]]+)\]/);
+  assert.ok(bandsDecl, 'WEATHER_BANDS nicht gefunden.');
+  const bands = [...bandsDecl[1].matchAll(/'([a-z]+)'/g)].map((m) => m[1]);
+  assert.ok(bands.length >= 5, `Nur ${bands.length} Temperaturbaender gelesen.`);
+
+  const darkScheme = darkSchemeBlock(tokens);
+  const darkAttr = darkAttrBlock(tokens);
+  assert.ok(darkScheme && darkAttr, 'Ein Dark-Block von tokens.css ist nicht auffindbar.');
+
+  const missing = [];
+  const check = (name, attr) => {
+    if (!new RegExp(`\\n\\s*--_${name}:\\s*#`).test(tokens)) missing.push(`tokens.css :root --_${name}`);
+    if (!new RegExp(`--_${name}:\\s*#`).test(darkScheme[1])) missing.push(`tokens.css prefers-color-scheme --_${name}`);
+    if (!new RegExp(`--_${name}:\\s*#`).test(darkAttr[1])) missing.push(`tokens.css [data-theme=dark] --_${name}`);
+    if (!new RegExp(`--${name}:\\s*var\\(--_${name}\\)`).test(tokens)) missing.push(`tokens.css oeffentliches --${name}`);
+    if (!css.includes(attr)) missing.push(`dashboard.css ${attr}`);
+  };
+
+  for (const tone of tones) check(`weather-${tone}`, `[data-weather-tone="${tone}"]`);
+  for (const band of bands) check(`weather-band-${band}`, `[data-weather-band="${band}"]`);
+
+  assert.deepEqual(missing, [], `Wetter-Vokabular unvollstaendig:\n${missing.join('\n')}`);
+});
+
+test('jede Bewegung des Wetter-Widgets steht unter einer Bewegungs-Bedingung', () => {
+  const page = read('../public/pages/dashboard.js');
+  const css = read('../public/styles/dashboard.css');
+
+  const motionFn = page.match(/function weatherMotionAttr\([\s\S]*?\n}/);
+  assert.ok(motionFn, 'weatherMotionAttr() nicht gefunden.');
+  const motions = [...new Set([...motionFn[0].matchAll(/data-weather-motion="([a-z]+)"/g)].map((m) => m[1]))];
+  assert.ok(motions.length >= 4, `Nur ${motions.length} Gangarten gelesen - die Signatur greift nicht mehr.`);
+
+  // DIE SIGNATUR IST „Wetter-Selektor + animation", NICHT EINE LISTE VON
+  // GANGARTEN. Ein Guard ueber die vier bekannten Namen waere beim fuenften
+  // gruen geblieben - genau der Fehler, den die Umstellung auf
+  // `no-preference` gerade behoben hat. Er faellt hier ueber die BAUART:
+  // jede Regel, die eine Wetter-Flaeche animiert, muss unter einer
+  // prefers-reduced-motion-Bedingung stehen.
+  const stray = [];
+  let seen = 0;
+  for (const rule of eachRule(css)) {
+    if (!/weather-widget|weather-forecast|wall-weather|data-weather-motion/.test(rule.selector)) continue;
+    if (!/\banimation(-name|-delay|-duration)?\s*:\s*(?!none)/.test(rule.body)) continue;
+    seen += 1;
+    const gated = rule.at.some((at) => /prefers-reduced-motion/.test(at));
+    // ZWEI BAUARTEN BRAUCHEN DIE BEDINGUNG NICHT, und beide sind das Gegenteil
+    // von Umgebungsbewegung:
+    //   - der Wand-Nachtmodus HAELT Bewegung an, statt sie zu starten;
+    //   - der Ladekringel des Aktualisieren-Knopfs ist Rueckmeldung auf eine
+    //     angestossene Aktion und laeuft nur, solange die Anfrage laeuft. Auch
+    //     unter reduzierter Bewegung muss erkennbar bleiben, dass etwas
+    //     passiert - Apple laesst seine Aktivitaetsanzeigen aus demselben Grund
+    //     drehen. Die Zusicherung darunter belegt, dass er wirklich fluechtig
+    //     ist; ohne sie waere das hier eine Ausnahme auf Zuruf.
+    const transient = /--spinning/.test(rule.selector);
+    if (!gated && !/data-wall-night/.test(rule.selector) && !transient) {
+      stray.push(`${rule.selector} -> ${rule.body.trim().slice(0, 60)}`);
+    }
+  }
+  assert.ok(seen >= 6, `Nur ${seen} animierte Wetter-Regeln gesehen - die Signatur greift nicht mehr.`);
+  assert.deepEqual(stray, [],
+    'Bewegung am Wetter-Widget ohne Bewegungs-Bedingung. Sie gehoert in den\n'
+    + '`@media (prefers-reduced-motion: no-preference)`-Block in dashboard.css -\n'
+    + 'eine nachgeschobene `animation: none`-Gegenregel verliert gegen jeden\n'
+    + `Selektor mit einem Zusatz mehr (gemessen am fallenden Regen).\n${stray.join('\n')}`);
+
+  // Und die Gegenrichtung: der Block muss jede Gangart auch wirklich fuehren.
+  const inBlock = [...eachRule(css)]
+    .filter((rule) => rule.at.some((at) => /prefers-reduced-motion:\s*no-preference/.test(at)))
+    .map((rule) => rule.selector).join('\n');
+  const missing = motions.filter((m) => !inBlock.includes(`[data-weather-motion="${m}"]`));
+  assert.deepEqual(missing, [], `Gangart ohne Animation: ${missing.join(', ')}`);
+  assert.match(inBlock, /weather-widget__glyph::before/, 'der Lichthauch muss im Bewegungsblock atmen');
+
+  // Die Ausnahme oben gilt nur, solange sie fluechtig IST: die Klasse wird um
+  // die Anfrage herum gesetzt und wieder entfernt. Bliebe sie stehen, waere
+  // aus der Rueckmeldung eine Dauerbewegung ohne Ausschalter geworden.
+  assert.match(page, /classList\.add\('weather-widget__refresh--spinning'\)/,
+    'der Ladekringel muss beim Anstossen gesetzt werden');
+  assert.match(page, /classList\.remove\('weather-widget__refresh--spinning'\)/,
+    'der Ladekringel muss wieder entfernt werden - sonst ist er keine Rueckmeldung, sondern Dauerbewegung');
+});
+
+/**
  * Jedes benutzte Token muss auch existieren.
  *
  * DIE GEGENRICHTUNG WAR ABGEDECKT, DIESE NICHT. Alle Token-Guards des Repos
@@ -11023,7 +11140,7 @@ test('kein Inline-Style in public/ schreibt einen Design-Wert als Literal', () =
  * Die Gegenrichtung steht darunter: eine Stufe ohne Nutzer waere eine
  * Einladung, sie beim naechsten Mal falsch zu belegen.
  */
-const TINT_SOURCE = /--(module-[\w-]+|meal-[\w-]+|cycle-[\w-]+|layer-color|note-color|holi-color|ev-color|c-accent|active-module-accent|item-module-accent|color-accent|color-warning|color-danger|color-success|today-card-accent|widget-accent|subscription-color|rw-[\w-]+)/;
+const TINT_SOURCE = /--(module-[\w-]+|meal-[\w-]+|weather-[\w-]+|cycle-[\w-]+|layer-color|note-color|holi-color|ev-color|c-accent|active-module-accent|item-module-accent|color-accent|color-warning|color-danger|color-success|today-card-accent|widget-accent|subscription-color|rw-[\w-]+)/;
 /* `countdown-accent` (#647) steht hier, weil die Kachel als EINZIGE Variable
  * beides fuehrt: bei einer Aufgabenzeile den kuratierten Modulton, bei einer
  * Terminzeile die vom Nutzer gewaehlte Farbe des Termins. Wer beide Faelle in

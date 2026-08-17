@@ -44,6 +44,18 @@ colors:
   family-health: "#9E1E88"
   family-records: "#42587E"
   family-neutral: "#677079"
+  # Wetterlagen (2026-08-17): eine PARALLELE Domaenenfamilie, keine zehnte
+  # Familie. Die Familientoene beantworten „welches Modul", die Wetterlage
+  # beantwortet „was ist draussen" - deshalb teilt keine Lage den Wert einer
+  # Familie, und keine erscheint ausserhalb einer Wetterflaeche. Bauart wie bei
+  # den Mahlzeit-Typen. Dark-Werte und die fuenf Temperaturbaender der
+  # Verlaufszeile: public/styles/tokens.css, Abschnitt 5b.
+  weather-clear: "#B45309"
+  weather-night: "#4C4FBF"
+  weather-cloud: "#4F6478"
+  weather-rain: "#0A5C9E"
+  weather-snow: "#00768C"
+  weather-storm: "#8B2FC9"
 typography:
   display:
     fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', 'Segoe UI', Roboto, Arial, sans-serif"
@@ -344,7 +356,10 @@ Rollout-Stand: die ganze App steht in der neuen Welt. Runde 1 zog die geteilten 
 Runde 2 das Kasten-in-Kasten-Vokabular samt Traeger-Regel, Runde 3 die Befunde des
 Finish-Reviews: die Zeilenlisten-Regel, EINE Buttonform, EIN Toenungsrezept, das
 Wetter-Widget als randlose Karte ohne Verlauf, Notizfarben nach der User-Farben-Regel und
-die Anmeldeseite als Teil der Welt.
+die Anmeldeseite als Teil der Welt. **Das Wetter-Widget hat 2026-08-17 Farbe
+zurueckbekommen, aber nicht seinen Verlauf** - die randlose Karte bleibt, der Ton kommt
+jetzt aus der Wetterlage statt aus dem globalen Akzent (siehe die Signature Component
+„Das Wetter-Widget").
 
 **Der Dashboard-Bogen (v2.4.0 bis v2.6.0) hat die Uebersicht von einem Raster zu einer
 Buehne gemacht** - und dabei drei Formen hinzugefuegt, die es vorher nicht gab: das
@@ -385,9 +400,23 @@ endgueltig loeschte.
 
 Warme Neutrale als Buehne, das Violett der Bildmarke als Stimme, 17 Modul-Tints als
 Orientierungsvokabular; alle Textfarben AA-vertieft. Es gibt keinen chromatischen
-Verlauf auf Inhalt - die einzige verbliebene Farbdramatik der App sind die driftenden
-Backdrop-Blobs hinter dem Glas (`--lg-blob-opacity` 0.16 light / 0.20 dark, in
-reduced-transparency und prefers-contrast auf 0).
+Verlauf auf Inhalt. Die Farbdramatik der App ist auf EINE Gattung beschraenkt: weiche,
+kreisrunde Lichtfelder HINTER dem Inhalt, die nie eine Flaeche fuellen und nie unter Text
+liegen, wo sie ihn traegt. Zwei Stellen gehoeren ihr an, und beide teilen dieselben
+Ausschalter (in reduced-transparency und prefers-contrast auf 0):
+
+- die driftenden **Backdrop-Blobs** hinter dem Glas (`--lg-blob-opacity` 0.16 light /
+  0.20 dark);
+- der **Lichthauch der Wetterglyphe** (`--weather-glow-opacity`, 2026-08-17), der aus dem
+  Zeichen zu kommen scheint und lange vor dem Text auslaeuft.
+
+**Die Unterscheidung ist keine Wortklauberei, sie ist die Lehre aus dem Verlauf, den
+Runde 3 entfernt hat.** Der war die Karte: eine deckende Flaeche von Kante zu Kante, im
+GLOBALEN Akzent statt in der Domaene, unter der jeder Text stand - und im Dark ein heller
+Block im dunklen Dashboard. Ein Lichtfeld hinter einer Glyphe teilt davon keine einzige
+Eigenschaft. Was auch nach der Rueckkehr der Farbe gilt: keine getoente Vollflaeche auf
+Inhalt, kein Verlauf ueber eine Karte, kein Text auf einer Flaeche, die nicht gemessen ist
+(der Sekundaertext ueber dem staerksten Punkt des Lichthauchs haelt 4.82-4.97:1).
 
 ### Primary
 - **Das Violett der Bildmarke** (`accent-violet` #6C3AED): die Stimme der App. 6.10:1 auf
@@ -1734,6 +1763,75 @@ Geraeten dieselbe.
 neutraler Hover warf diese Auskunft im Moment der Beruehrung weg. `--tint-state` (12 %) ist
 die Skalenstufe fuer genau das: Zustand auf einer ungetoenten Flaeche.
 
+### Das Wetter-Widget (Signature Component)
+
+**Das Wetter ist der einzige Inhalt der App, den niemand im Haushalt eingegeben hat** - er
+kommt von draussen und aendert sich von selbst. Deshalb ist es die einzige Kachel, die eine
+eigene Farbe und eine eigene Bewegung traegt. Bis 2026-08-17 stand seine Glyphe in
+`--module-dashboard`, also im Violett der Uebersicht: die Karte sagte damit, WO sie haengt -
+eine Auskunft, die auf einer Dashboard-Karte niemand braucht, weil sie schon aus der Seite
+folgt.
+
+**SECHS LAGEN ALS TON** (tokens.css 5b): klar, Nacht, bewoelkt, Regen, Schnee, Gewitter.
+Sie sind eine PARALLELE Domaenenfamilie, keine zehnte Familientonfamilie - das Vokabular
+der neun Familien gehoert den Modulen, und keine Lage teilt den Wert einer von ihnen. Die
+Lage wird aus dem ICON-NAMEN abgeleitet, nicht aus dem Beschreibungstext: der ist
+lokalisiert und in der OWM-Fassung frei formuliert, das Icon ist beim selben Provider immer
+derselbe Schluessel. Zwoelf Werte, gemessen gegen ihre drei realen Gruende je Theme,
+Zielwert **4.5:1 statt 3:1** - der Ton traegt in der Verlaufszeile auch die
+Hoechsttemperatur, und das ist Kleintext. Farbe ist nie alleiniger Traeger: daneben stehen
+die Glyphe der Lage und der ausgeschriebene `wmo.*`-Text.
+
+**DER LICHTHAUCH** haengt an der Glyphe, nicht an der Karte - eine Huelle um sie, weil ein
+SVG keine Pseudo-Elemente hat. Zwei Stufen, zwei Rollen: der Kern toent als Objekt
+(`--tint-surface`), das auslaufende Feld untergreift fremden Inhalt (`--tint-wash`). Der
+erste Anlauf hing an `.weather-widget__main` und rechnete sich von dessen Inline-Ende zur
+Glyphe zurueck; ab 860px Containerbreite bekommt der Kasten eine feste Basis und das Licht
+lag gemessen 108px neben seiner Sonne. **Wo ein Bezug eine Rechnung braucht, ist der
+Anker falsch gewaehlt.**
+
+**VIER GANGARTEN**, und jede sagt, was sie zeigt: `rays` dreht die Sonnenstrahlen um die
+stehende Scheibe (72s), `drift` laesst die Wolke ziehen, `fall` schickt Tropfen und Flocken
+versetzt nach unten, `flash` laesst das LICHT doppelt aufleuchten statt die Glyphe zucken
+(ein Blitz IM Zeichen liest bei 24px wie ein Darstellungsfehler). Die Gangart haengt am
+Icon, NICHT am Ton: `sun` und `cloud-sun` tragen denselben Bernstein und bewegen sich
+gegensaetzlich, weil bei `cloud-sun` die Wolke selbst ein `<path>` ist. Ziele sind
+Kindknoten der Lucide-SVGs; trifft eine Regel nach einem Update ins Leere, steht die Glyphe
+still - der schlechteste Ausgang ist kein Defekt.
+
+**DER AUSSCHALTER IST EINE BEDINGUNG, KEINE GEGENREGEL**, und das ist die uebertragbare
+Lehre dieser Runde. Der erste Anlauf folgte der Hausform
+(`@media (prefers-reduced-motion: reduce) { ... animation: none }`) und hat den Regen nicht
+angehalten: die Tropfenregel traegt ein `:not(:first-child)` und damit eine Klasse mehr
+Spezifitaet als die Gegenregel. Die Sonne stand still, der Regen fiel weiter, und beide
+standen im selben Block. Ein Spezifitaets-Wettruesten waere die zweite Falle gewesen - jede
+neue Gangart braeuchte ihre eigene Gegenzeile, und die vergisst man genau einmal. Die
+Bewegung steht deshalb NUR DANN im Stylesheet, wenn sie erwuenscht ist
+(`prefers-reduced-motion: no-preference`). Was bleibt, bleibt: Ton, Lichthauch und
+Spannenbalken sind Farbe und Form, keine Bewegung. Guard-Ebene: Signatur (jede Regel, die
+eine Wetterflaeche animiert, muss unter einer Bewegungs-Bedingung stehen) - er fand
+denselben Befund im Bestand, den Ladekringel des Aktualisieren-Knopfs, und der bleibt als
+BENANNTE Ausnahme: eine Aktivitaetsanzeige muss auch unter reduzierter Bewegung erkennbar
+sein, und die Zusicherung belegt, dass sie fluechtig ist.
+
+**DIE SPANNE DER WOCHE** macht aus der Verlaufszeile eine Auskunft. Unter jedem Wochentag
+standen zwei nackte Zahlen ohne Beziehung zueinander - welcher Tag der waermste ist, war
+eine Rechenaufgabe. Der Balken ist auf die Spanne der GANZEN Vorhersage normiert: Lage sagt,
+wo der Tag in der Woche liegt, Laenge, wie weit er schwankt, Farbe, wie warm es wird. Fuenf
+BENANNTE Temperaturbaender statt einer stufenlosen Rampe, und der Grund ist ein Guard: eine
+Interpolation haette ihren Mischwert als Zahl am Element gebraucht
+(`calc(var(--x) * 100%)`), und genau diese Bauart sieht der Toenungs-Guard nicht - sie waere
+die achtunddreissigste Prozentstufe gewesen, nur unsichtbar. Die Schwellen stehen in jeder
+Einheit ausgeschrieben statt umgerechnet: „unter null" ist im Fahrenheit-Haushalt 32 °F und
+nicht 31,999.
+
+**DREI FLAECHEN, ZWEI GANGARTEN.** Karte, Masthead-Zeile und Wand-Modus teilen Ton und
+Bewegung; die Kartenglyphe traegt Farbe allein, ihre fuenf Vorhersagezeichen bleiben
+sekundaer und die Auskunft uebernimmt der Balken. Auf der WAND ist es umgekehrt: dort traegt
+jeder der vier Tage seinen eigenen Ton, weil aus zwei Metern Farbe die schnellere Auskunft
+ist als Form. Nachts gibt die Wand beides ab - ein bernsteinfarbenes Sonnenzeichen waere im
+dunklen Flur der hellste Punkt im Raum.
+
 ### Anmeldeseite
 Die erste Seite der App ist Teil derselben Welt, keine Ausnahme. Die Buehne ist der reine
 Seitengrund ohne Verlauf (bis Runde 3 stand hier der letzte chromatische Verlauf der App).
@@ -1903,7 +2001,9 @@ Angabe braeuchte einen zweiten Timer, nur damit sie sich selbst aktuell haelt.
 - **Don't** Gradient-Text oder Akzent-Titel: Large Titles und Ueberschriften tragen immer
   Label-Farbe.
 - **Don't** chromatische Verlaeufe auf Inhalt legen; auch nicht auf der Anmeldebuehne und
-  nicht auf einem Widget.
+  nicht auf einem Widget. Ein weiches Lichtfeld HINTER einer Glyphe ist keins - es fuellt
+  keine Flaeche, laeuft vor dem Text aus und traegt die Ausschalter der Backdrop-Blobs
+  (siehe „Colors"). Wer es kopiert, kopiert auch die Messung.
 - **Don't** Akzentstreifen an Toolbars, Tabs oder Koepfen; die gehoerten zur abgeloesten Welt.
 - **Don't** dekorative Kicker/Eyebrows; eine Versal-Zeile ist nur als echte Information
   erlaubt (Apple-News-Muster, z. B. das Masthead-Datum).

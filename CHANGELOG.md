@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.21.0] - 2026-08-17
+
+### Changed
+
+- **The weather widget shows the weather, not the room it hangs in.** Its glyph carried the overview module's violet, which said where the card sits - something the page already answers - and nothing about what the card reports. The conditions now set the colour: clear day, clear night, cloud, rain, snow and thunderstorm each have their own tone, and a soft round light sits behind the glyph in that same tone. The glyph moves the way its weather does, too: the sun turns its rays around the standing disc, clouds drift, raindrops and snowflakes fall, and a thunderstorm flashes the light rather than the symbol. All twelve colour values are measured against the three real backgrounds they can sit on in each theme, and against the contrast requirement for small text rather than the lower one for icons, because the same tone also carries the forecast's high temperature. Colour is never the only signal: the glyph of the condition and its written description stand right beside it. The same tone reaches the quiet weather line under the greeting and the wall-tablet view, where every forecast day carries its own - from two metres a colour is read faster than a shape. A reduced-motion setting stops all movement and keeps the colour; the reduced-transparency and increased-contrast settings switch the light off, exactly as they already do for the glow behind the glass.
+- **The weather forecast shows how the week runs, not just five pairs of numbers.** Under each weekday stood a high and a low with no relation to their neighbours, so working out which day will be the warmest was arithmetic. Every day now carries a bar scaled against the whole forecast: where it sits says where the day falls in the week, how long it is says how far the temperature swings, and its colour names one of five bands from icy to hot. The bands mean the same thing in every unit, with the thresholds written out per unit instead of converted, so "below freezing" is 32 °F and not 31.999. The first column is called "Today" instead of naming its weekday.
+
 ## [2.20.0] - 2026-08-17
 
 ### Changed

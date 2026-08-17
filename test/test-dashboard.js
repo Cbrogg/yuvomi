@@ -1759,6 +1759,120 @@ test('Kennzahlreihe bezieht ihre Hoehe aus ihrem Inhalt, nicht von aussen', () =
 });
 
 // --------------------------------------------------------
+// Wetterlage, Gangart und Temperaturband (#Wetter-Kur 2026-08-17)
+// --------------------------------------------------------
+
+/**
+ * DIE ICON-LISTE KOMMT VOM SERVER, NICHT AUS DIESER DATEI. `wmoIcon()` in
+ * server/routes/weather.js ist die einzige Stelle, die entscheidet, welche
+ * Lucide-Namen je aus Open-Meteo herausfallen koennen - eine Liste hier waere
+ * die zweite Wahrheit und liefe beim naechsten WMO-Code auseinander, ohne rot
+ * zu werden. Der Guard liest deshalb die Rueckgabewerte der Funktion.
+ *
+ * DIESER GUARD KOMMT AUS EINEM GEMESSENEN FEHLER, nicht aus Vorsicht: die
+ * Sonne bekam ihre Rotation nie, weil `'sun'.endsWith('n')` wahr ist und die
+ * Tag/Nacht-Pruefung der OWM-Codes auf den Lucide-Zweig durchschlug. Ein
+ * Struktur-Guard ueber die CSS-Regeln sah das nicht - die Regel existierte,
+ * das Attribut kam nur nie an. Die Ebene muss die AUSGABE sein.
+ */
+test('jedes Wetter-Icon des Servers findet eine Lage, und die Sonne dreht sich', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  const routeSrc = readFileSync(new URL('../server/routes/weather.js', import.meta.url), 'utf8');
+  const wmoFn = routeSrc.match(/function wmoIcon\([\s\S]*?\n}/);
+  assert(wmoFn, 'wmoIcon() nicht gefunden - die Quelle der Icon-Namen ist weg');
+  const icons = [...new Set([...wmoFn[0].matchAll(/'([a-z-]+)'/g)].map((m) => m[1]))];
+  assert(icons.length >= 8, `Nur ${icons.length} Icon-Namen gelesen - die Signatur greift nicht mehr`);
+
+  const untoned = icons.filter((icon) => !__test.weatherToneKey(icon));
+  assert(untoned.length === 0, `Ohne Wetterton: ${untoned.join(', ')}`);
+
+  // Und der OWM-Legacy-Zweig, der dieselbe Funktion benutzt.
+  const owm = ['01d', '01n', '02d', '02n', '03d', '04d', '09d', '10d', '11d', '13d', '50d'];
+  const untonedOwm = owm.filter((code) => !__test.weatherToneKey(code));
+  assert(untonedOwm.length === 0, `OWM-Code ohne Wetterton: ${untonedOwm.join(', ')}`);
+
+  assert(__test.weatherMotionAttr('sun').includes('rays'), 'die Sonne muss ihre Strahlen drehen');
+  assert(__test.weatherMotionAttr('01d').includes('rays'), 'OWM-Tagsonne muss ihre Strahlen drehen');
+  assert(__test.weatherMotionAttr('01n') === '', 'die klare Nacht bewegt sich nicht');
+  assert(__test.weatherMotionAttr('moon') === '', 'der Mond zieht nicht');
+  assert(__test.weatherMotionAttr('cloud-rain').includes('fall'), 'Regen faellt');
+  assert(__test.weatherMotionAttr('cloud-lightning').includes('flash'), 'das Gewitter leuchtet');
+  assert(__test.weatherMotionAttr('cloud').includes('drift'), 'die Wolke zieht');
+});
+
+/**
+ * Der Wand-Modus rendert das Wetter aus denselben Bausteinen, aber in einer
+ * eigenen Komposition - und genau dort geht so etwas verloren. Aus zwei Metern
+ * ist der Ton die schnellere Auskunft als die Form, deshalb traegt hier JEDER
+ * Vorhersagetag seinen eigenen (anders als auf der Karte, wo der Balken das
+ * uebernimmt).
+ */
+test('der Wand-Modus faerbt jeden Wettertag, nicht nur den aktuellen', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  await withWallWindow(() => {
+    const weather = {
+      provider: 'open-meteo', city: 'Dortmund', units: 'metric',
+      current: { temp: 21, icon: 'cloud-lightning', desc: 'wmo.95', feels_like: 20, humidity: 70, wind_speed: 9 },
+      forecast: [
+        { date: '2026-08-17', icon: 'cloud-lightning', desc: 'wmo.95', temp_min: 16, temp_max: 21 },
+        { date: '2026-08-18', icon: 'sun', desc: 'wmo.0', temp_min: 14, temp_max: 26 },
+        { date: '2026-08-19', icon: 'cloud-snow', desc: 'wmo.71', temp_min: -2, temp_max: 1 },
+      ],
+    };
+    const html = __test.renderWallSurface({ urgentTasks: [], upcomingEvents: [], users: [] }, weather, {});
+    const section = html.slice(html.indexOf('wall__weather'));
+    const tones = [...section.matchAll(/data-weather-tone="([a-z]+)"/g)].map((m) => m[1]);
+    // Die Sektion selbst + drei Tage. Ohne die Reichweitenpruefung meldete ein
+    // leerer Treffer fehlerfrei „alles gut".
+    nodeAssert.equal(tones.length, 4, `vier Toene erwartet, gelesen: ${tones.join(', ')}`);
+    nodeAssert.deepEqual(tones, ['storm', 'storm', 'clear', 'snow'],
+      'die Sektion traegt die aktuelle Lage, jeder Tag seine eigene');
+    nodeAssert.match(section, /data-weather-motion="flash"/, 'die Wand kennt die Gangart der aktuellen Lage');
+  });
+});
+
+test('die Temperaturbaender liegen in jeder Einheit auf denselben Grenzen', async () => {
+  const { __test: { weatherTempBand } } = await import('../public/pages/dashboard.js');
+  // Dieselbe Wetterlage, drei Einheiten: -1 °C ist 30,2 °F ist 272,15 K, und
+  // alle drei muessen „eisig" heissen. Genau diese Kette bricht, wenn jemand
+  // eine Celsius-Schwelle im Code umrechnet statt sie auszuschreiben.
+  for (const [units, freezing, mild, hot] of [
+    ['metric', -1, 15, 30],
+    ['imperial', 30, 59, 86],
+    ['standard', 272, 288, 303],
+  ]) {
+    assert(weatherTempBand(freezing, units) === 'icy', `${units}: ${freezing} muss eisig sein`);
+    assert(weatherTempBand(mild, units) === 'mild', `${units}: ${mild} muss mild sein`);
+    assert(weatherTempBand(hot, units) === 'hot', `${units}: ${hot} muss heiss sein`);
+  }
+  assert(weatherTempBand(null, 'metric') === null, 'ohne Zahl kein Band');
+  assert(weatherTempBand('x', 'metric') === null, 'ohne Zahl kein Band');
+  // Eine unbekannte Einheit faellt auf metrisch zurueck statt auf undefined.
+  assert(weatherTempBand(25, 'kelvinish') === 'warm', 'unbekannte Einheit faellt auf metrisch');
+});
+
+test('die Spanne der Vorhersage bleibt ein Balken, auch wenn die Woche flach ist', async () => {
+  const { __test: { weatherSpanModel } } = await import('../public/pages/dashboard.js');
+  const flat = weatherSpanModel([
+    { temp_min: 10, temp_max: 10 }, { temp_min: 10, temp_max: 10 },
+  ]);
+  const one = flat({ temp_min: 10, temp_max: 10 });
+  assert(one.to - one.from >= 0.13, 'eine flache Woche darf keinen unsichtbaren Balken ergeben');
+  assert(one.from >= 0 && one.to <= 1, 'der Balken bleibt in seiner Spur');
+
+  const week = weatherSpanModel([
+    { temp_min: 0, temp_max: 10 }, { temp_min: 10, temp_max: 20 }, { temp_min: 5, temp_max: 15 },
+  ]);
+  const cold = week({ temp_min: 0, temp_max: 10 });
+  const warm = week({ temp_min: 10, temp_max: 20 });
+  assert(cold.from === 0 && warm.to === 1, 'die Woche spannt von ihrem Minimum bis zu ihrem Maximum');
+  assert(warm.from > cold.from, 'der waermere Tag liegt weiter rechts');
+
+  assert(weatherSpanModel([]) === null, 'ohne Vorhersage kein Modell');
+  assert(weatherSpanModel([{ temp_min: 'x', temp_max: 'y' }]) === null, 'ohne Zahlen kein Modell');
+});
+
+// --------------------------------------------------------
 // Ergebnis
 // --------------------------------------------------------
 await Promise.all(pendingTests);

@@ -1,4 +1,4 @@
-<!-- version: 2.20.0 -->
+<!-- version: 2.21.0 -->
 <!--
   Die `releaseNotes` fuer den Umbrel-App-Store, von Hand fuer JEDEN Release
   geschrieben. `umbrel-publish.yml` nimmt den Text unter diesem Kommentar
@@ -29,21 +29,21 @@
     - Leerzeile zwischen den Absaetzen: der Store rendert ein gefaltetes
       YAML-Blockskalar, dort ist die Leerzeile der Absatzumbruch.
 
-  HINWEIS ZU DIESER VERSION: wieder eine visuelle Runde ohne Migration und
-  ohne neue Pflicht-Einstellung, also kein Handlungs-Absatz. Beschrieben
-  wird, was ein Haushalt SIEHT: die Modulfarben sind ueberall dieselben, das
-  Menue auf dem Telefon zeigt sie zum ersten Mal, und jedes Modul fuehrt ein
-  Zeichen statt zweier. Draussen bleiben die Messwerte (Kontrastzahlen), die
-  Namen der Zeichen, die Zahl der Codestellen und alles, was die Farbe
-  begruendet - das steht im CHANGELOG. Die Installer-Korrektur ist nicht
-  erwaehnt: sie betrifft die Ersteinrichtung, nicht ein bestehendes
-  Haushalts-Update, und ihr Anlassfall ist nur sichtbar, wenn ein Stylesheet
-  gar nicht laedt.
+  HINWEIS ZU DIESER VERSION: eine visuelle Runde an genau EINER Kachel, ohne
+  Migration und ohne neue Pflicht-Einstellung, also kein Handlungs-Absatz. Zwei
+  Absaetze reichen, weil es zwei Dinge zu sehen gibt: die Kachel hat die Farbe
+  ihrer Wetterlage bekommen und bewegt sich, und die Vorhersagezeile sagt jetzt
+  etwas ueber die Woche. Draussen bleiben die Kontrastmesswerte, die Namen der
+  Toene und Baender, die Bauart der Bewegungsschaltung und die beiden Fehler,
+  die beim Bauen selbst gefunden und behoben wurden (ausgeliefert war keiner
+  von beiden) - das alles steht im CHANGELOG. Der dritte Absatz nennt die
+  Barrierefreiheits-Schalter, weil sie eine Antwort auf die naheliegende Sorge
+  sind: eine Kachel, die sich von selbst bewegt, will man abschalten koennen.
 -->
-The module colors are now the same everywhere. Each of Yuvomi's areas - calendar, tasks, kitchen, budget and the rest - has its own color, and until now it appeared at full strength on the overview but washed out and pale everywhere else, so the same area could look like it belonged to a different app depending on where you saw it. Every one of those round marks now carries its color at full strength.
+The weather tile now shows the weather instead of the app's own color. Clear skies, night, cloud, rain, snow and thunderstorms each have their own color, and the symbol carries it along with a soft glow behind it. It also moves the way the weather does: the sun turns slowly, clouds drift, rain and snow fall, and a thunderstorm lights up. The same color appears in the short weather line under the greeting and on the wall-tablet view, where every forecast day gets its own.
 
-On phones, the navigation bar at the bottom shows those colors for the first time. On a computer the sidebar has been showing them for a while, which is what made the difference noticeable: the same app, two different languages, depending on the window. The bar now works the way the sidebar does - each icon in its area's color, and the one you are currently in taking the app's violet.
+The forecast row tells you something about the week now. Under each weekday there used to be a high and a low and nothing else, so seeing which day will be the warmest meant comparing numbers. Each day now has a small bar: where it sits shows where the day falls in the week, its length shows how much the temperature swings, and its color says how warm it will get. The first column simply reads "Today".
 
-Each area also has exactly one icon again. Which symbol stood for which area had been written down in several places over time and they had grown apart, so Notes was a sticky note in the menu and a pushpin on the overview. There is one list now, and a few icons that had been borrowed from elsewhere were drawn in the app's own hand.
+If you would rather have less movement, your device's reduce-motion setting stops all of it and keeps the colors. The reduce-transparency and increase-contrast settings additionally switch off the glow behind the symbol.
 
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.20.0
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.21.0
