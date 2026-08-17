@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.21.1] - 2026-08-18
+
 ### Fixed
 
 - **An event that ends at midnight belongs to the evening it started in.** A Friday appointment running 21:00 to 24:00 appeared on Saturday as well, and not as itself: because its end date fell on the next calendar day, the calendar counted it as a multi-day event and moved it into the all-day row, where it ran as a bar across both days. The month grid showed it twice, the week and day views billed it as all-day, and the agenda listed it under Saturday too. An end time of exactly midnight now closes the day it ends, so the appointment stays a Friday evening. Events that genuinely cross midnight are untouched - one more minute and Saturday is booked again - and so are all-day events, which store the same midnight stamp but mean their last day inclusively.
