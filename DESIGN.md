@@ -248,7 +248,18 @@ components:
      Karte ist das Vollton-Siegel (module-seal--vivid), auch in der
      Kachelreihe. Anlass und Messlatte stehen an der Signature Component
      „Der Widget-Kopf"; der ignore.md-Eintrag border-accent-on-rounded ist
-     mit der 2px-Linie gegangen. -->
+     mit der 2px-Linie gegangen.
+
+     Etappe 3 und 4 am selben Tag, beide aus derselben Chroma-Lehre: die
+     Wochen- und Ganztages-Bloecke des Kalenders tragen ihre Layer-Farbe
+     jetzt als 3px-VOLLTON-Kante statt als zweite Waschung (dazu die
+     Initialen-Schwelle 20px/11px und 4px Polster an den Kalender-Chips),
+     und die Familien-Geburtstage sprechen die Identitaetsfarbe ihres
+     Mitglieds statt der Modul-Toenung (unverknuepfte Kontakte behalten
+     sie). Die drei neuen Regeln stehen bei Colors, Typography und an der
+     Signature Component „Event-Bloecke im Kalender"; verifiziert gegen
+     test:frontend-audit (296), test:calendar (65), test:dashboard (71),
+     test:document-guards (31). -->
 
 ## Direction Contract
 
@@ -534,6 +545,17 @@ eine ganze Inhaltsflaeche: die Notizkarte tat das bis Runde 3 mit einer zur Lauf
 gerechneten Textfarbe und war damit die einzige Stelle, an der die Lesbarkeit an einer
 ungemessenen Farbe hing (und im Dark-Theme ein Feld heller Pastellbloecke).
 
+**Die Identitaetsfarben-Regel** (2026-08-17, Etappe 4). Wo eine PERSON gemeint ist, spricht
+ihre Identitaetsfarbe - und app-weit dieselbe. Ihr Traeger ist die Avatar-Scheibe im VOLLTON;
+das ist keine Ausnahme von der User-Farben-Regel, sondern ihr Dot in seiner groessten Form,
+und die Beschriftung darauf rechnet `getReadableTextColor()` gegen den gewaehlten Ton statt
+gegen eine angenommene Flaeche. Anlass war das Geburtstags-Widget: es toente jede Scheibe mit
+dem Modulton, und dieselbe Person leuchtete in der Familien-Kachel und sass eine Karte weiter
+grau. **Ihre Grenze ist die Verknuepfung.** Ein Geburtstag ohne Familienmitglied
+(`family_user_color` NULL, im Dashboard-Payload per LEFT JOIN mitgeliefert) behaelt die
+neutrale Modul-Toenung. Eine gehashte Ersatzfarbe waere schlimmer als keine: sie spraeche die
+Farbsprache des Haushalts fuer Fremde.
+
 **Die Toenungsskala-Regel** (loest die frühere Ein-Toenungsrezept-Regel ab, Runde 9).
 Jede Toenung nimmt eine benannte Stufe aus `tokens.css` (Abschnitt 6b), keine schreibt eine
 Zahl. Die alte Fassung sagte „16 %, EIN Rezept, app-weit" und beschrieb damit 23 von 214
@@ -687,6 +709,15 @@ Muster, z. B. das Intl-formatierte Datum im Dashboard-Masthead) ist echte Inform
 Kanon-Bestandteil. Dekorative Kicker und Eyebrows ohne Informationswert bleiben verboten;
 die generische Opt-in-Klasse dafuer ist mit dem Rollout entfallen, weil ihr Name zur
 Rueckkehr des Musters einlud.
+
+**Die Initialen-Schwelle-Regel** (2026-08-17, Etappe 3). Unter der Lesbarkeit gibt es keine
+Initialen, nur die Farbe. Ein Avatar zeigt seine Initialen - und der Stapel sein „+N" - erst
+ab 20px Scheibe und dann nie unter 11px, dem Wert von Caption 2 und damit der kleinsten
+Textrolle, die die App ueberhaupt kennt (Verhaeltnis <= 0.55 statt der freien Proportion).
+Darunter IST die Scheibe der Kanal: die Nutzerfarbe traegt per Identitaetsfarben-Regel
+ohnehin das Signal, der Name steht im `title`. Vorher stand hier eine 9px-Untergrenze, und
+die Kalender-Gitter riefen mit `size` 14-16 genau hinein (Sonde `undersized-ui-text`, 13
+Fundstellen). Ein 9px-Text sagt weniger als ein sauberer Punkt.
 
 ## Layout
 
@@ -1039,6 +1070,11 @@ Zielgroessen-Regel halten (**Ebene 3**, `die Groesse des Icon-Knopfs gehoert der
   getoente FLAECHE (`--tint-state` Grund, `--tint-hint` Kante, `--tint-ink` Tinte) - das
   ist die andere Haelfte der Regel „eine Behandlung pro Kontrolltyp" und ausdruecklich
   NICHT die Segment-Pille. Scrollende Chip-Reihen bekommen die Fade-Mask (siehe Layout).
+- **Innenabstand:** vertikal mindestens 4px (`--space-1`). Die Kalender-Aufgaben-Chips
+  standen mit 2px buendig an der Kante ihrer eigenen Toenung (Sonde `cramped-padding`, 7
+  Fundstellen); eine getoente Flaeche braucht Luft zu ihrem Rand, sonst liest sie sich als
+  abgeschnitten statt als Chip. Einzige Ausnahme ist das dichte Monatsraster, das seine
+  engere Fassung ueber einen `.month-day`-Override behaelt.
 
 ### Cards / Containers
 - **Corner Style:** 12px (`--radius-md`) fuer die Karte, 16px (`--radius-lg`) fuer den
@@ -1681,14 +1717,27 @@ Kriterium der Regel eindeutig: er tut in jedem Modul dasselbe. Die 3:1-Messung o
 noch aus der Modulton-Zeit und bleibt die Begruendung der Untergrenze; sie haelt fuer den
 einen Akzent erst recht, weil das Violett dunkler ist als das gemessene Tasks-Gruen.
 
-### Monatsgrid-Event-Bars (Signature Component, Kalender)
-Flache Tint-Bars statt satter Farbfelder: Flaeche auf `--tint-surface` (Layer-Farbe auf
-`--color-surface-work`, Hover eine Sprosse hoeher auf `--tint-raised`), Tinte
-`color-mix(in srgb, var(--ev-color) 35%, var(--color-text-primary))`; gemessen 7.2-9.5:1
-ueber die Layer-Farben. Keine Borders, Icons oder Avatar-Stacks im Monat (das "wer" traegt
-das title-Attribut). "Heute" ist NUR ein gefuellter Akzent-Kreis auf der Ziffer;
+### Event-Bloecke im Kalender (Signature Component)
+**Im Monatsraster** flache Tint-Bars statt satter Farbfelder: Flaeche auf `--tint-surface`
+(Layer-Farbe auf `--color-surface-work`, Hover eine Sprosse hoeher auf `--tint-raised`),
+Tinte `color-mix(in srgb, var(--ev-color) 35%, var(--color-text-primary))`; gemessen
+7.2-9.5:1 ueber die Layer-Farben. Keine Borders, Icons oder Avatar-Stacks im Monat (das
+"wer" traegt das title-Attribut). "Heute" ist NUR ein gefuellter Akzent-Kreis auf der Ziffer;
 Nachbarmonatstage dimmen ueber Flaeche UND Ziffer (AA-fest), nie ueber blosse Opacity auf
 Text allein.
+
+**Die Vollton-Kanten-Regel** (2026-08-17, Etappe 3). Wo ein Block GROSS genug ist, ihn zu
+tragen, sagt eine Kante im Vollton, zu wem er gehoert - 3px an der Inline-Start-Seite, der
+Zeitleisten-Kanon der Messlatte (Apple Kalender, Fantastical). Der Tagesspalten-Block hatte
+sie als eigenes Element (`.day-event__spine`) laengst; Wochen- und Ganztages-Bloecke bekamen
+sie als `border-inline-start`, weil sie ohne sie im Dark entsaettigter Nebel waren: 16 %
+Fuellung plus eine 1px-Kante auf halber Deckung ist dieselbe Beimischungs-Falle, an der das
+Absenderband zerbrochen ist - **eine Waschung hellt auf, sie faerbt nicht.** Fuellung
+(`--tint-surface`) und Tinte (38 % im Wochen- und Tagesblock, 35 % im Ganztages-Balken und
+im Monat) bleiben bei ihren gemessenen Rezepten unveraendert; die Farbe wandert in die Kante,
+wo die User-Farben-Regel sie ausdruecklich zulaesst. Das Monatsraster bleibt kantenlos: bei
+20px Chiphoehe waere die Kante ein Viertel des Blocks und die Regel gegen sich selbst
+gerichtet.
 
 ### Der Wand-Modus (Signature Component)
 **Der WACHE Zustand des Dashboards - keine zweite Seite, sondern dieselbe Flaeche in anderer
@@ -1782,6 +1831,15 @@ Angabe braeuchte einen zweiten Timer, nur damit sie sich selbst aktuell haelt.
   „Termin", „Geburtstag"); das Verb traegt das Plus-Zeichen, der ganze Satz bleibt im
   `aria-label`. Der kurze Text steht als `data-dock-label` am `.page-fab`, damit der
   Router ihn beim Andocken findet (Register-Regel).
+- **Do** die Zugehoerigkeit eines farbigen Blocks ueber eine VOLLTON-Kante tragen (3px an der
+  Inline-Start-Seite), sobald der Block sie tragen kann, und Fuellung wie Tinte bei ihren
+  gemessenen Rezepten lassen (Vollton-Kanten-Regel).
+- **Do** eine Person ueberall in ihrer Identitaetsfarbe zeigen, und zwar auf der
+  Vollton-Scheibe; wer keine hat (unverknuepfter Kontakt), behaelt die Modul-Toenung, statt
+  eine gehashte zu bekommen (Identitaetsfarben-Regel).
+- **Do** einer Zahl, die neben einer anderen Zahl steht, ihr Wort mitgeben („wird 37" neben
+  „13 Tage"); stand das Wort bisher nur unsichtbar im `title`, ist es sichtbar faellig -
+  Kopfrechnen ist keine Gestaltung.
 
 ### Don't:
 - **Don't** einen zweiten Buttonradius einfuehren; die Kapsel steht in der `.btn`-Basisregel
@@ -1807,7 +1865,10 @@ Angabe braeuchte einen zweiten Timer, nur damit sie sich selbst aktuell haelt.
 - **Don't** einer Zeile in einer Liste eine Karte anziehen (Schatten, Radius,
   Surface-Fuellung) und nie `border-bottom` je Zeile.
 - **Don't** User-/Layer-Farben als Textfarbe verwenden; nur Border/Dot bzw. die gemessenen
-  16-%/35-%-Mix-Rezepte, und nie eine ganze Inhaltsflaeche.
+  16-%/35-%-Mix-Rezepte, und nie eine ganze Inhaltsflaeche (die Avatar-Scheibe ist der Dot
+  in seiner groessten Form, keine Flaeche - Identitaetsfarben-Regel).
+- **Don't** Initialen unter die kleinste Textrolle der App schrumpfen; ab 20px Scheibe
+  11px, darunter traegt die Farbe allein (Initialen-Schwelle-Regel).
 - **Don't** die Bildmarke anfassen (drei transluzente Kreise, Violett plus Sheen); sie ist
   als Marke gesetzt.
 - **Don't** Ueberschriften ueber 34px; die Display-Stufen 48/72px sind exklusiv fuer
