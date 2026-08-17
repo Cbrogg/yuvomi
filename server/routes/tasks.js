@@ -17,6 +17,7 @@ import {
 import { uniqueKey } from '../utils/category-slug.js';
 import { parseSyncTargetValue } from '../../public/utils/sync-target.js';
 import { mentionedUserIds } from '../../public/utils/mentions.js';
+import { resolvePermissions } from '../permissions.js';
 import { pushService } from '../services/push.js';
 import { serverTimeZone, utcToWall } from '../utils/timezone.js';
 import {
@@ -1468,6 +1469,14 @@ function notifyMentions(task, comment, authorId, previousComment = '') {
   const author = users.find((u) => u.id === authorId)?.display_name || '';
   for (const id of ids) {
     if (!findVisibleTask(task.id, id)) continue;
+    // Die Sichtbarkeit der Zeile ist nicht die einzige Huerde: wem das
+    // Aufgaben-Modul entzogen ist, der kommt an die Aufgabe gar nicht heran -
+    // und bekaeme mit dem Push trotzdem ihren Titel und den Kommentaranfang
+    // zugestellt. Dieselbe Frage, die die /api/v1-Middleware beim Lesen stellt.
+    const target = db.get().prepare('SELECT id, role, family_role FROM users WHERE id = ?').get(id);
+    if (!target) continue;
+    const perms = resolvePermissions(db.get(), target);
+    if (!perms.admin && perms.modules?.tasks === 'none') continue;
     pushService.sendPushToUser(id, {
       title: task.title,
       body: `${author}: ${comment}`.slice(0, 300),

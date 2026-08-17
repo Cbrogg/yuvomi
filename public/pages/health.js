@@ -1631,17 +1631,27 @@ function stopPrnTicker() {
   prnTicker = null;
 }
 
-// Welche Medikamente gerade gebucht werden. Denselben Knopf gibt es ZWEIMAL -
-// einmal je Tab, beide gleichzeitig gemountet -, und `btn.disabled` sperrt nur
-// den angeklickten: wer waehrend der laufenden Anfrage den Tab wechselt, findet
-// drueben einen scharfen Zwilling und bucht dieselbe Dosis ein zweites Mal.
-const prnInFlight = new Set();
+// Welche Medikamente gerade gebucht werden. Denselben Knopf gibt es mehrfach -
+// je Tab einen, beide gleichzeitig gemountet, und bei einem Medikament mit Plan
+// UND Bedarf zusaetzlich den geplanten neben dem der Bedarfszeile. `btn.disabled`
+// sperrt nur den angeklickten: wer waehrend der laufenden Anfrage den Tab
+// wechselt oder die andere Zeile nimmt, bucht dieselbe Dosis ein zweites Mal,
+// samt zweitem Bestandsabzug.
+const doseInFlight = new Set();
 
-/** Beide Knoepfe eines Medikaments sperren oder freigeben. */
-function setPrnBusy(medId, busy) {
-  if (busy) prnInFlight.add(medId); else prnInFlight.delete(medId);
-  document.querySelectorAll(`[data-prn-take][data-med-id="${medId}"]`)
-    .forEach((el) => { el.disabled = busy; });
+/** JEDEN Buchungsknopf eines Medikaments sperren oder freigeben. */
+function setDoseBusy(medId, busy) {
+  if (busy) doseInFlight.add(medId); else doseInFlight.delete(medId);
+  for (const el of doseButtonsFor(medId)) el.disabled = busy;
+}
+
+/** Alle Knoepfe, die fuer dieses Medikament eine Dosis buchen - geplant wie bei Bedarf. */
+function doseButtonsFor(medId) {
+  return document.querySelectorAll(
+    `[data-prn-take][data-med-id="${medId}"],`
+    + `[data-dose-take][data-med-id="${medId}"], [data-dose-skip][data-med-id="${medId}"],`
+    + `[data-ov-dose-take][data-med-id="${medId}"], [data-ov-dose-skip][data-med-id="${medId}"]`,
+  );
 }
 
 /** Eine Bedarfsdosis buchen. */
@@ -1651,7 +1661,7 @@ async function handlePrnDose(btn) {
   const medId = Number(btn.dataset.medId);
   const med = s.list.find((m) => m.id === medId);
   if (!med) return;
-  if (prnInFlight.has(medId)) return;
+  if (doseInFlight.has(medId)) return;
 
   const state = prnDoseState(med, s.logs[medId] || []);
   // Nicht gesperrt, nur gefragt: der Mindestabstand ist eine Empfehlung vom
@@ -1669,7 +1679,7 @@ async function handlePrnDose(btn) {
     if (!ok) return;
   }
 
-  setPrnBusy(medId, true);
+  setDoseBusy(medId, true);
   const dose = med.prn_dose_qty != null ? Number(med.prn_dose_qty) : null;
   try {
     await api.post(`/health/medications/${medId}/logs`, {
@@ -1682,7 +1692,7 @@ async function handlePrnDose(btn) {
     });
   } catch (err) {
     console.error('[Health] prn dose error:', err);
-    setPrnBusy(medId, false);
+    setDoseBusy(medId, false);
     window.yuvomi?.showToast(err?.data?.error || t('health.meds.doseError'), 'danger');
     return;
   }
@@ -1709,14 +1719,14 @@ async function handlePrnDose(btn) {
 
   window.yuvomi?.showToast(t('health.meds.doseSaved'), 'success');
   // Erst nach dem Neuzeichnen freigeben: bis dahin darf kein Zwilling scharf
-  // sein. Freigegeben wird ueber `setPrnBusy` und nicht ueber das Set allein -
+  // sein. Freigegeben wird ueber `setDoseBusy` und nicht ueber das Set allein -
   // die Knoepfe von eben sind beim Neuzeichnen verschwunden, und die neuen sind
   // gerade erst durch `wirePrn` gesperrt worden, weil die Buchung da noch lief.
   // Ein blosses `delete` haette den Eintrag geraeumt und den Knopf gesperrt
   // gelassen: bei einem Medikament ohne Mindestabstand bis zum naechsten
   // Seitenaufbau.
   await reloadMedViews();
-  setPrnBusy(medId, false);
+  setDoseBusy(medId, false);
 }
 
 /**
@@ -1739,12 +1749,20 @@ async function reloadMedViews() {
   await Promise.all(jobs);
 }
 
+/** Sperrt frisch gezeichnete Knoepfe, deren Buchung noch laeuft. */
+function respectDoseLock(root) {
+  // Ein Neuaufbau waehrend einer laufenden Buchung darf keinen Knopf wieder
+  // scharf machen - er entsteht ja frisch und wuesste sonst nichts davon.
+  root.querySelectorAll('[data-med-id]').forEach((btn) => {
+    if (typeof btn.disabled !== 'boolean') return;
+    if (doseInFlight.has(Number(btn.dataset.medId))) btn.disabled = true;
+  });
+}
+
 /** Bindet die Bedarfsknoepfe eines Wurzelelements. */
 function wirePrn(root) {
+  respectDoseLock(root);
   root.querySelectorAll('[data-prn-take]').forEach((btn) => {
-    // Ein Neuaufbau waehrend einer laufenden Buchung darf den Knopf nicht
-    // wieder scharf machen - er entsteht ja frisch und wuesste sonst nichts.
-    if (prnInFlight.has(Number(btn.dataset.medId))) btn.disabled = true;
     btn.addEventListener('click', () => handlePrnDose(btn));
   });
   if (root.querySelector('[data-prn-countdown]')) ensurePrnTicker();
@@ -2066,12 +2084,16 @@ async function reloadMeds() {
 
 async function handleDose(btn, action) {
   const medId = Number(btn.dataset.medId);
+  // Dieselbe Sperre wie bei der Bedarfsdosis: bei einem Medikament mit Plan UND
+  // Bedarf stehen beide Knoepfe nebeneinander, und zwei angestossene Buchungen
+  // sehen beide den alten Bestand.
+  if (doseInFlight.has(medId)) return;
   const logId = btn.dataset.logId ? Number(btn.dataset.logId) : null;
   const scheduleId = btn.dataset.scheduleId ? Number(btn.dataset.scheduleId) : null;
   const scheduledAt = btn.dataset.scheduledAt || null;
   const dose = btn.dataset.dose !== '' ? Number(btn.dataset.dose) : null;
 
-  btn.disabled = true;
+  setDoseBusy(medId, true);
   try {
     if (logId) {
       await api.post(`/health/logs/${logId}/${action}`, {});
@@ -2101,9 +2123,10 @@ async function handleDose(btn, action) {
     // Beide Tabs, nicht nur dieser: ein Medikament kann Plan UND Bedarf haben,
     // und dann verschiebt auch die geplante Dosis den Countdown drueben.
     await reloadMedViews();
+    setDoseBusy(medId, false);
   } catch (err) {
     console.error('[Health] dose error:', err);
-    btn.disabled = false;
+    setDoseBusy(medId, false);
     window.yuvomi?.showToast(err?.data?.error || t('health.meds.doseError'), 'danger');
   }
 }
@@ -3792,12 +3815,13 @@ function overviewDueRowMarkup(dose, med, log, own) {
 
 async function handleOverviewDose(btn, action) {
   const medId = Number(btn.dataset.medId);
+  if (doseInFlight.has(medId)) return;
   const logId = btn.dataset.logId ? Number(btn.dataset.logId) : null;
   const scheduleId = btn.dataset.scheduleId ? Number(btn.dataset.scheduleId) : null;
   const scheduledAt = btn.dataset.scheduledAt || null;
   const dose = btn.dataset.dose !== '' ? Number(btn.dataset.dose) : null;
 
-  btn.disabled = true;
+  setDoseBusy(medId, true);
   try {
     if (logId) {
       await api.post(`/health/logs/${logId}/${action}`, {});
@@ -3824,9 +3848,10 @@ async function handleOverviewDose(btn, action) {
 
     window.yuvomi?.showToast(t('health.meds.doseSaved'), 'success');
     await reloadMedViews();
+    setDoseBusy(medId, false);
   } catch (err) {
     console.error('[Health] overview dose error:', err);
-    btn.disabled = false;
+    setDoseBusy(medId, false);
     window.yuvomi?.showToast(err?.data?.error || t('health.meds.doseError'), 'danger');
   }
 }

@@ -791,3 +791,31 @@ test('Kommentare: eine beim Bearbeiten dazugekommene Erwähnung wird gemeldet', 
   assert.deepEqual(nachher.filter((id) => !vorher.includes(id)), [BOB]);
   assert.deepEqual(nachher.filter((id) => !nachher.includes(id)), []);
 });
+
+test('Kommentare: wem das Modul entzogen ist, bekommt keine Erwähnungs-Meldung', async () => {
+  // Sichtbarkeit der Zeile ist nicht die einzige Hürde: wem das Aufgaben-Modul
+  // auf `none` steht, der kommt an die Aufgabe gar nicht heran - und bekäme mit
+  // dem Push trotzdem ihren Titel und den Anfang des Kommentars zugestellt.
+  const { resolvePermissions } = await import('../server/permissions.js');
+  // subject_id wird als TEXT gehalten und auch so abgefragt (`loadSubjectRows`)
+  db.prepare(`
+    INSERT OR REPLACE INTO access_permissions (subject_type, subject_id, resource_type, resource_key, access)
+    VALUES ('user', ?, 'module', 'tasks', 'none')
+  `).run(String(BOB));
+
+  const bob = db.prepare('SELECT id, role, family_role FROM users WHERE id = ?').get(BOB);
+  const perms = resolvePermissions(db, bob);
+  assert.equal(perms.modules.tasks, 'none', 'Vorbedingung: Bob darf die Aufgaben nicht sehen');
+
+  // Die Aufgabe selbst bleibt für ihn sichtbar (visibility `all`) - genau
+  // deshalb reicht `findVisibleTask` als Prüfung nicht aus.
+  const task = await call('POST', '/', { as: { id: ALICE, role: 'admin' }, body: { title: 'Ohne Modulzugriff' } });
+  const posted = await call('POST', `/${task.body.data.id}/comments`, {
+    as: { id: ALICE, role: 'admin' }, body: { comment: '@bob liest das nicht' },
+  });
+  assert.equal(posted.status, 201);
+
+  db.prepare("DELETE FROM access_permissions WHERE subject_id = ? AND resource_key = 'tasks'").run(String(BOB));
+  const wieder = resolvePermissions(db, bob);
+  assert.notEqual(wieder.modules.tasks, 'none', 'Aufräumen: Bobs Zugriff ist wiederhergestellt');
+});

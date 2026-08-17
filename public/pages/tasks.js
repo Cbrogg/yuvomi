@@ -2239,7 +2239,16 @@ async function handleFormSubmit(e, container) {
           await api.put(`/tasks/${savedTaskId}/documents`, { document_ids: documentIds });
         } catch (err) {
           console.error('[Tasks] document link error:', err);
-          window.yuvomi.showToast(t('tasks.documentsLinkFailed'), 'danger');
+          // Das Formular bleibt STEHEN: die Aufgabe ist gespeichert, aber die
+          // Datei haengt nicht an ihr, und ein zuklappendes Modal mit gruenem
+          // Haken behauptete das Gegenteil. So bleibt der Weg zum zweiten
+          // Versuch offen - die Chips sind noch da, ein erneutes Speichern
+          // schickt dieselbe Liste.
+          resetSubmit(t('tasks.documentsLinkFailed'));
+          btnError(submitBtn);
+          await refreshTags();
+          await loadTasks(container);
+          return;
         }
       }
     }
