@@ -399,11 +399,6 @@
         "pointsSummary": "{{count}} bodů",
         "pointsSummary_one": "{{count}} bod",
         "documentsLabel": "Dokumenty",
-        "documentsHint": "Propojte dokumenty z modulu Dokumenty s tímto úkolem.",
-        "documentAdd": "Propojit dokument",
-        "documentAddPlaceholder": "Vyberte dokument…",
-        "documentRemove": "Odebrat propojení",
-        "documentsEmpty": "Zatím nejsou propojeny žádné dokumenty.",
         "documentsCount": "Dokumenty: {{count}}",
         "documentsCount_one": "Dokumenty: {{count}}",
         "assignedToMe": "Přiřazeno mně",
@@ -422,7 +417,18 @@
         "syncTargetLocal": "Uložit pouze lokálně",
         "syncTargetHint": "Vyber seznam připomínek, do kterého se má tento úkol zapsat.",
         "syncTargetMirrored": "Tento úkol se už synchronizuje se seznamem připomínek. Seznam už nelze změnit.",
-        "syncTargetUnavailable": "Naposledy zvolený seznam (již není dostupný)"
+        "syncTargetUnavailable": "Naposledy zvolený seznam (již není dostupný)",
+        "commentsLabel": "Komentáře",
+        "commentsEmpty": "Zatím žádné komentáře.",
+        "commentsLoadError": "Komentáře se nepodařilo načíst.",
+        "commentPlaceholder": "Napište komentář, @ někoho zmíní",
+        "commentSubmit": "Komentovat",
+        "commentEdit": "Upravit komentář",
+        "commentDelete": "Smazat komentář",
+        "commentEditedAt": "{{date}} {{time}} · upraveno",
+        "commentUnknownAuthor": "Neznámý",
+        "commentDeletedToast": "Komentář smazán.",
+        "documentsLinkFailed": "Úkol byl uložen, dokumenty se ale nepodařilo připojit."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} jídla",
@@ -2876,7 +2882,8 @@
         "storageGoogleDrive": "Google Drive",
         "budgetFolder": "Doklady",
         "splitExpensesFolder": "Společné výdaje",
-        "inventoryFolder": "Inventory"
+        "inventoryFolder": "Inventory",
+        "tasksFolder": "Úkoly"
     },
     "reminders": {
         "sectionTitle": "Připomínka",
@@ -3475,7 +3482,11 @@
                 "note": "Poznámka",
                 "visibility": "Viditelnost",
                 "active": "Aktivní",
-                "prn": "Dle potřeby (PRN)"
+                "prn": "Dle potřeby (PRN)",
+                "minInterval": "Minimální odstup (hodiny)",
+                "minIntervalHint": "Z něj a z posledního užití vzniká odpočet.",
+                "prnDose": "Dávka na jedno užití",
+                "prnDoseHint": "Při každé dávce podle potřeby se odečte ze zásoby."
             },
             "schedule": {
                 "title": "Plán užívání",
@@ -3517,7 +3528,22 @@
                 "deleteConfirm": "Smazat tento záznam?",
                 "deleted": "Záznam smazán",
                 "deleteConfirmDetail": "Záznam zmizí i z exportu. Tuto akci nelze vrátit zpět."
-            }
+            },
+            "prn": {
+                "title": "Podle potřeby",
+                "take": "Užít nyní",
+                "takeFor": "Užít {{medication}} nyní",
+                "nextAt": "Nejdříve v {{time}}",
+                "remainingHm": "zbývá {{hours}} h {{minutes}} min",
+                "remainingM": "zbývá {{minutes}} min",
+                "ready": "Nyní možné",
+                "lastTaken": "naposledy v {{time}}",
+                "never": "Zatím neužito",
+                "earlyConfirm": "Zapsat dávku před uplynutím minimálního odstupu?",
+                "earlyDetail": "Další dávka je na řadě až od {{time}} ({{remaining}}).",
+                "earlyConfirmAction": "Přesto zapsat"
+            },
+            "stockUpdateFailed": "Dávka je zapsána, zásobu se ale nepodařilo upravit."
         },
         "labs": {
             "title": "Laboratorní hodnoty",

@@ -129,6 +129,46 @@ Join table linking documents from the Documents module to a task, so the informa
 | created_at | TEXT | |
 | PRIMARY KEY | | (task_id, document_id) |
 
+**Uploading from the task (#733).** Until v2.17.0 the task modal carried its own picker, and it could
+only link what was already filed: attaching a photo of a note meant leaving the task, uploading it in
+Documents and coming back. The field is now the shared `components/document-attach.js` — the same one
+Budget, Shared Expenses and Inventory use, and which has been able to upload since #583 — so a file
+can be picked, dropped onto the field or chosen from the existing documents; new uploads land in the
+Documents module (folder `documents.tasksFolder`) and stay linked. Dropping is new to the shared
+component and therefore applies to all four modules.
+
+The read view lists the linked documents by name and shows images as previews, which is the second
+half of the request: what usually hangs off a task is a photographed note, and a filename does not
+answer the question the photo was attached for. `GET /api/v1/tasks/{id}` now returns a `documents`
+array (same visibility rule as `GET /{id}/documents`) — the detail view had been rendering that field
+since it was built, but the API never filled it, so the row was always empty.
+
+### Task Comments (migration v149, #734)
+A conversation about a task, next to the task. Modelled on `expense_comments` (v44), which answers the
+same question for a shared expense.
+
+| Column | Type | Constraint |
+|--------|------|-----------|
+| task_id | INTEGER | FK → Tasks (CASCADE delete), NOT NULL |
+| user_id | INTEGER | FK → Users (CASCADE delete), NOT NULL |
+| comment | TEXT | NOT NULL, max 5000 characters |
+| created_at | TEXT | ISO 8601, default now |
+| updated_at | TEXT | NULL until someone edits — only a corrected comment carries the mark |
+
+API: `GET/POST /api/v1/tasks/{id}/comments`, `PATCH/DELETE /api/v1/tasks/{id}/comments/{commentId}`.
+Whoever may see the task may read and write; editing is the author's alone, deleting is the author's
+or an admin's (otherwise nobody could moderate a post). A task the caller cannot see answers `404`
+for its comments as well — its existence is itself information.
+
+**Mentions.** `@Name` against the member list, read from the **text** and not from a second field
+alongside it: otherwise the highlighted name and the notified person would be two truths that drift
+apart as soon as someone types the name instead of picking it from the suggestions. The parser
+(`public/utils/mentions.js`) is shared by both sides — the browser highlights with it, the server
+picks the push recipients with it. Longest matching name wins (`@Anna Maria` over `@Anna`), matching
+is case-insensitive, and a word character before the `@` disqualifies it, so `info@example.org` is not
+a mention. A mentioned member is only notified if they may see the task: a mention is not a way to
+deliver the title of a private task.
+
 ### Rewards (migration v70)
 
 Points-and-rewards system. A member earns a task's `points` when the task is marked done (awarded to its assigned members; if unassigned, to the acting user — useful for a wall-mounted kiosk tablet on a single account). Participation is **opt-in per member**; redemptions require **parent/admin approval** by default — an admin can disable this household-wide (`rewards_require_approval` preference, Settings → Modules → Rewards) so redemptions are granted immediately. The Rewards module itself is toggleable in Settings → Modules → Rewards (nav visibility). A member's balance is always `SUM(delta)` over `reward_ledger` — there is no separately stored balance that could drift. Point award is idempotent (partial unique index) and reversed when a task leaves the `done` state.
@@ -1825,6 +1865,8 @@ under Settings → Family; every member can ask `GET /health/caregivers/me` who 
 | form | TEXT | `pill` \| `liquid` \| `injection` \| … |
 | active | INTEGER | 0/1, default 1 |
 | prn | INTEGER | 0/1 "as needed", default 0 |
+| min_interval_hours | REAL | minimum gap between two as-needed doses (v148), NULL = none |
+| prn_dose_qty | REAL | usual amount per as-needed dose (v148) |
 | stock_qty / stock_unit | REAL / TEXT | on-hand stock for refill alerts |
 | refill_threshold | REAL | warn when stock drops below |
 | note | TEXT | |
@@ -1855,6 +1897,34 @@ under Settings → Family; every member can ask `GET /health/caregivers/me` who 
 | dose_qty | REAL | |
 | note | TEXT | |
 | created_at | TEXT | ISO 8601, default now |
+
+**Taking an as-needed dose (#700).** "As needed" existed as a column, a form field and a badge since
+v65 — but there was no button anywhere: both booking paths hang off `data-schedule-id`, and a PRN
+medication is by definition not one of a schedule's entries. The Meds tab and the Overview now share **one** "As needed"
+section listing every active PRN medication with a *Take now* button that posts a log without a
+schedule (`POST /medications/:id/logs`, `{ status: 'taken', taken_at }`); `prn_dose_qty` is deducted
+from stock like a scheduled dose. `min_interval_hours` plus the last taken dose produce the readout
+next to it — the **absolute** time first ("earliest 18:40"), the remaining duration second, because
+the absolute one still holds three hours later. It is derived from the stored timestamp, not from a
+timer in one tab, so it survives a reload and a second device. Taking a dose early is not blocked but
+asked about: the minimum gap comes from a package insert, and a dose actually taken early should be
+recordable rather than hidden.
+
+`prn` and a schedule are **not** mutually exclusive, and deliberately so: a fixed base dose plus an
+extra one when the pain comes back is a common prescription, so such a medication appears in both
+"Due today" and "As needed" and can be logged from either. The minimum interval counts both, because
+it is a statement about the body and not about which list the button sat in - the countdown runs from
+the last dose actually *taken*, scheduled or not. Adherence is the other way round: it measures a
+plan being kept, so it counts only entries that carry a `scheduled_at`. That column, not
+`schedule_id`, is what makes an entry a planned one - the schedule reference is cleared by
+`ON DELETE SET NULL` when an old schedule is removed, and reading the past through it would turn
+every historical dose into an as-needed one and collapse last month's adherence retroactively.
+
+The same discussion exposed a filter bug: `GET /medications/:id/logs` and `GET /export/meds-logs`
+compared `scheduled_at` against the range, which is NULL for an as-needed dose — so it fell out of
+*every* range, including the CSV somebody prints for a doctor. Both now filter on
+`COALESCE(scheduled_at, taken_at, created_at)` truncated to minutes (the column holds wall-clock
+times *and* `…Z` timestamps).
 
 **Correcting an entry (#695 sibling, #701).** `POST /logs/{id}/take` and `/skip` were the only ways
 to change an entry, so a mistap was permanent — and not only on screen: the wrong time goes into

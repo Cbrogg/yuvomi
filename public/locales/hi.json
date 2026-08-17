@@ -399,11 +399,6 @@
         "pointsSummary": "{{count}} अंक",
         "pointsSummary_one": "{{count}} अंक",
         "documentsLabel": "दस्तावेज़",
-        "documentsHint": "दस्तावेज़ मॉड्यूल से दस्तावेज़ इस कार्य से लिंक करें।",
-        "documentAdd": "दस्तावेज़ लिंक करें",
-        "documentAddPlaceholder": "एक दस्तावेज़ चुनें…",
-        "documentRemove": "लिंक हटाएँ",
-        "documentsEmpty": "अभी तक कोई दस्तावेज़ लिंक नहीं है।",
         "documentsCount": "{{count}} दस्तावेज़",
         "documentsCount_one": "{{count}} दस्तावेज़",
         "assignedToMe": "मुझे सौंपे गए",
@@ -422,7 +417,18 @@
         "syncTargetLocal": "केवल स्थानीय रूप से सहेजें",
         "syncTargetHint": "एक अनुस्मारक सूची चुनें जिसमें यह कार्य लिखा जाएगा।",
         "syncTargetMirrored": "यह कार्य पहले से ही एक अनुस्मारक सूची के साथ सिंक होता है। सूची बाद में नहीं बदली जा सकती।",
-        "syncTargetUnavailable": "पहले चुनी गई सूची (अब उपलब्ध नहीं)"
+        "syncTargetUnavailable": "पहले चुनी गई सूची (अब उपलब्ध नहीं)",
+        "commentsLabel": "टिप्पणियाँ",
+        "commentsEmpty": "अभी कोई टिप्पणी नहीं.",
+        "commentsLoadError": "टिप्पणियाँ लोड नहीं हो सकीं.",
+        "commentPlaceholder": "टिप्पणी लिखें, @ किसी का उल्लेख करता है",
+        "commentSubmit": "टिप्पणी करें",
+        "commentEdit": "टिप्पणी संपादित करें",
+        "commentDelete": "टिप्पणी हटाएँ",
+        "commentEditedAt": "{{date}} {{time}} · संपादित",
+        "commentUnknownAuthor": "अज्ञात",
+        "commentDeletedToast": "टिप्पणी हटा दी गई.",
+        "documentsLinkFailed": "कार्य सहेजा गया, लेकिन दस्तावेज़ नहीं जोड़े जा सके."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} भोजन",
@@ -2714,7 +2720,8 @@
         "storageGoogleDrive": "Google Drive",
         "budgetFolder": "रसीदें",
         "splitExpensesFolder": "साझा खर्च",
-        "inventoryFolder": "Inventory"
+        "inventoryFolder": "Inventory",
+        "tasksFolder": "कार्य"
     },
     "shortcuts": {
         "goKitchen": "रसोई",
@@ -3475,7 +3482,11 @@
                 "note": "टिप्पणी",
                 "visibility": "दृश्यता",
                 "active": "सक्रिय",
-                "prn": "आवश्यकता पड़ने पर (PRN)"
+                "prn": "आवश्यकता पड़ने पर (PRN)",
+                "minInterval": "न्यूनतम अंतराल (घंटे)",
+                "minIntervalHint": "इसी से और पिछली खुराक से उलटी गिनती बनती है.",
+                "prnDose": "प्रति बार खुराक",
+                "prnDoseHint": "हर आवश्यकतानुसार खुराक पर स्टॉक से घटाई जाती है."
             },
             "schedule": {
                 "title": "सेवन योजना",
@@ -3517,7 +3528,22 @@
                 "deleteConfirm": "इस प्रविष्टि को मिटाएँ?",
                 "deleted": "प्रविष्टि मिटाई गई",
                 "deleteConfirmDetail": "यह प्रविष्टि निर्यात से भी हट जाएगी। इसे पूर्ववत नहीं किया जा सकता।"
-            }
+            },
+            "prn": {
+                "title": "आवश्यकतानुसार",
+                "take": "अभी लें",
+                "takeFor": "{{medication}} अभी लें",
+                "nextAt": "जल्दी से जल्दी {{time}}",
+                "remainingHm": "{{hours}} घं {{minutes}} मि शेष",
+                "remainingM": "{{minutes}} मि शेष",
+                "ready": "अभी संभव",
+                "lastTaken": "पिछली बार {{time}}",
+                "never": "अभी तक नहीं ली गई",
+                "earlyConfirm": "न्यूनतम अंतराल पूरा होने से पहले खुराक दर्ज करें?",
+                "earlyDetail": "अगली खुराक {{time}} से ही तय है ({{remaining}}).",
+                "earlyConfirmAction": "फिर भी दर्ज करें"
+            },
+            "stockUpdateFailed": "खुराक दर्ज हो गई, लेकिन स्टॉक अपडेट नहीं हो सका."
         },
         "labs": {
             "title": "लैब मान",

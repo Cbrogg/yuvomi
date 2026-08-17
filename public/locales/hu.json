@@ -399,11 +399,6 @@
         "pointsSummary": "{{count}} pont",
         "pointsSummary_one": "{{count}} pont",
         "documentsLabel": "Dokumentumok",
-        "documentsHint": "Kapcsolj dokumentumokat a Dokumentumok modulból ehhez a feladathoz.",
-        "documentAdd": "Dokumentum csatolása",
-        "documentAddPlaceholder": "Válassz dokumentumot…",
-        "documentRemove": "Kapcsolat eltávolítása",
-        "documentsEmpty": "Még nincs csatolt dokumentum.",
         "documentsCount": "{{count}} dokumentum",
         "documentsCount_one": "{{count}} dokumentum",
         "assignedToMe": "Hozzám rendelve",
@@ -422,7 +417,18 @@
         "syncTargetLocal": "Csak helyben mentés",
         "syncTargetHint": "Válassz emlékeztetőlistát, amelybe ez a feladat kerüljön.",
         "syncTargetMirrored": "Ez a feladat már szinkronizálva van egy emlékeztetőlistával. A lista utólag nem módosítható.",
-        "syncTargetUnavailable": "Korábban választott lista (már nem érhető el)"
+        "syncTargetUnavailable": "Korábban választott lista (már nem érhető el)",
+        "commentsLabel": "Hozzászólások",
+        "commentsEmpty": "Még nincs hozzászólás.",
+        "commentsLoadError": "A hozzászólásokat nem sikerült betölteni.",
+        "commentPlaceholder": "Írj hozzászólást, a @ megemlít valakit",
+        "commentSubmit": "Hozzászólás",
+        "commentEdit": "Hozzászólás szerkesztése",
+        "commentDelete": "Hozzászólás törlése",
+        "commentEditedAt": "{{date}} {{time}} · szerkesztve",
+        "commentUnknownAuthor": "Ismeretlen",
+        "commentDeletedToast": "Hozzászólás törölve.",
+        "documentsLinkFailed": "A feladat mentve, de a dokumentumokat nem sikerült csatolni."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} étkezésből",
@@ -2728,7 +2734,8 @@
         "storageGoogleDrive": "Google Drive",
         "budgetFolder": "Bizonylatok",
         "splitExpensesFolder": "Megosztott költségek",
-        "inventoryFolder": "Inventory"
+        "inventoryFolder": "Inventory",
+        "tasksFolder": "Feladatok"
     },
     "housekeeping": {
         "title": "Háztartás",
@@ -3475,7 +3482,11 @@
                 "note": "Megjegyzés",
                 "visibility": "Láthatóság",
                 "active": "Aktív",
-                "prn": "Szükség szerint (PRN)"
+                "prn": "Szükség szerint (PRN)",
+                "minInterval": "Minimális időköz (óra)",
+                "minIntervalHint": "Ebből és az utolsó bevételből adódik a visszaszámlálás.",
+                "prnDose": "Adag alkalmanként",
+                "prnDoseHint": "Minden szükség szerinti adagnál levonjuk a készletből."
             },
             "schedule": {
                 "title": "Szedési terv",
@@ -3517,7 +3528,22 @@
                 "deleteConfirm": "Törlöd ezt a bejegyzést?",
                 "deleted": "Bejegyzés törölve",
                 "deleteConfirmDetail": "A bejegyzés az exportból is eltűnik. Ez nem vonható vissza."
-            }
+            },
+            "prn": {
+                "title": "Szükség szerint",
+                "take": "Bevétel most",
+                "takeFor": "{{medication}} bevétele most",
+                "nextAt": "Legkorábban {{time}}",
+                "remainingHm": "még {{hours}} ó {{minutes}} p",
+                "remainingM": "még {{minutes}} p",
+                "ready": "Most lehetséges",
+                "lastTaken": "utoljára {{time}}",
+                "never": "Még nem volt bevéve",
+                "earlyConfirm": "Rögzíted az adagot a minimális időköz letelte előtt?",
+                "earlyDetail": "A következő adag csak {{time}} után esedékes ({{remaining}}).",
+                "earlyConfirmAction": "Rögzítés mégis"
+            },
+            "stockUpdateFailed": "Az adag rögzítve, de a készletet nem sikerült frissíteni."
         },
         "labs": {
             "title": "Laborértékek",

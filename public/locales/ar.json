@@ -399,11 +399,6 @@
         "pointsSummary": "{{count}} نقطة",
         "pointsSummary_one": "نقطة واحدة",
         "documentsLabel": "المستندات",
-        "documentsHint": "اربط مستندات من وحدة المستندات بهذه المهمة.",
-        "documentAdd": "ربط مستند",
-        "documentAddPlaceholder": "اختر مستندًا…",
-        "documentRemove": "إزالة الرابط",
-        "documentsEmpty": "لا توجد مستندات مرتبطة بعد.",
         "documentsCount": "{{count}} مستندات",
         "documentsCount_one": "{{count}} مستندات",
         "assignedToMe": "المُسندة إليّ",
@@ -422,7 +417,18 @@
         "syncTargetLocal": "الحفظ محليًا فقط",
         "syncTargetHint": "اختر قائمة تذكيرات لكتابة هذه المهمة فيها.",
         "syncTargetMirrored": "تتم مزامنة هذه المهمة بالفعل مع قائمة تذكيرات. لا يمكن تغيير القائمة لاحقًا.",
-        "syncTargetUnavailable": "القائمة المختارة سابقًا (لم تعد متاحة)"
+        "syncTargetUnavailable": "القائمة المختارة سابقًا (لم تعد متاحة)",
+        "commentsLabel": "التعليقات",
+        "commentsEmpty": "لا توجد تعليقات بعد.",
+        "commentsLoadError": "تعذّر تحميل التعليقات.",
+        "commentPlaceholder": "اكتب تعليقًا، و@ يذكر شخصًا",
+        "commentSubmit": "علّق",
+        "commentEdit": "تعديل التعليق",
+        "commentDelete": "حذف التعليق",
+        "commentEditedAt": "{{date}} {{time}} · مُعدّل",
+        "commentUnknownAuthor": "غير معروف",
+        "commentDeletedToast": "تم حذف التعليق.",
+        "documentsLinkFailed": "تم حفظ المهمة، لكن تعذّر ربط المستندات."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} وجبات",
@@ -2714,7 +2720,8 @@
         "storageGoogleDrive": "Google Drive",
         "budgetFolder": "الإيصالات",
         "splitExpensesFolder": "المصاريف المشتركة",
-        "inventoryFolder": "Inventory"
+        "inventoryFolder": "Inventory",
+        "tasksFolder": "المهام"
     },
     "shortcuts": {
         "goKitchen": "المطبخ",
@@ -3475,7 +3482,11 @@
                 "note": "ملاحظة",
                 "visibility": "الظهور",
                 "active": "نشط",
-                "prn": "عند الحاجة (PRN)"
+                "prn": "عند الحاجة (PRN)",
+                "minInterval": "أقل فاصل زمني (ساعات)",
+                "minIntervalHint": "منه ومن آخر جرعة ينشأ العد التنازلي.",
+                "prnDose": "الجرعة لكل مرة",
+                "prnDoseHint": "تُخصم من المخزون مع كل جرعة عند الحاجة."
             },
             "schedule": {
                 "title": "جدول التناول",
@@ -3517,7 +3528,22 @@
                 "deleteConfirm": "هل تريد حذف هذا السجل؟",
                 "deleted": "تم حذف السجل",
                 "deleteConfirmDetail": "سيختفي السجل أيضًا من التصدير. لا يمكن التراجع عن ذلك."
-            }
+            },
+            "prn": {
+                "title": "عند الحاجة",
+                "take": "تناول الآن",
+                "takeFor": "تناول {{medication}} الآن",
+                "nextAt": "في أقرب وقت {{time}}",
+                "remainingHm": "بقي {{hours}} س {{minutes}} د",
+                "remainingM": "بقي {{minutes}} د",
+                "ready": "ممكن الآن",
+                "lastTaken": "آخر مرة {{time}}",
+                "never": "لم تُتناول بعد",
+                "earlyConfirm": "هل تُسجَّل الجرعة قبل انقضاء الفاصل الأدنى؟",
+                "earlyDetail": "الجرعة التالية مقررة ابتداءً من {{time}} فقط ({{remaining}}).",
+                "earlyConfirmAction": "سجّل على أي حال"
+            },
+            "stockUpdateFailed": "تم تسجيل الجرعة، لكن تعذّر تحديث المخزون."
         },
         "labs": {
             "title": "التحاليل",

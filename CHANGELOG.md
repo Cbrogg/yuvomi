@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **An as-needed medication can finally be taken** (#700). "As needed" was a checkbox in the form, a badge in the list and a column in the database - but there was no button anywhere, because both booking paths hang off a schedule and an as-needed medication has none by definition. The Medications tab and the Health overview now share an **As needed** section that logs a dose with one tap. A medication can carry a **minimum interval** and a **usual dose**: the interval and the last dose taken produce the readout next to the button, which names the absolute time first ("earliest 18:40") and the remaining wait second, because the absolute one still holds three hours later. It is derived from the stored entry rather than a timer in one tab, so it survives a reload and shows the same thing on a second device. Taking a dose earlier is not blocked, only asked about, and the usual dose is deducted from the stock the same way a scheduled one is.
+- **Documents can be attached to a task without leaving it** (#733). The task dialog could only link files that were already in Documents, so adding a photo of a note meant uploading it elsewhere first. The field is now the same one Budget, Shared Expenses and Inventory use: upload a file, drop it onto the field, or pick something already filed. New uploads land in a "Tasks" folder and stay linked. Dropping a file onto the field works in those three modules now as well.
+- **Images attached to a task are shown as previews** in the task detail view, and the other documents are listed by name (#733). What usually hangs off a task is a photographed note, and a filename does not answer the question the photo was attached for.
+- **Tasks have comments** (#734). Discussion about a task can happen next to it instead of in a chat somewhere else. Whoever can see the task can read and write; only the author can edit a comment, and only the author or an admin can remove one. A `@name` mentions a family member, with suggestions while typing, and the mentioned person gets a push notification - but only if they are allowed to see the task in the first place.
+
+### Fixed
+
+- **A dose taken without a schedule no longer disappears from its own day** (#700). Medication entries were filtered by their planned time, which an as-needed dose does not have, so it fell out of every date range: it was missing from the intake log, from the adherence figure, and from the CSV export somebody prints for a doctor.
+- **The time of a logged dose is the time on your clock again**, not the UTC one. The app sent the moment with its time zone, the route stored only the date and time, and the zone was dropped in between - so in Central European Summer Time a dose taken at 22:41 was recorded as 20:41, in the app and in the export.
+- **The "Documents" row in a task's detail view is no longer always empty** (#733). It had been reading a field the API never filled, so linked documents showed up as a paperclip count on the card and as nothing at all inside the task.
+
 ## [2.16.1] - 2026-08-16
 
 ### Fixed

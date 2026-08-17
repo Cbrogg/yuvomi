@@ -126,6 +126,18 @@ a.doc-attach__chip-name:focus-visible {
   height: 16px;
 }
 
+/* Fallenlassen (#733). Das Feld zeigt den Zielbereich erst, wenn eine Datei
+ * über ihm hängt - eine dauerhaft gestrichelte Fläche wäre ein zweiter Rahmen
+ * neben dem Formular, den man 99 % der Zeit umsonst liest. Der Rahmen liegt
+ * innen (`outline` statt `border`), damit sich beim Aufleuchten nichts
+ * verschiebt. */
+.doc-attach--dragging {
+  outline: 2px dashed var(--module-accent);
+  outline-offset: var(--space-2);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), transparent);
+}
+
 /* --------------------------------------------------------
  * Auswahl-Overlay für vorhandene Dokumente
  *

@@ -399,11 +399,6 @@
         "pointsSummary": "{{count}} 积分",
         "pointsSummary_one": "{{count}} 积分",
         "documentsLabel": "文档",
-        "documentsHint": "将文档模块中的文档关联到此任务。",
-        "documentAdd": "关联文档",
-        "documentAddPlaceholder": "选择文档…",
-        "documentRemove": "移除关联",
-        "documentsEmpty": "尚未关联任何文档。",
         "documentsCount": "{{count}} 个文档",
         "documentsCount_one": "{{count}} 个文档",
         "assignedToMe": "分配给我",
@@ -422,7 +417,18 @@
         "syncTargetLocal": "仅保存在本地",
         "syncTargetHint": "选择一个提醒列表，用于写入此任务。",
         "syncTargetMirrored": "此任务已与某个提醒列表同步，之后无法更换列表。",
-        "syncTargetUnavailable": "先前选择的列表（已不可用）"
+        "syncTargetUnavailable": "先前选择的列表（已不可用）",
+        "commentsLabel": "评论",
+        "commentsEmpty": "还没有评论。",
+        "commentsLoadError": "无法加载评论。",
+        "commentPlaceholder": "写下评论，用 @ 提到某人",
+        "commentSubmit": "发表评论",
+        "commentEdit": "编辑评论",
+        "commentDelete": "删除评论",
+        "commentEditedAt": "{{date}} {{time}} · 已编辑",
+        "commentUnknownAuthor": "未知",
+        "commentDeletedToast": "评论已删除。",
+        "documentsLinkFailed": "任务已保存，但未能关联文档。"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} 餐",
@@ -2714,7 +2720,8 @@
         "storageGoogleDrive": "Google Drive",
         "budgetFolder": "凭证",
         "splitExpensesFolder": "共享支出",
-        "inventoryFolder": "Inventory"
+        "inventoryFolder": "Inventory",
+        "tasksFolder": "任务"
     },
     "shortcuts": {
         "goKitchen": "厨房",
@@ -3475,7 +3482,11 @@
                 "note": "备注",
                 "visibility": "可见性",
                 "active": "启用",
-                "prn": "按需（PRN）"
+                "prn": "按需（PRN）",
+                "minInterval": "最短间隔（小时）",
+                "minIntervalHint": "倒计时由该间隔和上次服用推算得出。",
+                "prnDose": "每次剂量",
+                "prnDoseHint": "每次按需服用都会从库存中扣除。"
             },
             "schedule": {
                 "title": "服药计划",
@@ -3517,7 +3528,22 @@
                 "deleteConfirm": "要删除此记录吗？",
                 "deleted": "记录已删除",
                 "deleteConfirmDetail": "该记录也会从导出中消失，且无法撤销。"
-            }
+            },
+            "prn": {
+                "title": "按需",
+                "take": "立即服用",
+                "takeFor": "立即服用 {{medication}}",
+                "nextAt": "最早 {{time}}",
+                "remainingHm": "还有 {{hours}} 小时 {{minutes}} 分钟",
+                "remainingM": "还有 {{minutes}} 分钟",
+                "ready": "现在可以服用",
+                "lastTaken": "上次 {{time}}",
+                "never": "尚未服用",
+                "earlyConfirm": "在最短间隔结束前记录这次服用吗？",
+                "earlyDetail": "下一次服用要到 {{time}} 之后（{{remaining}}）。",
+                "earlyConfirmAction": "仍然记录"
+            },
+            "stockUpdateFailed": "已记录服用，但未能更新库存。"
         },
         "labs": {
             "title": "化验值",

@@ -399,11 +399,6 @@
         "pointsSummary": "{{count}} баллов",
         "pointsSummary_one": "{{count}} балл",
         "documentsLabel": "Документы",
-        "documentsHint": "Свяжите документы из модуля «Документы» с этой задачей.",
-        "documentAdd": "Связать документ",
-        "documentAddPlaceholder": "Выберите документ…",
-        "documentRemove": "Удалить связь",
-        "documentsEmpty": "Пока нет связанных документов.",
         "documentsCount": "Документов: {{count}}",
         "documentsCount_one": "Документов: {{count}}",
         "assignedToMe": "Назначенные мне",
@@ -422,7 +417,18 @@
         "syncTargetLocal": "Сохранять только локально",
         "syncTargetHint": "Выбери список напоминаний, в который будет записана эта задача.",
         "syncTargetMirrored": "Эта задача уже синхронизируется со списком напоминаний. Список нельзя изменить задним числом.",
-        "syncTargetUnavailable": "Ранее выбранный список (больше недоступен)"
+        "syncTargetUnavailable": "Ранее выбранный список (больше недоступен)",
+        "commentsLabel": "Комментарии",
+        "commentsEmpty": "Комментариев пока нет.",
+        "commentsLoadError": "Не удалось загрузить комментарии.",
+        "commentPlaceholder": "Напишите комментарий, @ упоминает кого-то",
+        "commentSubmit": "Комментировать",
+        "commentEdit": "Изменить комментарий",
+        "commentDelete": "Удалить комментарий",
+        "commentEditedAt": "{{date}} {{time}} · изменено",
+        "commentUnknownAuthor": "Неизвестно",
+        "commentDeletedToast": "Комментарий удалён.",
+        "documentsLinkFailed": "Задача сохранена, но документы не удалось привязать."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} приёма пищи",
@@ -2714,7 +2720,8 @@
         "storageGoogleDrive": "Google Drive",
         "budgetFolder": "Чеки",
         "splitExpensesFolder": "Общие расходы",
-        "inventoryFolder": "Inventory"
+        "inventoryFolder": "Inventory",
+        "tasksFolder": "Задачи"
     },
     "shortcuts": {
         "goKitchen": "Кухня",
@@ -3475,7 +3482,11 @@
                 "note": "Заметка",
                 "visibility": "Видимость",
                 "active": "Активно",
-                "prn": "По потребности (PRN)"
+                "prn": "По потребности (PRN)",
+                "minInterval": "Минимальный интервал (часы)",
+                "minIntervalHint": "Из него и последнего приёма складывается обратный отсчёт.",
+                "prnDose": "Доза за приём",
+                "prnDoseHint": "Списывается из запаса при каждом приёме по потребности."
             },
             "schedule": {
                 "title": "График приёма",
@@ -3517,7 +3528,22 @@
                 "deleteConfirm": "Удалить эту запись?",
                 "deleted": "Запись удалена",
                 "deleteConfirmDetail": "Запись исчезнет и из экспорта. Отменить это нельзя."
-            }
+            },
+            "prn": {
+                "title": "По потребности",
+                "take": "Принять сейчас",
+                "takeFor": "Принять {{medication}} сейчас",
+                "nextAt": "Не раньше {{time}}",
+                "remainingHm": "осталось {{hours}} ч {{minutes}} мин",
+                "remainingM": "осталось {{minutes}} мин",
+                "ready": "Можно сейчас",
+                "lastTaken": "последний раз в {{time}}",
+                "never": "Ещё не принималось",
+                "earlyConfirm": "Записать дозу до истечения минимального интервала?",
+                "earlyDetail": "Следующая доза предусмотрена только с {{time}} ({{remaining}}).",
+                "earlyConfirmAction": "Всё равно записать"
+            },
+            "stockUpdateFailed": "Доза записана, но запас не удалось обновить."
         },
         "labs": {
             "title": "Анализы",

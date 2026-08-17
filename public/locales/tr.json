@@ -399,11 +399,6 @@
         "pointsSummary": "{{count}} puan",
         "pointsSummary_one": "{{count}} puan",
         "documentsLabel": "Belgeler",
-        "documentsHint": "Belgeler modülündeki belgeleri bu göreve bağlayın.",
-        "documentAdd": "Belge bağla",
-        "documentAddPlaceholder": "Bir belge seçin…",
-        "documentRemove": "Bağlantıyı kaldır",
-        "documentsEmpty": "Henüz bağlı belge yok.",
         "documentsCount": "{{count}} belge",
         "documentsCount_one": "{{count}} belge",
         "assignedToMe": "Bana atananlar",
@@ -422,7 +417,18 @@
         "syncTargetLocal": "Yalnızca yerel olarak kaydet",
         "syncTargetHint": "Bu görevin yazılacağı bir anımsatıcı listesi seç.",
         "syncTargetMirrored": "Bu görev zaten bir anımsatıcı listesiyle eşitleniyor. Liste sonradan değiştirilemez.",
-        "syncTargetUnavailable": "Daha önce seçilen liste (artık kullanılamıyor)"
+        "syncTargetUnavailable": "Daha önce seçilen liste (artık kullanılamıyor)",
+        "commentsLabel": "Yorumlar",
+        "commentsEmpty": "Henüz yorum yok.",
+        "commentsLoadError": "Yorumlar yüklenemedi.",
+        "commentPlaceholder": "Yorum yazın, @ birini etiketler",
+        "commentSubmit": "Yorum yap",
+        "commentEdit": "Yorumu düzenle",
+        "commentDelete": "Yorumu sil",
+        "commentEditedAt": "{{date}} {{time}} · düzenlendi",
+        "commentUnknownAuthor": "Bilinmiyor",
+        "commentDeletedToast": "Yorum silindi.",
+        "documentsLinkFailed": "Görev kaydedildi, ancak belgeler bağlanamadı."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} öğünden",
@@ -2714,7 +2720,8 @@
         "storageGoogleDrive": "Google Drive",
         "budgetFolder": "Fişler",
         "splitExpensesFolder": "Paylaşılan giderler",
-        "inventoryFolder": "Inventory"
+        "inventoryFolder": "Inventory",
+        "tasksFolder": "Görevler"
     },
     "shortcuts": {
         "goKitchen": "Mutfak",
@@ -3475,7 +3482,11 @@
                 "note": "Not",
                 "visibility": "Görünürlük",
                 "active": "Aktif",
-                "prn": "Gerektiğinde (PRN)"
+                "prn": "Gerektiğinde (PRN)",
+                "minInterval": "En kısa aralık (saat)",
+                "minIntervalHint": "Geri sayım buradan ve son alımdan çıkar.",
+                "prnDose": "Alım başına doz",
+                "prnDoseHint": "Her gerektiğinde dozda stoktan düşülür."
             },
             "schedule": {
                 "title": "Kullanım planı",
@@ -3517,7 +3528,22 @@
                 "deleteConfirm": "Bu kayıt silinsin mi?",
                 "deleted": "Kayıt silindi",
                 "deleteConfirmDetail": "Kayıt dışa aktarmadan da kaybolur. Bu işlem geri alınamaz."
-            }
+            },
+            "prn": {
+                "title": "Gerektiğinde",
+                "take": "Şimdi al",
+                "takeFor": "{{medication}} şimdi alınsın",
+                "nextAt": "En erken {{time}}",
+                "remainingHm": "{{hours}} sa {{minutes}} dk kaldı",
+                "remainingM": "{{minutes}} dk kaldı",
+                "ready": "Şimdi mümkün",
+                "lastTaken": "son {{time}}",
+                "never": "Henüz alınmadı",
+                "earlyConfirm": "Doz, en kısa aralık dolmadan kaydedilsin mi?",
+                "earlyDetail": "Sonraki doz ancak {{time}} itibarıyla öngörülüyor ({{remaining}}).",
+                "earlyConfirmAction": "Yine de kaydet"
+            },
+            "stockUpdateFailed": "Doz kaydedildi, ancak stok güncellenemedi."
         },
         "labs": {
             "title": "Laboratuvar",

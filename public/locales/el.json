@@ -399,11 +399,6 @@
         "pointsSummary": "{{count}} πόντοι",
         "pointsSummary_one": "{{count}} πόντος",
         "documentsLabel": "Έγγραφα",
-        "documentsHint": "Συνδέστε έγγραφα από τη μονάδα Έγγραφα με αυτή την εργασία.",
-        "documentAdd": "Σύνδεση εγγράφου",
-        "documentAddPlaceholder": "Επιλέξτε ένα έγγραφο…",
-        "documentRemove": "Κατάργηση σύνδεσης",
-        "documentsEmpty": "Δεν έχουν συνδεθεί έγγραφα ακόμη.",
         "documentsCount": "{{count}} έγγραφα",
         "documentsCount_one": "{{count}} έγγραφα",
         "assignedToMe": "Ανατεθειμένα σε μένα",
@@ -422,7 +417,18 @@
         "syncTargetLocal": "Αποθήκευση μόνο τοπικά",
         "syncTargetHint": "Επίλεξε μια λίστα υπενθυμίσεων στην οποία θα γραφτεί αυτή η εργασία.",
         "syncTargetMirrored": "Αυτή η εργασία συγχρονίζεται ήδη με μια λίστα υπενθυμίσεων. Η λίστα δεν μπορεί να αλλάξει εκ των υστέρων.",
-        "syncTargetUnavailable": "Λίστα που επιλέχθηκε παλαιότερα (δεν είναι πλέον διαθέσιμη)"
+        "syncTargetUnavailable": "Λίστα που επιλέχθηκε παλαιότερα (δεν είναι πλέον διαθέσιμη)",
+        "commentsLabel": "Σχόλια",
+        "commentsEmpty": "Δεν υπάρχουν ακόμη σχόλια.",
+        "commentsLoadError": "Τα σχόλια δεν φορτώθηκαν.",
+        "commentPlaceholder": "Γράψτε ένα σχόλιο, το @ αναφέρει κάποιον",
+        "commentSubmit": "Σχολιασμός",
+        "commentEdit": "Επεξεργασία σχολίου",
+        "commentDelete": "Διαγραφή σχολίου",
+        "commentEditedAt": "{{date}} {{time}} · επεξεργάστηκε",
+        "commentUnknownAuthor": "Άγνωστος",
+        "commentDeletedToast": "Το σχόλιο διαγράφηκε.",
+        "documentsLinkFailed": "Η εργασία αποθηκεύτηκε, αλλά τα έγγραφα δεν συνδέθηκαν."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} γεύματα",
@@ -2714,7 +2720,8 @@
         "storageGoogleDrive": "Google Drive",
         "budgetFolder": "Αποδείξεις",
         "splitExpensesFolder": "Κοινά έξοδα",
-        "inventoryFolder": "Inventory"
+        "inventoryFolder": "Inventory",
+        "tasksFolder": "Εργασίες"
     },
     "shortcuts": {
         "goKitchen": "Κουζίνα",
@@ -3475,7 +3482,11 @@
                 "note": "Σημείωση",
                 "visibility": "Ορατότητα",
                 "active": "Ενεργό",
-                "prn": "Όταν χρειάζεται (PRN)"
+                "prn": "Όταν χρειάζεται (PRN)",
+                "minInterval": "Ελάχιστο διάστημα (ώρες)",
+                "minIntervalHint": "Από αυτό και την τελευταία λήψη προκύπτει η αντίστροφη μέτρηση.",
+                "prnDose": "Δόση ανά λήψη",
+                "prnDoseHint": "Αφαιρείται από το απόθεμα σε κάθε δόση κατ' ανάγκη."
             },
             "schedule": {
                 "title": "Πρόγραμμα λήψης",
@@ -3517,7 +3528,22 @@
                 "deleteConfirm": "Διαγραφή αυτής της καταχώρισης;",
                 "deleted": "Η καταχώριση διαγράφηκε",
                 "deleteConfirmDetail": "Η καταχώριση εξαφανίζεται και από την εξαγωγή. Αυτό δεν αναιρείται."
-            }
+            },
+            "prn": {
+                "title": "Κατ' ανάγκη",
+                "take": "Λήψη τώρα",
+                "takeFor": "Λήψη {{medication}} τώρα",
+                "nextAt": "Το νωρίτερο στις {{time}}",
+                "remainingHm": "απομένουν {{hours}} ώ {{minutes}} λ",
+                "remainingM": "απομένουν {{minutes}} λ",
+                "ready": "Δυνατή τώρα",
+                "lastTaken": "τελευταία στις {{time}}",
+                "never": "Δεν έχει ληφθεί ακόμη",
+                "earlyConfirm": "Καταγραφή δόσης πριν συμπληρωθεί το ελάχιστο διάστημα;",
+                "earlyDetail": "Η επόμενη δόση προβλέπεται μόλις από τις {{time}} ({{remaining}}).",
+                "earlyConfirmAction": "Καταγραφή ούτως ή άλλως"
+            },
+            "stockUpdateFailed": "Η δόση καταγράφηκε, αλλά το απόθεμα δεν ενημερώθηκε."
         },
         "labs": {
             "title": "Εργαστηριακά",

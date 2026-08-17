@@ -411,11 +411,6 @@
         "pointsSummary": "{{count}} امتیاز",
         "pointsSummary_one": "{{count}} امتیاز",
         "documentsLabel": "اسناد",
-        "documentsHint": "اسناد ماژول اسناد را به این وظیفه پیوند دهید.",
-        "documentAdd": "پیوند سند",
-        "documentAddPlaceholder": "یک سند انتخاب کنید…",
-        "documentRemove": "حذف پیوند",
-        "documentsEmpty": "هنوز سندی پیوند داده نشده است.",
         "documentsCount": "{{count}} سند",
         "documentsCount_one": "{{count}} سند",
         "assignedToMe": "واگذارشده به من",
@@ -434,7 +429,18 @@
         "syncTargetLocal": "فقط ذخیره محلی",
         "syncTargetHint": "یک فهرست یادآوری انتخاب کن تا این وظیفه در آن نوشته شود.",
         "syncTargetMirrored": "این وظیفه از پیش با یک فهرست یادآوری همگام می‌شود. فهرست را بعداً نمی‌توان تغییر داد.",
-        "syncTargetUnavailable": "فهرست انتخاب‌شده پیشین (دیگر در دسترس نیست)"
+        "syncTargetUnavailable": "فهرست انتخاب‌شده پیشین (دیگر در دسترس نیست)",
+        "commentsLabel": "دیدگاه‌ها",
+        "commentsEmpty": "هنوز دیدگاهی نیست.",
+        "commentsLoadError": "دیدگاه‌ها بارگذاری نشد.",
+        "commentPlaceholder": "دیدگاهی بنویسید، @ کسی را نام می‌برد",
+        "commentSubmit": "ثبت دیدگاه",
+        "commentEdit": "ویرایش دیدگاه",
+        "commentDelete": "حذف دیدگاه",
+        "commentEditedAt": "{{date}} {{time}} · ویرایش‌شده",
+        "commentUnknownAuthor": "ناشناس",
+        "commentDeletedToast": "دیدگاه حذف شد.",
+        "documentsLinkFailed": "کار ذخیره شد، اما پیوند دادن سندها ممکن نشد."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} وعده",
@@ -2728,7 +2734,8 @@
         "storageGoogleDrive": "Google Drive",
         "budgetFolder": "رسیدها",
         "splitExpensesFolder": "هزینه‌های مشترک",
-        "inventoryFolder": "Inventory"
+        "inventoryFolder": "Inventory",
+        "tasksFolder": "کارها"
     },
     "userMultiSelect": {
         "nobody": "- هیچ‌کس -",
@@ -3475,7 +3482,11 @@
                 "note": "یادداشت",
                 "visibility": "نمایانی",
                 "active": "فعال",
-                "prn": "در صورت نیاز (PRN)"
+                "prn": "در صورت نیاز (PRN)",
+                "minInterval": "کمترین فاصله (ساعت)",
+                "minIntervalHint": "شمارش معکوس از این مقدار و آخرین مصرف به دست می‌آید.",
+                "prnDose": "مقدار هر بار مصرف",
+                "prnDoseHint": "در هر دوز در صورت نیاز از موجودی کم می‌شود."
             },
             "schedule": {
                 "title": "برنامه مصرف",
@@ -3517,7 +3528,22 @@
                 "deleteConfirm": "این رکورد حذف شود؟",
                 "deleted": "رکورد حذف شد",
                 "deleteConfirmDetail": "این رکورد از خروجی هم حذف می‌شود. این کار برگشت‌پذیر نیست."
-            }
+            },
+            "prn": {
+                "title": "در صورت نیاز",
+                "take": "اکنون مصرف کن",
+                "takeFor": "اکنون {{medication}} را مصرف کن",
+                "nextAt": "زودترین زمان {{time}}",
+                "remainingHm": "{{hours}} ساعت و {{minutes}} دقیقه مانده",
+                "remainingM": "{{minutes}} دقیقه مانده",
+                "ready": "اکنون ممکن است",
+                "lastTaken": "آخرین بار {{time}}",
+                "never": "هنوز مصرف نشده",
+                "earlyConfirm": "دوز پیش از پایان کمترین فاصله ثبت شود؟",
+                "earlyDetail": "دوز بعدی تنها از {{time}} پیش‌بینی شده است ({{remaining}}).",
+                "earlyConfirmAction": "با این حال ثبت کن"
+            },
+            "stockUpdateFailed": "دوز ثبت شد، اما به‌روزرسانی موجودی ممکن نشد."
         },
         "labs": {
             "title": "آزمایش‌ها",

@@ -399,11 +399,6 @@
         "pointsSummary": "{{count}} punti",
         "pointsSummary_one": "{{count}} punto",
         "documentsLabel": "Documenti",
-        "documentsHint": "Collega documenti dal modulo Documenti a questa attività.",
-        "documentAdd": "Collega documento",
-        "documentAddPlaceholder": "Seleziona un documento…",
-        "documentRemove": "Rimuovi collegamento",
-        "documentsEmpty": "Nessun documento collegato.",
         "documentsCount": "{{count}} documenti",
         "documentsCount_one": "{{count}} documenti",
         "assignedToMe": "Assegnati a me",
@@ -422,7 +417,18 @@
         "syncTargetLocal": "Salva solo in locale",
         "syncTargetHint": "Scegli un elenco di promemoria in cui scrivere questa attività.",
         "syncTargetMirrored": "Questa attività è già sincronizzata con un elenco di promemoria. L'elenco non può essere cambiato in seguito.",
-        "syncTargetUnavailable": "Elenco selezionato in precedenza (non più disponibile)"
+        "syncTargetUnavailable": "Elenco selezionato in precedenza (non più disponibile)",
+        "commentsLabel": "Commenti",
+        "commentsEmpty": "Ancora nessun commento.",
+        "commentsLoadError": "Impossibile caricare i commenti.",
+        "commentPlaceholder": "Scrivi un commento, @ menziona qualcuno",
+        "commentSubmit": "Commenta",
+        "commentEdit": "Modifica commento",
+        "commentDelete": "Elimina commento",
+        "commentEditedAt": "{{date}} {{time}} · modificato",
+        "commentUnknownAuthor": "Sconosciuto",
+        "commentDeletedToast": "Commento eliminato.",
+        "documentsLinkFailed": "L'attività è stata salvata, ma i documenti non sono stati collegati."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} pasti",
@@ -2714,7 +2720,8 @@
         "storageGoogleDrive": "Google Drive",
         "budgetFolder": "Ricevute",
         "splitExpensesFolder": "Spese condivise",
-        "inventoryFolder": "Inventory"
+        "inventoryFolder": "Inventory",
+        "tasksFolder": "Attività"
     },
     "shortcuts": {
         "goKitchen": "Cucina",
@@ -3475,7 +3482,11 @@
                 "note": "Nota",
                 "visibility": "Visibilità",
                 "active": "Attivo",
-                "prn": "Al bisogno (PRN)"
+                "prn": "Al bisogno (PRN)",
+                "minInterval": "Intervallo minimo (ore)",
+                "minIntervalHint": "Il conto alla rovescia nasce da questo e dall'ultima assunzione.",
+                "prnDose": "Dose per assunzione",
+                "prnDoseHint": "Viene scalata dalla scorta a ogni dose al bisogno."
             },
             "schedule": {
                 "title": "Piano di assunzione",
@@ -3517,7 +3528,22 @@
                 "deleteConfirm": "Eliminare questa voce?",
                 "deleted": "Voce eliminata",
                 "deleteConfirmDetail": "La voce scompare anche dall'esportazione. L'operazione non può essere annullata."
-            }
+            },
+            "prn": {
+                "title": "Al bisogno",
+                "take": "Prendi ora",
+                "takeFor": "Prendi {{medication}} ora",
+                "nextAt": "Non prima delle {{time}}",
+                "remainingHm": "ancora {{hours}} h {{minutes}} min",
+                "remainingM": "ancora {{minutes}} min",
+                "ready": "Possibile ora",
+                "lastTaken": "ultima alle {{time}}",
+                "never": "Non ancora presa",
+                "earlyConfirm": "Registrare la dose prima della fine dell'intervallo minimo?",
+                "earlyDetail": "La dose successiva è prevista solo dalle {{time}} ({{remaining}}).",
+                "earlyConfirmAction": "Registra comunque"
+            },
+            "stockUpdateFailed": "La dose è registrata, ma la scorta non è stata aggiornata."
         },
         "labs": {
             "title": "Esami",

@@ -399,11 +399,6 @@
         "pointsSummary": "{{count}} punten",
         "pointsSummary_one": "{{count}} punt",
         "documentsLabel": "Documenten",
-        "documentsHint": "Koppel documenten uit de module Documenten aan deze taak.",
-        "documentAdd": "Document koppelen",
-        "documentAddPlaceholder": "Selecteer een document…",
-        "documentRemove": "Koppeling verwijderen",
-        "documentsEmpty": "Nog geen documenten gekoppeld.",
         "documentsCount": "{{count}} documenten",
         "documentsCount_one": "{{count}} documenten",
         "assignedToMe": "Aan mij toegewezen",
@@ -422,7 +417,18 @@
         "syncTargetLocal": "Alleen lokaal opslaan",
         "syncTargetHint": "Kies een herinneringslijst om deze taak naartoe te schrijven.",
         "syncTargetMirrored": "Deze taak wordt al gesynchroniseerd met een herinneringslijst. De lijst kan achteraf niet worden gewijzigd.",
-        "syncTargetUnavailable": "Eerder gekozen lijst (niet meer beschikbaar)"
+        "syncTargetUnavailable": "Eerder gekozen lijst (niet meer beschikbaar)",
+        "commentsLabel": "Opmerkingen",
+        "commentsEmpty": "Nog geen opmerkingen.",
+        "commentsLoadError": "Opmerkingen konden niet worden geladen.",
+        "commentPlaceholder": "Schrijf een opmerking, @ noemt iemand",
+        "commentSubmit": "Plaatsen",
+        "commentEdit": "Opmerking bewerken",
+        "commentDelete": "Opmerking verwijderen",
+        "commentEditedAt": "{{date}} {{time}} · bewerkt",
+        "commentUnknownAuthor": "Onbekend",
+        "commentDeletedToast": "Opmerking verwijderd.",
+        "documentsLinkFailed": "De taak is opgeslagen, maar de documenten konden niet worden gekoppeld."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} maaltijden",
@@ -2728,7 +2734,8 @@
         "storageGoogleDrive": "Google Drive",
         "budgetFolder": "Bonnen",
         "splitExpensesFolder": "Gedeelde uitgaven",
-        "inventoryFolder": "Inventory"
+        "inventoryFolder": "Inventory",
+        "tasksFolder": "Taken"
     },
     "housekeeping": {
         "title": "Huishouden",
@@ -3475,7 +3482,11 @@
                 "note": "Notitie",
                 "visibility": "Zichtbaarheid",
                 "active": "Actief",
-                "prn": "Indien nodig (PRN)"
+                "prn": "Indien nodig (PRN)",
+                "minInterval": "Minimale tussentijd (uren)",
+                "minIntervalHint": "Hieruit en uit de laatste inname volgt de aftelling.",
+                "prnDose": "Dosis per inname",
+                "prnDoseHint": "Wordt bij elke zo-nodig-dosis van de voorraad afgetrokken."
             },
             "schedule": {
                 "title": "Innameschema",
@@ -3517,7 +3528,22 @@
                 "deleteConfirm": "Deze vermelding verwijderen?",
                 "deleted": "Vermelding verwijderd",
                 "deleteConfirmDetail": "De vermelding verdwijnt ook uit de export. Dit kan niet ongedaan worden gemaakt."
-            }
+            },
+            "prn": {
+                "title": "Zo nodig",
+                "take": "Nu innemen",
+                "takeFor": "{{medication}} nu innemen",
+                "nextAt": "Op zijn vroegst om {{time}}",
+                "remainingHm": "nog {{hours}} u {{minutes}} min",
+                "remainingM": "nog {{minutes}} min",
+                "ready": "Nu mogelijk",
+                "lastTaken": "laatst om {{time}}",
+                "never": "Nog niet ingenomen",
+                "earlyConfirm": "Dosis vastleggen voordat de minimale tussentijd voorbij is?",
+                "earlyDetail": "De volgende dosis is pas vanaf {{time}} voorzien ({{remaining}}).",
+                "earlyConfirmAction": "Toch vastleggen"
+            },
+            "stockUpdateFailed": "De dosis is vastgelegd, maar de voorraad kon niet worden bijgewerkt."
         },
         "labs": {
             "title": "Labwaarden",

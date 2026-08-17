@@ -399,11 +399,6 @@
         "pointsSummary": "{{count}} puntos",
         "pointsSummary_one": "{{count}} punto",
         "documentsLabel": "Documentos",
-        "documentsHint": "Vincula documentos del módulo Documentos a esta tarea.",
-        "documentAdd": "Vincular documento",
-        "documentAddPlaceholder": "Selecciona un documento…",
-        "documentRemove": "Quitar vínculo",
-        "documentsEmpty": "Aún no hay documentos vinculados.",
         "documentsCount": "{{count}} documentos",
         "documentsCount_one": "{{count}} documentos",
         "assignedToMe": "Asignado a mí",
@@ -422,7 +417,18 @@
         "syncTargetLocal": "Guardar solo localmente",
         "syncTargetHint": "Elige una lista de recordatorios en la que escribir esta tarea.",
         "syncTargetMirrored": "Esta tarea ya se sincroniza con una lista de recordatorios. La lista no se puede cambiar después.",
-        "syncTargetUnavailable": "Lista seleccionada anteriormente (ya no disponible)"
+        "syncTargetUnavailable": "Lista seleccionada anteriormente (ya no disponible)",
+        "commentsLabel": "Comentarios",
+        "commentsEmpty": "Todavía no hay comentarios.",
+        "commentsLoadError": "No se pudieron cargar los comentarios.",
+        "commentPlaceholder": "Escribe un comentario, @ menciona a alguien",
+        "commentSubmit": "Comentar",
+        "commentEdit": "Editar comentario",
+        "commentDelete": "Eliminar comentario",
+        "commentEditedAt": "{{date}} {{time}} · editado",
+        "commentUnknownAuthor": "Desconocido",
+        "commentDeletedToast": "Comentario eliminado.",
+        "documentsLinkFailed": "La tarea se guardó, pero no se pudieron vincular los documentos."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} comidas",
@@ -2714,7 +2720,8 @@
         "storageGoogleDrive": "Google Drive",
         "budgetFolder": "Comprobantes",
         "splitExpensesFolder": "Gastos compartidos",
-        "inventoryFolder": "Inventory"
+        "inventoryFolder": "Inventory",
+        "tasksFolder": "Tareas"
     },
     "shortcuts": {
         "goKitchen": "Cocina",
@@ -3475,7 +3482,11 @@
                 "note": "Nota",
                 "visibility": "Visibilidad",
                 "active": "Activo",
-                "prn": "Según necesidad (PRN)"
+                "prn": "Según necesidad (PRN)",
+                "minInterval": "Intervalo mínimo (horas)",
+                "minIntervalHint": "De esto y de la última toma sale la cuenta atrás.",
+                "prnDose": "Dosis por toma",
+                "prnDoseHint": "Se descuenta del stock en cada dosis a demanda."
             },
             "schedule": {
                 "title": "Pauta de tomas",
@@ -3517,7 +3528,22 @@
                 "deleteConfirm": "¿Eliminar esta entrada?",
                 "deleted": "Entrada eliminada",
                 "deleteConfirmDetail": "La entrada también desaparece de la exportación. Esta acción no se puede deshacer."
-            }
+            },
+            "prn": {
+                "title": "Según necesidad",
+                "take": "Tomar ahora",
+                "takeFor": "Tomar {{medication}} ahora",
+                "nextAt": "Como muy pronto a las {{time}}",
+                "remainingHm": "quedan {{hours}} h {{minutes}} min",
+                "remainingM": "quedan {{minutes}} min",
+                "ready": "Posible ahora",
+                "lastTaken": "última a las {{time}}",
+                "never": "Aún no tomada",
+                "earlyConfirm": "¿Registrar la dosis antes de que pase el intervalo mínimo?",
+                "earlyDetail": "La próxima dosis no está prevista hasta las {{time}} ({{remaining}}).",
+                "earlyConfirmAction": "Registrar igualmente"
+            },
+            "stockUpdateFailed": "La dosis quedó registrada, pero no se pudo actualizar el stock."
         },
         "labs": {
             "title": "Analíticas",
