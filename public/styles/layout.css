@@ -3438,7 +3438,16 @@ p.field-hint--warn[hidden] {
    * geblurten Moduls sichtbar bleibt — das Sheet wirkt als Karte über dem
    * Modul, nicht als Vollbild-Takeover. Safe-Areas bleiben respektiert. */
   max-height: min(88dvh, calc(100dvh - (2 * var(--space-3)) - env(safe-area-inset-top) - env(safe-area-inset-bottom)));
-  overflow: hidden;
+  /* clip, NICHT hidden (#805): hidden erzeugt eine Scroll-Box, die der Nutzer
+   * mangels Scrollbar nicht bedienen kann, der Browser aber programmatisch
+   * scrollt - Chrome ruft beim Fokussieren eines <select> scrollIntoView auf
+   * allen Vorfahren auf. Das Panel rutschte dadurch samt Kopfzeile und
+   * Schliessen-X aus dem Sichtfeld, ohne Weg zurueck. Ausloeser war ein
+   * .sr-only-Input (position:absolute, im Fluss), das dem overflow:auto des
+   * Bodys entkommt und die Scroll-Box des Panels auf 1245px aufblies.
+   * Gescrollt wird strukturell nur im Body; clip nimmt dem Panel die
+   * Scroll-Box, ist aber visuell deckungsgleich mit hidden. */
+  overflow: clip;
   display: flex;
   flex-direction: column;
   border-radius: var(--radius-lg);

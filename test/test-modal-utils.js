@@ -6,6 +6,8 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { eachRule } from './css-rules.js';
 
 // /i18n.js wird durch test-browser-loader.mjs gemockt (--loader Flag)
 const { wireBlurValidation, btnSuccess, btnError } = await import('../public/components/modal.js');
@@ -272,4 +274,54 @@ test('btnError: entfernt btn--shaking zuerst um Animation-Restart zu erzwingen',
   btnError(btn);
   assert.equal(order[0], 'remove:btn--shaking');
   assert.equal(order[1], 'add:btn--shaking');
+});
+
+// --------------------------------------------------------
+// Panel-Overflow (#805)
+// --------------------------------------------------------
+
+/* Das .modal-panel darf keine Scroll-Box haben.
+ *
+ * `overflow: hidden` erzeugt eine - unsichtbar fuer den Nutzer (keine
+ * Scrollbar), aber programmatisch scrollbar. Chrome ruft beim Fokussieren
+ * eines <select> scrollIntoView auf ALLEN Vorfahren auf und schob das Panel
+ * dabei um 507px hoch: Kopfzeile und Schliessen-X verliessen das Sichtfeld,
+ * ohne Weg zurueck. Ausloeser war ein .sr-only-Input (position:absolute im
+ * Fluss), das dem overflow:auto des Bodys entkommt.
+ *
+ * `overflow: clip` ist visuell deckungsgleich, erzeugt aber gar keine
+ * Scroll-Box. Gescrollt wird strukturell nur im Body.
+ *
+ * Der Guard prueft beide Enden der Zusage - sonst faellt nicht auf, wenn
+ * jemand die Regel spaeter im selben Stylesheet auf hidden zuruecksetzt. */
+const layoutCss = readFileSync(new URL('../public/styles/layout.css', import.meta.url), 'utf8');
+
+function overflowValuesOf(css, selector) {
+  const out = [];
+  for (const rule of eachRule(css)) {
+    if (!rule.selector.split(',').map((s) => s.trim()).includes(selector)) continue;
+    const m = rule.body.match(/(?:^|;)\s*overflow\s*:\s*([^;]+)/);
+    if (m) out.push(m[1].trim());
+  }
+  return out;
+}
+
+test('#805: .modal-panel bekommt overflow:clip, nie hidden', () => {
+  const werte = overflowValuesOf(layoutCss, '.modal-panel');
+  assert.ok(werte.length > 0, '.modal-panel setzt gar kein overflow - die Zusage steht nirgends');
+  assert.ok(
+    werte.every((v) => v === 'clip'),
+    `.modal-panel muss overflow:clip tragen, gefunden: ${werte.join(', ')}. `
+    + 'hidden macht das Panel programmatisch scrollbar und schiebt das Schliessen-X aus dem Bild (#805).',
+  );
+});
+
+test('#805: der Modal-Body bleibt der scrollende Container', () => {
+  const rule = [...eachRule(layoutCss)].find((r) => r.selector.trim() === '.modal-panel__body');
+  assert.ok(rule, '.modal-panel__body fehlt');
+  assert.match(
+    rule.body, /overflow-y\s*:\s*auto/,
+    '.modal-panel__body muss overflow-y:auto behalten - nimmt man ihm das Scrollen, '
+    + 'ist langer Modal-Inhalt hinter dem clip des Panels unerreichbar.',
+  );
 });
