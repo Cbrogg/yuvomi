@@ -127,17 +127,24 @@ router.get('/', (req, res) => {
   const result = {};
   const userId = req.authUserId || req.session.userId;
 
-  // Heute und +48h als ISO-Strings
   const now = new Date();
-  const todayStr = now.toISOString().slice(0, 10);
-  const currentMonth = todayStr.slice(0, 7);
-  const deadline48h = new Date(now.getTime() + 48 * 60 * 60 * 1000).toISOString();
 
-  // Lokaler Datums-/Wochentagsschlüssel für das Health-Widget: die Fälligkeit einer
-  // Dosis hängt am lokalen Kalendertag (nicht UTC), sonst driftet die days_mask westlich
-  // von UTC um einen Tag. Konvention wie public/utils/health-meds.js: Montag = 0 … Sonntag = 6.
+  // Lokaler Datums-/Wochentagsschlüssel: die Fälligkeit einer Dosis hängt am lokalen
+  // Kalendertag (nicht UTC), sonst driftet die days_mask westlich von UTC um einen Tag.
+  // Konvention wie public/utils/health-meds.js: Montag = 0 … Sonntag = 6.
+  //
+  // Dieser Schlüssel gilt für ALLES, was der Nutzer als Kalendertag eingegeben hat -
+  // Mahlzeitendatum, Fälligkeiten, Budget-Monat. Bis 2026-08-18 zog sich die Route
+  // daneben ein zweites `todayStr` aus `toISOString()`, also den UTC-Tag, und verglich
+  // ihn mit lokal gespeicherten Werten. Östlich von UTC lieferte das Dashboard dadurch
+  // in den frühen Morgenstunden die Mahlzeiten des VORTAGS (in CEST zwischen 00:00 und
+  // 02:00), westlich davon am späten Abend die von morgen; am Monatsersten traf es
+  // zusätzlich den Budget-Monat. Die CI läuft in UTC, wo beide Schlüssel gleich sind -
+  // deshalb war der Fehler dort nie zu sehen (CLAUDE.md führt genau diese Falle).
   const todayLocalKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   const localWeekdayIdx = (now.getDay() + 6) % 7;
+  const currentMonth = todayLocalKey.slice(0, 7);
+  const deadline48h = new Date(now.getTime() + 48 * 60 * 60 * 1000).toISOString();
 
   // Modulrechte des Betrachters (#467, siehe DENIED_PAYLOAD oben). Gelesen aus
   // dem, was die Auth-Schicht schon aufgelöst hat: null für Admins und für
@@ -170,7 +177,11 @@ router.get('/', (req, res) => {
   // due_sort = due_date + due_time, falling back to 23:59:59 when only a date is set,
   // and NULL when there is no due_date at all.
   if (allows('tasks')) try {
-    const nowIso = `${todayStr}T${now.toISOString().slice(11, 19)}`;
+    // Lokal, nicht UTC: verglichen wird gegen `due_date || 'T' || due_time`, und
+    // beide stehen als lokale Eingabewerte in der DB. Ein UTC-Zeitstempel verschob
+    // die Grenze „überfällig" um den Zonen-Offset.
+    const nowIso = `${todayLocalKey}T${String(now.getHours()).padStart(2, '0')}`
+      + `:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
     result.urgentTasks = d.prepare(`
       SELECT t.*, u.display_name AS assigned_name, u.avatar_color AS assigned_color,
         ${ASSIGNED_USERS_SQL},
@@ -264,7 +275,7 @@ router.get('/', (req, res) => {
           WHEN 'dinner'    THEN 2
           WHEN 'snack'     THEN 3
         END
-    `).all(todayStr, ...visibleTypes);
+    `).all(todayLocalKey, ...visibleTypes);
   } catch (err) {
     log.error('todayMeals error:', err.message);
     result.todayMeals = [];

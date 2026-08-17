@@ -14,6 +14,7 @@ import * as nodeAssert from 'node:assert/strict';
 import express from 'express';
 import { MIGRATIONS_SQL } from '../server/db-schema-test.js';
 import { addLocalDays, toLocalDateKey } from '../public/utils/date.js';
+import { withoutBlockComments } from './source-text.js';
 
 // Dynamisch geladen, weil beide Module inzwischen server/db.js in ihren
 // Import-Graphen ziehen: statische Imports laufen vor der DB_PATH-Zuweisung
@@ -68,12 +69,17 @@ const u2 = db.prepare(`INSERT INTO users (username, display_name, password_hash,
 const uid1 = u1.lastInsertRowid;
 const uid2 = u2.lastInsertRowid;
 
-const today = new Date().toISOString().slice(0, 10);
-const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+// Lokale Kalendertage, nicht UTC: die Route liest Mahlzeitendatum, due_date und
+// Geburtstage als lokale Kalenderwerte. Seedete der Test dagegen den UTC-Tag,
+// fielen beide oestlich von UTC in den fruehen Morgenstunden auseinander und die
+// Suite war zwischen 00:00 und 02:00 CEST rot - in UTC (CI) dagegen immer gruen.
+// `inOneHour` bleibt ein echter Instant und damit korrekt in UTC.
+const today = toLocalDateKey();
+const tomorrow = addLocalDays(today, 1);
 const currentMonth = today.slice(0, 7);
 const inOneHour = new Date(Date.now() + 3600000).toISOString();
-const in30h = new Date(Date.now() + 30 * 3600000).toISOString().slice(0, 10);
-const in72h = new Date(Date.now() + 72 * 3600000).toISOString().slice(0, 10);
+const in30h = toLocalDateKey(new Date(Date.now() + 30 * 3600000));
+const in72h = toLocalDateKey(new Date(Date.now() + 72 * 3600000));
 
 // Aufgaben
 db.prepare(`INSERT INTO tasks (title, priority, status, due_date, created_by, assigned_to)
@@ -1870,6 +1876,44 @@ test('die Spanne der Vorhersage bleibt ein Balken, auch wenn die Woche flach ist
 
   assert(weatherSpanModel([]) === null, 'ohne Vorhersage kein Modell');
   assert(weatherSpanModel([{ temp_min: 'x', temp_max: 'y' }]) === null, 'ohne Zahlen kein Modell');
+});
+
+// --------------------------------------------------------
+// Kalendertag der Route: lokal, nie UTC
+// --------------------------------------------------------
+
+/* Die Dashboard-Route darf einen KALENDERTAG nicht aus `toISOString()` ziehen.
+ *
+ * CLAUDE.md fuehrt diese Falle: `.toISOString().slice(0,10)` liefert den
+ * UTC-Tag, verglichen wird aber gegen Werte, die der Nutzer als lokalen
+ * Kalendertag eingegeben hat (Mahlzeitendatum, due_date, Budget-Monat).
+ * Oestlich von UTC lieferte das Dashboard dadurch in den fruehen Morgenstunden
+ * die Mahlzeiten des VORTAGS, westlich davon am spaeten Abend die von morgen.
+ *
+ * Warum dieser Guard und nicht der Verhaltenstest daneben: der faellt nur auf,
+ * wenn die Testmaschine gerade in einer Zone UND zu einer Stunde laeuft, in der
+ * die beiden Tage auseinanderfallen. Die CI laeuft in UTC, wo sie IMMER gleich
+ * sind - der Fehler war dort per Konstruktion unsichtbar und stand ueber
+ * mehrere Releases gruen im Build.
+ *
+ * `.toISOString()` ohne den Datums-Schnitt bleibt erlaubt: ein echter Instant
+ * (z.B. eine 48h-Grenze) ist in UTC korrekt aufgehoben. */
+test('die Route zieht ihren Kalendertag lokal, nicht aus toISOString()', () => {
+  const src = readFileSync(new URL('../server/routes/dashboard.js', import.meta.url), 'utf8');
+  // Kommentare raus, sonst findet der Guard die Beschreibung der Falle im
+  // Quelltext, die dort absichtlich steht.
+  const code = withoutBlockComments(src)
+    .split('\n')
+    .filter((line) => !/^\s*(\/\/|\*)/.test(line))
+    .join('\n');
+
+  const treffer = [...code.matchAll(/toISOString\(\)\s*\.slice\(\s*0\s*,\s*10\s*\)/g)];
+  assert(
+    treffer.length === 0,
+    `server/routes/dashboard.js zieht an ${treffer.length} Stelle(n) einen Kalendertag aus `
+    + 'toISOString() - das ist der UTC-Tag. Fuer alles, was der Nutzer als Kalendertag '
+    + 'eingegeben hat, gilt todayLocalKey.',
+  );
 });
 
 // --------------------------------------------------------
