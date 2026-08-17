@@ -242,10 +242,10 @@
     "express-rate-limit": "^8.6.2",
     "express-session": "^1.19.0",
     "helmet": "^8.3.0",
-    "libphonenumber-js": "^1.13.10",
+    "libphonenumber-js": "^1.13.11",
     "node-cron": "^4.6.0",
     "nodemailer": "^9.0.5",
-    "openid-client": "^6.8.4",
+    "openid-client": "^6.8.5",
     "web-push": "^3.6.7"
   },
   "optionalDependencies": {
