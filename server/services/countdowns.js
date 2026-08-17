@@ -177,12 +177,17 @@ function disabledModules(d) {
  * @param {object} opts
  * @param {number} opts.userId  Betrachter (Sichtbarkeitsfilter)
  * @param {string} opts.todayKey YYYY-MM-DD in der LOKALEN Zeit des Servers
+ * @param {Set<string>|null} [opts.hiddenModules] Module, die dem BETRACHTER
+ *        entzogen sind (`access_permissions`, #467) - eine andere Achse als die
+ *        haushaltweite Abschaltung unten, die dieselbe Antwort verdient.
  * @param {number} [opts.limit]
  * @returns {{items: Array<{source: 'event'|'task', id: number, title: string,
  *                  date: string, days_until: number, icon: string|null,
  *                  color: string|null, recurring: boolean}>, total: number}}
  */
-export function getCountdowns(d, { userId = null, todayKey, limit = DEFAULT_LIMIT } = {}) {
+export function getCountdowns(d, {
+  userId = null, todayKey, hiddenModules = null, limit = DEFAULT_LIMIT,
+} = {}) {
   /* EIN ABGESCHALTETES MODUL LIEFERT HIER GAR NICHTS MEHR (Review zu PR #793).
    *
    * Bis hierher fragte der Server beide Quellen ab, deckelte auf fünf und
@@ -201,11 +206,18 @@ export function getCountdowns(d, { userId = null, todayKey, limit = DEFAULT_LIMI
    * müssen dieselbe Menge meinen. Ein nachgelagerter Filter macht aus `total`
    * wieder die Sorte Zahl, die nur bis zu ihrer Obergrenze stimmt. Der
    * Browser-Filter bleibt trotzdem stehen: er fängt das Umschalten eines
-   * Moduls ohne neuen Ladevorgang ab. */
-  const disabled = disabledModules(d);
+   * Moduls ohne neuen Ladevorgang ab.
+   *
+   * ZWEI ACHSEN, EIN SCHNITT. `disabled_modules` schaltet ein Modul für den
+   * GANZEN Haushalt ab; `access_permissions` entzieht es einem einzelnen
+   * Mitglied (#467). Für diese Liste laufen beide auf dieselbe Frage hinaus -
+   * darf dieser Betrachter diese Zeile sehen? -, und deshalb landen sie in
+   * einem Set und nicht in zwei nacheinander angewandten Filtern. Der
+   * Unterschied wäre sonst wieder `total`: zwei Schnitte, zwei Wahrheiten. */
+  const hidden = new Set([...disabledModules(d), ...(hiddenModules ?? [])]);
   const items = [
-    ...(disabled.has('calendar') ? [] : eventCountdowns(d, userId, todayKey)),
-    ...(disabled.has('tasks') ? [] : taskCountdowns(d, userId, todayKey)),
+    ...(hidden.has('calendar') ? [] : eventCountdowns(d, userId, todayKey)),
+    ...(hidden.has('tasks') ? [] : taskCountdowns(d, userId, todayKey)),
   ];
 
   const sorted = items

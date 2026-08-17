@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **A module you are not allowed to see no longer sends its content to your dashboard** (#467). Blocking a module for a role or a member hid its tile, but the dashboard request still answered with everything behind it: a child whose Calendar access was set to "No access" was still sent the appointment titles, their descriptions, locations and attachment names, and the same held for tasks, budget figures, notes, the shopping list, birthdays, rewards, the housekeeping log, the medication summary and the countdown rows. Nothing showed it on screen - the data sat in the response, in the browser's network tab and in the offline cache. The dashboard now drops every part of a blocked module before it is even looked up. "Read only" is unchanged: it still delivers the data, it only takes away writing.
+
 ## [2.18.0] - 2026-08-17
 
 ### Added
