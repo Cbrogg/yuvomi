@@ -12,6 +12,7 @@ import { esc, fmtLocation, renderMarkdownLight } from '/utils/html.js';
 import { toLocalDateKey, parseLocalDateKey, addLocalDays } from '/utils/date.js';
 import { predictCycle, PHASE } from '/utils/health-cycle.js';
 import { localizeBirthdayEvent } from '/utils/birthday-event.js';
+import { countdownPhrase, countdownRank } from '/utils/countdown.js';
 import { findPageFab } from '/utils/fab.js';
 import { openModal, closeModal, confirmModal } from '/components/modal.js';
 import { renderAvatarStack } from '/components/user-multi-select.js';
@@ -239,6 +240,41 @@ function maybeHintCustomize(container) {
 // Wieder-Einblenden-Leiste dieselbe Sichtbarkeitsregel teilen.
 const MODULE_FOR_WIDGET = { tasks: 'tasks', calendar: 'calendar', shopping: 'shopping', meals: 'meals', notes: 'notes', birthdays: 'birthdays', budget: 'budget', rewards: 'rewards', health: 'health', cycle: 'health', housekeeping: 'housekeeping' };
 
+/* DER COUNTDOWN IST EIN WIDGET, DAS ES ERST GIBT, WENN JEMAND ETWAS MARKIERT
+ * HAT (#647). Er hat keine eigene Seite und keinen eigenen Bestand: seine
+ * Kachel zeigt Termine und Aufgaben, die jemand ausdrücklich dafür markiert
+ * hat, und in einem Haushalt, der das noch nie getan hat, gibt es nichts zu
+ * zeigen und nichts einzurichten.
+ *
+ * ER RENDERT DESHALB NICHT LEER, SONDERN IST DANN NICHT VERFUEGBAR - das ist
+ * genau der Unterschied, den das Familien-Widget unten schon einmal gekostet
+ * hat: ein Renderer, der '' zurückgibt, verschwindet aus dem Raster, bleibt
+ * aber `visible: true` und taucht damit auch in der Ablage der versteckten
+ * Widgets nicht auf. Hier fällt er aus beiden Listen, so wie ein abgeschaltetes
+ * Modul auch, und kommt mit dem ersten Countdown an seiner gespeicherten
+ * Position zurück.
+ *
+ * Der Zähler ist modulweit und nicht Teil von `data`, weil ihn zwei Aufrufer
+ * brauchen, von denen einer (die Ablage der versteckten Widgets) die Daten
+ * nicht sieht. Er wird bei jedem render() zurückgesetzt und nach dem Laden
+ * gesetzt - ein Stand von vorhin darf keine Kachel versprechen. */
+let countdownAvailable = false;
+
+function setCountdownAvailability(items) {
+  countdownAvailable = Array.isArray(items) && visibleCountdowns(items).length > 0;
+}
+
+// Aus welchem Modul ein Countdown stammt, entscheidet über ihn: wer den
+// Kalender abgeschaltet hat, soll dessen Einträge auch hier nicht sehen. Die
+// Kachel als Ganzes gehört keinem Modul (siehe PERMISSION_WIDGETS), ihre
+// einzelnen Zeilen schon - dieselbe Aufteilung wie bei der Kennzahlreihe.
+function visibleCountdowns(items) {
+  return (Array.isArray(items) ? items : []).filter((c) => {
+    const mod = c.source === 'task' ? 'tasks' : 'calendar';
+    return !window.yuvomi?.isModuleDisabled(mod);
+  });
+}
+
 function isWidgetModuleEnabled(id) {
   const mod = MODULE_FOR_WIDGET[id];
   if (mod && window.yuvomi?.isModuleDisabled(mod)) return false;
@@ -253,6 +289,7 @@ function isWidgetModuleEnabled(id) {
   // waere aus der Oberflaeche heraus nicht mehr erreichbar. Hier faellt es aus
   // beiden Listen, so wie ein abgeschaltetes Modul auch.
   if (id === 'family' && isSoloHousehold()) return false;
+  if (id === 'countdown' && !countdownAvailable) return false;
   return true;
 }
 
@@ -278,12 +315,13 @@ function widgetLabel(id) {
     family:   () => t('dashboard.familyMembers'),
     clock:    () => t('dashboard.clock'),
     metrics:  () => t('dashboard.metrics'),
+    countdown: () => t('dashboard.countdownTitle'),
   };
   return (map[id] ?? (() => id))();
 }
 
 function widgetIcon(id) {
-  const map = { tasks: 'check-square', calendar: 'calendar', birthdays: 'cake', budget: 'wallet', rewards: 'award', health: 'heart-pulse', cycle: 'calendar-heart', housekeeping: 'paintbrush', family: 'users', shopping: 'shopping-cart', meals: 'utensils', notes: 'pin', weather: 'cloud-sun', clock: 'clock', metrics: 'layout-grid' };
+  const map = { tasks: 'check-square', calendar: 'calendar', birthdays: 'cake', budget: 'wallet', rewards: 'award', health: 'heart-pulse', cycle: 'calendar-heart', housekeeping: 'paintbrush', family: 'users', shopping: 'shopping-cart', meals: 'utensils', notes: 'pin', weather: 'cloud-sun', clock: 'clock', metrics: 'layout-grid', countdown: 'hourglass' };
   return map[id] ?? 'layout-dashboard';
 }
 
@@ -505,13 +543,31 @@ function widgetHeader(icon, title, count, linkHref, linkLabel, sealSlug = null) 
   const badge = count != null && Number.isFinite(numericCount) && numericCount > 0
     ? `<span class="widget__badge">${count}</span>`
     : '';
+  // OHNE ZIEL KEIN LINK. Jede Kachel bis #647 gehoerte genau einer Seite, und
+  // „Alle" fuehrte dorthin. Der Countdown gehoert zweien: seine Zeilen kommen
+  // aus dem Kalender UND aus den Aufgaben, und jede fuehrt selbst an ihren Ort.
+  // Ein Kopf-Link muesste sich fuer eine der beiden entscheiden und waere fuer
+  // die andere Haelfte der Liste falsch. `href="null"` waere die schlechtere
+  // Antwort auf dieselbe Frage gewesen.
+  const link = linkHref
+    ? `<a href="${linkHref}" data-route="${linkHref}" class="widget__link"
+         aria-label="${esc(customLabel ? `${linkLabel}: ${title}` : t('dashboard.allLinkFor', { module: title }))}">
+        ${linkLabel}
+      </a>`
+    : '';
   // Herkunfts-Regel (Block 2): das Dashboard ist eine Mischstelle, also
   // traegt jeder Widget-Kopf das Markensiegel seines Moduls. Der Slug kommt
   // aus dem ersten Segment der Widget-Route; ein unbekannter Slug faellt im
   // var()-Fallback auf den App-Akzent zurueck. Wo Aktions-Link und Herkunft
   // auseinanderfallen (Familie: „Verwalten" fuehrt in die Einstellungen, die
-  // Karte gehoert aber den Menschen), benennt sealSlug die Herkunft explizit -
-  // sonst spraeche eine Karte zwei Modultoene (Critique P2).
+  // Karte gehoert aber den Menschen; der Countdown hat gar keinen Link mehr),
+  // benennt sealSlug die Herkunft explizit - sonst spraeche eine Karte zwei
+  // Modultoene (Critique P2).
+  //
+  // Diese beiden Zeilen bleiben in Sichtweite ihrer Bau-Stelle unten: der
+  // Guard „wer ein Markensiegel baut, benennt eine Herkunft" liest ein Fenster
+  // von acht Zeilen um das `module-seal` herum, und der Link-Block dazwischen
+  // hat sie beim ersten Anlauf genau daraus herausgeschoben.
   const slug = sealSlug ?? ((linkHref || '').split('/')[1] || '');
   const seal = slug ? ` style="--seal-accent: var(--module-${slug}, var(--color-accent))"` : '';
   return `
@@ -523,10 +579,7 @@ function widgetHeader(icon, title, count, linkHref, linkLabel, sealSlug = null) 
         <span class="widget__title-text">${title}</span>
         ${badge}
       </h3>
-      <a href="${linkHref}" data-route="${linkHref}" class="widget__link"
-         aria-label="${esc(customLabel ? `${linkLabel}: ${title}` : t('dashboard.allLinkFor', { module: title }))}">
-        ${linkLabel}
-      </a>
+      ${link}
     </div>
   `;
 }
@@ -861,6 +914,100 @@ function renderUpcomingBirthdays(allBirthdays, size) {
   return `<div class="widget widget--birthdays">
     ${widgetHeader('cake', t('nav.birthdays'), birthdays.length, '/birthdays')}
     <div class="widget__body">${items}</div>
+  </div>`;
+}
+
+/* DIE KACHEL AUS #647. Sie steht bewusst direkt hinter den Geburtstagen: es ist
+ * dieselbe Form - eine nach Nähe sortierte Liste aus „was" und „noch so lange" -
+ * und der Thread hat genau das als Auflösung vorgeschlagen, statt eines zweiten
+ * Systems neben Kalender und Aufgaben (@jamespurnama1).
+ *
+ * ZWEI QUELLEN, EINE LISTE, UND MAN SIEHT WELCHE. Ein Termin und eine Aufgabe
+ * zählen gleich herunter, führen aber woanders hin: das Icon der Zeile ist das
+ * des Termins (Yuvomi-eigenes Feld) bzw. das Aufgabenzeichen, und der Klick
+ * öffnet das jeweilige Modul. Ohne diesen Unterschied wäre die Liste eine
+ * dritte Sorte Eintrag, und genau die sollte es nicht geben.
+ *
+ * Der Rang ist die Nähe, nicht die Herkunft (sortiert der Server). Was vorbei
+ * ist, kommt eine Nachfrist lang weiter an und steht dann ganz oben - seine
+ * Tageszahl ist negativ. Wie lange und für wen, entscheidet der Server; die
+ * Kachel nimmt die Liste, wie sie kommt (siehe services/countdowns.js). */
+function renderCountdowns(allItems, size, total = null) {
+  const shown = visibleCountdowns(allItems);
+  const items = shown.slice(0, listRowCap(size));
+  // Kein Leerzustand: ohne Countdown ist die Kachel nicht leer, sondern nicht
+  // vorhanden (isWidgetModuleEnabled). Diese Zeile ist der Notausgang für den
+  // Fall, dass die Verfügbarkeit und die Daten auseinanderlaufen.
+  if (!items.length) return '';
+
+  const rows = items.map((c) => {
+    const phrase = countdownPhrase(c.days_until);
+    const label = phrase.count === undefined ? t(phrase.key) : t(phrase.key, { count: phrase.count });
+    // Die Farbe des Termins trägt die Zeile als schmale Marke - dieselbe
+    // Zuordnung, die er im Kalender hat. Eine Aufgabe hat keine, sie bekommt
+    // den Modulton.
+    const accent = c.color
+      ? ` style="--countdown-accent:${esc(c.color)}"`
+      : ` style="--countdown-accent:var(--module-${c.source === 'task' ? 'tasks' : 'calendar'}, var(--color-accent))"`;
+    /* DIE ZEILE TRIFFT IHR OBJEKT, nicht sein Modul - wie jede andere Zeile des
+     * Dashboards. Sie führte auf `/tasks` bzw. `/calendar`, und damit landete
+     * „Führerschein verlängern, ca. 3 Jahre" in einer ungefilterten Liste, in
+     * der ein Eintrag von 2029 praktisch unauffindbar ist: die Zeile versprach
+     * ein Objekt und lieferte ein Modul.
+     *
+     * Zwei Wege, weil die beiden Quellen zwei Wege HABEN und keinen dritten
+     * brauchen: die Aufgabe hängt sich an denselben Quick-Action-Griff wie die
+     * Zeilen des Aufgaben-Widgets (`data-task-id`, ausgewertet in `wireLinks`),
+     * der Termin an dieselbe Deep-Link-Route wie die Zeilen des
+     * Kalender-Widgets. Wichtig ist dabei das Datum: `c.date` ist das NÄCHSTE
+     * Vorkommen, nicht der Serienstart - ohne es öffnete eine jährliche
+     * Verlängerung ihr Blatt Jahre in der Vergangenheit. */
+    const anchor = c.source === 'task'
+      ? ` data-task-id="${esc(String(c.id))}" data-task-title="${esc(c.title)}"`
+      : ` data-route="/calendar?open=${encodeURIComponent(String(c.id))}&date=${encodeURIComponent(c.date)}"`;
+    return `
+      <div class="countdown-item" role="button" tabindex="0"${anchor}${accent}>
+        <span class="countdown-item__icon" aria-hidden="true">
+          <i data-lucide="${esc(c.icon || 'calendar')}"></i>
+        </span>
+        <div class="countdown-item__body">
+          <div class="countdown-item__title">${esc(c.title)}</div>
+          <div class="countdown-item__meta">${formatDate(c.date)}</div>
+        </div>
+        <div class="countdown-item__days countdown-item__days--${countdownRank(c.days_until)}">${esc(label)}</div>
+      </div>
+    `;
+  }).join('');
+
+  /* SIEGEL UND KOPFBAND SPRECHEN JETZT DENSELBEN TON, und der Ton ist der der
+   * Übersicht. Hier stand `'calendar'`: ein teal Kalendersiegel in einem
+   * violetten Kopfband, weil `.widget--countdown` als einzige der vierzehn
+   * Kacheln kein `--widget-accent` bekommen hatte und auf den App-Akzent
+   * zurückfiel. Genau der Fehler, den der `sealSlug`-Parameter verhindern soll -
+   * er war gesetzt, die Gegenseite im Stylesheet fehlte.
+   *
+   * `dashboard` und nicht `calendar`, weil die Kachel zwei Quellen hat und
+   * keiner von beiden gehört; in der Messung kamen drei von fünf Zeilen aus den
+   * Aufgaben. Dieselbe Antwort wie beim Wetter, das aus demselben Grund
+   * `--module-dashboard` trägt: eine Kachel ohne Modul gehört der Seite. */
+  /* WAS NICHT PASST, WIRD GENANNT. Die Kachel schnitt still ab - zweimal sogar:
+   * der Server bei fünf, die Kachel je nach Größe bei drei. Wer sechs Dinge
+   * markiert hatte, sah fünf und nichts, das auf den sechsten hinwies; die
+   * Kachel sah dabei vollständig aus.
+   *
+   * Gezählt wird gegen die SERVER-Gesamtzahl, nicht gegen die geladene Liste:
+   * sonst verschwiege die Zeile genau den Schnitt, der weiter oben passiert
+   * ist. Fehlt sie (älterer Server, Fehlerpfad), fällt sie auf die geladene
+   * Länge zurück - dann stimmt sie wenigstens für den Kachelschnitt. */
+  const gesamt = Number.isFinite(Number(total)) ? Number(total) : shown.length;
+  const rest = Math.max(0, gesamt - items.length);
+  const more = rest > 0
+    ? `<p class="countdown-more">${esc(t('dashboard.countdownMore', { count: rest }))}</p>`
+    : '';
+
+  return `<div class="widget widget--countdown">
+    ${widgetHeader('hourglass', t('dashboard.countdownTitle'), gesamt, null, null, 'dashboard')}
+    <div class="widget__body">${rows}${more}</div>
   </div>`;
 }
 
@@ -1994,6 +2141,7 @@ function renderDashboardLayout(cfg, data, weather, currency, { editing = false, 
     tasks: () => renderUrgentTasks(data.urgentTasks ?? []),
     calendar: () => renderUpcomingEvents(data.upcomingEvents ?? []),
     birthdays: (size) => renderUpcomingBirthdays(data.birthdays ?? [], size),
+    countdown: (size) => renderCountdowns(data.countdowns ?? [], size, data.countdownTotal),
     budget: () => renderBudgetWidget(data.budget ?? {}, currency),
     rewards: () => renderRewardsWidget(data.rewards ?? {}),
     health: () => renderHealthWidget(data.health ?? {}),
@@ -2850,7 +2998,10 @@ function wireLinks(container, rerender, { editing = false } = {}) {
 
   // Task-Items öffnen Quick-Action-Modal statt direkt zu navigieren
   if (editing) return;
-  container.querySelectorAll('.task-item[data-task-id]').forEach((el) => {
+  // Die Countdown-Zeile einer Aufgabe hängt an demselben Griff (#647): sie
+  // nennt ein Objekt, also trifft der Klick dieses Objekt. Ein eigener Handler
+  // daneben wäre ein zweiter Weg zur selben Handlung.
+  container.querySelectorAll('.task-item[data-task-id], .countdown-item[data-task-id]').forEach((el) => {
     const show = () => openTaskQuickAction(el.dataset.taskId, el.dataset.taskTitle, rerender);
     el.addEventListener('click', show);
     el.addEventListener('keydown', (e) => {
@@ -2951,7 +3102,10 @@ export async function render(container, { user }) {
     ${wallMode ? '' : renderFab()}
   `);
 
-  let data         = { upcomingEvents: [], urgentTasks: [], todayMeals: [], pinnedNotes: [], shoppingLists: [], birthdays: [], users: [], budget: {}, rewards: {}, health: {}, housekeeping: {} };
+  let data         = { upcomingEvents: [], urgentTasks: [], todayMeals: [], pinnedNotes: [], shoppingLists: [], birthdays: [], countdowns: [], users: [], budget: {}, rewards: {}, health: {}, housekeeping: {} };
+  // Ein Stand von vorhin darf keine Kachel versprechen: erst nach dem Laden
+  // wieder wahr (siehe die Notiz an `countdownAvailable`).
+  setCountdownAvailability([]);
   let weather      = null;
   let weatherAutoLocate = false;
   let widgetConfig = DEFAULT_WIDGET_CONFIG;
@@ -2987,6 +3141,7 @@ export async function render(container, { user }) {
     if (Array.isArray(data?.upcomingEvents)) {
       data.upcomingEvents = data.upcomingEvents.map(localizeBirthdayEvent);
     }
+    setCountdownAvailability(data?.countdowns);
     weather      = weatherRes.data ?? null;
     weatherAutoLocate = Boolean(prefsRes.data?.weather_user?.auto_locate ?? prefsRes.data?.weather_auto_locate);
     widgetConfig = normalizeDashboardConfig(prefsRes.data?.dashboard_widgets ?? DEFAULT_WIDGET_CONFIG);

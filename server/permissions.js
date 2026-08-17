@@ -80,6 +80,11 @@ export const PERMISSION_WIDGETS = Object.freeze([
   // Budget hat also nie eine Budget-Kachel. Was hier fehlte, ist die Sperre auf
   // die REIHE als solche.
   { id: 'metrics',      module: null },
+  // `module: null` aus demselben Grund wie die Kennzahlreihe: der Countdown
+  // (#647) sammelt aus Kalender UND Aufgaben ein, gehört also keinem der
+  // beiden. Was aus einem gesperrten Modul stammt, filtert die Kachel schon
+  // selbst - hier steht die Sperre auf das Widget als solches.
+  { id: 'countdown',    module: null },
 ]);
 
 export const MODULE_ACCESS_LEVELS = Object.freeze(['none', 'read', 'write']);

@@ -99,6 +99,7 @@ const APP_SHELL = [
   '/utils/color.js',
   '/utils/contact-name.js',
   '/utils/contrast.js',
+  '/utils/countdown.js',
   '/utils/dashboard-layout-hint.js',
   '/utils/dashboard-widgets.js',
   '/utils/date.js',

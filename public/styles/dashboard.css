@@ -286,6 +286,12 @@
 .widget--rewards  { --widget-accent: var(--module-rewards); }
 .widget--health   { --widget-accent: var(--module-health); }
 .widget--housekeeping { --widget-accent: var(--module-housekeeping); }
+/* Wie das Wetter: eine Kachel, die keinem Modul gehoert, traegt den Ton der
+ * Seite. Der Countdown (#647) sammelt aus Kalender UND Aufgaben ein - jeder
+ * der beiden Toene waere fuer die andere Haelfte der Liste falsch. Ohne diese
+ * Zeile fiel das Kopfband auf den App-Akzent zurueck und stand violett um ein
+ * teal Siegel, das `sealSlug` gesetzt hatte. */
+.widget--countdown { --widget-accent: var(--module-dashboard); }
 
 /* --------------------------------------------------------
  * Basis-Widget (Card)
@@ -2580,6 +2586,7 @@ svg.weather-forecast__icon {
   .dashboard .task-item,
   .dashboard .event-item,
   .dashboard .birthday-widget-item,
+  .dashboard .countdown-item,
   .dashboard .shopping-widget-list,
   .dashboard .meal-slot {
     min-height: var(--target-base);
@@ -2698,6 +2705,149 @@ svg.weather-forecast__icon {
   font-size: var(--text-sm);
   font-weight: var(--font-weight-bold);
 }
+
+/* Countdown-Kachel (#647). Bewusst dieselbe Zeilenform wie die Geburtstage
+ * darueber - drei Spalten, Hairline per +-Kombinator, kein eigener Rahmen:
+ * beide beantworten dieselbe Frage („was, wann, noch wie lange"), und zwei
+ * Formen dafuer waeren zwei Sorten Eintrag.
+ *
+ * Der Unterschied steht in der ersten Spalte: statt eines Avatars die Marke der
+ * Herkunft. Ihre Farbe kommt aus `--countdown-accent`, das die Zeile setzt -
+ * beim Termin seine eigene Kalenderfarbe, bei der Aufgabe der Modulton. Ohne
+ * diese Zuordnung waere die Liste eine dritte Sorte Eintrag ohne Heimat. */
+.countdown-item {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-2);
+  cursor: pointer;
+  touch-action: pan-y;
+  /* Der Radius dient dem Fokusring: ohne ihn saesse ein hartes Rechteck genau
+   * auf den Haarlinien der Nachbarzeilen. Er zieht der Zeile keine Karte an -
+   * es gibt weder Flaeche noch Schatten im Ruhezustand. */
+  border-radius: var(--radius-sm);
+  transition: background-color var(--transition-fast);
+}
+
+.countdown-item + .countdown-item {
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+/* DAS BENANNTE TOKEN, KEIN SCHATTEN. Die Zeile trug `cursor: pointer` und
+ * antwortete dem Zeiger nicht - der einzige klickbare Bereich des Dashboards
+ * ohne Rueckmeldung (Critique 2026-08-17).
+ *
+ * Sie haengt sich dabei NICHT an die Hover-Gruppe von `.task-item`/`.event-item`
+ * weiter unten, obwohl das der kuerzere Weg gewesen waere: die Gruppe hebt per
+ * `box-shadow`, und ein Schatten auf einer Haarlinien-Zeile ist genau das
+ * „einer Zeile in einer Liste eine Karte anziehen", das DESIGN.md verbietet.
+ * Jene Zeilen sind eigene Bloecke, diese ist eine Zeile in EINEM Traeger.
+ *
+ * `--color-surface-hover` ist der dokumentierte Schritt von `--color-surface`
+ * aus - dieselbe Antwort, die `.list-row:hover` app-weit gibt. Eine eigene
+ * Mischung stand hier im ersten Anlauf und waere eine 38. Prozentstufe
+ * gewesen, wo ein benanntes Token existiert. */
+.dashboard .countdown-item:hover {
+  background-color: var(--color-surface-hover);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .countdown-item { transition: none; }
+}
+
+.countdown-item__icon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--countdown-accent, var(--color-accent)) var(--tint-surface), transparent);
+  /* DIESE SCHEIBE IST DER EINZIGE HERKUNFTSKANAL DER ZEILE, seit die Zahl
+   * rechts die Dringlichkeit traegt. Sie nimmt das gemessene 35-%-Rezept und
+   * nicht den vollen Akzent, den DESIGN.md fuer Icons nennt: der Satz „Icons
+   * tragen den vollen Akzent (dort gilt 3:1)" steht INNERHALB der
+   * Akzent-auf-Toenung-Regel, deren Grenze ein Absatz weiter oben gezogen ist -
+   * kuratierte Modultoene. Hier steht ein Zwitter: Modulton bei der Aufgabe,
+   * freie Terminfarbe beim Termin.
+   *
+   * Gemessen im Dunkelmodus, weil die 3:1 eine Anforderung ist und keine
+   * Zusage: mit vollem Akzent lag ein Termin in #111111 bei 1.22:1 und ein
+   * blauer bei 3.86:1 - der eine unsichtbar, der andere hart an der Kante. Mit
+   * 35 % liegt derselbe schwarze Fall bei 6.2:1, und die Farbfamilie bleibt
+   * lesbar. Die 16-%-Toenung der Flaeche darunter traegt sie mit. */
+  color: color-mix(in srgb, var(--countdown-accent, var(--color-accent)) 35%, var(--color-text-primary));
+}
+
+.countdown-item__icon i {
+  width: 16px;
+  height: 16px;
+}
+
+.countdown-item__body {
+  min-width: 0;
+}
+
+.countdown-item__title {
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.countdown-item__meta {
+  margin-top: var(--space-0h);
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* DIE ZAHL IST DER GRUND, WARUM DIE ZEILE DA STEHT, und sie steht deshalb
+ * rechts und traegt Gewicht - anders als beim Geburtstagsalter aber ohne
+ * Badge-Flaeche: „ca. 3 Jahre" ist ein Satzteil, keine Ziffer, und in einer
+ * Pille umgebrochen saehe er wie ein Etikett aus.
+ *
+ * DIE FARBE SAGT „WIE BALD", NICHT „WOHER". Hier stand die Terminfarbe (erst
+ * als 70-%-Ink-Mix, dann als gemessene 35 %), und damit kodierte der lauteste
+ * Kanal der Zeile die Herkunft - eine Frage, die das Zeichen links schon
+ * beantwortet. Gemessen las die Kachel „Heute / Heute / Heute / Morgen /
+ * Morgen": fuenf Zeilen, zwei Werte, keine Rangfolge, und die auffaelligste war
+ * die mit der dunkelsten Kalenderfarbe. Die Herkunftsfarbe blieb auf der
+ * Zeichenscheibe, wo sie hingehoert.
+ *
+ * Vier Raenge aus `countdownRank()` (utils/countdown.js), damit Schwelle und
+ * Formulierung dieselbe Vorstellung von „nah" haben: die 30-Tage-Grenze ist
+ * hier dieselbe, an der der Text von exakt auf grob schaltet. */
+.countdown-item__days {
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-bold);
+  white-space: nowrap;
+}
+
+/* Der Rest, der nicht in die Kachel passt. Sekundaerton und keine Trennlinie
+ * davor: die Zeile ist eine Fussnote zur Liste, kein weiterer Eintrag darin. */
+.countdown-more {
+  margin: var(--space-2) 0 0;
+  padding: 0 var(--space-2);
+  color: var(--color-text-tertiary);
+  font-size: var(--text-xs);
+}
+
+/* Vorbei, aber in der Nachfrist: das Einzige in dieser Kachel, das eine
+ * Handlung verlangt. */
+.countdown-item__days--overdue { color: var(--color-danger); }
+/* Heute und morgen - die Zahl, wegen der jemand hinsieht. */
+.countdown-item__days--now     { color: var(--color-warning); }
+/* Der exakt gezaehlte Bereich traegt Label-Farbe: nah genug, um zu zaehlen,
+ * nicht nah genug, um zu rufen. */
+.countdown-item__days--soon    { color: var(--color-text-primary); }
+/* `later` bleibt beim Sekundaerton der Basisregel - eine eigene Regel dafuer
+ * waere eine Wiederholung, die beim naechsten Umbau auseinanderlaeuft. */
 
 /* „Heute dran"-Karte (Seele-Paket): pro Mitglied eine Zeile mit Avatar, Name
  * und heutiger Kurzlage - statt einer Stat-Zahl, die sich nie aendert.
