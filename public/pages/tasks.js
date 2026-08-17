@@ -1236,7 +1236,16 @@ function wireTaskForm(panel, { task = null, container }) {
     // Datei danach lebt und wo sie jemand bewusst anders freigegeben haben kann
     // - eine Aufgabenzuweisung darf keine fremde Freigabe ueberschreiben.
     visibility: () => taskDocumentVisibility(panel),
-    allowedMemberIds: () => getSelectedUserIds(panel, 'task_assigned').map(Number),
+    // Wer die Aufgabe sieht, sieht ihren Anhang: bei „nur Beteiligte" sind das
+    // die Zugewiesenen UND die Person, die die Aufgabe angelegt hat. Ohne sie
+    // laedt eine zugewiesene Person eine Datei hoch, und der Ersteller - der die
+    // Aufgabe oeffnen darf - findet dort eine Zeile weniger als vorhanden ist.
+    allowedMemberIds: () => {
+      const ids = getSelectedUserIds(panel, 'task_assigned').map(Number);
+      const creator = Number(task?.created_by ?? state.currentUserId);
+      if (Number.isInteger(creator) && !ids.includes(creator)) ids.push(creator);
+      return ids;
+    },
   });
 
   // Sync-Ziel nachladen (#695). Ohne await: die Liste kommt aus dem Netz, und
