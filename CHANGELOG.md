@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **A module you are not allowed to see no longer sends its content to your dashboard** (#467). Blocking a module for a role or a member hid its tile, but the dashboard request still answered with everything behind it: a child whose Calendar access was set to "No access" was still sent the appointment titles, their descriptions, locations and attachment names, and the same held for tasks, budget figures, notes, the shopping list, birthdays, rewards, the housekeeping log, the medication summary and the countdown rows. Nothing showed it on screen - the data sat in the response, in the browser's network tab and in the offline cache. The dashboard now drops every part of a blocked module before it is even looked up. "Read only" is unchanged: it still delivers the data, it only takes away writing.
+- **Search finds all five shopping items again, not two of them** (migration v151). Every item was written to the search index twice at the moment it was created, and search returns at most five hits per kind — so a search that should have listed five items listed two or three, and looked complete doing it. The duplicate disappeared as soon as anyone edited or ticked off the item, which is why it only ever affected the freshly added, untouched ones: exactly the ones people search for. Existing duplicates are cleaned up on upgrade.
 
 ## [2.18.0] - 2026-08-17
 
