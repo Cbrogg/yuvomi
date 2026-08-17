@@ -621,15 +621,20 @@ function renderSlot(date, type, mealsForDay, dayCol, typeRow) {
       ? `<span class="meal-card__recurrence" aria-label="${t('meals.recurrenceBadge')}"><i data-lucide="repeat-2" class="icon-sm" aria-hidden="true"></i></span>`
       : '';
 
+    // Die Karte ist bewusst KEIN Button: sie trägt Buttons und einen Link, und
+    // interaktiver Inhalt in einem Button ist invalides HTML - Screenreader
+    // verlieren dann die inneren Aktionen (Critique 2026-08-17). Das Öffnen
+    // gehört der Titelfläche; die Aktionen stehen daneben, nicht darin.
     return `
-      <div class="meal-card"
+      <div class="meal-card" data-meal-id="${meal.id}">
+        <button type="button" class="meal-card__open"
            data-action="edit-meal"
-           data-meal-id="${meal.id}"
-           role="button" tabindex="0">
-        <div class="meal-card__title"><span class="meal-card__title-text">${esc(meal.title)}</span>${recurrenceBadge}</div>
-        ${ingLabel ? `<div class="meal-card__meta">
-          <span class="meal-card__ingredients-count">${ingLabel}${esc(ingDoneLabel)}</span>
-        </div>` : ''}
+           data-meal-id="${meal.id}">
+          <span class="meal-card__title"><span class="meal-card__title-text">${esc(meal.title)}</span>${recurrenceBadge}</span>
+          ${ingLabel ? `<span class="meal-card__meta">
+            <span class="meal-card__ingredients-count">${ingLabel}${esc(ingDoneLabel)}</span>
+          </span>` : ''}
+        </button>
         <div class="meal-card__actions">
           ${meal.recipe_url ? `<a class="meal-card__action-btn meal-card__action-btn--recipe"
             data-action="open-recipe"
@@ -741,13 +746,6 @@ function wireGrid(grid) {
 
     if (action === 'transfer-meal') {
       await transferMeal(parseInt(btn.dataset.mealId, 10), btn);
-    }
-  });
-
-  grid.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      const card = e.target.closest('[data-action="edit-meal"]');
-      if (card) { e.preventDefault(); card.click(); }
     }
   });
 

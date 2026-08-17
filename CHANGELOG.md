@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **The actions on a meal card are reachable with a screen reader again**. Every card in the weekly plan was itself one large button, and the delete, shopping list and recipe buttons sat inside it. Interactive content inside a button is invalid markup, and assistive technology folds those inner controls into the name of the outer button instead of offering them as controls of their own. The card is now a plain container: opening a meal belongs to its title, and the three actions stand beside it as siblings rather than children. Clicking, keyboard operation and dragging a meal to another slot are unchanged.
+
 ## [2.18.1] - 2026-08-17
 
 ### Fixed
