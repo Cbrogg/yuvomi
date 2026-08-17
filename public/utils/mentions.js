@@ -137,11 +137,22 @@ export function applyMention(text, caret, displayName) {
 
   const before = value.slice(0, at);
   const afterAt = value.slice(at + 1);
-  const stehtGanzDa = afterAt.slice(0, name.length).toLowerCase() === name.toLowerCase();
+
+  // Wie viel vom Namen steht schon da? Zeichenweise verglichen und nicht als
+  // Ganzes: „@Anna Ma" ist weder ein vollstaendiger Name noch ein einzelnes
+  // Wort, und ein Vergleich auf Gleichheit haette es liegen gelassen -
+  // „@Anna Maria Ma". Der angefangene Teil gehoert zur Erwaehnung, egal ob ein
+  // Leerzeichen darin vorkommt.
+  let getippt = 0;
+  while (getippt < name.length && getippt < afterAt.length
+    && afterAt[getippt].toLowerCase() === name[getippt].toLowerCase()) getippt += 1;
+
+  // Mindestens bis zum Ende des angefangenen Wortes rechts vom Cursor, damit
+  // auch ein Vertipper hinter dem Cursor verschwindet - aber nie darueber
+  // hinaus, damit ein eigenstaendiges Wort dahinter stehen bleibt.
   const rest = value.slice(caret);
-  const consumed = stehtGanzDa
-    ? name.length
-    : (caret - (at + 1)) + rest.search(/[^\p{L}\p{N}_]|$/u);
+  const bisWortende = (caret - (at + 1)) + rest.search(/[^\p{L}\p{N}_]|$/u);
+  const consumed = Math.max(getippt, bisWortende);
   const after = value.slice(at + 1 + consumed);
   const inserted = `@${name}${after === '' || BOUNDARY.test(after[0]) ? ' ' : ''}`;
   return { text: `${before}${inserted}${after}`, caret: before.length + inserted.length };

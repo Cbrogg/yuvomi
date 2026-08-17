@@ -95,6 +95,10 @@ test('applyMention: ein mehrteiliger Name wird ganz ersetzt, nicht halb', () => 
   // „@Anna Maria  Maria" hinterlassen - halb ersetzt, halb stehen geblieben.
   assert.equal(applyMention('@Anna Maria', 4, 'Anna Maria').text, '@Anna Maria ');
   assert.equal(applyMention('@Anna Maria und Ben', 4, 'Anna Maria').text, '@Anna Maria und Ben');
+  // Auch HALB getippt, also weder ganzer Name noch ein einzelnes Wort: „@Anna Ma"
+  // ist der Anfang von „Anna Maria" und gehoert vollstaendig ersetzt.
+  assert.equal(applyMention('@Anna Ma', 4, 'Anna Maria').text, '@Anna Maria ');
+  assert.equal(applyMention('@Anna Ma und Ben', 4, 'Anna Maria').text, '@Anna Maria und Ben');
 });
 
 test('applyMention: Satzzeichen bleiben stehen und es entsteht kein Doppelraum', () => {

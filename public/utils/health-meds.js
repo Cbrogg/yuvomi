@@ -183,6 +183,15 @@ export function parseLogInstant(value) {
  * hier falsch, weil die Route den Wert auf Minuten kuerzt und die Zone dabei
  * verliert - die Einnahme stuende dann mit der UTC-Zahl im Protokoll.
  *
+ * Damit ist auch gesagt, was der Countdown NICHT kann: Wanduhrzeit gilt in der
+ * Zone des Haushalts (`TZ`, siehe server/utils/timezone.js), so wie
+ * `scheduled_at`, `due_time` und der ganze Kalender es halten. Wer eine Dosis in
+ * Berlin bucht und sie in New York abliest, liest 12:00 als 12:00. Das ist die
+ * Konvention des Hauses und keine Nachlaessigkeit dieser Funktion: ein echter
+ * Instant nur fuer `taken_at` haette zwei Formate in einer Spalte und einen
+ * Countdown, der zwei Zeitrechnungen vergleicht - teurer als der Fall, den er
+ * loest, solange ein Haushalt an einem Ort wohnt.
+ *
  * @param {Date} [value]
  * @returns {string}
  */
