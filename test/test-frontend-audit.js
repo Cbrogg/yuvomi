@@ -4818,10 +4818,13 @@ test('die Touch-Zielgröße folgt DESIGN.md statt einer dritten Zahl', () => {
   // or 40px (desktop) minimum. The --target-lg and --target-md tokens encode this -
   // never go below them on interactive elements."
   //
-  // Der Satz wird hier ZITIERT und nicht gelesen: DESIGN.md steht in .gitignore
-  // (Zeile 44), liegt also nur lokal und fehlt in der CI. Ein Guard, der eine
-  // ignorierte Datei liest, ist lokal grün und im Build rot - genau so ist dieser
-  // Test beim Release v1.59.0 aufgefallen.
+  // Der Satz wird hier ZITIERT und nicht gelesen, und der Grund dafür hat
+  // gewechselt. Er war: DESIGN.md stand in .gitignore, lag also nur lokal und
+  // fehlte in der CI - ein Guard, der eine ignorierte Datei liest, ist lokal grün
+  // und im Build rot (so ist dieser Test beim Release v1.59.0 aufgefallen). Seit
+  // c0df06ec (2026-08-08) ist die Datei committed, das Argument gilt nicht mehr.
+  // Zitiert bleibt der Satz trotzdem: die Zahl gehört in die ASSERTION, damit ein
+  // Edit an DESIGN.md den Guard nicht stillschweigend mitverschiebt.
   assert.match(tokens, /--target-base:\s*44px/, 'auf Zeigergeräten bleibt es bei 44px (über der 40er-Grenze)');
   assert.match(tokens, /@media \(hover: none\)\s*\{\s*:root\s*\{\s*--target-base:\s*var\(--target-lg\)/,
     'auf Fingergeräten muss --target-base die 48px aus DESIGN.md erreichen');

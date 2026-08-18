@@ -257,7 +257,7 @@
  * getoente Trennlinie) und zugleich die schwaechste: eine 50-%-Toenung auf
  * zwei Pixeln traegt im Dark fast keine Buntheit (dark-chroma.mjs). Der
  * Absender der Karte ist jetzt GENAU EINES: das Vollton-Siegel im Kopf
- * (module-seal--vivid, siehe den Kopf-Abschnitt unten). Der zugehoerige
+ * (.module-seal--sm, siehe den Kopf-Abschnitt unten). Der zugehoerige
  * ignore.md-Eintrag `border-accent-on-rounded` ist mit dieser Regel gegangen. */
 
 /* --------------------------------------------------------
@@ -2704,14 +2704,18 @@ svg.weather-forecast__icon {
  * Pastellstreifen und im Dark ein Braunschleier - der Betreiber-Befund
  * „klobige eingefaerbte Zeile" traf beide.
  *
- * DER ABSENDER IST JETZT DAS VOLLTON-SIEGEL (module-seal--vivid, dashboard.js):
+ * DER ABSENDER IST JETZT DAS VOLLTON-SIEGEL (.module-seal--sm, dashboard.js):
  * Titelzeile direkt auf der Kartenflaeche, davor die eine voll gesaettigte
  * Scheibe im Modulton - Apples Settings-Idiom, und zugleich die Antwort der
  * Chroma-Messung: echte Farbe kommt aus Volltonelementen, nicht aus
  * Beimischung. Der Kopf braucht damit weder eigene Regel noch eigenen Grund;
  * Polster und Hoehe kommen aus der .widget__header-Basisregel, und das Siegel
  * mischt sein Gesicht nicht mehr gegen einen Band-Grund (--seal-base entfiel
- * hier ersatzlos - vivid kennt gar keine Mischung). */
+ * hier ersatzlos - der Vollton kennt gar keine Mischung).
+ *
+ * Etappe 2 setzte hier `module-seal--vivid`; Etappe 3 desselben Tages hat den
+ * Vollton in die .module-seal-Basisregel gehoben und die Variante gestrichen,
+ * die Klasse steht deshalb nirgends mehr. */
 
 /* `min-width: 0` GEHOERT DER NACHGIEBIGEN SEITE, UND DAS IST NUR DER TITEL.
  *

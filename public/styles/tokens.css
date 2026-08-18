@@ -512,7 +512,9 @@
   --_family-people:   #CE2A63;  /* Rose - Kontakte, Geburtstage; 5.01:1 auf weiss */
   --_family-health:   #9E1E88;  /* Beeren-Fuchsia (310 Grad) - Gesundheit; 7.0:1 auf
                                  * weiss (AAA), kein Rot (Trennung von Danger) */
-  --_family-records:  #42587E;  /* Stahlblau - Dokumente, Notizen */
+  --_family-records:  #42587E;  /* Stahlblau - Dokumente, Notizen, Inventar
+                                 * (Inventar kam 2026-08-11 dazu, Begruendung
+                                 * unten an --module-inventory) */
   --_family-neutral:  #677079;  /* Grau - Einstellungen: Konfiguration gehoert keinem
                                  * Lebensbereich; 5.03:1 auf weiss */
 

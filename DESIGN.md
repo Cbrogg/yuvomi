@@ -272,7 +272,40 @@ components:
      sie). Die drei neuen Regeln stehen bei Colors, Typography und an der
      Signature Component „Event-Bloecke im Kalender"; verifiziert gegen
      test:frontend-audit (296), test:calendar (65), test:dashboard (71),
-     test:document-guards (31). -->
+     test:document-guards (31).
+
+     Nachgefuehrt 2026-08-18, geprueft gegen v2.21.0. Waehrend des Laufs kam
+     v2.21.1 dazu (Mitternachts-Termin, Modal-Overflow, UTC-Tagesschluessel);
+     ihre drei public/-Aenderungen beruehren keinen hier dokumentierten Wert -
+     `.modal-panel` wechselt von `overflow: hidden` auf `clip` und ist keine der
+     drei Stellen, an denen dieses Dokument `overflow: hidden` fuehrt. Seit dem
+     letzten Schreibzugriff hat sonst KEIN Commit public/ angefasst, der
+     Abgleich lief deshalb nicht gegen neue Arbeit, sondern gegen die eigene: Frontmatter (Farben, Radien, Spacing,
+     Typo-Rollen), Schattenvokabular, Motion, Icon- und Zielgroessen sind
+     mechanisch gegen tokens.css geprueft und decken sich; von den 115 hier
+     genannten Tokens existiert jedes, von 46 Selektoren und 18 Dateinamen
+     ebenfalls. Was NICHT stimmte, war dreimal dieselbe Stelle: die Etappe-3-
+     Streichung von `module-seal--vivid` und `--seal-base` war an ihrer eigenen
+     Signature Component ausgeschrieben, aber im Widget-Kopf-Abschnitt, im
+     Nachsatz darunter und in der Do-Liste stand die Klasse weiter als gebauter
+     Stand - dieselbe Datei verbot zwei Absaetze weiter oben ihre Rueckkehr per
+     Guard. Zwei Wahrheiten in einer Datei, und die Etappe war nur Stunden alt.
+     Der Sidecar trug denselben Rueckstand schaerfer: sein `.module-seal`-
+     Snippet baute noch die 16-%-Toenung samt `--vivid`-Variante, also genau
+     das, was der Guard verbietet, und `narrative.rules` fuehrte die
+     zurueckgenommene Traeger-Regel als geltende.
+
+     Drei weitere Sidecar-Befunde desselben Laufs, und alle drei sind hier nur
+     deshalb notiert, weil `.impeccable/design.json` gitignored ist und keine
+     CI ihn je anfasst: die tonalen Rampen von `family-overview` und
+     `family-time` lagen auf Hue/Chroma eines Tons, den ihr Token nicht mehr
+     traegt (family-time zeigte eine VIOLETTE Rampe unter einer azurblauen
+     Scheibe - der Rueckstand des Umzugs, den ihre eigene Notiz beschreibt);
+     die sechs Wetterlagen standen seit ihrer Aufnahme ins Frontmatter ohne
+     jedes colorMeta da, waehrend alle neun Familientoene Name, Dark-Wert und
+     Rampe fuehren; und ein Don't war auf seinen ersten Satz gekuerzt. Die
+     Rampen sind aus dem jeweiligen canonical neu gerechnet, alle 29 Eintraege
+     stimmen jetzt gegen ihren Ausgangswert. -->
 
 ## Direction Contract
 
@@ -1404,9 +1437,9 @@ nichts.
 waeren zwei Angaben; erst der Schnitt macht daraus eine. Der Versatz betraegt ein Drittel des
 Avatars, und der Ring darum nimmt `--seal-pair-ground` (Voreinstellung `--color-surface`) -
 die Flaeche, auf der das PAAR steht. Er hiess `--seal-base` und teilte sich den Namen mit dem
-Mischgrund des Siegels; das waren immer zwei Fragen, und mit dem Vollton ist nur noch die
-zweite uebrig. Ohne den Ring laufen zwei gesaettigte Flaechen ineinander, sobald die Toene
-sich aehneln - seit dem Vollton noetiger als vorher, nicht weniger.
+Mischgrund des Siegels; das waren immer zwei Fragen, und mit dem Vollton ist von ihnen nur
+noch die des Rings uebrig. Ohne den Ring laufen zwei gesaettigte Flaechen ineinander, sobald
+die Toene sich aehneln - seit dem Vollton noetiger als vorher, nicht weniger.
 
 **Gebaut ist es an der Mischstelle „Heute wichtig"**, wo es das „von wem" der Aufgabe und des
 Termins traegt; Einkauf und Essen bekommen keines, weil sie keine Person haben. Gehalten von
@@ -1716,12 +1749,18 @@ die Sprache des Nutzers. Die beiden Karten liegen beidseits der Schichtgrenze un
 ### Der Widget-Kopf: das Vollton-Siegel als Absender (Signature Component)
 Seit 2026-08-17 (Widget-Kopf-Kur, Etappe 2 der Modernisierung) ist der Kopf einer
 Dashboard-Karte eine TITELZEILE DIREKT AUF DER KARTENFLAECHE: davor das Markensiegel im
-vivid-Gesicht (`module-seal--vivid`, Ton = Flaeche, Tinte = `--color-ink-on-vivid`), Titel in
+Vollton (Ton = Flaeche, Tinte = `--color-ink-on-vivid`), Titel in
 Text-Primary, Zaehler als getoenter Badge, „Alle" als neutraler Textlink mit Ton erst im
 Hover. Kein Band, keine getoente Trennlinie, keine 2px-Oberkante: der Absender einer Karte
 ist GENAU EIN Element, und es traegt den Modulton zu 100 %. Die Kachelreihe
-(`metric-card--tile`) fuehrt dasselbe vivid-Siegel - zwei Siegel-Gesichter auf einem Board
+(`metric-card--tile`) fuehrt dasselbe Siegel - zwei Siegel-Gesichter auf einem Board
 waeren zwei Wahrheiten.
+
+**Hier stand `module-seal--vivid`, und die Klasse gibt es nicht mehr.** In Etappe 2 war sie
+die Ausnahme neben der 16-%-Toenung; Etappe 3 desselben Tages hat den Vollton zur Regel
+gemacht, er steht seither in der `.module-seal`-Basisregel, und die Variante ist mitsamt
+`--seal-base` gestrichen (siehe „Das Markensiegel"). Der Kopf setzt hier also keine Klasse
+mehr, er setzt nur `--seal-accent`.
 
 **Hier stand von v2.6.0 bis 2026-08-17 das ABSENDERBAND** - ein vollbreites
 `--tint-wash`-Band mit getoenter Trennlinie plus der 2px-Haarlinie an der Oberkante, drei
@@ -1742,10 +1781,12 @@ auf ihren Modulton (fuer Badge, Link-Hover und Fehlerkante); das Siegel selbst b
 auf, also bekaemen alle Widgets dieselbe Farbe - ausgerechnet in dem Raster, in dem siebzehn
 Module nebeneinanderstehen.
 
-**`--seal-base` braucht der Kopf nicht mehr.** Die Mischgrund-Falle („Der Traeger
-entscheidet, welches Gesicht es zeigt") gehoerte zum getoenten Gesicht auf dem Band-Grund;
-das vivid-Gesicht kennt keine Mischung, sein Ton IST die Flaeche (AA an der Toast-Herkunft
-gemessen: Glyph auf Scheibe 5,1-9,8:1 in beiden Themes).
+**`--seal-base` braucht der Kopf nicht mehr - und niemand sonst.** Die Mischgrund-Falle
+(„Der Traeger entscheidet, welches Gesicht es zeigt") gehoerte zum getoenten Gesicht auf dem
+Band-Grund; der Vollton kennt keine Mischung, sein Ton IST die Flaeche (AA an der
+Toast-Herkunft gemessen: Glyph auf Scheibe 5,1-9,8:1 in beiden Themes). Der Parameter ist
+mit ihr app-weit entfallen, ein Guard verbietet seine Rueckkehr; was den Namen weiterfuehrt,
+ist `--seal-pair-ground` am Ueberlappungszeichen, und das beantwortet eine andere Frage.
 
 ### Das Tagesprogramm (Signature Component)
 Das eine Blatt, das die Uebersicht anfuehrt: EIN Traeger auf `--color-surface` mit
@@ -1960,8 +2001,9 @@ Angabe braeuchte einen zweiten Timer, nur damit sie sich selbst aktuell haelt.
   prefers-contrast, fehlender backdrop-filter).
 - **Do** ein Markensiegel nur setzen, wo es eine Rolle hat: an einer Mischstelle benennt es
   eine fremde Herkunft, im eigenen Modul steht es genau einmal als Absender im Kopf
-  (Herkunfts-Regel). Und **Do** ihm seinen echten Grund mitgeben (`--seal-base`), statt die
-  Toenung gegen eine angenommene Flaeche zu mischen.
+  (Herkunfts-Regel). Und **Do** seinen Ton allein ueber `--seal-accent` setzen: die Scheibe
+  traegt ihn im Vollton und mischt gegen gar nichts, deshalb stellt sich die Frage nach dem
+  Grund nur noch fuer die Tinte darauf.
 - **Do** den Rang eines Blocks ueber Radius und Elevation setzen, nie ueber Material
   (Rang-Regel); der wichtigste Block einer Seite darf nicht der leiseste sein.
 - **Do** einer Karte mit Fusszeile den Koerper strecken und die Fusszeile verankern
