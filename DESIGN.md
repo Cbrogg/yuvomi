@@ -567,6 +567,54 @@ Inhalt, kein Verlauf ueber eine Karte, kein Text auf einer Flaeche, die nicht ge
   Behaelter (`width` UND `height` - eine Marke ist bemessen, ein Chip waechst mit seinem
   Text), dessen Hintergrund eine Identitaetsfarbe als Waschung fuehrt und der dieselbe Farbe
   im Vordergrund noch einmal nennt, ohne sie irgendwo voll zu tragen.
+- **DIE SKALEN-REGEL: ein Etikett nennt seinen Ton EINMAL, und zwar voll** (seit
+  2026-08-18). Die Vollton-Regel hat die MARKEN geraeumt; ihr Guard sucht einen bemessenen
+  Behaelter, und genau das liess die zweite Haelfte des Bestands stehen - ein Etikett ist
+  nicht bemessen, es waechst mit seinem Text. Die Bauart war dieselbe: getoente Flaeche,
+  darauf dieselbe Farbe noch einmal gemischt. Auf einer SKALA kostet sie mehr als an einer
+  Marke, weil sie nicht eine Aussage schwaecht, sondern mehrere gegeneinander:
+  - Gemessen an den vier Prioritaetsstufen der Aufgaben (`skalen-vollton.mjs`, CIEDE2000
+    auf der Kartenflaeche): „Hoch" -> „Dringend" liegt als Waschung bei **3,47 light /
+    4,01 dark**. Das ist ueber der Wahrnehmungsschwelle von 2,3, aber ein Drittel dessen,
+    was dieses Projekt fuer die Diagramm-Serien als Abstand akzeptiert hat (11,3) - und
+    zwei Etiketten der Liste stehen nie nebeneinander, sondern jedes allein in seiner
+    Zeile. Im Vollton sind es **12,90 und 23,62**.
+  - Und sie verdeckt Stufen, die es gar nicht gibt: `.birthday-chip--default` und
+    `--soon` waren BITWEISE identisch, obwohl `countdownChip()` drei Stufen kennt und das
+    im Kommentar sagt. Ein Geburtstag morgen und einer in vierzig Tagen sahen gleich aus.
+    Niemandem aufgefallen, weil eine Toenung ohnehin kaum etwas sagt.
+
+  **Drei Antworten, und was gilt, entscheidet, was das Etikett SAGT:**
+  - **Meldung** (Danger/Warning/Success/Info - Vorrat, Inventar-Status, erwartete Buchung):
+    der Ton steht in der SCHRIFT, im vollen Wert, ohne Flaeche. Die semantischen Toene
+    halten das als Kleintext (Danger 5,38:1 light / 5,20:1 dark, Warning 4,96 / 7,13 auf
+    `--color-surface`) - die Ink-Mischung war hier nie noetig, sie stammt aus der Regel
+    fuer MODUL-Toene, die als Schrift wirklich scheitern. Zwei Meldungen nebeneinander
+    trennt ein Mittelpunkt ueber den `+`-Kombinator, nicht eine Kapsel.
+  - **Rangmarke** (eine Stufe einer geordneten Reihe - Aufgaben-Prioritaet): ein
+    8px-Vollton-PUNKT traegt die Farbe, die Schrift bleibt Sekundaertinte. Gescannt wird
+    der Punkt, gelesen das Wort. 8px ist das Bestandsmass fuer einen Farbpunkt
+    (Kalender-Ebenen, Feiertagsmarke der Agenda).
+  - **Zuordnung** (nennt eine Identitaet): Vollton-FLAECHE mit `--color-ink-on-vivid` -
+    aber nur, wenn die genannte Identitaet nicht die des Raums ist, in dem das Etikett
+    steht. Sonst greift die Herkunfts-Regel und das Etikett bleibt NEUTRAL
+    (`--color-fill-well` plus Sekundaertinte). Nach dieser Haelfte sind acht Stellen
+    neutral geworden, die den Modulton in seinem eigenen Modul trugen: Haushalt-Badge im
+    Budget, Bedarfs-Badge und Schwangerschaftszeichen in der Gesundheit, Zaehlmarke im
+    Mehr-Blatt, Widget-Zaehler, Alters-Badge (es stand neben einem Avatar in der
+    MITGLIEDSfarbe), Uhrzeit im Gesundheits-Widget, offener Betrag im
+    Haushaltshilfe-Widget.
+
+  **Bedienelemente sind ausgenommen, und zwar mit Grund, nicht mit Namensliste:** fuer sie
+  gilt die Eine-Stimme-Regel und ihr eigener Guard. Ein aktiver Filter-Chip beantwortet
+  „wo bin ich", und dafuer ist der Modulton zustaendig.
+  **Pruefebene: Signatur + Regel** (`was keine Marke ist, nennt seinen Ton auch nicht
+  zweimal blass` und `zwei Stufen einer Reihe sehen nie unabsichtlich gleich aus`,
+  `test:frontend-audit`). Der erste ist die KOMPLEMENTMENGE des Marken-Guards und traegt
+  deshalb kein Namensmuster: alles, was nicht bemessen ist, keinen `cursor: pointer` hat
+  und die Farbe nirgends voll traegt. Der zweite vergleicht Geschwister-Modifier EINER
+  Basisklasse: malen zwei dasselbe, ohne sich eine Regel zu teilen, ist eine Stufe zu viel
+  benannt - teilen sie sich eine (`--disposed, --lost`), ist die Gleichheit ausgesprochen.
 
 ### Tertiary
 - **Semantik im Apple-Vokabular, AA-vertieft**: Success (Apple Green, 5.1:1), Warning
@@ -589,8 +637,10 @@ Inhalt, kein Verlauf ueber eine Karte, kein Text auf einer Flaeche, die nicht ge
   dem Lauf, in dem dort ein Diagramm entsteht. Serie 1 (Indigo, dE 7.5 zum Akzent) bleibt
   bewusst: sie heisst in der Kontofarben-Wahl "Violett", dort ist die Naehe die Zusage.
 - **Prioritaeten** (`--color-priority-low..urgent`): unveraendert aus dem Bestand, die
-  Helligkeits-Trennung (High ~1,8x Urgent) ist farbfehlsicht-verifiziert. Die Badge-Fuellung
-  ist immer eine 12-%-Toenung derselben Farbe.
+  Helligkeits-Trennung (High ~1,8x Urgent) ist farbfehlsicht-verifiziert. **Die
+  Badge-Fuellung ist seit 2026-08-18 entfallen** (Skalen-Regel, Zweig Rangmarke): der Ton
+  steht im 8px-Punkt, das Etikett traegt weder Fuellung noch Kante noch getoente Schrift.
+  Was er vorher dreimal blass sagte, sagt er jetzt einmal voll.
 
 ### Neutral
 - **Grouped Background** (`grouped-bg` #F5F3ED): der App-Grund - warmes Papier in Apples
@@ -2093,6 +2143,15 @@ Angabe braeuchte einen zweiten Timer, nur damit sie sich selbst aktuell haelt.
 - **Do** einer Zahl, die neben einer anderen Zahl steht, ihr Wort mitgeben („wird 37" neben
   „13 Tage"); stand das Wort bisher nur unsichtbar im `title`, ist es sichtbar faellig -
   Kopfrechnen ist keine Gestaltung.
+- **Do** ein Etikett seinen Ton EINMAL und voll nennen lassen (Skalen-Regel): eine Meldung
+  in der Schrift, eine Rangmarke im 8px-Punkt neben neutraler Schrift, eine Zuordnung als
+  Vollton-Flaeche - und neutral (`--color-fill-well`), wenn die genannte Identitaet die des
+  Raums ist, in dem das Etikett steht.
+- **Do** den Glyph einer Kennzahlkarte die Farbe seines LABELS tragen lassen (`inherit`):
+  er ist das Piktogramm der Beschriftung neben ihm, und die Farbe der Karte gehoert ihrem
+  WERT (`trendValence()` in `utils/metric-card.js`). Neun Vitalkarten mit neun identischen
+  Modul-Glyphen sagten neunmal, in welchem Modul man steht - das ist die Wetter-Glyphe vor
+  v2.21.0, nur an einem geteilten Bauteil.
 
 ### Don't:
 - **Don't** einen zweiten Buttonradius einfuehren; die Kapsel steht in der `.btn`-Basisregel
@@ -2133,6 +2192,12 @@ Angabe braeuchte einen zweiten Timer, nur damit sie sich selbst aktuell haelt.
 - **Don't** Siegel in die Listen eines Moduls streuen oder der Tab-Bar/Sidebar geben; im
   eigenen Raum ist die Herkunft selbstverstaendlich, und die Leiste beantwortet "wo bin ich",
   nicht "woher".
+- **Don't** eine Stufe einer Skala als getoentes Feld bauen - schon gar nicht mit
+  getoenter Schrift und getoenter Kante darauf. Die vier Prioritaets-Etiketten nannten
+  ihren Ton dreimal blass, und zwischen den beiden obersten Stufen blieben davon 3,47
+  (light) uebrig. Und **Don't** zwei Stufen derselben Reihe dieselbe Regel schreiben, ohne
+  sie ihnen zu GEBEN: `--default` und `--soon` der Geburtstags-Chips waren bitweise gleich,
+  weil die Gleichheit in zwei Regeln stand statt in einer.
 - **Don't** eine Zugehoerigkeit ueber eine Haarlinie allein tragen lassen; was in einem Theme
   ein Signal ist und im anderen keines, ist kein Kanal. Und **Don't** sie ueber eine
   Waschung tragen lassen: eine Beimischung hellt im Dark fast nur auf. Der Kanal fuer

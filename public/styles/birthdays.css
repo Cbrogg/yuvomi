@@ -219,35 +219,55 @@
 /* --------------------------------------------------------
  * Countdown-Chip — einheitliches Wort-Register, kontrastgeprüft (AA).
  * -------------------------------------------------------- */
+/* Die Kapsel gehoert seit 2026-08-18 nur noch der Vollton-Stufe („Heute"):
+ * eine Polsterung ohne Fuellung ist ein Loch, kein Chip. Was hier bleibt, ist
+ * das gemeinsame Register - Groesse, Gewicht, kein Umbruch -, damit die drei
+ * Stufen dieselbe Zeile fuehren wie der Prioritaets-Chip der Aufgabenzeile. */
 .birthday-chip {
   flex-shrink: 0;
-  /* `0.25rem 0.6rem` stand hier als Rohwert - 0,6rem gibt es in keiner Stufe
-   * der Skala. Auf den Stufen ist der Chip zwei Pixel flacher und steht damit
-   * auf demselben Mass wie der Prioritäts-Chip der Aufgabenzeile, der dieselbe
-   * Rolle in derselben Metazeile spielt. Gemessen: Metazeile 25,6 -> 21,6px. */
-  padding: var(--space-0h) var(--space-2);
-  border-radius: var(--radius-full);
   font-size: var(--text-xs);
   font-weight: var(--font-weight-semibold);
   white-space: nowrap;
 }
 
+/* ── DREI STUFEN, DIE AUCH DREI SIND ──
+ *
+ * `countdownChip()` in birthdays.js sagt seit jeher „`mod` steuert die visuelle
+ * Stufe" und kennt drei: heute, in bis zu sieben Tagen, spaeter. Die CSS-Regeln
+ * fuer `--default` und `--soon` waren BITWEISE identisch - eine Skala mit einer
+ * Stufe, die es nicht gab. Sie ist niemandem aufgefallen, weil beide getoent
+ * waren und eine Toenung ohnehin kaum etwas sagt.
+ *
+ * Die Leiter laeuft jetzt ueber die AUFFAELLIGKEIT, nicht ueber den Farbton:
+ * heute traegt den Modulton im Vollton, „bald" tritt in die Primaertinte vor,
+ * alles Weitere bleibt Sekundaertinte. Ein Geburtstag in 40 Tagen ist keine
+ * Farbaussage, und drei Toenungen derselben Rose waeren genau der Fall, den
+ * die Vollton-Regel misst.
+ *
+ * Der Modulton ist hier ausdruecklich richtig: die Zeile beantwortet „wann",
+ * und der eine Tag, an dem die Antwort HEUTE lautet, ist der Anlass des ganzen
+ * Moduls. */
 .birthday-chip--default {
-  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), transparent);
-  /* Text zur Ink-Seite gezogen → AA auf hellem Tint (statt reinem Akzent 3,9:1). */
-  color: color-mix(in srgb, var(--module-accent) var(--tint-ink), var(--color-text-primary));
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-medium);
 }
 
 .birthday-chip--soon {
-  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), transparent);
-  color: color-mix(in srgb, var(--module-accent) var(--tint-ink), var(--color-text-primary));
+  color: var(--color-text-primary);
 }
 
+/* Vollton nach der Hausbauart: Ton als Flaeche, feste Tinte darauf. Vorher
+ * stand hier der zu Schwarz vertiefte Akzent mit --color-text-on-accent, weil
+ * reines Weiss auf dem hellen Dark-Ton nur ~2,7:1 trug. Genau dafuer gibt es
+ * --color-ink-on-vivid (light weiss, dark dunkle Tinte): der ungemischte
+ * Modulton haelt damit 5,08:1 light und 7,35:1 dark - im Dark ueber dem, was
+ * die Vertiefung schaffte (4,87:1), und ohne eine zweite Farbrechnung, die
+ * nur an dieser Stelle vorkam. */
 .birthday-chip--today {
-  /* Akzent zu Schwarz vertieft, damit weißer Text in BEIDEN Themes AA hält:
-   * der helle Dark-Mode-Akzent (#FB7185) trägt reines Weiß sonst nur ~2,7:1. */
-  background: color-mix(in srgb, var(--module-accent) 72%, black);
-  color: var(--color-text-on-accent);
+  background: var(--module-accent);
+  color: var(--color-ink-on-vivid);
+  padding: var(--space-0h) var(--space-2);
+  border-radius: var(--radius-full);
 }
 
 /* --------------------------------------------------------

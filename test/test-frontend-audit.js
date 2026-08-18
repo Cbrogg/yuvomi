@@ -11397,6 +11397,180 @@ test('eine Marke nennt ihre Identitaet im Vollton, nicht zweimal als Waschung', 
 });
 
 /**
+ * SIGNATUR: was KEINE Marke ist, nennt seinen Ton auch nicht zweimal blass.
+ *
+ * Der Guard darueber sucht dieselbe Bauart an einer MARKE - einem bemessenen
+ * Behaelter mit `width` UND `height`. Genau diese Bedingung liess die zweite
+ * Haelfte des Bestands stehen: ein Etikett ist NICHT bemessen, es waechst mit
+ * seinem Text. Uebrig blieben acht Stellen, und sie sagten alle den Modulton in
+ * einem Raum, der ihn schon beantwortet hat - das Haushalt-Badge im Budget, das
+ * Bedarfs-Badge und die Schwangerschaftsmarke in der Gesundheit, die Zaehlmarke
+ * im Mehr-Blatt, der Widget-Zaehler, das Alters-Badge neben einem Avatar in der
+ * MITGLIEDSfarbe, die Uhrzeit im Gesundheits-Widget, der offene Betrag im
+ * Haushaltshilfe-Widget. Dieselbe Lehre wie am Siegel, zum vierten Mal: **wer
+ * eine Regel setzt, sucht ihre Geschwister ueber die BAUART, nicht ueber den
+ * Namen.** Deshalb steht hier auch kein Namensmuster: dieser Guard ist die
+ * KOMPLEMENTMENGE des Marken-Guards, alles was uebrig bleibt.
+ *
+ * Die drei Antworten stehen in DESIGN.md (Colors, Skalen-Regel):
+ *   Meldung   -> Ton in der SCHRIFT, keine Flaeche (Vorrat, Inventar-Status)
+ *   Rangmarke -> Vollton-PUNKT, Schrift neutral (Aufgaben-Prioritaet)
+ *   Zuordnung -> Vollton-FLAECHE mit --color-ink-on-vivid, und nur dort, wo die
+ *                genannte Identitaet nicht die des Raums ist (Herkunfts-Regel)
+ *
+ * DREI AUSNAHMEN, jede mit einem Grund, der KEINE Namensliste ist:
+ *  - Traegt der Rumpf die Farbe irgendwo VOLL (Kante, Ring, Punkt), ist die
+ *    Aussage gesetzt und die Flaeche darunter ist ihr Beiwerk - so gebaut sind
+ *    die vier Kalender-Ereignisansichten seit v2.22.0.
+ *  - Steht die Schrift im VOLLEN Ton, ist das ein Callout und keine
+ *    zurueckgenommene Marke (.changelog-status--error).
+ *  - `cursor: pointer` heisst BEDIENELEMENT. Fuer die gilt die Eine-Stimme-Regel
+ *    und ihr eigener Guard („kein geteiltes Bedienelement wird unter seinem
+ *    eigenen Namen umgefaerbt"); ein aktiver Filter-Chip beantwortet „wo bin
+ *    ich", und dafuer ist der Modulton zustaendig.
+ */
+const LABEL_STATE = /(:hover|:focus|:active|:checked|\.is-|--active|--selected|--current|\[aria-|\[data-)/;
+
+test('was keine Marke ist, nennt seinen Ton auch nicht zweimal blass', () => {
+  const offenders = [];
+  let seen = 0;
+  for (const file of readdirSync(new URL('../public/styles/', import.meta.url)).filter((n) => n.endsWith('.css'))) {
+    if (file === 'tokens.css') continue;
+    for (const rule of eachRule(read(`../public/styles/${file}`))) {
+      const decls = declarations(rule.body);
+      // Eine MARKE ist bemessen - die gehoert dem Guard darueber.
+      if (decls.some(([p]) => p === 'width') && decls.some(([p]) => p === 'height')) continue;
+      // Ein BEDIENELEMENT gehoert der Eine-Stimme-Regel und ihrem Guard.
+      if (decls.some(([p, v]) => p === 'cursor' && v.trim() === 'pointer')) continue;
+
+      const washed = decls.find(([p, v]) => /^background(-color)?$/.test(p) && v.includes('color-mix') && MARK_SOURCE.test(v));
+      if (!washed) continue;
+      seen += 1;
+      const source = washed[1].match(MARK_SOURCE)[0];
+      const pale = decls.find(([p, v]) => p === 'color' && v.includes('color-mix') && v.includes(`var(${source}`));
+      if (!pale) continue;
+      // Traegt der Rumpf die Farbe irgendwo VOLL? Dann ist die Aussage gesetzt.
+      if (decls.some(([p, v]) => MARK_VIVID_PROP.test(p) && withoutColorMix(v).includes(`var(${source}`))) continue;
+
+      const selectors = rule.selector.split(',').map((sel) => sel.trim()).filter((sel) => !LABEL_STATE.test(sel));
+      if (!selectors.length) continue;
+      offenders.push(`${file}: ${selectors.join(', ')} -> ${source}`);
+    }
+  }
+  // Reichweiten-Nachweis wie beim Marken-Guard: `seen` zaehlt die
+  // NICHT-Marken, die eine Identitaetsfarbe als Waschung fuehren - der Bestand
+  // hat davon rund 30 (die vier Kalender-Ansichten, Dropzones, Zustandsfelder).
+  // Ohne die Zahl haelt die Zusicherung auch dann, wenn MARK_SOURCE ins Leere
+  // greift.
+  assert.ok(seen >= 15, `Nur ${seen} nicht-bemessene Waschungen gesehen - die Signatur greift nicht mehr.`);
+  assert.deepEqual(
+    offenders,
+    [],
+    'Etwas, das keine Marke ist, nennt seinen Ton zweimal blass (DESIGN.md,\n'
+    + 'Colors: die Skalen-Regel). Getoente Flaeche UND gemischte Schrift derselben\n'
+    + 'Farbe ist die zurueckgenommene Fassung - eine Beimischung hellt im Dark\n'
+    + 'fast nur auf. Drei Antworten, je nachdem was das Element SAGT:\n'
+    + '  Meldung   -> Ton in der Schrift, keine Flaeche\n'
+    + '  Rangmarke -> Vollton-Punkt daneben, Schrift neutral\n'
+    + '  Zuordnung -> Vollton-Flaeche mit var(--color-ink-on-vivid); nennt sie den\n'
+    + '               Raum, in dem sie steht, bleibt sie neutral (--color-fill-well)\n'
+    + `${offenders.join('\n')}`,
+  );
+});
+
+/**
+ * REGEL: zwei Stufen einer Reihe sehen nie unabsichtlich gleich aus.
+ *
+ * `countdownChip()` in birthdays.js kennt drei Stufen und sagt das im Kommentar
+ * ("`mod` steuert die visuelle Stufe"). Die Regeln fuer `--default` und
+ * `--soon` waren BITWEISE identisch - eine Skala mit einer Stufe, die es nicht
+ * gab, und niemandem aufgefallen, weil beide getoent waren und eine Toenung
+ * ohnehin kaum etwas sagt. Ein Geburtstag morgen und einer in vierzig Tagen
+ * sahen gleich aus.
+ *
+ * Gesucht werden Geschwister-Modifier EINER Basisklasse, die in GETRENNTEN
+ * Regeln stehen und dieselbe gerenderte Farbe setzen. Die Trennung ist der
+ * Kern: `.inventory-status-badge--disposed, .inventory-status-badge--lost`
+ * teilen ihre Regel ausdruecklich - der Autor hat gesagt, dass beide "nicht
+ * mehr da" heissen und das Wort den Rest erledigt. Zwei Regeln, die zufaellig
+ * dasselbe tun, hat niemand gesagt.
+ *
+ * Nur gerenderte Farbe zaehlt, keine Custom-Property-Zuweisung: dass das
+ * Familien-Widget und das Kontakte-Widget beide `--widget-accent:
+ * var(--module-contacts)` setzen, ist eine ZUORDNUNG (dasselbe Modul), keine
+ * Stufe. Und keine Reset-Werte (`none`, `transparent`, `inherit`), sonst zaehlt
+ * `background: none` dreier Navigations-Knoepfe als Farbaussage.
+ */
+const SCALE_PAINT = /^(color|background|background-color|border-color|fill|stroke)$/;
+const SCALE_RESET = /^(none|transparent|inherit|initial|unset|currentcolor)$/i;
+/** Nicht-Farb-Eigenschaften zaehlen mit: sie unterscheiden zwei Stufen genauso. */
+const SCALE_IGNORE = /^(content|transition|animation|will-change|cursor|font-family|--)/;
+
+test('zwei Stufen einer Reihe sehen nie unabsichtlich gleich aus', () => {
+  const families = new Map();
+  for (const file of readdirSync(new URL('../public/styles/', import.meta.url)).filter((n) => n.endsWith('.css'))) {
+    if (file === 'tokens.css') continue;
+    for (const rule of eachRule(read(`../public/styles/${file}`))) {
+      const mods = rule.selector.split(',').map((sel) => sel.trim())
+        .map((sel) => sel.match(/^\.([a-z0-9-]+?)--([a-z0-9-]+)$/i))
+        .filter(Boolean);
+      if (!mods.length) continue;
+      const decls = declarations(rule.body);
+      // Die Reihe muss ueberhaupt FARBE fuehren - sonst zaehlen die zwoelf
+      // Rastergroessen des Dashboards als Skala.
+      if (!decls.some(([p, v]) => SCALE_PAINT.test(p) && !SCALE_RESET.test(v.trim()))) continue;
+      // Verglichen wird der ganze sichtbare Rumpf, nicht nur die Farbe: eine
+      // Kante (`border: 1.5px solid ...`) oder eine Polsterung unterscheidet
+      // zwei Stufen genauso, und `border` ist eine Kurzform, die kein
+      // Farb-Filter sieht (gemessen an .btn--danger-outline gegen -ghost).
+      const paint = decls
+        .filter(([p]) => !SCALE_IGNORE.test(p))
+        .map(([p, v]) => `${p}:${v.replace(/\s+/g, ' ').trim()}`)
+        .sort()
+        .join(';');
+      if (!paint) continue;
+      // Modifier, die sich EINE Regel teilen, sind erklaert gleich.
+      const declared = mods.map((m) => m[2]).join('+');
+      for (const m of mods) {
+        const key = `${file}|${m[1]}|${rule.at.join('>')}`;
+        if (!families.has(key)) families.set(key, []);
+        families.get(key).push({ mod: m[2], paint, declared });
+      }
+    }
+  }
+
+  const offenders = [];
+  let compared = 0;
+  for (const [key, entries] of families) {
+    if (entries.length < 2) continue;
+    compared += 1;
+    const byPaint = new Map();
+    for (const entry of entries) {
+      if (!byPaint.has(entry.paint)) byPaint.set(entry.paint, []);
+      byPaint.get(entry.paint).push(entry);
+    }
+    for (const [, group] of byPaint) {
+      const declarations_ = new Set(group.map((g) => g.declared));
+      // Alle aus derselben Regel? Dann ist die Gleichheit ausgesprochen.
+      if (declarations_.size < 2 && group.length === group[0].declared.split('+').length) continue;
+      const mods = [...new Set(group.map((g) => g.mod))];
+      if (mods.length < 2) continue;
+      if (declarations_.size === 1) continue;
+      offenders.push(`${key} -> ${mods.join(' == ')}`);
+    }
+  }
+  assert.ok(compared >= 20, `Nur ${compared} Modifier-Reihen verglichen - der Scanner greift nicht mehr.`);
+  assert.deepEqual(
+    offenders,
+    [],
+    'Zwei Modifier derselben Basisklasse malen dasselbe, ohne sich eine Regel zu\n'
+    + 'teilen (DESIGN.md, Colors: die Skalen-Regel). Entweder ist eine Stufe zu\n'
+    + 'viel benannt, oder sie ist gemeint und gehoert in DIESELBE Regel wie ihre\n'
+    + `Schwester - dort steht sie als Absicht statt als Zufall.\n${offenders.join('\n')}`,
+  );
+});
+
+/**
  * REGEL: `var(--x)` ohne Fallback verlangt, dass --x auch irgendwo entsteht.
  *
  * Ein Verweis auf ein Token, das es nicht gibt, ist zur Laufzeit KEIN Fehler:

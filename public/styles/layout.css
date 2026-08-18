@@ -831,8 +831,12 @@ html:has(.search-overlay--visible) yuvomi-install-prompt {
   line-height: 18px;
   text-align: center;
   font-variant-numeric: tabular-nums;
-  background-color: color-mix(in srgb, var(--item-module-accent, var(--color-accent)) var(--tint-state), var(--color-surface));
-  color: color-mix(in srgb, var(--item-module-accent, var(--color-accent)) var(--tint-ink), var(--color-text-primary));
+  /* NEUTRAL, obwohl das Mehr-Blatt eine Mischstelle ist: die Herkunft nennt in
+   * dieser Zelle bereits das Vollton-Siegel darueber. Die ZAHL nennt keine -
+   * sie zaehlt, und eine Toenung des Modultons unter einer Toenung derselben
+   * Farbe sagte sie zweimal blass (Skalen-Regel, Gegenrichtung). */
+  background-color: var(--color-fill-well);
+  color: var(--color-text-secondary);
 }
 
 .more-item[aria-current="page"] {

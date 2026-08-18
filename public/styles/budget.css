@@ -174,26 +174,29 @@
   font-size: var(--text-2xs);
   font-weight: var(--font-weight-semibold);
   line-height: 1.5;
-  color: color-mix(in srgb, var(--module-accent) var(--tint-ink), var(--color-text-primary));
-  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), transparent);
+  color: var(--color-text-secondary);
+  background: var(--color-fill-well);
   white-space: nowrap;
 }
 
-/* Erwartete, noch nicht bestätigte Buchung (#637). Teilt die Pillen-Grammatik
- * des Haushalt-Badges, färbt aber in der Warn-Rolle: die Zeile steht in der
- * Liste, zählt aber in keiner Summe mit, und dieser Unterschied darf nicht auf
- * derselben Farbe liegen wie eine bloße Zuordnung. */
+/* Erwartete, noch nicht bestätigte Buchung (#637). Die Zeile steht in der
+ * Liste, zählt aber in keiner Summe mit.
+ *
+ * SIE TEILT DIE PILLEN-GRAMMATIK DES HAUSHALT-BADGES NICHT MEHR, und das ist
+ * der Punkt: das Haushalt-Badge ordnet ZU, dieses hier MELDET einen Zustand.
+ * Als getönte Pille unter getönter Schrift sagte es seinen Warnton zweimal
+ * blass und stand daneben in derselben Form wie die Zuordnung. Zweiter Zweig
+ * der Skalen-Regel: die Meldung trägt ihren Ton in der Schrift, im vollen Ton -
+ * gemessen 4,96:1 light und 7,13:1 dark auf der Kartenfläche, also AA für
+ * Kleintext, wofür die Ink-Mischung hier nie nötig war. */
 .budget-badge--pending {
   display: inline-block;
   vertical-align: middle;
   margin-inline-start: var(--space-1);
-  padding: var(--space-px) var(--space-2);
-  border-radius: var(--radius-full);
   font-size: var(--text-2xs);
   font-weight: var(--font-weight-semibold);
   line-height: 1.5;
-  color: color-mix(in srgb, var(--color-warning) var(--tint-ink), var(--color-text-primary));
-  background: color-mix(in srgb, var(--color-warning) var(--tint-surface), transparent);
+  color: var(--color-warning);
   white-space: nowrap;
 }
 

@@ -399,15 +399,17 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  /* Getönt statt voll gesättigt (Critique P5): ein volles Akzent-Badge pro Karte —
-   * plus Haarlinie, Link und Icon — summierte sich über ein volles Board zu ~8–10
-   * schreienden Farbtupfern. Der Zähler bleibt modul-getönt, aber ruhig; die
-   * Identität tragen Icon + Haarlinie. */
-  background-color: color-mix(in srgb, var(--widget-accent, var(--color-accent)) var(--tint-surface), var(--color-surface));
-  /* Text stärker zur Ink-Seite gemischt (58% statt 72% Akzent) → sicherer
-   * AA-Kontrast für den kleinen Bold-Zähler auf der hellen Tönung, auch bei
-   * helleren Modultönen (Critique R3, Sam). */
-  color: color-mix(in srgb, var(--widget-accent, var(--color-accent)) var(--tint-ink), var(--color-text-primary));
+  /* NEUTRAL, UND ZWAR SEIT DER KOPF EIN SIEGEL HAT.
+   *
+   * Hier stand eine Modultönung mit modulgemischter Schrift darauf, begründet
+   * als „ruhiger Zähler; die Identität tragen Icon + Haarlinie". Beide Träger
+   * dieser Begründung sind seit v2.19.0 weg: das Kopfband ist gestrichen, und
+   * die Herkunft nennt jetzt genau EIN Element, das Vollton-Siegel neben dem
+   * Titel. Was blieb, war die zurückgenommene Fassung derselben Aussage - die
+   * Farbe zweimal blass, an einem Element, das gar keine Identität nennt,
+   * sondern ZÄHLT (Skalen-Regel, Gegenrichtung). */
+  background-color: var(--color-fill-well);
+  color: var(--color-text-secondary);
   font-size: var(--text-xs);
   font-weight: var(--font-weight-bold);
   min-width: 16px;
@@ -2927,10 +2929,15 @@ svg.weather-forecast__icon {
    * Textfarbe zur Ink-Seite gemischt (AA, Konvention siehe tokens.css).
    * Seit Etappe 4 (2026-08-17) steht im Badge der ganze Satz („wird 37",
    * birthdays.turnsAge) statt der nackten Zahl: „37" neben „13 Tage" verlangte
-   * Kopfrechnen, und das Label stand unsichtbar schon im title-Attribut. */
+   * Kopfrechnen, und das Label stand unsichtbar schon im title-Attribut.
+   *
+   * NEUTRAL SEIT 2026-08-18: „getoent wie der Avatar" stimmt nicht mehr - der
+   * Avatar traegt die Farbe des MITGLIEDS, das Badge trug die des Moduls, und
+   * eine Zahl nennt ohnehin keine Identitaet. Zwei Toenungen nebeneinander,
+   * von denen eine gar nichts sagt (Skalen-Regel, Gegenrichtung). */
   white-space: nowrap;
-  background: color-mix(in srgb, var(--module-birthdays) var(--tint-surface), var(--color-surface));
-  color: color-mix(in srgb, var(--module-birthdays) var(--tint-ink), var(--color-text-primary));
+  background: var(--color-fill-well);
+  color: var(--color-text-secondary);
   font-size: var(--text-sm);
   font-weight: var(--font-weight-bold);
 }
@@ -3510,17 +3517,22 @@ svg.weather-forecast__icon {
   min-height: var(--target-base);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-full);
-  --module-accent: var(--module-rewards);
-  background: color-mix(in srgb, var(--module-accent) var(--tint-wash), transparent);
-  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-ink), var(--color-text-primary));
+  /* NEUTRAL: der Chip ist ein BEDIENELEMENT, und ein Bedienelement traegt die
+   * Stimme oder gar nichts, nie den Modulton (Eine-Stimme-Regel). Die Herkunft
+   * nennt das Vollton-Siegel im Kopf desselben Widgets. */
+  background: var(--color-fill-well);
+  color: var(--color-text-primary);
   font-size: var(--type-secondary);
   font-weight: var(--font-weight-medium);
   cursor: pointer;
   transition: background-color var(--transition-fast);
 }
 
+/* Der Ruhezustand ist bereits eine erhoehte Flaeche (--color-fill-well =
+ * --color-surface-3), der Hover nimmt deshalb die Stufe ueber DIESER, nicht die
+ * ueber der Grundflaeche - sonst faellt er im Dark auf seine eigene Farbe. */
 .rewards-widget__footer:hover {
-  background: color-mix(in srgb, var(--module-rewards) var(--tint-state), transparent);
+  background: var(--color-surface-elevated-hover);
 }
 
 .rewards-widget__footer svg {
@@ -3592,9 +3604,9 @@ svg.weather-forecast__icon {
   flex-shrink: 0;
   padding: var(--space-px) var(--space-2);
   border-radius: var(--radius-full);
-  --module-accent: var(--module-health);
-  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), transparent);
-  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-ink), var(--color-text-primary));
+  /* NEUTRAL: eine Uhrzeit ist eine Angabe, keine Herkunft. */
+  background: var(--color-fill-well);
+  color: var(--color-text-primary);
   font-size: var(--text-xs);
   font-weight: var(--font-weight-semibold);
   font-variant-numeric: tabular-nums;
@@ -3795,9 +3807,10 @@ svg.weather-forecast__icon {
   gap: var(--space-1h);
   padding: var(--space-1h) var(--space-2h);
   border-radius: var(--radius-sm);
-  --module-accent: var(--module-housekeeping);
-  background: color-mix(in srgb, var(--module-accent) var(--tint-wash), transparent);
-  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-ink), var(--color-text-primary));
+  /* NEUTRAL: der offene Betrag ist eine Angabe des Widgets, keine zweite
+   * Nennung des Moduls, dessen Siegel zwei Zeilen darueber steht. */
+  background: var(--color-fill-well);
+  color: var(--color-text-primary);
   font-size: var(--type-secondary);
   font-weight: var(--font-weight-medium);
   align-self: flex-start;

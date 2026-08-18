@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.23.0] - 2026-08-18
+
+### Changed
+
+- **A label that names a step says its colour once, at full strength.** The last release settled this for marks - a tinted disc cannot carry a colour, because in the dark a wash only lightens. The measurement was written for something that is *measured*, a disc with a width and a height, and that is exactly what let the other half of the app through: a label is not measured, it grows with its text. Task priorities were the clearest case. Each of the four levels was a tinted pill with a tinted border and tinted lettering - the same colour said three times, faintly - and between the top two levels, "High" and "Urgent", the tinted fields ended up 3.5 apart on the perceptual scale where 11 is what this project accepted for its chart colours, in a list where two labels never sit side by side to be compared. Priority is now a single dot in the full colour with the word beside it in plain type; the pantry's "almost empty" and "2 days left", the inventory status, an expected booking and the birthday countdown carry their colour in the lettering instead of under it. Eight more labels that were tinted in the colour of the module they were already standing in - the household badge in Budget, the pregnancy marker and the dose time in Health, the counter in the mobile "More" sheet, the widget counter and the age badge on the overview - are now neutral, because they name nothing that the room around them has not already said.
+- **A birthday count that never was.** The countdown next to a birthday knows three steps - today, within the week, later - and said so in a comment. Two of the three were written as separate rules that happened to be identical, so a birthday tomorrow and one in forty days looked exactly the same. Today now carries the module's colour at full strength, "within the week" steps forward into the main text colour, and everything further out stays quiet.
+- **A key figure's icon takes the colour of its label, not of its module.** The shared figure card - the same one used by Budget, Health, Housekeeping, Inventory, subscriptions and the overview - had its icon fixed to the module colour. On the health overview that meant nine vital cards with nine identical pink glyphs: nine statements about which module you are in, on a page whose title and seal answer that already. It is the same correction the weather glyph got two releases ago. The colour of one of these cards belongs to its *value*, which already decides whether a change reads as good or bad; the icon beside the label is a pictogram of that label and now shares its colour. The fill bar in the same card follows the app's own accent for the same reason - a fill level does the same thing in every module.
+- **A household member shows their own colour in the birthday list.** Everywhere else - the overview, the calendar, tasks, and since the last release contacts - a member of the household appears in the colour they picked. On the birthday page itself they all sat on the same neutral disc, indistinguishable from a relative who has no account. Linked entries now show that person's picture or their initials in their own colour; entries that belong to nobody in the household stay neutral on purpose.
+
+### Fixed
+
+- **The tag under a task is a full-size target again.** A tag in a task row sets a filter when you tap it, and it stood 23 pixels tall in a row that had the space for the full 24 the accessibility guideline asks for - close enough to pass on a technicality, not close enough to be right. The row now carries its own height instead of inheriting it from whichever chip inside it happens to be tallest, and the tag takes the full target size. Rows that carry neither a priority nor a tag keep that height too, which they never did before.
+
 ## [2.22.1] - 2026-08-18
 
 ### Fixed

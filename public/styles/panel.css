@@ -309,13 +309,17 @@
 /* Füllstand über --fill (0..1) als transform, nicht als width: eine Breiten-
  * Animation wirft bei jedem Renderdurchlauf das Layout neu. Der Parent clippt
  * die Ecken, der Balken braucht deshalb keinen eigenen Radius. */
+/* Der Balken traegt die STIMME, nicht den Modulton (Eine-Stimme-Regel): ein
+ * Fuellstand tut in jedem Modul dasselbe, und ein Abo-Budget zu 62 % ist keine
+ * Aussage darueber, in welchem Raum man steht. Ueber 100 % kippt er auf Danger
+ * - dort sagt die Farbe etwas ueber den WERT, und nur dann. */
 .metric-card__progress > span {
   display: block;
   height: 100%;
   width: 100%;
   transform: scaleX(var(--fill, 0));
   transform-origin: left center;
-  background: var(--module-accent, var(--color-accent));
+  background: var(--color-accent);
   transition: transform var(--transition-base);
 }
 
@@ -389,11 +393,26 @@
   hyphens: manual;
 }
 
+/* DER GLYPH GEHOERT ZU SEINEM LABEL, NICHT ZU SEINEM MODUL.
+ *
+ * Hier stand `var(--module-accent)`. Auf der Gesundheits-Uebersicht hiess das:
+ * neun Vitalkarten, neun Glyphen in exakt `rgb(219,96,203)` - neunmal die
+ * Aussage „du bist in Gesundheit" auf einer Seite, deren Titel und Siegel das
+ * schon beantwortet haben. Es ist dieselbe Messung, die 2026-08-17 die
+ * Wetter-Glyphe umgestellt hat: die Farbe eines Zeichens sagt, WAS es meldet,
+ * nicht WO es haengt.
+ *
+ * Und dieses Bauteil fuehrt seine Farbe an genau EINER Stelle - dem Wert.
+ * `trendValence()` (utils/metric-card.js) entscheidet dort, ob eine
+ * Veraenderung gut oder schlecht ist; der Glyph daneben ist das Piktogramm
+ * seines Labels und traegt deshalb dessen Farbe. `inherit` holt sie aus
+ * `.metric-card__head` und bleibt damit automatisch richtig, wenn die
+ * Kopfzeile ihre Textrolle wechselt. */
 .metric-card__icon {
   flex-shrink: 0;
   width: var(--icon-md);
   height: var(--icon-md);
-  color: var(--module-accent, var(--color-accent));
+  color: inherit;
 }
 
 /* Wert und Einheit stehen auf einer gemeinsamen Grundlinie. Sie dürfen

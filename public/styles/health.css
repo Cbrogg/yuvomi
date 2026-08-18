@@ -564,8 +564,8 @@ button.health-med-card:hover {
   padding: var(--space-0h) var(--space-2);
   border-radius: var(--radius-full);
   font-size: var(--text-2xs);
-  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), transparent);
-  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-ink), var(--color-text-primary));
+  background: var(--color-fill-well);
+  color: var(--color-text-secondary);
 }
 
 .health-med-badge--muted {
@@ -1605,8 +1605,8 @@ button.health-med-card:hover {
   font-weight: 600;
   padding: 2px var(--space-2);
   border-radius: var(--radius-full);
-  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-ink), var(--color-text-primary));
-  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), transparent);
+  color: var(--color-text-secondary);
+  background: var(--color-fill-well);
 }
 
 .cycle-preg__countdown { font-size: var(--text-sm); color: var(--color-text-secondary); }

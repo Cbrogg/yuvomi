@@ -214,9 +214,12 @@ function groupBy(tasks, mode) {
 // Render-Bausteine
 // --------------------------------------------------------
 
+// Die Stufe steht am PUNKT, nicht am Etikett: seit die Fuellung entfallen ist
+// (Skalen-Regel, DESIGN.md) traegt `.priority-badge` keine Farbe mehr, und eine
+// Modifier-Klasse ohne Regel ist tote Auszeichnung.
 function renderPriorityBadge(priority) {
   if (priority === 'none') return '';
-  return `<span class="priority-badge priority-badge--${priority}">
+  return `<span class="priority-badge">
     <span class="priority-dot priority-dot--${priority}"></span>
     ${PRIORITY_LABELS()[priority] ?? priority}
   </span>`;
@@ -1350,7 +1353,7 @@ const NEXT_STATUS = {
 function priorityNode(priority) {
   if (!priority || priority === 'none') return null;
   const badge = document.createElement('span');
-  badge.className = `priority-badge priority-badge--${priority}`;
+  badge.className = 'priority-badge';
   const dot = document.createElement('span');
   dot.className = `priority-dot priority-dot--${priority}`;
   badge.append(dot, document.createTextNode(PRIORITY_LABELS()[priority] ?? priority));
