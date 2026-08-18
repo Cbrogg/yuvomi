@@ -1,4 +1,4 @@
-<!-- version: 2.22.0 -->
+<!-- version: 2.22.1 -->
 <!--
   Die `releaseNotes` fuer den Umbrel-App-Store, von Hand fuer JEDEN Release
   geschrieben. `umbrel-publish.yml` nimmt den Text unter diesem Kommentar
@@ -29,29 +29,17 @@
     - Leerzeile zwischen den Absaetzen: der Store rendert ein gefaltetes
       YAML-Blockskalar, dort ist die Leerzeile der Absatzumbruch.
 
-  HINWEIS ZU DIESER VERSION: eine neue Funktion und drei Verbesserungen am
-  Aussehen, keine neue Pflicht-Einstellung. Die Datenbank-Migration bekommt
-  KEINEN Handlungs-Absatz - sie laeuft beim Start von selbst und verlangt
-  nichts vom Haushalt; stattdessen steht im Farb-Absatz ausdruecklich, dass
-  bestehende Kategorien ihre Farben behalten, denn das ist die Frage, die sich
-  jemand beim Update stellt. Erster Absatz ist die WAHLBARE Kategoriefarbe,
-  weil sie das Einzige ist, das jemand aktiv benutzen kann.
+  HINWEIS ZU DIESER VERSION: ein reiner Fehlerbehebungs-Release, eine Sache,
+  ein Absatz. Keine Migration, keine neue Einstellung, also kein
+  Handlungs-Absatz. Der Text nennt ausdruecklich, dass 2.21.1 dieselbe Sache
+  schon einmal angekuendigt hat und was davon uebrig war - wer das Update von
+  damals gelesen hat, wuerde sich sonst fragen, warum es noch einmal
+  dasteht. Die Bedingung (breite Fenster, abgeschaltete Systemanimationen)
+  gehoert hinein, weil sie erklaert, warum es die meisten nie getroffen hat.
 
-  Draussen bleibt alles, was nur die Bauart beschreibt: warum eine Toenung
-  keine Farbe tragen kann, welche Regel wo stand, welcher Endpunkt ein Feld
-  dazubekommen hat. Der Vollton-Absatz nennt deshalb keine Regel, sondern das,
-  was man sieht - Marken, die vorher blass waren und sich nicht unterscheiden
-  liessen. Die Einstellungs- und Kalender-Absaetze sind bewusst kurz: sie sind
-  Verfeinerungen, keine Neuigkeiten, und ein Absatz je Sache reicht.
+  Draussen bleibt die ganze Bauart: welche Regel wo stand, welcher Container
+  eine Scroll-Box war, welche Zahl gemessen wurde, welcher Test es absichert.
 -->
-Contact categories can now have their own colour. Seven of them came with one, and every category you added yourself had none - in practice they all took on the module's colour and were impossible to tell apart. You can now pick a colour for each category in the "Manage categories" dialog, where every row shows its own mark and opens a palette when you tap it. Your existing categories keep exactly the colours they had, and one you leave without a colour stays deliberately plain.
+Dialogs no longer slide out of view while you are filling them in. Opening the repeat interval in the new-task dialog could push the whole dialog upwards until its title and close button had left the screen, leaving Save and Cancel as the only way out of it. Version 2.21.1 announced this as fixed, and for most windows it was - what remained showed up only in wider browser windows and only with system animations switched off, a combination that is common on Windows. Dialogs now stay where they are at any window size, and their content scrolls the way it always did.
 
-Marks that name something now show their colour properly. Small round or square marks that tell you which module, category or person something belongs to used to be washed out, which in dark mode meant they barely showed a colour at all and in light mode made neighbouring categories look identical. They are now filled with their colour. The other way round applies too: a mark that names nothing in particular - a drop area, an empty preview tile - is plainly grey instead of faintly tinted.
-
-A contact who is also a member of your household now shows that person's photo or initials in their own colour, the same one they carry on the overview, in the calendar and in tasks. Their own colour comes first, so you still recognise them inside a category that has one of its own.
-
-Appointments look the same in every calendar view. The week and all-day rows already carried a coloured edge in their calendar's colour; the month and day views kept the old pale box, so the same appointment looked different depending on which view you had open. Both now show the edge.
-
-The settings list shows which module a page belongs to. Pages about the kitchen, the calendar, tasks, health, contacts, documents or rewards carry that module's colour; the rest - your account, appearance, notifications, backup - stay plain, because they are not about a single module.
-
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.22.0
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.22.1

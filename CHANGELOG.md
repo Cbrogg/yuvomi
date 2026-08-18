@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.22.1] - 2026-08-18
+
+### Fixed
+
+- **A dialog stays where it is while you fill it in - now on every window width.** The fix in v2.21.1 took the hidden scroll box off the dialog panel and left it one level up, on the overlay behind it, where the very same thing could happen: opening the repeat interval in the new-task dialog pushed the whole panel upwards until its title and close button had left the screen, with no way back, and the dialog could only be left through Save or Cancel. What was left showed above a window width of 768px and only with system animations switched off - a combination that is common on Windows, which is where it was reported from a second time. Both layers are now clipped in a way that creates no scroll box at all, and the panel no longer depends on its entry animation to keep the form fields inside it anchored to itself. Scrolling happens where it always did: inside the dialog's content.
+
 ## [2.22.0] - 2026-08-18
 
 ### Added

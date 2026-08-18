@@ -3442,7 +3442,14 @@ p.field-hint--warn[hidden] {
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
+  /* clip, NICHT hidden (#805): dieselbe Falle wie beim Panel, nur eine Ebene
+   * hoeher. hidden macht auch das Overlay zu einer Scroll-Box ohne Scrollbar -
+   * unbedienbar fuer den Nutzer, programmatisch scrollbar fuer den Browser.
+   * Bekam das Overlay einen absolut positionierten Nachfahren (das .sr-only-
+   * Input des Aufgaben-Formulars, siehe .modal-panel), wuchs seine Scroll-Box
+   * auf 1259px und Chrome schob beim Oeffnen eines <select> das komplette
+   * Panel samt Kopfzeile und Schliessen-X aus dem Bild. */
+  overflow: clip;
   padding: max(var(--space-3), env(safe-area-inset-top))
            max(var(--space-3), env(safe-area-inset-right))
            max(var(--space-3), env(safe-area-inset-bottom))
@@ -3475,6 +3482,14 @@ p.field-hint--warn[hidden] {
    * Gescrollt wird strukturell nur im Body; clip nimmt dem Panel die
    * Scroll-Box, ist aber visuell deckungsgleich mit hidden. */
   overflow: clip;
+  /* Breakpoint-UNABHAENGIG (#805, zweite Runde): das Panel muss der Containing
+   * Block seiner absolut positionierten Nachfahren sein, sonst fangen die eine
+   * Ebene hoeher am fixed .modal-overlay an und blaehen DESSEN Box auf. Bis
+   * v2.21.1 stand das nur in der Mobile-Media-Query; ab 768px hielt allein der
+   * transform-Endwert der Einfahr-Animation das Panel zufaellig in der Rolle -
+   * und genau den nimmt `prefers-reduced-motion: reduce` weg. Eine Zusage, die
+   * an einer Animation haengt, ist keine. */
+  position: relative;
   display: flex;
   flex-direction: column;
   border-radius: var(--radius-lg);
@@ -3953,9 +3968,9 @@ p.field-hint--warn[hidden] {
   }
 
   .modal-panel {
-    /* Extra top padding for the drag handle */
+    /* Extra top padding for the drag handle. position:relative steht seit #805
+     * in der Basisregel und gilt auf jeder Breite - hier stand es frueher. */
     padding-top: calc(var(--space-4) + 20px);
-    position: relative;
   }
 
   .modal-panel::before {

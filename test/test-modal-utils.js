@@ -325,3 +325,41 @@ test('#805: der Modal-Body bleibt der scrollende Container', () => {
     + 'ist langer Modal-Inhalt hinter dem clip des Panels unerreichbar.',
   );
 });
+
+/* Zweite Runde zu #805: der erste Fix sass nur am Panel und hat den Fehler
+ * damit bloss eine Ebene hoeher geschoben.
+ *
+ * Ab 768px trug .modal-panel kein position:relative - das stand allein in der
+ * Mobile-Media-Query. In der Rolle des Containing Blocks hielt es sich dort nur
+ * durch den transform-Endwert seiner Einfahr-Animation, und den nimmt
+ * `prefers-reduced-motion: reduce` weg. Dann faengt das .sr-only-Input am
+ * fixed .modal-overlay an, dessen `overflow: hidden` dieselbe unsichtbare
+ * Scroll-Box ist: gemessen 1259px Scroll-Hoehe bei 700px Sichtfeld, das Panel
+ * liess sich um 507px hochschieben, Kopfzeile und Schliessen-X weg.
+ *
+ * Beide Enden gehoeren gehalten: dem Overlay die Scroll-Box nehmen UND das
+ * Panel breakpoint-unabhaengig zum Containing Block machen. Eine Zusage, die an
+ * einer Animation haengt, ist keine. */
+
+test('#805: .modal-overlay bekommt overflow:clip, nie hidden', () => {
+  const werte = overflowValuesOf(layoutCss, '.modal-overlay');
+  assert.ok(werte.length > 0, '.modal-overlay setzt gar kein overflow - die Zusage steht nirgends');
+  assert.ok(
+    werte.every((v) => v === 'clip'),
+    `.modal-overlay muss overflow:clip tragen, gefunden: ${werte.join(', ')}. `
+    + 'hidden macht das Overlay programmatisch scrollbar und schiebt das ganze Panel '
+    + 'samt Schliessen-X aus dem Bild (#805).',
+  );
+});
+
+test('#805: .modal-panel ist auf jeder Breite der Containing Block', () => {
+  const regeln = [...eachRule(layoutCss)]
+    .filter((r) => r.selector.split(',').map((s) => s.trim()).includes('.modal-panel'))
+    .filter((r) => /(?:^|;)\s*position\s*:\s*relative/.test(r.body));
+  assert.ok(
+    regeln.some((r) => r.at.length === 0),
+    '.modal-panel braucht position:relative in der BASISREGEL, nicht nur in einer '
+    + `Media-Query (gefunden in: ${regeln.map((r) => r.at.join(' ') || 'Basis').join(' | ') || 'keiner Regel'}). `
+    + 'Sonst haengen absolut positionierte Nachfahren am .modal-overlay statt am Panel (#805).',
+  );
+});
