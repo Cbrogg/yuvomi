@@ -114,10 +114,28 @@
 }
 
 /* EINE Metazeile, und sie bricht nicht um: Countdown-Chip, dann Datum und
- * Alter, dann - wo Platz ist - die Notiz. `--space-1` und nicht `--space-2`,
- * aus demselben Grund wie in der Aufgabenzeile: der Chip hat eigene Polsterung
- * und eine eigene Fläche, zwischen ihm und dem Text liest sich der Abstand
- * optisch als das Doppelte. */
+ * Alter, dann - wo Platz ist - die Notiz. `--space-1` und nicht `--space-2`:
+ * die Teile sind durch einen Mittelpunkt getrennt, und der bringt seinen
+ * eigenen Abstand mit.
+ *
+ * DIE BEGRÜNDUNG FÜR DEN ENGEN ABSTAND WAR EINE FLÄCHE, DIE ES NICHT MEHR GIBT.
+ * Hier stand „der Chip hat eigene Polsterung und eine eigene Fläche, zwischen
+ * ihm und dem Text liest sich der Abstand optisch als das Doppelte" - richtig,
+ * solange alle drei Countdown-Stufen eine Kapsel trugen. Seit v2.23.0 trägt nur
+ * noch „Heute" eine (Skalen-Regel), und ohne sie stand „in 12 Tagen 30.08.2026
+ * · wird 37 Lindas Schwester" als ein einziger Zug da: die Kapsel war der
+ * Trenner gewesen, ohne dass es jemand aufgeschrieben hatte.
+ *
+ * Getrennt wird deshalb jetzt ausdrücklich, mit dem Mittelpunkt über den
+ * `+`-Kombinator - derselbe Träger, den `ageMeta()` schon INNERHALB von
+ * `__when` benutzt („30.08.2026 · wird 37") und den die Vorratsmeldungen seit
+ * derselben Etappe tragen. Der Trenner gehört dem ZWISCHENRAUM, nicht dem
+ * Teil davor oder danach, deshalb `::before` am zweiten Element.
+ *
+ * Die Notiz gewinnt dabei mit: sie hing schon vorher direkt am Alter („wird 37
+ * Lindas Schwester"), und das war nie beabsichtigt - es ist nur nie
+ * aufgefallen, weil links davon eine Kapsel stand und die Zeile dadurch
+ * gegliedert aussah. */
 .birthday-item__meta {
   display: flex;
   align-items: center;
@@ -126,6 +144,12 @@
   min-width: 0;
   overflow: hidden;
   unicode-bidi: plaintext;
+}
+
+.birthday-item__meta > * + *::before {
+  content: '·';
+  margin-inline-end: var(--space-1);
+  color: var(--color-text-tertiary);
 }
 
 .birthday-item__meta > .birthday-chip {

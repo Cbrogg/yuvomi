@@ -1,4 +1,4 @@
-<!-- version: 2.23.0 -->
+<!-- version: 2.23.1 -->
 <!--
   Die `releaseNotes` fuer den Umbrel-App-Store, von Hand fuer JEDEN Release
   geschrieben. `umbrel-publish.yml` nimmt den Text unter diesem Kommentar
@@ -29,20 +29,16 @@
     - Leerzeile zwischen den Absaetzen: der Store rendert ein gefaltetes
       YAML-Blockskalar, dort ist die Leerzeile der Absatzumbruch.
 
-  HINWEIS ZU DIESER VERSION: eine optische Runde, die in vielen Modulen
-  gleichzeitig sichtbar ist - deshalb ein Absatz ueber das, was ueberall
-  passiert (farbige Etiketten tragen ihre Farbe klarer), und ein zweiter ueber
-  die eine Stelle, an der jemand einen konkreten Unterschied bemerkt:
-  Haushaltsmitglieder in der Geburtstagsliste. Keine Migration, keine neue
-  Einstellung, also kein Handlungs-Absatz. Der Zielgroessen-Fix am
-  Aufgaben-Etikett bleibt draussen - er ist eine Pixelgroesse und faellt unter
-  "keine internen Details".
+  HINWEIS ZU DIESER VERSION: ein Fehlerbehebungs-Release mit genau einer
+  Sache, also ein Absatz. Keine Migration, kein Handlungs-Absatz. Der Text
+  nennt, dass die Ursache in 2.23.0 entstanden ist - wer das Update von
+  gestern gelesen hat, soll nicht raten muessen, ob hier etwas Neues kaputt
+  ging. Welche Regel entfallen war und welcher Trenner jetzt steht, bleibt
+  draussen: das ist Bauart.
 
   Draussen bleibt die ganze Bauart: welche Regel wo stand, welcher Container
   eine Scroll-Box war, welche Zahl gemessen wurde, welcher Test es absichert.
 -->
-Coloured labels across the app are easier to tell apart. Where a task's priority, a pantry warning or the status of a stored item used to sit on a faint tinted background that said the same colour twice, it now shows that colour clearly and once - as a small filled dot beside the word, or in the lettering itself. The countdown next to a birthday gained back the middle step it had lost, so a birthday tomorrow no longer looks the same as one in forty days. A number of small badges that were tinted in the colour of the section they already sat in have gone quiet, which leaves more room for the ones that do carry meaning.
+The line under a birthday reads as separate facts again. Yesterday's update took a tinted capsule off the countdown, and with it the only thing that had been keeping the countdown apart from the date, the age and the note - "in 12 days 30.08.2026 turns 37 Linda's sister" ran together as one stretch of text. The parts are separated again, and the note no longer sits flush against the age either, which it had been doing for much longer than a day.
 
-Household members now show their own colour in the birthday list. They already did on the overview, in the calendar and in contacts; here everybody sat on the same grey circle, which made a family member indistinguishable from a relative who has no account. Anyone linked to a household account now appears with their picture or their initials in the colour they picked.
-
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.23.0
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.23.1

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.23.1] - 2026-08-18
+
+### Fixed
+
+- **The line under a birthday reads as separate facts again.** Taking the tinted capsule off the countdown in the last release also took away the only thing that separated it from what follows, and "in 12 days 30.08.2026 · turns 37 Linda's sister" ran together as a single stretch of text. The capsule had been doing that job without anyone writing it down. The parts of the line are now separated the way the rest of the app separates them, with a middle dot - which also fixes something that predates this: the note has always sat flush against the age, and it only looked deliberate because a capsule stood to the left of it.
+
 ## [2.23.0] - 2026-08-18
 
 ### Changed
