@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.22.0] - 2026-08-18
+
+### Added
+
+- **A contact category can be given its own colour.** Seven categories came with one - doctor green, emergency red, and so on - and every category a household added itself got none, which in practice meant they all borrowed the module's colour and looked identical: two categories in the same shade say less than none at all. The reason was structural rather than an oversight. The colour was written as seven style rules keyed by the category's slug, and a rule keyed by a slug can only ever match the seven that ship with the app. It now lives with the category itself, chosen from those same seven tones, and a category without a choice stays deliberately neutral instead of borrowing. Nothing looks different in an existing household: the seven predefined categories keep exactly the colours they had. The choice sits in the category manager, where each row shows its own mark and opens its palette on demand; the mark is the preview, drawn the way the category will appear in the list.
+
+### Changed
+
+- **A mark that names something carries its colour at full strength, everywhere.** The overview learned this in the last two releases - a tinted disc cannot carry a colour, because in the dark a wash only lightens and in the light neighbouring family tones collapse onto the same value. The measurement retired one class and left eleven relatives of the identical build alive under other names: the category disc in Contacts, the module mark in the settings module list, the pregnancy marker in Health, the sender mark on document cards. All of them are settled now, in the direction each one calls for. Something that names an identity is filled with its colour; something that names nothing - a dropzone, an empty preview tile, the avatar of a contact who is not a household member - is neutral rather than faintly tinted with the module it happens to sit in. A colour freely chosen by a household member cannot fill a disc, because nothing can be known about its brightness in advance; those carry their colour beside the content as an edge or a ring, the way calendar blocks already do.
+- **An appointment looks the same in every calendar view.** The last release gave the week and all-day rows a 3px edge in their calendar colour, and left the month and day views on the pale tinted box they had before - the same appointment spoke two languages depending on which view button had been pressed. Both now carry the edge. There are two shapes for an event colour in the calendar and no longer four: the edge on a bar, the dot on an agenda row.
+- **A contact who is a household member shows that person, not the module.** The row displayed the same disc in the module's pink for everybody, while the same people carry their own colour on the overview, in the calendar and in tasks. A linked contact now shows the member's picture or initials in their own colour - and that colour outranks the category, so a household member stays recognisable even inside a category that has one of its own.
+- **The settings list shows which module a page belongs to.** Twenty-nine settings pages carried twenty-nine identical grey glyphs, although twelve of them are about a module whose colour stands as a legend in the sidebar two clicks away. Those twelve now carry it; the rest - account, appearance, notifications, backup - name no module and stay neutral on purpose. The same correction reached the module list itself, where every built-in row had silently fallen back to the app's own violet: the resolver that turns a module into its colour was private to the navigation, so the list had no access to it and nobody noticed while the mark was a pale wash.
+
+
 ## [2.21.1] - 2026-08-18
 
 ### Fixed

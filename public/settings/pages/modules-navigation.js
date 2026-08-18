@@ -19,6 +19,7 @@ import {
   sortNavigationItems,
 } from '/settings/module-order.js';
 import { MODULE_ICON, moduleIconHTML } from '/nav-icons.js';
+import { moduleAccentVar } from '/utils/module-accent.js';
 
 // Baut die geordnete Liste der Navigations-Rows: gesperrte, gewöhnliche, Kitchen
 // (als ein expandierbarer Eintrag) und Drittanbieter-Module — sortiert nach der
@@ -211,7 +212,7 @@ function builtInRowHtml(row) {
   return `
     <div class="settings-module-row settings-module-row--sortable ${stateClass}${lockedClass}${hiddenClass}${row.sortable ? '' : ' settings-module-row--fixed'}" data-module-row-id="${esc(row.orderId)}"${row.sortable ? ` draggable="true" data-module-order-id="${esc(row.orderId)}"` : ''}>
       ${rowControlsHtml(row)}
-      <div class="settings-module-row__icon">
+      <div class="settings-module-row__icon vivid-mark" style="--module-row-accent:${moduleAccentVar(row.id)}">
         ${moduleIconHTML(row.icon)}
       </div>
       <div class="settings-module-row__body">
@@ -247,7 +248,7 @@ function kitchenRowHtml(row) {
   return `
     <div class="settings-module-row settings-module-row--sortable settings-module-row--kitchen ${stateClass}${hiddenClass}" data-module-row-id="${esc(row.orderId)}" draggable="true" data-module-order-id="${esc(row.orderId)}">
       ${rowControlsHtml(row)}
-      <div class="settings-module-row__icon">
+      <div class="settings-module-row__icon vivid-mark" style="--module-row-accent:${moduleAccentVar('kitchen')}">
         ${moduleIconHTML(row.icon)}
       </div>
       <div class="settings-module-row__body">
@@ -284,7 +285,7 @@ function thirdPartyRowHtml(row) {
   return `
     <div class="settings-module-row settings-module-row--sortable ${stateClass}${errorClass}${row.sortable ? '' : ' settings-module-row--fixed'}" data-module-row-id="${esc(row.orderId)}"${row.sortable ? ` draggable="true" data-module-order-id="${esc(row.orderId)}"` : ''}>
       ${rowControlsHtml(row)}
-      <div class="settings-module-row__icon" style="--module-row-accent:${esc(row.accent) || DEFAULT_MODULE_ACCENT}">
+      <div class="settings-module-row__icon vivid-mark" style="--module-row-accent:${esc(row.accent) || DEFAULT_MODULE_ACCENT}">
         ${moduleIconHTML(row.icon)}
       </div>
       <div class="settings-module-row__body">

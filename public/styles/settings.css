@@ -182,10 +182,37 @@
 }
 
 .settings-shell__navigation-domain-icon,
+/* ── DIE MARKE EINES BLATTES ──
+ * Drei Orte zeigen dieselbe Liste (Seitenleiste, mobile Uebersicht,
+ * Desktop-Uebersicht), also tragen sie dieselbe Marke - je in ihrer Groesse.
+ * Wer ein Modul nennt, bekommt `vivid-mark` dazu und traegt dessen Ton im
+ * Vollton; wer keines nennt, bleibt auf dieser neutralen Grundform stehen.
+ * Die Zuordnung steht im `module`-Feld der Registry, die Regel in DESIGN.md
+ * (Colors, Vollton-Regel). */
 .settings-shell__navigation-link-icon {
+  display: grid;
+  place-items: center;
+  width: var(--space-6);
+  height: var(--space-6);
+  flex: 0 0 auto;
+  border-radius: var(--radius-xs);
+}
+
+/* Die neutrale Grundform gilt nur, WO keine Marke sie traegt: `.vivid-mark`
+ * steht in layout.css, diese Datei laedt danach, und bei gleicher Spezifitaet
+ * gewinnt die spaetere - die Marke waere eine Klasse ohne Wirkung. */
+.settings-shell__navigation-link-icon:not(.vivid-mark) {
+  color: var(--color-text-secondary);
+  background: var(--color-surface-2);
+}
+
+.settings-shell__navigation-link-icon-glyph {
   width: var(--space-4);
   height: var(--space-4);
-  flex: 0 0 auto;
+}
+
+.settings-shell__navigation-link--active .settings-shell__navigation-link-icon:not(.vivid-mark) {
+  color: var(--color-accent);
 }
 
 .settings-shell__navigation-list {
@@ -296,12 +323,22 @@
 }
 
 .settings-overview-link__icon {
+  display: grid;
+  place-items: center;
   width: var(--target-base);
   height: var(--target-base);
-  padding: var(--space-3);
+  flex: 0 0 auto;
   border-radius: var(--radius-sm);
+}
+
+.settings-overview-link__icon:not(.vivid-mark) {
   color: var(--module-settings);
   background: var(--color-surface-2);
+}
+
+.settings-overview-link__icon-glyph {
+  width: var(--space-5);
+  height: var(--space-5);
 }
 
 .settings-overview-link__copy {
@@ -693,12 +730,21 @@
   }
 
   .settings-desktop-overview__leaf-icon {
+    display: grid;
+    place-items: center;
     width: var(--target-md);
     height: var(--target-md);
-    padding: var(--space-2);
     border-radius: var(--radius-sm);
+  }
+
+  .settings-desktop-overview__leaf-icon:not(.vivid-mark) {
     color: var(--module-settings);
     background: var(--color-surface-2);
+  }
+
+  .settings-desktop-overview__leaf-icon-glyph {
+    width: var(--space-5);
+    height: var(--space-5);
   }
 
   .settings-desktop-overview__leaf-copy {
@@ -2459,8 +2505,7 @@
   width: var(--target-base);
   height: var(--target-base);
   border-radius: var(--radius-md);
-  color: var(--module-row-accent, var(--color-accent));
-  background: color-mix(in srgb, var(--module-row-accent, var(--color-accent)) var(--tint-surface), transparent);
+  --seal-accent: var(--module-row-accent, var(--color-accent));
 }
 
 .settings-module-row__body {

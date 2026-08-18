@@ -3172,7 +3172,16 @@
         "deleteSubConfirm": "Törli a {{name}} alkategóriát?",
         "deleteSubConfirmDetail": "Törölni csak addig lehet, amíg az alkategória sehol nincs hozzárendelve, így a meglévő tételek érintetlenek maradnak. Maga az alkategória viszont nem tér vissza.",
         "dragHandle": "Húzza az átrendezéshez",
-        "reorderAnnounce": "„{{name}}” most a(z) {{position}}. helyen van a(z) {{total}}-ból."
+        "reorderAnnounce": "„{{name}}” most a(z) {{position}}. helyen van a(z) {{total}}-ból.",
+        "colorPick": "Szín",
+        "colorNone": "Nincs",
+        "colorGreen": "Zöld",
+        "colorOcher": "Okker",
+        "colorViolet": "Ibolya",
+        "colorTeal": "Türkiz",
+        "colorOrange": "Narancs",
+        "colorRed": "Piros",
+        "colorGrey": "Szürke"
     },
     "subscriptions": {
         "tabLabel": "Előfizetések",

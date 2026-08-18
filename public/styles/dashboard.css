@@ -2879,12 +2879,14 @@ svg.weather-forecast__icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  /* Widget-lokaler Akzent, damit die Mischung unten die Birthdays-Farbe trifft
-   * statt des Dashboard-Violetts. Initialen sind Text: der rohe Akzent auf
-   * eigener Tönung lag bei 3.61:1 (Konvention siehe tokens.css). */
-  --module-accent: var(--module-birthdays);
-  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), transparent);
-  color: color-mix(in srgb, var(--module-accent, var(--color-accent)) var(--tint-ink), var(--color-text-primary));
+  /* EIN KONTAKT OHNE HAUSHALTS-VERKNUEPFUNG HAT KEINE IDENTITAETSFARBE, und
+   * genau das soll die Scheibe sagen. v2.19 hat das schon so begruendet
+   * („contacts without a link keep the neutral tint on purpose"), aber der
+   * „neutrale" Ton war der MODULTON - eine Farbaussage, nur eine leise. Wer
+   * verknuepft ist, traegt seine Mitgliedsfarbe; wer es nicht ist, traegt gar
+   * keine. Vollton-Regel, zweiter Zweig (DESIGN.md, Colors). */
+  background: var(--color-fill-well);
+  color: var(--color-text-secondary);
   font-weight: var(--font-weight-bold);
   font-size: var(--text-sm);
 }
@@ -2991,8 +2993,16 @@ svg.weather-forecast__icon {
   align-items: center;
   justify-content: center;
   background: color-mix(in srgb, var(--countdown-accent, var(--color-accent)) var(--tint-surface), transparent);
-  /* DIESE SCHEIBE IST DER EINZIGE HERKUNFTSKANAL DER ZEILE, seit die Zahl
-   * rechts die Dringlichkeit traegt. Sie nimmt das gemessene 35-%-Rezept und
+  /* DER RING TRAEGT DIE FARBE, DIE FLAECHE KANN ES NICHT (Vollton-Regel,
+   * zweiter Zweig - DESIGN.md, Colors). Eine Vollton-FUELLUNG braucht eine
+   * Tinte darauf, und die gibt es hier nicht: --countdown-accent ist bei einem
+   * Termin die frei gewaehlte Farbe des Nutzers, und deren Helligkeit ist
+   * unbestimmt (die Messung im Kommentar unten fand 1.22:1 bei Schwarz). Der
+   * Ring liegt daneben statt darunter und braucht deshalb keine - dieselbe
+   * Antwort wie die 3px-Kante am Kalenderblock, nur rund. */
+  box-shadow: inset 0 0 0 var(--space-0h) var(--countdown-accent, var(--color-accent));
+  /* Tinte und Toenung bleiben unveraendert: sie nehmen das gemessene
+   * 35-%-Rezept und
    * nicht den vollen Akzent, den DESIGN.md fuer Icons nennt: der Satz „Icons
    * tragen den vollen Akzent (dort gilt 3:1)" steht INNERHALB der
    * Akzent-auf-Toenung-Regel, deren Grenze ein Absatz weiter oben gezogen ist -

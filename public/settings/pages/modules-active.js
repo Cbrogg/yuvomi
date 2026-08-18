@@ -14,6 +14,7 @@ import {
   moduleSection,
 } from '/settings/module-order.js';
 import { MODULE_ICON, moduleIconHTML } from '/nav-icons.js';
+import { moduleAccentVar } from '/utils/module-accent.js';
 
 /**
  * Blatt: Einstellungen -> Module -> Aktive Module (adminOnly)
@@ -104,9 +105,14 @@ function statusChipHtml(row) {
 
 function rowHtml(row) {
   const stateClass = row.enabled ? 'settings-module-row--enabled' : 'settings-module-row--disabled';
-  const accentStyle = row.type === 'third-party'
-    ? ` style="--module-row-accent:${esc(row.accent) || DEFAULT_MODULE_ACCENT}"`
-    : '';
+  // Ein Drittanbieter-Modul bringt seine Farbe als Wert mit, ein eingebautes
+  // holt sie aus dem geteilten Auflöser - beide landen in derselben Property.
+  // Ohne den zweiten Zweig fiel jede eingebaute Zeile auf --color-accent
+  // zurück, siehe utils/module-accent.js.
+  const accent = row.type === 'third-party'
+    ? (esc(row.accent) || DEFAULT_MODULE_ACCENT)
+    : moduleAccentVar(row.id);
+  const accentStyle = accent ? ` style="--module-row-accent:${accent}"` : '';
   // Die Kueche traegt keinen eigenen Schalter: sie IST ihre vier Kinder, und ein
   // fuenfter Schalter darueber koennte nur wiederholen, was sie zusammen sagen.
   const toggleAttr = row.type === 'third-party'
@@ -130,7 +136,7 @@ function rowHtml(row) {
 
   return `
     <div class="settings-module-row settings-module-row--fixed ${stateClass}${row.hasError ? ' settings-module-row--error' : ''}" data-module-row-id="${esc(row.id)}">
-      <div class="settings-module-row__icon"${accentStyle}>
+      <div class="settings-module-row__icon vivid-mark"${accentStyle}>
         ${moduleIconHTML(row.icon)}
       </div>
       <div class="settings-module-row__body">

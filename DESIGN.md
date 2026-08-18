@@ -510,6 +510,63 @@ Inhalt, kein Verlauf ueber eine Karte, kein Text auf einer Flaeche, die nicht ge
   **Pruefebene: Regel** (`die Sidebar zeigt die Modultoene als Legende` +
   `die Tab-Bar zeigt dieselbe Legende wie die Sidebar`, `test:frontend-audit`) - zwei Guards,
   weil die beiden Faelle getrennt kaputtgehen koennen.
+- **DIE VOLLTON-REGEL: was eine Identitaet NENNT, traegt seine Farbe im Vollton** (seit
+  2026-08-18). Eine 16-%-Waschung kann eine Farbaussage nicht tragen, und das ist gemessen,
+  nicht empfunden: im Dark HELLT eine Beimischung fast nur auf (Buntheit 4-8 von 24-73 des
+  Volltons, `dark-chroma.mjs`), im Light kollabieren benachbarte Familientoene auf denselben
+  Wert - Notizen, Dokumente und Inventar teilen die Familie `records` und hatten bei 16 %
+  BITWEISE denselben Scheibengrund. Die Toenung loescht genau den Unterschied, den sie
+  zeigen soll. Die Regel hat zwei Zweige, und welcher gilt, entscheidet die HERKUNFT der
+  Farbe:
+  - **Kuratierter Ton** (Modul-/Familienton, Kategoriefarbe aus einer festen Liste): die
+    Farbe IST die Flaeche, die Tinte ist `--color-ink-on-vivid`. Traeger ist `.vivid-mark`
+    (layout.css) - dieselbe Regel, die auch das `.module-seal` haeutet, damit Sheen und
+    Tinte nicht auseinanderlaufen koennen; die Geometrie bleibt bei der jeweiligen Marke.
+    Gemessen ueber alle betroffenen Marken in beiden Themes, mit und ohne Sheen:
+    **light 3,65-7,17:1, dark 6,17-12,24:1** (`.impeccable/redesign-tools/vollton-marken.mjs`) -
+    dasselbe Feld, das schon am Siegel steht.
+  - **Freie Nutzerfarbe** (Kalenderfarbe, Terminfarbe, Abo-Farbe): der Vollton steht NEBEN
+    dem Inhalt, nicht darunter - als 3px-Kante, Ring oder Punkt. Eine Flaeche braucht eine
+    Tinte, und auf einer frei gewaehlten Helligkeit gibt es keine (ein schwarzer Termin lag
+    bei 1.22:1). Eine Kante braucht keine.
+
+  **DIE GEGENRICHTUNG GEHOERT ZUR REGEL: wer nichts nennt, bleibt neutral.** Ein Platzhalter
+  - die Dropzone, das leere Vorschaufeld, der Avatar eines Kontakts ohne Haushalts-
+  Verknuepfung - sagte mit einer Modultoenung „Dokumente" auf einer Seite, die das schon
+  beantwortet hat. Diese Flaechen sind neutral (`--color-fill-well` plus Sekundaertinte,
+  also der dokumentierte Well und keine eigene Erfindung).
+
+  **UND SIE GILT AUCH FUER DEN ORT, AN DEM DIE FARBE GEWAEHLT WIRD.** Die sieben Toene der
+  Kontakt-Kategorien standen als sieben Regeln `.contact-group--<key>` in contacts.css -
+  ein Selektor auf den Schluessel, der per Konstruktion nur die SEED-Kategorien treffen
+  kann. Seit #357 legt der Haushalt eigene an, und die fielen alle auf den Modulton
+  zurueck: „Familie" und „Dienstleistungen" sahen gleich aus. Seit Migration 152 traegt
+  die Kategorie ihren Ton SELBST, waehlbar aus genau diesen sieben (Endpoint
+  `/contacts/meta`, Palette im Kategorie-Manager), und ohne Wahl bleibt sie neutral.
+  Gespeichert wird der Token-Ausdruck, nicht ein Hex-Wert - die Toene sind
+  themenabhaengig, und ein Hex koennte den Dunkelmodus nicht bedienen (dasselbe Muster
+  wie bei den Kontofarben des Budgets).
+
+  **WARUM EINE ALLOWLIST UND KEIN FREIER FARBWAEHLER:** die Kategoriescheibe ist eine
+  Vollton-Marke, ihre Tinte ist die feste `--color-ink-on-vivid`. Das haelt nur ueber
+  kuratierten Toenen. Eine frei gewaehlte Farbe muesste nach dem zweiten Zweig als Kante
+  erscheinen - und damit gaebe es wieder zwei Gesichter fuer eine Marke.
+
+  **DER ANLASS IST EINE WIEDERHOLUNG, und die ist die eigentliche Lehre.** Die Messung von
+  2026-08-17 hat `module-seal--vivid` und `--seal-base` gestrichen und einen Guard
+  hinterlassen, der die KLASSE nannte. Elf Geschwister derselben Bauart lebten unter anderen
+  Namen weiter - die Kategoriescheibe der Kontakte, das Absenderzeichen der Dokumentenkarte,
+  das Modulzeichen der Einstellungs-Modulliste, die Marke der geteilten Ausgaben, das
+  Schwangerschaftszeichen -, und im Kalender hatte dieselbe Etappe zwei von vier
+  Ereignis-Ansichten umgestellt: Woche und Ganztag trugen die Vollton-Kante, Monat und Tag
+  nicht. Ein Termin sprach zwei Sprachen, je nachdem welchen Ansichtsknopf man gedrueckt
+  hatte. **Ein Guard ueber eine Namensliste deckt keine Regel ab, sondern N Dateien** - zum
+  dritten Mal in diesem Projekt.
+  **Pruefebene: Signatur** (`eine Marke nennt ihre Identitaet im Vollton, nicht zweimal als
+  Waschung`, `test:frontend-audit`). Gesucht wird die BAUART, nicht der Name: ein bemessener
+  Behaelter (`width` UND `height` - eine Marke ist bemessen, ein Chip waechst mit seinem
+  Text), dessen Hintergrund eine Identitaetsfarbe als Waschung fuehrt und der dieselbe Farbe
+  im Vordergrund noch einmal nennt, ohne sie irgendwo voll zu tragen.
 
 ### Tertiary
 - **Semantik im Apple-Vokabular, AA-vertieft**: Success (Apple Green, 5.1:1), Warning
@@ -2021,8 +2078,18 @@ Angabe braeuchte einen zweiten Timer, nur damit sie sich selbst aktuell haelt.
   Inline-Start-Seite), sobald der Block sie tragen kann, und Fuellung wie Tinte bei ihren
   gemessenen Rezepten lassen (Vollton-Kanten-Regel).
 - **Do** eine Person ueberall in ihrer Identitaetsfarbe zeigen, und zwar auf der
-  Vollton-Scheibe; wer keine hat (unverknuepfter Kontakt), behaelt die Modul-Toenung, statt
-  eine gehashte zu bekommen (Identitaetsfarben-Regel).
+  Vollton-Scheibe; wer keine hat (unverknuepfter Kontakt), bleibt NEUTRAL, statt eine
+  gehashte oder die Modul-Toenung zu bekommen (Identitaetsfarben-Regel). Der Modulton stand
+  hier bis 2026-08-18 als „neutral" - er ist es nicht, er ist eine leise Farbaussage, und
+  sie sagte „Geburtstage" auf einer Seite, die das schon beantwortet hat.
+  **Die PERSON schlaegt dabei ihre Kategorie:** eine Kontaktzeile mit
+  `family_user_id` traegt Bild und Farbe des Mitglieds, keine Kategoriescheibe - und ihre
+  Tinte kommt aus `getReadableTextColor`, weil eine Avatarfarbe frei gewaehlt und ihre
+  Helligkeit damit unbestimmt ist.
+- **Do** eine Marke, die eine Identitaet NENNT, ihre Farbe im VOLLTON tragen lassen:
+  kuratierter Ton als Flaeche (Klasse `vivid-mark`, Tinte `--color-ink-on-vivid`), freie
+  Nutzerfarbe als Kante, Ring oder Punkt daneben. Und **Do** neutral bleiben, wo nichts
+  genannt wird - ein Platzhalter braucht keine Herkunft (Vollton-Regel).
 - **Do** einer Zahl, die neben einer anderen Zahl steht, ihr Wort mitgeben („wird 37" neben
   „13 Tage"); stand das Wort bisher nur unsichtbar im `title`, ist es sichtbar faellig -
   Kopfrechnen ist keine Gestaltung.
@@ -2070,6 +2137,13 @@ Angabe braeuchte einen zweiten Timer, nur damit sie sich selbst aktuell haelt.
   ein Signal ist und im anderen keines, ist kein Kanal. Und **Don't** sie ueber eine
   Waschung tragen lassen: eine Beimischung hellt im Dark fast nur auf. Der Kanal fuer
   Zugehoerigkeit ist das Vollton-Siegel (Widget-Kopf, 2026-08-17; davor Absenderband).
+- **Don't** dieselbe Identitaetsfarbe zweimal blass nennen - getoente Flaeche UND blasser
+  Glyph darauf. Das ist die zurueckgenommene Fassung des Siegels unter anderem Namen, und
+  sie hat elf Mal ueberlebt, weil der Guard von damals die Klasse nannte statt der Regel.
+- **Don't** eine Regel dieser Art nur dort anwenden, wo sie aufgefallen ist. Die
+  Vollton-Kante erreichte zwei von vier Kalender-Ansichten, und das Vollton-Siegel eine von
+  zwoelf Marken - beide Male war die Etappe „fertig", waehrend dasselbe Objekt zwei
+  Sprachen sprach. Wer eine Regel setzt, sucht ihre Geschwister ueber die BAUART.
 - **Don't** einen Zustand ueber `opacity` auf dem eigenen Inhalt zeigen; eine Kachel, die
   ihren Text schlechter lesbar macht, um Anfassbarkeit zu signalisieren, steigt stattdessen
   eine Sprosse der Toenungsskala.

@@ -1,4 +1,4 @@
-<!-- version: 2.21.1 -->
+<!-- version: 2.22.0 -->
 <!--
   Die `releaseNotes` fuer den Umbrel-App-Store, von Hand fuer JEDEN Release
   geschrieben. `umbrel-publish.yml` nimmt den Text unter diesem Kommentar
@@ -29,23 +29,29 @@
     - Leerzeile zwischen den Absaetzen: der Store rendert ein gefaltetes
       YAML-Blockskalar, dort ist die Leerzeile der Absatzumbruch.
 
-  HINWEIS ZU DIESER VERSION: drei Fehlerbehebungen, alle rein im Verhalten,
-  keine Migration und keine neue Pflicht-Einstellung - also kein
-  Handlungs-Absatz. Ein Absatz je Fehler, jeweils aus der Sicht dessen, der ihn
-  bemerkt: ein Termin stand an einem Tag, an dem er nicht ist; die Uebersicht
-  zeigte nachts das Essen von gestern; ein Dialog liess sich nicht mehr
-  schliessen. Draussen bleibt alles, was die Ursache beschreibt (wie das
-  Enddatum gezaehlt wurde, UTC gegen lokale Zeitzone, wie der Browser ein
-  Auswahlfeld behandelt) - das steht im CHANGELOG. Beim Kalender wird
-  ausdruecklich erwaehnt, dass echte ueber Mitternacht laufende Termine
-  unveraendert bleiben: wer den Fehler kannte, soll wissen, dass nichts
-  anderes mitverschoben wurde. Beim Zeitzonen-Fehler ist die Tageszeit genannt,
-  weil sie erklaert, warum ihn die meisten nie gesehen haben.
+  HINWEIS ZU DIESER VERSION: eine neue Funktion und drei Verbesserungen am
+  Aussehen, keine neue Pflicht-Einstellung. Die Datenbank-Migration bekommt
+  KEINEN Handlungs-Absatz - sie laeuft beim Start von selbst und verlangt
+  nichts vom Haushalt; stattdessen steht im Farb-Absatz ausdruecklich, dass
+  bestehende Kategorien ihre Farben behalten, denn das ist die Frage, die sich
+  jemand beim Update stellt. Erster Absatz ist die WAHLBARE Kategoriefarbe,
+  weil sie das Einzige ist, das jemand aktiv benutzen kann.
+
+  Draussen bleibt alles, was nur die Bauart beschreibt: warum eine Toenung
+  keine Farbe tragen kann, welche Regel wo stand, welcher Endpunkt ein Feld
+  dazubekommen hat. Der Vollton-Absatz nennt deshalb keine Regel, sondern das,
+  was man sieht - Marken, die vorher blass waren und sich nicht unterscheiden
+  liessen. Die Einstellungs- und Kalender-Absaetze sind bewusst kurz: sie sind
+  Verfeinerungen, keine Neuigkeiten, und ein Absatz je Sache reicht.
 -->
-An appointment that ends at midnight now stays on the day it belongs to. An event running from nine in the evening until midnight also appeared on the following day, and there it was shown as an all-day event: in the month grid it filled two days, in the week and day views it sat in the all-day row, and the agenda listed it under the next day as well. Appointments that genuinely run past midnight are unchanged, and so are all-day events spanning several days.
+Contact categories can now have their own colour. Seven of them came with one, and every category you added yourself had none - in practice they all took on the module's colour and were impossible to tell apart. You can now pick a colour for each category in the "Manage categories" dialog, where every row shows its own mark and opens a palette when you tap it. Your existing categories keep exactly the colours they had, and one you leave without a colour stays deliberately plain.
 
-The overview now reads "today" from your own clock. Parts of it went by UTC instead, while a meal's date or a task's due date is the calendar day you typed in. If your time zone is ahead of UTC, the overview showed yesterday's meals during the early hours of the morning - in central Europe between midnight and two - and on the first of a month it could still show the previous month's budget. If your zone is behind UTC, the same drift landed on the next day late in the evening.
+Marks that name something now show their colour properly. Small round or square marks that tell you which module, category or person something belongs to used to be washed out, which in dark mode meant they barely showed a colour at all and in light mode made neighbouring categories look identical. They are now filled with their colour. The other way round applies too: a mark that names nothing in particular - a drop area, an empty preview tile - is plainly grey instead of faintly tinted.
 
-Dialogs no longer move while you are filling them in. In the new-task dialog, opening the repeat interval under "More settings" pushed the whole window upwards until its title and close button were off the screen, with no way to bring them back - the dialog could only be left through Save or Cancel. Dialogs now stay put; only their contents scroll, as before.
+A contact who is also a member of your household now shows that person's photo or initials in their own colour, the same one they carry on the overview, in the calendar and in tasks. Their own colour comes first, so you still recognise them inside a category that has one of its own.
 
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.21.1
+Appointments look the same in every calendar view. The week and all-day rows already carried a coloured edge in their calendar's colour; the month and day views kept the old pale box, so the same appointment looked different depending on which view you had open. Both now show the edge.
+
+The settings list shows which module a page belongs to. Pages about the kitchen, the calendar, tasks, health, contacts, documents or rewards carry that module's colour; the rest - your account, appearance, notifications, backup - stay plain, because they are not about a single module.
+
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.22.0

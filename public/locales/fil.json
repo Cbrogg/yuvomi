@@ -3172,7 +3172,16 @@
         "deleteSubConfirm": "Tanggalin ang subkategoryang \"{{name}}\"?",
         "deleteSubConfirmDetail": "Gumagana lang ang pagtanggal habang hindi pa nakatalaga ang subkategorya kahit saan, kaya hindi nagagalaw ang mga umiiral na entry. Hindi na maibabalik ang subkategorya mismo.",
         "dragHandle": "I-drag para muling ayusin",
-        "reorderAnnounce": "Nasa posisyon {{position}} ng {{total}} ngayon ang \"{{name}}\"."
+        "reorderAnnounce": "Nasa posisyon {{position}} ng {{total}} ngayon ang \"{{name}}\".",
+        "colorPick": "Kulay",
+        "colorNone": "Wala",
+        "colorGreen": "Berde",
+        "colorOcher": "Okre",
+        "colorViolet": "Biyoleta",
+        "colorTeal": "Teal",
+        "colorOrange": "Kahel",
+        "colorRed": "Pula",
+        "colorGrey": "Abo"
     },
     "subscriptions": {
         "tabLabel": "Mga Subscription",

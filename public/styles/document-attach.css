@@ -299,8 +299,13 @@ a.doc-attach__chip-name:focus-visible {
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-md);
-  color: var(--module-accent);
-  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), transparent);
+  /* NENNT NICHTS: ein Platzhalter, kein Absenderzeichen. Er trug den Modulton
+   * als Waschung und sagte damit „Dokumente" auf einer Seite, die das schon
+   * beantwortet. Neutral ist hier die Aussage, nicht der Rückzug - siehe die
+   * Vollton-Regel in DESIGN.md (Colors): entweder es nennt etwas, dann im
+   * Vollton, oder es nennt nichts, dann neutral. */
+  color: var(--color-text-secondary);
+  background: var(--color-fill-well);
 }
 
 .document-dropzone__icon svg {

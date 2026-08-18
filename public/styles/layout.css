@@ -641,10 +641,37 @@ html:has(.search-overlay--visible) yuvomi-install-prompt {
   width: var(--target-sm);
   height: var(--target-sm);
   border-radius: var(--radius-full);
+}
+
+/* ── DAS MATERIAL EINER MARKE, EINMAL ──
+ * Die Vollton-Regel (DESIGN.md, Colors) sagt: was eine Identitaet NENNT,
+ * traegt seine Farbe im Vollton. Das Siegel war der erste Traeger dieser
+ * Regel; die Modulseiten hatten daneben sieben eigene Marken in der
+ * zurueckgenommenen BLASSEN Fassung - 16-%-Waschung im Grund, dieselbe Farbe
+ * blass darueber. Genau die Bauart, die `--vivid` und `--seal-base` gekostet
+ * hat, nur unter anderen Klassennamen; der Guard von damals nannte eine
+ * Klasse, nicht die Regel, und hat sie deshalb nie gesehen.
+ *
+ * WARUM ZWEI SELEKTOREN UND NICHT EINE KLASSE: das Siegel besitzt seine
+ * GEOMETRIE (Scheibe, drei Groessenrollen). Die Marken einer Modulseite haben
+ * ihre eigene - 42px-Quadrat auf der Dokumentenkarte, 40px-Scheibe im
+ * Widget - und borgen nur die HAUT. Eine gemeinsame Regel statt zweier Kopien,
+ * damit der Sheen und die Tinte nicht auseinanderlaufen koennen; getrennte
+ * Geometrie, damit keine Flaeche ihre Form aendern muss, um Farbe zu tragen.
+ *
+ * `--seal-accent` ist der einzige Parameter. Wer eine andere Quelle fuehrt
+ * (Kategorie, Termin, Mitglied), setzt sie dort - siehe die Fundstellen in
+ * contacts.css, documents.css, settings.css, split-expenses.css. */
+.module-seal,
+.vivid-mark {
   background:
     linear-gradient(to bottom, var(--glass-sheen), transparent 55%),
     var(--seal-accent);
   color: var(--color-ink-on-vivid);
+}
+
+.vivid-mark {
+  --seal-accent: var(--module-accent, var(--color-accent));
 }
 
 .module-seal svg {

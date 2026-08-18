@@ -866,16 +866,30 @@ single unparsable vCard, suspends deletion entirely and logs a warning — an in
 must never be read as "everything else was deleted".
 
 ### Contact Categories (migration v84)
-DB-backed, customizable category list for contacts. Replaces the old hardcoded German-named set. The seven predefined keys (`doctor`, `school`, `authority`, `insurance`, `craftsman`, `emergency`, `misc`) carry a stable slug key (which also drives the per-category color tint and, together with `icon`, the list grouping), a localizing `label_key`, and a Lucide `icon`; the pre-existing German category values (`Arzt`, `Behörde`, …) are migrated to these keys. User-added categories store their `name` and default to the `tag` icon. A "Manage categories" button in the contacts toolbar opens the shared `yuvomi-category-manager` modal to add, rename, reorder, and delete categories, with the same in-use / last-category deletion guards as Tasks and Budget.
+DB-backed, customizable category list for contacts. Replaces the old hardcoded German-named set. The seven predefined keys (`doctor`, `school`, `authority`, `insurance`, `craftsman`, `emergency`, `misc`) carry a stable slug key (which, together with `icon`, drives the list grouping), a localizing `label_key`, a Lucide `icon`, and a `color`; the pre-existing German category values (`Arzt`, `Behörde`, …) are migrated to these keys. User-added categories store their `name` and default to the `tag` icon. A "Manage categories" button in the contacts toolbar opens the shared `yuvomi-category-manager` modal to add, rename, recolor, reorder, and delete categories, with the same in-use / last-category deletion guards as Tasks and Budget.
 
 | Column | Type | Constraint |
 |--------|------|-----------|
-| key | TEXT | PRIMARY KEY — stable slug (also the CSS color-tint slug) |
+| key | TEXT | PRIMARY KEY — stable slug |
 | name | TEXT | custom display name; NULL for predefined (localized) categories |
 | label_key | TEXT | i18n key for predefined categories; NULL for custom |
 | icon | TEXT | NOT NULL DEFAULT `tag` — Lucide icon name |
+| color | TEXT | nullable (migration v152) — one of the seven curated tones, stored as the token expression (`var(--color-success)`); NULL means no tone |
 | sort_order | INTEGER | NOT NULL |
 | created_at | TEXT | |
+
+**Category colour (migration v152):** the tone was written as seven CSS rules keyed by the slug
+(`.contact-group--<key>`), which by construction could only ever match the predefined keys — every
+user-added category fell back to the module tint, so two of them were indistinguishable. It now
+lives with the category. Stored is the **token expression**, not a hex value: the tones are
+theme-dependent (`--color-success` is `#1E7B35` in light and `#30D158` in dark) and a hex could not
+serve dark mode; the same convention the budget account colours use. The seven selectable tones are
+an **allowlist** served by `GET /api/v1/contacts/meta` as `categoryColors`, and `PUT
+/api/v1/contacts/categories/:key` rejects anything outside it with 400. The allowlist is not a
+limitation but the precondition for the mark: the category disc is a full-tone mark whose ink is the
+fixed `--color-ink-on-vivid`, which only holds over curated tones (see the full-tone rule in
+DESIGN.md). Sending `{ color }` without `name` changes only the tone — a predefined category keeps
+its `label_key` and stays localized.
 
 ### Contact Phones
 Multiple phone numbers per contact with label and primary flag.
@@ -2343,7 +2357,8 @@ Responsive grid with colored sticky notes. Phones use one readable column; wider
 
 - CRUD with category filter
 - **Separate first/last name (v1.38.0):** the contact dialog has two name fields grouped under one required marker ("Name \*") — at least one of them must be filled. The display name is composed as `First [Middle] Last`, and the list sorts by last name, so contacts read the same no matter which CardDAV server they came from. A contact that has no stored components yet is pre-filled by splitting its display name at the last word; that guess is only saved when a name field is actually edited. A category the household does not (or no longer) manages is offered as its own option instead of silently falling back to the first entry — see [structured name components](#contacts)
-- **Customizable categories:** a "Manage categories" button in the toolbar opens the shared `yuvomi-category-manager` modal to add, rename, reorder, and delete contact categories (predefined set localized with per-category icons and color tints, custom categories added inline). Deletion is blocked while a category is in use or when it is the last one — see [Contact Categories data model](#contact-categories-migration-v84)
+- **Customizable categories:** a "Manage categories" button in the toolbar opens the shared `yuvomi-category-manager` modal to add, rename, recolor, reorder, and delete contact categories (predefined set localized with per-category icons and tones, custom categories added inline). Each row shows its own mark — the same full-tone disc the contact list draws, so the row is the preview — and opens a seven-tone palette on demand; the palette is a `radiogroup` with arrow-key navigation. Deletion is blocked while a category is in use or when it is the last one — see [Contact Categories data model](#contact-categories-migration-v84)
+- **A linked household member outranks their category:** a contact with `family_user_id` shows that member's photo or initials in their **own** avatar colour, not the category disc — the same person, the same colour, everywhere (see the identity-colour rule in DESIGN.md). `GET /api/v1/contacts` and `GET /api/v1/contacts/:id` carry `family_display_name`, `family_avatar_color` and `family_avatar_data` for that purpose; they are `NULL` on unlinked contacts. Because the avatar colour is freely chosen, the initials take a computed readable ink rather than the fixed one used over curated tones
 - **Multi-value fields:** multiple phones, emails, and addresses per contact, each with a label (mobile, work, home, etc.) and optional `isPrimary` flag
 - **Additional fields:** organization, job_title, birthday, website, photo, nickname
 - Phone: `tel:` link, email: `mailto:` link

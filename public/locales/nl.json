@@ -3172,7 +3172,16 @@
         "deleteSubConfirm": "Subcategorie \"{{name}}\" verwijderen?",
         "deleteSubConfirmDetail": "Verwijderen kan alleen zolang de subcategorie nergens is toegewezen, dus bestaande items blijven ongemoeid. De subcategorie zelf keert niet terug.",
         "dragHandle": "Sleep om te herschikken",
-        "reorderAnnounce": "\"{{name}}\" staat nu op positie {{position}} van {{total}}."
+        "reorderAnnounce": "\"{{name}}\" staat nu op positie {{position}} van {{total}}.",
+        "colorPick": "Kleur",
+        "colorNone": "Geen",
+        "colorGreen": "Groen",
+        "colorOcher": "Oker",
+        "colorViolet": "Violet",
+        "colorTeal": "Turkoois",
+        "colorOrange": "Oranje",
+        "colorRed": "Rood",
+        "colorGrey": "Grijs"
     },
     "subscriptions": {
         "tabLabel": "Abonnementen",

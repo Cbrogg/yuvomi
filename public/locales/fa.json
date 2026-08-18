@@ -3172,7 +3172,16 @@
         "deleteSubConfirm": "زیردسته «{{name}}» حذف شود؟",
         "deleteSubConfirmDetail": "حذف فقط تا زمانی ممکن است که زیردسته در هیچ جایی اختصاص داده نشده باشد، بنابراین ورودی‌های موجود دست‌نخورده می‌مانند. خود زیردسته بازنمی‌گردد.",
         "dragHandle": "برای مرتب‌سازی بکشید",
-        "reorderAnnounce": "\"{{name}}\" اکنون در جایگاه {{position}} از {{total}} قرار دارد."
+        "reorderAnnounce": "\"{{name}}\" اکنون در جایگاه {{position}} از {{total}} قرار دارد.",
+        "colorPick": "رنگ",
+        "colorNone": "هیچ",
+        "colorGreen": "سبز",
+        "colorOcher": "خاکی",
+        "colorViolet": "بنفش",
+        "colorTeal": "فیروزه‌ای",
+        "colorOrange": "نارنجی",
+        "colorRed": "قرمز",
+        "colorGrey": "خاکستری"
     },
     "subscriptions": {
         "tabLabel": "اشتراک‌ها",

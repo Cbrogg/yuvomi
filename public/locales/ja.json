@@ -3172,7 +3172,16 @@
         "deleteSubConfirm": "サブカテゴリー「{{name}}」を削除しますか？",
         "deleteSubConfirmDetail": "削除できるのは、そのサブカテゴリがどこにも割り当てられていない間だけです。既存の項目はそのまま残りますが、サブカテゴリ自体は戻りません。",
         "dragHandle": "ドラッグして並べ替え",
-        "reorderAnnounce": "「{{name}}」は{{total}}件中{{position}}番目になりました。"
+        "reorderAnnounce": "「{{name}}」は{{total}}件中{{position}}番目になりました。",
+        "colorPick": "色",
+        "colorNone": "なし",
+        "colorGreen": "緑",
+        "colorOcher": "オーカー",
+        "colorViolet": "バイオレット",
+        "colorTeal": "ティール",
+        "colorOrange": "オレンジ",
+        "colorRed": "赤",
+        "colorGrey": "グレー"
     },
     "subscriptions": {
         "tabLabel": "サブスクリプション",

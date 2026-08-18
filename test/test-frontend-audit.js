@@ -6034,7 +6034,17 @@ test('dashboard „Heute wichtig" is one inset-grouped list, not a tile grid', (
   // Reißt eines der drei Glieder, ist die Kachel wieder ein Eigenbau.
   assert.match(iconBody, /--seal-accent:\s*var\(--today-card-accent\)/, 'the icon well forwards its tone accent to the seal');
   const layout = read('../public/styles/layout.css');
-  const sealBody = cssRuleBody(layout, '\n.module-seal');
+  // JEDE REGEL, DIE DAS SIEGEL ANSPRICHT, nicht die eine, die so heisst: seit
+  // 2026-08-18 teilt es seine HAUT mit `.vivid-mark` (die Marken der
+  // Modulseiten borgen sie, ohne ihre Geometrie aufzugeben), und damit steht
+  // das Rezept in einer Regel mit zwei Selektoren. Ein Guard, der nur
+  // `.module-seal {` sucht, faellt genau ueber diese Zusammenlegung - und
+  // haette sie als Rueckbau des Volltons gemeldet, obwohl sie ihn ausweitet.
+  const sealBody = [...eachRule(layout)]
+    .filter((r) => r.selector.split(',').some((s) => s.trim() === '.module-seal'))
+    .map((r) => r.body)
+    .join('\n');
+  assert.ok(sealBody, 'keine .module-seal-Regel gefunden - die Signatur greift nicht mehr');
   // DAS SIEGEL HAT EIN GESICHT, UND ES IST DER VOLLTON (2026-08-17).
   //
   // Hier stand das Toenungsrezept (16 % gegen einen parametrischen Grund
@@ -11254,6 +11264,135 @@ test('jede Stufe der Toenungsskala hat mindestens einen Nutzer', () => {
     declared.filter((t) => !used.has(t)),
     [],
     'Eine Stufe ohne Nutzer ist eine Einladung, sie beim naechsten Mal falsch zu belegen.',
+  );
+});
+
+/**
+ * DIE VOLLTON-REGEL: was eine IDENTITAET NENNT, traegt seine Farbe im Vollton.
+ *
+ * WARUM ES DIESEN GUARD BRAUCHT, und die Antwort ist eine Wiederholung. Die
+ * Messung von 2026-08-17 (dark-chroma.mjs) hat zwei Dinge gezeigt: im Dark
+ * HELLT eine 16-%-Beimischung nur auf, statt zu faerben (Buntheit 4-8 von
+ * 24-73 des Volltons), und im Light kollabieren benachbarte Familientoene auf
+ * denselben Wert - Notizen, Dokumente und Inventar teilen die Familie
+ * „records" und hatten bei 16 % BITWEISE denselben Scheibengrund. Daraus
+ * folgte die Streichung von `module-seal--vivid` und `--seal-base`, und ein
+ * Guard darueber. DER GUARD NANNTE DIE KLASSE, NICHT DIE REGEL. Also hat er
+ * genau eine Bauart geschuetzt, waehrend elf Geschwister derselben Bauart
+ * unter anderen Namen weiterlebten: die Kategoriescheibe der Kontakte, das
+ * Absenderzeichen der Dokumentenkarte, das Modulzeichen der
+ * Einstellungs-Modulliste, die Marke der geteilten Ausgaben, das
+ * Schwangerschaftszeichen. Dieselbe Lehre wie bei der Kueche und beim Budget:
+ * ein Guard ueber eine Namensliste deckt keine Regel ab, sondern N Dateien.
+ *
+ * DIE SIGNATUR IST DIE BAUART, NICHT DER NAME. Gesucht wird ein BEHAELTER
+ * (`width` UND `height` gesetzt - eine Marke ist bemessen, ein Chip waechst mit
+ * seinem Text), dessen Hintergrund eine Identitaetsfarbe als WASCHUNG fuehrt
+ * (`--tint-wash`/`--tint-surface`) und der DIESELBE Farbe noch einmal im
+ * Vordergrund nennt. Zweimal blass ueber dieselbe Aussage - das ist die
+ * zurueckgenommene Fassung, und sie ist an ihrer Doppelung erkennbar.
+ *
+ * ZWEI WEGE FUEHREN HERAUS, und beide sind eine Antwort, kein Schlupfloch:
+ *
+ *   1. VOLLTON. Ein KURATIERTER Ton (Modul-/Familienton) traegt die Flaeche,
+ *      der Glyph nimmt `--color-ink-on-vivid`. Gemessen fuer jede Marke dieser
+ *      Runde in beiden Themes, mit und ohne Sheen: schlechtester Fall light
+ *      3.65:1, dark 6.17:1 (`.impeccable/redesign-tools/vollton-marken.mjs`) -
+ *      dasselbe Feld, das schon am `.module-seal` steht.
+ *   2. KANTE, RING ODER PUNKT. Eine FREI GEWAEHLTE Nutzerfarbe kann keine
+ *      Flaeche tragen, weil ihre Helligkeit unbestimmt ist (ein schwarzer
+ *      Termin lag bei 1.22:1). Sie steht deshalb NEBEN dem Inhalt statt
+ *      darunter: `border-inline-start: 3px solid` am Kalenderblock, der
+ *      Inset-Ring an der Countdown-Scheibe, der 8px-Punkt an der Agendazeile.
+ *      Dort braucht sie keine Tinte, also auch keine Zusicherung ueber sie.
+ *
+ * WER NICHTS NENNT, FAELLT NICHT UNTER DIE REGEL. Ein Platzhalter - die
+ * Dropzone, das Vorschaufeld ohne Bild, der Avatar eines Kontakts ohne
+ * Haushalts-Verknuepfung - sagt mit einer Modultoenung „Dokumente" auf einer
+ * Seite, die das schon beantwortet hat. Solche Flaechen sind in dieser Runde
+ * NEUTRAL geworden statt bunt; sie fuehren danach gar keine Identitaetsfarbe
+ * mehr und liegen damit ausserhalb der Signatur, ohne eine Ausnahme zu
+ * brauchen.
+ */
+const MARK_SOURCE = /--(module-[\w-]+|meal-[\w-]+|weather-[\w-]+|cycle-[\w-]+|layer-color|note-color|holi-color|ev-color|c-accent|cat|active-module-accent|item-module-accent|today-card-accent|widget-accent|subscription-color|countdown-accent|module-row-accent|seal-accent|rw-[\w-]+)\b/;
+const MARK_WASH = /var\(--tint-(wash|surface)\)/;
+/** Traeger eines Volltons: die Farbe ohne `color-mix()` drumherum. */
+const MARK_VIVID_PROP = /^(background(-color|-image)?|border(-[\w-]+)?|box-shadow|outline|fill)$/;
+
+/** Deklarationen eines Regelrumpfs, an Semikolons AUSSERHALB von Klammern. */
+function declarations(body) {
+  const out = [];
+  let depth = 0;
+  let cur = '';
+  for (const ch of body) {
+    if (ch === '(') depth += 1;
+    else if (ch === ')') depth -= 1;
+    if (ch === ';' && depth === 0) { out.push(cur); cur = ''; continue; }
+    cur += ch;
+  }
+  if (cur.trim()) out.push(cur);
+  return out
+    .map((d) => [d.slice(0, d.indexOf(':')).trim(), d.slice(d.indexOf(':') + 1).trim()])
+    .filter(([prop]) => prop);
+}
+
+/** Derselbe Wert ohne seine `color-mix()`-Aufrufe - was bleibt, ist Vollton. */
+function withoutColorMix(value) {
+  let out = '';
+  let depth = 0;
+  for (let i = 0; i < value.length; i += 1) {
+    if (depth === 0 && value.startsWith('color-mix(', i)) { depth = 1; i += 9; continue; }
+    if (depth > 0) {
+      if (value[i] === '(') depth += 1;
+      else if (value[i] === ')') depth -= 1;
+      continue;
+    }
+    out += value[i];
+  }
+  return out;
+}
+
+test('eine Marke nennt ihre Identitaet im Vollton, nicht zweimal als Waschung', () => {
+  const offenders = [];
+  let seen = 0;
+  for (const file of readdirSync(new URL('../public/styles/', import.meta.url)).filter((n) => n.endsWith('.css'))) {
+    if (file === 'tokens.css') continue;
+    for (const rule of eachRule(read(`../public/styles/${file}`))) {
+      const decls = declarations(rule.body);
+      // Ein BEHAELTER: bemessen statt vom Text getragen.
+      if (!decls.some(([p]) => p === 'width') || !decls.some(([p]) => p === 'height')) continue;
+      if (!MARK_SOURCE.test(rule.body)) continue;
+      seen += 1;
+
+      const washed = decls.find(([p, v]) => /^background(-color)?$/.test(p) && MARK_WASH.test(v) && MARK_SOURCE.test(v));
+      if (!washed) continue;
+      const source = washed[1].match(MARK_SOURCE)[0];
+      // Nennt der Vordergrund DIESELBE Farbe noch einmal? Dann ist die Aussage
+      // doppelt und beide Male blass - die zurueckgenommene Fassung.
+      if (!decls.some(([p, v]) => p === 'color' && v.includes(`var(${source}`))) continue;
+      // Traegt irgendeine Eigenschaft desselben Rumpfs die Farbe im Vollton?
+      const vivid = decls.some(([p, v]) => MARK_VIVID_PROP.test(p) && withoutColorMix(v).includes(`var(${source}`));
+      if (vivid) continue;
+      offenders.push(`${file}: ${rule.selector} -> ${source}`);
+    }
+  }
+  // Reichweiten-Nachweis: ohne ihn haelt die Zusicherung auch dann, wenn
+  // MARK_SOURCE ins Leere greift - dieselbe Vorsichtsmassnahme wie bei der
+  // Toenungsskala darueber. Der Bestand fuehrt 52 bemessene Behaelter mit einer
+  // Identitaetsfarbe; keine feste Zahl, damit eine neue Marke die Suite nicht
+  // rot faerbt, nur weil sie dazukommt.
+  assert.ok(seen >= 35, `Nur ${seen} bemessene Marken gesehen - die Signatur greift nicht mehr.`);
+  assert.deepEqual(
+    offenders,
+    [],
+    'Eine Marke nennt ihre Identitaet zweimal als Waschung (DESIGN.md, Colors: die\n'
+    + 'Vollton-Regel). Eine 16-%-Toenung hellt im Dark nur auf und laesst im Light\n'
+    + 'benachbarte Familientoene auf denselben Wert fallen - sie kann die Aussage\n'
+    + 'nicht tragen. Zwei Antworten:\n'
+    + '  kuratierter Ton  -> Vollton-Flaeche, Glyph in var(--color-ink-on-vivid)\n'
+    + '                      (Klasse `vivid-mark`, layout.css)\n'
+    + '  freie Nutzerfarbe -> Vollton als Kante, Ring oder Punkt NEBEN dem Inhalt\n'
+    + `                      (3px border-inline-start, inset box-shadow)\n${offenders.join('\n')}`,
   );
 });
 

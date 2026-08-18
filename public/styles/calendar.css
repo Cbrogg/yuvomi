@@ -311,8 +311,19 @@
   line-height: 1.4;
   background: color-mix(in srgb, var(--ev-color) var(--tint-surface), var(--color-surface-work));
   color: color-mix(in srgb, var(--ev-color) 35%, var(--color-text-primary));
+  /* Dieselbe Vollton-Kante wie .allday-event, und aus demselben Grund: die
+   * Monatszelle zeichnet denselben BALKEN, nur kuerzer. Etappe 3 hat Woche und
+   * Ganztag umgestellt, Monat und Tag ausgelassen - ein Termin sprach damit
+   * zwei Sprachen, je nachdem welchen Ansichtsknopf man gedrueckt hatte.
+   *
+   * ES GIBT JETZT ZWEI FORMEN FUER EINE EREIGNISFARBE, nicht vier: die Kante am
+   * BALKEN (Woche, Tag, Ganztag, Monat) und den 8px-Punkt an der ZEILE
+   * (.agenda-event__color). Auf der Mobil-Monatszelle wird der Balken selbst
+   * zum Punkt - die Regel bleibt dieselbe, nur der Traeger wechselt. */
+  border-inline-start: 3px solid var(--ev-color);
   transition: background-color var(--transition-fast);
 }
+
 
 .month-day__event:hover {
   background: color-mix(in srgb, var(--ev-color) var(--tint-raised), var(--color-surface-work));
@@ -722,6 +733,12 @@
   border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--ev-color) var(--tint-surface), var(--color-surface));
   color: color-mix(in srgb, var(--ev-color) 38%, var(--color-text-primary));
+  /* Dieselbe Vollton-Kante wie .week-event (Begruendung dort): die Tagesansicht
+   * zeichnet DENSELBEN Block, nur mit einer Spalte. Etappe 3 hat Woche und
+   * Ganztag umgestellt und diese beiden Ansichten ausgelassen; damit sprach ein
+   * Termin in derselben Woche zwei Sprachen, je nachdem welchen Knopf man
+   * gedrueckt hatte. */
+  border-inline-start: 3px solid var(--ev-color);
   overflow: hidden;
   cursor: pointer;
   z-index: 1;

@@ -3172,7 +3172,16 @@
         "deleteSubConfirm": "Видалити підкатегорію \"{{name}}\"?",
         "deleteSubConfirmDetail": "Видалити можна, лише поки підкатегорію ніде не призначено, тож наявні записи залишаться недоторканими. Сама підкатегорія не повернеться.",
         "dragHandle": "Перетягніть, щоб змінити порядок",
-        "reorderAnnounce": "«{{name}}» тепер на позиції {{position}} з {{total}}."
+        "reorderAnnounce": "«{{name}}» тепер на позиції {{position}} з {{total}}.",
+        "colorPick": "Колір",
+        "colorNone": "Без пріоритету",
+        "colorGreen": "Зелений",
+        "colorOcher": "Вохра",
+        "colorViolet": "Фіолетовий",
+        "colorTeal": "Бірюзовий",
+        "colorOrange": "Помаранчевий",
+        "colorRed": "Червоний",
+        "colorGrey": "Сірий"
     },
     "subscriptions": {
         "tabLabel": "Підписки",

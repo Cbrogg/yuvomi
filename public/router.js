@@ -17,7 +17,8 @@ import { BULK_PILL_LAYER, clearBulkPill } from '/utils/bulk-pill.js';
 import { init as initReminders, stop as stopReminders } from '/reminders.js';
 import { initPush, stopPush } from '/push.js';
 import { numberLocaleFor } from '/settings/region-presets.js';
-import { isKitchenRoute, isKitchenModule, getLastKitchenRoute } from '/utils/kitchen-tabs.js';
+import { isKitchenRoute, getLastKitchenRoute } from '/utils/kitchen-tabs.js';
+import { moduleAccentToken, moduleAccentVar } from '/utils/module-accent.js';
 import { getLastHealthRoute, HEALTH_ROUTES } from '/utils/health-tabs.js';
 import { activityType } from '/utils/health-activity.js';
 import { buildHelpRows } from '/utils/help.js';
@@ -3268,29 +3269,13 @@ async function disableFailedThirdPartyModule(moduleId) {
   }
 }
 
-/**
- * Akzent-Token-Name eines Moduls. Die vier Küchen-Module lösen gemeinsam auf
- * --module-kitchen auf.
- *
- * Die belegbare Lage, an allen drei Stellen derselbe Satz (DESIGN.md,
- * tokens.css, hier): die Küche ist im ROUTING vier Module - vier Einträge in
- * ROUTES mit vier eigenen `module:`-Werten -, in NAVIGATION, AKZENT und
- * STATUSBAR aber eines. Was sie zusammenhält, ist `kitchenGroup: true` in den
- * Nav-Einträgen und dieses eine Token; ein Farbwechsel beim Tabwechsel sendete
- * dieselbe Botschaft wie ein Modulwechsel (Critique 2026-07-29).
- *
- * Ein Auflöser für alle Nav-Pfade - Bottom-Nav, Sidebar, More-Sheet und
- * Streifen -, damit die Regel nicht viermal einzeln steht.
- */
-function moduleAccentToken(mod) {
-  if (!mod) return '';
-  return isKitchenModule(mod) ? '--module-kitchen' : `--module-${mod}`;
-}
-
-function moduleAccentVar(mod) {
-  const token = moduleAccentToken(mod);
-  return token ? `var(${token})` : '';
-}
+/* Der Auflöser Modul → Ton steht in `/utils/module-accent.js`. Er war bis
+ * 2026-08-18 hier privat, und deshalb hatte die Modul-Liste der Einstellungen
+ * keinen - Begründung dort. Die Aussage bleibt dieselbe: die Küche ist im
+ * ROUTING vier Module (vier Einträge in ROUTES mit vier eigenen
+ * `module:`-Werten), in NAVIGATION, AKZENT und STATUSBAR aber eines; ein
+ * Farbwechsel beim Tabwechsel sendete dieselbe Botschaft wie ein Modulwechsel
+ * (Critique 2026-07-29). */
 
 function navItemEl({ path, navHref, label, icon, module: mod, accent, navId }) {
   const a = document.createElement('a');

@@ -269,9 +269,14 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  /* Theme-aware: Surface statt hartcodiertem white → korrekt in Dark Mode. */
-  background: color-mix(in srgb, var(--module-accent) var(--tint-surface), var(--color-surface));
-  color: color-mix(in srgb, var(--module-accent) var(--tint-ink), var(--color-text-primary));
+  /* EIN KONTAKT OHNE HAUSHALTS-VERKNUEPFUNG HAT KEINE IDENTITAETSFARBE, und
+   * genau das soll die Scheibe sagen. v2.19 hat das schon so begruendet
+   * („contacts without a link keep the neutral tint on purpose"), aber der
+   * „neutrale" Ton war der MODULTON - eine Farbaussage, nur eine leise. Wer
+   * verknuepft ist, traegt seine Mitgliedsfarbe; wer es nicht ist, traegt gar
+   * keine. Vollton-Regel, zweiter Zweig (DESIGN.md, Colors). */
+  background: var(--color-fill-well);
+  color: var(--color-text-secondary);
   font-weight: var(--font-weight-bold);
 }
 
