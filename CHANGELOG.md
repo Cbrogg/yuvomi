@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.24.1] - 2026-08-19
+
+### Changed
+
+- **The weekly meal plan fits on a phone.** A single dish took 172 px of vertical space to say
+  sixteen characters, because its title, its actions and a dashed "add another" strip each claimed a
+  row of their own. A meal is now one row — title and ingredient count on the left, its actions at
+  the end — the same shape the three neighbouring Kitchen tabs have used for a year. One week went
+  from 5830 px of scrolling to 3056 px, so a whole day now fits on one screen instead of filling it
+  with two meals. Nothing was hidden away: every action stays visible, it just no longer costs its
+  own line. The per-slot "add another meal" button is gone on phones, where a labelled "Add meal"
+  button already sits under every day — there were 34 ways to add a meal on a screen showing 27 of
+  them. On tablets and desktops, where the empty slots are visible and that button does not exist,
+  it stays.
+- **"Today" looks the same everywhere it is marked.** The week planner tinted both the weekday and
+  the date in the Kitchen colour, which was a third way of saying today next to the two the calendar
+  already had. It now carries the same filled accent mark the calendar's month and week views use.
+  The cycle calendar had the same problem with consequences: it ringed today in the Health colour,
+  the one tone in that grid closest to the period colour — and today is often a logged day, so both
+  rings met on the same cell. Measured perceptual distance to the period colour rose from 17.2 to
+  31.5 in light mode and from 14.3 to 26.0 in dark.
+
 ## [2.24.0] - 2026-08-19
 
 ### Changed

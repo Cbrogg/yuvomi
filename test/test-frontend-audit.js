@@ -12541,6 +12541,74 @@ test('die Sidebar zeigt die Modultoene als Legende', () => {
   assert.match(activeIcon.body, /color:\s*var\(--color-accent\)/);
 });
 
+// ---------------------------------------------------------------------------
+// DIE TAGESMARKE (Etappe E, 2026-08-19)
+//
+// „Heute" ist keine Modul-Aussage. Wo eine TAGESZELLE den aktuellen Tag
+// markiert, traegt sie die Stimme - genau wie der Kalender es seit jeher tut
+// (`.month-day--today .month-day__number`, `.week-view__day-num--today`) und
+// der Datepicker (`.ydp-cal__day.is-today`).
+//
+// DER GUARD LIEST DIE BAUART, NICHT DEN MODULNAMEN. Gesucht ist eine Regel, die
+// (a) den heutigen Tag markiert (`--today` bzw. `.is-today`) und (b) an einem
+// Element haengt, dessen Klasse eine TAGESZELLE benennt - also einen exakten
+// Namensabschnitt `day` fuehrt. Der Abschnittsvergleich ist der Kern: ein
+// `includes('day')` faengt `birthday` mit, und die Geburtstagszeile ist der
+// dokumentierte Gegenfall.
+//
+// ZWEI KATEGORIEN BLEIBEN AUSSEN VOR, und beide ohne Ausnahmeliste:
+//
+//   1. FRISTMELDUNGEN („heute faellig") - `.due-date--today`,
+//      `.housekeeping-task--today`. Sie sagen nicht „das ist der heutige Tag",
+//      sondern „das ist jetzt dran", und tragen deshalb die Warnfarbe. Kein
+//      Namensabschnitt `day`, also nie im Trefferraum.
+//   2. DIE GEBURTSTAGSZEILE - `.birthday-item--today`, `.birthday-chip--today`.
+//      Dort ist der Modulton ausdruecklich richtig und im Quelltext begruendet
+//      („die Zeile beantwortet wann, und der eine Tag, an dem die Antwort HEUTE
+//      lautet, ist der Anlass des ganzen Moduls"), samt gemessenem Kontrast.
+//      Sie sind Zeile und Chip, keine Tageszelle - die Bauart schliesst sie
+//      aus, nicht eine Liste, die beim naechsten Modul wieder unvollstaendig
+//      waere.
+//
+// Gegenprobe gefahren: mit `--module-accent` in `.cycle-cal__day.is-today`
+// (dem Stand vor dieser Etappe) wird der Guard rot und benennt die Fundstelle.
+// ---------------------------------------------------------------------------
+const TODAY_MARKER = /(?:--today\b|\.is-today\b)/;
+
+/** Fuehrt der Selektor irgendwo einen EXAKTEN Namensabschnitt `day`? */
+function namesADayCell(selector) {
+  return selector
+    .split(/[\s>+~,()]+/)
+    .filter((token) => token.startsWith('.'))
+    .some((token) => token
+      .replace(/^\./, '')
+      .split(/__|--|-|\./)
+      .includes('day'));
+}
+
+test('eine Tagesmarke traegt die Stimme, nicht den Modulton', () => {
+  const styleDir = new URL('../public/styles/', import.meta.url);
+  const offenders = [];
+
+  for (const file of readdirSync(styleDir).filter((f) => f.endsWith('.css'))) {
+    for (const { selector, body, at } of eachRule(read(`../public/styles/${file}`))) {
+      if (!TODAY_MARKER.test(selector)) continue;
+      if (!namesADayCell(selector)) continue;
+      if (!MODULE_TONE.test(body)) continue;
+      offenders.push(`${file}${at.length ? ` [${at.join(' ')}]` : ''}: ${selector}`);
+    }
+  }
+
+  assert.deepEqual(offenders, [],
+    'Die Marke des heutigen Tages traegt --color-accent, nicht den Modulton. '
+    + '„Heute" ist dieselbe Aussage in jedem Modul, und der Kalender beantwortet sie '
+    + 'seit jeher mit der Stimme (.month-day--today, .week-view__day-num--today, '
+    + '.ydp-cal__day.is-today). Wer eine Fristmeldung meint („heute faellig"), baut '
+    + 'keine Tageszelle - und wer den Modulton wirklich braucht, begruendet ihn im '
+    + 'Quelltext wie die Geburtstagszeile.\n'
+    + offenders.join('\n'));
+});
+
 test('ein Modul fuehrt EIN Zeichen, und die Zuordnung steht an einer Stelle', () => {
   // DER FEHLER WAR NICHT DIE STECKNADEL, SONDERN DIE DRITTE TABELLE.
   //

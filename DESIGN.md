@@ -783,6 +783,36 @@ FARBE sagen, und genau das kann sie im Dark nicht: die CIEDE2000/LCh-Zerlegung
 `--tint-surface` ist die Stufe eines Chips, der SELBST das getoente Objekt ist, und
 Farbaussagen gehoeren in Volltonelemente, nicht in Beimischung.
 
+**Die Tagesmarke-Regel (2026-08-19).** „Heute" ist in jedem Modul dieselbe Aussage, also
+traegt sie die STIMME. Wo eine TAGESZELLE den aktuellen Tag markiert, gehoert ihr die
+Vollton-Marke in `--color-accent` mit `--color-ink-on-vivid` darauf, und die Zelle bekommt
+weder Fuellung noch Rahmen - der Kanon, den der Kalender seit jeher fuehrt
+(`.month-day--today .month-day__number`, `.week-view__day-num--today`) und dem der
+Datepicker mit seinem Inset-Ring folgt. Kreis, wo eine Ziffer steht; Kapsel, wo ein Datum
+steht.
+
+Der Anlass war das Wochenboard der Kueche: es faerbte Wochentag UND Datum in
+`--module-accent` und war damit die dritte Fassung von „heute" neben den zwei des
+Kalenders - eine Marke, die ihre Identitaet als getoente SCHRIFT nennt statt im Vollton,
+und dafuer auch noch den Modulton im eigenen Modul nimmt, wo der Kopf die Herkunft
+laengst beantwortet. Das Nachziehen ueber die Bauart fand die zweite Fundstelle sofort:
+der Zyklus-Kalender ringte seinen heutigen Tag im Gesundheitston, und das ist im
+Zyklus-Gitter ausgerechnet der Ton, der den PHASEN am naechsten liegt (CIEDE2000 gegen
+`--cycle-period`: **17,23 light / 14,33 dark**; in der Stimme 31,50 / 25,97, und der
+engste Abstand des ganzen Gitters steigt damit von 17,23/14,33 auf 26,60/25,97). „Heute"
+liegt regelmaessig auf einem geloggten Tag - dann stehen beide Ringe an derselben Zelle.
+
+**Zwei Kategorien sind ausdruecklich NICHT gemeint, und beide unterscheiden sich nach der
+Bauart, nicht nach einer Ausnahmeliste.** Eine FRISTMELDUNG („heute faellig",
+`.due-date--today`, `.housekeeping-task--today`) sagt nicht „das ist der heutige Tag",
+sondern „das ist jetzt dran", und traegt die Warnfarbe. Und die GEBURTSTAGSZEILE behaelt
+ihren Modulton mit der Begruendung, die im Quelltext steht: die Zeile beantwortet „wann",
+und der eine Tag, an dem die Antwort HEUTE lautet, ist der Anlass des ganzen Moduls -
+gemessen 5,08:1 light / 7,35:1 dark. Beides sind Zeile, Chip oder Textspanne, keine
+Tageszelle. Pruefebene: Signatur (`eine Tagesmarke traegt die Stimme, nicht den Modulton`,
+`test:frontend-audit`) - der Guard sucht einen exakten Namensabschnitt `day` im Selektor,
+weil ein `includes('day')` `birthday` mitfaengt.
+
 ## Typography
 
 **Display/Body Font:** System-Stack (-apple-system, BlinkMacSystemFont, "SF Pro Text",
@@ -2181,9 +2211,18 @@ Angabe braeuchte einen zweiten Timer, nur damit sie sich selbst aktuell haelt.
   kuratierter Ton als Flaeche (Klasse `vivid-mark`, Tinte `--color-ink-on-vivid`), freie
   Nutzerfarbe als Kante, Ring oder Punkt daneben. Und **Do** neutral bleiben, wo nichts
   genannt wird - ein Platzhalter braucht keine Herkunft (Vollton-Regel).
+- **Do** den heutigen Tag einer TAGESZELLE in der Stimme markieren, als Vollton-Marke am
+  Datum, waehrend die Zelle selbst leer bleibt (Tagesmarke-Regel) - Kreis um eine Ziffer,
+  Kapsel um ein Datum. Eine Fristmeldung („heute faellig") ist keine Tageszelle und
+  behaelt ihre Warnfarbe.
 - **Do** einer Zahl, die neben einer anderen Zahl steht, ihr Wort mitgeben („wird 37" neben
   „13 Tage"); stand das Wort bisher nur unsichtbar im `title`, ist es sichtbar faellig -
   Kopfrechnen ist keine Gestaltung.
+- **Do** eine Liste, die im Schmalen zur Liste wird, dort auch die Zeilen-Grammatik
+  sprechen lassen (Textspalte mit `min-width: 0`, unschrumpfbare Bedienzone, EINE Zeile).
+  Der Wochenplan der Kueche stapelte als einziger der vier Tabs - Titel, Aktionszeile,
+  Anlege-Streifen - und kostete damit 172px Slot fuer 16 Zeichen und 5830px Scroll fuer
+  eine Woche bei 454px sichtbarer Flaeche. Als Zeile: 73px und 3056px.
 - **Do** ein Etikett seinen Ton EINMAL und voll nennen lassen (Skalen-Regel): eine Meldung
   in der Schrift, eine Rangmarke im 8px-Punkt neben neutraler Schrift, eine Zuordnung als
   Vollton-Flaeche - und neutral (`--color-fill-well`), wenn die genannte Identitaet die des
@@ -2249,7 +2288,16 @@ Angabe braeuchte einen zweiten Timer, nur damit sie sich selbst aktuell haelt.
 - **Don't** eine Regel dieser Art nur dort anwenden, wo sie aufgefallen ist. Die
   Vollton-Kante erreichte zwei von vier Kalender-Ansichten, und das Vollton-Siegel eine von
   zwoelf Marken - beide Male war die Etappe „fertig", waehrend dasselbe Objekt zwei
-  Sprachen sprach. Wer eine Regel setzt, sucht ihre Geschwister ueber die BAUART.
+  Sprachen sprach. Wer eine Regel setzt, sucht ihre Geschwister ueber die BAUART. Und
+  **Don't** dabei eine Bauart ueber `includes()` suchen: „jede Klasse mit `day` darin"
+  faengt `birthday` mit, und die Geburtstagszeile ist der dokumentierte Gegenfall. Der
+  Vergleich laeuft ueber NAMENSABSCHNITTE.
+- **Don't** eine Regel in einen Media-Block schreiben, der VOR den Bauteilen steht, die sie
+  ueberschreiben soll. Bei gleicher Spezifitaet gewinnt die spaetere Regel: `display: none`
+  und `flex-direction: row` im 640px-Block von meals.css verloren gegen die
+  Komponentendefinitionen 200 Zeilen darunter, und jede einzelne Regel sah dabei richtig
+  aus. Aufgefallen ist es nur an der Messung - das Wochengitter war danach 358px HOEHER
+  statt niedriger. Wer einen schmalen Zustand baut, stellt ihn hinter sein Bauteil.
 - **Don't** einen Zustand ueber `opacity` auf dem eigenen Inhalt zeigen; eine Kachel, die
   ihren Text schlechter lesbar macht, um Anfassbarkeit zu signalisieren, steigt stattdessen
   eine Sprosse der Toenungsskala.
