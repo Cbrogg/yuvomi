@@ -3300,7 +3300,12 @@ test('der FAB weicht der Zeile, statt eine Gasse zu reservieren', () => {
   //
   // Die Marge darf nicht zurueckkommen: sie ist das eine, was die Sichtflaeche
   // kostet.
-  assert.match(layout, /:has\([^)]*\.page-fab[^)]*\)[^{]*\.app-content\s*\{[^}]*padding-block-end:\s*var\(--fab-safe-zone\)/,
+  // `[^;]*` statt eines exakten `var(--fab-safe-zone)`: seit 2026-08-19 tritt der
+  // Install-Banner als dritte fixierte Flaeche hinzu und steht als SUMMAND in
+  // derselben Deklaration (`--install-prompt-tail`, ohne Banner 0). Drei
+  // Flaechen als `:has()`-Kombinatorik waeren acht Regeln; die Zusage bleibt,
+  // dass die FAB-Zone im Nachlauf steht - nicht, dass sie allein dort steht.
+  assert.match(layout, /:has\([^)]*\.page-fab[^)]*\)[^{]*\.app-content\s*\{[^}]*padding-block-end:[^;]*--fab-safe-zone/,
     'der FAB-Nachlauf gehoert als padding-block-end an .app-content - am Scroll-Ende '
     + 'liegt damit leerer Raum unter dem Knopf, und der Scrollport bleibt fensterhoch');
   assert.doesNotMatch(layout.replace(/\/\*[\s\S]*?\*\//g, ''), /margin-block-end:\s*var\(--fab-safe-zone\)/,
@@ -3968,8 +3973,13 @@ test('die Sammelaktions-Pille wohnt in der Shell und kostet die Liste keine Zeil
     'der Nachlauf leitet sich aus der Pillenhöhe ab und darf nicht davon wegdriften');
 
   // --- 3. Nachlauf am Scroll-Ende ------------------------------------------
+  // `:not(:has(.list-bulkbar))` ist die GEGENMENGE und keine Pillen-Regel: seit
+  // 2026-08-19 gibt es sie (der Fall ohne FAB und ohne Pille, den der
+  // Install-Banner-Nachlauf braucht), und ohne diesen Ausschluss zaehlte der
+  // Filter sie mit und verlangte von ihr eine Pillen-Zone.
   const safeZone = [...eachRule(layout)].filter((r) =>
-    /:has\([^)]*\.list-bulkbar[^)]*\)/.test(r.selector) && /\.app-content/.test(r.selector));
+    /(^|[^t])\:has\([^)]*\.list-bulkbar[^)]*\)/.test(r.selector.replace(/:not\(:has\([^)]*\.list-bulkbar[^)]*\)\)/g, ''))
+    && /\.app-content/.test(r.selector));
   assert.ok(safeZone.length >= 2,
     'der Nachlauf braucht BEIDE Fälle: mit FAB (Summe) und ohne (allein) - `:has()` trägt die '
     + 'Spezifität seines Arguments, eine Regel allein stünde unter der FAB-Regel');
@@ -5748,8 +5758,23 @@ test('calendar agenda events and task chips keep readable contrast in mobile age
   // Zusage, die `.month-day__event` seit dem HIG-Rollout flach haelt, und der
   // Grund, aus dem im Monatsraster flache Event-Bars neben umrandeten
   // Aufgaben-Bars standen.
-  assert.match(taskBody, /background:\s*color-mix\(in srgb,\s*currentColor/, 'task chips should tint from their readable text color');
-  assert.doesNotMatch(taskBody, /border(-color)?:|box-shadow:/, 'task chips read flat: the tint is the second channel, not an edge on top of it');
+  // DIE TOENUNG IST WEG, UND DAS IST DER PUNKT (2026-08-19, Skalen-Regel).
+  //
+  // Hier stand `background: color-mix(in srgb, currentColor ...)` als Zusage -
+  // der Chip toente aus seiner Prioritaetsfarbe und trug dieselbe Farbe als
+  // Schrift darauf. Das ist die Bauart, die v2.23.0 fuer die Aufgabenliste
+  // abgeschafft hat, und sie ueberlebte hier, weil dieser Test sie festhielt.
+  // Gemessen lagen die vier getoenten Felder 6,61 (medium/high) und 6,77
+  // (high/urgent) auseinander, bei 11,3 fuer die Diagrammserien des Projekts.
+  //
+  // Die Zusage ist jetzt die der Rangmarke: neutrale Flaeche, neutrale Schrift,
+  // die Stufe im 8px-Vollton-Punkt daneben - dieselbe, die `.priority-dot` in
+  // list-row.css fuer die Aufgabenliste traegt.
+  assert.match(taskBody, /background:\s*var\(--color-fill-well\)/, 'task chips carry a neutral surface: the step is the dot, not the fill');
+  assert.doesNotMatch(taskBody, /color-mix\(in srgb,\s*currentColor/, 'task chips must not tint from their priority colour: that is the retracted fassung of the scale rule');
+  assert.match(read('../public/pages/calendar.js'), /class="priority-dot priority-dot--\$\{priority\}"/,
+    'a task chip must render the shared priority dot (list-row.css), not a second fassung of the scale');
+  assert.doesNotMatch(taskBody, /border(-color)?:|box-shadow:/, 'task chips read flat: the dot is the second channel, not an edge on top of it');
   assert.match(metaBody, /color:\s*var\(--color-text-secondary\)/, 'metadata should remain legible in light and dark themes');
 });
 
@@ -11314,7 +11339,18 @@ test('jede Stufe der Toenungsskala hat mindestens einen Nutzer', () => {
  * mehr und liegen damit ausserhalb der Signatur, ohne eine Ausnahme zu
  * brauchen.
  */
-const MARK_SOURCE = /--(module-[\w-]+|meal-[\w-]+|weather-[\w-]+|cycle-[\w-]+|layer-color|note-color|holi-color|ev-color|c-accent|cat|active-module-accent|item-module-accent|today-card-accent|widget-accent|subscription-color|countdown-accent|module-row-accent|seal-accent|rw-[\w-]+)\b/;
+/* `--color-accent` GEHOERT DAZU - aber nur ueber die Doppelnennung.
+ *
+ * Die Stimme fehlte in dieser Liste, und `.changelog-release__badge` kam
+ * dadurch durch: 16-%-Flaeche plus dieselbe Farbe als Schrift darauf, also
+ * genau die Bauart, die die Regel abgeschafft hat. Sie pauschal zu verbieten
+ * waere falsch - gemessen tragen 19 Stellen eine Stimm-Waschung, und 15 davon
+ * sind die Shell an genau dem Ort, an dem sie hingehoert (`.page-fab`,
+ * `.btn--primary`, die Nav-Indikatoren, die Overlays). Der Unterschied ist
+ * nicht die Farbe, sondern ob sie ZWEIMAL steht: die Shell fuellt voll und
+ * setzt `--color-ink-on-vivid` darauf, ein Etikett nennt sie blass und noch
+ * einmal blass. Die Guards unten pruefen genau das. */
+const MARK_SOURCE = /--(module-[\w-]+|meal-[\w-]+|weather-[\w-]+|cycle-[\w-]+|layer-color|note-color|holi-color|ev-color|c-accent|cat|active-module-accent|item-module-accent|today-card-accent|widget-accent|subscription-color|countdown-accent|module-row-accent|seal-accent|rw-[\w-]+|color-accent)\b/;
 const MARK_WASH = /var\(--tint-(wash|surface)\)/;
 /** Traeger eines Volltons: die Farbe ohne `color-mix()` drumherum. */
 const MARK_VIVID_PROP = /^(background(-color|-image)?|border(-[\w-]+)?|box-shadow|outline|fill)$/;
@@ -11429,7 +11465,7 @@ test('eine Marke nennt ihre Identitaet im Vollton, nicht zweimal als Waschung', 
  *    eigenen Namen umgefaerbt"); ein aktiver Filter-Chip beantwortet „wo bin
  *    ich", und dafuer ist der Modulton zustaendig.
  */
-const LABEL_STATE = /(:hover|:focus|:active|:checked|\.is-|--active|--selected|--current|\[aria-|\[data-)/;
+const LABEL_STATE = /(:hover|:focus|:active|:checked|\.is-|--active|--selected|--current|--dragging|--loading|--open|\[aria-|\[data-)/;
 
 test('was keine Marke ist, nennt seinen Ton auch nicht zweimal blass', () => {
   const offenders = [];
@@ -11447,7 +11483,11 @@ test('was keine Marke ist, nennt seinen Ton auch nicht zweimal blass', () => {
       if (!washed) continue;
       seen += 1;
       const source = washed[1].match(MARK_SOURCE)[0];
-      const pale = decls.find(([p, v]) => p === 'color' && v.includes('color-mix') && v.includes(`var(${source}`));
+      // ROHE Tinte zaehlt mit. Der Guard verlangte, dass die Schrift SELBST ein
+      // `color-mix` ist - `color: var(--color-accent)` auf einer 16-%-Flaeche
+      // derselben Farbe galt damit als Callout und kam durch. Die Regel fragt,
+      // wie oft die Farbe genannt wird, nicht in welcher Schreibweise.
+      const pale = decls.find(([p, v]) => p === 'color' && v.includes(`var(${source}`));
       if (!pale) continue;
       // Traegt der Rumpf die Farbe irgendwo VOLL? Dann ist die Aussage gesetzt.
       if (decls.some(([p, v]) => MARK_VIVID_PROP.test(p) && withoutColorMix(v).includes(`var(${source}`))) continue;
@@ -11474,6 +11514,86 @@ test('was keine Marke ist, nennt seinen Ton auch nicht zweimal blass', () => {
     + '  Rangmarke -> Vollton-Punkt daneben, Schrift neutral\n'
     + '  Zuordnung -> Vollton-Flaeche mit var(--color-ink-on-vivid); nennt sie den\n'
     + '               Raum, in dem sie steht, bleibt sie neutral (--color-fill-well)\n'
+    + `${offenders.join('\n')}`,
+  );
+});
+
+/**
+ * REGEL: eine Farbe zaehlt auch dann zweimal, wenn sie in ZWEI Regeln steht.
+ *
+ * Die beiden Guards darueber lesen EINEN Regelkoerper. Genau daran sind sie
+ * vorbeigelaufen, und zwar an der haeufigsten Bauart ueberhaupt: der Behaelter
+ * traegt die getoente Flaeche, sein Kind den Glyph in derselben Farbe.
+ *
+ *     .rw-reward-card__icon   { background: color-mix(... --module-accent ...) }
+ *     .rw-reward-card__icon i { color: var(--module-accent) }
+ *
+ * Gemessen war das keine Theorie: sechs Praemienkacheln, sieben Kartenkoepfe der
+ * Gesundheit und der Beleg-Chip standen so im Baum, waehrend beide Guards gruen
+ * meldeten. Der Marken-Guard sah eine bemessene Flaeche ohne Tinte, der
+ * Etiketten-Guard eine Tinte ohne Flaeche - jeder fuer sich korrekt.
+ *
+ * WAS DIESER GUARD NICHT MELDET, ist ebenso wichtig wie was er meldet:
+ *   - Wo die Farbe irgendwo VOLL steht, ist die Aussage gesetzt (Vollton-Regel).
+ *     Die Terminbloecke des Kalenders tragen ihre `--ev-color` als 3px-Kante und
+ *     duerfen sie im Icon wiederholen.
+ *   - Zustaende (`:hover`, `--dragging`, `.is-`) gehoeren der Eine-Stimme-Regel.
+ *   - Bedienelemente ebenso, erkannt an `cursor: pointer` an einem der beiden.
+ *
+ * Der Nachfahre wird ueber die SELEKTOR-FORM gesucht, nicht ueber Namen: ein
+ * Guard, der `__icon` listet, findet beim naechsten Bauteil nichts (dieselbe
+ * Lehre wie beim Siegel-Guard, dessen Namensliste `.birthday-widget-item__age`
+ * uebersah).
+ */
+test('eine Waschung und ihre Tinte zaehlen zusammen, auch ueber zwei Regeln', () => {
+  const offenders = [];
+  let seen = 0;
+  for (const file of readdirSync(new URL('../public/styles/', import.meta.url)).filter((n) => n.endsWith('.css'))) {
+    if (file === 'tokens.css') continue;
+    const rules = [...eachRule(read(`../public/styles/${file}`))];
+
+    for (const rule of rules) {
+      const decls = declarations(rule.body);
+      const bedienEltern = decls.some(([p, v]) => p === 'cursor' && v.trim() === 'pointer');
+      const wash = decls.find(([p, v]) => /^background(-color)?$/.test(p) && v.includes('color-mix') && MARK_SOURCE.test(v));
+      if (!wash) continue;
+      const source = wash[1].match(MARK_SOURCE)[0];
+      // Traegt die Regel die Farbe irgendwo VOLL? Dann ist die Aussage gesetzt.
+      if (decls.some(([p, v]) => MARK_VIVID_PROP.test(p) && withoutColorMix(v).includes(`var(${source}`))) continue;
+
+      const eltern = rule.selector.split(',').map((x) => x.trim()).filter((x) => !LABEL_STATE.test(x));
+      if (!eltern.length) continue;
+      seen += 1;
+
+      for (const kind of rules) {
+        if (kind === rule) continue;
+        const kdecls = declarations(kind.body);
+        if (kdecls.some(([p, v]) => p === 'cursor' && v.trim() === 'pointer')) continue;
+        // Traegt das KIND die Farbe voll? Dann ist auch dort die Aussage gesetzt.
+        if (kdecls.some(([p, v]) => MARK_VIVID_PROP.test(p) && withoutColorMix(v).includes(`var(${source}`))) continue;
+        const tinte = kdecls.find(([p, v]) => p === 'color' && v.includes(`var(${source}`));
+        if (!tinte) continue;
+
+        for (const ksel of kind.selector.split(',').map((x) => x.trim())) {
+          if (LABEL_STATE.test(ksel)) continue;
+          const vorfahr = eltern.find((esel) => ksel.startsWith(`${esel} `) || ksel.startsWith(`${esel}>`));
+          if (!vorfahr) continue;
+          if (bedienEltern) continue;
+          offenders.push(`${file}: ${vorfahr} traegt die Waschung, ${ksel} die Tinte -> ${source}`);
+        }
+      }
+    }
+  }
+  // Reichweiten-Nachweis: ohne ihn haelt die Zusicherung auch dann, wenn
+  // MARK_SOURCE oder der Waschungs-Filter ins Leere greifen.
+  assert.ok(seen >= 15, `Nur ${seen} Waschungen gesehen - die Signatur greift nicht mehr.`);
+  assert.deepEqual(
+    offenders,
+    [],
+    'Eine Identitaetsfarbe steht als Flaeche im Behaelter UND als Tinte im Kind -\n'
+    + 'zusammen ist das die Doppelnennung, die die Vollton-Regel abgeschafft hat,\n'
+    + 'sie steht nur in zwei Regeln statt in einer. Entweder die Farbe steht\n'
+    + 'irgendwo VOLL (Kante, Punkt, gefuellte Scheibe), oder beide bleiben neutral.\n'
     + `${offenders.join('\n')}`,
   );
 });

@@ -301,16 +301,16 @@ function renderMetrics() {
     <div class="metric-grid">
       <div class="metric-card">
         <div class="metric-card__label">${esc(t('inventory.metricItemsLabel'))}</div>
-        <div class="metric-card__amount">${count}</div>
+        <div class="metric-card__value">${count}</div>
       </div>
       <div class="metric-card">
         <div class="metric-card__label">${esc(t('inventory.metricValueLabel'))}</div>
-        <div class="metric-card__amount">${esc(formatMoney(totalValue, _householdCurrency))}</div>
+        <div class="metric-card__value">${esc(formatMoney(totalValue, _householdCurrency))}</div>
       </div>
       <button type="button" class="metric-card metric-card--select${state.filterAttention ? ' is-active' : ''}"
               data-action="toggle-attention-filter" aria-pressed="${state.filterAttention}">
         <div class="metric-card__label">${esc(t('inventory.metricAttentionLabel'))}</div>
-        <div class="metric-card__amount">${needsAttention}</div>
+        <div class="metric-card__value">${needsAttention}</div>
       </button>
     </div>`;
 }

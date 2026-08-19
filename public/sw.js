@@ -15,7 +15,7 @@
  *   → bypassCacheUntil (in-memory + Cache API für SW-Restart-Robustheit)
  */
 
-const APP_RELEASE   = '2.23.1';
+const APP_RELEASE   = '2.24.0';
 const SHELL_CACHE   = `yuvomi-shell-${APP_RELEASE}`;
 const PAGES_CACHE   = `yuvomi-pages-${APP_RELEASE}`;
 const LOCALES_CACHE = `yuvomi-locales-${APP_RELEASE}`;
@@ -96,6 +96,7 @@ const APP_SHELL = [
   '/utils/birthday-event.js',
   '/utils/bulk-pill.js',
   '/utils/category-labels.js',
+  '/utils/chart.js',
   '/utils/color.js',
   '/utils/contact-name.js',
   '/utils/contrast.js',

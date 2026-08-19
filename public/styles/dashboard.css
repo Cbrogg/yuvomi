@@ -3446,12 +3446,20 @@ svg.weather-forecast__icon {
   background-color: var(--color-surface-2);
 }
 
+/* DER SPITZENREITER WIRD AUSGEZEICHNET, NICHT EINGEFAERBT.
+ *
+ * Hier stand eine Modulton-Waschung, und die Rangziffer darauf trug denselben
+ * Ton voll (Regel weiter unten) - zwei Kanaele fuer eine Aussage, und beide
+ * sagten „Belohnungen" statt „vorne". Das Widget nennt seine Herkunft schon im
+ * Kopf-Siegel; nach der Skalen-Regel bleibt eine Zuordnung neutral, wenn die
+ * genannte Identitaet die des Raums ist. Die Auszeichnung traegt jetzt die
+ * neutrale Well-Stufe, der Rang steht in der Schrift. */
 .rewards-widget-row--leader {
-  background: color-mix(in srgb, var(--module-rewards) var(--tint-wash), transparent);
+  background: var(--color-fill-well);
 }
 
 .rewards-widget-row--leader:hover {
-  background: color-mix(in srgb, var(--module-rewards) var(--tint-state), transparent);
+  background: var(--color-surface-elevated-hover);
 }
 
 .rewards-widget-row__rank {
@@ -3463,7 +3471,7 @@ svg.weather-forecast__icon {
 }
 
 .rewards-widget-row--leader .rewards-widget-row__rank {
-  color: var(--module-rewards);
+  color: var(--color-text-primary);
 }
 
 .rewards-widget-row__avatar {

@@ -172,13 +172,20 @@
   margin-top: var(--space-1);
 }
 
+/* EINE DATENREIHE NIMMT EINEN SERIENTON, KEINEN MODULTON.
+ *
+ * Flaeche und Linie standen in `--module-accent` und sagten damit „Abos" auf
+ * einer Seite, deren Kopf das beantwortet (Herkunfts-Regel). Fuer Datenreihen
+ * fuehrt das Projekt sieben kuratierte Toene (`--chart-series-*`, tokens.css),
+ * und deren Kommentar nennt subscriptions.js ausdruecklich als Bezieher - fuer
+ * den Kuchen weiter unten galt das laengst, fuer diese Kurve nie. */
 .subscriptions-area-chart polygon {
-  fill: color-mix(in srgb, var(--module-accent) var(--tint-surface), transparent);
+  fill: color-mix(in srgb, var(--chart-series-1) var(--tint-surface), transparent);
 }
 
 .subscriptions-area-chart polyline {
   fill: none;
-  stroke: var(--module-accent);
+  stroke: var(--chart-series-1);
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 2.5;

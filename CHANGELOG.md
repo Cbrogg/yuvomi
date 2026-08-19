@@ -7,6 +7,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.24.0] - 2026-08-19
+
+### Changed
+
+- **A card's headline number is now the size the design system always promised it.** It read at
+  Title 3 while the documentation described Title 1 - the same grade as the heading above it, so the
+  main statement of a card looked like its own footnote. Long values no longer shrink below Title 3;
+  where a row of cards gets too narrow for that, the row now wraps to two columns instead of
+  squeezing its cards. On a phone that had produced "GEGENSTÄN/DE" and "GESAMTWE/RT" broken
+  mid-compound across three lines, with an amount running into the neighbouring card.
+- **Rewards tells apart where a point came from by its sign, not by its colour.** Points earned from
+  a task and points given as a bonus were drawn in two tints that were byte-identical, because both
+  modules belong to the same colour family - the ledger showed two different things looking exactly
+  the same. The five kinds of entry have always had five distinct icons; those now carry the
+  distinction alone. The progress bar towards the next reward lost its gradient and wears the app's
+  single accent, like every other fill level.
+- **Health stops saying "health" fourteen times on one screen.** Seven card icons and six trend
+  lines were drawn in the module colour on a page whose title and seal already answer that question.
+  A trend line now carries the colour of its value, and a card icon the colour of its label.
+- **A task's priority looks the same in the calendar as in the task list.** In the calendar it was
+  still a tinted field with tinted lettering - the shape the last release replaced everywhere else
+  with a single dot in full colour beside plain type. The four levels sat perceptually 6.6 and 6.8
+  apart as tinted fields, against the 11.3 this project accepted for its chart colours.
+- **Sub-tab counters, attachment chips, drop zones and note avatars no longer name a colour twice.**
+  Each of them carried a module tone as a faint surface and the same tone again as its lettering or
+  glyph. A counter says how many, an attachment names a file, a drop zone is a placeholder - none of
+  them names an identity, so they are neutral now. The avatar on a note is the exception in the
+  other direction: it identifies a person and wears their colour at full strength.
+- **Charts across the app share one coordinate system.** The value axis, grid and time labels now
+  come from one place instead of three, and a chart no longer stretches out of proportion to fill
+  its box.
+
+### Fixed
+
+- **The inventory's three headline numbers were rendering as body text.** They carried a class name
+  that no stylesheet has ever defined, so "24.503,00 €" sat in the same size and weight as the
+  label above it.
+- **The install banner no longer hides the end of a page.** It sits fixed above the content like the
+  action button and the bulk-action pill, but unlike those two it never reserved any room: on the
+  rewards page the last 97 pixels of the final row - a child's points, their progress bar and the
+  redeem button - stayed under the banner with no way to scroll to them.
+- **In the light theme, the settings list shows all of its module marks again.** The neutral mark
+  sat one surface step too high and measured 1.01:1 against its own ground, which is not a surface
+  at all. Twelve coloured marks stood next to seventeen invisible ones; in the dark theme the same
+  rule had always been visible.
+- **The budget's trend chart labels its scale inside the picture.** The axis sat outside the chart
+  as separate text, because the chart was stretched and any text inside it would have been distorted
+  too - which had it backwards: the stretching was the cause. Outside, the labels drifted against
+  their own grid lines whenever the chart resized, and the amounts were cut off on the left, showing
+  "050,00 €" where "5.050 €" belongs.
+- **The housekeeping payment bars show how full they are.** Two bars stood next to each other at
+  fixed pixel heights with no track behind them, so the taller one showed nothing except that it was
+  taller. The "last visit" figure carried a date and a time in one number and ran past the edge of
+  its card; the time is now a footnote under the date.
+- **On a narrow screen, a recipe row keeps its shape.** The ingredient count was aligned to the
+  right while the recipe name started on the left, on the line directly below it - the alignment was
+  written for the wide layout and stayed when the narrow one moved the count onto its own row.
+- **The subscription chart's line is evenly thick.** It was drawn into a stretched box without the
+  attribute that keeps stroke widths constant, so the line came out thicker in one direction than
+  the other. Its colour now comes from the chart-series palette rather than the module tint.
+
 ## [2.23.1] - 2026-08-18
 
 ### Fixed

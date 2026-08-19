@@ -1550,19 +1550,26 @@
   line-height: 1.3;
   user-select: none;
   margin-bottom: var(--space-0h);
-  /* FLACHE Tint-Bar, wie .month-day__event - kein Rahmen, kein Schatten. Die
-   * Tönung IST der zweite Kanal neben der Textfarbe; Kante und Schatten waren
-   * ein dritter und vierter Träger derselben Information, und im Monatsraster
-   * standen dadurch flache Event-Bars neben umrandeten Aufgaben-Bars. In der
-   * Agenda fiel es auf, sobald die Terminzeile darüber flach wurde.
+  /* FLACHE BAR, WIE .month-day__event - und ihre Fläche sagt nichts mehr.
    *
-   * 13 % UND NICHT 16 %, obwohl 16 % das dokumentierte Tönungsrezept ist:
-   * dieser Chip tönt aus `currentColor`, und das ist hier ein PRIORITÄTSTON,
-   * kein kuratierter Modulton. Gemessen am gerenderten Pixel (Sonde 2, light,
-   * mobil UND desktop): #B4400E auf der 16-%-Tönung #F3E0D8 ergibt 4.49:1 und
-   * reisst AA um einen Hundertstel. Das ist die in §2 benannte Grenze der
-   * Tönungsregel - bei nicht kuratierten Tönen ist die Reserve schon weg. */
-  background: color-mix(in srgb, currentColor 13%, var(--color-surface-work));
+   * Hier stand eine 13-%-Tönung aus `currentColor`, also aus dem Prioritätston,
+   * mit demselben Ton als Schrift darauf. Der Kommentar, der die 13 % gegen die
+   * dokumentierten 16 % begründete, war korrekt und ist trotzdem hinfällig: er
+   * argumentierte gegen die alte Tönungsregel („wieviel Prozent verträgt die
+   * Fläche"), während die Skalen-Regel aus v2.23.0 die Fläche für eine Rangmarke
+   * ganz abgeschafft hat. Sie war schon damals eine Warnung - bei nicht
+   * kuratierten Tönen sei „die Reserve schon weg".
+   *
+   * GEMESSEN, warum das mehr als eine Formfrage war: die vier getönten Felder
+   * lagen wahrnehmungsnah 6,61 (medium↔high) und 6,77 (high↔urgent) auseinander,
+   * bei 11,3 für die Diagrammserien dieses Projekts - und in der Aufgabenliste
+   * stand dieselbe Stufe längst als 8px-Vollton-Punkt. Dieselbe Aufgabe sprach
+   * zwei Sprachen, je nachdem in welchem Modul man sie ansah.
+   *
+   * Die Bar bleibt eine Bar (das Monatsraster stellt sie neben die Event-Bars),
+   * ihre Fläche ist jetzt neutral, und die Stufe trägt der Punkt davor. */
+  background: var(--color-fill-well);
+  color: var(--color-text-primary);
 }
 
 .cal-task-chip:hover,
@@ -1578,23 +1585,20 @@
   white-space: nowrap;
 }
 
-/* Prioritätsvarianten – nutzt dieselben -bg/-text-Token wie tasks.css */
-.cal-task-chip--urgent {
-  color: var(--color-priority-urgent);
-}
-.cal-task-chip--high {
-  color: var(--color-priority-high);
-}
-.cal-task-chip--medium {
-  color: var(--color-priority-medium);
-}
-.cal-task-chip--low {
-  color: var(--color-priority-low);
-}
-.cal-task-chip--none {
-  color: var(--color-text-primary);
-  border-color: var(--color-border);
-}
+/* Die vier Prioritätsvarianten standen hier als TEXTFARBEN - der zweite Kanal
+ * neben der getönten Fläche. Die Skalen-Regel gibt einer Rangmarke genau einen,
+ * und der ist der Punkt (`.priority-dot`, list-row.css). Was die Klassen jetzt
+ * tun, ist ihren Ton zu BENENNEN, ohne ihn selbst zu malen: die kompakte
+ * Monatsansicht am Finger schrumpft den ganzen Chip auf 8px, und dann IST der
+ * Chip der Punkt und braucht die Farbe an sich (siehe den Block ganz unten,
+ * derselbe Weg, den die Termin-Bars über `--ev-color` gehen).
+ *
+ * „Ohne Priorität" benennt bewusst nichts - der Fallback dort unten ist
+ * neutral, und eine Marke für eine Abwesenheit wäre eine fünfte Stufe. */
+.cal-task-chip--urgent { --prio-color: var(--color-priority-urgent); }
+.cal-task-chip--high   { --prio-color: var(--color-priority-high); }
+.cal-task-chip--medium { --prio-color: var(--color-priority-medium); }
+.cal-task-chip--low    { --prio-color: var(--color-priority-low); }
 
 /* Im Monatsgrid werden auch Aufgaben-Chips zu flachen Bars nach Kanon: die
  * currentColor-Tönung bleibt, Border und Schatten entfallen; das check-square-
@@ -1687,8 +1691,16 @@
     background: var(--holi-color, var(--color-text-secondary));
   }
 
-  /* Task-Punkte durch einen dünnen Ring von Termin-Punkten unterscheidbar. */
+  /* HIER IST DER CHIP DER PUNKT - also trägt er die Stufe im Vollton, genau wie
+   * die Termin-Bar darüber ihre --ev-color. Die neutrale Bar-Fläche der großen
+   * Ansicht wäre hier ein Informationsverlust: vier Prioritäten sähen als vier
+   * graue Punkte gleich aus. Der eingelegte Punkt aus dem Markup ist auf dieser
+   * Größe ausgeblendet (`> * { display: none }` oben), seine Aufgabe übernimmt
+   * die Fläche.
+   *
+   * Der dünne Ring bleibt: er unterscheidet Aufgaben- von Terminpunkten. */
   .month-day .cal-task-chip {
+    background: var(--prio-color, var(--color-text-secondary));
     box-shadow: inset 0 0 0 var(--space-px) var(--color-surface-work);
   }
 

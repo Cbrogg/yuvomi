@@ -280,16 +280,31 @@ function renderDashboard(content) {
     });
     return;
   }
-  const lastVisit = data.last_visit?.check_in ? `${formatDate(data.last_visit.check_in)} · ${formatTime(data.last_visit.check_in)}` : t('housekeeping.noVisits');
+  // DATUM ALS WERT, UHRZEIT ALS FUSSNOTE.
+  // Beides zusammen in der Kennzahl ergab „18.08.2026 · 08:30" und lief in
+  // Title 1 gemessen 38px ueber die Kartenkante - eine Kennzahl traegt EINE
+  // Aussage, die Praezisierung darunter gehoert in `.metric-card__note`
+  // (dieselbe Rolle wie „7 aktiv" bei den Abos).
+  const hasLastVisit = Boolean(data.last_visit?.check_in);
+  const lastVisit = hasLastVisit ? formatDate(data.last_visit.check_in) : t('housekeeping.noVisits');
+  const lastVisitTime = hasLastVisit ? formatTime(data.last_visit.check_in) : '';
   const maxPayment = Math.max(1, ...(data.monthly_payments || []).map((row) => row.total));
   const bars = (data.monthly_payments || []).map((row) => {
-    const height = Math.max(8, Math.round((row.total / maxPayment) * 88));
+    // ANTEIL, KEINE PIXELHOEHE. Hier stand `style="height:${...}px"` mit einer
+    // im JS gerechneten Zahl - ein hartkodierter Designwert im Markup, und der
+    // Balken skalierte deshalb nicht mit seiner Karte. Der Wert ist DATEN
+    // (0..1), die Geometrie gehoert dem Stylesheet; dieselbe Bauart wie
+    // `--span-from/--span-to` am Wetterbalken und `--bar-scale` im Budget.
+    // Der Mindestanteil haelt einen Monat ohne Zahlung sichtbar.
+    const scale = Math.max(0.06, row.total / maxPayment);
     // Wert sichtbar am Balken statt nur im Hover-title: das Chart trug sonst
     // keine ablesbare Achse oder Zahl (Audit A2-23).
     return `
       <div class="housekeeping-chart__bar-wrap">
         <span class="housekeeping-chart__value">${esc(money(row.total))}</span>
-        <div class="housekeeping-chart__bar" style="height:${height}px" title="${esc(formatMonthLabel(row.month))} ${esc(money(row.total))}"></div>
+        <div class="housekeeping-chart__track" title="${esc(formatMonthLabel(row.month))} ${esc(money(row.total))}">
+          <div class="housekeeping-chart__bar" style="--bar-scale:${scale.toFixed(4)}"></div>
+        </div>
         <span>${esc(formatMonthLabel(row.month, { month: 'short' }))}</span>
       </div>
     `;
@@ -321,6 +336,7 @@ function renderDashboard(content) {
       <article class="metric-card">
         <div class="metric-card__label">${esc(t('housekeeping.lastVisit'))}</div>
         <div class="metric-card__value">${esc(lastVisit)}</div>
+        ${lastVisitTime ? `<div class="metric-card__note">${esc(lastVisitTime)}</div>` : ''}
       </article>
       <article class="metric-card">
         <div class="metric-card__label">${esc(t('housekeeping.pendingChores'))}</div>

@@ -1,4 +1,4 @@
-<!-- version: 2.23.1 -->
+<!-- version: 2.24.0 -->
 <!--
   Die `releaseNotes` fuer den Umbrel-App-Store, von Hand fuer JEDEN Release
   geschrieben. `umbrel-publish.yml` nimmt den Text unter diesem Kommentar
@@ -29,16 +29,21 @@
     - Leerzeile zwischen den Absaetzen: der Store rendert ein gefaltetes
       YAML-Blockskalar, dort ist die Leerzeile der Absatzumbruch.
 
-  HINWEIS ZU DIESER VERSION: ein Fehlerbehebungs-Release mit genau einer
-  Sache, also ein Absatz. Keine Migration, kein Handlungs-Absatz. Der Text
-  nennt, dass die Ursache in 2.23.0 entstanden ist - wer das Update von
-  gestern gelesen hat, soll nicht raten muessen, ob hier etwas Neues kaputt
-  ging. Welche Regel entfallen war und welcher Trenner jetzt steht, bleibt
-  draussen: das ist Bauart.
+  HINWEIS ZU DIESER VERSION: eine Runde am Erscheinungsbild, quer durch die
+  App - keine Migration, also kein Handlungs-Absatz. Drei Themen statt einer
+  Aufzaehlung von zehn Modulen: was man LIEST (Zahlen und Diagramme), was man
+  NICHT SAH (verdeckte Zeilen, unsichtbare Marken im hellen Modus) und die
+  Belohnungen, wo zwei verschiedene Dinge gleich aussahen. Der letzte Punkt
+  steht eigenstaendig, weil er Kinder betrifft und der einzige ist, bei dem
+  eine Auskunft schlicht falsch war.
 
   Draussen bleibt die ganze Bauart: welche Regel wo stand, welcher Container
   eine Scroll-Box war, welche Zahl gemessen wurde, welcher Test es absichert.
 -->
-The line under a birthday reads as separate facts again. Yesterday's update took a tinted capsule off the countdown, and with it the only thing that had been keeping the countdown apart from the date, the age and the note - "in 12 days 30.08.2026 turns 37 Linda's sister" ran together as one stretch of text. The parts are separated again, and the note no longer sits flush against the age either, which it had been doing for much longer than a day.
+Zahlen und Diagramme sind besser zu lesen. Die Kennzahlen oben auf einer Seite stehen jetzt in der Groesse, die ihnen zusteht - im Inventar waren Anzahl und Gesamtwert bislang so gross wie ihre Beschriftung und gingen darin unter. Der Verlauf im Budget beschriftet seine Werteachse jetzt im Diagramm selbst, statt daneben, und die Zahlen dort werden nicht mehr am linken Rand abgeschnitten. Die Balken der monatlichen Zahlungen in der Haushaltshilfe zeigen, wie voll sie sind, statt nur unterschiedlich hoch zu sein. Auf dem Telefon rutschen zu enge Kennzahlreihen in zwei Spalten, damit Woerter wie "Gegenstaende" nicht mitten im Wort umbrechen.
 
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.23.1
+Zwei Dinge waren schlicht nicht zu sehen. Der Hinweis zum Installieren der App lag ueber dem Ende jeder Seite, ohne Platz dafuer freizuhalten - bei den Belohnungen blieb dadurch die unterste Zeile mit dem Punktestand eines Kindes unerreichbar, egal wie weit man scrollte. Und im hellen Modus fehlte den meisten Eintraegen in den Einstellungen ihr Symbolfeld, sodass zwoelf farbige Zeilen neben siebzehn scheinbar leeren standen; im dunklen Modus war es immer da.
+
+In den Belohnungen ist wieder zu erkennen, woher Punkte stammen. Ein Punkt aus einer erledigten Aufgabe und ein vergebener Bonus wurden in derselben Farbe angezeigt, also gar nicht unterschieden - im Verlauf sagen das jetzt die Symbole, die es dafuer immer schon gab.
+
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.24.0

@@ -14,6 +14,7 @@
 import { api } from '/api.js';
 import { t, formatDate, formatTime, getLocale, getNumberFormat } from '/i18n.js';
 import { esc } from '/utils/html.js';
+import { CHART, chartScales, chartGridMarkup, chartXLabelsMarkup } from '/utils/chart.js';
 import { wireScrollFade, scheduleUndoableDelete } from '/utils/ux.js';
 import { toLocalDateKey, parseLocalDateKey, addLocalDays } from '/utils/date.js';
 import { trendMarkup } from '/utils/metric-card.js';
@@ -119,35 +120,13 @@ const RANGE_LABELS = {
 // Kanal-Farben (Trend-Chart). Nur Tokens — keine Wertung, rein zur Unterscheidung.
 const CHANNEL_COLORS = ['var(--module-health)', 'var(--color-info)', 'var(--color-warning)'];
 
-// Gemeinsame Chart-Geometrie: linker Gutter für Y-Wert-Labels, unterer für
-// X-Datumslabels. Alle drei Health-Charts (Vitalwerte, Laborwerte, Aktivität)
-// teilen denselben 600×200-viewBox und dieselben Ränder, damit sie als EIN
-// lesbares System wirken statt als drei verschiedene Kurven-Kästen.
-const CHART = Object.freeze({ W: 600, H: 200, PAD_L: 40, PAD_R: 12, PAD_T: 14, PAD_B: 26 });
-
-function chartScales() {
-  const { W, H, PAD_L, PAD_R, PAD_T, PAD_B } = CHART;
-  return { left: PAD_L, right: W - PAD_R, top: PAD_T, bottom: H - PAD_B };
-}
-
-// Fünf horizontale Gitterlinien mit Y-Wert-Beschriftung am linken Rand — ersetzt
-// die früheren zwei frei schwebenden Min-/Max-Zahlen durch eine echte Werteachse.
-function chartGridMarkup(min, max, metric) {
-  const { W, PAD_L, PAD_R } = CHART;
-  const { top, bottom } = chartScales();
-  const out = [];
-  // Bei Spannen ab 4 Einheiten sind Dezimal-Ticks Pseudo-Präzision
-  // ("125,9 mmHg", Audit A2-21) - dort runden die Labels auf Ganzzahlen.
-  // Kleine Labor-Spannen (z. B. 0,5-1,2) behalten ihre Nachkommastellen.
-  const wholeTicks = (max - min) >= 4;
-  for (let k = 0; k <= 4; k++) {
-    const gy = top + (k * (bottom - top)) / 4;
-    const val = max - (k * (max - min)) / 4;
-    out.push(`<line class="health-chart__grid" x1="${PAD_L}" y1="${gy.toFixed(1)}" x2="${W - PAD_R}" y2="${gy.toFixed(1)}" />`);
-    out.push(`<text x="${PAD_L - 6}" y="${(gy + 3.5).toFixed(1)}" class="health-chart__axis health-chart__axis--y" text-anchor="end">${esc(axisTickText(metric, val, wholeTicks))}</text>`);
-  }
-  return out.join('');
-}
+// Die Chart-Geometrie STAND HIER und ist nach `utils/chart.js` gezogen: sie
+// loeste den Fall fuer die drei Charts dieses Moduls, und dieselbe Aufgabe
+// stellte sich dem Budget-Trend und dem Abo-Flaechenchart - beide haben sie je
+// eigen und je falscher beantwortet (Achse ausserhalb des SVG, verzerrende
+// Skalierung). Was hier bleibt, ist das VOKABULAR: wie ein Achsenwert dieses
+// Moduls aussieht, weiss nur dieses Modul.
+const chartGridFor = (min, max, metric) => chartGridMarkup(min, max, (val, wholeTicks) => axisTickText(metric, val, wholeTicks));
 
 // Achsen-Tick. Eine Dauer darf hier nicht dezimal stehen: „8,4" neben einer
 // Verlaufszeile mit „8 Std. 24 Min." wäre dieselbe Größe in zwei Zahlensystemen.
@@ -165,21 +144,9 @@ function axisTickText(metric, value, wholeTicks) {
   return fmtNum(wholeTicks ? Math.round(value) : value);
 }
 
-// X-Achsen-Datumslabels (erstes, mittleres, letztes Datum) unter dem Plot,
-// an den Plotgrenzen ausgerichtet (erstes linksbündig, letztes rechtsbündig).
-function chartXLabelsMarkup(dates) {
-  if (!dates.length) return '';
-  const { H, W, PAD_L, PAD_R } = CHART;
-  const y = H - 7;
-  const picks = dates.length <= 2
-    ? dates.map((d, i) => ({ d, i }))
-    : [dates[0], dates[Math.floor((dates.length - 1) / 2)], dates[dates.length - 1]].map((d, i) => ({ d, i }));
-  return picks.map(({ d }, idx) => {
-    const anchor = idx === 0 ? 'start' : idx === picks.length - 1 ? 'end' : 'middle';
-    const px = anchor === 'start' ? PAD_L : anchor === 'end' ? W - PAD_R : (PAD_L + (W - PAD_R)) / 2;
-    return `<text x="${px.toFixed(1)}" y="${y}" class="health-chart__axis" text-anchor="${anchor}">${esc(formatDate(d))}</text>`;
-  }).join('');
-}
+// Die Auswahl der drei Marken und ihre Ausrichtung stehen in `utils/chart.js`;
+// hier steht nur, dass die Beschriftung dieses Moduls ein DATUM ist.
+const chartXLabels = (dates) => chartXLabelsMarkup(dates.map((d) => formatDate(d)));
 
 // Panel-Definitionen je Route. Icons folgen den Sub-Tab-Icons (health-tabs.js).
 const PANELS = () => [
@@ -724,10 +691,12 @@ function sparklineMarkup(points, key, metric) {
   const pts = withVal.map((o, idx) => `${x(idx).toFixed(1)},${y(o.v).toFixed(1)}`).join(' ');
   const lastX = x(n - 1).toFixed(1);
   const lastY = y(withVal[n - 1].v).toFixed(1);
+  // Farbe steht in panel.css am geteilten Bauteil, nicht hier: sie ist eine
+  // Aussage über den WERT und gehört deshalb der Karte, nicht dem Modul.
   return `<svg class="metric-card__spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
-      <polyline points="${pts}" fill="none" stroke="var(--module-accent)" stroke-width="1.5"
+      <polyline points="${pts}" fill="none" stroke-width="1.5"
         stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" />
-      <circle cx="${lastX}" cy="${lastY}" r="2" fill="var(--module-accent)" vector-effect="non-scaling-stroke" />
+      <circle cx="${lastX}" cy="${lastY}" r="2" vector-effect="non-scaling-stroke" />
     </svg>`;
 }
 
@@ -917,7 +886,7 @@ function chartMarkup(metric, series) {
         </span>`).join('')}</div>`
     : '';
 
-  const grid = chartGridMarkup(min, max, metric);
+  const grid = chartGridFor(min, max, metric);
 
   // Screenreader-Datentabelle: nur Buckets mit mindestens einem Wert.
   const chLabel = (idx) => (metric.channelLabelKeys?.[idx] ? t(metric.channelLabelKeys[idx]) : t(metric.labelKey));
@@ -926,7 +895,7 @@ function chartMarkup(metric, series) {
   const tableRows = dataPoints
     .map((p) => [formatDate(p.date), ...channels.map(({ key }) => fmtChannelValue(metric, p[key]))]);
   const table = tableRows.length ? chartTableMarkup(t(metric.labelKey), tableHeaders, tableRows) : '';
-  const xLabels = chartXLabelsMarkup(dataPoints.map((p) => p.date));
+  const xLabels = chartXLabels(dataPoints.map((p) => p.date));
 
   return `
     <svg class="health-chart" viewBox="0 0 ${W} ${H}" role="img"
@@ -2766,8 +2735,8 @@ function labTrendChart(points, analyteName) {
     tableRows,
   );
 
-  const grid = chartGridMarkup(min, max);
-  const xLabels = chartXLabelsMarkup(points.map((p) => p.date));
+  const grid = chartGridFor(min, max);
+  const xLabels = chartXLabels(points.map((p) => p.date));
 
   return `
     <svg class="health-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(ariaLabel)}">
@@ -3295,10 +3264,10 @@ function activityChartMarkup(summary) {
       ? `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="3" fill="var(--module-health)"><title>${esc(`${label}: ${t('health.activity.unit.min', { value: fmtNum(b.durationMin) })}`)}</title></rect>`
       : '';
     return `${rect}
-      <text x="${(x + barW / 2).toFixed(1)}" y="${H - 8}" class="health-chart__axis" text-anchor="middle">${esc(label)}</text>`;
+      <text x="${(x + barW / 2).toFixed(1)}" y="${H - 8}" class="chart__axis" text-anchor="middle">${esc(label)}</text>`;
   }).join('');
 
-  const grid = chartGridMarkup(0, max);
+  const grid = chartGridFor(0, max);
 
   const tableRows = buckets.map((b, i) => [
     t(ACTIVITY_WEEKDAY_LABEL_KEYS[i]),

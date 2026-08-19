@@ -200,10 +200,19 @@
 
 /* Die neutrale Grundform gilt nur, WO keine Marke sie traegt: `.vivid-mark`
  * steht in layout.css, diese Datei laedt danach, und bei gleicher Spezifitaet
- * gewinnt die spaetere - die Marke waere eine Klasse ohne Wirkung. */
+ * gewinnt die spaetere - die Marke waere eine Klasse ohne Wirkung.
+ *
+ * `--color-fill-well`, NICHT `--color-surface-2`. Die Gegenform stand auf der
+ * naechsthoeheren Flaeche statt auf der Well-Stufe, und im Light-Theme ist das
+ * keine Flaeche: #FBFAF7 auf dem Zeilengrund #FFFFFF ergibt gemessen 1.04:1,
+ * auf dem tatsaechlichen Grund 1.01:1 - unsichtbar. Im Dark trug dieselbe Regel,
+ * die zwoelf Modulblaetter aus v2.22.0 standen also hell als vier farbige
+ * Kacheln neben 25 nackten Glyphen und dunkel als 29 gleichwertige Zeilen.
+ * Ein Licht/Dunkel-Paritaetsbruch, und die Vollton-Regel benennt fuer ihre
+ * neutrale Gegenrichtung ausdruecklich `--color-fill-well`. */
 .settings-shell__navigation-link-icon:not(.vivid-mark) {
   color: var(--color-text-secondary);
-  background: var(--color-surface-2);
+  background: var(--color-fill-well);
 }
 
 .settings-shell__navigation-link-icon-glyph {
@@ -2392,13 +2401,21 @@
   background: color-mix(in srgb, var(--color-accent) var(--tint-state), transparent);
 }
 
-/* `--tint-ink` ist die Sprosse fuer TEXT auf getoenter Flaeche (tokens.css). Die
-   pure Akzentfarbe stand auf ihrer eigenen blassen Fuellung bei 4,25:1 (light)
-   und 3,86:1 (dark) - beide unter der 4,5:1 fuer Text. Die Skala hatte die
-   Antwort, ich hatte ihre oberste Stufe uebersehen. */
+/* „AUSGEBLENDET" IST EINE MELDUNG, UND EINE MELDUNG TRAEGT KEINE FLAECHE.
+ *
+ * Hier stand eine Akzent-Toenung mit `--tint-ink`-Schrift derselben Farbe, und
+ * der Kommentar davor erzaehlte die Vorgeschichte: die pure Akzentfarbe lag auf
+ * ihrer eigenen blassen Fuellung bei 4,25:1 (light) und 3,86:1 (dark), also
+ * unter AA, und die Antwort war damals die naechste Sprosse der Toenungsskala.
+ *
+ * Die Skalen-Regel (v2.23.0) beantwortet die Frage eine Ebene hoeher: ein
+ * Etikett nennt seinen Ton EINMAL. „Ausgeblendet" meldet einen Zustand, und
+ * Meldungen tragen ihren Ton in der Schrift - hier ist der Zustand nicht einmal
+ * gefaehrlich oder dringend, also bleibt auch die Schrift zurueckgenommen. Der
+ * ganze Kontrastkampf faellt mit der Flaeche weg, gegen die er gefuehrt wurde. */
 .settings-module-row__title .settings-module-status--hidden {
-  color: color-mix(in srgb, var(--color-accent) var(--tint-ink), var(--color-text-primary));
-  background: color-mix(in srgb, var(--color-accent) var(--tint-surface), transparent);
+  color: var(--color-text-secondary);
+  background: transparent;
 }
 
 /* Kind der Kueche: Symbol und Beschriftung links, Ausblenden rechts - dieselbe
@@ -2559,13 +2576,16 @@
   padding: var(--space-0h) var(--space-2);
   border-radius: var(--radius-full);
   font-weight: var(--font-weight-semibold);
-  /* Akzent-TEXT auf akzent-getoenter Flaeche - der rohe Akzent scheitert hier,
-   * weil der Grund eine Toenung DERSELBEN Farbe ist (gemessen 3,99:1 dark).
-   * Das ist die Akzent-auf-Toenung-Regel, und sie hat seit Runde 1 auf diesen
-   * Fall gewartet: die Regel stand in tokens.css, die Fundstelle sah niemand,
-   * weil kein Guard bis in die Settings-Blaetter reichte. */
-  color: color-mix(in srgb, var(--color-accent) var(--tint-ink), var(--color-text-primary));
-  background: color-mix(in srgb, var(--color-accent) var(--tint-surface), transparent);
+  /* „EXTERN" / „EINGEBAUT" IST EINE SACHANGABE, KEINE IDENTITAET.
+   *
+   * Hier stand Akzent-Text auf akzent-getoenter Flaeche, mit einer
+   * Kontrastbegruendung im Kommentar (der rohe Akzent scheiterte bei 3,99:1
+   * dark, weil der Grund eine Toenung DERSELBEN Farbe war). Die Skalen-Regel
+   * loest den Fall auf: die Zuordnung, die dieses Etikett nennt, ist keine
+   * Identitaet mit eigener Farbe - sie sagt, WOHER ein Modul kommt, so wie ein
+   * Versionsetikett sagt, WANN. Neutral, und der Kontrastkampf entfaellt. */
+  background: var(--color-fill-well);
+  color: var(--color-text-primary);
 }
 
 .settings-module-row__toggle {

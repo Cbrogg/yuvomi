@@ -915,10 +915,18 @@ function renderTaskChip(task, { interactive = true, icon = true } = {}) {
   const button   = interactive
     ? ` role="button" tabindex="0" aria-label="${esc(t('calendar.taskChipAriaLabel', { title: task.title }))}"`
     : '';
+  // Die Prioritaet steht als Rangmarke im Punkt (list-row.css), nicht mehr als
+  // getoentes Feld mit getoenter Schrift: dieselbe Stufe, die die Aufgabenliste
+  // seit v2.23.0 so zeigt. „Ohne" bekommt keinen Punkt - eine Marke fuer eine
+  // Abwesenheit waere eine fuenfte Stufe.
+  const dot = priority !== 'none'
+    ? `<span class="priority-dot priority-dot--${priority}" aria-hidden="true"></span>`
+    : '';
   return `<div class="cal-task-chip cal-task-chip--${priority}"
                data-task-id="${task.id}"${button}
                title="${label}${esc(timeStr)}">
     ${icon ? '<i data-lucide="check-square" class="icon-sm" aria-hidden="true"></i>' : ''}
+    ${dot}
     <span>${label}${esc(timeStr)}</span>
   </div>`;
 }

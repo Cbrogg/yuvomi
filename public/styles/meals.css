@@ -774,7 +774,9 @@
   padding: var(--space-3);
   border: none;
   border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--module-meals) var(--tint-wash), transparent);
+  /* Eine Notiz im eigenen Modul nennt nichts: der Modulton sagte „Mahlzeiten"
+   * auf einer Seite, deren Kopf das beantwortet (Herkunfts-Regel). */
+  background: var(--color-fill-well);
 }
 
 .meal-recurrence-note {

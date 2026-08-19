@@ -634,8 +634,13 @@
  * Spezifität nicht, bei gleicher Spezifität gewinnt sonst die spätere
  * Basisdeklaration und die Kompaktstufe bleibt wirkungslos (Audit A2-06). */
 @container budget-page (max-width: 479px) {
+  /* Der SCHRIFTGRAD stand hier auch (`--text-base`, 16px) und ist entfallen:
+   * die Kennzahl-Zeile klemmt ihn seit 2026-08-19 selbst, gestuft und mit
+   * Title 3 als Untergrenze (panel.css). Zwei Hosts unterboten sie lokal
+   * auf Fussnotengroesse - genau die Drift, gegen die das geteilte Bauteil
+   * gebaut wurde. Die Polsterung bleibt: sie ist eine Platzfrage, keine
+   * Typo-Entscheidung. */
   .metric-card { padding: var(--space-2); }
-  .metric-card__value { font-size: var(--text-base); }
   .metric-card__trend { display: none; }
 }
 
@@ -1537,29 +1542,20 @@
 .budget-stats__controls { display:flex; flex-wrap:wrap; gap:var(--space-3); align-items:center; margin-bottom:var(--space-4); }
 .budget-stats__trend { width:100%; height:auto; display:block; }
 
-/* Achsenbeschriftung der Trendkurve: Skalen-Maximum oben, Zeitraumgrenzen unten.
- * Liegt als HTML außerhalb des SVG, weil preserveAspectRatio="none" jeden
- * SVG-Text horizontal verzerren würde. */
-.budget-stats__trend-wrap { position:relative; }
-.budget-stats__axis-max { display:block; font-size:var(--text-xs); color:var(--color-text-tertiary); margin-bottom:var(--space-1); }
-.budget-stats__axis-x { display:flex; justify-content:space-between; font-size:var(--text-xs); color:var(--color-text-tertiary); margin-top:var(--space-1); }
+.budget-stats__trend-wrap { position:relative; width:100%; }
 
-/* Werteachse statt einer einzelnen Max-Zahl (Audit A2-05): Gitterlinien im
- * SVG (25/50/75%), das Halbwert-Label liegt am linken Rand auf halber Höhe.
- * Der Bezugsrahmen dafür (`.budget-stats__trend-wrap { position: relative }`)
- * steht schon vier Zeilen darüber - hier stand er ein zweites Mal. */
-.budget-stats__axis-mid {
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: var(--text-xs);
-  color: var(--color-text-tertiary);
-  background: color-mix(in srgb, var(--color-surface) 82%, transparent);
-  padding-inline: var(--space-0h);
-  pointer-events: none;
-}
-.budget-stats__grid { stroke: var(--color-border-subtle); stroke-width: 1; }
+/* HIER STANDEN DREI ACHSEN-REGELN UND EIN GITTER, alle ausserhalb des SVG:
+ * `__axis-max` als Zeile darueber, `__axis-mid` absolut auf halber Hoehe,
+ * `__axis-x` als Zeile darunter, dazu ein eigenes `__grid`. Die Begruendung
+ * dafuer stand daneben - „weil preserveAspectRatio='none' jeden SVG-Text
+ * horizontal verzerren wuerde" - und sie las die Kausalitaet verkehrt herum:
+ * das `none` war die Ursache, nicht die Randbedingung.
+ *
+ * Seit der Extraktion (utils/chart.js) bringt die geteilte Geometrie ihren
+ * linken Gutter mit, die Achse steht im Bild und traegt `.chart__axis` aus
+ * panel.css - dieselbe wie die drei Charts der Gesundheit. Ein Halbwert-Label
+ * mit halbtransparenter Hinterlegung, damit es die Gitterlinie ueberdeckt,
+ * unter der es steht, braucht es dann auch nicht mehr. */
 
 /* Ablesbare Einzelwerte: unsichtbare Schaltfläche je Datenpunkt über der Kurve.
  * Der Wert selbst steht im aria-label — das hier ist nur die Trefferfläche und

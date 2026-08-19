@@ -219,7 +219,49 @@
  * Gefragt wird an der SHELL, nicht am Scrollport: der FAB hängt seit #634 in
  * `.fab-layer` neben `.app-content`, nicht mehr darin. */
 .app-shell:has(.fab-layer .page-fab:not([hidden])) .app-content {
-  padding-block-end: var(--fab-safe-zone);
+  padding-block-end: calc(var(--fab-safe-zone) + var(--install-prompt-tail));
+}
+
+/* ── UND DER DRITTE FIXIERTE KÖRPER: DER INSTALL-BANNER ──
+ *
+ * FAB und Sammelaktions-Pille bekamen ihren Nachlauf, der Banner nie - obwohl
+ * er dieselbe Bauart hat (fixiert, über dem Scrollport, verdeckt das Ende der
+ * Seite). Gemessen auf /rewards bei 375px: 89px der letzten Punktestandszeile
+ * lagen bei maximalem Scroll unter ihm, mit Balken und „Einlösen" darin. Kein
+ * Scrollweg führte dorthin.
+ *
+ * ALS SUMMAND, NICHT ALS VIERTE `:has()`-REGEL. Der Nachlauf hat schon drei
+ * Fassungen (FAB, Pille, beides), und jede weitere fixierte Fläche verdoppelt
+ * sie. Der Banner steht deshalb als Variable in allen Fassungen - ohne ihn ist
+ * sie 0 und die Regeln rechnen wie bisher.
+ *
+ * DIE HÖHE KOMMT AUS DEM BAUTEIL (`--install-prompt-height`, gesetzt per
+ * ResizeObserver in yuvomi-install-prompt.js): sie hängt am Text, und der
+ * bricht in 24 Sprachen unterschiedlich um.
+ *
+ * DER FALLBACK IST GEMESSEN, keine Schätzung: 89px ist die deutsche
+ * iOS-Fassung mit zweizeiligem Untertitel, also der höhere der beiden
+ * Bannertexte. Er trägt allein - der Nachlauf stimmt auch dann, wenn die
+ * Meldung ausbleibt, weil das Banner nach einem Re-Render neu aufgebaut wurde.
+ * Ein Fallback, der nur den kurzen Fall kennt, wäre genau in den Sprachen
+ * falsch, in denen der Text umbricht. */
+/* BEIDE ALS `:root`, SONST GEWINNT DIE BASIS. Die erste Fassung schrieb den
+ * Zustand als `html:has(yuvomi-install-prompt)` - Typ plus :has() mit einem
+ * Typ-Argument ist Spezifitaet (0,0,2) und liegt damit UNTER dem `:root` der
+ * Basis (0,1,0). Gemessen: `--install-prompt-height` stand korrekt auf 89px,
+ * der Nachlauf blieb 0, und die letzte Zeile lag weiter 97px unter dem Banner.
+ * Dieselbe Falle, vor der die Pillen-Regel weiter unten im Kommentar warnt. */
+:root {
+  --install-prompt-tail: 0px;
+}
+
+:root:has(yuvomi-install-prompt) {
+  --install-prompt-tail: calc(var(--install-prompt-height, 89px) + var(--space-4));
+}
+
+/* Der Fall ohne FAB und ohne Pille - sonst deckte ihn keine der Regeln ab. */
+.app-shell:not(:has(.fab-layer .page-fab:not([hidden]))):not(:has(.list-bulkbar)) .app-content {
+  padding-block-end: var(--install-prompt-tail);
 }
 
 /* UND DIE PILLE BRAUCHT DENSELBEN NACHLAUF. Sie ist seit Etappe 5 eine fixierte
@@ -233,11 +275,11 @@
  * FAB-Regel darüber und bliebe wirkungslos, sobald ein FAB da ist. Und genau
  * das ist der Normalfall - beide Seiten mit Pille haben einen. */
 .app-shell:has(.fab-layer .page-fab:not([hidden])):has(.list-bulkbar) .app-content {
-  padding-block-end: calc(var(--fab-safe-zone) + var(--bulk-pill-safe-zone));
+  padding-block-end: calc(var(--fab-safe-zone) + var(--bulk-pill-safe-zone) + var(--install-prompt-tail));
 }
 
 .app-shell:not(:has(.fab-layer .page-fab:not([hidden]))):has(.list-bulkbar) .app-content {
-  padding-block-end: var(--bulk-pill-safe-zone);
+  padding-block-end: calc(var(--bulk-pill-safe-zone) + var(--install-prompt-tail));
 }
 
 /* UND DER NACHLAUF MUSS AN DAS, WAS WIRKLICH SCROLLT (Critique 2026-08-13).
@@ -3751,8 +3793,11 @@ p.field-hint--warn[hidden] {
   flex: 0 0 auto;
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-full);
-  background: color-mix(in srgb, var(--color-accent) var(--tint-surface), var(--color-surface));
-  color: var(--color-accent);
+  /* Eine Versionsnummer nennt weder eine Identitaet noch eine Stufe - sie ist
+   * ein Datum in Ziffernform. Hier stand die Stimme zweimal: als 16-%-Flaeche
+   * und als Schrift darauf. Neutral, wie jedes Etikett ohne Aussage. */
+  background: var(--color-fill-well);
+  color: var(--color-text-primary);
   font-size: var(--text-xs);
   font-weight: var(--font-weight-semibold);
 }

@@ -2781,6 +2781,22 @@ expires by itself — the run in which a kitchen or tasks page gains a chart is 
 Priorities encode rank by colour alone on the dashboard and the mobile calendar, so
 "high" stays separable from "urgent" by lightness as well as hue.
 
+**The evaluation surface (v2.24.0).** A chart with a value axis carries one coordinate system
+across the app (`public/utils/chart.js`): fixed margins, a five-tick value axis inside the picture,
+three time marks along the bottom. It was extracted from Health rather than designed - that module
+had solved it for its three charts, while the budget trend and the subscription area chart had each
+answered the same question their own way, both by stretching the box (`preserveAspectRatio="none"`)
+and moving the axis outside it. Those two are one fault, not two: without fixed margins there is no
+room for an axis inside, and outside it drifts against its own grid lines whenever the chart
+resizes. What stays with the module is the **vocabulary** - whether a tick reads "8:24", "126" or
+"5.050 €" is only knowable there, so the shared helper takes a format callback. A value axis
+labels a scale, not a balance, so money on one drops its cents.
+
+Not every chart is that shape. A **proportion bar** carries a neutral track with a fill whose share
+comes from the data as a 0..1 custom property, never as a pixel height computed in the markup - the
+weather forecast span and the housekeeping payment bars are the reference. A distribution donut is a
+third form again. The three do not share a component; they share the four promises in DESIGN.md.
+
 **The per-background rule.** AA holds *per background*, not per colour. A tint that passes on white
 can break on the grouped ground — seven module tints did exactly that and were deepened. Every new
 colour/surface pairing is measured against its real ground, in light **and** dark, never estimated

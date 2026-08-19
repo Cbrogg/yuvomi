@@ -198,19 +198,25 @@
   display: none;
 }
 
-/* Auf dem aktiven Tab kehrt der Zähler sich um: Tinte als Fläche, Akzent als
- * Ziffer (Apple-Muster für Badges auf gefüllten Segmenten). Die 15 %-Tönung von
- * oben würde hier eine leicht aufgehellte Akzentfläche ergeben, auf der
- * --color-text-primary (dunkles Ink) auf einem satten Modul-Tint stünde - der
- * einzige Ort, an dem der Fill-Umbau die alte Badge-Rechnung gekippt hätte.
- * Umgekehrt erbt die Ziffer exakt den verifizierten Akzent-auf-Weiß-Wert
- * (>=5:1 über alle 17 Tints). */
-/* Der Zähler kehrte sich auf der GEFÜLLTEN Pille um. Die Pille ist jetzt eine
- * Surface-Pille - ein weißer Zähler darauf wäre unsichtbar. Er nimmt deshalb
- * dieselbe getönte Marke wie überall sonst (tokens.css, Abschnitt 6c). */
+/* NEUTRAL, NICHT ZWEIMAL IM MODULTON.
+ *
+ * Diese Regel hat zwei Fassungen hinter sich (Akzent als Ziffer auf Tint-Fläche,
+ * dann getönte Marke auf der Surface-Pille) und beide nannten den Modulton
+ * zweimal blass: `--tint-state` als Fläche UND `--tint-ink` als Ziffer darauf.
+ * Die Skalen-Regel (v2.23.0) entscheidet den Fall über die Frage, was das
+ * Etikett SAGT - und ein Zähler sagt „wie viele", keine Identität. Der dritte
+ * Zweig der Regel greift zusätzlich: die Identität, die der Modulton nennen
+ * würde, ist die des Raums, in dem der Zähler steht. Also neutral.
+ *
+ * Der Warnzähler drei Regeln weiter unten ist die Gegenprobe im selben File:
+ * er SAGT etwas („hier fehlt was") und trägt seinen Ton deshalb voll.
+ *
+ * Der Ruhezustand oben bleibt unberührt: dort ist `currentColor` die neutrale
+ * Tab-Tinte, seine 15-%-Tönung also ohnehin farblos. Nur auf dem aktiven Tab
+ * wäre currentColor der Modulton - genau das fängt diese Regel ab. */
 .sub-tab--active .sub-tab__badge {
-  background-color: color-mix(in srgb, var(--active-module-accent, var(--color-accent)) var(--tint-state), transparent);
-  color: color-mix(in srgb, var(--active-module-accent, var(--color-accent)) var(--tint-ink), var(--color-text-primary));
+  background-color: var(--color-fill-well);
+  color: var(--color-text-primary);
 }
 
 /* Der Vorrats-Warnzähler bleibt sein eigenes Signal - auch auf dem aktiven Tab. */

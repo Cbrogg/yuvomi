@@ -969,21 +969,11 @@
   color: var(--color-text-secondary);
 }
 
-/* Der Punkt traegt die Farbe, also traegt er auch die Groesse, die das
- * Bestandsmass fuer einen Farbpunkt ist: 8px, wie die Kalender-Ebenenpunkte
- * und die Feiertagsmarke der Agenda. Bei den 4px von vorher war der Ton nur
- * Beiwerk neben dem getoenten Feld. */
-.priority-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: var(--radius-full);
-  flex-shrink: 0;
-}
-
-.priority-dot--low    { background-color: var(--color-priority-low); }
-.priority-dot--medium { background-color: var(--color-priority-medium); }
-.priority-dot--high   { background-color: var(--color-priority-high); }
-.priority-dot--urgent { background-color: var(--color-priority-urgent); }
+/* `.priority-dot` STAND HIER und ist nach list-row.css gezogen: dieselbe
+ * Rangmarke steht seit dieser Etappe auch am Aufgaben-Chip des Kalenders, und
+ * ein Page-CSS je Seite heisst, dass tasks.css dort gar nicht geladen ist. Eine
+ * zweite Fassung in calendar.css waere die Bauart gewesen, an der die
+ * Prioritaet ueberhaupt erst zwei Gesichter bekommen hat. */
 
 /* Fälligkeitsdatum */
 .due-date {

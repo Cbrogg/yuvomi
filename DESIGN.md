@@ -594,7 +594,14 @@ Inhalt, kein Verlauf ueber eine Karte, kein Text auf einer Flaeche, die nicht ge
   - **Rangmarke** (eine Stufe einer geordneten Reihe - Aufgaben-Prioritaet): ein
     8px-Vollton-PUNKT traegt die Farbe, die Schrift bleibt Sekundaertinte. Gescannt wird
     der Punkt, gelesen das Wort. 8px ist das Bestandsmass fuer einen Farbpunkt
-    (Kalender-Ebenen, Feiertagsmarke der Agenda).
+    (Kalender-Ebenen, Feiertagsmarke der Agenda). Der Punkt steht seit 2026-08-19 als
+    `.priority-dot` in `list-row.css`, nicht mehr in `tasks.css`: dieselbe Stufe erscheint
+    auch am Aufgaben-Chip des Kalenders, und ein Page-CSS je Seite heisst, dass tasks.css
+    dort gar nicht geladen ist. Die zweite Fassung, die daraus entstand, war ein getoentes
+    Feld mit getoenter Schrift - dieselbe Aufgabe sprach je nach Modul zwei Sprachen
+    (gemessen lagen die vier Felder 6,61 und 6,77 auseinander, bei 11,3 fuer die
+    Diagrammserien). **Wer eine Skala in einem zweiten Modul zeigt, verschiebt ihr Bauteil
+    in ein geteiltes Stylesheet, statt es dort nachzubauen.**
   - **Zuordnung** (nennt eine Identitaet): Vollton-FLAECHE mit `--color-ink-on-vivid` -
     aber nur, wenn die genannte Identitaet nicht die des Raums ist, in dem das Etikett
     steht. Sonst greift die Herkunfts-Regel und das Etikett bleibt NEUTRAL
@@ -2119,7 +2126,41 @@ Angabe braeuchte einen zweiten Timer, nur damit sie sich selbst aktuell haelt.
 - **Do** eine Spaltenzahl, die von der Breite eines BAUSTEINS abhaengt, per `@container`
   fragen - und den `container` am VORFAHREN deklarieren, nie am fragenden Element.
 - **Do** die Kennzahl einer Karte gestapelt setzen (kleines Label darueber, Zahl in Title 1
-  darunter, `tabular-nums`), nie als Zahl am rechten Ende einer Beschriftungszeile.
+  darunter, `tabular-nums`), nie als Zahl am rechten Ende einer Beschriftungszeile. Title 1
+  ist die Zusage, nicht die einzige Stufe: eine schmale KENNZAHLREIHE klemmt ihre Werte auf
+  Title 2 (unter 600px) und Title 3 (unter 400px), und Title 3 ist die Untergrenze - darunter
+  waere die Kennzahl so gross wie die Ueberschrift ueber ihr. Gefragt wird die REIHE, nicht
+  die Karte: wer eine Reihe aus `.metric-card` baut, deklariert
+  `container: metric-grid / inline-size` an ihr (`.metric-grid` und das Vitalraster der
+  Gesundheit tun genau das). Ein `container-type` an der KARTE selbst ist der Fehler dahinter -
+  `contain: inline-size` nimmt einem Grid-Item seine intrinsische Breite, und die Karten
+  fielen gemessen auf 18px zusammen.
+- **Do** einen Wert, der auch auf der kleinsten Stufe nicht passt, TEILEN statt weiter zu
+  verkleinern: die Kennzahl traegt eine Aussage, die Praezisierung gehoert in
+  `.metric-card__note`. „18.08.2026 · 08:30" war Datum UND Uhrzeit in einer Zahl und lief
+  38px ueber die Kartenkante; jetzt steht das Datum im Wert und die Uhrzeit in der Fussnote.
+- **Do** eine AUSWERTUNGSFLAECHE nach vier Zusagen bauen (die Grammatik, die der
+  Wetterbalken aus v2.21.0 gestiftet hat - sie war bis 2026-08-19 die einzige Flaechenfamilie
+  ohne Abschnitt hier, und das war kein Zufall, sondern die Ursache fuer fuenf Dialekte):
+  1. **Ein Verhaeltnis steht als ANTEIL am Element** (`--bar-scale`, `--span-from/--span-to`,
+     jeweils 0..1), nie als gerechnete Pixelhoehe im Markup. Der Wert ist DATEN, die Geometrie
+     ist DESIGN - das Balkenpaar der Haushaltshilfe trug `style="height:88px"` und skalierte
+     deshalb nicht mit seiner Karte.
+  2. **Ein Balken hat eine BAHN.** Ohne sie zeigt er nur sich selbst; mit ihr zeigt er seinen
+     Anteil. Die Bahn ist neutral (`--color-fill-well`), die Fuellung traegt die Farbe.
+  3. **Die Achse gehoert INS Diagramm**, nicht daneben: eine Beschriftung ausserhalb des SVG
+     verschiebt sich gegen ihre eigenen Gitterlinien, sobald das Diagramm skaliert.
+     `chartGridMarkup()` in health.js ist die Referenz - fuenf Linien mit Werteachse, EINE
+     geteilte Geometrie (`CHART`) fuer alle drei Charts des Moduls.
+  4. **Ein Diagramm ist nie der alleinige Traeger.** Die Zahl steht dabei; der Balken ist der
+     zweite Kanal, nicht der Ersatz.
+- **Do** jeder fixierten Shell-Flaeche ueber dem Scrollport einen NACHLAUF am Inhaltsende
+  geben, und zwar als Summand (`--install-prompt-tail`), nicht als weitere `:has()`-Fassung:
+  FAB, Sammelaktions-Pille und Install-Banner sind drei Flaechen und waeren als Kombinatorik
+  acht Regeln. Der Banner hatte bis 2026-08-19 gar keinen und verdeckte auf /rewards gemessen
+  97px der letzten Zeile, ohne Scrollweg dorthin. Wer den Summanden setzt, schreibt ihn als
+  `:root:has(...)` - `html:has(<typ>)` ist Spezifitaet (0,0,2) und verliert gegen das `:root`
+  der Basis.
 - **Do** den Primaerknopf eines Modulkopfs sein NOMEN zeigen lassen (`newLabel.*`:
   „Termin", „Geburtstag"); das Verb traegt das Plus-Zeichen, der ganze Satz bleibt im
   `aria-label`. Der kurze Text steht als `data-dock-label` am `.page-fab`, damit der
