@@ -5143,6 +5143,12 @@ textarea::placeholder {
   box-shadow: var(--shadow-lg);
   pointer-events: auto;
   animation: toast-in var(--duration-lg) var(--ease-out) forwards;
+  /* Der Wisch zum Verwerfen ist waagerecht - ohne diese Zeile hielt der Browser
+   * sich die Deutung offen, uebernahm die Geste als Bildlauf und beendete den
+   * Zeiger mit `pointercancel`, noch bevor die Schwelle erreicht war. Gemessen
+   * an #821: auf dem Telefon war der Wisch damit nie ausloesbar. Senkrecht
+   * bleibt beim Browser, damit die Seite unter dem Toast scrollbar bleibt. */
+  touch-action: pan-y;
 }
 
 .toast__icon {

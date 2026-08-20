@@ -11,7 +11,7 @@ import { forgetLayoutHint } from '/utils/dashboard-layout-hint.js';
 import { initI18n, getLocale, t, formatDate, formatTime } from '/i18n.js';
 import { esc } from '/utils/html.js';
 import { emptyHintEl } from '/utils/empty-state.js';
-import { wireScrollFade, wireCollapsingHeader } from '/utils/ux.js';
+import { wireScrollFade, wireCollapsingHeader, wireSwipeToDismiss } from '/utils/ux.js';
 import { TOAST_SURFACES, toastSurface } from '/utils/toast-surface.js';
 import { BULK_PILL_LAYER, clearBulkPill } from '/utils/bulk-pill.js';
 import { init as initReminders, stop as stopReminders } from '/reminders.js';
@@ -3797,31 +3797,17 @@ function showToast(message, type = 'default', duration = 3000, onUndo = null) {
   }
 
   container.appendChild(toast);
-  const dismissTimer = setTimeout(() => {
+  const dismiss = () => {
+    clearTimeout(dismissTimer);
     toast.classList.add('toast--out');
     toast.addEventListener('animationend', () => toast.remove(), { once: true });
-  }, duration);
+  };
+  const dismissTimer = setTimeout(dismiss, duration);
 
-  let startX = 0;
-  toast.addEventListener('pointerdown', (e) => { startX = e.clientX; toast.setPointerCapture(e.pointerId); });
-  toast.addEventListener('pointermove', (e) => {
-    const dx = e.clientX - startX;
-    if (Math.abs(dx) > 10) {
-      toast.style.transform = `translateX(${dx}px)`;
-      toast.style.opacity = String(Math.max(0, 1 - Math.abs(dx) / 120));
-    }
-  });
-  toast.addEventListener('pointerup', (e) => {
-    const dx = e.clientX - startX;
-    if (Math.abs(dx) > 40) {
-      clearTimeout(dismissTimer);
-      toast.classList.add('toast--out');
-      toast.addEventListener('animationend', () => toast.remove(), { once: true });
-    } else {
-      toast.style.transform = '';
-      toast.style.opacity = '';
-    }
-  });
+  // Wischen zum Verwerfen: die Geste samt ihrer zwei Fallen liegt in
+  // `wireSwipeToDismiss` (utils/ux.js), das CSS-Gegenstück ist das
+  // `touch-action: pan-y` auf `.toast`.
+  wireSwipeToDismiss(toast, { onDismiss: dismiss });
 }
 
 // --------------------------------------------------------
