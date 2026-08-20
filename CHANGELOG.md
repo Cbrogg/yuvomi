@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.25.0] - 2026-08-20
+
+### Fixed
+
+- **"Undo" in the toast messages works again.** Deleting a note, a task, a shopping item or an entry
+  in any other module offers a short "Undo" window at the bottom of the screen - and clicking it did
+  nothing at all. The button and its action were both in place; the click never reached them,
+  because the swipe-to-dismiss gesture on the toast captured the pointer as soon as it went down,
+  which redirects the resulting click to the toast instead of the button underneath. Keyboard and
+  touch took a different route and still worked, which is why this stayed hidden for so long: it
+  only ever broke for mouse users. Two more faults sat in the same place and are fixed with it -
+  simply moving the mouse across a toast pushed it off-screen and faded it to invisible before the
+  pointer could reach the button, and the horizontal swipe was never triggerable on a phone at all,
+  because the browser claimed the gesture for scrolling.
+
+### Added
+
+- **Retry-safe writes for the API (`Idempotency-Key`).** If a `POST` to the API goes out and the
+  answer is lost on the way - a timeout, a dropped connection, a restart at the wrong moment - the
+  caller cannot tell whether the record was created. Retrying may create a duplicate; not retrying
+  may lose the entry. Any `POST` under `/api/v1` now accepts an optional `Idempotency-Key` header:
+  repeating the same request with the same key returns the original response instead of creating a
+  second record, and says so with an `Idempotent-Replayed: true` header. Reusing a key for a
+  different request, or retrying while the first attempt is still running, is answered with `409`
+  rather than silently handing back someone else's result; a request that failed releases its key,
+  so a corrected payload can be sent again under the same one. Keys belong to the account that used
+  them, are kept for 24 hours and survive a restart. Callers that send no header are unaffected -
+  nothing about the existing API changes. Reported for task creation, implemented for every
+  endpoint, and documented in the OpenAPI spec.
+
 ## [2.24.3] - 2026-08-20
 
 ### Fixed

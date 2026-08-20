@@ -90,7 +90,7 @@ Turn on what your household needs; the rest stays out of the way.
 | **Birthdays** | Birthday tracker with automatic calendar events, age display and reminders. |
 | **Family** | Member profiles with roles, photos and contact details. New members join through an invite link and pick their own password. |
 | **Reminders** | Reminders on tasks and events via in-app badges, opt-in push, and household Gotify, ntfy or webhook channels. |
-| **API Tokens** | Bearer / X-API-Key tokens with an OpenAPI 3.0 spec and a built-in MCP endpoint for AI agents. |
+| **API Tokens** | Bearer / X-API-Key tokens with an OpenAPI 3.0 spec and a built-in MCP endpoint for AI agents. Writes are retry-safe via an optional `Idempotency-Key` header. |
 | **Backup** | Manual and scheduled backup/restore with pre-restore rollback and optional cloud upload. |
 
 Two more things you only get on your own server: **wall mode** turns the kitchen tablet into a

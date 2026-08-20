@@ -1,4 +1,4 @@
-<!-- version: 2.24.3 -->
+<!-- version: 2.25.0 -->
 <!--
   Die `releaseNotes` fuer den Umbrel-App-Store, von Hand fuer JEDEN Release
   geschrieben. `umbrel-publish.yml` nimmt den Text unter diesem Kommentar
@@ -29,22 +29,25 @@
     - Leerzeile zwischen den Absaetzen: der Store rendert ein gefaltetes
       YAML-Blockskalar, dort ist die Leerzeile der Absatzumbruch.
 
-  HINWEIS ZU DIESER VERSION: keine Migration, aber ein Handlungs-Absatz, und
-  der steht bewusst zuerst. Umbrel setzt fuer die App keine Zeitzone, ein
-  Container laeuft also auf UTC - und genau davon haengt ab, ob die
-  Kalender-Korrektur bei diesem Haushalt ueberhaupt ankommt. Wer TZ nicht
-  setzt, bekommt weiterhin verschobene Zeiten im abonnierten Kalender, nur
-  jetzt ausdruecklich als UTC statt unbestimmt. Das ehrlich zu sagen ist mehr
-  wert als die Korrektur zu bewerben.
+  HINWEIS ZU DIESER VERSION: kein Handlungs-Absatz. Die Datenbank bekommt eine
+  neue Tabelle, die beim ersten Start von selbst angelegt wird - das ist keine
+  Handlung fuer den Haushalt und gehoert deshalb nicht in den Text.
 
-  Draussen bleibt die ganze Bauart: Kalenderformat-Namen, welche Felder ein
-  Termin traegt, wo der Fehlerstand gespeichert wird, welcher Test es
-  absichert.
+  Der Bedienfehler steht zuerst, weil ihn jeder Haushalt taeglich trifft: er
+  war app-weit und betraf nur die Maus. Das gehoert dazu, sonst liest sich der
+  Absatz wie eine Korrektur an etwas, das der Leser nie kaputt erlebt hat -
+  wer Yuvomi am Telefon bedient, hat den Knopf immer funktionieren sehen.
+
+  Die Schnittstellen-Neuerung steht danach und ausdruecklich mit ihrem
+  Adressaten davor ("wer Yuvomi ueber seine Schnittstelle ansteuert"), damit
+  niemand nach einer Einstellung sucht, die es fuer ihn nicht gibt.
+
+  Draussen bleibt die ganze Bauart: wie der Klick abhanden kam, wie der
+  Schluessel gebildet wird, welche Antwortcodes es gibt, wie lange gespeichert
+  wird, welcher Test es absichert.
 -->
-Termine in einem abonnierten Kalender erscheinen wieder zur richtigen Zeit. Ein Termin, den du in Yuvomi anlegst, wurde im geteilten Kalender ohne Zeitzone weitergegeben - Google Kalender, Apple Kalender, Thunderbird, Outlook und Home Assistant lesen so etwas als UTC, ein Termin um 16 Uhr stand bei allen Abonnenten um 18 Uhr. Yuvomi gibt jetzt die Zeitzone deines Haushalts mit. Damit das bei dir wirkt, muss die App wissen, in welcher Zone du lebst: Umbrel startet sie ohne diese Angabe, sie laeuft dann auf UTC. Setze in den Einstellungen deiner Yuvomi-Installation die Variable TZ auf deine Zone, zum Beispiel Europe/Berlin. Ohne diese Angabe bleiben die Zeiten verschoben. Ein erneutes Abonnieren ist nicht noetig, die naechste Aktualisierung des Kalenders korrigiert die Termine von selbst.
+Der Knopf Rueckgaengig in den kurzen Meldungen am unteren Bildschirmrand funktioniert wieder. Wer eine Notiz, eine Aufgabe, einen Einkaufsposten oder einen Eintrag in einem anderen Modul geloescht hat, bekam die Meldung mitsamt Knopf angeboten - ein Klick darauf tat aber nichts, und die Loeschung blieb bestehen. Betroffen war nur die Bedienung mit der Maus: per Tastatur und am Telefon liess sich eine Loeschung immer zuruecknehmen, weshalb der Fehler lange unbemerkt blieb. Zwei kleinere Fehler an derselben Stelle gehen mit: die Meldung rutschte zur Seite und wurde unsichtbar, sobald der Mauszeiger sie nur beruehrte, und am Telefon liess sie sich nie wegwischen.
 
-Termine, die eine Kalenderverbindung mitgebracht hat, lassen sich wieder loswerden. Wer die Verbindung zu Google oder Apple getrennt hat, blieb bisher auf allen bereits uebernommenen Terminen sitzen: kein Abgleich fasste sie noch an, und beim erneuten Verbinden kamen sie ein zweites Mal herein - am deutlichsten bei wiederkehrenden Terminen. Sie einzeln zu loeschen war der einzige Weg. Beim Trennen fragt Yuvomi jetzt, ob sie mitgehen sollen, und nennt dabei ihre Anzahl; wer schon getrennt hat, findet den Weg in den Einstellungen unter Synchronisation. Deine eigenen Termine bleiben, und beim Anbieter aendert sich nichts - entfernt wird nur die Kopie in Yuvomi, ein erneutes Verbinden holt alles zurueck.
+Wer Yuvomi ueber seine Schnittstelle ansteuert - eigene Skripte, Home Assistant, KI-Assistenten -, kann Schreibzugriffe jetzt gefahrlos wiederholen. Bricht die Verbindung ab, nachdem eine Aufgabe angelegt wurde, aber bevor die Bestaetigung ankommt, war bisher nicht zu erkennen, ob sie entstanden ist; ein zweiter Versuch legte sie moeglicherweise ein zweites Mal an. Wird beim Aufruf ein selbst gewaehlter Schluessel mitgeschickt, liefert die Wiederholung dieselbe Antwort wie beim ersten Mal, statt einen weiteren Eintrag zu erzeugen. Wer die Schnittstelle nicht nutzt, merkt davon nichts, und an bestehenden Aufrufen aendert sich nichts.
 
-Ein fehlgeschlagener Kalenderabgleich sagt es dir. Bisher landete so ein Fehler nur im Serverprotokoll, ein abgelaufener Zugang sah von aussen aus wie ein Kalender, der einfach aufhoert sich zu aktualisieren - in einem gemeldeten Fall faellt das erst nach zwei Wochen auf. Der letzte Fehler steht jetzt in den Einstellungen unter Synchronisation, direkt unter dem Verbindungsstatus, und verschwindet von selbst, sobald ein Abgleich wieder durchlaeuft.
-
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.24.3
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.25.0
