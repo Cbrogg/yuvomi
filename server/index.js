@@ -14,6 +14,7 @@ import { createLogger } from './logger.js';
 import * as db from './db.js';
 import { router as authRouter, sessionMiddleware, requireAuth, requireAdmin } from './auth.js';
 import { csrfMiddleware } from './middleware/csrf.js';
+import idempotencyMiddleware from './middleware/idempotency.js';
 import { buildOpenApiSpec } from './openapi.js';
 import * as googleCalendar from './services/google-calendar.js';
 import * as appleCalendar from './services/apple-calendar.js';
@@ -425,6 +426,10 @@ app.use('/api/v1', (req, res, next) => {
   return next();
 });
 app.use('/api/v1', csrfMiddleware);
+// Retry-Sicherheit für schreibende Aufrufer (#822): greift nur, wenn ein
+// `Idempotency-Key` mitkommt, und liegt hinter Auth, Scopes und CSRF - ein
+// abgewiesener Aufruf darf keinen Schlüssel verbrauchen.
+app.use('/api/v1', idempotencyMiddleware);
 app.use('/api/v1/dashboard', dashboardRouter);
 app.use('/api/v1/tasks', tasksRouter);
 app.use('/api/v1/shopping', shoppingRouter);

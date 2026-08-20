@@ -2714,6 +2714,20 @@ Authentication options for external integrations:
 - **Bearer token:** `Authorization: Bearer <token>` — tokens created via Settings → Administration → API access (admin only)
 - **X-API-Key header:** `X-API-Key: <token>` — alternative header accepted alongside Bearer (the plain `API-Key` header is also accepted for MCP-client compatibility)
 
+### Retry-safe writes (`Idempotency-Key`, #822)
+
+Every `POST` under `/api/v1` accepts an optional `Idempotency-Key` request header (printable ASCII, max 255 characters). The one exception is `/api/v1/auth/*`, which is mounted ahead of the middleware. It exists for the case a client cannot resolve on its own: the request went out, the response was lost, and the caller now cannot tell whether the record was created. Retrying may duplicate it; not retrying may lose it.
+
+- **Same key, same body** → the original response is returned verbatim, with its original status code and an `Idempotent-Replayed: true` response header. Nothing is created a second time.
+- **Same key, different body** → `409`. A key that stands for two different requests is a client bug, and returning someone else's response would hide it.
+- **Same key while the first attempt is still running** → `409`. The record is claimed *before* the route executes, so a concurrent retry collides instead of racing alongside it.
+- **The first attempt failed (4xx/5xx)** → the key is released. A caller must be able to fix the payload and retry with the same key rather than stay bound to their own bad input.
+- **Different accounts** → different scopes. The key belongs to the authenticated actor, not to the path.
+
+The body fingerprint is taken over a canonical serialization, so re-ordering fields in the JSON body is not a different request - otherwise the retry case, of all cases, would draw a conflict. Records live in `idempotency_keys` (migration v153) and therefore survive a restart; they expire after **24 hours** and are swept on the next keyed request, so no cron is involved. A stuck in-flight record is taken over after 60 seconds, since a process that died mid-request must not block its key until the TTL runs out.
+
+`PUT` and `DELETE` are idempotent by HTTP definition and are not covered. `PATCH` is deliberately left out: whether a repeat is safe depends on the patch, and a half-kept promise is worse than none.
+
 ### MCP Endpoint
 
 A stateless [Model Context Protocol](https://modelcontextprotocol.io) endpoint is served at `/mcp` (JSON-RPC 2.0 over HTTP). It lets AI agents such as Claude Desktop drive the planner via natural language. Authentication reuses the API tokens above — send the token as `Authorization: Bearer <token>`; no CSRF token is required, and no new port is needed.
