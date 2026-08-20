@@ -1851,7 +1851,13 @@
             "removed_one": "{{count}} cita eliminada.",
             "accountQuestion": "¿Desconectar la cuenta y eliminar {{count}} citas?",
             "accountQuestion_one": "¿Desconectar la cuenta y eliminar {{count}} cita?",
-            "accountDetail": "Sin eliminarlas, las citas importadas se quedan sin calendario propio."
+            "accountDetail": "Sin eliminarlas, las citas importadas se quedan sin calendario propio.",
+            "orphanHint": "Quedan {{count}} citas importadas de esta conexión en Yuvomi.",
+            "orphanHint_one": "Queda {{count}} cita importada de esta conexión en Yuvomi.",
+            "orphanAction": "Eliminar las citas importadas",
+            "orphanQuestion": "¿Eliminar {{count}} citas importadas?",
+            "orphanQuestion_one": "¿Eliminar {{count}} cita importada?",
+            "orphanDetail": "La conexión está deshecha: ninguna sincronización vuelve a tocar estas citas. En el proveedor no cambia nada, y volver a conectar las recupera."
         },
         "calendarEnabled": "Calendario activado",
         "calendarsRefreshed": "Calendarios actualizados",

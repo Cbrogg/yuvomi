@@ -1851,7 +1851,13 @@
             "removed_one": "{{count}} compromisso removido.",
             "accountQuestion": "Desconectar a conta e excluir {{count}} compromissos?",
             "accountQuestion_one": "Desconectar a conta e excluir {{count}} compromisso?",
-            "accountDetail": "Sem excluir, os compromissos importados ficam sem calendário próprio."
+            "accountDetail": "Sem excluir, os compromissos importados ficam sem calendário próprio.",
+            "orphanHint": "{{count}} compromissos importados desta conexão ainda estão no Yuvomi.",
+            "orphanHint_one": "{{count}} compromisso importado desta conexão ainda está no Yuvomi.",
+            "orphanAction": "Remover os compromissos importados",
+            "orphanQuestion": "Excluir {{count}} compromissos importados?",
+            "orphanQuestion_one": "Excluir {{count}} compromisso importado?",
+            "orphanDetail": "A conexão foi desfeita: nenhuma sincronização toca mais nesses compromissos. No provedor nada muda, e reconectar traz todos de volta."
         },
         "calendarEnabled": "Calendário ativado",
         "calendarsRefreshed": "Calendários atualizados",

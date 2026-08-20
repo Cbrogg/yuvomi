@@ -1851,7 +1851,13 @@
             "removed_one": "{{count}} randevu kaldırıldı.",
             "accountQuestion": "Hesabın bağlantısı kesilip {{count}} randevu silinsin mi?",
             "accountQuestion_one": "Hesabın bağlantısı kesilip {{count}} randevu silinsin mi?",
-            "accountDetail": "Silinmezse içe aktarılan randevular kendi takvimi olmadan kalır."
+            "accountDetail": "Silinmezse içe aktarılan randevular kendi takvimi olmadan kalır.",
+            "orphanHint": "Bu bağlantıdan içe aktarılan {{count}} randevu hâlâ Yuvomi'de duruyor.",
+            "orphanHint_one": "Bu bağlantıdan içe aktarılan {{count}} randevu hâlâ Yuvomi'de duruyor.",
+            "orphanAction": "İçe aktarılan randevuları kaldır",
+            "orphanQuestion": "İçe aktarılan {{count}} randevu silinsin mi?",
+            "orphanQuestion_one": "İçe aktarılan {{count}} randevu silinsin mi?",
+            "orphanDetail": "Bağlantı kesildi - bu randevulara artık hiçbir eşitleme dokunmuyor. Sağlayıcıda hiçbir şey değişmez, yeniden bağlanmak onları geri getirir."
         },
         "calendarEnabled": "Takvim etkinleştirildi",
         "calendarsRefreshed": "Takvimler güncellendi",

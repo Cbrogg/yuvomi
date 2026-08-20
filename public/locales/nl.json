@@ -1819,7 +1819,13 @@
             "removed_one": "{{count}} afspraak verwijderd.",
             "accountQuestion": "Account loskoppelen en {{count}} afspraken verwijderen?",
             "accountQuestion_one": "Account loskoppelen en {{count}} afspraak verwijderen?",
-            "accountDetail": "Zonder verwijderen blijven de opgehaalde afspraken achter zonder eigen agenda."
+            "accountDetail": "Zonder verwijderen blijven de opgehaalde afspraken achter zonder eigen agenda.",
+            "orphanHint": "{{count}} opgehaalde afspraken van deze verbinding staan nog in Yuvomi.",
+            "orphanHint_one": "{{count}} opgehaalde afspraak van deze verbinding staat nog in Yuvomi.",
+            "orphanAction": "Opgehaalde afspraken verwijderen",
+            "orphanQuestion": "{{count}} opgehaalde afspraken verwijderen?",
+            "orphanQuestion_one": "{{count}} opgehaalde afspraak verwijderen?",
+            "orphanDetail": "De verbinding is verbroken - geen enkele synchronisatie raakt deze afspraken nog aan. Bij de aanbieder verandert niets, en opnieuw verbinden haalt ze terug."
         },
         "calendarsRefreshed": "Kalenders vernieuwd",
         "caldavRemindersToggle": "Herinneringslijsten tonen/verbergen",

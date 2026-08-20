@@ -1851,7 +1851,13 @@
             "removed_one": "تمت إزالة {{count}} موعد.",
             "accountQuestion": "فصل الحساب وحذف {{count}} موعد؟",
             "accountQuestion_one": "فصل الحساب وحذف {{count}} موعد؟",
-            "accountDetail": "من دون الحذف تبقى المواعيد المستوردة بلا تقويم خاص بها."
+            "accountDetail": "من دون الحذف تبقى المواعيد المستوردة بلا تقويم خاص بها.",
+            "orphanHint": "ما زال في Yuvomi {{count}} موعد مستورد من هذا الاتصال.",
+            "orphanHint_one": "ما زال في Yuvomi {{count}} موعد مستورد من هذا الاتصال.",
+            "orphanAction": "إزالة المواعيد المستوردة",
+            "orphanQuestion": "حذف {{count}} موعد مستورد؟",
+            "orphanQuestion_one": "حذف {{count}} موعد مستورد؟",
+            "orphanDetail": "تم قطع الاتصال - لم تعد أي مزامنة تمس هذه المواعيد. لا يتغير شيء لدى المزوّد، وإعادة الاتصال تستعيدها."
         },
         "calendarEnabled": "تم تفعيل التقويم",
         "calendarsRefreshed": "تم تحديث التقويمات",

@@ -1851,7 +1851,13 @@
             "removed_one": "{{count}} möte borttaget.",
             "accountQuestion": "Koppla från kontot och ta bort {{count}} möten?",
             "accountQuestion_one": "Koppla från kontot och ta bort {{count}} möte?",
-            "accountDetail": "Utan borttagning blir de hämtade mötena kvar utan egen kalender."
+            "accountDetail": "Utan borttagning blir de hämtade mötena kvar utan egen kalender.",
+            "orphanHint": "{{count}} hämtade möten från den här anslutningen finns kvar i Yuvomi.",
+            "orphanHint_one": "{{count}} hämtat möte från den här anslutningen finns kvar i Yuvomi.",
+            "orphanAction": "Ta bort hämtade möten",
+            "orphanQuestion": "Ta bort {{count}} hämtade möten?",
+            "orphanQuestion_one": "Ta bort {{count}} hämtat möte?",
+            "orphanDetail": "Anslutningen är frånkopplad - ingen synkronisering rör de här mötena längre. Hos leverantören ändras ingenting, och en ny anslutning hämtar tillbaka dem."
         },
         "calendarEnabled": "Kalender aktiverad",
         "calendarsRefreshed": "Kalendrar uppdaterade",

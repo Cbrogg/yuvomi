@@ -1871,7 +1871,13 @@
             "removed_one": "{{count}} Termin entfernt.",
             "accountQuestion": "Konto trennen und {{count}} Termine löschen?",
             "accountQuestion_one": "Konto trennen und {{count}} Termin löschen?",
-            "accountDetail": "Ohne das Löschen bleiben die übernommenen Termine ohne Kalenderzuordnung stehen."
+            "accountDetail": "Ohne das Löschen bleiben die übernommenen Termine ohne Kalenderzuordnung stehen.",
+            "orphanHint": "{{count}} übernommene Termine dieser Verbindung liegen noch in Yuvomi.",
+            "orphanHint_one": "{{count}} übernommener Termin dieser Verbindung liegt noch in Yuvomi.",
+            "orphanAction": "Übernommene Termine entfernen",
+            "orphanQuestion": "{{count}} übernommene Termine löschen?",
+            "orphanQuestion_one": "{{count}} übernommenen Termin löschen?",
+            "orphanDetail": "Die Verbindung ist getrennt - diese Termine erfasst kein Abgleich mehr. Beim Anbieter ändert sich nichts, ein erneutes Verbinden holt sie zurück."
         },
         "calendarsRefreshed": "Kalender aktualisiert",
         "caldavRemindersToggle": "Erinnerungslisten anzeigen/ausblenden",

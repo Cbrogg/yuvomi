@@ -1871,7 +1871,13 @@
             "removed_one": "{{count}} na appointment ang inalis.",
             "accountQuestion": "Idiskonekta ang account at burahin ang {{count}} na appointment?",
             "accountQuestion_one": "Idiskonekta ang account at burahin ang {{count}} na appointment?",
-            "accountDetail": "Kung hindi buburahin, mananatili ang mga na-import na appointment nang walang sariling kalendaryo."
+            "accountDetail": "Kung hindi buburahin, mananatili ang mga na-import na appointment nang walang sariling kalendaryo.",
+            "orphanHint": "May {{count}} na na-import na appointment mula sa koneksyong ito na nasa Yuvomi pa rin.",
+            "orphanHint_one": "May {{count}} na na-import na appointment mula sa koneksyong ito na nasa Yuvomi pa rin.",
+            "orphanAction": "Alisin ang mga na-import na appointment",
+            "orphanQuestion": "Burahin ang {{count}} na na-import na appointment?",
+            "orphanQuestion_one": "Burahin ang {{count}} na na-import na appointment?",
+            "orphanDetail": "Nadiskonekta na ang koneksyon - wala nang sync na humahawak sa mga appointment na ito. Walang nagbabago sa provider, at ibabalik ang mga ito kapag muling kumonekta."
         },
         "calendarsRefreshed": "Na-refresh ang mga kalendaryo",
         "caldavRemindersToggle": "Ipakita/itago ang mga listahan ng paalala",

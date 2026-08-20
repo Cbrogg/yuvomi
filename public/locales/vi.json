@@ -1796,7 +1796,13 @@
             "removed_one": "Đã xoá {{count}} lịch hẹn.",
             "accountQuestion": "Ngắt kết nối tài khoản và xoá {{count}} lịch hẹn?",
             "accountQuestion_one": "Ngắt kết nối tài khoản và xoá {{count}} lịch hẹn?",
-            "accountDetail": "Nếu không xoá, các lịch hẹn đã nhập sẽ ở lại mà không thuộc lịch nào."
+            "accountDetail": "Nếu không xoá, các lịch hẹn đã nhập sẽ ở lại mà không thuộc lịch nào.",
+            "orphanHint": "Còn {{count}} lịch hẹn đã nhập từ kết nối này trong Yuvomi.",
+            "orphanHint_one": "Còn {{count}} lịch hẹn đã nhập từ kết nối này trong Yuvomi.",
+            "orphanAction": "Xoá các lịch hẹn đã nhập",
+            "orphanQuestion": "Xoá {{count}} lịch hẹn đã nhập?",
+            "orphanQuestion_one": "Xoá {{count}} lịch hẹn đã nhập?",
+            "orphanDetail": "Kết nối đã ngắt - không còn đồng bộ nào chạm tới các lịch hẹn này. Ở nhà cung cấp không có gì thay đổi, và kết nối lại sẽ lấy chúng về."
         },
         "calendarsRefreshed": "Đã làm mới lịch",
         "caldavRemindersToggle": "Hiển thị/ẩn danh sách nhắc nhở",

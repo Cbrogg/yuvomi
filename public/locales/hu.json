@@ -1819,7 +1819,13 @@
             "removed_one": "{{count}} időpont eltávolítva.",
             "accountQuestion": "Leválasztja a fiókot és töröl {{count}} időpontot?",
             "accountQuestion_one": "Leválasztja a fiókot és töröl {{count}} időpontot?",
-            "accountDetail": "Törlés nélkül a behozott időpontok saját naptár nélkül maradnak."
+            "accountDetail": "Törlés nélkül a behozott időpontok saját naptár nélkül maradnak.",
+            "orphanHint": "Ebből a kapcsolatból {{count}} behozott időpont maradt a Yuvomiban.",
+            "orphanHint_one": "Ebből a kapcsolatból {{count}} behozott időpont maradt a Yuvomiban.",
+            "orphanAction": "Behozott időpontok eltávolítása",
+            "orphanQuestion": "Töröl {{count}} behozott időpontot?",
+            "orphanQuestion_one": "Töröl {{count}} behozott időpontot?",
+            "orphanDetail": "A kapcsolat le van választva - ezeket az időpontokat már egyetlen szinkronizálás sem érinti. A szolgáltatónál semmi nem változik, és az újracsatlakozás visszahozza őket."
         },
         "calendarsRefreshed": "Naptárak frissítve",
         "caldavRemindersToggle": "Emlékeztető listák mutatása/elrejtése",

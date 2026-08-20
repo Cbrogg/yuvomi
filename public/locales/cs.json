@@ -1836,7 +1836,13 @@
             "removed_one": "Odstraněna {{count}} událost.",
             "accountQuestion": "Odpojit účet a smazat {{count}} událostí?",
             "accountQuestion_one": "Odpojit účet a smazat {{count}} událost?",
-            "accountDetail": "Bez smazání zůstanou přenesené události bez vlastního kalendáře."
+            "accountDetail": "Bez smazání zůstanou přenesené události bez vlastního kalendáře.",
+            "orphanHint": "V Yuvomi zůstává {{count}} přenesených událostí z tohoto připojení.",
+            "orphanHint_one": "V Yuvomi zůstává {{count}} přenesená událost z tohoto připojení.",
+            "orphanAction": "Odstranit přenesené události",
+            "orphanQuestion": "Smazat {{count}} přenesených událostí?",
+            "orphanQuestion_one": "Smazat {{count}} přenesenou událost?",
+            "orphanDetail": "Připojení je odpojené - těchto událostí se už žádná synchronizace nedotkne. U poskytovatele se nic nemění a opětovné připojení je přenese znovu."
         },
         "calendarsRefreshed": "Kalendáře aktualizovány",
         "caldavRemindersToggle": "Zobrazit/skrýt seznamy připomínek",

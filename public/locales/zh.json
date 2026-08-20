@@ -1851,7 +1851,13 @@
             "removed_one": "已删除 {{count}} 个日程。",
             "accountQuestion": "断开账户并删除 {{count}} 个日程？",
             "accountQuestion_one": "断开账户并删除 {{count}} 个日程？",
-            "accountDetail": "不删除的话，导入的日程会留下且不属于任何日历。"
+            "accountDetail": "不删除的话，导入的日程会留下且不属于任何日历。",
+            "orphanHint": "此连接导入的 {{count}} 个日程仍留在 Yuvomi 中。",
+            "orphanHint_one": "此连接导入的 {{count}} 个日程仍留在 Yuvomi 中。",
+            "orphanAction": "删除导入的日程",
+            "orphanQuestion": "删除 {{count}} 个导入的日程？",
+            "orphanQuestion_one": "删除 {{count}} 个导入的日程？",
+            "orphanDetail": "连接已断开，这些日程不再被任何同步触及。提供方不会有任何变化，重新连接会再次取回它们。"
         },
         "calendarEnabled": "已启用日历",
         "calendarsRefreshed": "已刷新日历",

@@ -1371,7 +1371,17 @@ test('sync-calendar leaf loads CalDAV, Google, and Apple with independent status
   assert.match(source, /api\.get\('\/calendar\/google\/calendars'\)/);
   assert.match(source, /api\.patch\('\/calendar\/google\/calendars'/);
   assert.match(source, /api\.put\('\/calendar\/google\/readonly'/);
-  assert.match(source, /api\.delete\('\/calendar\/google\/disconnect'\)/);
+  // Ohne schliessendes Anfuehrungszeichen, aus demselben Grund wie beim
+  // CalDAV-Konto darueber: seit #820 haengt ein `?deleteEvents=` daran.
+  assert.match(source, /api\.delete\(`\/calendar\/google\/disconnect\?deleteEvents=/);
+  assert.match(source, /api\.delete\(endpoint\)/);
+  assert.match(source, /'\/calendar\/google\/mirrored-events'/);
+  // Der letzte Sync-Fehler steht an der Statuszeile, die er erklaert (#820) -
+  // vorher stand er nur im Serverlog, und ein stumm gescheiterter Sync sah aus
+  // wie ein Kalender, der einfach aufhoert sich zu aktualisieren.
+  assert.match(source, /appendSyncError\(status, googleStatus\?\.lastError\)/);
+  assert.match(source, /appendSyncError\(status, appleStatus\?\.lastError\)/);
+  assert.match(source, /t\('settings\.syncErrorDetail', \{ error: lastError \}\)/);
 
   // Apple: legacy badge + hint steering new users to CalDAV, endpoints preserved.
   assert.match(source, /settings\.legacy/);
@@ -1379,7 +1389,8 @@ test('sync-calendar leaf loads CalDAV, Google, and Apple with independent status
   assert.match(source, /api\.get\('\/calendar\/apple\/status'\)/);
   assert.match(source, /api\.post\('\/calendar\/apple\/connect'/);
   assert.match(source, /api\.post\('\/calendar\/apple\/sync'/);
-  assert.match(source, /api\.delete\('\/calendar\/apple\/disconnect'\)/);
+  assert.match(source, /api\.delete\(`\/calendar\/apple\/disconnect\?deleteEvents=/);
+  assert.match(source, /'\/calendar\/apple\/mirrored-events'/);
 
   // OAuth callback handling: localized banner, expand disclosure, scrub only callback params.
   assert.match(source, /sync_ok/);

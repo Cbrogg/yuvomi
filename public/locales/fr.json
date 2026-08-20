@@ -1851,7 +1851,13 @@
             "removed_one": "{{count}} rendez-vous supprimé.",
             "accountQuestion": "Déconnecter le compte et supprimer {{count}} rendez-vous ?",
             "accountQuestion_one": "Déconnecter le compte et supprimer {{count}} rendez-vous ?",
-            "accountDetail": "Sans suppression, les rendez-vous importés restent sans calendrier propre."
+            "accountDetail": "Sans suppression, les rendez-vous importés restent sans calendrier propre.",
+            "orphanHint": "{{count}} rendez-vous importés de cette connexion sont encore dans Yuvomi.",
+            "orphanHint_one": "{{count}} rendez-vous importé de cette connexion est encore dans Yuvomi.",
+            "orphanAction": "Supprimer les rendez-vous importés",
+            "orphanQuestion": "Supprimer {{count}} rendez-vous importés ?",
+            "orphanQuestion_one": "Supprimer {{count}} rendez-vous importé ?",
+            "orphanDetail": "La connexion est rompue : aucune synchronisation ne touche plus ces rendez-vous. Rien ne change chez le fournisseur, et une reconnexion les récupère."
         },
         "calendarEnabled": "Calendrier activé",
         "calendarsRefreshed": "Calendriers actualisés",

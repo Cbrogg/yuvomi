@@ -1842,7 +1842,13 @@
             "removed_one": "{{count}} appointment removed.",
             "accountQuestion": "Disconnect the account and delete {{count}} appointments?",
             "accountQuestion_one": "Disconnect the account and delete {{count}} appointment?",
-            "accountDetail": "Without deleting, the imported appointments stay behind with no calendar of their own."
+            "accountDetail": "Without deleting, the imported appointments stay behind with no calendar of their own.",
+            "orphanHint": "{{count}} appointments from this connection are still stored in Yuvomi.",
+            "orphanHint_one": "{{count}} appointment from this connection is still stored in Yuvomi.",
+            "orphanAction": "Remove imported appointments",
+            "orphanQuestion": "Delete {{count}} imported appointments?",
+            "orphanQuestion_one": "Delete {{count}} imported appointment?",
+            "orphanDetail": "The connection is disconnected - no sync touches these appointments any more. Nothing changes at the provider, and reconnecting fetches them again."
         },
         "calendarsRefreshed": "Calendars refreshed",
         "caldavRemindersToggle": "Show/hide reminder lists",

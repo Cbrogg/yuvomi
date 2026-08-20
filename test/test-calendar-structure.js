@@ -2,7 +2,7 @@
  * Calendar structure guard.
  *
  * Sichert die modulare Aufteilung von server/routes/calendar.js: der Orchestrator
- * muss dieselbe {Methode, Pfad}-Routentabelle wie vor dem Split ergeben (46
+ * muss dieselbe {Methode, Pfad}-Routentabelle wie vor dem Split ergeben (48
  * Routen), und die Cluster-Router müssen zusammen exakt diese Routen ergeben
  * (keine verlorene/doppelte Route). Zusätzlich wird die extern konsumierte
  * Re-Export-Fläche (__test.googleTarget, genutzt von test:google-multi) gepinnt.
@@ -73,6 +73,8 @@ const EXPECTED = [
   'PATCH /google/calendars',
   'PATCH /external-calendars',
   'DELETE /google/disconnect',
+  'DELETE /google/mirrored-events',
+  'DELETE /apple/mirrored-events',
   'PUT /google/readonly',
   // apple
   'GET /apple/status',
@@ -116,10 +118,10 @@ const EXPECTED = [
   'GET /caldav/reminders/status',
 ];
 
-test('Orchestrator ergibt exakt die erwartete Routentabelle (46 Routen)', () => {
+test('Orchestrator ergibt exakt die erwartete Routentabelle (48 Routen)', () => {
   const actual = collectRoutes(calendarRouter).sort();
   assert.deepEqual(actual, [...EXPECTED].sort());
-  assert.equal(actual.length, 46);
+  assert.equal(actual.length, 48);
 });
 
 test('die Cluster-Router zusammen ergeben genau die Orchestrator-Routen (keine verlorene/doppelte Route)', () => {

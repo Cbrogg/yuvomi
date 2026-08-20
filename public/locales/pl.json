@@ -1848,7 +1848,13 @@
             "removed_one": "Usunięto {{count}} termin.",
             "accountQuestion": "Odłączyć konto i usunąć {{count}} terminów?",
             "accountQuestion_one": "Odłączyć konto i usunąć {{count}} termin?",
-            "accountDetail": "Bez usunięcia pobrane terminy zostaną bez własnego kalendarza."
+            "accountDetail": "Bez usunięcia pobrane terminy zostaną bez własnego kalendarza.",
+            "orphanHint": "W Yuvomi pozostaje {{count}} pobranych terminów z tego połączenia.",
+            "orphanHint_one": "W Yuvomi pozostaje {{count}} pobrany termin z tego połączenia.",
+            "orphanAction": "Usuń pobrane terminy",
+            "orphanQuestion": "Usunąć {{count}} pobranych terminów?",
+            "orphanQuestion_one": "Usunąć {{count}} pobrany termin?",
+            "orphanDetail": "Połączenie jest rozłączone - żadna synchronizacja już nie dotyka tych terminów. U dostawcy nic się nie zmienia, a ponowne połączenie pobierze je z powrotem."
         },
         "calendarsRefreshed": "Kalendarze odświeżone",
         "caldavRemindersToggle": "Pokaż/ukryj listy przypomnień",

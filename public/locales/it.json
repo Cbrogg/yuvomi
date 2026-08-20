@@ -1851,7 +1851,13 @@
             "removed_one": "{{count}} appuntamento rimosso.",
             "accountQuestion": "Disconnettere l'account ed eliminare {{count}} appuntamenti?",
             "accountQuestion_one": "Disconnettere l'account ed eliminare {{count}} appuntamento?",
-            "accountDetail": "Senza eliminarli, gli appuntamenti importati restano senza un calendario proprio."
+            "accountDetail": "Senza eliminarli, gli appuntamenti importati restano senza un calendario proprio.",
+            "orphanHint": "{{count}} appuntamenti importati da questa connessione sono ancora in Yuvomi.",
+            "orphanHint_one": "{{count}} appuntamento importato da questa connessione è ancora in Yuvomi.",
+            "orphanAction": "Rimuovi gli appuntamenti importati",
+            "orphanQuestion": "Eliminare {{count}} appuntamenti importati?",
+            "orphanQuestion_one": "Eliminare {{count}} appuntamento importato?",
+            "orphanDetail": "La connessione è interrotta: nessuna sincronizzazione tocca più questi appuntamenti. Presso il fornitore non cambia nulla, e riconnettersi li recupera."
         },
         "calendarEnabled": "Calendario abilitato",
         "calendarsRefreshed": "Calendari aggiornati",

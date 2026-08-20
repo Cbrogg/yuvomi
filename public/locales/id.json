@@ -1848,7 +1848,13 @@
             "removed_one": "{{count}} janji temu dihapus.",
             "accountQuestion": "Putuskan akun dan hapus {{count}} janji temu?",
             "accountQuestion_one": "Putuskan akun dan hapus {{count}} janji temu?",
-            "accountDetail": "Tanpa dihapus, janji temu yang diimpor tetap ada tanpa kalender sendiri."
+            "accountDetail": "Tanpa dihapus, janji temu yang diimpor tetap ada tanpa kalender sendiri.",
+            "orphanHint": "{{count}} janji temu hasil impor dari koneksi ini masih ada di Yuvomi.",
+            "orphanHint_one": "{{count}} janji temu hasil impor dari koneksi ini masih ada di Yuvomi.",
+            "orphanAction": "Hapus janji temu hasil impor",
+            "orphanQuestion": "Hapus {{count}} janji temu hasil impor?",
+            "orphanQuestion_one": "Hapus {{count}} janji temu hasil impor?",
+            "orphanDetail": "Koneksi sudah diputus - tidak ada sinkronisasi yang menyentuh janji temu ini lagi. Di penyedia tidak ada yang berubah, dan menghubungkan kembali akan mengambilnya lagi."
         },
         "calendarsRefreshed": "Kalender diperbarui",
         "caldavRemindersToggle": "Tampilkan/sembunyikan daftar pengingat",

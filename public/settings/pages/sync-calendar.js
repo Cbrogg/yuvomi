@@ -535,9 +535,24 @@ function buildGoogleProvider(googleStatus, user) {
   status.className = 'settings-sync-info__status';
   status.textContent = providerConnectionStatus(googleStatus);
   section.appendChild(status);
+  appendSyncError(status, googleStatus?.lastError);
+
+  // Der Rückstand eines getrennten Kontos: hier vorbereitet, aber unten angehängt.
+  // Er steht am Fuß der Karte, hinter dem Verbinden - was man als Nächstes tun
+  // will, gehört vor das Wegräumen dessen, was war. Vorbereitet wird er trotzdem
+  // schon hier, weil der Early-Return darunter ihn sonst verschluckte: fehlen die
+  // OAuth-Credentials in der Umgebung, ist die Karte fertig, bevor sie Aktionen
+  // gebaut hat - und genau dann muss der Weg zum Aufräumen erreichbar bleiben (#820).
+  const cleanup = (!googleStatus?.connected && user?.role === 'admin')
+    ? buildMirroredCleanup({
+      count: googleStatus?.mirroredEvents || 0,
+      endpoint: '/calendar/google/mirrored-events',
+    })
+    : null;
 
   if (!googleStatus?.configured) {
     section.appendChild(buildProviderHint(t('settings.notConfigured')));
+    if (cleanup) section.appendChild(cleanup);
     return section;
   }
 
@@ -576,9 +591,18 @@ function buildGoogleProvider(googleStatus, user) {
       disconnectBtn.addEventListener('click', async () => {
         if (!await confirmModal(t('settings.googleDisconnectConfirm'),
           { danger: true, detail: t('settings.googleDisconnectConfirmDetail') })) return;
+        const deleteEvents = await askDeleteMirrored(googleStatus.mirroredEvents);
         try {
-          await api.delete('/calendar/google/disconnect');
-          showToast(t('settings.disconnectedToast', { provider: 'Google Calendar' }), 'default');
+          // Die Zahl statt der blossen Trennmeldung, wenn geraeumt wurde: sonst
+          // bliebe der zweite Teil der Aktion unbestaetigt (#820). Wie bei CalDAV.
+          const res = await api.delete(`/calendar/google/disconnect?deleteEvents=${deleteEvents ? 'true' : 'false'}`);
+          const removed = res?.removed ?? 0;
+          showToast(
+            removed
+              ? t('settings.syncCleanup.removed', { count: removed })
+              : t('settings.disconnectedToast', { provider: 'Google Calendar' }),
+            'default',
+          );
           window.yuvomi?.navigate('/settings/sync/calendar');
         } catch (err) {
           showToast(err.message || t('common.errorGeneric'), 'danger');
@@ -596,8 +620,112 @@ function buildGoogleProvider(googleStatus, user) {
     section.appendChild(buildProviderHint(t('settings.googleOnlyAdmin')));
   }
   if (actions.childElementCount) section.appendChild(actions);
+  if (cleanup) section.appendChild(cleanup);
 
   return section;
+}
+
+/**
+ * Der letzte Sync-Fehler, direkt hinter der Statuszeile, die er erklärt (#820).
+ *
+ * Bis dahin stand er nur im Serverlog: ein Google-Sync konnte wochenlang stumm
+ * scheitern, und der Haushalt sah lediglich einen Kalender, der aufhörte sich zu
+ * aktualisieren. Derselbe Platz und derselbe Schlüssel wie bei CardDAV
+ * (sync-contacts.js) - eine zweite Schreibweise für dieselbe Aussage wäre teurer
+ * als der geteilte Text.
+ *
+ * @param {HTMLElement} statusEl  die Statuszeile des Providers
+ * @param {string|null} lastError
+ */
+function appendSyncError(statusEl, lastError) {
+  if (!lastError) return;
+  statusEl.insertAdjacentElement(
+    'afterend',
+    createInlineError(t('settings.syncErrorDetail', { error: lastError })),
+  );
+}
+
+// --------------------------------------------------------------------------
+// Übernommene Termine aufräumen (#820)
+// --------------------------------------------------------------------------
+// Das Trennen löscht Zugangsdaten und Kalenderauswahl, nicht die schon
+// übernommenen Termine. Die blieben bisher ohne jeden Ausgang liegen: kein Sync
+// fasst sie wieder an, und beim erneuten Verbinden legt der Inbound sie ein
+// zweites Mal an - Dubletten, am sichtbarsten bei Serien. Von Hand hiess das:
+// Termin für Termin.
+//
+// Nur im getrennten Zustand: bei laufendem Sync holt der nächste Inbound alles
+// zurück, ein Löschen wäre folgenlos und deshalb irreführend.
+
+/** Zweite Rückfrage vor dem Trennen: Termine mitnehmen oder behalten? */
+async function askDeleteMirrored(count) {
+  if (!count) return false;
+  return confirmModal(
+    t('settings.syncCleanup.accountQuestion', { count }),
+    {
+      danger: true,
+      detail: t('settings.syncCleanup.accountDetail'),
+      confirmLabel: t('settings.syncCleanup.delete'),
+      cancelLabel: t('settings.syncCleanup.keep'),
+    },
+  );
+}
+
+/**
+ * Der Aufräum-Block eines getrennten Providers - oder null, wenn nichts liegt.
+ * @param {object} opts
+ * @param {number} opts.count     Termine, die lokal liegen
+ * @param {string} opts.endpoint  DELETE-Pfad für das Aufräumen
+ */
+function buildMirroredCleanup({ count, endpoint }) {
+  if (!count) return null;
+
+  const group = document.createElement('div');
+
+  const hint = document.createElement('p');
+  hint.className = 'form-hint';
+  hint.textContent = t('settings.syncCleanup.orphanHint', { count });
+  group.appendChild(hint);
+
+  // Die Aktionszeile der Karte statt einer `form-group`: die ist Flex mit
+  // stretch, der Knopf lief dort auf volle Breite und wog damit schwerer als
+  // das Verbinden darueber - laut fuer das Aufraeumen, leise fuer die Hauptsache.
+  const actions = document.createElement('div');
+  actions.className = 'settings-sync-actions';
+
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'btn btn--danger-outline';
+  btn.textContent = t('settings.syncCleanup.orphanAction');
+  btn.addEventListener('click', async () => {
+    const ok = await confirmModal(
+      t('settings.syncCleanup.orphanQuestion', { count }),
+      {
+        danger: true,
+        detail: t('settings.syncCleanup.orphanDetail'),
+        confirmLabel: t('settings.syncCleanup.delete'),
+        cancelLabel: t('settings.syncCleanup.keep'),
+      },
+    );
+    if (!ok) return;
+    await withBusy(btn, async () => {
+      try {
+        const { data } = await api.delete(endpoint);
+        showToast(t('settings.syncCleanup.removed', { count: data?.removed ?? 0 }), 'success');
+        // Nur diesen Block wegnehmen, die Seite NICHT neu aufbauen: ein
+        // navigate() klappte „Weitere Anbieter" wieder zu und nahm den Toast
+        // mit - der Nutzer landete ohne jede Rückmeldung dort, wo er angefangen
+        // hatte. Der Block existiert wegen des Rückstands; der ist jetzt fort.
+        group.remove();
+      } catch (err) {
+        showToast(err.message || t('common.errorGeneric'), 'danger');
+      }
+    });
+  });
+  actions.appendChild(btn);
+  group.appendChild(actions);
+
+  return group;
 }
 
 function buildProviderHint(text) {
@@ -740,11 +868,19 @@ function buildAppleProvider(appleStatus, user) {
   status.className = 'settings-sync-info__status';
   status.textContent = providerConnectionStatus(appleStatus);
   section.appendChild(status);
+  appendSyncError(status, appleStatus?.lastError);
 
   const legacyHint = document.createElement('p');
   legacyHint.className = 'form-hint settings-legacy-hint';
   legacyHint.textContent = t('settings.appleLegacyHint');
   section.appendChild(legacyHint);
+
+  const cleanup = (!appleStatus?.connected && user?.role === 'admin')
+    ? buildMirroredCleanup({
+      count: appleStatus?.mirroredEvents || 0,
+      endpoint: '/calendar/apple/mirrored-events',
+    })
+    : null;
 
   if (appleStatus?.configured) {
     const actions = document.createElement('div');
@@ -777,8 +913,9 @@ function buildAppleProvider(appleStatus, user) {
       disconnectBtn.addEventListener('click', async () => {
         if (!await confirmModal(t('settings.appleDisconnectConfirm'),
           { danger: true, detail: t('settings.appleDisconnectConfirmDetail') })) return;
+        const deleteEvents = await askDeleteMirrored(appleStatus.mirroredEvents);
         try {
-          await api.delete('/calendar/apple/disconnect');
+          await api.delete(`/calendar/apple/disconnect?deleteEvents=${deleteEvents ? 'true' : 'false'}`);
           showToast(t('settings.disconnectedToast', { provider: 'Apple Calendar' }), 'default');
           window.yuvomi?.navigate('/settings/sync/calendar');
         } catch (err) {
@@ -793,6 +930,7 @@ function buildAppleProvider(appleStatus, user) {
   } else {
     section.appendChild(buildProviderHint(t('settings.appleOnlyAdmin')));
   }
+  if (cleanup) section.appendChild(cleanup);
 
   return section;
 }
