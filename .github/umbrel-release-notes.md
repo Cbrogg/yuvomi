@@ -1,4 +1,4 @@
-<!-- version: 2.24.1 -->
+<!-- version: 2.24.2 -->
 <!--
   Die `releaseNotes` fuer den Umbrel-App-Store, von Hand fuer JEDEN Release
   geschrieben. `umbrel-publish.yml` nimmt den Text unter diesem Kommentar
@@ -29,20 +29,21 @@
     - Leerzeile zwischen den Absaetzen: der Store rendert ein gefaltetes
       YAML-Blockskalar, dort ist die Leerzeile der Absatzumbruch.
 
-  HINWEIS ZU DIESER VERSION: zwei Themen, keine Migration, also kein
-  Handlungs-Absatz. Erstens der Wochenplan auf dem Telefon - das ist die
-  Aenderung, die ein Haushalt sofort merkt, und sie gehoert zuerst. Zweitens
-  die Markierung des heutigen Tages, die an zwei Stellen anders aussah als
-  ueberall sonst; beim Zyklus-Kalender ist es mehr als Kosmetik, weil der Ring
-  dort der Periodenfarbe zu nahe kam. Der Messwert dazu bleibt draussen - im
-  Store zaehlt, dass die beiden jetzt auseinanderzuhalten sind, nicht um wie
-  viel.
+  HINWEIS ZU DIESER VERSION: ein Thema, keine Migration, also kein
+  Handlungs-Absatz. Alle drei Absaetze beschreiben denselben Fehler an drei
+  Stellen - unter einer Liste war Platz reserviert, in dem nichts steht. Im
+  Store zaehlt davon nur, was ein Haushalt sieht: es passt wieder mehr auf den
+  Bildschirm, und nichts verschwindet mehr unter dem Installationshinweis.
+  Der zweite Absatz steht getrennt, weil das der einzige der drei Faelle ist,
+  in dem jemand tatsaechlich an etwas nicht herankam.
 
   Draussen bleibt die ganze Bauart: welche Regel wo stand, wie hoch eine Zeile
   vorher war, welcher Test es absichert.
 -->
-Der Wochenplan der Kueche ist auf dem Telefon endlich ueberschaubar. Eine geplante Mahlzeit stand bisher als hohe Kachel da - Titel, darunter ihre Schaltflaechen, darunter noch ein gestrichelter Streifen zum Hinzufuegen -, sodass zwei Gerichte den ganzen Bildschirm fuellten und eine Woche endlos zu scrollen war. Eine Mahlzeit ist jetzt eine Zeile mit ihren Aktionen am Ende, so wie Einkauf, Vorrat und Rezepte es schon immer gehalten haben; ein ganzer Tag passt damit auf einen Bildschirm. Verborgen wurde dabei nichts - alle Schaltflaechen bleiben sichtbar, sie kosten nur keine eigene Zeile mehr. Auf dem Telefon ist ausserdem der kleine Plus-Knopf in jedem belegten Feld entfallen: darunter steht bei jedem Tag bereits ein beschrifteter Knopf zum Hinzufuegen, und zwei Wege zur selben Handlung waren einer zu viel. Auf Tablet und Rechner, wo die freien Felder sichtbar sind, bleibt er.
+Listen, die innerhalb der Seite scrollen, zeigen wieder ihre volle Hoehe. Sobald in Einkauf, Vorrat oder Kontakten eine Auswahl getroffen war und die Leiste mit den Sammelaktionen erschien, blieb unter der Liste ein leerer Streifen stehen, der ungefaehr eine Zeile hoch war und sich nicht wegscrollen liess. Auf dem Einkaufszettel bedeutet das jetzt einen Artikel mehr im Blick, und zwar genau waehrend man abhakt. Erreichbar war ohnehin alles - der Platz war nur unnoetig belegt.
 
-Der heutige Tag ist ueberall gleich markiert. Im Wochenplan war er als eingefaerbte Schrift in der Kuechenfarbe hervorgehoben - eine dritte Schreibweise neben den zwei, die der Kalender ohnehin fuehrt; er traegt jetzt dieselbe Markierung wie dort. Im Zyklus-Kalender war es mehr als eine Frage der Einheitlichkeit: der Ring um heute hatte fast die Farbe, mit der die Periode eingetragen wird, und weil heute haeufig ein eingetragener Tag ist, trafen beide auf demselben Feld aufeinander. Sie sind jetzt klar zu unterscheiden.
+Der Hinweis, mit dem sich Yuvomi als App installieren laesst, verdeckt nicht mehr das Ende einer Liste. Auf den meisten Seiten hatte er schon Platz freigehalten, in Kueche, Budget, Kontakten, Notizen und Kalender aber nicht - dort lagen die letzten Eintraege darunter, ohne dass man weiter scrollen konnte. Das gilt jetzt ueberall gleich.
 
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.24.1
+In der Terminliste des Kalenders war unterhalb des letzten Termins Platz fuer eine Schaltflaeche freigehalten, die auf einem Rechner an dieser Stelle gar nicht erscheint. Der Platz gehoert wieder den Terminen.
+
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.24.2

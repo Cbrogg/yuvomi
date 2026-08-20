@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.24.2] - 2026-08-20
+
+### Fixed
+
+- **A list that scrolls inside the page no longer loses a row to an empty strip below it.** Whenever
+  the bulk-action pill appeared - checked-off items in Shopping, the "Running low" filter in Pantry,
+  selection mode in Contacts - the room it needs was reserved twice: once as a trailing pad inside
+  the list, where it works, and once below the list, where it is neither scrollable nor visible
+  content. The second reservation shortened the list by 76 px on a desktop and 80 px on a phone, at
+  every scroll position, for as long as the pill was on screen. On a 1440x900 window the shopping
+  list went from 641 to 717 px of visible rows - about one more item, while you are ticking items
+  off. Nothing about reachability changed: at the scroll end the last row still ends exactly where
+  it did before, 6 px above the pill.
+- **The install banner no longer covers the end of a list.** It got its trailing room in v2.24.0,
+  but only on the pages that scroll as a whole - Tasks, Rewards, Documents, the Dashboard. On the
+  eight pages that scroll an inner container instead (Kitchen, Budget, Contacts, Notes, Calendar)
+  the room landed on the frame around that container, so the banner still hid the last entries with
+  no way to scroll to them. Every scroll port now carries its own trailing room, whichever
+  architecture its page uses.
+- **The calendar's agenda stopped reserving 80 px for a button that is not there.** The reservation
+  was written for the floating action button, which the agenda hides on pointer devices in favour of
+  the toolbar's create button - so on a desktop those 80 px held nothing at all.
+
 ## [2.24.1] - 2026-08-19
 
 ### Changed

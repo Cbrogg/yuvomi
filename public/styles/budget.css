@@ -1411,8 +1411,15 @@
     min-height: 0;
   }
 
-  /* Doppelte FAB-Clearance vermeiden: das Panel polstert bereits unten. */
-  .budget-tab-panel--budget .budget-list { padding-bottom: 0; }
+  /* HIER STAND `.budget-tab-panel--budget .budget-list { padding-bottom: 0 }`
+   * gegen doppelte FAB-Clearance. Seit `.page-scrollport` (layout.css) den
+   * Nachlauf an genau EINEN Scrollport je Kette gibt - den innersten, per
+   * `:not(:has(.page-scrollport))` - kann er nicht mehr doppelt entstehen.
+   *
+   * Die Liste trägt ihn in beiden Zuständen: über 640px, weil sie hier scrollt,
+   * und darunter, weil sie das letzte Element des Panels ist, das dann scrollt.
+   * Bliebe die Nullung, hätte der Budget-Tab am Finger gar keinen Nachlauf und
+   * die Sammelaktions-Pille verdeckte wieder die letzten Buchungen. */
 }
 
 

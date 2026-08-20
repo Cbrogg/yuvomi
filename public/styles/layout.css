@@ -200,17 +200,18 @@
  * also auf ihm und nicht auf der Zeilenaktion darunter - auf „Neu" statt auf
  * „Löschen". Läge es umgekehrt, wäre die strenge Invariante ihren Preis wert.
  *
- * AN .app-content, NICHT AN DEN LISTEN. Die App hat zwei Scrollport-
- * Architekturen: in Küche und Budget ist der Modul-Root `overflow: hidden` und
- * eine innere Liste scrollt, in Belohnungen und anderswo scrollt .app-content
- * die ganze Seite. Das Padding trifft beide richtig, aber auf zwei Wegen, und
- * das ist geprüft statt angenommen: wo `.app-content` selbst scrollt (Dashboard,
- * Aufgaben, Belohnungen …), reitet es als Nachlauf am Inhaltsende und der
- * Scrollport bleibt fensterhoch. Wo der Modul-Root `height: 100%` trägt,
- * verkürzt es dessen Bezugshöhe - dort verhält sich alles exakt wie mit der
- * Marge, also ohne Regress. Sieben `padding-bottom: *-fab-clearance` in vier
- * Dateien bleiben abgeschafft, samt der drei auseinandergedrifteten Kopien des
- * Tokens.
+ * ALS SUMMAND, NICHT ALS FERTIGES PADDING (2026-08-20). Bis dahin schrieb
+ * diese Regel den Nachlauf direkt an `.app-content` - mit der Begründung, die
+ * App habe zwei Scrollport-Architekturen und das Padding treffe beide richtig,
+ * nur auf zwei Wegen. Der zweite Weg war der falsche: wo der Modul-Root
+ * `height: 100%; overflow: hidden` trägt, verkürzt ein Padding an
+ * `.app-content` dessen Bezugshöhe, statt am Inhaltsende zu reiten. Die
+ * Sichtfläche geht verloren UND der Streifen ist nicht scrollbar. Was dort
+ * gebraucht wird, ist ein Nachlauf im echten Scrollport, und den kennt nur die
+ * Seite - deshalb `.page-scrollport` (Regel weiter unten).
+ *
+ * Sieben `padding-bottom: *-fab-clearance` in vier Dateien bleiben abgeschafft,
+ * samt der drei auseinandergedrifteten Kopien des Tokens.
  *
  * NUR MIT FAB: `:has()` fragt die Seite, statt eine Klasse zu verlangen, die
  * beim nächsten neuen Modul vergessen wird. `:not([hidden])`, weil eine Seite
@@ -218,8 +219,8 @@
  *
  * Gefragt wird an der SHELL, nicht am Scrollport: der FAB hängt seit #634 in
  * `.fab-layer` neben `.app-content`, nicht mehr darin. */
-.app-shell:has(.fab-layer .page-fab:not([hidden])) .app-content {
-  padding-block-end: calc(var(--fab-safe-zone) + var(--install-prompt-tail));
+.app-shell:has(.fab-layer .page-fab:not([hidden])) {
+  --fab-tail: var(--fab-safe-zone);
 }
 
 /* ── UND DER DRITTE FIXIERTE KÖRPER: DER INSTALL-BANNER ──
@@ -251,56 +252,94 @@
  * Basis (0,1,0). Gemessen: `--install-prompt-height` stand korrekt auf 89px,
  * der Nachlauf blieb 0, und die letzte Zeile lag weiter 97px unter dem Banner.
  * Dieselbe Falle, vor der die Pillen-Regel weiter unten im Kommentar warnt. */
+/* DIE DREI SUMMANDEN DES NACHLAUFS, jeder 0, solange seine Fläche fehlt.
+ *
+ * Sie stehen als Variablen und nicht als vier `:has()`-Kombinationen an der
+ * Nachlauf-Regel: mit drei fixierten Flächen wären das acht Regeln, von denen
+ * jede die Spezifitätsfalle von `:has()` mitzurechnen hätte. Als Summanden
+ * bleibt EINE Regel übrig, und die vierte Fläche kostet eine Zeile statt einer
+ * Verdopplung.
+ *
+ * `--fab-tail` und `--bulk-pill-tail` werden an `.app-shell` gesetzt (beide
+ * Flächen hängen dort), `--install-prompt-tail` an `:root` (das Banner ist ein
+ * Kind von `body`). Die Summe zieht `.app-content`, siehe dort - sie MUSS
+ * unterhalb aller drei Setzer stehen, weil eine Custom Property ihre `var()`
+ * an der Stelle auflöst, an der sie DEKLARIERT wird, nicht dort, wo sie
+ * benutzt wird. An `:root` deklariert hätte sie alle drei als 0 gelesen. */
 :root {
   --install-prompt-tail: 0px;
+  --fab-tail: 0px;
+  --bulk-pill-tail: 0px;
 }
 
 :root:has(yuvomi-install-prompt) {
   --install-prompt-tail: calc(var(--install-prompt-height, 89px) + var(--space-4));
 }
 
-/* Der Fall ohne FAB und ohne Pille - sonst deckte ihn keine der Regeln ab. */
-.app-shell:not(:has(.fab-layer .page-fab:not([hidden]))):not(:has(.list-bulkbar)) .app-content {
-  padding-block-end: var(--install-prompt-tail);
+/* Die Pille ist der zweite Summand - dieselbe Bauart wie der FAB: fixierte
+ * Shell-Fläche über dem Scrollport, die am Scroll-Ende sonst genau die Zeilen
+ * verdeckt, auf die sie sich bezieht. Am Finger fällt --fab-safe-zone auf 0
+ * (der FAB sitzt dort in der Nav-Kapsel), dort ist sie der ganze Nachlauf. */
+.app-shell:has(.list-bulkbar) {
+  --bulk-pill-tail: var(--bulk-pill-safe-zone);
 }
 
-/* UND DIE PILLE BRAUCHT DENSELBEN NACHLAUF. Sie ist seit Etappe 5 eine fixierte
- * Shell-Fläche über der Liste (siehe .list-bulkbar) und verdeckt am Scroll-Ende
- * sonst genau die Zeilen, auf die sie sich bezieht - derselbe Defekt, den
- * Sonde 18 für den FAB misst. Am Finger fällt --fab-safe-zone auf 0 (der FAB
- * sitzt dort in der Nav-Kapsel), dort ist die Pillenzone der ganze Nachlauf.
- *
- * ZWEI REGELN STATT EINER SUMME: `:has()` trägt die Spezifität seines
- * Arguments, eine Regel mit nur `:has(.list-bulkbar)` stünde UNTER der
- * FAB-Regel darüber und bliebe wirkungslos, sobald ein FAB da ist. Und genau
- * das ist der Normalfall - beide Seiten mit Pille haben einen. */
-.app-shell:has(.fab-layer .page-fab:not([hidden])):has(.list-bulkbar) .app-content {
-  padding-block-end: calc(var(--fab-safe-zone) + var(--bulk-pill-safe-zone) + var(--install-prompt-tail));
+/* Die Summe. AN .app-content UND NICHT AN :root - sie liest die drei Summanden
+ * an der Stelle, an der sie deklariert wird (siehe :root oben), und alle drei
+ * sind erst hier fertig. */
+.app-content {
+  --shell-tail: calc(var(--fab-tail) + var(--bulk-pill-tail) + var(--install-prompt-tail));
 }
 
-.app-shell:not(:has(.fab-layer .page-fab:not([hidden]))):has(.list-bulkbar) .app-content {
-  padding-block-end: calc(var(--bulk-pill-safe-zone) + var(--install-prompt-tail));
-}
-
-/* UND DER NACHLAUF MUSS AN DAS, WAS WIRKLICH SCROLLT (Critique 2026-08-13).
+/* --------------------------------------------------------
+ * DER NACHLAUF GEHÖRT AN DAS, WAS WIRKLICH SCROLLT
  *
- * Die zwei Regeln darüber setzen ihn an `.app-content` - und genau dort scrollt
- * bei den drei Modulen mit Pille gar nichts. Einkauf und Vorrat scrollen in
- * `.list-scroller`, die Kontakte in `.contacts-list`; `.app-content` ist bei
- * ihnen ein `overflow: hidden`-Rahmen um eine Flex-Spalte. Der Nachlauf landete
- * damit an einer Box, die keinen Scroll-Ende-Zustand hat, und die Pille verdeckt
- * am Listenende weiter die Zeilen, auf die sie sich bezieht: gemessen 16.334px²
- * auf /contacts, 16.732px² auf /shopping. Eine Regel, die nie feuert, ist im
- * Quelltext nicht von einer zu unterscheiden, die ihre Sache tut.
+ * Die App hat zwei Scrollport-Architekturen. In Belohnungen, Aufgaben,
+ * Dokumenten, Gesundheit und auf der Übersicht scrollt `.app-content` die ganze
+ * Seite. In Küche, Budget, Kontakten, Notizen und Kalender trägt der Modul-Root
+ * `height: 100%; overflow: hidden` und genau ein Kind darin scrollt - acht
+ * Seiten, gemessen an ihren `*-page`-Regeln.
  *
- * `.has-bulk-safe-zone` ist die ROLLE „ich bin der Scrollport einer Seite, die
- * eine Sammelaktions-Pille zeigt". Sie steht bewusst nicht als Liste von
- * Modul-Selektoren hier - eine Allowlist über N Dateien deckt keine Regel ab,
- * und dieses Repo hat das schon dreimal bezahlt. Stattdessen trägt jeder
- * Scrollport sie selbst, und ein Guard prüft die Gegenrichtung: wer
- * `setBulkPill` aufruft, muss sie vergeben haben. */
-.app-shell:has(.list-bulkbar) .has-bulk-safe-zone {
-  padding-block-end: var(--bulk-pill-safe-zone);
+ * BIS 2026-08-20 BEKAMEN BEIDE DENSELBEN NACHLAUF AN `.app-content`, und in der
+ * zweiten Architektur war das jedes Mal falsch: das Padding verkürzt dort die
+ * Bezugshöhe des Modul-Roots, statt am Inhaltsende zu reiten. Was entsteht, ist
+ * ein Streifen UNTERHALB des Scrollports - er scrollt nicht mit, er trägt
+ * nichts, und die Fläche, die er kostet, fehlt der Liste bei jedem Scrollstand.
+ * Gemessen mit sichtbarer Sammelaktions-Pille, in allen drei Modulen gleich:
+ *
+ *   1440x900    Scrollport 641 statt 717px, 76px totes Band darunter
+ *   1680x1050   Scrollport 791 statt 867px, 76px
+ *   390x844     Scrollport 575 statt 655px, 80px
+ *
+ * Der Defekt war zweimal repariert worden, ohne dass die Ursache fiel: 2026-08-13
+ * kam eine zweite Regel für den echten Scrollport dazu (`.has-bulk-safe-zone`),
+ * die alte blieb daneben stehen, und seitdem zahlten die drei Module mit Pille
+ * sie doppelt. Das Muster ist der eigentliche Befund - der Nachlauf gehört
+ * NICHT an die Box, die den Scrollport enthält, sondern an den Scrollport.
+ *
+ * `.page-scrollport` ist die Rolle „ich bin der Scrollport meiner Seite". Sie
+ * steht bewusst nicht als Liste von Modul-Selektoren hier: eine Allowlist über
+ * N Dateien deckt keine Regel ab, und dieses Repo hat das schon dreimal
+ * bezahlt. Jeder Scrollport trägt sie selbst, und zwei Guards prüfen beide
+ * Richtungen (test-frontend-audit.js): jede Seite mit eigenem Scrollport
+ * vergibt sie, und keine `.app-content`-Regel setzt den Nachlauf mehr selbst.
+ *
+ * `:not(:has(.page-scrollport))` an BEIDEN Selektoren, und das ist keine
+ * Symmetrie um ihrer selbst willen. Am Default-Port beantwortet es „bringt die
+ * Seite ihren eigenen mit?". An der Rolle beantwortet es dieselbe Frage eine
+ * Ebene tiefer: das Budget schaltet seinen Scrollport bei 640px um (darüber
+ * scrollt `.budget-list` im Panel, darunter das Panel selbst), beide tragen die
+ * Rolle, und der Nachlauf gehört jeweils dem inneren. Ohne den Ausschluss
+ * polsterte das Panel die Liste, die es enthält, aus dem sichtbaren Bereich -
+ * derselbe Fehler wie oben, nur eine Ebene tiefer.
+ *
+ * `--scrollport-pad` ist das EIGENE Bodenpolster eines Scrollports, das der
+ * Nachlauf nicht wegnehmen darf. Wochengitter und Agenda haben eines; ohne
+ * diesen Summanden hätte die Rolle es überschrieben.
+ * -------------------------------------------------------- */
+.app-content:not(:has(.page-scrollport)),
+.app-shell .page-scrollport:not(:has(.page-scrollport)) {
+  padding-block-end: calc(var(--scrollport-pad, 0px) + var(--shell-tail));
 }
 
 /* #main-content wird nach jeder Navigation programmatisch fokussiert, damit

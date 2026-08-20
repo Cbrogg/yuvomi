@@ -967,9 +967,19 @@
   flex: 1;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  /* Bottom-Freiraum für den schwebenden FAB, damit das letzte Event nicht
-   * unter der Aktion verschwindet. */
-  padding: var(--space-2) var(--space-4) calc(var(--space-16) + var(--space-4));
+  padding: var(--space-2) var(--space-4);
+  /* Das eigene Bodenpolster - den Freiraum für die fixierten Shell-Flächen legt
+   * `.page-scrollport` darauf (layout.css).
+   *
+   * HIER STAND `calc(var(--space-16) + var(--space-4))` mit der Begründung
+   * „Bottom-Freiraum für den schwebenden FAB". Das ist die achte Kopie jener
+   * sieben `padding-bottom: *-fab-clearance`, die 2026-08-12 abgeschafft
+   * wurden - sie hat den Umbau überlebt, weil sie im `padding`-Shorthand
+   * steckte und kein Token beim Namen nannte. Der Guard, der Eigenbau-Tokens
+   * sucht, konnte sie deshalb nicht sehen. Sie reservierte 80px, unabhängig
+   * davon, ob überhaupt ein FAB da war - am Zeiger ist er in der Agenda
+   * ausgeblendet (`.toolbar-new-btn`), dort waren es 80px für nichts. */
+  --scrollport-pad: var(--space-2);
 }
 
 .agenda-day {

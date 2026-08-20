@@ -1671,12 +1671,26 @@ Knopf IST.** Und es ist sicher, weil die Gefahrenrichtung stimmt: er liegt oben,
 landet also auf „Anlegen" und nicht auf „Loeschen" darunter. Laege es umgekehrt, waere die
 strenge Invariante ihren Preis wert.
 
-**Ein Nachlauf trifft beide Scrollport-Architekturen richtig, auf zwei Wegen** - geprueft, nicht
-angenommen. Wo `.app-content` selbst scrollt (Dashboard, Aufgaben, Belohnungen, Geburtstage,
-Dokumente …), reitet er am Inhaltsende und der Scrollport bleibt fensterhoch. Wo der Modul-Root
-`height: 100%` traegt (die acht mit innerem Scroller), verkuerzt er dessen Bezugshoehe - dort
-verhaelt sich alles exakt wie mit der Marge, also ohne Regress. Gemessen ueber 15 Routen: kein
-totes Band, und am Scroll-Ende nirgends ein Ziel unter dem Knopf.
+**Der Nachlauf gehoert an das, was WIRKLICH scrollt** (2026-08-20). Hier stand: „Ein Nachlauf
+trifft beide Scrollport-Architekturen richtig, auf zwei Wegen - geprueft, nicht angenommen …
+gemessen ueber 15 Routen: kein totes Band." Der erste Weg stimmt: wo `.app-content` selbst
+scrollt (Dashboard, Aufgaben, Belohnungen, Geburtstage, Dokumente …), reitet der Nachlauf am
+Inhaltsende und der Scrollport bleibt fensterhoch. Der zweite war falsch, und die Formulierung
+sagt auch, warum er durchging: „verkuerzt er dessen Bezugshoehe - dort verhaelt sich alles exakt
+wie mit der Marge, also **ohne Regress**". Gemessen wurde gegen den Vorzustand, nicht gegen die
+Zusage. Kein Regress heisst nicht richtig: bei den acht Modul-Roots mit `height: 100%` verkuerzt
+das Padding an `.app-content` den echten Scrollport bei jedem Scrollstand und laesst darunter
+einen Streifen stehen, der nichts traegt und nicht mitscrollt.
+
+Sichtbar wurde es erst, als die Sammelpille dazukam: sie bekam 2026-08-13 die richtige Fassung
+(Nachlauf am echten Scrollport), die alte an `.app-content` blieb daneben stehen, und die drei
+Module mit Pille zahlten sie sieben Tage lang doppelt - 76px am Zeiger, 80px am Finger, in jedem
+der drei gleich. Die Regel lautet deshalb: **der Nachlauf haengt an der Rolle `.page-scrollport`,
+die jede Seite mit eigenem Scrollport selbst vergibt** - nie an der Box, die den Scrollport
+enthaelt. Die drei fixierten Flaechen sind Summanden (`--fab-tail`, `--bulk-pill-tail`,
+`--install-prompt-tail`), eine Regel legt die Summe an. Ein Scrollport mit eigenem Bodenpolster
+meldet es als `--scrollport-pad` an, statt `padding-bottom` zu schreiben, sonst ersetzt der
+Nachlauf es.
 
 **Mobil aendert die Regel nichts, und das ist per Konstruktion so:** unter 1024px ist
 `--fab-safe-zone` 0, weil der Knopf in der Nav-Kapsel sitzt. Ein Nachlauf von 0 ist dasselbe
@@ -1685,7 +1699,12 @@ wie eine Marge von 0.
 Pruefebene: **Dokument** (`Sonde 18 - am Scroll-Ende liegt nichts Bedienbares unter dem FAB`,
 test-document-guards.js, beide Geraetewelten) plus **Struktur** (`der FAB weicht der Zeile,
 statt eine Gasse zu reservieren`, test-frontend-audit.js), der die Marge ausdruecklich
-verbietet. Sonde 18 ist gegen ihren Anlassfall gegengeprueft: ohne Reserve meldet sie
+verbietet. Seit 2026-08-20 dazu drei Guards ueber die Rolle: `wer seinen eigenen Scrollport
+mitbringt, markiert ihn` (Kriterium ist die Bauart des Modul-Roots, keine Modulliste),
+`die Scrollport-Rolle sitzt an einer Box mit Ueberlauf` (Gegenrichtung) und `die Pillenzone
+steht nur am markierten Scrollport` (Abwesenheit an `.app-content`). Der letzte ist die Lehre
+aus dem Vorgaenger, den er ersetzt: der forderte die falsche Bauart ausdruecklich ein und
+zementierte damit den Defekt, den er absichern sollte. Sonde 18 ist gegen ihren Anlassfall gegengeprueft: ohne Reserve meldet sie
 `contact-more-menu__trigger` (64 %) und `row-action--danger` (45 %). **Und sie hatte selbst
 zwei blinde Fassungen** - die erste suchte den Scroller an seinem Namen statt an seinem
 Overflow und meldete Zwischenstaende als Ende, die zweite zaehlte Ziele mit, die der Scrollport

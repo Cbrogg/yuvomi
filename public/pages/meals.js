@@ -249,7 +249,7 @@ export async function render(container, { user }) {
         </div>
       </div>
       <div class="meals-layout">
-        <div class="week-grid" id="week-grid">
+        <div class="week-grid page-scrollport" id="week-grid">
           <div style="grid-column:1/-1">${renderSkeletonList({ rows: 5, lines: 2 })}</div>
         </div>
         <aside class="recipe-sidebar" id="recipe-sidebar"></aside>

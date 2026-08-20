@@ -168,7 +168,7 @@ export async function render(container, { user }) {
       </div>
       <div class="contacts-filters" id="contacts-filters" role="group" aria-label="${t('contacts.filterAll')}"></div>
       <div id="contacts-status" class="sr-only" role="status" aria-live="polite"></div>
-      <div id="contacts-list" class="contacts-list has-bulk-safe-zone" aria-busy="true">${renderSkeletonList({ rows: 6, lines: 2 })}</div>
+      <div id="contacts-list" class="contacts-list page-scrollport" aria-busy="true">${renderSkeletonList({ rows: 6, lines: 2 })}</div>
       <button class="page-fab" id="fab-new-contact" aria-label="${t('contacts.newContactLabel')}" data-dock-label="${t('newLabel.contacts')}">
         <i data-lucide="plus" class="icon-xl" aria-hidden="true"></i>
       </button>

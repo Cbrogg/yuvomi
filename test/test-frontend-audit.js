@@ -3199,16 +3199,216 @@ test('das Lesemass haengt an der Seite, nicht am Traeger', () => {
 
 test('wer eine Pille zeigt, markiert seinen Scrollport', () => {
   const layout = read('../public/styles/layout.css');
-  assert.match(layout, /\.has-bulk-safe-zone\s*\{[\s\S]*?padding-block-end:\s*var\(--bulk-pill-safe-zone\)/,
+  assert.match(layout, /\.page-scrollport[^{]*\{[^}]*padding-block-end:[^;]*--shell-tail/,
     'die Rolle muss den Nachlauf auch wirklich setzen - sonst prueft der Rest hier eine Klasse ohne Wirkung');
 
   for (const page of walkJsFiles('../public/pages/')) {
     const src = read(page);
     if (!/\bsetBulkPill\s*\(/.test(src)) continue;
-    assert.match(src, /has-bulk-safe-zone/,
+    assert.match(src, /page-scrollport/,
       `${page}: zeigt eine Sammelaktions-Pille, markiert aber seinen Scrollport nicht - `
       + 'sie verdeckt dann am Listenende die Zeilen, auf die sie sich bezieht');
   }
+});
+
+/**
+ * Und sie steht NUR dort - der Ersatz raeumt seinen Vorgaenger weg.
+ *
+ * Die Regel darueber kam 2026-08-13, weil die Pillenzone an `.app-content`
+ * bei keinem der drei Module etwas ausrichtete. Entfernt wurde die alte dabei
+ * nicht, und weil beide fuer sich richtig aussehen, fiel sieben Tage lang
+ * niemandem auf, dass jedes Modul mit Pille sie zweimal zahlt: einmal als
+ * Nachlauf IM Scrollport (wirksam) und einmal als toter Streifen darunter
+ * (76px bei 1440x900 und 1680x1050, 80px bei 390x844, in allen drei Modulen
+ * gleich, gemessen 2026-08-20).
+ *
+ * Geprueft wird die Abwesenheit an der Box, die NICHT scrollt. Das ist die
+ * Gegenrichtung zum Guard darueber: der sagt „die Zone muss am Scrollport
+ * stehen", dieser sagt „und sonst nirgends". Ein Guard, der nur das
+ * Vorhandensein prueft, ist gegen doppelt gemoppelt blind - genau das ist hier
+ * passiert.
+ */
+/**
+ * Wer seinen eigenen Scrollport mitbringt, markiert ihn - app-weit.
+ *
+ * Die App hat zwei Scrollport-Architekturen, und die Nachlauf-Regel in
+ * layout.css unterscheidet sie ueber `.page-scrollport`. Faellt die Rolle bei
+ * einer Seite aus, greift die Regel dort an `.app-content` - also an der Box,
+ * die den Scrollport ENTHAELT statt an ihm. Das Padding verkuerzt dann den
+ * Scrollport, statt am Inhaltsende zu reiten: Sichtflaeche weg, und der
+ * Streifen darunter scrollt nicht mit. Genau dieser Defekt lief von 2026-08-12
+ * bis 2026-08-20, erst nur beim Install-Banner, dann doppelt bei der Pille.
+ *
+ * DAS KRITERIUM IST DER MODUL-ROOT, nicht eine Liste von Modulnamen: wer
+ * `height: 100%` UND `overflow: hidden` an seiner `*-page`-Regel traegt, kann
+ * nicht selbst scrollen und hat folglich ein Kind, das es tut. Damit waechst
+ * die Zusicherung mit dem naechsten Modul mit, statt es zu vergessen.
+ */
+test('wer seinen eigenen Scrollport mitbringt, markiert ihn', () => {
+  const styleDir = new URL('../public/styles/', import.meta.url);
+
+  // 1. Alle Seiten mit eigenem Scrollport, aus den Stylesheets gelesen.
+  const eigenerPort = [];
+  for (const file of readdirSync(styleDir).filter((f) => f.endsWith('.css'))) {
+    for (const rule of eachRule(read(`../public/styles/${file}`))) {
+      const selector = rule.selector.trim();
+      // Nur der Modul-Root selbst: `.notes-page`, nicht `.notes-page .foo` und
+      // nicht `.document-viewer__pdf-page` (eine PDF-Seite, kein Modul).
+      if (!/^\.[a-z-]+-page$/.test(selector)) continue;
+      if (!/height:\s*100%/.test(rule.body)) continue;
+      if (!/overflow:\s*hidden/.test(rule.body)) continue;
+      eigenerPort.push(selector.slice(1));
+    }
+  }
+  assert.ok(eigenerPort.length >= 8,
+    `es muessen mindestens die acht bekannten Seiten mit eigenem Scrollport gefunden werden, `
+    + `gefunden: ${eigenerPort.join(', ')}`);
+
+  // 2. Und jede von ihnen vergibt die Rolle in der Datei, die sie rendert.
+  const seiten = walkJsFiles('../public/pages/').map((f) => ({ f, src: read(f) }));
+  for (const root of new Set(eigenerPort)) {
+    const traeger = seiten.filter(({ src }) => src.includes(root));
+    assert.ok(traeger.length > 0, `kein public/pages/*.js rendert ${root}`);
+    for (const { f, src } of traeger) {
+      assert.match(src, /page-scrollport/,
+        `${f}: rendert ${root} (height:100% + overflow:hidden, scrollt also nicht selbst), `
+        + 'vergibt die Rolle page-scrollport aber nicht - der Nachlauf der fixierten '
+        + 'Shell-Flaechen landet dann an .app-content und verkuerzt den Scrollport, '
+        + 'statt am Inhaltsende zu reiten');
+    }
+  }
+});
+
+/**
+ * Und die Rolle sitzt an etwas, das wirklich scrollt.
+ *
+ * Die Gegenrichtung zum Guard darueber: eine Klasse, die an einer Box klebt,
+ * die gar keinen Ueberlauf hat, legt den Nachlauf ins Leere und sieht dabei
+ * genauso richtig aus wie eine, die ihre Sache tut.
+ */
+/**
+ * Und ein Scrollport nennt sein Bodenpolster nicht selbst.
+ *
+ * DIE ACHTE KOPIE. 2026-08-12 wurden sieben `padding-bottom: *-fab-clearance`
+ * in vier Dateien abgeschafft und ein Guard dagegen gesetzt - er sucht nach
+ * Eigenbau-TOKENS. Eine achte ueberlebte trotzdem, in calendar.css:
+ *
+ *   padding: var(--space-2) var(--space-4) calc(var(--space-16) + var(--space-4));
+ *
+ * Kein Token beim Namen, nur der dritte Wert eines Shorthands - 80px Reserve
+ * fuer einen FAB, der in der Agenda am Zeiger ausgeblendet ist. Der alte Guard
+ * konnte sie nicht sehen, weil er die falsche Sache suchte: nicht das Token ist
+ * das Problem, sondern dass ein Scrollport seinen Bodenfreiraum ueberhaupt
+ * selbst festlegt.
+ *
+ * Geprueft wird deshalb die BAUART: an einem Scrollport ist der dritte Wert
+ * eines `padding`-Shorthands verboten, ebenso ein eigenes `padding-bottom`.
+ * Sein Bodenpolster gehoert in `--scrollport-pad`, damit `.page-scrollport`
+ * den Shell-Nachlauf DARAUF legen kann statt ihn zu ersetzen. Die Zwei-Wert-
+ * Form (`padding: a b`) bleibt erlaubt: sie meint die Achsen, und die Rolle
+ * ueberschreibt ihren Boden ohnehin.
+ */
+test('ein Scrollport nennt seinen Bodenfreiraum nicht selbst', () => {
+  const styleDir = new URL('../public/styles/', import.meta.url);
+
+  const markiert = new Set();
+  for (const file of walkJsFiles('../public/pages/')) {
+    for (const m of read(file).matchAll(/["'`]([^"'`]*\bpage-scrollport\b[^"'`]*)["'`]/g)) {
+      for (const cls of m[1].split(/\s+/)) {
+        if (cls && cls !== 'page-scrollport' && /^[a-z][\w-]*$/.test(cls)) markiert.add(cls);
+      }
+    }
+  }
+
+  const verstoesse = [];
+  for (const file of readdirSync(styleDir).filter((f) => f.endsWith('.css'))) {
+    for (const rule of eachRule(read(`../public/styles/${file}`))) {
+      // Nur Regeln, deren LETZTES Glied ein markierter Scrollport ist - eine
+      // Regel auf ein Kind darin (`.agenda-view .agenda-day`) polstert das Kind.
+      const letztes = rule.selector.trim().split(/\s+/).pop() || '';
+      const klassen = [...letztes.matchAll(/\.([a-z][\w-]*)/g)].map((m) => m[1]);
+      if (!klassen.some((c) => markiert.has(c))) continue;
+
+      for (const decl of rule.body.matchAll(/(^|[;{])\s*(padding(?:-bottom|-block-end)?)\s*:([^;]*)/g)) {
+        const [, , prop, wert] = decl;
+        if (prop !== 'padding') {
+          verstoesse.push(`${file}: ${rule.selector.trim()} → ${prop}:${wert.trim()}`);
+          continue;
+        }
+        // Werte zaehlen, ohne calc(...)/var(...) mit ihren Leerzeichen zu zerlegen.
+        const teile = wert.trim().replace(/\b(?:calc|var|min|max|clamp)\([^()]*(?:\([^()]*\)[^()]*)*\)/g, 'X').split(/\s+/).filter(Boolean);
+        if (teile.length >= 3) {
+          verstoesse.push(`${file}: ${rule.selector.trim()} → padding mit ${teile.length} Werten (${wert.trim()})`);
+        }
+      }
+    }
+  }
+
+  assert.deepStrictEqual(verstoesse, [],
+    'diese Scrollports legen ihren Bodenfreiraum selbst fest, statt ihn als '
+    + '--scrollport-pad anzumelden. Genau so ueberlebte die achte FAB-Reserve den '
+    + `Umbau von 2026-08-12: ${verstoesse.join(' | ')}`);
+});
+
+test('die Scrollport-Rolle sitzt an einer Box mit Ueberlauf', () => {
+  const styleDir = new URL('../public/styles/', import.meta.url);
+
+  // Jede KLASSENGRUPPE, in der `page-scrollport` steht - nicht jede Klasse
+  // einzeln. Die Scroll-Achse liegt am geteilten Baustein (`.list-scroller`,
+  // `.budget-tab-panel`), waehrend `items-list` oder `--loans` nur benennen,
+  // welche Liste es ist. Eine Pruefung je Klasse verlangte von jedem Namen
+  // seine eigene Achse und waere an genau diesen Namen zerbrochen.
+  const gruppen = [];
+  for (const file of walkJsFiles('../public/pages/')) {
+    for (const m of read(file).matchAll(/["'`]([^"'`]*\bpage-scrollport\b[^"'`]*)["'`]/g)) {
+      const klassen = m[1].split(/\s+/).filter((c) => /^[a-z][\w-]*$/.test(c) && c !== 'page-scrollport');
+      if (klassen.length) gruppen.push({ file, klassen });
+    }
+  }
+  assert.ok(gruppen.length >= 10, `zu wenige markierte Scrollports gefunden: ${gruppen.length}`);
+
+  const scrollend = new Set();
+  for (const file of readdirSync(styleDir).filter((f) => f.endsWith('.css'))) {
+    for (const rule of eachRule(read(`../public/styles/${file}`))) {
+      if (!/overflow(-y)?:\s*(auto|scroll)/.test(rule.body)) continue;
+      for (const cls of rule.selector.matchAll(/\.([a-z][\w-]*)/g)) scrollend.add(cls[1]);
+    }
+  }
+  const blind = gruppen
+    .filter(({ klassen }) => !klassen.some((c) => scrollend.has(c)))
+    .map(({ file, klassen }) => `${file}: ${klassen.join('.')}`);
+  assert.deepStrictEqual(blind, [],
+    'diese Markierungen tragen page-scrollport, aber keine ihrer Klassen hat eine '
+    + `Scroll-Achse - die Rolle legt dort einen Nachlauf ins Leere: ${blind.join(' | ')}`);
+});
+
+test('die Pillenzone steht nur am markierten Scrollport', () => {
+  const layout = read('../public/styles/layout.css').replace(/\/\*[\s\S]*?\*\//g, '');
+
+  // Jede Regel, deren Selektor auf `.app-content` endet und ein Padding aus
+  // einer der drei Zonen setzt. Geprueft werden alle drei und nicht nur die
+  // Pille: der Defekt ist die BAUART, nicht die Flaeche - der Install-Banner
+  // machte 2026-08-19 exakt denselben Fehler auf demselben Selektor.
+  //
+  // `.app-content:not(:has(.page-scrollport))` ist ausgenommen und ist das
+  // Gegenteil des Defekts: dieser Selektor sagt ausdruecklich „nur, wenn die
+  // Seite KEINEN eigenen Scrollport mitbringt" - dann ist .app-content der
+  // Scrollport und der Nachlauf gehoert ihm.
+  const ZONEN = /--(?:fab-safe-zone|bulk-pill-safe-zone|install-prompt-tail|shell-tail)/;
+  const treffer = [];
+  for (const m of layout.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    const selector = m[1].trim().replace(/\s+/g, ' ');
+    if (!/\.app-content\s*$/.test(selector)) continue;
+    if (/:not\(:has\([^)]*\.page-scrollport[^)]*\)\)\s*$/.test(selector)) continue;
+    if (!/padding/.test(m[2]) || !ZONEN.test(m[2])) continue;
+    treffer.push(selector);
+  }
+
+  assert.deepStrictEqual(treffer, [],
+    'diese Regeln polstern .app-content mit einer Shell-Zone, ohne den Fall '
+    + 'auszuschliessen, in dem die Seite ihren eigenen Scrollport mitbringt. Dort '
+    + 'scrollt .app-content nicht, das Padding verkuerzt den echten Scrollport und '
+    + `wird zum toten Band darunter: ${treffer.join(', ')}`);
 });
 
 test('ein Kopf mit --narrow pflegt ihn beim Ansichtswechsel', () => {
@@ -3300,14 +3500,22 @@ test('der FAB weicht der Zeile, statt eine Gasse zu reservieren', () => {
   //
   // Die Marge darf nicht zurueckkommen: sie ist das eine, was die Sichtflaeche
   // kostet.
-  // `[^;]*` statt eines exakten `var(--fab-safe-zone)`: seit 2026-08-19 tritt der
-  // Install-Banner als dritte fixierte Flaeche hinzu und steht als SUMMAND in
-  // derselben Deklaration (`--install-prompt-tail`, ohne Banner 0). Drei
-  // Flaechen als `:has()`-Kombinatorik waeren acht Regeln; die Zusage bleibt,
-  // dass die FAB-Zone im Nachlauf steht - nicht, dass sie allein dort steht.
-  assert.match(layout, /:has\([^)]*\.page-fab[^)]*\)[^{]*\.app-content\s*\{[^}]*padding-block-end:[^;]*--fab-safe-zone/,
-    'der FAB-Nachlauf gehoert als padding-block-end an .app-content - am Scroll-Ende '
-    + 'liegt damit leerer Raum unter dem Knopf, und der Scrollport bleibt fensterhoch');
+  // SEIT 2026-08-20 IST DIE FAB-ZONE EIN SUMMAND, KEIN FERTIGES PADDING.
+  // Hier stand die Forderung, sie als `padding-block-end` an `.app-content` zu
+  // finden - und genau diese Bauart war der Defekt: bei den acht Seiten mit
+  // eigenem Scrollport verkuerzt ein Padding dort die Bezugshoehe des
+  // Modul-Roots, statt am Inhaltsende zu reiten. Der Nachlauf haengt jetzt an
+  // `.page-scrollport`; die FAB-Zone erreicht ihn als `--fab-tail`.
+  //
+  // Geprueft wird die KETTE, weil jedes Glied fuer sich harmlos aussieht: die
+  // Bedingung setzt den Summanden, die Summe zaehlt ihn, die Regel legt sie an.
+  assert.match(layout, /:has\([^)]*\.page-fab[^{]*\{[^}]*--fab-tail:\s*var\(--fab-safe-zone\)/,
+    'die FAB-Zone muss unter der FAB-Bedingung zum Summanden --fab-tail werden');
+  assert.match(layout, /--shell-tail:\s*calc\([^;]*--fab-tail[^;]*\)/,
+    'und --fab-tail muss in der Summe --shell-tail auftauchen, sonst zaehlt ihn niemand');
+  assert.match(layout, /\.page-scrollport[^{]*\{[^}]*padding-block-end:[^;]*--shell-tail/,
+    'und --shell-tail muss als padding-block-end am Scrollport landen - am Scroll-Ende '
+    + 'liegt damit leerer Raum unter dem Knopf, und der Scrollport bleibt porthoch');
   assert.doesNotMatch(layout.replace(/\/\*[\s\S]*?\*\//g, ''), /margin-block-end:\s*var\(--fab-safe-zone\)/,
     'die FAB-Zone darf den Scrollport nicht wieder verkuerzen (Marge statt Nachlauf): '
     + 'das schnitt das Dashboard-Raster 96px ueber der Fensterkante ab');
@@ -3973,20 +4181,25 @@ test('die Sammelaktions-Pille wohnt in der Shell und kostet die Liste keine Zeil
     'der Nachlauf leitet sich aus der Pillenhöhe ab und darf nicht davon wegdriften');
 
   // --- 3. Nachlauf am Scroll-Ende ------------------------------------------
-  // `:not(:has(.list-bulkbar))` ist die GEGENMENGE und keine Pillen-Regel: seit
-  // 2026-08-19 gibt es sie (der Fall ohne FAB und ohne Pille, den der
-  // Install-Banner-Nachlauf braucht), und ohne diesen Ausschluss zaehlte der
-  // Filter sie mit und verlangte von ihr eine Pillen-Zone.
-  const safeZone = [...eachRule(layout)].filter((r) =>
-    /(^|[^t])\:has\([^)]*\.list-bulkbar[^)]*\)/.test(r.selector.replace(/:not\(:has\([^)]*\.list-bulkbar[^)]*\)\)/g, ''))
-    && /\.app-content/.test(r.selector));
-  assert.ok(safeZone.length >= 2,
-    'der Nachlauf braucht BEIDE Fälle: mit FAB (Summe) und ohne (allein) - `:has()` trägt die '
-    + 'Spezifität seines Arguments, eine Regel allein stünde unter der FAB-Regel');
-  for (const rule of safeZone) {
-    assert.match(rule.body, /padding-block-end:[^;]*--bulk-pill-safe-zone/,
-      'jede Pillen-Regel am Scrollport muss den Nachlauf setzen');
-  }
+  // HIER STAND EINE FORDERUNG NACH ZWEI REGELN an `.app-content` - eine mit
+  // FAB, eine ohne, beide mit der Pillenzone als Summand. Sie stammte aus der
+  // Zeit, als der Nachlauf dort stand, und ueberlebte den Umzug an
+  // `.has-bulk-safe-zone` (2026-08-13) unveraendert: der Guard verlangte
+  // seitdem genau die Regel, die der Umzug ersetzt hatte, und zementierte
+  // damit den doppelten Abzug (Messung an der Regel in layout.css).
+  //
+  // Geprueft wird jetzt die Sache statt der alten Bauart: die Zone haengt an
+  // der Rolle, und die Rolle haengt an einer Bedingung - ohne Pille kein
+  // Nachlauf, sonst reservierte jede der drei Listen ihn dauerhaft.
+  const pillenSummand = [...eachRule(layout)].filter((r) =>
+    /--bulk-pill-tail:\s*var\(--bulk-pill-safe-zone\)/.test(r.body));
+  assert.strictEqual(pillenSummand.length, 1,
+    'die Pillenzone wird an GENAU EINER Stelle zum Summanden --bulk-pill-tail');
+  assert.match(pillenSummand[0].selector, /:has\([^)]*\.list-bulkbar[^)]*\)/,
+    'und nur, solange eine Pille da ist - sonst reserviert jeder Scrollport den '
+    + 'Streifen auch dann, wenn nichts ausgewaehlt ist');
+  assert.match(layout, /--shell-tail:\s*calc\([^;]*--bulk-pill-tail[^;]*\)/,
+    'und der Summand muss in der Summe --shell-tail auftauchen, sonst zaehlt ihn niemand');
 
   // --- Der Stapel: Reihenfolge IST die Zusage ------------------------------
   // Die Spalte ist unten verankert, also steht oben, wer zuerst im DOM steht.

@@ -1487,7 +1487,7 @@ function renderMonthView(container) {
       <div class="month-weekdays">
         ${weekdayOrder(state.weekStart).map((idx) => `<div class="month-weekday">${DAY_NAMES_SHORT()[idx]}</div>`).join('')}
       </div>
-      <div class="month-grid" id="month-grid">
+      <div class="month-grid page-scrollport" id="month-grid">
         ${days.map(({ date, inMonth }) => renderMonthDay(date, inMonth)).join('')}
       </div>
     </div>
@@ -1670,7 +1670,7 @@ function renderWeekView(container) {
           </div>
         `).join('')}
       </div>
-      <div class="week-view__scroll" id="week-scroll">
+      <div class="week-view__scroll page-scrollport" id="week-scroll">
         <div class="week-view__body">
           <div class="week-view__times">
             ${Array.from({ length: 24 }, (_, h) => `
@@ -1895,7 +1895,7 @@ function renderDayView(container) {
           ${tasksOnDay(state.cursor).map(renderTaskChip).join('')}
         </div>
       </div>` : ''}
-      <div class="day-view__scroll" id="day-scroll">
+      <div class="day-view__scroll page-scrollport" id="day-scroll">
         <div class="day-view__body">
           <div class="day-view__times">
             ${Array.from({ length: 24 }, (_, h) => `
@@ -2004,7 +2004,7 @@ function renderAgendaView(container) {
 
   container.replaceChildren();
   container.insertAdjacentHTML('beforeend', `
-    <div class="agenda-view" id="agenda-view">
+    <div class="agenda-view page-scrollport" id="agenda-view">
       ${groups.length === 0
         ? `<div class="empty-state">
              <i data-lucide="calendar-plus" class="empty-state__icon" aria-hidden="true"></i>
@@ -2238,7 +2238,7 @@ function renderCalendarSearchResults(body) {
   }
 
   body.insertAdjacentHTML('beforeend', `
-    <div class="agenda-view cal-search-results" id="cal-search-results">
+    <div class="agenda-view page-scrollport cal-search-results" id="cal-search-results">
       <p class="cal-search-results__count" aria-hidden="true">${esc(calendarSearchCountLabel())}</p>
       ${groups.map(({ date, events }) => `
         <div class="agenda-day" data-date="${esc(date)}">

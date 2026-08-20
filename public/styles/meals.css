@@ -1026,7 +1026,10 @@
     column-gap: var(--space-2);
     row-gap: var(--space-2);
     align-items: stretch;
-    padding: 0 0 var(--space-3);
+    /* Das eigene Bodenpolster als Variable, nicht als `padding-bottom`:
+     * `.page-scrollport` (layout.css) legt den Freiraum der fixierten
+     * Shell-Flächen DARAUF und überschriebe ein direktes Padding hier. */
+    --scrollport-pad: var(--space-3);
     min-width: 0;
     overflow-x: auto;
     scroll-snap-type: x proximity;
