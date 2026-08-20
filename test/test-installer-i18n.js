@@ -25,6 +25,28 @@ function flattenKeys(obj, prefix = '', out = new Set()) {
   return out;
 }
 
+// Dieselbe Zusicherung wie für die App-Locales (test/test-i18n.js), nur mit der
+// Einrückung, die HIER gilt: die Installer-Locales stehen auf ZWEI Leerzeichen.
+//
+// Sie stand dort bis zum 2026-08-20 als Stichprobe über Zeile 2 und übersah damit
+// acht völlig uneingerückte Zeilen in allen 24 App-Locales. Hier gab es die Prüfung
+// bisher gar nicht - die Dateien sind sauber, aber nichts hielt sie dabei. Da beide
+// Verzeichnisse von denselben Skripten und Händen gepflegt werden, gilt die Regel
+// an beiden Enden oder an keinem.
+test('jede Installer-Locale ist Zeile für Zeile 2-Leerzeichen-formatiert', () => {
+  const wrong = [];
+  for (const locale of SUPPORTED_LOCALES) {
+    const raw = readFileSync(new URL(`${locale}.json`, LOCALES_DIR), 'utf8');
+    const canonical = `${JSON.stringify(JSON.parse(raw), null, 2)}\n`;
+    if (raw === canonical) continue;
+    const a = raw.split('\n');
+    const b = canonical.split('\n');
+    const i = a.findIndex((line, n) => line !== b[n]);
+    wrong.push(`${locale}.json Zeile ${i + 1}: ${JSON.stringify(a[i])} statt ${JSON.stringify(b[i])}`);
+  }
+  assert.deepEqual(wrong, [], `nicht kanonisch 2-Leerzeichen-formatiert:\n  ${wrong.join('\n  ')}`);
+});
+
 /** Alle in install.html referenzierten i18n-Schlüssel (Attribute, t(), applyRich). */
 function referencedKeys() {
   const html = readFileSync(HTML_PATH, 'utf8');
