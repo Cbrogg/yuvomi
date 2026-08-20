@@ -1,4 +1,4 @@
-<!-- version: 2.24.2 -->
+<!-- version: 2.24.3 -->
 <!--
   Die `releaseNotes` fuer den Umbrel-App-Store, von Hand fuer JEDEN Release
   geschrieben. `umbrel-publish.yml` nimmt den Text unter diesem Kommentar
@@ -29,21 +29,22 @@
     - Leerzeile zwischen den Absaetzen: der Store rendert ein gefaltetes
       YAML-Blockskalar, dort ist die Leerzeile der Absatzumbruch.
 
-  HINWEIS ZU DIESER VERSION: ein Thema, keine Migration, also kein
-  Handlungs-Absatz. Alle drei Absaetze beschreiben denselben Fehler an drei
-  Stellen - unter einer Liste war Platz reserviert, in dem nichts steht. Im
-  Store zaehlt davon nur, was ein Haushalt sieht: es passt wieder mehr auf den
-  Bildschirm, und nichts verschwindet mehr unter dem Installationshinweis.
-  Der zweite Absatz steht getrennt, weil das der einzige der drei Faelle ist,
-  in dem jemand tatsaechlich an etwas nicht herankam.
+  HINWEIS ZU DIESER VERSION: keine Migration, aber ein Handlungs-Absatz, und
+  der steht bewusst zuerst. Umbrel setzt fuer die App keine Zeitzone, ein
+  Container laeuft also auf UTC - und genau davon haengt ab, ob die
+  Kalender-Korrektur bei diesem Haushalt ueberhaupt ankommt. Wer TZ nicht
+  setzt, bekommt weiterhin verschobene Zeiten im abonnierten Kalender, nur
+  jetzt ausdruecklich als UTC statt unbestimmt. Das ehrlich zu sagen ist mehr
+  wert als die Korrektur zu bewerben.
 
-  Draussen bleibt die ganze Bauart: welche Regel wo stand, wie hoch eine Zeile
-  vorher war, welcher Test es absichert.
+  Draussen bleibt die ganze Bauart: Kalenderformat-Namen, welche Felder ein
+  Termin traegt, wo der Fehlerstand gespeichert wird, welcher Test es
+  absichert.
 -->
-Listen, die innerhalb der Seite scrollen, zeigen wieder ihre volle Hoehe. Sobald in Einkauf, Vorrat oder Kontakten eine Auswahl getroffen war und die Leiste mit den Sammelaktionen erschien, blieb unter der Liste ein leerer Streifen stehen, der ungefaehr eine Zeile hoch war und sich nicht wegscrollen liess. Auf dem Einkaufszettel bedeutet das jetzt einen Artikel mehr im Blick, und zwar genau waehrend man abhakt. Erreichbar war ohnehin alles - der Platz war nur unnoetig belegt.
+Termine in einem abonnierten Kalender erscheinen wieder zur richtigen Zeit. Ein Termin, den du in Yuvomi anlegst, wurde im geteilten Kalender ohne Zeitzone weitergegeben - Google Kalender, Apple Kalender, Thunderbird, Outlook und Home Assistant lesen so etwas als UTC, ein Termin um 16 Uhr stand bei allen Abonnenten um 18 Uhr. Yuvomi gibt jetzt die Zeitzone deines Haushalts mit. Damit das bei dir wirkt, muss die App wissen, in welcher Zone du lebst: Umbrel startet sie ohne diese Angabe, sie laeuft dann auf UTC. Setze in den Einstellungen deiner Yuvomi-Installation die Variable TZ auf deine Zone, zum Beispiel Europe/Berlin. Ohne diese Angabe bleiben die Zeiten verschoben. Ein erneutes Abonnieren ist nicht noetig, die naechste Aktualisierung des Kalenders korrigiert die Termine von selbst.
 
-Der Hinweis, mit dem sich Yuvomi als App installieren laesst, verdeckt nicht mehr das Ende einer Liste. Auf den meisten Seiten hatte er schon Platz freigehalten, in Kueche, Budget, Kontakten, Notizen und Kalender aber nicht - dort lagen die letzten Eintraege darunter, ohne dass man weiter scrollen konnte. Das gilt jetzt ueberall gleich.
+Termine, die eine Kalenderverbindung mitgebracht hat, lassen sich wieder loswerden. Wer die Verbindung zu Google oder Apple getrennt hat, blieb bisher auf allen bereits uebernommenen Terminen sitzen: kein Abgleich fasste sie noch an, und beim erneuten Verbinden kamen sie ein zweites Mal herein - am deutlichsten bei wiederkehrenden Terminen. Sie einzeln zu loeschen war der einzige Weg. Beim Trennen fragt Yuvomi jetzt, ob sie mitgehen sollen, und nennt dabei ihre Anzahl; wer schon getrennt hat, findet den Weg in den Einstellungen unter Synchronisation. Deine eigenen Termine bleiben, und beim Anbieter aendert sich nichts - entfernt wird nur die Kopie in Yuvomi, ein erneutes Verbinden holt alles zurueck.
 
-In der Terminliste des Kalenders war unterhalb des letzten Termins Platz fuer eine Schaltflaeche freigehalten, die auf einem Rechner an dieser Stelle gar nicht erscheint. Der Platz gehoert wieder den Terminen.
+Ein fehlgeschlagener Kalenderabgleich sagt es dir. Bisher landete so ein Fehler nur im Serverprotokoll, ein abgelaufener Zugang sah von aussen aus wie ein Kalender, der einfach aufhoert sich zu aktualisieren - in einem gemeldeten Fall faellt das erst nach zwei Wochen auf. Der letzte Fehler steht jetzt in den Einstellungen unter Synchronisation, direkt unter dem Verbindungsstatus, und verschwindet von selbst, sobald ein Abgleich wieder durchlaeuft.
 
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.24.2
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.24.3

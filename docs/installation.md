@@ -238,9 +238,9 @@ docker compose up -d
 Docker pulls `ghcr.io/ulsklyc/yuvomi:latest` automatically. No build step, no Node.js installation needed.
 
 > **Pinning a version.** Every release is also published under immutable tags:
-> `2.24.2` (exact version), `2.24` (latest patch of that minor), plus a moving `main`
+> `2.24.3` (exact version), `2.24` (latest patch of that minor), plus a moving `main`
 > tag for the current development state. To pin production to a known-good release,
-> set `image: ghcr.io/ulsklyc/yuvomi:2.24.2` in your compose file and bump it
+> set `image: ghcr.io/ulsklyc/yuvomi:2.24.3` in your compose file and bump it
 > deliberately; `latest` always points at the newest release.
 
 Continue with [Step 4 — Verify](#4-verify-the-container-is-running).
@@ -286,7 +286,7 @@ docker compose logs -f
 You should see output like:
 
 ```
-yuvomi  | [Yuvomi] Server running on port 3000 | Version 2.24.2
+yuvomi  | [Yuvomi] Server running on port 3000 | Version 2.24.3
 yuvomi  | [Yuvomi] Environment: production
 yuvomi  | [Sync] Auto-sync active every 15 minutes.
 ```
@@ -429,7 +429,7 @@ All configuration happens in the `.env` file. The container reads these values o
 | `PORT` | Port the Express server listens on **inside the container** (rarely changed) | `3000` | No |
 | `OIKOS_HTTP_PORT` | Host port that the compose file maps to the container's port 3000. Change this to expose Yuvomi on a different host port; the app inside the container always listens on 3000. | `3000` | No |
 | `OIKOS_HTTP_BIND` | Host bind address for the published port (`podman-compose.yml` only). Set to `127.0.0.1` for rootless Podman behind a reverse proxy on the same host. | `0.0.0.0` | No |
-| `TZ` | Container timezone (e.g. `Europe/Berlin`). Affects timestamps, the automated-backup schedule, and serves as the household zone wherever a time carries none of its own: events pushed to Google Calendar when the target calendar reports no zone, and the due times of CalDAV reminders synced into Tasks. | `UTC` | No |
+| `TZ` | Container timezone (e.g. `Europe/Berlin`). Affects timestamps, the automated-backup schedule, and serves as the household zone wherever a time carries none of its own: events pushed to Google Calendar when the target calendar reports no zone, the due times of CalDAV reminders synced into Tasks, and the times in the exported calendar feed (`/feed/calendar/<token>.ics`), which subscribers read in this zone - a wrong `TZ` shifts every appointment for everyone subscribed. | `UTC` | No |
 | `NODE_ENV` | Runtime environment | `production` | No |
 | `LOG_LEVEL` | Lowest severity written to the container log (`debug`, `info`, `warn`, `error`). Set to `debug` to see the per-run detail of the calendar, contact and holiday sync, which stays quiet at `info` when a run has nothing to do. | `info` | No |
 | `TRUST_PROXY` | Number of reverse-proxy hops to trust, or a subnet string (e.g. `1`, `172.16.0.0/12`, `loopback`). The default already trusts a single hop, so `req.ip` returns the real client IP behind one Caddy/Nginx/Traefik proxy without any configuration. Set to `loopback` for direct, proxy-less deployments, or to a subnet/higher hop count behind multiple proxy layers. Numeric values are treated as a hop count; named values (`loopback`, `linklocal`, `uniquelocal`) work as expected. | `1` | No |

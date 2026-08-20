@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.24.3] - 2026-08-20
+
+### Fixed
+
+- **Calendar feed times now carry their time zone.** Events you create in Yuvomi are stored as plain
+  wall-clock time, and the subscription feed exported them as RFC 5545 *floating* time - valid, and
+  meant to be read on the viewer's own clock. In practice Google Calendar, Apple Calendar,
+  Thunderbird, Outlook and Home Assistant all resolve such values to UTC, so a 16:00 appointment in
+  a household running `TZ=Europe/Madrid` showed up at 18:00 for everyone subscribed to the feed. The
+  digits are unchanged; they are now anchored: `DTSTART;TZID=Europe/Madrid:...` with a matching
+  `VTIMEZONE` component and an `X-WR-TIMEZONE` calendar header. Events synced in from Google or
+  CalDAV already carried an unambiguous offset and keep it, all-day events are unaffected, and a
+  household whose zone is UTC gets a plain `Z` instead of a timezone component many clients do not
+  carry. Re-subscribing is not necessary - the next feed refresh corrects the times.
+- **A failed Google or Apple calendar sync is visible instead of silent.** Both providers recorded
+  sync failures in the server log only, so an expired token or a revoked app password looked from
+  the outside like a calendar that quietly stopped updating - one household noticed after roughly
+  two weeks, and only from the duplicates that reconnecting left behind. The last error now appears
+  in Settings -> Sync -> Calendar, right below the connection status it explains, and disappears by
+  itself as soon as a run succeeds.
+
+### Added
+
+- **Appointments brought in by a sync can be cleared out.** Disconnecting a Google or Apple account
+  removed the credentials but left every appointment it had already imported behind: no sync touches
+  them again, and reconnecting imported them a second time as visible duplicates - most obvious on
+  recurring events. Removing them meant deleting one appointment at a time. Disconnecting now offers
+  to take them along and says how many there are, and for anyone already disconnected, Settings ->
+  Sync -> Calendar offers to clear them afterwards. Your own appointments stay, including ones
+  waiting to be uploaded, and nothing changes at Google or iCloud - only Yuvomi's copy is removed,
+  and reconnecting fetches everything again.
+
 ## [2.24.2] - 2026-08-20
 
 ### Fixed
