@@ -1252,7 +1252,7 @@ Birthday records with optional profile photo and automatic calendar event + remi
 ### API Tokens
 Named Bearer / X-API-Key tokens for non-interactive external integrations. Admin-only creation and revocation. Token values are SHA-256-hashed at rest; the plaintext is shown only once after creation.
 
-Tokens can optionally be **scoped** to individual modules and access levels — a least-privilege allow-list that matters most for tokens handed to an off-device AI/MCP client. Each scope is `<module>:read` or `<module>:write` (write implies read); modules cover `tasks`, `shopping`, `meals`, `pantry`, `calendar`, `notes`, `contacts`, `budget`, `documents`, `health`, `rewards`, `housekeeping`, `weather`, `family`, `dashboard`, `search`. A `NULL` scopes value means no scoping — full role-based access (the default, and the state of every token created before this feature). A scoped token can only reach modules on its allow-list; every other `/api/v1` path is denied. Enforcement is shared across the REST API and MCP: the MCP core tools are checked in-process, `tools/list` hides tools the token cannot use, and the OpenAPI bridge inherits the same limits because it loops back through the REST layer with the same token.
+Tokens can optionally be **scoped** to individual modules and access levels — a least-privilege allow-list that matters most for tokens handed to an off-device AI/MCP client. Each scope is `<module>:read` or `<module>:write` (write implies read); modules cover `tasks`, `shopping`, `meals`, `pantry`, `calendar`, `notes`, `contacts`, `budget`, `documents`, `health`, `rewards`, `housekeeping`, `weather`, `family`, `dashboard`, `search`. A `NULL` scopes value means no scoping — full role-based access (the default, and the state of every token created before this feature). A scoped token can only reach modules on its allow-list; every other `/api/v1` path is denied. Enforcement is shared across the REST API and MCP: the MCP core tools are checked in-process, `tools/list` hides tools the token cannot use, and the OpenAPI bridge inherits the same limits because it loops back through the REST layer with the same token. Scopes narrow, they never grant: the module permissions of the user behind the token apply on top of them, on both surfaces (#823).
 
 | Column | Type | Constraint |
 |--------|------|-----------|
@@ -2068,7 +2068,11 @@ deviations from the default are stored — a missing row means module `write` (f
 default. Widgets inherit their module's lock (module `none` → its widgets blocked); a widget can
 also be blocked on its own (e.g. hiding the cycle widget for some members without disabling Health).
 Enforcement is **server-side** — the same scope layer that guards API tokens gates interactive
-sessions too; the settings UI only maintains the configuration.
+sessions too; the settings UI only maintains the configuration. The rule itself lives in
+one function (`moduleAccessVerdict` in `server/permissions.js`) that every data-bearing surface
+calls: the `/api/v1` middleware and the [MCP tool layer](#mcp-endpoint). It had been spelled out
+inline in the middleware only, and the MCP core tools — which run in-process against SQLite and
+never see express — therefore had no module check at all (#823).
 
 | Column | Type | Constraint |
 |--------|------|-----------|
@@ -2737,6 +2741,7 @@ A stateless [Model Context Protocol](https://modelcontextprotocol.io) endpoint i
 - **OpenAPI bridge:** `list_api_operations` and `get_api_operation` discover every documented REST operation; `call_api_operation` invokes any of them over an authenticated loopback call. This exposes the full API through one mechanism instead of a per-route tool, and every call inherits the token's permissions (admin-only routes require an admin token).
 - Each call runs as the token's creating user and inherits that user's role. HTTPS is strongly recommended.
 - **Token scopes apply here too:** a scoped token only sees the core tools it is allowed to use in `tools/list`, is refused any out-of-scope `tools/call`, and — because `call_api_operation` loops back through the REST layer — cannot reach REST operations outside its allow-list. Use this to hand an AI client a token that, for example, may write the calendar but never read the health module.
+- **Role/member module permissions apply here too (#823).** Scopes and [access permissions](#access-permissions-migration-v74) are two independent limits and both must agree: a member configured with `tasks: none` is refused `list_tasks` and `create_task` no matter what the token's scopes say, and a member on `tasks: read` may list but not create. A scope can only narrow what the member already has — issuing a token can never widen it. `tools/list` hides what the account may not call, so an agent is never offered a tool its next request would refuse. **Split-expense guest accounts** reach no core tool at all, mirroring the `/api/v1` guard that confines them to `/split-expenses`. Until this fix the core tools ran in-process against SQLite and never met the `/api/v1` middleware, so MCP answered a request that REST denied for the same person — the rule itself now lives in `server/permissions.js` (`moduleAccessVerdict`) and both surfaces call it rather than each spelling it out.
 - Binary responses through the bridge (e.g. document/backup downloads) are inlined as base64 up to **5 MiB**; larger downloads are rejected and should use the dedicated streaming REST route directly.
 - **Optional:** `MCP_INTERNAL_BASE_URL` overrides the base URL the bridge calls back into; it defaults to `BASE_URL` or `http://127.0.0.1:<PORT>` and is only needed for non-standard bind addresses.
 

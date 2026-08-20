@@ -70,6 +70,7 @@ import permissionsRouter from './routes/permissions.js';
 import changelogRouter from './routes/changelog.js';
 import mcpRouter from './mcp/server.js';
 import { moduleForPath, requiredAccess, tokenAllows } from './scopes.js';
+import { moduleAccessVerdict, MODULE_ACCESS_DENIED, MODULE_ACCESS_READ_ONLY } from './permissions.js';
 
 const log     = createLogger('Server');
 const logSync = createLogger('Sync');
@@ -412,15 +413,17 @@ app.use('/api/v1', (req, res, next) => {
 // erreichbar, damit die App bedienbar bleibt. Admins haben sessionModuleAccess
 // === null (Bypass), ebenso unbeschränkte Mitglieder (Fast-Path).
 app.use('/api/v1', (req, res, next) => {
-  const access = req.sessionModuleAccess;
-  if (!access) return next();
-  const moduleKey = moduleForPath(req.path);
-  if (!moduleKey || !(moduleKey in access)) return next();
-  const level = access[moduleKey];
-  if (level === 'none') {
+  // Die Regel selbst steht in permissions.js — dieselbe Funktion prüft den
+  // MCP-Endpoint (#823), damit beide Oberflächen nicht auseinanderlaufen.
+  const verdict = moduleAccessVerdict(
+    req.sessionModuleAccess,
+    moduleForPath(req.path),
+    requiredAccess(req.method),
+  );
+  if (verdict === MODULE_ACCESS_DENIED) {
     return res.status(403).json({ error: 'You do not have access to this module.', code: 403 });
   }
-  if (level === 'read' && requiredAccess(req.method) === 'write') {
+  if (verdict === MODULE_ACCESS_READ_ONLY) {
     return res.status(403).json({ error: 'You have read-only access to this module.', code: 403 });
   }
   return next();

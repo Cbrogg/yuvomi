@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.25.1] - 2026-08-20
+
+### Security
+
+- **The MCP endpoint now enforces the same module permissions as the REST API (#823).** A member
+  configured with a module set to "no access" was refused by `/api/v1` but still served by the
+  matching MCP tool: `list_tasks` returned the household's tasks for an account whose Tasks module
+  was `none`, and the write tools were open the same way. The reason was structural rather than a
+  missed check - the curated core tools run in-process against SQLite and never pass through the
+  Express middleware where the permission rule was spelled out, so nothing was there to apply it.
+  The rule now lives in one place (`moduleAccessVerdict` in `server/permissions.js`) that both
+  surfaces call: a module on `none` refuses the read and the write tool, a module on `read` refuses
+  only the write tool, and `tools/list` hides what the account may not call, so an AI client is
+  never offered a tool its next request would deny. Token scopes and member permissions are two
+  independent limits and both have to agree - handing out a token can no longer widen what the
+  person behind it is allowed to do. Guest accounts for Shared expenses, which `/api/v1` confines to
+  the expense routes, likewise reach no core tool any more. The OpenAPI bridge was never affected:
+  it loops back through the REST layer and inherited every limit already. Self-hosters who kept the
+  MCP port away from ordinary accounts for this reason no longer need to.
+
 ## [2.25.0] - 2026-08-20
 
 ### Fixed

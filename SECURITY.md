@@ -52,12 +52,13 @@ Vulnerabilities that require physical access to the host or root on the server a
 
 ## Authorization Model
 
-Yuvomi uses a flat family authorization model:
+Yuvomi is a shared family planner, not a multi-tenant application: a household is one trust boundary, and Yuvomi will never gain tenant separation. Within that boundary there are three axes.
 
-- **Admin** can create, edit, and delete all user accounts and all shared data.
-- **Member** can read and write all shared data (tasks, shopping lists, meals, calendar events, notes, contacts, budget entries) but cannot manage user accounts.
+- **Role.** **Admin** can create, edit, and delete all user accounts and all shared data, and bypasses the two axes below entirely (so nobody can lock themselves out). **Member** can read and write shared data but cannot manage user accounts.
+- **Module permissions** (per family role, overridable per member). A module can be set to `write` (the default), `read` or `none` for a member; dashboard widgets can be blocked the same way and inherit their module's lock. Storage is sparse - only deviations from the default are recorded, so an installation that never configures anything behaves exactly as it did before this existed.
+- **Per-row visibility.** Tasks, calendar events and documents each carry their own visibility (all members / assignees only / private, and a named member list for documents). This one has **no admin bypass**: a private task stays hidden from a parent too, because the intended use is preparing a surprise.
 
-There is no per-user data isolation - all family members see and can edit all data. This is intentional: Yuvomi is a shared family planner, not a multi-tenant application.
+The two lower axes are enforced **server-side, on every surface that hands out household data** - the REST API, the aggregating endpoints that no path-based guard can cover (dashboard, search, the kitchen bar), and the MCP endpoint. The client-side maps exist to hide navigation entries, never to decide access. The module rule in particular lives in exactly one function that all of these call; when it was spelled out inline in the REST middleware alone, the MCP tools - which run in-process and never pass through that middleware - answered requests the REST API denied for the same person (#823).
 
 An API token authenticates as a family member rather than as a credential of its own. Only an admin can create one, and an admin picks which member it acts as; that member supplies the role, the ownership of anything the token writes, and the module permissions resolved on every request. The creating admin stays recorded separately for the audit trail and grants nothing. A subject can therefore only narrow what a token reaches, never widen it: a non-admin subject cannot use admin-only routes, and optional token scopes remain an allow-list on top of the subject's own permissions. Split-expense guests cannot be selected as a subject, and deleting either the creator or the subject removes the token.
 

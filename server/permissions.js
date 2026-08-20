@@ -201,6 +201,40 @@ export function deniedModules(sessionModuleAccess) {
   return out;
 }
 
+// Urteil der Modulrechte-Prüfung. 'allow' = durchlassen, 'none' = Modul ganz
+// gesperrt, 'read-only' = nur Lesen erlaubt, Schreibversuch abgewiesen.
+export const MODULE_ACCESS_ALLOW = 'allow';
+export const MODULE_ACCESS_DENIED = 'none';
+export const MODULE_ACCESS_READ_ONLY = 'read-only';
+
+/**
+ * Erlaubt die aufgelöste Modulrechte-Karte diesen Zugriff?
+ *
+ * DIE Prüfung für jede Oberfläche, die Haushaltsdaten herausgibt — REST wie
+ * MCP. Sie stand vorher nur inline in der /api/v1-Middleware, und genau das war
+ * der Fehler aus #823: die MCP-Kern-Tools laufen in-process an express vorbei,
+ * hatten damit keine Modulprüfung und gaben einem Mitglied mit `tasks: none`
+ * die Aufgaben trotzdem heraus. Eine zweite Schreibweise derselben Regel wäre
+ * dieselbe Falle noch einmal — deshalb ein Aufruf, kein Nachbau.
+ *
+ * DENY-Liste, keine Allow-Liste: `null` (Admin/unbeschränkt) und jedes nicht
+ * gelistete Modul sind erlaubt. Nur was ausdrücklich eingeschränkt wurde, wird
+ * abgewiesen.
+ *
+ * @param {Record<string,'none'|'read'>|null|undefined} sessionModuleAccess
+ * @param {string|null} moduleKey - Scope-Modulschlüssel (scopes.js)
+ * @param {'read'|'write'} access
+ * @returns {'allow'|'none'|'read-only'}
+ */
+export function moduleAccessVerdict(sessionModuleAccess, moduleKey, access) {
+  if (!sessionModuleAccess) return MODULE_ACCESS_ALLOW;
+  if (!moduleKey || !(moduleKey in sessionModuleAccess)) return MODULE_ACCESS_ALLOW;
+  const level = sessionModuleAccess[moduleKey];
+  if (level === 'none') return MODULE_ACCESS_DENIED;
+  if (level === 'read' && access === 'write') return MODULE_ACCESS_READ_ONLY;
+  return MODULE_ACCESS_ALLOW;
+}
+
 /**
  * Nur-Lese-Payload für Clients (/auth/me, /login): die aufgelösten Maps plus
  * Admin-Flag. Der Client blendet damit Nav-Einträge, Settings-Ziele und

@@ -1,4 +1,4 @@
-<!-- version: 2.25.0 -->
+<!-- version: 2.25.1 -->
 <!--
   Die `releaseNotes` fuer den Umbrel-App-Store, von Hand fuer JEDEN Release
   geschrieben. `umbrel-publish.yml` nimmt den Text unter diesem Kommentar
@@ -29,25 +29,25 @@
     - Leerzeile zwischen den Absaetzen: der Store rendert ein gefaltetes
       YAML-Blockskalar, dort ist die Leerzeile der Absatzumbruch.
 
-  HINWEIS ZU DIESER VERSION: kein Handlungs-Absatz. Die Datenbank bekommt eine
-  neue Tabelle, die beim ersten Start von selbst angelegt wird - das ist keine
-  Handlung fuer den Haushalt und gehoert deshalb nicht in den Text.
+  HINWEIS ZU DIESER VERSION: kein Handlungs-Absatz im engen Sinn - keine neue
+  Env-Variable, keine Migration, die jemand anstossen muesste. Der zweite
+  Absatz nennt trotzdem eine Handlung, weil es fuer einen Teil der Leser eine
+  gibt: wer die Schnittstelle wegen genau dieses Fehlers von normalen Konten
+  ferngehalten hat, kann sie jetzt wieder freigeben.
 
-  Der Bedienfehler steht zuerst, weil ihn jeder Haushalt taeglich trifft: er
-  war app-weit und betraf nur die Maus. Das gehoert dazu, sonst liest sich der
-  Absatz wie eine Korrektur an etwas, das der Leser nie kaputt erlebt hat -
-  wer Yuvomi am Telefon bedient, hat den Knopf immer funktionieren sehen.
+  Der Text nennt zuerst, WEN es betrifft, und erst dann, was passiert war. Ein
+  Haushalt ohne eingeschraenkte Mitglieder und ohne Schnittstellen-Zugang ist
+  gar nicht betroffen, und das muss er nach einem Satz wissen, statt sich durch
+  eine Sicherheitsmeldung zu lesen, die ihn nichts angeht.
 
-  Die Schnittstellen-Neuerung steht danach und ausdruecklich mit ihrem
-  Adressaten davor ("wer Yuvomi ueber seine Schnittstelle ansteuert"), damit
-  niemand nach einer Einstellung sucht, die es fuer ihn nicht gibt.
-
-  Draussen bleibt die ganze Bauart: wie der Klick abhanden kam, wie der
-  Schluessel gebildet wird, welche Antwortcodes es gibt, wie lange gespeichert
-  wird, welcher Test es absichert.
+  Draussen bleibt die ganze Bauart: dass es zwei Zugangswege mit getrennten
+  Pruefungen waren, wo die Regel stand und wohin sie gewandert ist, wie die
+  Werkzeugliste gefiltert wird, welche Pruefschicht welchen Weg deckt. Ebenso
+  draussen bleibt das Kuerzel MCP: im Store liest das ein Haushalt, und
+  "Schnittstelle fuer KI-Assistenten" sagt ihm dasselbe.
 -->
-Der Knopf Rueckgaengig in den kurzen Meldungen am unteren Bildschirmrand funktioniert wieder. Wer eine Notiz, eine Aufgabe, einen Einkaufsposten oder einen Eintrag in einem anderen Modul geloescht hat, bekam die Meldung mitsamt Knopf angeboten - ein Klick darauf tat aber nichts, und die Loeschung blieb bestehen. Betroffen war nur die Bedienung mit der Maus: per Tastatur und am Telefon liess sich eine Loeschung immer zuruecknehmen, weshalb der Fehler lange unbemerkt blieb. Zwei kleinere Fehler an derselben Stelle gehen mit: die Meldung rutschte zur Seite und wurde unsichtbar, sobald der Mauszeiger sie nur beruehrte, und am Telefon liess sie sich nie wegwischen.
+Wer einzelnen Mitgliedern oder Familienrollen den Zugriff auf Module eingeschraenkt hat und zugleich einen Zugang fuer Skripte oder KI-Assistenten vergibt, sollte dieses Update einspielen. Ein Mitglied, dem zum Beispiel die Aufgaben entzogen waren, bekam sie in der App korrekt verweigert - ueber die Schnittstelle fuer KI-Assistenten wurden sie ihm aber trotzdem herausgegeben, lesend wie schreibend. Beide Wege halten sich jetzt an dieselben Rechte, und dasselbe gilt fuer Gastkonten der geteilten Ausgaben, die ausserhalb ihres Bereichs nichts mehr erreichen.
 
-Wer Yuvomi ueber seine Schnittstelle ansteuert - eigene Skripte, Home Assistant, KI-Assistenten -, kann Schreibzugriffe jetzt gefahrlos wiederholen. Bricht die Verbindung ab, nachdem eine Aufgabe angelegt wurde, aber bevor die Bestaetigung ankommt, war bisher nicht zu erkennen, ob sie entstanden ist; ein zweiter Versuch legte sie moeglicherweise ein zweites Mal an. Wird beim Aufruf ein selbst gewaehlter Schluessel mitgeschickt, liefert die Wiederholung dieselbe Antwort wie beim ersten Mal, statt einen weiteren Eintrag zu erzeugen. Wer die Schnittstelle nicht nutzt, merkt davon nichts, und an bestehenden Aufrufen aendert sich nichts.
+Einzustellen ist dafuer nichts: die vergebenen Rechte gelten ab dem Update auch dort, und Haushalte ohne eingeschraenkte Mitglieder merken keinen Unterschied. Wer diesen Zugang bisher bewusst nur Verwaltungskonten gegeben hat, weil ein normales Mitglied darueber zu viel sehen konnte, kann ihn jetzt wieder freigeben.
 
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.25.0
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.25.1
