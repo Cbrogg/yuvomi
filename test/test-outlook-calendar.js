@@ -1,5 +1,5 @@
 /**
- * Modul: Outlook Calendar Push – Unit- und Sync-Tests
+ * Modul: Outlook Calendar Push - Unit- und Sync-Tests
  * Zweck: Validiert das RRULE→Graph-Mapping, die Ganztags-/Datetime-Konvertierung
  *        und den One-Way-Push-Algorithmus (Create/No-Op/Update/Move/Delete/
  *        Recreate-nach-Remote-Delete/invalid_grant) mit injiziertem fetch.
